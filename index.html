@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0" />
+<title>ArgantaLab — Build. Learn. Pitch.</title>
+<meta name="description" content="Build games. Learn systems. Pitch products." />
+
+<!-- PWA: theme + apple metas -->
+<meta name="theme-color" content="#007AFF" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0A0F1A" media="(prefers-color-scheme: dark)" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ArgantaLab" />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<style>
+/* ============================================================
+   ARGANTALAB — DESIGN SYSTEM
+   Premium macOS aesthetic · light default · dark toggle
+   ============================================================ */
+:root{
+  --bg:        #EDEEF2;
+  --bg-2:      #F6F7FB;
+  --sidebar:   rgba(255,255,255,0.72);
+  --card:      rgba(255,255,255,0.78);
+  --card-solid:#FFFFFF;
+  --glass:     rgba(255,255,255,0.55);
+  --border:    rgba(0,0,0,0.08);
+  --border-2:  rgba(0,0,0,0.05);
+  --t1:        #1C1C1E;
+  --t2:        #6C6C70;
+  --t3:        #9A9AA0;
+  --accent:    #007AFF;
+  --accent-2:  #5856D6;
+  --accent-3:  #34C759;
+  --gold:      #FF9F0A;
+  --danger:    #FF3B30;
+  --pink:      #FF2D92;
+  --cyan:      #32D0E0;
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.05);
+  --shadow-md: 0 4px 12px rgba(16,24,40,0.07), 0 12px 32px rgba(16,24,40,0.06);
+  --shadow-lg: 0 20px 60px rgba(16,24,40,0.14);
+  --aurora-1:  rgba(0,122,255,0.30);
+  --aurora-2:  rgba(88,86,214,0.26);
+  --aurora-3:  rgba(50,208,224,0.22);
+  --scene-bg:  linear-gradient(160deg,#0B1020,#11182B 60%,#0A0F1A);
+  --r-sm: 8px; --r-md: 14px; --r-lg: 20px; --r-xl: 26px; --r-2xl: 34px;
+  --ease: cubic-bezier(.22,1,.36,1);
+  --ease-2: cubic-bezier(.34,1.56,.64,1);
+}
+html[data-theme="dark"]{
+  --bg:        #000000;
+  --bg-2:      #0A0A0C;
+  --sidebar:   rgba(28,28,30,0.72);
+  --card:      rgba(34,34,38,0.78);
+  --card-solid:#1C1C1E;
+  --glass:     rgba(44,44,48,0.55);
+  --border:    rgba(255,255,255,0.10);
+  --border-2:  rgba(255,255,255,0.06);
+  --t1:        #FFFFFF;
+  --t2:        #9A9AA0;
+  --t3:        #6C6C70;
+  --accent:    #0A84FF;
+  --accent-2:  #7D7AFF;
+  --accent-3:  #30D158;
+  --gold:      #FFD60A;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 8px 28px rgba(0,0,0,0.5);
+  --shadow-lg: 0 24px 70px rgba(0,0,0,0.6);
+  --aurora-1:  rgba(10,132,255,0.30);
+  --aurora-2:  rgba(125,122,255,0.26);
+  --aurora-3:  rgba(50,208,224,0.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--t1);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  transition:background .5s var(--ease),color .35s var(--ease);
+  letter-spacing:-0.01em;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:20px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--t3);background-clip:padding-box}
+
+/* ---------- AURORA BACKDROP ---------- */
+.aurora{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.aurora i{position:absolute;border-radius:50%;filter:blur(90px);opacity:.9;mix-blend-mode:normal;animation:drift 22s var(--ease) infinite alternate}
+.aurora i:nth-child(1){width:46vw;height:46vw;background:var(--aurora-1);top:-12%;left:-8%}
+.aurora i:nth-child(2){width:42vw;height:42vw;background:var(--aurora-2);bottom:-16%;right:-10%;animation-delay:-7s;animation-duration:28s}
+.aurora i:nth-child(3){width:34vw;height:34vw;background:var(--aurora-3);top:38%;left:48%;animation-delay:-13s;animation-duration:25s}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(6vw,5vh) scale(1.12)}100%{transform:translate(-5vw,-4vh) scale(1.04)}}
+
+/* ---------- APP SHELL ---------- */
+#app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+.topbar{
+  height:56px;flex:none;display:flex;align-items:center;gap:14px;padding:0 18px;
+  background:var(--sidebar);backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);
+  border-bottom:1px solid var(--border);z-index:30;
+}
+.brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:17px;letter-spacing:-0.02em}
+.brand .name b{background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.topbar .spacer{flex:1}
+.tb-user{display:flex;align-items:center;gap:12px}
+.tb-stats{display:flex;flex-direction:column;align-items:flex-end;gap:3px;line-height:1}
+.tb-stats .nm{font-size:12.5px;font-weight:650}
+.tb-stats .nm small{color:var(--t2);font-weight:500;margin-left:6px}
+.xpbar{width:130px;height:6px;border-radius:20px;background:var(--border);overflow:hidden}
+.xpbar i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width 1s var(--ease)}
+.icon-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--card);border:1px solid var(--border);transition:.25s var(--ease)}
+.icon-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow-sm)}
+
+.shell{flex:1;display:flex;min-height:0}
+.drawer{
+  width:236px;flex:none;padding:18px 12px;overflow-y:auto;
+  background:var(--sidebar);backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px;
+}
+.nav-label{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--t3);text-transform:uppercase;padding:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-md);font-size:14.5px;font-weight:550;color:var(--t2);transition:.2s var(--ease);position:relative}
+.nav-item svg{width:21px;height:21px;flex:none;stroke-width:1.7}
+.nav-item:hover{background:var(--card);color:var(--t1)}
+.nav-item.on{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 16%,transparent),transparent);color:var(--accent);font-weight:650}
+.nav-item.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
+.drawer .grow{flex:1}
+
+.main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;scroll-behavior:smooth}
+.main-inner{max-width:1080px;margin:0 auto;padding:28px 32px 64px}
+.side{
+  width:330px;flex:none;padding:22px;overflow-y:auto;
+  background:var(--sidebar);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-left:1px solid var(--border);
+}
+
+/* ---------- TYPE ---------- */
+.page-head{margin-bottom:22px}
+.page-head h1{font-size:30px;font-weight:780;letter-spacing:-0.03em}
+.page-head p{color:var(--t2);font-size:15px;margin-top:4px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.section-title{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin:26px 0 12px;display:flex;align-items:center;gap:8px}
+
+/* ---------- CARDS ---------- */
+.card{background:var(--card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
+.glass{background:var(--glass);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px)}
+.pad{padding:20px}
+
+/* profile banner */
+.banner{position:relative;overflow:hidden;border-radius:var(--r-2xl);padding:26px 28px;color:#fff;background:linear-gradient(125deg,var(--accent),var(--accent-2) 70%,var(--pink));box-shadow:var(--shadow-lg)}
+.banner::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 300px at 80% -20%,rgba(255,255,255,.35),transparent 60%);pointer-events:none}
+.banner .hi{font-size:24px;font-weight:760;letter-spacing:-0.02em}
+.banner .role{opacity:.92;font-weight:550;margin-top:2px;font-size:14px}
+.banner .xpwrap{margin:18px 0 14px;max-width:420px}
+.banner .xptrack{height:10px;border-radius:20px;background:rgba(255,255,255,.25);overflow:hidden}
+.banner .xptrack i{display:block;height:100%;border-radius:20px;background:#fff;box-shadow:0 0 16px rgba(255,255,255,.6);transition:width 1.1s var(--ease)}
+.banner .pills{display:flex;gap:10px;flex-wrap:wrap}
+.bpill{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);padding:7px 13px;border-radius:20px;font-size:13px;font-weight:600;backdrop-filter:blur(6px)}
+.banner .av{position:absolute;right:26px;top:24px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:26px;border:2px solid rgba(255,255,255,.4)}
+
+/* featured hero */
+.hero{position:relative;overflow:hidden;border-radius:var(--r-2xl);min-height:220px;padding:28px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff;background:var(--scene-bg);box-shadow:var(--shadow-lg);cursor:pointer}
+.hero .glow{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(80,160,255,.55),transparent 60%);filter:blur(20px);pointer-events:none;transition:transform .18s ease;top:-120px;left:-60px}
+.hero .stars{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 60%,#cfe6ff,transparent),radial-gradient(1px 1px at 40% 80%,#fff,transparent),radial-gradient(1.5px 1.5px at 85% 25%,#fff,transparent),radial-gradient(1px 1px at 55% 15%,#bcd,transparent);opacity:.7}
+.hero .live{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#7CFFB2;margin-bottom:10px}
+.hero .live .dot{width:8px;height:8px;border-radius:50%;background:#34C759;box-shadow:0 0 0 0 rgba(52,199,89,.7);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,.6)}70%{box-shadow:0 0 0 10px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}
+.hero h2{font-size:30px;font-weight:800;letter-spacing:-0.03em;position:relative}
+.hero p{opacity:.85;margin:6px 0 16px;max-width:440px;position:relative}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;position:relative}
+.hero .tags{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;position:relative}
+.tag{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:var(--r-md);font-size:14.5px;font-weight:650;transition:.22s var(--ease);white-space:nowrap}
+.btn svg{width:17px;height:17px}
+.btn-primary{background:#fff;color:#0B1020}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.3)}
+.btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn-ghost:hover{background:rgba(255,255,255,.24)}
+.btn-accent{background:var(--accent);color:#fff;box-shadow:var(--shadow-sm)}
+.btn-accent:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);filter:brightness(1.05)}
+.btn-soft{background:var(--card);color:var(--t1);border:1px solid var(--border)}
+.btn-soft:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.btn-block{width:100%;justify-content:center}
+
+/* game grid */
+.grid{display:grid;gap:16px}
+.grid.g4{grid-template-columns:repeat(4,1fr)}
+.grid.g3{grid-template-columns:repeat(3,1fr)}
+.grid.g2{grid-template-columns:repeat(2,1fr)}
+.gcard{border-radius:var(--r-lg);overflow:hidden;background:var(--card);border:1px solid var(--border);transition:.28s var(--ease);cursor:pointer;box-shadow:var(--shadow-sm)}
+.gcard:hover{transform:translateY(-4px) scale(1.01);box-shadow:var(--shadow-lg)}
+.gcard .thumb{height:128px;position:relative;overflow:hidden;display:grid;place-items:center}
+.gcard .thumb svg{width:100%;height:100%}
+.gcard .body{padding:14px 16px}
+.gcard .body h3{font-size:15.5px;font-weight:700}
+.gcard .body span{font-size:12.5px;color:var(--t2)}
+.gcard .play{margin-top:10px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:650;color:var(--accent)}
+.gcard.add{display:grid;place-items:center;border-style:dashed;color:var(--t2);min-height:182px}
+.gcard.add:hover{color:var(--accent);border-color:var(--accent)}
+
+/* lesson module cards */
+.mod{position:relative;border-radius:var(--r-xl);padding:22px;background:var(--card);border:1px solid var(--border);transition:.28s var(--ease);overflow:hidden;box-shadow:var(--shadow-sm)}
+.mod:not(.locked){cursor:pointer}
+.mod:not(.locked):hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.mod .num{position:absolute;top:18px;right:20px;font-size:34px;font-weight:800;color:var(--border);letter-spacing:-0.04em}
+.mod .ic{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 18%,transparent),color-mix(in srgb,var(--accent-2) 14%,transparent));margin-bottom:14px}
+.mod .ic svg{width:28px;height:28px;color:var(--accent)}
+.mod h3{font-size:17px;font-weight:740;letter-spacing:-0.02em}
+.mod p{font-size:13.5px;color:var(--t2);margin-top:5px;line-height:1.45}
+.mod .foot{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-2)}
+.mod .xpchip{font-size:12px;font-weight:700;color:var(--gold)}
+.mod .startlink{font-size:13.5px;font-weight:650;color:var(--accent);display:inline-flex;align-items:center;gap:5px}
+.mod.locked{opacity:.62}
+.mod.locked .ic{background:var(--border)}.mod.locked .ic svg{color:var(--t3)}
+.mod.done{border-color:color-mix(in srgb,var(--accent-3) 50%,var(--border))}
+.mod .donechip{font-size:12px;font-weight:700;color:var(--accent-3);display:inline-flex;align-items:center;gap:5px}
+
+/* progress bar generic */
+.prog{height:8px;border-radius:20px;background:var(--border);overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width 1s var(--ease)}
+
+/* cinematic scene frame */
+.scene{position:relative;border-radius:var(--r-2xl);height:330px;overflow:hidden;background:var(--scene-bg);box-shadow:var(--shadow-lg);display:grid;place-items:center;color:#fff}
+.scene .sky{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 15% 20%,#fff,transparent),radial-gradient(1px 1px at 75% 35%,#cde,transparent),radial-gradient(1.5px 1.5px at 45% 70%,#fff,transparent),radial-gradient(1px 1px at 85% 80%,#fff,transparent),radial-gradient(1.5px 1.5px at 30% 90%,#bcd,transparent);opacity:.6}
+.scene .ctrls{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:5}
+.mini-btn{padding:8px 14px;border-radius:20px;font-size:12.5px;font-weight:650;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(6px);transition:.2s}
+.mini-btn:hover{background:rgba(255,255,255,.26)}
+
+/* explanation chips */
+.exgrid{display:grid;gap:14px;margin-top:18px}
+.exchip{padding:16px 18px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+.exchip .e{font-size:24px;margin-bottom:6px}
+.exchip h4{font-size:14.5px;font-weight:700}
+.exchip p{font-size:13px;color:var(--t2);margin-top:3px}
+
+/* step navigator */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;margin:22px 0 18px}
+.steps .node{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative;flex:1}
+.steps .dot{width:14px;height:14px;border-radius:50%;background:var(--border);border:2px solid var(--card-solid);z-index:2;transition:.3s}
+.steps .node.on .dot{background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent)}
+.steps .node.done .dot{background:var(--accent-3)}
+.steps .node span{font-size:11.5px;color:var(--t2);font-weight:600}
+.steps .node.on span{color:var(--accent)}
+.steps .bar{position:absolute;top:6px;left:50%;width:100%;height:2px;background:var(--border);z-index:1}
+.steps .node.done .bar{background:var(--accent-3)}
+.nav-row{display:flex;justify-content:space-between;gap:12px;margin-top:14px}
+
+/* side panel */
+.sp-block{margin-bottom:22px}
+.sp-h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sp-h .d{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.sp-body{font-size:13.5px;color:var(--t1);line-height:1.5}
+.vocab{display:flex;flex-direction:column;gap:8px}
+.vrow{display:flex;align-items:baseline;gap:8px;font-size:13px}
+.vrow b{color:var(--accent);font-weight:650;min-width:62px}
+.vrow span{color:var(--t2)}
+.mission{display:flex;flex-direction:column;gap:9px}
+.mrow{display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;user-select:none}
+.mrow .box{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex:none;display:grid;place-items:center;transition:.2s}
+.mrow.ck .box{background:var(--accent-3);border-color:var(--accent-3)}
+.mrow.ck .box svg{opacity:1}
+.mrow .box svg{width:13px;height:13px;color:#fff;opacity:0;transition:.2s}
+.mrow.ck span{color:var(--t3);text-decoration:line-through}
+.note-area{width:100%;min-height:80px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg-2);padding:11px;font:inherit;font-size:13px;color:var(--t1);resize:vertical}
+.spline{height:1px;background:var(--border);margin:18px 0}
+
+/* stat tiles */
+.stats-row{display:grid;gap:14px}
+.stat{padding:18px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+.stat .lbl{font-size:12.5px;color:var(--t2);font-weight:600}
+.stat .val{font-size:30px;font-weight:800;letter-spacing:-0.03em;margin-top:4px}
+.stat .delta{font-size:12px;font-weight:650;color:var(--accent-3);margin-top:2px}
+
+/* game player */
+.player-bar{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.player-bar .now{font-weight:700;font-size:16px}
+.player-bar .now small{color:var(--t2);font-weight:500;display:block;font-size:12px}
+.frame-wrap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow-lg);background:#000}
+.frame-wrap iframe{width:100%;height:66vh;border:none;display:block}
+.howbox{margin-top:16px;padding:18px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--border)}
+.howbox h4{font-size:14px;font-weight:700;margin-bottom:6px}
+.howbox p{font-size:13.5px;color:var(--t2)}
+.code{display:inline-block;margin-top:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--bg-2);border:1px solid var(--border);padding:8px 12px;border-radius:8px;color:var(--accent)}
+
+/* try-it / interactive */
+.tryit{margin-top:18px;padding:20px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--border)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--t2);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:11px 13px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg-2);font:inherit;font-size:14px;color:var(--t1)}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.result-box{margin-top:14px;padding:16px;border-radius:var(--r-md);background:var(--bg-2);border:1px dashed var(--border);font-size:13.5px;line-height:1.5}
+.slider{width:100%;-webkit-appearance:none;height:6px;border-radius:20px;background:var(--border);outline:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);box-shadow:var(--shadow-sm);cursor:pointer}
+.gauge{font-size:40px;font-weight:850;letter-spacing:-0.04em}
+
+/* bottom dock (mobile / ipad) */
+.dock{display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;
+  padding:8px 14px calc(8px + env(safe-area-inset-bottom));
+  background:var(--sidebar);backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px);
+  border-top:1px solid var(--border)}
+.dock-row{display:flex;justify-content:space-around;align-items:center;max-width:520px;margin:0 auto}
+.dock-item{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--t3);font-size:10.5px;font-weight:600;padding:6px 4px;border-radius:14px;transition:.2s;flex:1}
+.dock-item svg{width:24px;height:24px;stroke-width:1.8}
+.dock-item.on{color:var(--accent)}
+.dock-item.on svg{transform:translateY(-1px)}
+
+/* toast + modal */
+.toast-wrap{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:10px;align-items:center}
+.toast{padding:12px 20px;border-radius:30px;background:var(--card-solid);border:1px solid var(--border);box-shadow:var(--shadow-lg);font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;animation:toastin .4s var(--ease-2)}
+.toast .e{font-size:18px}
+@keyframes toastin{from{opacity:0;transform:translateY(-14px) scale(.95)}to{opacity:1;transform:none}}
+.overlay{position:fixed;inset:0;z-index:80;background:rgba(10,12,20,.5);backdrop-filter:blur(8px);display:grid;place-items:center;animation:fade .3s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{width:min(420px,90vw);text-align:center;padding:34px 28px;border-radius:var(--r-2xl);background:var(--card-solid);border:1px solid var(--border);box-shadow:var(--shadow-lg);animation:pop .55s var(--ease-2)}
+@keyframes pop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+.badge-art{width:96px;height:96px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--gold),#FF7A00);box-shadow:0 12px 40px rgba(255,159,10,.45)}
+.badge-art svg{width:50px;height:50px;color:#fff}
+.modal h3{font-size:22px;font-weight:800;letter-spacing:-0.02em}
+.modal .sub{color:var(--t2);margin:6px 0 4px;font-size:14px}
+.modal .bname{font-size:18px;font-weight:750;color:var(--gold);margin:10px 0 22px}
+
+/* confetti */
+.confetti{position:fixed;inset:0;z-index:85;pointer-events:none;overflow:hidden}
+.confetti i{position:absolute;width:9px;height:14px;top:-20px;border-radius:2px;animation:fall 2.4s linear forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(640deg);opacity:.9}}
+
+/* charts */
+.chart-card{padding:18px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+.chart-card h4{font-size:13.5px;font-weight:700;margin-bottom:12px;color:var(--t2)}
+.insight{margin-top:16px;padding:18px;border-radius:var(--r-lg);background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 12%,transparent),color-mix(in srgb,var(--accent-2) 8%,transparent));border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border))}
+.insight .h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.insight p{font-size:14px;line-height:1.5}
+table.data{width:100%;border-collapse:collapse;font-size:13.5px}
+table.data th{text-align:left;padding:10px 12px;color:var(--t2);font-weight:650;font-size:12px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)}
+table.data td{padding:11px 12px;border-bottom:1px solid var(--border-2)}
+table.data tr:last-child td{border-bottom:none}
+
+/* demo stage */
+.stage{position:relative;border-radius:var(--r-2xl);min-height:460px;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,#1b2440,#0A0F1A);box-shadow:var(--shadow-lg);display:grid;place-items:center;color:#fff;text-align:center}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage .slide{position:relative;z-index:3;padding:40px;max-width:560px}
+.stage .dots{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:4}
+.stage .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);transition:.3s}
+.stage .dots i.on{background:#fff;width:22px;border-radius:20px}
+.stage .nav{position:absolute;bottom:20px;left:0;right:0;display:flex;justify-content:center;gap:12px;z-index:4}
+
+.fade-in{animation:fadeUp .5s var(--ease) both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.stagger>*{animation:fadeUp .5s var(--ease) both}
+.stagger>*:nth-child(2){animation-delay:.05s}
+.stagger>*:nth-child(3){animation-delay:.1s}
+.stagger>*:nth-child(4){animation-delay:.15s}
+.stagger>*:nth-child(5){animation-delay:.2s}
+
+/* ---------- RESPONSIVE ---------- */
+@media(max-width:1180px){.side{display:none}}
+@media(max-width:920px){
+  .drawer{display:none}
+  .dock{display:block}
+  .main{padding-bottom:80px}
+  .main-inner{padding:20px 18px 90px}
+  .grid.g4{grid-template-columns:repeat(2,1fr)}
+  .grid.g3{grid-template-columns:repeat(2,1fr)}
+  .page-head h1{font-size:25px}
+  .tb-stats{display:none}
+}
+@media(max-width:560px){
+  .grid.g4,.grid.g3,.grid.g2{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(2,1fr)!important}
+  .hero h2{font-size:24px}
+  .frame-wrap iframe{height:72vh}
+}
+@media(min-width:921px) and (max-width:1180px){
+  /* iPad landscape: keep drawer hidden, dock visible already handled <920 */
+}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="aurora"><i></i><i></i><i></i></div>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span id="brandLogo"></span>
+      <span class="name">Arganta<b>Lab</b></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="tb-user">
+      <div class="tb-stats">
+        <div class="nm" id="tbName">Baginda <small id="tbLvl">Lv.1</small></div>
+        <div class="xpbar"><i id="tbXp" style="width:24%"></i></div>
+      </div>
+      <button class="icon-btn" data-action="toggle-theme" id="themeBtn" title="Toggle theme"></button>
+      <div class="avatar" id="tbAvatar">B</div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="drawer" id="drawer"></nav>
+    <main class="main" id="main"><div class="main-inner" id="mainInner"></div></main>
+    <aside class="side" id="side"></aside>
+  </div>
+
+  <nav class="dock" id="dock"></nav>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+<div id="modalRoot"></div>
+
+<script>
+/* ============================================================
+   ARGANTALAB — app logic
+   Architecture notes (React + Supabase ready):
+   · Store = single source of truth (mirrors future Supabase rows)
+   · Config registries (GAMES/NAV/MODULES/LESSONS) = future DB tables
+   · Components are pure functions returning HTML strings
+   · One render() = React-like reconciliation by region
+   ============================================================ */
+
+/* ---------- ICONS (macOS / SF-style inline SVG) ---------- */
+const I = {
+  arganta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="12" rx="4"/><circle cx="8.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><path d="M15 11v2M16 12h-2" stroke-linecap="round"/></svg>',
+  web:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18"/></svg>',
+  ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" stroke-linejoin="round"/><circle cx="18" cy="17" r="1.4"/><circle cx="6" cy="17" r="1"/></svg>',
+  data:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M5 19V11M10 19V6M15 19v-5M20 19v-9"/></svg>',
+  launch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linejoin="round"><path d="M5 15c-1 2-1 4-1 4s2 0 4-1m-3-3c1-5 4-9 11-11 0 7-4 10-9 11l-2-0z"/><path d="M9 15l-1-1c0-2 1-4 3-6"/><circle cx="14.5" cy="9.5" r="1.3"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M10 14v3M14 14v3M8 20h8M9 20l.5-3M15 20l-.5-3"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18" opacity=".5"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L16 3H8l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 3 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L8 21h8l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>',
+  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4 2c0 1.5-2 2-2 3.5"/><circle cx="11.5" cy="17.5" r=".6" fill="currentColor"/></svg>',
+};
+
+/* logo: animated glass cube */
+const LOGO = '<svg width="30" height="30" viewBox="0 0 40 40"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#007AFF"/><stop offset="1" stop-color="#5856D6"/></linearGradient></defs><rect x="3" y="3" width="34" height="34" rx="10" fill="url(#lg)"/><g style="transform-origin:20px 20px;animation:spinlogo 8s linear infinite"><path d="M20 10l8 4.5v9L20 28l-8-4.5v-9z" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.85)" stroke-width="1.4" stroke-linejoin="round"/><path d="M20 10v18M12 14.5l8 4 8-4" stroke="rgba(255,255,255,.65)" stroke-width="1.1" fill="none"/></g><circle cx="20" cy="20" r="2.4" fill="#fff"/><style>@keyframes spinlogo{from{transform:rotateY(0)}to{transform:rotate(360deg)}}</style></svg>';
+
+/* ---------- STORE (Supabase-shaped) ---------- */
+const KEY='argantalab_state_v1';
+const DEFAULT={
+  learnerName:'Baginda', avatar:'B', userId:null,
+  xp:120, level:1, badges:[], completedLessons:[],
+  gamesPlayed:[], gamesBuilt:1, bugsFixed:0,
+  lastTab:'arganta', pitchScript:'', pitchCompleted:false,
+  reflectionLog:[], theme:'light', missions:{}
+};
+function load(){ try{return {...DEFAULT,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return {...DEFAULT}} }
+const Store={
+  state:load(), subs:[],
+  get(k){return this.state[k]},
+  set(patch){Object.assign(this.state,patch);this.persist();this.emit()},
+  persist(){try{localStorage.setItem(KEY,JSON.stringify(this.state))}catch(e){}},
+  sub(fn){this.subs.push(fn)}, emit(){this.subs.forEach(f=>f())}
+};
+// route is ephemeral (not persisted)
+let ROUTE={tab:Store.get('lastTab')||'arganta', page:'home', lessonId:null, gameId:null, step:0, slide:0};
+
+/* ---------- CONFIG REGISTRIES (future DB tables) ---------- */
+const GAMES=[
+  {id:'strike',  file:'AppGame_Strike_Zone_3D.html',            name:'Strike Zone 3D', tags:['3D','Shooter','HTML'], hue:210, featured:true,
+   desc:'First product built with AI + HTML. Health, weapons, coins, and a shop.'},
+  {id:'critter', file:'AppGame_Strike_Zone_Critter_Keys.html',  name:'Critter Keys',   tags:['Typing','Arcade'], hue:280,
+   desc:'Catch critters by hitting the right keys. Fast-paced typing fun.'},
+  {id:'kincatch',file:'AppGame_Strike_Zone_Kincatch.html',      name:'Kincatch',       tags:['Catch','Reflex'], hue:150,
+   desc:'A reflex catching game. Quick hands, quick mind.'},
+];
+const NAV=[
+  {tab:'arganta', label:'Arganta',       short:'Arganta', icon:'arganta', group:'PLAY'},
+  {tab:'web',     label:'Web Quest',     short:'Web',     icon:'web',     group:'LEARN'},
+  {tab:'ai',      label:'AI Forge',      short:'AI',      icon:'ai',      group:'LEARN'},
+  {tab:'data',    label:'Data Lab',      short:'Data',    icon:'data',    group:'LEARN'},
+  {tab:'launch',  label:'Launch Studio', short:'Launch',  icon:'launch',  group:'SHIP'},
+];
+
+/* lessons: each is a data object → one LessonView renders all of them */
+const LESSONS={
+  // WEB QUEST
+  'web/internet-map':{tab:'web',num:'01',title:'Internet Map',scene:'browser',
+    blurb:'Web, websites, URLs, hosting, domains',
+    key:'The internet is a network of computers sharing HTML files. A browser fetches and shows them.',
+    cards:[['🏠','Website','= a house'],['📍','Domain','= the address'],['🏝','Hosting','= the land'],['🚗','Browser','= the car that takes you there']],
+    vocab:[['URL','web address'],['Domain','the name'],['Host','the server'],['HTML','the file'],['Browser','the reader']],
+    mission:['Open DevTools (F12)','Look at the URL bar','Find index.html'], steps:['Intro','Web','Domain','Hosting','Summary'], xp:40},
+  'web/app-machine':{tab:'web',num:'02',title:'App Machine',scene:'machine',
+    blurb:'Frontend, backend, database, API',
+    key:'Every app has parts: the screen you see (frontend), hidden helpers (backend), memory (database), and messengers (API).',
+    cards:[['🖥','Frontend','what you see'],['⚙️','Backend','hidden helper'],['🗄','Database','the memory'],['📨','API','the messenger']],
+    vocab:[['Frontend','the screen'],['Backend','the engine'],['Database','the vault'],['API','the messenger']],
+    mission:['Press Play in Arganta','Watch the iframe change','Notice coins save'], steps:['Intro','Frontend','Backend','Database','Summary'], xp:40},
+  'web/build-map':{tab:'web',num:'03',title:'Build Map',scene:'map',
+    blurb:'Architecture, files, iframe, components',
+    key:'index.html is the center of ArgantaLab. Tabs and game files orbit it, connected by the iframe beam.',
+    cards:[['📄','index.html','the app shell'],['🛰','iframe','loads games'],['🧩','Components','reusable parts'],['🌊','Data flow','how info moves']],
+    vocab:[['Shell','main file'],['iframe','window inside page'],['Component','a building block']],
+    mission:['Find index.html','List the 5 tabs','Spot an AppGame file'], steps:['Center','Tabs','iframe','Summary'], xp:40, lock:['web/internet-map','web/app-machine']},
+  'web/system-chain':{tab:'web',num:'04',title:'System Chain',scene:'chain',
+    blurb:'Input, process, output, state, feedback',
+    key:'Everything is a chain: Input → Process → Output. Sometimes the output loops back as new input.',
+    cards:[['⬇️','Input','what enters'],['⚙️','Process','what happens'],['⬆️','Output','what leaves'],['🔁','Feedback','output loops back']],
+    vocab:[['Input','the start'],['Process','the work'],['Output','the result'],['State','what is saved']],
+    mission:['Click Play, watch the chain','Finish a lesson, watch XP rise','Name one feedback loop'], steps:['Input','Process','Output','Loop'], xp:40, lock:['web/build-map']},
+  // AI FORGE
+  'ai/prompt-power':{tab:'ai',num:'01',title:'Prompt Power',scene:'prompt',
+    blurb:'The 8-step prompt formula',
+    key:'A messy prompt makes messy results. A structured prompt becomes a clean blueprint the AI can follow.',
+    cards:[['1️⃣','Build','what are we building?'],['2️⃣','User','who is it for?'],['3️⃣','Goal','what is the win?'],['4️⃣','Rules','what are the limits?']],
+    vocab:[['Prompt','what you ask'],['Requirement','what you need'],['Iterate','improve again']],
+    mission:['Write a bad prompt','Rewrite it with 4 steps','Compare results'], steps:['Bad vs Good','Formula','Build','Try','Summary'], xp:40, interactive:'promptBuilder'},
+  'ai/chatgpt-brain':{tab:'ai',num:'02',title:'ChatGPT Brain',scene:'brain',
+    blurb:'Idea partner, explainer, reviewer',
+    key:'ChatGPT helps you think — but YOU are the director. It suggests; you decide.',
+    cards:[['💡','Idea Partner','brainstorm with you'],['📖','Explainer','makes it simple'],['🎨','Designer','plans the look'],['🔍','Reviewer','spots problems']],
+    vocab:[['LLM','language model'],['Prompt','your request'],['Director','you!']],
+    mission:['Ask for 3 game ideas','Pick your favourite','Ask it to design first'], steps:['Roles','Demo','You Decide','Summary'], xp:40, lock:['ai/prompt-power']},
+  'ai/codex-builder':{tab:'ai',num:'03',title:'Codex Builder',scene:'code',
+    blurb:'Your coding teammate',
+    key:'Codex edits files and fixes bugs. Give it the file, the expected behaviour, the actual bug, and a clear scope.',
+    cards:[['📁','File','which file to change'],['✅','Expected','what should happen'],['🔴','Actual','what goes wrong'],['🎯','Scope','only change this']],
+    vocab:[['Bug','a mistake'],['Fix','the repair'],['Scope','the limit']],
+    mission:['Pick a file','Describe expected vs actual','Limit the scope'], steps:['Teammate','Prompt','Review','Summary'], xp:40, lock:['ai/chatgpt-brain']},
+  'ai/agent-command':{tab:'ai',num:'04',title:'Agent Command',scene:'agent',
+    blurb:'LLM + tools + memory + goal',
+    key:'An agent = an LLM that can use tools, remember things, and chase a goal — step by step, on its own.',
+    cards:[['🧠','LLM','understands language'],['🔧','Tools','things it can use'],['💾','Memory','what it remembers'],['🎯','Goal','what it finishes']],
+    vocab:[['Agent','LLM + tools + goal'],['Tool','an ability'],['Workflow','the steps']],
+    mission:['Name a goal','List 2 tools','Describe 1 step'], steps:['Parts','Workflow','Demo','Summary'], xp:40, lock:['ai/codex-builder']},
+  // DATA LAB
+  'data/game-stats':{tab:'data',num:'01',title:'Game Stats',scene:'stats',
+    blurb:'Count, average, max, min, percentage',
+    key:'Statistics turn a pile of numbers into meaning: how many, what is normal, what is the best.',
+    cards:[['#️⃣','Count','how many'],['📊','Average','the normal value'],['⬆️','Max','the best'],['⬇️','Min','the lowest']],
+    vocab:[['Count','total number'],['Average','the middle'],['Trend','up or down']],
+    mission:['Find total matches','Calculate average coins','Spot the trend'], steps:['Data','Stats','Try','Summary'], xp:40, interactive:'statsExplorer'},
+  'data/chart-magic':{tab:'data',num:'02',title:'Chart Magic',scene:'chart',
+    blurb:'Line, bar, pie, scatter, heatmap',
+    key:'A chart is a picture of data. Pick the right chart and the story jumps out instantly.',
+    cards:[['📈','Line','change over time'],['📊','Bar','compare groups'],['🥧','Pie','parts of a whole'],['🔥','Heatmap','activity grid']],
+    vocab:[['Axis','the sides'],['Series','a data line'],['Legend','the key']],
+    mission:['Pick a chart type','Read the trend','Explain in 1 line'], steps:['Types','Live','Read','Summary'], xp:40, interactive:'chartMagic', lock:['data/game-stats']},
+  'data/boss-dashboard':{tab:'data',num:'03',title:'Boss Dashboard',scene:'dashboard',
+    blurb:'Business intelligence for product owners',
+    key:'A dashboard shows the most important numbers in one place so an owner can make fast decisions.',
+    cards:[['🎯','KPI','key number'],['📉','Trend','direction'],['💡','Insight','what it means']],
+    vocab:[['KPI','key metric'],['BI','business intel'],['Insight','the takeaway']],
+    mission:['Find best weapon','Find worst day','Write one insight'], steps:['Dashboard'], xp:40, interactive:'dashboard', lock:['data/chart-magic']},
+  'data/prediction-bot':{tab:'data',num:'04',title:'Prediction Bot',scene:'predict',
+    blurb:'Rule-based prediction & basic ML',
+    key:'Data science finds patterns. Machine learning lets the computer learn patterns from examples.',
+    cards:[['🎯','Accuracy','how precise'],['🔥','Streak','wins in a row'],['💀','Deaths','fewer is better'],['🔫','Weapon','which tool']],
+    vocab:[['Data science','find patterns'],['ML','learns from data'],['Predict','a smart guess']],
+    mission:['Move the sliders','Read the win chance','Try to reach 80%'], steps:['Predict'], xp:40, interactive:'predictBot', lock:['data/boss-dashboard']},
+  // LAUNCH
+  'launch/github-trail':{tab:'launch',num:'02',title:'GitHub Trail',scene:'github',
+    blurb:'Repository, commit, branch, README',
+    key:'GitHub is like Google Drive for code, but every save has a story. A commit is a save point.',
+    cards:[['📦','Repository','the project folder'],['💾','Commit','a save point'],['🌿','Branch','a side copy'],['📄','README','the intro page']],
+    vocab:[['Repo','project folder'],['Commit','a save'],['Branch','a copy']],
+    mission:['Create a repo','Make a first commit','View history'], steps:['Idea','Concepts','Steps','Summary'], xp:40},
+  'launch/launch-pad':{tab:'launch',num:'03',title:'Launch Pad',scene:'rocket',
+    blurb:'Deploy, hosting, GitHub Pages, PWA',
+    key:'Deploy means publish to the web. GitHub Pages turns your repo into a live website with one switch.',
+    cards:[['🚀','Deploy','publish online'],['🏝','Hosting','where it lives'],['📍','Domain','the address'],['📱','PWA','installs like an app']],
+    vocab:[['Deploy','go live'],['Pages','free hosting'],['PWA','app-like site']],
+    mission:['Enable GitHub Pages','Copy the live URL','Open it on a phone'], steps:['Idea','Concepts','Checklist','Summary'], xp:40, lock:['launch/github-trail']},
+};
+
+/* badges */
+const BADGES={
+  'web':{name:'Web Explorer',need:['web/internet-map','web/app-machine','web/build-map','web/system-chain']},
+  'ai':{name:'Prompt Master',need:['ai/prompt-power','ai/chatgpt-brain','ai/codex-builder','ai/agent-command']},
+  'data':{name:'Data Detective',need:['data/game-stats','data/chart-magic','data/boss-dashboard','data/prediction-bot']},
+};
+
+/* sample game data (future: game_sessions table) */
+const SAMPLE=[
+  {m:1,win:1,coins:80,weapon:'Rifle',deaths:2},
+  {m:2,win:0,coins:40,weapon:'Pistol',deaths:5},
+  {m:3,win:1,coins:120,weapon:'Marksman',deaths:1},
+  {m:4,win:1,coins:90,weapon:'Marksman',deaths:2},
+  {m:5,win:0,coins:30,weapon:'Pistol',deaths:6},
+];
+
+/* ---------- HELPERS ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const xpForLevel=l=>l*500;
+function addXp(n){
+  let xp=Store.get('xp')+n, level=Store.get('level');
+  while(xp>=xpForLevel(level)){level++;}
+  Store.set({xp,level});
+  toast('+'+n+' XP','✨');
+}
+function lessonLocked(id){
+  const L=LESSONS[id]; if(!L||!L.lock)return false;
+  return !L.lock.every(d=>Store.get('completedLessons').includes(d));
+}
+function tabLessons(tab){return Object.entries(LESSONS).filter(([id,l])=>l.tab===tab)}
+function go(patch){ROUTE={...ROUTE,...patch}; if(patch.tab)Store.set({lastTab:patch.tab}); renderMain(); renderSide(); renderNav();}
+
+/* ---------- TOAST ---------- */
+function toast(msg,emoji){
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML=(emoji?'<span class="e">'+emoji+'</span>':'')+msg;
+  $('#toasts').appendChild(t);
+  setTimeout(()=>{t.style.transition='.4s';t.style.opacity='0';t.style.transform='translateY(-10px)';setTimeout(()=>t.remove(),400)},2200);
+}
+
+/* ---------- BADGE UNLOCK ---------- */
+function checkBadges(){
+  const done=Store.get('completedLessons'), have=Store.get('badges');
+  for(const [k,b] of Object.entries(BADGES)){
+    if(!have.includes(b.name) && b.need.every(n=>done.includes(n))){
+      Store.set({badges:[...Store.get('badges'),b.name]});
+      unlockModal(b.name);
+    }
+  }
+}
+function unlockModal(name){
+  confettiBurst();
+  const root=$('#modalRoot');
+  root.innerHTML='<div class="overlay" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()">'
+    +'<div class="badge-art">'+I.trophy+'</div>'
+    +'<h3>Badge Unlocked!</h3><div class="sub">You earned a new badge</div>'
+    +'<div class="bname">'+name+'</div>'
+    +'<button class="btn btn-accent btn-block" data-action="close-modal">Awesome!</button>'
+    +'</div></div>';
+}
+function confettiBurst(){
+  const c=document.createElement('div');c.className='confetti';
+  const cols=['#007AFF','#5856D6','#FF9F0A','#34C759','#FF2D92','#32D0E0'];
+  for(let i=0;i<70;i++){const p=document.createElement('i');
+    p.style.left=Math.random()*100+'vw';p.style.background=cols[i%cols.length];
+    p.style.animationDelay=(Math.random()*.6)+'s';p.style.animationDuration=(1.8+Math.random()*1.4)+'s';
+    c.appendChild(p);}
+  document.body.appendChild(c);setTimeout(()=>c.remove(),3600);
+}
+
+/* ---------- THEME ---------- */
+function applyTheme(){document.documentElement.dataset.theme=Store.get('theme');$('#themeBtn').innerHTML=Store.get('theme')==='light'?I.moon:I.sun;}
+function toggleTheme(){Store.set({theme:Store.get('theme')==='light'?'dark':'light'});applyTheme();}
+
+/* ============================================================
+   CINEMATIC SCENES (CSS/SVG, offline)
+   ============================================================ */
+function gameThumb(hue){
+  return '<svg viewBox="0 0 300 130" preserveAspectRatio="none">'
+    +'<defs><linearGradient id="t'+hue+'" x1="0" y1="0" x2="1" y2="1">'
+    +'<stop offset="0" stop-color="hsl('+hue+',70%,55%)"/><stop offset="1" stop-color="hsl('+(hue+50)+',65%,38%)"/></linearGradient></defs>'
+    +'<rect width="300" height="130" fill="url(#t'+hue+')"/>'
+    +'<circle cx="60" cy="40" r="50" fill="rgba(255,255,255,.12)"/>'
+    +'<circle cx="240" cy="110" r="70" fill="rgba(0,0,0,.12)"/>'
+    +'<polygon points="135,55 175,75 135,95" fill="rgba(255,255,255,.9)"/></svg>';
+}
+
+const SCENES={
+  browser:()=>`<div class="sky"></div><div style="position:relative;text-align:center">
+    <div style="width:220px;margin:0 auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,80,200,.4);animation:float 4s ease-in-out infinite">
+      <div style="display:flex;gap:5px;padding:9px 12px;background:rgba(255,255,255,.12)"><i style="width:9px;height:9px;border-radius:50%;background:#FF5F57"></i><i style="width:9px;height:9px;border-radius:50%;background:#FEBC2E"></i><i style="width:9px;height:9px;border-radius:50%;background:#28C840"></i><span style="margin-left:auto;font-size:10px;opacity:.7">arganta.com</span></div>
+      <div style="padding:26px 12px;font-size:13px;font-weight:700">⌂ ArgantaLab</div></div>
+    <div style="margin-top:18px;display:flex;gap:30px;justify-content:center;font-size:11px;opacity:.85">
+      <div>📍<br>Domain</div><div>🏝<br>Hosting</div><div>📄<br>HTML</div></div></div>
+    <style>@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}</style>`,
+  machine:()=>`<div class="sky"></div><div style="position:relative;text-align:center">
+    <div style="width:180px;margin:0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:16px;box-shadow:0 20px 60px rgba(120,80,255,.35)">
+      <div style="background:linear-gradient(135deg,#32D0E0,#007AFF);border-radius:10px;height:70px;display:grid;place-items:center;font-size:11px;font-weight:700">🖥 FRONTEND</div>
+      <div style="margin-top:8px;display:flex;gap:7px;font-size:9px;font-weight:700">
+        <div style="flex:1;background:rgba(255,255,255,.12);border-radius:8px;padding:8px 4px">⚙️<br>BACKEND</div>
+        <div style="flex:1;background:rgba(255,215,10,.18);border-radius:8px;padding:8px 4px">🗄<br>DATABASE</div>
+        <div style="flex:1;background:rgba(255,45,146,.18);border-radius:8px;padding:8px 4px">📨<br>API</div></div></div>
+    <div style="margin-top:14px;font-size:11px;opacity:.7">A 3D arcade machine — each part lights up</div></div>`,
+  map:()=>`<div class="sky"></div><div style="position:relative;width:240px;height:240px">
+    <div style="position:absolute;inset:0;display:grid;place-items:center"><div style="width:96px;height:96px;border-radius:20px;background:linear-gradient(135deg,#007AFF,#5856D6);display:grid;place-items:center;font-size:11px;font-weight:800;text-align:center;box-shadow:0 0 50px rgba(0,122,255,.6);z-index:3">index<br>.html</div></div>
+    ${[0,1,2,3,4].map((i)=>`<div style="position:absolute;top:50%;left:50%;width:42px;height:42px;margin:-21px;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;font-size:9px;font-weight:700;animation:orbit 12s linear infinite;animation-delay:${-i*2.4}s">${['ARG','WEB','AI','DTA','LCH'][i]}</div>`).join('')}
+    </div><style>@keyframes orbit{from{transform:rotate(0) translateX(95px) rotate(0)}to{transform:rotate(360deg) translateX(95px) rotate(-360deg)}}</style>`,
+  chain:()=>`<div class="sky"></div><div style="display:flex;align-items:center;gap:14px;font-weight:700;font-size:13px">
+    ${['⬇️ INPUT','⚙️ PROCESS','⬆️ OUTPUT'].map((s,i)=>`<div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);padding:16px 18px;border-radius:14px;animation:glowpulse 2.4s ease-in-out infinite;animation-delay:${i*.8}s">${s}</div>${i<2?'<span style="font-size:20px;opacity:.6">→</span>':''}`).join('')}
+    </div><div style="position:absolute;bottom:60px;font-size:11px;opacity:.65">Output can loop back as the next Input 🔁</div>
+    <style>@keyframes glowpulse{0%,100%{box-shadow:0 0 0 rgba(80,160,255,0)}50%{box-shadow:0 0 26px rgba(80,160,255,.6)}}</style>`,
+  prompt:()=>`<div class="sky"></div><div style="display:flex;gap:24px;align-items:center">
+    <div style="text-align:center"><div style="width:120px;height:90px;background:rgba(255,80,80,.18);border:1px dashed rgba(255,120,120,.6);border-radius:12px;display:grid;place-items:center;font-size:11px;padding:8px;animation:shake 3s ease-in-out infinite">"make a fun game"<br>💥</div><div style="font-size:10px;opacity:.6;margin-top:6px">Messy prompt</div></div>
+    <span style="font-size:24px">→</span>
+    <div style="text-align:center"><div style="width:130px;background:rgba(52,199,89,.16);border:1px solid rgba(52,199,89,.5);border-radius:12px;padding:12px;font-size:9.5px;text-align:left;line-height:1.6">1. Build?<br>2. For who?<br>3. Goal?<br>4. Rules?</div><div style="font-size:10px;opacity:.6;margin-top:6px">✓ Blueprint</div></div></div>
+    <style>@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}</style>`,
+  brain:()=>`<div class="sky"></div><div style="position:relative;width:230px;height:200px;display:grid;place-items:center">
+    <div style="font-size:54px;animation:float 4s ease-in-out infinite">🧠</div>
+    ${['Idea','Explain','Design','Review','Prompt'].map((s,i)=>`<div style="position:absolute;top:50%;left:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);padding:6px 10px;border-radius:20px;font-size:10px;font-weight:600;animation:orbit2 14s linear infinite;animation-delay:${-i*2.8}s">${s}</div>`).join('')}
+    </div><style>@keyframes orbit2{from{transform:rotate(0) translateX(98px) rotate(0)}to{transform:rotate(360deg) translateX(98px) rotate(-360deg)}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}</style>`,
+  code:()=>`<div class="sky"></div><div style="display:flex;gap:18px;font-family:ui-monospace,monospace;font-size:11px">
+    <div style="background:rgba(255,80,80,.14);border:1px solid rgba(255,100,100,.4);border-radius:12px;padding:16px;line-height:1.8">// bug<br>x -= left;<br><span style="color:#FF7A7A">🔴 wrong</span></div>
+    <span style="font-size:22px;align-self:center">→</span>
+    <div style="background:rgba(52,199,89,.14);border:1px solid rgba(52,199,89,.4);border-radius:12px;padding:16px;line-height:1.8">// fixed<br>x += left;<br><span style="color:#7CFFB2">✅ correct</span></div></div>`,
+  agent:()=>`<div class="sky"></div><div style="text-align:center;line-height:2.2;font-size:13px;font-weight:600">
+    ${[['🧠 LLM','understands language'],['🔧 Tools','things it can use'],['💾 Memory','what it remembers'],['🎯 Goal','what it finishes']].map((r,i)=>`<div style="animation:fadeUp .6s ease both;animation-delay:${i*.3}s"><b>${r[0]}</b> <span style="opacity:.6;font-weight:400">→ ${r[1]}</span></div>`).join('')}
+    <div style="margin-top:8px;font-size:16px;font-weight:800;animation:fadeUp .6s ease both;animation-delay:1.3s">= 🤖 AGENT</div></div>`,
+  stats:()=>`<div class="sky"></div><div style="display:flex;gap:14px">
+    ${[['#️⃣','Count','5'],['📊','Avg','72'],['⬆️','Max','120'],['⬇️','Min','30']].map((s,i)=>`<div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:16px;text-align:center;animation:fadeUp .5s ease both;animation-delay:${i*.12}s"><div style="font-size:22px">${s[0]}</div><div style="font-size:20px;font-weight:800;margin-top:4px">${s[2]}</div><div style="font-size:10px;opacity:.6">${s[1]}</div></div>`).join('')}</div>`,
+  chart:()=>`<div class="sky"></div>${miniLine(['#7CC7FF'])}`,
+  dashboard:()=>`<div class="sky"></div><div style="font-size:13px;font-weight:700;opacity:.85;text-align:center"><div style="font-size:40px">🎯</div>Business Intelligence<br><span style="font-size:11px;opacity:.6;font-weight:400">One screen. Fast decisions.</span></div>`,
+  predict:()=>`<div class="sky"></div><div style="text-align:center"><div style="font-size:46px;animation:float 4s ease-in-out infinite">🤖</div><div style="margin-top:10px;font-size:13px;font-weight:700">Win Score = Accuracy×2 + Streak×3 + …</div></div><style>@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}</style>`,
+  github:()=>`<div class="sky"></div><div style="text-align:center"><div style="font-size:46px">🐙</div><div style="margin-top:14px;display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700">
+    ${['Added game','Fixed bug','Added shop'].map((s,i)=>`<div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:7px 11px">●<br>${s}</div>${i<2?'<span>→</span>':''}`).join('')}<span>→ main</span></div></div>`,
+  rocket:()=>`<div class="sky"></div><div style="text-align:center"><div style="font-size:54px;animation:lift 2.6s ease-in-out infinite">🚀</div>
+    <div style="margin-top:14px;font-size:10px;font-weight:700;display:flex;gap:8px;opacity:.85">FILE <span>→</span> GITHUB <span>→</span> PAGES <span>→</span> LIVE 🌍</div></div>
+    <style>@keyframes lift{0%,100%{transform:translateY(6px)}50%{transform:translateY(-12px)}}</style>`,
+};
+function scene(type){return '<div class="scene fade-in">'+(SCENES[type]?SCENES[type]():SCENES.browser())
+  +'<div class="ctrls"><button class="mini-btn" data-action="replay">↺ Replay Animation</button></div></div>';}
+
+/* ---------- mini SVG charts ---------- */
+function miniLine(){
+  const pts=SAMPLE.map((d,i)=>[30+i*60,150-d.coins]);
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+  return `<svg viewBox="0 0 330 170" style="width:300px"><defs><linearGradient id="lf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CC7FF" stop-opacity=".5"/><stop offset="1" stop-color="#7CC7FF" stop-opacity="0"/></linearGradient></defs>
+    <path d="${path} L${pts[pts.length-1][0]} 160 L${pts[0][0]} 160 Z" fill="url(#lf)"/>
+    <path d="${path}" fill="none" stroke="#7CC7FF" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="600" stroke-dashoffset="600"><animate attributeName="stroke-dashoffset" to="0" dur="1.4s" fill="freeze"/></path>
+    ${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#fff"/>`).join('')}</svg>`;
+}
+function lineChart(){
+  const max=120,pts=SAMPLE.map((d,i)=>[24+i*64,140-(d.coins/max*110)]);
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+  return `<svg viewBox="0 0 340 160" style="width:100%"><defs><linearGradient id="lc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    ${[0,1,2,3].map(i=>`<line x1="20" y1="${30+i*32}" x2="320" y2="${30+i*32}" stroke="var(--border)"/>`).join('')}
+    <path d="${path} L${pts[pts.length-1][0]} 150 L${pts[0][0]} 150 Z" fill="url(#lc)"/>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="700" stroke-dashoffset="700"><animate attributeName="stroke-dashoffset" to="0" dur="1.3s" fill="freeze"/></path>
+    ${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="var(--card-solid)" stroke="var(--accent)" stroke-width="2.5"/><text x="${p[0]}" y="156" font-size="10" fill="var(--t3)" text-anchor="middle">M${i+1}</text>`).join('')}</svg>`;
+}
+function barChart(){
+  const w={Rifle:6,Pistol:2,Marksman:8},max=8,keys=Object.keys(w);
+  return `<svg viewBox="0 0 340 160" style="width:100%">
+    ${keys.map((k,i)=>{const h=w[k]/max*110;return `<g><rect x="${40+i*100}" y="${140-h}" width="56" height="${h}" rx="8" fill="var(--accent)" opacity="${.5+i*.25}"><animate attributeName="height" from="0" to="${h}" dur="1s" fill="freeze"/><animate attributeName="y" from="140" to="${140-h}" dur="1s" fill="freeze"/></rect><text x="${68+i*100}" y="154" font-size="11" fill="var(--t2)" text-anchor="middle">${k}</text><text x="${68+i*100}" y="${134-h}" font-size="12" font-weight="700" fill="var(--t1)" text-anchor="middle">${w[k]}</text></g>`}).join('')}</svg>`;
+}
+function donutChart(){
+  const d=[['Marksman',8,'var(--accent)'],['Rifle',6,'var(--accent-2)'],['Pistol',2,'var(--cyan)']];
+  const total=16;let off=0;const R=46,C=2*Math.PI*R;
+  const segs=d.map(s=>{const frac=s[1]/total,len=C*frac;const el=`<circle cx="80" cy="80" r="${R}" fill="none" stroke="${s[2]}" stroke-width="20" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"/>`;off+=len;return el}).join('');
+  return `<svg viewBox="0 0 160 160" style="width:140px">${segs}<text x="80" y="78" font-size="22" font-weight="800" fill="var(--t1)" text-anchor="middle">16</text><text x="80" y="96" font-size="9" fill="var(--t2)" text-anchor="middle">matches</text></svg>`;
+}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+function renderNav(){
+  // drawer
+  let groups={},html='';
+  NAV.forEach(n=>{(groups[n.group]=groups[n.group]||[]).push(n)});
+  for(const g in groups){
+    html+='<div class="nav-label">'+g+'</div>';
+    groups[g].forEach(n=>{html+='<a class="nav-item'+(ROUTE.tab===n.tab?' on':'')+'" data-action="tab" data-tab="'+n.tab+'">'+I[n.icon]+'<span>'+n.label+'</span></a>';});
+  }
+  html+='<div class="grow"></div>';
+  html+='<a class="nav-item" data-action="tab" data-tab="launch" style="opacity:.7">'+I.help+'<span>Help</span></a>';
+  html+='<a class="nav-item" data-action="toggle-theme">'+I.gear+'<span>Theme</span></a>';
+  $('#drawer').innerHTML=html;
+  // dock
+  $('#dock').innerHTML='<div class="dock-row">'+NAV.map(n=>'<a class="dock-item'+(ROUTE.tab===n.tab?' on':'')+'" data-action="tab" data-tab="'+n.tab+'">'+I[n.icon]+'<span>'+n.short+'</span></a>').join('')+'</div>';
+  // topbar stats
+  const lvl=Store.get('level'),xp=Store.get('xp'),pct=Math.min(100,Math.round((xp%xpForLevel(lvl))/xpForLevel(lvl)*100))||Math.round(xp/xpForLevel(lvl)*100);
+  $('#tbName').innerHTML=Store.get('learnerName')+' <small>Lv.'+lvl+'</small>';
+  $('#tbXp').style.width=Math.min(100,pct)+'%';
+  $('#tbAvatar').textContent=Store.get('avatar');
+}
+
+function renderMain(){
+  const el=$('#mainInner');let html='';
+  if(ROUTE.gameId){html=GamePlayer();}
+  else if(ROUTE.lessonId){html=LessonView();}
+  else{
+    switch(ROUTE.tab){
+      case 'arganta':html=ArgantaHome();break;
+      case 'web':html=ModuleHome('web','Web Quest','Understand how the web and ArgantaLab work');break;
+      case 'ai':html=ModuleHome('ai','AI Forge','Master AI tools and learn to speak with machines');break;
+      case 'data':html=ModuleHome('data','Data Lab','Turn game data into insights and predictions');break;
+      case 'launch':html=LaunchStudio();break;
+    }
+  }
+  el.innerHTML=html;
+  $('#main').scrollTop=0;
+  afterRender();
+}
+
+function ArgantaHome(){
+  const lvl=Store.get('level'),xp=Store.get('xp'),pct=Math.min(100,Math.round(xp/xpForLevel(lvl)*100));
+  const done=Store.get('completedLessons').length,total=Object.keys(LESSONS).length;
+  const feat=GAMES.find(g=>g.featured);
+  return `<div class="fade-in">
+    <div class="page-head"><h1>Arganta</h1><p>Your HTML game world</p></div>
+    <div class="banner">
+      <div class="av">🧑</div>
+      <div class="hi">Hi, ${Store.get('learnerName')} 👋</div>
+      <div class="role">Level ${lvl} — Game Builder</div>
+      <div class="xpwrap"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;opacity:.9"><span>XP</span><span>${xp} / ${xpForLevel(lvl)}</span></div><div class="xptrack"><i style="width:${pct}%"></i></div></div>
+      <div class="pills"><span class="bpill">🎮 ${Store.get('gamesBuilt')} Built</span><span class="bpill">📚 ${done}/${total} Lessons</span><span class="bpill">🏅 ${Store.get('badges').length}/3 Badges</span></div>
+    </div>
+
+    <div class="section-title">Featured Experience</div>
+    <div class="hero" id="hero" data-action="open-game" data-game="${feat.id}">
+      <div class="glow" id="heroGlow"></div><div class="stars"></div>
+      <div class="live"><span class="dot"></span> Live</div>
+      <h2>${feat.name}</h2><p>${feat.desc}</p>
+      <div class="cta"><span class="btn btn-primary">${I.play} Play Now</span><span class="btn btn-ghost">◎ How It Works</span></div>
+      <div class="tags">${feat.tags.map(t=>'<span class="tag">'+t+'</span>').join('')}</div>
+    </div>
+
+    <div class="section-title">All Worlds · ${GAMES.length} games</div>
+    <div class="grid g4 stagger">
+      ${GAMES.map(g=>`<div class="gcard" data-action="open-game" data-game="${g.id}">
+        <div class="thumb">${gameThumb(g.hue)}</div>
+        <div class="body"><h3>${g.name}</h3><span>${g.tags.join(' · ')}</span><div class="play">${I.play} Play</div></div></div>`).join('')}
+      <div class="gcard add" data-action="toast" data-msg="Add more games in V2!">${I.plus}<div style="margin-top:8px;font-weight:650;font-size:13px">Add Game</div></div>
+    </div></div>`;
+}
+
+function GamePlayer(){
+  const g=GAMES.find(x=>x.id===ROUTE.gameId);
+  return `<div class="fade-in">
+    <div class="player-bar">
+      <button class="icon-btn" data-action="exit-game">${I.back}</button>
+      <div class="now">Now Playing <small>${g.name}</small></div>
+      <div style="flex:1"></div>
+      <button class="btn btn-soft" data-action="exit-game">✕ Exit</button>
+    </div>
+    <div class="frame-wrap"><iframe src="${g.file}" title="${g.name}" allow="fullscreen"></iframe></div>
+    <div class="howbox"><h4>How this works</h4><p>index.html opened another HTML file using an &lt;iframe&gt; tag. This is how Arganta launches every game.</p>
+      <span class="code">&lt;iframe src="${g.file}"&gt;&lt;/iframe&gt;</span></div></div>`;
+}
+
+function ModuleHome(tab,title,sub){
+  const lessons=tabLessons(tab);
+  const done=lessons.filter(([id])=>Store.get('completedLessons').includes(id)).length;
+  const pct=Math.round(done/lessons.length*100);
+  return `<div class="fade-in">
+    <div class="page-head"><div class="eyebrow">${title}</div><h1>${title}</h1><p>${sub}</p>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;max-width:420px"><div class="prog" style="flex:1;margin:0"><i style="width:${pct}%"></i></div><span style="font-size:13px;color:var(--t2);font-weight:600">${done}/${lessons.length} done</span></div></div>
+    <div class="grid g2 stagger">
+      ${lessons.map(([id,l])=>{
+        const isDone=Store.get('completedLessons').includes(id);
+        const locked=lessonLocked(id);
+        return `<div class="mod ${locked?'locked':''} ${isDone?'done':''}" ${locked?'':'data-action="open-lesson" data-lesson="'+id+'"'}>
+          <div class="num">${l.num}</div>
+          <div class="ic">${I[NAV.find(n=>n.tab===tab).icon]}</div>
+          <h3>${l.title}</h3><p>${l.blurb}</p>
+          <div class="foot">
+            ${locked?'<span class="startlink" style="color:var(--t3)">'+I.lock+' Locked</span>':isDone?'<span class="donechip">'+I.check+' Completed</span>':'<span class="startlink">Start '+I.arrow+'</span>'}
+            <span class="xpchip">+${l.xp} XP</span></div></div>`;
+      }).join('')}
+    </div></div>`;
+}
+
+function LaunchStudio(){
+  // mix: builder log + github + launchpad + pitch + demo entry
+  const xp=Store.get('xp'),lvl=Store.get('level');
+  const done=Store.get('completedLessons').length,total=Object.keys(LESSONS).length;
+  return `<div class="fade-in">
+    <div class="page-head"><div class="eyebrow">Launch Studio</div><h1>Launch Studio</h1><p>Publish, present, and pitch your product</p></div>
+
+    <div class="section-title">📓 Builder Log</div>
+    <div class="stats-row grid g4" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat"><div class="lbl">Total XP</div><div class="val" data-count="${xp}">0</div><div class="delta">Level ${lvl}</div></div>
+      <div class="stat"><div class="lbl">Badges</div><div class="val" data-count="${Store.get('badges').length}">0</div><div class="delta">of 3</div></div>
+      <div class="stat"><div class="lbl">Lessons</div><div class="val" data-count="${done}">0</div><div class="delta">of ${total}</div></div>
+      <div class="stat"><div class="lbl">Games Built</div><div class="val" data-count="${Store.get('gamesBuilt')}">0</div><div class="delta">live</div></div>
+    </div>
+
+    <div class="section-title">🏅 Badges</div>
+    <div class="grid g3 stagger">
+      ${Object.values(BADGES).map(b=>{const have=Store.get('badges').includes(b.name);
+        return `<div class="mod ${have?'done':'locked'}" style="text-align:center"><div class="ic" style="margin:0 auto 12px;${have?'background:linear-gradient(135deg,var(--gold),#FF7A00)':''}">${have?'<span style="color:#fff">'+I.trophy+'</span>':I.lock}</div><h3>${b.name}</h3><p>${have?'Earned! 🎉':'Complete all '+b.need.length+' lessons'}</p></div>`}).join('')}
+    </div>
+
+    <div class="section-title">🚀 Modules</div>
+    <div class="grid g2 stagger">
+      ${tabLessons('launch').map(([id,l])=>{const isDone=Store.get('completedLessons').includes(id),locked=lessonLocked(id);
+        return `<div class="mod ${locked?'locked':''} ${isDone?'done':''}" ${locked?'':'data-action="open-lesson" data-lesson="'+id+'"'}><div class="num">${l.num}</div><div class="ic">${I.launch}</div><h3>${l.title}</h3><p>${l.blurb}</p><div class="foot">${locked?'<span class="startlink" style="color:var(--t3)">'+I.lock+' Locked</span>':isDone?'<span class="donechip">'+I.check+' Done</span>':'<span class="startlink">Start '+I.arrow+'</span>'}<span class="xpchip">+${l.xp} XP</span></div></div>`}).join('')}
+      <div class="mod" data-action="open-lesson" data-lesson="pitch"><div class="num">04</div><div class="ic">🎤</div><h3>Pitch Studio</h3><p>The 9-step pitch formula & your script</p><div class="foot"><span class="startlink">Open ${I.arrow}</span><span class="xpchip">+40 XP</span></div></div>
+      <div class="mod" data-action="open-lesson" data-lesson="demo"><div class="num">05</div><div class="ic">🎬</div><h3>Demo Stage</h3><p>Cinematic slide presentation</p><div class="foot"><span class="startlink">Present ${I.arrow}</span><span class="xpchip">+40 XP</span></div></div>
+    </div></div>`;
+}
+
+/* ---------- LESSON VIEW (data-driven) ---------- */
+function LessonView(){
+  if(ROUTE.lessonId==='pitch')return PitchStudio();
+  if(ROUTE.lessonId==='demo')return DemoStage();
+  const L=LESSONS[ROUTE.lessonId];if(!L)return '<p>Lesson not found.</p>';
+  const backTab=L.tab;
+  const stepCount=L.steps.length;
+  return `<div class="fade-in">
+    <div class="player-bar"><button class="icon-btn" data-action="back-tab" data-tab="${backTab}">${I.back}</button>
+      <div class="now">${L.title}<small>Step ${ROUTE.step+1} of ${stepCount}</small></div></div>
+    ${scene(L.scene)}
+    ${L.interactive?Interactives[L.interactive]():''}
+    <div class="section-title">What this means</div>
+    <div class="exgrid grid g2 stagger">${L.cards.map(c=>`<div class="exchip"><div class="e">${c[0]}</div><h4>${c[1]}</h4><p>${c[2]}</p></div>`).join('')}</div>
+    <div class="steps">${L.steps.map((s,i)=>`<div class="node ${i===ROUTE.step?'on':''} ${i<ROUTE.step?'done':''}">${i<L.steps.length-1?'<div class="bar"></div>':''}<div class="dot"></div><span>${s}</span></div>`).join('')}</div>
+    <div class="nav-row">
+      <button class="btn btn-soft" data-action="step" data-dir="-1" ${ROUTE.step===0?'style="visibility:hidden"':''}>${I.back} Previous</button>
+      ${ROUTE.step<stepCount-1
+        ?'<button class="btn btn-accent" data-action="step" data-dir="1">Next '+I.arrow+'</button>'
+        :'<button class="btn btn-accent" data-action="complete" data-lesson="'+ROUTE.lessonId+'">'+(Store.get('completedLessons').includes(ROUTE.lessonId)?'Done ✓ Replay':'Complete +'+L.xp+' XP')+'</button>'}
+    </div></div>`;
+}
+
+/* ---------- INTERACTIVES ---------- */
+const Interactives={
+  promptBuilder(){return `<div class="tryit"><div class="section-title" style="margin-top:0">✦ Try It — Prompt Builder</div>
+    <div class="field"><label>What are you building?</label><input id="pb1" placeholder="a 3D arena game"></div>
+    <div class="field"><label>Who is it for?</label><input id="pb2" placeholder="kids age 8–14"></div>
+    <div class="field"><label>What is the goal?</label><input id="pb3" placeholder="score points and survive"></div>
+    <button class="btn btn-accent" data-action="prompt-gen">Generate Prompt ${I.arrow}</button>
+    <div class="result-box" id="pbOut">Your generated prompt will appear here…</div></div>`;},
+  statsExplorer(){return `<div class="tryit"><div class="section-title" style="margin-top:0">📊 Statistics Explorer</div>
+    <table class="data"><thead><tr><th>Match</th><th>Result</th><th>Coins</th><th>Weapon</th><th>Deaths</th></tr></thead><tbody>
+      ${SAMPLE.map(d=>`<tr><td>${d.m}</td><td>${d.win?'✅ Win':'❌ Loss'}</td><td>${d.coins}</td><td>${d.weapon}</td><td>${d.deaths}</td></tr>`).join('')}</tbody></table>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <select id="seCol" class="field" style="flex:1;min-width:120px"><option value="coins">Coins</option><option value="deaths">Deaths</option></select>
+      <select id="seFn" style="flex:1;min-width:120px;padding:11px 13px;border-radius:14px;border:1px solid var(--border);background:var(--bg-2);font:inherit;color:var(--t1)"><option value="avg">Average</option><option value="sum">Total</option><option value="max">Max</option><option value="min">Min</option></select>
+      <button class="btn btn-accent" data-action="stats-calc">Calculate</button></div>
+    <div class="result-box" id="seOut">Pick a column and function, then Calculate.</div></div>`;},
+  chartMagic(){return `<div class="tryit"><div class="section-title" style="margin-top:0">✨ Chart Magic</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="cmTabs">
+      ${['line','bar','donut'].map((t,i)=>`<button class="mini-btn" style="color:var(--t1);background:var(--card);border:1px solid var(--border)${i===0?';border-color:var(--accent);color:var(--accent)':''}" data-action="chart-tab" data-type="${t}">${t==='line'?'📈 Line':t==='bar'?'📊 Bar':'🥧 Donut'}</button>`).join('')}</div>
+    <div class="chart-card" id="cmChart">${lineChart()}</div>
+    <div class="insight"><div class="h">${I.spark} Insight</div><p id="cmInsight">Coins trend upward — Match 3 was your best run.</p></div></div>`;},
+  dashboard(){return `<div style="margin-top:18px">
+    <div class="stats-row grid g4" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat"><div class="lbl">Matches</div><div class="val" data-count="12">0</div><div class="delta">▲ +2</div></div>
+      <div class="stat"><div class="lbl">Win Rate</div><div class="val" data-count="67" data-suffix="%">0</div><div class="delta">▲ +8%</div></div>
+      <div class="stat"><div class="lbl">Coins</div><div class="val" data-count="620">0</div><div class="delta">▲ +80</div></div>
+      <div class="stat"><div class="lbl">XP</div><div class="val" data-count="240">0</div><div class="delta">▲ +40</div></div></div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="chart-card"><h4>Coins Over Time</h4>${lineChart()}</div>
+      <div class="chart-card"><h4>Weapon Performance</h4>${barChart()}</div></div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="chart-card"><h4>Weapon Usage</h4><div style="display:grid;place-items:center;padding:8px">${donutChart()}</div></div>
+      <div class="chart-card"><h4>Weekly Activity</h4>${heatmap()}</div></div>
+    <div class="insight"><div class="h">${I.spark} Insight</div><p>You win more often with the <b>Marksman</b> (8/10 = 80%). Switch from Pistol when you want to win. Coins are up <b>+120%</b> over the last 5 matches — keep playing!</p></div></div>`;},
+  predictBot(){return `<div class="tryit"><div class="section-title" style="margin-top:0">🤖 Try the Prediction Bot</div>
+    <div class="field"><label>Accuracy — <span id="pAcc">75</span>%</label><input type="range" class="slider" id="sAcc" min="0" max="100" value="75" data-action="predict-live"></div>
+    <div class="field"><label>Win Streak — <span id="pStk">3</span> games</label><input type="range" class="slider" id="sStk" min="0" max="10" value="3" data-action="predict-live"></div>
+    <div class="field"><label>Deaths — <span id="pDth">4</span></label><input type="range" class="slider" id="sDth" min="0" max="10" value="4" data-action="predict-live"></div>
+    <div class="field"><label>Weapon</label><select id="sWpn" data-action="predict-live"><option value="3">Marksman</option><option value="2">Rifle</option><option value="1">Pistol</option></select></div>
+    <div class="result-box" style="text-align:center"><div class="gauge" id="pGauge" style="color:var(--accent-3)">78%</div><div style="font-size:13px;font-weight:700;margin-top:4px" id="pVerdict">✅ HIGH win chance</div><div style="font-size:13px;color:var(--t2);margin-top:6px" id="pAdvice">Keep your streak and use the Marksman.</div></div></div>`;},
+};
+function heatmap(){
+  const days=['M','T','W','T','F','S','S'];let cells='';
+  for(let d=0;d<7;d++){const v=[3,2,4,1,5,3,2][d];cells+=`<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:30px;height:30px;border-radius:8px;background:color-mix(in srgb,var(--accent) ${v*18}%,var(--bg-2))"></div><span style="font-size:10px;color:var(--t3)">${days[d]}</span></div>`;}
+  return '<div style="display:flex;gap:8px;justify-content:space-between;padding:10px 0">'+cells+'</div>';
+}
+
+/* ---------- PITCH STUDIO ---------- */
+function PitchStudio(){
+  const steps=['Hello','Product name','Who it is for','What it does','Why it is fun','Demo it','How I built it','What I learned','Ask for feedback'];
+  const script=Store.get('pitchScript')||`Hi, my name is ${Store.get('learnerName')}.\n\nToday I want to show you Arganta — my HTML game world where I can play games that I build myself.\n\nThe first game is Strike Zone 3D. It has health, weapons, coins, and a shop.\n\nI built it by learning how to speak with AI, improve prompts, and fix bugs.\n\nNext I want to add more games, a leaderboard, and better mobile controls. Please try it and tell me what to improve!`;
+  return `<div class="fade-in"><div class="player-bar"><button class="icon-btn" data-action="back-tab" data-tab="launch">${I.back}</button><div class="now">Pitch Studio<small>Explain and sell your product</small></div></div>
+    <div class="section-title">The 9-Step Pitch Formula</div>
+    <div class="card pad"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      ${steps.map((s,i)=>`<div style="display:flex;gap:10px;align-items:center;font-size:13.5px"><span style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none">${i+1}</span>${s}</div>`).join('')}</div></div>
+    <div class="section-title">My Pitch Script</div>
+    <div class="card pad"><textarea class="note-area" id="pitchText" style="min-height:200px">${script}</textarea>
+      <div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-accent" data-action="save-pitch">Save Script</button><button class="btn btn-soft" data-action="open-lesson" data-lesson="demo">Practice in Demo Stage ${I.arrow}</button></div></div></div>`;
+}
+
+/* ---------- DEMO STAGE ---------- */
+const SLIDES=[
+  {t:'Arganta',s:'Your HTML Game World',n:'Hi, my name is '+'Baginda'+'. Today I want to show you Arganta, my HTML game world.'},
+  {t:'What It Does',s:'Arganta opens HTML games in one hub',n:'Each game is a single HTML file. Arganta launches them with an iframe.'},
+  {t:'Live Demo',s:'Strike Zone 3D',n:'Let me show you the first game I built — Strike Zone 3D.',demo:true},
+  {t:'What I Learned',s:'Web · AI · Data · GitHub · Product thinking',n:'I learned how websites, databases, AI, and data dashboards work.'},
+  {t:'What Comes Next',s:'More games · Leaderboard · Mobile controls 🚀',n:'Next I want more games, a leaderboard, and better mobile controls. Please give me feedback!'},
+];
+function DemoStage(){
+  const i=ROUTE.slide||0,sl=SLIDES[i];
+  return `<div class="fade-in"><div class="player-bar"><button class="icon-btn" data-action="back-tab" data-tab="launch">${I.back}</button><div class="now">Demo Stage<small>Slide ${i+1} of ${SLIDES.length}</small></div></div>
+    <div class="stage"><canvas id="stageFx"></canvas>
+      <div class="dots">${SLIDES.map((_,k)=>'<i class="'+(k===i?'on':'')+'"></i>').join('')}</div>
+      <div class="slide fade-in" id="slideBody">
+        ${i===0?'<div style="margin:0 auto 18px">'+LOGO.replace('width="30" height="30"','width="64" height="64"')+'</div>':''}
+        <div style="font-size:13px;letter-spacing:.1em;text-transform:uppercase;opacity:.6;font-weight:700">Slide ${i+1}</div>
+        <h2 style="font-size:38px;font-weight:850;letter-spacing:-0.03em;margin:8px 0">${sl.t}</h2>
+        <p style="font-size:17px;opacity:.85">${sl.s}</p>
+        ${sl.demo?'<button class="btn btn-primary" style="margin-top:18px" data-action="open-game" data-game="strike">'+I.play+' Open Strike Zone 3D</button>':''}
+        ${i===SLIDES.length-1?'<button class="btn btn-accent" style="margin-top:18px" data-action="finish-demo">Finish Presentation 🎉</button>':''}
+      </div>
+      <div class="nav">
+        <button class="mini-btn" data-action="slide" data-dir="-1" ${i===0?'style="visibility:hidden"':''}>${I.back} Back</button>
+        <button class="mini-btn" data-action="slide" data-dir="1" ${i===SLIDES.length-1?'style="visibility:hidden"':''}>Next ${I.arrow}</button>
+      </div></div>
+    <div class="howbox"><h4>📝 Speaker Notes — Slide ${i+1}</h4><p>"${sl.n}"</p></div></div>`;
+}
+
+/* ---------- SIDE PANEL ---------- */
+function renderSide(){
+  const el=$('#side');let html='';
+  if(ROUTE.gameId){
+    const g=GAMES.find(x=>x.id===ROUTE.gameId);
+    html=`<div class="sp-block"><div class="sp-h"><span class="d"></span>Now Playing</div><div class="sp-body"><b>${g.name}</b><p style="color:var(--t2);margin-top:6px">${g.desc}</p></div></div>
+      <div class="spline"></div>
+      <div class="sp-block"><div class="sp-h"><span class="d"></span>How it works</div><div class="sp-body">An &lt;iframe&gt; loads another HTML file inside this page — that's the whole trick.</div></div>
+      <div class="sp-block"><div class="sp-h"><span class="d"></span>What to try</div><div class="mission">${['Move with WASD','Hit the targets','Earn coins','Open the shop'].map(m=>'<div class="mrow"><div class="box">'+I.check+'</div><span>'+m+'</span></div>').join('')}</div></div>`;
+  } else if(ROUTE.lessonId && LESSONS[ROUTE.lessonId]){
+    const L=LESSONS[ROUTE.lessonId];
+    const ck=Store.get('missions')[ROUTE.lessonId]||[];
+    html=`<div class="sp-block"><div class="sp-h"><span class="d"></span>${L.title}</div><div class="sp-body">Step ${ROUTE.step+1} / ${L.steps.length}</div></div>
+      <div class="sp-block"><div class="sp-h"><span class="d"></span>Key Idea</div><div class="sp-body">${L.key}</div></div>
+      <div class="spline"></div>
+      <div class="sp-block"><div class="sp-h">📚 Vocabulary</div><div class="vocab">${L.vocab.map(v=>'<div class="vrow"><b>'+v[0]+'</b><span>'+v[1]+'</span></div>').join('')}</div></div>
+      <div class="sp-block"><div class="sp-h">✓ Mini Mission</div><div class="mission">${L.mission.map((m,i)=>'<div class="mrow '+(ck.includes(i)?'ck':'')+'" data-action="mission" data-i="'+i+'"><div class="box">'+I.check+'</div><span>'+m+'</span></div>').join('')}</div></div>`;
+  } else {
+    const tab=ROUTE.tab;const meta={arganta:['Arganta','Arganta is your HTML game world. Each game is one HTML file you can play and improve.'],web:['Web Quest','Understand how the internet and ArgantaLab work together.'],ai:['AI Forge','Learn to speak with AI and use it to build real products.'],data:['Data Lab','Turn raw game numbers into charts, dashboards, and predictions.'],launch:['Launch Studio','Publish your product, then present and pitch it like a founder.']}[tab];
+    const lessons=tabLessons(tab);
+    html=`<div class="sp-block"><div class="sp-h"><span class="d"></span>${meta[0]}</div><div class="sp-body">${meta[1]}</div></div>`;
+    if(lessons.length){html+=`<div class="spline"></div><div class="sp-block"><div class="sp-h">📖 In this tab</div><div class="vocab">${lessons.map(([id,l])=>{const d=Store.get('completedLessons').includes(id),lk=lessonLocked(id);return '<div class="vrow"><span style="min-width:0">'+l.title+'</span><b style="margin-left:auto;color:'+(d?'var(--accent-3)':lk?'var(--t3)':'var(--accent)')+'">'+(d?'✓':lk?'🔒':'○')+'</b></div>'}).join('')}</div></div>`;}
+    const badge=BADGES[tab];
+    if(badge){const have=Store.get('badges').includes(badge.name);html+=`<div class="sp-block"><div class="sp-h">🏅 Badge</div><div class="sp-body" style="display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:${have?'linear-gradient(135deg,var(--gold),#FF7A00)':'var(--border)'};color:#fff">${have?I.trophy:I.lock}</div><div><b>${badge.name}</b><div style="font-size:12px;color:var(--t2)">${have?'Earned!':'Complete all 4 lessons'}</div></div></div></div>`;}
+  }
+  el.innerHTML=html;
+}
+
+/* ---------- AFTER RENDER (animations / canvas) ---------- */
+function afterRender(){
+  // count-up numbers
+  document.querySelectorAll('[data-count]').forEach(el=>{
+    const target=+el.dataset.count,suffix=el.dataset.suffix||'';let cur=0;const dur=900,t0=performance.now();
+    function tick(t){const p=Math.min(1,(t-t0)/dur);cur=Math.round(target*(1-Math.pow(1-p,3)));el.textContent=cur+suffix;if(p<1)requestAnimationFrame(tick);}
+    requestAnimationFrame(tick);
+  });
+  // hero pointer glow
+  const hero=$('#hero'),glow=$('#heroGlow');
+  if(hero&&glow){hero.addEventListener('pointermove',e=>{const r=hero.getBoundingClientRect();glow.style.transform='translate('+(e.clientX-r.left-130)+'px,'+(e.clientY-r.top-60)+'px)';});}
+  // demo stage particles
+  const cv=$('#stageFx');if(cv)startStageFx(cv);
+}
+
+let fxRAF;
+function startStageFx(canvas){
+  cancelAnimationFrame(fxRAF);
+  const ctx=canvas.getContext('2d');function size(){canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;}size();
+  const N=60,ps=Array.from({length:N},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.8+.4,s:Math.random()*.4+.1}));
+  function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);
+    const g=ctx.createRadialGradient(canvas.width/2,40,10,canvas.width/2,40,canvas.height);g.addColorStop(0,'rgba(120,160,255,.18)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='rgba(255,255,255,.7)';ps.forEach(p=>{p.y-=p.s;if(p.y<0){p.y=canvas.height;p.x=Math.random()*canvas.width;}ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();});
+    fxRAF=requestAnimationFrame(draw);}
+  draw();
+}
+
+/* ============================================================
+   EVENT DELEGATION
+   ============================================================ */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-action]');if(!t)return;
+  const a=t.dataset.action;
+  switch(a){
+    case 'tab':go({tab:t.dataset.tab,page:'home',lessonId:null,gameId:null,step:0,slide:0});break;
+    case 'back-tab':go({tab:t.dataset.tab,lessonId:null,gameId:null,step:0});break;
+    case 'open-game':go({gameId:t.dataset.game});break;
+    case 'exit-game':go({gameId:null});break;
+    case 'open-lesson':go({lessonId:t.dataset.lesson,gameId:null,step:0,slide:0});break;
+    case 'toggle-theme':toggleTheme();break;
+    case 'replay':renderMain();break;
+    case 'toast':toast(t.dataset.msg,'🚧');break;
+    case 'close-modal':$('#modalRoot').innerHTML='';break;
+    case 'step':{const L=LESSONS[ROUTE.lessonId];let s=ROUTE.step+ +t.dataset.dir;s=Math.max(0,Math.min(L.steps.length-1,s));go({step:s});break;}
+    case 'mission':{const id=ROUTE.lessonId,i=+t.dataset.i;const m={...Store.get('missions')};const arr=new Set(m[id]||[]);arr.has(i)?arr.delete(i):arr.add(i);m[id]=[...arr];Store.set({missions:m});renderSide();break;}
+    case 'complete':completeLesson(t.dataset.lesson);break;
+    case 'prompt-gen':{const v=id=>($('#'+id).value||$('#'+id).placeholder);$('#pbOut').innerHTML='<b>Create '+v('pb1')+' for '+v('pb2')+'.</b><br>The goal is to '+v('pb3')+'.<br>Single HTML file. Design first, then build.<br><button class="btn btn-soft" style="margin-top:10px" data-action="toast" data-msg="Copied!">Copy</button>';break;}
+    case 'stats-calc':statsCalc();break;
+    case 'chart-tab':chartTab(t);break;
+    case 'slide':{let s=(ROUTE.slide||0)+ +t.dataset.dir;s=Math.max(0,Math.min(SLIDES.length-1,s));go({slide:s});break;}
+    case 'finish-demo':if(!Store.get('pitchCompleted')){Store.set({pitchCompleted:true});addXp(40);}confettiBurst();toast('Presentation complete!','🎉');break;
+    case 'save-pitch':Store.set({pitchScript:$('#pitchText').value});toast('Script saved','💾');break;
+    case 'predict-live':break;
+  }
+});
+document.addEventListener('input',e=>{
+  if(e.target.closest('[data-action="predict-live"]')||['sAcc','sStk','sDth','sWpn'].includes(e.target.id))predictLive();
+});
+
+function completeLesson(id){
+  const done=Store.get('completedLessons');
+  if(!done.includes(id)){Store.set({completedLessons:[...done,id]});addXp(LESSONS[id].xp);toast(LESSONS[id].title+' complete!','🏅');checkBadges();}
+  else{go({step:0});return;}
+  go({lessonId:null,tab:LESSONS[id].tab});
+}
+function statsCalc(){
+  const col=$('#seCol').value,fn=$('#seFn').value,vals=SAMPLE.map(d=>d[col]);
+  let r,exp;const sum=vals.reduce((a,b)=>a+b,0);
+  if(fn==='avg'){r=Math.round(sum/vals.length);exp='We added all '+col+' and divided by '+vals.length+' matches.';}
+  else if(fn==='sum'){r=sum;exp='We added every '+col+' value together.';}
+  else if(fn==='max'){r=Math.max(...vals);exp='The single highest '+col+' value.';}
+  else{r=Math.min(...vals);exp='The single lowest '+col+' value.';}
+  $('#seOut').innerHTML='<b style="font-size:18px">'+fn.toUpperCase()+' '+col+' = '+r+'</b><br><span style="color:var(--t2)">'+exp+'</span>';
+}
+function chartTab(btn){
+  const type=btn.dataset.type;
+  document.querySelectorAll('#cmTabs .mini-btn').forEach(b=>{b.style.borderColor='var(--border)';b.style.color='var(--t1)';});
+  btn.style.borderColor='var(--accent)';btn.style.color='var(--accent)';
+  $('#cmChart').innerHTML=type==='line'?lineChart():type==='bar'?barChart():'<div style="display:grid;place-items:center;padding:8px">'+donutChart()+'</div>';
+  $('#cmInsight').textContent=type==='line'?'Coins trend upward — Match 3 was your best run.':type==='bar'?'Marksman wins most often — it is your strongest weapon.':'Marksman makes up half of all match wins.';
+}
+function predictLive(){
+  const acc=+$('#sAcc').value,stk=+$('#sStk').value,dth=+$('#sDth').value,wpn=+$('#sWpn').value;
+  $('#pAcc').textContent=acc;$('#pStk').textContent=stk;$('#pDth').textContent=dth;
+  let score=acc*0.5 + stk*3 + (10-dth)*2 + wpn*4;score=Math.max(0,Math.min(100,Math.round(score*0.7)));
+  const g=$('#pGauge'),v=$('#pVerdict'),ad=$('#pAdvice');
+  g.textContent=score+'%';
+  if(score>=70){g.style.color='var(--accent-3)';v.textContent='✅ HIGH win chance';ad.textContent='Great setup — keep your streak going!';}
+  else if(score>=45){g.style.color='var(--gold)';v.textContent='⚠️ MEDIUM win chance';ad.textContent='Reduce deaths or pick a stronger weapon.';}
+  else{g.style.color='var(--danger)';v.textContent='❌ LOW win chance';ad.textContent='Try the Marksman and improve accuracy.';}
+}
+
+/* ---------- SUBSCRIPTIONS ---------- */
+Store.sub(()=>{renderNav();});
+
+/* ============================================================
+   PWA — manifest (inline) + service worker
+   ============================================================ */
+(function installPWA(){
+  $('#brandLogo').innerHTML=LOGO;
+  applyTheme();
+  // inline manifest via blob
+  const iconSvg=encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" rx="120" fill="#007AFF"/><path d="M256 130l104 60v120l-104 60-104-60V190z" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="14" stroke-linejoin="round"/><circle cx="256" cy="256" r="30" fill="#fff"/></svg>');
+  const manifest={name:'ArgantaLab',short_name:'ArgantaLab',description:'Build games. Learn systems. Pitch products.',start_url:'./index.html',display:'standalone',background_color:'#EDEEF2',theme_color:'#007AFF',orientation:'any',icons:[{src:'data:image/svg+xml,'+iconSvg,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]};
+  try{const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);document.head.appendChild(link);}catch(e){}
+  // service worker (offline). Prefer external sw.js if present; fallback to inline blob.
+  if('serviceWorker' in navigator){
+    const swCode=`const C='argantalab-v1';self.addEventListener('install',e=>{self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});self.addEventListener('fetch',e=>{e.respondWith(caches.open(C).then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{if(e.request.method==='GET'&&res.ok){c.put(e.request,res.clone())}return res}).catch(()=>r))))});`;
+    navigator.serviceWorker.register('sw.js').catch(()=>{
+      try{const b=new Blob([swCode],{type:'text/javascript'});navigator.serviceWorker.register(URL.createObjectURL(b)).catch(()=>{});}catch(e){}
+    });
+  }
+})();
+
+/* ---------- BOOT ---------- */
+renderNav();renderMain();renderSide();
+</script>
+</body>
+</html>
