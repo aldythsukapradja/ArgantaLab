@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0" />
 <title>ArgantaLab — Build. Learn. Pitch.</title>
 <meta name="description" content="Build games. Learn systems. Pitch products." />
 <meta name="theme-color" content="#05070d" />
+<meta name="github-repo" content="aldythsukapradja/ArgantaLab" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="ArgantaLab" />
@@ -73,7 +74,7 @@ html[data-theme="light"] .topbar{background:linear-gradient(180deg,rgba(234,237,
 .nav-item.on{color:var(--t1);font-weight:680;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,transparent),transparent)}
 .nav-item.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--grad);box-shadow:0 0 14px var(--glow-a)}
 .nav-item.on svg{color:var(--accent)}
-.drawer .grow{flex:1}
+.drawer .nav-spacer{flex:1;min-height:12px}
 
 .main{flex:1;position:relative;overflow:hidden}
 .main-inner{height:100%;max-width:1180px;margin:0 auto;padding:18px 36px;display:flex;flex-direction:column}
@@ -157,8 +158,8 @@ html[data-theme="light"] .topbar{background:linear-gradient(180deg,rgba(234,237,
 .deck-head .now{font-weight:750;font-size:17px}.deck-head .now small{color:var(--t2);font-weight:500;display:block;font-size:12px}
 .deck-body{flex:1;min-height:0;display:grid;place-items:center;position:relative}
 .deck-slide{width:100%;max-width:920px;text-align:center}
-.deck-slide .art{width:clamp(120px,20vh,200px);height:clamp(120px,20vh,200px);margin:0 auto clamp(14px,3vh,28px);border-radius:var(--r-2xl);position:relative;overflow:hidden;border:1px solid var(--border);background:linear-gradient(160deg,#0a1124,#0c1430 70%,#070b18);display:grid;place-items:center;box-shadow:var(--shadow)}
-.deck-slide .art .sky{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 18% 24%,#fff,transparent),radial-gradient(1px 1px at 72% 38%,#9cf,transparent),radial-gradient(1.5px 1.5px at 46% 72%,#fff,transparent),radial-gradient(1px 1px at 86% 80%,#fff,transparent);opacity:.5}
+.deck-slide .art{width:clamp(118px,19vh,190px);height:clamp(118px,19vh,190px);margin:0 auto clamp(14px,3vh,26px);border-radius:var(--r-2xl);position:relative;overflow:hidden;border:1px solid var(--border);background:linear-gradient(150deg,color-mix(in srgb,var(--accent) 24%,var(--bg-2)),color-mix(in srgb,var(--accent-2) 16%,var(--bg-2)));display:grid;place-items:center;box-shadow:var(--shadow)}
+.deck-slide .art .sky{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 18% 24%,#fff,transparent),radial-gradient(1px 1px at 72% 38%,#fff,transparent),radial-gradient(1.5px 1.5px at 46% 72%,#fff,transparent),radial-gradient(1px 1px at 86% 80%,#fff,transparent);opacity:.4}
 .deck-slide .art .em{font-size:clamp(54px,9vh,96px);filter:drop-shadow(0 12px 40px rgba(0,0,0,.5))}
 .deck-slide .n{font-size:13px;font-weight:750;color:var(--accent);letter-spacing:.08em}
 .deck-slide h2{font-size:clamp(28px,5vw,56px);font-weight:840;letter-spacing:-0.03em;margin:6px 0 14px}
@@ -232,9 +233,11 @@ table.data td{padding:10px 11px;border-bottom:1px solid var(--border-2)}
 .game-win:fullscreen,.game-win:-webkit-full-screen{width:100vw;height:100vh;border-radius:0}
 
 /* dock */
-.dock{display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;padding:8px 14px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(0deg,var(--bg),rgba(5,7,13,.6));backdrop-filter:blur(24px);border-top:1px solid var(--border)}
+.dock{display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;padding:8px 14px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(5,7,13,.92),rgba(5,7,13,.62));backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border)}
+html[data-theme="light"] .dock{background:linear-gradient(0deg,rgba(244,246,251,.96),rgba(244,246,251,.78));box-shadow:0 -14px 38px rgba(20,30,60,.12)}
 .dock-row{display:flex;justify-content:space-around;max-width:540px;margin:0 auto}
-.dock-item{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--t3);font-size:10.5px;font-weight:600;padding:6px;flex:1}
+.dock-item{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--t3);font-size:10.5px;font-weight:600;padding:6px;flex:1;min-width:0}
+.dock-item span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dock-item svg{width:24px;height:24px;stroke-width:1.8}.dock-item.on{color:var(--accent)}
 
 /* toast + modal */
@@ -260,8 +263,9 @@ table.data td{padding:10px 11px;border-bottom:1px solid var(--border-2)}
 .show-prog{display:flex;align-items:center;gap:14px;width:min(420px,84vw)}
 .coverflow{flex:1;min-height:0;display:flex;align-items:center;gap:6px;width:100%}
 .cf-stage{flex:1;height:100%;position:relative;perspective:1600px}
-.cf-card{position:absolute;left:50%;top:50%;width:min(390px,76vw);transform:translate(-50%,-50%);
-  border-radius:var(--r-2xl);padding:clamp(22px,3vh,34px);border:1px solid var(--border);background:var(--panel-2);
+.cf-card{position:absolute;left:50%;top:50%;width:min(380px,76vw);height:clamp(340px,48vh,420px);transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;justify-content:center;
+  border-radius:var(--r-2xl);padding:clamp(22px,3vh,32px);border:1px solid var(--border);background:var(--panel-2);
   backdrop-filter:blur(18px);box-shadow:var(--shadow);text-align:left;cursor:pointer;
   transition:transform .6s var(--spring),opacity .45s var(--ease),box-shadow .4s,border-color .4s;will-change:transform,opacity}
 .cf-card.active{cursor:default;border-color:color-mix(in srgb,var(--accent) 50%,var(--border));box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 70px var(--glow-a)}
@@ -281,6 +285,41 @@ table.data td{padding:10px 11px;border-bottom:1px solid var(--border-2)}
 .cf-arrow svg{width:22px;height:22px}
 .cf-arrow:hover{transform:scale(1.12);border-color:var(--accent);box-shadow:0 8px 24px var(--glow-a)}
 
+/* ====== ARGANTA · App Store-style game list ====== */
+.screen.arg{justify-content:flex-start;gap:18px;padding-top:6px}
+.arg-hero{display:flex;flex-direction:column;gap:14px}
+.arg-hero .h-title{font-size:clamp(30px,5vw,62px)}
+.glist{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grow{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:18px;border:1px solid var(--border);background:var(--panel);backdrop-filter:blur(8px);cursor:pointer;transition:.25s var(--ease)}
+.grow:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:var(--shadow)}
+.grow .gic{width:62px;height:62px;border-radius:15px;overflow:hidden;flex:none;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.grow .gic svg{width:100%;height:100%;display:block}
+.grow .gmeta{flex:1;min-width:0}
+.grow .gmeta h3{font-size:16px;font-weight:730;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grow .gmeta h3 em{font-style:normal;font-size:9.5px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--green);background:color-mix(in srgb,var(--green) 16%,transparent);padding:3px 8px;border-radius:20px}
+.grow .gmeta span{font-size:12.5px;color:var(--t2)}
+.grow .get{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 17px;border-radius:20px;background:var(--grad);color:#fff;font-weight:730;font-size:13px;box-shadow:0 6px 16px var(--glow-b)}
+.grow .get svg{width:14px;height:14px}
+.empty-games{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;padding:18px;border-radius:18px;border:1px dashed var(--border);background:var(--panel);color:var(--t2)}
+.empty-games b{color:var(--t1);font-size:15px}.empty-games span{font-size:13px;line-height:1.45}.empty-games code{color:var(--accent)}
+
+/* ====== LESSON · analogy vs real example side by side ====== */
+.deck-slide.rich{max-width:900px}
+.rich-top{display:flex;align-items:center;gap:18px;justify-content:center;margin-bottom:clamp(16px,3vh,26px)}
+.rich-ic{width:clamp(64px,11vh,90px);height:clamp(64px,11vh,90px);border-radius:24px;display:grid;place-items:center;font-size:clamp(34px,6vh,46px);background:linear-gradient(140deg,color-mix(in srgb,var(--accent) 22%,var(--bg-2)),color-mix(in srgb,var(--accent-2) 14%,var(--bg-2)));border:1px solid var(--border);box-shadow:var(--shadow);flex:none}
+.rich-top .tt{text-align:left}
+.rich-top .n{text-align:left}
+.rich-top h2{font-size:clamp(24px,4vw,42px);text-align:left;font-weight:830;letter-spacing:-0.03em;margin-top:4px}
+.relate{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.rcard{padding:clamp(16px,2.4vh,24px);border-radius:var(--r-xl);border:1px solid var(--border);text-align:left}
+.rcard.a{background:linear-gradient(140deg,color-mix(in srgb,var(--accent) 14%,transparent),transparent);border-color:color-mix(in srgb,var(--accent) 32%,var(--border))}
+.rcard.r{background:linear-gradient(140deg,color-mix(in srgb,var(--green) 13%,transparent),transparent);border-color:color-mix(in srgb,var(--green) 32%,var(--border))}
+.rcard .rh{font-size:12px;font-weight:750;letter-spacing:.03em;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.rcard.a .rh{color:var(--accent)}.rcard.r .rh{color:var(--green)}
+.rcard p{font-size:clamp(14px,1.9vw,18px);line-height:1.5;color:var(--t1)}
+@media(max-width:680px){.relate{grid-template-columns:1fr}.rich-top{flex-direction:column;text-align:center;gap:12px}.rich-top .tt,.rich-top h2,.rich-top .n{text-align:center}}
+
+@media(max-width:1024px){.glist{grid-template-columns:1fr}}
 .hidden{display:none!important}
 
 @media(max-width:1024px){
@@ -313,9 +352,10 @@ table.data td{padding:10px 11px;border-bottom:1px solid var(--border-2)}
 
 <div id="app">
   <header class="topbar">
-    <div class="brand"><span id="brandLogo"></span><span>Arganta<b>Lab</b></span></div>
+    <div class="brand"><span id="brandLogo"></span><span><b>ArgantaLab</b></span></div>
     <div class="spacer"></div>
     <div class="tb-stats"><div class="nm" id="tbName">Baginda <small>Lv.1</small></div><div class="xpbar"><i id="tbXp" style="width:24%"></i></div></div>
+    <button class="icon-btn" data-action="open-concept" id="conceptBtn" title="Concept"></button>
     <button class="icon-btn" data-action="toggle-theme" id="themeBtn" title="Theme"></button>
     <div class="avatar" id="tbAvatar">B</div>
   </header>
@@ -326,7 +366,6 @@ table.data td{padding:10px 11px;border-bottom:1px solid var(--border-2)}
   <nav class="dock" id="dock"></nav>
 </div>
 
-<button class="concept-toggle" data-action="open-concept" id="conceptBtn"></button>
 <div class="concept-back" id="conceptBack" data-action="close-concept"></div>
 <aside class="concept" id="concept"></aside>
 
@@ -386,47 +425,72 @@ const LOGO='<svg width="32" height="32" viewBox="0 0 40 40"><defs><linearGradien
 
 /* STORE */
 const KEY='argantalab_state_v3';
-const DEFAULT={learnerName:'Baginda',avatar:'B',userId:null,xp:120,level:1,badges:[],completedLessons:[],gamesPlayed:[],gamesBuilt:1,bugsFixed:0,lastTab:'arganta',pitchScript:'',pitchCompleted:false,reflectionLog:[],theme:'dark',missions:{}};
+const DEFAULT={learnerName:'Baginda',avatar:'B',userId:null,xp:120,level:1,badges:[],completedLessons:[],gamesPlayed:[],gamesBuilt:1,bugsFixed:0,lastTab:'arganta',pitchScript:'',pitchCompleted:false,reflectionLog:[],theme:'light',missions:{}};
 function load(){try{return {...DEFAULT,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return {...DEFAULT}}}
 const Store={state:load(),subs:[],get(k){return this.state[k]},set(p){Object.assign(this.state,p);this.persist();this.emit()},persist(){try{localStorage.setItem(KEY,JSON.stringify(this.state))}catch(e){}},sub(f){this.subs.push(f)},emit(){this.subs.forEach(f=>f())}};
 let ROUTE={tab:Store.get('lastTab')||'arganta',lessonId:null,step:0};
 let carIdx=0;
 
 /* GAMES */
-let GAMES=[
-  {id:'strike',file:'AppGame_Strike_Zone_3D.html',name:'Strike Zone 3D',tags:['3D','Shooter'],hue:210,featured:true,desc:'Health, weapons, coins, and a shop. The first product built with AI + HTML.'},
-  {id:'nitro',file:'AppGame_Nitro_Edge_Racing.html',name:'Nitro Edge Racing',tags:['Racing','Arcade'],hue:18,desc:'High-speed neon racer. Drift the edge and chase the leaderboard.'},
-  {id:'critter',file:'AppGame_Strike_Zone_Critter_Keys.html',name:'Critter Keys',tags:['Typing','Arcade'],hue:285,desc:'Catch critters by hitting the right keys. Fast typing fun.'},
-  {id:'kincatch',file:'AppGame_Strike_Zone_Kincatch.html',name:'Kincatch',tags:['Catch','Reflex'],hue:150,desc:'A reflex catching game. Quick hands, quick mind.'},
-];
-function prettyName(f){return f.replace(/^AppGame_/,'').replace(/\.html$/i,'').replace(/_/g,' ').trim();}
+const GAME_META={
+  'Strike Zone 3D':{id:'strike',tags:['3D','Shooter'],hue:210,featured:true,desc:'Health, weapons, coins, and a shop. The first product built with AI + HTML.'},
+  'Nitro Edge Racing':{id:'nitro',tags:['Racing','Arcade'],hue:18,desc:'High-speed neon racer. Drift the edge and chase the leaderboard.'},
+  'Strike Zone Critter Keys':{id:'critter',name:'Critter Keys',tags:['Typing','Arcade'],hue:285,desc:'Catch critters by hitting the right keys. Fast typing fun.'},
+  'Strike Zone Kincatch':{id:'kincatch',name:'Kincatch',tags:['Catch','Reflex'],hue:150,desc:'A reflex catching game. Quick hands, quick mind.'},
+};
+let GAMES=[];
+let discoveryMessage='';
+function normalizeGameFile(f){return decodeURIComponent(String(f).split(/[?#]/)[0].split('/').pop()||'');}
+function prettyName(f){return normalizeGameFile(f).replace(/^AppGame_/,'').replace(/\.html$/i,'').replace(/_/g,' ').trim();}
 function hueFrom(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;}
-function addDiscovered(f){if(GAMES.some(g=>g.file.toLowerCase()===f.toLowerCase()))return false;GAMES.push({id:'auto-'+f,file:f,name:prettyName(f),tags:['Game'],hue:hueFrom(f),desc:'A game world built for Arganta.'});return true;}
+function gameIdFrom(f){return 'game-'+prettyName(f).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function extractGameFiles(txt){const found=new Set(),re=/AppGame_[A-Za-z0-9_-]+\.html/gi;let m;while((m=re.exec(txt)))found.add(normalizeGameFile(m[0]));return found;}
+function addDiscovered(f){
+  const file=normalizeGameFile(f);if(!/^AppGame_.*\.html$/i.test(file))return false;
+  if(GAMES.some(g=>g.file.toLowerCase()===file.toLowerCase()))return false;
+  const baseName=prettyName(file),meta=GAME_META[baseName]||{};
+  GAMES.push({id:meta.id||gameIdFrom(file),file,name:meta.name||baseName,tags:meta.tags||['Game'],hue:meta.hue??hueFrom(file),featured:!!meta.featured,desc:meta.desc||'A game world built for ArgantaLab.'});
+  GAMES.sort((a,b)=>(b.featured-a.featured)||a.name.localeCompare(b.name));
+  return true;
+}
+function githubRepoInfo(){
+  const meta=document.querySelector('meta[name="github-repo"]');
+  const repoSlug=meta&&meta.content.trim();
+  if(repoSlug&&/^[\w.-]+\/[\w.-]+$/.test(repoSlug)){const [owner,repo]=repoSlug.split('/');return {owner,repo};}
+  const host=location.hostname.toLowerCase();if(!host.endsWith('github.io'))return null;
+  const owner=host.split('.')[0],seg=location.pathname.split('/').filter(Boolean);
+  const repo=(seg[0]&&!/\.html?$/i.test(seg[0]))?seg[0]:owner+'.github.io';
+  return {owner,repo};
+}
 async function discoverGames(){
   const found=new Set();
-  try{const r=await fetch('./',{cache:'no-store'});if(r.ok){const txt=await r.text();const re=/AppGame_[A-Za-z0-9_\-]+\.html/g;let m;while((m=re.exec(txt)))found.add(m[0]);}}catch(e){}
-  try{const host=location.hostname;if(host.endsWith('github.io')){const owner=host.split('.')[0];const seg=location.pathname.split('/').filter(Boolean);const repo=(seg[0]&&!/\.html?$/i.test(seg[0]))?seg[0]:owner+'.github.io';const r=await fetch('https://api.github.com/repos/'+owner+'/'+repo+'/contents/');if(r.ok){const files=await r.json();if(Array.isArray(files))files.forEach(f=>{if(/^AppGame_.*\.html$/i.test(f.name))found.add(f.name);});}}}catch(e){}
+  if(location.protocol==='http:'||location.protocol==='https:'){
+    try{const r=await fetch('./',{cache:'no-store'});if(r.ok){extractGameFiles(await r.text()).forEach(f=>found.add(f));}}catch(e){}
+  }else{
+    discoveryMessage='Local file mode cannot scan folders. Publish to GitHub Pages or open through a static server so the browser can see dropped game files.';
+  }
+  try{const gh=githubRepoInfo();if(gh){const r=await fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/',{cache:'no-store'});if(r.ok){const files=await r.json();if(Array.isArray(files))files.forEach(f=>{if(/^AppGame_.*\.html$/i.test(f.name))found.add(f.name);});}}}catch(e){}
   let added=false;found.forEach(f=>{if(addDiscovered(f))added=true;});
-  if(added&&!ROUTE.lessonId&&ROUTE.tab==='arganta')renderMain();
+  if((added||discoveryMessage)&&!ROUTE.lessonId&&ROUTE.tab==='arganta')renderMain();
 }
 
-const NAV=[{tab:'arganta',label:'Arganta',short:'Arganta',icon:'arganta',group:'PLAY'},{tab:'web',label:'Web Quest',short:'Web',icon:'web',group:'LEARN'},{tab:'ai',label:'AI Forge',short:'AI',icon:'ai',group:'LEARN'},{tab:'data',label:'Data Lab',short:'Data',icon:'data',group:'LEARN'},{tab:'launch',label:'Launch Studio',short:'Launch',icon:'launch',group:'SHIP'}];
+const NAV=[{tab:'arganta',label:'ArgantaLab',short:'ArgantaLab',icon:'arganta',group:'PLAY'},{tab:'web',label:'Web Quest',short:'Web',icon:'web',group:'LEARN'},{tab:'data',label:'Data Lab',short:'Data',icon:'data',group:'LEARN'},{tab:'ai',label:'AI Forge',short:'AI',icon:'ai',group:'LEARN'},{tab:'launch',label:'Launch Studio',short:'Launch',icon:'launch',group:'SHIP'}];
 
 const LESSONS={
-  'web/internet-map':{tab:'web',num:'01',title:'Internet Map',blurb:'Web, websites, URLs, hosting, domains',key:'The internet is a network of computers sharing HTML files. A browser fetches and shows them.',slides:[['🌐','The Web','A giant network of computers passing files to each other.'],['🏠','Website = a house','Your HTML files are the rooms people walk into.'],['📍','Domain = the address','arganta.com tells the browser where to knock.'],['🏝','Hosting = the land','A server that keeps your house standing 24/7.'],['🚗','Browser = the car','It drives to the address and shows you the house.']],vocab:[['URL','web address'],['Domain','the name'],['Host','the server'],['HTML','the file'],['Browser','the reader']],mission:['Open DevTools (F12)','Look at the URL bar','Find index.html'],xp:40},
-  'web/app-machine':{tab:'web',num:'02',title:'App Machine',blurb:'Frontend, backend, database, API',key:'Every app has parts: the screen (frontend), hidden helpers (backend), memory (database), messengers (API).',slides:[['🖥','Frontend','Everything you see and tap.'],['⚙️','Backend','The hidden engine doing the work.'],['🗄','Database','The vault that remembers scores.'],['📨','API','The messenger carrying requests.']],vocab:[['Frontend','the screen'],['Backend','the engine'],['Database','the vault'],['API','the messenger']],mission:['Press Play in Arganta','Watch the game load','Notice progress saves'],xp:40},
-  'web/build-map':{tab:'web',num:'03',title:'Build Map',blurb:'Architecture, files, components',key:'index.html is the center of ArgantaLab. Tabs and game files orbit it.',slides:[['📄','index.html','The shell — the heart everything plugs into.'],['🧩','Components','Reusable blocks you snap together.'],['🛰','Game files','Each AppGame is its own world.'],['🌊','Data flow','How info travels from click to screen.']],vocab:[['Shell','main file'],['Component','a block'],['Flow','how data moves']],mission:['Find index.html','List the 5 tabs','Spot an AppGame file'],xp:40,lock:['web/internet-map','web/app-machine']},
-  'web/system-chain':{tab:'web',num:'04',title:'System Chain',blurb:'Input, process, output, feedback',key:'Everything is a chain: Input then Process then Output. Output can loop back as new input.',slides:[['⬇️','Input','What enters — a click, a key, a tap.'],['⚙️','Process','The logic that decides what happens.'],['⬆️','Output','What you see come back out.'],['🔁','Feedback','The output becomes the next input.']],vocab:[['Input','the start'],['Process','the work'],['Output','the result'],['State','what is saved']],mission:['Click Play, watch the chain','Finish a lesson, watch XP rise','Name one feedback loop'],xp:40,lock:['web/build-map']},
-  'ai/prompt-power':{tab:'ai',num:'01',title:'Prompt Power',blurb:'The 8-step prompt formula',key:'A messy prompt makes messy results. A structured prompt becomes a clean blueprint.',slides:[['💥','Messy prompt','"make a fun game" explodes into chaos.'],['📐','Structured prompt','Step-by-step requirements become a blueprint.'],['🎯','Be specific','Who, what, goal, rules, controls, style.'],['🔁','Iterate','Great products are rewritten, not guessed.']],vocab:[['Prompt','what you ask'],['Requirement','what you need'],['Iterate','improve again']],mission:['Write a bad prompt','Rewrite it with 4 steps','Compare results'],xp:40,interactive:'promptBuilder'},
-  'ai/chatgpt-brain':{tab:'ai',num:'02',title:'ChatGPT Brain',blurb:'Idea partner, explainer, reviewer',key:'ChatGPT helps you think — but YOU are the director. It suggests; you decide.',slides:[['💡','Idea partner','Brainstorm ten ideas in ten seconds.'],['📖','Explainer','Turns hard things into simple words.'],['🎨','Designer','Plans the look before you build.'],['🎬','You direct','It proposes — you choose and own it.']],vocab:[['LLM','language model'],['Prompt','your request'],['Director','you!']],mission:['Ask for 3 game ideas','Pick your favourite','Ask it to design first'],xp:40,lock:['ai/prompt-power']},
-  'ai/codex-builder':{tab:'ai',num:'03',title:'Codex Builder',blurb:'Your coding teammate',key:'Codex edits files and fixes bugs. Give it the file, expected behaviour, the bug, and a clear scope.',slides:[['📁','The file','Tell it exactly which file to change.'],['✅','Expected','Describe what should happen.'],['🔴','Actual','Describe the bug you see.'],['🎯','Scope','"Only change this" keeps it safe.']],vocab:[['Bug','a mistake'],['Fix','the repair'],['Scope','the limit']],mission:['Pick a file','Describe expected vs actual','Limit the scope'],xp:40,lock:['ai/chatgpt-brain']},
-  'ai/agent-command':{tab:'ai',num:'04',title:'Agent Command',blurb:'LLM + tools + memory + goal',key:'An agent = an LLM that uses tools, remembers, and chases a goal — step by step, on its own.',slides:[['🧠','LLM','Understands and writes language.'],['🔧','Tools','Things it can actually use.'],['💾','Memory','What it carries between steps.'],['🎯','Goal','The mission it works to finish.']],vocab:[['Agent','LLM + tools + goal'],['Tool','an ability'],['Workflow','the steps']],mission:['Name a goal','List 2 tools','Describe 1 step'],xp:40,lock:['ai/codex-builder']},
-  'data/game-stats':{tab:'data',num:'01',title:'Game Stats',blurb:'Count, average, max, min',key:'Statistics turn a pile of numbers into meaning: how many, what is normal, what is best.',slides:[['#️⃣','Count','How many matches did you play?'],['📊','Average','The normal value in the middle.'],['⬆️','Max & Min','Your best and worst runs.'],['📈','Trend','Are you getting better over time?']],vocab:[['Count','total number'],['Average','the middle'],['Trend','up or down']],mission:['Find total matches','Calculate average coins','Spot the trend'],xp:40,interactive:'statsExplorer'},
-  'data/chart-magic':{tab:'data',num:'02',title:'Chart Magic',blurb:'Line, bar, pie, heatmap',key:'A chart is a picture of data. Pick the right chart and the story jumps out instantly.',slides:[['📈','Line','Shows change over time.'],['📊','Bar','Compares groups side by side.'],['🥧','Pie','Shows parts of a whole.'],['🔥','Heatmap','Shows activity across a grid.']],vocab:[['Axis','the sides'],['Series','a data line'],['Legend','the key']],mission:['Pick a chart type','Read the trend','Explain in 1 line'],xp:40,interactive:'chartMagic',lock:['data/game-stats']},
-  'data/boss-dashboard':{tab:'data',num:'03',title:'Boss Dashboard',blurb:'Business intelligence',key:'A dashboard shows the most important numbers in one place so an owner can decide fast.',slides:[['🎯','KPIs','The few numbers that matter most.'],['📉','Trends','Which way are things heading?'],['💡','Insight','The decision the data points to.']],vocab:[['KPI','key metric'],['BI','business intel'],['Insight','the takeaway']],mission:['Find best weapon','Find worst day','Write one insight'],xp:40,interactive:'dashboard',lock:['data/chart-magic']},
-  'data/prediction-bot':{tab:'data',num:'04',title:'Prediction Bot',blurb:'Rule-based prediction & ML',key:'Data science finds patterns. Machine learning lets the computer learn patterns from examples.',slides:[['🎯','Signals','Accuracy, streak, deaths, weapon.'],['🧮','Formula','Combine signals into a score.'],['🤖','Predict','Turn the score into a win chance.'],['📚','Learn','Real ML improves from data itself.']],vocab:[['Data science','find patterns'],['ML','learns from data'],['Predict','a smart guess']],mission:['Move the sliders','Read the win chance','Try to reach 80%'],xp:40,interactive:'predictBot',lock:['data/boss-dashboard']},
+  'web/internet-map':{tab:'web',num:'01',title:'Internet Map',blurb:'Web, websites, URLs, hosting, domains',key:'The internet is a network of computers sharing HTML files. A browser fetches and shows them.',slides:[{ic:'🌐',t:'The Web',an:'A giant city of houses joined by roads.',re:'Billions of computers worldwide passing files to each other right now.'},{ic:'🏠',t:'Website = a house',an:'A place people visit; each page is a room inside.',re:'argantalab.com is a website — its rooms are pages like Play and Learn.'},{ic:'📮',t:'Domain = the address',an:'The street address so visitors can find your house.',re:'Typing "argantalab.com" tells the browser where your files live.'},{ic:'🏝️',t:'Hosting = the land',an:'The plot of land your house sits on, open 24/7.',re:'GitHub Pages is free land that keeps ArgantaLab online day and night.'},{ic:'🚗',t:'Browser = the car',an:'The car that drives you to the address and shows the house.',re:'Chrome or Safari loads index.html and paints it on your screen.'}],vocab:[['URL','web address'],['Domain','the name'],['Host','the server'],['HTML','the file'],['Browser','the reader']],mission:['Open DevTools (F12)','Look at the URL bar','Find index.html'],xp:40},
+  'web/app-machine':{tab:'web',num:'02',title:'App Machine',blurb:'Frontend, backend, database, API',key:'Every app has parts: the screen (frontend), hidden helpers (backend), memory (database), messengers (API).',slides:[{ic:'🕹️',t:'Frontend',an:'The arcade machine’s screen and buttons you touch.',re:'The colorful pages, cards, and Play buttons you tap in ArgantaLab.'},{ic:'⚙️',t:'Backend',an:'The hidden engine inside the machine doing the work.',re:'Code that decides what happens when you press Play or finish a lesson.'},{ic:'🗄️',t:'Database',an:'A memory card that never forgets.',re:'Your XP, badges, and finished lessons, saved for next time.'},{ic:'📮',t:'API',an:'A waiter carrying orders between you and the kitchen.',re:'The messenger that fetches your coins and brings them to the screen.'}],vocab:[['Frontend','the screen'],['Backend','the engine'],['Database','the vault'],['API','the messenger']],mission:['Press Play in ArgantaLab','Watch the game load','Notice progress saves'],xp:40},
+  'web/build-map':{tab:'web',num:'03',title:'Build Map',blurb:'Architecture, files, components',key:'index.html is the center of ArgantaLab. Tabs and game files orbit it.',slides:[{ic:'🏢',t:'index.html',an:'The lobby of a building everything connects to.',re:'The one file that loads ArgantaLab and opens every tab and game.'},{ic:'🧩',t:'Components',an:'LEGO blocks you reuse to build faster.',re:'Cards, buttons, and the nav are blocks reused on every screen.'},{ic:'🛰️',t:'Game files',an:'Separate planets you fly to when you visit.',re:'Each AppGame_*.html is its own world, opened only when you play it.'},{ic:'🌊',t:'Data flow',an:'Water flowing from a tap into a glass.',re:'A click sends data through the code, and the screen fills with the result.'}],vocab:[['Shell','main file'],['Component','a block'],['Flow','how data moves']],mission:['Find index.html','List the 5 tabs','Spot an AppGame file'],xp:40,lock:['web/internet-map','web/app-machine']},
+  'web/system-chain':{tab:'web',num:'04',title:'System Chain',blurb:'Input, process, output, feedback',key:'Everything is a chain: Input then Process then Output. Output can loop back as new input.',slides:[{ic:'🔘',t:'Input',an:'Pressing a button on a vending machine.',re:'Your click, key press, or tap that starts everything.'},{ic:'⚙️',t:'Process',an:'The machine choosing and dropping your snack.',re:'Code decides what should happen from your input.'},{ic:'🎁',t:'Output',an:'The snack landing in the tray.',re:'The new screen, score, or game that appears for you.'},{ic:'🔁',t:'Feedback',an:'Eating it, then wanting another.',re:'Finishing a lesson raises XP, which unlocks the next lesson.'}],vocab:[['Input','the start'],['Process','the work'],['Output','the result'],['State','what is saved']],mission:['Click Play, watch the chain','Finish a lesson, watch XP rise','Name one feedback loop'],xp:40,lock:['web/build-map']},
+  'ai/prompt-power':{tab:'ai',num:'01',title:'Prompt Power',blurb:'The 8-step prompt formula',key:'A messy prompt makes messy results. A structured prompt becomes a clean blueprint.',slides:[{ic:'🍕',t:'A prompt is an order',an:'Ordering food — the clearer you ask, the better it comes.',re:'A prompt is the text you give an AI to say exactly what to build.'},{ic:'💥',t:'Messy prompt',an:'"Make me food" — you get something random.',re:'"make a fun game" gives a confusing, random result.'},{ic:'📐',t:'Clear prompt',an:'"A cheese pizza, medium, no onions." Perfect order.',re:'"A 3D arena game for ages 8-14, keyboard controls, with coins."'},{ic:'🔁',t:'Iterate',an:'Sending the dish back to add more cheese.',re:'You refine the prompt again and again until the game feels right.'}],vocab:[['Prompt','what you ask'],['Requirement','what you need'],['Iterate','improve again']],mission:['Write a bad prompt','Rewrite it with 4 steps','Compare results'],xp:40,interactive:'promptBuilder'},
+  'ai/chatgpt-brain':{tab:'ai',num:'02',title:'ChatGPT Brain',blurb:'Idea partner, explainer, reviewer',key:'ChatGPT helps you think — but YOU are the director. It suggests; you decide.',slides:[{ic:'💡',t:'Idea partner',an:'A friend who brainstorms ten ideas in seconds.',re:'Ask ChatGPT for game ideas and it lists ten instantly.'},{ic:'📖',t:'Explainer',an:'A teacher who makes hard things simple.',re:'It can explain what an "iframe" is in one kid-friendly sentence.'},{ic:'🎨',t:'Designer',an:'An architect sketching before builders start.',re:'It plans the screens and colors before any code is written.'},{ic:'🎬',t:'You are the director',an:'You direct the movie; the AI is the crew.',re:'It suggests — you choose, change, and own the final game.'}],vocab:[['LLM','language model'],['Prompt','your request'],['Director','you!']],mission:['Ask for 3 game ideas','Pick your favourite','Ask it to design first'],xp:40,lock:['ai/prompt-power']},
+  'ai/codex-builder':{tab:'ai',num:'03',title:'Codex Builder',blurb:'Your coding teammate',key:'Codex edits files and fixes bugs. Give it the file, expected behaviour, the bug, and a clear scope.',slides:[{ic:'🧑‍🔧',t:'Coding teammate',an:'A mechanic who fixes your car when you point to the noise.',re:'Codex edits your game files and repairs bugs you describe.'},{ic:'📁',t:'Name the file',an:'Telling the mechanic which car to open.',re:'Point to the exact game file you want Codex to edit.'},{ic:'🔍',t:'Expected vs actual',an:'"It should turn left, but it turns right."',re:'Describe what should happen and what actually goes wrong.'},{ic:'🎯',t:'Scope',an:'"Only fix the brakes, don’t repaint the car."',re:'"Only change the movement code" keeps the rest of the game safe.'}],vocab:[['Bug','a mistake'],['Fix','the repair'],['Scope','the limit']],mission:['Pick a file','Describe expected vs actual','Limit the scope'],xp:40,lock:['ai/chatgpt-brain']},
+  'ai/agent-command':{tab:'ai',num:'04',title:'Agent Command',blurb:'LLM + tools + memory + goal',key:'An agent = an LLM that uses tools, remembers, and chases a goal — step by step, on its own.',slides:[{ic:'🧠',t:'LLM',an:'A brain that understands and speaks language.',re:'The part of the AI that reads your words and writes back.'},{ic:'🔧',t:'Tools',an:'Hands that can actually pick things up.',re:'Abilities like reading files, searching, or running code.'},{ic:'📓',t:'Memory',an:'A notebook it carries between steps.',re:'What it remembers about your goal while it works.'},{ic:'🤖',t:'Agent = all of it',an:'A robot with a brain, hands, a notebook, and a mission.',re:'LLM + tools + memory + a goal, working step by step on its own.'}],vocab:[['Agent','LLM + tools + goal'],['Tool','an ability'],['Workflow','the steps']],mission:['Name a goal','List 2 tools','Describe 1 step'],xp:40,lock:['ai/codex-builder']},
+  'data/game-stats':{tab:'data',num:'01',title:'Game Stats',blurb:'Count, average, max, min',key:'Statistics turn a pile of numbers into meaning: how many, what is normal, what is best.',slides:[{ic:'🫙',t:'Count',an:'Counting how many marbles are in a jar.',re:'How many matches you played — here it is 5.'},{ic:'⚖️',t:'Average',an:'Sharing candy equally among friends.',re:'Add all coins and split evenly — the normal amount per match (72).'},{ic:'🏔️',t:'Max & Min',an:'The tallest and shortest kid in class.',re:'Your best match (120 coins) and your worst (30 coins).'},{ic:'📈',t:'Trend',an:'Watching a plant grow taller each week.',re:'Are your coins climbing match after match? That is the trend.'}],vocab:[['Count','total number'],['Average','the middle'],['Trend','up or down']],mission:['Find total matches','Calculate average coins','Spot the trend'],xp:40,interactive:'statsExplorer'},
+  'data/chart-magic':{tab:'data',num:'02',title:'Chart Magic',blurb:'Line, bar, pie, heatmap',key:'A chart is a picture of data. Pick the right chart and the story jumps out instantly.',slides:[{ic:'📈',t:'Line chart',an:'Footprints showing the path you walked.',re:'Coins for each match — watch them rise and fall over time.'},{ic:'📊',t:'Bar chart',an:'Stacking blocks to see whose tower is tallest.',re:'Which weapon won the most games, compared side by side.'},{ic:'🥧',t:'Pie chart',an:'Slicing a pizza into shares.',re:'How much each weapon was used out of the whole.'},{ic:'🔥',t:'Heatmap',an:'A calendar where busy days glow brighter.',re:'Which days of the week you played the most.'}],vocab:[['Axis','the sides'],['Series','a data line'],['Legend','the key']],mission:['Pick a chart type','Read the trend','Explain in 1 line'],xp:40,interactive:'chartMagic',lock:['data/game-stats']},
+  'data/boss-dashboard':{tab:'data',num:'03',title:'Boss Dashboard',blurb:'Business intelligence',key:'A dashboard shows the most important numbers in one place so an owner can decide fast.',slides:[{ic:'🎯',t:'KPIs',an:'The few dials on a car dashboard you really watch.',re:'Matches, win rate, coins, and XP — your most important numbers.'},{ic:'🧭',t:'Trends',an:'A compass showing which way you are heading.',re:'Are your wins climbing or dropping lately?'},{ic:'💡',t:'Insight',an:'The "aha!" that tells you what to do next.',re:'"Use the Marksman — it wins 80% of the time."'}],vocab:[['KPI','key metric'],['BI','business intel'],['Insight','the takeaway']],mission:['Find best weapon','Find worst day','Write one insight'],xp:40,interactive:'dashboard',lock:['data/chart-magic']},
+  'data/prediction-bot':{tab:'data',num:'04',title:'Prediction Bot',blurb:'Rule-based prediction & ML',key:'Data science finds patterns. Machine learning lets the computer learn patterns from examples.',slides:[{ic:'🕵️',t:'Signals',an:'Clues a detective collects.',re:'Accuracy, win streak, deaths, and weapon are the clues.'},{ic:'🧮',t:'Formula',an:'A recipe that mixes clues into a score.',re:'Combine the signals with weights into one win-score.'},{ic:'⛅',t:'Predict',an:'A weather forecast — a smart guess, not magic.',re:'Turn the score into a win-chance, like 78%.'},{ic:'📚',t:'Machine learning',an:'A puppy learning tricks from lots of practice.',re:'Real ML sharpens its guesses by studying tons of past games.'}],vocab:[['Data science','find patterns'],['ML','learns from data'],['Predict','a smart guess']],mission:['Move the sliders','Read the win chance','Try to reach 80%'],xp:40,interactive:'predictBot',lock:['data/boss-dashboard']},
   'launch/github-trail':{tab:'launch',num:'02',title:'GitHub Trail',blurb:'Repo, commit, branch, README',key:'GitHub is like Google Drive for code, but every save has a story. A commit is a save point.',slides:[['📦','Repository','The folder that holds your whole project.'],['💾','Commit','A save point with a short story.'],['🌿','Branch','A safe copy to try ideas on.'],['📄','README','The front page that explains it all.']],vocab:[['Repo','project folder'],['Commit','a save'],['Branch','a copy']],mission:['Create a repo','Make a first commit','View history'],xp:40},
-  'launch/launch-pad':{tab:'launch',num:'03',title:'Launch Pad',blurb:'Deploy, hosting, GitHub Pages, PWA',key:'Deploy means publish to the web. GitHub Pages turns your repo into a live website with one switch.',slides:[['🚀','Deploy','Push your files and flip Pages on.'],['🏝','Hosting','GitHub keeps it online for free.'],['📍','URL','Share username.github.io/arganta.'],['📱','Install','A PWA can live on the home screen.']],vocab:[['Deploy','go live'],['Pages','free hosting'],['PWA','app-like site']],mission:['Enable GitHub Pages','Copy the live URL','Open it on a phone'],xp:40,lock:['launch/github-trail']},
+  'launch/launch-pad':{tab:'launch',num:'03',title:'Launch Pad',blurb:'Deploy, hosting, GitHub Pages, PWA',key:'Deploy means publish to the web. GitHub Pages turns your repo into a live website with one switch.',slides:[['🚀','Deploy','Push your files and flip Pages on.'],['🏝','Hosting','GitHub keeps it online for free.'],['📍','URL','Share username.github.io/argantalab.'],['📱','Install','A PWA can live on the home screen.']],vocab:[['Deploy','go live'],['Pages','free hosting'],['PWA','app-like site']],mission:['Enable GitHub Pages','Copy the live URL','Open it on a phone'],xp:40,lock:['launch/github-trail']},
 };
 const BADGES={web:{name:'Web Explorer',need:['web/internet-map','web/app-machine','web/build-map','web/system-chain']},ai:{name:'Prompt Master',need:['ai/prompt-power','ai/chatgpt-brain','ai/codex-builder','ai/agent-command']},data:{name:'Data Detective',need:['data/game-stats','data/chart-magic','data/boss-dashboard','data/prediction-bot']}};
 const SAMPLE=[{m:1,win:1,coins:80,weapon:'Rifle',deaths:2},{m:2,win:0,coins:40,weapon:'Pistol',deaths:5},{m:3,win:1,coins:120,weapon:'Marksman',deaths:1},{m:4,win:1,coins:90,weapon:'Marksman',deaths:2},{m:5,win:0,coins:30,weapon:'Pistol',deaths:6}];
@@ -434,7 +498,7 @@ const SAMPLE=[{m:1,win:1,coins:80,weapon:'Rifle',deaths:2},{m:2,win:0,coins:40,w
 const $=(s,r=document)=>r.querySelector(s);
 const xpForLevel=l=>l*500;
 function addXp(n){let xp=Store.get('xp')+n,level=Store.get('level');while(xp>=xpForLevel(level))level++;Store.set({xp,level});toast('+'+n+' XP','✨');}
-function lessonLocked(id){const L=LESSONS[id];if(!L||!L.lock)return false;return !L.lock.every(d=>Store.get('completedLessons').includes(d));}
+function lessonLocked(id){return false;}
 function tabLessons(tab){return Object.entries(LESSONS).filter(([id,l])=>l.tab===tab);}
 function go(p){ROUTE={...ROUTE,...p};
   if(p.tab){Store.set({lastTab:p.tab});window.__bgScene=p.tab;if(window.BG)window.BG.setScene(p.tab);carIdx=0;
@@ -443,7 +507,7 @@ function go(p){ROUTE={...ROUTE,...p};
 function setBG(){window.__bgScene=ROUTE.tab;if(window.BG)window.BG.setScene(ROUTE.tab);}
 function toast(msg,e){const t=document.createElement('div');t.className='toast';t.innerHTML=(e?'<span class="e">'+e+'</span>':'')+msg;$('#toasts').appendChild(t);if(window.gsap)gsap.from(t,{y:-14,opacity:0,duration:.4,ease:'back.out(2)'});setTimeout(()=>{if(window.gsap)gsap.to(t,{opacity:0,y:-10,duration:.35,onComplete:()=>t.remove()});else t.remove();},2200);}
 function checkBadges(){const done=Store.get('completedLessons'),have=Store.get('badges');for(const [k,b] of Object.entries(BADGES)){if(!have.includes(b.name)&&b.need.every(n=>done.includes(n))){Store.set({badges:[...Store.get('badges'),b.name]});unlockModal(b.name);}}}
-function unlockModal(name){confettiBurst();$('#modalRoot').innerHTML='<div class="overlay" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()"><div class="badge-art">'+I.trophy+'</div><h3>Badge Unlocked!</h3><div class="sub">You earned a new badge</div><div class="bname">'+name+'</div><button class="btn btn-primary" style="width:100%;justify-content:center" data-action="close-modal">Awesome!</button></div></div>';if(window.gsap)gsap.from('.modal',{scale:.7,opacity:0,duration:.6,ease:'back.out(1.7)'});}
+function unlockModal(name){confettiBurst();$('#modalRoot').innerHTML='<div class="overlay" data-action="close-modal"><div class="modal"><div class="badge-art">'+I.trophy+'</div><h3>Badge Unlocked!</h3><div class="sub">You earned a new badge</div><div class="bname">'+name+'</div><button class="btn btn-primary" style="width:100%;justify-content:center" data-action="close-modal">Awesome!</button></div></div>';if(window.gsap)gsap.from('.modal',{scale:.7,opacity:0,duration:.6,ease:'back.out(1.7)'});}
 function confettiBurst(){const c=document.createElement('div');c.className='confetti';const cols=['#4D9FFF','#8B5CF6','#FFC24B','#3DE08A','#FF5EA0','#34E5FF'];for(let i=0;i<80;i++){const p=document.createElement('i');p.style.left=Math.random()*100+'vw';p.style.background=cols[i%cols.length];p.style.animationDelay=(Math.random()*.6)+'s';p.style.animationDuration=(1.9+Math.random()*1.4)+'s';c.appendChild(p);}document.body.appendChild(c);setTimeout(()=>c.remove(),4000);}
 function applyTheme(){document.documentElement.dataset.theme=Store.get('theme');$('#themeBtn').innerHTML=Store.get('theme')==='dark'?I.sun:I.moon;$('#brandLogo').innerHTML=LOGO;}
 function toggleTheme(){Store.set({theme:Store.get('theme')==='dark'?'light':'dark'});applyTheme();}
@@ -458,7 +522,7 @@ function renderAll(){renderNav();renderMain();renderConcept();}
 function renderNav(){
   let groups={},html='';NAV.forEach(n=>{(groups[n.group]=groups[n.group]||[]).push(n);});
   for(const g in groups){html+='<div class="nav-label">'+g+'</div>';groups[g].forEach(n=>{html+='<a class="nav-item'+(ROUTE.tab===n.tab?' on':'')+'" data-action="tab" data-tab="'+n.tab+'">'+I[n.icon]+'<span>'+n.label+'</span></a>';});}
-  html+='<div class="grow"></div><a class="nav-item" data-action="toggle-theme">'+I.spark+'<span>Theme</span></a>';
+  html+='<div class="nav-spacer"></div><a class="nav-item" data-action="toggle-theme">'+I.spark+'<span>Theme</span></a>';
   $('#drawer').innerHTML=html;
   $('#dock').innerHTML='<div class="dock-row">'+NAV.map(n=>'<a class="dock-item'+(ROUTE.tab===n.tab?' on':'')+'" data-action="tab" data-tab="'+n.tab+'">'+I[n.icon]+'<span>'+n.short+'</span></a>').join('')+'</div>';
   const lvl=Store.get('level'),xp=Store.get('xp'),pct=Math.min(100,Math.round(xp/xpForLevel(lvl)*100));
@@ -474,23 +538,23 @@ function renderMain(){
 
 function ArgantaHome(){
   const lvl=Store.get('level'),xp=Store.get('xp');const done=Store.get('completedLessons').length,total=Object.keys(LESSONS).length;
-  const feat=GAMES.find(g=>g.featured)||GAMES[0];const rest=GAMES.filter(g=>g.id!==feat.id).slice(0,3);
-  return '<div class="screen">'
-    +'<div><div class="kicker"><span class="live"></span> '+GAMES.length+' worlds live · auto-synced</div>'
-    +'<h1 class="h-title" style="margin-top:14px">Welcome to <span class="g">Arganta</span></h1>'
-    +'<p class="lead" style="margin-top:14px">Your own HTML game world. Play what you build, learn how it works, then publish and pitch it.</p>'
-    +'<div class="cta" style="margin-top:18px"><button class="btn btn-primary" data-action="open-game" data-game="'+feat.id+'">'+I.play+' Play '+feat.name+'</button><button class="btn btn-ghost" data-action="tab" data-tab="web">Start Learning '+I.arrow+'</button></div>'
-    +'<div class="chips" style="margin-top:16px"><div class="statchip"><b>'+xp+'</b><span>XP · Lv '+lvl+'</span></div><div class="statchip"><b>'+Store.get('gamesBuilt')+'</b><span>Built</span></div><div class="statchip"><b>'+done+'</b><span>of '+total+' Lessons</span></div><div class="statchip"><b>'+Store.get('badges').length+'</b><span>of 3 Badges</span></div></div></div>'
+  const feat=GAMES.find(g=>g.featured)||GAMES[0];
+  const emptyText=discoveryMessage||'Drop game files beside index.html. File names must start with <code>AppGame_</code> and end with <code>.html</code>, then refresh after your static host exposes them.';
+  const rows=GAMES.length?GAMES.map(g=>'<div class="grow" data-action="open-game" data-game="'+g.id+'"><div class="gic">'+gameThumb(g.hue)+'</div><div class="gmeta"><h3>'+g.name+(feat&&g.id===feat.id?' <em>Now Playable</em>':'')+'</h3><span>'+g.tags.join(' · ')+'</span></div><button class="get" data-action="open-game" data-game="'+g.id+'">'+I.play+' Play</button></div>').join(''):'<div class="empty-games"><b>Scanning for games...</b><span>'+emptyText+'</span></div>';
+  const primary=feat?'<button class="btn btn-primary" data-action="open-game" data-game="'+feat.id+'">'+I.play+' Play '+feat.name+'</button>':'<button class="btn btn-primary" disabled>'+I.play+' Waiting for games</button>';
+  return '<div class="screen arg">'
+    +'<div class="arg-hero"><div class="kicker"><span class="live"></span> '+(GAMES.length?GAMES.length+' worlds live · auto-synced':'Scanning AppGame_*.html')+'</div>'
+    +'<h1 class="h-title">Welcome to <span class="g">ArgantaLab</span></h1>'
+    +'<p class="lead">Your own HTML game world. Play what you build, learn how it works, then publish and pitch it.</p>'
+    +'<div class="cta">'+primary+'<button class="btn btn-ghost" data-action="tab" data-tab="web">Start Learning '+I.arrow+'</button></div>'
+    +'<div class="chips"><div class="statchip"><b>'+xp+'</b><span>XP · Lv '+lvl+'</span></div><div class="statchip"><b>'+GAMES.length+'</b><span>Built</span></div><div class="statchip"><b>'+done+'</b><span>of '+total+' Lessons</span></div><div class="statchip"><b>'+Store.get('badges').length+'</b><span>of 3 Badges</span></div></div></div>'
     +'<div class="section-label">All Worlds · '+GAMES.length+' games</div>'
-    +'<div class="worlds">'
-    +'<div class="gcard feat" data-action="open-game" data-game="'+feat.id+'"><span class="badge"><span class="d"></span> Now Playable</span><div class="thumb">'+gameThumb(feat.hue)+'<div class="pl"><span>'+I.play+'</span></div></div><div class="body"><h3>'+feat.name+'</h3><span>'+feat.desc+'</span></div></div>'
-    +rest.map(g=>'<div class="gcard" data-action="open-game" data-game="'+g.id+'"><div class="thumb">'+gameThumb(g.hue)+'<div class="pl"><span>'+I.play+'</span></div></div><div class="body"><h3>'+g.name+'</h3><span>'+g.tags.join(' · ')+'</span></div></div>').join('')
-    +'</div></div>';
+    +'<div class="glist">'+rows+'</div></div>';
 }
 
 function GameModal(id){
   const g=GAMES.find(x=>x.id===id);if(!g)return;
-  $('#gameRoot').innerHTML='<div class="game-back" data-action="game-close"><div class="game-win" id="gameWin" onclick="event.stopPropagation()">'
+  $('#gameRoot').innerHTML='<div class="game-back" data-action="game-close"><div class="game-win" id="gameWin">'
     +'<div class="game-tb"><div class="lights"><button class="light r" data-action="game-close" title="Close">'+I.x+'</button><button class="light y" data-action="game-close" title="Minimize"></button><button class="light g" data-action="game-full" title="Fullscreen">'+I.full+'</button></div>'
     +'<div class="game-title">'+g.name+'</div>'
     +'<button class="game-exit" data-action="game-close">'+I.x+' Exit</button></div>'
@@ -551,7 +615,9 @@ function LessonDeck(){
   const slides=lessonSlides(L);const i=Math.max(0,Math.min(slides.length-1,ROUTE.step));const sl=slides[i];
   let inner='';
   if(sl.type==='intro'){inner='<div class="deck-slide"><div class="kicker" style="margin:0 auto 18px">'+I[L.tab]+' Lesson '+L.num+'</div><h2 class="g" style="background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">'+L.title+'</h2><p>'+L.key+'</p></div>';}
-  else if(sl.type==='concept'){inner='<div class="deck-slide"><div class="art"><div class="sky"></div><div class="em">'+sl.data[0]+'</div></div><div class="n">0'+(i)+'</div><h2>'+sl.data[1]+'</h2><p>'+sl.data[2]+'</p></div>';}
+  else if(sl.type==='concept'){const d=sl.data;
+    if(Array.isArray(d))inner='<div class="deck-slide"><div class="art"><div class="sky"></div><div class="em">'+d[0]+'</div></div><div class="n">0'+i+'</div><h2>'+d[1]+'</h2><p>'+d[2]+'</p></div>';
+    else inner='<div class="deck-slide rich"><div class="rich-top"><div class="rich-ic">'+d.ic+'</div><div class="tt"><div class="n">0'+i+'</div><h2>'+d.t+'</h2></div></div><div class="relate"><div class="rcard a"><div class="rh">🧩 Think of it like…</div><p>'+d.an+'</p></div><div class="rcard r"><div class="rh">⚙️ In real life</div><p>'+d.re+'</p></div></div></div>';}
   else if(sl.type==='interactive'){inner='<div class="deck-slide">'+Interactives[L.interactive]()+'</div>';}
   else{inner='<div class="deck-slide"><div class="art"><div class="sky"></div><div class="em">🏆</div></div><h2>Nice work!</h2><p>You finished '+L.title+'. Mark it complete to earn your XP.</p><div style="margin-top:22px"><button class="btn btn-primary" data-action="complete" data-lesson="'+ROUTE.lessonId+'">'+(Store.get('completedLessons').includes(ROUTE.lessonId)?'Completed ✓ Again':'Complete +'+L.xp+' XP')+'</button></div></div>';}
   return '<div class="screen" style="justify-content:flex-start">'
@@ -572,7 +638,7 @@ const Interactives={
 
 function PitchStudio(){
   const steps=['Hello','Product','Who for','What','Why fun','Demo','How built','Learned','Feedback'];
-  const script=Store.get('pitchScript')||('Hi, my name is '+Store.get('learnerName')+'.\n\nToday I want to show you Arganta — my HTML game world where I play games that I build myself.\n\nThe first game is Strike Zone 3D. It has health, weapons, coins, and a shop.\n\nNext I want more games, a leaderboard, and mobile controls. Please tell me what to improve!');
+  const script=Store.get('pitchScript')||('Hi, my name is '+Store.get('learnerName')+'.\n\nToday I want to show you ArgantaLab — my HTML game world where I play games that I build myself.\n\nThe first game is Strike Zone 3D. It has health, weapons, coins, and a shop.\n\nNext I want more games, a leaderboard, and mobile controls. Please tell me what to improve!');
   return '<div class="screen" style="justify-content:flex-start">'
     +'<div class="deck-head"><button class="icon-btn" data-action="tab" data-tab="launch">'+I.back+'</button><div class="now">Pitch Studio<small>Explain &amp; sell your product</small></div></div>'
     +'<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;justify-content:center">'
@@ -580,7 +646,7 @@ function PitchStudio(){
     +'<div class="panel" style="max-height:none"><textarea id="pitchText" style="width:100%;min-height:140px;border-radius:14px;border:1px solid var(--border);background:var(--bg-2);padding:14px;font:inherit;font-size:14.5px;color:var(--t1);line-height:1.6;resize:none">'+script+'</textarea><div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-primary" data-action="save-pitch">Save</button><button class="btn btn-soft" data-action="open-lesson" data-lesson="demo">Practice in Demo Stage '+I.arrow+'</button></div></div></div></div>';
 }
 
-const SLIDES=[{t:'Arganta',s:'Your HTML Game World',logo:true},{t:'What It Does',s:'Opens HTML games in one cinematic hub'},{t:'Live Demo',s:'Strike Zone 3D',demo:true},{t:'What I Learned',s:'Web · AI · Data · GitHub · Product'},{t:'What Comes Next',s:'More games · Leaderboard · Mobile 🚀'}];
+const SLIDES=[{t:'ArgantaLab',s:'Your HTML Game World',logo:true},{t:'What It Does',s:'Opens HTML games in one cinematic hub'},{t:'Live Demo',s:'Strike Zone 3D',demo:true},{t:'What I Learned',s:'Web · AI · Data · GitHub · Product'},{t:'What Comes Next',s:'More games · Leaderboard · Mobile 🚀'}];
 function DemoStage(){
   const i=Math.max(0,Math.min(SLIDES.length-1,ROUTE.step||0)),sl=SLIDES[i];
   return '<div class="screen" style="justify-content:flex-start">'
@@ -597,7 +663,7 @@ function renderConcept(){
   const el=$('#concept');let body='';
   if(ROUTE.lessonId&&LESSONS[ROUTE.lessonId]){const L=LESSONS[ROUTE.lessonId];const ck=Store.get('missions')[ROUTE.lessonId]||[];
     body='<div class="sp-block"><div class="sp-h"><span class="d"></span>Key Idea</div><div class="sp-body">'+L.key+'</div></div><div class="spline"></div><div class="sp-block"><div class="sp-h">📚 Vocabulary</div><div class="vocab">'+L.vocab.map(v=>'<div class="vrow"><b>'+v[0]+'</b><span>'+v[1]+'</span></div>').join('')+'</div></div><div class="sp-block"><div class="sp-h">✓ Mini Mission</div><div class="mission">'+L.mission.map((m,i)=>'<div class="mrow '+(ck.includes(i)?'ck':'')+'" data-action="mission" data-i="'+i+'"><div class="box">'+I.check+'</div><span>'+m+'</span></div>').join('')+'</div></div>';
-  } else {const tab=ROUTE.tab;const meta={arganta:['Arganta','Your HTML game world. Each game is one HTML file. Tap a card — it pops open as an 80% window on desktop, or full screen on mobile. Green light = fullscreen.'],web:['Web Quest','Understand how the internet and ArgantaLab work together.'],ai:['AI Forge','Learn to speak with AI and use it to build real products.'],data:['Data Lab','Turn raw game numbers into charts, dashboards, and predictions.'],launch:['Launch Studio','Publish your product, then present and pitch it like a founder.']}[tab];
+  } else {const tab=ROUTE.tab;const meta={arganta:['ArgantaLab','Your HTML game world. Each game is one HTML file. Tap a card — it pops open as an 80% window on desktop, or full screen on mobile. Green light = fullscreen.'],web:['Web Quest','Understand how the internet and ArgantaLab work together.'],ai:['AI Forge','Learn to speak with AI and use it to build real products.'],data:['Data Lab','Turn raw game numbers into charts, dashboards, and predictions.'],launch:['Launch Studio','Publish your product, then present and pitch it like a founder.']}[tab];
     body='<div class="sp-block"><div class="sp-h"><span class="d"></span>'+meta[0]+'</div><div class="sp-body">'+meta[1]+'</div></div>';
     const lessons=tabLessons(tab);if(lessons.length){body+='<div class="spline"></div><div class="sp-block"><div class="sp-h">📖 In this tab</div><div class="vocab">'+lessons.map(([id,l])=>{const d=Store.get('completedLessons').includes(id),lk=lessonLocked(id);return '<div class="vrow"><span style="min-width:0">'+l.title+'</span><b style="margin-left:auto;color:'+(d?'var(--green)':lk?'var(--t3)':'var(--accent)')+'">'+(d?'✓':lk?'🔒':'○')+'</b></div>';}).join('')+'</div></div>';}
   }
@@ -616,11 +682,13 @@ function closeConcept(){$('#concept').classList.remove('open');$('#conceptBack')
 
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-action]');if(!t)return;const a=t.dataset.action;
+  if(a==='game-close'&&t.classList.contains('game-back')&&e.target.closest('.game-win'))return;
+  if(a==='close-modal'&&t.classList.contains('overlay')&&e.target.closest('.modal'))return;
   switch(a){
     case 'tab':go({tab:t.dataset.tab,lessonId:null,step:0});break;
     case 'open-game':GameModal(t.dataset.game);break;
     case 'game-close':closeGame();break;
-    case 'game-full':{const w=$('#gameWin');if(!w)break;if(document.fullscreenElement)document.exitFullscreen();else if(w.requestFullscreen)w.requestFullscreen().catch(()=>{});else if(w.webkitRequestFullscreen)w.webkitRequestFullscreen();break;}
+    case 'game-full':{const w=$('#gameWin');if(!w)break;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else if(w.requestFullscreen)w.requestFullscreen().catch(()=>{});else if(w.webkitRequestFullscreen)w.webkitRequestFullscreen();break;}
     case 'open-lesson':go({lessonId:t.dataset.lesson,step:0});break;
     case 'cf-prev':carMove(-1);break;
     case 'cf-next':carMove(1);break;
@@ -653,7 +721,7 @@ function chartTab(btn){const type=btn.dataset.type;document.querySelectorAll('#c
 function predictLive(){const acc=+$('#sAcc').value,stk=+$('#sStk').value,dth=+$('#sDth').value,wpn=+$('#sWpn').value;$('#pAcc').textContent=acc;$('#pStk').textContent=stk;$('#pDth').textContent=dth;let score=acc*0.5+stk*3+(10-dth)*2+wpn*4;score=Math.max(0,Math.min(100,Math.round(score*0.7)));const g=$('#pGauge'),v=$('#pVerdict'),ad=$('#pAdvice');g.textContent=score+'%';if(score>=70){g.style.background='linear-gradient(120deg,var(--green),var(--cyan))';g.style.webkitBackgroundClip='text';v.textContent='✅ HIGH win chance';ad.textContent='Great setup — keep your streak!';}else if(score>=45){g.style.background='linear-gradient(120deg,var(--gold),var(--pink))';g.style.webkitBackgroundClip='text';v.textContent='⚠️ MEDIUM win chance';ad.textContent='Reduce deaths or pick a stronger weapon.';}else{g.style.background='linear-gradient(120deg,var(--danger),var(--pink))';g.style.webkitBackgroundClip='text';v.textContent='❌ LOW win chance';ad.textContent='Try the Marksman and improve accuracy.';}}
 
 Store.sub(renderNav);
-$('#conceptBtn').innerHTML=I.info+' Concept';
+$('#conceptBtn').innerHTML=I.info;
 applyTheme();renderAll();setBG();discoverGames();
 </script>
 </body>
