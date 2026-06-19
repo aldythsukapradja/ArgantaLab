@@ -302,6 +302,75 @@ html[data-theme="light"] .dock{background:linear-gradient(0deg,rgba(244,246,251,
 .grow .get svg{width:14px;height:14px}
 .empty-games{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;padding:18px;border-radius:18px;border:1px dashed var(--border);background:var(--panel);color:var(--t2)}
 .empty-games b{color:var(--t1);font-size:15px}.empty-games span{font-size:13px;line-height:1.45}.empty-games code{color:var(--accent)}
+.learn-lab{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;align-items:stretch}
+.task-list{display:flex;flex-direction:column;gap:10px}
+.task{display:flex;gap:11px;align-items:flex-start;padding:12px;border-radius:var(--r-md);background:var(--bg-2);border:1px solid var(--border)}
+.task .dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--grad);color:#fff;font-size:11px;font-weight:800}
+.task b{display:block;font-size:13.5px}.task span{display:block;color:var(--t2);font-size:12.5px;line-height:1.45;margin-top:2px}
+.mindmap{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
+.mind-center{grid-column:1/-1;text-align:center;padding:15px;border-radius:var(--r-lg);background:var(--grad);color:#fff;font-weight:820;box-shadow:0 14px 34px var(--glow-b)}
+.mind-node{padding:13px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg-2)}
+.mind-node b{font-size:13.5px}.mind-node span{display:block;color:var(--t2);font-size:12.5px;line-height:1.45;margin-top:4px}
+@media(max-width:720px){.learn-lab,.mindmap{grid-template-columns:1fr}}
+
+/* ====== STUDIO · single HTML game builder ====== */
+.screen.studio{justify-content:flex-start;gap:10px;padding:0;height:calc(100vh - 110px);min-height:620px}
+.studio-shell{flex:1;min-height:0;border:1px solid var(--border);background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(16px);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.studio-appbar{height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg-2) 72%,transparent)}
+.studio-brand{display:flex;align-items:center;gap:10px;min-width:0;font-weight:820;color:var(--t1)}
+.studio-brand .orb{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--grad);color:#fff;box-shadow:0 8px 18px var(--glow-b)}
+.studio-brand small{display:block;color:var(--t2);font-size:11px;font-weight:650;margin-top:1px}
+.studio-tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--panel);border:1px solid var(--border)}
+.studio-tabs button{padding:7px 13px;border-radius:9px;font-size:12px;font-weight:720;color:var(--t2)}
+.studio-tabs button.on{background:var(--bg);color:var(--t1);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.studio-publish{padding:9px 13px;border-radius:12px;background:#0b1020;color:#fff;font-weight:780;font-size:12.5px;box-shadow:0 9px 22px rgba(5,9,20,.22)}
+.studio-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(290px,380px) minmax(0,1fr);background:linear-gradient(145deg,color-mix(in srgb,var(--bg) 88%,#fff 12%),color-mix(in srgb,var(--bg-2) 82%,#fff 18%))}
+.studio-chat{min-height:0;border-right:1px solid var(--border);background:color-mix(in srgb,var(--bg) 92%,transparent);display:flex;flex-direction:column}
+.studio-chat-top{height:50px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-bottom:1px solid var(--border)}
+.studio-chat-top h2{font-size:15px}.studio-chat-top span{font-size:11px;color:var(--green);font-weight:760}
+.chat-stream{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:14px}
+.chat-bubble{max-width:94%;padding:11px 12px;border-radius:15px;font-size:13px;line-height:1.45;border:1px solid var(--border);box-shadow:0 5px 16px rgba(0,0,0,.04)}
+.chat-bubble.ai{align-self:flex-start;background:#fff;color:#111827}
+.chat-bubble.you{align-self:flex-end;background:linear-gradient(135deg,#eff6ff,#faf5ff);color:#172554}
+.chat-bubble.warn{background:#fff7ed;border-color:#fed7aa;color:#7c2d12}
+.thinking-line{display:flex;align-items:center;gap:8px}
+.thinking-core{width:30px;height:30px;border-radius:11px;display:grid;place-items:center;background:var(--grad);color:#fff;box-shadow:0 0 22px var(--glow-b);animation:studioPulse 1.3s infinite}
+.thinking-dots{display:inline-flex;gap:4px}.thinking-dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:dotHop .85s infinite}.thinking-dots i:nth-child(2){animation-delay:.12s}.thinking-dots i:nth-child(3){animation-delay:.24s}
+.build-meter{height:5px;margin-top:10px;border-radius:99px;background:#e5e7eb;overflow:hidden}.build-meter i{display:block;height:100%;width:62%;border-radius:inherit;background:var(--grad);animation:buildSweep 1.15s infinite}
+@keyframes studioPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}@keyframes dotHop{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-5px);opacity:1}}@keyframes buildSweep{0%{transform:translateX(-110%)}100%{transform:translateX(170%)}}
+.template-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 14px 12px}
+.template-card{padding:11px;border-radius:14px;border:1px solid var(--border);background:#fff;text-align:left;color:#111827;transition:.22s var(--ease)}
+.template-card:hover,.template-card.on{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 20px var(--glow-a)}
+.template-card b{display:block;font-size:13px}.template-card span{display:block;color:#64748b;font-size:11.5px;margin-top:3px}
+.studio-prompt{display:flex;gap:8px;margin:0 14px 14px;padding:8px;border-radius:16px;background:#fff;border:1px solid var(--border);box-shadow:0 8px 22px rgba(15,23,42,.06)}
+.studio-prompt input{flex:1;min-width:0;border:0;background:transparent;color:#111827;font-size:13.5px;outline:none}
+.studio-prompt button{width:38px;height:38px;border-radius:13px;background:var(--grad);color:#fff;display:grid;place-items:center;flex:none}
+.studio-stage{min-width:0;min-height:0;display:flex;flex-direction:column}
+.studio-toolbar{height:50px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 80%,transparent)}
+.device-tabs{display:flex;gap:6px;padding:4px;border-radius:14px;background:#fff;border:1px solid var(--border)}
+.device-tabs button{padding:7px 11px;border-radius:10px;font-size:12px;font-weight:720;color:#64748b}
+.device-tabs button.on{background:var(--grad);color:#fff;box-shadow:0 8px 20px var(--glow-b)}
+.studio-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);font-weight:680;min-width:0}
+.studio-status i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+.preview-area{flex:1;min-height:0;display:grid;place-items:center;overflow:auto;padding:18px;background:radial-gradient(circle at 50% 20%,rgba(77,159,255,.16),transparent 38%),linear-gradient(145deg,#eef4ff,#f8fafc)}
+.device-frame{background:#fff;border:1px solid rgba(148,163,184,.36);box-shadow:0 28px 80px rgba(15,23,42,.18);overflow:hidden;transition:.35s var(--spring);display:flex;flex-direction:column;color:#111827}
+.device-frame.desktop{width:100%;height:100%;max-height:610px;border-radius:18px}
+.device-frame.tablet{width:min(680px,92%);aspect-ratio:4/3;border-radius:26px}
+.device-frame.iphone{width:min(350px,88%);aspect-ratio:9/19;border-radius:36px}
+.device-bar{height:34px;flex:none;display:flex;align-items:center;gap:7px;padding:0 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.device-bar span{width:9px;height:9px;border-radius:50%;background:#ff5f57}.device-bar span:nth-child(2){background:#febc2e}.device-bar span:nth-child(3){background:#28c840}
+.studio-game-shell{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;background:#f8fbff}
+.studio-game-top{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 16px;border-bottom:1px solid #e2e8f0;background:linear-gradient(90deg,#fff,#f8fbff)}
+.studio-game-top b{font-size:14px}.studio-game-top small{font-size:11px;color:#64748b}
+.studio-game-canvas{flex:1;width:100%;min-height:0;display:block;background:#f8fafc;touch-action:none}
+.studio-controls{height:56px;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-top:1px solid #e2e8f0;background:#fff;flex-wrap:wrap}
+.studio-controls button{min-width:38px;height:36px;padding:0 12px;border-radius:12px;border:1px solid #dbe4f0;background:#f8fafc;color:#0f172a;font-weight:780;font-size:12px;box-shadow:0 4px 10px rgba(15,23,42,.04)}
+.studio-controls button.primary{background:var(--grad);color:#fff;border:0}
+.studio-specs{height:44px;flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border);background:color-mix(in srgb,var(--bg) 88%,transparent)}
+.studio-spec{display:flex;align-items:center;gap:7px;padding:0 12px;border-right:1px solid var(--border);min-width:0}
+.studio-spec:last-child{border-right:0}.studio-spec b{font-size:11px;white-space:nowrap}.studio-spec span{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1024px){.screen.studio{height:auto;min-height:calc(100vh - 150px)}.studio-workspace{grid-template-columns:1fr}.studio-chat{border-right:0;border-bottom:1px solid var(--border);max-height:380px}.device-frame.desktop{height:460px}.studio-specs{grid-template-columns:1fr;height:auto}.studio-spec{height:34px;border-right:0;border-bottom:1px solid var(--border)}}
+@media(max-width:620px){.studio-appbar{height:auto;align-items:flex-start;flex-direction:column;padding:10px}.studio-tabs{width:100%;justify-content:space-between}.studio-publish{width:100%}.preview-area{padding:10px}.studio-controls{height:auto}.studio-toolbar{height:auto;align-items:flex-start;flex-direction:column;padding:10px}.device-tabs{width:100%;justify-content:space-between}.device-tabs button{flex:1}.device-frame.desktop{height:390px}.template-grid{grid-template-columns:1fr}}
 
 /* ====== LESSON · analogy vs real example side by side ====== */
 .deck-slide.rich{max-width:900px}
@@ -377,11 +446,12 @@ html[data-theme="light"] .dock{background:linear-gradient(0deg,rgba(244,246,251,
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-const SCENES={arganta:{color:0x4D9FFF,build:gem},web:{color:0x34E5FF,build:globe},ai:{color:0x8B5CF6,build:orb},data:{color:0x3DE08A,build:bars},launch:{color:0xFF5EA0,build:spire}};
+const SCENES={arganta:{color:0x4D9FFF,build:gem},web:{color:0x34E5FF,build:globe},ai:{color:0x8B5CF6,build:orb},data:{color:0x3DE08A,build:bars},studio:{color:0xFFC24B,build:cubeLab},launch:{color:0xFF5EA0,build:spire}};
 function gem(){const c=0x4D9FFF,g=new THREE.Group();g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(1.5,0),new THREE.MeshStandardMaterial({color:c,metalness:.4,roughness:.2,transparent:true,opacity:.55,flatShading:true})));g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.55,0)),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.6})));return g;}
 function globe(){const c=0x34E5FF,g=new THREE.Group();g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.7,2)),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.7})));g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(1.55,1),new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:.25})));return g;}
 function orb(){const c=0x8B5CF6,g=new THREE.Group();g.add(new THREE.Points(new THREE.IcosahedronGeometry(1.7,4),new THREE.PointsMaterial({color:c,size:.045,transparent:true,opacity:.9})));g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(.8,2),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.6,transparent:true,opacity:.4})));return g;}
 function bars(){const c=0x3DE08A,g=new THREE.Group(),hs=[1.4,2.2,1.0,2.8,1.7];hs.forEach((h,i)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(.5,h,.5),new THREE.MeshStandardMaterial({color:c,metalness:.3,roughness:.3,emissive:c,emissiveIntensity:.15}));m.position.set((i-2)*.75,h/2-1.2,0);g.add(m);const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.5,h,.5)),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.3}));e.position.copy(m.position);g.add(e);});return g;}
+function cubeLab(){const c=0xFFC24B,g=new THREE.Group();for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(.72,.72,.72),new THREE.MeshStandardMaterial({color:c,metalness:.35,roughness:.25,emissive:c,emissiveIntensity:.08,transparent:true,opacity:.78}));m.position.set((i%3-1)*.85,Math.floor(i/3)*.85-.45,(i%2)*.28);g.add(m);g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.74,.74,.74)),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.38})));g.children[g.children.length-1].position.copy(m.position);}return g;}
 function spire(){const c=0xFF5EA0,g=new THREE.Group();g.add(new THREE.Mesh(new THREE.ConeGeometry(.7,2.2,5),new THREE.MeshStandardMaterial({color:c,metalness:.5,roughness:.2,flatShading:true,transparent:true,opacity:.75})));g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.ConeGeometry(.72,2.25,5)),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.5})));const ring=new THREE.Mesh(new THREE.TorusGeometry(1.5,.03,8,60),new THREE.MeshBasicMaterial({color:c}));ring.rotation.x=Math.PI/2.4;g.add(ring);return g;}
 let renderer,scene,camera,hero,stars,raf,curKey=null;const mouse={x:0,y:0},tmouse={x:0,y:0};
 function start(){const canvas=document.getElementById('bgCanvas');try{renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});}catch(e){return;}
@@ -406,6 +476,7 @@ const I={
   web:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18"/></svg>',
   ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" stroke-linejoin="round"/><circle cx="18" cy="17" r="1.4"/><circle cx="6" cy="17" r="1"/></svg>',
   data:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M5 19V11M10 19V6M15 19v-5M20 19v-9"/></svg>',
+  studio:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="3"/><path d="M8 21h8M12 17v4M8 9h3M8 12h5M16 9h1M16 12h1"/></svg>',
   launch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linejoin="round"><path d="M5 15c-1 2-1 4-1 4s2 0 4-1m-3-3c1-5 4-9 11-11 0 7-4 10-9 11l-2 0z"/><path d="M9 15l-1-1c0-2 1-4 3-6"/><circle cx="14.5" cy="9.5" r="1.3"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
   play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
@@ -474,7 +545,7 @@ async function discoverGames(){
   if((added||discoveryMessage)&&!ROUTE.lessonId&&ROUTE.tab==='arganta')renderMain();
 }
 
-const NAV=[{tab:'arganta',label:'ArgantaLab',short:'ArgantaLab',icon:'arganta',group:'PLAY'},{tab:'web',label:'Web Quest',short:'Web',icon:'web',group:'LEARN'},{tab:'data',label:'Data Lab',short:'Data',icon:'data',group:'LEARN'},{tab:'ai',label:'AI Forge',short:'AI',icon:'ai',group:'LEARN'},{tab:'launch',label:'Launch Studio',short:'Launch',icon:'launch',group:'SHIP'}];
+const NAV=[{tab:'arganta',label:'ArgantaLab',short:'ArgantaLab',icon:'arganta',group:'PLAY'},{tab:'web',label:'Web Quest',short:'Web',icon:'web',group:'LEARN'},{tab:'data',label:'Data Lab',short:'Data',icon:'data',group:'LEARN'},{tab:'ai',label:'AI Forge',short:'AI',icon:'ai',group:'LEARN'},{tab:'studio',label:'Studio',short:'Studio',icon:'studio',group:'BUILD'},{tab:'launch',label:'Launch Studio',short:'Launch',icon:'launch',group:'SHIP'}];
 
 const LESSONS={
   'web/internet-map':{tab:'web',num:'01',title:'Internet Map',blurb:'Web, websites, URLs, hosting, domains',key:'The internet is a network of computers sharing HTML files. A browser fetches and shows them.',slides:[{ic:'🌐',t:'The Web',an:'A giant city of houses joined by roads.',re:'Billions of computers worldwide passing files to each other right now.'},{ic:'🏠',t:'Website = a house',an:'A place people visit; each page is a room inside.',re:'argantalab.com is a website — its rooms are pages like Play and Learn.'},{ic:'📮',t:'Domain = the address',an:'The street address so visitors can find your house.',re:'Typing "argantalab.com" tells the browser where your files live.'},{ic:'🏝️',t:'Hosting = the land',an:'The plot of land your house sits on, open 24/7.',re:'GitHub Pages is free land that keeps ArgantaLab online day and night.'},{ic:'🚗',t:'Browser = the car',an:'The car that drives you to the address and shows the house.',re:'Chrome or Safari loads index.html and paints it on your screen.'}],vocab:[['URL','web address'],['Domain','the name'],['Host','the server'],['HTML','the file'],['Browser','the reader']],mission:['Open DevTools (F12)','Look at the URL bar','Find index.html'],xp:40},
@@ -494,6 +565,30 @@ const LESSONS={
 };
 const BADGES={web:{name:'Web Explorer',need:['web/internet-map','web/app-machine','web/build-map','web/system-chain']},ai:{name:'Prompt Master',need:['ai/prompt-power','ai/chatgpt-brain','ai/codex-builder','ai/agent-command']},data:{name:'Data Detective',need:['data/game-stats','data/chart-magic','data/boss-dashboard','data/prediction-bot']}};
 const SAMPLE=[{m:1,win:1,coins:80,weapon:'Rifle',deaths:2},{m:2,win:0,coins:40,weapon:'Pistol',deaths:5},{m:3,win:1,coins:120,weapon:'Marksman',deaths:1},{m:4,win:1,coins:90,weapon:'Marksman',deaths:2},{m:5,win:0,coins:30,weapon:'Pistol',deaths:6}];
+let STUDIO_DEVICE='desktop',STUDIO_DEMO='tetris';
+const STUDIO_DEMOS={
+  tetris:{name:'Neon Blocks',kind:'Tetris',prompt:'Create a single-file falling block puzzle with keyboard controls, score, levels, and mobile buttons.',palette:'Grid · Blocks · Score'},
+  invaders:{name:'Star Defender',kind:'Space Invader',prompt:'Create a single-file arcade shooter with aliens, lasers, lives, and a boss wave.',palette:'Aliens · Laser · Lives'}
+};
+let STUDIO_INPUT='',STUDIO_BUILDING=false,STUDIO_BUILD_STEP='Ready',studioGame=null,studioRaf=0;
+let STUDIO_MESSAGES=[
+  {role:'ai',html:'Tell me what to build. This demo Studio can generate two working light-mode games: <b>Tetris</b> or <b>Space Invaders</b>.'},
+  {role:'ai',html:'Pick a template or type a prompt, then press build. The preview is playable while the chat simulates a real single-file HTML build.'}
+];
+const LEARN_EXTRAS={
+  web:{
+    lab:{title:'Web Practical Lab',blurb:'Trace one click from button to game window.',goal:'Prove you understand how ArgantaLab opens a game from a plain HTML file.',tasks:[['Find','Open index.html and locate the game list plus the Play button action.'],['Trace','Follow the click into GameModal and identify the iframe file name.'],['Test','Add or rename one AppGame file, publish it, then confirm it appears.'],['Explain','Say the flow in one sentence: click, route, iframe, game.']]},
+    map:{title:'Web Mind Map',center:'Web App System',nodes:[['Browser','Reads HTML, CSS, and JS, then paints the app.'],['Files','index.html is the hub; AppGame files are separate worlds.'],['Hosting','GitHub Pages keeps the files online.'],['Flow','Input becomes code action, output becomes screen change.'],['State','localStorage remembers XP, badges, and progress.'],['Deploy','Push files, refresh the site, test the live URL.']]}
+  },
+  data:{
+    lab:{title:'Data Practical Lab',blurb:'Turn play results into one clear decision.',goal:'Use game stats to make a better player or product decision.',tasks:[['Collect','Write five match rows: result, coins, weapon, deaths.'],['Calculate','Find average coins, best weapon, and worst death count.'],['Visualize','Pick line, bar, or donut and explain why.'],['Decide','Write one action: what should the player change next?']]},
+    map:{title:'Data Mind Map',center:'Data Decision System',nodes:[['Raw data','The match rows before they mean anything.'],['Stats','Count, average, max, min, and trend.'],['Charts','Pictures that make patterns easier to see.'],['Dashboard','The few numbers that matter right now.'],['Prediction','A rule or model that makes a smart guess.'],['Action','The decision you make from the evidence.']]}
+  },
+  ai:{
+    lab:{title:'AI Practical Lab',blurb:'Write, test, and improve a builder prompt.',goal:'Use AI like a teammate without giving away your director role.',tasks:[['Brief','Describe the game, audience, goal, controls, and style.'],['Prompt','Turn the brief into a structured request for Codex or ChatGPT.'],['Review','Compare expected vs actual and name the biggest mismatch.'],['Iterate','Send a sharper follow-up with one clear fix.']]},
+    map:{title:'AI Mind Map',center:'AI Builder System',nodes:[['Prompt','The instruction that shapes the answer.'],['Context','Files, goals, constraints, and examples.'],['Iteration','Small improvements after every result.'],['Tools','Reading, editing, running, and testing code.'],['Agent','Model plus tools plus memory chasing a goal.'],['Director','You choose what matters and approve the result.']]}
+  }
+};
 
 const $=(s,r=document)=>r.querySelector(s);
 const xpForLevel=l=>l*500;
@@ -530,13 +625,14 @@ function renderNav(){
 }
 function renderMain(){
   const el=$('#mainInner');let html='';
-  if(ROUTE.lessonId)html=ROUTE.lessonId==='pitch'?PitchStudio():ROUTE.lessonId==='demo'?DemoStage():LessonDeck();
-  else if(ROUTE.tab==='arganta')html=ArgantaHome();
+  if(ROUTE.lessonId)html=ROUTE.lessonId==='pitch'?PitchStudio():ROUTE.lessonId==='demo'?DemoStage():ROUTE.lessonId.startsWith('lab/')?PracticalLab(ROUTE.lessonId.split('/')[1]):ROUTE.lessonId.startsWith('mindmap/')?MindMapSummary(ROUTE.lessonId.split('/')[1]):LessonDeck();
+  else if(ROUTE.tab==='arganta')html=ArgantaLabHome();
+  else if(ROUTE.tab==='studio')html=StudioHome();
   else html=ModuleCarousel(ROUTE.tab);
   el.innerHTML=html;afterRender();
 }
 
-function ArgantaHome(){
+function ArgantaLabHome(){
   const lvl=Store.get('level'),xp=Store.get('xp');const done=Store.get('completedLessons').length,total=Object.keys(LESSONS).length;
   const feat=GAMES.find(g=>g.featured)||GAMES[0];
   const emptyText=discoveryMessage||'Drop game files beside index.html. File names must start with <code>AppGame_</code> and end with <code>.html</code>, then refresh after your static host exposes them.';
@@ -550,6 +646,146 @@ function ArgantaHome(){
     +'<div class="chips"><div class="statchip"><b>'+xp+'</b><span>XP · Lv '+lvl+'</span></div><div class="statchip"><b>'+GAMES.length+'</b><span>Built</span></div><div class="statchip"><b>'+done+'</b><span>of '+total+' Lessons</span></div><div class="statchip"><b>'+Store.get('badges').length+'</b><span>of 3 Badges</span></div></div></div>'
     +'<div class="section-label">All Worlds · '+GAMES.length+' games</div>'
     +'<div class="glist">'+rows+'</div></div>';
+}
+
+function studioEsc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function studioTrim(){if(STUDIO_MESSAGES.length>10)STUDIO_MESSAGES=STUDIO_MESSAGES.slice(-10);}
+function studioMessage(m){return '<div class="chat-bubble '+(m.role||'ai')+'">'+(m.html||studioEsc(m.text||''))+'</div>';}
+function studioThinking(){
+  return '<div class="chat-bubble ai"><div class="thinking-line"><span class="thinking-core">'+I.studio+'</span><div><b>'+studioEsc(STUDIO_BUILD_STEP)+'</b><br><span style="color:#64748b">Composing HTML, CSS, canvas, controls, scoring</span> <span class="thinking-dots"><i></i><i></i><i></i></span></div></div><div class="build-meter"><i></i></div></div>';
+}
+function inferStudioDemo(text){
+  const v=(text||'').toLowerCase();
+  if(/space|alien|invader|shooter|laser|ship|arcade/.test(v))return 'invaders';
+  if(/tetris|block|falling|puzzle|tetromino|brick/.test(v))return 'tetris';
+  return null;
+}
+function studioControlLabels(){
+  return STUDIO_DEMO==='tetris'
+    ?[['left','←'],['right','→'],['rotate','Rotate'],['down','↓'],['drop','Drop'],['restart','Reset']]
+    :[['left','←'],['right','→'],['fire','Fire'],['restart','Reset']];
+}
+function runStudioBuild(){
+  if(STUDIO_BUILDING)return;
+  const input=$('#studioPrompt');
+  const text=(input&&input.value.trim())||STUDIO_DEMOS[STUDIO_DEMO].prompt;
+  const type=inferStudioDemo(text);
+  STUDIO_INPUT=text;
+  STUDIO_MESSAGES.push({role:'you',text});
+  if(!type){
+    STUDIO_MESSAGES.push({role:'warn',html:'I can only build <b>Tetris</b> or <b>Space Invaders</b> in this Studio demo. Try: "make Tetris" or "make Space Invaders".'});
+    studioTrim();renderMain();return;
+  }
+  const demo=STUDIO_DEMOS[type];
+  STUDIO_BUILDING=true;STUDIO_BUILD_STEP='Reading game request';studioTrim();renderMain();
+  const steps=['Sketching the light-mode layout','Writing the canvas game loop','Adding controls and scoring','Running the playable preview'];
+  let delay=0;
+  steps.forEach(step=>{delay+=650;setTimeout(()=>{STUDIO_BUILD_STEP=step;renderMain();},delay);});
+  setTimeout(()=>{
+    STUDIO_DEMO=type;STUDIO_INPUT=demo.prompt;STUDIO_BUILDING=false;
+    STUDIO_MESSAGES.push({role:'ai',html:'Built <b>'+demo.name+'</b>. It is running in the preview now with keyboard controls, mobile buttons, score, restart, and a light interface.'});
+    studioTrim();renderMain();toast(demo.kind+' is playable','🎮');
+  },delay+760);
+}
+function setStudioDemo(id){
+  if(!STUDIO_DEMOS[id])return;
+  STUDIO_DEMO=id;STUDIO_INPUT=STUDIO_DEMOS[id].prompt;
+  STUDIO_MESSAGES.push({role:'ai',html:'Loaded the <b>'+STUDIO_DEMOS[id].kind+'</b> starter. Press build to simulate generating this single HTML game.'});
+  studioTrim();renderMain();
+}
+function StudioHome(){
+  const demo=STUDIO_DEMOS[STUDIO_DEMO],input=STUDIO_INPUT||demo.prompt;
+  return '<div class="screen studio"><div class="studio-shell">'
+    +'<div class="studio-appbar"><div class="studio-brand"><span class="orb">'+I.studio+'</span><div>ArgantaLab Studio<small>Single HTML game builder</small></div></div>'
+    +'<div class="studio-tabs"><button class="on">Preview</button><button>Code</button><button>Assets</button></div><button class="studio-publish" data-action="studio-send">Build Preview</button></div>'
+    +'<div class="studio-workspace"><aside class="studio-chat"><div class="studio-chat-top"><h2>Builder Chat</h2><span>'+(!STUDIO_BUILDING?'Ready':'Thinking')+'</span></div>'
+    +'<div class="chat-stream" id="studioChat">'+STUDIO_MESSAGES.map(studioMessage).join('')+(STUDIO_BUILDING?studioThinking():'')+'</div>'
+    +'<div class="template-grid">'+Object.entries(STUDIO_DEMOS).map(([id,d])=>'<button class="template-card '+(id===STUDIO_DEMO?'on':'')+'" data-action="studio-demo" data-demo="'+id+'"><b>'+d.kind+'</b><span>'+d.name+'</span></button>').join('')+'</div>'
+    +'<div class="studio-prompt"><input id="studioPrompt" value="'+studioEsc(input)+'" placeholder="Ask for Tetris or Space Invaders"><button data-action="studio-send" title="Build">'+I.arrow+'</button></div></aside>'
+    +'<section class="studio-stage"><div class="studio-toolbar"><div class="studio-status"><i></i><span>Previewing '+demo.name+' · '+demo.palette+'</span></div><div class="device-tabs">'+['desktop','tablet','iphone'].map(d=>'<button class="'+(d===STUDIO_DEVICE?'on':'')+'" data-action="studio-device" data-device="'+d+'">'+(d==='iphone'?'iPhone':d[0].toUpperCase()+d.slice(1))+'</button>').join('')+'</div></div>'
+    +'<div class="preview-area"><div class="device-frame '+STUDIO_DEVICE+'"><div class="device-bar"><span></span><span></span><span></span></div><div class="studio-game-shell"><div class="studio-game-top"><div><b>'+demo.name+'</b><br><small>'+demo.kind+' · light mode canvas game</small></div><small>Arrows / Space / R</small></div><canvas id="studioGameCanvas" class="studio-game-canvas"></canvas><div class="studio-controls">'+studioControlLabels().map(([c,l])=>'<button class="'+(c==='fire'||c==='drop'?'primary':'')+'" data-action="studio-control" data-control="'+c+'">'+l+'</button>').join('')+'</div></div></div></div>'
+    +'<div class="studio-specs"><div class="studio-spec"><b>Output</b><span>One AppGame_*.html file</span></div><div class="studio-spec"><b>Controls</b><span>Keyboard plus touch buttons</span></div><div class="studio-spec"><b>Status</b><span>'+(!STUDIO_BUILDING?'Playable preview':'Building preview')+'</span></div></div></section></div></div></div>';
+}
+function stopStudioGame(){if(studioRaf)cancelAnimationFrame(studioRaf);studioRaf=0;studioGame=null;}
+function initStudioGame(){
+  stopStudioGame();
+  const canvas=$('#studioGameCanvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');let last=performance.now(),pw=0,ph=0,dpr=1;
+  function fit(){
+    const r=canvas.getBoundingClientRect();const w=Math.max(280,Math.floor(r.width)),h=Math.max(260,Math.floor(r.height));
+    const nd=Math.min(2,window.devicePixelRatio||1);
+    if(w!==pw||h!==ph||nd!==dpr){pw=w;ph=h;dpr=nd;canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
+  }
+  studioGame=STUDIO_DEMO==='tetris'?createTetrisGame(ctx):createInvadersGame(ctx);
+  function loop(now){fit();const dt=Math.min(34,now-last);last=now;if(studioGame){studioGame.update(dt);studioGame.draw(pw,ph);}studioRaf=requestAnimationFrame(loop);}
+  studioRaf=requestAnimationFrame(loop);
+}
+function studioControl(control,pressed){if(studioGame&&studioGame.control)studioGame.control(control,pressed);}
+function block(ctx,x,y,s,color){
+  ctx.fillStyle=color;ctx.strokeStyle='rgba(15,23,42,.12)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect?ctx.roundRect(x+1,y+1,s-2,s-2,7):ctx.rect(x+1,y+1,s-2,s-2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(x+4,y+4,Math.max(3,s-8),3);
+}
+function createTetrisGame(ctx){
+  const C=10,R=20,colors=['#5b9cff','#a855f7','#22d3ee','#f59e0b','#ec4899','#34d399','#f87171'];
+  const shapes=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[1,1,0],[0,1,1]],[[0,1,1],[1,1,0]]];
+  let board,cur,timer,score,lines,level,over;
+  const blank=()=>Array.from({length:R},()=>Array(C).fill(null));
+  const pick=()=>{const i=Math.floor(Math.random()*shapes.length);return {m:shapes[i].map(r=>r.slice()),x:Math.floor(C/2)-2,y:0,c:colors[i]};};
+  function reset(){board=blank();timer=0;score=0;lines=0;level=1;over=false;cur=pick();if(hit())over=true;}
+  function hit(dx=0,dy=0,m=cur.m){for(let y=0;y<m.length;y++)for(let x=0;x<m[y].length;x++)if(m[y][x]){const nx=cur.x+x+dx,ny=cur.y+y+dy;if(nx<0||nx>=C||ny>=R||(ny>=0&&board[ny][nx]))return true;}return false;}
+  function move(dx,dy){if(!hit(dx,dy)){cur.x+=dx;cur.y+=dy;return true;}return false;}
+  function rot(){const m=cur.m[0].map((_,i)=>cur.m.map(r=>r[i]).reverse());if(!hit(0,0,m))cur.m=m;}
+  function merge(){cur.m.forEach((r,y)=>r.forEach((v,x)=>{if(v&&cur.y+y>=0)board[cur.y+y][cur.x+x]=cur.c;}));let n=0;board=board.filter(r=>{const full=r.every(Boolean);if(full)n++;return !full;});while(board.length<R)board.unshift(Array(C).fill(null));if(n){score+=[0,100,300,500,800][n]*level;lines+=n;level=1+Math.floor(lines/5);}cur=pick();if(hit())over=true;}
+  function hard(){while(move(0,1));merge();}
+  reset();
+  return {
+    update(dt){if(over)return;timer+=dt;if(timer>Math.max(130,760-level*55)){if(!move(0,1))merge();timer=0;}},
+    control(c,pressed){if(pressed===false)return;if(c==='restart')reset();if(over)return;if(c==='left')move(-1,0);else if(c==='right')move(1,0);else if(c==='down'){if(!move(0,1))merge();}else if(c==='rotate')rot();else if(c==='drop')hard();},
+    draw(w,h){
+      ctx.clearRect(0,0,w,h);
+      const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#ffffff');g.addColorStop(1,'#eef6ff');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#0f172a';ctx.font='700 14px Inter,system-ui';ctx.fillText('Score '+score,18,26);ctx.fillText('Lines '+lines,18,46);ctx.textAlign='right';ctx.fillText('Level '+level,w-18,26);ctx.textAlign='left';
+      const s=Math.min((w-64)/C,(h-82)/R),bw=s*C,bh=s*R,bx=(w-bw)/2,by=62;
+      ctx.fillStyle='rgba(255,255,255,.72)';ctx.strokeStyle='#dbe7f5';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect?ctx.roundRect(bx-8,by-8,bw+16,bh+16,18):ctx.rect(bx-8,by-8,bw+16,bh+16);ctx.fill();ctx.stroke();
+      for(let y=0;y<R;y++)for(let x=0;x<C;x++){ctx.strokeStyle='rgba(148,163,184,.22)';ctx.strokeRect(bx+x*s,by+y*s,s,s);if(board[y][x])block(ctx,bx+x*s,by+y*s,s,board[y][x]);}
+      cur.m.forEach((r,y)=>r.forEach((v,x)=>{if(v&&cur.y+y>=0)block(ctx,bx+(cur.x+x)*s,by+(cur.y+y)*s,s,cur.c);}));
+      if(over){ctx.fillStyle='rgba(255,255,255,.82)';ctx.fillRect(0,0,w,h);ctx.fillStyle='#0f172a';ctx.textAlign='center';ctx.font='800 28px Inter,system-ui';ctx.fillText('Game Over',w/2,h/2-8);ctx.font='600 14px Inter,system-ui';ctx.fillText('Press R or Reset to play again',w/2,h/2+20);ctx.textAlign='left';}
+    }
+  };
+}
+function createInvadersGame(ctx){
+  const W=480,H=600;let ship,bullets,enemy,aliens,dir,score,lives,level,cool,over,msg,held;
+  function spawn(){aliens=[];for(let r=0;r<4;r++)for(let c=0;c<8;c++)aliens.push({x:64+c*44,y:74+r*34,w:28,h:20,a:1});dir=1;}
+  function reset(){ship={x:W/2,y:H-64,w:54,h:26};bullets=[];enemy=[];score=0;lives=3;level=1;cool=0;over=false;msg='';held={left:false,right:false};spawn();}
+  function fire(){if(cool<=0&&!over){bullets.push({x:ship.x,y:ship.y-18});cool=230;}}
+  function rect(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+  reset();
+  return {
+    update(dt){
+      if(over)return;cool-=dt;if(held.left)ship.x-=260*dt/1000;if(held.right)ship.x+=260*dt/1000;ship.x=Math.max(32,Math.min(W-32,ship.x));
+      bullets.forEach(b=>b.y-=420*dt/1000);bullets=bullets.filter(b=>b.y>-20);
+      enemy.forEach(b=>b.y+=205*dt/1000);enemy=enemy.filter(b=>b.y<H+20);
+      const speed=22+level*7;let edge=false;aliens.forEach(a=>{a.x+=dir*speed*dt/1000;if(a.x<24||a.x>W-52)edge=true;});if(edge){dir*=-1;aliens.forEach(a=>a.y+=18);}
+      bullets.forEach(b=>aliens.forEach(a=>{if(a.a&&rect({x:b.x-3,y:b.y-12,w:6,h:18},a)){a.a=0;b.y=-99;score+=10;}}));aliens=aliens.filter(a=>a.a);
+      if(Math.random()<.012+level*.002&&aliens.length){const a=aliens[Math.floor(Math.random()*aliens.length)];enemy.push({x:a.x+a.w/2,y:a.y+a.h,w:5,h:15});}
+      enemy.forEach(b=>{if(rect(b,{x:ship.x-ship.w/2,y:ship.y-ship.h/2,w:ship.w,h:ship.h})){b.y=999;lives--;if(lives<=0){over=true;msg='Game Over';}}});
+      if(aliens.some(a=>a.y>ship.y-55)){lives--;spawn();if(lives<=0){over=true;msg='Game Over';}}
+      if(!aliens.length){level++;score+=100;spawn();}
+    },
+    control(c,pressed){if(c==='restart'){reset();return;}if(c==='fire'||c==='drop')fire();else if(c==='left'||c==='right'){if(pressed===undefined)ship.x+=c==='left'?-38:38;else held[c]=pressed;ship.x=Math.max(32,Math.min(W-32,ship.x));}},
+    draw(w,h){
+      ctx.clearRect(0,0,w,h);ctx.save();ctx.scale(w/W,h/H);
+      const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#ffffff');bg.addColorStop(1,'#eaf5ff');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+      for(let i=0;i<44;i++){ctx.fillStyle=i%3?'rgba(91,156,255,.16)':'rgba(168,85,247,.16)';ctx.fillRect((i*73)%W,(i*47)%H,2,2);}
+      ctx.fillStyle='#0f172a';ctx.font='700 16px Inter,system-ui';ctx.fillText('Score '+score,18,28);ctx.textAlign='right';ctx.fillText('Lives '+lives+'  Lv '+level,W-18,28);ctx.textAlign='left';
+      aliens.forEach((a,i)=>{ctx.fillStyle=i%2?'#22c55e':'#38bdf8';ctx.beginPath();ctx.roundRect?ctx.roundRect(a.x,a.y,a.w,a.h,8):ctx.rect(a.x,a.y,a.w,a.h);ctx.fill();ctx.fillStyle='#fff';ctx.fillRect(a.x+7,a.y+7,4,4);ctx.fillRect(a.x+a.w-11,a.y+7,4,4);});
+      bullets.forEach(b=>{ctx.fillStyle='#ec4899';ctx.fillRect(b.x-2,b.y-16,4,18);});enemy.forEach(b=>{ctx.fillStyle='#f59e0b';ctx.fillRect(b.x-2,b.y,4,16);});
+      ctx.fillStyle='#2563eb';ctx.beginPath();ctx.moveTo(ship.x,ship.y-24);ctx.lineTo(ship.x+ship.w/2,ship.y+ship.h/2);ctx.lineTo(ship.x-ship.w/2,ship.y+ship.h/2);ctx.closePath();ctx.fill();ctx.fillStyle='#a855f7';ctx.fillRect(ship.x-18,ship.y+8,36,7);
+      if(over){ctx.fillStyle='rgba(255,255,255,.84)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#0f172a';ctx.textAlign='center';ctx.font='800 30px Inter,system-ui';ctx.fillText(msg,W/2,H/2-8);ctx.font='600 15px Inter,system-ui';ctx.fillText('Press R or Reset to try again',W/2,H/2+22);ctx.textAlign='left';}
+      ctx.restore();
+    }
+  };
 }
 
 function GameModal(id){
@@ -575,17 +811,39 @@ function moduleItems(tab){
     arr.push({id:'pitch',l:{num:'04',title:'Pitch Studio',blurb:'The 9-step pitch formula and your editable script.',xp:40}});
     arr.push({id:'demo',l:{num:'05',title:'Demo Stage',blurb:'A cinematic slide presentation with spotlight.',xp:40}});
     return arr;}
-  return tabLessons(tab).map(([id,l])=>({id,l}));
+  const arr=tabLessons(tab).map(([id,l])=>({id,l}));
+  if(LEARN_EXTRAS[tab]){
+    arr.push({id:'lab/'+tab,l:{num:'LAB',title:LEARN_EXTRAS[tab].lab.title,blurb:LEARN_EXTRAS[tab].lab.blurb,xp:0}});
+    arr.push({id:'mindmap/'+tab,l:{num:'MAP',title:LEARN_EXTRAS[tab].map.title,blurb:'A one-screen summary of the whole '+CARMETA[tab].e+' concept.',xp:0}});
+  }
+  return arr;
 }
 function cfCard(it,i,tab){
   const id=it.id,l=it.l;const locked=LESSONS[id]?lessonLocked(id):false;const done=Store.get('completedLessons').includes(id);
-  const emoji=id==='pitch'?'🎤':id==='demo'?'🎬':null;const icon=emoji?'<span style="font-size:34px">'+emoji+'</span>':(I[tab]||I.launch);
+  const emoji=id==='pitch'?'🎤':id==='demo'?'🎬':id.startsWith('lab/')?'🧪':id.startsWith('mindmap/')?'🗺️':null;const icon=emoji?'<span style="font-size:34px">'+emoji+'</span>':(I[tab]||I.launch);
+  const metaText=id.startsWith('lab/')?'Practice':id.startsWith('mindmap/')?'Summary':'+'+l.xp+' XP';
   return '<div class="cf-card '+(locked?'locked':'')+' '+(done?'done':'')+'" data-idx="'+i+'" data-action="cf-focus">'
     +'<div class="cf-num">'+l.num+'</div><div class="cf-ic">'+icon+'</div>'
     +'<h2>'+l.title+'</h2><p>'+l.blurb+'</p>'
-    +'<div class="cf-meta">'+(done?'<span class="donechip">'+I.check+' Completed</span>':locked?'<span style="color:var(--t3)">'+I.lock+' Locked</span>':'<span class="xpchip">+'+l.xp+' XP</span>')+'</div>'
+    +'<div class="cf-meta">'+(done?'<span class="donechip">'+I.check+' Completed</span>':locked?'<span style="color:var(--t3)">'+I.lock+' Locked</span>':'<span class="xpchip">'+metaText+'</span>')+'</div>'
     +(locked?'<button class="btn btn-soft cf-start" disabled>'+I.lock+' Locked</button>':'<button class="btn btn-primary cf-start" data-action="open-lesson" data-lesson="'+id+'">'+(done?'Replay':'Start')+' '+I.arrow+'</button>')
     +'</div>';
+}
+
+function PracticalLab(tab){
+  const x=LEARN_EXTRAS[tab];if(!x)return '<div class="screen"><p>Lab not found.</p></div>';
+  return '<div class="screen" style="justify-content:flex-start">'
+    +'<div class="deck-head"><button class="icon-btn" data-action="tab" data-tab="'+tab+'">'+I.back+'</button><div class="now">'+x.lab.title+'<small>'+x.lab.blurb+'</small></div></div>'
+    +'<div class="deck-body"><div class="panel" style="max-width:900px"><div class="learn-lab"><div><h3 class="pt">Practical Goal</h3><p style="color:var(--t2);line-height:1.55">'+x.lab.goal+'</p><div class="insight"><div class="h">'+I.spark+' Done When</div><p>You can show the file, explain the flow, and name the next improvement without guessing.</p></div></div><div class="task-list">'+x.lab.tasks.map((t,i)=>'<div class="task"><span class="dot">'+(i+1)+'</span><div><b>'+t[0]+'</b><span>'+t[1]+'</span></div></div>').join('')+'</div></div></div></div>'
+    +'<div class="deck-nav"><button class="btn btn-soft" data-action="tab" data-tab="'+tab+'">'+I.back+' Back</button><button class="btn btn-primary" data-action="open-concept">Open Concept '+I.arrow+'</button></div></div>';
+}
+
+function MindMapSummary(tab){
+  const x=LEARN_EXTRAS[tab];if(!x)return '<div class="screen"><p>Mind map not found.</p></div>';
+  return '<div class="screen" style="justify-content:flex-start">'
+    +'<div class="deck-head"><button class="icon-btn" data-action="tab" data-tab="'+tab+'">'+I.back+'</button><div class="now">'+x.map.title+'<small>See the whole idea at once</small></div></div>'
+    +'<div class="deck-body"><div class="panel" style="max-width:860px"><div class="mindmap"><div class="mind-center">'+x.map.center+'</div>'+x.map.nodes.map(n=>'<div class="mind-node"><b>'+n[0]+'</b><span>'+n[1]+'</span></div>').join('')+'</div></div></div>'
+    +'<div class="deck-nav"><button class="btn btn-soft" data-action="tab" data-tab="'+tab+'">'+I.back+' Back</button><button class="btn btn-primary" data-action="open-concept">Open Concept '+I.arrow+'</button></div></div>';
 }
 function ModuleCarousel(tab){
   const items=moduleItems(tab);if(carIdx>=items.length)carIdx=0;const m=CARMETA[tab];
@@ -663,9 +921,10 @@ function renderConcept(){
   const el=$('#concept');let body='';
   if(ROUTE.lessonId&&LESSONS[ROUTE.lessonId]){const L=LESSONS[ROUTE.lessonId];const ck=Store.get('missions')[ROUTE.lessonId]||[];
     body='<div class="sp-block"><div class="sp-h"><span class="d"></span>Key Idea</div><div class="sp-body">'+L.key+'</div></div><div class="spline"></div><div class="sp-block"><div class="sp-h">📚 Vocabulary</div><div class="vocab">'+L.vocab.map(v=>'<div class="vrow"><b>'+v[0]+'</b><span>'+v[1]+'</span></div>').join('')+'</div></div><div class="sp-block"><div class="sp-h">✓ Mini Mission</div><div class="mission">'+L.mission.map((m,i)=>'<div class="mrow '+(ck.includes(i)?'ck':'')+'" data-action="mission" data-i="'+i+'"><div class="box">'+I.check+'</div><span>'+m+'</span></div>').join('')+'</div></div>';
-  } else {const tab=ROUTE.tab;const meta={arganta:['ArgantaLab','Your HTML game world. Each game is one HTML file. Tap a card — it pops open as an 80% window on desktop, or full screen on mobile. Green light = fullscreen.'],web:['Web Quest','Understand how the internet and ArgantaLab work together.'],ai:['AI Forge','Learn to speak with AI and use it to build real products.'],data:['Data Lab','Turn raw game numbers into charts, dashboards, and predictions.'],launch:['Launch Studio','Publish your product, then present and pitch it like a founder.']}[tab];
+  } else {const tab=ROUTE.tab;const meta={arganta:['ArgantaLab','Your HTML game world. Each game is one HTML file. Tap a card — it pops open as an 80% window on desktop, or full screen on mobile. Green light = fullscreen.'],web:['Web Quest','Understand how the internet and ArgantaLab work together.'],ai:['AI Forge','Learn to speak with AI and use it to build real products.'],data:['Data Lab','Turn raw game numbers into charts, dashboards, and predictions.'],studio:['Studio','Prompt on the left, preview on the right. Build and test single-file HTML game ideas before exporting them.'],launch:['Launch Studio','Publish your product, then present and pitch it like a founder.']}[tab];
     body='<div class="sp-block"><div class="sp-h"><span class="d"></span>'+meta[0]+'</div><div class="sp-body">'+meta[1]+'</div></div>';
     const lessons=tabLessons(tab);if(lessons.length){body+='<div class="spline"></div><div class="sp-block"><div class="sp-h">📖 In this tab</div><div class="vocab">'+lessons.map(([id,l])=>{const d=Store.get('completedLessons').includes(id),lk=lessonLocked(id);return '<div class="vrow"><span style="min-width:0">'+l.title+'</span><b style="margin-left:auto;color:'+(d?'var(--green)':lk?'var(--t3)':'var(--accent)')+'">'+(d?'✓':lk?'🔒':'○')+'</b></div>';}).join('')+'</div></div>';}
+    if(LEARN_EXTRAS[tab]){const x=LEARN_EXTRAS[tab];body+='<div class="spline"></div><div class="sp-block"><div class="sp-h">🧪 Practical Focus</div><div class="sp-body">'+x.lab.goal+'</div></div><div class="sp-block"><div class="sp-h">🗺️ Mind Map</div><div class="vocab">'+x.map.nodes.slice(0,4).map(n=>'<div class="vrow"><b>'+n[0]+'</b><span>'+n[1]+'</span></div>').join('')+'</div></div>';}
   }
   el.innerHTML='<div class="ch"><h3>Concept</h3><button class="close" data-action="close-concept">'+I.x+'</button></div>'+body;
 }
@@ -675,6 +934,11 @@ function afterRender(){
   const cf=$('#cfStage');
   if(cf){layoutCarousel();if(window.gsap){gsap.from('#mainInner .show-head > *',{y:22,opacity:0,duration:.6,stagger:.07,ease:'power3.out'});gsap.from(cf,{opacity:0,duration:.7,ease:'power2.out'});}}
   else if(window.gsap){const sc=$('#mainInner .screen');if(sc)gsap.from(sc.children,{y:24,opacity:0,duration:.7,stagger:.07,ease:'power3.out'});const ds=$('#deckBody .deck-slide');if(ds)gsap.from(ds,{y:18,opacity:0,duration:.5,ease:'power3.out'});}
+  if(ROUTE.tab==='studio'&&!ROUTE.lessonId){
+    initStudioGame();
+    const chat=$('#studioChat');if(chat)chat.scrollTop=chat.scrollHeight;
+    if(window.gsap){gsap.from('.device-frame',{scale:.97,opacity:.75,duration:.45,ease:'power2.out'});gsap.from('.chat-bubble:last-child',{y:10,opacity:0,duration:.32,ease:'power2.out'});}
+  }else stopStudioGame();
 }
 
 function openConcept(){renderConcept();$('#concept').classList.add('open');$('#conceptBack').classList.add('open');}
@@ -693,6 +957,10 @@ document.addEventListener('click',e=>{
     case 'cf-prev':carMove(-1);break;
     case 'cf-next':carMove(1);break;
     case 'cf-focus':{const c=t.closest('.cf-card');if(c){carIdx=+c.dataset.idx;layoutCarousel();}break;}
+    case 'studio-device':STUDIO_DEVICE=t.dataset.device;renderMain();break;
+    case 'studio-demo':setStudioDemo(t.dataset.demo);break;
+    case 'studio-control':studioControl(t.dataset.control);break;
+    case 'studio-send':runStudioBuild();break;
     case 'step':{const dir=+t.dataset.dir;go({step:Math.max(0,(ROUTE.step||0)+dir)});break;}
     case 'toggle-theme':toggleTheme();break;
     case 'toast':toast(t.dataset.msg,'🎮');break;
@@ -711,8 +979,22 @@ document.addEventListener('input',e=>{if(['sAcc','sStk','sDth','sWpn'].includes(
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if($('#gameRoot').innerHTML)closeGame();else closeConcept();return;}
   if($('#gameRoot').innerHTML)return;
+  if(ROUTE.tab==='studio'&&!ROUTE.lessonId){
+    if(e.target&&e.target.id==='studioPrompt'&&e.key==='Enter'){e.preventDefault();runStudioBuild();return;}
+    if(!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')){
+      const map={ArrowLeft:'left',ArrowRight:'right',ArrowDown:'down',ArrowUp:'rotate',' ':'drop',Space:'drop',r:'restart',R:'restart',x:'rotate',X:'rotate'};
+      let c=map[e.key];if(STUDIO_DEMO==='invaders'&&(e.key===' '||e.key==='Space'))c='fire';
+      if(c){e.preventDefault();studioControl(c,(c==='left'||c==='right')?true:undefined);return;}
+    }
+  }
   if(ROUTE.lessonId){if(e.key==='ArrowRight')go({step:(ROUTE.step||0)+1});else if(e.key==='ArrowLeft'&&(ROUTE.step||0)>0)go({step:ROUTE.step-1});}
   else if(['web','ai','data','launch'].includes(ROUTE.tab)){if(e.key==='ArrowRight')carMove(1);else if(e.key==='ArrowLeft')carMove(-1);else if(e.key==='Enter'){const a=$('#cfStage .cf-card.active .cf-start[data-action="open-lesson"]');if(a)a.click();}}
+});
+document.addEventListener('keyup',e=>{
+  if(ROUTE.tab==='studio'&&!ROUTE.lessonId){
+    if(e.key==='ArrowLeft')studioControl('left',false);
+    if(e.key==='ArrowRight')studioControl('right',false);
+  }
 });
 
 function completeLesson(id){const done=Store.get('completedLessons');if(!done.includes(id)){Store.set({completedLessons:[...done,id]});addXp(LESSONS[id].xp);toast(LESSONS[id].title+' complete!','🏅');checkBadges();}go({lessonId:null,tab:LESSONS[id].tab,step:0});}
