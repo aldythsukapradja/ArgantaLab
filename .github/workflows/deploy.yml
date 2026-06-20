@@ -33,6 +33,8 @@ jobs:
 
       - name: Build
         working-directory: apps/web
+        env:
+          VITE_BASE_PATH: /ArgantaLab/
         run: npm run build
 
       - name: Deploy to gh-pages branch

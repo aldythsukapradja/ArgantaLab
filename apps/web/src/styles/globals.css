@@ -447,3 +447,33 @@ html[data-theme="light"] .dock{background:linear-gradient(0deg,rgba(244,246,251,
   .template-grid{grid-template-columns:1fr}
   .kpis{grid-template-columns:1fr 1fr}
 }
+
+/* ====== LOGIN ====== */
+.login-shell{position:fixed;inset:0;display:grid;place-items:center;z-index:100;
+  background:radial-gradient(ellipse at 60% 30%,color-mix(in srgb,var(--accent) 18%,var(--bg)),var(--bg))}
+.login-card{width:min(400px,90vw);padding:44px 36px;border-radius:var(--r-2xl);
+  background:var(--panel-2);border:1px solid var(--border);backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;text-align:center}
+.login-logo{margin-bottom:20px;filter:drop-shadow(0 12px 32px var(--glow-b))}
+.login-title{font-size:32px;font-weight:860;letter-spacing:-0.04em;background:var(--grad);
+  -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px}
+.login-sub{font-size:15px;color:var(--t2);margin-bottom:32px;line-height:1.5}
+.login-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;
+  padding:14px 20px;border-radius:var(--r-md);border:1px solid var(--border);
+  background:var(--panel);color:var(--t1);font-size:15px;font-weight:650;cursor:pointer;
+  transition:.25s var(--ease);font-family:inherit}
+.login-google:hover:not(:disabled){transform:translateY(-2px);border-color:var(--accent);box-shadow:0 12px 32px var(--glow-a)}
+.login-google:disabled{opacity:.6;cursor:not-allowed}
+.login-spinner{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--border);
+  border-top-color:var(--accent);animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login-error{width:100%;margin-bottom:16px;padding:12px 14px;border-radius:var(--r-md);
+  background:color-mix(in srgb,var(--danger) 16%,transparent);border:1px solid color-mix(in srgb,var(--danger) 40%,var(--border));
+  color:var(--danger);font-size:13px;text-align:left}
+.login-fine{margin-top:24px;font-size:12px;color:var(--t3)}
+
+/* ====== APP LOADING ====== */
+.app-loading{position:fixed;inset:0;display:grid;place-items:center;z-index:100;background:var(--bg)}
+.app-loading .pulse{width:52px;height:52px;border-radius:14px;background:var(--grad);
+  animation:studioPulse 1.2s ease-in-out infinite;box-shadow:0 12px 36px var(--glow-b)}
+

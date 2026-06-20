@@ -1,5 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { useAppStore } from '@store/appStore'
+import { supabase } from '@lib/supabase'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -9,6 +11,7 @@ import BackgroundScene from '@components/three/BackgroundScene'
 import Home from '@/pages/Home'
 import Learn from '@/pages/Learn'
 import Studio from '@/pages/Studio'
+import Login from '@/pages/Login'
 import '@/styles/globals.css'
 
 const CONFETTI_COLORS = ['#4D9FFF','#8B5CF6','#FF5EA0','#3DE08A','#FFC24B','#34E5FF']
@@ -78,7 +81,7 @@ function PageContent({ tab }: { tab: string }) {
   return <Learn tab={tab} />
 }
 
-function App() {
+function AppShell() {
   const { theme, activeTab, lastTab } = useAppStore()
   const tab = activeTab || lastTab || 'arganta'
 
@@ -111,6 +114,28 @@ function App() {
       <Toasts />
     </div>
   )
+}
+
+function App() {
+  const [session, setSession] = useState<Session | null | 'loading'>('loading')
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    return () => subscription.unsubscribe()
+  }, [])
+
+  if (session === 'loading') {
+    return (
+      <div className="app-loading">
+        <div className="pulse" />
+      </div>
+    )
+  }
+
+  if (!session) return <Login />
+
+  return <AppShell />
 }
 
 export default App
