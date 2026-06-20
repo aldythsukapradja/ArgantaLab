@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { useAppStore } from '@store/appStore'
-import { supabase } from '@lib/supabase'
+import { supabase, supabaseMisconfigured } from '@lib/supabase'
+
+// Local dev affordance: when running `vite dev` with no Supabase keys,
+// skip the login wall so the app is usable offline. Production builds on
+// Vercel always have keys (supabaseMisconfigured === false), so this never
+// triggers there.
+const DEV_GUEST = import.meta.env.DEV && (
+  supabaseMisconfigured ||
+  (typeof localStorage !== 'undefined' && localStorage.getItem('alab_dev_guest') === '1')
+)
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -125,7 +134,7 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (session === 'loading') {
+  if (session === 'loading' && !DEV_GUEST) {
     return (
       <div className="app-loading">
         <div className="pulse" />
@@ -133,7 +142,7 @@ function App() {
     )
   }
 
-  if (!session) return <Login />
+  if (!session && !DEV_GUEST) return <Login />
 
   return <AppShell />
 }

@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import { useAppStore } from '@store/appStore'
 import { LESSONS, moduleItems, CARMETA, LEARN_EXTRAS, SAMPLE, DEMO_SLIDES, lineChart, barChart, donutChart, tabLessons } from '@/data'
+import { isCinematic } from '@/data/cinematic'
+import CinematicPlayer from '@components/learn/CinematicPlayer'
 
 /* ── icons ── */
 const BackIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -457,6 +459,8 @@ export default function Learn({ tab }: { tab: string }) {
   const { lessonId } = useAppStore()
 
   if (!lessonId) return <Coverflow tab={tab} />
+
+  if (isCinematic(lessonId)) return <CinematicPlayer lessonId={lessonId} />
 
   if (lessonId === 'launch/pitch') return <PitchStudio />
   if (lessonId === 'launch/demo') return <DemoStage />
