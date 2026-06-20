@@ -12,6 +12,7 @@ import AuthWall from '@components/auth/AuthWall'
 import Home from '@/pages/Home'
 import Learn from '@/pages/Learn'
 import Wizard from '@/pages/Wizard'
+import BuilderLab from '@/pages/BuilderLab'
 import '@/styles/globals.css'
 
 const CONFETTI_COLORS = ['#4D9FFF','#8B5CF6','#FF5EA0','#3DE08A','#FFC24B','#34E5FF']
@@ -141,6 +142,7 @@ function CloudSync() {
 function PageContent({ tab }: { tab: string }) {
   if (tab === 'arganta') return <Home />
   if (tab === 'studio') return <Wizard />
+  if (tab === 'lab') return <BuilderLab />
   return <Learn tab={tab} />
 }
 

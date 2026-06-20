@@ -5,7 +5,8 @@ import type { WizardConfig } from '@/data/wizard'
 export interface SavedGame {
   id: string
   title: string
-  config: WizardConfig
+  source: 'wizard' | 'procode'
+  config?: WizardConfig
   html: string
   createdAt: number
   plays: number

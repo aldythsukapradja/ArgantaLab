@@ -82,6 +82,8 @@ var NEON = STYLE === 'neon', RETRO = STYLE === 'retro', KAWAII = STYLE === 'kawa
 
 document.documentElement.style.setProperty('--ac', W.ac);
 
+var DEV = window.ARGANTA_DEVICE || (('ontouchstart' in window) ? 'iphone' : 'desktop');
+
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var DPR = Math.min(window.devicePixelRatio || 1, 2), w = 0, h = 0;
 function resize(){ w = cv.clientWidth; h = cv.clientHeight; cv.width = w*DPR; cv.height = h*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
@@ -217,6 +219,7 @@ cv.addEventListener('pointerdown',function(e){ if(state==='play'){ var rect=cv.g
 function hold(id,side){ var el=document.getElementById(id); var on=function(e){e.preventDefault();keys[side]=1;}, off=function(){keys[side]=0;};
   el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off); el.addEventListener('pointerleave',off); el.addEventListener('pointercancel',off); }
 hold('bl','l'); hold('br','r');
+document.getElementById('pad').style.display = (DEV === 'desktop') ? 'none' : 'flex';
 document.getElementById('play').addEventListener('click',start);
 document.getElementById('again').addEventListener('click',start);
 

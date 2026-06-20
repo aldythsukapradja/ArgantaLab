@@ -49,11 +49,11 @@ export default function Home() {
       <div className="section-label">My Creations</div>
       <div className="glist">
         {mine.map(g => {
-          const char = CHARACTERS.find(c => c.key === g.config.character)?.emoji ?? '🎮'
-          const world = WORLDS.find(w => w.key === g.config.world)?.label ?? ''
+          const char = g.source === 'procode' ? '🔬' : (CHARACTERS.find(c => c.key === g.config?.character)?.emoji ?? '🎮')
+          const world = g.source === 'procode' ? 'Pro-Code' : (WORLDS.find(w => w.key === g.config?.world)?.label ?? '')
           return (
             <div key={g.id} className="grow">
-              <div className="gic mine" style={{ background: worldBg[g.config.world] || 'var(--grad)' }}>
+              <div className="gic mine" style={{ background: worldBg[g.config?.world ?? ''] || 'var(--grad)' }}>
                 <span className="mine-char">{char}</span>
               </div>
               <div className="gmeta">

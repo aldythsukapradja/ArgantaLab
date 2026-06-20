@@ -47,7 +47,7 @@ export default function Wizard() {
   const save = () => {
     const title = cfg.title || suggestTitle(cfg)
     const id = savedId || newGameId()
-    saveMyGame({ id, title, config: { ...cfg, title }, html: generateGame({ ...cfg, title }), createdAt: Date.now(), plays: 0 })
+    saveMyGame({ id, title, source: 'wizard', config: { ...cfg, title }, html: generateGame({ ...cfg, title }), createdAt: Date.now(), plays: 0 })
     setSavedId(id)
     if (!savedId) addXp(40)
     addToast(`Saved “${title}” to your games!`, '🎮')
