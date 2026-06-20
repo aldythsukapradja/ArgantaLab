@@ -1,26 +1,16 @@
-import { useEffect, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import { useEffect } from 'react'
 import { useAppStore } from '@store/appStore'
-import { supabase, supabaseMisconfigured } from '@lib/supabase'
-
-// Local dev affordance: when running `vite dev` with no Supabase keys,
-// skip the login wall so the app is usable offline. Production builds on
-// Vercel always have keys (supabaseMisconfigured === false), so this never
-// triggers there.
-const DEV_GUEST = import.meta.env.DEV && (
-  supabaseMisconfigured ||
-  (typeof localStorage !== 'undefined' && localStorage.getItem('alab_dev_guest') === '1')
-)
+import { supabase } from '@lib/supabase'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
 import Dock from '@components/layout/Dock'
 import GameModal from '@components/games/GameModal'
 import BackgroundScene from '@components/three/BackgroundScene'
+import AuthWall from '@components/auth/AuthWall'
 import Home from '@/pages/Home'
 import Learn from '@/pages/Learn'
 import Studio from '@/pages/Studio'
-import Login from '@/pages/Login'
 import '@/styles/globals.css'
 
 const CONFETTI_COLORS = ['#4D9FFF','#8B5CF6','#FF5EA0','#3DE08A','#FFC24B','#34E5FF']
@@ -121,29 +111,26 @@ function AppShell() {
       <GameModal />
       <BadgeModal />
       <Toasts />
+      <AuthWall />
     </div>
   )
 }
 
 function App() {
-  const [session, setSession] = useState<Session | null | 'loading'>('loading')
+  const setSession = useAppStore(s => s.setSession)
+  const closeAuthWall = useAppStore(s => s.closeAuthWall)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s)
+      if (s) closeAuthWall() // signed in → dismiss any open login wall
+    })
     return () => subscription.unsubscribe()
-  }, [])
+  }, [setSession, closeAuthWall])
 
-  if (session === 'loading' && !DEV_GUEST) {
-    return (
-      <div className="app-loading">
-        <div className="pulse" />
-      </div>
-    )
-  }
-
-  if (!session && !DEV_GUEST) return <Login />
-
+  // The app is always browseable as a guest. The login wall (AuthWall) only
+  // appears when a guest triggers a gated action (play / learn / build).
   return <AppShell />
 }
 

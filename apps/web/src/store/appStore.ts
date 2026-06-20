@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import type { Session } from '@supabase/supabase-js'
+
+// Local-dev bypass so gated actions are testable without real OAuth.
+// Never true in production (import.meta.env.DEV === false there).
+const DEV_AUTH_BYPASS = import.meta.env.DEV &&
+  typeof localStorage !== 'undefined' && localStorage.getItem('alab_dev_guest') === '1'
 
 export interface Toast {
   id: string
@@ -28,6 +34,10 @@ interface AppStore {
   missions: Record<string, number[]>
   lastTab: string
 
+  // — auth (not persisted) —
+  session: Session | null | 'loading'
+  authWallReason: string | null   // non-null = login overlay is open
+
   // — session UI state (not persisted) —
   activeTab: string
   lessonId: string | null
@@ -47,6 +57,11 @@ interface AppStore {
   studioMessages: StudioMessage[]
 
   // — actions —
+  setSession: (s: Session | null | 'loading') => void
+  isAuthed: () => boolean
+  requireAuth: (reason?: string) => boolean
+  openAuthWall: (reason?: string) => void
+  closeAuthWall: () => void
   go: (p: { tab?: string; lessonId?: string | null; step?: number }) => void
   addXp: (n: number) => void
   completeLesson: (id: string) => void
@@ -89,6 +104,10 @@ export const useAppStore = create<AppStore>()(
       missions: {},
       lastTab: 'arganta',
 
+      // auth defaults
+      session: 'loading',
+      authWallReason: null,
+
       // session defaults
       activeTab: 'arganta',
       lessonId: null,
@@ -106,6 +125,22 @@ export const useAppStore = create<AppStore>()(
       studioBuilding: false,
       studioBuildStep: 'Ready',
       studioMessages: INITIAL_STUDIO_MESSAGES,
+
+      setSession(s) { set({ session: s }) },
+
+      isAuthed() {
+        const s = get().session
+        return DEV_AUTH_BYPASS || (s !== null && s !== 'loading')
+      },
+
+      requireAuth(reason) {
+        if (get().isAuthed()) return true
+        get().openAuthWall(reason)
+        return false
+      },
+
+      openAuthWall(reason) { set({ authWallReason: reason ?? 'to keep going' }) },
+      closeAuthWall() { set({ authWallReason: null }) },
 
       go(p) {
         const next: Partial<AppStore> = {}
@@ -160,6 +195,7 @@ export const useAppStore = create<AppStore>()(
       },
 
       openGame(id) {
+        if (!get().requireAuth('to play games')) return
         const played = get().gamesPlayed
         if (!played.includes(id)) set({ gamesPlayed: [...played, id] })
         set({ openGameId: id })
@@ -207,6 +243,7 @@ export const useAppStore = create<AppStore>()(
       },
 
       runStudioBuild(text) {
+        if (!get().requireAuth('to build games')) return
         if (get().studioBuilding) return
         const lower = text.toLowerCase()
         const isInvaders = /space|alien|invader|shooter|laser|ship|arcade/.test(lower)

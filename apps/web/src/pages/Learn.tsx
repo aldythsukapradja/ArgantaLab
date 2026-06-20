@@ -27,7 +27,7 @@ function SlideArt({ emoji }: { emoji: string }) {
    COVERFLOW – module selector
    ============================================================ */
 function Coverflow({ tab }: { tab: string }) {
-  const { go, completedLessons } = useAppStore()
+  const { go, completedLessons, requireAuth } = useAppStore()
   const items = moduleItems(tab)
   const [idx, setIdx] = useState(0)
   const meta = CARMETA[tab as keyof typeof CARMETA] ?? { e: '📖', t: 'Learn', s: 'Choose a module' }
@@ -38,6 +38,7 @@ function Coverflow({ tab }: { tab: string }) {
 
   const handleStart = (item: { id: string }) => {
     const id = item.id
+    if (!requireAuth('to start learning')) return
     if (id === 'pitch') { go({ lessonId: 'launch/pitch' }); return }
     if (id === 'demo') { go({ lessonId: 'launch/demo' }); return }
     if (id.startsWith('lab/') || id.startsWith('mindmap/')) { go({ lessonId: id }); return }

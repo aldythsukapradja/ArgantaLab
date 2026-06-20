@@ -5,9 +5,15 @@ const MoonIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const BookIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
 
 export function TopBar() {
-  const { learnerName, avatar, xp, level, theme, toggleTheme, setShowConcept, showConcept, lessonId } = useAppStore()
+  const { learnerName, avatar, xp, level, theme, toggleTheme, setShowConcept, showConcept, lessonId,
+    isAuthed, session, openAuthWall } = useAppStore()
   const xpForNext = level * 500
   const pct = Math.min(100, (xp / xpForNext) * 100)
+  const authed = isAuthed()
+  const photo = (session && session !== 'loading') ? session.user?.user_metadata?.avatar_url as string | undefined : undefined
+  const name = (session && session !== 'loading')
+    ? (session.user?.user_metadata?.full_name as string | undefined) ?? learnerName
+    : learnerName
 
   return (
     <header className="topbar">
@@ -26,17 +32,25 @@ export function TopBar() {
           <BookIcon />
         </button>
       )}
-      <div className="tb-stats">
-        <div className="nm">
-          {learnerName}
-          <small>Lv {level}</small>
+      {authed && (
+        <div className="tb-stats">
+          <div className="nm">
+            {name}
+            <small>Lv {level}</small>
+          </div>
+          <div className="xpbar"><i style={{ width: `${pct}%` }} /></div>
         </div>
-        <div className="xpbar"><i style={{ width: `${pct}%` }} /></div>
-      </div>
+      )}
       <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">
         {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
       </button>
-      <div className="avatar">{avatar}</div>
+      {authed ? (
+        photo
+          ? <img className="avatar avatar-img" src={photo} alt={name} referrerPolicy="no-referrer" />
+          : <div className="avatar">{(name?.[0] ?? avatar).toUpperCase()}</div>
+      ) : (
+        <button className="tb-signin" onClick={() => openAuthWall('to save your progress')}>Sign in</button>
+      )}
     </header>
   )
 }
