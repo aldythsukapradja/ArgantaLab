@@ -502,6 +502,46 @@ html[data-theme="light"] .dock{background:linear-gradient(0deg,rgba(244,246,251,
 .authwall-later{margin-top:14px;font-size:13px;font-weight:600;color:var(--t3);transition:.2s}
 .authwall-later:hover{color:var(--t1)}
 
+/* ====== CINEMATIC WORLD MAP (lesson selector) ====== */
+.wm{position:absolute;inset:0;overflow:hidden}
+.wm-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.wm-grad{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(3,5,12,.55) 0%,transparent 30%,transparent 46%,rgba(3,5,12,.86) 100%)}
+html[data-theme="light"] .wm-grad{background:linear-gradient(180deg,rgba(5,8,18,.4) 0%,transparent 30%,transparent 44%,rgba(5,8,18,.9) 100%)}
+.wm-inner{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:space-between;
+  padding:26px 34px 30px;overflow-y:auto}
+.wm-head{max-width:620px}
+.wm-head .h-title{color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.5);font-size:clamp(30px,5vw,58px)}
+.wm-head .lead{color:rgba(255,255,255,.78)}
+.wm-head .kicker{background:rgba(77,159,255,.18);border-color:rgba(77,159,255,.4);color:#fff}
+.wm-prog{display:flex;align-items:center;gap:12px;margin-top:16px;max-width:420px}
+.wm-prog span{font-size:12px;font-weight:650;color:rgba(255,255,255,.85);white-space:nowrap}
+
+.wm-track{display:flex;gap:16px;padding:30px 4px 14px;overflow-x:auto;scroll-snap-type:x proximity}
+.wm-track::-webkit-scrollbar{height:6px}
+.wm-node{position:relative;flex:none;width:158px;scroll-snap-align:center;text-align:left;cursor:pointer;
+  padding:16px 16px 15px;border-radius:var(--r-lg);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:.28s var(--spring);color:#fff}
+.wm-node:hover:not(.locked){transform:translateY(-5px);border-color:var(--accent);box-shadow:0 16px 40px var(--glow-a)}
+.wm-node .wm-num{position:absolute;top:12px;right:14px;font-size:12px;font-weight:800;color:rgba(255,255,255,.45);letter-spacing:.04em}
+.wm-node .wm-ic{font-size:32px;line-height:1;margin-bottom:10px;filter:drop-shadow(0 6px 18px rgba(77,159,255,.5))}
+.wm-node h3{font-size:15.5px;font-weight:750;letter-spacing:-0.01em;margin-bottom:3px}
+.wm-node .wm-loc{font-size:11.5px;color:rgba(255,255,255,.6);font-weight:500}
+.wm-node .wm-status{margin-top:12px;font-size:11.5px;font-weight:750;padding:6px 11px;border-radius:30px;display:inline-block;
+  background:rgba(77,159,255,.22);color:#cfe4ff}
+.wm-node.next{border-color:rgba(77,159,255,.55);box-shadow:0 0 0 1px rgba(77,159,255,.3),0 14px 36px var(--glow-a)}
+.wm-node.next .wm-status{background:var(--grad);color:#fff}
+.wm-node.done{background:rgba(255,194,75,.14);border-color:rgba(255,194,75,.4)}
+.wm-node.done .wm-ic{filter:drop-shadow(0 6px 20px rgba(255,194,75,.7))}
+.wm-node.done .wm-status{background:rgba(255,194,75,.26);color:#ffe2a6}
+.wm-node.locked{opacity:.5;cursor:not-allowed;background:rgba(255,255,255,.04)}
+.wm-node.locked .wm-status{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+
+@media(max-width:640px){
+  .wm-inner{padding:18px 16px 22px}
+  .wm-node{width:140px}
+}
+
 /* ====== CINEMATIC LEARN PLAYER ====== */
 /* full-screen takeover — hide the app chrome while a lesson plays */
 body.cine-mode .topbar,

@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import { useAppStore } from '@store/appStore'
 import { LESSONS, moduleItems, CARMETA, LEARN_EXTRAS, SAMPLE, DEMO_SLIDES, lineChart, barChart, donutChart, tabLessons } from '@/data'
-import { isCinematic } from '@/data/cinematic'
+import { isCinematic, cinematicForTab } from '@/data/cinematic'
 import CinematicPlayer from '@components/learn/CinematicPlayer'
+import CinematicWorldMap from '@components/learn/CinematicWorldMap'
 
 /* ── icons ── */
 const BackIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -459,7 +460,10 @@ function Interactive({ id }: { id: string }) {
 export default function Learn({ tab }: { tab: string }) {
   const { lessonId } = useAppStore()
 
-  if (!lessonId) return <Coverflow tab={tab} />
+  if (!lessonId) {
+    if (cinematicForTab(tab).length > 0) return <CinematicWorldMap tab={tab} />
+    return <Coverflow tab={tab} />
+  }
 
   if (isCinematic(lessonId)) return <CinematicPlayer lessonId={lessonId} />
 

@@ -41,6 +41,7 @@ export default function CinematicPlayer({ lessonId }: { lessonId: string }) {
     if (!scene || !cityRef.current) return
     cityRef.current.goTo(scene.cam)
     cityRef.current.spotlight(scene.spotlight !== undefined)
+    cityRef.current.setEffect(scene.effect ?? 'normal')
     setFired(false)
     setTyped('')
 

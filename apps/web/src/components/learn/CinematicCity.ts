@@ -19,6 +19,8 @@ const PRESETS: Record<string, CamPreset> = {
   ground:   { pos: [4, 1.4, 9],   look: [0, 4, -10] },
   // low POV driving down the road toward the building
   drive:    { pos: [0.5, 1.6, 17], look: [0, 2.5, -30] },
+  // standing at the base of the hero building, looking up (control-room feel)
+  inside:   { pos: [3, 1.2, 4], look: [0, 11, -10] },
 }
 
 export class CinematicCity {
@@ -155,6 +157,25 @@ export class CinematicCity {
       const mat = hero.mesh.material as THREE.MeshStandardMaterial
       gsap.to(mat, { emissiveIntensity: on ? 0.5 : 0.06, duration: 1.2 })
     }
+  }
+
+  /** Switch the whole city's visual treatment: normal / xray (wireframe) / paint. */
+  setEffect(effect: 'normal' | 'xray' | 'paint' = 'normal') {
+    this.buildings.forEach(b => {
+      const u = b.userData as { mesh?: THREE.Mesh; base?: number }
+      if (!u.mesh) return
+      const mat = u.mesh.material as THREE.MeshStandardMaterial
+      if (effect === 'xray') {
+        mat.wireframe = true
+        gsap.to(mat, { emissiveIntensity: 0.22, duration: 0.8, ease: 'power2.out' })
+      } else if (effect === 'paint') {
+        mat.wireframe = false
+        gsap.to(mat, { emissiveIntensity: 0.55, duration: 1.0, ease: 'power2.out' })
+      } else {
+        mat.wireframe = false
+        gsap.to(mat, { emissiveIntensity: u.base ?? 0.06, duration: 0.8, ease: 'power2.out' })
+      }
+    })
   }
 
   /** Fire a bright packet burst from the hero building (interactive feedback). */
