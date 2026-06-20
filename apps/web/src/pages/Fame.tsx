@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { loadMyGames } from '@lib/myGames'
+import { getLeaderboard } from '@lib/gamesCloud'
 
 // Sample board so the screen feels alive until real cross-user leaderboards
 // land (those need an aggregate public view / RPC).
@@ -13,14 +14,26 @@ const SAMPLE = [
 ]
 
 export default function Fame() {
-  const { learnerName, xp, level, go } = useAppStore()
+  const { learnerName, xp, level, go, session } = useAppStore()
   const [scope, setScope] = useState<'circle' | 'world'>('world')
   const games = loadMyGames().length
+  const myId = session && session !== 'loading' ? session.user.id : null
+  const [live, setLive] = useState<{ name: string; xp: number; games: number; emoji: string; me: boolean }[] | null>(null)
 
-  // Splice the player into the sample board by XP.
-  const me = { name: learnerName, xp, games, emoji: '😎', me: true }
-  const board = [...SAMPLE.map(s => ({ ...s, me: false })), me].sort((a, b) => b.xp - a.xp)
-  const myRank = board.findIndex(b => (b as { me?: boolean }).me) + 1
+  // Real cross-user board when the backend has data; otherwise the sample.
+  useEffect(() => {
+    getLeaderboard(20).then(rows => {
+      if (!rows || rows.length === 0) { setLive(null); return }
+      setLive(rows.map(r => ({ name: r.name, xp: r.xp, games: r.games, emoji: '🎮', me: !!myId && r.id === myId })))
+    })
+  }, [myId])
+
+  const sampleBoard = (() => {
+    const me = { name: learnerName, xp, games, emoji: '😎', me: true }
+    return [...SAMPLE.map(s => ({ ...s, me: false })), me].sort((a, b) => b.xp - a.xp)
+  })()
+  const board = live ?? sampleBoard
+  const myRank = board.findIndex(b => b.me) + 1 || board.length
 
   return (
     <div className="screen fame">
@@ -55,7 +68,7 @@ export default function Fame() {
 
       {scope === 'circle'
         ? <p className="fame-note">🏘 Circle leaderboards connect to your family Circle app — coming soon.</p>
-        : <p className="fame-note">🌍 Live world rankings are being built. For now, beat the sample creators!</p>}
+        : <p className="fame-note">{live ? '🌍 Live world rankings — real ArgantaLab creators!' : '🌍 Live rankings activate once creators sign in. Beat the sample for now!'}</p>}
 
       <button className="btn btn-primary fame-cta" onClick={() => go({ tab: 'web' })}>📚 Earn more XP →</button>
     </div>

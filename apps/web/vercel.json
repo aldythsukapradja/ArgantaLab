@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/play/:slug", "destination": "/api/play?slug=:slug" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

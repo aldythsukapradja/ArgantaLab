@@ -94,6 +94,8 @@ create table if not exists public.games (
 );
 
 alter table public.games add column if not exists creator_name text;
+alter table public.games add column if not exists slug text;
+create unique index if not exists games_slug_idx on public.games(slug) where slug is not null;
 
 alter table public.games enable row level security;
 
@@ -132,3 +134,19 @@ begin
 end;
 $$;
 grant execute on function public.bump_play(text) to anon, authenticated;
+
+-- ============================================================
+--  LEADERBOARD  (cross-user, privacy-safe: no emails exposed)
+--  SECURITY DEFINER so it can read across profiles despite RLS.
+-- ============================================================
+create or replace function public.get_leaderboard(top int default 20)
+returns table(id uuid, display_name text, photo_url text, xp int, level int, games bigint)
+language sql security definer set search_path = public stable
+as $$
+  select p.id, p.display_name, p.photo_url, p.xp, p.level,
+    (select count(*) from public.games g where g.user_id = p.id) as games
+  from public.profiles p
+  order by p.xp desc
+  limit top;
+$$;
+grant execute on function public.get_leaderboard(int) to anon, authenticated;

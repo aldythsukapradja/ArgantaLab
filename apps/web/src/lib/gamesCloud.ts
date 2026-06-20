@@ -8,7 +8,7 @@ export async function pushGame(userId: string, g: SavedGame): Promise<void> {
   try {
     await supabase.from('games').upsert({
       id: g.id, user_id: userId, title: g.title, source: g.source,
-      config: g.config ?? null, html: g.html, plays: g.plays,
+      config: g.config ?? null, html: g.html, plays: g.plays, slug: g.slug ?? null,
     })
   } catch { /* ignore */ }
 }
@@ -17,16 +17,34 @@ export async function deleteGameCloud(userId: string, id: string): Promise<void>
   try { await supabase.from('games').delete().eq('id', id).eq('user_id', userId) } catch { /* ignore */ }
 }
 
-export async function setGameVisibility(userId: string, id: string, visibility: 'private' | 'public', creatorName: string): Promise<void> {
-  try { await supabase.from('games').update({ visibility, creator_name: creatorName }).eq('id', id).eq('user_id', userId) } catch { /* ignore */ }
+export async function setGameVisibility(userId: string, id: string, visibility: 'private' | 'public', creatorName: string, slug?: string): Promise<void> {
+  try {
+    const patch: Record<string, unknown> = { visibility, creator_name: creatorName }
+    if (slug) patch.slug = slug
+    await supabase.from('games').update(patch).eq('id', id).eq('user_id', userId)
+  } catch { /* ignore */ }
 }
 
-// Public read (anon ok) for the /play/:id share page and Discover gallery.
-export async function fetchPublicGame(id: string): Promise<{ id: string; title: string; html: string; creator: string; plays: number } | null> {
+// Public read (anon ok) for the /play/:slug share page. Accepts slug OR id.
+export async function fetchPublicGame(slugOrId: string): Promise<{ id: string; title: string; html: string; creator: string; plays: number } | null> {
   try {
-    const { data, error } = await supabase.from('games').select('id,title,html,creator_name,plays,visibility').eq('id', id).maybeSingle()
+    const { data, error } = await supabase.from('games')
+      .select('id,title,html,creator_name,plays,visibility')
+      .or(`slug.eq.${slugOrId},id.eq.${slugOrId}`).limit(1).maybeSingle()
     if (error || !data || data.visibility !== 'public') return null
     return { id: data.id, title: data.title, html: data.html, creator: data.creator_name ?? 'a kid', plays: data.plays ?? 0 }
+  } catch { return null }
+}
+
+export interface LeaderRow { id: string; name: string; photo: string | null; xp: number; level: number; games: number }
+export async function getLeaderboard(top = 20): Promise<LeaderRow[] | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_leaderboard', { top })
+    if (error || !data) return null
+    return (data as Record<string, unknown>[]).map(d => ({
+      id: d.id as string, name: (d.display_name as string) ?? 'Creator', photo: (d.photo_url as string) ?? null,
+      xp: (d.xp as number) ?? 0, level: (d.level as number) ?? 1, games: Number(d.games ?? 0),
+    }))
   } catch { return null }
 }
 
