@@ -45,8 +45,15 @@ html[data-theme="light"] .topbar{background:linear-gradient(180deg,rgba(234,237,
 .brand b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .topbar .spacer{flex:1}
 .tb-stats{display:flex;flex-direction:column;align-items:flex-end;gap:4px;line-height:1}
-.tb-stats .nm{font-size:13px;font-weight:650}
-.tb-stats .nm small{color:var(--t2);font-weight:500;margin-left:6px}
+.tb-stats .nm{font-size:13px;font-weight:650;display:flex;align-items:center;gap:6px}
+.tb-stats .nm small{color:var(--t2);font-weight:500}
+.tb-name{font-size:13px;font-weight:650;color:var(--t1);background:none;border:none;padding:0;cursor:pointer;
+  border-bottom:1px dashed transparent;transition:.18s}
+.tb-name:hover{border-bottom-color:var(--accent);color:var(--accent)}
+.tb-name-input{font-size:13px;font-weight:650;color:var(--t1);background:var(--panel);border:1px solid var(--accent);
+  border-radius:6px;padding:2px 7px;width:120px;outline:none}
+.tb-diamonds{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:750;color:var(--t1);
+  padding:7px 12px;border-radius:30px;background:var(--panel);border:1px solid var(--border)}
 .xpbar{width:140px;height:5px;border-radius:20px;background:var(--border);overflow:hidden}
 .xpbar i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--accent),var(--cyan));
   box-shadow:0 0 12px var(--glow-a);transition:width 1s var(--ease)}

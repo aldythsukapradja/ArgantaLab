@@ -25,6 +25,7 @@ interface AppStore {
   avatar: string
   xp: number
   level: number
+  diamonds: number
   badges: string[]
   completedLessons: string[]
   gamesPlayed: string[]
@@ -57,6 +58,8 @@ interface AppStore {
   studioMessages: StudioMessage[]
 
   // — actions —
+  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[] }) => void
+  setLearnerName: (name: string) => void
   setSession: (s: Session | null | 'loading') => void
   isAuthed: () => boolean
   requireAuth: (reason?: string) => boolean
@@ -95,6 +98,7 @@ export const useAppStore = create<AppStore>()(
       avatar: 'B',
       xp: 120,
       level: 1,
+      diamonds: 0,
       badges: [],
       completedLessons: [],
       gamesPlayed: [],
@@ -125,6 +129,20 @@ export const useAppStore = create<AppStore>()(
       studioBuilding: false,
       studioBuildStep: 'Ready',
       studioMessages: INITIAL_STUDIO_MESSAGES,
+
+      hydrateFromCloud(p) {
+        set({
+          learnerName: p.display_name || get().learnerName,
+          xp: p.xp,
+          level: p.level,
+          diamonds: p.diamonds,
+          completedLessons: p.completed_lessons ?? [],
+          badges: p.badges ?? [],
+          gamesPlayed: p.games_played ?? [],
+        })
+      },
+
+      setLearnerName(name) { set({ learnerName: name }) },
 
       setSession(s) { set({ session: s }) },
 
@@ -172,7 +190,8 @@ export const useAppStore = create<AppStore>()(
         const done = get().completedLessons
         if (done.includes(id)) return
         const newDone = [...done, id]
-        set({ completedLessons: newDone })
+        set({ completedLessons: newDone, diamonds: get().diamonds + 5 })
+        get().addToast('+5 💎', '💎')
 
         // check badges
         const BADGES: Record<string, { name: string; need: string[] }> = {
@@ -295,6 +314,7 @@ export const useAppStore = create<AppStore>()(
         avatar: s.avatar,
         xp: s.xp,
         level: s.level,
+        diamonds: s.diamonds,
         badges: s.badges,
         completedLessons: s.completedLessons,
         gamesPlayed: s.gamesPlayed,

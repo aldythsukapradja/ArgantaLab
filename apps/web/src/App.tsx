@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { supabase } from '@lib/supabase'
+import { syncProfileOnLogin, saveProfile } from '@lib/profile'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -74,6 +75,53 @@ function Toasts() {
   )
 }
 
+/** Loads the cloud profile on login and saves progress changes (debounced).
+ *  No-ops gracefully when the Supabase backend isn't set up yet. */
+function CloudSync() {
+  const session = useAppStore(s => s.session)
+  const hydrate = useAppStore(s => s.hydrateFromCloud)
+  const [ready, setReady] = useState(false)
+  const userIdRef = useRef<string | null>(null)
+
+  const xp = useAppStore(s => s.xp)
+  const level = useAppStore(s => s.level)
+  const diamonds = useAppStore(s => s.diamonds)
+  const completedLessons = useAppStore(s => s.completedLessons)
+  const badges = useAppStore(s => s.badges)
+  const gamesPlayed = useAppStore(s => s.gamesPlayed)
+  const learnerName = useAppStore(s => s.learnerName)
+
+  // On login: pull the cloud profile, merge guest progress, hydrate the store.
+  useEffect(() => {
+    if (!session || session === 'loading') { userIdRef.current = null; setReady(false); return }
+    const uid = session.user.id
+    if (userIdRef.current === uid) return
+    userIdRef.current = uid
+    setReady(false)
+    const st = useAppStore.getState()
+    syncProfileOnLogin(session, {
+      learnerName: st.learnerName, xp: st.xp, level: st.level, diamonds: st.diamonds,
+      completedLessons: st.completedLessons, badges: st.badges, gamesPlayed: st.gamesPlayed,
+    }).then(p => { if (p) hydrate(p); setReady(true) })
+  }, [session, hydrate])
+
+  // After load: push progress changes back to the cloud, debounced.
+  useEffect(() => {
+    if (!ready) return
+    const uid = userIdRef.current
+    if (!uid) return
+    const t = setTimeout(() => {
+      saveProfile(uid, {
+        display_name: learnerName, xp, level, diamonds,
+        completed_lessons: completedLessons, badges, games_played: gamesPlayed,
+      })
+    }, 800)
+    return () => clearTimeout(t)
+  }, [ready, xp, level, diamonds, completedLessons, badges, gamesPlayed, learnerName])
+
+  return null
+}
+
 function PageContent({ tab }: { tab: string }) {
   if (tab === 'arganta') return <Home />
   if (tab === 'studio') return <Studio />
@@ -112,6 +160,7 @@ function AppShell() {
       <BadgeModal />
       <Toasts />
       <AuthWall />
+      <CloudSync />
     </div>
   )
 }
