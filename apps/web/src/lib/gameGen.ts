@@ -66,9 +66,13 @@ var WORLDS = {
   volcano: { bg:['#2b0a0a','#6a1212'], good:['\\uD83D\\uDC8E','\\uD83D\\uDD25','\\uD83E\\uDE99','\\uD83D\\uDCB0'], bad:'\\uD83E\\uDEA8', ac:'#FF7A2F', amb:'embers' },
   ice:     { bg:['#0a2a3a','#16526b'], good:['\\u2744\\uFE0F','\\uD83D\\uDC8E','\\u26C4','\\uD83E\\uDDCA'], bad:'\\uD83E\\uDEA8', ac:'#9fe8ff', amb:'snow' },
   jungle:  { bg:['#0c2a12','#1a4d24'], good:['\\uD83C\\uDF4C','\\uD83E\\uDD6D','\\uD83C\\uDF43','\\uD83E\\uDD65'], bad:'\\uD83D\\uDC0D', ac:'#3DE08A', amb:'leaves' },
-  city:    { bg:['#0a0a1a','#241047'], good:['\\uD83D\\uDCA0','\\uD83E\\uDE99','\\u26A1','\\uD83D\\uDCBF'], bad:'\\uD83E\\uDD16', ac:'#FF5EA0', amb:'grid' }
+  city:    { bg:['#0a0a1a','#241047'], good:['\\uD83D\\uDCA0','\\uD83E\\uDE99','\\u26A1','\\uD83D\\uDCBF'], bad:'\\uD83E\\uDD16', ac:'#FF5EA0', amb:'grid' },
+  candy:   { bg:['#3a0a2a','#6a1247'], good:['\\uD83C\\uDF6D','\\uD83C\\uDF6C','\\uD83E\\uDDC1','\\uD83C\\uDF70'], bad:'\\uD83E\\uDDB7', ac:'#FF5EA0', amb:'bubbles' },
+  galaxy:  { bg:['#05031a','#1a0a47'], good:['\\uD83C\\uDF1F','\\uD83D\\uDCAB','\\uD83C\\uDF20','\\uD83E\\uDE90'], bad:'\\uD83D\\uDC7E', ac:'#A855F7', amb:'stars' },
+  desert:  { bg:['#2a1a05','#5a3a12'], good:['\\uD83C\\uDF35','\\uD83E\\uDE99','\\uD83D\\uDC8E','\\uD83C\\uDFFA'], bad:'\\uD83E\\uDD82', ac:'#FFC24B', amb:'embers' }
 };
-var CHARS = { robot:'\\uD83E\\uDD16', dino:'\\uD83E\\uDD95', dragon:'\\uD83D\\uDC09', unicorn:'\\uD83E\\uDD84', ninja:'\\uD83E\\uDD77', astro:'\\uD83D\\uDC68\\u200D\\uD83D\\uDE80', wizard:'\\uD83E\\uDDD9', cat:'\\uD83D\\uDC31' };
+var CHARS = { robot:'\\uD83E\\uDD16', dino:'\\uD83E\\uDD95', dragon:'\\uD83D\\uDC09', unicorn:'\\uD83E\\uDD84', ninja:'\\uD83E\\uDD77', astro:'\\uD83D\\uDC68\\u200D\\uD83D\\uDE80', wizard:'\\uD83E\\uDDD9', cat:'\\uD83D\\uDC31',
+  hero:'\\uD83E\\uDDB8', alien:'\\uD83D\\uDC7D', ghost:'\\uD83D\\uDC7B', gdragon:'\\uD83D\\uDC32', trex:'\\uD83E\\uDD96', fairy:'\\uD83E\\uDDDA' };
 var SPEED = { slow:0.7, normal:1, fast:1.4, turbo:1.9 };
 var DIFF = { easy:{lives:5,target:200,spawn:1}, medium:{lives:3,target:350,spawn:1.3}, hard:{lives:3,target:520,spawn:1.7} };
 var PU = { shield:'\\uD83D\\uDEE1\\uFE0F', magnet:'\\uD83E\\uDDF2', double:'\\u2B50', life:'\\u2764\\uFE0F' };

@@ -2,7 +2,7 @@
 //  GAME WIZARD — option catalogue (keys shared with gameGen.ts)
 // ============================================================
 
-export interface Opt { key: string; label: string; emoji: string; note?: string }
+export interface Opt { key: string; label: string; emoji: string; note?: string; price?: number; rarity?: 'rare' | 'epic' | 'legendary' }
 
 export interface WizardConfig {
   type: string
@@ -28,7 +28,18 @@ export const WORLDS: Opt[] = [
   { key: 'ice', label: 'Ice Kingdom', emoji: '🧊' },
   { key: 'jungle', label: 'Jungle', emoji: '🌿' },
   { key: 'city', label: 'Neon City', emoji: '🏙️' },
+  { key: 'desert', label: 'Lost Desert', emoji: '🏜️', price: 60, rarity: 'rare' },
+  { key: 'candy', label: 'Candy Land', emoji: '🍭', price: 90, rarity: 'epic' },
+  { key: 'galaxy', label: 'Galaxy', emoji: '🌠', price: 120, rarity: 'legendary' },
 ]
+
+// Everything purchasable, for the Diamond Shop.
+export function shopItems(): { kind: 'character' | 'world'; opt: Opt }[] {
+  return [
+    ...CHARACTERS.filter(o => o.price).map(opt => ({ kind: 'character' as const, opt })),
+    ...WORLDS.filter(o => o.price).map(opt => ({ kind: 'world' as const, opt })),
+  ]
+}
 
 export const CHARACTERS: Opt[] = [
   { key: 'robot', label: 'Robot', emoji: '🤖' },
@@ -39,6 +50,12 @@ export const CHARACTERS: Opt[] = [
   { key: 'astro', label: 'Astronaut', emoji: '👨‍🚀' },
   { key: 'wizard', label: 'Wizard', emoji: '🧙' },
   { key: 'cat', label: 'Cat', emoji: '🐱' },
+  { key: 'ghost', label: 'Ghost', emoji: '👻', price: 50, rarity: 'rare' },
+  { key: 'alien', label: 'Alien', emoji: '👽', price: 60, rarity: 'rare' },
+  { key: 'fairy', label: 'Fairy', emoji: '🧚', price: 70, rarity: 'rare' },
+  { key: 'trex', label: 'T-Rex', emoji: '🦖', price: 90, rarity: 'epic' },
+  { key: 'hero', label: 'Super Hero', emoji: '🦸', price: 120, rarity: 'epic' },
+  { key: 'gdragon', label: 'Golden Dragon', emoji: '🐲', price: 180, rarity: 'legendary' },
 ]
 
 export const STYLES: Opt[] = [
