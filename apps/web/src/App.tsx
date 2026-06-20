@@ -11,7 +11,7 @@ import BackgroundScene from '@components/three/BackgroundScene'
 import AuthWall from '@components/auth/AuthWall'
 import Home from '@/pages/Home'
 import Learn from '@/pages/Learn'
-import Studio from '@/pages/Studio'
+import Wizard from '@/pages/Wizard'
 import '@/styles/globals.css'
 
 const CONFETTI_COLORS = ['#4D9FFF','#8B5CF6','#FF5EA0','#3DE08A','#FFC24B','#34E5FF']
@@ -57,6 +57,22 @@ function BadgeModal() {
         </div>
       </div>
     </>
+  )
+}
+
+function WizardGameModal() {
+  const { playGameHtml, playGameTitle, closeWizardGame } = useAppStore()
+  if (!playGameHtml) return null
+  return (
+    <div className="wgm">
+      <div className="wgm-bar">
+        <b>{playGameTitle}</b>
+        <button className="wgm-x" onClick={closeWizardGame} aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <iframe className="wgm-frame" title={playGameTitle} srcDoc={playGameHtml} sandbox="allow-scripts allow-pointer-lock" />
+    </div>
   )
 }
 
@@ -124,7 +140,7 @@ function CloudSync() {
 
 function PageContent({ tab }: { tab: string }) {
   if (tab === 'arganta') return <Home />
-  if (tab === 'studio') return <Studio />
+  if (tab === 'studio') return <Wizard />
   return <Learn tab={tab} />
 }
 
@@ -157,6 +173,7 @@ function AppShell() {
       <Dock />
       <ConceptDrawer />
       <GameModal />
+      <WizardGameModal />
       <BadgeModal />
       <Toasts />
       <AuthWall />

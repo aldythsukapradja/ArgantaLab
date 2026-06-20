@@ -54,7 +54,7 @@ export const NAV: NavItem[] = [
   { tab: 'web',     label: 'Web Quest',  short: 'Web',        icon: 'web',     group: 'LEARN' },
   { tab: 'data',    label: 'Data Lab',   short: 'Data',       icon: 'data',    group: 'LEARN' },
   { tab: 'ai',      label: 'AI Forge',   short: 'AI',         icon: 'ai',      group: 'LEARN' },
-  { tab: 'studio',  label: 'Studio',     short: 'Studio',     icon: 'studio',  group: 'BUILD' },
+  { tab: 'studio',  label: 'Game Wizard', short: 'Wizard',    icon: 'studio',  group: 'BUILD' },
   { tab: 'launch',  label: 'Launch Studio', short: 'Launch',  icon: 'launch',  group: 'SHIP' },
 ]
 
