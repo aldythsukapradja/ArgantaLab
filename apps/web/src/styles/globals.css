@@ -502,6 +502,89 @@ html[data-theme="light"] .dock{background:linear-gradient(0deg,rgba(244,246,251,
 .authwall-later{margin-top:14px;font-size:13px;font-weight:600;color:var(--t3);transition:.2s}
 .authwall-later:hover{color:var(--t1)}
 
+/* ====== PROMPT FORGE (rich AI lesson) ====== */
+.pf .cine-canvas{filter:saturate(1.05)}
+.pf-stage{position:relative;z-index:3;flex:1;min-height:0;display:flex;flex-direction:column;
+  max-width:760px;width:100%;margin:0 auto;padding:6px 26px 22px}
+.pf-center{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;text-align:left}
+.pf-center .cs-emoji{font-size:clamp(46px,8vw,78px)}
+.pf-lead{font-size:15px;line-height:1.5;color:rgba(255,255,255,.82);max-width:560px}
+.pf-cta{align-self:flex-start;margin-top:6px;justify-content:center}
+.pf-cta:disabled{opacity:.45;pointer-events:none}
+
+.pf-compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0}
+.pf-bad,.pf-good{padding:14px 16px;border-radius:var(--r-md);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14)}
+.pf-bad{background:rgba(255,93,93,.14)}
+.pf-good{background:rgba(61,224,138,.14)}
+.pf-bad .pf-h,.pf-good .pf-h{font-size:12px;font-weight:750;margin-bottom:6px;color:#fff}
+.pf-compare p{font-size:13px;line-height:1.45;color:rgba(255,255,255,.9)}
+
+/* gate map */
+.pf-map{flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px}
+.pf-gates{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px}
+.pf-gate{position:relative;text-align:left;padding:16px 15px;border-radius:var(--r-lg);cursor:pointer;color:#fff;
+  background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.34);backdrop-filter:blur(12px);transition:.26s var(--spring)}
+.pf-gate:hover{transform:translateY(-4px);border-color:var(--accent-2);box-shadow:0 14px 36px var(--glow-b)}
+.pf-gate.done{background:rgba(61,224,138,.16);border-color:rgba(61,224,138,.4)}
+.pf-gate-num{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.55)}
+.pf-gate-ic{font-size:30px;margin:6px 0 8px}
+.pf-gate h3{font-size:14.5px;font-weight:750}
+.pf-gate-badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:#9fe8b6}
+
+/* gate body */
+.pf-gatebody{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
+.pf-gatehead{display:flex;align-items:center;gap:12px}
+.pf-gtitle{font-size:clamp(19px,3vw,26px);font-weight:800;color:#fff;letter-spacing:-0.02em}
+.pf-scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-right:4px}
+.pf-lessonlist{list-style:none;display:flex;flex-direction:column;gap:8px}
+.pf-lessonlist li{font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.9);padding-left:18px;position:relative}
+.pf-lessonlist li::before{content:"▸";position:absolute;left:0;color:var(--accent)}
+.pf-ex{display:flex;flex-direction:column;gap:8px}
+.pf-ex-row{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:var(--r-md);backdrop-filter:blur(10px)}
+.pf-ex-row span{font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:20px;flex:none;margin-top:1px}
+.pf-ex-row.bad{background:rgba(255,93,93,.12)}
+.pf-ex-row.bad span{background:rgba(255,93,93,.3);color:#ffd2d2}
+.pf-ex-row.good{background:rgba(61,224,138,.12)}
+.pf-ex-row.good span{background:rgba(61,224,138,.3);color:#c5f6d8}
+.pf-ex-row p{font-size:13px;line-height:1.45;color:rgba(255,255,255,.92)}
+
+/* challenge */
+.pf-challenge{padding:15px;border-radius:var(--r-md);background:rgba(77,159,255,.12);border:1px solid rgba(77,159,255,.3)}
+.pf-cq{font-size:14px;font-weight:700;color:#fff;margin-bottom:11px}
+.pf-input{width:100%;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.2);border-radius:var(--r-sm);
+  color:#fff;font-size:13.5px;font-family:inherit;padding:11px 12px;resize:vertical;line-height:1.45}
+.pf-input::placeholder{color:rgba(255,255,255,.4)}
+.pf-input:disabled{opacity:.8}
+.pf-options{display:flex;flex-direction:column;gap:8px}
+.pf-opt{text-align:left;padding:12px 14px;border-radius:var(--r-sm);font-size:13.5px;font-weight:550;color:#fff;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);transition:.2s;cursor:pointer}
+.pf-opt:hover:not(:disabled){border-color:var(--accent);background:rgba(255,255,255,.14)}
+.pf-opt.right{background:rgba(61,224,138,.24);border-color:#3DE08A}
+.pf-opt.wrong{background:rgba(255,93,93,.22);border-color:#FF5D5D}
+.pf-opt:disabled{cursor:default}
+.pf-seq{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px;min-height:4px}
+.pf-chip{font-size:12px;font-weight:650;padding:6px 11px;border-radius:20px;background:var(--grad);color:#fff}
+.pf-row{display:flex;gap:8px;flex-wrap:wrap}
+.pf-fb{margin-top:10px;font-size:12.5px;font-weight:600;color:#ffd98a}
+.pf-fb.ok{color:#7ef0a8}
+.pf-example{font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.82);padding:12px;border-radius:var(--r-sm);
+  background:rgba(0,0,0,.2);border:1px dashed rgba(255,255,255,.2)}
+.pf-btnrow{display:flex;gap:8px}
+.pf .btn-soft{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff}
+
+/* done summary */
+.pf-summary{display:flex;flex-direction:column;gap:8px;margin:4px 0}
+.pf-sum{display:flex;flex-direction:column;padding:10px 13px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+.pf-sum b{font-size:13.5px;color:#fff}
+.pf-sum span{font-size:12px;color:rgba(255,255,255,.7)}
+.pf-quote{font-size:14px;font-style:italic;color:rgba(255,255,255,.85);margin-top:4px}
+
+@media(max-width:640px){
+  .pf-compare,.pf-gates{grid-template-columns:1fr}
+  .pf-stage{padding:6px 16px 18px}
+}
+
 /* ====== CINEMATIC WORLD MAP (lesson selector) ====== */
 .wm{position:absolute;inset:0;overflow:hidden}
 .wm-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0}

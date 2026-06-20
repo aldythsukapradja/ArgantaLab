@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@store/appStore'
 import { cinematicForTab, WORLDS, type CLesson } from '@/data/cinematic'
-import { CinematicCity } from './CinematicCity'
+import { createWorld } from './worlds'
 
 export default function CinematicWorldMap({ tab }: { tab: string }) {
   const { go, completedLessons, requireAuth } = useAppStore()
@@ -11,15 +11,16 @@ export default function CinematicWorldMap({ tab }: { tab: string }) {
   const world = lessons.length ? WORLDS[lessons[0].world] : null
   const doneCount = lessons.filter(l => completedLessons.includes(l.id)).length
 
+  const worldId = lessons[0]?.world ?? 'city'
   useEffect(() => {
     if (!canvasRef.current) return
-    const city = new CinematicCity(canvasRef.current)
-    city.goTo('orbit', 0.1)
-    city.spotlight(true)
-    const onResize = () => city.resize()
+    const scene = createWorld(worldId, canvasRef.current)
+    scene.goTo('orbit', 0.1)
+    scene.spotlight(true)
+    const onResize = () => scene.resize()
     window.addEventListener('resize', onResize)
-    return () => { window.removeEventListener('resize', onResize); city.dispose() }
-  }, [])
+    return () => { window.removeEventListener('resize', onResize); scene.dispose() }
+  }, [worldId])
 
   const unlocked = (l: CLesson) => !l.lock || l.lock.every(p => completedLessons.includes(p))
 

@@ -4,6 +4,7 @@ import { LESSONS, moduleItems, CARMETA, LEARN_EXTRAS, SAMPLE, DEMO_SLIDES, lineC
 import { isCinematic, cinematicForTab } from '@/data/cinematic'
 import CinematicPlayer from '@components/learn/CinematicPlayer'
 import CinematicWorldMap from '@components/learn/CinematicWorldMap'
+import PromptForge from '@components/learn/PromptForge'
 
 /* ── icons ── */
 const BackIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -465,6 +466,7 @@ export default function Learn({ tab }: { tab: string }) {
     return <Coverflow tab={tab} />
   }
 
+  if (lessonId === 'ai/prompt-power') return <PromptForge />
   if (isCinematic(lessonId)) return <CinematicPlayer lessonId={lessonId} />
 
   if (lessonId === 'launch/pitch') return <PitchStudio />

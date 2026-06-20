@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useAppStore } from '@store/appStore'
 import { CINEMATIC_LESSONS } from '@/data/cinematic'
-import { CinematicCity } from './CinematicCity'
+import { createWorld, type CinematicWorld } from './worlds'
 
 const Back = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
 const Next = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
@@ -14,7 +14,7 @@ export default function CinematicPlayer({ lessonId }: { lessonId: string }) {
   const lesson = CINEMATIC_LESSONS[lessonId]
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const cityRef = useRef<CinematicCity | null>(null)
+  const cityRef = useRef<CinematicWorld | null>(null)
   const textRef = useRef<HTMLDivElement>(null)
   const [step, setStep] = useState(0)
   const [typed, setTyped] = useState('')
@@ -24,7 +24,7 @@ export default function CinematicPlayer({ lessonId }: { lessonId: string }) {
   useEffect(() => {
     document.body.classList.add('cine-mode')
     if (!canvasRef.current) return () => document.body.classList.remove('cine-mode')
-    const city = new CinematicCity(canvasRef.current)
+    const city = createWorld(lesson?.world ?? 'city', canvasRef.current)
     cityRef.current = city
     const onResize = () => city.resize()
     window.addEventListener('resize', onResize)
