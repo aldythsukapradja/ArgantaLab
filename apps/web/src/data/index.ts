@@ -60,6 +60,16 @@ export const NAV: NavItem[] = [
   { tab: 'launch',  label: 'Launch Studio', short: 'Launch',  icon: 'launch',  group: 'SHIP' },
 ]
 
+// ── Mobile navigation: 5 grouped tabs (sub-tabs shown as centre pills) ──
+export interface MobileTab { key: string; label: string; icon: string; members: string[] }
+export const MOBILE_TABS: MobileTab[] = [
+  { key: 'play',  label: 'Play',  icon: 'arganta', members: ['arganta'] },
+  { key: 'learn', label: 'Learn', icon: 'web',     members: ['web', 'data', 'ai'] },
+  { key: 'build', label: 'Build', icon: 'studio',  members: ['studio', 'lab'] },
+  { key: 'ship',  label: 'Ship',  icon: 'launch',  members: ['launch'] },
+  { key: 'shop',  label: 'Shop',  icon: 'shop',    members: ['shop'] },
+]
+
 // ── Games ────────────────────────────────────────────────────
 export const GAMES: Game[] = [
   { id: 'strike',  file: 'AppGame_Strike_Zone_3D.html',          name: 'Strike Zone 3D',   tags: ['3D','Shooter'],  hue: 210, featured: true,  desc: 'Health, weapons, coins, and a shop. The first product built with AI + HTML.' },

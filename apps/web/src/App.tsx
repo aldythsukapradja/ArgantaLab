@@ -11,6 +11,7 @@ import Dock from '@components/layout/Dock'
 import GameModal from '@components/games/GameModal'
 import BackgroundScene from '@components/three/BackgroundScene'
 import AuthWall from '@components/auth/AuthWall'
+import { MOBILE_TABS, NAV } from '@/data'
 import Home from '@/pages/Home'
 import Learn from '@/pages/Learn'
 import Wizard from '@/pages/Wizard'
@@ -145,6 +146,26 @@ function CloudSync() {
   return null
 }
 
+/** Mobile-only centre pills for switching sub-tabs within a grouped tab
+ *  (Learn = Web/Data/AI, Build = Wizard/Lab). Hidden on desktop & in lessons. */
+function MobileSubTabs() {
+  const { activeTab, go } = useAppStore()
+  const group = MOBILE_TABS.find(g => g.members.includes(activeTab))
+  if (!group || group.members.length < 2) return null
+  return (
+    <div className="msub">
+      {group.members.map(m => {
+        const item = NAV.find(n => n.tab === m)
+        return (
+          <button key={m} className={`msub-pill${activeTab === m ? ' on' : ''}`} onClick={() => go({ tab: m })}>
+            {item?.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function PageContent({ tab }: { tab: string }) {
   if (tab === 'arganta') return <Home />
   if (tab === 'studio') return <Wizard />
@@ -169,6 +190,7 @@ function AppShell() {
       <div className="scrim" />
 
       <TopBar />
+      <MobileSubTabs />
 
       <div className="shell">
         <Sidebar />
