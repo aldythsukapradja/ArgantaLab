@@ -1,11 +1,16 @@
 import { useState } from 'react'
-import { supabase } from '@lib/supabase'
+import { supabase, supabaseMisconfigured } from '@lib/supabase'
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    supabaseMisconfigured
+      ? 'Supabase env vars not found. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel → Settings → Environment Variables, then redeploy.'
+      : null
+  )
 
   const signInWithGoogle = async () => {
+    if (supabaseMisconfigured) return
     setLoading(true)
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
@@ -42,13 +47,9 @@ export default function Login() {
         <button
           className="login-google"
           onClick={signInWithGoogle}
-          disabled={loading}
+          disabled={loading || supabaseMisconfigured}
         >
-          {loading ? (
-            <span className="login-spinner" />
-          ) : (
-            <GoogleIcon />
-          )}
+          {loading ? <span className="login-spinner" /> : <GoogleIcon />}
           {loading ? 'Signing in…' : 'Continue with Google'}
         </button>
 
