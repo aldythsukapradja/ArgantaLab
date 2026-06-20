@@ -14,7 +14,7 @@ const WORLD_BG: Record<string, string> = {
 }
 
 export default function Wizard() {
-  const { requireAuth, addXp, addToast, go } = useAppStore()
+  const { requireAuth, addXp, addToast, go, ownsItem, buyItem } = useAppStore()
   const [step, setStep] = useState(0)
   const [cfg, setCfg] = useState<WizardConfig>(defaultConfig())
   const [savedId, setSavedId] = useState<string | null>(null)
@@ -74,8 +74,10 @@ export default function Wizard() {
 
       <div className="wiz-body">
         {stepKey === 'type' && <Picker title="What kind of game?" opts={GAME_TYPES} value={cfg.type} onPick={k => set({ type: k })} showNote />}
-        {stepKey === 'world' && <Picker title="Where does it happen?" opts={WORLDS} value={cfg.world} onPick={k => set({ world: k })} grid />}
-        {stepKey === 'character' && <Picker title="Who is your hero?" opts={CHARACTERS} value={cfg.character} onPick={k => set({ character: k })} grid />}
+        {stepKey === 'world' && <Picker title="Where does it happen?" opts={WORLDS} value={cfg.world} onPick={k => set({ world: k })} grid
+          owns={ownsItem} buy={(o) => buyItem(o.key, o.price ?? 0, o.label)} />}
+        {stepKey === 'character' && <Picker title="Who is your hero?" opts={CHARACTERS} value={cfg.character} onPick={k => set({ character: k })} grid
+          owns={ownsItem} buy={(o) => buyItem(o.key, o.price ?? 0, o.label)} />}
         {stepKey === 'style' && <Picker title="Pick your look" opts={STYLES} value={cfg.style} onPick={k => set({ style: k })} grid />}
         {stepKey === 'settings' && (
           <div className="wiz-section">
@@ -124,20 +126,32 @@ function BuildChip({ cfg }: { cfg: WizardConfig }) {
   )
 }
 
-function Picker({ title, opts, value, onPick, grid, small, showNote }: {
-  title: string; opts: Opt[]; value: string; onPick: (k: string) => void; grid?: boolean; small?: boolean; showNote?: boolean
+function Picker({ title, opts, value, onPick, grid, small, showNote, owns, buy }: {
+  title: string; opts: Opt[]; value: string; onPick: (k: string) => void
+  grid?: boolean; small?: boolean; showNote?: boolean
+  owns?: (k: string) => boolean; buy?: (o: Opt) => boolean
 }) {
+  const handle = (o: Opt) => {
+    const locked = !!o.price && owns && !owns(o.key)
+    if (locked) { if (buy && buy(o)) onPick(o.key); return }
+    onPick(o.key)
+  }
   return (
     <div className="wiz-pick">
       <h2 className="wiz-q">{title}</h2>
       <div className={`wiz-opts${grid ? ' grid' : ''}${small ? ' small' : ''}`}>
-        {opts.map(o => (
-          <button key={o.key} className={`wiz-opt${value === o.key ? ' sel' : ''}`} onClick={() => onPick(o.key)}>
-            <span className="wiz-opt-e">{o.emoji}</span>
-            <span className="wiz-opt-l">{o.label}</span>
-            {showNote && o.note && <span className="wiz-opt-n">{o.note}</span>}
-          </button>
-        ))}
+        {opts.map(o => {
+          const locked = !!o.price && owns && !owns(o.key)
+          return (
+            <button key={o.key} className={`wiz-opt${value === o.key ? ' sel' : ''}${locked ? ' locked' : ''}${o.rarity ? ' ' + o.rarity : ''}`} onClick={() => handle(o)}>
+              {o.rarity && <span className="wiz-opt-rarity">{o.rarity}</span>}
+              <span className="wiz-opt-e">{o.emoji}</span>
+              <span className="wiz-opt-l">{o.label}</span>
+              {showNote && o.note && <span className="wiz-opt-n">{o.note}</span>}
+              {locked && <span className="wiz-opt-price">💎 {o.price}</span>}
+            </button>
+          )
+        })}
       </div>
     </div>
   )

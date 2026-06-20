@@ -56,6 +56,7 @@ export const NAV: NavItem[] = [
   { tab: 'ai',      label: 'AI Forge',   short: 'AI',         icon: 'ai',      group: 'LEARN' },
   { tab: 'studio',  label: 'Game Wizard', short: 'Wizard',    icon: 'studio',  group: 'BUILD' },
   { tab: 'lab',     label: 'Builder Lab', short: 'Lab',       icon: 'lab',     group: 'BUILD' },
+  { tab: 'shop',    label: 'Diamond Shop', short: 'Shop',     icon: 'shop',    group: 'SHIP' },
   { tab: 'launch',  label: 'Launch Studio', short: 'Launch',  icon: 'launch',  group: 'SHIP' },
 ]
 

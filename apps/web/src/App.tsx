@@ -13,6 +13,7 @@ import Home from '@/pages/Home'
 import Learn from '@/pages/Learn'
 import Wizard from '@/pages/Wizard'
 import BuilderLab from '@/pages/BuilderLab'
+import Shop from '@/pages/Shop'
 import '@/styles/globals.css'
 
 const CONFETTI_COLORS = ['#4D9FFF','#8B5CF6','#FF5EA0','#3DE08A','#FFC24B','#34E5FF']
@@ -143,6 +144,7 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'arganta') return <Home />
   if (tab === 'studio') return <Wizard />
   if (tab === 'lab') return <BuilderLab />
+  if (tab === 'shop') return <Shop />
   return <Learn tab={tab} />
 }
 

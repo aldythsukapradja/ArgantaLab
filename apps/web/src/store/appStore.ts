@@ -26,6 +26,7 @@ interface AppStore {
   xp: number
   level: number
   diamonds: number
+  unlocks: string[]
   badges: string[]
   completedLessons: string[]
   gamesPlayed: string[]
@@ -62,6 +63,8 @@ interface AppStore {
   // — actions —
   hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[] }) => void
   setLearnerName: (name: string) => void
+  ownsItem: (key: string) => boolean
+  buyItem: (key: string, price: number, name: string) => boolean
   setSession: (s: Session | null | 'loading') => void
   isAuthed: () => boolean
   requireAuth: (reason?: string) => boolean
@@ -103,6 +106,7 @@ export const useAppStore = create<AppStore>()(
       xp: 120,
       level: 1,
       diamonds: 0,
+      unlocks: [],
       badges: [],
       completedLessons: [],
       gamesPlayed: [],
@@ -149,6 +153,19 @@ export const useAppStore = create<AppStore>()(
       },
 
       setLearnerName(name) { set({ learnerName: name }) },
+
+      ownsItem(key) { return get().unlocks.includes(key) },
+
+      buyItem(key, price, name) {
+        if (get().unlocks.includes(key)) return true
+        if (get().diamonds < price) {
+          get().addToast(`Need ${price - get().diamonds} more 💎 for ${name}`, '💎')
+          return false
+        }
+        set({ diamonds: get().diamonds - price, unlocks: [...get().unlocks, key] })
+        get().addToast(`Unlocked ${name}!`, '✨')
+        return true
+      },
 
       setSession(s) { set({ session: s }) },
 
@@ -324,6 +341,7 @@ export const useAppStore = create<AppStore>()(
         xp: s.xp,
         level: s.level,
         diamonds: s.diamonds,
+        unlocks: s.unlocks,
         badges: s.badges,
         completedLessons: s.completedLessons,
         gamesPlayed: s.gamesPlayed,
