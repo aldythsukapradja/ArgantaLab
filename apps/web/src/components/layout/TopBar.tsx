@@ -7,7 +7,7 @@ const BookIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 
 export function TopBar() {
   const { learnerName, avatar, xp, level, diamonds, theme, toggleTheme, setShowConcept, showConcept, lessonId,
-    isAuthed, session, openAuthWall, setLearnerName } = useAppStore()
+    isAuthed, session, openAuthWall, setLearnerName, go } = useAppStore()
   const xpForNext = level * 500
   const pct = Math.min(100, (xp / xpForNext) * 100)
   const authed = isAuthed()
@@ -66,9 +66,11 @@ export function TopBar() {
         {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
       </button>
       {authed ? (
-        photo
-          ? <img className="avatar avatar-img" src={photo} alt={name} referrerPolicy="no-referrer" />
-          : <div className="avatar">{(name?.[0] ?? avatar).toUpperCase()}</div>
+        <button className="avatar avatar-btn" onClick={() => go({ tab: 'avatar' })} title="Your profile">
+          {photo
+            ? <img className="avatar-img" src={photo} alt={name} referrerPolicy="no-referrer" />
+            : <span>{(name?.[0] ?? avatar).toUpperCase()}</span>}
+        </button>
       ) : (
         <button className="tb-signin" onClick={() => openAuthWall('to save your progress')}>Sign in</button>
       )}

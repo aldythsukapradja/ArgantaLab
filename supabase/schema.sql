@@ -87,10 +87,13 @@ create table if not exists public.games (
   config      jsonb,                      -- wizard choices (null for procode)
   html        text,                       -- self-contained game
   visibility  text default 'private',     -- 'private' | 'circle' | 'public'
+  creator_name text,                       -- denormalised for the public share page
   plays       int  default 0,
   created_at  timestamptz default now(),
   updated_at  timestamptz default now()
 );
+
+alter table public.games add column if not exists creator_name text;
 
 alter table public.games enable row level security;
 
@@ -116,3 +119,16 @@ drop trigger if exists games_touch on public.games;
 create trigger games_touch
   before update on public.games
   for each row execute function public.touch_updated_at();
+
+-- Anyone (even logged-out players on the share page) can bump the play count
+-- of a PUBLIC game, without write access to the table.
+create or replace function public.bump_play(game_id text)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  update public.games set plays = plays + 1 where id = game_id and visibility = 'public';
+end;
+$$;
+grant execute on function public.bump_play(text) to anon, authenticated;

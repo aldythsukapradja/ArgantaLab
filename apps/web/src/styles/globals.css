@@ -518,6 +518,101 @@ body.cine-mode .msub{display:none!important}
 .authwall-later{margin-top:14px;font-size:13px;font-weight:600;color:var(--t3);transition:.2s}
 .authwall-later:hover{color:var(--t1)}
 
+/* ====== SHIP: avatar button, discover, gamestore, avatar, fame ====== */
+.avatar-btn{padding:0;overflow:hidden;border:none;cursor:pointer;transition:.2s}
+.avatar-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px var(--glow-b)}
+.avatar-btn .avatar-img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+.disc-head{margin-bottom:4px}
+
+/* discover reuses .glist/.grow/.gic */
+
+/* my gamestore */
+.store-list{display:flex;flex-direction:column;gap:12px}
+.store-card{display:flex;gap:14px;padding:14px;border-radius:var(--r-lg);background:var(--panel);border:1.5px solid var(--border)}
+.store-card.pub{border-color:color-mix(in srgb,var(--green) 40%,var(--border))}
+.store-thumb{width:64px;height:64px;border-radius:var(--r-md);display:grid;place-items:center;font-size:34px;flex:none}
+.store-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.store-titlerow{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.store-titlerow h3{font-size:16px;font-weight:750}
+.store-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--panel-2);color:var(--t2);flex:none}
+.store-badge.on{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
+.store-sub{font-size:12.5px;color:var(--t2)}
+.store-link{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:6px 6px 6px 11px}
+.store-link code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--accent)}
+.store-copy{flex:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:var(--accent);color:#fff;border:none;cursor:pointer}
+.store-actions{display:flex;align-items:center;gap:8px;margin-top:2px}
+.store-actions .btn{padding:9px 15px;font-size:13px}
+
+/* avatar page */
+.avpage{align-items:center;gap:18px}
+.av-card{width:min(420px,100%);text-align:center;padding:30px 24px 24px;border-radius:var(--r-2xl);
+  background:var(--panel-2);border:1px solid var(--border);box-shadow:var(--shadow)}
+.av-photo{width:88px;height:88px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;box-shadow:0 10px 30px var(--glow-b)}
+.av-photo-fallback{display:grid;place-items:center;font-size:36px;font-weight:800;color:#fff;background:var(--grad)}
+.av-name{font-size:24px;font-weight:850;letter-spacing:-0.02em}
+.av-lvl{font-size:13px;color:var(--t2);margin-top:2px}
+.av-email{font-size:12.5px;color:var(--t2);margin-top:12px;padding:9px 14px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--border)}
+.av-email b{color:var(--t1)}
+.av-stats{display:flex;justify-content:center;gap:10px;margin:16px 0}
+.av-stat{flex:1;padding:12px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--border)}
+.av-stat b{display:block;font-size:18px;font-weight:800}
+.av-stat span{font-size:11px;color:var(--t2)}
+.av-logout{width:100%;justify-content:center}
+.av-soon{width:min(420px,100%);text-align:center;padding:24px;border-radius:var(--r-2xl);background:var(--panel);border:1px dashed var(--border)}
+.av-soon-emoji{font-size:44px}
+.av-soon h2{font-size:18px;font-weight:800;margin:6px 0}
+.av-soon p{font-size:13px;color:var(--t2);line-height:1.5;max-width:320px;margin:0 auto 16px}
+.av-links{display:flex;flex-direction:column;gap:10px}
+.av-link{display:flex;align-items:center;gap:13px;text-align:left;padding:13px 16px;border-radius:var(--r-md);
+  background:var(--panel-2);border:1px solid var(--border);cursor:pointer;transition:.2s}
+.av-link:hover{border-color:var(--accent);transform:translateY(-2px)}
+.av-link span{font-size:26px}
+.av-link b{display:block;font-size:14.5px}
+.av-link small{font-size:12px;color:var(--t2)}
+
+/* hall of fame */
+.fame{gap:14px}
+.fame-tabs{display:flex;gap:8px}
+.fame-tab{padding:9px 16px;border-radius:30px;font-size:13px;font-weight:650;cursor:pointer;background:var(--panel);border:1px solid var(--border);color:var(--t1)}
+.fame-tab.on{background:color-mix(in srgb,var(--accent) 16%,var(--panel));border-color:var(--accent)}
+.fame-you{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:var(--r-md);background:var(--grad);color:#fff;font-size:13px}
+.fame-you b{font-size:20px;font-weight:850}
+.fame-board{display:flex;flex-direction:column;gap:6px}
+.fame-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--border)}
+.fame-row.me{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
+.fame-pos{width:30px;font-size:15px;font-weight:800;text-align:center;flex:none}
+.fame-av{font-size:24px;flex:none}
+.fame-name{flex:1;font-weight:700;font-size:14px}
+.fame-name em{color:var(--accent);font-style:normal;font-weight:600}
+.fame-xp{font-size:13px;font-weight:700;color:var(--gold)}
+.fame-games{font-size:12.5px;color:var(--t2);min-width:48px;text-align:right}
+.fame-note{font-size:12.5px;color:var(--t2);text-align:center}
+.fame-cta{align-self:center}
+
+/* ====== PUBLIC SHARE PAGE (/play/:id) ====== */
+.pp{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;background:var(--bg);padding-bottom:30px}
+.pp-top{width:100%;display:flex;justify-content:center;padding:14px}
+.pp-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:30px;text-decoration:none;
+  font-size:13.5px;font-weight:650;color:var(--t1);background:var(--panel-2);border:1px solid var(--border);
+  box-shadow:0 8px 26px rgba(0,0,0,.18);backdrop-filter:blur(10px);transition:.25s var(--spring)}
+.pp-pill:hover{transform:translateY(-2px) scale(1.02);border-color:var(--accent)}
+.pp-pill b{color:var(--t1);font-weight:800}
+.pp-heart{font-size:14px}
+.pp-x{color:var(--t3);font-weight:600}
+.pp-brand{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:850}
+.pp-stage{width:min(760px,100%);padding:0 14px}
+.pp-meta{width:min(760px,100%);padding:16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.pp-title{font-size:clamp(22px,4vw,32px);font-weight:850;letter-spacing:-0.02em}
+.pp-stats{font-size:13px;color:var(--t2)}
+.pp-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.pp-foot{font-size:12.5px;color:var(--t3);margin-top:6px}
+.pp-load{min-height:100vh;display:grid;place-items:center;background:var(--bg)}
+.pp-missing{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;background:var(--bg)}
+.pp-missing-emoji{font-size:54px}
+.pp-missing h1{font-size:24px;font-weight:800}
+.pp-missing p{font-size:14px;color:var(--t2)}
+
 /* ====== DIAMOND SHOP ====== */
 .shop{height:100%;display:flex;flex-direction:column;gap:16px;padding-top:6px;overflow-y:auto}
 .shop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}

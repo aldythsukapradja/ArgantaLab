@@ -17,6 +17,31 @@ export async function deleteGameCloud(userId: string, id: string): Promise<void>
   try { await supabase.from('games').delete().eq('id', id).eq('user_id', userId) } catch { /* ignore */ }
 }
 
+export async function setGameVisibility(userId: string, id: string, visibility: 'private' | 'public', creatorName: string): Promise<void> {
+  try { await supabase.from('games').update({ visibility, creator_name: creatorName }).eq('id', id).eq('user_id', userId) } catch { /* ignore */ }
+}
+
+// Public read (anon ok) for the /play/:id share page and Discover gallery.
+export async function fetchPublicGame(id: string): Promise<{ id: string; title: string; html: string; creator: string; plays: number } | null> {
+  try {
+    const { data, error } = await supabase.from('games').select('id,title,html,creator_name,plays,visibility').eq('id', id).maybeSingle()
+    if (error || !data || data.visibility !== 'public') return null
+    return { id: data.id, title: data.title, html: data.html, creator: data.creator_name ?? 'a kid', plays: data.plays ?? 0 }
+  } catch { return null }
+}
+
+export async function fetchPublicGames(limit = 24): Promise<{ id: string; title: string; html: string; creator: string; plays: number; source: string }[] | null> {
+  try {
+    const { data, error } = await supabase.from('games').select('id,title,html,creator_name,plays,source').eq('visibility', 'public').order('plays', { ascending: false }).limit(limit)
+    if (error) return null
+    return (data ?? []).map(d => ({ id: d.id, title: d.title, html: d.html, creator: d.creator_name ?? 'a kid', plays: d.plays ?? 0, source: d.source ?? 'wizard' }))
+  } catch { return null }
+}
+
+export async function bumpPlay(id: string): Promise<void> {
+  try { await supabase.rpc('bump_play', { game_id: id }) } catch { /* ignore */ }
+}
+
 export async function pullGames(userId: string): Promise<SavedGame[] | null> {
   try {
     const { data, error } = await supabase.from('games').select('*').eq('user_id', userId)

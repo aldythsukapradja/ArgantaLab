@@ -10,6 +10,11 @@ export interface SavedGame {
   html: string
   createdAt: number
   plays: number
+  published?: boolean
+}
+
+export function getMyGame(id: string): SavedGame | undefined {
+  return loadMyGames().find(g => g.id === id)
 }
 
 const KEY = 'argantalab_games_v1'
