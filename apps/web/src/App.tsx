@@ -124,7 +124,13 @@ function App() {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
-      if (s) closeAuthWall() // signed in → dismiss any open login wall
+      if (s) {
+        closeAuthWall() // signed in → dismiss any open login wall
+        // strip the #access_token=… fragment Supabase appends after OAuth
+        if (window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        }
+      }
     })
     return () => subscription.unsubscribe()
   }, [setSession, closeAuthWall])
