@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { STYLE_OPTS, FEATURE_OPTS, buildPrompt, emptyForm, type PromptForm, type PromptSegment } from '@lib/promptBuilder'
-import { saveMyGame, newGameId } from '@lib/myGames'
+import { saveMyGame, newGameId, type SavedGame } from '@lib/myGames'
+import { pushGame } from '@lib/gamesCloud'
 import DeviceFrame from '@components/build/DeviceFrame'
 
 type Phase = 'compose' | 'scroll' | 'paste' | 'publish'
 
 export default function BuilderLab() {
-  const { requireAuth, addXp, addToast, go } = useAppStore()
+  const { requireAuth, addXp, addToast, go, session } = useAppStore()
   const [phase, setPhase] = useState<Phase>('compose')
   const [form, setForm] = useState<PromptForm>(emptyForm())
   const [code, setCode] = useState('')
@@ -25,7 +26,9 @@ export default function BuilderLab() {
   const save = () => {
     const t = title.trim() || form.idea.trim() || 'My Pro-Code Game'
     const id = savedId || newGameId()
-    saveMyGame({ id, title: t, source: 'procode', html: code, createdAt: Date.now(), plays: 0 })
+    const game: SavedGame = { id, title: t, source: 'procode', html: code, createdAt: Date.now(), plays: 0 }
+    saveMyGame(game)
+    if (session && session !== 'loading') pushGame(session.user.id, game)
     setSavedId(id)
     if (!savedId) addXp(60)
     addToast(`Published “${t}”!`, '🚀')

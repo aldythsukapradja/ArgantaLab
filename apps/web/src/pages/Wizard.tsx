@@ -5,7 +5,8 @@ import {
   STEP_HINTS, STEPS, defaultConfig, suggestTitle, type Opt, type WizardConfig,
 } from '@/data/wizard'
 import { generateGame } from '@lib/gameGen'
-import { saveMyGame, newGameId } from '@lib/myGames'
+import { saveMyGame, newGameId, type SavedGame } from '@lib/myGames'
+import { pushGame } from '@lib/gamesCloud'
 
 const WORLD_BG: Record<string, string> = {
   space: 'linear-gradient(135deg,#0a0e27,#1a1147)', ocean: 'linear-gradient(135deg,#012a4a,#01497c)',
@@ -14,7 +15,7 @@ const WORLD_BG: Record<string, string> = {
 }
 
 export default function Wizard() {
-  const { requireAuth, addXp, addToast, go, ownsItem, buyItem } = useAppStore()
+  const { requireAuth, addXp, addToast, go, ownsItem, buyItem, session } = useAppStore()
   const [step, setStep] = useState(0)
   const [cfg, setCfg] = useState<WizardConfig>(defaultConfig())
   const [savedId, setSavedId] = useState<string | null>(null)
@@ -47,7 +48,9 @@ export default function Wizard() {
   const save = () => {
     const title = cfg.title || suggestTitle(cfg)
     const id = savedId || newGameId()
-    saveMyGame({ id, title, source: 'wizard', config: { ...cfg, title }, html: generateGame({ ...cfg, title }), createdAt: Date.now(), plays: 0 })
+    const game: SavedGame = { id, title, source: 'wizard', config: { ...cfg, title }, html: generateGame({ ...cfg, title }), createdAt: Date.now(), plays: 0 }
+    saveMyGame(game)
+    if (session && session !== 'loading') pushGame(session.user.id, game)
     setSavedId(id)
     if (!savedId) addXp(40)
     addToast(`Saved “${title}” to your games!`, '🎮')

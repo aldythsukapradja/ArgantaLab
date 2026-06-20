@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { GAMES, gameThumb } from '@/data'
 import { loadMyGames, saveMyGame, deleteMyGame, type SavedGame } from '@lib/myGames'
+import { pushGame, deleteGameCloud } from '@lib/gamesCloud'
 import { WORLDS, CHARACTERS } from '@/data/wizard'
 
 const PlayIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -16,16 +17,18 @@ const worldBg: Record<string, string> = {
 }
 
 export default function Home() {
-  const { openGame, gamesPlayed, go, completedLessons, xp, level, playWizardGame } = useAppStore()
+  const { openGame, gamesPlayed, go, completedLessons, xp, level, playWizardGame, session } = useAppStore()
   const [mine, setMine] = useState<SavedGame[]>([])
   useEffect(() => { setMine(loadMyGames()) }, [])
+  const uid = session && session !== 'loading' ? session.user.id : null
 
   const play = (g: SavedGame) => {
     const updated = { ...g, plays: g.plays + 1 }
     setMine(saveMyGame(updated))
+    if (uid) pushGame(uid, updated)
     playWizardGame(g.html, g.title)
   }
-  const remove = (id: string) => setMine(deleteMyGame(id))
+  const remove = (id: string) => { setMine(deleteMyGame(id)); if (uid) deleteGameCloud(uid, id) }
 
   return (
     <div className="screen arg">

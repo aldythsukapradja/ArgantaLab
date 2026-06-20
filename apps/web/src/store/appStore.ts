@@ -61,7 +61,7 @@ interface AppStore {
   studioMessages: StudioMessage[]
 
   // — actions —
-  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[] }) => void
+  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[] }) => void
   setLearnerName: (name: string) => void
   ownsItem: (key: string) => boolean
   buyItem: (key: string, price: number, name: string) => boolean
@@ -149,6 +149,7 @@ export const useAppStore = create<AppStore>()(
           completedLessons: p.completed_lessons ?? [],
           badges: p.badges ?? [],
           gamesPlayed: p.games_played ?? [],
+          unlocks: p.unlocks ?? [],
         })
       },
 

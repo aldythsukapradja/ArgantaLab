@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { supabase } from '@lib/supabase'
 import { syncProfileOnLogin, saveProfile } from '@lib/profile'
+import { pullGames } from '@lib/gamesCloud'
+import { mergeCloudGames } from '@lib/myGames'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -107,9 +109,11 @@ function CloudSync() {
   const completedLessons = useAppStore(s => s.completedLessons)
   const badges = useAppStore(s => s.badges)
   const gamesPlayed = useAppStore(s => s.gamesPlayed)
+  const unlocks = useAppStore(s => s.unlocks)
   const learnerName = useAppStore(s => s.learnerName)
 
-  // On login: pull the cloud profile, merge guest progress, hydrate the store.
+  // On login: pull the cloud profile, merge guest progress, hydrate the store,
+  // and pull the user's saved games into local storage.
   useEffect(() => {
     if (!session || session === 'loading') { userIdRef.current = null; setReady(false); return }
     const uid = session.user.id
@@ -119,8 +123,9 @@ function CloudSync() {
     const st = useAppStore.getState()
     syncProfileOnLogin(session, {
       learnerName: st.learnerName, xp: st.xp, level: st.level, diamonds: st.diamonds,
-      completedLessons: st.completedLessons, badges: st.badges, gamesPlayed: st.gamesPlayed,
+      completedLessons: st.completedLessons, badges: st.badges, gamesPlayed: st.gamesPlayed, unlocks: st.unlocks,
     }).then(p => { if (p) hydrate(p); setReady(true) })
+    pullGames(uid).then(g => { if (g) mergeCloudGames(g) })
   }, [session, hydrate])
 
   // After load: push progress changes back to the cloud, debounced.
@@ -131,11 +136,11 @@ function CloudSync() {
     const t = setTimeout(() => {
       saveProfile(uid, {
         display_name: learnerName, xp, level, diamonds,
-        completed_lessons: completedLessons, badges, games_played: gamesPlayed,
+        completed_lessons: completedLessons, badges, games_played: gamesPlayed, unlocks,
       })
     }, 800)
     return () => clearTimeout(t)
-  }, [ready, xp, level, diamonds, completedLessons, badges, gamesPlayed, learnerName])
+  }, [ready, xp, level, diamonds, completedLessons, badges, gamesPlayed, unlocks, learnerName])
 
   return null
 }

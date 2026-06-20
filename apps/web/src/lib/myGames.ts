@@ -35,3 +35,14 @@ export function deleteMyGame(id: string): SavedGame[] {
 export function newGameId(): string {
   return 'g_' + Math.random().toString(36).slice(2, 9)
 }
+
+// Merge cloud games into local storage (cloud wins per id). Returns the union.
+export function mergeCloudGames(cloud: SavedGame[]): SavedGame[] {
+  const local = loadMyGames()
+  const byId = new Map<string, SavedGame>()
+  for (const g of local) byId.set(g.id, g)
+  for (const g of cloud) byId.set(g.id, g)
+  const all = Array.from(byId.values()).sort((a, b) => b.createdAt - a.createdAt)
+  localStorage.setItem(KEY, JSON.stringify(all))
+  return all
+}

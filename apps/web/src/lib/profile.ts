@@ -11,6 +11,7 @@ export interface CloudProfile {
   completed_lessons: string[]
   badges: string[]
   games_played: string[]
+  unlocks: string[]
   role: string
 }
 
@@ -23,6 +24,7 @@ export interface LocalProgress {
   completedLessons: string[]
   badges: string[]
   gamesPlayed: string[]
+  unlocks: string[]
 }
 
 const uniq = (a: string[], b: string[]) => Array.from(new Set([...a, ...b]))
@@ -64,6 +66,7 @@ export async function syncProfileOnLogin(session: Session, local: LocalProgress)
     completed_lessons: uniq((row?.completed_lessons as string[]) ?? [], local.completedLessons),
     badges: uniq((row?.badges as string[]) ?? [], local.badges),
     games_played: uniq((row?.games_played as string[]) ?? [], local.gamesPlayed),
+    unlocks: uniq((row?.unlocks as string[]) ?? [], local.unlocks),
     role: (row?.role as string) ?? 'user',
   }
 
@@ -79,6 +82,7 @@ export async function syncProfileOnLogin(session: Session, local: LocalProgress)
       completed_lessons: merged.completed_lessons,
       badges: merged.badges,
       games_played: merged.games_played,
+      unlocks: merged.unlocks,
     })
   } catch { /* non-fatal — we still hydrate from the merged value */ }
 
