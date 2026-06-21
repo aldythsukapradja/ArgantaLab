@@ -4,6 +4,10 @@ import { useAppStore } from '@store/appStore'
 import { getItems } from '@lib/content'
 import { pickItems, recordAttempt, repairItem } from '@lib/adaptive'
 import { renderItem } from './interactions'
+import Buddy from '@components/avatar/Buddy'
+
+const CHEER = ['Awesome!', 'You got it!', 'Brilliant!', 'Nice work!', 'Superstar!']
+const NUDGE = ['Almost! Keep going.', 'Good try — you\'ll get the next one!', 'No worries, learning is trying!']
 
 const GREEN = '#16a34a', RED = '#ef4444'
 
@@ -90,6 +94,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
     const stars = total && correctCount / total >= 0.9 ? 3 : total && correctCount / total >= 0.6 ? 2 : 1
     return (
       <div className="le-results">
+        <Buddy mood="celebrate" size={104} color={world.color} bob={false} />
         <div className="le-results-stars">{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</div>
         <h2>{node.type === 'boss' ? 'Boss cleared!' : 'Node complete!'}</h2>
         <p className="le-results-sub">{correctCount} / {total} correct · +{earnedXp.current} XP · +{node.rewardDiamonds} 💎</p>
@@ -118,10 +123,15 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
 
       {answered && (
         <div className="le-feedback" style={{ borderColor: lastCorrect ? GREEN : RED }}>
-          <div className="le-feedback-h" style={{ color: lastCorrect ? GREEN : RED }}>
-            {lastCorrect ? '✅ Correct!' : '❌ Not quite'}
+          <div className="le-feedback-row">
+            <Buddy mood={lastCorrect ? 'celebrate' : 'sad'} size={56} color={world.color} bob={false} />
+            <div>
+              <div className="le-feedback-h" style={{ color: lastCorrect ? GREEN : RED }}>
+                {lastCorrect ? CHEER[idx % CHEER.length] : NUDGE[idx % NUDGE.length]}
+              </div>
+              {item!.explanation && <p className="le-feedback-x">{item!.explanation}</p>}
+            </div>
           </div>
-          {item!.explanation && <p className="le-feedback-x">{item!.explanation}</p>}
           <button className="le-check" style={{ background: lastCorrect ? GREEN : world.color }} onClick={next}>
             {idx + 1 >= total ? 'Finish' : 'Continue →'}
           </button>

@@ -4,6 +4,7 @@ import { useAppStore } from '@store/appStore'
 import { getMastery } from '@lib/adaptive'
 import { nodeState, nodeUnlocked, setNodeDone, worldRing, earnedBadges } from '@lib/learnProgress'
 import ItemPlayer from './ItemPlayer'
+import Buddy from '@components/avatar/Buddy'
 
 type Spine = 'journey' | 'signature' | 'arena' | 'badges' | 'profile'
 
@@ -66,7 +67,7 @@ export default function WorldHub({ world }: { world: World }) {
   return (
     <div className="le-world">
       <div className="le-world-head">
-        <div className="le-world-icon" style={{ background: `${world.color}22`, borderColor: `${world.color}55`, color: world.color }}>{world.icon}</div>
+        <div className="le-world-buddy"><Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} /></div>
         <div className="le-world-meta">
           <h1>{world.name}</h1>
           <p style={{ color: world.color }}>{world.vibe}</p>

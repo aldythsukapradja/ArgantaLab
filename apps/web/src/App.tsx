@@ -12,7 +12,7 @@ import GameModal from '@components/games/GameModal'
 import BackgroundScene from '@components/three/BackgroundScene'
 import AuthWall from '@components/auth/AuthWall'
 import { MOBILE_TABS, NAV, WORLD_TABS } from '@/data'
-import Home from '@/pages/Home'
+import PlayHome from '@/pages/PlayHome'
 import Wizard from '@/pages/Wizard'
 import BuilderLab from '@/pages/BuilderLab'
 import Shop from '@/pages/Shop'
@@ -192,7 +192,7 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'fame') return <Fame />
   if (tab === 'profile') return <Profile />
   if (tab === 'admin') return <AdminStudio />
-  return <Home />
+  return <PlayHome />
 }
 
 function AppShell() {
