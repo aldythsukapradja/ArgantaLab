@@ -5,6 +5,7 @@ import { accessoryFor } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getItems } from '@lib/content'
 import { pickItems, recordAttempt, repairItem } from '@lib/adaptive'
+import { bumpQuest } from '@lib/quests'
 import { renderItem } from './interactions'
 import Buddy from '@components/avatar/Buddy'
 
@@ -81,7 +82,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
     setDone(true)
     const ratio = total ? correctCount / total : 0
     const stars = ratio >= 0.9 ? 3 : ratio >= 0.6 ? 2 : 1
-    if (earnedXp.current > 0) addXp(earnedXp.current)
+    if (earnedXp.current > 0) { addXp(earnedXp.current); bumpQuest('xp', earnedXp.current) }
     onComplete(stars)
   }
 

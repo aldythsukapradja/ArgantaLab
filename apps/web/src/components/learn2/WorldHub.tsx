@@ -8,7 +8,9 @@ import ItemPlayer from './ItemPlayer'
 import Buddy from '@components/avatar/Buddy'
 import BadgeCinematic from './BadgeCinematic'
 import CinematicLauncher from './CinematicLauncher'
+import Journey from './Journey'
 import { pushLearnState } from '@lib/learnCloud'
+import { bumpQuest } from '@lib/quests'
 
 type Spine = 'journey' | 'signature' | 'arena' | 'badges' | 'profile'
 
@@ -25,7 +27,7 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addDiamonds, addToast, costume, session } = useAppStore()
+  const { requireAuth, addDiamonds, addToast, costume, session, go } = useAppStore()
   const uid = session && session !== 'loading' ? session.user.id : null
   const [spine, setSpine] = useState<Spine>('journey')
   const [active, setActive] = useState<JourneyNode | null>(null)
@@ -34,6 +36,9 @@ export default function WorldHub({ world }: { world: World }) {
   const ring = worldRing(world)
   const flat = world.units.flatMap(u => u.nodes)
   const earned = earnedBadges(world)
+
+  // the current node = first unlocked, not-yet-done node (gets the START bubble)
+  const currentKey = flat.find((n, i) => nodeUnlocked(world, i) && nodeState(world.key, n.key).status !== 'done')?.key
 
   const cinematic = badgeQueue[0]
     ? <BadgeCinematic key={badgeQueue[0].key} name={badgeQueue[0].name} icon={badgeQueue[0].icon}
@@ -49,6 +54,7 @@ export default function WorldHub({ world }: { world: World }) {
   const complete = (node: JourneyNode, stars: number) => {
     const wasDone = nodeState(world.key, node.key).status === 'done'
     setNodeDone(world.key, node.key, stars)
+    bumpQuest(node.type === 'boss' ? 'boss' : 'node')
     if (!wasDone) {
       addDiamonds(node.rewardDiamonds)
       // queue any newly-earned badges for the unlock cinematic
@@ -83,6 +89,9 @@ export default function WorldHub({ world }: { world: World }) {
     <div className="le-world">
       {cinematic}
       <div className="le-world-head">
+        <button className="le-back" onClick={() => go({ tab: 'learn' })} aria-label="Back to worlds" title="Back to worlds">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
         <div className="le-world-buddy"><Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} accessory={accessoryFor(costume)} /></div>
         <div className="le-world-meta">
           <h1>{world.name}</h1>
@@ -101,37 +110,7 @@ export default function WorldHub({ world }: { world: World }) {
 
       <div className="le-world-body">
         {spine === 'journey' && (
-          <div className="le-journey">
-            {world.units.map(unit => (
-              <div key={unit.key} className="le-unit">
-                <div className="le-unit-h" style={{ color: unit.color }}>{unit.title}</div>
-                <div className="le-nodes">
-                  {unit.nodes.map(node => {
-                    const fi = flat.findIndex(n => n.key === node.key)
-                    const st = nodeState(world.key, node.key)
-                    const unlocked = nodeUnlocked(world, fi)
-                    const isBoss = node.type === 'boss'
-                    return (
-                      <button key={node.key}
-                        className={`le-node${st.status === 'done' ? ' done' : ''}${!unlocked ? ' locked' : ''}${isBoss ? ' boss' : ''}`}
-                        disabled={!unlocked}
-                        style={st.status === 'done' || unlocked ? { borderColor: world.color } : undefined}
-                        onClick={() => unlocked && launch(node)}>
-                        <span className="le-node-ic" style={{ background: unlocked ? world.color : 'var(--border)' }}>
-                          {st.status === 'done' ? '✓' : isBoss ? '👑' : unlocked ? '▶' : '🔒'}
-                        </span>
-                        <span className="le-node-t">
-                          <b>{node.title}</b>
-                          <small>{isBoss ? 'Boss · ' : ''}{node.itemCount} questions · +{node.rewardDiamonds}💎</small>
-                        </span>
-                        {st.status === 'done' && <span className="le-node-stars">{'⭐'.repeat(st.stars)}</span>}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+          <Journey world={world} launch={launch} currentKey={currentKey} costume={costume} />
         )}
 
         {spine === 'signature' && (

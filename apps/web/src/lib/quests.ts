@@ -58,6 +58,12 @@ export const QUESTS: QuestDef[] = [
   { id: 'w_boss', scope: 'weekly', title: 'Beat 3 bosses this week', icon: '⚔️', metric: c => c.boss, target: 3, reward: { diamonds: 30 } },
 ]
 
+/** Raw daily + weekly activity counters (for the parent dashboard). */
+export function getCounters(): { daily: Counters; weekly: Counters } {
+  const s = load()
+  return { daily: s.daily, weekly: s.weekly }
+}
+
 export interface QuestView { def: QuestDef; progress: number; done: boolean; claimed: boolean }
 export function getQuests(): QuestView[] {
   const s = load()
