@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import type { World, JourneyNode } from '@/data/learn'
+import type { World, JourneyNode, Badge } from '@/data/learn'
+import { accessoryFor } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getMastery } from '@lib/adaptive'
 import { nodeState, nodeUnlocked, setNodeDone, worldRing, earnedBadges } from '@lib/learnProgress'
 import ItemPlayer from './ItemPlayer'
 import Buddy from '@components/avatar/Buddy'
+import BadgeCinematic from './BadgeCinematic'
+import CinematicLauncher from './CinematicLauncher'
+import { pushLearnState } from '@lib/learnCloud'
 
 type Spine = 'journey' | 'signature' | 'arena' | 'badges' | 'profile'
 
@@ -21,13 +25,21 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addDiamonds, addToast } = useAppStore()
+  const { requireAuth, addDiamonds, addToast, costume, session } = useAppStore()
+  const uid = session && session !== 'loading' ? session.user.id : null
   const [spine, setSpine] = useState<Spine>('journey')
   const [active, setActive] = useState<JourneyNode | null>(null)
+  const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
   const ring = worldRing(world)
   const flat = world.units.flatMap(u => u.nodes)
   const earned = earnedBadges(world)
+
+  const cinematic = badgeQueue[0]
+    ? <BadgeCinematic key={badgeQueue[0].key} name={badgeQueue[0].name} icon={badgeQueue[0].icon}
+        color={world.color} accessory={accessoryFor(costume)}
+        onDone={() => setBadgeQueue(q => q.slice(1))} />
+    : null
 
   const launch = (node: JourneyNode) => {
     if (!requireAuth('to start learning')) return
@@ -39,16 +51,19 @@ export default function WorldHub({ world }: { world: World }) {
     setNodeDone(world.key, node.key, stars)
     if (!wasDone) {
       addDiamonds(node.rewardDiamonds)
-      // surface any newly-earned badges
+      // queue any newly-earned badges for the unlock cinematic
       const after = earnedBadges(world)
-      for (const b of world.badges) if (after.has(b.key) && !earned.has(b.key)) addToast(`${b.icon} ${b.name} unlocked!`, '🏅')
+      const fresh = world.badges.filter(b => after.has(b.key) && !earned.has(b.key))
+      if (fresh.length) setBadgeQueue(q => [...q, ...fresh])
     }
+    if (uid) pushLearnState(uid)   // mirror progress to the cloud (best-effort)
     force(n => n + 1)
   }
 
   if (active) {
     return (
       <div className="le-world">
+        {cinematic}
         <ItemPlayer world={world} node={active}
           onExit={() => { setActive(null); force(n => n + 1) }}
           onComplete={(stars) => complete(active, stars)} />
@@ -66,8 +81,9 @@ export default function WorldHub({ world }: { world: World }) {
 
   return (
     <div className="le-world">
+      {cinematic}
       <div className="le-world-head">
-        <div className="le-world-buddy"><Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} /></div>
+        <div className="le-world-buddy"><Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} accessory={accessoryFor(costume)} /></div>
         <div className="le-world-meta">
           <h1>{world.name}</h1>
           <p style={{ color: world.color }}>{world.vibe}</p>
@@ -119,16 +135,18 @@ export default function WorldHub({ world }: { world: World }) {
         )}
 
         {spine === 'signature' && (
-          <div className="le-sig">
-            <div className="le-sig-card" style={{ borderColor: `${world.color}55` }}>
-              <h3 style={{ color: world.color }}>{world.signature}</h3>
-              <p>This is {world.name}'s signature play. Jump into a quick mixed drill across every skill.</p>
-              <button className="le-check" style={{ background: world.color }}
-                onClick={() => launch({ key: 'sig-drill', title: `${world.signature} drill`, type: 'practice', skills: world.skills.map(s => s.key), itemCount: 6, rewardDiamonds: 8 })}>
-                ⚡ Quick drill
-              </button>
-            </div>
-          </div>
+          world.key === 'LOG'
+            ? <CinematicLauncher />
+            : <div className="le-sig">
+                <div className="le-sig-card" style={{ borderColor: `${world.color}55` }}>
+                  <h3 style={{ color: world.color }}>{world.signature}</h3>
+                  <p>This is {world.name}'s signature play. Jump into a quick mixed drill across every skill.</p>
+                  <button className="le-check" style={{ background: world.color }}
+                    onClick={() => launch({ key: 'sig-drill', title: `${world.signature} drill`, type: 'practice', skills: world.skills.map(s => s.key), itemCount: 6, rewardDiamonds: 8 })}>
+                    ⚡ Quick drill
+                  </button>
+                </div>
+              </div>
         )}
 
         {spine === 'arena' && (

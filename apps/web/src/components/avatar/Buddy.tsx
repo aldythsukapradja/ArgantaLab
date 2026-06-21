@@ -3,6 +3,7 @@
 // Default name = the learner's own name (set elsewhere). Reacts with moods.
 
 export type Mood = 'idle' | 'happy' | 'celebrate' | 'think' | 'sad' | 'wave'
+export type Accessory = { kind: 'visor' | 'cape' | 'goggles' | 'headset' | 'hat' | 'backpack'; color: string }
 
 interface Props {
   mood?: Mood
@@ -10,10 +11,11 @@ interface Props {
   color?: string          // body base colour (defaults to the brand purple)
   look?: { x: number; y: number }  // pupil direction, each -1..1
   bob?: boolean           // gentle floating idle animation
+  accessory?: Accessory   // equipped costume
   className?: string
 }
 
-export default function Buddy({ mood = 'idle', size = 120, color = '#8b5cf6', look = { x: 0, y: 0 }, bob = true, className = '' }: Props) {
+export default function Buddy({ mood = 'idle', size = 120, color = '#8b5cf6', look = { x: 0, y: 0 }, bob = true, accessory, className = '' }: Props) {
   const dark = shade(color, -28)
   const light = shade(color, 22)
   const lx = Math.max(-1, Math.min(1, look.x)) * 3
@@ -31,6 +33,9 @@ export default function Buddy({ mood = 'idle', size = 120, color = '#8b5cf6', lo
           <stop offset="100%" stopColor={dark} />
         </radialGradient>
       </defs>
+
+      {/* costume — behind layer (cape, backpack) */}
+      {accessory && accBehind(accessory)}
 
       {/* ears */}
       <ellipse cx="30" cy="28" rx="9" ry="14" fill={dark} />
@@ -74,8 +79,58 @@ export default function Buddy({ mood = 'idle', size = 120, color = '#8b5cf6', lo
         </g>
       )}
       {mood === 'wave' && <text className="buddy-wave" x="78" y="60" fontSize="16">👋</text>}
+
+      {/* costume — front layer (visor, goggles, headset, hat) */}
+      {accessory && accFront(accessory)}
     </svg>
   )
+}
+
+// Accessories drawn BEHIND the body (so the body overlaps them).
+function accBehind({ kind, color }: Accessory) {
+  const dark = shade(color, -22)
+  if (kind === 'cape') return (
+    <g><path d="M26 46 L74 46 L84 92 Q50 102 16 92 Z" fill={color} />
+      <path d="M26 46 L74 46 L70 56 Q50 60 30 56 Z" fill={dark} /></g>
+  )
+  if (kind === 'backpack') return (
+    <g><rect x="72" y="48" width="16" height="24" rx="5" fill={color} />
+      <rect x="75" y="52" width="10" height="7" rx="2" fill={dark} /></g>
+  )
+  return null
+}
+
+// Accessories drawn IN FRONT of the face.
+function accFront({ kind, color }: Accessory) {
+  const dark = shade(color, -26)
+  const light = shade(color, 28)
+  switch (kind) {
+    case 'visor': return (
+      <g><rect x="24" y="32" width="52" height="11" rx="5.5" fill={color} />
+        <rect x="20" y="41" width="60" height="4" rx="2" fill={dark} />
+        <rect x="28" y="34" width="20" height="3" rx="1.5" fill={light} opacity="0.6" /></g>
+    )
+    case 'goggles': return (
+      <g fill="none" stroke={color} strokeWidth="3.4">
+        <circle cx="40" cy="52" r="11" /><circle cx="60" cy="52" r="11" />
+        <path d="M51 52h-2" /><path d="M29 50 L22 48" /><path d="M71 50 L78 48" />
+        <circle cx="40" cy="52" r="11" fill="#bfe9ff" opacity="0.18" stroke="none" />
+        <circle cx="60" cy="52" r="11" fill="#bfe9ff" opacity="0.18" stroke="none" /></g>
+    )
+    case 'headset': return (
+      <g><path d="M27 30 Q50 6 73 30" stroke={color} strokeWidth="4.5" fill="none" />
+        <rect x="21" y="24" width="9" height="13" rx="4" fill={color} />
+        <rect x="70" y="24" width="9" height="13" rx="4" fill={color} />
+        <path d="M75 32 Q84 46 64 51" stroke={dark} strokeWidth="2.6" fill="none" />
+        <circle cx="64" cy="51" r="3" fill={dark} /></g>
+    )
+    case 'hat': return (
+      <g><ellipse cx="50" cy="20" rx="31" ry="6.5" fill={dark} />
+        <path d="M33 21 Q33 5 50 5 Q67 5 67 21 Z" fill={color} />
+        <rect x="35" y="16" width="30" height="4" rx="2" fill={dark} /></g>
+    )
+    default: return null  // cape & backpack are behind-layer
+  }
 }
 
 // lighten/darken a #rrggbb hex by percent (-100..100)

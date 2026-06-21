@@ -350,11 +350,21 @@ create table if not exists public.quest_progress (
   primary key (user_id, item_id)
 );
 
+-- Learn-engine state mirror (cross-device). The runtime engine is key-based and
+-- local-first; this single row per user mirrors the two localStorage blobs
+-- (node completion + skill mastery) for sync, sidestepping uuid-FK coupling.
+create table if not exists public.learn_state (
+  user_id    uuid primary key references public.profiles(id) on delete cascade,
+  nodes      jsonb default '{}'::jsonb,
+  mastery    jsonb default '{}'::jsonb,
+  updated_at timestamptz default now()
+);
+
 -- RLS: own-row only on every progress table
 do $$
 declare t text;
 begin
-  foreach t in array array['world_progress','item_attempts','skill_mastery','node_progress','user_badges','quest_progress']
+  foreach t in array array['world_progress','item_attempts','skill_mastery','node_progress','user_badges','quest_progress','learn_state']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "%s_own" on public.%I', t, t);

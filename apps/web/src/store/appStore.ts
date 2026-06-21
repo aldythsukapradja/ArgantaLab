@@ -31,6 +31,7 @@ interface AppStore {
   completedLessons: string[]
   gamesPlayed: string[]
   role: string
+  costume: string | null   // equipped costume = a world key (e.g. 'NUM'), or null
   theme: 'light' | 'dark'
   pitchScript: string
   pitchCompleted: boolean
@@ -64,6 +65,7 @@ interface AppStore {
   // — actions —
   hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string }) => void
   isAdmin: () => boolean
+  setCostume: (worldKey: string | null) => void
   setLearnerName: (name: string) => void
   ownsItem: (key: string) => boolean
   buyItem: (key: string, price: number, name: string) => boolean
@@ -114,6 +116,7 @@ export const useAppStore = create<AppStore>()(
       completedLessons: [],
       gamesPlayed: [],
       role: 'user',
+      costume: null,
       theme: 'light',
       pitchScript: '',
       pitchCompleted: false,
@@ -163,6 +166,8 @@ export const useAppStore = create<AppStore>()(
         if (import.meta.env.DEV) return true
         return get().role === 'admin'
       },
+
+      setCostume(worldKey) { set({ costume: worldKey }) },
 
       setLearnerName(name) { set({ learnerName: name }) },
 
@@ -362,6 +367,7 @@ export const useAppStore = create<AppStore>()(
         badges: s.badges,
         completedLessons: s.completedLessons,
         gamesPlayed: s.gamesPlayed,
+        costume: s.costume,
         theme: s.theme,
         pitchScript: s.pitchScript,
         pitchCompleted: s.pitchCompleted,

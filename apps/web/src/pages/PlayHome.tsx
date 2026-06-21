@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { GAMES, gameThumb } from '@/data'
-import { WORLDS } from '@/data/learn'
+import { WORLDS, accessoryFor } from '@/data/learn'
 import { worldRing } from '@lib/learnProgress'
 import { getStreak, touchStreak } from '@lib/streak'
 import { loadMyGames, saveMyGame, deleteMyGame, type SavedGame } from '@lib/myGames'
@@ -31,7 +31,7 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 }
 
 export default function PlayHome() {
-  const { learnerName, setLearnerName, go, xp, level, openGame, gamesPlayed, playWizardGame, session } = useAppStore()
+  const { learnerName, setLearnerName, go, xp, level, openGame, gamesPlayed, playWizardGame, session, costume } = useAppStore()
   const [hover, setHover] = useState<number | null>(null)
   const [mood, setMood] = useState<Mood>('wave')
   const [streak, setStreak] = useState(0)
@@ -91,7 +91,7 @@ export default function PlayHome() {
         </svg>
 
         <div className="ph-buddy">
-          <Buddy mood={mood} size={132} look={look} />
+          <Buddy mood={mood} size={132} look={look} accessory={accessoryFor(costume)} />
         </div>
 
         {WORLDS.map((w, i) => {

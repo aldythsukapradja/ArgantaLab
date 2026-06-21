@@ -4,6 +4,7 @@ import { supabase } from '@lib/supabase'
 import { syncProfileOnLogin, saveProfile } from '@lib/profile'
 import { pullGames } from '@lib/gamesCloud'
 import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
+import { pullLearnState } from '@lib/learnCloud'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -141,6 +142,8 @@ function CloudSync() {
     }).then(p => { if (p) hydrate(p); setReady(true) })
     // Replace the local view with exactly this user's cloud games.
     pullGames(uid).then(g => replaceWithCloud(g ?? []))
+    // Merge cloud learn progress (rings, mastery, node completion) into local.
+    pullLearnState(uid)
   }, [session, hydrate])
 
   // After load: push progress changes back to the cloud, debounced.

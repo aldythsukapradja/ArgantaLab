@@ -303,6 +303,24 @@ const LIF: World = {
 export const WORLDS: World[] = [NUM, WRD, WON, LOG, WLD, LIF]
 export const WORLD_BY_KEY: Record<string, World> = Object.fromEntries(WORLDS.map(w => [w.key, w]))
 
+// ── Costumes (one per world) — earned free at ring ≥ 50%, or a diamond shortcut.
+// `kind` tells the Buddy avatar which accessory to draw.
+export interface Costume { world: string; name: string; kind: 'visor' | 'cape' | 'goggles' | 'headset' | 'hat' | 'backpack'; color: string; price: number }
+export const COSTUMES: Costume[] = [
+  { world: 'NUM', name: 'Calculator Visor', kind: 'visor', color: '#f59e0b', price: 40 },
+  { world: 'WRD', name: 'Reading Cape', kind: 'cape', color: '#3b82f6', price: 40 },
+  { world: 'WON', name: 'Lab Goggles', kind: 'goggles', color: '#10b981', price: 40 },
+  { world: 'LOG', name: 'Circuit Headset', kind: 'headset', color: '#8b5cf6', price: 40 },
+  { world: 'WLD', name: 'Explorer Hat', kind: 'hat', color: '#ef4444', price: 40 },
+  { world: 'LIF', name: 'Helper Backpack', kind: 'backpack', color: '#f472b6', price: 40 },
+]
+export const COSTUME_BY_WORLD: Record<string, Costume> = Object.fromEntries(COSTUMES.map(c => [c.world, c]))
+export function accessoryFor(costumeKey: string | null | undefined): { kind: Costume['kind']; color: string } | undefined {
+  if (!costumeKey) return undefined
+  const c = COSTUME_BY_WORLD[costumeKey]
+  return c ? { kind: c.kind, color: c.color } : undefined
+}
+
 export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS]
 
 export function localItemsFor(world: string, skills: string[], stage = 'explorer'): Item[] {
