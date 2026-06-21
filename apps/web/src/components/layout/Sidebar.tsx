@@ -14,10 +14,19 @@ const icons: Record<string, () => JSX.Element> = {
   avatar: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>,
   trophy: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M10 14v3M14 14v3M8 20h8M9 20l.5-3M15 20l-.5-3"/></svg>,
   launch: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>,
+  profile: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M5 18a4 4 0 0 1 8 0M15 9h3M15 13h3"/></svg>,
+  learn: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M2 5l10 3 10-3-10-3z"/><path d="M2 5v9l10 3 10-3V5"/></svg>,
+  admin: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 14H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 5 8.6l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.09c.66.13 1.26.51 1.69 1.08"/></svg>,
+}
+
+// The 6 learning worlds render a coloured glyph instead of an SVG.
+const WORLD_GLYPH: Record<string, { g: string; c: string }> = {
+  num: { g: '#', c: '#f59e0b' }, wrd: { g: 'A', c: '#3b82f6' }, won: { g: '⚗', c: '#10b981' },
+  log: { g: '{}', c: '#8b5cf6' }, wld: { g: '🗺', c: '#ef4444' }, lif: { g: '♥', c: '#f472b6' },
 }
 
 export default function Sidebar() {
-  const { activeTab, go } = useAppStore()
+  const { activeTab, go, isAdmin } = useAppStore()
 
   const groups: Record<string, typeof NAV> = {}
   NAV.forEach(n => { if (!groups[n.group]) groups[n.group] = []; groups[n.group].push(n) })
@@ -28,6 +37,7 @@ export default function Sidebar() {
         <div key={g}>
           <div className="nav-label">{g}</div>
           {items.map(item => {
+            const glyph = WORLD_GLYPH[item.tab]
             const Icon = icons[item.tab] ?? icons.arganta
             return (
               <button
@@ -35,7 +45,9 @@ export default function Sidebar() {
                 className={`nav-item${activeTab === item.tab ? ' on' : ''}`}
                 onClick={() => go({ tab: item.tab })}
               >
-                <Icon />
+                {glyph
+                  ? <span className="nav-glyph" style={{ color: glyph.c }}>{glyph.g}</span>
+                  : <Icon />}
                 {item.label}
               </button>
             )
@@ -43,6 +55,15 @@ export default function Sidebar() {
         </div>
       ))}
       <div className="nav-spacer" />
+      {isAdmin() && (
+        <div>
+          <div className="nav-label">Creator</div>
+          <button className={`nav-item${activeTab === 'admin' ? ' on' : ''}`} onClick={() => go({ tab: 'admin' })}>
+            {icons.admin()}
+            Content Studio
+          </button>
+        </div>
+      )}
     </nav>
   )
 }

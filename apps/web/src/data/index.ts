@@ -49,11 +49,15 @@ export const I: Record<string, string> = {
 export const LOGO = `<svg width="32" height="32" viewBox="0 0 40 40"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4D9FFF"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs><rect x="3" y="3" width="34" height="34" rx="11" fill="url(#lg)"/><g style="transform-origin:20px 20px;animation:spinlogo 9s linear infinite"><path d="M20 10l8 4.5v9L20 28l-8-4.5v-9z" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.9)" stroke-width="1.4" stroke-linejoin="round"/><path d="M20 10v18M12 14.5l8 4 8-4" stroke="rgba(255,255,255,.6)" stroke-width="1.1" fill="none"/></g><circle cx="20" cy="20" r="2.4" fill="#fff"/><style>@keyframes spinlogo{to{transform:rotate(360deg)}}</style></svg>`
 
 // ── Navigation ───────────────────────────────────────────────
+//  Play (home) · Learn (6 learning worlds) · Build · Ship · You
 export const NAV: NavItem[] = [
   { tab: 'arganta',   label: 'ArgantaLab',   short: 'Home',     icon: 'arganta',   group: 'PLAY' },
-  { tab: 'web',       label: 'Web Quest',    short: 'Web',      icon: 'web',       group: 'LEARN' },
-  { tab: 'data',      label: 'Data Lab',     short: 'Data',     icon: 'data',      group: 'LEARN' },
-  { tab: 'ai',        label: 'AI Forge',     short: 'AI',       icon: 'ai',        group: 'LEARN' },
+  { tab: 'num',       label: 'NumberDash',   short: 'Number',   icon: 'num',       group: 'LEARN' },
+  { tab: 'wrd',       label: 'WordQuest',    short: 'Words',    icon: 'wrd',       group: 'LEARN' },
+  { tab: 'won',       label: 'WonderLab',    short: 'Science',  icon: 'won',       group: 'LEARN' },
+  { tab: 'log',       label: 'LogicLand',    short: 'Logic',    icon: 'log',       group: 'LEARN' },
+  { tab: 'wld',       label: 'WorldTrail',   short: 'World',    icon: 'wld',       group: 'LEARN' },
+  { tab: 'lif',       label: 'LifeQuest',    short: 'Life',     icon: 'lif',       group: 'LEARN' },
   { tab: 'studio',    label: 'Game Wizard',  short: 'Wizard',   icon: 'studio',    group: 'BUILD' },
   { tab: 'lab',       label: 'Builder Lab',  short: 'Lab',      icon: 'lab',       group: 'BUILD' },
   { tab: 'discover',  label: 'Discover',     short: 'Discover', icon: 'discover',  group: 'SHIP' },
@@ -61,16 +65,22 @@ export const NAV: NavItem[] = [
   { tab: 'avatar',    label: 'Avatar',       short: 'Avatar',   icon: 'avatar',    group: 'YOU' },
   { tab: 'fame',      label: 'Hall of Fame', short: 'Fame',     icon: 'trophy',    group: 'YOU' },
   { tab: 'shop',      label: 'Diamond Shop', short: 'Shop',     icon: 'shop',      group: 'YOU' },
+  { tab: 'profile',   label: 'Profile',      short: 'Profile',  icon: 'profile',   group: 'YOU' },
 ]
 
-// ── Mobile navigation: 5 grouped tabs (sub-tabs shown as centre pills) ──
-export interface MobileTab { key: string; label: string; icon: string; members: string[] }
+// The 6 learning worlds (Learn group), in display order.
+export const WORLD_TABS = ['num', 'wrd', 'won', 'log', 'wld', 'lif']
+
+// ── Mobile navigation: 5 grouped tabs ──
+//  `members` = tabs that keep this dock item highlighted.
+//  `pills`   = optional centre sub-nav pills (omit for hub-style groups).
+export interface MobileTab { key: string; label: string; icon: string; members: string[]; pills?: string[] }
 export const MOBILE_TABS: MobileTab[] = [
   { key: 'play',   label: 'Play',   icon: 'arganta',  members: ['arganta'] },
-  { key: 'learn',  label: 'Learn',  icon: 'web',      members: ['web', 'data', 'ai'] },
-  { key: 'build',  label: 'Build',  icon: 'studio',   members: ['studio', 'lab'] },
-  { key: 'ship',   label: 'Ship',   icon: 'discover', members: ['discover', 'gamestore'] },
-  { key: 'avatar', label: 'Avatar', icon: 'avatar',   members: ['avatar', 'fame', 'shop'] },
+  { key: 'learn',  label: 'Learn',  icon: 'learn',    members: ['learn', ...WORLD_TABS] },
+  { key: 'build',  label: 'Build',  icon: 'studio',   members: ['studio', 'lab'], pills: ['studio', 'lab'] },
+  { key: 'ship',   label: 'Ship',   icon: 'discover', members: ['discover', 'gamestore'], pills: ['discover', 'gamestore'] },
+  { key: 'avatar', label: 'You',    icon: 'avatar',   members: ['avatar', 'fame', 'shop', 'profile'], pills: ['avatar', 'fame', 'shop', 'profile'] },
 ]
 
 // ── Games ────────────────────────────────────────────────────

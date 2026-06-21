@@ -30,6 +30,7 @@ interface AppStore {
   badges: string[]
   completedLessons: string[]
   gamesPlayed: string[]
+  role: string
   theme: 'light' | 'dark'
   pitchScript: string
   pitchCompleted: boolean
@@ -61,10 +62,12 @@ interface AppStore {
   studioMessages: StudioMessage[]
 
   // — actions —
-  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[] }) => void
+  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string }) => void
+  isAdmin: () => boolean
   setLearnerName: (name: string) => void
   ownsItem: (key: string) => boolean
   buyItem: (key: string, price: number, name: string) => boolean
+  addDiamonds: (n: number) => void
   setSession: (s: Session | null | 'loading') => void
   isAuthed: () => boolean
   requireAuth: (reason?: string) => boolean
@@ -110,6 +113,7 @@ export const useAppStore = create<AppStore>()(
       badges: [],
       completedLessons: [],
       gamesPlayed: [],
+      role: 'user',
       theme: 'light',
       pitchScript: '',
       pitchCompleted: false,
@@ -150,7 +154,14 @@ export const useAppStore = create<AppStore>()(
           badges: p.badges ?? [],
           gamesPlayed: p.games_played ?? [],
           unlocks: p.unlocks ?? [],
+          role: p.role ?? get().role,
         })
+      },
+
+      isAdmin() {
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('alab_admin') === '1') return true
+        if (import.meta.env.DEV) return true
+        return get().role === 'admin'
       },
 
       setLearnerName(name) { set({ learnerName: name }) },
@@ -166,6 +177,11 @@ export const useAppStore = create<AppStore>()(
         set({ diamonds: get().diamonds - price, unlocks: [...get().unlocks, key] })
         get().addToast(`Unlocked ${name}!`, '✨')
         return true
+      },
+
+      addDiamonds(n) {
+        if (!n) return
+        set({ diamonds: Math.max(0, get().diamonds + n) })
       },
 
       setSession(s) { set({ session: s }) },

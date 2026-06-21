@@ -3,7 +3,7 @@ import { useAppStore } from '@store/appStore'
 import { supabase } from '@lib/supabase'
 import { syncProfileOnLogin, saveProfile } from '@lib/profile'
 import { pullGames } from '@lib/gamesCloud'
-import { mergeCloudGames } from '@lib/myGames'
+import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -11,9 +11,8 @@ import Dock from '@components/layout/Dock'
 import GameModal from '@components/games/GameModal'
 import BackgroundScene from '@components/three/BackgroundScene'
 import AuthWall from '@components/auth/AuthWall'
-import { MOBILE_TABS, NAV } from '@/data'
+import { MOBILE_TABS, NAV, WORLD_TABS } from '@/data'
 import Home from '@/pages/Home'
-import Learn from '@/pages/Learn'
 import Wizard from '@/pages/Wizard'
 import BuilderLab from '@/pages/BuilderLab'
 import Shop from '@/pages/Shop'
@@ -21,6 +20,10 @@ import Discover from '@/pages/Discover'
 import MyGameStore from '@/pages/MyGameStore'
 import Avatar from '@/pages/Avatar'
 import Fame from '@/pages/Fame'
+import Profile from '@/pages/Profile'
+import LearnHub from '@/pages/LearnHub'
+import World from '@/pages/World'
+import AdminStudio from '@/pages/admin/AdminStudio'
 import PlayPage from '@/pages/PlayPage'
 import '@/styles/globals.css'
 
@@ -121,17 +124,23 @@ function CloudSync() {
   // On login: pull the cloud profile, merge guest progress, hydrate the store,
   // and pull the user's saved games into local storage.
   useEffect(() => {
-    if (!session || session === 'loading') { userIdRef.current = null; setReady(false); return }
+    if (!session || session === 'loading') {
+      userIdRef.current = null; setReady(false)
+      setGamesOwner(null)   // back to the guest bucket on logout
+      return
+    }
     const uid = session.user.id
     if (userIdRef.current === uid) return
     userIdRef.current = uid
     setReady(false)
+    setGamesOwner(uid)      // switch to this user's own games bucket
     const st = useAppStore.getState()
     syncProfileOnLogin(session, {
       learnerName: st.learnerName, xp: st.xp, level: st.level, diamonds: st.diamonds,
       completedLessons: st.completedLessons, badges: st.badges, gamesPlayed: st.gamesPlayed, unlocks: st.unlocks,
     }).then(p => { if (p) hydrate(p); setReady(true) })
-    pullGames(uid).then(g => { if (g) mergeCloudGames(g) })
+    // Replace the local view with exactly this user's cloud games.
+    pullGames(uid).then(g => replaceWithCloud(g ?? []))
   }, [session, hydrate])
 
   // After load: push progress changes back to the cloud, debounced.
@@ -156,14 +165,14 @@ function CloudSync() {
 function MobileSubTabs() {
   const { activeTab, go } = useAppStore()
   const group = MOBILE_TABS.find(g => g.members.includes(activeTab))
-  if (!group || group.members.length < 2) return null
+  if (!group || !group.pills || group.pills.length < 2) return null
   return (
     <div className="msub">
-      {group.members.map(m => {
+      {group.pills.map(m => {
         const item = NAV.find(n => n.tab === m)
         return (
           <button key={m} className={`msub-pill${activeTab === m ? ' on' : ''}`} onClick={() => go({ tab: m })}>
-            {item?.label}
+            {item?.short ?? item?.label}
           </button>
         )
       })}
@@ -172,7 +181,8 @@ function MobileSubTabs() {
 }
 
 function PageContent({ tab }: { tab: string }) {
-  if (tab === 'arganta') return <Home />
+  if (WORLD_TABS.includes(tab)) return <World tab={tab} />
+  if (tab === 'learn') return <LearnHub />
   if (tab === 'studio') return <Wizard />
   if (tab === 'lab') return <BuilderLab />
   if (tab === 'shop') return <Shop />
@@ -180,7 +190,9 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'gamestore') return <MyGameStore />
   if (tab === 'avatar') return <Avatar />
   if (tab === 'fame') return <Fame />
-  return <Learn tab={tab} />
+  if (tab === 'profile') return <Profile />
+  if (tab === 'admin') return <AdminStudio />
+  return <Home />
 }
 
 function AppShell() {
