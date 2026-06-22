@@ -49,6 +49,7 @@ interface AppStore {
 
   // — player switcher (not persisted) —
   showSwitcher: boolean
+  locked: boolean   // true = switcher can't be dismissed; you must sign in
 
   // — auth (not persisted) —
   session: Session | null | 'loading'
@@ -82,6 +83,7 @@ interface AppStore {
   isKidMode: () => boolean
   openSwitcher: () => void
   closeSwitcher: () => void
+  lockSession: () => void
   loginAsKid: (kid: KidProfile) => void
   switchToOwner: () => void
   // — avatar cosmetics (Roblox-style) —
@@ -168,6 +170,7 @@ export const useAppStore = create<AppStore>()(
       lastTab: 'arganta',
       activeKidId: null,
       showSwitcher: false,
+      locked: false,
 
       // auth defaults
       session: 'loading',
@@ -217,7 +220,10 @@ export const useAppStore = create<AppStore>()(
 
       isKidMode() { return get().activeKidId !== null },
       openSwitcher() { set({ showSwitcher: true }) },
-      closeSwitcher() { set({ showSwitcher: false }) },
+      closeSwitcher() { if (!get().locked) set({ showSwitcher: false }) },
+      // Lock the session — show the switcher and forbid dismissing it until
+      // someone signs in (kid PIN or parent passcode). Used by "Log out".
+      lockSession() { set({ showSwitcher: true, locked: true }) },
 
       loginAsKid(kid) {
         const cur = get()
@@ -228,7 +234,7 @@ export const useAppStore = create<AppStore>()(
         const snap = loadSnapshot(`kid_${kid.id}`)
         set({
           activeKidId: kid.id,
-          showSwitcher: false,
+          showSwitcher: false, locked: false,
           activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
           ...((snap ?? freshKid(kid)) as Partial<AppStore>),
         })
@@ -241,7 +247,7 @@ export const useAppStore = create<AppStore>()(
         const snap = loadSnapshot('owner')
         set({
           activeKidId: null,
-          showSwitcher: false,
+          showSwitcher: false, locked: false,
           activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
           ...((snap ?? {}) as Partial<AppStore>),
         })

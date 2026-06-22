@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { WORLDS, STAGES, type World } from '@/data/learn'
 import { getMastery } from '@lib/adaptive'
@@ -13,34 +12,14 @@ const SUBJECT: Record<string, string> = {
   LOG: 'Computing & Digital Literacy', WLD: 'Humanities (Geography · History · Economics)', LIF: 'Wellbeing & Life Skills',
 }
 
-// A light "grown-ups" gate: a small sum keeps little fingers out of the reports.
-function Gate({ onPass }: { onPass: () => void }) {
-  const [a] = useState(() => 6 + Math.floor(Math.random() * 7))
-  const [b] = useState(() => 7 + Math.floor(Math.random() * 6))
-  const [val, setVal] = useState('')
-  const ok = Number(val) === a * b
-  return (
-    <div className="screen" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 16 }}>
-      <div className="par-gate">
-        <div style={{ fontSize: 40 }}>🧑‍🏫</div>
-        <h2>For grown-ups</h2>
-        <p>To see your child's progress report, solve: <b>{a} × {b}</b></p>
-        <input className="le-input" style={{ maxWidth: 160, textAlign: 'center', margin: '0 auto' }} inputMode="numeric"
-          value={val} onChange={e => setVal(e.target.value)} placeholder="answer" />
-        <button className="btn btn-primary" disabled={!ok} style={{ justifyContent: 'center', opacity: ok ? 1 : 0.5 }} onClick={onPass}>Enter report →</button>
-      </div>
-    </div>
-  )
-}
-
 function Bar({ pct, color }: { pct: number; color: string }) {
   return <div className="par-bar"><i style={{ width: `${pct}%`, background: color }} /></div>
 }
 
+// Entry to this page is already gated by the Parent passcode at the grown-up
+// switcher — so no separate math gate here.
 export default function Parent() {
   const { learnerName, level, xp } = useAppStore()
-  const [entered, setEntered] = useState(false)
-  if (!entered) return <Gate onPass={() => setEntered(true)} />
 
   const stage = STAGES.find(s => s.key === 'explorer')!
   const streak = getStreak()

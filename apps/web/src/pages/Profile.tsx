@@ -8,6 +8,7 @@ import {
   type KidProfile, type Circle,
 } from '@lib/circles'
 import Buddy from '@components/avatar/Buddy'
+import { supabase } from '@lib/supabase'
 
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
@@ -26,8 +27,10 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 }
 
 export default function Profile() {
-  const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher } = useAppStore()
+  const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher, lockSession, addToast } = useAppStore()
   const outfit = resolvedOutfit()
+  const kidLogout = () => { addToast('Logged out 👋', '🔒'); lockSession() }
+  const parentLogout = async () => { try { await supabase.auth.signOut() } catch { /* ignore */ } addToast('Logged out 👋', '⏻'); lockSession() }
   const [view, setView] = useState<'home' | 'add'>('home')
   const [state, setState] = useState(() => loadCircles())
   const refresh = () => setState(loadCircles())
@@ -91,7 +94,10 @@ export default function Profile() {
 
         <div className="ig-foot">
           <div className="ig-foot-row"><b>{totalBadges}</b> badges earned</div>
-          <button className="btn btn-ghost" onClick={openSwitcher}>🔄 Switch player</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost" onClick={openSwitcher}>🔄 Switch</button>
+            <button className="btn btn-ghost" onClick={kidLogout}>🔒 Log out</button>
+          </div>
         </div>
         <p className="ig-kc">👋 This is your own space, {learnerName}! Only you can see it.</p>
       </div>
@@ -142,7 +148,10 @@ export default function Profile() {
 
       <div className="ig-foot">
         <div className="ig-foot-row"><b>{totalBadges}</b> badges earned</div>
-        <button className="btn btn-ghost" onClick={() => go({ tab: 'parent' })}>🧑‍🏫 Grown-up dashboard</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={() => go({ tab: 'parent' })}>🧑‍🏫 Dashboard</button>
+          <button className="btn btn-ghost" onClick={parentLogout}>⏻ Log out</button>
+        </div>
       </div>
 
       <p className="ig-kc">🔗 Your Circles will connect to <b>KinetikCircle</b> — our family social app — when it launches.</p>
