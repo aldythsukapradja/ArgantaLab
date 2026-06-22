@@ -3,7 +3,7 @@
 // This doubles as the MockDataSource payload and the hq_app seed.
 
 import type { AppManifest, ProductNorthStar } from '../contract/manifest'
-import type { Rollup, TreeNode, ScorecardTile, AppHealth } from '../contract/metrics'
+import type { Rollup, TreeNode, ScorecardTile, AppHealth, FeatureAdoption, EconomyFlow, AudienceData } from '../contract/metrics'
 import type { Signal } from '../contract/signals'
 
 export const PRODUCT_NORTH_STARS: ProductNorthStar[] = [
@@ -112,3 +112,48 @@ export const SIGNALS: Signal[] = [
   { id: 's3', severity: 'success', headline: '@kin resolved 142 clashes this week' },
   { id: 's4', severity: 'info', headline: '2 apps promoted to dedicated tables' },
 ]
+
+// ── Feature adoption per app (keep/kill/propagate) ──
+export const FEATURE_ADOPTION: Record<string, FeatureAdoption[]> = {
+  arganta: [
+    { appId: 'arganta', featureId: 'wizard', label: 'Game Wizard', adoptionPct: 71, trend: 'up', verdict: 'core' },
+    { appId: 'arganta', featureId: 'lab', label: 'Builder Lab (pro-code)', adoptionPct: 58, trend: 'up', verdict: 'hero' },
+    { appId: 'arganta', featureId: 'worlds', label: 'Cinematic Learn worlds', adoptionPct: 44, trend: 'flat', verdict: 'core' },
+    { appId: 'arganta', featureId: 'avatar', label: 'Avatar dressing room', adoptionPct: 39, trend: 'up', verdict: 'niche' },
+    { appId: 'arganta', featureId: 'pitch', label: 'Pitch Studio', adoptionPct: 8, trend: 'down', verdict: 'watch' },
+    { appId: 'arganta', featureId: 'fame', label: 'Hall of Fame board', adoptionPct: 3, trend: 'down', verdict: 'dead' },
+  ],
+  'kinetik-calendar': [
+    { appId: 'kinetik-calendar', featureId: 'board', label: 'Calendar board', adoptionPct: 68, trend: 'up', verdict: 'hero' },
+    { appId: 'kinetik-calendar', featureId: 'today', label: 'Today triage', adoptionPct: 55, trend: 'flat', verdict: 'core' },
+    { appId: 'kinetik-calendar', featureId: 'kin', label: '@kin assist', adoptionPct: 34, trend: 'up', verdict: 'niche' },
+    { appId: 'kinetik-calendar', featureId: 'routines', label: 'Routines', adoptionPct: 11, trend: 'down', verdict: 'watch' },
+  ],
+}
+
+// ── Diamond economy (cross-app) ──
+export const ECONOMY: EconomyFlow = {
+  sources: [
+    { label: 'Lessons', amount: 48000 },
+    { label: 'Streaks', amount: 22000 },
+    { label: 'Plays / quests', amount: 19000 },
+  ],
+  sinks: [
+    { label: 'Cosmetics', amount: 31000 },
+    { label: 'Featured listing', amount: 12000 },
+    { label: 'Premium unlocks', amount: 9000 },
+  ],
+  float: 214000,
+  sinkCoverage: 0.61,
+}
+
+// ── Audience / retention cohorts ──
+export const AUDIENCE: AudienceData = {
+  dauMau: 31,
+  cohorts: [
+    { label: 'Wk 1', d1: 82, d7: 54, d14: 41, d30: 34 },
+    { label: 'Wk 2', d1: 85, d7: 58, d14: 44, d30: 37 },
+    { label: 'Wk 3', d1: 88, d7: 61, d14: 47, d30: 29 },
+    { label: 'Wk 4', d1: 86, d7: 59, d14: null, d30: null },
+  ],
+}

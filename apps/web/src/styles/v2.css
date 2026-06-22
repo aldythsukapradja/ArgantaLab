@@ -401,6 +401,137 @@
 .fmap-here { position: absolute; left: 56%; top: -34px; z-index: 5; display: flex; flex-direction: column; align-items: center; }
 .fmap-here-tag { font-size: 9px; font-weight: 900; color: #fff; background: #ef4444; padding: 1px 7px; border-radius: 10px; margin-top: -6px; box-shadow: 0 2px 5px rgba(0,0,0,.2); }
 
+/* ════════════════════════════════════════════════════════════
+   JOURNEY — immersive themed ladders (the "wow" path)
+   ════════════════════════════════════════════════════════════ */
+.jr { position: relative; max-width: 540px; margin: 0 auto; width: 100%; border-radius: 22px; overflow: hidden;
+  padding: 16px 14px 34px; border: 1px solid var(--border); isolation: isolate;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--wc) 15%, var(--bg-2)), var(--bg-2)); }
+.jr-head { position: relative; z-index: 2; text-align: center; }
+.jr-head b { display: block; font-size: 15px; font-weight: 850; letter-spacing: .06em; color: var(--wc); }
+.jr-head span { font-size: 11.5px; color: var(--t2); font-weight: 600; }
+.jr-deco { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+
+.jr-track { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 30px; margin-top: 18px; }
+
+/* unit divider */
+.jr-unit { display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%; }
+.jr-unit-head { display: flex; align-items: center; gap: 9px; width: 100%; max-width: 320px; margin: 4px auto 2px;
+  background: color-mix(in srgb, var(--wc) 16%, var(--panel)); border: 1px solid color-mix(in srgb, var(--wc) 30%, transparent);
+  border-radius: 14px; padding: 7px 12px; }
+.jr-unit-no { width: 22px; height: 22px; border-radius: 50%; background: var(--wc); color: #fff; font-size: 12px; font-weight: 800; display: grid; place-items: center; flex-shrink: 0; }
+.jr-unit-head b { flex: 1; font-size: 13.5px; font-weight: 800; color: var(--t1); }
+.jr-unit-prog { font-size: 11px; font-weight: 800; color: var(--wc); }
+
+/* a row = connector + node + (buddy) + label */
+.jr-row { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px;
+  animation: jrIn .5s var(--ease) both; animation-delay: var(--d, 0ms); }
+@keyframes jrIn { from { opacity: 0; transform: translateY(16px) scale(.85); } to { opacity: 1; transform: none; } }
+
+/* glowing connector that fills as you progress */
+.jr-link { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); width: 8px; height: 30px; border-radius: 6px;
+  background: var(--border); z-index: -1; }
+.jr-link.on { background: linear-gradient(var(--wc), color-mix(in srgb, var(--wc) 55%, transparent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--wc) 60%, transparent); }
+.jr-link.on::after { content: ""; position: absolute; inset: 0; border-radius: 6px;
+  background: linear-gradient(transparent, #fff, transparent); background-size: 100% 50%; background-repeat: no-repeat;
+  animation: jrFlow 1.4s linear infinite; opacity: .7; }
+@keyframes jrFlow { from { background-position: 0 -100%; } to { background-position: 0 200%; } }
+
+/* the node button — round, glossy, deep */
+.jr-node { position: relative; width: 76px; height: 76px; border-radius: 50%; border: none; cursor: pointer;
+  display: grid; place-items: center; z-index: 1; transition: transform .15s var(--spring), filter .15s;
+  background: radial-gradient(circle at 38% 30%, color-mix(in srgb, var(--wc) 55%, #fff), var(--wc) 62%, color-mix(in srgb, var(--wc) 70%, #000));
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--wc) 55%, #000), 0 12px 22px rgba(0,0,0,.28), inset 0 3px 6px rgba(255,255,255,.4);
+  border: 3px solid rgba(255,255,255,.55); }
+.jr-node:hover:not(:disabled) { transform: translateY(-3px); filter: brightness(1.07); }
+.jr-node:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 color-mix(in srgb, var(--wc) 55%, #000), 0 5px 12px rgba(0,0,0,.3), inset 0 3px 6px rgba(255,255,255,.4); }
+.jr-ic { font-size: 28px; font-weight: 900; color: #fff; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); z-index: 2; }
+.jr-stars { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #fbbf24;
+  white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.3); }
+.jr-glow, .jr-ring { position: absolute; border-radius: 50%; pointer-events: none; }
+.jr-glow { inset: -14px; opacity: 0; background: radial-gradient(circle, color-mix(in srgb, var(--wc) 55%, transparent), transparent 70%); }
+.jr-ring { inset: -8px; border: 2.5px dashed color-mix(in srgb, var(--wc) 70%, transparent); opacity: 0; }
+
+/* states */
+.jr-node.done { background: radial-gradient(circle at 38% 30%, color-mix(in srgb, var(--wc) 35%, #fff), var(--wc)); }
+.jr-node.locked { cursor: default; background: var(--border); border-color: rgba(255,255,255,.25);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--t3) 30%, #000), 0 8px 14px rgba(0,0,0,.18); filter: saturate(.4); }
+.jr-node.locked .jr-ic { opacity: .55; font-size: 22px; }
+.jr-node.boss { width: 92px; height: 92px; border-width: 4px; }
+.jr-node.boss .jr-ic { font-size: 38px; }
+.jr-node.chest { background: radial-gradient(circle at 40% 30%, #fde68a, #f59e0b 65%, #b45309); }
+.jr-node.lesson { box-shadow: 0 6px 0 color-mix(in srgb, var(--wc) 55%, #000), 0 12px 22px rgba(0,0,0,.28), inset 0 3px 6px rgba(255,255,255,.4), 0 0 0 4px color-mix(in srgb, var(--wc) 18%, transparent); }
+
+/* the current node — the star of the show */
+.jr-node.current { animation: jrBob 1.6s ease-in-out infinite; }
+.jr-node.current .jr-glow { opacity: 1; animation: jrPulse 1.8s ease-in-out infinite; }
+.jr-node.current .jr-ring { opacity: 1; animation: jrSpin 6s linear infinite; }
+@keyframes jrBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes jrPulse { 0%, 100% { transform: scale(1); opacity: .7; } 50% { transform: scale(1.25); opacity: 1; } }
+@keyframes jrSpin { to { transform: rotate(360deg); } }
+.jr-row.current { z-index: 3; }
+.jr-pin-tag { position: absolute; top: -22px; z-index: 4; background: var(--wc); color: #fff; font-size: 10px; font-weight: 900;
+  letter-spacing: .05em; padding: 3px 10px; border-radius: 20px; box-shadow: 0 4px 10px color-mix(in srgb, var(--wc) 45%, transparent);
+  animation: jrTag 1.4s ease-in-out infinite; }
+.jr-pin-tag::after { content: ""; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--wc); }
+@keyframes jrTag { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.jr-here { position: absolute; right: -54px; top: 16px; z-index: 4; pointer-events: none; animation: jrFloat 3s ease-in-out infinite; }
+@keyframes jrFloat { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-7px) rotate(3deg); } }
+.jr-row.r .jr-here { right: auto; left: -54px; }
+
+.jr-label { font-size: 12px; font-weight: 750; color: var(--t1); text-align: center; max-width: 130px; }
+.jr-label em { color: var(--t3); font-style: normal; font-weight: 600; }
+.jr-node.locked ~ .jr-label { color: var(--t3); }
+
+/* gentle zig-zag */
+.jr-row.l { margin-left: -54px; } .jr-row.r { margin-left: 54px; }
+
+/* ── ARCADE (NumberDash) — neon speed track ── */
+.jr-arcade .jr-streak { position: absolute; top: -20%; width: 3px; height: 60px; border-radius: 3px;
+  background: linear-gradient(color-mix(in srgb, var(--wc) 70%, transparent), transparent); animation: jrStreak 1.4s linear infinite; opacity: .5; }
+@keyframes jrStreak { from { transform: translateY(-60px); } to { transform: translateY(120vh); } }
+.jr-arcade .jr-grid { position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--wc) 18%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--wc) 18%, transparent) 1px, transparent 1px); background-size: 34px 34px; mask-image: linear-gradient(transparent, #000 60%); opacity: .5; }
+
+/* ── STORY (WordQuest) — sparkle trail ── */
+.jr-story .jr-spark { position: absolute; font-size: 16px; animation: jrTwinkle 2.4s ease-in-out infinite; }
+@keyframes jrTwinkle { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+.jr-story .jr-node { border-radius: 46% 54% 52% 48% / 52% 48% 54% 46%; }
+
+/* ── LAB (WonderLab) — rising bubbles ── */
+.jr-lab .jr-bubble { position: absolute; bottom: -20px; width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--wc) 50%, transparent)); animation: jrBubbleUp 5s linear infinite; opacity: .55; }
+@keyframes jrBubbleUp { from { transform: translateY(0) scale(.6); opacity: 0; } 20% { opacity: .6; } to { transform: translateY(-120vh) scale(1.1); opacity: 0; } }
+
+/* ── CIRCUIT (LogicLand) — PCB grid + nodes ── */
+.jr-circuit .jr-pcb { position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--wc) 14%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--wc) 14%, transparent) 1px, transparent 1px); background-size: 26px 26px; opacity: .6; }
+.jr-circuit .jr-node-dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--wc); box-shadow: 0 0 8px var(--wc); animation: jrTwinkle 2s ease-in-out infinite; }
+.jr-circuit .jr-node { border-radius: 16px; }
+.jr-circuit .jr-link { width: 6px; }
+
+/* ── MAP (WorldTrail) — expedition pins ── */
+.jr-map { background: linear-gradient(160deg, color-mix(in srgb, #fbbf24 16%, var(--bg-2)), var(--bg-2)); }
+.jr-map .jr-compass { position: absolute; right: 12px; bottom: 12px; font-size: 30px; animation: jrSpin 14s linear infinite; }
+.jr-map .jr-terrain { position: absolute; font-size: 26px; opacity: .4; }
+.jr-map .jr-terrain.t1 { left: 6%; top: 22%; } .jr-map .jr-terrain.t2 { right: 8%; top: 44%; } .jr-map .jr-terrain.t3 { left: 10%; bottom: 14%; }
+.jr-map .jr-link { background: repeating-linear-gradient(var(--border) 0 5px, transparent 5px 10px); width: 5px; }
+.jr-map .jr-link.on { background: repeating-linear-gradient(var(--wc) 0 5px, transparent 5px 10px); box-shadow: none; }
+.jr-map .jr-node { border-radius: 50% 50% 50% 4px; transform: rotate(45deg); }
+.jr-map .jr-node:hover:not(:disabled) { transform: rotate(45deg) translateY(-3px); }
+.jr-map .jr-node .jr-ic { transform: rotate(-45deg); }
+.jr-map .jr-node.current { animation: jrBobPin 1.6s ease-in-out infinite; }
+@keyframes jrBobPin { 0%, 100% { transform: rotate(45deg) translateY(0); } 50% { transform: rotate(45deg) translateY(-6px); } }
+
+/* ── PARTY (LifeQuest) — confetti board ── */
+.jr-party { background: linear-gradient(160deg, color-mix(in srgb, #ec4899 14%, var(--bg-2)), var(--bg-2)); }
+.jr-party .jr-confetti { position: absolute; top: -16px; width: 8px; height: 12px; border-radius: 2px; opacity: .75; animation: jrFall 5s linear infinite; }
+@keyframes jrFall { from { transform: translateY(-16px) rotate(0); } to { transform: translateY(120vh) rotate(540deg); } }
+
+/* light-mode keeps all six bright (never a dark panel) */
+html[data-theme="light"] .jr { background: linear-gradient(180deg, color-mix(in srgb, var(--wc) 13%, #fff), var(--bg-2)); }
+html[data-theme="light"] .jr-map { background: linear-gradient(160deg, color-mix(in srgb, #fbbf24 16%, #fff), var(--bg-2)); }
+html[data-theme="light"] .jr-party { background: linear-gradient(160deg, color-mix(in srgb, #ec4899 13%, #fff), var(--bg-2)); }
+
 /* ── light-mode polish (no dark panels) ─────────────────── */
 html[data-theme="light"] .rbx-stage { background: radial-gradient(120% 90% at 50% 10%, color-mix(in srgb,var(--accent) 14%,#fff), var(--bg-2)); }
 html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb,var(--accent) 12%,#fff), var(--bg-2)); }

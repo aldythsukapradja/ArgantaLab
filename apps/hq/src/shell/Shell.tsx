@@ -4,13 +4,21 @@ import { useHQ } from './store'
 import { cloudEnabled } from '../data'
 import { Pulse } from '../surfaces/Pulse'
 import { Portfolio } from '../surfaces/Portfolio'
+import { Features } from '../surfaces/Features'
+import { Economy } from '../surfaces/Economy'
+import { Audience } from '../surfaces/Audience'
 import { Placeholder } from '../surfaces/Placeholder'
 
 function Content() {
   const { surface } = useHQ()
-  if (surface === 'pulse') return <Pulse />
-  if (surface === 'portfolio') return <Portfolio />
-  return <Placeholder id={surface} />
+  switch (surface) {
+    case 'pulse': return <Pulse />
+    case 'portfolio': return <Portfolio />
+    case 'features': return <Features />
+    case 'audience': return <Audience />
+    case 'economy': return <Economy />
+    default: return <Placeholder id={surface} />
+  }
 }
 
 export function Shell() {

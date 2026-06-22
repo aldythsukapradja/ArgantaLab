@@ -5,7 +5,7 @@
 // "Contract-real": real where data exists, mock where it doesn't.
 
 import type { HQDataSource } from './HQDataSource'
-import type { Rollup } from '../contract/metrics'
+import type { Rollup, AudienceData } from '../contract/metrics'
 import { supabase } from '../lib/supabase'
 import { MockDataSource } from './mock'
 import { MANIFESTS } from './seed'
@@ -35,7 +35,6 @@ export class SupabaseDataSource implements HQDataSource {
       if (error || !data) return base
       const a = (data as any).arganta
       if (!a) return base
-      // Overlay REAL ArgantaLab numbers onto the relevant node.
       const rollup: Rollup = structuredClone(base)
       if (product === 'arganta') {
         rollup.northStar.value = a.weeklyActiveLearners ?? rollup.northStar.value
@@ -47,8 +46,20 @@ export class SupabaseDataSource implements HQDataSource {
     } catch { return base }
   }
 
-  async appHealth() { return mock.appHealth() }   // real per-app needs the event bridge (P2)
+  async appHealth() { return mock.appHealth() }      // real per-app needs the event bridge (P1)
   async signals() { return mock.signals() }
+  async featureAdoption(appId: string) { return mock.featureAdoption(appId) } // needs feature_view events (P1)
+  async economyFlow() { return mock.economyFlow() }  // economy_ledger ingest (P3)
+
+  async audience(): Promise<AudienceData> {
+    const base = await mock.audience()
+    try {
+      // DAU/MAU is real today (item_attempts); cohort triangle needs the event bridge.
+      const { data, error } = await supabase.rpc('hq_dau_mau')
+      if (error || !data) return base
+      return { ...base, dauMau: (data as any).ratio ?? base.dauMau }
+    } catch { return base }
+  }
 
   /** P0 convenience: push the seed manifests into hq_app (operator only). */
   async seedManifests() {

@@ -1,6 +1,7 @@
 import { useAppStore } from '@store/appStore'
 import { CIRCLES, PEOPLE, ROLE_LABEL, initials } from '@data/seed'
 import { IconSwitch, IconUserPlus, IconSun, IconMoon } from '@components/Icons'
+import { supabase, supabaseReady } from '@lib/supabase'
 
 export default function Me() {
   const { activeCircleId, setCircle, theme, toggleTheme } = useAppStore()
@@ -43,7 +44,35 @@ export default function Me() {
         </button>
       </div>
 
+      <SyncRow />
+
       <p className="me-foot">Private to the people you choose. No followers, no likes — just your circle.</p>
+    </div>
+  )
+}
+
+function SyncRow() {
+  const session = useAppStore(s => s.session)
+  const signIn = () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
+  const signOut = () => supabase.auth.signOut()
+  const authed = session && session !== 'loading'
+
+  return (
+    <div className="card sync-row">
+      <span className="sync-dot" data-on={authed ? '1' : '0'} />
+      {!supabaseReady ? (
+        <div className="sync-main"><b>Works offline</b><small>Add Supabase keys to sync across devices.</small></div>
+      ) : authed ? (
+        <>
+          <div className="sync-main"><b>Synced</b><small>{session.user.email}</small></div>
+          <button className="chip" onClick={signOut}>Sign out</button>
+        </>
+      ) : (
+        <>
+          <div className="sync-main"><b>Sync across devices</b><small>Sign in to back up your circle.</small></div>
+          <button className="chip on" onClick={signIn}>Sign in</button>
+        </>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useAppStore } from '@store/appStore'
 import TopBar from '@components/layout/TopBar'
 import Nav from '@components/layout/Nav'
+import CloudSync from '@components/CloudSync'
 import Today from '@pages/Today'
 import Calendar from '@pages/Calendar'
 import Moments from '@pages/Moments'
@@ -20,6 +21,7 @@ export default function App() {
         {tab === 'me' && <Me />}
       </main>
       <Nav />
+      <CloudSync />
     </div>
   )
 }
