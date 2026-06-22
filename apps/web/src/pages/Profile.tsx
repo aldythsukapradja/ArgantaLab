@@ -8,9 +8,9 @@ import {
   type KidProfile, type Circle,
 } from '@lib/circles'
 import Buddy from '@components/avatar/Buddy'
-import KidForm from '@components/auth/KidForm'
+import KidForm, { type KidFormData } from '@components/auth/KidForm'
 import { cloudEnabled } from '@lib/supabase'
-import { signOutCloud, linkKid } from '@lib/cloudAuth'
+import { signOutCloud, linkKid, parentCreateKid } from '@lib/cloudAuth'
 
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
@@ -29,7 +29,17 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 }
 
 export default function Profile() {
-  const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher, lockSession, addToast } = useAppStore()
+  const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher, lockSession, addToast, session } = useAppStore()
+  const realSession = session && session !== 'loading' ? session : null
+  const addKidCloudOrLocal = async (d: KidFormData) => {
+    if (cloudEnabled && realSession?.user) {
+      const r = await parentCreateKid(d, realSession.user.id)
+      addKid(d)  // keep a local face for quick switching on this device
+      addToast(r.ok ? 'Kid account created ☁️' : (r.error ?? 'Saved locally'), r.ok ? '✨' : '⚠️')
+    } else {
+      addKid(d)
+    }
+  }
   const outfit = resolvedOutfit()
   const kidLogout = async () => { addToast('Logged out 👋', '🔒'); await signOutCloud(); useAppStore.setState({ role: 'user' }); lockSession() }
   const parentLogout = async () => { await signOutCloud(); addToast('Logged out 👋', '⏻'); lockSession() }
@@ -50,7 +60,7 @@ export default function Profile() {
   const handle = '@' + learnerName.toLowerCase().replace(/\s+/g, '')
   const kidMode = isKidMode()
 
-  if (view === 'add') return <KidForm mode="add" onSave={d => { addKid(d); refresh(); setView('home') }} onCancel={() => setView('home')} />
+  if (view === 'add') return <KidForm mode="add" onSave={async d => { await addKidCloudOrLocal(d); refresh(); setView('home') }} onCancel={() => setView('home')} />
   if (view === 'edit' && editing) return (
     <KidForm mode="edit" initial={editing} onSave={d => { updateKid(editing.id, d); refresh(); setView('home') }} onCancel={() => setView('home')} />
   )

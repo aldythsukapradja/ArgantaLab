@@ -5,6 +5,7 @@ import { syncProfileOnLogin, saveProfile } from '@lib/profile'
 import { pullGames } from '@lib/gamesCloud'
 import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
 import { pullLearnState } from '@lib/learnCloud'
+import { pullAvatarState, pushAvatarState } from '@lib/avatarCloud'
 import { touchPresence } from '@lib/cloudAuth'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
@@ -127,6 +128,8 @@ function CloudSync() {
   const gamesPlayed = useAppStore(s => s.gamesPlayed)
   const unlocks = useAppStore(s => s.unlocks)
   const learnerName = useAppStore(s => s.learnerName)
+  const outfit = useAppStore(s => s.outfit)
+  const ownedCosmetics = useAppStore(s => s.ownedCosmetics)
 
   // On login: pull the cloud profile, merge guest progress, hydrate the store,
   // and pull the user's saved games into local storage.
@@ -150,6 +153,15 @@ function CloudSync() {
     pullGames(uid).then(g => replaceWithCloud(g ?? []))
     // Merge cloud learn progress (rings, mastery, node completion) into local.
     pullLearnState(uid)
+    // Pull the cloud wardrobe (outfit + owned cosmetics); cloud outfit wins, owned unions.
+    pullAvatarState(uid).then(a => {
+      if (!a) return
+      const cur = useAppStore.getState()
+      useAppStore.setState({
+        outfit: a.outfit ? { ...cur.outfit, ...a.outfit } : cur.outfit,
+        ownedCosmetics: a.owned ? Array.from(new Set([...cur.ownedCosmetics, ...a.owned])) : cur.ownedCosmetics,
+      })
+    })
   }, [session, hydrate])
 
   // After load: push progress changes back to the cloud, debounced.
@@ -162,9 +174,10 @@ function CloudSync() {
         display_name: learnerName, xp, level, diamonds,
         completed_lessons: completedLessons, badges, games_played: gamesPlayed, unlocks,
       })
+      pushAvatarState(uid, outfit, ownedCosmetics)
     }, 800)
     return () => clearTimeout(t)
-  }, [ready, xp, level, diamonds, completedLessons, badges, gamesPlayed, unlocks, learnerName])
+  }, [ready, xp, level, diamonds, completedLessons, badges, gamesPlayed, unlocks, learnerName, outfit, ownedCosmetics])
 
   // Presence: mark this account online while a session is active (for the
   // parent's online dots). No-ops when cloud isn't configured.

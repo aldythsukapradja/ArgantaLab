@@ -7,10 +7,20 @@
 //  the grow-up-to-Gmail path is a simple email change later.
 //  All calls no-op safely when `cloudEnabled` is false.
 // ============================================================
+import { createClient } from '@supabase/supabase-js'
 import { supabase, cloudEnabled } from './supabase'
 import type { Gender } from './circles'
 
 const KID_DOMAIN = 'kids.argantalab.app'
+
+// A throwaway client used to CREATE a kid account without disturbing the
+// parent's session. signUp() would otherwise sign the calling client in as the
+// new kid; this isolated client (no persisted session) absorbs that instead.
+function signupClient() {
+  const url = (import.meta.env.VITE_SUPABASE_URL as string) || ''
+  const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || ''
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'alab_signup_tmp' } })
+}
 
 export const synthEmail = (username: string) =>
   `${username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@${KID_DOMAIN}`
@@ -52,6 +62,36 @@ export async function kidSignup(input: { username: string; pin: string; displayN
   })
   if (error) return { ok: false, error: error.message }
   return { ok: true, data }
+}
+
+// A signed-in PARENT creates a kid's cloud account and stays logged in.
+// Uses an isolated client so the parent's session is untouched; the new kid's
+// own (transient) session sets guardian_id back to the parent.
+export async function parentCreateKid(
+  input: { username: string; pin: string; displayName: string; dob: string; gender: Gender },
+  parentId: string,
+): Promise<CloudResult<CloudProfile>> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const tmp = signupClient()
+  try {
+    const { data, error } = await tmp.auth.signUp({
+      email: synthEmail(input.username),
+      password: pinToPassword(input.pin),
+      options: { data: { username: input.username.trim().toLowerCase(), display_name: input.displayName.trim(), dob: input.dob, gender: input.gender, role: 'kid' } },
+    })
+    if (error) return { ok: false, error: error.message }
+    const kidId = data.user?.id
+    if (!kidId) return { ok: false, error: 'No account created' }
+    // the kid (transient session) links itself to the guardian
+    if (data.session) {
+      await tmp.from('profiles').update({ guardian_id: parentId }).eq('id', kidId)
+    }
+    const { data: prof } = await tmp.from('profiles').select('id,display_name,role,friend_code,dob,gender').eq('id', kidId).maybeSingle()
+    await tmp.auth.signOut()
+    return { ok: true, data: (prof ?? { id: kidId, display_name: input.displayName, role: 'kid' }) as CloudProfile }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
 }
 
 export async function kidLogin(username: string, pin: string): Promise<CloudResult> {

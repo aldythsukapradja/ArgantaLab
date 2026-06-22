@@ -506,6 +506,7 @@ export const useAppStore = create<AppStore>()(
         activeKidId: s.activeKidId,
         activeCircleId: s.activeCircleId,
         stageKey: s.stageKey,
+        role: s.role,
       }),
     }
   )

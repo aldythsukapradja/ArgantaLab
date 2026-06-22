@@ -365,6 +365,17 @@
 
 .avatar-btn.kidring { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #f59e0b; }
 
+/* typed sign-in (logout target) */
+.psw-form { width: min(320px, 86vw); margin: 18px auto 0; display: flex; flex-direction: column; gap: 10px; }
+.psw-form .le-input { width: 100%; text-align: center; font-size: 16px; }
+.psw-go { padding: 13px; border-radius: 14px; border: none; background: var(--grad); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; }
+.psw-go:disabled { opacity: .5; cursor: default; }
+.psw-divider { display: flex; align-items: center; gap: 10px; width: min(320px, 86vw); margin: 18px auto 12px; color: var(--t3); font-size: 12px; }
+.psw-divider::before, .psw-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.psw-alt { display: flex; flex-direction: column; gap: 8px; width: min(320px, 86vw); margin: 0 auto; }
+.psw-alt button { padding: 11px; border-radius: 12px; border: 1px solid var(--border); background: var(--panel); color: var(--t1); font-size: 14px; font-weight: 650; cursor: pointer; }
+.psw-alt button:hover { border-color: var(--accent); }
+
 /* ── Learn world: stage pill ────────────────────────────── */
 .le-stage-pill { display: inline-block; margin-top: 5px; font-size: 11px; font-weight: 800; padding: 3px 11px; border-radius: 20px; }
 
