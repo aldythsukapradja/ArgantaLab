@@ -17,10 +17,13 @@ function pickRingCols(t: TableNode, fk: string) {
   const rest = t.columns.filter((c) => c.name !== fk && !c.pk)
   return [...f, ...rest].slice(0, 4)
 }
-function heightOf(t: TableNode, isCenter: boolean, fk?: string) {
-  const cols = isCenter ? pickCenterCols(t) : pickRingCols(t, fk!)
-  const more = t.columns.length > cols.length ? 17 : 0
-  return HEAD + cols.length * ROW + more
+function heightOf(t: TableNode, isCenter: boolean, fk: string | undefined, isExpanded: boolean) {
+  const cols = isExpanded
+    ? t.columns
+    : isCenter ? pickCenterCols(t) : pickRingCols(t, fk!)
+  const more = (!isExpanded && t.columns.length > cols.length) ? 17 : 0
+  const collapse = isExpanded ? 17 : 0
+  return HEAD + cols.length * ROW + more + collapse
 }
 function edge(rx: number, ry: number, rw: number, rh: number, tx: number, ty: number) {
   const cx = rx + rw / 2, cy = ry + rh / 2
@@ -33,13 +36,22 @@ function edge(rx: number, ry: number, rw: number, rh: number, tx: number, ty: nu
 }
 
 export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: () => void }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  function toggleExpand(name: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }
+
   const byName = useMemo(() => {
     const m = new Map<string, TableNode>()
     model.tables.forEach((t) => m.set(t.name, t))
     return m
   }, [model])
 
-  // incoming FK count per table (self-refs excluded) → hub ranking
   const hubs = useMemo(() => {
     const count = new Map<string, number>()
     for (const r of model.relationships) {
@@ -75,21 +87,21 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
     if (!el || !center) return
     const W = el.clientWidth, H = el.clientHeight
     const c = byName.get(center)
-    const ch = c ? heightOf(c, true) : 120
+    const ch = c ? heightOf(c, true, undefined, expanded.has(center)) : 120
     const next: Pos = { [center]: { x: W / 2 - CW / 2, y: H / 2 - ch / 2 } }
     const n = ring.length || 1
     const rx = Math.min(W * 0.34, 250), ry = H * 0.36
     ring.forEach((it, i) => {
       const ang = (-90 + i * (360 / n)) * Math.PI / 180
       const cx = W / 2 + rx * Math.cos(ang), cy = H / 2 + ry * Math.sin(ang)
-      const rh = heightOf(it.table, false, it.fk)
+      const rh = heightOf(it.table, false, it.fk, expanded.has(it.table.name))
       next[it.table.name] = {
         x: Math.max(4, Math.min(cx - RW / 2, W - RW - 4)),
         y: Math.max(4, Math.min(cy - rh / 2, H - rh - 4)),
       }
     })
     setPos(next)
-  }, [center, ring, byName])
+  }, [center, ring, byName, expanded])
 
   useLayoutEffect(() => { layout() }, [layout])
   useLayoutEffect(() => {
@@ -125,7 +137,8 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
   function renderNode(t: TableNode, isCenter: boolean, fk?: string) {
     const p = pos[t.name]
     if (!p) return null
-    const cols = isCenter ? pickCenterCols(t) : pickRingCols(t, fk!)
+    const isExp = expanded.has(t.name)
+    const cols = isExp ? t.columns : (isCenter ? pickCenterCols(t) : pickRingCols(t, fk!))
     const hidden = t.columns.length - cols.length
     return (
       <div key={t.name} className={'tnode' + (isCenter ? ' center' : '') + (dragName === t.name ? ' drag' : '')}
@@ -146,21 +159,30 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
             </div>
           )
         })}
-        {hidden > 0 && <div className="tn-more">+{hidden} more</div>}
+        {hidden > 0 && (
+          <div className="tn-more tn-more-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(t.name) }}>
+            +{hidden} more columns
+          </div>
+        )}
+        {isExp && hidden === 0 && t.columns.length > 4 && (
+          <div className="tn-more tn-more-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(t.name) }}>
+            show less
+          </div>
+        )}
       </div>
     )
   }
 
-  // wires
+  // wires — SVG must have width/height="100%" so user-unit coords match CSS px
   const c = byName.get(center)
   const wires: ReactNode[] = []
   if (c && pos[center]) {
-    const cp = pos[center], ch = heightOf(c, true)
+    const cp = pos[center], ch = heightOf(c, true, undefined, expanded.has(center))
     const ccx = cp.x + CW / 2, ccy = cp.y + ch / 2
     ring.forEach((it) => {
       const rp = pos[it.table.name]
       if (!rp) return
-      const rh = heightOf(it.table, false, it.fk)
+      const rh = heightOf(it.table, false, it.fk, expanded.has(it.table.name))
       const rcx = rp.x + RW / 2, rcy = rp.y + rh / 2
       const [ax, ay] = edge(cp.x, cp.y, CW, ch, rcx, rcy)
       const [bx, by] = edge(rp.x, rp.y, RW, rh, ccx, ccy)
@@ -184,13 +206,15 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
         {hubs.slice(0, 4).map((h) => (
           <button key={h} className={'chip' + (center === h ? ' on' : '')} onClick={() => setCenter(h)}>{h}</button>
         ))}
-        <span className="chip" style={{ marginLeft: 'auto', color: 'var(--tx3)' }}><Hand size={13} /> drag any table</span>
+        <span className="chip" style={{ marginLeft: 'auto', color: 'var(--tx3)' }}><Hand size={13} /> drag tables</span>
         <button className="chip" onClick={() => layout()} title="Reset layout"><RotateCcw size={13} /></button>
         {onRefresh && <button className="chip" onClick={onRefresh} title="Refresh from source">Refresh</button>}
       </div>
 
       <div className="canvas" ref={containerRef}>
-        <svg className="wires">{wires}</svg>
+        {/* width/height="100%" is required: without it SVG user-units default to 300×150
+            so lines drawn at real pixel coords fall outside the visible coordinate space */}
+        <svg className="wires" width="100%" height="100%">{wires}</svg>
         {c && renderNode(c, true)}
         {ring.map((it) => renderNode(it.table, false, it.fk))}
       </div>

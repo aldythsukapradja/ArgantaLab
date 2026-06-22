@@ -119,6 +119,8 @@ a{color:inherit;text-decoration:none}
 .tr.k .tc{font-weight:600;color:var(--acc-text)}
 .tt{font-size:9px;color:var(--tx3);flex-shrink:0;font-family:var(--mono)}
 .tn-more{padding:3px 9px;font-size:9.5px;color:var(--tx3);border-top:1px solid var(--bg3)}
+.tn-more-btn{cursor:pointer;color:var(--acc);font-weight:600;user-select:none}
+.tn-more-btn:hover{background:var(--acc-soft)}
 .legend{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--tx2)}
 .legend .ld{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 
