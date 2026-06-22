@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Session } from '@supabase/supabase-js'
+import { DEFAULT_OUTFIT, COSMETIC_BY_ID, resolveOutfit, type Slot, type ResolvedOutfit } from '@/data/cosmetics'
+
+// Cosmetics that every kid owns from day one (the free starter loadout + free skins/bgs).
+const FREE_COSMETICS = ['skin:default', 'skin:blue', 'skin:mint', 'bg:studio', 'bg:sky']
 
 // Local-dev bypass so gated actions are testable without real OAuth.
 // Never true in production (import.meta.env.DEV === false there).
@@ -32,6 +36,8 @@ interface AppStore {
   gamesPlayed: string[]
   role: string
   costume: string | null   // equipped costume = a world key (e.g. 'NUM'), or null
+  outfit: Record<Slot, string>   // equipped cosmetic id per slot ('' = empty)
+  ownedCosmetics: string[]       // purchased + free cosmetic ids
   theme: 'light' | 'dark'
   pitchScript: string
   pitchCompleted: boolean
@@ -66,6 +72,12 @@ interface AppStore {
   hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string }) => void
   isAdmin: () => boolean
   setCostume: (worldKey: string | null) => void
+  // — avatar cosmetics (Roblox-style) —
+  equipCosmetic: (slot: Slot, id: string) => void
+  unequipSlot: (slot: Slot) => void
+  ownsCosmetic: (id: string) => boolean
+  buyCosmetic: (id: string) => boolean
+  resolvedOutfit: () => ResolvedOutfit
   setLearnerName: (name: string) => void
   ownsItem: (key: string) => boolean
   buyItem: (key: string, price: number, name: string) => boolean
@@ -117,6 +129,8 @@ export const useAppStore = create<AppStore>()(
       gamesPlayed: [],
       role: 'user',
       costume: null,
+      outfit: { ...DEFAULT_OUTFIT },
+      ownedCosmetics: [...FREE_COSMETICS],
       theme: 'light',
       pitchScript: '',
       pitchCompleted: false,
@@ -168,6 +182,40 @@ export const useAppStore = create<AppStore>()(
       },
 
       setCostume(worldKey) { set({ costume: worldKey }) },
+
+      equipCosmetic(slot, id) {
+        // toggle off if re-equipping the same item (except skin/bg which always have one)
+        const cur = get().outfit[slot]
+        const next = (cur === id && slot !== 'skin' && slot !== 'bg') ? '' : id
+        set({ outfit: { ...get().outfit, [slot]: next } })
+      },
+
+      unequipSlot(slot) {
+        if (slot === 'skin') { set({ outfit: { ...get().outfit, skin: 'skin:default' } }); return }
+        if (slot === 'bg') { set({ outfit: { ...get().outfit, bg: 'bg:studio' } }); return }
+        set({ outfit: { ...get().outfit, [slot]: '' } })
+      },
+
+      ownsCosmetic(id) {
+        const item = COSMETIC_BY_ID[id]
+        if (item && item.price === 0) return true
+        return get().ownedCosmetics.includes(id)
+      },
+
+      buyCosmetic(id) {
+        const item = COSMETIC_BY_ID[id]
+        if (!item) return false
+        if (get().ownsCosmetic(id)) return true
+        if (get().diamonds < item.price) {
+          get().addToast(`Need ${item.price - get().diamonds} more 💎 for ${item.name}`, '💎')
+          return false
+        }
+        set({ diamonds: get().diamonds - item.price, ownedCosmetics: [...get().ownedCosmetics, id] })
+        get().addToast(`Unlocked ${item.name}!`, '✨')
+        return true
+      },
+
+      resolvedOutfit() { return resolveOutfit(get().outfit) },
 
       setLearnerName(name) { set({ learnerName: name }) },
 
@@ -368,6 +416,8 @@ export const useAppStore = create<AppStore>()(
         completedLessons: s.completedLessons,
         gamesPlayed: s.gamesPlayed,
         costume: s.costume,
+        outfit: s.outfit,
+        ownedCosmetics: s.ownedCosmetics,
         theme: s.theme,
         pitchScript: s.pitchScript,
         pitchCompleted: s.pitchCompleted,

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { World, JourneyNode, Badge } from '@/data/learn'
-import { accessoryFor } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getMastery } from '@lib/adaptive'
 import { nodeState, nodeUnlocked, setNodeDone, worldRing, earnedBadges } from '@lib/learnProgress'
@@ -27,7 +26,8 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addDiamonds, addToast, costume, session, go } = useAppStore()
+  const { requireAuth, addDiamonds, addToast, resolvedOutfit, session, go } = useAppStore()
+  const outfit = resolvedOutfit()
   const uid = session && session !== 'loading' ? session.user.id : null
   const [spine, setSpine] = useState<Spine>('journey')
   const [active, setActive] = useState<JourneyNode | null>(null)
@@ -42,7 +42,7 @@ export default function WorldHub({ world }: { world: World }) {
 
   const cinematic = badgeQueue[0]
     ? <BadgeCinematic key={badgeQueue[0].key} name={badgeQueue[0].name} icon={badgeQueue[0].icon}
-        color={world.color} accessory={accessoryFor(costume)}
+        color={world.color} outfit={outfit}
         onDone={() => setBadgeQueue(q => q.slice(1))} />
     : null
 
@@ -92,7 +92,7 @@ export default function WorldHub({ world }: { world: World }) {
         <button className="le-back" onClick={() => go({ tab: 'learn' })} aria-label="Back to worlds" title="Back to worlds">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <div className="le-world-buddy"><Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} accessory={accessoryFor(costume)} /></div>
+        <div className="le-world-buddy"><Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} outfit={outfit} /></div>
         <div className="le-world-meta">
           <h1>{world.name}</h1>
           <p style={{ color: world.color }}>{world.vibe}</p>
@@ -110,7 +110,7 @@ export default function WorldHub({ world }: { world: World }) {
 
       <div className="le-world-body">
         {spine === 'journey' && (
-          <Journey world={world} launch={launch} currentKey={currentKey} costume={costume} />
+          <Journey world={world} launch={launch} currentKey={currentKey} outfit={outfit} />
         )}
 
         {spine === 'signature' && (

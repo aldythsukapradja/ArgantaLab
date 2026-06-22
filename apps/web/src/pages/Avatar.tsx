@@ -1,83 +1,118 @@
+import { useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
-import { supabase } from '@lib/supabase'
-import { loadMyGames } from '@lib/myGames'
-import { COSTUMES, WORLD_BY_KEY, accessoryFor } from '@/data/learn'
-import { worldRing } from '@lib/learnProgress'
+import { SLOTS, RARITY_META, cosmeticsForSlot, resolveOutfit, type Slot, type Cosmetic } from '@/data/cosmetics'
 import Buddy from '@components/avatar/Buddy'
 
+// The Roblox-style dressing room: pick a slot, tap items to try them on the
+// big live avatar, then Save (or Buy any locked items you previewed).
 export default function Avatar() {
-  const { learnerName, xp, level, diamonds, unlocks, costume, setCostume, ownsItem, buyItem, session, go, addToast } = useAppStore()
-  const realSession = session && session !== 'loading' ? session : null
-  const email = realSession?.user?.email ?? null
-  const gameCount = loadMyGames().length
+  const { learnerName, setLearnerName, diamonds, outfit, ownsCosmetic, buyCosmetic, addToast } = useAppStore()
+  const [slot, setSlot] = useState<Slot>('hat')
+  // draft = the look you're previewing; starts from your saved outfit.
+  const [draft, setDraft] = useState<Record<Slot, string>>({ ...outfit })
 
-  const logout = async () => {
-    try { await supabase.auth.signOut() } catch { /* ignore */ }
-    addToast('See you soon! 👋', '👋')
+  const resolved = useMemo(() => resolveOutfit(draft), [draft])
+  const items = cosmeticsForSlot(slot)
+
+  // Items in the draft you don't own yet (must buy before saving).
+  const lockedInDraft = useMemo(
+    () => (Object.values(draft).filter(Boolean) as string[]).filter(id => !ownsCosmetic(id)),
+    [draft, ownsCosmetic],
+  )
+  const totalLockedCost = lockedInDraft.reduce((sum, id) => sum + (costFor(id) ?? 0), 0)
+  const dirty = (Object.keys(draft) as Slot[]).some(s => draft[s] !== outfit[s])
+
+  const tryOn = (it: Cosmetic) => {
+    setDraft(d => {
+      const isOn = d[it.slot] === it.id
+      // skin & bg always keep a value; others toggle off when re-tapped
+      const next = isOn && it.slot !== 'skin' && it.slot !== 'bg' ? '' : it.id
+      return { ...d, [it.slot]: next }
+    })
   }
 
-  const equipped = accessoryFor(costume)
-
-  const isUnlocked = (world: string) => worldRing(WORLD_BY_KEY[world]) >= 50 || ownsItem(`costume:${world}`)
-
-  const onCardClick = (world: string, price: number, name: string) => {
-    if (isUnlocked(world)) {
-      // toggle equip
-      setCostume(costume === world ? null : world)
-      if (costume !== world) addToast(`Wearing the ${name}!`, '🎭')
-    } else {
-      if (buyItem(`costume:${world}`, price, name)) setCostume(world)
+  const saveLook = () => {
+    if (lockedInDraft.length) {
+      // buy each locked item, then commit
+      let ok = true
+      for (const id of lockedInDraft) if (!buyCosmetic(id)) ok = false
+      if (!ok) return
     }
+    useAppStore.setState({ outfit: { ...draft } })
+    addToast('Look saved! 😎', '✨')
+  }
+
+  const reset = () => setDraft({ ...outfit })
+
+  const editName = () => {
+    const n = prompt('Your avatar name:', learnerName)
+    if (n && n.trim()) setLearnerName(n.trim())
   }
 
   return (
-    <div className="screen avpage" style={{ justifyContent: 'flex-start', gap: 16, overflowY: 'auto' }}>
-      <div className="av-hero">
-        <div className="av-hero-buddy"><Buddy mood="wave" size={150} accessory={equipped} /></div>
-        <h1 className="av-name">{learnerName}</h1>
-        <div className="av-lvl">Level {level} · {xp.toLocaleString()} XP</div>
-        {email ? <div className="av-email">👤 <b>{email}</b></div> : <div className="av-email">Playing as a guest</div>}
-        <div className="av-stats">
-          <div className="av-stat"><b>💎 {diamonds}</b><span>diamonds</span></div>
-          <div className="av-stat"><b>{gameCount}</b><span>games</span></div>
-          <div className="av-stat"><b>{unlocks.filter(u => u.startsWith('costume:')).length}</b><span>costumes</span></div>
+    <div className="screen rbx" style={{ justifyContent: 'flex-start' }}>
+      {/* ── live preview stage ── */}
+      <div className="rbx-stage">
+        <div className="rbx-stage-glow" />
+        <div className="rbx-avatar">
+          <Buddy mood="happy" size={230} outfit={resolved} showBg bob />
         </div>
+        <div className="rbx-platform" />
+        <button className="rbx-name" onClick={editName}>{learnerName} <span>✏️</span></button>
+        <div className="rbx-bal">💎 {diamonds}</div>
       </div>
 
-      <div className="section-label">Wardrobe</div>
-      <p className="av-ward-hint">Unlock a costume by growing that world's ring to 50% — or take a diamond shortcut. Tap to wear it.</p>
-      <div className="av-wardrobe">
-        {COSTUMES.map(c => {
-          const world = WORLD_BY_KEY[c.world]
-          const unlocked = isUnlocked(c.world)
-          const wearing = costume === c.world
-          const pct = worldRing(world)
+      {/* ── slot selector ── */}
+      <div className="rbx-slots">
+        {SLOTS.map(s => (
+          <button key={s.key} className={`rbx-slot${slot === s.key ? ' on' : ''}`} onClick={() => setSlot(s.key)}>
+            <span className="rbx-slot-ic">{s.emoji}</span>
+            <span className="rbx-slot-lb">{s.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── item grid ── */}
+      <div className="rbx-grid">
+        {items.map(it => {
+          const owned = ownsCosmetic(it.id)
+          const wearing = draft[it.slot] === it.id
+          const r = RARITY_META[it.rarity]
+          const previewOutfit = it.slot === 'bg'
+            ? { bg: { render: it.render, color: it.color } }
+            : { skin: it.slot === 'skin' ? { render: it.render, color: it.color } : { render: 'default', color: '#8b5cf6' }, [it.slot]: { render: it.render, color: it.color } }
           return (
-            <button key={c.world} className={`av-cos${wearing ? ' on' : ''}${!unlocked ? ' locked' : ''}`}
-              style={unlocked ? { borderColor: c.color } : undefined}
-              onClick={() => onCardClick(c.world, c.price, c.name)}>
-              <div className="av-cos-buddy"><Buddy mood="idle" size={64} bob={false} accessory={{ kind: c.kind, color: c.color }} color={unlocked ? '#8b5cf6' : '#5b6478'} /></div>
-              <b style={{ color: unlocked ? 'var(--t1)' : 'var(--t3)' }}>{c.name}</b>
-              <small style={{ color: c.color }}>{world.name}</small>
+            <button key={it.id} className={`rbx-card${wearing ? ' on' : ''}${!owned ? ' locked' : ''}`}
+              style={wearing ? { borderColor: r.color } : undefined} onClick={() => tryOn(it)}>
+              <span className="rbx-rarity" style={{ background: r.color }}>{r.label}</span>
+              <div className="rbx-card-art" style={{ background: it.slot === 'bg' ? it.color : undefined }}>
+                {it.slot === 'bg'
+                  ? <span className="rbx-bg-dot" style={{ background: it.color }} />
+                  : <Buddy mood="idle" size={66} bob={false} outfit={previewOutfit as never} />}
+              </div>
+              <b>{it.name}</b>
               {wearing
-                ? <span className="av-cos-tag" style={{ background: c.color }}>Wearing ✓</span>
-                : unlocked
-                  ? <span className="av-cos-tag eq">Tap to wear</span>
-                  : <span className="av-cos-tag lk">🔒 {pct}% · or {c.price}💎</span>}
+                ? <span className="rbx-tag wearing">Wearing ✓</span>
+                : owned
+                  ? <span className="rbx-tag own">Owned</span>
+                  : <span className="rbx-tag price">💎 {it.price}</span>}
             </button>
           )
         })}
       </div>
 
-      <div className="av-links">
-        <button className="av-link" onClick={() => go({ tab: 'fame' })}><span>🏆</span><div><b>Hall of Fame</b><small>See where you rank</small></div></button>
-        <button className="av-link" onClick={() => go({ tab: 'shop' })}><span>💎</span><div><b>Diamond Shop</b><small>Spend your diamonds</small></div></button>
-        <button className="av-link" onClick={() => go({ tab: 'profile' })}><span>📊</span><div><b>Profile</b><small>Your skill rings</small></div></button>
+      {/* ── action bar ── */}
+      <div className="rbx-actions">
+        {dirty && <button className="rbx-btn ghost" onClick={reset}>↩ Reset</button>}
+        {lockedInDraft.length > 0
+          ? <button className="rbx-btn buy" onClick={saveLook}>🛒 Buy &amp; wear · 💎 {totalLockedCost}</button>
+          : <button className="rbx-btn save" disabled={!dirty} onClick={saveLook}>{dirty ? '💾 Save look' : '✓ Looking good'}</button>}
       </div>
-
-      {realSession
-        ? <button className="btn btn-ghost av-logout" onClick={logout}>⏻ Log out</button>
-        : <button className="btn btn-primary av-logout" onClick={() => useAppStore.getState().openAuthWall('to save your progress')}>Sign in</button>}
     </div>
   )
+}
+
+function costFor(id: string): number | undefined {
+  const slot = id.split(':')[0] as Slot
+  return cosmeticsForSlot(slot).find(c => c.id === id)?.price
 }

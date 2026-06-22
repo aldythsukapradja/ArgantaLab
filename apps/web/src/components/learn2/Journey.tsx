@@ -1,7 +1,7 @@
 import type { World, JourneyNode } from '@/data/learn'
-import { accessoryFor } from '@/data/learn'
 import { nodeState, nodeUnlocked } from '@lib/learnProgress'
 import Buddy from '@components/avatar/Buddy'
+import type { ResolvedOutfit } from '@/data/cosmetics'
 
 // Each world wears its analog app's skin so the six don't feel the same.
 const STYLE: Record<string, 'arcade' | 'story' | 'lab' | 'circuit' | 'map' | 'party'> = {
@@ -12,7 +12,7 @@ export interface JProps {
   world: World
   launch: (n: JourneyNode) => void
   currentKey?: string
-  costume: string | null
+  outfit: ResolvedOutfit
 }
 
 export default function Journey(p: JProps) {
@@ -41,7 +41,7 @@ function useMeta(world: World) {
 //  STORY  (WordQuest · Duolingo) — winding candy path
 // ════════════════════════════════════════════════════════════
 const OFFSETS = [0, 42, 58, 42, 0, -42, -58, -42]
-function Story({ world, launch, currentKey, costume }: JProps) {
+function Story({ world, launch, currentKey, outfit }: JProps) {
   const { info } = useMeta(world)
   return (
     <div className="le-path jx">
@@ -64,7 +64,7 @@ function Story({ world, launch, currentKey, costume }: JProps) {
                     <span className="le-orb-ic">{m.st.status === 'done' ? (m.isBoss ? '👑' : '★') : m.isBoss ? '👑' : m.unlocked ? '▶' : '🔒'}</span>
                     {m.st.status === 'done' && <span className="le-orb-stars">{'⭐'.repeat(m.st.stars)}</span>}
                   </button>
-                  {m.isCurrent && <div className="le-orb-buddy"><Buddy size={50} mood="happy" color={world.color} accessory={accessoryFor(costume)} /></div>}
+                  {m.isCurrent && <div className="le-orb-buddy"><Buddy size={50} mood="happy" color={world.color} outfit={outfit} /></div>}
                   <span className="le-orb-label">{node.title}{m.isBoss && <em> · Boss</em>}</span>
                 </div>
               )
@@ -185,7 +185,7 @@ function MapTrail({ world, launch, currentKey }: JProps) {
 // ════════════════════════════════════════════════════════════
 //  PARTY  (LifeQuest · Habitica / Jackbox) — cozy quest board
 // ════════════════════════════════════════════════════════════
-function Party({ world, launch, currentKey, costume }: JProps) {
+function Party({ world, launch, currentKey, outfit }: JProps) {
   const { flat, info } = useMeta(world)
   const tilt = [-2, 1.5, -1, 2, -1.5, 1]
   return (
@@ -200,7 +200,7 @@ function Party({ world, launch, currentKey, costume }: JProps) {
               {m.isCurrent && <span className="jx-card-ribbon">PLAY!</span>}
               <span className="jx-card-ic">{m.st.status === 'done' ? '🌟' : !m.unlocked ? '🔒' : m.isBoss ? '🎈' : '🎲'}</span>
               <b>{node.title}</b>
-              {m.isCurrent && <span className="jx-card-buddy"><Buddy size={40} mood="celebrate" color={world.color} accessory={accessoryFor(costume)} bob={false} /></span>}
+              {m.isCurrent && <span className="jx-card-buddy"><Buddy size={40} mood="celebrate" color={world.color} outfit={outfit} bob={false} /></span>}
             </button>
           )
         })}

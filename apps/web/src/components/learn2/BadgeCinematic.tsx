@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
-import Buddy, { type Accessory } from '@components/avatar/Buddy'
+import Buddy from '@components/avatar/Buddy'
+import type { ResolvedOutfit } from '@/data/cosmetics'
 
 interface Props {
   name: string
   icon: string
   color: string
-  accessory?: Accessory
+  outfit?: ResolvedOutfit
   onDone: () => void
 }
 
 // The 7-beat reward cinematic: pause → diamonds fly → capsule shakes →
 // Buddy appears → badge flips open → ring pulses → confetti.
-export default function BadgeCinematic({ name, icon, color, accessory, onDone }: Props) {
+export default function BadgeCinematic({ name, icon, color, outfit, onDone }: Props) {
   const root = useRef<HTMLDivElement>(null)
   const capsule = useRef<HTMLDivElement>(null)
   const badge = useRef<HTMLDivElement>(null)
@@ -56,7 +57,7 @@ export default function BadgeCinematic({ name, icon, color, accessory, onDone }:
           })}
         </div>
 
-        <div className="bc-buddy" ref={buddy}><Buddy mood="celebrate" size={92} color={color} bob={false} accessory={accessory} /></div>
+        <div className="bc-buddy" ref={buddy}><Buddy mood="celebrate" size={92} color={color} bob={false} outfit={outfit} /></div>
 
         {/* capsule (shakes, then opens) */}
         <div className="bc-capsule" ref={capsule} style={{ borderColor: color }}>🎁</div>

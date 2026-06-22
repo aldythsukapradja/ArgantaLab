@@ -321,7 +321,88 @@ export function accessoryFor(costumeKey: string | null | undefined): { kind: Cos
   return c ? { kind: c.kind, color: c.color } : undefined
 }
 
-export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS]
+// ============================================================
+//  EXTRA EXPLORER ITEMS — deeper pool per skill (8+ each) so the
+//  adaptive engine has real variety. Add rows here to add content.
+// ============================================================
+const EXTRA_ITEMS: Item[] = [
+  // ── NumberDash · times ──
+  it('NUM', 'times', 'mcq', 'What is 4 × 6?', { choices: ['18', '24', '28', '20'], answer: 1 }, { explanation: '4 × 6 = 24.' }),
+  it('NUM', 'times', 'type', '7 × 7 = ?', { answer: '49', numeric: true }, { explanation: '7 × 7 = 49.' }),
+  it('NUM', 'times', 'cloze', 'Complete it.', { before: '6 × ', after: ' = 48', options: ['6', '7', '8'], answer: '8' }, { explanation: '6 × 8 = 48.' }),
+  it('NUM', 'times', 'match', 'Match the fact to its answer.', { pairs: [['3 × 4', '12'], ['5 × 6', '30'], ['9 × 2', '18']] }, { explanation: 'Skip-count to check each one.' }),
+  it('NUM', 'times', 'speed', 'Lightning round!', { questions: [{ q: '8 × 3', a: '24' }, { q: '7 × 5', a: '35' }, { q: '6 × 6', a: '36' }, { q: '9 × 3', a: '27' }, { q: '8 × 5', a: '40' }], seconds: 50 }),
+  // ── NumberDash · fractions ──
+  it('NUM', 'fractions', 'mcq', '1/2 of 10 is...?', { choices: ['2', '5', '10', '20'], answer: 1 }, { explanation: 'Half of 10 is 5.' }),
+  it('NUM', 'fractions', 'cloze', 'Two quarters make...', { before: '2/4 = ', after: '', options: ['1/2', '1/4', '2'], answer: '1/2' }, { explanation: '2/4 simplifies to 1/2.' }),
+  it('NUM', 'fractions', 'numline', 'Place 1/2 on the line.', { min: 0, max: 1, answer: 0.5, tol: 0.06, label: '1/2' }, { explanation: 'One half is right in the middle.' }),
+  it('NUM', 'fractions', 'mcq', 'Which is a quarter?', { choices: ['1/4', '1/2', '3/4', '4/4'], answer: 0 }, { explanation: '1/4 means one out of four equal parts.' }),
+
+  // ── WordQuest · phonics ──
+  it('WRD', 'phonics', 'listen', 'Which letter makes this sound?', { say: 'mmm', choices: ['m', 'n', 'w'], answer: 0 }, { explanation: 'The /m/ sound is the letter m.' }),
+  it('WRD', 'phonics', 'cloze', 'Finish the word: do__', { before: 'do', after: '', options: ['g', 't', 'p'], answer: 'g' }, { explanation: 'd-o-g spells dog.' }),
+  it('WRD', 'phonics', 'mcq', 'Which word rhymes with "cat"?', { choices: ['hat', 'dog', 'sun', 'cup'], answer: 0 }, { explanation: 'cat and hat both end in -at.' }),
+  it('WRD', 'phonics', 'cloze', 'Make a word: __ish', { before: '', after: 'ish', options: ['f', 'b', 'th'], answer: 'f' }, { explanation: 'f-ish spells fish.' }),
+  // ── WordQuest · grammar ──
+  it('WRD', 'grammar', 'cloze', 'Choose the right word.', { before: 'They ', after: ' playing outside.', options: ['is', 'are', 'am'], answer: 'are' }, { explanation: '"They" takes "are".' }),
+  it('WRD', 'grammar', 'fix', 'Tap the mistake.', { tokens: ['the', 'cat', 'are', 'sleeping'], wrong: 2, fix: 'is' }, { explanation: 'One cat → "is".' }),
+  it('WRD', 'grammar', 'mcq', 'Which is a question?', { choices: ['I like cake.', 'Where is my hat?', 'Run fast!', 'The sky is blue.'], answer: 1 }, { explanation: 'A question ends with a "?".' }),
+  // ── WordQuest · vocab ──
+  it('WRD', 'vocab', 'mcq', 'What does "tiny" mean?', { choices: ['very small', 'very big', 'very fast', 'very loud'], answer: 0 }, { explanation: 'Tiny = very small.' }),
+  it('WRD', 'vocab', 'match', 'Match the synonyms.', { pairs: [['begin', 'start'], ['end', 'finish'], ['small', 'little']] }, { explanation: 'Synonyms mean the same.' }),
+  // ── WordQuest · writing ──
+  it('WRD', 'writing', 'seq', 'Put the day in order.', { items: ['Wake up', 'Eat breakfast', 'Go to school', 'Come home'] }, { explanation: 'Order the events in time.' }),
+  it('WRD', 'writing', 'bank', 'Build a sentence.', { tiles: ['I', 'can', 'run', 'fast'], answer: ['I', 'can', 'run', 'fast'] }, { explanation: 'Start with a capital "I".' }),
+
+  // ── WonderLab · biology ──
+  it('WON', 'biology', 'sort', 'Sort: lives in water or land?', { buckets: ['Water', 'Land'], items: [{ text: 'Fish', bucket: 0 }, { text: 'Lion', bucket: 1 }, { text: 'Whale', bucket: 0 }, { text: 'Dog', bucket: 1 }] }, { explanation: 'Habitats are where animals live.' }),
+  it('WON', 'biology', 'mcq', 'What do animals need to live?', { choices: ['Food and water', 'Only toys', 'Only sunlight', 'Nothing'], answer: 0 }, { explanation: 'All animals need food and water.' }),
+  it('WON', 'biology', 'seq', 'Order the butterfly life cycle.', { items: ['Egg', 'Caterpillar', 'Chrysalis', 'Butterfly'] }, { explanation: 'A butterfly changes in 4 stages.' }),
+  // ── WonderLab · chemistry ──
+  it('WON', 'chemistry', 'mcq', 'What is ice made of?', { choices: ['Frozen water', 'Sand', 'Glass', 'Sugar'], answer: 0 }, { explanation: 'Ice is water frozen solid.' }),
+  it('WON', 'chemistry', 'sort', 'Sort: solid, liquid?', { buckets: ['Solid', 'Liquid'], items: [{ text: 'Rock', bucket: 0 }, { text: 'Milk', bucket: 1 }, { text: 'Brick', bucket: 0 }, { text: 'Juice', bucket: 1 }] }, { explanation: 'Solids keep their shape; liquids flow.' }),
+  // ── WonderLab · physics ──
+  it('WON', 'physics', 'mcq', 'What pulls things down to the ground?', { choices: ['Gravity', 'Wind', 'Light', 'Sound'], answer: 0 }, { explanation: 'Gravity pulls everything down.' }),
+  it('WON', 'physics', 'pte', 'You drop a feather and a rock.', { predict: { prompt: 'Which lands first in air?', choices: ['Rock', 'Feather'], answer: 0 }, sim: '🪶 floats · 🪨 drops fast', explain: { prompt: 'Why?', choices: ['Air slows the light feather', 'The rock is magic'], answer: 0 } }, { explanation: 'Air resistance slows the feather.' }),
+  // ── WonderLab · earth ──
+  it('WON', 'earth', 'mcq', 'What is the Sun?', { choices: ['A star', 'A planet', 'A moon', 'A cloud'], answer: 0 }, { explanation: 'The Sun is a star.' }),
+  it('WON', 'earth', 'seq', 'Order from smallest to biggest.', { items: ['Moon', 'Earth', 'Sun'] }, { explanation: 'The Sun is much bigger than Earth.' }),
+
+  // ── LogicLand · code ──
+  it('LOG', 'code', 'code', 'Order blocks: draw a square.', { tiles: ['repeat 4 times', 'move forward', 'turn right'], answer: ['repeat 4 times', 'move forward', 'turn right'] }, { explanation: 'A loop repeats the steps.' }),
+  it('LOG', 'code', 'mcq', 'What does a loop do?', { choices: ['Repeats steps', 'Deletes code', 'Changes colour', 'Plays music'], answer: 0 }, { explanation: 'Loops repeat actions.' }),
+  // ── LogicLand · data ──
+  it('LOG', 'data', 'mcq', 'The biggest number in 3, 9, 5 is?', { choices: ['9', '5', '3', '17'], answer: 0 }, { explanation: '9 is the largest.' }),
+  it('LOG', 'data', 'sort', 'Sort: bigger or smaller than 10?', { buckets: ['< 10', '> 10'], items: [{ text: '4', bucket: 0 }, { text: '15', bucket: 1 }, { text: '8', bucket: 0 }, { text: '20', bucket: 1 }] }, { explanation: 'Compare each to 10.' }),
+  // ── LogicLand · ai ──
+  it('LOG', 'ai', 'mcq', 'Which is a clearer prompt?', { choices: ['Make a red racing car game', 'Make something', 'Game', 'Do it'], answer: 0 }, { explanation: 'Clear details give better results.' }),
+  // ── LogicLand · logic ──
+  it('LOG', 'logic', 'seq', 'Order: brush your teeth.', { items: ['Get the toothbrush', 'Add toothpaste', 'Brush', 'Rinse'] }, { explanation: 'Step-by-step = an algorithm.' }),
+  it('LOG', 'logic', 'mcq', 'A pattern: 2, 4, 6, __?', { choices: ['8', '7', '9', '5'], answer: 0 }, { explanation: 'Add 2 each time → 8.' }),
+
+  // ── WorldTrail · geography ──
+  it('WLD', 'geography', 'map', 'Which is a desert?', { choices: ['Sahara', 'Pacific', 'Amazon', 'Everest'], answer: 0 }, { explanation: 'The Sahara is a huge desert.' }),
+  it('WLD', 'geography', 'match', 'Match country to capital.', { pairs: [['France', 'Paris'], ['Japan', 'Tokyo'], ['Egypt', 'Cairo']] }, { explanation: 'A capital is a country\'s main city.' }),
+  it('WLD', 'geography', 'mcq', 'How many continents are there?', { choices: ['5', '7', '10', '3'], answer: 1 }, { explanation: 'There are 7 continents.' }),
+  // ── WorldTrail · history ──
+  it('WLD', 'history', 'mcq', 'Who built the pyramids?', { choices: ['Ancient Egyptians', 'Robots', 'Vikings', 'Astronauts'], answer: 0 }, { explanation: 'The ancient Egyptians built them.' }),
+  it('WLD', 'history', 'seq', 'Order: oldest to newest transport.', { items: ['Horse', 'Steam train', 'Car', 'Rocket'] }, { explanation: 'Transport improved over time.' }),
+  // ── WorldTrail · economics ──
+  it('WLD', 'economics', 'mcq', 'What is a "need"?', { choices: ['Food and water', 'A new toy', 'Candy', 'A game'], answer: 0 }, { explanation: 'Needs keep us alive; wants are extra.' }),
+  it('WLD', 'economics', 'sort', 'Sort: need or want?', { buckets: ['Need', 'Want'], items: [{ text: 'Water', bucket: 0 }, { text: 'Toy', bucket: 1 }, { text: 'Food', bucket: 0 }, { text: 'Sweets', bucket: 1 }] }, { explanation: 'Needs first, then wants.' }),
+
+  // ── LifeQuest ──
+  it('LIF', 'habits', 'mcq', 'How many hours of sleep do kids need?', { choices: ['About 10', 'About 2', 'About 24', 'None'], answer: 0 }, { explanation: 'Kids need around 9–11 hours.' }),
+  it('LIF', 'habits', 'party', 'Real-world quest', { task: 'Make your bed today', quest: true }),
+  it('LIF', 'kindness', 'mcq', 'A friend is sad. What helps?', { choices: ['Listen and cheer them up', 'Ignore them', 'Laugh at them', 'Walk away'], answer: 0 }, { explanation: 'Kindness means caring for others.' }),
+  it('LIF', 'kindness', 'party', 'Real-world quest', { task: 'Give someone a compliment', quest: true }),
+  it('LIF', 'movement', 'party', 'Real-world quest', { task: 'Stretch up high 5 times', quest: true }),
+  it('LIF', 'movement', 'mcq', 'Which is good exercise?', { choices: ['Running and jumping', 'Sitting all day', 'Sleeping', 'Watching TV'], answer: 0 }, { explanation: 'Moving keeps your body strong.' }),
+  it('LIF', 'party', 'party', 'Emoji guess', { prompt: 'Yellow fruit monkeys love 🐵', reveal: '🍌 Banana!' }),
+  it('LIF', 'party', 'party', 'Emoji guess', { prompt: 'It rains from these ☁️', reveal: '🌧️ Clouds!' }),
+]
+
+export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS]
 
 export function localItemsFor(world: string, skills: string[], stage = 'explorer'): Item[] {
   return LOCAL_ITEMS.filter(i => i.world === world && i.stage === stage && skills.includes(i.skill))

@@ -61,6 +61,7 @@ export const NAV: NavItem[] = [
   { tab: 'lif',       label: 'LifeQuest',    short: 'Life',     icon: 'lif',       group: 'LEARN' },
   { tab: 'studio',    label: 'Game Wizard',  short: 'Wizard',   icon: 'studio',    group: 'BUILD' },
   { tab: 'lab',       label: 'Builder Lab',  short: 'Lab',      icon: 'lab',       group: 'BUILD' },
+  { tab: 'pitch',     label: 'Pitch Studio', short: 'Pitch',    icon: 'studio',    group: 'BUILD' },
   { tab: 'discover',  label: 'Discover',     short: 'Discover', icon: 'discover',  group: 'SHIP' },
   { tab: 'gamestore', label: 'My GameStore', short: 'Store',    icon: 'store',     group: 'SHIP' },
   { tab: 'avatar',    label: 'Avatar',       short: 'Avatar',   icon: 'avatar',    group: 'YOU' },
@@ -80,7 +81,7 @@ export interface MobileTab { key: string; label: string; icon: string; members: 
 export const MOBILE_TABS: MobileTab[] = [
   { key: 'play',   label: 'Play',   icon: 'arganta',  members: ['arganta', 'quests'], pills: ['arganta', 'quests'] },
   { key: 'learn',  label: 'Learn',  icon: 'learn',    members: ['learn', ...WORLD_TABS] },
-  { key: 'build',  label: 'Build',  icon: 'studio',   members: ['studio', 'lab'], pills: ['studio', 'lab'] },
+  { key: 'build',  label: 'Build',  icon: 'studio',   members: ['studio', 'lab', 'pitch'], pills: ['studio', 'lab', 'pitch'] },
   { key: 'ship',   label: 'Ship',   icon: 'discover', members: ['discover', 'gamestore'], pills: ['discover', 'gamestore'] },
   { key: 'avatar', label: 'You',    icon: 'avatar',   members: ['avatar', 'fame', 'shop', 'profile', 'parent'], pills: ['avatar', 'fame', 'shop', 'profile', 'parent'] },
 ]

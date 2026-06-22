@@ -1182,6 +1182,36 @@ html[data-theme="light"] .cine-grad{background:linear-gradient(180deg,rgba(5,8,1
   padding:3px 11px;border-radius:20px;transform:rotate(8deg);box-shadow:0 3px 8px rgba(0,0,0,.3)}
 .jx-card-buddy{position:absolute;bottom:-12px;right:-10px}
 
+/* light-mode: never use dark panels — recolor each skin to a light surface,
+   keeping its accent colour and vibe (dark versions remain for dark mode) */
+html[data-theme="light"] .jx-arcade{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--wc) 12%,#fff),var(--bg-2));
+  box-shadow:inset 0 0 40px color-mix(in srgb,var(--wc) 7%,transparent)}
+html[data-theme="light"] .jx-arcade-head{text-shadow:none}
+html[data-theme="light"] .jx-arcade-head span{color:var(--t2)}
+html[data-theme="light"] .jx-disc{background:radial-gradient(circle at 40% 32%,color-mix(in srgb,var(--wc) 85%,#fff),var(--wc) 58%,color-mix(in srgb,var(--wc) 55%,#fff))}
+html[data-theme="light"] .jx-disc-label{color:var(--t1)}
+html[data-theme="light"] .jx-disc-label em{text-shadow:none}
+html[data-theme="light"] .jx-disc.locked{background:var(--border)}
+
+html[data-theme="light"] .jx-circuit{background:linear-gradient(160deg,color-mix(in srgb,var(--wc) 10%,#fff),var(--bg-2))}
+html[data-theme="light"] .jx-circuit-head span{color:var(--t2)}
+html[data-theme="light"] .jx-chip{background:#fff}
+html[data-theme="light"] .jx-chip.locked{background:var(--panel)}
+html[data-theme="light"] .jx-chip-label{color:var(--t1)}
+
+html[data-theme="light"] .jx-map{background:linear-gradient(160deg,color-mix(in srgb,var(--wc) 12%,#fff),var(--bg-2))}
+html[data-theme="light"] .jx-map::before{background-image:radial-gradient(circle at 28% 18%,color-mix(in srgb,var(--wc) 10%,transparent),transparent 38%),radial-gradient(circle at 72% 66%,color-mix(in srgb,var(--wc) 10%,transparent),transparent 38%)}
+html[data-theme="light"] .jx-map-head{color:var(--t1)}
+html[data-theme="light"] .jx-map-head span{color:var(--t2)}
+html[data-theme="light"] .jx-pin.locked{background:var(--border)}
+html[data-theme="light"] .jx-pin-label{color:var(--t1);background:var(--panel)}
+
+html[data-theme="light"] .jx-party{background:linear-gradient(160deg,color-mix(in srgb,var(--wc) 14%,#fff),var(--bg-2))}
+html[data-theme="light"] .jx-party-head{color:var(--t1)}
+html[data-theme="light"] .jx-party-head span{color:var(--t2)}
+html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
+
 /* Signature / soon / badges / profile */
 .le-sig-card,.le-soon{padding:24px;border-radius:var(--r-lg);background:var(--panel);border:1px solid var(--border);text-align:center}
 .le-sig-card h3{font-size:20px;font-weight:800;margin-bottom:8px}

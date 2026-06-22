@@ -371,3 +371,78 @@ begin
     execute format('create policy "%s_own" on public.%I for all using (auth.uid() = user_id) with check (auth.uid() = user_id)', t, t);
   end loop;
 end $$;
+
+-- ============================================================
+--  AVATAR COSMETICS — equipped loadout + owned items (mirror)
+--  Local-first; this single row syncs the wardrobe across devices.
+-- ============================================================
+create table if not exists public.avatar_state (
+  user_id   uuid primary key references public.profiles(id) on delete cascade,
+  outfit    jsonb default '{}'::jsonb,    -- slot -> cosmetic id
+  owned     jsonb default '[]'::jsonb,    -- owned cosmetic ids
+  updated_at timestamptz default now()
+);
+alter table public.avatar_state enable row level security;
+drop policy if exists "avatar_state_own" on public.avatar_state;
+create policy "avatar_state_own" on public.avatar_state
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+--  CIRCLES & KID PROFILES  (KinetikCircle-compatible)
+--  A parent owns circles and child profiles. Kids sign in with a
+--  username + PIN locally; `linked_email` upgrades them to Google
+--  login when they grow up. The same circles/circle_members graph
+--  will power the future KinetikCircle social app.
+-- ============================================================
+create table if not exists public.circles (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid references public.profiles(id) on delete cascade,
+  name        text,
+  kind        text default 'family',     -- 'family' | 'kids' | 'class' | 'friends'
+  emoji       text,
+  invite_code text,
+  created_at  timestamptz default now()
+);
+
+create table if not exists public.child_profiles (
+  id            uuid primary key default gen_random_uuid(),
+  parent_id     uuid references public.profiles(id) on delete cascade,
+  username      text,
+  pin_hash      text,                     -- bcrypt/argon hash (server) — plain only stays local
+  display_name  text,
+  color         text,
+  emoji         text,
+  age           int,
+  linked_email  text,                     -- set when upgraded to Gmail
+  created_at    timestamptz default now()
+);
+create unique index if not exists child_username_idx on public.child_profiles(parent_id, username);
+
+create table if not exists public.circle_members (
+  circle_id  uuid references public.circles(id) on delete cascade,
+  member_id  uuid,                         -- profile id OR child profile id
+  member_kind text default 'child',        -- 'parent' | 'child'
+  role       text default 'member',        -- 'admin' | 'member'
+  joined_at  timestamptz default now(),
+  primary key (circle_id, member_id)
+);
+
+-- RLS: a parent owns their circles, members, and child profiles
+alter table public.circles enable row level security;
+drop policy if exists "circles_own" on public.circles;
+create policy "circles_own" on public.circles
+  for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+alter table public.child_profiles enable row level security;
+drop policy if exists "child_profiles_own" on public.child_profiles;
+create policy "child_profiles_own" on public.child_profiles
+  for all using (auth.uid() = parent_id) with check (auth.uid() = parent_id);
+
+alter table public.circle_members enable row level security;
+drop policy if exists "circle_members_own" on public.circle_members;
+create policy "circle_members_own" on public.circle_members
+  for all using (
+    exists (select 1 from public.circles c where c.id = circle_id and c.owner_id = auth.uid())
+  ) with check (
+    exists (select 1 from public.circles c where c.id = circle_id and c.owner_id = auth.uid())
+  );

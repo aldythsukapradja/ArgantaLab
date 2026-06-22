@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { World, JourneyNode } from '@/data/learn'
 import type { Item } from '@/data/learn'
-import { accessoryFor } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getItems } from '@lib/content'
 import { pickItems, recordAttempt, repairItem } from '@lib/adaptive'
@@ -23,8 +22,8 @@ interface Props {
 
 /** Plays a sequence of items for one journey node. */
 export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
-  const { addXp, addToast, costume } = useAppStore()
-  const acc = accessoryFor(costume)
+  const { addXp, addToast, resolvedOutfit } = useAppStore()
+  const acc = resolvedOutfit()
   const [queue, setQueue] = useState<Item[] | null>(null)
   const [idx, setIdx] = useState(0)
   const [answered, setAnswered] = useState(false)
@@ -98,7 +97,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
     const stars = total && correctCount / total >= 0.9 ? 3 : total && correctCount / total >= 0.6 ? 2 : 1
     return (
       <div className="le-results">
-        <Buddy mood="celebrate" size={104} color={world.color} bob={false} accessory={acc} />
+        <Buddy mood="celebrate" size={104} color={world.color} bob={false} outfit={acc} />
         <div className="le-results-stars">{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</div>
         <h2>{node.type === 'boss' ? 'Boss cleared!' : 'Node complete!'}</h2>
         <p className="le-results-sub">{correctCount} / {total} correct · +{earnedXp.current} XP · +{node.rewardDiamonds} 💎</p>
@@ -128,7 +127,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
       {answered && (
         <div className="le-feedback" style={{ borderColor: lastCorrect ? GREEN : RED }}>
           <div className="le-feedback-row">
-            <Buddy mood={lastCorrect ? 'celebrate' : 'sad'} size={56} color={world.color} bob={false} accessory={acc} />
+            <Buddy mood={lastCorrect ? 'celebrate' : 'sad'} size={56} color={world.color} bob={false} outfit={acc} />
             <div>
               <div className="le-feedback-h" style={{ color: lastCorrect ? GREEN : RED }}>
                 {lastCorrect ? CHEER[idx % CHEER.length] : NUDGE[idx % NUDGE.length]}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { loadMyGames } from '@lib/myGames'
 import { getLeaderboard } from '@lib/gamesCloud'
-import { WORLDS, accessoryFor } from '@/data/learn'
+import { WORLDS } from '@/data/learn'
 import { worldRing } from '@lib/learnProgress'
 import Buddy from '@components/avatar/Buddy'
 
@@ -18,7 +18,8 @@ const SAMPLE = [
 type Scope = 'circle' | 'world' | 'myworlds'
 
 export default function Fame() {
-  const { learnerName, xp, level, costume, go, session } = useAppStore()
+  const { learnerName, xp, level, resolvedOutfit, go, session } = useAppStore()
+  const outfit = resolvedOutfit()
   const [scope, setScope] = useState<Scope>('world')
   const games = loadMyGames().length
   const myId = session && session !== 'loading' ? session.user.id : null
@@ -44,7 +45,7 @@ export default function Fame() {
   return (
     <div className="screen fame" style={{ justifyContent: 'flex-start', gap: 14, paddingTop: 6 }}>
       <div className="fame-hero">
-        <Buddy mood="happy" size={70} accessory={accessoryFor(costume)} bob={false} />
+        <Buddy mood="happy" size={70} outfit={outfit} bob={false} />
         <div>
           <div className="kicker"><span className="live" />&nbsp;Hall of Fame</div>
           <h1 className="h-title" style={{ fontSize: 'clamp(26px,4vw,44px)', marginTop: 6 }}>Top <span className="g">creators</span></h1>

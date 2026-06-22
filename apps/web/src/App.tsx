@@ -16,6 +16,7 @@ import { MOBILE_TABS, NAV, WORLD_TABS } from '@/data'
 import PlayHome from '@/pages/PlayHome'
 import Wizard from '@/pages/Wizard'
 import BuilderLab from '@/pages/BuilderLab'
+import PitchBuilder from '@/pages/PitchBuilder'
 import Shop from '@/pages/Shop'
 import Discover from '@/pages/Discover'
 import MyGameStore from '@/pages/MyGameStore'
@@ -29,6 +30,7 @@ import World from '@/pages/World'
 import AdminStudio from '@/pages/admin/AdminStudio'
 import PlayPage from '@/pages/PlayPage'
 import '@/styles/globals.css'
+import '@/styles/v2.css'
 
 const CONFETTI_COLORS = ['#4D9FFF','#8B5CF6','#FF5EA0','#3DE08A','#FFC24B','#34E5FF']
 
@@ -190,6 +192,7 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'learn') return <LearnHub />
   if (tab === 'studio') return <Wizard />
   if (tab === 'lab') return <BuilderLab />
+  if (tab === 'pitch') return <PitchBuilder />
   if (tab === 'shop') return <Shop />
   if (tab === 'discover') return <Discover />
   if (tab === 'gamestore') return <MyGameStore />
