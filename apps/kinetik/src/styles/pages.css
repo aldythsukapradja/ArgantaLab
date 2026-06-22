@@ -2,6 +2,61 @@
    KINETIK — page styles (imported after globals.css)
    ========================================================= */
 
+/* ---- Today : buddy pulse ---- */
+.buddy-pulse {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  margin-top: 8px; padding: 12px 14px; border-radius: var(--r-lg);
+  color: #fff; text-align: left;
+  box-shadow: 0 12px 30px rgba(244, 63, 94, 0.32);
+  transition: transform 0.16s var(--ease);
+}
+.buddy-pulse:active { transform: scale(0.985); }
+.bp-orb { width: 38px; height: 38px; border-radius: 50%; flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.22); display: grid; place-items: center; backdrop-filter: blur(4px); }
+.bp-spark { width: 12px; height: 12px; border-radius: 4px; background: #fff;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.9); animation: spark 1.6s var(--ease) infinite; }
+@keyframes spark { 0%, 100% { transform: scale(1) rotate(0); opacity: 0.9; } 50% { transform: scale(0.7) rotate(45deg); opacity: 0.55; } }
+.bp-meta { flex: 1; display: flex; flex-direction: column; }
+.bp-meta b { font-size: 14px; font-weight: 700; }
+.bp-meta small { font-size: 11.5px; opacity: 0.92; }
+.bp-dia { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700;
+  background: rgba(255, 255, 255, 0.22); border-radius: 999px; padding: 6px 11px; }
+
+/* ---- Today : energy mix ---- */
+.energy-row { display: flex; gap: 7px; margin: 14px 0 4px; }
+.epill { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: var(--card); border: 0.5px solid var(--border); border-radius: var(--r-sm); padding: 9px 4px; box-shadow: var(--shadow); }
+html[data-theme='dark'] .epill { box-shadow: none; }
+.ep-top { font-size: 15px; font-weight: 800; line-height: 1; }
+.ep-bar { width: 100%; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.ep-bar i { display: block; height: 100%; border-radius: 3px; transition: width 0.5s var(--ease); }
+.ep-lbl { font-size: 9.5px; font-weight: 600; color: var(--faint); letter-spacing: 0.02em; }
+
+/* ---- Today : next-card extras + timeline ---- */
+.next-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.kind-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.04em; color: var(--muted); background: var(--bg-2); border-radius: 8px; padding: 5px 9px; flex: 0 0 auto; }
+
+.timeline { display: flex; flex-direction: column; gap: 8px; }
+.tl-row { display: flex; align-items: center; gap: 11px; padding: 11px 13px; text-align: left;
+  background: var(--card); border: 0.5px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow);
+  transition: transform 0.14s var(--ease); }
+html[data-theme='dark'] .tl-row { box-shadow: none; }
+.tl-row:active { transform: scale(0.985); }
+.tl-row.past { opacity: 0.5; }
+.tl-time { font-size: 11.5px; font-weight: 700; color: var(--muted); width: 50px; flex: 0 0 auto; }
+.tl-rail { width: 4px; align-self: stretch; display: flex; flex: 0 0 auto; }
+.tl-rail i { width: 4px; border-radius: 4px; flex: 1; }
+.tl-main { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tl-main > b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-who { display: inline-flex; align-items: center; gap: 4px; }
+.tl-who em { font-style: normal; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who-dot { width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center;
+  color: #fff; font-size: 7.5px; font-weight: 800; flex: 0 0 auto; }
+
+/* routine chips read lighter than one-off events on the board */
+.ev-chip.routine { opacity: 0.92; border: 1px dashed rgba(255, 255, 255, 0.55); }
+
 /* ---- Today ---- */
 .next-card { margin-top: 14px; overflow: hidden; cursor: pointer; }
 .next-bar { height: 4px; }

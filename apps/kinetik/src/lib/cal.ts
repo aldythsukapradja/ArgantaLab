@@ -1,11 +1,12 @@
 // =========================================================
-//  Calendar engine (simple port of the battle-tested logic):
-//  events on a date, the current week, and clash detection.
+//  Calendar engine: merges one-off EVENTS with weekly ROUTINES,
+//  expands routines onto the right weekday, sorts a day, and
+//  flags clashes (same person, overlapping time).
 // =========================================================
-import { isoOf, type KEvent } from '@data/seed'
+import { isoOf, type KEvent, type Routine, type EnergyKey } from '@data/seed'
 
 export const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m }
+export const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return (h || 0) * 60 + (m || 0) }
 
 export const fmtTime = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number)
@@ -14,18 +15,37 @@ export const fmtTime = (hhmm: string) => {
   return m ? `${h12}:${String(m).padStart(2, '0')}${ap}` : `${h12}${ap}`
 }
 
-/** Events on a given ISO date, sorted by start, with a `clash` flag. */
-export function eventsOn(all: KEvent[], dateIso: string, circleId: string): (KEvent & { clash: boolean })[] {
-  const day = all
+/** A concrete thing happening on a given day (from an event or a routine). */
+export interface Occ {
+  id: string; title: string; start: string; end: string
+  who: string[]; energy: EnergyKey; kind: 'event' | 'routine'
+  responsible?: string; coach?: string; location?: string; prep?: string[]
+  clash: boolean
+}
+
+const weekdayOf = (dateIso: string) => new Date(dateIso + 'T00:00').getDay()
+
+/** Everything on `dateIso` for a circle: events on that date + routines on that weekday. */
+export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: string, circleId: string): Occ[] {
+  const dow = weekdayOf(dateIso)
+  const fromEvents: Occ[] = events
     .filter(e => e.circleId === circleId && e.date === dateIso)
-    .sort((a, b) => toMin(a.start) - toMin(b.start))
-  return day.map(e => {
-    const clash = day.some(o =>
-      o.id !== e.id &&
-      o.who.some(w => e.who.includes(w)) &&
-      toMin(o.start) < toMin(e.end) && toMin(o.end) > toMin(e.start))
-    return { ...e, clash }
-  })
+    .map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, who: e.who, energy: e.energy, kind: 'event', coach: e.coach, location: e.location, prep: e.prep, clash: false }))
+  const fromRoutines: Occ[] = routines
+    .filter(r => r.circleId === circleId && r.day === dow)
+    .map(r => ({ id: r.id, title: r.title, start: r.start, end: r.end, who: r.who, energy: r.energy, kind: 'routine', responsible: r.responsible, clash: false }))
+
+  const day = [...fromEvents, ...fromRoutines].sort((a, b) => toMin(a.start) - toMin(b.start))
+  return day.map(e => ({
+    ...e,
+    clash: day.some(o => o.id !== e.id && o.who.some(w => e.who.includes(w)) && toMin(o.start) < toMin(e.end) && toMin(o.end) > toMin(e.start)),
+  }))
+}
+
+/** Back-compat: just the one-off events on a date (kept for any old callers). */
+export function eventsOn(all: KEvent[], dateIso: string, circleId: string): (KEvent & { clash: boolean })[] {
+  const day = all.filter(e => e.circleId === circleId && e.date === dateIso).sort((a, b) => toMin(a.start) - toMin(b.start))
+  return day.map(e => ({ ...e, clash: day.some(o => o.id !== e.id && o.who.some(w => e.who.includes(w)) && toMin(o.start) < toMin(e.end) && toMin(o.end) > toMin(e.start)) }))
 }
 
 export interface CalDay { date: Date; iso: string; dow: number; isToday: boolean; isWeekend: boolean }

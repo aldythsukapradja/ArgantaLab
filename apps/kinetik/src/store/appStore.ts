@@ -58,7 +58,7 @@ export const useAppStore = create<AppStore>()(
         set({ events: d.events ?? get().events, moments: d.moments ?? get().moments }),
     }),
     {
-      name: 'kinetik_state_v1',
+      name: 'kinetik_state_v2',   // bumped: now seeded from the real Aldyth-circle snapshot
       storage: createJSONStorage(() => localStorage),
       // session is runtime-only; never persist it.
       partialize: (s) => ({

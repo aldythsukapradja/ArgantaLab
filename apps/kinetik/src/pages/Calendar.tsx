@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from '@store/appStore'
-import { week, eventsOn, fmtTime, DOW } from '@lib/cal'
-import { CIRCLES, PEOPLE, ENERGY, initials, type EnergyKey } from '@data/seed'
+import { week, occurrencesOn, fmtTime, DOW } from '@lib/cal'
+import { CIRCLES, PEOPLE, ROUTINES, ENERGY, initials, type EnergyKey } from '@data/seed'
 import { IconChevron, IconChevronL, IconPlus } from '@components/Icons'
 
 export default function Calendar() {
@@ -44,7 +44,7 @@ export default function Calendar() {
         ))}
 
         {days.map(d => {
-          const dayEvents = eventsOn(events, d.iso, activeCircleId)
+          const dayItems = occurrencesOn(events, ROUTINES, d.iso, activeCircleId)
           return (
             <div key={d.iso} className="b-rowgroup" style={{ display: 'contents' }}>
               <div className={`b-day${d.isToday ? ' today' : ''}${d.isWeekend ? ' wknd' : ''}`}>
@@ -53,8 +53,8 @@ export default function Calendar() {
               </div>
               {cols.map(p => (
                 <div key={p.id} className={`b-cell${d.isWeekend ? ' wknd' : ''}`}>
-                  {dayEvents.filter(e => e.who.includes(p.id)).map(e => (
-                    <button key={e.id} className={`ev-chip${e.clash ? ' clash' : ''}`} style={{ background: ENERGY[e.energy as EnergyKey] }}>
+                  {dayItems.filter(e => e.who.includes(p.id)).map(e => (
+                    <button key={e.id} className={`ev-chip${e.clash ? ' clash' : ''}${e.kind === 'routine' ? ' routine' : ''}`} style={{ background: ENERGY[e.energy as EnergyKey] }}>
                       <b>{e.title}</b><small>{fmtTime(e.start)}</small>
                     </button>
                   ))}
