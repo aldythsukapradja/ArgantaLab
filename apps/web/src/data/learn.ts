@@ -6,6 +6,7 @@
 // ============================================================
 
 import { EXPLORER_PACK } from './explorerContent'
+import { STAGE_PACKS } from './stagePacks'
 
 export type InteractionKey =
   | 'mcq' | 'multi' | 'type' | 'speed' | 'bank' | 'cloze'
@@ -62,6 +63,38 @@ export const STAGES: Stage[] = [
   { key: 'champion', label: 'Champion', minAge: 14, maxAge: 16 },
   { key: 'legend', label: 'Legend', minAge: 16, maxAge: 19 },
 ]
+
+// Each stage gets a glyph + colour for badges/pills across the app.
+export const STAGE_META: Record<string, { emoji: string; color: string }> = {
+  tiny: { emoji: '🐣', color: '#f59e0b' },
+  starter: { emoji: '🌱', color: '#10b981' },
+  explorer: { emoji: '🧭', color: '#6366f1' },
+  builder: { emoji: '🛠️', color: '#0ea5e9' },
+  champion: { emoji: '🏆', color: '#f97316' },
+  legend: { emoji: '⭐', color: '#a855f7' },
+}
+
+// Age from an ISO date-of-birth string ('YYYY-MM-DD').
+export function ageFromDob(dob: string | undefined): number {
+  if (!dob) return 0
+  const d = new Date(dob)
+  if (isNaN(+d)) return 0
+  const now = new Date()
+  let a = now.getFullYear() - d.getFullYear()
+  const m = now.getMonth() - d.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--
+  return Math.max(0, a)
+}
+
+// Auto-classify a learner into a stage by age (the band [minAge, maxAge)).
+export function stageForAge(age: number): Stage {
+  const hit = STAGES.find(s => age >= s.minAge && age < s.maxAge)
+  if (hit) return hit
+  return age < STAGES[0].minAge ? STAGES[0] : STAGES[STAGES.length - 1]
+}
+export function stageForDob(dob: string | undefined): Stage {
+  return stageForAge(ageFromDob(dob))
+}
 
 // Interaction-type registry — documents each payload shape for the Admin UI + LLM prompt.
 export interface InteractionMeta {
@@ -120,17 +153,39 @@ const NUM_ITEMS: Item[] = [
 ]
 const NUM: World = {
   key: 'NUM', name: 'NumberDash', color: '#f59e0b', icon: '#', signature: 'Drill', vibe: 'Arcade math racing', status: 'live',
-  skills: [{ key: 'times', label: 'Times tables', band: 2 }, { key: 'fractions', label: 'Fractions', band: 3 }],
-  units: [{
-    key: 'num-core', title: 'Number Basics', color: '#f59e0b', nodes: [
-      { key: 'n1', title: 'Times Tables', type: 'practice', skills: ['times'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'n2', title: 'Fractions', type: 'practice', skills: ['fractions'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'n3', title: 'Number Boss', type: 'boss', skills: ['times', 'fractions'], itemCount: 4, rewardDiamonds: 15 },
-    ],
-  }],
+  skills: [
+    { key: 'placevalue', label: 'Place value', band: 1 },
+    { key: 'arith', label: 'Add & subtract', band: 1 },
+    { key: 'times', label: 'Times tables', band: 2 },
+    { key: 'fractions', label: 'Fractions', band: 3 },
+    { key: 'money', label: 'Money', band: 2 },
+    { key: 'measure', label: 'Measurement', band: 2 },
+    { key: 'time', label: 'Telling time', band: 2 },
+    { key: 'geometry', label: 'Shapes & geometry', band: 2 },
+  ],
+  units: [
+    {
+      key: 'num-foundations', title: 'Number Foundations', color: '#f59e0b', nodes: [
+        { key: 'n1', title: 'Place Value', type: 'lesson', skills: ['placevalue'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'n2', title: 'Add & Subtract', type: 'practice', skills: ['arith'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'n3', title: 'Times Tables', type: 'practice', skills: ['times'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'n4', title: 'Number Chest', type: 'chest', skills: ['placevalue', 'arith', 'times'], itemCount: 3, rewardDiamonds: 12 },
+      ],
+    },
+    {
+      key: 'num-world', title: 'Maths in the World', color: '#f59e0b', nodes: [
+        { key: 'n5', title: 'Fractions', type: 'practice', skills: ['fractions'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'n6', title: 'Money', type: 'practice', skills: ['money'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'n7', title: 'Measure & Time', type: 'practice', skills: ['measure', 'time'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'n8', title: 'Shapes', type: 'practice', skills: ['geometry'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'n9', title: 'Number Boss', type: 'boss', skills: ['times', 'fractions', 'money', 'geometry'], itemCount: 6, rewardDiamonds: 20 },
+      ],
+    },
+  ],
   badges: [
     { key: 'times-titan', name: 'Times-Table Titan', icon: '✖️', rule: { type: 'skill_mastery', skill: 'times', pct: 80 } },
     { key: 'fraction-hero', name: 'Fraction Hero', icon: '🍕', rule: { type: 'skill_mastery', skill: 'fractions', pct: 80 } },
+    { key: 'shape-shifter', name: 'Shape Shifter', icon: '🔷', rule: { type: 'skill_mastery', skill: 'geometry', pct: 80 } },
     { key: 'dash-champ', name: 'Dash Champion', icon: '🏆', rule: { type: 'world_complete' } },
   ],
 }
@@ -155,13 +210,22 @@ const WRD_ITEMS: Item[] = [
 const WRD: World = {
   key: 'WRD', name: 'WordQuest', color: '#3b82f6', icon: 'A', signature: 'Drill', vibe: 'Storybook adventure', status: 'live',
   skills: [{ key: 'phonics', label: 'Phonics', band: 1 }, { key: 'grammar', label: 'Grammar', band: 2 }, { key: 'vocab', label: 'Vocabulary', band: 2 }, { key: 'writing', label: 'Writing', band: 3 }],
-  units: [{
-    key: 'wrd-core', title: 'Word Power', color: '#3b82f6', nodes: [
-      { key: 'w1', title: 'Grammar', type: 'practice', skills: ['grammar'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'w2', title: 'Words & Stories', type: 'practice', skills: ['vocab', 'writing', 'phonics'], itemCount: 5, rewardDiamonds: 5 },
-      { key: 'w3', title: 'Word Boss', type: 'boss', skills: ['grammar', 'vocab', 'writing'], itemCount: 3, rewardDiamonds: 15 },
-    ],
-  }],
+  units: [
+    {
+      key: 'wrd-sounds', title: 'Sounds & Words', color: '#3b82f6', nodes: [
+        { key: 'w1', title: 'Phonics', type: 'lesson', skills: ['phonics'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'w2', title: 'Vocabulary', type: 'practice', skills: ['vocab'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'w3', title: 'Word Chest', type: 'chest', skills: ['phonics', 'vocab'], itemCount: 3, rewardDiamonds: 12 },
+      ],
+    },
+    {
+      key: 'wrd-write', title: 'Grammar & Writing', color: '#3b82f6', nodes: [
+        { key: 'w4', title: 'Grammar', type: 'practice', skills: ['grammar'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'w5', title: 'Writing', type: 'practice', skills: ['writing'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'w6', title: 'Word Boss', type: 'boss', skills: ['grammar', 'vocab', 'writing'], itemCount: 6, rewardDiamonds: 20 },
+      ],
+    },
+  ],
   badges: [
     { key: 'grammar-guard', name: 'Grammar Guardian', icon: '🛡️', rule: { type: 'skill_mastery', skill: 'grammar', pct: 80 } },
     { key: 'word-wizard', name: 'Word Wizard', icon: '📖', rule: { type: 'skill_mastery', skill: 'vocab', pct: 80 } },
@@ -189,13 +253,22 @@ const WON_ITEMS: Item[] = [
 const WON: World = {
   key: 'WON', name: 'WonderLab', color: '#10b981', icon: '⚗', signature: 'Lab', vibe: 'Lab experiments', status: 'live',
   skills: [{ key: 'biology', label: 'Biology', band: 2 }, { key: 'chemistry', label: 'Chemistry', band: 2 }, { key: 'physics', label: 'Physics', band: 3 }, { key: 'earth', label: 'Earth & Space', band: 2 }],
-  units: [{
-    key: 'won-core', title: 'Science Lab', color: '#10b981', nodes: [
-      { key: 'wo1', title: 'Living World', type: 'practice', skills: ['biology', 'earth'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'wo2', title: 'Matter & Forces', type: 'practice', skills: ['chemistry', 'physics'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'wo3', title: 'Lab Boss', type: 'boss', skills: ['biology', 'physics', 'chemistry'], itemCount: 3, rewardDiamonds: 15 },
-    ],
-  }],
+  units: [
+    {
+      key: 'won-life', title: 'The Living World', color: '#10b981', nodes: [
+        { key: 'wo1', title: 'Biology', type: 'lesson', skills: ['biology'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'wo2', title: 'Earth & Space', type: 'practice', skills: ['earth'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'wo3', title: 'Nature Chest', type: 'chest', skills: ['biology', 'earth'], itemCount: 3, rewardDiamonds: 12 },
+      ],
+    },
+    {
+      key: 'won-matter', title: 'Matter & Forces', color: '#10b981', nodes: [
+        { key: 'wo4', title: 'Chemistry', type: 'practice', skills: ['chemistry'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'wo5', title: 'Physics', type: 'practice', skills: ['physics'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'wo6', title: 'Lab Boss', type: 'boss', skills: ['biology', 'physics', 'chemistry'], itemCount: 6, rewardDiamonds: 20 },
+      ],
+    },
+  ],
   badges: [
     { key: 'bio-brain', name: 'Bio Brainiac', icon: '🧬', rule: { type: 'skill_mastery', skill: 'biology', pct: 80 } },
     { key: 'lab-explorer', name: 'Lab Explorer', icon: '🔬', rule: { type: 'skill_mastery', skill: 'physics', pct: 80 } },
@@ -223,13 +296,22 @@ const LOG_ITEMS: Item[] = [
 const LOG: World = {
   key: 'LOG', name: 'LogicLand', color: '#8b5cf6', icon: '{}', signature: 'CS', vibe: 'Puzzle island', status: 'live',
   skills: [{ key: 'code', label: 'Code', band: 2 }, { key: 'data', label: 'Data', band: 2 }, { key: 'ai', label: 'AI', band: 3 }, { key: 'logic', label: 'Logic', band: 2 }],
-  units: [{
-    key: 'log-core', title: 'CS Island', color: '#8b5cf6', nodes: [
-      { key: 'l1', title: 'Code World', type: 'practice', skills: ['code', 'logic'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'l2', title: 'Data & AI', type: 'practice', skills: ['data', 'ai'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'l3', title: 'Logic Boss', type: 'boss', skills: ['code', 'data', 'ai'], itemCount: 3, rewardDiamonds: 15 },
-    ],
-  }],
+  units: [
+    {
+      key: 'log-code', title: 'Code & Logic', color: '#8b5cf6', nodes: [
+        { key: 'l1', title: 'Logic & Patterns', type: 'lesson', skills: ['logic'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'l2', title: 'Code World', type: 'practice', skills: ['code'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'l3', title: 'Logic Chest', type: 'chest', skills: ['logic', 'code'], itemCount: 3, rewardDiamonds: 12 },
+      ],
+    },
+    {
+      key: 'log-ai', title: 'Data & AI', color: '#8b5cf6', nodes: [
+        { key: 'l4', title: 'Data', type: 'practice', skills: ['data'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'l5', title: 'AI', type: 'practice', skills: ['ai'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'l6', title: 'Logic Boss', type: 'boss', skills: ['code', 'data', 'ai'], itemCount: 6, rewardDiamonds: 20 },
+      ],
+    },
+  ],
   badges: [
     { key: 'code-caster', name: 'Code Caster', icon: '🪄', rule: { type: 'skill_mastery', skill: 'code', pct: 80 } },
     { key: 'data-detective', name: 'Data Detective', icon: '🕵️', rule: { type: 'skill_mastery', skill: 'data', pct: 80 } },
@@ -256,13 +338,21 @@ const WLD_ITEMS: Item[] = [
 const WLD: World = {
   key: 'WLD', name: 'WorldTrail', color: '#ef4444', icon: '🗺', signature: 'Trail', vibe: 'Passport map', status: 'live',
   skills: [{ key: 'geography', label: 'Geography', band: 2 }, { key: 'history', label: 'History', band: 2 }, { key: 'economics', label: 'Business & Economics', band: 3 }],
-  units: [{
-    key: 'wld-core', title: 'World Trail', color: '#ef4444', nodes: [
-      { key: 'wl1', title: 'Around the World', type: 'practice', skills: ['geography'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'wl2', title: 'Time & Trade', type: 'practice', skills: ['history', 'economics'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'wl3', title: 'Trail Boss', type: 'boss', skills: ['geography', 'history', 'economics'], itemCount: 3, rewardDiamonds: 15 },
-    ],
-  }],
+  units: [
+    {
+      key: 'wld-geo', title: 'Around the World', color: '#ef4444', nodes: [
+        { key: 'wl1', title: 'Geography', type: 'lesson', skills: ['geography'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'wl2', title: 'Map Chest', type: 'chest', skills: ['geography'], itemCount: 3, rewardDiamonds: 12 },
+      ],
+    },
+    {
+      key: 'wld-time', title: 'Time & Trade', color: '#ef4444', nodes: [
+        { key: 'wl3', title: 'History', type: 'practice', skills: ['history'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'wl4', title: 'Economics', type: 'practice', skills: ['economics'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'wl5', title: 'Trail Boss', type: 'boss', skills: ['geography', 'history', 'economics'], itemCount: 6, rewardDiamonds: 20 },
+      ],
+    },
+  ],
   badges: [
     { key: 'map-master', name: 'Map Master', icon: '🧭', rule: { type: 'skill_mastery', skill: 'geography', pct: 80 } },
     { key: 'time-traveller', name: 'Time Traveller', icon: '⏳', rule: { type: 'skill_mastery', skill: 'history', pct: 80 } },
@@ -288,13 +378,22 @@ const LIF_ITEMS: Item[] = [
 const LIF: World = {
   key: 'LIF', name: 'LifeQuest', color: '#f472b6', icon: '♥', signature: 'Party', vibe: 'Cozy social world', status: 'live',
   skills: [{ key: 'habits', label: 'Habits', band: 1 }, { key: 'kindness', label: 'Kindness', band: 1 }, { key: 'movement', label: 'Movement', band: 1 }, { key: 'party', label: 'Party games', band: 2 }],
-  units: [{
-    key: 'lif-core', title: 'Life & Play', color: '#f472b6', nodes: [
-      { key: 'li1', title: 'Daily Quests', type: 'practice', skills: ['habits', 'kindness', 'movement'], itemCount: 4, rewardDiamonds: 5 },
-      { key: 'li2', title: 'Party Time', type: 'practice', skills: ['party'], itemCount: 3, rewardDiamonds: 5 },
-      { key: 'li3', title: 'Life Boss', type: 'boss', skills: ['kindness', 'party'], itemCount: 2, rewardDiamonds: 15 },
-    ],
-  }],
+  units: [
+    {
+      key: 'lif-me', title: 'Healthy Me', color: '#f472b6', nodes: [
+        { key: 'li1', title: 'Good Habits', type: 'lesson', skills: ['habits'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'li2', title: 'Move Your Body', type: 'practice', skills: ['movement'], itemCount: 3, rewardDiamonds: 5 },
+        { key: 'li3', title: 'Wellbeing Chest', type: 'chest', skills: ['habits', 'movement'], itemCount: 3, rewardDiamonds: 12 },
+      ],
+    },
+    {
+      key: 'lif-others', title: 'Me & Others', color: '#f472b6', nodes: [
+        { key: 'li4', title: 'Kindness', type: 'practice', skills: ['kindness'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'li5', title: 'Party Time', type: 'practice', skills: ['party'], itemCount: 4, rewardDiamonds: 5 },
+        { key: 'li6', title: 'Life Boss', type: 'boss', skills: ['kindness', 'party', 'habits'], itemCount: 5, rewardDiamonds: 20 },
+      ],
+    },
+  ],
   badges: [
     { key: 'kind-heart', name: 'Kind Heart', icon: '💖', rule: { type: 'skill_mastery', skill: 'kindness', pct: 60 } },
     { key: 'party-star', name: 'Party Star', icon: '🎉', rule: { type: 'skill_mastery', skill: 'party', pct: 60 } },
@@ -404,7 +503,7 @@ const EXTRA_ITEMS: Item[] = [
   it('LIF', 'party', 'party', 'Emoji guess', { prompt: 'It rains from these ☁️', reveal: '🌧️ Clouds!' }),
 ]
 
-export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS, ...EXPLORER_PACK]
+export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS, ...EXPLORER_PACK, ...(STAGE_PACKS as Item[])]
 
 export function localItemsFor(world: string, skills: string[], stage = 'explorer'): Item[] {
   return LOCAL_ITEMS.filter(i => i.world === world && i.stage === stage && skills.includes(i.skill))

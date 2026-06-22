@@ -446,3 +446,256 @@ create policy "circle_members_own" on public.circle_members
   ) with check (
     exists (select 1 from public.circles c where c.id = circle_id and c.owner_id = auth.uid())
   );
+
+-- ============================================================
+--  CLOUD ACCOUNTS  (Step 2)  — kids & adults are unified profiles
+--  Kids sign in with username+PIN via SYNTHETIC EMAIL auth:
+--    client creates auth user  <username>@kids.argantalab.app
+--    with the PIN (padded) as the password → kid IS an auth.user,
+--    so every per-user RLS policy (auth.uid()) just works.
+--  A guardian (Google account) links a kid by friend_code.
+--  ⚠ In Supabase → Authentication → Providers → Email, turn OFF
+--    "Confirm email" so kids can sign in immediately.
+-- ============================================================
+
+-- profile is the single identity table for BOTH kids and adults
+alter table public.profiles add column if not exists username     text;
+alter table public.profiles add column if not exists dob          date;
+alter table public.profiles add column if not exists gender       text;   -- 'boy' | 'girl' (kids)
+alter table public.profiles add column if not exists friend_code  text;
+alter table public.profiles add column if not exists guardian_id  uuid references public.profiles(id) on delete set null;
+alter table public.profiles add column if not exists last_seen    timestamptz;
+
+create unique index if not exists profiles_username_idx    on public.profiles (lower(username)) where username is not null;
+create unique index if not exists profiles_friend_code_idx on public.profiles (friend_code)     where friend_code is not null;
+create index        if not exists profiles_guardian_idx    on public.profiles (guardian_id);
+
+-- unique 6-char friend code generator
+create or replace function public.gen_friend_code()
+returns text language plpgsql as $$
+declare c text; taken boolean;
+begin
+  loop
+    c := upper(substr(md5(random()::text || clock_timestamp()::text), 1, 6));
+    select exists(select 1 from public.profiles where friend_code = c) into taken;
+    exit when not taken;
+  end loop;
+  return c;
+end; $$;
+
+-- new-user trigger now captures kid metadata + mints a friend code
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email, display_name, photo_url, username, role, dob, gender, friend_code)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'display_name', new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'avatar_url',
+    new.raw_user_meta_data->>'username',
+    coalesce(new.raw_user_meta_data->>'role', 'user'),
+    nullif(new.raw_user_meta_data->>'dob', '')::date,
+    new.raw_user_meta_data->>'gender',
+    public.gen_friend_code()
+  )
+  on conflict (id) do nothing;
+  return new;
+end; $$;
+
+-- backfill friend codes for any existing rows
+update public.profiles set friend_code = public.gen_friend_code() where friend_code is null;
+
+-- guardians may READ their linked kids' profiles (for the family dashboard)
+drop policy if exists "profiles_select_guardian" on public.profiles;
+create policy "profiles_select_guardian" on public.profiles
+  for select using (guardian_id = auth.uid());
+
+-- look up a profile by friend code (minimal public fields, for linking/friends)
+create or replace function public.find_by_code(p_code text)
+returns table(id uuid, display_name text, role text, photo_url text, friend_code text)
+language sql security definer set search_path = public stable as $$
+  select id, display_name, role, photo_url, friend_code
+  from public.profiles where friend_code = upper(p_code) limit 1;
+$$;
+grant execute on function public.find_by_code(text) to anon, authenticated;
+
+-- a guardian links a kid (by code) → sets the kid's guardian_id to the caller
+create or replace function public.link_kid(p_code text)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare kid_id uuid;
+begin
+  select id into kid_id from public.profiles where friend_code = upper(p_code) and role = 'kid';
+  if kid_id is null then return false; end if;
+  update public.profiles set guardian_id = auth.uid() where id = kid_id;
+  return true;
+end; $$;
+grant execute on function public.link_kid(text) to authenticated;
+
+-- presence heartbeat (the caller marks themselves seen-now)
+create or replace function public.touch_presence()
+returns void language sql security definer set search_path = public as $$
+  update public.profiles set last_seen = now() where id = auth.uid();
+$$;
+grant execute on function public.touch_presence() to authenticated;
+
+-- KIDS-ONLY leaderboard (no adults on the board)
+create or replace function public.get_kid_leaderboard(top int default 20)
+returns table(id uuid, display_name text, photo_url text, xp int, level int, dob date)
+language sql security definer set search_path = public stable as $$
+  select id, display_name, photo_url, xp, level, dob
+  from public.profiles where role = 'kid'
+  order by xp desc limit top;
+$$;
+grant execute on function public.get_kid_leaderboard(int) to anon, authenticated;
+
+-- ============================================================
+-- ============================================================
+--  CIRCLE HQ  ·  operator command center (apps/hq)
+--  100% ADDITIVE — only hq_* objects; reads ArgantaLab tables read-only.
+--  Nothing above this line is modified. Safe to re-run.
+-- ============================================================
+-- ============================================================
+
+-- ---------- who counts as an operator ----------
+-- Operators are flagged in profiles.role. Reuse 'admin' or add 'operator'.
+--   update public.profiles set role='operator' where email='you@example.com';
+create or replace function public.hq_is_operator()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('operator', 'admin')
+  );
+$$;
+
+-- ---------- CONTRACT TABLES (the 3 plug-in contracts) ----------
+create table if not exists public.hq_app (              -- AppManifest
+  id            text primary key,
+  name          text not null,
+  product       text not null,                           -- 'kinetik' | 'arganta' | future
+  category      text,
+  audience      text[],
+  circle_types  text[],
+  status        text default 'live',
+  owner         text,
+  metrics       text[],
+  economy_hooks jsonb default '{}'::jsonb,
+  agent_surfaces text[],
+  created_at    timestamptz default now()
+);
+
+create table if not exists public.hq_feature (          -- FeatureMap rows
+  app_id     text references public.hq_app(id) on delete cascade,
+  tab_id     text not null,
+  feature_id text not null,
+  label      text,
+  primary key (app_id, tab_id, feature_id)
+);
+
+create table if not exists public.hq_product_northstar ( -- ProductNorthStar (recursive via parent)
+  product           text primary key,
+  label             text,
+  formula           text,
+  input_metric_keys text[],
+  parent            text
+);
+
+create table if not exists public.hq_metric_def (
+  key text primary key, label text, source text,
+  benchmark_green numeric, benchmark_amber numeric,
+  higher_better boolean default true, unit text
+);
+
+create table if not exists public.hq_insight_rule (
+  id text primary key, type text, enabled boolean default true,
+  thresholds jsonb default '{}'::jsonb, severity text default 'info'
+);
+
+-- ---------- THE UNIVERSAL EVENT SINK ----------
+create table if not exists public.hq_event (
+  id         bigint generated always as identity primary key,
+  ts         timestamptz default now(),
+  product    text, app_id text,
+  person_ref text, circle_ref text,          -- hashed, no PII
+  type       text,                           -- feature_view | lesson_done | plan_created | diamond_earned | agent_action
+  tab_id     text, feature_id text,
+  payload    jsonb default '{}'::jsonb
+);
+create index if not exists hq_event_ptt_idx on public.hq_event (product, type, ts);
+create index if not exists hq_event_app_idx on public.hq_event (app_id, ts);
+
+-- ---------- RLS: operator-only read on every hq_ table ----------
+alter table public.hq_event             enable row level security;
+alter table public.hq_app               enable row level security;
+alter table public.hq_feature           enable row level security;
+alter table public.hq_product_northstar enable row level security;
+drop policy if exists hq_event_read   on public.hq_event;
+drop policy if exists hq_app_read     on public.hq_app;
+drop policy if exists hq_feature_read on public.hq_feature;
+drop policy if exists hq_ns_read      on public.hq_product_northstar;
+create policy hq_event_read   on public.hq_event             for select using (public.hq_is_operator());
+create policy hq_app_read     on public.hq_app               for select using (public.hq_is_operator());
+create policy hq_feature_read on public.hq_feature           for select using (public.hq_is_operator());
+create policy hq_ns_read      on public.hq_product_northstar for select using (public.hq_is_operator());
+-- Operator may upsert app manifests (P0 self-seed from the client).
+drop policy if exists hq_app_write on public.hq_app;
+create policy hq_app_write on public.hq_app for all
+  using (public.hq_is_operator()) with check (public.hq_is_operator());
+-- hq_event writes happen server-side with the service-role key (bypasses RLS).
+
+-- ---------- AGGREGATE RPCs (operator-only; read ArgantaLab tables) ----------
+create or replace function public.hq_portfolio_rollup(p_days int default 7)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare v_learners int; v_active int; v_diamonds bigint; v_games int;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select count(*) into v_learners from public.profiles;
+  select count(distinct user_id) into v_active from public.item_attempts
+    where created_at >= now() - make_interval(days => p_days);
+  select coalesce(sum(diamonds), 0) into v_diamonds from public.profiles;
+  select count(*) into v_games from public.games;
+  return jsonb_build_object('arganta', jsonb_build_object(
+    'learners', v_learners, 'weeklyActiveLearners', v_active,
+    'diamondFloat', v_diamonds, 'games', v_games));
+end;
+$$;
+
+create or replace function public.hq_dau_mau()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare v_dau int; v_mau int;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select count(distinct user_id) into v_dau from public.item_attempts
+    where created_at >= now() - interval '1 day';
+  select count(distinct user_id) into v_mau from public.item_attempts
+    where created_at >= now() - interval '30 days';
+  return jsonb_build_object('dau', v_dau, 'mau', v_mau,
+    'ratio', case when v_mau > 0 then round(100.0 * v_dau / v_mau, 1) else 0 end);
+end;
+$$;
+
+create or replace function public.hq_game_stats()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  return (select jsonb_object_agg(coalesce(visibility,'private'), n)
+          from (select visibility, count(*) n from public.games group by visibility) s);
+end;
+$$;
+
+grant execute on function public.hq_is_operator()         to authenticated;
+grant execute on function public.hq_portfolio_rollup(int) to authenticated;
+grant execute on function public.hq_dau_mau()             to authenticated;
+grant execute on function public.hq_game_stats()          to authenticated;
+
+-- ---------- SEED · recursive product north stars ----------
+insert into public.hq_product_northstar (product, label, formula, input_metric_keys, parent) values
+  ('portfolio', 'Weekly engaged accounts', 'sum of product north stars', array['arganta_ns','kinetik_ns'], null),
+  ('arganta',   'Weekly mastery-loop learners', 'learners completing >=1 mastery loop / week',
+     array['lessons_done','ring_gain','streak_ret','games_built','diamond_cycle'], 'portfolio'),
+  ('kinetik',   'Weekly core-loop circles', 'circles completing plan->live->remember / week',
+     array['plans','moments','kin_assists','members_active','cross_app'], 'portfolio')
+on conflict (product) do nothing;
+-- ============================================================
+--  END CIRCLE HQ
+-- ============================================================

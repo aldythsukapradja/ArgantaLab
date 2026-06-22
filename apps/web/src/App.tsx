@@ -5,6 +5,7 @@ import { syncProfileOnLogin, saveProfile } from '@lib/profile'
 import { pullGames } from '@lib/gamesCloud'
 import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
 import { pullLearnState } from '@lib/learnCloud'
+import { touchPresence } from '@lib/cloudAuth'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -164,6 +165,15 @@ function CloudSync() {
     }, 800)
     return () => clearTimeout(t)
   }, [ready, xp, level, diamonds, completedLessons, badges, gamesPlayed, unlocks, learnerName])
+
+  // Presence: mark this account online while a session is active (for the
+  // parent's online dots). No-ops when cloud isn't configured.
+  useEffect(() => {
+    if (!session || session === 'loading') return
+    touchPresence()
+    const t = setInterval(touchPresence, 60_000)
+    return () => clearInterval(t)
+  }, [session])
 
   return null
 }

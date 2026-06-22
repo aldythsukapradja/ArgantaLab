@@ -22,7 +22,7 @@ interface Props {
 
 /** Plays a sequence of items for one journey node. */
 export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
-  const { addXp, addToast, resolvedOutfit } = useAppStore()
+  const { addXp, addToast, resolvedOutfit, stageKey } = useAppStore()
   const acc = resolvedOutfit()
   const [queue, setQueue] = useState<Item[] | null>(null)
   const [idx, setIdx] = useState(0)
@@ -36,7 +36,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    getItems(world.key, node.skills).then(pool => {
+    getItems(world.key, node.skills, stageKey, node.itemCount + 4).then(pool => {
       if (cancelled) return
       poolRef.current = pool
       const picked = pickItems(pool, Math.min(node.itemCount, pool.length || node.itemCount))
@@ -44,7 +44,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
       setQueue(picked.length ? picked : [])
     })
     return () => { cancelled = true }
-  }, [world.key, node.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [world.key, node.key, stageKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const total = queue?.length ?? 0
   const item = queue && idx < queue.length ? queue[idx] : null

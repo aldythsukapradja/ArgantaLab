@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { World, JourneyNode, Badge } from '@/data/learn'
+import { STAGES, STAGE_META } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getMastery } from '@lib/adaptive'
 import { nodeState, nodeUnlocked, setNodeDone, worldRing, earnedBadges } from '@lib/learnProgress'
@@ -26,8 +27,10 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addDiamonds, addToast, resolvedOutfit, session, go } = useAppStore()
+  const { requireAuth, addDiamonds, addToast, resolvedOutfit, session, go, stageKey } = useAppStore()
   const outfit = resolvedOutfit()
+  const stage = STAGES.find(s => s.key === stageKey)
+  const stageMeta = STAGE_META[stageKey]
   const uid = session && session !== 'loading' ? session.user.id : null
   const [spine, setSpine] = useState<Spine>('journey')
   const [active, setActive] = useState<JourneyNode | null>(null)
@@ -96,6 +99,7 @@ export default function WorldHub({ world }: { world: World }) {
         <div className="le-world-meta">
           <h1>{world.name}</h1>
           <p style={{ color: world.color }}>{world.vibe}</p>
+          {stage && stageMeta && <span className="le-stage-pill" style={{ background: `${stageMeta.color}1f`, color: stageMeta.color }}>{stageMeta.emoji} {stage.label} · ages {stage.minAge}–{stage.maxAge}</span>}
         </div>
         <Ring pct={ring} color={world.color} />
       </div>

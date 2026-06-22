@@ -1,0 +1,19 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import { useAppStore } from './store/appStore'
+import { gsap } from 'gsap'
+import './styles/globals.css'
+import './styles/pages.css'
+
+// Hydrate theme before first paint so there is no flash.
+document.documentElement.dataset.theme = useAppStore.getState().theme
+
+// Dev-only handle so previews can pause the looping "live" animations for a clean capture.
+if (import.meta.env.DEV) (window as unknown as { __gsap: typeof gsap }).__gsap = gsap
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)

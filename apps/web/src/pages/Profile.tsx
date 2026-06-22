@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useAppStore } from '@store/appStore'
-import { WORLDS } from '@/data/learn'
+import { WORLDS, STAGE_META, ageFromDob, stageForDob } from '@/data/learn'
 import { worldRing, earnedBadges } from '@lib/learnProgress'
 import { loadMyGames } from '@lib/myGames'
 import {
-  loadCircles, addKid, removeKid, peopleCount,
+  loadCircles, addKid, updateKid, removeKid, peopleCount,
   type KidProfile, type Circle,
 } from '@lib/circles'
 import Buddy from '@components/avatar/Buddy'
-import { supabase } from '@lib/supabase'
+import KidForm from '@components/auth/KidForm'
+import { cloudEnabled } from '@lib/supabase'
+import { signOutCloud, linkKid } from '@lib/cloudAuth'
 
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
@@ -29,9 +31,17 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 export default function Profile() {
   const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher, lockSession, addToast } = useAppStore()
   const outfit = resolvedOutfit()
-  const kidLogout = () => { addToast('Logged out 👋', '🔒'); lockSession() }
-  const parentLogout = async () => { try { await supabase.auth.signOut() } catch { /* ignore */ } addToast('Logged out 👋', '⏻'); lockSession() }
-  const [view, setView] = useState<'home' | 'add'>('home')
+  const kidLogout = async () => { addToast('Logged out 👋', '🔒'); await signOutCloud(); useAppStore.setState({ role: 'user' }); lockSession() }
+  const parentLogout = async () => { await signOutCloud(); addToast('Logged out 👋', '⏻'); lockSession() }
+  const linkAKid = async () => {
+    const code = prompt('Enter your child\'s friend-code to link them to your family:')
+    if (!code) return
+    const r = await linkKid(code)
+    addToast(r.ok ? 'Kid linked! 👨‍👩‍👧' : (r.error ?? 'Could not link'), r.ok ? '🔗' : '⚠️')
+    if (r.ok) refresh()
+  }
+  const [view, setView] = useState<'home' | 'add' | 'edit'>('home')
+  const [editing, setEditing] = useState<KidProfile | null>(null)
   const [state, setState] = useState(() => loadCircles())
   const refresh = () => setState(loadCircles())
 
@@ -40,7 +50,10 @@ export default function Profile() {
   const handle = '@' + learnerName.toLowerCase().replace(/\s+/g, '')
   const kidMode = isKidMode()
 
-  if (view === 'add') return <AddKid onDone={() => { refresh(); setView('home') }} onCancel={() => setView('home')} />
+  if (view === 'add') return <KidForm mode="add" onSave={d => { addKid(d); refresh(); setView('home') }} onCancel={() => setView('home')} />
+  if (view === 'edit' && editing) return (
+    <KidForm mode="edit" initial={editing} onSave={d => { updateKid(editing.id, d); refresh(); setView('home') }} onCancel={() => setView('home')} />
+  )
 
   // ── shared header ──
   const header = (
@@ -111,7 +124,9 @@ export default function Profile() {
 
       <div className="ig-actions">
         <button className="ig-btn" onClick={() => go({ tab: 'avatar' })}>✏️ Edit avatar</button>
-        <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>
+        {cloudEnabled
+          ? <button className="ig-btn" onClick={linkAKid}>🔗 Link kid</button>
+          : <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>}
         <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
       </div>
 
@@ -130,17 +145,22 @@ export default function Profile() {
         </div>
       ) : (
         <div className="ig-kids">
-          {state.kids.map(k => (
-            <div key={k.id} className="ig-kid">
-              <span className="ig-kid-av" style={{ background: k.color }}>{k.emoji}</span>
-              <div className="ig-kid-meta">
-                <b>{k.displayName}</b>
-                <small>@{k.username} · PIN <code>{k.pin}</code>{k.linkedEmail ? ' · 📧 linked' : ''}</small>
+          {state.kids.map(k => {
+            const st = stageForDob(k.dob)
+            const meta = STAGE_META[st.key]
+            return (
+              <div key={k.id} className="ig-kid">
+                <span className="ig-kid-av" style={{ background: k.color }}>{k.emoji}</span>
+                <div className="ig-kid-meta">
+                  <b>{k.displayName} <span className="ig-kid-stage" style={{ background: `${meta.color}22`, color: meta.color }}>{meta.emoji} {st.label}</span></b>
+                  <small>@{k.username} · PIN <code>{k.pin}</code> · {k.gender === 'girl' ? '👧 girl' : '👦 boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}{k.linkedEmail ? ' · 📧 linked' : ''}</small>
+                </div>
+                <button className="ig-kid-play" onClick={openSwitcher}>Log in</button>
+                <button className="ig-kid-edit2" title="Edit" onClick={() => { setEditing(k); setView('edit') }}>✏️</button>
+                <button className="ig-kid-del" title="Remove" onClick={() => { if (confirm(`Remove ${k.displayName}'s profile?`)) { removeKid(k.id); refresh() } }}>✕</button>
               </div>
-              <button className="ig-kid-play" onClick={openSwitcher}>Log in</button>
-              <button className="ig-kid-del" title="Remove" onClick={() => { if (confirm(`Remove ${k.displayName}'s profile?`)) { removeKid(k.id); refresh() } }}>✕</button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -175,38 +195,3 @@ function CircleCard({ circle, kids }: { circle: Circle; kids: KidProfile[] }) {
   )
 }
 
-// ── Add-kid form ──────────────────────────────────────────────
-function AddKid({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
-  const [name, setName] = useState('')
-  const [username, setUsername] = useState('')
-  const [pin, setPin] = useState('')
-  const [age, setAge] = useState('')
-  const ok = name.trim() && username.trim() && pin.length === 4
-
-  const submit = () => {
-    if (!ok) return
-    addKid({ displayName: name.trim(), username: username.trim(), pin, age: age ? Number(age) : undefined })
-    onDone()
-  }
-
-  return (
-    <div className="screen kid-form" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <div className="kid-form-card">
-        <div className="kid-form-ic">🧒</div>
-        <h2>Add a kid</h2>
-        <p>Create a profile your child signs into with a username and PIN.</p>
-        <label>Child's name<input className="le-input" value={name} onChange={e => setName(e.target.value)} placeholder="Baginda" /></label>
-        <label>Username<input className="le-input" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))} placeholder="baginda" /></label>
-        <div className="kid-form-row">
-          <label>4-digit PIN<input className="le-input" value={pin} inputMode="numeric" maxLength={4} onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="1234" /></label>
-          <label>Age (optional)<input className="le-input" value={age} inputMode="numeric" maxLength={2} onChange={e => setAge(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="8" /></label>
-        </div>
-        <p className="kid-form-hint">🔒 The PIN is only stored on this device, and you can always see it. Later, your child can upgrade to a Google login.</p>
-        <div className="kid-form-btns">
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" disabled={!ok} style={{ opacity: ok ? 1 : 0.5 }} onClick={submit}>Create profile</button>
-        </div>
-      </div>
-    </div>
-  )
-}

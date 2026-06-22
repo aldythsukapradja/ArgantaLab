@@ -1,0 +1,75 @@
+/* Circle HQ theme — inherits Kinetik's token system (data-theme light/dark,
+   --acc/--acc2 accents, glass surfaces). Operator-dense, data-first. */
+
+:root { --acc:#ff3d72; --acc2:#6ee7f9; --acc3:#818cf8;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --dur:.18s; --ease:cubic-bezier(.4,0,.2,1);
+}
+html[data-theme="dark"]{
+  --bg0:#05070f; --bg1:#0a1022; --bg2:#101a36;
+  --text:#eef2ff; --dim:rgba(228,234,255,.62); --faint:rgba(228,234,255,.38);
+  --glass:rgba(15,22,44,.55); --glass2:rgba(20,30,58,.72);
+  --brd:rgba(255,255,255,.10); --brd2:rgba(255,255,255,.16);
+  --chip:rgba(255,255,255,.07);
+  --ok:#34d399; --warn:#fbbf24; --bad:#fb7185; --info:#60a5fa;
+  --ok-bg:rgba(52,211,153,.14); --warn-bg:rgba(251,191,36,.14); --bad-bg:rgba(251,113,133,.14); --info-bg:rgba(96,165,250,.14);
+  color-scheme:dark;
+}
+html[data-theme="light"]{
+  --bg0:#eef2fb; --bg1:#e6ecfa; --bg2:#dfe7f8;
+  --text:#0d1426; --dim:rgba(16,24,48,.7); --faint:rgba(16,24,48,.48);
+  --glass:rgba(255,255,255,.7); --glass2:rgba(255,255,255,.9);
+  --brd:rgba(120,140,190,.18); --brd2:rgba(120,140,190,.28);
+  --chip:rgba(20,40,90,.06);
+  --ok:#059669; --warn:#d97706; --bad:#e11d48; --info:#2563eb;
+  --ok-bg:rgba(5,150,105,.10); --warn-bg:rgba(217,119,6,.10); --bad-bg:rgba(225,29,72,.10); --info-bg:rgba(37,99,235,.10);
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body,#root{height:100%}
+body{font-family:var(--font); color:var(--text); font-size:14px; line-height:1.5;
+  background:
+    radial-gradient(120% 90% at 85% -10%, color-mix(in srgb, var(--acc) 14%, transparent), transparent 55%),
+    radial-gradient(120% 100% at 0% 100%, color-mix(in srgb, var(--acc2) 12%, transparent), transparent 55%),
+    linear-gradient(170deg, var(--bg1), var(--bg0) 55%, var(--bg2));
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--text)}
+.glass{background:var(--glass); backdrop-filter:blur(20px) saturate(1.3); -webkit-backdrop-filter:blur(20px) saturate(1.3);
+  border:1px solid var(--brd);}
+.card{background:var(--glass); border:1px solid var(--brd); border-radius:var(--r-lg); }
+.mono{font-family:var(--mono)}
+.dim{color:var(--dim)} .faint{color:var(--faint)}
+.lbl{font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+.row{display:flex; align-items:center; gap:10px}
+.spread{display:flex; align-items:center; justify-content:space-between; gap:10px}
+::-webkit-scrollbar{width:9px;height:9px} ::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:9px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============ LAYOUT (responsive: bigscreen / laptop / tablet / phone) ============ */
+.hq-app{display:grid; grid-template-columns:172px 1fr; height:100vh; height:100dvh; overflow:hidden}
+.hq-rail{height:100%; overflow-y:auto}
+.hq-main{height:100%; overflow-y:auto; display:flex; flex-direction:column}
+.hq-topbar{position:sticky; top:0; z-index:20; padding:14px 18px;
+  background:color-mix(in srgb,var(--bg0) 72%,transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px)}
+.hq-content{padding:4px 18px 64px; width:100%; max-width:1200px}
+
+/* Laptop / tablet: collapse rail to icons */
+@media (max-width:1024px){
+  .hq-app{grid-template-columns:60px 1fr}
+  .hq-rail-label{display:none}
+  .hq-rail button{justify-content:center}
+}
+/* Narrow: stack the 2-col grids */
+@media (max-width:760px){ .hq-2col{grid-template-columns:1fr !important} }
+/* Phone: rail becomes a bottom tab bar */
+@media (max-width:640px){
+  .hq-app{grid-template-columns:1fr}
+  .hq-rail{position:fixed; left:0; right:0; bottom:0; top:auto; height:auto; z-index:40;
+    flex-direction:row !important; justify-content:space-between; gap:0; padding:6px 6px; overflow-x:auto}
+  .hq-rail>div:first-child{display:none}
+  .hq-main{padding-bottom:62px}
+}
+@media (max-width:520px){ .hq-hide-sm{display:none} }

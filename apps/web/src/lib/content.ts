@@ -37,11 +37,35 @@ export async function loadCloudItems(force = false): Promise<Item[] | null> {
 
 export function invalidateContentCache() { _cloudCache = undefined }
 
-/** Items for a node: cloud (if available) else local, filtered by world + skills + stage. */
-export async function getItems(world: string, skills: string[], stage = 'explorer'): Promise<Item[]> {
+// Stage neighbours, nearest-first, so a thin stage borrows from adjacent ones.
+const STAGE_ORDER = ['tiny', 'starter', 'explorer', 'builder', 'champion', 'legend']
+function stageFallback(stage: string): string[] {
+  const i = STAGE_ORDER.indexOf(stage)
+  if (i < 0) return ['explorer']
+  const out: string[] = []
+  for (let d = 0; d < STAGE_ORDER.length; d++) {
+    if (STAGE_ORDER[i - d]) out.push(STAGE_ORDER[i - d])
+    if (d && STAGE_ORDER[i + d]) out.push(STAGE_ORDER[i + d])
+  }
+  return out
+}
+
+/** Items for a node: cloud (if available) else local, filtered by world + skills,
+ *  preferring the player's stage but broadening to neighbours so a node is never
+ *  starved (a Starter kid still gets a full session even on a thin skill). */
+export async function getItems(world: string, skills: string[], stage = 'explorer', want = 6): Promise<Item[]> {
   const cloud = await loadCloudItems()
   const pool = cloud && cloud.length ? cloud : LOCAL_ITEMS
-  return pool.filter(i => i.world === world && i.stage === stage && skills.includes(i.skill))
+  const inWorld = pool.filter(i => i.world === world && skills.includes(i.skill))
+  const out: Item[] = []
+  const seen = new Set<string>()
+  for (const st of stageFallback(stage)) {
+    for (const it of inWorld) {
+      if (it.stage === st && !seen.has(it.id)) { seen.add(it.id); out.push(it) }
+    }
+    if (out.length >= want) break   // enough variety from near stages — stop widening
+  }
+  return out
 }
 
 // ── Admin CRUD (writes go to cloud; require admin role via RLS) ──

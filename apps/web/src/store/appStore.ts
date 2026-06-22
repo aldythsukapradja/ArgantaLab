@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 import { DEFAULT_OUTFIT, COSMETIC_BY_ID, resolveOutfit, type Slot, type ResolvedOutfit } from '@/data/cosmetics'
 import { setPlayerId, saveSnapshot, loadSnapshot, type PlayerSnapshot } from '@lib/player'
 import type { KidProfile } from '@lib/circles'
+import { stageForDob } from '@/data/learn'
 
 // Cosmetics that every kid owns from day one (the free starter loadout + free skins/bgs).
 const FREE_COSMETICS = ['skin:default', 'skin:blue', 'skin:mint', 'bg:studio', 'bg:sky']
@@ -46,6 +47,8 @@ interface AppStore {
   missions: Record<string, number[]>
   lastTab: string
   activeKidId: string | null   // null = grown-up/owner mode; else a logged-in kid
+  activeCircleId: string | null   // the circle currently in focus (switcher pill)
+  stageKey: string             // active player's learning stage (drives content difficulty)
 
   // — player switcher (not persisted) —
   showSwitcher: boolean
@@ -81,6 +84,7 @@ interface AppStore {
   setCostume: (worldKey: string | null) => void
   // — player session (kid vs grown-up) —
   isKidMode: () => boolean
+  setActiveCircle: (id: string | null) => void
   openSwitcher: () => void
   closeSwitcher: () => void
   lockSession: () => void
@@ -138,6 +142,7 @@ function freshKid(kid: KidProfile): Partial<AppStore> {
     learnerName: kid.displayName, avatar: kid.displayName[0]?.toUpperCase() ?? 'K',
     xp: 0, level: 1, diamonds: 20, unlocks: [], badges: [], completedLessons: [], gamesPlayed: [],
     costume: null, outfit: { ...DEFAULT_OUTFIT }, ownedCosmetics: [...FREE_COSMETICS],
+    stageKey: stageForDob(kid.dob).key,
   }
 }
 
@@ -169,6 +174,8 @@ export const useAppStore = create<AppStore>()(
       missions: {},
       lastTab: 'arganta',
       activeKidId: null,
+      activeCircleId: null,
+      stageKey: 'explorer',
       showSwitcher: false,
       locked: false,
 
@@ -218,7 +225,9 @@ export const useAppStore = create<AppStore>()(
 
       setCostume(worldKey) { set({ costume: worldKey }) },
 
-      isKidMode() { return get().activeKidId !== null },
+      // kid mode = a local PIN session (activeKidId) OR a cloud kid account (role)
+      isKidMode() { return get().activeKidId !== null || get().role === 'kid' },
+      setActiveCircle(id) { set({ activeCircleId: id }) },
       openSwitcher() { set({ showSwitcher: true }) },
       closeSwitcher() { if (!get().locked) set({ showSwitcher: false }) },
       // Lock the session — show the switcher and forbid dismissing it until
@@ -237,6 +246,7 @@ export const useAppStore = create<AppStore>()(
           showSwitcher: false, locked: false,
           activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
           ...((snap ?? freshKid(kid)) as Partial<AppStore>),
+          stageKey: stageForDob(kid.dob).key,   // always re-derive (age advances)
         })
       },
 
@@ -247,7 +257,7 @@ export const useAppStore = create<AppStore>()(
         const snap = loadSnapshot('owner')
         set({
           activeKidId: null,
-          showSwitcher: false, locked: false,
+          showSwitcher: false, locked: false, stageKey: 'explorer',
           activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
           ...((snap ?? {}) as Partial<AppStore>),
         })
@@ -494,6 +504,8 @@ export const useAppStore = create<AppStore>()(
         missions: s.missions,
         lastTab: s.lastTab,
         activeKidId: s.activeKidId,
+        activeCircleId: s.activeCircleId,
+        stageKey: s.stageKey,
       }),
     }
   )
