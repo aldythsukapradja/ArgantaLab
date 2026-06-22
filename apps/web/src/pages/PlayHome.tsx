@@ -123,13 +123,6 @@ export default function PlayHome() {
             <span className="ph-rec-ic" style={{ background: `${rec.w.color}22`, color: rec.w.color }}>{rec.w.icon}</span>
             <span>Play <b>{RING_LABEL[rec.w.key]}</b> to grow your ring →</span>
           </button>
-
-          <div className="phub-quick">
-            <button className="phub-quick-b" onClick={() => setHub('style')}><span>👕</span>Dress up</button>
-            <button className="phub-quick-b" onClick={() => setHub('shop')}><span>💎</span>Shop</button>
-            <button className="phub-quick-b" onClick={() => go({ tab: 'learn' })}><span>📚</span>Learn</button>
-            <button className="phub-quick-b" onClick={() => go({ tab: 'profile' })}><span>👥</span>My Circle</button>
-          </div>
         </div>
       )}
     </div>

@@ -1,8 +1,9 @@
 import type { World } from '@/data/learn'
 import { getMastery } from './adaptive'
+import { pkey } from './player'
 
 // Per-node journey progress, kept in localStorage for instant offline play.
-// (Cloud node_progress mirroring can be layered on later via Supabase.)
+// Namespaced per player (each kid has their own worlds).
 
 export interface NodeState { status: 'open' | 'done'; stars: number }
 const KEY = 'argantalab_nodes_v1'
@@ -10,9 +11,9 @@ const KEY = 'argantalab_nodes_v1'
 type Store = Record<string, NodeState>  // keyed `${world}/${nodeKey}`
 
 function load(): Store {
-  try { return JSON.parse(localStorage.getItem(KEY) || '{}') } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(pkey(KEY)) || '{}') } catch { return {} }
 }
-function save(s: Store) { try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* ignore */ } }
+function save(s: Store) { try { localStorage.setItem(pkey(KEY), JSON.stringify(s)) } catch { /* ignore */ } }
 
 export function nodeState(world: string, nodeKey: string): NodeState {
   return load()[`${world}/${nodeKey}`] ?? { status: 'open', stars: 0 }

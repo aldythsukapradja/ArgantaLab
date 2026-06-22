@@ -257,7 +257,7 @@
 .pitch-edit-nav { display: flex; gap: 10px; }
 .pitch-edit-nav .btn { flex: 1; justify-content: center; }
 
-.pp-overlay { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center;
+.pp-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
   color: #fff; overflow: hidden; }
 .pp-particles { position: absolute; inset: 0; pointer-events: none; }
 .pp-particle { position: absolute; }
@@ -324,6 +324,33 @@
 .ship-card-meta { padding: 16px 12px 12px; }
 .ship-card-meta b { font-size: 14px; color: var(--t1); display: block; }
 .ship-card-meta small { font-size: 11px; color: var(--t2); }
+
+/* ── Player switcher / kid login (full-screen) ──────────── */
+.psw { position: fixed; inset: 0; z-index: 9998; display: grid; place-items: center;
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb,var(--accent) 30%,var(--bg)), var(--bg)); }
+.psw-inner { width: min(560px, 92vw); text-align: center; padding: 24px; }
+.psw-title { font-size: clamp(26px, 5vw, 40px); font-weight: 850; letter-spacing: -.02em; color: var(--t1); }
+.psw-sub { font-size: 14px; color: var(--t2); margin: 6px 0 26px; }
+.psw-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+.psw-av { display: flex; flex-direction: column; align-items: center; gap: 10px; background: none; border: none; cursor: pointer; }
+.psw-av span { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; font-size: 44px;
+  border: 4px solid transparent; transition: .2s var(--ease); box-shadow: 0 10px 26px rgba(0,0,0,.18); }
+.psw-av:hover span { transform: translateY(-5px); border-color: var(--accent); }
+.psw-av.on span { border-color: var(--accent); }
+.psw-av b { font-size: 15px; font-weight: 700; color: var(--t1); }
+.psw-av.grown span { color: #fff; }
+.psw-empty { font-size: 13px; color: var(--t2); margin-top: 22px; }
+.psw-close { margin-top: 26px; background: var(--panel); border: 1px solid var(--border); color: var(--t2);
+  padding: 10px 22px; border-radius: 24px; font-weight: 650; cursor: pointer; }
+.psw-pad { width: min(320px, 90vw); margin: 0 auto; }
+.psw-face { width: 80px; height: 80px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 40px; margin-bottom: 8px; }
+.psw-pad h2 { font-size: 24px; font-weight: 800; color: var(--t1); }
+.psw-pad > p { font-size: 13px; color: var(--t2); margin-bottom: 16px; }
+.psw-dots { display: flex; gap: 14px; justify-content: center; margin-bottom: 22px; }
+.psw-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.psw-pad.shake { animation: kidShake .4s; }
+
+.avatar-btn.kidring { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #f59e0b; }
 
 /* ── light-mode polish (no dark panels) ─────────────────── */
 html[data-theme="light"] .rbx-stage { background: radial-gradient(120% 90% at 50% 10%, color-mix(in srgb,var(--accent) 14%,#fff), var(--bg-2)); }

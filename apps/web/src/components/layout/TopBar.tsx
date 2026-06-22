@@ -7,7 +7,8 @@ const BookIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 
 export function TopBar() {
   const { learnerName, avatar, xp, level, diamonds, theme, toggleTheme, setShowConcept, showConcept, lessonId,
-    isAuthed, session, openAuthWall, setLearnerName, go } = useAppStore()
+    isAuthed, session, openAuthWall, setLearnerName, openSwitcher, isKidMode } = useAppStore()
+  const kidMode = isKidMode()
   const xpForNext = level * 500
   const pct = Math.min(100, (xp / xpForNext) * 100)
   const authed = isAuthed()
@@ -65,8 +66,12 @@ export function TopBar() {
       <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">
         {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
       </button>
-      {authed ? (
-        <button className="avatar avatar-btn" onClick={() => go({ tab: 'avatar' })} title="Your profile">
+      {kidMode ? (
+        <button className="avatar avatar-btn kidring" onClick={openSwitcher} title="Switch player">
+          <span>{(name?.[0] ?? avatar).toUpperCase()}</span>
+        </button>
+      ) : authed ? (
+        <button className="avatar avatar-btn" onClick={openSwitcher} title="Switch player">
           {photo
             ? <img className="avatar-img" src={photo} alt={name} referrerPolicy="no-referrer" />
             : <span>{(name?.[0] ?? avatar).toUpperCase()}</span>}

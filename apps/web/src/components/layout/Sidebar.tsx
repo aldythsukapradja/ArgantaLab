@@ -28,10 +28,12 @@ const WORLD_GLYPH: Record<string, { g: string; c: string }> = {
 }
 
 export default function Sidebar() {
-  const { activeTab, go, isAdmin } = useAppStore()
+  const { activeTab, go, isAdmin, isKidMode } = useAppStore()
+  const kidMode = isKidMode()
 
   const groups: Record<string, typeof NAV> = {}
-  NAV.forEach(n => { if (!groups[n.group]) groups[n.group] = []; groups[n.group].push(n) })
+  // In kid mode, the grown-ups dashboard is hidden — kids see only their stuff.
+  NAV.filter(n => !(kidMode && n.tab === 'parent')).forEach(n => { if (!groups[n.group]) groups[n.group] = []; groups[n.group].push(n) })
 
   return (
     <nav className="drawer">
@@ -57,7 +59,7 @@ export default function Sidebar() {
         </div>
       ))}
       <div className="nav-spacer" />
-      {isAdmin() && (
+      {!kidMode && isAdmin() && (
         <div>
           <div className="nav-label">Creator</div>
           <button className={`nav-item${activeTab === 'admin' ? ' on' : ''}`} onClick={() => go({ tab: 'admin' })}>

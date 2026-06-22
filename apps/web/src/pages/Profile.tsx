@@ -4,7 +4,7 @@ import { WORLDS } from '@/data/learn'
 import { worldRing, earnedBadges } from '@lib/learnProgress'
 import { loadMyGames } from '@lib/myGames'
 import {
-  loadCircles, addKid, removeKid, setActiveKid, verifyLogin, peopleCount,
+  loadCircles, addKid, removeKid, peopleCount,
   type KidProfile, type Circle,
 } from '@lib/circles'
 import Buddy from '@components/avatar/Buddy'
@@ -25,53 +25,95 @@ function Ring({ pct, color }: { pct: number; color: string }) {
   )
 }
 
-type View = 'home' | 'add' | 'login'
-
 export default function Profile() {
-  const { learnerName, setLearnerName, level, resolvedOutfit, go, addToast } = useAppStore()
+  const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher } = useAppStore()
   const outfit = resolvedOutfit()
-  const [view, setView] = useState<View>('home')
+  const [view, setView] = useState<'home' | 'add'>('home')
   const [state, setState] = useState(() => loadCircles())
   const refresh = () => setState(loadCircles())
 
   const games = loadMyGames().length
   const totalBadges = WORLDS.reduce((a, w) => a + earnedBadges(w).size, 0)
   const handle = '@' + learnerName.toLowerCase().replace(/\s+/g, '')
+  const kidMode = isKidMode()
 
   if (view === 'add') return <AddKid onDone={() => { refresh(); setView('home') }} onCancel={() => setView('home')} />
-  if (view === 'login') return <KidLogin onDone={(kid) => { if (kid) { setLearnerName(kid.displayName); addToast(`Welcome, ${kid.displayName}! 👋`, '🎮') } refresh(); setView('home') }} onCancel={() => setView('home')} />
 
-  return (
-    <div className="screen ig" style={{ justifyContent: 'flex-start', gap: 14 }}>
-      {/* ── Instagram-style header ── */}
-      <div className="ig-head">
-        <div className="ig-avatar"><Buddy mood="happy" size={92} outfit={outfit} showBg bob={false} /></div>
-        <div className="ig-head-r">
-          <div className="ig-stats">
-            <button className="ig-stat" onClick={() => go({ tab: 'gamestore' })}><b>{games}</b><span>Games</span></button>
-            <div className="ig-stat"><b>{state.circles.length}</b><span>Circles</span></div>
-            <div className="ig-stat"><b>{peopleCount()}</b><span>People</span></div>
-          </div>
-          <div className="ig-id">
-            <b className="ig-name">{learnerName}</b>
-            <span className="ig-handle">{handle} · Lv {level} Explorer</span>
-          </div>
+  // ── shared header ──
+  const header = (
+    <div className="ig-head">
+      <div className="ig-avatar"><Buddy mood="happy" size={92} outfit={outfit} showBg bob={false} /></div>
+      <div className="ig-head-r">
+        <div className="ig-stats">
+          <button className="ig-stat" onClick={() => go({ tab: 'gamestore' })}><b>{games}</b><span>Games</span></button>
+          <div className="ig-stat"><b>{state.circles.length}</b><span>Circles</span></div>
+          <div className="ig-stat"><b>{peopleCount()}</b><span>People</span></div>
+        </div>
+        <div className="ig-id">
+          <b className="ig-name">{learnerName}</b>
+          <span className="ig-handle">{handle} · Lv {level} Explorer</span>
         </div>
       </div>
+    </div>
+  )
+
+  const rings = (
+    <>
+      <div className="section-label">Skill rings</div>
+      <div className="ig-rings">
+        {WORLDS.map(w => (
+          <button key={w.key} className="ig-ring" onClick={() => go({ tab: w.key.toLowerCase() })}>
+            <Ring pct={worldRing(w)} color={w.color} />
+            <small>{RING_LABEL[w.key]}</small>
+          </button>
+        ))}
+      </div>
+    </>
+  )
+
+  // ════ KID MODE — only their own stuff, no grown-up tools ════
+  if (kidMode) {
+    return (
+      <div className="screen ig" style={{ justifyContent: 'flex-start', gap: 14 }}>
+        {header}
+        <div className="ig-actions">
+          <button className="ig-btn" onClick={() => go({ tab: 'avatar' })}>✏️ Edit avatar</button>
+          <button className="ig-btn" onClick={() => go({ tab: 'fame' })}>🏆 Hall of Fame</button>
+          <button className="ig-btn" onClick={openSwitcher}>🔄 Switch player</button>
+        </div>
+
+        <div className="section-label">My Circle</div>
+        <div className="ig-circles">
+          {state.circles.map(c => <CircleCard key={c.id} circle={c} kids={state.kids} />)}
+        </div>
+
+        {rings}
+
+        <div className="ig-foot">
+          <div className="ig-foot-row"><b>{totalBadges}</b> badges earned</div>
+          <button className="btn btn-ghost" onClick={openSwitcher}>🔄 Switch player</button>
+        </div>
+        <p className="ig-kc">👋 This is your own space, {learnerName}! Only you can see it.</p>
+      </div>
+    )
+  }
+
+  // ════ GROWN-UP MODE — full family management ════
+  return (
+    <div className="screen ig" style={{ justifyContent: 'flex-start', gap: 14 }}>
+      {header}
 
       <div className="ig-actions">
         <button className="ig-btn" onClick={() => go({ tab: 'avatar' })}>✏️ Edit avatar</button>
-        <button className="ig-btn" onClick={() => setView('login')}>🔑 Kid login</button>
+        <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>
         <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
       </div>
 
-      {/* ── Circle cards ── */}
       <div className="section-label">My Circles</div>
       <div className="ig-circles">
         {state.circles.map(c => <CircleCard key={c.id} circle={c} kids={state.kids} />)}
       </div>
 
-      {/* ── Kid roster (parent-visible) ── */}
       <div className="section-label">Kids in this family</div>
       {state.kids.length === 0 ? (
         <div className="ig-empty">
@@ -83,31 +125,20 @@ export default function Profile() {
       ) : (
         <div className="ig-kids">
           {state.kids.map(k => (
-            <div key={k.id} className={`ig-kid${state.activeKidId === k.id ? ' active' : ''}`}>
+            <div key={k.id} className="ig-kid">
               <span className="ig-kid-av" style={{ background: k.color }}>{k.emoji}</span>
               <div className="ig-kid-meta">
                 <b>{k.displayName}</b>
                 <small>@{k.username} · PIN <code>{k.pin}</code>{k.linkedEmail ? ' · 📧 linked' : ''}</small>
               </div>
-              {state.activeKidId === k.id
-                ? <span className="ig-kid-tag">Playing</span>
-                : <button className="ig-kid-play" onClick={() => { setActiveKid(k.id); setLearnerName(k.displayName); refresh(); addToast(`Switched to ${k.displayName}`, '🎮') }}>Play</button>}
+              <button className="ig-kid-play" onClick={openSwitcher}>Log in</button>
               <button className="ig-kid-del" title="Remove" onClick={() => { if (confirm(`Remove ${k.displayName}'s profile?`)) { removeKid(k.id); refresh() } }}>✕</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Skill rings ── */}
-      <div className="section-label">Skill rings</div>
-      <div className="ig-rings">
-        {WORLDS.map(w => (
-          <button key={w.key} className="ig-ring" onClick={() => go({ tab: w.key.toLowerCase() })}>
-            <Ring pct={worldRing(w)} color={w.color} />
-            <small>{RING_LABEL[w.key]}</small>
-          </button>
-        ))}
-      </div>
+      {rings}
 
       <div className="ig-foot">
         <div className="ig-foot-row"><b>{totalBadges}</b> badges earned</div>
@@ -167,73 +198,6 @@ function AddKid({ onDone, onCancel }: { onDone: () => void; onCancel: () => void
           <button className="btn btn-primary" disabled={!ok} style={{ opacity: ok ? 1 : 0.5 }} onClick={submit}>Create profile</button>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── Kid PIN login (Apple Screen-Time style pad) ──────────────
-function KidLogin({ onDone, onCancel }: { onDone: (kid: KidProfile | null) => void; onCancel: () => void }) {
-  const kids = loadCircles().kids
-  const [picked, setPicked] = useState<KidProfile | null>(kids.length === 1 ? kids[0] : null)
-  const [pin, setPin] = useState('')
-  const [err, setErr] = useState(false)
-
-  const press = (d: string) => {
-    if (!picked) return
-    setErr(false)
-    const next = (pin + d).slice(0, 4)
-    setPin(next)
-    if (next.length === 4) {
-      const kid = verifyLogin(picked.username, next)
-      if (kid) { setActiveKid(kid.id); onDone(kid) }
-      else { setErr(true); setTimeout(() => setPin(''), 500) }
-    }
-  }
-
-  if (kids.length === 0) {
-    return (
-      <div className="screen kid-form" style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div className="kid-form-card"><div className="kid-form-ic">🔑</div><h2>No kids yet</h2><p>Add a kid profile first.</p>
-          <button className="btn btn-primary" onClick={onCancel}>OK</button></div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="screen kid-login" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      {!picked ? (
-        <div className="kid-login-pick">
-          <h2>Who's playing?</h2>
-          <div className="kid-login-avatars">
-            {kids.map(k => (
-              <button key={k.id} className="kid-login-av" onClick={() => setPicked(k)}>
-                <span style={{ background: k.color }}>{k.emoji}</span>
-                <b>{k.displayName}</b>
-              </button>
-            ))}
-          </div>
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-        </div>
-      ) : (
-        <div className={`kid-login-pad${err ? ' shake' : ''}`}>
-          <span className="kid-login-face" style={{ background: picked.color }}>{picked.emoji}</span>
-          <h2>Hi {picked.displayName}!</h2>
-          <p>Enter your PIN</p>
-          <div className="kid-login-dots">
-            {[0, 1, 2, 3].map(i => <span key={i} className={`kid-dot${i < pin.length ? ' filled' : ''}`} />)}
-          </div>
-          <div className="kid-login-keys">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
-              <button key={d} className="kid-key" onClick={() => press(d)}>{d}</button>
-            ))}
-            <button className="kid-key ghost" onClick={() => { setPicked(kids.length > 1 ? null : picked); setPin('') }}>↩</button>
-            <button className="kid-key" onClick={() => press('0')}>0</button>
-            <button className="kid-key ghost" onClick={() => setPin(p => p.slice(0, -1))}>⌫</button>
-          </div>
-          {err && <p className="kid-login-err">Wrong PIN — try again</p>}
-          <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={onCancel}>Cancel</button>
-        </div>
-      )}
     </div>
   )
 }

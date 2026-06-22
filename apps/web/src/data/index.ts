@@ -64,9 +64,6 @@ export const NAV: NavItem[] = [
   { tab: 'pitch',     label: 'Pitch Studio', short: 'Pitch',    icon: 'studio',    group: 'BUILD' },
   { tab: 'discover',  label: 'Discover',     short: 'Discover', icon: 'discover',  group: 'SHIP' },
   { tab: 'gamestore', label: 'My GameStore', short: 'Store',    icon: 'store',     group: 'SHIP' },
-  { tab: 'avatar',    label: 'Avatar',       short: 'Avatar',   icon: 'avatar',    group: 'YOU' },
-  { tab: 'fame',      label: 'Hall of Fame', short: 'Fame',     icon: 'trophy',    group: 'YOU' },
-  { tab: 'shop',      label: 'Diamond Shop', short: 'Shop',     icon: 'shop',      group: 'YOU' },
   { tab: 'profile',   label: 'Profile',      short: 'Profile',  icon: 'profile',   group: 'YOU' },
   { tab: 'parent',    label: 'Grown-ups',    short: 'Parent',   icon: 'parent2',   group: 'YOU' },
 ]
@@ -83,7 +80,7 @@ export const MOBILE_TABS: MobileTab[] = [
   { key: 'learn',  label: 'Learn',  icon: 'learn',    members: ['learn', ...WORLD_TABS] },
   { key: 'build',  label: 'Build',  icon: 'studio',   members: ['studio', 'lab', 'pitch'], pills: ['studio', 'lab', 'pitch'] },
   { key: 'ship',   label: 'Ship',   icon: 'discover', members: ['discover', 'gamestore'], pills: ['discover', 'gamestore'] },
-  { key: 'avatar', label: 'You',    icon: 'avatar',   members: ['avatar', 'fame', 'shop', 'profile', 'parent'], pills: ['avatar', 'fame', 'shop', 'profile', 'parent'] },
+  { key: 'avatar', label: 'You',    icon: 'avatar',   members: ['profile', 'parent', 'avatar', 'fame', 'shop'], pills: ['profile', 'parent'] },
 ]
 
 // ── Games ────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import gsap from 'gsap'
 import { PITCH_SLIDES, TEMPLATE_BY_KEY, type PitchDeck } from '@lib/pitch'
 
@@ -42,7 +43,7 @@ export default function PitchPresent({ deck, onExit }: { deck: PitchDeck; onExit
   const prev = () => setI(v => Math.max(0, v - 1))
   const pe = PARTICLE[t.particle]
 
-  return (
+  return createPortal(
     <div className="pp-overlay" ref={stage} style={{ background: `linear-gradient(150deg, ${t.c1}, ${t.c2})` }}>
       <div className="pp-particles" aria-hidden>
         {Array.from({ length: 14 }, (_, k) => (
@@ -66,6 +67,7 @@ export default function PitchPresent({ deck, onExit }: { deck: PitchDeck; onExit
         </div>
         {i < 5 ? <button className="pp-nav" onClick={next}>→</button> : <button className="pp-nav done" onClick={onExit}>✓</button>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -12,6 +12,7 @@ import Dock from '@components/layout/Dock'
 import GameModal from '@components/games/GameModal'
 import BackgroundScene from '@components/three/BackgroundScene'
 import AuthWall from '@components/auth/AuthWall'
+import PlayerSwitcher from '@components/auth/PlayerSwitcher'
 import { MOBILE_TABS, NAV, WORLD_TABS } from '@/data'
 import PlayHome from '@/pages/PlayHome'
 import Wizard from '@/pages/Wizard'
@@ -170,12 +171,14 @@ function CloudSync() {
 /** Mobile-only centre pills for switching sub-tabs within a grouped tab
  *  (Learn = Web/Data/AI, Build = Wizard/Lab). Hidden on desktop & in lessons. */
 function MobileSubTabs() {
-  const { activeTab, go } = useAppStore()
+  const { activeTab, go, isKidMode } = useAppStore()
   const group = MOBILE_TABS.find(g => g.members.includes(activeTab))
   if (!group || !group.pills || group.pills.length < 2) return null
+  const pills = isKidMode() ? group.pills.filter(p => p !== 'parent') : group.pills
+  if (pills.length < 2) return null
   return (
     <div className="msub">
-      {group.pills.map(m => {
+      {pills.map(m => {
         const item = NAV.find(n => n.tab === m)
         return (
           <button key={m} className={`msub-pill${activeTab === m ? ' on' : ''}`} onClick={() => go({ tab: m })}>
@@ -188,6 +191,8 @@ function MobileSubTabs() {
 }
 
 function PageContent({ tab }: { tab: string }) {
+  // Kids never see grown-up tools, even via a stale/deep-linked tab.
+  if (useAppStore.getState().isKidMode() && (tab === 'parent' || tab === 'admin')) return <PlayHome />
   if (WORLD_TABS.includes(tab)) return <World tab={tab} />
   if (tab === 'learn') return <LearnHub />
   if (tab === 'studio') return <Wizard />
@@ -239,6 +244,7 @@ function AppShell() {
       <BadgeModal />
       <Toasts />
       <AuthWall />
+      <PlayerSwitcher />
       <CloudSync />
     </div>
   )

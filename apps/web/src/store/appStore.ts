@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Session } from '@supabase/supabase-js'
 import { DEFAULT_OUTFIT, COSMETIC_BY_ID, resolveOutfit, type Slot, type ResolvedOutfit } from '@/data/cosmetics'
+import { setPlayerId, saveSnapshot, loadSnapshot, type PlayerSnapshot } from '@lib/player'
+import type { KidProfile } from '@lib/circles'
 
 // Cosmetics that every kid owns from day one (the free starter loadout + free skins/bgs).
 const FREE_COSMETICS = ['skin:default', 'skin:blue', 'skin:mint', 'bg:studio', 'bg:sky']
@@ -43,6 +45,10 @@ interface AppStore {
   pitchCompleted: boolean
   missions: Record<string, number[]>
   lastTab: string
+  activeKidId: string | null   // null = grown-up/owner mode; else a logged-in kid
+
+  // — player switcher (not persisted) —
+  showSwitcher: boolean
 
   // — auth (not persisted) —
   session: Session | null | 'loading'
@@ -72,6 +78,12 @@ interface AppStore {
   hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string }) => void
   isAdmin: () => boolean
   setCostume: (worldKey: string | null) => void
+  // — player session (kid vs grown-up) —
+  isKidMode: () => boolean
+  openSwitcher: () => void
+  closeSwitcher: () => void
+  loginAsKid: (kid: KidProfile) => void
+  switchToOwner: () => void
   // — avatar cosmetics (Roblox-style) —
   equipCosmetic: (slot: Slot, id: string) => void
   unequipSlot: (slot: Slot) => void
@@ -109,6 +121,24 @@ interface AppStore {
 
 const XP_PER_LEVEL = (l: number) => l * 500
 
+// Capture the identity + wallet + cosmetics of the active player (for switching).
+function snapshotOf(s: AppStore): PlayerSnapshot {
+  return {
+    learnerName: s.learnerName, avatar: s.avatar, xp: s.xp, level: s.level, diamonds: s.diamonds,
+    unlocks: s.unlocks, badges: s.badges, completedLessons: s.completedLessons, gamesPlayed: s.gamesPlayed,
+    costume: s.costume, outfit: s.outfit, ownedCosmetics: s.ownedCosmetics,
+  }
+}
+
+// A brand-new kid starts fresh: own name, empty progress, a welcome gift of diamonds.
+function freshKid(kid: KidProfile): Partial<AppStore> {
+  return {
+    learnerName: kid.displayName, avatar: kid.displayName[0]?.toUpperCase() ?? 'K',
+    xp: 0, level: 1, diamonds: 20, unlocks: [], badges: [], completedLessons: [], gamesPlayed: [],
+    costume: null, outfit: { ...DEFAULT_OUTFIT }, ownedCosmetics: [...FREE_COSMETICS],
+  }
+}
+
 const INITIAL_STUDIO_MESSAGES: StudioMessage[] = [
   { role: 'ai', html: 'Tell me what to build. This Studio can generate two working games: <b>Tetris</b> or <b>Space Invaders</b>.' },
   { role: 'ai', html: 'Pick a template or type a prompt, then press Build.' },
@@ -136,6 +166,8 @@ export const useAppStore = create<AppStore>()(
       pitchCompleted: false,
       missions: {},
       lastTab: 'arganta',
+      activeKidId: null,
+      showSwitcher: false,
 
       // auth defaults
       session: 'loading',
@@ -182,6 +214,38 @@ export const useAppStore = create<AppStore>()(
       },
 
       setCostume(worldKey) { set({ costume: worldKey }) },
+
+      isKidMode() { return get().activeKidId !== null },
+      openSwitcher() { set({ showSwitcher: true }) },
+      closeSwitcher() { set({ showSwitcher: false }) },
+
+      loginAsKid(kid) {
+        const cur = get()
+        // save the current player's snapshot before swapping
+        saveSnapshot(cur.activeKidId ? `kid_${cur.activeKidId}` : 'owner', snapshotOf(cur))
+        // switch the local-progress namespace to this kid
+        setPlayerId(`kid_${kid.id}`)
+        const snap = loadSnapshot(`kid_${kid.id}`)
+        set({
+          activeKidId: kid.id,
+          showSwitcher: false,
+          activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
+          ...((snap ?? freshKid(kid)) as Partial<AppStore>),
+        })
+      },
+
+      switchToOwner() {
+        const cur = get()
+        if (cur.activeKidId) saveSnapshot(`kid_${cur.activeKidId}`, snapshotOf(cur))
+        setPlayerId('owner')
+        const snap = loadSnapshot('owner')
+        set({
+          activeKidId: null,
+          showSwitcher: false,
+          activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
+          ...((snap ?? {}) as Partial<AppStore>),
+        })
+      },
 
       equipCosmetic(slot, id) {
         // toggle off if re-equipping the same item (except skin/bg which always have one)
@@ -423,6 +487,7 @@ export const useAppStore = create<AppStore>()(
         pitchCompleted: s.pitchCompleted,
         missions: s.missions,
         lastTab: s.lastTab,
+        activeKidId: s.activeKidId,
       }),
     }
   )
