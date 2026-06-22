@@ -5,6 +5,8 @@
 //  in the Admin Content Studio) overrides this at runtime.
 // ============================================================
 
+import { EXPLORER_PACK } from './explorerContent'
+
 export type InteractionKey =
   | 'mcq' | 'multi' | 'type' | 'speed' | 'bank' | 'cloze'
   | 'match' | 'sort' | 'seq' | 'fix' | 'numline' | 'slider'
@@ -402,7 +404,7 @@ const EXTRA_ITEMS: Item[] = [
   it('LIF', 'party', 'party', 'Emoji guess', { prompt: 'It rains from these ☁️', reveal: '🌧️ Clouds!' }),
 ]
 
-export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS]
+export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS, ...EXPLORER_PACK]
 
 export function localItemsFor(world: string, skills: string[], stage = 'explorer'): Item[] {
   return LOCAL_ITEMS.filter(i => i.world === world && i.stage === stage && skills.includes(i.skill))
