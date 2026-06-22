@@ -32,7 +32,7 @@ export function Rail({ who }: { who: string }) {
       </div>
 
       {GROUPS.map((g) => (
-        <div key={g.name}>
+        <div key={g.name} className="rail-grp-wrap">
           <div className="rail-grp">{g.name}</div>
           {g.items.map(({ id, label, Icon, badge }) => (
             <button key={id} className={'nav' + (surface === id ? ' on' : '')}
