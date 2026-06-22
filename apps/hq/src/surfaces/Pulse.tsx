@@ -1,78 +1,77 @@
-import { useEffect, useState } from 'react'
-import { data } from '../data'
-import { insight } from '../insight/engine'
-import type { Rollup, TreeNode } from '../contract/metrics'
-import type { Signal } from '../contract/signals'
-import { MetricTree } from '../components/MetricTree'
-import { Scorecard } from '../components/Scorecard'
-import { InsightStrip } from '../components/InsightStrip'
-import { useHQ, type ProductLens } from '../shell/store'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Users, Flame, Target, Gamepad2, Gem, BookOpen, Sparkles, Lightbulb } from 'lucide-react'
+import { live } from '../data/live'
+import type { SchemaInsights } from '../data/types'
+import { Kpi } from '../components/Kpi'
+import { Empty, Loading } from '../components/Empty'
+import { compact, pct } from '../lib/format'
 
-const LENSES: { id: ProductLens; label: string }[] = [
-  { id: 'portfolio', label: 'Portfolio' },
-  { id: 'arganta', label: 'ArgantaLab' },
-  { id: 'kinetik', label: 'KinetikCircle' },
-]
-const SEV: Record<string, string> = { success: 'var(--ok)', warn: 'var(--warn)', danger: 'var(--bad)', info: 'var(--info)' }
-
-// Build a 2-point series from a node's value + delta so TrendShift can speak,
-// attributing to the strongest child.
-function treeInsight(root: TreeNode) {
-  const d = root.deltaPct ?? 0
-  const prev = root.value / (1 + d / 100)
-  const topChild = root.children?.slice().sort((a, b) => (b.deltaPct ?? b.adoptionPct ?? 0) - (a.deltaPct ?? a.adoptionPct ?? 0))[0]
-  return insight(
-    { key: root.key, label: root.label, points: [{ t: '0', v: prev }, { t: '1', v: root.value }] },
-    { label: root.label, driverHint: topChild?.label },
-  )
+function deriveInsight(i: SchemaInsights): { tone: 'tl' | 'warn' | 'ok'; text: ReactNode } | null {
+  if (i.attemptsTotal === 0) {
+    return { tone: 'tl', text: <>No learning attempts recorded yet — metrics light up as soon as the first lesson is answered.</> }
+  }
+  if (i.accuracyPct !== null && i.accuracyPct < 55) {
+    return { tone: 'warn', text: <>30-day accuracy is <b>{pct(i.accuracyPct)}</b> — content difficulty may be outrunning learners. Review the hardest skills.</> }
+  }
+  if (i.learners > 0 && i.activeLearners7d / i.learners < 0.2) {
+    return { tone: 'warn', text: <>Only <b>{compact(i.activeLearners7d)}</b> of <b>{compact(i.learners)}</b> learners were active this week (&lt;20%). Re-engagement is the lever.</> }
+  }
+  return { tone: 'ok', text: <><b>{compact(i.activeLearners7d)}</b> weekly active learners with <b>{pct(i.accuracyPct)}</b> accuracy — healthy core loop.</> }
 }
 
 export function Pulse() {
-  const { product, setProduct } = useHQ()
-  const [rollup, setRollup] = useState<Rollup | null>(null)
-  const [signals, setSignals] = useState<Signal[]>([])
+  const [i, setI] = useState<SchemaInsights | null | undefined>(undefined)
+  useEffect(() => { live.schemaInsights().then((d) => setI(d)) }, [])
 
-  useEffect(() => { data.portfolioRollup(product).then(setRollup) }, [product])
-  useEffect(() => { data.signals().then(setSignals) }, [])
+  if (i === undefined) return <Pad><Loading label="Computing live metrics…" /></Pad>
+  if (i === null) return (
+    <Pad>
+      <Empty title="Metrics need a live connection">
+        Every number on Pulse comes from a real aggregate (<span className="src">hq_schema_insights()</span>).
+        Connect Supabase and sign in as operator — no placeholder values are ever shown.
+      </Empty>
+    </Pad>
+  )
 
-  if (!rollup) return <div className="dim" style={{ padding: 20 }}>Loading…</div>
-
+  const ins = deriveInsight(i)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-        {LENSES.map((l) => (
-          <button key={l.id} onClick={() => setProduct(l.id)}
-            style={{ fontSize: 12, padding: '5px 12px', borderRadius: 99,
-              color: product === l.id ? '#fff' : 'var(--dim)',
-              background: product === l.id ? 'linear-gradient(135deg,var(--acc),var(--acc3))' : 'var(--chip)',
-              border: '1px solid var(--brd2)' }}>{l.label}</button>
-        ))}
-      </div>
-
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <h2 style={{ fontSize: 17, fontWeight: 600 }}>Pulse</h2>
-        <div className="faint" style={{ fontSize: 12 }}>North-star tree · {product} lens</div>
+        <div className="h1">Pulse</div>
+        <div className="sub">North-star health · every tile wired to a real query</div>
       </div>
 
-      <div className="hq-2col" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14, alignItems: 'start' }}>
-        <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Metric tree</div>
-          <MetricTree root={rollup.northStar} />
-          <div style={{ marginTop: 12 }}><InsightStrip insight={treeInsight(rollup.northStar)} /></div>
+      {ins && (
+        <div className={'insight ' + ins.tone}>
+          <Lightbulb size={15} /><div>{ins.text}</div>
         </div>
-        <Scorecard tiles={rollup.scorecard} />
+      )}
+
+      <div className="kpi-grid">
+        <Kpi label="Weekly active learners" value={i.activeLearners7d} icon={<Users size={13} />}
+          sub={<>of {compact(i.learners)} total</>} />
+        <Kpi label="Attempts (7d)" value={i.attempts7d} icon={<Flame size={13} />}
+          sub={<>{compact(i.attemptsTotal)} all-time</>} />
+        <Kpi label="Accuracy (30d)" value={i.accuracyPct === null ? '—' : pct(i.accuracyPct)} icon={<Target size={13} />}
+          accent={i.accuracyPct !== null && i.accuracyPct >= 55 ? 'ok' : 'warn'} sub="correct / attempts" />
+        <Kpi label="Games built" value={i.gamesTotal} icon={<Gamepad2 size={13} />}
+          sub={<>{compact(i.gamesPublic)} public</>} />
+        <Kpi label="Diamond float" value={i.diamondsFloat} icon={<Gem size={13} />} sub="held across learners" />
+        <Kpi label="Live content" value={i.itemsLive} icon={<BookOpen size={13} />}
+          sub={<>{compact(i.worldsLive)} worlds live</>} />
       </div>
 
-      <div className="card" style={{ padding: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Signal feed</div>
-        {signals.map((s) => (
-          <div key={s.id} className="row" style={{ gap: 9, padding: '7px 0', alignItems: 'flex-start' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', marginTop: 5, background: SEV[s.severity], flex: '0 0 auto' }} />
-            <div style={{ fontSize: 12.5 }}>{s.headline}
-              {s.driver && <span className="faint"> · {s.driver}</span>}</div>
-          </div>
-        ))}
+      <div className="insight tl" style={{ alignItems: 'center' }}>
+        <Sparkles size={15} />
+        <div>VC scorecard (Rule of 40, NRR, Burn Multiple, k-factor) activates once revenue + cohort events flow through <span className="src">hq_event</span>. Until then these are the live engagement primitives — real, not estimated.</div>
       </div>
     </div>
   )
+}
+
+function Pad({ children }: { children: ReactNode }) {
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div><div className="h1">Pulse</div><div className="sub">North-star health · every tile wired to a real query</div></div>
+    {children}
+  </div>
 }

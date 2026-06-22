@@ -1,51 +1,62 @@
 import { useEffect, useState } from 'react'
-import { data } from '../data'
-import type { AppHealth } from '../contract/metrics'
-import { Sparkline } from '../components/Sparkline'
-
-const VERDICT: Record<string, { label: string; fg: string; bg: string }> = {
-  hero: { label: 'Hero', fg: 'var(--ok)', bg: 'var(--ok-bg)' },
-  core: { label: 'Core', fg: 'var(--info)', bg: 'var(--info-bg)' },
-  niche: { label: 'Niche', fg: 'var(--acc3)', bg: 'color-mix(in srgb,var(--acc3) 16%,transparent)' },
-  watch: { label: 'Watch', fg: 'var(--warn)', bg: 'var(--warn-bg)' },
-  dead: { label: 'Dead', fg: 'var(--bad)', bg: 'var(--bad-bg)' },
-}
-const nf = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`
+import { GraduationCap, Plus } from 'lucide-react'
+import { live } from '../data/live'
+import type { SchemaInsights } from '../data/types'
+import { Empty, Loading } from '../components/Empty'
+import { compact } from '../lib/format'
 
 export function Portfolio() {
-  const [apps, setApps] = useState<AppHealth[]>([])
-  useEffect(() => { data.appHealth().then(setApps) }, [])
+  const [i, setI] = useState<SchemaInsights | null | undefined>(undefined)
+  useEffect(() => { live.schemaInsights().then((d) => setI(d)) }, [])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <h2 style={{ fontSize: 17, fontWeight: 600 }}>Portfolio</h2>
-        <div className="faint" style={{ fontSize: 12 }}>{apps.length} apps · weekly active + health verdict</div>
+        <div className="h1">Portfolio</div>
+        <div className="sub">Apps with real data in Supabase today — others appear automatically as they emit events</div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 12 }}>
-        {apps.map((a) => {
-          const v = VERDICT[a.verdict]
-          const trendUp = a.trend[a.trend.length - 1] >= a.trend[0]
-          return (
-            <div key={a.appId} className="card" style={{ padding: 14 }}>
-              <div className="spread">
-                <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>{a.name}</div>
-                  <div className="faint" style={{ fontSize: 11 }}>{a.product} · {a.category}</div>
+
+      {i === undefined && <Loading label="Loading app health…" />}
+      {i === null && <Empty title="No live connection">Portfolio reads the same live aggregates as Pulse. Connect Supabase and sign in to populate it.</Empty>}
+
+      {i && (
+        <>
+          <div className="card" style={{ padding: 16 }}>
+            <div className="spread" style={{ marginBottom: 12 }}>
+              <div className="row">
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--mag)', display: 'grid', placeItems: 'center' }}>
+                  <GraduationCap size={18} color="#fff" />
                 </div>
-                <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 6, color: v.fg, background: v.bg }}>{v.label}</span>
-              </div>
-              <div className="spread" style={{ marginTop: 12, alignItems: 'flex-end' }}>
                 <div>
-                  <div style={{ fontSize: 20, fontWeight: 600 }}>{nf(a.wau)}</div>
-                  <div className="faint" style={{ fontSize: 11 }}>weekly active</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>ArgantaLab</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>Kids learning super-app · live</div>
                 </div>
-                <Sparkline data={a.trend} color={trendUp ? 'var(--ok)' : 'var(--warn)'} />
               </div>
+              <span className="pill pill-tl">Connected</span>
             </div>
-          )
-        })}
-      </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10 }}>
+              {[
+                ['Learners', i.learners, 'profiles'],
+                ['Active 7d', i.activeLearners7d, 'item_attempts'],
+                ['Games', i.gamesTotal, 'games'],
+                ['Live content', i.itemsLive, 'items'],
+                ['Circles', i.circles, 'circles'],
+              ].map(([l, v, src]) => (
+                <div key={l as string} style={{ background: 'var(--bg2)', borderRadius: 9, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--tx2)' }}>{l as string}</div>
+                  <div style={{ fontSize: 19, fontWeight: 600, margin: '2px 0' }}>{compact(v as number)}</div>
+                  <div className="src" style={{ background: 'transparent', padding: 0, fontSize: 10 }}>{src as string}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Empty icon={<Plus />} title="Connect more apps">
+            KinetikCircle mini-apps surface here the moment they write rows to <span className="src">hq_event</span>.
+            One manifest, zero dashboard changes.
+          </Empty>
+        </>
+      )}
     </div>
   )
 }

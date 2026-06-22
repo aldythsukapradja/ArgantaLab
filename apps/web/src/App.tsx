@@ -4,6 +4,7 @@ import { supabase } from '@lib/supabase'
 import { syncProfileOnLogin, saveProfile } from '@lib/profile'
 import { pullGames } from '@lib/gamesCloud'
 import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
+import { memStore } from '@lib/memStore'
 import { pullLearnState } from '@lib/learnCloud'
 import { pullAvatarState, pushAvatarState } from '@lib/avatarCloud'
 import { touchPresence } from '@lib/cloudAuth'
@@ -136,14 +137,15 @@ function CloudSync() {
   useEffect(() => {
     if (!session || session === 'loading') {
       userIdRef.current = null; setReady(false)
-      setGamesOwner(null)   // back to the guest bucket on logout
+      setGamesOwner(null); memStore.clear()   // drop the session cache on logout
       return
     }
     const uid = session.user.id
     if (userIdRef.current === uid) return
     userIdRef.current = uid
     setReady(false)
-    setGamesOwner(uid)      // switch to this user's own games bucket
+    memStore.clear()       // never carry another account's progress between users
+    setGamesOwner(uid)     // switch to this user's own games bucket
     const st = useAppStore.getState()
     syncProfileOnLogin(session, {
       learnerName: st.learnerName, xp: st.xp, level: st.level, diamonds: st.diamonds,
@@ -235,11 +237,21 @@ function PageContent({ tab }: { tab: string }) {
 
 function AppShell() {
   const { theme, activeTab, lastTab } = useAppStore()
+  const session = useAppStore(s => s.session)
   const tab = activeTab || lastTab || 'arganta'
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  // Cloud-only: with nothing stored locally, you must sign in to have any state.
+  // Once auth resolves, lock the app to the sign-in page until someone signs in.
+  useEffect(() => {
+    if (session === 'loading') return
+    const st = useAppStore.getState()
+    const authed = st.isAuthed() || st.activeKidId !== null || st.role === 'kid'
+    if (!authed && !st.showSwitcher) st.lockSession()
+  }, [session])
 
   return (
     <div id="app">

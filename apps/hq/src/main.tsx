@@ -3,9 +3,9 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './theme.css'
 
-// Apply the persisted theme before first paint.
+// Light is the default; honor a persisted choice if present.
 const stored = localStorage.getItem('hq_theme')
-if (stored) document.documentElement.setAttribute('data-theme', stored)
+document.documentElement.setAttribute('data-theme', stored === 'dark' ? 'dark' : 'light')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

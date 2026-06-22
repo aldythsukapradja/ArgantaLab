@@ -1,33 +1,46 @@
-import { useEffect, useState } from 'react'
-import { data } from '../data'
-import type { AudienceData } from '../contract/metrics'
-import { CohortGrid } from '../components/CohortGrid'
-import { InsightStrip } from '../components/InsightStrip'
-import { cohortInsight } from '../insight/domain'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Users, Activity, Grid3x3 } from 'lucide-react'
+import { live } from '../data/live'
+import type { SchemaInsights } from '../data/types'
+import { Kpi } from '../components/Kpi'
+import { Empty, Loading } from '../components/Empty'
+import { compact } from '../lib/format'
 
 export function Audience() {
-  const [a, setA] = useState<AudienceData | null>(null)
-  useEffect(() => { data.audience().then(setA) }, [])
-  if (!a) return <div className="dim" style={{ padding: 20 }}>Loading…</div>
+  const [i, setI] = useState<SchemaInsights | null | undefined>(undefined)
+  useEffect(() => { live.schemaInsights().then((d) => setI(d)) }, [])
 
-  const sticky = a.dauMau >= 20 ? 'var(--ok)' : a.dauMau >= 10 ? 'var(--warn)' : 'var(--bad)'
+  if (i === undefined) return <Wrap><Loading label="Loading audience…" /></Wrap>
+  if (i === null) return <Wrap><Empty title="No live connection">Audience metrics derive from real <span className="src">item_attempts</span> activity. Connect Supabase to populate.</Empty></Wrap>
+
+  const stick = i.learners > 0 ? Math.round((i.activeLearners7d / i.learners) * 100) : null
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div>
-        <h2 style={{ fontSize: 17, fontWeight: 600 }}>Audience</h2>
-        <div className="faint" style={{ fontSize: 12 }}>Retention cohorts + stickiness</div>
+    <Wrap>
+      <div className="kpi-grid">
+        <Kpi label="Total learners" value={i.learners} icon={<Users size={13} />} sub={<>{compact(i.kids)} kids</>} />
+        <Kpi label="Active this week" value={i.activeLearners7d} icon={<Activity size={13} />}
+          sub={stick === null ? undefined : <>{stick}% of base</>} accent={stick !== null && stick >= 20 ? 'ok' : 'warn'} />
+        <Kpi label="Attempts / active" value={i.activeLearners7d > 0 ? Math.round(i.attempts7d / i.activeLearners7d) : '—'}
+          icon={<Activity size={13} />} sub="depth this week" />
       </div>
-      <div className="card" style={{ padding: 14 }}>
-        <div className="spread" style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Retention by signup cohort</div>
-          <div className="row" style={{ gap: 6, fontSize: 11.5 }}>
-            <span className="dim">DAU/MAU</span>
-            <span style={{ fontWeight: 700, color: sticky }}>{a.dauMau}%</span>
-          </div>
-        </div>
-        <CohortGrid rows={a.cohorts} />
-        <div style={{ marginTop: 14 }}><InsightStrip insight={cohortInsight(a.cohorts)} /></div>
+
+      <div className="card" style={{ padding: 18 }}>
+        <Empty icon={<Grid3x3 />} title="Retention cohort triangle — next">
+          The D1/D7/D14/D30 cohort grid computes from <span className="src">item_attempts.created_at</span> via an
+          <span className="src">hq_retention()</span> RPC (next build step). It will fill with your real cohorts —
+          no sample numbers are shown in the meantime.
+        </Empty>
       </div>
+    </Wrap>
+  )
+}
+
+function Wrap({ children }: { children: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div><div className="h1">Audience</div><div className="sub">Stickiness + retention from real learning activity</div></div>
+      {children}
     </div>
   )
 }

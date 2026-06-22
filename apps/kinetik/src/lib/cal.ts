@@ -24,6 +24,10 @@ export interface Occ {
 }
 
 const weekdayOf = (dateIso: string) => new Date(dateIso + 'T00:00').getDay()
+/** All-day / long-span items (flights, trips) are ambient — they shouldn't make
+ *  every overlapping routine look like a scheduling clash. */
+const AMBIENT_MIN = 480 // 8h
+const isAmbient = (o: { start: string; end: string }) => toMin(o.end) - toMin(o.start) >= AMBIENT_MIN
 
 /** Everything on `dateIso` for a circle: events on that date + routines on that weekday. */
 export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: string, circleId: string): Occ[] {
@@ -38,7 +42,7 @@ export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: st
   const day = [...fromEvents, ...fromRoutines].sort((a, b) => toMin(a.start) - toMin(b.start))
   return day.map(e => ({
     ...e,
-    clash: day.some(o => o.id !== e.id && o.who.some(w => e.who.includes(w)) && toMin(o.start) < toMin(e.end) && toMin(o.end) > toMin(e.start)),
+    clash: !isAmbient(e) && day.some(o => o.id !== e.id && !isAmbient(o) && o.who.some(w => e.who.includes(w)) && toMin(o.start) < toMin(e.end) && toMin(o.end) > toMin(e.start)),
   }))
 }
 

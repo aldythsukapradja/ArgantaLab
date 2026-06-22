@@ -14,7 +14,9 @@ type Stage = 'pick' | 'signin' | 'kid' | 'pverify' | 'pcreate1' | 'pcreate2' | '
 //    grown-ups use Google / passcode. This is where Log out sends you.
 //  • UNLOCKED (tap avatar) → "Who's playing?" quick face-switch on this device.
 export default function PlayerSwitcher() {
-  const { showSwitcher, closeSwitcher, loginAsKid, switchToOwner, activeKidId, locked, openAuthWall } = useAppStore()
+  const { showSwitcher, closeSwitcher, loginAsKid, switchToOwner, activeKidId, locked, openAuthWall, session, role } = useAppStore()
+  // Someone is "in a session" only if a real cloud user or a kid is active.
+  const inSession = (!!session && session !== 'loading') || activeKidId !== null || role === 'kid'
   const [stage, setStage] = useState<Stage>('pick')
   const [picked, setPicked] = useState<KidProfile | null>(null)
   const [pin, setPin] = useState('')
@@ -28,10 +30,11 @@ export default function PlayerSwitcher() {
 
   useEffect(() => {
     if (showSwitcher) {
-      setStage(locked ? 'signin' : 'pick')
+      // Sign-in page when logged out OR not in a session; face-switcher only mid-session.
+      setStage(locked || !inSession ? 'signin' : 'pick')
       setPicked(null); setPin(''); setTmp(''); setErr(false); setBusy(false); setCloudErr(null); setUName(''); setUPin('')
     }
-  }, [showSwitcher, locked])
+  }, [showSwitcher, locked, inSession])
   if (!showSwitcher) return null
 
   const kids = loadCircles().kids
@@ -47,8 +50,11 @@ export default function PlayerSwitcher() {
     setCloudErr(null); setBusy(true)
     if (cloudEnabled) {
       const r = await kidLogin(uName.trim(), uPin)
+      if (r.ok) { setBusy(false); endSession(); return }
+      // fall back to a local profile on this device (e.g. kids added before cloud)
+      const local = verifyLogin(uName.trim(), uPin)
       setBusy(false)
-      if (r.ok) endSession()
+      if (local) loginAsKid(local)
       else setCloudErr('That username or PIN didn\'t match. Check with a grown-up.')
     } else {
       setBusy(false)

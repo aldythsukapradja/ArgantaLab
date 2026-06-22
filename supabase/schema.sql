@@ -696,6 +696,152 @@ insert into public.hq_product_northstar (product, label, formula, input_metric_k
   ('kinetik',   'Weekly core-loop circles', 'circles completing plan->live->remember / week',
      array['plans','moments','kin_assists','members_active','cross_app'], 'portfolio')
 on conflict (product) do nothing;
+
+-- ============================================================
+--  CIRCLE HQ · LIVE DATA-MODEL + INSIGHTS  (additive, operator-only)
+--  The dashboard introspects the catalog so the ERD, tables, and
+--  insights stay in lock-step with the real schema — add a table in
+--  Supabase and it shows up with zero dashboard changes.
+-- ============================================================
+
+-- Full live data model: every public table, its columns, PK/FK flags,
+-- live row estimate, and all foreign-key relationships → drives the ERD.
+create or replace function public.hq_schema_model()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare result jsonb;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+
+  with cols as (
+    select c.table_name, c.column_name, c.data_type, c.ordinal_position
+    from information_schema.columns c
+    where c.table_schema = 'public'
+  ),
+  pks as (
+    select tc.table_name, kcu.column_name
+    from information_schema.table_constraints tc
+    join information_schema.key_column_usage kcu
+      on kcu.constraint_name = tc.constraint_name and kcu.table_schema = tc.table_schema
+    where tc.constraint_type = 'PRIMARY KEY' and tc.table_schema = 'public'
+  ),
+  fks as (
+    select tc.table_name as src_table, kcu.column_name as src_col,
+           ccu.table_name as ref_table, ccu.column_name as ref_col
+    from information_schema.table_constraints tc
+    join information_schema.key_column_usage kcu
+      on kcu.constraint_name = tc.constraint_name and kcu.table_schema = tc.table_schema
+    join information_schema.constraint_column_usage ccu
+      on ccu.constraint_name = tc.constraint_name and ccu.table_schema = tc.table_schema
+    where tc.constraint_type = 'FOREIGN KEY' and tc.table_schema = 'public'
+  ),
+  tbls as (
+    select t.table_name,
+           greatest(coalesce(cl.reltuples, 0)::bigint, 0) as row_est
+    from information_schema.tables t
+    left join pg_class cl
+      on cl.relname = t.table_name and cl.relnamespace = 'public'::regnamespace
+    where t.table_schema = 'public' and t.table_type = 'BASE TABLE'
+  )
+  select jsonb_build_object(
+    'tables', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'name', tb.table_name,
+        'rows', tb.row_est,
+        'columns', (
+          select jsonb_agg(jsonb_build_object(
+            'name', co.column_name,
+            'type', co.data_type,
+            'pk', exists(select 1 from pks p where p.table_name = tb.table_name and p.column_name = co.column_name),
+            'fk', (select f.ref_table from fks f where f.src_table = tb.table_name and f.src_col = co.column_name limit 1)
+          ) order by co.ordinal_position)
+          from cols co where co.table_name = tb.table_name
+        )
+      ) order by tb.table_name)
+      from tbls tb
+    ), '[]'::jsonb),
+    'relationships', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'from', f.src_table, 'fromCol', f.src_col,
+        'to', f.ref_table, 'toCol', f.ref_col))
+      from fks f
+    ), '[]'::jsonb),
+    'generatedAt', now()
+  ) into result;
+
+  return result;
+end;
+$$;
+
+-- Live row preview for any public table (operator-only, read-only, clamped).
+create or replace function public.hq_table_preview(p_table text, p_limit int default 20)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare v jsonb; v_ok boolean;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select exists(
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = p_table and table_type = 'BASE TABLE'
+  ) into v_ok;
+  if not v_ok then raise exception 'unknown table %', p_table; end if;
+  execute format(
+    'select coalesce(jsonb_agg(t), ''[]''::jsonb) from (select * from public.%I limit %s) t',
+    p_table, least(greatest(p_limit, 1), 100)
+  ) into v;
+  return v;
+end;
+$$;
+
+-- Headline insights computed from REAL data (no dummy values anywhere).
+create or replace function public.hq_schema_insights()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare r jsonb;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select jsonb_build_object(
+    'learners',         (select count(*) from public.profiles),
+    'kids',             (select count(*) from public.profiles where role = 'kid'),
+    'attemptsTotal',    (select count(*) from public.item_attempts),
+    'attempts7d',       (select count(*) from public.item_attempts where created_at >= now() - interval '7 days'),
+    'activeLearners7d', (select count(distinct user_id) from public.item_attempts where created_at >= now() - interval '7 days'),
+    'accuracyPct',      (select case when count(*) > 0
+                                then round(100.0 * count(*) filter (where correct) / count(*), 1) else null end
+                         from public.item_attempts where created_at >= now() - interval '30 days'),
+    'gamesTotal',       (select count(*) from public.games),
+    'gamesPublic',      (select count(*) from public.games where visibility = 'public'),
+    'diamondsFloat',    (select coalesce(sum(diamonds), 0) from public.profiles),
+    'worldsLive',       (select count(*) from public.worlds where status = 'live'),
+    'itemsLive',        (select count(*) from public.items where status = 'live'),
+    'circles',          (select count(*) from public.circles),
+    'generatedAt', now()
+  ) into r;
+  return r;
+end;
+$$;
+
+-- Ontology snapshots (semantic layer for agents). Regenerated on demand;
+-- the dashboard always reads the latest snapshot.
+create table if not exists public.hq_ontology (
+  id           bigint generated always as identity primary key,
+  created_at   timestamptz default now(),
+  generated_by text default 'deterministic',
+  model        jsonb not null
+);
+alter table public.hq_ontology enable row level security;
+drop policy if exists hq_ontology_rw on public.hq_ontology;
+create policy hq_ontology_rw on public.hq_ontology for all
+  using (public.hq_is_operator()) with check (public.hq_is_operator());
+
+create or replace function public.hq_latest_ontology()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select model from public.hq_ontology
+  where public.hq_is_operator()
+  order by created_at desc limit 1;
+$$;
+
+grant execute on function public.hq_schema_model()          to authenticated;
+grant execute on function public.hq_table_preview(text,int) to authenticated;
+grant execute on function public.hq_schema_insights()       to authenticated;
+grant execute on function public.hq_latest_ontology()       to authenticated;
 -- ============================================================
 --  END CIRCLE HQ
 -- ============================================================

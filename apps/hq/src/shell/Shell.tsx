@@ -1,40 +1,39 @@
 import { Rail } from './Rail'
-import { CommandBar } from './CommandBar'
+import { Topbar } from './Topbar'
 import { useHQ } from './store'
-import { cloudEnabled } from '../data'
+import { cloudEnabled } from '../lib/supabase'
+import { Data } from '../surfaces/Data'
 import { Pulse } from '../surfaces/Pulse'
 import { Portfolio } from '../surfaces/Portfolio'
-import { Features } from '../surfaces/Features'
-import { Economy } from '../surfaces/Economy'
 import { Audience } from '../surfaces/Audience'
-import { Placeholder } from '../surfaces/Placeholder'
+import { Builder } from '../surfaces/Builder'
 
-function Content() {
+function Surface() {
   const { surface } = useHQ()
   switch (surface) {
+    case 'data': return <Data />
     case 'pulse': return <Pulse />
     case 'portfolio': return <Portfolio />
-    case 'features': return <Features />
     case 'audience': return <Audience />
-    case 'economy': return <Economy />
-    default: return <Placeholder id={surface} />
+    case 'builder': return <Builder />
   }
 }
 
-export function Shell() {
+export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   return (
-    <div className="hq-app">
-      <Rail />
-      <main className="hq-main">
-        <div className="hq-topbar"><CommandBar /></div>
+    <div className="hq">
+      <Rail who={who} />
+      <div className="main">
+        <Topbar canSignOut={authed} />
         {!cloudEnabled && (
-          <div style={{ margin: '0 18px', padding: '7px 11px', borderRadius: 10, fontSize: 11.5,
-            background: 'var(--warn-bg)', color: 'var(--warn)' }}>
-            Demo data — add the real Supabase URL + anon key to apps/hq/.env.local for live ArgantaLab numbers.
+          <div className="banner">
+            Offline preview — add <span className="src" style={{ background: 'transparent', padding: 0 }}>VITE_SUPABASE_URL</span> + anon key to <span className="src" style={{ background: 'transparent', padding: 0 }}>apps/hq/.env.local</span> and sign in to load live data.
           </div>
         )}
-        <div className="hq-content"><Content /></div>
-      </main>
+        <div className="content">
+          <div className="content-in"><Surface /></div>
+        </div>
+      </div>
     </div>
   )
 }

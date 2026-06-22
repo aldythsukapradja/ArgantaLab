@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import type { Item } from '@/data/learn'
 import { pkey } from './player'
+import { memStore } from './memStore'
 
 // Adaptive engine (DoodleMaths / Leitner style). Mastery + spaced-repetition box
 // per skill live in localStorage for instant, offline play; best-effort mirrored
@@ -12,9 +13,9 @@ const KEY = 'argantalab_mastery_v1'
 type Store = Record<string, SkillState>  // keyed by `${world}/${skill}`
 
 function load(): Store {
-  try { return JSON.parse(localStorage.getItem(pkey(KEY)) || '{}') } catch { return {} }
+  try { return JSON.parse(memStore.getItem(pkey(KEY)) || '{}') } catch { return {} }
 }
-function save(s: Store) { try { localStorage.setItem(pkey(KEY), JSON.stringify(s)) } catch { /* ignore */ } }
+function save(s: Store) { try { memStore.setItem(pkey(KEY), JSON.stringify(s)) } catch { /* ignore */ } }
 
 export function getMastery(world: string, skill: string): number {
   return load()[`${world}/${skill}`]?.mastery ?? 0

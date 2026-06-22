@@ -1,8 +1,8 @@
 import type { WizardConfig } from '@/data/wizard'
+import { memStore } from './memStore'
 
-// Locally-saved creations, namespaced per signed-in user so switching accounts
-// never shows another account's games. Guests use a shared 'guest' bucket.
-// Cloud sync (Supabase `games`) remains the source of truth across devices.
+// Session-only game cache (in memory, namespaced per signed-in user). The cloud
+// `games` table is the single source of truth; this is just hydrated from it.
 export interface SavedGame {
   id: string
   title: string
@@ -18,18 +18,9 @@ export interface SavedGame {
 const BASE = 'argantalab_games_v1'
 let owner = 'guest'
 
-/** Set the active games owner (call on login/logout). Migrates the legacy
- *  un-namespaced bucket into the guest bucket once. */
+/** Set the active games owner (call on login/logout). */
 export function setGamesOwner(id: string | null) {
   owner = id || 'guest'
-  // one-time migration of the old global key into the guest bucket
-  try {
-    const legacy = localStorage.getItem(BASE)
-    if (legacy && !localStorage.getItem(`${BASE}__guest`)) {
-      localStorage.setItem(`${BASE}__guest`, legacy)
-      localStorage.removeItem(BASE)
-    }
-  } catch { /* ignore */ }
 }
 
 const keyFor = () => `${BASE}__${owner}`
@@ -39,20 +30,20 @@ export function getMyGame(idOrSlug: string): SavedGame | undefined {
 }
 
 export function loadMyGames(): SavedGame[] {
-  try { return JSON.parse(localStorage.getItem(keyFor()) || '[]') } catch { return [] }
+  try { return JSON.parse(memStore.getItem(keyFor()) || '[]') } catch { return [] }
 }
 
 export function saveMyGame(g: SavedGame): SavedGame[] {
   const all = loadMyGames()
   const idx = all.findIndex(x => x.id === g.id)
   if (idx >= 0) all[idx] = g; else all.unshift(g)
-  localStorage.setItem(keyFor(), JSON.stringify(all))
+  memStore.setItem(keyFor(), JSON.stringify(all))
   return all
 }
 
 export function deleteMyGame(id: string): SavedGame[] {
   const all = loadMyGames().filter(g => g.id !== id)
-  localStorage.setItem(keyFor(), JSON.stringify(all))
+  memStore.setItem(keyFor(), JSON.stringify(all))
   return all
 }
 
@@ -64,7 +55,7 @@ export function newGameId(): string {
  *  Used on login so the signed-in user sees exactly their own games. */
 export function replaceWithCloud(cloud: SavedGame[]): SavedGame[] {
   const all = [...cloud].sort((a, b) => b.createdAt - a.createdAt)
-  localStorage.setItem(keyFor(), JSON.stringify(all))
+  memStore.setItem(keyFor(), JSON.stringify(all))
   return all
 }
 
@@ -75,6 +66,6 @@ export function mergeCloudGames(cloud: SavedGame[]): SavedGame[] {
   for (const g of local) byId.set(g.id, g)
   for (const g of cloud) byId.set(g.id, g)
   const all = Array.from(byId.values()).sort((a, b) => b.createdAt - a.createdAt)
-  localStorage.setItem(keyFor(), JSON.stringify(all))
+  memStore.setItem(keyFor(), JSON.stringify(all))
   return all
 }

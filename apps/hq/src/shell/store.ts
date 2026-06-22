@@ -1,37 +1,36 @@
 import { create } from 'zustand'
 
-export type SurfaceId =
-  | 'pulse' | 'portfolio' | 'features' | 'audience' | 'economy'
-  | 'agents' | 'forge' | 'studio' | 'registry'
+export type SurfaceId = 'portfolio' | 'pulse' | 'data' | 'audience' | 'builder'
+export type DataTab = 'schema' | 'tables' | 'ontology'
+export type Theme = 'light' | 'dark'
 
-export type ProductLens = 'portfolio' | 'arganta' | 'kinetik'
+const SURFACE_LABEL: Record<SurfaceId, string> = {
+  portfolio: 'Portfolio', pulse: 'Pulse', data: 'Data', audience: 'Audience', builder: 'Builder',
+}
+export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 
 interface HQState {
   surface: SurfaceId
-  product: ProductLens
-  theme: 'dark' | 'light'
-  cmdOpen: boolean
+  dataTab: DataTab
+  theme: Theme
   go: (s: SurfaceId) => void
-  setProduct: (p: ProductLens) => void
+  setDataTab: (t: DataTab) => void
   toggleTheme: () => void
-  setCmd: (o: boolean) => void
 }
 
-const initialTheme = (): 'dark' | 'light' =>
-  (localStorage.getItem('hq_theme') as 'dark' | 'light') || 'dark'
+const initialTheme = (): Theme =>
+  (localStorage.getItem('hq_theme') as Theme) || 'light'
 
 export const useHQ = create<HQState>((set) => ({
-  surface: 'pulse',
-  product: 'portfolio',
+  surface: 'data',
+  dataTab: 'schema',
   theme: initialTheme(),
-  cmdOpen: false,
   go: (surface) => set({ surface }),
-  setProduct: (product) => set({ product }),
+  setDataTab: (dataTab) => set({ dataTab }),
   toggleTheme: () => set((s) => {
-    const theme = s.theme === 'dark' ? 'light' : 'dark'
+    const theme: Theme = s.theme === 'light' ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('hq_theme', theme)
     return { theme }
   }),
-  setCmd: (cmdOpen) => set({ cmdOpen }),
 }))

@@ -154,10 +154,10 @@ const INITIAL_STUDIO_MESSAGES: StudioMessage[] = [
 export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
-      // persisted defaults
-      learnerName: 'Baginda',
-      avatar: 'B',
-      xp: 120,
+      // defaults (replaced by cloud data on sign-in)
+      learnerName: 'Player',
+      avatar: 'P',
+      xp: 0,
       level: 1,
       diamonds: 0,
       unlocks: [],
@@ -483,30 +483,14 @@ export const useAppStore = create<AppStore>()(
       },
     }),
     {
-      name: 'argantalab_state_v3',
+      name: 'argantalab_state_v4',
       storage: createJSONStorage(() => localStorage),
+      // CLOUD IS THE SINGLE SOURCE OF TRUTH. We persist ONLY device-level UI
+      // prefs — never account, gems, or progress (those hydrate from the cloud
+      // on login). This is why phones & web can never diverge.
       partialize: (s) => ({
-        learnerName: s.learnerName,
-        avatar: s.avatar,
-        xp: s.xp,
-        level: s.level,
-        diamonds: s.diamonds,
-        unlocks: s.unlocks,
-        badges: s.badges,
-        completedLessons: s.completedLessons,
-        gamesPlayed: s.gamesPlayed,
-        costume: s.costume,
-        outfit: s.outfit,
-        ownedCosmetics: s.ownedCosmetics,
         theme: s.theme,
-        pitchScript: s.pitchScript,
-        pitchCompleted: s.pitchCompleted,
-        missions: s.missions,
         lastTab: s.lastTab,
-        activeKidId: s.activeKidId,
-        activeCircleId: s.activeCircleId,
-        stageKey: s.stageKey,
-        role: s.role,
       }),
     }
   )
