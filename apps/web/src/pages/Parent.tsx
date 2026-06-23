@@ -154,6 +154,27 @@ export default function Parent() {
         </div>
       )}
 
+      {/* Family overview — every child's real cloud balance & level at a glance */}
+      {!demo && kids && kids.length > 0 && (
+        <div className="par-family" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+          {kids.map(k => (
+            <button key={k.id} onClick={() => { setDemo(false); setActiveKid(k.id) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                       border: `1.5px solid ${k.id === activeKid ? 'var(--accent, #6366f1)' : 'var(--border, #2a2a35)'}`,
+                       background: k.id === activeKid ? 'color-mix(in srgb, var(--accent,#6366f1) 12%, transparent)' : 'var(--card, rgba(255,255,255,.03))' }}>
+              <span className="pk-av" style={{ position: 'relative', flex: '0 0 auto' }}>
+                {kidGlyph({ name: k.display_name, photo: k.photo_url ?? null })}
+                {isOnline(k.last_seen) && <i className="pk-on" />}
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <b style={{ display: 'block', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.display_name}</b>
+                <small style={{ color: 'var(--t2, #9aa1ad)', fontSize: 11.5 }}>💎 {fmt(k.diamonds ?? 0)} · Lv {k.level ?? 1}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {demo && (
         <div className="par-demo-banner">
           <span>👁 <b>Sample data</b> — a preview of the analytics. Numbers aren't real until kids play and the analytics migration is applied.</span>

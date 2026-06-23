@@ -38,6 +38,7 @@ export interface CloudProfile {
   friend_code?: string | null
   dob?: string | null
   gender?: string | null
+  diamonds?: number
   xp?: number
   level?: number
   last_seen?: string | null
