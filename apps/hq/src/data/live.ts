@@ -47,6 +47,28 @@ export interface GamePublishInput {
   ageMin?: number | null
   ageMax?: number | null
   thumbnail?: string
+  visibility?: string
+  circle_ids?: string[]
+}
+
+export interface CircleMember {
+  id: string
+  name: string
+  avatar?: string
+  kind: 'parent' | 'child'
+  role: 'admin' | 'member'
+  joined_at?: string
+}
+
+export interface Circle {
+  id: string
+  name: string
+  kind: 'family' | 'kids' | 'class' | 'friends'
+  emoji?: string
+  owner_id: string
+  members: CircleMember[]
+  member_count?: number
+  created_at?: string
 }
 
 // Thin typed wrappers over the operator RPCs. Every call returns null when the
@@ -85,6 +107,7 @@ export const live = {
 
   async publishGame(game: GamePublishInput): Promise<boolean> {
     if (!cloudEnabled) return false
+    const visibility = game.visibility || 'public'
     const { error } = await supabase
       .from('games')
       .upsert({
@@ -94,8 +117,9 @@ export const live = {
         source: 'procode',
         config: { category: game.category ?? null, source: 'code' },
         html: game.html,
-        visibility: 'public',
-        creator_name: game.creatorName || 'Circle HQ',
+        visibility,
+        circle_ids: game.circle_ids || null,
+        creator_name: game.creatorName || 'KinetikCircle',
         category: game.category ?? null,
         description: game.description ?? null,
         tags: game.tags ?? [],
@@ -155,6 +179,133 @@ export const live = {
       .insert({ model: o, generated_by: o.generatedBy || 'deterministic' })
     if (error) console.warn('[hq] saveOntology →', error.message)
     return !error
+  },
+
+  // ── KinetikCircle Integration ──
+
+  async listUserCircles(): Promise<Circle[]> {
+    if (!cloudEnabled) return []
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    const { data, error } = await supabase
+      .from('circles')
+      .select(`
+        id, name, kind, emoji, owner_id, created_at,
+        circle_members (
+          id: member_id, member_kind, role, joined_at
+        )
+      `)
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.warn('[hq] listUserCircles →', error.message)
+      return []
+    }
+
+    // Enrich members with profile data
+    const circles: Circle[] = []
+    for (const circle of data || []) {
+      const memberIds = (circle.circle_members || []).map((m: any) => m.id).filter(Boolean)
+      if (memberIds.length === 0) continue
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name, photo_url')
+        .in('id', memberIds)
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+
+      const members: CircleMember[] = (circle.circle_members || []).map((m: any) => {
+        const profile = profileMap.get(m.id)
+        return {
+          id: m.id,
+          name: profile?.display_name || 'Unknown',
+          avatar: profile?.photo_url,
+          kind: m.member_kind,
+          role: m.role,
+          joined_at: m.joined_at,
+        }
+      })
+
+      circles.push({
+        id: circle.id,
+        name: circle.name,
+        kind: circle.kind,
+        emoji: circle.emoji,
+        owner_id: circle.owner_id,
+        members,
+        member_count: members.length,
+        created_at: circle.created_at,
+      })
+    }
+
+    return circles
+  },
+
+  async getCircle(circleId: string): Promise<Circle | null> {
+    if (!cloudEnabled) return null
+
+    const { data: circle, error: circleError } = await supabase
+      .from('circles')
+      .select(`
+        id, name, kind, emoji, owner_id, created_at,
+        circle_members (
+          id: member_id, member_kind, role, joined_at
+        )
+      `)
+      .eq('id', circleId)
+      .single()
+
+    if (circleError) {
+      console.warn('[hq] getCircle →', circleError.message)
+      return null
+    }
+
+    const memberIds = (circle.circle_members || []).map((m: any) => m.id).filter(Boolean)
+    if (memberIds.length === 0) {
+      return {
+        id: circle.id,
+        name: circle.name,
+        kind: circle.kind,
+        emoji: circle.emoji,
+        owner_id: circle.owner_id,
+        members: [],
+        member_count: 0,
+        created_at: circle.created_at,
+      }
+    }
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, display_name, photo_url')
+      .in('id', memberIds)
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+
+    const members: CircleMember[] = (circle.circle_members || []).map((m: any) => {
+      const profile = profileMap.get(m.id)
+      return {
+        id: m.id,
+        name: profile?.display_name || 'Unknown',
+        avatar: profile?.photo_url,
+        kind: m.member_kind,
+        role: m.role,
+        joined_at: m.joined_at,
+      }
+    })
+
+    return {
+      id: circle.id,
+      name: circle.name,
+      kind: circle.kind,
+      emoji: circle.emoji,
+      owner_id: circle.owner_id,
+      members,
+      member_count: members.length,
+      created_at: circle.created_at,
+    }
   },
 }
 
