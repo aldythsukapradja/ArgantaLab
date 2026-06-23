@@ -1,18 +1,25 @@
 import { useRef } from 'react'
 import { gsap } from 'gsap'
-import { useAppStore } from '@store/appStore'
-import { PEOPLE, CIRCLES, ENERGY, personById, initials, firstName, type Moment, type EnergyKey } from '@data/seed'
+import { useDataStore, personById, firstName } from '@store/dataStore'
+import { useUiStore } from '@store/uiStore'
+import { ENERGY, initials } from '@data/energy'
+import type { Moment, EnergyKey } from '@data/types'
 import { IconHeart, IconComment, IconTag, IconPhoto, IconPlus, IconDiamond, IconHistory } from '@components/Icons'
 
 export default function Moments() {
-  const { moments, activeCircleId, heart } = useAppStore()
-  const circle = CIRCLES.find(c => c.id === activeCircleId) ?? CIRCLES[0]
-  const members = PEOPLE.filter(p => circle.memberIds.includes(p.id))
+  const moments = useDataStore(s => s.moments)
+  const people = useDataStore(s => s.people)
+  const circles = useDataStore(s => s.circles)
+  const heart = useDataStore(s => s.heart)
+  const activeCircleId = useUiStore(s => s.activeCircleId)
+
+  const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
+  const members = people.filter(p => circle && circle.memberIds.includes(p.id))
   const feed = moments.filter(m => m.circleId === activeCircleId).sort((a, b) => b.createdAt - a.createdAt)
 
   return (
     <div className="fade-in">
-      <p className="mom-private">{circle.name} · private to your circle</p>
+      <p className="mom-private">{circle?.name ?? 'Your circle'} · private to your circle</p>
 
       <div className="stories">
         <button className="story add"><span className="story-av dashed"><IconPlus width={18} height={18} /></span><small>Add</small></button>
@@ -21,9 +28,15 @@ export default function Moments() {
         ))}
       </div>
 
-      {feed.map(m => <MomentCard key={m.id} m={m} onHeart={() => heart(m.id)} />)}
+      {feed.length === 0 && (
+        <div className="card allset" style={{ marginTop: 8 }}>
+          <div className="allset-ic">✨</div>
+          <h3>No moments yet</h3>
+          <p>Celebrate a win and it’ll show up here for the circle.</p>
+        </div>
+      )}
 
-      <div className="mom-ago"><IconHistory width={13} height={13} /> A year ago · Keyla's first day of school</div>
+      {feed.map(m => <MomentCard key={m.id} m={m} onHeart={() => heart(m.id)} />)}
     </div>
   )
 }
@@ -60,7 +73,7 @@ function MomentCard({ m, onHeart }: { m: Moment; onHeart: () => void }) {
     <div className="card moment">
       <div className="moment-head">
         <span className="m-av" style={{ background: author?.color }}>{initials(author?.name ?? '?')}</span>
-        <div className="m-id"><b>{author?.name}</b><small>{rel(m.createdAt)}</small></div>
+        <div className="m-id"><b>{author?.name ?? 'Someone'}</b><small>{rel(m.createdAt)}</small></div>
       </div>
       <div className="moment-photo" style={{ background: photoWash(m.tone) }}><IconPhoto width={32} height={32} /></div>
       <div className="moment-body">

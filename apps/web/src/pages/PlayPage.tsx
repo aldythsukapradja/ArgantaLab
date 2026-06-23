@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import DeviceFrame from '@components/build/DeviceFrame'
 import { fetchPublicGame, bumpPlay } from '@lib/gamesCloud'
 import { getMyGame } from '@lib/myGames'
+import { useCircleBridge } from '@lib/circleBridge'
 
 interface PublicGame { title: string; html: string; creator: string; plays: number }
 
@@ -10,6 +11,7 @@ export default function PlayPage({ id }: { id: string }) {
   const [game, setGame] = useState<PublicGame | null | 'loading'>('loading')
   const [copied, setCopied] = useState(false)
   const origin = window.location.origin
+  useCircleBridge(id)   // answer the game's SDK calls (live when the player is signed in)
 
   useEffect(() => {
     let cancelled = false
@@ -50,7 +52,7 @@ export default function PlayPage({ id }: { id: string }) {
         </a>
       </header>
 
-      <div className="pp-stage"><DeviceFrame html={game.html} /></div>
+      <div className="pp-stage"><DeviceFrame html={game.html} gameId={id} /></div>
 
       <div className="pp-meta">
         <h1 className="pp-title">{game.title}</h1>

@@ -26,7 +26,7 @@ export default function Home() {
     const updated = { ...g, plays: g.plays + 1 }
     setMine(saveMyGame(updated))
     if (uid) pushGame(uid, updated)
-    playWizardGame(g.html, g.title)
+    playWizardGame(g.html, g.title, g.id)
   }
   const remove = (id: string) => { setMine(deleteMyGame(id)); if (uid) deleteGameCloud(uid, id) }
 

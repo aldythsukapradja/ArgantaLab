@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { supabase } from '@lib/supabase'
 import { syncProfileOnLogin, saveProfile } from '@lib/profile'
-import { pullGames } from '@lib/gamesCloud'
+import { pullGames, bumpPlay } from '@lib/gamesCloud'
 import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
 import { memStore } from '@lib/memStore'
 import { pullLearnState } from '@lib/learnCloud'
@@ -10,6 +10,7 @@ import { pullAvatarState, pushAvatarState } from '@lib/avatarCloud'
 import { ensureStarterPack } from '@lib/rewards'
 import { touchPresence } from '@lib/cloudAuth'
 import { initContent } from '@lib/content'
+import { injectCircle, circleCtx, useCircleBridge } from '@lib/circleBridge'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -85,7 +86,18 @@ function BadgeModal() {
 }
 
 function WizardGameModal() {
-  const { playGameHtml, playGameTitle, closeWizardGame } = useAppStore()
+  const { playGameHtml, playGameTitle, playGameId, closeWizardGame } = useAppStore()
+  // Only bridge real (published) games to the Circle backend; previews stay local.
+  useCircleBridge(playGameId)
+
+  const srcDoc = useMemo(() => {
+    if (!playGameHtml) return ''
+    const base = circleCtx(playGameId || 'preview')
+    return injectCircle(playGameHtml, { ...base, live: base.live && !!playGameId })
+  }, [playGameHtml, playGameId])
+
+  useEffect(() => { if (playGameId) bumpPlay(playGameId) }, [playGameId])
+
   if (!playGameHtml) return null
   return (
     <div className="wgm">
@@ -95,7 +107,7 @@ function WizardGameModal() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
-      <iframe className="wgm-frame" title={playGameTitle} srcDoc={playGameHtml} sandbox="allow-scripts allow-pointer-lock" />
+      <iframe className="wgm-frame" title={playGameTitle} srcDoc={srcDoc} sandbox="allow-scripts allow-pointer-lock" />
     </div>
   )
 }

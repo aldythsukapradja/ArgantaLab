@@ -108,7 +108,7 @@ export default function Discover() {
       {trending.length ? (
         <div className="ship-grid">
           {trending.map(g => (
-            <button key={g.id} className="ship-card" onClick={() => playWizardGame(g.html, g.title)}>
+            <button key={g.id} className="ship-card" onClick={() => playWizardGame(g.html, g.title, g.id)}>
               <div className="ship-card-art" dangerouslySetInnerHTML={{ __html: gameThumb(g.hue) }}>
               </div>
               <div className="ship-card-emoji">{g.emoji}</div>

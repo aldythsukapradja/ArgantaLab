@@ -71,7 +71,7 @@ export default function MyGameStore() {
                     </div>
                   )}
                   <div className="store-actions">
-                    <button className="btn btn-soft" onClick={() => playWizardGame(g.html, g.title)}><Play /> Play</button>
+                    <button className="btn btn-soft" onClick={() => playWizardGame(g.html, g.title, g.id)}><Play /> Play</button>
                     <button className={`btn ${g.published ? 'btn-soft' : 'btn-primary'}`} onClick={() => publish(g)}>
                       {g.published ? 'Make private' : '🌍 Publish'}
                     </button>
