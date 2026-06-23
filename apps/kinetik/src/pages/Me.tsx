@@ -4,7 +4,7 @@ import { useUiStore } from '@store/uiStore'
 import { supabase } from '@lib/supabase'
 import { ROLE_LABEL, initials } from '@data/energy'
 import { cloudReady } from '@lib/supabase'
-import { IconSwitch, IconUserPlus, IconSun, IconMoon, IconMe } from '@components/Icons'
+import { IconSwitch, IconUserPlus, IconSun, IconMoon, IconMe, IconGem } from '@components/Icons'
 
 interface ChildWithProgress {
   id: string; display_name: string; color: string; emoji: string; age?: number
@@ -87,9 +87,19 @@ export default function Me() {
           <div key={p.id} className="person-row">
             <span className="p-av" style={{ background: p.color }}>{initials(p.name)}</span>
             <span className="p-name">{p.name}</span>
-            <span className="p-role" data-role={p.role}>{ROLE_LABEL[p.role]}</span>
+            <div className="p-right">
+              <span className="p-gem">💎</span>
+              <span className="p-role" data-role={p.role}>{ROLE_LABEL[p.role]}</span>
+            </div>
           </div>
         ))}
+      </div>
+
+      <div className="me-diamond-bar">
+        <div className="mdb-item">
+          <IconGem width={18} height={18} style={{ color: '#60A5FA' }} />
+          <span>Diamonds: <b>{me?.role ? '0' : '—'}</b></span>
+        </div>
       </div>
 
       <div className="me-actions">
