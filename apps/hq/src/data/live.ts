@@ -1,12 +1,11 @@
 import { supabase, cloudEnabled } from '../lib/supabase'
 import type { SchemaModel, SchemaInsights, Ontology } from './types'
-import type { WizardConfig } from './gameWizard'
 
 export interface PublishedGame {
   id: string
   title: string
   source: string
-  config: WizardConfig | null
+  config: Record<string, unknown> | null
   html: string
   visibility: string
   plays: number
@@ -49,7 +48,7 @@ export const live = {
   },
 
   async publishGame(game: {
-    id: string; title: string; config: WizardConfig; html: string
+    id: string; title: string; config: Record<string, unknown>; html: string
     userId: string; creatorName?: string
   }): Promise<boolean> {
     if (!cloudEnabled) return false
