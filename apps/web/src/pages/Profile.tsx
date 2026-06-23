@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { WORLDS, STAGE_META, ageFromDob, stageForDob } from '@/data/learn'
 import { worldRing, earnedBadges } from '@lib/learnProgress'
@@ -10,7 +10,7 @@ import {
 import Buddy from '@components/avatar/Buddy'
 import KidForm, { type KidFormData } from '@components/auth/KidForm'
 import { cloudEnabled } from '@lib/supabase'
-import { signOutCloud, linkKid, parentCreateKid } from '@lib/cloudAuth'
+import { signOutCloud, linkKid, parentCreateKid, adoptKid, unlinkKid, listMyKids, type CloudProfile } from '@lib/cloudAuth'
 
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
@@ -31,11 +31,24 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 export default function Profile() {
   const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher, lockSession, addToast, session } = useAppStore()
   const realSession = session && session !== 'loading' ? session : null
+
+  // The family roster is CLOUD-authoritative (guardian_id), so it always matches
+  // the Grown-ups dashboard switcher. Local circles are kept only as a private
+  // PIN keychain (the cloud never stores plain PINs) and joined in by username.
+  const [cloudKids, setCloudKids] = useState<CloudProfile[] | null>(null)
+  const loadCloudKids = () => {
+    if (cloudEnabled && realSession?.user) {
+      listMyKids().then(ks => setCloudKids(ks.filter(k => k.role === 'kid')))
+    }
+  }
+  useEffect(loadCloudKids, [realSession?.user?.id])
+
   const addKidCloudOrLocal = async (d: KidFormData) => {
     if (cloudEnabled && realSession?.user) {
       const r = await parentCreateKid(d, realSession.user.id)
-      addKid(d)  // keep a local face for quick switching on this device
+      addKid(d)  // local PIN keychain entry (reminder only — not used for auth)
       addToast(r.ok ? 'Kid account created ☁️' : (r.error ?? 'Saved locally'), r.ok ? '✨' : '⚠️')
+      loadCloudKids()
     } else {
       addKid(d)
     }
@@ -50,15 +63,59 @@ export default function Profile() {
     addToast(r.ok ? 'Kid linked! 👨‍👩‍👧' : (r.error ?? 'Could not link'), r.ok ? '🔗' : '⚠️')
     if (r.ok) refresh()
   }
+  // One-tap repair: link every local kid to this grown-up's cloud account by
+  // PIN, so kids created before guardian-linking was reliable (or on another
+  // device) finally appear in the Grown-ups dashboard switcher.
+  const [syncing, setSyncing] = useState(false)
+  const syncKidsToCloud = async () => {
+    if (!realSession?.user) { addToast('Sign in as a grown-up first', '⚠️'); return }
+    const kids = loadCircles().kids
+    if (kids.length === 0) { addToast('No kid profiles on this device yet', '🧒'); return }
+    setSyncing(true)
+    let linked = 0
+    for (const k of kids) {
+      if (await adoptKid(k.username, k.pin)) linked++
+    }
+    setSyncing(false)
+    addToast(linked > 0 ? `Synced ${linked} kid${linked > 1 ? 's' : ''} to cloud ☁️` : 'Nothing to sync (check PINs)', linked > 0 ? '✨' : '⚠️')
+    loadCloudKids()
+  }
   const [view, setView] = useState<'home' | 'add' | 'edit'>('home')
   const [editing, setEditing] = useState<KidProfile | null>(null)
   const [state, setState] = useState(() => loadCircles())
-  const refresh = () => setState(loadCircles())
+  const refresh = () => { setState(loadCircles()); loadCloudKids() }
 
   const games = loadMyGames().length
   const totalBadges = WORLDS.reduce((a, w) => a + earnedBadges(w).size, 0)
   const handle = '@' + learnerName.toLowerCase().replace(/\s+/g, '')
   const kidMode = isKidMode()
+
+  // ── Unified family roster row (cloud-authoritative, local PIN keychain joined) ──
+  interface RosterRow { id: string; displayName: string; username?: string | null; pin?: string; gender?: string; dob?: string; color: string; emoji: string; local?: KidProfile; cloudId?: string }
+  const PALETTE = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ef4444', '#14b8a6']
+  const localByUsername = new Map(state.kids.map(k => [k.username, k]))
+  const roster: RosterRow[] = (cloudEnabled && realSession?.user)
+    ? (cloudKids ?? []).map((k, i) => {
+        const local = k.username ? localByUsername.get(k.username) : undefined
+        return {
+          id: k.id, displayName: k.display_name, username: k.username ?? local?.username,
+          pin: local?.pin, gender: k.gender ?? local?.gender, dob: k.dob ?? local?.dob,
+          color: local?.color ?? PALETTE[i % PALETTE.length],
+          emoji: (k.gender ?? local?.gender) === 'girl' ? '👧' : '👦',
+          local, cloudId: k.id,
+        }
+      })
+    : state.kids.map(k => ({ id: k.id, displayName: k.displayName, username: k.username, pin: k.pin, gender: k.gender, dob: k.dob, color: k.color, emoji: k.emoji, local: k }))
+
+  // Remove a child from the family: unlink the cloud guardian link (kid account
+  // survives) and drop the local PIN reminder. Falls back to local-only offline.
+  const removeFromFamily = async (k: RosterRow) => {
+    if (!confirm(`Remove ${k.displayName} from your family?`)) return
+    if (cloudEnabled && k.cloudId) await unlinkKid(k.cloudId)
+    if (k.local) removeKid(k.local.id)
+    addToast(`Removed ${k.displayName}`, '👋')
+    refresh()
+  }
 
   if (view === 'add') return <KidForm mode="add" onSave={async d => { await addKidCloudOrLocal(d); refresh(); setView('home') }} onCancel={() => setView('home')} />
   if (view === 'edit' && editing) return (
@@ -137,6 +194,9 @@ export default function Profile() {
         {cloudEnabled
           ? <button className="ig-btn" onClick={linkAKid}>🔗 Link kid</button>
           : <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>}
+        {cloudEnabled && state.kids.length > 0 && (
+          <button className="ig-btn" disabled={syncing} onClick={syncKidsToCloud}>{syncing ? '☁️ Syncing…' : '☁️ Sync to cloud'}</button>
+        )}
         <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
       </div>
 
@@ -146,16 +206,16 @@ export default function Profile() {
       </div>
 
       <div className="section-label">Kids in this family</div>
-      {state.kids.length === 0 ? (
+      {roster.length === 0 ? (
         <div className="ig-empty">
           <span className="ig-empty-ic">🧒</span>
-          <b>No kid profiles yet</b>
-          <p>Add a profile for each child. They sign in with a username and a 4-digit PIN you set (and can always see).</p>
+          <b>{cloudEnabled && cloudKids === null ? 'Loading your family…' : 'No kid profiles yet'}</b>
+          <p>Add a profile for each child. They sign in with a username and a 4-digit PIN you set.</p>
           <button className="btn btn-primary" onClick={() => setView('add')}>＋ Add your first kid</button>
         </div>
       ) : (
         <div className="ig-kids">
-          {state.kids.map(k => {
+          {roster.map(k => {
             const st = stageForDob(k.dob)
             const meta = STAGE_META[st.key]
             return (
@@ -163,11 +223,13 @@ export default function Profile() {
                 <span className="ig-kid-av" style={{ background: k.color }}>{k.emoji}</span>
                 <div className="ig-kid-meta">
                   <b>{k.displayName} <span className="ig-kid-stage" style={{ background: `${meta.color}22`, color: meta.color }}>{meta.emoji} {st.label}</span></b>
-                  <small>@{k.username} · PIN <code>{k.pin}</code> · {k.gender === 'girl' ? '👧 girl' : '👦 boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}{k.linkedEmail ? ' · 📧 linked' : ''}</small>
+                  <small>{k.username ? `@${k.username} · ` : ''}{k.pin ? <>PIN <code>{k.pin}</code> · </> : ''}{k.gender === 'girl' ? '👧 girl' : '👦 boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}{cloudEnabled ? ' · ☁️ cloud' : ''}</small>
                 </div>
                 <button className="ig-kid-play" onClick={openSwitcher}>Log in</button>
-                <button className="ig-kid-edit2" title="Edit" onClick={() => { setEditing(k); setView('edit') }}>✏️</button>
-                <button className="ig-kid-del" title="Remove" onClick={() => { if (confirm(`Remove ${k.displayName}'s profile?`)) { removeKid(k.id); refresh() } }}>✕</button>
+                {k.local && (
+                  <button className="ig-kid-edit2" title="Edit PIN reminder" onClick={() => { setEditing(k.local!); setView('edit') }}>✏️</button>
+                )}
+                <button className="ig-kid-del" title="Remove from family" onClick={() => removeFromFamily(k)}>✕</button>
               </div>
             )
           })}

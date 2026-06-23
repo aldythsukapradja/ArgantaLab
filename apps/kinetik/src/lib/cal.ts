@@ -3,7 +3,8 @@
 //  expands routines onto the right weekday, sorts a day, and
 //  flags clashes (same person, overlapping time).
 // =========================================================
-import { isoOf, type KEvent, type Routine, type EnergyKey } from '@data/seed'
+import { isoOf } from '@data/energy'
+import type { KEvent, Routine, EnergyKey } from '@data/types'
 
 export const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return (h || 0) * 60 + (m || 0) }
@@ -34,7 +35,7 @@ export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: st
   const dow = weekdayOf(dateIso)
   const fromEvents: Occ[] = events
     .filter(e => e.circleId === circleId && e.date === dateIso)
-    .map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, who: e.who, energy: e.energy, kind: 'event', coach: e.coach, location: e.location, prep: e.prep, clash: false }))
+    .map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, who: e.who, energy: e.energy, kind: 'event', prep: e.prep, clash: false }))
   const fromRoutines: Occ[] = routines
     .filter(r => r.circleId === circleId && r.day === dow)
     .map(r => ({ id: r.id, title: r.title, start: r.start, end: r.end, who: r.who, energy: r.energy, kind: 'routine', responsible: r.responsible, clash: false }))
@@ -76,4 +77,27 @@ export const untilText = (nowMin: number, startMin: number) => {
   if (d <= 0) return 'now'
   const h = Math.floor(d / 60), m = d % 60
   return 'in ' + (h ? `${h}h ` : '') + (m ? `${m}m` : '')
+}
+
+export interface MonthCell {
+  date: Date; iso: string; dow: number
+  inMonth: boolean; isToday: boolean; isWeekend: boolean
+}
+
+/** Calendar grid for a full month (Sun-first, padded to whole weeks). */
+export function monthGrid(year: number, month: number): MonthCell[] {
+  const todayIso = isoOf(new Date())
+  const firstDay = new Date(year, month, 1)
+  const startDow = firstDay.getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const rows = Math.ceil((startDow + daysInMonth) / 7)
+  return Array.from({ length: rows * 7 }, (_, i) => {
+    const d = new Date(year, month, 1 - startDow + i)
+    return {
+      date: d, iso: isoOf(d), dow: d.getDay(),
+      inMonth: d.getMonth() === month && d.getFullYear() === year,
+      isToday: isoOf(d) === todayIso,
+      isWeekend: d.getDay() === 0 || d.getDay() === 6,
+    }
+  })
 }

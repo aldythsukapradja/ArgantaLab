@@ -7,6 +7,11 @@
 
 import { EXPLORER_PACK } from './explorerContent'
 import { STAGE_PACKS } from './stagePacks'
+import { CONTENT_PACK_2 } from './contentPack2'
+import { CONTENT_PACK_3 } from './contentPack3'
+import { CONTENT_PACK_4 } from './contentPack4'
+import { CONTENT_PACK_5 } from './contentPack5'
+import { CONTENT_PACK_6 } from './contentPack6'
 
 export type InteractionKey =
   | 'mcq' | 'multi' | 'type' | 'speed' | 'bank' | 'cloze'
@@ -209,7 +214,7 @@ const WRD_ITEMS: Item[] = [
 ]
 const WRD: World = {
   key: 'WRD', name: 'WordQuest', color: '#3b82f6', icon: 'A', signature: 'Drill', vibe: 'Storybook adventure', status: 'live',
-  skills: [{ key: 'phonics', label: 'Phonics', band: 1 }, { key: 'grammar', label: 'Grammar', band: 2 }, { key: 'vocab', label: 'Vocabulary', band: 2 }, { key: 'writing', label: 'Writing', band: 3 }],
+  skills: [{ key: 'phonics', label: 'Phonics', band: 1 }, { key: 'grammar', label: 'Grammar', band: 2 }, { key: 'vocab', label: 'Vocabulary', band: 2 }, { key: 'reading', label: 'Reading comprehension', band: 3 }, { key: 'writing', label: 'Writing', band: 3 }],
   units: [
     {
       key: 'wrd-sounds', title: 'Sounds & Words', color: '#3b82f6', nodes: [
@@ -221,8 +226,9 @@ const WRD: World = {
     {
       key: 'wrd-write', title: 'Grammar & Writing', color: '#3b82f6', nodes: [
         { key: 'w4', title: 'Grammar', type: 'practice', skills: ['grammar'], itemCount: 5, rewardDiamonds: 5 },
+        { key: 'wr', title: 'Reading', type: 'practice', skills: ['reading'], itemCount: 5, rewardDiamonds: 6 },
         { key: 'w5', title: 'Writing', type: 'practice', skills: ['writing'], itemCount: 4, rewardDiamonds: 5 },
-        { key: 'w6', title: 'Word Boss', type: 'boss', skills: ['grammar', 'vocab', 'writing'], itemCount: 6, rewardDiamonds: 20 },
+        { key: 'w6', title: 'Word Boss', type: 'boss', skills: ['grammar', 'reading', 'writing'], itemCount: 6, rewardDiamonds: 20 },
       ],
     },
   ],
@@ -503,7 +509,7 @@ const EXTRA_ITEMS: Item[] = [
   it('LIF', 'party', 'party', 'Emoji guess', { prompt: 'It rains from these ☁️', reveal: '🌧️ Clouds!' }),
 ]
 
-export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS, ...EXPLORER_PACK, ...(STAGE_PACKS as Item[])]
+export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS, ...EXPLORER_PACK, ...(STAGE_PACKS as Item[]), ...(CONTENT_PACK_2 as Item[]), ...(CONTENT_PACK_3 as Item[]), ...(CONTENT_PACK_4 as Item[]), ...(CONTENT_PACK_5 as Item[]), ...(CONTENT_PACK_6 as Item[])]
 
 export function localItemsFor(world: string, skills: string[], stage = 'explorer'): Item[] {
   return LOCAL_ITEMS.filter(i => i.world === world && i.stage === stage && skills.includes(i.skill))

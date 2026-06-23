@@ -4,6 +4,7 @@ import type { Item } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getItems } from '@lib/content'
 import { pickItems, recordAttempt, repairItem } from '@lib/adaptive'
+import { logLearnEvent } from '@lib/analytics'
 import { bumpQuest } from '@lib/quests'
 import { renderItem } from './interactions'
 import Buddy from '@components/avatar/Buddy'
@@ -33,6 +34,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
   const poolRef = useRef<Item[]>([])
   const usedRef = useRef<Set<string>>(new Set())
   const earnedXp = useRef(0)
+  const shownAt = useRef(Date.now())
 
   useEffect(() => {
     let cancelled = false
@@ -49,11 +51,15 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
   const total = queue?.length ?? 0
   const item = queue && idx < queue.length ? queue[idx] : null
 
+  // reset the per-question timer whenever a fresh item is shown
+  useEffect(() => { shownAt.current = Date.now() }, [idx, queue])
+
   const handleResult = (correct: boolean) => {
     if (answered || !item) return
     setAnswered(true)
     setLastCorrect(correct)
     recordAttempt(item.world, item.skill, correct)
+    logLearnEvent(item, correct, Date.now() - shownAt.current)
     if (correct) {
       setCorrectCount(c => c + 1)
       earnedXp.current += item.xp ?? 10

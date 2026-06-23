@@ -13,34 +13,21 @@ export interface CloudProfile {
   games_played: string[]
   unlocks: string[]
   role: string
+  dob: string | null
 }
-
-// Local progress snapshot taken from the store before a login merge.
-export interface LocalProgress {
-  learnerName: string
-  xp: number
-  level: number
-  diamonds: number
-  completedLessons: string[]
-  badges: string[]
-  gamesPlayed: string[]
-  unlocks: string[]
-}
-
-const uniq = (a: string[], b: string[]) => Array.from(new Set([...a, ...b]))
 
 /**
- * Sync the user's profile on login:
- *  - reads the cloud row (auto-created by the signup trigger),
- *  - merges any guest progress made before signing in,
- *  - writes the merged result back, and returns it for the store to hydrate.
- * Returns null if the backend isn't ready (table missing) so the app can
- * keep running on localStorage alone.
+ * Sync the signed-in user's profile on login. The cloud row (auto-created by
+ * the signup trigger) is the SINGLE SOURCE OF TRUTH — we read it verbatim and
+ * hydrate the store from it. We deliberately do NOT merge any leftover store
+ * values: those may belong to a *different* player (e.g. the parent we just
+ * switched away from), and merging them up is exactly what used to leak the
+ * parent's 50k diamonds onto a kid. Returns null if the backend isn't ready.
  */
-export async function syncProfileOnLogin(session: Session, local: LocalProgress): Promise<CloudProfile | null> {
+export async function syncProfileOnLogin(session: Session): Promise<CloudProfile | null> {
   const user = session.user
   const meta = user.user_metadata ?? {}
-  const googleName = (meta.full_name as string) || (meta.name as string) || local.learnerName
+  const fallbackName = (meta.display_name as string) || (meta.full_name as string) || (meta.name as string) || (user.email?.split('@')[0] ?? 'Player')
   const photo = (meta.avatar_url as string) || (meta.picture as string) || null
 
   let row: Record<string, unknown> | null = null
@@ -57,36 +44,33 @@ export async function syncProfileOnLogin(session: Session, local: LocalProgress)
     return null
   }
 
-  const merged: CloudProfile = {
-    display_name: (row?.display_name as string) || googleName,
-    photo_url: photo ?? (row?.photo_url as string) ?? null,
-    xp: Math.max(local.xp, (row?.xp as number) ?? 0),
-    level: Math.max(local.level, (row?.level as number) ?? 1),
-    diamonds: Math.max(local.diamonds, (row?.diamonds as number) ?? 0),
-    completed_lessons: uniq((row?.completed_lessons as string[]) ?? [], local.completedLessons),
-    badges: uniq((row?.badges as string[]) ?? [], local.badges),
-    games_played: uniq((row?.games_played as string[]) ?? [], local.gamesPlayed),
-    unlocks: uniq((row?.unlocks as string[]) ?? [], local.unlocks),
+  const profile: CloudProfile = {
+    display_name: (row?.display_name as string) || fallbackName,
+    photo_url: (row?.photo_url as string) ?? photo,
+    xp: (row?.xp as number) ?? 0,
+    level: (row?.level as number) ?? 1,
+    diamonds: (row?.diamonds as number) ?? 0,
+    completed_lessons: (row?.completed_lessons as string[]) ?? [],
+    badges: (row?.badges as string[]) ?? [],
+    games_played: (row?.games_played as string[]) ?? [],
+    unlocks: (row?.unlocks as string[]) ?? [],
     role: (row?.role as string) ?? 'user',
+    dob: (row?.dob as string) ?? (row?.birthday as string) ?? null,
   }
 
-  try {
-    await supabase.from('profiles').upsert({
-      id: user.id,
-      email: user.email,
-      display_name: merged.display_name,
-      photo_url: merged.photo_url,
-      xp: merged.xp,
-      level: merged.level,
-      diamonds: merged.diamonds,
-      completed_lessons: merged.completed_lessons,
-      badges: merged.badges,
-      games_played: merged.games_played,
-      unlocks: merged.unlocks,
-    })
-  } catch { /* non-fatal — we still hydrate from the merged value */ }
+  // Only backfill identity fields that the cloud row is missing (e.g. a brand-new
+  // Google parent whose display_name/photo haven't been written yet). Never touch
+  // xp/diamonds/progress here — the row owns those.
+  if (!row?.display_name || (!row?.photo_url && photo)) {
+    try {
+      await supabase.from('profiles').update({
+        display_name: profile.display_name,
+        photo_url: profile.photo_url,
+      }).eq('id', user.id)
+    } catch { /* non-fatal */ }
+  }
 
-  return merged
+  return profile
 }
 
 /** Push a progress patch for the signed-in user. Silently no-ops on failure. */

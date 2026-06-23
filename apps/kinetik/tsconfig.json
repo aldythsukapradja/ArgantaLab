@@ -24,6 +24,7 @@
       "@lib/*": ["src/lib/*"],
       "@store/*": ["src/store/*"],
       "@data/*": ["src/data/*"],
+      "@repo/*": ["src/repo/*"],
       "@pages/*": ["src/pages/*"]
     }
   },

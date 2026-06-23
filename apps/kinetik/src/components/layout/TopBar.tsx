@@ -1,31 +1,65 @@
-import { useAppStore, type Tab } from '@store/appStore'
-import { CIRCLES } from '@data/seed'
-import { IconSun, IconMoon, IconSwitch } from '@components/Icons'
-
-const TITLES: Record<Tab, string> = { today: 'Today', calendar: 'Calendar', moments: 'Moments', apps: 'Apps', me: 'Me' }
+import { useUiStore } from '@store/uiStore'
+import { useDataStore } from '@store/dataStore'
+import { initials } from '@data/energy'
+import { IconPlus } from '@components/Icons'
 
 export default function TopBar() {
-  const { tab, theme, toggleTheme, activeCircleId, setCircle } = useAppStore()
-  const circle = CIRCLES.find(c => c.id === activeCircleId) ?? CIRCLES[0]
+  const { activeCircleId, setCircle, go } = useUiStore()
+  const circles = useDataStore(s => s.circles)
+  const me = useDataStore(s => s.me)
 
-  const cycleCircle = () => {
-    const i = CIRCLES.findIndex(c => c.id === activeCircleId)
-    setCircle(CIRCLES[(i + 1) % CIRCLES.length].id)
-  }
+  const accentOf = (c: { accent: [string, string] }) => c.accent ?? ['var(--accent)', 'var(--care)']
 
   return (
     <header className="topbar">
-      <div>
-        <div className="tb-title">{TITLES[tab]}</div>
-        <button className="circle-pill" style={{ marginTop: 6 }} onClick={cycleCircle}>
-          <span className="circle-dot" style={{ background: `linear-gradient(135deg,${circle.accent[0]},${circle.accent[1]})` }} />
-          {circle.name}
-          <IconSwitch width={14} height={14} style={{ color: 'var(--accent)' }} />
+      {/* Row 1: wordmark + avatar */}
+      <div className="tb-row">
+        <div className="tb-wordmark">
+          <span className="wm-k">Kinetik</span><span className="wm-c">Circle</span>
+        </div>
+        <button
+          className="topbar-avatar"
+          onClick={() => go('me')}
+          aria-label="Profile"
+          style={me?.photoUrl ? undefined : { background: 'var(--grad)' }}
+        >
+          {me?.photoUrl
+            ? <img src={me.photoUrl} alt={me.name} className="topbar-avatar-img" referrerPolicy="no-referrer" />
+            : <span>{initials(me?.name || 'Me')}</span>}
         </button>
       </div>
-      <button className="avatar" onClick={toggleTheme} aria-label="Toggle theme" style={{ background: 'var(--card)', border: '0.5px solid var(--border-2)', color: 'var(--muted)' }}>
-        {theme === 'dark' ? <IconSun width={18} height={18} /> : <IconMoon width={18} height={18} />}
-      </button>
+
+      {/* Row 2: Life360-style scrollable circle pills */}
+      <div className="circle-rail" role="tablist" aria-label="Your circles">
+        {circles.map(c => {
+          const active = c.id === activeCircleId
+          const [a0, a1] = accentOf(c)
+          return (
+            <button
+              key={c.id}
+              role="tab"
+              aria-selected={active}
+              className={`circle-pill2${active ? ' active' : ''}`}
+              onClick={() => setCircle(c.id)}
+              style={active ? { background: `linear-gradient(135deg, ${a0}, ${a1})` } : undefined}
+            >
+              <span
+                className="cp-dot"
+                style={{ background: active ? 'rgba(255,255,255,0.9)' : `linear-gradient(135deg, ${a0}, ${a1})` }}
+              />
+              <span className="cp-name">{c.name}</span>
+            </button>
+          )
+        })}
+        <button
+          className="circle-pill2 cp-add"
+          onClick={() => go('me')}
+          aria-label="Add circle"
+          title="Add circle"
+        >
+          <IconPlus width={15} height={15} />
+        </button>
+      </div>
     </header>
   )
 }

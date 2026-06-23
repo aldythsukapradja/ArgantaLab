@@ -7,7 +7,10 @@ import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
 import { memStore } from '@lib/memStore'
 import { pullLearnState } from '@lib/learnCloud'
 import { pullAvatarState, pushAvatarState } from '@lib/avatarCloud'
+import { ensureStarterPack } from '@lib/rewards'
+import { setPlayerId } from '@lib/player'
 import { touchPresence } from '@lib/cloudAuth'
+import { initContent } from '@lib/content'
 import { injectCircle, circleCtx, useCircleBridge } from '@lib/circleBridge'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
@@ -144,12 +147,14 @@ function CloudSync() {
   const outfit = useAppStore(s => s.outfit)
   const ownedCosmetics = useAppStore(s => s.ownedCosmetics)
 
-  // On login: pull the cloud profile, merge guest progress, hydrate the store,
-  // and pull the user's saved games into local storage.
+  // On login/switch: wipe the previous player from the store, then pull THIS
+  // account's cloud profile and hydrate from it. Identity == the session.
   useEffect(() => {
     if (!session || session === 'loading') {
       userIdRef.current = null; setReady(false)
       setGamesOwner(null); memStore.clear()   // drop the session cache on logout
+      setPlayerId('owner')
+      useAppStore.getState().resetIdentity()  // clear name/wallet/progress on logout
       return
     }
     const uid = session.user.id
@@ -158,11 +163,20 @@ function CloudSync() {
     setReady(false)
     memStore.clear()       // never carry another account's progress between users
     setGamesOwner(uid)     // switch to this user's own games bucket
-    const st = useAppStore.getState()
-    syncProfileOnLogin(session, {
-      learnerName: st.learnerName, xp: st.xp, level: st.level, diamonds: st.diamonds,
-      completedLessons: st.completedLessons, badges: st.badges, gamesPlayed: st.gamesPlayed, unlocks: st.unlocks,
-    }).then(p => { if (p) hydrate(p); setReady(true) })
+    setPlayerId(uid)       // namespace the local learn cache to this account
+    // Blank-slate the store BEFORE hydrating so no prior player's values linger
+    // (and can never be pushed back up into this account by the debounced saver).
+    useAppStore.getState().resetIdentity()
+    syncProfileOnLogin(session).then(p => {
+      if (p) hydrate(p)
+      setReady(true)
+      // Grown-ups get a one-time 50,000-diamond reward budget. Idempotent in the
+      // DB; we sync the store to the returned balance so the debounced profile
+      // push never clobbers the server-side grant.
+      if (useAppStore.getState().role !== 'kid') {
+        ensureStarterPack().then(bal => { if (bal > 0) useAppStore.setState({ diamonds: bal }) })
+      }
+    })
     // Replace the local view with exactly this user's cloud games.
     pullGames(uid).then(g => replaceWithCloud(g ?? []))
     // Merge cloud learn progress (rings, mastery, node completion) into local.
@@ -261,7 +275,7 @@ function AppShell() {
   useEffect(() => {
     if (session === 'loading') return
     const st = useAppStore.getState()
-    const authed = st.isAuthed() || st.activeKidId !== null || st.role === 'kid'
+    const authed = st.isAuthed() || st.role === 'kid'
     if (!authed && !st.showSwitcher) st.lockSession()
   }, [session])
 
@@ -302,6 +316,7 @@ function App() {
   const closeAuthWall = useAppStore(s => s.closeAuthWall)
 
   useEffect(() => {
+    initContent()   // Duolingo-style: serve cached curriculum, revalidate in background
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
