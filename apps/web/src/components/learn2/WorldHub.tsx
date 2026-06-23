@@ -27,10 +27,11 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addDiamonds, addToast, resolvedOutfit, session, go, stageKey } = useAppStore()
+  const { requireAuth, addDiamonds, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode } = useAppStore()
   const outfit = resolvedOutfit()
   const stage = STAGES.find(s => s.key === stageKey)
   const stageMeta = STAGE_META[stageKey]
+  const adult = !isKidMode()
   const uid = session && session !== 'loading' ? session.user.id : null
   const [spine, setSpine] = useState<Spine>('journey')
   const [active, setActive] = useState<JourneyNode | null>(null)
@@ -99,7 +100,15 @@ export default function WorldHub({ world }: { world: World }) {
         <div className="le-world-meta">
           <h1>{world.name}</h1>
           <p style={{ color: world.color }}>{world.vibe}</p>
-          {stage && stageMeta && <span className="le-stage-pill" style={{ background: `${stageMeta.color}1f`, color: stageMeta.color }}>{stageMeta.emoji} {stage.label} · ages {stage.minAge}–{stage.maxAge}</span>}
+          {adult ? (
+            <select className="le-stage-pick" value={stageKey} onChange={e => setStage(e.target.value)}
+              title="Preview content for an age band"
+              style={{ background: `${stageMeta.color}1f`, color: stageMeta.color, border: 'none', borderRadius: 999, padding: '4px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+              {STAGES.map(s => <option key={s.key} value={s.key} style={{ color: '#111' }}>{STAGE_META[s.key].emoji} {s.label} · ages {s.minAge}–{s.maxAge}</option>)}
+            </select>
+          ) : (
+            stage && stageMeta && <span className="le-stage-pill" style={{ background: `${stageMeta.color}1f`, color: stageMeta.color }}>{stageMeta.emoji} {stage.label} · ages {stage.minAge}–{stage.maxAge}</span>
+          )}
         </div>
         <Ring pct={ring} color={world.color} />
       </div>

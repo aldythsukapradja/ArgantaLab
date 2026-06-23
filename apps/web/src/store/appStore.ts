@@ -79,6 +79,7 @@ interface AppStore {
   // — actions —
   hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string; dob?: string | null }) => void
   resetIdentity: () => void
+  setStage: (key: string) => void
   isAdmin: () => boolean
   setCostume: (worldKey: string | null) => void
   // — player session (kid vs grown-up) —
@@ -205,10 +206,15 @@ export const useAppStore = create<AppStore>()(
           gamesPlayed: p.games_played ?? [],
           unlocks: p.unlocks ?? [],
           role: p.role ?? get().role,
-          // content difficulty follows the logged-in account's own age
-          stageKey: stageForDob(p.dob ?? undefined).key,
+          // Kids are LOCKED to their own age band. Grown-ups have no kid DOB, so
+          // (instead of defaulting to "Tiny") they start at the oldest band and
+          // can switch freely via setStage().
+          stageKey: (p.role ?? get().role) === 'kid' ? stageForDob(p.dob ?? undefined).key : 'legend',
         })
       },
+
+      // Grown-ups pick any age band to preview; kids can't change theirs.
+      setStage(key) { if (get().role !== 'kid') set({ stageKey: key }) },
 
       // Wipe the active player's identity/wallet/progress back to a blank slate.
       // Called on logout and at the start of every session switch so the next

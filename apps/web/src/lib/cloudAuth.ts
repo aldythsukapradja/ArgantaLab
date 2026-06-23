@@ -255,3 +255,70 @@ export async function myFriendCode(): Promise<string | null> {
   const { data } = await supabase.from('profiles').select('friend_code').eq('id', uid).single()
   return (data?.friend_code as string) ?? null
 }
+
+// ── Friends + social stats + per-kid rings ──────────────────
+export interface SocialStats { circles: number; connections: number; friends: number }
+export interface Friend { id: string; display_name: string; photo_url: string | null; role: string; last_seen: string | null; source: string }
+export interface FriendRequest { id: string; from_id: string; from_name: string; from_photo: string | null; created_at: string }
+export interface KidFriend { id: string; display_name: string; photo_url: string | null; status: string }
+export interface WorldRing { world: string; pct: number }
+
+export async function socialStats(userId?: string): Promise<SocialStats> {
+  if (!cloudEnabled) return { circles: 0, connections: 0, friends: 0 }
+  const { data, error } = await supabase.rpc('social_stats', userId ? { p_user: userId } : {})
+  if (error || !data) return { circles: 0, connections: 0, friends: 0 }
+  return data as SocialStats
+}
+
+export async function myFriends(): Promise<Friend[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('my_friends')
+  if (error || !data) return []
+  return data as Friend[]
+}
+
+export async function myFriendRequests(): Promise<FriendRequest[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('my_friend_requests')
+  if (error || !data) return []
+  return data as FriendRequest[]
+}
+
+export async function sendFriendRequest(code: string): Promise<CloudResult<{ status: string }>> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const { data, error } = await supabase.rpc('send_friend_request', { p_code: code.trim().toUpperCase() })
+  if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
+  return { ok: true, data: data as { status: string } }
+}
+
+export async function respondFriendRequest(id: string, accept: boolean): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('respond_friend_request', { p_id: id, p_accept: accept })
+  return !error && data === true
+}
+
+export async function removeFriend(userId: string): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('remove_friend', { p_user: userId })
+  return !error && data === true
+}
+
+export async function kidFriends(kidId: string): Promise<KidFriend[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('kid_friends', { p_kid: kidId })
+  if (error || !data) return []
+  return data as KidFriend[]
+}
+
+export async function removeKidFriend(kidId: string, userId: string): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('remove_kid_friend', { p_kid: kidId, p_user: userId })
+  return !error && data === true
+}
+
+export async function kidWorldRings(kidId: string): Promise<WorldRing[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('kid_world_rings', { p_kid: kidId })
+  if (error || !data) return []
+  return data as WorldRing[]
+}
