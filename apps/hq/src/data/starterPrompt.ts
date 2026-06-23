@@ -524,4 +524,3 @@ export const PROMPT_CATEGORIES = [
   { key: 'rpg',      label: 'RPG / Adventure',  emoji: '⚔️', hint: 'Top-down, quests, inventory, dialogue' },
   { key: 'survival', label: 'Survival',         emoji: '🏕️', hint: 'Resource gathering, crafting, day/night cycle' },
 ]
-`
