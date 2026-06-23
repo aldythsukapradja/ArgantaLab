@@ -10,6 +10,7 @@ export default function Today() {
   const events = useDataStore(s => s.events)
   const routines = useDataStore(s => s.routines)
   const circles = useDataStore(s => s.circles)
+  const me = useDataStore(s => s.me)
   const activeCircleId = useUiStore(s => s.activeCircleId)
   const go = useUiStore(s => s.go)
 
@@ -26,8 +27,7 @@ export default function Today() {
   const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
   const summary = agenda.length === 0 ? 'A clear day ahead.' : `${agenda.length} plan${agenda.length === 1 ? '' : 's'} today${clashes ? `, ${clashes} clash` : ''}.`
 
-  const owner = circle ? personById(circle.memberIds[0]) : undefined
-  const ownerName = owner?.name ?? 'there'
+  const ownerName = (me?.name ?? 'there').split(' ')[0]
   const accent0 = circle?.accent[0] ?? '#F43F5E'
 
   const root = useRef<HTMLDivElement | null>(null)
