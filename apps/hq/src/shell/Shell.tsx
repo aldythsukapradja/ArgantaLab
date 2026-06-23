@@ -6,7 +6,7 @@ import { Data } from '../surfaces/Data'
 import { Pulse } from '../surfaces/Pulse'
 import { Portfolio } from '../surfaces/Portfolio'
 import { Audience } from '../surfaces/Audience'
-import { Builder } from '../surfaces/Builder'
+import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 
 function Surface() {
   const { surface } = useHQ()
@@ -15,7 +15,8 @@ function Surface() {
     case 'pulse': return <Pulse />
     case 'portfolio': return <Portfolio />
     case 'audience': return <Audience />
-    case 'builder': return <Builder />
+    case 'game': return <GameBuilder />
+    case 'app': return <AppBuilder />
   }
 }
 

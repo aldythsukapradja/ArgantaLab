@@ -3,7 +3,8 @@ import { useHQ, surfaceLabel } from './store'
 import { signOut } from '../lib/auth'
 
 export function Topbar({ canSignOut }: { canSignOut: boolean }) {
-  const { surface, dataTab, theme, toggleTheme } = useHQ()
+  const { surface, dataTab, builderSub, theme, toggleTheme } = useHQ()
+  const isBuilder = surface === 'game' || surface === 'app'
   return (
     <header className="topbar">
       <div className="crumb">
@@ -11,6 +12,7 @@ export function Topbar({ canSignOut }: { canSignOut: boolean }) {
         <span>/</span>
         <b>{surfaceLabel(surface)}</b>
         {surface === 'data' && (<><span>/</span><b style={{ textTransform: 'capitalize' }}>{dataTab}</b></>)}
+        {isBuilder && (<><span>/</span><b style={{ textTransform: 'capitalize' }}>{builderSub}</b></>)}
       </div>
 
       <div style={{ flex: 1 }} />

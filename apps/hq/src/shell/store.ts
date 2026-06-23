@@ -1,23 +1,28 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'portfolio' | 'pulse' | 'data' | 'audience' | 'builder'
+export type SurfaceId = 'portfolio' | 'pulse' | 'data' | 'audience' | 'game' | 'app'
 export type DataTab = 'schema' | 'tables' | 'ontology'
-export type BuilderTab = 'game' | 'app'
+export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 export type Theme = 'light' | 'dark'
 
 const SURFACE_LABEL: Record<SurfaceId, string> = {
-  portfolio: 'Portfolio', pulse: 'Pulse', data: 'Data', audience: 'Audience', builder: 'Builder',
+  portfolio: 'Portfolio', pulse: 'Pulse', data: 'Data', audience: 'Audience',
+  game: 'Game Builder', app: 'App Builder',
 }
 export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 
 interface HQState {
   surface: SurfaceId
   dataTab: DataTab
-  builderTab: BuilderTab
+  builderSub: BuilderSub
+  studioId: string | null          // artifact being edited in Studio (null = new)
+  analyticsFocus: string | null    // artifact selected in Analytics detail
   theme: Theme
   go: (s: SurfaceId) => void
   setDataTab: (t: DataTab) => void
-  setBuilderTab: (t: BuilderTab) => void
+  setBuilderSub: (t: BuilderSub) => void
+  openStudio: (id?: string | null) => void
+  openAnalytics: (focusId?: string | null) => void
   toggleTheme: () => void
 }
 
@@ -27,11 +32,15 @@ const initialTheme = (): Theme =>
 export const useHQ = create<HQState>((set) => ({
   surface: 'data',
   dataTab: 'schema',
-  builderTab: 'game',
+  builderSub: 'catalogue',
+  studioId: null,
+  analyticsFocus: null,
   theme: initialTheme(),
-  go: (surface) => set({ surface }),
+  go: (surface) => set({ surface, builderSub: 'catalogue', studioId: null }),
   setDataTab: (dataTab) => set({ dataTab }),
-  setBuilderTab: (builderTab) => set({ builderTab }),
+  setBuilderSub: (builderSub) => set({ builderSub }),
+  openStudio: (id = null) => set({ builderSub: 'studio', studioId: id }),
+  openAnalytics: (focusId = null) => set({ builderSub: 'analytics', analyticsFocus: focusId }),
   toggleTheme: () => set((s) => {
     const theme: Theme = s.theme === 'light' ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', theme)
