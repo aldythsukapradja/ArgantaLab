@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Gamepad2, Plus, ArrowLeft, RefreshCw, Send,
   EyeOff, Copy, Check, Play, AlertTriangle,
+  ChevronDown,
 } from 'lucide-react'
 import { STARTER_PROMPT, PROMPT_CATEGORIES } from '../data/starterPrompt'
-import { live, type PublishedGame } from '../data/live'
+import { live, type PublishedGame, type Circle } from '../data/live'
 import { supabase, cloudEnabled } from '../lib/supabase'
 import { Empty, Loading } from '../components/Empty'
 
@@ -38,20 +39,34 @@ function validate(html: string) {
 }
 
 export function GameBuilder() {
-  const [view, setView]        = useState<View>('catalog')
-  const [games, setGames]      = useState<PublishedGame[] | undefined>(undefined)
-  const [editingId, setEditId] = useState<string | null>(null)
-  const [meta, setMeta]        = useState<Meta>(emptyMeta())
-  const [publishing, setPub]   = useState(false)
-  const [published, setLive]   = useState(false)
-  const [error, setErr]        = useState<string | null>(null)
+  const [view, setView]           = useState<View>('catalog')
+  const [games, setGames]         = useState<PublishedGame[] | undefined>(undefined)
+  const [editingId, setEditId]    = useState<string | null>(null)
+  const [meta, setMeta]           = useState<Meta>(emptyMeta())
+  const [publishing, setPub]      = useState(false)
+  const [published, setLive]      = useState(false)
+  const [error, setErr]           = useState<string | null>(null)
+  const [circles, setCircles]     = useState<Circle[]>([])
+  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setGames(undefined)
     live.listGames().then(g => setGames(g))
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const loadCircles = useCallback(() => {
+    live.listUserCircles().then(c => {
+      setCircles(c)
+      if (c.length > 0 && !selectedCircleId) {
+        setSelectedCircleId(c[0].id)
+      }
+    })
+  }, [selectedCircleId])
+
+  useEffect(() => {
+    load()
+    loadCircles()
+  }, [load, loadCircles])
 
   const openNew = () => {
     setMeta(emptyMeta())
@@ -87,6 +102,8 @@ export function GameBuilder() {
       tags: meta.tags.split(',').map(t => t.trim()).filter(Boolean),
       ageMin: meta.ageMin ? parseInt(meta.ageMin, 10) : null,
       ageMax: meta.ageMax ? parseInt(meta.ageMax, 10) : null,
+      visibility: selectedCircleId ? 'circle' : 'public',
+      circle_ids: selectedCircleId ? [selectedCircleId] : undefined,
     })
     if (ok) { setEditId(id); setLive(true); load() }
     else setErr('Publish failed — check Supabase connection.')
@@ -114,6 +131,9 @@ export function GameBuilder() {
       onPublish={publish}
       onUnpublish={unpublish}
       onBack={() => setView('catalog')}
+      circles={circles}
+      selectedCircleId={selectedCircleId}
+      onSelectCircle={setSelectedCircleId}
     />
   )
 }
@@ -234,7 +254,7 @@ function GameCard({ game, onClick }: { game: PublishedGame; onClick: () => void 
 
 // ── Build View ─────────────────────────────────────────────────────────
 
-function BuildView({ meta, onChange, publishing, published, error, onPublish, onUnpublish, onBack }: {
+function BuildView({ meta, onChange, publishing, published, error, onPublish, onUnpublish, onBack, circles, selectedCircleId, onSelectCircle }: {
   meta: Meta
   onChange: (p: Partial<Meta>) => void
   publishing: boolean
@@ -243,6 +263,9 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
   onPublish: () => void
   onUnpublish: () => void
   onBack: () => void
+  circles: Circle[]
+  selectedCircleId: string | null
+  onSelectCircle: (id: string | null) => void
 }) {
   const [copied, setCopied]   = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
@@ -269,6 +292,82 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
             <ArrowLeft size={13} /> Catalog
           </button>
           <div className="h1" style={{ margin: 0 }}>{meta.title || 'New Game'}</div>
+        </div>
+        <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+          {circles.length > 0 && (
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <button
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: '1px solid var(--bd2)',
+                  background: 'var(--bg)',
+                  color: 'var(--tx)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+                onClick={(e) => {
+                  const menu = e.currentTarget.nextElementSibling as HTMLDivElement
+                  menu.style.display = menu.style.display === 'block' ? 'none' : 'block'
+                }}
+              >
+                Circle: {selectedCircleId ? circles.find(c => c.id === selectedCircleId)?.name : 'Public'}
+                <ChevronDown size={13} />
+              </button>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: 4,
+                  background: 'var(--bg)',
+                  border: '1px solid var(--bd)',
+                  borderRadius: 8,
+                  display: 'none',
+                  zIndex: 10,
+                  minWidth: 200,
+                }}
+              >
+                <button
+                  onClick={() => { onSelectCircle(null); (document.querySelector('[style*="position: absolute"]') as HTMLDivElement)?.setAttribute('style', 'display: none') }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: 'none',
+                    background: selectedCircleId === null ? 'var(--acc-soft)' : 'transparent',
+                    color: selectedCircleId === null ? 'var(--acc-text)' : 'var(--tx)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                  }}
+                >
+                  Public (Global)
+                </button>
+                {circles.map(circle => (
+                  <button
+                    key={circle.id}
+                    onClick={() => { onSelectCircle(circle.id); (document.querySelector('[style*="position: absolute"]') as HTMLDivElement)?.setAttribute('style', 'display: none') }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: selectedCircleId === circle.id ? 'var(--acc-soft)' : 'transparent',
+                      color: selectedCircleId === circle.id ? 'var(--acc-text)' : 'var(--tx)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      borderTop: '1px solid var(--bd2)',
+                    }}
+                  >
+                    {circle.emoji} {circle.name} ({circle.members?.length || 0})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="row">
           {published && (
