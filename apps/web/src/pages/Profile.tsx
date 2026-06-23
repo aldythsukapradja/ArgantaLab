@@ -10,7 +10,7 @@ import {
 import Buddy from '@components/avatar/Buddy'
 import KidForm, { type KidFormData } from '@components/auth/KidForm'
 import { cloudEnabled } from '@lib/supabase'
-import { signOutCloud, linkKid, parentCreateKid } from '@lib/cloudAuth'
+import { signOutCloud, linkKid, parentCreateKid, adoptKid } from '@lib/cloudAuth'
 
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
@@ -49,6 +49,22 @@ export default function Profile() {
     const r = await linkKid(code)
     addToast(r.ok ? 'Kid linked! 👨‍👩‍👧' : (r.error ?? 'Could not link'), r.ok ? '🔗' : '⚠️')
     if (r.ok) refresh()
+  }
+  // One-tap repair: link every local kid to this grown-up's cloud account by
+  // PIN, so kids created before guardian-linking was reliable (or on another
+  // device) finally appear in the Grown-ups dashboard switcher.
+  const [syncing, setSyncing] = useState(false)
+  const syncKidsToCloud = async () => {
+    if (!realSession?.user) { addToast('Sign in as a grown-up first', '⚠️'); return }
+    const kids = loadCircles().kids
+    if (kids.length === 0) { addToast('No kid profiles on this device yet', '🧒'); return }
+    setSyncing(true)
+    let linked = 0
+    for (const k of kids) {
+      if (await adoptKid(k.username, k.pin)) linked++
+    }
+    setSyncing(false)
+    addToast(linked > 0 ? `Synced ${linked} kid${linked > 1 ? 's' : ''} to cloud ☁️` : 'Nothing to sync (check PINs)', linked > 0 ? '✨' : '⚠️')
   }
   const [view, setView] = useState<'home' | 'add' | 'edit'>('home')
   const [editing, setEditing] = useState<KidProfile | null>(null)
@@ -137,6 +153,9 @@ export default function Profile() {
         {cloudEnabled
           ? <button className="ig-btn" onClick={linkAKid}>🔗 Link kid</button>
           : <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>}
+        {cloudEnabled && state.kids.length > 0 && (
+          <button className="ig-btn" disabled={syncing} onClick={syncKidsToCloud}>{syncing ? '☁️ Syncing…' : '☁️ Sync to cloud'}</button>
+        )}
         <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
       </div>
 
