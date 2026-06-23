@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import {
   Gamepad2, Plus, ArrowLeft, RefreshCw, Send,
   EyeOff, Copy, Check, Play, AlertTriangle,
+  Star, Users, Monitor, Tablet, Smartphone, ExternalLink,
 } from 'lucide-react'
 import { STARTER_PROMPT, PROMPT_CATEGORIES } from '../data/starterPrompt'
+import { FEATURED_GAMES, featuredUrl, featuredArt, type FeaturedGame } from '../data/featuredGames'
 import { live, type PublishedGame } from '../data/live'
 import { supabase, cloudEnabled } from '../lib/supabase'
 import { Empty, Loading } from '../components/Empty'
@@ -23,6 +25,17 @@ const emptyMeta = (): Meta => ({
   title: '', category: 'platformer', html: '',
   description: '', tags: '', ageMin: '', ageMax: '',
 })
+
+// Preview device presets. `ar` drives the frame aspect-ratio; the frame fits to
+// the panel height and clamps to its width, so every device stays fully visible.
+type DeviceKey = 'desktop' | 'tablet' | 'phone'
+const DEVICES: Record<DeviceKey, {
+  label: string; icon: typeof Monitor; ar: string; radius: number; bezel: number
+}> = {
+  desktop: { label: 'Desktop 16:9', icon: Monitor,    ar: '16 / 9',   radius: 8,  bezel: 0  },
+  tablet:  { label: 'Tablet',       icon: Tablet,     ar: '3 / 4',    radius: 18, bezel: 10 },
+  phone:   { label: 'iPhone',       icon: Smartphone, ar: '9 / 19.5', radius: 32, bezel: 8  },
+}
 
 function validate(html: string) {
   return {
@@ -126,8 +139,22 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
   onEdit: (g: PublishedGame) => void
   onRefresh: () => void
 }) {
-  const pub  = games?.filter(g => g.visibility === 'public') ?? []
-  const priv = games?.filter(g => g.visibility !== 'public') ?? []
+  const [userFilter, setUserFilter] = useState<string | null>(null)
+
+  const community = games?.filter(g => g.visibility === 'public') ?? []
+  const drafts    = games?.filter(g => g.visibility !== 'public') ?? []
+
+  // Distinct creators across all DB games drive the "filter by user" row.
+  const creators = useMemo(() => {
+    const names = (games ?? []).map(g => g.creator_name || 'Unknown')
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b))
+  }, [games])
+
+  const byUser = (g: PublishedGame) =>
+    !userFilter || (g.creator_name || 'Unknown') === userFilter
+
+  const pub  = community.filter(byUser)
+  const priv = drafts.filter(byUser)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -148,6 +175,9 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
         </div>
       </div>
 
+      {/* ── Featured · KinetikCircle (built-in flagship games) ── */}
+      <FeaturedSection games={FEATURED_GAMES} />
+
       {!cloudEnabled && (
         <div className="insight warn" style={{ borderRadius: 'var(--r-md)' }}>
           <span style={{ fontSize: 16 }}>⚠️</span>
@@ -157,14 +187,25 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
 
       {games === undefined && <Loading label="Loading game catalog…" />}
 
-      {games !== undefined && games.length === 0 && (
-        <Empty icon={<Gamepad2 />} title="No games yet">
+      {/* ── Filter by user ── */}
+      {creators.length > 0 && (
+        <UserFilter creators={creators} value={userFilter} onChange={setUserFilter} />
+      )}
+
+      {games !== undefined && community.length === 0 && drafts.length === 0 && (
+        <Empty icon={<Gamepad2 />} title="No published games yet">
           Hit <b>New Game</b>, copy the starter prompt into Claude or ChatGPT, then paste the generated HTML back here.
         </Empty>
       )}
 
+      {(community.length > 0 || drafts.length > 0) && pub.length === 0 && priv.length === 0 && (
+        <Empty icon={<Users />} title="No games from this creator">
+          Clear the user filter to see every game.
+        </Empty>
+      )}
+
       {pub.length > 0 && (
-        <Section label={`Published (${pub.length})`} badge="pill-ok">
+        <Section label={`Community (${pub.length})`} badge="pill-ok">
           <GameGrid games={pub} onEdit={onEdit} />
         </Section>
       )}
@@ -174,6 +215,93 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
           <GameGrid games={priv} onEdit={onEdit} />
         </Section>
       )}
+    </div>
+  )
+}
+
+// ── Featured group ───────────────────────────────────────────────────────
+
+function FeaturedSection({ games }: { games: FeaturedGame[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="row" style={{ gap: 8 }}>
+        <Star size={14} fill="var(--acc)" color="var(--acc)" />
+        <span style={{ fontSize: 13, fontWeight: 700 }}>Featured</span>
+        <span className="pill" style={{
+          background: 'var(--acc-soft)', color: 'var(--acc-text)',
+          border: '1px solid var(--acc)', fontSize: 10.5,
+        }}>
+          KinetikCircle · {games.length}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+        {games.map(g => <FeaturedCard key={g.id} game={g} />)}
+      </div>
+    </div>
+  )
+}
+
+function FeaturedCard({ game }: { game: FeaturedGame }) {
+  const open = () => window.open(featuredUrl(game.file), '_blank', 'noopener')
+  return (
+    <button
+      className="card"
+      onClick={open}
+      title="Open in ArgantaLab"
+      style={{ padding: 0, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', width: '100%' }}
+    >
+      <div style={{
+        height: 76, position: 'relative',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
+        ...featuredArt(game.hue),
+      }}>
+        {game.emoji}
+        <span style={{
+          position: 'absolute', top: 7, left: 7, fontSize: 9, fontWeight: 700,
+          letterSpacing: '0.04em', textTransform: 'uppercase',
+          padding: '2px 7px', borderRadius: 20,
+          background: 'rgba(0,0,0,0.35)', color: '#fff', backdropFilter: 'blur(4px)',
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+        }}>
+          <Star size={9} fill="#fff" /> Featured
+        </span>
+      </div>
+      <div style={{ padding: '10px 12px 12px' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {game.name}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{game.tags.join(' · ')}</div>
+        <div style={{ fontSize: 11, color: 'var(--acc-text)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <ExternalLink size={11} /> Open in ArgantaLab
+        </div>
+      </div>
+    </button>
+  )
+}
+
+// ── Filter by user ───────────────────────────────────────────────────────
+
+function UserFilter({ creators, value, onChange }: {
+  creators: string[]
+  value: string | null
+  onChange: (v: string | null) => void
+}) {
+  const pill = (active: boolean): React.CSSProperties => ({
+    padding: '5px 11px', borderRadius: 20, fontSize: 11.5, cursor: 'pointer',
+    border: `1.5px solid ${active ? 'var(--acc)' : 'var(--bd2)'}`,
+    background: active ? 'var(--acc-soft)' : 'var(--bg)',
+    color: active ? 'var(--acc-text)' : 'var(--tx2)',
+    display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+  })
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <span style={{ fontSize: 11, color: 'var(--tx3)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        <Users size={12} /> Filter by user
+      </span>
+      <button onClick={() => onChange(null)} style={pill(value === null)}>All</button>
+      {creators.map(c => (
+        <button key={c} onClick={() => onChange(c)} style={pill(value === c)}>{c}</button>
+      ))}
     </div>
   )
 }
@@ -221,6 +349,9 @@ function GameCard({ game, onClick }: { game: PublishedGame; onClick: () => void 
         <div style={{ fontSize: 11, color: 'var(--tx3)' }}>
           {cat ? `${cat.emoji} ${cat.label}` : 'Game'}
         </div>
+        <div style={{ fontSize: 10.5, color: 'var(--tx3)', marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          by {game.creator_name || 'Unknown'}
+        </div>
         <div style={{ fontSize: 11, color: 'var(--tx3)', marginTop: 5 }}>
           {game.plays} plays
           {game.visibility === 'public'
@@ -246,9 +377,19 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
 }) {
   const [copied, setCopied]   = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
+  const [device, setDevice]   = useState<DeviceKey>('desktop')
   const v = validate(meta.html)
   const canPublish = !publishing && meta.title.trim().length > 0 && meta.html.trim().length > 0
   const activeCat  = PROMPT_CATEGORIES.find(c => c.key === meta.category)
+
+  // Pop the current HTML into a real browser tab — the truest "how it feels".
+  const openNewTab = () => {
+    if (!meta.html.trim()) return
+    const blob = new Blob([meta.html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
 
   const copyPrompt = async () => {
     const suffix = activeCat
@@ -296,7 +437,7 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
       {published && (
         <div className="insight ok" style={{ borderRadius: 'var(--r-md)' }}>
           <span style={{ fontSize: 15 }}>✓</span>
-          <div><b>"{meta.title}"</b> is live in ArgantaLab's Discover tab. Kids can play it right now.</div>
+          <div><b>"{meta.title}"</b> is live in ArgantaLab's Discover tab, published via <b>KinetikCircle</b>. Kids can play it right now.</div>
         </div>
       )}
 
@@ -477,12 +618,50 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
           <div className="card" style={{ overflow: 'hidden' }}>
             <div style={{
               padding: '10px 14px', borderBottom: '1px solid var(--bd)',
-              display: 'flex', alignItems: 'center', gap: 8,
+              display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
             }}>
               <Gamepad2 size={14} color="var(--acc)" />
-              <span style={{ fontSize: 12.5, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 500, flex: 1, minWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {meta.title || 'Live Preview'}
               </span>
+
+              {/* Device segmented control */}
+              <div style={{ display: 'inline-flex', border: '1px solid var(--bd2)', borderRadius: 8, overflow: 'hidden' }}>
+                {(Object.keys(DEVICES) as DeviceKey[]).map(k => {
+                  const d = DEVICES[k]
+                  const active = device === k
+                  const Icon = d.icon
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => setDevice(k)}
+                      title={d.label}
+                      style={{
+                        padding: '5px 9px', cursor: 'pointer', border: 'none',
+                        background: active ? 'var(--acc)' : 'transparent',
+                        color: active ? '#fff' : 'var(--tx3)',
+                        display: 'inline-flex', alignItems: 'center',
+                      }}
+                    >
+                      <Icon size={13} />
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                onClick={openNewTab}
+                disabled={!meta.html}
+                title="Open in a new browser tab"
+                className="chip"
+                style={{
+                  gap: 4, padding: '4px 10px', fontSize: 11.5,
+                  color: meta.html ? 'var(--tx2)' : 'var(--tx3)',
+                }}
+              >
+                <ExternalLink size={11} /> New tab
+              </button>
+
               <button
                 onClick={() => setPreview(meta.html || null)}
                 disabled={!meta.html}
@@ -498,19 +677,39 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
               </button>
             </div>
 
-            <div style={{ height: 420, background: '#05070f', position: 'relative' }}>
+            <div style={{
+              height: 460, background: '#05070f', position: 'relative',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: device === 'desktop' ? 0 : 16, boxSizing: 'border-box',
+            }}>
               {preview ? (
-                <iframe
-                  key={preview.slice(0, 120)}
-                  srcDoc={preview}
-                  sandbox="allow-scripts allow-pointer-lock"
-                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                  title="Game Preview"
-                />
+                <div style={{
+                  aspectRatio: DEVICES[device].ar,
+                  height: '100%', maxWidth: '100%', maxHeight: '100%',
+                  background: '#000',
+                  borderRadius: DEVICES[device].radius,
+                  padding: DEVICES[device].bezel,
+                  boxShadow: device === 'desktop'
+                    ? 'none'
+                    : '0 0 0 2px #1b1f30, 0 18px 40px rgba(0,0,0,0.55)',
+                  boxSizing: 'border-box',
+                }}>
+                  <iframe
+                    key={preview.slice(0, 120) + device}
+                    srcDoc={preview}
+                    sandbox="allow-scripts allow-pointer-lock"
+                    style={{
+                      width: '100%', height: '100%', border: 'none', display: 'block',
+                      borderRadius: Math.max(0, DEVICES[device].radius - DEVICES[device].bezel),
+                      background: '#000',
+                    }}
+                    title="Game Preview"
+                  />
+                </div>
               ) : (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  height: '100%', gap: 10, color: 'rgba(255,255,255,0.3)', fontSize: 13,
+                  gap: 10, color: 'rgba(255,255,255,0.3)', fontSize: 13,
                 }}>
                   <Gamepad2 size={28} strokeWidth={1.5} />
                   <span style={{ textAlign: 'center' }}>
@@ -523,7 +722,7 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
 
           {preview && (
             <div style={{ fontSize: 11, color: 'var(--tx3)', textAlign: 'center' }}>
-              Preview runs sandboxed · click inside to interact · re-paste + Run to reload
+              {DEVICES[device].label} preview · sandboxed · click inside to interact · use New tab for full-action feel
             </div>
           )}
         </div>
