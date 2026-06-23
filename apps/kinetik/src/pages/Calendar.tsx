@@ -1,14 +1,22 @@
 import { useState } from 'react'
-import { useAppStore } from '@store/appStore'
+import { useDataStore } from '@store/dataStore'
+import { useUiStore } from '@store/uiStore'
 import { week, occurrencesOn, fmtTime, DOW } from '@lib/cal'
-import { CIRCLES, PEOPLE, ROUTINES, ENERGY, initials, type EnergyKey } from '@data/seed'
+import { ENERGY, initials } from '@data/energy'
+import type { EnergyKey, Person } from '@data/types'
 import { IconChevron, IconChevronL, IconPlus } from '@components/Icons'
 
 export default function Calendar() {
-  const { events, activeCircleId, calWeekOffset, setWeekOffset, calFilter, setFilter, addEvent } = useAppStore()
-  const [adding, setAdding] = useState<string | null>(null)   // iso date or null
-  const circle = CIRCLES.find(c => c.id === activeCircleId) ?? CIRCLES[0]
-  const members = PEOPLE.filter(p => circle.memberIds.includes(p.id))
+  const events = useDataStore(s => s.events)
+  const routines = useDataStore(s => s.routines)
+  const circles = useDataStore(s => s.circles)
+  const people = useDataStore(s => s.people)
+  const addEvent = useDataStore(s => s.addEvent)
+  const { activeCircleId, calWeekOffset, setWeekOffset, calFilter, setFilter } = useUiStore()
+
+  const [adding, setAdding] = useState<string | null>(null) // iso date or null
+  const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
+  const members = people.filter(p => circle && circle.memberIds.includes(p.id))
   const cols = members.filter(p => !calFilter || calFilter.includes(p.id))
   const days = week(calWeekOffset)
   const range = `${days[0].date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${days[6].date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
@@ -35,7 +43,7 @@ export default function Calendar() {
         })}
       </div>
 
-      <div className="card board" style={{ gridTemplateColumns: `42px repeat(${cols.length}, 1fr)` }}>
+      <div className="card board" style={{ gridTemplateColumns: `42px repeat(${Math.max(cols.length, 1)}, 1fr)` }}>
         <div className="b-corner" />
         {cols.map(p => (
           <div key={p.id} className="b-head">
@@ -44,7 +52,7 @@ export default function Calendar() {
         ))}
 
         {days.map(d => {
-          const dayItems = occurrencesOn(events, ROUTINES, d.iso, activeCircleId)
+          const dayItems = occurrencesOn(events, routines, d.iso, activeCircleId)
           return (
             <div key={d.iso} className="b-rowgroup" style={{ display: 'contents' }}>
               <div className={`b-day${d.isToday ? ' today' : ''}${d.isWeekend ? ' wknd' : ''}`}>
@@ -65,32 +73,49 @@ export default function Calendar() {
         })}
       </div>
 
-      {adding && <QuickAdd date={adding} members={members} onClose={() => setAdding(null)} onSave={(e) => { addEvent(e); setAdding(null) }} />}
+      {adding && circle && (
+        <QuickAdd
+          date={adding}
+          members={members}
+          circleId={circle.id}
+          onClose={() => setAdding(null)}
+          onSave={async (e) => { await addEvent(e); setAdding(null) }}
+        />
+      )}
     </div>
   )
 }
 
-function QuickAdd({ date, members, onClose, onSave }: {
+function QuickAdd({ date, members, circleId, onClose, onSave }: {
   date: string
-  members: typeof PEOPLE
+  members: Person[]
+  circleId: string
   onClose: () => void
-  onSave: (e: { circleId: string; title: string; date: string; start: string; end: string; who: string[]; energy: EnergyKey }) => void
+  onSave: (e: { circleId: string; title: string; date: string; start: string; end: string; who: string[] }) => void | Promise<void>
 }) {
-  const activeCircleId = useAppStore(s => s.activeCircleId)
   const [title, setTitle] = useState('')
   const [who, setWho] = useState<string[]>([])
   const [start, setStart] = useState('09:00')
-  const energy: EnergyKey = 'mind'
+  const [saving, setSaving] = useState(false)
   const d = new Date(date + 'T00:00')
   const endOf = (s: string) => { const [h, m] = s.split(':').map(Number); return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
-  const ok = title.trim() && who.length > 0
+  const ok = title.trim() && who.length > 0 && !saving
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await onSave({ circleId, title: title.trim(), date, start, end: endOf(start), who })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="sheet-scrim" onClick={onClose}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <div className="sheet-grip" />
         <h3 className="sheet-title">Add on {d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}</h3>
-        <input className="field" placeholder="What's the plan?" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
+        <input className="field" placeholder="What’s the plan?" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
         <div className="sheet-lbl">Who</div>
         <div className="cal-filters" style={{ paddingLeft: 0 }}>
           {members.map(p => {
@@ -100,9 +125,8 @@ function QuickAdd({ date, members, onClose, onSave }: {
         </div>
         <div className="sheet-lbl">Time</div>
         <input className="field" type="time" value={start} onChange={e => setStart(e.target.value)} />
-        <button className="btn grad" style={{ width: '100%', marginTop: 16, opacity: ok ? 1 : 0.5 }} disabled={!ok}
-          onClick={() => onSave({ circleId: activeCircleId, title: title.trim(), date, start, end: endOf(start), who, energy })}>
-          <IconPlus width={18} height={18} /> Add to calendar
+        <button className="btn grad" style={{ width: '100%', marginTop: 16, opacity: ok ? 1 : 0.5 }} disabled={!ok} onClick={save}>
+          <IconPlus width={18} height={18} /> {saving ? 'Saving…' : 'Add to calendar'}
         </button>
       </div>
     </div>

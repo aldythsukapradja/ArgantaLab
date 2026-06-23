@@ -1,24 +1,25 @@
 import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
-import { useAppStore } from '@store/appStore'
-import {
-  ENERGY, ENERGY_LABEL, ROUTINES, CIRCLES, personById, firstName, initials,
-  todayISO, type EnergyKey,
-} from '@data/seed'
+import { useDataStore, personById, firstName } from '@store/dataStore'
+import { useUiStore } from '@store/uiStore'
+import { ENERGY, ENERGY_LABEL, ENERGY_ORDER, todayISO, initials } from '@data/energy'
 import { occurrencesOn, fmtTime, untilText, isoTomorrow, toMin, type Occ } from '@lib/cal'
 import { IconChevron, IconPlus, IconDiamond, IconHistory, IconCalendar } from '@components/Icons'
 
-const ENERGY_ORDER: EnergyKey[] = ['care', 'growth', 'play', 'mind', 'memory', 'calm']
-
 export default function Today() {
-  const { events, activeCircleId, go } = useAppStore()
-  const circle = CIRCLES.find(c => c.id === activeCircleId) ?? CIRCLES[0]
+  const events = useDataStore(s => s.events)
+  const routines = useDataStore(s => s.routines)
+  const circles = useDataStore(s => s.circles)
+  const activeCircleId = useUiStore(s => s.activeCircleId)
+  const go = useUiStore(s => s.go)
+
+  const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
   const now = new Date()
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  const agenda = occurrencesOn(events, ROUTINES, todayISO(), activeCircleId)
+  const agenda = occurrencesOn(events, routines, todayISO(), activeCircleId)
   const next = agenda.find(a => toMin(a.end) > nowMin)
-  const tomorrow = occurrencesOn(events, ROUTINES, isoTomorrow(), activeCircleId)
+  const tomorrow = occurrencesOn(events, routines, isoTomorrow(), activeCircleId)
   const clashes = agenda.filter(a => a.clash).length
 
   const h = now.getHours()
@@ -26,7 +27,9 @@ export default function Today() {
   const travel = agenda.find(a => a.energy === 'memory')
   const summary = buildSummary(agenda.length, next, nowMin, clashes, travel)
 
-  // today's energy mix
+  const owner = circle ? personById(circle.memberIds[0]) : undefined
+  const ownerName = owner?.name ?? 'there'
+
   const mix: Record<string, number> = {}
   agenda.forEach(a => { mix[a.energy] = (mix[a.energy] || 0) + 1 })
   const maxE = Math.max(1, ...Object.values(mix))
@@ -34,14 +37,18 @@ export default function Today() {
   const root = useRef<HTMLDivElement | null>(null)
   const dot = useRef<HTMLSpanElement | null>(null)
   useEffect(() => {
-    gsap.fromTo(root.current!.querySelectorAll('.rise'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.06, ease: 'power3.out' })
+    if (!root.current) return
+    gsap.fromTo(root.current.querySelectorAll('.rise'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.06, ease: 'power3.out' })
     if (dot.current) gsap.to(dot.current, { scale: 1.7, opacity: 0.35, repeat: -1, yoyo: true, duration: 1.1, ease: 'sine.inOut' })
   }, [])
+
+  const accent0 = circle?.accent[0] ?? '#F43F5E'
+  const accent1 = circle?.accent[1] ?? '#FB7185'
 
   return (
     <div className="fade-in" ref={root}>
       {/* Buddy pulse */}
-      <button className="buddy-pulse rise" style={{ background: `linear-gradient(120deg, ${circle.accent[0]}, ${circle.accent[1]})` }} onClick={() => go('me')}>
+      <button className="buddy-pulse rise" style={{ background: `linear-gradient(120deg, ${accent0}, ${accent1})` }} onClick={() => go('me')}>
         <span className="bp-orb"><span className="bp-spark" /></span>
         <span className="bp-meta"><b>Buddy</b><small>Level 7 · 1,240 / 1,500 XP</small></span>
         <span className="bp-dia"><IconDiamond width={15} height={15} /> 320</span>
@@ -49,7 +56,7 @@ export default function Today() {
 
       {/* Greeting */}
       <div className="greet rise" style={{ marginTop: 14 }}>
-        <h1>{greet}, Aldyth</h1>
+        <h1>{greet}, {ownerName}</h1>
         <p>{summary}</p>
       </div>
 
@@ -67,7 +74,7 @@ export default function Today() {
       {/* Next up */}
       {next ? (
         <div className="card next-card rise" onClick={() => go('calendar')}>
-          <div className="next-bar" style={{ background: `linear-gradient(90deg, ${ENERGY[next.energy]}, ${circle.accent[0]})` }} />
+          <div className="next-bar" style={{ background: `linear-gradient(90deg, ${ENERGY[next.energy]}, ${accent0})` }} />
           <div className="next-body">
             <div className="next-when" style={{ color: ENERGY[next.energy] }}>
               <span className="next-dot" ref={dot} style={{ background: ENERGY[next.energy] }} />
@@ -84,7 +91,7 @@ export default function Today() {
       ) : (
         <div className="card allset rise">
           <div className="allset-ic">✓</div>
-          <h3>You're all set today</h3>
+          <h3>You’re all set today</h3>
           <p>Nothing more needs you. Enjoy the evening.</p>
         </div>
       )}
@@ -136,7 +143,7 @@ function Who({ who }: { who: string[] }) {
 function buildSummary(n: number, next: Occ | undefined, nowMin: number, clashes: number, travel?: Occ): string {
   if (n === 0) return 'A clear day ahead. Nothing scheduled.'
   const bits: string[] = []
-  if (travel && (travel.energy === 'memory')) bits.push(`Travel day — ${travel.title} at ${fmtTime(travel.start)}.`)
+  if (travel && travel.energy === 'memory') bits.push(`Travel day — ${travel.title} at ${fmtTime(travel.start)}.`)
   bits.push(`${n} plan${n === 1 ? '' : 's'} today${clashes ? `, ${clashes} clash` : ''}.`)
   if (next && toMin(next.start) > nowMin) bits.push(`Next: ${next.title} ${untilText(nowMin, toMin(next.start))}.`)
   return bits.join(' ')

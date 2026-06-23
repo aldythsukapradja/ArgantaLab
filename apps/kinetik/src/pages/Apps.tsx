@@ -1,5 +1,7 @@
 import { useRef } from 'react'
 import { gsap } from 'gsap'
+import { useDataStore } from '@store/dataStore'
+import { useUiStore } from '@store/uiStore'
 import { APP_ICON } from '@components/Icons'
 
 interface AppDef { id: string; name: string; icon: keyof typeof APP_ICON; grad: [string, string]; diamonds?: number }
@@ -15,6 +17,9 @@ const APPS: AppDef[] = [
 ]
 
 export default function Apps() {
+  const circles = useDataStore(s => s.circles)
+  const activeCircleId = useUiStore(s => s.activeCircleId)
+  const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   const tap = (id: string) => {
     const el = refs.current[id]
@@ -22,7 +27,7 @@ export default function Apps() {
   }
   return (
     <div className="fade-in">
-      <p className="mom-private">Sukapradja Family · your household</p>
+      <p className="mom-private">{circle?.name ?? 'Your circle'} · your household</p>
       <div className="apps-grid">
         {APPS.map(a => {
           const Icon = APP_ICON[a.icon]

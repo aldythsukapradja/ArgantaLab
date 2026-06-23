@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
-import { useAppStore, type Tab } from '@store/appStore'
+import { useUiStore, type Tab } from '@store/uiStore'
 import { IconToday, IconCalendar, IconHeart, IconApps, IconMe } from '@components/Icons'
 
 const ITEMS: { tab: Tab; label: string; Icon: (p: any) => JSX.Element; dome?: boolean }[] = [
@@ -14,8 +14,8 @@ const ITEMS: { tab: Tab; label: string; Icon: (p: any) => JSX.Element; dome?: bo
 // Live nav: the active icon springs in and then breathes — the satisfying
 // micro-motion (Ultrahuman-style) the family feels on every tab change.
 export default function Nav() {
-  const tab = useAppStore(s => s.tab)
-  const go = useAppStore(s => s.go)
+  const tab = useUiStore(s => s.tab)
+  const go = useUiStore(s => s.go)
   const iconRefs = useRef<(HTMLSpanElement | null)[]>([])
   const idle = useRef<gsap.core.Tween | null>(null)
 

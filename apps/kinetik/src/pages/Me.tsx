@@ -1,24 +1,33 @@
-import { useAppStore } from '@store/appStore'
-import { CIRCLES, PEOPLE, ROLE_LABEL, initials } from '@data/seed'
+import { useDataStore } from '@store/dataStore'
+import { useUiStore } from '@store/uiStore'
+import { ROLE_LABEL, initials } from '@data/energy'
+import { cloudReady } from '@lib/supabase'
 import { IconSwitch, IconUserPlus, IconSun, IconMoon } from '@components/Icons'
-import { supabase, supabaseReady } from '@lib/supabase'
 
 export default function Me() {
-  const { activeCircleId, setCircle, theme, toggleTheme } = useAppStore()
-  const circle = CIRCLES.find(c => c.id === activeCircleId) ?? CIRCLES[0]
-  const members = PEOPLE.filter(p => circle.memberIds.includes(p.id))
-  const me = PEOPLE[0]
+  const circles = useDataStore(s => s.circles)
+  const people = useDataStore(s => s.people)
+  const { activeCircleId, setCircle, theme, toggleTheme } = useUiStore()
+
+  const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
+  const members = people.filter(p => circle && circle.memberIds.includes(p.id))
+  const me = members.find(p => p.role === 'owner') ?? members[0]
 
   const cycleCircle = () => {
-    const i = CIRCLES.findIndex(c => c.id === activeCircleId)
-    setCircle(CIRCLES[(i + 1) % CIRCLES.length].id)
+    if (circles.length < 2) return
+    const i = circles.findIndex(c => c.id === activeCircleId)
+    setCircle(circles[(i + 1) % circles.length].id)
+  }
+
+  if (!circle || !me) {
+    return <div className="fade-in"><p className="me-foot">No circle loaded yet.</p></div>
   }
 
   return (
     <div className="fade-in">
       <div className="me-head">
         <span className="me-av" style={{ background: `linear-gradient(135deg,${circle.accent[0]},${circle.accent[1]})` }}>{me.name[0]}</span>
-        <div className="me-name">{me.name} Sukapradja</div>
+        <div className="me-name">{me.name}</div>
         <button className="circle-pill" onClick={cycleCircle}>
           <span className="circle-dot" style={{ background: `linear-gradient(135deg,${circle.accent[0]},${circle.accent[1]})` }} />
           {circle.name}
@@ -52,26 +61,17 @@ export default function Me() {
 }
 
 function SyncRow() {
-  const session = useAppStore(s => s.session)
-  const signIn = () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
-  const signOut = () => supabase.auth.signOut()
-  const authed = session && session !== 'loading'
-
+  const source = useDataStore(s => s.source)
+  const on = cloudReady && source === 'cloud'
   return (
     <div className="card sync-row">
-      <span className="sync-dot" data-on={authed ? '1' : '0'} />
-      {!supabaseReady ? (
-        <div className="sync-main"><b>Works offline</b><small>Add Supabase keys to sync across devices.</small></div>
-      ) : authed ? (
-        <>
-          <div className="sync-main"><b>Synced</b><small>{session.user.email}</small></div>
-          <button className="chip" onClick={signOut}>Sign out</button>
-        </>
+      <span className="sync-dot" data-on={on ? '1' : '0'} />
+      {!cloudReady ? (
+        <div className="sync-main"><b>Works offline</b><small>Add Supabase keys in .env.local to sync across devices.</small></div>
+      ) : source === 'cloud' ? (
+        <div className="sync-main"><b>Live · synced to cloud</b><small>This is your real data from Supabase.</small></div>
       ) : (
-        <>
-          <div className="sync-main"><b>Sync across devices</b><small>Sign in to back up your circle.</small></div>
-          <button className="chip on" onClick={signIn}>Sign in</button>
-        </>
+        <div className="sync-main"><b>Offline copy</b><small>Showing the last synced cache — reconnect to sync.</small></div>
       )}
     </div>
   )

@@ -3,7 +3,8 @@
 //  expands routines onto the right weekday, sorts a day, and
 //  flags clashes (same person, overlapping time).
 // =========================================================
-import { isoOf, type KEvent, type Routine, type EnergyKey } from '@data/seed'
+import { isoOf } from '@data/energy'
+import type { KEvent, Routine, EnergyKey } from '@data/types'
 
 export const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return (h || 0) * 60 + (m || 0) }
@@ -34,7 +35,7 @@ export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: st
   const dow = weekdayOf(dateIso)
   const fromEvents: Occ[] = events
     .filter(e => e.circleId === circleId && e.date === dateIso)
-    .map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, who: e.who, energy: e.energy, kind: 'event', coach: e.coach, location: e.location, prep: e.prep, clash: false }))
+    .map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, who: e.who, energy: e.energy, kind: 'event', prep: e.prep, clash: false }))
   const fromRoutines: Occ[] = routines
     .filter(r => r.circleId === circleId && r.day === dow)
     .map(r => ({ id: r.id, title: r.title, start: r.start, end: r.end, who: r.who, energy: r.energy, kind: 'routine', responsible: r.responsible, clash: false }))
