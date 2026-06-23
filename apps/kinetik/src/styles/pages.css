@@ -111,7 +111,9 @@ html[data-theme='dark'] .next-when { color: #67E8F9; }
 .ev-chip.clash { outline: 2px solid var(--warn); outline-offset: -1px; }
 
 .sheet-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(20, 16, 40, 0.4); backdrop-filter: blur(6px); display: flex; align-items: flex-end; justify-content: center; }
-.sheet { width: 100%; max-width: var(--maxw); background: var(--card); border-radius: 26px 26px 0 0; padding: 10px 20px calc(26px + env(safe-area-inset-bottom)); animation: sheetUp 0.34s var(--ease); }
+.sheet { width: 100%; max-width: var(--maxw); max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--card); border-radius: 26px 26px 0 0; padding: 10px 20px calc(26px + env(safe-area-inset-bottom)); animation: sheetUp 0.34s var(--ease); }
+.sheet::-webkit-scrollbar { width: 0; }
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
 .sheet-grip { width: 40px; height: 4px; border-radius: 3px; background: var(--border-2); margin: 0 auto 14px; }
 .sheet-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; }
