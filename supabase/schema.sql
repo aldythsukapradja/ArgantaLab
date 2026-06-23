@@ -1041,6 +1041,31 @@ begin
 end; $$;
 grant execute on function public.game_grant(text, int, int) to authenticated;
 
+-- ── Featured games registry (operator-curated, manually ranked) ──
+-- game_ref is either 'builtin:<id>' (a static ArgantaLab game) or a games.id.
+-- World-readable so ArgantaLab can consume the ranking; operator-write only.
+-- `rank` is the manual order (lower = higher up); a smarter ranking can later
+-- compute and write these values.
+create table if not exists public.hq_featured (
+  game_ref   text primary key,
+  rank       integer not null default 0,
+  created_at timestamptz default now()
+);
+alter table public.hq_featured enable row level security;
+drop policy if exists hq_featured_read on public.hq_featured;
+create policy hq_featured_read on public.hq_featured for select using (true);
+drop policy if exists hq_featured_write on public.hq_featured;
+create policy hq_featured_write on public.hq_featured for all
+  using (public.hq_is_operator()) with check (public.hq_is_operator());
+
+-- Seed the 4 built-in flagship games as featured by default (idempotent).
+insert into public.hq_featured (game_ref, rank) values
+  ('builtin:strike',   0),
+  ('builtin:nitro',    1),
+  ('builtin:critter',  2),
+  ('builtin:kincatch', 3)
+on conflict (game_ref) do nothing;
+
 -- ============================================================
 --  END GAME PLATFORM SPINE
 -- ============================================================

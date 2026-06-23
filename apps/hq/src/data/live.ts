@@ -35,6 +35,11 @@ export interface AppManifest {
   created_at?: string
 }
 
+export interface FeaturedRef {
+  game_ref: string                      // 'builtin:<id>' or a games.id
+  rank: number
+}
+
 export interface GamePublishInput {
   id: string
   title: string
@@ -146,6 +151,42 @@ export const live = {
     })
     if (error) console.warn('[hq] saveApp →', error.message)
     return !error
+  },
+
+  // ── Featured games (operator-curated, manually ranked) ──
+  async listFeatured(): Promise<FeaturedRef[]> {
+    if (!cloudEnabled) return []
+    const { data, error } = await supabase
+      .from('hq_featured')
+      .select('game_ref, rank')
+      .order('rank', { ascending: true })
+    if (error) { console.warn('[hq] listFeatured →', error.message); return [] }
+    return (data || []) as FeaturedRef[]
+  },
+
+  async setFeatured(ref: string, on: boolean): Promise<boolean> {
+    if (!cloudEnabled) return false
+    if (on) {
+      // Append to the end of the ranking.
+      const { data } = await supabase
+        .from('hq_featured').select('rank').order('rank', { ascending: false }).limit(1)
+      const nextRank = ((data?.[0]?.rank as number | undefined) ?? -1) + 1
+      const { error } = await supabase.from('hq_featured').upsert({ game_ref: ref, rank: nextRank })
+      if (error) { console.warn('[hq] setFeatured →', error.message); return false }
+      return true
+    }
+    const { error } = await supabase.from('hq_featured').delete().eq('game_ref', ref)
+    if (error) { console.warn('[hq] setFeatured(remove) →', error.message); return false }
+    return true
+  },
+
+  // Rewrite the full ranking: each ref gets its array index as its rank.
+  async reorderFeatured(orderedRefs: string[]): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const rows = orderedRefs.map((game_ref, i) => ({ game_ref, rank: i }))
+    const { error } = await supabase.from('hq_featured').upsert(rows)
+    if (error) { console.warn('[hq] reorderFeatured →', error.message); return false }
+    return true
   },
 
   async saveOntology(o: Ontology): Promise<boolean> {

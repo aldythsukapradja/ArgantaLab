@@ -3,10 +3,11 @@ import {
   Gamepad2, Plus, ArrowLeft, RefreshCw, Send,
   EyeOff, Copy, Check, Play, AlertTriangle,
   Star, Users, Monitor, Tablet, Smartphone, ExternalLink,
+  ChevronUp, ChevronDown,
 } from 'lucide-react'
 import { STARTER_PROMPT, PROMPT_CATEGORIES } from '../data/starterPrompt'
 import { FEATURED_GAMES, featuredUrl, featuredArt, type FeaturedGame } from '../data/featuredGames'
-import { live, type PublishedGame } from '../data/live'
+import { live, type PublishedGame, type FeaturedRef } from '../data/live'
 import { supabase, cloudEnabled } from '../lib/supabase'
 import { Empty, Loading } from '../components/Empty'
 
@@ -59,12 +60,29 @@ export function GameBuilder() {
   const [published, setLive]   = useState(false)
   const [error, setErr]        = useState<string | null>(null)
 
+  const [featured, setFeatured] = useState<FeaturedRef[]>([])
+
   const load = useCallback(() => {
     setGames(undefined)
     live.listGames().then(g => setGames(g))
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const loadFeatured = useCallback(() => { live.listFeatured().then(setFeatured) }, [])
+
+  useEffect(() => { load(); loadFeatured() }, [load, loadFeatured])
+
+  const toggleFeatured = async (ref: string, on: boolean) => {
+    setFeatured(prev => on
+      ? [...prev, { game_ref: ref, rank: prev.length }]
+      : prev.filter(f => f.game_ref !== ref))           // optimistic
+    if (!(await live.setFeatured(ref, on))) loadFeatured()
+  }
+
+  const reorderFeatured = async (orderedRefs: string[]) => {
+    setFeatured(orderedRefs.map((game_ref, i) => ({ game_ref, rank: i })))  // optimistic
+    await live.reorderFeatured(orderedRefs)
+    loadFeatured()
+  }
 
   const openNew = () => {
     setMeta(emptyMeta())
@@ -114,7 +132,17 @@ export function GameBuilder() {
   }
 
   if (view === 'catalog') {
-    return <CatalogView games={games} onNew={openNew} onEdit={openEdit} onRefresh={load} />
+    return (
+      <CatalogView
+        games={games}
+        featured={featured}
+        onNew={openNew}
+        onEdit={openEdit}
+        onRefresh={() => { load(); loadFeatured() }}
+        onToggleFeatured={toggleFeatured}
+        onReorderFeatured={reorderFeatured}
+      />
+    )
   }
 
   return (
@@ -133,11 +161,14 @@ export function GameBuilder() {
 
 // ── Catalog ────────────────────────────────────────────────────────────
 
-function CatalogView({ games, onNew, onEdit, onRefresh }: {
+function CatalogView({ games, featured, onNew, onEdit, onRefresh, onToggleFeatured, onReorderFeatured }: {
   games: PublishedGame[] | undefined
+  featured: FeaturedRef[]
   onNew: () => void
   onEdit: (g: PublishedGame) => void
   onRefresh: () => void
+  onToggleFeatured: (ref: string, on: boolean) => void
+  onReorderFeatured: (orderedRefs: string[]) => void
 }) {
   const [userFilter, setUserFilter] = useState<string | null>(null)
 
@@ -155,6 +186,40 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
 
   const pub  = community.filter(byUser)
   const priv = drafts.filter(byUser)
+
+  const isFeatured = (ref: string) => featured.some(f => f.game_ref === ref)
+
+  // Resolve the ranked featured refs into displayable items (built-in or DB).
+  const featuredItems = useMemo<FeaturedItem[]>(() => {
+    const out: FeaturedItem[] = []
+    for (const f of featured) {
+      if (f.game_ref.startsWith('builtin:')) {
+        const bg = FEATURED_GAMES.find(g => g.id === f.game_ref.slice('builtin:'.length))
+        if (bg) out.push({
+          ref: f.game_ref, kind: 'Built-in', title: bg.name, emoji: bg.emoji,
+          sub: bg.tags.join(' · '), open: () => window.open(featuredUrl(bg.file), '_blank', 'noopener'),
+        })
+      } else {
+        const dg = (games ?? []).find(g => g.id === f.game_ref)
+        if (dg) {
+          const cat = PROMPT_CATEGORIES.find(c => c.key === (dg.category ?? (dg.config?.category as string | undefined)))
+          out.push({
+            ref: f.game_ref, kind: 'Community', title: dg.title || 'Untitled',
+            emoji: cat?.emoji ?? '🎮', sub: `by ${dg.creator_name || 'Unknown'}`, open: () => onEdit(dg),
+          })
+        }
+      }
+    }
+    return out
+  }, [featured, games, onEdit])
+
+  const moveFeatured = (index: number, dir: -1 | 1) => {
+    const refs = featuredItems.map(it => it.ref)
+    const j = index + dir
+    if (j < 0 || j >= refs.length) return
+    ;[refs[index], refs[j]] = [refs[j], refs[index]]
+    onReorderFeatured(refs)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -175,8 +240,8 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
         </div>
       </div>
 
-      {/* ── Featured · KinetikCircle (built-in flagship games) ── */}
-      <FeaturedSection games={FEATURED_GAMES} />
+      {/* ── Featured (curated + manually ranked) ── */}
+      <FeaturedStrip items={featuredItems} onMove={moveFeatured} onRemove={ref => onToggleFeatured(ref, false)} />
 
       {!cloudEnabled && (
         <div className="insight warn" style={{ borderRadius: 'var(--r-md)' }}>
@@ -187,15 +252,23 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
 
       {games === undefined && <Loading label="Loading game catalog…" />}
 
+      {/* ── Built-in (KinetikCircle flagship games) ── */}
+      <Section label={`Built-in · KinetikCircle (${FEATURED_GAMES.length})`} badge="pill-mut">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+          {FEATURED_GAMES.map(g => (
+            <BuiltinCard
+              key={g.id}
+              game={g}
+              featured={isFeatured(`builtin:${g.id}`)}
+              onToggleFeatured={() => onToggleFeatured(`builtin:${g.id}`, !isFeatured(`builtin:${g.id}`))}
+            />
+          ))}
+        </div>
+      </Section>
+
       {/* ── Filter by user ── */}
       {creators.length > 0 && (
         <UserFilter creators={creators} value={userFilter} onChange={setUserFilter} />
-      )}
-
-      {games !== undefined && community.length === 0 && drafts.length === 0 && (
-        <Empty icon={<Gamepad2 />} title="No published games yet">
-          Hit <b>New Game</b>, copy the starter prompt into Claude or ChatGPT, then paste the generated HTML back here.
-        </Empty>
       )}
 
       {(community.length > 0 || drafts.length > 0) && pub.length === 0 && priv.length === 0 && (
@@ -206,22 +279,35 @@ function CatalogView({ games, onNew, onEdit, onRefresh }: {
 
       {pub.length > 0 && (
         <Section label={`Community (${pub.length})`} badge="pill-ok">
-          <GameGrid games={pub} onEdit={onEdit} />
+          <GameGrid games={pub} onEdit={onEdit} isFeatured={isFeatured} onToggleFeatured={onToggleFeatured} />
         </Section>
       )}
 
       {priv.length > 0 && (
         <Section label={`Drafts (${priv.length})`}>
-          <GameGrid games={priv} onEdit={onEdit} />
+          <GameGrid games={priv} onEdit={onEdit} isFeatured={isFeatured} onToggleFeatured={onToggleFeatured} />
         </Section>
       )}
     </div>
   )
 }
 
-// ── Featured group ───────────────────────────────────────────────────────
+// ── Featured group (dynamic, manually ranked) ──────────────────────────────
 
-function FeaturedSection({ games }: { games: FeaturedGame[] }) {
+interface FeaturedItem {
+  ref: string
+  kind: 'Built-in' | 'Community'
+  title: string
+  emoji: string
+  sub: string
+  open: () => void
+}
+
+function FeaturedStrip({ items, onMove, onRemove }: {
+  items: FeaturedItem[]
+  onMove: (index: number, dir: -1 | 1) => void
+  onRemove: (ref: string) => void
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div className="row" style={{ gap: 8 }}>
@@ -231,51 +317,110 @@ function FeaturedSection({ games }: { games: FeaturedGame[] }) {
           background: 'var(--acc-soft)', color: 'var(--acc-text)',
           border: '1px solid var(--acc)', fontSize: 10.5,
         }}>
-          KinetikCircle · {games.length}
+          ranked · {items.length}
         </span>
+        <span style={{ fontSize: 11, color: 'var(--tx3)' }}>— tap ★ on any game below to feature it</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-        {games.map(g => <FeaturedCard key={g.id} game={g} />)}
-      </div>
+
+      {items.length === 0 ? (
+        <div className="card" style={{ padding: 14, fontSize: 12, color: 'var(--tx3)' }}>
+          No featured games yet. Tap the ★ on a built-in or community game to add it here, then use ↑ ↓ to rank.
+        </div>
+      ) : (
+        <div className="card" style={{ padding: 6, display: 'flex', flexDirection: 'column' }}>
+          {items.map((it, i) => (
+            <div
+              key={it.ref}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px',
+                borderBottom: i < items.length - 1 ? '1px solid var(--bd)' : 'none',
+              }}
+            >
+              <span style={{
+                minWidth: 22, height: 22, borderRadius: 6, fontSize: 11, fontWeight: 700,
+                background: 'var(--acc-soft)', color: 'var(--acc-text)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                {i + 1}
+              </span>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>{it.emoji}</span>
+              <button
+                onClick={it.open}
+                title="Open"
+                style={{
+                  flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none',
+                  cursor: 'pointer', padding: 0, color: 'var(--tx)',
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {it.title}
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--tx3)' }}>{it.kind} · {it.sub}</div>
+              </button>
+              <div className="row" style={{ gap: 2, flexShrink: 0 }}>
+                <button className="chip" onClick={() => onMove(i, -1)} disabled={i === 0}
+                  title="Move up" style={{ padding: 5 }}><ChevronUp size={13} /></button>
+                <button className="chip" onClick={() => onMove(i, 1)} disabled={i === items.length - 1}
+                  title="Move down" style={{ padding: 5 }}><ChevronDown size={13} /></button>
+                <button className="chip" onClick={() => onRemove(it.ref)} title="Remove from Featured"
+                  style={{ padding: 5, color: 'var(--acc-text)' }}><Star size={13} fill="currentColor" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-function FeaturedCard({ game }: { game: FeaturedGame }) {
-  const open = () => window.open(featuredUrl(game.file), '_blank', 'noopener')
+function StarBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button
-      className="card"
-      onClick={open}
-      title="Open in ArgantaLab"
-      style={{ padding: 0, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', width: '100%' }}
+      onClick={e => { e.stopPropagation(); onToggle() }}
+      title={on ? 'Remove from Featured' : 'Add to Featured'}
+      style={{
+        position: 'absolute', top: 7, right: 7, zIndex: 2,
+        width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', border: 'none',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: on ? 'var(--acc)' : 'rgba(0,0,0,0.4)', color: '#fff', backdropFilter: 'blur(4px)',
+      }}
     >
-      <div style={{
-        height: 76, position: 'relative',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
-        ...featuredArt(game.hue),
-      }}>
-        {game.emoji}
-        <span style={{
-          position: 'absolute', top: 7, left: 7, fontSize: 9, fontWeight: 700,
-          letterSpacing: '0.04em', textTransform: 'uppercase',
-          padding: '2px 7px', borderRadius: 20,
-          background: 'rgba(0,0,0,0.35)', color: '#fff', backdropFilter: 'blur(4px)',
-          display: 'inline-flex', alignItems: 'center', gap: 3,
-        }}>
-          <Star size={9} fill="#fff" /> Featured
-        </span>
-      </div>
-      <div style={{ padding: '10px 12px 12px' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {game.name}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{game.tags.join(' · ')}</div>
-        <div style={{ fontSize: 11, color: 'var(--acc-text)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <ExternalLink size={11} /> Open in ArgantaLab
-        </div>
-      </div>
+      <Star size={13} fill={on ? '#fff' : 'none'} />
     </button>
+  )
+}
+
+function BuiltinCard({ game, featured, onToggleFeatured }: {
+  game: FeaturedGame
+  featured: boolean
+  onToggleFeatured: () => void
+}) {
+  const open = () => window.open(featuredUrl(game.file), '_blank', 'noopener')
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+      <StarBtn on={featured} onToggle={onToggleFeatured} />
+      <button
+        onClick={open}
+        title="Open in ArgantaLab"
+        style={{ padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%', background: 'none', border: 'none' }}
+      >
+        <div style={{
+          height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
+          ...featuredArt(game.hue),
+        }}>
+          {game.emoji}
+        </div>
+        <div style={{ padding: '10px 12px 12px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {game.name}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{game.tags.join(' · ')}</div>
+          <div style={{ fontSize: 11, color: 'var(--acc-text)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <ExternalLink size={11} /> Open in ArgantaLab
+          </div>
+        </div>
+      </button>
+    </div>
   )
 }
 
@@ -317,24 +462,43 @@ function Section({ label, badge = 'pill-mut', children }: {
   )
 }
 
-function GameGrid({ games, onEdit }: { games: PublishedGame[]; onEdit: (g: PublishedGame) => void }) {
+function GameGrid({ games, onEdit, isFeatured, onToggleFeatured }: {
+  games: PublishedGame[]
+  onEdit: (g: PublishedGame) => void
+  isFeatured: (ref: string) => boolean
+  onToggleFeatured: (ref: string, on: boolean) => void
+}) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-      {games.map(g => <GameCard key={g.id} game={g} onClick={() => onEdit(g)} />)}
+      {games.map(g => (
+        <GameCard
+          key={g.id}
+          game={g}
+          onClick={() => onEdit(g)}
+          featured={isFeatured(g.id)}
+          onToggleFeatured={() => onToggleFeatured(g.id, !isFeatured(g.id))}
+        />
+      ))}
     </div>
   )
 }
 
-function GameCard({ game, onClick }: { game: PublishedGame; onClick: () => void }) {
+function GameCard({ game, onClick, featured, onToggleFeatured }: {
+  game: PublishedGame
+  onClick: () => void
+  featured: boolean
+  onToggleFeatured: () => void
+}) {
   const catKey = game.config?.category as string | undefined
   const cat    = PROMPT_CATEGORIES.find(c => c.key === catKey)
 
   return (
-    <button
-      className="card"
-      onClick={onClick}
-      style={{ padding: 0, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', width: '100%' }}
-    >
+    <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+      <StarBtn on={featured} onToggle={onToggleFeatured} />
+      <button
+        onClick={onClick}
+        style={{ padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%', background: 'none', border: 'none' }}
+      >
       <div style={{
         height: 76,
         background: 'linear-gradient(135deg,#1e1b4b 0%,#312e81 60%,#4c1d95 100%)',
@@ -359,7 +523,8 @@ function GameCard({ game, onClick }: { game: PublishedGame; onClick: () => void 
             : <span style={{ color: 'var(--tx3)', marginLeft: 6 }}>● Draft</span>}
         </div>
       </div>
-    </button>
+      </button>
+    </div>
   )
 }
 
