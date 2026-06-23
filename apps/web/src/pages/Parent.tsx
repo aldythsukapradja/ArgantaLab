@@ -136,25 +136,14 @@ export default function Parent() {
     <div className="screen par" style={{ justifyContent: 'flex-start', gap: 16, paddingTop: 6 }}>
       {/* header + kid switcher */}
       <div>
-        <div className="kicker"><span className="live" />&nbsp;Family report</div>
+        <div className="kicker"><span className="live" />&nbsp;Family Pulse</div>
         <h1 className="h-title" style={{ fontSize: 'clamp(24px,4vw,40px)', marginTop: 8 }}>
           {kid ? <>{kid.name}'s <span className="g">skills</span></> : <>Your <span className="g">children</span></>}
         </h1>
         <p className="lead">Real Cambridge skills underneath the games. Small, frequent drills — here's what's working and where to nudge.</p>
       </div>
 
-      {kids && kids.length > 0 && (
-        <div className="pk-switch">
-          {kids.map(k => (
-            <button key={k.id} className={`pk-pill${k.id === activeKid ? ' on' : ''}`} onClick={() => { setDemo(false); setActiveKid(k.id) }}>
-              <span className="pk-av">{kidGlyph({ name: k.display_name, photo: k.photo_url ?? null })}{isOnline(k.last_seen) && <i className="pk-on" />}</span>
-              <span className="pk-name">{k.display_name}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Family overview — every child's real cloud balance & level at a glance */}
+      {/* Single selector — every child's real cloud balance & level at a glance */}
       {!demo && kids && kids.length > 0 && (
         <div className="par-family" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
           {kids.map(k => (
@@ -186,7 +175,7 @@ export default function Parent() {
         <div className="par-empty soft">
           <span className="par-empty-ic">📊</span>
           <h2>Analytics aren't switched on yet</h2>
-          <p>The Grown-ups dashboard runs on the cloud analytics engine. Once the one-time database setup (<code>migration_analytics_rewards.sql</code>) is applied and {kids?.[0]?.display_name ?? 'your child'} plays, real skills, gaps and trends appear here.</p>
+          <p>Family Pulse runs on the cloud analytics engine. Once the one-time database setup (<code>migration_analytics_rewards.sql</code>) is applied and {kids?.[0]?.display_name ?? 'your child'} plays, real skills, gaps and trends appear here.</p>
           {previewBtn}
         </div>
       )}

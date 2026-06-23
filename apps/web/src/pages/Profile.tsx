@@ -132,6 +132,35 @@ export default function Profile() {
     reloadAll()
   }
 
+  // ── Friends (code-gated for everyone) ──────────────────────
+  const addFriend = async () => {
+    const code = prompt('Enter your friend\'s code to add them:')?.trim()
+    if (!code) return
+    const r = await sendFriendRequest(code)
+    addToast(r.ok ? (r.data?.status === 'accepted' ? 'Already friends 🎉' : 'Friend request sent 📨') : (r.error ?? 'Could not send'), r.ok ? '✅' : '⚠️')
+    if (r.ok) reloadAll()
+  }
+  const answerFriendReq = async (req: FriendRequest, accept: boolean) => {
+    await respondFriendRequest(req.id, accept)
+    addToast(accept ? `You and ${req.from_name} are friends 🎉` : 'Request declined', accept ? '✨' : '👋')
+    reloadAll()
+  }
+  const dropFriend = async (f: Friend) => {
+    if (f.source === 'circle') { addToast('In a shared circle — remove from the circle to unfriend', 'ℹ️'); return }
+    if (!confirm(`Remove ${f.display_name} from your friends?`)) return
+    await removeFriend(f.id); addToast(`Removed ${f.display_name}`, '👋'); reloadAll()
+  }
+  const viewKidFriends = async (k: CloudProfile) => {
+    const list = await kidFriends(k.id)
+    if (list.length === 0) { addToast(`${k.display_name} has no friends yet`, '🧒'); return }
+    const names = list.map(f => `${f.display_name} (${f.status})`).join('\n')
+    const who = prompt(`${k.display_name}'s friends:\n\n${names}\n\nType a name to REMOVE, or cancel:`)?.trim()
+    if (!who) return
+    const target = list.find(f => f.display_name.toLowerCase() === who.toLowerCase())
+    if (!target) { addToast('No match', '⚠️'); return }
+    await removeKidFriend(k.id, target.id); addToast(`Removed ${target.display_name} from ${k.display_name}`, '🛡️')
+  }
+
   const games = loadMyGames().length
   const totalBadges = WORLDS.reduce((a, w) => a + earnedBadges(w).size, 0)
   const handle = '@' + learnerName.toLowerCase().replace(/\s+/g, '')
@@ -146,9 +175,9 @@ export default function Profile() {
       <div className="ig-avatar"><Buddy mood="happy" size={92} outfit={outfit} showBg bob={false} /></div>
       <div className="ig-head-r">
         <div className="ig-stats">
-          <button className="ig-stat" onClick={() => go({ tab: 'gamestore' })}><b>{games}</b><span>Games</span></button>
-          <div className="ig-stat"><b>{circles.length}</b><span>Circles</span></div>
-          <div className="ig-stat"><b>{kids.length}</b><span>Kids</span></div>
+          <div className="ig-stat"><b>{stats.circles}</b><span>Circles</span></div>
+          <div className="ig-stat"><b>{stats.connections}</b><span>Connections</span></div>
+          <div className="ig-stat"><b>{stats.friends}</b><span>Friends</span></div>
         </div>
         <div className="ig-id">
           <b className="ig-name">{learnerName}</b>
@@ -192,6 +221,47 @@ export default function Profile() {
     </>
   )
 
+  // Friend requests inbox (shown to anyone with pending requests)
+  const friendReqInbox = friendReqs.length > 0 && (
+    <>
+      <div className="section-label">🤝 Friend requests</div>
+      <div className="ig-kids">
+        {friendReqs.map(req => (
+          <div key={req.id} className="ig-kid">
+            <span className="ig-kid-av" style={{ background: '#10b981' }}>{(req.from_name[0] ?? '?').toUpperCase()}</span>
+            <div className="ig-kid-meta"><b>{req.from_name}</b><small>wants to be friends</small></div>
+            <button className="ig-kid-play" onClick={() => answerFriendReq(req, true)}>Accept</button>
+            <button className="ig-kid-del" title="Decline" onClick={() => answerFriendReq(req, false)}>✕</button>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+
+  // Friends list (circle co-members ∪ explicit friends)
+  const friendsBlock = (
+    <>
+      <div className="section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Friends</span>
+        <button className="ig-btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={addFriend}>＋ Add friend</button>
+      </div>
+      {friends.length === 0
+        ? <p className="ig-kc" style={{ margin: 0 }}>Add friends by their code — everyone in your circles is a friend too.</p>
+        : (
+          <div className="ig-friends" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {friends.map(f => (
+              <button key={f.id} className="ig-friend" title={f.source === 'circle' ? 'In a shared circle' : 'Friend'} onClick={() => dropFriend(f)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 999, padding: '5px 12px 5px 6px', background: 'var(--card)', cursor: 'pointer' }}>
+                <span style={{ width: 26, height: 26, borderRadius: '50%', background: f.role === 'kid' ? '#ec4899' : '#6366f1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{(f.display_name[0] ?? '?').toUpperCase()}</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{f.display_name}</span>
+                {f.source === 'circle' && <span style={{ fontSize: 10, color: 'var(--t2)' }}>circle</span>}
+              </button>
+            ))}
+          </div>
+        )}
+    </>
+  )
+
   // ════ KID MODE — only their own stuff, no grown-up tools ════
   if (kidMode) {
     return (
@@ -203,10 +273,14 @@ export default function Profile() {
           <button className="ig-btn" onClick={openSwitcher}>🔄 Switch player</button>
         </div>
 
+        {friendReqInbox}
+
         <div className="section-label">My Circles</div>
         <div className="ig-circles">
           {circles.map(c => <CloudCircleCard key={c.id} circle={c} />)}
         </div>
+
+        {friendsBlock}
 
         {rings}
 
@@ -233,11 +307,13 @@ export default function Profile() {
           ? <button className="ig-btn" onClick={linkAKid}>🔗 Link kid</button>
           : <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>}
         {cloudEnabled && <button className="ig-btn" onClick={claimKid}>🪪 Claim kid</button>}
-        {cloudEnabled && <button className="ig-btn" onClick={inviteGrownUp}>👥 Invite grown-up</button>}
+        {cloudEnabled && <button className="ig-btn" onClick={inviteGrownUp}>👥 Add to circle</button>}
+        {cloudEnabled && <button className="ig-btn" onClick={addFriend}>🤝 Add friend</button>}
         <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
       </div>
 
       {invitesInbox}
+      {friendReqInbox}
 
       <div className="section-label">My Circles</div>
       <div className="ig-circles">
@@ -269,19 +345,36 @@ export default function Profile() {
                 </div>
                 <button className="ig-kid-play" onClick={openSwitcher}>Log in</button>
                 <button className="ig-kid-edit2" title="Reset PIN" onClick={() => resetPin(k)}>🔑</button>
+                <button className="ig-kid-edit2" title="Kid's friends" onClick={() => viewKidFriends(k)}>🤝</button>
                 <button className="ig-kid-del" title="Remove from family" onClick={() => removeFromFamily(k)}>✕</button>
+                <div className="ig-kid-rings" style={{ flexBasis: '100%', display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, marginTop: 8 }}>
+                  {WORLDS.map(w => {
+                    const pct = kidRings[k.id]?.find(r => r.world === w.key)?.pct ?? 0
+                    return (
+                      <div key={w.key} style={{ textAlign: 'center' }}>
+                        <Ring pct={pct} color={w.color} />
+                        <small style={{ display: 'block', fontSize: 9, color: 'var(--t2)' }}>{RING_LABEL[w.key]}</small>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )
           })}
         </div>
       )}
 
-      {rings}
+      {friendsBlock}
+
+      <details className="ig-mylearning" style={{ marginTop: 6 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--t2)', fontWeight: 700 }}>My learning (your own progress)</summary>
+        {rings}
+      </details>
 
       <div className="ig-foot">
         <div className="ig-foot-row"><b>{totalBadges}</b> badges earned</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={() => go({ tab: 'parent' })}>🧑‍🏫 Dashboard</button>
+          <button className="btn btn-ghost" onClick={() => go({ tab: 'parent' })}>📊 Family Pulse</button>
           <button className="btn btn-ghost" onClick={parentLogout}>⏻ Log out</button>
         </div>
       </div>

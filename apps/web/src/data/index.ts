@@ -65,7 +65,7 @@ export const NAV: NavItem[] = [
   { tab: 'discover',  label: 'Discover',     short: 'Discover', icon: 'discover',  group: 'SHIP' },
   { tab: 'gamestore', label: 'My GameStore', short: 'Store',    icon: 'store',     group: 'SHIP' },
   { tab: 'profile',   label: 'Profile',      short: 'Profile',  icon: 'profile',   group: 'YOU' },
-  { tab: 'parent',    label: 'Grown-ups',    short: 'Parent',   icon: 'parent2',   group: 'YOU' },
+  { tab: 'parent',    label: 'Family Pulse', short: 'Pulse',    icon: 'parent2',   group: 'YOU' },
 ]
 
 // The 6 learning worlds (Learn group), in display order.
