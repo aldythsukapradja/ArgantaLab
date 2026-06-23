@@ -12,7 +12,8 @@ import { energyOf } from '@data/energy'
 import type { Circle, Person, Routine, KEvent, Moment, CircleData } from '@data/types'
 
 // ---- row types (as stored) ----
-interface CircleRow { id: string; name: string; accent: string; kind: string }
+// `circles` is the existing ArgantaLab table; accent was added by 01_schema.sql
+interface CircleRow { id: string; name: string; accent: string | null; kind: string | null }
 interface PersonRow { id: string; circle_id: string; name: string; color: string; role: string }
 interface RoutineRow {
   id: string; circle_id: string; title: string; who: string[] | null
@@ -31,8 +32,8 @@ interface MomentRow {
 
 // ---- row → domain mappers ----
 const mapCircle = (r: CircleRow, memberIds: string[]): Circle => ({
-  id: r.id, name: r.name, kind: (r.kind as Circle['kind']) || 'family',
-  accent: [r.accent, '#FB7185'], memberIds,
+  id: r.id, name: r.name ?? '', kind: (r.kind as Circle['kind']) || 'family',
+  accent: [r.accent ?? '#F43F5E', '#FB7185'], memberIds,
 })
 const mapPerson = (r: PersonRow): Person => ({
   id: r.id, circleId: r.circle_id, name: r.name, color: r.color, role: (r.role as Person['role']) || 'member',
@@ -57,7 +58,7 @@ const mapMoment = (r: MomentRow): Moment => ({
 /** Pull the whole graph. Throws on error so the store can fall back to cache. */
 export async function fetchAll(): Promise<CircleData> {
   const [circles, people, routines, events, moments] = await Promise.all([
-    supabase.from('kinetik_circles').select('*'),
+    supabase.from('circles').select('id, name, kind, accent'),
     supabase.from('kinetik_people').select('*'),
     supabase.from('kinetik_routines').select('*'),
     supabase.from('kinetik_events').select('*'),
