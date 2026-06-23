@@ -102,6 +102,7 @@ export default function Today() {
         })}
       </div>
 
+      {/* Tomorrow — moved to middle */}
       <button className="card tmrw rise" onClick={() => go('calendar')}>
         <span>Tomorrow · <b>{tomorrow.length} plan{tomorrow.length === 1 ? '' : 's'}</b></span>
         <IconChevron width={18} height={18} style={{ color: 'var(--accent)' }} />

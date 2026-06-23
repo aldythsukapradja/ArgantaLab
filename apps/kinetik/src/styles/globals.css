@@ -209,6 +209,15 @@ img { max-width: 100%; display: block; }
 html[data-theme='dark'] .topbar-avatar { box-shadow: 0 0 0 2px var(--border-2), 0 4px 14px rgba(0,0,0,.5); }
 .topbar-avatar:active { transform: scale(0.91); }
 .topbar-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.topbar-logout {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: grid; place-items: center;
+  color: var(--faint); font-size: 16px; font-weight: 600;
+  background: var(--bg-2); border: 0.5px solid var(--border);
+  transition: all 0.16s var(--ease);
+  cursor: pointer;
+}
+.topbar-logout:active { background: var(--bg); color: var(--care); transform: scale(0.9); }
 
 /* ---------- generic cards ---------- */
 .card {

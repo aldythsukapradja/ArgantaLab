@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useUiStore } from '@store/uiStore'
 import { useDataStore } from '@store/dataStore'
+import { supabase } from '@lib/supabase'
 import { initials } from '@data/energy'
 import { IconPlus } from '@components/Icons'
 
@@ -14,6 +15,11 @@ export default function TopBar() {
   const handleSelectCircle = (id: string) => {
     setCircle(id)
     setShowCircleMenu(false)
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.reload()
   }
 
   const accent0 = circle?.accent[0] ?? 'var(--accent)'
@@ -69,7 +75,7 @@ export default function TopBar() {
         )}
       </div>
 
-      {/* Right: real Google photo → Me tab */}
+      {/* Right: real Google photo → Me tab + Logout */}
       <div className="tb-right">
         <button
           className="topbar-avatar"
@@ -80,6 +86,14 @@ export default function TopBar() {
           {me?.photoUrl
             ? <img src={me.photoUrl} alt={me.name} className="topbar-avatar-img" referrerPolicy="no-referrer" />
             : <span>{initials(me?.name || 'Me')}</span>}
+        </button>
+        <button
+          className="topbar-logout"
+          onClick={handleLogout}
+          aria-label="Logout"
+          title="Sign out"
+        >
+          ⎋
         </button>
       </div>
     </header>
