@@ -2,7 +2,7 @@ import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
 import { ROLE_LABEL, initials } from '@data/energy'
 import { cloudReady } from '@lib/supabase'
-import { IconSwitch, IconUserPlus, IconSun, IconMoon } from '@components/Icons'
+import { IconSwitch, IconUserPlus, IconSun, IconMoon, IconMe } from '@components/Icons'
 
 export default function Me() {
   const circles = useDataStore(s => s.circles)
@@ -48,12 +48,25 @@ export default function Me() {
 
       <div className="me-actions">
         <button className="btn ghost" style={{ flex: 1 }}><IconUserPlus width={17} height={17} /> Invite</button>
-        <button className="btn ghost" style={{ flex: 1 }} onClick={toggleTheme}>
-          {theme === 'dark' ? <IconSun width={17} height={17} /> : <IconMoon width={17} height={17} />} {theme === 'dark' ? 'Light' : 'Dark'}
-        </button>
       </div>
 
       <SyncRow />
+
+      <div className="section-label">Settings</div>
+      <div className="card">
+        <button className="settings-row" onClick={toggleTheme}>
+          <span className="sr-icon" style={{ background: theme === 'dark' ? 'color-mix(in srgb, var(--play) 16%, transparent)' : 'color-mix(in srgb, var(--memory) 14%, transparent)' }}>
+            {theme === 'dark'
+              ? <IconSun width={17} height={17} style={{ color: 'var(--play)' }} />
+              : <IconMoon width={17} height={17} style={{ color: 'var(--memory)' }} />}
+          </span>
+          <span className="sr-main">
+            <b>Appearance</b>
+            <small>Currently {theme === 'dark' ? 'dark' : 'light'} mode</small>
+          </span>
+          <span className="sr-val">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+        </button>
+      </div>
 
       <p className="me-foot">Private to the people you choose. No followers, no likes — just your circle.</p>
     </div>
