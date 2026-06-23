@@ -47,98 +47,95 @@ export default function Login() {
   }
 
   return (
-    <div id="app" className="auth-bg">
-      {/* Gradient blob background */}
-      <div className="auth-blob auth-blob-1" />
-      <div className="auth-blob auth-blob-2" />
-      <div className="auth-blob auth-blob-3" />
+    <div className="auth-page">
+      {/* Animated gradient background */}
+      <div className="auth-bg">
+        <div className="auth-gradient" />
+        <div className="auth-glow auth-glow-1" />
+        <div className="auth-glow auth-glow-2" />
+      </div>
 
       <div className="auth-container">
-        {/* Hero section */}
-        <div className="auth-hero">
-          <div className="auth-logo">
-            <span className="al-k">Kinetik</span>
-            <span className="al-c">Circle</span>
+        {/* Header with logo */}
+        <div className="auth-header">
+          <div className="auth-logo-mark">
+            <span>K</span>
           </div>
-          <p className="auth-tagline">Family coordination reimagined</p>
-          <p className="auth-desc">Plan together. Track progress. Celebrate moments.</p>
+          <div className="auth-brand">
+            <span>Kinetik</span><span>Circle</span>
+          </div>
+          <p className="auth-subtitle">Family coordination reimagined</p>
+          <p style={{ marginTop: 8, fontSize: 14, color: 'var(--muted)' }}>Plan together. Track progress. Celebrate moments.</p>
         </div>
 
-        {/* Tab switcher */}
-        <div className="auth-tabs">
+        {/* Tab navigation */}
+        <div className="auth-tab-nav">
           <button
-            className={`auth-tab${tab === 'parent' ? ' on' : ''}`}
+            className={`auth-tab-btn${tab === 'parent' ? ' active' : ''}`}
             onClick={() => { setTab('parent'); setError(null) }}
           >
             Parent Login
           </button>
           <button
-            className={`auth-tab${tab === 'kid' ? ' on' : ''}`}
+            className={`auth-tab-btn${tab === 'kid' ? ' active' : ''}`}
             onClick={() => { setTab('kid'); setError(null) }}
           >
             Kids Login
           </button>
         </div>
 
-        {/* Parent Login Card */}
+        {/* Parent Login */}
         {tab === 'parent' && (
-          <div className="auth-card">
-            <div className="ac-icon">👨‍👩‍👧‍👦</div>
-            <h2 className="ac-title">Welcome Back</h2>
-            <p className="ac-subtitle">Sign in to manage your family circle</p>
+          <div className="auth-card-content">
+            <div className="auth-card-header">
+              <h2>Welcome Back</h2>
+              <p>Sign in to manage your family circle</p>
+            </div>
 
             <button
-              className="btn grad"
-              style={{ width: '100%', marginTop: 24 }}
+              className="auth-btn-primary"
               disabled={loading}
               onClick={signInWithGoogle}
             >
-              {loading ? 'Signing in…' : (
-                <>
-                  <span style={{ fontSize: '18px', marginRight: '8px' }}>🔗</span>
-                  Continue with Google
-                </>
-              )}
+              {loading ? 'Signing in…' : 'Continue with Google'}
             </button>
 
             <div className="auth-divider">
               <span>or</span>
             </div>
 
-            <div className="auth-signup-prompt">
+            <div style={{ textAlign: 'center', fontSize: 14 }}>
               New to KinetikCircle?{' '}
               <button
-                className="auth-link"
-                onClick={() => {
-                  // Open sign up flow
-                  alert('Sign up coming soon')
-                }}
+                className="auth-link-btn"
+                onClick={() => alert('Sign up coming soon')}
               >
                 Create account
               </button>
             </div>
 
-            {error && <div className="auth-error">{error}</div>}
+            {error && <div className="auth-error-msg">{error}</div>}
           </div>
         )}
 
-        {/* Kids Login Card */}
+        {/* Kids Login */}
         {tab === 'kid' && (
-          <div className="auth-card">
-            <div className="ac-icon">👧</div>
-            <h2 className="ac-title">Kids Login</h2>
-            <p className="ac-subtitle">Enter your username and PIN</p>
+          <div className="auth-card-content">
+            <div className="auth-card-header">
+              <h2>Kids Login</h2>
+              <p>Enter your username and PIN</p>
+            </div>
 
-            <div className="auth-form" style={{ marginTop: 24 }}>
+            <div className="auth-form">
               <input
-                className="field"
+                className="auth-field"
                 placeholder="Username"
                 value={kidUsername}
                 onChange={e => setKidUsername(e.target.value)}
                 disabled={loading}
               />
               <input
-                className="field"
+                className="auth-field"
                 placeholder="PIN"
                 type="password"
                 value={kidPin}
@@ -147,8 +144,7 @@ export default function Login() {
                 maxLength={4}
               />
               <button
-                className="btn grad"
-                style={{ width: '100%' }}
+                className="auth-btn-primary"
                 disabled={loading || !kidUsername || !kidPin}
                 onClick={handleKidLogin}
               >
@@ -156,14 +152,14 @@ export default function Login() {
               </button>
             </div>
 
-            {error && <div className="auth-error">{error}</div>}
+            {error && <div className="auth-error-msg">{error}</div>}
           </div>
         )}
 
         {/* Footer */}
-        <p className="auth-legal">
-          🔒 Your family's data is encrypted and private. Never shared.
-        </p>
+        <div className="auth-footer">
+          <p className="auth-note">🔒 Your family's data is encrypted and private. Never shared.</p>
+        </div>
       </div>
     </div>
   )
