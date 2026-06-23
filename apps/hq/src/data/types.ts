@@ -60,3 +60,37 @@ export interface Ontology {
   generatedAt?: string
   generatedBy?: string
 }
+
+// ── Content richness (world × stage coverage matrix) ──
+export interface ContentStage {
+  key: string
+  label: string
+  minAge: number
+  maxAge: number
+  order: number
+}
+
+export interface ContentWorld {
+  key: string
+  name: string
+  order: number
+}
+
+export interface ContentCell {
+  world: string
+  stage: string
+  authored: number
+  live: number
+  interactions: number      // distinct interaction types present
+  rungs: number             // distinct difficulty rungs present
+  skills: number            // distinct skills present
+  lastUpdated: string | null
+}
+
+export interface ContentMatrix {
+  stages: ContentStage[]
+  worlds: ContentWorld[]
+  cells: ContentCell[]
+  totals: { authored: number; live: number }
+  generatedAt: string
+}

@@ -1069,3 +1069,52 @@ on conflict (game_ref) do nothing;
 -- ============================================================
 --  END GAME PLATFORM SPINE
 -- ============================================================
+
+
+-- ============================================================
+--  CIRCLE HQ — CONTENT RICHNESS
+--  Operator-gated aggregate over the items catalog. Returns the
+--  world × stage coverage matrix that drives the Content surface.
+--  100% additive · no dummy data · reads only real items rows.
+-- ============================================================
+create or replace function public.hq_content_matrix()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare r jsonb;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select jsonb_build_object(
+    'stages', (select coalesce(jsonb_agg(jsonb_build_object(
+                 'key', key, 'label', label, 'minAge', min_age,
+                 'maxAge', max_age, 'order', order_idx
+               ) order by order_idx), '[]'::jsonb) from public.stages),
+    'worlds', (select coalesce(jsonb_agg(jsonb_build_object(
+                 'key', key, 'name', name, 'order', order_idx
+               ) order by order_idx), '[]'::jsonb)
+               from public.worlds where status = 'live'),
+    'cells',  (select coalesce(jsonb_agg(c), '[]'::jsonb) from (
+                 select
+                   world_key                                   as world,
+                   stage_key                                   as stage,
+                   count(*)                                    as authored,
+                   count(*) filter (where status = 'live')     as live,
+                   count(distinct interaction_type)            as interactions,
+                   count(distinct difficulty)                  as rungs,
+                   count(distinct skill_key)                   as skills,
+                   max(updated_at)                             as "lastUpdated"
+                 from public.items
+                 where world_key is not null and stage_key is not null
+                 group by world_key, stage_key
+               ) c),
+    'totals', jsonb_build_object(
+       'authored', (select count(*) from public.items),
+       'live',     (select count(*) from public.items where status = 'live')
+    ),
+    'generatedAt', now()
+  ) into r;
+  return r;
+end;
+$$;
+grant execute on function public.hq_content_matrix() to authenticated;
+-- ============================================================
+--  END CONTENT RICHNESS
+-- ============================================================

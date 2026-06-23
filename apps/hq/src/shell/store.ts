@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'portfolio' | 'pulse' | 'data' | 'audience' | 'game' | 'app'
+export type SurfaceId = 'portfolio' | 'pulse' | 'data' | 'audience' | 'content' | 'game' | 'app'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 export type Theme = 'light' | 'dark'
 
 const SURFACE_LABEL: Record<SurfaceId, string> = {
   portfolio: 'Portfolio', pulse: 'Pulse', data: 'Data', audience: 'Audience',
-  game: 'Game Builder', app: 'App Builder',
+  content: 'Content', game: 'Game Builder', app: 'App Builder',
 }
 export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 

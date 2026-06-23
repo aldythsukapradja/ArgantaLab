@@ -1,5 +1,5 @@
 import { supabase, cloudEnabled } from '../lib/supabase'
-import type { SchemaModel, SchemaInsights, Ontology } from './types'
+import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix } from './types'
 
 export interface PublishedGame {
   id: string
@@ -119,6 +119,7 @@ async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T | n
 export const live = {
   schemaModel: () => rpc<SchemaModel>('hq_schema_model'),
   schemaInsights: () => rpc<SchemaInsights>('hq_schema_insights'),
+  contentMatrix: () => rpc<ContentMatrix>('hq_content_matrix'),
   tablePreview: (table: string, limit = 20) =>
     rpc<Record<string, unknown>[]>('hq_table_preview', { p_table: table, p_limit: limit }),
   latestOntology: () => rpc<Ontology>('hq_latest_ontology'),

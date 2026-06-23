@@ -322,3 +322,12 @@ export async function kidWorldRings(kidId: string): Promise<WorldRing[]> {
   if (error || !data) return []
   return data as WorldRing[]
 }
+
+export interface DirUser { id: string; display_name: string; photo_url: string | null; friend_code: string; role: string; rel: 'none' | 'pending' | 'friend' }
+/** Browse registered grown-ups for the Add-friend popup (kids never listed). */
+export async function searchUsers(q = '', limit = 8, offset = 0): Promise<DirUser[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('search_users', { p_q: q.trim(), p_limit: limit, p_offset: offset })
+  if (error || !data) return []
+  return data as DirUser[]
+}

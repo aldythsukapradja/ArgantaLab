@@ -189,5 +189,29 @@ language sql stable security definer set search_path = public as $$
 $$;
 grant execute on function public.kid_world_rings(uuid) to authenticated;
 
+-- ── User directory search (for the Add-friend popup) ────────
+-- Paginated, privacy-conscious: EXCLUDES the caller and ALL kid accounts
+-- (minors are never browsable — they can only be added by exact friend code).
+-- `rel` tells the UI whether you're already friends / have a pending request.
+create or replace function public.search_users(p_q text default '', p_limit int default 8, p_offset int default 0)
+returns table(id uuid, display_name text, photo_url text, friend_code text, role text, rel text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.display_name, p.photo_url, p.friend_code, p.role,
+    case
+      when exists(select 1 from public.friendships f where f.status='accepted'
+                  and ((f.requester=auth.uid() and f.addressee=p.id) or (f.addressee=auth.uid() and f.requester=p.id))) then 'friend'
+      when exists(select 1 from public.friendships f where f.status='pending'
+                  and ((f.requester=auth.uid() and f.addressee=p.id) or (f.addressee=auth.uid() and f.requester=p.id))) then 'pending'
+      else 'none'
+    end as rel
+  from public.profiles p
+  where p.id <> auth.uid()
+    and p.role <> 'kid'
+    and (coalesce(p_q,'') = '' or p.display_name ilike '%'||p_q||'%' or p.friend_code ilike p_q||'%')
+  order by p.display_name
+  limit least(greatest(p_limit,1),25) offset greatest(p_offset,0);
+$$;
+grant execute on function public.search_users(text, int, int) to authenticated;
+
 commit;
 -- ============================================================

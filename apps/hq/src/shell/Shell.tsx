@@ -6,6 +6,7 @@ import { Data } from '../surfaces/Data'
 import { Pulse } from '../surfaces/Pulse'
 import { Portfolio } from '../surfaces/Portfolio'
 import { Audience } from '../surfaces/Audience'
+import { Content } from '../surfaces/Content'
 import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 
 function Surface() {
@@ -15,6 +16,7 @@ function Surface() {
     case 'pulse': return <Pulse />
     case 'portfolio': return <Portfolio />
     case 'audience': return <Audience />
+    case 'content': return <Content />
     case 'game': return <GameBuilder />
     case 'app': return <AppBuilder />
   }

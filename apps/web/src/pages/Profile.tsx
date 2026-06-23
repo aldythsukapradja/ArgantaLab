@@ -6,6 +6,7 @@ import { loadMyGames } from '@lib/myGames'
 import { addKid as addKidLocal } from '@lib/circles'   // offline-only fallback
 import Buddy from '@components/avatar/Buddy'
 import KidForm, { type KidFormData } from '@components/auth/KidForm'
+import FriendSearch from '@components/auth/FriendSearch'
 import { cloudEnabled } from '@lib/supabase'
 import {
   signOutCloud, linkKid, parentCreateKid, unlinkKid, resetKidPin, adoptKid,
@@ -66,6 +67,7 @@ export default function Profile() {
   useEffect(reloadAll, [uid])
 
   const [view, setView] = useState<'home' | 'add'>('home')
+  const [showFriendSearch, setShowFriendSearch] = useState(false)
   const outfit = resolvedOutfit()
 
   const kidLogout = async () => { addToast('Logged out 👋', '🔒'); await signOutCloud(); useAppStore.setState({ role: 'user' }); lockSession() }
@@ -132,14 +134,8 @@ export default function Profile() {
     reloadAll()
   }
 
-  // ── Friends (code-gated for everyone) ──────────────────────
-  const addFriend = async () => {
-    const code = prompt('Enter your friend\'s code to add them:')?.trim()
-    if (!code) return
-    const r = await sendFriendRequest(code)
-    addToast(r.ok ? (r.data?.status === 'accepted' ? 'Already friends 🎉' : 'Friend request sent 📨') : (r.error ?? 'Could not send'), r.ok ? '✅' : '⚠️')
-    if (r.ok) reloadAll()
-  }
+  // ── Friends (code-gated for everyone; search popup excludes kids) ──
+  const addFriend = () => setShowFriendSearch(true)
   const answerFriendReq = async (req: FriendRequest, accept: boolean) => {
     await respondFriendRequest(req.id, accept)
     addToast(accept ? `You and ${req.from_name} are friends 🎉` : 'Request declined', accept ? '✨' : '👋')
@@ -262,6 +258,10 @@ export default function Profile() {
     </>
   )
 
+  const friendSearchModal = showFriendSearch && (
+    <FriendSearch onClose={() => setShowFriendSearch(false)} onChanged={reloadAll} />
+  )
+
   // ════ KID MODE — only their own stuff, no grown-up tools ════
   if (kidMode) {
     return (
@@ -270,7 +270,6 @@ export default function Profile() {
         <div className="ig-actions">
           <button className="ig-btn" onClick={() => go({ tab: 'avatar' })}>✏️ Edit avatar</button>
           <button className="ig-btn" onClick={() => go({ tab: 'fame' })}>🏆 Hall of Fame</button>
-          <button className="ig-btn" onClick={openSwitcher}>🔄 Switch player</button>
         </div>
 
         {friendReqInbox}
@@ -286,12 +285,10 @@ export default function Profile() {
 
         <div className="ig-foot">
           <div className="ig-foot-row"><b>{totalBadges}</b> badges earned</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost" onClick={openSwitcher}>🔄 Switch</button>
-            <button className="btn btn-ghost" onClick={kidLogout}>🔒 Log out</button>
-          </div>
+          <button className="btn btn-ghost" onClick={kidLogout}>🔒 Log out</button>
         </div>
         <p className="ig-kc">👋 This is your own space, {learnerName}! Only you can see it.</p>
+        {friendSearchModal}
       </div>
     )
   }
@@ -380,6 +377,7 @@ export default function Profile() {
       </div>
 
       <p className="ig-kc">🔗 Circles are shared with <b>KinetikCircle</b> — our family social app — as it comes online.</p>
+      {friendSearchModal}
     </div>
   )
 }
