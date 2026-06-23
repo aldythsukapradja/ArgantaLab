@@ -356,21 +356,147 @@ html[data-theme='dark'] .next-when { color: #67E8F9; }
 .sync-main small { font-size: 11px; color: var(--muted); }
 .me-foot { font-size: 11.5px; color: var(--faint); text-align: center; margin-top: 16px; line-height: 1.5; padding: 0 24px; }
 
-/* ---- Settings rows (Me page) ---- */
+/* ===============================================================
+   ME PAGE — SOCIAL MEDIA LEVEL DESIGN
+   =============================================================== */
+.me-page { display: flex; flex-direction: column; padding-top: 6px; }
+
+/* ── Instagram-style header: avatar + inline stats ── */
+.ig-header {
+  display: flex; align-items: center; gap: 18px;
+  padding: 8px 4px 4px;
+}
+.ig-avatar {
+  width: 84px; height: 84px; border-radius: 50%; flex: 0 0 auto;
+  object-fit: cover;
+  border: 3px solid var(--card);
+  box-shadow: 0 0 0 2px var(--border-2), 0 8px 22px rgba(20,16,40,.16);
+}
+html[data-theme='dark'] .ig-avatar { box-shadow: 0 0 0 2px var(--border-2), 0 8px 22px rgba(0,0,0,.5); }
+.ig-avatar-fallback {
+  display: grid; place-items: center; color: #fff; font-size: 30px; font-weight: 700;
+}
+.ig-stats {
+  flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+}
+.ig-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 4px 2px; border-radius: 10px;
+  transition: background 0.14s var(--ease);
+}
+.ig-stat:active { background: var(--bg-2); }
+.ig-stat b { font-size: 18px; font-weight: 800; color: var(--ink); line-height: 1; }
+.ig-stat span { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+
+/* ── Name + bio row ── */
+.ig-bio { padding: 12px 4px 4px; }
+.ig-name { font-size: 18px; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+.ig-bio-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ig-circle-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  background: var(--bg-2); padding: 6px 12px; border-radius: 999px;
+}
+.ig-dot { width: 7px; height: 7px; border-radius: 50%; }
+.ig-diamonds {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12.5px; font-weight: 700; color: #60a5fa;
+  background: color-mix(in srgb, #60a5fa 12%, var(--card));
+  padding: 6px 12px; border-radius: 999px;
+}
+
+/* ── Add buttons ── */
+.ig-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 4px; }
+.ig-action-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  background: var(--card); border: 0.5px solid var(--border-2);
+  padding: 11px 16px; border-radius: 12px; box-shadow: var(--shadow);
+  transition: transform 0.15s var(--ease);
+}
+.ig-action-btn:active { transform: scale(0.97); }
+
+/* ── Sections ── */
+.me-section { margin-top: 24px; }
+.me-section-last { margin-bottom: 40px; }
+.mes-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mes-title { font-size: 15px; font-weight: 800; color: var(--ink); }
+.mes-live { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--growth); text-transform: uppercase; letter-spacing: 0.04em; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--growth); box-shadow: 0 0 0 3px color-mix(in srgb, var(--growth) 22%, transparent); animation: live-pulse 1.6s ease-in-out infinite; }
+@keyframes live-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ── Members with live progress rings ── */
+.members-list {
+  background: var(--card); border: 0.5px solid var(--border);
+  border-radius: 16px; overflow: hidden; box-shadow: var(--shadow);
+}
+.member-row {
+  display: flex; align-items: center; gap: 13px;
+  padding: 12px 14px; border-bottom: 0.5px solid var(--line);
+  transition: background 0.14s var(--ease);
+}
+.member-row:last-child { border-bottom: none; }
+.member-row:active { background: var(--bg-2); }
+
+.member-ring { position: relative; width: 54px; height: 54px; flex: 0 0 auto; display: grid; place-items: center; }
+.mr-svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.mr-track { fill: none; stroke: var(--line); stroke-width: 3.5; }
+.mr-prog { fill: none; stroke-width: 3.5; stroke-linecap: round; transition: stroke-dasharray 0.7s var(--ease); }
+.mr-av {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px;
+}
+.mr-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mr-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.mr-sub { font-size: 11.5px; color: var(--muted); }
+.mr-diamonds {
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
+  font-size: 12px; font-weight: 700; color: #60a5fa;
+}
+
+/* Settings card */
+.settings-card {
+  background: var(--card); border: 0.5px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
 .settings-row {
   display: flex; align-items: center; gap: 13px;
   width: 100%; padding: 14px 16px; text-align: left;
-  transition: opacity 0.14s;
+  transition: background 0.14s var(--ease);
+  border-bottom: 0.5px solid var(--border);
 }
-.settings-row:active { opacity: 0.7; }
+.settings-row:last-child { border-bottom: none; }
+.settings-row:active { background: var(--bg-2); }
+
 .sr-icon {
-  width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto;
+  width: 36px; height: 36px; border-radius: 11px; flex: 0 0 auto;
   display: grid; place-items: center;
 }
 .sr-main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.sr-main b { font-size: 13.5px; font-weight: 600; }
+.sr-main b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
 .sr-main small { font-size: 11px; color: var(--muted); }
 .sr-val { font-size: 12px; font-weight: 600; color: var(--faint); }
+
+/* Sync indicator */
+.sync-indicator {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 12px 14px; background: color-mix(in srgb, var(--growth) 8%, var(--card));
+  border: 0.5px solid color-mix(in srgb, var(--growth) 30%, transparent);
+  border-radius: 12px; font-size: 12px;
+}
+.sync-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--faint); flex: 0 0 auto;
+  margin-top: 2px;
+}
+.sync-dot[data-on='1'] {
+  background: var(--growth);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--growth) 18%, transparent);
+}
+.sync-indicator > div { display: flex; flex-direction: column; gap: 1px; }
+.sync-indicator b { color: var(--growth); font-weight: 700; }
+.sync-indicator small { color: var(--muted); }
 
 /* ---- boot loader + data-source banner (rebuild) ---- */
 .boot { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 64px 0; color: var(--muted); }

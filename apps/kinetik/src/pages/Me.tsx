@@ -1,58 +1,66 @@
 import { useState, useEffect } from 'react'
 import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
-import { supabase } from '@lib/supabase'
+import { supabase, cloudReady } from '@lib/supabase'
+import { fetchMemberProgress, type MemberProgress } from '@repo/kinetikRepo'
 import { ROLE_LABEL, initials } from '@data/energy'
-import { cloudReady } from '@lib/supabase'
-import { IconSwitch, IconUserPlus, IconSun, IconMoon, IconMe, IconGem } from '@components/Icons'
+import { IconSwitch, IconSun, IconMoon, IconPlus } from '@components/Icons'
 
-interface ChildWithProgress {
-  id: string; display_name: string; color: string; emoji: string; age?: number
-  progress?: { ring_pct?: number; xp?: number; skills_mastered?: number }
+interface UserProfile {
+  display_name: string; photo_url: string | null; diamonds: number; email: string
 }
 
 export default function Me() {
   const circles = useDataStore(s => s.circles)
   const people = useDataStore(s => s.people)
-  const { activeCircleId, setCircle, theme, toggleTheme } = useUiStore()
-  const [children, setChildren] = useState<ChildWithProgress[]>([])
-  const [loadingKids, setLoadingKids] = useState(false)
+  const moments = useDataStore(s => s.moments)
+  const { activeCircleId, setCircle, theme, toggleTheme, go } = useUiStore()
+
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [progress, setProgress] = useState<Record<string, MemberProgress>>({})
+  const [loading, setLoading] = useState(true)
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
   const members = people.filter(p => circle && circle.memberIds.includes(p.id))
-  const me = members.find(p => p.role === 'owner') ?? members[0]
 
+  // Instagram-style stats
+  const momentCount = moments.filter(m => m.circleId === circle?.id).length
+  const circleCount = circles.length
+  const memberCount = members.length
+  const friendCount = new Set(circles.flatMap(c => c.memberIds)).size
+
+  // Load profile once
   useEffect(() => {
-    const fetchChildren = async () => {
-      setLoadingKids(true)
+    const run = async () => {
+      setLoading(true)
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data: kids } = await supabase
-          .from('child_profiles')
-          .select('id, display_name, color, emoji, age')
-          .eq('parent_id', user.id)
-        if (kids) {
-          const withProgress = await Promise.all(
-            kids.map(async (kid) => {
-              const { data: prog } = await supabase
-                .from('world_progress')
-                .select('ring_pct, xp, skills_mastered')
-                .eq('user_id', kid.id)
-                .single()
-              return { ...kid, progress: prog ?? undefined }
-            })
-          )
-          setChildren(withProgress as ChildWithProgress[])
-        }
+        if (!user) throw new Error('Not authenticated')
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('display_name, photo_url, diamonds')
+          .eq('id', user.id)
+          .single()
+        setProfile({
+          display_name: prof?.display_name || user.user_metadata?.full_name || 'User',
+          photo_url: prof?.photo_url || user.user_metadata?.avatar_url || null,
+          diamonds: prof?.diamonds || 0,
+          email: user.email || '',
+        })
       } catch (err) {
-        console.error('Failed to fetch children:', err)
+        console.error('profile load failed:', err)
       } finally {
-        setLoadingKids(false)
+        setLoading(false)
       }
     }
-    fetchChildren()
+    run()
   }, [])
+
+  // Load live member progress whenever the circle changes
+  useEffect(() => {
+    if (!circle) return
+    fetchMemberProgress(circle.id).then(setProgress).catch(() => setProgress({}))
+  }, [circle?.id])
 
   const cycleCircle = () => {
     if (circles.length < 2) return
@@ -65,102 +73,138 @@ export default function Me() {
     window.location.reload()
   }
 
-  if (!circle || !me) {
-    return <div className="fade-in"><p className="me-foot">No circle loaded yet.</p></div>
+  if (loading) {
+    return (
+      <div className="fade-in" style={{ padding: '40px 16px', textAlign: 'center' }}>
+        <div className="boot"><span className="boot-orb" /><p>Loading profile…</p></div>
+      </div>
+    )
   }
 
+  const accent0 = circle?.accent[0] ?? 'var(--accent)'
+  const accent1 = circle?.accent[1] ?? 'var(--care)'
+
   return (
-    <div className="fade-in">
-      <div className="me-head">
-        <span className="me-av" style={{ background: `linear-gradient(135deg,${circle.accent[0]},${circle.accent[1]})` }}>{me.name[0]}</span>
-        <div className="me-name">{me.name}</div>
-        <button className="circle-pill" onClick={cycleCircle}>
-          <span className="circle-dot" style={{ background: `linear-gradient(135deg,${circle.accent[0]},${circle.accent[1]})` }} />
-          {circle.name}
-          <IconSwitch width={14} height={14} style={{ color: 'var(--accent)' }} />
-        </button>
-      </div>
-
-      <div className="section-label">People in this circle</div>
-      <div className="card people">
-        {members.map(p => (
-          <div key={p.id} className="person-row">
-            <span className="p-av" style={{ background: p.color }}>{initials(p.name)}</span>
-            <span className="p-name">{p.name}</span>
-            <div className="p-right">
-              <span className="p-gem">💎</span>
-              <span className="p-role" data-role={p.role}>{ROLE_LABEL[p.role]}</span>
-            </div>
+    <div className="fade-in me-page">
+      {/* ── Instagram-style header: avatar + inline stats ── */}
+      <div className="ig-header">
+        {profile?.photo_url ? (
+          <img src={profile.photo_url} alt={profile.display_name} className="ig-avatar" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="ig-avatar ig-avatar-fallback" style={{ background: `linear-gradient(135deg,${accent0},${accent1})` }}>
+            {initials(profile?.display_name || 'U')}
           </div>
-        ))}
-      </div>
+        )}
 
-      <div className="me-diamond-bar">
-        <div className="mdb-item">
-          <IconGem width={18} height={18} style={{ color: '#60A5FA' }} />
-          <span>Diamonds: <b>{me?.role ? '0' : '—'}</b></span>
+        <div className="ig-stats">
+          <button className="ig-stat" onClick={() => go('moments')}>
+            <b>{momentCount}</b><span>Moments</span>
+          </button>
+          <button className="ig-stat" onClick={cycleCircle}>
+            <b>{circleCount}</b><span>Circles</span>
+          </button>
+          <button className="ig-stat">
+            <b>{memberCount}</b><span>Members</span>
+          </button>
+          <button className="ig-stat">
+            <b>{friendCount}</b><span>Friends</span>
+          </button>
         </div>
       </div>
 
-      <div className="me-actions">
-        <button className="btn ghost" style={{ flex: 1 }}><IconUserPlus width={17} height={17} /> Invite</button>
+      {/* ── Name + circle + diamonds ── */}
+      <div className="ig-bio">
+        <h1 className="ig-name">{profile?.display_name}</h1>
+        <div className="ig-bio-row">
+          <span className="ig-circle-tag">
+            <span className="ig-dot" style={{ background: accent0 }} />
+            {circle?.name}
+          </span>
+          <span className="ig-diamonds">💎 {(profile?.diamonds || 0).toLocaleString()}</span>
+        </div>
       </div>
 
-      {children.length > 0 && (
-        <>
-          <div className="section-label">Kids Learning</div>
-          <div className="kids-grid">
-            {children.map(kid => (
-              <div key={kid.id} className="kid-card">
-                <div className="kid-av" style={{ background: kid.color }}>{kid.emoji || initials(kid.display_name)}</div>
-                <span className="kid-name">{kid.display_name}</span>
-                {kid.progress?.ring_pct !== undefined && (
-                  <div className="progress-ring-wrap">
-                    <svg width="56" height="56" viewBox="0 0 56 56" className="progress-ring-svg">
-                      <circle cx="28" cy="28" r="22" className="progress-ring-bg" />
-                      <circle
-                        cx="28" cy="28" r="22"
-                        className="progress-ring-fill"
-                        style={{ strokeDasharray: `${Math.round(kid.progress.ring_pct * 1.38)} 138`, stroke: kid.color }}
-                      />
-                    </svg>
-                    <span className="progress-pct">{Math.round(kid.progress.ring_pct)}%</span>
-                  </div>
-                )}
+      {/* ── Add buttons ── */}
+      <div className="ig-actions">
+        <button className="ig-action-btn"><IconPlus width={16} height={16} /> Add Circle</button>
+        <button className="ig-action-btn"><IconPlus width={16} height={16} /> Add Kids</button>
+      </div>
+
+      {/* ── Circle members with LIVE progress rings ── */}
+      <section className="me-section">
+        <div className="mes-head">
+          <h2 className="mes-title">Circle Members</h2>
+          <span className="mes-live"><span className="live-dot" /> live</span>
+        </div>
+        <div className="members-list">
+          {members.map(p => {
+            const prog = progress[p.id]
+            const pct = prog?.ringPct ?? 0
+            return (
+              <div key={p.id} className="member-row">
+                <MemberRing color={p.color} pct={pct} label={initials(p.name)} />
+                <div className="mr-info">
+                  <span className="mr-name">{p.name}</span>
+                  <span className="mr-sub">
+                    {ROLE_LABEL[p.role]}
+                    {prog && pct > 0 && <> · <b style={{ color: p.color }}>{pct}%</b></>}
+                    {prog && prog.xp > 0 && <> · {prog.xp.toLocaleString()} XP</>}
+                  </span>
+                </div>
+                <span className="mr-diamonds">💎 {(prog?.diamonds || 0).toLocaleString()}</span>
               </div>
-            ))}
-          </div>
-        </>
-      )}
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ── Settings ── */}
+      <section className="me-section me-section-last">
+        <h2 className="mes-title">Settings</h2>
+        <div className="settings-card">
+          <button className="settings-row" onClick={toggleTheme}>
+            <span className="sr-icon" style={{ background: theme === 'dark' ? 'color-mix(in srgb, var(--play) 16%, transparent)' : 'color-mix(in srgb, var(--memory) 14%, transparent)' }}>
+              {theme === 'dark' ? <IconSun width={18} height={18} style={{ color: 'var(--play)' }} /> : <IconMoon width={18} height={18} style={{ color: 'var(--memory)' }} />}
+            </span>
+            <span className="sr-main"><b>Appearance</b><small>{theme === 'dark' ? 'Dark' : 'Light'} mode</small></span>
+            <span className="sr-val">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+          </button>
+          <button className="settings-row" onClick={cycleCircle}>
+            <span className="sr-icon" style={{ background: 'color-mix(in srgb, var(--accent) 14%, transparent)' }}>
+              <IconSwitch width={18} height={18} style={{ color: 'var(--accent)' }} />
+            </span>
+            <span className="sr-main"><b>Active Circle</b><small>{circle?.name || 'Select a circle'}</small></span>
+            <span className="sr-val">→</span>
+          </button>
+          <button className="settings-row" onClick={handleLogout}>
+            <span className="sr-icon" style={{ background: 'color-mix(in srgb, var(--care) 14%, transparent)' }}>🚪</span>
+            <span className="sr-main"><b>Sign Out</b><small>Log out of your account</small></span>
+            <span className="sr-val">→</span>
+          </button>
+        </div>
+      </section>
 
       <SyncRow />
+    </div>
+  )
+}
 
-      <div className="section-label">Settings</div>
-      <div className="card">
-        <button className="settings-row" onClick={toggleTheme}>
-          <span className="sr-icon" style={{ background: theme === 'dark' ? 'color-mix(in srgb, var(--play) 16%, transparent)' : 'color-mix(in srgb, var(--memory) 14%, transparent)' }}>
-            {theme === 'dark'
-              ? <IconSun width={17} height={17} style={{ color: 'var(--play)' }} />
-              : <IconMoon width={17} height={17} style={{ color: 'var(--memory)' }} />}
-          </span>
-          <span className="sr-main">
-            <b>Appearance</b>
-            <small>Currently {theme === 'dark' ? 'dark' : 'light'} mode</small>
-          </span>
-          <span className="sr-val">{theme === 'dark' ? 'Dark' : 'Light'}</span>
-        </button>
-        <button className="settings-row" onClick={handleLogout} style={{ borderTop: '0.5px solid var(--line)' }}>
-          <span className="sr-icon" style={{ background: 'color-mix(in srgb, var(--care) 14%, transparent)' }}>
-            🚪
-          </span>
-          <span className="sr-main">
-            <b>Sign Out</b>
-            <small>Log out of your account</small>
-          </span>
-        </button>
-      </div>
-
-      <p className="me-foot">Private to the people you choose. No followers, no likes — just your circle.</p>
+/** Avatar wrapped in a circular progress ring. */
+function MemberRing({ color, pct, label }: { color: string; pct: number; label: string }) {
+  const r = 22
+  const circ = 2 * Math.PI * r
+  const dash = (Math.min(pct, 100) / 100) * circ
+  return (
+    <div className="member-ring">
+      <svg width="54" height="54" viewBox="0 0 54 54" className="mr-svg">
+        <circle cx="27" cy="27" r={r} className="mr-track" />
+        <circle
+          cx="27" cy="27" r={r}
+          className="mr-prog"
+          style={{ stroke: color, strokeDasharray: `${dash} ${circ}` }}
+        />
+      </svg>
+      <span className="mr-av" style={{ background: color }}>{label}</span>
     </div>
   )
 }
@@ -169,14 +213,14 @@ function SyncRow() {
   const source = useDataStore(s => s.source)
   const on = cloudReady && source === 'cloud'
   return (
-    <div className="card sync-row">
+    <div className="sync-indicator" style={{ marginTop: 20 }}>
       <span className="sync-dot" data-on={on ? '1' : '0'} />
       {!cloudReady ? (
-        <div className="sync-main"><b>Works offline</b><small>Add Supabase keys in .env.local to sync across devices.</small></div>
+        <div><b>Works offline</b><small>Add Supabase keys to sync</small></div>
       ) : source === 'cloud' ? (
-        <div className="sync-main"><b>Live · synced to cloud</b><small>This is your real data from Supabase.</small></div>
+        <div><b>Live · synced to cloud</b><small>Real data from Supabase</small></div>
       ) : (
-        <div className="sync-main"><b>Offline copy</b><small>Showing the last synced cache — reconnect to sync.</small></div>
+        <div><b>Offline copy</b><small>Last synced cache — reconnect to sync</small></div>
       )}
     </div>
   )
