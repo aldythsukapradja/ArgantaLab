@@ -6,19 +6,15 @@ import { fetchMemberProgress, type MemberProgress } from '@repo/kinetikRepo'
 import { ROLE_LABEL, initials } from '@data/energy'
 import { IconSwitch, IconSun, IconMoon, IconPlus } from '@components/Icons'
 
-interface UserProfile {
-  display_name: string; photo_url: string | null; diamonds: number; email: string
-}
-
 export default function Me() {
   const circles = useDataStore(s => s.circles)
   const people = useDataStore(s => s.people)
   const moments = useDataStore(s => s.moments)
+  const me = useDataStore(s => s.me)            // the one real signed-in user
+  const status = useDataStore(s => s.status)
   const { activeCircleId, setCircle, theme, toggleTheme, go } = useUiStore()
 
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [progress, setProgress] = useState<Record<string, MemberProgress>>({})
-  const [loading, setLoading] = useState(true)
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
   const members = people.filter(p => circle && circle.memberIds.includes(p.id))
@@ -29,38 +25,13 @@ export default function Me() {
   const memberCount = members.length
   const friendCount = new Set(circles.flatMap(c => c.memberIds)).size
 
-  // Load profile once
-  useEffect(() => {
-    const run = async () => {
-      setLoading(true)
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('Not authenticated')
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('display_name, photo_url, diamonds')
-          .eq('id', user.id)
-          .single()
-        setProfile({
-          display_name: prof?.display_name || user.user_metadata?.full_name || 'User',
-          photo_url: prof?.photo_url || user.user_metadata?.avatar_url || null,
-          diamonds: prof?.diamonds || 0,
-          email: user.email || '',
-        })
-      } catch (err) {
-        console.error('profile load failed:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    run()
-  }, [])
-
-  // Load live member progress whenever the circle changes
+  // Live member progress whenever the circle changes
   useEffect(() => {
     if (!circle) return
     fetchMemberProgress(circle.id).then(setProgress).catch(() => setProgress({}))
   }, [circle?.id])
+
+  const loading = status === 'loading' && !me
 
   const cycleCircle = () => {
     if (circles.length < 2) return
@@ -88,11 +59,11 @@ export default function Me() {
     <div className="fade-in me-page">
       {/* ── Instagram-style header: avatar + inline stats ── */}
       <div className="ig-header">
-        {profile?.photo_url ? (
-          <img src={profile.photo_url} alt={profile.display_name} className="ig-avatar" referrerPolicy="no-referrer" />
+        {me?.photoUrl ? (
+          <img src={me.photoUrl} alt={me.name} className="ig-avatar" referrerPolicy="no-referrer" />
         ) : (
           <div className="ig-avatar ig-avatar-fallback" style={{ background: `linear-gradient(135deg,${accent0},${accent1})` }}>
-            {initials(profile?.display_name || 'U')}
+            {initials(me?.name || 'U')}
           </div>
         )}
 
@@ -114,13 +85,13 @@ export default function Me() {
 
       {/* ── Name + circle + diamonds ── */}
       <div className="ig-bio">
-        <h1 className="ig-name">{profile?.display_name}</h1>
+        <h1 className="ig-name">{me?.name ?? 'Your profile'}</h1>
         <div className="ig-bio-row">
           <span className="ig-circle-tag">
             <span className="ig-dot" style={{ background: accent0 }} />
             {circle?.name}
           </span>
-          <span className="ig-diamonds">💎 {(profile?.diamonds || 0).toLocaleString()}</span>
+          <span className="ig-diamonds">💎 {(me?.diamonds || 0).toLocaleString()}</span>
         </div>
       </div>
 

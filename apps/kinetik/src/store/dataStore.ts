@@ -12,7 +12,8 @@ import { cloudReady } from '@lib/supabase'
 import * as repo from '@repo/kinetikRepo'
 import { useUiStore } from '@store/uiStore'
 import { energyOf } from '@data/energy'
-import type { Circle, Person, KEvent, CircleData } from '@data/types'
+import type { Circle, Person, KEvent, Routine, CircleData } from '@data/types'
+import type { Me } from '@repo/kinetikRepo'
 
 const CACHE_KEY = 'kinetik_cache_v1'
 
@@ -24,9 +25,12 @@ interface DataStore extends CircleData {
   status: Status
   source: Source
   error: string | null
+  /** The signed-in user (real auth + profile). null until loaded / signed out. */
+  me: Me | null
 
   load: () => Promise<void>
   addEvent: (e: Omit<KEvent, 'id' | 'energy'>) => Promise<void>
+  addRoutine: (r: Omit<Routine, 'id' | 'energy'>) => Promise<void>
   heart: (momentId: string) => Promise<void>
 }
 
@@ -54,9 +58,14 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   status: 'loading',
   source: 'empty',
   error: null,
+  me: null,
 
   load: async () => {
     set({ status: 'loading', error: null })
+
+    // The signed-in user is real auth state — fetch it regardless of
+    // whether the circle data round-trips (best-effort, never throws).
+    repo.fetchMe().then(me => set({ me })).catch(() => {})
 
     // No keys → offline-only. Show cache if we have one, else empty.
     if (!cloudReady) {
@@ -99,6 +108,20 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     const events = [...get().events, local]
     set({ events })
     writeCache({ ...pick(get()), events })
+  },
+
+  addRoutine: async (r) => {
+    if (cloudReady) {
+      const saved = await repo.insertRoutine(r) // throws on failure → surfaced to caller
+      const routines = [...get().routines, saved]
+      set({ routines })
+      writeCache({ ...pick(get()), routines })
+      return
+    }
+    const local: Routine = { ...r, id: 'ro_' + Math.random().toString(36).slice(2, 9), energy: deriveEnergy(r.title) }
+    const routines = [...get().routines, local]
+    set({ routines })
+    writeCache({ ...pick(get()), routines })
   },
 
   heart: async (momentId) => {

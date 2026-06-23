@@ -25,6 +25,7 @@ export default function Calendar() {
   const circles    = useDataStore(s => s.circles)
   const people     = useDataStore(s => s.people)
   const addEvent   = useDataStore(s => s.addEvent)
+  const addRoutine = useDataStore(s => s.addRoutine)
   const {
     activeCircleId,
     calWeekOffset, setWeekOffset,
@@ -193,7 +194,16 @@ export default function Calendar() {
           members={members}
           circleId={circle.id}
           onClose={() => setAdding(null)}
-          onSave={async (e) => { await addEvent(e); setAdding(null) }}
+          onSave={async (e) => {
+            if (e.repeat) {
+              // Recurring → a real weekly routine on that weekday.
+              const day = new Date(e.date + 'T00:00').getDay()
+              await addRoutine({ circleId: e.circleId, title: e.title, who: e.who, day, start: e.start, end: e.end })
+            } else {
+              await addEvent({ circleId: e.circleId, title: e.title, date: e.date, start: e.start, end: e.end, who: e.who })
+            }
+            setAdding(null)
+          }}
         />
       )}
     </div>
@@ -205,7 +215,7 @@ function QuickAdd({ date, members, circleId, onClose, onSave }: {
   members: Person[]
   circleId: string
   onClose: () => void
-  onSave: (e: { circleId: string; title: string; date: string; start: string; end: string; who: string[] }) => void | Promise<void>
+  onSave: (e: { circleId: string; title: string; date: string; start: string; end: string; who: string[]; repeat: boolean }) => void | Promise<void>
 }) {
   const now = new Date()
   const [title,      setTitle]      = useState('')
@@ -225,7 +235,7 @@ function QuickAdd({ date, members, circleId, onClose, onSave }: {
   const save = async () => {
     if (!ok) return
     setSaving(true)
-    try { await onSave({ circleId, title: title.trim(), date: pickedDate, start, end: endTime, who }) }
+    try { await onSave({ circleId, title: title.trim(), date: pickedDate, start, end: endTime, who, repeat }) }
     finally { setSaving(false) }
   }
 
@@ -279,7 +289,10 @@ function QuickAdd({ date, members, circleId, onClose, onSave }: {
             </button>
           ))}
         </div>
-        <p className="qa-end-label">{endLabel}</p>
+        <p className="qa-end-label">
+          {endLabel}
+          {repeat && ` · repeats every ${new Date(pickedDate + 'T00:00').toLocaleDateString(undefined, { weekday: 'long' })}`}
+        </p>
 
         <label className="qa-repeat">
           <input type="checkbox" checked={repeat} onChange={e => setRepeat(e.target.checked)} />

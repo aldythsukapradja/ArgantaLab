@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useUiStore } from '@store/uiStore'
 import { useDataStore } from '@store/dataStore'
+import { initials } from '@data/energy'
 import { IconPlus } from '@components/Icons'
 
 export default function TopBar() {
   const { activeCircleId, setCircle, go } = useUiStore()
   const circles = useDataStore(s => s.circles)
+  const me = useDataStore(s => s.me)
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
   const [showCircleMenu, setShowCircleMenu] = useState(false)
 
@@ -67,15 +69,17 @@ export default function TopBar() {
         )}
       </div>
 
-      {/* Right: Avatar for Me */}
+      {/* Right: real Google photo → Me tab */}
       <div className="tb-right">
         <button
           className="topbar-avatar"
           onClick={() => { go('me'); setShowCircleMenu(false) }}
           aria-label="Profile"
-          style={{ background: `linear-gradient(135deg, ${accent0}, ${accent1})` }}
+          style={me?.photoUrl ? undefined : { background: `linear-gradient(135deg, ${accent0}, ${accent1})` }}
         >
-          A
+          {me?.photoUrl
+            ? <img src={me.photoUrl} alt={me.name} className="topbar-avatar-img" referrerPolicy="no-referrer" />
+            : <span>{initials(me?.name || 'Me')}</span>}
         </button>
       </div>
     </header>
