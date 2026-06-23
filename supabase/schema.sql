@@ -688,6 +688,20 @@ grant execute on function public.hq_portfolio_rollup(int) to authenticated;
 grant execute on function public.hq_dau_mau()             to authenticated;
 grant execute on function public.hq_game_stats()          to authenticated;
 
+-- Operator: list ALL games (bypasses RLS so operators see every row)
+create or replace function public.hq_list_games()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  return coalesce(
+    (select jsonb_agg(row_to_json(g) order by g.created_at desc)
+     from public.games g),
+    '[]'::jsonb
+  );
+end;
+$$;
+grant execute on function public.hq_list_games() to authenticated;
+
 -- ---------- SEED · recursive product north stars ----------
 insert into public.hq_product_northstar (product, label, formula, input_metric_keys, parent) values
   ('portfolio', 'Weekly engaged accounts', 'sum of product north stars', array['arganta_ns','kinetik_ns'], null),
