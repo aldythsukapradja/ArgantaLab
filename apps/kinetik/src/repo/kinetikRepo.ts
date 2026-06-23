@@ -92,8 +92,66 @@ export async function insertEvent(e: Omit<KEvent, 'id' | 'energy'>): Promise<KEv
   return mapEvent(row as EventRow)
 }
 
+/** Insert a weekly recurring routine. Returns the saved domain routine. */
+export async function insertRoutine(r: Omit<Routine, 'id' | 'energy'>): Promise<Routine> {
+  const id = 'ro_' + Math.random().toString(36).slice(2, 9)
+  const row = {
+    id, circle_id: r.circleId, title: r.title, who: r.who,
+    responsible: r.responsible ?? null, day: r.day,
+    start_time: r.start, end_time: r.end, duration_min: r.durationMin ?? null,
+  }
+  const { error } = await supabase.from('kinetik_routines').insert(row)
+  if (error) throw error
+  return mapRoutine(row as RoutineRow)
+}
+
 /** Set a moment's heart count (caller computes the new value optimistically). */
 export async function setHearts(momentId: string, hearts: number): Promise<void> {
   const { error } = await supabase.from('kinetik_moments').update({ hearts }).eq('id', momentId)
   if (error) throw error
+}
+
+/** The signed-in user (auth + their profile row). The one real "me". */
+export interface Me { id: string; name: string; photoUrl: string | null; diamonds: number }
+export async function fetchMe(): Promise<Me | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const meta = (user.user_metadata ?? {}) as Record<string, string>
+  let name = meta.full_name || meta.name || user.email?.split('@')[0] || 'there'
+  let photoUrl: string | null = meta.avatar_url || meta.picture || null
+  let diamonds = 0
+  try {
+    const { data: prof } = await supabase
+      .from('profiles').select('display_name, photo_url, diamonds').eq('id', user.id).single()
+    if (prof) {
+      name = prof.display_name || name
+      photoUrl = prof.photo_url || photoUrl
+      diamonds = prof.diamonds ?? 0
+    }
+  } catch { /* profile row may not exist yet — fall back to auth metadata */ }
+  return { id: user.id, name, photoUrl, diamonds }
+}
+
+/** Live learning progress for every member of a circle.
+ *  Backed by the `kinetik_member_progress` security-definer function so
+ *  the owner can read kids' progress without weakening per-user RLS.
+ *  Returns a map keyed by kinetik_people.id. Empty map if the function
+ *  isn't installed yet or the caller doesn't own the circle. */
+export interface MemberProgress {
+  ringPct: number; xp: number; skills: number; streak: number; diamonds: number
+}
+export async function fetchMemberProgress(circleId: string): Promise<Record<string, MemberProgress>> {
+  const { data, error } = await supabase.rpc('kinetik_member_progress', { p_circle: circleId })
+  if (error || !data) return {}
+  const out: Record<string, MemberProgress> = {}
+  for (const r of data as Array<{ member_id: string; ring_pct: number; xp: number; skills: number; streak: number; diamonds: number }>) {
+    out[r.member_id] = {
+      ringPct: Number(r.ring_pct) || 0,
+      xp: r.xp || 0,
+      skills: r.skills || 0,
+      streak: r.streak || 0,
+      diamonds: r.diamonds || 0,
+    }
+  }
+  return out
 }
