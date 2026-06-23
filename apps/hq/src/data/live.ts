@@ -95,7 +95,7 @@ export const live = {
         config: { category: game.category ?? null, source: 'code' },
         html: game.html,
         visibility: 'public',
-        creator_name: game.creatorName || 'Circle HQ',
+        creator_name: game.creatorName || 'KinetikCircle',
         category: game.category ?? null,
         description: game.description ?? null,
         tags: game.tags ?? [],
