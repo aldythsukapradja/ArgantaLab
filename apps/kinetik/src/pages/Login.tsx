@@ -26,9 +26,13 @@ export default function Login() {
         options: { redirectTo: `${window.location.origin}/` },
       })
       if (error) throw error
+      // If we reach here, OAuth redirect will happen
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to sign in')
+      const msg = e instanceof Error ? e.message : 'Failed to sign in'
+      setError(msg)
       setLoading(false)
+      // Auto-reset after 5s if error occurs
+      setTimeout(() => setLoading(false), 5000)
     }
   }
 
@@ -97,7 +101,9 @@ export default function Login() {
               className="auth-btn-primary"
               disabled={loading}
               onClick={signInWithGoogle}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
+              <span style={{ fontSize: '18px' }}>🔗</span>
               {loading ? 'Signing in…' : 'Continue with Google'}
             </button>
 
