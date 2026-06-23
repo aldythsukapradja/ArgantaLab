@@ -4,6 +4,7 @@ import { supabase } from '@lib/supabase'
 type Tab = 'parent' | 'kid'
 
 export default function Login() {
+  // Production version: 2026-06-23 professional design active
   const [tab, setTab] = useState<Tab>('parent')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
