@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Hammer, Plus, ArrowLeft, RefreshCw, Save, Boxes } from 'lucide-react'
+import { Plus, ArrowLeft, RefreshCw, Save, Boxes } from 'lucide-react'
 import { live, type AppManifest } from '../data/live'
 import { cloudEnabled } from '../lib/supabase'
 import { Empty, Loading } from '../components/Empty'

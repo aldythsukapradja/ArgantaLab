@@ -2,10 +2,11 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Gamepad2, Plus, ArrowLeft, RefreshCw, Send,
   EyeOff, Copy, Check, Play, AlertTriangle,
-  ChevronDown,
+  ChevronDown, Smartphone, Tablet, Monitor,
 } from 'lucide-react'
 import { STARTER_PROMPT, PROMPT_CATEGORIES } from '../data/starterPrompt'
 import { live, type PublishedGame, type Circle } from '../data/live'
+import { generateCircleAppSDKMock } from '../data/circleAppSDK'
 import { supabase, cloudEnabled } from '../lib/supabase'
 import { Empty, Loading } from '../components/Empty'
 
@@ -254,6 +255,8 @@ function GameCard({ game, onClick }: { game: PublishedGame; onClick: () => void 
 
 // ── Build View ─────────────────────────────────────────────────────────
 
+type DeviceMode = 'iphone' | 'tablet' | 'desktop'
+
 function BuildView({ meta, onChange, publishing, published, error, onPublish, onUnpublish, onBack, circles, selectedCircleId, onSelectCircle }: {
   meta: Meta
   onChange: (p: Partial<Meta>) => void
@@ -269,6 +272,8 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
 }) {
   const [copied, setCopied]   = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
+  const [device, setDevice]   = useState<DeviceMode>('desktop')
+  const [circleData, setCircleData] = useState<Circle | null>(null)
   const v = validate(meta.html)
   const canPublish = !publishing && meta.title.trim().length > 0 && meta.html.trim().length > 0
   const activeCat  = PROMPT_CATEGORIES.find(c => c.key === meta.category)
@@ -281,6 +286,14 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
   }
+
+  useEffect(() => {
+    if (selectedCircleId) {
+      live.getCircle(selectedCircleId).then(c => setCircleData(c))
+    } else {
+      setCircleData(null)
+    }
+  }, [selectedCircleId])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -395,7 +408,9 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
       {published && (
         <div className="insight ok" style={{ borderRadius: 'var(--r-md)' }}>
           <span style={{ fontSize: 15 }}>✓</span>
-          <div><b>"{meta.title}"</b> is live in ArgantaLab's Discover tab. Kids can play it right now.</div>
+          <div>
+            <b>"{meta.title}"</b> is live{selectedCircleId && circleData ? ` in ${circleData.name}` : " in ArgantaLab's Discover tab"}. Kids can play it right now.
+          </div>
         </div>
       )}
 
@@ -573,15 +588,17 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
           )}
 
           {/* Preview */}
-          <div className="card" style={{ overflow: 'hidden' }}>
+          <div className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{
               padding: '10px 14px', borderBottom: '1px solid var(--bd)',
-              display: 'flex', alignItems: 'center', gap: 8,
+              display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between',
             }}>
-              <Gamepad2 size={14} color="var(--acc)" />
-              <span style={{ fontSize: 12.5, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {meta.title || 'Live Preview'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <Gamepad2 size={14} color="var(--acc)" />
+                <span style={{ fontSize: 12.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {meta.title || 'Live Preview'}
+                </span>
+              </div>
               <button
                 onClick={() => setPreview(meta.html || null)}
                 disabled={!meta.html}
@@ -597,19 +614,110 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
               </button>
             </div>
 
-            <div style={{ height: 420, background: '#05070f', position: 'relative' }}>
+            {preview && (
+              <div style={{
+                padding: '10px 14px', borderBottom: '1px solid var(--bd)',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                {['iphone', 'tablet', 'desktop'].map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setDevice(mode as DeviceMode)}
+                    className="chip"
+                    style={{
+                      padding: '4px 8px', fontSize: 11, gap: 3,
+                      background: device === mode ? 'var(--acc)' : 'transparent',
+                      color: device === mode ? '#fff' : 'var(--tx2)',
+                      borderColor: device === mode ? 'var(--acc)' : 'var(--bd2)',
+                    }}
+                  >
+                    {mode === 'iphone' && <Smartphone size={11} />}
+                    {mode === 'tablet' && <Tablet size={11} />}
+                    {mode === 'desktop' && <Monitor size={11} />}
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div style={{
+              flex: 1, background: '#05070f', position: 'relative',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              minHeight: preview ? 480 : 420, padding: preview ? 16 : 0,
+            }}>
               {preview ? (
-                <iframe
-                  key={preview.slice(0, 120)}
-                  srcDoc={preview}
-                  sandbox="allow-scripts allow-pointer-lock"
-                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                  title="Game Preview"
-                />
+                <div style={{ display: 'flex', gap: 12, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                  {/* Device Frame */}
+                  <div style={{
+                    position: 'relative',
+                    height: '100%',
+                    ...getDeviceFrameStyle(device),
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: '#fff',
+                      borderRadius: device === 'iphone' ? '40px' : device === 'tablet' ? '24px' : '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                    }}>
+                      <iframe
+                        key={preview.slice(0, 120)}
+                        srcDoc={generatePreviewHTML(meta.html, circleData)}
+                        sandbox="allow-scripts allow-pointer-lock"
+                        style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                        title="Game Preview"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Audience Panel */}
+                  {circleData && (
+                    <div style={{
+                      display: 'flex', flexDirection: 'column', gap: 10, height: '100%',
+                      maxWidth: 200, overflowY: 'auto', paddingRight: 4,
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx3)', marginBottom: 8 }}>AUDIENCE</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tx)', marginBottom: 2 }}>
+                          {circleData.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--tx3)' }}>
+                          {circleData.members.length} {circleData.members.length === 1 ? 'member' : 'members'}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {circleData.members.map(m => (
+                          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{
+                              width: 32, height: 32, borderRadius: '50%',
+                              background: m.avatar ? `url(${m.avatar})` : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                              backgroundSize: 'cover', backgroundPosition: 'center',
+                              border: '2px solid var(--bd)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', fontWeight: 600, fontSize: 12,
+                            }}>
+                              {!m.avatar && m.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {m.name}
+                              </div>
+                              <div style={{ fontSize: 10, color: 'var(--tx3)' }}>
+                                {m.kind === 'parent' ? '👨‍👩‍👧‍👦 Parent' : '👶 Child'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  height: '100%', gap: 10, color: 'rgba(255,255,255,0.3)', fontSize: 13,
+                  gap: 10, color: 'rgba(255,255,255,0.3)', fontSize: 13,
                 }}>
                   <Gamepad2 size={28} strokeWidth={1.5} />
                   <span style={{ textAlign: 'center' }}>
@@ -622,13 +730,76 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
 
           {preview && (
             <div style={{ fontSize: 11, color: 'var(--tx3)', textAlign: 'center' }}>
-              Preview runs sandboxed · click inside to interact · re-paste + Run to reload
+              Preview with {circleData ? `${circleData.name} audience` : 'mock SDK'} · {device} frame · re-paste + Run to reload
             </div>
           )}
         </div>
       </div>
     </div>
   )
+}
+
+// ── Device frames & SDK injection ──────────────────────────────────────
+
+function getDeviceFrameStyle(device: DeviceMode): React.CSSProperties {
+  switch (device) {
+    case 'iphone':
+      return { width: 280, aspectRatio: '9/19.5' }
+    case 'tablet':
+      return { width: 360, aspectRatio: '3/4' }
+    case 'desktop':
+      return { width: 480, aspectRatio: '16/9' }
+  }
+}
+
+function generatePreviewHTML(gameHTML: string, circle: Circle | null): string {
+  const mockUser = circle ? {
+    id: 'user_demo',
+    name: 'Demo Player',
+    avatar: undefined,
+    role: 'member' as const,
+    circle_id: circle.id,
+  } : {
+    id: 'user_demo',
+    name: 'Demo Player',
+    avatar: undefined,
+    role: 'member' as const,
+    circle_id: 'circle_demo',
+  }
+
+  const mockCircle = circle ? {
+    id: circle.id,
+    name: circle.name,
+    type: circle.kind as 'family' | 'kids' | 'class' | 'friends',
+    members: circle.members.map(m => ({
+      id: m.id,
+      name: m.name,
+      avatar: m.avatar || undefined,
+      kind: m.kind,
+      role: m.role,
+    })),
+  } : {
+    id: 'circle_demo',
+    name: 'Demo Circle',
+    type: 'family' as const,
+    members: [{
+      id: 'user_demo',
+      name: 'Demo Player',
+      avatar: undefined,
+      kind: 'child' as const,
+      role: 'member' as const,
+    }],
+  }
+
+  const sdkCode = generateCircleAppSDKMock(mockUser, mockCircle)
+
+  // Extract the closing body tag and inject SDK before it
+  const hasBodyClose = gameHTML.includes('</body>')
+  const htmlWithSDK = hasBodyClose
+    ? gameHTML.replace('</body>', `<script>${sdkCode}</script></body>`)
+    : `${gameHTML}<script>${sdkCode}</script>`
+
+  return htmlWithSDK
 }
 
 // ── Micro-components ────────────────────────────────────────────────────
