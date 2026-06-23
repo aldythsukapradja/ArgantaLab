@@ -147,17 +147,14 @@ export async function linkKid(code: string): Promise<CloudResult> {
   return { ok: data === true, error: data === true ? undefined : 'No kid found for that code' }
 }
 
-/** The kids linked to the signed-in guardian (for the family dashboard). */
+/** Every child of the signed-in guardian — guardian_id mirror OR guardianships
+ *  (M:N), so co-parented kids appear too. Server-authoritative via my_children(). */
 export async function listMyKids(): Promise<CloudProfile[]> {
   if (!cloudEnabled) return []
-  const { data: u } = await supabase.auth.getUser()
-  const uid = u.user?.id
-  if (!uid) return []
-  const { data } = await supabase
-    .from('profiles')
-    .select('id,display_name,role,username,photo_url,friend_code,dob,gender,xp,level,last_seen')
-    .eq('guardian_id', uid)
-  return (data ?? []) as CloudProfile[]
+  const { data, error } = await supabase.rpc('my_children')
+  if (error || !data) return []
+  // my_children() returns kids only; stamp role so existing filters still work.
+  return (data as CloudProfile[]).map(k => ({ ...k, role: 'kid' }))
 }
 
 /** Unlink a kid from the signed-in guardian (kid account itself is untouched). */
@@ -166,6 +163,69 @@ export async function unlinkKid(kidId: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('unlink_kid', { p_kid: kidId })
   if (error) return false
   return data === true
+}
+
+// ── Circles (cloud, server-authoritative) ───────────────────
+export interface CloudCircle {
+  id: string; name: string; kind: string; emoji: string | null
+  accent: string | null; role: string; owner_id: string; member_count: number
+}
+export interface CircleMember {
+  id: string; display_name: string; role: string; photo_url: string | null
+  is_kid: boolean; last_seen: string | null
+}
+export interface PendingInvite {
+  id: string; circle_id: string; circle_name: string; circle_kind: string
+  role: string; as_guardian: boolean; invited_by_name: string; created_at: string
+}
+
+/** Circles the signed-in user owns or belongs to. */
+export async function myCircles(): Promise<CloudCircle[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('my_circles')
+  if (error || !data) return []
+  return data as CloudCircle[]
+}
+
+/** The members (adults + kids) of a circle the caller belongs to. */
+export async function circleRoster(circleId: string): Promise<CircleMember[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('circle_roster', { p_circle: circleId })
+  if (error || !data) return []
+  return data as CircleMember[]
+}
+
+/** Owner/admin invites a registered ADULT (by friend code) into a circle. */
+export async function inviteToCircle(circleId: string, code: string, role = 'member', asGuardian = false): Promise<CloudResult> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const { error } = await supabase.rpc('invite_to_circle', {
+    p_circle: circleId, p_code: code.trim().toUpperCase(), p_role: role, p_as_guardian: asGuardian,
+  })
+  if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
+  return { ok: true }
+}
+
+/** Pending circle invites awaiting the signed-in user's response. */
+export async function myInvites(): Promise<PendingInvite[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('my_invites')
+  if (error || !data) return []
+  return data as PendingInvite[]
+}
+
+export async function respondToInvite(inviteId: string, accept: boolean): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('respond_to_invite', { p_invite: inviteId, p_accept: accept })
+  if (error) return false
+  return data === true
+}
+
+/** Parent resets a child's PIN (no plaintext is ever stored — server re-hashes). */
+export async function resetKidPin(kidId: string, newPin: string): Promise<CloudResult> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const { error } = await supabase.rpc('reset_kid_pin', { p_kid: kidId, p_new_pin: newPin })
+  if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
+  return { ok: true }
 }
 
 // ── Presence + leaderboard ──────────────────────────────────

@@ -3,18 +3,20 @@ import { useAppStore } from '@store/appStore'
 import { WORLDS, STAGE_META, ageFromDob, stageForDob } from '@/data/learn'
 import { worldRing, earnedBadges } from '@lib/learnProgress'
 import { loadMyGames } from '@lib/myGames'
-import {
-  loadCircles, addKid, updateKid, removeKid, peopleCount,
-  type KidProfile, type Circle,
-} from '@lib/circles'
+import { addKid as addKidLocal } from '@lib/circles'   // offline-only fallback
 import Buddy from '@components/avatar/Buddy'
 import KidForm, { type KidFormData } from '@components/auth/KidForm'
 import { cloudEnabled } from '@lib/supabase'
-import { signOutCloud, linkKid, parentCreateKid, adoptKid, unlinkKid, listMyKids, type CloudProfile } from '@lib/cloudAuth'
+import {
+  signOutCloud, linkKid, parentCreateKid, unlinkKid, resetKidPin,
+  listMyKids, myCircles, inviteToCircle, myInvites, respondToInvite,
+  type CloudProfile, type CloudCircle, type PendingInvite,
+} from '@lib/cloudAuth'
 
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
 }
+const PALETTE = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ef4444', '#14b8a6']
 
 function Ring({ pct, color }: { pct: number; color: string }) {
   const r = 20, c = 2 * Math.PI * r
@@ -31,96 +33,86 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 export default function Profile() {
   const { learnerName, level, resolvedOutfit, go, isKidMode, openSwitcher, lockSession, addToast, session } = useAppStore()
   const realSession = session && session !== 'loading' ? session : null
+  const uid = realSession?.user?.id
 
-  // The family roster is CLOUD-authoritative (guardian_id), so it always matches
-  // the Grown-ups dashboard switcher. Local circles are kept only as a private
-  // PIN keychain (the cloud never stores plain PINs) and joined in by username.
+  // EVERYTHING family-related is cloud-authoritative (server is the only truth):
+  //   kids     → my_children()  (guardian_id OR guardianships, so co-parented kids show)
+  //   circles  → my_circles()
+  //   invites  → my_invites()
   const [cloudKids, setCloudKids] = useState<CloudProfile[] | null>(null)
-  const loadCloudKids = () => {
-    if (cloudEnabled && realSession?.user) {
-      listMyKids().then(ks => setCloudKids(ks.filter(k => k.role === 'kid')))
-    }
+  const [circles, setCircles] = useState<CloudCircle[]>([])
+  const [invites, setInvites] = useState<PendingInvite[]>([])
+  const reloadAll = () => {
+    if (!cloudEnabled || !uid) return
+    listMyKids().then(setCloudKids)
+    myCircles().then(setCircles)
+    myInvites().then(setInvites)
   }
-  useEffect(loadCloudKids, [realSession?.user?.id])
+  useEffect(reloadAll, [uid])
 
-  const addKidCloudOrLocal = async (d: KidFormData) => {
-    if (cloudEnabled && realSession?.user) {
-      const r = await parentCreateKid(d, realSession.user.id)
-      addKid(d)  // local PIN keychain entry (reminder only — not used for auth)
-      addToast(r.ok ? 'Kid account created ☁️' : (r.error ?? 'Saved locally'), r.ok ? '✨' : '⚠️')
-      loadCloudKids()
-    } else {
-      addKid(d)
-    }
-  }
+  const [view, setView] = useState<'home' | 'add'>('home')
   const outfit = resolvedOutfit()
+
   const kidLogout = async () => { addToast('Logged out 👋', '🔒'); await signOutCloud(); useAppStore.setState({ role: 'user' }); lockSession() }
   const parentLogout = async () => { await signOutCloud(); addToast('Logged out 👋', '⏻'); lockSession() }
+
+  const addKidCloud = async (d: KidFormData) => {
+    if (cloudEnabled && uid) {
+      const r = await parentCreateKid(d, uid)
+      addToast(r.ok ? `${d.displayName} added ☁️` : (r.error ?? 'Could not create'), r.ok ? '✨' : '⚠️')
+      reloadAll()
+    } else {
+      addKidLocal(d)   // offline dev only
+    }
+  }
+
   const linkAKid = async () => {
-    const code = prompt('Enter your child\'s friend-code to link them to your family:')
+    const code = prompt('Enter your child\'s friend-code to add them to your family:')
     if (!code) return
     const r = await linkKid(code)
     addToast(r.ok ? 'Kid linked! 👨‍👩‍👧' : (r.error ?? 'Could not link'), r.ok ? '🔗' : '⚠️')
-    if (r.ok) refresh()
+    if (r.ok) reloadAll()
   }
-  // One-tap repair: link every local kid to this grown-up's cloud account by
-  // PIN, so kids created before guardian-linking was reliable (or on another
-  // device) finally appear in the Grown-ups dashboard switcher.
-  const [syncing, setSyncing] = useState(false)
-  const syncKidsToCloud = async () => {
-    if (!realSession?.user) { addToast('Sign in as a grown-up first', '⚠️'); return }
-    const kids = loadCircles().kids
-    if (kids.length === 0) { addToast('No kid profiles on this device yet', '🧒'); return }
-    setSyncing(true)
-    let linked = 0
-    for (const k of kids) {
-      if (await adoptKid(k.username, k.pin)) linked++
-    }
-    setSyncing(false)
-    addToast(linked > 0 ? `Synced ${linked} kid${linked > 1 ? 's' : ''} to cloud ☁️` : 'Nothing to sync (check PINs)', linked > 0 ? '✨' : '⚠️')
-    loadCloudKids()
+
+  // Invite another REGISTERED grown-up (by friend code) into the family circle,
+  // as a co-guardian. Two+ adults per circle is supported by design.
+  const familyCircle = circles.find(c => c.kind === 'family' && c.role === 'owner') ?? circles.find(c => c.kind === 'family')
+  const inviteGrownUp = async () => {
+    if (!familyCircle) { addToast('Add a child first to create your family circle', '🧒'); return }
+    const code = prompt('Enter the grown-up\'s friend-code to invite them as a co-parent:')
+    if (!code) return
+    const r = await inviteToCircle(familyCircle.id, code, 'admin', true)
+    addToast(r.ok ? 'Invite sent 📨 — they accept it on their profile' : (r.error ?? 'Could not invite'), r.ok ? '✅' : '⚠️')
   }
-  const [view, setView] = useState<'home' | 'add' | 'edit'>('home')
-  const [editing, setEditing] = useState<KidProfile | null>(null)
-  const [state, setState] = useState(() => loadCircles())
-  const refresh = () => { setState(loadCircles()); loadCloudKids() }
+
+  const removeFromFamily = async (k: CloudProfile) => {
+    if (!confirm(`Remove ${k.display_name} from your family? (their account is kept)`)) return
+    await unlinkKid(k.id)
+    addToast(`Removed ${k.display_name}`, '👋')
+    reloadAll()
+  }
+
+  const resetPin = async (k: CloudProfile) => {
+    const pin = prompt(`Set a new 4-digit PIN for ${k.display_name}:`)
+    if (!pin) return
+    if (!/^\d{4}$/.test(pin)) { addToast('PIN must be exactly 4 digits', '⚠️'); return }
+    const r = await resetKidPin(k.id, pin)
+    addToast(r.ok ? `${k.display_name}'s PIN updated 🔑` : (r.error ?? 'Could not update'), r.ok ? '✅' : '⚠️')
+  }
+
+  const answerInvite = async (inv: PendingInvite, accept: boolean) => {
+    const ok = await respondToInvite(inv.id, accept)
+    addToast(ok ? (accept ? `Joined ${inv.circle_name} 🎉` : 'Invite declined') : 'Something went wrong', accept ? '✨' : '👋')
+    reloadAll()
+  }
 
   const games = loadMyGames().length
   const totalBadges = WORLDS.reduce((a, w) => a + earnedBadges(w).size, 0)
   const handle = '@' + learnerName.toLowerCase().replace(/\s+/g, '')
   const kidMode = isKidMode()
+  const kids = cloudKids ?? []
 
-  // ── Unified family roster row (cloud-authoritative, local PIN keychain joined) ──
-  interface RosterRow { id: string; displayName: string; username?: string | null; pin?: string; gender?: string; dob?: string; color: string; emoji: string; local?: KidProfile; cloudId?: string }
-  const PALETTE = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ef4444', '#14b8a6']
-  const localByUsername = new Map(state.kids.map(k => [k.username, k]))
-  const roster: RosterRow[] = (cloudEnabled && realSession?.user)
-    ? (cloudKids ?? []).map((k, i) => {
-        const local = k.username ? localByUsername.get(k.username) : undefined
-        return {
-          id: k.id, displayName: k.display_name, username: k.username ?? local?.username,
-          pin: local?.pin, gender: k.gender ?? local?.gender, dob: k.dob ?? local?.dob,
-          color: local?.color ?? PALETTE[i % PALETTE.length],
-          emoji: (k.gender ?? local?.gender) === 'girl' ? '👧' : '👦',
-          local, cloudId: k.id,
-        }
-      })
-    : state.kids.map(k => ({ id: k.id, displayName: k.displayName, username: k.username, pin: k.pin, gender: k.gender, dob: k.dob, color: k.color, emoji: k.emoji, local: k }))
-
-  // Remove a child from the family: unlink the cloud guardian link (kid account
-  // survives) and drop the local PIN reminder. Falls back to local-only offline.
-  const removeFromFamily = async (k: RosterRow) => {
-    if (!confirm(`Remove ${k.displayName} from your family?`)) return
-    if (cloudEnabled && k.cloudId) await unlinkKid(k.cloudId)
-    if (k.local) removeKid(k.local.id)
-    addToast(`Removed ${k.displayName}`, '👋')
-    refresh()
-  }
-
-  if (view === 'add') return <KidForm mode="add" onSave={async d => { await addKidCloudOrLocal(d); refresh(); setView('home') }} onCancel={() => setView('home')} />
-  if (view === 'edit' && editing) return (
-    <KidForm mode="edit" initial={editing} onSave={d => { updateKid(editing.id, d); refresh(); setView('home') }} onCancel={() => setView('home')} />
-  )
+  if (view === 'add') return <KidForm mode="add" onSave={async d => { await addKidCloud(d); setView('home') }} onCancel={() => setView('home')} />
 
   // ── shared header ──
   const header = (
@@ -129,8 +121,8 @@ export default function Profile() {
       <div className="ig-head-r">
         <div className="ig-stats">
           <button className="ig-stat" onClick={() => go({ tab: 'gamestore' })}><b>{games}</b><span>Games</span></button>
-          <div className="ig-stat"><b>{state.circles.length}</b><span>Circles</span></div>
-          <div className="ig-stat"><b>{peopleCount()}</b><span>People</span></div>
+          <div className="ig-stat"><b>{circles.length}</b><span>Circles</span></div>
+          <div className="ig-stat"><b>{kids.length}</b><span>Kids</span></div>
         </div>
         <div className="ig-id">
           <b className="ig-name">{learnerName}</b>
@@ -154,6 +146,26 @@ export default function Profile() {
     </>
   )
 
+  // Pending invites — shown to ANY signed-in user (a grown-up invited to a circle)
+  const invitesInbox = invites.length > 0 && (
+    <>
+      <div className="section-label">📨 Invites</div>
+      <div className="ig-kids">
+        {invites.map(inv => (
+          <div key={inv.id} className="ig-kid">
+            <span className="ig-kid-av" style={{ background: '#6366f1' }}>{inv.circle_kind === 'family' ? '👨‍👩‍👧‍👦' : '👥'}</span>
+            <div className="ig-kid-meta">
+              <b>{inv.circle_name}</b>
+              <small>{inv.invited_by_name} invited you · {inv.role}{inv.as_guardian ? ' · co-parent' : ''}</small>
+            </div>
+            <button className="ig-kid-play" onClick={() => answerInvite(inv, true)}>Accept</button>
+            <button className="ig-kid-del" title="Decline" onClick={() => answerInvite(inv, false)}>✕</button>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+
   // ════ KID MODE — only their own stuff, no grown-up tools ════
   if (kidMode) {
     return (
@@ -165,9 +177,9 @@ export default function Profile() {
           <button className="ig-btn" onClick={openSwitcher}>🔄 Switch player</button>
         </div>
 
-        <div className="section-label">My Circle</div>
+        <div className="section-label">My Circles</div>
         <div className="ig-circles">
-          {state.circles.map(c => <CircleCard key={c.id} circle={c} kids={state.kids} />)}
+          {circles.map(c => <CloudCircleCard key={c.id} circle={c} />)}
         </div>
 
         {rings}
@@ -194,19 +206,21 @@ export default function Profile() {
         {cloudEnabled
           ? <button className="ig-btn" onClick={linkAKid}>🔗 Link kid</button>
           : <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>}
-        {cloudEnabled && state.kids.length > 0 && (
-          <button className="ig-btn" disabled={syncing} onClick={syncKidsToCloud}>{syncing ? '☁️ Syncing…' : '☁️ Sync to cloud'}</button>
-        )}
+        {cloudEnabled && <button className="ig-btn" onClick={inviteGrownUp}>👥 Invite grown-up</button>}
         <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
       </div>
 
+      {invitesInbox}
+
       <div className="section-label">My Circles</div>
       <div className="ig-circles">
-        {state.circles.map(c => <CircleCard key={c.id} circle={c} kids={state.kids} />)}
+        {circles.length === 0
+          ? <p className="ig-kc" style={{ margin: 0 }}>Your family circle appears here once you add a child.</p>
+          : circles.map(c => <CloudCircleCard key={c.id} circle={c} />)}
       </div>
 
       <div className="section-label">Kids in this family</div>
-      {roster.length === 0 ? (
+      {kids.length === 0 ? (
         <div className="ig-empty">
           <span className="ig-empty-ic">🧒</span>
           <b>{cloudEnabled && cloudKids === null ? 'Loading your family…' : 'No kid profiles yet'}</b>
@@ -215,20 +229,19 @@ export default function Profile() {
         </div>
       ) : (
         <div className="ig-kids">
-          {roster.map(k => {
-            const st = stageForDob(k.dob)
+          {kids.map((k, i) => {
+            const st = stageForDob(k.dob ?? undefined)
             const meta = STAGE_META[st.key]
+            const color = PALETTE[i % PALETTE.length]
             return (
               <div key={k.id} className="ig-kid">
-                <span className="ig-kid-av" style={{ background: k.color }}>{k.emoji}</span>
+                <span className="ig-kid-av" style={{ background: color }}>{k.gender === 'girl' ? '👧' : '👦'}</span>
                 <div className="ig-kid-meta">
-                  <b>{k.displayName} <span className="ig-kid-stage" style={{ background: `${meta.color}22`, color: meta.color }}>{meta.emoji} {st.label}</span></b>
-                  <small>{k.username ? `@${k.username} · ` : ''}{k.pin ? <>PIN <code>{k.pin}</code> · </> : ''}{k.gender === 'girl' ? '👧 girl' : '👦 boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}{cloudEnabled ? ' · ☁️ cloud' : ''}</small>
+                  <b>{k.display_name} <span className="ig-kid-stage" style={{ background: `${meta.color}22`, color: meta.color }}>{meta.emoji} {st.label}</span></b>
+                  <small>{k.username ? `@${k.username} · ` : ''}code <code>{k.friend_code}</code> · {k.gender === 'girl' ? '👧 girl' : '👦 boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}</small>
                 </div>
                 <button className="ig-kid-play" onClick={openSwitcher}>Log in</button>
-                {k.local && (
-                  <button className="ig-kid-edit2" title="Edit PIN reminder" onClick={() => { setEditing(k.local!); setView('edit') }}>✏️</button>
-                )}
+                <button className="ig-kid-edit2" title="Reset PIN" onClick={() => resetPin(k)}>🔑</button>
                 <button className="ig-kid-del" title="Remove from family" onClick={() => removeFromFamily(k)}>✕</button>
               </div>
             )
@@ -246,24 +259,21 @@ export default function Profile() {
         </div>
       </div>
 
-      <p className="ig-kc">🔗 Your Circles will connect to <b>KinetikCircle</b> — our family social app — when it launches.</p>
+      <p className="ig-kc">🔗 Circles are shared with <b>KinetikCircle</b> — our family social app — as it comes online.</p>
     </div>
   )
 }
 
-function CircleCard({ circle, kids }: { circle: Circle; kids: KidProfile[] }) {
-  const members = circle.memberIds.map(id => kids.find(k => k.id === id)).filter(Boolean) as KidProfile[]
+function CloudCircleCard({ circle }: { circle: CloudCircle }) {
   return (
     <div className="ig-circle">
       <div className="ig-circle-top">
-        <span className="ig-circle-ic">{circle.emoji}</span>
-        <div><b>{circle.name}</b><small>{members.length + 1} member{members.length ? 's' : ''}</small></div>
-      </div>
-      <div className="ig-circle-members">
-        <span className="ig-mem parent" title="You">🧑</span>
-        {members.slice(0, 5).map(m => <span key={m.id} className="ig-mem" style={{ background: m.color }} title={m.displayName}>{m.emoji}</span>)}
+        <span className="ig-circle-ic">{circle.emoji ?? (circle.kind === 'family' ? '👨‍👩‍👧‍👦' : '👥')}</span>
+        <div>
+          <b>{circle.name}</b>
+          <small>{circle.member_count} member{circle.member_count === 1 ? '' : 's'} · {circle.role}</small>
+        </div>
       </div>
     </div>
   )
 }
-

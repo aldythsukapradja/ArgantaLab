@@ -113,6 +113,24 @@ begin
 end; $$;
 grant execute on function public.unlink_kid(uuid) to authenticated;
 
+-- ── (2d) Reset a child's PIN (guardian-only, no plaintext stored) ──
+-- Lets a grown-up set a new 4-digit PIN for their child without anyone ever
+-- storing the PIN in clear text — the server re-hashes it into the auth password.
+-- Depends on public.is_guardian_of() (migration_spine.sql) — resolved at call time.
+create or replace function public.reset_kid_pin(p_kid uuid, p_new_pin text)
+returns boolean
+language plpgsql security definer set search_path = public, auth, extensions as $$
+begin
+  if auth.uid() is null then return false; end if;
+  if not public.is_guardian_of(p_kid) then raise exception 'not your child'; end if;
+  if p_new_pin !~ '^[0-9]{4}$' then raise exception 'PIN must be exactly 4 digits'; end if;
+  update auth.users
+    set encrypted_password = crypt(p_new_pin || '#aLab', gen_salt('bf'))
+    where id = p_kid;
+  return found;
+end; $$;
+grant execute on function public.reset_kid_pin(uuid, text) to authenticated;
+
 -- ============================================================
 --  END AUTH & SYNC FIX
 -- ============================================================
