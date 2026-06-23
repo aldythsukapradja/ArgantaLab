@@ -81,6 +81,33 @@ export default function Today() {
         </div>
       )}
 
+      {/* Tomorrow — sits between "Happening Now" and today's timeline */}
+      <button className="card tmrw-card rise" onClick={() => go('calendar')}>
+        <span className="tmrw-bar" style={{ background: `linear-gradient(180deg, ${tomorrow[0] ? ENERGY[tomorrow[0].energy] : accent0}, ${accent0})` }} />
+        <span className="tmrw-body">
+          <span className="tmrw-head">
+            <span className="tmrw-label">TOMORROW</span>
+            <span className="tmrw-count">{tomorrow.length} plan{tomorrow.length === 1 ? '' : 's'}</span>
+            <IconChevron width={18} height={18} style={{ color: 'var(--accent)', marginLeft: 'auto' }} />
+          </span>
+          {tomorrow.length > 0 ? (
+            <span className="tmrw-preview">
+              {tomorrow.slice(0, 3).map(t => (
+                <span className="tmrw-item" key={t.id}>
+                  <span className="tmrw-time">{fmtTime(t.start)}</span>
+                  <span className="tmrw-pdot" style={{ background: ENERGY[t.energy] }} />
+                  <span className="tmrw-title">{t.title}</span>
+                  <WhoDots who={t.who} />
+                </span>
+              ))}
+              {tomorrow.length > 3 && <span className="tmrw-more">+{tomorrow.length - 3} more</span>}
+            </span>
+          ) : (
+            <span className="tmrw-empty">Nothing planned yet — a free day ahead.</span>
+          )}
+        </span>
+      </button>
+
       {/* Timeline */}
       <div className="section-label rise">Today · {agenda.length}</div>
       <div className="timeline rise">
@@ -101,13 +128,19 @@ export default function Today() {
           )
         })}
       </div>
-
-      {/* Tomorrow — moved to middle */}
-      <button className="card tmrw rise" onClick={() => go('calendar')}>
-        <span>Tomorrow · <b>{tomorrow.length} plan{tomorrow.length === 1 ? '' : 's'}</b></span>
-        <IconChevron width={18} height={18} style={{ color: 'var(--accent)' }} />
-      </button>
     </div>
+  )
+}
+
+function WhoDots({ who }: { who: string[] }) {
+  if (!who.length) return null
+  return (
+    <span className="tmrw-who">
+      {who.slice(0, 3).map(id => {
+        const p = personById(id)
+        return <span key={id} className="who-dot" style={{ background: p?.color || 'var(--faint)' }} title={p?.name}>{initials(p?.name || '?')}</span>
+      })}
+    </span>
   )
 }
 

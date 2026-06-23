@@ -3,7 +3,7 @@ import { gsap } from 'gsap'
 import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
 import { initials } from '@data/energy'
-import { cloudReady } from '@lib/supabase'
+import { cloudReady, supabase } from '@lib/supabase'
 import * as repo from '@repo/kinetikRepo'
 import type { MemberProgress } from '@repo/kinetikRepo'
 import { IconSun, IconMoon, IconSwitch, IconUserPlus, IconPlus } from '@components/Icons'
@@ -15,9 +15,17 @@ export default function Me() {
   const authUser = useDataStore(s => s.me)
   const { activeCircleId, setCircle, theme, toggleTheme } = useUiStore()
   const [progress, setProgress] = useState<Record<string, MemberProgress>>({})
+  const [query, setQuery] = useState('')
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
   const members = people.filter(p => circle && circle.memberIds.includes(p.id))
+  const q = query.trim().toLowerCase()
+  const shownMembers = q ? members.filter(p => p.name.toLowerCase().includes(q)) : members
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.reload()
+  }
 
   // Live learning progress (rings + diamonds) for every member of the circle.
   useEffect(() => {
@@ -68,7 +76,7 @@ export default function Me() {
         <div className="ig-stats">
           <div className="ig-stat"><b>{momentCount}</b><span>Moments</span></div>
           <div className="ig-stat"><b>{circleCount}</b><span>Circles</span></div>
-          <div className="ig-stat"><b>{memberCount}</b><span>Members</span></div>
+          <div className="ig-stat"><b>{memberCount}</b><span>Connections</span></div>
           <div className="ig-stat"><b>{friendCount}</b><span>Friends</span></div>
         </div>
       </div>
@@ -96,14 +104,26 @@ export default function Me() {
         </button>
       </div>
 
-      {/* ── Circle members with LIVE progress rings + diamonds ── */}
+      {/* ── Connections with LIVE progress rings + diamonds ── */}
       <div className="me-section rise">
         <div className="mes-head">
-          <span className="mes-title">Circle Members</span>
+          <span className="mes-title">Connections</span>
           {cloudReady && <span className="mes-live"><span className="live-dot" /> Live</span>}
         </div>
+        <div className="me-search">
+          <IconSearch />
+          <input
+            className="me-search-input"
+            placeholder="Search connections…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          {query && <button className="me-search-clear" onClick={() => setQuery('')} aria-label="Clear">×</button>}
+        </div>
         <div className="members-list">
-          {members.map(p => {
+          {shownMembers.length === 0 ? (
+            <div className="list-empty">No connections match “{query}”.</div>
+          ) : shownMembers.map(p => {
             const prog = progress[p.id]
             return <MemberRow key={p.id} name={p.name} color={p.color} role={p.role} progress={prog} />
           })}
@@ -131,9 +151,11 @@ export default function Me() {
         </div>
       </div>
 
-      {/* ── Sync status ── */}
+      {/* ── Sign out ── */}
       <div className="me-section me-section-last rise">
-        <SyncRow />
+        <button className="signout-btn" onClick={handleLogout}>
+          <span className="so-glyph">⎋</span> Sign out
+        </button>
         <p className="me-foot">Private to the people you choose. No followers, no likes — just your circle.</p>
       </div>
     </div>
@@ -177,19 +199,11 @@ function IconDiamondGem() {
   )
 }
 
-function SyncRow() {
-  const source = useDataStore(s => s.source)
-  const on = cloudReady && source === 'cloud'
+function IconSearch() {
   return (
-    <div className="sync-indicator">
-      <span className="sync-dot" data-on={on ? '1' : '0'} />
-      {!cloudReady ? (
-        <div><b>Works offline</b><small>Add Supabase keys to sync across devices.</small></div>
-      ) : source === 'cloud' ? (
-        <div><b>Live · synced to cloud</b><small>This is your real data from Supabase.</small></div>
-      ) : (
-        <div><b>Offline copy</b><small>Showing the last synced cache — reconnect to sync.</small></div>
-      )}
-    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </svg>
   )
 }

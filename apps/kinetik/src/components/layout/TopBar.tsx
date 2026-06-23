@@ -1,7 +1,5 @@
-import { useState } from 'react'
 import { useUiStore } from '@store/uiStore'
 import { useDataStore } from '@store/dataStore'
-import { supabase } from '@lib/supabase'
 import { initials } from '@data/energy'
 import { IconPlus } from '@components/Icons'
 
@@ -9,94 +7,59 @@ export default function TopBar() {
   const { activeCircleId, setCircle, go } = useUiStore()
   const circles = useDataStore(s => s.circles)
   const me = useDataStore(s => s.me)
-  const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
-  const [showCircleMenu, setShowCircleMenu] = useState(false)
 
-  const handleSelectCircle = (id: string) => {
-    setCircle(id)
-    setShowCircleMenu(false)
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    window.location.reload()
-  }
-
-  const accent0 = circle?.accent[0] ?? 'var(--accent)'
-  const accent1 = circle?.accent[1] ?? 'var(--care)'
+  const accentOf = (c: { accent: [string, string] }) => c.accent ?? ['var(--accent)', 'var(--care)']
 
   return (
     <header className="topbar">
-      {/* Left: Wordmark */}
-      <div className="tb-wordmark">
-        <span className="wm-k">Kinetik</span><span className="wm-c">Circle</span>
-      </div>
-
-      {/* Center: Circle selector */}
-      <div className="circle-selector">
-        <button
-          className="cs-button"
-          style={{
-            background: `linear-gradient(135deg, ${accent0}, ${accent1})`,
-          }}
-          onClick={() => setShowCircleMenu(!showCircleMenu)}
-        >
-          <span className="csb-dot" style={{ background: accent0 }} />
-          {circle?.name}
-          <span className="csb-caret">▼</span>
-        </button>
-
-        {/* Circle menu dropdown */}
-        {showCircleMenu && (
-          <div className="cs-menu">
-            {circles.map(c => {
-              const isCurrent = c.id === activeCircleId
-              return (
-                <button
-                  key={c.id}
-                  className={`csm-item${isCurrent ? ' current' : ''}`}
-                  onClick={() => handleSelectCircle(c.id)}
-                  style={isCurrent ? {
-                    background: `linear-gradient(135deg, ${c.accent[0]}20, ${c.accent[1]}20)`,
-                    borderColor: c.accent[0],
-                  } : {}}
-                >
-                  <span className="csm-dot" style={{ background: `linear-gradient(135deg, ${c.accent[0]}, ${c.accent[1]})` }} />
-                  <span className="csm-name">{c.name}</span>
-                  {isCurrent && <span className="csm-check">✓</span>}
-                </button>
-              )
-            })}
-            <button className="csm-item csm-add" onClick={() => { setShowCircleMenu(false); alert('Add circle coming soon') }}>
-              <IconPlus width={16} height={16} />
-              Add Circle
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Right: real Google photo → Me tab + Logout */}
-      <div className="tb-right">
+      {/* Row 1: wordmark + avatar */}
+      <div className="tb-row">
+        <div className="tb-wordmark">
+          <span className="wm-k">Kinetik</span><span className="wm-c">Circle</span>
+        </div>
         <button
           className="topbar-avatar"
-          onClick={() => { go('me'); setShowCircleMenu(false) }}
+          onClick={() => go('me')}
           aria-label="Profile"
-          style={me?.photoUrl ? undefined : { background: `linear-gradient(135deg, ${accent0}, ${accent1})` }}
+          style={me?.photoUrl ? undefined : { background: 'var(--grad)' }}
         >
           {me?.photoUrl
             ? <img src={me.photoUrl} alt={me.name} className="topbar-avatar-img" referrerPolicy="no-referrer" />
             : <span>{initials(me?.name || 'Me')}</span>}
         </button>
+      </div>
+
+      {/* Row 2: Life360-style scrollable circle pills */}
+      <div className="circle-rail" role="tablist" aria-label="Your circles">
+        {circles.map(c => {
+          const active = c.id === activeCircleId
+          const [a0, a1] = accentOf(c)
+          return (
+            <button
+              key={c.id}
+              role="tab"
+              aria-selected={active}
+              className={`circle-pill2${active ? ' active' : ''}`}
+              onClick={() => setCircle(c.id)}
+              style={active ? { background: `linear-gradient(135deg, ${a0}, ${a1})` } : undefined}
+            >
+              <span
+                className="cp-dot"
+                style={{ background: active ? 'rgba(255,255,255,0.9)' : `linear-gradient(135deg, ${a0}, ${a1})` }}
+              />
+              <span className="cp-name">{c.name}</span>
+            </button>
+          )
+        })}
         <button
-          className="topbar-logout"
-          onClick={handleLogout}
-          aria-label="Logout"
-          title="Sign out"
+          className="circle-pill2 cp-add"
+          onClick={() => go('me')}
+          aria-label="Add circle"
+          title="Add circle"
         >
-          ⎋
+          <IconPlus width={15} height={15} />
         </button>
       </div>
     </header>
   )
 }
-
