@@ -7,7 +7,9 @@ import { replaceWithCloud, setGamesOwner } from '@lib/myGames'
 import { memStore } from '@lib/memStore'
 import { pullLearnState } from '@lib/learnCloud'
 import { pullAvatarState, pushAvatarState } from '@lib/avatarCloud'
+import { ensureStarterPack } from '@lib/rewards'
 import { touchPresence } from '@lib/cloudAuth'
+import { initContent } from '@lib/content'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -150,7 +152,16 @@ function CloudSync() {
     syncProfileOnLogin(session, {
       learnerName: st.learnerName, xp: st.xp, level: st.level, diamonds: st.diamonds,
       completedLessons: st.completedLessons, badges: st.badges, gamesPlayed: st.gamesPlayed, unlocks: st.unlocks,
-    }).then(p => { if (p) hydrate(p); setReady(true) })
+    }).then(p => {
+      if (p) hydrate(p)
+      setReady(true)
+      // Grown-ups get a one-time 50,000-diamond reward budget. Idempotent in the
+      // DB; we sync the store to the returned balance so the debounced profile
+      // push never clobbers the server-side grant.
+      if (useAppStore.getState().role !== 'kid') {
+        ensureStarterPack().then(bal => { if (bal > 0) useAppStore.setState({ diamonds: bal }) })
+      }
+    })
     // Replace the local view with exactly this user's cloud games.
     pullGames(uid).then(g => replaceWithCloud(g ?? []))
     // Merge cloud learn progress (rings, mastery, node completion) into local.
@@ -290,6 +301,7 @@ function App() {
   const closeAuthWall = useAppStore(s => s.closeAuthWall)
 
   useEffect(() => {
+    initContent()   // Duolingo-style: serve cached curriculum, revalidate in background
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)

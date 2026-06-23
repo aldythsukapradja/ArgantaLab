@@ -1,4 +1,3 @@
-import { supabase } from './supabase'
 import type { Item } from '@/data/learn'
 import { pkey } from './player'
 import { memStore } from './memStore'
@@ -29,14 +28,9 @@ export function recordAttempt(world: string, skill: string, correct: boolean) {
   const box = correct ? Math.min(5, cur.box + 1) : 1   // wrong → back to box 1 (resurface soon)
   store[k] = { mastery, box, lastSeen: Date.now() }
   save(store)
-  // best-effort cloud mirror
-  supabase.auth.getUser().then(({ data }) => {
-    const uid = data.user?.id
-    if (!uid) return
-    supabase.from('skill_mastery').upsert({
-      user_id: uid, world_key: world, skill_key: skill, mastery, box, last_seen: new Date().toISOString(),
-    }).then(() => {}, () => {})
-  }, () => {})
+  // NOTE: the cloud is updated by the log_learn_event RPC (see lib/analytics.ts),
+  // which is now the single writer of cloud skill_mastery. This local store only
+  // drives instant, offline, this-session UI for the active player.
 }
 
 /**
