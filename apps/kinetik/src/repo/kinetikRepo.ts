@@ -105,6 +105,12 @@ export async function insertRoutine(r: Omit<Routine, 'id' | 'energy'>): Promise<
   return mapRoutine(row as RoutineRow)
 }
 
+/** Set a moment's heart count (caller computes the new value optimistically). */
+export async function setHearts(momentId: string, hearts: number): Promise<void> {
+  const { error } = await supabase.from('kinetik_moments').update({ hearts }).eq('id', momentId)
+  if (error) throw error
+}
+
 /** The signed-in user (auth + their profile row). The one real "me". */
 export interface Me { id: string; name: string; photoUrl: string | null; diamonds: number }
 export async function fetchMe(): Promise<Me | null> {
@@ -124,12 +130,6 @@ export async function fetchMe(): Promise<Me | null> {
     }
   } catch { /* profile row may not exist yet — fall back to auth metadata */ }
   return { id: user.id, name, photoUrl, diamonds }
-}
-
-/** Set a moment's heart count (caller computes the new value optimistically). */
-export async function setHearts(momentId: string, hearts: number): Promise<void> {
-  const { error } = await supabase.from('kinetik_moments').update({ hearts }).eq('id', momentId)
-  if (error) throw error
 }
 
 /** Live learning progress for every member of a circle.

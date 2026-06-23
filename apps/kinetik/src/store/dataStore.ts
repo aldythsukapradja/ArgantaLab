@@ -12,7 +12,7 @@ import { cloudReady } from '@lib/supabase'
 import * as repo from '@repo/kinetikRepo'
 import { useUiStore } from '@store/uiStore'
 import { energyOf } from '@data/energy'
-import type { Circle, Person, KEvent, Routine, CircleData } from '@data/types'
+import type { Circle, Person, Routine, KEvent, CircleData } from '@data/types'
 import type { Me } from '@repo/kinetikRepo'
 
 const CACHE_KEY = 'kinetik_cache_v1'
