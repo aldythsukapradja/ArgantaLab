@@ -10,7 +10,10 @@ import { cloudEnabled } from '@lib/supabase'
 import {
   signOutCloud, linkKid, parentCreateKid, unlinkKid, resetKidPin, adoptKid,
   listMyKids, myCircles, inviteToCircle, myInvites, respondToInvite,
+  socialStats, myFriends, myFriendRequests, sendFriendRequest, respondFriendRequest,
+  removeFriend, kidFriends, removeKidFriend, kidWorldRings,
   type CloudProfile, type CloudCircle, type PendingInvite,
+  type SocialStats, type Friend, type FriendRequest, type WorldRing,
 } from '@lib/cloudAuth'
 
 const RING_LABEL: Record<string, string> = {
@@ -42,11 +45,23 @@ export default function Profile() {
   const [cloudKids, setCloudKids] = useState<CloudProfile[] | null>(null)
   const [circles, setCircles] = useState<CloudCircle[]>([])
   const [invites, setInvites] = useState<PendingInvite[]>([])
+  const [stats, setStats] = useState<SocialStats>({ circles: 0, connections: 0, friends: 0 })
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [friendReqs, setFriendReqs] = useState<FriendRequest[]>([])
+  const [kidRings, setKidRings] = useState<Record<string, WorldRing[]>>({})
   const reloadAll = () => {
     if (!cloudEnabled || !uid) return
-    listMyKids().then(setCloudKids)
     myCircles().then(setCircles)
     myInvites().then(setInvites)
+    socialStats().then(setStats)
+    myFriends().then(setFriends)
+    myFriendRequests().then(setFriendReqs)
+    listMyKids().then(ks => {
+      setCloudKids(ks)
+      // per-kid world rings for the command-center cards
+      Promise.all(ks.map(k => kidWorldRings(k.id).then(r => [k.id, r] as const)))
+        .then(pairs => setKidRings(Object.fromEntries(pairs)))
+    })
   }
   useEffect(reloadAll, [uid])
 
