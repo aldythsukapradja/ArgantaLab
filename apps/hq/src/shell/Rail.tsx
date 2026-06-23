@@ -1,5 +1,5 @@
 import {
-  LayoutGrid, Database, Activity, Users, Hammer, CircleDashed,
+  LayoutGrid, Database, Activity, Users, Gamepad2, Boxes, CircleDashed,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 
@@ -17,7 +17,8 @@ const GROUPS: Group[] = [
     { id: 'audience', label: 'Audience', Icon: Users },
   ] },
   { name: 'Build', items: [
-    { id: 'builder', label: 'Builder', Icon: Hammer },
+    { id: 'game', label: 'Game Builder', Icon: Gamepad2 },
+    { id: 'app', label: 'App Builder', Icon: Boxes },
   ] },
 ]
 

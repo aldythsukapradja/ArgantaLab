@@ -18,6 +18,24 @@ export interface PublishedGame {
   age_max?: number | null
   thumbnail?: string | null
   version?: number | null
+  // Featuring / analytics (added by migration; optional for back-compat)
+  featured?: boolean | null
+  featured_rank?: number | null
+  rating_avg?: number | null
+  rating_count?: number | null
+  share_count?: number | null
+  pinned?: boolean | null
+}
+
+export interface TelemetryEvent {
+  id?: string
+  artifact_id: string
+  artifact_kind: 'game' | 'app'
+  event_type: string
+  user_id?: string | null
+  circle_id?: string | null
+  payload?: Record<string, unknown> | null
+  emitted_at?: string
 }
 
 export interface AppManifest {
@@ -33,6 +51,19 @@ export interface AppManifest {
   economy_hooks?: Record<string, unknown> | null
   agent_surfaces?: string[] | null
   created_at?: string
+  // Artifact fields (apps are publishable HTML artifacts too)
+  html?: string | null
+  description?: string | null
+  visibility?: string | null
+  circle_ids?: string[] | null
+  plays?: number | null
+  thumbnail?: string | null
+  featured?: boolean | null
+  featured_rank?: number | null
+  rating_avg?: number | null
+  rating_count?: number | null
+  share_count?: number | null
+  pinned?: boolean | null
 }
 
 export interface GamePublishInput {
@@ -49,6 +80,7 @@ export interface GamePublishInput {
   thumbnail?: string
   visibility?: string
   circle_ids?: string[]
+  featured?: boolean
 }
 
 export interface CircleMember {
@@ -96,11 +128,13 @@ export const live = {
     // Try operator RPC first (sees all games across users); fall back to own+public via RLS
     const rpcResult = await rpc<PublishedGame[]>('hq_list_games')
     if (rpcResult) return rpcResult
+    // select('*') so featuring/analytics columns flow through when the migration
+    // is applied, and we degrade cleanly when it isn't.
     const { data, error } = await supabase
       .from('games')
-      .select('id, title, source, config, html, visibility, plays, created_at, creator_name')
+      .select('*')
       .order('created_at', { ascending: false })
-      .limit(100)
+      .limit(200)
     if (error) { console.warn('[hq] listGames →', error.message); return [] }
     return (data || []) as PublishedGame[]
   },
@@ -108,25 +142,25 @@ export const live = {
   async publishGame(game: GamePublishInput): Promise<boolean> {
     if (!cloudEnabled) return false
     const visibility = game.visibility || 'public'
-    const { error } = await supabase
-      .from('games')
-      .upsert({
-        id: game.id,
-        user_id: game.userId,
-        title: game.title,
-        source: 'procode',
-        config: { category: game.category ?? null, source: 'code' },
-        html: game.html,
-        visibility,
-        circle_ids: game.circle_ids || null,
-        creator_name: game.creatorName || 'KinetikCircle',
-        category: game.category ?? null,
-        description: game.description ?? null,
-        tags: game.tags ?? [],
-        age_min: game.ageMin ?? null,
-        age_max: game.ageMax ?? null,
-        thumbnail: game.thumbnail ?? null,
-      })
+    const row: Record<string, unknown> = {
+      id: game.id,
+      user_id: game.userId,
+      title: game.title,
+      source: 'procode',
+      config: { category: game.category ?? null, source: 'code' },
+      html: game.html,
+      visibility,
+      circle_ids: game.circle_ids || null,
+      creator_name: game.creatorName || 'KinetikCircle',
+      category: game.category ?? null,
+      description: game.description ?? null,
+      tags: game.tags ?? [],
+      age_min: game.ageMin ?? null,
+      age_max: game.ageMax ?? null,
+      thumbnail: game.thumbnail ?? null,
+    }
+    if (game.featured != null) row.featured = game.featured
+    const { error } = await supabase.from('games').upsert(row)
     if (error) { console.warn('[hq] publishGame →', error.message); return false }
     // Snapshot a version (best-effort; ignore failure so publish still succeeds)
     await supabase.rpc('snapshot_game_version', { p_game: game.id })
@@ -155,7 +189,7 @@ export const live = {
 
   async saveApp(app: AppManifest): Promise<boolean> {
     if (!cloudEnabled) return false
-    const { error } = await supabase.from('hq_app').upsert({
+    const row: Record<string, unknown> = {
       id: app.id,
       name: app.name,
       product: app.product,
@@ -167,7 +201,17 @@ export const live = {
       metrics: app.metrics ?? [],
       economy_hooks: app.economy_hooks ?? {},
       agent_surfaces: app.agent_surfaces ?? [],
-    })
+    }
+    // Only include artifact columns when provided, so the upsert works whether or
+    // not the migration adding them has been applied.
+    if (app.html != null) row.html = app.html
+    if (app.description != null) row.description = app.description
+    if (app.visibility != null) row.visibility = app.visibility
+    if (app.circle_ids != null) row.circle_ids = app.circle_ids
+    if (app.thumbnail != null) row.thumbnail = app.thumbnail
+    if (app.featured != null) row.featured = app.featured
+
+    const { error } = await supabase.from('hq_app').upsert(row)
     if (error) console.warn('[hq] saveApp →', error.message)
     return !error
   },
@@ -306,6 +350,90 @@ export const live = {
       member_count: members.length,
       created_at: circle.created_at,
     }
+  },
+
+  // ── Featuring & Analytics ──
+
+  /** Persist a featured decision. Degrades silently if columns are missing. */
+  async setFeatured(
+    kind: 'game' | 'app',
+    id: string,
+    featured: boolean,
+    rank: number | null = null,
+  ): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const table = kind === 'game' ? 'games' : 'hq_app'
+    const { error } = await supabase
+      .from(table)
+      .update({ featured, featured_rank: rank, featured_set_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) { console.warn('[hq] setFeatured →', error.message); return false }
+    return true
+  },
+
+  /** Toggle a curator hard-pin (always featured regardless of score). */
+  async setPinned(kind: 'game' | 'app', id: string, pinned: boolean): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const table = kind === 'game' ? 'games' : 'hq_app'
+    const { error } = await supabase.from(table).update({ pinned }).eq('id', id)
+    if (error) { console.warn('[hq] setPinned →', error.message); return false }
+    return true
+  },
+
+  /** Archive (hide from catalogue) by flipping visibility to private. */
+  async archiveArtifact(kind: 'game' | 'app', id: string): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const table = kind === 'game' ? 'games' : 'hq_app'
+    const { error } = await supabase.from(table).update({ visibility: 'private' }).eq('id', id)
+    if (error) { console.warn('[hq] archiveArtifact →', error.message); return false }
+    return true
+  },
+
+  async deleteArtifact(kind: 'game' | 'app', id: string): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const table = kind === 'game' ? 'games' : 'hq_app'
+    const { error } = await supabase.from(table).delete().eq('id', id)
+    if (error) { console.warn('[hq] deleteArtifact →', error.message); return false }
+    return true
+  },
+
+  /** Log a play/SDK event. Best-effort; never blocks the play experience. */
+  async logTelemetry(ev: TelemetryEvent): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const { error } = await supabase.from('artifact_telemetry').insert({
+      artifact_id: ev.artifact_id,
+      artifact_kind: ev.artifact_kind,
+      event_type: ev.event_type,
+      user_id: ev.user_id ?? null,
+      circle_id: ev.circle_id ?? null,
+      payload: ev.payload ?? {},
+    })
+    if (error) { console.warn('[hq] logTelemetry →', error.message); return false }
+    return true
+  },
+
+  /** Raw telemetry for one artifact (for the per-artifact detail panel). */
+  async listTelemetry(artifactId: string, days = 30): Promise<TelemetryEvent[]> {
+    if (!cloudEnabled) return []
+    const since = new Date(Date.now() - days * 86_400_000).toISOString()
+    const { data, error } = await supabase
+      .from('artifact_telemetry')
+      .select('*')
+      .eq('artifact_id', artifactId)
+      .gte('emitted_at', since)
+      .order('emitted_at', { ascending: false })
+      .limit(500)
+    if (error) { console.warn('[hq] listTelemetry →', error.message); return [] }
+    return (data || []) as TelemetryEvent[]
+  },
+
+  /** Increment lifetime play count (best-effort RPC, falls back to no-op). */
+  async incrementPlays(kind: 'game' | 'app', id: string): Promise<void> {
+    if (!cloudEnabled) return
+    await supabase.rpc('increment_plays', { p_kind: kind, p_id: id }).then(
+      undefined,
+      () => {/* RPC may not exist yet; ignore */},
+    )
   },
 }
 
