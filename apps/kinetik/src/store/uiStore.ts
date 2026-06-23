@@ -1,26 +1,25 @@
-// =========================================================
-//  UI STATE ONLY — theme, current tab, which circle is in view,
-//  calendar navigation + filters. No domain data lives here, so
-//  there's no chance of "is this the real list or a stale copy?".
-//  Persisted: just the user's preferences.
-// =========================================================
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 export type Tab = 'today' | 'calendar' | 'moments' | 'apps' | 'me'
+export type CalView = 'board' | 'month'
 
 interface UiStore {
   theme: 'light' | 'dark'
   tab: Tab
   activeCircleId: string
   calWeekOffset: number
-  calFilter: string[] | null // null = everyone
+  calFilter: string[] | null
+  calView: CalView
+  calMonthOffset: number
 
   go: (tab: Tab) => void
   toggleTheme: () => void
   setCircle: (id: string) => void
   setWeekOffset: (n: number) => void
   setFilter: (ids: string[] | null) => void
+  setCalView: (v: CalView) => void
+  setMonthOffset: (n: number) => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -31,6 +30,8 @@ export const useUiStore = create<UiStore>()(
       activeCircleId: '',
       calWeekOffset: 0,
       calFilter: null,
+      calView: 'board',
+      calMonthOffset: 0,
 
       go: (tab) => set({ tab }),
       toggleTheme: () => {
@@ -41,6 +42,8 @@ export const useUiStore = create<UiStore>()(
       setCircle: (id) => set({ activeCircleId: id, calFilter: null }),
       setWeekOffset: (n) => set({ calWeekOffset: n }),
       setFilter: (ids) => set({ calFilter: ids }),
+      setCalView: (v) => set({ calView: v }),
+      setMonthOffset: (n) => set({ calMonthOffset: n }),
     }),
     {
       name: 'kinetik_ui_v1',
@@ -48,6 +51,7 @@ export const useUiStore = create<UiStore>()(
       partialize: (s) => ({
         theme: s.theme, tab: s.tab, activeCircleId: s.activeCircleId,
         calWeekOffset: s.calWeekOffset, calFilter: s.calFilter,
+        calView: s.calView, calMonthOffset: s.calMonthOffset,
       }),
     },
   ),

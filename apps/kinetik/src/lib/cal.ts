@@ -78,3 +78,26 @@ export const untilText = (nowMin: number, startMin: number) => {
   const h = Math.floor(d / 60), m = d % 60
   return 'in ' + (h ? `${h}h ` : '') + (m ? `${m}m` : '')
 }
+
+export interface MonthCell {
+  date: Date; iso: string; dow: number
+  inMonth: boolean; isToday: boolean; isWeekend: boolean
+}
+
+/** Calendar grid for a full month (Sun-first, padded to whole weeks). */
+export function monthGrid(year: number, month: number): MonthCell[] {
+  const todayIso = isoOf(new Date())
+  const firstDay = new Date(year, month, 1)
+  const startDow = firstDay.getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const rows = Math.ceil((startDow + daysInMonth) / 7)
+  return Array.from({ length: rows * 7 }, (_, i) => {
+    const d = new Date(year, month, 1 - startDow + i)
+    return {
+      date: d, iso: isoOf(d), dow: d.getDay(),
+      inMonth: d.getMonth() === month && d.getFullYear() === year,
+      isToday: isoOf(d) === todayIso,
+      isWeekend: d.getDay() === 0 || d.getDay() === 6,
+    }
+  })
+}
