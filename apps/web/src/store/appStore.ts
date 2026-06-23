@@ -66,6 +66,7 @@ interface AppStore {
   openGameId: string | null
   playGameHtml: string | null
   playGameTitle: string
+  playGameId: string | null
   toasts: Toast[]
   pendingBadge: string | null
   showConfetti: boolean
@@ -111,7 +112,7 @@ interface AppStore {
   toggleTheme: () => void
   openGame: (id: string) => void
   closeGame: () => void
-  playWizardGame: (html: string, title: string) => void
+  playWizardGame: (html: string, title: string, id?: string) => void
   closeWizardGame: () => void
   setShowConcept: (v: boolean) => void
   addToast: (msg: string, emoji?: string) => void
@@ -191,6 +192,7 @@ export const useAppStore = create<AppStore>()(
       openGameId: null,
       playGameHtml: null,
       playGameTitle: '',
+      playGameId: null,
       toasts: [],
       pendingBadge: null,
       showConfetti: false,
@@ -395,8 +397,8 @@ export const useAppStore = create<AppStore>()(
 
       closeGame() { set({ openGameId: null }) },
 
-      playWizardGame(html, title) { set({ playGameHtml: html, playGameTitle: title }) },
-      closeWizardGame() { set({ playGameHtml: null, playGameTitle: '' }) },
+      playWizardGame(html, title, id) { set({ playGameHtml: html, playGameTitle: title, playGameId: id ?? null }) },
+      closeWizardGame() { set({ playGameHtml: null, playGameTitle: '', playGameId: null }) },
 
       setShowConcept(v) { set({ showConcept: v }) },
 

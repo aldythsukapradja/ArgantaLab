@@ -9,7 +9,20 @@ import { supabase, cloudEnabled } from '../lib/supabase'
 import { Empty, Loading } from '../components/Empty'
 
 type View = 'catalog' | 'build'
-interface Meta { title: string; category: string; html: string }
+interface Meta {
+  title: string
+  category: string
+  html: string
+  description: string
+  tags: string
+  ageMin: string
+  ageMax: string
+}
+
+const emptyMeta = (): Meta => ({
+  title: '', category: 'platformer', html: '',
+  description: '', tags: '', ageMin: '', ageMax: '',
+})
 
 function validate(html: string) {
   return {
@@ -28,7 +41,7 @@ export function GameBuilder() {
   const [view, setView]        = useState<View>('catalog')
   const [games, setGames]      = useState<PublishedGame[] | undefined>(undefined)
   const [editingId, setEditId] = useState<string | null>(null)
-  const [meta, setMeta]        = useState<Meta>({ title: '', category: 'platformer', html: '' })
+  const [meta, setMeta]        = useState<Meta>(emptyMeta())
   const [publishing, setPub]   = useState(false)
   const [published, setLive]   = useState(false)
   const [error, setErr]        = useState<string | null>(null)
@@ -41,15 +54,19 @@ export function GameBuilder() {
   useEffect(() => { load() }, [load])
 
   const openNew = () => {
-    setMeta({ title: '', category: 'platformer', html: '' })
+    setMeta(emptyMeta())
     setEditId(null); setLive(false); setErr(null); setView('build')
   }
 
   const openEdit = (g: PublishedGame) => {
     setMeta({
-      title:    g.title || '',
-      category: (g.config?.category as string | undefined) ?? 'platformer',
-      html:     g.html || '',
+      title:       g.title || '',
+      category:    g.category ?? (g.config?.category as string | undefined) ?? 'platformer',
+      html:        g.html || '',
+      description: g.description ?? '',
+      tags:        (g.tags ?? []).join(', '),
+      ageMin:      g.age_min != null ? String(g.age_min) : '',
+      ageMax:      g.age_max != null ? String(g.age_max) : '',
     })
     setEditId(g.id); setLive(g.visibility === 'public'); setErr(null); setView('build')
   }
@@ -63,9 +80,13 @@ export function GameBuilder() {
     const id = editingId ?? crypto.randomUUID()
     const ok = await live.publishGame({
       id, title: meta.title,
-      config: { category: meta.category, source: 'code' },
       html: meta.html,
       userId: session.user.id,
+      category: meta.category,
+      description: meta.description.trim() || undefined,
+      tags: meta.tags.split(',').map(t => t.trim()).filter(Boolean),
+      ageMin: meta.ageMin ? parseInt(meta.ageMin, 10) : null,
+      ageMax: meta.ageMax ? parseInt(meta.ageMax, 10) : null,
     })
     if (ok) { setEditId(id); setLive(true); load() }
     else setErr('Publish failed — check Supabase connection.')
@@ -369,19 +390,59 @@ function BuildView({ meta, onChange, publishing, published, error, onPublish, on
             )}
           </div>
 
-          {/* Step 3: Title */}
+          {/* Step 3: Metadata */}
           <div className="card" style={{ padding: 13 }}>
-            <Label>Step 3 — Name your game</Label>
-            <input
-              value={meta.title}
-              onChange={e => onChange({ title: e.target.value })}
-              placeholder="e.g. Neon Rivals Arena, Pixel Farm Quest…"
-              style={{
-                width: '100%', padding: '9px 12px', borderRadius: 8,
-                border: '1px solid var(--bd2)', background: 'var(--bg)',
-                fontSize: 13, color: 'var(--tx)', outline: 'none', boxSizing: 'border-box',
-              }}
-            />
+            <Label>Step 3 — Game details</Label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Field label="Title">
+                <input
+                  value={meta.title}
+                  onChange={e => onChange({ title: e.target.value })}
+                  placeholder="e.g. Neon Rivals Arena, Pixel Farm Quest…"
+                  style={inputStyle}
+                />
+              </Field>
+
+              <Field label="Description">
+                <textarea
+                  value={meta.description}
+                  onChange={e => onChange({ description: e.target.value })}
+                  placeholder="One line kids see in Discover — what's the game about?"
+                  rows={2}
+                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                />
+              </Field>
+
+              <Field label="Tags (comma-separated)">
+                <input
+                  value={meta.tags}
+                  onChange={e => onChange({ tags: e.target.value })}
+                  placeholder="space, shooter, multiplayer"
+                  style={inputStyle}
+                />
+              </Field>
+
+              <Field label="Age range">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    value={meta.ageMin}
+                    onChange={e => onChange({ ageMin: e.target.value.replace(/\D/g, '') })}
+                    placeholder="6"
+                    inputMode="numeric"
+                    style={{ ...inputStyle, width: 70, textAlign: 'center' }}
+                  />
+                  <span style={{ color: 'var(--tx3)', fontSize: 12 }}>to</span>
+                  <input
+                    value={meta.ageMax}
+                    onChange={e => onChange({ ageMax: e.target.value.replace(/\D/g, '') })}
+                    placeholder="12"
+                    inputMode="numeric"
+                    style={{ ...inputStyle, width: 70, textAlign: 'center' }}
+                  />
+                  <span style={{ color: 'var(--tx3)', fontSize: 12 }}>years</span>
+                </div>
+              </Field>
+            </div>
           </div>
         </div>
 
@@ -481,6 +542,21 @@ function Label({ children }: { children: React.ReactNode }) {
     }}>
       {children}
     </div>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 11px', borderRadius: 8,
+  border: '1px solid var(--bd2)', background: 'var(--bg)',
+  fontSize: 13, color: 'var(--tx)', outline: 'none', boxSizing: 'border-box',
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: 11, color: 'var(--tx3)', fontWeight: 500 }}>{label}</span>
+      {children}
+    </label>
   )
 }
 
