@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd apps/hq && npm install && npm run build",
+  "outputDirectory": "apps/hq/dist",
+  "installCommand": "echo skip",
+  "framework": null
+}
