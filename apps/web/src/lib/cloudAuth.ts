@@ -65,8 +65,11 @@ export async function kidSignup(input: { username: string; pin: string; displayN
 }
 
 // A signed-in PARENT creates a kid's cloud account and stays logged in.
-// Uses an isolated client so the parent's session is untouched; the new kid's
-// own (transient) session sets guardian_id back to the parent.
+// Uses an isolated client so the parent's session is untouched. The guardian
+// link is set authoritatively from the signup metadata (the handle_new_user
+// trigger writes guardian_id), so it no longer depends on a transient kid
+// session — which never exists when email-confirmation is on. If the kid
+// already exists (e.g. created on another device), we self-heal by adopting it.
 export async function parentCreateKid(
   input: { username: string; pin: string; displayName: string; dob: string; gender: Gender },
   parentId: string,
@@ -77,12 +80,21 @@ export async function parentCreateKid(
     const { data, error } = await tmp.auth.signUp({
       email: synthEmail(input.username),
       password: pinToPassword(input.pin),
-      options: { data: { username: input.username.trim().toLowerCase(), display_name: input.displayName.trim(), dob: input.dob, gender: input.gender, role: 'kid' } },
+      options: { data: { username: input.username.trim().toLowerCase(), display_name: input.displayName.trim(), dob: input.dob, gender: input.gender, role: 'kid', guardian_id: parentId } },
     })
-    if (error) return { ok: false, error: error.message }
+    if (error) {
+      // Already registered (e.g. created earlier / on another device): adopt it
+      // by PIN so it links to this guardian instead of failing outright.
+      if (/already|registered|exists/i.test(error.message)) {
+        const linked = await adoptKid(input.username, input.pin)
+        if (linked) return { ok: true, data: { id: 'existing', display_name: input.displayName, role: 'kid' } as CloudProfile }
+      }
+      return { ok: false, error: error.message }
+    }
     const kidId = data.user?.id
     if (!kidId) return { ok: false, error: 'No account created' }
-    // the kid (transient session) links itself to the guardian
+    // Belt-and-suspenders: if a kid session happens to exist, also link directly
+    // (covers projects where the trigger metadata path hasn't been applied yet).
     if (data.session) {
       await tmp.from('profiles').update({ guardian_id: parentId }).eq('id', kidId)
     }
@@ -92,6 +104,16 @@ export async function parentCreateKid(
   } catch (e) {
     return { ok: false, error: String(e) }
   }
+}
+
+// Claim / re-link an existing kid account to the signed-in guardian, proving
+// control with the kid's PIN. Repairs kids whose guardian_id was never set
+// (orphaned by the old create flow). No-ops safely if the PIN is wrong.
+export async function adoptKid(username: string, pin: string): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('adopt_kid', { p_username: username.trim().toLowerCase(), p_pin: pin })
+  if (error) return false
+  return data === true
 }
 
 export async function kidLogin(username: string, pin: string): Promise<CloudResult> {
