@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti'
 import { useAppStore } from '@store/appStore'
 import { WORLDS } from '@/data/learn'
 import {
-  listKids, loadKidDashboard, masteryGrid, computeGaps, bloomDistribution,
+  listKids, loadKidDashboard, sampleDashboard, masteryGrid, computeGaps, bloomDistribution,
   competencyScores, currentStreak, weekActiveDays, avgMinutesPerDay, stageOf,
   type KidDashboard, type Gap, type GapReason,
 } from '@lib/parentDash'
@@ -56,6 +56,13 @@ export default function Parent() {
   const [dash, setDash] = useState<KidDashboard | null>(null)
   const [loadingDash, setLoadingDash] = useState(false)
   const [budget, setBudget] = useState(useAppStore.getState().diamonds)
+  const [demo, setDemo] = useState(false)
+
+  // Display-only sample so a grown-up can see the full analytics before any
+  // real telemetry exists. Stable across renders; never written anywhere.
+  const activeName = kids?.find(k => k.id === activeKid)?.display_name
+  const sample = useMemo(() => sampleDashboard(activeName ?? 'Sample'), [activeName])
+  const view = demo ? sample : dash
 
   // Load the family roster once.
   useEffect(() => {
@@ -78,41 +85,52 @@ export default function Parent() {
 
   // ── Derived analytics (memoised per dashboard) ────────────────
   const derived = useMemo(() => {
-    if (!dash) return null
-    const grid = masteryGrid(dash)
+    if (!view) return null
+    const grid = masteryGrid(view)
     const cells = grid.flatMap(g => g.cells)
     const overall = cells.length ? Math.round(cells.reduce((a, c) => a + (c.pct ?? 0), 0) / cells.length) : 0
     return {
       grid, overall,
-      streak: currentStreak(dash.daily),
-      weekDays: weekActiveDays(dash.daily),
-      avgMin: avgMinutesPerDay(dash.daily),
-      gaps: computeGaps(dash, 6),
-      bloom: bloomDistribution(dash),
-      comp: competencyScores(dash),
-      stage: stageOf(dash.kid.dob),
-      totalAnswers: dash.daily.reduce((a, d) => a + d.items, 0),
+      streak: currentStreak(view.daily),
+      weekDays: weekActiveDays(view.daily),
+      avgMin: avgMinutesPerDay(view.daily),
+      gaps: computeGaps(view, 6),
+      bloom: bloomDistribution(view),
+      comp: competencyScores(view),
+      stage: stageOf(view.kid.dob),
+      totalAnswers: view.daily.reduce((a, d) => a + d.items, 0),
     }
-  }, [dash])
+  }, [view])
 
-  // ── Offline / empty states ────────────────────────────────────
-  if (!cloudEnabled) return (
-    <div className="screen par"><div className="par-empty">
-      <span className="par-empty-ic">☁️</span>
-      <h2>Connect to the cloud</h2>
-      <p>Kid progress analytics sync from the cloud. Sign in online to see each child's skills, gaps and trends.</p>
-    </div></div>
-  )
-  if (kids === null) return <div className="screen par"><div className="par-loading">Loading your family…</div></div>
-  if (kids.length === 0) return (
-    <div className="screen par"><div className="par-empty">
-      <span className="par-empty-ic">👨‍👩‍👧</span>
-      <h2>No children linked yet</h2>
-      <p>Add a child from the player switcher, or link an existing account with their friend code. Their daily progress will appear here.</p>
-    </div></div>
+  const previewBtn = (
+    <button className="par-demo-btn" onClick={() => setDemo(true)}>👁 Preview with sample data</button>
   )
 
-  const kid = dash?.kid
+  // ── Offline / empty states (skipped while previewing) ─────────
+  if (!demo) {
+    if (!cloudEnabled) return (
+      <div className="screen par"><div className="par-empty">
+        <span className="par-empty-ic">☁️</span>
+        <h2>Connect to the cloud</h2>
+        <p>Kid progress analytics sync from the cloud. Sign in online to see each child's skills, gaps and trends.</p>
+        {previewBtn}
+      </div></div>
+    )
+    if (kids === null) return <div className="screen par"><div className="par-loading">Loading your family…</div></div>
+    if (kids.length === 0) return (
+      <div className="screen par"><div className="par-empty">
+        <span className="par-empty-ic">👨‍👩‍👧</span>
+        <h2>No children linked yet</h2>
+        <p>Add a child from the player switcher, or link an existing account with their friend code. Their daily progress will appear here.</p>
+        {previewBtn}
+      </div></div>
+    )
+  }
+
+  const kid = view?.kid
+  // Real session, kids exist, but the dashboard RPC returned nothing — almost
+  // always because the analytics migration hasn't been applied yet.
+  const needsSetup = !demo && !loadingDash && !dash && (kids?.length ?? 0) > 0
 
   return (
     <div className="screen par" style={{ justifyContent: 'flex-start', gap: 16, paddingTop: 6 }}>
@@ -125,18 +143,36 @@ export default function Parent() {
         <p className="lead">Real Cambridge skills underneath the games. Small, frequent drills — here's what's working and where to nudge.</p>
       </div>
 
-      <div className="pk-switch">
-        {kids.map(k => (
-          <button key={k.id} className={`pk-pill${k.id === activeKid ? ' on' : ''}`} onClick={() => setActiveKid(k.id)}>
-            <span className="pk-av">{kidGlyph({ name: k.display_name, photo: k.photo_url ?? null })}{isOnline(k.last_seen) && <i className="pk-on" />}</span>
-            <span className="pk-name">{k.display_name}</span>
-          </button>
-        ))}
-      </div>
+      {kids && kids.length > 0 && (
+        <div className="pk-switch">
+          {kids.map(k => (
+            <button key={k.id} className={`pk-pill${k.id === activeKid ? ' on' : ''}`} onClick={() => { setDemo(false); setActiveKid(k.id) }}>
+              <span className="pk-av">{kidGlyph({ name: k.display_name, photo: k.photo_url ?? null })}{isOnline(k.last_seen) && <i className="pk-on" />}</span>
+              <span className="pk-name">{k.display_name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {demo && (
+        <div className="par-demo-banner">
+          <span>👁 <b>Sample data</b> — a preview of the analytics. Numbers aren't real until kids play and the analytics migration is applied.</span>
+          <button onClick={() => setDemo(false)}>Exit preview</button>
+        </div>
+      )}
+
+      {needsSetup && (
+        <div className="par-empty soft">
+          <span className="par-empty-ic">📊</span>
+          <h2>Analytics aren't switched on yet</h2>
+          <p>The Grown-ups dashboard runs on the cloud analytics engine. Once the one-time database setup (<code>migration_analytics_rewards.sql</code>) is applied and {kids?.[0]?.display_name ?? 'your child'} plays, real skills, gaps and trends appear here.</p>
+          {previewBtn}
+        </div>
+      )}
 
       {loadingDash && <div className="par-loading">Crunching the numbers…</div>}
 
-      {dash && derived && kid && (
+      {view && derived && kid && (
         <>
           {/* stat cards */}
           <div className="par-kpis">
@@ -180,19 +216,19 @@ export default function Parent() {
 
                 <div className="pc-card">
                   <div className="pc-h"><b>Progress trend</b><small>Questions attempted vs correct</small></div>
-                  <div className="pc-box"><TrajectoryLine daily={dash.daily} theme={nv} /></div>
+                  <div className="pc-box"><TrajectoryLine daily={view.daily} theme={nv} /></div>
                 </div>
 
                 <div className="pc-card">
                   <div className="pc-h"><b>Where the time goes</b><small>Last 30 days · by world</small></div>
-                  {Object.keys(dash.interest).length
-                    ? <div className="pc-box pc-box-interest"><InterestBar interest={dash.interest} theme={nv} /></div>
+                  {Object.keys(view.interest).length
+                    ? <div className="pc-box pc-box-interest"><InterestBar interest={view.interest} theme={nv} /></div>
                     : <div className="pc-thin">No activity in the last 30 days.</div>}
                 </div>
 
                 <div className="pc-card pc-wide">
                   <div className="pc-h"><b>Daily rhythm</b><small>Practice consistency · last 4 months</small></div>
-                  <div className="pc-box pc-box-cal"><ActivityCalendar daily={dash.daily} theme={nv} /></div>
+                  <div className="pc-box pc-box-cal"><ActivityCalendar daily={view.daily} theme={nv} /></div>
                 </div>
               </div>
 
@@ -253,7 +289,8 @@ export default function Parent() {
             kidName={kid.name}
             kidDiamonds={kid.diamonds}
             budget={budget}
-            recent={dash.recentRewards}
+            recent={view.recentRewards}
+            demo={demo}
             onGranted={(fromBal) => { setBudget(fromBal); useAppStore.setState({ diamonds: fromBal }); reloadDash() }}
           />
         </>
@@ -267,9 +304,10 @@ export default function Parent() {
 // ── Reward panel ────────────────────────────────────────────────
 const AMOUNTS = [50, 100, 500, 1000]
 
-function RewardPanel({ kidId, kidName, kidDiamonds, budget, recent, onGranted }: {
+function RewardPanel({ kidId, kidName, kidDiamonds, budget, recent, demo, onGranted }: {
   kidId: string; kidName: string; kidDiamonds: number; budget: number
   recent: { amount: number; reason: string | null; kind: string; at: string }[]
+  demo?: boolean
   onGranted: (fromBalance: number) => void
 }) {
   const [amount, setAmount] = useState(100)
@@ -287,6 +325,7 @@ function RewardPanel({ kidId, kidName, kidDiamonds, budget, recent, onGranted }:
 
   const send = async () => {
     setErr(null); setOkMsg(null)
+    if (demo) { fireConfetti(); setOkMsg('Preview mode — connect the cloud to send real diamonds.'); return }
     if (amount <= 0) { setErr('Pick an amount above zero.'); return }
     if (amount > budget) { setErr("That's more than your diamond budget."); return }
     setBusy(true)
