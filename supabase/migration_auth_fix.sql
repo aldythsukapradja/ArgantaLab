@@ -98,6 +98,21 @@ begin
 end; $$;
 grant execute on function public.adopt_kid(text, text) to authenticated;
 
+-- ── (2c) Unlink a kid from the current guardian ─────────────
+-- Removes a child from this family (sets guardian_id back to null). Only the
+-- kid's current guardian may do this; the kid's own account is left intact.
+create or replace function public.unlink_kid(p_kid uuid)
+returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return false; end if;
+  update public.profiles
+    set guardian_id = null
+    where id = p_kid and role = 'kid' and guardian_id = auth.uid();
+  return found;
+end; $$;
+grant execute on function public.unlink_kid(uuid) to authenticated;
+
 -- ============================================================
 --  END AUTH & SYNC FIX
 -- ============================================================

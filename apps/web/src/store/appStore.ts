@@ -2,8 +2,6 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Session } from '@supabase/supabase-js'
 import { DEFAULT_OUTFIT, COSMETIC_BY_ID, resolveOutfit, type Slot, type ResolvedOutfit } from '@/data/cosmetics'
-import { setPlayerId, saveSnapshot, loadSnapshot, type PlayerSnapshot } from '@lib/player'
-import type { KidProfile } from '@lib/circles'
 import { stageForDob } from '@/data/learn'
 
 // Cosmetics that every kid owns from day one (the free starter loadout + free skins/bgs).
@@ -46,7 +44,6 @@ interface AppStore {
   pitchCompleted: boolean
   missions: Record<string, number[]>
   lastTab: string
-  activeKidId: string | null   // null = grown-up/owner mode; else a logged-in kid
   activeCircleId: string | null   // the circle currently in focus (switcher pill)
   stageKey: string             // active player's learning stage (drives content difficulty)
 
@@ -80,7 +77,8 @@ interface AppStore {
   studioMessages: StudioMessage[]
 
   // — actions —
-  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string }) => void
+  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string; dob?: string | null }) => void
+  resetIdentity: () => void
   isAdmin: () => boolean
   setCostume: (worldKey: string | null) => void
   // — player session (kid vs grown-up) —
@@ -89,8 +87,6 @@ interface AppStore {
   openSwitcher: () => void
   closeSwitcher: () => void
   lockSession: () => void
-  loginAsKid: (kid: KidProfile) => void
-  switchToOwner: () => void
   // — avatar cosmetics (Roblox-style) —
   equipCosmetic: (slot: Slot, id: string) => void
   unequipSlot: (slot: Slot) => void
@@ -128,23 +124,16 @@ interface AppStore {
 
 const XP_PER_LEVEL = (l: number) => l * 500
 
-// Capture the identity + wallet + cosmetics of the active player (for switching).
-function snapshotOf(s: AppStore): PlayerSnapshot {
-  return {
-    learnerName: s.learnerName, avatar: s.avatar, xp: s.xp, level: s.level, diamonds: s.diamonds,
-    unlocks: s.unlocks, badges: s.badges, completedLessons: s.completedLessons, gamesPlayed: s.gamesPlayed,
-    costume: s.costume, outfit: s.outfit, ownedCosmetics: s.ownedCosmetics,
-  }
-}
-
-// A brand-new kid starts fresh: own name, empty progress, a welcome gift of diamonds.
-function freshKid(kid: KidProfile): Partial<AppStore> {
-  return {
-    learnerName: kid.displayName, avatar: kid.displayName[0]?.toUpperCase() ?? 'K',
-    xp: 0, level: 1, diamonds: 20, unlocks: [], badges: [], completedLessons: [], gamesPlayed: [],
-    costume: null, outfit: { ...DEFAULT_OUTFIT }, ownedCosmetics: [...FREE_COSMETICS],
-    stageKey: stageForDob(kid.dob).key,
-  }
+// The identity/wallet/progress fields that belong to ONE player. On every
+// session change we reset these to a clean slate before hydrating the incoming
+// player from the cloud — so no previous player's name, gems, or progress can
+// ever leak across a switch. Device-level prefs (theme, tab) are NOT reset.
+const BLANK_IDENTITY = {
+  learnerName: 'Player', avatar: 'P', xp: 0, level: 1, diamonds: 0,
+  unlocks: [] as string[], badges: [] as string[], completedLessons: [] as string[], gamesPlayed: [] as string[],
+  role: 'user', costume: null as string | null,
+  outfit: { ...DEFAULT_OUTFIT }, ownedCosmetics: [...FREE_COSMETICS],
+  stageKey: 'explorer',
 }
 
 const INITIAL_STUDIO_MESSAGES: StudioMessage[] = [
@@ -174,7 +163,6 @@ export const useAppStore = create<AppStore>()(
       pitchCompleted: false,
       missions: {},
       lastTab: 'arganta',
-      activeKidId: null,
       activeCircleId: null,
       stageKey: 'explorer',
       showSwitcher: false,
@@ -208,6 +196,7 @@ export const useAppStore = create<AppStore>()(
       hydrateFromCloud(p) {
         set({
           learnerName: p.display_name || get().learnerName,
+          avatar: (p.display_name?.[0] ?? get().avatar).toUpperCase(),
           xp: p.xp,
           level: p.level,
           diamonds: p.diamonds,
@@ -216,8 +205,15 @@ export const useAppStore = create<AppStore>()(
           gamesPlayed: p.games_played ?? [],
           unlocks: p.unlocks ?? [],
           role: p.role ?? get().role,
+          // content difficulty follows the logged-in account's own age
+          stageKey: stageForDob(p.dob ?? undefined).key,
         })
       },
+
+      // Wipe the active player's identity/wallet/progress back to a blank slate.
+      // Called on logout and at the start of every session switch so the next
+      // player hydrates clean — the core guard against cross-player leakage.
+      resetIdentity() { set({ ...BLANK_IDENTITY, outfit: { ...DEFAULT_OUTFIT }, ownedCosmetics: [...FREE_COSMETICS] }) },
 
       isAdmin() {
         if (typeof localStorage !== 'undefined' && localStorage.getItem('alab_admin') === '1') return true
@@ -227,43 +223,14 @@ export const useAppStore = create<AppStore>()(
 
       setCostume(worldKey) { set({ costume: worldKey }) },
 
-      // kid mode = a local PIN session (activeKidId) OR a cloud kid account (role)
-      isKidMode() { return get().activeKidId !== null || get().role === 'kid' },
+      // Identity is the Supabase session: a kid account has role 'kid'.
+      isKidMode() { return get().role === 'kid' },
       setActiveCircle(id) { set({ activeCircleId: id }) },
       openSwitcher() { set({ showSwitcher: true }) },
       closeSwitcher() { if (!get().locked) set({ showSwitcher: false }) },
       // Lock the session — show the switcher and forbid dismissing it until
       // someone signs in (kid PIN or parent passcode). Used by "Log out".
       lockSession() { set({ showSwitcher: true, locked: true }) },
-
-      loginAsKid(kid) {
-        const cur = get()
-        // save the current player's snapshot before swapping
-        saveSnapshot(cur.activeKidId ? `kid_${cur.activeKidId}` : 'owner', snapshotOf(cur))
-        // switch the local-progress namespace to this kid
-        setPlayerId(`kid_${kid.id}`)
-        const snap = loadSnapshot(`kid_${kid.id}`)
-        set({
-          activeKidId: kid.id,
-          showSwitcher: false, locked: false,
-          activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
-          ...((snap ?? freshKid(kid)) as Partial<AppStore>),
-          stageKey: stageForDob(kid.dob).key,   // always re-derive (age advances)
-        })
-      },
-
-      switchToOwner() {
-        const cur = get()
-        if (cur.activeKidId) saveSnapshot(`kid_${cur.activeKidId}`, snapshotOf(cur))
-        setPlayerId('owner')
-        const snap = loadSnapshot('owner')
-        set({
-          activeKidId: null,
-          showSwitcher: false, locked: false, stageKey: 'explorer',
-          activeTab: 'arganta', lastTab: 'arganta', lessonId: null,
-          ...((snap ?? {}) as Partial<AppStore>),
-        })
-      },
 
       equipCosmetic(slot, id) {
         // toggle off if re-equipping the same item (except skin/bg which always have one)

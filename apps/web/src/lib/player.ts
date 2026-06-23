@@ -1,13 +1,13 @@
 // ============================================================
-//  PLAYER SESSION  — who is using the app right now
-//  'owner' = the grown-up / account holder. 'kid_<id>' = a child.
-//  This namespaces local progress (rings, mastery) so each kid has
-//  their OWN worlds, and stores a per-player identity snapshot
-//  (name, avatar, wallet, cosmetics) so switching is a clean swap.
+//  PLAYER NAMESPACE  — namespaces the local LEARN CACHE by account
+//  Identity, wallet, and progress are owned by the cloud (each player is
+//  their own Supabase session). This only scopes the session-level learn
+//  cache (rings/mastery in memStore) to the signed-in account's id so two
+//  accounts on one device never share cached state. No wallet, no PINs,
+//  no identity is persisted here.
 // ============================================================
 
 const PKEY = 'argantalab_player_v1'
-const SNAP = 'argantalab_psnap_v1'
 
 let _id = 'owner'
 try { _id = localStorage.getItem(PKEY) || 'owner' } catch { /* ignore */ }
@@ -19,38 +19,8 @@ export function setPlayerId(id: string) {
   try { localStorage.setItem(PKEY, _id) } catch { /* ignore */ }
 }
 
-/** Namespace a localStorage base key by the active player.
+/** Namespace a cache base key by the active account.
  *  The owner keeps the original (un-suffixed) key for back-compat. */
 export function pkey(base: string): string {
   return _id === 'owner' ? base : `${base}__${_id}`
-}
-
-// ── per-player identity snapshot ────────────────────────────
-export interface PlayerSnapshot {
-  learnerName: string
-  avatar: string
-  xp: number
-  level: number
-  diamonds: number
-  unlocks: string[]
-  badges: string[]
-  completedLessons: string[]
-  gamesPlayed: string[]
-  costume: string | null
-  outfit: Record<string, string>
-  ownedCosmetics: string[]
-}
-
-function loadAll(): Record<string, PlayerSnapshot> {
-  try { return JSON.parse(localStorage.getItem(SNAP) || '{}') } catch { return {} }
-}
-
-export function saveSnapshot(playerId: string, snap: PlayerSnapshot) {
-  const all = loadAll()
-  all[playerId] = snap
-  try { localStorage.setItem(SNAP, JSON.stringify(all)) } catch { /* ignore */ }
-}
-
-export function loadSnapshot(playerId: string): PlayerSnapshot | null {
-  return loadAll()[playerId] ?? null
 }

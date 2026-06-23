@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppStore } from '@store/appStore'
-import { verifyLogin, addKid } from '@lib/circles'
 import { supabase, cloudEnabled } from '@lib/supabase'
 import { kidSignup, kidLogin, signOutCloud } from '@lib/cloudAuth'
 import KidForm, { type KidFormData } from './KidForm'
@@ -12,10 +11,9 @@ type Stage = 'signin' | 'account' | 'signup'
 // Google at the top, kids type username + PIN, brand-new kids tap "New player").
 // Signed in + tapping the avatar → a simple account menu (Switch / Log out).
 export default function PlayerSwitcher() {
-  const { showSwitcher, loginAsKid, locked, learnerName, role, resolvedOutfit } = useAppStore()
+  const { showSwitcher, locked, learnerName, role, resolvedOutfit } = useAppStore()
   const session = useAppStore(s => s.session)
-  const activeKidId = useAppStore(s => s.activeKidId)
-  const inSession = (!!session && session !== 'loading') || activeKidId !== null || role === 'kid'
+  const inSession = (!!session && session !== 'loading') || role === 'kid'
 
   const [stage, setStage] = useState<Stage>('signin')
   const [uName, setUName] = useState('')
@@ -42,33 +40,29 @@ export default function PlayerSwitcher() {
     // success → the page redirects to Google
   }
 
+  // Cloud-only, real re-auth. signInWithPassword atomically REPLACES whoever is
+  // signed in (so a failed attempt leaves the current player untouched — we never
+  // sign the parent out on a wrong PIN). On success the session changes and
+  // CloudSync hydrates this kid's own cloud row — no local fallback, no leakage.
   const kidLogIn = async () => {
     if (uName.trim().length < 2 || uPin.length !== 4) return
+    if (!cloudEnabled) { setErr('Cloud isn\'t set up yet — ask a grown-up.'); return }
     setErr(null); setBusy(true)
-    if (cloudEnabled) {
-      const r = await kidLogin(uName.trim(), uPin)
-      if (r.ok) { endSession(); return }
-      const local = verifyLogin(uName.trim(), uPin)   // fall back to a profile on this device
-      setBusy(false)
-      if (local) loginAsKid(local)
-      else setErr('That username or PIN didn\'t match. Ask a grown-up to check.')
-    } else {
-      setBusy(false)
-      const kid = verifyLogin(uName.trim(), uPin)
-      if (kid) loginAsKid(kid); else setErr('That username or PIN didn\'t match.')
-    }
+    const r = await kidLogin(uName.trim(), uPin)
+    setBusy(false)
+    if (r.ok) { endSession(); return }
+    setErr('That username or PIN didn\'t match. Ask a grown-up to check.')
   }
 
   const handleSignup = async (d: KidFormData) => {
     setErr(null)
-    if (cloudEnabled) {
-      setBusy(true); const r = await kidSignup(d); setBusy(false)
-      if (r.ok) endSession()
-      else setErr(r.error === 'cloud-disabled' ? 'Cloud is not set up yet.' : (r.error ?? 'Could not create account'))
-    } else { const s = addKid(d); loginAsKid(s.kids[s.kids.length - 1]) }
+    if (!cloudEnabled) { setErr('Cloud isn\'t set up yet — ask a grown-up.'); return }
+    setBusy(true); const r = await kidSignup(d); setBusy(false)
+    if (r.ok) endSession()
+    else setErr(r.error === 'cloud-disabled' ? 'Cloud is not set up yet.' : (r.error ?? 'Could not create account'))
   }
 
-  const logOut = async () => { await signOutCloud(); useAppStore.setState({ role: 'user', activeKidId: null }); useAppStore.getState().lockSession() }
+  const logOut = async () => { await signOutCloud(); useAppStore.setState({ role: 'user' }); useAppStore.getState().lockSession() }
 
   // ── New player ──
   if (stage === 'signup') {
