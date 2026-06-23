@@ -1,6 +1,12 @@
 import { useEffect } from 'react'
 import { supabase, cloudEnabled } from './supabase'
 import { useAppStore } from '../store/appStore'
+import { walletEarn, walletSpend } from './wallet'
+
+const signedInNow = () => {
+  const s = useAppStore.getState().session
+  return cloudEnabled && s !== null && s !== 'loading'
+}
 
 // ============================================================
 //  CIRCLE GAME BRIDGE  (host side)
@@ -138,14 +144,19 @@ async function handleCircleCall(gameId: string, method: string, args: unknown[])
 
     case 'awardDiamonds': {
       const n = Number(args[0]) || 0
-      st().addDiamonds(n)
+      const reason = typeof args[1] === 'string' ? (args[1] as string) : `game:${gameId}`
+      const r = await walletEarn(n, 'game', reason)        // server-authoritative mint (capped)
+      if (r && typeof r.balance === 'number') return { balance: r.balance }
+      st().addDiamonds(n)                                   // guest / offline fallback
       return { balance: st().diamonds }
     }
     case 'spendDiamonds': {
       const n = Number(args[0]) || 0
       if (st().diamonds < n) return { ok: false, balance: st().diamonds }
-      st().addDiamonds(-n)
-      return { ok: true, balance: st().diamonds }
+      const r = await walletSpend(n, `game:${gameId}`)      // server checks the balance
+      if (r) return { ok: true, balance: r.balance }
+      if (!signedInNow()) { st().addDiamonds(-n); return { ok: true, balance: st().diamonds } }
+      return { ok: false, balance: st().diamonds }          // server rejected (insufficient)
     }
 
     case 'getXP':

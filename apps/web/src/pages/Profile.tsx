@@ -8,7 +8,7 @@ import Buddy from '@components/avatar/Buddy'
 import KidForm, { type KidFormData } from '@components/auth/KidForm'
 import { cloudEnabled } from '@lib/supabase'
 import {
-  signOutCloud, linkKid, parentCreateKid, unlinkKid, resetKidPin,
+  signOutCloud, linkKid, parentCreateKid, unlinkKid, resetKidPin, adoptKid,
   listMyKids, myCircles, inviteToCircle, myInvites, respondToInvite,
   type CloudProfile, type CloudCircle, type PendingInvite,
 } from '@lib/cloudAuth'
@@ -72,6 +72,17 @@ export default function Profile() {
     const r = await linkKid(code)
     addToast(r.ok ? 'Kid linked! 👨‍👩‍👧' : (r.error ?? 'Could not link'), r.ok ? '🔗' : '⚠️')
     if (r.ok) reloadAll()
+  }
+  // Repair path for an existing kid whose cloud account isn't linked to you yet
+  // (e.g. created before guardian-linking was reliable). Claims them by PIN.
+  const claimKid = async () => {
+    const username = prompt('Claim an existing kid — their username:')?.trim()
+    if (!username) return
+    const pin = prompt(`Enter ${username}'s 4-digit PIN to prove you're their grown-up:`)?.trim()
+    if (!pin) return
+    const linked = await adoptKid(username, pin)
+    addToast(linked ? `${username} is now in your family ☁️` : 'No match — check the username and PIN', linked ? '✨' : '⚠️')
+    if (linked) reloadAll()
   }
 
   // Invite another REGISTERED grown-up (by friend code) into the family circle,
@@ -206,6 +217,7 @@ export default function Profile() {
         {cloudEnabled
           ? <button className="ig-btn" onClick={linkAKid}>🔗 Link kid</button>
           : <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>}
+        {cloudEnabled && <button className="ig-btn" onClick={claimKid}>🪪 Claim kid</button>}
         {cloudEnabled && <button className="ig-btn" onClick={inviteGrownUp}>👥 Invite grown-up</button>}
         <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
       </div>

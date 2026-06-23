@@ -259,7 +259,9 @@ export const useAppStore = create<AppStore>()(
           get().addToast(`Need ${item.price - get().diamonds} more 💎 for ${item.name}`, '💎')
           return false
         }
+        // optimistic, then reconcile the spend against the server wallet (truth)
         set({ diamonds: get().diamonds - item.price, ownedCosmetics: [...get().ownedCosmetics, id] })
+        if (item.price > 0) import('@lib/wallet').then(w => w.walletSpend(item.price, `cosmetic:${id}`).then(r => { if (!r) w.refreshBalance() }))
         get().addToast(`Unlocked ${item.name}!`, '✨')
         return true
       },
@@ -277,6 +279,7 @@ export const useAppStore = create<AppStore>()(
           return false
         }
         set({ diamonds: get().diamonds - price, unlocks: [...get().unlocks, key] })
+        if (price > 0) import('@lib/wallet').then(w => w.walletSpend(price, `item:${key}`).then(r => { if (!r) w.refreshBalance() }))
         get().addToast(`Unlocked ${name}!`, '✨')
         return true
       },
@@ -332,7 +335,9 @@ export const useAppStore = create<AppStore>()(
         const done = get().completedLessons
         if (done.includes(id)) return
         const newDone = [...done, id]
+        // optimistic +5, then mint it on the server wallet (ledger truth, capped)
         set({ completedLessons: newDone, diamonds: get().diamonds + 5 })
+        import('@lib/wallet').then(w => w.walletEarn(5, 'lesson', `lesson:${id}`))
         get().addToast('+5 💎', '💎')
 
         // check badges
