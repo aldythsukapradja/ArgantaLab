@@ -607,32 +607,33 @@ function CodeStep(props: CodeStepProps) {
                   {circleData && (
                     <div style={{
                       display: 'flex', flexDirection: 'column', gap: 10, height: '100%',
-                      maxWidth: 180, overflowY: 'auto', paddingRight: 4,
+                      maxWidth: 200, overflowY: 'auto', paddingRight: 4,
                     }}>
                       <div>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--tx3)', marginBottom: 8 }}>AUDIENCE</div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx)', marginBottom: 2 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx3)', marginBottom: 8 }}>AUDIENCE</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tx)', marginBottom: 2 }}>
                           {circleData.name}
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--tx3)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--tx3)' }}>
                           {circleData.members.length} {circleData.members.length === 1 ? 'member' : 'members'}
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {circleData.members.slice(0, 5).map(m => (
-                          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {circleData.members.map(m => (
+                          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{
-                              width: 28, height: 28, borderRadius: '50%',
+                              width: 32, height: 32, borderRadius: '50%',
                               background: m.avatar ? `url(${m.avatar})` : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                               backgroundSize: 'cover', backgroundPosition: 'center',
+                              border: '2px solid var(--bd)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: '#fff', fontWeight: 600, fontSize: 10,
+                              color: '#fff', fontWeight: 600, fontSize: 12,
                             }}>
                               {!m.avatar && m.name.charAt(0).toUpperCase()}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {m.name}
                               </div>
                             </div>
