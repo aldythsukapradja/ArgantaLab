@@ -33,6 +33,7 @@ export interface CloudProfile {
   id: string
   display_name: string
   role: string
+  username?: string | null
   photo_url?: string | null
   friend_code?: string | null
   dob?: string | null
@@ -154,9 +155,17 @@ export async function listMyKids(): Promise<CloudProfile[]> {
   if (!uid) return []
   const { data } = await supabase
     .from('profiles')
-    .select('id,display_name,role,photo_url,friend_code,dob,gender,xp,level,last_seen')
+    .select('id,display_name,role,username,photo_url,friend_code,dob,gender,xp,level,last_seen')
     .eq('guardian_id', uid)
   return (data ?? []) as CloudProfile[]
+}
+
+/** Unlink a kid from the signed-in guardian (kid account itself is untouched). */
+export async function unlinkKid(kidId: string): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('unlink_kid', { p_kid: kidId })
+  if (error) return false
+  return data === true
 }
 
 // ── Presence + leaderboard ──────────────────────────────────
