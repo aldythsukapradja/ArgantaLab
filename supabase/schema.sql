@@ -859,3 +859,188 @@ grant execute on function public.hq_latest_ontology()       to authenticated;
 -- ============================================================
 --  END CIRCLE HQ
 -- ============================================================
+
+-- ============================================================
+--  GAME PLATFORM SPINE  ·  metadata · versions · leaderboard ·
+--  saves · economy.  Powers the pro-code Game Builder and the
+--  Circle Game SDK runtime bridge.  Additive & idempotent.
+-- ============================================================
+
+-- ── Richer catalog metadata (drives Discover filtering) ─────
+alter table public.games add column if not exists category    text;
+alter table public.games add column if not exists description text;
+alter table public.games add column if not exists tags        text[] default '{}';
+alter table public.games add column if not exists age_min     int;
+alter table public.games add column if not exists age_max     int;
+alter table public.games add column if not exists thumbnail   text;          -- emoji or data-url
+alter table public.games add column if not exists version     int default 1;
+
+-- ── Version history: every publish snapshots html + config ──
+create table if not exists public.game_versions (
+  id         uuid primary key default gen_random_uuid(),
+  game_id    text references public.games(id) on delete cascade,
+  version    int  not null,
+  title      text,
+  html       text,
+  config     jsonb,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now(),
+  unique (game_id, version)
+);
+alter table public.game_versions enable row level security;
+drop policy if exists "game_versions_select" on public.game_versions;
+create policy "game_versions_select" on public.game_versions
+  for select using (
+    exists (select 1 from public.games g where g.id = game_id
+            and (g.visibility = 'public' or g.user_id = auth.uid()))
+  );
+drop policy if exists "game_versions_insert_own" on public.game_versions;
+create policy "game_versions_insert_own" on public.game_versions
+  for insert with check (
+    exists (select 1 from public.games g where g.id = game_id and g.user_id = auth.uid())
+  );
+
+-- ── Per-game leaderboard (real cross-user; SDK submitScore target) ──
+create table if not exists public.game_scores (
+  id         uuid primary key default gen_random_uuid(),
+  game_id    text references public.games(id) on delete cascade,
+  user_id    uuid references public.profiles(id) on delete cascade,
+  score      bigint not null,
+  meta       jsonb  default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+create index if not exists game_scores_board_idx on public.game_scores (game_id, score desc);
+create unique index if not exists game_scores_user_idx on public.game_scores (game_id, user_id);
+alter table public.game_scores enable row level security;
+-- board is world-readable (public play pages); each user writes only own row
+drop policy if exists "game_scores_select" on public.game_scores;
+create policy "game_scores_select" on public.game_scores for select using (true);
+drop policy if exists "game_scores_own" on public.game_scores;
+create policy "game_scores_own" on public.game_scores
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ── Per-game per-user save slots (SDK saveState/loadState target) ──
+create table if not exists public.game_saves (
+  user_id    uuid references public.profiles(id) on delete cascade,
+  game_id    text references public.games(id) on delete cascade,
+  slot       text default 'default',
+  data       jsonb default '{}'::jsonb,
+  updated_at timestamptz default now(),
+  primary key (user_id, game_id, slot)
+);
+alter table public.game_saves enable row level security;
+drop policy if exists "game_saves_own" on public.game_saves;
+create policy "game_saves_own" on public.game_saves
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ── SPINE RPCs — the trusted host (ArgantaLab) calls these on the
+--    game's behalf after receiving CIRCLE_GAME_EVENT via postMessage ──
+
+-- Snapshot the current game into game_versions and bump games.version.
+create or replace function public.snapshot_game_version(p_game text)
+returns int language plpgsql security definer set search_path = public as $$
+declare v_next int; g record;
+begin
+  select * into g from public.games where id = p_game and user_id = auth.uid();
+  if g is null then raise exception 'game not found or not owned'; end if;
+  v_next := coalesce(g.version, 1);
+  insert into public.game_versions (game_id, version, title, html, config, created_by)
+  values (p_game, v_next, g.title, g.html, g.config, auth.uid())
+  on conflict (game_id, version) do update
+    set title = excluded.title, html = excluded.html, config = excluded.config, created_at = now();
+  update public.games set version = v_next + 1 where id = p_game;
+  return v_next;
+end; $$;
+grant execute on function public.snapshot_game_version(text) to authenticated;
+
+-- Submit a score: keeps the user's best only; returns rank + high-score flag.
+create or replace function public.submit_game_score(p_game text, p_score bigint, p_meta jsonb default '{}'::jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_prev bigint; v_best bigint; v_high boolean; v_rank bigint;
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  select score into v_prev from public.game_scores where game_id = p_game and user_id = auth.uid();
+  v_high := v_prev is null or p_score > v_prev;
+  v_best := greatest(coalesce(v_prev, 0), p_score);
+  if v_high then
+    insert into public.game_scores (game_id, user_id, score, meta)
+    values (p_game, auth.uid(), p_score, coalesce(p_meta, '{}'::jsonb))
+    on conflict (game_id, user_id) do update
+      set score = excluded.score, meta = excluded.meta, created_at = now();
+  end if;
+  select count(*) + 1 into v_rank from public.game_scores
+    where game_id = p_game and score > v_best;
+  return jsonb_build_object('rank', v_rank, 'isHighScore', v_high, 'best', v_best);
+end; $$;
+grant execute on function public.submit_game_score(text, bigint, jsonb) to authenticated;
+
+-- Read a game's leaderboard (privacy-safe: names + avatars only, no emails).
+create or replace function public.get_game_leaderboard(p_game text, top int default 10)
+returns table(rank bigint, user_id uuid, name text, avatar text, score bigint, at timestamptz)
+language sql security definer set search_path = public stable as $$
+  select row_number() over (order by s.score desc, s.created_at asc) as rank,
+         s.user_id, coalesce(p.display_name, 'Player') as name, p.photo_url as avatar,
+         s.score, s.created_at as at
+  from public.game_scores s
+  left join public.profiles p on p.id = s.user_id
+  where s.game_id = p_game
+  order by s.score desc, s.created_at asc
+  limit least(greatest(top, 1), 100);
+$$;
+grant execute on function public.get_game_leaderboard(text, int) to anon, authenticated;
+
+-- The caller's own rank in a game.
+create or replace function public.get_my_game_rank(p_game text)
+returns jsonb language plpgsql security definer set search_path = public stable as $$
+declare v_score bigint; v_rank bigint;
+begin
+  if auth.uid() is null then return null; end if;
+  select score into v_score from public.game_scores where game_id = p_game and user_id = auth.uid();
+  if v_score is null then return null; end if;
+  select count(*) + 1 into v_rank from public.game_scores where game_id = p_game and score > v_score;
+  return jsonb_build_object('rank', v_rank, 'score', v_score);
+end; $$;
+grant execute on function public.get_my_game_rank(text) to authenticated;
+
+-- Save / load a per-game slot (cross-device persistence for the SDK).
+create or replace function public.save_game_state(p_game text, p_slot text, p_data jsonb)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  insert into public.game_saves (user_id, game_id, slot, data, updated_at)
+  values (auth.uid(), p_game, coalesce(p_slot, 'default'), coalesce(p_data, '{}'::jsonb), now())
+  on conflict (user_id, game_id, slot) do update set data = excluded.data, updated_at = now();
+  return true;
+end; $$;
+grant execute on function public.save_game_state(text, text, jsonb) to authenticated;
+
+create or replace function public.load_game_state(p_game text, p_slot text default 'default')
+returns jsonb language sql security definer set search_path = public stable as $$
+  select data from public.game_saves
+  where user_id = auth.uid() and game_id = p_game and slot = coalesce(p_slot, 'default');
+$$;
+grant execute on function public.load_game_state(text, text) to authenticated;
+
+-- Award diamonds + XP from gameplay (CAPPED to curb runaway/cheating games).
+-- The trusted host calls this; per-call caps keep a buggy/abusive game bounded.
+create or replace function public.game_grant(p_game text, p_diamonds int default 0, p_xp int default 0)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_d int; v_x int; r record;
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  v_d := least(greatest(coalesce(p_diamonds, 0), 0), 500);   -- max 500 💎 per call
+  v_x := least(greatest(coalesce(p_xp, 0), 0), 1000);        -- max 1000 XP per call
+  update public.profiles
+    set diamonds = coalesce(diamonds, 0) + v_d,
+        xp       = coalesce(xp, 0) + v_x,
+        level    = greatest(1, floor(1 + sqrt((coalesce(xp, 0) + v_x) / 100.0))::int)
+    where id = auth.uid()
+    returning diamonds, xp, level into r;
+  return jsonb_build_object('diamonds', r.diamonds, 'xp', r.xp, 'level', r.level,
+                            'granted', jsonb_build_object('diamonds', v_d, 'xp', v_x));
+end; $$;
+grant execute on function public.game_grant(text, int, int) to authenticated;
+
+-- ============================================================
+--  END GAME PLATFORM SPINE
+-- ============================================================

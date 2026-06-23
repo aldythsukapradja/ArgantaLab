@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
+import { injectCircle, circleCtx } from '@lib/circleBridge'
 
 // A device-accurate preview. Wraps the game in a desktop / iPad / iPhone
 // shell at real proportions and tells the game which control scheme to use
 // by injecting window.ARGANTA_DEVICE before the game's own code runs.
+// It also injects the Circle Game SDK so the game's economy/leaderboard/save
+// hooks work — locally as a mock in previews, live when a gameId is given.
 
 type Device = 'desktop' | 'ipad' | 'iphone'
 const SIZES: Record<Device, { w: number; h: number; label: string; emoji: string }> = {
@@ -11,19 +14,21 @@ const SIZES: Record<Device, { w: number; h: number; label: string; emoji: string
   iphone: { w: 390, h: 844, label: 'iPhone', emoji: '📲' },
 }
 
-function inject(html: string, device: Device): string {
+function inject(html: string, device: Device, gameId?: string): string {
   const tag = `<script>window.ARGANTA_DEVICE=${JSON.stringify(device)};</script>`
-  // Put the flag first so the game reads it on load.
-  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, m => m + tag)
-  if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, m => m + tag)
-  return tag + html
+  // Device flag first, then the Circle SDK (live only when a real gameId is set).
+  const base = circleCtx(gameId || 'preview')
+  const withSdk = injectCircle(html, { ...base, live: base.live && !!gameId })
+  if (/<head[^>]*>/i.test(withSdk)) return withSdk.replace(/<head[^>]*>/i, m => m + tag)
+  if (/<html[^>]*>/i.test(withSdk)) return withSdk.replace(/<html[^>]*>/i, m => m + tag)
+  return tag + withSdk
 }
 
-export default function DeviceFrame({ html, onRestartKey }: { html: string; onRestartKey?: number }) {
+export default function DeviceFrame({ html, onRestartKey, gameId }: { html: string; onRestartKey?: number; gameId?: string }) {
   const [device, setDevice] = useState<Device>('iphone')
   const [reloadKey, setReloadKey] = useState(0)
   const s = SIZES[device]
-  const srcDoc = useMemo(() => inject(html, device), [html, device])
+  const srcDoc = useMemo(() => inject(html, device, gameId), [html, device, gameId])
   const key = `${device}-${reloadKey}-${onRestartKey ?? 0}`
 
   return (
