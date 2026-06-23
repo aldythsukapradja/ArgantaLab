@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
 import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
 import { week, occurrencesOn, fmtTime, DOW } from '@lib/cal'
@@ -7,6 +8,7 @@ import type { EnergyKey, Person } from '@data/types'
 import { IconChevron, IconChevronL, IconPlus } from '@components/Icons'
 
 export default function Calendar() {
+  const root = useRef<HTMLDivElement | null>(null)
   const events = useDataStore(s => s.events)
   const routines = useDataStore(s => s.routines)
   const circles = useDataStore(s => s.circles)
@@ -27,12 +29,23 @@ export default function Calendar() {
     setFilter(next.length === 0 || next.length === members.length ? null : next)
   }
 
+  useEffect(() => {
+    if (!root.current) return
+    const tl = gsap.timeline()
+    tl.fromTo(root.current.querySelector('.cal-toolbar'), { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: 'cubic.out' }, 0)
+    tl.fromTo(root.current.querySelector('.cal-filters'), { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: 'cubic.out' }, 0.1)
+    tl.fromTo(root.current.querySelector('.board'), { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.5, ease: 'cubic.out' }, 0.2)
+  }, [calWeekOffset, calFilter])
+
   return (
-    <div className="fade-in">
-      <div className="cal-nav">
-        <button className="chip" onClick={() => setWeekOffset(calWeekOffset - 1)} aria-label="Previous week"><IconChevronL width={16} height={16} /></button>
-        <span className="cal-range">{calWeekOffset === 0 ? 'This week' : range}</span>
-        <button className="chip" onClick={() => setWeekOffset(calWeekOffset + 1)} aria-label="Next week"><IconChevron width={16} height={16} /></button>
+    <div className="fade-in" ref={root}>
+      <div className="cal-toolbar">
+        <div className="view-toggle" style={{ visibility: 'hidden', width: 0 }} />
+        <div className="cal-nav-row">
+          <button className="cal-nav-btn" onClick={() => setWeekOffset(calWeekOffset - 1)} aria-label="Previous week"><IconChevronL width={14} height={14} /></button>
+          <span className="cal-range">{calWeekOffset === 0 ? 'This week' : range}</span>
+          <button className="cal-nav-btn" onClick={() => setWeekOffset(calWeekOffset + 1)} aria-label="Next week"><IconChevron width={14} height={14} /></button>
+        </div>
       </div>
 
       <div className="cal-filters">

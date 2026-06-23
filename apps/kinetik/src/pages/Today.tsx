@@ -34,8 +34,16 @@ export default function Today() {
   const dot = useRef<HTMLSpanElement | null>(null)
   useEffect(() => {
     if (!root.current) return
-    gsap.fromTo(root.current.querySelectorAll('.rise'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.06, ease: 'power3.out' })
-    if (dot.current) gsap.to(dot.current, { scale: 1.7, opacity: 0.35, repeat: -1, yoyo: true, duration: 1.1, ease: 'sine.inOut' })
+    const tl = gsap.timeline()
+    tl.fromTo(
+      root.current.querySelectorAll('.rise'),
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.6, stagger: 0.08, ease: 'cubic.out' },
+      0
+    )
+    if (dot.current) {
+      tl.to(dot.current, { scale: 1.8, opacity: 0.32, repeat: -1, yoyo: true, duration: 1.2, ease: 'sine.inOut' }, 0.3)
+    }
   }, [])
 
   return (
