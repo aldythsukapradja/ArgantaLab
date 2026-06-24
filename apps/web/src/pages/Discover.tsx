@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
-import { GAMES, gameThumb } from '@/data'
+import { gameThumb } from '@/data'
 import { CHARACTERS } from '@/data/wizard'
 import { loadMyGames, type SavedGame } from '@lib/myGames'
 import { fetchPublicGames } from '@lib/gamesCloud'
+import { loadFeatured, type FeaturedGame } from '@lib/featured'
 import { loadPitches, TEMPLATE_BY_KEY, type PitchDeck } from '@lib/pitch'
 import PitchPresent from '@components/pitch/PitchPresent'
 
@@ -16,8 +17,9 @@ const worldHue: Record<string, number> = { space: 250, ocean: 205, volcano: 8, i
 // The Ship tab: an App-Store-style showcase — featured hero, trending row,
 // kid-made games, and a cinematic pitch-deck showcase.
 export default function Discover() {
-  const { openGame, playWizardGame, go } = useAppStore()
+  const { openGame, playWizardGame, go, learnerName } = useAppStore()
   const [community, setCommunity] = useState<Community[]>([])
+  const [featured, setFeatured] = useState<FeaturedGame[] | null>(null)
   const [pitches, setPitches] = useState<PitchDeck[]>(() => loadPitches())
   const [present, setPresent] = useState<PitchDeck | null>(null)
   const [featIdx, setFeatIdx] = useState(0)
@@ -32,15 +34,20 @@ export default function Discover() {
       for (const g of cloud) merged.set(g.id, { id: g.id, title: g.title, html: g.html, creator: g.creator, plays: g.plays, emoji: '🎮', hue: 250 })
       setCommunity([...merged.values()].sort((a, b) => b.plays - a.plays))
     })
+    loadFeatured().then(setFeatured)
   }, [])
 
-  // rotate the featured hero
+  // rotate the featured hero through the curated list
   useEffect(() => {
-    const t = setInterval(() => setFeatIdx(i => (i + 1) % GAMES.length), 4200)
+    if (!featured || featured.length === 0) return
+    const t = setInterval(() => setFeatIdx(i => (i + 1) % featured.length), 4200)
     return () => clearInterval(t)
-  }, [])
+  }, [featured])
 
-  const feat = GAMES[featIdx]
+  // play a featured game: built-ins open the bundled HTML by id, cloud games stream their html
+  const playFeatured = (g: FeaturedGame) => g.builtin ? openGame(g.id) : g.html && playWizardGame(g.html, g.name, g.id)
+
+  const feat = featured && featured.length ? featured[featIdx % featured.length] : null
   const trending = useMemo(() => [...community].sort((a, b) => b.plays - a.plays).slice(0, 8), [community])
 
   if (present) return <PitchPresent deck={present} onExit={() => setPresent(null)} />
@@ -52,31 +59,42 @@ export default function Discover() {
         <h1 className="h-title" style={{ marginTop: 6 }}>Play what kids <span className="g">built</span></h1>
       </div>
 
-      {/* ── Featured hero ── */}
-      <button className="ship-hero" onClick={() => openGame(feat.id)}>
-        <div className="ship-hero-art" dangerouslySetInnerHTML={{ __html: gameThumb(feat.hue) }} />
-        <div className="ship-hero-info">
-          <span className="ship-hero-tag">⭐ Featured</span>
-          <h2>{feat.name}</h2>
-          <p>{feat.desc}</p>
-          <span className="ship-hero-cta"><Play /> Play now</span>
-        </div>
-        <div className="ship-hero-dots">
-          {GAMES.map((g, i) => <span key={g.id} className={`ship-hero-dot${i === featIdx ? ' on' : ''}`} />)}
-        </div>
-      </button>
+      {/* ── Featured hero (Circle HQ curated) ── */}
+      {feat && (
+        <button className="ship-hero" onClick={() => playFeatured(feat)}>
+          <div className="ship-hero-art" dangerouslySetInnerHTML={{ __html: gameThumb(feat.hue) }} />
+          <div className="ship-hero-info">
+            <span className="ship-hero-tag">⭐ Featured</span>
+            <h2>{feat.name}</h2>
+            {feat.desc && <p>{feat.desc}</p>}
+            <span className="ship-hero-cta"><Play /> Play now</span>
+          </div>
+          <div className="ship-hero-dots">
+            {featured!.map((g, i) => <span key={g.id} className={`ship-hero-dot${i === (featIdx % featured!.length) ? ' on' : ''}`} />)}
+          </div>
+        </button>
+      )}
 
-      {/* ── Top picks (curated) ── */}
-      <div className="section-label">Baginda's picks</div>
-      <div className="ship-rail">
-        {GAMES.map(g => (
-          <button key={g.id} className="ship-app" onClick={() => openGame(g.id)}>
-            <div className="ship-app-ic" dangerouslySetInnerHTML={{ __html: gameThumb(g.hue) }} />
-            <div className="ship-app-meta"><b>{g.name}</b><small>{g.tags.join(' · ')}</small></div>
-            <span className="ship-app-get">GET</span>
-          </button>
-        ))}
-      </div>
+      {/* ── Top picks — curated in Circle HQ ── */}
+      <div className="section-label">{learnerName ? `${learnerName}'s picks` : 'Featured picks'}</div>
+      {featured === null ? (
+        <div className="ship-rail"><div className="ship-app" style={{ opacity: .5 }}>Loading…</div></div>
+      ) : featured.length === 0 ? (
+        <div className="empty-games">
+          <b>No featured games yet</b>
+          <span>Games featured here are curated in Circle HQ. Once an operator features one, it appears in this rail.</span>
+        </div>
+      ) : (
+        <div className="ship-rail">
+          {featured.map(g => (
+            <button key={g.id} className="ship-app" onClick={() => playFeatured(g)}>
+              <div className="ship-app-ic" dangerouslySetInnerHTML={{ __html: gameThumb(g.hue) }} />
+              <div className="ship-app-meta"><b>{g.name}</b><small>{(g.tags ?? []).join(' · ') || (g.builtin ? 'Built-in' : 'Community')}</small></div>
+              <span className="ship-app-get">GET</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Pitch showcase ── */}
       <div className="section-label">🎤 Pitch showcase</div>
