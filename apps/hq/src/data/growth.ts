@@ -14,6 +14,7 @@ export interface ScoreRow {
   value: string
   tone: Tone
   note: string       // benchmark verdict (VC altitude)
+  what: string       // plain-English "what is this" (executive altitude)
   detail: string     // driver / context (consulting altitude, on click)
 }
 
@@ -23,6 +24,7 @@ export interface HeroCard {
   value: string
   sub: string
   tone: Tone
+  what: string       // plain-English definition for non-experts
 }
 
 // Editable thresholds — later promotable to a BenchmarkRef table.
@@ -47,41 +49,62 @@ const signed = (v: number | null) => (v == null ? '—' : (v > 0 ? '+' : '') + v
 export function heroCards(o: GrowthOverview): HeroCard[] {
   return [
     { key: 'wau', label: 'Weekly active learners', value: compact(o.wau),
-      sub: o.wowPct == null ? 'WoW —' : `${signed(o.wowPct)} WoW`, tone: toneWow(o.wowPct) },
+      sub: o.wowPct == null ? 'WoW —' : `${signed(o.wowPct)} WoW`, tone: toneWow(o.wowPct),
+      what: 'How many unique kids actually used the app in the last 7 days — the truest pulse of real usage. "WoW" is the change versus the week before.' },
     { key: 'stick', label: 'Stickiness · DAU/MAU', value: o.stickiness == null ? '—' : pct(o.stickiness),
-      sub: `> ${BENCHMARKS.stickiness.good}% benchmark`, tone: toneStick(o.stickiness) },
+      sub: `> ${BENCHMARKS.stickiness.good}% benchmark`, tone: toneStick(o.stickiness),
+      what: 'Of everyone who used the app this month (MAU = monthly active users), the share who show up on an average day (DAU = daily active users). Higher means more of a daily habit. Above 20% is strong for a consumer app.' },
     { key: 'new', label: 'New learners · 7d', value: compact(o.newLearners7d),
-      sub: o.newWowPct == null ? 'WoW —' : `${signed(o.newWowPct)} WoW`, tone: toneWow(o.newWowPct) },
+      sub: o.newWowPct == null ? 'WoW —' : `${signed(o.newWowPct)} WoW`, tone: toneWow(o.newWowPct),
+      what: 'How many brand-new kids signed up in the last 7 days — your top-of-funnel growth. "WoW" compares it to the prior week.' },
     { key: 'acc', label: 'Accuracy · 30d', value: o.accuracyPct == null ? '—' : pct(o.accuracyPct),
-      sub: 'healthy 55–85%', tone: toneAcc(o.accuracyPct) },
+      sub: 'healthy 55–85%', tone: toneAcc(o.accuracyPct),
+      what: 'The average share of questions answered correctly over 30 days. Too low (<55%) means content is too hard; too high (>85%) means it is too easy to drive real learning.' },
   ]
 }
 
 export function buildScorecard(o: GrowthOverview): ScoreRow[] {
+  const wauMau = o.mau > 0 ? Math.round((o.wau / o.mau) * 1000) / 10 : null
   return [
     { key: 'stick', label: 'DAU / MAU', value: o.stickiness == null ? '—' : pct(o.stickiness), tone: toneStick(o.stickiness),
       note: `> ${BENCHMARKS.stickiness.good}% strong · > ${BENCHMARKS.stickiness.elite}% elite`,
-      detail: `${compact(o.dau)} daily / ${compact(o.mau)} monthly active. Stickiness is the share of monthly learners who show up on a given day — the truest engagement signal pre-revenue.` },
+      what: 'Of everyone active this month, the share active on an average day. The single best daily-habit signal.',
+      detail: `${compact(o.dau)} daily / ${compact(o.mau)} monthly active. The truest engagement signal pre-revenue.` },
+    { key: 'wauMau', label: 'WAU / MAU', value: wauMau == null ? '—' : pct(wauMau), tone: toneStick(wauMau),
+      note: '> 50% strong weekly habit',
+      what: 'Of everyone active this month, the share active in a given week — a gentler habit gauge than DAU/MAU.',
+      detail: `${compact(o.wau)} weekly / ${compact(o.mau)} monthly active. Useful when usage is weekly rather than daily.` },
     { key: 'wow', label: 'WoW growth', value: signed(o.wowPct), tone: toneWow(o.wowPct),
       note: `> ${BENCHMARKS.wow.good}% good · > ${BENCHMARKS.wow.elite}% elite (YC)`,
+      what: 'How much weekly active users grew versus the prior week. Sustained 10%+ is elite, early-stage rocket growth.',
       detail: `Weekly active went ${compact(o.wauPrev)} → ${compact(o.wau)}. Sustained 7%+ weekly is the YC default-alive bar.` },
     { key: 'depth', label: 'Depth · attempts/active', value: String(o.depth), tone: toneDepth(o.depth),
       note: `> ${BENCHMARKS.depth.good} healthy · > ${BENCHMARKS.depth.elite} deep`,
-      detail: `${compact(o.attempts7d)} attempts across ${compact(o.wau)} weekly actives. Depth proxies habit strength and content sufficiency.` },
+      what: 'How many questions each active learner attempts per week — a proxy for how strong the habit is.',
+      detail: `${compact(o.attempts7d)} attempts across ${compact(o.wau)} weekly actives. Proxies habit strength and content sufficiency.` },
     { key: 'acc', label: 'Accuracy · 30d', value: o.accuracyPct == null ? '—' : pct(o.accuracyPct), tone: toneAcc(o.accuracyPct),
       note: 'healthy 55–85% band',
+      what: 'Average % of questions answered correctly. The sweet spot keeps kids challenged but succeeding.',
       detail: 'Below 55% suggests content is outrunning learners; above 85% suggests it is too easy to drive mastery gains.' },
+    { key: 'mau', label: 'Monthly reach · MAU', value: compact(o.mau), tone: 'info',
+      note: 'unique learners / 30d',
+      what: 'How many unique kids used the app at least once in the last 30 days — your total monthly reach.',
+      detail: `${compact(o.mau)} monthly active out of ${compact(o.learners)} total signups.` },
     { key: 'retention', label: 'D30 retention', value: '—', tone: 'pending',
-      note: 'one RPC away (hq_retention)',
-      detail: 'The cohort triangle lands in the Retention sub-tab (P2) via hq_retention(). It reads the same item_attempts — no new instrumentation.' },
+      note: '> 35% top-quartile edtech',
+      what: 'Of kids who joined, the share still active 30 days later. The #1 number investors check — it proves the product keeps people.',
+      detail: 'The cohort triangle lives in the Retention sub-tab via hq_retention(). Reads the same item_attempts — no new instrumentation.' },
     { key: 'kfactor', label: 'k-factor', value: '—', tone: 'pending',
       note: '> 0.5 assisted · > 1 viral',
+      what: 'How many new users each existing user brings in through invites. Above 1 means the product grows itself, virally.',
       detail: 'Needs invite→join events from the circle-invite flow. Until then virality is uninstrumented.' },
     { key: 'nrr', label: 'NRR', value: '—', tone: 'pending',
       note: '> 110% good · > 130% elite',
+      what: 'Net revenue retention — whether existing customers spend more or less over a year. Above 100% means revenue grows even with zero new sign-ups.',
       detail: 'Activates once monetization events flow through hq_event. Engagement-stage today.' },
     { key: 'rule40', label: 'Rule of 40', value: '—', tone: 'pending',
       note: 'growth % + margin > 40',
+      what: 'A balance test for scaling companies: your growth rate plus profit margin should exceed 40%.',
       detail: 'Requires revenue. Surfaced now so the path to the revenue scorecard is explicit.' },
   ]
 }

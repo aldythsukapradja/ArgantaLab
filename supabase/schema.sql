@@ -1217,6 +1217,53 @@ begin
 end;
 $$;
 grant execute on function public.hq_growth_overview() to authenticated;
+
+-- Weekly cohort retention triangle. Cohort = signup week (profiles.created_at);
+-- ret[k] = % of that cohort active in the k-th week after signup (W0 = signup
+-- week). Null where the week hasn't elapsed yet. Real over profiles+item_attempts.
+create or replace function public.hq_retention()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare r jsonb;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select jsonb_build_object(
+    'horizons', jsonb_build_array('W0','W1','W2','W3','W4'),
+    'cohorts', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'label', to_char(cw, 'MM-DD'),
+        'size', sz,
+        'ret', (
+          select jsonb_agg(
+            case
+              when cw + (k * interval '7 days') > now() then null
+              when sz = 0 then null
+              else round(100.0 * (
+                select count(distinct p.id) from public.profiles p
+                where date_trunc('week', p.created_at) = cw
+                  and exists (
+                    select 1 from public.item_attempts a
+                    where a.user_id = p.id
+                      and a.created_at >= cw + (k * interval '7 days')
+                      and a.created_at <  cw + ((k + 1) * interval '7 days')
+                  )
+              ) / sz)
+            end order by k)
+          from generate_series(0, 4) as k
+        )
+      ) order by cw desc)
+      from (
+        select date_trunc('week', created_at) as cw, count(*) as sz
+        from public.profiles
+        where created_at >= date_trunc('week', now()) - interval '5 weeks'
+        group by 1
+      ) c
+    ),
+    'generatedAt', now()
+  ) into r;
+  return r;
+end;
+$$;
+grant execute on function public.hq_retention() to authenticated;
 -- ============================================================
 --  END GROWTH ANALYTICS
 -- ============================================================

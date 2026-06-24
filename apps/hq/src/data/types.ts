@@ -114,3 +114,14 @@ export interface GrowthOverview {
   attemptsTotal: number
   generatedAt: string
 }
+
+export interface RetentionCohort {
+  label: string
+  size: number
+  ret: (number | null)[]   // % active per week-since-signup, null = not elapsed
+}
+export interface RetentionData {
+  horizons: string[]       // ['W0','W1','W2','W3','W4']
+  cohorts: RetentionCohort[]
+  generatedAt: string
+}
