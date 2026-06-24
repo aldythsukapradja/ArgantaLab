@@ -18,7 +18,7 @@ export default function Moments() {
   const feed = moments.filter(m => m.circleId === activeCircleId).sort((a, b) => b.createdAt - a.createdAt)
 
   return (
-    <div className="fade-in">
+    <div className="fade-in moments-page">
       <p className="mom-private">{circle?.name ?? 'Your circle'} · private to your circle</p>
 
       <div className="stories">
@@ -36,7 +36,9 @@ export default function Moments() {
         </div>
       )}
 
-      {feed.map(m => <MomentCard key={m.id} m={m} onHeart={() => heart(m.id)} />)}
+      <div className="mom-feed">
+        {feed.map(m => <MomentCard key={m.id} m={m} onHeart={() => heart(m.id)} />)}
+      </div>
     </div>
   )
 }

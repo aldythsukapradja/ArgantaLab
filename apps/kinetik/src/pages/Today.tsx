@@ -49,7 +49,7 @@ export default function Today() {
   }, [])
 
   return (
-    <div className="fade-in" ref={root}>
+    <div className="fade-in today-page" ref={root}>
       {/* Greeting */}
       <div className="greet rise">
         <h1>{greet}, {ownerName}</h1>

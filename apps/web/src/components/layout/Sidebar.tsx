@@ -28,7 +28,7 @@ const WORLD_GLYPH: Record<string, { g: string; c: string }> = {
 }
 
 export default function Sidebar() {
-  const { activeTab, go, isAdmin, isKidMode } = useAppStore()
+  const { activeTab, go, isKidMode } = useAppStore()
   const kidMode = isKidMode()
 
   const groups: Record<string, typeof NAV> = {}
@@ -59,15 +59,8 @@ export default function Sidebar() {
         </div>
       ))}
       <div className="nav-spacer" />
-      {!kidMode && isAdmin() && (
-        <div>
-          <div className="nav-label">Creator</div>
-          <button className={`nav-item${activeTab === 'admin' ? ' on' : ''}`} onClick={() => go({ tab: 'admin' })}>
-            {icons.admin()}
-            Content Studio
-          </button>
-        </div>
-      )}
+      {/* Content Studio moved to Circle HQ (operator-only). Parents can no
+          longer edit the shared Supabase curriculum from the player app. */}
     </nav>
   )
 }

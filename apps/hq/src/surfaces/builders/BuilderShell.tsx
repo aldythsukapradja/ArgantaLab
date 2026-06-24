@@ -21,7 +21,7 @@ export function BuilderShell({ kind }: { kind: Kind }) {
   const data = useBuilderData(kind)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="builder">
       <div className="seg" style={{ alignSelf: 'flex-start' }}>
         {TABS.map(({ id, label, Icon }) => (
           <button key={id} className={builderSub === id ? 'on' : ''} onClick={() => setBuilderSub(id)}>

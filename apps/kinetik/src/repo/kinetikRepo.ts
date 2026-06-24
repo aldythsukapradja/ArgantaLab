@@ -30,11 +30,24 @@ interface MomentRow {
   hearts: number; comments: number; created_at: string
 }
 
+// Lighten a hex toward white — used to derive the 2nd gradient stop so every
+// circle's accent reads as its OWN colour (not a fixed pink second stop).
+function lighten(hex: string, amt = 0.26): string {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return hex
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16)
+  const m = (c: number) => Math.round(c + (255 - c) * amt).toString(16).padStart(2, '0')
+  return `#${m(r)}${m(g)}${m(b)}`
+}
+
 // ---- row → domain mappers ----
-const mapCircle = (r: CircleRow, memberIds: string[]): Circle => ({
-  id: r.id, name: r.name ?? '', kind: (r.kind as Circle['kind']) || 'family',
-  accent: [r.accent ?? '#F43F5E', '#FB7185'], memberIds,
-})
+const mapCircle = (r: CircleRow, memberIds: string[]): Circle => {
+  const a0 = r.accent ?? '#F43F5E'
+  return {
+    id: r.id, name: r.name ?? '', kind: (r.kind as Circle['kind']) || 'family',
+    accent: [a0, lighten(a0)], memberIds,
+  }
+}
 const mapPerson = (r: PersonRow): Person => ({
   id: r.id, circleId: r.circle_id, name: r.name, color: r.color, role: (r.role as Person['role']) || 'member',
 })
@@ -109,6 +122,108 @@ export async function insertRoutine(r: Omit<Routine, 'id' | 'energy'>): Promise<
 export async function setHearts(momentId: string, hearts: number): Promise<void> {
   const { error } = await supabase.from('kinetik_moments').update({ hearts }).eq('id', momentId)
   if (error) throw error
+}
+
+// ── Apps (published by CircleHQ into the shared `hq_app` table) ──
+export interface KApp {
+  id: string
+  name: string
+  category: string | null
+  description: string | null
+  thumbnail: string | null
+  html: string | null
+  featured: boolean
+}
+
+/** Kinetik apps published from CircleHQ, scoped to this circle.
+ *  An app shows when: product = kinetik · not planned/private · and either
+ *  global (no circle_ids) or explicitly shared with this circle. */
+export async function fetchApps(circleId: string): Promise<KApp[]> {
+  const { data, error } = await supabase
+    .from('hq_app')
+    .select('id, name, category, description, thumbnail, html, featured, product, status, visibility, circle_ids, created_at')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    .filter(a => (a.product ?? 'kinetik') === 'kinetik')
+    .filter(a => a.status !== 'planned' && a.visibility !== 'private')
+    .filter(a => {
+      const ids = a.circle_ids
+      return !Array.isArray(ids) || ids.length === 0 || ids.includes(circleId)
+    })
+    .sort((a, b) => Number(!!b.featured) - Number(!!a.featured))
+    .map(a => ({
+      id: String(a.id), name: (a.name as string) || 'Untitled',
+      category: (a.category as string) ?? null, description: (a.description as string) ?? null,
+      thumbnail: (a.thumbnail as string) ?? null, html: (a.html as string) ?? null,
+      featured: !!a.featured,
+    }))
+}
+
+// ── Circle + member management (real writes) ──────────────────
+// kinetik_people is open read+write (anon key OK). The `circles` table is
+// owner-only, so create/delete go through the security-definer RPCs that
+// the logged-in owner is granted.
+
+/** Add a display member to a circle. Returns the saved domain Person. */
+export async function insertPerson(circleId: string, name: string, role: Person['role'], color: string): Promise<Person> {
+  const id = 'person_' + Math.random().toString(36).slice(2, 10)
+  const { error } = await supabase.from('kinetik_people').insert({ id, circle_id: circleId, name, color, role })
+  if (error) throw error
+  return { id, circleId, name, color, role }
+}
+
+/** Remove a member from a circle. */
+export async function deletePerson(personId: string): Promise<void> {
+  const { error } = await supabase.from('kinetik_people').delete().eq('id', personId)
+  if (error) throw error
+}
+
+/** Create a circle (the caller becomes its owner) and seed the creator as the
+ *  first member. Returns the new circle id. */
+export async function createCircle(name: string, accent: string, ownerName: string, ownerColor: string): Promise<string> {
+  const { data: cid, error } = await supabase.rpc('create_circle', { p_name: name, p_kind: 'family' })
+  if (error) throw error
+  const circleId = cid as string
+  // accent is a Kinetik-only column; owner can update their own circle row.
+  const { error: aErr } = await supabase.from('circles').update({ accent }).eq('id', circleId)
+  if (aErr) throw aErr
+  // seed the creator as the first kinetik member (owner).
+  const pid = 'person_' + Math.random().toString(36).slice(2, 10)
+  const { error: pErr } = await supabase.from('kinetik_people')
+    .insert({ id: pid, circle_id: circleId, name: ownerName, color: ownerColor, role: 'owner' })
+  if (pErr) throw pErr
+  return circleId
+}
+
+/** Delete a circle (owner only; cascades its people / routines / events / moments). */
+export async function deleteCircle(circleId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_circle', { p_circle: circleId })
+  if (error) throw error
+}
+
+/** Rename and/or recolor a circle (owner-only; direct update, RLS-guarded). */
+export async function updateCircle(circleId: string, patch: { name?: string; accent?: string }): Promise<void> {
+  const { error } = await supabase.from('circles').update(patch).eq('id', circleId)
+  if (error) throw error
+}
+
+/** The 2-stop gradient for a stored accent (so the store can rebuild it locally). */
+export function accentStops(a0: string): [string, string] {
+  return [a0, lighten(a0)]
+}
+
+/** A registered user from the directory (used by the "add member" picker).
+ *  Backed by `search_users` — lists ALL registered profiles, name/code searchable.
+ *  Requires an authenticated session (auth.uid()); empty otherwise. */
+export interface DirUser { id: string; name: string; photoUrl: string | null; friendCode: string | null; role: string; rel: string }
+export async function searchUsers(q = ''): Promise<DirUser[]> {
+  const { data, error } = await supabase.rpc('search_users', { p_q: q, p_limit: 24, p_offset: 0 })
+  if (error) throw error
+  return ((data ?? []) as Array<Record<string, string | null>>).map(r => ({
+    id: String(r.id), name: r.display_name || 'Unknown', photoUrl: r.photo_url ?? null,
+    friendCode: r.friend_code ?? null, role: r.role || '', rel: r.rel || 'none',
+  }))
 }
 
 /** The signed-in user (auth + their profile row). The one real "me". */

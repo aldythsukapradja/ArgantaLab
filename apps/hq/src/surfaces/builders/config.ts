@@ -37,10 +37,17 @@ const GAME_CONFIG: BuilderConfig = {
   sdkGlobal: 'CircleGame',
   sourceLabel: 'Category',
   publishVerb: 'Publish to ArgantaLab',
-  sources: PROMPT_CATEGORIES.map(c => ({
-    key: c.key, label: c.label, emoji: c.emoji, hint: c.hint,
-    prompt: `${STARTER_PROMPT}\n\nGame type to build: ${c.label}\nKey elements: ${c.hint}\n`,
-  })),
+  sources: [
+    ...PROMPT_CATEGORIES.map(c => ({
+      key: c.key, label: c.label, emoji: c.emoji, hint: c.hint,
+      prompt: `${STARTER_PROMPT}\n\nGame type to build: ${c.label}\nKey elements: ${c.hint}\n`,
+    })),
+    {
+      key: 'global', label: 'Global · Custom', emoji: '🌐',
+      hint: 'Bring your own — paste any single-file HTML game on demand',
+      prompt: `${STARTER_PROMPT}\n\nGame type to build: anything you want (custom / on-demand).\nMake it a single self-contained HTML file.\n`,
+    },
+  ],
 }
 
 const APP_CONFIG: BuilderConfig = {
@@ -52,10 +59,17 @@ const APP_CONFIG: BuilderConfig = {
   sdkGlobal: 'CircleApp',
   sourceLabel: 'Template',
   publishVerb: 'Publish App',
-  sources: APP_TEMPLATES.map(t => ({
-    key: t.id, label: t.name, emoji: t.emoji, hint: t.description,
-    prompt: t.prompt,
-  })),
+  sources: [
+    ...APP_TEMPLATES.map(t => ({
+      key: t.id, label: t.name, emoji: t.emoji, hint: t.description,
+      prompt: t.prompt,
+    })),
+    {
+      key: 'global', label: 'Global · Custom', emoji: '🌐',
+      hint: 'Bring your own — paste any single-file HTML app on demand',
+      prompt: `Build a single self-contained HTML file (inline CSS + JS, no build step).\nIt can be any kind of app you want.\nConnect to the family circle via the global CircleApp SDK when relevant — CircleApp.ready(), CircleApp.save(), CircleApp.me().\nReturn ONLY the complete HTML document.`,
+    },
+  ],
 }
 
 export function builderConfig(kind: Kind): BuilderConfig {

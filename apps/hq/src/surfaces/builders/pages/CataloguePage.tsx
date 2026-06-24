@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Search, RefreshCw } from 'lucide-react'
 import { useHQ } from '../../../shell/store'
 import { cloudEnabled } from '../../../lib/supabase'
+import { live } from '../../../data/live'
 import { Empty, Loading } from '../../../components/Empty'
 import { builderConfig } from '../config'
 import { openFullscreen, toSignals, type Kind } from '../artifact'
@@ -33,6 +34,12 @@ export function CataloguePage({ kind, data }: { kind: Kind; data: BuilderData })
   const play = (id: string) => {
     const a = byId.get(id); if (!a?.html) return
     openFullscreen(kind, a.html, { user, circle: defaultCircle })
+  }
+  const archive = async (id: string) => {
+    const a = byId.get(id)
+    if (!confirm(`Archive "${a?.title ?? `this ${cfg.noun.toLowerCase()}`}"? It's hidden from the catalogue but stays recoverable in Drafts.`)) return
+    await live.archiveArtifact(kind, id)
+    reload()
   }
 
   return (
@@ -86,7 +93,7 @@ export function CataloguePage({ kind, data }: { kind: Kind; data: BuilderData })
                 key={f.id} item={f} emoji={byId.get(f.id)?.emoji ?? cfg.accentEmoji} badge={f.badge}
                 onPlay={() => play(f.id)} onEdit={() => openStudio(f.id)}
                 onAnalytics={() => openAnalytics(f.id)}
-                onFullscreen={() => play(f.id)}
+                onFullscreen={() => play(f.id)} onArchive={() => archive(f.id)}
               />
             ))}
           </Grid>
@@ -102,7 +109,7 @@ export function CataloguePage({ kind, data }: { kind: Kind; data: BuilderData })
                 key={r.id} item={r} emoji={byId.get(r.id)?.emoji ?? cfg.accentEmoji}
                 onPlay={() => play(r.id)} onEdit={() => openStudio(r.id)}
                 onAnalytics={() => openAnalytics(r.id)}
-                onFullscreen={() => play(r.id)}
+                onFullscreen={() => play(r.id)} onArchive={() => archive(r.id)}
               />
             ))}
           </Grid>
@@ -123,7 +130,7 @@ export function CataloguePage({ kind, data }: { kind: Kind; data: BuilderData })
                   key={a.id} item={r} emoji={a.emoji} draft
                   onPlay={() => play(a.id)} onEdit={() => openStudio(a.id)}
                   onAnalytics={() => openAnalytics(a.id)}
-                  onFullscreen={() => play(a.id)}
+                  onFullscreen={() => play(a.id)} onArchive={() => archive(a.id)}
                 />
               )
             })}

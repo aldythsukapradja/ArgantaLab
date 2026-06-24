@@ -93,7 +93,9 @@ function sdkScript(kind: Kind, ctx: SDKContext): string {
           id: ctx.circle.id, name: ctx.circle.name,
           type: ctx.circle.kind as 'family' | 'kids' | 'class' | 'friends',
           members: ctx.circle.members.map(m => ({
-            id: m.id, name: m.name, avatar: m.avatar, kind: m.kind, role: m.role,
+            id: m.id, name: m.name, avatar: m.avatar, kind: m.kind,
+            // SDK mock only distinguishes admin/member; fold the wider role ladder.
+            role: (m.role === 'member' || m.role === 'viewer') ? 'member' as const : 'admin' as const,
           })),
         }
       : {

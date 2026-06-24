@@ -32,6 +32,12 @@ interface DataStore extends CircleData {
   addEvent: (e: Omit<KEvent, 'id' | 'energy'>) => Promise<void>
   addRoutine: (r: Omit<Routine, 'id' | 'energy'>) => Promise<void>
   heart: (momentId: string) => Promise<void>
+  /** Circle + member management (real DB writes; throw on failure). */
+  addPerson: (circleId: string, name: string, role: Person['role'], color: string) => Promise<void>
+  removePerson: (personId: string) => Promise<void>
+  addCircle: (name: string, accent: string) => Promise<string>
+  updateCircle: (circleId: string, patch: { name?: string; accent?: string }) => Promise<void>
+  removeCircle: (circleId: string) => Promise<void>
 }
 
 const EMPTY: CircleData = { circles: [], people: [], routines: [], events: [], moments: [] }
@@ -132,6 +138,56 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     if (cloudReady && next) {
       try { await repo.setHearts(momentId, next.hearts) } catch { /* best-effort */ }
     }
+  },
+
+  // ── Circle + member management ──────────────────────────────
+  // Writes hit the DB first (throw on failure so the UI can surface the real
+  // error), then we update local state + cache. No optimistic faking.
+  addPerson: async (circleId, name, role, color) => {
+    const saved = await repo.insertPerson(circleId, name, role, color)
+    const people = [...get().people, saved]
+    const circles = get().circles.map(c =>
+      c.id === circleId ? { ...c, memberIds: [...c.memberIds, saved.id] } : c)
+    set({ people, circles })
+    writeCache(pick({ ...get(), people, circles }))
+  },
+
+  removePerson: async (personId) => {
+    await repo.deletePerson(personId)
+    const people = get().people.filter(p => p.id !== personId)
+    const circles = get().circles.map(c => ({ ...c, memberIds: c.memberIds.filter(id => id !== personId) }))
+    set({ people, circles })
+    writeCache(pick({ ...get(), people, circles }))
+  },
+
+  addCircle: async (name, accent) => {
+    const me = get().me
+    const cid = await repo.createCircle(name, accent, me?.name ?? 'Me', '#8B5CF6')
+    await get().load()          // refetch the graph so the new circle + owner member appear
+    useUiStore.getState().setCircle(cid)
+    return cid
+  },
+
+  updateCircle: async (circleId, patch) => {
+    await repo.updateCircle(circleId, patch)
+    const circles = get().circles.map(c => c.id === circleId
+      ? {
+          ...c,
+          ...(patch.name !== undefined ? { name: patch.name } : {}),
+          ...(patch.accent !== undefined ? { accent: repo.accentStops(patch.accent) } : {}),
+        }
+      : c)
+    set({ circles })
+    writeCache(pick({ ...get(), circles }))
+  },
+
+  removeCircle: async (circleId) => {
+    await repo.deleteCircle(circleId)
+    const remaining = get().circles.filter(c => c.id !== circleId)
+    // if we just deleted the active circle, move to another one
+    const ui = useUiStore.getState()
+    if (ui.activeCircleId === circleId && remaining[0]) ui.setCircle(remaining[0].id)
+    await get().load()
   },
 }))
 

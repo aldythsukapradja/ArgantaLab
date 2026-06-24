@@ -16,12 +16,26 @@ export function Label({ children }: { children: ReactNode }) {
   )
 }
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 11, color: 'var(--tx3)', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 11, color: 'var(--tx3)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {label}
+        {required && <ReqBadge />}
+        {hint && <span style={{ fontSize: 10, color: 'var(--tx3)', fontWeight: 400 }}>· {hint}</span>}
+      </span>
       {children}
     </label>
+  )
+}
+
+/** Marks a field as mandatory for classification (Analytics / Discover / content design). */
+export function ReqBadge() {
+  return (
+    <span style={{
+      fontSize: 8.5, fontWeight: 700, color: 'var(--bad)', background: 'var(--bad-bg)',
+      padding: '1px 6px', borderRadius: 99, letterSpacing: '.04em',
+    }}>REQUIRED</span>
   )
 }
 

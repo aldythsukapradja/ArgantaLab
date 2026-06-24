@@ -24,6 +24,13 @@ export const IconTag = (p: P) => (<svg {...base(p)}><path d="M20.6 13.4 12 22 2 
 export const IconPhoto = (p: P) => (<svg {...base(p)}><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="2" /><path d="m4 18 5-4 4 3 3-2 4 3" /></svg>)
 export const IconHistory = (p: P) => (<svg {...base(p)}><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 4v4h4M12 8v4l3 2" /></svg>)
 export const IconUserPlus = (p: P) => (<svg {...base(p)}><circle cx="9" cy="8" r="4" /><path d="M2 21c0-3.6 3.1-5.8 7-5.8M17 11v6M14 14h6" /></svg>)
+export const IconShare = (p: P) => (<svg {...base(p)}><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>)
+export const IconSettings = (p: P) => (<svg {...base(p)}><circle cx="12" cy="12" r="3.2" /><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3" /></svg>)
+export const IconLogout = (p: P) => (<svg {...base(p)}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>)
+export const IconTrash = (p: P) => (<svg {...base(p)}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6" /></svg>)
+export const IconMinus = (p: P) => (<svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg>)
+export const IconPencil = (p: P) => (<svg {...base(p)}><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" /><path d="M13.5 6.5l3 3" /></svg>)
+export const IconCheck = (p: P) => (<svg {...base(p)}><path d="M5 12.5l4.5 4.5L19 7" /></svg>)
 
 export const APP_ICON: Record<string, (p: P) => JSX.Element> = {
   padel: (p) => (<svg {...base(p)}><circle cx="12" cy="9" r="6" /><path d="M12 15v6M9 21h6" /><circle cx="12" cy="9" r="2.2" /></svg>),

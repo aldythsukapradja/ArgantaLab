@@ -71,25 +71,26 @@ body {
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 img { max-width: 100%; display: block; }
 
-/* ---------- app shell (phone column on desktop) ---------- */
+/* ---------- app shell ----------
+   Mobile: phone column, flex; sidebar hidden, bottom Nav shown.
+   Tablet/Desktop: CSS grid [sidebar | body]; bottom Nav hidden. */
 #app {
   position: relative;
   width: 100%;
-  max-width: var(--maxw);
+  max-width: 100%;        /* phone mode fills the viewport — no centered column / side gaps */
   min-height: 100%;
   margin: 0 auto;
-  background: var(--bg);
+  /* subtle per-circle wash (--c0 set inline from the active circle) over the neutral canvas */
+  background:
+    radial-gradient(150% 52% at 50% 0%, color-mix(in srgb, var(--c0, transparent) 9%, transparent), transparent 72%),
+    var(--bg);
   display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
-@media (min-width: 480px) {
-  body { background: #E6E6EC; }
-  html[data-theme='dark'] body { background: #050309; }
-  #app {
-    min-height: 100dvh;
-    box-shadow: 0 30px 80px rgba(20, 16, 40, 0.14);
-  }
+.app-body {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; flex-direction: column;
+  height: 100dvh;
 }
 
 .main {
@@ -100,6 +101,33 @@ img { max-width: 100%; display: block; }
   padding: 0 16px calc(var(--navh) + 28px);
 }
 .main::-webkit-scrollbar { width: 0; }
+
+/* ===== Tablet & desktop: sidebar shell ===== */
+@media (min-width: 768px) {
+  body { background: var(--bg); }
+  html[data-theme='dark'] body { background: var(--bg); }
+  #app {
+    max-width: none; width: 100%;
+    height: 100dvh; min-height: 100dvh;
+    display: grid; grid-template-columns: 84px 1fr;
+    box-shadow: none; overflow: hidden;
+  }
+  .app-body { min-height: 0; height: 100dvh; overflow: hidden; }
+  .sidebar { display: flex; }
+  .topbar { display: none; }
+  .nav { display: none; }
+  .main {
+    height: 100%;
+    padding: 26px 30px 44px;
+  }
+  .main::-webkit-scrollbar { width: 8px; }
+  .main::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+}
+@media (min-width: 1200px) {
+  #app { grid-template-columns: 252px 1fr; }
+  .main { padding: 32px 44px 52px; }
+  .main > * { max-width: 1180px; margin-inline: auto; }
+}
 
 /* ---------- top bar ---------- */
 .topbar {
@@ -114,35 +142,101 @@ img { max-width: 100%; display: block; }
 }
 .tb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 
-/* Life360-style scrollable circle pills */
-.circle-rail {
-  display: flex; align-items: center; gap: 8px;
-  overflow-x: auto; scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
-  margin: 0 -16px; padding: 2px 16px 4px;
-  scrollbar-width: none;
+/* =========================================================
+   TOP BAR v2 — centered circle chip + dropdown + fancy emblem
+   --c0 / --c1 are the active circle's accent stops (set inline)
+   ========================================================= */
+.topbar-v2 { padding: 12px 16px 10px; }
+.tb-grid {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 8px;
 }
-.circle-rail::-webkit-scrollbar { display: none; }
-.circle-pill2 {
-  display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto;
-  scroll-snap-align: start;
-  padding: 7px 14px 7px 11px; border-radius: 999px;
-  font-size: 13px; font-weight: 700; color: var(--ink);
+.tb-grid .tb-wordmark { justify-self: start; }
+.topbar-avatar { justify-self: end; }
+
+.tb-center { position: relative; justify-self: center; }
+
+/* the white pill, tinted by the circle theme */
+.circle-chip {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 7px 13px 7px 9px; border-radius: 999px;
+  background: var(--card);
+  border: 1.5px solid color-mix(in srgb, var(--c1) 38%, transparent);
+  box-shadow: 0 3px 14px color-mix(in srgb, var(--c1) 22%, transparent);
+  transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease), border-color 0.2s var(--ease);
+  white-space: nowrap; cursor: pointer; max-width: 220px;
+}
+.circle-chip:active { transform: scale(0.96); }
+.circle-chip.open { border-color: color-mix(in srgb, var(--c1) 65%, transparent); }
+.cc-name {
+  font-size: 13.5px; font-weight: 700; line-height: 1;
+  color: color-mix(in srgb, var(--c0) 78%, var(--ink));
+  overflow: hidden; text-overflow: ellipsis;
+}
+html[data-theme='dark'] .cc-name { color: color-mix(in srgb, var(--c1) 60%, var(--ink)); }
+.cc-caret { color: var(--c1); transition: transform 0.24s var(--ease); flex: 0 0 auto; }
+.cc-caret.up { transform: rotate(-90deg); }
+
+/* fancy emblem — glossy gradient orb framed by a soft halo */
+.circle-emblem {
+  position: relative; flex: 0 0 auto;
+  border-radius: 50%; padding: 2px;
+  background: conic-gradient(from 130deg, var(--c0), var(--c1), var(--c0));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--c0) 16%, transparent),
+    0 3px 9px color-mix(in srgb, var(--c1) 45%, transparent);
+}
+.ce-core {
+  position: relative; display: block; width: 100%; height: 100%;
+  border-radius: 50%; overflow: hidden;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--c0) 82%, #fff), var(--c1));
+}
+.ce-core::after {
+  content: ''; position: absolute; top: 12%; left: 16%;
+  width: 42%; height: 34%; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+.circle-emblem.is-active::before {
+  content: ''; position: absolute; inset: -3px; border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--c1) 50%, transparent);
+  animation: emblem-pulse 2.4s var(--ease) infinite;
+}
+@keyframes emblem-pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  70%, 100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* dropdown menu */
+.cc-menu {
+  position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  min-width: 220px; max-width: 280px; padding: 6px; z-index: 60;
   background: var(--card); border: 0.5px solid var(--border-2);
-  box-shadow: 0 2px 8px rgba(20,16,40,0.06);
-  transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease);
-  white-space: nowrap; cursor: pointer;
+  border-radius: 18px; box-shadow: 0 16px 44px rgba(20, 16, 40, 0.18);
+  animation: cc-drop 0.22s var(--ease);
 }
-html[data-theme='dark'] .circle-pill2 { box-shadow: none; }
-.circle-pill2:active { transform: scale(0.95); }
-.circle-pill2.active {
-  color: #fff; border-color: transparent;
-  box-shadow: 0 6px 18px rgba(20,16,40,0.22);
+html[data-theme='dark'] .cc-menu { box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55); }
+.cc-menu::before {
+  content: ''; position: absolute; top: -6px; left: 50%; margin-left: -6px;
+  width: 12px; height: 12px; background: var(--card); transform: rotate(45deg);
+  border-left: 0.5px solid var(--border-2); border-top: 0.5px solid var(--border-2);
 }
-.cp-dot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35); }
-.cp-name { line-height: 1; }
-.cp-add { padding: 8px; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
-.cp-add:active { transform: scale(0.9); }
+@keyframes cc-drop { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.cc-item {
+  width: 100%; display: flex; align-items: center; gap: 11px;
+  padding: 10px 11px; border-radius: 12px; text-align: left;
+  font-size: 13.5px; font-weight: 600; color: var(--ink);
+  transition: background 0.14s var(--ease);
+}
+.cc-item:active { transform: scale(0.98); }
+.cc-item.on { background: var(--bg-2); }
+.cc-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-check { font-size: 14px; font-weight: 800; color: var(--c1); flex: 0 0 auto; }
+.cc-new { color: var(--accent); margin-top: 2px; border-top: 0.5px solid var(--line); border-radius: 0 0 12px 12px; padding-top: 12px; }
+.cc-new-ic {
+  width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
 
 /* legacy single-row topbar grid (kept for any other callers) */
 .topbar-grid {
@@ -430,44 +524,185 @@ html[data-theme='dark'] .btn { background: var(--ink); color: #0a0713; }
 .login-legal { font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 16px; }
 
 /* =========================================================
-   BOTTOM NAV — sliding pill + live icons + Moments dome
+   BOTTOM NAV — floating frosted-glass pill (mobile)
+   --nav0 / --nav1 = active circle accent (set inline on <nav>)
    ========================================================= */
 .nav {
   position: fixed;
   left: 50%; transform: translateX(-50%);
-  bottom: 0;
-  width: 100%; max-width: var(--maxw);
-  height: var(--navh);
+  bottom: calc(11px + env(safe-area-inset-bottom));
+  width: calc(100% - 24px); max-width: 620px;
+  height: 66px;
   z-index: 40;
-  display: flex; align-items: flex-end; justify-content: space-around;
-  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  backdrop-filter: blur(18px) saturate(1.4);
-  border-top: 0.5px solid var(--border);
+  display: flex; align-items: stretch; justify-content: space-around;
+  padding: 0 6px;
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--card) 64%, transparent);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  border: 0.5px solid color-mix(in srgb, var(--ink) 8%, transparent);
+  box-shadow:
+    0 14px 40px rgba(20, 16, 40, 0.18),
+    0 3px 10px rgba(20, 16, 40, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+}
+html[data-theme='dark'] .nav {
+  background: color-mix(in srgb, var(--card-2) 50%, rgba(8, 6, 16, 0.55));
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 16px 44px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 .nav-btn {
-  position: relative; z-index: 2;
-  flex: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-size: 10px; font-weight: 600;
+  position: relative; flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.01em;
   color: var(--faint);
-  padding: 6px 0 4px;
-  transition: color 0.2s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.22s var(--ease);
 }
-.nav-btn.on { color: var(--accent); }
-.nav-btn svg { width: 24px; height: 24px; }
-.nav-btn .ic-wrap { display: grid; place-items: center; height: 26px; }
+.nav-btn .ic-wrap {
+  position: relative; display: grid; place-items: center;
+  width: 46px; height: 30px; border-radius: 11px;
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* soft glass pill that fades in behind the active icon */
+.nav-btn .ic-wrap::before {
+  content: ''; position: absolute; inset: 0; border-radius: 11px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--nav0) 22%, transparent),
+    color-mix(in srgb, var(--nav1) 14%, transparent));
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--nav0) 34%, transparent);
+  opacity: 0; transform: scale(0.7);
+  transition: opacity 0.28s var(--ease), transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.nav-btn svg { position: relative; z-index: 1; width: 23px; height: 23px; }
+.nav-lbl { transition: color 0.22s var(--ease); }
 
-/* the center Moments dome */
-.nav-btn.dome .ic-wrap {
-  width: 50px; height: 31px;
-  margin-bottom: -2px;
-  border-radius: 25px 25px 9px 9px;
-  background: var(--grad);
-  display: grid; place-items: center;
-  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
-  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+/* active state — accent icon + label, glass pill revealed */
+.nav-btn.on { color: var(--nav0); }
+.nav-btn.on .ic-wrap::before { opacity: 1; transform: scale(1); }
+.nav-btn:active .ic-wrap { transform: scale(0.84); }
+
+/* =========================================================
+   SIDEBAR — tablet rail (84px) + desktop full (252px)
+   Hidden on mobile (display:none); shown via grid at ≥768px.
+   --c0 / --c1 = active circle accent (set inline).
+   ========================================================= */
+.sidebar {
+  display: none;
+  flex-direction: column;
+  height: 100dvh; position: sticky; top: 0;
+  padding: 16px 12px 16px;
+  background: var(--card-2);
+  border-right: 0.5px solid var(--border);
+  overflow: hidden;
 }
-.nav-btn.dome svg { width: 19px; height: 19px; color: #fff; }
-.nav-btn.dome.on .ic-wrap { box-shadow: 0 8px 22px rgba(139, 92, 246, 0.5); }
-.nav-btn.dome:active .ic-wrap { transform: scale(0.92); }
+html[data-theme='dark'] .sidebar { background: var(--bg-2); }
+
+/* brand */
+.sb-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 4px; height: 40px; }
+.sb-logo {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #D946EF);
+  display: grid; place-items: center; color: #fff; font-size: 18px; font-weight: 800;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+.sb-word { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+.sb-word .wm-k { color: var(--ink); }
+.sb-word .wm-c { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* circle switcher */
+.sb-circle { position: relative; margin: 14px 0 8px; }
+.sb-circle-btn {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 14px;
+  background: var(--card); border: 1.5px solid color-mix(in srgb, var(--c1) 34%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--c1) 18%, transparent);
+  transition: border-color 0.2s var(--ease), transform 0.14s var(--ease);
+}
+.sb-circle-btn:active { transform: scale(0.98); }
+.sb-circle-btn.open { border-color: color-mix(in srgb, var(--c1) 60%, transparent); }
+.sb-circle-name {
+  flex: 1; min-width: 0; text-align: left; font-size: 13.5px; font-weight: 700;
+  color: color-mix(in srgb, var(--c0) 76%, var(--ink));
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html[data-theme='dark'] .sb-circle-name { color: color-mix(in srgb, var(--c1) 60%, var(--ink)); }
+.sb-caret { color: var(--c1); flex: 0 0 auto; transition: transform 0.24s var(--ease); }
+.sb-caret.up { transform: rotate(-90deg); }
+
+.sb-menu {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 60;
+  padding: 6px; background: var(--card); border: 0.5px solid var(--border-2);
+  border-radius: 16px; box-shadow: 0 16px 44px rgba(20, 16, 40, 0.18);
+  animation: cc-drop 0.2s var(--ease);
+}
+html[data-theme='dark'] .sb-menu { box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55); }
+
+/* nav items */
+.sb-nav { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.sb-item {
+  display: flex; align-items: center; gap: 13px;
+  padding: 11px 12px; border-radius: 13px; text-align: left;
+  color: var(--muted); font-size: 14px; font-weight: 600;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+.sb-item:hover { background: var(--bg-2); color: var(--ink); }
+.sb-item-ic { width: 24px; height: 24px; flex: 0 0 auto; display: grid; place-items: center; }
+.sb-item-ic svg { width: 23px; height: 23px; }
+.sb-item-label { white-space: nowrap; }
+/* active — identical language to the bottom nav: circle accent + glass pill */
+.sb-item.on {
+  color: var(--c0);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--c0) 20%, transparent),
+    color-mix(in srgb, var(--c1) 12%, transparent));
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--c0) 32%, transparent);
+}
+.sb-item.on:hover { background: linear-gradient(135deg,
+  color-mix(in srgb, var(--c0) 24%, transparent),
+  color-mix(in srgb, var(--c1) 15%, transparent)); }
+.sb-item.on .sb-item-ic { color: var(--c0); }
+
+/* profile (pinned bottom) */
+.sb-profile {
+  margin-top: auto; display: flex; align-items: center; gap: 11px;
+  padding: 9px 10px; border-radius: 14px;
+  transition: background 0.16s var(--ease);
+}
+.sb-profile:hover { background: var(--bg-2); }
+.sb-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex: 0 0 auto; object-fit: cover;
+  display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 800;
+  box-shadow: 0 0 0 2px var(--border-2);
+}
+.sb-profile-info { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.sb-profile-info b { font-size: 13.5px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-profile-info small { font-size: 11.5px; color: var(--muted); }
+
+/* ── Tablet rail: collapse to icons only (84px) ── */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .sidebar { padding: 16px 0; align-items: center; }
+  .sb-brand { justify-content: center; padding: 6px 0; }
+  .sb-word { display: none; }
+  .sb-circle { margin: 16px 0 10px; }
+  .sb-circle-btn { justify-content: center; padding: 8px; border-radius: 50%; width: 46px; height: 46px; margin: 0 auto; }
+  .sb-circle-name, .sb-caret { display: none; }
+  .sb-menu { left: 8px; width: 220px; right: auto; }
+  .sb-nav { width: 100%; align-items: center; padding: 0 10px; }
+  .sb-item { flex-direction: column; gap: 4px; width: 60px; padding: 9px 0; justify-content: center; }
+  .sb-item-label { font-size: 9.5px; font-weight: 600; }
+  .sb-profile { justify-content: center; padding: 8px; }
+  .sb-profile-info { display: none; }
+}
+
+/* ── Responsive show/hide — declared LAST so it wins on source order
+   over the base .sidebar / .nav / .topbar rules (media queries add no
+   specificity, so order is what decides the override). ── */
+@media (min-width: 768px) {
+  .sidebar { display: flex; }
+  .nav { display: none; }
+  .topbar { display: none; }
+}

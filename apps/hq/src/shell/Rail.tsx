@@ -1,5 +1,5 @@
 import {
-  LayoutGrid, Database, Activity, Users, BookOpen, Gamepad2, Boxes, CircleDashed,
+  LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 
@@ -13,13 +13,12 @@ const GROUPS: Group[] = [
   ] },
   { name: 'Analytics', items: [
     { id: 'data', label: 'Data', Icon: Database, badge: 'Live' },
-    { id: 'pulse', label: 'Pulse', Icon: Activity },
-    { id: 'audience', label: 'Audience', Icon: Users },
-    { id: 'content', label: 'Content', Icon: BookOpen },
+    { id: 'growth', label: 'Growth', Icon: TrendingUp },
   ] },
   { name: 'Build', items: [
     { id: 'game', label: 'Game Builder', Icon: Gamepad2 },
     { id: 'app', label: 'App Builder', Icon: Boxes },
+    { id: 'content', label: 'Learn Builder', Icon: GraduationCap },
   ] },
 ]
 

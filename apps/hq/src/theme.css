@@ -18,6 +18,10 @@ html[data-theme="light"]{
   --bd:#ececef; --bd2:#e0e0e4; --bd3:#d4d4d8;
   --ok:#16a34a; --ok-bg:#dcfce7; --warn:#d97706; --warn-bg:#fef3c7;
   --bad:#dc2626; --bad-bg:#fee2e2; --tl:#0d9488; --tl-bg:#ccfbf1; --amb:#b45309; --amb-bg:#fef3c7;
+  --glass:rgba(255,255,255,.72); --glass-bd:rgba(16,24,40,.07);
+  --builder-grad:radial-gradient(760px 540px at 5% 0%, rgba(99,102,241,.14), transparent 56%), radial-gradient(820px 600px at 99% 100%, rgba(255,61,114,.10), transparent 56%), radial-gradient(620px 540px at 84% 6%, rgba(45,212,191,.075), transparent 56%), var(--canvas);
+  --stage:radial-gradient(300px 240px at 28% 16%, rgba(99,102,241,.20), transparent 70%), radial-gradient(340px 280px at 84% 94%, rgba(255,61,114,.15), transparent 70%), linear-gradient(160deg,#f4f5fc,#eceffb);
+  --device-glow:0 22px 50px rgba(79,70,229,.20), 0 0 0 1px rgba(99,102,241,.10), 0 0 64px rgba(99,102,241,.18);
   color-scheme:light;
 }
 html[data-theme="dark"]{
@@ -27,6 +31,10 @@ html[data-theme="dark"]{
   --acc-soft:#1e1b3a; --acc-text:#a5b4fc;
   --ok:#4ade80; --ok-bg:#14321f; --warn:#fbbf24; --warn-bg:#3a2a08;
   --bad:#f87171; --bad-bg:#3a1414; --tl:#2dd4bf; --tl-bg:#0c2e2a; --amb:#fbbf24; --amb-bg:#3a2a08;
+  --glass:rgba(22,22,30,.62); --glass-bd:rgba(255,255,255,.08);
+  --builder-grad:radial-gradient(760px 540px at 5% 0%, rgba(99,102,241,.20), transparent 56%), radial-gradient(820px 600px at 99% 100%, rgba(255,61,114,.16), transparent 56%), radial-gradient(620px 540px at 84% 6%, rgba(45,212,191,.10), transparent 56%), var(--canvas);
+  --stage:radial-gradient(300px 240px at 28% 16%, rgba(99,102,241,.30), transparent 70%), radial-gradient(340px 280px at 84% 94%, rgba(255,61,114,.20), transparent 70%), linear-gradient(160deg,#161826,#0d0e17);
+  --device-glow:0 24px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.07), 0 0 72px rgba(99,102,241,.30);
   color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -51,6 +59,7 @@ a{color:inherit;text-decoration:none}
 .topbar{flex-shrink:0;height:54px;display:flex;align-items:center;gap:12px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--bd)}
 .content{flex:1;overflow-y:auto;padding:22px 24px 60px}
 .content-in{max-width:1180px;margin:0 auto}
+.content-in.wide{max-width:1560px}
 
 /* ---------- Rail ---------- */
 .rail-logo{display:flex;align-items:center;gap:9px;padding:6px 8px 14px}
@@ -180,3 +189,17 @@ table.tbl tr:last-child td{border-bottom:none}
   .nav-badge{display:none}
   .main{height:100vh;height:100dvh}
 }
+
+/* ---------- Builder — cloud workspace ---------- */
+/* Flat light (or dark) canvas — no workspace gradient. Cards float with a
+   larger radius + soft shadow; the only gradient lives on the device stage
+   (.cloud-stage), which flips light↔dark via the --stage token. */
+.builder{display:flex;flex-direction:column;gap:16px;min-height:calc(100dvh - 116px)}
+.builder .card{border-radius:var(--r-xl);box-shadow:var(--shadow-md)}
+.cloud-stage{background:var(--stage)}
+.device-float{box-shadow:var(--device-glow)}
+.title-edit{font-size:16px;font-weight:600;color:var(--tx);background:transparent;border:none;border-bottom:1.5px solid transparent;outline:none;padding:1px 2px;border-radius:0;letter-spacing:-.01em;max-width:360px}
+.title-edit:hover{border-bottom-color:var(--bd2)}
+.title-edit:focus{border-bottom-color:var(--acc)}
+.title-edit::placeholder{color:var(--tx3);font-weight:500}
+@media (max-width:640px){.builder{min-height:calc(100dvh - 96px)}}

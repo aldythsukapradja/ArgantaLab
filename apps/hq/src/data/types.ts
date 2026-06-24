@@ -94,3 +94,23 @@ export interface ContentMatrix {
   totals: { authored: number; live: number }
   generatedAt: string
 }
+
+// ── Growth analytics (Pulse + Audience merged) ──
+export interface GrowthPoint { week: string; value: number }
+export interface GrowthOverview {
+  northStar: GrowthPoint[]
+  dau: number
+  wau: number
+  mau: number
+  stickiness: number | null   // DAU/MAU %
+  wauPrev: number
+  wowPct: number | null       // WAU week-over-week %
+  depth: number               // attempts per active (7d)
+  accuracyPct: number | null
+  newLearners7d: number
+  newWowPct: number | null
+  learners: number
+  attempts7d: number
+  attemptsTotal: number
+  generatedAt: string
+}

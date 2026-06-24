@@ -584,6 +584,23 @@ create table if not exists public.hq_app (              -- AppManifest
   created_at    timestamptz default now()
 );
 
+-- Publishable-artifact columns so the HQ App Builder can store the app's HTML
+-- and KinetikCircle can consume published apps. Additive & idempotent.
+alter table public.hq_app add column if not exists html            text;
+alter table public.hq_app add column if not exists description     text;
+alter table public.hq_app add column if not exists visibility      text default 'private';  -- 'private' | 'circle' | 'public'
+alter table public.hq_app add column if not exists circle_ids      text[] default '{}';
+alter table public.hq_app add column if not exists thumbnail       text;
+alter table public.hq_app add column if not exists featured        boolean default false;
+alter table public.hq_app add column if not exists featured_rank   int;
+alter table public.hq_app add column if not exists featured_set_at timestamptz;
+alter table public.hq_app add column if not exists rating_avg      numeric;
+alter table public.hq_app add column if not exists rating_count    int default 0;
+alter table public.hq_app add column if not exists share_count     int default 0;
+alter table public.hq_app add column if not exists pinned          boolean default false;
+alter table public.hq_app add column if not exists plays           int default 0;
+alter table public.hq_app add column if not exists updated_at      timestamptz default now();
+
 create table if not exists public.hq_feature (          -- FeatureMap rows
   app_id     text references public.hq_app(id) on delete cascade,
   tab_id     text not null,
@@ -634,7 +651,8 @@ drop policy if exists hq_app_read     on public.hq_app;
 drop policy if exists hq_feature_read on public.hq_feature;
 drop policy if exists hq_ns_read      on public.hq_product_northstar;
 create policy hq_event_read   on public.hq_event             for select using (public.hq_is_operator());
-create policy hq_app_read     on public.hq_app               for select using (public.hq_is_operator());
+-- Public apps are world-readable so KinetikCircle can consume them; operators see all (incl. drafts).
+create policy hq_app_read     on public.hq_app               for select using (visibility = 'public' or public.hq_is_operator());
 create policy hq_feature_read on public.hq_feature           for select using (public.hq_is_operator());
 create policy hq_ns_read      on public.hq_product_northstar for select using (public.hq_is_operator());
 -- Operator may upsert app manifests (P0 self-seed from the client).
@@ -874,6 +892,15 @@ alter table public.games add column if not exists age_min     int;
 alter table public.games add column if not exists age_max     int;
 alter table public.games add column if not exists thumbnail   text;          -- emoji or data-url
 alter table public.games add column if not exists version     int default 1;
+-- Circle scoping, curation/featuring, ratings & soft-archive (HQ Studio).
+alter table public.games add column if not exists circle_ids      text[] default '{}';
+alter table public.games add column if not exists featured        boolean default false;
+alter table public.games add column if not exists featured_rank   int;
+alter table public.games add column if not exists featured_set_at timestamptz;
+alter table public.games add column if not exists rating_avg      numeric;
+alter table public.games add column if not exists rating_count    int default 0;
+alter table public.games add column if not exists share_count     int default 0;
+alter table public.games add column if not exists pinned          boolean default false;
 
 -- ── Version history: every publish snapshots html + config ──
 create table if not exists public.game_versions (
@@ -1115,6 +1142,81 @@ begin
 end;
 $$;
 grant execute on function public.hq_content_matrix() to authenticated;
+
+-- Content authoring moves to HQ: let operators (not just admins) write items.
+-- Permissive policy — OR'd with items_admin, so admins keep access too.
+drop policy if exists items_operator on public.items;
+create policy items_operator on public.items for all
+  using (public.hq_is_operator()) with check (public.hq_is_operator());
+
+-- content_meta: single-row version flag. Player apps poll it and hot-swap the
+-- curriculum cache when it changes, so an HQ edit reaches every device.
+create table if not exists public.content_meta (
+  id         int primary key default 1,
+  version    int default 1,
+  updated_at timestamptz default now()
+);
+alter table public.content_meta enable row level security;
+drop policy if exists content_meta_read on public.content_meta;
+create policy content_meta_read on public.content_meta for select using (true);
+drop policy if exists content_meta_write on public.content_meta;
+create policy content_meta_write on public.content_meta for all
+  using (public.hq_is_operator()) with check (public.hq_is_operator());
+insert into public.content_meta (id, version) values (1, 1) on conflict (id) do nothing;
 -- ============================================================
 --  END CONTENT RICHNESS
+-- ============================================================
+
+
+-- ============================================================
+--  CIRCLE HQ — GROWTH ANALYTICS
+--  One operator-gated call powering the Growth › Overview tab.
+--  100% real aggregates over item_attempts + profiles. No dummy data.
+-- ============================================================
+create or replace function public.hq_growth_overview()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  r jsonb;
+  v_dau int; v_wau int; v_mau int; v_wau_prev int;
+  v_new7 int; v_new_prev7 int; v_attempts7 int;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+
+  select count(distinct user_id) into v_dau      from public.item_attempts where created_at >= now() - interval '1 day';
+  select count(distinct user_id) into v_wau      from public.item_attempts where created_at >= now() - interval '7 days';
+  select count(distinct user_id) into v_mau      from public.item_attempts where created_at >= now() - interval '30 days';
+  select count(distinct user_id) into v_wau_prev from public.item_attempts where created_at >= now() - interval '14 days' and created_at < now() - interval '7 days';
+  select count(*)                 into v_attempts7 from public.item_attempts where created_at >= now() - interval '7 days';
+  select count(*) into v_new7      from public.profiles where created_at >= now() - interval '7 days';
+  select count(*) into v_new_prev7 from public.profiles where created_at >= now() - interval '14 days' and created_at < now() - interval '7 days';
+
+  select jsonb_build_object(
+    -- North-star: weekly active learners, last 8 ISO weeks.
+    'northStar', (
+      select coalesce(jsonb_agg(jsonb_build_object('week', to_char(wk, 'MM-DD'), 'value', (
+        select count(distinct user_id) from public.item_attempts
+        where created_at >= wk and created_at < wk + interval '7 days'
+      )) order by wk), '[]'::jsonb)
+      from generate_series(date_trunc('week', now()) - interval '7 weeks', date_trunc('week', now()), interval '1 week') as wk
+    ),
+    'dau', v_dau, 'wau', v_wau, 'mau', v_mau,
+    'stickiness',  case when v_mau > 0 then round(100.0 * v_dau / v_mau, 1) else null end,
+    'wauPrev', v_wau_prev,
+    'wowPct',      case when v_wau_prev > 0 then round(100.0 * (v_wau - v_wau_prev) / v_wau_prev, 1) else null end,
+    'depth',       case when v_wau > 0 then round(v_attempts7::numeric / v_wau, 1) else 0 end,
+    'accuracyPct', (select case when count(*) > 0 then round(100.0 * count(*) filter (where correct) / count(*), 1) else null end
+                     from public.item_attempts where created_at >= now() - interval '30 days'),
+    'newLearners7d', v_new7,
+    'newWowPct',   case when v_new_prev7 > 0 then round(100.0 * (v_new7 - v_new_prev7) / v_new_prev7, 1) else null end,
+    'learners',     (select count(*) from public.profiles),
+    'attempts7d', v_attempts7,
+    'attemptsTotal', (select count(*) from public.item_attempts),
+    'generatedAt', now()
+  ) into r;
+  return r;
+end;
+$$;
+grant execute on function public.hq_growth_overview() to authenticated;
+-- ============================================================
+--  END GROWTH ANALYTICS
 -- ============================================================

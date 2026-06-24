@@ -3,9 +3,8 @@ import { Topbar } from './Topbar'
 import { useHQ } from './store'
 import { cloudEnabled } from '../lib/supabase'
 import { Data } from '../surfaces/Data'
-import { Pulse } from '../surfaces/Pulse'
+import { Growth } from '../surfaces/Growth'
 import { Portfolio } from '../surfaces/Portfolio'
-import { Audience } from '../surfaces/Audience'
 import { Content } from '../surfaces/Content'
 import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 
@@ -13,9 +12,8 @@ function Surface() {
   const { surface } = useHQ()
   switch (surface) {
     case 'data': return <Data />
-    case 'pulse': return <Pulse />
+    case 'growth': return <Growth />
     case 'portfolio': return <Portfolio />
-    case 'audience': return <Audience />
     case 'content': return <Content />
     case 'game': return <GameBuilder />
     case 'app': return <AppBuilder />
@@ -23,6 +21,8 @@ function Surface() {
 }
 
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
+  const { surface } = useHQ()
+  const wide = surface === 'game' || surface === 'app'
   return (
     <div className="hq">
       <Rail who={who} />
@@ -34,7 +34,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
           </div>
         )}
         <div className="content">
-          <div className="content-in"><Surface /></div>
+          <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, Pencil, BarChart3, Maximize2 } from 'lucide-react'
+import { Play, Pencil, BarChart3, Maximize2, Archive } from 'lucide-react'
 import type { RankedArtifact, FeaturedBadge } from '../../../data/algorithm'
 import { fmtCount } from '../artifact'
 import { Badge, TrendChip } from './ui'
@@ -13,9 +13,10 @@ interface Props {
   onEdit: () => void
   onAnalytics: () => void
   onFullscreen: () => void
+  onArchive?: () => void
 }
 
-export function ArtifactCard({ item, emoji, badge, draft, onPlay, onEdit, onAnalytics, onFullscreen }: Props) {
+export function ArtifactCard({ item, emoji, badge, draft, onPlay, onEdit, onAnalytics, onFullscreen, onArchive }: Props) {
   const [hover, setHover] = useState(false)
 
   return (
@@ -47,6 +48,7 @@ export function ArtifactCard({ item, emoji, badge, draft, onPlay, onEdit, onAnal
             <Act onClick={onFullscreen} title="Fullscreen"><Maximize2 size={15} /></Act>
             <Act onClick={onEdit} title="Edit"><Pencil size={15} /></Act>
             <Act onClick={onAnalytics} title="Analytics"><BarChart3 size={15} /></Act>
+            {onArchive && <Act onClick={onArchive} title="Archive"><Archive size={15} /></Act>}
           </div>
         )}
         {hover && draft && (
@@ -56,6 +58,7 @@ export function ArtifactCard({ item, emoji, badge, draft, onPlay, onEdit, onAnal
           }}>
             <Act onClick={onEdit} title="Edit"><Pencil size={15} /></Act>
             <Act onClick={onPlay} title="Preview"><Play size={15} /></Act>
+            {onArchive && <Act onClick={onArchive} title="Archive"><Archive size={15} /></Act>}
           </div>
         )}
       </div>

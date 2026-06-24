@@ -1,5 +1,5 @@
 import { supabase, cloudEnabled } from '../lib/supabase'
-import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix } from './types'
+import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix, GrowthOverview } from './types'
 
 export interface PublishedGame {
   id: string
@@ -88,7 +88,7 @@ export interface CircleMember {
   name: string
   avatar?: string
   kind: 'parent' | 'child'
-  role: 'admin' | 'member'
+  role: 'owner' | 'coleader' | 'admin' | 'member' | 'viewer'
   joined_at?: string
 }
 
@@ -120,6 +120,7 @@ export const live = {
   schemaModel: () => rpc<SchemaModel>('hq_schema_model'),
   schemaInsights: () => rpc<SchemaInsights>('hq_schema_insights'),
   contentMatrix: () => rpc<ContentMatrix>('hq_content_matrix'),
+  growthOverview: () => rpc<GrowthOverview>('hq_growth_overview'),
   tablePreview: (table: string, limit = 20) =>
     rpc<Record<string, unknown>[]>('hq_table_preview', { p_table: table, p_limit: limit }),
   latestOntology: () => rpc<Ontology>('hq_latest_ontology'),
@@ -151,7 +152,6 @@ export const live = {
       config: { category: game.category ?? null, source: 'code' },
       html: game.html,
       visibility,
-      circle_ids: game.circle_ids || null,
       creator_name: game.creatorName || 'KinetikCircle',
       category: game.category ?? null,
       description: game.description ?? null,
@@ -160,7 +160,11 @@ export const live = {
       age_max: game.ageMax ?? null,
       thumbnail: game.thumbnail ?? null,
     }
-    if (game.featured != null) row.featured = game.featured
+    // Only send the optional/advanced columns when they carry a value — keeps
+    // publish working on a games table that predates the featured/circle_ids
+    // columns (they're added by schema.sql; absent ones would 400 the upsert).
+    if (game.circle_ids?.length) row.circle_ids = game.circle_ids
+    if (game.featured) row.featured = true
     const { error } = await supabase.from('games').upsert(row)
     if (error) { console.warn('[hq] publishGame →', error.message); return false }
     // Snapshot a version (best-effort; ignore failure so publish still succeeds)
@@ -208,9 +212,9 @@ export const live = {
     if (app.html != null) row.html = app.html
     if (app.description != null) row.description = app.description
     if (app.visibility != null) row.visibility = app.visibility
-    if (app.circle_ids != null) row.circle_ids = app.circle_ids
+    if (app.circle_ids?.length) row.circle_ids = app.circle_ids
     if (app.thumbnail != null) row.thumbnail = app.thumbnail
-    if (app.featured != null) row.featured = app.featured
+    if (app.featured) row.featured = true
 
     const { error } = await supabase.from('hq_app').upsert(row)
     if (error) console.warn('[hq] saveApp →', error.message)
@@ -249,28 +253,37 @@ export const live = {
       return []
     }
 
-    // Enrich members with profile data
+    // Everyone in the circle = the owner + every member row (any role:
+    // owner / coleader / admin / member / viewer). The owner lives on
+    // circles.owner_id and may not have a circle_members row, so we always
+    // fold them in and de-dupe.
     const circles: Circle[] = []
     for (const circle of data || []) {
-      const memberIds = (circle.circle_members || []).map((m: any) => m.id).filter(Boolean)
-      if (memberIds.length === 0) continue
+      const rows = (circle.circle_members || []) as any[]
+      const roleById = new Map<string, string>(rows.map(m => [m.id, m.role]))
+      const kindById = new Map<string, string>(rows.map(m => [m.id, m.member_kind]))
+      const joinedById = new Map<string, string>(rows.map(m => [m.id, m.joined_at]))
+
+      const ids = Array.from(new Set<string>(
+        [circle.owner_id, ...rows.map(m => m.id)].filter(Boolean),
+      ))
 
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, display_name, photo_url')
-        .in('id', memberIds)
-
+        .in('id', ids)
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
 
-      const members: CircleMember[] = (circle.circle_members || []).map((m: any) => {
-        const profile = profileMap.get(m.id)
+      const members: CircleMember[] = ids.map(id => {
+        const profile = profileMap.get(id)
+        const role = id === circle.owner_id ? 'owner' : (roleById.get(id) || 'member')
         return {
-          id: m.id,
+          id,
           name: profile?.display_name || 'Unknown',
           avatar: profile?.photo_url,
-          kind: m.member_kind,
-          role: m.role,
-          joined_at: m.joined_at,
+          kind: (kindById.get(id) as 'parent' | 'child') || 'parent',
+          role: role as CircleMember['role'],
+          joined_at: joinedById.get(id),
         }
       })
 
