@@ -1178,14 +1178,25 @@ html[data-theme='dark'] .me3-card { box-shadow: none; }
 .me3-add-ic { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .me3-add-ic.accent { background: color-mix(in srgb, var(--c0) 12%, transparent); color: var(--c0); }
 
-/* member rows */
-.me3-member { display: flex; align-items: center; gap: 11px; padding: 9px 14px; }
-.me3-mav { width: 38px; height: 38px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 700; }
+/* member rows — adults compact; kids get a row of world rings below */
+.me3-member { display: flex; flex-direction: column; gap: 10px; padding: 10px 14px; }
+.me3-member.me { background: linear-gradient(135deg, color-mix(in srgb, var(--c0) 7%, var(--card)), var(--card)); }
+.me3-member-top { display: flex; align-items: center; gap: 11px; }
+.me3-mav { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; color: #fff; font-size: 16px; font-weight: 700; object-fit: cover; }
 .me3-minfo { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.me3-minfo b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.me3-minfo b { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; }
 .me3-minfo small { font-size: 11px; color: var(--faint); }
+.me3-you { margin-left: 7px; font-size: 9.5px; font-weight: 700; color: var(--c0); background: color-mix(in srgb, var(--c0) 14%, transparent); padding: 2px 7px; border-radius: 999px; }
 .me3-mdia { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--memory); }
 .me3-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* kid world rings (Number / Word / Wonder / Logic / World / Life) */
+.me3-rings { display: flex; gap: 5px; padding: 0 2px; }
+.me3-ring { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1 1 0; min-width: 0; }
+.me3-ring-disc { width: 40px; height: 40px; border-radius: 50%; padding: 3px; display: grid; place-items: center; background: conic-gradient(var(--rc) var(--p), var(--line) 0); transition: background 0.6s var(--ease); }
+.me3-ring-disc b { width: 100%; height: 100%; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+.me3-ring small { font-size: 8.5px; color: var(--faint); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me3-hint { font-size: 11px; color: var(--faint); margin: 8px 6px 0; line-height: 1.45; }
 
 /* settings */
 .me3-srow { width: 100%; display: flex; align-items: center; gap: 13px; padding: 11px 15px; text-align: left; transition: background 0.14s var(--ease); }

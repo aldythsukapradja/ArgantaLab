@@ -1,5 +1,5 @@
 import { supabase, cloudEnabled } from '../lib/supabase'
-import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix, GrowthOverview, RetentionData } from './types'
+import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix, GrowthOverview, RetentionData, AcquisitionData, EconomyData } from './types'
 
 export interface PublishedGame {
   id: string
@@ -122,6 +122,8 @@ export const live = {
   contentMatrix: () => rpc<ContentMatrix>('hq_content_matrix'),
   growthOverview: () => rpc<GrowthOverview>('hq_growth_overview'),
   retention: () => rpc<RetentionData>('hq_retention'),
+  acquisition: () => rpc<AcquisitionData>('hq_acquisition'),
+  economy: () => rpc<EconomyData>('hq_economy'),
   tablePreview: (table: string, limit = 20) =>
     rpc<Record<string, unknown>[]>('hq_table_preview', { p_table: table, p_limit: limit }),
   latestOntology: () => rpc<Ontology>('hq_latest_ontology'),

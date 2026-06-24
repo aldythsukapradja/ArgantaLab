@@ -129,6 +129,15 @@ export default function Apps() {
   )
 }
 
+// CircleHQ apps gate their standalone boot behind an "embedded" check
+// (`window.self !== window.top`, which is always true inside an iframe), so
+// embedded they skip rendering their content and wait for a host to drive them.
+// Our runner IS the standalone surface, so neutralise that check → the app boots
+// and renders fully, exactly like opening it on its own.
+function runnableHtml(html: string): string {
+  return html.replace(/window\.(?:self|top|parent)\s*!==?\s*window\.(?:self|top|parent)/g, 'false')
+}
+
 function AppRunner({ app, onClose }: { app: KApp; onClose: () => void }) {
   return (
     <div className="app-runner">
@@ -138,7 +147,16 @@ function AppRunner({ app, onClose }: { app: KApp; onClose: () => void }) {
         <span className="ar-spacer" />
       </div>
       {app.html
-        ? <iframe className="ar-frame" srcDoc={app.html} sandbox="allow-scripts allow-forms allow-popups allow-modals" title={app.name} />
+        ? <iframe
+            className="ar-frame"
+            srcDoc={runnableHtml(app.html)}
+            // First-party apps published from CircleHQ — they need same-origin so
+            // localStorage / Supabase / fetch work; without it their JS throws on
+            // first storage access and the app renders blank.
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-popups-to-escape-sandbox"
+            allow="clipboard-write; clipboard-read"
+            title={app.name}
+          />
         : <div className="ar-empty"><b>{app.name}</b><p>{app.description || 'This app has no runnable build yet.'}</p></div>}
     </div>
   )

@@ -5,24 +5,20 @@ import { useUiStore } from '@store/uiStore'
 import { initials } from '@data/energy'
 import { cloudReady, supabase } from '@lib/supabase'
 import * as repo from '@repo/kinetikRepo'
-import type { MemberProgress } from '@repo/kinetikRepo'
-import type { Role, Circle } from '@data/types'
+import type { World, SocialStats, FamilyMember } from '@repo/kinetikRepo'
+import type { Circle } from '@data/types'
 import { CircleEmblem as Emblem, accentOf } from '@components/CircleEmblem'
-import {
-  IconSun, IconMoon, IconShare, IconPlus, IconUserPlus,
-  IconLogout, IconTrash, IconMinus, IconChevron, IconPencil,
-} from '@components/Icons'
+import { IconSun, IconMoon, IconShare, IconPlus, IconLogout, IconTrash, IconChevron, IconPencil } from '@components/Icons'
 
-const MEMBER_COLORS = ['#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6', '#F43F5E']
 const ACCENTS = ['#F43F5E', '#0EA5E9', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899']
-const ROLES: Role[] = ['member', 'coleader', 'viewer']
-
-// Show roles EXACTLY as stored in the DB (owner / coleader / member / viewer),
-// only capitalising the first letter. No friendly relabelling ("Leader" etc).
+const KID_COLORS = ['#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6', '#F43F5E']
 const roleText = (r: string) => (r ? r.charAt(0).toUpperCase() + r.slice(1) : r)
+function colorFor(s: string): string {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return KID_COLORS[h % KID_COLORS.length]
+}
 
-// Supabase errors are plain objects ({message, details, hint, code}), NOT Error
-// instances — String(e) on them yields "[object Object]". Extract a real message.
 function errMsg(e: unknown): string {
   if (!e) return 'Something went wrong'
   if (e instanceof Error) return e.message
@@ -37,29 +33,42 @@ function errMsg(e: unknown): string {
 
 export default function Me() {
   const circles = useDataStore(s => s.circles)
-  const people = useDataStore(s => s.people)
   const moments = useDataStore(s => s.moments)
   const authUser = useDataStore(s => s.me)
-  const { addPerson, removePerson, addCircle, updateCircle, removeCircle } = useDataStore.getState()
+  const { addCircle, updateCircle, removeCircle } = useDataStore.getState()
   const { activeCircleId, setCircle, theme, toggleTheme } = useUiStore()
 
-  const [progress, setProgress] = useState<Record<string, MemberProgress>>({})
-  const [editMembers, setEditMembers] = useState(false)
+  // Real ArgantaLab family data (owner-only; populates when signed in as owner).
+  const [worlds, setWorlds] = useState<World[]>([])
+  const [family, setFamily] = useState<FamilyMember[] | null>(null)
+  const [rings, setRings] = useState<Record<string, Record<string, number>>>({})
+  const [stats, setStats] = useState<SocialStats | null>(null)
+
   const [editCircles, setEditCircles] = useState(false)
-  const [sheet, setSheet] = useState<'member' | 'circle' | null>(null)
+  const [sheet, setSheet] = useState<'circle' | null>(null)
   const [editing, setEditing] = useState<Circle | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
-  const members = people.filter(p => circle && circle.memberIds.includes(p.id))
 
+  useEffect(() => { repo.fetchWorlds().then(setWorlds).catch(() => {}) }, [])
+  useEffect(() => { repo.fetchSocialStats().then(setStats).catch(() => {}) }, [authUser?.id])
+
+  // Load the circle's real roster, then each kid's world rings.
   useEffect(() => {
     if (!circle) return
     let alive = true
-    repo.fetchMemberProgress(circle.id).then(p => { if (alive) setProgress(p) }).catch(() => {})
+    setFamily(null)
+    repo.fetchFamily(circle.id, authUser).then(fam => {
+      if (!alive) return
+      setFamily(fam)
+      fam.filter(m => m.kind === 'child').forEach(kid => {
+        repo.fetchKidRings(kid.id).then(r => { if (alive) setRings(prev => ({ ...prev, [kid.id]: r })) }).catch(() => {})
+      })
+    }).catch(() => { if (alive) setFamily([]) })
     return () => { alive = false }
-  }, [circle?.id, people.length])
+  }, [circle?.id, authUser?.id])
 
   const root = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -71,34 +80,26 @@ export default function Me() {
   if (!circle) return <div className="fade-in"><p className="me-foot">No circle loaded yet.</p></div>
 
   const [a0, a1] = accentOf(circle)
-  const name = authUser?.name ?? members.find(m => m.role === 'owner')?.name ?? 'You'
+  const name = authUser?.name ?? 'You'
   const diamonds = authUser?.diamonds ?? 0
-  const myRole = members.find(m => m.name === name)?.role ?? 'owner'
 
+  // Stats — Moments from kinetik_moments; the rest from the real social_stats RPC.
   const momentCount = moments.filter(m => m.circleId === circle.id).length
-  const circleCount = circles.length
-  const connectionCount = members.length
-  const friendCount = Math.max(people.length - 1, 0)
+  const activeCount = family?.length ?? circle.memberIds.length
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true); setErr(null)
-    try { await fn() } catch (e) { setErr(errMsg(e)) }
-    finally { setBusy(false) }
-  }
-  const onRemoveMember = (id: string, who: string) => {
-    if (!window.confirm(`Remove ${who} from ${circle.name}?`)) return
-    run(() => removePerson(id))
+    try { await fn() } catch (e) { setErr(errMsg(e)) } finally { setBusy(false) }
   }
   const onDeleteCircle = (id: string, nm: string) => {
     if (!window.confirm(`Delete “${nm}”? This removes its members, routines and events. This cannot be undone.`)) return
     run(() => removeCircle(id)).then(() => setEditCircles(false))
   }
-  const nextColor = () => MEMBER_COLORS[members.length % MEMBER_COLORS.length]
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.reload() }
 
   return (
     <div className="fade-in me3" ref={root} style={{ ['--c0' as any]: a0, ['--c1' as any]: a1 }}>
-      {/* Header (no cover) */}
+      {/* Header */}
       <div className="me3-head rise">
         {authUser?.photoUrl
           ? <img className="me3-avatar" src={authUser.photoUrl} alt={name} referrerPolicy="no-referrer" />
@@ -110,14 +111,14 @@ export default function Me() {
         </div>
       </div>
       <div className="me3-name rise">{name}</div>
-      <div className="me3-role rise"><span className="me3-role-dot" />{roleText(myRole)} · {circle.name}</div>
+      <div className="me3-role rise"><span className="me3-role-dot" />Owner · {circle.name}</div>
 
-      {/* Stats */}
+      {/* Stats (real social_stats; Moments from kinetik) */}
       <div className="me3-stats rise">
         <div className="me3-stat"><b>{momentCount}</b><span>Moments</span></div>
-        <div className="me3-stat"><b>{circleCount}</b><span>Circles</span></div>
-        <div className="me3-stat"><b>{connectionCount}</b><span>Connections</span></div>
-        <div className="me3-stat"><b>{friendCount}</b><span>Friends</span></div>
+        <div className="me3-stat"><b>{stats?.circles ?? circles.length}</b><span>Circles</span></div>
+        <div className="me3-stat"><b>{stats?.connections ?? activeCount}</b><span>Connections</span></div>
+        <div className="me3-stat"><b>{stats?.friends ?? 0}</b><span>Friends</span></div>
       </div>
 
       {err && <div className="me3-error rise">{err}</div>}
@@ -130,13 +131,14 @@ export default function Me() {
       <div className="me3-card rise">
         {circles.map(c => {
           const on = c.id === activeCircleId
+          const count = on ? activeCount : c.memberIds.length
           return (
             <div key={c.id} className={`me3-circle-row${on ? ' on' : ''}`}>
               <button className="me3-circle-main" onClick={() => setCircle(c.id)}>
                 <Emblem accent={accentOf(c)} size={36} active={on} />
                 <span className="me3-circle-info">
                   <b>{c.name}</b>
-                  <small>{c.kind ?? 'family'} · {c.memberIds.length} member{c.memberIds.length === 1 ? '' : 's'}</small>
+                  <small>{c.kind ?? 'family'} · {count} member{count === 1 ? '' : 's'}</small>
                 </span>
               </button>
               {editCircles ? (
@@ -153,36 +155,21 @@ export default function Me() {
         </button>
       </div>
 
-      {/* Members (above settings) — live from kinetik_people */}
+      {/* Members — REAL family (circle_members + child_profiles + kid_world_rings) */}
       <div className="me3-sec-head rise">
         <span className="me3-sec-title">Members · {circle.name}</span>
-        <div className="me3-sec-right">
-          {cloudReady && <span className="me3-live"><span className="live-dot" /> Live</span>}
-          <button className="me3-edit" onClick={() => setEditMembers(v => !v)}>{editMembers ? 'Done' : 'Edit'}</button>
-        </div>
+        {cloudReady && <span className="me3-live"><span className="live-dot" /> Live</span>}
       </div>
       <div className="me3-card rise">
-        {members.length === 0 && <div className="me3-empty">No members yet.</div>}
-        {members.map(p => {
-          // Per-member diamonds come ONLY from the kinetik_member_progress RPC.
-          // If it isn't deployed (or returns nothing for this member), show no
-          // chip — never a fabricated 0 or the owner's wallet number.
-          const prog = progress[p.id]
-          return (
-            <div key={p.id} className="me3-member">
-              {editMembers && p.role !== 'owner' && (
-                <button className="me3-remove" disabled={busy} aria-label={`Remove ${p.name}`} onClick={() => onRemoveMember(p.id, p.name)}><IconMinus width={19} height={19} /></button>
-              )}
-              <span className="me3-mav" style={{ background: p.color }}>{initials(p.name)}</span>
-              <div className="me3-minfo"><b>{p.name}</b><small>{roleText(p.role)}</small></div>
-              {prog && <span className="me3-mdia"><IconDiamondGem size={13} /> {prog.diamonds.toLocaleString()}</span>}
-            </div>
-          )
-        })}
-        <button className="me3-add-row me3-add-member" disabled={busy} onClick={() => { setErr(null); setSheet('member') }}>
-          <span className="me3-add-ic accent"><IconUserPlus width={17} height={17} /></span><span>Add member</span>
-        </button>
+        {family === null && <div className="me3-empty">Loading family…</div>}
+        {family && family.length === 0 && <div className="me3-empty">Sign in as the circle owner to see members.</div>}
+        {family && family.map(m => (
+          <MemberRow key={m.id} m={m} worlds={worlds} rings={rings[m.id]} ownerDiamonds={m.kind === 'owner' ? diamonds : null} />
+        ))}
       </div>
+      {family && family.some(m => m.kind === 'child') && (
+        <p className="me3-hint rise">Kids &amp; rings are read live from ArgantaLab. Manage kids (add / edit / PIN) in the ArgantaLab app.</p>
+      )}
 
       {/* Settings */}
       <div className="me3-sec-head rise"><span className="me3-sec-title">Settings</span></div>
@@ -199,8 +186,6 @@ export default function Me() {
 
       <p className="me-foot rise">Private to the people you choose. No followers, no likes — just your circle.</p>
 
-      {sheet === 'member' && <AddMemberSheet circleName={circle.name} busy={busy} onClose={() => setSheet(null)}
-        onSubmit={(nm, role) => run(() => addPerson(circle.id, nm, role, nextColor())).then(() => setSheet(null))} />}
       {sheet === 'circle' && <NewCircleSheet busy={busy} onClose={() => setSheet(null)}
         onSubmit={(nm, accent) => run(() => addCircle(nm, accent)).then(() => setSheet(null))} />}
       {editing && <EditCircleSheet circle={editing} busy={busy} onClose={() => setEditing(null)}
@@ -209,25 +194,47 @@ export default function Me() {
   )
 }
 
-// ── Add member ──
-function AddMemberSheet({ circleName, busy, onClose, onSubmit }: {
-  circleName: string; busy: boolean; onClose: () => void; onSubmit: (name: string, role: Role) => void
+// ── A member row: adults show role + (owner) diamonds; kids show 6 world rings ──
+function MemberRow({ m, worlds, rings, ownerDiamonds }: {
+  m: FamilyMember; worlds: World[]; rings?: Record<string, number>; ownerDiamonds: number | null
 }) {
-  const [nm, setNm] = useState('')
-  const [role, setRole] = useState<Role>('member')
+  const avatarBg = m.color || (m.kind === 'child' ? colorFor(m.id) : 'var(--grad)')
+  const face = m.emoji || initials(m.name)
   return (
-    <Sheet title={`Add to ${circleName}`} onClose={onClose}>
-      <input className="field" placeholder="Member name" value={nm} onChange={e => setNm(e.target.value)} autoFocus />
-      <div className="sheet-lbl">Role</div>
-      <div className="me3-seg">
-        {ROLES.map(r => <button key={r} className={`me3-seg-btn${role === r ? ' on' : ''}`} onClick={() => setRole(r)}>{roleText(r)}</button>)}
+    <div className={`me3-member${m.kind === 'owner' ? ' me' : ''}${m.kind === 'child' ? ' kid' : ''}`}>
+      <div className="me3-member-top">
+        {m.photoUrl
+          ? <img className="me3-mav" src={m.photoUrl} alt={m.name} referrerPolicy="no-referrer" />
+          : <span className="me3-mav" style={{ background: avatarBg }}>{face}</span>}
+        <div className="me3-minfo">
+          <b>{m.name}{m.kind === 'owner' && <span className="me3-you">You</span>}</b>
+          <small>
+            {roleText(m.role)}
+            {m.kind === 'child' && m.age != null ? ` · age ${m.age}` : ''}
+            {m.username ? ` · @${m.username}` : ''}
+          </small>
+        </div>
+        {ownerDiamonds != null && <span className="me3-mdia"><IconDiamondGem size={13} /> {ownerDiamonds.toLocaleString()}</span>}
       </div>
-      <button className="btn grad me3-submit" disabled={busy || !nm.trim()} onClick={() => onSubmit(nm.trim(), role)}>{busy ? 'Adding…' : 'Add member'}</button>
-    </Sheet>
+      {m.kind === 'child' && worlds.length > 0 && (
+        <div className="me3-rings">
+          {worlds.map(w => {
+            const pct = Math.min(Math.max(rings?.[w.key] ?? 0, 0), 100)
+            return (
+              <div className="me3-ring" key={w.key}>
+                <span className="me3-ring-disc" style={{ ['--rc' as any]: w.color, ['--p' as any]: `${pct * 3.6}deg` }}>
+                  <b style={{ color: w.color }}>{pct}</b>
+                </span>
+                <small>{w.short}</small>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 
-// ── New circle ──
 function NewCircleSheet({ busy, onClose, onSubmit }: { busy: boolean; onClose: () => void; onSubmit: (name: string, accent: string) => void }) {
   const [nm, setNm] = useState('')
   const [accent, setAccent] = useState(ACCENTS[0])
@@ -241,7 +248,6 @@ function NewCircleSheet({ busy, onClose, onSubmit }: { busy: boolean; onClose: (
   )
 }
 
-// ── Edit circle: rename + recolor (writes to DB) ──
 function EditCircleSheet({ circle, busy, onClose, onSubmit }: { circle: Circle; busy: boolean; onClose: () => void; onSubmit: (name: string, accent: string) => void }) {
   const [nm, setNm] = useState(circle.name)
   const [accent, setAccent] = useState(circle.accent[0])

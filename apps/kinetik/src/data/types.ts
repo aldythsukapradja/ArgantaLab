@@ -22,6 +22,10 @@ export interface Person {
   name: string
   color: string
   role: Role
+  /** ArgantaLab account this member maps to (profiles.id or child_profiles.id),
+   *  set by 03_member_progress.sql. null = not linked → no real progress yet. */
+  linkId?: string | null
+  linkKind?: 'profile' | 'child' | null
 }
 
 export interface Routine {

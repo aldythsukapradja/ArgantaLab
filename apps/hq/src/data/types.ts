@@ -125,3 +125,22 @@ export interface RetentionData {
   cohorts: RetentionCohort[]
   generatedAt: string
 }
+
+export interface FunnelStage { stage: string; count: number }
+export interface AcquisitionData {
+  funnel: FunnelStage[]
+  newWeekly: GrowthPoint[]
+  generatedAt: string
+}
+
+export interface EconomyLeg { kind: string; amount: number }
+export interface EconomyData {
+  float: number
+  minted: number
+  spent: number
+  gifted: number
+  coverage: number | null   // spent / minted %
+  sources: EconomyLeg[]
+  ledgerRows: number
+  generatedAt: string
+}

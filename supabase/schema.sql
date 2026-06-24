@@ -1247,7 +1247,7 @@ begin
             end order by k)
           from generate_series(0, 4) as k
         )
-      ) order by cw desc)
+      ) order by cw desc), '[]'::jsonb)
       from (
         select date_trunc('week', created_at) as cw, count(*) as sz
         from public.profiles

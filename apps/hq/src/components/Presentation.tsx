@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { X, ArrowLeft, ArrowRight } from 'lucide-react'
-import type { GrowthOverview } from '../data/types'
+import type { GrowthOverview, AcquisitionData, EconomyData } from '../data/types'
 import type { HeroCard, ScoreRow, GrowthInsight } from '../data/growth'
+
+const KIND_LABEL: Record<string, string> = {
+  starter: 'Starter grant', reward: 'Lesson rewards', earn: 'Earned in play', gift: 'Family gifts', spend: 'Spent in shop',
+}
 
 // Always-dark boardroom palette (independent of app theme).
 const C = {
@@ -13,6 +17,8 @@ const C = {
 
 interface Props {
   overview: GrowthOverview
+  acquisition: AcquisitionData | null
+  economy: EconomyData | null
   heroes: HeroCard[]
   score: ScoreRow[]
   insight: GrowthInsight
@@ -20,10 +26,15 @@ interface Props {
   onClose: () => void
 }
 
-export function Presentation({ overview: o, heroes, score, insight, who, onClose }: Props) {
+export function Presentation({ overview: o, acquisition: a, economy: e, heroes, score, insight, who, onClose }: Props) {
   const [i, setI] = useState(0)
   const stage = useRef<HTMLDivElement>(null)
-  const slides = [coverSlide, northStarSlide, numbersSlide, scorecardSlide, closingSlide]
+  const slides = [
+    coverSlide, northStarSlide, numbersSlide, scorecardSlide,
+    ...(a && a.funnel.length ? [funnelSlide] : []),
+    ...(e ? [economySlide] : []),
+    closingSlide,
+  ]
   const total = slides.length
 
   const go = (d: number) => setI(v => Math.min(total - 1, Math.max(0, v + d)))
@@ -64,6 +75,7 @@ export function Presentation({ overview: o, heroes, score, insight, who, onClose
       })
       tl.from('.pres-anim', { opacity: 0, y: 26, duration: 0.7, stagger: 0.07, ease: 'power3.out' }, 0)
         .from('.pres-pop', { opacity: 0, scale: 0.92, duration: 0.5, stagger: 0.05, ease: 'back.out(1.6)' }, 0.25)
+        .from('.pres-bar', { scaleX: 0, transformOrigin: 'left center', duration: 0.9, stagger: 0.07, ease: 'power3.out' }, 0.2)
     }, stage)
     return () => ctx.revert()
   }, [i])
@@ -87,7 +99,7 @@ export function Presentation({ overview: o, heroes, score, insight, who, onClose
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         justifyContent: 'center', padding: '0 clamp(40px, 9vw, 160px)',
       }}>
-        {slides[i]({ o, heroes, score, insight, who })}
+        {slides[i]({ o, a, e, heroes, score, insight, who })}
       </div>
 
       <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', pointerEvents: 'none' }}>
@@ -117,7 +129,10 @@ const navBtn = (disabled: boolean): React.CSSProperties => ({
   color: disabled ? C.faint : C.ink, display: 'grid', placeItems: 'center', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1,
 })
 
-interface SlideArgs { o: GrowthOverview; heroes: HeroCard[]; score: ScoreRow[]; insight: GrowthInsight; who: string }
+interface SlideArgs {
+  o: GrowthOverview; a: AcquisitionData | null; e: EconomyData | null
+  heroes: HeroCard[]; score: ScoreRow[]; insight: GrowthInsight; who: string
+}
 
 const kicker = (text: string): ReactNode => (
   <div className="pres-anim" style={{ fontSize: 13, letterSpacing: '.14em', color: C.acc2, marginBottom: 18 }}>{text.toUpperCase()}</div>
@@ -211,6 +226,74 @@ function scorecardSlide({ score }: SlideArgs) {
       </div>
       <div className="pres-anim" style={{ marginTop: 22, fontSize: 14, color: C.faint }}>
         Live engagement metrics scored today · revenue ratios activate with monetization.
+      </div>
+    </div>
+  )
+}
+
+function funnelSlide({ a }: SlideArgs) {
+  if (!a) return null
+  const top = a.funnel[0]?.count || 1
+  return (
+    <div>
+      {kicker('Activation funnel')}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 2.2vh, 22px)', maxWidth: 840 }}>
+        {a.funnel.map((s, idx) => {
+          const w = Math.max(9, Math.round((100 * s.count) / top))
+          const prev = idx === 0 ? s.count : a.funnel[idx - 1].count
+          const conv = idx === 0 ? 100 : prev > 0 ? Math.round((100 * s.count) / prev) : 0
+          return (
+            <div key={s.stage} className="pres-anim">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
+                <span style={{ fontSize: 16, color: C.dim }}>{s.stage}</span>
+                <span style={{ fontSize: 14, color: C.acc2 }}>{idx === 0 ? 'top of funnel' : `${conv}% of previous`}</span>
+              </div>
+              <div style={{ height: 40, borderRadius: 11, background: C.panel, overflow: 'hidden' }}>
+                <div className="pres-bar" style={{ width: `${w}%`, height: '100%', borderRadius: 11, background: 'linear-gradient(90deg,#818cf8,#a5b4fc)', display: 'flex', alignItems: 'center', paddingLeft: 16 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#0b1020' }}><span data-count={s.count} data-dec="0">0</span></span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function economySlide({ e }: SlideArgs) {
+  if (!e) return null
+  const max = Math.max(1, ...e.sources.map(s => s.amount))
+  const big: [string, number, string][] = [
+    ['Float held', e.float, ''], ['Minted', e.minted, ''], ['Spent', e.spent, ''],
+  ]
+  return (
+    <div>
+      {kicker('Diamond economy')}
+      <div style={{ display: 'flex', gap: 'clamp(24px, 5vw, 72px)', flexWrap: 'wrap', marginBottom: 28 }}>
+        {big.map(([lab, val]) => (
+          <div key={lab} className="pres-pop">
+            <div style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 700, lineHeight: 1 }}><span data-count={val} data-dec="0">0</span></div>
+            <div style={{ fontSize: 15, color: C.dim, marginTop: 6 }}>{lab}</div>
+          </div>
+        ))}
+        <div className="pres-pop">
+          <div style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 700, lineHeight: 1, color: e.coverage != null && e.coverage >= 50 ? C.ok : C.warn }}>
+            <span data-count={e.coverage ?? 0} data-dec="0" data-suffix="%">0</span>
+          </div>
+          <div style={{ fontSize: 15, color: C.dim, marginTop: 6 }}>Sink coverage</div>
+        </div>
+      </div>
+      <div style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {e.sources.map(s => (
+          <div key={s.kind} className="pres-anim" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ width: 140, fontSize: 14, color: C.dim }}>{KIND_LABEL[s.kind] ?? s.kind}</span>
+            <div style={{ flex: 1, height: 18, borderRadius: 6, background: C.panel, overflow: 'hidden' }}>
+              <div className="pres-bar" style={{ width: `${Math.max(4, Math.round((100 * s.amount) / max))}%`, height: '100%', borderRadius: 6, background: s.kind === 'spend' ? C.mag : C.acc }} />
+            </div>
+            <span style={{ width: 70, textAlign: 'right', fontSize: 14, color: C.ink }}>{s.amount.toLocaleString()}</span>
+          </div>
+        ))}
       </div>
     </div>
   )

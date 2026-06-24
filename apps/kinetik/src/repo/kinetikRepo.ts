@@ -14,7 +14,7 @@ import type { Circle, Person, Routine, KEvent, Moment, CircleData } from '@data/
 // ---- row types (as stored) ----
 // `circles` is the existing ArgantaLab table; accent was added by 01_schema.sql
 interface CircleRow { id: string; name: string; accent: string | null; kind: string | null }
-interface PersonRow { id: string; circle_id: string; name: string; color: string; role: string }
+interface PersonRow { id: string; circle_id: string; name: string; color: string; role: string; link_id?: string | null; link_kind?: string | null }
 interface RoutineRow {
   id: string; circle_id: string; title: string; who: string[] | null
   responsible: string | null; day: number; start_time: string; end_time: string; duration_min: number | null
@@ -50,6 +50,7 @@ const mapCircle = (r: CircleRow, memberIds: string[]): Circle => {
 }
 const mapPerson = (r: PersonRow): Person => ({
   id: r.id, circleId: r.circle_id, name: r.name, color: r.color, role: (r.role as Person['role']) || 'member',
+  linkId: r.link_id ?? null, linkKind: (r.link_kind as Person['linkKind']) ?? null,
 })
 const mapRoutine = (r: RoutineRow): Routine => ({
   id: r.id, circleId: r.circle_id, title: r.title, who: r.who ?? [],
@@ -122,6 +123,112 @@ export async function insertRoutine(r: Omit<Routine, 'id' | 'energy'>): Promise<
 export async function setHearts(momentId: string, hearts: number): Promise<void> {
   const { error } = await supabase.from('kinetik_moments').update({ hearts }).eq('id', momentId)
   if (error) throw error
+}
+
+// ── Real ArgantaLab family (source of truth) ──────────────────
+// The Me page reads the REAL family from circles + circle_members +
+// child_profiles + per-kid world rings, NOT the legacy kinetik_people seed.
+// All of these are owner-RLS / security-definer, so they only return data
+// when the circle owner is signed in.
+
+export interface World { key: string; name: string; short: string; color: string }
+const WORLD_SHORT: Record<string, string> = { NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life' }
+export async function fetchWorlds(): Promise<World[]> {
+  const { data, error } = await supabase.from('worlds').select('key, name, color, order_idx').order('order_idx')
+  if (error) throw error
+  return ((data ?? []) as Array<Record<string, string>>).map(w => ({
+    key: w.key, name: w.name, short: WORLD_SHORT[w.key] ?? w.name, color: w.color || '#94A3B8',
+  }))
+}
+
+export interface SocialStats { circles: number; connections: number; friends: number }
+export async function fetchSocialStats(): Promise<SocialStats> {
+  const { data, error } = await supabase.rpc('social_stats')
+  if (error) throw error
+  const d = (data ?? {}) as Record<string, number>
+  return { circles: d.circles ?? 0, connections: d.connections ?? 0, friends: d.friends ?? 0 }
+}
+
+export interface FamilyMember {
+  id: string
+  name: string
+  kind: 'owner' | 'parent' | 'child'
+  role: string
+  photoUrl: string | null
+  color: string | null
+  emoji: string | null
+  age: number | null
+  username: string | null
+}
+
+function ageFromDob(dob?: string | null): number | null {
+  if (!dob) return null
+  const d = new Date(dob)
+  if (isNaN(d.getTime())) return null
+  const now = new Date()
+  let a = now.getFullYear() - d.getFullYear()
+  const md = now.getMonth() - d.getMonth()
+  if (md < 0 || (md === 0 && now.getDate() < d.getDate())) a--
+  return a >= 0 && a < 130 ? a : null
+}
+
+/** The real roster of a circle: owner + adult co-leaders + kids. Kids are
+ *  `profiles` rows with role='kid' (guardian-readable), with `child_profiles`
+ *  as a fallback for any not-yet-upgraded kid. Owner-only by RLS. */
+export async function fetchFamily(circleId: string, me: { id: string; name: string; photoUrl: string | null } | null): Promise<FamilyMember[]> {
+  const [{ data: cm }, { data: circ }] = await Promise.all([
+    supabase.from('circle_members').select('member_id, role').eq('circle_id', circleId),
+    supabase.from('circles').select('owner_id').eq('id', circleId).maybeSingle(),
+  ])
+  const ownerId = (circ as { owner_id?: string } | null)?.owner_id ?? me?.id ?? null
+  const ids = Array.from(new Set([...(cm ?? []).map((m: { member_id: string }) => m.member_id), ownerId].filter(Boolean))) as string[]
+  if (!ids.length) return []
+
+  const [{ data: profs }, { data: kidsRows }] = await Promise.all([
+    supabase.from('profiles').select('id, display_name, photo_url, role, username, dob').in('id', ids),
+    supabase.from('child_profiles').select('id, display_name, color, emoji, age, username').in('id', ids),
+  ])
+  const prof = new Map((profs ?? []).map((p: Record<string, unknown>) => [p.id as string, p]))
+  const kid = new Map((kidsRows ?? []).map((k: Record<string, unknown>) => [k.id as string, k]))
+  const roleOf = new Map((cm ?? []).map((m: { member_id: string; role: string }) => [m.member_id, m.role]))
+
+  const out: FamilyMember[] = []
+  for (const id of ids) {
+    const isOwner = id === ownerId
+    const p = prof.get(id)
+    const k = kid.get(id)
+    const isKid = !isOwner && (p?.role === 'kid' || !!k)
+    if (isKid) {
+      out.push({
+        id, kind: 'child', role: (roleOf.get(id) as string) || 'member',
+        name: (p?.display_name as string) || (k?.display_name as string) || 'Kid',
+        photoUrl: (p?.photo_url as string) || null,
+        color: (k?.color as string) || null,
+        emoji: (k?.emoji as string) || null,
+        age: ((k?.age as number) ?? null) ?? ageFromDob(p?.dob as string),
+        username: (p?.username as string) || (k?.username as string) || null,
+      })
+    } else {
+      out.push({
+        id, kind: isOwner ? 'owner' : 'parent', role: isOwner ? 'owner' : ((roleOf.get(id) as string) || 'coleader'),
+        name: isOwner ? (me?.name || (p?.display_name as string) || 'You') : ((p?.display_name as string) || 'Member'),
+        photoUrl: isOwner ? (me?.photoUrl || (p?.photo_url as string) || null) : ((p?.photo_url as string) || null),
+        color: null, emoji: null, age: null, username: null,
+      })
+    }
+  }
+  const rank: Record<string, number> = { owner: 0, parent: 1, child: 2 }
+  out.sort((x, y) => rank[x.kind] - rank[y.kind])
+  return out
+}
+
+/** Per-kid world rings → { worldKey: pct }. Guardian-only (security definer). */
+export async function fetchKidRings(kidId: string): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('kid_world_rings', { p_kid: kidId })
+  if (error) return {}
+  const out: Record<string, number> = {}
+  for (const r of (data ?? []) as Array<{ world: string; pct: number }>) out[r.world] = Number(r.pct) || 0
+  return out
 }
 
 // ── Apps (published by CircleHQ into the shared `hq_app` table) ──
