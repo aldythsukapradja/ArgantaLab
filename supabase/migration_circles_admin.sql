@@ -154,5 +154,38 @@ begin
 end; $$;
 grant execute on function public.invite_to_circle(uuid, text, text, boolean) to authenticated;
 
+-- ── Reward / adjust a kid's diamonds (give from budget, or take) ──
+-- delta > 0 : GIVE — debits the guardian's budget, credits the kid (ledgered).
+-- delta < 0 : TAKE — removes from the kid, CLAMPED at 0 (never negative; burned).
+create or replace function public.adjust_kid_diamonds(p_kid uuid, p_delta int, p_reason text default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); from_bal int; kid_bal int; applied int;
+begin
+  if uid is null then raise exception 'not authenticated'; end if;
+  if not public.is_guardian_of(p_kid) then raise exception 'not your child'; end if;
+  if coalesce(p_delta, 0) = 0 then raise exception 'pick a non-zero amount'; end if;
+
+  if p_delta > 0 then
+    select coalesce(diamonds, 0) into from_bal from public.profiles where id = uid for update;
+    if from_bal < p_delta then raise exception 'insufficient balance'; end if;
+    update public.profiles set diamonds = diamonds - p_delta where id = uid;
+    update public.profiles set diamonds = coalesce(diamonds, 0) + p_delta where id = p_kid;
+    insert into public.diamond_ledger (from_user, to_user, amount, kind, reason)
+      values (uid, p_kid, p_delta, 'reward', p_reason);
+  else
+    select coalesce(diamonds, 0) into kid_bal from public.profiles where id = p_kid for update;
+    applied := least(-p_delta, kid_bal);            -- clamp: never below zero
+    if applied > 0 then
+      update public.profiles set diamonds = diamonds - applied where id = p_kid;
+      insert into public.diamond_ledger (from_user, to_user, amount, kind, reason)
+        values (p_kid, null, applied, 'deduct', p_reason);
+    end if;
+  end if;
+  return jsonb_build_object('ok', true,
+    'kidBalance',  (select coalesce(diamonds, 0) from public.profiles where id = p_kid),
+    'fromBalance', (select coalesce(diamonds, 0) from public.profiles where id = uid));
+end; $$;
+grant execute on function public.adjust_kid_diamonds(uuid, int, text) to authenticated;
+
 commit;
 -- ============================================================
