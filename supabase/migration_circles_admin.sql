@@ -187,5 +187,21 @@ begin
 end; $$;
 grant execute on function public.adjust_kid_diamonds(uuid, int, text) to authenticated;
 
+-- ── Co-guardian reads: make telemetry/ledger RLS guardianship-aware ──
+-- (Previously these checked only the single guardian_id mirror, so a second
+--  guardian couldn't read a kid's events/rewards directly. is_guardian_of
+--  covers the M:N graph.)
+drop policy if exists learn_event_select on public.learn_event;
+create policy learn_event_select on public.learn_event for select
+  using (auth.uid() = user_id or public.is_guardian_of(user_id));
+
+drop policy if exists daily_summary_select on public.daily_summary;
+create policy daily_summary_select on public.daily_summary for select
+  using (auth.uid() = user_id or public.is_guardian_of(user_id));
+
+drop policy if exists diamond_ledger_select on public.diamond_ledger;
+create policy diamond_ledger_select on public.diamond_ledger for select
+  using (auth.uid() = to_user or auth.uid() = from_user or public.is_guardian_of(to_user));
+
 commit;
 -- ============================================================

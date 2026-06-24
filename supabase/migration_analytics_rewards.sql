@@ -196,7 +196,11 @@ returns jsonb language plpgsql stable security definer set search_path = public 
 declare uid uuid := auth.uid(); r jsonb;
 begin
   if uid is null then raise exception 'not authenticated'; end if;
-  if not (p_kid = uid or exists(select 1 from public.profiles where id=p_kid and guardian_id=uid)) then
+  -- Authorize via the M:N guardianships graph (is_guardian_of), NOT just the
+  -- single guardian_id mirror — so EVERY co-guardian sees the kid, not only the
+  -- primary one. (is_guardian_of is defined in migration_spine.sql; resolved at
+  -- call time.) Fixes a co-parent seeing empty stats for a kid that has data.
+  if not (p_kid = uid or public.is_guardian_of(p_kid)) then
     raise exception 'not authorized';
   end if;
 
