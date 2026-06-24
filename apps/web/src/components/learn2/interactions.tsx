@@ -498,7 +498,11 @@ const REGISTRY: Record<InteractionKey, Renderer> = {
   map: Mcq,
   multi: MultiSelect,
   type: TypeAnswer,
-  speed: SpeedRecall,
+  // 'speed' is a rapid-fire drill (payload.questions[]). Single-answer items
+  // tagged 'speed' (payload.answer) fall back to the typed-answer renderer so
+  // they never crash on a missing questions[] array.
+  speed: (props) => Array.isArray((props.item.payload as { questions?: unknown[] }).questions)
+    ? <SpeedRecall {...props} /> : <TypeAnswer {...props} />,
   bank: WordBank,
   code: (props) => <WordBank {...props} vertical />,
   cloze: Cloze,

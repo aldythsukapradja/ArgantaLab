@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { World, JourneyNode } from '@/data/learn'
 import type { Item } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
@@ -8,6 +8,23 @@ import { logLearnEvent } from '@lib/analytics'
 import { bumpQuest } from '@lib/quests'
 import { renderItem } from './interactions'
 import Buddy from '@components/avatar/Buddy'
+
+// Safety net: a single malformed item can never blank the whole app. If a
+// renderer throws, show a gentle "skip" instead of a white screen.
+class ItemErrorBoundary extends Component<{ children: ReactNode; onSkip: () => void }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  componentDidCatch(err: unknown) { console.warn('[item] render failed, skipping:', err) }
+  render() {
+    if (this.state.failed) return (
+      <div className="le-empty" style={{ textAlign: 'center' }}>
+        <p>Oops — this one hiccuped. Let's move on!</p>
+        <button className="le-check" onClick={this.props.onSkip}>Next →</button>
+      </div>
+    )
+    return this.props.children
+  }
+}
 
 const CHEER = ['Awesome!', 'You got it!', 'Brilliant!', 'Nice work!', 'Superstar!']
 const NUDGE = ['Almost! Keep going.', 'Good try — you\'ll get the next one!', 'No worries, learning is trying!']
@@ -124,9 +141,11 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
 
       <div className="le-stage">
         <div className="le-prompt">{item!.prompt}</div>
-        {/* key remounts the renderer per item so internal state resets */}
+        {/* key remounts the renderer (and its error boundary) per item */}
         <div key={item!.id + idx} className="le-render">
-          {renderItem(item!, handleResult)}
+          <ItemErrorBoundary onSkip={() => { if (!answered) handleResult(false); next() }}>
+            {renderItem(item!, handleResult)}
+          </ItemErrorBoundary>
         </div>
       </div>
 
