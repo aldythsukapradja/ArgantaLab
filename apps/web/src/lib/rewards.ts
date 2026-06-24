@@ -38,6 +38,19 @@ export async function grantDiamonds(kidId: string, amount: number, reason: strin
   return data as { ok: boolean; fromBalance: number; toBalance: number }
 }
 
+/** Give (delta>0, from your budget) or take (delta<0, clamped at 0) a kid's diamonds. */
+export async function adjustKidDiamonds(kidId: string, delta: number, reason: string) {
+  const { data, error } = await supabase.rpc('adjust_kid_diamonds', { p_kid: kidId, p_delta: delta, p_reason: reason || null })
+  if (error) {
+    const m = error.message || ''
+    if (m.includes('insufficient')) throw new Error("You don't have enough diamonds for that.")
+    if (m.includes('not your child')) throw new Error('You can only reward your own children.')
+    if (m.includes('non-zero')) throw new Error('Pick an amount above zero.')
+    throw new Error('Could not update diamonds. Try again.')
+  }
+  return data as { ok: boolean; kidBalance: number; fromBalance: number }
+}
+
 /** Recent rewards this grown-up has SENT (for the history feed). */
 export async function recentRewardsSent(limit = 10): Promise<(RewardRow & { to: string })[]> {
   if (!cloudEnabled) return []

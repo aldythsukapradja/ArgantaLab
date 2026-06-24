@@ -8,7 +8,7 @@ import {
 } from '@lib/parentDash'
 import type { CloudProfile } from '@lib/cloudAuth'
 import { isOnline } from '@lib/cloudAuth'
-import { getMyDiamonds, grantDiamonds } from '@lib/rewards'
+import { getMyDiamonds, grantDiamonds, adjustKidDiamonds } from '@lib/rewards'
 import { cloudEnabled } from '@lib/supabase'
 import { nivoTheme } from '@lib/nivoTheme'
 import { useCountUp, fmt } from '@lib/useCountUp'
@@ -192,17 +192,32 @@ export default function FamilyPulse() {
             <span className="par-stage-sub">{fmt(derived.totalAnswers)} questions answered all-time</span>
           </div>
 
-          {/* insight cards — always shown */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
-            <div style={{ background: 'color-mix(in srgb, #3DE08A 14%, transparent)', borderRadius: 12, padding: '10px 14px' }}>
+          {/* insight cards — always shown, with embedded reward flow */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <span style={{ fontSize: 12, background: 'var(--pp-tint, rgba(127,127,140,.12))', borderRadius: 999, padding: '5px 12px' }}>💎 your budget · {budget.toLocaleString()}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 10 }}>
+            <div style={{ background: 'color-mix(in srgb, #3DE08A 14%, transparent)', borderRadius: 14, padding: '12px 14px' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#1f9d63' }}>👍 Going well</div>
-              <div style={{ fontSize: 13 }}>{hasData && topWorld ? `${SUBJECT[topWorld]} is their strongest area.` : 'Play a little to unlock strengths.'}</div>
+              <div style={{ fontSize: 13, marginBottom: 10 }}>{hasData && topWorld ? `${SUBJECT[topWorld]} is their strongest area.` : 'Play a little to unlock strengths.'}</div>
+              <RewardControl kidId={kid.id} kidName={kid.name} budget={budget} mode="give" accent="#1f9d63"
+                onDone={(fromBal) => { setBudget(fromBal); useAppStore.setState({ diamonds: fromBal }); reloadDash() }} />
             </div>
-            <div style={{ background: 'color-mix(in srgb, #FFA23A 16%, transparent)', borderRadius: 12, padding: '10px 14px' }}>
+            <div style={{ background: 'color-mix(in srgb, #FFA23A 16%, transparent)', borderRadius: 14, padding: '12px 14px' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#c9760f' }}>🎯 Where to nudge</div>
-              <div style={{ fontSize: 13 }}>{hasData && topGap ? `${topGap.skill ? topGap.skill.label : 'Deeper thinking'} — ${GAP_META[topGap.reason].tip}` : 'Suggestions appear after the first session.'}</div>
+              <div style={{ fontSize: 13, marginBottom: 10 }}>{hasData && topGap ? `${topGap.skill ? topGap.skill.label : 'Deeper thinking'} — ${GAP_META[topGap.reason].tip}` : 'Suggestions appear after the first session.'}</div>
+              <RewardControl kidId={kid.id} kidName={kid.name} budget={budget} mode="givetake" accent="#c9760f"
+                onDone={(fromBal) => { setBudget(fromBal); useAppStore.setState({ diamonds: fromBal }); reloadDash() }} />
             </div>
           </div>
+          {view.recentRewards.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 11, color: 'var(--t2)', alignItems: 'center' }}>
+              <span>🕘 Recent:</span>
+              {view.recentRewards.slice(0, 4).map((r, i) => (
+                <span key={i}>{r.kind === 'deduct' ? '−' : '+'}{r.amount.toLocaleString()} · {r.reason || (r.kind === 'starter' ? 'Starter' : r.kind === 'deduct' ? 'Adjustment' : 'Reward')} · {timeAgo(r.at)}</span>
+              ))}
+            </div>
+          )}
 
           {/* analytics — ALL charts always rendered (empty frame until there's data) */}
           <div className="section-label">Skills analytics {!hasData && <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 12 }}>· empty until {kid.name} plays</span>}</div>
@@ -279,9 +294,6 @@ export default function FamilyPulse() {
             })}
           </div>
 
-          <RewardPanel kidId={kid.id} kidName={kid.name} kidDiamonds={kid.diamonds} budget={budget}
-            recent={view.recentRewards}
-            onGranted={(fromBal) => { setBudget(fromBal); useAppStore.setState({ diamonds: fromBal }); reloadDash() }} />
         </>
       )}
 
@@ -290,68 +302,51 @@ export default function FamilyPulse() {
   )
 }
 
-const AMOUNTS = [50, 100, 500, 1000]
-function RewardPanel({ kidId, kidName, kidDiamonds, budget, recent, onGranted }: {
-  kidId: string; kidName: string; kidDiamonds: number; budget: number
-  recent: { amount: number; reason: string | null; kind: string; at: string }[]
-  onGranted: (fromBalance: number) => void
+// Compact reward control embedded in an insight card: 50 · 100 · Custom pills,
+// then Give (and Take for the "where to nudge" card). Take is clamped at 0.
+function RewardControl({ kidId, kidName, budget, mode, accent, onDone }: {
+  kidId: string; kidName: string; budget: number; mode: 'give' | 'givetake'; accent: string
+  onDone: (fromBalance: number, kidBalance: number) => void
 }) {
+  const addToast = useAppStore(s => s.addToast)
   const [amount, setAmount] = useState(100)
-  const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [okMsg, setOkMsg] = useState<string | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
 
-  const send = async () => {
-    setErr(null); setOkMsg(null)
-    if (amount <= 0) { setErr('Pick an amount above zero.'); return }
-    if (amount > budget) { setErr("That's more than your diamond budget."); return }
+  const apply = async (sign: 1 | -1) => {
+    if (amount <= 0) { addToast('Pick an amount above zero', '⚠️'); return }
     setBusy(true)
     try {
-      const res = await grantDiamonds(kidId, amount, reason.trim())
-      const r = btnRef.current?.getBoundingClientRect()
-      confetti({ particleCount: 90, spread: 70, startVelocity: 38,
-        origin: r ? { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight } : { x: 0.5, y: 0.6 },
-        colors: ['#FFC24B', '#34E5FF', '#4D9FFF', '#FF5EA0', '#3DE08A'] })
-      setOkMsg(`Sent ${amount.toLocaleString()} 💎 to ${kidName}!`); setReason('')
-      onGranted(res.fromBalance)
-    } catch (e) { setErr(e instanceof Error ? e.message : 'Could not send diamonds.') }
+      const res = await adjustKidDiamonds(kidId, sign * amount, sign > 0 ? 'reward — effort' : 'adjustment')
+      if (sign > 0) {
+        const r = btnRef.current?.getBoundingClientRect()
+        confetti({ particleCount: 80, spread: 65, startVelocity: 36,
+          origin: r ? { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight } : { x: 0.5, y: 0.6 },
+          colors: ['#FFC24B', '#34E5FF', '#4D9FFF', '#FF5EA0', '#3DE08A'] })
+      }
+      addToast(sign > 0 ? `Gave ${amount} 💎 to ${kidName}` : `Took ${amount} 💎 from ${kidName}`, sign > 0 ? '🎁' : '➖')
+      onDone(res.fromBalance, res.kidBalance)
+    } catch (e) { addToast(e instanceof Error ? e.message : 'Could not update', '⚠️') }
     finally { setBusy(false) }
   }
 
+  const pill = (v: number) => (
+    <button onClick={() => setAmount(v)} style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 999, cursor: 'pointer',
+      border: `1.5px solid ${amount === v ? accent : 'var(--border)'}`, background: amount === v ? `${accent}1f` : 'var(--card)', color: amount === v ? accent : 'inherit' }}>{v}</button>
+  )
+  const actBtn = (label: string, sign: 1 | -1, danger = false) => (
+    <button ref={sign > 0 ? btnRef : undefined} onClick={() => apply(sign)} disabled={busy}
+      style={{ fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 10, cursor: 'pointer', color: '#fff', border: 'none',
+        background: danger ? '#ef4444' : accent, opacity: busy ? 0.6 : 1 }}>{label}</button>
+  )
+
   return (
-    <div className="par-reward">
-      <div className="par-reward-h">
-        <div>
-          <div className="section-label" style={{ margin: 0 }}>Reward {kidName}</div>
-          <small className="par-reward-sub">Send diamonds for real-world wins — chores, kindness, effort.</small>
-        </div>
-        <div className="par-reward-budget"><b>💎 {budget.toLocaleString()}</b><span>your budget</span></div>
-      </div>
-      <div className="par-reward-amounts">
-        {AMOUNTS.map(a => <button key={a} className={`par-amt${amount === a ? ' on' : ''}`} onClick={() => setAmount(a)}>{a.toLocaleString()}</button>)}
-        <input className="par-amt-input" type="number" min={1} value={amount} onChange={e => setAmount(Math.max(0, Math.floor(Number(e.target.value) || 0)))} aria-label="Custom amount" />
-      </div>
-      <input className="par-reason" placeholder="What's it for? (e.g. tidied your room) — optional" value={reason} maxLength={80} onChange={e => setReason(e.target.value)} />
-      <div className="par-reward-foot">
-        <span className="par-reward-after">{kidName} has 💎 {kidDiamonds.toLocaleString()} → 💎 {(kidDiamonds + amount).toLocaleString()}</span>
-        <button ref={btnRef} className="par-send" onClick={send} disabled={busy || amount <= 0}>{busy ? 'Sending…' : `Send ${amount.toLocaleString()} 💎`}</button>
-      </div>
-      {err && <div className="par-reward-msg err">{err}</div>}
-      {okMsg && <div className="par-reward-msg ok">{okMsg}</div>}
-      {recent.length > 0 && (
-        <div className="par-reward-hist">
-          <div className="par-hist-label">Recent rewards</div>
-          {recent.slice(0, 5).map((r, i) => (
-            <div key={i} className="par-hist-row">
-              <span className="par-hist-amt">+{r.amount.toLocaleString()} 💎</span>
-              <span className="par-hist-reason">{r.reason || (r.kind === 'starter' ? 'Starter pack' : 'Reward')}</span>
-              <span className="par-hist-when">{timeAgo(r.at)}</span>
-            </div>
-          ))}
-        </div>
-      )}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      {pill(50)}{pill(100)}
+      <input type="number" min={1} value={amount} onChange={e => setAmount(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+        aria-label="Custom amount" style={{ width: 70, fontSize: 12, padding: '5px 8px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--card)', textAlign: 'center' }} />
+      {actBtn(mode === 'give' ? '🎁 Give' : '➕ Give', 1)}
+      {mode === 'givetake' && actBtn('➖ Take', -1, true)}
     </div>
   )
 }
