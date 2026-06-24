@@ -31,11 +31,10 @@ import MyGameStore from '@/pages/MyGameStore'
 import Avatar from '@/pages/Avatar'
 import Fame from '@/pages/Fame'
 import Profile from '@/pages/Profile'
-import Parent from '@/pages/Parent'
+import FamilyPulse from '@/pages/FamilyPulse'
 import Quests from '@/pages/Quests'
 import LearnHub from '@/pages/LearnHub'
 import World from '@/pages/World'
-import AdminStudio from '@/pages/admin/AdminStudio'
 import PlayPage from '@/pages/PlayPage'
 import '@/styles/globals.css'
 import '@/styles/v2.css'
@@ -255,9 +254,9 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'avatar') return <Avatar />
   if (tab === 'fame') return <Fame />
   if (tab === 'profile') return <Profile />
-  if (tab === 'parent') return <Parent />
+  if (tab === 'parent') return <FamilyPulse />
   if (tab === 'quests') return <Quests />
-  if (tab === 'admin') return <AdminStudio />
+  // 'admin' (Content Studio) relocated to Circle HQ — fall through to home.
   return <PlayHome />
 }
 

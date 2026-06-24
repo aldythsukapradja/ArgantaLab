@@ -3,7 +3,7 @@ import { ResponsiveCalendar } from '@nivo/calendar'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveLine } from '@nivo/line'
 import type { NivoTheme } from '@lib/nivoTheme'
-import { BLOOM_META, COMPETENCY_META, type Bloom, type Competency } from '@lib/taxonomy'
+import { BLOOM_META, BLOOM_ORDER, COMPETENCY_META, type Bloom, type Competency } from '@lib/taxonomy'
 import type { DailyRow } from '@lib/parentDash'
 import { WORLDS } from '@/data/learn'
 
@@ -14,7 +14,9 @@ const accent = '#4D9FFF', green = '#3DE08A'
 
 // ── Competency radar (Cambridge Life Competencies) ──────────────
 export function CompetencyRadar({ data, theme }: { data: { competency: Competency; pct: number }[]; theme: NivoTheme }) {
-  const rows = data.map(d => ({ axis: COMPETENCY_META[d.competency].short, score: d.pct }))
+  // Empty-safe: always render the full set of axes (zeros when no data).
+  const src = data.length ? data : (Object.keys(COMPETENCY_META) as Competency[]).map(c => ({ competency: c, pct: 0 }))
+  const rows = src.map(d => ({ axis: COMPETENCY_META[d.competency].short, score: d.pct }))
   return (
     <ResponsiveRadar
       data={rows}
@@ -44,7 +46,8 @@ export function CompetencyRadar({ data, theme }: { data: { competency: Competenc
 
 // ── Bloom depth bars (how deep the thinking goes) ───────────────
 export function BloomBar({ data, theme }: { data: { bloom: Bloom; n: number; pct: number }[]; theme: NivoTheme }) {
-  const rows = data.map(d => ({ level: BLOOM_META[d.bloom].label, pct: d.pct, n: d.n, color: BLOOM_META[d.bloom].color }))
+  const src = data.length ? data : BLOOM_ORDER.map(b => ({ bloom: b, n: 0, pct: 0 }))
+  const rows = src.map(d => ({ level: BLOOM_META[d.bloom].label, pct: d.pct, n: d.n, color: BLOOM_META[d.bloom].color }))
   return (
     <ResponsiveBar
       data={rows}
@@ -74,9 +77,9 @@ export function BloomBar({ data, theme }: { data: { bloom: Bloom; n: number; pct
 
 // ── Interest map (where the time goes, last 30 days) ────────────
 export function InterestBar({ interest, theme }: { interest: Record<string, number>; theme: NivoTheme }) {
+  // Always show every world (zeros when no data) so the frame is never blank.
   const rows = WORLDS
     .map(w => ({ world: w.name, count: interest[w.key] ?? 0, color: w.color }))
-    .filter(r => r.count > 0)
     .sort((a, b) => b.count - a.count)
   return (
     <ResponsiveBar
@@ -128,7 +131,11 @@ export function ActivityCalendar({ daily, theme }: { daily: DailyRow[]; theme: N
 
 // ── Trajectory line (items + correct per active day) ────────────
 export function TrajectoryLine({ daily, theme }: { daily: DailyRow[]; theme: NivoTheme }) {
-  const active = daily.filter(d => d.items > 0).slice(-28)
+  const real = daily.filter(d => d.items > 0).slice(-28)
+  // Empty-safe: a flat last-7-days baseline so the axes/line frame always shows.
+  const active = real.length ? real : Array.from({ length: 7 }, (_, i) => ({
+    day: new Date(Date.now() - (6 - i) * 864e5).toISOString().slice(0, 10), items: 0, correct: 0, minutes: 0, xp: 0,
+  }))
   const series = [
     { id: 'Attempted', color: accent, data: active.map(d => ({ x: d.day.slice(5), y: d.items })) },
     { id: 'Correct', color: green, data: active.map(d => ({ x: d.day.slice(5), y: d.correct })) },

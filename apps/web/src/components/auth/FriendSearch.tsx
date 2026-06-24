@@ -60,22 +60,24 @@ export default function FriendSearch({ onClose, onChanged }: { onClose: () => vo
         </div>
 
         <div style={{ padding: 12 }}>
-          <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search grown-ups by name…"
+          <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search by name…"
             style={{ width: '100%', padding: '10px 12px', borderRadius: 12, border: '1px solid var(--border)', fontSize: 14, background: 'var(--card)' }} />
         </div>
 
         <div style={{ overflowY: 'auto', padding: '0 12px 12px', flex: 1 }}>
           {loading ? (
-            <p style={{ textAlign: 'center', color: 'var(--t2)', fontSize: 13, padding: '18px 0' }}>Searching…</p>
+            <p style={{ textAlign: 'center', color: 'var(--t2)', fontSize: 13, padding: '18px 0' }}>Loading…</p>
           ) : users.length === 0 ? (
-            <p style={{ textAlign: 'center', color: 'var(--t2)', fontSize: 13, padding: '18px 0' }}>No grown-ups found. Try the exact code below.</p>
+            <p style={{ textAlign: 'center', color: 'var(--t2)', fontSize: 13, padding: '18px 0' }}>No one matches “{q}”.</p>
           ) : users.map(u => (
             <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ width: 36, height: 36, borderRadius: '50%', flex: '0 0 auto', background: '#6366f1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }}>
+              <span style={{ width: 36, height: 36, borderRadius: '50%', flex: '0 0 auto', background: u.role === 'kid' ? '#ec4899' : '#6366f1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }}>
                 {u.photo_url ? <img src={u.photo_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : (u.display_name[0] ?? '?').toUpperCase()}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <b style={{ fontSize: 14, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.display_name}</b>
+                <b style={{ fontSize: 14, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {u.display_name} <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--t2)' }}>{u.role === 'kid' ? 'kid' : 'grown-up'}</span>
+                </b>
                 <small style={{ color: 'var(--t2)', fontSize: 11 }}>code {u.friend_code}</small>
               </div>
               {u.rel === 'friend' ? (
@@ -90,10 +92,6 @@ export default function FriendSearch({ onClose, onChanged }: { onClose: () => vo
           {more && !loading && (
             <button onClick={loadMore} style={{ width: '100%', marginTop: 10, padding: '9px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Load more</button>
           )}
-        </div>
-
-        <div style={{ padding: 12, borderTop: '1px solid var(--border)' }}>
-          <button onClick={addByCode} style={{ width: '100%', padding: '10px', borderRadius: 12, border: '1px dashed var(--border)', background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🔑 Add by exact code (incl. kids)</button>
         </div>
       </div>
     </div>, document.body,
