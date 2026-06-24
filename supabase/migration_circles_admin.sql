@@ -17,6 +17,32 @@ begin;
 -- migrate any legacy 'admin' rows to the new 'coleader' name
 update public.circle_members set role = 'coleader' where role = 'admin';
 
+-- ── Backfill: every circle's OWNER must be a member row (role owner) ──
+-- so the owner appears in the members list / roster like everyone else.
+insert into public.circle_members (circle_id, member_id, member_kind, role)
+  select id, owner_id, 'profile', 'owner' from public.circles where owner_id is not null
+  on conflict (circle_id, member_id) do update set role = 'owner';
+
+-- ── circle_roster: include the owner even if a membership row is missing ──
+create or replace function public.circle_roster(p_circle uuid)
+returns table(id uuid, display_name text, role text, photo_url text, is_kid boolean, last_seen timestamptz)
+language sql stable security definer set search_path = public as $$
+  with roster as (
+    select member_id as uid, role from public.circle_members where circle_id = p_circle
+    union
+    select owner_id, 'owner' from public.circles where id = p_circle and owner_id is not null
+  ),
+  best as (
+    select uid, case when bool_or(role = 'owner') then 'owner' else min(role) end as role
+    from roster group by uid
+  )
+  select p.id, p.display_name, b.role, p.photo_url, (p.role = 'kid'), p.last_seen
+  from best b join public.profiles p on p.id = b.uid
+  where public.is_member(p_circle)
+  order by (b.role = 'owner') desc, (p.role = 'kid'), p.display_name;
+$$;
+grant execute on function public.circle_roster(uuid) to authenticated;
+
 -- ── Permission helpers (supersede earlier definitions) ──────
 create or replace function public.is_circle_owner(p_circle uuid)
 returns boolean language sql stable security definer set search_path = public as $$
