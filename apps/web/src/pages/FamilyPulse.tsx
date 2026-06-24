@@ -239,7 +239,7 @@ export default function FamilyPulse() {
               <div className="pc-box pc-box-interest"><InterestBar interest={view.interest} theme={nv} /></div>
             </div>
             <div className="pc-card pc-wide">
-              <div className="pc-h"><b>Daily rhythm</b><small>Practice consistency · last 4 months</small></div>
+              <div className="pc-h"><b>Daily rhythm</b><small>Practice consistency · this year</small></div>
               <div className="pc-box pc-box-cal"><ActivityCalendar daily={view.daily} theme={nv} /></div>
             </div>
           </div>

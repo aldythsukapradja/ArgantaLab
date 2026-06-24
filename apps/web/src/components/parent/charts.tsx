@@ -106,47 +106,57 @@ export function InterestBar({ interest, theme }: { interest: Record<string, numb
   )
 }
 
-// ── Activity calendar — custom heatmap (clean day + month labels) ───
+// ── Activity calendar — custom full-year heatmap that fills the card ───
 const DOW = ['', 'Mon', '', 'Wed', '', 'Fri', '']
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 export function ActivityCalendar({ daily }: { daily: DailyRow[]; theme?: NivoTheme }) {
   const byDay = new Map(daily.map(d => [d.day, d.items]))
   const max = Math.max(1, ...daily.map(d => d.items))
-  const WEEKS = 18
+  const WEEKS = 53                                   // a full year, GitHub-style
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  // walk back to the Sunday that starts the window
   const cur = new Date(today); cur.setDate(cur.getDate() - (WEEKS * 7 - 1) - cur.getDay())
-  const cols: { key: string; n: number; firstOfMonth: boolean; month: number }[][] = []
+  const cols: { label: string; days: { key: string; n: number }[] }[] = []
+  let prevMonth = -1
   for (let w = 0; w < WEEKS; w++) {
-    const col: { key: string; n: number; firstOfMonth: boolean; month: number }[] = []
+    const days: { key: string; n: number }[] = []
+    let label = ''
     for (let d = 0; d < 7; d++) {
-      const key = cur.toISOString().slice(0, 10)
-      col.push({ key, n: byDay.get(key) ?? 0, firstOfMonth: cur.getDate() <= 7, month: cur.getMonth() })
+      const m = cur.getMonth()
+      if (d === 0 && m !== prevMonth && cur.getDate() <= 7) { label = MON[m]; prevMonth = m }
+      days.push({ key: cur.toISOString().slice(0, 10), n: byDay.get(cur.toISOString().slice(0, 10)) ?? 0 })
       cur.setDate(cur.getDate() + 1)
     }
-    cols.push(col)
+    cols.push({ label, days })
   }
   const fill = (n: number) => n === 0 ? 'var(--border)' : `rgba(77,159,255,${(0.3 + 0.7 * Math.min(1, n / max)).toFixed(2)})`
+  // one grid: a labels column + 53 week columns (1fr each) so it stretches to fill.
   return (
-    <div style={{ display: 'flex', gap: 6, paddingTop: 4, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 9, color: 'var(--t2)', marginTop: 16 }}>
-        {DOW.map((d, i) => <span key={i} style={{ height: 12, lineHeight: '12px' }}>{d}</span>)}
-      </div>
-      <div style={{ display: 'flex', gap: 3, flex: 1 }}>
-        {cols.map((col, ci) => {
-          const showMonth = col.some(c => c.firstOfMonth) && (ci === 0 || !cols[ci - 1].some(c => c.month === col.find(x => x.firstOfMonth)?.month))
-          const monthIdx = col.find(c => c.firstOfMonth)?.month
-          return (
-            <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ height: 12, fontSize: 9, color: 'var(--t2)', whiteSpace: 'nowrap' }}>{showMonth && monthIdx !== undefined ? MON[monthIdx] : ''}</span>
-              {col.map(c => (
-                <span key={c.key} title={`${c.key}: ${c.n} answered`} style={{ width: 12, height: 12, borderRadius: 3, background: fill(c.n) }} />
-              ))}
-            </div>
-          )
-        })}
-      </div>
+    <div style={{ display: 'grid', gridTemplateColumns: `auto repeat(${WEEKS}, minmax(0, 1fr))`, gridTemplateRows: '13px repeat(7, 1fr)', columnGap: 2, rowGap: 2, width: '100%' }}>
+      {/* corner */}
+      <span />
+      {/* month labels row */}
+      {cols.map((c, ci) => <span key={'m' + ci} style={{ gridRow: 1, fontSize: 9, color: 'var(--t2)', whiteSpace: 'nowrap', overflow: 'visible' }}>{c.label}</span>)}
+      {/* day-of-week labels + cells, row by row */}
+      {[0, 1, 2, 3, 4, 5, 6].map(r => (
+        <ActivityRow key={r} row={r} label={DOW[r]} cols={cols} fill={fill} />
+      ))}
     </div>
+  )
+}
+
+function ActivityRow({ row, label, cols, fill }: {
+  row: number; label: string
+  cols: { label: string; days: { key: string; n: number }[] }[]
+  fill: (n: number) => string
+}) {
+  return (
+    <>
+      <span style={{ gridRow: row + 2, gridColumn: 1, fontSize: 9, color: 'var(--t2)', paddingRight: 6, alignSelf: 'center' }}>{label}</span>
+      {cols.map((c, ci) => {
+        const d = c.days[row]
+        return <span key={ci} title={`${d.key}: ${d.n} answered`} style={{ gridRow: row + 2, gridColumn: ci + 2, aspectRatio: '1', borderRadius: 2, background: fill(d.n) }} />
+      })}
+    </>
   )
 }
 
