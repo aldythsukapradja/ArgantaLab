@@ -1,0 +1,118 @@
+/* ============================================================
+   PREMIUM PROFILE — glassmorphism + unified action system
+   Theme-aware (light default, [data-theme="dark"] override).
+   ============================================================ */
+
+:root {
+  --pp-glass: rgba(255, 255, 255, 0.55);
+  --pp-glass-edge: rgba(255, 255, 255, 0.65);
+  --pp-glass-shadow: 0 8px 30px rgba(20, 20, 45, 0.08);
+  --pp-tint: rgba(120, 120, 140, 0.10);
+  --pp-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #ec4899 100%);
+}
+[data-theme="dark"] {
+  --pp-glass: rgba(34, 36, 52, 0.55);
+  --pp-glass-edge: rgba(255, 255, 255, 0.08);
+  --pp-glass-shadow: 0 8px 30px rgba(0, 0, 0, 0.34);
+  --pp-tint: rgba(255, 255, 255, 0.07);
+}
+
+.pp-glass {
+  background: var(--pp-glass);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  backdrop-filter: blur(16px) saturate(1.35);
+  border: 1px solid var(--pp-glass-edge);
+  box-shadow: var(--pp-glass-shadow);
+  border-radius: 18px;
+}
+
+/* ── stat chips ─────────────────────────────────────────── */
+.pp-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.pp-chip {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 5px 13px; border-radius: 999px; background: var(--pp-tint);
+  font-size: 12px; color: var(--t2);
+}
+.pp-chip b { font-size: 14px; color: var(--text, inherit); }
+
+/* ── unified action bar (4 identical pills) ─────────────── */
+.pp-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.pp-action {
+  flex: 1 1 150px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 16px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer;
+  background: var(--pp-glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid var(--pp-glass-edge); color: var(--text, inherit);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.pp-action:hover { transform: translateY(-2px); box-shadow: var(--pp-glass-shadow); }
+.pp-action .e { font-size: 16px; line-height: 1; }
+.pp-action.primary {
+  color: #fff; border: none; background: var(--pp-grad);
+  box-shadow: 0 6px 18px rgba(139, 92, 246, .35);
+}
+.pp-action.primary:hover { box-shadow: 0 10px 28px rgba(139, 92, 246, .48); }
+
+/* ── circle cards ───────────────────────────────────────── */
+.pp-circles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.pp-circle {
+  border-radius: 16px; overflow: hidden; cursor: pointer; text-align: left; width: 100%;
+  border: 1px solid var(--pp-glass-edge); background: var(--pp-glass);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.pp-circle:hover { transform: translateY(-3px); box-shadow: var(--pp-glass-shadow); }
+.pp-circle-accent { height: 5px; }
+.pp-circle-body { padding: 12px 14px; }
+.pp-circle-top { display: flex; align-items: center; gap: 10px; }
+.pp-circle-disc { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex: 0 0 auto; }
+.pp-circle-meta { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--t2); margin-top: 2px; }
+
+.pp-avstack { display: flex; align-items: center; margin-top: 10px; }
+.pp-av {
+  width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto;
+  border: 2px solid var(--bg, #fff); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; margin-left: -8px;
+}
+.pp-av:first-child { margin-left: 0; }
+.pp-av.more { background: var(--pp-tint); color: var(--t2); }
+
+/* ── glass kid cards ────────────────────────────────────── */
+.pp-kids { display: flex; flex-direction: column; gap: 12px; }
+.pp-kid { padding: 14px 16px; }
+.pp-kid-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pp-kid-av {
+  width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  box-shadow: 0 0 0 3px var(--pp-glass-edge);
+}
+.pp-kid-info { flex: 1; min-width: 130px; }
+.pp-kid-name { font-size: 15px; font-weight: 700; }
+.pp-kid-stage { font-size: 10px; padding: 1px 9px; border-radius: 999px; margin-left: 4px; vertical-align: middle; }
+.pp-kid-sub { font-size: 11px; color: var(--t2); margin-top: 2px; }
+.pp-login { padding: 7px 16px; border-radius: 11px; border: none; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.pp-iconchip {
+  width: 34px; height: 34px; border-radius: 11px; border: 1px solid var(--pp-glass-edge);
+  background: var(--pp-tint); display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px; transition: transform .14s ease, background .14s ease;
+}
+.pp-iconchip:hover { transform: translateY(-1px); }
+.pp-ringrow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 12px; border-top: 1px solid var(--pp-glass-edge); padding-top: 12px; }
+.pp-ring small { display: block; font-size: 9px; color: var(--t2); text-align: center; margin-top: 1px; }
+
+/* ── friends ────────────────────────────────────────────── */
+.pp-friends { display: flex; flex-wrap: wrap; gap: 8px; }
+.pp-friend {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px;
+  border-radius: 999px; border: 1px solid var(--pp-glass-edge); background: var(--pp-glass);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); cursor: pointer;
+  transition: transform .14s ease;
+}
+.pp-friend:hover { transform: translateY(-1px); }
+.pp-friend-av { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.pp-friend b { font-size: 13px; }
+.pp-friend small { font-size: 10px; color: var(--t2); }
+
+/* ── My learning + foot ─────────────────────────────────── */
+.pp-soft { padding: 12px 16px; border-radius: 16px; }
+.pp-soft > summary { cursor: pointer; font-size: 13px; color: var(--t2); font-weight: 700; list-style: none; }
+.pp-soft > summary::-webkit-details-marker { display: none; }

@@ -12,12 +12,16 @@ import EditKid from '@components/circles/EditKid'
 import { cloudEnabled } from '@lib/supabase'
 import {
   signOutCloud, parentCreateKid, unlinkKid, resetKidPin,
-  listMyKids, myCircles, myInvites, respondToInvite, createCircle,
+  listMyKids, myCircles, myInvites, respondToInvite, createCircle, circleRoster,
   socialStats, myFriends, myFriendRequests, respondFriendRequest,
   removeFriend, kidFriends, removeKidFriend, kidWorldRings,
-  type CloudProfile, type CloudCircle, type PendingInvite,
+  type CloudProfile, type CloudCircle, type PendingInvite, type CircleMember,
   type SocialStats, type Friend, type FriendRequest, type WorldRing,
 } from '@lib/cloudAuth'
+import '@/styles/profile-premium.css'
+
+const ROLE_RANK: Record<string, number> = { owner: 0, coleader: 1, member: 2, viewer: 3 }
+const AV_LIMIT = 6   // optimum: 6 avatars then "+N"
 
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
@@ -52,9 +56,15 @@ export default function Profile() {
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendReqs, setFriendReqs] = useState<FriendRequest[]>([])
   const [kidRings, setKidRings] = useState<Record<string, WorldRing[]>>({})
+  const [rosters, setRosters] = useState<Record<string, CircleMember[]>>({})
   const reloadAll = () => {
     if (!cloudEnabled || !uid) return
-    myCircles().then(setCircles)
+    myCircles().then(cs => {
+      setCircles(cs)
+      // a few member avatars per circle (owner→co-leader→member), for the stacks
+      Promise.all(cs.map(c => circleRoster(c.id).then(r => [c.id, r] as const)))
+        .then(pairs => setRosters(Object.fromEntries(pairs)))
+    })
     myInvites().then(setInvites)
     socialStats().then(setStats)
     myFriends().then(setFriends)
@@ -156,10 +166,10 @@ export default function Profile() {
     <div className="ig-head">
       <div className="ig-avatar"><Buddy mood="happy" size={92} outfit={outfit} showBg bob={false} /></div>
       <div className="ig-head-r">
-        <div className="ig-stats">
-          <div className="ig-stat"><b>{stats.circles || circles.length}</b><span>Circles</span></div>
-          <div className="ig-stat"><b>{stats.connections}</b><span>Connections</span></div>
-          <div className="ig-stat"><b>{stats.friends || friends.length}</b><span>Friends</span></div>
+        <div className="pp-stats">
+          <span className="pp-chip"><b>{stats.circles || circles.length}</b> Circles</span>
+          <span className="pp-chip"><b>{stats.connections}</b> Connections</span>
+          <span className="pp-chip"><b>{stats.friends || friends.length}</b> Friends</span>
         </div>
         <div className="ig-id">
           <b className="ig-name">{learnerName}</b>
@@ -230,13 +240,12 @@ export default function Profile() {
       {friends.length === 0
         ? <p className="ig-kc" style={{ margin: 0 }}>Add friends by their code — everyone in your circles is a friend too.</p>
         : (
-          <div className="ig-friends" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="pp-friends">
             {friends.map(f => (
-              <button key={f.id} className="ig-friend" title={f.source === 'circle' ? 'In a shared circle' : 'Friend'} onClick={() => dropFriend(f)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 999, padding: '5px 12px 5px 6px', background: 'var(--card)', cursor: 'pointer' }}>
-                <span style={{ width: 26, height: 26, borderRadius: '50%', background: f.role === 'kid' ? '#ec4899' : '#6366f1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{(f.display_name[0] ?? '?').toUpperCase()}</span>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{f.display_name}</span>
-                {f.source === 'circle' && <span style={{ fontSize: 10, color: 'var(--t2)' }}>circle</span>}
+              <button key={f.id} className="pp-friend" title={f.source === 'circle' ? 'In a shared circle' : 'Friend'} onClick={() => dropFriend(f)}>
+                <span className="pp-friend-av" style={{ background: f.role === 'kid' ? '#ec4899' : '#6366f1' }}>{(f.display_name[0] ?? '?').toUpperCase()}</span>
+                <b>{f.display_name}</b>
+                {f.source === 'circle' && <small>circle</small>}
               </button>
             ))}
           </div>
@@ -253,16 +262,16 @@ export default function Profile() {
     return (
       <div className="screen ig" style={{ justifyContent: 'flex-start', gap: 14 }}>
         {header}
-        <div className="ig-actions">
-          <button className="ig-btn" onClick={() => go({ tab: 'avatar' })}>✏️ Edit avatar</button>
-          <button className="ig-btn" onClick={() => go({ tab: 'fame' })}>🏆 Hall of Fame</button>
+        <div className="pp-actions">
+          <button className="pp-action" onClick={() => go({ tab: 'avatar' })}><span className="e">✏️</span> Edit avatar</button>
+          <button className="pp-action" onClick={() => go({ tab: 'fame' })}><span className="e">🏆</span> Hall of Fame</button>
         </div>
 
         {friendReqInbox}
 
         <div className="section-label">My Circles</div>
-        <div className="ig-circles">
-          {circles.map(c => <CloudCircleCard key={c.id} circle={c} onClick={() => setOpenCircle(c)} />)}
+        <div className="pp-circles">
+          {circles.map(c => <CloudCircleCard key={c.id} circle={c} members={rosters[c.id] ?? []} onClick={() => setOpenCircle(c)} />)}
         </div>
 
         {friendsBlock}
@@ -285,23 +294,23 @@ export default function Profile() {
     <div className="screen ig" style={{ justifyContent: 'flex-start', gap: 14 }}>
       {header}
 
-      <div className="ig-actions">
-        <button className="ig-btn" onClick={() => go({ tab: 'avatar' })}>✏️ Edit avatar</button>
+      <div className="pp-actions">
+        <button className="pp-action" onClick={() => go({ tab: 'avatar' })}><span className="e">✏️</span> Edit avatar</button>
         {cloudEnabled
-          ? <button className="ig-btn" onClick={newCircle}>＋ New circle</button>
-          : <button className="ig-btn" onClick={openSwitcher}>🔑 Kid login</button>}
-        {cloudEnabled && <button className="ig-btn" onClick={addFriend}>🤝 Add friend</button>}
-        <button className="ig-btn primary" onClick={() => setView('add')}>＋ Add kid</button>
+          ? <button className="pp-action" onClick={newCircle}><span className="e">➕</span> New circle</button>
+          : <button className="pp-action" onClick={openSwitcher}><span className="e">🔑</span> Kid login</button>}
+        {cloudEnabled && <button className="pp-action" onClick={addFriend}><span className="e">🫂</span> Add friend</button>}
+        <button className="pp-action primary" onClick={() => setView('add')}><span className="e">➕</span> Add kid</button>
       </div>
 
       {invitesInbox}
       {friendReqInbox}
 
       <div className="section-label">My Circles <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 12 }}>· tap to manage members &amp; roles</span></div>
-      <div className="ig-circles">
+      <div className="pp-circles">
         {circles.length === 0
           ? <p className="ig-kc" style={{ margin: 0 }}>Your family circle appears here once you add a child.</p>
-          : circles.map(c => <CloudCircleCard key={c.id} circle={c} onClick={() => setOpenCircle(c)} />)}
+          : circles.map(c => <CloudCircleCard key={c.id} circle={c} members={rosters[c.id] ?? []} onClick={() => setOpenCircle(c)} />)}
       </div>
 
       <div className="section-label">Kids in this family</div>
@@ -313,34 +322,32 @@ export default function Profile() {
           <button className="btn btn-primary" onClick={() => setView('add')}>＋ Add your first kid</button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="pp-kids">
           {kids.map((k, i) => {
             const st = stageForDob(k.dob ?? undefined)
             const meta = STAGE_META[st.key]
             const color = PALETTE[i % PALETTE.length]
             return (
-              <div key={k.id} style={{ border: '1px solid var(--border)', borderRadius: 16, padding: '12px 14px', background: 'var(--card)' }}>
-                {/* header row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <span style={{ width: 40, height: 40, borderRadius: '50%', flex: '0 0 auto', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{k.gender === 'girl' ? '👧' : '👦'}</span>
-                  <div style={{ flex: 1, minWidth: 130 }}>
-                    <b style={{ fontSize: 14 }}>{k.display_name} <span className="ig-kid-stage" style={{ background: `${meta.color}22`, color: meta.color }}>{meta.emoji} {st.label}</span></b>
-                    <div style={{ fontSize: 11, color: 'var(--t2)' }}>{k.username ? `@${k.username} · ` : ''}code <code>{k.friend_code}</code> · {k.gender === 'girl' ? 'girl' : 'boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}</div>
+              <div key={k.id} className="pp-glass pp-kid">
+                <div className="pp-kid-head">
+                  <span className="pp-kid-av" style={{ background: `linear-gradient(135deg, ${color}, ${color}aa)` }}>{k.gender === 'girl' ? '👧' : '👦'}</span>
+                  <div className="pp-kid-info">
+                    <div className="pp-kid-name">{k.display_name}<span className="pp-kid-stage" style={{ background: `${meta.color}22`, color: meta.color }}>{meta.emoji} {st.label}</span></div>
+                    <div className="pp-kid-sub">{k.username ? `@${k.username} · ` : ''}code <code>{k.friend_code}</code> · {k.gender === 'girl' ? 'girl' : 'boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}</div>
                   </div>
-                  <button className="ig-kid-play" onClick={openSwitcher}>Log in</button>
-                  <button className="ig-kid-edit2" title="Edit profile" onClick={() => setEditingKid(k)}>✏️</button>
-                  <button className="ig-kid-edit2" title="Reset PIN" onClick={() => resetPin(k)}>🔑</button>
-                  <button className="ig-kid-edit2" title="Kid's friends" onClick={() => viewKidFriends(k)}>🤝</button>
-                  <button className="ig-kid-del" title="Remove from family" onClick={() => removeFromFamily(k)}>✕</button>
+                  <button className="pp-login" onClick={openSwitcher}>Log in</button>
+                  <button className="pp-iconchip" title="Edit profile" onClick={() => setEditingKid(k)}>✏️</button>
+                  <button className="pp-iconchip" title="Reset PIN" onClick={() => resetPin(k)}>🔑</button>
+                  <button className="pp-iconchip" title="Kid's friends" onClick={() => viewKidFriends(k)}>🫂</button>
+                  <button className="pp-iconchip" title="Remove from family" onClick={() => removeFromFamily(k)}>✕</button>
                 </div>
-                {/* rings row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                <div className="pp-ringrow">
                   {WORLDS.map(w => {
                     const pct = kidRings[k.id]?.find(r => r.world === w.key)?.pct ?? 0
                     return (
-                      <div key={w.key} style={{ textAlign: 'center' }}>
+                      <div key={w.key} className="pp-ring">
                         <Ring pct={pct} color={w.color} />
-                        <small style={{ display: 'block', fontSize: 9, color: 'var(--t2)' }}>{RING_LABEL[w.key]}</small>
+                        <small>{RING_LABEL[w.key]}</small>
                       </div>
                     )
                   })}
@@ -353,16 +360,16 @@ export default function Profile() {
 
       {friendsBlock}
 
-      <details className="ig-mylearning" style={{ marginTop: 6 }}>
-        <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--t2)', fontWeight: 700 }}>My learning (your own progress)</summary>
+      <details className="pp-glass pp-soft" style={{ marginTop: 6 }}>
+        <summary>▸ My learning (your own progress)</summary>
         {rings}
       </details>
 
-      <div className="ig-foot">
-        <div className="ig-foot-row"><b>{totalBadges}</b> badges earned</div>
+      <div className="pp-glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 13 }}><b style={{ fontSize: 18 }}>{totalBadges}</b> <span style={{ color: 'var(--t2)' }}>badges earned</span></div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={() => go({ tab: 'parent' })}>📊 Family Pulse</button>
-          <button className="btn btn-ghost" onClick={parentLogout}>⏻ Log out</button>
+          <button className="pp-action" style={{ flex: '0 0 auto' }} onClick={() => go({ tab: 'parent' })}><span className="e">📊</span> Family Pulse</button>
+          <button className="pp-action" style={{ flex: '0 0 auto' }} onClick={parentLogout}><span className="e">⏻</span> Log out</button>
         </div>
       </div>
 
@@ -375,15 +382,33 @@ export default function Profile() {
 }
 
 const ROLE_NAME: Record<string, string> = { owner: 'Owner', coleader: 'Co-leader', member: 'Member', viewer: 'Viewer' }
-function CloudCircleCard({ circle, onClick }: { circle: CloudCircle; onClick?: () => void }) {
+function CloudCircleCard({ circle, members, onClick }: { circle: CloudCircle; members: CircleMember[]; onClick?: () => void }) {
+  const accent = circle.accent || (circle.kind === 'family' ? '#6366f1' : '#8b5cf6')
+  // sort owner → co-leader → member → viewer, take the first AV_LIMIT
+  const sorted = [...members].sort((a, b) => (ROLE_RANK[a.role] ?? 9) - (ROLE_RANK[b.role] ?? 9))
+  const shown = sorted.slice(0, AV_LIMIT)
+  const extra = Math.max(0, (members.length || circle.member_count) - shown.length)
   return (
-    <button className="ig-circle" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', textAlign: 'left', width: '100%', border: '1px solid var(--border)', background: 'var(--card)' }}>
-      <div className="ig-circle-top">
-        <span className="ig-circle-ic">{circle.emoji ?? (circle.kind === 'family' ? '👨‍👩‍👧‍👦' : '👥')}</span>
-        <div>
-          <b>{circle.name}</b>
-          <small>{circle.member_count} member{circle.member_count === 1 ? '' : 's'} · {ROLE_NAME[circle.role] ?? circle.role}</small>
+    <button className="pp-circle" onClick={onClick}>
+      <div className="pp-circle-accent" style={{ background: `linear-gradient(90deg, ${accent}, ${accent}66)` }} />
+      <div className="pp-circle-body">
+        <div className="pp-circle-top">
+          <span className="pp-circle-disc" style={{ background: `${accent}22`, color: accent }}>{circle.emoji ?? (circle.kind === 'family' ? '👨‍👩‍👧‍👦' : '👥')}</span>
+          <div>
+            <b style={{ fontSize: 14 }}>{circle.name}</b>
+            <div className="pp-circle-meta">{circle.member_count} · {circle.role === 'owner' && <span>👑 </span>}{ROLE_NAME[circle.role] ?? circle.role}</div>
+          </div>
         </div>
+        {shown.length > 0 && (
+          <div className="pp-avstack">
+            {shown.map(m => (
+              <span key={m.id} className="pp-av" style={{ background: m.is_kid ? '#ec4899' : '#6366f1' }} title={`${m.display_name} · ${ROLE_NAME[m.role] ?? m.role}`}>
+                {m.photo_url ? <img src={m.photo_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : (m.display_name[0] ?? '?').toUpperCase()}
+              </span>
+            ))}
+            {extra > 0 && <span className="pp-av more">+{extra}</span>}
+          </div>
+        )}
       </div>
     </button>
   )
