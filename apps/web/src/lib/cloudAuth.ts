@@ -323,6 +323,48 @@ export async function kidWorldRings(kidId: string): Promise<WorldRing[]> {
   return data as WorldRing[]
 }
 
+// ── Circle administration ───────────────────────────────────
+export async function createCircle(name: string, kind = 'friends'): Promise<string | null> {
+  if (!cloudEnabled) return null
+  const { data, error } = await supabase.rpc('create_circle', { p_name: name.trim(), p_kind: kind })
+  if (error) return null
+  return data as string
+}
+export async function deleteCircle(circleId: string): Promise<CloudResult> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const { error } = await supabase.rpc('delete_circle', { p_circle: circleId })
+  if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
+  return { ok: true }
+}
+export async function setMemberRole(circleId: string, memberId: string, role: string): Promise<CloudResult> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const { error } = await supabase.rpc('set_member_role', { p_circle: circleId, p_member: memberId, p_role: role })
+  if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
+  return { ok: true }
+}
+export async function addKidToCircle(circleId: string, kidId: string): Promise<CloudResult> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const { error } = await supabase.rpc('add_kid_to_circle', { p_circle: circleId, p_kid: kidId })
+  if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
+  return { ok: true }
+}
+export async function updateKid(kidId: string, displayName: string, dob: string | null, gender: string | null): Promise<CloudResult> {
+  if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
+  const { error } = await supabase.rpc('update_kid', { p_kid: kidId, p_display_name: displayName, p_dob: dob, p_gender: gender })
+  if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
+  return { ok: true }
+}
+export async function removeCircleMember(circleId: string, memberId: string): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('remove_circle_member', { p_circle: circleId, p_user: memberId })
+  return !error && data === true
+}
+export async function leaveCircle(circleId: string): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { data, error } = await supabase.rpc('leave_circle', { p_circle: circleId })
+  return !error && data === true
+}
+
 export interface DirUser { id: string; display_name: string; photo_url: string | null; friend_code: string; role: string; rel: 'none' | 'pending' | 'friend' }
 /** Browse registered grown-ups for the Add-friend popup (kids never listed). */
 export async function searchUsers(q = '', limit = 8, offset = 0): Promise<DirUser[]> {

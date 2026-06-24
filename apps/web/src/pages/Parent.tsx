@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti'
 import { useAppStore } from '@store/appStore'
 import { WORLDS } from '@/data/learn'
 import {
-  listKids, loadKidDashboard, sampleDashboard, masteryGrid, computeGaps, bloomDistribution,
+  listKids, loadKidDashboard, masteryGrid, computeGaps, bloomDistribution,
   competencyScores, currentStreak, weekActiveDays, avgMinutesPerDay, stageOf,
   type KidDashboard, type Gap, type GapReason,
 } from '@lib/parentDash'
@@ -56,13 +56,10 @@ export default function Parent() {
   const [dash, setDash] = useState<KidDashboard | null>(null)
   const [loadingDash, setLoadingDash] = useState(false)
   const [budget, setBudget] = useState(useAppStore.getState().diamonds)
-  const [demo, setDemo] = useState(false)
 
-  // Display-only sample so a grown-up can see the full analytics before any
-  // real telemetry exists. Stable across renders; never written anywhere.
-  const activeName = kids?.find(k => k.id === activeKid)?.display_name
-  const sample = useMemo(() => sampleDashboard(activeName ?? 'Sample'), [activeName])
-  const view = demo ? sample : dash
+  // Single source of truth: the real cloud dashboard. No preview/sample mode —
+  // every kid shows the same view; missing numbers render as 0 / N-A.
+  const view = dash
 
   // Load the family roster once.
   useEffect(() => {
@@ -102,35 +99,27 @@ export default function Parent() {
     }
   }, [view])
 
-  const previewBtn = (
-    <button className="par-demo-btn" onClick={() => setDemo(true)}>👁 Preview with sample data</button>
+  // ── Offline / empty states ────────────────────────────────────
+  if (!cloudEnabled) return (
+    <div className="screen par"><div className="par-empty">
+      <span className="par-empty-ic">☁️</span>
+      <h2>Connect to the cloud</h2>
+      <p>Kid progress analytics sync from the cloud. Sign in online to see each child's skills, gaps and trends.</p>
+    </div></div>
+  )
+  if (kids === null) return <div className="screen par"><div className="par-loading">Loading your family…</div></div>
+  if (kids.length === 0) return (
+    <div className="screen par"><div className="par-empty">
+      <span className="par-empty-ic">👨‍👩‍👧</span>
+      <h2>No children yet</h2>
+      <p>Add a child from your Profile. Their daily progress will appear here.</p>
+    </div></div>
   )
 
-  // ── Offline / empty states (skipped while previewing) ─────────
-  if (!demo) {
-    if (!cloudEnabled) return (
-      <div className="screen par"><div className="par-empty">
-        <span className="par-empty-ic">☁️</span>
-        <h2>Connect to the cloud</h2>
-        <p>Kid progress analytics sync from the cloud. Sign in online to see each child's skills, gaps and trends.</p>
-        {previewBtn}
-      </div></div>
-    )
-    if (kids === null) return <div className="screen par"><div className="par-loading">Loading your family…</div></div>
-    if (kids.length === 0) return (
-      <div className="screen par"><div className="par-empty">
-        <span className="par-empty-ic">👨‍👩‍👧</span>
-        <h2>No children linked yet</h2>
-        <p>Add a child from the player switcher, or link an existing account with their friend code. Their daily progress will appear here.</p>
-        {previewBtn}
-      </div></div>
-    )
-  }
-
   const kid = view?.kid
-  // Real session, kids exist, but the dashboard RPC returned nothing — almost
-  // always because the analytics migration hasn't been applied yet.
-  const needsSetup = !demo && !loadingDash && !dash && (kids?.length ?? 0) > 0
+  // Kids exist, but the dashboard RPC returned nothing — almost always because
+  // the analytics migration hasn't been applied yet.
+  const needsSetup = !loadingDash && !dash && (kids?.length ?? 0) > 0
 
   return (
     <div className="screen par" style={{ justifyContent: 'flex-start', gap: 16, paddingTop: 6 }}>
@@ -144,10 +133,10 @@ export default function Parent() {
       </div>
 
       {/* Single selector — every child's real cloud balance & level at a glance */}
-      {!demo && kids && kids.length > 0 && (
+      {kids && kids.length > 0 && (
         <div className="par-family" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
           {kids.map(k => (
-            <button key={k.id} onClick={() => { setDemo(false); setActiveKid(k.id) }}
+            <button key={k.id} onClick={() => setActiveKid(k.id)}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
                        border: `1.5px solid ${k.id === activeKid ? 'var(--accent, #6366f1)' : 'var(--border, #2a2a35)'}`,
                        background: k.id === activeKid ? 'color-mix(in srgb, var(--accent,#6366f1) 12%, transparent)' : 'var(--card, rgba(255,255,255,.03))' }}>
@@ -164,19 +153,11 @@ export default function Parent() {
         </div>
       )}
 
-      {demo && (
-        <div className="par-demo-banner">
-          <span>👁 <b>Sample data</b> — a preview of the analytics. Numbers aren't real until kids play and the analytics migration is applied.</span>
-          <button onClick={() => setDemo(false)}>Exit preview</button>
-        </div>
-      )}
-
       {needsSetup && (
         <div className="par-empty soft">
           <span className="par-empty-ic">📊</span>
-          <h2>Analytics aren't switched on yet</h2>
-          <p>Family Pulse runs on the cloud analytics engine. Once the one-time database setup (<code>migration_analytics_rewards.sql</code>) is applied and {kids?.[0]?.display_name ?? 'your child'} plays, real skills, gaps and trends appear here.</p>
-          {previewBtn}
+          <h2>No data yet for {kid?.name ?? kids?.find(k => k.id === activeKid)?.display_name ?? 'this child'}</h2>
+          <p>Once they start playing, skills, gaps and trends fill in here. (If this stays empty, the one-time <code>migration_analytics_rewards.sql</code> setup may still need to be applied.)</p>
         </div>
       )}
 
@@ -300,7 +281,6 @@ export default function Parent() {
             kidDiamonds={kid.diamonds}
             budget={budget}
             recent={view.recentRewards}
-            demo={demo}
             onGranted={(fromBal) => { setBudget(fromBal); useAppStore.setState({ diamonds: fromBal }); reloadDash() }}
           />
         </>
@@ -314,10 +294,9 @@ export default function Parent() {
 // ── Reward panel ────────────────────────────────────────────────
 const AMOUNTS = [50, 100, 500, 1000]
 
-function RewardPanel({ kidId, kidName, kidDiamonds, budget, recent, demo, onGranted }: {
+function RewardPanel({ kidId, kidName, kidDiamonds, budget, recent, onGranted }: {
   kidId: string; kidName: string; kidDiamonds: number; budget: number
   recent: { amount: number; reason: string | null; kind: string; at: string }[]
-  demo?: boolean
   onGranted: (fromBalance: number) => void
 }) {
   const [amount, setAmount] = useState(100)
@@ -335,7 +314,6 @@ function RewardPanel({ kidId, kidName, kidDiamonds, budget, recent, demo, onGran
 
   const send = async () => {
     setErr(null); setOkMsg(null)
-    if (demo) { fireConfetti(); setOkMsg('Preview mode — connect the cloud to send real diamonds.'); return }
     if (amount <= 0) { setErr('Pick an amount above zero.'); return }
     if (amount > budget) { setErr("That's more than your diamond budget."); return }
     setBusy(true)
