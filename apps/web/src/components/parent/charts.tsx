@@ -109,12 +109,17 @@ export function InterestBar({ interest, theme }: { interest: Record<string, numb
 // ── Activity calendar — custom full-year heatmap that fills the card ───
 const DOW = ['', 'Mon', '', 'Wed', '', 'Fri', '']
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// Local YYYY-MM-DD (NOT toISOString, which is UTC and shifts the day in +tz).
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 export function ActivityCalendar({ daily }: { daily: DailyRow[]; theme?: NivoTheme }) {
-  const byDay = new Map(daily.map(d => [d.day, d.items]))
+  // DB days are plain date strings; normalise to the first 10 chars to be safe.
+  const byDay = new Map(daily.map(d => [String(d.day).slice(0, 10), d.items]))
   const max = Math.max(1, ...daily.map(d => d.items))
   const WEEKS = 53                                   // a full year, GitHub-style
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  const cur = new Date(today); cur.setDate(cur.getDate() - (WEEKS * 7 - 1) - cur.getDay())
+  // Start on the Sunday (WEEKS-1) weeks before THIS week, so the LAST column is
+  // the current week (Sun..Sat) and includes today — not the last completed week.
+  const cur = new Date(today); cur.setDate(cur.getDate() - cur.getDay() - (WEEKS - 1) * 7)
   const cols: { label: string; days: { key: string; n: number }[] }[] = []
   let prevMonth = -1
   for (let w = 0; w < WEEKS; w++) {
@@ -123,7 +128,8 @@ export function ActivityCalendar({ daily }: { daily: DailyRow[]; theme?: NivoThe
     for (let d = 0; d < 7; d++) {
       const m = cur.getMonth()
       if (d === 0 && m !== prevMonth && cur.getDate() <= 7) { label = MON[m]; prevMonth = m }
-      days.push({ key: cur.toISOString().slice(0, 10), n: byDay.get(cur.toISOString().slice(0, 10)) ?? 0 })
+      const key = ymd(cur)
+      days.push({ key, n: byDay.get(key) ?? 0 })
       cur.setDate(cur.getDate() + 1)
     }
     cols.push({ label, days })
