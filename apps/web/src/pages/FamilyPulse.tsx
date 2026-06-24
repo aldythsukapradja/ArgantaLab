@@ -62,6 +62,9 @@ export default function FamilyPulse() {
   const [kids, setKids] = useState<CloudProfile[] | null>(null)
   const [activeKid, setActiveKid] = useState<string | null>(null)
   const [dash, setDash] = useState<KidDashboard | null>(null)
+  // null = errored/unauthorized (kid_dashboard returns a row on success, even with
+  // no play data) → lets us distinguish "couldn't load" from "no play yet".
+  const [loadFailed, setLoadFailed] = useState(false)
   const [budget, setBudget] = useState(useAppStore.getState().diamonds)
 
   useEffect(() => {
@@ -72,13 +75,13 @@ export default function FamilyPulse() {
   }, [])
 
   useEffect(() => {
-    if (!activeKid) { setDash(null); return }
+    if (!activeKid) { setDash(null); setLoadFailed(false); return }
     let alive = true
-    loadKidDashboard(activeKid).then(d => { if (alive) setDash(d) })
+    loadKidDashboard(activeKid).then(d => { if (alive) { setDash(d); setLoadFailed(d === null) } })
     return () => { alive = false }
   }, [activeKid])
 
-  const reloadDash = () => { if (activeKid) loadKidDashboard(activeKid).then(setDash) }
+  const reloadDash = () => { if (activeKid) loadKidDashboard(activeKid).then(d => { setDash(d); setLoadFailed(d === null) }) }
 
   const activeProfile = kids?.find(k => k.id === activeKid) ?? null
   // The view ALWAYS exists: real dashboard, or an empty frame from the profile.
@@ -166,6 +169,14 @@ export default function FamilyPulse() {
           </button>
         ))}
       </div>
+
+      {/* Couldn't-load banner — distinguishes an auth/setup error from "no play yet" */}
+      {loadFailed && kid && (
+        <div style={{ background: 'color-mix(in srgb, #ef4444 12%, transparent)', borderRadius: 14, padding: '12px 16px', border: '1px solid color-mix(in srgb, #ef4444 35%, transparent)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#c0392b' }}>⚠️ Couldn't load {kid.name}'s analytics</div>
+          <div style={{ fontSize: 13 }}>The dashboard engine returned nothing for your account. Re-run <code>migration_analytics_rewards.sql</code> and <code>migration_circles_admin.sql</code> in Supabase (the co-guardian fix), then reload. The numbers below are placeholders until then.</div>
+        </div>
+      )}
 
       {view && derived && kid && (
         <>
