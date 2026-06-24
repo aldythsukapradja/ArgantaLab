@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppStore } from '@store/appStore'
 import {
   circleRoster, setMemberRole, removeCircleMember, addKidToCircle, inviteToCircle,
-  deleteCircle, leaveCircle,
-  type CloudCircle, type CircleMember, type CloudProfile,
+  deleteCircle, leaveCircle, searchUsers,
+  type CloudCircle, type CircleMember, type CloudProfile, type DirUser,
 } from '@lib/cloudAuth'
 
 const ROLE_LABEL: Record<string, string> = { owner: 'Owner', coleader: 'Co-leader', member: 'Member', viewer: 'Viewer' }
@@ -19,11 +19,29 @@ export default function CircleMembers({ circle, myKids, onClose, onChanged }: {
   const addToast = useAppStore(s => s.addToast)
   const [members, setMembers] = useState<CircleMember[]>([])
   const [adding, setAdding] = useState(false)
+  const [addingAdult, setAddingAdult] = useState(false)
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState<DirUser[]>([])
+  const [searching, setSearching] = useState(false)
+  const seq = useRef(0)
   const canManage = circle.role === 'owner' || circle.role === 'coleader'
   const isOwner = circle.role === 'owner'
 
   const load = () => circleRoster(circle.id).then(setMembers)
   useEffect(() => { load() }, [circle.id])
+
+  // Live grown-up search (same flow as Add friend) — debounced, excludes kids.
+  useEffect(() => {
+    if (!addingAdult) return
+    const id = ++seq.current
+    setSearching(true)
+    const t = setTimeout(async () => {
+      const rows = await searchUsers(q, 10, 0)
+      if (seq.current !== id) return
+      setResults(rows.filter(u => u.role !== 'kid')); setSearching(false)
+    }, 250)
+    return () => clearTimeout(t)
+  }, [q, addingAdult])
 
   const changeRole = async (m: CircleMember, role: string) => {
     const r = await setMemberRole(circle.id, m.id, role)
@@ -36,12 +54,10 @@ export default function CircleMembers({ circle, myKids, onClose, onChanged }: {
     addToast(r ? `Removed ${m.display_name}` : 'Could not remove', r ? '👋' : '⚠️')
     if (r) { load(); onChanged() }
   }
-  const addByCode = async () => {
-    const code = prompt('Add a grown-up by their friend code:')?.trim()
-    if (!code) return
-    const r = await inviteToCircle(circle.id, code, 'member', circle.kind === 'family')
-    addToast(r.ok ? 'Invite sent 📨' : (r.error ?? 'Could not invite'), r.ok ? '✅' : '⚠️')
-    if (r.ok) { load(); onChanged() }
+  const addAdult = async (u: DirUser) => {
+    const r = await inviteToCircle(circle.id, u.friend_code, 'member', circle.kind === 'family')
+    addToast(r.ok ? `Invite sent to ${u.display_name} 📨` : (r.error ?? 'Could not invite'), r.ok ? '✅' : '⚠️')
+    if (r.ok) { setResults(rs => rs.filter(x => x.id !== u.id)); load(); onChanged() }
   }
   const addChild = async (k: CloudProfile) => {
     const r = await addKidToCircle(circle.id, k.id)
@@ -100,6 +116,24 @@ export default function CircleMembers({ circle, myKids, onClose, onChanged }: {
             </div>
           ))}
 
+          {addingAdult && (
+            <div style={{ padding: '8px 14px', borderTop: '1px dashed var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 6 }}>Invite a grown-up — search registered users</div>
+              <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search by name…"
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, background: 'var(--card)', marginBottom: 8 }} />
+              {searching ? <p style={{ fontSize: 12, color: 'var(--t2)', margin: 0 }}>Searching…</p>
+                : results.filter(u => !memberIds.has(u.id)).length === 0
+                  ? <p style={{ fontSize: 12, color: 'var(--t2)', margin: 0 }}>No grown-ups match “{q}”.</p>
+                  : results.filter(u => !memberIds.has(u.id)).map(u => (
+                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
+                      <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#6366f1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{(u.display_name[0] ?? '?').toUpperCase()}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{u.display_name}</span>
+                      <button onClick={() => addAdult(u)} style={{ fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', borderRadius: 999, padding: '4px 12px', background: 'var(--card)', cursor: 'pointer' }}>Invite</button>
+                    </div>
+                  ))}
+            </div>
+          )}
+
           {adding && (
             <div style={{ padding: '8px 14px', borderTop: '1px dashed var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 6 }}>Add one of your children</div>
@@ -117,8 +151,8 @@ export default function CircleMembers({ circle, myKids, onClose, onChanged }: {
 
         {canManage && (
           <div style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={addByCode} style={{ flex: 1, fontSize: 12, padding: '8px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>🤝 Add grown-up</button>
-            <button onClick={() => setAdding(a => !a)} style={{ flex: 1, fontSize: 12, padding: '8px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>🧒 Add child</button>
+            <button onClick={() => { setAddingAdult(a => !a); setAdding(false) }} style={{ flex: 1, fontSize: 12, padding: '8px', borderRadius: 10, border: `1px solid ${addingAdult ? '#6366f1' : 'var(--border)'}`, background: 'var(--card)', cursor: 'pointer' }}>🤝 Add grown-up</button>
+            <button onClick={() => { setAdding(a => !a); setAddingAdult(false) }} style={{ flex: 1, fontSize: 12, padding: '8px', borderRadius: 10, border: `1px solid ${adding ? '#ec4899' : 'var(--border)'}`, background: 'var(--card)', cursor: 'pointer' }}>🧒 Add child</button>
           </div>
         )}
         <div style={{ padding: '0 12px 12px', display: 'flex', justifyContent: 'flex-end' }}>
