@@ -115,11 +115,13 @@ export function ActivityCalendar({ daily }: { daily: DailyRow[]; theme?: NivoThe
   // DB days are plain date strings; normalise to the first 10 chars to be safe.
   const byDay = new Map(daily.map(d => [String(d.day).slice(0, 10), d.items]))
   const max = Math.max(1, ...daily.map(d => d.items))
-  const WEEKS = 53                                   // a full year, GitHub-style
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  // Start on the Sunday (WEEKS-1) weeks before THIS week, so the LAST column is
-  // the current week (Sun..Sat) and includes today — not the last completed week.
-  const cur = new Date(today); cur.setDate(cur.getDate() - cur.getDay() - (WEEKS - 1) * 7)
+  // Fixed Jan 1 → Dec 31 of the current year so the grid always reads left-to-right.
+  const year = new Date().getFullYear()
+  const jan1 = new Date(year, 0, 1); jan1.setHours(0, 0, 0, 0)
+  const cur = new Date(jan1); cur.setDate(cur.getDate() - cur.getDay())
+  const dec31 = new Date(year, 11, 31)
+  const totalDays = Math.ceil((dec31.getTime() - cur.getTime()) / 864e5) + 1
+  const WEEKS = Math.ceil(totalDays / 7)
   const cols: { label: string; days: { key: string; n: number }[] }[] = []
   let prevMonth = -1
   for (let w = 0; w < WEEKS; w++) {

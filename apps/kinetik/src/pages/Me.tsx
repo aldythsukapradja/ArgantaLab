@@ -19,6 +19,17 @@ function colorFor(s: string): string {
   return KID_COLORS[h % KID_COLORS.length]
 }
 
+// Kid stage/tier by age — mirrors ArgantaLab's STAGES (Tiny → Legend).
+const STAGES: { label: string; min: number; max: number }[] = [
+  { label: 'Tiny', min: 1, max: 6 }, { label: 'Starter', min: 6, max: 8 },
+  { label: 'Explorer', min: 8, max: 11 }, { label: 'Builder', min: 11, max: 14 },
+  { label: 'Champion', min: 14, max: 16 }, { label: 'Legend', min: 16, max: 19 },
+]
+function tierFor(age: number | null): string | null {
+  if (age == null) return null
+  return STAGES.find(s => age >= s.min && age < s.max)?.label ?? (age >= 19 ? 'Legend' : null)
+}
+
 function errMsg(e: unknown): string {
   if (!e) return 'Something went wrong'
   if (e instanceof Error) return e.message
@@ -198,21 +209,26 @@ export default function Me() {
 function MemberRow({ m, worlds, rings, ownerDiamonds }: {
   m: FamilyMember; worlds: World[]; rings?: Record<string, number>; ownerDiamonds: number | null
 }) {
-  const avatarBg = m.color || (m.kind === 'child' ? colorFor(m.id) : 'var(--grad)')
+  const isKid = m.kind === 'child'
+  const avatarBg = m.color || (isKid ? colorFor(m.id) : 'var(--grad)')
   const face = m.emoji || initials(m.name)
+  const tier = isKid ? tierFor(m.age) : null
+  const sub = isKid
+    ? [m.age != null ? `age ${m.age}` : null, m.username ? `@${m.username}` : null].filter(Boolean).join(' · ')
+    : roleText(m.role)
   return (
-    <div className={`me3-member${m.kind === 'owner' ? ' me' : ''}${m.kind === 'child' ? ' kid' : ''}`}>
+    <div className={`me3-member${m.kind === 'owner' ? ' me' : ''}${isKid ? ' kid' : ''}`}>
       <div className="me3-member-top">
         {m.photoUrl
           ? <img className="me3-mav" src={m.photoUrl} alt={m.name} referrerPolicy="no-referrer" />
           : <span className="me3-mav" style={{ background: avatarBg }}>{face}</span>}
         <div className="me3-minfo">
-          <b>{m.name}{m.kind === 'owner' && <span className="me3-you">You</span>}</b>
-          <small>
-            {roleText(m.role)}
-            {m.kind === 'child' && m.age != null ? ` · age ${m.age}` : ''}
-            {m.username ? ` · @${m.username}` : ''}
-          </small>
+          <b>
+            {m.name}
+            {m.kind === 'owner' && <span className="me3-you">You</span>}
+            {tier && <span className="me3-tier">{tier}</span>}
+          </b>
+          <small>{sub || '—'}</small>
         </div>
         {ownerDiamonds != null && <span className="me3-mdia"><IconDiamondGem size={13} /> {ownerDiamonds.toLocaleString()}</span>}
       </div>

@@ -5,10 +5,12 @@ import { useAppStore } from '@store/appStore'
 import { getMastery } from '@lib/adaptive'
 import { nodeState, nodeUnlocked, setNodeDone, worldRing, earnedBadges } from '@lib/learnProgress'
 import ItemPlayer from './ItemPlayer'
+import DrillPlayer from './DrillPlayer'
 import Buddy from '@components/avatar/Buddy'
 import BadgeCinematic from './BadgeCinematic'
 import CinematicLauncher from './CinematicLauncher'
 import Journey from './Journey'
+import { DRILLS_BY_WORLD, type Drill } from '@/data/drills'
 import { pushLearnState } from '@lib/learnCloud'
 import { bumpQuest } from '@lib/quests'
 
@@ -35,6 +37,7 @@ export default function WorldHub({ world }: { world: World }) {
   const uid = session && session !== 'loading' ? session.user.id : null
   const [spine, setSpine] = useState<Spine>('journey')
   const [active, setActive] = useState<JourneyNode | null>(null)
+  const [activeDrill, setActiveDrill] = useState<Drill | null>(null)
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
   const ring = worldRing(world)
@@ -53,6 +56,11 @@ export default function WorldHub({ world }: { world: World }) {
   const launch = (node: JourneyNode) => {
     if (!requireAuth('to start learning')) return
     setActive(node)
+  }
+
+  const launchDrill = (drill: Drill) => {
+    if (!requireAuth('to start a drill')) return
+    setActiveDrill(drill)
   }
 
   const complete = (node: JourneyNode, stars: number) => {
@@ -77,6 +85,16 @@ export default function WorldHub({ world }: { world: World }) {
         <ItemPlayer world={world} node={active}
           onExit={() => { setActive(null); force(n => n + 1) }}
           onComplete={(stars) => complete(active, stars)} />
+      </div>
+    )
+  }
+
+  if (activeDrill) {
+    return (
+      <div className="le-world">
+        {cinematic}
+        <DrillPlayer world={world} drill={activeDrill}
+          onExit={() => { setActiveDrill(null); if (uid) pushLearnState(uid); force(n => n + 1) }} />
       </div>
     )
   }
@@ -127,18 +145,29 @@ export default function WorldHub({ world }: { world: World }) {
         )}
 
         {spine === 'signature' && (
-          world.key === 'LOG'
-            ? <CinematicLauncher />
-            : <div className="le-sig">
-                <div className="le-sig-card" style={{ borderColor: `${world.color}55` }}>
-                  <h3 style={{ color: world.color }}>{world.signature}</h3>
-                  <p>This is {world.name}'s signature play. Jump into a quick mixed drill across every skill.</p>
-                  <button className="le-check" style={{ background: world.color }}
-                    onClick={() => launch({ key: 'sig-drill', title: `${world.signature} drill`, type: 'practice', skills: world.skills.map(s => s.key), itemCount: 6, rewardDiamonds: 8 })}>
-                    ⚡ Quick drill
-                  </button>
-                </div>
-              </div>
+          <div className="le-sig">
+            {world.key === 'LOG' && <CinematicLauncher />}
+            <div className="dr-gallery-head">
+              <h3 style={{ color: world.color }}>⚡ {world.name} Drills</h3>
+              <p>Short, repeatable rounds to sharpen one skill. New questions every time.</p>
+            </div>
+            <div className="dr-gallery">
+              {(DRILLS_BY_WORLD[world.key] ?? []).map(d => (
+                <button key={d.key} className="dr-card" style={{ borderColor: `${world.color}33` }} onClick={() => launchDrill(d)}>
+                  <div className="dr-card-ic" style={{ background: `${world.color}1a`, color: world.color }}>{d.emoji}</div>
+                  <div className="dr-card-body">
+                    <b>{d.title}</b>
+                    <small>{d.blurb}</small>
+                    <div className="dr-card-rew">
+                      <span className="dr-chip" style={{ color: world.color }}>+{d.xp} XP</span>
+                      <span className="dr-chip">+{d.diamonds} 💎</span>
+                    </div>
+                  </div>
+                  <span className="dr-card-go" style={{ color: world.color }}>▶</span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         {spine === 'arena' && (
