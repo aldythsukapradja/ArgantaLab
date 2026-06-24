@@ -1085,13 +1085,10 @@ drop policy if exists hq_featured_write on public.hq_featured;
 create policy hq_featured_write on public.hq_featured for all
   using (public.hq_is_operator()) with check (public.hq_is_operator());
 
--- Seed the 4 built-in flagship games as featured by default (idempotent).
-insert into public.hq_featured (game_ref, rank) values
-  ('builtin:strike',   0),
-  ('builtin:nitro',    1),
-  ('builtin:critter',  2),
-  ('builtin:kincatch', 3)
-on conflict (game_ref) do nothing;
+-- Featured games are curated entirely in Circle HQ — NO default seed.
+-- (Auto-featuring the 4 built-ins made the Ship "picks" rail look like
+--  placeholders; operators now feature games deliberately. To clear an
+--  existing install's built-in rows, run migration_clear_featured.sql.)
 
 -- ============================================================
 --  END GAME PLATFORM SPINE
@@ -1264,6 +1261,66 @@ begin
 end;
 $$;
 grant execute on function public.hq_retention() to authenticated;
+
+-- Acquisition funnel + new-signup trend. All real over profiles / item_attempts
+-- / skill_mastery — no new instrumentation needed.
+create or replace function public.hq_acquisition()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare r jsonb; v_signup int; v_activated int; v_mastery int; v_habit int;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select count(*)                 into v_signup    from public.profiles;
+  select count(distinct user_id)  into v_activated from public.item_attempts;
+  select count(distinct user_id)  into v_mastery   from public.skill_mastery;
+  select count(*) into v_habit from (
+    select user_id from public.item_attempts
+    group by user_id having count(distinct date_trunc('week', created_at)) >= 2
+  ) h;
+  select jsonb_build_object(
+    'funnel', jsonb_build_array(
+      jsonb_build_object('stage', 'Signed up',            'count', v_signup),
+      jsonb_build_object('stage', 'Activated · 1st lesson','count', v_activated),
+      jsonb_build_object('stage', 'Mastery loop',          'count', v_mastery),
+      jsonb_build_object('stage', 'Habit · 2+ weeks',      'count', v_habit)
+    ),
+    'newWeekly', (
+      select coalesce(jsonb_agg(jsonb_build_object('week', to_char(wk, 'MM-DD'), 'value', (
+        select count(*) from public.profiles where created_at >= wk and created_at < wk + interval '7 days'
+      )) order by wk), '[]'::jsonb)
+      from generate_series(date_trunc('week', now()) - interval '7 weeks', date_trunc('week', now()), interval '1 week') as wk
+    ),
+    'generatedAt', now()
+  ) into r;
+  return r;
+end;
+$$;
+grant execute on function public.hq_acquisition() to authenticated;
+
+-- Diamond economy: float + minted sources vs spent sinks + per-kind breakdown.
+-- Real over profiles.diamonds (float) + diamond_ledger (flows).
+create or replace function public.hq_economy()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare r jsonb; v_float bigint; v_mint bigint; v_spent bigint; v_gift bigint;
+begin
+  if not public.hq_is_operator() then raise exception 'not authorized'; end if;
+  select coalesce(sum(diamonds), 0) into v_float from public.profiles;
+  select coalesce(sum(amount), 0) into v_mint  from public.diamond_ledger where kind in ('starter', 'reward', 'earn');
+  select coalesce(sum(amount), 0) into v_spent from public.diamond_ledger where kind = 'spend';
+  select coalesce(sum(amount), 0) into v_gift  from public.diamond_ledger where kind = 'gift';
+  select jsonb_build_object(
+    'float', v_float, 'minted', v_mint, 'spent', v_spent, 'gifted', v_gift,
+    'coverage', case when v_mint > 0 then round(100.0 * v_spent / v_mint, 1) else null end,
+    'sources', (
+      select coalesce(jsonb_agg(jsonb_build_object('kind', kind, 'amount', amt) order by amt desc), '[]'::jsonb)
+      from (select kind, sum(amount) as amt from public.diamond_ledger group by kind) s
+    ),
+    'ledgerRows', (select count(*) from public.diamond_ledger),
+    'generatedAt', now()
+  ) into r;
+  return r;
+end;
+$$;
+grant execute on function public.hq_economy() to authenticated;
 -- ============================================================
 --  END GROWTH ANALYTICS
 -- ============================================================

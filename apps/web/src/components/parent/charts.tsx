@@ -1,5 +1,4 @@
 import { ResponsiveRadar } from '@nivo/radar'
-import { ResponsiveCalendar } from '@nivo/calendar'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveLine } from '@nivo/line'
 import type { NivoTheme } from '@lib/nivoTheme'
@@ -107,25 +106,47 @@ export function InterestBar({ interest, theme }: { interest: Record<string, numb
   )
 }
 
-// ── Activity calendar (daily volume heatmap) ────────────────────
-export function ActivityCalendar({ daily, theme }: { daily: DailyRow[]; theme: NivoTheme }) {
-  const data = daily.filter(d => d.items > 0).map(d => ({ day: d.day, value: d.items }))
-  const to = new Date().toISOString().slice(0, 10)
-  const from = new Date(Date.now() - 119 * 864e5).toISOString().slice(0, 10)
+// ── Activity calendar — custom heatmap (clean day + month labels) ───
+const DOW = ['', 'Mon', '', 'Wed', '', 'Fri', '']
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+export function ActivityCalendar({ daily }: { daily: DailyRow[]; theme?: NivoTheme }) {
+  const byDay = new Map(daily.map(d => [d.day, d.items]))
+  const max = Math.max(1, ...daily.map(d => d.items))
+  const WEEKS = 18
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  // walk back to the Sunday that starts the window
+  const cur = new Date(today); cur.setDate(cur.getDate() - (WEEKS * 7 - 1) - cur.getDay())
+  const cols: { key: string; n: number; firstOfMonth: boolean; month: number }[][] = []
+  for (let w = 0; w < WEEKS; w++) {
+    const col: { key: string; n: number; firstOfMonth: boolean; month: number }[] = []
+    for (let d = 0; d < 7; d++) {
+      const key = cur.toISOString().slice(0, 10)
+      col.push({ key, n: byDay.get(key) ?? 0, firstOfMonth: cur.getDate() <= 7, month: cur.getMonth() })
+      cur.setDate(cur.getDate() + 1)
+    }
+    cols.push(col)
+  }
+  const fill = (n: number) => n === 0 ? 'var(--border)' : `rgba(77,159,255,${(0.3 + 0.7 * Math.min(1, n / max)).toFixed(2)})`
   return (
-    <ResponsiveCalendar
-      data={data}
-      from={from}
-      to={to}
-      emptyColor="var(--border)"
-      colors={['#bcd9ff', accent, '#2563eb', '#1e40af']}
-      margin={{ top: 16, right: 12, bottom: 8, left: 12 }}
-      monthBorderColor="transparent"
-      dayBorderWidth={2}
-      dayBorderColor="transparent"
-      daySpacing={2}
-      theme={theme}
-    />
+    <div style={{ display: 'flex', gap: 6, paddingTop: 4, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 9, color: 'var(--t2)', marginTop: 16 }}>
+        {DOW.map((d, i) => <span key={i} style={{ height: 12, lineHeight: '12px' }}>{d}</span>)}
+      </div>
+      <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+        {cols.map((col, ci) => {
+          const showMonth = col.some(c => c.firstOfMonth) && (ci === 0 || !cols[ci - 1].some(c => c.month === col.find(x => x.firstOfMonth)?.month))
+          const monthIdx = col.find(c => c.firstOfMonth)?.month
+          return (
+            <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ height: 12, fontSize: 9, color: 'var(--t2)', whiteSpace: 'nowrap' }}>{showMonth && monthIdx !== undefined ? MON[monthIdx] : ''}</span>
+              {col.map(c => (
+                <span key={c.key} title={`${c.key}: ${c.n} answered`} style={{ width: 12, height: 12, borderRadius: 3, background: fill(c.n) }} />
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
