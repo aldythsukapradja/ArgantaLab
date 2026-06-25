@@ -7,6 +7,7 @@ import {
 } from '../data/agents'
 import { SCENARIOS, scenarioById } from '../data/scenarios'
 import { ChartView, type ChartData } from './charts'
+import { useHQ, type AgentSize } from '../shell/store'
 
 const CHIPS = [
   { label: '📋 Daily Brief', prompt: 'Give me my daily brief' },
@@ -29,8 +30,7 @@ const ceoAgent = AGENTS.find(a => a.orchestrator)!
 interface Step { ico: string; label: string; model: Model; done: boolean }
 interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[]; convened?: string[]; chart?: ChartData }
 
-type PanelSize = 'small' | 'expanded' | 'full'
-const SIZE_GLYPH: Record<PanelSize, string> = { small: '–', expanded: '□', full: '⤢' }
+const SIZE_GLYPH: Record<AgentSize, string> = { small: '–', expanded: '□', full: '⤢' }
 
 const STEP_ICON: Record<string, string> = { sense: '⚡', compute: '🔢', match: '🎯', generate: '✦', deliver: '📬' }
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
@@ -51,11 +51,10 @@ function render(text: string) {
 }
 
 export function AgentOrb() {
-  const [open, setOpen] = useState(false)
+  const { agentOpen: open, agentSize: size, toggleAgent, closeAgent, setAgentSize } = useHQ()
   const [busy, setBusy] = useState(false)
   const [input, setInput] = useState('')
   const [msgs, setMsgs] = useState<Msg[]>([])
-  const [size, setSize] = useState<PanelSize>('expanded')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' }) }, [msgs, busy])
@@ -168,7 +167,7 @@ export function AgentOrb() {
 
   return (
     <>
-      <button className="agent-orb" aria-label="Open COO Agent" onClick={() => setOpen(o => !o)}
+      <button className="agent-orb" aria-label="Open COO Agent" onClick={() => toggleAgent()}
         style={{ transform: open ? 'scale(.9)' : 'scale(1)' }}>
         <Sparkles size={22} color="#fff" />
       </button>
@@ -177,9 +176,9 @@ export function AgentOrb() {
         <div className={'agent-panel ' + size}>
           <div className="agent-head">
             <div className="agent-lights">
-              <button className={'al red' + (size === 'small' ? ' on' : '')} title="Small" aria-label="Small" onClick={() => setSize('small')}><span>{SIZE_GLYPH.small}</span></button>
-              <button className={'al yellow' + (size === 'expanded' ? ' on' : '')} title="Expanded" aria-label="Expanded" onClick={() => setSize('expanded')}><span>{SIZE_GLYPH.expanded}</span></button>
-              <button className={'al green' + (size === 'full' ? ' on' : '')} title="Full screen" aria-label="Full screen" onClick={() => setSize('full')}><span>{SIZE_GLYPH.full}</span></button>
+              <button className={'al red' + (size === 'small' ? ' on' : '')} title="Small" aria-label="Small" onClick={() => setAgentSize('small')}><span>{SIZE_GLYPH.small}</span></button>
+              <button className={'al yellow' + (size === 'expanded' ? ' on' : '')} title="Expanded" aria-label="Expanded" onClick={() => setAgentSize('expanded')}><span>{SIZE_GLYPH.expanded}</span></button>
+              <button className={'al green' + (size === 'full' ? ' on' : '')} title="Full screen" aria-label="Full screen" onClick={() => setAgentSize('full')}><span>{SIZE_GLYPH.full}</span></button>
             </div>
             <div style={{ width: 32, height: 32, borderRadius: 9, flex: 'none', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,var(--acc),var(--mag,#8a5cf6))' }}>
               <Sparkles size={16} color="#fff" />
@@ -189,7 +188,7 @@ export function AgentOrb() {
               <div style={{ fontSize: 11, color: 'var(--tx3)' }}>Circle AI OS · live SQL pipeline</div>
             </div>
             <Pill model="sonnet" />
-            <button className="agent-x" onClick={() => setOpen(false)} aria-label="Close"><X size={15} /></button>
+            <button className="agent-x" onClick={() => closeAgent()} aria-label="Close"><X size={15} /></button>
           </div>
 
           <div className="agent-chips">

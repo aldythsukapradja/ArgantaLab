@@ -1706,11 +1706,20 @@ html[data-theme='dark'] .mom2-tl-card { box-shadow: none; }
 .mom2-tl-title { font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.25; }
 .mom2-tl-meta { font-size: 11px; color: var(--faint); margin-top: 2px; }
 .mom2-tl-body { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.45; }
-.mom2-tl-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-top: 9px; }
-.mom2-tl-cover { width: 100%; height: 130px; border-radius: 12px; overflow: hidden; margin-top: 9px; background: var(--bg-2); display: grid; place-items: center; color: var(--faint); }
-.mom2-tl-cover img { width: 100%; height: 100%; object-fit: cover; }
 .mom2-tl-dia { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 800; color: var(--memory); flex: 0 0 auto; background: color-mix(in srgb, var(--memory) 13%, transparent); padding: 3px 8px; border-radius: 999px; }
-.mom2-tl-open { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: 11.5px; font-weight: 700; color: var(--c0); margin-top: 8px; }
+
+/* milestone media (skeleton-loaded) */
+.mom2-tl-media { position: relative; display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 12px; overflow: hidden; margin-top: 9px; background: var(--skel); }
+
+/* album = full-bleed photo hero card */
+.mom2-tl-album { padding: 0; overflow: hidden; }
+.mom2-tl-hero { position: relative; display: block; width: 100%; aspect-ratio: 3 / 2; background: var(--skel); }
+.mom2-tl-hero-fb { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(140deg, var(--c0), var(--c1)); color: rgba(255, 255, 255, 0.9); }
+.mom2-tl-hero-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, transparent 42%, rgba(10, 8, 20, 0.16) 62%, rgba(10, 8, 20, 0.64) 100%); }
+.mom2-tl-hero-cap { position: absolute; left: 14px; right: 50px; bottom: 12px; display: flex; flex-direction: column; gap: 1px; color: #fff; }
+.mom2-tl-hero-cap b { font-size: 16px; font-weight: 800; line-height: 1.2; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mom2-tl-hero-cap small { font-size: 11.5px; font-weight: 600; opacity: 0.94; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45); }
+.mom2-tl-hero-go { position: absolute; right: 12px; bottom: 12px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(255, 255, 255, 0.22); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.3); }
 
 /* portalled bottom sheet: opacity-only entrance (the global translateY(100%)
    leaves a residual transform under a portal → sheet renders off-screen) */

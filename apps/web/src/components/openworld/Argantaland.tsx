@@ -1,23 +1,24 @@
 // ============================================================
 //  ARGANTALAND · the 2D overworld engine (generic, data-driven)
-//  Renders ANY map from data/openworld/argantaland.ts, moves the avatar tile by
-//  tile (keyboard + on-screen D-pad overlaid on the map), and rolls weighted
-//  wild-kin encounters in the grass → hands off to the EXISTING battle
-//  (OpenworldPlayer) → befriend → the kin joins the Nexus. The grid is fully
-//  responsive (a ResizeObserver measures the cell size, so the avatar scales
-//  with it). The avatar is the real AvatarSprite, so it wears the kid's equipped
-//  cosmetics AND rides their equipped mount.
+//  A CAMERA viewport follows the avatar over a map that's bigger than the screen
+//  (room to roam). Move tile-by-tile (keyboard + on-screen D-pad overlaid on the
+//  map); grass rolls a weighted wild-kin encounter → the EXISTING battle
+//  (OpenworldPlayer) → befriend. CO-OP: a Realtime presence channel shows circle
+//  friends walking the same map live. The avatar is the real AvatarSprite, so it
+//  wears the kid's equipped cosmetics AND rides their equipped mount.
 // ============================================================
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { World } from '@/data/learn'
+import { useAppStore } from '@store/appStore'
 import { mapFor, tileOf, biomeOf, isWalkable, spawnOf, rollEncounter } from '@/data/openworld/argantaland'
 import { kin as kinDef } from '@/data/openworld'
 import { myMounts } from '@lib/mounts'
+import { joinLand, type Peer, type LandCtrl } from '@lib/landPresence'
 import AvatarSprite from './AvatarSprite'
+import Buddy from '@components/avatar/Buddy'
 import OpenworldPlayer from './OpenworldPlayer'
 
-// Darken a #rrggbb by pct (negative = darker) — for the subtle checker on tiles.
 function shade(hex: string, pct: number): string {
   if (hex[0] !== '#') return hex
   const n = parseInt(hex.slice(1), 16)
@@ -28,29 +29,44 @@ function shade(hex: string, pct: number): string {
 }
 
 export default function Argantaland({ world, onExit }: { world: World; onExit: () => void }) {
+  const { learnerName, resolvedOutfit, activeCircleId, session } = useAppStore()
+  const myId = session && session !== 'loading' ? session.user.id : null
   const map = mapFor(world.key)
   const cols = map ? map.rows[0].length : 0
   const rows = map ? map.rows.length : 0
 
-  const gridRef = useRef<HTMLDivElement>(null)
-  const [cell, setCell] = useState(40)
+  const viewRef = useRef<HTMLDivElement>(null)
+  const [view, setView] = useState({ w: 440, h: 480 })
   const [pos, setPos] = useState(() => (map ? spawnOf(map) : { r: 1, c: 1 }))
   const [battleKin, setBattleKin] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
   const [mount, setMount] = useState<string | undefined>(undefined)
+  const [peers, setPeers] = useState<Peer[]>([])
 
   useEffect(() => { myMounts().then(m => setMount(m.equipped ?? undefined)) }, [])
 
-  // Measure the grid so the avatar + movement scale with the responsive tiles.
+  // Measure the viewport so the camera + tile size fit it.
   useLayoutEffect(() => {
-    const el = gridRef.current
-    if (!el || !cols) return
-    const measure = () => setCell(el.clientWidth / cols)
+    const el = viewRef.current
+    if (!el) return
+    const measure = () => setView({ w: el.clientWidth, h: el.clientHeight })
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [cols, battleKin])
+  }, [battleKin])
+
+  // Co-op presence: join the map channel, broadcast our position, render friends.
+  const ctrl = useRef<LandCtrl | null>(null)
+  useEffect(() => {
+    if (!myId || !map) return
+    const me: Peer = { id: myId, name: learnerName, x: pos.c, y: pos.r, color: world.color, outfit: resolvedOutfit() }
+    const c = joinLand(world.key, activeCircleId, me, setPeers)
+    ctrl.current = c
+    return () => { c.leave(); ctrl.current = null; setPeers([]) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [world.key, myId, activeCircleId])
+  useEffect(() => { ctrl.current?.move(pos.c, pos.r) }, [pos])
 
   const tryEncounter = useCallback((t: string, gym: boolean) => {
     if (t !== 'grass' && !gym) return
@@ -88,26 +104,40 @@ export default function Argantaland({ world, onExit }: { world: World; onExit: (
 
   const pal = biomeOf(map)
   const bg = (t: string) => t === 'wall' ? pal.wall : t === 'water' ? pal.water : t === 'grass' ? pal.grass : t === 'gym' ? pal.gym : pal.ground
+  const TILE = Math.max(40, view.w / Math.min(cols, 10))
+  const worldW = cols * TILE, worldH = rows * TILE
+  const camX = Math.max(0, Math.min(Math.max(0, worldW - view.w), (pos.c + 0.5) * TILE - view.w / 2))
+  const camY = Math.max(0, Math.min(Math.max(0, worldH - view.h), (pos.r + 0.5) * TILE - view.h / 2))
 
   return (
     <div className="al-wrap">
       <div className="al-head">
         <button className="al-leave" onClick={onExit}><span aria-hidden>←</span> Leave</button>
         <div className="al-title"><b style={{ color: world.color }}>{map.name}</b><small>Walk into the grass to meet kin</small></div>
+        {peers.length > 0 && <span className="al-online" title="friends exploring"><i className="al-dot" />{peers.length}</span>}
       </div>
 
-      <div className="al-stage">
-        <div ref={gridRef} className="al-grid" style={{ ['--frame' as string]: pal.wall, gridTemplateColumns: `repeat(${cols}, 1fr)`, aspectRatio: `${cols} / ${rows}` }}>
+      <div ref={viewRef} className="al-view" style={{ ['--frame' as string]: pal.wall }}>
+        <div className="al-world" style={{ width: worldW, height: worldH, transform: `translate(${-camX}px, ${-camY}px)`, gridTemplateColumns: `repeat(${cols}, ${TILE}px)`, gridAutoRows: `${TILE}px` }}>
           {map.rows.flatMap((row, r) => [...row].map((ch, c) => {
             const t = tileOf(ch)
             const base = bg(t)
             return <div key={`${r}-${c}`} className="al-tile" style={{ background: (r + c) % 2 ? shade(base, -0.05) : base }}>{t === 'gym' ? <span className="al-gym">★</span> : null}</div>
           }))}
-          <div className="al-avatar" style={{ left: (pos.c + 0.5) * cell, top: (pos.r + 0.5) * cell }}>
-            <AvatarSprite mood="happy" size={Math.round(cell * 1.5)} mount={mount} />
+
+          {peers.map(p => (
+            <div key={p.id} className="al-peer" style={{ left: (p.x + 0.5) * TILE, top: (p.y + 0.5) * TILE }}>
+              <Buddy mood="idle" size={Math.round(TILE * 1.25)} outfit={p.outfit} />
+              <span className="al-peer-tag">{p.name}</span>
+            </div>
+          ))}
+
+          <div className="al-avatar" style={{ left: (pos.c + 0.5) * TILE, top: (pos.r + 0.5) * TILE }}>
+            <AvatarSprite mood="happy" size={Math.round(TILE * 1.5)} mount={mount} />
           </div>
-          {flash && <div className="al-flash">A wild <b>{flash}</b> appeared!</div>}
         </div>
+
+        {flash && <div className="al-flash">A wild <b>{flash}</b> appeared!</div>}
 
         <div className="al-dpad" role="group" aria-label="move">
           <button className="al-up" onClick={() => move(-1, 0)} aria-label="up">▲</button>

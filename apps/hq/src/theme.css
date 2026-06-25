@@ -178,17 +178,27 @@ table.tbl tr:last-child td{border-bottom:none}
   .rail-foot{justify-content:center}
 }
 @media (max-width:640px){
-  .content{padding:16px 14px 74px}
+  .content{padding:16px 14px 76px}
   .hq{grid-template-columns:1fr}
-  .rail{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;flex-wrap:nowrap;border-right:none;border-top:1px solid var(--bd);z-index:50;padding:4px 0;overflow:hidden;background:var(--bg)}
-  .rail-logo,.rail-grp,.rail-foot{display:none}
-  .rail-grp-wrap{display:contents}
-  .nav{flex:1;min-width:0;flex-direction:column;gap:2px;font-size:9.5px;padding:5px 2px;justify-content:center;align-items:center}
-  .nav i{width:auto}
-  .nav span:not(.nav-badge){display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  .nav-badge{display:none}
+  .rail{display:none}
   .main{height:100vh;height:100dvh}
 }
+
+/* ---------- Mobile bottom nav (4 groups) + secondary sub-tabs ---------- */
+.mnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:210;height:56px;
+  background:var(--bg);border-top:1px solid var(--bd);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+.mnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:10px;font-weight:500;color:var(--tx3);border-radius:10px;padding:5px 2px;min-width:0}
+.mnav-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mnav-item svg{color:var(--tx3)}
+.mnav-item.on{color:var(--acc-text)}
+.mnav-item.on svg{color:var(--acc)}
+.msub{display:none;gap:6px;padding:9px 14px;border-bottom:1px solid var(--bd);overflow-x:auto;
+  background:var(--bg);flex-shrink:0;scrollbar-width:none}
+.msub::-webkit-scrollbar{display:none}
+.msub button{flex:none;font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:99px;
+  border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);white-space:nowrap}
+.msub button.on{background:var(--acc-soft);border-color:transparent;color:var(--acc-text);font-weight:600}
 
 /* ---------- Builder — cloud workspace ---------- */
 /* Flat light (or dark) canvas — no workspace gradient. Cards float with a

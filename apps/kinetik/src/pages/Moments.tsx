@@ -447,11 +447,13 @@ function MilestonesTimeline({ items, albums, onOpenAlbum, onEditMs }: { items: M
         <div className="mom2-tl-row" key={'al' + e.al.id}>
           <DateChip iso={e.al.createdAt} />
           <span className="mom2-tl-node" style={{ ['--nc' as any]: 'var(--c0)' }}><IconPhoto width={13} height={13} /></span>
-          <button className="mom2-tl-card" onClick={() => onOpenAlbum(e.al)}>
-            <span className="mom2-tl-head"><span className="mom2-tl-title">{e.al.title}</span></span>
-            <span className="mom2-tl-meta">Album · {e.al.count} moment{e.al.count === 1 ? '' : 's'}</span>
-            <span className="mom2-tl-cover">{e.al.coverUrl ? <img src={e.al.coverUrl} alt="" /> : <IconPhoto width={22} height={22} />}</span>
-            <span className="mom2-tl-open">Open album <IconChevron width={14} height={14} /></span>
+          <button className="mom2-tl-card mom2-tl-album" onClick={() => onOpenAlbum(e.al)}>
+            <span className="mom2-tl-hero">
+              {e.al.coverUrl ? <SmartImg src={e.al.coverUrl} /> : <span className="mom2-tl-hero-fb"><IconPhoto width={26} height={26} /></span>}
+              <span className="mom2-tl-hero-grad" />
+              <span className="mom2-tl-hero-cap"><b>{e.al.title}</b><small>{e.al.count} moment{e.al.count === 1 ? '' : 's'}</small></span>
+              <span className="mom2-tl-hero-go"><IconChevron width={15} height={15} /></span>
+            </span>
           </button>
         </div>
       ) : (
@@ -465,7 +467,7 @@ function MilestonesTimeline({ items, albums, onOpenAlbum, onEditMs }: { items: M
             </span>
             <span className="mom2-tl-meta">{[e.ms.kid?.name ?? (e.ms.ref ?? ''), e.ms.author ? `by ${e.ms.author.name.split(' ')[0]}` : ''].filter(Boolean).join(' · ') || 'Milestone'}</span>
             {e.ms.body && <p className="mom2-tl-body">{e.ms.body}</p>}
-            {e.ms.mediaUrl && <img className="mom2-tl-img" src={e.ms.mediaUrl} alt="" />}
+            {e.ms.mediaUrl && <span className="mom2-tl-media"><SmartImg src={e.ms.mediaUrl} /></span>}
           </button>
         </div>
       ))}

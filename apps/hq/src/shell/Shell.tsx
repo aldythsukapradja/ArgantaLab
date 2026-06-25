@@ -1,5 +1,6 @@
 import { Rail } from './Rail'
 import { Topbar } from './Topbar'
+import { MobileNav, MobileSubnav } from './MobileNav'
 import { useHQ } from './store'
 import { cloudEnabled } from '../lib/supabase'
 import { Data } from '../surfaces/Data'
@@ -38,11 +39,13 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
             Offline preview — add <span className="src" style={{ background: 'transparent', padding: 0 }}>VITE_SUPABASE_URL</span> + anon key to <span className="src" style={{ background: 'transparent', padding: 0 }}>apps/hq/.env.local</span> and sign in to load live data.
           </div>
         )}
+        <MobileSubnav />
         <div className="content">
           <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>
         </div>
       </div>
       <AgentOrb />
+      <MobileNav />
     </div>
   )
 }
