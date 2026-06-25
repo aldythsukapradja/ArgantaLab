@@ -34,6 +34,7 @@ import Profile from '@/pages/Profile'
 import FamilyPulse from '@/pages/FamilyPulse'
 import Quests from '@/pages/Quests'
 import Nexus from '@/pages/Nexus'
+import MountShop from '@/pages/MountShop'
 import LearnHub from '@/pages/LearnHub'
 import World from '@/pages/World'
 import PlayPage from '@/pages/PlayPage'
@@ -250,6 +251,7 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'lab') return <BuilderLab />
   if (tab === 'pitch') return <PitchBuilder />
   if (tab === 'shop') return <Shop />
+  if (tab === 'mounts') return <MountShop />
   if (tab === 'discover') return <Discover />
   if (tab === 'gamestore') return <MyGameStore />
   if (tab === 'avatar') return <Avatar />

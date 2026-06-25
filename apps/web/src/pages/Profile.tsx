@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { WORLDS, STAGE_META, ageFromDob, stageForDob } from '@/data/learn'
-import { worldRing, earnedBadges } from '@lib/learnProgress'
+import { earnedBadges } from '@lib/learnProgress'
+import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import { loadMyGames } from '@lib/myGames'
 import { addKid as addKidLocal } from '@lib/circles'   // offline-only fallback
 import Buddy from '@components/avatar/Buddy'
@@ -14,9 +15,9 @@ import {
   signOutCloud, parentCreateKid, unlinkKid, resetKidPin,
   listMyKids, myCircles, myInvites, respondToInvite, createCircle, circleRoster,
   socialStats, myFriends, myFriendRequests, respondFriendRequest,
-  removeFriend, kidFriends, removeKidFriend, kidWorldRings,
+  removeFriend, kidFriends, removeKidFriend,
   type CloudProfile, type CloudCircle, type PendingInvite, type CircleMember,
-  type SocialStats, type Friend, type FriendRequest, type WorldRing,
+  type SocialStats, type Friend, type FriendRequest,
 } from '@lib/cloudAuth'
 import '@/styles/profile-premium.css'
 
@@ -55,7 +56,13 @@ export default function Profile() {
   const [stats, setStats] = useState<SocialStats>({ circles: 0, connections: 0, friends: 0 })
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendReqs, setFriendReqs] = useState<FriendRequest[]>([])
-  const [kidRings, setKidRings] = useState<Record<string, WorldRing[]>>({})
+  // DAILY rings everywhere on this page (today's XP per world, resets at local
+  // midnight) — so a parent sees TODAY's progress at a glance. Cumulative/overall
+  // lifetime progress lives in the Family Pulse. All of it is cloud-driven: the
+  // self ring keys off auth.uid(), the per-kid rings off kid_today_rings (RLS
+  // gates them to the guardian). `worldRing` (localStorage, cumulative) is gone.
+  const [kidToday, setKidToday] = useState<Record<string, Record<string, number>>>({})
+  const [myToday, setMyToday] = useState<Record<string, number>>({})
   const [rosters, setRosters] = useState<Record<string, CircleMember[]>>({})
   const reloadAll = () => {
     if (!cloudEnabled || !uid) return
@@ -69,11 +76,12 @@ export default function Profile() {
     socialStats().then(setStats)
     myFriends().then(setFriends)
     myFriendRequests().then(setFriendReqs)
+    todayWorldXp().then(setMyToday)   // my own daily rings (self)
     listMyKids().then(ks => {
       setCloudKids(ks)
-      // per-kid world rings for the command-center cards
-      Promise.all(ks.map(k => kidWorldRings(k.id).then(r => [k.id, r] as const)))
-        .then(pairs => setKidRings(Object.fromEntries(pairs)))
+      // each kid's TODAY rings for the family cards (guardian-readable)
+      Promise.all(ks.map(k => todayWorldXp(k.id).then(x => [k.id, x] as const)))
+        .then(pairs => setKidToday(Object.fromEntries(pairs)))
     })
   }
   useEffect(reloadAll, [uid])
@@ -181,11 +189,11 @@ export default function Profile() {
 
   const rings = (
     <>
-      <div className="section-label">Skill rings</div>
+      <div className="section-label">Today's rings <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 12 }}>· resets daily</span></div>
       <div className="ig-rings">
         {WORLDS.map(w => (
           <button key={w.key} className="ig-ring" onClick={() => go({ tab: w.key.toLowerCase() })}>
-            <Ring pct={worldRing(w)} color={w.color} />
+            <Ring pct={ringPct(myToday[w.key] ?? 0)} color={w.color} />
             <small>{RING_LABEL[w.key]}</small>
           </button>
         ))}
@@ -313,7 +321,7 @@ export default function Profile() {
           : circles.map(c => <CloudCircleCard key={c.id} circle={c} members={rosters[c.id] ?? []} onClick={() => setOpenCircle(c)} />)}
       </div>
 
-      <div className="section-label">Kids in this family</div>
+      <div className="section-label">Kids in this family <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 12 }}>· today's rings · lifetime in Family Pulse</span></div>
       {kids.length === 0 ? (
         <div className="ig-empty">
           <span className="ig-empty-ic">🧒</span>
@@ -343,7 +351,7 @@ export default function Profile() {
                 </div>
                 <div className="pp-ringrow">
                   {WORLDS.map(w => {
-                    const pct = kidRings[k.id]?.find(r => r.world === w.key)?.pct ?? 0
+                    const pct = ringPct(kidToday[k.id]?.[w.key] ?? 0)
                     return (
                       <div key={w.key} className="pp-ring">
                         <Ring pct={pct} color={w.color} />

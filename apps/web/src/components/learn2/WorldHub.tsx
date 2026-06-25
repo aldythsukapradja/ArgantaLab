@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { World, JourneyNode, Badge } from '@/data/learn'
 import { STAGES, STAGE_META } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getMastery } from '@lib/adaptive'
-import { nodeState, nodeUnlocked, setNodeDone, worldRing, earnedBadges } from '@lib/learnProgress'
+import { nodeState, nodeUnlocked, setNodeDone, nodeDoneToday, earnedBadges } from '@lib/learnProgress'
+import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import ItemPlayer from './ItemPlayer'
 import DrillPlayer from './DrillPlayer'
 import Buddy from '@components/avatar/Buddy'
@@ -13,6 +14,8 @@ import Journey from './Journey'
 import { DRILLS_BY_WORLD, type Drill } from '@/data/drills'
 import { pushLearnState } from '@lib/learnCloud'
 import { bumpQuest } from '@lib/quests'
+import { earnDiamonds } from '@lib/wallet'
+import { sectionDoneToday } from '@lib/sectionDaily'
 import { KIN } from '@/data/openworld'
 import KinSprite from '@components/openworld/KinSprite'
 import OpenworldPlayer from '@components/openworld/OpenworldPlayer'
@@ -32,7 +35,7 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addDiamonds, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode } = useAppStore()
+  const { requireAuth, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode, xp } = useAppStore()
   const outfit = resolvedOutfit()
   const stage = STAGES.find(s => s.key === stageKey)
   const stageMeta = STAGE_META[stageKey]
@@ -44,12 +47,18 @@ export default function WorldHub({ world }: { world: World }) {
   const [battleKin, setBattleKin] = useState<string | null>(null)
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
-  const ring = worldRing(world)
+  // DAILY world ring (today's XP in this world, resets at local midnight) —
+  // reloads whenever the kid earns XP so it fills live as they play.
+  const [todayXp, setTodayXp] = useState<Record<string, number>>({})
+  useEffect(() => { let on = true; todayWorldXp().then(x => { if (on) setTodayXp(x) }); return () => { on = false } }, [xp])
+  const ring = ringPct(todayXp[world.key] ?? 0)
   const flat = world.units.flatMap(u => u.nodes)
   const earned = earnedBadges(world)
 
-  // the current node = first unlocked, not-yet-done node (gets the START bubble)
-  const currentKey = flat.find((n, i) => nodeUnlocked(world, i) && nodeState(world.key, n.key).status !== 'done')?.key
+  // the current node = first unlocked node not yet done TODAY (gets the START
+  // bubble). Because "done" resets daily, the pin walks the journey again each
+  // day — so there's always a fresh node to play.
+  const currentKey = flat.find((n, i) => nodeUnlocked(world, i) && !nodeDoneToday(world.key, n.key))?.key
 
   const cinematic = badgeQueue[0]
     ? <BadgeCinematic key={badgeQueue[0].key} name={badgeQueue[0].name} icon={badgeQueue[0].icon}
@@ -68,11 +77,14 @@ export default function WorldHub({ world }: { world: World }) {
   }
 
   const complete = (node: JourneyNode, stars: number) => {
-    const wasDone = nodeState(world.key, node.key).status === 'done'
+    // Reward once per LOCAL DAY per node — so replaying tomorrow pays again
+    // (server-capped), but spamming the same node today doesn't. Unlock state is
+    // permanent, so progression is never lost.
+    const earnedToday = nodeDoneToday(world.key, node.key)
     setNodeDone(world.key, node.key, stars)
     bumpQuest(node.type === 'boss' ? 'boss' : 'node')
-    if (!wasDone) {
-      addDiamonds(node.rewardDiamonds)
+    if (!earnedToday) {
+      earnDiamonds(node.rewardDiamonds, 'journey', `journey:${world.key}:${node.key}`)
       // queue any newly-earned badges for the unlock cinematic
       const after = earnedBadges(world)
       const fresh = world.badges.filter(b => after.has(b.key) && !earned.has(b.key))
@@ -121,6 +133,14 @@ export default function WorldHub({ world }: { world: World }) {
     { k: 'profile', label: 'Profile' },
   ]
 
+  // A nudge dot on each playable sub-tab until that section is done TODAY:
+  // Journey = a node still left to play; Drills/Openworld = no round done today.
+  const tabDot: Partial<Record<Spine, boolean>> = {
+    journey: !!currentKey,
+    signature: !sectionDoneToday(world.key, 'drills'),
+    arena: !sectionDoneToday(world.key, 'openworld'),
+  }
+
   // Wild kin you can hunt + befriend in this world's Openworld.
   const wildKin = KIN.filter(k => k.world === world.key.toLowerCase())
 
@@ -152,7 +172,10 @@ export default function WorldHub({ world }: { world: World }) {
         {TABS.map(t => (
           <button key={t.k} className={`le-spine-tab${spine === t.k ? ' on' : ''}`}
             style={spine === t.k ? { color: world.color, borderBottomColor: world.color } : undefined}
-            onClick={() => setSpine(t.k)}>{t.label}</button>
+            onClick={() => setSpine(t.k)}>
+            {t.label}
+            {tabDot[t.k] && <span className="le-spine-dot" style={{ background: world.color }} aria-label="not done today" />}
+          </button>
         ))}
       </div>
 

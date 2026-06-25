@@ -35,6 +35,20 @@ export async function walletEarn(amount: number, kind = 'earn', reason: string |
     { p_amount: Math.round(amount), p_kind: kind, p_reason: reason }))
 }
 
+/** The ONE earn path every reward site should call. Signed-in → server mint
+ *  (ledgered + daily-capped, balance snapped to truth). Guest/offline → optimistic
+ *  local credit so play still feels rewarding. `kind` groups the ledger entry
+ *  (lesson/game/drill/journey/openworld/quest/harvest); `reason` is the audit
+ *  trail. Diamonds buy cosmetics only — never grades/ranks/progress. */
+export async function earnDiamonds(amount: number, kind: string, reason: string): Promise<number> {
+  const n = Math.round(amount)
+  if (n <= 0) return useAppStore.getState().diamonds
+  const r = await walletEarn(n, kind, reason)
+  if (r && typeof r.balance === 'number') return r.balance
+  useAppStore.getState().addDiamonds(n) // guest / offline fallback
+  return useAppStore.getState().diamonds
+}
+
 /** Burn diamonds from the signed-in player (a purchase). Server checks balance. */
 export async function walletSpend(amount: number, reason: string | null = null) {
   return applyBalance(await rpc<{ ok: boolean; balance: number }>('wallet_spend',

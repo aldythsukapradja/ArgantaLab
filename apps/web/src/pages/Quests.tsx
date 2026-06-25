@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { getQuests, claimQuest, type QuestView } from '@lib/quests'
+import { earnDiamonds } from '@lib/wallet'
 import { getStreak } from '@lib/streak'
 
 export default function Quests() {
-  const { addDiamonds, addXp, addToast, go } = useAppStore()
+  const { addXp, addToast, go } = useAppStore()
   const [, force] = useState(0)
   const quests = getQuests()
   const daily = quests.filter(q => q.def.scope === 'daily')
@@ -14,7 +15,7 @@ export default function Quests() {
   const claim = (id: string) => {
     const reward = claimQuest(id)
     if (!reward) return
-    if (reward.diamonds) addDiamonds(reward.diamonds)
+    if (reward.diamonds) earnDiamonds(reward.diamonds, 'quest', `quest:${id}`)
     if (reward.xp) addXp(reward.xp)
     addToast(`Claimed ${reward.diamonds ? `+${reward.diamonds}💎` : ''}${reward.xp ? ` +${reward.xp}XP` : ''}`, '🎁')
     force(n => n + 1)

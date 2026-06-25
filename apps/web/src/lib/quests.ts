@@ -1,5 +1,9 @@
 // Daily & weekly quests — a lightweight re-engagement loop. Counters live in
-// localStorage and reset each day/week; events bump them via bumpQuest().
+// localStorage, namespaced PER KID (pkey) so accounts on a shared device don't
+// share a counter, and reset on the kid's LOCAL day/week; events bump them via
+// bumpQuest().
+import { pkey } from './player'
+import { localDay } from './day'
 
 const KEY = 'argantalab_quests_v1'
 
@@ -12,7 +16,7 @@ interface QState {
   claimed: string[]      // quest ids claimed (daily ids cleared each day)
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localDay()
 function weekId() {
   const d = new Date()
   const jan1 = new Date(d.getFullYear(), 0, 1)
@@ -23,14 +27,14 @@ const zero = (): Counters => ({ nodes: 0, boss: 0, xp: 0 })
 
 function load(): QState {
   let s: QState
-  try { s = JSON.parse(localStorage.getItem(KEY) || '') } catch { s = null as unknown as QState }
+  try { s = JSON.parse(localStorage.getItem(pkey(KEY)) || '') } catch { s = null as unknown as QState }
   if (!s) s = { date: today(), week: weekId(), daily: zero(), weekly: zero(), claimed: [] }
   // resets
   if (s.date !== today()) { s.date = today(); s.daily = zero(); s.claimed = s.claimed.filter(id => id.startsWith('w_')) }
   if (s.week !== weekId()) { s.week = weekId(); s.weekly = zero(); s.claimed = s.claimed.filter(id => !id.startsWith('w_')) }
   return s
 }
-function save(s: QState) { try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* ignore */ } }
+function save(s: QState) { try { localStorage.setItem(pkey(KEY), JSON.stringify(s)) } catch { /* ignore */ } }
 
 export function bumpQuest(kind: 'node' | 'boss' | 'xp', n = 1) {
   const s = load()

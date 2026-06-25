@@ -13,6 +13,7 @@
   --line: #ECECF1;
   --border: rgba(20, 16, 40, 0.07);
   --border-2: rgba(20, 16, 40, 0.12);
+  --skel: #c4bcd6;
 
   /* text */
   --ink: #15121C;
@@ -54,6 +55,7 @@ html[data-theme='dark'] {
   --muted: #A29DB5;
   --faint: #6E6982;
   --shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  --skel: #2c2942;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

@@ -6,6 +6,8 @@ import { useAppStore } from '@store/appStore'
 import { logLearnEvent } from '@lib/analytics'
 import { recordAttempt } from '@lib/adaptive'
 import { bumpQuest } from '@lib/quests'
+import { earnDiamonds } from '@lib/wallet'
+import { markSectionToday } from '@lib/sectionDaily'
 import { renderItem } from './interactions'
 import Buddy from '@components/avatar/Buddy'
 
@@ -98,7 +100,7 @@ function renderDrillItem(item: DrillItem, color: string, onResult: (correct: boo
 interface Props { world: World; drill: Drill; onExit: () => void }
 
 export default function DrillPlayer({ world, drill, onExit }: Props) {
-  const { addXp, addDiamonds, resolvedOutfit } = useAppStore()
+  const { addXp, resolvedOutfit } = useAppStore()
   const acc = resolvedOutfit()
   const queue = useMemo(() => drill.gen(), [drill.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const [idx, setIdx] = useState(0)
@@ -131,7 +133,8 @@ export default function DrillPlayer({ world, drill, onExit }: Props) {
     const ratio = total ? correctCount / total : 0
     const gems = ratio >= 0.6 ? drill.diamonds : Math.ceil(drill.diamonds / 2)
     if (earnedXp.current > 0) { addXp(earnedXp.current); bumpQuest('xp', earnedXp.current) }
-    if (gems > 0) addDiamonds(gems)
+    if (gems > 0) earnDiamonds(gems, 'drill', `drill:${drill.world}:${drill.key}`)
+    markSectionToday(drill.world, 'drills')
     bumpQuest('node')
   }
 

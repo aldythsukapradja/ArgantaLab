@@ -13,7 +13,7 @@
 //  addDiamonds). Diamonds buy cosmetics only — combat never sells progress.
 // ============================================================
 
-import { Component, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { World } from '@/data/learn'
 import type { Item } from '@/data/learn'
 import type { DrillItem } from '@/data/drills'
@@ -30,6 +30,9 @@ import {
 } from '@lib/combat/engine'
 import { kin as kinDef, ability, DEFAULT_LOADOUT, type KinDef } from '@/data/openworld'
 import { befriendKin } from '@lib/nexus'
+import { earnDiamonds } from '@lib/wallet'
+import { markSectionToday } from '@lib/sectionDaily'
+import { myMounts } from '@lib/mounts'
 import KinSprite from './KinSprite'
 import AvatarSprite from './AvatarSprite'
 
@@ -95,7 +98,11 @@ function buildQueue(worldKey: string): DrillItem[] {
 interface Props { world: World; kinId: string; onExit: () => void }
 
 export default function OpenworldPlayer({ world, kinId, onExit }: Props) {
-  const { addXp, addDiamonds, addToast } = useAppStore()
+  const { addXp, addToast } = useAppStore()
+  // The kid rides their equipped mount into battle (cosmetic + perk). Loaded from
+  // the cloud; on-foot if none equipped or offline.
+  const [mount, setMount] = useState<string | undefined>(undefined)
+  useEffect(() => { myMounts().then(m => setMount(m.equipped ?? undefined)) }, [])
   const def = kinDef(kinId)!
   const player: PlayerConfig = useMemo(() => ({ maxHearts: MAX_HEARTS, loadout: LOADOUT, autoHit: AUTO_HIT, energyPerCorrect: ENERGY_PER_CORRECT, mountPerk: null }), [])
 
@@ -125,10 +132,11 @@ export default function OpenworldPlayer({ world, kinId, onExit }: Props) {
     setOutcome(befriended ? 'befriend' : 'defeat'); setPhase('over')
     if (won) {
       const d = diamondsForVictory(TIER[def.rarity] ?? 1, true, befriended)
-      if (d > 0) addDiamonds(d)
+      if (d > 0) earnDiamonds(d, 'openworld', `openworld:${def.id}`)
       bumpQuest('boss')
     }
     if (earnedXp.current > 0) { addXp(earnedXp.current); bumpQuest('xp', earnedXp.current) }
+    markSectionToday(def.world.toUpperCase(), 'openworld') // match WorldHub's UPPERCASE world.key
   }
 
   // ── answer phase: a correct answer powers the engine, then you choose a move ──
@@ -254,7 +262,7 @@ export default function OpenworldPlayer({ world, kinId, onExit }: Props) {
         <div className="ow-hearts">{Array.from({ length: s.maxHearts }, (_, i) => <span key={i} className={i < s.hearts ? 'on' : ''}>{i < s.hearts ? '❤️' : '🤍'}</span>)}</div>
         <div className="ow-energy" title="Energy">⚡ <b>{s.energy}</b></div>
         {s.combo > 1 && <div className="ow-combo">🔥 {s.combo}×</div>}
-        <div className="ow-rider"><AvatarSprite mood={lastCorrect ? 'happy' : 'idle'} size={52} /></div>
+        <div className="ow-rider"><AvatarSprite mood={lastCorrect ? 'happy' : 'idle'} size={52} mount={mount} /></div>
       </div>
 
       {note && phase !== 'question' && phase !== 'powerup' && <div className="ow-note">{note}</div>}

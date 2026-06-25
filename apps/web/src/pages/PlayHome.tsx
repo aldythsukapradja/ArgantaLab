@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { WORLDS } from '@/data/learn'
-import { worldRing } from '@lib/learnProgress'
+import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import { getStreak, touchStreak } from '@lib/streak'
 import Buddy, { type Mood } from '@components/avatar/Buddy'
 import Avatar from '@/pages/Avatar'
@@ -32,6 +32,7 @@ export default function PlayHome() {
   const [hover, setHover] = useState<number | null>(null)
   const [mood, setMood] = useState<Mood>('wave')
   const [streak, setStreak] = useState(0)
+  const [todayXp, setTodayXp] = useState<Record<string, number>>({})
   const outfit = resolvedOutfit()
 
   useEffect(() => {
@@ -41,10 +42,22 @@ export default function PlayHome() {
   }, [])
   useEffect(() => { setStreak(getStreak()) }, [])
 
+  // Daily rings = today's XP per world from the cloud event log. Reload on mount,
+  // when returning to the Home sub-tab, and whenever the kid's XP changes (they
+  // just earned some) so the ring fills live without a refresh.
+  useEffect(() => {
+    if (hub !== 'home') return
+    let on = true
+    todayWorldXp().then(x => { if (on) setTodayXp(x) })
+    return () => { on = false }
+  }, [hub, xp])
+
+  const pctFor = (key: string) => ringPct(todayXp[key] ?? 0)
+
   const rec = useMemo(() => {
-    const ranked = WORLDS.map(w => ({ w, pct: worldRing(w) })).sort((a, b) => a.pct - b.pct)
+    const ranked = WORLDS.map(w => ({ w, pct: ringPct(todayXp[w.key] ?? 0) })).sort((a, b) => a.pct - b.pct)
     return ranked[0]
-  }, [])
+  }, [todayXp])
 
   const look = useMemo(() => {
     if (hover === null) return { x: 0, y: 0 }
@@ -104,11 +117,11 @@ export default function PlayHome() {
             {WORLDS.map((w, i) => {
               const a = (-90 + i * 60) * Math.PI / 180
               const x = 50 + 38 * Math.cos(a), y = 50 + 38 * Math.sin(a)
-              const pct = worldRing(w)
+              const pct = pctFor(w.key)
               return (
                 <button key={w.key} className="ph-ring" style={{ left: `${x}%`, top: `${y}%` }}
                   onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
-                  onClick={() => go({ tab: w.key.toLowerCase() })} title={`${RING_LABEL[w.key]} — ${pct}%`}>
+                  onClick={() => go({ tab: w.key.toLowerCase() })} title={`${RING_LABEL[w.key]} — ${pct}% of today's goal`}>
                   <span className="ph-ring-art">
                     <Ring pct={pct} color={w.color} />
                     <span className="ph-ring-glyph" style={{ color: w.color }}>{w.icon}</span>
@@ -121,7 +134,7 @@ export default function PlayHome() {
 
           <button className="ph-rec" style={{ borderColor: `${rec.w.color}55` }} onClick={() => go({ tab: rec.w.key.toLowerCase() })}>
             <span className="ph-rec-ic" style={{ background: `${rec.w.color}22`, color: rec.w.color }}>{rec.w.icon}</span>
-            <span>Play <b>{RING_LABEL[rec.w.key]}</b> to grow your ring →</span>
+            <span>{rec.pct >= 100 ? <>Rings glowing — keep your <b>{streak}-day</b> streak →</> : <>Play <b>{RING_LABEL[rec.w.key]}</b> to fill today's ring →</>}</span>
           </button>
         </div>
       )}

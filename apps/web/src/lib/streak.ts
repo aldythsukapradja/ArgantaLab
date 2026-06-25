@@ -1,30 +1,31 @@
-// Simple daily streak, kept in localStorage. Call touchStreak() once when the
-// app opens; getStreak() to read the current count.
+// Daily streak. Namespaced PER KID (pkey) so two accounts on one device never
+// share a streak, and bounded to the kid's LOCAL day (localDay) so it rolls at
+// local midnight, not UTC. Call touchStreak() once when the app opens;
+// getStreak() to read the current count.
+import { pkey } from './player'
+import { localDay, localYesterday } from './day'
 
 const KEY = 'argantalab_streak_v1'
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localDay()
 
 interface S { last: string; count: number }
 
 function load(): S {
-  try { return JSON.parse(localStorage.getItem(KEY) || '') } catch { return { last: '', count: 0 } }
+  try { return JSON.parse(localStorage.getItem(pkey(KEY)) || '') } catch { return { last: '', count: 0 } }
 }
 
 export function getStreak(): number {
   const s = load()
-  const t = today()
-  if (s.last === t) return s.count
+  if (s.last === today()) return s.count
   // if last activity was before yesterday, the streak is stale
-  const yest = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
-  return s.last === yest ? s.count : 0
+  return s.last === localYesterday() ? s.count : 0
 }
 
 export function touchStreak(): number {
   const s = load()
   const t = today()
   if (s.last === t) return s.count
-  const yest = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
-  const count = s.last === yest ? s.count + 1 : 1
-  try { localStorage.setItem(KEY, JSON.stringify({ last: t, count })) } catch { /* ignore */ }
+  const count = s.last === localYesterday() ? s.count + 1 : 1
+  try { localStorage.setItem(pkey(KEY), JSON.stringify({ last: t, count })) } catch { /* ignore */ }
   return count
 }

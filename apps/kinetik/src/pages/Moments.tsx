@@ -15,17 +15,38 @@ const SUBS: { key: Sub; label: string }[] = [
 const REACTIONS = ['❤️', '🏆', '😂', '😍', '👏', '🔥']
 
 function timeAgo(iso: string): string {
-  const s = (Date.now() - new Date(iso).getTime()) / 1000
+  const t = new Date(iso)
+  const s = (Date.now() - t.getTime()) / 1000
   if (s < 60) return 'now'
   if (s < 3600) return `${Math.floor(s / 60)}m`
   if (s < 86400) return `${Math.floor(s / 3600)}h`
   const d = Math.floor(s / 86400)
-  return d === 1 ? 'yesterday' : `${d}d`
+  if (d === 1) return 'yesterday'
+  if (d < 7) return `${d}d`
+  if (d < 35) return `${Math.floor(d / 7)}w`
+  // older than ~a month → an actual calendar date
+  const now = new Date()
+  return t.toLocaleDateString('en-US', t.getFullYear() === now.getFullYear()
+    ? { month: 'short', day: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' })
 }
 function errMsg(e: unknown): string {
   if (e instanceof Error) return e.message
   if (e && typeof e === 'object') { const o = e as any; return o.message || o.details || JSON.stringify(o) }
   return String(e)
+}
+
+// Image with a glass-shimmer skeleton that fades in once fully decoded — so you
+// never see the top-to-bottom paint. Fills its (positioned) parent box.
+function SmartImg({ src, alt = '', cover = true }: { src?: string; alt?: string; cover?: boolean }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <span className="smimg">
+      {!loaded && <span className="smimg-shim" />}
+      {src && <img src={src} alt={alt} loading="lazy" decoding="async" referrerPolicy="no-referrer"
+        onLoad={() => setLoaded(true)} className={`smimg-img${loaded ? ' on' : ''}`} style={{ objectFit: cover ? 'cover' : 'contain' }} />}
+    </span>
+  )
 }
 
 export default function Moments() {
@@ -42,10 +63,11 @@ export default function Moments() {
   const [family, setFamily] = useState<FamilyMember[]>([])
   const [err, setErr] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [commentsFor, setCommentsFor] = useState<M.MPost | null>(null)
+  const [openPost, setOpenPost] = useState<M.MPost | null>(null)
   const [storyAt, setStoryAt] = useState<number | null>(null)
   const [reelsAt, setReelsAt] = useState<number | null>(null)
   const [albumOpen, setAlbumOpen] = useState<M.MAlbum | null>(null)
+  const [albumStoryFor, setAlbumStoryFor] = useState<M.MAlbum | null>(null)
   const [albumPickFor, setAlbumPickFor] = useState<M.MPost | null>(null)
   const [creatingAlbum, setCreatingAlbum] = useState(false)
   const [creatingMilestone, setCreatingMilestone] = useState(false)
@@ -68,7 +90,7 @@ export default function Moments() {
   useEffect(loadFeed, [circle?.id])
   useEffect(() => { if (circle) fetchFamily(circle.id, me).then(setFamily).catch(() => {}) }, [circle?.id, me?.id])
   useEffect(() => { if (circle) M.fetchAlbums(circle.id).then(setAlbums).catch(() => setAlbums([])) }, [circle?.id])
-  useEffect(() => { if (sub === 'milestones' && circle) M.fetchMilestones(circle.id).then(setMilestones).catch(() => setMilestones([])) }, [sub, circle?.id])
+  useEffect(() => { if (circle) M.fetchMilestones(circle.id).then(setMilestones).catch(() => setMilestones([])) }, [circle?.id])
 
   if (!circle) return <div className="fade-in"><p className="me-foot">No circle loaded yet.</p></div>
 
@@ -147,18 +169,44 @@ export default function Moments() {
 
       {/* FEED */}
       {sub === 'feed' && (
-        <>
-          <StoriesRail stories={stories} albums={albums ?? []} onAdd={() => setCreating(true)} onOpen={i => setStoryAt(i)} onOpenAlbum={a => setAlbumOpen(a)} />
-          {feed === null && <div className="mom2-empty">Loading…</div>}
-          {feed && feed.length === 0 && <EmptyState onCreate={() => setCreating(true)} />}
-          {feed && feed.map(p => (
-            <PostCard key={p.id} post={p} meId={me?.id} nameOf={nameOf} onReact={react} onReward={reward} onComments={() => setCommentsFor(p)} onDelete={() => del(p)} onAddToAlbum={() => setAlbumPickFor(p)} onEditDate={() => setEditDateFor(p)} onEditCaption={() => setEditCaptionFor(p)} />
-          ))}
-        </>
+        <div className="mom2-feedwrap">
+          <div className="mom2-feedmain">
+            <StoriesRail stories={stories} albums={albums ?? []} onAdd={() => setCreating(true)} onOpen={i => setStoryAt(i)} onOpenAlbum={a => setAlbumStoryFor(a)} />
+            {feed === null && <div className="mom2-empty">Loading…</div>}
+            {feed && feed.length === 0 && <EmptyState onCreate={() => setCreating(true)} />}
+            {feed && feed.map(p => (
+              <PostCard key={p.id} post={p} meId={me?.id} nameOf={nameOf} onReact={react} onReward={reward} onComments={() => setOpenPost(p)} onDelete={() => del(p)} onAddToAlbum={() => setAlbumPickFor(p)} onEditDate={() => setEditDateFor(p)} onEditCaption={() => setEditCaptionFor(p)} />
+            ))}
+          </div>
+          <aside className="mom2-rail">
+            {(albums ?? []).length > 0 && <>
+              <div className="mom2-rail-title">Albums</div>
+              <div className="mom2-rail-albums">
+                {(albums ?? []).slice(0, 4).map(a => (
+                  <button key={a.id} className="mom2-rail-album" onClick={() => setAlbumStoryFor(a)}>
+                    <span className="mom2-rail-cover">{a.coverUrl ? <img src={a.coverUrl} alt="" /> : <IconPhoto width={20} height={20} />}</span>
+                    <small>{a.title}</small>
+                  </button>
+                ))}
+              </div>
+            </>}
+            {(milestones ?? []).length > 0 && <>
+              <div className="mom2-rail-title">Recent milestones</div>
+              <div className="mom2-rail-ms">
+                {(milestones ?? []).slice(0, 5).map(ms => (
+                  <button key={ms.id} className="mom2-rail-msrow" onClick={() => setEditMsFor(ms)}>
+                    <span className="mom2-rail-dot" style={{ background: ms.kind === 'learn' ? 'var(--memory)' : 'var(--c0)' }} />
+                    <span className="mom2-rail-msinfo"><b>{ms.title}</b><small>{[ms.kid?.name, timeAgo(ms.createdAt)].filter(Boolean).join(' · ')}</small></span>
+                  </button>
+                ))}
+              </div>
+            </>}
+          </aside>
+        </div>
       )}
 
       {/* MOMENTS GRID */}
-      {sub === 'grid' && <Grid posts={feed ?? []} onOpen={p => setCommentsFor(p)} />}
+      {sub === 'grid' && <Grid posts={feed ?? []} onOpen={p => setOpenPost(p)} />}
 
       {/* VIDEOS */}
       {sub === 'videos' && (videos.length ? <Grid posts={videos} onOpen={p => setReelsAt(videos.findIndex(v => v.id === p.id))} /> : <SoftEmpty label="No videos yet" />)}
@@ -175,10 +223,17 @@ export default function Moments() {
       )}
 
       {creating && <CreateSheet circle={circle} me={me} family={family} accent={circle.accent} onClose={() => setCreating(false)} onPosted={() => { setCreating(false); setSub('feed'); loadFeed() }} />}
-      {commentsFor && <CommentsSheet post={commentsFor} meId={me?.id} accent={circle.accent} onClose={() => setCommentsFor(null)} />}
+      {openPost && <PostDetail post={openPost} meId={me?.id} accent={circle.accent}
+        onClose={() => { setOpenPost(null); loadFeed() }}
+        onReact={react} onReward={reward}
+        onDelete={() => { setOpenPost(null); del(openPost) }}
+        onEditCaption={() => { setOpenPost(null); setEditCaptionFor(openPost) }}
+        onEditDate={() => { setOpenPost(null); setEditDateFor(openPost) }}
+        onAddToAlbum={() => { setOpenPost(null); setAlbumPickFor(openPost) }} />}
       {storyAt !== null && stories[storyAt] && <StoryViewer groups={stories} start={storyAt} onClose={() => setStoryAt(null)} />}
-      {reelsAt !== null && videos[reelsAt] && <ReelsPlayer posts={videos} start={reelsAt} onClose={() => setReelsAt(null)} onReact={react} onReward={reward} onComments={p => setCommentsFor(p)} />}
+      {reelsAt !== null && videos[reelsAt] && <ReelsPlayer posts={videos} start={reelsAt} onClose={() => setReelsAt(null)} onReact={react} onReward={reward} onComments={p => setOpenPost(p)} />}
       {albumOpen && <AlbumDetail album={albumOpen} onClose={() => setAlbumOpen(null)} onChanged={reloadAlbums} />}
+      {albumStoryFor && <AlbumStory album={albumStoryFor} onClose={() => setAlbumStoryFor(null)} />}
       {creatingAlbum && <NewAlbumSheet circleId={circle.id} accent={circle.accent} onClose={() => setCreatingAlbum(false)} onCreated={() => { setCreatingAlbum(false); reloadAlbums() }} />}
       {albumPickFor && <AddToAlbumSheet circleId={circle.id} post={albumPickFor} accent={circle.accent} onClose={() => setAlbumPickFor(null)} onDone={() => { setAlbumPickFor(null); reloadAlbums() }} />}
       {creatingMilestone && <AddMilestoneSheet circleId={circle.id} kids={family.filter(f => f.kind === 'child')} accent={circle.accent} onClose={() => setCreatingMilestone(false)} onCreated={() => { setCreatingMilestone(false); reloadMilestones() }} />}
@@ -208,14 +263,20 @@ function StoriesRail({ stories, albums, onAdd, onOpen, onOpenAlbum }: { stories:
       {stories.map((g, i) => (
         <button className="mom2-story" key={g.author.id} onClick={() => onOpen(i)}>
           <span className={`mom2-story-av${g.seen ? ' seen' : ''}`}>
-            {g.author.photo ? <img src={g.author.photo} alt="" referrerPolicy="no-referrer" /> : <span className="mom2-story-fb">{initials(g.author.name)}</span>}
+            <span className="mom2-story-pic">
+              {g.author.photo ? <SmartImg src={g.author.photo} /> : <span className="mom2-story-fb">{initials(g.author.name)}</span>}
+            </span>
           </span>
           <small>{g.author.name.split(' ')[0]}</small>
         </button>
       ))}
       {albums.map(a => (
         <button className="mom2-story" key={a.id} onClick={() => onOpenAlbum(a)}>
-          <span className="mom2-story-av album">{a.coverUrl ? <img src={a.coverUrl} alt="" /> : <span className="mom2-story-fb"><IconPhoto width={18} height={18} /></span>}</span>
+          <span className="mom2-story-av album">
+            <span className="mom2-story-pic">
+              {a.coverUrl ? <SmartImg src={a.coverUrl} /> : <span className="mom2-story-fb"><IconPhoto width={18} height={18} /></span>}
+            </span>
+          </span>
           <small>{a.title}</small>
         </button>
       ))}
@@ -267,9 +328,12 @@ function PostCard({ post, meId, nameOf, onReact, onReward, onComments, onDelete,
       {post.media.length > 0 && (
         <div className="mom2-media-wrap">
           <div className="mom2-carousel" ref={carRef} onScroll={onCarScroll}>
-            {post.media.map((m, i) => m.kind === 'video'
-              ? <video key={i} className="mom2-media" src={m.url} controls playsInline />
-              : m.url ? <img key={i} className="mom2-media" src={m.url} alt="" /> : <div key={i} className="mom2-media mom2-media-ph"><IconPhoto width={30} height={30} /></div>)}
+            {post.media.map((m, i) => (
+              <div key={i} className="mom2-slide">
+                {m.kind === 'video' ? <video className="mom2-media-el" src={m.url} controls playsInline />
+                  : m.url ? <SmartImg src={m.url} /> : <span className="mom2-media-ph2"><IconPhoto width={30} height={30} /></span>}
+              </div>
+            ))}
           </div>
           {post.media.length > 1 && <span className="mom2-count">{mediaIdx + 1}/{post.media.length}</span>}
           {post.media.length > 1 && <div className="mom2-dots">{post.media.map((_, i) => <span key={i} className={`mom2-dot${i === mediaIdx ? ' on' : ''}`} />)}</div>}
@@ -323,9 +387,10 @@ function Grid({ posts, onOpen }: { posts: M.MPost[]; onOpen: (p: M.MPost) => voi
       {posts.map(p => (
         <button key={p.id} className="mom2-cell" onClick={() => onOpen(p)}>
           {p.media[0]?.url
-            ? (p.kind === 'video' ? <video src={p.media[0].url} muted playsInline preload="metadata" /> : <img src={p.media[0].url} alt="" />)
+            ? (p.media[0].kind === 'video' ? <video src={p.media[0].url} muted playsInline preload="metadata" /> : <SmartImg src={p.media[0].url} />)
             : <span className="mom2-cell-ph"><IconPhoto width={22} height={22} /></span>}
-          {p.kind === 'video' && <span className="mom2-cell-vid">▶</span>}
+          {p.media.length > 1 && <span className="mom2-cell-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 3h11a2 2 0 0 1 2 2v11h-2V5H8V3zM5 7h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/></svg></span>}
+          {p.media[0]?.kind === 'video' && p.media.length === 1 && <span className="mom2-cell-badge">▶</span>}
         </button>
       ))}
     </div>
@@ -342,7 +407,7 @@ function AlbumsGrid({ albums, onOpen, onNew }: { albums: M.MAlbum[] | null; onOp
       </button>
       {albums.map(a => (
         <button className="mom2-album" key={a.id} onClick={() => onOpen(a)}>
-          <div className="mom2-album-cover">{a.coverUrl ? <img src={a.coverUrl} alt="" /> : <IconPhoto width={26} height={26} />}</div>
+          <div className="mom2-album-cover">{a.coverUrl ? <SmartImg src={a.coverUrl} /> : <IconPhoto width={26} height={26} />}</div>
           <b>{a.title}</b><small>{a.count} moment{a.count === 1 ? '' : 's'}</small>
         </button>
       ))}
@@ -460,43 +525,102 @@ function CreateSheet({ circle, me, family, accent, onClose, onPosted }: {
   )
 }
 
-// ── comments sheet ──
-function CommentsSheet({ post, meId, accent, onClose }: { post: M.MPost; meId?: string; accent: [string, string]; onClose: () => void }) {
+// ── unified post-detail (full-screen on mobile, split modal on desktop) ──
+function PostDetail({ post, meId, accent, onClose, onReact, onReward, onDelete, onEditCaption, onEditDate, onAddToAlbum }: {
+  post: M.MPost; meId?: string; accent: [string, string]; onClose: () => void
+  onReact: (p: M.MPost, e: string) => void; onReward: (p: M.MPost, n: number) => void
+  onDelete: () => void; onEditCaption: () => void; onEditDate: () => void; onAddToAlbum: () => void
+}) {
+  const [p, setP] = useState(post)
   const [list, setList] = useState<M.MComment[] | null>(null)
   const [text, setText] = useState('')
-  const [busy, setBusy] = useState(false)
-  useEffect(() => { M.fetchComments(post.id).then(setList).catch(() => setList([])) }, [post.id])
+  const [showReacts, setShowReacts] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [mediaIdx, setMediaIdx] = useState(0)
+  const [amt, setAmt] = useState(10)
+  const [rewardOpen, setRewardOpen] = useState(false)
+  const carRef = useRef<HTMLDivElement | null>(null)
+  const onCarScroll = () => { const el = carRef.current; if (el) setMediaIdx(Math.round(el.scrollLeft / Math.max(el.clientWidth, 1))) }
+  useEffect(() => { M.fetchComments(p.id).then(setList).catch(() => setList([])) }, [p.id])
+  const react = (emoji: string) => { const next = p.myReaction === emoji ? null : emoji; setP(applyReaction(p, next)); onReact(post, emoji); setShowReacts(false) }
   const send = async () => {
     if (!text.trim()) return
-    setBusy(true)
-    try {
-      await M.addComment(post.id, text.trim())
-      setText('')
-      setList(await M.fetchComments(post.id))
-    } catch { /* ignore */ } finally { setBusy(false) }
+    const body = text.trim(); setText('')
+    setP(x => ({ ...x, commentCount: x.commentCount + 1 }))
+    try { await M.addComment(p.id, body); setList(await M.fetchComments(p.id)) } catch { /* ignore */ }
   }
-  const del = async (id: string) => {
-    setList(l => l && l.filter(c => c.id !== id))
-    try { await M.deleteComment(id) } catch { setList(await M.fetchComments(post.id)) }
+  const delC = async (id: string) => {
+    setList(l => l && l.filter(c => c.id !== id)); setP(x => ({ ...x, commentCount: Math.max(x.commentCount - 1, 0) }))
+    try { await M.deleteComment(id) } catch { setList(await M.fetchComments(p.id)) }
   }
-  return (
-    <Sheet title="Comments" accent={accent} onClose={onClose}>
-      <div className="mom2-comlist">
-        {list === null && <div className="mom2-empty">Loading…</div>}
-        {list && list.length === 0 && <div className="mom2-empty">No comments yet. Be the first.</div>}
-        {list && list.map(c => (
-          <div className="mom2-com" key={c.id}>
-            {c.author.photo ? <img className="mom2-com-av" src={c.author.photo} alt="" referrerPolicy="no-referrer" /> : <span className="mom2-com-av mom2-av-fb">{initials(c.author.name)}</span>}
-            <div className="mom2-com-body"><b>{c.author.name.split(' ')[0]}</b> {c.body}<div className="mom2-com-time">{timeAgo(c.createdAt)}</div></div>
-            {c.author.id === meId && <button className="mom2-com-del" onClick={() => del(c.id)} aria-label="Delete comment">×</button>}
+  const clusters = Object.entries(p.reactions).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])
+  return createPortal(
+    <div className="mpd-scrim" onClick={onClose}>
+      <div className="mpd" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()}>
+        <div className="mpd-media">
+          <div className="mpd-carousel" ref={carRef} onScroll={onCarScroll}>
+            {p.media.map((m, i) => (
+              <div key={i} className="mpd-slide">
+                {m.kind === 'video' ? <video className="mom2-media-el" style={{ objectFit: 'contain' }} src={m.url} controls playsInline />
+                  : m.url ? <SmartImg src={m.url} cover={false} /> : <span className="mom2-media-ph2"><IconPhoto width={30} height={30} /></span>}
+              </div>
+            ))}
           </div>
-        ))}
+          {p.media.length > 1 && <span className="mom2-count">{mediaIdx + 1}/{p.media.length}</span>}
+          {p.media.length > 1 && <div className="mpd-dots">{p.media.map((_, i) => <span key={i} className={`mom2-dot${i === mediaIdx ? ' on' : ''}`} />)}</div>}
+        </div>
+        <div className="mpd-side">
+          <div className="mpd-head">
+            {p.author.photo ? <img className="mom2-av" src={p.author.photo} alt="" referrerPolicy="no-referrer" /> : <span className="mom2-av mom2-av-fb">{initials(p.author.name)}</span>}
+            <div className="mom2-id"><b>{p.author.name}</b><small>{p.audience === 'grownups' ? 'Grown-ups' : p.audience === 'custom' ? 'Custom' : 'Whole circle'} · {timeAgo(p.createdAt)}</small></div>
+            <div className="mom2-menu-wrap">
+              <button className="mom2-kebab" onClick={() => setMenuOpen(v => !v)} aria-label="More">⋯</button>
+              {menuOpen && (<>
+                <div className="mom2-menu-scrim" onClick={() => setMenuOpen(false)} />
+                <div className="mom2-menu">
+                  <button onClick={onEditCaption}>Edit caption</button>
+                  <button onClick={onEditDate}>Edit date</button>
+                  <button onClick={onAddToAlbum}>Add to album</button>
+                  <button className="danger" onClick={onDelete}>Delete</button>
+                </div>
+              </>)}
+            </div>
+            <button className="mpd-close" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+          <div className="mpd-scroll">
+            <div className="mom2-acts">
+              <button className={`mom2-act${p.myReaction ? ' on' : ''}`} onClick={() => setShowReacts(v => !v)}><IconHeart width={19} height={19} /> {p.reactionCount || ''}</button>
+              <button className="mom2-act"><IconComment width={19} height={19} /> {p.commentCount || ''}</button>
+              <button className="mom2-act reward" onClick={() => setRewardOpen(v => !v)}><IconDiamond width={17} height={17} /> {p.rewardTotal ? `+${p.rewardTotal}` : 'Reward'}</button>
+            </div>
+            {showReacts && <div className="mom2-react-row">{REACTIONS.map(e => <button key={e} className={`mom2-emoji${p.myReaction === e ? ' on' : ''}`} onClick={() => react(e)}>{e}</button>)}</div>}
+            {rewardOpen && (
+              <div className="mom2-reward-row">
+                {p.tags.length === 0 ? <span className="mom2-reward-hint">Tag someone to reward.</span> : <>
+                  <button className="mom2-step" onClick={() => setAmt(a => Math.max(1, a - 5))}>−</button><b>{amt} 💎 each</b><button className="mom2-step" onClick={() => setAmt(a => a + 5)}>+</button>
+                  <button className="mom2-reward-go" onClick={() => { onReward(post, amt); setRewardOpen(false) }}>Send</button>
+                </>}
+              </div>
+            )}
+            {clusters.length > 0 && <div className="mom2-cluster">{clusters.slice(0, 5).map(([e, n]) => <span key={e} className="mom2-chip">{e} {n}</span>)}</div>}
+            {p.body && <div className="mom2-caption"><b>{p.author.name.split(' ')[0]}</b> {p.body}</div>}
+            <div className="mpd-comhead">Comments</div>
+            {list === null && <div className="mom2-empty">Loading…</div>}
+            {list && list.length === 0 && <div className="mom2-empty">No comments yet. Be the first.</div>}
+            {list && list.map(c => (
+              <div className="mom2-com" key={c.id}>
+                {c.author.photo ? <img className="mom2-com-av" src={c.author.photo} alt="" referrerPolicy="no-referrer" /> : <span className="mom2-com-av mom2-av-fb">{initials(c.author.name)}</span>}
+                <div className="mom2-com-body"><b>{c.author.name.split(' ')[0]}</b> {c.body}<div className="mom2-com-time">{timeAgo(c.createdAt)}{c.author.id === meId && <button className="mom2-com-del-link" onClick={() => delC(c.id)}>· delete</button>}</div></div>
+              </div>
+            ))}
+          </div>
+          <div className="mpd-reply">
+            <input className="field" placeholder="Add a comment…" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send() }} />
+            <button className="mom2-com-send" disabled={!text.trim()} onClick={send}>Post</button>
+          </div>
+        </div>
       </div>
-      <div className="mom2-com-input">
-        <input className="field" placeholder="Add a comment…" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send() }} />
-        <button className="mom2-com-send" disabled={busy || !text.trim()} onClick={send}>Post</button>
-      </div>
-    </Sheet>
+    </div>, document.body
   )
 }
 
@@ -763,15 +887,25 @@ function AlbumDetail({ album, onClose, onChanged }: { album: M.MAlbum; onClose: 
           {posts.map((p, idx) => (
             <button key={p.id} className={`mom2-cell${pickCover ? ' pickable' : ''}`} disabled={busy} onClick={() => pickCover ? setCover(p) : setViewerAt(idx)}>
               {p.media[0]?.url
-                ? (p.media[0].kind === 'video' ? <video src={p.media[0].url} muted playsInline preload="metadata" /> : <img src={p.media[0].url} alt="" />)
+                ? (p.media[0].kind === 'video' ? <video src={p.media[0].url} muted playsInline preload="metadata" /> : <SmartImg src={p.media[0].url} />)
                 : <span className="mom2-cell-ph"><IconPhoto width={22} height={22} /></span>}
-              {p.media[0]?.kind === 'video' && <span className="mom2-cell-vid">▶</span>}
+              {p.media.length > 1 && <span className="mom2-cell-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 3h11a2 2 0 0 1 2 2v11h-2V5H8V3zM5 7h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/></svg></span>}
+              {p.media[0]?.kind === 'video' && p.media.length === 1 && <span className="mom2-cell-badge">▶</span>}
             </button>
           ))}
         </div>
       )}
       {viewerAt !== null && posts && <AlbumViewer posts={posts} start={viewerAt} onClose={() => setViewerAt(null)} />}
     </div>, document.body)
+}
+
+// ── open an album straight into the story-style viewer ──
+function AlbumStory({ album, onClose }: { album: M.MAlbum; onClose: () => void }) {
+  const [posts, setPosts] = useState<M.MPost[] | null>(null)
+  useEffect(() => { M.fetchAlbumPosts(album.id).then(setPosts).catch(() => setPosts([])) }, [album.id])
+  useEffect(() => { if (posts && posts.length === 0) onClose() }, [posts]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!posts || posts.length === 0) return null
+  return <AlbumViewer posts={posts} start={0} onClose={onClose} />
 }
 
 // ── album story-style viewer; the reply becomes a comment on the moment ──

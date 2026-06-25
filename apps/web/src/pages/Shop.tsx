@@ -35,7 +35,10 @@ export default function Shop() {
           <div className="kicker"><span className="live" />&nbsp;Diamond Shop</div>
           <h1 className="shop2-title">Dress up your <span className="g">buddy</span></h1>
         </div>
-        <div className="shop2-bal"><b>💎 {diamonds}</b><span>{ownedCount}/{COSMETICS.length} owned</span></div>
+        <div className="shop2-head-r">
+          <button className="mtshop-link" onClick={() => go({ tab: 'mounts' })}>🐎 Mount Stable →</button>
+          <div className="shop2-bal"><b>💎 {diamonds}</b><span>{ownedCount}/{COSMETICS.length} owned</span></div>
+        </div>
       </div>
 
       <div className="shop2-body">

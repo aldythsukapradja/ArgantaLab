@@ -1035,8 +1035,11 @@ html[data-theme="light"] .cine-grad{background:linear-gradient(180deg,rgba(5,8,1
 .le-world-meta p{font-size:13px;font-weight:600}
 .le-spine{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;
   position:sticky;top:0;z-index:6;background:var(--bg)}
-.le-spine-tab{padding:10px 14px;font-size:13.5px;font-weight:650;color:var(--t2);border-bottom:2px solid transparent;white-space:nowrap;transition:.18s}
+.le-spine-tab{position:relative;padding:10px 14px;font-size:13.5px;font-weight:650;color:var(--t2);border-bottom:2px solid transparent;white-space:nowrap;transition:.18s}
 .le-spine-tab.on{font-weight:750}
+/* "not done today" nudge dot on a playable sub-tab */
+.le-spine-dot{position:absolute;top:7px;right:5px;width:7px;height:7px;border-radius:50%;animation:le-dot-pulse 1.8s ease-in-out infinite}
+@keyframes le-dot-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.65}}
 .le-world-body{flex:1;overflow-y:auto;padding:16px 2px 30px;min-height:0}
 
 /* Journey — winding "path" of candy-button nodes */

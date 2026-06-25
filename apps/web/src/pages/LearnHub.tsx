@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { WORLDS, STAGES, STAGE_META } from '@/data/learn'
-import { worldRing, earnedBadges } from '@lib/learnProgress'
+import { earnedBadges, journeyDoneToday } from '@lib/learnProgress'
+import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import Buddy from '@components/avatar/Buddy'
 
 // Each world is an island on a hand-drawn adventure map. Positions trace a
@@ -26,14 +27,20 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 }
 
 export default function LearnHub() {
-  const { go, resolvedOutfit, stageKey, learnerName } = useAppStore()
+  const { go, resolvedOutfit, stageKey, learnerName, xp } = useAppStore()
   const outfit = resolvedOutfit()
   const stage = STAGES.find(s => s.key === stageKey)
   const meta = STAGE_META[stageKey]
 
-  const rings = useMemo(() => WORLDS.map(w => ({ w, pct: worldRing(w) })), [])
+  // DAILY rings here too (today's XP per world, resets at local midnight) — the
+  // map mirrors Home/Profile. Reloads when the kid earns XP. A "not done today"
+  // dot marks a world whose daily journey still has a node to play.
+  const [todayXp, setTodayXp] = useState<Record<string, number>>({})
+  useEffect(() => { let on = true; todayWorldXp().then(x => { if (on) setTodayXp(x) }); return () => { on = false } }, [xp])
+
+  const rings = useMemo(() => WORLDS.map(w => ({ w, pct: ringPct(todayXp[w.key] ?? 0), dot: !journeyDoneToday(w) })), [todayXp])
   const totalBadges = useMemo(() => WORLDS.reduce((a, w) => a + earnedBadges(w).size, 0), [])
-  // "you are here" = first world that isn't finished (lowest ring)
+  // "you are here" = the world with the least progress TODAY (lowest daily ring)
   const hereIdx = useMemo(() => {
     let lo = 0
     rings.forEach((r, i) => { if (r.pct < rings[lo].pct) lo = i })
@@ -81,7 +88,7 @@ export default function LearnHub() {
         <div className="fmap-cloud c2">☁️</div>
 
         {/* world islands */}
-        {rings.map(({ w, pct }, i) => {
+        {rings.map(({ w, pct, dot }, i) => {
           const s = SPOTS[i]
           const here = i === hereIdx
           return (
@@ -91,6 +98,7 @@ export default function LearnHub() {
                 <span className="fmap-motif">{MOTIF[w.key]}</span>
                 <span className="fmap-glyph">{w.icon}</span>
               </span>
+              {dot && <span className="fmap-dot" aria-label="not done today" />}
               <span className="fmap-ring-badge"><Ring pct={pct} color={w.color} /></span>
               <span className="fmap-flag" style={{ background: w.color }}>{w.name}</span>
               {here && (

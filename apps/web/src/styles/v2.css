@@ -114,6 +114,24 @@
 .shop2-card-tag.wearing { background: var(--accent); color: #fff; }
 .shop2-card-tag.own { background: color-mix(in srgb,var(--accent) 16%,transparent); color: var(--accent); }
 .shop2-card-tag.price { background: color-mix(in srgb,#f59e0b 20%,transparent); color: #d97706; }
+
+/* ── Mount Shop ─────────────────────────────────────────── */
+.shop2-head-r { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.mtshop-link { background: color-mix(in srgb,var(--accent) 12%,transparent); color: var(--accent); border: none;
+  font-weight: 750; font-size: 12.5px; padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: .15s; }
+.mtshop-link:hover { background: color-mix(in srgb,var(--accent) 20%,transparent); }
+.mtshop-stage { display: grid; place-items: center; min-height: 184px; }
+.mtshop-perk { color: var(--t2); font-size: 11.5px; text-align: center; line-height: 1.3; }
+.mtshop-gate { color: #0891b2; font-weight: 700; font-size: 11px; }
+.mtshop-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.mtshop-card { padding: 12px 8px 10px; border: 2px solid color-mix(in srgb,var(--rc,#888) 30%,var(--border)); }
+.mtshop-card.sel { border-color: var(--rc, var(--accent)); box-shadow: 0 6px 16px color-mix(in srgb,var(--rc,#000) 22%,transparent); }
+.mtshop-card-art { width: 100%; height: 70px; display: grid; place-items: center; }
+.mtshop-card-name { font-size: 12.5px; font-weight: 750; color: var(--t1); }
+.mtshop-card-foot em { font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--t2); }
+.mtshop-card-foot .mtshop-eq { color: #16a34a; }
+.mtshop-card-foot .mtshop-own { color: var(--accent); }
+.mtshop-gatepill { position: absolute; top: 6px; right: 6px; font-size: 13px; }
 .shop2-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px;
   padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); font-size: 13px; color: var(--t2); }
 
@@ -458,6 +476,11 @@
 .fmap-ring { filter: drop-shadow(0 3px 5px rgba(0,0,0,.18)); }
 .fmap-flag { margin-top: 7px; color: #fff; font-size: 12px; font-weight: 800; padding: 3px 12px; border-radius: 20px;
   box-shadow: 0 4px 10px rgba(0,0,0,.18); white-space: nowrap; }
+/* "not done today" nudge dot on a world island */
+.fmap-dot { position: absolute; top: 4px; right: -4px; z-index: 5; width: 15px; height: 15px; border-radius: 50%;
+  background: #ef4444; border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.28);
+  animation: fmapDot 1.5s ease-in-out infinite; }
+@keyframes fmapDot { 0%,100%{ transform: scale(1); opacity: 1 } 50%{ transform: scale(1.28); opacity: .7 } }
 .fmap-island.here .fmap-land { animation: fmapPulse 1.8s ease-in-out infinite; }
 @keyframes fmapPulse { 0%,100%{box-shadow:0 8px 18px rgba(0,0,0,.22), inset 0 -6px 12px rgba(0,0,0,.12), 0 0 0 0 var(--wc)} 50%{box-shadow:0 8px 18px rgba(0,0,0,.22), inset 0 -6px 12px rgba(0,0,0,.12), 0 0 0 7px color-mix(in srgb,var(--wc) 30%,transparent)} }
 .fmap-here { position: absolute; left: 56%; top: -34px; z-index: 5; display: flex; flex-direction: column; align-items: center; }
