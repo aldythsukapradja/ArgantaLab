@@ -5,8 +5,6 @@ import { useAuth } from './lib/auth'
 export default function App() {
   const { state, session } = useAuth()
 
-  if (new URLSearchParams(location.search).has('__previewShell')) return <Shell who="Operator" authed={false} />
-
   // Login is the final gate. In offline preview (no Supabase keys) the shell
   // renders directly so the UI is fully developable; live data + the operator
   // gate switch on automatically once keys are present.

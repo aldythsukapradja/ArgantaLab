@@ -274,3 +274,12 @@ table.tbl tr:last-child td{border-bottom:none}
 .agent-send{width:34px;height:34px;flex:none;border-radius:50%;border:none;background:linear-gradient(135deg,var(--acc),var(--acc-press));color:#fff;cursor:pointer;display:grid;place-items:center}
 .agent-send:disabled{opacity:.4;cursor:default}
 @media (max-width:560px){.agent-panel.small,.agent-panel.expanded{width:calc(100vw - 20px);right:10px;max-height:74vh}.agent-orb{right:16px;bottom:16px}}
+
+/* Mobile show/hide — placed last so it overrides earlier base display rules. */
+@media (max-width:640px){
+  .mnav{display:flex}
+  .msub{display:flex}
+  .agent-orb{display:none}
+  .agent-panel.small,.agent-panel.expanded{bottom:64px}
+  .agent-panel.full{bottom:56px}
+}
