@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, X, Send } from 'lucide-react'
+import { Sparkles, X, Send, Crown } from 'lucide-react'
 import {
-  PIPELINE, MODEL_META,
+  PIPELINE, MODEL_META, AGENTS,
   agentSense, agentCompute, agentMatch, agentGenerate, routeIntent,
   type Model, type Sensed, type Computed, type Signal,
 } from '../data/agents'
+import { SCENARIOS, scenarioById } from '../data/scenarios'
+import { ChartView, type ChartData } from './charts'
 
 const CHIPS = [
   { label: '📋 Daily Brief', prompt: 'Give me my daily brief' },
@@ -14,8 +16,18 @@ const CHIPS = [
   { label: '🤖 Agents', prompt: 'Show agent OS status' },
 ]
 
+// Scenario quick-launchers — the CEO Agent orchestrates these in-chat, convening
+// the scenario's agents and rendering the live chart inline.
+const SCN_LABEL: Record<string, string> = {
+  'growth-review': '📈 Growth', 'retention-triangle': '🔺 Retention',
+  'acquisition-funnel': '🌪 Funnel', 'diamond-economy': '💎 Economy map', 'content-coverage': '📚 Content',
+}
+
+const agentName = (id: string) => AGENTS.find(a => a.id === id)?.name || id
+const ceoAgent = AGENTS.find(a => a.orchestrator)!
+
 interface Step { ico: string; label: string; model: Model; done: boolean }
-interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[] }
+interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[]; convened?: string[]; chart?: ChartData }
 
 type PanelSize = 'small' | 'expanded' | 'full'
 const SIZE_GLYPH: Record<PanelSize, string> = { small: '–', expanded: '□', full: '⤢' }
@@ -102,6 +114,58 @@ export function AgentOrb() {
     setBusy(false)
   }
 
+  // CEO Agent orchestrates a scenario in-chat: convene agents → live pipeline →
+  // render the chart inline + headline + insight.
+  async function runScenario(id: string) {
+    if (busy) return
+    const scn = scenarioById(id)
+    if (!scn) return
+    setBusy(true)
+    setInput('')
+    setMsgs(m => [...m, { role: 'user', text: `Run scenario · ${scn.title}` }])
+
+    // Thinking
+    const think = { role: 'agent' as const, text: '' }
+    setMsgs(m => [...m, { ...think, text: '' }])
+    setMsgs(m => { const c = [...m]; c[c.length - 1] = { role: 'agent', text: '', steps: [] }; return c })
+    await sleep(350)
+
+    // Convene the agents (CEO + owner + participants), one by one.
+    const order = [ceoAgent.id, ...new Set([scn.ownerId, ...scn.participantIds])]
+    setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], convened: [] }; return c })
+    for (const aid of order) {
+      setMsgs(m => { const c = [...m]; const l = c[c.length - 1]; c[c.length - 1] = { ...l, convened: [...(l.convened || []), aid] }; return c })
+      await sleep(230)
+    }
+
+    // Animate the 5-layer pipeline while the live scenario runs.
+    const steps: Step[] = PIPELINE.map(s => ({ ico: STEP_ICON[s.key], label: s.name + ' — …', model: s.model, done: false }))
+    setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], steps: steps.map(s => ({ ...s })) }; return c })
+    const upd = (mut: (s: Step[]) => void) => setMsgs(m => { const c = [...m]; const l = c[c.length - 1]; if (l.steps) { mut(l.steps); c[c.length - 1] = { ...l } } return c })
+
+    await sleep(120)
+    const res = await scn.run()
+    upd(s => { s[0] = { ...s[0], label: `Sense — ${res ? 'supabase-live' : 'offline'}`, done: true } })
+    await sleep(200); upd(s => { s[1] = { ...s[1], label: `Compute — ${res ? 'metrics derived' : 'no data'}`, done: true } })
+    await sleep(200); upd(s => { s[2] = { ...s[2], label: `Match — ${scn.sources.length} source${scn.sources.length !== 1 ? 's' : ''}`, done: true } })
+    await sleep(480); upd(s => { s[3] = { ...s[3], label: 'Generate — narrative ready', done: true } })
+    await sleep(120); upd(s => { s[4] = { ...s[4], label: `Deliver — ${res ? 'chart + brief' : 'empty state'}`, done: true } })
+
+    if (!res) {
+      const txt = `**${scn.title}** _(CEO Agent · ${agentName(scn.ownerId)})_\n\nNo live signal yet — reads ${scn.sources.join(', ')}. Sign in as operator with data flowing to render the chart.`
+      for (let i = 1; i <= txt.length; i += 3) { const slice = txt.slice(0, i); setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], text: slice }; return c }); await sleep(7) }
+      setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], text: txt }; return c })
+      setBusy(false); return
+    }
+
+    // Attach the chart, then typewriter the headline + insight.
+    setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], chart: res.chart }; return c })
+    const txt = `**${res.headline}** _(CEO Agent · ${agentName(scn.ownerId)} · live SQL)_\n\n${res.insight}`
+    for (let i = 1; i <= txt.length; i += 3) { const slice = txt.slice(0, i); setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], text: slice }; return c }); await sleep(7) }
+    setMsgs(m => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], text: txt }; return c })
+    setBusy(false)
+  }
+
   return (
     <>
       <button className="agent-orb" aria-label="Open COO Agent" onClick={() => setOpen(o => !o)}
@@ -133,10 +197,30 @@ export function AgentOrb() {
               <button key={c.label} className="agent-chip" disabled={busy} onClick={() => run(c.prompt)}>{c.label}</button>
             ))}
           </div>
+          <div className="agent-chips agent-scn">
+            <span className="agent-scn-lbl"><Crown size={11} /> Orchestrate</span>
+            {SCENARIOS.map(s => (
+              <button key={s.id} className="agent-chip scn" disabled={busy} onClick={() => runScenario(s.id)} title={s.question}>
+                {SCN_LABEL[s.id] || s.title}
+              </button>
+            ))}
+          </div>
 
           <div className="agent-msgs" ref={scrollRef}>
             {msgs.map((m, i) => (
               <div key={i} className={'agent-msg ' + m.role}>
+                {m.convened && m.convened.length > 0 && (
+                  <div className="agent-convened">
+                    {m.convened.map(aid => {
+                      const a = AGENTS.find(x => x.id === aid)!
+                      return (
+                        <span key={aid} className="pill" style={{ gap: 5, background: a.orchestrator ? 'linear-gradient(135deg,var(--acc),var(--mag))' : 'var(--bg3)', color: a.orchestrator ? '#fff' : 'var(--tx)' }}>
+                          {a.orchestrator ? <Crown size={10} /> : <Sparkles size={10} />}{a.name}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
                 {m.steps && (
                   <div className="agent-steps">
                     {m.steps.map((s, k) => (
@@ -148,6 +232,7 @@ export function AgentOrb() {
                     ))}
                   </div>
                 )}
+                {m.chart && <div className="agent-chart"><ChartView data={m.chart} /></div>}
                 {m.text && <div className="agent-bubble" dangerouslySetInnerHTML={render(m.text)} />}
               </div>
             ))}

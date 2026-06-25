@@ -1680,18 +1680,37 @@ html[data-theme='dark'] .mom2-card { box-shadow: none; }
 .mom2-album small { font-size: 11px; color: var(--faint); }
 
 /* milestones */
-.mom2-mstones { display: flex; flex-direction: column; gap: 14px; padding: 6px 2px; }
-.mom2-mstone { display: flex; gap: 11px; }
-.mom2-mstone-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c0) 14%, transparent); }
-.mom2-mstone-body { flex: 1; min-width: 0; }
-.mom2-mstone-body b { font-size: 14px; font-weight: 700; color: var(--ink); }
-.mom2-mstone-body small { display: block; font-size: 11px; color: var(--faint); margin-top: 1px; }
-.mom2-mstone-body p { font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
-.mom2-mstone-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-top: 8px; }
-.mom2-mstone-dia { font-size: 12px; font-weight: 700; color: var(--memory); flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; }
-.mom2-mstone-album { width: 100%; text-align: left; align-items: flex-start; gap: 11px; }
-.mom2-mstone-cover { width: 44px; height: 44px; border-radius: 11px; flex: 0 0 auto; overflow: hidden; background: var(--bg-2); display: grid; place-items: center; color: var(--faint); }
-.mom2-mstone-cover img { width: 100%; height: 100%; object-fit: cover; }
+/* ---- Milestones : spine timeline (matches the Today flow) ---- */
+.mom2-tl { position: relative; display: flex; flex-direction: column; padding: 2px 2px 8px; }
+.mom2-tl::before { content: ''; position: absolute; top: 16px; bottom: 20px; left: 69px; width: 2px; border-radius: 2px; background: linear-gradient(180deg, color-mix(in srgb, var(--c0) 35%, var(--line)), var(--line)); }
+
+.mom2-tl-now { position: relative; display: grid; grid-template-columns: 46px 26px minmax(0, 1fr); column-gap: 11px; align-items: center; padding: 2px 0 10px; }
+.mom2-tl-now-lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--c0); text-align: center; }
+.mom2-tl-now-node { position: relative; z-index: 1; width: 13px; height: 13px; border-radius: 50%; justify-self: center; background: var(--c0); box-shadow: 0 0 0 4px var(--bg), 0 0 10px color-mix(in srgb, var(--c0) 55%, transparent); animation: tdNow 1.8s ease-out infinite; }
+.mom2-tl-now-line { height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--c0), transparent); display: flex; align-items: center; }
+.mom2-tl-now-pill { font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; background: var(--c0); border-radius: 999px; padding: 2px 8px; }
+
+.mom2-tl-row { position: relative; display: grid; grid-template-columns: 46px 26px minmax(0, 1fr); column-gap: 11px; align-items: start; padding: 7px 0; }
+.mom2-tl-date { display: flex; flex-direction: column; align-items: center; padding-top: 3px; }
+.mom2-tl-day { font-size: 16px; font-weight: 800; color: var(--ink); line-height: 1; }
+.mom2-tl-mon { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--faint); margin-top: 2px; }
+.mom2-tl-yr { font-size: 9px; font-weight: 700; color: var(--faint); margin-top: 1px; }
+
+.mom2-tl-node { position: relative; z-index: 1; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; justify-self: center; margin-top: 2px; color: #fff; background: var(--nc); box-shadow: 0 0 0 4px var(--bg), 0 2px 8px color-mix(in srgb, var(--nc) 42%, transparent); }
+
+.mom2-tl-card { width: 100%; text-align: left; display: flex; flex-direction: column; background: var(--card); border: 0.5px solid var(--border); border-radius: 15px; padding: 11px 13px; box-shadow: 0 3px 12px rgba(20, 16, 40, 0.06); transition: transform 0.14s var(--ease); }
+html[data-theme='dark'] .mom2-tl-card { box-shadow: none; }
+.mom2-tl-card:hover { transform: translateX(2px); }
+.mom2-tl-card:active { transform: scale(0.99); }
+.mom2-tl-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.mom2-tl-title { font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+.mom2-tl-meta { font-size: 11px; color: var(--faint); margin-top: 2px; }
+.mom2-tl-body { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.45; }
+.mom2-tl-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-top: 9px; }
+.mom2-tl-cover { width: 100%; height: 130px; border-radius: 12px; overflow: hidden; margin-top: 9px; background: var(--bg-2); display: grid; place-items: center; color: var(--faint); }
+.mom2-tl-cover img { width: 100%; height: 100%; object-fit: cover; }
+.mom2-tl-dia { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 800; color: var(--memory); flex: 0 0 auto; background: color-mix(in srgb, var(--memory) 13%, transparent); padding: 3px 8px; border-radius: 999px; }
+.mom2-tl-open { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: 11.5px; font-weight: 700; color: var(--c0); margin-top: 8px; }
 
 /* portalled bottom sheet: opacity-only entrance (the global translateY(100%)
    leaves a residual transform under a portal → sheet renders off-screen) */

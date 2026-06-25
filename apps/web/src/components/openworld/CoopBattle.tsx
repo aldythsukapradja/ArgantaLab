@@ -83,6 +83,19 @@ export default function CoopBattle({ world, joinSessionId, onExit }: { world: Wo
     return unsub
   }, [st?.id])
 
+  // Host waiting alone → auto-cancel after 2 min (matches the invite TTL). Clears
+  // the moment a friend joins (members.length jumps → effect re-runs, no timer).
+  const stRef = useRef(st); stRef.current = st
+  useEffect(() => {
+    if (!st || st.host_id !== myId || st.status !== 'open' || st.members.length >= 2) return
+    const t = setTimeout(() => {
+      const cur = stRef.current
+      if (cur && cur.status === 'open' && cur.members.length < 2) { addToast('No one joined — try again later', '⌛'); onExit() }
+    }, 120000)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [st?.id, st?.status, st?.members.length, myId])
+
   // Reward both players once, when the shared enemy falls.
   useEffect(() => {
     if (st?.status === 'won' && !rewarded.current) {

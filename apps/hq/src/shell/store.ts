@@ -31,7 +31,7 @@ const initialTheme = (): Theme =>
   (localStorage.getItem('hq_theme') as Theme) || 'light'
 
 export const useHQ = create<HQState>((set) => ({
-  surface: 'data',
+  surface: 'portfolio',
   dataTab: 'schema',
   builderSub: 'catalogue',
   studioId: null,

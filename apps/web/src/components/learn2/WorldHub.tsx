@@ -22,6 +22,7 @@ import { KIN } from '@/data/openworld'
 import KinSprite from '@components/openworld/KinSprite'
 import OpenworldPlayer from '@components/openworld/OpenworldPlayer'
 import CoopBattle from '@components/openworld/CoopBattle'
+import Argantaland from '@components/openworld/Argantaland'
 
 type Spine = 'journey' | 'signature' | 'arena' | 'badges' | 'profile'
 
@@ -48,8 +49,8 @@ export default function WorldHub({ world }: { world: World }) {
   const [active, setActive] = useState<JourneyNode | null>(null)
   const [activeDrill, setActiveDrill] = useState<Drill | null>(null)
   const [battleKin, setBattleKin] = useState<string | null>(null)
-  const [coopMode, setCoopMode] = useState(false)
   const [coopView, setCoopView] = useState(false)
+  const [landView, setLandView] = useState(false)
   const [coopJoinSid, setCoopJoinSid] = useState<string | undefined>(undefined)
 
   // A Home co-op invite routed here → open the co-op screen and auto-join it.
@@ -136,7 +137,7 @@ export default function WorldHub({ world }: { world: World }) {
     return (
       <div className="le-world">
         {cinematic}
-        <OpenworldPlayer world={world} kinId={battleKin} coop={coopMode}
+        <OpenworldPlayer world={world} kinId={battleKin}
           onExit={() => { setBattleKin(null); if (uid) pushLearnState(uid); force(n => n + 1) }} />
       </div>
     )
@@ -147,6 +148,15 @@ export default function WorldHub({ world }: { world: World }) {
       <div className="le-world">
         {cinematic}
         <CoopBattle world={world} joinSessionId={coopJoinSid} onExit={() => { setCoopView(false); setCoopJoinSid(undefined); if (uid) pushLearnState(uid); force(n => n + 1) }} />
+      </div>
+    )
+  }
+
+  if (landView) {
+    return (
+      <div className="le-world">
+        {cinematic}
+        <Argantaland world={world} onExit={() => { setLandView(false); if (uid) pushLearnState(uid); force(n => n + 1) }} />
       </div>
     )
   }
@@ -246,18 +256,17 @@ export default function WorldHub({ world }: { world: World }) {
               <h3 style={{ color: world.color }}>🗺️ {world.name} Openworld</h3>
               <p>Explore and battle wild kin. Answer to power your abilities, weaken a kin, then befriend it — it comes to live in your <b>Nexus</b>.</p>
             </div>
-            <div className="ow-coop-row">
-              <button className={`ow-coop-toggle${coopMode ? ' on' : ''}`} onClick={() => setCoopMode(v => !v)}
-                style={coopMode ? { borderColor: world.color, color: world.color } : undefined}>
-                <span>🐾 Buddy</span>
-                <b>{coopMode ? 'ON · a cheering buddy joins (solo)' : 'OFF · solo'}</b>
-              </button>
-              <button className="ow-coop-toggle" onClick={() => { if (requireAuth('to play co-op')) setCoopView(true) }}
-                style={{ borderColor: world.color, color: world.color }}>
-                <span>👫 Co-op</span>
-                <b>Play with a circle friend →</b>
-              </button>
-            </div>
+            <button className="ow-land-btn" onClick={() => { if (requireAuth('to explore')) setLandView(true) }}
+              style={{ borderColor: world.color }}>
+              <span className="ow-land-ic" style={{ background: `${world.color}22`, color: world.color }}>🗺️</span>
+              <span className="ow-land-txt"><b style={{ color: world.color }}>Enter ArgantaLand</b><small>Walk the {world.name} map &amp; meet wild kin</small></span>
+              <span className="ow-land-go" style={{ color: world.color }}>▶</span>
+            </button>
+            <button className="ow-coop-toggle" onClick={() => { if (requireAuth('to play co-op')) setCoopView(true) }}
+              style={{ borderColor: world.color, color: world.color, marginTop: 8 }}>
+              <span>👫 Co-op</span>
+              <b>Play with a circle friend →</b>
+            </button>
             <div className="ow-lobby">
               {wildKin.map(k => (
                 <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }}

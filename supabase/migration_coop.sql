@@ -154,7 +154,9 @@ returns jsonb language sql stable security definer set search_path = public as $
     'members', (select count(*) from public.coop_member m where m.session_id = s.id)
   ) order by s.created_at desc), '[]'::jsonb)
   from public.coop_session s
-  where s.circle_id = p_circle and s.status = 'open' and public.is_circle_member(p_circle);
+  where s.circle_id = p_circle and s.status = 'open'
+    and s.created_at > now() - interval '2 minutes'   -- invites auto-expire after 2 min
+    and public.is_circle_member(p_circle);
 $$;
 grant execute on function public.coop_open(uuid) to authenticated;
 

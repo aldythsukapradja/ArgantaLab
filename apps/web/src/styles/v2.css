@@ -741,6 +741,12 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 .ow-coop-toggle span { font-weight: 800; }
 .ow-coop-toggle b { font-weight: 650; }
 .ow-coop-toggle.on { border-style: solid; background: color-mix(in srgb, currentColor 8%, var(--bg-1)); }
+.ow-land-btn { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; padding: 14px 16px;
+  border: 2px solid var(--border); border-radius: 16px; background: var(--bg-1); cursor: pointer; text-align: left; transition: .15s; }
+.ow-land-btn:hover { transform: translateY(-2px); }
+.ow-land-ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; flex: none; }
+.ow-land-txt { flex: 1; } .ow-land-txt b { display: block; font-size: 15px; } .ow-land-txt small { color: var(--t2); font-size: 12px; }
+.ow-land-go { font-size: 16px; flex: none; }
 .ow-coop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .ow-coop-row .ow-coop-toggle { margin-top: 0; flex-direction: column; gap: 2px; align-items: flex-start; }
 /* ── Real co-op battle ───────────────────────────────────── */
@@ -762,6 +768,37 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 .cb-waiting { align-self: center; font-size: 12.5px; color: var(--t2); font-style: italic; }
 .cb-over { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding-top: 18px; }
 .cb-battle { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── ArgantaLand 2D overworld ────────────────────────────── */
+.al-wrap { display: flex; flex-direction: column; gap: 14px; max-width: 540px; margin: 0 auto; width: 100%; }
+.al-head { display: flex; align-items: center; gap: 12px; }
+.al-leave { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg-1);
+  border-radius: 999px; padding: 9px 18px; font-weight: 750; font-size: 13.5px; color: var(--t1); cursor: pointer; flex: none; transition: .15s; }
+.al-leave:hover { background: color-mix(in srgb, var(--accent) 12%, var(--bg-1)); transform: translateY(-1px); }
+.al-title { display: flex; flex-direction: column; line-height: 1.25; }
+.al-title b { font-size: 17px; } .al-title small { font-size: 12px; color: var(--t2); }
+.al-stage { position: relative; width: 100%; padding: 14px; border-radius: 24px; background: var(--bg-1);
+  box-shadow: 0 12px 34px rgba(0,0,0,.14), inset 0 0 0 1px var(--border); }
+.al-grid { position: relative; width: 100%; display: grid; gap: 0; border-radius: 14px; overflow: hidden;
+  border: 6px solid var(--frame); box-shadow: inset 0 2px 10px rgba(0,0,0,.22), 0 4px 12px rgba(0,0,0,.12); }
+.al-tile { position: relative; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,.05); }
+.al-gym { position: absolute; inset: 0; display: grid; place-items: center; font-size: 20px; color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.55); animation: alGym 1.8s ease-in-out infinite; }
+@keyframes alGym { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+.al-avatar { position: absolute; transform: translate(-50%, -62%); z-index: 3; pointer-events: none;
+  transition: left .13s ease, top .13s ease; filter: drop-shadow(0 4px 5px rgba(0,0,0,.38)); }
+.al-flash { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 5;
+  background: rgba(17,17,17,.9); color: #fff; font-size: 14.5px; font-weight: 700; padding: 11px 18px; border-radius: 14px;
+  white-space: nowrap; box-shadow: 0 8px 22px rgba(0,0,0,.35); animation: alPop .22s ease; }
+@keyframes alPop { from { transform: translate(-50%,-50%) scale(.8); opacity: 0; } to { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
+.al-flash b { color: #fde047; }
+/* D-pad — overlaid on the map, bottom-right */
+.al-dpad { position: absolute; right: 22px; bottom: 22px; z-index: 6;
+  display: grid; grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(3, 42px); gap: 5px; }
+.al-dpad button { border: none; border-radius: 13px; background: rgba(255,255,255,.82); color: #1f2937;
+  font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 2px 7px rgba(0,0,0,.28); transition: .1s; }
+.al-dpad button:hover { background: #fff; } .al-dpad button:active { transform: scale(.88); }
+.al-up { grid-area: 1 / 2; } .al-left { grid-area: 2 / 1; } .al-right { grid-area: 2 / 3; } .al-down { grid-area: 3 / 2; }
 .ow-note { text-align: center; font-size: 13px; font-weight: 700; color: var(--ow); }
 .ow-q, .ow-capture { background: var(--bg-1); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
 .ow-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }

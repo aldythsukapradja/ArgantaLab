@@ -5,7 +5,7 @@ import { useUiStore } from '@store/uiStore'
 import { initials } from '@data/energy'
 import * as M from '@repo/momentsRepo'
 import { fetchFamily, type FamilyMember } from '@repo/kinetikRepo'
-import { IconHeart, IconComment, IconDiamond, IconPlus, IconPhoto, IconChevron } from '@components/Icons'
+import { IconHeart, IconComment, IconDiamond, IconPlus, IconPhoto, IconChevron, IconCheck } from '@components/Icons'
 
 type Sub = 'feed' | 'grid' | 'videos' | 'albums' | 'milestones'
 const SUBS: { key: Sub; label: string }[] = [
@@ -423,26 +423,51 @@ function MilestonesTimeline({ items, albums, onOpenAlbum, onEditMs }: { items: M
     ...albums.map(al => ({ t: 'al' as const, date: al.createdAt, al })),
   ].sort((x, y) => +new Date(y.date) - +new Date(x.date))
   if (!merged.length) return <SoftEmpty label="No milestones yet" />
+  const nowYear = new Date().getFullYear()
+  const DateChip = ({ iso }: { iso: string }) => {
+    const d = new Date(iso)
+    return (
+      <span className="mom2-tl-date">
+        <span className="mom2-tl-day">{d.getDate()}</span>
+        <span className="mom2-tl-mon">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
+        {d.getFullYear() !== nowYear && <span className="mom2-tl-yr">{d.getFullYear()}</span>}
+      </span>
+    )
+  }
   return (
-    <div className="mom2-mstones">
+    <div className="mom2-tl">
+      {/* "now" cap — the timeline flows from today down into the past */}
+      <div className="mom2-tl-now">
+        <span className="mom2-tl-now-lbl">Today</span>
+        <span className="mom2-tl-now-node" />
+        <span className="mom2-tl-now-line"><span className="mom2-tl-now-pill">Now</span></span>
+      </div>
+
       {merged.map(e => e.t === 'al' ? (
-        <button className="mom2-mstone mom2-mstone-album" key={'al' + e.al.id} onClick={() => onOpenAlbum(e.al)}>
-          <span className="mom2-mstone-dot" style={{ background: 'var(--c0)' }} />
-          <span className="mom2-mstone-cover">{e.al.coverUrl ? <img src={e.al.coverUrl} alt="" /> : <IconPhoto width={18} height={18} />}</span>
-          <div className="mom2-mstone-body"><b>{e.al.title}</b><small>Album · {e.al.count} moment{e.al.count === 1 ? '' : 's'} · {timeAgo(e.al.createdAt)}</small></div>
-          <IconChevron width={16} height={16} style={{ color: 'var(--faint)', alignSelf: 'center' }} />
-        </button>
+        <div className="mom2-tl-row" key={'al' + e.al.id}>
+          <DateChip iso={e.al.createdAt} />
+          <span className="mom2-tl-node" style={{ ['--nc' as any]: 'var(--c0)' }}><IconPhoto width={13} height={13} /></span>
+          <button className="mom2-tl-card" onClick={() => onOpenAlbum(e.al)}>
+            <span className="mom2-tl-head"><span className="mom2-tl-title">{e.al.title}</span></span>
+            <span className="mom2-tl-meta">Album · {e.al.count} moment{e.al.count === 1 ? '' : 's'}</span>
+            <span className="mom2-tl-cover">{e.al.coverUrl ? <img src={e.al.coverUrl} alt="" /> : <IconPhoto width={22} height={22} />}</span>
+            <span className="mom2-tl-open">Open album <IconChevron width={14} height={14} /></span>
+          </button>
+        </div>
       ) : (
-        <button className="mom2-mstone mom2-mstone-btn" key={'ms' + e.ms.id} onClick={() => onEditMs(e.ms)}>
-          <span className="mom2-mstone-dot" style={{ background: e.ms.kind === 'learn' ? 'var(--memory)' : 'var(--c0)' }} />
-          <div className="mom2-mstone-body">
-            <b>{e.ms.title}</b>
-            <small>{[e.ms.kid?.name ?? (e.ms.ref ?? ''), e.ms.author ? `by ${e.ms.author.name.split(' ')[0]}` : '', timeAgo(e.ms.createdAt)].filter(Boolean).join(' · ')}</small>
-            {e.ms.body && <p>{e.ms.body}</p>}
-            {e.ms.mediaUrl && <img className="mom2-mstone-img" src={e.ms.mediaUrl} alt="" />}
-          </div>
-          {e.ms.diamonds > 0 && <span className="mom2-mstone-dia"><IconDiamond width={13} height={13} /> +{e.ms.diamonds}</span>}
-        </button>
+        <div className="mom2-tl-row" key={'ms' + e.ms.id}>
+          <DateChip iso={e.ms.createdAt} />
+          <span className="mom2-tl-node" style={{ ['--nc' as any]: e.ms.kind === 'learn' ? 'var(--memory)' : 'var(--c0)' }}><IconCheck width={14} height={14} /></span>
+          <button className="mom2-tl-card" onClick={() => onEditMs(e.ms)}>
+            <span className="mom2-tl-head">
+              <span className="mom2-tl-title">{e.ms.title}</span>
+              {e.ms.diamonds > 0 && <span className="mom2-tl-dia"><IconDiamond width={12} height={12} /> +{e.ms.diamonds}</span>}
+            </span>
+            <span className="mom2-tl-meta">{[e.ms.kid?.name ?? (e.ms.ref ?? ''), e.ms.author ? `by ${e.ms.author.name.split(' ')[0]}` : ''].filter(Boolean).join(' · ') || 'Milestone'}</span>
+            {e.ms.body && <p className="mom2-tl-body">{e.ms.body}</p>}
+            {e.ms.mediaUrl && <img className="mom2-tl-img" src={e.ms.mediaUrl} alt="" />}
+          </button>
+        </div>
       ))}
     </div>
   )

@@ -236,6 +236,13 @@ table.tbl tr:last-child td{border-bottom:none}
 .agent-chip{flex:none;font-size:11.5px;font-weight:500;padding:6px 12px;border-radius:99px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);cursor:pointer;white-space:nowrap;transition:all var(--dur) var(--ease)}
 .agent-chip:hover:not(:disabled){border-color:var(--acc);color:var(--acc-text)}
 .agent-chip:disabled{opacity:.5;cursor:default}
+.agent-scn{padding-top:0;border-bottom:1px solid var(--bd);align-items:center}
+.agent-scn-lbl{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--acc-text);padding-right:4px}
+.agent-chip.scn{background:var(--acc-soft);border-color:transparent;color:var(--acc-text);font-weight:600}
+.agent-chip.scn:hover:not(:disabled){border-color:var(--acc)}
+.agent-convened{display:flex;flex-wrap:wrap;gap:5px;width:100%}
+.agent-convened .pill{animation:agentin .2s var(--ease)}
+.agent-chart{width:100%;padding:12px;border:1px solid var(--bd);border-radius:11px;background:var(--bg2);overflow-x:auto}
 .agent-msgs{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:11px}
 .agent-msg{display:flex;flex-direction:column;gap:6px;max-width:100%}
 .agent-msg.user{align-items:flex-end}
