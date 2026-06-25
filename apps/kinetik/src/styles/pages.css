@@ -408,35 +408,48 @@ html[data-theme='dark'] .cal2-chip { box-shadow: none; }
 .cal2-chip.clash { outline: 2px solid var(--warn); outline-offset: -2px; }
 .cal2-chip.routine { border: 1px dashed rgba(255, 255, 255, 0.6); }
 
-/* ---- Month (stretches to fill) ---- */
+/* ---- Month (stretches to fill · moment-photo cells) ---- */
 .cal2-month { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .cal2-month-head { display: grid; grid-template-columns: repeat(7, 1fr); padding: 2px 0 10px; }
 .cal2-mh { font-size: 10px; font-weight: 800; color: var(--faint); letter-spacing: 0.05em; text-align: center; text-transform: uppercase; }
 .cal2-mh.wknd { color: var(--c0); }
 .cal2-month-grid {
   flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr;
-  min-height: 56vh; overflow: hidden; background: var(--card);
-  border: 0.5px solid var(--border); border-radius: 18px;
-  box-shadow: 0 6px 22px rgba(20, 16, 40, 0.08);
+  min-height: 58vh; overflow: hidden; background: var(--card);
+  border: 0.5px solid var(--border); border-radius: 20px;
+  box-shadow: 0 8px 28px rgba(20, 16, 40, 0.10);
 }
 html[data-theme='dark'] .cal2-month-grid { box-shadow: none; }
 .cal2-mcell {
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 9px 3px 6px; border-top: 0.5px solid var(--line); border-left: 0.5px solid var(--line);
-  transition: background 0.16s var(--ease); min-width: 0;
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
+  padding: 8px 7px; border-top: 0.5px solid var(--line); border-left: 0.5px solid var(--line);
+  transition: background 0.16s var(--ease); min-width: 0; text-align: left;
 }
 .cal2-mcell.wknd { background: color-mix(in srgb, var(--bg) 32%, transparent); }
 .cal2-mcell.out { opacity: 0.32; pointer-events: none; }
-.cal2-mcell:not(.out):active { background: color-mix(in srgb, var(--c0) 10%, transparent); }
-.cal2-mnum { font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1; }
+.cal2-mcell.today { background: color-mix(in srgb, var(--c0) 7%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c0) 38%, transparent); }
+.cal2-mcell:not(.out):active { background: color-mix(in srgb, var(--c0) 12%, transparent); }
+
+/* moment photo backdrop */
+.cal2-mphoto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+.cal2-mcell.has-photo::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card) 50%, transparent) 0%, color-mix(in srgb, var(--card) 84%, transparent) 70%, var(--card) 100%);
+}
+.cal2-mcell.has-photo.today::after { background: linear-gradient(180deg, color-mix(in srgb, var(--c0) 18%, transparent), color-mix(in srgb, var(--card) 88%, transparent) 75%, var(--card)); }
+.cal2-mphoto-badge { color: var(--c0); opacity: 0.85; flex: 0 0 auto; }
+
+.cal2-mtop { display: flex; align-items: flex-start; justify-content: space-between; gap: 2px; }
+.cal2-mnum { font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1.1; }
 .cal2-mcell.today .cal2-mnum {
   background: linear-gradient(135deg, var(--c0), var(--c1)); color: #fff;
   width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-  box-shadow: 0 3px 9px color-mix(in srgb, var(--c0) 40%, transparent);
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--c0) 42%, transparent); margin: -2px 0 0 -2px;
 }
-.cal2-mdots { display: flex; align-items: center; justify-content: center; gap: 3px; flex-wrap: wrap; }
-.cal2-mdot { width: 6px; height: 6px; border-radius: 50%; }
-.cal2-mmore { font-size: 8px; font-weight: 800; color: var(--faint); }
+.cal2-mdots { display: flex; align-items: center; gap: 3.5px; flex-wrap: wrap; }
+.cal2-mdot { width: 6.5px; height: 6.5px; border-radius: 50%; box-shadow: 0 1px 2px rgba(20, 16, 40, 0.22); }
+.cal2-mmore { font-size: 8.5px; font-weight: 800; color: var(--muted); }
 
 /* ---- Day detail + Quick add sheets (accent themed) ---- */
 .cal2-sheet { max-width: var(--maxw); }
