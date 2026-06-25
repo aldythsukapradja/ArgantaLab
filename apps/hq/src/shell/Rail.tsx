@@ -1,5 +1,6 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
+  Network, Megaphone,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 
@@ -19,6 +20,8 @@ const GROUPS: Group[] = [
     { id: 'game', label: 'Game Builder', Icon: Gamepad2 },
     { id: 'app', label: 'App Builder', Icon: Boxes },
     { id: 'content', label: 'Learn Builder', Icon: GraduationCap },
+    { id: 'agents', label: 'Agent Builder', Icon: Network },
+    { id: 'moments', label: 'Content Creator', Icon: Megaphone },
   ] },
 ]
 

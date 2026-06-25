@@ -6,7 +6,10 @@ import { Data } from '../surfaces/Data'
 import { Growth } from '../surfaces/Growth'
 import { Portfolio } from '../surfaces/Portfolio'
 import { Content } from '../surfaces/Content'
+import { Agents } from '../surfaces/Agents'
+import { Moments } from '../surfaces/Moments'
 import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
+import { AgentOrb } from '../components/AgentOrb'
 
 function Surface() {
   const { surface } = useHQ()
@@ -17,6 +20,8 @@ function Surface() {
     case 'content': return <Content />
     case 'game': return <GameBuilder />
     case 'app': return <AppBuilder />
+    case 'agents': return <Agents />
+    case 'moments': return <Moments />
   }
 }
 
@@ -37,6 +42,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
           <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>
         </div>
       </div>
+      <AgentOrb />
     </div>
   )
 }
