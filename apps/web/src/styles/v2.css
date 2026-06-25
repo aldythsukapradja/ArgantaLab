@@ -597,3 +597,131 @@ html[data-theme="light"] .jr-party { background: linear-gradient(160deg, color-m
 /* ── light-mode polish (no dark panels) ─────────────────── */
 html[data-theme="light"] .rbx-stage { background: radial-gradient(120% 90% at 50% 10%, color-mix(in srgb,var(--accent) 14%,#fff), var(--bg-2)); }
 html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb,var(--accent) 12%,#fff), var(--bg-2)); }
+
+/* ── Nexus (shared town tab) ─────────────────────────────── */
+.nexus { max-width: 920px; width: 100%; margin: 0 auto; }
+.nx-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; }
+.nx-rider { flex: 0 0 auto; display: grid; place-items: center; }
+.nx-castle { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+.nx-stage { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+  color: var(--t3); padding: 5px 11px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border); }
+.nx-stage-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.nx-stage.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.nx-stage.on .nx-stage-dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.nx-habs { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 14px; width: 100%; }
+.nx-hab { border: 1px solid var(--border); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.nx-hab-top { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+.nx-hab-count { font-size: 12px; font-weight: 700; color: var(--t3); }
+.nx-hab-kin { display: flex; flex-wrap: wrap; gap: 8px; }
+.nx-kin { background: none; border: 0; padding: 4px; border-radius: 12px; cursor: pointer; display: flex;
+  flex-direction: column; align-items: center; gap: 2px; transition: transform .12s, background .12s; }
+.nx-kin:hover { transform: translateY(-3px); background: var(--bg-2); }
+.nx-kin small { font-size: 10px; color: var(--t2); font-weight: 600; }
+.nx-kin-art { line-height: 0; transition: opacity .15s, filter .15s; }
+.nx-kin:hover .nx-kin-art { opacity: 1 !important; filter: none !important; }
+.nx-hab-go { margin-top: auto; background: none; border: 0; text-align: left; font-size: 12px;
+  font-weight: 700; cursor: pointer; padding: 4px 2px; opacity: .85; }
+.nx-hab-go:hover { opacity: 1; }
+.nx-drawer-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: grid; place-items: center;
+  z-index: 60; padding: 20px; backdrop-filter: blur(3px); }
+.nx-drawer { position: relative; background: var(--bg-1); border: 1px solid var(--border); border-radius: 22px;
+  padding: 22px; width: 320px; max-width: 100%; display: flex; flex-direction: column; align-items: center;
+  box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+.nx-drawer-x { position: absolute; top: 10px; right: 14px; background: none; border: 0; font-size: 24px;
+  line-height: 1; color: var(--t3); cursor: pointer; }
+.nx-rarity { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+  padding: 3px 10px; border-radius: 999px; }
+.nx-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px;
+  font-size: 12px; font-weight: 600; color: var(--t2); }
+.nx-stats span { background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+
+/* ── Nexus befriended residents (real cloud roster) ── */
+.nx-res-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+.nx-res { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 110px; padding: 8px;
+  background: var(--bg-1); border: 1.5px solid var(--border); border-radius: 14px; }
+.nx-res-art { position: relative; display: grid; place-items: center; }
+.nx-res-count { position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 999px; color: #fff; font-size: 10px; font-weight: 800; line-height: 18px; text-align: center;
+  border: 2px solid var(--bg-1); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+/* Harvest band — the gentle diamond trickle */
+.nx-harvest { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  width: 100%; padding: 12px 14px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(34,197,94,.10));
+  border: 1.5px solid rgba(245,158,11,.32); }
+.nx-harvest-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nx-harvest-info b { font-size: 14px; color: var(--t1); }
+.nx-harvest-btn { flex-shrink: 0; }
+.nx-harvest-btn:disabled { opacity: 0.55; cursor: default; }
+/* Harvest-gate question modal — gems are never free */
+.nx-task { position: relative; width: min(440px, 92vw); padding: 20px; border-radius: 18px;
+  background: var(--bg-1); border: 1.5px solid rgba(245,158,11,.4); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.nx-task-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; padding-right: 24px; }
+.nx-task-head b { font-size: 16px; color: var(--t1); }
+.nx-res-name { font-size: 12px; color: var(--t1); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-res-stage { font-size: 10px; font-weight: 700; color: var(--t2); text-transform: capitalize; }
+.nx-res-happy { width: 100%; height: 7px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border); overflow: hidden; margin: 2px 0; }
+.nx-res-happy i { display: block; height: 100%; border-radius: 999px; transition: width .4s cubic-bezier(.2,.8,.2,1); }
+.nx-care { display: flex; gap: 4px; width: 100%; }
+.nx-care button { flex: 1; font-size: 10px; font-weight: 700; padding: 4px 2px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg-2); color: var(--t1); cursor: pointer; }
+.nx-care button:disabled { opacity: 0.5; cursor: default; }
+.nx-care button:not(:disabled):hover { background: var(--bg-1); }
+
+/* ── Openworld lobby (kin picker in the world's Openworld tab) ── */
+.ow-lobby { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 14px; }
+.ow-kincard { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px;
+  background: var(--bg-1); border: 1.5px solid var(--border); border-radius: 16px; cursor: pointer;
+  transition: transform .14s ease, box-shadow .14s ease; }
+.ow-kincard:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+.ow-kincard-art { flex: 0 0 auto; display: grid; place-items: center; width: 72px; }
+.ow-kincard-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ow-kincard-body b { font-size: 15px; color: var(--t1); }
+.ow-kincard-body small { font-size: 12px; color: var(--t2); line-height: 1.3; }
+.ow-kincard-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; font-size: 11px; font-weight: 700; }
+.ow-rarity { text-transform: capitalize; border-radius: 999px; padding: 2px 9px; font-weight: 800; font-size: 11px; }
+
+/* ── Openworld battle HUD ── */
+.ow-stage { display: flex; flex-direction: column; gap: 12px; padding: 6px 2px 18px;
+  background: radial-gradient(130% 90% at 50% -10%, color-mix(in srgb, var(--ow) 16%, transparent), transparent 60%); }
+.ow-top { display: flex; align-items: center; gap: 10px; }
+.le-x { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-2);
+  color: var(--t2); font-size: 16px; cursor: pointer; flex: 0 0 auto; }
+.ow-enemy-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ow-enemy-meta b { font-size: 16px; color: var(--t1); }
+.ow-weak { font-size: 11px; font-weight: 700; color: var(--t2); }
+.ow-enemy { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0 4px; }
+.ow-enemy-art { transition: transform .12s ease; filter: drop-shadow(0 14px 20px rgba(0,0,0,.25)); }
+.ow-hpwrap { display: flex; flex-direction: column; align-items: center; gap: 3px; width: min(420px, 86%); }
+.ow-hp { width: 100%; height: 14px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border); overflow: hidden; }
+.ow-hp i { display: block; height: 100%; border-radius: 999px; transition: width .35s cubic-bezier(.2,.8,.2,1); }
+.ow-shield { font-size: 12px; font-weight: 800; color: #38bdf8; }
+.ow-hp-num { font-size: 11px; font-weight: 700; color: var(--t2); }
+.ow-tell { font-size: 11px; font-weight: 700; color: #38bdf8; background: #38bdf81a; border-radius: 999px; padding: 3px 10px; }
+.ow-playerbar { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 8px 12px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; }
+.ow-hearts { font-size: 18px; letter-spacing: 1px; }
+.ow-energy { font-size: 15px; font-weight: 700; color: var(--t1); }
+.ow-energy b { color: #f59e0b; }
+.ow-combo { font-size: 14px; font-weight: 800; color: #ef4444; }
+.ow-rider { flex: 0 0 auto; }
+.ow-note { text-align: center; font-size: 13px; font-weight: 700; color: var(--ow); }
+.ow-q, .ow-capture { background: var(--bg-1); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+.ow-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.ow-abilities { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.ow-ab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 84px; padding: 10px 12px;
+  background: var(--bg-1); border: 1.5px solid var(--border); border-radius: 14px; cursor: pointer; transition: transform .12s ease; }
+.ow-ab:not(:disabled):hover { transform: translateY(-2px); }
+.ow-ab-ic { font-size: 22px; }
+.ow-ab b { font-size: 13px; color: var(--t1); }
+.ow-ab small { font-size: 11px; font-weight: 700; color: #f59e0b; }
+.ow-ab-pu { border-color: #a855f7; background: linear-gradient(180deg, #a855f714, var(--bg-1)); }
+.ow-ab-pu small { color: #a855f7; }
+.ow-hint { font-size: 12px; color: var(--t2); text-align: center; max-width: 300px; margin: 0; }
+.ow-charged { font-size: 12px; font-weight: 800; color: #a855f7; background: #a855f71a;
+  border: 1px solid #a855f744; border-radius: 999px; padding: 4px 12px; }
+.ow-pu-banner { font-size: 13px; font-weight: 800; color: #a855f7; text-align: center; margin-bottom: 8px; }
+.ow-capture-head { display: flex; flex-direction: column; gap: 2px; align-items: center; margin-bottom: 10px; text-align: center; }
+.ow-capture-head b { font-size: 17px; }
+.ow-capture-head span { font-size: 12px; color: var(--t2); font-weight: 600; }
+.ow-fb { text-align: center; font-weight: 800; font-size: 14px; }
+.ow-results { text-align: center; }

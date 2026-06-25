@@ -13,6 +13,9 @@ import Journey from './Journey'
 import { DRILLS_BY_WORLD, type Drill } from '@/data/drills'
 import { pushLearnState } from '@lib/learnCloud'
 import { bumpQuest } from '@lib/quests'
+import { KIN } from '@/data/openworld'
+import KinSprite from '@components/openworld/KinSprite'
+import OpenworldPlayer from '@components/openworld/OpenworldPlayer'
 
 type Spine = 'journey' | 'signature' | 'arena' | 'badges' | 'profile'
 
@@ -38,6 +41,7 @@ export default function WorldHub({ world }: { world: World }) {
   const [spine, setSpine] = useState<Spine>('journey')
   const [active, setActive] = useState<JourneyNode | null>(null)
   const [activeDrill, setActiveDrill] = useState<Drill | null>(null)
+  const [battleKin, setBattleKin] = useState<string | null>(null)
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
   const ring = worldRing(world)
@@ -99,13 +103,26 @@ export default function WorldHub({ world }: { world: World }) {
     )
   }
 
+  if (battleKin) {
+    return (
+      <div className="le-world">
+        {cinematic}
+        <OpenworldPlayer world={world} kinId={battleKin}
+          onExit={() => { setBattleKin(null); if (uid) pushLearnState(uid); force(n => n + 1) }} />
+      </div>
+    )
+  }
+
   const TABS: { k: Spine; label: string }[] = [
     { k: 'journey', label: 'Journey' },
     { k: 'signature', label: world.signature },
-    { k: 'arena', label: 'Arena' },
+    { k: 'arena', label: 'Openworld' },
     { k: 'badges', label: 'Badges' },
     { k: 'profile', label: 'Profile' },
   ]
+
+  // Wild kin you can hunt + befriend in this world's Openworld.
+  const wildKin = KIN.filter(k => k.world === world.key.toLowerCase())
 
   return (
     <div className="le-world">
@@ -171,10 +188,30 @@ export default function WorldHub({ world }: { world: World }) {
         )}
 
         {spine === 'arena' && (
-          <div className="le-soon">
-            <div className="le-soon-art">⚔️</div>
-            <h3>Arena</h3>
-            <p>Challenge friends to live duels and team battles. Coming soon!</p>
+          <div className="le-sig">
+            <div className="dr-gallery-head">
+              <h3 style={{ color: world.color }}>🗺️ {world.name} Openworld</h3>
+              <p>Explore and battle wild kin. Answer to power your abilities, weaken a kin, then befriend it — it comes to live in your <b>Nexus</b>.</p>
+            </div>
+            <div className="ow-lobby">
+              {wildKin.map(k => (
+                <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }}
+                  onClick={() => { if (requireAuth('to enter the Openworld')) setBattleKin(k.id) }}>
+                  <span className="ow-kincard-art"><KinSprite kin={k.id} size={72} /></span>
+                  <div className="ow-kincard-body">
+                    <b>{k.name}</b>
+                    <small>{k.blurb}</small>
+                    <div className="ow-kincard-tags">
+                      <span className="ow-rarity" style={{ background: `${k.color}22`, color: k.color }}>{k.rarity}</span>
+                      <span className="dr-chip">❤️ {k.baseHp}</span>
+                      <span className="dr-chip" style={{ color: k.color }}>weak: {k.element}</span>
+                    </div>
+                  </div>
+                  <span className="dr-card-go" style={{ color: k.color }}>⚔️</span>
+                </button>
+              ))}
+              {wildKin.length === 0 && <p className="ph-sub">More kin are migrating to {world.name} soon…</p>}
+            </div>
           </div>
         )}
 

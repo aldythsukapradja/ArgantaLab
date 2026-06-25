@@ -172,10 +172,36 @@ function ageFromDob(dob?: string | null): number | null {
   return a >= 0 && a < 130 ? a : null
 }
 
-/** The real roster of a circle: owner + adult co-leaders + kids. Kids are
- *  `profiles` rows with role='kid' (guardian-readable), with `child_profiles`
- *  as a fallback for any not-yet-upgraded kid. Owner-only by RLS. */
+/** Real roster of a circle, names resolved past per-row RLS via the
+ *  kinetik_family RPC (so co-leaders show their real name). Falls back to the
+ *  direct-query method if the RPC isn't deployed yet. */
 export async function fetchFamily(circleId: string, me: { id: string; name: string; photoUrl: string | null } | null): Promise<FamilyMember[]> {
+  try {
+    const { data, error } = await supabase.rpc('kinetik_family', { p_circle: circleId })
+    if (error) throw error
+    const rows = (data ?? []) as Array<Record<string, unknown>>
+    if (!rows.length) return await fetchFamilyDirect(circleId, me)
+    return rows.map(r => {
+      const isOwner = r.crole === 'owner'
+      const isKid = !isOwner && r.role === 'kid'
+      return {
+        id: String(r.id),
+        name: isOwner && me ? (me.name || (r.name as string) || 'You') : ((r.name as string) || 'Member'),
+        kind: isOwner ? 'owner' : (isKid ? 'child' : 'parent'),
+        role: (r.crole as Person['role']) || (isKid ? 'member' : 'coleader'),
+        photoUrl: isOwner && me ? (me.photoUrl || (r.photo as string) || null) : ((r.photo as string) || null),
+        color: (r.color as string) || null, emoji: (r.emoji as string) || null,
+        age: ((r.age as number) ?? null) ?? ageFromDob(r.dob as string),
+        username: (r.username as string) || null,
+        linkId: String(r.id), linkKind: isKid ? 'child' : 'profile',
+      }
+    })
+  } catch {
+    return await fetchFamilyDirect(circleId, me)
+  }
+}
+
+async function fetchFamilyDirect(circleId: string, me: { id: string; name: string; photoUrl: string | null } | null): Promise<FamilyMember[]> {
   const [{ data: cm }, { data: circ }] = await Promise.all([
     supabase.from('circle_members').select('member_id, role').eq('circle_id', circleId),
     supabase.from('circles').select('owner_id').eq('id', circleId).maybeSingle(),

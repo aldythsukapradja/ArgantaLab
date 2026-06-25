@@ -33,6 +33,7 @@ import Fame from '@/pages/Fame'
 import Profile from '@/pages/Profile'
 import FamilyPulse from '@/pages/FamilyPulse'
 import Quests from '@/pages/Quests'
+import Nexus from '@/pages/Nexus'
 import LearnHub from '@/pages/LearnHub'
 import World from '@/pages/World'
 import PlayPage from '@/pages/PlayPage'
@@ -256,6 +257,7 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'profile') return <Profile />
   if (tab === 'parent') return <FamilyPulse />
   if (tab === 'quests') return <Quests />
+  if (tab === 'nexus') return <Nexus />
   // 'admin' (Content Studio) relocated to Circle HQ — fall through to home.
   return <PlayHome />
 }

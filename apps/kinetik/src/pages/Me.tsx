@@ -5,6 +5,7 @@ import { useUiStore } from '@store/uiStore'
 import { initials } from '@data/energy'
 import { cloudReady, supabase } from '@lib/supabase'
 import * as repo from '@repo/kinetikRepo'
+import { fetchMomentCount } from '@repo/momentsRepo'
 import type { World, SocialStats, FamilyMember } from '@repo/kinetikRepo'
 import type { Circle } from '@data/types'
 import { CircleEmblem as Emblem, accentOf } from '@components/CircleEmblem'
@@ -44,7 +45,6 @@ function errMsg(e: unknown): string {
 
 export default function Me() {
   const circles = useDataStore(s => s.circles)
-  const moments = useDataStore(s => s.moments)
   const authUser = useDataStore(s => s.me)
   const { addCircle, updateCircle, removeCircle } = useDataStore.getState()
   const { activeCircleId, setCircle, theme, toggleTheme } = useUiStore()
@@ -54,6 +54,7 @@ export default function Me() {
   const [family, setFamily] = useState<FamilyMember[] | null>(null)
   const [rings, setRings] = useState<Record<string, Record<string, number>>>({})
   const [stats, setStats] = useState<SocialStats | null>(null)
+  const [momentCount, setMomentCount] = useState(0)
 
   const [editCircles, setEditCircles] = useState(false)
   const [sheet, setSheet] = useState<'circle' | null>(null)
@@ -65,6 +66,7 @@ export default function Me() {
 
   useEffect(() => { repo.fetchWorlds().then(setWorlds).catch(() => {}) }, [])
   useEffect(() => { repo.fetchSocialStats().then(setStats).catch(() => {}) }, [authUser?.id])
+  useEffect(() => { if (circle) fetchMomentCount(circle.id).then(setMomentCount).catch(() => setMomentCount(0)) }, [circle?.id])
 
   // Load the circle's real roster, then each kid's world rings.
   useEffect(() => {
@@ -94,8 +96,7 @@ export default function Me() {
   const name = authUser?.name ?? 'You'
   const diamonds = authUser?.diamonds ?? 0
 
-  // Stats — Moments from kinetik_moments; the rest from the real social_stats RPC.
-  const momentCount = moments.filter(m => m.circleId === circle.id).length
+  // Stats — Moments from the real kinetik_post table; the rest from social_stats RPC.
   const activeCount = family?.length ?? circle.memberIds.length
 
   const run = async (fn: () => Promise<unknown>) => {
