@@ -744,6 +744,9 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 .ow-coop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .ow-coop-row .ow-coop-toggle { margin-top: 0; flex-direction: column; gap: 2px; align-items: flex-start; }
 /* ── Real co-op battle ───────────────────────────────────── */
+.cb-how { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; margin-bottom: 12px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-1)); border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border)); }
+.cb-how b { font-size: 13.5px; } .cb-how span { font-size: 12.5px; color: var(--t2); line-height: 1.45; }
 .cb-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .cb-head h3 { margin: 0; }
 .cb-openlist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }

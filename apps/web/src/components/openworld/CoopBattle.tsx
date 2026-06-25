@@ -21,6 +21,7 @@ import { markSectionToday } from '@lib/sectionDaily'
 import { renderItem } from '@components/learn2/interactions'
 import { KIN, kin as kinDef } from '@/data/openworld'
 import { coopCreate, coopJoin, coopAct, coopOpen, coopState, subscribeCoop, type CoopState, type CoopOpen } from '@lib/coop'
+import { myCircles } from '@lib/cloudAuth'
 import KinSprite from './KinSprite'
 import AvatarSprite from './AvatarSprite'
 
@@ -43,6 +44,12 @@ export default function CoopBattle({ world, onExit }: { world: World; onExit: ()
   const { activeCircleId, session, addToast } = useAppStore()
   const myId = session && session !== 'loading' ? session.user.id : null
 
+  // Resolve which circle we co-op in: the active one, else the kid's first.
+  const [circle, setCircle] = useState<{ id: string; name: string } | null>(null)
+  useEffect(() => {
+    myCircles().then(cs => { const p = cs.find(c => c.id === activeCircleId) ?? cs[0]; if (p) setCircle({ id: p.id, name: p.name }) })
+  }, [activeCircleId])
+
   const [st, setSt] = useState<CoopState | null>(null)
   const [open, setOpen] = useState<CoopOpen[]>([])
   const [queue, setQueue] = useState<DrillItem[]>(() => buildQueue(world.key))
@@ -54,8 +61,14 @@ export default function CoopBattle({ world, onExit }: { world: World; onExit: ()
   // Wild kin you can host a co-op fight against.
   const wildKin = useMemo(() => KIN.filter(k => k.world === world.key.toLowerCase()), [world.key])
 
-  // Open battles to join in this circle.
-  useEffect(() => { if (activeCircleId) coopOpen(activeCircleId).then(setOpen) }, [activeCircleId])
+  // Open battles to join in this circle (auto-refresh so a friend's new battle
+  // shows up without re-opening the page).
+  useEffect(() => {
+    if (!circle) return
+    coopOpen(circle.id).then(setOpen)
+    const t = setInterval(() => coopOpen(circle.id).then(setOpen), 4000)
+    return () => clearInterval(t)
+  }, [circle])
 
   // Live-stream the shared state once we're in a session.
   useEffect(() => {
@@ -83,12 +96,12 @@ export default function CoopBattle({ world, onExit }: { world: World; onExit: ()
   }
 
   const host = async (kinId: string) => {
-    if (!activeCircleId) { addToast('Join a circle first to play co-op', '👥'); return }
+    if (!circle) { addToast('Make a circle in your Profile first to play co-op', '👥'); return }
     const def = kinDef(kinId); if (!def) return
     const hp = Math.round(def.baseHp * COOP_HP_MULT)
     const shield = def.gimmick === 'shield3' ? 18 : 0
-    const s = await coopCreate(activeCircleId, kinId, world.key, hp, shield)
-    if (s) setSt(s); else addToast('Could not start — is the co-op migration run?', '⚠️')
+    const s = await coopCreate(circle.id, kinId, world.key, hp, shield)
+    if (s) setSt(s); else addToast('Could not start — run migration_coop.sql in Supabase', '⚠️')
   }
   const join = async (sid: string) => { const s = await coopJoin(sid); if (s) setSt(s); else addToast('Could not join', '⚠️') }
 
@@ -113,25 +126,34 @@ export default function CoopBattle({ world, onExit }: { world: World; onExit: ()
     return (
       <div className="le-world">
         <div className="cb-head"><button className="le-check ghost" onClick={onExit}>← Back</button><h3 style={{ color: world.color }}>🤝 {world.name} Co-op</h3></div>
-        {!activeCircleId && <p className="ig-kc">Join or pick a circle (in your Profile) to team up with a friend.</p>}
-        {open.length > 0 && (
-          <>
-            <div className="section-label">Join a friend’s battle</div>
-            <div className="cb-openlist">
-              {open.map(o => (
-                <button key={o.id} className="cb-openrow" onClick={() => join(o.id)}>
-                  <KinSprite kin={o.kin_key} size={40} />
-                  <div><b>{kinDef(o.kin_key)?.name ?? 'Kin'}</b><small>{o.host} · {o.members} in</small></div>
-                  <span className="cb-join">Join →</span>
-                </button>
-              ))}
-            </div>
-          </>
+
+        {/* how it works — co-op is a 2-device thing */}
+        <div className="cb-how">
+          <b>👫 Co-op is for two devices.</b>
+          <span>Pick a foe below to <b>host</b> a battle{circle ? <> in <b>{circle.name}</b></> : null}. Then your friend opens Co-op on <b>their</b> device and taps <b>Join</b> — you’ll fight the same kin together, live.</span>
+        </div>
+
+        {!circle && <p className="ig-kc">You need a circle to team up. Make or join one in your <b>Profile</b>, then come back.</p>}
+
+        <div className="section-label">Join a friend’s battle {circle && <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 12 }}>· in {circle.name}</span>}</div>
+        {open.length > 0 ? (
+          <div className="cb-openlist">
+            {open.map(o => (
+              <button key={o.id} className="cb-openrow" onClick={() => join(o.id)}>
+                <KinSprite kin={o.kin_key} size={40} />
+                <div><b>{kinDef(o.kin_key)?.name ?? 'Kin'}</b><small>hosted by {o.host} · {o.members} in</small></div>
+                <span className="cb-join">Join →</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="ig-kc" style={{ margin: '0 0 8px' }}>No open battles yet — host one below, or wait for a friend to host.</p>
         )}
-        <div className="section-label">Host a battle</div>
+
+        <div className="section-label">Host a battle <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 12 }}>· pick the foe you’ll fight together</span></div>
         <div className="ow-lobby">
           {wildKin.map(k => (
-            <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }} onClick={() => host(k.id)} disabled={!activeCircleId}>
+            <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }} onClick={() => host(k.id)} disabled={!circle}>
               <span className="ow-kincard-art"><KinSprite kin={k.id} size={64} /></span>
               <div className="ow-kincard-body"><b>{k.name}</b><small>{k.rarity} · a tougher shared foe</small></div>
             </button>

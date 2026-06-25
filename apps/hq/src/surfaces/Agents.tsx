@@ -42,7 +42,7 @@ export function Agents() {
       <div className="spread" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div className="h1">Agent Builder</div>
-          <div className="sub">The 25-agent operating system — one human CEO, many specialist agents, deterministic-first</div>
+          <div className="sub">The {AGENTS.length}-agent operating system — one human CEO, many specialist agents, deterministic-first</div>
         </div>
         <div className="seg">
           {SUBTABS.map(({ id, label, Icon }) => (
@@ -253,7 +253,7 @@ function Tokens() {
               </tr>
             ))}
             <tr style={{ borderTop: '2px solid var(--bd2)' }}>
-              <td style={{ padding: '11px 6px', fontSize: 13, fontWeight: 700 }} colSpan={3}>Total — full 25-agent OS</td>
+              <td style={{ padding: '11px 6px', fontSize: 13, fontWeight: 700 }} colSpan={3}>Total — full {AGENTS.length}-agent OS</td>
               <td style={{ padding: '11px 6px', fontSize: 14, fontWeight: 700, textAlign: 'right', color: 'var(--acc-text)' }}>~$2.20</td>
             </tr>
           </tbody>
