@@ -37,7 +37,7 @@ export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: st
     .filter(e => e.circleId === circleId && e.date === dateIso)
     .map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, who: e.who, energy: e.energy, kind: 'event', prep: e.prep, clash: false }))
   const fromRoutines: Occ[] = routines
-    .filter(r => r.circleId === circleId && r.day === dow)
+    .filter(r => r.circleId === circleId && r.day === dow && (!r.repeatUntil || r.repeatUntil >= dateIso))
     .map(r => ({ id: r.id, title: r.title, start: r.start, end: r.end, who: r.who, energy: r.energy, kind: 'routine', responsible: r.responsible, clash: false }))
 
   const day = [...fromEvents, ...fromRoutines].sort((a, b) => toMin(a.start) - toMin(b.start))

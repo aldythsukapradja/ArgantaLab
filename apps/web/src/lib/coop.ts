@@ -1,4 +1,5 @@
 import { supabase, cloudEnabled } from './supabase'
+import { myCircles } from './cloudAuth'
 
 // ============================================================
 //  REAL CO-OP (client) — two devices, one shared kin.
@@ -59,6 +60,17 @@ export async function coopOpen(circleId: string): Promise<CoopOpen[]> {
   const { data, error } = await supabase.rpc('coop_open', { p_circle: circleId })
   if (error) { console.warn('[coop] open failed:', error.message); return [] }
   return (data as CoopOpen[]) ?? []
+}
+
+/** Every open co-op battle across ALL my circles (for the Home invite banner). */
+export async function coopOpenMine(): Promise<CoopOpen[]> {
+  if (!cloudEnabled) return []
+  const circles = await myCircles()
+  if (circles.length === 0) return []
+  const lists = await Promise.all(circles.map(c => coopOpen(c.id)))
+  const seen = new Set<string>(); const out: CoopOpen[] = []
+  for (const l of lists) for (const o of l) if (!seen.has(o.id)) { seen.add(o.id); out.push(o) }
+  return out
 }
 
 /** Live-stream a session: calls onChange whenever the shared state moves.

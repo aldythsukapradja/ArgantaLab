@@ -40,7 +40,7 @@ class ItemBoundary extends Component<{ children: ReactNode; onSkip: () => void }
   render() { return this.state.failed ? <button className="le-check" onClick={this.props.onSkip}>Skip →</button> : this.props.children }
 }
 
-export default function CoopBattle({ world, onExit }: { world: World; onExit: () => void }) {
+export default function CoopBattle({ world, joinSessionId, onExit }: { world: World; joinSessionId?: string; onExit: () => void }) {
   const { activeCircleId, session, addToast } = useAppStore()
   const myId = session && session !== 'loading' ? session.user.id : null
 
@@ -52,6 +52,12 @@ export default function CoopBattle({ world, onExit }: { world: World; onExit: ()
 
   const [st, setSt] = useState<CoopState | null>(null)
   const [open, setOpen] = useState<CoopOpen[]>([])
+
+  // Came in from a Home invite → jump straight into that battle.
+  useEffect(() => {
+    if (joinSessionId && !st) coopJoin(joinSessionId).then(s => { if (s) setSt(s); else addToast('That battle has ended', 'ℹ️') })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joinSessionId])
   const [queue, setQueue] = useState<DrillItem[]>(() => buildQueue(world.key))
   const [qIdx, setQIdx] = useState(0)
   const [awaitMove, setAwaitMove] = useState(false)   // answered right → pick a move

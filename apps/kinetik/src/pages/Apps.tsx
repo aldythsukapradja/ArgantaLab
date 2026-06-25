@@ -5,7 +5,7 @@ import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
 import * as repo from '@repo/kinetikRepo'
 import type { KApp } from '@repo/kinetikRepo'
-import { APP_ICON, IconDiamond, IconChevronL } from '@components/Icons'
+import { APP_ICON, IconChevronL } from '@components/Icons'
 
 // Deterministic gradient + glyph for an app that ships no thumbnail, so the
 // shelf still looks designed. Derived from the app's own name/category.
@@ -31,10 +31,8 @@ function iconFor(cat: string | null, name: string): keyof typeof APP_ICON {
 
 export default function Apps() {
   const circles = useDataStore(s => s.circles)
-  const me = useDataStore(s => s.me)
   const activeCircleId = useUiStore(s => s.activeCircleId)
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
-  const diamonds = me?.diamonds ?? 0
 
   const [apps, setApps] = useState<KApp[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -63,7 +61,6 @@ export default function Apps() {
     <div className="fade-in apps-page">
       <div className="apps-head">
         <h1>Apps</h1>
-        <div className="me3-wallet" style={{ boxShadow: '0 2px 8px rgba(20,16,40,.08)' }}><IconDiamond width={14} height={14} style={{ color: 'var(--memory)' }} /> {diamonds.toLocaleString()}</div>
       </div>
 
       {/* Store hero */}
@@ -72,7 +69,6 @@ export default function Apps() {
         <span className="sh-orb sh-orb-2" />
         <div className="sh-top">
           <span className="sh-kicker">CircleHQ</span>
-          <span className="sh-dia"><IconDiamond width={14} height={14} /> {diamonds.toLocaleString()}</span>
         </div>
         <div className="sh-title">Apps for<br />{circle?.name ?? 'your circle'}</div>
         <div className="sh-foot">

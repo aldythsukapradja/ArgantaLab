@@ -283,11 +283,10 @@ html[data-theme='dark'] .td-tmrw { box-shadow: none; }
 @media (min-width: 1000px) {
   .today2 {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; align-items: start;
-    grid-template-areas: "hero hero" "focus flow" "stats tl" "tmrw tl" ". tl";
+    grid-template-areas: "hero hero" "focus flow" "tmrw tl" ". tl";
   }
   .today2 > .td-hero { grid-area: hero; }
   .today2 > .td-focus, .today2 > .td-allset { grid-area: focus; margin-bottom: 16px; }
-  .today2 > .td-stats { grid-area: stats; margin-bottom: 16px; }
   .today2 > .td-tmrw { grid-area: tmrw; }
   .today2 > .section-label { grid-area: flow; align-self: end; margin: 4px 4px 10px; }
   .today2 > .td-tl { grid-area: tl; }
@@ -470,6 +469,7 @@ html[data-theme='dark'] .cal2-month-grid { box-shadow: none; }
 
 /* Quick add */
 .cal2-scrim2 { z-index: 70; }
+.cal2-scrim3 { z-index: 80; }
 .cal2-lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--faint); text-transform: uppercase; margin: 18px 0 10px; }
 .cal2-who-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
 .cal2-who {
@@ -1633,7 +1633,10 @@ html[data-theme='dark'] .mom2-card { box-shadow: none; }
 .mom2-acts { display: flex; align-items: center; gap: 16px; }
 .mom2-act { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .mom2-act.on { color: var(--care); }
+.mom2-act.on svg path { fill: var(--care); }
+.mom2-act.on svg { animation: heartPop 0.36s var(--ease); }
 .mom2-act.reward { margin-left: auto; color: var(--memory); }
+@keyframes heartPop { 0% { transform: scale(1); } 35% { transform: scale(1.32); } 60% { transform: scale(0.92); } 100% { transform: scale(1); } }
 .mom2-react-row { display: flex; gap: 6px; margin-top: 10px; }
 .mom2-emoji { font-size: 20px; width: 38px; height: 38px; border-radius: 50%; background: var(--bg-2); transition: transform 0.14s var(--ease); }
 .mom2-emoji.on { background: color-mix(in srgb, var(--care) 16%, transparent); }
@@ -1777,6 +1780,8 @@ html[data-theme='dark'] .mom2-card { box-shadow: none; }
 .mreel-act { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #fff; }
 .mreel-act small { font-size: 11px; }
 .mreel-act.on { color: var(--care); }
+.mreel-act.on svg path { fill: var(--care); }
+.mreel-act.on svg { animation: heartPop 0.36s var(--ease); }
 .mreel-reward { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #a855f7, #d946ef); display: grid; place-items: center; }
 .mreel-cap { position: absolute; left: 14px; right: 70px; bottom: 32px; color: #fff; z-index: 2; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
 .mreel-cap b { font-size: 14px; } .mreel-cap p { font-size: 13px; margin-top: 6px; line-height: 1.4; }

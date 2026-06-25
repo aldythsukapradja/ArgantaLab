@@ -1,30 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { createPortal } from 'react-dom'
 import { gsap } from 'gsap'
 import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
-import { week, monthGrid, occurrencesOn, fmtTime, toMin, DOW, type Occ } from '@lib/cal'
-import { ENERGY, initials } from '@data/energy'
+import { week, monthGrid, occurrencesOn, fmtTime, DOW, type Occ } from '@lib/cal'
+import { ENERGY, initials, isoOf } from '@data/energy'
 import type { EnergyKey, Person } from '@data/types'
-import { IconChevron, IconChevronL, IconPlus, IconSwitch, IconTrash, IconCheck, IconHistory } from '@components/Icons'
+import { IconChevron, IconChevronL, IconSwitch, IconPhoto } from '@components/Icons'
+import DaySheet from '@components/DaySheet'
+import * as M from '@repo/momentsRepo'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MAX_COLS = 4
-
-/** Minutes → end time, given a start HH:MM. */
-const endFrom = (start: string, dur: number): string => {
-  const m = (toMin(start) + dur) % (24 * 60)
-  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-}
-const weekdayOf = (iso: string) => new Date(iso + 'T00:00').getDay()
-const errMsg = (e: unknown): string => {
-  if (e && typeof e === 'object') {
-    const o = e as Record<string, unknown>
-    return String(o.message || o.details || o.hint || o.code || JSON.stringify(o))
-  }
-  return String(e)
-}
 
 export default function Calendar() {
   const root = useRef<HTMLDivElement | null>(null)
@@ -32,8 +18,6 @@ export default function Calendar() {
   const routines = useDataStore(s => s.routines)
   const circles = useDataStore(s => s.circles)
   const people = useDataStore(s => s.people)
-  const addEvent = useDataStore(s => s.addEvent)
-  const addRoutine = useDataStore(s => s.addRoutine)
   const {
     activeCircleId, calWeekOffset, setWeekOffset,
     calView, setCalView, calMonthOffset, setMonthOffset,
@@ -41,7 +25,7 @@ export default function Calendar() {
 
   const [rotate, setRotate] = useState(0)       // member-window offset
   const [dayOpen, setDayOpen] = useState<string | null>(null) // iso → detail popup
-  const [adding, setAdding] = useState<string | null>(null)   // iso → quick-add sheet
+  const [photoByDate, setPhotoByDate] = useState<Record<string, string>>({})
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
   const members = useMemo(
@@ -72,6 +56,25 @@ export default function Calendar() {
     tl.fromTo(root.current.querySelector('.cal2-bar'), { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: 'cubic.out' }, 0)
     tl.fromTo(root.current.querySelector('.cal2-stage'), { opacity: 0, scale: 0.985 }, { opacity: 1, scale: 1, duration: 0.5, ease: 'cubic.out' }, 0.12)
   }, [calWeekOffset, calMonthOffset, calView])
+
+  // Family moments → a soft photo backdrop on the day they happened. One signed
+  // feed read per circle; we keep the most recent photo per date.
+  useEffect(() => {
+    if (!circle) return
+    let alive = true
+    M.fetchFeed(circle.id).then(posts => {
+      if (!alive) return
+      const map: Record<string, string> = {}
+      for (const p of posts) {
+        const iso = isoOf(new Date(p.createdAt))
+        if (map[iso]) continue
+        const photo = p.media.find(m => m.kind === 'photo' && m.url)
+        if (photo?.url) map[iso] = photo.url
+      }
+      setPhotoByDate(map)
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [circle?.id])
 
   const doSwap = () => {
     setRotate(r => (r + 1) % Math.max(members.length, 1))
@@ -141,40 +144,27 @@ export default function Calendar() {
         ) : (
           <MonthView
             year={monthBase.getFullYear()} month={monthBase.getMonth()}
-            events={events} routines={routines} members={members}
+            events={events} routines={routines} members={members} photoByDate={photoByDate}
             activeCircleId={activeCircleId} onPickDay={setDayOpen}
           />
         )}
       </div>
 
-      {/* Day detail popup — both views */}
-      {dayOpen && circle && createPortal(
-        <DayDetail
-          iso={dayOpen} members={members} accent={[c0, c1]}
-          items={occurrencesOn(events, routines, dayOpen, activeCircleId)}
-          onClose={() => setDayOpen(null)}
-          onAdd={() => setAdding(dayOpen)}
-        />, document.body)}
-
-      {/* Quick add sheet (renders above the detail) */}
-      {adding && circle && createPortal(
-        <QuickAdd
-          date={adding} members={members} visibleIds={visible.map(v => v.id)}
-          circleId={circle.id} accent={[c0, c1]}
-          onClose={() => setAdding(null)}
-          onAddEvent={async e => { await addEvent(e); setAdding(null) }}
-          onAddRoutine={async r => { await addRoutine(r); setAdding(null) }}
-        />, document.body)}
+      {/* Day detail + quick add (expands over both views) */}
+      {dayOpen && circle && (
+        <DaySheet iso={dayOpen} circle={circle} members={members} onClose={() => setDayOpen(null)} />
+      )}
     </div>
   )
 }
 
 /* ---------------- Month view ---------------- */
-function MonthView({ year, month, events, routines, members, activeCircleId, onPickDay }: {
+function MonthView({ year, month, events, routines, members, photoByDate, activeCircleId, onPickDay }: {
   year: number; month: number
   events: ReturnType<typeof useDataStore.getState>['events']
   routines: ReturnType<typeof useDataStore.getState>['routines']
   members: Person[]
+  photoByDate: Record<string, string>
   activeCircleId: string
   onPickDay: (iso: string) => void
 }) {
@@ -191,13 +181,18 @@ function MonthView({ year, month, events, routines, members, activeCircleId, onP
       <div className="cal2-month-grid">
         {cells.map(c => {
           const items = c.inMonth ? occurrencesOn(events, routines, c.iso, activeCircleId) : []
+          const photo = c.inMonth ? photoByDate[c.iso] : undefined
           return (
             <button
               key={c.iso}
-              className={`cal2-mcell${c.inMonth ? '' : ' out'}${c.isToday ? ' today' : ''}${c.isWeekend ? ' wknd' : ''}`}
+              className={`cal2-mcell${c.inMonth ? '' : ' out'}${c.isToday ? ' today' : ''}${c.isWeekend ? ' wknd' : ''}${photo ? ' has-photo' : ''}`}
               onClick={() => c.inMonth && onPickDay(c.iso)}
             >
-              <span className="cal2-mnum">{c.date.getDate()}</span>
+              {photo && <img className="cal2-mphoto" src={photo} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
+              <span className="cal2-mtop">
+                <span className="cal2-mnum">{c.date.getDate()}</span>
+                {photo && <IconPhoto className="cal2-mphoto-badge" width={13} height={13} />}
+              </span>
               {items.length > 0 && (
                 <span className="cal2-mdots">
                   {items.slice(0, 4).map(e => <span key={e.id} className="cal2-mdot" style={{ background: colorOf(e) }} />)}
@@ -207,180 +202,6 @@ function MonthView({ year, month, events, routines, members, activeCircleId, onP
             </button>
           )
         })}
-      </div>
-    </div>
-  )
-}
-
-/* ---------------- Day detail popup ---------------- */
-function DayDetail({ iso, members, accent, items, onClose, onAdd }: {
-  iso: string; members: Person[]; accent: [string, string]
-  items: Occ[]; onClose: () => void; onAdd: () => void
-}) {
-  const removeEvent = useDataStore(s => s.removeEvent)
-  const removeRoutine = useDataStore(s => s.removeRoutine)
-  const [busy, setBusy] = useState<string | null>(null)
-  const [err, setErr] = useState('')
-  const d = new Date(iso + 'T00:00')
-  const byId = useMemo(() => new Map(members.map(p => [p.id, p])), [members])
-
-  const del = async (o: Occ) => {
-    if (busy) return
-    setBusy(o.id); setErr('')
-    try { o.kind === 'routine' ? await removeRoutine(o.id) : await removeEvent(o.id) }
-    catch (e) { setErr(errMsg(e)) }
-    finally { setBusy(null) }
-  }
-
-  return (
-    <div className="sheet-scrim cal2-scrim2" onClick={onClose}>
-      <div className="sheet cal2-sheet" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="sheet-grip" onClick={onClose} aria-label="Close" />
-        <div className="cal2-dd-head">
-          <div>
-            <div className="cal2-dd-dow">{WEEKDAYS_LONG[d.getDay()]}</div>
-            <h3 className="cal2-dd-date">{d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}</h3>
-          </div>
-          <span className="cal2-dd-count">{items.length} {items.length === 1 ? 'plan' : 'plans'}</span>
-        </div>
-
-        {err && <div className="cal2-err">{err}</div>}
-
-        <div className="cal2-dd-list">
-          {items.length === 0 && <div className="cal2-dd-empty">Nothing planned yet.</div>}
-          {items.map(o => {
-            const who = o.who.map(id => byId.get(id)).filter(Boolean) as Person[]
-            return (
-              <div key={o.id} className={`cal2-dd-item${o.clash ? ' clash' : ''}`}>
-                <span className="cal2-dd-bar" style={{ background: ENERGY[o.energy as EnergyKey] }} />
-                <div className="cal2-dd-body">
-                  <div className="cal2-dd-title">{o.title}{o.kind === 'routine' && <span className="cal2-dd-weekly">Weekly</span>}{o.clash && <span className="cal2-dd-clash">Overlap</span>}</div>
-                  <div className="cal2-dd-time">{fmtTime(o.start)} – {fmtTime(o.end)}</div>
-                  <div className="cal2-dd-who">
-                    {who.map(p => <span key={p.id} className="cal2-dd-av" style={{ background: p.color }} title={p.name}>{initials(p.name)}</span>)}
-                  </div>
-                </div>
-                <button className="cal2-dd-del" onClick={() => del(o)} disabled={busy === o.id} aria-label="Delete"><IconTrash width={16} height={16} /></button>
-              </div>
-            )
-          })}
-        </div>
-
-        <button className="btn grad cal2-dd-add" onClick={onAdd}><IconPlus width={18} height={18} /> Add a plan</button>
-      </div>
-    </div>
-  )
-}
-
-/* ---------------- Quick add sheet ---------------- */
-const DURATIONS = [
-  { m: 30, l: '30m' }, { m: 60, l: '1h' }, { m: 90, l: '1h 30' }, { m: 120, l: '2h' }, { m: 180, l: '3h' },
-]
-
-function QuickAdd({ date, members, visibleIds, circleId, accent, onClose, onAddEvent, onAddRoutine }: {
-  date: string
-  members: Person[]
-  visibleIds: string[]
-  circleId: string
-  accent: [string, string]
-  onClose: () => void
-  onAddEvent: (e: { circleId: string; title: string; date: string; start: string; end: string; who: string[] }) => void | Promise<void>
-  onAddRoutine: (r: { circleId: string; title: string; who: string[]; day: number; start: string; end: string }) => void | Promise<void>
-}) {
-  const [title, setTitle] = useState('')
-  const [who, setWho] = useState<string[]>(visibleIds)
-  const [start, setStart] = useState('09:00')
-  const [dur, setDur] = useState(60)
-  const [weekly, setWeekly] = useState(false)
-  const [showMore, setShowMore] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const d = new Date(date + 'T00:00')
-
-  // primary chips = the members visible on the board; the rest live behind "+"
-  const primary = members.filter(p => visibleIds.includes(p.id))
-  const extra = members.filter(p => !visibleIds.includes(p.id))
-  const allOn = who.length === members.length && members.length > 0
-  const ok = title.trim() && who.length > 0 && !saving
-
-  useEffect(() => {
-    const scroller = document.querySelector('.main') as HTMLElement | null
-    const prev = scroller?.style.overflow ?? ''
-    if (scroller) scroller.style.overflow = 'hidden'
-    const t = setTimeout(() => inputRef.current?.focus(), 360)
-    return () => { if (scroller) scroller.style.overflow = prev; clearTimeout(t) }
-  }, [])
-
-  const toggle = (id: string) => setWho(w => w.includes(id) ? w.filter(x => x !== id) : [...w, id])
-  const end = endFrom(start, dur)
-
-  const save = async () => {
-    setSaving(true); setErr('')
-    try {
-      if (weekly) await onAddRoutine({ circleId, title: title.trim(), who, day: weekdayOf(date), start, end })
-      else await onAddEvent({ circleId, title: title.trim(), date, start, end, who })
-    } catch (e) { setErr(errMsg(e)); setSaving(false) }
-  }
-
-  const Chip = (p: Person) => {
-    const on = who.includes(p.id)
-    return (
-      <button key={p.id} className={`cal2-who${on ? ' on' : ''}`} onClick={() => toggle(p.id)}
-        style={on ? { background: p.color, borderColor: 'transparent', color: '#fff' } : { borderColor: p.color, color: p.color }}>
-        <span className="cal2-who-av" style={{ background: on ? 'rgba(255,255,255,.28)' : p.color, color: on ? '#fff' : '#fff' }}>{initials(p.name)}</span>
-        {p.name.split(' ')[0]}
-      </button>
-    )
-  }
-
-  return (
-    <div className="sheet-scrim cal2-scrim2" onClick={onClose}>
-      <div className="sheet cal2-sheet" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="sheet-grip" onClick={onClose} aria-label="Close" />
-        <div className="cal2-dd-head">
-          <div>
-            <div className="cal2-dd-dow">{weekly ? `Every ${WEEKDAYS_LONG[d.getDay()]}` : WEEKDAYS_LONG[d.getDay()]}</div>
-            <h3 className="cal2-dd-date">{d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}</h3>
-          </div>
-        </div>
-
-        <input ref={inputRef} className="field" placeholder="What's the plan?" value={title} onChange={e => setTitle(e.target.value)} />
-
-        <div className="cal2-lbl">Who</div>
-        <div className="cal2-who-wrap">
-          <button className={`cal2-who all${allOn ? ' on' : ''}`} onClick={() => setWho(allOn ? [] : members.map(m => m.id))}>
-            <IconCheck width={14} height={14} /> All
-          </button>
-          {primary.map(Chip)}
-          {extra.length > 0 && !showMore && (
-            <button className="cal2-who plus" onClick={() => setShowMore(true)} aria-label="Add more members"><IconPlus width={15} height={15} /></button>
-          )}
-          {showMore && extra.map(Chip)}
-        </div>
-
-        <div className="cal2-lbl">Time</div>
-        <div className="cal2-time-row">
-          <input className="field cal2-time" type="time" value={start} onChange={e => setStart(e.target.value)} />
-          <span className="cal2-time-end">ends {fmtTime(end)}</span>
-        </div>
-        <div className="cal2-dur">
-          {DURATIONS.map(o => (
-            <button key={o.m} className={`cal2-durchip${dur === o.m ? ' on' : ''}`} onClick={() => setDur(o.m)}>{o.l}</button>
-          ))}
-        </div>
-
-        <button className={`cal2-repeat${weekly ? ' on' : ''}`} onClick={() => setWeekly(w => !w)}>
-          <span className="cal2-repeat-l"><IconHistory width={17} height={17} /> Repeat weekly</span>
-          <span className={`cal2-toggle${weekly ? ' on' : ''}`}><span className="cal2-knob" /></span>
-        </button>
-        {weekly && <p className="cal2-repeat-note">Saved as a routine — repeats every {WEEKDAYS_LONG[d.getDay()]}.</p>}
-
-        {err && <div className="cal2-err">{err}</div>}
-
-        <button className="btn grad cal2-save" disabled={!ok} onClick={save}>
-          <IconPlus width={18} height={18} /> {saving ? 'Saving…' : weekly ? 'Add routine' : 'Add to calendar'}
-        </button>
       </div>
     </div>
   )

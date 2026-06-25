@@ -39,6 +39,8 @@ export interface Routine {
   end: string // 'HH:MM'
   energy: EnergyKey // derived from title at load time
   durationMin?: number
+  /** ISO date the weekly repeat stops on (inclusive). undefined = repeats forever. */
+  repeatUntil?: string
 }
 
 export interface KEvent {

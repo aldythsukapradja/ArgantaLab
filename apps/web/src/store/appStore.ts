@@ -57,6 +57,7 @@ interface AppStore {
 
   // — session UI state (not persisted) —
   activeTab: string
+  pendingCoop: { world: string; sessionId: string } | null   // Home invite → world auto-joins this co-op battle
   lessonId: string | null
   lessonStep: number
   showConcept: boolean
@@ -175,6 +176,7 @@ export const useAppStore = create<AppStore>()(
 
       // session defaults
       activeTab: 'arganta',
+      pendingCoop: null,
       lessonId: null,
       lessonStep: 0,
       showConcept: false,

@@ -18,6 +18,7 @@ interface PersonRow { id: string; circle_id: string; name: string; color: string
 interface RoutineRow {
   id: string; circle_id: string; title: string; who: string[] | null
   responsible: string | null; day: number; start_time: string; end_time: string; duration_min: number | null
+  repeat_until?: string | null
 }
 interface EventRow {
   id: string; circle_id: string; title: string; event_date: string
@@ -56,6 +57,7 @@ const mapRoutine = (r: RoutineRow): Routine => ({
   id: r.id, circleId: r.circle_id, title: r.title, who: r.who ?? [],
   responsible: r.responsible ?? undefined, day: r.day, start: r.start_time, end: r.end_time,
   energy: energyOf(r.title), durationMin: r.duration_min ?? undefined,
+  repeatUntil: r.repeat_until ?? undefined,
 })
 const mapEvent = (r: EventRow): KEvent => ({
   id: r.id, circleId: r.circle_id, title: r.title, date: r.event_date,
@@ -109,14 +111,17 @@ export async function insertEvent(e: Omit<KEvent, 'id' | 'energy'>): Promise<KEv
 /** Insert a weekly recurring routine. Returns the saved domain routine. */
 export async function insertRoutine(r: Omit<Routine, 'id' | 'energy'>): Promise<Routine> {
   const id = 'ro_' + Math.random().toString(36).slice(2, 9)
-  const row = {
+  const row: Record<string, unknown> = {
     id, circle_id: r.circleId, title: r.title, who: r.who,
     responsible: r.responsible ?? null, day: r.day,
     start_time: r.start, end_time: r.end, duration_min: r.durationMin ?? null,
   }
+  // Only send repeat_until for finite repeats — "always" omits it so the insert
+  // still works on databases where 05_routine_repeat_until.sql isn't applied yet.
+  if (r.repeatUntil) row.repeat_until = r.repeatUntil
   const { error } = await supabase.from('kinetik_routines').insert(row)
   if (error) throw error
-  return mapRoutine(row as RoutineRow)
+  return mapRoutine(row as unknown as RoutineRow)
 }
 
 /** Delete a one-off event. Throws on failure so the UI can surface it. */

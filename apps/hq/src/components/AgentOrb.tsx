@@ -17,6 +17,9 @@ const CHIPS = [
 interface Step { ico: string; label: string; model: Model; done: boolean }
 interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[] }
 
+type PanelSize = 'small' | 'expanded' | 'full'
+const SIZE_GLYPH: Record<PanelSize, string> = { small: '–', expanded: '□', full: '⤢' }
+
 const STEP_ICON: Record<string, string> = { sense: '⚡', compute: '🔢', match: '🎯', generate: '✦', deliver: '📬' }
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -40,6 +43,7 @@ export function AgentOrb() {
   const [busy, setBusy] = useState(false)
   const [input, setInput] = useState('')
   const [msgs, setMsgs] = useState<Msg[]>([])
+  const [size, setSize] = useState<PanelSize>('expanded')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' }) }, [msgs, busy])
@@ -106,10 +110,15 @@ export function AgentOrb() {
       </button>
 
       {open && (
-        <div className="agent-panel">
+        <div className={'agent-panel ' + size}>
           <div className="agent-head">
-            <div style={{ width: 34, height: 34, borderRadius: 9, flex: 'none', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,var(--acc),var(--mag,#8a5cf6))' }}>
-              <Sparkles size={17} color="#fff" />
+            <div className="agent-lights">
+              <button className={'al red' + (size === 'small' ? ' on' : '')} title="Small" aria-label="Small" onClick={() => setSize('small')}><span>{SIZE_GLYPH.small}</span></button>
+              <button className={'al yellow' + (size === 'expanded' ? ' on' : '')} title="Expanded" aria-label="Expanded" onClick={() => setSize('expanded')}><span>{SIZE_GLYPH.expanded}</span></button>
+              <button className={'al green' + (size === 'full' ? ' on' : '')} title="Full screen" aria-label="Full screen" onClick={() => setSize('full')}><span>{SIZE_GLYPH.full}</span></button>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: 9, flex: 'none', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,var(--acc),var(--mag,#8a5cf6))' }}>
+              <Sparkles size={16} color="#fff" />
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 600 }}>COO Agent</div>

@@ -1440,6 +1440,15 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
   border:1px solid var(--border);font-size:14px;font-weight:600;color:var(--t1);width:100%;max-width:520px;margin:0 auto;text-align:left}
 .ph-rec:hover{transform:translateY(-2px)}
 .ph-rec-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;font-weight:850;flex:none}
+/* live co-op invite banner on Home */
+.ph-coop-invite{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--r-md);width:100%;max-width:520px;
+  margin:8px auto 0;text-align:left;cursor:pointer;color:var(--t1);
+  background:linear-gradient(90deg,color-mix(in srgb,#8b5cf6 16%,var(--panel)),var(--panel));
+  border:1px solid color-mix(in srgb,#8b5cf6 40%,var(--border));animation:phCoopPulse 2s ease-in-out infinite}
+@keyframes phCoopPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,#8b5cf6 30%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,#8b5cf6 12%,transparent)}}
+.ph-coop-art{flex:none;width:40px;height:40px;display:grid;place-items:center}
+.ph-coop-body{flex:1;min-width:0}.ph-coop-body b{display:block;font-size:13.5px}.ph-coop-body small{color:var(--t2);font-size:11.5px}
+.ph-coop-join{flex:none;font-weight:800;color:#8b5cf6}
 
 /* companion inside worlds + feedback */
 .le-world-buddy{flex:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.2))}

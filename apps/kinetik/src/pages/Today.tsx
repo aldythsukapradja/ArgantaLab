@@ -5,6 +5,7 @@ import { useUiStore } from '@store/uiStore'
 import { ENERGY, todayISO, initials } from '@data/energy'
 import { occurrencesOn, fmtTime, untilText, isoTomorrow, toMin, type Occ } from '@lib/cal'
 import { IconChevron, IconHistory, IconCalendar, IconCheck } from '@components/Icons'
+import DaySheet from '@components/DaySheet'
 
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 
@@ -12,15 +13,19 @@ export default function Today() {
   const events = useDataStore(s => s.events)
   const routines = useDataStore(s => s.routines)
   const circles = useDataStore(s => s.circles)
+  const people = useDataStore(s => s.people)
   const me = useDataStore(s => s.me)
   const activeCircleId = useUiStore(s => s.activeCircleId)
-  const go = useUiStore(s => s.go)
 
   // Live clock — re-render every 30s so the countdown ticks and the "now" line moves.
   const [, setTick] = useState(0)
   useEffect(() => { const id = setInterval(() => setTick(t => t + 1), 30000); return () => clearInterval(id) }, [])
 
+  // Tapping any plan / the focus / tomorrow expands that day's detail in place.
+  const [dayOpen, setDayOpen] = useState<string | null>(null)
+
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
+  const members = circle ? people.filter(p => circle.memberIds.includes(p.id)) : []
   const c0 = circle?.accent[0] ?? '#8B5CF6'
   const c1 = circle?.accent[1] ?? '#C4B5FD'
   const now = new Date()
@@ -34,7 +39,6 @@ export default function Today() {
   const done = agenda.filter(a => toMin(a.end) <= nowMin).length
   const left = total - done
   const clashes = agenda.filter(a => a.clash).length
-  const people = new Set(agenda.flatMap(a => a.who)).size
   const pct = total ? done / total : 0
 
   const h = now.getHours()
@@ -72,21 +76,11 @@ export default function Today() {
 
       {/* Focus / next */}
       {next
-        ? <FocusCard occ={next} nowMin={nowMin} onOpen={() => go('calendar')} />
+        ? <FocusCard occ={next} nowMin={nowMin} onOpen={() => setDayOpen(todayISO())} />
         : <AllSet total={total} />}
 
-      {/* Stats strip */}
-      {total > 0 && (
-        <div className="td-stats rise">
-          <StatPill n={done} label="Done" tone="var(--growth)" />
-          <StatPill n={left} label="To go" tone="var(--c0)" />
-          <StatPill n={people} label={people === 1 ? 'Person' : 'People'} tone="var(--mind)" />
-          {clashes > 0 && <StatPill n={clashes} label="Clash" tone="var(--warn)" />}
-        </div>
-      )}
-
       {/* Tomorrow peek */}
-      <TomorrowCard items={tomorrow} onOpen={() => go('calendar')} />
+      <TomorrowCard items={tomorrow} onOpen={() => setDayOpen(isoTomorrow())} />
 
       {/* Timeline */}
       <div className="section-label rise">Today’s flow</div>
@@ -95,11 +89,15 @@ export default function Today() {
         {agenda.map((a, i) => (
           <Fragment key={a.id}>
             {i === nextIdx && <NowMarker now={now} />}
-            <EventRow occ={a} past={toMin(a.end) <= nowMin} isNext={a === next} onOpen={() => go('calendar')} />
+            <EventRow occ={a} past={toMin(a.end) <= nowMin} isNext={a === next} onOpen={() => setDayOpen(todayISO())} />
           </Fragment>
         ))}
         {total > 0 && nextIdx === total && <NowMarker now={now} />}
       </div>
+
+      {dayOpen && circle && (
+        <DaySheet iso={dayOpen} circle={circle} members={members} onClose={() => setDayOpen(null)} />
+      )}
     </div>
   )
 }
@@ -162,15 +160,6 @@ function AllSet({ total }: { total: number }) {
       </span>
       <h3>{total > 0 ? 'You’re all set' : 'A clear day'}</h3>
       <p>{total > 0 ? `All ${total} plan${total === 1 ? '' : 's'} done. Enjoy the rest of your day.` : 'Nothing on the agenda. Savor the calm.'}</p>
-    </div>
-  )
-}
-
-/* ---------- Stat pill ---------- */
-function StatPill({ n, label, tone }: { n: number; label: string; tone: string }) {
-  return (
-    <div className="td-stat" style={{ ['--tone' as any]: tone }}>
-      <b>{n}</b><span>{label}</span>
     </div>
   )
 }

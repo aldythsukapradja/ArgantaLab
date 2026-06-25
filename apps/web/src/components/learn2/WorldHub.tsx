@@ -38,7 +38,7 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode, xp } = useAppStore()
+  const { requireAuth, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode, xp, pendingCoop } = useAppStore()
   const outfit = resolvedOutfit()
   const stage = STAGES.find(s => s.key === stageKey)
   const stageMeta = STAGE_META[stageKey]
@@ -50,6 +50,15 @@ export default function WorldHub({ world }: { world: World }) {
   const [battleKin, setBattleKin] = useState<string | null>(null)
   const [coopMode, setCoopMode] = useState(false)
   const [coopView, setCoopView] = useState(false)
+  const [coopJoinSid, setCoopJoinSid] = useState<string | undefined>(undefined)
+
+  // A Home co-op invite routed here → open the co-op screen and auto-join it.
+  useEffect(() => {
+    if (pendingCoop && pendingCoop.world === world.key) {
+      setCoopJoinSid(pendingCoop.sessionId); setCoopView(true)
+      useAppStore.setState({ pendingCoop: null })
+    }
+  }, [pendingCoop, world.key])
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
   // DAILY world ring (today's XP in this world, resets at local midnight) —
@@ -137,7 +146,7 @@ export default function WorldHub({ world }: { world: World }) {
     return (
       <div className="le-world">
         {cinematic}
-        <CoopBattle world={world} onExit={() => { setCoopView(false); if (uid) pushLearnState(uid); force(n => n + 1) }} />
+        <CoopBattle world={world} joinSessionId={coopJoinSid} onExit={() => { setCoopView(false); setCoopJoinSid(undefined); if (uid) pushLearnState(uid); force(n => n + 1) }} />
       </div>
     )
   }
