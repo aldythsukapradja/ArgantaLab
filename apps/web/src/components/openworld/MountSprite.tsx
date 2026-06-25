@@ -77,6 +77,84 @@ const ART: Record<string, Art> = {
       <Eye x={82} y={23} />
     </g>
   ),
+  // Cheerful meadow pony — soft mane + tail.
+  meadowpony: (c, d, l) => (
+    <g>
+      <path d="M32 64 L30 84 M46 66 L44 84 M60 66 L62 84 M74 62 L78 82" stroke={d} strokeWidth="6" strokeLinecap="round" />
+      <ellipse cx="52" cy="56" rx="28" ry="16" fill={c} />
+      <path d="M70 50 Q80 40 80 28 Q72 30 68 40 Q64 48 62 52 Z" fill={c} />
+      <ellipse cx="80" cy="28" rx="8" ry="7" fill={c} />
+      <ellipse cx="86" cy="30" rx="4" ry="3" fill={l} />
+      <path d="M76 22 L74 14 L82 20 Z" fill={c} />
+      <path d="M70 30 Q66 44 70 52" fill="none" stroke={l} strokeWidth="4" strokeLinecap="round" />
+      <path d="M24 54 Q14 58 16 72" fill="none" stroke={l} strokeWidth="5" strokeLinecap="round" />
+      <Eye x={82} y={27} />
+    </g>
+  ),
+  // Blazing fox spirit — pointed ears, flame tail.
+  emberfox: (c, d, l) => (
+    <g>
+      <path d="M34 64 L32 82 M48 66 L46 82 M60 66 L62 82 M72 62 L76 80" stroke={d} strokeWidth="5" strokeLinecap="round" />
+      <ellipse cx="52" cy="56" rx="27" ry="15" fill={c} />
+      <path d="M70 52 Q82 46 82 34 Q74 36 70 44 Z" fill={c} />
+      <ellipse cx="78" cy="42" rx="9" ry="8" fill={c} />
+      <path d="M72 34 L70 24 L78 32 Z" fill={d} /><path d="M84 34 L88 24 L80 32 Z" fill={d} />
+      <path d="M82 46 L90 46 L84 50 Z" fill={l} />
+      <path d="M26 54 Q10 50 14 66 Q18 60 24 62 Q16 70 28 66 Z" fill={l} />
+      <Eye x={80} y={41} />
+    </g>
+  ),
+  // Frost elk — branching antlers, calm.
+  frostelk: (c, d, l) => (
+    <g>
+      <path d="M34 64 L32 84 M48 66 L46 84 M60 66 L62 84 M74 62 L78 82" stroke={d} strokeWidth="5" strokeLinecap="round" />
+      <ellipse cx="52" cy="56" rx="28" ry="15" fill={c} />
+      <path d="M70 50 Q80 42 80 30 Q73 32 68 42 Z" fill={c} />
+      <ellipse cx="80" cy="30" rx="8" ry="9" fill={c} />
+      <path d="M76 22 Q70 10 64 12 M76 20 Q72 14 66 16" stroke={l} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <path d="M84 22 Q90 10 96 12 M84 20 Q88 14 94 16" stroke={l} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <ellipse cx="84" cy="34" rx="4" ry="3" fill={l} />
+      <Eye x={82} y={29} />
+    </g>
+  ),
+  // Storm ram — curled horns, fluffy coat, a little bolt.
+  thunderram: (c, d, l) => (
+    <g>
+      <path d="M34 64 L32 82 M48 66 L46 82 M60 66 L62 82 M72 62 L76 80" stroke={d} strokeWidth="6" strokeLinecap="round" />
+      <ellipse cx="50" cy="56" rx="29" ry="17" fill={c} />
+      <circle cx="36" cy="50" r="8" fill={l} opacity="0.5" /><circle cx="52" cy="48" r="8" fill={l} opacity="0.5" />
+      <ellipse cx="76" cy="50" rx="11" ry="10" fill={c} />
+      <path d="M70 44 Q62 40 64 50 Q66 56 72 52" fill="none" stroke={d} strokeWidth="4" strokeLinecap="round" />
+      <path d="M82 44 Q90 40 88 50 Q86 56 80 52" fill="none" stroke={d} strokeWidth="4" strokeLinecap="round" />
+      <path d="M20 40 L26 40 L22 48 L28 48 L18 60 L22 50 L16 50 Z" fill="#fde047" />
+      <Eye x={79} y={49} />
+    </g>
+  ),
+  // Sleek night panther — pointed ears, curling tail.
+  shadowpanther: (c, d, l) => (
+    <g>
+      <path d="M32 64 L30 82 M46 66 L44 82 M60 66 L62 82 M74 62 L78 80" stroke={d} strokeWidth="5" strokeLinecap="round" />
+      <ellipse cx="50" cy="58" rx="30" ry="13" fill={c} />
+      <ellipse cx="78" cy="50" rx="11" ry="9" fill={c} />
+      <path d="M72 42 L70 34 L77 40 Z" fill={c} /><path d="M84 42 L86 34 L79 40 Z" fill={c} />
+      <path d="M22 56 Q8 52 12 40 Q16 48 24 50" fill="none" stroke={c} strokeWidth="5" strokeLinecap="round" />
+      <path d="M84 50 L92 48 L86 54 Z" fill={l} />
+      <Eye x={75} y={49} /><Eye x={82} y={49} />
+    </g>
+  ),
+  // Crystalline sky-dragon — faceted wings, horns.
+  crystaldrake: (c, d, l) => (
+    <g>
+      <path d="M46 50 Q18 28 14 52 Q18 62 46 56 Z" fill={d} /><path d="M54 50 Q82 28 86 52 Q82 62 54 56 Z" fill={d} />
+      <path d="M40 48 L30 46 L36 54 Z" fill={l} opacity="0.7" /><path d="M60 48 L70 46 L64 54 Z" fill={l} opacity="0.7" />
+      <ellipse cx="50" cy="56" rx="15" ry="14" fill={c} />
+      <ellipse cx="62" cy="46" rx="9" ry="7" fill={c} />
+      <path d="M58 38 L56 28 L62 36 Z" fill={l} /><path d="M66 38 L70 28 L64 36 Z" fill={l} />
+      <path d="M70 46 L78 44 L72 50 Z" fill={l} />
+      <path d="M36 60 Q24 66 28 76" fill="none" stroke={c} strokeWidth="4" strokeLinecap="round" />
+      <Eye x={62} y={45} />
+    </g>
+  ),
 }
 
 export interface MountSpriteProps {

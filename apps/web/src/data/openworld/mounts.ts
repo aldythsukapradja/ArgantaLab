@@ -36,11 +36,20 @@ const m = (
   gate: MountGate, perk: MountPerk, perkValue: number, color: string, blurb: string,
 ): MountDef => ({ id: `mount:${render}`, render, name, rarity, price, gate, perk, perkValue, color, blurb })
 
+// A long prestige LADDER so a mount is a real, weeks-long goal (the diamond sink
+// that keeps kids learning). Prices climb smoothly 500 → 20,000: the cheapest is
+// Sandstrider (500) and the apex Arganterion (20,000). Rarity rises with price.
 export const MOUNTS: MountDef[] = [
-  m('sandstrider', 'Sandstrider', 'common',    60,  'none',  'energyStart', 6,  '#f59e0b', 'A loyal desert runner. +Energy on your first correct answer.'),
-  m('stormfin',    'Stormfin',    'rare',      120, 'swim',  'guardOnce',   1,  '#06b6d4', 'A tidal serpent — wade into World Lagoon and shrug off the first hit.'),
-  m('updrift',     'Updrift',     'epic',      180, 'flier', 'comboKeep',   1,  '#8b5cf6', 'A sky-glider — reach Wonder Skyfield and keep your combo through a slip.'),
-  m('arganterion', 'Arganterion', 'legendary', 320, 'none',  'captureBoost',20, '#facc15', 'The legendary guardian-mount. Befriend kin far more easily.'),
+  m('sandstrider',   'Sandstrider',   'common',    500,   'none',  'energyStart', 6,  '#f59e0b', 'A loyal desert runner. +Energy on your first correct answer.'),
+  m('meadowpony',    'Meadowpony',    'common',    1500,  'none',  'comboKeep',   1,  '#84cc16', 'A cheerful little pony that keeps your combo through one slip.'),
+  m('stormfin',      'Stormfin',      'rare',      3000,  'swim',  'guardOnce',   1,  '#06b6d4', 'A tidal serpent — wade into World Lagoon and shrug off the first hit.'),
+  m('emberfox',      'Emberfox',      'rare',      5000,  'none',  'energyStart', 9,  '#f97316', 'A blazing fox spirit — a big Energy burst on your first correct answer.'),
+  m('frostelk',      'Frostelk',      'rare',      7500,  'none',  'captureBoost',14, '#38bdf8', 'A frost elk whose calm aura makes kin easier to befriend.'),
+  m('updrift',       'Updrift',       'epic',      10000, 'flier', 'comboKeep',   1,  '#8b5cf6', 'A sky-glider — reach Wonder Skyfield and keep your combo through a slip.'),
+  m('thunderram',    'Thunderram',    'epic',      13000, 'none',  'guardOnce',   1,  '#eab308', 'A storm ram that bodyguards you — shrug off the first hit each battle.'),
+  m('shadowpanther', 'Shadowpanther', 'epic',      16000, 'none',  'energyStart', 12, '#6366f1', 'A sleek nightcat — a huge Energy head-start to open every fight.'),
+  m('crystaldrake',  'Crystaldrake',  'legendary', 18000, 'flier', 'captureBoost',22, '#22d3ee', 'A crystalline dragon of the sky-isles; kin flock to befriend you.'),
+  m('arganterion',   'Arganterion',   'legendary', 20000, 'none',  'captureBoost',26, '#facc15', 'The legendary guardian-mount — the apex ride. Befriend kin with ease.'),
 ]
 
 export const MOUNT_BY_ID: Record<string, MountDef> = Object.fromEntries(MOUNTS.map(x => [x.id, x]))

@@ -21,6 +21,7 @@ import { sectionDoneToday } from '@lib/sectionDaily'
 import { KIN } from '@/data/openworld'
 import KinSprite from '@components/openworld/KinSprite'
 import OpenworldPlayer from '@components/openworld/OpenworldPlayer'
+import CoopBattle from '@components/openworld/CoopBattle'
 
 type Spine = 'journey' | 'signature' | 'arena' | 'badges' | 'profile'
 
@@ -48,6 +49,7 @@ export default function WorldHub({ world }: { world: World }) {
   const [activeDrill, setActiveDrill] = useState<Drill | null>(null)
   const [battleKin, setBattleKin] = useState<string | null>(null)
   const [coopMode, setCoopMode] = useState(false)
+  const [coopView, setCoopView] = useState(false)
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
   // DAILY world ring (today's XP in this world, resets at local midnight) —
@@ -127,6 +129,15 @@ export default function WorldHub({ world }: { world: World }) {
         {cinematic}
         <OpenworldPlayer world={world} kinId={battleKin} coop={coopMode}
           onExit={() => { setBattleKin(null); if (uid) pushLearnState(uid); force(n => n + 1) }} />
+      </div>
+    )
+  }
+
+  if (coopView) {
+    return (
+      <div className="le-world">
+        {cinematic}
+        <CoopBattle world={world} onExit={() => { setCoopView(false); if (uid) pushLearnState(uid); force(n => n + 1) }} />
       </div>
     )
   }
@@ -226,11 +237,18 @@ export default function WorldHub({ world }: { world: World }) {
               <h3 style={{ color: world.color }}>🗺️ {world.name} Openworld</h3>
               <p>Explore and battle wild kin. Answer to power your abilities, weaken a kin, then befriend it — it comes to live in your <b>Nexus</b>.</p>
             </div>
-            <button className={`ow-coop-toggle${coopMode ? ' on' : ''}`} onClick={() => setCoopMode(v => !v)}
-              style={coopMode ? { borderColor: world.color, color: world.color } : undefined}>
-              <span>🤝 Team up</span>
-              <b>{coopMode ? 'ON · a buddy joins your battle' : 'OFF · solo'}</b>
-            </button>
+            <div className="ow-coop-row">
+              <button className={`ow-coop-toggle${coopMode ? ' on' : ''}`} onClick={() => setCoopMode(v => !v)}
+                style={coopMode ? { borderColor: world.color, color: world.color } : undefined}>
+                <span>🐾 Buddy</span>
+                <b>{coopMode ? 'ON · a cheering buddy joins (solo)' : 'OFF · solo'}</b>
+              </button>
+              <button className="ow-coop-toggle" onClick={() => { if (requireAuth('to play co-op')) setCoopView(true) }}
+                style={{ borderColor: world.color, color: world.color }}>
+                <span>👫 Co-op</span>
+                <b>Play with a circle friend →</b>
+              </button>
+            </div>
             <div className="ow-lobby">
               {wildKin.map(k => (
                 <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }}

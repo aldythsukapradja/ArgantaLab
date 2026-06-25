@@ -119,6 +119,18 @@ export async function insertRoutine(r: Omit<Routine, 'id' | 'energy'>): Promise<
   return mapRoutine(row as RoutineRow)
 }
 
+/** Delete a one-off event. Throws on failure so the UI can surface it. */
+export async function deleteEvent(id: string): Promise<void> {
+  const { error } = await supabase.from('kinetik_events').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** Delete a weekly routine. Throws on failure so the UI can surface it. */
+export async function deleteRoutine(id: string): Promise<void> {
+  const { error } = await supabase.from('kinetik_routines').delete().eq('id', id)
+  if (error) throw error
+}
+
 /** Set a moment's heart count (caller computes the new value optimistically). */
 export async function setHearts(momentId: string, hearts: number): Promise<void> {
   const { error } = await supabase.from('kinetik_moments').update({ hearts }).eq('id', momentId)

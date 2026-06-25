@@ -31,6 +31,8 @@ interface DataStore extends CircleData {
   load: () => Promise<void>
   addEvent: (e: Omit<KEvent, 'id' | 'energy'>) => Promise<void>
   addRoutine: (r: Omit<Routine, 'id' | 'energy'>) => Promise<void>
+  removeEvent: (id: string) => Promise<void>
+  removeRoutine: (id: string) => Promise<void>
   heart: (momentId: string) => Promise<void>
   /** Circle + member management (real DB writes; throw on failure). */
   addPerson: (circleId: string, name: string, role: Person['role'], color: string) => Promise<void>
@@ -126,6 +128,20 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     }
     const local: Routine = { ...r, id: 'ro_' + Math.random().toString(36).slice(2, 9), energy: deriveEnergy(r.title) }
     const routines = [...get().routines, local]
+    set({ routines })
+    writeCache({ ...pick(get()), routines })
+  },
+
+  removeEvent: async (id) => {
+    if (cloudReady) await repo.deleteEvent(id) // throws on failure → surfaced to caller
+    const events = get().events.filter(e => e.id !== id)
+    set({ events })
+    writeCache({ ...pick(get()), events })
+  },
+
+  removeRoutine: async (id) => {
+    if (cloudReady) await repo.deleteRoutine(id)
+    const routines = get().routines.filter(r => r.id !== id)
     set({ routines })
     writeCache({ ...pick(get()), routines })
   },
