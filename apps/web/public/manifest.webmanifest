@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "ArgantaLab",
+  "short_name": "Arganta",
+  "description": "Build. Learn. Pitch. — the launchpad where young founders turn ideas into ventures.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "theme_color": "#05070d",
+  "background_color": "#05070d",
+  "categories": ["education", "productivity", "business"],
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}
