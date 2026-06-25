@@ -176,6 +176,8 @@ export interface FamilyMember {
   emoji: string | null
   age: number | null
   username: string | null
+  /** true only for the row that is the signed-in user (drives "You" + diamonds). */
+  isMe: boolean
 }
 
 function ageFromDob(dob?: string | null): number | null {
@@ -201,15 +203,19 @@ export async function fetchFamily(circleId: string, me: { id: string; name: stri
     return rows.map(r => {
       const isOwner = r.crole === 'owner'
       const isKid = !isOwner && r.role === 'kid'
+      // Only the row that IS the signed-in user gets the live me name/photo — the
+      // owner keeps their own identity even when a co-leader is the one viewing.
+      const isMe = !!me && String(r.id) === me.id
       return {
         id: String(r.id),
-        name: isOwner && me ? (me.name || (r.name as string) || 'You') : ((r.name as string) || 'Member'),
+        name: isMe && me ? (me.name || (r.name as string) || 'You') : ((r.name as string) || 'Member'),
         kind: isOwner ? 'owner' : (isKid ? 'child' : 'parent'),
         role: (r.crole as Person['role']) || (isKid ? 'member' : 'coleader'),
-        photoUrl: isOwner && me ? (me.photoUrl || (r.photo as string) || null) : ((r.photo as string) || null),
+        photoUrl: isMe && me ? (me.photoUrl || (r.photo as string) || null) : ((r.photo as string) || null),
         color: (r.color as string) || null, emoji: (r.emoji as string) || null,
         age: ((r.age as number) ?? null) ?? ageFromDob(r.dob as string),
         username: (r.username as string) || null,
+        isMe,
         linkId: String(r.id), linkKind: isKid ? 'child' : 'profile',
       }
     })
@@ -238,6 +244,7 @@ async function fetchFamilyDirect(circleId: string, me: { id: string; name: strin
   const out: FamilyMember[] = []
   for (const id of ids) {
     const isOwner = id === ownerId
+    const isMe = !!me && id === me.id
     const p = prof.get(id)
     const k = kid.get(id)
     const isKid = !isOwner && (p?.role === 'kid' || !!k)
@@ -250,13 +257,14 @@ async function fetchFamilyDirect(circleId: string, me: { id: string; name: strin
         emoji: (k?.emoji as string) || null,
         age: ((k?.age as number) ?? null) ?? ageFromDob(p?.dob as string),
         username: (p?.username as string) || (k?.username as string) || null,
+        isMe,
       })
     } else {
       out.push({
         id, kind: isOwner ? 'owner' : 'parent', role: isOwner ? 'owner' : ((roleOf.get(id) as string) || 'coleader'),
-        name: isOwner ? (me?.name || (p?.display_name as string) || 'You') : ((p?.display_name as string) || 'Member'),
-        photoUrl: isOwner ? (me?.photoUrl || (p?.photo_url as string) || null) : ((p?.photo_url as string) || null),
-        color: null, emoji: null, age: null, username: null,
+        name: isMe ? (me!.name || (p?.display_name as string) || 'You') : ((p?.display_name as string) || 'Member'),
+        photoUrl: isMe ? (me!.photoUrl || (p?.photo_url as string) || null) : ((p?.photo_url as string) || null),
+        color: null, emoji: null, age: null, username: null, isMe,
       })
     }
   }

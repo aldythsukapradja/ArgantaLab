@@ -24,6 +24,8 @@ export interface Agent {
   /** what it produces */
   output: string
   reportsTo: string | null
+  /** the CEO Agent — the AI orchestrator that can convene any agent + issue prompts */
+  orchestrator?: boolean
 }
 
 export const TIER_META: Record<Tier, { label: string; accent: string }> = {
@@ -45,8 +47,12 @@ export const MODEL_META: Record<Model, { label: string; bg: string; fg: string }
 // 4.6 because they reason, collaborate and debate. Specialist child agents run on
 // Haiku 4.5 (sense/classification) — cheaper, narrower.
 export const AGENTS: Agent[] = [
+  // ── Orchestrator ──
+  { id: 'ceo', name: 'CEO Agent', role: 'Chief Executive · Orchestrator', tier: 'executive', model: 'sonnet', reportsTo: null, orchestrator: true,
+    mission: 'The AI orchestrator. Convenes any subset of agents, routes a prompt or scenario to them, synthesises their positions, and reports one recommendation to the human CEO.',
+    inputs: ['*all agent outputs*', 'hq_growth_overview', 'hq_economy'], output: 'Orchestrated recommendation' },
   // ── C-Suite ──
-  { id: 'coo', name: 'COO Agent', role: 'Chief Operations Officer', tier: 'executive', model: 'sonnet', reportsTo: null,
+  { id: 'coo', name: 'COO Agent', role: 'Chief Operations Officer', tier: 'executive', model: 'sonnet', reportsTo: 'ceo',
     mission: 'Runs the portfolio rhythm. Sends the Founder Daily Brief: what changed, what is blocked, what needs a decision.',
     inputs: ['hq_growth_overview', 'hq_economy', 'hq_schema_insights'], output: 'Founder Daily Brief' },
   { id: 'cpo', name: 'CPO Agent', role: 'Chief Product Officer', tier: 'executive', model: 'sonnet', reportsTo: 'coo',

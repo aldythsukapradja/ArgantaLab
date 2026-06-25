@@ -14,6 +14,8 @@ import { IconSun, IconMoon, IconShare, IconPlus, IconLogout, IconTrash, IconChev
 const ACCENTS = ['#F43F5E', '#0EA5E9', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899']
 const KID_COLORS = ['#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6', '#F43F5E']
 const roleText = (r: string) => (r ? r.charAt(0).toUpperCase() + r.slice(1) : r)
+const ROLE_LABEL: Record<string, string> = { owner: 'Owner', coleader: 'Co-leader', member: 'Member', viewer: 'Viewer' }
+const roleLabel = (r: string) => ROLE_LABEL[r] ?? roleText(r)
 function colorFor(s: string): string {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
@@ -96,6 +98,11 @@ export default function Me() {
   const name = authUser?.name ?? 'You'
   const diamonds = authUser?.diamonds ?? 0
 
+  // The signed-in user's own role in this circle — Owner / Co-leader / Member.
+  // Resolved from the real roster so a co-leader isn't mislabelled as the owner.
+  const myMember = family?.find(m => m.isMe) ?? null
+  const myRole = myMember ? roleLabel(myMember.role) : null
+
   // Stats — Moments from the real kinetik_post table; the rest from social_stats RPC.
   const activeCount = family?.length ?? circle.memberIds.length
 
@@ -123,7 +130,7 @@ export default function Me() {
         </div>
       </div>
       <div className="me3-name rise">{name}</div>
-      <div className="me3-role rise"><span className="me3-role-dot" />Owner · {circle.name}</div>
+      <div className="me3-role rise"><span className="me3-role-dot" />{myRole ? `${myRole} · ` : ''}{circle.name}</div>
 
       {/* Stats (real social_stats; Moments from kinetik) */}
       <div className="me3-stats rise">
@@ -176,7 +183,7 @@ export default function Me() {
         {family === null && <div className="me3-empty">Loading family…</div>}
         {family && family.length === 0 && <div className="me3-empty">Sign in as the circle owner to see members.</div>}
         {family && family.map(m => (
-          <MemberRow key={m.id} m={m} worlds={worlds} rings={rings[m.id]} ownerDiamonds={m.kind === 'owner' ? diamonds : null} />
+          <MemberRow key={m.id} m={m} worlds={worlds} rings={rings[m.id]} myDiamonds={m.isMe ? diamonds : null} />
         ))}
       </div>
       {family && family.some(m => m.kind === 'child') && (
@@ -206,9 +213,9 @@ export default function Me() {
   )
 }
 
-// ── A member row: adults show role + (owner) diamonds; kids show 6 world rings ──
-function MemberRow({ m, worlds, rings, ownerDiamonds }: {
-  m: FamilyMember; worlds: World[]; rings?: Record<string, number>; ownerDiamonds: number | null
+// ── A member row: adults show role + (you) diamonds; kids show 6 world rings ──
+function MemberRow({ m, worlds, rings, myDiamonds }: {
+  m: FamilyMember; worlds: World[]; rings?: Record<string, number>; myDiamonds: number | null
 }) {
   const isKid = m.kind === 'child'
   const avatarBg = m.color || (isKid ? colorFor(m.id) : 'var(--grad)')
@@ -216,9 +223,9 @@ function MemberRow({ m, worlds, rings, ownerDiamonds }: {
   const tier = isKid ? tierFor(m.age) : null
   const sub = isKid
     ? [m.age != null ? `age ${m.age}` : null, m.username ? `@${m.username}` : null].filter(Boolean).join(' · ')
-    : roleText(m.role)
+    : roleLabel(m.role)
   return (
-    <div className={`me3-member${m.kind === 'owner' ? ' me' : ''}${isKid ? ' kid' : ''}`}>
+    <div className={`me3-member${m.isMe ? ' me' : ''}${isKid ? ' kid' : ''}`}>
       <div className="me3-member-top">
         {m.photoUrl
           ? <img className="me3-mav" src={m.photoUrl} alt={m.name} referrerPolicy="no-referrer" />
@@ -226,12 +233,12 @@ function MemberRow({ m, worlds, rings, ownerDiamonds }: {
         <div className="me3-minfo">
           <b>
             {m.name}
-            {m.kind === 'owner' && <span className="me3-you">You</span>}
+            {m.isMe && <span className="me3-you">You</span>}
             {tier && <span className="me3-tier">{tier}</span>}
           </b>
           <small>{sub || '—'}</small>
         </div>
-        {ownerDiamonds != null && <span className="me3-mdia"><IconDiamondGem size={13} /> {ownerDiamonds.toLocaleString()}</span>}
+        {myDiamonds != null && <span className="me3-mdia"><IconDiamondGem size={13} /> {myDiamonds.toLocaleString()}</span>}
       </div>
       {m.kind === 'child' && worlds.length > 0 && (
         <div className="me3-rings">

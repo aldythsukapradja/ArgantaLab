@@ -25,7 +25,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 function Pill({ model }: { model: Model }) {
   const m = MODEL_META[model]
-  return <span className="pill" style={{ background: m.bg, color: m.fg, fontSize: 9.5, fontWeight: 600, whiteSpace: 'nowrap' }}>{m.label}</span>
+  return <span className="pill" style={{ background: m.bg, color: m.fg, fontSize: 10.5, fontWeight: 600, padding: '3px 10px', whiteSpace: 'nowrap' }}>{m.label}</span>
 }
 
 // Markdown-lite → **bold** and newlines. Input is our own generated text, safe.

@@ -214,12 +214,13 @@ table.tbl tr:last-child td{border-bottom:none}
 .agent-panel{position:fixed;right:24px;bottom:90px;z-index:200;display:flex;flex-direction:column;
   background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);overflow:hidden;
   animation:agentin .26s var(--ease);transition:width .24s var(--ease),height .24s var(--ease),inset .24s var(--ease),max-height .24s var(--ease)}
-.agent-panel.small{width:372px;max-height:min(68vh,520px)}
-.agent-panel.expanded{width:480px;max-height:min(82vh,720px)}
-.agent-panel.full{inset:18px;width:auto;max-height:none}
-.agent-panel.full .agent-msg{max-width:760px;width:100%;align-self:center}
-.agent-panel.full .agent-bubble{font-size:13.5px}
-.agent-panel.full .agent-step{font-size:11px}
+.agent-panel.small{width:380px;max-height:min(70vh,540px)}
+.agent-panel.expanded{width:560px;max-height:min(84vh,760px)}
+.agent-panel.full{top:0;right:0;bottom:0;left:0;width:auto;max-height:none;border-radius:0;border:none}
+.agent-panel.full .agent-chips,.agent-panel.full .agent-msgs,.agent-panel.full .agent-composer{max-width:880px;margin-left:auto;margin-right:auto;width:100%}
+.agent-panel.full .agent-msg{max-width:100%}
+.agent-panel.full .agent-bubble{font-size:13.5px;max-width:84%}
+.agent-panel.full .agent-step{font-size:11.5px;padding:8px 12px}
 @keyframes agentin{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 .agent-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--bd)}
 .agent-lights{display:flex;gap:7px;align-items:center;margin-right:3px}
@@ -230,8 +231,9 @@ table.tbl tr:last-child td{border-bottom:none}
 .al.on span,.agent-lights:hover .al span{opacity:1}
 .agent-x{margin-left:2px;width:26px;height:26px;border-radius:50%;border:none;background:var(--bg3);color:var(--tx2);cursor:pointer;display:grid;place-items:center;flex:none}
 .agent-x:hover{background:var(--bd2);color:var(--tx)}
-.agent-chips{display:flex;gap:6px;padding:9px 12px;border-bottom:1px solid var(--bd);overflow-x:auto;background:var(--bg2)}
-.agent-chip{flex:none;font-size:11px;font-weight:500;padding:5px 10px;border-radius:99px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);cursor:pointer;white-space:nowrap;transition:all var(--dur) var(--ease)}
+.agent-chips{display:flex;gap:7px;padding:11px 13px;border-bottom:1px solid var(--bd);overflow-x:auto;background:var(--bg2);scrollbar-width:none}
+.agent-chips::-webkit-scrollbar{display:none}
+.agent-chip{flex:none;font-size:11.5px;font-weight:500;padding:6px 12px;border-radius:99px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);cursor:pointer;white-space:nowrap;transition:all var(--dur) var(--ease)}
 .agent-chip:hover:not(:disabled){border-color:var(--acc);color:var(--acc-text)}
 .agent-chip:disabled{opacity:.5;cursor:default}
 .agent-msgs{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:11px}
@@ -241,9 +243,10 @@ table.tbl tr:last-child td{border-bottom:none}
 .agent-msg.user .agent-bubble{background:linear-gradient(135deg,var(--acc),var(--acc-press));color:#fff;border-bottom-right-radius:4px}
 .agent-msg.agent .agent-bubble{background:var(--bg3);border:1px solid var(--bd);color:var(--tx);border-bottom-left-radius:4px}
 .agent-msg.agent .agent-bubble strong{font-weight:650}
-.agent-steps{display:flex;flex-direction:column;gap:4px;width:100%}
-.agent-step{display:flex;align-items:center;gap:7px;font-size:10.5px;padding:5px 8px;border-radius:8px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx3);animation:agentin .2s var(--ease)}
+.agent-steps{display:flex;flex-direction:column;gap:5px;width:100%}
+.agent-step{display:flex;align-items:center;gap:10px;font-size:11px;padding:7px 11px;border-radius:9px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx3);animation:agentin .2s var(--ease)}
 .agent-step.done{color:var(--tx);border-color:var(--bd2)}
+.agent-step .pill{flex:none}
 .agent-dots{display:inline-flex;gap:4px;padding:3px 2px}
 .agent-dots i{width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:dotb 1.4s ease-in-out infinite}
 .agent-dots i:nth-child(2){animation-delay:.2s}.agent-dots i:nth-child(3){animation-delay:.4s}
@@ -253,4 +256,4 @@ table.tbl tr:last-child td{border-bottom:none}
 .agent-input:focus{border-color:var(--acc)}
 .agent-send{width:34px;height:34px;flex:none;border-radius:50%;border:none;background:linear-gradient(135deg,var(--acc),var(--acc-press));color:#fff;cursor:pointer;display:grid;place-items:center}
 .agent-send:disabled{opacity:.4;cursor:default}
-@media (max-width:560px){.agent-panel.small,.agent-panel.expanded{width:calc(100vw - 20px);right:10px;max-height:74vh}.agent-panel.full{inset:10px}.agent-orb{right:16px;bottom:16px}}
+@media (max-width:560px){.agent-panel.small,.agent-panel.expanded{width:calc(100vw - 20px);right:10px;max-height:74vh}.agent-orb{right:16px;bottom:16px}}

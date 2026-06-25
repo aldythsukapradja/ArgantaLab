@@ -1,20 +1,29 @@
 import { useEffect, useState } from 'react'
 import {
   Network, GitBranch, Coins, Workflow, Lightbulb, ChevronRight, Circle,
+  Crown, Database, Play, Check, Sparkles, BarChart3,
 } from 'lucide-react'
 import {
   AGENTS, TIER_META, MODEL_META, PIPELINE, deriveStatus,
   type Agent, type Tier, type Model,
 } from '../data/agents'
+import { SCENARIOS, scenarioById, type ScenarioResult } from '../data/scenarios'
+import { ChartView, CHART_KINDS } from '../components/charts'
 import { live } from '../data/live'
+import type { SchemaModel } from '../data/types'
+import { Empty, Loading } from '../components/Empty'
 
-type SubTab = 'roster' | 'pipeline' | 'council' | 'tokens'
+type SubTab = 'roster' | 'orchestrate' | 'datamap' | 'pipeline' | 'council' | 'tokens'
 const SUBTABS: { id: SubTab; label: string; Icon: typeof Network }[] = [
   { id: 'roster', label: 'Roster', Icon: Network },
+  { id: 'orchestrate', label: 'Orchestration', Icon: Crown },
+  { id: 'datamap', label: 'Data Map', Icon: Database },
   { id: 'pipeline', label: 'Pipeline', Icon: Workflow },
   { id: 'council', label: 'Council', Icon: GitBranch },
   { id: 'tokens', label: 'Token Economics', Icon: Coins },
 ]
+
+const agentById = (id: string) => AGENTS.find(a => a.id === id)
 
 export function ModelPill({ model, small }: { model: Model; small?: boolean }) {
   const m = MODEL_META[model]
@@ -61,9 +70,234 @@ export function Agents() {
       </div>
 
       {tab === 'roster' && <Roster has={has} />}
+      {tab === 'orchestrate' && <Orchestration />}
+      {tab === 'datamap' && <DataMap />}
       {tab === 'pipeline' && <PipelineView />}
       {tab === 'council' && <Council />}
       {tab === 'tokens' && <Tokens />}
+    </div>
+  )
+}
+
+// ── Orchestration: CEO Agent convenes selected agents, runs a scenario,
+//    renders the chart from live SQL. ───────────────────────────────────────
+function Orchestration() {
+  const ceo = AGENTS.find(a => a.orchestrator)!
+  const [scenarioId, setScenarioId] = useState(SCENARIOS[0].id)
+  const scenario = scenarioById(scenarioId)!
+  const [picked, setPicked] = useState<Set<string>>(new Set([scenario.ownerId, ...scenario.participantIds]))
+  const [directive, setDirective] = useState('')
+  const [phase, setPhase] = useState<'idle' | 'running' | 'done'>('idle')
+  const [result, setResult] = useState<ScenarioResult | null>(null)
+  const [convened, setConvened] = useState<string[]>([])
+
+  // Re-seed the convened set whenever the scenario changes.
+  function selectScenario(id: string) {
+    const s = scenarioById(id)!
+    setScenarioId(id)
+    setPicked(new Set([s.ownerId, ...s.participantIds]))
+    setPhase('idle'); setResult(null); setConvened([])
+  }
+  function toggle(id: string) {
+    setPicked(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+
+  async function orchestrate() {
+    setPhase('running'); setResult(null)
+    // CEO convenes the selected agents one by one (visual), then renders.
+    const order = [ceo.id, ...[...picked].filter(id => id !== ceo.id)]
+    setConvened([])
+    for (const id of order) { setConvened(c => [...c, id]); await new Promise(r => setTimeout(r, 260)) }
+    const res = await scenario.run()
+    setResult(res)
+    setPhase('done')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* CEO orchestrator banner */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ height: 3, background: 'linear-gradient(90deg,var(--acc),var(--mag))' }} />
+        <div style={{ padding: 16, display: 'flex', gap: 13, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 11, flex: 'none', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,var(--acc),var(--mag))' }}>
+            <Crown size={19} color="#fff" />
+          </div>
+          <div style={{ minWidth: 200, flex: 1 }}>
+            <div className="row" style={{ gap: 8 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 650 }}>{ceo.name}</div>
+              <ModelPill model={ceo.model} small />
+              <span className="pill pill-mut">orchestrator</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--tx2)', marginTop: 4, lineHeight: 1.5 }}>{ceo.mission}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scenario picker */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', marginBottom: 8 }}>1 · Choose a scenario</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 10 }}>
+          {SCENARIOS.map(s => {
+            const on = s.id === scenarioId
+            const ChartIcon = CHART_KINDS.find(k => k.kind === s.chartKind)?.Icon || BarChart3
+            return (
+              <button key={s.id} onClick={() => selectScenario(s.id)} className="card"
+                style={{ textAlign: 'left', cursor: 'pointer', padding: 13, borderColor: on ? 'var(--acc)' : 'var(--bd2)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="row" style={{ gap: 7 }}>
+                  <ChartIcon size={14} color={on ? 'var(--acc)' : 'var(--tx3)'} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{s.title}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.45 }}>{s.question}</div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Agent selection */}
+      <div>
+        <div className="spread" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)' }}>2 · Convene agents <span style={{ color: 'var(--tx3)', fontWeight: 400 }}>· {picked.size} selected</span></div>
+          <div style={{ fontSize: 11, color: 'var(--tx3)' }}>owner: {agentById(scenario.ownerId)?.name}</div>
+        </div>
+        <div className="card" style={{ padding: 12, display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+          {AGENTS.filter(a => !a.orchestrator).map(a => {
+            const on = picked.has(a.id)
+            return (
+              <button key={a.id} onClick={() => toggle(a.id)}
+                className="chip" style={{ gap: 6, cursor: 'pointer', borderColor: on ? 'var(--acc)' : 'var(--bd2)', background: on ? 'var(--acc-soft)' : 'var(--bg)', color: on ? 'var(--acc-text)' : 'var(--tx2)' }}>
+                <span style={{ width: 14, height: 14, borderRadius: 4, display: 'grid', placeItems: 'center', background: on ? 'var(--acc)' : 'transparent', border: on ? 'none' : '1px solid var(--bd2)' }}>
+                  {on && <Check size={10} color="#fff" />}
+                </span>
+                {a.name}
+                <ModelPill model={a.model} small />
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Directive + run */}
+      <div className="card" style={{ padding: 13, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input value={directive} onChange={e => setDirective(e.target.value)}
+          placeholder="Optional CEO directive — e.g. 'focus on the 8–10 age band'"
+          style={{ flex: 1, minWidth: 200, padding: '9px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--bd2)', background: 'var(--bg2)', color: 'var(--tx)', font: 'inherit', fontSize: 12.5, outline: 'none' }} />
+        <button onClick={orchestrate} disabled={phase === 'running' || picked.size === 0}
+          className="chip" style={{ gap: 7, background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)', opacity: phase === 'running' ? 0.6 : 1 }}>
+          <Play size={13} /> {phase === 'running' ? 'Orchestrating…' : 'Run scenario'}
+        </button>
+      </div>
+
+      {/* Orchestration log + result */}
+      {phase !== 'idle' && (
+        <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {directive && <div className="insight tl" style={{ alignItems: 'center' }}><Crown size={14} /><div>CEO directive: <b>{directive}</b></div></div>}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', marginBottom: 8 }}>Orchestration · {convened.length} convened</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {convened.map(id => {
+                const a = agentById(id)!
+                return (
+                  <span key={id} className="pill" style={{ gap: 6, background: a.orchestrator ? 'linear-gradient(135deg,var(--acc),var(--mag))' : 'var(--bg3)', color: a.orchestrator ? '#fff' : 'var(--tx)', animation: 'agentin .2s var(--ease)' }}>
+                    {a.orchestrator ? <Crown size={11} /> : <Sparkles size={11} />}{a.name}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+
+          {phase === 'running' && <Loading label="Convening agents & sensing live SQL…" />}
+
+          {phase === 'done' && result === null && (
+            <Empty icon={<BarChart3 />} title="No live signal for this scenario yet">
+              Reads {scenario.sources.map(s => <span key={s} className="src" style={{ marginRight: 4 }}>{s}</span>)}. Sign in as operator with data flowing to render the chart.
+            </Empty>
+          )}
+
+          {phase === 'done' && result && (
+            <>
+              <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 15, fontWeight: 650 }}>{result.headline}</div>
+                <div className="row" style={{ gap: 5, marginLeft: 'auto' }}>
+                  {scenario.sources.map(s => <span key={s} className="src">{s}</span>)}
+                </div>
+              </div>
+              <div className="card" style={{ padding: 16, background: 'var(--bg2)' }}><ChartView data={result.chart} /></div>
+              <div className="insight tl"><Lightbulb size={15} /><div>{result.insight}</div></div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Data Map: live SQL tables grouped by the executive that owns/reads them. ──
+function DataMap() {
+  const [model, setModel] = useState<SchemaModel | null | undefined>(undefined)
+  useEffect(() => { live.schemaModel().then(setModel) }, [])
+
+  // A table is "read by" any agent whose inputs name it (substring match).
+  const readersOf = (table: string) =>
+    AGENTS.filter(a => a.inputs.some(i => i.replace(/^hq_/, '').includes(table.replace(/^hq_/, '')) || table.includes(i.replace(/^hq_/, ''))))
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="insight tl" style={{ alignItems: 'center' }}>
+        <Database size={15} />
+        <div>The live schema, mapped to the agents that consume it. Each agent's <span className="src">inputs</span> declare which SQL tables &amp; RPCs it reads — this is the data-ownership backbone of the OS.</div>
+      </div>
+
+      {model === undefined && <Loading label="Reading live schema…" />}
+      {model === null && (
+        <Empty title="Schema needs a live connection">
+          Run <span className="src">hq_schema_model()</span> in Supabase and sign in as operator to map tables to agents.
+        </Empty>
+      )}
+      {model && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="tbl" style={{ width: '100%' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'var(--tx2)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                <th style={{ padding: '10px 12px' }}>Table</th>
+                <th style={{ padding: '10px 12px' }}>Rows</th>
+                <th style={{ padding: '10px 12px' }}>Cols</th>
+                <th style={{ padding: '10px 12px' }}>Read by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {model.tables.map(t => {
+                const readers = readersOf(t.name)
+                return (
+                  <tr key={t.name} style={{ borderTop: '1px solid var(--bd)' }}>
+                    <td style={{ padding: '10px 12px' }}><span className="src">{t.name}</span></td>
+                    <td style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--tx2)' }}>{t.rows.toLocaleString()}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--tx3)' }}>{t.columns.length}</td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div className="row" style={{ gap: 5, flexWrap: 'wrap' }}>
+                        {readers.length ? readers.map(a => <span key={a.id} className="pill pill-mut" style={{ fontSize: 10 }}>{a.name}</span>)
+                          : <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>—</span>}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', marginBottom: 8 }}>Chart library · {CHART_KINDS.length} kinds <span style={{ color: 'var(--tx3)', fontWeight: 400 }}>· scenarios render with these; add a kind to extend</span></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 10 }}>
+          {CHART_KINDS.map(c => (
+            <div key={c.kind} className="card" style={{ padding: 13, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--acc-soft)', color: 'var(--acc-text)' }}><c.Icon size={16} /></div>
+              <div><div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.label}</div><div style={{ fontSize: 11, color: 'var(--tx2)', marginTop: 2 }}>{c.blurb}</div></div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
