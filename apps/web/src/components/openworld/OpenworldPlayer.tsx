@@ -28,7 +28,7 @@ import {
   captureChance, xpForTurn, diamondsForVictory,
   type CombatState, type PlayerConfig, type EnemyConfig, type AbilityRuntime,
 } from '@lib/combat/engine'
-import { kin as kinDef, ability, DEFAULT_LOADOUT, type KinDef } from '@/data/openworld'
+import { kin as kinDef, ability, DEFAULT_LOADOUT, KIN, type KinDef } from '@/data/openworld'
 import { befriendKin } from '@lib/nexus'
 import { earnDiamonds } from '@lib/wallet'
 import { markSectionToday } from '@lib/sectionDaily'
@@ -40,6 +40,11 @@ import AvatarSprite from './AvatarSprite'
 // AUTO_HIT = 0: a correct answer only charges Energy — the kin takes damage ONLY
 // from the move the kid then picks (Strike / Weakness Break).
 const AUTO_HIT = 0, ENERGY_PER_CORRECT = 10, MAX_HEARTS = 5, SHIELD3_AMOUNT = 18
+// Co-op buddy (bots-first): for now a VISUAL placeholder — a friendly kin cheers
+// at your side but deals NO damage (local co-op is cosmetic until real
+// multi-device co-op lands; the proven allyStrike balance in sim.ts is kept for
+// that future). It just bobs/flashes on a timer.
+const BUDDY_EVERY_MS = 5500
 const GREEN = '#16a34a', RED = '#ef4444'
 const TIER: Record<string, number> = { common: 1, rare: 2, epic: 3, legendary: 4 }
 
@@ -95,15 +100,18 @@ function buildQueue(worldKey: string): DrillItem[] {
   return items
 }
 
-interface Props { world: World; kinId: string; onExit: () => void }
+interface Props { world: World; kinId: string; coop?: boolean; onExit: () => void }
 
-export default function OpenworldPlayer({ world, kinId, onExit }: Props) {
+export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: Props) {
   const { addXp, addToast } = useAppStore()
   // The kid rides their equipped mount into battle (cosmetic + perk). Loaded from
   // the cloud; on-foot if none equipped or offline.
   const [mount, setMount] = useState<string | undefined>(undefined)
   useEffect(() => { myMounts().then(m => setMount(m.equipped ?? undefined)) }, [])
   const def = kinDef(kinId)!
+  // The co-op ally — a friendly kin from this world fighting at your side.
+  const buddyKin = useMemo(() => KIN.find(k => k.world === world.key.toLowerCase() && k.id !== kinId) ?? null, [world.key, kinId])
+  const [buddyFlash, setBuddyFlash] = useState(false)
   const player: PlayerConfig = useMemo(() => ({ maxHearts: MAX_HEARTS, loadout: LOADOUT, autoHit: AUTO_HIT, energyPerCorrect: ENERGY_PER_CORRECT, mountPerk: null }), [])
 
   const [s, setS] = useState<CombatState>(() => createBattle(player, enemyFrom(def)))
@@ -116,6 +124,14 @@ export default function OpenworldPlayer({ world, kinId, onExit }: Props) {
   const earnedXp = useRef(0)
   const shownAt = useRef(Date.now())
   const rewarded = useRef(false)
+
+  // Co-op buddy is a visual placeholder — it cheers on a timer but deals no
+  // damage (see note by BUDDY_EVERY_MS).
+  useEffect(() => {
+    if (!coop) return
+    const id = setInterval(() => { setBuddyFlash(true); setTimeout(() => setBuddyFlash(false), 700) }, BUDDY_EVERY_MS)
+    return () => clearInterval(id)
+  }, [coop])
 
   // Pull the next question, regenerating the deck endlessly so a battle never
   // runs dry (pure fluency pressure, like the drills).
@@ -263,6 +279,12 @@ export default function OpenworldPlayer({ world, kinId, onExit }: Props) {
         <div className="ow-energy" title="Energy">⚡ <b>{s.energy}</b></div>
         {s.combo > 1 && <div className="ow-combo">🔥 {s.combo}×</div>}
         <div className="ow-rider"><AvatarSprite mood={lastCorrect ? 'happy' : 'idle'} size={52} mount={mount} /></div>
+        {coop && buddyKin && (
+          <div className={`ow-buddy${buddyFlash ? ' hit' : ''}`} title={`${buddyKin.name} is cheering you on`}>
+            <KinSprite kin={buddyKin.id} size={46} bob />
+            <span className="ow-buddy-tag">{buddyFlash ? '📣' : '🤝'}</span>
+          </div>
+        )}
       </div>
 
       {note && phase !== 'question' && phase !== 'powerup' && <div className="ow-note">{note}</div>}

@@ -199,6 +199,27 @@ export function enemyTelegraph(prev: CombatState): CombatState {
   return s
 }
 
+/**
+ * A teammate's hit on the SHARED enemy (co-op). Pure: it chips the same enemy
+ * HP/shield the local player is fighting, but never touches the player's energy,
+ * hearts, or combo — the ally is a HELPER whose hits only speed the win. A
+ * 'breaker' ally also strips the shield and opens the weakness window (its role).
+ * Same shape as the rest of the engine, so it lifts to the server unchanged when
+ * a real teammate replaces the bot.
+ */
+export function allyStrike(prev: CombatState, power: number, opts: { breakShield?: boolean } = {}): CombatState {
+  if (prev.status !== 'active' && prev.status !== 'capture-window') return prev
+  const s: CombatState = { ...prev }
+  if (opts.breakShield && s.enemyShield > 0) {
+    s.enemyShield = 0
+    s.weaknessOpen = Math.max(s.weaknessOpen, 2)
+    s.capture = Math.min(100, s.capture + CAPTURE_ON_BREAK)
+  }
+  strike(s, power, { bypassShield: !!opts.breakShield })
+  settle(s)
+  return s
+}
+
 /** Chance (0..1) that a befriend attempt succeeds, given the weakened state. */
 export function captureChance(s: CombatState, mountBoost = 0): number {
   const hpFrac = s.enemyHp / s.enemyMaxHp

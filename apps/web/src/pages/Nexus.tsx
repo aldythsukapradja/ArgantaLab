@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { KIN, kin as kinDef, type KinDef } from '@/data/openworld'
 import { nexusRoster, careKin, nexusHarvest, type KinInstance, type HarvestState } from '@lib/nexus'
+import { myMounts } from '@lib/mounts'
 import { DRILLS_BY_WORLD, type DrillItem } from '@/data/drills'
 import type { Item } from '@/data/learn'
 import { renderItem } from '@components/learn2/interactions'
@@ -59,6 +60,8 @@ export default function Nexus() {
   const [harvest, setHarvest] = useState<HarvestState | null>(null)
   const [collecting, setCollecting] = useState(false)
   const [task, setTask] = useState<DrillItem | null>(null)   // the harvest-gate question
+  const [equippedMount, setEquippedMount] = useState<string | undefined>(undefined)
+  useEffect(() => { myMounts().then(m => setEquippedMount(m.equipped ?? undefined)) }, [session])
   const taskShownAt = useRef(Date.now())
 
   // Load the real befriended-kin roster + diamond trickle whenever the session changes.
@@ -141,8 +144,9 @@ export default function Nexus() {
               : <>Befriend kin in each world's Openworld and they'll come live here, helping your <b>{stage}</b> grow.</>}
           </p>
         </div>
-        <div className="nx-rider" title="That's you — your Shop look rides in">
-          <AvatarSprite mood="wave" size={120} mount="mount:sandstrider" />
+        <div className="nx-rider" title={equippedMount ? "That's you on your mount!" : 'That’s you — get a mount in the Stable'}>
+          <AvatarSprite mood="wave" size={120} mount={equippedMount} />
+          <button className="nx-mount-btn" onClick={() => go({ tab: 'mounts' })}>🐎 Mount Stable</button>
         </div>
       </div>
 

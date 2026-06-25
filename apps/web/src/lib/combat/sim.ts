@@ -17,7 +17,7 @@
 // ============================================================
 
 import {
-  createBattle, onAnswer, castAbility, enemyTelegraph,
+  createBattle, onAnswer, castAbility, enemyTelegraph, allyStrike,
   type CombatState, type PlayerConfig, type EnemyConfig, type AbilityRuntime, type Gimmick,
 } from './engine'
 
@@ -131,6 +131,45 @@ export const STD_PLAYER: PlayerConfig = {
 export const STD_ENEMY: EnemyConfig = {
   // Proven by Monte Carlo (see engine.test.ts): careful=1.00, smart≈0.99, naive≈0.29.
   maxHp: 110, power: 1, gimmick: 'shield3', shieldAmount: 18, captureThreshold: 0.25,
+}
+
+// ── CO-OP (bots-first): a kid + an AI buddy share ONE fight ──────────
+//  The buddy is a FINISHER: steady chip damage every round, but it does NOT
+//  break shields — so the KID still has to read the gimmick and Weakness-Break.
+//  The enemy's HP is scaled up (~1.5×) so the buddy's help keeps the round count
+//  (and therefore the heart pressure) close to the solo fight: co-op feels like
+//  "a bigger foe, but you've got backup", NOT a free win. Proven below: careful
+//  still 1.00, and naive is still punished (the buddy never covers a miss — a
+//  wrong answer still hands the enemy a free swing at the shared hearts).
+export interface CoopBuddy { power: number; breaks: boolean }
+export const STD_BUDDY: CoopBuddy = { power: 5, breaks: false }
+export const STD_COOP_ENEMY: EnemyConfig = {
+  maxHp: 175, power: 1, gimmick: 'shield3', shieldAmount: 18, captureThreshold: 0.25,
+}
+
+export function runCoopBattle(p: PlayerConfig, e: EnemyConfig, policy: Policy, buddy: CoopBuddy, rng: RNG): 'win' | 'loss' {
+  let s = createBattle(p, e)
+  for (let guard = 0; guard < 80 && s.status === 'active'; guard++) {
+    const miss = s.focusNext ? policy.missProb * 0.3 : policy.missProb
+    s = onAnswer(s, { correct: rng() >= miss, bold: policy.bold, energyPerCorrect: p.energyPerCorrect, autoHit: p.autoHit })
+    if (s.status !== 'active') break
+    s = policy.act(s, KIT)
+    if (s.status !== 'active') break
+    s = allyStrike(s, buddy.power, { breakShield: buddy.breaks }) // the buddy helps
+    if (s.status !== 'active') break
+    s = enemyTelegraph(s)
+  }
+  return s.status === 'won' || s.status === 'capture-window' ? 'win' : 'loss'
+}
+
+export function simulateCoop(runs = 4000, seed = 4242, p = STD_PLAYER, e = STD_COOP_ENEMY, buddy = STD_BUDDY): SimResult {
+  const rate = (policy: Policy, s0: number) => {
+    const rng = mulberry32(s0)
+    let wins = 0
+    for (let i = 0; i < runs; i++) if (runCoopBattle(p, e, policy, buddy, rng) === 'win') wins++
+    return wins / runs
+  }
+  return { careful: rate(CAREFUL, seed), smart: rate(SMART, seed + 1), naive: rate(NAIVE, seed + 2), runs }
 }
 
 export interface SimResult { careful: number; smart: number; naive: number; runs: number }

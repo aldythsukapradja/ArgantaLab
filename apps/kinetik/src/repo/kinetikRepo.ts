@@ -248,12 +248,22 @@ async function fetchFamilyDirect(circleId: string, me: { id: string; name: strin
   return out
 }
 
-/** Per-kid world rings → { worldKey: pct }. Guardian-only (security definer). */
+// XP that fills one world's DAILY ring — mirrors ArgantaLab's DAILY_WORLD_XP_GOAL.
+const DAILY_WORLD_XP_GOAL = 80
+
+/** Per-kid DAILY activity rings → { worldKey: pct } — "what did you learn TODAY",
+ *  scoped to the kid's LOCAL day and reset every midnight. Reads ArgantaLab's
+ *  kid_today_rings RPC (today's XP per world from the immutable learn_event log),
+ *  same server truth as the ArgantaLab Home rings. Guardian-only (security definer). */
 export async function fetchKidRings(kidId: string): Promise<Record<string, number>> {
-  const { data, error } = await supabase.rpc('kid_world_rings', { p_kid: kidId })
+  const tzOffset = -new Date().getTimezoneOffset() // minutes east of UTC (matches ArgantaLab tzOffsetMin)
+  const { data, error } = await supabase.rpc('kid_today_rings', { p_kid: kidId, p_tz_offset: tzOffset })
   if (error) return {}
   const out: Record<string, number> = {}
-  for (const r of (data ?? []) as Array<{ world: string; pct: number }>) out[r.world] = Number(r.pct) || 0
+  for (const r of (data ?? []) as Array<{ world: string; xp: number }>) {
+    const pct = Math.round(((Number(r.xp) || 0) / DAILY_WORLD_XP_GOAL) * 100)
+    out[r.world] = Math.max(0, Math.min(100, pct))
+  }
   return out
 }
 

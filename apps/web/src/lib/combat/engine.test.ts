@@ -3,7 +3,7 @@ import {
   createBattle, onAnswer, castAbility, enemyTelegraph, nextRating, captureChance,
   type PlayerConfig, type EnemyConfig,
 } from './engine'
-import { simulate, kinToEnemy, STD_PLAYER, STD_ENEMY } from './sim'
+import { simulate, simulateCoop, kinToEnemy, STD_PLAYER, STD_ENEMY } from './sim'
 import { KIN } from '../../data/openworld/kin'
 
 const enemy: EnemyConfig = { maxHp: 100, power: 1, gimmick: 'shield3', shieldAmount: 16, captureThreshold: 0.25 }
@@ -86,6 +86,26 @@ describe('combat balance — Monte Carlo proof (never tune by vibe)', () => {
 // through the same kinToEnemy mapping OpenworldPlayer uses and assert a careful
 // player can always win each kin. careful has missProb 0, so its outcome is
 // deterministic: this is a hard floor, not a statistical hope.
+// Co-op (bots-first): a kid + AI buddy vs a beefier shared kin (hp175/shield18,
+// buddy=finisher power5, no shield-break). The buddy helps but never breaks
+// shields or covers a miss, so skill must still carry the day. Proven curve:
+// careful=1.00 / smart≈0.97 / naive≈0.30.
+describe('combat balance — co-op (kid + buddy) holds the curve', () => {
+  const res = simulateCoop(4000, 7654321)
+  it('a careful player + buddy always wins', () => {
+    expect(res.careful).toBeGreaterThanOrEqual(0.99)
+  })
+  it('smart play with a buddy wins comfortably', () => {
+    expect(res.smart).toBeGreaterThanOrEqual(0.9)
+  })
+  it('skill still matters even with help: naive is punished', () => {
+    expect(res.naive).toBeLessThanOrEqual(0.45)
+  })
+  it('smart clearly beats naive in co-op too', () => {
+    expect(res.smart - res.naive).toBeGreaterThanOrEqual(0.35)
+  })
+})
+
 describe('combat balance — every shipped kin is careful-winnable', () => {
   for (const def of KIN) {
     it(`${def.name} (${def.world}/${def.rarity}/${def.gimmick}/hp${def.baseHp}) — careful always wins`, () => {

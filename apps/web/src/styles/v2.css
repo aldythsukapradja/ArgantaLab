@@ -624,7 +624,10 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 /* ── Nexus (shared town tab) ─────────────────────────────── */
 .nexus { max-width: 920px; width: 100%; margin: 0 auto; }
 .nx-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; }
-.nx-rider { flex: 0 0 auto; display: grid; place-items: center; }
+.nx-rider { flex: 0 0 auto; display: grid; place-items: center; gap: 4px; }
+.nx-mount-btn { border: none; cursor: pointer; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); white-space: nowrap; transition: .15s; }
+.nx-mount-btn:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); transform: translateY(-1px); }
 .nx-castle { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
 .nx-stage { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
   color: var(--t3); padding: 5px 11px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border); }
@@ -727,6 +730,17 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 .ow-energy b { color: #f59e0b; }
 .ow-combo { font-size: 14px; font-weight: 800; color: #ef4444; }
 .ow-rider { flex: 0 0 auto; }
+/* co-op buddy fighting alongside the player */
+.ow-buddy { flex: 0 0 auto; position: relative; transition: transform .15s; }
+.ow-buddy.hit { transform: translateY(-4px) scale(1.08); }
+.ow-buddy-tag { position: absolute; bottom: -2px; right: -4px; font-size: 13px; }
+/* "Team up" toggle in the Openworld lobby */
+.ow-coop-toggle { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  margin-top: 12px; padding: 10px 14px; border: 2px dashed var(--border); border-radius: 14px;
+  background: var(--bg-1); cursor: pointer; font-size: 13.5px; color: var(--t2); transition: .15s; }
+.ow-coop-toggle span { font-weight: 800; }
+.ow-coop-toggle b { font-weight: 650; }
+.ow-coop-toggle.on { border-style: solid; background: color-mix(in srgb, currentColor 8%, var(--bg-1)); }
 .ow-note { text-align: center; font-size: 13px; font-weight: 700; color: var(--ow); }
 .ow-q, .ow-capture { background: var(--bg-1); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
 .ow-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }

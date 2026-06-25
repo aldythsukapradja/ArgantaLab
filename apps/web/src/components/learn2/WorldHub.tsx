@@ -5,6 +5,8 @@ import { useAppStore } from '@store/appStore'
 import { getMastery } from '@lib/adaptive'
 import { nodeState, nodeUnlocked, setNodeDone, nodeDoneToday, earnedBadges } from '@lib/learnProgress'
 import { todayWorldXp, ringPct } from '@lib/dailyRings'
+import { myMounts } from '@lib/mounts'
+import AvatarSprite from '@components/openworld/AvatarSprite'
 import ItemPlayer from './ItemPlayer'
 import DrillPlayer from './DrillPlayer'
 import Buddy from '@components/avatar/Buddy'
@@ -45,6 +47,7 @@ export default function WorldHub({ world }: { world: World }) {
   const [active, setActive] = useState<JourneyNode | null>(null)
   const [activeDrill, setActiveDrill] = useState<Drill | null>(null)
   const [battleKin, setBattleKin] = useState<string | null>(null)
+  const [coopMode, setCoopMode] = useState(false)
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
   // DAILY world ring (today's XP in this world, resets at local midnight) —
@@ -52,6 +55,9 @@ export default function WorldHub({ world }: { world: World }) {
   const [todayXp, setTodayXp] = useState<Record<string, number>>({})
   useEffect(() => { let on = true; todayWorldXp().then(x => { if (on) setTodayXp(x) }); return () => { on = false } }, [xp])
   const ring = ringPct(todayXp[world.key] ?? 0)
+  // The kid's equipped mount rides along in the world header (cosmetic).
+  const [equippedMount, setEquippedMount] = useState<string | undefined>(undefined)
+  useEffect(() => { myMounts().then(m => setEquippedMount(m.equipped ?? undefined)) }, [])
   const flat = world.units.flatMap(u => u.nodes)
   const earned = earnedBadges(world)
 
@@ -119,7 +125,7 @@ export default function WorldHub({ world }: { world: World }) {
     return (
       <div className="le-world">
         {cinematic}
-        <OpenworldPlayer world={world} kinId={battleKin}
+        <OpenworldPlayer world={world} kinId={battleKin} coop={coopMode}
           onExit={() => { setBattleKin(null); if (uid) pushLearnState(uid); force(n => n + 1) }} />
       </div>
     )
@@ -151,7 +157,11 @@ export default function WorldHub({ world }: { world: World }) {
         <button className="le-back" onClick={() => go({ tab: 'learn' })} aria-label="Back to worlds" title="Back to worlds">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <div className="le-world-buddy"><Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} outfit={outfit} /></div>
+        <div className="le-world-buddy" onClick={() => go({ tab: 'mounts' })} title={equippedMount ? 'On your mount — tap for the Mount Stable' : 'Tap to visit the Mount Stable'} style={{ cursor: 'pointer' }}>
+          {equippedMount
+            ? <AvatarSprite mood={ring >= 50 ? 'happy' : 'idle'} size={64} mount={equippedMount} />
+            : <Buddy mood={ring >= 50 ? 'happy' : 'idle'} size={56} color={world.color} outfit={outfit} />}
+        </div>
         <div className="le-world-meta">
           <h1>{world.name}</h1>
           <p style={{ color: world.color }}>{world.vibe}</p>
@@ -216,6 +226,11 @@ export default function WorldHub({ world }: { world: World }) {
               <h3 style={{ color: world.color }}>🗺️ {world.name} Openworld</h3>
               <p>Explore and battle wild kin. Answer to power your abilities, weaken a kin, then befriend it — it comes to live in your <b>Nexus</b>.</p>
             </div>
+            <button className={`ow-coop-toggle${coopMode ? ' on' : ''}`} onClick={() => setCoopMode(v => !v)}
+              style={coopMode ? { borderColor: world.color, color: world.color } : undefined}>
+              <span>🤝 Team up</span>
+              <b>{coopMode ? 'ON · a buddy joins your battle' : 'OFF · solo'}</b>
+            </button>
             <div className="ow-lobby">
               {wildKin.map(k => (
                 <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }}

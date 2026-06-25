@@ -167,7 +167,7 @@ export default function Me() {
         </button>
       </div>
 
-      {/* Members — REAL family (circle_members + child_profiles + kid_world_rings) */}
+      {/* Members — REAL family (circle_members + child_profiles + kid_today_rings, daily) */}
       <div className="me3-sec-head rise">
         <span className="me3-sec-title">Members · {circle.name}</span>
         {cloudReady && <span className="me3-live"><span className="live-dot" /> Live</span>}
@@ -180,7 +180,7 @@ export default function Me() {
         ))}
       </div>
       {family && family.some(m => m.kind === 'child') && (
-        <p className="me3-hint rise">Kids &amp; rings are read live from ArgantaLab. Manage kids (add / edit / PIN) in the ArgantaLab app.</p>
+        <p className="me3-hint rise">Rings show today's learning and reset each day — read live from ArgantaLab. Manage kids (add / edit / PIN) in the ArgantaLab app.</p>
       )}
 
       {/* Settings */}
