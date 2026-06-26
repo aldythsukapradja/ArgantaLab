@@ -21,25 +21,34 @@ export default function Calendar() {
   const {
     activeCircleId, calWeekOffset, setWeekOffset,
     calView, setCalView, calMonthOffset, setMonthOffset,
+    boardLayout, setBoardLayout,
   } = useUiStore()
 
-  const [rotate, setRotate] = useState(0)       // member-window offset
+  const [layoutOpen, setLayoutOpen] = useState(false)  // board-layout picker
   const [dayOpen, setDayOpen] = useState<string | null>(null) // iso → detail popup
   const [photoByDate, setPhotoByDate] = useState<Record<string, string>>({})
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
-  const members = useMemo(
-    () => people.filter(p => circle && circle.memberIds.includes(p.id)),
-    [people, circle],
-  )
+  // Roster = the circle's live members PLUS anyone an event/routine still points
+  // at, so no entry shown on Today/Month can ever be unselectable on the board.
+  const members = useMemo(() => {
+    if (!circle) return []
+    const ref = new Set<string>()
+    for (const e of events) if (e.circleId === circle.id) for (const id of e.who) ref.add(id)
+    for (const r of routines) if (r.circleId === circle.id) for (const id of r.who) ref.add(id)
+    return people.filter(p => circle.memberIds.includes(p.id) || ref.has(p.id))
+  }, [people, circle, events, routines])
 
-  // Up to 4 columns, equal width. With more members, a swap button rotates which
-  // four are shown (the rest stay reachable, no horizontal overflow).
-  const overflow = members.length > MAX_COLS
+  // Which members/columns to show, from the saved layout for this circle.
+  // Falls back to the first up-to-4 members when nothing is saved yet.
+  const saved = circle ? boardLayout[circle.id] : undefined
+  const cols = Math.min(saved?.cols ?? Math.min(MAX_COLS, members.length || 1), MAX_COLS)
   const visible = useMemo(() => {
-    if (members.length <= MAX_COLS) return members
-    return Array.from({ length: MAX_COLS }, (_, i) => members[(rotate + i) % members.length])
-  }, [members, rotate])
+    const byId = new Map(members.map(m => [m.id, m]))
+    const chosen = (saved?.members ?? []).map(id => byId.get(id)).filter(Boolean) as Person[]
+    const list = chosen.length ? chosen : members.slice(0, cols)
+    return list.slice(0, cols)
+  }, [members, saved, cols])
 
   const c0 = circle?.accent[0] ?? '#8B5CF6'
   const c1 = circle?.accent[1] ?? '#C4B5FD'
@@ -76,11 +85,11 @@ export default function Calendar() {
     return () => { alive = false }
   }, [circle?.id])
 
-  const doSwap = () => {
-    setRotate(r => (r + 1) % Math.max(members.length, 1))
+  // Pop the column avatars whenever the chosen layout changes (live feedback).
+  useEffect(() => {
     const heads = root.current?.querySelectorAll('.cal2-head .cal2-av')
-    if (heads) gsap.fromTo(heads, { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, stagger: 0.05, ease: 'back.out(2)' })
-  }
+    if (heads?.length) gsap.fromTo(heads, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, stagger: 0.05, ease: 'back.out(2)' })
+  }, [visible.map(v => v.id).join(',')])
 
   return (
     <div className="fade-in cal2" ref={root} style={{ ['--c0' as any]: c0, ['--c1' as any]: c1 }}>
@@ -102,8 +111,8 @@ export default function Calendar() {
           <div className="cal2-board" style={{ gridTemplateColumns: `52px repeat(${Math.max(visible.length, 1)}, minmax(0, 1fr))` }}>
             {/* header row */}
             <div className="cal2-corner">
-              {overflow && (
-                <button className="cal2-swap" onClick={doSwap} aria-label="Swap members" title="Show other members">
+              {members.length > 0 && (
+                <button className="cal2-swap" onClick={() => setLayoutOpen(true)} aria-label="Choose board members & columns" title="Board layout">
                   <IconSwitch width={15} height={15} />
                 </button>
               )}
@@ -154,6 +163,97 @@ export default function Calendar() {
       {dayOpen && circle && (
         <DaySheet iso={dayOpen} circle={circle} members={members} onClose={() => setDayOpen(null)} />
       )}
+
+      {/* Board layout picker — saved per circle */}
+      {layoutOpen && circle && (
+        <BoardLayoutSheet
+          members={members} accent={[c0, c1]}
+          cols={cols} selected={visible.map(v => v.id)}
+          onChange={layout => setBoardLayout(circle.id, layout)}
+          onClose={() => setLayoutOpen(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ---------------- Board layout picker ---------------- */
+function BoardLayoutSheet({ members, accent, cols, selected, onChange, onClose }: {
+  members: Person[]; accent: [string, string]
+  cols: number; selected: string[]
+  onChange: (layout: { cols: number; members: string[] }) => void
+  onClose: () => void
+}) {
+  const [n, setN] = useState(Math.min(Math.max(cols, 1), Math.min(MAX_COLS, members.length || 1)))
+  const [sel, setSel] = useState<string[]>(selected.slice(0, n))
+
+  // Persist live so the board updates behind the sheet and survives reopen.
+  useEffect(() => { onChange({ cols: n, members: sel }) }, [n, sel]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const scroller = document.querySelector('.main') as HTMLElement | null
+    const prev = scroller?.style.overflow ?? ''
+    if (scroller) scroller.style.overflow = 'hidden'
+    return () => { if (scroller) scroller.style.overflow = prev }
+  }, [])
+
+  const setCols = (v: number) => { setN(v); setSel(s => s.slice(0, v)) }
+  const toggle = (id: string) => setSel(s => {
+    if (s.includes(id)) return s.filter(x => x !== id)
+    if (s.length >= n) return [...s.slice(1), id] // at cap → slide the oldest out
+    return [...s, id]
+  })
+
+  const colOptions = Array.from({ length: Math.min(MAX_COLS, Math.max(members.length, 1)) }, (_, i) => i + 1)
+
+  return (
+    <div className="sheet-scrim cal2-scrim2" onClick={onClose}>
+      <div className="sheet cal2-sheet" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="sheet-grip" onClick={onClose} aria-label="Close" />
+        <div className="cal2-dd-head">
+          <div>
+            <div className="cal2-dd-dow">Board layout</div>
+            <h3 className="cal2-dd-date">Who's on the board</h3>
+          </div>
+        </div>
+
+        {/* live preview of the chosen columns */}
+        <div className="cal2-lay-prev">
+          {Array.from({ length: n }, (_, i) => {
+            const m = sel[i] ? members.find(x => x.id === sel[i]) : undefined
+            return (
+              <div key={i} className="cal2-lay-col">
+                <span className={`cal2-lay-slot${m ? ' on' : ''}`} style={m ? { background: colorFor(m.id) } : undefined}>{m ? initials(m.name) : i + 1}</span>
+                <small>{m ? m.name.split(' ')[0] : '—'}</small>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="cal2-lbl">Columns</div>
+        <div className="cal2-dur">
+          {colOptions.map(o => (
+            <button key={o} className={`cal2-durchip${n === o ? ' on' : ''}`} onClick={() => setCols(o)}>{o}</button>
+          ))}
+        </div>
+
+        <div className="cal2-lbl">Show these members <span className="cal2-lay-hint">pick up to {n}</span></div>
+        <div className="cal2-lay-list">
+          {members.map(m => {
+            const idx = sel.indexOf(m.id)
+            const on = idx >= 0
+            return (
+              <button key={m.id} className={`cal2-lay-item${on ? ' on' : ''}`} onClick={() => toggle(m.id)}>
+                <span className="cal2-lay-av" style={{ background: colorFor(m.id) }}>{initials(m.name)}</span>
+                <span className="cal2-lay-name">{m.name}</span>
+                <span className={`cal2-lay-check${on ? ' on' : ''}`}>{on ? idx + 1 : ''}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <button className="btn grad cal2-save" onClick={onClose}>Done</button>
+      </div>
     </div>
   )
 }

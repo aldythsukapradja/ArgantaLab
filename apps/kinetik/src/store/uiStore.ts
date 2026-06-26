@@ -4,6 +4,9 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 export type Tab = 'today' | 'calendar' | 'moments' | 'apps' | 'me'
 export type CalView = 'board' | 'month'
 
+/** Saved board layout per circle: which members (in column order) + how many columns. */
+export interface BoardLayout { cols: number; members: string[] }
+
 interface UiStore {
   theme: 'light' | 'dark'
   tab: Tab
@@ -12,6 +15,7 @@ interface UiStore {
   calFilter: string[] | null
   calView: CalView
   calMonthOffset: number
+  boardLayout: Record<string, BoardLayout>
 
   go: (tab: Tab) => void
   toggleTheme: () => void
@@ -20,6 +24,7 @@ interface UiStore {
   setFilter: (ids: string[] | null) => void
   setCalView: (v: CalView) => void
   setMonthOffset: (n: number) => void
+  setBoardLayout: (circleId: string, layout: BoardLayout) => void
 }
 
 export const useUiStore = create<UiStore>()(
@@ -32,6 +37,7 @@ export const useUiStore = create<UiStore>()(
       calFilter: null,
       calView: 'board',
       calMonthOffset: 0,
+      boardLayout: {},
 
       go: (tab) => set({ tab }),
       toggleTheme: () => {
@@ -44,6 +50,7 @@ export const useUiStore = create<UiStore>()(
       setFilter: (ids) => set({ calFilter: ids }),
       setCalView: (v) => set({ calView: v }),
       setMonthOffset: (n) => set({ calMonthOffset: n }),
+      setBoardLayout: (circleId, layout) => set(s => ({ boardLayout: { ...s.boardLayout, [circleId]: layout } })),
     }),
     {
       name: 'kinetik_ui_v1',
@@ -52,6 +59,7 @@ export const useUiStore = create<UiStore>()(
         theme: s.theme, tab: s.tab, activeCircleId: s.activeCircleId,
         calWeekOffset: s.calWeekOffset, calFilter: s.calFilter,
         calView: s.calView, calMonthOffset: s.calMonthOffset,
+        boardLayout: s.boardLayout,
       }),
     },
   ),
