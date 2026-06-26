@@ -21,8 +21,8 @@ import { sectionDoneToday } from '@lib/sectionDaily'
 import { KIN } from '@/data/openworld'
 import KinSprite from '@components/openworld/KinSprite'
 import OpenworldPlayer from '@components/openworld/OpenworldPlayer'
-import CoopBattle from '@components/openworld/CoopBattle'
 import Argantaland from '@components/openworld/Argantaland'
+import ExploringNotice from '@components/openworld/ExploringNotice'
 
 type Spine = 'journey' | 'signature' | 'arena' | 'badges' | 'profile'
 
@@ -39,7 +39,7 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode, xp, pendingCoop } = useAppStore()
+  const { requireAuth, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode, xp, enterLand } = useAppStore()
   const outfit = resolvedOutfit()
   const stage = STAGES.find(s => s.key === stageKey)
   const stageMeta = STAGE_META[stageKey]
@@ -49,17 +49,12 @@ export default function WorldHub({ world }: { world: World }) {
   const [active, setActive] = useState<JourneyNode | null>(null)
   const [activeDrill, setActiveDrill] = useState<Drill | null>(null)
   const [battleKin, setBattleKin] = useState<string | null>(null)
-  const [coopView, setCoopView] = useState(false)
   const [landView, setLandView] = useState(false)
-  const [coopJoinSid, setCoopJoinSid] = useState<string | undefined>(undefined)
 
-  // A Home co-op invite routed here → open the co-op screen and auto-join it.
+  // Arrived here from a "Join {friend}" tap → drop straight into ArgantaLand.
   useEffect(() => {
-    if (pendingCoop && pendingCoop.world === world.key) {
-      setCoopJoinSid(pendingCoop.sessionId); setCoopView(true)
-      useAppStore.setState({ pendingCoop: null })
-    }
-  }, [pendingCoop, world.key])
+    if (enterLand === world.key) { setLandView(true); useAppStore.setState({ enterLand: null }) }
+  }, [enterLand, world.key])
   const [badgeQueue, setBadgeQueue] = useState<Badge[]>([])
   const [, force] = useState(0)
   // DAILY world ring (today's XP in this world, resets at local midnight) —
@@ -139,15 +134,6 @@ export default function WorldHub({ world }: { world: World }) {
         {cinematic}
         <OpenworldPlayer world={world} kinId={battleKin}
           onExit={() => { setBattleKin(null); if (uid) pushLearnState(uid); force(n => n + 1) }} />
-      </div>
-    )
-  }
-
-  if (coopView) {
-    return (
-      <div className="le-world">
-        {cinematic}
-        <CoopBattle world={world} joinSessionId={coopJoinSid} onExit={() => { setCoopView(false); setCoopJoinSid(undefined); if (uid) pushLearnState(uid); force(n => n + 1) }} />
       </div>
     )
   }
@@ -257,16 +243,12 @@ export default function WorldHub({ world }: { world: World }) {
               <p>Explore and battle wild kin. Answer to power your abilities, weaken a kin, then befriend it — it comes to live in your <b>Nexus</b>.</p>
             </div>
             <button className="ow-land-btn" onClick={() => { if (requireAuth('to explore')) setLandView(true) }}
-              style={{ borderColor: world.color }}>
-              <span className="ow-land-ic" style={{ background: `${world.color}22`, color: world.color }}>🗺️</span>
-              <span className="ow-land-txt"><b style={{ color: world.color }}>Enter ArgantaLand</b><small>Walk the {world.name} map &amp; meet wild kin</small></span>
-              <span className="ow-land-go" style={{ color: world.color }}>▶</span>
+              style={{ ['--wc' as string]: world.color }}>
+              <span className="ow-land-ic">🗺️</span>
+              <span className="ow-land-txt"><b>Enter ArgantaLand</b><small>Walk the {world.name} map · meet kin · team up with friends</small></span>
+              <span className="ow-land-go">▶</span>
             </button>
-            <button className="ow-coop-toggle" onClick={() => { if (requireAuth('to play co-op')) setCoopView(true) }}
-              style={{ borderColor: world.color, color: world.color, marginTop: 8 }}>
-              <span>👫 Co-op</span>
-              <b>Play with a circle friend →</b>
-            </button>
+            <ExploringNotice onJoin={w => { if (w === world.key) { setLandView(true) } else { useAppStore.setState({ enterLand: w }); go({ tab: w.toLowerCase() }) } }} />
             <div className="ow-lobby">
               {wildKin.map(k => (
                 <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }}

@@ -3,9 +3,7 @@ import { useAppStore } from '@store/appStore'
 import { WORLDS } from '@/data/learn'
 import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import { getStreak, touchStreak } from '@lib/streak'
-import { coopOpenMine, type CoopOpen } from '@lib/coop'
-import { kin as kinDef } from '@/data/openworld'
-import KinSprite from '@components/openworld/KinSprite'
+import ExploringNotice from '@components/openworld/ExploringNotice'
 import Buddy, { type Mood } from '@components/avatar/Buddy'
 import Avatar from '@/pages/Avatar'
 import Fame from '@/pages/Fame'
@@ -36,24 +34,7 @@ export default function PlayHome() {
   const [mood, setMood] = useState<Mood>('wave')
   const [streak, setStreak] = useState(0)
   const [todayXp, setTodayXp] = useState<Record<string, number>>({})
-  const [coopInvites, setCoopInvites] = useState<CoopOpen[]>([])
   const outfit = resolvedOutfit()
-
-  // Live co-op invites: any open battle a circle friend is hosting. Polls while
-  // you're on the Home hub so a freshly-hosted battle shows up within seconds.
-  useEffect(() => {
-    if (hub !== 'home') { setCoopInvites([]); return }
-    let on = true
-    const pull = () => coopOpenMine().then(v => { if (on) setCoopInvites(v) })
-    pull()
-    const t = setInterval(pull, 6000)
-    return () => { on = false; clearInterval(t) }
-  }, [hub])
-
-  const joinCoop = (o: CoopOpen) => {
-    useAppStore.setState({ pendingCoop: { world: o.world_key, sessionId: o.id } })
-    go({ tab: o.world_key.toLowerCase() })
-  }
 
   useEffect(() => {
     setStreak(touchStreak())
@@ -157,20 +138,7 @@ export default function PlayHome() {
             <span>{rec.pct >= 100 ? <>Rings glowing — keep your <b>{streak}-day</b> streak →</> : <>Play <b>{RING_LABEL[rec.w.key]}</b> to fill today's ring →</>}</span>
           </button>
 
-          {/* Live co-op invites — a circle friend is hosting a battle right now */}
-          {coopInvites.map(o => {
-            const def = kinDef(o.kin_key)
-            return (
-              <button key={o.id} className="ph-coop-invite" onClick={() => joinCoop(o)}>
-                <span className="ph-coop-art"><KinSprite kin={o.kin_key} size={40} /></span>
-                <span className="ph-coop-body">
-                  <b>🤝 {o.host ?? 'A friend'} wants to team up!</b>
-                  <small>Co-op vs {def?.name ?? 'a kin'} · {RING_LABEL[o.world_key] ?? o.world_key} · {o.members} in</small>
-                </span>
-                <span className="ph-coop-join">Join →</span>
-              </button>
-            )
-          })}
+          <ExploringNotice onJoin={w => { useAppStore.setState({ enterLand: w }); go({ tab: w.toLowerCase() }) }} />
         </div>
       )}
     </div>

@@ -475,7 +475,9 @@ html[data-theme='dark'] .cal2-month-grid { box-shadow: none; }
 .cal2-dd-time { font-size: 12.5px; color: var(--muted); margin-top: 2px; font-weight: 600; }
 .cal2-dd-who { display: flex; gap: 4px; margin-top: 8px; }
 .cal2-dd-av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 9px; font-weight: 800; border: 1.5px solid var(--card); }
-.cal2-dd-del { width: 34px; flex: 0 0 34px; display: grid; place-items: center; color: var(--faint); border-radius: 10px; align-self: center; transition: all 0.16s var(--ease); }
+.cal2-dd-acts { display: flex; flex-direction: column; gap: 4px; align-self: center; flex: 0 0 auto; }
+.cal2-dd-edit, .cal2-dd-del { width: 32px; height: 30px; display: grid; place-items: center; color: var(--faint); border-radius: 9px; transition: all 0.16s var(--ease); }
+.cal2-dd-edit:active { color: var(--c0); background: color-mix(in srgb, var(--c0) 12%, transparent); }
 .cal2-dd-del:active { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .cal2-dd-del:disabled { opacity: 0.4; }
 .cal2-dd-add { width: 100%; }

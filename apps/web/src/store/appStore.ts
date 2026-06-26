@@ -57,7 +57,7 @@ interface AppStore {
 
   // — session UI state (not persisted) —
   activeTab: string
-  pendingCoop: { world: string; sessionId: string } | null   // Home invite → world auto-joins this co-op battle
+  enterLand: string | null   // "Join" a friend exploring → open this world's ArgantaLand on arrival
   lessonId: string | null
   lessonStep: number
   showConcept: boolean
@@ -176,7 +176,7 @@ export const useAppStore = create<AppStore>()(
 
       // session defaults
       activeTab: 'arganta',
-      pendingCoop: null,
+      enterLand: null,
       lessonId: null,
       lessonStep: 0,
       showConcept: false,

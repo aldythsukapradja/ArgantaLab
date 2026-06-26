@@ -120,6 +120,27 @@ export async function fetchComments(postId: string): Promise<MComment[]> {
 
 // ── writes ──
 export interface NewMedia { file: File; kind: 'photo' | 'video' }
+
+// Robust media-type helpers. The moments bucket is mime-restricted to image/* +
+// video/*, so a file whose `type` is empty/unknown (HEIC, some Android pickers,
+// screenshots) would be sent as octet-stream and REJECTED — the usual cause of a
+// multi-file upload failing as soon as one such file is in the batch.
+const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'webm', 'avi', 'mkv', '3gp', 'ogv'])
+const IMG_MIME: Record<string, string> = { png: 'image/png', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif', bmp: 'image/bmp', jpg: 'image/jpeg', jpeg: 'image/jpeg' }
+const VID_MIME: Record<string, string> = { mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', avi: 'video/x-msvideo', mkv: 'video/x-matroska', '3gp': 'video/3gpp', ogv: 'video/ogg' }
+const extOf = (name: string) => (name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+/** Decide photo/video from the file's type, falling back to its extension. */
+export function kindOf(file: File): 'photo' | 'video' {
+  if (file.type.startsWith('video')) return 'video'
+  if (file.type.startsWith('image')) return 'photo'
+  return VIDEO_EXT.has(extOf(file.name)) ? 'video' : 'photo'
+}
+function safeMime(type: string, kind: 'photo' | 'video', ext: string): string {
+  if (type && /^(image|video)\//.test(type)) return type
+  if (kind === 'video' || VIDEO_EXT.has(ext)) return VID_MIME[ext] ?? 'video/mp4'
+  return IMG_MIME[ext] ?? 'image/jpeg'
+}
+
 export async function postMoment(opts: {
   circleId: string; kind: string; body: string; audience: string; audienceIds?: string[]
   media?: NewMedia[]; tags?: string[]; isStory?: boolean
@@ -128,10 +149,10 @@ export async function postMoment(opts: {
   const mediaJson: { kind: string; path: string }[] = []
   for (let i = 0; i < (opts.media?.length ?? 0); i++) {
     const m = opts.media![i]
-    const ext = m.file.name.split('.').pop() || (m.kind === 'video' ? 'mp4' : 'jpg')
+    const ext = extOf(m.file.name) || (m.kind === 'video' ? 'mp4' : 'jpg')
     const path = `${opts.circleId}/${folder}/${i}.${ext}`
-    const { error } = await supabase.storage.from(BUCKET).upload(path, m.file, { contentType: m.file.type, upsert: false })
-    if (error) throw error
+    const { error } = await supabase.storage.from(BUCKET).upload(path, m.file, { contentType: safeMime(m.file.type, m.kind, ext), upsert: false })
+    if (error) throw new Error(`Couldn't upload "${m.file.name}": ${error.message}`)
     mediaJson.push({ kind: m.kind, path })
   }
   const { data, error } = await supabase.rpc('kinetik_post_moment', {

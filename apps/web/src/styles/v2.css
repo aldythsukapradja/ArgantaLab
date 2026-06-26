@@ -696,9 +696,12 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 /* ── Openworld lobby (kin picker in the world's Openworld tab) ── */
 .ow-lobby { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 14px; }
 .ow-kincard { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px;
-  background: var(--bg-1); border: 1.5px solid var(--border); border-radius: 16px; cursor: pointer;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+  border: 1px solid color-mix(in srgb, #ffffff 30%, var(--border)); border-radius: 18px; cursor: pointer;
+  box-shadow: 0 6px 22px rgba(0,0,0,.10), inset 0 1px 0 rgba(255,255,255,.4);
   transition: transform .14s ease, box-shadow .14s ease; }
-.ow-kincard:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+.ow-kincard:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.5); }
 .ow-kincard-art { flex: 0 0 auto; display: grid; place-items: center; width: 72px; }
 .ow-kincard-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .ow-kincard-body b { font-size: 15px; color: var(--t1); }
@@ -741,12 +744,18 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 .ow-coop-toggle span { font-weight: 800; }
 .ow-coop-toggle b { font-weight: 650; }
 .ow-coop-toggle.on { border-style: solid; background: color-mix(in srgb, currentColor 8%, var(--bg-1)); }
-.ow-land-btn { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; padding: 14px 16px;
-  border: 2px solid var(--border); border-radius: 16px; background: var(--bg-1); cursor: pointer; text-align: left; transition: .15s; }
-.ow-land-btn:hover { transform: translateY(-2px); }
-.ow-land-ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; flex: none; }
-.ow-land-txt { flex: 1; } .ow-land-txt b { display: block; font-size: 15px; } .ow-land-txt small { color: var(--t2); font-size: 12px; }
-.ow-land-go { font-size: 16px; flex: none; }
+.ow-land-btn { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; margin-top: 12px; padding: 16px 18px;
+  border: 2.5px solid transparent; border-radius: 20px; cursor: pointer; text-align: left; transition: transform .15s ease, box-shadow .15s ease;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--wc, #8b5cf6) 12%, var(--panel)), var(--panel)) padding-box,
+    linear-gradient(135deg, var(--wc, #8b5cf6), color-mix(in srgb, var(--wc, #8b5cf6) 35%, #ec4899)) border-box;
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--wc, #8b5cf6) 24%, transparent); }
+.ow-land-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 34px color-mix(in srgb, var(--wc, #8b5cf6) 34%, transparent); }
+.ow-land-ic { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; flex: none;
+  background: color-mix(in srgb, var(--wc, #8b5cf6) 22%, transparent); }
+.ow-land-txt { flex: 1; } .ow-land-txt b { display: block; font-size: 16px; color: var(--wc, var(--t1)); }
+.ow-land-txt small { color: var(--t2); font-size: 12px; }
+.ow-land-go { font-size: 18px; flex: none; color: var(--wc, var(--t2)); }
 .ow-coop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .ow-coop-row .ow-coop-toggle { margin-top: 0; flex-direction: column; gap: 2px; align-items: flex-start; }
 /* ── Real co-op battle ───────────────────────────────────── */
@@ -768,6 +777,39 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 .cb-waiting { align-self: center; font-size: 12.5px; color: var(--t2); font-style: italic; }
 .cb-over { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding-top: 18px; }
 .cb-battle { display: flex; flex-direction: column; gap: 6px; }
+/* "X is exploring → Join" notice (Home + world lobby) */
+.ex-list { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 520px; margin: 10px auto 0; }
+.ex-card { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-radius: var(--r-md, 14px); cursor: pointer; text-align: left;
+  background: linear-gradient(90deg, color-mix(in srgb, #22c55e 14%, var(--panel)), var(--panel));
+  border: 1px solid color-mix(in srgb, #22c55e 36%, var(--border)); color: var(--t1);
+  box-shadow: 0 4px 14px rgba(0,0,0,.08); animation: alBlink 2s ease-in-out infinite; transition: transform .12s; }
+.ex-card:hover { transform: translateY(-1px); }
+.ex-av { flex: none; width: 38px; height: 38px; display: grid; place-items: center; }
+.ex-body { flex: 1; min-width: 0; } .ex-body b { display: block; font-size: 13.5px; } .ex-body small { color: var(--t2); font-size: 11.5px; }
+.ex-join { flex: none; font-weight: 800; color: #16a34a; }
+/* shared co-op arena: foe up top, both mounted heroes facing it */
+.cb-arena { background: linear-gradient(180deg, color-mix(in srgb, var(--wc) 10%, var(--bg-1)), var(--bg-1));
+  border: 1px solid color-mix(in srgb, var(--wc) 25%, var(--border)); border-radius: 22px; padding: 18px 14px; margin: 6px 0 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 8px 26px rgba(0,0,0,.10); }
+.cb-foe { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cb-foe-bar { width: min(300px, 92%); }
+.cb-foe .ow-hp { height: 13px; border-radius: 8px; }
+.cb-shield { font-size: 12px; font-weight: 800; color: #2563eb; margin-left: 6px; }
+.cb-foe-num { display: block; text-align: center; margin-top: 5px; font-size: 12.5px; color: var(--t2); font-weight: 700; }
+.cb-party { display: flex; justify-content: center; gap: 26px; margin-top: 14px; flex-wrap: wrap; }
+.cb-hero { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.cb-hero b { font-size: 13px; } .cb-hero.me b { color: var(--wc); }
+.cb-hero .cb-hearts { font-size: 13px; letter-spacing: 1px; }
+.cb-hero.waiting { opacity: .65; justify-content: center; }
+.cb-slot { width: 70px; height: 70px; border-radius: 50%; border: 2px dashed var(--border); display: grid; place-items: center; font-size: 28px; color: var(--t2); }
+.cb-hero.waiting small { font-size: 11px; color: var(--t2); }
+.cb-q { margin-top: 6px; }
+.cb-moves { text-align: center; margin-top: 10px; }
+.cb-moves-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.cb-move { border: none; cursor: pointer; font-size: 15px; font-weight: 800; padding: 13px 24px; border-radius: 14px; color: #fff;
+  box-shadow: 0 4px 14px rgba(0,0,0,.2); transition: .12s; }
+.cb-move:active { transform: scale(.96); }
+.cb-move.strike { background: #f59e0b; } .cb-move.brk { background: #8b5cf6; }
 
 /* ── ArgantaLand 2D overworld ────────────────────────────── */
 .al-wrap { display: flex; flex-direction: column; gap: 12px; max-width: 620px; margin: 0 auto; width: 100%; }
@@ -792,6 +834,15 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 @keyframes alGym { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
 .al-avatar { position: absolute; transform: translate(-50%, -62%); z-index: 4; pointer-events: none;
   transition: left .13s ease, top .13s ease; filter: drop-shadow(0 4px 5px rgba(0,0,0,.4)); }
+.al-kin { position: absolute; transform: translate(-50%, -58%); z-index: 2; pointer-events: none; display: grid; place-items: center; }
+/* in-map co-op invite / host pill (top-left of the map) */
+.al-coop { position: absolute; left: 14px; top: 14px; z-index: 8; }
+.al-coop button { border: none; cursor: pointer; font-size: 13px; font-weight: 750; padding: 9px 15px; border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(0,0,0,.28); transition: .12s; }
+.al-coop button:active { transform: scale(.95); }
+.al-coop-host { background: rgba(255,255,255,.88); color: #1f2937; }
+.al-coop-join { background: #8b5cf6; color: #fff; animation: alBlink 1.6s ease-in-out infinite; }
+.al-coop-join b { text-decoration: underline; }
 .al-peer { position: absolute; transform: translate(-50%, -62%); z-index: 3; pointer-events: none;
   transition: left .2s ease, top .2s ease; display: flex; flex-direction: column; align-items: center;
   filter: drop-shadow(0 3px 4px rgba(0,0,0,.3)); }
@@ -802,8 +853,8 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
   white-space: nowrap; box-shadow: 0 8px 22px rgba(0,0,0,.4); animation: alPop .22s ease; }
 @keyframes alPop { from { transform: translate(-50%,-50%) scale(.8); opacity: 0; } to { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
 .al-flash b { color: #fde047; }
-/* D-pad — overlaid on the map, bottom-right */
-.al-dpad { position: absolute; right: 18px; bottom: 18px; z-index: 8;
+/* D-pad — overlaid on the map, bottom-LEFT */
+.al-dpad { position: absolute; left: 18px; bottom: 18px; z-index: 8;
   display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px); gap: 5px; }
 .al-dpad button { border: none; border-radius: 14px; background: rgba(255,255,255,.85); color: #1f2937;
   font-size: 17px; font-weight: 800; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.3); transition: .1s; }

@@ -14,7 +14,7 @@ import type { Circle, Person, Routine, KEvent, Moment, CircleData } from '@data/
 // ---- row types (as stored) ----
 // `circles` is the existing ArgantaLab table; accent was added by 01_schema.sql
 interface CircleRow { id: string; name: string; accent: string | null; kind: string | null }
-interface PersonRow { id: string; circle_id: string; name: string; color: string; role: string; link_id?: string | null; link_kind?: string | null }
+interface PersonRow { id: string; circle_id: string; name: string; color: string; role: string; link_id?: string | null; link_kind?: string | null; active?: boolean }
 interface RoutineRow {
   id: string; circle_id: string; title: string; who: string[] | null
   responsible: string | null; day: number; start_time: string; end_time: string; duration_min: number | null
@@ -71,6 +71,16 @@ const mapMoment = (r: MomentRow): Moment => ({
   tone: (r.tone as Moment['tone']) ?? undefined, rewardEnergy: (r.reward_energy as Moment['rewardEnergy']) ?? undefined,
 })
 
+/** Make every visible circle's kinetik_people roster mirror its real
+ *  membership (06_sync_people.sql). Best-effort per circle — silently skips
+ *  circles where the RPC isn't deployed yet, so it never blocks the load. */
+export async function syncPeopleAll(): Promise<void> {
+  const { data, error } = await supabase.from('circles').select('id')
+  if (error || !data) return
+  await Promise.all((data as { id: string }[]).map(c =>
+    supabase.rpc('kinetik_sync_people', { p_circle: c.id }).then(() => {}, () => {})))
+}
+
 /** Pull the whole graph. Throws on error so the store can fall back to cache. */
 export async function fetchAll(): Promise<CircleData> {
   const [circles, people, routines, events, moments] = await Promise.all([
@@ -84,7 +94,11 @@ export async function fetchAll(): Promise<CircleData> {
     if (r.error) throw r.error
   }
   const peopleRows = (people.data ?? []) as PersonRow[]
-  const byCircle = (cid: string) => peopleRows.filter(p => p.circle_id === cid).map(p => p.id)
+  // The live roster (circle.memberIds) is the ACTIVE rows — current members.
+  // Inactive rows stay in `people` below so historical who-ids still resolve a
+  // name, they're just not shown as columns. (active === undefined → pre-06
+  // migration → treat as active, so behaviour is unchanged until it's deployed.)
+  const byCircle = (cid: string) => peopleRows.filter(p => p.circle_id === cid && p.active !== false).map(p => p.id)
 
   return {
     circles: ((circles.data ?? []) as CircleRow[]).map(c => mapCircle(c, byCircle(c.id))),
@@ -122,6 +136,27 @@ export async function insertRoutine(r: Omit<Routine, 'id' | 'energy'>): Promise<
   const { error } = await supabase.from('kinetik_routines').insert(row)
   if (error) throw error
   return mapRoutine(row as unknown as RoutineRow)
+}
+
+/** Edit a one-off event's title / who / time. Throws on failure. */
+export interface PlanPatch { title?: string; who?: string[]; start?: string; end?: string }
+function planRow(patch: PlanPatch): Record<string, unknown> {
+  const row: Record<string, unknown> = {}
+  if (patch.title !== undefined) row.title = patch.title
+  if (patch.who !== undefined) row.who = patch.who
+  if (patch.start !== undefined) row.start_time = patch.start
+  if (patch.end !== undefined) row.end_time = patch.end
+  return row
+}
+export async function updateEvent(id: string, patch: PlanPatch): Promise<void> {
+  const { error } = await supabase.from('kinetik_events').update(planRow(patch)).eq('id', id)
+  if (error) throw error
+}
+
+/** Edit a weekly routine's title / who / time. Throws on failure. */
+export async function updateRoutine(id: string, patch: PlanPatch): Promise<void> {
+  const { error } = await supabase.from('kinetik_routines').update(planRow(patch)).eq('id', id)
+  if (error) throw error
 }
 
 /** Delete a one-off event. Throws on failure so the UI can surface it. */

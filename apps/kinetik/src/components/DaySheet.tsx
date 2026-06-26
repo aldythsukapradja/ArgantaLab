@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useDataStore } from '@store/dataStore'
 import { occurrencesOn, fmtTime, toMin, type Occ } from '@lib/cal'
-import { ENERGY, initials, isoOf } from '@data/energy'
+import { ENERGY, initials, isoOf, colorFor } from '@data/energy'
 import type { Circle, Person, EnergyKey } from '@data/types'
-import { IconPlus, IconTrash, IconCheck, IconHistory } from '@components/Icons'
+import { IconPlus, IconTrash, IconCheck, IconHistory, IconPencil } from '@components/Icons'
 
 const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -34,7 +34,10 @@ export default function DaySheet({ iso, circle, members, onClose }: {
   const routines = useDataStore(s => s.routines)
   const addEvent = useDataStore(s => s.addEvent)
   const addRoutine = useDataStore(s => s.addRoutine)
+  const editEvent = useDataStore(s => s.editEvent)
+  const editRoutine = useDataStore(s => s.editRoutine)
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<Occ | null>(null)
 
   const accent: [string, string] = [circle.accent[0], circle.accent[1]]
   const items = occurrencesOn(events, routines, iso, circle.id)
@@ -42,7 +45,7 @@ export default function DaySheet({ iso, circle, members, onClose }: {
 
   return createPortal(
     <>
-      <DayDetail iso={iso} members={members} accent={accent} items={items} onClose={onClose} onAdd={() => setAdding(true)} />
+      <DayDetail iso={iso} members={members} accent={accent} items={items} onClose={onClose} onAdd={() => setAdding(true)} onEdit={setEditing} />
       {adding && (
         <QuickAdd
           date={iso} members={members} primaryIds={primaryIds} circleId={circle.id} accent={accent}
@@ -51,15 +54,26 @@ export default function DaySheet({ iso, circle, members, onClose }: {
           onAddRoutine={async r => { await addRoutine(r); setAdding(false) }}
         />
       )}
+      {editing && (
+        <EditPlan
+          occ={editing} members={members} primaryIds={primaryIds} accent={accent}
+          onClose={() => setEditing(null)}
+          onSave={async patch => {
+            if (editing.kind === 'routine') await editRoutine(editing.id, patch)
+            else await editEvent(editing.id, patch)
+            setEditing(null)
+          }}
+        />
+      )}
     </>,
     document.body,
   )
 }
 
 /* ---------------- Day detail ---------------- */
-function DayDetail({ iso, members, accent, items, onClose, onAdd }: {
+function DayDetail({ iso, members, accent, items, onClose, onAdd, onEdit }: {
   iso: string; members: Person[]; accent: [string, string]
-  items: Occ[]; onClose: () => void; onAdd: () => void
+  items: Occ[]; onClose: () => void; onAdd: () => void; onEdit: (o: Occ) => void
 }) {
   const removeEvent = useDataStore(s => s.removeEvent)
   const removeRoutine = useDataStore(s => s.removeRoutine)
@@ -101,10 +115,13 @@ function DayDetail({ iso, members, accent, items, onClose, onAdd }: {
                   <div className="cal2-dd-title">{o.title}{o.kind === 'routine' && <span className="cal2-dd-weekly">Weekly</span>}{o.clash && <span className="cal2-dd-clash">Overlap</span>}</div>
                   <div className="cal2-dd-time">{fmtTime(o.start)} – {fmtTime(o.end)}</div>
                   <div className="cal2-dd-who">
-                    {who.map(p => <span key={p.id} className="cal2-dd-av" style={{ background: p.color }} title={p.name}>{initials(p.name)}</span>)}
+                    {who.map(p => <span key={p.id} className="cal2-dd-av" style={{ background: colorFor(p.id) }} title={p.name}>{initials(p.name)}</span>)}
                   </div>
                 </div>
-                <button className="cal2-dd-del" onClick={() => del(o)} disabled={busy === o.id} aria-label="Delete"><IconTrash width={16} height={16} /></button>
+                <span className="cal2-dd-acts">
+                  <button className="cal2-dd-edit" onClick={() => onEdit(o)} aria-label="Edit"><IconPencil width={16} height={16} /></button>
+                  <button className="cal2-dd-del" onClick={() => del(o)} disabled={busy === o.id} aria-label="Delete"><IconTrash width={16} height={16} /></button>
+                </span>
               </div>
             )
           })}
@@ -177,8 +194,8 @@ function QuickAdd({ date, members, primaryIds, circleId, accent, onClose, onAddE
     const on = who.includes(p.id)
     return (
       <button key={p.id} className={`cal2-who${on ? ' on' : ''}`} onClick={() => toggle(p.id)}
-        style={on ? { background: p.color, borderColor: 'transparent', color: '#fff' } : { borderColor: p.color, color: p.color }}>
-        <span className="cal2-who-av" style={{ background: on ? 'rgba(255,255,255,.28)' : p.color, color: '#fff' }}>{initials(p.name)}</span>
+        style={on ? { background: colorFor(p.id), borderColor: 'transparent', color: '#fff' } : { borderColor: colorFor(p.id), color: colorFor(p.id) }}>
+        <span className="cal2-who-av" style={{ background: on ? 'rgba(255,255,255,.28)' : colorFor(p.id), color: '#fff' }}>{initials(p.name)}</span>
         {p.name.split(' ')[0]}
       </button>
     )
@@ -241,6 +258,100 @@ function QuickAdd({ date, members, primaryIds, circleId, accent, onClose, onAddE
 
         <button className="btn grad cal2-save" disabled={!ok} onClick={save}>
           <IconPlus width={18} height={18} /> {saving ? 'Saving…' : weekly ? 'Add routine' : 'Add to calendar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- Edit plan ---------------- */
+function EditPlan({ occ, members, primaryIds, accent, onClose, onSave }: {
+  occ: Occ
+  members: Person[]
+  primaryIds: string[]
+  accent: [string, string]
+  onClose: () => void
+  onSave: (patch: { title: string; who: string[]; start: string; end: string }) => void | Promise<void>
+}) {
+  const [title, setTitle] = useState(occ.title)
+  const [who, setWho] = useState<string[]>(occ.who)
+  const [start, setStart] = useState(occ.start)
+  const [dur, setDur] = useState(Math.max(toMin(occ.end) - toMin(occ.start), 15))
+  const [showMore, setShowMore] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const primary = members.filter(p => primaryIds.includes(p.id))
+  const extra = members.filter(p => !primaryIds.includes(p.id))
+  const allOn = who.length === members.length && members.length > 0
+  const ok = title.trim() && who.length > 0 && !saving
+  const end = endFrom(start, dur)
+
+  useEffect(() => {
+    const scroller = document.querySelector('.main') as HTMLElement | null
+    const prev = scroller?.style.overflow ?? ''
+    if (scroller) scroller.style.overflow = 'hidden'
+    return () => { if (scroller) scroller.style.overflow = prev }
+  }, [])
+
+  const toggle = (id: string) => setWho(w => w.includes(id) ? w.filter(x => x !== id) : [...w, id])
+  const save = async () => {
+    setSaving(true); setErr('')
+    try { await onSave({ title: title.trim(), who, start, end }) }
+    catch (e) { setErr(errMsg(e)); setSaving(false) }
+  }
+
+  const Chip = (p: Person) => {
+    const on = who.includes(p.id)
+    return (
+      <button key={p.id} className={`cal2-who${on ? ' on' : ''}`} onClick={() => toggle(p.id)}
+        style={on ? { background: colorFor(p.id), borderColor: 'transparent', color: '#fff' } : { borderColor: colorFor(p.id), color: colorFor(p.id) }}>
+        <span className="cal2-who-av" style={{ background: on ? 'rgba(255,255,255,.28)' : colorFor(p.id), color: '#fff' }}>{initials(p.name)}</span>
+        {p.name.split(' ')[0]}
+      </button>
+    )
+  }
+
+  return (
+    <div className="sheet-scrim cal2-scrim2 cal2-scrim3" onClick={onClose}>
+      <div className="sheet cal2-sheet" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="sheet-grip" onClick={onClose} aria-label="Close" />
+        <div className="cal2-dd-head">
+          <div>
+            <div className="cal2-dd-dow">Edit {occ.kind === 'routine' ? 'routine' : 'plan'}</div>
+            <h3 className="cal2-dd-date">{occ.title}</h3>
+          </div>
+        </div>
+
+        <input className="field" placeholder="What's the plan?" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
+
+        <div className="cal2-lbl">Who</div>
+        <div className="cal2-who-wrap">
+          <button className={`cal2-who all${allOn ? ' on' : ''}`} onClick={() => setWho(allOn ? [] : members.map(m => m.id))}>
+            <IconCheck width={14} height={14} /> All
+          </button>
+          {primary.map(Chip)}
+          {extra.length > 0 && !showMore && (
+            <button className="cal2-who plus" onClick={() => setShowMore(true)} aria-label="Add more members"><IconPlus width={15} height={15} /></button>
+          )}
+          {showMore && extra.map(Chip)}
+        </div>
+
+        <div className="cal2-lbl">Time</div>
+        <div className="cal2-time-row">
+          <input className="field cal2-time" type="time" value={start} onChange={e => setStart(e.target.value)} />
+        </div>
+        <div className="cal2-dur">
+          {DURATIONS.map(o => (
+            <button key={o.m} className={`cal2-durchip${dur === o.m ? ' on' : ''}`} onClick={() => setDur(o.m)}>{o.l}</button>
+          ))}
+        </div>
+
+        {occ.kind === 'routine' && <p className="cal2-repeat-note">Weekly routine — repeats on this weekday.</p>}
+        {err && <div className="cal2-err">{err}</div>}
+
+        <button className="btn grad cal2-save" disabled={!ok} onClick={save}>
+          <IconCheck width={18} height={18} /> {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
     </div>

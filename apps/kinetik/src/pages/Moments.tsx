@@ -494,8 +494,9 @@ function CreateSheet({ circle, me, family, accent, onClose, onPosted }: {
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = [...files.map(f => f.file), ...Array.from(e.target.files ?? [])].slice(0, 10)
-    const next = picked.map(f => ({ file: f, kind: (f.type.startsWith('video') ? 'video' : 'photo') as 'video' | 'photo' }))
+    const next = picked.map(f => ({ file: f, kind: M.kindOf(f) }))
     setFiles(next); setPreviews(picked.map(f => URL.createObjectURL(f)))
+    if (fileRef.current) fileRef.current.value = '' // allow re-picking the same file
   }
   const toggleTag = (id: string) => setTags(t => t.includes(id) ? t.filter(x => x !== id) : [...t, id])
 

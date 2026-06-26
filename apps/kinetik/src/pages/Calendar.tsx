@@ -3,7 +3,7 @@ import { gsap } from 'gsap'
 import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
 import { week, monthGrid, occurrencesOn, fmtTime, DOW, type Occ } from '@lib/cal'
-import { ENERGY, initials, isoOf } from '@data/energy'
+import { ENERGY, initials, isoOf, colorFor } from '@data/energy'
 import type { EnergyKey, Person } from '@data/types'
 import { IconChevron, IconChevronL, IconSwitch, IconPhoto } from '@components/Icons'
 import DaySheet from '@components/DaySheet'
@@ -110,7 +110,7 @@ export default function Calendar() {
             </div>
             {visible.map(p => (
               <div key={p.id} className="cal2-head">
-                <span className="cal2-av" style={{ background: p.color }}>{initials(p.name)}</span>
+                <span className="cal2-av" style={{ background: colorFor(p.id) }}>{initials(p.name)}</span>
                 <span className="cal2-head-name">{p.name.split(' ')[0]}</span>
               </div>
             ))}
@@ -171,7 +171,7 @@ function MonthView({ year, month, events, routines, members, photoByDate, active
   const cells = monthGrid(year, month)
   const colorOf = (o: Occ): string => {
     const m = members.find(p => o.who.includes(p.id))
-    return m?.color ?? ENERGY[o.energy as EnergyKey]
+    return m ? colorFor(m.id) : ENERGY[o.energy as EnergyKey]
   }
   return (
     <div className="cal2-month">

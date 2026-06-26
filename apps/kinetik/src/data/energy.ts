@@ -40,3 +40,13 @@ export const todayISO = () => isoOf(new Date())
 // ---- pure name helpers ----
 export const initials = (name: string) =>
   name.trim().slice(0, name.includes(' ') ? 1 : 2).toUpperCase()
+
+// Stable, distinct colour per member — derived from the id so the same person
+// is always the same colour across Calendar / Today / day sheets, regardless of
+// whether their account stores a colour.
+const MEMBER_COLORS = ['#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6', '#F43F5E']
+export function colorFor(id: string): string {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return MEMBER_COLORS[h % MEMBER_COLORS.length]
+}

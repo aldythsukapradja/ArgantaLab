@@ -155,3 +155,31 @@ export function rollEncounter(world: string, gym = false): string | null {
   for (const x of weighted) { roll -= x.w; if (roll <= 0) return x.id }
   return weighted[0].id
 }
+
+// ── visible kin on the map (you SEE them and walk into them) ──
+export interface KinSpawn { id: string; kinId: string; r: number; c: number }
+
+/** Every grass tile (where kin can roam), excluding the player spawn. */
+export function grassTiles(m: MapDef): { r: number; c: number }[] {
+  const out: { r: number; c: number }[] = []
+  for (let r = 0; r < m.rows.length; r++) for (let c = 0; c < m.rows[r].length; c++) {
+    if (tileOf(m.rows[r][c]) === 'grass') out.push({ r, c })
+  }
+  return out
+}
+
+/** Populate the map with VISIBLE kin: ~6 weighted (commons many, legendaries
+ *  rare) scattered on grass + one legendary parked on the gym tile. */
+export function makeKinSpawns(m: MapDef): KinSpawn[] {
+  const grass = grassTiles(m).sort(() => Math.random() - 0.5)
+  const out: KinSpawn[] = []
+  const n = Math.min(6, grass.length)
+  for (let i = 0; i < n; i++) {
+    const id = rollEncounter(m.world, false)
+    if (id) out.push({ id: `${grass[i].r}-${grass[i].c}-${i}`, kinId: id, r: grass[i].r, c: grass[i].c })
+  }
+  for (let r = 0; r < m.rows.length; r++) for (let c = 0; c < m.rows[r].length; c++) {
+    if (tileOf(m.rows[r][c]) === 'gym') { const id = rollEncounter(m.world, true); if (id) out.push({ id: `gym-${r}-${c}`, kinId: id, r, c }) }
+  }
+  return out
+}

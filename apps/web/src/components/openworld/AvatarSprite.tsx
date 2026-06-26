@@ -7,6 +7,7 @@
 // ============================================================
 
 import { useAppStore } from '@store/appStore'
+import type { ResolvedOutfit } from '@/data/cosmetics'
 import Buddy, { type Mood } from '@components/avatar/Buddy'
 import MountSprite from './MountSprite'
 
@@ -17,11 +18,14 @@ export interface AvatarSpriteProps {
   bob?: boolean
   /** mount id or render key — when set, the avatar rides it */
   mount?: string
+  /** override the look (e.g. a co-op teammate's outfit); defaults to my own */
+  outfit?: ResolvedOutfit
   className?: string
 }
 
-export default function AvatarSprite({ mood = 'idle', size = 120, look, bob, mount, className }: AvatarSpriteProps) {
-  const outfit = useAppStore(s => s.resolvedOutfit())
+export default function AvatarSprite({ mood = 'idle', size = 120, look, bob, mount, outfit: outfitProp, className }: AvatarSpriteProps) {
+  const myOutfit = useAppStore(s => s.resolvedOutfit())
+  const outfit = outfitProp ?? myOutfit
 
   if (!mount) {
     return <Buddy mood={mood} size={size} look={look} bob={bob} outfit={outfit} className={className} />

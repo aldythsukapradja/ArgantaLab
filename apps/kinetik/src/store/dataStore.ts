@@ -33,6 +33,8 @@ interface DataStore extends CircleData {
   addRoutine: (r: Omit<Routine, 'id' | 'energy'>) => Promise<void>
   removeEvent: (id: string) => Promise<void>
   removeRoutine: (id: string) => Promise<void>
+  editEvent: (id: string, patch: repo.PlanPatch) => Promise<void>
+  editRoutine: (id: string, patch: repo.PlanPatch) => Promise<void>
   heart: (momentId: string) => Promise<void>
   /** Circle + member management (real DB writes; throw on failure). */
   addPerson: (circleId: string, name: string, role: Person['role'], color: string) => Promise<void>
@@ -87,6 +89,8 @@ export const useDataStore = create<DataStore>()((set, get) => ({
 
     // Cloud-first.
     try {
+      // Keep the roster mirroring the real circle membership before we read it.
+      await repo.syncPeopleAll().catch(() => {})
       const data = await repo.fetchAll()
       writeCache(data)
       set({ ...data, status: 'ready', source: 'cloud', error: null })
@@ -142,6 +146,20 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   removeRoutine: async (id) => {
     if (cloudReady) await repo.deleteRoutine(id)
     const routines = get().routines.filter(r => r.id !== id)
+    set({ routines })
+    writeCache({ ...pick(get()), routines })
+  },
+
+  editEvent: async (id, patch) => {
+    if (cloudReady) await repo.updateEvent(id, patch) // throws → surfaced to caller
+    const events = get().events.map(e => e.id === id ? applyPlanPatch(e, patch) : e)
+    set({ events })
+    writeCache({ ...pick(get()), events })
+  },
+
+  editRoutine: async (id, patch) => {
+    if (cloudReady) await repo.updateRoutine(id, patch)
+    const routines = get().routines.map(r => r.id === id ? applyPlanPatch(r, patch) : r)
     set({ routines })
     writeCache({ ...pick(get()), routines })
   },
@@ -208,6 +226,16 @@ export const useDataStore = create<DataStore>()((set, get) => ({
 }))
 
 const deriveEnergy = (t: string) => energyOf(t)
+
+/** Apply a title/who/time patch to an event or routine, re-deriving energy. */
+function applyPlanPatch<T extends KEvent | Routine>(item: T, patch: repo.PlanPatch): T {
+  const next = { ...item }
+  if (patch.title !== undefined) { next.title = patch.title; next.energy = deriveEnergy(patch.title) }
+  if (patch.who !== undefined) next.who = patch.who
+  if (patch.start !== undefined) next.start = patch.start
+  if (patch.end !== undefined) next.end = patch.end
+  return next
+}
 
 const pick = (s: DataStore): CircleData => ({
   circles: s.circles, people: s.people, routines: s.routines, events: s.events, moments: s.moments,

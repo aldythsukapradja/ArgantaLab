@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, Fragment } from 'react'
 import { gsap } from 'gsap'
 import { useDataStore, personById, firstName } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
-import { ENERGY, todayISO, initials } from '@data/energy'
+import { ENERGY, todayISO, initials, colorFor } from '@data/energy'
 import { occurrencesOn, fmtTime, untilText, isoTomorrow, toMin, type Occ } from '@lib/cal'
 import { IconChevron, IconHistory, IconCalendar, IconCheck } from '@components/Icons'
 import DaySheet from '@components/DaySheet'
@@ -230,7 +230,7 @@ function WhoAvatars({ who, names, compact }: { who: string[]; names?: boolean; c
       <span className="td-who-av">
         {who.slice(0, max).map(id => {
           const p = personById(id)
-          return <span key={id} className="who-dot" style={{ background: p?.color || 'var(--faint)' }} title={p?.name}>{initials(p?.name || '?')}</span>
+          return <span key={id} className="who-dot" style={{ background: colorFor(id) }} title={p?.name}>{initials(p?.name || '?')}</span>
         })}
       </span>
       {names && <em>{who.map(firstName).join(', ')}</em>}
