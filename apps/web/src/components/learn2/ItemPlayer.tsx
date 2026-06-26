@@ -8,6 +8,7 @@ import { logLearnEvent } from '@lib/analytics'
 import { bumpQuest } from '@lib/quests'
 import { renderItem } from './interactions'
 import Buddy from '@components/avatar/Buddy'
+import CheerSquad from '@components/openworld/CheerSquad'
 
 // Safety net: a single malformed item can never blank the whole app. If a
 // renderer throws, show a gentle "skip" instead of a white screen.
@@ -165,6 +166,8 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
           </button>
         </div>
       )}
+
+      <CheerSquad cheering={answered && lastCorrect} />
     </div>
   )
 }

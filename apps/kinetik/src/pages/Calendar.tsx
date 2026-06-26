@@ -29,15 +29,11 @@ export default function Calendar() {
   const [photoByDate, setPhotoByDate] = useState<Record<string, string>>({})
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
-  // Roster = the circle's live members PLUS anyone an event/routine still points
-  // at, so no entry shown on Today/Month can ever be unselectable on the board.
-  const members = useMemo(() => {
-    if (!circle) return []
-    const ref = new Set<string>()
-    for (const e of events) if (e.circleId === circle.id) for (const id of e.who) ref.add(id)
-    for (const r of routines) if (r.circleId === circle.id) for (const id of r.who) ref.add(id)
-    return people.filter(p => circle.memberIds.includes(p.id) || ref.has(p.id))
-  }, [people, circle, events, routines])
+  // Roster = the circle's LIVE (active) members only — the real database circle.
+  const members = useMemo(
+    () => people.filter(p => circle && circle.memberIds.includes(p.id)),
+    [people, circle],
+  )
 
   // Which members/columns to show, from the saved layout for this circle.
   // Falls back to the first up-to-4 members when nothing is saved yet.
@@ -269,6 +265,10 @@ function MonthView({ year, month, events, routines, members, photoByDate, active
   onPickDay: (iso: string) => void
 }) {
   const cells = monthGrid(year, month)
+  // Same live-member basis as the Board: only count entries involving a current
+  // circle member, so the month dots match what the Board actually shows.
+  const liveIds = new Set(members.map(m => m.id))
+  const isLive = (o: Occ) => o.who.length === 0 || o.who.some(id => liveIds.has(id))
   const colorOf = (o: Occ): string => {
     const m = members.find(p => o.who.includes(p.id))
     return m ? colorFor(m.id) : ENERGY[o.energy as EnergyKey]
@@ -280,7 +280,7 @@ function MonthView({ year, month, events, routines, members, photoByDate, active
       </div>
       <div className="cal2-month-grid">
         {cells.map(c => {
-          const items = c.inMonth ? occurrencesOn(events, routines, c.iso, activeCircleId) : []
+          const items = c.inMonth ? occurrencesOn(events, routines, c.iso, activeCircleId).filter(isLive) : []
           const photo = c.inMonth ? photoByDate[c.iso] : undefined
           return (
             <button

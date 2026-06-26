@@ -31,8 +31,13 @@ export default function Today() {
   const now = new Date()
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  const agenda = occurrencesOn(events, routines, todayISO(), activeCircleId)
-  const tomorrow = occurrencesOn(events, routines, isoTomorrow(), activeCircleId)
+  // Show only entries that involve a LIVE circle member (same basis as the
+  // Board). Orphaned/old-seed entries (who points only at people no longer in
+  // the circle) are hidden, so Today matches the real database circle.
+  const liveIds = new Set(circle?.memberIds ?? [])
+  const isLive = (o: Occ) => o.who.length === 0 || o.who.some(id => liveIds.has(id))
+  const agenda = occurrencesOn(events, routines, todayISO(), activeCircleId).filter(isLive)
+  const tomorrow = occurrencesOn(events, routines, isoTomorrow(), activeCircleId).filter(isLive)
   const next = agenda.find(a => toMin(a.end) > nowMin)
   const nextIdx = next ? agenda.indexOf(next) : agenda.length
   const total = agenda.length
