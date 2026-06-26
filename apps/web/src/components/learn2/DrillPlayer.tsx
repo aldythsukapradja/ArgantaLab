@@ -188,6 +188,8 @@ export default function DrillPlayer({ world, drill, onExit }: Props) {
           </button>
         </div>
       )}
+
+      <CheerSquad cheering={answered && lastCorrect} />
     </div>
   )
 }
