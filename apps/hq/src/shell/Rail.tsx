@@ -13,8 +13,8 @@ const GROUPS: Group[] = [
     { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid },
   ] },
   { name: 'Analytics', items: [
-    { id: 'data', label: 'Data', Icon: Database },
     { id: 'growth', label: 'Growth', Icon: TrendingUp },
+    { id: 'data', label: 'Data', Icon: Database },
   ] },
   { name: 'Build', items: [
     { id: 'game', label: 'Game Builder', Icon: Gamepad2 },

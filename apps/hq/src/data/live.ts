@@ -491,6 +491,36 @@ export const live = {
     return true
   },
 
+  /** Live KinetikCircle platform stats — queries kinetik tables directly. */
+  async kinetikStats(): Promise<KinetikStats | null> {
+    if (!cloudEnabled) return null
+    try {
+      const ago7d = new Date(Date.now() - 7 * 86400_000).toISOString()
+      const [circles, members, posts, posts7d, postData, bcastData] = await Promise.all([
+        supabase.from('circles').select('id', { count: 'exact', head: true }),
+        supabase.from('circle_members').select('id', { count: 'exact', head: true }),
+        supabase.from('kinetik_post').select('id', { count: 'exact', head: true }),
+        supabase.from('kinetik_post').select('id', { count: 'exact', head: true }).gte('created_at', ago7d),
+        supabase.from('kinetik_post').select('reaction_count').limit(10000),
+        supabase.from('kinetik_broadcast').select('status, view_count, reaction_count').limit(1000),
+      ])
+      const reactions = (postData.data ?? []).reduce((s: number, r: any) => s + (r.reaction_count || 0), 0)
+      const published = (bcastData.data ?? []).filter((b: any) => b.status === 'published')
+      const bViews = published.reduce((s: number, b: any) => s + (b.view_count || 0), 0)
+      const bReacts = published.reduce((s: number, b: any) => s + (b.reaction_count || 0), 0)
+      return {
+        circles: circles.count ?? 0,
+        members: members.count ?? 0,
+        posts: posts.count ?? 0,
+        posts7d: posts7d.count ?? 0,
+        reactions,
+        broadcastsPublished: published.length,
+        broadcastViews: bViews,
+        broadcastReactions: bReacts,
+      }
+    } catch { return null }
+  },
+
   /** Save many broadcasts at once (bulk import). Returns counts. */
   async saveBroadcastBatch(items: BroadcastInput[]): Promise<{ ok: number; fail: number }> {
     if (!cloudEnabled) return { ok: 0, fail: items.length }
@@ -543,6 +573,17 @@ export interface BroadcastInput {
   audience?: string
   status?: string
   publish_at?: string | null
+}
+
+export interface KinetikStats {
+  circles: number
+  members: number
+  posts: number
+  posts7d: number
+  reactions: number
+  broadcastsPublished: number
+  broadcastViews: number
+  broadcastReactions: number
 }
 
 export { cloudEnabled }
