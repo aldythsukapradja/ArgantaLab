@@ -3,6 +3,7 @@ import { useAppStore } from '@store/appStore'
 import { MOUNTS, type MountDef } from '@/data/openworld/mounts'
 import { RARITY_META } from '@/data/cosmetics'
 import { myMounts, buyMount, equipMount } from '@lib/mounts'
+import { setWish } from '@lib/wishlist'
 import AvatarSprite from '@components/openworld/AvatarSprite'
 import MountSprite from '@components/openworld/MountSprite'
 
@@ -85,7 +86,10 @@ export default function MountShop() {
                 ? <button className="shop2-pi-btn wear" onClick={unequip}>✓ Riding · tap to dismount</button>
                 : isOwned(preview)
                   ? <button className="shop2-pi-btn wear" onClick={() => wear(preview)}>Ride it</button>
-                  : <button className="shop2-pi-btn buy" disabled={busy} onClick={() => buy(preview)}>Buy · 💎 {preview.price}</button>}
+                  : <>
+                    <button className="shop2-pi-btn buy" disabled={busy} onClick={() => buy(preview)}>Buy · 💎 {preview.price}</button>
+                    <button className="shop2-pi-goal" onClick={() => { setWish({ id: preview.id, name: preview.name, price: preview.price, kind: 'mount', tint: preview.color }); addToast(`Saving for ${preview.name} 🎯`, '⭐') }}>⭐ Set as my goal</button>
+                  </>}
             </div>
           )}
           <button className="mtshop-link" onClick={() => go({ tab: 'shop' })}>👕 Cosmetics shop →</button>

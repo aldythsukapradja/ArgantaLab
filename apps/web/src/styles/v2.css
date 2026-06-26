@@ -132,6 +132,9 @@
 .mtshop-card-foot .mtshop-eq { color: #16a34a; }
 .mtshop-card-foot .mtshop-own { color: var(--accent); }
 .mtshop-gatepill { position: absolute; top: 6px; right: 6px; font-size: 13px; }
+.shop2-pi-goal { margin-top: 8px; width: 100%; background: transparent; border: 1px solid var(--border); color: var(--t2);
+  border-radius: 12px; padding: 8px 12px; font-size: 12.5px; font-weight: 750; cursor: pointer; transition: .14s; }
+.shop2-pi-goal:hover { background: var(--bg-1); color: var(--t1); }
 .shop2-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px;
   padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); font-size: 13px; color: var(--t2); }
 

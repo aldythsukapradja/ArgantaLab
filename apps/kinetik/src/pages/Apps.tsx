@@ -6,6 +6,7 @@ import { useUiStore } from '@store/uiStore'
 import * as repo from '@repo/kinetikRepo'
 import type { KApp } from '@repo/kinetikRepo'
 import { APP_ICON, IconChevronL } from '@components/Icons'
+import { NATIVE_APPS, type NativeApp } from '../apps/registry'
 
 // Deterministic gradient + glyph for an app that ships no thumbnail, so the
 // shelf still looks designed. Derived from the app's own name/category.
@@ -35,17 +36,17 @@ export default function Apps() {
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
 
   const [apps, setApps] = useState<KApp[] | null>(null)
-  const [err, setErr] = useState<string | null>(null)
   const [open, setOpen] = useState<KApp | null>(null)
+  const [native, setNative] = useState<NativeApp | null>(null)
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   useEffect(() => {
     if (!circle) return
     let alive = true
-    setApps(null); setErr(null)
+    setApps(null)
     repo.fetchApps(circle.id)
       .then(a => { if (alive) setApps(a) })
-      .catch(e => { if (alive) { setApps([]); setErr(e instanceof Error ? e.message : 'Could not load apps') } })
+      .catch(() => { if (alive) setApps([]) })
     return () => { alive = false }
   }, [circle?.id])
 
@@ -68,35 +69,26 @@ export default function Apps() {
         <span className="sh-orb sh-orb-1" />
         <span className="sh-orb sh-orb-2" />
         <div className="sh-top">
-          <span className="sh-kicker">CircleHQ</span>
+          <span className="sh-kicker">KinetikCircle</span>
         </div>
         <div className="sh-title">Apps for<br />{circle?.name ?? 'your circle'}</div>
         <div className="sh-foot">
-          <span className="sh-sub">{count > 0 ? `${count} app${count === 1 ? '' : 's'} published to this circle` : 'Apps you build in CircleHQ land here'}</span>
+          <span className="sh-sub">Shared family apps — everything links to your circle.</span>
         </div>
       </div>
 
-      {/* Your apps */}
-      <div className="apps-sec-head">
-        <span className="apps-sec-title">Your apps</span>
-        {apps && <span className="apps-sec-count">{count} {count === 1 ? 'app' : 'apps'}</span>}
+      {/* Native circle apps */}
+      <div className="apps-grid2">
+        {NATIVE_APPS.map(a => (
+          <button key={a.id} className="app-tile2" onClick={() => setNative(a)}>
+            <span className="app-ic2" style={{ background: `linear-gradient(140deg,${a.accent[0]},${a.accent[1]})`, fontSize: 26 }}>{a.emoji}</span>
+            <small>{a.name}</small>
+          </button>
+        ))}
       </div>
 
-      {apps === null && (
-        <div className="apps-grid2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div className="app-tile2" key={i}><span className="app-ic2 app-skel" /><small className="app-skel-line" /></div>
-          ))}
-        </div>
-      )}
-
-      {apps && apps.length === 0 && (
-        <div className="apps-empty">
-          <span className="apps-empty-ic"><APP_ICON.game width={28} height={28} /></span>
-          <b>No apps yet</b>
-          <p>{err ? err : 'Build an app in CircleHQ and publish it to this circle — it’ll appear here.'}</p>
-        </div>
-      )}
+      {/* Published CircleHQ apps */}
+      {apps && apps.length > 0 && <div className="apps-sec-head"><span className="apps-sec-title">From CircleHQ</span><span className="apps-sec-count">{count} {count === 1 ? 'app' : 'apps'}</span></div>}
 
       {apps && apps.length > 0 && (
         <div className="apps-grid2">
@@ -118,9 +110,10 @@ export default function Apps() {
         </div>
       )}
 
-      <p className="apps-note">Apps are built &amp; published from CircleHQ. Each one shares your circle “{circle?.name ?? ''}”.</p>
+      <p className="apps-note">Every app shares your circle “{circle?.name ?? ''}” — data is private to your family.</p>
 
       {open && createPortal(<AppRunner app={open} onClose={() => setOpen(null)} />, document.body)}
+      {native && createPortal(<native.Component onClose={() => setNative(null)} />, document.body)}
     </div>
   )
 }

@@ -38,6 +38,7 @@ export interface CloudProfile {
   friend_code?: string | null
   dob?: string | null
   gender?: string | null
+  stage_override?: string | null
   diamonds?: number
   xp?: number
   level?: number
@@ -348,9 +349,9 @@ export async function addKidToCircle(circleId: string, kidId: string): Promise<C
   if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
   return { ok: true }
 }
-export async function updateKid(kidId: string, displayName: string, dob: string | null, gender: string | null): Promise<CloudResult> {
+export async function updateKid(kidId: string, displayName: string, dob: string | null, gender: string | null, stage?: string | null): Promise<CloudResult> {
   if (!cloudEnabled) return { ok: false, error: 'cloud-disabled' }
-  const { error } = await supabase.rpc('update_kid', { p_kid: kidId, p_display_name: displayName, p_dob: dob, p_gender: gender })
+  const { error } = await supabase.rpc('update_kid', { p_kid: kidId, p_display_name: displayName, p_dob: dob, p_gender: gender, p_stage: stage ?? null })
   if (error) return { ok: false, error: error.message.replace(/^.*?:\s*/, '') }
   return { ok: true }
 }

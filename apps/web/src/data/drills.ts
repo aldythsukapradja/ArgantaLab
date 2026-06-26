@@ -319,6 +319,62 @@ function genSafety(): DrillItem[] {
   return shuf(SAFETY).map(([q, a, d]) => mcq('safe', 'LIF', 'kindness', q, a, [a, ...d]))
 }
 
+// ── extra generators (more variety for Drills + Openworld battles) ──
+function genDouble(): DrillItem[] {
+  return Array.from({ length: 12 }, () => { const a = ri(3, 50); return typed('double', 'NUM', 'arith', `Double ${a} = ?`, String(a * 2), { explanation: `${a} + ${a} = ${a * 2}.` }) })
+}
+function genRound(): DrillItem[] {
+  return Array.from({ length: 10 }, () => { const a = ri(11, 989); const r = Math.round(a / 10) * 10; return typed('round', 'NUM', 'placevalue', `Round ${a} to the nearest 10`, String(r)) })
+}
+const HOMO: [string, string, string[]][] = [
+  ['Those are ___ shoes. (belonging to them)', 'their', ['their', 'there', "they're"]],
+  ['Put the box over ___.', 'there', ['their', 'there', "they're"]],
+  ['___ going to win! (they are)', "They're", ['Their', 'There', "They're"]],
+  ['I have ___ cats. (the number)', 'two', ['to', 'too', 'two']],
+  ['Can I come ___? (also)', 'too', ['to', 'too', 'two']],
+  ['We walked ___ school.', 'to', ['to', 'too', 'two']],
+  ['___ book is this? (belonging to whom)', 'Whose', ['Whose', "Who's"]],
+]
+function genHomophone(): DrillItem[] {
+  return Array.from({ length: 8 }, () => { const [p, c, pool] = pick(HOMO); return mcq('homo', 'WRD', 'grammar', `Pick the right word: ${p}`, c, pool) })
+}
+const PREFIX: [string, string][] = [['un- (unhappy)', 'not'], ['re- (redo)', 'again'], ['pre- (preview)', 'before'], ['bi- (bicycle)', 'two'], ['tri- (triangle)', 'three'], ['sub- (submarine)', 'under'], ['multi- (multiple)', 'many'], ['trans- (transport)', 'across']]
+function genPrefix(): DrillItem[] {
+  const MEAN = ['not', 'again', 'before', 'two', 'three', 'under', 'many', 'across']
+  return Array.from({ length: 8 }, () => { const [p, m] = pick(PREFIX); return mcq('prefix', 'WRD', 'vocab', `What does "${p}" mean?`, m, MEAN) })
+}
+const SCI: [string, string, string[]][] = [
+  ['How many legs does an insect have?', '6', ['4', '6', '8', '10']],
+  ['Water freezes at… °C', '0', ['0', '10', '32', '100']],
+  ['Water boils at… °C', '100', ['0', '50', '100', '200']],
+  ['The closest star to Earth is the…', 'Sun', ['Sun', 'Moon', 'Mars', 'Venus']],
+  ['Plants give out which gas in daylight?', 'Oxygen', ['Oxygen', 'Smoke', 'Sugar', 'Iron']],
+  ['A baby frog is called a…', 'Tadpole', ['Tadpole', 'Puppy', 'Chick', 'Cub']],
+  ['Bees make…', 'Honey', ['Honey', 'Milk', 'Silk', 'Web']],
+  ['Which is a mammal?', 'Whale', ['Whale', 'Shark', 'Frog', 'Eagle']],
+]
+function genSci(): DrillItem[] {
+  return Array.from({ length: 8 }, () => { const [q, c, pool] = pick(SCI); return mcq('sci', 'WON', 'biology', q, c, pool) })
+}
+function genSeqNext(): DrillItem[] {
+  return Array.from({ length: 8 }, () => { const start = ri(1, 9), step = pick([2, 3, 5, 10]); const seq = [start, start + step, start + 2 * step]; return typed('seqn', 'LOG', 'logic', `What comes next? ${seq.join(', ')}, …`, String(start + 3 * step), { explanation: `Add ${step} each time.` }) })
+}
+const COUNTRY: [string, string][] = [['Egypt', 'Africa'], ['Kenya', 'Africa'], ['Japan', 'Asia'], ['India', 'Asia'], ['China', 'Asia'], ['Brazil', 'South America'], ['France', 'Europe'], ['Italy', 'Europe'], ['Canada', 'North America'], ['Australia', 'Oceania']]
+function genContinent(): DrillItem[] {
+  const CONT = ['Africa', 'Asia', 'Europe', 'South America', 'North America', 'Oceania']
+  return Array.from({ length: 8 }, () => { const [c, k] = pick(COUNTRY); return mcq('cont', 'WLD', 'geography', `Which continent is ${c} in?`, k, CONT) })
+}
+const HEALTH: [string, string, string[]][] = [
+  ['Which builds strong bones?', 'Milk', ['Milk', 'Soda', 'Candy', 'Chips']],
+  ['Best drink to rehydrate after sport?', 'Water', ['Water', 'Soda', 'Coffee', 'Juice']],
+  ['Roughly how many hours should kids sleep?', '10', ['4', '6', '10', '14']],
+  ['A kind word can make someone feel…', 'Happy', ['Happy', 'Sad', 'Angry', 'Scared']],
+  ['Before eating you should…', 'Wash hands', ['Wash hands', 'Run', 'Shout', 'Nap']],
+]
+function genHealthQ(): DrillItem[] {
+  return Array.from({ length: 6 }, () => { const [q, c, pool] = pick(HEALTH); return mcq('hq', 'LIF', 'habits', q, c, pool) })
+}
+
 // ════════════════════════════════════════════════════════════
 //  CATALOG
 // ════════════════════════════════════════════════════════════
@@ -358,6 +414,15 @@ export const DRILLS: Drill[] = [
   { key: 'lif-emotion', world: 'LIF', skill: 'kindness', title: 'Emotion Match', emoji: '😊', blurb: 'Name how someone feels.', rounds: 6, xp: 12, diamonds: 5, gen: genEmotion },
   { key: 'lif-healthy', world: 'LIF', skill: 'habits', title: 'Healthy Choices', emoji: '🥗', blurb: 'Pick the healthier option.', rounds: 6, xp: 12, diamonds: 5, gen: genHealthy },
   { key: 'lif-safety', world: 'LIF', skill: 'kindness', title: 'Safety Scenarios', emoji: '🦺', blurb: 'Stay safe — what would you do?', rounds: 5, xp: 14, diamonds: 6, gen: genSafety },
+  // — extra variety —
+  { key: 'num-double', world: 'NUM', skill: 'arith', title: 'Doubling Dash', emoji: '✌️', blurb: 'Double it, fast.', rounds: 12, xp: 12, diamonds: 5, gen: genDouble },
+  { key: 'num-round', world: 'NUM', skill: 'placevalue', title: 'Rounding Rush', emoji: '🎯', blurb: 'Round to the nearest 10.', rounds: 10, xp: 12, diamonds: 5, gen: genRound },
+  { key: 'wrd-homophone', world: 'WRD', skill: 'grammar', title: 'Homophone Hunt', emoji: '👂', blurb: 'there / their / they’re & more.', rounds: 8, xp: 14, diamonds: 6, gen: genHomophone },
+  { key: 'wrd-prefix', world: 'WRD', skill: 'vocab', title: 'Prefix Power', emoji: '🔤', blurb: 'What word-beginnings mean.', rounds: 8, xp: 12, diamonds: 5, gen: genPrefix },
+  { key: 'won-facts', world: 'WON', skill: 'biology', title: 'Science Snap', emoji: '🔬', blurb: 'Quick-fire science facts.', rounds: 8, xp: 12, diamonds: 5, gen: genSci },
+  { key: 'log-seqnext', world: 'LOG', skill: 'logic', title: 'Number Patterns', emoji: '➿', blurb: 'What number comes next?', rounds: 8, xp: 12, diamonds: 5, gen: genSeqNext },
+  { key: 'wld-continent', world: 'WLD', skill: 'geography', title: 'Continent Quest', emoji: '🌍', blurb: 'Which continent is it in?', rounds: 8, xp: 12, diamonds: 5, gen: genContinent },
+  { key: 'lif-health', world: 'LIF', skill: 'habits', title: 'Healthy Habits', emoji: '💪', blurb: 'Smart everyday choices.', rounds: 6, xp: 12, diamonds: 5, gen: genHealthQ },
 ]
 
 export const DRILLS_BY_WORLD: Record<string, Drill[]> = DRILLS.reduce((m, d) => {

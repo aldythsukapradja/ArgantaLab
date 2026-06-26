@@ -4,6 +4,7 @@ import { WORLDS } from '@/data/learn'
 import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import { getStreak, touchStreak } from '@lib/streak'
 import ExploringNotice from '@components/openworld/ExploringNotice'
+import WishlistGoal from '@components/openworld/WishlistGoal'
 import Buddy, { type Mood } from '@components/avatar/Buddy'
 import Avatar from '@/pages/Avatar'
 import Fame from '@/pages/Fame'
@@ -138,6 +139,7 @@ export default function PlayHome() {
             <span>{rec.pct >= 100 ? <>Rings glowing — keep your <b>{streak}-day</b> streak →</> : <>Play <b>{RING_LABEL[rec.w.key]}</b> to fill today's ring →</>}</span>
           </button>
 
+          <WishlistGoal onOpen={kind => kind === 'mount' ? go({ tab: 'mounts' }) : setHub('shop')} />
           <ExploringNotice onJoin={w => { useAppStore.setState({ enterLand: w }); go({ tab: w.toLowerCase() }) }} />
         </div>
       )}

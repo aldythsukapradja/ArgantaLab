@@ -32,6 +32,7 @@ import { kin as kinDef, ability, DEFAULT_LOADOUT, KIN, type KinDef } from '@/dat
 import { befriendKin } from '@lib/nexus'
 import { earnDiamonds } from '@lib/wallet'
 import { markSectionToday } from '@lib/sectionDaily'
+import { hasClearedKin, markKinCleared } from '@lib/openworldClears'
 import { myMounts } from '@lib/mounts'
 import KinSprite from './KinSprite'
 import AvatarSprite from './AvatarSprite'
@@ -147,7 +148,12 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
     rewarded.current = true
     setOutcome(befriended ? 'befriend' : 'defeat'); setPhase('over')
     if (won) {
-      const d = diamondsForVictory(TIER[def.rarity] ?? 1, true, befriended)
+      // First clear of THIS kin pays the full bonus; rematches pay ~half (no
+      // grinding the same kin for diamonds — the server daily cap also applies).
+      const first = !hasClearedKin(def.id)
+      markKinCleared(def.id)
+      let d = diamondsForVictory(TIER[def.rarity] ?? 1, first, befriended)
+      if (!first) d = Math.max(2, Math.round(d * 0.5))
       if (d > 0) earnDiamonds(d, 'openworld', `openworld:${def.id}`)
       bumpQuest('boss')
     }

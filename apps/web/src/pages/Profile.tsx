@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '@store/appStore'
-import { WORLDS, STAGE_META, ageFromDob, stageForDob } from '@/data/learn'
+import { WORLDS, STAGES, STAGE_META, ageFromDob, stageForDob } from '@/data/learn'
 import { earnedBadges } from '@lib/learnProgress'
 import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import { loadMyGames } from '@lib/myGames'
@@ -332,7 +332,7 @@ export default function Profile() {
       ) : (
         <div className="pp-kids">
           {kids.map((k, i) => {
-            const st = stageForDob(k.dob ?? undefined)
+            const st = (k.stage_override ? (STAGES.find(s => s.key === k.stage_override) ?? stageForDob(k.dob ?? undefined)) : stageForDob(k.dob ?? undefined))
             const meta = STAGE_META[st.key]
             const color = PALETTE[i % PALETTE.length]
             return (

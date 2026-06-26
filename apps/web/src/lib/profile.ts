@@ -14,6 +14,7 @@ export interface CloudProfile {
   unlocks: string[]
   role: string
   dob: string | null
+  stage_override: string | null
 }
 
 /**
@@ -56,6 +57,7 @@ export async function syncProfileOnLogin(session: Session): Promise<CloudProfile
     unlocks: (row?.unlocks as string[]) ?? [],
     role: (row?.role as string) ?? 'user',
     dob: (row?.dob as string) ?? (row?.birthday as string) ?? null,
+    stage_override: (row?.stage_override as string) ?? null,
   }
 
   // Only backfill identity fields that the cloud row is missing (e.g. a brand-new

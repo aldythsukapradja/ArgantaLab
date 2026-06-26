@@ -12,6 +12,14 @@ import { CONTENT_PACK_3 } from './contentPack3'
 import { CONTENT_PACK_4 } from './contentPack4'
 import { CONTENT_PACK_5 } from './contentPack5'
 import { CONTENT_PACK_6 } from './contentPack6'
+import { CONTENT_PACK_7 } from './contentPack7'
+import { CONTENT_PACK_8 } from './contentPack8'
+import { CONTENT_PACK_9 } from './contentPack9'
+import { CONTENT_PACK_10 } from './contentPack10'
+import { CONTENT_PACK_11 } from './contentPack11'
+import { CONTENT_PACK_12 } from './contentPack12'
+import { CONTENT_PACK_13 } from './contentPack13'
+import { CONTENT_PACK_14 } from './contentPack14'
 
 export type InteractionKey =
   | 'mcq' | 'multi' | 'type' | 'speed' | 'bank' | 'cloze'
@@ -509,7 +517,7 @@ const EXTRA_ITEMS: Item[] = [
   it('LIF', 'party', 'party', 'Emoji guess', { prompt: 'It rains from these ☁️', reveal: '🌧️ Clouds!' }),
 ]
 
-export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS, ...EXPLORER_PACK, ...(STAGE_PACKS as Item[]), ...(CONTENT_PACK_2 as Item[]), ...(CONTENT_PACK_3 as Item[]), ...(CONTENT_PACK_4 as Item[]), ...(CONTENT_PACK_5 as Item[]), ...(CONTENT_PACK_6 as Item[])]
+export const LOCAL_ITEMS: Item[] = [...NUM_ITEMS, ...WRD_ITEMS, ...WON_ITEMS, ...LOG_ITEMS, ...WLD_ITEMS, ...LIF_ITEMS, ...EXTRA_ITEMS, ...EXPLORER_PACK, ...(STAGE_PACKS as Item[]), ...(CONTENT_PACK_2 as Item[]), ...(CONTENT_PACK_3 as Item[]), ...(CONTENT_PACK_4 as Item[]), ...(CONTENT_PACK_5 as Item[]), ...(CONTENT_PACK_6 as Item[]), ...(CONTENT_PACK_7 as Item[]), ...(CONTENT_PACK_8 as Item[]), ...(CONTENT_PACK_9 as Item[]), ...(CONTENT_PACK_10 as Item[]), ...(CONTENT_PACK_11 as Item[]), ...(CONTENT_PACK_12 as Item[]), ...(CONTENT_PACK_13 as Item[]), ...(CONTENT_PACK_14 as Item[])]
 
 export function localItemsFor(world: string, skills: string[], stage = 'explorer'): Item[] {
   return LOCAL_ITEMS.filter(i => i.world === world && i.stage === stage && skills.includes(i.skill))

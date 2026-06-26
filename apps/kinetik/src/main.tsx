@@ -5,6 +5,7 @@ import { useUiStore } from './store/uiStore'
 import { gsap } from 'gsap'
 import './styles/globals.css'
 import './styles/pages.css'
+import './styles/apps.css'
 
 // Hydrate theme before first paint so there is no flash.
 document.documentElement.dataset.theme = useUiStore.getState().theme

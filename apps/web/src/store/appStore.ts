@@ -78,7 +78,7 @@ interface AppStore {
   studioMessages: StudioMessage[]
 
   // — actions —
-  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string; dob?: string | null }) => void
+  hydrateFromCloud: (p: { display_name: string; xp: number; level: number; diamonds: number; completed_lessons: string[]; badges: string[]; games_played: string[]; unlocks: string[]; role?: string; dob?: string | null; stage_override?: string | null }) => void
   resetIdentity: () => void
   setStage: (key: string) => void
   isAdmin: () => boolean
@@ -208,10 +208,10 @@ export const useAppStore = create<AppStore>()(
           gamesPlayed: p.games_played ?? [],
           unlocks: p.unlocks ?? [],
           role: p.role ?? get().role,
-          // Kids are LOCKED to their own age band. Grown-ups have no kid DOB, so
-          // (instead of defaulting to "Tiny") they start at the oldest band and
-          // can switch freely via setStage().
-          stageKey: (p.role ?? get().role) === 'kid' ? stageForDob(p.dob ?? undefined).key : 'legend',
+          // Kids are LOCKED to their level: a guardian's stage_override if set,
+          // else auto-by-age (DOB). Grown-ups have no kid DOB, so they start at
+          // the oldest band and can switch freely via setStage().
+          stageKey: (p.role ?? get().role) === 'kid' ? (p.stage_override || stageForDob(p.dob ?? undefined).key) : 'legend',
         })
       },
 

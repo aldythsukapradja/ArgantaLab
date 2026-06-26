@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { COSMETICS, SLOTS, RARITY_META, resolveOutfit, type Slot, type Cosmetic } from '@/data/cosmetics'
+import { setWish } from '@lib/wishlist'
 import Buddy from '@components/avatar/Buddy'
 
 type Filter = 'all' | Slot
@@ -8,7 +9,7 @@ type Filter = 'all' | Slot
 // The Diamond Shop: browse 80+ cosmetics, try any on the live avatar, buy with
 // diamonds, then wear instantly. Roblox-style catalog.
 export default function Shop() {
-  const { diamonds, outfit, ownsCosmetic, buyCosmetic, equipCosmetic, go } = useAppStore()
+  const { diamonds, outfit, ownsCosmetic, buyCosmetic, equipCosmetic, go, addToast } = useAppStore()
   const [filter, setFilter] = useState<Filter>('all')
   const [preview, setPreview] = useState<Cosmetic | null>(null)
 
@@ -53,7 +54,10 @@ export default function Shop() {
               <b>{preview.name}</b>
               {ownsCosmetic(preview.id)
                 ? <button className="shop2-pi-btn wear" onClick={() => wear(preview)}>Wear it</button>
-                : <button className="shop2-pi-btn buy" onClick={() => buy(preview)}>Buy · 💎 {preview.price}</button>}
+                : <>
+                  <button className="shop2-pi-btn buy" onClick={() => buy(preview)}>Buy · 💎 {preview.price}</button>
+                  <button className="shop2-pi-goal" onClick={() => { setWish({ id: preview.id, name: preview.name, price: preview.price, kind: 'cosmetic', tint: RARITY_META[preview.rarity].color }); addToast(`Saving for ${preview.name} 🎯`, '⭐') }}>⭐ Set as my goal</button>
+                </>}
             </div>
           ) : (
             <p className="shop2-preview-hint">Tap an item to try it on ✨</p>
