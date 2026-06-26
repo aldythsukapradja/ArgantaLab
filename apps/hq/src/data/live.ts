@@ -452,6 +452,86 @@ export const live = {
       () => {/* RPC may not exist yet; ignore */},
     )
   },
+
+  // ── Broadcast ("Discover" feed engine) ──
+
+  /** Full broadcast catalogue (operator-only RPC). Empty array when offline. */
+  async listBroadcasts(): Promise<BroadcastRow[]> {
+    if (!cloudEnabled) return []
+    const rows = await rpc<BroadcastRow[]>('hq_broadcast_list')
+    return rows ?? []
+  },
+
+  /** Create or update a broadcast. Returns the new/updated id, or null. */
+  async saveBroadcast(b: BroadcastInput): Promise<string | null> {
+    if (!cloudEnabled) return null
+    const { data, error } = await supabase.rpc('hq_broadcast_save', {
+      p_id: b.id ?? null,
+      p_format: b.format, p_theme: b.theme, p_title: b.title, p_body: b.body ?? null,
+      p_media_kind: b.media_kind ?? 'none', p_media_url: b.media_url ?? null,
+      p_source: b.source ?? null, p_emoji: b.emoji ?? null, p_accent: b.accent ?? null,
+      p_audience: b.audience ?? 'circle', p_status: b.status ?? 'draft',
+      p_publish_at: b.publish_at ?? null,
+    })
+    if (error) { console.warn('[hq] saveBroadcast →', error.message); return null }
+    return data as string
+  },
+
+  async setBroadcastStatus(id: string, status: string): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const { error } = await supabase.rpc('hq_broadcast_set_status', { p_id: id, p_status: status })
+    if (error) { console.warn('[hq] setBroadcastStatus →', error.message); return false }
+    return true
+  },
+
+  async deleteBroadcast(id: string): Promise<boolean> {
+    if (!cloudEnabled) return false
+    const { error } = await supabase.rpc('hq_broadcast_delete', { p_id: id })
+    if (error) { console.warn('[hq] deleteBroadcast →', error.message); return false }
+    return true
+  },
+
+  /** Promote any due scheduled broadcasts (no-op cron fallback). */
+  async publishDueBroadcasts(): Promise<void> {
+    if (!cloudEnabled) return
+    await supabase.rpc('hq_broadcast_publish_due').then(undefined, () => {/* ignore */})
+  },
+}
+
+export interface BroadcastRow {
+  id: string
+  format: string
+  theme: string
+  title: string
+  body: string | null
+  media_kind: string
+  media_url: string | null
+  source: string | null
+  emoji: string | null
+  accent: string | null
+  audience: string
+  status: string
+  publish_at: string | null
+  published_at: string | null
+  view_count: number
+  reaction_count: number
+  created_at: string
+}
+
+export interface BroadcastInput {
+  id?: string | null
+  format: string
+  theme: string
+  title: string
+  body?: string | null
+  media_kind?: string
+  media_url?: string | null
+  source?: string | null
+  emoji?: string | null
+  accent?: string | null
+  audience?: string
+  status?: string
+  publish_at?: string | null
 }
 
 export { cloudEnabled }

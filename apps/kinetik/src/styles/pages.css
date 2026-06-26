@@ -1564,6 +1564,34 @@ html[data-theme='dark'] .apps-empty { box-shadow: none; }
 .mom2-tab.on { color: var(--c0); border-bottom-color: var(--c0); }
 .mom2-empty { padding: 22px; text-align: center; color: var(--muted); font-size: 13px; }
 
+/* broadcast ("Discover") card — authored by KinetikCircle */
+.bcast { background: var(--card); border: 0.5px solid var(--border); border-radius: 16px;
+  box-shadow: var(--shadow); overflow: hidden; margin-bottom: 14px;
+  border-top: 3px solid var(--bc, #8B5CF6); }
+.bcast-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
+.bcast-id { line-height: 1.25; min-width: 0; }
+.bcast-id b { font-size: 14px; font-weight: 800; color: var(--ink); display: block; }
+.bcast-id small { font-size: 11px; color: var(--faint); }
+.bcast-badge { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--muted);
+  background: var(--bg-2); border-radius: 999px; padding: 3px 9px; flex: 0 0 auto; }
+.bcast-media { position: relative; width: 100%; aspect-ratio: 16 / 10; background: var(--bg-2); overflow: hidden; }
+.bcast-media .smimg { position: absolute; inset: 0; display: block; }
+.bcast-media video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+.bcast-body { padding: 12px 16px 8px; }
+.bcast-body h3 { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink);
+  margin: 0 0 6px; line-height: 1.25; }
+.bcast-body p { font-size: 14px; color: var(--muted); line-height: 1.55; margin: 0; white-space: pre-wrap; }
+.bcast-src { font-size: 12px; color: var(--faint); margin-top: 8px; }
+.bcast-react { display: flex; gap: 7px; padding: 8px 14px 14px; flex-wrap: wrap; }
+.bcast-rx { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
+  background: var(--bg-2); border: 0.5px solid transparent; font-size: 15px; line-height: 1;
+  transition: transform 0.12s, background 0.12s, border-color 0.12s; }
+.bcast-rx small { font-size: 12px; font-weight: 700; color: var(--muted); }
+.bcast-rx:active { transform: scale(0.92); }
+.bcast-rx.on { background: color-mix(in srgb, var(--bc, #8B5CF6) 16%, var(--card));
+  border-color: color-mix(in srgb, var(--bc, #8B5CF6) 45%, transparent); }
+.bcast-rx.on small { color: var(--ink); }
+
 /* stories */
 .mom2-stories { display: flex; gap: 14px; padding: 14px 2px; overflow-x: auto; scrollbar-width: none; }
 .mom2-stories::-webkit-scrollbar { display: none; }
