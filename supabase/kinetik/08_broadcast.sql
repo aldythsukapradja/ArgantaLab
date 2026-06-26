@@ -1,5 +1,5 @@
 -- ============================================================
---  KINETIK · BROADCAST  ("Discover" feed engine)  — run AFTER 04_moments.sql
+--  KINETIK · BROADCAST  ("Discover" feed engine)  — run AFTER the other kinetik files
 --
 --  Platform-authored content that fills every circle's feed so it is never
 --  empty: fun facts, top-10s, parenting tips, did-you-knows, quotes — posted
