@@ -27,7 +27,7 @@ export default function CheerSquad({ cheering = false }: { cheering?: boolean })
       <div className="cheer-av"><AvatarSprite size={66} mount={mount} mood={cheering ? 'happy' : 'idle'} /></div>
       {kins.map((k, i) => (
         <div key={k.id} className="cheer-kin" style={{ animationDelay: `${i * 0.12}s` }}>
-          <KinSprite kin={k.kin_key} size={42} bob />
+          <KinSprite kin={k.kin_key} size={42} />
         </div>
       ))}
     </div>
