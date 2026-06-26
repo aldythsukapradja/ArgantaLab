@@ -4,6 +4,7 @@ import { useUiStore } from '@store/uiStore'
 import { initials, colorFor } from '@data/energy'
 import { vault, type VaultDoc, type VaultBudget, type VaultExpense, type VaultSub, type VaultField } from '@repo/appsRepo'
 import AppShell, { type AppTab } from './AppShell'
+import { Ring, CountUp } from './ui'
 
 const ACCENT: [string, string] = ['#0E9D6B', '#34D399']
 const TABS: AppTab[] = [{ key: 'docs', label: 'Documents' }, { key: 'money', label: 'Money' }, { key: 'family', label: 'Family' }]
@@ -43,6 +44,13 @@ export default function VaultApp({ onClose }: { onClose: () => void }) {
   const monthExp = expenses.filter(e => e.spentAt >= mStart)
   const monthTotal = monthExp.reduce((s, e) => s + e.amount, 0)
   const subTotal = subs.reduce((s, x) => s + x.amount, 0)
+  const totalBudget = budgets.reduce((s, b) => s + b.monthly, 0)
+  const budgetPct = totalBudget ? Math.min(100, Math.round(monthTotal / totalBudget * 100)) : (monthTotal ? 100 : 0)
+  const topCats = useMemo(() => {
+    const m = new Map<string, { icon: string; amt: number }>()
+    for (const e of monthExp) { const r = m.get(e.category) ?? { icon: e.icon, amt: 0 }; r.amt += e.amount; m.set(e.category, r) }
+    return [...m.entries()].map(([cat, r]) => ({ cat, ...r })).sort((a, b) => b.amt - a.amt).slice(0, 3)
+  }, [expenses])
   const expiringSoon = docs.filter(d => { const dt = daysTo(d.expiry); return dt != null && dt <= 30 }).length
 
   return (
@@ -85,15 +93,25 @@ export default function VaultApp({ onClose }: { onClose: () => void }) {
 
           {money2 === 'overview' && (
             <>
-              <div className="kap-card" style={{ marginTop: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: 'var(--faint)', fontWeight: 700 }}>This month</div>
-                <div style={{ fontSize: 30, fontWeight: 800, margin: '4px 0' }}>{money(monthTotal)}</div>
+              <div className="kap-hero" style={{ marginTop: 12 }}>
+                <Ring pct={budgetPct} value={<CountUp to={budgetPct} fmt={n => `${Math.round(n)}%`} />} label={totalBudget ? 'of budget' : 'spent'} />
+                <div className="kap-hero-main">
+                  <div className="kap-hero-ey">This month</div>
+                  <div className="kap-hero-big">QAR <CountUp to={monthTotal} /></div>
+                  <div className="kap-hero-sub">{monthExp.length} transactions · {money(subTotal)}/mo subs</div>
+                </div>
               </div>
-              <div className="kap-stats" style={{ marginTop: 10 }}>
-                <div className="kap-stat"><b>{monthExp.length}</b><span>Transactions</span></div>
-                <div className="kap-stat"><b>{money(subTotal)}</b><span>Subs / mo</span></div>
-                <div className="kap-stat"><b>{budgets.length}</b><span>Budgets</span></div>
-              </div>
+              {topCats.length > 0 && (
+                <>
+                  <div className="kap-sec"><h2>Top spending</h2></div>
+                  {topCats.map(c => (
+                    <div key={c.cat} className="kap-card" style={{ marginBottom: 9 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><b>{c.icon} {c.cat}</b><small style={{ color: 'var(--faint)', fontWeight: 700 }}>{money(c.amt)}</small></div>
+                      <div className="kap-bar"><i style={{ width: `${Math.round(c.amt / topCats[0].amt * 100)}%` }} /></div>
+                    </div>
+                  ))}
+                </>
+              )}
             </>
           )}
 

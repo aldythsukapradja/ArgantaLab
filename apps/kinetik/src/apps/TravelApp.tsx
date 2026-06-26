@@ -4,12 +4,21 @@ import { useUiStore } from '@store/uiStore'
 import { initials, colorFor } from '@data/energy'
 import { travel, type Trip, type Activity, type PackItem, type TripExpense } from '@repo/appsRepo'
 import AppShell, { type AppTab } from './AppShell'
+import { Ring, CountUp, Skeleton } from './ui'
 
 const ACCENT: [string, string] = ['#0E9DC4', '#38BDF8']
 const TABS: AppTab[] = [{ key: 'overview', label: 'Overview' }, { key: 'plan', label: 'Itinerary' }, { key: 'pack', label: 'Packing' }, { key: 'budget', label: 'Budget' }]
 const money = (n: number) => `QAR ${Math.round(n).toLocaleString()}`
 const fmtDate = (iso?: string | null) => iso ? new Date(iso + 'T00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '—'
 const nightsOf = (a?: string | null, b?: string | null) => (a && b) ? Math.max(0, Math.round((+new Date(b) - +new Date(a)) / 864e5)) : 0
+function countdown(t: Trip): string {
+  if (!t.startDate) return 'Trip'
+  const d = Math.ceil((+new Date(t.startDate + 'T00:00') - Date.now()) / 864e5)
+  if (d > 1) return `In ${d} days`
+  if (d === 1) return 'Tomorrow'
+  if (t.endDate && +new Date(t.endDate + 'T23:59') >= Date.now()) return 'Happening now'
+  return 'Trip complete'
+}
 const SMART_PACK = ['Passport / IDs', 'Chargers', 'Toiletries', 'Medication', 'Clothes', 'Shoes', 'Sunglasses', 'Travel docs', 'Adapter', 'Snacks']
 const errMsg = (e: unknown) => (e && typeof e === 'object' ? String((e as any).message || (e as any).details || JSON.stringify(e)) : String(e))
 
@@ -64,7 +73,7 @@ export default function TravelApp({ onClose }: { onClose: () => void }) {
       {!trip ? (
         <>
           <div className="kap-sec"><h2>Your trips</h2><span className="kap-sec-sub">{trips?.length ?? 0} planned</span></div>
-          {trips === null && <div className="kap-empty">Loading…</div>}
+          {trips === null && <><Skeleton h={70} /><Skeleton h={70} /></>}
           {trips && trips.length === 0 && (
             <div className="kap-empty"><span className="kap-empty-ic">✈️</span><b>No trips yet</b><p>Tap New to start planning your next adventure.</p></div>
           )}
@@ -88,19 +97,18 @@ export default function TravelApp({ onClose }: { onClose: () => void }) {
         <>
           {dtab === 'overview' && (
             <>
-              <div className="kap-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span className="kap-row-em" style={{ fontSize: 26 }}>{trip.emoji}</span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{trip.destination || trip.title}</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--faint)' }}>📅 {fmtDate(trip.startDate)} – {fmtDate(trip.endDate)} · {nightsOf(trip.startDate, trip.endDate)} nights</div>
-                  </div>
+              <div className="kap-hero">
+                <Ring pct={packPct} value={<CountUp to={packPct} fmt={n => `${Math.round(n)}%`} />} label="packed" />
+                <div className="kap-hero-main">
+                  <div className="kap-hero-ey">{countdown(trip)}</div>
+                  <div className="kap-hero-big">{trip.destination || trip.title}</div>
+                  <div className="kap-hero-sub">📅 {fmtDate(trip.startDate)} – {fmtDate(trip.endDate)} · {nightsOf(trip.startDate, trip.endDate)} nights</div>
                 </div>
               </div>
               <div className="kap-stats" style={{ marginTop: 10 }}>
                 <div className="kap-stat"><b>{nightsOf(trip.startDate, trip.endDate)}</b><span>Nights</span></div>
-                <div className="kap-stat"><b>{packPct}%</b><span>Packed</span></div>
-                <div className="kap-stat"><b>{money(spent)}</b><span>Spent</span></div>
+                <div className="kap-stat"><b><CountUp to={spent} fmt={n => Math.round(n).toLocaleString()} /></b><span>QAR spent</span></div>
+                <div className="kap-stat"><b>{trip.travelers.length || 'All'}</b><span>Travelers</span></div>
               </div>
               <div className="kap-sec"><h2>Travelers</h2></div>
               {members.filter(m => trip.travelers.includes(m.id)).map(m => (

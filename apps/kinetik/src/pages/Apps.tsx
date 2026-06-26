@@ -41,6 +41,13 @@ export default function Apps() {
   const [native, setNative] = useState<NativeApp | null>(null)
   const [snips, setSnips] = useState<Record<string, string>>({})
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const root = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!root.current) return
+    gsap.fromTo(root.current.querySelectorAll('.rise'),
+      { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.06, ease: 'power3.out' })
+  }, [])
 
   useEffect(() => {
     if (!circle) return
@@ -62,7 +69,7 @@ export default function Apps() {
   const count = apps?.length ?? 0
 
   return (
-    <div className="fade-in apps2">
+    <div className="fade-in apps2" ref={root}>
       <div className="apps2-head rise">
         <h1>Apps</h1>
         <p>Native to {circle?.name ?? 'your circle'} — data stays in your family.</p>

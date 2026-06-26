@@ -4,6 +4,7 @@ import { useUiStore } from '@store/uiStore'
 import { isoOf } from '@data/energy'
 import { kitchen, type Recipe, type MealPlan, type ShopItem } from '@repo/appsRepo'
 import AppShell, { type AppTab } from './AppShell'
+import { Ring, CountUp } from './ui'
 
 const ACCENT: [string, string] = ['#FF6A4D', '#FF9F4D']
 const TABS: AppTab[] = [{ key: 'recipes', label: 'Recipes' }, { key: 'plan', label: 'Plan' }, { key: 'shop', label: 'Shop' }, { key: 'circle', label: 'Circle' }]
@@ -92,6 +93,16 @@ export default function KitchenApp({ onClose }: { onClose: () => void }) {
 
       {tab === 'shop' && (
         <>
+          {shop.length > 0 && (
+            <div className="kap-hero" style={{ marginBottom: 12 }}>
+              <Ring pct={shop.length ? Math.round(shop.filter(i => i.done).length / shop.length * 100) : 0} value={<CountUp to={shop.filter(i => i.done).length} />} label={`of ${shop.length}`} />
+              <div className="kap-hero-main">
+                <div className="kap-hero-ey">Shopping run</div>
+                <div className="kap-hero-big">{shop.filter(i => !i.done).length} to get</div>
+                <div className="kap-hero-sub">{aisles.length} aisle{aisles.length === 1 ? '' : 's'}</div>
+              </div>
+            </div>
+          )}
           <div className="kap-chips" style={{ marginTop: 4 }}>{QUICK.map(([e, n, a]) => <button key={n} className="kap-chip" onClick={async () => { await kitchen.addShop(cid, [{ name: n, aisle: a }]).catch(() => {}); reloadS() }}>{e} {n}</button>)}</div>
           <div className="kap-sec"><h2>Shopping list</h2><span className="kap-sec-sub">{shop.filter(i => !i.done).length} to get</span></div>
           {shop.length === 0 && <div className="kap-empty"><span className="kap-empty-ic">🧺</span><b>Your list is clear</b><p>Tap a quick item above or send a recipe from Plan.</p></div>}

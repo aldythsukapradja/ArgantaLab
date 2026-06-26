@@ -1156,6 +1156,33 @@ html[data-theme='dark'] .auth-card-shell { box-shadow: 0 24px 70px rgba(0, 0, 0,
 /* =========================================================
    APP STORE v2 — hero + grid
    ========================================================= */
+/* ---- Apps tab v2 — premium live launcher cards ---- */
+.apps2 { padding-top: 6px; }
+.apps2-head { padding: 4px 2px 2px; }
+.apps2-head h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.025em; color: var(--ink); }
+.apps2-head p { font-size: 13px; color: var(--muted); margin-top: 3px; font-weight: 500; }
+.apps2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.apps2-card {
+  position: relative; overflow: hidden; text-align: left; min-height: 132px;
+  display: flex; flex-direction: column; gap: 9px; padding: 16px;
+  border-radius: 22px; background: var(--card); border: 0.5px solid var(--border);
+  box-shadow: 0 10px 30px -16px rgba(20, 16, 40, 0.3);
+  transition: transform 0.16s var(--ease);
+}
+html[data-theme='dark'] .apps2-card { box-shadow: none; }
+.apps2-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(130% 90% at 100% 0%, color-mix(in srgb, var(--ca0) 16%, transparent), transparent 60%); pointer-events: none; }
+.apps2-card:active { transform: scale(0.97); }
+.apps2-ic { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; font-size: 25px; background: linear-gradient(140deg, var(--ca0), var(--ca1)); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--ca0) 60%, transparent); position: relative; }
+.apps2-name { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; position: relative; margin-top: auto; }
+.apps2-snip { font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--ca0) 70%, var(--muted)); position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.apps2-go { position: absolute; top: 15px; right: 15px; font-size: 16px; font-weight: 800; color: color-mix(in srgb, var(--ca0) 80%, var(--ink)); opacity: 0.8; }
+.apps2-sec { display: flex; align-items: baseline; justify-content: space-between; margin: 26px 2px 12px; }
+.apps2-sec span { font-size: 14px; font-weight: 800; color: var(--ink); }
+.apps2-sec small { font-size: 12px; color: var(--faint); font-weight: 600; }
+.apps2-mini { display: flex; gap: 16px; flex-wrap: wrap; }
+.apps2-mini-tile { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 64px; }
+@media (min-width: 720px) { .apps2-grid { grid-template-columns: repeat(4, 1fr); } }
+
 .apps-page { padding-top: 6px; }
 .apps-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px 2px; }
 .apps-head h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
