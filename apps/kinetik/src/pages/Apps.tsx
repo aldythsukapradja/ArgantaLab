@@ -7,6 +7,7 @@ import * as repo from '@repo/kinetikRepo'
 import type { KApp } from '@repo/kinetikRepo'
 import { APP_ICON, IconChevronL } from '@components/Icons'
 import { NATIVE_APPS, type NativeApp } from '../apps/registry'
+import * as appsRepo from '@repo/appsRepo'
 
 // Deterministic gradient + glyph for an app that ships no thumbnail, so the
 // shelf still looks designed. Derived from the app's own name/category.
@@ -38,15 +39,17 @@ export default function Apps() {
   const [apps, setApps] = useState<KApp[] | null>(null)
   const [open, setOpen] = useState<KApp | null>(null)
   const [native, setNative] = useState<NativeApp | null>(null)
+  const [snips, setSnips] = useState<Record<string, string>>({})
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   useEffect(() => {
     if (!circle) return
     let alive = true
-    setApps(null)
+    setApps(null); setSnips({})
     repo.fetchApps(circle.id)
       .then(a => { if (alive) setApps(a) })
       .catch(() => { if (alive) setApps([]) })
+    appsRepo.appSnippets(circle.id).then(s => { if (alive) setSnips(s) }).catch(() => {})
     return () => { alive = false }
   }, [circle?.id])
 
@@ -59,58 +62,50 @@ export default function Apps() {
   const count = apps?.length ?? 0
 
   return (
-    <div className="fade-in apps-page">
-      <div className="apps-head">
+    <div className="fade-in apps2">
+      <div className="apps2-head rise">
         <h1>Apps</h1>
+        <p>Native to {circle?.name ?? 'your circle'} — data stays in your family.</p>
       </div>
 
-      {/* Store hero */}
-      <div className="store-hero" role="presentation">
-        <span className="sh-orb sh-orb-1" />
-        <span className="sh-orb sh-orb-2" />
-        <div className="sh-top">
-          <span className="sh-kicker">KinetikCircle</span>
-        </div>
-        <div className="sh-title">Apps for<br />{circle?.name ?? 'your circle'}</div>
-        <div className="sh-foot">
-          <span className="sh-sub">Shared family apps — everything links to your circle.</span>
-        </div>
-      </div>
-
-      {/* Native circle apps */}
-      <div className="apps-grid2">
+      {/* Native circle apps — live cards */}
+      <div className="apps2-grid">
         {NATIVE_APPS.map(a => (
-          <button key={a.id} className="app-tile2" onClick={() => setNative(a)}>
-            <span className="app-ic2" style={{ background: `linear-gradient(140deg,${a.accent[0]},${a.accent[1]})`, fontSize: 26 }}>{a.emoji}</span>
-            <small>{a.name}</small>
+          <button
+            key={a.id}
+            className="apps2-card rise"
+            ref={el => (refs.current[a.id] = el)}
+            style={{ ['--ca0' as any]: a.accent[0], ['--ca1' as any]: a.accent[1] }}
+            onClick={() => { const el = refs.current[a.id]; if (el) gsap.fromTo(el, { scale: 0.94 }, { scale: 1, duration: 0.45, ease: 'back.out(3)' }); setNative(a) }}
+          >
+            <span className="apps2-ic">{a.emoji}</span>
+            <span className="apps2-name">{a.name}</span>
+            <span className="apps2-snip">{snips[a.id] ?? a.tagline}</span>
+            <span className="apps2-go" aria-hidden>↗</span>
           </button>
         ))}
       </div>
 
-      {/* Published CircleHQ apps */}
-      {apps && apps.length > 0 && <div className="apps-sec-head"><span className="apps-sec-title">From CircleHQ</span><span className="apps-sec-count">{count} {count === 1 ? 'app' : 'apps'}</span></div>}
-
+      {/* Published CircleHQ apps — secondary shelf */}
       {apps && apps.length > 0 && (
-        <div className="apps-grid2">
-          {apps.map(a => {
-            const [g0, g1] = gradFor(a.id + a.name)
-            const Icon = APP_ICON[iconFor(a.category, a.name)]
-            return (
-              <button key={a.id} className="app-tile2" ref={el => (refs.current[a.id] = el)} onClick={() => tap(a)}>
-                <span className="app-ic2" style={a.thumbnail ? { padding: 0, overflow: 'hidden' } : { background: `linear-gradient(140deg,${g0},${g1})` }}>
-                  {a.thumbnail
-                    ? <img src={a.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <Icon width={26} height={26} />}
-                  {a.featured && <span className="app-badge2">★</span>}
-                </span>
-                <small>{a.name}</small>
-              </button>
-            )
-          })}
-        </div>
+        <>
+          <div className="apps2-sec rise"><span>From CircleHQ</span><small>{count} {count === 1 ? 'app' : 'apps'}</small></div>
+          <div className="apps2-mini rise">
+            {apps.map(a => {
+              const [g0, g1] = gradFor(a.id + a.name)
+              const Icon = APP_ICON[iconFor(a.category, a.name)]
+              return (
+                <button key={a.id} className="apps2-mini-tile" ref={el => (refs.current[a.id] = el)} onClick={() => tap(a)}>
+                  <span className="app-ic2" style={a.thumbnail ? { padding: 0, overflow: 'hidden' } : { background: `linear-gradient(140deg,${g0},${g1})` }}>
+                    {a.thumbnail ? <img src={a.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon width={24} height={24} />}
+                  </span>
+                  <small>{a.name}</small>
+                </button>
+              )
+            })}
+          </div>
+        </>
       )}
-
-      <p className="apps-note">Every app shares your circle “{circle?.name ?? ''}” — data is private to your family.</p>
 
       {open && createPortal(<AppRunner app={open} onClose={() => setOpen(null)} />, document.body)}
       {native && createPortal(<native.Component onClose={() => setNative(null)} />, document.body)}

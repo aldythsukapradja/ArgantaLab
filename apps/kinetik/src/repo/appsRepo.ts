@@ -7,6 +7,25 @@
 import { supabase } from '@lib/supabase'
 
 const rows = <T>(data: unknown): T[] => (data ?? []) as T[]
+
+/** One-line live snippet per app for the launcher cards (count-only, cheap). */
+export async function appSnippets(circleId: string): Promise<Record<string, string>> {
+  const out: Record<string, string> = {}
+  const count = async (table: string, q?: (b: any) => any): Promise<number> => {
+    try { let b = supabase.from(table).select('id', { count: 'exact', head: true }).eq('circle_id', circleId); if (q) b = q(b); const { count } = await b; return count ?? 0 } catch { return 0 }
+  }
+  const [trips, sessions, dinners, docs] = await Promise.all([
+    count('kinetik_trip'),
+    count('kinetik_padel_session'),
+    count('kinetik_meal_plan', b => b.not('recipe_id', 'is', null)),
+    count('kinetik_vault_doc'),
+  ])
+  out.travel = trips ? `${trips} trip${trips === 1 ? '' : 's'} planned` : 'Plan a trip'
+  out.padel = sessions ? 'Session ready · tap to play' : 'Set up a session'
+  out.kitchen = dinners ? `${dinners} dinner${dinners === 1 ? '' : 's'} planned` : 'Plan the week'
+  out.vault = docs ? `${docs} document${docs === 1 ? '' : 's'} stored` : 'Secure your docs'
+  return out
+}
 async function ok<T>(p: PromiseLike<{ data: T; error: unknown }>): Promise<T> {
   const { data, error } = await p
   if (error) throw error

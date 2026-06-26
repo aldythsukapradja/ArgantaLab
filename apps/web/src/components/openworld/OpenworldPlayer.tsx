@@ -91,9 +91,9 @@ const BREAK  = LOADOUT.find(a => a.kind === 'break')!
 const CHARGE = LOADOUT.find(a => a.kind === 'charge')!
 
 // Endless, renderItem-compatible question stream sourced from the world's drills.
-function buildQueue(worldKey: string): DrillItem[] {
+function buildQueue(worldKey: string, stage?: string): DrillItem[] {
   const drills = DRILLS_BY_WORLD[worldKey] ?? []
-  const items = drills.flatMap(d => d.gen())
+  const items = drills.flatMap(d => d.gen(stage))
     // clock/flag need DrillPlayer's bespoke renderers; the battle uses the
     // standard interaction layer, so keep the renderItem-native types.
     .filter(it => it.type === 'mcq' || it.type === 'type')
@@ -104,7 +104,7 @@ function buildQueue(worldKey: string): DrillItem[] {
 interface Props { world: World; kinId: string; coop?: boolean; onExit: () => void }
 
 export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: Props) {
-  const { addXp, addToast } = useAppStore()
+  const { addXp, addToast, stageKey } = useAppStore()
   // The kid rides their equipped mount into battle (cosmetic + perk). Loaded from
   // the cloud; on-foot if none equipped or offline.
   const [mount, setMount] = useState<string | undefined>(undefined)
@@ -117,7 +117,7 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
 
   const [s, setS] = useState<CombatState>(() => createBattle(player, enemyFrom(def)))
   const [phase, setPhase] = useState<Phase>('question')
-  const [queue, setQueue] = useState<DrillItem[]>(() => buildQueue(world.key))
+  const [queue, setQueue] = useState<DrillItem[]>(() => buildQueue(world.key, stageKey))
   const [qIdx, setQIdx] = useState(0)
   const [lastCorrect, setLastCorrect] = useState(false)
   const [outcome, setOutcome] = useState<'befriend' | 'defeat' | null>(null)
@@ -137,7 +137,7 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
   // Pull the next question, regenerating the deck endlessly so a battle never
   // runs dry (pure fluency pressure, like the drills).
   const drawItem = (): DrillItem => {
-    if (qIdx + 1 >= queue.length) { const fresh = buildQueue(world.key); setQueue(fresh); setQIdx(0); return fresh[0] }
+    if (qIdx + 1 >= queue.length) { const fresh = buildQueue(world.key, stageKey); setQueue(fresh); setQIdx(0); return fresh[0] }
     const next = queue[qIdx + 1]; setQIdx(qIdx + 1); return next
   }
   const item = queue[qIdx]

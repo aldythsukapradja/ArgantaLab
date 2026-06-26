@@ -30,7 +30,9 @@ begin
 end; $$;
 grant execute on function public.update_kid(uuid, text, date, text, text) to authenticated;
 
--- expose stage_override on my_children() so the Profile cards show the real level
+-- expose stage_override on my_children() so the Profile cards show the real level.
+-- (adding a column changes the OUT row type, so Postgres needs a DROP first.)
+drop function if exists public.my_children();
 create or replace function public.my_children()
 returns table(id uuid, display_name text, username text, photo_url text, dob date, gender text,
               diamonds int, xp int, level int, last_seen timestamptz, friend_code text, stage_override text)

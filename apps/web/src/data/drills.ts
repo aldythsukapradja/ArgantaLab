@@ -33,8 +33,13 @@ export interface Drill {
   rounds: number           // questions per round
   xp: number               // round-completion XP
   diamonds: number         // round-completion diamonds
-  gen: () => DrillItem[]    // fresh, shuffled items every call
+  gen: (stage?: string) => DrillItem[]    // fresh, shuffled items every call; numeric drills scale to stage
 }
+
+// Level 0..5 for a stage — numeric generators widen their ranges as it grows, so
+// a Tiny kid and a Legend get age-appropriate drills + openworld battles.
+const STAGE_LVL: Record<string, number> = { tiny: 0, starter: 1, explorer: 2, builder: 3, champion: 4, legend: 5 }
+const lvl = (stage?: string) => STAGE_LVL[stage ?? 'explorer'] ?? 2
 
 // ── tiny RNG helpers (no deps) ──────────────────────────────
 const ri = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1))
@@ -57,16 +62,18 @@ function typed(k: string, world: string, skill: string, prompt: string, answer: 
 // ════════════════════════════════════════════════════════════
 //  NUM · NumberDash
 // ════════════════════════════════════════════════════════════
-function genTimes(): DrillItem[] {
+function genTimes(stage?: string): DrillItem[] {
+  const L = lvl(stage); const max = L <= 1 ? 5 : L === 2 ? 9 : 12
   return Array.from({ length: 12 }, () => {
-    const a = ri(2, 12), b = ri(2, 12)
+    const a = ri(2, max), b = ri(2, max)
     return typed('times', 'NUM', 'times', `${a} × ${b} = ?`, String(a * b), { explanation: `${a} × ${b} = ${a * b}.` })
   })
 }
-function genAddSub(): DrillItem[] {
+function genAddSub(stage?: string): DrillItem[] {
+  const L = lvl(stage); const hi = L === 0 ? 10 : L === 1 ? 30 : L === 2 ? 99 : L === 3 ? 500 : 9999
   return Array.from({ length: 12 }, () => {
-    if (Math.random() < 0.5) { const a = ri(2, 50), b = ri(2, 50); return typed('addsub', 'NUM', 'arith', `${a} + ${b} = ?`, String(a + b)) }
-    const a = ri(10, 60), b = ri(1, a); return typed('addsub', 'NUM', 'arith', `${a} − ${b} = ?`, String(a - b))
+    if (Math.random() < 0.5) { const a = ri(2, hi), b = ri(2, hi); return typed('addsub', 'NUM', 'arith', `${a} + ${b} = ?`, String(a + b)) }
+    const a = ri(Math.ceil(hi / 4), hi), b = ri(1, a); return typed('addsub', 'NUM', 'arith', `${a} − ${b} = ?`, String(a - b))
   })
 }
 const FRACS: [string, number][] = [['1/2', .5], ['1/3', .333], ['1/4', .25], ['1/5', .2], ['2/3', .667], ['3/4', .75], ['2/5', .4], ['1/8', .125], ['3/8', .375], ['5/8', .625]]
@@ -320,11 +327,14 @@ function genSafety(): DrillItem[] {
 }
 
 // ── extra generators (more variety for Drills + Openworld battles) ──
-function genDouble(): DrillItem[] {
-  return Array.from({ length: 12 }, () => { const a = ri(3, 50); return typed('double', 'NUM', 'arith', `Double ${a} = ?`, String(a * 2), { explanation: `${a} + ${a} = ${a * 2}.` }) })
+function genDouble(stage?: string): DrillItem[] {
+  const hi = lvl(stage) <= 1 ? 12 : lvl(stage) === 2 ? 50 : 200
+  return Array.from({ length: 12 }, () => { const a = ri(2, hi); return typed('double', 'NUM', 'arith', `Double ${a} = ?`, String(a * 2), { explanation: `${a} + ${a} = ${a * 2}.` }) })
 }
-function genRound(): DrillItem[] {
-  return Array.from({ length: 10 }, () => { const a = ri(11, 989); const r = Math.round(a / 10) * 10; return typed('round', 'NUM', 'placevalue', `Round ${a} to the nearest 10`, String(r)) })
+function genRound(stage?: string): DrillItem[] {
+  if (lvl(stage) >= 3) return Array.from({ length: 10 }, () => { const a = ri(101, 9899); const r = Math.round(a / 100) * 100; return typed('round', 'NUM', 'placevalue', `Round ${a} to the nearest 100`, String(r)) })
+  const hi = lvl(stage) <= 1 ? 99 : 989
+  return Array.from({ length: 10 }, () => { const a = ri(11, hi); const r = Math.round(a / 10) * 10; return typed('round', 'NUM', 'placevalue', `Round ${a} to the nearest 10`, String(r)) })
 }
 const HOMO: [string, string, string[]][] = [
   ['Those are ___ shoes. (belonging to them)', 'their', ['their', 'there', "they're"]],

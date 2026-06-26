@@ -101,9 +101,9 @@ function renderDrillItem(item: DrillItem, color: string, onResult: (correct: boo
 interface Props { world: World; drill: Drill; onExit: () => void }
 
 export default function DrillPlayer({ world, drill, onExit }: Props) {
-  const { addXp, resolvedOutfit } = useAppStore()
+  const { addXp, resolvedOutfit, stageKey } = useAppStore()
   const acc = resolvedOutfit()
-  const queue = useMemo(() => drill.gen(), [drill.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  const queue = useMemo(() => drill.gen(stageKey), [drill.key, stageKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const [idx, setIdx] = useState(0)
   const [answered, setAnswered] = useState(false)
   const [lastCorrect, setLastCorrect] = useState(false)
