@@ -4,6 +4,7 @@ import { useUiStore } from '@store/uiStore'
 import { initials, todayISO } from '@data/energy'
 import { padel, type PadelSession, type PadelPlayer, type PadelMatch } from '@repo/appsRepo'
 import AppShell, { type AppTab } from './AppShell'
+import { CountUp } from './ui'
 
 const ACCENT: [string, string] = ['#2F6BFF', '#54C7EC']
 const TABS: AppTab[] = [{ key: 'setup', label: 'Setup' }, { key: 'players', label: 'Players' }, { key: 'matches', label: 'Matches' }, { key: 'board', label: 'Board' }]
@@ -142,7 +143,7 @@ export default function PadelApp({ onClose }: { onClose: () => void }) {
             <div className="kap-card" style={{ textAlign: 'center', background: `linear-gradient(135deg,${ACCENT[0]},${ACCENT[1]})`, color: '#fff', border: 'none' }}>
               <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.9, letterSpacing: '.06em' }}>🏆 CHAMPION</div>
               <div style={{ fontSize: 22, fontWeight: 800, margin: '4px 0' }}>{board[0].name}</div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>{board[0].pts} points · {board[0].w}W-{board[0].l}L</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}><CountUp to={board[0].pts} /> points · {board[0].w}W-{board[0].l}L</div>
             </div>
           )}
           {board.length > 0 && (
