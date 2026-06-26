@@ -164,6 +164,8 @@ export default function DrillPlayer({ world, drill, onExit }: Props) {
         <span className="le-count" style={{ color: world.color }}>{idx + 1}/{total}</span>
       </div>
 
+      <CheerSquad cheering={answered && lastCorrect} />
+
       <div className="le-stage">
         <div className="le-prompt">{item!.prompt}</div>
         <div key={item!.id} className="le-render">
@@ -189,8 +191,6 @@ export default function DrillPlayer({ world, drill, onExit }: Props) {
           </button>
         </div>
       )}
-
-      <CheerSquad cheering={answered && lastCorrect} />
     </div>
   )
 }

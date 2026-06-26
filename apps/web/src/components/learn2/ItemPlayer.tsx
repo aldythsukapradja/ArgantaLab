@@ -140,6 +140,8 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
         <span className="le-count" style={{ color: world.color }}>{idx + 1}/{total}</span>
       </div>
 
+      <CheerSquad cheering={answered && lastCorrect} />
+
       <div className="le-stage">
         <div className="le-prompt">{item!.prompt}</div>
         {/* key remounts the renderer (and its error boundary) per item */}
@@ -166,8 +168,6 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
           </button>
         </div>
       )}
-
-      <CheerSquad cheering={answered && lastCorrect} />
     </div>
   )
 }
