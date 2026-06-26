@@ -491,6 +491,17 @@ export const live = {
     return true
   },
 
+  /** Save many broadcasts at once (bulk import). Returns counts. */
+  async saveBroadcastBatch(items: BroadcastInput[]): Promise<{ ok: number; fail: number }> {
+    if (!cloudEnabled) return { ok: 0, fail: items.length }
+    let ok = 0, fail = 0
+    for (const b of items) {
+      const id = await this.saveBroadcast(b)
+      if (id) ok++; else fail++
+    }
+    return { ok, fail }
+  },
+
   /** Promote any due scheduled broadcasts (no-op cron fallback). */
   async publishDueBroadcasts(): Promise<void> {
     if (!cloudEnabled) return
