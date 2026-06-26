@@ -8,7 +8,7 @@ import { Growth } from '../surfaces/Growth'
 import { Portfolio } from '../surfaces/Portfolio'
 import { Content } from '../surfaces/Content'
 import { Agents } from '../surfaces/Agents'
-import { Moments } from '../surfaces/Moments'
+import { Broadcast } from '../surfaces/Broadcast'
 import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 import { AgentOrb } from '../components/AgentOrb'
 
@@ -22,7 +22,7 @@ function Surface() {
     case 'game': return <GameBuilder />
     case 'app': return <AppBuilder />
     case 'agents': return <Agents />
-    case 'moments': return <Moments />
+    case 'broadcast': return <Broadcast />
   }
 }
 

@@ -4,6 +4,7 @@ import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
 import { initials } from '@data/energy'
 import * as M from '@repo/momentsRepo'
+import * as B from '@repo/broadcastRepo'
 import { fetchFamily, type FamilyMember } from '@repo/kinetikRepo'
 import { IconHeart, IconComment, IconDiamond, IconPlus, IconPhoto, IconChevron, IconCheck } from '@components/Icons'
 
@@ -57,6 +58,7 @@ export default function Moments() {
 
   const [sub, setSub] = useState<Sub>('feed')
   const [feed, setFeed] = useState<M.MPost[] | null>(null)
+  const [bcasts, setBcasts] = useState<B.BcastPost[]>([])
   const [stories, setStories] = useState<M.MStoryGroup[]>([])
   const [albums, setAlbums] = useState<M.MAlbum[] | null>(null)
   const [milestones, setMilestones] = useState<M.MMilestone[] | null>(null)
@@ -86,6 +88,7 @@ export default function Moments() {
     setFeed(null); setErr(null)
     M.fetchFeed(circle.id).then(setFeed).catch(e => { setFeed([]); setErr(errMsg(e)) })
     M.fetchStories(circle.id).then(setStories).catch(() => setStories([]))
+    B.fetchBroadcasts().then(bs => { setBcasts(bs); bs.forEach(b => B.seenBroadcast(b.id)) }).catch(() => setBcasts([]))
   }
   useEffect(loadFeed, [circle?.id])
   useEffect(() => { if (circle) fetchFamily(circle.id, me).then(setFamily).catch(() => {}) }, [circle?.id, me?.id])
@@ -98,6 +101,11 @@ export default function Moments() {
     const next = post.myReaction === emoji ? null : emoji
     setFeed(f => f && f.map(p => p.id === post.id ? applyReaction(p, next) : p))
     try { await M.toggleReaction(post.id, next) } catch { loadFeed() }
+  }
+  const reactBcast = async (b: B.BcastPost, emoji: string) => {
+    const next = b.myReaction === emoji ? null : emoji
+    setBcasts(list => list.map(x => x.id === b.id ? applyBcastReaction(x, next) : x))
+    try { await B.reactBroadcast(b.id, next) } catch { B.fetchBroadcasts().then(setBcasts).catch(() => {}) }
   }
   const reward = async (post: M.MPost, amount: number) => {
     try {
@@ -119,6 +127,7 @@ export default function Moments() {
       M.fetchStories(circle.id).then(setStories).catch(() => {}),
       M.fetchAlbums(circle.id).then(setAlbums).catch(() => {}),
       M.fetchMilestones(circle.id).then(setMilestones).catch(() => {}),
+      B.fetchBroadcasts().then(setBcasts).catch(() => {}),
     ])
   }
   // pull-to-refresh on the scroll container
@@ -172,8 +181,9 @@ export default function Moments() {
         <div className="mom2-feedwrap">
           <div className="mom2-feedmain">
             <StoriesRail stories={stories} albums={albums ?? []} onAdd={() => setCreating(true)} onOpen={i => setStoryAt(i)} onOpenAlbum={a => setAlbumStoryFor(a)} />
+            {bcasts.map(b => <BroadcastCard key={b.id} b={b} onReact={reactBcast} />)}
             {feed === null && <div className="mom2-empty">Loading…</div>}
-            {feed && feed.length === 0 && <EmptyState onCreate={() => setCreating(true)} />}
+            {feed && feed.length === 0 && bcasts.length === 0 && <EmptyState onCreate={() => setCreating(true)} />}
             {feed && feed.map(p => (
               <PostCard key={p.id} post={p} meId={me?.id} nameOf={nameOf} onReact={react} onReward={reward} onComments={() => setOpenPost(p)} onDelete={() => del(p)} onAddToAlbum={() => setAlbumPickFor(p)} onEditDate={() => setEditDateFor(p)} onEditCaption={() => setEditCaptionFor(p)} />
             ))}
@@ -253,6 +263,73 @@ function applyReaction(p: M.MPost, next: string | null): M.MPost {
 }
 
 // ── stories rail ──
+// ── Broadcast ("Discover") card — authored by KinetikCircle ──
+function applyBcastReaction(b: B.BcastPost, next: string | null): B.BcastPost {
+  const reactions = { ...b.reactions }
+  if (b.myReaction) reactions[b.myReaction] = Math.max((reactions[b.myReaction] ?? 1) - 1, 0)
+  if (next) reactions[next] = (reactions[next] ?? 0) + 1
+  const count = b.reactionCount + (next ? 1 : 0) - (b.myReaction ? 1 : 0)
+  return { ...b, reactions, myReaction: next, reactionCount: Math.max(count, 0) }
+}
+
+const BCAST_FORMAT_LABEL: Record<string, string> = {
+  fact: 'Fun Fact', did_you_know: 'Did You Know', top10: 'Top 10', tip: 'Tip', quote: 'Quote', story: 'Story',
+}
+
+function KMark({ size = 30 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" role="img" aria-label="KinetikCircle" style={{ flex: 'none' }}>
+      <defs>
+        <linearGradient id="kc-mark" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#22D3EE" /><stop offset="1" stopColor="#8B5CF6" />
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="116" fill="url(#kc-mark)" />
+      <circle cx="256" cy="256" r="106" fill="none" stroke="#fff" strokeWidth="40" />
+      <circle cx="332" cy="180" r="34" fill="#fff" />
+      <circle cx="256" cy="256" r="22" fill="#fff" />
+    </svg>
+  )
+}
+
+function BroadcastCard({ b, onReact }: { b: B.BcastPost; onReact: (b: B.BcastPost, e: string) => void }) {
+  const accent = b.accent || '#8B5CF6'
+  return (
+    <article className="bcast" style={{ ['--bc' as any]: accent }}>
+      <header className="bcast-head">
+        <KMark size={34} />
+        <div className="bcast-id">
+          <b>KinetikCircle</b>
+          <small>Discover · {BCAST_FORMAT_LABEL[b.format] || 'Fun Fact'}</small>
+        </div>
+        <span className="bcast-badge">{timeAgo(b.publishedAt)}</span>
+      </header>
+      {b.mediaKind === 'image' && b.mediaUrl && (
+        <div className="bcast-media"><SmartImg src={b.mediaUrl} /></div>
+      )}
+      {b.mediaKind === 'video' && b.mediaUrl && (
+        <div className="bcast-media"><video src={b.mediaUrl} controls playsInline preload="metadata" /></div>
+      )}
+      <div className="bcast-body">
+        <h3>{b.emoji ? `${b.emoji} ` : ''}{b.title}</h3>
+        {b.body && <p>{b.body}</p>}
+        {b.source && <div className="bcast-src">— {b.source}</div>}
+      </div>
+      <footer className="bcast-react">
+        {REACTIONS.map(e => {
+          const n = b.reactions[e] ?? 0
+          const on = b.myReaction === e
+          return (
+            <button key={e} className={`bcast-rx${on ? ' on' : ''}`} onClick={() => onReact(b, e)}>
+              <span>{e}</span>{n > 0 && <small>{n}</small>}
+            </button>
+          )
+        })}
+      </footer>
+    </article>
+  )
+}
+
 function StoriesRail({ stories, albums, onAdd, onOpen, onOpenAlbum }: { stories: M.MStoryGroup[]; albums: M.MAlbum[]; onAdd: () => void; onOpen: (i: number) => void; onOpenAlbum: (a: M.MAlbum) => void }) {
   return (
     <div className="mom2-stories">
