@@ -10,6 +10,7 @@ import { earnDiamonds } from '@lib/wallet'
 import { markSectionToday } from '@lib/sectionDaily'
 import { renderItem } from './interactions'
 import Buddy from '@components/avatar/Buddy'
+import CheerSquad from '@components/openworld/CheerSquad'
 
 // Drills reuse the journey's interaction renderers, but add two visual
 // renderers of their own (an analog clock face + a flag image). Everything
