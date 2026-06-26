@@ -2,20 +2,27 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Megaphone, Sparkles, Library as LibraryIcon, FlaskConical, LayoutGrid,
   Eye, Heart, Send, CalendarClock, Pencil, Trash2, Plus, Image as ImageIcon,
-  Video, Archive, Check, Flame, ArrowUpRight,
+  Video, Archive, Check, Flame, ArrowUpRight, Wand2, ClipboardPaste, Copy,
+  ExternalLink, ListChecks, Minus,
 } from 'lucide-react'
-import { live, cloudEnabled, type BroadcastRow } from '../data/live'
+import { live, cloudEnabled, type BroadcastRow, type BroadcastInput } from '../data/live'
 import {
   FORMATS, THEMES, LIBRARY, RESEARCH, formatDef, themeDef, accentFor, blankDraft,
   type BFormat, type BTheme, type BMediaKind, type BAudience, type LibraryItem,
 } from '../data/broadcast'
+import {
+  GOALS, packsByGoal, buildPrompt, parseImport,
+  type PromptPack, type PromptGoal, type ParsedPost,
+} from '../data/prompts'
 import { Loading, Empty } from '../components/Empty'
 import { compact } from '../lib/format'
 
-type Tab = 'catalogue' | 'studio' | 'library' | 'research'
+type Tab = 'catalogue' | 'studio' | 'prompts' | 'import' | 'library' | 'research'
 const TABS: { id: Tab; label: string; Icon: typeof Sparkles }[] = [
   { id: 'catalogue', label: 'Catalogue', Icon: LayoutGrid },
   { id: 'studio', label: 'Studio', Icon: Sparkles },
+  { id: 'prompts', label: 'Prompts', Icon: Wand2 },
+  { id: 'import', label: 'Import', Icon: ClipboardPaste },
   { id: 'library', label: 'Library', Icon: LibraryIcon },
   { id: 'research', label: 'Research', Icon: FlaskConical },
 ]
@@ -122,6 +129,8 @@ export function Broadcast() {
 
       {tab === 'catalogue' && <Catalogue rows={rows} onNew={() => openStudio()} onEdit={r => openStudio(rowToDraft(r))} onReload={reload} onMsg={setMsg} />}
       {tab === 'studio' && <Studio draft={draft} setDraft={setDraft} onNew={() => openStudio()} onSaved={(m) => { setMsg(m); reload(); setTab('catalogue') }} onMsg={setMsg} />}
+      {tab === 'prompts' && <PromptsTab onImport={() => setTab('import')} />}
+      {tab === 'import' && <ImportTab onSaved={(m) => { setMsg(m); reload(); setTab('catalogue') }} onMsg={setMsg} />}
       {tab === 'library' && <LibraryTab onClone={(it) => openStudio(it)} />}
       {tab === 'research' && <Research onUse={(theme, format) => openStudio({ theme, format })} />}
     </div>
@@ -541,6 +550,285 @@ function Research({ onUse }: { onUse: (theme: BTheme, format: BFormat) => void }
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ── Shared bits ───────────────────────────────────────────────
+function Stepper({ value, set, min = 1, max = 40, step = 1 }: { value: number; set: (n: number) => void; min?: number; max?: number; step?: number }) {
+  const clamp = (n: number) => Math.max(min, Math.min(max, n))
+  return (
+    <div className="row" style={{ gap: 0, border: '1px solid var(--bd2)', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
+      <button className="chip" style={{ border: 'none', borderRadius: 0, padding: '7px 11px' }} onClick={() => set(clamp(value - step))}><Minus size={13} /></button>
+      <span style={{ minWidth: 40, textAlign: 'center', fontSize: 13, fontWeight: 700 }}>{value}</span>
+      <button className="chip" style={{ border: 'none', borderRadius: 0, padding: '7px 11px' }} onClick={() => set(clamp(value + step))}><Plus size={13} /></button>
+    </div>
+  )
+}
+
+function CopyButton({ text, label = 'Copy prompt', big }: { text: string; label?: string; big?: boolean }) {
+  const [done, setDone] = useState(false)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text) }
+    catch {
+      const ta = document.createElement('textarea'); ta.value = text
+      ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select()
+      try { document.execCommand('copy') } catch { /* ignore */ }
+      document.body.removeChild(ta)
+    }
+    setDone(true); setTimeout(() => setDone(false), 1800)
+  }
+  return (
+    <button className="chip" style={{ gap: 6, padding: big ? '9px 16px' : undefined, fontSize: big ? 13 : undefined, fontWeight: 700, background: done ? '#10B981' : 'var(--acc)', color: '#fff', borderColor: 'transparent' }} onClick={copy}>
+      {done ? <><Check size={14} /> Copied to clipboard</> : <><Copy size={big ? 14 : 13} /> {label}</>}
+    </button>
+  )
+}
+
+// ── Prompts (the LLM content engine) ──────────────────────────
+const LLM_LINKS = [
+  { label: 'ChatGPT', url: 'https://chat.openai.com/' },
+  { label: 'Claude', url: 'https://claude.ai/new' },
+  { label: 'Gemini', url: 'https://gemini.google.com/app' },
+]
+
+function PromptsTab({ onImport }: { onImport: () => void }) {
+  const [goal, setGoal] = useState<PromptGoal>('virality')
+  const [packId, setPackId] = useState<string>(packsByGoal('virality')[0].id)
+  const [count, setCount] = useState(10)
+  const [format, setFormat] = useState<BFormat>('fact')
+  const [theme, setTheme] = useState<BTheme>('funfacts')
+
+  const packs = packsByGoal(goal)
+  const pack: PromptPack = packs.find(p => p.id === packId) || packs[0]
+  const pickGoal = (g: PromptGoal) => { setGoal(g); setPackId(packsByGoal(g)[0].id) }
+  const prompt = buildPrompt(pack, { count, format, theme })
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="insight tl" style={{ alignItems: 'flex-start' }}>
+        <Wand2 size={15} style={{ marginTop: 2 }} />
+        <div>
+          <b>The content engine.</b> No API needed — pick a goal &amp; pack, copy the prompt, paste it into any LLM, then bring its answer to the <b>Import</b> tab to drip-schedule weeks of feed. Every prompt is tuned for stop-the-scroll hooks &amp; re-shares.
+          <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Open an LLM:</span>
+            {LLM_LINKS.map(l => (
+              <a key={l.label} className="chip" style={{ gap: 5, textDecoration: 'none' }} href={l.url} target="_blank" rel="noreferrer">
+                {l.label} <ExternalLink size={11} />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* goal picker */}
+      <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+        {GOALS.map(g => (
+          <button key={g.key} className={'chip' + (goal === g.key ? ' on' : '')}
+            style={goal === g.key ? { background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' } : undefined}
+            onClick={() => pickGoal(g.key)} title={g.blurb}>{g.emoji} {g.label}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,340px) minmax(0,1fr)', gap: 16, alignItems: 'start' }} className="bc-studio">
+        {/* pack list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {packs.map(p => {
+            const on = p.id === pack.id
+            return (
+              <button key={p.id} className="card" onClick={() => setPackId(p.id)}
+                style={{ padding: 13, textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 5, borderColor: on ? 'var(--acc)' : undefined, boxShadow: on ? '0 0 0 1px var(--acc) inset' : undefined }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{p.emoji} {p.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--tx2)', lineHeight: 1.45 }}>{p.blurb}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--tx3)', lineHeight: 1.4, fontStyle: 'italic' }}>{p.why}</div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* composer */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 8 }}>
+          <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="row" style={{ gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {pack.usesCount && (
+                <Field label="How many?" style={{ flex: 'none' }}>
+                  <Stepper value={count} set={setCount} min={1} max={40} />
+                </Field>
+              )}
+            </div>
+            {pack.usesFormat && (
+              <Field label="Format" hint={formatDef(format).hint}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {FORMATS.map(f => (
+                    <button key={f.key} className={'chip' + (format === f.key ? ' on' : '')}
+                      style={format === f.key ? { background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' } : undefined}
+                      onClick={() => setFormat(f.key)}>{f.emoji} {f.label}</button>
+                  ))}
+                </div>
+              </Field>
+            )}
+            {pack.usesTheme && (
+              <Field label="Theme" hint={themeDef(theme).blurb}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {THEMES.map(t => (
+                    <button key={t.key} className={'chip' + (theme === t.key ? ' on' : '')}
+                      style={theme === t.key ? { background: t.accent, color: '#fff', borderColor: t.accent } : undefined}
+                      onClick={() => setTheme(t.key)}>{t.emoji} {t.label}</button>
+                  ))}
+                </div>
+              </Field>
+            )}
+          </div>
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="spread" style={{ alignItems: 'center', padding: '11px 14px', borderBottom: '1px solid var(--bd)' }}>
+              <span className="row" style={{ gap: 6, fontSize: 11.5, fontWeight: 700, color: 'var(--tx2)' }}><Wand2 size={13} /> Your prompt</span>
+              <CopyButton text={prompt} />
+            </div>
+            <pre style={{ margin: 0, padding: 14, fontSize: 11.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 360, overflowY: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', color: 'var(--tx2)' }}>{prompt}</pre>
+          </div>
+
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <CopyButton text={prompt} big />
+            {pack.goal !== 'research' && (
+              <button className="chip" style={{ gap: 6 }} onClick={onImport}>
+                Paste the answer into Import <ArrowUpRight size={13} />
+              </button>
+            )}
+            {pack.goal === 'research' && (
+              <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>Use the results to update the Research desk &amp; steer what you author.</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Import (paste LLM output → drip-schedule) ─────────────────
+type ImportMode = 'draft' | 'publish' | 'drip'
+
+function ImportTab({ onSaved, onMsg }: { onSaved: (m: string) => void; onMsg: (m: string) => void }) {
+  const [raw, setRaw] = useState('')
+  const [parsed, setParsed] = useState<ReturnType<typeof parseImport> | null>(null)
+  const [mode, setMode] = useState<ImportMode>('drip')
+  const [start, setStart] = useState('')
+  const [gapHours, setGapHours] = useState(12)
+  const [busy, setBusy] = useState(false)
+
+  const posts: ParsedPost[] = parsed?.posts ?? []
+  const doParse = () => setParsed(parseImport(raw))
+
+  const scheduleAt = (i: number): string | null => {
+    if (mode !== 'drip') return null
+    const base = start ? new Date(start) : new Date()
+    return new Date(base.getTime() + i * gapHours * 3600_000).toISOString()
+  }
+  const lastWhen = posts.length > 1 ? scheduleAt(posts.length - 1) : null
+
+  const save = async () => {
+    if (!posts.length) return
+    if (!cloudEnabled) { onMsg('Offline — connect Supabase & sign in as operator to import to live feeds.'); return }
+    if (mode === 'drip' && !start) { onMsg('Pick a start time for the drip schedule first.'); return }
+    setBusy(true)
+    const status = mode === 'publish' ? 'published' : mode === 'drip' ? 'scheduled' : 'draft'
+    const items: BroadcastInput[] = posts.map((p, i) => ({
+      format: p.format, theme: p.theme, title: p.title, body: p.body || null,
+      media_kind: 'none', media_url: null, source: p.source || null,
+      emoji: p.emoji || null, accent: p.accent, audience: p.audience,
+      status, publish_at: scheduleAt(i),
+    }))
+    const { ok, fail } = await live.saveBroadcastBatch(items)
+    setBusy(false)
+    const tail = mode === 'drip' ? ' — drip-scheduled' : mode === 'publish' ? ' — live in every feed now' : ' — saved as drafts'
+    onSaved(`Imported ${ok} post${ok === 1 ? '' : 's'}${fail ? ` (${fail} failed)` : ''}${tail}.`)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="insight tl" style={{ alignItems: 'flex-start' }}>
+        <ClipboardPaste size={15} style={{ marginTop: 2 }} />
+        <div><b>Bulk import.</b> Paste the JSON the LLM returned (from a <b>Prompts</b> pack). We parse it into ready cards, then you drip-schedule them so the feed stays fresh daily — the heart of the retention loop.</div>
+      </div>
+
+      <Field label="Paste the LLM output (the JSON array)">
+        <textarea value={raw} onChange={e => setRaw(e.target.value)} rows={8}
+          placeholder='[ { "format": "fact", "theme": "animals", "emoji": "🐙", "title": "...", "body": "...", "source": "" } ]'
+          style={{ ...inp, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, lineHeight: 1.5 }} />
+      </Field>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <button className="chip" style={{ gap: 6, background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' }} onClick={doParse}><ListChecks size={13} /> Parse cards</button>
+        {raw && <button className="chip" style={{ gap: 6 }} onClick={() => { setRaw(''); setParsed(null) }}>Clear</button>}
+      </div>
+
+      {parsed?.error && (
+        <div className="banner" style={{ position: 'static', borderRadius: 12 }}>{parsed.error}</div>
+      )}
+
+      {posts.length > 0 && (
+        <>
+          <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="row" style={{ gap: 8, fontSize: 13, fontWeight: 700 }}>
+              <Check size={15} style={{ color: '#10B981' }} /> {posts.length} card{posts.length === 1 ? '' : 's'} ready
+              {parsed && parsed.skipped > 0 && <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--tx3)' }}>· {parsed.skipped} skipped (missing title)</span>}
+            </div>
+
+            <Field label="How should they go out?">
+              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                {([['drip', 'Drip-schedule'], ['draft', 'Save as drafts'], ['publish', 'Publish all now']] as [ImportMode, string][]).map(([m, label]) => (
+                  <button key={m} className={'chip' + (mode === m ? ' on' : '')}
+                    style={mode === m ? { background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' } : undefined}
+                    onClick={() => setMode(m)}>{label}</button>
+                ))}
+              </div>
+            </Field>
+
+            {mode === 'drip' && (
+              <div className="row" style={{ gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <Field label="First post goes live" style={{ flex: 'none' }}>
+                  <input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} style={{ ...inp, width: 'auto' }} />
+                </Field>
+                <Field label="Then every (hours)" style={{ flex: 'none' }}>
+                  <Stepper value={gapHours} set={setGapHours} min={1} max={168} />
+                </Field>
+                {start && lastWhen && (
+                  <div style={{ fontSize: 11.5, color: 'var(--tx3)', paddingBottom: 8 }}>
+                    Spreads to <b>{fmtWhen(lastWhen)}</b> · ~{(24 / gapHours).toFixed(gapHours >= 24 ? 1 : 0)}/day
+                  </div>
+                )}
+              </div>
+            )}
+            {mode === 'publish' && <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>All {posts.length} go live in every circle’s feed immediately.</div>}
+            {mode === 'draft' && <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>Saved to drafts — review &amp; publish from the Catalogue.</div>}
+
+            <div>
+              <button className="chip" disabled={busy} onClick={save}
+                style={{ gap: 6, padding: '9px 16px', fontWeight: 700, background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' }}>
+                <Send size={14} /> {busy ? 'Importing…' : `Import ${posts.length} card${posts.length === 1 ? '' : 's'}`}
+              </button>
+              {!cloudEnabled && <span style={{ fontSize: 11, color: 'var(--tx3)', marginLeft: 10 }}>Connect Supabase &amp; sign in as operator to enable.</span>}
+            </div>
+          </div>
+
+          {/* preview of parsed cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
+            {posts.map((p, i) => {
+              const t = themeDef(p.theme), f = formatDef(p.format)
+              return (
+                <div key={i} className="card" style={{ padding: 13, display: 'flex', flexDirection: 'column', gap: 7, borderTop: `3px solid ${p.accent}` }}>
+                  <div className="spread" style={{ alignItems: 'center' }}>
+                    <span className="row" style={{ gap: 6, fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: t.accent }}>{f.emoji} {f.label} · {t.label}</span>
+                    {mode === 'drip' && start && <span style={{ fontSize: 10, color: 'var(--tx3)' }}>{fmtWhen(scheduleAt(i))}</span>}
+                  </div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700 }}>{p.emoji} {p.title}</div>
+                  {p.body && <div style={{ fontSize: 12, color: 'var(--tx2)', lineHeight: 1.45, whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.body}</div>}
+                  {p.source && <div style={{ fontSize: 10.5, color: 'var(--tx3)' }}>— {p.source}</div>}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }

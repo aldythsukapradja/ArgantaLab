@@ -274,6 +274,7 @@ function applyBcastReaction(b: B.BcastPost, next: string | null): B.BcastPost {
 
 const BCAST_FORMAT_LABEL: Record<string, string> = {
   fact: 'Fun Fact', did_you_know: 'Did You Know', top10: 'Top 10', tip: 'Tip', quote: 'Quote', story: 'Story',
+  on_this_day: 'On This Day', this_or_that: 'This or That', mind_blown: 'Mind-Blown', by_numbers: 'By the Numbers', challenge: 'Mini Challenge',
 }
 
 function KMark({ size = 30 }: { size?: number }) {
