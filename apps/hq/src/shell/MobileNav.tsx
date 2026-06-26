@@ -8,7 +8,7 @@ type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: Surfa
 export const MGROUPS: Grp[] = [
   { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid, surfaces: ['portfolio'] },
   { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['data', 'growth'] },
-  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'moments'] },
+  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'broadcast'] },
 ]
 
 export function MobileNav() {
