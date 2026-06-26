@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   Activity, Users, UserPlus, Target, Lightbulb, TrendingUp, ChevronRight, Info,
-  Presentation as PresentIcon, CalendarClock, Filter, Gem,
+  Presentation as PresentIcon, CalendarClock, Filter, Gem, Circle, MessageSquare,
+  Heart, Megaphone, Eye, Image,
 } from 'lucide-react'
 import { live } from '../data/live'
+import type { KinetikStats } from '../data/live'
 import { supabase } from '../lib/supabase'
 import type { GrowthOverview, RetentionData, AcquisitionData, EconomyData } from '../data/types'
 import { heroCards, buildScorecard, growthInsight, type Tone, type HeroCard, type GrowthInsight, type ScoreRow } from '../data/growth'
@@ -36,12 +38,14 @@ const HERO_ICON: Record<string, ReactNode> = {
 export function Growth() {
   const [tab, setTab] = useState<SubTab>('overview')
   const [o, setO] = useState<GrowthOverview | null | undefined>(undefined)
+  const [k, setK] = useState<KinetikStats | null | undefined>(undefined)
   const [a, setA] = useState<AcquisitionData | null | undefined>(undefined)
   const [e, setE] = useState<EconomyData | null | undefined>(undefined)
   const [present, setPresent] = useState(false)
   const [who, setWho] = useState('Operator')
 
   useEffect(() => {
+    live.kinetikStats().then(setK)
     live.growthOverview().then(setO)
     live.acquisition().then(setA)
     live.economy().then(setE)
@@ -51,9 +55,10 @@ export function Growth() {
     })
   }, [])
 
-  const heroes = o ? heroCards(o) : []
-  const score = o ? buildScorecard(o) : []
-  const insight: GrowthInsight | null = o ? growthInsight(o) : null
+  const oData = o ?? null
+  const heroes = oData ? heroCards(oData) : []
+  const score = oData ? buildScorecard(oData) : []
+  const insight: GrowthInsight | null = oData ? growthInsight(oData) : null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -71,24 +76,30 @@ export function Growth() {
               </button>
             ))}
           </div>
-          <button className="chip" disabled={!o} onClick={() => setPresent(true)}
-            style={{ gap: 6, background: o ? 'var(--acc)' : 'var(--bg3)', color: o ? '#fff' : 'var(--tx3)', borderColor: o ? 'var(--acc)' : 'var(--bd2)' }}>
+          <button className="chip" disabled={!oData} onClick={() => setPresent(true)}
+            style={{ gap: 6, background: oData ? 'var(--acc)' : 'var(--bg3)', color: oData ? '#fff' : 'var(--tx3)', borderColor: oData ? 'var(--acc)' : 'var(--bd2)' }}>
             <PresentIcon size={13} /> Present
           </button>
         </div>
       </div>
 
-      {o === undefined && <Loading label="Computing live growth metrics…" />}
-      {o === null && (
-        <Empty title="Growth metrics need a live connection">
-          Every number is a real aggregate (<span className="src">hq_growth_overview()</span>) over
-          <span className="src">item_attempts</span> + <span className="src">profiles</span>. Connect Supabase and sign in as operator.
+      {k === undefined && o === undefined && <Loading label="Loading growth metrics…" />}
+      {k === null && o === null && (
+        <Empty title="Growth needs a live connection">
+          Connect Supabase and sign in as operator — KinetikCircle &amp; ArgantaLab stats load automatically.
         </Empty>
       )}
-      {o && insight && tab === 'overview' && <Overview o={o} heroes={heroes} score={score} insight={insight} />}
+      {tab === 'overview' && (k !== undefined || o !== undefined) && (
+        <Overview o={o ?? null} k={k ?? null} heroes={heroes} score={score} insight={insight} />
+      )}
       {o && tab === 'retention' && <Retention o={o} />}
       {o && tab === 'acquisition' && <Acquisition o={o} a={a} />}
       {o && tab === 'economy' && <Economy e={e} />}
+      {!o && tab !== 'overview' && (
+        <Empty title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} needs ArgantaLab data`}>
+          The {tab} tab reads ArgantaLab learning metrics (<span className="src">hq_{tab === 'retention' ? 'retention' : tab === 'acquisition' ? 'acquisition' : 'economy'}()</span>). Connect and sign in as operator.
+        </Empty>
+      )}
 
       {present && o && insight && (
         <Presentation overview={o} acquisition={a ?? null} economy={e ?? null}
@@ -98,68 +109,114 @@ export function Growth() {
   )
 }
 
-function Overview({ o, heroes, score, insight }: { o: GrowthOverview; heroes: HeroCard[]; score: ScoreRow[]; insight: GrowthInsight }) {
+function KinetikSnapshot({ k }: { k: KinetikStats }) {
+  const metrics: { label: string; value: number; icon: ReactNode; sub: string }[] = [
+    { label: 'Circles', value: k.circles, icon: <Circle size={13} />, sub: 'family groups' },
+    { label: 'Members', value: k.members, icon: <Users size={13} />, sub: 'circle members' },
+    { label: 'Posts · 7d', value: k.posts7d, icon: <MessageSquare size={13} />, sub: `${compact(k.posts)} total` },
+    { label: 'Reactions', value: k.reactions, icon: <Heart size={13} />, sub: 'on family posts' },
+    { label: 'Broadcasts live', value: k.broadcastsPublished, icon: <Megaphone size={13} />, sub: 'Discover posts' },
+    { label: 'Discover views', value: k.broadcastViews, icon: <Eye size={13} />, sub: `${compact(k.broadcastReactions)} reactions` },
+  ]
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="row" style={{ gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--tx2)' }}>
+        <Image size={14} /> KinetikCircle
+      </div>
+      <div className="kpi-grid">
+        {metrics.map(m => (
+          <div key={m.label} className="kpi">
+            <div className="kpi-l">{m.icon} {m.label}</div>
+            <div className="kpi-v">{compact(m.value)}</div>
+            <div className="kpi-s" style={{ color: 'var(--tx3)' }}>{m.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Overview({ o, k, heroes, score, insight }: { o: GrowthOverview | null; k: KinetikStats | null; heroes: HeroCard[]; score: ScoreRow[]; insight: GrowthInsight | null }) {
   const [drill, setDrill] = useState<string | null>(null)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className={'insight ' + (insight.tone === 'success' ? 'ok' : insight.tone === 'warning' || insight.tone === 'danger' ? 'warn' : 'tl')}>
-        <Lightbulb size={15} />
-        <div><b>{insight.headline}.</b> {insight.body}</div>
-      </div>
+      {k && <KinetikSnapshot k={k} />}
 
-      <div className="kpi-grid">
+      {!o && !k && (
+        <Empty title="Connect Supabase to see growth metrics">
+          Both KinetikCircle and ArgantaLab metrics load automatically once connected.
+        </Empty>
+      )}
+
+      {o && insight && (
+        <div className={'insight ' + (insight.tone === 'success' ? 'ok' : insight.tone === 'warning' || insight.tone === 'danger' ? 'warn' : 'tl')}>
+          <Lightbulb size={15} />
+          <div><b>{insight.headline}.</b> {insight.body}</div>
+        </div>
+      )}
+
+      {o && (
+      <div className="row" style={{ gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--tx2)', marginTop: k ? 4 : 0 }}>
+        <Activity size={14} /> ArgantaLab — Learning metrics
+      </div>
+      )}
+      {o && <div className="kpi-grid">
         {heroes.map(h => <HeroMetric key={h.key} h={h} />)}
-      </div>
+      </div>}
 
-      <div className="card" style={{ padding: 16 }}>
-        <div className="spread" style={{ marginBottom: 8 }}>
-          <div>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>North-star · weekly active learners</div>
-            <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>Distinct learners with a mastery attempt, last 8 weeks</div>
+      {o && (
+        <>
+          <div className="card" style={{ padding: 16 }}>
+            <div className="spread" style={{ marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 600 }}>North-star · weekly active learners</div>
+                <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>Distinct learners with a mastery attempt, last 8 weeks</div>
+              </div>
+              <span className="row" style={{ gap: 5, fontSize: 12, color: 'var(--tx2)' }}><TrendingUp size={13} /> live</span>
+            </div>
+            <LineChart points={o.northStar} />
           </div>
-          <span className="row" style={{ gap: 5, fontSize: 12, color: 'var(--tx2)' }}><TrendingUp size={13} /> live</span>
-        </div>
-        <LineChart points={o.northStar} />
-      </div>
 
-      <div>
-        <div className="spread" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600 }}>Unicorn scorecard</div>
-          <div style={{ fontSize: 11, color: 'var(--tx3)' }}>benchmarked vs edtech / consumer · click a tile to learn what it means</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
-          {score.map(s => {
-            const on = drill === s.key
-            return (
-              <button key={s.key} onClick={() => setDrill(on ? null : s.key)}
-                style={{
-                  textAlign: 'left', cursor: 'pointer', background: 'var(--bg)', borderRadius: 'var(--r-lg)',
-                  border: `1px solid ${on ? 'var(--acc)' : 'var(--bd2)'}`, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 6,
-                }}>
-                <div className="spread">
-                  <span style={{ fontSize: 12.5, color: 'var(--tx)', fontWeight: 500 }}>{s.label}</span>
-                  <span style={{ fontSize: 18, fontWeight: 600, color: s.tone === 'pending' ? 'var(--tx3)' : 'var(--tx)' }}>{s.value}</span>
-                </div>
-                <div className="spread">
-                  <span className="pill" style={{ background: TONE_BG[s.tone], color: TONE_FG[s.tone] }}>{s.note}</span>
-                  <ChevronRight size={13} color="var(--tx3)" style={{ transform: on ? 'rotate(90deg)' : 'none', transition: 'transform .16s' }} />
-                </div>
-                {on && (
-                  <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.5, marginTop: 2 }}>
-                    <span style={{ color: 'var(--tx)', fontWeight: 600 }}>What it is:</span> {s.what}
-                    <div style={{ marginTop: 5, paddingTop: 5, borderTop: '1px solid var(--bd)', color: 'var(--tx3)' }}>{s.detail}</div>
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+          <div>
+            <div className="spread" style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>Unicorn scorecard</div>
+              <div style={{ fontSize: 11, color: 'var(--tx3)' }}>benchmarked vs edtech / consumer · click a tile to learn what it means</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
+              {score.map(s => {
+                const on = drill === s.key
+                return (
+                  <button key={s.key} onClick={() => setDrill(on ? null : s.key)}
+                    style={{
+                      textAlign: 'left', cursor: 'pointer', background: 'var(--bg)', borderRadius: 'var(--r-lg)',
+                      border: `1px solid ${on ? 'var(--acc)' : 'var(--bd2)'}`, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 6,
+                    }}>
+                    <div className="spread">
+                      <span style={{ fontSize: 12.5, color: 'var(--tx)', fontWeight: 500 }}>{s.label}</span>
+                      <span style={{ fontSize: 18, fontWeight: 600, color: s.tone === 'pending' ? 'var(--tx3)' : 'var(--tx)' }}>{s.value}</span>
+                    </div>
+                    <div className="spread">
+                      <span className="pill" style={{ background: TONE_BG[s.tone], color: TONE_FG[s.tone] }}>{s.note}</span>
+                      <ChevronRight size={13} color="var(--tx3)" style={{ transform: on ? 'rotate(90deg)' : 'none', transition: 'transform .16s' }} />
+                    </div>
+                    {on && (
+                      <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.5, marginTop: 2 }}>
+                        <span style={{ color: 'var(--tx)', fontWeight: 600 }}>What it is:</span> {s.what}
+                        <div style={{ marginTop: 5, paddingTop: 5, borderTop: '1px solid var(--bd)', color: 'var(--tx3)' }}>{s.detail}</div>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-      <div className="insight tl" style={{ alignItems: 'center' }}>
-        <Activity size={15} />
-        <div>Revenue ratios (NRR, Rule of 40) stay <b>pending</b> until monetization events flow through <span className="src">hq_event</span> — these are the honest engagement-stage primitives, real not estimated.</div>
-      </div>
+          <div className="insight tl" style={{ alignItems: 'center' }}>
+            <Activity size={15} />
+            <div>Revenue ratios (NRR, Rule of 40) stay <b>pending</b> until monetization events flow through <span className="src">hq_event</span> — these are the honest engagement-stage primitives, real not estimated.</div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

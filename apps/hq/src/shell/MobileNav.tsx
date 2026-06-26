@@ -7,7 +7,7 @@ import { useHQ, surfaceLabel, type SurfaceId } from './store'
 type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[] }
 export const MGROUPS: Grp[] = [
   { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid, surfaces: ['portfolio'] },
-  { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['data', 'growth'] },
+  { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data'] },
   { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'broadcast'] },
 ]
 
