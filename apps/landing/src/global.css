@@ -462,8 +462,181 @@ body {
 .reveal-d3.in { transition-delay: 0.3s; }
 .reveal-d4.in { transition-delay: 0.4s; }
 
+/* ── About / company ────────────────────────────────────────── */
+.about {
+  padding: 130px 40px;
+  background: var(--bg);
+  position: relative;
+}
+.about-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 80px;
+  align-items: start;
+}
+.about-sticky { position: sticky; top: 120px; }
+.about-lead {
+  font-size: clamp(26px, 3.2vw, 38px);
+  font-weight: 800; line-height: 1.25; letter-spacing: -1px;
+  color: var(--tx1);
+}
+.about-lead .mut { color: var(--tx3); }
+.about-body { display: flex; flex-direction: column; gap: 22px; }
+.about-body p { font-size: 17px; line-height: 1.75; color: var(--tx2); }
+.about-body p strong { color: var(--tx1); font-weight: 700; }
+.about-signature {
+  margin-top: 8px; display: flex; align-items: center; gap: 14px;
+  padding-top: 24px; border-top: 1px solid var(--border);
+}
+.about-sig-mark {
+  width: 44px; height: 44px; border-radius: 12px; flex: none;
+  background: var(--grd); display: grid; place-items: center;
+}
+.about-sig-text { font-size: 14px; color: var(--tx2); line-height: 1.4; }
+.about-sig-text b { color: var(--tx1); display: block; font-size: 15px; font-weight: 700; }
+
+/* ── Stats band ─────────────────────────────────────────────── */
+.stats-band {
+  padding: 70px 40px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.stats-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px;
+}
+.stat-big { text-align: center; }
+.stat-big-num {
+  font-size: clamp(40px, 6vw, 60px); font-weight: 900;
+  letter-spacing: -2px; line-height: 1;
+  background: var(--grd); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text;
+}
+.stat-big-label {
+  font-size: 14px; color: var(--tx2); font-weight: 500; margin-top: 10px;
+}
+
+/* ── Values ─────────────────────────────────────────────────── */
+.values {
+  padding: 120px 40px; background: var(--bg); text-align: center;
+}
+.values-inner { max-width: 1100px; margin: 0 auto; }
+.values-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+  margin-top: 60px; text-align: left;
+}
+.value-card {
+  border-radius: 18px; padding: 28px 24px;
+  border: 1px solid var(--border); background: var(--card-bg);
+  backdrop-filter: blur(8px); transition: all 0.3s;
+}
+.value-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--acc-p); }
+.value-icon {
+  width: 44px; height: 44px; border-radius: 12px; margin-bottom: 18px;
+  display: grid; place-items: center; font-size: 20px;
+  background: var(--bg3);
+}
+.value-title { font-size: 16px; font-weight: 700; color: var(--tx1); margin-bottom: 8px; letter-spacing: -0.3px; }
+.value-desc { font-size: 13.5px; color: var(--tx2); line-height: 1.6; }
+
+/* ── Portfolio grid ─────────────────────────────────────────── */
+.portfolio {
+  padding: 120px 40px; background: var(--bg2); text-align: center;
+}
+.portfolio-inner { max-width: 1100px; margin: 0 auto; }
+.port-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  margin-top: 56px;
+}
+.port-card {
+  border-radius: 18px; overflow: hidden; text-decoration: none;
+  border: 1px solid var(--border); background: var(--bg);
+  transition: all 0.35s; text-align: left;
+  display: flex; flex-direction: column;
+}
+.port-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+.port-art {
+  height: 130px; position: relative; overflow: hidden;
+  display: grid; place-items: center;
+}
+.port-art-emoji {
+  font-size: 44px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
+  transition: transform 0.4s;
+}
+.port-card:hover .port-art-emoji { transform: scale(1.18) rotate(-6deg); }
+.port-art-play {
+  position: absolute; bottom: 10px; right: 10px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(255,255,255,0.9); color: #111;
+  display: grid; place-items: center;
+  opacity: 0; transform: translateY(6px); transition: all 0.3s;
+}
+.port-card:hover .port-art-play { opacity: 1; transform: none; }
+.port-info { padding: 16px 16px 18px; flex: 1; }
+.port-name { font-size: 15px; font-weight: 700; color: var(--tx1); margin-bottom: 6px; }
+.port-desc { font-size: 12.5px; color: var(--tx2); line-height: 1.55; margin-bottom: 12px; }
+.port-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.port-tag {
+  font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+  background: var(--bg3); color: var(--tx3); letter-spacing: 0.3px;
+}
+.port-note {
+  margin-top: 40px; font-size: 13.5px; color: var(--tx3);
+}
+
+/* ── Contact ────────────────────────────────────────────────── */
+.contact {
+  padding: 120px 40px; background: var(--bg);
+  position: relative; overflow: hidden;
+}
+.contact-card {
+  max-width: 920px; margin: 0 auto;
+  border-radius: 28px; padding: 70px 48px; text-align: center;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(ellipse at top, rgba(124,58,237,0.10), transparent 60%),
+    var(--bg2);
+  position: relative; overflow: hidden;
+}
+.contact-card::before {
+  content: ''; position: absolute; top: -50%; left: 50%;
+  transform: translateX(-50%);
+  width: 500px; height: 500px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(14,165,233,0.10), transparent 70%);
+  pointer-events: none;
+}
+.contact-title {
+  font-size: clamp(30px, 4vw, 46px); font-weight: 900;
+  letter-spacing: -1.5px; color: var(--tx1); margin-bottom: 16px;
+  position: relative;
+}
+.contact-sub {
+  font-size: 17px; color: var(--tx2); line-height: 1.6;
+  max-width: 480px; margin: 0 auto 36px; position: relative;
+}
+.contact-email {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 32px; border-radius: 14px;
+  background: var(--grd); color: #fff; text-decoration: none;
+  font-size: 16px; font-weight: 700; letter-spacing: -0.2px;
+  box-shadow: 0 8px 32px rgba(124,58,237,0.25);
+  transition: all 0.3s; position: relative;
+}
+.contact-email:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(124,58,237,0.4); }
+
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
+  .about { padding: 80px 24px; }
+  .about-inner { grid-template-columns: 1fr; gap: 40px; }
+  .about-sticky { position: static; }
+  .stats-band { padding: 48px 24px; }
+  .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+  .values { padding: 80px 24px; }
+  .values-grid { grid-template-columns: 1fr 1fr; }
+  .portfolio { padding: 80px 24px; }
+  .port-grid { grid-template-columns: 1fr 1fr; }
+  .contact { padding: 80px 24px; }
+  .contact-card { padding: 48px 24px; }
   .nav { padding: 0 20px; }
   .nav-links { display: none; }
   .section { padding: 80px 24px; }

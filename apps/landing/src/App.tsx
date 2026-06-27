@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ThreeCanvas } from './ThreeCanvas'
+import { PRODUCTS, GAMES, ART } from './portfolio'
 
 gsap.registerPlugin(ScrollTrigger)
+
+const CONTACT_EMAIL = 'hello@arganta.app'
 
 // ── Icons ──────────────────────────────────────────────────────
 function IconApple() {
@@ -55,6 +58,23 @@ function IconChevronDown() {
     </svg>
   )
 }
+function IconMail() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/>
+    </svg>
+  )
+}
+
+function ArgantaMark({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="7" stroke="white" strokeWidth="2.5"/>
+      <circle cx="16" cy="8" r="2.5" fill="white"/>
+      <circle cx="12" cy="12" r="1.5" fill="white"/>
+    </svg>
+  )
+}
 
 // ── Store buttons ────────────────────────────────────────────
 function StoreBtn({ type, href }: { type: 'apple' | 'google'; href: string }) {
@@ -87,7 +107,6 @@ function PhoneMockup({ gradient, children }: { gradient: string; children: React
   )
 }
 
-// ── KinetikCircle phone UI ────────────────────────────────────
 function KinetikPhone() {
   const items = ['Moments', 'Stories', 'Albums', 'Routines']
   const posts = [
@@ -120,7 +139,6 @@ function KinetikPhone() {
   )
 }
 
-// ── ArgantaLab phone UI ───────────────────────────────────────
 function LabPhone() {
   const subjects = [
     { emoji: '🔢', name: 'Math', pct: 82 },
@@ -168,7 +186,6 @@ function LabPhone() {
   )
 }
 
-// ── Dashboard mockup ──────────────────────────────────────────
 function DashboardMockup() {
   const bars = [30, 55, 42, 70, 85, 62, 90]
   const stats = [
@@ -217,38 +234,41 @@ function DashboardMockup() {
   )
 }
 
+const VALUES = [
+  { icon: '👨‍👩‍👧‍👦', title: 'Family-first', desc: 'We build for circles, not crowds. Every product is designed for the people who matter most.' },
+  { icon: '🔒', title: 'Privacy by design', desc: 'Your data stays in your circle. No ads, no selling, no public feeds — calm by default.' },
+  { icon: '⚡', title: 'AI-native', desc: 'We build with AI at the core — from authoring games to shipping features at studio speed.' },
+  { icon: '🚀', title: 'Ship & iterate', desc: 'Real products in production, improved continuously. We learn from live usage, not slides.' },
+]
+
+const STATS = [
+  { num: '3', label: 'Products live' },
+  { num: '4+', label: 'Games shipped' },
+  { num: '100%', label: 'Privacy-first' },
+  { num: '1', label: 'Connected ecosystem' },
+]
+
 // ── Main App ─────────────────────────────────────────────────
 export default function App() {
   const [dark, setDark] = useState(true)
-  const heroRef = useRef<HTMLDivElement>(null)
   const heroContentRef = useRef<HTMLDivElement>(null)
 
-  // Apply theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
   }, [dark])
 
-  // GSAP animations
   useEffect(() => {
-    // Hero entrance
     if (heroContentRef.current) {
-      const els = heroContentRef.current.querySelectorAll('.hero-badge, .hero-title, .hero-sub, .hero-ctas, .hero-scroll')
+      const els = heroContentRef.current.querySelectorAll('.hero-badge, .hero-title, .hero-sub, .hero-ctas')
       gsap.fromTo(els,
         { opacity: 0, y: 50 },
         { opacity: 1, y: 0, duration: 1, stagger: 0.12, ease: 'power3.out', delay: 0.3 }
       )
     }
-
-    // Scroll reveals
     const reveals = document.querySelectorAll('.reveal')
     reveals.forEach(el => {
-      ScrollTrigger.create({
-        trigger: el,
-        start: 'top 88%',
-        onEnter: () => el.classList.add('in'),
-      })
+      ScrollTrigger.create({ trigger: el, start: 'top 88%', onEnter: () => el.classList.add('in') })
     })
-
     return () => ScrollTrigger.getAll().forEach(t => t.kill())
   }, [])
 
@@ -260,131 +280,173 @@ export default function App() {
   ]
   const LAB_FEATURES = [
     'Mastery-based lessons with XP & diamond rewards',
-    'Mini-games built with AI-powered Game Builder',
+    'Mini-games built with the AI Game Builder',
     'Live progress dashboard for parents',
     'Circles shared with KinetikCircle',
   ]
   const HQ_FEATURES = [
-    'Portfolio view across all your apps',
+    'Portfolio view across every app',
     'Growth analytics & engagement KPIs',
     'Broadcast engine — reach every circle at once',
-    'Game Builder, App Builder & Learn Builder',
+    'Game, App & Learn builders, AI-powered',
   ]
 
   return (
     <>
       {/* ── Nav ──────────────────────────────────────── */}
       <header className="nav">
-        <a href="/" className="nav-logo">
-          <div className="nav-mark">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="7" stroke="white" strokeWidth="2.5"/>
-              <circle cx="16" cy="8" r="2.5" fill="white"/>
-              <circle cx="12" cy="12" r="1.5" fill="white"/>
-            </svg>
-          </div>
+        <a href="#top" className="nav-logo">
+          <div className="nav-mark"><ArgantaMark /></div>
           Arganta
         </a>
         <ul className="nav-links">
-          <li><a href="#kinetik">KinetikCircle</a></li>
-          <li><a href="#lab">ArgantaLab</a></li>
-          <li><a href="#hq">Circle HQ</a></li>
-          <li><a href="#ecosystem">Ecosystem</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#products">Products</a></li>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#contact">Contact</a></li>
         </ul>
         <div className="nav-right">
           <button className="theme-btn" onClick={() => setDark(d => !d)} aria-label="Toggle theme">
             {dark ? <IconSun /> : <IconMoon />}
           </button>
-          <a href="https://hq.arganta.app" target="_blank" rel="noopener" className="btn-nav">
-            Try HQ <IconArrow />
+          <a href="#contact" className="btn-nav">
+            Get in touch <IconArrow />
           </a>
         </div>
       </header>
 
       {/* ── Hero ─────────────────────────────────────── */}
-      <section className="hero" ref={heroRef}>
+      <section className="hero" id="top">
         <div className="hero-canvas">
           <ThreeCanvas dark={dark} />
         </div>
-
-        {/* Gradient vignette overlay */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 1,
           background: dark
             ? 'radial-gradient(ellipse at center, transparent 30%, rgba(9,9,11,0.7) 100%)'
             : 'radial-gradient(ellipse at center, transparent 30%, rgba(255,255,255,0.8) 100%)',
         }} />
-
         <div className="hero-content" ref={heroContentRef}>
           <div className="hero-badge">
             <span className="hero-badge-dot" />
-            Three apps. One ecosystem.
+            Arganta · Family Technology Studio
           </div>
           <h1 className="hero-title">
-            Build families.<br />
-            <span className="grad">Build futures.</span>
+            We build the apps<br />
+            <span className="grad">families grow with.</span>
           </h1>
           <p className="hero-sub">
-            Arganta powers the apps where families connect,
-            kids learn, and creators bring it all to life.
+            Arganta is a product studio crafting a connected ecosystem —
+            where families share private moments, kids fall in love with
+            learning, and operators run it all from one place.
           </p>
           <div className="hero-ctas">
-            <a href="#kinetik" className="btn-primary">
-              Explore apps <IconArrow />
+            <a href="#products" className="btn-primary">
+              See our products <IconArrow />
             </a>
-            <a href="https://hq.arganta.app" target="_blank" rel="noopener" className="btn-secondary">
-              Operator login
+            <a href="#about" className="btn-secondary">
+              About the studio
             </a>
           </div>
         </div>
-
         <div className="hero-scroll">
           <span>Scroll</span>
           <IconChevronDown />
         </div>
       </section>
 
-      {/* ── Trust strip ───────────────────────────────── */}
-      <div className="trust">
-        {[
-          { num: '3', label: 'Live apps' },
-          { num: '∞', label: 'Family moments' },
-          { num: '100%', label: 'Privacy-first' },
-          { num: 'One', label: 'Connected ecosystem' },
-        ].map(item => (
-          <div key={item.label} className="trust-item">
-            <span className="trust-num">{item.num}</span>
-            <span>{item.label}</span>
+      {/* ── About ────────────────────────────────────── */}
+      <section className="about" id="about">
+        <div className="about-inner">
+          <div className="about-sticky reveal">
+            <div className="section-eyebrow" style={{ marginBottom: 24 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--grd)', display: 'inline-block' }} />
+              About Arganta
+            </div>
+            <h2 className="about-lead">
+              One studio.<br />
+              <span className="mut">A connected ecosystem of products for modern families.</span>
+            </h2>
           </div>
-        ))}
+          <div className="about-body reveal reveal-d1">
+            <p>
+              Arganta started with a simple belief: <strong>families deserve technology
+              built for them</strong> — not for advertisers, algorithms or endless scroll.
+            </p>
+            <p>
+              So we build products that work together as one. <strong>KinetikCircle</strong> gives
+              every family a private space to share life. <strong>ArgantaLab</strong> turns learning
+              into something kids actually love. And <strong>Circle HQ</strong> is the operator OS
+              that powers it all — analytics, content, and AI-driven builders under one roof.
+            </p>
+            <p>
+              Every product is privacy-first, AI-native, and designed around a single
+              idea: <strong>bring the people in your circle closer.</strong> We ship fast,
+              learn from real usage, and treat each release as a promise to the families who use it.
+            </p>
+            <div className="about-signature">
+              <div className="about-sig-mark"><ArgantaMark size={22} /></div>
+              <div className="about-sig-text">
+                <b>Arganta</b>
+                Building family technology, one circle at a time.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats band ───────────────────────────────── */}
+      <div className="stats-band">
+        <div className="stats-inner">
+          {STATS.map((s, i) => (
+            <div key={s.label} className={`stat-big reveal reveal-d${i + 1}`}>
+              <div className="stat-big-num">{s.num}</div>
+              <div className="stat-big-label">{s.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ── KinetikCircle ─────────────────────────────── */}
-      <section className="section" id="kinetik" style={{ background: 'var(--bg)' }}>
+      {/* ── Values ───────────────────────────────────── */}
+      <section className="values">
+        <div className="values-inner">
+          <div className="section-tag reveal">How we build</div>
+          <h2 className="eco-title reveal reveal-d1" style={{ fontSize: 'clamp(30px,4vw,46px)' }}>
+            Principles behind<br />every product.
+          </h2>
+          <div className="values-grid">
+            {VALUES.map((v, i) => (
+              <div key={v.title} className={`value-card reveal reveal-d${i + 1}`}>
+                <div className="value-icon">{v.icon}</div>
+                <div className="value-title">{v.title}</div>
+                <div className="value-desc">{v.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Products ─────────────────────────────────── */}
+      <div id="products" />
+
+      {/* KinetikCircle */}
+      <section className="section" style={{ background: 'var(--bg)' }}>
         <div className="section-inner">
           <div>
             <div className="section-eyebrow reveal">
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
-                display: 'inline-block',
-              }} />
-              Family Social
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #22d3ee, #06b6d4)', display: 'inline-block' }} />
+              Product · Family Social
             </div>
-            <h2 className="section-title reveal reveal-d1">
-              Your family's<br />private universe
-            </h2>
+            <h2 className="section-title reveal reveal-d1">Your family's<br />private universe</h2>
             <p className="section-desc reveal reveal-d2">
               KinetikCircle is a private social app built exclusively for families.
               Share moments, stories, albums and routines — all within your circle,
-              completely away from the noise of public social media.
+              away from the noise of public social media.
             </p>
             <ul className="feature-list reveal reveal-d3">
               {KINETIK_FEATURES.map(f => (
                 <li key={f}>
-                  <span className="feat-dot" style={{ background: 'rgba(6,182,212,0.15)', color: '#0891b2' }}>
-                    <IconCheck />
-                  </span>
+                  <span className="feat-dot" style={{ background: 'rgba(6,182,212,0.15)', color: '#0891b2' }}><IconCheck /></span>
                   {f}
                 </li>
               ))}
@@ -407,33 +469,27 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── ArgantaLab ────────────────────────────────── */}
-      <section className="section" id="lab" style={{ background: 'var(--bg2)' }}>
+      {/* ArgantaLab */}
+      <section className="section" style={{ background: 'var(--bg2)' }}>
         <div className="section-inner rev">
           <div>
             <div className="section-eyebrow reveal" style={{ color: '#7c3aed' }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
-                display: 'inline-block',
-              }} />
-              Kids Education
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', display: 'inline-block' }} />
+              Product · Kids Education
             </div>
             <h2 className="section-title reveal reveal-d1">
               Where kids<br />fall in love with<br />
               <span style={{ background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>learning</span>
             </h2>
             <p className="section-desc reveal reveal-d2">
-              ArgantaLab is a gamified learning super-app for kids — mastery-based
-              lessons, AI-authored mini-games, diamond rewards, and family circles
-              that keep parents in the loop.
+              ArgantaLab is a gamified learning super-app — mastery-based lessons,
+              AI-authored mini-games, diamond rewards, and family circles that keep
+              parents in the loop.
             </p>
             <ul className="feature-list reveal reveal-d3">
               {LAB_FEATURES.map(f => (
                 <li key={f}>
-                  <span className="feat-dot" style={{ background: 'rgba(124,58,237,0.12)', color: '#7c3aed' }}>
-                    <IconCheck />
-                  </span>
+                  <span className="feat-dot" style={{ background: 'rgba(124,58,237,0.12)', color: '#7c3aed' }}><IconCheck /></span>
                   {f}
                 </li>
               ))}
@@ -456,32 +512,24 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── Circle HQ ─────────────────────────────────── */}
-      <section className="section" id="hq" style={{ background: 'var(--bg)' }}>
+      {/* Circle HQ */}
+      <section className="section" style={{ background: 'var(--bg)' }}>
         <div className="section-inner">
           <div>
             <div className="section-eyebrow reveal" style={{ color: 'var(--tx2)' }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: 'var(--tx2)',
-                display: 'inline-block',
-              }} />
-              Operator Platform
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--tx2)', display: 'inline-block' }} />
+              Product · Operator Platform
             </div>
-            <h2 className="section-title reveal reveal-d1">
-              The command center<br />for your ecosystem
-            </h2>
+            <h2 className="section-title reveal reveal-d1">The command center<br />for the ecosystem</h2>
             <p className="section-desc reveal reveal-d2">
-              Circle HQ is the founder OS that sits above both apps.
-              Manage content, track growth, broadcast to every circle,
-              and build the next feature — all from one dashboard.
+              Circle HQ is the founder OS that sits above every app. Manage content,
+              track growth, broadcast to every circle, and build the next feature —
+              all from one dashboard.
             </p>
             <ul className="feature-list reveal reveal-d3">
               {HQ_FEATURES.map(f => (
                 <li key={f}>
-                  <span className="feat-dot" style={{ background: 'var(--bg3)', color: 'var(--tx2)' }}>
-                    <IconCheck />
-                  </span>
+                  <span className="feat-dot" style={{ background: 'var(--bg3)', color: 'var(--tx2)' }}><IconCheck /></span>
                   {f}
                 </li>
               ))}
@@ -493,114 +541,104 @@ export default function App() {
             </div>
           </div>
           <div className="mockup-wrap reveal">
-            <div className="mockup-glow" style={{
-              background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)',
-              opacity: 0.08,
-            }} />
+            <div className="mockup-glow" style={{ background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)', opacity: 0.08 }} />
             <DashboardMockup />
           </div>
         </div>
       </section>
 
-      {/* ── Ecosystem ─────────────────────────────────── */}
-      <section className="ecosystem" id="ecosystem">
-        <div className="ecosystem-inner">
-          <div className="section-tag reveal">The Ecosystem</div>
-          <h2 className="eco-title reveal reveal-d1">
-            Three apps.<br />
-            <span style={{
-              background: 'var(--grd)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>One circle.</span>
+      {/* ── Portfolio / Work ─────────────────────────── */}
+      <section className="portfolio" id="work">
+        <div className="portfolio-inner">
+          <div className="section-tag reveal">Selected Work</div>
+          <h2 className="eco-title reveal reveal-d1" style={{ fontSize: 'clamp(30px,4vw,46px)' }}>
+            Games we've shipped,<br />
+            <span style={{ background: 'var(--grd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>built with AI.</span>
           </h2>
           <p className="eco-sub reveal reveal-d2">
-            Each app is powerful alone. Together they form a closed-loop ecosystem
-            where family life, learning, and creation reinforce each other.
+            Playable HTML games authored inside Circle HQ's Game Builder and
+            shipped live inside ArgantaLab. Click any title to play.
+          </p>
+          <div className="port-grid">
+            {GAMES.map((g, i) => (
+              <a key={g.id} href={g.href} target="_blank" rel="noopener"
+                className={`port-card reveal reveal-d${(i % 4) + 1}`}>
+                <div className="port-art" style={{ background: ART(g.hue) }}>
+                  <span className="port-art-emoji">{g.emoji}</span>
+                  <span className="port-art-play"><IconPlay /></span>
+                </div>
+                <div className="port-info">
+                  <div className="port-name">{g.name}</div>
+                  <div className="port-desc">{g.desc}</div>
+                  <div className="port-tags">
+                    {g.tags.map(t => <span key={t} className="port-tag">{t}</span>)}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+          <p className="port-note reveal">
+            …and more shipping continuously. Every game is built with AI + HTML inside our own tooling.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Promotion / Download ─────────────────────── */}
+      <section className="ecosystem">
+        <div className="ecosystem-inner">
+          <div className="section-tag reveal">Get the apps</div>
+          <h2 className="eco-title reveal reveal-d1">
+            Bring Arganta<br />
+            <span style={{ background: 'var(--grd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>to your family.</span>
+          </h2>
+          <p className="eco-sub reveal reveal-d2">
+            Download our consumer apps, or sign in to Circle HQ to run the ecosystem.
           </p>
           <div className="eco-grid">
-            {[
-              {
-                icon: '🔵',
-                bg: 'rgba(6,182,212,0.12)',
-                color: '#0891b2',
-                title: 'KinetikCircle',
-                desc: 'Private family social — moments, stories, albums and routines shared within a closed circle.',
-                tag: 'circle.arganta.app',
-                tagColor: 'rgba(6,182,212,0.15)',
-                tagText: '#0891b2',
-                href: 'https://circle.arganta.app',
-                delay: 0,
-              },
-              {
-                icon: '🟣',
-                bg: 'rgba(124,58,237,0.12)',
-                color: '#7c3aed',
-                title: 'ArgantaLab',
-                desc: 'Kids learning super-app — gamified lessons, mini-games, diamond rewards and family circles.',
-                tag: 'lab.arganta.app',
-                tagColor: 'rgba(124,58,237,0.15)',
-                tagText: '#7c3aed',
-                href: 'https://lab.arganta.app',
-                delay: 100,
-              },
-              {
-                icon: '⚙️',
-                bg: 'var(--bg3)',
-                color: 'var(--tx2)',
-                title: 'Circle HQ',
-                desc: 'The operator OS — analytics, content management, broadcast engine and all the builders.',
-                tag: 'hq.arganta.app',
-                tagColor: 'var(--bg3)',
-                tagText: 'var(--tx2)',
-                href: 'https://hq.arganta.app',
-                delay: 200,
-              },
-            ].map(card => (
-              <a key={card.title} href={card.href} target="_blank" rel="noopener"
-                className={`eco-card reveal`}
-                style={{ textDecoration: 'none', transitionDelay: `${card.delay}ms` }}>
-                <div className="eco-icon" style={{ background: card.bg }}>
-                  <span style={{ fontSize: 22 }}>{card.icon}</span>
+            {PRODUCTS.map((p, i) => (
+              <div key={p.id} className={`eco-card reveal reveal-d${i + 1}`}>
+                <div className="eco-icon" style={{ background: p.gradient }}>
+                  <span style={{ fontSize: 22, filter: 'grayscale(1) brightness(3)' }}>
+                    {p.id === 'kinetik' ? '🔵' : p.id === 'lab' ? '🟣' : '⚙️'}
+                  </span>
                 </div>
-                <div className="eco-card-title">{card.title}</div>
-                <div className="eco-card-desc">{card.desc}</div>
-                <span className="eco-tag" style={{ background: card.tagColor, color: card.tagText }}>
-                  {card.tag}
-                </span>
-              </a>
+                <div className="eco-card-title">{p.name}</div>
+                <div className="eco-card-desc">{p.desc}</div>
+                {p.id === 'hq' ? (
+                  <a href={p.href} target="_blank" rel="noopener" className="btn-try" style={{ marginTop: 18 }}>
+                    Open dashboard <IconArrow />
+                  </a>
+                ) : (
+                  <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className="store-btns" style={{ marginBottom: 0 }}>
+                      <StoreBtn type="apple" href={p.href} />
+                      <StoreBtn type="google" href={p.href} />
+                    </div>
+                    <a href={p.href} target="_blank" rel="noopener" className="btn-try">
+                      Try in browser <IconArrow />
+                    </a>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Final CTA ─────────────────────────────────── */}
-      <section className="cta-section">
-        <div className="cta-glow" />
-        <div className="cta-inner">
-          <div className="section-tag reveal" style={{ marginBottom: 24 }}>Get started</div>
-          <h2 className="cta-title reveal reveal-d1">
-            Ready to build<br />
-            <span style={{
-              background: 'var(--grd)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>your circle?</span>
+      {/* ── Contact ──────────────────────────────────── */}
+      <section className="contact" id="contact">
+        <div className="contact-card reveal">
+          <div className="section-tag" style={{ marginBottom: 22 }}>Let's talk</div>
+          <h2 className="contact-title">
+            Building something<br />for families?
           </h2>
-          <p className="cta-sub reveal reveal-d2">
-            Download KinetikCircle or ArgantaLab for your family,
-            or sign in to Circle HQ to manage your ecosystem.
+          <p className="contact-sub">
+            Partnerships, press, or just want to say hello —
+            we'd love to hear from you.
           </p>
-          <div className="cta-btns reveal reveal-d3">
-            <a href="https://circle.arganta.app" target="_blank" rel="noopener" className="btn-primary">
-              KinetikCircle <IconArrow />
-            </a>
-            <a href="https://lab.arganta.app" target="_blank" rel="noopener" className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #a78bfa)' }}>
-              ArgantaLab <IconArrow />
-            </a>
-            <a href="https://hq.arganta.app" target="_blank" rel="noopener" className="btn-secondary">
-              Circle HQ →
-            </a>
-          </div>
+          <a href={`mailto:${CONTACT_EMAIL}`} className="contact-email">
+            <IconMail /> {CONTACT_EMAIL}
+          </a>
         </div>
       </section>
 
@@ -608,23 +646,18 @@ export default function App() {
       <footer className="footer">
         <div className="footer-inner">
           <div className="footer-brand">
-            <a href="/" className="footer-logo">
-              <div className="nav-mark">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="7" stroke="white" strokeWidth="2.5"/>
-                  <circle cx="16" cy="8" r="2.5" fill="white"/>
-                  <circle cx="12" cy="12" r="1.5" fill="white"/>
-                </svg>
-              </div>
+            <a href="#top" className="footer-logo">
+              <div className="nav-mark"><ArgantaMark size={14} /></div>
               Arganta
             </a>
             <p className="footer-tagline">
-              Building the apps where families connect, kids learn, and creators thrive.
+              A family technology studio. Building the apps where families connect,
+              kids learn, and creators thrive.
             </p>
           </div>
           <div className="footer-cols">
             <div className="footer-col">
-              <div className="footer-col-title">Apps</div>
+              <div className="footer-col-title">Products</div>
               <ul>
                 <li><a href="https://circle.arganta.app" target="_blank" rel="noopener">KinetikCircle</a></li>
                 <li><a href="https://lab.arganta.app" target="_blank" rel="noopener">ArgantaLab</a></li>
@@ -632,33 +665,26 @@ export default function App() {
               </ul>
             </div>
             <div className="footer-col">
-              <div className="footer-col-title">Download</div>
+              <div className="footer-col-title">Company</div>
               <ul>
-                <li><a href="https://circle.arganta.app">App Store (Circle)</a></li>
-                <li><a href="https://lab.arganta.app">App Store (Lab)</a></li>
-                <li><a href="https://circle.arganta.app">Google Play (Circle)</a></li>
-                <li><a href="https://lab.arganta.app">Google Play (Lab)</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#work">Work</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
               </ul>
             </div>
             <div className="footer-col">
-              <div className="footer-col-title">Company</div>
+              <div className="footer-col-title">Legal</div>
               <ul>
-                <li><a href="/">About</a></li>
-                <li><a href="/">Privacy Policy</a></li>
-                <li><a href="/">Terms of Service</a></li>
-                <li><a href="/">Contact</a></li>
+                <li><a href="#">Privacy Policy</a></li>
+                <li><a href="#">Terms of Service</a></li>
               </ul>
             </div>
           </div>
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Arganta. All rights reserved.</span>
-          <button
-            className="theme-btn"
-            onClick={() => setDark(d => !d)}
-            aria-label="Toggle theme"
-            style={{ border: '1px solid var(--border)' }}
-          >
+          <button className="theme-btn" onClick={() => setDark(d => !d)} aria-label="Toggle theme" style={{ border: '1px solid var(--border)' }}>
             {dark ? <IconSun /> : <IconMoon />}
           </button>
         </div>
