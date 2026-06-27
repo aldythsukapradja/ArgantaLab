@@ -3,6 +3,9 @@ REM Double-click to start ALL local dev servers at once.
 echo Starting all Arganta local servers...
 echo.
 
+REM Arganta Landing (port 5174)
+start "Arganta Landing" cmd /k "cd /d "%~dp0apps\landing" && echo Arganta Landing on http://localhost:5174/ && npm run dev -- --port 5174 --strictPort"
+
 REM KinetikCircle app (port 5180)
 start "KinetikCircle" cmd /k "cd /d "%~dp0apps\kinetik" && echo KinetikCircle on http://localhost:5180/ && npm run dev"
 
@@ -14,6 +17,7 @@ start "ArgantaLab" cmd /k "cd /d "%~dp0apps\web" && echo ArgantaLab on http://lo
 
 REM Give servers 3 seconds to boot, then open all in browser
 timeout /t 3 /nobreak > nul
+start "" http://localhost:5174/
 start "" http://localhost:5180/
 start "" http://localhost:5273/
 start "" http://localhost:5176/
