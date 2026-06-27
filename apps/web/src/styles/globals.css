@@ -245,8 +245,8 @@ table.data td{padding:10px 11px;border-bottom:1px solid var(--border-2)}
    inset from the edges, rounded, safe-area aware, soft pill behind active icon. */
 .dock{display:none;position:fixed;z-index:40;
   left:50%;transform:translateX(-50%);
-  bottom:calc(10px + env(safe-area-inset-bottom));
-  width:calc(100% - 24px);max-width:480px;height:64px;
+  bottom:calc(11px + env(safe-area-inset-bottom));
+  width:calc(100% - 24px);max-width:620px;height:66px;
   padding:0 6px;border-radius:26px;
   background:color-mix(in srgb,var(--bg-2) 55%,rgba(8,6,16,.55));
   backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px) saturate(1.8);
