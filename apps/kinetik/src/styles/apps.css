@@ -40,8 +40,8 @@ html[data-theme='dark'] .kap {
 .kap-title-dot { width: 13px; height: 13px; border-radius: 50%; background: linear-gradient(135deg, var(--c0), var(--pad)); flex: 0 0 auto; }
 .kap-soon { display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; border-radius: 999px; background: color-mix(in srgb, var(--pad) 12%, transparent); border: 1px solid color-mix(in srgb, var(--pad) 20%, transparent); color: var(--pad); font-size: 12px; font-weight: 800; flex: 0 0 auto; }
 .kap-soon em { font-style: normal; font-size: 10px; letter-spacing: 0.04em; opacity: 0.85; }
-.kap-me { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; object-fit: cover; border: 2px solid var(--card); box-shadow: var(--shadow); }
-.kap-me-fb { display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 800; background: linear-gradient(135deg, var(--c0), var(--pad)); }
+.kap-theme { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center; color: var(--ink); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); transition: transform 0.14s ease; }
+.kap-theme:active { transform: scale(0.9); }
 
 /* Body + reveal */
 .kap-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 16px 30px; }

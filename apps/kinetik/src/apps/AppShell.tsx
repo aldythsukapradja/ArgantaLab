@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
-import { initials } from '@data/energy'
-import { IconChevronL } from '@components/Icons'
+import { IconChevronL, IconSun, IconMoon } from '@components/Icons'
 
 export interface AppTab { key: string; label: string }
 
@@ -21,10 +20,10 @@ export default function AppShell({ accent, emoji, title, onBack, tabs, tab, onTa
   children: ReactNode
 }) {
   const circles = useDataStore(s => s.circles)
-  const me = useDataStore(s => s.me)
   const activeCircleId = useUiStore(s => s.activeCircleId)
+  const theme = useUiStore(s => s.theme)
+  const toggleTheme = useUiStore(s => s.toggleTheme)
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
-  const meInitial = initials(me?.name || 'Me')
 
   return (
     <div className="kap" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }}>
@@ -35,10 +34,9 @@ export default function AppShell({ accent, emoji, title, onBack, tabs, tab, onTa
           <b>{title}</b>
           <small><span className="kap-title-dot" />{circle?.name ?? 'Your circle'}</small>
         </div>
-        <span className="kap-soon">💎 <em>Soon</em></span>
-        {me?.photoUrl
-          ? <img className="kap-me" src={me.photoUrl} alt={me.name} referrerPolicy="no-referrer" />
-          : <span className="kap-me kap-me-fb">{meInitial}</span>}
+        <button className="kap-theme" onClick={toggleTheme} aria-label="Toggle light or dark mode">
+          {theme === 'dark' ? <IconSun width={18} height={18} /> : <IconMoon width={18} height={18} />}
+        </button>
       </header>
 
       <div className="kap-body">{children}</div>

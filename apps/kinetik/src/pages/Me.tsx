@@ -96,7 +96,6 @@ export default function Me() {
 
   const [a0, a1] = accentOf(circle)
   const name = authUser?.name ?? 'You'
-  const diamonds = authUser?.diamonds ?? 0
 
   // The signed-in user's own role in this circle — Owner / Co-leader / Member.
   // Resolved from the real roster so a co-leader isn't mislabelled as the owner.
@@ -124,7 +123,6 @@ export default function Me() {
           ? <img className="me3-avatar" src={authUser.photoUrl} alt={name} referrerPolicy="no-referrer" />
           : <div className="me3-avatar me3-avatar-fb">{initials(name)}</div>}
         <div className="me3-head-actions">
-          <span className="me3-wallet"><IconDiamondGem /> {diamonds.toLocaleString()}</span>
           <button className="me3-icon-btn" aria-label="Share profile" onClick={() => alert('Share — coming soon')}><IconShare width={16} height={16} /></button>
           <button className="me3-icon-btn" aria-label="Toggle theme" onClick={toggleTheme}>{theme === 'dark' ? <IconSun width={16} height={16} /> : <IconMoon width={16} height={16} />}</button>
         </div>
@@ -183,7 +181,7 @@ export default function Me() {
         {family === null && <div className="me3-empty">Loading family…</div>}
         {family && family.length === 0 && <div className="me3-empty">Sign in as the circle owner to see members.</div>}
         {family && family.map(m => (
-          <MemberRow key={m.id} m={m} worlds={worlds} rings={rings[m.id]} myDiamonds={m.isMe ? diamonds : null} />
+          <MemberRow key={m.id} m={m} worlds={worlds} rings={rings[m.id]} />
         ))}
       </div>
       {family && family.some(m => m.kind === 'child') && (
@@ -213,9 +211,9 @@ export default function Me() {
   )
 }
 
-// ── A member row: adults show role + (you) diamonds; kids show 6 world rings ──
-function MemberRow({ m, worlds, rings, myDiamonds }: {
-  m: FamilyMember; worlds: World[]; rings?: Record<string, number>; myDiamonds: number | null
+// ── A member row: adults show their role; kids show 6 world rings ──
+function MemberRow({ m, worlds, rings }: {
+  m: FamilyMember; worlds: World[]; rings?: Record<string, number>
 }) {
   const isKid = m.kind === 'child'
   const avatarBg = m.color || (isKid ? colorFor(m.id) : 'var(--grad)')
@@ -238,7 +236,6 @@ function MemberRow({ m, worlds, rings, myDiamonds }: {
           </b>
           <small>{sub || '—'}</small>
         </div>
-        {myDiamonds != null && <span className="me3-mdia"><IconDiamondGem size={13} /> {myDiamonds.toLocaleString()}</span>}
       </div>
       {m.kind === 'child' && worlds.length > 0 && (
         <div className="me3-rings">
@@ -304,8 +301,4 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
       </div>
     </div>
   )
-}
-
-function IconDiamondGem({ size = 14 }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M5.5 3h13l3.5 6-10 12L2 9l3.5-6z" opacity="0.95" /></svg>
 }

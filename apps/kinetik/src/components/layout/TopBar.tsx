@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUiStore } from '@store/uiStore'
 import { useDataStore } from '@store/dataStore'
-import { initials } from '@data/energy'
-import { IconChevron, IconPlus } from '@components/Icons'
+import { IconChevron, IconPlus, IconSun, IconMoon } from '@components/Icons'
 import { CircleEmblem as Emblem, accentOf } from '@components/CircleEmblem'
 
 export default function TopBar() {
-  const { activeCircleId, setCircle, go } = useUiStore()
+  const { activeCircleId, setCircle, go, theme, toggleTheme } = useUiStore()
   const circles = useDataStore(s => s.circles)
-  const me = useDataStore(s => s.me)
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement | null>(null)
 
@@ -72,16 +70,9 @@ export default function TopBar() {
           )}
         </div>
 
-        {/* right — avatar */}
-        <button
-          className="topbar-avatar"
-          onClick={() => go('me')}
-          aria-label="Profile"
-          style={me?.photoUrl ? undefined : { background: 'var(--grad)' }}
-        >
-          {me?.photoUrl
-            ? <img src={me.photoUrl} alt={me.name} className="topbar-avatar-img" referrerPolicy="no-referrer" />
-            : <span>{initials(me?.name || 'Me')}</span>}
+        {/* right — theme switcher */}
+        <button className="topbar-theme" onClick={toggleTheme} aria-label="Toggle light or dark mode">
+          {theme === 'dark' ? <IconSun width={18} height={18} /> : <IconMoon width={18} height={18} />}
         </button>
       </div>
     </header>
