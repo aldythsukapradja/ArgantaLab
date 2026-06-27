@@ -24,7 +24,7 @@ export const FEATURED_GAMES: FeaturedGame[] = [
 // Where the built-in games are hosted. Override per-environment with
 // VITE_ARGANTA_URL; falls back to the production ArgantaLab deployment.
 export const ARGANTA_URL =
-  ((import.meta.env.VITE_ARGANTA_URL as string) || 'https://argantalab.vercel.app').replace(/\/$/, '')
+  ((import.meta.env.VITE_ARGANTA_URL as string) || 'https://lab.arganta.app').replace(/\/$/, '')
 
 export const featuredUrl = (file: string) => `${ARGANTA_URL}/games/${file}`
 
