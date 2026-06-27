@@ -28,8 +28,8 @@ export default function Dock() {
           const Icon = icons[t.icon] ?? icons.arganta
           const target = lastInGroup[t.key] || t.members[0]
           return (
-            <button key={t.key} className={`dock-item${active ? ' on' : ''}`} onClick={() => go({ tab: target })}>
-              <Icon />
+            <button key={t.key} className={`dock-item${active ? ' on' : ''}`} onClick={() => go({ tab: target })} aria-current={active ? 'page' : undefined}>
+              <span className="dock-ic"><Icon /></span>
               <span>{t.label}</span>
             </button>
           )
