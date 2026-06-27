@@ -4,7 +4,7 @@ echo Starting all Arganta local servers...
 echo.
 
 REM Arganta Landing (port 5174)
-start "Arganta Landing" cmd /k "cd /d "%~dp0apps\landing" && echo Arganta Landing on http://localhost:5174/ && npm run dev -- --port 5174 --strictPort"
+start "Arganta Landing" cmd /k "cd /d "%~dp0apps\landing" && npm install && echo Arganta Landing on http://localhost:5174/ && npm run dev -- --port 5174 --strictPort"
 
 REM KinetikCircle app (port 5180)
 start "KinetikCircle" cmd /k "cd /d "%~dp0apps\kinetik" && echo KinetikCircle on http://localhost:5180/ && npm run dev"
