@@ -12,64 +12,18 @@ import { ArgantaLandCapture, OrbitCapture, QACapture, WorldMapCapture } from './
 
 const CONTACT_EMAIL = 'hello@arganta.app'
 
-type SlideId =
-  | 'promise'
-  | 'problem'
-  | 'answer'
-  | 'worlds'
-  | 'companions'
-  | 'rings'
-  | 'argons'
-  | 'nexus'
-  | 'circle'
-  | 'parents'
-  | 'create'
-  | 'safety'
-  | 'cta'
+type SceneId = 'open' | 'problem' | 'mechanism' | 'worlds' | 'quest' | 'proof' | 'trust' | 'cta'
 
-interface Slide {
-  id: SlideId
+interface Scene {
+  id: SceneId
   kicker: string
   title: ReactNode
-  body?: ReactNode
+  body: ReactNode
   visual: ReactNode
-  mode?: 'center' | 'split' | 'final'
+  accent: string
 }
 
 const worlds = WORLDS.slice(0, 6)
-
-const ringData = [
-  ['Number', 82, worlds[0].color],
-  ['Word', 64, worlds[1].color],
-  ['Wonder', 48, worlds[2].color],
-  ['Logic', 76, worlds[3].color],
-  ['World', 57, worlds[4].color],
-  ['Life', 91, worlds[5].color],
-] as const
-
-const ledgerRows = [
-  ['+120', 'solved fraction boss', 'learning'],
-  ['+80', 'read aloud streak', 'habit'],
-  ['-30', 'missed agreed routine', 'consequence'],
-  ['+150', 'presented Wonder project', 'creation'],
-] as const
-
-const parentSignals = [
-  ['Skill mastery', 78],
-  ['Learning gaps', 42],
-  ['Daily rhythm', 86],
-  ['Bloom depth', 63],
-  ['Argons economy', 91],
-] as const
-
-const trust = [
-  'Private circles by default',
-  'Parent-aware sharing',
-  'Learning-gated rewards',
-  'Server-controlled Argons ledger',
-  'Moderated publishing',
-  'Human judgment with agentic support',
-]
 
 function ArgantaMark({ size = 18 }: { size?: number }) {
   return (
@@ -83,7 +37,7 @@ function ArgantaMark({ size = 18 }: { size?: number }) {
 
 function IconArrow({ dir = 'right' }: { dir?: 'left' | 'right' }) {
   return (
-    <svg className={dir === 'left' ? 'flip' : ''} width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg className={dir === 'left' ? 'flip' : ''} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   )
@@ -105,66 +59,95 @@ function IconMoon() {
   )
 }
 
-function PromiseVisual() {
-  return <OrbitCapture />
-}
-
-function ProblemVisual() {
-  const items = [
-    ['Hours vanish', 'attention without evidence', 74],
-    ['Rewards are random', 'coins without meaning', 58],
-    ['Parents see summaries', 'activity without proof', 44],
-    ['Learning is separate', 'school outside play', 68],
-    ['Progress is hard to prove', 'growth without a ledger', 36],
-  ] as const
+function OpeningScene() {
   return (
-    <div className="problem-visual pres-pop">
-      <div className="problem-scan" aria-hidden />
-      <div className="problem-core">
-        <small>black box</small>
-        <b>Games already have the time.</b>
-        <span>Most of it is not connected to measurable growth.</span>
+    <div className="cine-visual open-visual">
+      <div className="orbit-halo" aria-hidden>
+        <span />
+        <span />
+        <span />
       </div>
-      <div className="problem-stack">
-        {items.map(([item, note, value], i) => (
-          <div key={item} className={`problem-card p${i + 1}`}>
-            <small>{String(i + 1).padStart(2, '0')}</small>
-            <span>{item}</span>
-            <b>{note}</b>
-            <i><em style={{ width: `${value}%` }} /></i>
-          </div>
+      <div className="hero-orbit-shell actor-main">
+        <OrbitCapture />
+      </div>
+      <div className="floating-ledger actor-side">
+        <span>Argons minted</span>
+        <b><CountUp to={4280} /></b>
+        <small>knowledge currency</small>
+      </div>
+      <div className="kin-comet-row actor-side">
+        {KIN.slice(0, 5).map((kin, index) => (
+          <i key={kin.id} style={{ '--d': `${index * 0.08}s`, '--kin': kin.color } as CSSProperties}>
+            <KinSprite kin={kin.id} size={52} bob />
+          </i>
         ))}
-      </div>
-      <div className="problem-signal">
-        <span>screen time</span>
-        <i />
-        <span>growth signal</span>
       </div>
     </div>
   )
 }
 
-function AnswerVisual() {
-  return <QACapture />
-}
-
-function WorldsVisual() {
-  return <WorldMapCapture />
-}
-
-function CompanionsVisual() {
+function ProblemScene() {
+  const cards = [
+    ['Hours vanish', 'time without evidence'],
+    ['Rewards are random', 'coins without meaning'],
+    ['Parents see summaries', 'activity without proof'],
+    ['Learning is separate', 'school outside play'],
+  ] as const
   return (
-    <div className="companions-visual pres-pop">
-      <div className="buddy-card">
-        <Buddy mood="wave" size={190} color="#8b5cf6" />
-        <b>Buddy</b>
-        <span>The child's progress companion.</span>
+    <div className="cine-visual problem-cinema">
+      <div className="blackbox actor-main">
+        <div className="blackbox-core">
+          <span>black box</span>
+          <b>Games already have the time.</b>
+          <small>Growth is trapped inside the session.</small>
+        </div>
+        <div className="blackbox-crack" />
       </div>
-      <div className="kin-card-grid">
-        {KIN.slice(0, 8).map(k => (
-          <span key={k.id} style={{ '--kin': k.color } as CSSProperties}>
-            <KinSprite kin={k.id} size={64} bob />
-            <b>{k.name}</b>
+      <div className="problem-orbit">
+        {cards.map(([title, note], index) => (
+          <article key={title} className={`problem-shard s${index + 1}`}>
+            <b>{title}</b>
+            <span>{note}</span>
+            <i />
+          </article>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MechanismScene() {
+  return (
+    <div className="cine-visual mechanism-cinema">
+      <div className="mechanism-rings actor-main" style={{ '--c0': '#22d3ee', '--c1': '#8b5cf6' } as CSSProperties}>
+        {worlds.map((world, index) => (
+          <div key={world.key} className={`mechanism-ring r${index + 1}`} style={{ '--world': world.color } as CSSProperties}>
+            <KinetikRing pct={[82, 64, 48, 76, 57, 91][index]} size={96} value={<span>{world.icon}</span>} label={world.name} />
+          </div>
+        ))}
+        <div className="mechanism-core">
+          <CircleEmblem accent={['#22d3ee', '#8b5cf6']} active size={86} />
+          <b>Play becomes proof</b>
+        </div>
+      </div>
+      <div className="quest-peek actor-side">
+        <QACapture />
+      </div>
+    </div>
+  )
+}
+
+function WorldsScene() {
+  return (
+    <div className="cine-visual worlds-cinema">
+      <div className="map-starfield actor-main">
+        <WorldMapCapture />
+      </div>
+      <div className="world-index actor-side">
+        {worlds.map(world => (
+          <span key={world.key} style={{ '--world': world.color } as CSSProperties}>
+            <i>{world.icon}</i>
+            <b>{world.name}</b>
           </span>
         ))}
       </div>
@@ -172,294 +155,148 @@ function CompanionsVisual() {
   )
 }
 
-function RingsVisual() {
+function QuestScene() {
   return (
-    <div className="rings-visual pres-pop" style={{ '--c0': '#22d3ee', '--c1': '#8b5cf6' } as CSSProperties}>
-      {ringData.map(([label, pct, color]) => (
-        <div key={label} className="ring-card" style={{ '--c0': color, '--c1': '#8b5cf6' } as CSSProperties}>
-          <KinetikRing pct={pct} size={88} value={<CountUp to={pct} fmt={n => `${Math.round(n)}%`} />} label={label} />
-        </div>
-      ))}
-      <div className="today-nudge">
-        <span>Today's nudge</span>
-        <b>Play Wonder to fill the lowest ring.</b>
+    <div className="cine-visual quest-cinema">
+      <div className="land-portal actor-main">
+        <ArgantaLandCapture />
+      </div>
+      <div className="qa-portal actor-side">
+        <QACapture />
       </div>
     </div>
   )
 }
 
-function ArgonsVisual() {
-  return (
-    <div className="argons-visual pres-pop">
-      <div className="wallet-card">
-        <span>Knowledge currency</span>
-        <b><CountUp to={4280} /> Argons</b>
-        <small>Visible effort. Accountable economy.</small>
-      </div>
-      {ledgerRows.map(([amount, reason, kind]) => (
-        <div key={`${amount}-${reason}`} className={`ledger-row ${kind}`}>
-          <b>{amount}</b>
-          <span>{reason}</span>
-          <small>{kind}</small>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function NexusVisual() {
-  return <ArgantaLandCapture />
-}
-
-function CircleVisual() {
-  const circles = [
-    ['Family', '#f43f5e', '#fb7185'],
-    ['Class', '#22d3ee', '#6366f1'],
-    ['Tutor', '#f59e0b', '#ec4899'],
+function ProofScene() {
+  const signals = [
+    ['Skill mastery', 78, '#22d3ee'],
+    ['Bloom depth', 63, '#8b5cf6'],
+    ['Daily rhythm', 86, '#22c55e'],
+    ['Argons ledger', 91, '#f6b83f'],
   ] as const
   return (
-    <div className="circle-visual pres-pop">
-      {circles.map(([label, a, b], i) => (
-        <div key={label} className="circle-card">
-          <CircleEmblem accent={[a, b]} active={i === 0} size={58} />
-          <b>{label} circle</b>
-          <span>Trusted challenge space</span>
-        </div>
-      ))}
-      <div className="challenge-board">
-        {['Ring streak', 'Argons earned', 'Kin collected', 'World mastery'].map((item, i) => (
-          <div key={item}><span>{i + 1}</span><b>{item}</b></div>
+    <div className="cine-visual proof-cinema">
+      <div className="proof-orb actor-main" style={{ '--c0': '#22d3ee', '--c1': '#8b5cf6' } as CSSProperties}>
+        <KinetikRing pct={78} size={180} value={<CountUp to={78} fmt={n => `${Math.round(n)}%`} />} label="mastery" />
+        <div className="proof-buddy"><Buddy mood="celebrate" size={126} color="#8b5cf6" /></div>
+      </div>
+      <div className="signal-stack actor-side">
+        {signals.map(([label, value, color]) => (
+          <span key={label} style={{ '--signal': color } as CSSProperties}>
+            <b>{label}</b>
+            <i><em style={{ width: `${value}%` }} /></i>
+            <strong>{value}%</strong>
+          </span>
         ))}
       </div>
     </div>
   )
 }
 
-function ParentsVisual() {
+function TrustScene() {
+  const chips = ['Private circles', 'Parent-aware sharing', 'Learning-gated rewards', 'Server ledger', 'Moderated publishing']
   return (
-    <div className="parents-visual pres-pop" style={{ '--c0': '#22d3ee', '--c1': '#8b5cf6' } as CSSProperties}>
-      <div className="parent-top">
-        <KinetikRing pct={78} size={112} value={<CountUp to={78} fmt={n => `${Math.round(n)}%`} />} label="mastery" />
-        <div>
-          <span>Parent signal</span>
-          <b>Wonder high. Logic needs confidence.</b>
-        </div>
+    <div className="cine-visual trust-cinema">
+      <div className="circle-constellation actor-main">
+        {[
+          ['Family', '#f43f5e', '#fb7185'],
+          ['Class', '#22d3ee', '#6366f1'],
+          ['Tutor', '#f59e0b', '#ec4899'],
+        ].map(([label, a, b], index) => (
+          <div key={label} className={`trust-circle c${index + 1}`}>
+            <CircleEmblem accent={[a, b]} active={index === 0} size={96} />
+            <b>{label}</b>
+          </div>
+        ))}
       </div>
-      <div className="parent-bars">
-        {parentSignals.map(([label, pct]) => <span key={label}><b>{label}</b><i><em style={{ width: `${pct}%` }} /></i><small>{pct}%</small></span>)}
+      <div className="trust-capsules actor-side">
+        {chips.map(chip => <span key={chip}>{chip}</span>)}
       </div>
     </div>
   )
 }
 
-function CreateVisual() {
-  const steps = ['Learn foundation', 'Complete quest', 'Build creation', 'Present it', 'Improve it']
+function CtaScene() {
   return (
-    <div className="create-visual pres-pop">
-      {steps.map((step, i) => <span key={step} className="create-stage"><i>{i + 1}</i><b>{step}</b></span>)}
-      <div className="agent-row">
-        {['Planner', 'Builder', 'Tester', 'Reviewer', 'Safety', 'Curriculum'].map(agent => <i key={agent}>{agent}</i>)}
+    <div className="cine-visual cta-cinema">
+      <div className="cta-sigil actor-main">
+        <ArgantaMark size={74} />
+      </div>
+      <div className="cta-actions actor-side">
+        <a className="primary-btn" href="https://lab.arganta.app">Explore ArgantaLab <IconArrow /></a>
+        <a className="secondary-btn" href={`mailto:${CONTACT_EMAIL}?subject=Learning%20Partner%20with%20ArgantaLab`}>Learning Partner</a>
+        <a className="secondary-btn" href={`mailto:${CONTACT_EMAIL}`}>Contact Founder</a>
+        <footer>Built by parents. Designed for global families.</footer>
       </div>
     </div>
   )
 }
 
-function SafetyVisual() {
-  return (
-    <div className="safety-visual pres-pop">
-      <div className="safety-core">
-        <div className="trust-shield"><ArgantaMark size={38} /></div>
-        <b>Family trust layer</b>
-        <span>Privacy, moderation, parent controls, and human judgment around the creative engine.</span>
-      </div>
-      <div className="trust-grid">
-        {trust.map((item, i) => <span key={item} className={`trust-chip t${i + 1}`}>{item}</span>)}
-      </div>
-    </div>
-  )
-}
-
-function CtaVisual() {
-  return (
-    <div className="cta-visual pres-pop">
-      <div className="cta-mark"><ArgantaMark size={44} /></div>
-      <a className="primary-btn" href="https://lab.arganta.app">Explore ArgantaLab <IconArrow /></a>
-      <a className="secondary-btn" href={`mailto:${CONTACT_EMAIL}?subject=Learning%20Partner%20with%20ArgantaLab`}>Learning Partner</a>
-      <a className="secondary-btn" href={`mailto:${CONTACT_EMAIL}`}>Contact Founder</a>
-      <footer>Built by parents. Designed for global families.</footer>
-    </div>
-  )
-}
-
-const slides: Slide[] = [
+const scenes: Scene[] = [
   {
-    id: 'promise',
+    id: 'open',
     kicker: 'ArgantaLab',
-    title: (
-      <>
-        <span>Kids see play. </span>
-        <em>Parents see growth.</em>
-      </>
-    ),
-    body: 'ArgantaLab turns the hours kids spend in games into measurable learning — powered by Argons, a knowledge currency that makes growth visible.',
-    visual: <PromiseVisual />,
-    mode: 'split',
+    title: <><span>Kids see play. </span><em>Parents see growth.</em></>,
+    body: 'ArgantaLab turns the hours kids spend in games into measurable learning, powered by Argons and daily rings that make growth visible.',
+    visual: <OpeningScene />,
+    accent: '#22d3ee',
   },
   {
     id: 'problem',
-    kicker: 'The Problem',
-    title: (
-      <>
-        <span>The hours are there. </span>
-        <em>The growth is invisible.</em>
-      </>
-    ),
-    body: 'Games capture attention beautifully. Parents still struggle to know what skill grew, what habit formed, and what should happen next.',
-    visual: <ProblemVisual />,
-    mode: 'split',
+    kicker: 'The Black Box',
+    title: <><span>Screen time is huge. </span><em>The signal is hidden.</em></>,
+    body: 'Games are already earning attention. The missing layer is proof: what improved, what habit formed, and what parents should do next.',
+    visual: <ProblemScene />,
+    accent: '#fb7185',
   },
   {
-    id: 'answer',
-    kicker: 'The Product Loop',
-    title: (
-      <>
-        <span>Turn game loops into </span>
-        <em>growth loops.</em>
-      </>
-    ),
-    body: 'Learn, fill rings, earn Argons, grow Buddy, capture Kin, and turn every session into a parent-visible signal.',
-    visual: <AnswerVisual />,
-    mode: 'split',
+    id: 'mechanism',
+    kicker: 'The Conversion Engine',
+    title: <><span>Every session becomes </span><em>a growth event.</em></>,
+    body: 'Questions fill rings. Rings mint Argons. Argons unlock worlds, Kin, and parent-visible progress.',
+    visual: <MechanismScene />,
+    accent: '#8b5cf6',
   },
   {
     id: 'worlds',
     kicker: 'Six Worlds',
-    title: (
-      <>
-        <span>Six worlds train </span>
-        <em>six intelligences.</em>
-      </>
-    ),
-    body: 'NumberDash, WordQuest, WonderLab, LogicLand, WorldTrail, and LifeQuest connect play to a real learning foundation.',
-    visual: <WorldsVisual />,
-    mode: 'split',
+    title: <><span>One game universe. </span><em>Six intelligences.</em></>,
+    body: 'NumberDash, WordQuest, WonderLab, LogicLand, WorldTrail, and LifeQuest turn curriculum into places kids want to enter.',
+    visual: <WorldsScene />,
+    accent: '#f6b83f',
   },
   {
-    id: 'companions',
-    kicker: 'Buddy & Kin',
-    title: (
-      <>
-        <span>The learning feels </span>
-        <em>alive.</em>
-      </>
-    ),
-    body: 'Buddy creates attachment. Kin create discovery. Together they make progress emotional, collectible, and memorable.',
-    visual: <CompanionsVisual />,
-    mode: 'split',
+    id: 'quest',
+    kicker: 'Real Play',
+    title: <><span>Learning is not a worksheet. </span><em>It is movement.</em></>,
+    body: 'Buddy walks, Kin appear, and real Q&A moments become the gate between play and reward.',
+    visual: <QuestScene />,
+    accent: '#22c55e',
   },
   {
-    id: 'rings',
-    kicker: 'Daily Rings',
-    title: (
-      <>
-        <span>Rings turn effort </span>
-        <em>into rhythm.</em>
-      </>
-    ),
-    body: 'A child can feel today. A parent can see the pattern. The product quietly builds the habit underneath.',
-    visual: <RingsVisual />,
-    mode: 'split',
+    id: 'proof',
+    kicker: 'Parent Proof',
+    title: <><span>The parent sees </span><em>the intelligence behind play.</em></>,
+    body: 'Skill mastery, rhythm, Bloom depth, and the Argons ledger become a calm proof layer over the child’s week.',
+    visual: <ProofScene />,
+    accent: '#22d3ee',
   },
   {
-    id: 'argons',
-    kicker: 'Argons',
-    title: (
-      <>
-        <span>A knowledge currency </span>
-        <em>parents can guide.</em>
-      </>
-    ),
-    body: 'Argons reward learning, care, creation, and real-world effort. Parents keep reward and consequence controls calm, visible, and accountable.',
-    visual: <ArgonsVisual />,
-    mode: 'split',
-  },
-  {
-    id: 'nexus',
-    kicker: 'ArgantaLand',
-    title: (
-      <>
-        <span>Kids walk into </span>
-        <em>learning worlds.</em>
-      </>
-    ),
-    body: 'Buddy, Kin, maps, and questions are connected inside real play spaces, so learning feels like movement through a world.',
-    visual: <NexusVisual />,
-    mode: 'split',
-  },
-  {
-    id: 'circle',
-    kicker: 'Trusted Circles',
-    title: (
-      <>
-        <span>Competition belongs </span>
-        <em>inside trust.</em>
-      </>
-    ),
-    body: 'Safe circles turn family, tutor, class, or friend energy into motivation without public pressure or anonymous social loops.',
-    visual: <CircleVisual />,
-    mode: 'split',
-  },
-  {
-    id: 'parents',
-    kicker: 'Parent Growth View',
-    title: (
-      <>
-        <span>Parents see the signal </span>
-        <em>behind the play.</em>
-      </>
-    ),
-    body: 'Skill mastery, gaps, Bloom depth, rhythm, and the Argons ledger become a calm picture of growth.',
-    visual: <ParentsVisual />,
-    mode: 'split',
-  },
-  {
-    id: 'create',
-    kicker: 'Creation Layer',
-    title: (
-      <>
-        <span>After kids learn, </span>
-        <em>they build.</em>
-      </>
-    ),
-    body: 'ArgantaLab helps kids turn intelligence into projects, stories, presentations, and playable creations.',
-    visual: <CreateVisual />,
-    mode: 'split',
-  },
-  {
-    id: 'safety',
+    id: 'trust',
     kicker: 'Trust Layer',
-    title: (
-      <>
-        <span>Safe by design. </span>
-        <em>Creative by nature.</em>
-      </>
-    ),
-    body: 'A family-first product needs privacy, parent awareness, learning gates, moderation, and human judgment.',
-    visual: <SafetyVisual />,
-    mode: 'split',
+    title: <><span>Competition belongs </span><em>inside trusted circles.</em></>,
+    body: 'Family, class, tutor, and learning partners can motivate without public pressure or anonymous social loops.',
+    visual: <TrustScene />,
+    accent: '#ec4899',
   },
   {
     id: 'cta',
     kicker: 'Start Here',
-    title: (
-      <>
-        <span>Turn screen time into </span>
-        <em>intelligence time.</em>
-      </>
-    ),
-    body: 'For families, tutors, clubs, and learning partners ready to make screen time meaningful.',
-    visual: <CtaVisual />,
-    mode: 'final',
+    title: <><span>Turn screen time into </span><em>intelligence time.</em></>,
+    body: 'For families, tutors, clubs, and learning partners ready to make game time measurable, meaningful, and alive.',
+    visual: <CtaScene />,
+    accent: '#22d3ee',
   },
 ]
 
@@ -467,12 +304,11 @@ function App() {
   const [active, setActive] = useState(0)
   const [dark, setDark] = useState(true)
   const dir = useRef(1)
-  const tiltRef = useRef<HTMLDivElement>(null)
-  const stageRef = useRef<HTMLDivElement>(null)
-  const slide = slides[active]
+  const stageRef = useRef<HTMLElement>(null)
+  const scene = scenes[active]
 
   const goTo = (index: number) => {
-    const next = Math.max(0, Math.min(slides.length - 1, index))
+    const next = Math.max(0, Math.min(scenes.length - 1, index))
     if (next !== active) dir.current = next > active ? 1 : -1
     setActive(next)
   }
@@ -487,7 +323,7 @@ function App() {
         event.preventDefault()
         setActive(step => {
           dir.current = 1
-          return Math.min(slides.length - 1, step + 1)
+          return Math.min(scenes.length - 1, step + 1)
         })
       } else if (event.key === 'ArrowLeft') {
         event.preventDefault()
@@ -512,89 +348,54 @@ function App() {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline()
       tl.fromTo(el, {
-        rotationY: reduce ? 0 : dir.current * 15,
-        z: reduce ? 0 : -220,
         opacity: 0,
-        transformPerspective: 1100,
-        transformOrigin: 'center center',
+        x: reduce ? 0 : dir.current * 72,
+        z: reduce ? 0 : -260,
+        rotationY: reduce ? 0 : dir.current * 18,
+        transformPerspective: 1400,
       }, {
-        rotationY: 0,
-        z: 0,
         opacity: 1,
-        duration: reduce ? 0.01 : 0.75,
+        x: 0,
+        z: 0,
+        rotationY: 0,
+        duration: reduce ? 0.01 : 0.88,
         ease: 'power3.out',
       })
-      el.querySelectorAll<SVGGeometryElement>('.pres-line').forEach(path => {
-        const len = path.getTotalLength()
-        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len })
-        tl.to(path, { strokeDashoffset: 0, duration: reduce ? 0.01 : 1.25, ease: 'power2.inOut' }, 0.24)
-      })
-      el.querySelectorAll<HTMLElement>('[data-count]').forEach(node => {
-        const to = parseFloat(node.dataset.count || '0')
-        const suffix = node.dataset.suffix || ''
-        const obj = { v: 0 }
-        tl.to(obj, {
-          v: to,
-          duration: reduce ? 0.01 : 1.1,
-          ease: 'power2.out',
-          onUpdate: () => { node.textContent = Math.round(obj.v).toLocaleString() + suffix },
-        }, 0.18)
-      })
-      tl.fromTo('.kicker', { y: reduce ? 0 : 14, opacity: 0 }, { y: 0, opacity: 1, duration: reduce ? 0.01 : 0.42, ease: 'power2.out' }, 0.04)
-        .fromTo('.cs-headline', { clipPath: 'inset(0 100% 0 0)', opacity: 0 }, { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: reduce ? 0.01 : 0.72, ease: 'power3.out' }, 0.1)
-        .fromTo('.slide-body', { opacity: 0, y: reduce ? 0 : 24 }, { opacity: 1, y: 0, duration: reduce ? 0.01 : 0.52, ease: 'power2.out' }, 0.32)
-        .fromTo('.pres-anim:not(.kicker):not(.slide-body)', { opacity: 0, y: reduce ? 0 : 34 }, { opacity: 1, y: 0, duration: reduce ? 0.01 : 0.64, stagger: reduce ? 0 : 0.07, ease: 'power3.out' }, 0.08)
-        .fromTo('.pres-pop', { opacity: 0, scale: reduce ? 1 : 0.9, rotationY: reduce ? 0 : dir.current * 24 }, { opacity: 1, scale: 1, rotationY: 0, duration: reduce ? 0.01 : 0.7, ease: 'back.out(1.5)' }, 0.18)
-        .fromTo('.problem-card, .loop-step, .world-card, .kin-card-grid span, .ring-card, .ledger-row, .habitat, .circle-card, .parent-bars span, .create-stage, .trust-chip', {
-          opacity: 0,
-          y: reduce ? 0 : 22,
-          rotationX: reduce ? 0 : -14,
-          transformPerspective: 700,
-        }, {
-          opacity: 1,
+      tl.fromTo('.scene-kicker', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: reduce ? 0.01 : 0.42, ease: 'power2.out' }, 0.05)
+        .fromTo('.scene-title', { clipPath: 'inset(0 100% 0 0)', opacity: 0 }, { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: reduce ? 0.01 : 0.78, ease: 'power3.out' }, 0.12)
+        .fromTo('.scene-body', { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: reduce ? 0.01 : 0.56, ease: 'power2.out' }, 0.42)
+        .fromTo('.actor-main', { scale: reduce ? 1 : 0.72, y: reduce ? 0 : 52, opacity: 0, rotationX: reduce ? 0 : -12 }, {
+          scale: 1,
           y: 0,
+          opacity: 1,
           rotationX: 0,
-          duration: reduce ? 0.01 : 0.58,
-          stagger: reduce ? 0 : 0.045,
-          ease: 'power3.out',
-        }, 0.34)
-        .fromTo('.buddy-stage .buddy, .loop-center .buddy, .loop-center svg:last-child, .world-art svg, .safety-core, .cta-mark', {
+          duration: reduce ? 0.01 : 0.82,
+          ease: 'back.out(1.45)',
+        }, 0.18)
+        .fromTo('.actor-side, .problem-shard, .world-index span, .trust-capsules span, .signal-stack span', {
+          y: reduce ? 0 : 34,
           opacity: 0,
-          scale: reduce ? 1 : 0.72,
-          rotationY: reduce ? 0 : -38,
+          scale: reduce ? 1 : 0.86,
         }, {
+          y: 0,
           opacity: 1,
           scale: 1,
-          rotationY: 0,
-          duration: reduce ? 0.01 : 0.66,
-          stagger: reduce ? 0 : 0.035,
-          ease: 'back.out(1.7)',
-        }, 0.28)
-        .fromTo('.pres-bar', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: reduce ? 0.01 : 0.72, stagger: reduce ? 0 : 0.06, ease: 'power3.out' }, 0.2)
-        .fromTo('.mini-bars i, .parent-bars em, .problem-card em', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: reduce ? 0.01 : 0.78, stagger: reduce ? 0 : 0.04, ease: 'power3.out' }, 0.42)
-      gsap.to('.problem-scan', { xPercent: 440, duration: reduce ? 0.01 : 2.8, repeat: reduce ? 0 : -1, ease: 'none' })
-      gsap.to('.loop-center', { y: reduce ? 0 : -6, duration: 2.6, yoyo: true, repeat: reduce ? 0 : -1, ease: 'sine.inOut' })
+          duration: reduce ? 0.01 : 0.58,
+          stagger: reduce ? 0 : 0.055,
+          ease: 'power3.out',
+        }, 0.45)
+      gsap.to('.orbit-halo span', { rotate: '+=360', duration: reduce ? 0.01 : 18, repeat: reduce ? 0 : -1, ease: 'none', stagger: 1.4 })
+      gsap.to('.cta-sigil, .mechanism-core, .proof-orb', { y: reduce ? 0 : -10, duration: 2.6, repeat: reduce ? 0 : -1, yoyo: true, ease: 'sine.inOut' })
     }, el)
     return () => ctx.revert()
   }, [active])
 
-  useEffect(() => {
-    const el = tiltRef.current
-    if (!el) return
-    const onMove = (event: MouseEvent) => {
-      const x = event.clientX / window.innerWidth - 0.5
-      const y = event.clientY / window.innerHeight - 0.5
-      gsap.to(el, { rotationY: x * 5, rotationX: -y * 4, transformPerspective: 1400, transformOrigin: 'center center', duration: 0.75, ease: 'power2.out' })
-    }
-    window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
-  }, [])
-
   return (
-    <div className="deck-app">
+    <div className="deck-app cine-app" data-scene={scene.id} style={{ '--scene-accent': scene.accent } as CSSProperties}>
       <div className="scene-canvas" aria-hidden>
         <ArgantaBoxScene dark={dark} step={active} />
       </div>
+      <div className="cine-grid-depth" aria-hidden />
       <div className="stage-wash" aria-hidden />
 
       <header className="stage-brand">
@@ -602,7 +403,7 @@ function App() {
           <span><ArgantaMark /></span>
           <b>ArgantaLab</b>
         </button>
-        <div className="act-label">{slide.kicker}</div>
+        <div className="act-label">{scene.kicker}</div>
       </header>
 
       <div className="stage-actions" aria-label="Presentation controls">
@@ -612,28 +413,26 @@ function App() {
         <button className="stage-btn" onClick={() => goTo(active - 1)} disabled={active === 0} aria-label="Previous slide">
           <IconArrow dir="left" />
         </button>
-        <button className="stage-btn" onClick={() => goTo(active + 1)} disabled={active === slides.length - 1} aria-label="Next slide">
+        <button className="stage-btn" onClick={() => goTo(active + 1)} disabled={active === scenes.length - 1} aria-label="Next slide">
           <IconArrow />
         </button>
       </div>
 
-      <main className="slide-stage" aria-live="polite">
-        <div ref={tiltRef} className="tilt-shell">
-          <section ref={stageRef} key={slide.id} className={`deck-slide ${slide.mode ?? 'split'}`}>
-            <div className="slide-copy">
-              <p className="kicker pres-anim">{slide.kicker}</p>
-              <h1 className="cs-headline">{slide.title}</h1>
-              {slide.body && <p className="slide-body pres-anim">{slide.body}</p>}
-            </div>
-            <div className="slide-visual">
-              {slide.visual}
-            </div>
-          </section>
-        </div>
+      <main className="cine-stage" aria-live="polite">
+        <section ref={stageRef} key={scene.id} className={`cine-scene scene-${scene.id}`}>
+          <div className="scene-copy">
+            <p className="scene-kicker">{scene.kicker}</p>
+            <h1 className="scene-title">{scene.title}</h1>
+            <p className="scene-body">{scene.body}</p>
+          </div>
+          <div className="scene-visual">
+            {scene.visual}
+          </div>
+        </section>
       </main>
 
-      <div className="progress-rail" aria-label="Slide progress">
-        {slides.map((item, index) => (
+      <div className="progress-rail cinematic" aria-label="Scene progress">
+        {scenes.map((item, index) => (
           <button
             key={item.id}
             className={`progress-dot ${index === active ? 'on' : ''}`}
@@ -645,7 +444,7 @@ function App() {
       </div>
 
       <div className="stage-footer">
-        <span>{String(active + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}</span>
+        <span>{String(active + 1).padStart(2, '0')} / {String(scenes.length).padStart(2, '0')}</span>
       </div>
     </div>
   )
