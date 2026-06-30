@@ -52,8 +52,8 @@ export const LOGO = `<svg width="32" height="32" viewBox="0 0 40 40"><defs><line
 //  Play (home) · Learn (6 learning worlds) · Build · Ship · You
 export const NAV: NavItem[] = [
   { tab: 'arganta',   label: 'ArgantaLab',   short: 'Home',     icon: 'arganta',   group: 'PLAY' },
-  { tab: 'quests',    label: 'Quests',       short: 'Quests',   icon: 'quests',    group: 'PLAY' },
   { tab: 'kinworld',  label: 'KinWorld',     short: 'KinWorld', icon: 'kinworld',  group: 'PLAY' },
+  { tab: 'quests',    label: 'Quests',       short: 'Quests',   icon: 'quests',    group: 'PLAY' },
   { tab: 'num',       label: 'NumberDash',   short: 'Number',   icon: 'num',       group: 'LEARN' },
   { tab: 'wrd',       label: 'WordQuest',    short: 'Words',    icon: 'wrd',       group: 'LEARN' },
   { tab: 'won',       label: 'WonderLab',    short: 'Science',  icon: 'won',       group: 'LEARN' },
@@ -78,7 +78,7 @@ export const WORLD_TABS = ['num', 'wrd', 'won', 'log', 'wld', 'lif']
 //  `pills`   = optional centre sub-nav pills (omit for hub-style groups).
 export interface MobileTab { key: string; label: string; icon: string; members: string[]; pills?: string[] }
 export const MOBILE_TABS: MobileTab[] = [
-  { key: 'play',   label: 'Play',   icon: 'arganta',  members: ['arganta', 'quests', 'kinworld'], pills: ['arganta', 'quests', 'kinworld'] },
+  { key: 'play',   label: 'Play',   icon: 'arganta',  members: ['arganta', 'kinworld', 'quests'], pills: ['arganta', 'kinworld', 'quests'] },
   { key: 'learn',  label: 'Learn',  icon: 'learn',    members: ['learn', ...WORLD_TABS] },
   { key: 'build',  label: 'Build',  icon: 'studio',   members: ['studio', 'lab', 'pitch'], pills: ['studio', 'lab', 'pitch'] },
   { key: 'ship',   label: 'Ship',   icon: 'discover', members: ['discover', 'library', 'gamestore'], pills: ['discover', 'library', 'gamestore'] },
