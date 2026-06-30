@@ -21,7 +21,7 @@ const GROUPS: Group[] = [
     { id: 'app', label: 'App Builder', Icon: Boxes },
     { id: 'content', label: 'Learn Builder', Icon: GraduationCap },
     { id: 'agents', label: 'Agent Builder', Icon: Network },
-    { id: 'broadcast', label: 'Broadcast', Icon: Megaphone },
+    { id: 'broadcast', label: 'Content Builder', Icon: Megaphone },
   ] },
 ]
 

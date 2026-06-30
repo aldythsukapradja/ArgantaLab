@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
-import { GraduationCap, Users, MessageSquare, Heart, Megaphone, Eye, Image, Circle } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import {
+  GraduationCap, Users, MessageSquare, Heart, Megaphone, Eye, Image, Circle,
+  UserPlus, Zap, Flame, Repeat, Share2, Coins, Shuffle, TrendingUp, Info,
+} from 'lucide-react'
 import { live } from '../data/live'
-import type { SchemaInsights } from '../data/types'
+import type { SchemaInsights, GrowthOverview, EconomyData, PortfolioVc, GrowthPoint } from '../data/types'
 import type { KinetikStats } from '../data/live'
+import { chartColor } from '../components/charts'
 import { Empty, Loading } from '../components/Empty'
-import { compact } from '../lib/format'
+import { compact, pct } from '../lib/format'
+
+const signed = (v: number | null | undefined) => (v == null ? 'WoW —' : `${v > 0 ? '+' : ''}${v}% WoW`)
 
 function KMark({ size = 34 }: { size?: number }) {
   return (
@@ -37,24 +43,35 @@ function StatCell({ label, value, icon, src }: { label: string; value: string | 
 export function Portfolio() {
   const [i, setI] = useState<SchemaInsights | null | undefined>(undefined)
   const [k, setK] = useState<KinetikStats | null | undefined>(undefined)
+  const [o, setO] = useState<GrowthOverview | null | undefined>(undefined)
+  const [e, setE] = useState<EconomyData | null | undefined>(undefined)
+  const [v, setV] = useState<PortfolioVc | null | undefined>(undefined)
 
   useEffect(() => {
     live.schemaInsights().then(setI)
     live.kinetikStats().then(setK)
+    live.growthOverview().then(setO)
+    live.economy().then(setE)
+    live.portfolioVc().then(setV)
   }, [])
 
   const loading = i === undefined && k === undefined
   const offline = i === null && k === null
+  const hasVc = !!(o || v)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
         <div className="h1">Portfolio</div>
-        <div className="sub">All live products in the Arganta ecosystem — connect Supabase &amp; sign in as operator to see real data</div>
+        <div className="sub">The investor read on the Arganta ecosystem — acquisition, retention &amp; monetization, every number live</div>
       </div>
 
       {loading && <Loading label="Loading app health…" />}
-      {offline && <Empty title="No live connection">Connect Supabase and sign in as operator — both app cards populate automatically.</Empty>}
+      {offline && <Empty title="No live connection">Connect Supabase and sign in as operator — the scorecard and both app cards populate automatically.</Empty>}
+
+      {hasVc && <NorthStar o={o ?? null} v={v ?? null} />}
+      {hasVc && <Scorecard o={o ?? null} e={e ?? null} v={v ?? null} />}
+      {v && v.familiesTotal > 0 && <Flywheel v={v} />}
 
       {/* ── KinetikCircle ──────────────────────────────────── */}
       {k !== undefined && (
@@ -118,6 +135,128 @@ export function Portfolio() {
           {!i && <div style={{ fontSize: 12.5, color: 'var(--tx3)', padding: '8px 0' }}>Sign in as operator to see live stats.</div>}
         </AppCard>
       )}
+    </div>
+  )
+}
+
+// ── North-star hero: weekly engaged accounts ───────────────────────────────
+function NorthStar({ o, v }: { o: GrowthOverview | null; v: PortfolioVc | null }) {
+  const engaged = o?.wau ?? null
+  const circles = v?.flywheelCount ?? null
+  const wow = o?.wowPct ?? null
+  return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div className="spread" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--tx3)', letterSpacing: '.05em', textTransform: 'uppercase' }}>Ecosystem north star</div>
+          <div style={{ fontSize: 12.5, color: 'var(--tx2)', marginTop: 2 }}>Weekly engaged accounts <span style={{ color: 'var(--tx3)' }}>· active learners + circles</span></div>
+          <div className="row" style={{ gap: 12, alignItems: 'baseline', marginTop: 6 }}>
+            <span style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-.02em', lineHeight: 1 }}>{engaged == null ? '—' : compact(engaged)}</span>
+            {wow != null && (
+              <span className="row" style={{ gap: 4, fontSize: 12.5, color: wow >= 0 ? 'var(--ok)' : 'var(--bad)' }}>
+                <TrendingUp size={13} /> {signed(wow)}
+              </span>
+            )}
+            {circles != null && <span style={{ fontSize: 12, color: 'var(--tx3)' }}>· {compact(circles)} active circles</span>}
+          </div>
+        </div>
+        {o && o.northStar.length > 0 && <SparkLine points={o.northStar} />}
+      </div>
+    </div>
+  )
+}
+
+function SparkLine({ points }: { points: GrowthPoint[] }) {
+  const W = 200, H = 54
+  const n = points.length
+  if (n < 2) return null
+  const max = Math.max(1, ...points.map(p => p.value))
+  const x = (idx: number) => (idx * W) / (n - 1)
+  const y = (val: number) => 6 + (1 - val / max) * (H - 12)
+  const line = points.map((p, idx) => `${idx ? 'L' : 'M'}${x(idx).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Weekly engaged accounts trend" style={{ flex: 'none' }}>
+      <path d={`${line} L${W},${H} L0,${H} Z`} fill="var(--acc-soft)" opacity={0.5} />
+      <path d={line} fill="none" stroke="var(--acc)" strokeWidth={2} strokeLinejoin="round" />
+      <circle cx={x(n - 1)} cy={y(points[n - 1].value)} r={3} fill="var(--acc)" />
+    </svg>
+  )
+}
+
+// ── The AARRR scorecard: one headline metric per pillar ─────────────────────
+interface Pillar { key: string; pillar: string; icon: ReactNode; value: string; sub: string; tone?: string; what: string }
+
+function Scorecard({ o, e, v }: { o: GrowthOverview | null; e: EconomyData | null; v: PortfolioVc | null }) {
+  const num = (x: number | null | undefined, suffix = '') => (x == null ? '—' : compact(x) + suffix)
+  const pctOr = (x: number | null | undefined) => (x == null ? '—' : pct(x))
+
+  const pillars: Pillar[] = [
+    { key: 'acq', pillar: 'Acquisition', icon: <UserPlus size={13} />,
+      value: num(o?.newLearners7d), sub: signed(o?.newWowPct),
+      tone: o?.newWowPct != null && o.newWowPct >= 0 ? 'var(--ok)' : 'var(--warn)',
+      what: 'New accounts that joined in the last 7 days, and how that compares to the week before. Top of the funnel.' },
+    { key: 'act', pillar: 'Activation', icon: <Zap size={13} />,
+      value: pctOr(v?.activationRate), sub: 'acted within 48h',
+      what: 'Of everyone who signed up, the share who took a first real action within 48 hours — the single biggest lever on everything downstream.' },
+    { key: 'eng', pillar: 'Engagement', icon: <Flame size={13} />,
+      value: pctOr(o?.stickiness), sub: o?.depth ? `${o.depth} actions / active` : 'DAU/MAU',
+      what: 'Stickiness (DAU/MAU): of everyone active this month, the share active on an average day. The truest daily-habit signal pre-revenue.' },
+    { key: 'ret', pillar: 'Retention', icon: <Repeat size={13} />,
+      value: pctOr(v?.d1Retention),
+      sub: v?.d1Retention == null ? 'next-day comeback' : `came back next day · n=${compact(v.d1Sample)}`,
+      tone: v?.d1Retention != null && v.d1Retention >= 40 ? 'var(--ok)' : undefined,
+      what: 'D1 retention — of the days a learner is active, how often they come back the next day (last 14d). The live, daily-habit version of retention: it populates from day two instead of waiting 30 days. Above ~40% is strong for a daily app.' },
+    { key: 'ref', pillar: 'Referral', icon: <Share2 size={13} />,
+      value: v?.kFactor == null ? '—' : v.kFactor.toFixed(2),
+      sub: v ? `${compact(v.invitesAccepted)}/${compact(v.invitesSent)} invites` : 'invite loop',
+      what: 'Accepted invites per inviter — how much the product grows itself. Above 1 means each user brings in more than one, the viral threshold.' },
+    { key: 'rev', pillar: 'Monetization', icon: <Coins size={13} />,
+      value: pctOr(e?.coverage), sub: v?.spentPerActiveKid != null ? `${compact(v.spentPerActiveKid)} diamonds/kid` : 'pre-revenue',
+      tone: e?.coverage != null && e.coverage >= 50 ? 'var(--ok)' : undefined,
+      what: 'Sink coverage — how much of the recurring diamond mint gets spent. A healthy value loop is the dress rehearsal for the revenue loop; spend-per-kid is the pay-intent proxy.' },
+  ]
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--tx2)', marginBottom: 8 }}>
+        <TrendingUp size={14} /> Unicorn scorecard — the growth funnel
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(168px,1fr))', gap: 10 }}>
+        {pillars.map((p, idx) => <PillarTile key={p.key} p={p} accent={chartColor(idx)} />)}
+      </div>
+    </div>
+  )
+}
+
+function PillarTile({ p, accent }: { p: Pillar; accent: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="kpi" style={{ position: 'relative' }}>
+      <div className="kpi-l" style={{ justifyContent: 'space-between', width: '100%' }}>
+        <span className="row" style={{ gap: 6, color: accent, fontWeight: 600 }}>{p.icon}{p.pillar}</span>
+        <button onClick={() => setOpen(s => !s)} title="What is this?" aria-label="What is this?"
+          style={{ color: open ? 'var(--acc)' : 'var(--tx3)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+          <Info size={12} />
+        </button>
+      </div>
+      <div className={'kpi-v' + (p.value === '—' ? ' empty' : '')}>{p.value}</div>
+      <div className="kpi-s" style={{ color: p.tone ?? 'var(--tx3)' }}>{p.sub}</div>
+      {open && (
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--bd)', fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.5 }}>{p.what}</div>
+      )}
+    </div>
+  )
+}
+
+// ── The flywheel: cross-app moat ────────────────────────────────────────────
+function Flywheel({ v }: { v: PortfolioVc }) {
+  const pctVal = v.familiesTotal > 0 ? Math.round((100 * v.flywheelCount) / v.familiesTotal) : 0
+  return (
+    <div className="insight" style={{ background: 'var(--acc-soft)', color: 'var(--tx)', alignItems: 'center', border: '1px solid var(--bd2)' }}>
+      <Shuffle size={16} style={{ color: 'var(--mag)', flex: 'none' }} />
+      <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+        <b>The flywheel · {pctVal}% of circles have an active learner</b> ({compact(v.flywheelCount)} of {compact(v.familiesTotal)}). Families who use KinetikCircle <i>and</i> ArgantaLab reinforce each other — the cross-app loop is the moat, not the count of either product alone.
+      </div>
     </div>
   )
 }

@@ -97,6 +97,8 @@ export interface ContentMatrix {
 
 // ── Growth analytics (Pulse + Audience merged) ──
 export interface GrowthPoint { week: string; value: number }
+/** One activity type (journey, quest, drill, …) over the trailing 30 days. */
+export interface ActivityKind { kind: string; events: number; actives: number }
 export interface GrowthOverview {
   northStar: GrowthPoint[]
   dau: number
@@ -105,13 +107,14 @@ export interface GrowthOverview {
   stickiness: number | null   // DAU/MAU %
   wauPrev: number
   wowPct: number | null       // WAU week-over-week %
-  depth: number               // attempts per active (7d)
+  depth: number               // activity events per active (7d)
   accuracyPct: number | null
   newLearners7d: number
   newWowPct: number | null
   learners: number
   attempts7d: number
   attemptsTotal: number
+  activityMix?: ActivityKind[]  // earn-activity events by type, last 30d (v2 RPC)
   generatedAt: string
 }
 
@@ -126,6 +129,23 @@ export interface RetentionData {
   generatedAt: string
 }
 
+// ── Portfolio · VC scorecard (cross-cutting AARRR + flywheel) ──
+export interface PortfolioVc {
+  activationRate: number | null      // % signups acting within 48h
+  lessonsCompleted7d: number
+  lessonsCompletedTotal: number
+  returnRate: number | null          // % of >30d-old accounts still active (retention proxy)
+  d1Retention: number | null         // next-day comeback rate over last 14d (daily retention)
+  d1Sample: number                   // active-day observations behind d1Retention
+  spentPerActiveKid: number | null   // diamonds spent / active kid (30d) — pay-intent proxy
+  familiesTotal: number
+  flywheelCount: number              // circles containing an active learner
+  invitesSent: number
+  invitesAccepted: number
+  kFactor: number | null             // accepted invites per inviter
+  generatedAt: string
+}
+
 export interface FunnelStage { stage: string; count: number }
 export interface AcquisitionData {
   funnel: FunnelStage[]
@@ -133,14 +153,18 @@ export interface AcquisitionData {
   generatedAt: string
 }
 
-export interface EconomyLeg { kind: string; amount: number }
+export interface EconomyLeg { kind: string; amount: number; flow?: 'mint' | 'sink' }
+export interface MintBurnPoint { week: string; mint: number; burn: number }
 export interface EconomyData {
   float: number
   minted: number
   spent: number
+  starterGrant?: number      // one-time onboarding grants (v2 RPC)
+  recurringMinted?: number   // minted minus the starter floor (v2 RPC)
   gifted: number
-  coverage: number | null   // spent / minted %
+  coverage: number | null    // spent / recurring-mint % (v2) — meaningful sink coverage
   sources: EconomyLeg[]
+  mintBurn?: MintBurnPoint[]  // weekly mint vs burn, starter excluded (v2 RPC)
   ledgerRows: number
   generatedAt: string
 }

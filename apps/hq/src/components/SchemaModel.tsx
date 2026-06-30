@@ -1,6 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState, useCallback, type ReactNode, type PointerEvent as RPointerEvent } from 'react'
-import { Hand, RotateCcw } from 'lucide-react'
+import { Hand, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import type { SchemaModel as Model, TableNode } from '../data/types'
+
+const ZOOM_MIN = 0.5, ZOOM_MAX = 1.4, ZOOM_STEP = 0.1
 
 const HEAD = 33, ROW = 24, CW = 158, RW = 124
 
@@ -81,6 +83,10 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
   const [pos, setPos] = useState<Pos>({})
   const dragRef = useRef<{ name: string; dx: number; dy: number } | null>(null)
   const [dragName, setDragName] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const zoomRef = useRef(1)
+  useLayoutEffect(() => { zoomRef.current = zoom }, [zoom])
+  const zoomBy = (d: number) => setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(z + d).toFixed(2))))
 
   const layout = useCallback(() => {
     const el = containerRef.current
@@ -115,8 +121,10 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
       const d = dragRef.current, el = containerRef.current
       if (!d || !el) return
       const r = el.getBoundingClientRect()
-      const x = Math.max(0, Math.min(e.clientX - r.left - d.dx, el.clientWidth - RW))
-      const y = Math.max(0, Math.min(e.clientY - r.top - d.dy, el.clientHeight - 40))
+      const z = zoomRef.current
+      // event coords → stage (layout) coords by dividing out the zoom scale
+      const x = Math.max(0, Math.min((e.clientX - r.left) / z - d.dx, el.clientWidth / z - RW))
+      const y = Math.max(0, Math.min((e.clientY - r.top) / z - d.dy, el.clientHeight / z - 40))
       setPos((p) => ({ ...p, [d.name]: { x, y } }))
     }
     function up() { if (dragRef.current) { dragRef.current = null; setDragName(null) } }
@@ -129,7 +137,10 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
     const el = containerRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
-    dragRef.current = { name, dx: e.clientX - (r.left + e.currentTarget.offsetLeft), dy: e.clientY - (r.top + e.currentTarget.offsetTop) }
+    const z = zoomRef.current
+    const p = pos[name] || { x: 0, y: 0 }
+    // grab offset in stage (layout) coords so dragging tracks the cursor at any zoom
+    dragRef.current = { name, dx: (e.clientX - r.left) / z - p.x, dy: (e.clientY - r.top) / z - p.y }
     setDragName(name)
     e.preventDefault()
   }
@@ -207,16 +218,25 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
           <button key={h} className={'chip' + (center === h ? ' on' : '')} onClick={() => setCenter(h)}>{h}</button>
         ))}
         <span className="chip" style={{ marginLeft: 'auto', color: 'var(--tx3)' }}><Hand size={13} /> drag tables</span>
-        <button className="chip" onClick={() => layout()} title="Reset layout"><RotateCcw size={13} /></button>
+        <div className="zoomctl">
+          <button onClick={() => zoomBy(-ZOOM_STEP)} disabled={zoom <= ZOOM_MIN} title="Zoom out"><ZoomOut size={13} /></button>
+          <span className="zoomval" onClick={() => setZoom(1)} title="Reset zoom">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => zoomBy(ZOOM_STEP)} disabled={zoom >= ZOOM_MAX} title="Zoom in"><ZoomIn size={13} /></button>
+        </div>
+        <button className="chip" onClick={() => { setZoom(1); layout() }} title="Reset layout"><RotateCcw size={13} /></button>
         {onRefresh && <button className="chip" onClick={onRefresh} title="Refresh from source">Refresh</button>}
       </div>
 
       <div className="canvas" ref={containerRef}>
-        {/* width/height="100%" is required: without it SVG user-units default to 300×150
-            so lines drawn at real pixel coords fall outside the visible coordinate space */}
-        <svg className="wires" width="100%" height="100%">{wires}</svg>
-        {c && renderNode(c, true)}
-        {ring.map((it) => renderNode(it.table, false, it.fk))}
+        {/* Inner stage is CSS-scaled for zoom; layout + drag math stay in unscaled
+            stage coords (see onDown/move). transform-origin 0 0 keeps coords aligned. */}
+        <div className="canvas-stage" style={{ transform: `scale(${zoom})`, transformOrigin: '0 0' }}>
+          {/* width/height="100%" is required: without it SVG user-units default to 300×150
+              so lines drawn at real pixel coords fall outside the visible coordinate space */}
+          <svg className="wires" width="100%" height="100%">{wires}</svg>
+          {c && renderNode(c, true)}
+          {ring.map((it) => renderNode(it.table, false, it.fk))}
+        </div>
       </div>
 
       <div className="legend">

@@ -9,6 +9,7 @@ export async function pushGame(userId: string, g: SavedGame): Promise<void> {
     await supabase.from('games').upsert({
       id: g.id, user_id: userId, title: g.title, source: g.source,
       config: g.config ?? null, html: g.html, plays: g.plays, slug: g.slug ?? null,
+      category: g.category ?? null,
     })
   } catch { /* ignore */ }
 }
@@ -48,11 +49,11 @@ export async function getLeaderboard(top = 20): Promise<LeaderRow[] | null> {
   } catch { return null }
 }
 
-export async function fetchPublicGames(limit = 24): Promise<{ id: string; title: string; html: string; creator: string; plays: number; source: string }[] | null> {
+export async function fetchPublicGames(limit = 24): Promise<{ id: string; title: string; html: string; creator: string; plays: number; source: string; category: string }[] | null> {
   try {
-    const { data, error } = await supabase.from('games').select('id,title,html,creator_name,plays,source').eq('visibility', 'public').order('plays', { ascending: false }).limit(limit)
+    const { data, error } = await supabase.from('games').select('id,title,html,creator_name,plays,source,category').eq('visibility', 'public').order('plays', { ascending: false }).limit(limit)
     if (error) return null
-    return (data ?? []).map(d => ({ id: d.id, title: d.title, html: d.html, creator: d.creator_name ?? 'a kid', plays: d.plays ?? 0, source: d.source ?? 'wizard' }))
+    return (data ?? []).map(d => ({ id: d.id, title: d.title, html: d.html, creator: d.creator_name ?? 'a kid', plays: d.plays ?? 0, source: d.source ?? 'wizard', category: (d.category as string) ?? '' }))
   } catch { return null }
 }
 

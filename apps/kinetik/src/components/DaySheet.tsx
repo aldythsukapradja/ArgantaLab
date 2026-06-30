@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useDataStore } from '@store/dataStore'
-import { occurrencesOn, fmtTime, toMin, type Occ } from '@lib/cal'
+import { occurrencesOn, blocksOn, fmtTime, toMin, type Occ } from '@lib/cal'
 import { ENERGY, initials, isoOf, colorFor } from '@data/energy'
-import type { Circle, Person, EnergyKey } from '@data/types'
+import type { Circle, Person, EnergyKey, KEvent } from '@data/types'
 import { IconPlus, IconTrash, IconCheck, IconHistory, IconPencil } from '@components/Icons'
 
 const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -41,11 +41,12 @@ export default function DaySheet({ iso, circle, members, onClose }: {
 
   const accent: [string, string] = [circle.accent[0], circle.accent[1]]
   const items = occurrencesOn(events, routines, iso, circle.id)
+  const blocks = blocksOn(events, iso, circle.id)
   const primaryIds = members.slice(0, 4).map(m => m.id)
 
   return createPortal(
     <>
-      <DayDetail iso={iso} members={members} accent={accent} items={items} onClose={onClose} onAdd={() => setAdding(true)} onEdit={setEditing} />
+      <DayDetail iso={iso} members={members} accent={accent} items={items} blocks={blocks} onClose={onClose} onAdd={() => setAdding(true)} onEdit={setEditing} />
       {adding && (
         <QuickAdd
           date={iso} members={members} primaryIds={primaryIds} circleId={circle.id} accent={accent}
@@ -71,9 +72,9 @@ export default function DaySheet({ iso, circle, members, onClose }: {
 }
 
 /* ---------------- Day detail ---------------- */
-function DayDetail({ iso, members, accent, items, onClose, onAdd, onEdit }: {
+function DayDetail({ iso, members, accent, items, blocks, onClose, onAdd, onEdit }: {
   iso: string; members: Person[]; accent: [string, string]
-  items: Occ[]; onClose: () => void; onAdd: () => void; onEdit: (o: Occ) => void
+  items: Occ[]; blocks: KEvent[]; onClose: () => void; onAdd: () => void; onEdit: (o: Occ) => void
 }) {
   const removeEvent = useDataStore(s => s.removeEvent)
   const removeRoutine = useDataStore(s => s.removeRoutine)
@@ -90,6 +91,17 @@ function DayDetail({ iso, members, accent, items, onClose, onAdd, onEdit }: {
     finally { setBusy(null) }
   }
 
+  const delBlock = async (id: string) => {
+    if (busy) return
+    setBusy(id); setErr('')
+    try { await removeEvent(id) }
+    catch (e) { setErr(errMsg(e)) }
+    finally { setBusy(null) }
+  }
+
+  const rangeText = (b: KEvent) =>
+    `${new Date(b.date + 'T00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${new Date((b.endDate ?? b.date) + 'T00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
+
   return (
     <div className="sheet-scrim cal2-scrim2" onClick={onClose}>
       <div className="sheet cal2-sheet" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -103,6 +115,21 @@ function DayDetail({ iso, members, accent, items, onClose, onAdd, onEdit }: {
         </div>
 
         {err && <div className="cal2-err">{err}</div>}
+
+        {blocks.length > 0 && (
+          <div className="cal2-dd-blocks">
+            {blocks.map(b => (
+              <div key={b.id} className="cal2-dd-block">
+                <span className="cal2-dd-block-ico"><IconHistory width={15} height={15} /></span>
+                <div className="cal2-dd-block-body">
+                  <b>{b.title}</b>
+                  <small>Blocked · {rangeText(b)}</small>
+                </div>
+                <button className="cal2-dd-del" onClick={() => delBlock(b.id)} disabled={busy === b.id} aria-label="Remove block"><IconTrash width={16} height={16} /></button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="cal2-dd-list">
           {items.length === 0 && <div className="cal2-dd-empty">Nothing planned yet.</div>}

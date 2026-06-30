@@ -55,6 +55,8 @@ export interface KEvent {
   prep?: string[]
   durationMin?: number
   endDate?: string
+  /** A multi-day blocked span (vacation etc.) — ambient, never a clash. */
+  isBlock?: boolean
 }
 
 export interface Moment {

@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/buddy.tsx","./src/components/kinsprite.tsx","./src/components/ring.tsx","./src/data/cosmetics.ts","./src/data/worlds.ts","./src/stage/active.tsx","./src/stage/scenes.tsx","./src/three/gemsbackground.tsx"],"version":"5.8.3"}

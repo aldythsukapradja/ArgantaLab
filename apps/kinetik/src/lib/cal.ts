@@ -30,11 +30,12 @@ const weekdayOf = (dateIso: string) => new Date(dateIso + 'T00:00').getDay()
 const AMBIENT_MIN = 480 // 8h
 const isAmbient = (o: { start: string; end: string }) => toMin(o.end) - toMin(o.start) >= AMBIENT_MIN
 
-/** Everything on `dateIso` for a circle: events on that date + routines on that weekday. */
+/** Everything on `dateIso` for a circle: events on that date + routines on that weekday.
+ *  Multi-day blocks are excluded here (they're ambient — see `blocksOn`). */
 export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: string, circleId: string): Occ[] {
   const dow = weekdayOf(dateIso)
   const fromEvents: Occ[] = events
-    .filter(e => e.circleId === circleId && e.date === dateIso)
+    .filter(e => e.circleId === circleId && e.date === dateIso && !e.isBlock)
     .map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, who: e.who, energy: e.energy, kind: 'event', prep: e.prep, clash: false }))
   const fromRoutines: Occ[] = routines
     .filter(r => r.circleId === circleId && r.day === dow && (!r.repeatUntil || r.repeatUntil >= dateIso))
@@ -45,6 +46,20 @@ export function occurrencesOn(events: KEvent[], routines: Routine[], dateIso: st
     ...e,
     clash: !isAmbient(e) && day.some(o => o.id !== e.id && !isAmbient(o) && o.who.some(w => e.who.includes(w)) && toMin(o.start) < toMin(e.end) && toMin(o.end) > toMin(e.start)),
   }))
+}
+
+/** All blocked spans covering `dateIso` (event_date ≤ date ≤ end_date). */
+export function blocksOn(events: KEvent[], dateIso: string, circleId: string): KEvent[] {
+  return events.filter(e =>
+    e.circleId === circleId && e.isBlock &&
+    e.date <= dateIso && (e.endDate ?? e.date) >= dateIso)
+}
+
+/** Every block whose span intersects [startIso, endIso] (inclusive). */
+export function blocksInRange(events: KEvent[], startIso: string, endIso: string, circleId: string): KEvent[] {
+  return events.filter(e =>
+    e.circleId === circleId && e.isBlock &&
+    e.date <= endIso && (e.endDate ?? e.date) >= startIso)
 }
 
 /** Back-compat: just the one-off events on a date (kept for any old callers). */

@@ -30,6 +30,8 @@ interface DataStore extends CircleData {
 
   load: () => Promise<void>
   addEvent: (e: Omit<KEvent, 'id' | 'energy'>) => Promise<void>
+  /** Block out a multi-day span (vacation etc.) — start → end inclusive. */
+  addBlock: (b: { circleId: string; title: string; date: string; endDate: string; who: string[] }) => Promise<void>
   addRoutine: (r: Omit<Routine, 'id' | 'energy'>) => Promise<void>
   removeEvent: (id: string) => Promise<void>
   removeRoutine: (id: string) => Promise<void>
@@ -120,6 +122,14 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     const events = [...get().events, local]
     set({ events })
     writeCache({ ...pick(get()), events })
+  },
+
+  addBlock: async (b) => {
+    // A block is an all-day, multi-day ambient event (is_block = true).
+    await get().addEvent({
+      circleId: b.circleId, title: b.title, date: b.date, endDate: b.endDate,
+      start: '00:00', end: '23:59', who: b.who, isBlock: true,
+    })
   },
 
   addRoutine: async (r) => {

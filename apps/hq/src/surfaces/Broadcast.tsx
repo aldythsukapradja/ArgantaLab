@@ -106,8 +106,8 @@ export function Broadcast() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="spread" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div className="h1">Broadcast</div>
-          <div className="sub">Platform-authored “Discover” posts that keep every KinetikCircle feed alive — mix a format with a theme, paste the copy, schedule it.</div>
+          <div className="h1">Content Builder</div>
+          <div className="sub">Build the platform-authored “Discover” content that keeps every KinetikCircle feed alive — mix a format with a theme, paste the copy, schedule it.</div>
         </div>
         <div className="seg">
           {TABS.map(({ id, label, Icon }) => (

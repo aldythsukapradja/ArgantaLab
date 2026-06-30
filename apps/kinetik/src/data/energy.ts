@@ -6,9 +6,11 @@
 // =========================================================
 import type { EnergyKey, Role } from './types'
 
+// Premium, harmonised palette — medium saturation + matched lightness so the
+// whole schedule reads as one cohesive set (no neon, no dull greys).
 export const ENERGY: Record<EnergyKey, string> = {
-  care: '#FB7185', mind: '#22D3EE', growth: '#34D399',
-  memory: '#8B5CF6', play: '#FBBF24', calm: '#94A3B8',
+  care: '#F2738C', mind: '#48A7EA', growth: '#27B79A',
+  memory: '#8E7BEA', play: '#ECA13A', calm: '#7C89C4',
 }
 
 export const ENERGY_LABEL: Record<EnergyKey, string> = {

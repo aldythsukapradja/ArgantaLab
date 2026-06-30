@@ -57,7 +57,7 @@ a{color:inherit;text-decoration:none}
 .rail{height:100%;overflow-y:auto;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:10px 10px 12px}
 .main{height:100%;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .topbar{flex-shrink:0;height:54px;display:flex;align-items:center;gap:12px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--bd)}
-.content{flex:1;overflow-y:auto;padding:22px 24px 60px}
+.content{flex:1;overflow-y:auto;padding:18px 24px 26px}
 .content-in{max-width:1180px;margin:0 auto}
 .content-in.wide{max-width:1560px}
 
@@ -91,13 +91,32 @@ a{color:inherit;text-decoration:none}
 .pill-warn{background:var(--warn-bg);color:var(--warn)} .pill-mut{background:var(--bg3);color:var(--tx2)}
 .src{font-family:var(--mono);font-size:11px;background:var(--bg3);color:var(--tx2);padding:1px 6px;border-radius:5px}
 
+/* ---------- Dashboard grid (Growth overview) ---------- */
+.gdash{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:stretch}
+.gd-12{grid-column:span 12}
+.gd-7{grid-column:span 7}
+.gd-5{grid-column:span 5}
+.gdash .card{width:100%}
+.gdash > .card{height:100%}
+@media(max-width:1080px){.gd-7,.gd-5{grid-column:span 12}}
+/* Compact strip for the KinetikCircle stats on Growth — fills the row, no wrap-gap */
+.kstrip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+@media(max-width:640px){.kstrip{grid-template-columns:repeat(3,1fr);row-gap:10px}}
+.kstrip .kc-l{font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kstrip .kc-v{font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.kstrip .kc-s{font-size:10px;color:var(--tx3)}
+
 /* ---------- KPI ---------- */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:11px}
 .kpi{background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:14px 15px;box-shadow:var(--shadow-sm)}
 .kpi-l{font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:6px;margin-bottom:7px}
 .kpi-v{font-size:25px;font-weight:600;letter-spacing:-.02em}
 .kpi-v.empty{color:var(--tx3)}
 .kpi-s{font-size:11px;margin-top:4px}
+
+/* ---------- Range sliders (monetization simulator) ---------- */
+.msim input[type=range], input[type=range].sim{accent-color:var(--acc)}
+input[type=range]{accent-color:var(--acc);height:18px;cursor:pointer}
 
 /* ---------- Subtabs (segmented) ---------- */
 .seg{display:inline-flex;padding:3px;background:var(--bg3);border-radius:var(--r-md);gap:2px}
@@ -109,9 +128,16 @@ a{color:inherit;text-decoration:none}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;font-size:12px;font-weight:500;color:var(--tx2);border:1px solid var(--bd2);background:var(--bg)}
 .chip:hover{border-color:var(--bd3)}
 .chip.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-text)}
-.canvas{position:relative;height:520px;border:1px solid var(--bd2);border-radius:var(--r-lg);overflow:hidden;background:var(--bg2);
+.canvas{position:relative;height:clamp(540px,76vh,940px);border:1px solid var(--bd2);border-radius:var(--r-lg);overflow:hidden;background:var(--bg2);
   background-image:radial-gradient(var(--bd2) .8px,transparent .8px);background-size:18px 18px;touch-action:none}
+.canvas-stage{position:absolute;inset:0;will-change:transform}
 .wires{position:absolute;inset:0;z-index:1;pointer-events:none}
+.zoomctl{display:inline-flex;align-items:center;gap:1px;border:1px solid var(--bd2);border-radius:99px;background:var(--bg);padding:2px}
+.zoomctl button{display:grid;place-items:center;width:26px;height:23px;border-radius:99px;color:var(--tx2)}
+.zoomctl button:hover:not(:disabled){background:var(--bg3);color:var(--tx)}
+.zoomctl button:disabled{opacity:.4;cursor:default}
+.zoomval{font-size:11px;color:var(--tx2);min-width:36px;text-align:center;cursor:pointer;user-select:none;font-variant-numeric:tabular-nums}
+.zoomval:hover{color:var(--tx)}
 .tnode{position:absolute;z-index:2;width:124px;background:var(--bg);border:1px solid var(--bd2);border-radius:10px;box-shadow:var(--shadow-md);cursor:grab;user-select:none;overflow:hidden}
 .tnode.drag{cursor:grabbing;box-shadow:var(--shadow-lg);border-color:var(--acc)}
 .tnode.center{width:158px;border:1.5px solid var(--acc);box-shadow:0 6px 22px rgba(99,102,241,.22)}

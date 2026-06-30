@@ -2,15 +2,23 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { gsap } from 'gsap'
 import { useDataStore } from '@store/dataStore'
 import { useUiStore } from '@store/uiStore'
-import { week, monthGrid, occurrencesOn, fmtTime, DOW, type Occ } from '@lib/cal'
+import { week, monthGrid, occurrencesOn, blocksOn, blocksInRange, fmtTime, DOW, type Occ } from '@lib/cal'
 import { ENERGY, initials, isoOf, colorFor } from '@data/energy'
-import type { EnergyKey, Person } from '@data/types'
-import { IconChevron, IconChevronL, IconSwitch, IconPhoto } from '@components/Icons'
+import type { EnergyKey, Person, KEvent } from '@data/types'
+import { IconChevron, IconChevronL, IconSwitch, IconPhoto, IconCalendar, IconCheck, IconToday } from '@components/Icons'
 import DaySheet from '@components/DaySheet'
 import * as M from '@repo/momentsRepo'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MAX_COLS = 4
+
+/** Compact time for a month pill: "9a", "2:30p". */
+const shortT = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  const ap = h < 12 ? 'a' : 'p'
+  const h12 = h % 12 || 12
+  return m ? `${h12}:${String(m).padStart(2, '0')}${ap}` : `${h12}${ap}`
+}
 
 export default function Calendar() {
   const root = useRef<HTMLDivElement | null>(null)
@@ -26,6 +34,7 @@ export default function Calendar() {
 
   const [layoutOpen, setLayoutOpen] = useState(false)  // board-layout picker
   const [dayOpen, setDayOpen] = useState<string | null>(null) // iso → detail popup
+  const [blockOpen, setBlockOpen] = useState(false)    // block-out-dates sheet
   const [photoByDate, setPhotoByDate] = useState<Record<string, string>>({})
 
   const circle = circles.find(c => c.id === activeCircleId) ?? circles[0]
@@ -96,10 +105,23 @@ export default function Calendar() {
           <button className={`cal2-seg-btn${calView === 'month' ? ' on' : ''}`} onClick={() => setCalView('month')}>Month</button>
         </div>
         <div className="cal2-nav">
+          <button
+            className="cal2-today-btn"
+            disabled={calView === 'board' ? calWeekOffset === 0 : calMonthOffset === 0}
+            onClick={() => calView === 'board' ? setWeekOffset(0) : setMonthOffset(0)}
+            title="Jump to today"
+          >
+            <IconToday width={14} height={14} /><span>Today</span>
+          </button>
           <button className="cal2-nav-btn" onClick={() => calView === 'board' ? setWeekOffset(calWeekOffset - 1) : setMonthOffset(calMonthOffset - 1)} aria-label="Previous"><IconChevronL width={15} height={15} /></button>
           <span className="cal2-range">{calView === 'board' ? (calWeekOffset === 0 ? 'This week' : range) : monthLabel}</span>
           <button className="cal2-nav-btn" onClick={() => calView === 'board' ? setWeekOffset(calWeekOffset + 1) : setMonthOffset(calMonthOffset + 1)} aria-label="Next"><IconChevron width={15} height={15} /></button>
         </div>
+        {circle && (
+          <button className="cal2-block-btn" onClick={() => setBlockOpen(true)} title="Block out a range of dates">
+            <IconCalendar width={15} height={15} /><span>Block</span>
+          </button>
+        )}
       </div>
 
       <div className="cal2-stage">
@@ -123,18 +145,21 @@ export default function Calendar() {
             {/* day rows */}
             {days.map(d => {
               const items = occurrencesOn(events, routines, d.iso, activeCircleId)
+              const dayBlocks = blocksOn(events, d.iso, activeCircleId).filter(b => b.who.length === 0 || b.who.some(id => members.some(m => m.id === id)))
+              const blocked = dayBlocks.length > 0
               return (
                 <div key={d.iso} style={{ display: 'contents' }}>
-                  <button className={`cal2-day${d.isToday ? ' today' : ''}${d.isWeekend ? ' wknd' : ''}`} onClick={() => setDayOpen(d.iso)}>
+                  <button className={`cal2-day${d.isToday ? ' today' : ''}${d.isWeekend ? ' wknd' : ''}${blocked ? ' blocked' : ''}`} onClick={() => setDayOpen(d.iso)}>
                     <span className="cal2-dow">{DOW[d.dow]}</span>
                     <span className="cal2-date">{d.date.getDate()}</span>
+                    {blocked && <span className="cal2-day-block" title={dayBlocks.map(b => b.title).join(', ')}>{dayBlocks[0].title.split(' ')[0]}</span>}
                   </button>
                   {visible.map(p => {
                     const mine = items.filter(e => e.who.includes(p.id))
                     return (
-                      <button key={p.id} className={`cal2-cell${d.isWeekend ? ' wknd' : ''}${d.isToday ? ' today' : ''}`} onClick={() => setDayOpen(d.iso)}>
+                      <button key={p.id} className={`cal2-cell${d.isWeekend ? ' wknd' : ''}${d.isToday ? ' today' : ''}${blocked ? ' blocked' : ''}`} onClick={() => setDayOpen(d.iso)}>
                         {mine.map(e => (
-                          <span key={e.id} className={`cal2-chip${e.clash ? ' clash' : ''}${e.kind === 'routine' ? ' routine' : ''}`} style={{ background: ENERGY[e.energy as EnergyKey] }}>
+                          <span key={e.id} className={`cal2-chip${e.clash ? ' clash' : ''}${e.kind === 'routine' ? ' routine' : ''}`} style={{ ['--ec' as any]: ENERGY[e.energy as EnergyKey] }}>
                             <b>{e.title}</b><i>{fmtTime(e.start)}</i>
                           </span>
                         ))}
@@ -169,6 +194,103 @@ export default function Calendar() {
           onClose={() => setLayoutOpen(false)}
         />
       )}
+
+      {/* Block-out-dates sheet */}
+      {blockOpen && circle && (
+        <BlockSheet
+          circleId={circle.id} members={members} accent={[c0, c1]}
+          onClose={() => setBlockOpen(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ---------------- Block out dates sheet ---------------- */
+function BlockSheet({ circleId, members, accent, onClose }: {
+  circleId: string; members: Person[]; accent: [string, string]; onClose: () => void
+}) {
+  const addBlock = useDataStore(s => s.addBlock)
+  const today = isoOf(new Date())
+  const [title, setTitle] = useState('')
+  const [from, setFrom] = useState(today)
+  const [to, setTo] = useState(today)
+  const [who, setWho] = useState<string[]>(members.map(m => m.id)) // default: whole circle
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    const scroller = document.querySelector('.main') as HTMLElement | null
+    const prev = scroller?.style.overflow ?? ''
+    if (scroller) scroller.style.overflow = 'hidden'
+    const t = setTimeout(() => inputRef.current?.focus(), 360)
+    return () => { if (scroller) scroller.style.overflow = prev; clearTimeout(t) }
+  }, [])
+
+  // Keep the range sane: end never before start.
+  const end = to < from ? from : to
+  const allOn = who.length === members.length && members.length > 0
+  const dayCount = Math.round((new Date(end + 'T00:00').getTime() - new Date(from + 'T00:00').getTime()) / 86400000) + 1
+  const ok = title.trim() && who.length > 0 && !saving
+
+  const toggle = (id: string) => setWho(w => w.includes(id) ? w.filter(x => x !== id) : [...w, id])
+
+  const save = async () => {
+    setSaving(true); setErr('')
+    try {
+      await addBlock({ circleId, title: title.trim(), date: from, endDate: end, who })
+      onClose()
+    } catch (e) {
+      setErr(e && typeof e === 'object' ? String((e as Record<string, unknown>).message ?? e) : String(e))
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="sheet-scrim cal2-scrim2 cal2-scrim3" onClick={onClose}>
+      <div className="sheet cal2-sheet" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="sheet-grip" onClick={onClose} aria-label="Close" />
+        <div className="cal2-dd-head">
+          <div>
+            <div className="cal2-dd-dow">Block out dates</div>
+            <h3 className="cal2-dd-date">Set a date range</h3>
+          </div>
+          <span className="cal2-dd-count">{dayCount} day{dayCount === 1 ? '' : 's'}</span>
+        </div>
+
+        <input ref={inputRef} className="field" placeholder="What's it for? (e.g. trip, exams, event)" value={title} onChange={e => setTitle(e.target.value)} />
+
+        <div className="cal2-lbl">From → To</div>
+        <div className="cal2-block-dates">
+          <input className="field cal2-time" type="date" value={from} onChange={e => { setFrom(e.target.value); if (to < e.target.value) setTo(e.target.value) }} />
+          <span className="cal2-block-arrow"><IconChevron width={16} height={16} /></span>
+          <input className="field cal2-time" type="date" value={end} min={from} onChange={e => setTo(e.target.value)} />
+        </div>
+
+        <div className="cal2-lbl">Who it's for</div>
+        <div className="cal2-who-wrap">
+          <button className={`cal2-who all${allOn ? ' on' : ''}`} onClick={() => setWho(allOn ? [] : members.map(m => m.id))}>
+            <IconCheck width={14} height={14} /> Everyone
+          </button>
+          {members.map(p => {
+            const on = who.includes(p.id)
+            return (
+              <button key={p.id} className={`cal2-who${on ? ' on' : ''}`} onClick={() => toggle(p.id)}
+                style={on ? { background: colorFor(p.id), borderColor: 'transparent', color: '#fff' } : { borderColor: colorFor(p.id), color: colorFor(p.id) }}>
+                <span className="cal2-who-av" style={{ background: on ? 'rgba(255,255,255,.28)' : colorFor(p.id), color: '#fff' }}>{initials(p.name)}</span>
+                {p.name.split(' ')[0]}
+              </button>
+            )
+          })}
+        </div>
+
+        {err && <div className="cal2-err">{err}</div>}
+
+        <button className="btn grad cal2-save" disabled={!ok} onClick={save}>
+          <IconCalendar width={18} height={18} /> {saving ? 'Saving…' : `Block ${dayCount} day${dayCount === 1 ? '' : 's'}`}
+        </button>
+      </div>
     </div>
   )
 }
@@ -254,7 +376,12 @@ function BoardLayoutSheet({ members, accent, cols, selected, onChange, onClose }
   )
 }
 
-/* ---------------- Month view ---------------- */
+/* ---------------- Month view (Outlook-style: event pills + spanning blocks) ---------------- */
+const NUM_H = 26   // px reserved at the top of each cell for the date number
+const BAR_H = 19   // px per block lane
+
+interface BlockSeg { block: KEvent; startCol: number; endCol: number; span: number; lane: number; showLabel: boolean }
+
 function MonthView({ year, month, events, routines, members, photoByDate, activeCircleId, onPickDay }: {
   year: number; month: number
   events: ReturnType<typeof useDataStore.getState>['events']
@@ -266,43 +393,130 @@ function MonthView({ year, month, events, routines, members, photoByDate, active
 }) {
   const cells = monthGrid(year, month)
   // Same live-member basis as the Board: only count entries involving a current
-  // circle member, so the month dots match what the Board actually shows.
+  // circle member, so the month matches what the Board actually shows.
   const liveIds = new Set(members.map(m => m.id))
-  const isLive = (o: Occ) => o.who.length === 0 || o.who.some(id => liveIds.has(id))
-  const colorOf = (o: Occ): string => {
-    const m = members.find(p => o.who.includes(p.id))
-    return m ? colorFor(m.id) : ENERGY[o.energy as EnergyKey]
-  }
+  const isLive = (o: { who: string[] }) => o.who.length === 0 || o.who.some(id => liveIds.has(id))
+  // Unified with the Board: every entry is coloured by its ENERGY, not by member.
+  const colorOf = (o: Occ): string => ENERGY[o.energy as EnergyKey]
+
+  // Chunk the 35/42 cells into week rows.
+  const weeks: typeof cells[] = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+
+  // All blocks intersecting this month grid (live members only).
+  const allBlocks = blocksInRange(events, cells[0].iso, cells[cells.length - 1].iso, activeCircleId).filter(isLive)
+
   return (
     <div className="cal2-month">
       <div className="cal2-month-head">
         {WEEKDAYS.map((w, i) => <span key={w} className={`cal2-mh${i === 0 || i === 6 ? ' wknd' : ''}`}>{w}</span>)}
       </div>
-      <div className="cal2-month-grid">
-        {cells.map(c => {
-          const items = c.inMonth ? occurrencesOn(events, routines, c.iso, activeCircleId).filter(isLive) : []
-          const photo = c.inMonth ? photoByDate[c.iso] : undefined
-          return (
-            <button
-              key={c.iso}
-              className={`cal2-mcell${c.inMonth ? '' : ' out'}${c.isToday ? ' today' : ''}${c.isWeekend ? ' wknd' : ''}${photo ? ' has-photo' : ''}`}
-              onClick={() => c.inMonth && onPickDay(c.iso)}
-            >
-              {photo && <img className="cal2-mphoto" src={photo} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
-              <span className="cal2-mtop">
-                <span className="cal2-mnum">{c.date.getDate()}</span>
-                {photo && <IconPhoto className="cal2-mphoto-badge" width={13} height={13} />}
-              </span>
-              {items.length > 0 && (
-                <span className="cal2-mdots">
-                  {items.slice(0, 4).map(e => <span key={e.id} className="cal2-mdot" style={{ background: colorOf(e) }} />)}
-                  {items.length > 4 && <span className="cal2-mmore">+{items.length - 4}</span>}
-                </span>
-              )}
-            </button>
-          )
-        })}
+      <div className="cal2-month-body">
+        {weeks.map((wk, wi) => (
+          <MonthWeek
+            key={wi} cells={wk} blocks={allBlocks}
+            events={events} routines={routines} activeCircleId={activeCircleId}
+            isLive={isLive} colorOf={colorOf} photoByDate={photoByDate} onPickDay={onPickDay}
+          />
+        ))}
       </div>
+    </div>
+  )
+}
+
+function MonthWeek({ cells, blocks, events, routines, activeCircleId, isLive, colorOf, photoByDate, onPickDay }: {
+  cells: ReturnType<typeof monthGrid>
+  blocks: KEvent[]
+  events: ReturnType<typeof useDataStore.getState>['events']
+  routines: ReturnType<typeof useDataStore.getState>['routines']
+  activeCircleId: string
+  isLive: (o: { who: string[] }) => boolean
+  colorOf: (o: Occ) => string
+  photoByDate: Record<string, string>
+  onPickDay: (iso: string) => void
+}) {
+  const weekStart = cells[0].iso
+  const weekEnd = cells[cells.length - 1].iso
+
+  // Lay block spans out into lanes for this week (greedy, longest-first).
+  const segs: BlockSeg[] = []
+  const laneEnds: number[] = []  // laneEnds[k] = endCol of last seg placed in lane k
+  const intersecting = blocks
+    .filter(b => b.date <= weekEnd && (b.endDate ?? b.date) >= weekStart)
+    .map(b => {
+      const s = b.date < weekStart ? weekStart : b.date
+      const e = (b.endDate ?? b.date) > weekEnd ? weekEnd : (b.endDate ?? b.date)
+      const startCol = Math.max(0, cells.findIndex(c => c.iso === s))
+      const endCol = Math.max(startCol, cells.findIndex(c => c.iso === e))
+      return { b, startCol, endCol, showLabel: b.date >= weekStart || startCol === 0 }
+    })
+    .sort((a, z) => a.startCol - z.startCol || (z.endCol - z.startCol) - (a.endCol - a.startCol))
+
+  for (const it of intersecting) {
+    let lane = 0
+    while (laneEnds[lane] !== undefined && laneEnds[lane] >= it.startCol) lane++
+    laneEnds[lane] = it.endCol
+    segs.push({ block: it.b, startCol: it.startCol, endCol: it.endCol, span: it.endCol - it.startCol + 1, lane, showLabel: it.showLabel })
+  }
+  const laneCount = laneEnds.length
+  const lanesH = laneCount * BAR_H
+  const maxPills = Math.max(1, 3 - laneCount)
+
+  return (
+    <div className="cal2-wk">
+      {cells.map(c => {
+        const items = c.inMonth ? occurrencesOn(events, routines, c.iso, activeCircleId).filter(isLive) : []
+        const photo = c.inMonth ? photoByDate[c.iso] : undefined
+        const shown = items.slice(0, maxPills)
+        const overflow = items.length - shown.length
+        return (
+          <button
+            key={c.iso}
+            className={`cal2-mcell${c.inMonth ? '' : ' out'}${c.isToday ? ' today' : ''}${c.isWeekend ? ' wknd' : ''}${photo ? ' has-photo' : ''}`}
+            onClick={() => c.inMonth && onPickDay(c.iso)}
+          >
+            {photo && <img className="cal2-mphoto" src={photo} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
+            <span className="cal2-mtop">
+              <span className="cal2-mnum">{c.date.getDate()}</span>
+              {photo && <IconPhoto className="cal2-mphoto-badge" width={13} height={13} />}
+            </span>
+            <span className="cal2-lanes" style={{ height: lanesH }} aria-hidden />
+            <span className="cal2-pills">
+              {shown.map(e => (
+                <span key={e.id} className={`cal2-mpill${e.clash ? ' clash' : ''}`} style={{ ['--pc' as any]: colorOf(e) }}>
+                  <i>{shortT(e.start)}</i>{e.title}
+                </span>
+              ))}
+              {overflow > 0 && <span className="cal2-mmore">+{overflow} more</span>}
+            </span>
+          </button>
+        )
+      })}
+
+      {/* Spanning block bars overlay (aligned to the 7 equal columns) */}
+      {segs.length > 0 && (
+        <div className="cal2-wk-bars" style={{ top: NUM_H }}>
+          {segs.map(s => {
+            const isStart = s.block.date >= weekStart
+            const isEnd = (s.block.endDate ?? s.block.date) <= weekEnd
+            return (
+              <span
+                key={s.block.id}
+                className={`cal2-wbar${isStart ? ' start' : ''}${isEnd ? ' end' : ''}`}
+                style={{
+                  left: `calc(${(s.startCol / 7) * 100}% + 3px)`,
+                  width: `calc(${(s.span / 7) * 100}% - 6px)`,
+                  top: s.lane * BAR_H,
+                }}
+                onClick={ev => { ev.stopPropagation(); onPickDay(cells[s.startCol].iso) }}
+                title={s.block.title}
+              >
+                {s.showLabel && <span className="cal2-wbar-label">{s.block.title}</span>}
+              </span>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

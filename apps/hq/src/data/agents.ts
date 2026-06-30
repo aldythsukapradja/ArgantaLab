@@ -5,7 +5,8 @@
 // state rather than inventing numbers.
 
 import { live } from './live'
-import type { GrowthOverview, EconomyData, SchemaInsights, ContentMatrix } from './types'
+import type { GrowthOverview, EconomyData, SchemaInsights, ContentMatrix, PortfolioVc } from './types'
+import { PRESETS, DEFAULT_GLOBALS, computeScenario } from './monetization'
 
 export type Model = 'sonnet' | 'haiku' | 'det'
 export type Tier = 'executive' | 'argantalab' | 'kinetik' | 'growth' | 'platform' | 'brand'
@@ -169,15 +170,16 @@ export interface Sensed {
   economy: EconomyData | null
   insights: SchemaInsights | null
   content: ContentMatrix | null
+  vc: PortfolioVc | null
   source: 'supabase-live' | 'offline'
 }
 
 export async function agentSense(): Promise<Sensed> {
-  const [growth, economy, insights, content] = await Promise.all([
-    live.growthOverview(), live.economy(), live.schemaInsights(), live.contentMatrix(),
+  const [growth, economy, insights, content, vc] = await Promise.all([
+    live.growthOverview(), live.economy(), live.schemaInsights(), live.contentMatrix(), live.portfolioVc(),
   ])
-  const any = growth || economy || insights || content
-  return { growth, economy, insights, content, source: any ? 'supabase-live' : 'offline' }
+  const any = growth || economy || insights || content || vc
+  return { growth, economy, insights, content, vc, source: any ? 'supabase-live' : 'offline' }
 }
 
 export interface Computed {
@@ -190,12 +192,22 @@ export interface Computed {
   learners: number | null
   gamesPublic: number | null
   contentLivePct: number | null
+  // ── new metrics & economics ──
+  activation: number | null      // % signups acting within 48h
+  d1Retention: number | null     // next-day comeback rate
+  flywheelPct: number | null     // % circles with an active learner
+  spentPerKid: number | null     // diamonds spent / active kid (pay-intent proxy)
+  recurringMint: number | null   // diamonds minted from real play (excl. starter)
+  burn: number | null            // diamonds spent (sinks)
+  lessons7d: number | null       // journey nodes completed, 7d
 }
 
 export function agentCompute(s: Sensed): Computed {
-  const g = s.growth, e = s.economy, i = s.insights, c = s.content
+  const g = s.growth, e = s.economy, i = s.insights, c = s.content, v = s.vc
   const contentLivePct = c && c.totals.authored > 0
     ? Math.round((c.totals.live / c.totals.authored) * 100) : null
+  const recurringMint = e?.recurringMinted ?? (e ? Math.max(0, e.minted - (e.starterGrant ?? 0)) : null)
+  const flywheelPct = v && v.familiesTotal > 0 ? Math.round((100 * v.flywheelCount) / v.familiesTotal) : null
   return {
     wau: g?.wau ?? null,
     stickiness: g?.stickiness ?? null,
@@ -206,6 +218,13 @@ export function agentCompute(s: Sensed): Computed {
     learners: i?.learners ?? g?.learners ?? null,
     gamesPublic: i?.gamesPublic ?? null,
     contentLivePct,
+    activation: v?.activationRate ?? null,
+    d1Retention: v?.d1Retention ?? null,
+    flywheelPct,
+    spentPerKid: v?.spentPerActiveKid ?? null,
+    recurringMint,
+    burn: e?.spent ?? null,
+    lessons7d: v?.lessonsCompleted7d ?? null,
   }
 }
 
@@ -213,14 +232,20 @@ export interface Signal { tone: 'ok' | 'warn' | 'info'; text: string }
 
 export function agentMatch(c: Computed): Signal[] {
   const out: Signal[] = []
-  if (c.wau == null) {
+  if (c.wau == null && c.activation == null) {
     out.push({ tone: 'info', text: 'No live growth data — connect Supabase & sign in as operator' })
     return out
   }
   if (c.wowPct != null && c.wowPct < 0) out.push({ tone: 'warn', text: `Weekly active down ${Math.abs(c.wowPct)}% WoW — retention risk` })
   if (c.wowPct != null && c.wowPct > 0) out.push({ tone: 'ok', text: `Weekly active up ${c.wowPct}% WoW` })
+  if (c.activation != null && c.activation < 40) out.push({ tone: 'warn', text: `Activation ${c.activation}% — first-value moment is leaking before habit forms` })
+  if (c.d1Retention != null && c.d1Retention < 30) out.push({ tone: 'warn', text: `Day-1 comeback ${c.d1Retention}% — daily habit isn't sticking yet` })
+  if (c.d1Retention != null && c.d1Retention >= 40) out.push({ tone: 'ok', text: `Day-1 comeback ${c.d1Retention}% — strong daily habit` })
   if (c.stickiness != null && c.stickiness < 20) out.push({ tone: 'warn', text: `Stickiness ${c.stickiness}% (<20% target) — needs daily-quest loop` })
+  if (c.flywheelPct != null && c.flywheelPct < 60) out.push({ tone: 'info', text: `Only ${c.flywheelPct}% of circles have an active learner — cross-app flywheel underused` })
+  if (c.flywheelPct != null && c.flywheelPct >= 80) out.push({ tone: 'ok', text: `Flywheel strong — ${c.flywheelPct}% of circles have an active learner` })
   if (c.coverage != null && c.coverage < 50) out.push({ tone: 'warn', text: `Diamond sink coverage ${c.coverage}% — diamonds piling up` })
+  if (c.coverage != null && c.coverage >= 50) out.push({ tone: 'ok', text: `Diamond sink coverage ${c.coverage}% — economy recirculates` })
   if (c.accuracy != null && c.accuracy < 60) out.push({ tone: 'warn', text: `Mastery accuracy ${c.accuracy}% — items may be too hard` })
   if (c.contentLivePct != null && c.contentLivePct < 60) out.push({ tone: 'info', text: `Only ${c.contentLivePct}% of authored content is live` })
   if (out.length === 0) out.push({ tone: 'ok', text: 'All monitored signals within healthy range' })
@@ -232,14 +257,15 @@ export function agentMatch(c: Computed): Signal[] {
 // it deterministic-template so the demo never fabricates: same facts, scripted
 // phrasing, routed by intent. Markdown-lite (**bold**) rendered by the UI.
 
-export type Intent = 'brief' | 'focus' | 'blockers' | 'economy' | 'agents' | 'general'
+export type Intent = 'brief' | 'focus' | 'blockers' | 'economy' | 'monetization' | 'agents' | 'general'
 
 export function routeIntent(prompt: string): Intent {
   const p = prompt.toLowerCase()
   if (/brief|status|how are we|how am i|today/.test(p)) return 'brief'
   if (/focus|priorit|what should|next/.test(p)) return 'focus'
   if (/block|stuck|risk|problem|wrong/.test(p)) return 'blockers'
-  if (/econ|diamond|money|cost|runway|pricing/.test(p)) return 'economy'
+  if (/monet|subscri|revenue|forecast|arr|mrr|ltv|paywall|charge|pricing/.test(p)) return 'monetization'
+  if (/econ|diamond|money|cost|runway|float|sink/.test(p)) return 'economy'
   if (/agent|os |roster|team|who/.test(p)) return 'agents'
   return 'general'
 }
@@ -252,13 +278,19 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
 
   if (intent === 'brief') {
     return `**Founder Daily Brief** ${liveTag}\n\n` +
-      `**📊 Portfolio**\n` +
-      `• Weekly active learners: ${n(c.wau)}  ·  WoW ${c.wowPct == null ? '—' : (c.wowPct > 0 ? '+' : '') + c.wowPct + '%'}\n` +
-      `• Stickiness (DAU/MAU): ${n(c.stickiness, '%')}  ·  Mastery accuracy: ${n(c.accuracy, '%')}\n` +
-      `• Total learners: ${n(c.learners)}  ·  Public games: ${n(c.gamesPublic)}\n` +
-      `• Diamond float: ${n(c.float)}  ·  Sink coverage: ${n(c.coverage, '%')}\n\n` +
+      `**📊 The funnel** _(AARRR)_\n` +
+      `• Weekly active: ${n(c.wau)}  ·  WoW ${c.wowPct == null ? '—' : (c.wowPct > 0 ? '+' : '') + c.wowPct + '%'}  ·  Stickiness ${n(c.stickiness, '%')}\n` +
+      `• Activation ${n(c.activation, '%')}  ·  Day-1 comeback ${n(c.d1Retention, '%')}  ·  Flywheel ${n(c.flywheelPct, '%')}\n` +
+      `• Lessons done (7d): ${n(c.lessons7d)}  ·  Total learners: ${n(c.learners)}\n` +
+      `**💎 Economy**\n` +
+      `• Recurring earn ${n(c.recurringMint)} vs burn ${n(c.burn)}  ·  Sink coverage ${n(c.coverage, '%')}  ·  Spend/kid ${n(c.spentPerKid)}\n\n` +
       `**⚡ Signals**\n${sigLines}\n\n` +
-      `**🎯 Focus today**: ${c.wau == null ? 'Wire live telemetry so every signal computes.' : (c.stickiness != null && c.stickiness < 20) ? 'Ship the daily-quest loop — stickiness is the binding constraint.' : 'Protect the share loop and parent progress card.'}`
+      `**🎯 Focus today**: ${
+        c.wau == null && c.activation == null ? 'Wire live telemetry so every signal computes.' :
+        c.activation != null && c.activation < 40 ? 'Fix the activation moment — first value within 48h is the binding constraint.' :
+        c.d1Retention != null && c.d1Retention < 30 ? 'Build the daily-quest loop — day-1 comeback is the binding constraint.' :
+        c.stickiness != null && c.stickiness < 20 ? 'Ship the daily-quest loop to lift stickiness above 20%.' :
+        'Protect the share loop and parent progress card.'}`
   }
   if (intent === 'focus') {
     return `**CPO · Product Focus** _(Sonnet 4.6 reasoning)_\n\n` +
@@ -277,11 +309,26 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
   }
   if (intent === 'economy') {
     return `**CFO · Economy Health** _(Sonnet 4.6)_\n\n` +
-      `**💎 Diamond economy** ${liveTag}\n` +
-      `• Float held: ${n(c.float)}  ·  Sink coverage: ${n(c.coverage, '%')}\n` +
-      `• Ledger is append-only — balance = SUM(delta). Earned in play, spent on cosmetics. No real-money path.\n\n` +
-      `**💰 Operating cost**\n• Full 25-agent LLM OS: ~$2.20 / month\n• Supabase + Vercel: free tier\n\n` +
-      `${c.coverage != null && c.coverage < 50 ? '⚠️ Sink coverage is low — diamonds are minting faster than they are spent. Add a shop sink.' : '✅ Economy balanced for the engagement stage.'}`
+      `**💎 Diamond value loop** ${liveTag}\n` +
+      `• Recurring earn: ${n(c.recurringMint)}  ·  Burn (spent): ${n(c.burn)}  ·  Sink coverage: ${n(c.coverage, '%')}\n` +
+      `• Float held: ${n(c.float)}  ·  Spend per active kid: ${n(c.spentPerKid)} 💎 (the live pay-intent proxy)\n` +
+      `• The one-time starter grant is held out so coverage reflects the real loop, not the onboarding floor.\n\n` +
+      `**💰 Operating cost**\n• Full 25-agent LLM OS: ~$2.20 / month · Supabase + Vercel: free tier\n\n` +
+      `${c.coverage != null && c.coverage < 50 ? '⚠️ Sink coverage low — diamonds mint faster than they are spent. Add a shop sink.' : '✅ Loop balanced — diamonds recirculate at a healthy rate.'}\n\n` +
+      `Ask **"monetization"** for the subscription + diamond-IAP revenue forecast.`
+  }
+  if (intent === 'monetization') {
+    const fam = 10_000
+    const lo = computeScenario(PRESETS.low, fam, DEFAULT_GLOBALS)
+    const mid = computeScenario(PRESETS.mid, fam, DEFAULT_GLOBALS)
+    const hi = computeScenario(PRESETS.high, fam, DEFAULT_GLOBALS)
+    const m = (v: number) => v >= 1e6 ? '$' + (v / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M' : '$' + Math.round(v / 1000) + 'k'
+    return `**CFO · Monetization Readiness** _(Sonnet 4.6)_\n\n` +
+      `Two streams when revenue switches on: **subscription** (parents pay monthly) + **diamond IAP** (parents buy packs for kids). Modelled at 10,000 active families:\n` +
+      `• Low ${m(lo.arr)} ARR  ·  Mid ${m(mid.arr)}  ·  High ${m(hi.arr)} _(annual recurring)_\n` +
+      `• Mid case: LTV:CAC ${mid.ltvCac == null ? '—' : mid.ltvCac.toFixed(1) + '×'} · payback ${mid.paybackMo == null ? '—' : Math.round(mid.paybackMo) + 'mo'} — clears the fundable bar (>3×, <12mo).\n` +
+      `• Live pay-intent: ${n(c.spentPerKid)} 💎 spent per active kid — calibrate the IAP buyer rate against it before launch.\n\n` +
+      `Drag any assumption in the interactive simulator: **Growth → Monetization**.`
   }
   if (intent === 'agents') {
     const byTier = AGENTS.reduce<Record<string, number>>((m, a) => { m[a.tier] = (m[a.tier] || 0) + 1; return m }, {})

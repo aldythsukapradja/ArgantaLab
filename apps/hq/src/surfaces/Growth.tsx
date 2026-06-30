@@ -2,25 +2,28 @@ import { useEffect, useState, type ReactNode } from 'react'
 import {
   Activity, Users, UserPlus, Target, Lightbulb, TrendingUp, ChevronRight, Info,
   Presentation as PresentIcon, CalendarClock, Filter, Gem, Circle, MessageSquare,
-  Heart, Megaphone, Eye, Image,
+  Heart, Megaphone, Eye, Image, Sparkles, ArrowLeftRight, Coins,
 } from 'lucide-react'
 import { live } from '../data/live'
 import type { KinetikStats } from '../data/live'
 import { supabase } from '../lib/supabase'
 import type { GrowthOverview, RetentionData, AcquisitionData, EconomyData } from '../data/types'
-import { heroCards, buildScorecard, growthInsight, type Tone, type HeroCard, type GrowthInsight, type ScoreRow } from '../data/growth'
+import { heroCards, buildScorecard, growthInsight, kindLabel, type Tone, type HeroCard, type GrowthInsight, type ScoreRow } from '../data/growth'
 import { LineChart } from '../components/LineChart'
 import { CohortHeat } from '../components/CohortHeat'
+import { ChartView, chartColor } from '../components/charts'
 import { Presentation } from '../components/Presentation'
+import { Monetization } from './Monetization'
 import { Empty, Loading } from '../components/Empty'
 import { pct, compact } from '../lib/format'
 
-type SubTab = 'overview' | 'retention' | 'acquisition' | 'economy'
+type SubTab = 'overview' | 'retention' | 'acquisition' | 'economy' | 'monetization'
 const SUBTABS: { id: SubTab; label: string; soon?: boolean }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'retention', label: 'Retention' },
   { id: 'acquisition', label: 'Acquisition' },
   { id: 'economy', label: 'Economy' },
+  { id: 'monetization', label: 'Monetization' },
 ]
 
 const TONE_BG: Record<Tone, string> = {
@@ -32,7 +35,7 @@ const TONE_FG: Record<Tone, string> = {
 const heroAccent = (t: Tone): string =>
   t === 'success' ? 'var(--ok)' : t === 'warning' ? 'var(--warn)' : t === 'danger' ? 'var(--bad)' : 'var(--tx3)'
 const HERO_ICON: Record<string, ReactNode> = {
-  wau: <Activity size={13} />, stick: <Users size={13} />, new: <UserPlus size={13} />, acc: <Target size={13} />,
+  wau: <Activity size={13} />, stick: <Users size={13} />, mau: <CalendarClock size={13} />, new: <UserPlus size={13} />,
 }
 
 export function Growth() {
@@ -61,7 +64,7 @@ export function Growth() {
   const insight: GrowthInsight | null = oData ? growthInsight(oData) : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div className="spread" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div className="h1">Growth</div>
@@ -83,8 +86,8 @@ export function Growth() {
         </div>
       </div>
 
-      {k === undefined && o === undefined && <Loading label="Loading growth metrics…" />}
-      {k === null && o === null && (
+      {tab !== 'monetization' && k === undefined && o === undefined && <Loading label="Loading growth metrics…" />}
+      {tab !== 'monetization' && k === null && o === null && (
         <Empty title="Growth needs a live connection">
           Connect Supabase and sign in as operator — KinetikCircle &amp; ArgantaLab stats load automatically.
         </Empty>
@@ -95,7 +98,8 @@ export function Growth() {
       {o && tab === 'retention' && <Retention o={o} />}
       {o && tab === 'acquisition' && <Acquisition o={o} a={a} />}
       {o && tab === 'economy' && <Economy e={e} />}
-      {!o && tab !== 'overview' && (
+      {tab === 'monetization' && <Monetization liveFamilies={k?.circles ?? null} />}
+      {!o && tab !== 'overview' && tab !== 'monetization' && (
         <Empty title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} needs ArgantaLab data`}>
           The {tab} tab reads ArgantaLab learning metrics (<span className="src">hq_{tab === 'retention' ? 'retention' : tab === 'acquisition' ? 'acquisition' : 'economy'}()</span>). Connect and sign in as operator.
         </Empty>
@@ -119,16 +123,16 @@ function KinetikSnapshot({ k }: { k: KinetikStats }) {
     { label: 'Discover views', value: k.broadcastViews, icon: <Eye size={13} />, sub: `${compact(k.broadcastReactions)} reactions` },
   ]
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div className="row" style={{ gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--tx2)' }}>
-        <Image size={14} /> KinetikCircle
+    <div className="card" style={{ padding: '11px 15px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div className="row" style={{ gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--tx2)' }}>
+        <Image size={13} /> KinetikCircle
       </div>
-      <div className="kpi-grid">
+      <div className="kstrip">
         {metrics.map(m => (
-          <div key={m.label} className="kpi">
-            <div className="kpi-l">{m.icon} {m.label}</div>
-            <div className="kpi-v">{compact(m.value)}</div>
-            <div className="kpi-s" style={{ color: 'var(--tx3)' }}>{m.sub}</div>
+          <div key={m.label}>
+            <div className="kc-l">{m.icon} {m.label}</div>
+            <div className="kc-v">{compact(m.value)}</div>
+            <div className="kc-s">{m.sub}</div>
           </div>
         ))}
       </div>
@@ -139,7 +143,7 @@ function KinetikSnapshot({ k }: { k: KinetikStats }) {
 function Overview({ o, k, heroes, score, insight }: { o: GrowthOverview | null; k: KinetikStats | null; heroes: HeroCard[]; score: ScoreRow[]; insight: GrowthInsight | null }) {
   const [drill, setDrill] = useState<string | null>(null)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
       {k && <KinetikSnapshot k={k} />}
 
       {!o && !k && (
@@ -164,36 +168,40 @@ function Overview({ o, k, heroes, score, insight }: { o: GrowthOverview | null; 
         {heroes.map(h => <HeroMetric key={h.key} h={h} />)}
       </div>}
 
-      {o && (
-        <>
-          <div className="card" style={{ padding: 16 }}>
+      {o && (() => {
+        const hasMix = (o.activityMix ?? []).some(m => m.events > 0)
+        return (
+        <div className="gdash">
+          <div className={'card ' + (hasMix ? 'gd-7' : 'gd-12')} style={{ padding: 16 }}>
             <div className="spread" style={{ marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 600 }}>North-star · weekly active learners</div>
-                <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>Distinct learners with a mastery attempt, last 8 weeks</div>
+                <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>Distinct active learners, last 8 weeks</div>
               </div>
               <span className="row" style={{ gap: 5, fontSize: 12, color: 'var(--tx2)' }}><TrendingUp size={13} /> live</span>
             </div>
             <LineChart points={o.northStar} />
           </div>
 
-          <div>
+          {hasMix && <ActivityMix o={o} className="gd-5" />}
+
+          <div className="gd-12">
             <div className="spread" style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 13.5, fontWeight: 600 }}>Unicorn scorecard</div>
               <div style={{ fontSize: 11, color: 'var(--tx3)' }}>benchmarked vs edtech / consumer · click a tile to learn what it means</div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(168px,1fr))', gap: 10 }}>
               {score.map(s => {
                 const on = drill === s.key
                 return (
                   <button key={s.key} onClick={() => setDrill(on ? null : s.key)}
                     style={{
                       textAlign: 'left', cursor: 'pointer', background: 'var(--bg)', borderRadius: 'var(--r-lg)',
-                      border: `1px solid ${on ? 'var(--acc)' : 'var(--bd2)'}`, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 6,
+                      border: `1px solid ${on ? 'var(--acc)' : 'var(--bd2)'}`, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
                     }}>
                     <div className="spread">
-                      <span style={{ fontSize: 12.5, color: 'var(--tx)', fontWeight: 500 }}>{s.label}</span>
-                      <span style={{ fontSize: 18, fontWeight: 600, color: s.tone === 'pending' ? 'var(--tx3)' : 'var(--tx)' }}>{s.value}</span>
+                      <span style={{ fontSize: 12, color: 'var(--tx)', fontWeight: 500 }}>{s.label}</span>
+                      <span style={{ fontSize: 17, fontWeight: 600, color: s.tone === 'pending' ? 'var(--tx3)' : 'var(--tx)' }}>{s.value}</span>
                     </div>
                     <div className="spread">
                       <span className="pill" style={{ background: TONE_BG[s.tone], color: TONE_FG[s.tone] }}>{s.note}</span>
@@ -210,13 +218,9 @@ function Overview({ o, k, heroes, score, insight }: { o: GrowthOverview | null; 
               })}
             </div>
           </div>
-
-          <div className="insight tl" style={{ alignItems: 'center' }}>
-            <Activity size={15} />
-            <div>Revenue ratios (NRR, Rule of 40) stay <b>pending</b> until monetization events flow through <span className="src">hq_event</span> — these are the honest engagement-stage primitives, real not estimated.</div>
-          </div>
-        </>
-      )}
+        </div>
+        )
+      })()}
     </div>
   )
 }
@@ -239,6 +243,29 @@ function HeroMetric({ h }: { h: HeroCard }) {
           {h.what}
         </div>
       )}
+    </div>
+  )
+}
+
+// What kids actually do — live breakdown of earn-activity by type (last 30d).
+// This is the honest answer to "are lessons being completed?" and doubles as a
+// content-investment map: where engagement actually concentrates.
+function ActivityMix({ o, className = '' }: { o: GrowthOverview; className?: string }) {
+  const mix = (o.activityMix ?? []).filter(m => m.events > 0)
+  if (mix.length === 0) return null
+  const totalEvents = mix.reduce((s, m) => s + m.events, 0)
+  const top = mix[0]
+  const slices = mix.map((m, i) => ({ label: kindLabel(m.kind), value: m.events, color: chartColor(i) }))
+  return (
+    <div className={'card ' + className} style={{ padding: 16 }}>
+      <div className="spread" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <div className="row" style={{ gap: 6, fontSize: 13.5, fontWeight: 600 }}><Sparkles size={14} /> What kids actually do · last 30d</div>
+          <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{compact(totalEvents)} learning actions across {mix.length} activity types — drives where to invest content next</div>
+        </div>
+        <span className="pill pill-ok">{kindLabel(top.kind)} leads · {Math.round((100 * top.events) / totalEvents)}%</span>
+      </div>
+      <ChartView data={{ kind: 'donut', slices, centerValue: compact(totalEvents), centerLabel: 'actions' }} />
     </div>
   )
 }
@@ -358,54 +385,107 @@ function Acquisition({ o, a }: { o: GrowthOverview; a: AcquisitionData | null | 
   )
 }
 
-const KIND_LABEL: Record<string, string> = {
-  starter: 'Starter grant', reward: 'Lesson rewards', earn: 'Earned in play', gift: 'Family gifts', spend: 'Spent in shop',
-}
-
 function Economy({ e }: { e: EconomyData | null | undefined }) {
   if (e === undefined) return <Loading label="Loading economy…" />
   if (e === null) return <Empty title="Economy needs a live connection">Run <span className="src">hq_economy()</span> in Supabase and sign in as operator.</Empty>
 
+  // Separate the one-time onboarding floor from the recurring earn loop so the
+  // 250k starter grant stops flattening every other bar. Fall back to old shape
+  // when the v2 RPC hasn't been run yet.
+  const starter = e.starterGrant ?? (e.sources.find(s => s.kind === 'starter')?.amount ?? 0)
+  const recurringMint = e.recurringMinted ?? Math.max(0, e.minted - starter)
   const coverTone = e.coverage == null ? 'var(--tx3)' : e.coverage >= 50 ? 'var(--ok)' : 'var(--warn)'
-  const maxLeg = Math.max(1, ...e.sources.map(s => s.amount))
+
+  // Mint sources for the earn loop (exclude the starter floor and all sinks) and
+  // the sinks, both as comparable bars.
+  const mintBars = e.sources
+    .filter(s => (s.flow ? s.flow === 'mint' : !['spend', 'deduct'].includes(s.kind)) && s.kind !== 'starter')
+    .map((s, i) => ({ label: kindLabel(s.kind), value: s.amount, color: chartColor(i) }))
+  const sinkBars = e.sources
+    .filter(s => (s.flow ? s.flow === 'sink' : ['spend', 'deduct'].includes(s.kind)))
+    .map(s => ({ label: kindLabel(s.kind), value: s.amount, color: 'var(--mag)' }))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
       <div className="insight tl" style={{ alignItems: 'center' }}>
         <Gem size={15} />
-        <div>The diamond economy is the pre-revenue value loop: diamonds are <b>minted</b> (rewards) and <b>spent</b> (shop). Sink coverage — how much of what's minted gets spent — flags inflation when it's low.</div>
+        <div>The diamond economy is the pre-revenue value loop. The one-time <b>starter grant</b> is held aside so the metric that matters — the <b>recurring earn loop</b> versus what kids <b>spend</b> — is honest. Sink coverage flags inflation when it's low.</div>
       </div>
 
       <div className="kpi-grid">
         <div className="kpi"><div className="kpi-l"><Gem size={13} /> Float · held</div><div className="kpi-v">{compact(e.float)}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>diamonds across learners</div></div>
-        <div className="kpi"><div className="kpi-l">Minted · sources</div><div className="kpi-v">{compact(e.minted)}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>rewards + grants + earned</div></div>
-        <div className="kpi"><div className="kpi-l">Spent · sinks</div><div className="kpi-v">{compact(e.spent)}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>consumed in the shop</div></div>
-        <div className="kpi"><div className="kpi-l"><Target size={13} /> Sink coverage</div><div className="kpi-v">{e.coverage == null ? '—' : pct(e.coverage)}</div><div className="kpi-s" style={{ color: coverTone }}>{e.coverage == null ? 'no flows yet' : e.coverage >= 50 ? 'healthy sink' : 'diamonds piling up'}</div></div>
+        <div className="kpi"><div className="kpi-l"><Coins size={13} /> Recurring earn</div><div className="kpi-v">{compact(recurringMint)}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>minted from real play (excl. starter)</div></div>
+        <div className="kpi"><div className="kpi-l"><ArrowLeftRight size={13} /> Spent · sinks</div><div className="kpi-v">{compact(e.spent)}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>shop spends + penalties</div></div>
+        <div className="kpi"><div className="kpi-l"><Target size={13} /> Sink coverage</div><div className="kpi-v">{e.coverage == null ? '—' : pct(e.coverage)}</div><div className="kpi-s" style={{ color: coverTone }}>{e.coverage == null ? 'no flows yet' : e.coverage >= 50 ? 'healthy — diamonds recirculate' : 'diamonds piling up'}</div></div>
       </div>
 
-      <div className="card" style={{ padding: 16 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 12 }}>Diamond flow · by source &amp; sink</div>
-        {e.sources.length === 0 ? (
-          <Empty title="No diamond flows yet">Rewards and shop spends appear here as they happen via <span className="src">diamond_ledger</span>.</Empty>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {e.sources.map(s => (
-              <div key={s.kind} className="row" style={{ gap: 12 }}>
-                <div style={{ width: 130, fontSize: 12.5, color: 'var(--tx2)' }}>{KIND_LABEL[s.kind] ?? s.kind}</div>
-                <div style={{ flex: 1, height: 22, background: 'var(--bg3)', borderRadius: 6, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.max(3, Math.round((100 * s.amount) / maxLeg))}%`, height: '100%', borderRadius: 6, background: s.kind === 'spend' ? 'var(--mag)' : 'var(--acc)' }} />
-                </div>
-                <div style={{ width: 64, textAlign: 'right', fontSize: 12, fontWeight: 600 }}>{compact(s.amount)}</div>
-              </div>
-            ))}
+      {starter > 0 && (
+        <div className="insight" style={{ background: 'var(--bg2)', color: 'var(--tx2)', alignItems: 'center' }}>
+          <Sparkles size={15} />
+          <div><b>{compact(starter)}</b> in one-time starter grants seeds new wallets — an onboarding floor, not ongoing inflation. It's excluded from the loop and coverage below so the numbers reflect real economic motion.</div>
+        </div>
+      )}
+
+      {e.mintBurn && e.mintBurn.length > 0 && (
+        <div className="card" style={{ padding: 16 }}>
+          <div className="spread" style={{ marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>Mint vs burn · weekly</div>
+              <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>diamonds earned from play (mint) against diamonds spent (burn) — the real economic pulse</div>
+            </div>
+            <div className="row" style={{ gap: 14, fontSize: 11, color: 'var(--tx2)' }}>
+              <span className="row" style={{ gap: 5 }}><span style={{ width: 11, height: 3, borderRadius: 2, background: 'var(--acc)' }} /> mint</span>
+              <span className="row" style={{ gap: 5 }}><span style={{ width: 11, height: 3, borderRadius: 2, background: 'var(--mag)' }} /> burn</span>
+            </div>
           </div>
-        )}
-      </div>
+          <MintBurnChart points={e.mintBurn} />
+        </div>
+      )}
 
-      <div className="insight tl" style={{ alignItems: 'center' }}>
-        <Activity size={15} />
-        <div>Real money (MRR, NRR, Rule of 40) layers on top of this same loop once monetization launches — the diamond economy is the dress rehearsal for the revenue economy.</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 12 }}>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>Earn loop · by source</div>
+          <div style={{ fontSize: 11.5, color: 'var(--tx2)', marginBottom: 12 }}>where recurring diamonds are minted — your engagement mix in money form</div>
+          {mintBars.length === 0
+            ? <Empty title="No earn flows yet">Journey, quest and reward earns appear here via <span className="src">diamond_ledger</span>.</Empty>
+            : <ChartView data={{ kind: 'bars', bars: mintBars }} />}
+        </div>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>Sinks · where it goes</div>
+          <div style={{ fontSize: 11.5, color: 'var(--tx2)', marginBottom: 12 }}>shop spends and penalties — the drain that keeps the float healthy</div>
+          {sinkBars.length === 0
+            ? <Empty title="No sinks yet">Add a shop sink so diamonds recirculate instead of piling up.</Empty>
+            : <ChartView data={{ kind: 'bars', bars: sinkBars }} />}
+        </div>
       </div>
     </div>
+  )
+}
+
+// Compact dual-series chart: weekly mint (earn) vs burn (spend). Dependency-free,
+// theme-tokened — the economy counterpart to the north-star line.
+function MintBurnChart({ points }: { points: { week: string; mint: number; burn: number }[] }) {
+  const W = 760, H = 170, padL = 10, padR = 10, padT = 18, padB = 22
+  const n = points.length
+  if (n === 0) return null
+  const max = Math.max(1, ...points.map(p => Math.max(p.mint, p.burn)))
+  const x = (i: number) => padL + (i * (W - padL - padR)) / Math.max(1, n - 1)
+  const y = (v: number) => padT + (1 - v / max) * (H - padT - padB)
+  const path = (key: 'mint' | 'burn') => points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ')
+  const mintLine = path('mint'), burnLine = path('burn')
+  const base = H - padB
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ height: 'auto', display: 'block' }} role="img" aria-label="Weekly mint vs burn">
+      {[0.25, 0.5, 0.75, 1].map(f => {
+        const gy = padT + f * (H - padT - padB)
+        return <line key={f} x1={padL} x2={W - padR} y1={gy} y2={gy} stroke="var(--bd)" strokeWidth={1} />
+      })}
+      <path d={`${mintLine} L${x(n - 1).toFixed(1)},${base} L${x(0).toFixed(1)},${base} Z`} fill="var(--acc-soft)" opacity={0.6} />
+      <path d={mintLine} fill="none" stroke="var(--acc)" strokeWidth={2.5} strokeLinejoin="round" />
+      <path d={burnLine} fill="none" stroke="var(--mag)" strokeWidth={2.5} strokeLinejoin="round" strokeDasharray="5 4" />
+      {points.map((p, i) => <circle key={'m' + i} cx={x(i)} cy={y(p.mint)} r={3} fill="var(--acc)" />)}
+      {points.map((p, i) => <circle key={'b' + i} cx={x(i)} cy={y(p.burn)} r={3} fill="var(--mag)" />)}
+      {points.map((p, i) => <text key={'l' + i} x={x(i)} y={H - 6} fontSize={10} fill="var(--tx3)" textAnchor="middle">{p.week}</text>)}
+    </svg>
   )
 }

@@ -1,5 +1,5 @@
 import { supabase, cloudEnabled } from '../lib/supabase'
-import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix, GrowthOverview, RetentionData, AcquisitionData, EconomyData } from './types'
+import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix, GrowthOverview, RetentionData, AcquisitionData, EconomyData, PortfolioVc } from './types'
 
 export interface PublishedGame {
   id: string
@@ -121,6 +121,7 @@ export const live = {
   schemaInsights: () => rpc<SchemaInsights>('hq_schema_insights'),
   contentMatrix: () => rpc<ContentMatrix>('hq_content_matrix'),
   growthOverview: () => rpc<GrowthOverview>('hq_growth_overview'),
+  portfolioVc: () => rpc<PortfolioVc>('hq_portfolio_vc'),
   retention: () => rpc<RetentionData>('hq_retention'),
   acquisition: () => rpc<AcquisitionData>('hq_acquisition'),
   economy: () => rpc<EconomyData>('hq_economy'),
@@ -491,14 +492,19 @@ export const live = {
     return true
   },
 
-  /** Live KinetikCircle platform stats — queries kinetik tables directly. */
+  /** Live KinetikCircle platform stats. Prefers the operator RPC (counts the
+   *  whole ecosystem, bypassing own-row RLS); falls back to direct queries. */
   async kinetikStats(): Promise<KinetikStats | null> {
     if (!cloudEnabled) return null
+    // Operator RPC first — the only path that counts Members correctly (direct
+    // circle_members reads are blocked by own-row RLS and have no `id` column).
+    const viaRpc = await rpc<KinetikStats>('hq_kinetik_stats')
+    if (viaRpc) return viaRpc
     try {
       const ago7d = new Date(Date.now() - 7 * 86400_000).toISOString()
       const [circles, members, posts, posts7d, postData, bcastData] = await Promise.all([
         supabase.from('circles').select('id', { count: 'exact', head: true }),
-        supabase.from('circle_members').select('id', { count: 'exact', head: true }),
+        supabase.from('circle_members').select('member_id', { count: 'exact', head: true }),
         supabase.from('kinetik_post').select('id', { count: 'exact', head: true }),
         supabase.from('kinetik_post').select('id', { count: 'exact', head: true }).gte('created_at', ago7d),
         supabase.from('kinetik_post').select('reaction_count').limit(10000),

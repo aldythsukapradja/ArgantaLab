@@ -2,11 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { X, ArrowLeft, ArrowRight, Sun, Moon } from 'lucide-react'
 import type { GrowthOverview, AcquisitionData, EconomyData } from '../data/types'
-import type { HeroCard, ScoreRow, GrowthInsight } from '../data/growth'
-
-const KIND_LABEL: Record<string, string> = {
-  starter: 'Starter grant', reward: 'Lesson rewards', earn: 'Earned in play', gift: 'Family gifts', spend: 'Spent in shop',
-}
+import { kindLabel, type HeroCard, type ScoreRow, type GrowthInsight } from '../data/growth'
 
 interface Palette {
   bg: string; ink: string; dim: string; faint: string
@@ -291,11 +287,17 @@ function funnelSlide({ a, c }: SlideArgs) {
 
 function economySlide({ e, c }: SlideArgs) {
   if (!e) return null
-  const max = Math.max(1, ...e.sources.map(s => s.amount))
-  const big: [string, number][] = [['Float held', e.float], ['Minted', e.minted], ['Spent', e.spent]]
+  // Recurring earn loop — the one-time starter grant is held aside so the deck
+  // tells the honest economic story, not the 250k onboarding floor.
+  const starter = e.starterGrant ?? (e.sources.find(s => s.kind === 'starter')?.amount ?? 0)
+  const recurring = e.recurringMinted ?? Math.max(0, e.minted - starter)
+  const loop = e.sources.filter(s => s.kind !== 'starter')
+  const max = Math.max(1, ...loop.map(s => s.amount))
+  const isSink = (k: string, flow?: string) => flow ? flow === 'sink' : ['spend', 'deduct'].includes(k)
+  const big: [string, number][] = [['Float held', e.float], ['Recurring earn', recurring], ['Spent', e.spent]]
   return (
     <div>
-      {kicker('Diamond economy', c)}
+      {kicker('Diamond economy · recurring loop', c)}
       <div style={{ display: 'flex', gap: 'clamp(24px, 5vw, 72px)', flexWrap: 'wrap', marginBottom: 28 }}>
         {big.map(([lab, val]) => (
           <div key={lab} className="pres-pop">
@@ -311,11 +313,11 @@ function economySlide({ e, c }: SlideArgs) {
         </div>
       </div>
       <div style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {e.sources.map(s => (
+        {loop.map(s => (
           <div key={s.kind} className="pres-anim" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ width: 140, fontSize: 14, color: c.dim }}>{KIND_LABEL[s.kind] ?? s.kind}</span>
+            <span style={{ width: 140, fontSize: 14, color: c.dim }}>{kindLabel(s.kind)}</span>
             <div style={{ flex: 1, height: 18, borderRadius: 6, background: c.panel, overflow: 'hidden' }}>
-              <div className="pres-bar" style={{ width: `${Math.max(4, Math.round((100 * s.amount) / max))}%`, height: '100%', borderRadius: 6, background: s.kind === 'spend' ? c.mag : c.acc }} />
+              <div className="pres-bar" style={{ width: `${Math.max(4, Math.round((100 * s.amount) / max))}%`, height: '100%', borderRadius: 6, background: isSink(s.kind, s.flow) ? c.mag : c.acc }} />
             </div>
             <span style={{ width: 70, textAlign: 'right', fontSize: 14, color: c.ink }}>{s.amount.toLocaleString()}</span>
           </div>

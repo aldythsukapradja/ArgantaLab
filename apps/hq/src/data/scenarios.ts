@@ -1,6 +1,8 @@
 import { live } from './live'
 import type { ChartData } from '../components/charts'
 import { chartColor } from '../components/charts'
+import { kindLabel } from './growth'
+import { PRESETS, DEFAULT_GLOBALS, computeScenario } from './monetization'
 
 // Operating scenarios — the important questions the agent OS answers. Each one
 // declares its owning executive, the agents it convenes, the SQL sources it
@@ -24,10 +26,6 @@ export interface Scenario {
   chartKind: ChartData['kind']
   /** null = offline or no signal yet (caller shows an honest empty state) */
   run: () => Promise<ScenarioResult | null>
-}
-
-const KIND_LABEL: Record<string, string> = {
-  starter: 'Starter grant', reward: 'Lesson rewards', earn: 'Earned in play', gift: 'Family gifts', spend: 'Spent in shop',
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -100,16 +98,42 @@ export const SCENARIOS: Scenario[] = [
     run: async () => {
       const e = await live.economy()
       if (!e || e.sources.length === 0) return null
-      const bars = e.sources.map((s, i) => ({
-        label: KIND_LABEL[s.kind] ?? s.kind, value: s.amount,
-        color: s.kind === 'spend' ? 'var(--mag)' : chartColor(i),
+      // Hold out the one-time starter grant so the recurring earn loop is visible.
+      const loop = e.sources.filter(s => s.kind !== 'starter')
+      const isSink = (k: string, flow?: string) => flow ? flow === 'sink' : ['spend', 'deduct'].includes(k)
+      const bars = loop.map((s, i) => ({
+        label: kindLabel(s.kind), value: s.amount,
+        color: isSink(s.kind, s.flow) ? 'var(--mag)' : chartColor(i),
       }))
       return {
         chart: { kind: 'bars', bars },
         headline: `${e.coverage == null ? '—' : e.coverage + '%'} sink coverage · float ${e.float}`,
         insight: e.coverage == null ? 'No diamond flows yet — minted vs spent appears as play happens.'
-          : e.coverage >= 50 ? `Sink coverage ${e.coverage}% is healthy — diamonds spent keep pace with minting.`
+          : e.coverage >= 50 ? `Sink coverage ${e.coverage}% is healthy — burn keeps pace with the recurring mint (starter grant held out).`
             : `CFO: sink coverage ${e.coverage}% is low — diamonds mint faster than they’re spent. Add a shop sink before inflation sets in.`,
+      }
+    },
+  },
+  {
+    id: 'monetization-forecast',
+    title: 'Monetization Forecast',
+    question: 'If we switch on revenue, how much do we make at scale?',
+    ownerId: 'cfo', participantIds: ['ir', 'vp-growth'],
+    sources: ['hq_economy', 'monetization model'], chartKind: 'bars',
+    run: async () => {
+      const fam = 10_000
+      const cases: { k: 'low' | 'mid' | 'high'; label: string }[] = [
+        { k: 'low', label: 'Low' }, { k: 'mid', label: 'Mid' }, { k: 'high', label: 'High' },
+      ]
+      const bars = cases.map((c, i) => ({
+        label: c.label, value: Math.round(computeScenario(PRESETS[c.k], fam, DEFAULT_GLOBALS).arr),
+        color: c.k === 'high' ? 'var(--ok)' : c.k === 'mid' ? 'var(--acc)' : chartColor(i),
+      }))
+      const mid = computeScenario(PRESETS.mid, fam, DEFAULT_GLOBALS)
+      return {
+        chart: { kind: 'bars', bars, unit: ' ARR' },
+        headline: `Mid case ≈ $${Math.round(mid.arr / 1000)}k ARR at 10k families`,
+        insight: `Subscription + diamond IAP. Mid-case LTV:CAC ${mid.ltvCac == null ? '—' : mid.ltvCac.toFixed(1) + '×'}, payback ${mid.paybackMo == null ? '—' : Math.round(mid.paybackMo) + 'mo'} — clears the fundable bar. Drag the drivers in Growth → Monetization to reshape the fan.`,
       }
     },
   },

@@ -8,6 +8,16 @@ import { pct, compact } from '../lib/format'
 
 export type Tone = 'success' | 'info' | 'warning' | 'danger' | 'pending'
 
+// Human labels for every diamond_ledger `kind` seen in the live economy — used
+// by the economy flow, the activity-mix chart, and the investor deck.
+export const KIND_LABEL: Record<string, string> = {
+  starter: 'Starter grant', reward: 'Lesson rewards', earn: 'Earned in play', gift: 'Family gifts',
+  spend: 'Spent in shop', deduct: 'Penalties / refunds',
+  journey: 'Journey nodes', quest: 'LifeQuests', drill: 'Skill drills',
+  openworld: 'Open-world play', harvest: 'World harvest', coop: 'Co-op play',
+}
+export const kindLabel = (k: string): string => KIND_LABEL[k] ?? k.charAt(0).toUpperCase() + k.slice(1)
+
 export interface ScoreRow {
   key: string
   label: string
@@ -54,12 +64,12 @@ export function heroCards(o: GrowthOverview): HeroCard[] {
     { key: 'stick', label: 'Stickiness · DAU/MAU', value: o.stickiness == null ? '—' : pct(o.stickiness),
       sub: `> ${BENCHMARKS.stickiness.good}% benchmark`, tone: toneStick(o.stickiness),
       what: 'Of everyone who used the app this month (MAU = monthly active users), the share who show up on an average day (DAU = daily active users). Higher means more of a daily habit. Above 20% is strong for a consumer app.' },
+    { key: 'mau', label: 'Monthly reach · MAU', value: compact(o.mau),
+      sub: `${compact(o.dau)} today · ${compact(o.wau)} this week`, tone: 'info',
+      what: 'How many unique kids used the app at least once in the last 30 days — your total monthly reach. The funnel from MAU → WAU → DAU shows how the habit tightens.' },
     { key: 'new', label: 'New learners · 7d', value: compact(o.newLearners7d),
       sub: o.newWowPct == null ? 'WoW —' : `${signed(o.newWowPct)} WoW`, tone: toneWow(o.newWowPct),
       what: 'How many brand-new kids signed up in the last 7 days — your top-of-funnel growth. "WoW" compares it to the prior week.' },
-    { key: 'acc', label: 'Accuracy · 30d', value: o.accuracyPct == null ? '—' : pct(o.accuracyPct),
-      sub: 'healthy 55–85%', tone: toneAcc(o.accuracyPct),
-      what: 'The average share of questions answered correctly over 30 days. Too low (<55%) means content is too hard; too high (>85%) means it is too easy to drive real learning.' },
   ]
 }
 
@@ -93,7 +103,7 @@ export function buildScorecard(o: GrowthOverview): ScoreRow[] {
     { key: 'retention', label: 'D30 retention', value: '—', tone: 'pending',
       note: '> 35% top-quartile edtech',
       what: 'Of kids who joined, the share still active 30 days later. The #1 number investors check — it proves the product keeps people.',
-      detail: 'The cohort triangle lives in the Retention sub-tab via hq_retention(). Reads the same item_attempts — no new instrumentation.' },
+      detail: 'The cohort triangle lives in the Retention sub-tab via hq_retention(). Reads the unified activity signal (play, quests, journeys, earns) — no new instrumentation.' },
     { key: 'kfactor', label: 'k-factor', value: '—', tone: 'pending',
       note: '> 0.5 assisted · > 1 viral',
       what: 'How many new users each existing user brings in through invites. Above 1 means the product grows itself, virally.',

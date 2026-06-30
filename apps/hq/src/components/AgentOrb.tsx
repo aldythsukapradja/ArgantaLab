@@ -14,6 +14,7 @@ const CHIPS = [
   { label: '🎯 Focus', prompt: 'What should I focus on this week?' },
   { label: '⚠️ Blockers', prompt: "What's blocking me?" },
   { label: '💎 Economy', prompt: 'Economy health check' },
+  { label: '💰 Monetization', prompt: 'Monetization forecast' },
   { label: '🤖 Agents', prompt: 'Show agent OS status' },
 ]
 
@@ -21,7 +22,8 @@ const CHIPS = [
 // the scenario's agents and rendering the live chart inline.
 const SCN_LABEL: Record<string, string> = {
   'growth-review': '📈 Growth', 'retention-triangle': '🔺 Retention',
-  'acquisition-funnel': '🌪 Funnel', 'diamond-economy': '💎 Economy map', 'content-coverage': '📚 Content',
+  'acquisition-funnel': '🌪 Funnel', 'diamond-economy': '💎 Economy map',
+  'monetization-forecast': '💰 Monetize', 'content-coverage': '📚 Content',
 }
 
 const agentName = (id: string) => AGENTS.find(a => a.id === id)?.name || id

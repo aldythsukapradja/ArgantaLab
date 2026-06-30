@@ -95,11 +95,22 @@ export const travel = {
 }
 
 /* ───────────── Padel Matchday ───────────── */
-export interface PadelSession { id: string; format: string; points: number; courts: number; status: string }
+export interface PadelSession {
+  id: string; format: string; points: number; courts: number; status: string
+  eventName: string | null; venue: string | null; duration: number; pace: string
+  americanoMode: string; mexicanoFirst: string; selectedCourts: number[]
+}
 export interface PadelPlayer { id: string; sessionId: string; name: string; memberId: string | null; sort: number }
-export interface PadelMatch { id: string; sessionId: string; court: number; matchNo: number; teamA: string[]; teamB: string[]; scoreA: number | null; scoreB: number | null; status: string }
+export interface PadelBatch { id: string; sessionId: string; number: number; kind: string; label: string | null; sitouts: string[] }
+export interface PadelMatch { id: string; sessionId: string; batchId: string | null; court: number; matchNo: number; teamA: string[]; teamB: string[]; scoreA: number | null; scoreB: number | null; status: string }
 
-const mapSession = (r: any): PadelSession => ({ id: r.id, format: r.format || 'americano', points: r.points ?? 24, courts: r.courts ?? 1, status: r.status || 'setup' })
+const mapSession = (r: any): PadelSession => ({
+  id: r.id, format: r.format || 'americano', points: r.points ?? 24, courts: r.courts ?? 1, status: r.status || 'setup',
+  eventName: r.event_name ?? null, venue: r.venue ?? null, duration: r.duration ?? 90, pace: r.pace || 'normal',
+  americanoMode: r.americano_mode || 'duration', mexicanoFirst: r.mexicano_first || 'roster',
+  selectedCourts: Array.isArray(r.selected_courts) && r.selected_courts.length ? r.selected_courts : [1],
+})
+const mapBatch = (r: any): PadelBatch => ({ id: r.id, sessionId: r.session_id, number: r.number ?? 1, kind: r.kind || 'americano', label: r.label ?? null, sitouts: r.sitouts ?? [] })
 
 export const padel = {
   async sessions(circleId: string): Promise<PadelSession[]> {
@@ -116,9 +127,30 @@ export const padel = {
     if (p.points !== undefined) row.points = p.points
     if (p.courts !== undefined) row.courts = p.courts
     if (p.status !== undefined) row.status = p.status
+    if (p.eventName !== undefined) row.event_name = p.eventName
+    if (p.venue !== undefined) row.venue = p.venue
+    if (p.duration !== undefined) row.duration = p.duration
+    if (p.pace !== undefined) row.pace = p.pace
+    if (p.americanoMode !== undefined) row.americano_mode = p.americanoMode
+    if (p.mexicanoFirst !== undefined) row.mexicano_first = p.mexicanoFirst
+    if (p.selectedCourts !== undefined) row.selected_courts = p.selectedCourts
     await ok(supabase.from('kinetik_padel_session').update(row).eq('id', id).select())
   },
   async deleteSession(id: string): Promise<void> { await ok(supabase.from('kinetik_padel_session').delete().eq('id', id).select()) },
+
+  async batches(sessionId: string): Promise<PadelBatch[]> {
+    const d = await ok(supabase.from('kinetik_padel_batch').select('*').eq('session_id', sessionId).order('number'))
+    return rows<any>(d).map(mapBatch)
+  },
+  async addBatch(circleId: string, sessionId: string, b: { number: number; kind: string; label: string; sitouts?: string[] }): Promise<PadelBatch> {
+    const d = await ok(supabase.from('kinetik_padel_batch').insert({ circle_id: circleId, session_id: sessionId, number: b.number, kind: b.kind, label: b.label, sitouts: b.sitouts ?? [] }).select().single())
+    return mapBatch(d)
+  },
+  async resetBatches(sessionId: string): Promise<void> {
+    // matches cascade off batch delete (FK on delete cascade)
+    await ok(supabase.from('kinetik_padel_batch').delete().eq('session_id', sessionId).select())
+    await ok(supabase.from('kinetik_padel_match').delete().eq('session_id', sessionId).select())
+  },
 
   async players(sessionId: string): Promise<PadelPlayer[]> {
     const d = await ok(supabase.from('kinetik_padel_player').select('*').eq('session_id', sessionId).order('sort').order('created_at'))
@@ -130,25 +162,30 @@ export const padel = {
   async delPlayer(id: string): Promise<void> { await ok(supabase.from('kinetik_padel_player').delete().eq('id', id).select()) },
 
   async matches(sessionId: string): Promise<PadelMatch[]> {
-    const d = await ok(supabase.from('kinetik_padel_match').select('*').eq('session_id', sessionId).order('court').order('match_no'))
-    return rows<any>(d).map(r => ({ id: r.id, sessionId: r.session_id, court: r.court ?? 1, matchNo: r.match_no ?? 1, teamA: r.team_a ?? [], teamB: r.team_b ?? [], scoreA: r.score_a ?? null, scoreB: r.score_b ?? null, status: r.status || 'pending' }))
+    const d = await ok(supabase.from('kinetik_padel_match').select('*').eq('session_id', sessionId).order('match_no'))
+    return rows<any>(d).map(r => ({ id: r.id, sessionId: r.session_id, batchId: r.batch_id ?? null, court: r.court ?? 1, matchNo: r.match_no ?? 1, teamA: r.team_a ?? [], teamB: r.team_b ?? [], scoreA: r.score_a ?? null, scoreB: r.score_b ?? null, status: r.status || 'pending' }))
   },
-  async replaceMatches(circleId: string, sessionId: string, ms: Omit<PadelMatch, 'id' | 'sessionId' | 'status'>[]): Promise<void> {
-    await ok(supabase.from('kinetik_padel_match').delete().eq('session_id', sessionId).select())
-    if (ms.length) await ok(supabase.from('kinetik_padel_match').insert(ms.map(m => ({ circle_id: circleId, session_id: sessionId, court: m.court, match_no: m.matchNo, team_a: m.teamA, team_b: m.teamB, score_a: m.scoreA, score_b: m.scoreB }))).select())
+  async addMatches(circleId: string, sessionId: string, batchId: string, ms: { court: number; matchNo: number; teamA: string[]; teamB: string[] }[]): Promise<void> {
+    if (!ms.length) return
+    await ok(supabase.from('kinetik_padel_match').insert(ms.map(m => ({ circle_id: circleId, session_id: sessionId, batch_id: batchId, court: m.court, match_no: m.matchNo, team_a: m.teamA, team_b: m.teamB }))).select())
   },
   async saveScore(id: string, scoreA: number, scoreB: number): Promise<void> {
     await ok(supabase.from('kinetik_padel_match').update({ score_a: scoreA, score_b: scoreB, status: 'done' }).eq('id', id).select())
+  },
+  async clearScore(id: string): Promise<void> {
+    await ok(supabase.from('kinetik_padel_match').update({ score_a: null, score_b: null, status: 'pending' }).eq('id', id).select())
   },
 }
 
 /* ───────────── Kitchen ───────────── */
 export interface Ingredient { name: string; qty?: string; aisle?: string }
-export interface Recipe { id: string; emoji: string; name: string; category: string; minutes: number; servings: number; ingredients: Ingredient[] }
+export interface Recipe { id: string; emoji: string; name: string; category: string; minutes: number; servings: number; ingredients: Ingredient[]; steps: string[] }
 export interface MealPlan { id: string; planDate: string; recipeId: string | null; note: string | null }
 export interface ShopItem { id: string; name: string; aisle: string; qty: string | null; done: boolean }
+export interface GroceryBasket { id: string; title: string; items: { name: string; aisle: string }[] }
+export interface GroceryRun { id: string; title: string | null; itemCount: number; createdAt: string }
 
-const mapRecipe = (r: any): Recipe => ({ id: r.id, emoji: r.emoji || '🍽️', name: r.name, category: r.category || 'Mains', minutes: r.minutes ?? 30, servings: r.servings ?? 4, ingredients: Array.isArray(r.ingredients) ? r.ingredients : [] })
+const mapRecipe = (r: any): Recipe => ({ id: r.id, emoji: r.emoji || '🍽️', name: r.name, category: r.category || 'Mains', minutes: r.minutes ?? 30, servings: r.servings ?? 4, ingredients: Array.isArray(r.ingredients) ? r.ingredients : [], steps: Array.isArray(r.steps) ? r.steps : [] })
 
 export const kitchen = {
   async recipes(circleId: string): Promise<Recipe[]> {
@@ -156,7 +193,7 @@ export const kitchen = {
     return rows<any>(d).map(mapRecipe)
   },
   async createRecipe(circleId: string, r: Partial<Recipe>): Promise<Recipe> {
-    const d = await ok(supabase.from('kinetik_recipe').insert({ circle_id: circleId, emoji: r.emoji ?? '🍽️', name: r.name, category: r.category ?? 'Mains', minutes: r.minutes ?? 30, servings: r.servings ?? 4, ingredients: r.ingredients ?? [] }).select().single())
+    const d = await ok(supabase.from('kinetik_recipe').insert({ circle_id: circleId, emoji: r.emoji ?? '🍽️', name: r.name, category: r.category ?? 'Mains', minutes: r.minutes ?? 30, servings: r.servings ?? 4, ingredients: r.ingredients ?? [], steps: r.steps ?? [] }).select().single())
     return mapRecipe(d)
   },
   async deleteRecipe(id: string): Promise<void> { await ok(supabase.from('kinetik_recipe').delete().eq('id', id).select()) },
@@ -177,15 +214,36 @@ export const kitchen = {
     await ok(supabase.from('kinetik_shop_item').insert(items.map(i => ({ circle_id: circleId, name: i.name, aisle: i.aisle ?? 'Other', qty: i.qty ?? null }))).select())
   },
   async toggleShop(id: string, done: boolean): Promise<void> { await ok(supabase.from('kinetik_shop_item').update({ done }).eq('id', id).select()) },
+  async delShop(id: string): Promise<void> { await ok(supabase.from('kinetik_shop_item').delete().eq('id', id).select()) },
   async clearDone(circleId: string): Promise<void> { await ok(supabase.from('kinetik_shop_item').delete().eq('circle_id', circleId).eq('done', true).select()) },
+}
+
+/* ───────────── Grocery (folded into Kitchen) ───────────── */
+export const grocery = {
+  async baskets(circleId: string): Promise<GroceryBasket[]> {
+    const d = await ok(supabase.from('kinetik_grocery_basket').select('*').eq('circle_id', circleId).order('created_at', { ascending: false }))
+    return rows<any>(d).map(r => ({ id: r.id, title: r.title, items: Array.isArray(r.items) ? r.items : [] }))
+  },
+  async addBasket(circleId: string, title: string, items: { name: string; aisle: string }[]): Promise<void> {
+    await ok(supabase.from('kinetik_grocery_basket').insert({ circle_id: circleId, title, items }).select())
+  },
+  async delBasket(id: string): Promise<void> { await ok(supabase.from('kinetik_grocery_basket').delete().eq('id', id).select()) },
+
+  async runs(circleId: string): Promise<GroceryRun[]> {
+    const d = await ok(supabase.from('kinetik_grocery_run').select('*').eq('circle_id', circleId).order('created_at', { ascending: false }))
+    return rows<any>(d).map(r => ({ id: r.id, title: r.title ?? null, itemCount: r.item_count ?? 0, createdAt: r.created_at }))
+  },
+  async logRun(circleId: string, title: string | null, itemCount: number): Promise<void> {
+    await ok(supabase.from('kinetik_grocery_run').insert({ circle_id: circleId, title, item_count: itemCount }).select())
+  },
 }
 
 /* ───────────── Family Vault ───────────── */
 export interface VaultField { k: string; v: string }
 export interface VaultDoc { id: string; category: string; name: string; icon: string; fields: VaultField[]; expiry: string | null; filePath: string | null; createdAt: string }
 export interface VaultBudget { id: string; category: string; icon: string; monthly: number }
-export interface VaultExpense { id: string; descr: string | null; category: string; icon: string; amount: number; spentAt: string }
-export interface VaultSub { id: string; name: string; icon: string; amount: number; period: string }
+export interface VaultExpense { id: string; descr: string | null; category: string; icon: string; amount: number; spentAt: string; paidBy: string | null }
+export interface VaultSub { id: string; name: string; icon: string; amount: number; period: string; billingDay: number | null; category: string }
 
 export const vault = {
   async docs(circleId: string): Promise<VaultDoc[]> {
@@ -207,19 +265,19 @@ export const vault = {
 
   async expenses(circleId: string): Promise<VaultExpense[]> {
     const d = await ok(supabase.from('kinetik_vault_expense').select('*').eq('circle_id', circleId).order('spent_at', { ascending: false }))
-    return rows<any>(d).map(r => ({ id: r.id, descr: r.descr ?? null, category: r.category || 'Other', icon: r.icon || '🧾', amount: Number(r.amount) || 0, spentAt: r.spent_at }))
+    return rows<any>(d).map(r => ({ id: r.id, descr: r.descr ?? null, category: r.category || 'Other', icon: r.icon || '🧾', amount: Number(r.amount) || 0, spentAt: r.spent_at, paidBy: r.paid_by ?? null }))
   },
   async addExpense(circleId: string, e: Partial<VaultExpense>): Promise<void> {
-    await ok(supabase.from('kinetik_vault_expense').insert({ circle_id: circleId, descr: e.descr ?? null, category: e.category ?? 'Other', icon: e.icon ?? '🧾', amount: e.amount ?? 0, spent_at: e.spentAt ?? new Date().toISOString().slice(0, 10) }).select())
+    await ok(supabase.from('kinetik_vault_expense').insert({ circle_id: circleId, descr: e.descr ?? null, category: e.category ?? 'Other', icon: e.icon ?? '🧾', amount: e.amount ?? 0, spent_at: e.spentAt ?? new Date().toISOString().slice(0, 10), paid_by: e.paidBy ?? null }).select())
   },
   async delExpense(id: string): Promise<void> { await ok(supabase.from('kinetik_vault_expense').delete().eq('id', id).select()) },
 
   async subs(circleId: string): Promise<VaultSub[]> {
     const d = await ok(supabase.from('kinetik_vault_sub').select('*').eq('circle_id', circleId).order('created_at', { ascending: false }))
-    return rows<any>(d).map(r => ({ id: r.id, name: r.name, icon: r.icon || '📺', amount: Number(r.amount) || 0, period: r.period || 'month' }))
+    return rows<any>(d).map(r => ({ id: r.id, name: r.name, icon: r.icon || '📺', amount: Number(r.amount) || 0, period: r.period || 'month', billingDay: r.billing_day ?? null, category: r.category || 'Other' }))
   },
   async addSub(circleId: string, s: Partial<VaultSub>): Promise<void> {
-    await ok(supabase.from('kinetik_vault_sub').insert({ circle_id: circleId, name: s.name, icon: s.icon ?? '📺', amount: s.amount ?? 0, period: s.period ?? 'month' }).select())
+    await ok(supabase.from('kinetik_vault_sub').insert({ circle_id: circleId, name: s.name, icon: s.icon ?? '📺', amount: s.amount ?? 0, period: s.period ?? 'month', billing_day: s.billingDay ?? null, category: s.category ?? 'Other' }).select())
   },
   async delSub(id: string): Promise<void> { await ok(supabase.from('kinetik_vault_sub').delete().eq('id', id).select()) },
 }

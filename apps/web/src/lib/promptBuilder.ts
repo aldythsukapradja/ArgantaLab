@@ -98,3 +98,20 @@ export function buildPrompt(f: PromptForm): { segments: PromptSegment[]; full: s
 
   return { segments, full }
 }
+
+// ── Quick prompt for the simplified Lab ──────────────────────
+//  Builds a ready-to-copy AI prompt from just name + category + description.
+//  No multi-step wizard — this is the optional helper popup.
+export function buildSimplePrompt(name: string, category: string, desc: string): string {
+  const title = name.trim() || 'a fun arcade game'
+  const cat = (category || 'arcade').trim().toLowerCase()
+  const about = desc.trim() || `a ${cat} game called ${title}`
+  return [
+    `You are an expert game developer. Build ONE self-contained HTML file: ${title} — ${about}.`,
+    `Genre: ${cat}.`,
+    'Put all HTML, CSS, and JavaScript in a single .html file. No external links, libraries, fonts, images, or internet — it must run by itself.',
+    'It must work on BOTH a computer (arrow keys / WASD / spacebar) AND a phone or tablet (big on-screen touch buttons). Read window.ARGANTA_DEVICE — it will be \'desktop\', \'ipad\', or \'iphone\'. Show keyboard hints on desktop and large touch buttons on ipad/iphone. If it is not set, detect touch automatically.',
+    'Always show a start screen, the current score, and a Restart button. Make it polished, forgiving, and fun.',
+    'Return ONLY the complete code inside a single ```html code block — no explanation before or after.',
+  ].join('\n\n')
+}

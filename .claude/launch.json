@@ -3,6 +3,7 @@
   "configurations": [
     { "name": "arganta", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","5599"], "port": 5599 },
     { "name": "kinetik", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/kinetik"], "port": 5180 },
-    { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/web"], "port": 5173 }
+    { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/web"], "port": 5173 },
+    { "name": "landing", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/landing"], "port": 5191 }
   ]
 }

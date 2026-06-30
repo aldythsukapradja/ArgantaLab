@@ -23,7 +23,7 @@ interface RoutineRow {
 interface EventRow {
   id: string; circle_id: string; title: string; event_date: string
   start_time: string; end_time: string; who: string[] | null; prep: string[] | null
-  duration_min: number | null; end_date: string | null
+  duration_min: number | null; end_date: string | null; is_block?: boolean | null
 }
 interface MomentRow {
   id: string; circle_id: string; author_id: string | null; body: string
@@ -63,6 +63,7 @@ const mapEvent = (r: EventRow): KEvent => ({
   id: r.id, circleId: r.circle_id, title: r.title, date: r.event_date,
   start: r.start_time, end: r.end_time, who: r.who ?? [], energy: energyOf(r.title),
   prep: r.prep ?? undefined, durationMin: r.duration_min ?? undefined, endDate: r.end_date ?? undefined,
+  isBlock: r.is_block ?? false,
 })
 const mapMoment = (r: MomentRow): Moment => ({
   id: r.id, circleId: r.circle_id, authorId: r.author_id ?? '', text: r.body,
@@ -112,14 +113,17 @@ export async function fetchAll(): Promise<CircleData> {
 /** Insert a new event. Returns the saved domain event. */
 export async function insertEvent(e: Omit<KEvent, 'id' | 'energy'>): Promise<KEvent> {
   const id = 'ev_' + Math.random().toString(36).slice(2, 9)
-  const row = {
+  const row: Record<string, unknown> = {
     id, circle_id: e.circleId, title: e.title, event_date: e.date,
     start_time: e.start, end_time: e.end, who: e.who, prep: e.prep ?? [],
     duration_min: e.durationMin ?? null, end_date: e.endDate ?? null,
   }
+  // Only send is_block when true so the insert still works on databases where
+  // 10_blocks.sql hasn't been applied yet.
+  if (e.isBlock) row.is_block = true
   const { error } = await supabase.from('kinetik_events').insert(row)
   if (error) throw error
-  return mapEvent(row as EventRow)
+  return mapEvent(row as unknown as EventRow)
 }
 
 /** Insert a weekly recurring routine. Returns the saved domain routine. */

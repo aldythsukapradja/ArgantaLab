@@ -13,6 +13,8 @@ export interface SavedGame {
   plays: number
   published?: boolean
   slug?: string
+  category?: string
+  desc?: string
 }
 
 const BASE = 'argantalab_games_v1'

@@ -380,6 +380,276 @@ const ART: Record<string, Art> = {
       <Face y={49} gap={7} r={3.2} smile={false} />
     </g>
   ),
+
+  // ── NUMERIA (added) ──
+  sumseal: (c, d, l) => (
+    <g>
+      <ellipse cx="34" cy="74" rx="11" ry="6" fill={d} transform="rotate(-18 34 74)" />
+      <ellipse cx="66" cy="74" rx="11" ry="6" fill={d} transform="rotate(18 66 74)" />
+      <ellipse cx="50" cy="58" rx="22" ry="24" fill={c} />
+      <ellipse cx="50" cy="64" rx="13" ry="15" fill={l} />
+      <ellipse cx="50" cy="44" rx="14" ry="12" fill={c} />
+      <Face y={44} gap={6} r={3} />
+      <path d="M50 49 v3" stroke={d} strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M44 50 H30 M44 53 H31 M56 50 H70 M56 53 H69" stroke={d} strokeWidth="1" strokeLinecap="round" />
+      <Cheeks y={50} gap={14} />
+    </g>
+  ),
+  dividove: (c, d, l) => (
+    <g>
+      <path d="M52 56 Q22 40 18 60 Q34 64 50 60 Z" fill={l} />
+      <path d="M48 56 Q78 40 82 60 Q66 64 50 60 Z" fill={c} />
+      <ellipse cx="50" cy="58" rx="15" ry="18" fill={c} />
+      <ellipse cx="50" cy="62" rx="9" ry="12" fill={l} />
+      <path d="M50 76 L42 88 L58 88 Z" fill={d} />
+      <ellipse cx="50" cy="42" rx="9" ry="9" fill={c} />
+      <path d="M58 42 L70 44 L58 47 Z" fill="#f59e0b" />
+      <Face x={50} y={41} gap={3.6} r={2.2} />
+    </g>
+  ),
+
+  // ── WORDVEIL (added) ──
+  spellynx: (c, d, l) => (
+    <g>
+      <path d="M32 36 L26 14 L42 30 Z" fill={c} /><path d="M68 36 L74 14 L58 30 Z" fill={c} />
+      <path d="M34 22 L33 12 M66 22 L67 12" stroke={d} strokeWidth="2" strokeLinecap="round" />
+      <ellipse cx="50" cy="56" rx="23" ry="21" fill={c} />
+      <ellipse cx="50" cy="62" rx="14" ry="12" fill={l} />
+      <ellipse cx="42" cy="53" rx="3.4" ry="4.2" fill="#1f2937" /><ellipse cx="58" cy="53" rx="3.4" ry="4.2" fill="#1f2937" />
+      <path d="M50 58 L47 61 H53 Z" fill={d} />
+      <path d="M40 56 H30 M40 59 H31 M60 56 H70 M60 59 H69" stroke={d} strokeWidth="1" strokeLinecap="round" />
+      <Cheeks y={60} gap={16} />
+    </g>
+  ),
+  vowelcub: (c, d, l) => (
+    <g>
+      <circle cx="32" cy="40" r="10" fill={c} /><circle cx="68" cy="40" r="10" fill={c} />
+      <circle cx="32" cy="40" r="5" fill={l} /><circle cx="68" cy="40" r="5" fill={l} />
+      <ellipse cx="50" cy="58" rx="23" ry="22" fill={c} />
+      <ellipse cx="50" cy="64" rx="13" ry="12" fill={l} />
+      <ellipse cx="50" cy="60" rx="3.4" ry="2.6" fill={d} />
+      <Face y={54} gap={8} r={3.4} />
+      <Cheeks y={62} gap={15} />
+    </g>
+  ),
+  syllabee: (c, d, l) => (
+    <g>
+      <ellipse cx="36" cy="46" rx="13" ry="9" fill="#fff" opacity="0.85" transform="rotate(-18 36 46)" />
+      <ellipse cx="64" cy="46" rx="13" ry="9" fill="#fff" opacity="0.85" transform="rotate(18 64 46)" />
+      <path d="M44 24 Q40 16 34 16 M56 24 Q60 16 66 16" fill="none" stroke={d} strokeWidth="1.8" strokeLinecap="round" />
+      <ellipse cx="50" cy="60" rx="20" ry="18" fill={c} />
+      <path d="M36 54 H64 M34 64 H66" stroke={d} strokeWidth="4" strokeLinecap="round" />
+      <Face y={56} gap={6.5} r={3} />
+      <Cheeks y={62} gap={13} />
+    </g>
+  ),
+  punctuapup: (c, d, l) => (
+    <g>
+      <ellipse cx="28" cy="58" rx="9" ry="18" fill={d} /><ellipse cx="72" cy="58" rx="9" ry="18" fill={d} />
+      <ellipse cx="50" cy="56" rx="23" ry="21" fill={c} />
+      <ellipse cx="50" cy="64" rx="13" ry="11" fill={l} />
+      <ellipse cx="50" cy="58" rx="3.6" ry="2.8" fill="#1f2937" />
+      <path d="M50 61 V65 M50 65 Q47 68 50 70 Q53 68 50 65" fill="#ff7eb3" stroke={d} strokeWidth="0.8" />
+      <Face y={52} gap={8.5} r={3.4} />
+      <Cheeks y={62} gap={16} />
+    </g>
+  ),
+
+  // ── LIFE (added) ──
+  calmkoala: (c, d, l) => (
+    <g>
+      <circle cx="28" cy="44" r="13" fill={c} /><circle cx="72" cy="44" r="13" fill={c} />
+      <circle cx="28" cy="44" r="7" fill={l} /><circle cx="72" cy="44" r="7" fill={l} />
+      <ellipse cx="50" cy="58" rx="22" ry="22" fill={c} />
+      <ellipse cx="50" cy="60" rx="9" ry="11" fill={d} />
+      <Face y={50} gap={9} r={3} smile={false} />
+      <path d="M44 64 Q50 67 56 64" fill="none" stroke={d} strokeWidth="1.4" strokeLinecap="round" />
+      <Cheeks y={60} gap={16} />
+    </g>
+  ),
+  joyfawn: (c, d, l) => (
+    <g>
+      <path d="M42 30 L40 20 M58 30 L60 20" stroke={d} strokeWidth="2.4" strokeLinecap="round" />
+      <ellipse cx="32" cy="40" rx="6" ry="10" fill={c} transform="rotate(-22 32 40)" />
+      <ellipse cx="68" cy="40" rx="6" ry="10" fill={c} transform="rotate(22 68 40)" />
+      <ellipse cx="50" cy="58" rx="19" ry="21" fill={c} />
+      <ellipse cx="50" cy="66" rx="11" ry="9" fill={l} />
+      <circle cx="42" cy="60" r="1.6" fill="#fff" opacity="0.8" /><circle cx="58" cy="62" r="1.4" fill="#fff" opacity="0.8" />
+      <ellipse cx="50" cy="62" rx="3" ry="2.4" fill={d} />
+      <Face y={52} gap={7} r={3.2} />
+      <Cheeks y={61} gap={13} />
+    </g>
+  ),
+  restbunny: (c, d, l) => (
+    <g>
+      <ellipse cx="40" cy="30" rx="7" ry="18" fill={c} transform="rotate(-10 40 30)" />
+      <ellipse cx="60" cy="30" rx="7" ry="18" fill={c} transform="rotate(10 60 30)" />
+      <ellipse cx="40" cy="30" rx="3" ry="13" fill={l} transform="rotate(-10 40 30)" />
+      <ellipse cx="60" cy="30" rx="3" ry="13" fill={l} transform="rotate(10 60 30)" />
+      <ellipse cx="50" cy="60" rx="21" ry="20" fill={c} />
+      <ellipse cx="50" cy="66" rx="12" ry="10" fill={l} />
+      <ellipse cx="50" cy="60" rx="3" ry="2.4" fill={d} />
+      <Face y={54} gap={8} r={3.2} />
+      <Cheeks y={62} gap={15} />
+    </g>
+  ),
+  hearthog: (c, d, l) => (
+    <g>
+      {Array.from({ length: 9 }, (_, i) => {
+        const a = (-0.9 + (i / 8) * (Math.PI + 0.6))
+        return <path key={i} d={`M50 56 L${50 + Math.cos(a) * 34} ${52 + Math.sin(a) * 30} L${50 + Math.cos(a + 0.18) * 22} ${52 + Math.sin(a + 0.18) * 20} Z`} fill={d} />
+      })}
+      <ellipse cx="50" cy="60" rx="22" ry="18" fill={c} />
+      <ellipse cx="50" cy="66" rx="13" ry="11" fill={l} />
+      <ellipse cx="50" cy="62" rx="3.4" ry="2.6" fill="#1f2937" />
+      <Face y={56} gap={7.5} r={3} />
+      <Cheeks y={63} gap={15} />
+    </g>
+  ),
+
+  // ── WORLD (added) ──
+  compassgull: (c, d, l) => (
+    <g>
+      <path d="M48 54 Q20 44 14 62 Q32 64 48 58 Z" fill={c} />
+      <path d="M52 54 Q80 44 86 62 Q68 64 52 58 Z" fill={c} />
+      <ellipse cx="50" cy="56" rx="16" ry="19" fill="#fff" />
+      <ellipse cx="50" cy="44" rx="11" ry="10" fill="#fff" />
+      <path d="M58 44 L72 47 L58 50 Z" fill="#f59e0b" />
+      <path d="M46 76 L40 88 M54 76 L60 88" stroke="#f59e0b" strokeWidth="2.4" strokeLinecap="round" />
+      <Face x={50} y={43} gap={3.6} r={2.2} />
+    </g>
+  ),
+  peakyak: (c, d, l) => (
+    <g>
+      <path d="M34 40 Q22 38 24 28 Q32 34 38 36 Z" fill={l} /><path d="M66 40 Q78 38 76 28 Q68 34 62 36 Z" fill={l} />
+      {[28, 40, 52, 64, 72].map((x, i) => <path key={i} d={`M${x} 50 l-3 30 l6 0 z`} fill={i % 2 ? d : c} />)}
+      <ellipse cx="50" cy="58" rx="26" ry="22" fill={c} />
+      <ellipse cx="50" cy="60" rx="14" ry="13" fill={l} />
+      <ellipse cx="50" cy="64" rx="3.6" ry="2.8" fill={d} />
+      <Face y={56} gap={8} r={3.2} smile={false} />
+    </g>
+  ),
+  deltafrog: (c, d, l) => (
+    <g>
+      <ellipse cx="26" cy="74" rx="9" ry="6" fill={d} /><ellipse cx="74" cy="74" rx="9" ry="6" fill={d} />
+      <ellipse cx="50" cy="62" rx="26" ry="19" fill={c} />
+      <ellipse cx="50" cy="68" rx="17" ry="11" fill={l} />
+      <circle cx="38" cy="42" r="10" fill={c} /><circle cx="62" cy="42" r="10" fill={c} />
+      <circle cx="38" cy="41" r="5.5" fill="#fff" /><circle cx="62" cy="41" r="5.5" fill="#fff" />
+      <circle cx="38" cy="42" r="2.8" fill="#1f2937" /><circle cx="62" cy="42" r="2.8" fill="#1f2937" />
+      <path d="M38 58 Q50 66 62 58" fill="none" stroke={d} strokeWidth="2.2" strokeLinecap="round" />
+    </g>
+  ),
+  atlasram: (c, d, l) => (
+    <g>
+      <path d="M34 40 Q18 40 20 54 Q22 64 32 60 Q24 56 26 48 Q28 42 36 44 Z" fill={l} />
+      <path d="M66 40 Q82 40 80 54 Q78 64 68 60 Q76 56 74 48 Q72 42 64 44 Z" fill={l} />
+      <ellipse cx="50" cy="58" rx="21" ry="21" fill={c} />
+      <ellipse cx="50" cy="50" rx="15" ry="12" fill={l} />
+      <ellipse cx="50" cy="64" rx="11" ry="9" fill={l} />
+      <ellipse cx="50" cy="64" rx="3.2" ry="2.4" fill={d} />
+      <Face y={48} gap={6.5} r={3} smile={false} />
+    </g>
+  ),
+
+  // ── WONDER (added) ──
+  sproutling: (c, d, l) => (
+    <g>
+      <path d="M50 34 Q50 18 64 14 Q60 30 50 34 Z" fill="#4ade80" />
+      <path d="M50 36 Q50 22 36 18 Q40 32 50 36 Z" fill="#22c55e" />
+      <path d="M50 34 V44" stroke="#15803d" strokeWidth="2.4" strokeLinecap="round" />
+      <ellipse cx="50" cy="62" rx="20" ry="20" fill={c} />
+      <ellipse cx="50" cy="68" rx="12" ry="11" fill={l} />
+      <Face y={60} gap={7.5} r={3.2} />
+      <Cheeks y={67} gap={14} />
+    </g>
+  ),
+  sparkmoth: (c, d, l) => (
+    <g>
+      <path d="M48 52 Q14 34 14 58 Q16 76 48 64 Z" fill={c} /><path d="M52 52 Q86 34 86 58 Q84 76 52 64 Z" fill={c} />
+      <circle cx="28" cy="50" r="4" fill="#fde047" /><circle cx="72" cy="50" r="4" fill="#fde047" />
+      <circle cx="30" cy="64" r="2.6" fill={l} /><circle cx="70" cy="64" r="2.6" fill={l} />
+      <path d="M46 32 Q40 22 34 24 M54 32 Q60 22 66 24" fill="none" stroke={d} strokeWidth="1.6" strokeLinecap="round" />
+      <ellipse cx="50" cy="54" rx="7" ry="18" fill={d} />
+      <Face x={50} y={42} gap={4} r={2.4} />
+    </g>
+  ),
+  tidalnewt: (c, d, l) => (
+    <g>
+      <path d="M64 70 Q86 70 84 50 Q80 62 66 60 Z" fill={c} />
+      <path d="M50 38 Q52 30 50 26 Q48 30 50 38" fill={l} />
+      <ellipse cx="48" cy="58" rx="24" ry="17" fill={c} />
+      <path d="M28 50 Q48 42 68 50" fill="none" stroke={l} strokeWidth="3" strokeLinecap="round" />
+      <ellipse cx="36" cy="48" rx="6" ry="6" fill={l} />
+      <ellipse cx="36" cy="48" rx="2.6" ry="2.6" fill="#1f2937" />
+      <ellipse cx="56" cy="48" rx="5" ry="5" fill={l} />
+      <ellipse cx="56" cy="48" rx="2.2" ry="2.2" fill="#1f2937" />
+      <path d="M30 58 Q42 64 54 58" fill="none" stroke={d} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M30 70 l-4 8 M44 72 l-2 8" stroke={c} strokeWidth="3" strokeLinecap="round" />
+    </g>
+  ),
+  emberfox: (c, d, l) => (
+    <g>
+      <path d="M74 72 Q92 64 88 46 Q82 58 74 60 Z" fill="#f59e0b" />
+      <path d="M78 60 Q86 56 84 46" fill="none" stroke="#fde047" strokeWidth="2" />
+      <path d="M30 38 L24 18 L40 32 Z" fill={c} /><path d="M70 38 L76 18 L60 32 Z" fill={c} />
+      <path d="M32 36 L28 24 L39 33 Z" fill="#fde047" /><path d="M68 36 L72 24 L61 33 Z" fill="#fde047" />
+      <ellipse cx="50" cy="58" rx="22" ry="21" fill={c} />
+      <path d="M50 50 a14 11 0 0 0 -14 11 a14 11 0 0 0 28 0 a14 11 0 0 0 -14 -11 Z" fill={l} />
+      <ellipse cx="50" cy="63" rx="3.4" ry="2.6" fill={d} />
+      <Face y={55} gap={8} r={3.2} />
+      <Cheeks y={62} gap={15} />
+    </g>
+  ),
+
+  // ── LOGIC (added) ──
+  loopbat: (c, d, l) => (
+    <g>
+      <path d="M48 54 Q20 40 12 56 Q18 60 24 58 Q20 66 28 66 Q24 56 48 60 Z" fill={c} />
+      <path d="M52 54 Q80 40 88 56 Q82 60 76 58 Q80 66 72 66 Q76 56 52 60 Z" fill={c} />
+      <path d="M40 40 L36 30 L46 38 Z" fill={c} /><path d="M60 40 L64 30 L54 38 Z" fill={c} />
+      <ellipse cx="50" cy="58" rx="16" ry="16" fill={c} />
+      <ellipse cx="50" cy="62" rx="9" ry="9" fill={l} />
+      <Face y={56} gap={6} r={2.8} />
+      <Cheeks y={61} gap={11} />
+    </g>
+  ),
+  bytebee: (c, d, l) => (
+    <g>
+      <rect x="20" y="46" width="16" height="10" rx="2" fill="#fff" opacity="0.85" />
+      <rect x="64" y="46" width="16" height="10" rx="2" fill="#fff" opacity="0.85" />
+      <path d="M44 26 V18 M56 26 V18" stroke={d} strokeWidth="2" strokeLinecap="round" />
+      <circle cx="44" cy="16" r="2.4" fill="#fde047" /><circle cx="56" cy="16" r="2.4" fill="#fde047" />
+      <rect x="32" y="44" width="36" height="34" rx="9" fill={c} />
+      <rect x="32" y="54" width="36" height="6" fill={d} /><rect x="32" y="66" width="36" height="6" fill={d} />
+      <rect x="40" y="48" width="20" height="9" rx="3" fill={l} />
+      <circle cx="46" cy="52" r="2.4" fill="#1f2937" /><circle cx="54" cy="52" r="2.4" fill="#1f2937" />
+    </g>
+  ),
+  nullowl: (c, d, l) => (
+    <g>
+      <path d="M30 36 L26 24 L40 32 Z" fill={d} /><path d="M70 36 L74 24 L60 32 Z" fill={d} />
+      <ellipse cx="50" cy="56" rx="24" ry="26" fill={c} />
+      <ellipse cx="50" cy="64" rx="18" ry="16" fill={l} />
+      <circle cx="40" cy="50" r="10" fill="#fff" /><circle cx="60" cy="50" r="10" fill="#fff" />
+      <circle cx="40" cy="50" r="5" fill="#1f2937" /><circle cx="60" cy="50" r="5" fill="#1f2937" />
+      <line x1="34" y1="44" x2="46" y2="56" stroke={d} strokeWidth="1.4" /><line x1="54" y1="44" x2="66" y2="56" stroke={d} strokeWidth="1.4" />
+      <path d="M50 56 L46 62 L54 62 Z" fill="#f59e0b" />
+    </g>
+  ),
+  stackcrab: (c, d, l) => (
+    <g>
+      <path d="M22 56 Q14 50 18 44 Q24 48 26 54 Z" fill={c} /><path d="M22 54 Q12 56 16 62 Q22 60 24 56 Z" fill={c} />
+      <path d="M78 56 Q86 50 82 44 Q76 48 74 54 Z" fill={c} /><path d="M78 54 Q88 56 84 62 Q78 60 76 56 Z" fill={c} />
+      <path d="M30 74 l-6 8 M70 74 l6 8 M40 78 l-4 8 M60 78 l4 8" stroke={d} strokeWidth="2.4" strokeLinecap="round" />
+      <ellipse cx="50" cy="62" rx="24" ry="17" fill={c} />
+      <ellipse cx="50" cy="64" rx="16" ry="10" fill={l} />
+      <line x1="42" y1="46" x2="42" y2="38" stroke={c} strokeWidth="2" /><line x1="58" y1="46" x2="58" y2="38" stroke={c} strokeWidth="2" />
+      <circle cx="42" cy="36" r="4" fill="#fff" /><circle cx="58" cy="36" r="4" fill="#fff" />
+      <circle cx="42" cy="36" r="2" fill="#1f2937" /><circle cx="58" cy="36" r="2" fill="#1f2937" />
+      <path d="M42 64 Q50 70 58 64" fill="none" stroke={d} strokeWidth="1.8" strokeLinecap="round" />
+    </g>
+  ),
 }
 
 export interface KinSpriteProps {
