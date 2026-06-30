@@ -121,8 +121,22 @@ export default function KitchenApp({ onClose }: { onClose: () => void }) {
 
   return (
     <AppShell accent={ACCENT} emoji="🍳" title="Kitchen" onBack={onClose} tabs={TABS} tab={tab} onTab={setTab} toast={toast}>
-      {tab === 'recipes' && (
+      {tab === 'recipes' && (() => {
+        const planned = days.filter(d => plan.find(p => p.planDate === d.iso)?.recipeId).length
+        const onShop = shop.filter(i => !i.done).length
+        return (
         <>
+          <div className="kap-apphero">
+            <span className="kap-apphero-emoji">🍳</span>
+            <div className="kap-apphero-ey">This week</div>
+            <div className="kap-apphero-title">What's cooking?</div>
+            <div className="kap-apphero-sub">Plan dinners, cook step-by-step, shop together.</div>
+            <div className="kap-apphero-chips">
+              <span className="kap-apphero-chip">{recipes.length} recipe{recipes.length === 1 ? '' : 's'}</span>
+              <span className="kap-apphero-chip">{planned} dinner{planned === 1 ? '' : 's'} planned</span>
+              <span className="kap-apphero-chip">{onShop} on the list</span>
+            </div>
+          </div>
           <div className="kap-chips" style={{ marginTop: 4 }}>{['All', ...CATS].map(c => <button key={c} className={`kap-chip${cat === c ? ' on' : ''}`} onClick={() => setCat(c)}>{c}</button>)}</div>
           <div className="kap-sec"><h2>{cat === 'All' ? 'All recipes' : cat}</h2><span className="kap-sec-sub">{shown.length}</span></div>
           {shown.length === 0 && <div className="kap-empty"><span className="kap-empty-ic">🍽️</span><b>No recipes yet</b><p>Add your family's favourites.</p></div>}
@@ -135,7 +149,8 @@ export default function KitchenApp({ onClose }: { onClose: () => void }) {
           ))}
           <button className="kap-add-big" style={{ marginTop: 12 }} onClick={() => setSheet('recipe')}>＋ New recipe</button>
         </>
-      )}
+        )
+      })()}
 
       {tab === 'plan' && (
         <>

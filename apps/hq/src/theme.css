@@ -81,7 +81,30 @@ a{color:inherit;text-decoration:none}
 .crumb b{color:var(--tx);font-weight:500}
 .tbtn{width:32px;height:32px;border-radius:var(--r-md);display:grid;place-items:center;color:var(--tx2);border:1px solid transparent}
 .tbtn:hover{background:var(--bg3);color:var(--tx)}
-.kbd{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--r-md);border:1px solid var(--bd2);background:var(--bg2);color:var(--tx3);font-size:12px}
+.kbd{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--r-md);border:1px solid var(--bd2);background:var(--bg2);color:var(--tx3);font-size:12px;cursor:pointer}
+.kbd:hover{border-color:var(--bd3);color:var(--tx2)}
+.hq-show-sm{display:none}
+@media(max-width:640px){.hq-hide-sm{display:none!important}.hq-show-sm{display:grid!important}}
+
+/* ---------- Command palette (⌘K) ---------- */
+.cmdk-overlay{position:fixed;inset:0;z-index:300;background:rgba(15,12,30,.42);backdrop-filter:blur(2px);
+  display:flex;align-items:flex-start;justify-content:center;padding:13vh 16px 16px;animation:fade .14s var(--ease)}
+.cmdk{width:100%;max-width:560px;background:var(--bg);border:1px solid var(--bd2);border-radius:14px;
+  box-shadow:var(--shadow-lg);overflow:hidden;display:flex;flex-direction:column;max-height:66vh}
+.cmdk-input{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--bd)}
+.cmdk-input input{flex:1;border:none;outline:none;background:transparent;color:var(--tx);font:inherit;font-size:14.5px;min-width:0}
+.cmdk-input kbd{font-family:var(--mono);font-size:10px;color:var(--tx3);border:1px solid var(--bd2);border-radius:5px;padding:1px 6px}
+.cmdk-list{overflow-y:auto;padding:6px}
+.cmdk-item{width:100%;display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:var(--tx2);
+  text-align:left;font-size:13px;background:none;border:none;cursor:pointer}
+.cmdk-item.on{background:var(--acc-soft)}
+.cmdk-item svg{color:var(--tx3);flex:none}
+.cmdk-item.on svg{color:var(--acc)}
+.cmdk-label{flex:1;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmdk-item.on .cmdk-label{color:var(--acc-text)}
+.cmdk-tag{font-size:10.5px;color:var(--tx3);flex:none}
+.cmdk-enter{color:var(--acc)!important}
+.cmdk-empty{padding:22px;text-align:center;color:var(--tx3);font-size:12.5px}
 
 /* ---------- Headings & generic ---------- */
 .h1{font-size:18px;font-weight:600;letter-spacing:-.01em}
@@ -204,21 +227,41 @@ table.tbl tr:last-child td{border-bottom:none}
   .rail-foot{justify-content:center}
 }
 @media (max-width:640px){
-  .content{padding:16px 14px 76px}
+  .content{padding:16px 14px calc(92px + env(safe-area-inset-bottom))}
   .hq{grid-template-columns:1fr}
   .rail{display:none}
   .main{height:100vh;height:100dvh}
 }
 
 /* ---------- Mobile bottom nav (4 groups) + secondary sub-tabs ---------- */
-.mnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:210;height:56px;
-  background:var(--bg);border-top:1px solid var(--bd);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
-.mnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  font-size:10px;font-weight:500;color:var(--tx3);border-radius:10px;padding:5px 2px;min-width:0}
-.mnav-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.mnav-item svg{color:var(--tx3)}
+/* Floating glass pill — matches the KinetikCircle / ArgantaLab bottom nav */
+.mnav{display:none;position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  width:calc(100% - 20px);max-width:520px;height:62px;z-index:210;
+  align-items:stretch;justify-content:space-around;padding:0 6px;
+  border-radius:24px;
+  background:color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter:blur(26px) saturate(1.7);-webkit-backdrop-filter:blur(26px) saturate(1.7);
+  border:0.5px solid color-mix(in srgb, var(--tx) 9%, transparent);
+  box-shadow:0 14px 40px rgba(20,16,40,.16),0 3px 10px rgba(20,16,40,.07),inset 0 1px 0 rgba(255,255,255,.55)}
+html[data-theme='dark'] .mnav{
+  background:color-mix(in srgb, var(--bg2) 58%, rgba(8,6,16,.5));
+  border-color:rgba(255,255,255,.1);
+  box-shadow:0 16px 44px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06)}
+.mnav-item{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:10px;font-weight:600;letter-spacing:.01em;color:var(--tx3);background:none;border:none;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:color .22s var(--ease)}
+.mn-ic{position:relative;display:grid;place-items:center;width:46px;height:30px;border-radius:11px;
+  transition:transform .32s cubic-bezier(.34,1.56,.64,1)}
+.mn-ic::before{content:'';position:absolute;inset:0;border-radius:11px;
+  background:var(--acc-soft);box-shadow:inset 0 0 0 .5px color-mix(in srgb, var(--acc) 38%, transparent);
+  opacity:0;transform:scale(.7);transition:opacity .28s var(--ease),transform .34s cubic-bezier(.34,1.56,.64,1)}
+.mn-ic svg{position:relative;z-index:1;color:var(--tx3);transition:color .22s var(--ease)}
+.mn-lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .mnav-item.on{color:var(--acc-text)}
-.mnav-item.on svg{color:var(--acc)}
+.mnav-item.on .mn-ic svg{color:var(--acc)}
+.mnav-item.on .mn-ic::before{opacity:1;transform:scale(1)}
+.mnav-item:active .mn-ic{transform:scale(.86)}
 .msub{display:none;gap:6px;padding:9px 14px;border-bottom:1px solid var(--bd);overflow-x:auto;
   background:var(--bg);flex-shrink:0;scrollbar-width:none}
 .msub::-webkit-scrollbar{display:none}
@@ -306,6 +349,19 @@ table.tbl tr:last-child td{border-bottom:none}
   .mnav{display:flex}
   .msub{display:flex}
   .agent-orb{display:none}
-  .agent-panel.small,.agent-panel.expanded{bottom:64px}
-  .agent-panel.full{bottom:56px}
+  .agent-panel.small,.agent-panel.expanded{bottom:84px}
+  .agent-panel.full{bottom:84px}
+  /* On mobile the panel is always full-screen — the macOS size dots are a
+     desktop-only resize affordance and read as a second close button, so hide
+     them and keep the single ✕. */
+  .agent-panel.full .agent-lights{display:none}
 }
+
+/* ---------- Portfolio product-card stat grid ---------- */
+/* Web: one row (8 across). Mobile: two rows of four. */
+.pstat-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}
+.pstat{background:var(--bg2);border-radius:9px;padding:9px 10px;min-width:0}
+.pstat-l{font-size:10.5px;color:var(--tx2);display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pstat-v{font-size:17px;font-weight:600;margin:2px 0;letter-spacing:-.01em}
+.pstat-s{font-size:9.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:760px){.pstat-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}}

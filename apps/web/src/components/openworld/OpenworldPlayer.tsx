@@ -156,6 +156,7 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
       if (!first) d = Math.max(2, Math.round(d * 0.5))
       if (d > 0) earnDiamonds(d, 'openworld', `openworld:${def.id}`)
       bumpQuest('boss')
+      bumpQuest('dungeon')
     }
     if (earnedXp.current > 0) { addXp(earnedXp.current); bumpQuest('xp', earnedXp.current) }
     markSectionToday(def.world.toUpperCase(), 'openworld') // match WorldHub's UPPERCASE world.key
@@ -224,6 +225,7 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
       // Persist to the cloud roster (server-authoritative; best-effort so the
       // celebration never blocks on the network). It shows up in the Nexus.
       befriendKin(def.id, def.world).catch(() => {})
+      bumpQuest('befriend')
       addToast(`${def.name} joined your Nexus!`, '✨'); finish(true, true)
     }
     else {

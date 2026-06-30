@@ -6,6 +6,7 @@ import { padel, type PadelSession, type PadelPlayer, type PadelBatch, type Padel
 import AppShell, { type AppTab } from './AppShell'
 import { Sheet, Seg, ChoiceGrid, MemberPicker, StatTile, CountUp, BulkPaste, type PickMember } from './ui'
 import { addCalendarEvent, shareToMoment, buildCard, shareOrDownload, download, detectNames, errMsg } from './integrations'
+import { Racket, Bolt, PadelCourt } from './art'
 import * as E from './padel/engine'
 
 const ACCENT: [string, string] = ['#2F6BFF', '#54C7EC']
@@ -171,16 +172,28 @@ export default function PadelApp({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <AppShell accent={ACCENT} emoji="🎾" title="Padel Matchday" subtitle={session?.eventName || circle?.name} onBack={onClose} tabs={TABS} tab={tab} onTab={setTab} toast={toast}>
+    <AppShell accent={ACCENT} emoji="🎾" title="Matchday" subtitle={session?.eventName || circle?.name} onBack={onClose} tabs={TABS} tab={tab} onTab={setTab} toast={toast}>
       {/* ── SETUP ── */}
       {tab === 'setup' && session && (
         <>
+          <div className="kap-apphero">
+            <span className="kap-apphero-motif"><PadelCourt w={150} /></span>
+            <div className="kap-apphero-ey">{session.format === 'mexicano' ? 'Mexicano ladder' : 'Americano rotation'}</div>
+            <div className="kap-apphero-title">{session.eventName || 'New session'}</div>
+            <div className="kap-apphero-sub">Fair rounds · live scoring · shareable result cards</div>
+            <div className="kap-apphero-chips">
+              <span className="kap-apphero-chip">{session.points} pts</span>
+              <span className="kap-apphero-chip">{session.selectedCourts.length} court{session.selectedCourts.length === 1 ? '' : 's'}</span>
+              <span className="kap-apphero-chip">{session.duration}m</span>
+            </div>
+          </div>
+
           <div className="kap-lbl">Event name</div>
           <input className="kap-field" placeholder="Friday Padel Night" value={session.eventName ?? ''} onChange={e => patch({ eventName: e.target.value })} maxLength={70} />
 
           <div className="kap-lbl">Format</div>
           <Seg value={session.format as 'americano' | 'mexicano'} onChange={f => { patch({ format: f }); flash(f === 'mexicano' ? 'Mexicano ladder' : 'Americano rotation') }}
-            options={[{ k: 'americano', label: '🔁 Americano' }, { k: 'mexicano', label: '⚡ Mexicano' }]} />
+            options={[{ k: 'americano', label: <><Racket /> Americano</> }, { k: 'mexicano', label: <><Bolt /> Mexicano</> }]} />
 
           <div className="kap-lbl">Points to win</div>
           <ChoiceGrid value={session.points} onChange={p => { if (p === -1) { setSheet('custom') } else patch({ points: p as number }) }}
@@ -405,13 +418,15 @@ function CourtsSheet({ selected, onClose, onSave }: { selected: number[]; onClos
   const toggle = (n: number) => setSel(s => s.includes(n) ? (s.length > 1 ? s.filter(x => x !== n) : s) : [...s, n].sort((a, b) => a - b))
   return (
     <Sheet title="Select courts" sub="Pick exact court numbers, e.g. Court 2 and Court 7." onClose={onClose}>
-      <div className="kap-cats" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginTop: 6 }}>
+      <div className="court-grid">
         {Array.from({ length: max }, (_, i) => i + 1).map(n => (
-          <button key={n} className={`kap-cat${sel.includes(n) ? '' : ''}`} style={sel.includes(n) ? { background: 'linear-gradient(135deg,var(--c0),var(--c1))', color: '#fff', borderColor: 'transparent' } : undefined} onClick={() => toggle(n)}>
-            <span className="kap-cat-ic" style={{ fontSize: 22 }}>{n}</span><span className="kap-cat-count" style={sel.includes(n) ? { color: 'rgba(255,255,255,.8)' } : undefined}>Court</span>
+          <button key={n} className={`court-tile${sel.includes(n) ? ' on' : ''}`} onClick={() => toggle(n)} aria-pressed={sel.includes(n)}>
+            <span className="court-tile-lbl">Court</span>
+            <span className="court-tile-fig"><PadelCourt /></span>
+            <span className="court-tile-no">{n}</span>
           </button>
         ))}
-        <button className="kap-cat" onClick={() => setMax(m => m + 1)}><span className="kap-cat-ic">＋</span><span className="kap-cat-count">Add</span></button>
+        <button className="court-tile add" onClick={() => setMax(m => m + 1)} aria-label="Add court">＋</button>
       </div>
       <button className="kap-btn primary block" style={{ marginTop: 16 }} onClick={() => onSave(sel)}>Save {sel.length} court{sel.length === 1 ? '' : 's'}</button>
     </Sheet>

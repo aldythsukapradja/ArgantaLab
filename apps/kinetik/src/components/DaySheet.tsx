@@ -4,7 +4,7 @@ import { useDataStore } from '@store/dataStore'
 import { occurrencesOn, blocksOn, fmtTime, toMin, type Occ } from '@lib/cal'
 import { ENERGY, initials, isoOf, colorFor } from '@data/energy'
 import type { Circle, Person, EnergyKey, KEvent } from '@data/types'
-import { IconPlus, IconTrash, IconCheck, IconHistory, IconPencil } from '@components/Icons'
+import { IconPlus, IconTrash, IconCheck, IconHistory, IconPencil, IconShare } from '@components/Icons'
 
 const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -32,21 +32,33 @@ export default function DaySheet({ iso, circle, members, onClose }: {
 }) {
   const events = useDataStore(s => s.events)
   const routines = useDataStore(s => s.routines)
+  const circles = useDataStore(s => s.circles)
   const addEvent = useDataStore(s => s.addEvent)
   const addRoutine = useDataStore(s => s.addRoutine)
   const editEvent = useDataStore(s => s.editEvent)
   const editRoutine = useDataStore(s => s.editRoutine)
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Occ | null>(null)
+  const [sharing, setSharing] = useState(false)
 
   const accent: [string, string] = [circle.accent[0], circle.accent[1]]
   const items = occurrencesOn(events, routines, iso, circle.id)
   const blocks = blocksOn(events, iso, circle.id)
   const primaryIds = members.slice(0, 4).map(m => m.id)
+  const otherCircles = circles.filter(c => c.id !== circle.id)
 
   return createPortal(
     <>
-      <DayDetail iso={iso} members={members} accent={accent} items={items} blocks={blocks} onClose={onClose} onAdd={() => setAdding(true)} onEdit={setEditing} />
+      <DayDetail iso={iso} members={members} accent={accent} items={items} blocks={blocks} canShare={otherCircles.length > 0} onClose={onClose} onAdd={() => setAdding(true)} onEdit={setEditing} onShare={() => setSharing(true)} />
+      {sharing && (
+        <ShareToCircle
+          iso={iso} items={items} accent={accent} circles={otherCircles}
+          onClose={() => setSharing(false)}
+          onShare={async (targetId) => {
+            for (const it of items) await addEvent({ circleId: targetId, title: it.title, date: iso, start: it.start, end: it.end, who: [] })
+          }}
+        />
+      )}
       {adding && (
         <QuickAdd
           date={iso} members={members} primaryIds={primaryIds} circleId={circle.id} accent={accent}
@@ -72,9 +84,9 @@ export default function DaySheet({ iso, circle, members, onClose }: {
 }
 
 /* ---------------- Day detail ---------------- */
-function DayDetail({ iso, members, accent, items, blocks, onClose, onAdd, onEdit }: {
+function DayDetail({ iso, members, accent, items, blocks, canShare, onClose, onAdd, onEdit, onShare }: {
   iso: string; members: Person[]; accent: [string, string]
-  items: Occ[]; blocks: KEvent[]; onClose: () => void; onAdd: () => void; onEdit: (o: Occ) => void
+  items: Occ[]; blocks: KEvent[]; canShare: boolean; onClose: () => void; onAdd: () => void; onEdit: (o: Occ) => void; onShare: () => void
 }) {
   const removeEvent = useDataStore(s => s.removeEvent)
   const removeRoutine = useDataStore(s => s.removeRoutine)
@@ -112,6 +124,13 @@ function DayDetail({ iso, members, accent, items, blocks, onClose, onAdd, onEdit
             <h3 className="cal2-dd-date">{d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}</h3>
           </div>
           <span className="cal2-dd-count">{items.length} {items.length === 1 ? 'plan' : 'plans'}</span>
+        </div>
+
+        <div className="cal2-dd-actions">
+          <button className="btn grad cal2-dd-add" onClick={onAdd}><IconPlus width={18} height={18} /> Add a plan</button>
+          {canShare && items.length > 0 && (
+            <button className="cal2-dd-share" onClick={onShare} title="Share this day to another circle"><IconShare width={17} height={17} /></button>
+          )}
         </div>
 
         {err && <div className="cal2-err">{err}</div>}
@@ -153,17 +172,15 @@ function DayDetail({ iso, members, accent, items, blocks, onClose, onAdd, onEdit
             )
           })}
         </div>
-
-        <button className="btn grad cal2-dd-add" onClick={onAdd}><IconPlus width={18} height={18} /> Add a plan</button>
       </div>
     </div>
   )
 }
 
 /* ---------------- Quick add ---------------- */
-const DURATIONS = [
-  { m: 30, l: '30m' }, { m: 60, l: '1h' }, { m: 90, l: '1h 30' }, { m: 120, l: '2h' }, { m: 180, l: '3h' },
-]
+// 30-minute increments all the way to 24h — a scrollable rail.
+const fmtDur = (m: number) => { const h = Math.floor(m / 60), mm = m % 60; return h ? (mm ? `${h}h ${mm}` : `${h}h`) : `${mm}m` }
+const DURATIONS = Array.from({ length: 48 }, (_, i) => { const m = (i + 1) * 30; return { m, l: fmtDur(m) } })
 const REPEATS = [
   { k: '4w', l: '4 weeks' }, { k: '3m', l: '3 months' }, { k: '6m', l: '6 months' }, { k: 'always', l: 'Always' },
 ]
@@ -379,6 +396,69 @@ function EditPlan({ occ, members, primaryIds, accent, onClose, onSave }: {
 
         <button className="btn grad cal2-save" disabled={!ok} onClick={save}>
           <IconCheck width={18} height={18} /> {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- Share this day to another circle ---------------- */
+function ShareToCircle({ iso, items, accent, circles, onClose, onShare }: {
+  iso: string; items: Occ[]; accent: [string, string]; circles: Circle[]
+  onClose: () => void; onShare: (targetId: string) => Promise<void>
+}) {
+  const [sel, setSel] = useState<string | null>(circles.length === 1 ? circles[0].id : null)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const d = new Date(iso + 'T00:00')
+
+  useEffect(() => {
+    const scroller = document.querySelector('.main') as HTMLElement | null
+    const prev = scroller?.style.overflow ?? ''
+    if (scroller) scroller.style.overflow = 'hidden'
+    return () => { if (scroller) scroller.style.overflow = prev }
+  }, [])
+
+  const target = circles.find(c => c.id === sel)
+  const save = async () => {
+    if (!sel) return
+    setSaving(true); setErr('')
+    try { await onShare(sel); onClose() }
+    catch (e) { setErr(errMsg(e)); setSaving(false) }
+  }
+
+  return (
+    <div className="sheet-scrim cal2-scrim2 cal2-scrim3" onClick={onClose}>
+      <div className="sheet cal2-sheet" style={{ ['--c0' as any]: accent[0], ['--c1' as any]: accent[1] }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="sheet-grip" onClick={onClose} aria-label="Close" />
+        <div className="cal2-dd-head">
+          <div>
+            <div className="cal2-dd-dow">Share this day</div>
+            <h3 className="cal2-dd-date">{d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}</h3>
+          </div>
+          <span className="cal2-dd-count">{items.length} {items.length === 1 ? 'plan' : 'plans'}</span>
+        </div>
+
+        <p className="cal2-share-note">Copy this day’s {items.length} plan{items.length === 1 ? '' : 's'} into another circle as one-off events on the same date.</p>
+
+        <div className="cal2-lbl">Choose a circle</div>
+        <div className="cal2-share-list">
+          {circles.map(c => {
+            const on = sel === c.id
+            return (
+              <button key={c.id} className={`cal2-share-item${on ? ' on' : ''}`} onClick={() => setSel(c.id)}>
+                <span className="cal2-share-dot" style={{ background: `linear-gradient(135deg, ${c.accent[0]}, ${c.accent[1]})` }} />
+                <span className="cal2-share-name">{c.name}</span>
+                <span className={`cal2-share-check${on ? ' on' : ''}`}>{on ? <IconCheck width={13} height={13} /> : null}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {err && <div className="cal2-err">{err}</div>}
+
+        <button className="btn grad cal2-save" disabled={!sel || saving} onClick={save}>
+          <IconShare width={17} height={17} /> {saving ? 'Sharing…' : target ? `Copy to ${target.name}` : 'Choose a circle'}
         </button>
       </div>
     </div>

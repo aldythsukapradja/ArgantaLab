@@ -3,6 +3,7 @@ import { useAppStore } from '@store/appStore'
 import { buildSimplePrompt } from '@lib/promptBuilder'
 import { saveMyGame, newGameId, type SavedGame } from '@lib/myGames'
 import { pushGame, setGameVisibility } from '@lib/gamesCloud'
+import { bumpQuest } from '@lib/quests'
 import { makeSlug } from '@lib/slug'
 import DeviceFrame from '@components/build/DeviceFrame'
 
@@ -50,7 +51,7 @@ export default function BuilderLab() {
       pushGame(session.user.id, game)
       setGameVisibility(session.user.id, id, 'public', learnerName, slug)
     }
-    if (!savedId) addXp(60)
+    if (!savedId) { addXp(60); bumpQuest('publish') }
     setSavedId(id)
     addToast(`Published “${title}” to the Library!`, '🚀')
   }

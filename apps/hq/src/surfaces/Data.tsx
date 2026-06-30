@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Database, Table2, Network, RefreshCw, Sparkles } from 'lucide-react'
 import { live, cloudEnabled } from '../data/live'
 import type { SchemaModel as Model, Ontology } from '../data/types'
@@ -16,13 +16,12 @@ export function Data() {
   useEffect(() => { loadModel() }, [])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
       <div className="spread">
         <div>
           <div className="h1">Data model</div>
           <div className="sub">
-            Introspected live from Postgres — add a table in Supabase and it appears here.
-            {model && <> · {model.tables.length} tables · synced {ago(model.generatedAt)}</>}
+            Live Postgres schema{model && <> · {model.tables.length} tables · {ago(model.generatedAt)}</>}
           </div>
         </div>
         <span className={'pill ' + (cloudEnabled ? 'pill-ok' : 'pill-mut')}>
@@ -58,9 +57,22 @@ function NotConnected() {
   )
 }
 
+// The tables an operator actually wants to inspect first — surfaced at the top
+// of the picker (and as the default), ahead of the long tail of system tables.
+const HIGH_INSIGHT = [
+  'profiles', 'item_attempts', 'diamond_ledger', 'node_progress', 'quest_progress',
+  'skill_mastery', 'games', 'items', 'circles', 'circle_members', 'kinetik_post',
+  'kinetik_broadcast', 'learn_state', 'worlds',
+]
+
 function TablesView({ model }: { model: Model }) {
-  const names = model.tables.map((t) => t.name)
-  const [table, setTable] = useState(names.includes('item_attempts') ? 'item_attempts' : names[0])
+  const names = useMemo(() => {
+    const present = new Set(model.tables.map((t) => t.name))
+    const top = HIGH_INSIGHT.filter((n) => present.has(n))
+    const rest = model.tables.map((t) => t.name).filter((n) => !top.includes(n)).sort()
+    return [...top, ...rest]
+  }, [model])
+  const [table, setTable] = useState(names[0])
   const [rows, setRows] = useState<Record<string, unknown>[] | null | undefined>(undefined)
 
   useEffect(() => { setRows(undefined); live.tablePreview(table, 25).then((r) => setRows(r)) }, [table])

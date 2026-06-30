@@ -44,27 +44,27 @@ export function CataloguePage({ kind, data }: { kind: Kind; data: BuilderData })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="spread">
-        <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 14px', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div style={{ minWidth: 200 }}>
           <div className="h1">{cfg.noun} Catalogue</div>
           <div className="sub">Published {cfg.nounPlural.toLowerCase()} from KinetikCircle — featured slate is curated by Analytics</div>
         </div>
-        <div className="row">
-          <div className="row" style={{ gap: 6, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--bd2)', background: 'var(--bg)' }}>
-            <Search size={13} color="var(--tx3)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 1 auto', minWidth: 0 }}>
+          <div className="row" style={{ gap: 6, padding: '6px 11px', borderRadius: 'var(--r-md)', border: '1px solid var(--bd2)', background: 'var(--bg)', flex: '1 1 150px', minWidth: 110, maxWidth: 260 }}>
+            <Search size={13} color="var(--tx3)" style={{ flex: 'none' }} />
             <input
               value={query} onChange={e => setQuery(e.target.value)}
               placeholder={`Search ${cfg.nounPlural.toLowerCase()}…`}
-              style={{ border: 'none', outline: 'none', background: 'transparent', width: 150, fontSize: 12.5 }}
+              style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', minWidth: 0, fontSize: 12.5 }}
             />
           </div>
-          <button className="chip" onClick={reload} title="Refresh"><RefreshCw size={13} /></button>
+          <button className="chip" onClick={reload} title="Refresh" style={{ flex: 'none', width: 34, height: 34, justifyContent: 'center', padding: 0 }}><RefreshCw size={14} /></button>
           <button
             className="chip"
-            style={{ background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)', gap: 6 }}
+            style={{ background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)', gap: 6, flex: 'none', whiteSpace: 'nowrap', height: 34, fontWeight: 600 }}
             onClick={() => openStudio(null)}
           >
-            <Plus size={13} /> New {cfg.noun}
+            <Plus size={14} /> New {cfg.noun}
           </button>
         </div>
       </div>

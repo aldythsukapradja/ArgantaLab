@@ -1818,6 +1818,37 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
 .q-family-ic{font-size:26px}
 .q-family b{font-size:14px;font-weight:700}.q-family small{display:block;font-size:12px;color:var(--t2);margin-top:2px}
 
+/* ── daily quest CHAIN (guided stepper) ── */
+.qc{display:flex;flex-direction:column}
+.qc-step{display:flex;gap:14px;align-items:stretch}
+.qc-rail{display:flex;flex-direction:column;align-items:center;flex:none;width:40px}
+.qc-node{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:18px;font-weight:850;flex:none;
+  background:var(--panel-2);border:2px solid var(--border);color:var(--t2);z-index:1}
+.qc-line{flex:1;width:3px;background:var(--border);margin:2px 0;border-radius:3px;min-height:14px}
+.qc-line.on{background:var(--green)}
+.qc-card{flex:1;min-width:0;background:var(--panel);border:1.5px solid var(--border);border-radius:var(--r-md);
+  padding:12px 14px;margin-bottom:12px;transition:.2s}
+.qc-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.qc-label{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.qc-title{display:block;font-size:14.5px;font-weight:750;color:var(--t1);margin-top:1px}
+.qc-reward{font-size:12px;font-weight:800;color:var(--gold);white-space:nowrap}
+.qc-bar{height:7px;border-radius:20px;background:var(--border);overflow:hidden;margin:9px 0 7px}
+.qc-bar i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width .6s var(--ease)}
+.qc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.qc-prog{font-size:11px;color:var(--t2)}
+.qc-claim{padding:7px 14px;border-radius:20px;background:var(--grad);color:#fff;font-weight:800;font-size:12.5px;cursor:pointer}
+.qc-claim:hover{transform:translateY(-1px)}
+.qc-go{padding:7px 14px;border-radius:20px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);
+  font-weight:800;font-size:12.5px;cursor:pointer;border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.qc-go:hover{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.qc-claimed{font-size:12px;font-weight:800;color:var(--green)}
+/* states */
+.qc-step.active .qc-card{border-color:var(--accent);box-shadow:0 6px 20px var(--glow-a)}
+.qc-step.active .qc-node{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel))}
+.qc-step.done .qc-node,.qc-step.claimed .qc-node{background:var(--green);border-color:var(--green);color:#fff}
+.qc-step.locked .qc-card{opacity:.62}
+.qc-step.locked .qc-go{background:var(--panel-2);color:var(--t3);border-color:var(--border)}
+
 /* badge unlock cinematic */
 .bc-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;
   background:radial-gradient(120% 90% at 50% 40%,rgba(10,12,26,.86),rgba(5,7,13,.97));backdrop-filter:blur(6px)}

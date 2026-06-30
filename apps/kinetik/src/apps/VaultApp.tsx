@@ -87,6 +87,17 @@ export default function VaultApp({ onClose }: { onClose: () => void }) {
         </>
       ) : tab === 'docs' ? (
         <>
+          <div className="kap-apphero">
+            <span className="kap-apphero-emoji">🛡️</span>
+            <div className="kap-apphero-ey">Private to {circle?.name}</div>
+            <div className="kap-apphero-title">{docs.length} document{docs.length === 1 ? '' : 's'} secured</div>
+            <div className="kap-apphero-sub">Passports, insurance, finances — always at hand.</div>
+            <div className="kap-apphero-chips">
+              <span className="kap-apphero-chip">{DOC_CATS.length} categories</span>
+              {soon > 0 && <span className="kap-apphero-chip">⏳ {soon} expiring</span>}
+              {expired > 0 && <span className="kap-apphero-chip">⚠️ {expired} expired</span>}
+            </div>
+          </div>
           {expired > 0 && <div className="kap-alert danger">⚠️ {expired} document{expired === 1 ? '' : 's'} expired — check Identity & Travel.</div>}
           {soon > 0 && <div className="kap-alert warn">📅 {soon} document{soon === 1 ? '' : 's'} expiring within 90 days.</div>}
 

@@ -1,16 +1,26 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
-  GraduationCap, Users, MessageSquare, Heart, Megaphone, Eye, Image, Circle,
-  UserPlus, Zap, Flame, Repeat, Share2, Coins, Shuffle, TrendingUp, Info,
+  GraduationCap, Users, MessageSquare, Heart, Circle,
+  UserPlus, Zap, Flame, Repeat, Share2, Coins, Shuffle, TrendingUp, Info, Gem, Clock, CalendarClock,
 } from 'lucide-react'
 import { live } from '../data/live'
 import type { SchemaInsights, GrowthOverview, EconomyData, PortfolioVc, GrowthPoint } from '../data/types'
 import type { KinetikStats } from '../data/live'
 import { chartColor } from '../components/charts'
+import { PRESETS, DEFAULT_GLOBALS, computeScenario } from '../data/monetization'
 import { Empty, Loading } from '../components/Empty'
 import { compact, pct } from '../lib/format'
 
 const signed = (v: number | null | undefined) => (v == null ? 'WoW —' : `${v > 0 ? '+' : ''}${v}% WoW`)
+const pctOr = (v: number | null | undefined) => (v == null ? '—' : pct(v))
+const screenTime = (m: number | null | undefined) => (m == null ? '—' : m >= 60 ? (Math.round(m / 6) / 10) + 'h' : Math.round(m) + 'm')
+const perDay = (v: number | null | undefined) => (v == null ? '—' : String(v))
+// Mid-case revenue per family per month — the diamond economy / engagement
+// converted into money. Subscription-only for the family app, blended (sub +
+// diamond IAP) for the learning app. Scale-independent, so computed once.
+const SUB_ARPU = PRESETS.mid.conv * PRESETS.mid.price
+const BLEND_ARPU = computeScenario(PRESETS.mid, 1000, DEFAULT_GLOBALS).arpu
+const usd2 = (n: number) => '$' + n.toFixed(2)
 
 function KMark({ size = 34 }: { size?: number }) {
   return (
@@ -28,14 +38,22 @@ function KMark({ size = 34 }: { size?: number }) {
   )
 }
 
-function StatCell({ label, value, icon, src }: { label: string; value: string | number; icon?: React.ReactNode; src?: string }) {
+// AARRR pillar accents — each stat is colour-tagged by the funnel stage it
+// belongs to, so the card reads as acquisition → engagement → retention → money.
+const PILLAR = {
+  acq: 'var(--acc)', eng: 'var(--tl)', ret: 'var(--ok)', mon: 'var(--mag)',
+} as const
+type PillarKey = keyof typeof PILLAR
+
+function StatCell({ label, value, icon, src, pillar, tone }: {
+  label: string; value: string | number; icon?: React.ReactNode; src?: string; pillar?: PillarKey; tone?: string
+}) {
+  const accent = pillar ? PILLAR[pillar] : undefined
   return (
-    <div style={{ background: 'var(--bg2)', borderRadius: 9, padding: '10px 12px' }}>
-      <div style={{ fontSize: 11, color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: 4 }}>
-        {icon}<span>{label}</span>
-      </div>
-      <div style={{ fontSize: 19, fontWeight: 600, margin: '2px 0' }}>{typeof value === 'number' ? compact(value) : value}</div>
-      {src && <div className="src" style={{ background: 'transparent', padding: 0, fontSize: 10 }}>{src}</div>}
+    <div className="pstat" style={pillar ? { boxShadow: `inset 3px 0 0 ${accent}` } : undefined}>
+      <div className="pstat-l" style={accent ? { color: accent } : undefined}>{icon}<span>{label}</span></div>
+      <div className="pstat-v" style={tone ? { color: tone } : undefined}>{typeof value === 'number' ? compact(value) : value}</div>
+      {src && <div className="pstat-s">{src}</div>}
     </div>
   )
 }
@@ -91,17 +109,25 @@ export function Portfolio() {
             'Reactions + comments; Cheer Squad celebrations',
           ]}
         >
-          {k && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10 }}>
-              <StatCell label="Circles" value={k.circles} icon={<Circle size={11} />} src="circles" />
-              <StatCell label="Members" value={k.members} icon={<Users size={11} />} src="circle_members" />
-              <StatCell label="Posts" value={k.posts} icon={<Image size={11} />} src="kinetik_post" />
-              <StatCell label="Posts · 7d" value={k.posts7d} icon={<MessageSquare size={11} />} src="last 7 days" />
-              <StatCell label="Reactions" value={k.reactions} icon={<Heart size={11} />} src="kinetik_post" />
-              <StatCell label="Broadcasts live" value={k.broadcastsPublished} icon={<Megaphone size={11} />} src="kinetik_broadcast" />
-              <StatCell label="Discover views" value={k.broadcastViews} icon={<Eye size={11} />} src="broadcast" />
+          {k && (() => {
+            const fw = v && v.familiesTotal > 0 ? Math.round((100 * v.flywheelCount) / v.familiesTotal) : null
+            return (
+            <div className="pstat-grid">
+              {/* acquisition */}
+              <StatCell pillar="acq" label="Members" value={k.members} icon={<Users size={11} />} src="people" />
+              <StatCell pillar="acq" label="Circles" value={k.circles} icon={<Circle size={11} />} src="families" />
+              {/* engagement — family posting + their kids' daily learning */}
+              <StatCell pillar="eng" label="Posts · 7d" value={k.posts7d} icon={<MessageSquare size={11} />} src="this week" />
+              <StatCell pillar="eng" label="Reactions" value={k.reactions} icon={<Heart size={11} />} src="on posts" />
+              <StatCell pillar="eng" label="Calendar / day" value={perDay(k.calPerDay)} icon={<CalendarClock size={11} />} src="events + routines" />
+              <StatCell pillar="eng" label="Screen time" value={screenTime(v?.screenMinPerKidDay)} icon={<Clock size={11} />} src="per kid / day" />
+              {/* retention / moat */}
+              <StatCell pillar="ret" label="Flywheel" value={fw == null ? '—' : fw + '%'} icon={<Shuffle size={11} />} src="have a learner" />
+              {/* monetization */}
+              <StatCell pillar="mon" label="Rev / family" value={usd2(SUB_ARPU)} icon={<Coins size={11} />} src="subscription /mo" />
             </div>
-          )}
+            )
+          })()}
           {!k && <div style={{ fontSize: 12.5, color: 'var(--tx3)', padding: '8px 0' }}>Sign in as operator to see live stats.</div>}
         </AppCard>
       )}
@@ -124,12 +150,20 @@ export function Portfolio() {
           ]}
         >
           {i && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10 }}>
-              <StatCell label="Learners" value={i.learners} icon={<Users size={11} />} src="profiles" />
-              <StatCell label="Active · 7d" value={i.activeLearners7d} icon={<MessageSquare size={11} />} src="item_attempts" />
-              <StatCell label="Games" value={i.gamesTotal} icon={<Image size={11} />} src="games" />
-              <StatCell label="Live content" value={i.itemsLive} icon={<Eye size={11} />} src="items" />
-              <StatCell label="Circles" value={i.circles} icon={<Circle size={11} />} src="circles" />
+            <div className="pstat-grid">
+              {/* acquisition — are new learners arriving, and do they reach first value? */}
+              <StatCell pillar="acq" label="New · 7d" value={o?.newLearners7d ?? i.learners} icon={<UserPlus size={11} />}
+                src={o ? signed(o.newWowPct) : 'signups'} tone={o?.newWowPct != null ? (o.newWowPct >= 0 ? 'var(--ok)' : 'var(--warn)') : undefined} />
+              <StatCell pillar="acq" label="Activation" value={pctOr(v?.activationRate)} icon={<Zap size={11} />} src="acted in 48h" />
+              {/* engagement — how much each kid does, daily */}
+              <StatCell pillar="eng" label="Lessons / day" value={perDay(v?.lessonsPerKidDay)} icon={<GraduationCap size={11} />} src="per kid" />
+              <StatCell pillar="eng" label="Screen time" value={screenTime(v?.screenMinPerKidDay)} icon={<Clock size={11} />} src="per kid / day" />
+              {/* retention — do they come back? */}
+              <StatCell pillar="ret" label="Comes back daily" value={pctOr(o?.stickiness)} icon={<Repeat size={11} />} src="of monthly kids" />
+              <StatCell pillar="ret" label="Next-day return" value={pctOr(v?.d1Retention)} icon={<TrendingUp size={11} />} src="came back" />
+              {/* monetization — the diamond economy, and its money conversion */}
+              <StatCell pillar="mon" label="Diamonds" value={i.diamondsFloat} icon={<Gem size={11} />} src={v?.spentPerActiveKid != null ? `${compact(v.spentPerActiveKid)} spent/kid` : 'float'} />
+              <StatCell pillar="mon" label="Rev / family" value={usd2(BLEND_ARPU)} icon={<Coins size={11} />} src="sub + 💎 IAP /mo" />
             </div>
           )}
           {!i && <div style={{ fontSize: 12.5, color: 'var(--tx3)', padding: '8px 0' }}>Sign in as operator to see live stats.</div>}

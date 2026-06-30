@@ -11,6 +11,7 @@ import { Agents } from '../surfaces/Agents'
 import { Broadcast } from '../surfaces/Broadcast'
 import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 import { AgentOrb } from '../components/AgentOrb'
+import { CommandPalette } from './CommandPalette'
 
 function Surface() {
   const { surface } = useHQ()
@@ -46,6 +47,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
       </div>
       <AgentOrb />
       <MobileNav />
+      <CommandPalette />
     </div>
   )
 }

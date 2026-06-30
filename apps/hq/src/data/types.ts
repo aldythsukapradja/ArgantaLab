@@ -134,6 +134,8 @@ export interface PortfolioVc {
   activationRate: number | null      // % signups acting within 48h
   lessonsCompleted7d: number
   lessonsCompletedTotal: number
+  lessonsPerKidDay: number | null    // lessons completed per active kid per day (7d avg)
+  screenMinPerKidDay: number | null  // estimated screen-time minutes per active kid per day (7d)
   returnRate: number | null          // % of >30d-old accounts still active (retention proxy)
   d1Retention: number | null         // next-day comeback rate over last 14d (daily retention)
   d1Sample: number                   // active-day observations behind d1Retention

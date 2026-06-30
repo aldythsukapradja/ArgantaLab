@@ -590,6 +590,7 @@ export interface KinetikStats {
   broadcastsPublished: number
   broadcastViews: number
   broadcastReactions: number
+  calPerDay?: number | null   // avg calendar items/day (routines + week's events) — v2 RPC
 }
 
 export { cloudEnabled }

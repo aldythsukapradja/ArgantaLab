@@ -17,7 +17,7 @@ export interface NativeApp {
 
 export const NATIVE_APPS: NativeApp[] = [
   { id: 'travel', name: 'Travel Planner', emoji: '✈️', tagline: 'Plan trips together', accent: ['#0E9DC4', '#38BDF8'], Component: TravelApp },
-  { id: 'padel', name: 'Padel Matchday', emoji: '🎾', tagline: 'Run the matches', accent: ['#2F6BFF', '#54C7EC'], Component: PadelApp },
+  { id: 'padel', name: 'Matchday', emoji: '🎾', tagline: 'Fair rounds · live scores', accent: ['#2F6BFF', '#54C7EC'], Component: PadelApp },
   { id: 'kitchen', name: 'Kitchen', emoji: '🍳', tagline: 'Recipes · plan · shop', accent: ['#FF6A4D', '#FF9F4D'], Component: KitchenApp },
   { id: 'vault', name: 'Family Vault', emoji: '🔐', tagline: 'Docs & money', accent: ['#0E9D6B', '#34D399'], Component: VaultApp },
 ]

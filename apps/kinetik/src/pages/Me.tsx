@@ -117,18 +117,20 @@ export default function Me() {
 
   return (
     <div className="fade-in me3" ref={root} style={{ ['--c0' as any]: a0, ['--c1' as any]: a1 }}>
-      {/* Header */}
+      {/* Header — avatar + identity in one compact row */}
       <div className="me3-head rise">
         {authUser?.photoUrl
           ? <img className="me3-avatar" src={authUser.photoUrl} alt={name} referrerPolicy="no-referrer" />
           : <div className="me3-avatar me3-avatar-fb">{initials(name)}</div>}
+        <div className="me3-id">
+          <div className="me3-name">{name}</div>
+          <div className="me3-role"><span className="me3-role-dot" /><span className="me3-role-txt">{myRole ? `${myRole} · ` : ''}{circle.name}</span></div>
+        </div>
         <div className="me3-head-actions">
           <button className="me3-icon-btn" aria-label="Share profile" onClick={() => alert('Share — coming soon')}><IconShare width={16} height={16} /></button>
           <button className="me3-icon-btn" aria-label="Toggle theme" onClick={toggleTheme}>{theme === 'dark' ? <IconSun width={16} height={16} /> : <IconMoon width={16} height={16} />}</button>
         </div>
       </div>
-      <div className="me3-name rise">{name}</div>
-      <div className="me3-role rise"><span className="me3-role-dot" />{myRole ? `${myRole} · ` : ''}{circle.name}</div>
 
       {/* Stats (real social_stats; Moments from kinetik) */}
       <div className="me3-stats rise">

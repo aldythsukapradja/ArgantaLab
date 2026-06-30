@@ -242,6 +242,12 @@ returns jsonb language sql stable security definer set search_path = public as $
     'posts',   (select count(*) from public.kinetik_post),
     'posts7d', (select count(*) from public.kinetik_post where created_at >= now() - interval '7 days'),
     'reactions', (select coalesce(sum(reaction_count),0) from public.kinetik_post),
+    -- calendar activity per day: standing weekly routines (each recurs once/week)
+    -- plus this week's one-off events, averaged across the 7 days.
+    'calPerDay', round((
+        (select count(*) from public.kinetik_routines)
+        + (select count(*) from public.kinetik_events where event_date >= current_date - 7)
+      ) / 7.0, 1),
     'broadcastsPublished', (select count(*) from public.kinetik_broadcast where status = 'published'),
     'broadcastViews',      (select coalesce(sum(view_count),0) from public.kinetik_broadcast where status = 'published'),
     'broadcastReactions',  (select coalesce(sum(reaction_count),0) from public.kinetik_broadcast where status = 'published'),
@@ -257,19 +263,51 @@ grant execute on function public.hq_kinetik_stats() to authenticated;
 -- friends/invites migration) hasn't been applied yet.
 create or replace function public.hq_portfolio_vc()
 returns jsonb language plpgsql stable security definer set search_path = public as $$
-declare r jsonb; v_ref jsonb;
+declare r jsonb; v_ref jsonb; v_lpd numeric; v_smin numeric;
 begin
   if not public.hq_is_operator() then return null; end if;
 
+  -- Lessons completed per active kid per day (7-day average). The runtime records
+  -- completions as diamond_ledger rewards (journey nodes, lessons, drills, quests)
+  -- — node_progress is left empty by the local-first engine, so count the ledger.
+  select round(
+      (select count(*) from public.diamond_ledger
+        where kind in ('journey','reward','drill','quest') and created_at >= now() - interval '7 days')::numeric
+      / 7.0
+      / nullif((select count(distinct a.user_id) from public.hq_activity() a join public.profiles p on p.id = a.user_id
+                where p.role = 'kid' and a.ts >= now() - interval '7 days'), 0), 1)
+    into v_lpd;
+
+  -- Estimated screen-time minutes per active kid per day (7d). Activity events are
+  -- sessionised with a 30-min inactivity gap; each session counts its intra-gap
+  -- seconds plus a 2-min tail (a lone event ≈ a 2-min visit).
+  with ev as (
+    select a.user_id, a.ts from public.hq_activity() a
+    join public.profiles p on p.id = a.user_id
+    where p.role = 'kid' and a.ts >= now() - interval '7 days'
+  ),
+  g as (select user_id, ts, lag(ts) over (partition by user_id order by ts) as prev from ev),
+  s as (
+    select user_id,
+      case when prev is null or ts - prev > interval '30 minutes' then 1 else 0 end as ns,
+      case when prev is not null and ts - prev <= interval '30 minutes' then extract(epoch from (ts - prev)) else 0 end as sec
+    from g
+  )
+  select round((sum(sec) + sum(ns) * 120) / nullif(count(distinct user_id), 0) / 7 / 60)
+    into v_smin from s;
+
   select jsonb_build_object(
+    'lessonsPerKidDay', v_lpd,
+    'screenMinPerKidDay', v_smin,
     -- ACTIVATION — of all signups, % that took a first action within 48h of joining
     'activationRate', (select case when count(*) > 0 then round(100.0*count(*) filter (where activated)/count(*),1) else null end
        from (select p.id, exists(select 1 from public.hq_activity() a
                 where a.user_id = p.id and a.ts >= p.created_at and a.ts < p.created_at + interval '48 hours') as activated
              from public.profiles p) q),
-    -- ENGAGEMENT — journey nodes completed (the "lessons done" signal)
-    'lessonsCompleted7d',    (select count(*) from public.node_progress where completed_at >= now() - interval '7 days'),
-    'lessonsCompletedTotal', (select count(*) from public.node_progress where completed_at is not null),
+    -- ENGAGEMENT — learning completions from the diamond ledger (journey nodes,
+    -- lessons, drills, quests) — the real "lessons done" signal.
+    'lessonsCompleted7d',    (select count(*) from public.diamond_ledger where kind in ('journey','reward','drill','quest') and created_at >= now() - interval '7 days'),
+    'lessonsCompletedTotal', (select count(*) from public.diamond_ledger where kind in ('journey','reward','drill','quest')),
     -- RETENTION proxy — of accounts older than 30d, % still active in the last 30d
     'returnRate', (select case when count(*) > 0 then round(100.0*count(*) filter (where retained)/count(*),1) else null end
        from (select p.id, exists(select 1 from public.hq_activity() a where a.user_id = p.id and a.ts >= now() - interval '30 days') as retained

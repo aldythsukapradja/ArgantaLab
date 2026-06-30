@@ -7,6 +7,18 @@ export default defineConfig({
   resolve: {
     alias: { '@': resolve(__dirname, 'src') },
   },
+  build: {
+    chunkSizeWarningLimit: 1100,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          gsap: ['gsap'],
+          react: ['react', 'react-dom'],
+        },
+      },
+    },
+  },
   server: {
     port: process.env.PORT ? parseInt(process.env.PORT) : 5191,
     strictPort: true,

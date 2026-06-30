@@ -33,16 +33,19 @@ export default function SkyScene({ focusRef, dark }: { focusRef: React.MutableRe
     let w = window.innerWidth, h = window.innerHeight
     renderer.setSize(w, h)
 
+    const mobile = w < 820
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(58, w / h, 0.1, 200)
-    camera.position.z = 18
+    camera.position.z = mobile ? 24 : 18
 
     // ── clouds: soft sprite planes at varied depth ──
     const cloudTex = softSprite('rgba(255,255,255,0.95)', 'rgba(255,255,255,0)')
     const clouds: THREE.Sprite[] = []
-    for (let i = 0; i < 16; i++) {
-      const m = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, opacity: 0.5 + Math.random() * 0.3, depthWrite: false })
+    for (let i = 0; i < (mobile ? 9 : 16); i++) {
+      const op = 0.5 + Math.random() * 0.3
+      const m = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, opacity: op, depthWrite: false })
       const s = new THREE.Sprite(m)
+      s.userData.op = op
       const z = -10 - Math.random() * 26
       s.position.set((Math.random() - 0.5) * 70, (Math.random() - 0.5) * 40, z)
       const sc = 14 + Math.random() * 22
@@ -66,11 +69,14 @@ export default function SkyScene({ focusRef, dark }: { focusRef: React.MutableRe
     const crystals: THREE.Mesh[] = []
     const geo = new THREE.OctahedronGeometry(1, 0)
     const cols = [0xc4b5fd, 0xa5d8ff, 0xb2f2bb, 0xffd8a8, 0xffc9c9, 0x99e9f2]
-    for (let i = 0; i < 26; i++) {
-      const mat = new THREE.MeshStandardMaterial({ color: cols[i % cols.length], metalness: 0.45, roughness: 0.15, transparent: true, opacity: 0.78, flatShading: true })
+    const crystalN = mobile ? 12 : 26
+    const crystalMax = mobile ? 0.8 : 1.25
+    for (let i = 0; i < crystalN; i++) {
+      const col = cols[i % cols.length]
+      const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0, metalness: 0.45, roughness: 0.15, transparent: true, opacity: 0.72, flatShading: true })
       const m = new THREE.Mesh(geo, mat)
-      m.position.set((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 26, (Math.random() - 0.5) * 18 - 2)
-      m.scale.setScalar(0.35 + Math.random() * 1.25)
+      m.position.set((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 18 - 4)
+      m.scale.setScalar(0.3 + Math.random() * crystalMax)
       scene.add(m); crystals.push(m)
     }
 
@@ -101,10 +107,19 @@ export default function SkyScene({ focusRef, dark }: { focusRef: React.MutableRe
       pollen.geometry.attributes.position.needsUpdate = true
       rays.forEach((s, i) => { s.material.opacity = 0.14 + 0.06 * Math.sin(t * 0.4 + i) })
 
-      // night dims the sun, lifts crystal glow
+      // night: dim clouds, light up the crystals like jewels
       const d = darkRef.current
-      amb.intensity += ((d ? 0.4 : 0.85) - amb.intensity) * 0.05
-      sun.intensity += ((d ? 0.7 : 1.5) - sun.intensity) * 0.05
+      amb.intensity += ((d ? 0.55 : 0.85) - amb.intensity) * 0.05
+      sun.intensity += ((d ? 1.0 : 1.5) - sun.intensity) * 0.05
+      crystals.forEach(g => {
+        const m = g.material as THREE.MeshStandardMaterial
+        m.emissiveIntensity += ((d ? 0.62 : 0) - m.emissiveIntensity) * 0.06
+        m.opacity += ((d ? 0.9 : 0.72) - m.opacity) * 0.06
+      })
+      clouds.forEach(s => {
+        const base = (s.userData.op as number) ?? 0.6
+        s.material.opacity += ((d ? base * 0.28 : base) - s.material.opacity) * 0.06
+      })
 
       const f = focusRef.current
       camera.position.x += (f.x * 0.0014 - camera.position.x) * 0.04

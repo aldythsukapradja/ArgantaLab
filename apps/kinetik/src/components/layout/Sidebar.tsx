@@ -12,7 +12,7 @@ const ITEMS: { tab: Tab; label: string; Icon: (p: { active: boolean }) => JSX.El
   { tab: 'calendar', label: 'Calendar', Icon: NavCalendar },
   { tab: 'moments', label: 'Moments', Icon: NavMoments },
   { tab: 'apps', label: 'Apps', Icon: NavApps },
-  { tab: 'me', label: 'Me', Icon: NavMe },
+  { tab: 'me', label: 'You', Icon: NavMe },
 ]
 
 /** Desktop / tablet navigation. Hidden on mobile (the bottom Nav takes over). */

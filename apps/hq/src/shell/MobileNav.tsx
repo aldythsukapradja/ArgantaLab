@@ -20,11 +20,11 @@ export function MobileNav() {
       {MGROUPS.map(g => (
         <button key={g.id} className={'mnav-item' + (!agentOpen && activeGroup === g.id ? ' on' : '')}
           onClick={() => { if (agentOpen) closeAgent(); go(g.surfaces[0]) }}>
-          <g.Icon size={19} /><span>{g.label}</span>
+          <span className="mn-ic"><g.Icon size={20} /></span><span className="mn-lbl">{g.label}</span>
         </button>
       ))}
       <button className={'mnav-item' + (agentOpen ? ' on' : '')} onClick={() => openAgent('full')}>
-        <Sparkles size={19} /><span>Agent</span>
+        <span className="mn-ic"><Sparkles size={20} /></span><span className="mn-lbl">Agent</span>
       </button>
     </nav>
   )

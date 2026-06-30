@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState, useCallback, type ReactNode
 import { Hand, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import type { SchemaModel as Model, TableNode } from '../data/types'
 
-const ZOOM_MIN = 0.5, ZOOM_MAX = 1.4, ZOOM_STEP = 0.1
+const ZOOM_MIN = 0.35, ZOOM_MAX = 1.4, ZOOM_STEP = 0.1
 
 const HEAD = 33, ROW = 24, CW = 158, RW = 124
 
@@ -85,6 +85,7 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
   const [dragName, setDragName] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const zoomRef = useRef(1)
+  const lastFitRef = useRef<string>('')   // last center we auto-fit, so resize doesn't override manual zoom
   useLayoutEffect(() => { zoomRef.current = zoom }, [zoom])
   const zoomBy = (d: number) => setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(z + d).toFixed(2))))
 
@@ -96,17 +97,23 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
     const ch = c ? heightOf(c, true, undefined, expanded.has(center)) : 120
     const next: Pos = { [center]: { x: W / 2 - CW / 2, y: H / 2 - ch / 2 } }
     const n = ring.length || 1
-    const rx = Math.min(W * 0.34, 250), ry = H * 0.36
+    // Radius big enough that ring cards never overlap (circumference fits them
+    // all); the view then auto-fits/zooms to show the whole spread. No clamping —
+    // nodes can sit beyond the canvas and you pan/zoom to read them.
+    const minR = (n * (RW + 26)) / (2 * Math.PI)
+    const rx = Math.max(W * 0.30, minR)
+    const ry = Math.max(H * 0.30, minR * 0.9)
     ring.forEach((it, i) => {
       const ang = (-90 + i * (360 / n)) * Math.PI / 180
       const cx = W / 2 + rx * Math.cos(ang), cy = H / 2 + ry * Math.sin(ang)
       const rh = heightOf(it.table, false, it.fk, expanded.has(it.table.name))
-      next[it.table.name] = {
-        x: Math.max(4, Math.min(cx - RW / 2, W - RW - 4)),
-        y: Math.max(4, Math.min(cy - rh / 2, H - rh - 4)),
-      }
+      next[it.table.name] = { x: cx - RW / 2, y: cy - rh / 2 }
     })
     setPos(next)
+    // Auto-fit the whole star into view when the center (star) changes.
+    const contentW = 2 * rx + RW + 24, contentH = 2 * ry + 200
+    const fit = Math.max(ZOOM_MIN, Math.min(1, (W - 16) / contentW, (H - 16) / contentH))
+    if (lastFitRef.current !== center) { lastFitRef.current = center; setZoom(+fit.toFixed(2)) }
   }, [center, ring, byName, expanded])
 
   useLayoutEffect(() => { layout() }, [layout])
@@ -121,11 +128,12 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
       const d = dragRef.current, el = containerRef.current
       if (!d || !el) return
       const r = el.getBoundingClientRect()
-      const z = zoomRef.current
-      // event coords → stage (layout) coords by dividing out the zoom scale
-      const x = Math.max(0, Math.min((e.clientX - r.left) / z - d.dx, el.clientWidth / z - RW))
-      const y = Math.max(0, Math.min((e.clientY - r.top) / z - d.dy, el.clientHeight / z - 40))
-      setPos((p) => ({ ...p, [d.name]: { x, y } }))
+      const z = zoomRef.current, W = el.clientWidth, H = el.clientHeight
+      // event coords → stage (layout) coords. Stage scales about its centre, so
+      // invert about the centre too. No clamp: spread-out nodes stay draggable.
+      const lx = W / 2 + ((e.clientX - r.left) - W / 2) / z
+      const ly = H / 2 + ((e.clientY - r.top) - H / 2) / z
+      setPos((p) => ({ ...p, [d.name]: { x: lx - d.dx, y: ly - d.dy } }))
     }
     function up() { if (dragRef.current) { dragRef.current = null; setDragName(null) } }
     window.addEventListener('pointermove', move)
@@ -137,10 +145,12 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
     const el = containerRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
-    const z = zoomRef.current
+    const z = zoomRef.current, W = el.clientWidth, H = el.clientHeight
     const p = pos[name] || { x: 0, y: 0 }
-    // grab offset in stage (layout) coords so dragging tracks the cursor at any zoom
-    dragRef.current = { name, dx: (e.clientX - r.left) / z - p.x, dy: (e.clientY - r.top) / z - p.y }
+    // grab offset in stage (layout) coords (centre-origin) so dragging tracks the cursor at any zoom
+    const lx = W / 2 + ((e.clientX - r.left) - W / 2) / z
+    const ly = H / 2 + ((e.clientY - r.top) - H / 2) / z
+    dragRef.current = { name, dx: lx - p.x, dy: ly - p.y }
     setDragName(name)
     e.preventDefault()
   }
@@ -223,17 +233,16 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
           <span className="zoomval" onClick={() => setZoom(1)} title="Reset zoom">{Math.round(zoom * 100)}%</span>
           <button onClick={() => zoomBy(ZOOM_STEP)} disabled={zoom >= ZOOM_MAX} title="Zoom in"><ZoomIn size={13} /></button>
         </div>
-        <button className="chip" onClick={() => { setZoom(1); layout() }} title="Reset layout"><RotateCcw size={13} /></button>
+        <button className="chip" onClick={() => { lastFitRef.current = ''; layout() }} title="Reset &amp; fit"><RotateCcw size={13} /></button>
         {onRefresh && <button className="chip" onClick={onRefresh} title="Refresh from source">Refresh</button>}
       </div>
 
       <div className="canvas" ref={containerRef}>
-        {/* Inner stage is CSS-scaled for zoom; layout + drag math stay in unscaled
-            stage coords (see onDown/move). transform-origin 0 0 keeps coords aligned. */}
-        <div className="canvas-stage" style={{ transform: `scale(${zoom})`, transformOrigin: '0 0' }}>
-          {/* width/height="100%" is required: without it SVG user-units default to 300×150
-              so lines drawn at real pixel coords fall outside the visible coordinate space */}
-          <svg className="wires" width="100%" height="100%">{wires}</svg>
+        {/* Inner stage is CSS-scaled for zoom about its centre, so the diagram
+            stays centred at any zoom; drag math inverts about the centre too. */}
+        <div className="canvas-stage" style={{ transform: `scale(${zoom})`, transformOrigin: '50% 50%' }}>
+          {/* overflow visible so wires to off-canvas nodes aren't clipped */}
+          <svg className="wires" width="100%" height="100%" style={{ overflow: 'visible' }}>{wires}</svg>
           {c && renderNode(c, true)}
           {ring.map((it) => renderNode(it.table, false, it.fk))}
         </div>

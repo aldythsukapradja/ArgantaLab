@@ -22,6 +22,7 @@ interface HQState {
   theme: Theme
   agentOpen: boolean               // floating COO/CEO orb open?
   agentSize: AgentSize             // small | expanded | full
+  paletteOpen: boolean             // ⌘K command palette open?
   go: (s: SurfaceId) => void
   setDataTab: (t: DataTab) => void
   setBuilderSub: (t: BuilderSub) => void
@@ -32,6 +33,9 @@ interface HQState {
   closeAgent: () => void
   toggleAgent: () => void
   setAgentSize: (s: AgentSize) => void
+  openPalette: () => void
+  closePalette: () => void
+  togglePalette: () => void
 }
 
 const initialTheme = (): Theme =>
@@ -46,6 +50,7 @@ export const useHQ = create<HQState>((set) => ({
   theme: initialTheme(),
   agentOpen: false,
   agentSize: 'expanded',
+  paletteOpen: false,
   go: (surface) => set({ surface, builderSub: 'catalogue', studioId: null }),
   setDataTab: (dataTab) => set({ dataTab }),
   setBuilderSub: (builderSub) => set({ builderSub }),
@@ -61,4 +66,7 @@ export const useHQ = create<HQState>((set) => ({
   closeAgent: () => set({ agentOpen: false }),
   toggleAgent: () => set((s) => ({ agentOpen: !s.agentOpen })),
   setAgentSize: (agentSize) => set({ agentSize }),
+  openPalette: () => set({ paletteOpen: true }),
+  closePalette: () => set({ paletteOpen: false }),
+  togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
 }))

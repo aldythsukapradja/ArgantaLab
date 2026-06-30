@@ -3,6 +3,13 @@ import { supabase } from '@lib/supabase'
 
 type Tab = 'parent' | 'kid'
 
+// Kids have no email — they sign in with username + PIN via SYNTHETIC-EMAIL auth
+// (same scheme as apps/web/lib/cloudAuth): "baginda" → baginda@kids.argantalab.app
+// with the PIN padded to a valid password. The kid is then a real auth.user.
+const KID_DOMAIN = 'kids.argantalab.app'
+const synthEmail = (u: string) => `${u.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@${KID_DOMAIN}`
+const pinToPassword = (pin: string) => `${pin}#aLab`
+
 /** Official multicolor Google "G". */
 function GoogleG({ size = 18 }: { size?: number }) {
   return (
@@ -28,9 +35,10 @@ export default function Login() {
     })
   }, [])
 
+  const switchTab = (t: Tab) => { setTab(t); setError(null) }
+
   const signInWithGoogle = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -38,23 +46,27 @@ export default function Login() {
       })
       if (error) throw error
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to sign in'
-      setError(msg)
+      setError(e instanceof Error ? e.message : 'Failed to sign in')
       setLoading(false)
-      setTimeout(() => setLoading(false), 5000)
     }
   }
 
   const handleKidLogin = async () => {
-    if (!kidUsername || !kidPin) { setError('Username and PIN required'); return }
-    setLoading(true)
-    setError(null)
+    const u = kidUsername.trim(), p = kidPin.trim()
+    if (!u) { setError('Enter your username'); return }
+    if (p.length < 4) { setError('Your PIN is 4 digits'); return }
+    setLoading(true); setError(null)
     try {
-      setError('Kids login coming soon')
-    } finally {
+      const { error } = await supabase.auth.signInWithPassword({ email: synthEmail(u), password: pinToPassword(p) })
+      if (error) throw error
+      // App.tsx's onAuthStateChange picks up the session and loads the app.
+    } catch {
+      setError("That username or PIN didn't match. Ask a parent if you're stuck.")
       setLoading(false)
     }
   }
+
+  const kidReady = kidUsername.trim().length > 0 && kidPin.trim().length >= 4
 
   return (
     <div className="auth-page">
@@ -66,7 +78,7 @@ export default function Login() {
       </div>
 
       <div className="auth-container">
-        <div className="auth-card-shell">
+        <div className={`auth-card-shell${tab === 'kid' ? ' kid' : ''}`}>
           {/* Header */}
           <div className="auth-header">
             <div className="auth-logo-mark"><span>K</span></div>
@@ -77,8 +89,8 @@ export default function Login() {
           {/* Tabs */}
           <div className="auth-tab-nav">
             <span className="auth-tab-thumb" data-tab={tab} />
-            <button className={`auth-tab-btn${tab === 'parent' ? ' active' : ''}`} onClick={() => { setTab('parent'); setError(null) }}>Parent</button>
-            <button className={`auth-tab-btn${tab === 'kid' ? ' active' : ''}`} onClick={() => { setTab('kid'); setError(null) }}>Kids</button>
+            <button className={`auth-tab-btn${tab === 'parent' ? ' active' : ''}`} onClick={() => switchTab('parent')}>Parent</button>
+            <button className={`auth-tab-btn${tab === 'kid' ? ' active' : ''}`} onClick={() => switchTab('kid')}>Kids</button>
           </div>
 
           {tab === 'parent' && (
@@ -95,7 +107,7 @@ export default function Login() {
 
               <div className="auth-divider"><span>or</span></div>
 
-              <button className="auth-link-btn" onClick={() => alert('Sign up coming soon')}>
+              <button className="auth-link-btn" onClick={signInWithGoogle} disabled={loading}>
                 Create a new account
               </button>
 
@@ -106,18 +118,30 @@ export default function Login() {
           {tab === 'kid' && (
             <div className="auth-card-content">
               <div className="auth-card-header">
-                <h2>Kids login</h2>
-                <p>Enter your username and PIN</p>
+                <h2>Hi there! 👋</h2>
+                <p>Type your username and PIN to play</p>
               </div>
 
               <div className="auth-form">
-                <input className="auth-field" placeholder="Username" value={kidUsername} onChange={e => setKidUsername(e.target.value)} disabled={loading} />
-                <input className="auth-field" placeholder="PIN" type="password" value={kidPin} onChange={e => setKidPin(e.target.value)} disabled={loading} maxLength={4} />
-                <button className="auth-btn-primary" disabled={loading || !kidUsername || !kidPin} onClick={handleKidLogin}>
-                  {loading ? 'Signing in…' : 'Sign in'}
+                <label className="auth-field-wrap">
+                  <span className="auth-field-ico">🧒</span>
+                  <input className="auth-field has-ico" placeholder="Username" autoComplete="username" autoCapitalize="none"
+                    value={kidUsername} onChange={e => setKidUsername(e.target.value)} disabled={loading}
+                    onKeyDown={e => { if (e.key === 'Enter') document.getElementById('kid-pin')?.focus() }} />
+                </label>
+                <label className="auth-field-wrap">
+                  <span className="auth-field-ico">🔑</span>
+                  <input id="kid-pin" className="auth-field has-ico pin" placeholder="4-digit PIN" type="password"
+                    inputMode="numeric" maxLength={6} value={kidPin}
+                    onChange={e => setKidPin(e.target.value.replace(/[^0-9]/g, ''))} disabled={loading}
+                    onKeyDown={e => { if (e.key === 'Enter' && kidReady) handleKidLogin() }} />
+                </label>
+                <button className="auth-submit" disabled={loading || !kidReady} onClick={handleKidLogin}>
+                  {loading ? 'Signing in…' : 'Let’s go →'}
                 </button>
               </div>
 
+              <p className="auth-kidhint">Forgot your PIN? Ask a parent to reset it.</p>
               {error && <div className="auth-error-msg">{error}</div>}
             </div>
           )}
