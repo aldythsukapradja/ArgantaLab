@@ -86,7 +86,8 @@
 .abx-stat b { font-family: var(--serif); font-weight: 500; font-size: clamp(22px, 3vw, 30px); line-height: 1; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .abx-stat span { font-size: 11px; color: var(--muted); }
 
-.abx-team { justify-content: stretch; gap: 10px; padding-bottom: 6px; }
+.abx-team { justify-content: flex-start; gap: 10px; padding-bottom: 6px; }
+.abx-team.active > * { animation: none; }  /* no translateY stagger — org chart owns its own reveal */
 /* no scale-transform on the team panel — it would distort React Flow's handle geometry */
 .abx-panel.abx-team.prev, .abx-panel.abx-team.next { transform: none; }
 .abx-team > .abx-teamhead, .abx-team > .abx-legend { flex: none; }
@@ -97,24 +98,28 @@
 .abx-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .abx-legend i { width: 8px; height: 8px; border-radius: 50%; }
 
-/* org chart (React Flow) */
-.orgflow { position: relative; flex: 1; width: 100%; min-height: 0; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: color-mix(in srgb, var(--card) 40%, transparent); --of-edge: color-mix(in srgb, var(--violet) 38%, transparent); --of-dot: color-mix(in srgb, var(--ink) 7%, transparent); opacity: 0; transition: opacity .6s ease .1s; }
+/* org chart (bespoke zoomable SVG) */
+.orgflow { position: relative; flex: 1; width: 100%; min-height: 0; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: color-mix(in srgb, var(--card) 40%, transparent); --of-edge: color-mix(in srgb, var(--violet) 40%, transparent); opacity: 0; transition: opacity .6s ease .1s; }
 .abx-panel.active .orgflow { opacity: 1; }
-.orgflow .react-flow { background: transparent; }
-.orgflow-hint { position: absolute; top: 10px; left: 12px; z-index: 5; font-size: 10.5px; font-weight: 600; color: var(--muted); background: color-mix(in srgb, var(--card-solid) 70%, transparent); padding: 3px 9px; border-radius: 999px; pointer-events: none; }
+.orgflow-svg { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.orgflow-svg:active { cursor: grabbing; }
+.orgflow-edge { fill: none; stroke: var(--of-edge); stroke-width: 1.6; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.abx-panel.active .orgflow-edge { animation: ofEdge .7s ease forwards; animation-delay: var(--ed, 0s); }
+@keyframes ofEdge { to { stroke-dashoffset: 0; } }
+.orgflow-node { overflow: visible; }
+.abx-panel.active .orgflow-node { animation: ofNode .5s ease both; }
+@keyframes ofNode { from { opacity: 0; } }
 .ofn { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 12px; border-radius: 11px; background: var(--card-solid); border: 1px solid var(--border); border-left: 3px solid var(--tc); font-size: 11.5px; white-space: nowrap; overflow: hidden; box-shadow: 0 6px 16px -11px rgba(40, 26, 80, .45); }
-.ofn b { overflow: hidden; text-overflow: ellipsis; }
-.ofn b { font-weight: 600; color: var(--ink); }
+.ofn b { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
 .ofn.exec { border-color: color-mix(in srgb, var(--tc) 40%, var(--border)); border-left-color: var(--tc); }
 .ofn.ceo { background: var(--grad); border: none; color: #fff; box-shadow: 0 14px 30px -12px var(--violet); font-size: 12.5px; }
 .ofn.ceo b { color: #fff; }
 .ofn-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-.ofn.ceo .ofn-dot { background: rgba(255, 255, 255, .92) !important; }
-.ofn-h { opacity: 0 !important; width: 1px !important; height: 1px !important; min-width: 0 !important; min-height: 0 !important; border: none !important; }
-.orgflow .react-flow__controls { box-shadow: var(--shadow); border-radius: 10px; overflow: hidden; }
-.orgflow .react-flow__controls-button { background: var(--card-solid); border-bottom: 1px solid var(--border); color: var(--ink); width: 26px; height: 26px; }
-.orgflow .react-flow__controls-button svg { fill: var(--ink); }
-.orgflow .react-flow__controls-button:hover { background: color-mix(in srgb, var(--violet) 12%, var(--card-solid)); }
+.ofn.ceo .ofn-dot { background: rgba(255, 255, 255, .92); }
+.orgflow-hint { position: absolute; top: 10px; left: 12px; z-index: 5; font-size: 10.5px; font-weight: 600; color: var(--muted); background: color-mix(in srgb, var(--card-solid) 70%, transparent); padding: 3px 9px; border-radius: 999px; pointer-events: none; }
+.orgflow-ctrl { position: absolute; bottom: 10px; right: 10px; z-index: 5; display: flex; flex-direction: column; gap: 4px; }
+.orgflow-ctrl button { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-solid); color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 4px 12px -6px rgba(40, 26, 80, .4); transition: background .2s; }
+.orgflow-ctrl button:hover { background: color-mix(in srgb, var(--violet) 12%, var(--card-solid)); }
 
 .abx-ctrl { flex: none; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 10px; }
 .abx-arrow { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--card-solid); color: var(--ink); cursor: pointer; font-size: 18px; line-height: 1; }
@@ -164,7 +169,10 @@
   .pcard.ask { grid-column: auto; }
   .scr-founder { flex-direction: column; text-align: center; }
   .abx-panel { padding: 14px 16px; gap: 14px; }
-  .abx-team { padding: 12px 12px 4px; gap: 8px; }
+  .abx-team { padding: 10px 10px 4px; gap: 6px; }
+  .abx-team .abx-teamhead .scr-kick { display: none; }
+  .abx-teamlead { font-size: 21px; }
+  .abx-legend { font-size: 10px; gap: 10px; }
   .abx-halo-ring { width: 122px; height: 122px; }
 }
 
@@ -237,8 +245,6 @@
 .pdeck-ctrl { flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; }
 .pdeck-arrow { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--card-solid); color: var(--ink); cursor: pointer; font-size: 18px; line-height: 1; }
 .pdeck-arrow:disabled { opacity: .3; cursor: default; }
-.pdeck-play { border: 1px solid color-mix(in srgb, var(--violet) 40%, var(--border)); background: color-mix(in srgb, var(--violet) 8%, var(--card)); border-radius: 999px; padding: 8px 18px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--violet); transition: .2s; }
-.pdeck-play:hover { background: color-mix(in srgb, var(--violet) 16%, var(--card)); }
 .pdeck-dots { display: flex; gap: 5px; }
 .pdeck-dot { width: 6px; height: 6px; border-radius: 50%; border: none; background: var(--border); cursor: pointer; padding: 0; transition: .2s; }
 .pdeck-dot.on { width: 18px; border-radius: 4px; background: var(--grad); }

@@ -1,8 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Buddy from './components/Buddy'
+import OrgFlow from './components/OrgFlow'
 import { AGENTS } from './data/agents'
-
-const OrgFlow = lazy(() => import('./components/OrgFlow'))
 
 export type Tab = 'home' | 'products' | 'about' | 'pitch'
 export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }) => void
@@ -125,9 +124,7 @@ export function About() {
             <span className="scr-kick">The company</span>
             <h2 className="abx-teamlead">A company that <em>runs itself.</em></h2>
           </div>
-          {i === 1
-            ? <Suspense fallback={<div className="orgflow" />}><OrgFlow /></Suspense>
-            : <div className="orgflow" />}
+          <OrgFlow />
           <div className="abx-legend">{MODEL_LEGEND.map(([c, l]) => <span key={l}><i style={{ background: c }} />{l}</span>)}</div>
         </section>
       </div>

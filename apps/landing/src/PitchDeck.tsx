@@ -222,19 +222,12 @@ const SLIDES: Slide[] = [
 export default function PitchDeck() {
   const { data } = useHqPitch()
   const [idx, setIdx] = useState(0)
-  const [playing, setPlaying] = useState(false)
   const n = SLIDES.length
   const wheelAcc = useRef(0)
   const lastHop = useRef(0)
 
   const go = useCallback((d: number) => setIdx(i => Math.max(0, Math.min(n - 1, i + d))), [n])
-  const manual = useCallback((d: number) => { setPlaying(false); go(d) }, [go])
-
-  useEffect(() => {
-    if (!playing) return
-    const id = setInterval(() => setIdx(i => (i + 1) % n), 5200)
-    return () => clearInterval(id)
-  }, [playing, n])
+  const manual = useCallback((d: number) => go(d), [go])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -272,8 +265,7 @@ export default function PitchDeck() {
       </div>
       <div className="pdeck-ctrl">
         <button className="pdeck-arrow" onClick={() => manual(-1)} disabled={idx === 0} aria-label="Previous">‹</button>
-        <button className="pdeck-play" onClick={() => setPlaying(p => !p)}>{playing ? '❙❙ Pause' : '▸ Present'}</button>
-        <div className="pdeck-dots">{SLIDES.map((s, i) => <button key={s.id} className={`pdeck-dot${i === idx ? ' on' : ''}`} onClick={() => { setPlaying(false); setIdx(i) }} aria-label={s.id} />)}</div>
+        <div className="pdeck-dots">{SLIDES.map((s, i) => <button key={s.id} className={`pdeck-dot${i === idx ? ' on' : ''}`} onClick={() => setIdx(i)} aria-label={s.id} />)}</div>
         <button className="pdeck-arrow" onClick={() => manual(1)} disabled={idx === n - 1} aria-label="Next">›</button>
       </div>
     </div>
