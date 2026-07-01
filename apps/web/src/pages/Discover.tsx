@@ -59,6 +59,23 @@ export default function Discover() {
         <h1 className="h-title" style={{ marginTop: 6 }}>Play what kids <span className="g">built</span></h1>
       </div>
 
+      {/* ── ⭐ Star by ArgantaLab — the flagship native game, always first ── */}
+      <button className="ship-star" onClick={() => go({ tab: 'kinquest' })}>
+        <div className="ship-star-glow" aria-hidden />
+        <div className="ship-star-body">
+          <span className="ship-star-tag">⭐ Star by ArgantaLab</span>
+          <h2 className="ship-star-title">KinQuest</h2>
+          <p className="ship-star-desc">Collect kin, challenge Sanctuary Keepers, and climb to The Apex — every battle powered by your own schoolwork.</p>
+          <span className="ship-star-cta"><Play /> Play now</span>
+        </div>
+        <div className="ship-star-art" aria-hidden>
+          <span className="ship-star-emoji">🗺️</span>
+          <span className="ship-star-mini m1">🔢</span>
+          <span className="ship-star-mini m2">📖</span>
+          <span className="ship-star-mini m3">⚡</span>
+        </div>
+      </button>
+
       {/* ── Featured hero (Circle HQ curated) ── */}
       {feat && (
         <button className="ship-hero" onClick={() => playFeatured(feat)}>

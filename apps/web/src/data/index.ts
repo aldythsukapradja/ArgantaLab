@@ -25,6 +25,7 @@ export interface ModuleItem {
 
 // ── Icons ────────────────────────────────────────────────────
 export const I: Record<string, string> = {
+  kinquest: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>`,
   arganta: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="12" rx="4"/><circle cx="8.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><path d="M15 11v2M16 12h-2" stroke-linecap="round"/></svg>`,
   web: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18"/></svg>`,
   ai: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" stroke-linejoin="round"/><circle cx="18" cy="17" r="1.4"/><circle cx="6" cy="17" r="1"/></svg>`,
@@ -51,6 +52,7 @@ export const LOGO = `<svg width="32" height="32" viewBox="0 0 40 40"><defs><line
 // ── Navigation ───────────────────────────────────────────────
 //  Play (home) · Learn (6 learning worlds) · Build · Ship · You
 export const NAV: NavItem[] = [
+  { tab: 'kinquest',  label: 'KinQuest',     short: 'KinQuest', icon: 'kinquest',  group: 'PLAY' },
   { tab: 'arganta',   label: 'ArgantaLab',   short: 'Home',     icon: 'arganta',   group: 'PLAY' },
   { tab: 'kinworld',  label: 'KinWorld',     short: 'KinWorld', icon: 'kinworld',  group: 'PLAY' },
   { tab: 'quests',    label: 'Quests',       short: 'Quests',   icon: 'quests',    group: 'PLAY' },
@@ -79,7 +81,7 @@ export const WORLD_TABS = ['num', 'wrd', 'won', 'log', 'wld', 'lif']
 //  `pills`   = optional centre sub-nav pills (omit for hub-style groups).
 export interface MobileTab { key: string; label: string; icon: string; members: string[]; pills?: string[] }
 export const MOBILE_TABS: MobileTab[] = [
-  { key: 'play',   label: 'Play',   icon: 'arganta',  members: ['arganta', 'kinworld', 'quests', 'fame'], pills: ['arganta', 'kinworld', 'quests', 'fame'] },
+  { key: 'play',   label: 'Play',   icon: 'arganta',  members: ['kinquest', 'arganta', 'kinworld', 'quests', 'fame'], pills: ['kinquest', 'arganta', 'kinworld', 'quests', 'fame'] },
   { key: 'learn',  label: 'Learn',  icon: 'learn',    members: ['learn', ...WORLD_TABS] },
   { key: 'build',  label: 'Build',  icon: 'studio',   members: ['studio', 'lab', 'pitch'], pills: ['studio', 'lab', 'pitch'] },
   { key: 'ship',   label: 'Ship',   icon: 'discover', members: ['discover', 'library', 'gamestore'], pills: ['discover', 'library', 'gamestore'] },

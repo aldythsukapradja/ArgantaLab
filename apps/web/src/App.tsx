@@ -35,6 +35,7 @@ import Profile from '@/pages/Profile'
 import FamilyPulse from '@/pages/FamilyPulse'
 import Quests from '@/pages/Quests'
 import KinWorld from '@/pages/KinWorld'
+import KinQuest from '@/pages/KinQuest'
 import MountShop from '@/pages/MountShop'
 import LearnHub from '@/pages/LearnHub'
 import World from '@/pages/World'
@@ -261,6 +262,7 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'profile') return <Profile />
   if (tab === 'parent') return <FamilyPulse />
   if (tab === 'quests') return <Quests />
+  if (tab === 'kinquest') return <KinQuest />
   if (tab === 'kinworld') return <KinWorld />
   // 'admin' (Content Studio) relocated to Circle HQ — fall through to home.
   return <PlayHome />
