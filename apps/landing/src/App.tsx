@@ -9,21 +9,21 @@ const EditorialDeck = lazy(() => import('./decks/EditorialDeck'))
 type Route =
   | { view: 'app'; tab: Tab }
   | { view: 'editorial'; present: boolean }
-  | { view: 'general' }
+  | { view: 'general'; flight?: string }
 
-const TABS: Tab[] = ['home', 'products', 'company', 'pitch']
+const TABS: Tab[] = ['home', 'products', 'about', 'pitch']
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
   const [a, b] = h.split('/')
   if (a === 'editorial') return { view: 'editorial', present: b === 'present' }
-  if (a === 'general') return { view: 'general' }
+  if (a === 'general') return { view: 'general', flight: b || undefined }
   if ((TABS as string[]).includes(a)) return { view: 'app', tab: a as Tab }
   return { view: 'app', tab: 'home' }
 }
 function toHash(r: Route): string {
   if (r.view === 'editorial') return `#/editorial${r.present ? '/present' : ''}`
-  if (r.view === 'general') return '#/general'
+  if (r.view === 'general') return `#/general${r.flight ? '/' + r.flight : ''}`
   return r.tab === 'home' ? '#/' : `#/${r.tab}`
 }
 
@@ -43,17 +43,18 @@ export default function App() {
   }, [])
 
   const onTab = useCallback((tab: Tab) => nav({ view: 'app', tab }), [nav])
-  const onLaunch = useCallback((deck: string, present: boolean) => {
-    if (deck === 'general') nav({ view: 'general' })
-    else nav({ view: 'editorial', present })
+  const onLaunch = useCallback((deck: string, opt?: { present?: boolean; flight?: string }) => {
+    if (deck === 'general') nav({ view: 'general', flight: opt?.flight })
+    else nav({ view: 'editorial', present: opt?.present ?? false })
   }, [nav])
   const exit = useCallback(() => nav({ view: 'app', tab: 'home' }), [nav])
+  const exitToProducts = useCallback(() => nav({ view: 'app', tab: 'products' }), [nav])
 
   return (
     <ThemeProvider>
       <Suspense fallback={<div className="app-loading"><span className="app-loading-orb" /></div>}>
         {route.view === 'app' && <AppShell tab={route.tab} onTab={onTab} onLaunch={onLaunch} />}
-        {route.view === 'general' && <GeneralDeck onExit={exit} />}
+        {route.view === 'general' && <GeneralDeck flight={route.flight} onExit={exitToProducts} />}
         {route.view === 'editorial' && <EditorialDeck present={route.present} onExit={exit} />}
       </Suspense>
     </ThemeProvider>

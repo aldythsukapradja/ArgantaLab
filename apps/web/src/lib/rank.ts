@@ -1,25 +1,29 @@
 // ============================================================
 //  SEASONAL RANK  (within-circle ladder, resets every 3 months)
-//  Points are earned ONLY from learning (hooked into addXp). Tiers/stars are
-//  derived client-side from the season's points; standings are scoped to the
-//  kid's circle. Everything degrades to empty offline. Server side: rank_points
-//  table + add_rank_points / season_points RPCs (see supabase/rank.sql).
+//  The rank number IS the learner's XP this season — every XP earned counts 1:1,
+//  UNCAPPED. Tiers use a hand-tuned rising curve calibrated so the top is a real
+//  season-long grind (a ~2.2k-XP/day kid reaches Luminary in ~70+ days), while
+//  early tiers come quick and encouraging. Everything degrades to empty offline.
+//  Server side: rank_points table + add_rank_points / season_points RPCs.
 // ============================================================
 
 import { supabase, cloudEnabled } from './supabase'
 
 // ArgantaLab's own ladder — a creator/explorer growth arc, not metals.
-export interface Tier { name: string; color: string; glyph: string }
+// `at` = season XP needed to reach the tier. The gaps widen hard on purpose:
+// Spark/Explorer come in days; Luminary is the summit of a dedicated season.
+export interface Tier { name: string; color: string; glyph: string; at: number }
 export const TIERS: Tier[] = [
-  { name: 'Spark',      color: '#f0a83a', glyph: '✦' }, // just getting started
-  { name: 'Explorer',   color: '#5ec257', glyph: '❖' },
-  { name: 'Adventurer', color: '#37a8c4', glyph: '✧' },
-  { name: 'Maker',      color: '#7a4fd0', glyph: '✶' },
-  { name: 'Sage',       color: '#d9a520', glyph: '★' },
-  { name: 'Luminary',   color: '#d4476b', glyph: '✷' }, // the top of the arc
+  { name: 'Spark',      color: '#f0a83a', glyph: '✦', at: 0 },       // just getting started
+  { name: 'Explorer',   color: '#5ec257', glyph: '❖', at: 5000 },
+  { name: 'Adventurer', color: '#37a8c4', glyph: '✧', at: 15000 },
+  { name: 'Maker',      color: '#7a4fd0', glyph: '✶', at: 40000 },
+  { name: 'Sage',       color: '#d9a520', glyph: '★', at: 85000 },
+  { name: 'Luminary',   color: '#d4476b', glyph: '✷', at: 160000 }, // the summit
 ]
-const POINTS_PER_STAR = 40
 const STARS_PER_TIER = 5
+/** The XP that crowns the ladder (reaching this = Luminary). */
+export const TOP_POINTS = TIERS[TIERS.length - 1].at
 
 /** Current season id, e.g. "2026-Q3". Matches season_of() on the server. */
 export function seasonId(d = new Date()): string {
@@ -31,15 +35,21 @@ export function seasonEndsInDays(d = new Date()): number {
   return Math.max(0, Math.ceil((end.getTime() - d.getTime()) / 86400000))
 }
 
-export interface RankTier { tierIdx: number; tier: Tier; star: number; starsPer: number; points: number }
+export interface RankTier { tierIdx: number; tier: Tier; star: number; starsPer: number; points: number; nextAt: number; frac: number }
 export function tierOf(points: number): RankTier {
-  const stars = Math.floor(Math.max(0, points) / POINTS_PER_STAR)
-  const tierIdx = Math.min(TIERS.length - 1, Math.floor(stars / STARS_PER_TIER))
-  const star = tierIdx >= TIERS.length - 1 ? STARS_PER_TIER : stars % STARS_PER_TIER
-  return { tierIdx, tier: TIERS[tierIdx], star, starsPer: STARS_PER_TIER, points }
+  const p = Math.max(0, points)
+  let idx = 0
+  for (let i = 0; i < TIERS.length; i++) if (p >= TIERS[i].at) idx = i
+  const tier = TIERS[idx]
+  const isTop = idx >= TIERS.length - 1
+  const nextAt = isTop ? tier.at : TIERS[idx + 1].at
+  const span = nextAt - tier.at
+  const frac = isTop ? 1 : span > 0 ? (p - tier.at) / span : 1
+  const star = isTop ? STARS_PER_TIER : Math.min(STARS_PER_TIER, Math.floor(frac * STARS_PER_TIER))
+  return { tierIdx: idx, tier, star, starsPer: STARS_PER_TIER, points: p, nextAt, frac: Math.min(1, frac) }
 }
 
-/** Award season points for a learning event (best-effort; called from addXp). */
+/** Award season XP for a learning event (best-effort; called from addXp, uncapped). */
 export async function addRankPoints(points: number): Promise<void> {
   if (!cloudEnabled || points <= 0) return
   try { await supabase.rpc('add_rank_points', { p_points: Math.round(points) }) } catch { /* ignore */ }

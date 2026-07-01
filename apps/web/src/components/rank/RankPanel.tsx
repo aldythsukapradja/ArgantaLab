@@ -37,7 +37,7 @@ export default function RankPanel() {
           <div className="rank-name" style={{ color: t.tier.color }}>{t.tier.name}
             <span className="rank-stars">{'★'.repeat(t.star)}<span className="dim">{'★'.repeat(t.starsPer - t.star)}</span></span>
           </div>
-          <div className="rank-sub">{points} pts · season ends in {days} day{days === 1 ? '' : 's'}</div>
+          <div className="rank-sub">{points.toLocaleString()} XP · season ends in {days} day{days === 1 ? '' : 's'}</div>
         </div>
       </div>
       {board.length > 1 && (
@@ -46,7 +46,7 @@ export default function RankPanel() {
             <div key={r.id} className={`rank-row${r.id === myId ? ' me' : ''}`}>
               <span className="rank-pos">{i + 1}</span>
               <span className="rank-who">{r.id === myId ? `${learnerName} (you)` : r.name}</span>
-              <span className="rank-pts">{r.points}</span>
+              <span className="rank-pts">{r.points.toLocaleString()}</span>
             </div>
           ))}
         </div>

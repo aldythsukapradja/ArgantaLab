@@ -51,9 +51,9 @@ function ArgantaMark({ size = 20 }: { size?: number }) {
 }
 function IconMap() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l-6 2v12l6-2 6 2 6-2V6l-6 2-6-2zM9 6v12M15 8v12" /></svg> }
 
-export default function GeneralDeck({ onExit }: { onExit?: () => void }) {
+export default function GeneralDeck({ flight, onExit }: { flight?: string; onExit?: () => void }) {
   const { dark } = useTheme()
-  const [view, setView] = useState<View>({ mode: 'hub' })
+  const [view, setView] = useState<View>(flight && FLIGHT_BY_ID[flight] ? { mode: 'flight', f: flight, i: 0 } : { mode: 'hub' })
   const [size, setSize] = useState(() => sceneSize())
   const stageRef = useRef<HTMLDivElement>(null)
   const cam = useRef({ x: HUB_POS.x, y: HUB_POS.y, s: fitScale(true) })
@@ -152,10 +152,10 @@ export default function GeneralDeck({ onExit }: { onExit?: () => void }) {
   }, [step])
 
   const activeId = viewId(view)
-  const flight = view.mode === 'flight' ? FLIGHT_BY_ID[view.f] : null
-  const dots = flight?.scenes ?? []
-  const footLabel = view.mode === 'hub' ? 'The Arganta cosmos' : view.mode === 'subhub' ? 'Products' : `${flight?.title} · ${flight?.scenes[view.i].title}`
-  const progress = useMemo(() => view.mode === 'flight' && flight ? (view.i / Math.max(1, flight.scenes.length - 1)) * 100 : 0, [view, flight])
+  const curFlight = view.mode === 'flight' ? FLIGHT_BY_ID[view.f] : null
+  const dots = curFlight?.scenes ?? []
+  const footLabel = view.mode === 'hub' ? 'The Arganta cosmos' : view.mode === 'subhub' ? 'Products' : `${curFlight?.title} · ${curFlight?.scenes[view.i].title}`
+  const progress = useMemo(() => view.mode === 'flight' && curFlight ? (view.i / Math.max(1, curFlight.scenes.length - 1)) * 100 : 0, [view, curFlight])
 
   return (
     <div className="cosmos-app">
@@ -193,7 +193,7 @@ export default function GeneralDeck({ onExit }: { onExit?: () => void }) {
       {view.mode === 'flight' && (
         <div className="cosmos-controls">
           <button className="cctl-arrow" onClick={() => step(-1)} aria-label="Previous"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
-          <div className="cctl-dots">{dots.map((sc, i) => <button key={sc.id} className={`cctl-dot${view.mode === 'flight' && view.i === i ? ' on' : ''}`} onClick={() => goFlight(flight!.id, i)} aria-label={sc.title} title={sc.title} />)}</div>
+          <div className="cctl-dots">{dots.map((sc, i) => <button key={sc.id} className={`cctl-dot${view.mode === 'flight' && view.i === i ? ' on' : ''}`} onClick={() => goFlight(curFlight!.id, i)} aria-label={sc.title} title={sc.title} />)}</div>
           <button className="cctl-arrow next" onClick={() => step(1)} aria-label="Next"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg></button>
         </div>
       )}

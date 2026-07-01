@@ -2,12 +2,14 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { DailyCircle } from '@lib/dailyRings'
 import { myRankPoints, tierOf } from '@lib/rank'
 import TierIcon from './TierIcon'
+import RankLadder from './RankLadder'
 
 // The daily North Star — Apple-Activity-style concentric rings (Focus outermost,
 // filling inward through Rings, Quests, Catch), with the rank crest at the centre.
 // Each goal also shows as a clean colour-coded card.
 export default function NorthStar({ circle, onGo }: { circle: DailyCircle; onGo: (tab: string) => void }) {
   const [points, setPoints] = useState(0)
+  const [ladder, setLadder] = useState(false)
   useEffect(() => { myRankPoints().then(setPoints) }, [])
   const t = tierOf(points)
 
@@ -20,6 +22,7 @@ export default function NorthStar({ circle, onGo }: { circle: DailyCircle; onGo:
 
   return (
     <div className={`ns${circle.full ? ' full' : ''}`}>
+      <div className="ns-ringcol">
       <div className="ns-ring">
         <svg viewBox="0 0 120 120" width="126" height="126">
           <g fill="none" strokeLinecap="round">
@@ -38,11 +41,15 @@ export default function NorthStar({ circle, onGo }: { circle: DailyCircle; onGo:
         </svg>
         <div className="ns-center"><TierIcon color={t.tier.color} glyph={t.tier.glyph} size={34} /></div>
       </div>
+      <button className="ns-rank" onClick={() => setLadder(true)} style={{ ['--tc' as string]: t.tier.color }}>
+        <b>{t.tier.name}</b><span>{points.toLocaleString()} XP · how to climb ›</span>
+      </button>
+      </div>
 
       <div className="ns-body">
         <div className="ns-head">
           <b>Today's North Star</b>
-          <span className="ns-tier" style={{ color: circle.full ? '#0f6e56' : t.tier.color, background: `${circle.full ? '#1d9e75' : t.tier.color}1e` }}>{t.tier.name} · {circle.done}/4</span>
+          <span className="ns-tier" style={{ color: circle.full ? '#0f6e56' : 'var(--t2)', background: circle.full ? '#1d9e751e' : 'var(--panel-2)' }}>{circle.done}/4 done</span>
         </div>
         <div className="ns-goals">
           {goals.map((g, i) => (
@@ -55,6 +62,8 @@ export default function NorthStar({ circle, onGo }: { circle: DailyCircle; onGo:
           ))}
         </div>
       </div>
+
+      {ladder && <RankLadder points={points} onClose={() => setLadder(false)} />}
     </div>
   )
 }

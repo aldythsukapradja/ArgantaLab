@@ -695,12 +695,20 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
   border-radius: 14px; padding: 12px 14px; }
 .hall-mount { align-self: center; }
 /* Kindex filter pills */
-.dex-pills { display: flex; gap: 7px; overflow-x: auto; padding: 0 22px 12px; scrollbar-width: none; }
+.dex-pillwrap { position: relative; }
+.dex-pillwrap::before, .dex-pillwrap::after { content: ''; position: absolute; top: 0; bottom: 12px; width: 26px; pointer-events: none; z-index: 3; }
+.dex-pillwrap::before { left: 0; background: linear-gradient(90deg, var(--bg), transparent); }
+.dex-pillwrap::after { right: 0; background: linear-gradient(270deg, var(--bg), transparent); }
+.dex-pills { display: flex; gap: 8px; overflow-x: auto; padding: 2px 22px 12px; scrollbar-width: none; }
 .dex-pills::-webkit-scrollbar { display: none; }
-.dex-pill { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; padding: 6px 13px; border-radius: 999px; cursor: pointer;
-  background: var(--panel); border: 1.5px solid var(--border); color: var(--t1); transition: .15s; white-space: nowrap; }
-.dex-pill:hover { border-color: var(--accent); }
-.dex-pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.dex-pill { --wc: var(--accent); flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 800; padding: 7px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  color: var(--t1); background: color-mix(in srgb, var(--wc) 9%, var(--panel));
+  border: 1.5px solid color-mix(in srgb, var(--wc) 32%, var(--border)); transition: transform .15s, box-shadow .15s, background .15s; }
+.dex-pill .dex-pill-ic { font-size: 13px; line-height: 1; }
+.dex-pill:hover { transform: translateY(-1px); border-color: var(--wc); }
+.dex-pill.on { color: #fff; background: var(--wc); border-color: var(--wc);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--wc) 75%, transparent); }
 .nx-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; }
 .nx-rider { flex: 0 0 auto; display: grid; place-items: center; gap: 4px; }
 .nx-mount-btn { border: none; cursor: pointer; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 999px;

@@ -1,8 +1,9 @@
 // ============================================================
 //  ARGANTALAB · KINWORLD  (the living hub — its own Play tab)
-//  The map is a Phaser pixel-dungeon (KinWorldGame): a keep ringed by guardian
-//  kin, six themed gates in the walls, and a movable hero. Walking a gate drops
-//  into that world's Argantaland dungeon; tapping the keep opens the Town Hall
+//  The map is a PixiJS Kenney "Tiny Town" village (KinWorldGame): a maturing
+//  Town Hall ringed by six themed cottages with befriended kin roaming their
+//  yards, and a movable Buddy hero (camera follows). Walking to a cottage porch
+//  drops into that world's Argantaland dungeon; tapping the hall opens the Town
 //  (Kindex + Collect), which stays a React overlay. Care + harvest are
 //  server-authoritative.
 // ============================================================
@@ -158,13 +159,19 @@ export default function KinWorld() {
               </div>
             </div>
 
-            <div className="dex-pills">
-              <button className={`dex-pill${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}>All</button>
-              {WORLDS.map(w => (
-                <button key={w.key} className={`dex-pill${filter === w.key ? ' on' : ''}`}
-                  style={filter === w.key ? { background: w.color, borderColor: w.color, color: '#fff' } : undefined}
-                  onClick={() => setFilter(w.key)}>{w.name}</button>
-              ))}
+            <div className="dex-pillwrap">
+              <div className="dex-pills">
+                <button className={`dex-pill${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}>
+                  <span className="dex-pill-ic">🗺️</span>All
+                </button>
+                {WORLDS.map(w => (
+                  <button key={w.key} className={`dex-pill${filter === w.key ? ' on' : ''}`}
+                    style={{ ['--wc' as string]: w.color }}
+                    onClick={() => setFilter(w.key)}>
+                    <span className="dex-pill-ic">{w.emoji}</span>{w.name}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="dex-scroll">

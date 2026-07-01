@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHqPitch, UNIT_ECON, type PitchData } from './lib/hq'
-import OrgChart from './components/OrgChart'
+import { AGENTS } from './data/agents'
 
 // ── inline investor pitch — a slide presentation inside the Pitch tab ──
 const fmt = (n?: number | null, suffix = '') => n == null ? null : (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(Math.round(n * 10) / 10)) + suffix
@@ -111,8 +111,12 @@ const SLIDES: Slide[] = [
   </> },
   { id: 'moat', el: () => <>
     <span className="pkick">The moat</span>
-    <h2 className="pdisplay sm">A company run by <em>agents.</em></h2>
-    <div className="pdeck-org"><OrgChart /></div>
+    <h2 className="pdisplay sm">Three moats that <em>compound.</em></h2>
+    <div className="pgrid3">
+      <div className="mcard"><b className="mcard-v">{AGENTS.length}</b><span className="mcard-l">AI-agent company</span><span className="mcard-what">One founder, a full org of agents — lean, ships fast, scales without headcount.</span></div>
+      <div className="mcard"><span className="mcard-l" style={{ color: '#06b6d4' }}>Circles</span><span className="mcard-what">Network effect — every family deepens the trusted circle graph + proprietary learning data.</span></div>
+      <div className="mcard"><span className="mcard-l" style={{ color: '#10b981' }}>Content depth</span><span className="mcard-what">Six worlds × six age stages — thousands of authored, adaptive learning items.</span></div>
+    </div>
   </> },
   { id: 'traction', el: d => <>
     <span className="pkick">Traction · live catalog</span>
