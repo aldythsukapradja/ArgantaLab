@@ -6,6 +6,7 @@
 
 import { live } from './live'
 import type { GrowthOverview, EconomyData, SchemaInsights, ContentMatrix, PortfolioVc } from './types'
+import type { OfficeId } from './graph/types'
 import { PRESETS, DEFAULT_GLOBALS, computeScenario } from './monetization'
 
 export type Model = 'sonnet' | 'haiku' | 'det'
@@ -142,6 +143,35 @@ export const AGENTS: Agent[] = [
     mission: '60-second demo script, investor / parent / kid demo paths, the wow moment.',
     inputs: ['hq_growth_overview'], output: 'Demo & wow design' },
 ]
+
+// ── Reconciliation to Command's six offices ─────────────────────────────────
+// The legacy `tier` grouping collapses into `office` ownership. Command is the
+// single source of truth for the org; this map reroots the 27-agent roster under
+// the six C-level chiefs. (Build-group Agent Builder is now authoring-only.)
+export const AGENT_OFFICE: Record<string, OfficeId> = {
+  ceo: 'bridge',
+  coo: 'operations', cpo: 'operations',
+  cto: 'technology', cfo: 'treasury', gc: 'legal',
+  'vp-arg': 'operations', 'pm-game': 'operations', 'learn-dir': 'operations',
+  'content-writer': 'operations', 'game-design': 'operations', 'kid-tester': 'operations',
+  'vp-kin': 'operations', 'pm-moments': 'operations', 'parent-intel': 'operations', community: 'operations',
+  'vp-growth': 'operations', retention: 'operations', acquisition: 'operations',
+  ir: 'treasury',
+  'data-arch': 'technology', qa: 'technology', release: 'technology',
+  security: 'legal',
+  brand: 'operations', 'content-creator': 'operations', demo: 'operations',
+}
+export const officeOf = (a: Agent): OfficeId => AGENT_OFFICE[a.id] ?? 'operations'
+
+export const OFFICE_META: Record<OfficeId, { label: string; accent: string }> = {
+  bridge: { label: 'The Bridge · CEO', accent: 'var(--acc)' },
+  operations: { label: 'Operations · COO', accent: 'var(--mag)' },
+  technology: { label: 'Technology · CTO', accent: 'var(--acc-text)' },
+  treasury: { label: 'Treasury · CFO', accent: 'var(--ok)' },
+  legal: { label: 'Legal · GC', accent: 'var(--warn)' },
+  roster: { label: 'The Guild · Guildmaster', accent: 'var(--acc)' },
+}
+export const OFFICE_KEYS: OfficeId[] = ['bridge', 'operations', 'technology', 'treasury', 'legal', 'roster']
 
 // Which agents are "lit up" right now is derived from whether their primary
 // data source has any signal — deterministic, not decorative.
