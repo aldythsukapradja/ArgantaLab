@@ -58,6 +58,7 @@ interface AppStore {
   // — session UI state (not persisted) —
   activeTab: string
   enterLand: string | null   // "Join" a friend exploring → open this world's ArgantaLand on arrival
+  landReturnTo: 'kinworld' | 'learn' | null // where a dungeon's back button returns to
   lessonId: string | null
   lessonStep: number
   showConcept: boolean
@@ -177,6 +178,7 @@ export const useAppStore = create<AppStore>()(
       // session defaults
       activeTab: 'arganta',
       enterLand: null,
+      landReturnTo: null,
       lessonId: null,
       lessonStep: 0,
       showConcept: false,

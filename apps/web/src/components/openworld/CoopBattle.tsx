@@ -216,7 +216,7 @@ export default function CoopBattle({ world, joinSessionId, onExit }: { world: Wo
         <h2>{won ? '🎉 Victory together!' : '💛 Out of hearts'}</h2>
         <KinSprite kin={st.kin_key} size={120} />
         <p>{won ? 'Your team weakened the kin — great teamwork!' : 'Regroup and try again with your buddy.'}</p>
-        <button className="btn btn-primary" onClick={onExit}>Back to Openworld</button>
+        <button className="btn btn-primary" onClick={onExit}>Back to KinWorld</button>
       </div>
     )
   }

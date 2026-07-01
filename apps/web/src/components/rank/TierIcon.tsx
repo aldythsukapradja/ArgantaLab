@@ -11,7 +11,7 @@ function shade(hex: string, pct: number): string {
 
 export default function TierIcon({ color, glyph, size = 52 }: { color: string; glyph: string; size?: number }) {
   const uid = 'tg' + color.replace('#', '')
-  const light = shade(color, 0.32), dark = shade(color, -0.28)
+  const light = shade(color, 0.2), dark = shade(color, -0.28)
   return (
     <svg viewBox="0 0 56 56" width={size} height={size} role="img" aria-label="rank crest">
       <defs>
@@ -19,7 +19,7 @@ export default function TierIcon({ color, glyph, size = 52 }: { color: string; g
           <stop offset="0" stopColor={light} /><stop offset="1" stopColor={dark} />
         </linearGradient>
         <radialGradient id={uid + 'g'} cx="50%" cy="42%" r="60%">
-          <stop offset="0" stopColor={color} stopOpacity="0.45" /><stop offset="1" stopColor={color} stopOpacity="0" />
+          <stop offset="0" stopColor={color} stopOpacity="0.28" /><stop offset="1" stopColor={color} stopOpacity="0" />
         </radialGradient>
       </defs>
       <circle cx="28" cy="28" r="26" fill={`url(#${uid}g)`} />

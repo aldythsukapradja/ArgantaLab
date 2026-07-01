@@ -6,7 +6,8 @@ import AvatarSprite from '../components/AvatarSprite'
 import MountSprite from '../components/MountSprite'
 import { WORLDS, RING_LABELS } from '../data/worlds'
 import { TOWN_KIN, TOWN_HABITATS, SHOP_COSMETICS, SHOP_MOUNTS } from '../data/kinworld'
-import { AGENTS, TIER_META, MODEL_META, PIPELINE, type Tier } from '../data/agents'
+import { PIPELINE } from '../data/agents'
+import OrgChart from '../components/OrgChart'
 import { useIsActive } from './active'
 
 export const SCENE_W = 1180
@@ -658,33 +659,16 @@ export function CWedge() {
   )
 }
 
-const TIER_ORDER: Tier[] = ['executive', 'argantalab', 'kinetik', 'growth', 'platform', 'brand']
-const AGENT_STATS = [['1', 'human CEO'], ['25', 'AI agents'], ['3', 'products run'], ['24/7', 'always on']]
+const AGENT_STATS = [['1', 'human CEO'], ['26', 'AI agents'], ['3', 'products run'], ['24/7', 'always on']]
 const AGENT_PROPS = ['Lean by default', 'Real-time KPIs', 'Agile decisions', 'Scales without headcount']
 export function CAgents() {
   return (
     <Center>
       <Kicker>The agentic engine · Circle HQ</Kicker>
       <h2 className="headline sm reveal">A company run by <Grad>agents.</Grad></h2>
-      <p className="lede wide reveal">Arganta is operated by a real workforce of specialist AI agents — a CEO agent orchestrating C-suite, product, growth and safety tribes. The whole company, deterministic-first, with no payroll to scale.</p>
       <div className="agent-stats reveal">{AGENT_STATS.map(([v, l]) => <div key={l} className="agent-stat"><b>{v}</b><span>{l}</span></div>)}</div>
       <div className="agent-props reveal">{AGENT_PROPS.map(p => <span key={p} className="prop-chip">{p}</span>)}</div>
-      <div className="roster reveal">
-        {TIER_ORDER.map(t => (
-          <div key={t} className="roster-tier">
-            <span className="roster-label" style={{ color: TIER_META[t].accent }}>{TIER_META[t].label}</span>
-            <div className="roster-row">
-              {AGENTS.filter(a => a.tier === t).map(a => (
-                <span key={a.id} className={`agent-pill${a.orchestrator ? ' boss' : ''}`} style={{ ['--tc' as string]: TIER_META[t].accent }} title={a.mission}>
-                  <b>{a.name}</b>
-                  <i className="model-dot" style={{ background: MODEL_META[a.model].fg }} />
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="model-legend reveal">{Object.entries(MODEL_META).map(([k, m]) => <span key={k}><i style={{ background: m.fg }} />{m.label}</span>)}</div>
+      <div className="reveal" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}><OrgChart /></div>
     </Center>
   )
 }

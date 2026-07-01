@@ -1,21 +1,30 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ThemeProvider } from './theme'
-import Hub from './Hub'
+import AppShell from './AppShell'
+import type { Tab } from './appscreens'
 
 const GeneralDeck = lazy(() => import('./decks/GeneralDeck'))
 const EditorialDeck = lazy(() => import('./decks/EditorialDeck'))
 
-type Route = { deck: 'hub' | 'general' | 'editorial'; present: boolean }
+type Route =
+  | { view: 'app'; tab: Tab }
+  | { view: 'editorial'; present: boolean }
+  | { view: 'general' }
+
+const TABS: Tab[] = ['home', 'products', 'company', 'pitch']
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
-  const [deck, mode] = h.split('/')
-  if (deck === 'general' || deck === 'editorial') return { deck, present: mode === 'present' }
-  return { deck: 'hub', present: false }
+  const [a, b] = h.split('/')
+  if (a === 'editorial') return { view: 'editorial', present: b === 'present' }
+  if (a === 'general') return { view: 'general' }
+  if ((TABS as string[]).includes(a)) return { view: 'app', tab: a as Tab }
+  return { view: 'app', tab: 'home' }
 }
-function toHash(r: Route) {
-  if (r.deck === 'hub') return '#/'
-  return `#/${r.deck}${r.present ? '/present' : ''}`
+function toHash(r: Route): string {
+  if (r.view === 'editorial') return `#/editorial${r.present ? '/present' : ''}`
+  if (r.view === 'general') return '#/general'
+  return r.tab === 'home' ? '#/' : `#/${r.tab}`
 }
 
 export default function App() {
@@ -27,29 +36,25 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onPop)
   }, [])
 
-  // The hub + editorial deck scroll; the camera (general) deck is fixed full-screen.
-  useEffect(() => {
-    const el = document.documentElement
-    if (route.deck === 'general') el.classList.remove('page-scroll')
-    else el.classList.add('page-scroll')
-  }, [route.deck])
-
   const nav = useCallback((r: Route) => {
     const hash = toHash(r)
     if (window.location.hash !== hash) window.history.pushState(null, '', hash)
     setRoute(r)
-    window.scrollTo(0, 0)
   }, [])
 
-  const open = useCallback((deck: string, present: boolean) => nav({ deck: deck as Route['deck'], present }), [nav])
-  const exit = useCallback(() => nav({ deck: 'hub', present: false }), [nav])
+  const onTab = useCallback((tab: Tab) => nav({ view: 'app', tab }), [nav])
+  const onLaunch = useCallback((deck: string, present: boolean) => {
+    if (deck === 'general') nav({ view: 'general' })
+    else nav({ view: 'editorial', present })
+  }, [nav])
+  const exit = useCallback(() => nav({ view: 'app', tab: 'home' }), [nav])
 
   return (
     <ThemeProvider>
       <Suspense fallback={<div className="app-loading"><span className="app-loading-orb" /></div>}>
-        {route.deck === 'hub' && <Hub onOpen={open} />}
-        {route.deck === 'general' && <GeneralDeck onExit={exit} />}
-        {route.deck === 'editorial' && <EditorialDeck present={route.present} onExit={exit} />}
+        {route.view === 'app' && <AppShell tab={route.tab} onTab={onTab} onLaunch={onLaunch} />}
+        {route.view === 'general' && <GeneralDeck onExit={exit} />}
+        {route.view === 'editorial' && <EditorialDeck present={route.present} onExit={exit} />}
       </Suspense>
     </ThemeProvider>
   )

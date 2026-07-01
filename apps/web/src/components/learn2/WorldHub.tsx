@@ -39,7 +39,7 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
 }
 
 export default function WorldHub({ world }: { world: World }) {
-  const { requireAuth, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode, xp, enterLand } = useAppStore()
+  const { requireAuth, addToast, resolvedOutfit, session, go, stageKey, setStage, isKidMode, xp, enterLand, landReturnTo } = useAppStore()
   const outfit = resolvedOutfit()
   const stage = STAGES.find(s => s.key === stageKey)
   const stageMeta = STAGE_META[stageKey]
@@ -142,7 +142,11 @@ export default function WorldHub({ world }: { world: World }) {
     return (
       <div className="le-world">
         {cinematic}
-        <Argantaland world={world} onExit={() => { setLandView(false); if (uid) pushLearnState(uid); force(n => n + 1) }} />
+        <Argantaland world={world} onExit={() => {
+          setLandView(false); if (uid) pushLearnState(uid); force(n => n + 1)
+          // return to wherever the kid entered from: the KinWorld map, or this Learn hub
+          if (landReturnTo === 'kinworld') { useAppStore.setState({ landReturnTo: null }); go({ tab: 'kinworld' }) }
+        }} />
       </div>
     )
   }
@@ -150,7 +154,7 @@ export default function WorldHub({ world }: { world: World }) {
   const TABS: { k: Spine; label: string }[] = [
     { k: 'journey', label: 'Journey' },
     { k: 'signature', label: world.signature },
-    { k: 'arena', label: 'Openworld' },
+    { k: 'arena', label: 'KinWorld' },
     { k: 'badges', label: 'Badges' },
     { k: 'profile', label: 'Profile' },
   ]
@@ -239,20 +243,20 @@ export default function WorldHub({ world }: { world: World }) {
         {spine === 'arena' && (
           <div className="le-sig">
             <div className="dr-gallery-head">
-              <h3 style={{ color: world.color }}>🗺️ {world.name} Openworld</h3>
-              <p>Explore and battle wild kin. Answer to power your abilities, weaken a kin, then befriend it — it comes to live in your <b>Nexus</b>.</p>
+              <h3 style={{ color: world.color }}>🗺️ {world.name} · KinWorld</h3>
+              <p>Explore and battle wild kin. Answer to power your abilities, weaken a kin, then befriend it — it comes to live in your <b>KinWorld town</b>.</p>
             </div>
-            <button className="ow-land-btn" onClick={() => { if (requireAuth('to explore')) setLandView(true) }}
+            <button className="ow-land-btn" onClick={() => { if (requireAuth('to explore')) { useAppStore.setState({ landReturnTo: 'learn' }); setLandView(true) } }}
               style={{ ['--wc' as string]: world.color }}>
               <span className="ow-land-ic">🗺️</span>
-              <span className="ow-land-txt"><b>Enter ArgantaLand</b><small>Walk the {world.name} map · meet kin · team up with friends</small></span>
+              <span className="ow-land-txt"><b>Enter KinWorld</b><small>Walk the {world.name} map · meet kin · team up with friends</small></span>
               <span className="ow-land-go">▶</span>
             </button>
             <ExploringNotice onJoin={w => { if (w === world.key) { setLandView(true) } else { useAppStore.setState({ enterLand: w }); go({ tab: w.toLowerCase() }) } }} />
             <div className="ow-lobby">
               {wildKin.map(k => (
                 <button key={k.id} className="ow-kincard" style={{ borderColor: `${k.color}44` }}
-                  onClick={() => { if (requireAuth('to enter the Openworld')) setBattleKin(k.id) }}>
+                  onClick={() => { if (requireAuth('to enter KinWorld')) setBattleKin(k.id) }}>
                   <span className="ow-kincard-art"><KinSprite kin={k.id} size={72} /></span>
                   <div className="ow-kincard-body">
                     <b>{k.name}</b>

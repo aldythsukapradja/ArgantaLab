@@ -45,22 +45,37 @@ export function ringPct(xp: number): number {
 import { getCounters } from './quests'
 
 export const DAILY_CIRCLE_XP = 120 // focused-effort goal (well above the old flat 80)
-export const DAILY_DRILLS = 3      // "do 3 drills"
+export const DAILY_DRILLS = 3      // "clear 3 quests" (drill/practice signal)
+export const DAILY_RINGS = 6       // all six world rings
+export const DAILY_KIN = 1
+const WORLD_KEYS = ['NUM', 'WRD', 'WON', 'LOG', 'WLD', 'LIF']
 
-// The North Star: a core-4 daily set spanning what kids actually do. Full = all 4.
+// The North Star: a core-4 daily set spanning what kids actually do. Every goal
+// exposes a count/target so the ring + pills can show real progress (x/y).
 export interface DailyCircle {
-  effort: boolean; lesson: boolean; drill: boolean; kin: boolean
-  done: number; full: boolean; xp: number; goalXp: number; drills: number; drillGoal: number
+  effort: boolean; rings: boolean; quest: boolean; kin: boolean
+  done: number; full: boolean
+  xp: number; goalXp: number
+  ringsN: number; ringsGoal: number
+  quests: number; questGoal: number
+  kins: number; kinGoal: number
 }
 
-/** Compute today's circle from cloud XP (effort) + local activity. */
+/** Compute today's circle from cloud XP (effort + rings) + local activity. */
 export function dailyCircle(todayXp: Record<string, number>): DailyCircle {
   const xp = Object.values(todayXp).reduce((a, b) => a + (b || 0), 0)
   const c = getCounters().daily
+  const ringsN = WORLD_KEYS.filter(k => ringPct(todayXp[k] ?? 0) >= 100).length
   const effort = xp >= DAILY_CIRCLE_XP
-  const lesson = c.nodes >= 1
-  const drill = c.drill >= DAILY_DRILLS
-  const kin = c.befriend >= 1
-  const done = [effort, lesson, drill, kin].filter(Boolean).length
-  return { effort, lesson, drill, kin, done, full: done === 4, xp, goalXp: DAILY_CIRCLE_XP, drills: c.drill, drillGoal: DAILY_DRILLS }
+  const rings = ringsN >= DAILY_RINGS
+  const quest = c.drill >= DAILY_DRILLS
+  const kin = c.befriend >= DAILY_KIN
+  const done = [effort, rings, quest, kin].filter(Boolean).length
+  return {
+    effort, rings, quest, kin, done, full: done === 4,
+    xp, goalXp: DAILY_CIRCLE_XP,
+    ringsN, ringsGoal: DAILY_RINGS,
+    quests: c.drill, questGoal: DAILY_DRILLS,
+    kins: c.befriend, kinGoal: DAILY_KIN,
+  }
 }

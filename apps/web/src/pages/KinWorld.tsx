@@ -20,6 +20,7 @@ import { recordAttempt } from '@lib/adaptive'
 import { logLearnEvent } from '@lib/analytics'
 import KinSprite from '@components/openworld/KinSprite'
 import KinWorldGame from '@components/openworld/KinWorldGame'
+import DiamondIcon from '@components/ui/DiamondIcon'
 
 function drawHarvestQuestion(roster: KinInstance[]): DrillItem | null {
   const worlds = roster.length
@@ -73,7 +74,7 @@ export default function KinWorld() {
 
   // Walk through a gate → drop into that world's Argantaland dungeon (enterLand).
   const enterDungeon = (world: string) => {
-    useAppStore.setState({ enterLand: world.toUpperCase() })
+    useAppStore.setState({ enterLand: world.toUpperCase(), landReturnTo: 'kinworld' })
     go({ tab: world })
   }
 
@@ -148,14 +149,13 @@ export default function KinWorld() {
                 <div>
                   <b>🌾 Diamond Harvest</b>
                   <span className="ph-sub" style={{ fontSize: 12, display: 'block' }}>
-                    {harvest ? `${harvest.ratePerDay.toFixed(2)} 💎/day · ${harvest.pending.toFixed(2)} banked` : 'Befriend kin to start the trickle'}
+                    {harvest ? <>{harvest.ratePerDay.toFixed(2)} <DiamondIcon size={12} />/day · {harvest.pending.toFixed(2)} banked</> : 'Befriend kin to start the trickle'}
                   </span>
                 </div>
                 <button className="btn btn-primary" disabled={collecting || readyToCollect < 1} onClick={startHarvest}>
-                  {readyToCollect >= 1 ? `Collect ${readyToCollect} 💎` : 'Trickling… 🌱'}
+                  {readyToCollect >= 1 ? <>Collect {readyToCollect} <DiamondIcon size={13} /></> : 'Trickling… 🌱'}
                 </button>
               </div>
-              <button className="nx-mount-btn hall-mount" onClick={() => go({ tab: 'mounts' })}>🐎 Mount Stable</button>
             </div>
 
             <div className="dex-pills">
@@ -233,7 +233,7 @@ export default function KinWorld() {
             <button className="nx-drawer-x" onClick={() => setTask(null)} aria-label="Close">×</button>
             <div className="nx-task-head">
               <b>🌾 Harvest Task</b>
-              <span className="ph-sub" style={{ fontSize: 12 }}>Answer to collect <b>{readyToCollect} 💎</b> from your town</span>
+              <span className="ph-sub" style={{ fontSize: 12 }}>Answer to collect <b>{readyToCollect} <DiamondIcon size={12} /></b> from your town</span>
             </div>
             <div className="le-prompt" style={{ marginTop: 4 }}>{task.prompt}</div>
             <div key={task.id} className="le-render">

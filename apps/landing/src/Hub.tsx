@@ -6,9 +6,9 @@ const HubBg = lazy(() => import('./three/HubBg'))
 interface DeckCard { id: string; no: string; name: string; tag: string; desc: string; live: boolean; kind: 'modes' | 'open' }
 
 const DECKS: DeckCard[] = [
-  { id: 'editorial', no: '01', name: 'Editorial', tag: 'Cinematic scroll', desc: 'The story, told slow and confident. Smooth-scroll, editorial type, the real product in your hand.', live: true, kind: 'modes' },
-  { id: 'general', no: '02', name: 'General', tag: 'Interactive deck', desc: 'The full cinematic flight — every world, product and idea, as a camera that travels the cosmos.', live: true, kind: 'open' },
-  { id: 'pitch', no: '03', name: 'Investor one-pager', tag: 'Coming soon', desc: 'The tight, proof-first version — one metric, one ask, five minutes.', live: false, kind: 'open' },
+  { id: 'editorial', no: '01', name: 'The story', tag: 'For everyone', desc: 'The cinematic version — the fastest way to feel what we build. Best for a first look.', live: true, kind: 'modes' },
+  { id: 'general', no: '02', name: 'The product tour', tag: 'For families & partners', desc: 'The full interactive flight — every product, world and idea, up close.', live: true, kind: 'open' },
+  { id: 'onepager', no: '03', name: 'The investor brief', tag: 'For investors', desc: 'Thesis, market, model, moat, traction and the ask — the five-minute version.', live: true, kind: 'open' },
 ]
 
 function Mark({ size = 22 }: { size?: number }) {
@@ -32,10 +32,11 @@ export default function Hub({ onOpen }: { onOpen: (id: string, present: boolean)
         <ThemeToggle />
       </header>
 
+      <div className="hubx-body">
       <section className="hubx-hero">
-        <span className="hubx-kicker">The Arganta presentations</span>
-        <h1 className="hubx-title">One idea,<br /><em>told a few different ways.</em></h1>
-        <p className="hubx-lede">Pick an experience below.</p>
+        <span className="hubx-kicker">Arganta · company profile</span>
+        <h1 className="hubx-title">One trusted OS for<br /><em>the modern family.</em></h1>
+        <p className="hubx-lede">For the families we build for, the partners we grow with, and the investors backing the future of the family. Choose how you'd like to explore.</p>
       </section>
 
       <section className="hubx-decks">
@@ -53,7 +54,7 @@ export default function Hub({ onOpen }: { onOpen: (id: string, present: boolean)
               <div className="deck-actions">
                 {d.kind === 'modes' ? (
                   <>
-                    <button className="deck-btn" onClick={() => onOpen(d.id, false)}>Scroll</button>
+                    <button className="deck-btn" onClick={() => onOpen(d.id, false)}>View</button>
                     <button className="deck-btn primary" onClick={() => onOpen(d.id, true)}>Present ▸</button>
                   </>
                 ) : (
@@ -64,6 +65,7 @@ export default function Hub({ onOpen }: { onOpen: (id: string, present: boolean)
           </article>
         ))}
       </section>
+      </div>
 
       <footer className="hubx-foot">
         <span>Built by parents. Designed for families everywhere.</span>

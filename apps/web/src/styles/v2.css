@@ -630,8 +630,8 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 /* full-bleed Phaser dungeon: fill the main area exactly so the page never scrolls */
 .kinworld.kw-full { position: absolute; inset: 0; max-width: none; margin: 0; padding: 0; }
 
-/* ── KinWorld pixel-dungeon (Phaser canvas) ── */
-.kw-game { position: absolute; inset: 8px; border-radius: 16px; overflow: hidden; background: #bfe6f2;
+/* ── KinWorld pixel-dungeon (PixiJS canvas) ── */
+.kw-game { position: absolute; inset: 8px; border-radius: 16px; overflow: hidden; background: #7ec850;
   box-shadow: var(--shadow); }
 .kw-canvas { position: absolute; inset: 0; }
 .kw-canvas canvas { display: block; }
@@ -639,16 +639,16 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 /* enter-dungeon prompt + on-screen d-pad (overlaid on the canvas) */
 .kw-enter { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9; border: 0; cursor: pointer;
   color: #fff; font-weight: 800; font-size: 13.5px; padding: 10px 20px; border-radius: 24px; box-shadow: 0 6px 18px rgba(0,0,0,.34); }
-.kw-dpad { position: absolute; left: 16px; bottom: 16px; z-index: 9; display: grid; gap: 5px;
-  grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(3, 42px); touch-action: none; }
+.kw-dpad { position: absolute; left: 14px; bottom: 18px; z-index: 9; display: grid; gap: 5px;
+  grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); touch-action: none; }
 .kw-dpad .dp { border: 1.5px solid rgba(255,255,255,.85); background: rgba(60,52,137,.82); color: #fff; border-radius: 11px;
   font-size: 13px; cursor: pointer; display: grid; place-items: center; user-select: none; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
 .kw-dpad .dp:active { background: rgba(60,52,137,1); transform: scale(.94); }
 .kw-dpad .dp-u { grid-area: 1 / 2; } .kw-dpad .dp-l { grid-area: 2 / 1; }
 .kw-dpad .dp-r { grid-area: 2 / 3; } .kw-dpad .dp-d { grid-area: 3 / 2; }
 
-/* clear the mobile dock so the game doesn't sit under it */
-@media (max-width: 900px) { .kw-game { bottom: 80px; } }
+/* clear the mobile dock so the map + d-pad never sit under it (down arrow was cut) */
+@media (max-width: 900px) { .kw-game { bottom: 96px; } .kw-dpad { bottom: 14px; } }
 
 /* ── Kindex (Pokédex) overlay ── */
 .dex-wrap { position: fixed; inset: 0; z-index: 140; background: rgba(8,10,18,.55); backdrop-filter: blur(7px);
