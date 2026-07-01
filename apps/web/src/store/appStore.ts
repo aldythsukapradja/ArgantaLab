@@ -337,6 +337,8 @@ export const useAppStore = create<AppStore>()(
         while (xp >= XP_PER_LEVEL(level)) level++
         set({ xp, level })
         get().addToast(`+${n} XP`, '✨')
+        // learning XP → seasonal rank points (best-effort, cloud)
+        import('@lib/rank').then(m => m.addRankPoints(n)).catch(() => {})
       },
 
       completeLesson(id) {

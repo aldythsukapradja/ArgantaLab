@@ -8,7 +8,7 @@ import { localDay } from './day'
 
 const KEY = 'argantalab_quests_v1'
 
-export interface Counters { nodes: number; boss: number; xp: number; befriend: number; dungeon: number; publish: number }
+export interface Counters { nodes: number; boss: number; xp: number; befriend: number; dungeon: number; publish: number; drill: number; harvest: number }
 interface QState {
   date: string
   week: string
@@ -24,7 +24,7 @@ function weekId() {
   const wk = Math.ceil((((d.getTime() - jan1.getTime()) / 86400000) + jan1.getDay() + 1) / 7)
   return `${d.getFullYear()}-W${wk}`
 }
-const zero = (): Counters => ({ nodes: 0, boss: 0, xp: 0, befriend: 0, dungeon: 0, publish: 0 })
+const zero = (): Counters => ({ nodes: 0, boss: 0, xp: 0, befriend: 0, dungeon: 0, publish: 0, drill: 0, harvest: 0 })
 
 function load(): QState {
   let s: QState
@@ -39,7 +39,7 @@ function load(): QState {
 }
 function save(s: QState) { try { localStorage.setItem(pkey(KEY), JSON.stringify(s)) } catch { /* ignore */ } }
 
-export type QuestKind = 'node' | 'boss' | 'xp' | 'befriend' | 'dungeon' | 'publish'
+export type QuestKind = 'node' | 'boss' | 'xp' | 'befriend' | 'dungeon' | 'publish' | 'drill' | 'harvest'
 
 export function bumpQuest(kind: QuestKind, n = 1) {
   const s = load()
@@ -50,6 +50,8 @@ export function bumpQuest(kind: QuestKind, n = 1) {
   else if (kind === 'befriend') both('befriend', n)
   else if (kind === 'dungeon') both('dungeon', n)
   else if (kind === 'publish') both('publish', n)
+  else if (kind === 'drill') both('drill', n)
+  else if (kind === 'harvest') both('harvest', n)
   save(s)
 }
 
@@ -75,8 +77,9 @@ export const QUESTS: QuestDef[] = [
   { id: 'd_show',     scope: 'daily', step: 5, label: 'Show',     title: 'Earn 80 XP today',    icon: '⭐', metric: c => c.xp,       target: 80, reward: { diamonds: 12 }, route: 'arganta' },
   // ── weekly ──
   { id: 'w_nodes', scope: 'weekly', title: 'Complete 10 lessons this week', icon: '🏅', metric: c => c.nodes, target: 10, reward: { diamonds: 40, xp: 50 } },
+  { id: 'w_dungeon', scope: 'weekly', title: 'Clear 3 dungeons this week', icon: '🗺️', metric: c => c.dungeon, target: 3, reward: { diamonds: 30 } },
+  { id: 'w_harvest', scope: 'weekly', title: 'Harvest your town 3 times', icon: '🌾', metric: c => c.harvest, target: 3, reward: { diamonds: 25 } },
   { id: 'w_befriend', scope: 'weekly', title: 'Befriend 3 kin this week', icon: '🐾', metric: c => c.befriend, target: 3, reward: { diamonds: 30 } },
-  { id: 'w_boss', scope: 'weekly', title: 'Beat 3 bosses this week', icon: '⚔️', metric: c => c.boss, target: 3, reward: { diamonds: 30 } },
 ]
 
 /** Raw daily + weekly activity counters (for the parent dashboard). */

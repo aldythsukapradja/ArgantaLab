@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom'
 import { useAppStore } from '@store/appStore'
 import { KIN, kin as kinDef, type KinDef } from '@/data/openworld'
 import { nexusRoster, careKin, nexusHarvest, type KinInstance, type HarvestState } from '@lib/nexus'
+import { bumpQuest } from '@lib/quests'
 import { DRILLS_BY_WORLD, type DrillItem } from '@/data/drills'
 import type { Item } from '@/data/learn'
 import { renderItem } from '@components/learn2/interactions'
@@ -117,6 +118,7 @@ export default function KinWorld() {
     setHarvest(h)
     if (h.minted > 0) {
       useAppStore.setState({ diamonds: h.balance })
+      bumpQuest('harvest')
       addToast(`Harvested ${h.minted} 💎 from your town!`, '💎')
     } else {
       addToast('Not ripe yet — let your kin trickle a little longer 🌱', '⏳')

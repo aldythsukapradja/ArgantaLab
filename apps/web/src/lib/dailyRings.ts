@@ -34,3 +34,33 @@ export async function todayWorldXp(kidId?: string): Promise<Record<string, numbe
 export function ringPct(xp: number): number {
   return Math.max(0, Math.min(100, Math.round((xp / DAILY_WORLD_XP_GOAL) * 100)))
 }
+
+// ============================================================
+//  THE DAILY CIRCLE  (three distinct actions — not a flat XP bar)
+//  A meaningful "circle full" needs varied real effort, so it takes THREE
+//  things: focused effort (cloud XP, tamper-proof), a finished lesson, and an
+//  explore action (a dungeon clear or a befriend). Only a full circle advances
+//  the streak. Targets are tunable knobs — raise them as the kids grow.
+// ============================================================
+import { getCounters } from './quests'
+
+export const DAILY_CIRCLE_XP = 120 // focused-effort goal (well above the old flat 80)
+export const DAILY_DRILLS = 3      // "do 3 drills"
+
+// The North Star: a core-4 daily set spanning what kids actually do. Full = all 4.
+export interface DailyCircle {
+  effort: boolean; lesson: boolean; drill: boolean; kin: boolean
+  done: number; full: boolean; xp: number; goalXp: number; drills: number; drillGoal: number
+}
+
+/** Compute today's circle from cloud XP (effort) + local activity. */
+export function dailyCircle(todayXp: Record<string, number>): DailyCircle {
+  const xp = Object.values(todayXp).reduce((a, b) => a + (b || 0), 0)
+  const c = getCounters().daily
+  const effort = xp >= DAILY_CIRCLE_XP
+  const lesson = c.nodes >= 1
+  const drill = c.drill >= DAILY_DRILLS
+  const kin = c.befriend >= 1
+  const done = [effort, lesson, drill, kin].filter(Boolean).length
+  return { effort, lesson, drill, kin, done, full: done === 4, xp, goalXp: DAILY_CIRCLE_XP, drills: c.drill, drillGoal: DAILY_DRILLS }
+}

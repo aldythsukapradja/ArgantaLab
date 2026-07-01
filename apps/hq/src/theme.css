@@ -151,7 +151,7 @@ input[type=range]{accent-color:var(--acc);height:18px;cursor:pointer}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;font-size:12px;font-weight:500;color:var(--tx2);border:1px solid var(--bd2);background:var(--bg)}
 .chip:hover{border-color:var(--bd3)}
 .chip.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-text)}
-.canvas{position:relative;height:clamp(540px,76vh,940px);border:1px solid var(--bd2);border-radius:var(--r-lg);overflow:hidden;background:var(--bg2);
+.canvas{position:relative;height:clamp(400px,calc(100dvh - 250px),920px);border:1px solid var(--bd2);border-radius:var(--r-lg);overflow:hidden;background:var(--bg2);
   background-image:radial-gradient(var(--bd2) .8px,transparent .8px);background-size:18px 18px;touch-action:none}
 .canvas-stage{position:absolute;inset:0;will-change:transform}
 .wires{position:absolute;inset:0;z-index:1;pointer-events:none}
@@ -231,6 +231,11 @@ table.tbl tr:last-child td{border-bottom:none}
   .hq{grid-template-columns:1fr}
   .rail{display:none}
   .main{height:100vh;height:100dvh}
+  /* Data schema fits the viewport on mobile — no page scroll */
+  .canvas{height:calc(100dvh - 360px);min-height:280px}
+  .legend{display:none}
+  .tl-hint{display:none}
+  .zoomctl{margin-left:auto}
 }
 
 /* ---------- Mobile bottom nav (4 groups) + secondary sub-tabs ---------- */

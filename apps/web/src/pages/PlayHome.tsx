@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
 import { WORLDS } from '@/data/learn'
-import { todayWorldXp, ringPct } from '@lib/dailyRings'
+import { todayWorldXp, ringPct, dailyCircle } from '@lib/dailyRings'
 import { getStreak, touchStreak } from '@lib/streak'
 import ExploringNotice from '@components/openworld/ExploringNotice'
 import WishlistGoal from '@components/openworld/WishlistGoal'
@@ -38,11 +38,15 @@ export default function PlayHome() {
   const outfit = resolvedOutfit()
 
   useEffect(() => {
-    setStreak(touchStreak())
     const t = setTimeout(() => setMood('idle'), 1800)
     return () => clearTimeout(t)
   }, [])
   useEffect(() => { setStreak(getStreak()) }, [])
+
+  // The daily circle (3 actions). Only a FULL circle advances the streak — the
+  // streak no longer ticks just for opening the app.
+  const circle = useMemo(() => dailyCircle(todayXp), [todayXp, xp])
+  useEffect(() => { if (circle.full) setStreak(touchStreak()) }, [circle.full])
 
   // Daily rings = today's XP per world from the cloud event log. Reload on mount,
   // when returning to the Home sub-tab, and whenever the kid's XP changes (they
@@ -101,6 +105,19 @@ export default function PlayHome() {
               <p className="ph-sub">Level {level} · {xp.toLocaleString()} XP · 💎 {diamonds}</p>
             </div>
             <div className="ph-streak">🔥 {streak} day{streak === 1 ? '' : 's'}</div>
+          </div>
+
+          <div className={`ph-circle${circle.full ? ' full' : ''}`}>
+            <div className="ph-circle-head">
+              <b>⭐ Today's North Star</b>
+              <span>{circle.full ? '✓ Full — streak safe today!' : `${circle.done}/4 done`}</span>
+            </div>
+            <div className="ph-circle-reqs">
+              <button className={`ph-req${circle.effort ? ' on' : ''}`} onClick={() => go({ tab: 'learn' })}>{circle.effort ? '✓' : '⏱️'} Focus <b>{Math.min(circle.xp, circle.goalXp)}/{circle.goalXp}</b> XP</button>
+              <button className={`ph-req${circle.lesson ? ' on' : ''}`} onClick={() => go({ tab: 'learn' })}>{circle.lesson ? '✓' : '📚'} Finish a lesson</button>
+              <button className={`ph-req${circle.drill ? ' on' : ''}`} onClick={() => go({ tab: 'learn' })}>{circle.drill ? '✓' : '⚡'} Do drills <b>{Math.min(circle.drills, circle.drillGoal)}/{circle.drillGoal}</b></button>
+              <button className={`ph-req${circle.kin ? ' on' : ''}`} onClick={() => go({ tab: 'kinworld' })}>{circle.kin ? '✓' : '🐾'} Catch a kin</button>
+            </div>
           </div>
 
           <div className="ph-orbit">

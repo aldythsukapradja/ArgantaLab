@@ -610,6 +610,17 @@ body.cine-mode .msub{display:none!important}
 .fame-xp{font-size:13px;font-weight:700;color:var(--gold)}
 .fame-games{font-size:12.5px;color:var(--t2);min-width:48px;text-align:right}
 .fame-note{font-size:12.5px;color:var(--t2);text-align:center}
+
+/* badge collection grid */
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.badge-cell{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:14px 8px 11px;
+  border-radius:16px;background:var(--panel);border:1.5px solid var(--border);opacity:.72}
+.badge-cell.on{opacity:1;border-color:color-mix(in srgb,var(--gold) 45%,var(--border));
+  background:color-mix(in srgb,var(--gold) 8%,var(--panel))}
+.badge-ic{font-size:30px;line-height:1;filter:grayscale(.7)}
+.badge-cell.on .badge-ic{filter:none}
+.badge-nm{font-size:11px;font-weight:700;color:var(--t2);line-height:1.25}
+.badge-cell.on .badge-nm{color:var(--t1)}
 .fame-cta{align-self:center}
 
 /* ====== PUBLIC SHARE PAGE (/play/:id) ====== */
@@ -1582,6 +1593,20 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
 .ph-streak{padding:8px 14px;border-radius:30px;background:color-mix(in srgb,var(--gold) 16%,transparent);
   border:1px solid color-mix(in srgb,var(--gold) 38%,transparent);font-size:13px;font-weight:750;white-space:nowrap}
 
+/* daily circle — three actions make it full (only then does the streak tick) */
+.ph-circle{margin-top:12px;padding:12px 14px;border-radius:var(--r-md);background:var(--panel);border:1.5px solid var(--border)}
+.ph-circle.full{border-color:var(--green);background:color-mix(in srgb,var(--green) 8%,var(--panel))}
+.ph-circle-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}
+.ph-circle-head b{font-size:14px;font-weight:800}
+.ph-circle-head span{font-size:12px;font-weight:700;color:var(--t2)}
+.ph-circle.full .ph-circle-head span{color:var(--green)}
+.ph-circle-reqs{display:flex;gap:8px;flex-wrap:wrap}
+.ph-req{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:6px 11px;border-radius:30px;
+  background:var(--panel-2);border:1px solid var(--border);color:var(--t2);cursor:pointer;font-family:inherit;transition:.14s}
+.ph-req:hover{border-color:var(--accent)}
+.ph-req.on{background:color-mix(in srgb,var(--green) 16%,transparent);border-color:color-mix(in srgb,var(--green) 40%,transparent);color:var(--green)}
+.ph-req b{font-weight:850}
+
 .ph-orbit{position:relative;width:100%;max-width:380px;margin:6px auto 0;aspect-ratio:1/1}
 .ph-lines{position:absolute;inset:0;width:100%;height:100%}
 .ph-buddy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;
@@ -1817,6 +1842,24 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
 .q-family:hover{border-color:var(--accent)}
 .q-family-ic{font-size:26px}
 .q-family b{font-size:14px;font-weight:700}.q-family small{display:block;font-size:12px;color:var(--t2);margin-top:2px}
+
+/* ── seasonal rank panel (top of Quests) ── */
+.rank-panel{padding:14px 16px;border-radius:var(--r-lg);background:var(--panel);border:1.5px solid var(--border)}
+.rank-top{display:flex;align-items:center;gap:12px}
+.rank-badge{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;flex:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-size:16px;font-weight:850}
+.rank-stars{font-size:13px;color:var(--gold);letter-spacing:1px;margin-left:6px}
+.rank-stars .dim{color:var(--border)}
+.rank-sub{font-size:12px;color:var(--t2);margin-top:1px}
+.rank-board{display:flex;flex-direction:column;gap:3px;margin-top:11px}
+.rank-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;font-size:13px}
+.rank-row.me{background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:750}
+.rank-pos{width:18px;font-weight:800;color:var(--t3);flex:none}
+.rank-who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-pts{font-weight:800;color:var(--accent)}
+.rank-hint{font-size:11.5px;color:var(--t2);margin-top:9px;line-height:1.4}
 
 /* ── daily quest CHAIN (guided stepper) ── */
 .qc{display:flex;flex-direction:column}

@@ -227,7 +227,7 @@ export function SchemaModel({ model, onRefresh }: { model: Model; onRefresh?: ()
         {hubs.slice(0, 4).map((h) => (
           <button key={h} className={'chip' + (center === h ? ' on' : '')} onClick={() => setCenter(h)}>{h}</button>
         ))}
-        <span className="chip" style={{ marginLeft: 'auto', color: 'var(--tx3)' }}><Hand size={13} /> drag tables</span>
+        <span className="chip tl-hint" style={{ marginLeft: 'auto', color: 'var(--tx3)' }}><Hand size={13} /> drag tables</span>
         <div className="zoomctl">
           <button onClick={() => zoomBy(-ZOOM_STEP)} disabled={zoom <= ZOOM_MIN} title="Zoom out"><ZoomOut size={13} /></button>
           <span className="zoomval" onClick={() => setZoom(1)} title="Reset zoom">{Math.round(zoom * 100)}%</span>

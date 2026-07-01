@@ -137,6 +137,7 @@ export default function DrillPlayer({ world, drill, onExit }: Props) {
     if (gems > 0) earnDiamonds(gems, 'drill', `drill:${drill.world}:${drill.key}`)
     markSectionToday(drill.world, 'drills')
     bumpQuest('node')
+    bumpQuest('drill')
   }
 
   if (done) {

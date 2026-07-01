@@ -18,6 +18,12 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  // pixi.js is only ever loaded via a lazy dynamic import (the KinWorld map), so
+  // Vite doesn't discover it on startup — pre-bundle it explicitly, otherwise the
+  // lazy import 504s with "Outdated Optimize Dep".
+  optimizeDeps: {
+    include: ['pixi.js'],
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,

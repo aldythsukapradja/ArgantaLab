@@ -4,6 +4,8 @@ import { loadMyGames } from '@lib/myGames'
 import { getLeaderboard } from '@lib/gamesCloud'
 import { WORLDS } from '@/data/learn'
 import { worldRing } from '@lib/learnProgress'
+import { allBadges } from '@lib/badges'
+import RankPanel from '@components/rank/RankPanel'
 import Buddy from '@components/avatar/Buddy'
 
 // Sample board so the world view feels alive until enough real creators sign in.
@@ -15,7 +17,7 @@ const SAMPLE = [
   { name: 'StarCoder', xp: 3300, games: 9, emoji: '⭐' },
 ]
 
-type Scope = 'circle' | 'world' | 'myworlds'
+type Scope = 'circle' | 'world' | 'myworlds' | 'badges'
 
 export default function Fame() {
   const { learnerName, xp, level, resolvedOutfit, go, session } = useAppStore()
@@ -42,6 +44,9 @@ export default function Fame() {
   // Personal world standings (your own rings ranked) — honest, real, local.
   const myWorlds = WORLDS.map(w => ({ w, pct: worldRing(w) })).sort((a, b) => b.pct - a.pct)
 
+  const badges = allBadges()
+  const badgesEarned = badges.filter(b => b.earned).length
+
   return (
     <div className="screen fame" style={{ justifyContent: 'flex-start', gap: 14, paddingTop: 6 }}>
       <div className="fame-hero">
@@ -53,12 +58,28 @@ export default function Fame() {
       </div>
 
       <div className="fame-tabs">
-        <button className={`fame-tab${scope === 'circle' ? ' on' : ''}`} onClick={() => setScope('circle')}>🏘 Circle</button>
+        <button className={`fame-tab${scope === 'circle' ? ' on' : ''}`} onClick={() => setScope('circle')}>🏅 Rank</button>
         <button className={`fame-tab${scope === 'world' ? ' on' : ''}`} onClick={() => setScope('world')}>🌍 World</button>
         <button className={`fame-tab${scope === 'myworlds' ? ' on' : ''}`} onClick={() => setScope('myworlds')}>⭐ My Worlds</button>
+        <button className={`fame-tab${scope === 'badges' ? ' on' : ''}`} onClick={() => setScope('badges')}>🎖 Badges</button>
       </div>
 
-      {scope === 'myworlds' ? (
+      {scope === 'circle' ? (
+        <RankPanel />
+      ) : scope === 'badges' ? (
+        <>
+          <div className="fame-you"><span>Badges earned</span><b>{badgesEarned}</b><span>of {badges.length}</span></div>
+          <div className="badge-grid">
+            {badges.map(b => (
+              <div key={b.key} className={`badge-cell${b.earned ? ' on' : ''}`} title={b.group}>
+                <span className="badge-ic">{b.earned ? b.icon : '🔒'}</span>
+                <small className="badge-nm">{b.name}</small>
+              </div>
+            ))}
+          </div>
+          <p className="fame-note">🏅 Earn badges by playing every part of ArgantaLab — learn, explore, befriend, build, and keep your streak.</p>
+        </>
+      ) : scope === 'myworlds' ? (
         <>
           <div className="fame-you"><span>Your skill rings, ranked</span></div>
           <div className="fame-board">
@@ -89,9 +110,7 @@ export default function Fame() {
               </div>
             ))}
           </div>
-          {scope === 'circle'
-            ? <p className="fame-note">🏘 Circle leaderboards connect to your family Circle app — coming soon.</p>
-            : <p className="fame-note">{live ? '🌍 Live world rankings — real ArgantaLab creators!' : '🌍 Live rankings activate once creators sign in. Beat the sample for now!'}</p>}
+          <p className="fame-note">{live ? '🌍 Live world rankings — real ArgantaLab creators!' : '🌍 Live rankings activate once creators sign in. Beat the sample for now!'}</p>
         </>
       )}
 
