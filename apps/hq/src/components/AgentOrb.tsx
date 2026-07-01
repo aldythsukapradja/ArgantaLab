@@ -254,7 +254,7 @@ export function AgentOrb() {
           </div>
 
           <div className="agent-composer">
-            <input className="agent-input" value={input} placeholder="Ask the COO Agent…" disabled={busy}
+            <input className="agent-input" value={input} placeholder={`Ask the ${chief ? chief.chief : 'COO'} Agent…`} disabled={busy}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && input.trim()) run(input.trim()) }} />
             <button className="agent-send" disabled={busy || !input.trim()} onClick={() => input.trim() && run(input.trim())} aria-label="Send">

@@ -244,7 +244,19 @@ Every product surface is owned by exactly one office. **Operations** owns the bu
 - **P4** Office cockpits — Treasury (Growth-Lab⨯Treasury model + drawers), Technology (coverage x-ray + arch), Operations (CURR + content depth), Legal, Guild.
 - **P5** LLM layer — office-aware agent chat behind the deterministic seam; quarantined edges; CEO roll-up.
 
-## 7. Open items / next
-- ◐ Map block ④ for **Bridge, Legal, The Guild** (Operations, CTO, CFO done).
+## 7. Build status (shipped)
+
+Committed & pushed on `claude/circle-hq-command-tab-4y19ja`, verified in a headless Chromium run (no console/page errors):
+
+- ☑ **P0** — Command rail group between Analytics/Build; sub-tab bar (Lobby + 6 offices); store/Shell/Rail/MobileNav/Palette wired; existing surfaces untouched.
+- ☑ **P1** — `data/graph/{types,seed,agents,engine}.ts`; ~61 surfaces + levers + spine + guardrail signals + HQ/office nodes with honest provenance; SourceBadge/HealthDot/CoverageBar.
+- ☑ **P2** — engine (rollup, coverage, deriveVerdict + LADDERS_TO teeth, blastRadius, consults); Lobby (north star, value ladder, six office cards, consult log, resolve queue, coverage bar); generic four-panel Office renders all six from owned subgraph.
+- ☑ **Treasury cockpit** — Growth-Lab×Treasury model (discount ladder, cost stack, break-even, NPV, 10k💎 mint); interactive Low/Mid/High fan + demand/money sliders, `simulated` badged.
+- ☑ **Agent reconciliation** — 27 agents regrouped under the six offices; Agents tab = authoring-only banner → Command → The Guild; AgentOrb office-aware (becomes the active chief's agent: identity, brief, daily-question chips).
+
+## 8. Remaining (next session)
+- ◐ Office block ④ chat *answer engine* per chief (P5) — orb identity/chips/brief are live; answers still route through the COO deterministic pipeline. Give each chief its own generate() + inline visuals (CFO fan-in-chat, CTO coverage x-ray).
+- ◐ Treasury drawer (desktop) / full-page (mobile) for P&L · OpEx · CapEx · cashflow · NPV detail.
+- ☐ **P3 Supabase**: activate `hq_event`; `w2f_weekly()`, `curr_states()`, `k_factor()`, `surface_health()`; flip metrics live → values populate (currently every metric shows "—" + badge, by design).
 - ☐ Confirm the **$0.08/active infra** number (decides Low viability).
-- ☐ Persist SQL for P0 read-side RPCs.
+- ◐ P4 remaining office cockpits (Operations CURR machine, Legal register, Guild ROI board) — currently render the generic four-panel.

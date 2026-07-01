@@ -7,10 +7,14 @@ import {
   type Case, type Assumptions, type MonthRow,
 } from '../../data/graph/model'
 
-const fmt$ = (n: number) => (Math.abs(n) >= 1e6 ? (n < 0 ? '-' : '') + '$' + (Math.abs(n) / 1e6).toFixed(2) + 'M'
-  : Math.abs(n) >= 1e3 ? (n < 0 ? '-' : '') + '$' + Math.round(Math.abs(n) / 1e3) + 'k'
-  : (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)))
-const fmtN = (n: number) => n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
+const fmt$ = (n: number) => {
+  const a = Math.abs(n), s = n < 0 ? '-' : ''
+  if (a < 10) return s + '$' + a.toFixed(2)
+  if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(2) + 'M'
+  if (a >= 1e3) return s + '$' + Math.round(a / 1e3) + 'k'
+  return s + '$' + Math.round(a)
+}
+const fmtN = (n: number) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
 
 export function Treasury() {
   return <Office id="treasury" cockpit={<FinancialCockpit />} />
