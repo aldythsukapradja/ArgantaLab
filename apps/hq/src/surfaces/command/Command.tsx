@@ -1,5 +1,7 @@
 import { useHQ, type CommandTab } from '../../shell/store'
-import { Empty } from '../../components/Empty'
+import { Lobby } from './Lobby'
+import { Office } from './Office'
+import { Treasury } from './Treasury'
 
 const TABS: { id: CommandTab; label: string }[] = [
   { id: 'lobby', label: 'Lobby' },
@@ -26,7 +28,10 @@ export function Command() {
           ))}
         </div>
       </div>
-      <Empty title="Command is booting">Skeleton in place — lobby, offices, and the graph land next.</Empty>
+
+      {commandTab === 'lobby' && <Lobby />}
+      {commandTab === 'treasury' && <Treasury />}
+      {commandTab !== 'lobby' && commandTab !== 'treasury' && <Office id={commandTab} />}
     </div>
   )
 }
