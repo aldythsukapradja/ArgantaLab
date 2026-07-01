@@ -62,3 +62,55 @@ function calc(c: Case, label: string): UnitEcon {
 export const UNIT_ECON: Record<'low' | 'mid' | 'high', UnitEcon> = {
   low: calc(PRESETS.low, 'Low'), mid: calc(PRESETS.mid, 'Mid'), high: calc(PRESETS.high, 'High'),
 }
+
+// ── chart series, recalculated straight from the HQ model ──────────────────
+// (mirrors apps/hq monetization.ts + growth.ts benchmarks so every chart renders
+//  deterministically, live-data or not — never a fake claim, always the model.)
+
+// CAC payback: cumulative gross contribution of one acquired subscriber vs CAC.
+// Retention S(k) = (1-churn)^(k-1); C(t) = grossPerSub · Σ S(k). Crosses CAC at payback.
+export function paybackCurve(key: 'low' | 'mid' | 'high' = 'mid', months = 18) {
+  const c = PRESETS[key]
+  const grossPerSub = c.price * MARGIN
+  const cum: number[] = []
+  let acc = 0
+  for (let t = 0; t <= months; t++) {
+    if (t > 0) acc += grossPerSub * Math.pow(1 - c.churn, t - 1)
+    cum.push(acc)
+  }
+  const paybackMo = CAC / grossPerSub
+  return { cum, cac: CAC, months, paybackMo, ltv: grossPerSub / c.churn }
+}
+
+// Weekly-active compounding — the "default alive" curve. 7% = YC bar, 10% = elite.
+export function growthCurve(base = 100, weeks = 12) {
+  const slow: number[] = [], fast: number[] = []
+  for (let w = 0; w <= weeks; w++) { slow.push(base * Math.pow(1.07, w)); fast.push(base * Math.pow(1.10, w)) }
+  return { weeks, slow, fast }
+}
+
+// Retention decay vs day-since-signup — top-quartile edtech target vs typical.
+// Anchored to BENCHMARKS (D30 > 35% = top-quartile). Live D1/D30 overlaid when present.
+export const RETENTION_DAYS = [0, 1, 7, 14, 30]
+export function retentionCurve() {
+  return {
+    days: RETENTION_DAYS,
+    target: [100, 55, 44, 39, 36],   // top-quartile edtech
+    typical: [100, 40, 25, 19, 15],  // category average
+  }
+}
+
+// ARR fan vs installed families — driver-based, Low/Mid/High (forecastCurve logic).
+export function arrFan(maxFamilies = 100_000, steps = 8) {
+  const mk = (c: Case) => {
+    const out: number[] = []
+    for (let i = 0; i <= steps; i++) {
+      const f = (maxFamilies * i) / steps
+      const arpu = c.conv * c.price + c.iapBuyers * c.iapSpend
+      out.push(arpu * f * 12)
+    }
+    return out
+  }
+  const families = Array.from({ length: steps + 1 }, (_, i) => (maxFamilies * i) / steps)
+  return { families, low: mk(PRESETS.low), mid: mk(PRESETS.mid), high: mk(PRESETS.high) }
+}

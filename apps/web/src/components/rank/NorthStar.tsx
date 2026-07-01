@@ -1,17 +1,50 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { useAppStore } from '@store/appStore'
 import type { DailyCircle } from '@lib/dailyRings'
 import { myRankPoints, tierOf } from '@lib/rank'
+import { DAILY_RING_REWARD, ringRewardClaimedToday, claimRingReward, celebrationSeenToday, markCelebrationSeen } from '@lib/dailyReward'
+import { earnDiamonds } from '@lib/wallet'
+import DiamondIcon from '@components/ui/DiamondIcon'
+import { localDay } from '@lib/day'
 import TierIcon from './TierIcon'
 import RankLadder from './RankLadder'
 
+// deterministic confetti pieces for the celebration burst
+const CONFETTI = Array.from({ length: 18 }, (_, i) => ({
+  x: (i * 53) % 100,
+  color: ['#f0a83a', '#37a8c4', '#7a4fd0', '#ec4899', '#5ec257', '#f4c14e'][i % 6],
+  d: (i % 6) * 0.12,
+  r: (i * 47) % 360,
+}))
+
 // The daily North Star — Apple-Activity-style concentric rings (Focus outermost,
 // filling inward through Rings, Quests, Catch), with the rank crest at the centre.
-// Each goal also shows as a clean colour-coded card.
+// Completing all four goals awards a daily diamond bonus + a celebration.
 export default function NorthStar({ circle, onGo }: { circle: DailyCircle; onGo: (tab: string) => void }) {
+  const learnerName = useAppStore(s => s.learnerName)
   const [points, setPoints] = useState(0)
   const [ladder, setLadder] = useState(false)
+  const [claimed, setClaimed] = useState(ringRewardClaimedToday())
+  const [celebrate, setCelebrate] = useState(false)
   useEffect(() => { myRankPoints().then(setPoints) }, [])
   const t = tierOf(points)
+
+  // Daily bonus: complete the WHOLE North Star (all 4 goals) → 100 💎, once a day.
+  const done = circle.full
+  const giftReady = done && !claimed
+
+  const claimGift = async () => {
+    if (!done || claimed || !claimRingReward()) return
+    setClaimed(true)
+    await earnDiamonds(DAILY_RING_REWARD, 'quest', `northstar:${localDay()}`)
+    useAppStore.getState().addToast(`+${DAILY_RING_REWARD} 💎 · North Star complete!`, '💎')
+  }
+
+  // Pop the celebration once, the moment the North Star fills.
+  useEffect(() => {
+    if (done && !claimed && !celebrationSeenToday()) { markCelebrationSeen(); setCelebrate(true) }
+  }, [done, claimed])
 
   const goals: { on: boolean; ic: string; name: string; count: ReactNode; tab: string; color: string; r: number; frac: number }[] = [
     { on: circle.effort, ic: '🔥', name: 'Focus', count: <>{Math.min(circle.xp, circle.goalXp)}/{circle.goalXp}</>, tab: 'learn', color: '#f0a83a', r: 52, frac: Math.min(1, circle.xp / circle.goalXp) },
@@ -44,11 +77,21 @@ export default function NorthStar({ circle, onGo }: { circle: DailyCircle; onGo:
       <button className="ns-rank" onClick={() => setLadder(true)} style={{ ['--tc' as string]: t.tier.color }}>
         <b>{t.tier.name}</b><span>{points.toLocaleString()} XP · how to climb ›</span>
       </button>
+
+      {/* daily bonus capsule — complete the North Star to claim 100 💎 (resets daily) */}
+      <button className={`ns-gift${giftReady ? ' ready' : ''}${claimed ? ' done' : ''}`} onClick={claimGift} disabled={!giftReady}>
+        <DiamondIcon size={14} />
+        {claimed
+          ? <span>Claimed <b>✓</b></span>
+          : giftReady
+            ? <span>Claim <b>{DAILY_RING_REWARD}</b></span>
+            : <span><b>{DAILY_RING_REWARD}</b> · {circle.done}/4</span>}
+      </button>
       </div>
 
       <div className="ns-body">
         <div className="ns-head">
-          <b>Today's North Star</b>
+          <b>North Star</b>
           <span className="ns-tier" style={{ color: circle.full ? '#0f6e56' : 'var(--t2)', background: circle.full ? '#1d9e751e' : 'var(--panel-2)' }}>{circle.done}/4 done</span>
         </div>
         <div className="ns-goals">
@@ -64,6 +107,24 @@ export default function NorthStar({ circle, onGo }: { circle: DailyCircle; onGo:
       </div>
 
       {ladder && <RankLadder points={points} onClose={() => setLadder(false)} />}
+
+      {celebrate && createPortal(
+        <div className="nsc-wrap" onClick={() => setCelebrate(false)}>
+          <div className="nsc-card" onClick={e => e.stopPropagation()}>
+            <div className="nsc-confetti" aria-hidden>
+              {CONFETTI.map((c, i) => <i key={i} style={{ left: `${c.x}%`, background: c.color, animationDelay: `${c.d}s`, transform: `rotate(${c.r}deg)` }} />)}
+            </div>
+            <button className="nsc-x" onClick={() => setCelebrate(false)} aria-label="Close">✕</button>
+            <div className="nsc-badge"><TierIcon color={t.tier.color} glyph={t.tier.glyph} size={58} /></div>
+            <h2 className="nsc-title">🎉 North Star complete!</h2>
+            <p className="nsc-sub">You lit up your whole day{learnerName ? `, ${learnerName}` : ''}. Here's your daily bonus.</p>
+            <button className="nsc-claim" onClick={async () => { await claimGift(); setCelebrate(false) }}>
+              {claimed ? <>Claimed ✓</> : <>Claim {DAILY_RING_REWARD} <DiamondIcon size={18} /></>}
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

@@ -13,7 +13,7 @@ export default function RankLadder({ points, onClose }: { points: number; onClos
           <div><div className="kicker">🏅 Rank ladder</div><h2 className="rl-title">Climb to Luminary</h2></div>
           <button className="rl-x" onClick={onClose} aria-label="Close">✕</button>
         </div>
-        <p className="rl-sub">Your rank is your <b>season XP</b> — every bit of learning (lessons, drills, dungeons, quests) counts. The summit is a long climb; everyone resets each season.</p>
+        <p className="rl-sub">Your rank is your <b>total XP</b> — the same XP you earn everywhere (lessons, drills, dungeons, quests). Keep learning to climb; the summit is a long journey.</p>
 
         <div className="rl-list">
           {TIERS.map((t, i) => ({ t, i })).reverse().map(({ t, i }) => {

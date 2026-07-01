@@ -71,10 +71,10 @@ export interface QuestDef {
 export const QUESTS: QuestDef[] = [
   // ── the daily chain: one quest line through every surface ──
   { id: 'd_learn',    scope: 'daily', step: 1, label: 'Learn',    title: 'Finish 2 lessons',    icon: '📚', metric: c => c.nodes,    target: 2, reward: { diamonds: 10 }, route: 'learn' },
-  { id: 'd_explore',  scope: 'daily', step: 2, label: 'Explore',  title: 'Clear a dungeon',     icon: '🗺️', metric: c => c.dungeon,  target: 1, reward: { diamonds: 12 }, route: 'kinworld' },
+  { id: 'd_explore',  scope: 'daily', step: 2, label: 'Journey',  title: 'Finish 3 journeys',   icon: '🧭', metric: c => c.nodes,    target: 3, reward: { diamonds: 12 }, route: 'learn' },
   { id: 'd_befriend', scope: 'daily', step: 3, label: 'Befriend', title: 'Befriend a kin',      icon: '💗', metric: c => c.befriend, target: 1, reward: { diamonds: 15 }, route: 'kinworld' },
-  { id: 'd_build',    scope: 'daily', step: 4, label: 'Build',    title: 'Publish a game',      icon: '🛠️', metric: c => c.publish,  target: 1, reward: { diamonds: 20 }, route: 'lab' },
-  { id: 'd_show',     scope: 'daily', step: 5, label: 'Show',     title: 'Earn 80 XP today',    icon: '⭐', metric: c => c.xp,       target: 80, reward: { diamonds: 12 }, route: 'arganta' },
+  { id: 'd_build',    scope: 'daily', step: 4, label: 'Practice', title: 'Finish 6 drills',     icon: '🎯', metric: c => c.drill,    target: 6, reward: { diamonds: 20 }, route: 'learn' },
+  { id: 'd_show',     scope: 'daily', step: 5, label: 'Master',   title: 'Win a boss battle',   icon: '⚔️', metric: c => c.boss,      target: 1, reward: { diamonds: 15 }, route: 'learn' },
   // ── weekly ──
   { id: 'w_nodes', scope: 'weekly', title: 'Complete 10 lessons this week', icon: '🏅', metric: c => c.nodes, target: 10, reward: { diamonds: 40, xp: 50 } },
   { id: 'w_dungeon', scope: 'weekly', title: 'Clear 3 dungeons this week', icon: '🗺️', metric: c => c.dungeon, target: 3, reward: { diamonds: 30 } },

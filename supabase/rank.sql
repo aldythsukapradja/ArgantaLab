@@ -52,3 +52,20 @@ $$;
 grant execute on function public.add_rank_points(int) to authenticated;
 grant execute on function public.season_points(uuid[]) to authenticated;
 grant execute on function public.season_of(timestamptz) to authenticated;
+
+-- ============================================================
+--  v2 — RANK IS NOW REAL XP (all-time), not a separate counter.
+--  The old rank_points table lagged actual XP (e.g. showed 1.4k while the kid
+--  had 20k). Redefine the standings RPC to read profiles.xp directly, so the
+--  circle board matches the number kids see everywhere. add_rank_points is no
+--  longer called by the client; rank_points is left in place but unused.
+--  Re-run just this block in the Supabase SQL editor.
+-- ============================================================
+create or replace function public.season_points(p_ids uuid[])
+returns table (kid_id uuid, points int)
+language sql security definer set search_path = public as $$
+  select u as kid_id, coalesce(p.xp, 0)::int as points
+  from unnest(p_ids) as u
+  left join public.profiles p on p.id = u;
+$$;
+grant execute on function public.season_points(uuid[]) to authenticated;

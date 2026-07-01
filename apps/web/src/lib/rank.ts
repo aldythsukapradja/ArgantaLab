@@ -1,16 +1,17 @@
 // ============================================================
-//  SEASONAL RANK  (within-circle ladder, resets every 3 months)
-//  The rank number IS the learner's XP this season — every XP earned counts 1:1,
-//  UNCAPPED. Tiers use a hand-tuned rising curve calibrated so the top is a real
-//  season-long grind (a ~2.2k-XP/day kid reaches Luminary in ~70+ days), while
-//  early tiers come quick and encouraging. Everything degrades to empty offline.
-//  Server side: rank_points table + add_rank_points / season_points RPCs.
+//  RANK  (creator/explorer growth arc, driven by REAL XP)
+//  The rank number IS the learner's actual profile XP (all-time) — the very same
+//  XP shown everywhere else, read straight from profiles.xp. No separate counter,
+//  no cap. Tiers use a hand-tuned rising curve calibrated so the top is a real
+//  grind (a ~2.2k-XP/day kid reaches Luminary in ~70+ days) while early tiers come
+//  quick. Circle standings come from season_points(ids) → profiles.xp (SECURITY
+//  DEFINER RPC). Everything degrades to empty offline.
 // ============================================================
 
 import { supabase, cloudEnabled } from './supabase'
 
 // ArgantaLab's own ladder — a creator/explorer growth arc, not metals.
-// `at` = season XP needed to reach the tier. The gaps widen hard on purpose:
+// `at` = XP needed to reach the tier. The gaps widen hard on purpose:
 // Spark/Explorer come in days; Luminary is the summit of a dedicated season.
 export interface Tier { name: string; color: string; glyph: string; at: number }
 export const TIERS: Tier[] = [
@@ -24,16 +25,6 @@ export const TIERS: Tier[] = [
 const STARS_PER_TIER = 5
 /** The XP that crowns the ladder (reaching this = Luminary). */
 export const TOP_POINTS = TIERS[TIERS.length - 1].at
-
-/** Current season id, e.g. "2026-Q3". Matches season_of() on the server. */
-export function seasonId(d = new Date()): string {
-  return `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`
-}
-/** Days until the current season ends (next quarter boundary). */
-export function seasonEndsInDays(d = new Date()): number {
-  const end = new Date(d.getFullYear(), (Math.floor(d.getMonth() / 3) + 1) * 3, 1)
-  return Math.max(0, Math.ceil((end.getTime() - d.getTime()) / 86400000))
-}
 
 export interface RankTier { tierIdx: number; tier: Tier; star: number; starsPer: number; points: number; nextAt: number; frac: number }
 export function tierOf(points: number): RankTier {
@@ -49,25 +40,19 @@ export function tierOf(points: number): RankTier {
   return { tierIdx: idx, tier, star, starsPer: STARS_PER_TIER, points: p, nextAt, frac: Math.min(1, frac) }
 }
 
-/** Award season XP for a learning event (best-effort; called from addXp, uncapped). */
-export async function addRankPoints(points: number): Promise<void> {
-  if (!cloudEnabled || points <= 0) return
-  try { await supabase.rpc('add_rank_points', { p_points: Math.round(points) }) } catch { /* ignore */ }
-}
-
-/** This kid's points in the current season. */
+/** This learner's rank score = their real profile XP (all-time). */
 export async function myRankPoints(): Promise<number> {
   if (!cloudEnabled) return 0
   try {
     const { data: u } = await supabase.auth.getUser()
     const id = u.user?.id
     if (!id) return 0
-    const { data } = await supabase.from('rank_points').select('points').eq('kid_id', id).eq('season', seasonId()).maybeSingle()
-    return (data?.points as number) ?? 0
+    const { data } = await supabase.from('profiles').select('xp').eq('id', id).maybeSingle()
+    return (data?.xp as number) ?? 0
   } catch { return 0 }
 }
 
-/** Season points for a set of members (circle standings). id → points. */
+/** Rank scores (profile XP) for a set of members — circle standings. id → xp. */
 export async function seasonPoints(ids: string[]): Promise<Record<string, number>> {
   if (!cloudEnabled || ids.length === 0) return {}
   try {

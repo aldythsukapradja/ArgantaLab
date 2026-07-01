@@ -5,7 +5,8 @@ import { getLeaderboard } from '@lib/gamesCloud'
 import { WORLDS } from '@/data/learn'
 import { worldRing } from '@lib/learnProgress'
 import { allBadges } from '@lib/badges'
-import RankPanel from '@components/rank/RankPanel'
+import { tierOf } from '@lib/rank'
+import TierIcon from '@components/rank/TierIcon'
 import Buddy from '@components/avatar/Buddy'
 
 // Sample board so the world view feels alive until enough real creators sign in.
@@ -17,7 +18,7 @@ const SAMPLE = [
   { name: 'StarCoder', xp: 3300, games: 9, emoji: '⭐' },
 ]
 
-type Scope = 'circle' | 'world' | 'myworlds' | 'badges'
+type Scope = 'world' | 'myworlds' | 'badges'
 
 export default function Fame() {
   const { learnerName, xp, level, resolvedOutfit, go, session } = useAppStore()
@@ -58,15 +59,12 @@ export default function Fame() {
       </div>
 
       <div className="fame-tabs">
-        <button className={`fame-tab${scope === 'circle' ? ' on' : ''}`} onClick={() => setScope('circle')}>🏅 Rank</button>
         <button className={`fame-tab${scope === 'world' ? ' on' : ''}`} onClick={() => setScope('world')}>🌍 World</button>
         <button className={`fame-tab${scope === 'myworlds' ? ' on' : ''}`} onClick={() => setScope('myworlds')}>⭐ My Worlds</button>
         <button className={`fame-tab${scope === 'badges' ? ' on' : ''}`} onClick={() => setScope('badges')}>🎖 Badges</button>
       </div>
 
-      {scope === 'circle' ? (
-        <RankPanel />
-      ) : scope === 'badges' ? (
+      {scope === 'badges' ? (
         <>
           <div className="fame-you"><span>Badges earned</span><b>{badgesEarned}</b><span>of {badges.length}</span></div>
           <div className="badge-grid">
@@ -103,7 +101,7 @@ export default function Fame() {
             {board.map((row, i) => (
               <div key={i} className={`fame-row${(row as { me?: boolean }).me ? ' me' : ''}`}>
                 <div className="fame-pos">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</div>
-                <div className="fame-av">{row.emoji}</div>
+                <div className="fame-av" title={tierOf(row.xp).tier.name}><TierIcon color={tierOf(row.xp).tier.color} glyph={tierOf(row.xp).tier.glyph} size={30} /></div>
                 <div className="fame-name">{row.name}{(row as { me?: boolean }).me && <em> (you)</em>}</div>
                 <div className="fame-xp">⭐ {row.xp.toLocaleString()}</div>
                 <div className="fame-games">🎮 {row.games}</div>

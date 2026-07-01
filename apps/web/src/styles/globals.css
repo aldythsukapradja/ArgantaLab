@@ -604,7 +604,7 @@ body.cine-mode .msub{display:none!important}
 .fame-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--border)}
 .fame-row.me{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
 .fame-pos{width:30px;font-size:15px;font-weight:800;text-align:center;flex:none}
-.fame-av{font-size:24px;flex:none}
+.fame-av{font-size:24px;flex:none;display:grid;place-items:center;width:32px;height:32px}
 .fame-name{flex:1;font-weight:700;font-size:14px}
 .fame-name em{color:var(--accent);font-style:normal;font-weight:600}
 .fame-xp{font-size:13px;font-weight:700;color:var(--gold)}
@@ -1644,6 +1644,42 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
 .ns-rank:hover{background:color-mix(in srgb,var(--tc) 12%,transparent)}
 .ns-rank b{font-size:13px;font-weight:850;color:var(--tc)}
 .ns-rank span{font-size:10px;font-weight:700;color:var(--t3);white-space:nowrap}
+/* daily North Star bonus — a compact, premium diamond capsule */
+.ns-gift{margin-top:4px;display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;
+  font-size:11px;font-weight:800;letter-spacing:.01em;color:var(--t2);white-space:nowrap;
+  background:var(--panel-2);border:1.5px solid var(--border);cursor:default;transition:.18s}
+.ns-gift svg{flex:none}
+.ns-gift b{font-weight:900}
+.ns-gift.ready{cursor:pointer;color:#6d4200;border-color:transparent;background:linear-gradient(180deg,#ffedb0,#ffcf5c);
+  box-shadow:0 3px 12px -4px rgba(240,168,58,.7),inset 0 1px 0 rgba(255,255,255,.7);animation:nsgift 1.8s ease-in-out infinite}
+.ns-gift.ready:hover{transform:translateY(-1px)}
+.ns-gift.done{color:#0f7a55;border-color:color-mix(in srgb,#1d9e75 34%,var(--border));background:color-mix(in srgb,#1d9e75 12%,var(--panel))}
+@keyframes nsgift{0%,100%{box-shadow:0 3px 12px -4px rgba(240,168,58,.5),inset 0 1px 0 rgba(255,255,255,.6);transform:translateY(0)}
+  50%{box-shadow:0 6px 18px -3px rgba(240,168,58,.95),inset 0 1px 0 rgba(255,255,255,.85);transform:translateY(-1px)}}
+
+/* North Star "complete!" celebration */
+.nsc-wrap{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:20px;
+  background:rgba(10,12,22,.55);backdrop-filter:blur(8px);animation:nscfade .2s ease}
+@keyframes nscfade{from{opacity:0}to{opacity:1}}
+.nsc-card{position:relative;overflow:hidden;width:min(340px,92vw);padding:30px 24px 24px;text-align:center;
+  border-radius:26px;border:1px solid var(--border);box-shadow:0 30px 70px -20px rgba(0,0,0,.5);
+  background:radial-gradient(120% 90% at 50% 0%, color-mix(in srgb,var(--accent) 16%,var(--bg)), var(--bg));
+  animation:nscpop .42s cubic-bezier(.2,1.2,.3,1)}
+@keyframes nscpop{from{transform:scale(.82) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.nsc-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--panel-2);color:var(--t2);font-size:12px;z-index:2}
+.nsc-badge{display:grid;place-items:center;margin:0 auto 8px;width:58px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.25));
+  animation:nscbadge 2.4s ease-in-out infinite}
+@keyframes nscbadge{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-5px) rotate(3deg)}}
+.nsc-title{font-size:20px;font-weight:900;letter-spacing:-.02em;margin:4px 0 2px}
+.nsc-sub{font-size:12.5px;color:var(--t2);margin:0 auto 16px;max-width:250px;line-height:1.4}
+.nsc-claim{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border:none;border-radius:999px;cursor:pointer;
+  font-size:15px;font-weight:850;color:#6d4200;background:linear-gradient(180deg,#ffe9a0,#ffc648);
+  box-shadow:0 8px 22px -6px rgba(240,168,58,.9),inset 0 1px 0 rgba(255,255,255,.7);transition:.16s}
+.nsc-claim:hover{transform:translateY(-2px);filter:brightness(1.05)}
+.nsc-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.nsc-confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;opacity:.9;animation:nscfall 2.4s linear infinite}
+@keyframes nscfall{0%{transform:translateY(-14px) rotate(0);opacity:0}10%{opacity:1}100%{transform:translateY(360px) rotate(380deg);opacity:0}}
 
 /* rank ladder popup */
 .rl-wrap{position:fixed;inset:0;z-index:200;background:rgba(8,10,18,.55);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:16px;animation:dexfade .16s ease}

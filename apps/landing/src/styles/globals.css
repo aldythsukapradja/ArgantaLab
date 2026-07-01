@@ -672,10 +672,10 @@ html.page-scroll #root { height: auto; min-height: 100%; }
 .org-node.ceo .org-dot { background: rgba(255,255,255,.9); }
 
 /* cascading reveal on the active slide / camera scene */
-.slide .org-node, .cine-scene .org-node { opacity: 0; }
-.slide .org-v, .cine-scene .org-v { opacity: 0; transform: scaleY(0); transform-origin: top; }
-.slide.active .org-node, .cine-scene.is-active .org-node { animation: orgPop .6s cubic-bezier(.16,1,.3,1) both; animation-delay: var(--d, 0s); }
-.slide.active .org-v, .cine-scene.is-active .org-v { animation: orgGrow .45s ease both; animation-delay: var(--d, 0s); }
+.slide .org-node, .cine-scene .org-node, .abx-panel .org-node { opacity: 0; }
+.slide .org-v, .cine-scene .org-v, .abx-panel .org-v { opacity: 0; transform: scaleY(0); transform-origin: top; }
+.slide.active .org-node, .cine-scene.is-active .org-node, .abx-panel.active .org-node { animation: orgPop .6s cubic-bezier(.16,1,.3,1) both; animation-delay: var(--d, 0s); }
+.slide.active .org-v, .cine-scene.is-active .org-v, .abx-panel.active .org-v { animation: orgGrow .45s ease both; animation-delay: var(--d, 0s); }
 @keyframes orgPop { from { opacity: 0; transform: translateY(15px) scale(.92); } to { opacity: 1; transform: none; } }
 @keyframes orgGrow { to { opacity: 1; transform: scaleY(1); } }
 .ed-orghead { display: flex; flex-direction: column; align-items: center; gap: 8px; }
