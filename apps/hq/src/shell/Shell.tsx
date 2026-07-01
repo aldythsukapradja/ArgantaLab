@@ -12,6 +12,7 @@ import { Broadcast } from '../surfaces/Broadcast'
 import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 import { AgentOrb } from '../components/AgentOrb'
 import { CommandPalette } from './CommandPalette'
+import { Command } from '../surfaces/command/Command'
 
 function Surface() {
   const { surface } = useHQ()
@@ -24,6 +25,7 @@ function Surface() {
     case 'app': return <AppBuilder />
     case 'agents': return <Agents />
     case 'broadcast': return <Broadcast />
+    case 'command': return <Command />
   }
 }
 

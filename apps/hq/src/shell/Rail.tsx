@@ -1,13 +1,13 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
-  Network, Megaphone,
+  Network, Megaphone, Radar,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 
 type Item = { id: SurfaceId; label: string; Icon: typeof LayoutGrid; badge?: string }
 type Group = { name: string; items: Item[] }
 
-// Order locked: Products → Analytics → Build.
+// Order locked: Products → Analytics → Command → Build.
 const GROUPS: Group[] = [
   { name: 'Products', items: [
     { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid },
@@ -15,6 +15,9 @@ const GROUPS: Group[] = [
   { name: 'Analytics', items: [
     { id: 'growth', label: 'Growth', Icon: TrendingUp },
     { id: 'data', label: 'Data', Icon: Database },
+  ] },
+  { name: 'Command', items: [
+    { id: 'command', label: 'Command', Icon: Radar },
   ] },
   { name: 'Build', items: [
     { id: 'game', label: 'Game Builder', Icon: Gamepad2 },

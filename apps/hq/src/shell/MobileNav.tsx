@@ -1,13 +1,15 @@
-import { LayoutGrid, TrendingUp, Boxes, Sparkles } from 'lucide-react'
+import { LayoutGrid, TrendingUp, Boxes, Sparkles, Radar } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId } from './store'
 
-// Mobile collapses the 8-surface rail into 4 reachable groups. Multi-surface
-// groups expose their members as a secondary sub-tab bar; "Agent" opens the
-// orchestrating orb full-screen (the floating orb is hidden on mobile).
+// Mobile collapses the rail into reachable groups. Multi-surface groups expose
+// their members as a secondary sub-tab bar; "Agent" opens the orchestrating orb
+// full-screen (the floating orb is hidden on mobile). Command carries its own
+// internal sub-tab bar (lobby + six offices), so it stays a single entry here.
 type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[] }
 export const MGROUPS: Grp[] = [
   { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid, surfaces: ['portfolio'] },
   { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data'] },
+  { id: 'command', label: 'Command', Icon: Radar, surfaces: ['command'] },
   { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'broadcast'] },
 ]
 
