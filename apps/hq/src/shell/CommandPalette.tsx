@@ -1,30 +1,42 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search, CornerDownLeft, LayoutGrid, TrendingUp, Database, Gamepad2, Boxes,
-  GraduationCap, Network, Megaphone, Table2, Sparkles, SunMoon, Coins,
+  GraduationCap, Network, Megaphone, Table2, Sparkles, SunMoon, Coins, Radar,
 } from 'lucide-react'
-import { useHQ, surfaceLabel, type SurfaceId } from './store'
+import { useHQ, surfaceLabel, type SurfaceId, type CommandTab } from './store'
 
 interface Cmd { id: string; label: string; hint: string; keywords: string; Icon: typeof Search; run: () => void }
 
 const SURFACE_ICON: Record<SurfaceId, typeof Search> = {
   portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
-  game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone,
+  game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone, command: Radar,
 }
+
+// Command sub-tabs surfaced as palette jumps.
+const COMMAND_JUMPS: { tab: CommandTab; label: string }[] = [
+  { tab: 'lobby', label: 'Lobby' }, { tab: 'bridge', label: 'Bridge · CEO' },
+  { tab: 'operations', label: 'Operations · COO' }, { tab: 'technology', label: 'Technology · CTO' },
+  { tab: 'treasury', label: 'Treasury · CFO' }, { tab: 'legal', label: 'Legal · GC' },
+  { tab: 'roster', label: 'The Guild · Guildmaster' },
+]
 
 // A real command palette — type to jump anywhere. Opens on ⌘K / Ctrl+K or the
 // topbar search. Keyboard-first: ↑/↓ to move, ⏎ to run, Esc to close.
 export function CommandPalette() {
-  const { paletteOpen, closePalette, togglePalette, go, setDataTab, openAgent, toggleTheme } = useHQ()
+  const { paletteOpen, closePalette, togglePalette, go, goOffice, setDataTab, openAgent, toggleTheme } = useHQ()
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   const cmds = useMemo<Cmd[]>(() => {
-    const surfs: SurfaceId[] = ['portfolio', 'growth', 'data', 'game', 'app', 'content', 'agents', 'broadcast']
+    const surfs: SurfaceId[] = ['portfolio', 'growth', 'data', 'command', 'game', 'app', 'content', 'agents', 'broadcast']
     const out: Cmd[] = surfs.map(s => ({
       id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s, Icon: SURFACE_ICON[s], run: () => go(s),
+    }))
+    COMMAND_JUMPS.forEach(j => out.push({
+      id: 'cmd-' + j.tab, label: 'Command · ' + j.label, hint: 'Open', keywords: 'office chief ' + j.tab,
+      Icon: Radar, run: () => goOffice(j.tab),
     }))
     out.push(
       { id: 'g-mon', label: 'Growth · Monetization', hint: 'Open', keywords: 'revenue forecast arr subscription', Icon: Coins, run: () => go('growth') },
@@ -35,7 +47,7 @@ export function CommandPalette() {
       { id: 'theme', label: 'Toggle theme', hint: 'Action', keywords: 'dark light mode', Icon: SunMoon, run: () => toggleTheme() },
     )
     return out
-  }, [go, setDataTab, openAgent, toggleTheme])
+  }, [go, goOffice, setDataTab, openAgent, toggleTheme])
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()

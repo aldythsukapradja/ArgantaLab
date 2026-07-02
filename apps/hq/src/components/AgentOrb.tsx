@@ -6,6 +6,8 @@ import {
   type Model, type Sensed, type Computed, type Signal,
 } from '../data/agents'
 import { SCENARIOS, scenarioById } from '../data/scenarios'
+import { OFFICE_CHAT, officeById } from '../data/graph/agents'
+import type { OfficeId } from '../data/graph/types'
 import { ChartView, type ChartData } from './charts'
 import { useHQ, type AgentSize } from '../shell/store'
 
@@ -53,17 +55,26 @@ function render(text: string) {
 }
 
 export function AgentOrb() {
-  const { agentOpen: open, agentSize: size, toggleAgent, closeAgent, setAgentSize } = useHQ()
+  const { agentOpen: open, agentSize: size, toggleAgent, closeAgent, setAgentSize, surface, commandTab } = useHQ()
   const [busy, setBusy] = useState(false)
   const [input, setInput] = useState('')
   const [msgs, setMsgs] = useState<Msg[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Office-aware: inside a Command office, the orb becomes that chief's agent.
+  const activeOffice: OfficeId | null = surface === 'command' && commandTab !== 'lobby' ? commandTab : null
+  const chief = activeOffice ? officeById(activeOffice) : null
+  const chips = activeOffice
+    ? OFFICE_CHAT[activeOffice].chips.map(c => ({ label: c.label, prompt: c.q }))
+    : CHIPS
+
   useEffect(() => { scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' }) }, [msgs, busy])
   useEffect(() => {
     if (open && msgs.length === 0) setMsgs([{
       role: 'agent',
-      text: "**Hi 👋** I'm your **COO Agent** — I run the Circle AI OS over live SQL. I sense, compute, match, then synthesise with Sonnet 4.6. Ask me anything.",
+      text: chief && activeOffice
+        ? `**Hi 👋** I'm your **${chief.chief} Agent** — ${OFFICE_CHAT[activeOffice].brief}`
+        : "**Hi 👋** I'm your **COO Agent** — I run the Circle AI OS over live SQL. I sense, compute, match, then synthesise with Sonnet 4.6. Ask me anything.",
     }])
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -186,15 +197,15 @@ export function AgentOrb() {
               <Sparkles size={16} color="#fff" />
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 600 }}>COO Agent</div>
-              <div style={{ fontSize: 11, color: 'var(--tx3)' }}>Circle AI OS · live SQL pipeline</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>{chief ? `${chief.chief} Agent` : 'COO Agent'}</div>
+              <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{chief ? `${chief.office} · Command` : 'Circle AI OS · live SQL pipeline'}</div>
             </div>
             <Pill model="sonnet" />
             <button className="agent-x" onClick={() => closeAgent()} aria-label="Close"><X size={15} /></button>
           </div>
 
           <div className="agent-chips">
-            {CHIPS.map(c => (
+            {chips.map(c => (
               <button key={c.label} className="agent-chip" disabled={busy} onClick={() => run(c.prompt)}>{c.label}</button>
             ))}
           </div>
@@ -243,7 +254,7 @@ export function AgentOrb() {
           </div>
 
           <div className="agent-composer">
-            <input className="agent-input" value={input} placeholder="Ask the COO Agent…" disabled={busy}
+            <input className="agent-input" value={input} placeholder={`Ask the ${chief ? chief.chief : 'COO'} Agent…`} disabled={busy}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && input.trim()) run(input.trim()) }} />
             <button className="agent-send" disabled={busy || !input.trim()} onClick={() => input.trim() && run(input.trim())} aria-label="Send">

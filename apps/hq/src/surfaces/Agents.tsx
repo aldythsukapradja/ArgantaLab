@@ -4,9 +4,11 @@ import {
   Crown, Database, Play, Check, Sparkles, BarChart3,
 } from 'lucide-react'
 import {
-  AGENTS, TIER_META, MODEL_META, PIPELINE, deriveStatus,
-  type Agent, type Tier, type Model,
+  AGENTS, MODEL_META, PIPELINE, deriveStatus,
+  officeOf, OFFICE_META, OFFICE_KEYS,
+  type Agent, type Model,
 } from '../data/agents'
+import { useHQ } from '../shell/store'
 import { SCENARIOS, scenarioById, type ScenarioResult } from '../data/scenarios'
 import { ChartView, CHART_KINDS } from '../components/charts'
 import { live } from '../data/live'
@@ -51,7 +53,7 @@ export function Agents() {
       <div className="spread" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div className="h1">Agent Builder</div>
-          <div className="sub">The {AGENTS.length}-agent operating system — one human CEO, many specialist agents, deterministic-first</div>
+          <div className="sub">The {AGENTS.length}-agent OS across six offices — author agents here, operate them in Command</div>
         </div>
         <div className="seg">
           {SUBTABS.map(({ id, label, Icon }) => (
@@ -304,18 +306,20 @@ function DataMap() {
 
 function Roster({ has }: { has: { growth: boolean; economy: boolean; content: boolean } }) {
   const [open, setOpen] = useState<string | null>(null)
-  const tiers = Object.keys(TIER_META) as Tier[]
+  const { goOffice } = useHQ()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="insight tl" style={{ alignItems: 'center' }}>
+      <div className="insight ok" style={{ alignItems: 'center' }}>
         <Lightbulb size={15} />
-        <div>An agent earns its place only if it ships a <b>decision, artifact, monitoring signal, or action</b>. A dot is <b>lit</b> when its live data source has signal — not for decoration.</div>
+        <div>Reconciled to <b>Command's six offices</b> — the org's single source of truth. This builder <b>authors</b> agents; the live roster, orchestration and ROI now live in{' '}
+          <button onClick={() => goOffice('roster')} className="src" style={{ cursor: 'pointer', border: 'none' }}>Command → The Guild</button>. A dot is <b>lit</b> when the agent's live data source has signal.</div>
       </div>
-      {tiers.map(tier => {
-        const list = AGENTS.filter(a => a.tier === tier)
-        const meta = TIER_META[tier]
+      {OFFICE_KEYS.map(office => {
+        const list = AGENTS.filter(a => officeOf(a) === office)
+        if (list.length === 0) return null
+        const meta = OFFICE_META[office]
         return (
-          <div key={tier}>
+          <div key={office}>
             <div className="row" style={{ gap: 8, marginBottom: 10 }}>
               <span style={{ width: 9, height: 9, borderRadius: 3, background: meta.accent }} />
               <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.label}</div>
@@ -335,7 +339,7 @@ function AgentCard({ a, has, open, onToggle }: {
   a: Agent; has: { growth: boolean; economy: boolean; content: boolean }; open: boolean; onToggle: () => void
 }) {
   const status = deriveStatus(a, has)
-  const accent = TIER_META[a.tier].accent
+  const accent = OFFICE_META[officeOf(a)].accent
   return (
     <button onClick={onToggle} className="card" style={{
       textAlign: 'left', cursor: 'pointer', padding: 0, overflow: 'hidden',
