@@ -17,7 +17,7 @@ const worldHue: Record<string, number> = { space: 250, ocean: 205, volcano: 8, i
 // The Ship tab: an App-Store-style showcase — featured hero, trending row,
 // kid-made games, and a cinematic pitch-deck showcase.
 export default function Discover() {
-  const { openGame, playWizardGame, go, learnerName } = useAppStore()
+  const { openGame, playWizardGame, go, learnerName, openKinQuest } = useAppStore()
   const [community, setCommunity] = useState<Community[]>([])
   const [featured, setFeatured] = useState<FeaturedGame[] | null>(null)
   const [pitches, setPitches] = useState<PitchDeck[]>(() => loadPitches())
@@ -60,7 +60,7 @@ export default function Discover() {
       </div>
 
       {/* ── ⭐ Star by ArgantaLab — the flagship native game, always first ── */}
-      <button className="ship-star" onClick={() => go({ tab: 'kinquest' })}>
+      <button className="ship-star" onClick={openKinQuest}>
         <div className="ship-star-glow" aria-hidden />
         <div className="ship-star-body">
           <span className="ship-star-tag">⭐ Star by ArgantaLab</span>

@@ -69,6 +69,7 @@ interface AppStore {
   toasts: Toast[]
   pendingBadge: string | null
   showConfetti: boolean
+  kinquestOpen: boolean            // full-screen KinQuest game overlay (opened from Discover)
 
   // — studio session state (not persisted) —
   studioDevice: 'desktop' | 'tablet' | 'iphone'
@@ -113,6 +114,8 @@ interface AppStore {
   closeGame: () => void
   playWizardGame: (html: string, title: string, id?: string) => void
   closeWizardGame: () => void
+  openKinQuest: () => void
+  closeKinQuest: () => void
   setShowConcept: (v: boolean) => void
   addToast: (msg: string, emoji?: string) => void
   clearBadge: () => void
@@ -189,6 +192,7 @@ export const useAppStore = create<AppStore>()(
       toasts: [],
       pendingBadge: null,
       showConfetti: false,
+      kinquestOpen: false,
 
       // studio session
       studioDevice: 'desktop',
@@ -383,6 +387,9 @@ export const useAppStore = create<AppStore>()(
 
       playWizardGame(html, title, id) { set({ playGameHtml: html, playGameTitle: title, playGameId: id ?? null }) },
       closeWizardGame() { set({ playGameHtml: null, playGameTitle: '', playGameId: null }) },
+
+      openKinQuest() { set({ kinquestOpen: true }) },
+      closeKinQuest() { set({ kinquestOpen: false }) },
 
       setShowConcept(v) { set({ showConcept: v }) },
 

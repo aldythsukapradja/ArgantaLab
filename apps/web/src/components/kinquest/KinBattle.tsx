@@ -66,7 +66,8 @@ export default function KinBattle({
   const [question, setQuestion] = useState<BattleQuestion | null>(null)
   const [pending, setPending] = useState<'focus' | 'befriend' | null>(null)
   const [busy, setBusy] = useState(false)
-  const [banner, setBanner] = useState<string>(bs.lastEvent?.text ?? '')
+  const [banner, setBanner] = useState<string>(
+    isKeeper ? `Keeper ${keeperName ?? ''} sends out ${enemyTeam[0].name}!` : (bs.lastEvent?.text ?? ''))
   const [quizFeedback, setQuizFeedback] = useState<{ correct: boolean; text: string } | null>(null)
   const [hitFx, setHitFx] = useState<'player' | 'enemy' | null>(null)
   const [showSwap, setShowSwap] = useState(false)

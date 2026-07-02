@@ -116,6 +116,25 @@ function WizardGameModal() {
   )
 }
 
+// The flagship KinQuest game, opened from Discover as a full-screen takeover
+// (no app chrome). Escape or the ✕ button closes back to wherever you were.
+function KinQuestOverlay() {
+  const open = useAppStore(s => s.kinquestOpen)
+  const close = useAppStore(s => s.closeKinQuest)
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, close])
+  if (!open) return null
+  return (
+    <div className="kq-overlay">
+      <KinQuest />
+    </div>
+  )
+}
+
 function Toasts() {
   const { toasts } = useAppStore()
   if (!toasts.length) return null
@@ -262,7 +281,6 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'profile') return <Profile />
   if (tab === 'parent') return <FamilyPulse />
   if (tab === 'quests') return <Quests />
-  if (tab === 'kinquest') return <KinQuest />
   if (tab === 'kinworld') return <KinWorld />
   // 'admin' (Content Studio) relocated to Circle HQ — fall through to home.
   return <PlayHome />
@@ -309,6 +327,7 @@ function AppShell() {
       <ConceptDrawer />
       <GameModal />
       <WizardGameModal />
+      <KinQuestOverlay />
       <BadgeModal />
       <Toasts />
       <AuthWall />
