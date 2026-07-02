@@ -11,15 +11,6 @@ import type { OfficeId } from '../data/graph/types'
 import { ChartView, type ChartData } from './charts'
 import { useHQ, type AgentSize } from '../shell/store'
 
-const CHIPS = [
-  { label: '📋 Daily Brief', prompt: 'Give me my daily brief' },
-  { label: '🎯 Focus', prompt: 'What should I focus on this week?' },
-  { label: '⚠️ Blockers', prompt: "What's blocking me?" },
-  { label: '💎 Economy', prompt: 'Economy health check' },
-  { label: '💰 Monetization', prompt: 'Monetization forecast' },
-  { label: '🤖 Agents', prompt: 'Show agent OS status' },
-]
-
 // Scenario quick-launchers — the CEO Agent orchestrates these in-chat, convening
 // the scenario's agents and rendering the live chart inline.
 const SCN_LABEL: Record<string, string> = {
@@ -61,20 +52,18 @@ export function AgentOrb() {
   const [msgs, setMsgs] = useState<Msg[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Office-aware: inside a Command office, the orb becomes that chief's agent.
-  const activeOffice: OfficeId | null = surface === 'command' && commandTab !== 'lobby' ? commandTab : null
-  const chief = activeOffice ? officeById(activeOffice) : null
-  const chips = activeOffice
-    ? OFFICE_CHAT[activeOffice].chips.map(c => ({ label: c.label, prompt: c.q }))
-    : CHIPS
+  // Office-aware: the orb is the CEO Agent by default (the orchestrator), and
+  // becomes that chief's agent inside a Command office.
+  const inOffice = surface === 'command' && commandTab !== 'lobby'
+  const officeKey: OfficeId = inOffice ? commandTab : 'bridge'
+  const chief = officeById(officeKey)
+  const chips = OFFICE_CHAT[officeKey].chips.map(c => ({ label: c.label, prompt: c.q }))
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' }) }, [msgs, busy])
   useEffect(() => {
     if (open && msgs.length === 0) setMsgs([{
       role: 'agent',
-      text: chief && activeOffice
-        ? `**Hi 👋** I'm your **${chief.chief} Agent** — ${OFFICE_CHAT[activeOffice].brief}`
-        : "**Hi 👋** I'm your **COO Agent** — I run the Circle AI OS over live SQL. I sense, compute, match, then synthesise with Sonnet 4.6. Ask me anything.",
+      text: `**Hi 👋** I'm your **${chief.chief} Agent** — ${OFFICE_CHAT[officeKey].brief}`,
     }])
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -180,7 +169,7 @@ export function AgentOrb() {
 
   return (
     <>
-      <button className="agent-orb" aria-label="Open COO Agent" onClick={() => toggleAgent()}
+      <button className="agent-orb" aria-label="Open CEO Agent" onClick={() => toggleAgent()}
         style={{ transform: open ? 'scale(.9)' : 'scale(1)' }}>
         <Sparkles size={22} color="#fff" />
       </button>
@@ -197,8 +186,8 @@ export function AgentOrb() {
               <Sparkles size={16} color="#fff" />
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 600 }}>{chief ? `${chief.chief} Agent` : 'COO Agent'}</div>
-              <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{chief ? `${chief.office} · Command` : 'Circle AI OS · live SQL pipeline'}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>{chief.chief} Agent</div>
+              <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{inOffice ? `${chief.office} · Command` : 'Circle AI OS · orchestrator'}</div>
             </div>
             <Pill model="sonnet" />
             <button className="agent-x" onClick={() => closeAgent()} aria-label="Close"><X size={15} /></button>
@@ -254,7 +243,7 @@ export function AgentOrb() {
           </div>
 
           <div className="agent-composer">
-            <input className="agent-input" value={input} placeholder={`Ask the ${chief ? chief.chief : 'COO'} Agent…`} disabled={busy}
+            <input className="agent-input" value={input} placeholder={`Ask the ${chief.chief} Agent…`} disabled={busy}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && input.trim()) run(input.trim()) }} />
             <button className="agent-send" disabled={busy || !input.trim()} onClick={() => input.trim() && run(input.trim())} aria-label="Send">

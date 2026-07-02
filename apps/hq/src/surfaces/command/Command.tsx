@@ -3,12 +3,11 @@ import { Lobby } from './Lobby'
 import { Office } from './Office'
 import { Treasury } from './Treasury'
 import { CoverageXray, OpsCockpit, LegalRegister, GuildBoard, BridgeRollup } from './Cockpits'
-import { DailyBrief, ReportPanel } from './reports/Briefing'
+import { ReportPanel, ReportsHub } from './reports/Briefing'
 import {
   buildOperationsReport, buildGrowthReport, buildProductReport,
   buildHealthReport, buildRiskReport, buildPeopleReport,
 } from '../../data/reports/domain'
-import { buildBoardDeck, buildInvestorUpdate } from '../../data/reports/board'
 import type { Report } from '../../data/reports/types'
 import type { OfficeId } from '../../data/graph/types'
 
@@ -57,10 +56,8 @@ export function Command() {
       {commandTab === 'treasury' && <Treasury />}
       {commandTab === 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <DailyBrief />
           <Office id="bridge" cockpit={COCKPIT.bridge} />
-          <ReportPanel report={buildBoardDeck()} label="Board deck" />
-          <ReportPanel report={buildInvestorUpdate()} label="Investor update" />
+          <ReportsHub />
         </div>
       )}
       {commandTab !== 'lobby' && commandTab !== 'treasury' && commandTab !== 'bridge' && (

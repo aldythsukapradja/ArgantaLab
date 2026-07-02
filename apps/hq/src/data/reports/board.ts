@@ -61,3 +61,22 @@ export function buildInvestorUpdate(): Report {
   ]
   return { id: 'investor', title: 'Investor Update', subtitle: 'IR · monthly — traction, KPIs, asks', owner: 'treasury', cadence: 'monthly', audience: 'Investors', sections, livePct: cov.pct }
 }
+
+export function buildAllHands(): Report {
+  const cov = coverage()
+  const lines = OFFICE_ORDER.map(officeHeadline)
+  const mid = runModel(CASE_DEFAULTS.mid, 24)
+  const sections: Section[] = [
+    { id: 'h', kind: 'headline', source: 'partial', label: 'All-hands', tone: 'ok', text: 'One North Star: a child learned AND a parent coordinated, same week.', sub: 'Everyone’s work ladders here. If it doesn’t move a lever or a stage, we ask why.' },
+    { id: 'k', kind: 'kpiRow', source: 'partial', items: [
+      { label: 'North Star · W2F', value: '—', sub: 'weekly' },
+      { label: 'Coverage', value: `${cov.pct}%`, sub: '→ 80%', tone: cov.pct >= 80 ? 'ok' : 'warn' },
+      { label: 'Families · mo24 (mid)', value: num(mid.endActive) },
+      { label: 'Break-even', value: mid.steadyBreakeven ? `${Math.round(mid.steadyBreakeven)} fam` : 'never' },
+    ] },
+    { id: 'wins', kind: 'text', source: 'live', text: 'Shipped: the Command cockpit — one product ontology, six offices, an honest coverage x-ray, the daily briefing, and a full reporting layer. The North-Star query is built and live-ready.' },
+    { id: 'chiefs', kind: 'chiefLines', source: 'partial', title: 'Where each office stands', lines },
+    { id: 'next', kind: 'text', source: 'partial', text: 'This month: validate w2f_weekly() on live data, lift instrumentation coverage past 80%, and protect the Mid-case unit economics.' },
+  ]
+  return { id: 'allhands', title: 'All-Hands', subtitle: 'CEO · monthly — mission, wins, where each office stands', owner: 'company', cadence: 'monthly', audience: 'Team', sections, livePct: cov.pct }
+}

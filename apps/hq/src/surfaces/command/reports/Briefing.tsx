@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
-import { FileText, Presentation as PresentIcon, Printer, X, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
+import { FileText, Presentation as PresentIcon, Printer, X, ChevronLeft, ChevronRight, ArrowRight, ChevronDown } from 'lucide-react'
 import { officeById } from '../../../data/graph/agents'
 import { buildDailyBriefing } from '../../../data/reports/daily'
+import {
+  buildOperationsReport, buildGrowthReport, buildProductReport,
+  buildHealthReport, buildRiskReport, buildPeopleReport,
+} from '../../../data/reports/domain'
+import { buildFinancialReport } from '../../../data/reports/financial'
+import { buildBoardDeck, buildInvestorUpdate, buildAllHands } from '../../../data/reports/board'
 import type { Report, Section } from '../../../data/reports/types'
 import { ChartView } from '../../../components/charts'
 import { CashflowChart, BarsChart, Gauge } from '../../../components/rcharts'
@@ -229,6 +235,63 @@ export function ReportPanel({ report, label }: { report: Report; label: string }
         <button className="chip" onClick={() => setOpen(o => !o)} style={{ gap: 6, cursor: 'pointer', background: open ? 'var(--bg3)' : 'var(--acc)', color: open ? 'var(--tx)' : '#fff', borderColor: open ? 'var(--bd2)' : 'var(--acc)' }}>{open ? 'Hide' : 'Open report'}</button>
       </div>
       {open && <ReportView report={report} onPresent={() => setPresent(true)} />}
+      {present && <Present report={report} onClose={() => setPresent(false)} />}
+    </div>
+  )
+}
+
+// The Reports & Presentations hub — one dropdown to pick any briefing, report,
+// or deck; renders it with Present + Export.
+const CATALOG: { group: string; label: string; build: () => Report }[] = [
+  { group: 'Briefing', label: 'Daily C-Level Briefing', build: buildDailyBriefing },
+  { group: 'Presentation', label: 'Board Deck', build: buildBoardDeck },
+  { group: 'Presentation', label: 'Investor Update', build: buildInvestorUpdate },
+  { group: 'Presentation', label: 'All-Hands', build: buildAllHands },
+  { group: 'Report', label: 'Financial', build: buildFinancialReport },
+  { group: 'Report', label: 'Operations', build: buildOperationsReport },
+  { group: 'Report', label: 'Product', build: buildProductReport },
+  { group: 'Report', label: 'Growth', build: buildGrowthReport },
+  { group: 'Report', label: 'Health Check', build: buildHealthReport },
+  { group: 'Report', label: 'Risk & Compliance', build: buildRiskReport },
+  { group: 'Report', label: 'Agent Workforce', build: buildPeopleReport },
+]
+
+export function ReportsHub() {
+  const [i, setI] = useState(0)
+  const [menu, setMenu] = useState(false)
+  const [present, setPresent] = useState(false)
+  const cur = CATALOG[i]
+  const report = cur.build()
+  const groups = [...new Set(CATALOG.map(c => c.group))]
+  useEffect(() => {
+    if (!menu) return
+    const onDown = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest('[data-rhub]')) setMenu(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [menu])
+  return (
+    <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="spread" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600 }}><FileText size={14} /> Reports &amp; Presentations</div>
+        <div data-rhub style={{ position: 'relative' }}>
+          <button className="chip" onClick={() => setMenu(o => !o)} style={{ gap: 8, cursor: 'pointer' }}>
+            <span className="pill pill-mut" style={{ fontSize: 9 }}>{cur.group}</span>{cur.label}<ChevronDown size={13} />
+          </button>
+          {menu && (
+            <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 30, background: 'var(--bg2)', border: '1px solid var(--bd2)', borderRadius: 'var(--r-lg)', boxShadow: '0 12px 32px -12px rgba(0,0,0,.5)', minWidth: 240, overflow: 'hidden', paddingBottom: 4 }}>
+              {groups.map(g => (
+                <div key={g}>
+                  <div style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)', padding: '9px 12px 4px' }}>{g}</div>
+                  {CATALOG.map((c, ci) => c.group === g ? (
+                    <button key={ci} onClick={() => { setI(ci); setMenu(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 12.5, cursor: 'pointer', background: ci === i ? 'var(--acc-soft)' : 'transparent', color: ci === i ? 'var(--acc-text)' : 'var(--tx)' }}>{c.label}</button>
+                  ) : null)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <ReportView report={report} onPresent={() => setPresent(true)} />
       {present && <Present report={report} onClose={() => setPresent(false)} />}
     </div>
   )
