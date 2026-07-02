@@ -2288,3 +2288,42 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
   transition:transform .04s linear}
 /* on mobile the KinWorld map sits above the dock; lift the stick to clear it fully */
 @media (max-width:900px){ .kw-joy{bottom:34px} }
+
+/* ── ArgantaCup · Fame tab ──────────────────────────────── */
+.cup-empty{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+  padding:34px 22px;background:var(--panel);border:1px solid var(--border);border-radius:18px}
+.cup-empty-ic{font-size:34px;opacity:.85}
+.cup-empty b{font-size:16px}
+.cup-empty span{font-size:12.5px;color:var(--t2);max-width:34ch;line-height:1.5}
+.cup-card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:14px 16px;margin-bottom:12px}
+.cup-card-head{display:flex;align-items:center;justify-content:space-between}
+.cup-card-head b{font-size:16px;font-weight:800}
+.cup-time{font-size:12px;color:var(--t2)}
+.cup-prize{margin:8px 0 12px}
+.cup-prize-pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;
+  color:#7a5a10;background:linear-gradient(90deg,#ffe9a8,#ffd76b);padding:4px 12px;border-radius:999px}
+.cup-board{display:flex;flex-direction:column;gap:8px}
+.cup-row{display:flex;align-items:center;gap:10px}
+.cup-row.me{background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:10px;padding:5px 8px;margin:0 -8px}
+.cup-pos{width:22px;text-align:center;font-size:13px;font-weight:800;color:var(--t2)}
+.cup-name{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cup-name em{color:var(--accent);font-style:normal;font-weight:700}
+.cup-bar{flex:1.6;height:8px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+.cup-bar i{display:block;height:100%;border-radius:999px;background:var(--accent);transition:width .6s var(--ease)}
+.cup-score{width:62px;text-align:right;font-size:13px;font-weight:800}
+.cup-foot{font-size:12px;color:var(--t2);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+/* ── ArgantaCup · Family Pulse manage ───────────────────── */
+.par-cups{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:12px 14px}
+.par-cups-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.par-cups-head b{font-size:15px}
+.par-cups-head small{display:block;font-size:12px;color:var(--t2);margin-top:1px}
+.par-cup-new{flex:0 0 auto;padding:8px 16px!important;font-size:13px!important}
+.par-cup-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.par-cup-row{display:flex;align-items:center;gap:8px;background:var(--panel-2);border-radius:12px;padding:8px 12px}
+.par-cup-info{flex:1;min-width:0}
+.par-cup-info b{font-size:13.5px}
+.par-cup-info small{display:block;font-size:11.5px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.par-cup-btn{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--t2);padding:6px 12px;border-radius:10px;
+  background:var(--panel);border:1px solid var(--border)}
+.par-cup-btn.danger{color:#c0392b;border-color:#ef444455}

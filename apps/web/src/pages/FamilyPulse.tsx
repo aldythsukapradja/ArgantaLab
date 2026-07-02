@@ -9,6 +9,8 @@ import {
 import type { CloudProfile } from '@lib/cloudAuth'
 import { isOnline } from '@lib/cloudAuth'
 import { getMyDiamonds, grantDiamonds, adjustKidDiamonds } from '@lib/rewards'
+import { myCups, settleCup, cancelCup, cupTimeLeft, type Cup } from '@lib/competitions'
+import CupCreate from '@components/circles/CupCreate'
 import { cloudEnabled } from '@lib/supabase'
 import { nivoTheme } from '@lib/nivoTheme'
 import { useCountUp, fmt } from '@lib/useCountUp'
@@ -57,6 +59,7 @@ function emptyDashboard(k: CloudProfile): KidDashboard {
 
 export default function FamilyPulse() {
   const theme = useAppStore(s => s.theme)
+  const addToast = useAppStore(s => s.addToast)
   const nv = useMemo(() => nivoTheme(theme), [theme])
 
   const [kids, setKids] = useState<CloudProfile[] | null>(null)
@@ -66,11 +69,15 @@ export default function FamilyPulse() {
   // no play data) → lets us distinguish "couldn't load" from "no play yet".
   const [loadFailed, setLoadFailed] = useState(false)
   const [budget, setBudget] = useState(useAppStore.getState().diamonds)
+  const [cups, setCups] = useState<Cup[]>([])
+  const [showCup, setShowCup] = useState(false)
+  const reloadCups = () => myCups().then(setCups)
 
   useEffect(() => {
     let alive = true
     listKids().then(ks => { if (alive) { setKids(ks); setActiveKid(ks[0]?.id ?? null) } })
     getMyDiamonds().then(b => { if (alive && b > 0) setBudget(b) })
+    myCups().then(c => { if (alive) setCups(c) })
     return () => { alive = false }
   }, [])
 
@@ -169,6 +176,36 @@ export default function FamilyPulse() {
           </button>
         ))}
       </div>
+
+      {/* ── ArgantaCup: create + manage circle competitions ── */}
+      <div className="par-cups">
+        <div className="par-cups-head">
+          <div><b>🏆 ArgantaCup</b><small>Run a contest in your circle — winner takes a real prize.</small></div>
+          <button className="btn btn-primary par-cup-new" onClick={() => setShowCup(true)}>＋ New cup</button>
+        </div>
+        {cups.length > 0 && (
+          <div className="par-cup-list">
+            {cups.map(c => {
+              const lead = c.standings[0]
+              return (
+                <div key={c.id} className="par-cup-row">
+                  <div className="par-cup-info">
+                    <b>{c.title}</b>
+                    <small>
+                      {c.prize_kind === 'diamonds' ? `💎 ${c.prize_diamonds.toLocaleString()}` : c.prize_kind === 'mount' ? '🐎 mount' : '🎁 item'}
+                      {' · '}{cupTimeLeft(c.ends_at)}
+                      {lead ? ` · leader: ${lead.name}` : ''}
+                    </small>
+                  </div>
+                  <button className="par-cup-btn" onClick={async () => { await settleCup(c.id); reloadCups(); addToast('Cup ended & prize paid 🏆', '🏆') }}>End now</button>
+                  <button className="par-cup-btn danger" onClick={async () => { await cancelCup(c.id); reloadCups(); addToast('Cup cancelled · prize refunded', '↩️') }}>Cancel</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+      {showCup && <CupCreate onClose={() => setShowCup(false)} onCreated={reloadCups} />}
 
       {/* Couldn't-load banner — distinguishes an auth/setup error from "no play yet" */}
       {loadFailed && kid && (

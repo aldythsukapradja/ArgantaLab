@@ -6,8 +6,11 @@ import { WORLDS } from '@/data/learn'
 import { worldRing } from '@lib/learnProgress'
 import { allBadges } from '@lib/badges'
 import { tierOf } from '@lib/rank'
+import { myCups, cupTimeLeft, type Cup } from '@lib/competitions'
 import TierIcon from '@components/rank/TierIcon'
 import Buddy from '@components/avatar/Buddy'
+
+const PRIZE_LABEL = (c: Cup) => c.prize_kind === 'diamonds' ? `💎 ${c.prize_diamonds.toLocaleString()}` : c.prize_kind === 'mount' ? '🐎 A mount' : '🎁 A shop item'
 
 // Sample board so the world view feels alive until enough real creators sign in.
 const SAMPLE = [
@@ -18,7 +21,7 @@ const SAMPLE = [
   { name: 'StarCoder', xp: 3300, games: 9, emoji: '⭐' },
 ]
 
-type Scope = 'world' | 'myworlds' | 'badges'
+type Scope = 'world' | 'myworlds' | 'badges' | 'cup'
 
 export default function Fame() {
   const { learnerName, xp, level, resolvedOutfit, go, session } = useAppStore()
@@ -27,12 +30,14 @@ export default function Fame() {
   const games = loadMyGames().length
   const myId = session && session !== 'loading' ? session.user.id : null
   const [live, setLive] = useState<{ name: string; xp: number; games: number; emoji: string; me: boolean }[] | null>(null)
+  const [cups, setCups] = useState<Cup[] | null>(null)   // null = loading, [] = none
 
   useEffect(() => {
     getLeaderboard(20).then(rows => {
       if (!rows || rows.length === 0) { setLive(null); return }
       setLive(rows.map(r => ({ name: r.name, xp: r.xp, games: r.games, emoji: '🎮', me: !!myId && r.id === myId })))
     })
+    myCups().then(setCups)
   }, [myId])
 
   const sampleBoard = (() => {
@@ -62,9 +67,53 @@ export default function Fame() {
         <button className={`fame-tab${scope === 'world' ? ' on' : ''}`} onClick={() => setScope('world')}>🌍 World</button>
         <button className={`fame-tab${scope === 'myworlds' ? ' on' : ''}`} onClick={() => setScope('myworlds')}>⭐ My Worlds</button>
         <button className={`fame-tab${scope === 'badges' ? ' on' : ''}`} onClick={() => setScope('badges')}>🎖 Badges</button>
+        <button className={`fame-tab${scope === 'cup' ? ' on' : ''}`} onClick={() => setScope('cup')}>🏆 Cup</button>
       </div>
 
-      {scope === 'badges' ? (
+      {scope === 'cup' ? (
+        cups === null ? (
+          <div className="fame-board"><div className="fame-row" style={{ opacity: .5 }}>Loading…</div></div>
+        ) : cups.length === 0 ? (
+          <div className="cup-empty">
+            <span className="cup-empty-ic">🏆</span>
+            <b>No cup running</b>
+            <span>Ask a grown-up to start an ArgantaCup in your circle — winners take a real prize.</span>
+          </div>
+        ) : (
+          <>
+            {cups.map(c => {
+              const winning = c.standings[0]
+              const top = winning?.score || 1
+              const me = c.standings.find(s => s.kid_id === myId)
+              return (
+                <div key={c.id} className="cup-card">
+                  <div className="cup-card-head">
+                    <b>{c.title}</b>
+                    <span className="cup-time">⏳ {cupTimeLeft(c.ends_at)}</span>
+                  </div>
+                  <div className="cup-prize"><span className="cup-prize-pill">{PRIZE_LABEL(c)} to the winner</span></div>
+                  <div className="cup-board">
+                    {c.standings.map((s, i) => (
+                      <div key={s.kid_id} className={`cup-row${s.kid_id === myId ? ' me' : ''}`}>
+                        <span className="cup-pos">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</span>
+                        <span className="cup-name">{s.name}{s.kid_id === myId && <em> · you</em>}</span>
+                        <span className="cup-bar"><i style={{ width: `${Math.round((s.score / top) * 100)}%` }} /></span>
+                        <span className="cup-score">{s.score.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {me && winning && me.kid_id !== winning.kid_id && (
+                    <p className="cup-foot">🔥 {(winning.score - me.score).toLocaleString()} more to take the lead — keep learning!</p>
+                  )}
+                  {me && winning && me.kid_id === winning.kid_id && (
+                    <p className="cup-foot">👑 You're in the lead — hold your ground!</p>
+                  )}
+                </div>
+              )
+            })}
+          </>
+        )
+      ) : scope === 'badges' ? (
         <>
           <div className="fame-you"><span>Badges earned</span><b>{badgesEarned}</b><span>of {badges.length}</span></div>
           <div className="badge-grid">
