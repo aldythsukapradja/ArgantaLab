@@ -118,20 +118,34 @@ export function guard(prev: BattleState): BattleState {
   return s
 }
 
-/** Befriend chance (0..1). Zero on Keeper battles or a healthy enemy. */
-export function befriendChance(s: BattleState, quizCorrect = false): number {
+/** Befriend chance (0..1). Zero on Keeper battles or a healthy enemy.
+ *  `berryBoost` is an earned Bond Berry's bonus (see items.ts). */
+export function befriendChance(s: BattleState, quizCorrect = false, berryBoost = 0): number {
   if (s.isKeeper) return 0
   const frac = s.enemy.hp / s.enemy.maxHp
   if (frac > 0.55) return 0
-  const base = 0.18 + (1 - frac) * 0.6 + (quizCorrect ? 0.15 : 0)
+  const base = 0.18 + (1 - frac) * 0.6 + (quizCorrect ? 0.15 : 0) + Math.max(0, berryBoost)
   return Math.max(0, Math.min(0.95, base))
 }
 
+/** Use a healing item on the active kin: restores `frac` of maxHp and passes
+ *  the turn (classic item-costs-a-turn rule). Pure no-op when it isn't usable. */
+export function useHeal(prev: BattleState, frac: number): BattleState {
+  if (prev.status !== 'active' || prev.turn !== 'player') return prev
+  if (prev.player.hp >= prev.player.maxHp) return prev
+  const s: BattleState = { ...prev, player: { ...prev.player } }
+  const amount = Math.max(1, Math.round(s.player.maxHp * frac))
+  s.player.hp = Math.min(s.player.maxHp, s.player.hp + amount)
+  s.turn = 'enemy'
+  s.lastEvent = { kind: 'guard', by: 'player', text: `${s.player.name} drank Berry Juice! +${amount} HP` }
+  return s
+}
+
 /** Attempt to befriend the weakened wild kin. roll ∈ [0,1); success if roll < chance. */
-export function attemptBefriend(prev: BattleState, o: { roll: number; quizCorrect?: boolean }): BattleState {
+export function attemptBefriend(prev: BattleState, o: { roll: number; quizCorrect?: boolean; berryBoost?: number }): BattleState {
   if (prev.status !== 'active' || prev.turn !== 'player') return prev
   const s: BattleState = { ...prev, player: { ...prev.player }, enemy: { ...prev.enemy } }
-  const chance = befriendChance(s, o.quizCorrect)
+  const chance = befriendChance(s, o.quizCorrect, o.berryBoost ?? 0)
   const success = chance > 0 && o.roll < chance
   if (success) {
     s.status = 'befriended'

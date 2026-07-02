@@ -16,6 +16,8 @@ export interface PartyKin {
   level: number
   bond: number         // 0..100 → drives evolution tier
   world: string
+  hp?: number          // CURRENT hp (persists between battles); undefined = full
+  xp?: number          // xp toward the next level (see growth.ts)
 }
 
 /** HP a combatant has at a given level+tier (from catalog baseHp). */
@@ -47,9 +49,12 @@ export function makeCombatant(render: string, level: number, bondOrTier: number,
   }
 }
 
-/** Build a Combatant from a saved PartyKin. */
+/** Build a Combatant from a saved PartyKin — honouring its PERSISTED hp, so
+ *  damage carries between battles and the Kin Center means something. */
 export function combatantFromParty(k: PartyKin): Combatant {
-  return makeCombatant(k.render, k.level, k.bond)
+  const c = makeCombatant(k.render, k.level, k.bond)
+  if (typeof k.hp === 'number') c.hp = Math.max(0, Math.min(c.maxHp, Math.round(k.hp)))
+  return c
 }
 
 /** Build a wild enemy of a given render key within a level band. */

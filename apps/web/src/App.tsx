@@ -42,6 +42,7 @@ import World from '@/pages/World'
 import PlayPage from '@/pages/PlayPage'
 import '@/styles/globals.css'
 import '@/styles/v2.css'
+import '@/styles/kinquest.css'
 
 const CONFETTI_COLORS = ['#4D9FFF','#8B5CF6','#FF5EA0','#3DE08A','#FFC24B','#34E5FF']
 

@@ -1,0 +1,116 @@
+/* ============================================================
+   ARGANTALAB · KINQUEST v2  (battle theatre · overworld polish)
+   Additions on top of the base .kq/.kqb/.kqt/.kqd rules in globals.css
+   ============================================================ */
+
+/* ── battle theatre ─────────────────────────────────────── */
+.kqb-caret{display:inline-block;width:7px;height:13px;margin-left:2px;vertical-align:-2px;
+  background:currentColor;opacity:.7;animation:kqcaret 1s steps(2) infinite}
+@keyframes kqcaret{50%{opacity:0}}
+.kqb-shake-s{animation:kqshakes .3s ease}
+@keyframes kqshakes{25%{transform:translate(3px,-2px)}50%{transform:translate(-3px,2px)}75%{transform:translate(2px,1px)}}
+.kqb-shake-b{animation:kqshakeb .34s ease}
+@keyframes kqshakeb{20%{transform:translate(6px,-4px)}40%{transform:translate(-6px,4px)}60%{transform:translate(5px,2px)}80%{transform:translate(-4px,-2px)}}
+.kqb-stage-e{position:absolute;top:118px;right:34px;width:150px;height:34px;border-radius:50%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--rc) 40%,#223) 0%,transparent 75%);opacity:.6;pointer-events:none}
+.kqb-stage-m{position:absolute;bottom:26px;left:30px;width:170px;height:38px;border-radius:50%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--rc) 40%,#223) 0%,transparent 75%);opacity:.6;pointer-events:none}
+.kqb-sprite.enter-r{animation:kqenterR .8s cubic-bezier(.22,1,.36,1) both}
+@keyframes kqenterR{from{transform:scaleX(-1) translateX(-130px);opacity:0}to{transform:scaleX(-1) translateX(0);opacity:1}}
+.kqb-sprite.enter-l{animation:kqenterL .8s cubic-bezier(.22,1,.36,1) both}
+@keyframes kqenterL{from{transform:translateX(-130px);opacity:0}to{transform:translateX(0);opacity:1}}
+.kqb-sprite.faint{animation:kqfaintA .8s ease forwards}
+@keyframes kqfaintA{to{transform:translateY(34px);opacity:0}}
+.kqb-esprite.faint{animation:kqfaintB .8s ease forwards}
+@keyframes kqfaintB{to{transform:scaleX(-1) translateY(34px);opacity:0}}
+.kqb-dmg{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:19px;font-weight:900;color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,.6),0 0 2px #000;animation:kqdmg .85s ease forwards;pointer-events:none;z-index:5}
+.kqb-dmg.big{font-size:25px;color:#ffd76b}
+@keyframes kqdmg{20%{transform:translate(-50%,-14px) scale(1.15)}to{transform:translate(-50%,-34px);opacity:0}}
+.kqb-hpfoot{display:flex;align-items:center;gap:6px;margin-top:3px}
+.kqb-xptrack{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.kqb-xptrack i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#59c7ff,#8f7bff);
+  transition:width .8s cubic-bezier(.3,.8,.3,1)}
+
+/* ── encounter flash transition ─────────────────────────── */
+.kq-flash{position:absolute;inset:0;z-index:55;pointer-events:none;overflow:hidden}
+.kq-flash i{position:absolute;inset:0;background:#fff;opacity:0;animation:kqblink .68s linear forwards}
+.kq-flash i:nth-child(2){animation-delay:.16s}
+.kq-flash i:nth-child(3){background:radial-gradient(circle at 50% 50%,transparent 0%,#0a0f18 62%);animation:kqiris .68s ease forwards;opacity:0}
+@keyframes kqblink{0%{opacity:0}20%{opacity:.95}40%{opacity:0}}
+@keyframes kqiris{40%{opacity:0}100%{opacity:1}}
+
+/* ── Kin Center heal effect ─────────────────────────────── */
+.kq-heal{position:absolute;inset:0;z-index:56;display:grid;place-items:center;background:rgba(8,12,22,.55);
+  backdrop-filter:blur(3px);animation:kqfade .3s ease}
+.kq-heal b{font-size:16px;font-weight:800;color:#ffd8e6;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.kq-heal span{position:absolute;bottom:18%;font-size:22px;animation:kqheart 1.5s ease-in infinite}
+@keyframes kqheart{0%{transform:translateY(0) scale(.7);opacity:0}25%{opacity:1}100%{transform:translateY(-120px) scale(1.15);opacity:0}}
+
+/* ── HUD chips are buttons now ──────────────────────────── */
+.kqt-hud-chip{cursor:pointer;transition:transform .12s}
+.kqt-hud-chip:active{transform:scale(.95)}
+.kqt-hud-chip.dim{cursor:default;opacity:.85}
+.kqt-hud-chip.warn{background:rgba(220,60,80,.72);border-color:rgba(255,160,170,.5);animation:kqwarn 1.4s ease infinite}
+@keyframes kqwarn{50%{transform:translateY(-2px)}}
+
+/* ── sheets: party / KinBook ────────────────────────────── */
+.kqs-wrap{position:absolute;inset:0;z-index:50;display:grid;place-items:center;padding:16px;
+  background:rgba(4,6,12,.6);backdrop-filter:blur(6px);animation:kqfade .2s ease}
+.kqs-panel{width:min(430px,94vw);max-height:82vh;overflow-y:auto;border-radius:20px;padding:14px 16px;
+  background:linear-gradient(165deg,#2b2150,#1c1636);border:2px solid rgba(180,160,255,.4);
+  box-shadow:0 22px 60px rgba(0,0,0,.6);animation:kqslideup .24s cubic-bezier(.22,1,.36,1)}
+.kqs-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.kqs-head b{flex:1;font-size:16px;color:#fff}
+.kqs-count{font-size:12px;font-weight:800;color:#ffd77a}
+.kqs-x{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);font-size:13px}
+.kqs-list{display:flex;flex-direction:column;gap:8px}
+.kqs-kin{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.kqs-kin.lead{border-color:rgba(255,215,107,.55);background:rgba(255,215,107,.08)}
+.kqs-kin.out{opacity:.55}
+.kqs-art{flex:0 0 auto}
+.kqs-meta{flex:1;min-width:0}
+.kqs-name{display:flex;align-items:baseline;gap:6px}
+.kqs-name b{font-size:14px;color:#fff}
+.kqs-name small{font-size:11px;color:#b9b3d9}
+.kqs-bar{height:7px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:4px}
+.kqs-bar i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
+.kqs-sub{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:10.5px;color:#b9b3d9}
+.kqs-xp{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+.kqs-xp i{display:block;height:100%;background:linear-gradient(90deg,#59c7ff,#8f7bff)}
+.kqs-lead{flex:0 0 auto;font-size:12px;font-weight:800;color:#1c1636;background:#ffd76b;
+  border:none;padding:7px 14px;border-radius:11px;cursor:pointer}
+.kqs-bag{display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}
+.kqs-item{font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,.08);
+  padding:5px 12px;border-radius:11px;border:1px solid rgba(255,255,255,.12)}
+.kqs-note{font-size:11.5px;color:#b9b3d9;text-align:center;margin-top:10px}
+.kqbk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kqbk-cell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.kqbk-cell.caught{border-color:rgba(255,215,107,.45)}
+.kqbk-no{font-size:9px;color:#8f89b8;align-self:flex-start;margin-left:2px}
+.kqbk-art.sil svg{filter:brightness(0) opacity(.75)}
+.kqbk-unknown{width:54px;height:54px;display:grid;place-items:center;font-size:22px;font-weight:900;color:#4d4675}
+.kqbk-cell small{font-size:10px;color:#cfc9ee;font-weight:700}
+
+/* ── evolution cutscene ─────────────────────────────────── */
+.kqe-wrap{position:absolute;inset:0;z-index:60;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 45%,#3a2d6e 0%,#120e24 70%);animation:kqfade .3s ease}
+.kqe-stage{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:20px}
+.kqe-art{filter:drop-shadow(0 10px 26px rgba(140,110,255,.45))}
+.kqe-art.charge svg{animation:kqcharge 2.1s ease forwards}
+@keyframes kqcharge{
+  0%{filter:brightness(0);transform:scale(1)}
+  35%{filter:brightness(0);transform:scale(1.12)}
+  55%{filter:brightness(0) invert(1);transform:scale(.94)}
+  70%{filter:brightness(0);transform:scale(1.2)}
+  85%{filter:brightness(0) invert(1);transform:scale(1.05)}
+  100%{filter:brightness(0) invert(1);transform:scale(1.25)}}
+.kqe-art.reveal svg{animation:kqreveal .7s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes kqreveal{from{filter:brightness(0) invert(1);transform:scale(1.25)}to{filter:none;transform:scale(1.1)}}
+.kqe-text{font-size:15px;font-weight:700;color:#e8e2ff;animation:kqfade .6s ease}
+.kqe-title{font-size:21px;font-weight:900;color:#fff;max-width:30ch;
+  text-shadow:0 2px 14px rgba(150,120,255,.6);animation:kqpop .5s cubic-bezier(.34,1.56,.64,1)}
+.kqe-btn{margin-top:6px;padding:11px 26px!important}

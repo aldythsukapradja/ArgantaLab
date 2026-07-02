@@ -1,14 +1,14 @@
 // ============================================================
-//  ARGANTALAB · KINQUEST · SEEDLING TOWN  (PixiJS v8 — walkable overworld)
-//  A Pokémon-style starter town built from the Kenney "Tiny Town" CC0 tileset
-//  (16px tiles, /assets/tinytown/tilemap_packed.png). You walk an avatar
-//  4-directionally around town: enter the Kin Center to heal, the Market to
-//  shop, houses to talk, and the Gym to battle the Keeper. Wading into TALL
-//  GRASS can trigger a wild-kin encounter. Camera follows the hero.
-//
-//  Engine (movement / camera / collision / tile-slicing) is adapted from the
-//  proven KinWorldGame. Interactions are surfaced to React via refs so the
-//  Pixi scene builds ONCE and never rebuilds on a callback change.
+//  ARGANTALAB · KINQUEST · OVERWORLD  (PixiJS v8 — walkable maps)
+//  Two hand-authored maps built from the Kenney "Tiny Town" CC0 tileset:
+//    · town  — Seedling Town: Kin Center, Market, Gym, Lab, houses, NPCs
+//    · route — Verdant Path: a wild route north of town with deep tall grass,
+//              two challenger kids (route trainers), and the sealed north gate.
+//  v2 graphics pass: layered dirt paths, two-tone tall grass with blades,
+//  building drop-shadows + windows, pond ripples, sun patches, an inner
+//  forest rim for depth, grass-rustle particles and the classic "!" pop
+//  before a wild encounter. Engine (movement / camera / collision /
+//  tap-to-walk / joystick) carries over from the proven KinWorld town.
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
@@ -20,37 +20,98 @@ import { ELEMENT_META } from '@/data/kinquest'
 import type { Element } from '@/data/openworld'
 
 // ---- tile geometry (Tiny Town: 12-col sheet, index = row*12 + col) ----
-const T = 16, COLS = 40, ROWS = 28, BASEW = COLS * T, BASEH = ROWS * T
+const T = 16
 const SHEET_COLS = 12
 const TILE = { GRASS: 0, PINE: 4, TREE: 16, BUSH: 28, FLOWER: 29, FENCE: 45, ROOF_L: 49, ROOF_R: 50, WALL: 73, DOOR: 74, CRATE: 83 }
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 const hex2int = (h: string) => parseInt(h.replace('#', ''), 16)
 
-// ---- town blueprint (positions in tile coords; roofs 2 wide) ----
-export type ActionId = 'center' | 'market' | 'gym' | 'lab' | 'house1' | 'house2' | 'npc_guide' | 'npc_elder'
-export interface ActionTarget { id: ActionId; label: string; kind: 'building' | 'npc' }
+// ---- interaction targets ----
+export type ActionKind = 'building' | 'npc' | 'trainer' | 'exit'
+export interface ActionTarget { id: string; label: string; kind: ActionKind }
 
-interface BDef { id: ActionId; col: number; row: number; roof: number; emoji: string; label: string }
-const BUILDINGS: BDef[] = [
-  { id: 'lab',     col: 18, row: 3,  roof: 0x8b5cf6, emoji: '🔬', label: "Prof's Lab" },
-  { id: 'center',  col: 6,  row: 9,  roof: 0xef4444, emoji: '➕', label: 'Kin Center' },
-  { id: 'market',  col: 30, row: 9,  roof: 0x3b82f6, emoji: '🛒', label: 'Market' },
-  { id: 'house1',  col: 6,  row: 18, roof: 0x6b8e23, emoji: '🏠', label: 'House' },
-  { id: 'house2',  col: 31, row: 18, roof: 0xa0522d, emoji: '🏠', label: 'House' },
-  { id: 'gym',     col: 18, row: 20, roof: 0xf3c34e, emoji: '🏛', label: 'Gym' },
-]
-const GRASS_PATCHES = [
-  { c: 9, r: 5, w: 5, h: 3 },
-  { c: 24, r: 13, w: 6, h: 4 },
-  { c: 14, r: 24, w: 6, h: 3 },
-]
-interface NDef { id: ActionId; col: number; row: number; color: number; emoji: string; label: string }
-const NPCS: NDef[] = [
-  { id: 'npc_guide', col: 20, row: 13, color: 0x4dabf7, emoji: '🧒', label: 'Talk' },
-  { id: 'npc_elder', col: 16, row: 22, color: 0xb197fc, emoji: '🧓', label: 'Talk' },
-]
-const SPAWN_C = 20, SPAWN_R = 15
+// ---- route trainers (exported — the shell builds their battles) ----
+export interface TrainerDef {
+  id: string; name: string; emoji: string; color: number
+  team: [string, number][]        // [render key, level]
+  rewardItem: string; diamonds: number
+  intro: string; beaten: string
+}
+export const TRAINERS: Record<string, TrainerDef> = {
+  trainer_milo: {
+    id: 'trainer_milo', name: 'Bug Kid Milo', emoji: '🧢', color: 0x4dabf7,
+    team: [['addbug', 5], ['sumseal', 6]], rewardItem: 'potion', diamonds: 15,
+    intro: 'My bugs never lose! Battle me!', beaten: 'Wow… train my bugs harder, I guess.',
+  },
+  trainer_vera: {
+    id: 'trainer_vera', name: 'Scout Vera', emoji: '🎒', color: 0xf59e0b,
+    team: [['dividove', 6], ['multimoth', 7]], rewardItem: 'berry', diamonds: 20,
+    intro: 'I scouted every patch of this route. Prove you belong here!', beaten: 'You really do belong here. Route mastered!',
+  },
+}
+
+// ---- map blueprints ----
+interface BDef { id: string; col: number; row: number; roof: number; emoji: string; label: string }
+interface NDef { id: string; col: number; row: number; color: number; emoji: string }
+interface GRect { c: number; r: number; w: number; h: number }
+interface ExitDef { id: string; rect: GRect; label: string }
+interface TDefPos { id: string; col: number; row: number }
+interface MapDef {
+  cols: number; rows: number
+  spawn: { c: number; r: number }
+  buildings: BDef[]; npcs: NDef[]; grass: GRect[]
+  exits: ExitDef[]; trainers: TDefPos[]
+  ponds: { c: number; r: number }[]
+  gapNorth?: [number, number]      // open cols in the top border (a way out)
+  gapSouth?: [number, number]
+}
+
+const MAPS: Record<string, MapDef> = {
+  town: {
+    cols: 40, rows: 28, spawn: { c: 20, r: 15 },
+    buildings: [
+      { id: 'lab',    col: 18, row: 3,  roof: 0x8b5cf6, emoji: '🔬', label: "Prof's Lab" },
+      { id: 'center', col: 6,  row: 9,  roof: 0xe4405f, emoji: '➕', label: 'Kin Center' },
+      { id: 'market', col: 30, row: 9,  roof: 0x3b82f6, emoji: '🛒', label: 'Market' },
+      { id: 'house1', col: 6,  row: 18, roof: 0x6b8e23, emoji: '🏠', label: 'House' },
+      { id: 'house2', col: 31, row: 18, roof: 0xa0522d, emoji: '🏠', label: 'House' },
+      { id: 'gym',    col: 18, row: 20, roof: 0xf3c34e, emoji: '🏛', label: 'Gym' },
+    ],
+    npcs: [
+      { id: 'npc_guide', col: 23, row: 13, color: 0x4dabf7, emoji: '🧒' },
+      { id: 'npc_elder', col: 16, row: 22, color: 0xb197fc, emoji: '🧓' },
+    ],
+    grass: [ { c: 10, r: 5, w: 5, h: 3 }, { c: 25, r: 14, w: 5, h: 3 }, { c: 13, r: 24, w: 6, h: 2 } ],
+    exits: [ { id: 'exit_route', rect: { c: 24, r: 0, w: 4, h: 2 }, label: 'Verdant Path' } ],
+    trainers: [],
+    ponds: [{ c: 34, r: 23 }],
+    gapNorth: [24, 27],
+  },
+  route: {
+    cols: 26, rows: 44, spawn: { c: 13, r: 40 },
+    buildings: [],
+    npcs: [],
+    grass: [
+      { c: 4,  r: 32, w: 8, h: 4 },
+      { c: 14, r: 26, w: 8, h: 5 },
+      { c: 4,  r: 18, w: 9, h: 5 },
+      { c: 13, r: 10, w: 8, h: 4 },
+      { c: 5,  r: 5,  w: 6, h: 3 },
+    ],
+    exits: [
+      { id: 'exit_town', rect: { c: 11, r: 42, w: 4, h: 2 }, label: 'Seedling Town' },
+      { id: 'gate_north', rect: { c: 11, r: 0, w: 4, h: 2 }, label: 'North Gate' },
+    ],
+    trainers: [
+      { id: 'trainer_milo', col: 18, row: 30 },
+      { id: 'trainer_vera', col: 7,  row: 13 },
+    ],
+    ponds: [{ c: 20, r: 20 }],
+    gapNorth: [11, 14],
+    gapSouth: [11, 14],
+  },
+}
 
 function svgTex(node: ReactElement): string {
   let s = renderToStaticMarkup(node)
@@ -66,11 +127,14 @@ async function rasterize(url: string, w: number, h: number): Promise<HTMLCanvasE
 }
 
 export default function KinQuestTown({
-  paused, gymElement, gymSealed, onAction, onEncounter,
+  map, spawn, paused, gymElement, gymSealed, trainersBeaten, onAction, onEncounter,
 }: {
+  map: string
+  spawn?: { c: number; r: number }
   paused: boolean
   gymElement: Element
   gymSealed: boolean
+  trainersBeaten: string[]
   onAction: (t: ActionTarget) => void
   onEncounter: () => void
 }) {
@@ -88,6 +152,9 @@ export default function KinQuestTown({
     let destroyed = false
     let app: any = null
     const parent = parentRef.current
+    const M = MAPS[map] ?? MAPS.town
+    const COLS = M.cols, ROWS = M.rows, BASEW = COLS * T, BASEH = ROWS * T
+    const SPAWN = spawn ?? M.spawn
     const keys: Record<string, boolean> = {}
     const kd = (e: KeyboardEvent) => { if (/^Arrow|^[wasdWASD]$/.test(e.key)) { keys[e.key.toLowerCase()] = true; e.preventDefault() } }
     const ku = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = false }
@@ -118,59 +185,75 @@ export default function KinQuestTown({
         const grass = new Set<string>()
         const block = (c: number, r: number) => blocked.add(c + ',' + r)
 
-        // ground
+        // deterministic RNG for all decor
+        let seed = map === 'route' ? 77003 : 20260702
+        const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff }
+
+        // ── LAYER 0 · ground: grass with soft colour variation + sun patches ──
         const ground = new PIXI.TilingSprite({ texture: tile(TILE.GRASS), width: BASEW, height: BASEH })
         world.addChild(ground)
+        const mood = new PIXI.Graphics()
+        for (let i = 0; i < 8; i++) {
+          const x = rnd() * BASEW, y = rnd() * BASEH, rr = 60 + rnd() * 90
+          mood.ellipse(x, y, rr, rr * 0.7).fill({ color: i % 2 ? 0xfff8c0 : 0x1c4a20, alpha: i % 2 ? 0.06 : 0.07 })
+        }
+        world.addChild(mood)
 
-        // tap-to-walk layer (under entities). Tapping snaps to a nearby building/
-        // NPC interaction point so the hero walks right up to it. (`targets` fills
-        // in below; this handler only runs on a later tap.)
+        // tap-to-walk layer (under entities)
+        let moveTarget: { x: number; y: number } | null = null, stuck = 0
         const tapLayer = new PIXI.Graphics()
         tapLayer.rect(0, 0, BASEW, BASEH).fill({ color: 0x000000, alpha: 0.001 })
         tapLayer.eventMode = 'static'
-        tapLayer.on('pointertap', (e: any) => {
-          if (pausedRef.current) return
-          const p = world.toLocal(e.global)
-          let tx = p.x, ty = p.y
-          let best = 1e9, bx = tx, by = ty
-          for (const t of targets) { const dd = Math.hypot(t.x - tx, t.y - ty); if (dd < best) { best = dd; bx = t.x; by = t.y } }
-          if (best < 2.4 * T) { tx = bx; ty = by }
-          moveTarget = { x: clamp(tx, T + 4, BASEW - T - 4), y: clamp(ty, T + 4, BASEH - T - 4) }
-          stuck = 0
-        })
         world.addChild(tapLayer)
 
-        // dirt paths — a plaza cross + spurs to each building porch
-        const doors = BUILDINGS.map(b => ({ ...b, px: (b.col + 1) * T, py: (b.row + 2) * T }))
+        // ── LAYER 1 · layered dirt paths (edge + fill + highlight + speckles) ──
+        const doors = M.buildings.map(b => ({ ...b, px: (b.col + 1) * T, py: (b.row + 2) * T }))
         const paths = new PIXI.Graphics()
-        const cx = SPAWN_C * T, cy = SPAWN_R * T
-        paths.moveTo(4 * T, cy).lineTo((COLS - 4) * T, cy).stroke({ width: 15, color: 0xcdb488, alpha: 0.6, cap: 'round' })
-        paths.moveTo(cx, 5 * T).lineTo(cx, (ROWS - 4) * T).stroke({ width: 15, color: 0xcdb488, alpha: 0.6, cap: 'round' })
-        for (const d of doors) {
-          paths.moveTo(d.px, d.py).lineTo(clamp(d.px, cx - 1, cx + 1) === d.px ? d.px : cx, d.py).lineTo(cx, cy)
-            .stroke({ width: 11, color: 0xcdb488, alpha: 0.5, cap: 'round' })
+        const cx = SPAWN.c === M.spawn.c ? M.spawn.c * T : M.spawn.c * T
+        const cy = M.spawn.r * T
+        const drawPath = (pts: [number, number][]) => {
+          for (const [w, col, al] of [[17, 0x8a6a3c, 0.55], [12, 0xd9b97e, 0.9], [5, 0xecd9a8, 0.55]] as [number, number, number][]) {
+            paths.moveTo(pts[0][0], pts[0][1])
+            for (let i = 1; i < pts.length; i++) paths.lineTo(pts[i][0], pts[i][1])
+            paths.stroke({ width: w, color: col, alpha: al, cap: 'round', join: 'round' })
+          }
+        }
+        if (map === 'town') {
+          drawPath([[4 * T, cy], [(COLS - 4) * T, cy]])
+          drawPath([[cx, 4 * T], [cx, (ROWS - 3) * T]])
+          for (const d of doors) drawPath([[d.px, d.py], [d.px, cy < d.py ? d.py - 2 * T : d.py + 2 * T], [cx, cy]])
+          // path up to the north exit
+          drawPath([[26 * T, cy - 8 * T], [26 * T, 1 * T]])
+        } else {
+          // a winding route path south → north
+          drawPath([[13 * T, (ROWS - 2) * T], [13 * T, 36 * T], [9 * T, 30 * T], [13 * T, 24 * T], [17 * T, 17 * T], [13 * T, 8 * T], [13 * T, 1 * T]])
+        }
+        // speckle stones
+        for (let i = 0; i < 26; i++) {
+          const x = rnd() * BASEW, y = rnd() * BASEH
+          paths.circle(x, y, 1 + rnd() * 1.4).fill({ color: 0xcbb37e, alpha: 0.35 })
         }
         world.addChild(paths)
 
-        // tall-grass patches (walkable; darker green blades; trigger encounters)
+        // ── LAYER 2 · tall grass — two-tone clumps with blades ──
         const grassG = new PIXI.Graphics()
-        for (const p of GRASS_PATCHES) {
+        for (const p of M.grass) {
           for (let dc = 0; dc < p.w; dc++) for (let dr = 0; dr < p.h; dr++) {
             const c = p.c + dc, r = p.r + dr, x = c * T, y = r * T
             grass.add(c + ',' + r)
-            grassG.rect(x, y, T, T).fill({ color: 0x2f8f3f, alpha: 0.85 })
-            grassG.rect(x, y, T, T).fill({ color: 0x256f31, alpha: 0.25 })
-            // little blades
+            grassG.roundRect(x + 0.5, y + 0.5, T - 1, T - 1, 3).fill({ color: 0x2e8b3e, alpha: 0.92 })
+            grassG.roundRect(x + 2, y + 2, T - 4, T - 4, 3).fill({ color: 0x257434, alpha: 0.5 })
             for (let b = 0; b < 3; b++) {
-              const bx = x + 3 + b * 5
-              grassG.moveTo(bx, y + T - 2).lineTo(bx - 1.5, y + T - 7).moveTo(bx, y + T - 2).lineTo(bx + 1.5, y + T - 7)
-                .stroke({ width: 1, color: 0x1e5a28, alpha: 0.7 })
+              const bx = x + 3 + b * 5 + (rnd() - 0.5) * 2
+              const tall = 6 + rnd() * 3
+              grassG.moveTo(bx, y + T - 2).lineTo(bx - 2, y + T - 2 - tall).lineTo(bx + 0.5, y + T - 4).closePath()
+                .fill({ color: b % 2 ? 0x1e6b2d : 0x3fae52, alpha: 0.95 })
             }
           }
         }
         world.addChild(grassG)
 
-        // entities layer (depth-sorted)
+        // ── entities (depth-sorted) ──
         const ent = new PIXI.Container(); ent.sortableChildren = true; world.addChild(ent)
         const put = (idx: number, col: number, row: number, tint?: number, z?: number) => {
           const s = new PIXI.Sprite(tile(idx)); s.x = col * T; s.y = row * T
@@ -178,69 +261,119 @@ export default function KinQuestTown({
           s.zIndex = z ?? (row + 1) * T; ent.addChild(s); return s
         }
 
-        let seed = 20260702; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff }
-        const butterflies: { s: any; t: number; cx: number; cy: number; rx: number; ry: number; sp: number }[] = []
         const shimmers: any[] = []
+        const ripples: { g: any; t: number; cx: number; cy: number }[] = []
+        const butterflies: { s: any; t: number; cx: number; cy: number; rx: number; ry: number; sp: number }[] = []
+        const rustles: { g: any; vx: number; vy: number; life: number }[] = []
         let hero: any = null, lastTile = '', clock = 0, lastNearId: string | null = null
-        let moveTarget: { x: number; y: number } | null = null, stuck = 0
+        let encounterLock = false, lastExit = ''
 
-        // border forest walls
-        for (let c = 0; c < COLS; c++) { put(c % 2 ? TILE.TREE : TILE.PINE, c, 0); block(c, 0); put(c % 2 ? TILE.PINE : TILE.TREE, c, ROWS - 1); block(c, ROWS - 1) }
-        for (let r = 1; r < ROWS - 1; r++) { put(r % 2 ? TILE.TREE : TILE.PINE, 0, r); block(0, r); put(r % 2 ? TILE.PINE : TILE.TREE, COLS - 1, r); block(COLS - 1, r) }
+        // ── border forest with an inner rim for depth (gaps for exits) ──
+        const inGapN = (c: number) => M.gapNorth && c >= M.gapNorth[0] && c <= M.gapNorth[1]
+        const inGapS = (c: number) => M.gapSouth && c >= M.gapSouth[0] && c <= M.gapSouth[1]
+        for (let c = 0; c < COLS; c++) {
+          if (!inGapN(c)) { put(c % 2 ? TILE.TREE : TILE.PINE, c, 0); block(c, 0) }
+          if (!inGapS(c)) { put(c % 2 ? TILE.PINE : TILE.TREE, c, ROWS - 1); block(c, ROWS - 1) }
+        }
+        for (let r = 1; r < ROWS - 1; r++) {
+          put(r % 2 ? TILE.TREE : TILE.PINE, 0, r); block(0, r)
+          put(r % 2 ? TILE.PINE : TILE.TREE, COLS - 1, r); block(COLS - 1, r)
+        }
+        // inner rim (decorative depth, walk-through bushes)
+        for (let c = 2; c < COLS - 2; c += 2) {
+          if (!inGapN(c) && rnd() < 0.7) put(rnd() < 0.5 ? TILE.PINE : TILE.BUSH, c, 1)
+          if (!inGapS(c) && rnd() < 0.7) put(rnd() < 0.5 ? TILE.TREE : TILE.BUSH, c, ROWS - 2)
+        }
 
-        // a building: tinted 2×2 roof over wall+door; footprint solid; porch below the door
-        const targets: { id: ActionId; label: string; kind: 'building' | 'npc'; x: number; y: number }[] = []
+        // ── buildings: shadow + tinted roof + wall/door + window + sign ──
+        const targets: { id: string; label: string; kind: ActionKind; x: number; y: number }[] = []
         for (const b of doors) {
+          const bx = (b.col + 1) * T, byTop = b.row * T
+          const shadow = new PIXI.Graphics()
+          shadow.ellipse(bx, (b.row + 2) * T + 4, 22, 6).fill({ color: 0x000000, alpha: 0.18 })
+          shadow.zIndex = (b.row + 2) * T - 1; ent.addChild(shadow)
           put(TILE.ROOF_L, b.col, b.row, b.roof); put(TILE.ROOF_R, b.col + 1, b.row, b.roof)
           put(TILE.WALL, b.col, b.row + 1); put(TILE.DOOR, b.col + 1, b.row + 1)
           block(b.col, b.row); block(b.col + 1, b.row); block(b.col, b.row + 1); block(b.col + 1, b.row + 1)
+          // window on the wall tile
+          const win = new PIXI.Graphics()
+          win.roundRect(b.col * T + 4, (b.row + 1) * T + 4, 8, 7, 1.5).fill(0x9fd8ef).stroke({ color: 0x5b4a32, width: 1 })
+          win.rect(b.col * T + 7.5, (b.row + 1) * T + 4, 1, 7).fill(0x5b4a32)
+          win.zIndex = (b.row + 2) * T + 1; ent.addChild(win)
           targets.push({ id: b.id, label: b.label, kind: 'building', x: b.px, y: b.py })
-          // floating emoji marker above the roof
-          const mk = new PIXI.Text({ text: b.emoji, style: { fontFamily: 'Arial', fontSize: 16 } })
-          mk.anchor.set(0.5); mk.position.set((b.col + 1) * T, b.row * T - 12); mk.zIndex = 99990; ent.addChild(mk)
-          label(PIXI, ent, b.label, (b.col + 1) * T, (b.row + 2) * T + 9, 11, b.id === 'gym' ? hex2int(ELEMENT_META[gymElement].color) : undefined)
+          const mk = new PIXI.Text({ text: b.emoji, style: { fontFamily: 'Arial', fontSize: 15 } })
+          mk.anchor.set(0.5); mk.position.set(bx, byTop - 11); mk.zIndex = 99990; ent.addChild(mk)
+          label(PIXI, ent, b.label, bx, (b.row + 2) * T + 10, 11, b.id === 'gym' ? hex2int(ELEMENT_META[gymElement].color) : undefined)
         }
-        // gym crest badge over the gym roof (shows sealed ✓ once beaten)
-        {
-          const g = BUILDINGS.find(x => x.id === 'gym')!
+        if (map === 'town') {
+          const g = M.buildings.find(x => x.id === 'gym')!
           const crest = new PIXI.Text({ text: gymSealed ? '✅' : ELEMENT_META[gymElement].icon, style: { fontFamily: 'Arial', fontSize: 13, fill: hex2int(ELEMENT_META[gymElement].color), fontWeight: '700' } })
           crest.anchor.set(0.5); crest.position.set((g.col + 1) * T, g.row * T - 26); crest.zIndex = 99991; ent.addChild(crest)
         }
 
-        // a decorative pond (blocked)
-        {
-          const pc = 34, pr = 22, x = pc * T, y = pr * T
+        // ── ponds with animated ripples ──
+        for (const p of M.ponds) {
+          const x = p.c * T, y = p.r * T
           const g = new PIXI.Graphics()
+          g.ellipse(x, y + 3, 30, 18).fill({ color: 0x1c5a80, alpha: 0.35 })
           g.ellipse(x, y, 28, 17).fill(0x3f9fd0); g.ellipse(x, y, 22, 12).fill(0x63c4ea)
+          g.ellipse(x - 6, y - 4, 8, 3.5).fill({ color: 0xffffff, alpha: 0.4 })
           g.zIndex = y - 60; ent.addChild(g)
-          const sh = new PIXI.Graphics(); sh.ellipse(x - 7, y - 4, 10, 4).fill({ color: 0xffffff, alpha: 0.5 }); sh.zIndex = y - 59; ent.addChild(sh); shimmers.push(sh)
-          for (let dc = -2; dc <= 2; dc++) for (let dr = -1; dr <= 1; dr++) block(pc + dc, pr + dr)
+          for (let dc = -2; dc <= 2; dc++) for (let dr = -1; dr <= 1; dr++) block(p.c + dc, p.r + dr)
+          for (let i = 0; i < 2; i++) {
+            const rg = new PIXI.Graphics(); rg.zIndex = y - 58; ent.addChild(rg)
+            ripples.push({ g: rg, t: i * 0.5, cx: x + (i ? 8 : -6), cy: y + (i ? 3 : -2) })
+          }
+          const sh = new PIXI.Graphics(); sh.ellipse(x - 8, y - 5, 10, 4).fill({ color: 0xffffff, alpha: 0.45 }); sh.zIndex = y - 57; ent.addChild(sh); shimmers.push(sh)
         }
 
-        // NPCs — a little body + head, with a floating emoji, gentle idle bob
+        // ── NPCs + route trainers ──
         const npcSprites: { s: any; baseY: number; ph: number }[] = []
-        for (const n of NPCS) {
-          const x = n.col * T + T / 2, y = n.row * T + T
+        const placePerson = (id: string, col: number, row: number, color: number, emoji: string, kind: ActionKind, beaten = false) => {
+          const x = col * T + T / 2, y = row * T + T
           const c = new PIXI.Container(); c.position.set(x, y); c.zIndex = y + 6
           const body = new PIXI.Graphics()
-          body.roundRect(-5, -12, 10, 12, 4).fill(n.color)
-          body.circle(0, -14, 5).fill(0xf6c89a) // head
+          body.ellipse(0, 1, 7, 2.6).fill({ color: 0x000000, alpha: 0.2 })
+          body.roundRect(-5, -12, 10, 12, 4).fill(beaten ? 0x9aa0a6 : color)
+          body.circle(0, -14, 5).fill(0xf6c89a)
           c.addChild(body)
-          const mk = new PIXI.Text({ text: n.emoji, style: { fontFamily: 'Arial', fontSize: 13 } }); mk.anchor.set(0.5); mk.position.set(0, -26); c.addChild(mk)
+          const mk = new PIXI.Text({ text: emoji, style: { fontFamily: 'Arial', fontSize: 13 } }); mk.anchor.set(0.5); mk.position.set(0, -26); c.addChild(mk)
           ent.addChild(c)
-          block(n.col, n.row)
-          targets.push({ id: n.id, label: n.label, kind: 'npc', x, y: y + T })
+          block(col, row)
+          targets.push({ id, label: kind === 'trainer' ? 'Challenge' : 'Talk', kind, x, y: y + T })
           npcSprites.push({ s: c, baseY: y, ph: rnd() * 6.28 })
         }
+        for (const n of M.npcs) placePerson(n.id, n.col, n.row, n.color, n.emoji, 'npc')
+        for (const tp of M.trainers) {
+          const td = TRAINERS[tp.id]
+          if (td) placePerson(td.id, tp.col, tp.row, td.color, trainersBeaten.includes(td.id) ? '🤝' : td.emoji, 'trainer', trainersBeaten.includes(td.id))
+        }
 
-        // scattered greenery in open ground (walkable decor)
+        // ── exit gates: signposts + fence posts framing the gaps ──
+        for (const ex of M.exits) {
+          const gx = (ex.rect.c + ex.rect.w / 2) * T, gy = (ex.rect.r + ex.rect.h / 2) * T
+          if (ex.id !== 'gate_north') {
+            const sign = new PIXI.Graphics()
+            sign.rect(gx - 1.5 + T, gy + 6, 3, 10).fill(0x6b5b3a)
+            sign.roundRect(gx - 13 + T, gy - 2, 26, 10, 2).fill(0xd9b97e).stroke({ color: 0x6b5b3a, width: 1 })
+            sign.zIndex = gy + 20; ent.addChild(sign)
+            label(PIXI, ent, ex.id === 'exit_route' ? '🌿 Verdant Path ↑' : '🏘 Seedling Town ↓', gx + T, gy + (ex.rect.r === 0 ? 30 : -14), 10)
+          } else {
+            // the sealed gate: a fence wall with a lock sign — walking near it talks
+            for (let c = ex.rect.c; c < ex.rect.c + ex.rect.w; c++) { put(TILE.FENCE, c, 1); block(c, 1) }
+            label(PIXI, ent, gymSealed ? '✨ Wordveil — soon!' : '🔒 Beat the Gym first', gx + T, 2 * T + 10, 10, 0xb45309)
+          }
+        }
+
+        // ── scattered decor (light — the maps breathe now) ──
         const clearOf = (x: number, y: number) => {
-          if (Math.hypot(x - SPAWN_C * T, y - SPAWN_R * T) < 2.4 * T) return true
+          if (Math.hypot(x - SPAWN.c * T, y - SPAWN.r * T) < 2.4 * T) return true
           for (const t of targets) if (Math.hypot(x - t.x, y - t.y) < 2 * T) return true
           return false
         }
         const taken = new Set<string>()
-        for (let i = 0; i < 55; i++) {
+        const budget = map === 'route' ? 40 : 45
+        for (let i = 0; i < budget; i++) {
           const c = 2 + Math.floor(rnd() * (COLS - 4)), r = 2 + Math.floor(rnd() * (ROWS - 4))
           const key = c + ',' + r
           if (blocked.has(key) || grass.has(key) || taken.has(key)) continue
@@ -248,14 +381,14 @@ export default function KinQuestTown({
           if (clearOf(x, y)) continue
           taken.add(key)
           const roll = rnd()
-          put(roll < 0.5 ? (rnd() < 0.5 ? TILE.TREE : TILE.PINE) : roll < 0.8 ? TILE.BUSH : TILE.FLOWER, c, r)
+          put(roll < 0.42 ? (rnd() < 0.5 ? TILE.TREE : TILE.PINE) : roll < 0.72 ? TILE.FLOWER : TILE.BUSH, c, r)
         }
 
-        // context-action prompt bubbles above each target
+        // context-action prompt bubbles
         const prompts: Record<string, any> = {}
         for (const t of targets) {
           const pr = new PIXI.Container(); pr.position.set(t.x, t.y - 34); pr.visible = false; pr.zIndex = 99999
-          const pt = new PIXI.Text({ text: t.kind === 'npc' ? '💬' : '⤵', style: { fontFamily: 'Arial', fontSize: 13, fontWeight: '700', fill: 0xffffff } }); pt.anchor.set(0.5)
+          const pt = new PIXI.Text({ text: t.kind === 'npc' ? '💬' : t.kind === 'trainer' ? '⚔' : '⤵', style: { fontFamily: 'Arial', fontSize: 13, fontWeight: '700', fill: 0xffffff } }); pt.anchor.set(0.5)
           const pb = new PIXI.Graphics(); pb.roundRect(-14, -12, 28, 24, 12).fill(0x2b2440)
           pr.addChild(pb); pr.addChild(pt); ent.addChild(pr); prompts[t.id] = pr
         }
@@ -270,6 +403,33 @@ export default function KinQuestTown({
           butterflies.push({ s: b, t: rnd() * 6.28, cx: bx, cy: by, rx: 34 + rnd() * 40, ry: 22 + rnd() * 28, sp: 0.02 + rnd() * 0.02 })
         }
 
+        // "!" pop shown over the hero just before an encounter
+        const alert = new PIXI.Container(); alert.visible = false; alert.zIndex = 999999
+        const ab = new PIXI.Graphics(); ab.roundRect(-8, -26, 16, 20, 4).fill(0xffffff).stroke({ color: 0x2b2440, width: 1.5 })
+        const at = new PIXI.Text({ text: '!', style: { fontFamily: 'Arial', fontSize: 15, fontWeight: '900', fill: 0xd53f3f } })
+        at.anchor.set(0.5); at.position.set(0, -16)
+        alert.addChild(ab); alert.addChild(at); ent.addChild(alert)
+
+        // soft vignette so the map doesn't end abruptly
+        const vig = new PIXI.Graphics()
+        vig.rect(0, 0, BASEW, 10).fill({ color: 0x0a1e0a, alpha: 0.22 })
+        vig.rect(0, BASEH - 10, BASEW, 10).fill({ color: 0x0a1e0a, alpha: 0.22 })
+        vig.rect(0, 0, 10, BASEH).fill({ color: 0x0a1e0a, alpha: 0.18 })
+        vig.rect(BASEW - 10, 0, 10, BASEH).fill({ color: 0x0a1e0a, alpha: 0.18 })
+        vig.zIndex = 999990; ent.addChild(vig)
+
+        // tap-to-walk wiring (needs targets — registered after they exist)
+        tapLayer.on('pointertap', (e: any) => {
+          if (pausedRef.current) return
+          const p = world.toLocal(e.global)
+          let tx = p.x, ty = p.y
+          let best = 1e9, bx2 = tx, by2 = ty
+          for (const t of targets) { const dd = Math.hypot(t.x - tx, t.y - ty); if (dd < best) { best = dd; bx2 = t.x; by2 = t.y } }
+          if (best < 2.4 * T) { tx = bx2; ty = by2 }
+          moveTarget = { x: clamp(tx, T + 4, BASEW - T - 4), y: clamp(ty, T + 4, BASEH - T - 4) }
+          stuck = 0
+        })
+
         window.addEventListener('keydown', kd); window.addEventListener('keyup', ku)
 
         app.ticker.add((tk: any) => {
@@ -277,8 +437,7 @@ export default function KinQuestTown({
           const dt = tk.deltaTime
           clock += dt
 
-          if (hero && !pausedRef.current) {
-            // analog movement — keyboard gives ±1 per axis, joystick gives a vector
+          if (hero && !pausedRef.current && !encounterLock) {
             let vx = 0, vy = 0
             if (keys['arrowleft'] || keys['a']) vx -= 1
             if (keys['arrowright'] || keys['d']) vx += 1
@@ -292,7 +451,7 @@ export default function KinQuestTown({
             const mag = Math.hypot(vx, vy)
             let moving = false
             if (mag > 0.01) {
-              moveTarget = null // manual control cancels tap-to-walk
+              moveTarget = null
               const nvx = vx / Math.max(1, mag), nvy = vy / Math.max(1, mag)
               if (Math.abs(nvx) > 0.02) hero.scale.x = nvx < 0 ? -Math.abs(hero.scale.x) : Math.abs(hero.scale.x)
               const mx = stepX(nvx), my = stepY(nvy); moving = mx || my
@@ -318,35 +477,75 @@ export default function KinQuestTown({
             hero.zIndex = hero.y + 20
 
             // nearest interactable → context prompt (only push to React on CHANGE)
-            let found: { id: ActionId; label: string; kind: 'building' | 'npc' } | null = null
+            let found: ActionTarget | null = null
             for (const t of targets) if (Math.hypot(t.x - hero.x, t.y - hero.y) < 34) { found = { id: t.id, label: t.label, kind: t.kind }; break }
             const fid = found ? found.id : null
             for (const k in prompts) prompts[k].visible = fid === k
             if (fid !== lastNearId) { lastNearId = fid; nearRef.current(found) }
 
-            // tall-grass encounter check on entering a NEW grass tile
-            const tc = Math.floor(hero.x / T), tr = Math.floor(feetY() / T), key = tc + ',' + tr
+            // exit zones (fire once per entry)
+            const tc = Math.floor(hero.x / T), tr = Math.floor(feetY() / T)
+            let onExit = ''
+            for (const ex of M.exits) {
+              if (tc >= ex.rect.c && tc < ex.rect.c + ex.rect.w && tr >= ex.rect.r && tr < ex.rect.r + ex.rect.h) { onExit = ex.id; break }
+            }
+            if (onExit !== lastExit) {
+              lastExit = onExit
+              if (onExit) cbRef.current.onAction({ id: onExit, label: onExit, kind: 'exit' })
+            }
+
+            // tall grass: rustle particles + encounter roll on each NEW grass tile
+            const key = tc + ',' + tr
             if (key !== lastTile) {
               lastTile = key
-              if (moving && grass.has(key) && Math.random() < 0.14) {
-                cbRef.current.onEncounter()
+              if (moving && grass.has(key)) {
+                for (let i = 0; i < 5; i++) {
+                  const g = new PIXI.Graphics()
+                  g.roundRect(-1.5, -3, 3, 6, 1).fill({ color: i % 2 ? 0x3fae52 : 0x1e6b2d, alpha: 0.9 })
+                  g.position.set(hero.x + (Math.random() - 0.5) * 12, hero.y + 4)
+                  g.zIndex = hero.y + 19; ent.addChild(g)
+                  rustles.push({ g, vx: (Math.random() - 0.5) * 0.9, vy: -0.8 - Math.random() * 0.8, life: 1 })
+                }
+                if (Math.random() < 0.13) {
+                  encounterLock = true
+                  alert.visible = true
+                  alert.position.set(hero.x, hero.y - 34)
+                  setTimeout(() => {
+                    if (destroyed) return
+                    alert.visible = false
+                    encounterLock = false
+                    cbRef.current.onEncounter()
+                  }, 480)
+                }
               }
             }
           }
 
           npcSprites.forEach(n => { n.s.pivot.y = Math.sin(clock * 0.08 + n.ph) * 1.2 })
           shimmers.forEach((sh, i) => { sh.alpha = 0.3 + Math.abs(Math.sin(clock * 0.04 + i)) * 0.3 })
+          ripples.forEach(rp => {
+            rp.t += 0.012 * dt
+            const ph = rp.t % 1
+            rp.g.clear()
+            rp.g.ellipse(rp.cx, rp.cy, 4 + ph * 14, (4 + ph * 14) * 0.55).stroke({ color: 0xffffff, width: 1, alpha: 0.4 * (1 - ph) })
+          })
           butterflies.forEach(b => {
             b.t += b.sp * dt
             b.s.x = b.cx + Math.cos(b.t) * b.rx; b.s.y = b.cy + Math.sin(b.t * 1.6) * b.ry
             b.s.scale.x = Math.cos(b.t * 6) * 0.6 + 0.7
           })
+          for (let i = rustles.length - 1; i >= 0; i--) {
+            const rp = rustles[i]
+            rp.g.x += rp.vx * dt; rp.g.y += rp.vy * dt; rp.life -= 0.04 * dt
+            rp.g.alpha = Math.max(0, rp.life); rp.g.rotation += 0.1 * dt
+            if (rp.life <= 0) { rp.g.destroy(); rustles.splice(i, 1) }
+          }
 
-          // camera: fixed comfortable follow, clamped to map bounds
-          const z = clamp(app.screen.width / (15 * T), 1.4, 4)
+          // camera: comfy chunky-pixel follow, clamped to map bounds
+          const z = clamp(app.screen.width / (13.5 * T), 1.6, 4)
           world.scale.set(z)
-          const tx = hero ? hero.x : BASEW / 2, ty = hero ? hero.y : BASEH / 2
-          let px = app.screen.width / 2 - tx * z, py = app.screen.height / 2 - ty * z
+          const tx2 = hero ? hero.x : BASEW / 2, ty2 = hero ? hero.y : BASEH / 2
+          let px = app.screen.width / 2 - tx2 * z, py = app.screen.height / 2 - ty2 * z
           px = BASEW * z > app.screen.width ? clamp(px, app.screen.width - BASEW * z, 0) : (app.screen.width - BASEW * z) / 2
           py = BASEH * z > app.screen.height ? clamp(py, app.screen.height - BASEH * z, 0) : (app.screen.height - BASEH * z) / 2
           world.position.set(px, py)
@@ -355,7 +554,8 @@ export default function KinQuestTown({
         // rasterise the avatar
         const avC = await rasterize(avatarTex, 96, 96)
         if (destroyed || !app.stage) return
-        const heroC = new PIXI.Container(); heroC.position.set(SPAWN_C * T, SPAWN_R * T)
+        const heroC = new PIXI.Container(); heroC.position.set(SPAWN.c * T, SPAWN.r * T)
+        const heroShadow = new PIXI.Graphics(); heroShadow.ellipse(0, 6, 9, 3).fill({ color: 0x000000, alpha: 0.22 }); heroC.addChild(heroShadow)
         const rs = new PIXI.Sprite(PIXI.Texture.from(avC)); rs.anchor.set(0.5, 0.9); rs.scale.set(0.52); heroC.addChild(rs)
         heroC.zIndex = heroC.y + 20; ent.addChild(heroC); hero = heroC
       } catch (err) { console.error('[kinquest-town] pixi init failed:', err) }
@@ -366,14 +566,14 @@ export default function KinQuestTown({
       window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku)
       try { if (app) app.destroy(true, { children: true }) } catch { /* ignore */ }
     }
-  }, [avatarTex]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [avatarTex, map, gymSealed, trainersBeaten.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="kqt">
       <div ref={parentRef} className="kqt-canvas" />
-      {near && (
+      {near && near.kind !== 'exit' && (
         <button className="kqt-action" onClick={() => cbRef.current.onAction(near)}>
-          {near.kind === 'npc' ? '💬 Talk' : `⤵ Enter ${near.label}`}
+          {near.kind === 'npc' ? '💬 Talk' : near.kind === 'trainer' ? '⚔ Challenge' : `⤵ Enter ${near.label}`}
         </button>
       )}
       {!paused && <Joystick className="kqt-joy" onChange={(dx, dy) => { controls.current = { dx, dy } }} />}
