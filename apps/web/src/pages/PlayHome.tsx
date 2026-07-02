@@ -3,6 +3,7 @@ import { useAppStore } from '@store/appStore'
 import { WORLDS } from '@/data/learn'
 import { todayWorldXp, ringPct, dailyCircle } from '@lib/dailyRings'
 import { getStreak, touchStreak } from '@lib/streak'
+import { myCups, cupTimeLeft, type Cup } from '@lib/competitions'
 import ExploringNotice from '@components/openworld/ExploringNotice'
 import Buddy, { type Mood } from '@components/avatar/Buddy'
 import NorthStar from '@components/rank/NorthStar'
@@ -31,10 +32,17 @@ export default function PlayHome() {
   const [mood, setMood] = useState<Mood>('wave')
   const [streak, setStreak] = useState(0)
   const [todayXp, setTodayXp] = useState<Record<string, number>>({})
+  const [cup, setCup] = useState<Cup | null>(null)   // soonest-ending live cup, if any
   const outfit = resolvedOutfit()
 
   useEffect(() => { const t = setTimeout(() => setMood('idle'), 1800); return () => clearTimeout(t) }, [])
   useEffect(() => { setStreak(getStreak()) }, [])
+  useEffect(() => {
+    myCups().then(cs => {
+      const live = cs.filter(c => c.status === 'live').sort((a, b) => +new Date(a.ends_at) - +new Date(b.ends_at))
+      setCup(live[0] ?? null)
+    })
+  }, [])
 
   // The daily circle (core 4). Only a FULL circle advances the streak.
   const circle = useMemo(() => dailyCircle(todayXp), [todayXp, xp])
@@ -68,7 +76,14 @@ export default function PlayHome() {
             <p className="ph-hi">Hi, <button className="ph-name" onClick={editName}>{learnerName} ✏️</button></p>
             <p className="ph-sub">Level {level} · {xp.toLocaleString()} XP · <DiamondIcon size={13} /> {diamonds}</p>
           </div>
-          <div className="ph-streak">🔥 {streak} day{streak === 1 ? '' : 's'}</div>
+          <div className="ph-badges">
+            {cup && (
+              <button className="ph-cup" onClick={() => go({ tab: 'fame' })} title={cup.title}>
+                🏆 {cupTimeLeft(cup.ends_at)}
+              </button>
+            )}
+            <div className="ph-streak">🔥 {streak} day{streak === 1 ? '' : 's'}</div>
+          </div>
         </div>
 
         <NorthStar circle={circle} onGo={t => go({ tab: t })} />

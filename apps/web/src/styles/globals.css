@@ -1615,8 +1615,13 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
 .ph-hi{font-size:22px;font-weight:800;letter-spacing:-0.02em}
 .ph-name{font-size:22px;font-weight:850;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;border:none;cursor:pointer}
 .ph-sub{font-size:13px;color:var(--t2);font-weight:600;margin-top:2px}
+.ph-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .ph-streak{padding:8px 14px;border-radius:30px;background:color-mix(in srgb,var(--gold) 16%,transparent);
   border:1px solid color-mix(in srgb,var(--gold) 38%,transparent);font-size:13px;font-weight:750;white-space:nowrap}
+.ph-cup{padding:8px 14px;border-radius:30px;font-size:13px;font-weight:750;white-space:nowrap;cursor:pointer;
+  color:#7a5a10;background:linear-gradient(90deg,color-mix(in srgb,#ffd76b 34%,transparent),color-mix(in srgb,#ffb347 26%,transparent));
+  border:1px solid color-mix(in srgb,#ffb347 55%,transparent)}
+.ph-cup:hover{transform:translateY(-1px)}
 
 /* daily circle — three actions make it full (only then does the streak tick) */
 .ph-circle{margin-top:12px;padding:12px 14px;border-radius:var(--r-md);background:var(--panel);border:1.5px solid var(--border)}
