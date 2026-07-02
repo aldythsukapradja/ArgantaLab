@@ -169,7 +169,7 @@ export const OFFICE_META: Record<OfficeId, { label: string; accent: string }> = 
   technology: { label: 'Technology · CTO', accent: 'var(--acc-text)' },
   treasury: { label: 'Treasury · CFO', accent: 'var(--ok)' },
   legal: { label: 'Legal · GC', accent: 'var(--warn)' },
-  roster: { label: 'The Guild · Guildmaster', accent: 'var(--acc)' },
+  roster: { label: 'The Guild · CAPO', accent: 'var(--acc)' },
 }
 export const OFFICE_KEYS: OfficeId[] = ['bridge', 'operations', 'technology', 'treasury', 'legal', 'roster']
 

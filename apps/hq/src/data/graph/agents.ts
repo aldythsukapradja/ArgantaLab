@@ -29,8 +29,8 @@ export const OFFICES: AgentDef[] = [
     slice: 'Trust — the guardrail across the whole value ladder.',
     ownsKinds: ['ip', 'risk'], issues: ['FLAG', 'HOLD'],
     sla: [{ key: 'open_holds', label: 'Open holds', target: 0, source: 'placeholder' }] },
-  { id: 'roster', office: 'The Guild', chief: 'Guildmaster', pairedHuman: null,
-    slice: 'The agent workforce that runs every office — and its ROI.',
+  { id: 'roster', office: 'The Guild', chief: 'CAPO', pairedHuman: null,
+    slice: 'Chief of Agent & People Officer — the AI agent workforce that runs every office, and its ROI.',
     ownsKinds: ['office'], issues: ['IMPROVE', 'REPLACE'],
     cost: { source: 'placeholder' },
     sla: [{ key: 'agent_roi', label: 'Lowest-ROI agent', target: 1, source: 'placeholder' }] },
@@ -97,7 +97,7 @@ export const OFFICE_CHAT: Record<OfficeId, OfficeChat> = {
     ],
   },
   roster: {
-    brief: 'The Guild — who is on the bench, who is lit by live data, and which agent earns its token budget.',
+    brief: 'CAPO · The Guild — who is on the bench, who is lit by live data, and which agent earns its token budget.',
     chips: [
       { label: '🗂️ Roster', q: 'Show the agent roster by office' },
       { label: '📈 Agent ROI', q: 'Which agent has the lowest ROI?' },

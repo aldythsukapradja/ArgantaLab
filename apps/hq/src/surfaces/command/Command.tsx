@@ -4,6 +4,7 @@ import { Office } from './Office'
 import { Treasury } from './Treasury'
 import { CoverageXray, OpsCockpit, LegalRegister, GuildBoard, BridgeRollup } from './Cockpits'
 import { ReportPanel, ReportsHub } from './reports/Briefing'
+import { ArchMap } from './ArchMap'
 import {
   buildOperationsReport, buildGrowthReport, buildProductReport,
   buildHealthReport, buildRiskReport, buildPeopleReport,
@@ -26,14 +27,15 @@ const COCKPIT: Partial<Record<OfficeId, React.ReactNode>> = {
   roster: <GuildBoard />,
 }
 
+// Tabs show the chief title; the office name + role is explained inside the tab.
 const TABS: { id: CommandTab; label: string }[] = [
   { id: 'lobby', label: 'Lobby' },
-  { id: 'bridge', label: 'Bridge' },
-  { id: 'operations', label: 'Operations' },
-  { id: 'technology', label: 'Technology' },
-  { id: 'treasury', label: 'Treasury' },
-  { id: 'legal', label: 'Legal' },
-  { id: 'roster', label: 'The Guild' },
+  { id: 'bridge', label: 'CEO' },
+  { id: 'operations', label: 'COO' },
+  { id: 'technology', label: 'CTO' },
+  { id: 'treasury', label: 'CFO' },
+  { id: 'legal', label: 'GC' },
+  { id: 'roster', label: 'CAPO' },
 ]
 
 export function Command() {
@@ -63,6 +65,7 @@ export function Command() {
       {commandTab !== 'lobby' && commandTab !== 'treasury' && commandTab !== 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Office id={commandTab} cockpit={COCKPIT[commandTab]} />
+          {commandTab === 'technology' && <ArchMap />}
           {(OFFICE_REPORTS[commandTab] ?? []).map((build, i) => {
             const rep = build()
             return <ReportPanel key={i} report={rep} label={rep.title} />

@@ -135,3 +135,52 @@ export function Gauge({ value, target, unit, caption, ok }: { value: number; tar
     </div>
   )
 }
+
+export interface StackSeries { key: string; label: string; color: string }
+
+// Themed stacked area — cost-vs-scale (log x). Series stack in order given.
+export function StackedAreaChart({ data, xKey, series, xFmt, yFmt, height, marker }: {
+  data: Record<string, number>[]
+  xKey: string
+  series: StackSeries[]
+  xFmt: (v: number) => string
+  yFmt: (v: number) => string
+  height?: number
+  marker?: number
+}) {
+  const TT = ({ active, payload, label }: { active?: boolean; payload?: { dataKey: string; name: string; value: number; color: string }[]; label?: number }) => {
+    if (!active || !payload?.length || label == null) return null
+    const total = payload.reduce((s, p) => s + p.value, 0)
+    return (
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--bd2)', borderRadius: 8, padding: '8px 10px', fontSize: 11, boxShadow: '0 8px 24px -12px rgba(0,0,0,.5)' }}>
+        <div style={{ color: 'var(--tx3)', marginBottom: 4 }}>{xFmt(label)} families</div>
+        {[...payload].reverse().map(p => (
+          <div key={p.dataKey} style={{ color: p.color, fontWeight: 600 }}>{p.name}: {yFmt(p.value)}</div>
+        ))}
+        <div style={{ color: 'var(--tx)', fontWeight: 700, borderTop: '1px solid var(--bd)', marginTop: 4, paddingTop: 4 }}>Total: {yFmt(total)}</div>
+      </div>
+    )
+  }
+  return (
+    <ResponsiveContainer width="100%" height={height ?? 240}>
+      <AreaChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 2 }}>
+        <defs>
+          {series.map(s => (
+            <linearGradient key={s.key} id={`sg-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity={0.55} />
+              <stop offset="100%" stopColor={s.color} stopOpacity={0.15} />
+            </linearGradient>
+          ))}
+        </defs>
+        <CartesianGrid stroke="var(--bd)" vertical={false} />
+        <XAxis dataKey={xKey} scale="log" type="number" domain={['dataMin', 'dataMax']} tickFormatter={xFmt} tick={{ fill: 'var(--tx3)', fontSize: 10 }} stroke="var(--bd2)" tickLine={false} />
+        <YAxis tickFormatter={yFmt} tick={{ fill: 'var(--tx3)', fontSize: 10 }} stroke="var(--bd2)" tickLine={false} width={54} />
+        {marker != null && <ReferenceLine x={marker} stroke="var(--tx3)" strokeDasharray="4 4" />}
+        <Tooltip content={<TT />} />
+        {series.map(s => (
+          <Area key={s.key} type="monotone" dataKey={s.key} name={s.label} stackId="1" stroke={s.color} strokeWidth={1.4} fill={`url(#sg-${s.key})`} fillOpacity={1} isAnimationActive={false} />
+        ))}
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
