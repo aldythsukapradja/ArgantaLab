@@ -70,3 +70,58 @@ export function CashflowChart({ data, series, kind, months, height = 220 }: {
     </ResponsiveContainer>
   )
 }
+
+import { BarChart, Bar, Cell } from 'recharts'
+
+export interface BarItem { label: string; value: number; color?: string }
+
+// Horizontal themed bars — funnels, distributions, counts. Blind data should be
+// a table, not a bar of zeros; use this only for real counts.
+export function BarsChart({ items, unit = 'count', height }: { items: BarItem[]; unit?: 'count' | 'money' | '%'; height?: number }) {
+  const fmt = unit === 'money' ? money : unit === '%' ? (v: number) => `${Math.round(v)}%` : num
+  const TT = ({ active, payload }: { active?: boolean; payload?: { payload: BarItem }[] }) => {
+    if (!active || !payload?.length) return null
+    const it = payload[0].payload
+    return <div style={{ background: 'var(--bg2)', border: '1px solid var(--bd2)', borderRadius: 8, padding: '6px 9px', fontSize: 11 }}><b>{it.label}</b> · {fmt(it.value)}</div>
+  }
+  return (
+    <ResponsiveContainer width="100%" height={height ?? Math.max(110, items.length * 34 + 24)}>
+      <BarChart data={items} layout="vertical" margin={{ top: 4, right: 18, left: 4, bottom: 2 }}>
+        <XAxis type="number" tickFormatter={fmt} tick={{ fill: 'var(--tx3)', fontSize: 10 }} stroke="var(--bd2)" tickLine={false} />
+        <YAxis type="category" dataKey="label" width={116} tick={{ fill: 'var(--tx2)', fontSize: 11 }} stroke="var(--bd2)" tickLine={false} />
+        <Tooltip content={<TT />} cursor={{ fill: 'var(--bg3)', opacity: 0.4 }} />
+        <Bar dataKey="value" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+          {items.map((it, i) => <Cell key={i} fill={it.color ?? 'var(--acc)'} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+// Custom SVG arc gauge (dependency-free, reliable centering) — coverage→target,
+// LTV:CAC, SLA attainment.
+export function Gauge({ value, target, unit, caption, ok }: { value: number; target?: number; unit: '%' | 'x' | 'ratio'; caption?: string; ok?: boolean }) {
+  const max = unit === '%' ? 100 : Math.max(target ?? 1, value) * 1.25
+  const frac = Math.max(0, Math.min(1, value / max))
+  const R = 62, cx = 80, cy = 76, sw = 14
+  const a0 = Math.PI, a1 = 0 // semicircle left→right
+  const pt = (t: number) => [cx + R * Math.cos(a0 + (a1 - a0) * t), cy + R * Math.sin(a0 + (a1 - a0) * t)]
+  const arc = (t0: number, t1: number) => {
+    const [x0, y0] = pt(t0), [x1, y1] = pt(t1)
+    return `M${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}`
+  }
+  const color = ok == null ? 'var(--acc)' : ok ? 'var(--ok)' : 'var(--warn)'
+  const disp = unit === '%' ? `${Math.round(value)}%` : unit === 'x' ? `${value.toFixed(1)}×` : value.toFixed(2)
+  const tFrac = target != null ? Math.max(0, Math.min(1, target / max)) : null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <svg viewBox="0 0 160 96" width="180" style={{ maxWidth: '100%' }}>
+        <path d={arc(0, 1)} fill="none" stroke="var(--bg3)" strokeWidth={sw} strokeLinecap="round" />
+        <path d={arc(0, frac)} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+        {tFrac != null && (() => { const [tx, ty] = pt(tFrac); return <circle cx={tx} cy={ty} r={3.5} fill="var(--tx)" /> })()}
+        <text x={cx} y={cy - 8} textAnchor="middle" fontSize={22} fontWeight={800} fill="var(--tx)">{disp}</text>
+      </svg>
+      {caption && <div style={{ fontSize: 10.5, color: 'var(--tx3)', marginTop: -6 }}>{caption}</div>}
+    </div>
+  )
+}

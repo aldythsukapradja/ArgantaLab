@@ -4,7 +4,7 @@ import { officeById } from '../../../data/graph/agents'
 import { buildDailyBriefing } from '../../../data/reports/daily'
 import type { Report, Section } from '../../../data/reports/types'
 import { ChartView } from '../../../components/charts'
-import { CashflowChart } from '../../../components/rcharts'
+import { CashflowChart, BarsChart, Gauge } from '../../../components/rcharts'
 import { SourceBadge } from '../SourceBadge'
 import { HealthDot } from '../HealthDot'
 
@@ -101,6 +101,24 @@ export function SectionView({ s }: { s: Section }) {
       <div>
         <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>{s.title}</div>
         <CashflowChart data={s.data} series={s.series} kind={s.unit} months={s.months} height={200} />
+      </div>
+    )
+  }
+  if (s.kind === 'bars') {
+    return (
+      <div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>{s.title}</div>
+        <BarsChart items={s.items} unit={s.unit} />
+      </div>
+    )
+  }
+  if (s.kind === 'gauge') {
+    const ok = s.target != null ? s.value >= s.target : undefined
+    return (
+      <div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 4 }}>{s.title}</div>
+        <Gauge value={s.value} target={s.target} unit={s.unit} ok={ok}
+          caption={s.caption ?? (s.target != null ? `target ${s.unit === '%' ? s.target + '%' : s.unit === 'x' ? s.target + '×' : s.target}` : undefined)} />
       </div>
     )
   }

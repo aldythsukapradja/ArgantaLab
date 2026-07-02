@@ -29,6 +29,8 @@ export type Section =
   | { id: string; kind: 'consults'; source: Source; title: string; items: ConsultItem[] }
   | { id: string; kind: 'chart'; source: Source; title: string; chart: ChartData }
   | { id: string; kind: 'reChart'; source: Source; title: string; data: Record<string, number>[]; series: RSeries[]; unit: 'money' | 'count'; months: number }
+  | { id: string; kind: 'bars'; source: Source; title: string; items: { label: string; value: number; color?: string }[]; unit?: 'count' | 'money' | '%' }
+  | { id: string; kind: 'gauge'; source: Source; title: string; value: number; target?: number; unit: '%' | 'x' | 'ratio'; caption?: string }
   | { id: string; kind: 'table'; source: Source; title: string; head: string[]; rows: (string | number)[][]; strongLast?: boolean }
   | { id: string; kind: 'text'; source: Source; text: string }
 

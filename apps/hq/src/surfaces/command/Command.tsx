@@ -3,8 +3,20 @@ import { Lobby } from './Lobby'
 import { Office } from './Office'
 import { Treasury } from './Treasury'
 import { CoverageXray, OpsCockpit, LegalRegister, GuildBoard, BridgeRollup } from './Cockpits'
-import { DailyBrief } from './reports/Briefing'
+import { DailyBrief, ReportPanel } from './reports/Briefing'
+import {
+  buildOperationsReport, buildGrowthReport, buildProductReport,
+  buildHealthReport, buildRiskReport, buildPeopleReport,
+} from '../../data/reports/domain'
+import type { Report } from '../../data/reports/types'
 import type { OfficeId } from '../../data/graph/types'
+
+const OFFICE_REPORTS: Partial<Record<OfficeId, (() => Report)[]>> = {
+  operations: [buildOperationsReport, buildGrowthReport, buildProductReport],
+  technology: [buildHealthReport],
+  legal: [buildRiskReport],
+  roster: [buildPeopleReport],
+}
 
 const COCKPIT: Partial<Record<OfficeId, React.ReactNode>> = {
   bridge: <BridgeRollup />,
@@ -48,7 +60,15 @@ export function Command() {
           <Office id="bridge" cockpit={COCKPIT.bridge} />
         </div>
       )}
-      {commandTab !== 'lobby' && commandTab !== 'treasury' && commandTab !== 'bridge' && <Office id={commandTab} cockpit={COCKPIT[commandTab]} />}
+      {commandTab !== 'lobby' && commandTab !== 'treasury' && commandTab !== 'bridge' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Office id={commandTab} cockpit={COCKPIT[commandTab]} />
+          {(OFFICE_REPORTS[commandTab] ?? []).map((build, i) => {
+            const rep = build()
+            return <ReportPanel key={i} report={rep} label={rep.title} />
+          })}
+        </div>
+      )}
     </div>
   )
 }
