@@ -117,7 +117,7 @@ function VerdictQueue({ id }: { id: OfficeId }) {
       <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600, marginBottom: 4 }}><Gavel size={14} /> Verdict queue</div>
       <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 12 }}>every verdict carries a LADDERS_TO — or the engine rejects it</div>
       {verdicts.length === 0 && <div style={{ fontSize: 12, color: 'var(--tx3)' }}>No verdicts yet.</div>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
         {verdicts.map(v => {
           const target = nodeById(v.targetNode)
           const ladder = nodeById(v.laddersTo)
@@ -143,13 +143,13 @@ function ConsultPanel({ id }: { id: OfficeId }) {
     <div className="card" style={{ padding: 16 }}>
       <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600, marginBottom: 10 }}><MessageSquare size={14} /> Consults</div>
       {consults.length === 0 && <div style={{ fontSize: 12, color: 'var(--tx3)' }}>No open consults.</div>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {consults.map(c => {
           const from = officeById(c.from as OfficeId), to = officeById(c.to as OfficeId)
           const outbound = c.from === id
           const pill = c.status === 'answered' ? 'pill-ok' : c.status === 'blocked' ? 'pill-bad' : 'pill-mut'
           return (
-            <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 3, borderLeft: `2px solid ${outbound ? 'var(--acc)' : 'var(--bd2)'}`, paddingLeft: 10 }}>
+            <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 5, borderLeft: `2px solid ${outbound ? 'var(--acc)' : 'var(--bd2)'}`, paddingLeft: 12 }}>
               <div className="spread">
                 <span style={{ fontSize: 12, fontWeight: 600 }}>{outbound ? `→ ${to?.chief}` : `← ${from?.chief}`}</span>
                 <span className={'pill ' + pill} style={{ fontSize: 9.5 }}>{c.status}</span>

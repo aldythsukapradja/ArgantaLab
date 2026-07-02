@@ -149,18 +149,18 @@ function OfficeCard({ id }: { id: OfficeId }) {
 function ConsultLog({ consults }: { consults: ReturnType<typeof allConsults> }) {
   return (
     <div className="card" style={{ padding: 16 }}>
-      <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600, marginBottom: 10 }}><MessageSquare size={14} /> Consult log</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600, marginBottom: 12 }}><MessageSquare size={14} /> Consult log</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {consults.map(c => {
           const from = officeById(c.from as OfficeId), to = officeById(c.to as OfficeId)
           const pill = c.status === 'answered' ? 'pill-ok' : c.status === 'blocked' ? 'pill-bad' : 'pill-mut'
           return (
-            <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 3, borderLeft: '2px solid var(--bd2)', paddingLeft: 10 }}>
+            <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 5, borderLeft: '2px solid var(--bd2)', paddingLeft: 12 }}>
               <div className="spread">
                 <span style={{ fontSize: 12, fontWeight: 600 }}>{from?.chief} → {to?.chief}</span>
                 <span className={'pill ' + pill} style={{ fontSize: 9.5 }}>{c.status}</span>
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.45 }}>{c.note}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.5 }}>{c.note}</div>
             </div>
           )
         })}
@@ -175,18 +175,18 @@ function ResolveQueue({ consults }: { consults: ReturnType<typeof allConsults> }
   return (
     <div className="card" style={{ padding: 16 }}>
       <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600, marginBottom: 4 }}><Gavel size={14} /> Resolve queue</div>
-      <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 10 }}>priority: Trust &gt; North Star &gt; Retention &gt; Money</div>
+      <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 12 }}>priority: Trust &gt; North Star &gt; Retention &gt; Money</div>
       {open.length === 0 && <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Nothing waiting on the Bridge.</div>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {open.map((c, i) => {
           const from = officeById(c.from as OfficeId)
           const about = c.about ? nodeById(c.about) : undefined
           return (
             <div key={c.id} className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
               <span className="pill pill-mut" style={{ fontSize: 10, flex: 'none' }}>#{i + 1}</span>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ fontSize: 12, fontWeight: 600 }}>{from?.office} · {about?.label ?? c.about}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.45 }}>{c.note}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.5 }}>{c.note}</div>
               </div>
             </div>
           )

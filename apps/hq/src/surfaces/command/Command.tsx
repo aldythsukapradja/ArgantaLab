@@ -3,6 +3,7 @@ import { Lobby } from './Lobby'
 import { Office } from './Office'
 import { Treasury } from './Treasury'
 import { CoverageXray, OpsCockpit, LegalRegister, GuildBoard, BridgeRollup } from './Cockpits'
+import { DailyBrief } from './reports/Briefing'
 import type { OfficeId } from '../../data/graph/types'
 
 const COCKPIT: Partial<Record<OfficeId, React.ReactNode>> = {
@@ -41,7 +42,13 @@ export function Command() {
 
       {commandTab === 'lobby' && <Lobby />}
       {commandTab === 'treasury' && <Treasury />}
-      {commandTab !== 'lobby' && commandTab !== 'treasury' && <Office id={commandTab} cockpit={COCKPIT[commandTab]} />}
+      {commandTab === 'bridge' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <DailyBrief />
+          <Office id="bridge" cockpit={COCKPIT.bridge} />
+        </div>
+      )}
+      {commandTab !== 'lobby' && commandTab !== 'treasury' && commandTab !== 'bridge' && <Office id={commandTab} cockpit={COCKPIT[commandTab]} />}
     </div>
   )
 }
