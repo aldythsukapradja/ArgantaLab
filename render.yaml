@@ -1,0 +1,24 @@
+# Render blueprint — deploys The Bridge (apps/mcp) as an always-on MCP endpoint
+# so Claude / ChatGPT mobile can reach it over HTTPS.
+#
+# The whole repo is checked out, so apps/mcp's relative import of the HQ engine
+# (../../hq/src/data/graph) resolves at runtime — no bundling needed.
+#
+#   Render dashboard → New → Blueprint → pick this repo → Apply.
+#   Render injects PORT automatically; the server reads it.
+#   Your link is:  https://<service>.onrender.com/mcp
+#   BRIDGE_TOKEN is auto-generated — copy it from the service's Environment tab.
+services:
+  - type: web
+    name: circle-hq-bridge
+    runtime: node
+    plan: free
+    rootDir: apps/mcp
+    buildCommand: npm install
+    startCommand: npm run http
+    healthCheckPath: /healthz
+    envVars:
+      - key: MCP_TRANSPORT
+        value: http
+      - key: BRIDGE_TOKEN
+        generateValue: true
