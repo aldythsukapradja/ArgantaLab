@@ -1,11 +1,14 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Wallet, TrendingUp, X, FileText, Receipt, Building2, Waves, Percent, Layers } from 'lucide-react'
 import { Office } from './Office'
 import { SourceBadge } from './SourceBadge'
+import { CashflowChart, type RSeries } from '../../components/rcharts'
+import { ReportPanel } from './reports/Briefing'
+import { buildFinancialReport } from '../../data/reports/financial'
 import {
   runModel, CASE_DEFAULTS, SLIDERS, DIAMOND_GRANT, HORIZONS,
   FIXED_MO, PROCESSING, INFRA_REG, REG_MULT,
-  type Case, type Assumptions, type MonthRow, type ModelResult,
+  type Case, type Assumptions, type ModelResult,
 } from '../../data/graph/model'
 
 const CASE_COLOR: Record<Case, string> = { low: 'var(--tx3)', mid: 'var(--acc)', high: 'var(--ok)' }
@@ -29,7 +32,12 @@ const fmt$ = (n: number) => {
 const fmtN = (n: number) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
 
 export function Treasury() {
-  return <Office id="treasury" cockpit={<FinancialCockpit />} />
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <Office id="treasury" cockpit={<FinancialCockpit />} />
+      <ReportPanel report={buildFinancialReport()} label="Financial report" />
+    </div>
+  )
 }
 
 function FinancialCockpit() {
@@ -49,9 +57,21 @@ function FinancialCockpit() {
   function set<K extends keyof Assumptions>(k: K, v: number) { setA(prev => ({ ...prev, [k]: v })) }
 
   const positive = r.contributionPerActive > 0
-  const series: Series[] = isAll
-    ? compare.map(({ c, res }) => ({ label: c, color: CASE_COLOR[c], rows: res.rows, dashed: c === 'low' }))
-    : [{ label: kase, color: positive ? 'var(--ok)' : 'var(--bad)', rows: r.rows, fill: true }]
+  const acc = (row: { cum: number; active: number }) => (view === 'cashflow' ? row.cum : row.active)
+  let chartData: Record<string, number>[]
+  let series: RSeries[]
+  if (isAll) {
+    const nrows = compare[0].res.rows.length
+    chartData = Array.from({ length: nrows }, (_, i) => {
+      const o: Record<string, number> = { i }
+      compare.forEach(({ c, res }) => { o[c] = acc(res.rows[i]) })
+      return o
+    })
+    series = cases.map(c => ({ key: c, label: c, color: CASE_COLOR[c], dashed: c === 'low' }))
+  } else {
+    chartData = r.rows.map((row, i) => ({ i, v: acc(row) }))
+    series = [{ key: 'v', label: kase, color: positive ? 'var(--ok)' : 'var(--bad)', fill: true }]
+  }
 
   return (
     <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -118,7 +138,7 @@ function FinancialCockpit() {
             </div>
           </div>
         </div>
-        <FancyChart series={series} view={view} />
+        <CashflowChart data={chartData} series={series} kind={view === 'cashflow' ? 'money' : 'count'} months={months} />
         {isAll && (
           <div className="row" style={{ gap: 14, marginTop: 8, fontSize: 11, color: 'var(--tx2)', flexWrap: 'wrap' }}>
             {cases.map(c => <span key={c} className="row" style={{ gap: 5 }}><span style={{ width: 14, height: 3, borderRadius: 2, background: CASE_COLOR[c] }} /><span style={{ textTransform: 'capitalize' }}>{c}{c === 'low' ? ' (dashed)' : ''}</span></span>)}
@@ -173,92 +193,6 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: 'ok'
   )
 }
 
-interface Series { label: string; color: string; rows: MonthRow[]; dashed?: boolean; fill?: boolean }
-
-// Catmull-Rom → cubic bézier for a smooth (non-overshooting-ish) curve.
-function catmull(pts: { x: number; y: number }[]) {
-  if (pts.length < 2) return ''
-  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] ?? p2
-    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
-    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
-    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
-  }
-  return d
-}
-
-function FancyChart({ series, view }: { series: Series[]; view: 'cashflow' | 'families' }) {
-  const [hover, setHover] = useState<number | null>(null)
-  const ref = useRef<SVGSVGElement>(null)
-  const W = 620, H = 210, padL = 52, padR = 16, padT = 14, padB = 26
-  const val = (row: MonthRow) => (view === 'cashflow' ? row.cum : row.active)
-  const n = series[0].rows.length
-  const flat = series.flatMap(s => s.rows.map(val))
-  const min = Math.min(0, ...flat), max = Math.max(1, ...flat)
-  const x = (i: number) => padL + (i * (W - padL - padR)) / Math.max(1, n - 1)
-  const y = (v: number) => padT + (1 - (v - min) / (max - min)) * (H - padT - padB)
-  const base = y(min), zeroY = y(0)
-  const longRange = n > 30
-  const ticks = [...new Set([0, 0.2, 0.4, 0.6, 0.8, 1].map(f => Math.round(f * (n - 1))))]
-  const tickLabel = (i: number) => (longRange ? `${2026 + Math.floor(i / 12)}` : `m${i + 1}`)
-
-  function onMove(e: React.MouseEvent) {
-    const svg = ref.current; if (!svg) return
-    const rect = svg.getBoundingClientRect()
-    const px = ((e.clientX - rect.left) / rect.width) * W
-    const i = Math.max(0, Math.min(n - 1, Math.round(((px - padL) / (W - padL - padR)) * (n - 1))))
-    setHover(i)
-  }
-
-  return (
-    <svg ref={ref} viewBox={`0 0 ${W} ${H}`} width="100%" style={{ height: 'auto', display: 'block' }}
-      role="img" aria-label={view} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
-      <defs>
-        {series.map((s, si) => (
-          <linearGradient key={si} id={`fg${si}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={s.color} stopOpacity="0.26" />
-            <stop offset="1" stopColor={s.color} stopOpacity="0" />
-          </linearGradient>
-        ))}
-      </defs>
-      {[0, 0.25, 0.5, 0.75, 1].map(f => {
-        const gy = padT + f * (H - padT - padB)
-        return <line key={f} x1={padL} x2={W - padR} y1={gy} y2={gy} stroke="var(--bd)" strokeWidth={1} />
-      })}
-      <text x={padL - 8} y={y(max) + 3} textAnchor="end" fontSize={9.5} fill="var(--tx3)">{view === 'cashflow' ? fmt$(max) : fmtN(max)}</text>
-      <text x={padL - 8} y={y(min) + 3} textAnchor="end" fontSize={9.5} fill="var(--tx3)">{view === 'cashflow' ? fmt$(min) : fmtN(min)}</text>
-      {min < 0 && <line x1={padL} x2={W - padR} y1={zeroY} y2={zeroY} stroke="var(--bd2)" strokeWidth={1} strokeDasharray="4 4" />}
-      {ticks.map(i => <text key={i} x={x(i)} y={H - 7} textAnchor="middle" fontSize={9.5} fill="var(--tx3)">{tickLabel(i)}</text>)}
-      {series.map((s, si) => {
-        const pts = s.rows.map((row, i) => ({ x: x(i), y: y(val(row)) }))
-        const d = catmull(pts)
-        return (
-          <g key={si}>
-            {s.fill && <path d={`${d} L${x(n - 1).toFixed(1)},${base.toFixed(1)} L${x(0).toFixed(1)},${base.toFixed(1)} Z`} fill={`url(#fg${si})`} />}
-            <path d={d} fill="none" stroke={s.color} strokeWidth={2.6} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '5 4' : undefined} />
-            <circle cx={x(n - 1)} cy={y(val(s.rows[n - 1]))} r={3.4} fill={s.color} />
-          </g>
-        )
-      })}
-      {hover != null && (
-        <g>
-          <line x1={x(hover)} x2={x(hover)} y1={padT} y2={base} stroke="var(--tx3)" strokeWidth={1} strokeDasharray="3 3" />
-          {series.map((s, si) => <circle key={si} cx={x(hover)} cy={y(val(s.rows[hover]))} r={3.6} fill="var(--bg)" stroke={s.color} strokeWidth={2} />)}
-          <g transform={`translate(${Math.min(x(hover) + 8, W - 118)},${padT + 4})`}>
-            <rect width={110} height={15 + series.length * 14} rx={6} fill="var(--bg2)" stroke="var(--bd2)" />
-            <text x={8} y={13} fontSize={9.5} fill="var(--tx3)">{longRange ? `${2026 + Math.floor(hover / 12)}` : `month ${hover + 1}`}</text>
-            {series.map((s, si) => (
-              <text key={si} x={8} y={14 + (si + 1) * 14} fontSize={10} fill={s.color} fontWeight={600}>
-                {series.length > 1 ? `${s.label}: ` : ''}{view === 'cashflow' ? fmt$(val(s.rows[hover])) : fmtN(val(s.rows[hover]))}
-              </text>
-            ))}
-          </g>
-        </g>
-      )}
-    </svg>
-  )
-}
 
 // ── detail drawer (right on desktop, full-page on mobile via min()) ──────────
 function StatementDrawer({ stmt, a, r, onClose }: { stmt: StmtKey; a: Assumptions; r: ModelResult; onClose: () => void }) {

@@ -4,6 +4,7 @@ import { officeById } from '../../../data/graph/agents'
 import { buildDailyBriefing } from '../../../data/reports/daily'
 import type { Report, Section } from '../../../data/reports/types'
 import { ChartView } from '../../../components/charts'
+import { CashflowChart } from '../../../components/rcharts'
 import { SourceBadge } from '../SourceBadge'
 import { HealthDot } from '../HealthDot'
 
@@ -95,6 +96,34 @@ export function SectionView({ s }: { s: Section }) {
       </div>
     )
   }
+  if (s.kind === 'reChart') {
+    return (
+      <div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>{s.title}</div>
+        <CashflowChart data={s.data} series={s.series} kind={s.unit} months={s.months} height={200} />
+      </div>
+    )
+  }
+  if (s.kind === 'table') {
+    return (
+      <div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>{s.title}</div>
+        <div style={{ border: '1px solid var(--bd)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
+          <div className="row" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--tx3)', padding: '8px 12px' }}>
+            {s.head.map((h, i) => <span key={i} style={{ flex: 1, textAlign: i === 0 ? 'left' : 'right' }}>{h}</span>)}
+          </div>
+          {s.rows.map((r, ri) => {
+            const strong = s.strongLast && ri === s.rows.length - 1
+            return (
+              <div key={ri} className="row" style={{ fontSize: 12, padding: '8px 12px', borderTop: '1px solid var(--bd)', fontWeight: strong ? 700 : 400 }}>
+                {r.map((c, ci) => <span key={ci} style={{ flex: 1, textAlign: ci === 0 ? 'left' : 'right', fontFamily: ci === 0 ? 'inherit' : 'var(--mono)', color: ci === 0 ? 'var(--tx)' : 'var(--tx2)' }}>{c}</span>)}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
   return <div style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.5 }}>{s.text}</div>
 }
 
@@ -165,6 +194,22 @@ export function DailyBrief() {
         </button>
       </div>
       {!open && <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.5 }}>On-demand C-level briefing — the North Star, the one thing today, the six chief headlines, and what needs your Bridge to resolve. Present or export it.</div>}
+      {open && <ReportView report={report} onPresent={() => setPresent(true)} />}
+      {present && <Present report={report} onClose={() => setPresent(false)} />}
+    </div>
+  )
+}
+
+// Generic report panel — button → ReportView + Present. Reused by any office.
+export function ReportPanel({ report, label }: { report: Report; label: string }) {
+  const [open, setOpen] = useState(false)
+  const [present, setPresent] = useState(false)
+  return (
+    <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="spread" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600 }}><FileText size={14} /> {label}</div>
+        <button className="chip" onClick={() => setOpen(o => !o)} style={{ gap: 6, cursor: 'pointer', background: open ? 'var(--bg3)' : 'var(--acc)', color: open ? 'var(--tx)' : '#fff', borderColor: open ? 'var(--bd2)' : 'var(--acc)' }}>{open ? 'Hide' : 'Open report'}</button>
+      </div>
       {open && <ReportView report={report} onPresent={() => setPresent(true)} />}
       {present && <Present report={report} onClose={() => setPresent(false)} />}
     </div>
