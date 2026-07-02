@@ -63,18 +63,26 @@ export interface QuestDef {
   metric: (c: Counters) => number
   target: number
   reward: { diamonds?: number; xp?: number }
-  step?: number          // chain order (daily quests only)
-  label?: string         // the chain stage name (Learn / Explore / …)
-  route?: string         // tab to open when the kid taps this step
+  step?: number             // chain order (daily quests only)
+  label?: string            // the chain stage name (Learn / Explore / …)
+  route?: string            // tab to open when the kid taps this step
+  cloud?: 'xp' | 'rings'    // read progress from CLOUD truth (today's XP / rings)
 }
 
+// Mirror the Home North Star knobs so the Quest chain tells the SAME story
+// (hardcoded to avoid a circular import — dailyRings imports getCounters here).
+const FOCUS_XP = 120
+const RINGS_GOAL = 6
+
 export const QUESTS: QuestDef[] = [
-  // ── the daily chain: one quest line through every surface ──
-  { id: 'd_learn',    scope: 'daily', step: 1, label: 'Learn',    title: 'Finish 2 lessons',    icon: '📚', metric: c => c.nodes,    target: 2, reward: { diamonds: 10 }, route: 'learn' },
-  { id: 'd_explore',  scope: 'daily', step: 2, label: 'Journey',  title: 'Finish 3 journeys',   icon: '🧭', metric: c => c.nodes,    target: 3, reward: { diamonds: 12 }, route: 'learn' },
-  { id: 'd_befriend', scope: 'daily', step: 3, label: 'Befriend', title: 'Befriend a kin',      icon: '💗', metric: c => c.befriend, target: 1, reward: { diamonds: 15 }, route: 'kinworld' },
-  { id: 'd_build',    scope: 'daily', step: 4, label: 'Practice', title: 'Finish 6 drills',     icon: '🎯', metric: c => c.drill,    target: 6, reward: { diamonds: 20 }, route: 'learn' },
-  { id: 'd_show',     scope: 'daily', step: 5, label: 'Master',   title: 'Win a boss battle',   icon: '⚔️', metric: c => c.boss,      target: 1, reward: { diamonds: 15 }, route: 'learn' },
+  // ── the daily chain: mirrors the Home North Star and is driven by the SAME
+  //    cloud truth (today's XP + world rings), so filling your rings ALWAYS
+  //    advances the chain — no device-local desync. Steps 3–5 are action counters.
+  { id: 'd_focus',    scope: 'daily', step: 1, label: 'Focus',    title: `Earn ${FOCUS_XP} XP today`, icon: '🔥', metric: () => 0, cloud: 'xp',    target: FOCUS_XP,   reward: { diamonds: 10 }, route: 'learn' },
+  { id: 'd_learn',    scope: 'daily', step: 2, label: 'Learn',    title: 'Fill your 6 skill rings',   icon: '🎯', metric: () => 0, cloud: 'rings', target: RINGS_GOAL, reward: { diamonds: 14 }, route: 'learn' },
+  { id: 'd_build',    scope: 'daily', step: 3, label: 'Practice', title: 'Finish 3 drills',           icon: '🎲', metric: c => c.drill,    target: 3, reward: { diamonds: 16 }, route: 'learn' },
+  { id: 'd_befriend', scope: 'daily', step: 4, label: 'Befriend', title: 'Befriend a kin',            icon: '💗', metric: c => c.befriend, target: 1, reward: { diamonds: 18 }, route: 'kinworld' },
+  { id: 'd_show',     scope: 'daily', step: 5, label: 'Master',   title: 'Win a boss battle',         icon: '⚔️', metric: c => c.boss,     target: 1, reward: { diamonds: 15 }, route: 'learn' },
   // ── weekly ──
   { id: 'w_nodes', scope: 'weekly', title: 'Complete 10 lessons this week', icon: '🏅', metric: c => c.nodes, target: 10, reward: { diamonds: 40, xp: 50 } },
   { id: 'w_dungeon', scope: 'weekly', title: 'Clear 3 dungeons this week', icon: '🗺️', metric: c => c.dungeon, target: 3, reward: { diamonds: 30 } },
@@ -88,23 +96,32 @@ export function getCounters(): { daily: Counters; weekly: Counters } {
   return { daily: s.daily, weekly: s.weekly }
 }
 
+// Cloud-truth context for the daily-chain quests: today's total XP + how many of
+// the six world rings are full. The page reads the same server RPC the Home
+// rings use and passes it in. Absent → cloud quests read 0 (graceful, not broken).
+export interface QuestCtx { todayXp?: number; ringsN?: number }
+function progressOf(def: QuestDef, s: QState, ctx?: QuestCtx): number {
+  if (def.cloud === 'xp') return Math.min(ctx?.todayXp ?? 0, def.target)
+  if (def.cloud === 'rings') return Math.min(ctx?.ringsN ?? 0, def.target)
+  const c = def.scope === 'daily' ? s.daily : s.weekly
+  return Math.min(def.metric(c), def.target)
+}
+
 export interface QuestView { def: QuestDef; progress: number; done: boolean; claimed: boolean }
-export function getQuests(): QuestView[] {
+export function getQuests(ctx?: QuestCtx): QuestView[] {
   const s = load()
   return QUESTS.map(def => {
-    const c = def.scope === 'daily' ? s.daily : s.weekly
-    const progress = Math.min(def.metric(c), def.target)
+    const progress = progressOf(def, s, ctx)
     return { def, progress, done: progress >= def.target, claimed: s.claimed.includes(def.id) }
   })
 }
 
 /** Claim a completed quest's reward. Returns the reward, or null if not claimable. */
-export function claimQuest(id: string): { diamonds?: number; xp?: number } | null {
+export function claimQuest(id: string, ctx?: QuestCtx): { diamonds?: number; xp?: number } | null {
   const s = load()
   const def = QUESTS.find(q => q.id === id)
   if (!def || s.claimed.includes(id)) return null
-  const c = def.scope === 'daily' ? s.daily : s.weekly
-  if (def.metric(c) < def.target) return null
+  if (progressOf(def, s, ctx) < def.target) return null
   s.claimed.push(id)
   save(s)
   return def.reward

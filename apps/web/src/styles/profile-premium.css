@@ -99,6 +99,19 @@
 .pp-ringrow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 12px; border-top: 1px solid var(--pp-glass-edge); padding-top: 12px; }
 .pp-ring small { display: block; font-size: 9px; color: var(--t2); text-align: center; margin-top: 1px; }
 
+/* ── premium daily snapshot: North Star crest + rank + chips ── */
+.pp-ns { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--pp-glass-edge); }
+.pp-ns-crest { position: relative; flex: 0 0 auto; width: 64px; height: 64px; display: grid; place-items: center;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.22)); }
+.pp-ns-crest svg { display: block; }
+.pp-ns-badge { position: absolute; inset: 0; display: grid; place-items: center; }
+.pp-ns-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.pp-ns-tier { font-size: 13.5px; font-weight: 800; letter-spacing: .01em; }
+.pp-ns-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.pp-ns-chip { font-size: 12px; font-weight: 700; color: var(--t1); background: var(--pp-tint);
+  border: 1px solid var(--pp-glass-edge); border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+.pp-ns-chip b { color: inherit; }
+
 /* ── friends ────────────────────────────────────────────── */
 .pp-friends { display: flex; flex-wrap: wrap; gap: 8px; }
 .pp-friend {

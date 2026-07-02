@@ -1,13 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '@store/appStore'
-import { getQuests, claimQuest, type QuestView } from '@lib/quests'
+import { getQuests, claimQuest, type QuestView, type QuestCtx } from '@lib/quests'
+import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import { earnDiamonds } from '@lib/wallet'
 import { getStreak } from '@lib/streak'
+
+const WORLD_KEYS = ['NUM', 'WRD', 'WON', 'LOG', 'WLD', 'LIF']
 
 export default function Quests() {
   const { addXp, addToast, go } = useAppStore()
   const [, force] = useState(0)
-  const quests = getQuests()
+  // Cloud truth (today's XP + full rings) so the Focus/Learn steps reflect what
+  // the kid actually did — the same signal the Home North Star reads.
+  const [ctx, setCtx] = useState<QuestCtx>({})
+  useEffect(() => {
+    todayWorldXp().then(x => {
+      const todayXp = Object.values(x).reduce((a, b) => a + (b || 0), 0)
+      const ringsN = WORLD_KEYS.filter(k => ringPct(x[k] ?? 0) >= 100).length
+      setCtx({ todayXp, ringsN })
+    })
+  }, [])
+  const quests = getQuests(ctx)
   const chain = quests.filter(q => q.def.scope === 'daily').sort((a, b) => (a.def.step ?? 0) - (b.def.step ?? 0))
   const weekly = quests.filter(q => q.def.scope === 'weekly')
   const streak = getStreak()
@@ -16,7 +29,7 @@ export default function Quests() {
   const activeIdx = chain.findIndex(q => !q.done)
 
   const claim = (id: string) => {
-    const reward = claimQuest(id)
+    const reward = claimQuest(id, ctx)
     if (!reward) return
     if (reward.diamonds) earnDiamonds(reward.diamonds, 'quest', `quest:${id}`)
     if (reward.xp) addXp(reward.xp)

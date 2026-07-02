@@ -6,6 +6,9 @@ import { todayWorldXp, ringPct } from '@lib/dailyRings'
 import { loadMyGames } from '@lib/myGames'
 import { addKid as addKidLocal } from '@lib/circles'   // offline-only fallback
 import Buddy from '@components/avatar/Buddy'
+import { tierOf } from '@lib/rank'
+import TierIcon from '@components/rank/TierIcon'
+import { nexusRoster } from '@lib/nexus'
 import KidForm, { type KidFormData } from '@components/auth/KidForm'
 import FriendSearch from '@components/auth/FriendSearch'
 import CircleMembers from '@components/circles/CircleMembers'
@@ -27,6 +30,8 @@ const AV_LIMIT = 6   // optimum: 6 avatars then "+N"
 const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
 }
+const WORLD_KEYS = WORLDS.map(w => w.key)
+const NS_FOCUS_XP = 120, NS_SPREAD = 3
 const PALETTE = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ef4444', '#14b8a6']
 
 function Ring({ pct, color }: { pct: number; color: string }) {
@@ -38,6 +43,55 @@ function Ring({ pct, color }: { pct: number; color: string }) {
         strokeDasharray={`${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 25 25)" />
       <text x="25" y="29" textAnchor="middle" fontSize="10" fontWeight="800" fill={color}>{pct}</text>
     </svg>
+  )
+}
+
+// A kid's premium daily snapshot: a 4-ring North Star crest (Focus · Rings ·
+// Kin · Spread) around the rank badge, plus tier + diamonds + kin chips. Every
+// value is CLOUD truth (today's XP, befriended roster, profile), so a guardian
+// sees the same numbers on any device.
+function KidSnapshot({ xp, diamonds, todayXp, kins }: {
+  xp: number; diamonds: number; todayXp: Record<string, number>; kins: number | null
+}) {
+  const t = tierOf(xp)
+  const xpSum = WORLD_KEYS.reduce((a, k) => a + (todayXp[k] || 0), 0)
+  const ringsN = WORLD_KEYS.filter(k => ringPct(todayXp[k] ?? 0) >= 100).length
+  const spread = WORLD_KEYS.filter(k => (todayXp[k] ?? 0) > 0).length
+  const goals = [
+    { name: 'Focus',  color: '#f0a83a', frac: Math.min(1, xpSum / NS_FOCUS_XP), on: xpSum >= NS_FOCUS_XP },
+    { name: 'Rings',  color: '#37a8c4', frac: ringsN / 6,                        on: ringsN >= 6 },
+    { name: 'Kin',    color: '#ec4899', frac: (kins ?? 0) >= 1 ? 1 : 0,          on: (kins ?? 0) >= 1 },
+    { name: 'Spread', color: '#7a4fd0', frac: Math.min(1, spread / NS_SPREAD),   on: spread >= NS_SPREAD },
+  ]
+  const done = goals.filter(g => g.on).length
+  const RAD = [26, 20, 14, 8]
+  return (
+    <div className="pp-ns">
+      <div className="pp-ns-crest" title={`Today's North Star · ${done}/4`}>
+        <svg viewBox="0 0 64 64" width="64" height="64">
+          {goals.map((g, i) => {
+            const r = RAD[i], c = 2 * Math.PI * r
+            return (
+              <g key={i}>
+                <circle cx="32" cy="32" r={r} fill="none" stroke={g.color} strokeOpacity="0.16" strokeWidth="5" />
+                <circle cx="32" cy="32" r={r} fill="none" stroke={g.color} strokeWidth="5" strokeLinecap="round"
+                  strokeDasharray={`${(c * g.frac).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 32 32)"
+                  style={{ transition: 'stroke-dasharray .6s cubic-bezier(.2,.8,.2,1)' }} />
+              </g>
+            )
+          })}
+        </svg>
+        <span className="pp-ns-badge"><TierIcon color={t.tier.color} glyph={t.tier.glyph} size={22} /></span>
+      </div>
+      <div className="pp-ns-side">
+        <div className="pp-ns-tier" style={{ color: t.tier.color }}>{t.tier.glyph} {t.tier.name}</div>
+        <div className="pp-ns-chips">
+          <span className="pp-ns-chip"><b>{done}</b>/4 today</span>
+          <span className="pp-ns-chip">💎 {diamonds.toLocaleString()}</span>
+          <span className="pp-ns-chip">🐾 {kins == null ? '—' : kins}</span>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -62,6 +116,7 @@ export default function Profile() {
   // self ring keys off auth.uid(), the per-kid rings off kid_today_rings (RLS
   // gates them to the guardian). `worldRing` (localStorage, cumulative) is gone.
   const [kidToday, setKidToday] = useState<Record<string, Record<string, number>>>({})
+  const [kidKins, setKidKins] = useState<Record<string, number>>({})   // per-kid befriended-kin count
   const [myToday, setMyToday] = useState<Record<string, number>>({})
   const [rosters, setRosters] = useState<Record<string, CircleMember[]>>({})
   const reloadAll = () => {
@@ -82,6 +137,9 @@ export default function Profile() {
       // each kid's TODAY rings for the family cards (guardian-readable)
       Promise.all(ks.map(k => todayWorldXp(k.id).then(x => [k.id, x] as const)))
         .then(pairs => setKidToday(Object.fromEntries(pairs)))
+      // each kid's befriended-kin count (distinct species) for the snapshot
+      Promise.all(ks.map(k => nexusRoster(k.id).then(r => [k.id, new Set(r.map(x => x.kin_key)).size] as const)))
+        .then(pairs => setKidKins(Object.fromEntries(pairs)))
     })
   }
   useEffect(reloadAll, [uid])
@@ -349,6 +407,7 @@ export default function Profile() {
                   <button className="pp-iconchip" title="Kid's friends" onClick={() => viewKidFriends(k)}>🫂</button>
                   <button className="pp-iconchip" title="Remove from family" onClick={() => removeFromFamily(k)}>✕</button>
                 </div>
+                <KidSnapshot xp={k.xp ?? 0} diamonds={k.diamonds ?? 0} todayXp={kidToday[k.id] ?? {}} kins={kidKins[k.id] ?? null} />
                 <div className="pp-ringrow">
                   {WORLDS.map(w => {
                     const pct = ringPct(kidToday[k.id]?.[w.key] ?? 0)
