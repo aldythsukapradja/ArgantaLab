@@ -2,6 +2,16 @@ import { useHQ, type CommandTab } from '../../shell/store'
 import { Lobby } from './Lobby'
 import { Office } from './Office'
 import { Treasury } from './Treasury'
+import { CoverageXray, OpsCockpit, LegalRegister, GuildBoard, BridgeRollup } from './Cockpits'
+import type { OfficeId } from '../../data/graph/types'
+
+const COCKPIT: Partial<Record<OfficeId, React.ReactNode>> = {
+  bridge: <BridgeRollup />,
+  operations: <OpsCockpit />,
+  technology: <CoverageXray />,
+  legal: <LegalRegister />,
+  roster: <GuildBoard />,
+}
 
 const TABS: { id: CommandTab; label: string }[] = [
   { id: 'lobby', label: 'Lobby' },
@@ -31,7 +41,7 @@ export function Command() {
 
       {commandTab === 'lobby' && <Lobby />}
       {commandTab === 'treasury' && <Treasury />}
-      {commandTab !== 'lobby' && commandTab !== 'treasury' && <Office id={commandTab} />}
+      {commandTab !== 'lobby' && commandTab !== 'treasury' && <Office id={commandTab} cockpit={COCKPIT[commandTab]} />}
     </div>
   )
 }
