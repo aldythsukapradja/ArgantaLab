@@ -1,0 +1,26 @@
+{
+  "name": "circle-hq-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Bridge — an MCP server that gives Claude or ChatGPT a CEO seat over Circle HQ. Read-only, hierarchical, deterministic seed. Reuses the HQ engine with zero rebuild.",
+  "scripts": {
+    "smoke": "tsx src/smoke.ts",
+    "dev": "tsx src/server.ts",
+    "stdio": "tsx src/server.ts",
+    "http": "tsx src/server.ts --http",
+    "inspect": "npx -y @modelcontextprotocol/inspector tsx src/server.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "express": "^4.21.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.3.3"
+  }
+}
