@@ -49,7 +49,7 @@ const DEX_NO: Record<string, number> = Object.fromEntries(KIN.map((k, i) => [k.i
 const pad = (n: number) => String(n).padStart(3, '0')
 
 export default function KinWorld() {
-  const { go, session, addToast, learnerName } = useAppStore()
+  const { go, session, addToast, learnerName, openKinQuest } = useAppStore()
   const [active, setActive] = useState<KinDef | null>(null)
   const [roster, setRoster] = useState<KinInstance[]>([])
   const [loading, setLoading] = useState(true)
@@ -131,7 +131,7 @@ export default function KinWorld() {
 
   return (
     <div className="screen kinworld kw-full">
-      <KinWorldGame roster={roster} stage={stage} onEnterDungeon={enterDungeon} onOpenHall={() => setHallOpen(true)} />
+      <KinWorldGame roster={roster} stage={stage} onEnterDungeon={enterDungeon} onOpenHall={() => setHallOpen(true)} onEnterKinQuest={openKinQuest} />
 
       {/* ── Town Hall: harvest Collect + Kindex, opened from the keep ── */}
       {hallOpen && createPortal(

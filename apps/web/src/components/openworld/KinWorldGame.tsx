@@ -15,6 +15,7 @@ import { useAppStore } from '@store/appStore'
 import KinSprite from './KinSprite'
 import MountSprite from './MountSprite'
 import Buddy from '@components/avatar/Buddy'
+import Joystick from '@components/ui/Joystick'
 import { myMounts } from '@lib/mounts'
 import type { KinInstance } from '@lib/nexus'
 
@@ -50,14 +51,14 @@ async function rasterize(url: string, w: number, h: number): Promise<HTMLCanvasE
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 
-export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall }: {
-  roster: KinInstance[]; stage: number; onEnterDungeon: (world: string) => void; onOpenHall: () => void
+export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall, onEnterKinQuest }: {
+  roster: KinInstance[]; stage: number; onEnterDungeon: (world: string) => void; onOpenHall: () => void; onEnterKinQuest: () => void
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const controls = useRef({ dx: 0, dy: 0 })
   const [near, setNear] = useState<{ world: string; name: string; hex: number } | null>(null)
   const nearRef = useRef(setNear); nearRef.current = setNear
-  const cbRef = useRef({ onEnterDungeon, onOpenHall }); cbRef.current = { onEnterDungeon, onOpenHall }
+  const cbRef = useRef({ onEnterDungeon, onOpenHall, onEnterKinQuest }); cbRef.current = { onEnterDungeon, onOpenHall, onEnterKinQuest }
   const outfit = useAppStore(s => s.resolvedOutfit())
   const [mountId, setMountId] = useState<string | undefined>(undefined)
   useEffect(() => { myMounts().then(m => setMountId(m.equipped ?? undefined)) }, [])
@@ -165,6 +166,31 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
           label(PIXI, ent, g.name, (g.col + 1) * T, (g.row + 2) * T + 9, 12)
         })
 
+        // ---- seaside PORT → sails to KinQuest (the flagship game) ----
+        const portC = 20, portR = 29
+        {
+          const wx = portC * T, wy = (portR + 1) * T
+          const water = new PIXI.Graphics()
+          water.roundRect(wx - 3 * T, wy - 2, 6 * T, 3 * T, 10).fill(0x3f9fd0)
+          water.roundRect(wx - 3 * T + 4, wy - 2 + 4, 6 * T - 8, 3 * T - 8, 8).fill(0x63c4ea)
+          water.zIndex = wy - 40; ent.addChild(water)
+          for (let dc = -3; dc <= 2; dc++) for (let dr = 0; dr <= 2; dr++) block(portC + dc, portR + 1 + dr)
+          // dock planks (walkable) + posts
+          put(TILE.FENCE, portC - 1, portR); put(TILE.FENCE, portC + 1, portR)
+          // a little sailing boat in the water
+          const boat = new PIXI.Graphics()
+          const bx = portC * T, by = (portR + 1) * T + 10
+          boat.moveTo(bx - 15, by).lineTo(bx + 15, by).lineTo(bx + 10, by + 9).lineTo(bx - 10, by + 9).closePath().fill(0x8b5a2b)
+          boat.rect(bx - 1, by - 22, 2, 22).fill(0x6b4423)
+          boat.moveTo(bx + 1, by - 22).lineTo(bx + 14, by - 8).lineTo(bx + 1, by - 8).closePath().fill(0xffd700)
+          boat.zIndex = by + 4; ent.addChild(boat)
+          // interaction porch on the dock front + a golden anchor sign
+          doors.push({ world: '__kq__', name: 'KinQuest', hex: 0xf0a83a, x: portC * T, y: portR * T })
+          const anchor = new PIXI.Text({ text: '⚓', style: { fontFamily: 'Arial', fontSize: 16 } })
+          anchor.anchor.set(0.5); anchor.position.set(portC * T, (portR - 1) * T + 2); anchor.zIndex = 99990; ent.addChild(anchor)
+          label(PIXI, ent, 'KinQuest', portC * T, (portR - 1) * T + 16, 12, 0xf0a83a)
+        }
+
         // central Town Hall — grows with stage, built from the same tiles, gold roofs
         const GOLD = 0xf3c34e
         const kc = KEEP_C, kr = KEEP_R
@@ -264,23 +290,28 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
 
           // hero movement (4-directional, slow & elegant) with soft building collision
           if (hero) {
+            // analog movement — keyboard gives ±1 per axis, joystick gives a vector
             let vx = 0, vy = 0
-            if (keys['arrowleft'] || keys['a']) vx = -1
-            else if (keys['arrowright'] || keys['d']) vx = 1
-            else if (keys['arrowup'] || keys['w']) vy = -1
-            else if (keys['arrowdown'] || keys['s']) vy = 1
-            if (controls.current.dx) { vx = controls.current.dx; vy = 0 }
-            else if (controls.current.dy) { vy = controls.current.dy; vx = 0 }
-            if (vx) hero.scale.x = vx < 0 ? -Math.abs(hero.scale.x) : Math.abs(hero.scale.x)
-            const spd = 1.5 * dt
+            if (keys['arrowleft'] || keys['a']) vx -= 1
+            if (keys['arrowright'] || keys['d']) vx += 1
+            if (keys['arrowup'] || keys['w']) vy -= 1
+            if (keys['arrowdown'] || keys['s']) vy += 1
+            if (controls.current.dx !== 0 || controls.current.dy !== 0) { vx = controls.current.dx; vy = controls.current.dy }
             const feetY = () => hero.y + 6
-            const nx = clamp(hero.x + vx * spd, T + 4, BASEW - T - 4)
-            if (!blocked.has(Math.floor(nx / T) + ',' + Math.floor(feetY() / T))) hero.x = nx
-            const ny = clamp(hero.y + vy * spd, T + 4, BASEH - T - 4)
-            if (!blocked.has(Math.floor(hero.x / T) + ',' + Math.floor((ny + 6) / T))) hero.y = ny
+            const mag = Math.hypot(vx, vy)
+            if (mag > 0.01) {
+              const nvx = vx / Math.max(1, mag), nvy = vy / Math.max(1, mag)
+              if (Math.abs(nvx) > 0.02) hero.scale.x = nvx < 0 ? -Math.abs(hero.scale.x) : Math.abs(hero.scale.x)
+              const spd = 1.7 * dt
+              const nx = clamp(hero.x + nvx * spd, T + 4, BASEW - T - 4)
+              if (!blocked.has(Math.floor(nx / T) + ',' + Math.floor(feetY() / T))) hero.x = nx
+              const ny = clamp(hero.y + nvy * spd, T + 4, BASEH - T - 4)
+              if (!blocked.has(Math.floor(hero.x / T) + ',' + Math.floor((ny + 6) / T))) hero.y = ny
+              hero.pivot.y = Math.sin(clock * 0.4) * 1.5
+            } else {
+              hero.pivot.y = 0
+            }
             hero.zIndex = hero.y + 20
-            const bob = (vx || vy) ? Math.sin(clock * 0.4) * 1.5 : 0
-            hero.pivot.y = bob
 
             // nearest porch → prompt
             let found: { world: string; name: string; hex: number } | null = null
@@ -357,24 +388,16 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
     }
   }, [sig, mountId, stage]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const press = (dx: number, dy: number) => () => { controls.current = { dx, dy } }
-  const release = () => { controls.current = { dx: 0, dy: 0 } }
-
   return (
     <div className="kw-game">
       <div ref={parentRef} className="kw-canvas" />
       {near && (
         <button className="kw-enter" style={{ background: `#${near.hex.toString(16).padStart(6, '0')}` }}
-          onClick={() => cbRef.current.onEnterDungeon(near.world)}>
-          Enter {near.name} →
+          onClick={() => (near.world === '__kq__' ? cbRef.current.onEnterKinQuest() : cbRef.current.onEnterDungeon(near.world))}>
+          {near.world === '__kq__' ? `⚓ Sail to ${near.name} →` : `Enter ${near.name} →`}
         </button>
       )}
-      <div className="kw-dpad">
-        <button className="dp dp-u" onPointerDown={press(0, -1)} onPointerUp={release} onPointerLeave={release} aria-label="Up">▲</button>
-        <button className="dp dp-l" onPointerDown={press(-1, 0)} onPointerUp={release} onPointerLeave={release} aria-label="Left">◀</button>
-        <button className="dp dp-r" onPointerDown={press(1, 0)} onPointerUp={release} onPointerLeave={release} aria-label="Right">▶</button>
-        <button className="dp dp-d" onPointerDown={press(0, 1)} onPointerUp={release} onPointerLeave={release} aria-label="Down">▼</button>
-      </div>
+      <Joystick className="kw-joy" onChange={(dx, dy) => { controls.current = { dx, dy } }} />
     </div>
   )
 }

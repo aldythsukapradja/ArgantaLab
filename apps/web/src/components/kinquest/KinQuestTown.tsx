@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { useAppStore } from '@store/appStore'
 import Buddy from '@components/avatar/Buddy'
+import Joystick from '@components/ui/Joystick'
 import { ELEMENT_META } from '@/data/kinquest'
 import type { Element } from '@/data/openworld'
 
@@ -258,23 +259,28 @@ export default function KinQuestTown({
           clock += dt
 
           if (hero && !pausedRef.current) {
+            // analog movement — keyboard gives ±1 per axis, joystick gives a vector
             let vx = 0, vy = 0
-            if (keys['arrowleft'] || keys['a']) vx = -1
-            else if (keys['arrowright'] || keys['d']) vx = 1
-            else if (keys['arrowup'] || keys['w']) vy = -1
-            else if (keys['arrowdown'] || keys['s']) vy = 1
-            if (controls.current.dx) { vx = controls.current.dx; vy = 0 }
-            else if (controls.current.dy) { vy = controls.current.dy; vx = 0 }
-            if (vx) hero.scale.x = vx < 0 ? -Math.abs(hero.scale.x) : Math.abs(hero.scale.x)
-            const spd = 1.5 * dt
+            if (keys['arrowleft'] || keys['a']) vx -= 1
+            if (keys['arrowright'] || keys['d']) vx += 1
+            if (keys['arrowup'] || keys['w']) vy -= 1
+            if (keys['arrowdown'] || keys['s']) vy += 1
+            if (controls.current.dx !== 0 || controls.current.dy !== 0) { vx = controls.current.dx; vy = controls.current.dy }
             const feetY = () => hero.y + 6
-            const nx = clamp(hero.x + vx * spd, T + 4, BASEW - T - 4)
-            if (!blocked.has(Math.floor(nx / T) + ',' + Math.floor(feetY() / T))) hero.x = nx
-            const ny = clamp(hero.y + vy * spd, T + 4, BASEH - T - 4)
-            if (!blocked.has(Math.floor(hero.x / T) + ',' + Math.floor((ny + 6) / T))) hero.y = ny
+            const mag = Math.hypot(vx, vy)
+            if (mag > 0.01) {
+              const nvx = vx / Math.max(1, mag), nvy = vy / Math.max(1, mag) // diagonals aren't faster
+              if (Math.abs(nvx) > 0.02) hero.scale.x = nvx < 0 ? -Math.abs(hero.scale.x) : Math.abs(hero.scale.x)
+              const spd = 1.7 * dt
+              const nx = clamp(hero.x + nvx * spd, T + 4, BASEW - T - 4)
+              if (!blocked.has(Math.floor(nx / T) + ',' + Math.floor(feetY() / T))) hero.x = nx
+              const ny = clamp(hero.y + nvy * spd, T + 4, BASEH - T - 4)
+              if (!blocked.has(Math.floor(hero.x / T) + ',' + Math.floor((ny + 6) / T))) hero.y = ny
+              hero.pivot.y = Math.sin(clock * 0.4) * 1.5
+            } else {
+              hero.pivot.y = 0
+            }
             hero.zIndex = hero.y + 20
-            const bob = (vx || vy) ? Math.sin(clock * 0.4) * 1.5 : 0
-            hero.pivot.y = bob
 
             // nearest interactable → context prompt (only push to React on CHANGE)
             let found: { id: ActionId; label: string; kind: 'building' | 'npc' } | null = null
@@ -327,9 +333,6 @@ export default function KinQuestTown({
     }
   }, [avatarTex]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const press = (dx: number, dy: number) => () => { controls.current = { dx, dy } }
-  const release = () => { controls.current = { dx: 0, dy: 0 } }
-
   return (
     <div className="kqt">
       <div ref={parentRef} className="kqt-canvas" />
@@ -338,12 +341,7 @@ export default function KinQuestTown({
           {near.kind === 'npc' ? '💬 Talk' : `⤵ Enter ${near.label}`}
         </button>
       )}
-      <div className="kw-dpad kqt-dpad">
-        <button className="dp dp-u" onPointerDown={press(0, -1)} onPointerUp={release} onPointerLeave={release} aria-label="Up">▲</button>
-        <button className="dp dp-l" onPointerDown={press(-1, 0)} onPointerUp={release} onPointerLeave={release} aria-label="Left">◀</button>
-        <button className="dp dp-r" onPointerDown={press(1, 0)} onPointerUp={release} onPointerLeave={release} aria-label="Right">▶</button>
-        <button className="dp dp-d" onPointerDown={press(0, 1)} onPointerUp={release} onPointerLeave={release} aria-label="Down">▼</button>
-      </div>
+      {!paused && <Joystick className="kqt-joy" onChange={(dx, dy) => { controls.current = { dx, dy } }} />}
     </div>
   )
 }
