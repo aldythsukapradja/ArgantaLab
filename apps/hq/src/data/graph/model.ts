@@ -36,6 +36,15 @@ const DISCOUNT_ANNUAL = 0.15
 const HORIZON = 24
 const A0 = 300
 
+// Forecast horizons. 2045 ≈ 19 years from mid-2026 → ~228 months of long-term view.
+export interface Horizon { key: string; label: string; months: number }
+export const HORIZONS: Horizon[] = [
+  { key: '2y', label: '2 yr', months: 24 },
+  { key: '5y', label: '5 yr', months: 60 },
+  { key: '10y', label: '10 yr', months: 120 },
+  { key: '2045', label: 'to 2045', months: 228 },
+]
+
 // discount ladder folded into annual (2mo free) + seasonal (Eid/Christmas/Summer)
 export function effArpu(list: number): number {
   const annual = list * 10 / 12
@@ -72,13 +81,13 @@ export interface ModelResult {
   householdD30: number
 }
 
-export function runModel(a: Assumptions): ModelResult {
+export function runModel(a: Assumptions, months: number = HORIZON): ModelResult {
   const arpu = effArpu(a.listPrice)
   const rm = Math.pow(1 + DISCOUNT_ANNUAL, 1 / 12) - 1
   const cap = effectiveCap(a)
   const rows: MonthRow[] = []
   let cum = 0, npv = 0, prev = A0, firstPositive: number | null = null
-  for (let m = 1; m <= HORIZON; m++) {
+  for (let m = 1; m <= months; m++) {
     const active = logistic(m, cap)
     const registered = active * REG_MULT
     const payers = active * a.conv
