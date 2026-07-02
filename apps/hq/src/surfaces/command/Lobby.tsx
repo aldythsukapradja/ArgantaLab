@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Landmark, Gamepad2, Cpu, Wallet, Scale, Users2, ChevronRight, MessageSquare, Gavel } from 'lucide-react'
 import { useHQ, type CommandTab } from '../../shell/store'
 import { OFFICE_ORDER, officeById } from '../../data/graph/agents'
@@ -5,7 +6,9 @@ import { NORTHSTAR } from '../../data/graph/seed'
 import {
   coverage, ownedBy, rollupHealth, verdictsFor, allConsults, nodeById,
 } from '../../data/graph/engine'
+import { commandLive, type W2FPoint } from '../../data/graph/live'
 import type { OfficeId, GraphNode } from '../../data/graph/types'
+import { LineChart } from '../../components/LineChart'
 import { SourceBadge } from './SourceBadge'
 import { HealthDot } from './HealthDot'
 import { CoverageBar } from './CoverageBar'
@@ -42,6 +45,10 @@ export function Lobby() {
 
 function NorthStarHero() {
   const n = NORTHSTAR
+  const [w2f, setW2f] = useState<W2FPoint[] | null | undefined>(undefined)
+  useEffect(() => { commandLive.w2fWeekly().then(setW2f) }, [])
+  const isLive = !!(w2f && w2f.length > 0)
+  const latest = isLive ? w2f![w2f!.length - 1].w2f : null
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
       <div style={{ height: 3, background: 'linear-gradient(90deg,var(--acc),var(--mag))' }} />
@@ -50,11 +57,18 @@ function NorthStarHero() {
           <div className="row" style={{ gap: 8, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--acc-text)', fontWeight: 600 }}>North Star</div>
           <div style={{ fontSize: 22, fontWeight: 800, margin: '6px 0 4px', letterSpacing: '-.02em' }}>{n.label}</div>
           <div style={{ fontSize: 12.5, color: 'var(--tx2)', maxWidth: 520, lineHeight: 1.5 }}>{n.note}</div>
+          {isLive && (
+            <div style={{ marginTop: 12, maxWidth: 420 }}>
+              <LineChart points={w2f!.map(p => ({ week: p.week, value: p.w2f }))} />
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 34, fontWeight: 800, color: 'var(--tx3)' }}>—</div>
-          <SourceBadge source={n.metric!.source} />
-          <div style={{ fontSize: 10.5, color: 'var(--tx3)', maxWidth: 200 }}>Buildable now via <span className="src">w2f_weekly()</span> — awaiting the query.</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 34, fontWeight: 800, color: isLive ? 'var(--tx)' : 'var(--tx3)' }}>{latest ?? '—'}</div>
+          <SourceBadge source={isLive ? 'live' : n.metric!.source} />
+          <div style={{ fontSize: 10.5, color: 'var(--tx3)', maxWidth: 200 }}>
+            {isLive ? 'Live from w2f_weekly() — kid learned AND parent coordinated, same week.' : <>Buildable now via <span className="src">w2f_weekly()</span> — run the migration + sign in as operator.</>}
+          </div>
         </div>
       </div>
     </div>

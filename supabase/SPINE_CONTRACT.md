@@ -54,3 +54,12 @@ members see their circle; operators see all.
 All migrations are idempotent and were validated by running them in real
 PostgreSQL (PGlite) with assertion suites (identity, M:N guardians, invites,
 wallet guards, leak cleanup, family stats).
+
+## Circle HQ — COMMAND read-side RPCs (migration_command_graph.sql)
+Run **after** the existing chain. All SECURITY DEFINER, operator-gated (`hq_is_operator()`), granted to `authenticated`. They light up the Command graph with **no new instrumentation** — reads only.
+- `w2f_weekly()` → `(week, families, w2f)` — **the North Star**: family circles where a child had ≥1 `learn_event` AND an adult logged ≥1 `kinetik_events`/`kinetik_post` in the same ISO week. ⚠ Validate against real data before the client badge flips `partial → live`.
+- `curr_states()` → `(state, families)` — New / Current / At-risk / Dormant from last kid-learn + last parent-activity per family.
+- `k_factor()` → `(sent, accepted, k)` — circle-invite virality from `circle_invites`.
+- `surface_health()` → `(surface_id, events)` — per-surface activity from the `hq_event` sink (empty until the 3 apps emit `feature_view`/`lesson_done`/…). **Reuse `hq_event`; do not create `product_event`.**
+
+Client: `apps/hq/src/data/graph/live.ts` calls these; offline/non-operator → `null`, and the UI keeps its honest "—" + source badge.

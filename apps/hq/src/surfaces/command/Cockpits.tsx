@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Radar, Activity, BookOpen, Scale, Users2, Compass, Gavel, Coins } from 'lucide-react'
 import { NODES } from '../../data/graph/seed'
 import {
   coverage, nodeById, ownedBy, rollupHealth, pendingConsults,
 } from '../../data/graph/engine'
+import { commandLive, type CurrState } from '../../data/graph/live'
 import { officeById, OFFICE_ORDER } from '../../data/graph/agents'
 import { AGENTS, officeOf, OFFICE_META, OFFICE_KEYS, MODEL_META } from '../../data/agents'
 import type { Source, GraphNode, OfficeId } from '../../data/graph/types'
@@ -75,18 +76,25 @@ export function OpsCockpit() {
     { k: 'New', note: 'joined ≤7d' }, { k: 'Current', note: 'both hooks this week' },
     { k: 'At-risk', note: 'one hook cold' }, { k: 'Dormant', note: 'both cold' },
   ]
+  const [states, setStates] = useState<CurrState[] | null | undefined>(undefined)
+  useEffect(() => { commandLive.currStates().then(setStates) }, [])
+  const countOf = (k: string) => states?.find(s => s.state === k)?.families ?? null
+  const isLive = !!(states && states.length > 0)
   const worlds = ['learn.num', 'learn.wrd', 'learn.won', 'learn.log', 'learn.wld', 'learn.lif'].map(id => nodeById(id)!).filter(Boolean)
   return (
     <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600 }}><Activity size={14} /> CURR state machine <SourceBadge source="partial" small /></div>
+      <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600 }}><Activity size={14} /> CURR state machine <SourceBadge source={isLive ? 'live' : 'partial'} small /></div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
-        {curr.map((c, i) => (
-          <div key={c.k} style={{ background: 'var(--bg)', border: '1px solid var(--bd2)', borderRadius: 'var(--r-lg)', padding: '9px 10px' }}>
-            <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{c.k}</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 800, color: 'var(--tx3)' }}>—</div>
-            <div style={{ fontSize: 9.5, color: i === 1 ? 'var(--ok)' : i === 2 ? 'var(--warn)' : 'var(--tx3)' }}>{c.note}</div>
-          </div>
-        ))}
+        {curr.map((c, i) => {
+          const v = countOf(c.k)
+          return (
+            <div key={c.k} style={{ background: 'var(--bg)', border: '1px solid var(--bd2)', borderRadius: 'var(--r-lg)', padding: '9px 10px' }}>
+              <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{c.k}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 800, color: v == null ? 'var(--tx3)' : 'var(--tx)' }}>{v ?? '—'}</div>
+              <div style={{ fontSize: 9.5, color: i === 1 ? 'var(--ok)' : i === 2 ? 'var(--warn)' : 'var(--tx3)' }}>{c.note}</div>
+            </div>
+          )
+        })}
       </div>
       <div>
         <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Two-hook decomposition</div>
