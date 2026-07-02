@@ -25,7 +25,7 @@ const agentName = (id: string) => AGENTS.find(a => a.id === id)?.name || id
 const ceoAgent = AGENTS.find(a => a.orchestrator)!
 
 interface Step { ico: string; label: string; model: Model; done: boolean }
-interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[]; convened?: string[]; chart?: ChartData; report?: Report }
+interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[]; convened?: string[]; chart?: ChartData; report?: Report; menu?: boolean }
 
 const SIZE_GLYPH: Record<AgentSize, string> = { small: '–', expanded: '□', full: '⤢' }
 
@@ -52,13 +52,14 @@ export function AgentOrb() {
   const [busy, setBusy] = useState(false)
   const [input, setInput] = useState('')
   const [msgs, setMsgs] = useState<Msg[]>([])
-  const [reportMenu, setReportMenu] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Single access point: open any report / presentation inline in the chat.
+  // Single access point: pick any report / presentation, rendered inline in chat.
+  function showReportMenu() {
+    setMsgs(m => [...m, { role: 'agent', text: '', menu: true }])
+  }
   function openReport(build: () => Report, label: string) {
     setMsgs(m => [...m, { role: 'user', text: `Open ${label}` }, { role: 'agent', text: '', report: build() }])
-    setReportMenu(false)
     if (size === 'small') setAgentSize('expanded')
   }
 
@@ -217,22 +218,10 @@ export function AgentOrb() {
             ))}
           </div>
 
-          <div className="agent-chips" style={{ position: 'relative' }} data-orbreports>
-            <button className="agent-chip" style={{ fontWeight: 600 }} disabled={busy} onClick={() => setReportMenu(o => !o)}>
+          <div className="agent-chips">
+            <button className="agent-chip" style={{ fontWeight: 600 }} disabled={busy} onClick={showReportMenu}>
               <FileText size={11} style={{ verticalAlign: -1, marginRight: 4 }} />Reports &amp; presentations<ChevronDown size={11} style={{ verticalAlign: -1, marginLeft: 3 }} />
             </button>
-            {reportMenu && (
-              <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 4px)', zIndex: 40, background: 'var(--bg2)', border: '1px solid var(--bd2)', borderRadius: 'var(--r-lg)', boxShadow: '0 12px 32px -12px rgba(0,0,0,.5)', minWidth: 230, maxHeight: 320, overflowY: 'auto', paddingBottom: 4 }}>
-                {[...new Set(CATALOG.map(c => c.group))].map(g => (
-                  <div key={g}>
-                    <div style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)', padding: '8px 12px 4px' }}>{g}</div>
-                    {CATALOG.filter(c => c.group === g).map(c => (
-                      <button key={c.label} onClick={() => openReport(c.build, c.label)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 12, cursor: 'pointer', background: 'transparent', color: 'var(--tx)' }}>{c.label}</button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="agent-msgs" ref={scrollRef}>
@@ -262,6 +251,21 @@ export function AgentOrb() {
                   </div>
                 )}
                 {m.chart && <div className="agent-chart"><ChartView data={m.chart} /></div>}
+                {m.menu && (
+                  <div className="agent-bubble" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>Pick a report or presentation:</div>
+                    {[...new Set(CATALOG.map(c => c.group))].map(g => (
+                      <div key={g}>
+                        <div style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)', marginBottom: 5 }}>{g}</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {CATALOG.filter(c => c.group === g).map(c => (
+                            <button key={c.label} className="agent-chip" onClick={() => openReport(c.build, c.label)}>{c.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {m.report && <div style={{ marginTop: 2 }}><ReportInline report={m.report} /></div>}
                 {m.text && <div className="agent-bubble" dangerouslySetInnerHTML={render(m.text)} />}
               </div>
