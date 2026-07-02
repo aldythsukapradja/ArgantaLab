@@ -8,6 +8,7 @@ import {
   buildOperationsReport, buildGrowthReport, buildProductReport,
   buildHealthReport, buildRiskReport, buildPeopleReport,
 } from '../../data/reports/domain'
+import { buildBoardDeck, buildInvestorUpdate } from '../../data/reports/board'
 import type { Report } from '../../data/reports/types'
 import type { OfficeId } from '../../data/graph/types'
 
@@ -58,6 +59,8 @@ export function Command() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <DailyBrief />
           <Office id="bridge" cockpit={COCKPIT.bridge} />
+          <ReportPanel report={buildBoardDeck()} label="Board deck" />
+          <ReportPanel report={buildInvestorUpdate()} label="Investor update" />
         </div>
       )}
       {commandTab !== 'lobby' && commandTab !== 'treasury' && commandTab !== 'bridge' && (

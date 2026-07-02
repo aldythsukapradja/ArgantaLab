@@ -98,30 +98,40 @@ export function BarsChart({ items, unit = 'count', height }: { items: BarItem[];
   )
 }
 
-// Custom SVG arc gauge (dependency-free, reliable centering) — coverage→target,
-// LTV:CAC, SLA attainment.
+// Custom SVG top-semicircle gauge. The arc is built by SAMPLING points along the
+// same path for both track and value, so they are always perfectly concentric
+// (no SVG arc-flag ambiguity at the semicircle). — coverage→target, LTV:CAC, SLA.
 export function Gauge({ value, target, unit, caption, ok }: { value: number; target?: number; unit: '%' | 'x' | 'ratio'; caption?: string; ok?: boolean }) {
   const max = unit === '%' ? 100 : Math.max(target ?? 1, value) * 1.25
   const frac = Math.max(0, Math.min(1, value / max))
-  const R = 62, cx = 80, cy = 76, sw = 14
-  const a0 = Math.PI, a1 = 0 // semicircle left→right
-  const pt = (t: number) => [cx + R * Math.cos(a0 + (a1 - a0) * t), cy + R * Math.sin(a0 + (a1 - a0) * t)]
-  const arc = (t0: number, t1: number) => {
-    const [x0, y0] = pt(t0), [x1, y1] = pt(t1)
-    return `M${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}`
+  const R = 60, cx = 80, cy = 74, sw = 13
+  // t=0 → left, t=0.5 → top, t=1 → right (y flipped so the arc bows UP)
+  const ptAt = (t: number): [number, number] => {
+    const ang = Math.PI - Math.PI * t
+    return [cx + R * Math.cos(ang), cy - R * Math.sin(ang)]
+  }
+  const pathFor = (t0: number, t1: number) => {
+    const steps = Math.max(2, Math.round((t1 - t0) * 64))
+    let d = ''
+    for (let k = 0; k <= steps; k++) {
+      const [x, y] = ptAt(t0 + (t1 - t0) * (k / steps))
+      d += (k ? 'L' : 'M') + `${x.toFixed(2)},${y.toFixed(2)} `
+    }
+    return d
   }
   const color = ok == null ? 'var(--acc)' : ok ? 'var(--ok)' : 'var(--warn)'
   const disp = unit === '%' ? `${Math.round(value)}%` : unit === 'x' ? `${value.toFixed(1)}×` : value.toFixed(2)
   const tFrac = target != null ? Math.max(0, Math.min(1, target / max)) : null
+  const tMark = tFrac != null ? ptAt(tFrac) : null
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <svg viewBox="0 0 160 96" width="180" style={{ maxWidth: '100%' }}>
-        <path d={arc(0, 1)} fill="none" stroke="var(--bg3)" strokeWidth={sw} strokeLinecap="round" />
-        <path d={arc(0, frac)} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" />
-        {tFrac != null && (() => { const [tx, ty] = pt(tFrac); return <circle cx={tx} cy={ty} r={3.5} fill="var(--tx)" /> })()}
-        <text x={cx} y={cy - 8} textAnchor="middle" fontSize={22} fontWeight={800} fill="var(--tx)">{disp}</text>
+      <svg viewBox="0 0 160 90" width="180" style={{ maxWidth: '100%' }}>
+        <path d={pathFor(0, 1)} fill="none" stroke="var(--bg3)" strokeWidth={sw} strokeLinecap="round" />
+        <path d={pathFor(0, frac)} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+        {tMark && <circle cx={tMark[0]} cy={tMark[1]} r={3.5} fill="var(--tx)" stroke="var(--bg)" strokeWidth={1.5} />}
+        <text x={cx} y={cy - 2} textAnchor="middle" fontSize={22} fontWeight={800} fill="var(--tx)">{disp}</text>
       </svg>
-      {caption && <div style={{ fontSize: 10.5, color: 'var(--tx3)', marginTop: -6 }}>{caption}</div>}
+      {caption && <div style={{ fontSize: 10.5, color: 'var(--tx3)', marginTop: -4 }}>{caption}</div>}
     </div>
   )
 }
