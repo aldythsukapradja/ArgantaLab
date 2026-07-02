@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppStore } from '@store/appStore'
-import { updateKid, type CloudProfile } from '@lib/cloudAuth'
+import { updateKid, resetKidPin, type CloudProfile } from '@lib/cloudAuth'
 import { STAGES, STAGE_META, stageForDob } from '@/data/learn'
 
 // Guardian edits a child's profile: name, DOB, gender, and LEVEL. Age (DOB) only
@@ -13,16 +13,22 @@ export default function EditKid({ kid, onClose, onSaved }: { kid: CloudProfile; 
   const [dob, setDob] = useState(kid.dob ?? '')
   const [gender, setGender] = useState(kid.gender ?? 'boy')
   const [stage, setStage] = useState(kid.stage_override ?? '')   // '' = auto-by-age
+  const [pin, setPin] = useState('')                              // '' = leave PIN unchanged
   const [busy, setBusy] = useState(false)
 
   const autoStage = stageForDob(dob || undefined)
 
   const save = async () => {
     if (!name.trim()) { addToast('Name is required', '⚠️'); return }
+    if (pin && !/^\d{4}$/.test(pin)) { addToast('PIN must be exactly 4 digits', '⚠️'); return }
     setBusy(true)
     const r = await updateKid(kid.id, name.trim(), dob || null, gender, stage || 'auto')
+    // optional PIN reset — only when the guardian typed a fresh 4-digit code
+    let pinOk = true
+    if (r.ok && pin) { const p = await resetKidPin(kid.id, pin); pinOk = p.ok }
     setBusy(false)
-    addToast(r.ok ? `${name.trim()} updated ✏️` : (r.error ?? 'Could not save'), r.ok ? '✅' : '⚠️')
+    if (r.ok && pinOk) addToast(`${name.trim()} updated ✏️${pin ? ' · PIN reset 🔑' : ''}`, '✅')
+    else addToast(r.ok ? 'Saved, but the PIN reset failed' : (r.error ?? 'Could not save'), '⚠️')
     if (r.ok) { onSaved(); onClose() }
   }
 
@@ -61,7 +67,12 @@ export default function EditKid({ kid, onClose, onSaved }: { kid: CloudProfile; 
               {STAGES.map(s => <option key={s.key} value={s.key}>{STAGE_META[s.key]?.emoji} {s.label} · ages {s.minAge}–{s.maxAge}</option>)}
             </select>
           </label>
-          <small style={{ color: 'var(--t3)', fontSize: 11 }}>Username and PIN don't change here — reset the PIN from the kid card. Level applies next time they sign in.</small>
+          <label style={{ fontSize: 12, color: 'var(--t2)' }}>🔑 Reset PIN <span style={{ color: 'var(--t3)' }}>(leave blank to keep the current one)</span>
+            <input value={pin} inputMode="numeric" maxLength={4} placeholder="New 4-digit PIN"
+              onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              style={{ ...field, marginTop: 4, letterSpacing: pin ? '0.4em' : 'normal' }} />
+          </label>
+          <small style={{ color: 'var(--t3)', fontSize: 11 }}>Username can't change here. Level applies next time they sign in.</small>
         </div>
         <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer', fontSize: 14 }}>Cancel</button>

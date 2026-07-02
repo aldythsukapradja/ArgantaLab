@@ -15,7 +15,7 @@ import CircleMembers from '@components/circles/CircleMembers'
 import EditKid from '@components/circles/EditKid'
 import { cloudEnabled } from '@lib/supabase'
 import {
-  signOutCloud, parentCreateKid, unlinkKid, resetKidPin,
+  signOutCloud, parentCreateKid, unlinkKid,
   listMyKids, myCircles, myInvites, respondToInvite, createCircle, circleRoster,
   socialStats, myFriends, myFriendRequests, respondFriendRequest,
   removeFriend, kidFriends, removeKidFriend,
@@ -180,14 +180,6 @@ export default function Profile() {
     await unlinkKid(k.id)
     addToast(`Removed ${k.display_name}`, '👋')
     reloadAll()
-  }
-
-  const resetPin = async (k: CloudProfile) => {
-    const pin = prompt(`Set a new 4-digit PIN for ${k.display_name}:`)
-    if (!pin) return
-    if (!/^\d{4}$/.test(pin)) { addToast('PIN must be exactly 4 digits', '⚠️'); return }
-    const r = await resetKidPin(k.id, pin)
-    addToast(r.ok ? `${k.display_name}'s PIN updated 🔑` : (r.error ?? 'Could not update'), r.ok ? '✅' : '⚠️')
   }
 
   const answerInvite = async (inv: PendingInvite, accept: boolean) => {
@@ -402,8 +394,7 @@ export default function Profile() {
                     <div className="pp-kid-sub">{k.username ? `@${k.username} · ` : ''}code <code>{k.friend_code}</code> · {k.gender === 'girl' ? 'girl' : 'boy'}{k.dob ? ` · age ${ageFromDob(k.dob)}` : ''}</div>
                   </div>
                   <button className="pp-login" onClick={openSwitcher}>Log in</button>
-                  <button className="pp-iconchip" title="Edit profile" onClick={() => setEditingKid(k)}>✏️</button>
-                  <button className="pp-iconchip" title="Reset PIN" onClick={() => resetPin(k)}>🔑</button>
+                  <button className="pp-iconchip" title="Edit profile & PIN" onClick={() => setEditingKid(k)}>✏️</button>
                   <button className="pp-iconchip" title="Kid's friends" onClick={() => viewKidFriends(k)}>🫂</button>
                   <button className="pp-iconchip" title="Remove from family" onClick={() => removeFromFamily(k)}>✕</button>
                 </div>
