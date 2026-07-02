@@ -254,9 +254,14 @@ Committed & pushed on `claude/circle-hq-command-tab-4y19ja`, verified in a headl
 - ☑ **Treasury cockpit** — Growth-Lab×Treasury model (discount ladder, cost stack, break-even, NPV, 10k💎 mint); interactive Low/Mid/High fan + demand/money sliders, `simulated` badged.
 - ☑ **Agent reconciliation** — 27 agents regrouped under the six offices; Agents tab = authoring-only banner → Command → The Guild; AgentOrb office-aware (becomes the active chief's agent: identity, brief, daily-question chips).
 
-## 8. Remaining (next session)
-- ◐ Office block ④ chat *answer engine* per chief (P5) — orb identity/chips/brief are live; answers still route through the COO deterministic pipeline. Give each chief its own generate() + inline visuals (CFO fan-in-chat, CTO coverage x-ray).
-- ◐ Treasury drawer (desktop) / full-page (mobile) for P&L · OpEx · CapEx · cashflow · NPV detail.
-- ☐ **P3 Supabase**: activate `hq_event`; `w2f_weekly()`, `curr_states()`, `k_factor()`, `surface_health()`; flip metrics live → values populate (currently every metric shows "—" + badge, by design).
-- ☐ Confirm the **$0.08/active infra** number (decides Low viability).
-- ◐ P4 remaining office cockpits (Operations CURR machine, Legal register, Guild ROI board) — currently render the generic four-panel.
+## 8. Build status — P3 + P4 shipped
+
+- ☑ **P4 office cockpits** — Technology coverage x-ray (grey map, tap → the `hq_event` to wire), Operations CURR + two-hook + content depth, Legal register, Guild roster/ROI board, Bridge chief roll-up + resolve. All verified in headless Chromium.
+- ☑ **P4 Treasury drawers** — Income (P&L) · OpEx · CapEx · Cashflow · NPV as a right-drawer (desktop) / full-page (mobile), computed from the model.
+- ☑ **P3 read-side SQL** — `supabase/migration_command_graph.sql`: `w2f_weekly()` (North Star), `curr_states()`, `k_factor()`, `surface_health()` — operator-gated, additive, idempotent; reuse `hq_event` (no `product_event`). `data/graph/live.ts` client; North Star hero + Operations CURR fetch live with graceful `—` fallback offline.
+
+## 9. Remaining
+- ⚠ **Validate `w2f_weekly()`** against real `learn_event` + `kinetik_*` data, then run the migration on the live project → North Star + CURR + k-factor flip from `—` to live values (client is already wired).
+- ☐ Confirm the **$0.08/active infra** number (decides Low-case viability).
+- ⬜ **P5 (deferred by request — no LLM yet)**: per-chief chat answer engines (orb identity/chips/brief are live; answers still route through the COO deterministic pipeline); quarantined `CAUSES` edges; CEO narration.
+- ⬜ Remaining live wiring: k-factor → breadth lever; surface_health → per-surface badges flip; Treasury family base → live count.
