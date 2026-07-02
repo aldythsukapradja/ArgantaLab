@@ -543,6 +543,15 @@ export const live = {
     if (!cloudEnabled) return
     await supabase.rpc('hq_broadcast_publish_due').then(undefined, () => {/* ignore */})
   },
+
+  /** Autopilot: ask the Edge Function to LLM-generate a batch and drip-schedule it.
+   *  The caller's operator JWT is forwarded automatically. Returns counts, or null. */
+  async runAutopilot(params: { count: number; gapHours: number; status: 'scheduled' | 'draft'; themes?: string[] }): Promise<{ inserted: number; skipped: number } | null> {
+    if (!cloudEnabled) return null
+    const { data, error } = await supabase.functions.invoke('broadcast-autopilot', { body: params })
+    if (error) { console.warn('[hq] runAutopilot →', error.message); return null }
+    return data as { inserted: number; skipped: number }
+  },
 }
 
 export interface BroadcastRow {

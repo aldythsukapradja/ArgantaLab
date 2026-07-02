@@ -3,7 +3,7 @@ import {
   Megaphone, Sparkles, Library as LibraryIcon, FlaskConical, LayoutGrid,
   Eye, Heart, Send, CalendarClock, Pencil, Trash2, Plus, Image as ImageIcon,
   Video, Archive, Check, Flame, ArrowUpRight, Wand2, ClipboardPaste, Copy,
-  ExternalLink, ListChecks, Minus,
+  ExternalLink, ListChecks, Minus, Rocket, Gauge, TrendingUp,
 } from 'lucide-react'
 import { live, cloudEnabled, type BroadcastRow, type BroadcastInput } from '../data/live'
 import {
@@ -17,9 +17,10 @@ import {
 import { Loading, Empty } from '../components/Empty'
 import { compact } from '../lib/format'
 
-type Tab = 'catalogue' | 'studio' | 'prompts' | 'import' | 'library' | 'research'
+type Tab = 'catalogue' | 'autopilot' | 'studio' | 'prompts' | 'import' | 'library' | 'research'
 const TABS: { id: Tab; label: string; Icon: typeof Sparkles }[] = [
   { id: 'catalogue', label: 'Catalogue', Icon: LayoutGrid },
+  { id: 'autopilot', label: 'Autopilot', Icon: Rocket },
   { id: 'studio', label: 'Studio', Icon: Sparkles },
   { id: 'prompts', label: 'Prompts', Icon: Wand2 },
   { id: 'import', label: 'Import', Icon: ClipboardPaste },
@@ -128,6 +129,7 @@ export function Broadcast() {
       {msg && <div className="insight tl" style={{ alignItems: 'center' }}><Check size={15} /><div>{msg}</div></div>}
 
       {tab === 'catalogue' && <Catalogue rows={rows} onNew={() => openStudio()} onEdit={r => openStudio(rowToDraft(r))} onReload={reload} onMsg={setMsg} />}
+      {tab === 'autopilot' && <Autopilot rows={rows} onReload={reload} onMsg={setMsg} />}
       {tab === 'studio' && <Studio draft={draft} setDraft={setDraft} onNew={() => openStudio()} onSaved={(m) => { setMsg(m); reload(); setTab('catalogue') }} onMsg={setMsg} />}
       {tab === 'prompts' && <PromptsTab onImport={() => setTab('import')} />}
       {tab === 'import' && <ImportTab onSaved={(m) => { setMsg(m); reload(); setTab('catalogue') }} onMsg={setMsg} />}
@@ -550,6 +552,121 @@ function Research({ onUse }: { onUse: (theme: BTheme, format: BFormat) => void }
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ── Autopilot (the automated content engine) ──────────────────
+function Autopilot({ rows, onReload, onMsg }: {
+  rows: BroadcastRow[] | null
+  onReload: () => void
+  onMsg: (m: string) => void
+}) {
+  const [count, setCount] = useState(14)
+  const [gapHours, setGapHours] = useState(24)
+  const [mode, setMode] = useState<'scheduled' | 'draft'>('scheduled')
+  const [busy, setBusy] = useState(false)
+
+  const a = useMemo(() => {
+    const r = rows ?? []
+    const now = Date.now()
+    const published = r.filter(x => x.status === 'published')
+    const reach = published.reduce((s, x) => s + (x.view_count || 0), 0)
+    const reactions = published.reduce((s, x) => s + (x.reaction_count || 0), 0)
+    const engagement = reach ? reactions / reach : 0
+    const queue = r.filter(x => x.status === 'scheduled' && x.publish_at && new Date(x.publish_at).getTime() > now)
+    const lastAt = queue.reduce<string | null>((mx, x) => (!mx || (x.publish_at! > mx) ? x.publish_at! : mx), null)
+    const days = lastAt ? Math.max(0, Math.ceil((new Date(lastAt).getTime() - now) / 86400_000)) : 0
+    // theme leaderboard by engagement rate
+    const by = new Map<string, { reach: number; reactions: number }>()
+    for (const x of published) { const t = by.get(x.theme) ?? { reach: 0, reactions: 0 }; t.reach += x.view_count || 0; t.reactions += x.reaction_count || 0; by.set(x.theme, t) }
+    const themes = Array.from(by.entries())
+      .map(([theme, v]) => ({ theme, eng: v.reach ? v.reactions / v.reach : 0, reach: v.reach }))
+      .filter(t => t.reach > 0)
+      .sort((x, y) => y.eng - x.eng)
+      .slice(0, 5)
+    return { reach, reactions, engagement, queueCount: queue.length, days, lastAt, themes }
+  }, [rows])
+
+  const run = async () => {
+    if (!cloudEnabled) { onMsg('Offline — deploy the broadcast-autopilot function & connect Supabase to generate.'); return }
+    setBusy(true)
+    const res = await live.runAutopilot({ count, gapHours, status: mode })
+    setBusy(false)
+    if (res) { onMsg(`Autopilot: ${res.inserted} new post${res.inserted === 1 ? '' : 's'} ${mode === 'scheduled' ? 'scheduled' : 'saved to drafts'}${res.skipped ? ` · ${res.skipped} skipped` : ''}.`); onReload() }
+    else onMsg('Autopilot failed — is the function deployed and ANTHROPIC_API_KEY set? (You must be signed in as an operator.)')
+  }
+
+  const perDay = (24 / gapHours)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="insight tl" style={{ alignItems: 'flex-start' }}>
+        <Rocket size={15} style={{ marginTop: 2 }} />
+        <div><b>Autopilot.</b> The LLM generates a fresh batch and drip-schedules it into the queue — the existing <span className="src">publish_due</span> cron then posts one at a time, so the feed refills itself. Token-efficient: run it occasionally (or on a weekly cron), not every day.</div>
+      </div>
+
+      {/* analytics */}
+      <div className="kpi-grid">
+        <div className="kpi"><div className="kpi-l"><Eye size={13} /> Reach</div><div className="kpi-v">{rows === null ? '—' : compact(a.reach)}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>unique views, all circles</div></div>
+        <div className="kpi"><div className="kpi-l"><TrendingUp size={13} /> Engagement</div><div className="kpi-v">{rows === null ? '—' : (a.engagement * 100).toFixed(1) + '%'}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>reactions ÷ reach</div></div>
+        <div className="kpi"><div className="kpi-l"><Gauge size={13} /> Queue health</div><div className="kpi-v" style={{ color: a.days <= 3 ? '#EF4444' : undefined }}>{rows === null ? '—' : `${a.days}d`}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>{a.queueCount} scheduled ahead</div></div>
+        <div className="kpi"><div className="kpi-l"><Heart size={13} /> Reactions</div><div className="kpi-v">{rows === null ? '—' : compact(a.reactions)}</div><div className="kpi-s" style={{ color: 'var(--tx3)' }}>on published posts</div></div>
+      </div>
+
+      {rows !== null && a.days <= 3 && (
+        <div className="banner" style={{ position: 'static', borderRadius: 12 }}>
+          Queue running low ({a.days} day{a.days === 1 ? '' : 's'} left). Generate a batch to keep every feed fresh.
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(260px,340px)', gap: 16, alignItems: 'start' }} className="bc-studio">
+        {/* generate panel */}
+        <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700 }}>Generate a batch</div>
+          <div className="row" style={{ gap: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Field label="How many posts" style={{ flex: 'none' }}><Stepper value={count} set={setCount} min={1} max={40} /></Field>
+            <Field label="One every (hours)" style={{ flex: 'none' }}><Stepper value={gapHours} set={setGapHours} min={1} max={168} /></Field>
+          </div>
+          <Field label="Add to the queue as">
+            <div className="row" style={{ gap: 6 }}>
+              {([['scheduled', 'Scheduled (auto-post)'], ['draft', 'Drafts (review first)']] as ['scheduled' | 'draft', string][]).map(([m, label]) => (
+                <button key={m} className={'chip' + (mode === m ? ' on' : '')} style={mode === m ? { background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' } : undefined} onClick={() => setMode(m)}>{label}</button>
+              ))}
+            </div>
+          </Field>
+          <div style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.5 }}>
+            {mode === 'scheduled'
+              ? <>Drips ~{perDay < 1 ? perDay.toFixed(1) : perDay.toFixed(0)}/day starting after the current queue. Duplicates are skipped automatically.</>
+              : <>Saved as drafts — review &amp; publish from the Catalogue.</>}
+          </div>
+          <div>
+            <button className="chip" disabled={busy || !cloudEnabled} onClick={run}
+              style={{ gap: 6, padding: '10px 18px', fontWeight: 700, background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' }}>
+              <Rocket size={14} /> {busy ? 'Generating…' : `Generate & ${mode === 'scheduled' ? 'schedule' : 'draft'} ${count}`}
+            </button>
+            {!cloudEnabled && <span style={{ fontSize: 11, color: 'var(--tx3)', marginLeft: 10 }}>Deploy the function &amp; sign in as operator to enable.</span>}
+          </div>
+        </div>
+
+        {/* theme leaderboard → steer the next batch */}
+        <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="row" style={{ gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--tx2)' }}><TrendingUp size={14} /> Top themes by engagement</div>
+          {a.themes.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--tx3)' }}>No published data yet — engagement appears here once posts collect reactions.</div>
+          ) : a.themes.map((t, i) => {
+            const td = themeDef(t.theme as BTheme)
+            return (
+              <div key={t.theme} className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: 'var(--tx3)' }}>{i + 1}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, flex: 1, color: td.accent }}>{td.emoji} {td.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700 }}>{(t.eng * 100).toFixed(1)}%</span>
+              </div>
+            )
+          })}
+          <div style={{ fontSize: 10.5, color: 'var(--tx3)', lineHeight: 1.4, marginTop: 2 }}>Lean the next batch into what's landing — pass these as the theme mix.</div>
+        </div>
+      </div>
     </div>
   )
 }

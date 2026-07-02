@@ -1,13 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { AGENTS, TIER_META, MODEL_META, type Tier } from '../data/agents'
+import { AGENTS, MODEL_META, OFFICE_BY_ID, officeOf, type Tier, type Model, type OfficeId } from '../data/agents'
 
 // A real, pannable / zoomable organizational chart — bespoke SVG (no chart dep).
-// Laid out top-down: CEO → COO → C-suite → five department columns, wired from the
-// live `reportsTo` graph. viewBox + preserveAspectRatio auto-fits any screen; drag
-// to pan, wheel / pinch / buttons to zoom — so all 26 agents fit + explore on mobile.
+// Top-down: CEO → the six office chiefs → their agents, coloured by OFFICE.
+// viewBox + preserveAspectRatio auto-fits any screen; drag to pan, wheel / pinch /
+// buttons to zoom — so the whole 27-agent, six-office org fits + explores on mobile.
 const COLS: Tier[] = ['argantalab', 'kinetik', 'growth', 'platform', 'brand']
 const COLW = 210
-const CSUITE = ['cpo', 'cto', 'cfo', 'gc']
+const CSUITE = ['cpo', 'cto', 'cfo', 'gc', 'capo']
+const SYNTH: Record<string, { name: string; office: OfficeId; model: Model }> = {
+  capo: { name: 'CAPO · The Guild', office: 'guild', model: 'det' },
+}
 const NW = 176, NH = 38, NH_CEO = 46, PAD = 34
 
 interface ONode { id: string; x: number; y: number; w: number; h: number; name: string; accent: string; dot: string; ceo?: boolean; exec?: boolean }
@@ -19,7 +22,10 @@ function build() {
   const edges: OEdge[] = []
   const add = (id: string, x: number, y: number, extra: { ceo?: boolean; exec?: boolean } = {}) => {
     const a = byId[id]
-    nodes.push({ id, x, y, w: NW, h: extra.ceo ? NH_CEO : NH, name: a.name, accent: TIER_META[a.tier].accent, dot: MODEL_META[a.model].fg, ...extra })
+    const office = a ? officeOf(id) : SYNTH[id].office
+    const name = a ? a.name : SYNTH[id].name
+    const model = a ? a.model : SYNTH[id].model
+    nodes.push({ id, x, y, w: NW, h: extra.ceo ? NH_CEO : NH, name, accent: OFFICE_BY_ID[office].accent, dot: MODEL_META[model].fg, ...extra })
   }
   const centerX = ((COLS.length - 1) * COLW) / 2 - (NW - COLW) / 2
   add('ceo', centerX, 0, { ceo: true })

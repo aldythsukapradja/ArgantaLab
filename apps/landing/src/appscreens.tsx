@@ -1,49 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Buddy from './components/Buddy'
 import OrgFlow from './components/OrgFlow'
-import { AGENTS } from './data/agents'
+import { AGENTS, OFFICES } from './data/agents'
+import { SITE } from './lib/site'
 
 export type Tab = 'home' | 'products' | 'about' | 'pitch'
 export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }) => void
 
 // ─────────────── HOME (fit-to-viewport) ───────────────
-const PROOF = [
-  ['2.5h', 'a day on screens'],
-  ['124B', 'hours on Roblox'],
-  ['50M+', 'daily Duolingo'],
-  ['98M', 'families · Life360'],
-]
 export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) => void }) {
   return (
     <div className="scr scr-home">
       <div className="scr-hero">
         <div className="scr-hero-buddy"><Buddy mood="wave" size={112} /></div>
-        <span className="scr-kick">Arganta</span>
-        <h1 className="scr-h1">One trusted OS for<br /><em>the modern family.</em></h1>
-        <p className="scr-lede">We turn the screen time families already spend into intelligence, connection and growth — inside circles you trust.</p>
+        <span className="scr-kick">{SITE.hero.kicker}</span>
+        <h1 className="scr-h1">{SITE.hero.title[0]}<br /><em>{SITE.hero.title[1]}.</em></h1>
+        <p className="scr-lede">{SITE.hero.lede}</p>
         <div className="scr-cta">
           <button className="scr-btn primary" onClick={() => onLaunch('editorial', { present: true })}>▸ Watch the story</button>
           <button className="scr-btn" onClick={() => onTab('products')}>Explore products</button>
         </div>
       </div>
-      <div className="scr-thesis"><span>Kids see play.</span><span className="g">Parents see growth.</span></div>
-      <div className="scr-proof">{PROOF.map(([n, t]) => <div key={t} className="scr-proof-i"><b>{n}</b><span>{t}</span></div>)}</div>
+      <div className="scr-thesis"><span>{SITE.thesis.a}</span><span className="g">{SITE.thesis.b}</span></div>
+      <div className="scr-proof">{SITE.proof.map(([n, t]) => <div key={t} className="scr-proof-i"><b>{n}</b><span>{t}</span></div>)}</div>
     </div>
   )
 }
 
 // ─────────────── PRODUCTS (fit, each card → its presentation) ───────────────
-const PRODUCTS = [
-  { id: 'argantalab', name: 'ArgantaLab', color: '#8b5cf6', tag: 'Six-world learning', line: 'Learn, build, pitch & ship — parents see real growth.' },
-  { id: 'kinetik', name: 'KinetikCircle', color: '#06b6d4', tag: 'The family OS', line: 'Routines, calendar, moments — the rhythm of family life.' },
-  { id: 'circleapps', name: 'Circle Apps', color: '#10b981', tag: 'One platform, nine apps', line: 'Padel, kitchen, travel, vault — every task, one circle.' },
-]
 export function Products({ onLaunch }: { onLaunch: Launch }) {
   return (
     <div className="scr scr-products">
       <div className="scr-head"><span className="scr-kick">Products</span><h2 className="scr-h2">Three products, <em>one circle.</em></h2></div>
       <div className="prodlist">
-        {PRODUCTS.map(p => (
+        {SITE.products.map(p => (
           <button key={p.id} className="prodx" style={{ ['--wc' as string]: p.color }} onClick={() => onLaunch('general', { flight: p.id })}>
             <span className="prodx-dot" style={{ background: p.color }} />
             <div className="prodx-body">
@@ -63,13 +53,8 @@ export function Products({ onLaunch }: { onLaunch: Launch }) {
 const ABOUT_STATS: [string, string][] = [
   ['1', 'human CEO'],
   [String(AGENTS.length), 'AI agents'],
-  ['3', 'products'],
+  [String(OFFICES.length), 'offices'],
   ['24/7', 'always shipping'],
-]
-const MODEL_LEGEND: [string, string][] = [
-  ['#0891b2', 'Sonnet — reasoning'],
-  ['#059669', 'Haiku — execution'],
-  ['#64748b', 'Deterministic'],
 ]
 
 export function About() {
@@ -109,10 +94,10 @@ export function About() {
         <section className={`abx-panel ${cls(0)}`} aria-hidden={i !== 0}>
           <div className="abx-founder">
             <div className="abx-halo"><span className="abx-halo-ring" /><Buddy mood="happy" size={104} /></div>
-            <span className="scr-kick">About Arganta</span>
+            <span className="scr-kick">About {SITE.brand.name}</span>
             <h2 className="abx-lead">Built by <em>one parent</em>.<br />Run by <em>{AGENTS.length} agents</em>.</h2>
-            <p className="abx-quote">"I wanted the calm, ambitious version of childhood screen time — so I built the company to make it, and staffed it with a full team of AI agents."</p>
-            <div className="abx-sign"><b>Aldyth Sukapradja</b><span>Founder &amp; human CEO <em className="scr-note">· add photo + story</em></span></div>
+            <p className="abx-quote">"{SITE.founder.quote}"</p>
+            <div className="abx-sign"><b>{SITE.founder.name}</b><span>{SITE.founder.role} <em className="scr-note">· {SITE.founder.note}</em></span></div>
           </div>
           <div className="abx-strip">
             {ABOUT_STATS.map(([n, l]) => <div key={l} className="abx-stat"><b>{n}</b><span>{l}</span></div>)}
@@ -121,11 +106,11 @@ export function About() {
 
         <section className={`abx-panel abx-team ${cls(1)}`} aria-hidden={i !== 1}>
           <div className="abx-teamhead">
-            <span className="scr-kick">The company</span>
+            <span className="scr-kick">The company · six offices</span>
             <h2 className="abx-teamlead">A company that <em>runs itself.</em></h2>
           </div>
           <OrgFlow />
-          <div className="abx-legend">{MODEL_LEGEND.map(([c, l]) => <span key={l}><i style={{ background: c }} />{l}</span>)}</div>
+          <div className="abx-legend">{OFFICES.map(o => <span key={o.id}><i style={{ background: o.accent }} />{o.label}</span>)}</div>
         </section>
       </div>
 

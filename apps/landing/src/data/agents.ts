@@ -48,8 +48,41 @@ export const AGENTS: Agent[] = [
   { id: 'qa', name: 'QA / Red Team', role: 'QA Red Team', tier: 'platform', model: 'haiku', reportsTo: 'cto', mission: 'Break the product first — weird inputs, child misuse.' },
   { id: 'release', name: 'Release Manager', role: 'Release Manager', tier: 'platform', model: 'haiku', reportsTo: 'cto', mission: 'Release checklist, regression, rollback, demo readiness.' },
   { id: 'brand', name: 'Brand Director', role: 'Brand Director', tier: 'brand', model: 'sonnet', reportsTo: 'coo', mission: 'Visual identity, tone, naming, landing & app-store copy.' },
+  { id: 'content-creator', name: 'Content Creator', role: 'Content Creator', tier: 'brand', model: 'sonnet', reportsTo: 'vp-kin', mission: 'KinetikCircle moments, feed posts, family recaps from real events.' },
   { id: 'demo', name: 'Demo Director', role: 'Demo Director', tier: 'brand', model: 'sonnet', reportsTo: 'coo', mission: '60-second demo script, the wow moment.' },
 ]
+
+// ── The six offices (Command's org truth — apps/hq/src/data/graph/agents.ts) ──
+// The 27-agent roster reconciles UNDER six C-level chiefs. CAPO / The Guild is the
+// office that runs the agent workforce itself.
+export type OfficeId = 'bridge' | 'operations' | 'technology' | 'treasury' | 'legal' | 'guild'
+
+export interface Office { id: OfficeId; label: string; chief: string; accent: string; slice: string }
+export const OFFICES: Office[] = [
+  { id: 'bridge', label: 'The Bridge', chief: 'CEO', accent: '#8b5cf6', slice: 'The whole W2F — synthesises the six chiefs into one call.' },
+  { id: 'operations', label: 'Operations', chief: 'COO', accent: '#a855f7', slice: 'Depth + frequency — the two retention hooks across the value stages.' },
+  { id: 'technology', label: 'Technology', chief: 'CTO', accent: '#06b6d4', slice: 'Efficiency + instrumentation coverage — the enabler.' },
+  { id: 'treasury', label: 'Treasury', chief: 'CFO', accent: '#10b981', slice: 'Payment + the money lens on every lever.' },
+  { id: 'legal', label: 'Legal', chief: 'GC', accent: '#f59e0b', slice: 'Trust — the guardrail across the whole value ladder.' },
+  { id: 'guild', label: 'The Guild', chief: 'CAPO', accent: '#ef4444', slice: 'The AI agent workforce that runs every office — and its ROI.' },
+]
+export const OFFICE_BY_ID: Record<OfficeId, Office> = Object.fromEntries(OFFICES.map(o => [o.id, o])) as Record<OfficeId, Office>
+
+// which office each roster agent belongs to
+export const AGENT_OFFICE: Record<string, OfficeId> = {
+  ceo: 'bridge',
+  coo: 'operations', cpo: 'operations',
+  cto: 'technology', cfo: 'treasury', gc: 'legal',
+  'vp-arg': 'operations', 'pm-game': 'operations', 'learn-dir': 'operations',
+  'content-writer': 'operations', 'game-design': 'operations', 'kid-tester': 'operations',
+  'vp-kin': 'operations', 'pm-moments': 'operations', 'parent-intel': 'operations', community: 'operations',
+  'vp-growth': 'operations', retention: 'operations', acquisition: 'operations',
+  ir: 'treasury',
+  'data-arch': 'technology', qa: 'technology', release: 'technology',
+  security: 'legal',
+  brand: 'operations', 'content-creator': 'operations', demo: 'operations',
+}
+export const officeOf = (id: string): OfficeId => AGENT_OFFICE[id] ?? 'operations'
 
 export interface PipelineStage { key: string; name: string; sub: string; model: Model }
 export const PIPELINE: PipelineStage[] = [

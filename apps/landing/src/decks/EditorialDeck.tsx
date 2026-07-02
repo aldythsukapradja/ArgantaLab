@@ -6,6 +6,7 @@ import AvatarSprite from '../components/AvatarSprite'
 import { WORLDS, RING_LABELS } from '../data/worlds'
 import { AGENTS } from '../data/agents'
 import OrgChart from '../components/OrgChart'
+import { SITE } from '../lib/site'
 import { ThemeToggle } from '../theme'
 
 // ──────────────────────────────────────────────────────────────
@@ -45,12 +46,12 @@ const SLIDES: Slide[] = [
     <h1 className="ed-display xl">Screen time,<br /><em>rewritten.</em></h1>
   </> },
   { id: 'thesis', layout: 'center', el: <>
-    <h2 className="ed-display">Kids see play.<br /><em>Parents see growth.</em></h2>
+    <h2 className="ed-display">{SITE.thesis.a}<br /><em>{SITE.thesis.b}</em></h2>
     <p className="ed-sub">The same hour on a screen, pointed at something that lasts.</p>
   </> },
   { id: 'problem', layout: 'center', el: <>
     <span className="ed-kick">The problem</span>
-    <div className="ed-bignum">2.5<span>hrs / day</span></div>
+    <div className="ed-bignum">{SITE.problem.stat}<span>{SITE.problem.unit}</span></div>
     <h2 className="ed-display sm">A childhood of screens, <em>building nothing.</em></h2>
   </> },
   { id: 'product', layout: 'split', el: <>
@@ -92,9 +93,9 @@ const SLIDES: Slide[] = [
     </div>
     <div className="ed-device">
       <div className="dash">
-        <div className="dash-kpis">{[['7', 'day streak'], ['41m', 'today'], ['6/6', 'rings']].map(([v, l]) => <div key={l} className="dash-kpi"><b>{v}</b><span>{l}</span></div>)}</div>
-        {[['Number sense', 82, '#f59e0b'], ['Reading', 64, '#3b82f6'], ['Science', 91, '#10b981'], ['Logic & code', 47, '#8b5cf6']].map(([l, p, c]) => (
-          <div key={l as string} className="dash-row"><div className="dash-row-top"><span>{l}</span><b style={{ color: c as string }}>{p}%</b></div><div className="lbar"><i style={{ width: `${p}%`, background: c as string }} /></div></div>
+        <div className="dash-kpis">{[[String(SITE.demoDash.streak), 'day streak'], [`${SITE.demoDash.todayMin}m`, 'today'], [SITE.demoDash.rings, 'rings']].map(([v, l]) => <div key={l} className="dash-kpi"><b>{v}</b><span>{l}</span></div>)}</div>
+        {SITE.demoDash.skills.map(([l, p, c]) => (
+          <div key={l} className="dash-row"><div className="dash-row-top"><span>{l}</span><b style={{ color: c }}>{p}%</b></div><div className="lbar"><i style={{ width: `${p}%`, background: c }} /></div></div>
         ))}
       </div>
     </div>
@@ -112,7 +113,7 @@ const SLIDES: Slide[] = [
       <div>
         <span className="ed-kick">The founder</span>
         <h2 className="ed-display xs">Built by a parent, for parents.</h2>
-        <p className="ed-body">Aldyth Sukapradja — building the calm, ambitious version of childhood screen time I want for my own family. <span className="ed-note">(add your photo + story here)</span></p>
+        <p className="ed-body">{SITE.founder.name} — {SITE.founder.quote} <span className="ed-note">({SITE.founder.note})</span></p>
       </div>
     </div>
   </> },

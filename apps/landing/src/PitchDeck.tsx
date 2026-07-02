@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useHqPitch, UNIT_ECON, paybackCurve, growthCurve, retentionCurve, arrFan, type PitchData } from './lib/hq'
-import { AGENTS } from './data/agents'
+import { useHqPitch, growthCurve, retentionCurve, type PitchData } from './lib/hq'
+import { CASES, runModel, costCurve, ECON } from './lib/econ'
+import { AGENTS, OFFICES } from './data/agents'
+import { SITE } from './lib/site'
 import PitchChart from './components/PitchChart'
 
-// ── inline investor pitch — a cinematic slide presentation inside the Pitch tab ──
+// ── inline investor pitch — a cinematic slide presentation inside the Pitch tab.
+// Every static fact comes from SITE; every modelled number from ECON (mirrors HQ);
+// every live number from useHqPitch(). One source of truth, consistent everywhere.
 const fmt = (n?: number | null, suffix = '') => n == null ? null : (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(Math.round(n * 10) / 10)) + suffix
-const usd = (n: number) => '$' + (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n.toFixed(n < 10 ? 2 : 0))
-const arrFmt = (n: number) => '$' + (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : Math.round(n / 1e3) + 'k')
+const money = (n: number) => '$' + (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(0) + 'k' : n.toFixed(2))
 
 function Metric({ label, value, bench, what }: { label: string; value: string | null; bench: string; what: string }) {
   return (
@@ -22,44 +25,60 @@ function Stat({ v, l, live }: { v: string | null; l: string; live?: boolean }) {
   return <div className="pstat"><b className={v == null ? 'soon' : ''}>{v ?? 'live soon'}</b><span>{l}{live && v != null ? ' · live' : ''}</span></div>
 }
 
-// deterministic chart series — recalculated from the HQ model (see lib/hq.ts)
+// ── deterministic chart series ──
 const GROWTH = growthCurve(100, 12)
 const RET = retentionCurve()
-const PAY = paybackCurve('mid', 18)
-const FAN = arrFan(100_000, 8)
+const MID = runModel(CASES.mid, 24)
+const LOW = runModel(CASES.low, 24)
+const HIGH = runModel(CASES.high, 24)
+const CASH = MID.rows.map(r => r.cum)
+const ARR_MID = MID.rows.map(r => r.revenue * 12)
+const ARR_LOW = LOW.rows.map(r => r.revenue * 12)
+const ARR_HIGH = HIGH.rows.map(r => r.revenue * 12)
+const SCALE = costCurve(24)
+const SCALE_PA = SCALE.map(p => p.perActive)
+const cumBreak = CASH.findIndex(v => v >= 0)
+const CASH_MARK = cumBreak >= 0 ? cumBreak : (MID.firstPositiveMonth ? MID.firstPositiveMonth - 1 : CASH.length - 1)
+const BREAK_FAM = ECON.breakEvenFamilies ? Math.round(ECON.breakEvenFamilies) : null
+const HH_D30 = Math.round(ECON.householdD30 * 100)
+const MONTH_TICKS = [0, 5, 11, 17, 23].map((i, k) => ({ i, label: ['mo 1', '6', '12', '18', '24'][k] }))
 
 interface Slide { id: string; chapter: string; el: (d: PitchData | null) => React.ReactNode }
 const SLIDES: Slide[] = [
-  { id: 'cover', chapter: 'Arganta', el: () => <>
+  { id: 'cover', chapter: SITE.brand.name, el: () => <>
     <span className="pkick">Investor pitch · Seed · 2026</span>
     <h1 className="pdisplay xl">Turn screen time into<br /><em>intelligence time.</em></h1>
-    <p className="psub">The trusted operating system for the modern family. Every metric here is a <b>live aggregate</b> from our own operator system — benchmarked to YC / edtech quartiles, revenue ratios marked pending, never faked.</p>
+    <p className="psub">{SITE.brand.tagline}. Every metric here is a <b>live aggregate</b> from our own operator system — benchmarked to YC / edtech quartiles, revenue ratios marked pending, never faked.</p>
   </> },
-  { id: 'thesis', chapter: 'The thesis', el: () => <><h2 className="pdisplay">Kids see play.<br /><em>Parents see growth.</em></h2><p className="psub">One product, two customers who never conflict — the child wants the game, the parent wants the outcome, and both get exactly that.</p></> },
+  { id: 'thesis', chapter: 'The thesis', el: () => <>
+    <h2 className="pdisplay">{SITE.thesis.a}<br /><em>{SITE.thesis.b}</em></h2>
+    <p className="psub">{SITE.northStar.line}</p>
+  </> },
+  { id: 'northstar', chapter: 'The North Star', el: () => <>
+    <span className="pkick">Our North Star</span>
+    <h2 className="pdisplay sm">Weekly <em>Two-Hook</em> Families.</h2>
+    <p className="psub">{SITE.northStar.def} The retained household — not a download — is the company.</p>
+    <div className="pgrid2">
+      {SITE.northStar.hooks.map(h => <div key={h.k} className="mcard"><span className="mcard-l">{h.k}</span><span className="mcard-what">{h.v}</span></div>)}
+    </div>
+    <p className="psub sm">Two hooks compound: household D30 = 1 − (1 − kid)(1 − parent) ≈ <b>{HH_D30}%</b>. One hook can’t hold a family; two can.</p>
+  </> },
   { id: 'problem', chapter: 'The problem', el: () => <>
     <span className="pkick">The problem</span>
-    <div className="pbignum">2.5<span>hrs / day</span></div>
+    <div className="pbignum">{SITE.problem.stat}<span>{SITE.problem.unit}</span></div>
     <h2 className="pdisplay sm">A childhood of screens, <em>building nothing.</em></h2>
-    <p className="psub">That's ~900 hours a year of a child's attention — the most valuable resource on earth — spent on infinite scroll instead of skills. Parents feel it. No one has fixed it.</p>
+    <p className="psub">{SITE.problem.detail}</p>
   </> },
   { id: 'market', chapter: 'The market', el: () => <>
     <span className="pkick">The market</span>
     <h2 className="pdisplay sm">A <em>generational</em> market.</h2>
-    <div className="pgrid3">
-      <div className="mcard"><b className="mcard-v">1.9B</b><span className="mcard-what">children under 15 worldwide — the largest connected generation ever.</span></div>
-      <div className="mcard"><b className="mcard-v">$340B</b><span className="mcard-what">consumer & digital learning spend by 2030.</span></div>
-      <div className="mcard"><b className="mcard-v">$0</b><span className="mcard-what">trusted OS that owns the whole family relationship — the seat is empty.</span></div>
-    </div>
-    <p className="psub sm"><span className="pnote">Directional global references — the wedge is the family, not a single category.</span></p>
+    <div className="pgrid3">{SITE.market.refs.map(r => <div key={r.l} className="mcard"><b className="mcard-v">{r.n}</b><span className="mcard-what">{r.l}</span></div>)}</div>
+    <p className="psub sm"><span className="pnote">{SITE.market.note}</span></p>
   </> },
   { id: 'whynow', chapter: 'Why now', el: () => <>
     <span className="pkick">Why now</span>
     <h2 className="pdisplay sm">Every pillar is <em>already proven.</em></h2>
-    <div className="pgrid3">
-      <div className="mcard"><b className="mcard-v">124B</b><span className="mcard-what">hours on Roblox, 2025 — kids already live in digital worlds.</span></div>
-      <div className="mcard"><b className="mcard-v">50M+</b><span className="mcard-what">daily Duolingo learners — gamified habit works at scale.</span></div>
-      <div className="mcard"><b className="mcard-v">98M</b><span className="mcard-what">families on Life360 — households organize in circles.</span></div>
-    </div>
+    <div className="pgrid3">{SITE.whyNow.map(r => <div key={r.l} className="mcard"><b className="mcard-v">{r.n}</b><span className="mcard-what">{r.l}</span></div>)}</div>
     <p className="psub sm">Three multi-billion behaviors exist in isolation. <b>We fuse them into one product</b> — and AI finally makes adaptive, per-child content cheap enough to do it.</p>
   </> },
   { id: 'wedge', chapter: 'The wedge', el: () => <>
@@ -70,20 +89,16 @@ const SLIDES: Slide[] = [
   { id: 'product', chapter: 'The product', el: () => <>
     <span className="pkick">The product</span>
     <h2 className="pdisplay sm">One OS, <em>three products.</em></h2>
-    <div className="pgrid3">
-      <div className="mcard" style={{ ['--ac' as string]: '#8b5cf6' }}><span className="mcard-l" style={{ color: '#8b5cf6' }}>ArgantaLab</span><span className="mcard-what">Six-world learning · build, pitch & ship.</span></div>
-      <div className="mcard" style={{ ['--ac' as string]: '#06b6d4' }}><span className="mcard-l" style={{ color: '#06b6d4' }}>KinetikCircle</span><span className="mcard-what">The family OS · rhythm, calendar, moments.</span></div>
-      <div className="mcard" style={{ ['--ac' as string]: '#10b981' }}><span className="mcard-l" style={{ color: '#10b981' }}>Circle Apps</span><span className="mcard-what">Nine task apps · one shared spine.</span></div>
-    </div>
+    <div className="pgrid3">{SITE.products.map(p => <div key={p.id} className="mcard" style={{ ['--ac' as string]: p.color }}><span className="mcard-l" style={{ color: p.color }}>{p.name}</span><span className="mcard-what">{p.line}</span></div>)}</div>
     <p className="psub sm">Land with learning. Expand into the family's whole operating system. One account, one wallet, one trusted graph.</p>
   </> },
   { id: 'engagement', chapter: 'Traction · engagement', el: d => <>
     <span className="pkick">It works · engagement</span>
     <h2 className="pdisplay sm">The pre-revenue <em>truth.</em></h2>
     <div className="pgrid2">
-      <Metric label="Weekly active learners" value={fmt(d?.wau)} bench="North Star" what="Unique kids who used the app in 7 days — the truest pulse." />
+      <Metric label="Weekly two-hook families" value={fmt(d?.flywheelCount)} bench="the North Star" what="Households where a kid learned AND a parent coordinated, same week." />
+      <Metric label="Weekly active learners" value={fmt(d?.wau)} bench="the pulse" what="Unique kids who used the app in the last 7 days." />
       <Metric label="Stickiness · DAU/MAU" value={fmt(d?.stickiness ?? undefined, '%')} bench="> 20% strong · > 50% elite" what="Share of monthly users active on an average day." />
-      <Metric label="WoW growth" value={d?.wowPct == null ? null : (d.wowPct > 0 ? '+' : '') + d.wowPct + '%'} bench="> 7% = YC default-alive" what="Weekly-active growth vs the prior week." />
       <Metric label="Depth · attempts/active" value={fmt(d?.depth)} bench="> 4 healthy · > 8 deep" what="Questions each active learner attempts per week." />
     </div>
   </> },
@@ -99,7 +114,7 @@ const SLIDES: Slide[] = [
         xTicks={[{ i: 0, label: 'wk 0' }, { i: 4, label: '4' }, { i: 8, label: '8' }, { i: 12, label: '12' }]}
       />
     </div>
-    <p className="psub sm">At the YC "default-alive" bar of 7% week-over-week, an index of 100 weekly-active learners becomes <b>~225 in a quarter</b>. At 10%, ~314. The North Star is a straight line on a log of ambition.</p>
+    <p className="psub sm">At the YC "default-alive" bar of 7% week-over-week, an index of 100 becomes <b>~225 in a quarter</b>; at 10%, ~314. The North Star is a straight line on a log of ambition.</p>
   </> },
   { id: 'intelligence', chapter: 'Traction · the graph', el: d => <>
     <span className="pkick">Intelligence time</span>
@@ -112,10 +127,10 @@ const SLIDES: Slide[] = [
   </> },
   { id: 'retention', chapter: 'Traction · retention', el: d => <>
     <span className="pkick">Retention · the #1 number</span>
-    <h2 className="pdisplay sm">Proof the product <em>keeps them.</em></h2>
+    <h2 className="pdisplay sm">Two hooks <em>keep them.</em></h2>
     <div className="pchartwrap">
       <PitchChart
-        height={190}
+        height={188}
         series={[
           { color: '#8b5cf6', pts: RET.target, area: true, endLabel: 'top-quartile' },
           { color: '#94a3b8', pts: RET.typical, dashed: true, endLabel: 'typical' },
@@ -125,8 +140,8 @@ const SLIDES: Slide[] = [
       />
     </div>
     <div className="pstats">
+      <Stat v={`${HH_D30}%`} l="household D30 (modelled)" />
       <Stat v={fmt(d?.d30 ?? undefined, '%')} l="D30 retention" live />
-      <Stat v={fmt(d?.d1 ?? undefined, '%')} l="D1 comeback" live />
       <Stat v={fmt(d?.activationRate ?? undefined, '%')} l="48h activation" live />
     </div>
   </> },
@@ -150,20 +165,20 @@ const SLIDES: Slide[] = [
   </> },
   { id: 'econ', chapter: 'Unit economics', el: () => <>
     <span className="pkick">Unit economics · base case</span>
-    <h2 className="pdisplay sm">One subscriber <em>pays back in {PAY.paybackMo.toFixed(1)} months.</em></h2>
+    <h2 className="pdisplay sm">Positive economics — <em>break-even ≈ {BREAK_FAM} families.</em></h2>
     <div className="pchartwrap">
       <PitchChart
         height={196}
-        series={[{ color: '#10b981', pts: PAY.cum, area: true }]}
-        xTicks={[0, 3, 6, 9, 12, 15, 18].map(m => ({ i: m, label: m + 'mo' }))}
-        refLine={{ v: PAY.cac, label: `CAC $${PAY.cac}` }}
-        marker={{ i: Math.round(PAY.paybackMo), v: PAY.cac, label: `payback ${PAY.paybackMo.toFixed(1)}mo` }}
+        series={[{ color: '#10b981', pts: CASH, area: true }]}
+        xTicks={MONTH_TICKS}
+        refLine={{ v: 0, label: 'break-even' }}
+        marker={{ i: CASH_MARK, v: CASH[CASH_MARK], label: MID.firstPositiveMonth ? `cash-positive · mo ${MID.firstPositiveMonth}` : 'trajectory' }}
       />
     </div>
     <div className="pstats">
-      <Stat v={`${UNIT_ECON.mid.ltvCac.toFixed(1)}×`} l="LTV / CAC" />
-      <Stat v={`${UNIT_ECON.mid.payback.toFixed(1)}mo`} l="payback" />
-      <Stat v={usd(UNIT_ECON.mid.ltv)} l="LTV / sub" />
+      <Stat v={BREAK_FAM ? `${BREAK_FAM}` : '—'} l="break-even families" />
+      <Stat v={money(ECON.cac)} l="CAC (invite-led)" />
+      <Stat v={`${money(ECON.contributionPerActive)}`} l="contribution / active" />
     </div>
   </> },
   { id: 'model', chapter: 'The model', el: () => <>
@@ -173,21 +188,38 @@ const SLIDES: Slide[] = [
       <PitchChart
         height={196}
         series={[
-          { color: '#8b5cf6', pts: FAN.high, area: true, endLabel: 'High' },
-          { color: '#06b6d4', pts: FAN.mid, endLabel: 'Mid' },
-          { color: '#94a3b8', pts: FAN.low, dashed: true, endLabel: 'Low' },
+          { color: '#8b5cf6', pts: ARR_HIGH, area: true, endLabel: 'High' },
+          { color: '#06b6d4', pts: ARR_MID, endLabel: 'Mid' },
+          { color: '#94a3b8', pts: ARR_LOW, dashed: true, endLabel: 'Low' },
         ]}
-        xTicks={[{ i: 0, label: '0' }, { i: 4, label: '50k families' }, { i: 8, label: '100k' }]}
+        xTicks={MONTH_TICKS}
       />
     </div>
-    <p className="psub sm">Two revenue streams — subscription + Argon packs — through one driver model. At 100k families the base case throws off <b>{arrFmt(FAN.mid[FAN.mid.length - 1])} ARR</b>; the breakout case <b>{arrFmt(FAN.high[FAN.high.length - 1])}</b>. Not a single hopeful number — a range.</p>
+    <p className="psub sm">Subscription (${CASES.mid.listPrice}/mo list · ~{money(ECON.effArpu)} effective ARPU) through one driver model, Low→High. The base case reaches a <b>{money(ECON.arrRunRate)} ARR run-rate</b> in 24 months — not a single hopeful number, a range.</p>
+  </> },
+  { id: 'scale', chapter: 'The architecture', el: () => <>
+    <span className="pkick">Built to scale · cheaply</span>
+    <h2 className="pdisplay sm">A whole company for <em>~{money(ECON.agentOsCostMo)}/mo.</em></h2>
+    <div className="pchartwrap">
+      <PitchChart
+        height={190}
+        series={[{ color: '#8b5cf6', pts: SCALE_PA, area: true }]}
+        xTicks={[{ i: 0, label: '1k' }, { i: 8, label: '10k' }, { i: 15, label: '100k' }, { i: 23, label: '1M families' }]}
+        refLine={{ v: ECON.infraPerActive, label: `$${ECON.infraPerActive.toFixed(2)} infra / active` }}
+      />
+    </div>
+    <div className="pstats">
+      <Stat v={money(ECON.agentOsCostMo)} l={`${AGENTS.length}-agent OS / mo`} />
+      <Stat v={`$${ECON.infraPerActive.toFixed(2)}`} l="infra / active" />
+      <Stat v="deterministic" l="SQL + math, LLM only phrases" />
+    </div>
   </> },
   { id: 'moat', chapter: 'The moat', el: () => <>
     <span className="pkick">The moat</span>
     <h2 className="pdisplay sm">Three moats that <em>compound.</em></h2>
     <div className="pgrid3">
-      <div className="mcard" style={{ ['--ac' as string]: '#8b5cf6' }}><b className="mcard-v">{AGENTS.length}</b><span className="mcard-l">AI-agent company</span><span className="mcard-what">One founder, a full org of agents — lean, ships daily, scales without headcount.</span></div>
-      <div className="mcard" style={{ ['--ac' as string]: '#06b6d4' }}><span className="mcard-l" style={{ color: '#06b6d4' }}>Circles</span><span className="mcard-what">Network effect — every family deepens a trusted graph + proprietary learning data.</span></div>
+      <div className="mcard" style={{ ['--ac' as string]: '#8b5cf6' }}><b className="mcard-v">{AGENTS.length}</b><span className="mcard-l">AI-agent company · {OFFICES.length} offices</span><span className="mcard-what">One founder, a full org of agents — deterministic-first, ships daily, scales without headcount.</span></div>
+      <div className="mcard" style={{ ['--ac' as string]: '#06b6d4' }}><span className="mcard-l" style={{ color: '#06b6d4' }}>Two-hook circles</span><span className="mcard-what">Every family deepens a trusted graph — kid pull × parent stick, a retention no single-hook app can copy.</span></div>
       <div className="mcard" style={{ ['--ac' as string]: '#10b981' }}><span className="mcard-l" style={{ color: '#10b981' }}>Content depth</span><span className="mcard-what">Six worlds × six age stages — thousands of authored, adaptive learning items.</span></div>
     </div>
   </> },
@@ -208,14 +240,10 @@ const SLIDES: Slide[] = [
   </> },
   { id: 'ask', chapter: 'The ask', el: () => <>
     <span className="pkick">Team · the ask</span>
-    <h2 className="pdisplay sm">Built by a parent.<br /><em>Raising to reach 10,000 families.</em></h2>
-    <div className="pgrid3">
-      <div className="mcard"><span className="mcard-l">Scale the agent workforce</span><span className="mcard-what">Deepen content across all six worlds and every age stage.</span></div>
-      <div className="mcard"><span className="mcard-l">Prove the paywall</span><span className="mcard-what">Turn demonstrated pay-intent into subscription revenue.</span></div>
-      <div className="mcard"><span className="mcard-l">Ignite the circle flywheel</span><span className="mcard-what">Family & classroom invite loops toward k &gt; 1.</span></div>
-    </div>
-    <p className="psub sm">Aldyth Sukapradja, founder & human CEO. <span className="pnote">Raise amount & use-of-funds detailed on request.</span></p>
-    <div className="pcta"><a className="pbtn primary" href="mailto:hello@arganta.app?subject=Investing%20in%20Arganta">Talk to us →</a></div>
+    <h2 className="pdisplay sm">Built by a parent.<br /><em>{SITE.ask.headline}</em></h2>
+    <div className="pgrid3">{SITE.ask.uses.map(u => <div key={u.l} className="mcard"><span className="mcard-l">{u.l}</span><span className="mcard-what">{u.d}</span></div>)}</div>
+    <p className="psub sm">{SITE.founder.name}, {SITE.founder.role}. Ask: {SITE.ask.intros}.</p>
+    <div className="pcta"><a className="pbtn primary" href={`mailto:${SITE.brand.email}?subject=Investing%20in%20${SITE.brand.name}`}>Talk to us →</a></div>
   </> },
 ]
 
