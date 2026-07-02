@@ -26,6 +26,8 @@ interface HQState {
   agentOpen: boolean               // floating COO/CEO orb open?
   agentSize: AgentSize             // small | expanded | full
   paletteOpen: boolean             // ⌘K command palette open?
+  verdictState: Record<string, 'active' | 'resolved' | 'rejected'>  // Command verdict lifecycle
+  setVerdictState: (id: string, s: 'active' | 'resolved' | 'rejected') => void
   go: (s: SurfaceId) => void
   goOffice: (t: CommandTab) => void // jump into Command at a given sub-tab
   setDataTab: (t: DataTab) => void
@@ -57,6 +59,8 @@ export const useHQ = create<HQState>((set) => ({
   agentOpen: false,
   agentSize: 'expanded',
   paletteOpen: false,
+  verdictState: {},
+  setVerdictState: (id, s) => set((st) => ({ verdictState: { ...st.verdictState, [id]: s } })),
   go: (surface) => set({ surface, builderSub: 'catalogue', studioId: null, commandTab: 'lobby' }),
   goOffice: (commandTab) => set({ surface: 'command', commandTab }),
   setDataTab: (dataTab) => set({ dataTab }),

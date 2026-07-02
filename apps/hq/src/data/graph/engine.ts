@@ -3,7 +3,7 @@
 // value resting on a placeholder input is itself no better than placeholder.
 
 import { NODES, EDGES } from './seed'
-import type { GraphNode, GraphEdge, Health, Source, OfficeId, Verdict, VerdictKind } from './types'
+import type { GraphNode, GraphEdge, Health, Source, OfficeId, Verdict, VerdictKind, Lever } from './types'
 
 const byId = new Map(NODES.map(n => [n.id, n]))
 export const nodeById = (id: string): GraphNode | undefined => byId.get(id)
@@ -128,4 +128,33 @@ export function pendingConsults(): GraphEdge[] {
 }
 export function allConsults(): GraphEdge[] {
   return EDGES.filter(e => e.kind === 'CONSULTS')
+}
+
+// ---- RCA: walk NorthStar -> weakest lever -> weakest surface -> missing event
+export interface RCAStep { nodeId: string; label: string; why: string; kind: string; source: Source; health: Health }
+export function rootCause(): RCAStep[] {
+  const steps: RCAStep[] = []
+  const ns = byId.get('ns.w2f')
+  if (ns) steps.push({ nodeId: ns.id, label: ns.label, why: 'The North Star — what everything optimises.', kind: ns.kind, source: ns.metric?.source ?? ns.status, health: sourceHealth(ns.status) })
+
+  const lever = weakestLever()
+  if (lever) {
+    steps.push({ nodeId: lever.id, label: lever.label, why: 'Weakest input to the North Star right now.', kind: lever.kind, source: lever.status, health: sourceHealth(lever.status) })
+    const lk = lever.levers?.[0] as Lever | undefined
+    const rank: Record<Source, number> = { live: 0, partial: 1, simulated: 1, placeholder: 2 }
+    const surfaces = NODES.filter(n => n.metric && n.role !== 'guardrail' && n.levers?.includes(lk as Lever))
+      .sort((a, b) => rank[b.status] - rank[a.status])
+    const weak = surfaces[0]
+    if (weak) {
+      steps.push({ nodeId: weak.id, label: weak.label, why: 'The least-instrumented surface feeding that lever.', kind: weak.kind, source: weak.status, health: sourceHealth(weak.status) })
+      const guard = NODES.find(n => n.parent === weak.id && n.role === 'guardrail')
+      if (guard) {
+        steps.push({ nodeId: guard.id, label: guard.label, why: 'The guardrail that would catch the failure here.', kind: 'signal', source: guard.status, health: sourceHealth(guard.status) })
+      } else {
+        const ev = weak.emits?.[0] ?? 'feature_view'
+        steps.push({ nodeId: `${weak.id}.event`, label: ev, why: 'The missing event — wire this into hq_event to see it.', kind: 'event', source: 'placeholder', health: 'blind' })
+      }
+    }
+  }
+  return steps
 }

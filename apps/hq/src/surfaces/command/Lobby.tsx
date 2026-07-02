@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Landmark, Gamepad2, Cpu, Wallet, Scale, Users2, ChevronRight, MessageSquare, Gavel } from 'lucide-react'
+import { Landmark, Gamepad2, Cpu, Wallet, Scale, Users2, ChevronRight, MessageSquare, Gavel, HelpCircle } from 'lucide-react'
 import { useHQ, type CommandTab } from '../../shell/store'
 import { OFFICE_ORDER, officeById } from '../../data/graph/agents'
 import { NORTHSTAR } from '../../data/graph/seed'
 import {
-  coverage, ownedBy, rollupHealth, verdictsFor, allConsults, nodeById,
+  coverage, ownedBy, rollupHealth, verdictsFor, allConsults, nodeById, rootCause,
 } from '../../data/graph/engine'
 import { commandLive, type W2FPoint } from '../../data/graph/live'
 import type { OfficeId, GraphNode } from '../../data/graph/types'
@@ -46,9 +46,11 @@ export function Lobby() {
 function NorthStarHero() {
   const n = NORTHSTAR
   const [w2f, setW2f] = useState<W2FPoint[] | null | undefined>(undefined)
+  const [why, setWhy] = useState(false)
   useEffect(() => { commandLive.w2fWeekly().then(setW2f) }, [])
   const isLive = !!(w2f && w2f.length > 0)
   const latest = isLive ? w2f![w2f!.length - 1].w2f : null
+  const rca = rootCause()
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
       <div style={{ height: 3, background: 'linear-gradient(90deg,var(--acc),var(--mag))' }} />
@@ -66,11 +68,37 @@ function NorthStarHero() {
         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 34, fontWeight: 800, color: isLive ? 'var(--tx)' : 'var(--tx3)' }}>{latest ?? '—'}</div>
           <SourceBadge source={isLive ? 'live' : n.metric!.source} />
+          <button className="chip" onClick={() => setWhy(v => !v)} style={{ gap: 5, cursor: 'pointer', fontSize: 11 }}>
+            <HelpCircle size={12} /> {why ? 'Hide' : 'Why?'}
+          </button>
           <div style={{ fontSize: 10.5, color: 'var(--tx3)', maxWidth: 200 }}>
             {isLive ? 'Live from w2f_weekly() — kid learned AND parent coordinated, same week.' : <>Buildable now via <span className="src">w2f_weekly()</span> — run the migration + sign in as operator.</>}
           </div>
         </div>
       </div>
+      {why && (
+        <div style={{ borderTop: '1px solid var(--bd)', padding: '14px 20px', background: 'var(--bg)' }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, marginBottom: 10 }}>Root-cause walk — North Star → the missing event</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {rca.map((s, i) => (
+              <div key={s.nodeId} className="row" style={{ gap: 10, alignItems: 'flex-start', paddingBottom: i < rca.length - 1 ? 14 : 0, position: 'relative' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 'none' }}>
+                  <HealthDot health={s.health} />
+                  {i < rca.length - 1 && <div style={{ width: 2, flex: 1, minHeight: 18, background: 'var(--bd2)', marginTop: 4 }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
+                  <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{s.label}</span>
+                    <span className="pill pill-mut" style={{ fontSize: 9 }}>{s.kind}</span>
+                    <SourceBadge source={s.source} small />
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--tx2)', marginTop: 2 }}>{s.why}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

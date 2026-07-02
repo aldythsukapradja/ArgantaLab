@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
-import { Landmark, Gamepad2, Cpu, Wallet, Scale, Users2, MessageSquare, Gavel, Compass, Target } from 'lucide-react'
+import { Landmark, Gamepad2, Cpu, Wallet, Scale, Users2, MessageSquare, Gavel, Compass, Target, Check, X, RotateCcw } from 'lucide-react'
+import { useHQ } from '../../shell/store'
 import { officeById, OFFICE_CHAT } from '../../data/graph/agents'
 import {
   ownedBy, verdictsFor, allConsults, rollupHealth, nodeById, childrenOf,
@@ -112,22 +113,43 @@ function NodeRow({ node, owned, depth }: { node: GraphNode; owned: GraphNode[]; 
 
 function VerdictQueue({ id }: { id: OfficeId }) {
   const verdicts = verdictsFor(id).slice(0, 12)
+  const { verdictState, setVerdictState } = useHQ()
+  const openCount = verdicts.filter(v => !verdictState[v.id] || verdictState[v.id] === 'active').length
   return (
     <div className="card" style={{ padding: 16 }}>
-      <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600, marginBottom: 4 }}><Gavel size={14} /> Verdict queue</div>
+      <div className="spread" style={{ marginBottom: 4 }}>
+        <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600 }}><Gavel size={14} /> Verdict queue</div>
+        <span className="pill pill-mut" style={{ fontSize: 10 }}>{openCount} open</span>
+      </div>
       <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 12 }}>every verdict carries a LADDERS_TO — or the engine rejects it</div>
       {verdicts.length === 0 && <div style={{ fontSize: 12, color: 'var(--tx3)' }}>No verdicts yet.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
         {verdicts.map(v => {
           const target = nodeById(v.targetNode)
           const ladder = nodeById(v.laddersTo)
+          const st = verdictState[v.id] ?? 'proposed'
+          const done = st === 'resolved' || st === 'rejected'
           return (
-            <div key={v.id} className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+            <div key={v.id} className="row" style={{ gap: 10, alignItems: 'flex-start', opacity: done ? 0.55 : 1 }}>
               <span className="pill" style={{ fontSize: 9.5, fontWeight: 700, flex: 'none', color: '#fff', background: VERDICT_TONE[v.kind] ?? 'var(--tx3)' }}>{v.kind}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>{target?.label}</div>
+                <div className="row" style={{ gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, textDecoration: st === 'rejected' ? 'line-through' : 'none' }}>{target?.label}</span>
+                  {st === 'resolved' && <span className="pill pill-ok" style={{ fontSize: 9 }}>resolved</span>}
+                  {st === 'rejected' && <span className="pill pill-bad" style={{ fontSize: 9 }}>rejected</span>}
+                </div>
                 <div style={{ fontSize: 11, color: 'var(--tx2)', lineHeight: 1.4 }}>{v.rationale}</div>
                 <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2 }}>↳ ladders to <span className="src">{ladder?.label}</span></div>
+              </div>
+              <div className="row" style={{ gap: 4, flex: 'none' }}>
+                {done ? (
+                  <button title="Reopen" aria-label="Reopen" onClick={() => setVerdictState(v.id, 'active')} style={{ cursor: 'pointer', color: 'var(--tx3)', display: 'grid', placeItems: 'center', width: 22, height: 22 }}><RotateCcw size={13} /></button>
+                ) : (
+                  <>
+                    <button title="Resolve" aria-label="Resolve" onClick={() => setVerdictState(v.id, 'resolved')} style={{ cursor: 'pointer', color: 'var(--ok)', display: 'grid', placeItems: 'center', width: 22, height: 22 }}><Check size={14} /></button>
+                    <button title="Reject" aria-label="Reject" onClick={() => setVerdictState(v.id, 'rejected')} style={{ cursor: 'pointer', color: 'var(--bad)', display: 'grid', placeItems: 'center', width: 22, height: 22 }}><X size={14} /></button>
+                  </>
+                )}
               </div>
             </div>
           )
