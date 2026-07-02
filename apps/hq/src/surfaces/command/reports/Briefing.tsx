@@ -224,6 +224,17 @@ export function DailyBrief() {
   )
 }
 
+// Inline report — ReportView + its own Present. For embedding in the agent chat.
+export function ReportInline({ report }: { report: Report }) {
+  const [present, setPresent] = useState(false)
+  return (
+    <>
+      <ReportView report={report} onPresent={() => setPresent(true)} />
+      {present && <Present report={report} onClose={() => setPresent(false)} />}
+    </>
+  )
+}
+
 // Generic report panel — button → ReportView + Present. Reused by any office.
 export function ReportPanel({ report, label }: { report: Report; label: string }) {
   const [open, setOpen] = useState(false)
@@ -242,7 +253,7 @@ export function ReportPanel({ report, label }: { report: Report; label: string }
 
 // The Reports & Presentations hub — one dropdown to pick any briefing, report,
 // or deck; renders it with Present + Export.
-const CATALOG: { group: string; label: string; build: () => Report }[] = [
+export const CATALOG: { group: string; label: string; build: () => Report }[] = [
   { group: 'Briefing', label: 'Daily C-Level Briefing', build: buildDailyBriefing },
   { group: 'Presentation', label: 'Board Deck', build: buildBoardDeck },
   { group: 'Presentation', label: 'Investor Update', build: buildInvestorUpdate },

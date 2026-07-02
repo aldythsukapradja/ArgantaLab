@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, X, Send, Crown } from 'lucide-react'
+import { Sparkles, X, Send, Crown, FileText, ChevronDown } from 'lucide-react'
 import {
   PIPELINE, MODEL_META, AGENTS,
   agentSense, agentCompute, agentMatch, agentGenerate, routeIntent,
@@ -8,6 +8,8 @@ import {
 import { SCENARIOS, scenarioById } from '../data/scenarios'
 import { OFFICE_CHAT, officeById } from '../data/graph/agents'
 import type { OfficeId } from '../data/graph/types'
+import { CATALOG, ReportInline } from '../surfaces/command/reports/Briefing'
+import type { Report } from '../data/reports/types'
 import { ChartView, type ChartData } from './charts'
 import { useHQ, type AgentSize } from '../shell/store'
 
@@ -23,7 +25,7 @@ const agentName = (id: string) => AGENTS.find(a => a.id === id)?.name || id
 const ceoAgent = AGENTS.find(a => a.orchestrator)!
 
 interface Step { ico: string; label: string; model: Model; done: boolean }
-interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[]; convened?: string[]; chart?: ChartData }
+interface Msg { role: 'user' | 'agent'; text: string; steps?: Step[]; convened?: string[]; chart?: ChartData; report?: Report }
 
 const SIZE_GLYPH: Record<AgentSize, string> = { small: '–', expanded: '□', full: '⤢' }
 
@@ -50,7 +52,15 @@ export function AgentOrb() {
   const [busy, setBusy] = useState(false)
   const [input, setInput] = useState('')
   const [msgs, setMsgs] = useState<Msg[]>([])
+  const [reportMenu, setReportMenu] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Single access point: open any report / presentation inline in the chat.
+  function openReport(build: () => Report, label: string) {
+    setMsgs(m => [...m, { role: 'user', text: `Open ${label}` }, { role: 'agent', text: '', report: build() }])
+    setReportMenu(false)
+    if (size === 'small') setAgentSize('expanded')
+  }
 
   // Office-aware: the orb is the CEO Agent by default (the orchestrator), and
   // becomes that chief's agent inside a Command office.
@@ -207,6 +217,24 @@ export function AgentOrb() {
             ))}
           </div>
 
+          <div className="agent-chips" style={{ position: 'relative' }} data-orbreports>
+            <button className="agent-chip" style={{ fontWeight: 600 }} disabled={busy} onClick={() => setReportMenu(o => !o)}>
+              <FileText size={11} style={{ verticalAlign: -1, marginRight: 4 }} />Reports &amp; presentations<ChevronDown size={11} style={{ verticalAlign: -1, marginLeft: 3 }} />
+            </button>
+            {reportMenu && (
+              <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 4px)', zIndex: 40, background: 'var(--bg2)', border: '1px solid var(--bd2)', borderRadius: 'var(--r-lg)', boxShadow: '0 12px 32px -12px rgba(0,0,0,.5)', minWidth: 230, maxHeight: 320, overflowY: 'auto', paddingBottom: 4 }}>
+                {[...new Set(CATALOG.map(c => c.group))].map(g => (
+                  <div key={g}>
+                    <div style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)', padding: '8px 12px 4px' }}>{g}</div>
+                    {CATALOG.filter(c => c.group === g).map(c => (
+                      <button key={c.label} onClick={() => openReport(c.build, c.label)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 12, cursor: 'pointer', background: 'transparent', color: 'var(--tx)' }}>{c.label}</button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="agent-msgs" ref={scrollRef}>
             {msgs.map((m, i) => (
               <div key={i} className={'agent-msg ' + m.role}>
@@ -234,6 +262,7 @@ export function AgentOrb() {
                   </div>
                 )}
                 {m.chart && <div className="agent-chart"><ChartView data={m.chart} /></div>}
+                {m.report && <div style={{ marginTop: 2 }}><ReportInline report={m.report} /></div>}
                 {m.text && <div className="agent-bubble" dangerouslySetInnerHTML={render(m.text)} />}
               </div>
             ))}
