@@ -122,6 +122,24 @@ export default function KinQuestTown({
         const ground = new PIXI.TilingSprite({ texture: tile(TILE.GRASS), width: BASEW, height: BASEH })
         world.addChild(ground)
 
+        // tap-to-walk layer (under entities). Tapping snaps to a nearby building/
+        // NPC interaction point so the hero walks right up to it. (`targets` fills
+        // in below; this handler only runs on a later tap.)
+        const tapLayer = new PIXI.Graphics()
+        tapLayer.rect(0, 0, BASEW, BASEH).fill({ color: 0x000000, alpha: 0.001 })
+        tapLayer.eventMode = 'static'
+        tapLayer.on('pointertap', (e: any) => {
+          if (pausedRef.current) return
+          const p = world.toLocal(e.global)
+          let tx = p.x, ty = p.y
+          let best = 1e9, bx = tx, by = ty
+          for (const t of targets) { const dd = Math.hypot(t.x - tx, t.y - ty); if (dd < best) { best = dd; bx = t.x; by = t.y } }
+          if (best < 2.4 * T) { tx = bx; ty = by }
+          moveTarget = { x: clamp(tx, T + 4, BASEW - T - 4), y: clamp(ty, T + 4, BASEH - T - 4) }
+          stuck = 0
+        })
+        world.addChild(tapLayer)
+
         // dirt paths — a plaza cross + spurs to each building porch
         const doors = BUILDINGS.map(b => ({ ...b, px: (b.col + 1) * T, py: (b.row + 2) * T }))
         const paths = new PIXI.Graphics()
@@ -164,6 +182,7 @@ export default function KinQuestTown({
         const butterflies: { s: any; t: number; cx: number; cy: number; rx: number; ry: number; sp: number }[] = []
         const shimmers: any[] = []
         let hero: any = null, lastTile = '', clock = 0, lastNearId: string | null = null
+        let moveTarget: { x: number; y: number } | null = null, stuck = 0
 
         // border forest walls
         for (let c = 0; c < COLS; c++) { put(c % 2 ? TILE.TREE : TILE.PINE, c, 0); block(c, 0); put(c % 2 ? TILE.PINE : TILE.TREE, c, ROWS - 1); block(c, ROWS - 1) }
@@ -221,7 +240,7 @@ export default function KinQuestTown({
           return false
         }
         const taken = new Set<string>()
-        for (let i = 0; i < 120; i++) {
+        for (let i = 0; i < 55; i++) {
           const c = 2 + Math.floor(rnd() * (COLS - 4)), r = 2 + Math.floor(rnd() * (ROWS - 4))
           const key = c + ',' + r
           if (blocked.has(key) || grass.has(key) || taken.has(key)) continue
@@ -267,16 +286,32 @@ export default function KinQuestTown({
             if (keys['arrowdown'] || keys['s']) vy += 1
             if (controls.current.dx !== 0 || controls.current.dy !== 0) { vx = controls.current.dx; vy = controls.current.dy }
             const feetY = () => hero.y + 6
+            const spd = 1.7 * dt
+            const stepX = (nvx: number) => { const nx = clamp(hero.x + nvx * spd, T + 4, BASEW - T - 4); if (!blocked.has(Math.floor(nx / T) + ',' + Math.floor(feetY() / T))) { hero.x = nx; return true } return false }
+            const stepY = (nvy: number) => { const ny = clamp(hero.y + nvy * spd, T + 4, BASEH - T - 4); if (!blocked.has(Math.floor(hero.x / T) + ',' + Math.floor((ny + 6) / T))) { hero.y = ny; return true } return false }
             const mag = Math.hypot(vx, vy)
+            let moving = false
             if (mag > 0.01) {
-              const nvx = vx / Math.max(1, mag), nvy = vy / Math.max(1, mag) // diagonals aren't faster
+              moveTarget = null // manual control cancels tap-to-walk
+              const nvx = vx / Math.max(1, mag), nvy = vy / Math.max(1, mag)
               if (Math.abs(nvx) > 0.02) hero.scale.x = nvx < 0 ? -Math.abs(hero.scale.x) : Math.abs(hero.scale.x)
-              const spd = 1.7 * dt
-              const nx = clamp(hero.x + nvx * spd, T + 4, BASEW - T - 4)
-              if (!blocked.has(Math.floor(nx / T) + ',' + Math.floor(feetY() / T))) hero.x = nx
-              const ny = clamp(hero.y + nvy * spd, T + 4, BASEH - T - 4)
-              if (!blocked.has(Math.floor(hero.x / T) + ',' + Math.floor((ny + 6) / T))) hero.y = ny
+              const mx = stepX(nvx), my = stepY(nvy); moving = mx || my
               hero.pivot.y = Math.sin(clock * 0.4) * 1.5
+            } else if (moveTarget) {
+              const dx = moveTarget.x - hero.x, dy = moveTarget.y - hero.y
+              const dist = Math.hypot(dx, dy)
+              if (dist < 16) { moveTarget = null; hero.pivot.y = 0 }
+              else {
+                const nvx = dx / dist, nvy = dy / dist
+                if (Math.abs(nvx) > 0.02) hero.scale.x = nvx < 0 ? -Math.abs(hero.scale.x) : Math.abs(hero.scale.x)
+                const px0 = hero.x, py0 = hero.y
+                const mx = stepX(nvx), my = stepY(nvy)
+                if (!mx && !my) { if (!stepX(Math.sign(nvx))) stepY(Math.sign(nvy)) }
+                moving = true
+                hero.pivot.y = Math.sin(clock * 0.4) * 1.5
+                stuck = (Math.abs(hero.x - px0) < 0.05 && Math.abs(hero.y - py0) < 0.05) ? stuck + 1 : 0
+                if (stuck > 40) { moveTarget = null; stuck = 0 }
+              }
             } else {
               hero.pivot.y = 0
             }
@@ -293,7 +328,7 @@ export default function KinQuestTown({
             const tc = Math.floor(hero.x / T), tr = Math.floor(feetY() / T), key = tc + ',' + tr
             if (key !== lastTile) {
               lastTile = key
-              if ((vx || vy) && grass.has(key) && Math.random() < 0.14) {
+              if (moving && grass.has(key) && Math.random() < 0.14) {
                 cbRef.current.onEncounter()
               }
             }
