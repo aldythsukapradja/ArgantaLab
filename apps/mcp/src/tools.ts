@@ -7,6 +7,9 @@ import {
   orgBrief, askCeo, officeReport, graphQuery, nodeGet, verdictQueue,
   rootCauseChain, financialModel, scaleModel, OFFICE_IDS,
 } from './bridge'
+import {
+  pixelQuery, pixelFacets, pixelGet, pixelSimilar, pixelVocab, pixelPalettes, pixelUsage,
+} from './vault'
 
 const OfficeEnum = z.enum(OFFICE_IDS as [string, ...string[]])
 const SourceEnum = z.enum(['live', 'partial', 'simulated', 'placeholder'])
@@ -104,5 +107,72 @@ export function registerTools(server: McpServer) {
     'data tier. Use to answer "what does the stack cost at 100k families and why?"',
     { families: z.number().int().min(100).max(5_000_000).optional().describe('default 10000') },
     async ({ families }) => json(scaleModel(families ?? 10000)),
+  )
+
+  // ── Pixel Vault — the pixel-art catalogue, queryable before generating ─────
+  const PixelFilter = {
+    domain: z.string().optional(), kind: z.string().optional(), theme: z.string().optional(),
+    characterType: z.string().optional(), style: z.string().optional(), groupId: z.string().optional(),
+    tier: z.enum(['T0', 'T1', 'T2']).optional(), source: z.string().optional(),
+    animated: z.boolean().optional(), canonical: z.boolean().optional(),
+    q: z.string().optional(), includeUnverified: z.boolean().optional(),
+    limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional(),
+  }
+
+  server.tool(
+    'pixel_query',
+    'Search the Pixel Vault catalogue of open-source pixel art. Filter by domain (rpg/cinematic/ui/…), ' +
+    'kind (character/tile/background/…), theme, characterType, style, groupId, tier (T0 ship-as-is / T1 ' +
+    'reference-only / T2 do-not-use), source, animated, or free text. Use BEFORE generating art to find a ' +
+    'style reference. Returns each item with its license tier and shippability.',
+    PixelFilter,
+    async (f) => json(pixelQuery(f as never)),
+  )
+
+  server.tool(
+    'pixel_facets',
+    'Benchmark the catalogue: distinct values + counts per field (domain, kind, theme, style, tier, source, ' +
+    'animated) over an optional filter scope. Answers "how many T0 characters exist per theme" before you ' +
+    'decide to reuse or generate. Counts trust verified items unless includeUnverified is set.',
+    PixelFilter,
+    async (f) => json(pixelFacets(f as never)),
+  )
+
+  server.tool(
+    'pixel_get',
+    'Fetch one vault item by id: full metadata, license tier policy, and its palette.',
+    { id: z.string().describe('vault item id, e.g. ref.kenney.pixel-platformer.coin_gold') },
+    async ({ id }) => json(pixelGet(id)),
+  )
+
+  server.tool(
+    'pixel_similar',
+    'Given a vault item id, return everything in its group plus items sharing theme/style/kind — pull a ' +
+    'whole cast or set for a scene in one call.',
+    { id: z.string() },
+    async ({ id }) => json(pixelSimilar(id)),
+  )
+
+  server.tool(
+    'pixel_vocab',
+    'The controlled vocabulary (domain/kind/theme/characterType/style/animation), the license→tier policy, ' +
+    'and the registered sources. Read this first so your tags match the catalogue instead of inventing synonyms.',
+    {},
+    async () => json(pixelVocab()),
+  )
+
+  server.tool(
+    'pixel_palettes',
+    'List the shared color palettes (canonical Arganta sets + public-domain Lospec palettes) with their colors.',
+    {},
+    async () => json(pixelPalettes()),
+  )
+
+  server.tool(
+    'pixel_usage',
+    'The render-key coverage x-ray: which sprite keys across the Arganta apps are wired to a real asset vs ' +
+    'still procedural placeholders vs missing, plus published-but-unused (orphan) assets.',
+    {},
+    async () => json(pixelUsage()),
   )
 }
