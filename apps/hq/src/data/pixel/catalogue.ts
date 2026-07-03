@@ -24,7 +24,7 @@ interface Seed {
   source: string; sourceId: string; pack?: string; url: string; author?: string; license: License
   domain: string[]; kind: string; isCharacter?: boolean; characterType?: string
   theme: string[]; style?: string; groupId?: string; tags: string[]; verified?: boolean
-  w: number; h: number; perspective?: string; swatch?: string[]
+  w: number; h: number; perspective?: string; swatch?: string[]; thumbUrl?: string
   animations?: Animation[]
   status?: VaultItem['status']
 }
@@ -38,7 +38,7 @@ function mk(s: Seed): VaultItem {
       characterType: s.characterType, theme: s.theme, style: s.style, groupId: s.groupId,
       tags: s.tags, verified: s.verified ?? false,
     },
-    form: { size: { w: s.w, h: s.h }, perspective: s.perspective, colorCount: s.swatch?.length, swatch: s.swatch },
+    form: { size: { w: s.w, h: s.h }, perspective: s.perspective, colorCount: s.swatch?.length, swatch: s.swatch, thumbUrl: s.thumbUrl },
     animations: s.animations ?? [],
     relationships: {},
     status: s.status,
@@ -79,6 +79,29 @@ export const CATALOGUE: VaultItem[] = [
   // ── PixelLab · T0 / CC0 · your own generations (published to Library) ─────
   mk({ id: 'asset.char.ember_pup', name: 'Ember Pup', source: 'pixellab', sourceId: 'gen/ember-pup', url: 'https://pixellab.ai', license: 'CC0', domain: ['rpg', 'avatar', 'world'], kind: 'creature', characterType: 'companion', theme: ['fantasy', 'cute'], style: '16bit', groupId: 'kin-family-ember', tags: ['kin', 'pet', 'fire', 'companion', 'arganta'], w: 32, h: 32, perspective: 'side', swatch: ['#ff6b35', '#f7931e', '#ffcd75', '#262b44'], animations: [{ name: 'idle', frames: 4, fps: 6, directions: 1, loop: true }, { name: 'walk', frames: 6, fps: 10, directions: 4, loop: true }, { name: 'bounce', frames: 4, fps: 8, directions: 1, loop: true }], status: 'published', verified: true }),
   mk({ id: 'asset.avatar.buddy_1', name: 'Buddy Avatar', source: 'pixellab', sourceId: 'gen/buddy-1', url: 'https://pixellab.ai', license: 'CC0', domain: ['avatar', 'ui'], kind: 'portrait', theme: ['cute', 'modern'], style: 'modern-hd-pixel', tags: ['avatar', 'buddy', 'profile', 'arganta'], w: 48, h: 48, perspective: 'portrait', swatch: ['#4cc9f0', '#4361ee', '#ffd6a5'], status: 'published', verified: true }),
+
+  // ── PixelLab mounts · T0 / owned · REAL art (128×128, in the repo) ────────
+  ...(([
+    ['arganterion', 'Arganterion', ['fantasy'], 'side'],
+    ['crystaldrake', 'Crystal Drake', ['fantasy'], 'side'],
+    ['emberfox', 'Ember Fox', ['fantasy', 'cute'], 'side'],
+    ['frostelk', 'Frost Elk', ['seasonal-winter', 'nature'], 'side'],
+    ['meadowpony', 'Meadow Pony', ['cute', 'nature'], 'side'],
+    ['sandstrider', 'Sand Strider', ['nature'], 'side'],
+    ['shadowpanther', 'Shadow Panther', ['horror'], 'side'],
+    ['stormfin', 'Storm Fin', ['underwater'], 'side'],
+    ['thunderram', 'Thunder Ram', ['nature'], 'side'],
+    ['updrift', 'Updrift', ['fantasy', 'nature'], 'side'],
+  ] as [string, string, string[], string][]).map(([slug, name, theme, persp]) => mk({
+    id: `asset.mount.${slug}`, name, source: 'pixellab', sourceId: `gen/mount-${slug}`, url: 'https://pixellab.ai', license: 'CC0',
+    domain: ['world', 'rpg', 'avatar'], kind: 'creature', characterType: 'mount', theme, style: 'modern-hd-pixel',
+    groupId: 'arganta-mounts', tags: ['mount', 'rideable', 'arganta', slug], w: 128, h: 128, perspective: persp,
+    thumbUrl: `/pixel/mounts/${slug}.png`, animations: [{ name: 'idle', frames: 1, fps: 1, directions: 1, loop: true }], status: 'published', verified: true,
+  }))),
+
+  // ── Kenney CC0 packs · T0 · REAL art (already in the repo) ─────────────────
+  mk({ id: 'ref.kenney.tiny-town.tilemap', name: 'Tiny Town (tilemap)', source: 'kenney', sourceId: 'tiny-town/tilemap', pack: 'Tiny Town', url: 'https://kenney.nl/assets/tiny-town', author: 'Kenney', license: 'CC0', domain: ['rpg', 'topdown', 'tileset'], kind: 'tileset', theme: ['nature', 'cute', 'medieval'], style: '16bit', groupId: 'kenney-tiny-town', tags: ['town', 'village', 'tileset', 'overworld', 'buildings'], w: 16, h: 16, perspective: 'top-down', thumbUrl: '/pixel/kenney/tinytown.png', swatch: ['#63c74d', '#8f563b', '#d9a066', '#4cc9f0'], verified: true }),
+  mk({ id: 'ref.kenney.roguelike.sheet', name: 'Roguelike (spritesheet)', source: 'kenney', sourceId: 'roguelike/sheet', pack: 'Roguelike', url: 'https://kenney.nl/assets/roguelike-rpg-pack', author: 'Kenney', license: 'CC0', domain: ['rpg', 'roguelike', 'tileset'], kind: 'tileset', theme: ['fantasy', 'dungeon', 'medieval'], style: '16bit', groupId: 'kenney-roguelike', tags: ['roguelike', 'rpg', 'spritesheet', 'characters', 'items'], w: 16, h: 16, perspective: 'top-down', thumbUrl: '/pixel/kenney/roguelike.png', swatch: ['#5a6988', '#d9a066', '#63c74d', '#262b44'], verified: true }),
 
   // ── T2 / Proprietary · catalogued ONLY so the vault recognises + warns ─────
   mk({ id: 'ref.spriters.mario_smb1', name: 'Mario (SMB1)', source: 'spriters-resource', sourceId: 'spriters/mario-smb1', url: 'https://www.spriters-resource.com', author: 'Nintendo', license: 'Proprietary', domain: ['platformer'], kind: 'character', characterType: 'hero', theme: ['modern'], style: 'retro-8bit', tags: ['mario', 'nintendo', 'ripped', 'do-not-use'], w: 16, h: 16, perspective: 'side', swatch: ['#e43b44', '#4361ee', '#ffd6a5'], verified: true }),

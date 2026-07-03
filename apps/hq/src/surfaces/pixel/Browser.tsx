@@ -66,7 +66,7 @@ export function Browser({ base, title, blurb }: { base: QueryFilter; title: stri
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div className="spread" style={{ fontSize: 12, color: 'var(--tx2)' }}>
           <span><b style={{ color: 'var(--tx)', fontFamily: 'var(--mono)' }}>{res.total}</b> item{res.total !== 1 ? 's' : ''}{activeCount || q ? ' · filtered' : ''}</span>
-          <span style={{ fontSize: 10.5, color: 'var(--tx3)' }}>swatch = generated metadata stand-in, not the source art</span>
+          <span style={{ fontSize: 10.5, color: 'var(--tx3)' }}>real art where owned/CC0 · generated stand-in for un-downloaded refs</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(132px,1fr))', gap: 10 }}>
           {res.items.map(it => (

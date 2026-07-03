@@ -7,9 +7,17 @@ import type { Tier, VaultItem } from '../../data/pixel/types'
 function hash(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
 function rng(seed: number) { let x = seed || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 1000) / 1000 } }
 
-// A mirrored pixel cluster (characters/creatures) or a tile lattice — drawn from
-// the item's swatch colors. Reads as pixel art without being the copyrighted art.
+// Real art when we have it (thumbUrl → owned/CC0/synced), otherwise a generated
+// stand-in drawn from the swatch colors (honest: never the copyrighted pixels).
 export function Swatch({ item, px = 84 }: { item: VaultItem; px?: number }) {
+  if (item.form.thumbUrl) {
+    return <img src={item.form.thumbUrl} alt={item.name} width={px} height={px} loading="lazy"
+      style={{ width: px, height: px, objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 6, background: 'repeating-conic-gradient(var(--bg3) 0% 25%, transparent 0% 50%) 0 0/12px 12px' }} />
+  }
+  return <SwatchStandIn item={item} px={px} />
+}
+
+function SwatchStandIn({ item, px }: { item: VaultItem; px: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const cv = ref.current; if (!cv) return

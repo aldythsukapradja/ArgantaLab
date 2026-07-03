@@ -48,6 +48,8 @@ export interface ItemForm {
   paletteId?: string
   colorCount?: number
   swatch?: string[]         // a few representative hex colors, for the catalogue card
+  thumbUrl?: string         // real art (public path or Supabase URL). Absent → generated stand-in.
+  storagePath?: string      // Supabase Storage object path once synced
 }
 
 export interface Animation {
