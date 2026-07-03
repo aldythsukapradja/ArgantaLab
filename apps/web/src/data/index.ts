@@ -88,12 +88,7 @@ export const MOBILE_TABS: MobileTab[] = [
 ]
 
 // ── Games ────────────────────────────────────────────────────
-export const GAMES: Game[] = [
-  { id: 'strike',  file: 'AppGame_Strike_Zone_3D.html',          name: 'Strike Zone 3D',   tags: ['3D','Shooter'],  hue: 210, featured: true,  desc: 'Health, weapons, coins, and a shop. The first product built with AI + HTML.' },
-  { id: 'nitro',   file: 'AppGame_Nitro_Edge_Racing.html',       name: 'Nitro Edge Racing', tags: ['Racing','Arcade'], hue: 18,  featured: false, desc: 'High-speed neon racer. Drift the edge and chase the leaderboard.' },
-  { id: 'critter', file: 'AppGame_Strike_Zone_Critter_Keys.html', name: 'Critter Keys',     tags: ['Typing','Arcade'], hue: 285, featured: false, desc: 'Catch critters by hitting the right keys. Fast typing fun.' },
-  { id: 'kincatch', file: 'AppGame_Strike_Zone_Kincatch.html',   name: 'Kincatch',          tags: ['Catch','Reflex'],  hue: 150, featured: false, desc: 'A reflex catching game. Quick hands, quick mind.' },
-]
+export const GAMES: Game[] = []
 
 export function gameThumb(hue: number): string {
   return `<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="t${hue}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue},75%,55%)"/><stop offset="1" stop-color="hsl(${(hue+55)%360},65%,30%)"/></linearGradient></defs><rect width="300" height="200" fill="url(#t${hue})"/><circle cx="55" cy="50" r="65" fill="rgba(255,255,255,.12)"/><circle cx="250" cy="170" r="90" fill="rgba(0,0,0,.16)"/><polygon points="130,80 180,100 130,120" fill="rgba(255,255,255,.92)"/></svg>`

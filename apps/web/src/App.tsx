@@ -12,6 +12,7 @@ import { setPlayerId } from '@lib/player'
 import { touchPresence } from '@lib/cloudAuth'
 import { initContent } from '@lib/content'
 import { injectCircle, circleCtx, useCircleBridge } from '@lib/circleBridge'
+import { installGameServices, setGameServicesUser } from '@lib/gameServices'
 import { TopBar } from '@components/layout/TopBar'
 import { ConceptDrawer } from '@components/layout/ConceptDrawer'
 import Sidebar from '@components/layout/Sidebar'
@@ -134,6 +135,18 @@ function KinQuestOverlay() {
       <KinQuest />
     </div>
   )
+}
+
+/** Answers save/score/leaderboard postMessages from generated games
+ *  (the Arganta engine bridge). Local-first, cloud when signed in. */
+function GameServicesSync() {
+  const session = useAppStore(s => s.session)
+  const learnerName = useAppStore(s => s.learnerName)
+  useEffect(() => { installGameServices() }, [])
+  useEffect(() => {
+    setGameServicesUser(session && session !== 'loading' ? { id: session.user.id, name: learnerName } : null)
+  }, [session, learnerName])
+  return null
 }
 
 function Toasts() {
@@ -334,6 +347,7 @@ function AppShell() {
       <AuthWall />
       <PlayerSwitcher />
       <CloudSync />
+      <GameServicesSync />
     </div>
   )
 }

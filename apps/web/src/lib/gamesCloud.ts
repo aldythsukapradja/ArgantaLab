@@ -8,7 +8,7 @@ export async function pushGame(userId: string, g: SavedGame): Promise<void> {
   try {
     await supabase.from('games').upsert({
       id: g.id, user_id: userId, title: g.title, source: g.source,
-      config: g.config ?? null, html: g.html, plays: g.plays, slug: g.slug ?? null,
+      config: g.spec ?? g.config ?? null, html: g.html, plays: g.plays, slug: g.slug ?? null,
       category: g.category ?? null,
     })
   } catch { /* ignore */ }
@@ -65,14 +65,20 @@ export async function pullGames(userId: string): Promise<SavedGame[] | null> {
   try {
     const { data, error } = await supabase.from('games').select('*').eq('user_id', userId)
     if (error) return null
-    return (data ?? []).map(r => ({
-      id: r.id as string,
-      title: r.title as string,
-      source: (r.source as 'wizard' | 'procode') ?? 'procode',
-      config: (r.config as SavedGame['config']) ?? undefined,
-      html: r.html as string,
-      createdAt: r.created_at ? Date.parse(r.created_at as string) : Date.now(),
-      plays: (r.plays as number) ?? 0,
-    }))
+    return (data ?? []).map(r => {
+      const source = (r.source as SavedGame['source']) ?? 'procode'
+      const cfg = r.config as Record<string, unknown> | null
+      const isSpec = !!cfg && cfg.v === 2
+      return {
+        id: r.id as string,
+        title: r.title as string,
+        source,
+        config: !isSpec ? (cfg as unknown as SavedGame['config']) ?? undefined : undefined,
+        spec: isSpec ? (cfg as unknown as SavedGame['spec']) : undefined,
+        html: r.html as string,
+        createdAt: r.created_at ? Date.parse(r.created_at as string) : Date.now(),
+        plays: (r.plays as number) ?? 0,
+      }
+    })
   } catch { return null }
 }

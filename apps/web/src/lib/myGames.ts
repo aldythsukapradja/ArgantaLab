@@ -1,4 +1,5 @@
 import type { WizardConfig } from '@/data/wizard'
+import type { GameSpec } from '@/engine/types'
 import { memStore } from './memStore'
 
 // Session-only game cache (in memory, namespaced per signed-in user). The cloud
@@ -6,8 +7,9 @@ import { memStore } from './memStore'
 export interface SavedGame {
   id: string
   title: string
-  source: 'wizard' | 'procode'
-  config?: WizardConfig
+  source: 'wizard' | 'procode' | 'studio'
+  config?: WizardConfig   // legacy v1 wizard games
+  spec?: GameSpec         // v2 Studio games (stored in the cloud `config` jsonb)
   html: string
   createdAt: number
   plays: number

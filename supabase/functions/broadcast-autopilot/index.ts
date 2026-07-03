@@ -44,6 +44,23 @@ async function keyOf(title: string, body: string): Promise<string> {
   return 'ap_' + Array.from(new Uint8Array(digest)).slice(0, 10).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+/** Fetch a premium, topic-matched photo from Unsplash. Returns a CDN URL, or
+ *  null when no key is set (→ posts stay text-only). Fast (~200ms). */
+async function photoFor(query: string): Promise<string | null> {
+  const key = Deno.env.get('UNSPLASH_ACCESS_KEY')
+  if (!key || !query.trim()) return null
+  try {
+    const r = await fetch(
+      `https://api.unsplash.com/search/photos?per_page=1&orientation=landscape&content_filter=high&query=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Client-ID ${key}` } })
+    if (!r.ok) return null
+    const j = await r.json()
+    const raw = j?.results?.[0]?.urls?.raw
+    // request a crisp, right-sized crop from Unsplash's on-the-fly image CDN
+    return raw ? `${raw}&w=1080&h=1080&fit=crop&crop=entropy&q=80` : (j?.results?.[0]?.urls?.regular ?? null)
+  } catch { return null }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
   const URL = Deno.env.get('SUPABASE_URL')!
@@ -68,6 +85,7 @@ Deno.serve(async (req) => {
   const gapHours = clamp(body.gapHours ?? 24, 1, 168)
   const status = body.status === 'draft' ? 'draft' : 'scheduled'
   const themeHint = Array.isArray(body.themes) && body.themes.length ? body.themes.join(', ') : 'a wide mix of all themes'
+  const brief = typeof body.brief === 'string' ? body.brief.trim().slice(0, 400) : ''
 
   // ── generate ──
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
@@ -76,24 +94,28 @@ Deno.serve(async (req) => {
     `You are "KinetikCircle", a warm, kid-safe family content creator that fills a family app's Discover feed.\n` +
     `Return ONLY a JSON array of ${count} original posts — no prose, no markdown. Each object:\n` +
     `{ "format": one of [${FORMATS.join(', ')}], "theme": one of [${THEMES.join(', ')}], ` +
-    `"emoji": one leading emoji, "title": punchy headline <60 chars, "body": 2–4 warm sentences, "source": optional attribution }\n` +
+    `"emoji": one leading emoji, "title": punchy headline <60 chars, "body": 2–4 warm sentences, ` +
+    `"image_query": 2–4 vivid keywords for a premium matching photo (concrete nouns, e.g. "sea otter floating"), "source": optional attribution }\n` +
     `Rules: original (inspired-by, never copied), wholesome, screenshot-worthy, one surprising idea each. ` +
     `No medical/financial advice. Vary formats & themes (${themeHint}). For top10 put each item on its own line.`
 
+  const MODEL = Deno.env.get('AUTOPILOT_MODEL') || 'claude-sonnet-5'
   let text = '[]'
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 3000, system, messages: [{ role: 'user', content: `Generate the ${count} posts now.` }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 3000, system, messages: [{ role: 'user', content: `Generate the ${count} posts now.${brief ? ` They must all be about: ${brief}.` : ''}` }] }),
     })
     const j = await r.json()
-    if (!r.ok) return json({ error: 'llm', detail: j?.error?.message ?? r.statusText }, 502)
-    text = j?.content?.[0]?.text ?? '[]'
+    if (!r.ok) return json({ error: 'llm', model: MODEL, detail: j?.error?.message ?? r.statusText, raw: JSON.stringify(j).slice(0, 500) }, 502)
+    // newer models can return a "thinking" block first — find the text block, not [0]
+    text = (Array.isArray(j?.content) ? j.content.find((c: any) => c?.type === 'text')?.text : '') ?? ''
+    if (!text) return json({ error: 'llm-no-text', model: MODEL, raw: JSON.stringify(j).slice(0, 500) }, 502)
   } catch (e) { return json({ error: 'llm-fetch', detail: String(e) }, 502) }
 
   const posts = parseArray(text)
-  if (!posts.length) return json({ error: 'no-posts', preview: text.slice(0, 200) }, 422)
+  if (!posts.length) return json({ error: 'no-posts', model: MODEL, preview: text.slice(0, 300) }, 422)
 
   // ── schedule tail: drip after the current queue ──
   const supa = createClient(URL, SRK)
@@ -112,11 +134,12 @@ Deno.serve(async (req) => {
     const format = FORMATS.includes(p.format) ? p.format : 'fact'
     i++
     const publish_at = status === 'scheduled' ? new Date(tail.getTime() + i * gapHours * 3600_000).toISOString() : null
+    const img = await photoFor(String(p?.image_query ?? p?.theme ?? ''))
     const { error } = await supa.from('kinetik_broadcast').insert({
       external_key: await keyOf(title, String(p?.body ?? '')),
       batch_id: batchId, origin: 'llm', prompt_version: PROMPT_VERSION,
       format, theme, title, body: p?.body ?? null,
-      media_kind: 'none', media_url: null, source: p?.source ?? null,
+      media_kind: img ? 'image' : 'none', media_url: img, source: p?.source ?? null,
       emoji: p?.emoji ?? null, accent: ACCENT[theme], audience: 'circle',
       status, publish_at,
     })

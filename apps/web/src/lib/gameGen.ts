@@ -1,11 +1,35 @@
 import type { WizardConfig } from '@/data/wizard'
+import type { GameSpec } from '@/engine/types'
+// The whole Arganta engine, pre-bundled to one minified IIFE by
+// scripts/buildEngine.mjs (runs before dev/build).
+import engineSrc from '@/generated/engine.js?raw'
 
 // ============================================================
 //  GAME GENERATOR
-//  Turns a WizardConfig into a complete, self-contained, playable
-//  HTML game. Every choice (type, world, character, style, speed,
-//  difficulty, power-ups) actually changes how the game plays.
+//  v2 (Studio): spec-driven — one shared engine bundle + a JSON
+//  GameSpec. Every skin/map/sidekick/dial is pure data.
+//  v1 (legacy): the old WizardConfig template, kept so previously
+//  saved games keep working.
 // ============================================================
+
+const noScriptClose = (s: string) => s.replace(/<\/script/gi, '<\\/script')
+
+/** v2: emit a complete single-file game from a GameSpec. */
+export function generateGameV2(spec: GameSpec, gameId: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="generator" content="Arganta Studio v2">
+<title>${escapeHtml(spec.title || 'My Game')}</title>
+</head>
+<body>
+<script>${noScriptClose(engineSrc)}</script>
+<script>ARGANTA.boot(${noScriptClose(JSON.stringify(spec))}, ${JSON.stringify(gameId)})</script>
+</body>
+</html>`
+}
 
 export function generateGame(cfg: WizardConfig): string {
   const json = JSON.stringify(cfg)
