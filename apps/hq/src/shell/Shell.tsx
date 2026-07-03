@@ -13,6 +13,7 @@ import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 import { AgentOrb } from '../components/AgentOrb'
 import { CommandPalette } from './CommandPalette'
 import { Command } from '../surfaces/command/Command'
+import { Pixel } from '../surfaces/pixel/Pixel'
 
 function Surface() {
   const { surface } = useHQ()
@@ -26,6 +27,7 @@ function Surface() {
     case 'agents': return <Agents />
     case 'broadcast': return <Broadcast />
     case 'command': return <Command />
+    case 'pixel': return <Pixel />
   }
 }
 

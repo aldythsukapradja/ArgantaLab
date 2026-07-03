@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search, CornerDownLeft, LayoutGrid, TrendingUp, Database, Gamepad2, Boxes,
-  GraduationCap, Network, Megaphone, Table2, Sparkles, SunMoon, Coins, Radar,
+  GraduationCap, Network, Megaphone, Table2, Sparkles, SunMoon, Coins, Radar, Grid2x2,
 } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId, type CommandTab } from './store'
 
@@ -10,6 +10,7 @@ interface Cmd { id: string; label: string; hint: string; keywords: string; Icon:
 const SURFACE_ICON: Record<SurfaceId, typeof Search> = {
   portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
   game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone, command: Radar,
+  pixel: Grid2x2,
 }
 
 // Command sub-tabs surfaced as palette jumps.

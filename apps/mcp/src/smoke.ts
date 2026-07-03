@@ -4,6 +4,7 @@ import {
   orgBrief, askCeo, officeReport, graphQuery, nodeGet, verdictQueue,
   rootCauseChain, financialModel, scaleModel, OFFICE_IDS, NORTH_STAR,
 } from './bridge'
+import { pixelQuery, pixelFacets, pixelSimilar, pixelVocab, pixelPalettes, pixelUsage } from './vault'
 
 let fails = 0
 function ok(cond: unknown, msg: string) {
@@ -75,6 +76,22 @@ ok(Math.abs(sc.perActive - 0.086) < 0.02, 'per-active reconciles near Treasury $
 ok(sc.byLayer.length === 5, 'five stack layers priced')
 const scBig = scaleModel(1_000_000)
 ok(scBig.monthlyTotal > sc.monthlyTotal, 'cost grows with scale (1M > 10k)')
+
+head('pixel_vault')
+const pv = pixelQuery({ tier: 'T0', includeUnverified: true })
+ok(pv.items.every(i => i.tier === 'T0' && i.shippable), 'T0 query returns only shippable items (' + pv.total + ')')
+const t2 = pixelQuery({ tier: 'T2', includeUnverified: true })
+ok(t2.items.every(i => !i.shippable), 'T2 items are flagged not-shippable (' + t2.total + ')')
+const pf = pixelFacets({ includeUnverified: true })
+ok(pf.facets.tier?.length >= 2 && pf.total > 0, 'facets tally tiers over the catalogue (' + pf.total + ' items)')
+const pchar = pixelQuery({ kind: 'character', animated: true, includeUnverified: true })
+ok(pchar.items.every(i => i.animations.length > 0), 'animated+character filter returns only animated characters')
+const psim = pixelSimilar('ref.lpc.base_male') as { similar?: unknown[] }
+ok((psim.similar?.length ?? 0) > 0, 'similar pulls the LPC group/cast')
+ok(pixelVocab().vocab.kind.length > 0 && !!pixelVocab().tiers.T0, 'vocab exposes kinds + tier policy for agent tagging')
+ok(pixelPalettes().palettes.length > 0, 'palettes listed')
+const pu = pixelUsage()
+ok(pu.total > 0 && pu.pct >= 0, 'usage x-ray computes coverage (' + pu.pct + '% wired of ' + pu.total + ')')
 
 console.log('\n' + (fails === 0 ? '✅ ALL BRIDGE CHECKS PASSED' : `❌ ${fails} CHECK(S) FAILED`))
 process.exit(fails === 0 ? 0 : 1)
