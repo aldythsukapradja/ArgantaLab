@@ -27,13 +27,22 @@ each item's license tier.
 
 ## Growing it to the full libraries
 
-"Download everything" is per-source work; the sync script has an extension seam at the
-bottom — add one fetcher per source and it uploads + upserts exactly like the local art:
+Two ways, both wired:
 
-- **Lospec** — JSON API (`/palette-list/<slug>.json`) → straight into `pixel_palette`.
-- **Kenney** — pack zips → unzip → upload each sprite.
-- **OpenGameArt** — the `nyuuzyou/OpenGameArt-OGA-BY-4.0` Hugging Face dump (JSONL + images).
-- **PixelLab** — your own generations via the PixelLab MCP land in Ingest, then here.
+**1. Drop-folder (reliable, any source).** Put art in `apps/hq/public/pixel/import/`:
+- `import/sheets/<pack>/*.png` → each spritesheet is **sliced** into tiles.
+- `import/sprites/<pack>/*.png` → each PNG uploaded **as one sprite**.
+Download any Kenney/itch/CC0 pack (one-click zips), unzip into a pack folder, re-run
+the sync. Fully offline, no scraping. It's your private store, so any source is fine.
+
+**2. Lospec palettes (network, opt-in).** Add `FETCH_LOSPEC=1` to the sync command to
+pull the full Lospec library (~4,300 palettes) into `pixel_palette`:
+```bash
+SUPABASE_URL=… SUPABASE_SERVICE_KEY=… FETCH_LOSPEC=1 npm run pixel-sync
+```
+
+Still to add as fetchers (the seam is in `pixel-sync.ts`): Kenney.nl pack auto-download,
+the `nyuuzyou/OpenGameArt-OGA-BY-4.0` Hugging Face dump, PixelLab MCP output.
 
 Because everything is private and behind your login, T1/T2 provenance is a **quality/traceability
 signal**, not a shipping gate — you can store any of it. (Tiers still matter the day you'd
