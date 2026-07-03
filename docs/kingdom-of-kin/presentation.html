@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kingdom of Kin — Pitch Deck</title>
+<style>
+  :root{
+    --bg:#0c0d11; --panel:#15171d; --card:#1b1e26; --card2:#22262f;
+    --line:#2c303b; --line2:#3a3f4d;
+    --ink:#eef1f6; --mut:#9aa2b1; --dim:#6b7280;
+    --gold:#f2b64c; --gold2:#e0982a;
+    --teal:#4fd1c5; --violet:#a78bfa; --coral:#f0997b; --green:#97c459; --blue:#85b7eb; --pink:#ed93b1;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --parch:#e9dcc0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#000;color:var(--ink);font-family:var(--sans);overflow:hidden}
+
+  /* deck */
+  .deck{width:100vw;height:100vh;position:relative}
+  .slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+    padding:6vh 8vw;background:
+      radial-gradient(1400px 500px at 15% -10%,rgba(242,182,76,.09),transparent),
+      radial-gradient(1000px 600px at 100% 110%,rgba(79,209,197,.06),transparent),
+      var(--bg);animation:fade .4s ease}
+  .slide.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* chrome */
+  .bar{position:fixed;bottom:0;left:0;right:0;height:52px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 20px;background:rgba(12,13,17,.85);
+    border-top:1px solid var(--line);backdrop-filter:blur(8px);z-index:50}
+  .bar .brand{font-weight:700;font-size:14px}.bar .brand span{color:var(--gold)}
+  .dots{display:flex;gap:6px}
+  .dots i{width:8px;height:8px;border-radius:50%;background:var(--line2);cursor:pointer;transition:.2s}
+  .dots i.on{background:var(--gold);width:22px;border-radius:4px}
+  .navb{display:flex;gap:8px;align-items:center}
+  .navb button{background:var(--card);border:1px solid var(--line2);color:var(--ink);width:34px;height:34px;
+    border-radius:9px;cursor:pointer;font-size:16px;transition:.15s}
+  .navb button:hover{background:var(--card2);border-color:var(--gold)}
+  .navb .cnt{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+
+  /* type */
+  .kick{color:var(--gold);font-size:13px;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:16px}
+  h1{font-size:clamp(34px,6vw,72px);line-height:1.02;letter-spacing:-1px;font-weight:800}
+  h2{font-size:clamp(24px,3.4vw,40px);font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+  h2 .m{color:var(--gold)}
+  .sub{color:var(--mut);font-size:clamp(15px,1.5vw,19px);max-width:60ch;margin-top:14px;line-height:1.6}
+  .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:700;margin-bottom:22px;display:flex;gap:10px;align-items:center}
+  .eyebrow .n{background:var(--gold);color:#1a1204;width:26px;height:26px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+  p{color:var(--mut);font-size:15px;line-height:1.6}
+  strong{color:var(--ink);font-weight:650}
+  .small{font-size:12.5px;color:var(--dim)}
+
+  .dna{display:flex;gap:10px;flex-wrap:wrap;margin-top:32px}
+  .dna span{font-size:13px;padding:8px 15px;border-radius:22px;border:1px solid var(--line2);color:#c7cdd8;background:var(--card)}
+  .dna span b{color:var(--gold)}
+
+  /* grid + cards */
+  .grid{display:grid;gap:16px;margin-top:8px}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .card .ico{font-size:26px;margin-bottom:10px}
+  .card h3{font-size:18px;font-weight:700;margin-bottom:6px}
+  .card p{font-size:13.5px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px}
+  .pill.mvp{background:rgba(151,196,89,.16);color:var(--green)}
+  .pill.scale{background:rgba(167,139,250,.16);color:var(--violet)}
+  .pill.gap{background:rgba(240,153,123,.16);color:var(--coral)}
+  .pill.re{background:rgba(79,209,197,.14);color:var(--teal)}
+
+  .loop{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:26px}
+  .loop .s{background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;flex:1;min-width:120px}
+  .loop .s b{color:var(--gold);display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+  .loop .s span{font-size:13px;color:var(--mut)}
+  .loop .a{color:var(--dim);font-size:20px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:1px}
+  td{color:var(--mut)}td b{color:var(--ink)}
+  tr:last-child td{border-bottom:none}
+
+  ul.chk{list-style:none;display:grid;gap:8px;margin-top:8px}
+  ul.chk li{padding-left:24px;position:relative;font-size:13.5px;color:var(--mut)}
+  ul.chk li::before{content:"";position:absolute;left:0;top:5px;width:13px;height:13px;border-radius:4px;border:2px solid var(--green)}
+  ul.chk.sc li::before{border-color:var(--violet)}
+  ul.chk li b{color:var(--ink)}
+
+  .risk{border-left:3px solid var(--coral);background:var(--card);padding:12px 15px;border-radius:0 10px 10px 0}
+  .risk h4{color:var(--coral);font-size:14px;margin-bottom:3px}
+  .risk .fx{color:var(--teal);font-size:12px;margin-top:4px}
+
+  /* ---------- WORLD MAP ---------- */
+  .mapwrap{margin-top:10px;border-radius:18px;overflow:hidden;border:2px solid #3a2f1c;
+    box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .mapstage{width:100%;height:min(64vh,560px);display:block;background:
+    radial-gradient(1200px 500px at 60% 40%,#f3e8ca,#e6d6b0 70%,#d9c69a)}
+
+  /* ---------- GAME SIMULATOR ---------- */
+  .simrow{display:grid;grid-template-columns:1fr 300px;gap:26px;align-items:center;margin-top:10px}
+  @media(max-width:1100px){.simrow{grid-template-columns:1fr}}
+  .device{background:#05060a;border:2px solid #2c303b;border-radius:18px;padding:12px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);width:100%;max-width:760px;margin:0 auto}
+  .devtop{display:flex;align-items:center;justify-content:space-between;padding:2px 8px 10px}
+  .devtop .t{font-size:12px;color:var(--dim);letter-spacing:.5px}
+  .devtop .dotz{display:flex;gap:5px}.devtop .dotz i{width:9px;height:9px;border-radius:50%;background:#333}
+  .screen{position:relative;height:min(52vh,420px);border-radius:12px;overflow:hidden;background:#0f1116}
+  .scene{position:absolute;inset:0;display:flex;flex-direction:column}
+
+  .hud{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;
+    background:rgba(0,0,0,.35);border-bottom:1px solid rgba(255,255,255,.06);z-index:3}
+  .hud .who{font-weight:700;color:var(--ink)}
+  .hud .lv{color:var(--gold);font-weight:700}
+  .stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center}
+  .ctrls{padding:10px 12px;background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.06);
+    display:flex;gap:8px;flex-wrap:wrap;justify-content:center;z-index:3}
+  .btn{background:var(--gold);color:#1a1204;border:none;padding:9px 14px;border-radius:9px;font-weight:700;
+    font-size:13px;cursor:pointer;transition:.12s}
+  .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .btn.ghost{background:var(--card2);color:var(--ink);border:1px solid var(--line2)}
+  .btn.sk{background:#20242e;color:#cdd3df;border:1px solid var(--line2);min-width:88px}
+  .btn.sk small{display:block;color:var(--dim);font-size:10px}
+  .btn.glow{animation:glow 1s infinite alternate}
+  @keyframes glow{to{box-shadow:0 0 0 4px rgba(242,182,76,.35)}}
+
+  .sprite{font-size:44px;filter:drop-shadow(0 6px 6px rgba(0,0,0,.4));transition:.2s}
+  .toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);
+    color:#fff;padding:6px 14px;border-radius:20px;font-size:12.5px;z-index:5;border:1px solid var(--line2)}
+  .hpbar{width:120px;height:9px;background:#2a2f3a;border-radius:5px;overflow:hidden}
+  .hpbar i{display:block;height:100%;background:linear-gradient(90deg,#e24b4a,#f0997b);transition:width .35s}
+  .hpbar.mp i{background:linear-gradient(90deg,#378add,#85b7eb)}
+
+  .clscard{background:#171a21;border:1px solid var(--line2);border-radius:10px;padding:10px;cursor:pointer;text-align:center;transition:.15s}
+  .clscard:hover{border-color:var(--gold);background:#1d212a}
+  .clscard.sel{border-color:var(--gold);background:rgba(242,182,76,.12)}
+  .clscard .e{font-size:24px}.clscard .n{font-size:12px;font-weight:700;margin-top:3px}
+  .clscard .d{font-size:10px;color:var(--dim)}
+
+  .qbtn{background:#1a1e26;border:1px solid var(--line2);color:var(--ink);padding:10px;border-radius:9px;
+    font-size:15px;font-weight:700;cursor:pointer}
+  .qbtn:hover{border-color:var(--gold)}
+  .qbtn.right{background:rgba(151,196,89,.2);border-color:var(--green)}
+  .qbtn.wrong{background:rgba(226,75,74,.2);border-color:#e24b4a}
+
+  .facil{background:#171a21;border:1px solid var(--line2);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:.15s}
+  .facil:hover{border-color:var(--gold);background:#1d212a}
+  .facil .e{font-size:22px}.facil .n{font-size:11px;font-weight:700;margin-top:4px}
+
+  .steplist{display:flex;flex-direction:column;gap:6px}
+  .steplist .it{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--dim);padding:5px 8px;border-radius:8px}
+  .steplist .it.on{color:var(--ink);background:var(--card);border:1px solid var(--line2)}
+  .steplist .it b{color:var(--gold);font-variant-numeric:tabular-nums;width:16px}
+
+  .hint{text-align:center;font-size:11px;color:var(--dim);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- 1 COVER -->
+<section class="slide">
+  <div class="kick">A learn-to-play MMORPG for kids &amp; families</div>
+  <h1>Kingdom of <span style="color:var(--gold)">Kin</span></h1>
+  <p class="sub">A real-time, kid-safe MMORPG built <strong>on top of ArgantaLab</strong> — where the maths, reading and science a child truly learns is the key that unlocks a living world of hunting, taming, castles and clan warfare. One island, six worlds, playable together from day one.</p>
+  <div class="dna">
+    <span><b>Nexus</b> · the climb to 99</span>
+    <span><b>Ragnarok</b> · jobs &amp; grades</span>
+    <span><b>Pokémon</b> · the monster is the pet</span>
+    <span><b>Suikoden</b> · grow your castle</span>
+    <span><b>Total War</b> · send your army</span>
+  </div>
+  <p class="small" style="margin-top:34px">Use ← → arrow keys to navigate · concept v0.1 · nothing built yet</p>
+</section>
+
+<!-- 2 CORE LOOP -->
+<section class="slide">
+  <div class="eyebrow"><span class="n">01</span>The core loop</div>
+  <h2>The whole game is <span class="m">one sentence</span>, repeated deeper each season.</h2>
+  <div class="loop">
+    <div class="s"><b>Learn</b><span>Real drills in ArgantaLab</span></div><span class="a">→</span>
+    <div class="s"><b>Unlock</b><span>Knowledge opens the gates</span></div><span class="a">→</span>
+    <div class="s"><b>Hunt &amp; tame</b><span>Fight Kin — kill or befriend</span></div><span class="a">→</span>
+    <div class="s"><b>Grow</b><span>Level, grade, evolve</span></div><span class="a">→</span>
+    <div class="s"><b>Build</b><span>Fill your castle &amp; army</span></div><span class="a">→</span>
+    <div class="s"><b>Compete</b><span>Emblem Wars, then deeper</span></div>
+  </div>
+  <p class="sub" style="margin-top:30px">The genius of the fit: <strong>the thing that makes you stronger in the game is the thing a parent wants their kid doing anyway.</strong> Learning isn't a mini-game bolted on — it's the power source.</p>
+</section>
+
+<!-- 3 DNA -->
+<section class="slide">
+  <div class="eyebrow"><span class="n">02</span>The 5-pillar DNA</div>
+  <h2>Five loved games, <span class="m">one coherent whole</span>.</h2>
+  <div class="grid g3" style="margin-top:22px">
+    <div class="card"><div class="ico">🏯</div><h3>Nexus / Nexia</h3><p>Rats &amp; deer, your first horse, the climb to <strong>level 99</strong>, a dragon at the top. A persistent 2D world you walk with others.</p></div>
+    <div class="card"><div class="ico">⚔️</div><h3>Ragnarok</h3><p><strong>Base + Job Level</strong>, job-change "grades" at trials, hunting grounds by level band, simple skills on cooldown.</p></div>
+    <div class="card"><div class="ico">🐾</div><h3>Pokémon</h3><p>The hook: <strong>every monster is a Kin you can tame.</strong> Weaken, befriend, evolve — reusing ArgantaLab's real Kin system.</p></div>
+    <div class="card"><div class="ico">🏰</div><h3>Suikoden</h3><p>Each class has a <strong>castle</strong> you fill with recruited Kin, upgraded rooms and a trophy archive.</p></div>
+    <div class="card"><div class="ico">🗺️</div><h3>Total War</h3><p>Circles raise armies and <strong>send troops</strong> to contest regions — strategy in composition, resolved as a battle report.</p></div>
+    <div class="card" style="background:linear-gradient(180deg,var(--card2),var(--card))"><div class="ico">💎</div><h3>ArgantaLab</h3><p>Identity, diamonds, the Kin roster, mounts, the 6 worlds, the Keepers — <strong>already built.</strong> This is the multiplayer door in.</p></div>
+  </div>
+</section>
+
+<!-- 4 LEARNING BRIDGE -->
+<section class="slide">
+  <div class="eyebrow"><span class="n">03</span>The learning bridge — the special sauce</div>
+  <h2>Where does the learning <span class="m">actually happen?</span></h2>
+  <p class="sub">Three touchpoints. Learning is the <em>key</em>, never a tax on every swing.</p>
+  <div class="grid g3" style="margin-top:24px">
+    <div class="card"><span class="pill mvp">the gate</span><h3 style="margin-top:12px">Rings unlock dungeons</h3><p>Your <strong>daily ArgantaLab rings</strong> are your Focus. Fill a world's ring, its dungeon &amp; Job Trial open. Neglect it, the gate stays shut.</p></div>
+    <div class="card"><span class="pill mvp">the light touch</span><h3 style="margin-top:12px">A question to tame</h3><p>To <strong>befriend</strong> a weakened Kin you answer one quick question — the existing Friendship Window. Capturing is a joyful micro-moment.</p></div>
+    <div class="card"><span class="pill mvp">the real test</span><h3 style="margin-top:12px">Trials are quiz-battles</h3><p><strong>Keeper &amp; Job Trials</strong> are real quiz-battles at the child's year level. To grade up, you prove the maths.</p></div>
+  </div>
+  <p class="small" style="margin-top:20px"><b style="color:var(--coral)">⚑ Open decision:</b> this model is the proposed answer, not yet signed off — it's the dial we turn for more or less learning pressure.</p>
+</section>
+
+<!-- 5 WORLD MAP SKETCH -->
+<section class="slide" style="padding:4vh 5vw">
+  <div class="eyebrow"><span class="n">04</span>The world — ArgantaLab Island</div>
+  <div class="mapwrap">
+    <svg class="mapstage" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="7"/></filter>
+        <filter id="rough2"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+      </defs>
+      <!-- sea texture lines -->
+      <g stroke="#c9b485" stroke-width="1.2" opacity="0.5" fill="none" filter="url(#rough2)">
+        <path d="M40,70 q30,-10 60,0 t60,0"/><path d="M840,60 q30,-10 60,0 t60,0"/>
+        <path d="M60,510 q30,-10 60,0 t60,0"/><path d="M820,520 q30,-10 60,0 t60,0"/>
+      </g>
+      <!-- island landmass -->
+      <path filter="url(#rough)" d="M120,300 C90,220 150,150 250,160 C300,90 420,110 470,180 C540,120 640,140 660,200
+        C760,150 880,180 900,260 C960,300 950,410 880,430 C840,500 720,500 660,450
+        C560,510 430,500 400,440 C300,500 180,470 170,400 C110,390 100,340 120,300 Z"
+        fill="#cdb98a" stroke="#7a6034" stroke-width="4"/>
+      <!-- inner terrain tints -->
+      <g filter="url(#rough2)" opacity="0.5">
+        <ellipse cx="240" cy="400" rx="70" ry="45" fill="#e6c56a"/>       <!-- numeria dunes -->
+        <ellipse cx="365" cy="255" rx="60" ry="48" fill="#8bbf7a"/>       <!-- wordveil grove -->
+        <ellipse cx="505" cy="365" rx="66" ry="46" fill="#e0a3bd"/>       <!-- life meadow -->
+        <ellipse cx="625" cy="200" rx="60" ry="46" fill="#b6a6e6"/>       <!-- wonder sky -->
+        <ellipse cx="725" cy="405" rx="66" ry="46" fill="#8fc3e0"/>       <!-- world lagoon -->
+        <ellipse cx="850" cy="290" rx="58" ry="46" fill="#9bd08a"/>       <!-- logic circuit -->
+      </g>
+      <!-- the winding road -->
+      <path filter="url(#rough2)" fill="none" stroke="#6b5228" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"
+        d="M130,305 Q185,360 240,395 Q300,320 365,258 Q435,300 505,362 Q560,270 625,200 Q680,300 725,402 Q790,340 850,288 Q905,215 930,150"/>
+      <!-- stops -->
+      <g font-family="var(--sans)" text-anchor="middle">
+        <!-- helper: each stop = pin + label -->
+        <g><circle cx="130" cy="305" r="15" fill="#f4efe4" stroke="#7a6034" stroke-width="3"/><text x="130" y="311" font-size="15">⛵</text><text x="130" y="345" font-size="13" font-weight="700" fill="#4a3a1c">Seedling Cove</text><text x="130" y="360" font-size="10" fill="#6b5228">lv 1–9 · start</text></g>
+        <g><circle cx="240" cy="395" r="16" fill="#f4efe4" stroke="#7a6034" stroke-width="3"/><text x="240" y="401" font-size="15">🔢</text><text x="240" y="435" font-size="13" font-weight="700" fill="#4a3a1c">Numeria</text><text x="240" y="449" font-size="10" fill="#6b5228">Counthaven · lv 10–25</text></g>
+        <g><circle cx="365" cy="255" r="16" fill="#f4efe4" stroke="#7a6034" stroke-width="3"/><text x="365" y="261" font-size="15">📖</text><text x="365" y="228" font-size="13" font-weight="700" fill="#4a3a1c">Wordveil</text><text x="365" y="214" font-size="10" fill="#6b5228">Inkhollow · lv 25–40</text></g>
+        <g><circle cx="505" cy="362" r="16" fill="#f4efe4" stroke="#7a6034" stroke-width="3"/><text x="505" y="368" font-size="15">🌸</text><text x="505" y="402" font-size="13" font-weight="700" fill="#4a3a1c">Life Meadow</text><text x="505" y="416" font-size="10" fill="#6b5228">Heartwell · lv 40–55</text></g>
+        <g><circle cx="625" cy="200" r="16" fill="#f4efe4" stroke="#7a6034" stroke-width="3"/><text x="625" y="206" font-size="15">🌟</text><text x="625" y="173" font-size="13" font-weight="700" fill="#4a3a1c">Wonder Sky</text><text x="625" y="159" font-size="10" fill="#6b5228">Cloudspire · lv 55–70</text></g>
+        <g><circle cx="725" cy="402" r="16" fill="#f4efe4" stroke="#7a6034" stroke-width="3"/><text x="725" y="408" font-size="15">🌊</text><text x="725" y="442" font-size="13" font-weight="700" fill="#4a3a1c">World Lagoon</text><text x="725" y="456" font-size="10" fill="#6b5228">Tideport · lv 70–85</text></g>
+        <g><circle cx="850" cy="288" r="16" fill="#f4efe4" stroke="#7a6034" stroke-width="3"/><text x="850" y="294" font-size="15">⚡</text><text x="850" y="322" font-size="13" font-weight="700" fill="#4a3a1c">Logic Circuit</text><text x="850" y="336" font-size="10" fill="#6b5228">Bytefall · lv 85–95</text></g>
+        <g><path d="M930,128 l16,26 l-32,0 Z" fill="#f0997b" stroke="#7a3a1c" stroke-width="2"/><text x="930" y="118" font-size="13" font-weight="800" fill="#7a2a1c">The Apex</text><text x="930" y="176" font-size="10" fill="#7a2a1c">lv 95–99 · the Naga 🐉</text></g>
+      </g>
+      <!-- compass -->
+      <g transform="translate(64,470)" font-family="var(--sans)"><circle r="24" fill="#f4efe4" stroke="#7a6034" stroke-width="2"/><text y="-8" text-anchor="middle" font-size="11" font-weight="700" fill="#7a2a1c">N</text><path d="M0,-16 L5,4 L0,-1 L-5,4 Z" fill="#7a6034"/></g>
+    </svg>
+  </div>
+  <p class="small" style="margin-top:12px">One island, walked west → east by every class. Home <b style="color:var(--ink)">cities</b> are always safe; home <b style="color:var(--ink)">dungeons</b> are level-locked. (Rough sketch — real pixel art later.)</p>
+</section>
+
+<!-- 6 GAME SIMULATOR -->
+<section class="slide" style="padding:4vh 5vw">
+  <div class="eyebrow"><span class="n">05</span>Play the journey — click through it</div>
+  <div class="simrow">
+    <div class="device">
+      <div class="devtop"><div class="dotz"><i></i><i></i><i></i></div><div class="t" id="simTitle">login</div><div style="width:34px"></div></div>
+      <div class="screen"><div class="scene" id="simScene"></div></div>
+      <p class="hint">This is a clickable mockup of the real user journey — tap the buttons.</p>
+    </div>
+    <div>
+      <h3 style="font-size:16px;margin-bottom:12px;color:var(--ink)">The flow</h3>
+      <div class="steplist" id="simSteps"></div>
+      <button class="btn ghost" style="margin-top:14px;width:100%" onclick="simReset()">↻ Restart journey</button>
+    </div>
+  </div>
+</section>
+
+<!-- 7 BATTLE -->
+<section class="slide">
+  <div class="eyebrow"><span class="n">06</span>Battle system</div>
+  <h2>Kid-simple, tech-light, <span class="m">readable at a glance</span>.</h2>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card"><h3>Tab-target, not twitch</h3><p>Tap a Kin to target, auto-attack begins, fire up to <strong>4 skills</strong> on cooldown. No aiming or dodging — friendly for young hands and weak devices. Server-authoritative so nothing's cheatable.</p></div>
+    <div class="card"><h3>The 6-element wheel</h3><p>Every Kin has an element — pattern, order, truth, place, wonder, logic — and a readable tell (shields on the 3rd beat). Exploit the weakness for a Break. <span class="pill re">reuse</span></p></div>
+    <div class="card"><h3>Capture, live</h3><p>Drop a Kin low → a <strong>Befriend</strong> prompt → the Friendship Window (one question). It's not consumed from the shared spawn, so others can tame their own.</p></div>
+    <div class="card"><h3>No harsh death</h3><p>Lose and you <strong>faint</strong> — gentle return to town, no XP or item loss. Risk is wasted time, never punishment. Dungeons &amp; the Naga raid want a party of 2–6.</p></div>
+  </div>
+</section>
+
+<!-- 8 PROGRESSION -->
+<section class="slide" style="padding:5vh 6vw">
+  <div class="eyebrow"><span class="n">07</span>World &amp; progression</div>
+  <h2>Six classes, <span class="m">one shared road</span>.</h2>
+  <table>
+    <tr><th>Region</th><th>Levels</th><th>Home city</th><th>Class line — Grade 1 → 2 → 3</th><th>Keeper</th></tr>
+    <tr><td><b>Seedling Cove</b></td><td>1–9</td><td>—</td><td>no class yet — tutorial</td><td>—</td></tr>
+    <tr><td><b>Numeria</b></td><td>10–25</td><td>Counthaven</td><td>Cadet → Officer → General</td><td>Mira</td></tr>
+    <tr><td><b>Wordveil</b></td><td>25–40</td><td>Inkhollow</td><td>Interpreter → Diplomat → Ambassador</td><td>Sol</td></tr>
+    <tr><td><b>Life Meadow</b></td><td>40–55</td><td>Heartwell</td><td>Medic → Doctor → Surgeon</td><td>Kira</td></tr>
+    <tr><td><b>Wonder Sky</b></td><td>55–70</td><td>Cloudspire</td><td>Researcher → Scientist → Astronomer</td><td>Lyra</td></tr>
+    <tr><td><b>World Lagoon</b></td><td>70–85</td><td>Tideport</td><td>Surveyor → Cartographer → Geologist</td><td>Rho</td></tr>
+    <tr><td><b>Logic Circuit</b></td><td>85–95</td><td>Bytefall</td><td>Technician → Engineer → Architect</td><td>Vex</td></tr>
+    <tr><td><b>The Apex</b></td><td>95–99+</td><td>shared capital</td><td>all converge — the Naga raid 🐉</td><td>The Sage</td></tr>
+  </table>
+  <p class="small" style="margin-top:14px"><b style="color:var(--ink)">Two tracks:</b> Base Level (1–99) + Job Level (gates grade-ups). Four skills per class, ranked 1→5 — that's the whole tree.</p>
+</section>
+
+<!-- 9 CASTLE -->
+<section class="slide">
+  <div class="eyebrow"><span class="n">08</span>City &amp; castle — one template, six skins</div>
+  <h2>Build the engine <span class="m">once</span>, reskin per class.</h2>
+  <div class="grid g4" style="margin-top:22px">
+    <div class="card"><div class="ico">🏯</div><h3 style="font-size:15px">The Keep</h3><p>Job Trials &amp; grade-ups.</p></div>
+    <div class="card"><div class="ico">🐾</div><h3 style="font-size:15px">The Barracks</h3><p>House your Kin. <span class="pill re">reuse</span></p></div>
+    <div class="card"><div class="ico">🏪</div><h3 style="font-size:15px">Shop + Stable</h3><p>Gear + mounts. <span class="pill re">reuse</span></p></div>
+    <div class="card"><div class="ico">🛌</div><h3 style="font-size:15px">The Inn</h3><p>Heal &amp; rest.</p></div>
+    <div class="card"><div class="ico">🔨</div><h3 style="font-size:15px">The Forge</h3><p>Craft gear. <span class="pill scale">scale</span></p></div>
+    <div class="card"><div class="ico">🗺️</div><h3 style="font-size:15px">War Room</h3><p>Raise an army. <span class="pill scale">scale</span></p></div>
+    <div class="card"><div class="ico">⚔️</div><h3 style="font-size:15px">The Arena</h3><p>Duels &amp; wars. <span class="pill scale">scale</span></p></div>
+    <div class="card"><div class="ico">📖</div><h3 style="font-size:15px">The Archive</h3><p>Kin-dex &amp; trophies. <span class="pill scale">scale</span></p></div>
+  </div>
+  <p class="small" style="margin-top:18px">The Barracks isn't a new system — it's a doorway into your one existing Kin town. <b style="color:var(--ink)">Six castles, one roster.</b></p>
+</section>
+
+<!-- 10 PLANS -->
+<section class="slide" style="padding:5vh 6vw">
+  <div class="eyebrow"><span class="n">09</span>Start simple, scale as data</div>
+  <h2>Base plan <span class="m">vs</span> scale plan.</h2>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card" style="background:linear-gradient(180deg,rgba(151,196,89,.06),transparent)">
+      <span class="pill mvp">MVP · Season 0 — ship first</span>
+      <ul class="chk" style="margin-top:14px">
+        <li>Login via existing ArgantaLab account</li>
+        <li>Cove tutorial: move, attack, capture, free mount</li>
+        <li>Class select at lv 10 — <b>all six</b></li>
+        <li><b>All 6 worlds walkable</b>, one dungeon each</li>
+        <li>Tab-target combat + 4 skills + element wheel</li>
+        <li>Kill-or-tame reusing the Kin roster</li>
+        <li>Dungeon boss = quiz Job Trial → Grade 1→2→3</li>
+        <li>Rings gate dungeons — the learning bridge, live</li>
+        <li>Home city + mini-castle (Keep/Barracks/Shop/Inn)</li>
+        <li>Circle party (2–6) + safe chat · existing mounts</li>
+      </ul>
+    </div>
+    <div class="card" style="background:linear-gradient(180deg,rgba(167,139,250,.06),transparent)">
+      <span class="pill scale">Seasons 1+ — deferred, arrives as content</span>
+      <ul class="chk sc" style="margin-top:14px">
+        <li>Emblem Wars, War Room &amp; Arena</li>
+        <li>Full castle: Forge, Archive, upgrades</li>
+        <li>Extra dungeons per world &amp; hard modes</li>
+        <li>Gear crafting + a farmed <b>gold</b> economy</li>
+        <li>Kin breeding, more skills, sub-path forks</li>
+        <li>PvP duels &amp; player trading</li>
+        <li>Seasonal events &amp; cosmetic drops</li>
+        <li>Bespoke pixel art (starts on placeholders)</li>
+      </ul>
+      <p class="small" style="margin-top:12px">All of it is <b style="color:var(--ink)">data onto MVP schemas</b> — not a rebuild. That's why we design the slots now.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11 MISSING -->
+<section class="slide" style="padding:5vh 6vw">
+  <div class="eyebrow"><span class="n">10</span>Honest audit — what's missing</div>
+  <h2>The gaps between <span class="m">great concept</span> and shippable game.</h2>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="risk"><h4>1 · Learning-in-play loop</h4><p class="small">A kid could progress without a single question — fatal.</p><p class="fx"><b>Fix:</b> the 3-touchpoint bridge. Needs your sign-off.</p></div>
+    <div class="risk"><h4>2 · Combat feel</h4><p class="small">Tab-target vs. action changes the whole engine.</p><p class="fx"><b>Fix:</b> ship tab-target; revisit only if playtests feel flat.</p></div>
+    <div class="risk"><h4>3 · One currency</h4><p class="small">Diamonds are cosmetic — nothing farmed for gear/potions.</p><p class="fx"><b>Fix:</b> add <b>gold</b> from Kin drops; keep diamonds cosmetic.</p></div>
+    <div class="risk"><h4>4 · Gear depth</h4><p class="small">The Forge is a name only.</p><p class="fx"><b>Fix:</b> fixed gear per grade at MVP; crafting in S1.</p></div>
+    <div class="risk"><h4>5 · Retention</h4><p class="small">What brings a kid back tomorrow?</p><p class="fx"><b>Fix:</b> daily board + Kin-care harvest + ArgantaCup — all exist.</p></div>
+    <div class="risk"><h4>6 · Pacing &amp; balance</h4><p class="small">1→99 across six worlds; bands are guesses.</p><p class="fx"><b>Fix:</b> short sessions; treat bands as first-draft numbers.</p></div>
+  </div>
+</section>
+
+<!-- 12 ROADMAP -->
+<section class="slide" style="padding:5vh 6vw">
+  <div class="eyebrow"><span class="n">11</span>Roadmap</div>
+  <h2>Prove it's <span class="m">real</span>, then prove it's <span class="m">fun</span>, then scale.</h2>
+  <div class="grid g3" style="margin-top:22px">
+    <div class="card"><span class="pill gap">Phase 0</span><h3 style="margin-top:10px">Vertical slice</h3><p>Two players move &amp; fight in one server room. De-risks realtime + cheat-proofing before any content.</p></div>
+    <div class="card"><span class="pill mvp">Phase 1</span><h3 style="margin-top:10px">One world, end to end</h3><p>Cove → class → Numeria → hunt/tame → dungeon → grade-up. The "is it fun?" gate.</p></div>
+    <div class="card"><span class="pill mvp">Phase 2 · MVP</span><h3 style="margin-top:10px">All six worlds</h3><p>Roll the loop across every region + cities + party dungeons. Soft-launch to ArgantaLab families.</p></div>
+    <div class="card"><span class="pill scale">Phase 3</span><h3 style="margin-top:10px">Castles &amp; wars</h3><p>Full facilities, War Room, auto-resolved Emblem Wars. Suikoden + Total War switch on.</p></div>
+    <div class="card"><span class="pill scale">Phase 4+</span><h3 style="margin-top:10px">Live game</h3><p>Extra dungeons, crafting, gold, sub-paths, seasonal events, bespoke art.</p></div>
+    <div class="card" style="background:linear-gradient(180deg,var(--card2),var(--card))"><div class="ico">🎯</div><h3 style="margin-top:0">Decide first</h3><p>1 · learning bridge · 2 · the title · 3 · combat feel. Then we pick where to start.</p></div>
+  </div>
+</section>
+
+</div>
+
+<!-- BAR -->
+<div class="bar">
+  <div class="brand">Kingdom of <span>Kin</span></div>
+  <div class="dots" id="dots"></div>
+  <div class="navb">
+    <button onclick="go(cur-1)">‹</button>
+    <span class="cnt" id="cnt">1 / 12</span>
+    <button onclick="go(cur+1)">›</button>
+  </div>
+</div>
+
+<script>
+/* ---------- deck nav ---------- */
+const slides=[...document.querySelectorAll('.slide')];
+const dots=document.getElementById('dots');
+const cnt=document.getElementById('cnt');
+let cur=0;
+slides.forEach((_,i)=>{const d=document.createElement('i');d.onclick=()=>go(i);dots.appendChild(d)});
+function go(i){cur=Math.max(0,Math.min(slides.length-1,i));
+  slides.forEach((s,k)=>s.classList.toggle('active',k===cur));
+  [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===cur));
+  cnt.textContent=(cur+1)+' / '+slides.length;}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')go(cur+1);if(e.key==='ArrowLeft')go(cur-1)});
+go(0);
+
+/* ---------- game simulator ---------- */
+const CLASSES=[
+  {e:'🎖️',n:'Cadet',d:'numbers'},{e:'🗣️',n:'Interpreter',d:'language'},
+  {e:'⚕️',n:'Medic',d:'body'},{e:'🔭',n:'Researcher',d:'science'},
+  {e:'🧭',n:'Surveyor',d:'maps'},{e:'⚙️',n:'Technician',d:'logic'},
+];
+const FLOW=['Login','Seedling Cove','Choose class','World map','Hunt a Kin','Befriend it','Your castle','Grade up'];
+let simStep=0, chosen='Cadet', kinHp=100;
+
+const scene=document.getElementById('simScene');
+const simTitle=document.getElementById('simTitle');
+const simSteps=document.getElementById('simSteps');
+
+function renderSteps(){simSteps.innerHTML=FLOW.map((f,i)=>
+  `<div class="it ${i===simStep?'on':''}"><b>${i+1}</b> ${f}</div>`).join('')}
+
+function H(hud,stage,ctrls){return `
+  <div class="hud">${hud}</div>
+  <div class="stage">${stage}</div>
+  <div class="ctrls">${ctrls}</div>`}
+
+function draw(){
+  renderSteps(); simTitle.textContent=(FLOW[simStep]||'the loop').toLowerCase();
+  if(simStep===0){ // login
+    scene.innerHTML=`<div class="scene" style="align-items:center;justify-content:center;gap:14px;background:radial-gradient(600px 300px at 50% 0%,rgba(242,182,76,.14),#0f1116)">
+      <div style="font-size:40px">🏯</div>
+      <div style="font-weight:800;font-size:22px">Kingdom of Kin</div>
+      <div style="color:var(--dim);font-size:12px;margin-bottom:6px">one account with ArgantaLab</div>
+      <button class="btn" onclick="next()">▶ Sign in &amp; enter</button></div>`;
+  }else if(simStep===1){ // cove
+    scene.innerHTML=H(
+      `<span class="who">🧒 New Voyager</span><span class="lv">Lv 4 · Seedling Cove</span>`,
+      `<div style="position:absolute;inset:0;background:linear-gradient(180deg,#6fae5c,#4d8a3e)"></div>
+       <div style="position:relative;display:flex;gap:40px;align-items:flex-end">
+         <div class="sprite">🧒</div><div class="sprite" style="font-size:30px">🐀</div><div class="sprite" style="font-size:34px">🦌</div></div>
+       <div class="toast" id="tst" style="display:none"></div>`,
+      `<button class="btn" onclick="poke('You hit the rat! +5 XP')">⚔ Attack rat</button>
+       <button class="btn ghost" onclick="poke('🐴 You got the Coveback Pony!')">🐴 Ride pony</button>
+       <button class="btn glow" onclick="next()">Continue →</button>`);
+  }else if(simStep===2){ // class
+    scene.innerHTML=H(
+      `<span class="who">Choose your calling</span><span class="lv">Lv 10</span>`,
+      `<div style="position:absolute;inset:0;padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-content:center">
+        ${CLASSES.map(c=>`<div class="clscard ${c.n===chosen?'sel':''}" onclick="pick('${c.n}')">
+          <div class="e">${c.e}</div><div class="n">${c.n}</div><div class="d">${c.d}</div></div>`).join('')}</div>`,
+      `<button class="btn" onclick="next()">Confirm ${chosen} →</button>`);
+  }else if(simStep===3){ // map
+    scene.innerHTML=H(
+      `<span class="who">🧒 ${chosen}</span><span class="lv">Lv 10 · World map</span>`,
+      `<div style="position:absolute;inset:0;background:#e6d6b0"></div>
+       <svg viewBox="0 0 500 240" style="position:absolute;inset:0;width:100%;height:100%">
+         <path d="M40,140 Q120,80 200,120 Q300,70 400,120 Q460,150 470,110" fill="none" stroke="#6b5228" stroke-width="3" stroke-dasharray="2 7"/>
+         <circle cx="40" cy="140" r="11" fill="#fff" stroke="#7a6034" stroke-width="2"/><text x="40" y="145" font-size="12" text-anchor="middle">⛵</text>
+         <circle cx="200" cy="120" r="12" fill="#f2b64c" stroke="#7a6034" stroke-width="2"/><text x="200" y="125" font-size="12" text-anchor="middle">🔢</text>
+         <circle cx="470" cy="110" r="10" fill="#f0997b" stroke="#7a2a1c" stroke-width="2"/><text x="470" y="115" font-size="11" text-anchor="middle">🐉</text>
+         <text x="40" y="168" font-size="10" text-anchor="middle" fill="#4a3a1c">Cove ✓</text>
+         <text x="200" y="150" font-size="10" text-anchor="middle" fill="#4a3a1c" font-weight="700">Numeria</text>
+         <text x="115" y="100" font-size="9" fill="#7a2a1c">you ▸</text>
+       </svg>`,
+      `<button class="btn" onclick="next()">🚶 Travel to Numeria →</button>`);
+  }else if(simStep===4){ // battle
+    const w=kinHp+'%';
+    scene.innerHTML=H(
+      `<span class="who">🧒 ${chosen} · Lv 12</span><span class="lv" style="color:var(--coral)">Countfox 🦊 · weak to pattern</span>`,
+      `<div style="position:absolute;inset:0;background:linear-gradient(180deg,#d9b25a,#b98f3c)"></div>
+       <div style="position:absolute;top:14px;right:14px;text-align:right">
+         <div style="font-size:11px;color:#3a2a10;font-weight:700;margin-bottom:3px">Countfox</div>
+         <div class="hpbar"><i id="khp" style="width:${w}"></i></div></div>
+       <div style="position:relative;display:flex;gap:70px;align-items:flex-end;margin-top:20px">
+         <div class="sprite">🧒</div><div class="sprite" id="foe" style="font-size:40px">🦊</div></div>
+       <div class="toast" id="tst" style="display:none"></div>`,
+      `<button class="btn sk" onclick="hit(18,'Strike')">Strike<small>basic</small></button>
+       <button class="btn sk" onclick="hit(34,'Pattern Break')">Pattern Break<small>weakness ✦</small></button>
+       <button class="btn sk" onclick="hit(12,'Guard')">Guard<small>defend</small></button>
+       ${kinHp<=30?`<button class="btn glow" onclick="next()">🤝 Befriend!</button>`:''}`);
+  }else if(simStep===5){ // friendship window
+    scene.innerHTML=H(
+      `<span class="who">🤝 Friendship Window</span><span class="lv">answer to tame</span>`,
+      `<div style="position:absolute;inset:0;background:radial-gradient(400px 200px at 50% 30%,rgba(242,182,76,.18),#12141a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+        <div class="sprite" style="font-size:44px">🦊</div>
+        <div style="font-weight:700;font-size:18px">7 × 8 = ?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:220px">
+          <button class="qbtn" onclick="ans(this,0)">54</button>
+          <button class="qbtn" onclick="ans(this,1)">56</button>
+          <button class="qbtn" onclick="ans(this,0)">48</button>
+          <button class="qbtn" onclick="ans(this,0)">63</button></div>
+        <div class="toast" id="tst" style="display:none;position:static;transform:none"></div></div>`,
+      `<span class="small">answer correctly to befriend the Countfox</span>`);
+  }else if(simStep===6){ // castle
+    scene.innerHTML=H(
+      `<span class="who">🏯 Counthaven Castle</span><span class="lv">${chosen}'s home</span>`,
+      `<div style="position:absolute;inset:0;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:center;background:linear-gradient(180deg,#20242e,#12141a)">
+        <div class="facil" onclick="poke('🐾 Your Countfox roams here + 2 more Kin')"><div class="e">🐾</div><div class="n">Barracks</div></div>
+        <div class="facil" onclick="poke('🏪 Buy gear + your next mount')"><div class="e">🏪</div><div class="n">Shop + Stable</div></div>
+        <div class="facil" onclick="poke('🛌 Fully healed!')"><div class="e">🛌</div><div class="n">Inn</div></div>
+        <div class="facil glow" onclick="next()"><div class="e">🏯</div><div class="n">The Keep ▸ trial</div></div>
+        <div class="toast" id="tst" style="display:none"></div></div>`,
+      `<span class="small">tap The Keep to take your Job Trial</span>`);
+  }else if(simStep===7){ // grade up trial
+    scene.innerHTML=H(
+      `<span class="who">🏯 Job Trial · Keeper Mira</span><span class="lv">prove your maths</span>`,
+      `<div style="position:absolute;inset:0;background:radial-gradient(400px 200px at 50% 20%,rgba(167,139,250,.2),#12141a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+        <div class="sprite" style="font-size:40px">🧙‍♀️</div>
+        <div style="font-weight:700;font-size:17px">15 + 27 = ?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:220px">
+          <button class="qbtn" onclick="grade(this,0)">32</button>
+          <button class="qbtn" onclick="grade(this,1)">42</button>
+          <button class="qbtn" onclick="grade(this,0)">44</button>
+          <button class="qbtn" onclick="grade(this,0)">52</button></div>
+        <div class="toast" id="tst" style="display:none;position:static;transform:none"></div></div>`,
+      `<span class="small">win to grade up: Cadet → Officer</span>`);
+  }else{ // done
+    scene.innerHTML=`<div class="scene" style="align-items:center;justify-content:center;gap:12px;background:radial-gradient(500px 260px at 50% 20%,rgba(151,196,89,.16),#0f1116)">
+      <div style="font-size:44px">🎉</div>
+      <div style="font-weight:800;font-size:20px">That's the loop!</div>
+      <div style="color:var(--mut);font-size:13px;text-align:center;max-width:280px">Learn → unlock → hunt &amp; tame → grow → build → and now, contest the Emblem Wars with your circle.</div>
+      <button class="btn" onclick="simReset()">↻ Play again</button></div>`;
+  }
+}
+function next(){simStep++;draw()}
+function pick(n){chosen=n;draw()}
+function poke(msg){const t=document.getElementById('tst');if(t){t.textContent=msg;t.style.display='block';clearTimeout(window._tt);window._tt=setTimeout(()=>t.style.display='none',1600)}}
+function hit(dmg,name){kinHp=Math.max(0,kinHp-dmg);const b=document.getElementById('khp');if(b)b.style.width=kinHp+'%';
+  const f=document.getElementById('foe');if(f){f.style.transform='translateX(6px) rotate(6deg)';setTimeout(()=>f.style.transform='',150)}
+  poke(name+'! −'+dmg);if(kinHp<=30)draw();}
+function ans(el,ok){if(ok){el.classList.add('right');poke('🎉 Countfox befriended!');setTimeout(next,900)}else{el.classList.add('wrong');poke('Not quite — try again');setTimeout(()=>el.classList.remove('wrong'),700)}}
+function grade(el,ok){if(ok){el.classList.add('right');poke('⭐ Grade up! Cadet → Officer');chosen='Officer';setTimeout(next,1100)}else{el.classList.add('wrong');setTimeout(()=>el.classList.remove('wrong'),700)}}
+function simReset(){simStep=0;chosen='Cadet';kinHp=100;draw()}
+draw();
+</script>
+</body>
+</html>

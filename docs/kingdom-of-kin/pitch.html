@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kingdom of Kin — Concept & Plan</title>
+<style>
+  :root{
+    --bg:#0e0f13; --bg2:#15171d; --card:#1b1e26; --card2:#22262f;
+    --line:#2c303b; --line2:#3a3f4d;
+    --ink:#eef1f6; --mut:#9aa2b1; --dim:#6b7280;
+    --gold:#f2b64c; --gold2:#e0982a;
+    --teal:#4fd1c5; --violet:#a78bfa; --coral:#f0997b; --green:#97c459; --blue:#85b7eb; --pink:#ed93b1;
+    --radius:14px;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+
+  /* layout */
+  .wrap{display:grid;grid-template-columns:220px 1fr;max-width:1180px;margin:0 auto}
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:28px 18px;border-right:1px solid var(--line)}
+  nav .brand{font-weight:700;font-size:17px;letter-spacing:.2px;margin-bottom:2px}
+  nav .brand span{color:var(--gold)}
+  nav .tag{font-size:11px;color:var(--dim);margin-bottom:22px;text-transform:uppercase;letter-spacing:1.5px}
+  nav a{display:block;font-size:13.5px;color:var(--mut);padding:7px 10px;border-radius:8px;margin-bottom:2px;transition:.15s}
+  nav a:hover{background:var(--card);color:var(--ink)}
+  nav a .n{color:var(--dim);font-variant-numeric:tabular-nums;margin-right:8px;font-size:12px}
+  main{padding:0 0 120px}
+  section{padding:56px 52px;border-bottom:1px solid var(--line)}
+  @media(max-width:860px){.wrap{grid-template-columns:1fr}nav{display:none}section{padding:40px 22px}}
+
+  /* type */
+  h1{font-size:44px;line-height:1.1;letter-spacing:-.5px;font-weight:800}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+  h2 .num{background:var(--gold);color:#1a1204;width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+  h3{font-size:20px;font-weight:700;margin-bottom:6px}
+  h4{font-size:15px;font-weight:700;margin-bottom:4px}
+  p{color:var(--mut);font-size:15px}
+  p strong,li strong{color:var(--ink);font-weight:650}
+  .lead{font-size:18px;color:#c7cdd8;max-width:64ch}
+  .small{font-size:13px;color:var(--dim)}
+
+  /* hero */
+  .hero{padding:70px 52px 60px;background:radial-gradient(1200px 400px at 20% -10%,rgba(242,182,76,.10),transparent),var(--bg)}
+  .hero .kick{color:var(--gold);font-size:13px;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:18px}
+  .hero .lead{margin-top:20px}
+  .dna{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}
+  .dna span{font-size:12px;padding:6px 13px;border-radius:20px;border:1px solid var(--line2);color:#c7cdd8;background:var(--card)}
+  .dna span b{color:var(--gold);font-weight:700}
+
+  /* cards + grid */
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .card.tint{background:linear-gradient(180deg,var(--card2),var(--card))}
+  .ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px;background:rgba(242,182,76,.12)}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.3px}
+  .pill.mvp{background:rgba(151,196,89,.16);color:var(--green)}
+  .pill.scale{background:rgba(167,139,250,.16);color:var(--violet)}
+  .pill.gap{background:rgba(240,153,123,.16);color:var(--coral)}
+  .pill.reuse{background:rgba(79,209,197,.14);color:var(--teal)}
+
+  /* loop */
+  .loop{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+  .loop .step{background:var(--card);border:1px solid var(--line2);border-radius:10px;padding:12px 15px;font-size:13.5px;flex:1;min-width:130px}
+  .loop .step b{color:var(--gold);display:block;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+  .loop .arw{color:var(--dim);font-size:18px}
+
+  /* journey */
+  .steps{counter-reset:s;display:grid;gap:12px}
+  .step-row{display:grid;grid-template-columns:52px 1fr;gap:18px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .step-row .idx{counter-increment:s;font-size:22px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
+  .step-row .idx::before{content:counter(s,decimal-leading-zero)}
+  .step-row .scr{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:5px}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700}
+  td{color:var(--mut)}td b{color:var(--ink)}
+  tr:last-child td{border-bottom:none}
+
+  /* checklist */
+  ul.chk{list-style:none;display:grid;gap:9px}
+  ul.chk li{padding-left:26px;position:relative;font-size:14px;color:var(--mut)}
+  ul.chk li::before{content:"";position:absolute;left:0;top:6px;width:14px;height:14px;border-radius:4px;border:2px solid var(--green)}
+  ul.chk.scale li::before{border-color:var(--violet)}
+  ul.chk li b{color:var(--ink)}
+
+  /* two-plan */
+  .plan{border-radius:var(--radius);padding:24px;border:1px solid var(--line)}
+  .plan.base{background:linear-gradient(180deg,rgba(151,196,89,.06),transparent)}
+  .plan.scl{background:linear-gradient(180deg,rgba(167,139,250,.06),transparent)}
+  .plan h3{display:flex;align-items:center;gap:10px}
+
+  /* risks */
+  .risk{border-left:3px solid var(--coral);background:var(--card);padding:14px 18px;border-radius:0 10px 10px 0}
+  .risk h4{color:var(--coral)}
+  .fix{color:var(--teal);font-size:13px;margin-top:4px}
+  .fix b{color:var(--teal)}
+
+  /* roadmap */
+  .road{display:grid;gap:0}
+  .phase{display:grid;grid-template-columns:130px 1fr;gap:20px;padding:18px 0;border-bottom:1px dashed var(--line)}
+  .phase .when{font-weight:700;color:var(--gold);font-size:14px}
+  .phase .when small{display:block;color:var(--dim);font-weight:400;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+  .foot{padding:40px 52px;color:var(--dim);font-size:12.5px}
+  .kbd{font-family:ui-monospace,monospace;font-size:12px;background:var(--card2);border:1px solid var(--line2);padding:1px 6px;border-radius:5px;color:#c7cdd8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">Kingdom of <span>Kin</span></div>
+  <div class="tag">concept · v0.1</div>
+  <a href="#vision"><span class="n">01</span>Vision</a>
+  <a href="#loop"><span class="n">02</span>The core loop</a>
+  <a href="#dna"><span class="n">03</span>The 5-pillar DNA</a>
+  <a href="#learn"><span class="n">04</span>The learning bridge</a>
+  <a href="#journey"><span class="n">05</span>User journey</a>
+  <a href="#battle"><span class="n">06</span>Battle system</a>
+  <a href="#world"><span class="n">07</span>World &amp; progression</a>
+  <a href="#castle"><span class="n">08</span>City &amp; castle</a>
+  <a href="#wars"><span class="n">09</span>Emblem Wars</a>
+  <a href="#base"><span class="n">10</span>Base plan (MVP)</a>
+  <a href="#scale"><span class="n">11</span>Scale plan</a>
+  <a href="#missing"><span class="n">12</span>What's missing</a>
+  <a href="#road"><span class="n">13</span>Roadmap</a>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero" id="vision">
+  <div class="kick">A learn-to-play MMORPG for kids &amp; families</div>
+  <h1>Kingdom of Kin</h1>
+  <p class="lead">A real-time, kid-safe MMORPG built <b>on top of ArgantaLab</b> — where the maths, reading and science a child actually learns is the key that unlocks a living world of hunting, taming, castles and clan warfare. One island, six worlds, playable together from day one.</p>
+  <div class="dna">
+    <span><b>Nexus</b> — the climb to 99 &amp; the dragon</span>
+    <span><b>Ragnarok</b> — jobs &amp; grades</span>
+    <span><b>Pokémon</b> — the monster is the pet</span>
+    <span><b>Suikoden</b> — grow your castle</span>
+    <span><b>Total War</b> — send your army</span>
+  </div>
+</div>
+
+<!-- CORE LOOP -->
+<section id="loop">
+  <h2><span class="num">02</span>The core loop</h2>
+  <p class="lead" style="margin-bottom:26px">The whole game is one sentence, repeated deeper each season:</p>
+  <div class="loop">
+    <div class="step"><b>Learn</b>Do real drills in ArgantaLab</div>
+    <span class="arw">→</span>
+    <div class="step"><b>Unlock</b>Knowledge opens the world's gates</div>
+    <span class="arw">→</span>
+    <div class="step"><b>Hunt &amp; tame</b>Fight Kin — kill for XP or befriend</div>
+    <span class="arw">→</span>
+    <div class="step"><b>Grow</b>Level your hero, grade your job, evolve your Kin</div>
+    <span class="arw">→</span>
+    <div class="step"><b>Build</b>Fill your castle, raise your circle's army</div>
+    <span class="arw">→</span>
+    <div class="step"><b>Compete</b>Contest the Emblem Wars, then go deeper</div>
+  </div>
+  <p class="small" style="margin-top:18px">The genius of the fit: <b style="color:var(--ink)">the thing that makes you stronger in the game is the thing a parent wants their kid doing anyway.</b> Learning is not a mini-game bolted on — it is the power source.</p>
+</section>
+
+<!-- DNA -->
+<section id="dna">
+  <h2><span class="num">03</span>What we take from each pillar</h2>
+  <div class="grid g3">
+    <div class="card"><div class="ico">🏯</div><h3>Nexus / Nexia</h3><p>The emotional spine you grew up on: start killing rats &amp; deer, ride your first horse, climb to <b>level 99</b>, and slay a dragon at the top. A persistent 2D world you walk with others.</p></div>
+    <div class="card"><div class="ico">⚔️</div><h3>Ragnarok</h3><p>The progression skeleton: <b>Base Level + Job Level</b>, job-change "grades" at trials, hunting grounds tuned by level band, simple readable skills on cooldown.</p></div>
+    <div class="card"><div class="ico">🐾</div><h3>Pokémon</h3><p>The hook that makes it ours: <b>every monster is a Kin you can tame.</b> Weaken it, befriend it, and it grows and evolves alongside you — reusing ArgantaLab's real Kin system.</p></div>
+    <div class="card"><div class="ico">🏰</div><h3>Suikoden</h3><p>The home you build: each class has a <b>castle</b> you fill with recruited Kin, upgraded facilities, and a trophy archive. A reason to keep coming back that isn't just numbers.</p></div>
+    <div class="card"><div class="ico">🗺️</div><h3>Total War</h3><p>The social endgame: circles raise armies from their Kin and heroes and <b>send troops</b> to contest regions — strategy in composition, not twitch, resolved as a battle report.</p></div>
+    <div class="card tint"><div class="ico">💎</div><h3>ArgantaLab (the base)</h3><p>Identity, the diamond economy, the Kin roster, the mount ladder, the 6 learning worlds, the Keepers — <b>already built.</b> Kingdom of Kin is the multiplayer doorway into it.</p></div>
+  </div>
+</section>
+
+<!-- LEARNING BRIDGE -->
+<section id="learn">
+  <h2><span class="num">04</span>The learning bridge — the special sauce</h2>
+  <p class="lead" style="margin-bottom:24px">The one question every educational game must answer: <b>where does the learning actually happen?</b> Our answer is three touchpoints — learning is the <i>key</i>, never a tax on every swing.</p>
+  <div class="grid g3">
+    <div class="card"><span class="pill mvp">the gate</span><h3 style="margin-top:12px">Rings unlock dungeons</h3><p>Your <b>daily ArgantaLab rings</b> (real drills, done in the main app) are your Focus. Fill a world's ring and that world's dungeon &amp; Job Trial open. Neglect a subject and its gate stays shut.</p></div>
+    <div class="card"><span class="pill mvp">the light touch</span><h3 style="margin-top:12px">A question to tame</h3><p>To <b>befriend</b> a weakened Kin, you answer one quick question in the Friendship Window — the existing ArgantaLab mechanic. Capturing is a tiny, joyful learning moment.</p></div>
+    <div class="card"><span class="pill mvp">the real test</span><h3 style="margin-top:12px">Trials are quiz-battles</h3><p><b>Keeper &amp; Job Trials</b> are true quiz-battles at the child's own year level, powered by KinQuest's existing quiz engine. To grade up from Cadet to Officer, you prove the maths.</p></div>
+  </div>
+  <p class="small" style="margin-top:18px"><b style="color:var(--coral)">Open decision:</b> this 3-touchpoint model is the proposed answer, not yet signed off. It keeps moment-to-moment combat fun and action-driven while making knowledge the source of progression. If we want <i>more</i> learning pressure (e.g. answering to cast a skill) or <i>less</i>, this is the dial to turn.</p>
+</section>
+
+<!-- USER JOURNEY -->
+<section id="journey">
+  <h2><span class="num">05</span>User journey — screen by screen</h2>
+  <p class="lead" style="margin-bottom:24px">The pitchable walkthrough, from login to endgame. Every screen re-uses ArgantaLab systems where a <span class="pill reuse">reuse</span> tag appears.</p>
+  <div class="steps">
+    <div class="step-row"><div class="idx"></div><div><div class="scr">Login</div><h4>Same account, one tap in</h4><p>Sign in with the existing ArgantaLab login. Your identity, diamonds and Kin roster are already there. <span class="pill reuse">reuse: auth + diamonds</span></p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">Seedling Cove — tutorial</div><h4>Rats, deer, and your first horse</h4><p>Land on the Cove with no class. Learn to move (joystick), attack, and capture on gentle critters. Claim a free starter mount — the "ride a horse" beat. <span class="pill reuse">reuse: Joystick, MountSprite</span></p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">Class select — ~level 10</div><h4>Choose one of six callings</h4><p>Pick your class freely: Cadet, Interpreter, Medic, Researcher, Surveyor, or Technician. This sets your home city — but not where you can play.</p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">Home city</div><h4>Meet your Keeper, see your castle</h4><p>One-time warp to your home city (always safe). Get your first skill and starter gear. Your home dungeon shows its level lock. <span class="pill reuse">reuse: Keepers Mira/Sol/…</span></p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">World map</div><h4>Detour to Numeria, the beginner world</h4><p>Since your hometown may be high-level, you warp to Numeria — tuned for newcomers — and begin the shared journey west-to-east. Fast-travel between visited cities is free.</p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">Hunting grounds</div><h4>The monster is the Kin</h4><p>Fight wild Kin for Base &amp; Job XP — or weaken and befriend them into your roster, where they evolve as your bond grows. <span class="pill reuse">reuse: Kin catalog + Nexus roster</span></p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">The dungeon &amp; the trial</div><h4>Beat the Keeper, change your grade</h4><p>With your rings filled, the region's single dungeon opens. Its boss is a quiz-battle Job Trial — win, and grade up (Cadet → Officer → General).</p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">The castle</div><h4>Store, care, craft, upgrade</h4><p>Return home to house your Kin in the Barracks, buy mounts at the Stable, heal at the Inn, and track your collection in the Archive. <span class="pill reuse">reuse: careKin, harvest, mount shop</span></p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">The Apex — endgame</div><h4>Level 99, and the dragon</h4><p>All classes converge at the summit for the Council of Elders trial and a co-op raid against the corrupted Naga. Post-99, hunting becomes permanent stat gains.</p></div></div>
+    <div class="step-row"><div class="idx"></div><div><div class="scr">Emblem Wars — social endgame</div><h4>Your circle vs. the world</h4><p>From the War Room, your circle raises an army from its Kin and heroes and contests a region's shrine. Glory and cosmetics only — no losses. <span class="pill reuse">reuse: ArgantaCup, circles</span></p></div></div>
+  </div>
+</section>
+
+<!-- BATTLE -->
+<section id="battle">
+  <h2><span class="num">06</span>Battle system</h2>
+  <p class="lead" style="margin-bottom:22px">Kid-simple, tech-light, readable at a glance. Deliberately minimal at launch — depth is added as data, not rewrites.</p>
+  <div class="grid g2">
+    <div class="card"><h3>Overworld combat</h3><p style="margin-bottom:10px"><b>Tab-target, not twitch.</b> Tap a Kin to target, auto-attack begins, and you fire up to <b>4 skills</b> on cooldowns. HP &amp; a resource bar. No aiming, no dodging skill-shots — friendly for young hands and weak devices.</p><p class="small">Server-authoritative resolution (Colyseus) so nothing is cheatable, but the maths is simple: attack vs. defense, plus the 6-element weakness wheel that already exists.</p></div>
+    <div class="card"><h3>The 6-element wheel</h3><p style="margin-bottom:10px">Every Kin has an element — <b>pattern, order, truth, place, wonder, logic</b> — and a readable "tell" (shields on the 3rd beat, heals when you miss). Exploit the weakness for a Break. <span class="pill reuse">reuse: elements + gimmicks</span></p><p class="small">This is the one layer of strategy, and it's the same wheel used everywhere else in ArgantaLab, so it's already balanced and tested.</p></div>
+    <div class="card"><h3>Capture, in a live world</h3><p style="margin-bottom:10px">Drop a Kin below a HP threshold and a <b>Befriend</b> prompt appears. Accept it to open the Friendship Window (one question). Succeed and it joins your roster; the Kin isn't "used up," so others nearby can tame their own.</p><p class="small">Solves the Pokémon-in-an-MMO problem: taming is a personal moment layered on shared combat.</p></div>
+    <div class="card"><h3>No harsh death</h3><p style="margin-bottom:10px">Lose a fight and you <b>faint</b> — a gentle return to the nearest town, no XP or item loss. Risk is "you wasted time," never "you were punished." Correct for a kids' game and for keeping the tone warm.</p><p class="small">Dungeons and the Naga raid ask for a party (2–6, your circle) — the only content that expects teamwork.</p></div>
+  </div>
+</section>
+
+<!-- WORLD -->
+<section id="world">
+  <h2><span class="num">07</span>World &amp; progression</h2>
+  <p class="lead" style="margin-bottom:20px">One island, eight stops, walked in the same order by every class. Home <b>cities</b> are always safe; home <b>dungeons</b> are level-locked.</p>
+  <table>
+    <tr><th>Region</th><th>Levels</th><th>Home city</th><th>Class line (Grade 1→2→3)</th><th>Keeper</th></tr>
+    <tr><td><b>Seedling Cove</b></td><td>1–9</td><td>—</td><td>no class yet — tutorial</td><td>—</td></tr>
+    <tr><td><b>Numeria</b></td><td>10–25</td><td>Counthaven</td><td>Cadet → Officer → General</td><td>Mira</td></tr>
+    <tr><td><b>Wordveil</b></td><td>25–40</td><td>Inkhollow</td><td>Interpreter → Diplomat → Ambassador</td><td>Sol</td></tr>
+    <tr><td><b>Life Meadow</b></td><td>40–55</td><td>Heartwell</td><td>Medic → Doctor → Surgeon</td><td>Kira</td></tr>
+    <tr><td><b>Wonder Sky</b></td><td>55–70</td><td>Cloudspire</td><td>Researcher → Scientist → Astronomer</td><td>Lyra</td></tr>
+    <tr><td><b>World Lagoon</b></td><td>70–85</td><td>Tideport</td><td>Surveyor → Cartographer → Geologist</td><td>Rho</td></tr>
+    <tr><td><b>Logic Circuit</b></td><td>85–95</td><td>Bytefall</td><td>Technician → Engineer → Architect</td><td>Vex</td></tr>
+    <tr><td><b>The Apex</b></td><td>95–99+</td><td>shared capital</td><td>all classes converge — the Naga raid</td><td>The Sage</td></tr>
+  </table>
+  <p class="small" style="margin-top:16px"><b style="color:var(--ink)">Two progression tracks:</b> Base Level (1–99, overall power) and Job Level (fills from hunting, spends on skill ranks and gates the grade-up trials). Four skills per class, ranked 1→5 — that's the whole tree.</p>
+</section>
+
+<!-- CASTLE -->
+<section id="castle">
+  <h2><span class="num">08</span>City &amp; castle — one template, six skins</h2>
+  <p class="lead" style="margin-bottom:22px">Every home city is built from the <b>same reusable facility schema</b> — build the engine once, reskin the name, Keeper and shop per class.</p>
+  <div class="grid g4">
+    <div class="card"><h4>🏯 The Keep</h4><p class="small">Job Trials &amp; grade-up ceremonies.</p></div>
+    <div class="card"><h4>🐾 The Barracks</h4><p class="small">House your Kin. <span class="pill reuse">reuse</span></p></div>
+    <div class="card"><h4>🏪 The Shop + Stable</h4><p class="small">Class gear + the mount ladder. <span class="pill reuse">reuse</span></p></div>
+    <div class="card"><h4>🛌 The Inn</h4><p class="small">Heal &amp; rest.</p></div>
+    <div class="card"><h4>🔨 The Forge</h4><p class="small">Craft &amp; upgrade gear. <span class="pill scale">scale</span></p></div>
+    <div class="card"><h4>🗺️ The War Room</h4><p class="small">Raise an army, target a region. <span class="pill scale">scale</span></p></div>
+    <div class="card"><h4>⚔️ The Arena</h4><p class="small">Duels &amp; war battle-reports. <span class="pill scale">scale</span></p></div>
+    <div class="card"><h4>📖 The Archive</h4><p class="small">Kin-dex &amp; trophy hall. <span class="pill scale">scale</span></p></div>
+  </div>
+  <p class="small" style="margin-top:16px">The Barracks is <b style="color:var(--ink)">not a new system</b> — it's a themed doorway into your one existing Nexus Kin town. Six castles, one roster.</p>
+</section>
+
+<!-- WARS -->
+<section id="wars">
+  <h2><span class="num">09</span>Emblem Wars — Total War, kid-scaled</h2>
+  <div class="grid g3">
+    <div class="card"><div class="ico">🧮</div><h4>Compose</h4><p>An army = each member's hero (class + grade) plus their befriended Kin, grouped into <b>Regiments by element</b>. Strength = Kin power × bond tier × count.</p></div>
+    <div class="card"><div class="ico">📍</div><h4>Deploy</h4><p>From the War Room, the circle sends Heroes &amp; Regiments to contest a region's shrine. The strategy is <b>composition &amp; targeting</b> — no live micro.</p></div>
+    <div class="card"><div class="ico">🎬</div><h4>Resolve</h4><p>Strength + element bonuses + a small variance roll → winner &amp; margin, played back as a <b>battle report</b> in the Arena. Cosmetic &amp; glory stakes only.</p></div>
+  </div>
+  <p class="small" style="margin-top:16px"><b style="color:var(--coral)">Scope flag:</b> this is auto-resolve, deliberately not a live RTS. A playable tactical battle screen is a much larger build — a Season 2+ decision, not a launch feature.</p>
+</section>
+
+<!-- BASE PLAN -->
+<section id="base">
+  <h2><span class="num">10</span>Base plan — the MVP ("Season 0")</h2>
+  <p class="lead" style="margin-bottom:22px">Goal: prove the core loop is <b>fun and educational</b>. All six worlds explorable from day one, but one dungeon each and the thinnest version of every other system.</p>
+  <div class="grid g2">
+    <div class="plan base">
+      <h3><span class="pill mvp">ship this first</span></h3>
+      <ul class="chk" style="margin-top:16px">
+        <li><b>Login</b> via existing ArgantaLab account (no new sign-up)</li>
+        <li><b>Cove tutorial</b>: move, attack, capture, free starter mount</li>
+        <li><b>Class select</b> at level 10 — all six available</li>
+        <li><b>All 6 worlds walkable</b> with Kin hunting grounds</li>
+        <li><b>Tab-target combat</b>: auto-attack + 4 skills + element wheel</li>
+        <li><b>Kill-or-tame</b> loop reusing the Kin roster &amp; Friendship Window</li>
+        <li><b>One dungeon per world</b>, boss = quiz-battle Job Trial</li>
+        <li><b>Base + Job Level</b> to 99, Grade 1→2→3</li>
+        <li><b>Rings gate dungeons</b> — the learning bridge, live</li>
+        <li><b>Home city + mini-castle</b>: Keep, Barracks, Shop, Inn</li>
+        <li><b>Circle party</b> (2–6) for dungeons, circle-safe chat</li>
+        <li>Existing <b>mount ladder</b> with swim/flier gates</li>
+      </ul>
+    </div>
+    <div class="plan scl">
+      <h3><span class="pill scale">explicitly deferred</span></h3>
+      <ul class="chk scale" style="margin-top:16px">
+        <li>Emblem Wars, War Room &amp; Arena</li>
+        <li>Full castle: Forge, Archive, facility upgrades</li>
+        <li>Extra dungeons per world &amp; hard modes</li>
+        <li>Gear crafting depth &amp; a farmed gold economy</li>
+        <li>Kin breeding, more skills, sub-path forks</li>
+        <li>PvP duels &amp; player trading</li>
+        <li>Seasonal events &amp; cosmetic drops</li>
+        <li>Bespoke pixel art (starts on placeholder tilesets)</li>
+      </ul>
+      <p class="small" style="margin-top:14px">Everything here is a <b>data or content addition</b> onto the MVP's schemas — not a rebuild. That is the whole point of designing the slots now.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SCALE -->
+<section id="scale">
+  <h2><span class="num">11</span>Scale plan — how depth arrives without rewrites</h2>
+  <div class="grid g2">
+    <div class="card"><h4>Dungeons as an array</h4><p class="small">Each region ships one dungeon but the shape is <span class="kbd">dungeons: DungeonDef[]</span> from day one. Season 2 hard-modes and event dungeons are new rows, not new code.</p></div>
+    <div class="card"><h4>Castle as a template</h4><p class="small">Facilities are data-driven. Unlocking the Forge or War Room later is flipping a flag and shipping its panel — the city shell already renders them.</p></div>
+    <div class="card"><h4>Skills as ranks</h4><p class="small">Four skills, ranks 1→5. Later seasons add a Tier-2 fork (the RO branch we deferred) without breaking any saved character.</p></div>
+    <div class="card"><h4>Wars on the element wheel</h4><p class="small">Emblem Wars re-use the same element maths as combat, so the strategic layer inherits balance for free when it's switched on.</p></div>
+    <div class="card"><h4>Kin &amp; mounts already scale</h4><p class="small">The roster, evolution tiers and 10-step mount ladder exist and grow as content — Kingdom of Kin adds zero parallel systems.</p></div>
+    <div class="card"><h4>Content is shared with ArgantaLab</h4><p class="small">New learning worlds, drills and Keepers added to the core app appear in the MMO automatically. One content pipeline, two products.</p></div>
+  </div>
+</section>
+
+<!-- MISSING -->
+<section id="missing">
+  <h2><span class="num">12</span>What's missing &amp; the risks to close</h2>
+  <p class="lead" style="margin-bottom:22px">Honest audit. These are the gaps between "great concept" and "shippable game," each with a proposed fix.</p>
+  <div class="grid g2">
+    <div class="risk"><h4>1. The learning-in-play loop</h4><p class="small">A kid could progress without answering a question — fatal for an ed-game.</p><p class="fix"><b>Fix:</b> the 3-touchpoint bridge (rings-gate + tame-question + quiz-trials). <b>Needs your sign-off.</b></p></div>
+    <div class="risk"><h4>2. Combat feel</h4><p class="small">"Tab-target vs. action" changes the whole engine and the fun.</p><p class="fix"><b>Fix:</b> ship tab-target + cooldowns (simplest, kid-friendly); revisit action-combat only if playtests feel flat.</p></div>
+    <div class="risk"><h4>3. Economy has one currency</h4><p class="small">Diamonds (learned) buy cosmetics — but there's no farmed currency for gear/potions.</p><p class="fix"><b>Fix:</b> add <b>gold</b> (dropped by Kin) for consumables &amp; gear; keep diamonds strictly cosmetic. Season 1.</p></div>
+    <div class="risk"><h4>4. Gear depth is undefined</h4><p class="small">The Forge exists in name only; no gear tiers or stats yet.</p><p class="fix"><b>Fix:</b> MVP ships fixed starter gear per grade; crafting/upgrades are a Season 1 layer.</p></div>
+    <div class="risk"><h4>5. Retention loop</h4><p class="small">What brings a kid back tomorrow?</p><p class="fix"><b>Fix:</b> daily mission board + Kin-care diamond harvest + ArgantaCup competitions — all already exist in ArgantaLab.</p></div>
+    <div class="risk"><h4>6. Pacing &amp; balance</h4><p class="small">1→99 across six worlds is a lot; level bands are a guess.</p><p class="fix"><b>Fix:</b> tune to short sessions; treat the bands as first-draft numbers to playtest, not commitments.</p></div>
+    <div class="risk"><h4>7. Real-time capture UX</h4><p class="small">Turn-based taming inside a live shared world is unusual.</p><p class="fix"><b>Fix:</b> the personal "Befriend prompt → Friendship Window" pattern; the Kin isn't consumed from the shared spawn.</p></div>
+    <div class="risk"><h4>8. Art &amp; tech pipeline</h4><p class="small">Bespoke pixel art is coming later; devices vary.</p><p class="fix"><b>Fix:</b> build on placeholder tilesets behind a swappable art seam (as KinQuest already does); PixiJS + PWA runs on low-end devices.</p></div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="road">
+  <h2><span class="num">13</span>Roadmap</h2>
+  <div class="road">
+    <div class="phase"><div class="when">Phase 0<small>De-risk</small></div><div><h4>Vertical slice</h4><p class="small">Two players move &amp; fight in one Colyseus room, server-authoritative. Proves the hardest technical risk (real-time, cheat-proof) before any content.</p></div></div>
+    <div class="phase"><div class="when">Phase 1<small>Core loop</small></div><div><h4>One world, end to end</h4><p class="small">Cove → class → Numeria → hunt/tame → one dungeon → grade-up. The full loop in a single world, learning bridge live. This is the "is it fun?" gate.</p></div></div>
+    <div class="phase"><div class="when">Phase 2<small>MVP / Season 0</small></div><div><h4>All six worlds + mini-castles</h4><p class="small">Roll the proven loop across all six regions, home cities, mounts, party dungeons, circle chat. Soft-launch to ArgantaLab families.</p></div></div>
+    <div class="phase"><div class="when">Phase 3<small>Social endgame</small></div><div><h4>Castles &amp; Emblem Wars</h4><p class="small">Full castle facilities, the War Room, and auto-resolved circle wars. The Suikoden + Total War layers switch on.</p></div></div>
+    <div class="phase"><div class="when">Phase 4+<small>Live game</small></div><div><h4>Seasons &amp; depth</h4><p class="small">Extra dungeons, gear crafting, gold economy, sub-path forks, seasonal events, bespoke art. The game becomes a live service.</p></div></div>
+  </div>
+</section>
+
+<div class="foot">
+  Kingdom of Kin — concept v0.1 · a multiplayer doorway into ArgantaLab.<br>
+  Working title, first-draft numbers, and the learning-bridge model all pending confirmation. Nothing here is built yet — this is the shared picture before we choose where to start.
+</div>
+
+</main>
+</div>
+</body>
+</html>

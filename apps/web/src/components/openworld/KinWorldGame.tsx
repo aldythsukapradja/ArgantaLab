@@ -411,8 +411,11 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
         const avC = await rasterize(textures['__avatar'], 96, 96)
         if (destroyed) return
         const heroC = new PIXI.Container(); heroC.position.set((KEEP_C + 1) * T, (KEEP_R + 4) * T)
-        if (textures['__mount']) { const mC = await rasterize(textures['__mount'], 104, 104); if (destroyed) return; const ms = new PIXI.Sprite(PIXI.Texture.from(mC)); ms.anchor.set(0.5, 0.85); ms.position.set(0, 8); ms.scale.set(0.6); heroC.addChild(ms) }
-        const rs = new PIXI.Sprite(PIXI.Texture.from(avC)); rs.anchor.set(0.5, 0.9); rs.position.set(0, hasMount ? -14 : 0); rs.scale.set(hasMount ? 0.4 : 0.52); heroC.addChild(rs)
+        if (textures['__mount']) { const mC = await rasterize(textures['__mount'], 104, 104); if (destroyed) return; const ms = new PIXI.Sprite(PIXI.Texture.from(mC)); ms.anchor.set(0.5, 0.85); ms.position.set(0, 8); ms.scale.set(0.68); heroC.addChild(ms) }
+        // when mounted, the rider-head is seated ON the saddle (mid-back): center
+        // anchor, small scale, nudged up+right — mirrors AvatarSprite's 0.43/34%/53%
+        // tuning (see ride_preview.png) so the overworld matches the shop/battle.
+        const rs = new PIXI.Sprite(PIXI.Texture.from(avC)); rs.anchor.set(0.5, hasMount ? 0.5 : 0.9); rs.position.set(hasMount ? 2 : 0, hasMount ? -12 : 0); rs.scale.set(hasMount ? 0.30 : 0.52); heroC.addChild(rs)
         heroC.zIndex = heroC.y + 20; ent.addChild(heroC); hero = heroC
       } catch (err) { console.error('[kinworld] pixi init failed:', err) }
     })()
