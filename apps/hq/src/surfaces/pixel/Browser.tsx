@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { X, ExternalLink } from 'lucide-react'
 import { vaultQuery, vaultFacets, vaultSimilar, TIERS } from '../../data/pixel/engine'
 import type { QueryFilter, VaultItem } from '../../data/pixel/types'
-import { Swatch, TierChip, AnimBadge } from './parts'
+import { Swatch, TierChip, AnimBadge, BigArt, useArtUrl, downloadImage } from './parts'
 
 // Facet keys shown in the rail, in order. `animated` is boolean-ish via a value.
 const FACET_ORDER = ['domain', 'kind', 'theme', 'characterType', 'style', 'tier', 'source'] as const
@@ -104,6 +104,7 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
 
 function Inspector({ item, data, onClose, onPick }: { item: VaultItem; data: VaultItem[]; onClose: () => void; onPick: (i: VaultItem) => void }) {
   const t = TIERS[item.source.tier]
+  const artUrl = useArtUrl(item)
   const sim = vaultSimilar(item.id, 8, data)
   const similar = (sim as { similar?: VaultItem[] }).similar ?? []
   const promptText = `pixel art, ${item.curated.kind}${item.curated.characterType ? ' (' + item.curated.characterType + ')' : ''}, ${item.curated.theme.join('/')}, ${item.curated.style ?? ''} style, ${item.form.size.w}x${item.form.size.h}, style reference: ${item.name} [${item.source.name}]`
@@ -111,11 +112,15 @@ function Inspector({ item, data, onClose, onPick }: { item: VaultItem; data: Vau
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 60 }}>
       <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 'min(460px,100vw)', background: 'var(--bg2)', borderLeft: '1px solid var(--bd2)', display: 'flex', flexDirection: 'column' }}>
         <div className="spread" style={{ padding: '12px 14px', borderBottom: '1px solid var(--bd)' }}>
-          <div className="row" style={{ gap: 8 }}><Swatch item={item} px={40} /><div><div style={{ fontSize: 13, fontWeight: 700 }}>{item.name}</div><div style={{ fontSize: 10, color: 'var(--tx3)', fontFamily: 'var(--mono)' }}>{item.id}</div></div></div>
+          <div><div style={{ fontSize: 13, fontWeight: 700 }}>{item.name}</div><div style={{ fontSize: 10, color: 'var(--tx3)', fontFamily: 'var(--mono)' }}>{item.id}</div></div>
           <button onClick={onClose} aria-label="Close" style={{ cursor: 'pointer', color: 'var(--tx2)' }}><X size={16} /></button>
         </div>
         <div style={{ padding: 14, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="row" style={{ gap: 8 }}><TierChip tier={item.source.tier} /><span style={{ fontSize: 11, color: t.shippable ? 'var(--ok)' : 'var(--warn)' }}>{t.shippable ? 'shippable as-is' : 'reference only'}{t.attribution ? ' · credit required' : ''}</span></div>
+          <BigArt item={item} />
+          <div className="spread">
+            <div className="row" style={{ gap: 8 }}><TierChip tier={item.source.tier} /><span style={{ fontSize: 11, color: t.shippable ? 'var(--ok)' : 'var(--warn)' }}>{t.shippable ? 'shippable as-is' : 'reference only'}{t.attribution ? ' · credit required' : ''}</span></div>
+            {artUrl && <button onClick={() => downloadImage(artUrl, `${item.id}.png`)} style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: 'var(--acc-text)', border: '1px solid var(--bd2)', borderRadius: 6, padding: '4px 10px', background: 'var(--bg)' }}>↓ Download</button>}
+          </div>
           <div className={'insight ' + (t.shippable ? 'ok' : 'warn')} style={{ alignItems: 'flex-start' }}><div><div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--tx3)' }}>License policy</div><div style={{ fontSize: 11.5, marginTop: 2, lineHeight: 1.5 }}>{t.rule}</div></div></div>
 
           <div>

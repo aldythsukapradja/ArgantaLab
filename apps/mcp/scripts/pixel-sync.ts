@@ -49,6 +49,9 @@ async function run() {
       }
     }
 
+    // real data only — skip metadata-only rows that have no actual pixels
+    if (!storagePath) { skipped++; continue }
+
     const { error } = await db.from('pixel_asset').upsert({
       id: it.id, name: it.name, source: it.source, curated: it.curated, form: it.form,
       animations: it.animations, tier: it.source.tier, license: it.source.license,
@@ -99,7 +102,8 @@ async function run() {
     if (error) console.error(`  x palette ${p.id}: ${error.message}`); else pals++
   }
 
-  console.log(`\n✓ pixel-sync complete — ${rows} catalogue assets (${uploaded} with art) + ${tiles} sliced Kenney sprites + ${pals} palettes.`)
+  console.log(`\n✓ pixel-sync complete — ${uploaded} real catalogue assets + ${tiles} sliced Kenney sprites + ${pals} palettes.`)
+  console.log(`  (${skipped} metadata-only rows skipped — real data only.)`)
   console.log(`  Total in Supabase: ${rows + tiles} assets, ${pals} palettes.`)
 }
 

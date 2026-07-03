@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 import { TIERS } from '../../data/pixel/engine'
 import { signedThumb } from '../../data/pixel/cloud'
 import type { Tier, VaultItem } from '../../data/pixel/types'
@@ -10,20 +11,64 @@ function rng(seed: number) { let x = seed || 1; return () => { x ^= x << 13; x ^
 
 // Real art when we have it (thumbUrl → owned/CC0/synced), otherwise a generated
 // stand-in drawn from the swatch colors (honest: never the copyrighted pixels).
-export function Swatch({ item, px = 84 }: { item: VaultItem; px?: number }) {
-  // real art: a local/absolute thumbUrl, else a lazily-signed private-bucket path
+const checker = 'repeating-conic-gradient(var(--bg3) 0% 25%, transparent 0% 50%) 0 0/12px 12px'
+
+// Resolve the real art URL: a local/absolute thumbUrl, else a lazily-signed
+// private-bucket path. null while a signed URL is in flight or there's no art.
+export function useArtUrl(item: VaultItem): string | null {
   const [signed, setSigned] = useState<string | null>(null)
   useEffect(() => {
     let alive = true
     if (!item.form.thumbUrl && item.form.storagePath) signedThumb(item.form.storagePath).then(u => { if (alive) setSigned(u) })
     return () => { alive = false }
   }, [item.form.thumbUrl, item.form.storagePath])
-  const url = item.form.thumbUrl ?? signed
+  return item.form.thumbUrl ?? signed
+}
+
+export function Swatch({ item, px = 84 }: { item: VaultItem; px?: number }) {
+  const url = useArtUrl(item)
   if (url) {
     return <img src={url} alt={item.name} width={px} height={px} loading="lazy"
-      style={{ width: px, height: px, objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 6, background: 'repeating-conic-gradient(var(--bg3) 0% 25%, transparent 0% 50%) 0 0/12px 12px' }} />
+      style={{ width: px, height: px, objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 6, background: checker }} />
   }
   return <SwatchStandIn item={item} px={px} />
+}
+
+// Large preview inside the inspector — click to open the fullscreen lightbox.
+export function BigArt({ item }: { item: VaultItem }) {
+  const url = useArtUrl(item)
+  const [zoom, setZoom] = useState(false)
+  if (!url) return <SwatchStandIn item={item} px={160} />
+  return (
+    <>
+      <button onClick={() => setZoom(true)} title="Click to enlarge" style={{ cursor: 'zoom-in', border: '1px solid var(--bd2)', borderRadius: 10, padding: 8, background: checker, display: 'flex', justifyContent: 'center' }}>
+        <img src={url} alt={item.name} style={{ maxWidth: '100%', maxHeight: 240, imageRendering: 'pixelated', objectFit: 'contain' }} />
+      </button>
+      {zoom && <Lightbox url={url} name={item.name} filename={`${item.id}.png`} onClose={() => setZoom(false)} />}
+    </>
+  )
+}
+
+export async function downloadImage(url: string, filename: string) {
+  try {
+    const r = await fetch(url); const blob = await r.blob()
+    const u = URL.createObjectURL(blob); const a = document.createElement('a')
+    a.href = u; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u)
+  } catch { window.open(url, '_blank') }
+}
+
+// Fullscreen zoom for detailed sheets/tilemaps. Pixelated + scrollable.
+export function Lightbox({ url, name, filename, onClose }: { url: string; name: string; filename: string; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.86)', zIndex: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'auto' }}>
+      <div className="row" onClick={e => e.stopPropagation()} style={{ gap: 10, marginBottom: 12, color: '#fff' }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
+        <button onClick={() => downloadImage(url, filename)} style={{ cursor: 'pointer', fontSize: 12, color: '#fff', border: '1px solid rgba(255,255,255,.4)', borderRadius: 6, padding: '3px 10px' }}>↓ Download</button>
+        <button onClick={onClose} aria-label="Close" style={{ cursor: 'pointer', color: '#fff' }}><X size={18} /></button>
+      </div>
+      <img onClick={e => e.stopPropagation()} src={url} alt={name} style={{ imageRendering: 'pixelated', maxWidth: '95vw', maxHeight: '82vh', objectFit: 'contain', background: checker, borderRadius: 8 }} />
+    </div>
+  )
 }
 
 function SwatchStandIn({ item, px }: { item: VaultItem; px: number }) {
