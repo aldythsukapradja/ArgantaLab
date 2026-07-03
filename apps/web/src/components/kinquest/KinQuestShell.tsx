@@ -376,13 +376,26 @@ export default function KinQuestShell() {
 }
 
 // ── Pokémon-style dialogue box ──
+// Speaker portraits (PixelLab pixel art) keyed by display name — falls back to
+// the emoji when a speaker has no portrait yet (e.g. future regions' Keepers).
+const NPC_DIR = '/assets/kinquest/npcs'
+const PORTRAITS: Record<string, string> = {
+  'Prof. Sage': `${NPC_DIR}/sage.png`, 'Pip': `${NPC_DIR}/pip.png`, 'Old Rowan': `${NPC_DIR}/rowan.png`,
+  'Grandma Willow': `${NPC_DIR}/willow.png`, 'Townsfolk': `${NPC_DIR}/townsfolk.png`,
+  'Bug Kid Milo': `${NPC_DIR}/milo.png`, 'Scout Vera': `${NPC_DIR}/vera.png`,
+  'Kin Center': `${NPC_DIR}/fern.png`, 'Market': `${NPC_DIR}/bramble.png`, 'Keeper Mira': `${NPC_DIR}/mira.png`,
+}
 function Dialogue({ data, onClose }: { data: Dialog; onClose: () => void }) {
   const [i, setI] = useState(0)
   const last = i >= data.lines.length - 1
+  const portrait = PORTRAITS[data.who]
   return (
     <div className="kqd-wrap" onClick={() => { if (!last) setI(i + 1) }}>
       <div className="kqd-box" onClick={e => e.stopPropagation()}>
-        <div className="kqd-head"><span className="kqd-emoji">{data.emoji}</span><b>{data.who}</b></div>
+        <div className="kqd-head">
+          {portrait ? <img className="kqd-portrait" src={portrait} alt="" /> : <span className="kqd-emoji">{data.emoji}</span>}
+          <b>{data.who}</b>
+        </div>
         <p className="kqd-line">{data.lines[i]}</p>
         <div className="kqd-foot">
           {!last ? (

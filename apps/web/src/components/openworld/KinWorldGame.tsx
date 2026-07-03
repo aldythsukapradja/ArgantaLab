@@ -1,40 +1,48 @@
 // ============================================================
-//  ARGANTALAB · KINWORLD  (PixiJS v8 — cozy Pallet-Town village)
-//  A hand-authored top-down town built from the Kenney "Tiny Town" CC0 tileset
-//  (16px tiles, /assets/tinytown/tilemap_packed.png). Grass is a tiling ground;
-//  six themed cottages (roofs tinted per-world) ring a central Town Hall that
-//  MATURES with progress (Class → Town → City → Kingdom). Befriended kin roam
-//  their yards; our Buddy avatar (with mount) walks 4-directionally. The camera
-//  FOLLOWS the avatar, but the scene opens zoomed-out so all six worlds are
-//  visible, then eases in. Kin/avatar are crisp SVG→texture sprites.
+//  ARGANTALAB · KINWORLD  (PixiJS v8 — the Arganta island)
+//  An ISLAND in the ocean, rebuilt on the "Arganta Atlas" PixelLab art pack
+//  (/assets/atlas: ground fills, props, buildings). Six BIOME DISTRICTS —
+//  each with its own ground + landmark building — ring a central Town Hall
+//  that MATURES with progress (Class → Town → City → Kingdom), connected by
+//  one winding ring road + spurs, with a decorative river and a south port
+//  that sails to KinQuest. Befriended kin guard the hall; our Buddy avatar
+//  (with mount) walks 4-directionally; the camera opens wide then follows.
+//  The Kenney Tiny Town sheet is kept ONLY as a per-asset fallback so a
+//  missing Atlas PNG can never break the world.
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { useAppStore } from '@store/appStore'
 import KinSprite from './KinSprite'
-import MountSprite from './MountSprite'
 import Buddy from '@components/avatar/Buddy'
 import Joystick from '@components/ui/Joystick'
 import { myMounts } from '@lib/mounts'
 import type { KinInstance } from '@lib/nexus'
 
-// ---- world palette (order matters — placed around the town) ----
+// ---- the six biome districts (compass preserved from the old spoke map:
+// Numeria NW · Wordveil NE · Meadow E · Lagoon SE · Skyfield SW · Circuit W).
+// Each district = its own Atlas ground + landmark building + signature prop. ----
+// Positions are ADAPTED TO THE PAINTED ISLAND (assets/painted/island.png): the
+// hall sits on the painted central plaza and each gate sits at a painted
+// path-end. If the painting is regenerated, re-eyeball these anchors.
 const GATES = [
-  { world: 'num', name: 'Numeria',  hex: 0xf59e0b, emoji: '☀️', col: 9,  row: 6 },
-  { world: 'wrd', name: 'Wordveil', hex: 0x3b82f6, emoji: '📖', col: 33, row: 7 },
-  { world: 'lif', name: 'Meadow',   hex: 0xec4899, emoji: '💗', col: 38, row: 18 },
-  { world: 'wld', name: 'Lagoon',   hex: 0xf97316, emoji: '🌊', col: 31, row: 27 },
-  { world: 'won', name: 'Skyfield', hex: 0x8b5cf6, emoji: '✨', col: 11, row: 26 },
-  { world: 'log', name: 'Circuit',  hex: 0x22c55e, emoji: '🔌', col: 5,  row: 17 },
+  { world: 'num', name: 'Numeria',  hex: 0xf59e0b, col: 11, row: 10, ground: 'dune',    landmark: 'landmark_numeria',  prop: 'tree_palm' },
+  { world: 'wrd', name: 'Wordveil', hex: 0x3b82f6, col: 22, row: 6,  ground: 'grass',   landmark: 'landmark_wordveil', prop: 'tree' },
+  { world: 'lif', name: 'Meadow',   hex: 0xec4899, col: 43, row: 20, ground: 'meadow',  landmark: 'landmark_meadow',   prop: 'tree_pink' },
+  { world: 'wld', name: 'Lagoon',   hex: 0xf97316, col: 34, row: 30, ground: 'reef',    landmark: 'landmark_lagoon',   prop: 'coral' },
+  { world: 'won', name: 'Skyfield', hex: 0x8b5cf6, col: 16, row: 30, ground: 'cloud',   landmark: 'landmark_sky',      prop: 'crystal' },
+  { world: 'log', name: 'Circuit',  hex: 0x22c55e, col: 8,  row: 20, ground: 'circuit', landmark: 'landmark_circuit',  prop: 'pylon' },
 ]
 const STAGE_NAMES = ['Class', 'Town', 'City', 'Kingdom']
 
-// ---- Kenney Tiny Town tile indices (12-col sheet; index = row*12 + col) ----
-const T = 16, COLS = 44, ROWS = 34, BASEW = COLS * T, BASEH = ROWS * T
-const SHEET_COLS = 12
+// ---- map geometry: matches the painted island exactly (800×704) ----
+const T = 16, COLS = 50, ROWS = 44, BASEW = COLS * T, BASEH = ROWS * T
+const SHEET_COLS = 12 // Kenney fallback sheet (12-col; index = row*12 + col)
 const TILE = { GRASS: 0, PINE: 4, TREE: 16, BUSH: 28, FLOWER: 29, FENCE: 45, ROOF_L: 49, ROOF_R: 50, WALL: 73, DOOR: 74, CRATE: 83 }
-const KEEP_C = 22, KEEP_R = 16 // town-hall anchor (tile coords)
+const KEEP_C = 24, KEEP_R = 19 // town-hall anchor — the painted plaza centre
+// the island ellipse — everything outside it is ocean (and blocked)
+const ISLE_RX = (COLS / 2 - 2.5) * T, ISLE_RY = (ROWS / 2 - 2.5) * T
 
 function svgTex(node: ReactElement): string {
   let s = renderToStaticMarkup(node)
@@ -62,6 +70,13 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
   const outfit = useAppStore(s => s.resolvedOutfit())
   const [mountId, setMountId] = useState<string | undefined>(undefined)
   useEffect(() => { myMounts().then(m => setMountId(m.equipped ?? undefined)) }, [])
+  // Shared ride on/off pref (toggled from KinQuest's 🐎 button) — on foot when '0'.
+  const ridingOn = typeof localStorage !== 'undefined' && localStorage.getItem('arg_riding') !== '0'
+  const rideMount = ridingOn ? mountId : undefined
+  // Mount PNG loads DIRECTLY as a Pixi texture — never via svgTex(MountSprite):
+  // an SVG rasterized through a data-URL <img> drops its external <image href>
+  // (browser security) and paints nothing.
+  const mountUrl = rideMount ? `/assets/mounts/${rideMount.replace(/^mount:/, '')}.png` : null
 
   const sig = roster.map(r => r.id).join(',')
   const textures = useMemo(() => {
@@ -69,16 +84,15 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
     const seen = new Set<string>()
     roster.slice(0, 12).forEach(r => { if (!seen.has(r.kin_key)) { seen.add(r.kin_key); t[r.kin_key] = svgTex(<KinSprite kin={r.kin_key} size={80} />) } })
     t['__avatar'] = svgTex(<Buddy mood="idle" size={96} outfit={outfit} />)
-    if (mountId) t['__mount'] = svgTex(<MountSprite mount={mountId} size={104} />)
     return t
-  }, [sig, mountId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sig]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let destroyed = false
     let app: any = null
     const parent = parentRef.current
     const guards = roster.slice(0, 12).map(r => r.kin_key)
-    const hasMount = !!mountId
+    const hasMount = !!rideMount
     const keys: Record<string, boolean> = {}
     const kd = (e: KeyboardEvent) => { if (/^Arrow|^[wasdWASD]$/.test(e.key)) { keys[e.key.toLowerCase()] = true; e.preventDefault() } }
     const ku = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = false }
@@ -92,26 +106,95 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
         if (destroyed) { app.destroy(true); return }
         parent.appendChild(app.canvas)
 
-        // ---- load the Kenney tilesheet & slice sub-textures (nearest = crisp pixels) ----
-        const sheet = await PIXI.Assets.load(`${import.meta.env.BASE_URL}assets/tinytown/tilemap_packed.png`)
+        // ---- art sources: the Arganta Atlas (PixelLab) is primary; the Kenney
+        // sheet stays loaded purely as a per-asset fallback ----
+        const sheet = await PIXI.Assets.load(`${import.meta.env.BASE_URL}assets/tinytown/tilemap_packed.png`).catch(() => null)
         if (destroyed) return
-        sheet.source.scaleMode = 'nearest'
+        if (sheet) sheet.source.scaleMode = 'nearest'
         const texCache: Record<number, any> = {}
         const tile = (idx: number) => {
+          if (!sheet) return PIXI.Texture.WHITE
           if (!texCache[idx]) {
             const c = idx % SHEET_COLS, r = Math.floor(idx / SHEET_COLS)
             texCache[idx] = new PIXI.Texture({ source: sheet.source, frame: new PIXI.Rectangle(c * T, r * T, T, T) })
           }
           return texCache[idx]
         }
+        // Atlas loader — a missing PNG resolves to null and the placement code
+        // falls back (Kenney tile / flat colour), so a failed generation can
+        // never break the world.
+        const atlas: Record<string, any> = {}
+        await Promise.all([
+          'grounds/water', 'grounds/grass', 'grounds/dune', 'grounds/meadow', 'grounds/cloud', 'grounds/circuit', 'grounds/reef',
+          'props/tree', 'props/tree_palm', 'props/tree_pink', 'props/crystal', 'props/pylon', 'props/coral', 'props/rock', 'props/flowers', 'props/bush',
+          'buildings/hall', 'buildings/house', 'buildings/port',
+          'buildings/landmark_numeria', 'buildings/landmark_wordveil', 'buildings/landmark_meadow',
+          'buildings/landmark_sky', 'buildings/landmark_lagoon', 'buildings/landmark_circuit',
+        ].map(async p => {
+          try { const t = await PIXI.Assets.load(`/assets/atlas/${p}.png`); t.source.scaleMode = 'nearest'; atlas[p] = t } catch { /* fallback */ }
+        }))
+        if (destroyed) return
+        // Map v2: the PixelLab-PAINTED island (one seamless artwork) replaces the
+        // whole composited terrain stack when present; missing → old pipeline.
+        let paintedBg: any = null
+        try { paintedBg = await PIXI.Assets.load('/assets/painted/island.png'); paintedBg.source.scaleMode = 'nearest' } catch { /* composited fallback */ }
+        if (destroyed) return
 
         const world = new PIXI.Container(); app.stage.addChild(world)
         const blocked = new Set<string>()
         const block = (c: number, r: number) => blocked.add(c + ',' + r)
+        const CX = BASEW / 2, CY = BASEH / 2
+        // island membership matches the painted layout's WOBBLED blob (not a pure
+        // ellipse) so collision follows the actual coastline
+        const inIsland = (x: number, y: number, pad = 0) => {
+          const a = Math.atan2(y - CY, x - CX)
+          const w = 1 + 0.10 * (Math.sin(3 * a + 1.7) * 0.6 + Math.sin(7 * a + 3.4) * 0.4)
+          return ((x - CX) / ((ISLE_RX + pad) * w)) ** 2 + ((y - CY) / ((ISLE_RY + pad) * w)) ** 2 <= 1
+        }
 
-        // ground — one tiling sprite of grass across the whole map
-        const ground = new PIXI.TilingSprite({ texture: tile(TILE.GRASS), width: BASEW, height: BASEH })
-        world.addChild(ground)
+        if (paintedBg) {
+          // one seamless painted artwork — ocean, coast, biomes, roads, river all in
+          const bg = new PIXI.Sprite(paintedBg); bg.width = BASEW; bg.height = BASEH
+          world.addChild(bg)
+        } else {
+          // ---- composited fallback: ocean → beach rim → grass → district patches ----
+          if (atlas['grounds/water']) world.addChild(new PIXI.TilingSprite({ texture: atlas['grounds/water'], width: BASEW, height: BASEH }))
+          else { const g = new PIXI.Graphics(); g.rect(0, 0, BASEW, BASEH).fill(0x4fb3dd); world.addChild(g) }
+          const beach = new PIXI.Graphics()
+          beach.ellipse(CX, CY, ISLE_RX + 18, ISLE_RY + 18).fill(0xead9a8)
+          beach.ellipse(CX, CY, ISLE_RX + 18, ISLE_RY + 18).stroke({ width: 5, color: 0xffffff, alpha: 0.35 })
+          world.addChild(beach)
+          if (atlas['grounds/grass']) {
+            const gts = new PIXI.TilingSprite({ texture: atlas['grounds/grass'], width: BASEW, height: BASEH })
+            const m = new PIXI.Graphics(); m.ellipse(CX, CY, ISLE_RX, ISLE_RY).fill(0xffffff)
+            world.addChild(m); gts.mask = m; world.addChild(gts)
+          } else { const g = new PIXI.Graphics(); g.ellipse(CX, CY, ISLE_RX, ISLE_RY).fill(0x74c06a); world.addChild(g) }
+          GATES.forEach(g => {
+            const gx = (g.col + 1) * T, gy = (g.row + 1) * T
+            const tex = atlas[`grounds/${g.ground}`]
+            if (g.ground === 'grass' || !tex) return
+            const ts = new PIXI.TilingSprite({ texture: tex, width: BASEW, height: BASEH })
+            const m = new PIXI.Graphics(); m.ellipse(gx, gy, 7.5 * T, 5.5 * T).fill(0xffffff)
+            world.addChild(m); ts.mask = m; world.addChild(ts)
+          })
+        }
+        // ocean/water collision — when painted, the EXACT water tiles were
+        // derived from the painting's pixels at build time (island_blocked.json);
+        // fallback uses the blob formula.
+        let paintedBlocked = false
+        if (paintedBg) {
+          try {
+            const bt: [number, number][] = await (await fetch('/assets/painted/island_blocked.json')).json()
+            bt.forEach(([c, r]) => block(c, r))
+            paintedBlocked = bt.length > 0
+          } catch { /* fall through to formula */ }
+          if (destroyed) return
+        }
+        if (!paintedBlocked) {
+          for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
+            if (!inIsland(c * T + T / 2, r * T + T / 2, 12)) block(c, r)
+          }
+        }
 
         // tap-to-walk: an invisible full-map layer UNDER the entities. Tapping the
         // map sets a walk target; tapping on/near a gate snaps to its porch so the
@@ -131,17 +214,43 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
         })
         world.addChild(tapLayer)
 
-        // soft dirt trails from the town hall out to each cottage (drawn under entities)
-        const paths = new PIXI.Graphics()
-        const kcx = (KEEP_C + 1) * T, kcy = (KEEP_R + 1) * T
-        GATES.forEach((g, i) => {
-          const gx = (g.col + 1) * T, gy = (g.row + 1) * T
-          const dx = gx - kcx, dy = gy - kcy, len = Math.hypot(dx, dy) || 1
-          const ox = -dy / len, oy = dx / len, off = 40 * (i % 2 ? 1 : -1)
-          const mx = (kcx + gx) / 2 + ox * off, my = (kcy + gy) / 2 + oy * off
-          paths.moveTo(kcx, kcy).quadraticCurveTo(mx, my, gx, gy).stroke({ width: 16, color: 0xcdb488, alpha: 0.55, cap: 'round' })
-        })
-        world.addChild(paths)
+        // road/port/hall anchor points (used by buildings + doors regardless of
+        // whether terrain is painted or composited)
+        const porch = (g: { col: number; row: number }) => ({ x: (g.col + 1) * T, y: (g.row + 2) * T })
+        const PORT = { x: 25 * T, y: 39 * T } // the painted south beach
+        const hallP = { x: (KEEP_C + 1) * T, y: (KEEP_R + 2) * T }
+        if (!paintedBg) {
+          // ---- composited fallback: ring road + spurs + river + bridges ----
+          const paths = new PIXI.Graphics()
+          const ringPts = [porch(GATES[0]), porch(GATES[1]), porch(GATES[2]), porch(GATES[3]), PORT, porch(GATES[4]), porch(GATES[5])]
+          for (let i = 0; i < ringPts.length; i++) {
+            const a = ringPts[i], b = ringPts[(i + 1) % ringPts.length]
+            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+            paths.moveTo(a.x, a.y).quadraticCurveTo(mx + (mx - CX) * 0.22, my + (my - CY) * 0.22, b.x, b.y)
+          }
+          paths.stroke({ width: 15, color: 0xcdb488, alpha: 0.8, cap: 'round', join: 'round' })
+          ;[porch(GATES[0]), porch(GATES[2]), PORT].forEach(p2 => {
+            const mx = (hallP.x + p2.x) / 2, my = (hallP.y + p2.y) / 2
+            paths.moveTo(hallP.x, hallP.y).quadraticCurveTo(mx + 18, my - 12, p2.x, p2.y)
+          })
+          paths.stroke({ width: 13, color: 0xcdb488, alpha: 0.7, cap: 'round' })
+          world.addChild(paths)
+          const riverPath = (g: any) => g.moveTo(34 * T, 2 * T)
+            .quadraticCurveTo(33 * T, 11 * T, 32 * T, 16 * T)
+            .quadraticCurveTo(31 * T, 22 * T, 32 * T, 28 * T)
+            .quadraticCurveTo(33 * T, 34 * T, 31 * T, 42 * T)
+          const river = new PIXI.Graphics()
+          riverPath(river); river.stroke({ width: 13, color: 0x2f7ea6, alpha: 0.7, cap: 'round' })
+          riverPath(river); river.stroke({ width: 8, color: 0x63c4ea, alpha: 0.9, cap: 'round' })
+          world.addChild(river)
+          const bridges = new PIXI.Graphics()
+          ;[[33 * T, 9 * T], [32 * T, 21 * T], [32 * T, 33 * T]].forEach(([bx2, by2]) => {
+            bridges.roundRect(bx2 - 15, by2 - 8, 30, 16, 3).fill(0x8b5a2b)
+            bridges.rect(bx2 - 15, by2 - 2, 30, 1.5).fill(0x6b4423)
+            bridges.rect(bx2 - 15, by2 + 3, 30, 1.5).fill(0x6b4423)
+          })
+          world.addChild(bridges)
+        }
 
         // entities layer (depth-sorted by baseline so the hero passes behind things above him)
         const ent = new PIXI.Container(); ent.sortableChildren = true; world.addChild(ent)
@@ -157,93 +266,73 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
         const sparkles: { s: any; vx: number; vy: number; t: number }[] = []
         const shimmers: any[] = []
         const butterflies: { s: any; t: number; cx: number; cy: number; rx: number; ry: number; sp: number }[] = []
+        const hotspots: { halo: any; ph: number }[] = []
         let hero: any = null, nearWorld: string | null = null, clock = 0, intro = 0
         let moveTarget: { x: number; y: number } | null = null, stuck = 0
 
-        // border forest — frames the map and forms the walls of the world
-        for (let c = 0; c < COLS; c++) { put(c % 2 ? TILE.TREE : TILE.PINE, c, 0); block(c, 0); put(c % 2 ? TILE.PINE : TILE.TREE, c, ROWS - 1); block(c, ROWS - 1) }
-        for (let r = 1; r < ROWS - 1; r++) { put(r % 2 ? TILE.TREE : TILE.PINE, 0, r); block(0, r); put(r % 2 ? TILE.PINE : TILE.TREE, COLS - 1, r); block(COLS - 1, r) }
-
-        // a 2×2 cottage: tinted roof over a wall with a door. Footprint is solid; the
-        // tile just below the door is the "porch" you walk onto to enter.
-        const cottage = (col: number, row: number, hex: number) => {
-          put(TILE.ROOF_L, col, row, hex); put(TILE.ROOF_R, col + 1, row, hex)
-          put(TILE.WALL, col, row + 1); put(TILE.DOOR, col + 1, row + 1)
-          block(col, row); block(col + 1, row); block(col, row + 1); block(col + 1, row + 1)
+        // ---- Atlas placement helpers (PNG primary, Kenney fallback) ----
+        // Buildings anchor at their base-centre; footprint tiles are blocked and
+        // the tile just below stays walkable as the "porch" you enter from.
+        const placeB = (key: string, cxp: number, baseY: number, hPx: number, bw: number, bh: number, fbHex?: number) => {
+          const t2 = atlas[key]
+          if (t2) {
+            const s = new PIXI.Sprite(t2); s.anchor.set(0.5, 1); s.position.set(cxp, baseY)
+            s.scale.set(hPx / t2.height); s.zIndex = baseY; ent.addChild(s)
+          } else {
+            const c1 = Math.round(cxp / T) - 1, r1 = Math.round(baseY / T) - 2
+            put(TILE.ROOF_L, c1, r1, fbHex); put(TILE.ROOF_R, c1 + 1, r1, fbHex)
+            put(TILE.WALL, c1, r1 + 1); put(TILE.DOOR, c1 + 1, r1 + 1)
+          }
+          const c0 = Math.floor(cxp / T - bw / 2), r0 = Math.floor(baseY / T) - bh
+          for (let dc = 0; dc < bw; dc++) for (let dr = 0; dr < bh; dr++) block(c0 + dc, r0 + dr)
+        }
+        const propAt = (key: string, x: number, y: number, hPx: number) => {
+          const t2 = atlas[key]
+          if (!t2) { put(TILE.TREE, Math.round(x / T), Math.round(y / T)); return }
+          const s = new PIXI.Sprite(t2); s.anchor.set(0.5, 1); s.position.set(x, y)
+          s.scale.set(hPx / t2.height); s.zIndex = y; ent.addChild(s)
         }
 
-        // six world cottages + a signpost flag + label
+        // six district LANDMARKS (the doors into each learning dungeon)
         const doors: { world: string; name: string; hex: number; x: number; y: number }[] = []
         GATES.forEach(g => {
-          cottage(g.col, g.row, g.hex)
-          const px = (g.col + 1) * T, py = (g.row + 2) * T // porch centre (in front of the door)
+          const px = (g.col + 1) * T, py = (g.row + 2) * T // porch centre (below the base)
+          placeB(`buildings/${g.landmark}`, px, py, 58, 3, 2, g.hex)
           doors.push({ world: g.world, name: g.name, hex: g.hex, x: px, y: py })
-          // little pennant on the roof
-          const flag = new PIXI.Graphics()
-          flag.rect(0, -18, 2, 18).fill(0x6b5b3a); flag.poly([2, -18, 14, -14, 2, -10]).fill(g.hex)
-          flag.position.set((g.col + 1) * T, g.row * T); flag.zIndex = g.row * T - 2; ent.addChild(flag)
-          label(PIXI, ent, g.name, (g.col + 1) * T, (g.row + 2) * T + 9, 12)
+          label(PIXI, ent, g.name, px, py + 12, 12)
         })
 
-        // ---- seaside PORT → sails to KinQuest (the flagship game) ----
-        const portC = 20, portR = 29
+        // ---- south-beach PORT → sails to KinQuest (the flagship game) ----
         {
-          const wx = portC * T, wy = (portR + 1) * T
-          const water = new PIXI.Graphics()
-          water.roundRect(wx - 3 * T, wy - 2, 6 * T, 3 * T, 10).fill(0x3f9fd0)
-          water.roundRect(wx - 3 * T + 4, wy - 2 + 4, 6 * T - 8, 3 * T - 8, 8).fill(0x63c4ea)
-          water.zIndex = wy - 40; ent.addChild(water)
-          for (let dc = -3; dc <= 2; dc++) for (let dr = 0; dr <= 2; dr++) block(portC + dc, portR + 1 + dr)
-          // dock planks (walkable) + posts
-          put(TILE.FENCE, portC - 1, portR); put(TILE.FENCE, portC + 1, portR)
-          // a little sailing boat in the water
+          placeB('buildings/port', PORT.x, PORT.y, 46, 3, 2, 0xf0a83a)
+          // a little sailing boat bobbing in the real ocean just off the beach
           const boat = new PIXI.Graphics()
-          const bx = portC * T, by = (portR + 1) * T + 10
+          const bx = PORT.x, by = PORT.y + 40
           boat.moveTo(bx - 15, by).lineTo(bx + 15, by).lineTo(bx + 10, by + 9).lineTo(bx - 10, by + 9).closePath().fill(0x8b5a2b)
           boat.rect(bx - 1, by - 22, 2, 22).fill(0x6b4423)
           boat.moveTo(bx + 1, by - 22).lineTo(bx + 14, by - 8).lineTo(bx + 1, by - 8).closePath().fill(0xffd700)
           boat.zIndex = by + 4; ent.addChild(boat)
           // interaction porch on the dock front + a golden anchor sign
-          doors.push({ world: '__kq__', name: 'KinQuest', hex: 0xf0a83a, x: portC * T, y: portR * T })
+          doors.push({ world: '__kq__', name: 'KinQuest', hex: 0xf0a83a, x: PORT.x, y: PORT.y })
           const anchor = new PIXI.Text({ text: '⚓', style: { fontFamily: 'Arial', fontSize: 16 } })
-          anchor.anchor.set(0.5); anchor.position.set(portC * T, (portR - 1) * T + 2); anchor.zIndex = 99990; ent.addChild(anchor)
-          label(PIXI, ent, 'KinQuest', portC * T, (portR - 1) * T + 16, 12, 0xf0a83a)
+          anchor.anchor.set(0.5); anchor.position.set(PORT.x, PORT.y - 3 * T); anchor.zIndex = 99990; ent.addChild(anchor)
+          label(PIXI, ent, 'KinQuest', PORT.x, PORT.y - 3 * T + 14, 12, 0xf0a83a)
         }
 
-        // central Town Hall — grows with stage, built from the same tiles, gold roofs
+        // central Town Hall — the Atlas hall, GROWING with stage (Class → Kingdom)
         const GOLD = 0xf3c34e
         const kc = KEEP_C, kr = KEEP_R
-        cottage(kc, kr, GOLD) // core (all stages)
-        if (stage >= 1) { cottage(kc - 2, kr, GOLD); cottage(kc + 2, kr, GOLD) } // wings → Town
-        if (stage >= 2) { // gate towers → City
-          ;[kc - 1, kc + 2].forEach(tx => { put(TILE.WALL, tx, kr + 2); put(TILE.ROOF_L, tx, kr + 1, GOLD); block(tx, kr + 1); block(tx, kr + 2) })
-        }
-        if (stage >= 3) { // second storey + banners → Kingdom
-          put(TILE.ROOF_L, kc, kr - 1, GOLD); put(TILE.ROOF_R, kc + 1, kr - 1, GOLD); block(kc, kr - 1); block(kc + 1, kr - 1)
-        }
+        placeB('buildings/hall', hallP.x, hallP.y, 62 + stage * 12, 4, 3, GOLD)
         // hall is tappable (opens the Town Hall sheet)
         const hallHit = new PIXI.Container(); hallHit.position.set((kc + 1) * T, (kr + 1) * T)
         hallHit.eventMode = 'static'; hallHit.cursor = 'pointer'
         hallHit.hitArea = new PIXI.Rectangle(-46, -46, 92, 92); hallHit.on('pointertap', () => cbRef.current.onOpenHall())
         hallHit.zIndex = 99998; ent.addChild(hallHit)
-        // label sits ABOVE the castle (a banner) so it never covers the hero below
-        label(PIXI, ent, STAGE_NAMES[stage] ?? 'Town Hall', (kc + 1) * T, (kr - 1) * T - 6, 14, GOLD)
+        // label sits ABOVE the hall (a banner) so it never covers the hero below
+        label(PIXI, ent, STAGE_NAMES[stage] ?? 'Town Hall', (kc + 1) * T, (kr - 3) * T - 6, 14, GOLD)
 
-        // ---- extra life around the kingdom: ponds, a little market, fences, lamps ----
-        // two ponds in open ground (blocked, so you stroll around them) with a shimmer
-        ;[[15, 25], [32, 11]].forEach(([pc, pr]) => {
-          const x = pc * T, y = pr * T
-          const g = new PIXI.Graphics()
-          g.ellipse(x, y, 30, 19).fill(0x3f9fd0); g.ellipse(x, y, 24, 14).fill(0x63c4ea)
-          g.zIndex = y - 60; ent.addChild(g)
-          const sh = new PIXI.Graphics(); sh.ellipse(x - 8, y - 5, 12, 5).fill({ color: 0xffffff, alpha: 0.5 }); sh.zIndex = y - 59; ent.addChild(sh); shimmers.push(sh)
-          for (let dc = -2; dc <= 2; dc++) for (let dr = -1; dr <= 1; dr++) block(pc + dc, pr + dr)
-          // a ring of reeds/bushes softening the bank
-          ;[[pc - 2, pr - 1], [pc + 2, pr + 1], [pc + 2, pr - 1]].forEach(([bc, br]) => put(TILE.BUSH, bc, br, undefined, y - 58))
-        })
-        // a small market square in front of the hall — crates + fence rails + lamps
-        ;[[kc - 3, kr + 3], [kc + 4, kr + 3], [kc + 4, kr + 2]].forEach(([c, r]) => { put(TILE.CRATE, c, r); block(c, r) })
-        ;[kc - 4, kc - 3, kc + 5, kc + 6].forEach(c => { put(TILE.FENCE, c, kr + 4); block(c, kr + 4) })
+        // ---- village life: cottages near the hall plaza + plaza lamps ----
+        ;[[21, 15], [34, 15], [20, 26], [35, 26]].forEach(([hc2, hr2]) => placeB('buildings/house', (hc2 + 1) * T, (hr2 + 2) * T, 42, 2, 2, 0xb98f5a))
         ;[[kc - 2, kr + 5], [kc + 3, kr + 5]].forEach(([c, r]) => {
           const lp = new PIXI.Graphics()
           lp.circle(c * T + 8, r * T, 10).fill({ color: 0xffe6a0, alpha: 0.45 })
@@ -260,9 +349,9 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
           butterflies.push({ s: b, t: rnd() * 6.28, cx, cy, rx: 40 + rnd() * 50, ry: 26 + rnd() * 34, sp: 0.02 + rnd() * 0.02 })
         }
 
-        // lush greenery filling the open grass (deterministic). Interior trees are
-        // DECORATIVE (walkable) so density never traps the hero; the hall plaza,
-        // porches and the spawn stay clear.
+        // ---- CLUSTERED decoration: each district grows its signature props
+        // around its landmark (deterministic; walkable so the hero never traps).
+        // The hall plaza, porches and the spawn stay clear.
         const kx0 = (KEEP_C + 1) * T, ky0 = (KEEP_R + 1) * T
         const spawnX = (KEEP_C + 1) * T, spawnY = (KEEP_R + 4) * T
         const clearOf = (x: number, y: number) => {
@@ -271,16 +360,23 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
           for (const d of doors) if (Math.hypot(x - d.x, y - d.y) < 2.2 * T) return true
           return false
         }
-        const taken = new Set<string>()
-        for (let i = 0; i < 150; i++) {
-          const c = 2 + Math.floor(rnd() * (COLS - 4)), r = 2 + Math.floor(rnd() * (ROWS - 4))
-          const key = c + ',' + r
-          if (blocked.has(key) || taken.has(key)) continue
-          const x = c * T, y = r * T
-          if (clearOf(x, y)) continue
-          taken.add(key)
-          const roll = rnd()
-          put(roll < 0.64 ? (rnd() < 0.5 ? TILE.TREE : TILE.PINE) : roll < 0.84 ? TILE.BUSH : TILE.FLOWER, c, r)
+        const onLand = (x: number, y: number) => !blocked.has(Math.floor(x / T) + ',' + Math.floor(y / T))
+        GATES.forEach(g => {
+          const gx = (g.col + 1) * T, gy = (g.row + 1) * T
+          for (let i = 0; i < 10; i++) {
+            const x = gx + (rnd() - 0.5) * 12 * T, y = gy + (rnd() - 0.5) * 9 * T
+            if (!inIsland(x, y, -8) || !onLand(x, y) || clearOf(x, y)) continue
+            const roll = rnd()
+            if (roll < 0.6) propAt(`props/${g.prop}`, x, y, 30)
+            else propAt(roll < 0.78 ? 'props/flowers' : roll < 0.92 ? 'props/bush' : 'props/rock', x, y, 16)
+          }
+        })
+        // light generic greenery across the open grass between districts
+        // (skipped on the painted map — it carries its own trees/decor)
+        if (!paintedBg) for (let i = 0; i < 22; i++) {
+          const x = 3 * T + rnd() * (BASEW - 6 * T), y = 3 * T + rnd() * (ROWS * T - 6 * T)
+          if (!inIsland(x, y, -12) || !onLand(x, y) || clearOf(x, y)) continue
+          propAt(rnd() < 0.7 ? 'props/tree' : 'props/bush', x, y, rnd() < 0.7 ? 30 : 16)
         }
 
         // gate porch prompts (an "Enter" pill that pops when the hero is close)
@@ -290,6 +386,18 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
           const pt = new PIXI.Text({ text: 'Enter →', style: { fontFamily: 'Arial, sans-serif', fontSize: 13, fontWeight: '700', fill: 0xffffff } }); pt.anchor.set(0.5)
           const pb = new PIXI.Graphics(); pb.roundRect(-pt.width / 2 - 8, -12, pt.width + 16, 24, 12).fill(d.hex)
           pr.addChild(pb); pr.addChild(pt); ent.addChild(pr); prompts[d.world] = pr
+        })
+
+        // ---- glowing HOTSPOT beacons: a bright pulsing dot marks every
+        // destination so the interactive spots pop off the painted map ----
+        doors.forEach(d => {
+          const hs = new PIXI.Container(); hs.position.set(d.x, d.y - 2); hs.zIndex = 99994
+          const halo = new PIXI.Graphics(); halo.circle(0, 0, 11).fill({ color: d.hex, alpha: 0.5 })
+          const core = new PIXI.Graphics()
+          core.circle(0, 0, 6).fill({ color: d.hex, alpha: 0.95 })
+          core.circle(0, 0, 3).fill({ color: 0xffffff, alpha: 0.95 })
+          hs.addChild(halo); hs.addChild(core); ent.addChild(hs)
+          hotspots.push({ halo, ph: Math.random() * 6.28 })
         })
 
         // drifting fireflies
@@ -369,6 +477,7 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
             if (sp.s.y < -8) { sp.s.y = BASEH + 8; sp.s.x = Math.random() * BASEW }
           })
           shimmers.forEach((sh, i) => { sh.alpha = 0.3 + Math.abs(Math.sin(clock * 0.04 + i)) * 0.3 })
+          hotspots.forEach(h => { const p = Math.sin(clock * 0.11 + h.ph) * 0.5 + 0.5; h.halo.scale.set(1 + p * 1.1); h.halo.alpha = 0.55 - p * 0.4 })
           butterflies.forEach(b => {
             b.t += b.sp * dt
             b.s.x = b.cx + Math.cos(b.t) * b.rx; b.s.y = b.cy + Math.sin(b.t * 1.6) * b.ry
@@ -378,7 +487,7 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
           // ---- camera: opens on the whole town (all 6 visible), then eases to a
           // close follow of the hero ----
           const fitZ = Math.min(app.screen.width / BASEW, app.screen.height / BASEH)
-          const followZ = clamp(fitZ * 1.85, fitZ, 4)
+          const followZ = clamp(fitZ * 2.0, fitZ, 4)
           const e = easeInOut(clamp((intro - 700) / (INTRO_MS - 700), 0, 1))
           const z = fitZ + (followZ - fitZ) * e
           const mapCX = BASEW / 2, mapCY = BASEH / 2
@@ -411,7 +520,14 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
         const avC = await rasterize(textures['__avatar'], 96, 96)
         if (destroyed) return
         const heroC = new PIXI.Container(); heroC.position.set((KEEP_C + 1) * T, (KEEP_R + 4) * T)
-        if (textures['__mount']) { const mC = await rasterize(textures['__mount'], 104, 104); if (destroyed) return; const ms = new PIXI.Sprite(PIXI.Texture.from(mC)); ms.anchor.set(0.5, 0.85); ms.position.set(0, 8); ms.scale.set(0.68); heroC.addChild(ms) }
+        if (mountUrl) {
+          try {
+            const mTex = await PIXI.Assets.load(mountUrl)
+            if (destroyed) return
+            mTex.source.scaleMode = 'nearest'
+            const ms = new PIXI.Sprite(mTex); ms.anchor.set(0.5, 0.85); ms.position.set(0, 8); ms.scale.set(0.55); heroC.addChild(ms)
+          } catch { /* on-foot if the PNG is missing */ }
+        }
         // when mounted, the rider-head is seated ON the saddle (mid-back): center
         // anchor, small scale, nudged up+right — mirrors AvatarSprite's 0.43/34%/53%
         // tuning (see ride_preview.png) so the overworld matches the shop/battle.
@@ -425,11 +541,13 @@ export default function KinWorldGame({ roster, stage, onEnterDungeon, onOpenHall
       window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku)
       try { if (app) app.destroy(true, { children: true }) } catch { /* ignore */ }
     }
-  }, [sig, mountId, stage]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sig, rideMount, stage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="kw-game">
       <div ref={parentRef} className="kw-canvas" />
+      {/* always-on shortcut straight into KinQuest */}
+      <button className="kw-kq" onClick={() => cbRef.current.onEnterKinQuest()}>⚓ KinQuest →</button>
       {near && (
         <button className="kw-enter" style={{ background: `#${near.hex.toString(16).padStart(6, '0')}` }}
           onClick={() => (near.world === '__kq__' ? cbRef.current.onEnterKinQuest() : cbRef.current.onEnterDungeon(near.world))}>

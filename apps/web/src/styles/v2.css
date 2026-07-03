@@ -631,10 +631,15 @@ html[data-theme="light"] .shop2-preview { background: radial-gradient(120% 80% a
 .kinworld.kw-full { position: absolute; inset: 0; max-width: none; margin: 0; padding: 0; }
 
 /* ── KinWorld pixel-dungeon (PixiJS canvas) ── */
-.kw-game { position: absolute; inset: 8px; border-radius: 16px; overflow: hidden; background: #7ec850;
-  box-shadow: var(--shadow); }
+.kw-game { position: absolute; inset: 8px; border-radius: 16px; overflow: hidden; background: transparent; }
 .kw-canvas { position: absolute; inset: 0; }
 .kw-canvas canvas { display: block; }
+/* quick shortcut straight to KinQuest (no need to walk to the port) */
+.kw-kq { position: absolute; top: 12px; right: 12px; z-index: 10; border: 1.5px solid rgba(255,215,122,.6);
+  cursor: pointer; color: #fff; font-weight: 800; font-size: 13px; padding: 9px 15px; border-radius: 999px;
+  background: linear-gradient(165deg, rgba(49,35,87,.94), rgba(29,22,54,.96)); backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.4); transition: transform .12s ease, border-color .12s ease; }
+.kw-kq:hover { border-color: #ffd77a; transform: translateY(-1px); }
 
 /* enter-dungeon prompt + on-screen d-pad (overlaid on the canvas) */
 .kw-enter { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9; border: 0; cursor: pointer;

@@ -18,23 +18,28 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 client = pixellab.Client(secret=os.environ["PIXELLAB_TOKEN"])
 
-# Shared house style keeps all 10 consistent.
-STYLE = ("chunky cute pixel art, bold dark outline, soft simple shading, "
-         "side view facing right, full body, riderless mount with an empty saddle, "
-         "centered, transparent background")
+# LOCKED "cool mount" recipe (2026-07-03, tuned on arganterion): majestic,
+# proportioned (NOT chibi, NOT gritty-retro), clear saddle for the riding avatar,
+# clean bright art that lives happily next to the kawaii Buddy. 128px, seed 55.
+STYLE = ("clean bright friendly game pixel art, smooth shading, cool and majestic, "
+         "NOT chibi, proportioned adult creature, side view facing right, "
+         "a clear ornate empty saddle on its back for a rider to sit on top, "
+         "dramatic and heroic, transparent background")
 
 # Driven by the mounts.ts catalog (name/blurb/color).
 MOUNTS = {
-    "sandstrider":   "a friendly desert runner mount like a slender sandy camel-horse, warm amber and tan",
-    "meadowpony":    "a cheerful chubby little pony with a soft pastel green mane and tail",
-    "stormfin":      "a sleek tidal sea-serpent mount with fins, teal and cyan, aquatic",
-    "emberfox":      "a blazing fox-spirit mount with a flaming tail, fiery orange and red",
-    "frostelk":      "a calm frost elk mount with icy branching antlers, pale ice-blue and white",
-    "updrift":       "a graceful winged sky-glider mount with broad feathery wings, violet purple",
-    "thunderram":    "a fluffy storm ram mount with big curled horns and a little lightning spark, golden yellow",
-    "shadowpanther": "a sleek glossy night panther mount, deep indigo and black",
-    "crystaldrake":  "a crystalline dragon mount with faceted gem wings and horns, bright cyan crystal",
-    "arganterion":   "a legendary regal guardian beast mount with ornate golden armor and horns, majestic",
+    "sandstrider":   "a swift desert courser steed, tan and warm amber, light desert barding, flowing mane and tail",
+    "meadowpony":    "a spirited meadow horse steed, soft green and cream coat, floral bridle, lush flowing mane",
+    "stormfin":      "a sleek serpentine sea-dragon steed with fins and a finned crest, teal and cyan, aquatic and graceful",
+    "emberfox":      "a blazing many-tailed fox steed, fiery orange and red, glowing flame accents, sleek and swift",
+    "frostelk":      "a majestic frost elk steed, icy pale-blue and white, grand branching antlers, frosted fur",
+    "updrift":       "a graceful winged sky-glider steed, violet purple, broad elegant feathered wings, airy",
+    "thunderram":    "a powerful storm ram steed, golden yellow fleece, big curled horns, crackling lightning accents, sturdy",
+    "shadowpanther": "a sleek shadow panther steed, deep indigo and black glossy coat, agile, glowing cyan eyes",
+    "crystaldrake":  "a majestic crystal dragon steed, bright cyan crystal body, faceted gem wings and horns, radiant",
+    "arganterion":   "a cool majestic legendary guardian steed mount, sleek powerful black horse-like body, "
+                     "ornate golden plate armor, long flowing golden-orange mane and tail, an elegant spiral horn, "
+                     "huge dramatic flame-gold feathered wings, glowing golden accents, regal and heroic",
 }
 
 for i, (key, subject) in enumerate(MOUNTS.items(), 1):
@@ -43,7 +48,7 @@ for i, (key, subject) in enumerate(MOUNTS.items(), 1):
             f"{client.base_url}/generate-image-pixflux",
             headers=client.headers(),
             json={"description": f"{subject}, {STYLE}",
-                  "image_size": {"width": 64, "height": 64}, "no_background": True},
+                  "image_size": {"width": 128, "height": 128}, "no_background": True, "seed": 55},
             timeout=120,
         )
         r.raise_for_status()

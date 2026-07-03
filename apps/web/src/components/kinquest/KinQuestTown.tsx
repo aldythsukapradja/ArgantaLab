@@ -16,6 +16,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { useAppStore } from '@store/appStore'
 import Buddy from '@components/avatar/Buddy'
 import Joystick from '@components/ui/Joystick'
+import { myMounts } from '@lib/mounts'
 import { ELEMENT_META } from '@/data/kinquest'
 import type { Element } from '@/data/openworld'
 
@@ -148,6 +149,18 @@ export default function KinQuestTown({
 
   const avatarTex = useMemo(() => svgTex(<Buddy mood="idle" size={96} outfit={outfit} />), [JSON.stringify(outfit)])
 
+  // Equipped mount + a ride on/off toggle (shared pref with KinWorld via
+  // localStorage 'arg_riding'). Toggling applies in-place — no scene rebuild.
+  // NOTE: the mount PNG is loaded DIRECTLY as a Pixi texture — never via
+  // svgTex(MountSprite): an SVG rasterized through a data-URL <img> silently
+  // drops its external <image href> (browser security), painting nothing.
+  const [mountId, setMountId] = useState<string | undefined>(undefined)
+  useEffect(() => { myMounts().then(m => setMountId(m.equipped ?? undefined)) }, [])
+  const [riding, setRiding] = useState(() => localStorage.getItem('arg_riding') !== '0')
+  const rideRef = useRef(riding); rideRef.current = riding
+  const applyRideRef = useRef<((r: boolean) => void) | null>(null)
+  const mountUrl = mountId ? `/assets/mounts/${mountId.replace(/^mount:/, '')}.png` : null
+
   useEffect(() => {
     let destroyed = false
     let app: any = null
@@ -189,15 +202,27 @@ export default function KinQuestTown({
         let seed = map === 'route' ? 77003 : 20260702
         const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff }
 
-        // ── LAYER 0 · ground: grass with soft colour variation + sun patches ──
-        const ground = new PIXI.TilingSprite({ texture: tile(TILE.GRASS), width: BASEW, height: BASEH })
-        world.addChild(ground)
-        const mood = new PIXI.Graphics()
-        for (let i = 0; i < 8; i++) {
-          const x = rnd() * BASEW, y = rnd() * BASEH, rr = 60 + rnd() * 90
-          mood.ellipse(x, y, rr, rr * 0.7).fill({ color: i % 2 ? 0xfff8c0 : 0x1c4a20, alpha: i % 2 ? 0.06 : 0.07 })
+        // Map v2: PixelLab-PAINTED terrain (one seamless artwork per map) replaces
+        // ground/paths/tall-grass/border visuals when present. Gameplay data
+        // (collision, encounter tiles, doors) is unchanged either way.
+        let paintedBg: any = null
+        try { paintedBg = await PIXI.Assets.load(`/assets/painted/kq_${map === 'route' ? 'route' : 'town'}.png`); paintedBg.source.scaleMode = 'nearest' } catch { /* composited fallback */ }
+        if (destroyed || !app.stage) return
+
+        // ── LAYER 0 · ground ──
+        if (paintedBg) {
+          const bg = new PIXI.Sprite(paintedBg); bg.width = BASEW; bg.height = BASEH
+          world.addChild(bg)
+        } else {
+          const ground = new PIXI.TilingSprite({ texture: tile(TILE.GRASS), width: BASEW, height: BASEH })
+          world.addChild(ground)
+          const mood = new PIXI.Graphics()
+          for (let i = 0; i < 8; i++) {
+            const x = rnd() * BASEW, y = rnd() * BASEH, rr = 60 + rnd() * 90
+            mood.ellipse(x, y, rr, rr * 0.7).fill({ color: i % 2 ? 0xfff8c0 : 0x1c4a20, alpha: i % 2 ? 0.06 : 0.07 })
+          }
+          world.addChild(mood)
         }
-        world.addChild(mood)
 
         // tap-to-walk layer (under entities)
         let moveTarget: { x: number; y: number } | null = null, stuck = 0
@@ -206,36 +231,40 @@ export default function KinQuestTown({
         tapLayer.eventMode = 'static'
         world.addChild(tapLayer)
 
-        // ── LAYER 1 · layered dirt paths (edge + fill + highlight + speckles) ──
+        // ── LAYER 1 · dirt paths (painted bg already includes them) ──
         const doors = M.buildings.map(b => ({ ...b, px: (b.col + 1) * T, py: (b.row + 2) * T }))
-        const paths = new PIXI.Graphics()
-        const cx = SPAWN.c === M.spawn.c ? M.spawn.c * T : M.spawn.c * T
-        const cy = M.spawn.r * T
-        const drawPath = (pts: [number, number][]) => {
-          for (const [w, col, al] of [[17, 0x8a6a3c, 0.55], [12, 0xd9b97e, 0.9], [5, 0xecd9a8, 0.55]] as [number, number, number][]) {
-            paths.moveTo(pts[0][0], pts[0][1])
-            for (let i = 1; i < pts.length; i++) paths.lineTo(pts[i][0], pts[i][1])
-            paths.stroke({ width: w, color: col, alpha: al, cap: 'round', join: 'round' })
+        if (!paintedBg) {
+          const paths = new PIXI.Graphics()
+          const cx = SPAWN.c === M.spawn.c ? M.spawn.c * T : M.spawn.c * T
+          const cy = M.spawn.r * T
+          const drawPath = (pts: [number, number][]) => {
+            for (const [w, col, al] of [[17, 0x8a6a3c, 0.55], [12, 0xd9b97e, 0.9], [5, 0xecd9a8, 0.55]] as [number, number, number][]) {
+              paths.moveTo(pts[0][0], pts[0][1])
+              for (let i = 1; i < pts.length; i++) paths.lineTo(pts[i][0], pts[i][1])
+              paths.stroke({ width: w, color: col, alpha: al, cap: 'round', join: 'round' })
+            }
           }
+          if (map === 'town') {
+            drawPath([[4 * T, cy], [(COLS - 4) * T, cy]])
+            drawPath([[cx, 4 * T], [cx, (ROWS - 3) * T]])
+            for (const d of doors) drawPath([[d.px, d.py], [d.px, cy < d.py ? d.py - 2 * T : d.py + 2 * T], [cx, cy]])
+            // path up to the north exit
+            drawPath([[26 * T, cy - 8 * T], [26 * T, 1 * T]])
+          } else {
+            // a winding route path south → north
+            drawPath([[13 * T, (ROWS - 2) * T], [13 * T, 36 * T], [9 * T, 30 * T], [13 * T, 24 * T], [17 * T, 17 * T], [13 * T, 8 * T], [13 * T, 1 * T]])
+          }
+          // speckle stones
+          for (let i = 0; i < 26; i++) {
+            const x = rnd() * BASEW, y = rnd() * BASEH
+            paths.circle(x, y, 1 + rnd() * 1.4).fill({ color: 0xcbb37e, alpha: 0.35 })
+          }
+          world.addChild(paths)
         }
-        if (map === 'town') {
-          drawPath([[4 * T, cy], [(COLS - 4) * T, cy]])
-          drawPath([[cx, 4 * T], [cx, (ROWS - 3) * T]])
-          for (const d of doors) drawPath([[d.px, d.py], [d.px, cy < d.py ? d.py - 2 * T : d.py + 2 * T], [cx, cy]])
-          // path up to the north exit
-          drawPath([[26 * T, cy - 8 * T], [26 * T, 1 * T]])
-        } else {
-          // a winding route path south → north
-          drawPath([[13 * T, (ROWS - 2) * T], [13 * T, 36 * T], [9 * T, 30 * T], [13 * T, 24 * T], [17 * T, 17 * T], [13 * T, 8 * T], [13 * T, 1 * T]])
-        }
-        // speckle stones
-        for (let i = 0; i < 26; i++) {
-          const x = rnd() * BASEW, y = rnd() * BASEH
-          paths.circle(x, y, 1 + rnd() * 1.4).fill({ color: 0xcbb37e, alpha: 0.35 })
-        }
-        world.addChild(paths)
 
-        // ── LAYER 2 · tall grass — two-tone clumps with blades ──
+        // ── LAYER 2 · tall grass — the clumps are drawn EVEN on the painted bg:
+        // encounters trigger on these blueprint tiles, so kids must see exactly
+        // where the wild grass is (the painting's own grass is decorative) ──
         const grassG = new PIXI.Graphics()
         for (const p of M.grass) {
           for (let dc = 0; dc < p.w; dc++) for (let dr = 0; dr < p.h; dr++) {
@@ -268,19 +297,20 @@ export default function KinQuestTown({
         let hero: any = null, lastTile = '', clock = 0, lastNearId: string | null = null
         let encounterLock = false, lastExit = ''
 
-        // ── border forest with an inner rim for depth (gaps for exits) ──
+        // ── border forest: BLOCKING always; tree visuals only without painted bg
+        // (the painting includes its own forest edge) ──
         const inGapN = (c: number) => M.gapNorth && c >= M.gapNorth[0] && c <= M.gapNorth[1]
         const inGapS = (c: number) => M.gapSouth && c >= M.gapSouth[0] && c <= M.gapSouth[1]
         for (let c = 0; c < COLS; c++) {
-          if (!inGapN(c)) { put(c % 2 ? TILE.TREE : TILE.PINE, c, 0); block(c, 0) }
-          if (!inGapS(c)) { put(c % 2 ? TILE.PINE : TILE.TREE, c, ROWS - 1); block(c, ROWS - 1) }
+          if (!inGapN(c)) { if (!paintedBg) put(c % 2 ? TILE.TREE : TILE.PINE, c, 0); block(c, 0) }
+          if (!inGapS(c)) { if (!paintedBg) put(c % 2 ? TILE.PINE : TILE.TREE, c, ROWS - 1); block(c, ROWS - 1) }
         }
         for (let r = 1; r < ROWS - 1; r++) {
-          put(r % 2 ? TILE.TREE : TILE.PINE, 0, r); block(0, r)
-          put(r % 2 ? TILE.PINE : TILE.TREE, COLS - 1, r); block(COLS - 1, r)
+          if (!paintedBg) { put(r % 2 ? TILE.TREE : TILE.PINE, 0, r); put(r % 2 ? TILE.PINE : TILE.TREE, COLS - 1, r) }
+          block(0, r); block(COLS - 1, r)
         }
         // inner rim (decorative depth, walk-through bushes)
-        for (let c = 2; c < COLS - 2; c += 2) {
+        if (!paintedBg) for (let c = 2; c < COLS - 2; c += 2) {
           if (!inGapN(c) && rnd() < 0.7) put(rnd() < 0.5 ? TILE.PINE : TILE.BUSH, c, 1)
           if (!inGapS(c) && rnd() < 0.7) put(rnd() < 0.5 ? TILE.TREE : TILE.BUSH, c, ROWS - 2)
         }
@@ -311,14 +341,17 @@ export default function KinQuestTown({
           crest.anchor.set(0.5); crest.position.set((g.col + 1) * T, g.row * T - 26); crest.zIndex = 99991; ent.addChild(crest)
         }
 
-        // ── ponds with animated ripples ──
+        // ── ponds: blocking always; the solid pond disc only when unpainted
+        // (the painting has its own pond — keep the animated ripples on top) ──
         for (const p of M.ponds) {
           const x = p.c * T, y = p.r * T
-          const g = new PIXI.Graphics()
-          g.ellipse(x, y + 3, 30, 18).fill({ color: 0x1c5a80, alpha: 0.35 })
-          g.ellipse(x, y, 28, 17).fill(0x3f9fd0); g.ellipse(x, y, 22, 12).fill(0x63c4ea)
-          g.ellipse(x - 6, y - 4, 8, 3.5).fill({ color: 0xffffff, alpha: 0.4 })
-          g.zIndex = y - 60; ent.addChild(g)
+          if (!paintedBg) {
+            const g = new PIXI.Graphics()
+            g.ellipse(x, y + 3, 30, 18).fill({ color: 0x1c5a80, alpha: 0.35 })
+            g.ellipse(x, y, 28, 17).fill(0x3f9fd0); g.ellipse(x, y, 22, 12).fill(0x63c4ea)
+            g.ellipse(x - 6, y - 4, 8, 3.5).fill({ color: 0xffffff, alpha: 0.4 })
+            g.zIndex = y - 60; ent.addChild(g)
+          }
           for (let dc = -2; dc <= 2; dc++) for (let dr = -1; dr <= 1; dr++) block(p.c + dc, p.r + dr)
           for (let i = 0; i < 2; i++) {
             const rg = new PIXI.Graphics(); rg.zIndex = y - 58; ent.addChild(rg)
@@ -328,16 +361,37 @@ export default function KinQuestTown({
         }
 
         // ── NPCs + route trainers ──
+        // Pixel-art people (PixelLab, /assets/kinquest/npcs) — the old primitive
+        // "rectangle + emoji" people stay as a graceful fallback if a PNG is missing.
+        const NPC_ART: Record<string, string> = {
+          npc_guide: '/assets/kinquest/npcs/pip.png', npc_elder: '/assets/kinquest/npcs/rowan.png',
+          trainer_milo: '/assets/kinquest/npcs/milo.png', trainer_vera: '/assets/kinquest/npcs/vera.png',
+        }
+        const npcTex: Record<string, any> = {}
+        await Promise.all(Object.entries(NPC_ART).map(async ([id, url]) => {
+          try { const t = await PIXI.Assets.load(url); t.source.scaleMode = 'nearest'; npcTex[id] = t } catch { /* fallback below */ }
+        }))
+        if (destroyed) return
         const npcSprites: { s: any; baseY: number; ph: number }[] = []
         const placePerson = (id: string, col: number, row: number, color: number, emoji: string, kind: ActionKind, beaten = false) => {
           const x = col * T + T / 2, y = row * T + T
           const c = new PIXI.Container(); c.position.set(x, y); c.zIndex = y + 6
-          const body = new PIXI.Graphics()
-          body.ellipse(0, 1, 7, 2.6).fill({ color: 0x000000, alpha: 0.2 })
-          body.roundRect(-5, -12, 10, 12, 4).fill(beaten ? 0x9aa0a6 : color)
-          body.circle(0, -14, 5).fill(0xf6c89a)
-          c.addChild(body)
-          const mk = new PIXI.Text({ text: emoji, style: { fontFamily: 'Arial', fontSize: 13 } }); mk.anchor.set(0.5); mk.position.set(0, -26); c.addChild(mk)
+          const shadow = new PIXI.Graphics()
+          shadow.ellipse(0, 1, 7, 2.6).fill({ color: 0x000000, alpha: 0.2 })
+          c.addChild(shadow)
+          const tex = npcTex[id]
+          if (tex) {
+            const sp = new PIXI.Sprite(tex); sp.anchor.set(0.5, 1); sp.position.set(0, 2)
+            sp.scale.set(32 / tex.height)
+            if (beaten) sp.tint = 0x9aa0a6
+            c.addChild(sp)
+          } else {
+            const body = new PIXI.Graphics()
+            body.roundRect(-5, -12, 10, 12, 4).fill(beaten ? 0x9aa0a6 : color)
+            body.circle(0, -14, 5).fill(0xf6c89a)
+            c.addChild(body)
+            const mk = new PIXI.Text({ text: emoji, style: { fontFamily: 'Arial', fontSize: 13 } }); mk.anchor.set(0.5); mk.position.set(0, -26); c.addChild(mk)
+          }
           ent.addChild(c)
           block(col, row)
           targets.push({ id, label: kind === 'trainer' ? 'Challenge' : 'Talk', kind, x, y: y + T })
@@ -372,7 +426,8 @@ export default function KinQuestTown({
           return false
         }
         const taken = new Set<string>()
-        const budget = map === 'route' ? 40 : 45
+        // painted maps carry their own decoration — skip the Kenney scatter
+        const budget = paintedBg ? 0 : map === 'route' ? 40 : 45
         for (let i = 0; i < budget; i++) {
           const c = 2 + Math.floor(rnd() * (COLS - 4)), r = 2 + Math.floor(rnd() * (ROWS - 4))
           const key = c + ',' + r
@@ -541,8 +596,10 @@ export default function KinQuestTown({
             if (rp.life <= 0) { rp.g.destroy(); rustles.splice(i, 1) }
           }
 
-          // camera: comfy chunky-pixel follow, clamped to map bounds
-          const z = clamp(app.screen.width / (13.5 * T), 1.6, 4)
+          // camera: comfy chunky-pixel follow, clamped to map bounds.
+          // ~26 tiles visible across (13.5 → 20 → 26 across two rounds of user
+          // feedback); low min zoom so the whole town breathes on any screen.
+          const z = clamp(app.screen.width / (26 * T), 0.9, 2.4)
           world.scale.set(z)
           const tx2 = hero ? hero.x : BASEW / 2, ty2 = hero ? hero.y : BASEH / 2
           let px = app.screen.width / 2 - tx2 * z, py = app.screen.height / 2 - ty2 * z
@@ -551,12 +608,35 @@ export default function KinQuestTown({
           world.position.set(px, py)
         })
 
-        // rasterise the avatar
+        // rasterise the avatar (+ equipped mount) — hero sized to match the
+        // 32px pixel-art NPCs (the old 0.52 scale towered over them).
         const avC = await rasterize(avatarTex, 96, 96)
         if (destroyed || !app.stage) return
         const heroC = new PIXI.Container(); heroC.position.set(SPAWN.c * T, SPAWN.r * T)
         const heroShadow = new PIXI.Graphics(); heroShadow.ellipse(0, 6, 9, 3).fill({ color: 0x000000, alpha: 0.22 }); heroC.addChild(heroShadow)
-        const rs = new PIXI.Sprite(PIXI.Texture.from(avC)); rs.anchor.set(0.5, 0.9); rs.scale.set(0.52); heroC.addChild(rs)
+        let mountSp: any = null
+        if (mountUrl) {
+          try {
+            const mTex = await PIXI.Assets.load(mountUrl)
+            if (destroyed || !app.stage) return
+            mTex.source.scaleMode = 'nearest'
+            mountSp = new PIXI.Sprite(mTex)
+            // 128px source → ~48px in-world, crisp pixels
+            mountSp.anchor.set(0.5, 0.9); mountSp.position.set(0, 4); mountSp.scale.set(0.38)
+            heroC.addChild(mountSp)
+          } catch { /* on-foot if the PNG is missing */ }
+        }
+        const rs = new PIXI.Sprite(PIXI.Texture.from(avC)); heroC.addChild(rs)
+        // Ride on/off applies in place (no scene rebuild): seated = small head on
+        // the saddle (mirrors AvatarSprite's tuning); on foot = NPC-scale walker.
+        const applyRide = (r: boolean) => {
+          const mounted = r && !!mountSp
+          if (mountSp) mountSp.visible = mounted
+          if (mounted) { rs.anchor.set(0.5, 0.5); rs.position.set(1, -22); rs.scale.set(0.26) }
+          else { rs.anchor.set(0.5, 0.9); rs.position.set(0, 0); rs.scale.set(0.38) }
+        }
+        applyRideRef.current = applyRide
+        applyRide(rideRef.current)
         heroC.zIndex = heroC.y + 20; ent.addChild(heroC); hero = heroC
       } catch (err) { console.error('[kinquest-town] pixi init failed:', err) }
     })()
@@ -566,7 +646,7 @@ export default function KinQuestTown({
       window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku)
       try { if (app) app.destroy(true, { children: true }) } catch { /* ignore */ }
     }
-  }, [avatarTex, map, gymSealed, trainersBeaten.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [avatarTex, mountUrl, map, gymSealed, trainersBeaten.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="kqt">
@@ -574,6 +654,14 @@ export default function KinQuestTown({
       {near && near.kind !== 'exit' && (
         <button className="kqt-action" onClick={() => cbRef.current.onAction(near)}>
           {near.kind === 'npc' ? '💬 Talk' : near.kind === 'trainer' ? '⚔ Challenge' : `⤵ Enter ${near.label}`}
+        </button>
+      )}
+      {mountId && !paused && (
+        <button
+          className="kqt-ride"
+          onClick={() => setRiding(v => { const n = !v; localStorage.setItem('arg_riding', n ? '1' : '0'); applyRideRef.current?.(n); return n })}
+        >
+          {riding ? '🚶 Walk' : '🐎 Ride'}
         </button>
       )}
       {!paused && <Joystick className="kqt-joy" onChange={(dx, dy) => { controls.current = { dx, dy } }} />}
