@@ -10,10 +10,12 @@
     "stdio": "tsx src/server.ts",
     "http": "tsx src/server.ts --http",
     "inspect": "npx -y @modelcontextprotocol/inspector tsx src/server.ts",
+    "pixel-sync": "tsx scripts/pixel-sync.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
+    "@supabase/supabase-js": "^2.45.0",
     "express": "^4.21.0",
     "zod": "^3.23.8"
   },
