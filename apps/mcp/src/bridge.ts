@@ -12,6 +12,7 @@ import { officeById, OFFICE_ORDER, OFFICE_CHAT } from '../../hq/src/data/graph/a
 import { runModel, CASE_DEFAULTS, HORIZONS } from '../../hq/src/data/graph/model'
 import type { Assumptions, Case } from '../../hq/src/data/graph/model'
 import { costAt, LAYERS, TREASURY_PER_ACTIVE, fmtFamilies } from '../../hq/src/data/graph/scaleModel'
+import { valuationEstimate, valuationLevers } from '../../hq/src/data/graph/valuation'
 import type { GraphNode, GraphEdge, OfficeId, Health, Source, Verdict } from '../../hq/src/data/graph/types'
 
 export const NORTH_STAR = 'ns.w2f'
@@ -231,5 +232,43 @@ export function scaleModel(families = 10000) {
     dataTier: tier,
     byLayer,
     honesty: HONESTY_RULE + ' Cost shapes are `simulated` — real pricing, projected volumes.',
+  }
+}
+
+// ---- The Actuary — valuation (owner Treasury) ------------------------------
+export function valuation(asOf = 'current') {
+  return valuationEstimate(asOf)
+}
+
+export function valuationLeverList() {
+  return { levers: valuationLevers(), honesty: HONESTY_RULE + ' Impacts are deterministic deltas over the same graph — what would move the number, ranked.' }
+}
+
+// history lives in the valuation_snapshot ledger (Supabase); this deterministic
+// deployment returns the current point + how to read the series
+export function valuationHistory() {
+  const e = valuationEstimate('current')
+  return {
+    note: 'Time series lives in the valuation_snapshot ledger (Supabase). This deployment is deterministic-seed + read-only, so it returns the current point only.',
+    current: { asOf: e.asOf, recommended: e.recommended, weightsMode: e.synthesized.weightsMode },
+    honesty: HONESTY_RULE,
+  }
+}
+
+// packages the estimate + a chair-framing template for the CALLING llm to
+// synthesize — no server-side model call, same pattern as ceo_ask
+export function valuationNarrative(asOf = 'current') {
+  const estimate = valuationEstimate(asOf)
+  return {
+    estimate,
+    chairs: {
+      VC: 'Price the floor, not the story. Which methods assume a fundraise-ready team this company has not tested?',
+      Angel: 'Back the builder. What single milestone most tightens this range, and how cheap is it?',
+      CEO: 'Sequencing — what is the fastest path to flip stage.pay live and re-rate?',
+      CTO: 'Which instrumentation gaps hold the technology-risk factor down?',
+      CFO: 'State the recommended range, its provenance, and the one input that would move it most.',
+    },
+    guidance: 'You are the Actuary. Give ONE decision-grade valuation read for the founder: the recommended range, the driver of change, and the top lever — each with its provenance. Never present a simulated method as measured.',
+    honesty: estimate.honesty,
   }
 }

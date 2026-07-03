@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Wallet, TrendingUp, X, FileText, Receipt, Building2, Waves, Percent, Layers } from 'lucide-react'
+import { Wallet, TrendingUp, X, FileText, Receipt, Building2, Waves, Percent, Layers, Scale, ArrowUpRight } from 'lucide-react'
 import { Office } from './Office'
 import { SourceBadge } from './SourceBadge'
-import { CashflowChart, type RSeries } from '../../components/rcharts'
+import { CashflowChart, ValuationFootballField, type RSeries, type FFRow } from '../../components/rcharts'
 import { ReportPanel } from './reports/Briefing'
 import { buildFinancialReport } from '../../data/reports/financial'
+import { buildValuationReport } from '../../data/reports/valuation'
+import { valuationEstimate, valuationLevers } from '../../data/graph/valuation'
 import {
   runModel, CASE_DEFAULTS, SLIDERS, DIAMOND_GRANT, HORIZONS,
   FIXED_MO, PROCESSING, INFRA_REG, REG_MULT,
@@ -35,7 +37,59 @@ export function Treasury() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Office id="treasury" cockpit={<FinancialCockpit />} />
+      <ValuationPanel />
       <ReportPanel report={buildFinancialReport()} label="Financial report" />
+      <ReportPanel report={buildValuationReport()} label="Valuation report" />
+    </div>
+  )
+}
+
+// ── The Actuary — valuation panel (six methods + what would move it) ─────────
+function ValuationPanel() {
+  const e = valuationEstimate('current')
+  const levers = valuationLevers()
+  const ff: FFRow[] = [
+    ...e.methods.map(m => ({ label: m.label, sub: m.provenance, low: m.low, high: m.high })),
+    { label: 'Recommended', sub: 'synthesized', low: e.recommended.low, high: e.recommended.high, highlight: true },
+  ]
+  return (
+    <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="spread" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div className="row" style={{ gap: 7, fontSize: 13, fontWeight: 600 }}><Scale size={14} /> Valuation · The Actuary <SourceBadge source={e.synthesized.provenance} small /></div>
+        <div style={{ fontSize: 12, color: 'var(--tx2)' }}>recommended <b style={{ color: 'var(--acc-text)', fontFamily: 'var(--mono)' }}>${e.recommended.low}M–${e.recommended.high}M</b> pre-money</div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 8 }}>
+        <Kpi label="Recommended low" value={`$${e.recommended.low}M`} />
+        <Kpi label="Recommended high" value={`$${e.recommended.high}M`} />
+        <Kpi label="Weighting" value={e.synthesized.weightsMode} />
+        <Kpi label="Top lever" value={levers[0] ? `+$${levers[0].estImpactUsdM}M` : '—'} tone="ok" />
+      </div>
+
+      <ValuationFootballField rows={ff} />
+
+      <div style={{ fontSize: 10.5, color: 'var(--tx3)', lineHeight: 1.5 }}>{e.driverOfChange}</div>
+
+      {/* what would move it — the founder's dynamic to-do */}
+      <div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, marginBottom: 6 }}>What would move it <span style={{ color: 'var(--tx3)', fontWeight: 400 }}>· ranked by $ impact</span></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {levers.map((l, i) => (
+            <div key={i} className="spread" style={{ gap: 10, padding: '8px 10px', border: '1px solid var(--bd2)', borderRadius: 'var(--r-lg)', background: 'var(--bg)', flexWrap: 'wrap' }}>
+              <div className="row" style={{ gap: 8, minWidth: 0 }}>
+                <ArrowUpRight size={13} style={{ color: 'var(--ok)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5 }}>{l.action}</span>
+              </div>
+              <div className="row" style={{ gap: 8 }}>
+                <span className="pill pill-mut" style={{ fontSize: 9.5, fontFamily: 'var(--mono)' }}>{l.node}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ok)', fontFamily: 'var(--mono)' }}>+${l.estImpactUsdM}M</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 10, color: 'var(--tx3)', lineHeight: 1.5 }}>Six standard early-stage methods, computed off the ontology graph + founder-set constants. No method calls an LLM. The range re-rates when <span style={{ fontFamily: 'var(--mono)' }}>stage.pay</span> flips live — the synthesis weights invert at first real payers.</div>
     </div>
   )
 }

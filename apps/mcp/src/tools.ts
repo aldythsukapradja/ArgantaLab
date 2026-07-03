@@ -6,6 +6,7 @@ import { z } from 'zod'
 import {
   orgBrief, askCeo, officeReport, graphQuery, nodeGet, verdictQueue,
   rootCauseChain, financialModel, scaleModel, OFFICE_IDS,
+  valuation, valuationLeverList, valuationHistory, valuationNarrative,
 } from './bridge'
 import {
   pixelQuery, pixelFacets, pixelGet, pixelSimilar, pixelVocab, pixelPalettes, pixelUsage,
@@ -174,5 +175,39 @@ export function registerTools(server: McpServer) {
     'still procedural placeholders vs missing, plus published-but-unused (orphan) assets.',
     {},
     async () => json(pixelUsage()),
+  )
+
+  // ── The Actuary — valuation (Treasury/CFO) ────────────────────────────────
+  server.tool(
+    'valuation_estimate',
+    'Six-method pre-money valuation range (Cost-to-Duplicate, Berkus, Risk Factor Summation, Scorecard, VC ' +
+    'Method, First Chicago), computed live off the ontology graph + founder-set constants, plus a synthesized ' +
+    'recommended range. Every method carries a provenance badge; none calls an LLM. USD millions.',
+    { asOf: z.string().optional() },
+    async ({ asOf }) => json(valuation(asOf)),
+  )
+
+  server.tool(
+    'valuation_levers',
+    'What would move the valuation, ranked by deterministic $ impact — e.g. wiring stage.pay live flips the ' +
+    'synthesis weights. Use to answer "what do I do to increase the company\'s value?"',
+    {},
+    async () => json(valuationLeverList()),
+  )
+
+  server.tool(
+    'valuation_history',
+    'The valuation over time. History lives in the valuation_snapshot ledger (Supabase); this deterministic ' +
+    'deployment returns the current point + how the series is read.',
+    {},
+    async () => json(valuationHistory()),
+  )
+
+  server.tool(
+    'valuation_narrative',
+    'The deterministic valuation packet PLUS a chair-framing template (VC / Angel / CEO / CTO / CFO) for YOU, ' +
+    'the calling model, to synthesize a decision-grade read. No server-side model call — same pattern as ceo_ask.',
+    { asOf: z.string().optional() },
+    async ({ asOf }) => json(valuationNarrative(asOf)),
   )
 }
