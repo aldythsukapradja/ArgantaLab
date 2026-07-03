@@ -34,16 +34,16 @@ function matches(i: VaultItem, f: QueryFilter): boolean {
 }
 
 export interface QueryResult { total: number; offset: number; limit: number; items: VaultItem[] }
-export function vaultQuery(f: QueryFilter = {}): QueryResult {
-  const all = CATALOGUE.filter(i => matches(i, f))
+export function vaultQuery(f: QueryFilter = {}, data: VaultItem[] = CATALOGUE): QueryResult {
+  const all = data.filter(i => matches(i, f))
   const offset = f.offset ?? 0
   const limit = f.limit ?? 60
   return { total: all.length, offset, limit, items: all.slice(offset, offset + limit) }
 }
 
 // distinct-value counts per field over the filtered set — the benchmarking view
-export function vaultFacets(scope: QueryFilter = {}): Facets {
-  const set = CATALOGUE.filter(i => matches(i, scope))
+export function vaultFacets(scope: QueryFilter = {}, data: VaultItem[] = CATALOGUE): Facets {
+  const set = data.filter(i => matches(i, scope))
   const tally = (get: (i: VaultItem) => string[]): FacetCount[] => {
     const m = new Map<string, number>()
     for (const i of set) for (const v of get(i)) if (v) m.set(v, (m.get(v) ?? 0) + 1)
@@ -68,8 +68,8 @@ export function vaultFacets(scope: QueryFilter = {}): Facets {
   }
 }
 
-export function vaultGet(id: string) {
-  const item = catalogueById(id)
+export function vaultGet(id: string, data: VaultItem[] = CATALOGUE) {
+  const item = data.find(i => i.id === id) ?? catalogueById(id)
   if (!item) return { error: `no vault item '${id}'`, hint: 'use vaultQuery to list ids' }
   return {
     item,
@@ -80,11 +80,11 @@ export function vaultGet(id: string) {
 }
 
 // items sharing a group, else overlapping theme/style — pull a whole cast at once
-export function vaultSimilar(id: string, limit = 12) {
-  const seed = catalogueById(id)
+export function vaultSimilar(id: string, limit = 12, data: VaultItem[] = CATALOGUE) {
+  const seed = data.find(i => i.id === id) ?? catalogueById(id)
   if (!seed) return { error: `no vault item '${id}'` }
-  const grouped = seed.curated.groupId ? CATALOGUE.filter(i => i.id !== id && i.curated.groupId === seed.curated.groupId) : []
-  const scored = CATALOGUE.filter(i => i.id !== id && !grouped.includes(i)).map(i => {
+  const grouped = seed.curated.groupId ? data.filter(i => i.id !== id && i.curated.groupId === seed.curated.groupId) : []
+  const scored = data.filter(i => i.id !== id && !grouped.includes(i)).map(i => {
     const themeOverlap = i.curated.theme.filter(t => seed.curated.theme.includes(t)).length
     const styleMatch = i.curated.style && i.curated.style === seed.curated.style ? 1 : 0
     const kindMatch = i.curated.kind === seed.curated.kind ? 1 : 0
@@ -94,10 +94,10 @@ export function vaultSimilar(id: string, limit = 12) {
 }
 
 // palette usedBy ≈ catalogue items sharing ≥2 colors (derived, not fabricated)
-export function listPalettes(): Palette[] {
-  return PALETTES.map(p => {
+export function listPalettes(palettes: Palette[] = PALETTES, data: VaultItem[] = CATALOGUE): Palette[] {
+  return palettes.map(p => {
     const cols = new Set(p.colors.map(c => c.toLowerCase()))
-    const usedBy = CATALOGUE.filter(i => (i.form.swatch ?? []).filter(s => cols.has(s.toLowerCase())).length >= 2).length
+    const usedBy = data.filter(i => (i.form.swatch ?? []).filter(s => cols.has(s.toLowerCase())).length >= 2).length
     return { ...p, usedBy }
   })
 }

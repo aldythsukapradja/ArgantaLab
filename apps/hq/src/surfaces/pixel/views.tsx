@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { usageSummary, listPalettes, ingestQueue } from '../../data/pixel/engine'
-import type { UsageSite } from '../../data/pixel/types'
+import type { UsageSite, Palette, VaultItem } from '../../data/pixel/types'
 
 // ── Usage — the render-key coverage x-ray over the other Arganta apps ────────
 const STATE_META: Record<UsageSite['state'], { c: string; label: string; dot: string }> = {
@@ -77,8 +77,8 @@ function Stat({ n, label, c }: { n: string | number; label: string; c?: string }
 }
 
 // ── Palettes — canonical + Lospec public-domain color systems ────────────────
-export function PalettesView() {
-  const palettes = listPalettes()
+export function PalettesView({ palettes: pals, items }: { palettes: Palette[]; items: VaultItem[] }) {
+  const palettes = listPalettes(pals, items)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>The shared color systems the catalogue references. Canonical Arganta sets keep art consistent across apps; Lospec palettes are public domain — import any as a starting point.</div>

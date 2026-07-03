@@ -13,7 +13,7 @@ const FILTER_KEY: Record<FacetKey, keyof QueryFilter> = {
   domain: 'domain', kind: 'kind', theme: 'theme', characterType: 'characterType', style: 'style', tier: 'tier', source: 'source',
 }
 
-export function Browser({ base, title, blurb }: { base: QueryFilter; title: string; blurb: string }) {
+export function Browser({ base, data, title, blurb }: { base: QueryFilter; data: VaultItem[]; title: string; blurb: string }) {
   const [sel, setSel] = useState<Partial<Record<FacetKey, string>>>({})
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<VaultItem | null>(null)
@@ -24,8 +24,8 @@ export function Browser({ base, title, blurb }: { base: QueryFilter; title: stri
     return f
   }, [base, sel, q])
 
-  const facets = useMemo(() => vaultFacets({ ...filter, q: undefined }), [filter])
-  const res = useMemo(() => vaultQuery(filter), [filter])
+  const facets = useMemo(() => vaultFacets({ ...filter, q: undefined }, data), [filter, data])
+  const res = useMemo(() => vaultQuery(filter, data), [filter, data])
 
   const toggle = (k: FacetKey, v: string) => setSel(s => ({ ...s, [k]: s[k] === v ? undefined : v }))
   const activeCount = Object.values(sel).filter(Boolean).length
@@ -88,7 +88,7 @@ export function Browser({ base, title, blurb }: { base: QueryFilter; title: stri
         </div>
       </div>
 
-      {open && <Inspector item={open} onClose={() => setOpen(null)} onPick={setOpen} />}
+      {open && <Inspector item={open} data={data} onClose={() => setOpen(null)} onPick={setOpen} />}
     </div>
   )
 }
@@ -102,9 +102,9 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   )
 }
 
-function Inspector({ item, onClose, onPick }: { item: VaultItem; onClose: () => void; onPick: (i: VaultItem) => void }) {
+function Inspector({ item, data, onClose, onPick }: { item: VaultItem; data: VaultItem[]; onClose: () => void; onPick: (i: VaultItem) => void }) {
   const t = TIERS[item.source.tier]
-  const sim = vaultSimilar(item.id, 8)
+  const sim = vaultSimilar(item.id, 8, data)
   const similar = (sim as { similar?: VaultItem[] }).similar ?? []
   const promptText = `pixel art, ${item.curated.kind}${item.curated.characterType ? ' (' + item.curated.characterType + ')' : ''}, ${item.curated.theme.join('/')}, ${item.curated.style ?? ''} style, ${item.form.size.w}x${item.form.size.h}, style reference: ${item.name} [${item.source.name}]`
   return (

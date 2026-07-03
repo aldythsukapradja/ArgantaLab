@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Boxes } from 'lucide-react'
 import { Browser } from './Browser'
 import { UsageView, PalettesView, IngestView } from './views'
+import { useVault } from './useVault'
 import { vaultFacets, ingestQueue, listPalettes, TIERS } from '../../data/pixel/engine'
 import type { Tier } from '../../data/pixel/types'
 
@@ -9,10 +10,11 @@ type Seg = 'library' | 'usage' | 'ingest' | 'references' | 'palettes'
 
 export function Pixel() {
   const [seg, setSeg] = useState<Seg>('references')
-  const all = vaultFacets({ includeUnverified: true })
+  const vault = useVault()
+  const all = vaultFacets({ includeUnverified: true }, vault.items)
   const tierCounts = Object.fromEntries((all.facets.tier ?? []).map(f => [f.value, f.count])) as Record<Tier, number>
   const pending = ingestQueue().length
-  const palettes = listPalettes().length
+  const palettes = listPalettes(vault.palettes, vault.items).length
 
   const TABS: { id: Seg; label: string; badge?: number }[] = [
     { id: 'references', label: 'References' },
@@ -27,7 +29,12 @@ export function Pixel() {
       <div className="spread" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div className="h1"><span className="row" style={{ gap: 8 }}><Boxes size={20} /> Pixel Vault</span></div>
-          <div className="sub">The source-of-truth pixel-art catalogue — license-tiered, faceted, and queryable by agents</div>
+          <div className="sub row" style={{ gap: 8 }}>
+            The source-of-truth pixel-art catalogue — license-tiered, faceted, and queryable by agents
+            <span className="pill" style={{ fontSize: 9.5, background: 'var(--bg3)', color: vault.source === 'cloud' ? 'var(--ok)' : 'var(--tx3)' }}>
+              {vault.source === 'cloud' ? `● Supabase · ${vault.items.length} items` : '○ seed (sign in to load your store)'}
+            </span>
+          </div>
         </div>
         <div className="seg">
           {TABS.map(t => (
@@ -51,11 +58,11 @@ export function Pixel() {
         })}
       </div>
 
-      {seg === 'references' && <Browser base={{ canonical: false }} title="References" blurb="Open-source inspiration, license-tiered. Never edited here — browse, then copy a generation prompt." />}
-      {seg === 'library' && <Browser base={{ canonical: true }} title="Library" blurb="Your canonical, shippable assets — what the Arganta apps actually consume, by id." />}
+      {seg === 'references' && <Browser base={{ canonical: false }} data={vault.items} title="References" blurb="Open-source inspiration, license-tiered. Never edited here — browse, then copy a generation prompt." />}
+      {seg === 'library' && <Browser base={{ canonical: true }} data={vault.items} title="Library" blurb="Your canonical, shippable assets — what the Arganta apps actually consume, by id." />}
       {seg === 'usage' && <UsageView />}
       {seg === 'ingest' && <IngestView />}
-      {seg === 'palettes' && <PalettesView />}
+      {seg === 'palettes' && <PalettesView palettes={vault.palettes} items={vault.items} />}
     </div>
   )
 }

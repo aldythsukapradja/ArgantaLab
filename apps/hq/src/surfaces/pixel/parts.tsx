@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TIERS } from '../../data/pixel/engine'
+import { signedThumb } from '../../data/pixel/cloud'
 import type { Tier, VaultItem } from '../../data/pixel/types'
 
 // Deterministic PRNG so a given id always renders the same motif (no flicker,
@@ -10,8 +11,16 @@ function rng(seed: number) { let x = seed || 1; return () => { x ^= x << 13; x ^
 // Real art when we have it (thumbUrl → owned/CC0/synced), otherwise a generated
 // stand-in drawn from the swatch colors (honest: never the copyrighted pixels).
 export function Swatch({ item, px = 84 }: { item: VaultItem; px?: number }) {
-  if (item.form.thumbUrl) {
-    return <img src={item.form.thumbUrl} alt={item.name} width={px} height={px} loading="lazy"
+  // real art: a local/absolute thumbUrl, else a lazily-signed private-bucket path
+  const [signed, setSigned] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    if (!item.form.thumbUrl && item.form.storagePath) signedThumb(item.form.storagePath).then(u => { if (alive) setSigned(u) })
+    return () => { alive = false }
+  }, [item.form.thumbUrl, item.form.storagePath])
+  const url = item.form.thumbUrl ?? signed
+  if (url) {
+    return <img src={url} alt={item.name} width={px} height={px} loading="lazy"
       style={{ width: px, height: px, objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 6, background: 'repeating-conic-gradient(var(--bg3) 0% 25%, transparent 0% 50%) 0 0/12px 12px' }} />
   }
   return <SwatchStandIn item={item} px={px} />

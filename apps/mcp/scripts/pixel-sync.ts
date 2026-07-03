@@ -14,6 +14,7 @@ import { dirname, join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { CATALOGUE } from '../../hq/src/data/pixel/catalogue'
 import { PALETTES } from '../../hq/src/data/pixel/palettes'
+import { sliceSheet } from './kenney-slice'
 
 const URL = process.env.SUPABASE_URL
 const KEY = process.env.SUPABASE_SERVICE_KEY
@@ -56,6 +57,39 @@ async function run() {
     if (error) console.error(`  x row ${it.id}: ${error.message}`); else rows++
   }
 
+  // slice the local Kenney CC0 sheets into individual real sprites → upload each
+  const SHEETS: { pack: string; file: string; domain: string[]; theme: string[] }[] = [
+    { pack: 'roguelike', file: '/pixel/kenney/roguelike.png', domain: ['rpg', 'roguelike', 'tileset'], theme: ['fantasy', 'dungeon', 'medieval'] },
+    { pack: 'tiny-town', file: '/pixel/kenney/tinytown.png', domain: ['rpg', 'topdown', 'tileset'], theme: ['nature', 'cute', 'medieval'] },
+  ]
+  let tiles = 0
+  for (const sh of SHEETS) {
+    let buf: Buffer
+    try { buf = await readFile(join(PUBLIC, sh.file)) } catch { console.warn(`  ! sheet missing: ${sh.file}`); continue }
+    const sprites = sliceSheet(buf)
+    console.log(`  · slicing ${sh.pack}: ${sprites.length} sprites`)
+    const rowsBatch: Record<string, unknown>[] = []
+    for (const t of sprites) {
+      const id = `ref.kenney.${sh.pack}.r${t.r}c${t.c}`
+      const path = `assets/kenney/${sh.pack}/r${t.r}c${t.c}.png`
+      const { error } = await db.storage.from(BUCKET).upload(path, t.png, { contentType: 'image/png', upsert: true })
+      if (error) { console.warn(`  ! tile ${id}: ${error.message}`); continue }
+      rowsBatch.push({
+        id, name: `Kenney ${sh.pack} r${t.r}c${t.c}`,
+        source: { name: 'kenney', sourceId: `${sh.pack}/r${t.r}c${t.c}`, pack: sh.pack, url: 'https://kenney.nl', author: 'Kenney', license: 'CC0', tier: 'T0', fetchedAt: new Date().toISOString().slice(0, 10) },
+        curated: { domain: sh.domain, kind: 'tile', isCharacter: false, theme: sh.theme, style: '16bit', groupId: `kenney-${sh.pack}`, tags: ['kenney', sh.pack, 'tile', 'sliced'], verified: false },
+        form: { size: { w: 16, h: 16 }, perspective: 'top-down', colorCount: t.colors },
+        animations: [], tier: 'T0', license: 'CC0', status: null, storage_path: path, updated_at: new Date().toISOString(),
+      })
+      tiles++
+    }
+    // batch the metadata upserts (500 at a time)
+    for (let i = 0; i < rowsBatch.length; i += 500) {
+      const { error } = await db.from('pixel_asset').upsert(rowsBatch.slice(i, i + 500))
+      if (error) console.error(`  x tile rows ${sh.pack} @${i}: ${error.message}`)
+    }
+  }
+
   let pals = 0
   for (const p of PALETTES) {
     const { error } = await db.from('pixel_palette').upsert({
@@ -65,8 +99,8 @@ async function run() {
     if (error) console.error(`  x palette ${p.id}: ${error.message}`); else pals++
   }
 
-  console.log(`\n✓ pixel-sync complete — ${rows} assets (${uploaded} with art, ${skipped} art-skipped), ${pals} palettes.`)
-  console.log('  Art with no local file yet is catalogued with storage_path=null — add a source fetcher below to download it.')
+  console.log(`\n✓ pixel-sync complete — ${rows} catalogue assets (${uploaded} with art) + ${tiles} sliced Kenney sprites + ${pals} palettes.`)
+  console.log(`  Total in Supabase: ${rows + tiles} assets, ${pals} palettes.`)
 }
 
 // ── extension seam: add a fetcher per source to download the full libraries ──
