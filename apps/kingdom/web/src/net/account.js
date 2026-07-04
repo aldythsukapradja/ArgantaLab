@@ -37,7 +37,7 @@ export const currentUser = async () => (await supabase.auth.getUser()).data.user
 export async function fetchKinetikProfile(userId) {
   const { data } = await supabase
     .from('profiles')
-    .select('display_name, photo_url, diamonds')
+    .select('display_name, photo_url, diamonds, xp, level, role')
     .eq('id', userId)
     .maybeSingle();
   return data || null;

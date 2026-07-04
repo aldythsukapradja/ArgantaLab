@@ -5,7 +5,7 @@
     { "name": "kingdom", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","8321","-d","apps/kingdom"], "port": 8321 },
     { "name": "kingdom-web", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/kingdom/web"], "port": 8322 },
     { "name": "kingdom-web-2", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/kingdom/web","--","--port","8323"], "port": 8323 },
-    { "name": "kingdom-dist", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","8326","-d","apps/kingdom/dist_site"], "port": 8326 },
+    { "name": "kingdom-dist", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","8749","-d","apps/kingdom/dist_site"], "port": 8749, "autoPort": false },
     { "name": "kinetik", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/kinetik"], "port": 5180 },
     { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/web"], "port": 5173, "autoPort": true },
     { "name": "landing", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/landing"], "port": 5191 }
