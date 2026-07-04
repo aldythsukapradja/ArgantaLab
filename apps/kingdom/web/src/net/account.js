@@ -71,15 +71,37 @@ export const signOut = () => supabase.auth.signOut();
 export const onAuth = (cb) => supabase.auth.onAuthStateChange((_e, session) => cb(session?.user ?? null));
 export const currentUser = async () => (await supabase.auth.getUser()).data.user;
 
+// Mirrors ArgantaLab's rank ladder (apps/web/src/lib/rank.ts) so the arena HUD
+// shows the learner's real rank glyph instead of always falling back to Spark's
+// '*'. Kept as a small local copy rather than a cross-app import — same tier
+// thresholds, so a rank here always matches what ArgantaLab itself shows.
+const RANK_TIERS = [
+  { name: 'Spark', color: '#f0a83a', glyph: '✦', at: 0 },
+  { name: 'Explorer', color: '#5ec257', glyph: '❖', at: 5000 },
+  { name: 'Adventurer', color: '#37a8c4', glyph: '✧', at: 15000 },
+  { name: 'Maker', color: '#7a4fd0', glyph: '✶', at: 40000 },
+  { name: 'Sage', color: '#d9a520', glyph: '★', at: 85000 },
+  { name: 'Luminary', color: '#d4476b', glyph: '✷', at: 160000 },
+];
+function computeRank(xp) {
+  const p = Math.max(0, Number(xp) || 0);
+  let idx = 0;
+  for (let i = 0; i < RANK_TIERS.length; i++) if (p >= RANK_TIERS[i].at) idx = i;
+  const t = RANK_TIERS[idx];
+  return { glyph: t.glyph, name: t.name, color: t.color };
+}
+
 function snakeProfile(profile = {}) {
+  const xp = Number(profile.xp ?? 0);
   return {
     ...profile,
     display_name: profile.display_name ?? profile.displayName ?? 'Player',
     photo_url: profile.photo_url ?? profile.photoUrl ?? null,
     diamonds: Number(profile.diamonds ?? 0),
-    xp: Number(profile.xp ?? 0),
+    xp,
     level: Number(profile.level ?? 1),
     role: profile.role ?? 'user',
+    rank: profile.rank ?? computeRank(xp),
   };
 }
 

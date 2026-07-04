@@ -18,6 +18,8 @@ const lastInGroup: Record<string, string> = {}
 
 export default function Dock() {
   const { activeTab, go } = useAppStore()
+  // Arena is a full-screen game view — the bottom tab bar has no home there.
+  if (activeTab === 'arena') return null
 
   return (
     <nav className="dock">

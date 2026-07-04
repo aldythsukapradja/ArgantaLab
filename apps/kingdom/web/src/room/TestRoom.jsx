@@ -71,7 +71,10 @@ export default function TestRoom({ spec, account, onPlayerState }) {
   const [spawnPick, setSpawnPick] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [skills, setSkills] = useState(() => normalizeSkills(spec.skills));
-  const [zoom, setZoom] = useState(1.6);
+  // Narrower viewports (phones) start a bit more zoomed out so more of the
+  // arena floor is visible instead of just the character up close. Still
+  // adjustable afterward via the Camera slider in settings.
+  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 720 ? 1.2 : 1.6));
   const [hudState, setHudState] = useState({ hp: 100, maxHp: 100, mp: 40, maxMp: 40 });
   const [peerList, setPeerList] = useState([]);
   const G = useRef(null);
@@ -931,6 +934,19 @@ export default function TestRoom({ spec, account, onPlayerState }) {
             <div className="browser-head"><b>Arena settings</b>
               <button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
             <div className="settings-body">
+              <section>
+                <h4>Friends online ({onlineFriends.filter((f) => f.status !== 'offline').length})</h4>
+                {onlineFriends.length ? (
+                  onlineFriends.slice(0, 8).map((f) => (
+                    <div className="settings-friend-row" key={`${f.source || 'friend'}:${f.character_id || f.profile_id}`}>
+                      <b>{f.character_name || f.display_name}</b>
+                      <small>{mapLabel(f.map_id)}</small>
+                    </div>
+                  ))
+                ) : (
+                  <p className="settings-empty">No friends online yet.</p>
+                )}
+              </section>
               <section>
                 <h4>Spawn monster</h4>
                 <div className="setrow">

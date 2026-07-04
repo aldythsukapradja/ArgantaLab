@@ -307,17 +307,10 @@
 .room-full { position: fixed; inset: 0; top: 49px; display: flex; }
 /* ArgantaLab embed (arenaOnly): no standalone header, so the arena is truly
    fullscreen from the very top. z-index sits in the host's immersive-game tier
-   so it covers ArgantaLab's topbar/dock (like the KinQuest/battle overlays),
-   with a floating exit button one layer above it. */
+   so it covers ArgantaLab's topbar/dock (like the KinQuest/battle overlays).
+   The way back is ArgantaLab's own TopBar pill (turns into "Home" while this
+   tab is active), not a button owned by this page. */
 .arena-only .room-full { top: 0; z-index: 1000; }
-.arena-exit {
-  position: fixed; top: 12px; left: 12px; z-index: 1002;
-  width: 40px; height: 40px; border-radius: 50%;
-  border: 1px solid #ffffff55; background: #000000aa; color: #fff;
-  font-size: 17px; line-height: 1; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.arena-exit:hover { background: #000; }
 .room-canvas { position: relative; flex: 1; overflow: hidden; background: #0a0a0c; }
 .room-canvas canvas { display: block; width: 100%; height: 100%; outline: none; }
 
@@ -396,6 +389,11 @@
 .setrow input[type="number"] { width: 90px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; }
 .setrow input[type="range"] { flex: 1; }
 .setrow button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 7px; padding: 5px 12px; cursor: pointer; }
+.settings-friend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+.settings-friend-row:last-child { border-bottom: none; }
+.settings-friend-row b { color: var(--text); font-weight: 600; }
+.settings-friend-row small { color: var(--muted); }
+.settings-empty { color: var(--muted); font-size: 12.5px; margin: 4px 0; }
 
 /* ================= premium lab pass ================= */
 .app header .subtitle { color: var(--muted); font-weight: 400; }
@@ -1190,6 +1188,13 @@
   .sync-actions { justify-content: stretch; }
   .sync-actions button { flex: 1; }
   .path-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Desktop-only keyboard hint (WASD/space/etc) — meaningless on touch and it
+     was crowding the settings gear button, which is the real controls to find. */
+  .hud-keys { display: none; }
+  .hud-top { justify-content: flex-end; }
+  /* The floating friends panel has no room next to the player HUD on a phone
+     width — its content now lives in the settings (gear) modal instead, see
+     the "Friends online" section there. */
   .arena-presence { display: none; }
 }
 

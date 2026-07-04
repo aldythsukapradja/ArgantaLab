@@ -6,6 +6,8 @@ const MoonIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const BookIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
 // crossed swords — the Arena / battle entry
 const BattleIcon = () => <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="M19 21h2v-2"/><path d="M9.5 17.5 21 6V3h-3L6.5 14.5"/><path d="m11 19-6-6"/><path d="m8 16-4 4"/><path d="M5 21H3v-2"/></svg>
+// house — shown in place of the Arena pill once you're already inside it
+const HomeIcon = () => <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
 
 export function TopBar() {
   const { learnerName, avatar, xp, level, diamonds, theme, toggleTheme, setShowConcept, showConcept, lessonId,
@@ -68,8 +70,8 @@ export function TopBar() {
       {authed && (
         <button
           className="tb-arena"
-          onClick={() => go({ tab: 'arena' })}
-          title="Enter the Arena"
+          onClick={() => go({ tab: activeTab === 'arena' ? 'arganta' : 'arena' })}
+          title={activeTab === 'arena' ? 'Return home' : 'Enter the Arena'}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
@@ -81,7 +83,7 @@ export function TopBar() {
             boxShadow: '0 2px 8px #6a4df540',
           }}
         >
-          <BattleIcon /> Arena
+          {activeTab === 'arena' ? <><HomeIcon /> Home</> : <><BattleIcon /> Arena</>}
         </button>
       )}
       <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">
