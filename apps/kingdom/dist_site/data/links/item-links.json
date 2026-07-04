@@ -1,0 +1,3422 @@
+[
+ {
+  "itemId": "item.coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.variedfoliole",
+  "iconIndex": 2195,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.89,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.1000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.10000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.1100coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.1200coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.1300coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.1500coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.1700coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.1800coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.2200coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.2400coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.2600coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.2700coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.3000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.3100coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.3300coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.3700coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.4000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.4500coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.50coin",
+  "iconIndex": 73,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.909,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.500coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.5000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.5500coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.600coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.7000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.800coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.8000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.9000coin",
+  "iconIndex": 71,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.acorn",
+  "iconIndex": 214,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.963,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.agedwine",
+  "iconIndex": 730,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.altborrowedkey",
+  "iconIndex": 644,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.913,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ambrosia",
+  "iconIndex": 229,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.92,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ambrosiarare",
+  "iconIndex": 229,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.92,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientarmor",
+  "iconIndex": 118,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.956,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientarmordress",
+  "iconIndex": 169,
+  "paletteId": 277,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientblouse",
+  "iconIndex": 163,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.909,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientclothe",
+  "iconIndex": 138,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientdress",
+  "iconIndex": 153,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.928,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientgown",
+  "iconIndex": 459,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.936,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancienthelm",
+  "iconIndex": 274,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancienthelmet",
+  "iconIndex": 274,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientrobe",
+  "iconIndex": 478,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.933,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientscalemail",
+  "iconIndex": 122,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.877,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientwaistcoat",
+  "iconIndex": 98,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.939,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientwardress",
+  "iconIndex": 182,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.888,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ancientwarplatemail",
+  "iconIndex": 148,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.956,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.antler",
+  "iconIndex": 287,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.946,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.archmagusstaff",
+  "iconIndex": 1099,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.931,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumnarmordress",
+  "iconIndex": 172,
+  "paletteId": 271,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.957,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumnblouse",
+  "iconIndex": 162,
+  "paletteId": 271,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumndress",
+  "iconIndex": 158,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.946,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumngown",
+  "iconIndex": 453,
+  "paletteId": 271,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.928,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumnhelmet",
+  "iconIndex": 272,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.858,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumnrobe",
+  "iconIndex": 476,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.934,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumnskirt",
+  "iconIndex": 192,
+  "paletteId": 271,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.937,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.autumnwardress",
+  "iconIndex": 180,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.985,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.axe",
+  "iconIndex": 645,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.92,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.baekhokey",
+  "iconIndex": 753,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.892,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.baitouy",
+  "iconIndex": 2914,
+  "paletteId": 55,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bandofthedeep",
+  "iconIndex": 2948,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.919,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.barbarianbrew",
+  "iconIndex": 733,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.903,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.barbarianrune",
+  "iconIndex": 19,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.862,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.basicsickle",
+  "iconIndex": 2957,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.946,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.battlehelm",
+  "iconIndex": 269,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.909,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.battlehelmrare",
+  "iconIndex": 269,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.909,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bearfur",
+  "iconIndex": 2435,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.824,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bearliver",
+  "iconIndex": 220,
+  "paletteId": 22,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.854,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bearstooth",
+  "iconIndex": 2241,
+  "paletteId": 795,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.924,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.beautifulleather",
+  "iconIndex": 2774,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.beef",
+  "iconIndex": 2426,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bekyunspear",
+  "iconIndex": 661,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.912,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bigaxe",
+  "iconIndex": 921,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.893,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.birdmeat",
+  "iconIndex": 213,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.931,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.birdwing",
+  "iconIndex": 2018,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.904,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.blackmagoja",
+  "iconIndex": 1981,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.94,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.blackvalkyrie",
+  "iconIndex": 1987,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.922,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.blood",
+  "iconIndex": 45,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.887,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodrare",
+  "iconIndex": 45,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.887,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodarmordress",
+  "iconIndex": 175,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.895,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodgarb",
+  "iconIndex": 105,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.913,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodhelm",
+  "iconIndex": 269,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.909,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodhelmet",
+  "iconIndex": 269,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.909,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodmaildress",
+  "iconIndex": 128,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.87,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodrobe",
+  "iconIndex": 473,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodscalemail",
+  "iconIndex": 123,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.881,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodwaistcoat",
+  "iconIndex": 95,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.919,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodwardress",
+  "iconIndex": 183,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.886,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bloodwarplatemail",
+  "iconIndex": 145,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.939,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bluekinkotot",
+  "iconIndex": 1984,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.969,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bluepotion",
+  "iconIndex": 257,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.957,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bluestardrop",
+  "iconIndex": 2011,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.996,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bone",
+  "iconIndex": 212,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.971,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bonemender",
+  "iconIndex": 2348,
+  "paletteId": 35,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.98,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.book",
+  "iconIndex": 20,
+  "paletteId": 2,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.937,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bottleofvenom",
+  "iconIndex": 701,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.924,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.bottleddarkness",
+  "iconIndex": 2094,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.913,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.brownpotion",
+  "iconIndex": 259,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.939,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.chakram",
+  "iconIndex": 2001,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.97,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.chestnut",
+  "iconIndex": 214,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.963,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.chickenmeat",
+  "iconIndex": 213,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.931,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.chungryongkey",
+  "iconIndex": 754,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.945,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.coconutstick",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.913,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.cookedfish",
+  "iconIndex": 231,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.941,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.coronalvaried",
+  "iconIndex": 1885,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.892,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.crabmeat",
+  "iconIndex": 1153,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.882,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.crackedbone",
+  "iconIndex": 1122,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.976,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.crunchybug",
+  "iconIndex": 2369,
+  "paletteId": 35,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.952,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.crystalwater",
+  "iconIndex": 3273,
+  "paletteId": 595,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.97,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.daemonheart",
+  "iconIndex": 2012,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.903,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.dartpoison",
+  "iconIndex": 256,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.951,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.deadlyearth",
+  "iconIndex": 721,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.881,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.deathhead",
+  "iconIndex": 619,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.902,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.desertspetum",
+  "iconIndex": 742,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.83,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.dopplegangerpumpkin",
+  "iconIndex": 1045,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.968,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.dragonliver",
+  "iconIndex": 220,
+  "paletteId": 22,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.854,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.dragonliverrare",
+  "iconIndex": 220,
+  "paletteId": 22,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.854,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.eartharmor",
+  "iconIndex": 117,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.952,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.eartharmordress",
+  "iconIndex": 169,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.957,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthblouse",
+  "iconIndex": 159,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthclothe",
+  "iconIndex": 135,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.944,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthdress",
+  "iconIndex": 157,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.925,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthgarb",
+  "iconIndex": 107,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.919,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthgown",
+  "iconIndex": 450,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.946,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthhelm",
+  "iconIndex": 271,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.894,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthhelmet",
+  "iconIndex": 271,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.894,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthmaildress",
+  "iconIndex": 128,
+  "paletteId": 273,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.875,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthrobe",
+  "iconIndex": 475,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.943,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthscalemail",
+  "iconIndex": 126,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.881,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthskirt",
+  "iconIndex": 189,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.941,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthwaistcoat",
+  "iconIndex": 89,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.905,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthwardress",
+  "iconIndex": 199,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.947,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.earthwarplatemail",
+  "iconIndex": 147,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.933,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.eesanblood",
+  "iconIndex": 45,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.887,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.eesanspike",
+  "iconIndex": 644,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.879,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.egg",
+  "iconIndex": 830,
+  "paletteId": 83,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.851,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.emptybowl",
+  "iconIndex": 1261,
+  "paletteId": 14,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.962,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.enchantedbloodrare",
+  "iconIndex": 45,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.887,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.enchantedspikerare",
+  "iconIndex": 644,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.879,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.faerielightrare",
+  "iconIndex": 627,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.faerielight",
+  "iconIndex": 627,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.familyclothe",
+  "iconIndex": 133,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.9,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.farmerarmor",
+  "iconIndex": 110,
+  "paletteId": 11,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.863,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.farmerclothe",
+  "iconIndex": 130,
+  "paletteId": 13,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.898,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.farmerhelm",
+  "iconIndex": 266,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.916,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.farmerwaistcoat",
+  "iconIndex": 92,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.862,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.farmershelm",
+  "iconIndex": 266,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.916,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.finemetal",
+  "iconIndex": 291,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.915,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.finesnakemeat",
+  "iconIndex": 221,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.929,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.fineweavingtool",
+  "iconIndex": 36,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.flashdust",
+  "iconIndex": 729,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.flashpowder",
+  "iconIndex": 729,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.foxblade",
+  "iconIndex": 0,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.951,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.foxfur",
+  "iconIndex": 218,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.87,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.foxtail",
+  "iconIndex": 218,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.87,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.fragilerose",
+  "iconIndex": 39,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.816,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.fragileroserare",
+  "iconIndex": 39,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.816,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.frozenspear",
+  "iconIndex": 665,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.967,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.giasomostick",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.gingerroot",
+  "iconIndex": 3325,
+  "paletteId": 54,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.96,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ginkowood",
+  "iconIndex": 723,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.774,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.givenipumpkin",
+  "iconIndex": 1045,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.968,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.goldbrick",
+  "iconIndex": 3263,
+  "paletteId": 54,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.949,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.golddust",
+  "iconIndex": 3427,
+  "paletteId": 54,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.963,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.goodeye",
+  "iconIndex": 2607,
+  "paletteId": 48,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.greencloak",
+  "iconIndex": 460,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.918,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.greenvalkyrie",
+  "iconIndex": 1987,
+  "paletteId": 595,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.879,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.hauntedmirror",
+  "iconIndex": 3963,
+  "paletteId": 265,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.99,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.heartskirt",
+  "iconIndex": 195,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.903,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.high",
+  "iconIndex": 721,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.881,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.holydust",
+  "iconIndex": 75,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.908,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.holypowder",
+  "iconIndex": 75,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.908,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.hoofsabrerare",
+  "iconIndex": 643,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.832,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.horsemeat",
+  "iconIndex": 2426,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.hunangaxe",
+  "iconIndex": 645,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.92,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.hunterpumpkin",
+  "iconIndex": 1054,
+  "paletteId": 818,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.79,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.hyunmookey",
+  "iconIndex": 480,
+  "paletteId": 48,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.958,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.iceshard",
+  "iconIndex": 719,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.976,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ilsanblood",
+  "iconIndex": 45,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.887,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ilsanspike",
+  "iconIndex": 644,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.879,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ilsanspikerare",
+  "iconIndex": 644,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.879,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ironbladerare",
+  "iconIndex": 1,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.954,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ironswordrare",
+  "iconIndex": 1,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.954,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.jadescalemail",
+  "iconIndex": 120,
+  "paletteId": 12,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.888,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.jadewarplatemail",
+  "iconIndex": 140,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.945,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.jujakkey",
+  "iconIndex": 752,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.899,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytoearth",
+  "iconIndex": 488,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.901,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytofire",
+  "iconIndex": 483,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.891,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytoheaven",
+  "iconIndex": 481,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.959,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytomountain",
+  "iconIndex": 487,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.941,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytopond",
+  "iconIndex": 485,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.897,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytothunder",
+  "iconIndex": 482,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.896,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytowater",
+  "iconIndex": 486,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.keytowind",
+  "iconIndex": 484,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.947,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.lararoyalsignetring",
+  "iconIndex": 2950,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.985,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.largerock",
+  "iconIndex": 2235,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.99,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.leanbeef",
+  "iconIndex": 2426,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.leatherblouse",
+  "iconIndex": 168,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.934,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.leatherdress",
+  "iconIndex": 149,
+  "paletteId": 277,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.leathergarb",
+  "iconIndex": 99,
+  "paletteId": 277,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.91,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.leathergown",
+  "iconIndex": 459,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.936,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.leatherskirt",
+  "iconIndex": 198,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.943,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.lifelessbody",
+  "iconIndex": 88,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.808,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.lightfoxfur",
+  "iconIndex": 218,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.87,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.limestone",
+  "iconIndex": 276,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.965,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.love",
+  "iconIndex": 693,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.946,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.luckamulet",
+  "iconIndex": 977,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.871,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.luckycoin",
+  "iconIndex": 22,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.luckycoinrare",
+  "iconIndex": 22,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.luckysilvercoin",
+  "iconIndex": 69,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.959,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.luckysilvercoinrare",
+  "iconIndex": 69,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.959,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.lurideye",
+  "iconIndex": 1612,
+  "paletteId": 14,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.973,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.magicaldust",
+  "iconIndex": 729,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.magicaldustrare",
+  "iconIndex": 729,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.magusscroll",
+  "iconIndex": 1989,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.92,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.meat",
+  "iconIndex": 5,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.94,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.meatscrap",
+  "iconIndex": 2426,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.med",
+  "iconIndex": 721,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.881,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.merchantarmor",
+  "iconIndex": 109,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.9,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.merchanthelm",
+  "iconIndex": 265,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.915,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.merchantwaistcoat",
+  "iconIndex": 91,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.904,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.mica",
+  "iconIndex": 275,
+  "paletteId": 504,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.798,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.militaryfork",
+  "iconIndex": 56,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.967,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.militaryforkrare",
+  "iconIndex": 56,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.967,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.miningpick",
+  "iconIndex": 11,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.919,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.miningshovel",
+  "iconIndex": 211,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.917,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.moonhelmrare",
+  "iconIndex": 273,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.moonhelmetrare",
+  "iconIndex": 273,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.moonpowder",
+  "iconIndex": 731,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.moonblade",
+  "iconIndex": 643,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.832,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.muddypotion",
+  "iconIndex": 259,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.939,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.obsidian",
+  "iconIndex": 275,
+  "paletteId": 504,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.798,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ogrecider",
+  "iconIndex": 733,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.903,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ogredrought",
+  "iconIndex": 733,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.903,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.pearlcharm",
+  "iconIndex": 289,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.896,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.pearlcharmrare",
+  "iconIndex": 289,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.896,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.phantombody",
+  "iconIndex": 1123,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.975,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.phantompumpkin",
+  "iconIndex": 4417,
+  "paletteId": 592,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.947,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.pinkheadband",
+  "iconIndex": 2650,
+  "paletteId": 195,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.827,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.poisonedwater",
+  "iconIndex": 3273,
+  "paletteId": 797,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.943,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.poor",
+  "iconIndex": 721,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.881,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.pork",
+  "iconIndex": 215,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.purifiedwater",
+  "iconIndex": 317,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.859,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.raremilitaryfork",
+  "iconIndex": 56,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.967,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.raremuddypotion",
+  "iconIndex": 259,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.939,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.rarepork",
+  "iconIndex": 216,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.964,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ratmeat",
+  "iconIndex": 288,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.965,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ravagesword",
+  "iconIndex": 2000,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.redcheogori",
+  "iconIndex": 1980,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.887,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.redfoxfur",
+  "iconIndex": 218,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.87,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.redpotion",
+  "iconIndex": 254,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.933,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.restlesspumpkin",
+  "iconIndex": 4413,
+  "paletteId": 51,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.rhinoleather",
+  "iconIndex": 2774,
+  "paletteId": 190,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.ricewine",
+  "iconIndex": 76,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.948,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.richwine",
+  "iconIndex": 76,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.948,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.roguepowder",
+  "iconIndex": 729,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.rootliquor",
+  "iconIndex": 727,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.933,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.rosepetal",
+  "iconIndex": 39,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.816,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.royalarmor",
+  "iconIndex": 118,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.952,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.royalclothe",
+  "iconIndex": 136,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.932,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.royalgarb",
+  "iconIndex": 102,
+  "paletteId": 271,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.924,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.royalhelm",
+  "iconIndex": 272,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.858,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.royalscalemail",
+  "iconIndex": 126,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.874,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.royalwaistcoat",
+  "iconIndex": 92,
+  "paletteId": 271,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.891,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.royalwarplatemail",
+  "iconIndex": 142,
+  "paletteId": 271,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.945,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.runeddagger",
+  "iconIndex": 1,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.954,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.rustyshortsword",
+  "iconIndex": 1,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.954,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.scalemail",
+  "iconIndex": 121,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.887,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.scribebook",
+  "iconIndex": 20,
+  "paletteId": 2,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.937,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.scribebookrare",
+  "iconIndex": 20,
+  "paletteId": 2,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.937,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.scribepen",
+  "iconIndex": 16,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.936,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.scribepenrare",
+  "iconIndex": 16,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.936,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.shortbow",
+  "iconIndex": 4,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.963,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.silk",
+  "iconIndex": 2775,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 1.0,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.skyarmor",
+  "iconIndex": 113,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.968,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.skyclothe",
+  "iconIndex": 131,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.945,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.skygarb",
+  "iconIndex": 101,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.922,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.skyhelm",
+  "iconIndex": 273,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.skyscalemail",
+  "iconIndex": 123,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.884,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.skywaistcoat",
+  "iconIndex": 91,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.94,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.skywarplatemail",
+  "iconIndex": 141,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.957,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.smallplateofsubstratum",
+  "iconIndex": 1134,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.963,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.smeltingagreement",
+  "iconIndex": 675,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.962,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.snakemeat",
+  "iconIndex": 221,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.929,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.sonhicloak",
+  "iconIndex": 462,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.sonhidress",
+  "iconIndex": 443,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.913,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.soothsayerstaff",
+  "iconIndex": 1095,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.931,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.soupbowl",
+  "iconIndex": 75,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.908,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.spareskin",
+  "iconIndex": 2794,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.796,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.sparkpowder",
+  "iconIndex": 29,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.888,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.spectralleaf",
+  "iconIndex": 776,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.896,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.spellofthebaekho",
+  "iconIndex": 3105,
+  "paletteId": 449,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.822,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.spike",
+  "iconIndex": 644,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.879,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.spikerare",
+  "iconIndex": 644,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.879,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.spiritcaller",
+  "iconIndex": 2348,
+  "paletteId": 35,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.98,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.splendidtigerpelt",
+  "iconIndex": 223,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.843,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springarmordress",
+  "iconIndex": 171,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.899,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springblouse",
+  "iconIndex": 161,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.902,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springbow",
+  "iconIndex": 4,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.963,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springdress",
+  "iconIndex": 149,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.917,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springgarb",
+  "iconIndex": 101,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.907,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springgown",
+  "iconIndex": 452,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.931,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springhelmet",
+  "iconIndex": 265,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.915,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springmaildress",
+  "iconIndex": 1247,
+  "paletteId": 14,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springrobe",
+  "iconIndex": 469,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springskirt",
+  "iconIndex": 191,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.929,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.springwardress",
+  "iconIndex": 201,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.927,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.spyexplosive",
+  "iconIndex": 29,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.888,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.starhelm",
+  "iconIndex": 268,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.924,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.starhelmet",
+  "iconIndex": 268,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.924,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.starpowder",
+  "iconIndex": 730,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.961,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.steelbracelet",
+  "iconIndex": 710,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.991,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.steeldagger",
+  "iconIndex": 1,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.954,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.steelsaber",
+  "iconIndex": 3624,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 1.0,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.steelsword",
+  "iconIndex": 0,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.951,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.steelthorn",
+  "iconIndex": 3624,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 1.0,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.stoneaxerare",
+  "iconIndex": 623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summerarmordress",
+  "iconIndex": 170,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.987,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summerblouse",
+  "iconIndex": 160,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.992,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summerdress",
+  "iconIndex": 150,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.989,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summergarb",
+  "iconIndex": 100,
+  "paletteId": 10,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.914,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summergown",
+  "iconIndex": 451,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.925,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summerhelmet",
+  "iconIndex": 266,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.916,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summerrobe",
+  "iconIndex": 470,
+  "paletteId": 47,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.929,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summerskirt",
+  "iconIndex": 190,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.991,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.summerwardress",
+  "iconIndex": 180,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.985,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.sunhelmrare",
+  "iconIndex": 270,
+  "paletteId": 27,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.937,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.sunhelmetrare",
+  "iconIndex": 270,
+  "paletteId": 27,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.937,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.sunpowder",
+  "iconIndex": 733,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.903,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.suppleviperheadsaber",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.suppleviperheadsword",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.supplewoodenblade",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.supplewoodensword",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.sutekey",
+  "iconIndex": 26,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.919,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.taostone",
+  "iconIndex": 770,
+  "paletteId": 0,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.785,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.taostonerare",
+  "iconIndex": 770,
+  "paletteId": 0,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.785,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.tarnishedamber",
+  "iconIndex": 1012,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.949,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.thickwine",
+  "iconIndex": 727,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.933,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.tigerheart",
+  "iconIndex": 220,
+  "paletteId": 22,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.854,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.titaniumglove",
+  "iconIndex": 490,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.titaniumgloverare",
+  "iconIndex": 490,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.926,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.tomeoftheearth",
+  "iconIndex": 19,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.862,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.topaz",
+  "iconIndex": 275,
+  "paletteId": 504,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.798,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.treatiseonbadpoetry",
+  "iconIndex": 3965,
+  "paletteId": 802,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.venomsac",
+  "iconIndex": 729,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.922,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.veryhigh",
+  "iconIndex": 721,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.881,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.viperstick",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.viperheadwoodsaber",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.viperheadwoodsword",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.voodoodoll",
+  "iconIndex": 2885,
+  "paletteId": 51,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.warplatemail",
+  "iconIndex": 141,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.94,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.watchonachain",
+  "iconIndex": 4160,
+  "paletteId": 197,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.936,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.waterqueenring",
+  "iconIndex": 2949,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.95,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.weavingtool",
+  "iconIndex": 36,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.weddingcloak",
+  "iconIndex": 1979,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.842,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.weddingdress",
+  "iconIndex": 479,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.953,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.whisperbracelet",
+  "iconIndex": 42,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.921,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.whisperbraceletrare",
+  "iconIndex": 42,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.921,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.whitekinkotot",
+  "iconIndex": 1984,
+  "paletteId": 273,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.877,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.whitevalkyrie",
+  "iconIndex": 1987,
+  "paletteId": 461,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.766,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.wickedwool",
+  "iconIndex": 2781,
+  "paletteId": 642,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.803,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.wildpumpkin",
+  "iconIndex": 4412,
+  "paletteId": 264,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.973,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.wine",
+  "iconIndex": 76,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.948,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.winterarmordress",
+  "iconIndex": 171,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.913,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.winterblouse",
+  "iconIndex": 163,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.927,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.winterdress",
+  "iconIndex": 151,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.935,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.wintergown",
+  "iconIndex": 454,
+  "paletteId": 26,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.945,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.winterhelmet",
+  "iconIndex": 273,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.938,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.winterrobe",
+  "iconIndex": 471,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.947,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.winterskirt",
+  "iconIndex": 191,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.915,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.winterwardress",
+  "iconIndex": 181,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.89,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.wolfmeat",
+  "iconIndex": 5,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.94,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.wolfpelt",
+  "iconIndex": 218,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.87,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.woodpotion",
+  "iconIndex": 1127,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.893,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.woodscrap",
+  "iconIndex": 723,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.774,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.woodenblade",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.woodensaber",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.woodensword",
+  "iconIndex": 1623,
+  "paletteId": 0,
+  "paletteRecovered": false,
+  "method": "image-match",
+  "score": 0.955,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.yellowpotion",
+  "iconIndex": 260,
+  "paletteId": 27,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.993,
+  "status": "auto"
+ },
+ {
+  "itemId": "item.zealouspumpkin",
+  "iconIndex": 4411,
+  "paletteId": 260,
+  "paletteRecovered": true,
+  "method": "image-match",
+  "score": 0.946,
+  "status": "auto"
+ }
+]

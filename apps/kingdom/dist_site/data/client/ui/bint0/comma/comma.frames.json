@@ -1,0 +1,63 @@
+{
+  "archive": "bint0.dat",
+  "entry": "comma.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 3,
+    "width": 4,
+    "height": 5,
+    "unknown": 0,
+    "pixelDataLength": 96
+  },
+  "renderedFrames": 3,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/comma/comma.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\comma\\comma.png",
+      "width": 20,
+      "height": 9,
+      "bytes": 158
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 4,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 4
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 8,
+      "y": 2,
+      "width": 4,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 4
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 14,
+      "y": 2,
+      "width": 4,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 4
+    }
+  ]
+}

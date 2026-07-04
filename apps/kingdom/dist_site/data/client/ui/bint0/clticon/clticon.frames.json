@@ -1,0 +1,51 @@
+{
+  "archive": "bint0.dat",
+  "entry": "clticon.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 2,
+    "width": 95,
+    "height": 95,
+    "unknown": 0,
+    "pixelDataLength": 18430
+  },
+  "renderedFrames": 2,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/clticon/clticon.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\clticon\\clticon.png",
+      "width": 196,
+      "height": 99,
+      "bytes": 9175
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 95,
+      "height": 95,
+      "top": 0,
+      "left": 0,
+      "bottom": 95,
+      "right": 95
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 99,
+      "y": 2,
+      "width": 95,
+      "height": 95,
+      "top": 0,
+      "left": 0,
+      "bottom": 95,
+      "right": 95
+    }
+  ]
+}

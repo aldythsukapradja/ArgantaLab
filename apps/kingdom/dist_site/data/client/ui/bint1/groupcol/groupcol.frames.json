@@ -1,0 +1,39 @@
+{
+  "archive": "bint1.dat",
+  "entry": "groupcol.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 155,
+    "height": 40,
+    "unknown": 0,
+    "pixelDataLength": 6320
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/groupcol/groupcol.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\groupcol\\groupcol.png",
+      "width": 159,
+      "height": 44,
+      "bytes": 7678
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 155,
+      "height": 40,
+      "top": -40,
+      "left": -155,
+      "bottom": 0,
+      "right": 0
+    }
+  ]
+}

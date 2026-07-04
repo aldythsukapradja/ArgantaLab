@@ -1,0 +1,51 @@
+{
+  "archive": "bint0.dat",
+  "entry": "boat.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 2,
+    "width": 93,
+    "height": 87,
+    "unknown": 0,
+    "pixelDataLength": 10418
+  },
+  "renderedFrames": 2,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/boat/boat.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\boat\\boat.png",
+      "width": 181,
+      "height": 91,
+      "bytes": 2966
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 93,
+      "height": 87,
+      "top": 11,
+      "left": 0,
+      "bottom": 98,
+      "right": 93
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 97,
+      "y": 2,
+      "width": 82,
+      "height": 24,
+      "top": 74,
+      "left": 0,
+      "bottom": 98,
+      "right": 82
+    }
+  ]
+}

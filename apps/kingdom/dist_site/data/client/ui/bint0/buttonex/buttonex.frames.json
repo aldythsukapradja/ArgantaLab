@@ -1,0 +1,51 @@
+{
+  "archive": "bint0.dat",
+  "entry": "BUTTONEX.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 2,
+    "width": 219,
+    "height": 32,
+    "unknown": 0,
+    "pixelDataLength": 14208
+  },
+  "renderedFrames": 2,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/buttonex/buttonex.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\buttonex\\buttonex.png",
+      "width": 444,
+      "height": 36,
+      "bytes": 4668
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 219,
+      "height": 32,
+      "top": 0,
+      "left": 0,
+      "bottom": 32,
+      "right": 219
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 223,
+      "y": 2,
+      "width": 219,
+      "height": 32,
+      "top": 0,
+      "left": 0,
+      "bottom": 32,
+      "right": 219
+    }
+  ]
+}

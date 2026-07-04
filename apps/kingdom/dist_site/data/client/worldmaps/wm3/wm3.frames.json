@@ -1,0 +1,39 @@
+{
+  "archive": "wm.dat",
+  "entry": "WM3.epf",
+  "schemaBucket": "maps",
+  "colorStatus": "canonical",
+  "note": "World map EPF with paired palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 1280,
+    "height": 960,
+    "unknown": 0,
+    "pixelDataLength": 1241663
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/maps/wm/wm3/wm3.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\maps\\wm\\wm3\\wm3.png",
+      "width": 1284,
+      "height": 964,
+      "bytes": 901951
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 1280,
+      "height": 960,
+      "top": 0,
+      "left": 0,
+      "bottom": 960,
+      "right": 1280
+    }
+  ]
+}

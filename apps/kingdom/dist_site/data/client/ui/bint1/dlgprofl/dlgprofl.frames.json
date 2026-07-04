@@ -1,0 +1,39 @@
+{
+  "archive": "bint1.dat",
+  "entry": "DLGPROFL.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 285,
+    "height": 238,
+    "unknown": 0,
+    "pixelDataLength": 68978
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/dlgprofl/dlgprofl.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\dlgprofl\\dlgprofl.png",
+      "width": 289,
+      "height": 242,
+      "bytes": 59775
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 285,
+      "height": 238,
+      "top": 1,
+      "left": 1,
+      "bottom": 239,
+      "right": 286
+    }
+  ]
+}

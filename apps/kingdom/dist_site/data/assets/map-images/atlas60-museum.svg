@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="611" height="362" viewBox="0 0 611 362">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7e7bf"/>
+      <stop offset="1" stop-color="#d7b27b"/>
+    </linearGradient>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#8f6a38" stroke-opacity=".18" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <rect width="100%" height="100%" fill="url(#grid)"/>
+  <rect x="18" y="18" width="575" height="326" rx="18" fill="#fff7dc" fill-opacity=".78" stroke="#8f4f1d" stroke-width="2" stroke-dasharray="8 7"/>
+  <text x="50%" y="44%" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#67350f">Museum</text>
+  <text x="50%" y="52%" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#7c4a1c">Source image missing on Nexus Atlas</text>
+  <text x="50%" y="59%" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#8f6a38">https://www.nexusatlas.com/photo/atlas60/museum.gif</text>
+</svg>

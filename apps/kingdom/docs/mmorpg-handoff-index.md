@@ -13,13 +13,14 @@ This handoff captures the architecture direction after auditing:
 
 ## Handoff Files
 
-1. [System Architecture](./mmorpg-system-architecture.md)
-2. [Supabase Data Schema](./mmorpg-supabase-schema.md)
-3. [GM Dashboard Design](./mmorpg-gm-dashboard-design.md)
-4. [User Control Dashboard Design](./mmorpg-user-control-dashboard-design.md)
-5. [Identity, EXP, Diamonds, And Ledgers](./mmorpg-identity-exp-diamond-ledgers.md)
-6. [Skill Effects And Quest Manager](./mmorpg-skill-effects-and-quest-manager.md)
-7. [Implementation Roadmap](./mmorpg-implementation-roadmap.md)
+1. [Current State Handoff (2026-07-04)](./HANDOFF-CURRENT-STATE-2026-07-04.md)
+2. [System Architecture](./mmorpg-system-architecture.md)
+3. [Supabase Data Schema](./mmorpg-supabase-schema.md)
+4. [GM Dashboard Design](./mmorpg-gm-dashboard-design.md)
+5. [User Control Dashboard Design](./mmorpg-user-control-dashboard-design.md)
+6. [Identity, EXP, Diamonds, And Ledgers](./mmorpg-identity-exp-diamond-ledgers.md)
+7. [Skill Effects And Quest Manager](./mmorpg-skill-effects-and-quest-manager.md)
+8. [Implementation Roadmap](./mmorpg-implementation-roadmap.md)
 
 ## Core Principle
 
@@ -42,4 +43,3 @@ The server decides.
 - Kids cannot gain progression EXP from monster kills.
 - Adult monster rankings must only use monster EXP.
 - Diamonds must only come from ArgantaLabs.
-

@@ -1,0 +1,87 @@
+{
+  "archive": "bint0.dat",
+  "entry": "CLASS.EPF",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 5,
+    "width": 46,
+    "height": 17,
+    "unknown": 0,
+    "pixelDataLength": 4080
+  },
+  "renderedFrames": 5,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/class/class.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\class\\class.png",
+      "width": 242,
+      "height": 21,
+      "bytes": 2900
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 46,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 46
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 50,
+      "y": 2,
+      "width": 46,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 46
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 98,
+      "y": 2,
+      "width": 46,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 46
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 146,
+      "y": 2,
+      "width": 46,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 46
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 194,
+      "y": 2,
+      "width": 46,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 46
+    }
+  ]
+}

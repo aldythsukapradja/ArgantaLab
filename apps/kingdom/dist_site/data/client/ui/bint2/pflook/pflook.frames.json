@@ -1,0 +1,39 @@
+{
+  "archive": "bint2.dat",
+  "entry": "PFLOOK.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 192,
+    "height": 287,
+    "unknown": 0,
+    "pixelDataLength": 55965
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/pflook/pflook.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\pflook\\pflook.png",
+      "width": 196,
+      "height": 291,
+      "bytes": 77887
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 192,
+      "height": 287,
+      "top": 0,
+      "left": 0,
+      "bottom": 287,
+      "right": 192
+    }
+  ]
+}

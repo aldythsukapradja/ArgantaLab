@@ -1,0 +1,111 @@
+{
+  "archive": "mnm.dat",
+  "entry": "MNSYMBOL.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "Mini-map/player-symbol UI sprite with paired palette.",
+  "header": {
+    "frameCount": 7,
+    "width": 12,
+    "height": 12,
+    "unknown": 0,
+    "pixelDataLength": 1234
+  },
+  "renderedFrames": 7,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/mnm/mnsymbol/mnsymbol.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\mnm\\mnsymbol\\mnsymbol.png",
+      "width": 100,
+      "height": 16,
+      "bytes": 1542
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 0,
+      "left": 0,
+      "bottom": 12,
+      "right": 12
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 16,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 0,
+      "left": 0,
+      "bottom": 12,
+      "right": 12
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 30,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 0,
+      "left": 0,
+      "bottom": 12,
+      "right": 12
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 44,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 0,
+      "left": 0,
+      "bottom": 12,
+      "right": 12
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 58,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 0,
+      "left": 0,
+      "bottom": 12,
+      "right": 12
+    },
+    {
+      "frameIndex": 5,
+      "pageIndex": 0,
+      "x": 72,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 0,
+      "left": 0,
+      "bottom": 12,
+      "right": 12
+    },
+    {
+      "frameIndex": 6,
+      "pageIndex": 0,
+      "x": 86,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 0,
+      "left": 0,
+      "bottom": 12,
+      "right": 12
+    }
+  ]
+}

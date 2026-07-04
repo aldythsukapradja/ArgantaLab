@@ -1,0 +1,39 @@
+{
+  "archive": "bint2.dat",
+  "entry": "txtcolor.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 329,
+    "height": 396,
+    "unknown": 0,
+    "pixelDataLength": 132611
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/txtcolor/txtcolor.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\txtcolor\\txtcolor.png",
+      "width": 333,
+      "height": 400,
+      "bytes": 162474
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 329,
+      "height": 396,
+      "top": 1,
+      "left": 2,
+      "bottom": 397,
+      "right": 331
+    }
+  ]
+}

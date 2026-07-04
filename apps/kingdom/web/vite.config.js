@@ -36,26 +36,13 @@ function serveKingdomData() {
   };
 }
 
-// Production serves the same URLs from Vercel's static output. The data
-// folder lives one level above the Vite app so it can also power Command/Game.
-function copyKingdomData() {
-  return {
-    name: 'copy-kingdom-data',
-    apply: 'build',
-    closeBundle() {
-      const src = path.join(KINGDOM, 'data');
-      const dest = path.join(__dirname, 'dist', 'data');
-      if (!fs.existsSync(src)) {
-        throw new Error(`Missing Kingdom data folder: ${src}`);
-      }
-      fs.rmSync(dest, { recursive: true, force: true });
-      fs.cpSync(src, dest, { recursive: true });
-    },
-  };
-}
+// Production deploy: scripts/build-deploy.mjs (run after this build, from
+// the apps/kingdom root) assembles command/ + data/ + this dist/ into one
+// output tree, with data/ as a SIBLING of the deployed app (not nested
+// inside it) — see that script for why. No copy-into-dist step needed here.
 
 export default defineConfig({
-  plugins: [react(), serveKingdomData(), copyKingdomData()],
+  plugins: [react(), serveKingdomData()],
   server: { port: 8322 },
   base: './',
 });

@@ -1,0 +1,135 @@
+{
+  "archive": "bint2.dat",
+  "entry": "SUBWIN.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 9,
+    "width": 7,
+    "height": 7,
+    "unknown": 0,
+    "pixelDataLength": 569
+  },
+  "renderedFrames": 9,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/subwin/subwin.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\subwin\\subwin.png",
+      "width": 83,
+      "height": 11,
+      "bytes": 414
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 11,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 20,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 29,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 38,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 5,
+      "pageIndex": 0,
+      "x": 47,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 6,
+      "pageIndex": 0,
+      "x": 56,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 7,
+      "pageIndex": 0,
+      "x": 65,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    },
+    {
+      "frameIndex": 8,
+      "pageIndex": 0,
+      "x": 74,
+      "y": 2,
+      "width": 7,
+      "height": 7,
+      "top": 0,
+      "left": 0,
+      "bottom": 7,
+      "right": 7
+    }
+  ]
+}

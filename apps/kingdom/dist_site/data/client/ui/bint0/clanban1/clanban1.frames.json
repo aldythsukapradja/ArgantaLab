@@ -1,0 +1,39 @@
+{
+  "archive": "bint0.dat",
+  "entry": "ClanBan1.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 448,
+    "height": 475,
+    "unknown": 0,
+    "pixelDataLength": 215183
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/clanban1/clanban1.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\clanban1\\clanban1.png",
+      "width": 452,
+      "height": 479,
+      "bytes": 216099
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 448,
+      "height": 475,
+      "top": 0,
+      "left": 0,
+      "bottom": 475,
+      "right": 448
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "archive": "mnm.dat",
+  "entry": "MNPLAYER.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "Mini-map/player-symbol UI sprite with paired palette.",
+  "header": {
+    "frameCount": 5,
+    "width": 24,
+    "height": 24,
+    "unknown": 0,
+    "pixelDataLength": 1868
+  },
+  "renderedFrames": 5,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/mnm/mnplayer/mnplayer.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\mnm\\mnplayer\\mnplayer.png",
+      "width": 96,
+      "height": 28,
+      "bytes": 993
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 24,
+      "height": 24,
+      "top": 0,
+      "left": 0,
+      "bottom": 24,
+      "right": 24
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 28,
+      "y": 2,
+      "width": 20,
+      "height": 20,
+      "top": 2,
+      "left": 2,
+      "bottom": 22,
+      "right": 22
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 50,
+      "y": 2,
+      "width": 14,
+      "height": 14,
+      "top": 5,
+      "left": 5,
+      "bottom": 19,
+      "right": 19
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 66,
+      "y": 2,
+      "width": 14,
+      "height": 14,
+      "top": 5,
+      "left": 5,
+      "bottom": 19,
+      "right": 19
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 82,
+      "y": 2,
+      "width": 12,
+      "height": 12,
+      "top": 6,
+      "left": 6,
+      "bottom": 18,
+      "right": 18
+    }
+  ]
+}

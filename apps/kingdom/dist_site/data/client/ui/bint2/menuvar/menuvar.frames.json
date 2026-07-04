@@ -1,0 +1,63 @@
+{
+  "archive": "bint2.dat",
+  "entry": "menuvar.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 3,
+    "width": 61,
+    "height": 24,
+    "unknown": 0,
+    "pixelDataLength": 4536
+  },
+  "renderedFrames": 3,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/menuvar/menuvar.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\menuvar\\menuvar.png",
+      "width": 191,
+      "height": 28,
+      "bytes": 5798
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 61,
+      "height": 24,
+      "top": 0,
+      "left": 0,
+      "bottom": 24,
+      "right": 61
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 65,
+      "y": 2,
+      "width": 61,
+      "height": 24,
+      "top": 0,
+      "left": 0,
+      "bottom": 24,
+      "right": 61
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 128,
+      "y": 2,
+      "width": 61,
+      "height": 24,
+      "top": 0,
+      "left": 0,
+      "bottom": 24,
+      "right": 61
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "archive": "bint2.dat",
+  "entry": "slidebg.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 12,
+    "width": 5,
+    "height": 5,
+    "unknown": 0,
+    "pixelDataLength": 244
+  },
+  "renderedFrames": 12,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/slidebg/slidebg.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\slidebg\\slidebg.png",
+      "width": 70,
+      "height": 9,
+      "bytes": 184
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 5,
+      "height": 3,
+      "top": 0,
+      "left": 0,
+      "bottom": 3,
+      "right": 5
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 9,
+      "y": 2,
+      "width": 5,
+      "height": 1,
+      "top": 0,
+      "left": 0,
+      "bottom": 1,
+      "right": 5
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 16,
+      "y": 2,
+      "width": 5,
+      "height": 3,
+      "top": 0,
+      "left": 0,
+      "bottom": 3,
+      "right": 5
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 23,
+      "y": 2,
+      "width": 3,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 3
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 28,
+      "y": 2,
+      "width": 1,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 1
+    },
+    {
+      "frameIndex": 5,
+      "pageIndex": 0,
+      "x": 31,
+      "y": 2,
+      "width": 3,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 3
+    },
+    {
+      "frameIndex": 6,
+      "pageIndex": 0,
+      "x": 36,
+      "y": 2,
+      "width": 5,
+      "height": 3,
+      "top": 0,
+      "left": 0,
+      "bottom": 3,
+      "right": 5
+    },
+    {
+      "frameIndex": 7,
+      "pageIndex": 0,
+      "x": 43,
+      "y": 2,
+      "width": 5,
+      "height": 1,
+      "top": 0,
+      "left": 0,
+      "bottom": 1,
+      "right": 5
+    },
+    {
+      "frameIndex": 8,
+      "pageIndex": 0,
+      "x": 50,
+      "y": 2,
+      "width": 5,
+      "height": 3,
+      "top": 0,
+      "left": 0,
+      "bottom": 3,
+      "right": 5
+    },
+    {
+      "frameIndex": 9,
+      "pageIndex": 0,
+      "x": 57,
+      "y": 2,
+      "width": 3,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 3
+    },
+    {
+      "frameIndex": 10,
+      "pageIndex": 0,
+      "x": 62,
+      "y": 2,
+      "width": 1,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 1
+    },
+    {
+      "frameIndex": 11,
+      "pageIndex": 0,
+      "x": 65,
+      "y": 2,
+      "width": 3,
+      "height": 5,
+      "top": 0,
+      "left": 0,
+      "bottom": 5,
+      "right": 3
+    }
+  ]
+}

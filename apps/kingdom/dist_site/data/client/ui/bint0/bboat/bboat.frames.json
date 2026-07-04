@@ -1,0 +1,39 @@
+{
+  "archive": "bint0.dat",
+  "entry": "BBOAT.EPF",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 47,
+    "height": 43,
+    "unknown": 0,
+    "pixelDataLength": 2212
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/bboat/bboat.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\bboat\\bboat.png",
+      "width": 51,
+      "height": 47,
+      "bytes": 1722
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 47,
+      "height": 43,
+      "top": 6,
+      "left": 4,
+      "bottom": 49,
+      "right": 51
+    }
+  ]
+}
