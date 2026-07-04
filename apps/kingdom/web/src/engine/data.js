@@ -23,6 +23,11 @@ export function loadImage(url) {
       url,
       new Promise((res, rej) => {
         const im = new Image();
+        // Absolute URL = cross-origin (embed fetching from the Kingdom host).
+        // Request it CORS-anonymous so the composite dye canvas stays untainted
+        // (getImageData would otherwise throw a SecurityError). Same-origin
+        // standalone uses relative /data URLs and keeps its plain load.
+        if (/^https?:\/\//i.test(url)) im.crossOrigin = 'anonymous';
         im.onload = () => res(im);
         im.onerror = () => rej(new Error(`image ${url}`));
         im.src = url;
