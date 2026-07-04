@@ -1,0 +1,5402 @@
+[
+ {
+  "monsterId": "monster.admiralblaze",
+  "mobId": 520,
+  "paletteId": 614,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 453.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.adolescentdragon",
+  "mobId": 108,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 191.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.agilemonkey",
+  "mobId": 126,
+  "paletteId": 179,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 413.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.albinobuck",
+  "mobId": 89,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 157.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ancientdrake",
+  "mobId": 108,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 183.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryox",
+  "mobId": 152,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 262.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspearman",
+  "mobId": 228,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 29.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritsgreydragon",
+  "mobId": 631,
+  "paletteId": 339,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 498.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritsorangedragon",
+  "mobId": 631,
+  "paletteId": 459,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 1311.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritsreddragon",
+  "mobId": 631,
+  "paletteId": 237,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 361.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritsredsnake",
+  "mobId": 617,
+  "paletteId": 578,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 912.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritswhitedragon",
+  "mobId": 631,
+  "paletteId": 534,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 56.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritswhitesnake",
+  "mobId": 617,
+  "paletteId": 391,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1176.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritsyellowdragon",
+  "mobId": 631,
+  "paletteId": 539,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 407.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.angryspiritsyellowsnake",
+  "mobId": 617,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 749.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.anxiouskomi",
+  "mobId": 243,
+  "paletteId": 193,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 465.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.arcticdeer",
+  "mobId": 89,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 157.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.armedguard",
+  "mobId": 933,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 168.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.atrociousbahadur",
+  "mobId": 669,
+  "paletteId": 61,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 243.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.avalancheogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 820.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.averagerhino",
+  "mobId": 457,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 327.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.azurehare",
+  "mobId": 21,
+  "paletteId": 627,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 408.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.babyturtle",
+  "mobId": 860,
+  "paletteId": 47,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 5.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.balbloodlust",
+  "mobId": 232,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 10.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bat",
+  "mobId": 105,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 65.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.beachmonkey",
+  "mobId": 126,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 197.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.beadyeyedstalker",
+  "mobId": 90,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 476.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.beastlynoyan",
+  "mobId": 672,
+  "paletteId": 236,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 1367.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bestialyurtchi",
+  "mobId": 677,
+  "paletteId": 592,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 178.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bigbat",
+  "mobId": 105,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 65.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bigrat",
+  "mobId": 91,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 31.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blackbuck",
+  "mobId": 89,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 29.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blackchick",
+  "mobId": 121,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 32.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blackchicken",
+  "mobId": 28,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 27.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blackrabbit",
+  "mobId": 21,
+  "paletteId": 534,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 61.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blacksheep",
+  "mobId": 173,
+  "paletteId": 590,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 79.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blacktiger",
+  "mobId": 29,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 17.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blissfulbird",
+  "mobId": 58,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 20.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blizzardking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 1474.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.blizzardogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 851.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodfox",
+  "mobId": 22,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 277.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodmanti",
+  "mobId": 98,
+  "paletteId": 245,
+  "method": "shape-match+palette-search",
+  "score": 0.969,
+  "colorMse": 244.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodrat",
+  "mobId": 91,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 171.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodsnake",
+  "mobId": 184,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.981,
+  "colorMse": 103.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodtick",
+  "mobId": 97,
+  "paletteId": 375,
+  "method": "shape-match+palette-search",
+  "score": 0.981,
+  "colorMse": 1383.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodwolf",
+  "mobId": 23,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 100.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodhound",
+  "mobId": 103,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 413.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bloodyyurtchi",
+  "mobId": 677,
+  "paletteId": 388,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 652.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bluedeer",
+  "mobId": 89,
+  "paletteId": 639,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 596.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bluedoe",
+  "mobId": 88,
+  "paletteId": 639,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 632.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bluerabbit",
+  "mobId": 125,
+  "paletteId": 236,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 520.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bluerooster",
+  "mobId": 124,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 883.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.boa",
+  "mobId": 33,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 0.972,
+  "colorMse": 84.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.boardefender",
+  "mobId": 139,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 21.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.boldboar",
+  "mobId": 152,
+  "paletteId": 619,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 670.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.boldhog",
+  "mobId": 122,
+  "paletteId": 265,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 297.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.boldpig",
+  "mobId": 19,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 313.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.boldpiglet",
+  "mobId": 20,
+  "paletteId": 222,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1158.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.boulder",
+  "mobId": 1002,
+  "paletteId": 77,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 8.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.brazen",
+  "mobId": 107,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.968,
+  "colorMse": 277.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.brightmonkey",
+  "mobId": 126,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 57.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.brownhare",
+  "mobId": 21,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 153.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.brownrabbit",
+  "mobId": 21,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 170.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.brutalyurtchi",
+  "mobId": 677,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 563.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.brute",
+  "mobId": 225,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 604.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.brutishkashik",
+  "mobId": 670,
+  "paletteId": 271,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 1060.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.bulkyrhino",
+  "mobId": 458,
+  "paletteId": 545,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 294.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.burlybahadur",
+  "mobId": 669,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 149.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.burlyrhino",
+  "mobId": 458,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 526.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cacklingnurumnamu",
+  "mobId": 1411,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 396.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cacklingponnamu",
+  "mobId": 619,
+  "paletteId": 366,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 373.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.caltroom",
+  "mobId": 235,
+  "paletteId": 364,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 669.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.canineguard",
+  "mobId": 23,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 611.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.carrionraven",
+  "mobId": 92,
+  "paletteId": 625,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 22.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cat",
+  "mobId": 182,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 32.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cavehare",
+  "mobId": 21,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 83.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.caveogre",
+  "mobId": 185,
+  "paletteId": 271,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 796.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.chargedyamour",
+  "mobId": 523,
+  "paletteId": 348,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 355.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.chargingox",
+  "mobId": 152,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 49.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.chiefslog",
+  "mobId": 161,
+  "paletteId": 374,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 1437.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.chocolatebunny",
+  "mobId": 21,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 182.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cloudscaleserpent",
+  "mobId": 617,
+  "paletteId": 9,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 361.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.colossalrhino",
+  "mobId": 459,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 21.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.commonrhino",
+  "mobId": 457,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 19.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.concealedassassin",
+  "mobId": 250,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 847.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.condemnedgrizzly",
+  "mobId": 1422,
+  "paletteId": 629,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 53.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.consumedgrizzly",
+  "mobId": 1422,
+  "paletteId": 546,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 297.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.coralserpent",
+  "mobId": 26,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 193.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.crazedmongrel",
+  "mobId": 95,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 89.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.crazedspearman",
+  "mobId": 228,
+  "paletteId": 242,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 792.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.crazyclaw",
+  "mobId": 29,
+  "paletteId": 1,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1182.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.crookedbandit",
+  "mobId": 251,
+  "paletteId": 130,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 820.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.crow",
+  "mobId": 92,
+  "paletteId": 625,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 22.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.crudeyurtchi",
+  "mobId": 677,
+  "paletteId": 317,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 457.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cutthroat",
+  "mobId": 254,
+  "paletteId": 310,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 893.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cycloneking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 1479.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.cycloneogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 837.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darkbuck",
+  "mobId": 89,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 30.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darkchild",
+  "mobId": 83,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 7.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darkdeer",
+  "mobId": 88,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 21.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darkfox",
+  "mobId": 22,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 12.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darkmanti",
+  "mobId": 98,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 368.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darksheep",
+  "mobId": 173,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 418.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darksnake",
+  "mobId": 184,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 196.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darkspirit",
+  "mobId": 476,
+  "paletteId": 31,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 591.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darksquirrel",
+  "mobId": 25,
+  "paletteId": 534,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 47.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darktiger",
+  "mobId": 107,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 355.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.darkwolf",
+  "mobId": 23,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 31.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dartingseahorse",
+  "mobId": 420,
+  "paletteId": 12,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 155.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deadlybowman",
+  "mobId": 245,
+  "paletteId": 12,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 1074.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deadlyimbecile",
+  "mobId": 239,
+  "paletteId": 9,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 283.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deathmongrel",
+  "mobId": 95,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 197.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deathwish",
+  "mobId": 119,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 14.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deathwizard",
+  "mobId": 236,
+  "paletteId": 545,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 882.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deepwoodsmanti",
+  "mobId": 98,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 379.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deer",
+  "mobId": 89,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 251.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.departedspirit",
+  "mobId": 167,
+  "paletteId": 594,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 208.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.desertscorpion",
+  "mobId": 1417,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 138.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.desertwanderer",
+  "mobId": 279,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 10.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.destructivenoyan",
+  "mobId": 672,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 350.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.deviousbandit",
+  "mobId": 250,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 786.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.diamondhorse",
+  "mobId": 17,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 252.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.diamondmonkey",
+  "mobId": 127,
+  "paletteId": 639,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 408.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dirtmanti",
+  "mobId": 98,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 275.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.diseasedrat",
+  "mobId": 120,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 16.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.disturbedskeleton",
+  "mobId": 314,
+  "paletteId": 128,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 675.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinedog",
+  "mobId": 138,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 457.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinedragon",
+  "mobId": 132,
+  "paletteId": 309,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 929.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinehorse",
+  "mobId": 134,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 308.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinemonkey",
+  "mobId": 136,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 460.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinemouse",
+  "mobId": 120,
+  "paletteId": 265,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 279.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divineox",
+  "mobId": 129,
+  "paletteId": 486,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 245.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinepig",
+  "mobId": 139,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1166.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinerabbit",
+  "mobId": 131,
+  "paletteId": 545,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 276.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinerat",
+  "mobId": 128,
+  "paletteId": 309,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 439.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinerooster",
+  "mobId": 137,
+  "paletteId": 546,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 796.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinesheep",
+  "mobId": 135,
+  "paletteId": 525,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 426.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinesnake",
+  "mobId": 133,
+  "paletteId": 309,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 476.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.divinetiger",
+  "mobId": 130,
+  "paletteId": 459,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 314.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.doe",
+  "mobId": 88,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 288.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dogdefender",
+  "mobId": 138,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 43.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dogguardian",
+  "mobId": 138,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 362.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dogsentry",
+  "mobId": 138,
+  "paletteId": 375,
+  "method": "shape-match+palette-search",
+  "score": 0.983,
+  "colorMse": 362.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dogtrooper",
+  "mobId": 93,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 20.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dorogam",
+  "mobId": 240,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 26.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dragondefender",
+  "mobId": 186,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 33.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dragonguardian",
+  "mobId": 186,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 782.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dragonhatchling",
+  "mobId": 108,
+  "paletteId": 128,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 87.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dragonsentry",
+  "mobId": 132,
+  "paletteId": 309,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 867.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dragonslayer",
+  "mobId": 132,
+  "paletteId": 280,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 897.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.drake",
+  "mobId": 108,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 180.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dread",
+  "mobId": 238,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 14.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.drone",
+  "mobId": 229,
+  "paletteId": 14,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 75.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dullrhino",
+  "mobId": 457,
+  "paletteId": 621,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 608.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dunescorpion",
+  "mobId": 1417,
+  "paletteId": 288,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 200.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.dunewasp",
+  "mobId": 242,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.982,
+  "colorMse": 14.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.duzembspirit",
+  "mobId": 1119,
+  "paletteId": 609,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 358.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.earthaitu",
+  "mobId": 1116,
+  "paletteId": 609,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 417.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.earthdaemon",
+  "mobId": 1115,
+  "paletteId": 609,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 333.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.earthimp",
+  "mobId": 660,
+  "paletteId": 26,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 15.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.earthrat",
+  "mobId": 90,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 276.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.earthsnake",
+  "mobId": 184,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.976,
+  "colorMse": 203.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.eelgrass",
+  "mobId": 825,
+  "paletteId": 95,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 371.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.electriceel",
+  "mobId": 26,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 442.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.electricyamour",
+  "mobId": 522,
+  "paletteId": 374,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 434.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.elitehorse",
+  "mobId": 17,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 0.981,
+  "colorMse": 559.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.enchantedsorcerer",
+  "mobId": 296,
+  "paletteId": 13,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 9.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.energeticyamour",
+  "mobId": 1414,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 27.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.engrossedgrizzly",
+  "mobId": 1422,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 9.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.enragedsaseum",
+  "mobId": 630,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 577.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.entombedspirit",
+  "mobId": 257,
+  "paletteId": 237,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 7.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fallenspirit",
+  "mobId": 167,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 24.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fastmonkey",
+  "mobId": 126,
+  "paletteId": 261,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 753.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fatpig",
+  "mobId": 122,
+  "paletteId": 265,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 298.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fatalninja",
+  "mobId": 264,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 0.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fear",
+  "mobId": 238,
+  "paletteId": 545,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 967.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.feralkashik",
+  "mobId": 670,
+  "paletteId": 632,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 1380.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fiercedog",
+  "mobId": 93,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 180.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fiercemouse",
+  "mobId": 120,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 16.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fiercenoyan",
+  "mobId": 672,
+  "paletteId": 492,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 790.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fiercesheep",
+  "mobId": 173,
+  "paletteId": 523,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 387.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fightingdog",
+  "mobId": 95,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 35.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fireaitu",
+  "mobId": 1116,
+  "paletteId": 59,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 684.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.firebear",
+  "mobId": 195,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 210.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.firedaemon",
+  "mobId": 1116,
+  "paletteId": 59,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 734.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fireeel",
+  "mobId": 184,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.981,
+  "colorMse": 103.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fireimp",
+  "mobId": 660,
+  "paletteId": 459,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 459.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.firerat",
+  "mobId": 91,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 171.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.firescorpion",
+  "mobId": 1417,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 62.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.firesnorter",
+  "mobId": 17,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 94.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fireworm",
+  "mobId": 183,
+  "paletteId": 459,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 956.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.firescaleviper",
+  "mobId": 617,
+  "paletteId": 578,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 916.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flametonguecaptain",
+  "mobId": 519,
+  "paletteId": 374,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 510.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flametonguecolonel",
+  "mobId": 519,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 35.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flametonguecorporal",
+  "mobId": 519,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 27.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flametonguegeneral",
+  "mobId": 520,
+  "paletteId": 165,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 953.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flametonguemaster",
+  "mobId": 519,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 315.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flametongueprivate",
+  "mobId": 519,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 35.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flametonguesergeant",
+  "mobId": 519,
+  "paletteId": 302,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 145.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flamingsheep",
+  "mobId": 173,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 523.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flaneer",
+  "mobId": 226,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 443.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fleshcollector",
+  "mobId": 659,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 249.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flittingseahorse",
+  "mobId": 420,
+  "paletteId": 350,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1498.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fluff",
+  "mobId": 21,
+  "paletteId": 267,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 259.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flurryking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1470.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.flurryogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 829.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fog",
+  "mobId": 323,
+  "paletteId": 31,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1040.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.foglevel2",
+  "mobId": 232,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 715.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.forestmanti",
+  "mobId": 98,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.976,
+  "colorMse": 22.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.forestthug",
+  "mobId": 225,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 20.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.fox",
+  "mobId": 22,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 205.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.freneticgrizzly",
+  "mobId": 622,
+  "paletteId": 463,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 71.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.frenziedspearman",
+  "mobId": 228,
+  "paletteId": 446,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 705.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.frostbear",
+  "mobId": 195,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 411.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.frostbutterfly",
+  "mobId": 433,
+  "paletteId": 523,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 955.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.frothingmutt",
+  "mobId": 95,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 451.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.furiousbeol",
+  "mobId": 1411,
+  "paletteId": 220,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1012.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.furioussaseum",
+  "mobId": 630,
+  "paletteId": 504,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 269.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.galledsaseum",
+  "mobId": 630,
+  "paletteId": 12,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 139.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.gaspingokunamu",
+  "mobId": 619,
+  "paletteId": 338,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 315.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.gaspingsonamu",
+  "mobId": 619,
+  "paletteId": 271,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 459.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ghaleb",
+  "mobId": 249,
+  "paletteId": 7,
+  "method": "shape-match+palette-search",
+  "score": 0.981,
+  "colorMse": 43.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ghostmanti",
+  "mobId": 98,
+  "paletteId": 249,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 780.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ghostlydoom",
+  "mobId": 235,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 12.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.giantbull",
+  "mobId": 27,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 88.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.giantcentipede",
+  "mobId": 32,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 0.964,
+  "colorMse": 245.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.gianthare",
+  "mobId": 21,
+  "paletteId": 267,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 213.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.giantmanti",
+  "mobId": 98,
+  "paletteId": 54,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 643.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.giantrabbit",
+  "mobId": 21,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 187.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.giantscorpion",
+  "mobId": 1417,
+  "paletteId": 288,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 235.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.giantspider",
+  "mobId": 97,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 506.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.gianttiger",
+  "mobId": 29,
+  "paletteId": 1,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1171.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.giganticrhino",
+  "mobId": 459,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 330.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.givenirogue",
+  "mobId": 254,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 195.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.gloomp",
+  "mobId": 592,
+  "paletteId": 226,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 1000.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.glowingsnake",
+  "mobId": 33,
+  "paletteId": 177,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 934.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.goldserpent",
+  "mobId": 184,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 362.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.goldendefender",
+  "mobId": 131,
+  "paletteId": 124,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 366.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.goldenhare",
+  "mobId": 125,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 47.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.goldenhorse",
+  "mobId": 17,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 46.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.goldenrabbit",
+  "mobId": 125,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 47.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.goldentiger",
+  "mobId": 29,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 31.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.gordoon",
+  "mobId": 226,
+  "paletteId": 18,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 1074.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.greathorn",
+  "mobId": 27,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 14.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.greatroost",
+  "mobId": 28,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 27.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.greatwyrm",
+  "mobId": 108,
+  "paletteId": 40,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 237.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.greendeer",
+  "mobId": 89,
+  "paletteId": 177,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 693.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.greendoe",
+  "mobId": 88,
+  "paletteId": 177,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 764.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.greengator",
+  "mobId": 453,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 449.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.greenrabbit",
+  "mobId": 125,
+  "paletteId": 236,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 805.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.griyal",
+  "mobId": 524,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 15.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.griyul",
+  "mobId": 524,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 650.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.grottohare",
+  "mobId": 21,
+  "paletteId": 267,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 260.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.guardianforce",
+  "mobId": 228,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 28.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.guardianwizard",
+  "mobId": 289,
+  "paletteId": 13,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 17.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hailking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 1472.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hailogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 830.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hare",
+  "mobId": 21,
+  "paletteId": 594,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 279.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.heartlessyurtchi",
+  "mobId": 677,
+  "paletteId": 350,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 240.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.henchman",
+  "mobId": 297,
+  "paletteId": 13,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 14.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hexedgrizzly",
+  "mobId": 622,
+  "paletteId": 375,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 432.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hillogre",
+  "mobId": 185,
+  "paletteId": 647,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 707.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hoove",
+  "mobId": 134,
+  "paletteId": 112,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1104.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hop",
+  "mobId": 125,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.982,
+  "colorMse": 150.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.horse",
+  "mobId": 17,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 16.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.horsedefender",
+  "mobId": 134,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 33.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.horseguardian",
+  "mobId": 134,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 947.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.horseguardsman",
+  "mobId": 134,
+  "paletteId": 233,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 1295.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.horsesentry",
+  "mobId": 134,
+  "paletteId": 245,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 537.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.horseswordsman",
+  "mobId": 134,
+  "paletteId": 233,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 1278.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hugetiger",
+  "mobId": 29,
+  "paletteId": 1,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1166.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hungryspirit",
+  "mobId": 266,
+  "paletteId": 34,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 22.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hunterrat",
+  "mobId": 90,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 476.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.hypnoticyamour",
+  "mobId": 523,
+  "paletteId": 629,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 705.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ibneon",
+  "mobId": 227,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 27.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.icebear",
+  "mobId": 195,
+  "paletteId": 261,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 784.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.immenserhino",
+  "mobId": 459,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 366.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.inferiorrhino",
+  "mobId": 457,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 112.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.insignificantrhino",
+  "mobId": 457,
+  "paletteId": 237,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 467.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.iomy",
+  "mobId": 632,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 105.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ivybudder",
+  "mobId": 1409,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 504.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.jarastalker",
+  "mobId": 250,
+  "paletteId": 338,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 931.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.jumborhino",
+  "mobId": 458,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 232.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.kamalattee",
+  "mobId": 273,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 13.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.killerbee",
+  "mobId": 568,
+  "paletteId": 127,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 565.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.killermongrel",
+  "mobId": 18,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 131.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.killerrat",
+  "mobId": 90,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 476.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.kingsguardian",
+  "mobId": 226,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 20.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.knap",
+  "mobId": 107,
+  "paletteId": 594,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 184.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lakewinny",
+  "mobId": 17,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1088.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.largebull",
+  "mobId": 27,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 141.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.largecentipede",
+  "mobId": 32,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 210.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.largehare",
+  "mobId": 21,
+  "paletteId": 594,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 279.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.largerhino",
+  "mobId": 458,
+  "paletteId": 594,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 263.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lavarat",
+  "mobId": 91,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 171.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lechipe",
+  "mobId": 251,
+  "paletteId": 546,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 537.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.leeringwolf",
+  "mobId": 623,
+  "paletteId": 516,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 724.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lesserghost",
+  "mobId": 167,
+  "paletteId": 302,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 174.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lesserskeleton",
+  "mobId": 30,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 124.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lethalarcher",
+  "mobId": 245,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 14.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lifelessspirit",
+  "mobId": 167,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 597.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lightningscholar",
+  "mobId": 236,
+  "paletteId": 481,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 1200.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lightningwolf",
+  "mobId": 23,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 56.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lilacbutterfly",
+  "mobId": 433,
+  "paletteId": 397,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 780.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lordbadakapi",
+  "mobId": 460,
+  "paletteId": 490,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 1158.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lostspiritspinkdragon",
+  "mobId": 631,
+  "paletteId": 450,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 700.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lostspiritspinksnake",
+  "mobId": 617,
+  "paletteId": 607,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 436.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.lostspiritspurpledragon",
+  "mobId": 631,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 287.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.maddog",
+  "mobId": 95,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 36.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.madhare",
+  "mobId": 125,
+  "paletteId": 198,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 164.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.madking",
+  "mobId": 181,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 17.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.madrabbit",
+  "mobId": 125,
+  "paletteId": 312,
+  "method": "shape-match+palette-search",
+  "score": 0.98,
+  "colorMse": 167.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.magneticyamour",
+  "mobId": 523,
+  "paletteId": 189,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 793.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.magnetizedgrizzly",
+  "mobId": 622,
+  "paletteId": 629,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 55.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.maliciouskhan",
+  "mobId": 987,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 650.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.marshogre",
+  "mobId": 185,
+  "paletteId": 596,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 642.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.maskedhunter",
+  "mobId": 250,
+  "paletteId": 4,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 30.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.massivescorpion",
+  "mobId": 171,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 37.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.masterbelial",
+  "mobId": 1111,
+  "paletteId": 143,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 11.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.masterbowman",
+  "mobId": 245,
+  "paletteId": 18,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 1089.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mastermutt",
+  "mobId": 138,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 43.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.maturedragon",
+  "mobId": 108,
+  "paletteId": 128,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 88.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mercilessnoyan",
+  "mobId": 672,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 29.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mesmericgrizzly",
+  "mobId": 1423,
+  "paletteId": 378,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 100.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.metalaitu",
+  "mobId": 1116,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 210.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.metaldaemon",
+  "mobId": 1115,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 142.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.metalimp",
+  "mobId": 660,
+  "paletteId": 480,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 329.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.meterworm",
+  "mobId": 183,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 232.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mightywyrm",
+  "mobId": 108,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 473.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mindlesskiller",
+  "mobId": 239,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 485.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.minibal",
+  "mobId": 244,
+  "paletteId": 460,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1018.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.minipik",
+  "mobId": 244,
+  "paletteId": 70,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 533.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.miniturtle",
+  "mobId": 860,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1356.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.minion",
+  "mobId": 276,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 19.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.minorrhino",
+  "mobId": 457,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 428.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.monkeyavenger",
+  "mobId": 136,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 11.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.monkeybasher",
+  "mobId": 136,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 485.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.monkeydefender",
+  "mobId": 136,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 9.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.monkeyguardian",
+  "mobId": 136,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 447.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.monkeymauler",
+  "mobId": 136,
+  "paletteId": 1,
+  "method": "shape-match+palette-search",
+  "score": 0.982,
+  "colorMse": 128.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.monkeysentry",
+  "mobId": 127,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 209.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.monsterousmonkey",
+  "mobId": 127,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 353.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.moonscaleserpent",
+  "mobId": 617,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 9.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.morridoom",
+  "mobId": 235,
+  "paletteId": 104,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1247.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.moth",
+  "mobId": 433,
+  "paletteId": 53,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 565.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mountaingoat",
+  "mobId": 94,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 3.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mountainwolf",
+  "mobId": 23,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 31.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mouse",
+  "mobId": 120,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 16.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mudbull",
+  "mobId": 27,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 142.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mudrat",
+  "mobId": 90,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 276.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mudslider",
+  "mobId": 862,
+  "paletteId": 131,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 12.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mudsnake",
+  "mobId": 184,
+  "paletteId": 267,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 211.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mulsae",
+  "mobId": 627,
+  "paletteId": 196,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 786.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.murderouskashik",
+  "mobId": 670,
+  "paletteId": 194,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 617.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicboar",
+  "mobId": 139,
+  "paletteId": 21,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1378.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicdog",
+  "mobId": 138,
+  "paletteId": 14,
+  "method": "shape-match+palette-search",
+  "score": 0.977,
+  "colorMse": 364.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicdragon",
+  "mobId": 132,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 6.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythichare",
+  "mobId": 131,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 26.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythichorse",
+  "mobId": 134,
+  "paletteId": 338,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 627.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicmonkey",
+  "mobId": 136,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 11.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicmouse",
+  "mobId": 120,
+  "paletteId": 265,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 279.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicox",
+  "mobId": 129,
+  "paletteId": 145,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 479.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicrooster",
+  "mobId": 137,
+  "paletteId": 631,
+  "method": "shape-match+palette-search",
+  "score": 0.99,
+  "colorMse": 455.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicsheep",
+  "mobId": 135,
+  "paletteId": 31,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 397.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythicsnake",
+  "mobId": 133,
+  "paletteId": 454,
+  "method": "shape-match+palette-search",
+  "score": 0.972,
+  "colorMse": 590.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.mythictiger",
+  "mobId": 130,
+  "paletteId": 234,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 113.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.neesha",
+  "mobId": 280,
+  "paletteId": 515,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1432.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.nettledsaseum",
+  "mobId": 1436,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 7.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ninetailedfox",
+  "mobId": 34,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 253.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.obesepig",
+  "mobId": 122,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 842.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.oblivion",
+  "mobId": 239,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 10.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.olddragon",
+  "mobId": 186,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 35.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.omphalo",
+  "mobId": 630,
+  "paletteId": 590,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 611.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.oneub",
+  "mobId": 227,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.974,
+  "colorMse": 24.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.orangedeer",
+  "mobId": 89,
+  "paletteId": 459,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 869.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.orangedoe",
+  "mobId": 88,
+  "paletteId": 459,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 982.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.orangerabbit",
+  "mobId": 125,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 874.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.oversizedrhino",
+  "mobId": 458,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 205.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.oxdefender",
+  "mobId": 129,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 45.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.oxsentry",
+  "mobId": 129,
+  "paletteId": 596,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 365.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.paledog",
+  "mobId": 18,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 347.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.palehunger",
+  "mobId": 27,
+  "paletteId": 237,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 269.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.palescorpion",
+  "mobId": 1417,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 141.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.palganfox",
+  "mobId": 255,
+  "paletteId": 71,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 633.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.palgunfox",
+  "mobId": 255,
+  "paletteId": 477,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1338.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.pheasant",
+  "mobId": 435,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 44.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.plainmonkey",
+  "mobId": 126,
+  "paletteId": 524,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 156.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.plainsnake",
+  "mobId": 26,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 229.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.polarbear",
+  "mobId": 117,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 10.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.possessedgrizzly",
+  "mobId": 1423,
+  "paletteId": 437,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 160.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.powerfulbahadur",
+  "mobId": 669,
+  "paletteId": 634,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 393.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.quickmonkey",
+  "mobId": 126,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 25.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.quiltar",
+  "mobId": 240,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 504.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rabbit",
+  "mobId": 21,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 15.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rabbitavenger",
+  "mobId": 131,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 26.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rabbitdefender",
+  "mobId": 131,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 26.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rabbitguardian",
+  "mobId": 131,
+  "paletteId": 1,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 1077.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rabbitsentry",
+  "mobId": 131,
+  "paletteId": 56,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 170.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rabbitwitch",
+  "mobId": 131,
+  "paletteId": 374,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 143.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rabidsaseum",
+  "mobId": 630,
+  "paletteId": 243,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 155.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.radiantchick",
+  "mobId": 121,
+  "paletteId": 578,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 737.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.radiantsnake",
+  "mobId": 33,
+  "paletteId": 177,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 934.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ragingbull",
+  "mobId": 27,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 86.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ragingtiger",
+  "mobId": 107,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.982,
+  "colorMse": 218.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rampagingbull",
+  "mobId": 27,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 53.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rat",
+  "mobId": 90,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 25.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ratdefender",
+  "mobId": 128,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 15.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ratsentry",
+  "mobId": 128,
+  "paletteId": 118,
+  "method": "shape-match+palette-search",
+  "score": 0.981,
+  "colorMse": 535.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ravage",
+  "mobId": 314,
+  "paletteId": 14,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 11.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.raven",
+  "mobId": 92,
+  "paletteId": 625,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 22.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ravenousbird",
+  "mobId": 58,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 20.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ravingsaseum",
+  "mobId": 1436,
+  "paletteId": 590,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 165.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.reanimateddancer",
+  "mobId": 776,
+  "paletteId": 34,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 13.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.reanimatedmessenger",
+  "mobId": 260,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 19.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.reanimatedoldman",
+  "mobId": 259,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 9.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.reanimatedseamstress",
+  "mobId": 775,
+  "paletteId": 34,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 18.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.redchick",
+  "mobId": 121,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.982,
+  "colorMse": 263.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.reddeer",
+  "mobId": 89,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 95.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.reddoe",
+  "mobId": 88,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 92.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.redhare",
+  "mobId": 21,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 95.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.redrabbit",
+  "mobId": 125,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.974,
+  "colorMse": 202.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.redsheep",
+  "mobId": 173,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 523.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.reefsnake",
+  "mobId": 184,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 112.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.regalpup",
+  "mobId": 93,
+  "paletteId": 237,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 315.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.restlesstiger",
+  "mobId": 107,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.982,
+  "colorMse": 216.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.restlessyamour",
+  "mobId": 1414,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 173.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.rocksnake",
+  "mobId": 26,
+  "paletteId": 313,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 532.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.roosterdefender",
+  "mobId": 137,
+  "paletteId": 562,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 11.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.roosterguardian",
+  "mobId": 137,
+  "paletteId": 555,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 1207.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.roostersentry",
+  "mobId": 137,
+  "paletteId": 454,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 330.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.royalpup",
+  "mobId": 93,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.984,
+  "colorMse": 20.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ruggedbahadur",
+  "mobId": 669,
+  "paletteId": 156,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 275.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.ruthlessyurtchi",
+  "mobId": 677,
+  "paletteId": 21,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 91.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.saltwaterseaweed",
+  "mobId": 822,
+  "paletteId": 85,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1112.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sanshin",
+  "mobId": 58,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 20.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sandyskeleton",
+  "mobId": 30,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 270.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.satanlittlehelper",
+  "mobId": 118,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 11.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.scar",
+  "mobId": 244,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 21.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.scarecrow",
+  "mobId": 92,
+  "paletteId": 625,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 22.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.scavengercrab",
+  "mobId": 567,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 18.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.scowlingwolf",
+  "mobId": 1404,
+  "paletteId": 34,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 100.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sealobster",
+  "mobId": 168,
+  "paletteId": 237,
+  "method": "shape-match+palette-search",
+  "score": 0.997,
+  "colorMse": 338.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.seasnake",
+  "mobId": 184,
+  "paletteId": 177,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 1137.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.seaweedserpent",
+  "mobId": 26,
+  "paletteId": 177,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 766.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.serpentinedragon",
+  "mobId": 186,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 358.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.shade",
+  "mobId": 981,
+  "paletteId": 371,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 28.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.shadowcrow",
+  "mobId": 92,
+  "paletteId": 625,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 22.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.shadowmanti",
+  "mobId": 98,
+  "paletteId": 540,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 444.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.shadowsentry",
+  "mobId": 276,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 19.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.shadybandit",
+  "mobId": 250,
+  "paletteId": 577,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 983.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sheep",
+  "mobId": 173,
+  "paletteId": 302,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 149.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sheepavenger",
+  "mobId": 135,
+  "paletteId": 31,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 275.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sheepdefender",
+  "mobId": 135,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.975,
+  "colorMse": 35.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sheepsentry",
+  "mobId": 135,
+  "paletteId": 525,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 394.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sheepshepherd",
+  "mobId": 135,
+  "paletteId": 497,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 760.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sheepveteran",
+  "mobId": 135,
+  "paletteId": 31,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 274.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.shrewdmauler",
+  "mobId": 228,
+  "paletteId": 460,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 422.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.silent",
+  "mobId": 276,
+  "paletteId": 454,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 443.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.silentwatcher",
+  "mobId": 251,
+  "paletteId": 19,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 942.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.silverdefender",
+  "mobId": 131,
+  "paletteId": 514,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 320.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.silverserpent",
+  "mobId": 26,
+  "paletteId": 261,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1045.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.simplemonkey",
+  "mobId": 126,
+  "paletteId": 374,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 142.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.simplesnake",
+  "mobId": 26,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 0.965,
+  "colorMse": 122.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.skeletallegionnaire",
+  "mobId": 590,
+  "paletteId": 628,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 494.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.skeletonju",
+  "mobId": 30,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 426.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.skeletonmage",
+  "mobId": 30,
+  "paletteId": 222,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 630.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.skeletonwarrior",
+  "mobId": 30,
+  "paletteId": 222,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 630.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.skilledhorse",
+  "mobId": 17,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 187.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sleetking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 1489.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sleetogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 838.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.slitherly",
+  "mobId": 33,
+  "paletteId": 359,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 206.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.slushking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 1473.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.slushogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 832.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.slymonkey",
+  "mobId": 126,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 97.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snake",
+  "mobId": 26,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 21.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snakeavenger",
+  "mobId": 133,
+  "paletteId": 438,
+  "method": "shape-match+palette-search",
+  "score": 0.978,
+  "colorMse": 1307.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snakedefender",
+  "mobId": 133,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.98,
+  "colorMse": 16.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snakesentry",
+  "mobId": 133,
+  "paletteId": 118,
+  "method": "shape-match+palette-search",
+  "score": 0.977,
+  "colorMse": 592.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snakeshaman",
+  "mobId": 133,
+  "paletteId": 438,
+  "method": "shape-match+palette-search",
+  "score": 0.978,
+  "colorMse": 1307.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snowbear",
+  "mobId": 195,
+  "paletteId": 302,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 285.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snowbeast",
+  "mobId": 116,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.98,
+  "colorMse": 141.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snowking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 1466.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snowogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 873.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.snowrabbit",
+  "mobId": 21,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 191.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.softmudcrab",
+  "mobId": 567,
+  "paletteId": 21,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 20.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.soulcollector",
+  "mobId": 734,
+  "paletteId": 619,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 27.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spasm",
+  "mobId": 184,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.976,
+  "colorMse": 203.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spirit",
+  "mobId": 167,
+  "paletteId": 233,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 148.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spiritdragon",
+  "mobId": 132,
+  "paletteId": 480,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1469.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spiritmonkey",
+  "mobId": 136,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 11.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spiritmouse",
+  "mobId": 120,
+  "paletteId": 624,
+  "method": "shape-match+palette-search",
+  "score": 0.973,
+  "colorMse": 431.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spiritrabbit",
+  "mobId": 131,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 26.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spiritsheep",
+  "mobId": 135,
+  "paletteId": 31,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 311.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spiritsnake",
+  "mobId": 133,
+  "paletteId": 438,
+  "method": "shape-match+palette-search",
+  "score": 0.978,
+  "colorMse": 1307.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spirittiger",
+  "mobId": 130,
+  "paletteId": 234,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 113.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spiritedhorse",
+  "mobId": 17,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 29.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spittingsquid",
+  "mobId": 405,
+  "paletteId": 56,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 228.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spottedmutt",
+  "mobId": 93,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.976,
+  "colorMse": 60.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.springbutterfly",
+  "mobId": 433,
+  "paletteId": 89,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 9.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sprintbutterfly",
+  "mobId": 433,
+  "paletteId": 89,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 38.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sprymonkey",
+  "mobId": 126,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 0.989,
+  "colorMse": 417.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spunkydog",
+  "mobId": 18,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 27.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spunkymonkey",
+  "mobId": 126,
+  "paletteId": 249,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 790.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.spurtingsquid",
+  "mobId": 405,
+  "paletteId": 497,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 115.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.squirrel",
+  "mobId": 25,
+  "paletteId": 237,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 249.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stealthguardian",
+  "mobId": 251,
+  "paletteId": 4,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 22.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stealthybandit",
+  "mobId": 251,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 555.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sting",
+  "mobId": 171,
+  "paletteId": 135,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 180.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stingerbee",
+  "mobId": 568,
+  "paletteId": 245,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 822.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stoneogre",
+  "mobId": 185,
+  "paletteId": 523,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 664.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stormsnake",
+  "mobId": 184,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 43.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stoutpig",
+  "mobId": 19,
+  "paletteId": 302,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 210.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stoutpiglet",
+  "mobId": 20,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 34.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stoutpup",
+  "mobId": 18,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 17.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stoutwarthog",
+  "mobId": 152,
+  "paletteId": 594,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 239.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.strangething",
+  "mobId": 192,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 21.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.strawberrie",
+  "mobId": 825,
+  "paletteId": 41,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 9.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stubbornpig",
+  "mobId": 19,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 64.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stubbornpiglet",
+  "mobId": 20,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 885.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.stubbornwarthog",
+  "mobId": 152,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 262.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sunfox",
+  "mobId": 22,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 31.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sunscorpion",
+  "mobId": 171,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 369.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sunsnake",
+  "mobId": 26,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 348.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sunfeather",
+  "mobId": 121,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.975,
+  "colorMse": 32.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sunscaleserpent",
+  "mobId": 617,
+  "paletteId": 389,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 463.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sute",
+  "mobId": 110,
+  "paletteId": 546,
+  "method": "shape-match+palette-search",
+  "score": 0.98,
+  "colorMse": 125.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.sweetbee",
+  "mobId": 568,
+  "paletteId": 363,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 980.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.swift",
+  "mobId": 276,
+  "paletteId": 56,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 463.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.swiftmauler",
+  "mobId": 228,
+  "paletteId": 24,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 244.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tako",
+  "mobId": 405,
+  "paletteId": 131,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 38.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.takrai",
+  "mobId": 820,
+  "paletteId": 85,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1147.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tangator",
+  "mobId": 453,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 263.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tempestking",
+  "mobId": 99,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1482.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tempestogre",
+  "mobId": 99,
+  "paletteId": 495,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 830.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tenseyamour",
+  "mobId": 522,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 152.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.terrifiedchicken",
+  "mobId": 28,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 123.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.thump",
+  "mobId": 125,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.982,
+  "colorMse": 150.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.thunderingrhino",
+  "mobId": 459,
+  "paletteId": 619,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 810.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tiger",
+  "mobId": 29,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 184.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tigeravenger",
+  "mobId": 130,
+  "paletteId": 234,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 112.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tigerslasher",
+  "mobId": 130,
+  "paletteId": 518,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 533.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tigerwarrior",
+  "mobId": 130,
+  "paletteId": 234,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 112.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tinyturtle",
+  "mobId": 860,
+  "paletteId": 12,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 695.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.tolerablerhino",
+  "mobId": 457,
+  "paletteId": 303,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 124.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.torturedphantom",
+  "mobId": 324,
+  "paletteId": 16,
+  "method": "shape-match+palette-search",
+  "score": 0.971,
+  "colorMse": 12.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.toughfight",
+  "mobId": 152,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.994,
+  "colorMse": 123.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.trapdoorspider",
+  "mobId": 97,
+  "paletteId": 524,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 537.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.trappedspirit",
+  "mobId": 258,
+  "paletteId": 188,
+  "method": "shape-match+palette-search",
+  "score": 0.983,
+  "colorMse": 16.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.trapper",
+  "mobId": 251,
+  "paletteId": 4,
+  "method": "shape-match+palette-search",
+  "score": 0.987,
+  "colorMse": 579.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.turbulentsaseum",
+  "mobId": 630,
+  "paletteId": 12,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 293.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.uglymonkey",
+  "mobId": 127,
+  "paletteId": 261,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 1174.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.uglysheep",
+  "mobId": 173,
+  "paletteId": 10,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 332.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.vengefulspearman",
+  "mobId": 225,
+  "paletteId": 245,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 832.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.viciouskashik",
+  "mobId": 670,
+  "paletteId": 76,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 1205.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.vigilantwolf",
+  "mobId": 623,
+  "paletteId": 480,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 661.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.vilerat",
+  "mobId": 90,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 25.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.vitalizingyamour",
+  "mobId": 1414,
+  "paletteId": 374,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 436.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.voltaicvamoth",
+  "mobId": 523,
+  "paletteId": 416,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 401.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.warthog",
+  "mobId": 153,
+  "paletteId": 545,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 691.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.waterglobule",
+  "mobId": 1105,
+  "paletteId": 139,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 9.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.waterimp",
+  "mobId": 660,
+  "paletteId": 480,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 706.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.waterqueen",
+  "mobId": 1106,
+  "paletteId": 139,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 12.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.watersnake",
+  "mobId": 33,
+  "paletteId": 267,
+  "method": "shape-match+palette-search",
+  "score": 0.974,
+  "colorMse": 146.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.waterwizard",
+  "mobId": 237,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 40.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.whitechicken",
+  "mobId": 28,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 316.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.whitehare",
+  "mobId": 441,
+  "paletteId": 89,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 13.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.whiterabbit",
+  "mobId": 21,
+  "paletteId": 254,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 191.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.whiterat",
+  "mobId": 90,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 388.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.whiterooster",
+  "mobId": 124,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 281.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.whitewolf",
+  "mobId": 23,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 278.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wibna",
+  "mobId": 227,
+  "paletteId": 551,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 53.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wickedghost",
+  "mobId": 167,
+  "paletteId": 183,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 516.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildchick",
+  "mobId": 121,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.979,
+  "colorMse": 156.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildchicken",
+  "mobId": 28,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.985,
+  "colorMse": 316.1,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildhorse",
+  "mobId": 17,
+  "paletteId": 103,
+  "method": "shape-match+palette-search",
+  "score": 0.981,
+  "colorMse": 559.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildpig",
+  "mobId": 19,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 210.4,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildpiglet",
+  "mobId": 20,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 64.2,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildrooster",
+  "mobId": 124,
+  "paletteId": 337,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 281.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildsnake",
+  "mobId": 26,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.986,
+  "colorMse": 8.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wildyamour",
+  "mobId": 523,
+  "paletteId": 508,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 1346.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.witch",
+  "mobId": 109,
+  "paletteId": 25,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 614.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.witchshaman",
+  "mobId": 109,
+  "paletteId": 232,
+  "method": "shape-match+palette-search",
+  "score": 0.995,
+  "colorMse": 564.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.witchywoman",
+  "mobId": 109,
+  "paletteId": 0,
+  "method": "shape-match+palette-search",
+  "score": 0.991,
+  "colorMse": 13.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wolf",
+  "mobId": 23,
+  "paletteId": 190,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 31.7,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wolfkin",
+  "mobId": 198,
+  "paletteId": 177,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 696.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wondrousoverachiever",
+  "mobId": 1528,
+  "paletteId": 39,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 20.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.woodaitu",
+  "mobId": 1116,
+  "paletteId": 131,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 7.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wooddaemon",
+  "mobId": 1115,
+  "paletteId": 145,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 20.5,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.woodimp",
+  "mobId": 660,
+  "paletteId": 418,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 887.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.woodsnake",
+  "mobId": 26,
+  "paletteId": 267,
+  "method": "shape-match+palette-search",
+  "score": 0.966,
+  "colorMse": 209.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.woodwolf",
+  "mobId": 23,
+  "paletteId": 287,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 56.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.woodenhorse",
+  "mobId": 17,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.998,
+  "colorMse": 284.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.woodssavage",
+  "mobId": 225,
+  "paletteId": 499,
+  "method": "shape-match+palette-search",
+  "score": 0.993,
+  "colorMse": 540.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.worm",
+  "mobId": 183,
+  "paletteId": 412,
+  "method": "shape-match+palette-search",
+  "score": 0.996,
+  "colorMse": 26.0,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.wrathfulspearman",
+  "mobId": 228,
+  "paletteId": 229,
+  "method": "shape-match+palette-search",
+  "score": 0.999,
+  "colorMse": 662.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.yachi",
+  "mobId": 111,
+  "paletteId": 514,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 606.6,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.yarsin",
+  "mobId": 240,
+  "paletteId": 338,
+  "method": "shape-match+palette-search",
+  "score": 1.0,
+  "colorMse": 496.3,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.youngdragon",
+  "mobId": 108,
+  "paletteId": 517,
+  "method": "shape-match+palette-search",
+  "score": 0.992,
+  "colorMse": 474.8,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.zealousprocrastinator",
+  "mobId": 252,
+  "paletteId": 5,
+  "method": "shape-match+palette-search",
+  "score": 0.968,
+  "colorMse": 1197.9,
+  "status": "auto"
+ },
+ {
+  "monsterId": "monster.zibongmask",
+  "mobId": 256,
+  "paletteId": 9,
+  "method": "shape-match+palette-search",
+  "score": 0.988,
+  "colorMse": 18.9,
+  "status": "auto"
+ }
+]

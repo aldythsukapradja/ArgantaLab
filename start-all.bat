@@ -15,12 +15,16 @@ start "Circle HQ" cmd /k "cd /d "%~dp0apps\hq" && echo Circle HQ on http://local
 REM ArgantaLab (port 5176)
 start "ArgantaLab" cmd /k "cd /d "%~dp0apps\web" && echo ArgantaLab on http://localhost:5176/ && npm run dev -- --port 5176 --strictPort"
 
+REM Kingdom command center + walkable client (port 5599, static server)
+start "Kingdom" cmd /k "cd /d "%~dp0" && echo Kingdom on http://localhost:5599/apps/kingdom/command/ && python -m http.server 5599"
+
 REM Give servers 3 seconds to boot, then open all in browser
 timeout /t 3 /nobreak > nul
 start "" http://localhost:5174/
 start "" http://localhost:5180/
 start "" http://localhost:5273/
 start "" http://localhost:5176/
+start "" http://localhost:5599/apps/kingdom/command/
 
 echo All servers started. Close the terminal windows to stop them.
 pause

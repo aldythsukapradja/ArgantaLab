@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kingdom Command — Game Database</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">⌘</div>
+        <div>
+          <b>Kingdom Command</b>
+          <small>nexus data ops</small>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-title">Insight</div>
+        <a class="nav-btn" data-route="overview" href="#/overview"><span>◫</span>Overview</a>
+        <a class="nav-btn" data-route="lab" href="#/lab"><span>🧪</span>Character Lab</a>
+        <a class="nav-btn" data-route="model" href="#/model"><span>⬡</span>Data Model</a>
+        <div class="nav-title">World</div>
+        <a class="nav-btn" data-route="world" href="#/world"><span>🗺</span>World Explorer</a>
+        <div class="nav-title">Registry</div>
+        <a class="nav-btn" data-route="monsters" href="#/monsters"><span>🐾</span>Monsters</a>
+        <a class="nav-btn" data-route="items" href="#/items"><span>◈</span>Items &amp; Drops</a>
+        <a class="nav-btn" data-route="skills" href="#/skills"><span>✦</span>Skills</a>
+        <a class="nav-btn" data-route="assets" href="#/assets"><span>▦</span>Asset Vault</a>
+        <div class="nav-title">Client Art</div>
+        <a class="nav-btn" data-route="charvault" href="#/charvault"><span>🧍</span>Char Vault</a>
+        <a class="nav-btn" data-route="mounts" href="#/mounts"><span>🐎</span>Mounts</a>
+        <a class="nav-btn" data-route="effects" href="#/effects"><span>✨</span>Effects</a>
+        <a class="nav-btn" data-route="audit" href="#/audit"><span>🔗</span>Audit &amp; Links</a>
+        <div class="nav-title">Raw</div>
+        <a class="nav-btn" data-route="tables" href="#/tables"><span>≣</span>Tables</a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <small id="dataStamp">loading data…</small>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="top-left">
+          <button id="sidebarToggle" class="icon-btn" title="Hide / show sidebar">☰</button>
+          <div class="crumb" id="crumb">Kingdom Command</div>
+        </div>
+        <div class="top-actions">
+          <div class="search-wrap">
+            <input id="globalSearch" class="search" placeholder="Search maps, monsters, items, skills…" autocomplete="off" />
+            <div id="searchResults" class="search-results" hidden></div>
+          </div>
+          <button id="exportOverrides" class="btn ghost" title="Download overrides/spawns.json">⇩ Export overrides</button>
+          <button id="themeToggle" class="btn ghost" title="Toggle dark mode">◐</button>
+        </div>
+      </header>
+      <main id="view" class="view"></main>
+    </div>
+  </div>
+
+  <nav class="mobilebar">
+    <a href="#/overview" data-route="overview"><span>◫</span><small>Overview</small></a>
+    <a href="#/world" data-route="world"><span>🗺</span><small>World</small></a>
+    <a href="#/monsters" data-route="monsters"><span>🐾</span><small>Codex</small></a>
+    <a href="#/lab" data-route="lab"><span>🧪</span><small>Lab</small></a>
+    <a href="#/items" data-route="items"><span>◈</span><small>Items</small></a>
+  </nav>
+
+  <div id="lightbox" class="lightbox" hidden>
+    <img id="lightboxImg" alt="" />
+    <div id="lightboxCaption"></div>
+  </div>
+
+  <script src="store.js"></script>
+  <script src="components.js"></script>
+  <script src="client-sprites.js"></script>
+  <script src="views-core.js"></script>
+  <script src="views-world.js"></script>
+  <script src="views-entities.js"></script>
+  <script src="views-vault.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
