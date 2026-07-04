@@ -6,9 +6,37 @@
 // (ArgantaLabs is the source of truth; we only display).
 import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
-export const supabase = (url && anon) ? createClient(url, anon) : null;
+// Normalize the configured Supabase URL. Vercel's env var is easy to set
+// wrong (bare project ref `abcd1234`, missing protocol, stray quotes/space).
+// A bad value used to crash createClient and white-screen the WHOLE app; now
+// we repair what we can and otherwise degrade to offline mode.
+function resolveSupabaseUrl(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  let u = raw.trim().replace(/^['"]|['"]$/g, ''); // strip stray quotes
+  if (!u) return null;
+  if (/^https?:\/\//i.test(u)) {
+    try { new URL(u); return u; } catch { return null; }
+  }
+  // bare host or bare project ref -> build the full URL
+  if (/\.supabase\.co$/i.test(u)) return 'https://' + u;          // host only
+  if (/^[a-z0-9]{16,}$/i.test(u)) return `https://${u}.supabase.co`; // ref only
+  return null;
+}
+
+const url = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
+const anon = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+
+function makeClient() {
+  if (!url || !anon) return null;
+  try {
+    return createClient(url, anon);
+  } catch (err) {
+    console.error('Supabase disabled — invalid config:', err?.message || err);
+    return null;
+  }
+}
+
+export const supabase = makeClient();
 export const authAvailable = !!supabase;
 
 const KID_DOMAIN = 'kids.argantalab.app';
