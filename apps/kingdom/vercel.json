@@ -3,6 +3,7 @@
   "buildCommand": "cd web && npm run build && cd .. && node scripts/build-deploy.mjs",
   "outputDirectory": "dist_site",
   "redirects": [
+    { "source": "/", "has": [{ "type": "host", "value": "heroes.arganta.app" }], "destination": "/lab/", "permanent": false },
     { "source": "/", "destination": "/command/", "permanent": false }
   ],
   "rewrites": [
