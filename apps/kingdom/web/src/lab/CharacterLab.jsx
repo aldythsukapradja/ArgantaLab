@@ -9,6 +9,7 @@ import AccountBar from '../components/AccountBar.jsx';
 import PartBrowser from './PartBrowser.jsx';
 import DyePicker from './DyePicker.jsx';
 import PracticePad from './PracticePad.jsx';
+import SkillBrowser from './SkillBrowser.jsx';
 import * as data from '../engine/data.js';
 
 const DIRECTIONS = ['South', 'East', 'North', 'West'];
@@ -30,6 +31,10 @@ const SKIN_IDS = [0, 1];               // the only true unclothed bodies
 const STORE_KEY = 'kingdom_lab_state_v2';
 const MOUNT_NAMES = { 0: 'Horse' };     // id 0 is confirmed present in every install
 const mountLabel = (id) => MOUNT_NAMES[id] || `mount #${id}`;
+const DEFAULT_SKILLS = [{ fx: 22 }, { fx: 1 }, { fx: 131 }];
+const normalizeSkills = (skills) => DEFAULT_SKILLS.map((def, i) => ({
+  fx: Number.isFinite(Number(skills?.[i]?.fx)) ? Number(skills[i].fx) : def.fx,
+}));
 
 const DEFAULTS = {
   sel: {
@@ -55,7 +60,7 @@ const SLOT_DEFS = [
   { key: 'weapon', cat: 'sword', label: 'Weapon', group: 'Weapon', optional: true, cats: ['sword', 'spear', 'bow', 'fan'] },
   { key: 'shield', cat: 'shield', label: 'Shield', group: 'Weapon', optional: true },
 ];
-const GROUPS = ['Head', 'Body & Armor', 'Weapon', 'Mount'];
+const GROUPS = ['Head', 'Body & Armor', 'Weapon', 'Mount', 'Skills'];
 
 function loadSaved() {
   try {
@@ -90,6 +95,9 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
   const [mountOn, setMountOn] = useState(saved?.mountOn || false);
   const [mountId, setMountId] = useState(saved?.mountId || 0);
   const [mountCount, setMountCount] = useState(0);
+  const [effects, setEffects] = useState([]);
+  const [skills, setSkills] = useState(normalizeSkills(saved?.skills));
+  const [skillTest, setSkillTest] = useState(null);
   const [action, setAction] = useState('NormalStandBy');
   const [emote, setEmote] = useState('');
   const [dir, setDir] = useState('South');
@@ -98,6 +106,7 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
   const [scale, setScale] = useState(3);
   const [frameInfo, setFrameInfo] = useState('');
   const [browse, setBrowse] = useState(null);
+  const [skillBrowse, setSkillBrowse] = useState(null);
   const [dyeFor, setDyeFor] = useState(null);
   const [dyeAnchor, setDyeAnchor] = useState(null);
 
@@ -112,20 +121,24 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
       setMountId((id) => (id >= 0 && id < m.length ? id : 0));
     }).catch(() => {});
   }, []);
+  useEffect(() => {
+    data.effects().then(setEffects).catch(() => setEffects([]));
+  }, []);
 
   // persist loadout across pages/sessions
   useEffect(() => {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ sel, mountOn, mountId }));
-  }, [sel, mountOn, mountId]);
+    localStorage.setItem(STORE_KEY, JSON.stringify({ sel, mountOn, mountId, skills }));
+  }, [sel, mountOn, mountId, skills]);
 
   // cloud loadout wins on login (applied once per cloudSpec arrival)
   const cloudSpec = account?.cloudSpec;
   useEffect(() => {
     if (!cloudSpec) return;
-    const { mount, ...parts } = cloudSpec;
+    const { mount, skills: cloudSkills, ...parts } = cloudSpec;
     if (parts.body) setSel(parts);
     setMountOn(!!mount);
     if (mount?.id != null) setMountId(mount.id);
+    if (cloudSkills) setSkills(normalizeSkills(cloudSkills));
   }, [JSON.stringify(cloudSpec || null)]);
 
   const bodyParts = meta.body?.parts || [];
@@ -187,8 +200,26 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
     localStorage.removeItem(STORE_KEY);
     setSel(DEFAULTS.sel);
     setMountOn(false); setMountId(0);
+    setSkills(DEFAULT_SKILLS);
     setAction('NormalStandBy'); setEmote(''); setDir('South');
     setSpeed(1); setScale(3); setPlaying(true);
+  }
+
+  const availableEffects = useMemo(() => effects.filter((e) => e?.sheet && e?.animation?.length), [effects]);
+  const effectById = useMemo(() => Object.fromEntries(availableEffects.map((e) => [e.id, e])), [availableEffects]);
+  const skillLabel = (fx) => effectById[fx] ? `effect #${String(fx).padStart(3, '0')}` : `effect #${fx}`;
+  function setSkillFx(slot, fx) {
+    setSkills((arr) => arr.map((s, i) => (i === slot ? { fx } : s)));
+  }
+  function stepSkill(slot, delta) {
+    if (!availableEffects.length) return;
+    const cur = skills[slot]?.fx ?? DEFAULT_SKILLS[slot]?.fx ?? availableEffects[0].id;
+    const i = availableEffects.findIndex((e) => e.id === cur);
+    const next = availableEffects[(i + delta + availableEffects.length) % availableEffects.length] || availableEffects[0];
+    setSkillFx(slot, next.id);
+  }
+  function testSkillFx(fx) {
+    setSkillTest({ fx, nonce: performance.now() });
   }
 
   const hasWeapon = !!sel.weapon;
@@ -198,10 +229,10 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
   const motionName = emote || effAction + dir;
 
   const spec = useMemo(() => {
-    const s = { ...sel };
+    const s = { ...sel, skills };
     if (mountOn) s.mount = { id: mountId };
     return s;
-  }, [sel, mountOn, mountId]);
+  }, [sel, mountOn, mountId, skills]);
   useEffect(() => { onSpec?.(spec); }, [spec]);
   useEffect(() => { if (mountOn && action !== 'Riding') setAction('Riding'); }, [mountOn]);
 
@@ -294,6 +325,21 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
                   <button title="back to the default horse" onClick={() => setMountId(0)}>🐎 Horse</button>
                 )}
               </div>
+            ) : group === 'Skills' ? (
+              <>
+                {skills.map((skill, i) => (
+                  <div className="slotrow skill-slotrow" key={i}>
+                    <label className="slotlabel"><span className="dot" /> Skill {i + 1}</label>
+                    <button onClick={() => stepSkill(i, -1)}>◀</button>
+                    <button className="browse-btn" onClick={() => setSkillBrowse({ slot: i })}>
+                      {skillLabel(skill.fx)} <span className="caret">▦</span>
+                    </button>
+                    <button onClick={() => stepSkill(i, +1)}>▶</button>
+                    <button onClick={() => testSkillFx(skill.fx)}>test</button>
+                  </div>
+                ))}
+                <p className="skill-help">These slots mirror the arena 1/2/3 skills. Pick an effect, then test it in the practice ground.</p>
+              </>
             ) : (
               SLOT_DEFS.filter((s) => s.group === group).map((slot) => {
                 const curKey = currentKeyFor(slot);
@@ -330,7 +376,7 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
       </div>
 
       <div className="pad-col card">
-        <PracticePad spec={spec} />
+        <PracticePad spec={spec} skills={skills} skillTest={skillTest} />
       </div>
 
       {browse && (
@@ -340,6 +386,19 @@ export default function CharacterLab({ onSpec, account, onClaimed }) {
           value={currentKeyFor(browse.slot)}
           onPick={pickFor(browse.slot)}
           onClose={() => setBrowse(null)}
+        />
+      )}
+      {skillBrowse && (
+        <SkillBrowser
+          title={`Skill ${skillBrowse.slot + 1} effect`}
+          effects={availableEffects}
+          value={skills[skillBrowse.slot]?.fx}
+          onPick={(entry) => {
+            setSkillFx(skillBrowse.slot, entry.id);
+            testSkillFx(entry.id);
+          }}
+          onTest={(entry) => testSkillFx(entry.id)}
+          onClose={() => setSkillBrowse(null)}
         />
       )}
       {dyeFor && (() => {

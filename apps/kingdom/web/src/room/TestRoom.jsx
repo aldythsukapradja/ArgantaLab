@@ -13,6 +13,9 @@ import { joinArena } from '../net/arenaNet.js';
 
 const TILE = 48;
 const WALK_MS = 460;
+const TURN_HOLD_MS = 140;
+const MONSTER_WALK_MS = 620;
+const SPAWN_KIND_MONSTER = 'monster';
 const DIR_BY_KEY = {
   ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South',
   ArrowLeft: 'West', a: 'West', ArrowRight: 'East', d: 'East',
@@ -20,6 +23,35 @@ const DIR_BY_KEY = {
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const MOB_DIR = { South: 'down', North: 'up', East: 'right', West: 'left' };
 const ATTACK_BY_WEAPON = { sword: 'Swing', spear: 'Pierce', bow: 'Shoot', fan: 'Swing' };
+const DEFAULT_SKILLS = [{ fx: 22 }, { fx: 1 }, { fx: 131 }];
+
+function normalizeSkills(skills) {
+  return DEFAULT_SKILLS.map((def, i) => ({
+    fx: Number.isFinite(Number(skills?.[i]?.fx)) ? Number(skills[i].fx) : def.fx,
+  }));
+}
+
+function sameTile(a, b) {
+  return a?.[0] === b?.[0] && a?.[1] === b?.[1];
+}
+
+function tileOccupied(g, tile, opts = {}) {
+  const { ignorePlayer = false } = opts;
+  if (!ignorePlayer && sameTile(g.player.tile, tile)) return true;
+  for (const m of g.monsters) {
+    if (m.state !== 'die' && sameTile(m.tile, tile)) return true;
+  }
+  for (const r of Object.values(g.remotes || {})) {
+    if ((r.hp ?? 100) > 0 && (sameTile(r.tile, tile) || (r.moveT < 1 && sameTile(r.from, tile)))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function uid(prefix = 'id') {
+  return `${prefix}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export default function TestRoom({ spec, account }) {
   const wrapRef = useRef(null);
@@ -29,9 +61,18 @@ export default function TestRoom({ spec, account }) {
   const [spawnList, setSpawnList] = useState([]);
   const [spawnPick, setSpawnPick] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [skills, setSkills] = useState([{ fx: 22 }, { fx: 1 }, { fx: 131 }]);
+  const [skills, setSkills] = useState(() => normalizeSkills(spec.skills));
   const [zoom, setZoom] = useState(1.6);
   const G = useRef(null);
+
+  useEffect(() => {
+    setSkills(normalizeSkills(spec.skills));
+  }, [JSON.stringify(spec.skills || null)]);
+
+  function keepCanvasFocus(e) {
+    e.preventDefault();
+    canvasRef.current?.focus({ preventScroll: true });
+  }
 
   // ---------- init ----------
   useEffect(() => {
@@ -62,10 +103,11 @@ export default function TestRoom({ spec, account }) {
         player: {
           resources, tile: [8, 8], from: [8, 8], moveT: 1, facing: 'South',
           mounted: false, oneShot: null, oneShotStart: 0, hp: 100, maxHp: 100,
+          turnHoldDir: null, turnHoldStart: 0,
           name: account?.character?.name || 'you',
           accountType: account?.accountType || 'adult',
         },
-        monsters: [], fx: [], zoom: 1.6, stick: null, held: new Set(),
+        monsters: [], monsterIds: new Set(), fx: [], zoom: 1.6, viewportW: 0, viewportH: 0, dpr: 1, stick: null, held: new Set(),
         weaponCat: spec.weapon?.cat || null,
         remotes: {}, net: null,
       };
@@ -141,10 +183,20 @@ export default function TestRoom({ spec, account }) {
         const r = g.remotes[ev.from];
         if (ev.type === 'move' && r) {
           r.from = [...r.tile]; r.tile = ev.tile; r.facing = ev.facing;
-          r.moveT = 0; r.moveStart = performance.now();
+          if (sameTile(r.from, r.tile)) {
+            r.moveT = 1; r.moveStart = performance.now();
+          } else {
+            r.moveT = 0; r.moveStart = performance.now();
+          }
         } else if (ev.type === 'action' && r) {
           r.oneShot = ev.motion; r.oneShotStart = performance.now();
           setTimeout(() => { if (r.oneShot === ev.motion) r.oneShot = null; }, 1200);
+        } else if (ev.type === 'spawn') {
+          spawnEntityFromIntent(g, ev);
+        } else if (ev.type === 'monster_move') {
+          applyMonsterMove(g, ev);
+        } else if (ev.type === 'monster_state') {
+          applyMonsterState(g, ev);
         } else if (ev.type === 'hp' && r) {
           r.hp = ev.hp;
         } else if (ev.type === 'attack' && ev.target === account.character.id) {
@@ -175,15 +227,16 @@ export default function TestRoom({ spec, account }) {
   function startOneShot(motion) {
     const g = G.current; if (!g) return;
     const p = g.player;
-    if (p.oneShot) return;
+    if (p.oneShot) return false;
     p.oneShot = motion;
     p.oneShotStart = performance.now();
     g.net?.send('action', { motion });
+    return true;
   }
   function doAttack() {
     const g = G.current; if (!g) return;
     const motion = ATTACK_BY_WEAPON[g.weaponCat] || 'Swing';
-    startOneShot(motion);
+    if (!startOneShot(motion)) return;
     strike(g);
   }
   function doSkill(i) {
@@ -222,9 +275,11 @@ export default function TestRoom({ spec, account }) {
       m.hp -= 34;
       if (m.hp <= 0) {
         m.state = 'die'; m.stateStart = performance.now();
+        g.net?.send('monster_state', { id: m.id, state: 'die', hp: 0 });
         pushToast(`+${m.xp.toLocaleString()} XP — ${m.name}`);
       } else {
         m.state = 'hit'; m.stateStart = performance.now();
+        g.net?.send('monster_state', { id: m.id, state: 'hit', hp: m.hp });
       }
     }, 180);
   }
@@ -232,21 +287,88 @@ export default function TestRoom({ spec, account }) {
     setToasts((t) => [...t.slice(-4), { id: Math.random(), text }]);
     setTimeout(() => setToasts((t) => t.slice(1)), 2600);
   }
-  function spawnMonster(name) {
+  function randomOpenTile(g) {
+    for (let i = 0; i < 80; i++) {
+      const tile = [3 + Math.floor(Math.random() * (g.gridW - 6)), 3 + Math.floor(Math.random() * (g.gridH - 6))];
+      if (!tileOccupied(g, tile)) return tile;
+    }
+    return [Math.max(1, Math.min(g.gridW - 2, g.player.tile[0] + 1)), g.player.tile[1]];
+  }
+
+  function addMonster(g, payload) {
+    if (!payload?.id || g.monsterIds.has(payload.id)) return;
+    const mob = g.mobsAll[payload.mobId];
+    if (!mob?.sheet) return;
+    g.monsterIds.add(payload.id);
+    loadImage(data.monsterSheetUrl(mob)).then((sheet) => {
+      if (!G.current || g.monsters.some((m) => m.id === payload.id)) return;
+      g.monsters.push({
+        id: payload.id,
+        name: payload.name || `mob #${payload.mobId}`,
+        xp: payload.xp || 0,
+        mobId: payload.mobId,
+        paletteId: payload.paletteId ?? null,
+        ownerId: payload.ownerId || null,
+        aiOwnerId: payload.aiOwnerId || payload.ownerId || null,
+        source: payload.source || 'settings',
+        mob, sheet,
+        tile: payload.tile || randomOpenTile(g),
+        from: null, moveT: 1, facing: payload.facing || 'South',
+        hp: payload.hp || 100, maxHp: payload.maxHp || 100, state: 'stand', stateStart: 0,
+        nextWander: performance.now() + 800 + Math.random() * 1200,
+      });
+    }).catch(() => g.monsterIds.delete(payload.id));
+  }
+
+  function spawnEntityFromIntent(g, ev) {
+    if (ev.kind === SPAWN_KIND_MONSTER) addMonster(g, ev.entity);
+  }
+
+  function spawnMonster(name, source = 'settings') {
     const g = G.current; if (!g) return;
     const pick = g.linked.find((l) => l.name === (name || spawnPick));
     if (!pick) return;
-    const mob = g.mobsAll[pick.mobId];
-    if (!mob?.sheet) return;
-    loadImage(data.monsterSheetUrl(mob)).then((sheet) => {
-      g.monsters.push({
-        ...pick, mob, sheet,
-        tile: [3 + Math.floor(Math.random() * (g.gridW - 6)), 3 + Math.floor(Math.random() * (g.gridH - 6))],
-        from: null, moveT: 1, facing: 'South',
-        hp: 100, maxHp: 100, state: 'stand', stateStart: 0,
-        nextWander: performance.now() + 800 + Math.random() * 1200,
-      });
-    });
+    const payload = {
+      id: uid('monster'),
+      kind: SPAWN_KIND_MONSTER,
+      ownerId: account?.character?.id || null,
+      aiOwnerId: account?.character?.id || null,
+      source,
+      name: pick.name,
+      xp: pick.xp,
+      mobId: pick.mobId,
+      paletteId: pick.paletteId ?? null,
+      tile: randomOpenTile(g),
+      facing: 'South',
+      hp: 100,
+      maxHp: 100,
+    };
+    addMonster(g, payload);
+    g.net?.send('spawn', { kind: SPAWN_KIND_MONSTER, entity: payload });
+  }
+
+  function findMonster(g, id) {
+    return g.monsters.find((m) => m.id === id);
+  }
+
+  function applyMonsterMove(g, ev) {
+    const m = findMonster(g, ev.id);
+    if (!m || m.aiOwnerId === account?.character?.id) return;
+    m.from = Array.isArray(ev.from) ? ev.from : [...m.tile];
+    m.tile = Array.isArray(ev.tile) ? ev.tile : m.tile;
+    m.facing = ev.facing || m.facing;
+    m.moveT = sameTile(m.from, m.tile) ? 1 : 0;
+    m.moveStart = performance.now();
+    m.nextWander = Infinity;
+  }
+
+  function applyMonsterState(g, ev) {
+    const m = findMonster(g, ev.id);
+    if (!m) return;
+    m.hp = ev.hp ?? m.hp;
+    m.state = ev.state || m.state;
+    m.stateStart = performance.now();
+    if (m.state === 'stand') m.nextWander = Infinity;
   }
 
   // ---------- keyboard ----------
@@ -283,10 +405,21 @@ export default function TestRoom({ spec, account }) {
       // a 0-height canvas makes viewH = 0/z, and the next frame's camera
       // clamp math divides/centers against that garbage before the real
       // size lands. Skipping zero reads keeps the last-known-good size.
-      const w = wrap.clientWidth, h = wrap.clientHeight;
+      const r = wrap.getBoundingClientRect();
+      const w = Math.floor(r.width), h = Math.floor(r.height);
       if (w > 0 && h > 0) {
-        canvas.width = w;
-        canvas.height = h;
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const bw = Math.floor(w * dpr), bh = Math.floor(h * dpr);
+        if (canvas.width !== bw || canvas.height !== bh) {
+          canvas.width = bw;
+          canvas.height = bh;
+        }
+        const g = G.current;
+        if (g) {
+          g.viewportW = w;
+          g.viewportH = h;
+          g.dpr = dpr;
+        }
       }
     }
     fit();
@@ -329,18 +462,41 @@ export default function TestRoom({ spec, account }) {
       } else if (!p.oneShot) {
         const dir = heldDirection(g);
         if (dir) {
-          if (p.facing !== dir) p.facing = dir;
+          if (p.facing !== dir) {
+            p.facing = dir;
+            p.turnHoldDir = dir;
+            p.turnHoldStart = now;
+            if (p.sentFacing !== p.facing) {
+              g.net?.send('move', { tile: p.tile, facing: p.facing });
+              p.sentFacing = p.facing;
+            }
+            draw(g, ctx, canvas, now);
+            window.__room = g;
+            return;
+          }
+          if (p.turnHoldDir === dir && now - p.turnHoldStart < TURN_HOLD_MS) {
+            draw(g, ctx, canvas, now);
+            window.__room = g;
+            return;
+          }
           const [dx, dy] = DELTA[dir];
           const nx = p.tile[0] + dx, ny = p.tile[1] + dy;
           if (nx >= 1 && ny >= 1 && nx < g.gridW - 1 && ny < g.gridH - 1) {
-            p.from = [...p.tile]; p.tile = [nx, ny];
-            p.moveT = 0; p.moveStart = now;
-            g.net?.send('move', { tile: p.tile, facing: p.facing });
-            p.sentFacing = p.facing;
+            const nextTile = [nx, ny];
+            if (!tileOccupied(g, nextTile, { ignorePlayer: true })) {
+              p.from = [...p.tile]; p.tile = nextTile;
+              p.moveT = 0; p.moveStart = now;
+              p.turnHoldDir = null; p.turnHoldStart = 0;
+              g.net?.send('move', { tile: p.tile, facing: p.facing });
+              p.sentFacing = p.facing;
+            }
           } else if (p.sentFacing !== p.facing) {
             g.net?.send('move', { tile: p.tile, facing: p.facing }); // turn only
             p.sentFacing = p.facing;
           }
+        } else {
+          p.turnHoldDir = null;
+          p.turnHoldStart = 0;
         }
       }
       if (p.oneShot) {
@@ -352,7 +508,8 @@ export default function TestRoom({ spec, account }) {
       for (const m of g.monsters) {
         if (m.state === 'die') continue;
         if (m.state === 'hit' && now - m.stateStart > 700) m.state = 'stand';
-        if (m.moveT < 1) m.moveT = Math.min(1, (now - m.moveStart) / 620);
+        if (m.moveT < 1) m.moveT = Math.min(1, (now - m.moveStart) / MONSTER_WALK_MS);
+        else if (m.aiOwnerId !== account?.character?.id) continue;
         else if (m.state === 'stand' && now > m.nextWander) {
           const dirs = Object.keys(DELTA);
           const dir = dirs[Math.floor(Math.random() * 4)];
@@ -360,13 +517,20 @@ export default function TestRoom({ spec, account }) {
           const nx = m.tile[0] + dx, ny = m.tile[1] + dy;
           m.facing = dir;
           if (nx >= 1 && ny >= 1 && nx < g.gridW - 1 && ny < g.gridH - 1 &&
-              !(nx === p.tile[0] && ny === p.tile[1])) {
+              !tileOccupied(g, [nx, ny])) {
             m.from = [...m.tile]; m.tile = [nx, ny]; m.moveT = 0; m.moveStart = now;
+            g.net?.send('monster_move', { id: m.id, from: m.from, tile: m.tile, facing: m.facing });
+          } else {
+            g.net?.send('monster_move', { id: m.id, from: m.tile, tile: m.tile, facing: m.facing });
           }
           m.nextWander = now + 700 + Math.random() * 1600;
         }
       }
-      g.monsters = g.monsters.filter((m) => !(m.state === 'die' && now - m.stateStart > 1400));
+      g.monsters = g.monsters.filter((m) => {
+        const keep = !(m.state === 'die' && now - m.stateStart > 1400);
+        if (!keep) g.monsterIds.delete(m.id);
+        return keep;
+      });
 
       draw(g, ctx, canvas, now);
       window.__room = g;
@@ -386,11 +550,13 @@ export default function TestRoom({ spec, account }) {
     // Defensive guards: a 0-size canvas (mid-resize) or an out-of-range
     // zoom must never reach the camera math below — either produces
     // Infinity/NaN that briefly renders as a giant void + oversized sprite.
-    if (canvas.width === 0 || canvas.height === 0) return;
+    const cssW = g.viewportW || canvas.clientWidth || canvas.width;
+    const cssH = g.viewportH || canvas.clientHeight || canvas.height;
+    if (cssW <= 0 || cssH <= 0 || canvas.width === 0 || canvas.height === 0) return;
     const z = Math.min(5, Math.max(0.5, g.zoom || 1.6));
     const p = g.player;
     const [ppx, ppy] = entityPx(p);
-    const viewW = canvas.width / z, viewH = canvas.height / z;
+    const viewW = cssW / z, viewH = cssH / z;
     const mapW = g.gridW * TILE, mapH = g.gridH * TILE;
     let camX = ppx + TILE / 2 - viewW / 2;
     let camY = ppy + TILE / 2 - viewH / 2;
@@ -398,9 +564,10 @@ export default function TestRoom({ spec, account }) {
     camY = mapH > viewH ? Math.max(0, Math.min(camY, mapH - viewH)) : (mapH - viewH) / 2;
 
     ctx.save();
+    ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#0a0a0c';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, cssW, cssH);
     ctx.scale(z, z);
     ctx.translate(-camX, -camY);
     ctx.drawImage(g.bg, 0, 0);
@@ -575,7 +742,7 @@ export default function TestRoom({ spec, account }) {
         {/* top bar */}
         <div className="hud-top">
           <span className="hud-keys">WASD · Space attack · 1/2/3 skills · E take · R mount · Q emote</span>
-          <button className="hud-gear" onClick={() => setShowSettings(true)}>⚙</button>
+          <button type="button" className="hud-gear" onPointerDown={keepCanvasFocus} onClick={() => setShowSettings(true)}>⚙</button>
         </div>
 
         {/* joystick (touch / small screens) */}
@@ -588,12 +755,12 @@ export default function TestRoom({ spec, account }) {
           <div className="small-ring">
             {skills.map((s, i) => (
               <button key={i} className="skill-circle" title={`effect #${s.fx}`}
-                onClick={() => doSkill(i)}>✦<small>{s.fx}</small></button>
+                type="button" onPointerDown={keepCanvasFocus} onClick={() => doSkill(i)}>✦<small>{s.fx}</small></button>
             ))}
-            <button className="skill-circle util" onClick={doTake} title="take / crouch">✋</button>
-            <button className="skill-circle util" onClick={toggleMount} title="mount">🐎</button>
+            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={doTake} title="take / crouch">✋</button>
+            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={toggleMount} title="mount">🐎</button>
           </div>
-          <button className="attack-circle" onClick={doAttack}>⚔</button>
+          <button type="button" className="attack-circle" onPointerDown={keepCanvasFocus} onClick={doAttack}>⚔</button>
         </div>
       </div>
 

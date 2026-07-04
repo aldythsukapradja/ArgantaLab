@@ -16,7 +16,7 @@ const DIR_BY_KEY = {
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const GRID = 9;
 
-export default function PracticePad({ spec, fxId = 22 }) {
+export default function PracticePad({ spec, skills = [{ fx: 22 }, { fx: 1 }, { fx: 131 }], skillTest = null, fxId = 22 }) {
   const canvasRef = useRef(null);
   const [ready, setReady] = useState(false);
   const G = useRef(null);
@@ -69,22 +69,27 @@ export default function PracticePad({ spec, fxId = 22 }) {
     if (!p || p.oneShot) return;
     p.oneShot = motion; p.oneShotStart = performance.now();
   }
-  function cast() {
+  function cast(castFxId = skills[0]?.fx ?? fxId) {
     const g = G.current; if (!g) return;
     oneShot('Spell');
-    const eff = g.effectsAll[fxId];
+    const eff = g.effectsAll[castFxId];
     if (!eff?.sheet || !eff.animation?.length) return;
     loadImage(data.effectSheetUrl(eff)).then((sheet) =>
       g.fx.push({ eff, sheet, at: g.player, start: performance.now() }));
   }
+
+  useEffect(() => {
+    if (!ready || !skillTest) return;
+    cast(skillTest.fx);
+  }, [ready, skillTest]);
 
   // keyboard only while the pad has focus (avoid stealing from the page)
   function onKeyDown(e) {
     const g = G.current; if (!g) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (DIR_BY_KEY[k]) { g.held.add(k); e.preventDefault(); }
-    else if (k === '1') { oneShot('Swing'); e.preventDefault(); }
-    else if (k === ' ') { cast(); e.preventDefault(); }
+    else if (k === '1' || k === '2' || k === '3') { cast(skills[Number(k) - 1]?.fx ?? fxId); e.preventDefault(); }
+    else if (k === ' ') { cast(skills[0]?.fx ?? fxId); e.preventDefault(); }
     else if (k === 'e') oneShot('Get');
     else if (k === 'q') oneShot('Victory');
     else if (k === 'r') g.player.mounted = !g.player.mounted && !!g.resources.mount;
@@ -188,15 +193,17 @@ export default function PracticePad({ spec, fxId = 22 }) {
     <div className="pad">
       <div className="pad-head">
         <b>Practice ground</b>
-        <small>click, then WASD · Space cast · 1 attack · E take · R mount · Q emote</small>
+        <small>click, then WASD · Space skill 1 · 1/2/3 skills · E take · R mount · Q emote</small>
       </div>
       <canvas
         ref={canvasRef} width={GRID * TILE} height={GRID * TILE}
         tabIndex={0} onKeyDown={onKeyDown} onKeyUp={onKeyUp}
       />
       <div className="pad-btns">
+        {skills.map((skill, i) => (
+          <button key={i} onClick={() => cast(skill.fx)}>Skill {i + 1} #{skill.fx}</button>
+        ))}
         <button onClick={() => oneShot('Swing')}>⚔ attack</button>
-        <button onClick={cast}>✦ cast</button>
         <button onClick={() => oneShot('Get')}>✋ take</button>
         <button onClick={() => { const g = G.current; if (g) g.player.mounted = !g.player.mounted && !!g.resources.mount; }}>🐎 mount</button>
       </div>
