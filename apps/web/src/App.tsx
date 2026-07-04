@@ -37,6 +37,7 @@ import FamilyPulse from '@/pages/FamilyPulse'
 import Quests from '@/pages/Quests'
 import KinWorld from '@/pages/KinWorld'
 import KinQuest from '@/pages/KinQuest'
+import Arena from '@/pages/Arena'
 import MountShop from '@/pages/MountShop'
 import LearnHub from '@/pages/LearnHub'
 import World from '@/pages/World'
@@ -296,6 +297,7 @@ function PageContent({ tab }: { tab: string }) {
   if (tab === 'parent') return <FamilyPulse />
   if (tab === 'quests') return <Quests />
   if (tab === 'kinworld') return <KinWorld />
+  if (tab === 'arena') return <Arena />
   // 'admin' (Content Studio) relocated to Circle HQ — fall through to home.
   return <PlayHome />
 }

@@ -4,10 +4,12 @@ import { useAppStore } from '@store/appStore'
 const SunIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
 const MoonIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 const BookIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+// crossed swords — the Arena / battle entry
+const BattleIcon = () => <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="M19 21h2v-2"/><path d="M9.5 17.5 21 6V3h-3L6.5 14.5"/><path d="m11 19-6-6"/><path d="m8 16-4 4"/><path d="M5 21H3v-2"/></svg>
 
 export function TopBar() {
   const { learnerName, avatar, xp, level, diamonds, theme, toggleTheme, setShowConcept, showConcept, lessonId,
-    isAuthed, session, openAuthWall, setLearnerName, openSwitcher, isKidMode } = useAppStore()
+    isAuthed, session, openAuthWall, setLearnerName, openSwitcher, isKidMode, go, activeTab } = useAppStore()
   const kidMode = isKidMode()
   const xpForNext = level * 500
   const pct = Math.min(100, (xp / xpForNext) * 100)
@@ -63,6 +65,25 @@ export function TopBar() {
         </div>
       )}
       {authed && <div className="tb-diamonds" title="Diamonds">💎 {diamonds}</div>}
+      {authed && (
+        <button
+          className="tb-arena"
+          onClick={() => go({ tab: 'arena' })}
+          title="Enter the Arena"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
+            border: '1px solid transparent', fontSize: 12.5, fontWeight: 700,
+            color: '#fff',
+            background: activeTab === 'arena'
+              ? 'linear-gradient(135deg,#e0501d,#ff8a5c)'
+              : 'linear-gradient(135deg,#6a4df5,#8B5CF6)',
+            boxShadow: '0 2px 8px #6a4df540',
+          }}
+        >
+          <BattleIcon /> Arena
+        </button>
+      )}
       <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">
         {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
       </button>

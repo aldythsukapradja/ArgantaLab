@@ -21,6 +21,7 @@ This handoff captures the architecture direction after auditing:
 6. [Identity, EXP, Diamonds, And Ledgers](./mmorpg-identity-exp-diamond-ledgers.md)
 7. [Skill Effects And Quest Manager](./mmorpg-skill-effects-and-quest-manager.md)
 8. [Implementation Roadmap](./mmorpg-implementation-roadmap.md)
+9. [Character Lab Polish And DB-Backed Progression Plan](./CHARACTER-LAB-POLISH-DB-BACKED-PLAN.md)
 
 ## Core Principle
 

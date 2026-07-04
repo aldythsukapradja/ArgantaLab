@@ -348,11 +348,12 @@ window.Views = window.Views || {};
 (function () {
   window.Views = window.Views || {};
   Views.lab = function (root) {
-    // Local dev: Kingdom Command is the static server on :8321, and the
-    // React app runs on its own Vite dev server on :8322 (hot reload).
+    // Local dev (ANY localhost port — 8321 dedicated server, 5599 repo
+    // server, etc.): the React app runs on its own Vite dev server at :8322.
     // Deployed: both are one static site (scripts/build-deploy.mjs), so the
-    // app sits at the relative path /lab/ instead.
-    const isLocalDev = location.hostname === 'localhost' && location.port === '8321';
+    // app sits at the relative path /lab/ instead. (Serving Kingdom Command
+    // from a non-8322 port and pointing the iframe at /lab/ 404s locally.)
+    const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     const labUrl = isLocalDev ? 'http://localhost:8322/' : '/lab/';
     root.innerHTML = `
       <div class="lab-embed">
