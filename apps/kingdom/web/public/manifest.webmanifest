@@ -1,13 +1,19 @@
 {
-  "name": "Kingdom — Character Lab & Arena",
-  "short_name": "Kingdom",
-  "description": "NexusTK-style character composer and Buya Arena multiplayer testbed.",
-  "start_url": "./",
+  "id": "/",
+  "name": "Kingdom Heroes",
+  "short_name": "Heroes",
+  "description": "Kingdom Heroes — build your NexusTK-style hero in the Character Lab, then battle in the Buya Arena.",
+  "start_url": "./?source=pwa",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "landscape",
   "background_color": "#0d0f16",
-  "theme_color": "#6a4df5",
+  "theme_color": "#7C5CFF",
+  "categories": ["games", "entertainment"],
   "icons": [
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "icon-maskable.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" },
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]

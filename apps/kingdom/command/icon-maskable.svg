@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kingdom Command Center">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4D9FFF"/>
+      <stop offset=".55" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <radialGradient id="gl" cx="30%" cy="22%" r="85%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".4"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <rect width="512" height="512" fill="url(#gl)"/>
+  <g fill="#ffffff" stroke="#ffffff" stroke-width="16" stroke-linejoin="round" stroke-linecap="round" transform="translate(256 256) scale(.78) translate(-256 -256)">
+    <path d="M150 348 L150 214 L206 268 L256 178 L306 268 L362 214 L362 348 Z"/>
+    <circle cx="150" cy="196" r="17"/>
+    <circle cx="256" cy="160" r="19"/>
+    <circle cx="362" cy="196" r="17"/>
+    <rect x="150" y="360" width="212" height="26" rx="13"/>
+  </g>
+</svg>

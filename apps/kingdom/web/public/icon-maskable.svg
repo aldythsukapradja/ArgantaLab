@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kingdom Heroes">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C5CFF"/>
+      <stop offset=".55" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#FFB020"/>
+    </linearGradient>
+    <radialGradient id="gl" cx="30%" cy="22%" r="85%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".4"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <rect width="512" height="512" fill="url(#gl)"/>
+  <g fill="#ffffff" stroke="#ffffff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(256 256) scale(.72) translate(-256 -256)">
+    <path d="M256 132 L286 176 L286 320 L226 320 L226 176 Z"/>
+    <rect x="176" y="320" width="160" height="26" rx="13"/>
+    <rect x="242" y="346" width="28" height="54"/>
+    <circle cx="256" cy="410" r="20"/>
+  </g>
+</svg>

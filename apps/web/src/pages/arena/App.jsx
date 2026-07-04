@@ -126,16 +126,19 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
         });
       }
     }
-    // Embedded: the host owns auth — hydrate from the injected user and skip
-    // the standalone login listeners entirely.
-    if (hostUser !== null || embedded) {
+    // ArgantaLab injects a live client + user object (React embed): the host
+    // owns auth, so hydrate straight from it. Everyone else — standalone AND the
+    // Kingdom Command iframe — uses our OWN client + listeners: standalone shows
+    // a login; Command feeds a session via setSession (main.jsx), which fires
+    // onAuth and lands here.
+    if (hostSupabase) {
       hydrate(hostUser);
       return undefined;
     }
     currentUser().then(hydrate);
     sub = onAuth(hydrate);
     return () => sub?.data?.subscription?.unsubscribe?.();
-  }, [hostUser?.id, embedded]);
+  }, [hostSupabase, hostUser?.id]);
 
   function handleSpec(spec) {
     specRef.current = spec;
@@ -308,6 +311,45 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
 
   const needsLogin = authAvailable && !account.user;
   const needsCharacter = authAvailable && account.user && !account.character;
+  // Kingdom Command iframe: framed, no injected client — login lives in Command.
+  const frameBridge = embedded && !hostSupabase;
+
+  // Framed by Kingdom Command but no session yet: don't show a Google button
+  // (it 403s in an iframe) — wait for Command to bridge the session in.
+  if (frameBridge && needsLogin) {
+    return (
+      <div className="app arena-app">
+        <main className="login-page">
+          <div className="bridge-wait">
+            <div className="bridge-spinner" />
+            <b>Connecting to Kingdom Command…</b>
+            <span>Sign in on the Command Center to open the Character Lab.</span>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Standalone Kingdom: a clean, full-screen login/claim gate on load. No
+  // Composer/Arena chrome appears until you're signed in AND have a character —
+  // then the header + Character Lab (below) mount, bound to that account (its
+  // saved build hydrates via applyToken). Embedded modes skip this gate: the
+  // host site (ArgantaLab) owns auth and passes the session in.
+  if (!embedded && (needsLogin || needsCharacter)) {
+    return (
+      <div className="app kingdom-gate">
+        <main className="login-page">
+          <AccountBar
+            account={account}
+            onClaimed={handleClaimed}
+            onSignOut={handleSignOut}
+            forcedLogout={forcedLogout}
+            onClearNotice={() => setForcedLogout(null)}
+          />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={`app${embedded ? ' arena-app' : ''}${arenaOnly ? ' arena-only' : ''}`}>

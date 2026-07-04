@@ -1,0 +1,20 @@
+{
+  "id": "/command/",
+  "name": "Kingdom Command Center",
+  "short_name": "Command",
+  "description": "Kingdom Command Center — Nexus data ops: characters, monsters, items, skills, and client art.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/command/?source=pwa",
+  "scope": "/command/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "landscape",
+  "theme_color": "#05070d",
+  "background_color": "#05070d",
+  "categories": ["productivity", "utilities", "games"],
+  "icons": [
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "icon-maskable.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}

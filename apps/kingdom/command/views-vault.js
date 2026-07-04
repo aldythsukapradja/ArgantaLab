@@ -354,15 +354,22 @@ window.Views = window.Views || {};
     // app sits at the relative path /lab/ instead. (Serving Kingdom Command
     // from a non-8322 port and pointing the iframe at /lab/ 404s locally.)
     const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    const labUrl = isLocalDev ? 'http://localhost:8322/' : '/lab/';
+    const base = isLocalDev ? 'http://localhost:8322/' : '/lab/';
+    // `embed=command` tells Kingdom Heroes to run framed: no Google login of its
+    // own (that 403s in an iframe) — it waits for Command to bridge the session.
+    const labUrl = base + '?embed=command';
     root.innerHTML = `
       <div class="lab-embed">
         <iframe src="${labUrl}" title="Character Lab"></iframe>
         <div class="lab-embed-note">${
           isLocalDev
-            ? `Standalone: <a href="${labUrl}" target="_blank">localhost:8322</a> — run the <code>kingdom-web</code> dev server if this frame is empty.`
-            : `Standalone: <a href="${labUrl}" target="_blank">${labUrl}</a>`
+            ? `Standalone: <a href="${base}" target="_blank">localhost:8322</a> — run the <code>kingdom-web</code> dev server if this frame is empty.`
+            : `Standalone: <a href="${base}" target="_blank">${base}</a>`
         }</div>
       </div>`;
+    // Hand the frame to the auth bridge: Command posts its session in, so the
+    // Lab is signed in as the same admin without its own login.
+    const iframe = root.querySelector('iframe');
+    if (window.KingdomAuth && iframe) window.KingdomAuth.attachFrame(iframe);
   };
 })();

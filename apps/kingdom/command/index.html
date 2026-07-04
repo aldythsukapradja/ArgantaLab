@@ -3,8 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kingdom Command — Game Database</title>
+  <title>Kingdom Command Center</title>
+  <meta name="theme-color" content="#05070d" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Command Center" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- Admin gate first: injects a full-screen login + hides the console until
+       an admin signs in (runs before the app scripts render, so no flash). -->
+  <script src="auth.js"></script>
 </head>
 <body>
   <div class="app">
@@ -83,5 +93,11 @@
   <script src="views-entities.js"></script>
   <script src="views-vault.js"></script>
   <script src="main.js"></script>
+  <script>
+    // PWA: register the (cache-safe) service worker at the /command/ scope.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
 </body>
 </html>

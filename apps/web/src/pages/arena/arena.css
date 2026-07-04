@@ -549,6 +549,23 @@
   padding: 20px 10px 30px;
   background: linear-gradient(180deg, #cfd9e7 0%, #e5eaf1 100%);
 }
+/* Standalone login gate: no header above it, so fill the whole viewport. */
+.kingdom-gate { min-height: 100vh; }
+.kingdom-gate .login-page { min-height: 100vh; }
+
+/* Kingdom Command iframe: waiting for the host to bridge the session. */
+.bridge-wait {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  text-align: center; color: #46506a;
+}
+.bridge-wait b { font-size: 16px; color: #26304a; }
+.bridge-wait span { font-size: 13px; max-width: 320px; }
+.bridge-spinner {
+  width: 30px; height: 30px; border-radius: 50%; margin-bottom: 4px;
+  border: 3px solid #c9d2e4; border-top-color: #7c5cff;
+  animation: bridge-spin .8s linear infinite;
+}
+@keyframes bridge-spin { to { transform: rotate(360deg); } }
 .login-card {
   position: relative;
   width: min(760px, 94vw);

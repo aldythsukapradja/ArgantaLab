@@ -81,8 +81,8 @@ export default function AccountBar({
         <div className="kingdom-auth-mark" aria-hidden="true">
           <span />
         </div>
-        <h1 className="kingdom-auth-title">Welcome to <span>ArgantaLab</span></h1>
-        <p className="kingdom-auth-subtitle">Sign in — your progress follows you on every device.</p>
+        <h1 className="kingdom-auth-title">Kingdom <span>Heroes</span></h1>
+        <p className="kingdom-auth-subtitle">Sign in — build your hero and battle in the Buya Arena.</p>
         {forcedLogout && (
           <div className="session-note">
             <b>Session moved</b>

@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Arganta",
+  "short_name": "Arganta",
+  "description": "Arganta turns screen time into intelligence time — six worlds, Buddy, Kin, daily rings, and parent-visible progress.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "theme_color": "#05070d",
+  "background_color": "#05070d",
+  "categories": ["education", "business"],
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}
