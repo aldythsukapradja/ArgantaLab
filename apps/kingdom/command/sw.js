@@ -16,6 +16,3 @@ self.addEventListener('activate', (e) => {
     })()
   );
 });
-self.addEventListener('fetch', () => {
-  // pass-through — do not intercept, do not cache
-});

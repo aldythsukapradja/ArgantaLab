@@ -311,68 +311,60 @@
    The way back is ArgantaLab's own TopBar pill (turns into "Home" while this
    tab is active), not a button owned by this page. */
 .arena-only .room-full { top: 0; z-index: 1000; }
+/* The host TopBar (~58px, holds the Home button) floats over the arena's top
+   edge. Lift the in-arena HUD below it — otherwise the ⚙ (the ONLY way to
+   spawn monsters, see friends, and tune skills/camera) hides under the host
+   bar, and the player panel tucks awkwardly beneath it. */
+.arena-only .hud-top { top: calc(60px + env(safe-area-inset-top, 0px)); }
+.arena-only .unit-frame,
+.arena-only .arena-presence { top: calc(110px + env(safe-area-inset-top, 0px)); }
 .room-canvas { position: relative; flex: 1; overflow: hidden; background: #0a0a0c; }
 .room-canvas canvas { display: block; width: 100%; height: 100%; outline: none; }
 
 .hud-top {
-  position: absolute; top: 10px; left: 12px; right: 12px;
+  position: absolute; left: 12px; right: 12px;
+  top: calc(10px + env(safe-area-inset-top, 0px));
   display: flex; align-items: center; gap: 10px; pointer-events: none;
+  z-index: 8;
 }
 .hud-keys {
   color: #fffc; font-size: 11.5px; background: #0006;
   padding: 4px 10px; border-radius: 8px;
 }
+/* the ⚙ is the only door to spawn/friends/skills/camera — keep it obvious and
+   tappable (solid, ringed, ≥44px) so it never gets lost against the arena. */
 .hud-gear {
   margin-left: auto; pointer-events: auto;
-  width: 38px; height: 38px; border-radius: 50%;
-  border: 1px solid #fff5; background: #0008; color: #fff;
-  font-size: 17px; cursor: pointer;
-}
-
-.joystick {
-  position: absolute; left: 22px; bottom: 26px;
-  width: 108px; height: 108px; border-radius: 50%;
-  background: #ffffff14; border: 2px solid #ffffff2e;
-  touch-action: none; user-select: none;
-  display: flex; align-items: center; justify-content: center;
-}
-.joystick .knob {
   width: 44px; height: 44px; border-radius: 50%;
-  background: #ffffff3d; border: 2px solid #ffffff66;
-  transition: transform 0.05s linear;
-  pointer-events: none;
+  border: 1.5px solid #ffffff66; background: #000000cc; color: #fff;
+  font-size: 20px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px #0008;
+}
+.hud-gear:active { transform: scale(0.94); }
+
+/* nipplejs joystick zone: touch anywhere in the lower-left to steer. The zone
+   is invisible; nipplejs draws the base/knob under the thumb. Kept clear of the
+   action cluster (bottom-right) so steering and attacking don't collide. */
+.stick-zone {
+  position: absolute; left: 0; bottom: 0;
+  width: 46%; height: 58%;
+  z-index: 6; touch-action: none; user-select: none;
+}
+/* soften nipplejs's default nipple to match the arena's glassy HUD */
+.stick-zone .nipple .back { opacity: 0.28 !important; }
+.stick-zone .nipple .front {
+  background: radial-gradient(circle at 34% 30%, #ffffffcc, #ffffff5c) !important;
+  box-shadow: 0 3px 10px #0007;
 }
 
-.cluster {
-  position: absolute; right: 22px; bottom: 24px;
-  display: flex; align-items: flex-end; gap: 12px;
-}
-.attack-circle {
-  width: 84px; height: 84px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff8a5c, #d84315);
-  border: 3px solid #fff7; color: #fff; font-size: 30px;
-  cursor: pointer; box-shadow: 0 6px 22px #0007; touch-action: manipulation;
-}
-.attack-circle:active { transform: scale(0.94); }
-.small-ring { display: grid; grid-template-columns: repeat(2, 46px); gap: 8px; margin-bottom: 4px; }
-.skill-circle {
-  width: 46px; height: 46px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #7c6cf5, #4433aa);
-  border: 2px solid #fff6; color: #fff; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  font-size: 14px; line-height: 1; touch-action: manipulation;
-}
-.skill-circle small { font-size: 9px; opacity: 0.8; }
-.skill-circle.util { background: radial-gradient(circle at 35% 30%, #7a8699, #3c4454); }
-.skill-circle:active { transform: scale(0.92); }
+/* Action cluster (attack + skill/util orbs) is defined once, in the
+   "Ragnarok-M style HUD" arc block further down — this used to hold an older
+   duplicate that fought it. */
 
-/* desktop: hide joystick (WASD), compact cluster */
+/* desktop: no touch joystick (WASD steers instead) */
 @media (min-width: 900px) and (pointer: fine) {
-  .joystick { display: none; }
-  .attack-circle { width: 64px; height: 64px; font-size: 24px; }
-  .small-ring { grid-template-columns: repeat(5, 40px); }
-  .skill-circle { width: 40px; height: 40px; }
-  .cluster { flex-direction: column; align-items: center; right: 26px; bottom: 22px; }
+  .stick-zone { display: none; }
 }
 
 .settings {
@@ -456,7 +448,7 @@
 }
 
 /* ================= Ragnarok-M style HUD ================= */
-.cluster { position: absolute; right: 18px; bottom: 18px; width: 210px; height: 200px; pointer-events: none; }
+.cluster { position: absolute; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 210px; height: 200px; pointer-events: none; }
 .cluster > * { pointer-events: auto; }
 .attack-circle {
   position: absolute; right: 8px; bottom: 6px;
@@ -1055,7 +1047,7 @@
 /* ================= premium DB-backed arena HUD ================= */
 .unit-frame {
   position: absolute;
-  top: 48px;
+  top: calc(48px + env(safe-area-inset-top, 0px));
   left: 16px;
   width: min(370px, calc(100vw - 32px));
   display: grid;
@@ -1144,7 +1136,7 @@
 .guardian-strip small { color: #ffffffa8; }
 .arena-presence {
   position: absolute;
-  top: 48px;
+  top: calc(48px + env(safe-area-inset-top, 0px));
   right: 16px;
   min-width: 170px;
   display: grid;

@@ -69,21 +69,13 @@ export function TopBar() {
       {authed && <div className="tb-diamonds" title="Diamonds">💎 {diamonds}</div>}
       {authed && (
         <button
-          className="tb-arena"
+          className={`tb-arena${activeTab === 'arena' ? ' on' : ''}`}
           onClick={() => go({ tab: activeTab === 'arena' ? 'arganta' : 'arena' })}
           title={activeTab === 'arena' ? 'Return home' : 'Enter the Arena'}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
-            border: '1px solid transparent', fontSize: 12.5, fontWeight: 700,
-            color: '#fff',
-            background: activeTab === 'arena'
-              ? 'linear-gradient(135deg,#e0501d,#ff8a5c)'
-              : 'linear-gradient(135deg,#6a4df5,#8B5CF6)',
-            boxShadow: '0 2px 8px #6a4df540',
-          }}
         >
-          {activeTab === 'arena' ? <><HomeIcon /> Home</> : <><BattleIcon /> Arena</>}
+          {activeTab === 'arena'
+            ? <><HomeIcon /><span className="tb-arena-lbl">Home</span></>
+            : <><BattleIcon /><span className="tb-arena-lbl">Arena</span></>}
         </button>
       )}
       <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">

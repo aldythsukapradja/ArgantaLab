@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LashiraBloom — Build Plan</title>
+<style>
+  :root{
+    --blue:#6f8bf6; --purple:#8b5cf6; --pink:#e879b9;
+    --ink:#1f2340; --muted:#6b6f8c; --line:#e7e8f2;
+    --bg:#f5f6fc; --card:#ffffff; --soft:#f0f1fa;
+    --grad:linear-gradient(90deg,var(--blue),var(--purple),var(--pink));
+    --green:#5ec27a; --amber:#e6a23a; --sky:#37a8c4;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1060px; margin:0 auto; padding:0 22px}
+  section{padding:64px 0; border-bottom:1px solid var(--line)}
+  h1,h2,h3{line-height:1.2; margin:0 0 .5em}
+  h1{font-size:44px; font-weight:800; letter-spacing:-.5px}
+  h2{font-size:28px; font-weight:700}
+  h3{font-size:17px; font-weight:700}
+  .grad-text{background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .eyebrow{font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--purple); margin-bottom:14px}
+  p{margin:0 0 14px} .muted{color:var(--muted)}
+  .lead{font-size:19px; color:#3a3e63; max-width:760px}
+  /* hero */
+  .hero{background:
+      radial-gradient(1100px 380px at 15% -10%, rgba(111,139,246,.16), transparent 60%),
+      radial-gradient(900px 360px at 95% 0%, rgba(232,121,185,.14), transparent 55%);
+      text-align:center; padding:96px 0 80px}
+  .mark{width:76px;height:76px;border-radius:22px;margin:0 auto 22px;
+      background:var(--grad); display:flex;align-items:center;justify-content:center;
+      box-shadow:0 14px 34px rgba(139,92,246,.30)}
+  .mark span{width:30px;height:30px;border-radius:50%;border:6px solid #fff;position:relative}
+  .mark span::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#fff}
+  .tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+  .tag{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 15px;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(31,35,64,.04)}
+  /* cards */
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:0 3px 14px rgba(31,35,64,.05)}
+  .card h3{margin-bottom:6px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;letter-spacing:.3px}
+  .v1{background:#e7f7ec;color:#2f8a4e} .later{background:#eef1ff;color:#5560c9}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  .num{font-size:30px;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+  /* wireframe / code */
+  pre{background:#1b1e33;color:#d7dbf0;border-radius:14px;padding:18px 20px;overflow:auto;font-size:12.5px;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre.light{background:var(--soft);color:#33385f;border:1px solid var(--line)}
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700}
+  tr:last-child td{border-bottom:none}
+  .flow{background:var(--grad);height:4px;border-radius:4px;margin:0 0 8px}
+  .steps{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0}
+  .step{flex:1;min-width:120px;background:var(--soft);border-radius:12px;padding:12px 14px;font-size:13px;text-align:center;border:1px solid var(--line)}
+  .badge-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .kv:last-child{border-bottom:none}
+  /* timeline */
+  .phase{display:flex;gap:16px;margin-bottom:14px}
+  .phase .dot{flex:0 0 auto;width:38px;height:38px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+  .phase .body{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px;flex:1}
+  .login{max-width:360px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:26px 24px;box-shadow:0 18px 50px rgba(31,35,64,.10);text-align:center}
+  .login .mark{width:56px;height:56px;border-radius:16px;margin-bottom:14px}
+  .login .mark span{width:22px;height:22px;border-width:5px}
+  .gbtn{border:1px solid var(--line);border-radius:12px;padding:12px;font-weight:700;font-size:14px;margin:12px 0 6px;display:flex;gap:10px;align-items:center;justify-content:center}
+  .field{border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--muted);font-size:14px;text-align:left;margin-top:8px}
+  .cta{background:var(--grad);color:#fff;border-radius:12px;padding:12px;font-weight:800;font-size:15px;margin-top:12px}
+  .divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:1px;margin:14px 0}
+  .divider::before,.divider::after{content:"";height:1px;background:var(--line);flex:1}
+  .link{color:var(--purple);font-weight:700}
+  .foot{padding:40px 0 70px;text-align:center;color:var(--muted);font-size:13px}
+  @media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr} h1{font-size:34px} .steps{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div class="mark"><span></span></div>
+    <h1>Welcome to <span class="grad-text">LashiraBloom</span></h1>
+    <p class="lead" style="margin:14px auto 0">A Stardew-inspired farming RPG for the ArgantaLab universe — built on your existing infrastructure, designed to grow from farm to full RPG without a rewrite.</p>
+    <div class="tags">
+      <span class="tag">🌾 Harvest Moon loop</span>
+      <span class="tag">🍃 Kins as Harvest Sprites</span>
+      <span class="tag">🗺 Persistent shared world</span>
+      <span class="tag">🎮 Heroes avatar + nipplejs</span>
+      <span class="tag">📚 Learning-gated</span>
+    </div>
+    <p class="muted" style="margin-top:22px;font-size:13px">Build plan · light-mode deck · nothing built yet</p>
+  </div>
+</header>
+
+<!-- PILLARS -->
+<section><div class="wrap">
+  <div class="eyebrow">The concept</div>
+  <h2>Three pillars, one philosophy</h2>
+  <p class="lead">The game is the motivation. Learning is the gate.</p>
+  <div class="grid g3" style="margin-top:22px">
+    <div class="card"><h3>🌾 Harvest Moon</h3><p class="muted">The loop: till, plant, water, harvest, sell, care. A home that evolves, seasons, festivals, a town of friends.</p></div>
+    <div class="card"><h3>🐾 Pokémon</h3><p class="muted">Your befriended <b>Kins are Harvest Sprites</b> — assignable helpers that auto-do chores. Cow, sheep, chicken are separate livestock.</p></div>
+    <div class="card"><h3>🏰 NexusTK</h3><p class="muted">A persistent shared world — real circle members visible in your valley — plus the layered Heroes sprite look.</p></div>
+  </div>
+</div></section>
+
+<!-- PHILOSOPHY -->
+<section style="background:var(--soft)"><div class="wrap">
+  <div class="eyebrow">The rule that runs everything</div>
+  <h2>Two logins. Two XP sources. One engine.</h2>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card">
+      <h3>👦 Kids — learn to grow</h3>
+      <p class="muted">Kids earn XP <b>only from the 6 World learning problems</b>. Playing gives them no XP. The stronger they want their farmer or hero, the more they learn.</p>
+      <div class="badge-row"><span class="pill later">XP = learning</span><span class="pill later">💎 = learning</span></div>
+    </div>
+    <div class="card">
+      <h3>🧑 Adults — play to grow</h3>
+      <p class="muted">Adults earn XP by <b>playing</b> (farming, combat) — because they likely won't do the rings. Same level formula, capped per source.</p>
+      <div class="badge-row"><span class="pill v1">XP = playing</span><span class="pill v1">capped RPC</span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>Already enforced in your codebase ✅</h3>
+    <p class="muted" style="margin-bottom:10px"><span class="kbd">apps/kingdom/supabase/002_kingdom_progression_presence.sql</span> already does exactly this — the spine is ~60% built.</p>
+    <div class="kv"><span><span class="kbd">argantalab_level_from_xp()</span></span><span class="muted">level = 1 + floor(xp/500) — the shared level truth</span></div>
+    <div class="kv"><span><span class="kbd">kingdom_award_monster_xp()</span></span><span class="muted">adults get capped XP; <b>kids get 0 XP</b> (lines 969–980)</span></div>
+    <div class="kv"><span><span class="kbd">kingdom_stat_policy / computed_stats()</span></span><span class="muted">stat = base + per_level×(level−1) — Reldens-style modifiers</span></div>
+    <div class="kv"><span><span class="kbd">kingdom_xp_policy / kingdom_xp_ledger</span></span><span class="muted">per-source caps + full audit trail</span></div>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><div class="num">🌸</div><h3 style="margin-top:8px">Bloom</h3><p class="muted">Soft currency, earned by playing, <b>shared per-circle-farm purse</b>. Never converts to diamonds — the wall is in the schema.</p></div>
+    <div class="card"><div class="num">💎</div><h3 style="margin-top:8px">Diamonds</h3><p class="muted">Platform currency, cosmetics only. Kids mint it by learning. Individual, not shared.</p></div>
+    <div class="card"><div class="num">3×</div><h3 style="margin-top:8px">Loops</h3><p class="muted">Your XP → your power · circle rings → farm unlocks · your learning → your diamonds. All point at the rings.</p></div>
+  </div>
+</div></section>
+
+<!-- ARCHITECTURE / REUSE -->
+<section><div class="wrap">
+  <div class="eyebrow">Build on top, don't reinvent</div>
+  <h2>Reuse map across the ArgantaLab repo</h2>
+  <p class="lead">LashiraBloom is a twin of <span class="kbd">apps/kingdom</span> — a game surface + an admin surface — attached to ArgantaLab like Kingdom Heroes.</p>
+  <pre>            ┌───────────── Supabase (bdagdxgpnlialkppjwor) ─────────────┐
+            │  profiles · diamonds · xp/level · circles · person_creatures │
+            │  kingdom_characters · kingdom_character_appearance           │
+            └───────┬───────────┬───────────────┬───────────┬────────────┘
+             apps/web       apps/kingdom     apps/lashira   apps/hq
+           (identity,     (Heroes avatar +   THIS PROJECT  (operator OS,
+            6-World rings,  controls +        reuses ALL     GM tools
+            diamonds)       progression SQL)  of the left)   pattern)
+                └── embeds ───┴── gameOnly / arenaOnly iframe + postMessage ──┘</pre>
+  <table style="margin-top:14px">
+    <tr><th>Need</th><th>Reuse (real path)</th></tr>
+    <tr><td>Level / XP rule / stat modifiers</td><td><span class="kbd">apps/kingdom/supabase/002_…sql</span> — level fn, award RPC, stat_policy, xp_ledger</td></tr>
+    <tr><td>Farmer &amp; Hero avatar</td><td><span class="kbd">apps/kingdom/web/src/engine/compositor.js</span> + <span class="kbd">kingdom_character_appearance</span></td></tr>
+    <tr><td>Controls (trackpad)</td><td><span class="kbd">apps/kingdom/web/src/room/TestRoom.jsx</span> → <b>nipplejs@0.10.2</b> (already a dep)</td></tr>
+    <tr><td>Tile renderer</td><td><span class="kbd">apps/web/src/components/openworld/KinWorldGame.tsx</span> (PixiJS v8, y-sort depth)</td></tr>
+    <tr><td>Kins (Harvest Sprites)</td><td><span class="kbd">apps/web/src/lib/nexus.ts</span> — care_kin / nexus_harvest / happiness</td></tr>
+    <tr><td>Mounts / Auth / Embed</td><td><span class="kbd">lib/mounts.ts</span> · <span class="kbd">kingdom/…/net/account.js</span> · <span class="kbd">pages/Arena.tsx</span> + <span class="kbd">sync-arena.mjs</span></td></tr>
+  </table>
+  <p class="muted" style="margin-top:12px">Extract the <b>nipplejs control module</b> and the <b>compositor</b> into shared modules so your current Kingdom polish flows into LashiraBloom automatically.</p>
+</div></section>
+
+<!-- THE SPINE / DASHBOARD -->
+<section style="background:var(--soft)"><div class="wrap">
+  <div class="eyebrow">Gold-standard RPG-maker backend</div>
+  <h2>The reusable spine → Bloom Command</h2>
+  <p class="lead">Learned from Reldens (Node + Colyseus + MySQL MMORPG engine): the engine reads data, content is rows. Six dashboard sections — build the farm, keep the RPG hooks.</p>
+
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card">
+      <h3>1 · World &amp; Maps</h3>
+      <div class="kv"><span>Maps (MapDef)</span><span><span class="pill v1">v1 farm</span> <span class="pill later">later</span></span></div>
+      <div class="kv"><span>Objects / placements</span><span class="pill v1">v1</span></div>
+      <div class="kv"><span>Respawn / resource areas</span><span><span class="pill v1">v1 crops</span> <span class="pill later">mobs</span></span></div>
+    </div>
+    <div class="card">
+      <h3>2 · Entities &amp; Content</h3>
+      <div class="kv"><span>Items · crops · tools</span><span class="pill v1">v1</span></div>
+      <div class="kv"><span>Livestock · Kins · NPCs</span><span class="pill v1">v1</span></div>
+      <div class="kv"><span>Enemies</span><span class="pill later">later</span></div>
+    </div>
+    <div class="card">
+      <h3>3 · Progression <span class="muted" style="font-size:12px">(spine)</span></h3>
+      <div class="kv"><span>Levels Set · Level · Modifiers</span><span class="pill v1">build now</span></div>
+      <div class="kv"><span>Stats · Class Path</span><span><span class="pill v1">v1 Farmer</span></span></div>
+      <div class="kv"><span>Skills · Targets · Conditions</span><span class="pill later">schema now</span></div>
+    </div>
+    <div class="card">
+      <h3>4 · Economy &amp; Rewards</h3>
+      <div class="kv"><span>Currencies (Bloom / 💎 wall)</span><span class="pill v1">v1</span></div>
+      <div class="kv"><span>Drop / loot tables</span><span><span class="pill v1">v1 harvest</span></span></div>
+      <div class="kv"><span>Shops · Leaderboards</span><span><span class="pill v1">v1</span> <span class="pill later">later</span></span></div>
+    </div>
+    <div class="card">
+      <h3>5 · Quests &amp; Narrative</h3>
+      <div class="kv"><span>Quests (beyond Reldens)</span><span><span class="pill v1">v1 dailies</span></span></div>
+      <div class="kv"><span>Dialogue / snippets</span><span class="pill v1">v1</span></div>
+      <div class="kv"><span>Seasons · festivals · live-ops</span><span><span class="pill v1">v1 seasons</span></span></div>
+    </div>
+    <div class="card">
+      <h3>6 · Players &amp; Ops</h3>
+      <div class="kv"><span>Players · Circles / Teams</span><span class="pill v1">v1</span></div>
+      <div class="kv"><span>Learning-gate mapping</span><span class="pill v1">v1</span></div>
+      <div class="kv"><span>PixelLab assets · Config · Audit</span><span class="pill v1">v1</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Spine data model — new generic tables (Phase 0)</h3>
+    <pre class="light">entity(id, kind, name, data_json, sprite_key)     entity_modifier(entity_id, stat, op, value)
+levels_set(id, key, auto_fill_multiplier)          level(levels_set_id, key, required_experience)
+class_path(id, key, levels_set_id)                 skill(class_path_id, kind, unlock_level, data_json)
+quest(id, key, ring_gate, objectives_json, rewards_json)   quest_progress(profile_id, quest_id, state)
+farm(id, circle_id, house_stage, barn_level, bloom_balance)   farm_plot(farm_id, x, y, crop_id, stage)
+livestock(farm_id, species, affection, produce_ready_at)     kin_assignment(person_creature_id, task)
+unlock_gate(farm_id, gate_id, satisfied_by_ring)   bloom_ledger(farm_id, delta, reason)  -- never 💎</pre>
+    <p class="muted" style="margin:8px 0 0">Rule: if a number could ever be balanced, it's a data row — not a constant. That's what makes this a real RPG-maker you can reuse for another game.</p>
+  </div>
+</div></section>
+
+<!-- MAPS -->
+<section><div class="wrap">
+  <div class="eyebrow">Stardew Valley as reference</div>
+  <h2>Five maps · ~24 NPCs</h2>
+  <div class="steps" style="margin:8px 0 18px">
+    <div class="step"><b>Farm</b><br><span class="muted">per circle · Phase 1</span></div>
+    <div class="step"><b>Town</b><br><span class="muted">Bloomridge · Phase 4</span></div>
+    <div class="step"><b>City Center</b><br><span class="muted">Arganta City · Phase 3</span></div>
+    <div class="step"><b>Mining</b><br><span class="muted">Emberdeep · Phase 3</span></div>
+    <div class="step"><b>Dungeon Hub</b><br><span class="muted">Hollow Gate · RPG-later</span></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>🌾 Farm <span class="pill v1">Phase 1</span></h3>
+      <p class="muted" style="margin-bottom:8px">NPCs: 0 permanent + traveling merchant. Per-circle, co-op.</p>
+      <pre>╔═══════╗  ┌────┐┌───┐
+║🏡 Lv2 ║  │BARN││COO│ 🐄🐑🐔
+╚═══════╝  └────┘└───┘
+▓🌱🌿▓  🍃(Kin waters)  📦bin
+▓🌾▓▓  👩‍🌾 you   ╭──╮
+◇ locked → circle ring    │◐ │</pre>
+      <p class="muted" style="font-size:13px">Art: LPC Farming + LPC Crops (5-frame growth) + isaiah658 CC0.</p>
+    </div>
+    <div class="card">
+      <h3>🏘 Town — Bloomridge <span class="pill later">Phase 4</span></h3>
+      <p class="muted" style="margin-bottom:8px">NPCs: ~12 — Sprout, Hazel, Bram, Forge, Willa, Pippin, Mayor, Fest + 4 Keeper cameos.</p>
+      <pre>[Seed][General][Carpenter][Smith]
+═══ town square · festival ═══
+[Animal][Café]  🚶🚶 real players
+→ City      → Farm     🎪 Fest</pre>
+      <p class="muted" style="font-size:13px">Art: LPC village + buildings. Ref: Pelican Town.</p>
+    </div>
+    <div class="card">
+      <h3>🏛 City Center — Arganta City <span class="pill later">Phase 3</span></h3>
+      <p class="muted" style="margin-bottom:8px">NPCs: ~8 — Bank, Cosmetic vendor (💎), Guild, 2 traders, Archive, Stable, Quest board.</p>
+      <pre>🏦Bank  💎Cosmetics  🏛Archive  📜Quests
+═══ grand market plaza ═══
+🧺🧺 traders   🐴 stable   ⚑ guild
+→ Town        → Mining</pre>
+      <p class="muted" style="font-size:13px">Art: LPC city/market props.</p>
+    </div>
+    <div class="card">
+      <h3>⛏ Mining — Emberdeep <span class="pill later">Phase 3</span></h3>
+      <p class="muted" style="margin-bottom:8px">NPCs: ~3 — Foreman, Sharpener, Ore trader. Holds the descent.</p>
+      <pre>⛏ ore  ⛏  🪨 rocks  💎 gems
+👷Foreman 🔧Sharpener 🧺Trader
+▓▓ cart ▓▓  ╔════════╗
+→ City      ║▼ HOLLOW ║→ Dungeon
+            ╚════════╝</pre>
+      <p class="muted" style="font-size:13px">Art: LPC cave/mining + Anokolisa CC0. Ref: Stardew Mines.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>⟳ Dungeon Hub — The Hollow Gate <span class="pill later">RPG-later</span></h3>
+    <p class="muted" style="margin-bottom:8px">One hall, every descent. NPC: 1 Gatekeeper. Six region-themed portals (reuse KinQuest worlds); enemies reuse <span class="kbd">kingdom_monster_templates</span>.</p>
+    <pre class="light">🧙 Gatekeeper
+⟳Numeria  ⟳Wordveil  ⟳Life Meadow  ⟳Wonder Sky  ⟳World Lagoon  ⟳Logic Circuit
+combat = nipplejs move + attack/skill · Heroes avatar · XP: adults capped, kids 0 (learn instead)</pre>
+  </div>
+</div></section>
+
+<!-- PIXEL ART -->
+<section style="background:var(--soft)"><div class="wrap">
+  <div class="eyebrow">Placeholder first, PixelLab next</div>
+  <h2>Pixel-art sources &amp; pipeline</h2>
+  <p class="lead">Prototype on open assets, then regenerate the real look with your PixelLab API. Licenses matter — ArgantaLab is commercial.</p>
+  <table style="margin-top:16px">
+    <tr><th>Source</th><th>License</th><th>Use</th></tr>
+    <tr><td><b>LPC — Liberated Pixel Cup</b></td><td>CC-BY-SA / GPL <span class="muted">(viral — placeholder only)</span></td><td>Crops (5-frame growth), farming, town, city, cave, dungeon tiles</td></tr>
+    <tr><td><b>isaiah658 Pixel Pack #1</b></td><td><span class="pill v1">CC0</span></td><td>Generic 16px gap-fill, no attribution</td></tr>
+    <tr><td><b>Kenney</b></td><td><span class="pill v1">CC0</span></td><td>UI + prototype filler (already in repo)</td></tr>
+    <tr><td><b>Sprout Lands</b> (Cup Nooble)</td><td>free = non-commercial; <b>premium = commercial</b></td><td>Closest cute-Stardew look — only if you buy premium</td></tr>
+    <tr><td><b>LimeZu</b> Modern Farm / Serene Village</td><td>check pack terms</td><td>High-quality farm / village if licensed</td></tr>
+  </table>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>PixelLab factory</h3><p class="muted">Data row → auto-prompt (locked palette + style-ref) → PNG → atlas → existing art seam → Pixi. Call the REST endpoint directly (SDK parser is broken); ground tiles need "fills edge to edge, no border".</p></div>
+    <div class="card"><h3>Style bible</h3><p class="muted">16px tiles, integer scaling only, high top-down 3/4, warm earth + sap-green + one seasonal accent, buildings bigger than characters, transition tiles not hard seams.</p></div>
+  </div>
+</div></section>
+
+<!-- PHASES -->
+<section><div class="wrap">
+  <div class="eyebrow">Build strategy</div>
+  <h2>Phases — farm first, RPG additive</h2>
+  <div style="margin-top:20px">
+    <div class="phase"><div class="dot">0</div><div class="body"><h3>Reusable spine &amp; scaffold</h3><p class="muted">Twin of Kingdom. Reuse level/xp/stat SQL; add generic entity/levels_set/skill/quest + farm tables. Extract shared nipplejs + compositor. Kid-PIN / adult-Google login.</p></div></div>
+    <div class="phase"><div class="dot">1</div><div class="body"><h3>The Farm loop <span class="pill v1">the gate</span></h3><p class="muted">Plots (till/plant/water/harvest, server-side growth), evolving house, barn/coop livestock, Kins as Harvest Sprites, Bloom purse, level→power. Ship only when one day is genuinely fun.</p></div></div>
+    <div class="phase"><div class="dot">2</div><div class="body"><h3>Learning integration + attach</h3><p class="muted">unlock_gate ↔ real 6-World rings (circle-combined), gate prompts, <span class="kbd">Bloom.tsx</span> embed + <span class="kbd">sync-bloom.mjs</span>, diamonds read-only HUD, tutorial + daily quests.</p></div></div>
+    <div class="phase"><div class="dot">3</div><div class="body"><h3>Bloom Command + Mining &amp; City</h3><p class="muted">Admin dashboard (twin of Command Center) + postMessage bridge. Maps 3–4 as MapDef rows. PixelLab batch for real art.</p></div></div>
+    <div class="phase"><div class="dot">4</div><div class="body"><h3>Town, social, seasons</h3><p class="muted">Bloomridge + ~12 NPCs + friendship (no romance) + gifting, seasons + first festival, Supabase presence (real circle members), cosmetic outfits.</p></div></div>
+    <div class="phase"><div class="dot">5</div><div class="body"><h3>RPG expansion — dungeons/combat</h3><p class="muted">Hollow Gate + 6 portals + enemies (reuse monster templates). Combat = nipplejs + skills rows. Hero class paths. All additive — no re-architecture. Kids: 0 combat XP (learn); adults: capped.</p></div></div>
+  </div>
+</div></section>
+
+<!-- LANDING -->
+<section style="background:var(--soft)"><div class="wrap">
+  <div class="eyebrow">First screen</div>
+  <h2>Landing / login</h2>
+  <p class="lead">The ArgantaLab auth card, re-titled — same dual login, kid copy nudges toward learning.</p>
+  <div class="login" style="margin-top:22px">
+    <div class="mark" style="margin-left:auto;margin-right:auto"><span></span></div>
+    <h3 style="font-size:22px;font-weight:800;margin:0">Welcome to <span class="grad-text">LashiraBloom</span></h3>
+    <p class="muted" style="font-size:13px;margin:6px 0 4px">Sign in — your farm follows you on every device.</p>
+    <div class="gbtn"><span style="font-weight:800;color:#4285F4">G</span> Continue with Google</div>
+    <p class="muted" style="font-size:11px;margin:0">For grown-ups</p>
+    <div class="divider">OR KIDS SIGN IN</div>
+    <div class="field">username</div>
+    <div class="field">4-digit PIN</div>
+    <div class="cta">Log in →</div>
+    <p style="margin:14px 0 0;font-size:13px"><span class="link">🎉 New here? Create a kid player</span></p>
+  </div>
+</div></section>
+
+<div class="foot">
+  <div class="wrap">
+    <p><b>LashiraBloom</b> — build plan &amp; deck · companion doc: <span class="kbd">docs/lashirabloom/buildplan.md</span></p>
+    <p>Built on ArgantaLab infrastructure · nothing built yet · planning only</p>
+  </div>
+</div>
+
+</body>
+</html>

@@ -238,6 +238,7 @@
           #05070d;
         color: #eef2ff; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
       }
+      .kc-gate[hidden] { display: none; }
       .kc-card {
         width: min(380px, calc(100vw - 20px)); text-align: center;
         padding: 40px 28px 26px; border-radius: 26px;

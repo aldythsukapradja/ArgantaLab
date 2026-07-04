@@ -5,6 +5,7 @@
 // Mobile: virtual joystick bottom-left, big Attack circle + skill circles
 // bottom-right, ⚙ settings popup for spawns/skills/zoom.
 import { useEffect, useRef, useState } from 'react';
+import nipplejs from 'nipplejs';
 import * as data from '../engine/data.js';
 import { loadJson, loadImage } from '../engine/data.js';
 import { resolveStep, paintStep, stepCount } from '../engine/compositor.js';
@@ -65,16 +66,17 @@ function uid(prefix = 'id') {
 export default function TestRoom({ spec, account, onPlayerState }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
+  const stickZoneRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [spawnList, setSpawnList] = useState([]);
   const [spawnPick, setSpawnPick] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [skills, setSkills] = useState(() => normalizeSkills(spec.skills));
-  // Narrower viewports (phones) start a bit more zoomed out so more of the
-  // arena floor is visible instead of just the character up close. Still
-  // adjustable afterward via the Camera slider in settings.
-  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 720 ? 1.2 : 1.6));
+  // Phones start at 1× so the whole arena floor is visible, not just the
+  // character up close; desktop keeps a tighter default. Adjustable afterward
+  // via the Camera slider in settings.
+  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 720 ? 1.0 : 1.6));
   const [hudState, setHudState] = useState({ hp: 100, maxHp: 100, mp: 40, maxMp: 40 });
   const [peerList, setPeerList] = useState([]);
   const G = useRef(null);
@@ -827,30 +829,61 @@ export default function TestRoom({ spec, account, onPlayerState }) {
     return false;
   }
 
-  // ---------- virtual joystick ----------
-  function stickHandlers() {
-    const start = (e) => {
-      const el = e.currentTarget;
-      el.setPointerCapture(e.pointerId);
-      move(e);
+  // ---------- virtual joystick (nipplejs) ----------
+  // Touch anywhere in the bottom-left zone spawns a joystick under the thumb.
+  // nipplejs gives a normalized vector + force; we scale by force and flip Y
+  // (nipplejs Y points up, our world Y points down/South) into g.stick, which
+  // heldDirection() already reads with a dead-zone. Multitouch means you can
+  // steer and tap Attack/skills at the same time. Skipped on desktop (WASD),
+  // where the zone is display:none (clientWidth 0).
+  useEffect(() => {
+    if (!ready) return undefined;
+    const zone = stickZoneRef.current;
+    if (!zone) return undefined;
+    let manager = null;
+    let raf = 0;
+    let tries = 0;
+    const onMove = (_e, d) => {
+      const g = G.current;
+      if (!g || !d.vector) return;
+      const f = Math.min(1, d.force || 0);
+      g.stick = { x: d.vector.x * f, y: -d.vector.y * f };
     };
-    const move = (e) => {
-      const g = G.current; if (!g) return;
-      if (e.buttons === 0 && e.type === 'pointermove' && e.pointerType === 'mouse') return;
-      const r = e.currentTarget.getBoundingClientRect();
-      const x = ((e.clientX - r.left) / r.width) * 2 - 1;
-      const y = ((e.clientY - r.top) / r.height) * 2 - 1;
-      g.stick = { x, y };
-      const knob = e.currentTarget.querySelector('.knob');
-      if (knob) knob.style.transform = `translate(${x * 26}px, ${y * 26}px)`;
+    const onEnd = () => {
+      const g = G.current;
+      if (g) g.stick = null;
     };
-    const end = (e) => {
-      const g = G.current; if (g) g.stick = null;
-      const knob = e.currentTarget.querySelector('.knob');
-      if (knob) knob.style.transform = '';
+    const setup = () => {
+      // Desktop hides the zone (display:none -> width 0): steer with WASD, no
+      // joystick. A width of 0 while still displayed just means layout hasn't
+      // settled yet — retry a few frames before giving up, so the joystick is
+      // never dead on a real device due to init timing.
+      if (zone.clientWidth === 0) {
+        if (getComputedStyle(zone).display !== 'none' && tries++ < 20) {
+          raf = requestAnimationFrame(setup);
+        }
+        return;
+      }
+      manager = nipplejs.create({
+        zone,
+        mode: 'dynamic',
+        color: 'rgba(255,255,255,0.55)',
+        size: 112,
+        threshold: 0.15,
+        fadeTime: 120,
+        restJoystick: true,
+      });
+      manager.on('move', onMove);
+      manager.on('end', onEnd);
     };
-    return { onPointerDown: start, onPointerMove: move, onPointerUp: end, onPointerCancel: end };
-  }
+    raf = requestAnimationFrame(setup);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (manager) manager.destroy();
+      const g = G.current;
+      if (g) g.stick = null;
+    };
+  }, [ready]);
 
   const profile = account?.profile || {};
   const rank = profile.rank || { glyph: '*', name: 'Spark', color: '#f0a83a' };
@@ -909,10 +942,8 @@ export default function TestRoom({ spec, account, onPlayerState }) {
           ))}
         </div>
 
-        {/* joystick (touch / small screens) */}
-        <div className="joystick" {...stickHandlers()}>
-          <div className="knob" />
-        </div>
+        {/* joystick zone (touch / small screens) — nipplejs renders into this */}
+        <div className="stick-zone" ref={stickZoneRef} />
 
         {/* action cluster */}
         <div className="cluster">
