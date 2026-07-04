@@ -1,0 +1,39 @@
+{
+  "archive": "bint1.dat",
+  "entry": "DLGSTAFF.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 317,
+    "height": 455,
+    "unknown": 0,
+    "pixelDataLength": 146061
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/dlgstaff/dlgstaff.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\dlgstaff\\dlgstaff.png",
+      "width": 321,
+      "height": 459,
+      "bytes": 236218
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 317,
+      "height": 455,
+      "top": 0,
+      "left": 0,
+      "bottom": 455,
+      "right": 317
+    }
+  ]
+}

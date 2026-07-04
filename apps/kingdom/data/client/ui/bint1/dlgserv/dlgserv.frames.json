@@ -1,0 +1,39 @@
+{
+  "archive": "bint1.dat",
+  "entry": "DLGSERV.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 359,
+    "height": 452,
+    "unknown": 0,
+    "pixelDataLength": 164082
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/dlgserv/dlgserv.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\dlgserv\\dlgserv.png",
+      "width": 363,
+      "height": 456,
+      "bytes": 256592
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 359,
+      "height": 452,
+      "top": 0,
+      "left": 0,
+      "bottom": 452,
+      "right": 359
+    }
+  ]
+}

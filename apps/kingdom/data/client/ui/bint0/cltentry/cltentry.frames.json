@@ -1,0 +1,39 @@
+{
+  "archive": "bint0.dat",
+  "entry": "cltentry.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 255,
+    "height": 95,
+    "unknown": 0,
+    "pixelDataLength": 24605
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/cltentry/cltentry.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\cltentry\\cltentry.png",
+      "width": 259,
+      "height": 99,
+      "bytes": 21558
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 255,
+      "height": 95,
+      "top": 0,
+      "left": 0,
+      "bottom": 95,
+      "right": 255
+    }
+  ]
+}

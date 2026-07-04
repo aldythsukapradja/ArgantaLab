@@ -1,0 +1,39 @@
+{
+  "archive": "misc.dat",
+  "entry": "FIELD10.EPF",
+  "schemaBucket": "maps",
+  "colorStatus": "canonical",
+  "note": "Field map EPF with paired palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 640,
+    "height": 480,
+    "unknown": 0,
+    "pixelDataLength": 311102
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/maps/misc/field10/field10.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\maps\\misc\\field10\\field10.png",
+      "width": 644,
+      "height": 484,
+      "bytes": 339615
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 640,
+      "height": 480,
+      "top": -240,
+      "left": -320,
+      "bottom": 240,
+      "right": 320
+    }
+  ]
+}

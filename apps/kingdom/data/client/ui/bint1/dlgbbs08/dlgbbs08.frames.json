@@ -1,0 +1,63 @@
+{
+  "archive": "bint1.dat",
+  "entry": "DLGBBS08.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 3,
+    "width": 449,
+    "height": 120,
+    "unknown": 0,
+    "pixelDataLength": 103518
+  },
+  "renderedFrames": 3,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/dlgbbs08/dlgbbs08.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\dlgbbs08\\dlgbbs08.png",
+      "width": 1355,
+      "height": 124,
+      "bytes": 156402
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 449,
+      "height": 120,
+      "top": 1,
+      "left": 1,
+      "bottom": 121,
+      "right": 450
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 453,
+      "y": 2,
+      "width": 449,
+      "height": 26,
+      "top": 0,
+      "left": 0,
+      "bottom": 26,
+      "right": 449
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 904,
+      "y": 2,
+      "width": 449,
+      "height": 82,
+      "top": 0,
+      "left": 0,
+      "bottom": 82,
+      "right": 449
+    }
+  ]
+}

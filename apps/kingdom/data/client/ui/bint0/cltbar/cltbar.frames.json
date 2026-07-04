@@ -1,0 +1,63 @@
+{
+  "archive": "bint0.dat",
+  "entry": "cltbar.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 3,
+    "width": 194,
+    "height": 20,
+    "unknown": 0,
+    "pixelDataLength": 4144
+  },
+  "renderedFrames": 3,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/cltbar/cltbar.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\cltbar\\cltbar.png",
+      "width": 208,
+      "height": 24,
+      "bytes": 549
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 194,
+      "height": 20,
+      "top": 0,
+      "left": 0,
+      "bottom": 20,
+      "right": 194
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 198,
+      "y": 2,
+      "width": 3,
+      "height": 20,
+      "top": 0,
+      "left": 0,
+      "bottom": 20,
+      "right": 3
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 203,
+      "y": 2,
+      "width": 3,
+      "height": 20,
+      "top": 0,
+      "left": 0,
+      "bottom": 20,
+      "right": 3
+    }
+  ]
+}

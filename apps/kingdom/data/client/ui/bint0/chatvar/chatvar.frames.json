@@ -1,0 +1,51 @@
+{
+  "archive": "bint0.dat",
+  "entry": "chatvar.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 2,
+    "width": 62,
+    "height": 24,
+    "unknown": 0,
+    "pixelDataLength": 3072
+  },
+  "renderedFrames": 2,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/chatvar/chatvar.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\chatvar\\chatvar.png",
+      "width": 130,
+      "height": 28,
+      "bytes": 3959
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 62,
+      "height": 24,
+      "top": 0,
+      "left": 0,
+      "bottom": 24,
+      "right": 62
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 66,
+      "y": 2,
+      "width": 62,
+      "height": 24,
+      "top": 0,
+      "left": 0,
+      "bottom": 24,
+      "right": 62
+    }
+  ]
+}

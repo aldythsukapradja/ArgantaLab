@@ -1,0 +1,39 @@
+{
+  "archive": "bint2.dat",
+  "entry": "userpart.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 61,
+    "height": 57,
+    "unknown": 0,
+    "pixelDataLength": 3658
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/userpart/userpart.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\userpart\\userpart.png",
+      "width": 65,
+      "height": 61,
+      "bytes": 515
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 61,
+      "height": 57,
+      "top": 0,
+      "left": 0,
+      "bottom": 57,
+      "right": 61
+    }
+  ]
+}

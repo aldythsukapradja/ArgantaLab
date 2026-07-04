@@ -1,0 +1,99 @@
+{
+  "archive": "bint2.dat",
+  "entry": "TITLEBUT.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 6,
+    "width": 191,
+    "height": 39,
+    "unknown": 0,
+    "pixelDataLength": 45396
+  },
+  "renderedFrames": 6,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/titlebut/titlebut.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\titlebut\\titlebut.png",
+      "width": 1160,
+      "height": 43,
+      "bytes": 37679
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 191,
+      "height": 39,
+      "top": 0,
+      "left": 0,
+      "bottom": 39,
+      "right": 191
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 195,
+      "y": 2,
+      "width": 191,
+      "height": 39,
+      "top": 0,
+      "left": 0,
+      "bottom": 39,
+      "right": 191
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 388,
+      "y": 2,
+      "width": 191,
+      "height": 39,
+      "top": 0,
+      "left": 0,
+      "bottom": 39,
+      "right": 191
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 581,
+      "y": 2,
+      "width": 191,
+      "height": 39,
+      "top": 0,
+      "left": 0,
+      "bottom": 39,
+      "right": 191
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 774,
+      "y": 2,
+      "width": 191,
+      "height": 39,
+      "top": 0,
+      "left": 0,
+      "bottom": 39,
+      "right": 191
+    },
+    {
+      "frameIndex": 5,
+      "pageIndex": 0,
+      "x": 967,
+      "y": 2,
+      "width": 191,
+      "height": 39,
+      "top": 0,
+      "left": 0,
+      "bottom": 39,
+      "right": 191
+    }
+  ]
+}

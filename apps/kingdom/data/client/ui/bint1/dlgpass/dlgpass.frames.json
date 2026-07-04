@@ -1,0 +1,39 @@
+{
+  "archive": "bint1.dat",
+  "entry": "DLGPASS.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 274,
+    "height": 231,
+    "unknown": 0,
+    "pixelDataLength": 64224
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/dlgpass/dlgpass.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\dlgpass\\dlgpass.png",
+      "width": 278,
+      "height": 235,
+      "bytes": 99832
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 274,
+      "height": 231,
+      "top": 0,
+      "left": 0,
+      "bottom": 231,
+      "right": 274
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "archive": "bint2.dat",
+  "entry": "userlook.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 4,
+    "width": 192,
+    "height": 287,
+    "unknown": 0,
+    "pixelDataLength": 223860
+  },
+  "renderedFrames": 4,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/userlook/userlook.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\userlook\\userlook.png",
+      "width": 778,
+      "height": 291,
+      "bytes": 314708
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 192,
+      "height": 287,
+      "top": 0,
+      "left": 0,
+      "bottom": 287,
+      "right": 192
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 196,
+      "y": 2,
+      "width": 192,
+      "height": 287,
+      "top": 0,
+      "left": 0,
+      "bottom": 287,
+      "right": 192
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 390,
+      "y": 2,
+      "width": 192,
+      "height": 287,
+      "top": 0,
+      "left": 0,
+      "bottom": 287,
+      "right": 192
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 584,
+      "y": 2,
+      "width": 192,
+      "height": 287,
+      "top": 0,
+      "left": 0,
+      "bottom": 287,
+      "right": 192
+    }
+  ]
+}

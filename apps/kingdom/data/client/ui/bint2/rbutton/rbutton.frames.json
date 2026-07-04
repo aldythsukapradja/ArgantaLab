@@ -1,0 +1,75 @@
+{
+  "archive": "bint2.dat",
+  "entry": "rbutton.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 4,
+    "width": 13,
+    "height": 13,
+    "unknown": 0,
+    "pixelDataLength": 812
+  },
+  "renderedFrames": 4,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/rbutton/rbutton.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\rbutton\\rbutton.png",
+      "width": 62,
+      "height": 17,
+      "bytes": 760
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 13,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 13
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 17,
+      "y": 2,
+      "width": 13,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 13
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 32,
+      "y": 2,
+      "width": 13,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 13
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 47,
+      "y": 2,
+      "width": 13,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 13
+    }
+  ]
+}

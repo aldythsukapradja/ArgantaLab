@@ -1,0 +1,135 @@
+{
+  "archive": "bint0.dat",
+  "entry": "CURSOR01.EPF",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 9,
+    "width": 24,
+    "height": 24,
+    "unknown": 0,
+    "pixelDataLength": 4232
+  },
+  "renderedFrames": 9,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/cursor01/cursor01.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\cursor01\\cursor01.png",
+      "width": 179,
+      "height": 28,
+      "bytes": 2273
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 16,
+      "height": 24,
+      "top": 0,
+      "left": 4,
+      "bottom": 24,
+      "right": 20
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 20,
+      "y": 2,
+      "width": 17,
+      "height": 24,
+      "top": 0,
+      "left": 4,
+      "bottom": 24,
+      "right": 21
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 39,
+      "y": 2,
+      "width": 19,
+      "height": 24,
+      "top": 0,
+      "left": 4,
+      "bottom": 24,
+      "right": 23
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 60,
+      "y": 2,
+      "width": 20,
+      "height": 22,
+      "top": 0,
+      "left": 4,
+      "bottom": 22,
+      "right": 24
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 82,
+      "y": 2,
+      "width": 20,
+      "height": 21,
+      "top": 0,
+      "left": 4,
+      "bottom": 21,
+      "right": 24
+    },
+    {
+      "frameIndex": 5,
+      "pageIndex": 0,
+      "x": 104,
+      "y": 2,
+      "width": 19,
+      "height": 22,
+      "top": 0,
+      "left": 4,
+      "bottom": 22,
+      "right": 23
+    },
+    {
+      "frameIndex": 6,
+      "pageIndex": 0,
+      "x": 125,
+      "y": 2,
+      "width": 18,
+      "height": 23,
+      "top": 0,
+      "left": 4,
+      "bottom": 23,
+      "right": 22
+    },
+    {
+      "frameIndex": 7,
+      "pageIndex": 0,
+      "x": 145,
+      "y": 2,
+      "width": 15,
+      "height": 23,
+      "top": 0,
+      "left": 4,
+      "bottom": 23,
+      "right": 19
+    },
+    {
+      "frameIndex": 8,
+      "pageIndex": 0,
+      "x": 162,
+      "y": 2,
+      "width": 15,
+      "height": 22,
+      "top": 0,
+      "left": 4,
+      "bottom": 22,
+      "right": 19
+    }
+  ]
+}

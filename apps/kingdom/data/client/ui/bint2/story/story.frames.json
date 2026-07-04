@@ -1,0 +1,87 @@
+{
+  "archive": "bint2.dat",
+  "entry": "STORY.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 5,
+    "width": 1024,
+    "height": 768,
+    "unknown": 0,
+    "pixelDataLength": 3970560
+  },
+  "renderedFrames": 5,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/story/story.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\story\\story.png",
+      "width": 3080,
+      "height": 1542,
+      "bytes": 3441655
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 1024,
+      "height": 768,
+      "top": 0,
+      "left": 0,
+      "bottom": 768,
+      "right": 1024
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 1028,
+      "y": 2,
+      "width": 1024,
+      "height": 768,
+      "top": 0,
+      "left": 0,
+      "bottom": 768,
+      "right": 1024
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 2054,
+      "y": 2,
+      "width": 1024,
+      "height": 768,
+      "top": 0,
+      "left": 0,
+      "bottom": 768,
+      "right": 1024
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 772,
+      "width": 1024,
+      "height": 768,
+      "top": 0,
+      "left": 0,
+      "bottom": 768,
+      "right": 1024
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 1028,
+      "y": 772,
+      "width": 1024,
+      "height": 768,
+      "top": 0,
+      "left": 0,
+      "bottom": 768,
+      "right": 1024
+    }
+  ]
+}

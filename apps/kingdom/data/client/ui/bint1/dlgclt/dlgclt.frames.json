@@ -1,0 +1,39 @@
+{
+  "archive": "bint1.dat",
+  "entry": "dlgclt.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 668,
+    "height": 468,
+    "unknown": 0,
+    "pixelDataLength": 315956
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/dlgclt/dlgclt.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\dlgclt\\dlgclt.png",
+      "width": 672,
+      "height": 472,
+      "bytes": 346501
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 668,
+      "height": 468,
+      "top": 0,
+      "left": 0,
+      "bottom": 468,
+      "right": 668
+    }
+  ]
+}

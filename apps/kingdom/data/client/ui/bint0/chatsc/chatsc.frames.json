@@ -1,0 +1,39 @@
+{
+  "archive": "bint0.dat",
+  "entry": "chatsc.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 15,
+    "height": 15,
+    "unknown": 0,
+    "pixelDataLength": 303
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/chatsc/chatsc.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\chatsc\\chatsc.png",
+      "width": 19,
+      "height": 19,
+      "bytes": 273
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 15,
+      "height": 15,
+      "top": -15,
+      "left": -15,
+      "bottom": 0,
+      "right": 0
+    }
+  ]
+}

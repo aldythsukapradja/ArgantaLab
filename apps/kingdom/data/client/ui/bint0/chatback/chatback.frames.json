@@ -1,0 +1,75 @@
+{
+  "archive": "bint0.dat",
+  "entry": "CHATBACK.EPF",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 4,
+    "width": 408,
+    "height": 13,
+    "unknown": 0,
+    "pixelDataLength": 21476
+  },
+  "renderedFrames": 4,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/chatback/chatback.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\chatback\\chatback.png",
+      "width": 1642,
+      "height": 17,
+      "bytes": 11273
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 408,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 408
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 412,
+      "y": 2,
+      "width": 408,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 408
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 822,
+      "y": 2,
+      "width": 408,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 408
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 1232,
+      "y": 2,
+      "width": 408,
+      "height": 13,
+      "top": 0,
+      "left": 0,
+      "bottom": 13,
+      "right": 408
+    }
+  ]
+}

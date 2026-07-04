@@ -1,0 +1,91 @@
+{
+  "generated": "2026-07-03T21:54:53.938Z",
+  "sources": {
+    "claude-extractor": "C:/Users/aldhy/OneDrive/Documents/Baginda's App/Nexus/app/assets/extracted",
+    "codex-canonical": "C:/Users/aldhy/OneDrive/Documents/Baginda's App/RPG/Prototype/assets/nexustk-client/pixel-art/canonical"
+  },
+  "folders": {
+    "char": {
+      "source": "claude-extractor",
+      "files": 5824,
+      "bytes": 279286699
+    },
+    "monsters": {
+      "source": "claude-extractor",
+      "files": 4028,
+      "bytes": 344891072
+    },
+    "mounts": {
+      "source": "claude-extractor",
+      "files": 108,
+      "bytes": 2479274
+    },
+    "effects": {
+      "source": "claude-extractor",
+      "files": 1292,
+      "bytes": 48866223
+    },
+    "items": {
+      "source": "claude-extractor",
+      "files": 4,
+      "bytes": 13304799
+    },
+    "tiles": {
+      "source": "claude-extractor",
+      "files": 54,
+      "bytes": 88484758
+    },
+    "audio": {
+      "source": "claude-extractor",
+      "files": 378,
+      "bytes": 89167341
+    },
+    "ui": {
+      "source": "codex-canonical",
+      "files": 218,
+      "bytes": 21409711
+    },
+    "worldmaps": {
+      "source": "codex-canonical",
+      "files": 10,
+      "bytes": 11496121
+    },
+    "fieldmaps": {
+      "source": "codex-canonical",
+      "files": 20,
+      "bytes": 3197352
+    },
+    "effects-misc": {
+      "source": "codex-canonical",
+      "files": 2,
+      "bytes": 299942
+    }
+  },
+  "extractorManifest": "extractor-manifest.json",
+  "counts": {
+    "monsters": 2013,
+    "mounts": 53,
+    "effects": 648,
+    "charParts": 2895,
+    "charByCategory": {
+      "arrow": 6,
+      "body": 449,
+      "bow": 138,
+      "coat": 430,
+      "emotion": 39,
+      "face": 39,
+      "facedec": 57,
+      "fan": 22,
+      "hair": 174,
+      "hairdec": 516,
+      "helmet": 152,
+      "mantle": 163,
+      "neck": 38,
+      "shield": 56,
+      "shoes": 53,
+      "spear": 126,
+      "sword": 437
+    },
+    "itemIcons": 5879
+  }
+}

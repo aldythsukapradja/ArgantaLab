@@ -1,0 +1,243 @@
+{
+  "archive": "bint0.dat",
+  "entry": "chatbutt.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 18,
+    "width": 19,
+    "height": 17,
+    "unknown": 0,
+    "pixelDataLength": 6018
+  },
+  "renderedFrames": 18,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/chatbutt/chatbutt.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\chatbutt\\chatbutt.png",
+      "width": 356,
+      "height": 21,
+      "bytes": 3587
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 19,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 19
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 23,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 42,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 61,
+      "y": 2,
+      "width": 19,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 19
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 82,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 5,
+      "pageIndex": 0,
+      "x": 101,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 6,
+      "pageIndex": 0,
+      "x": 120,
+      "y": 2,
+      "width": 19,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 19
+    },
+    {
+      "frameIndex": 7,
+      "pageIndex": 0,
+      "x": 141,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 8,
+      "pageIndex": 0,
+      "x": 160,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 9,
+      "pageIndex": 0,
+      "x": 179,
+      "y": 2,
+      "width": 19,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 19
+    },
+    {
+      "frameIndex": 10,
+      "pageIndex": 0,
+      "x": 200,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 11,
+      "pageIndex": 0,
+      "x": 219,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 12,
+      "pageIndex": 0,
+      "x": 238,
+      "y": 2,
+      "width": 19,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 19
+    },
+    {
+      "frameIndex": 13,
+      "pageIndex": 0,
+      "x": 259,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 14,
+      "pageIndex": 0,
+      "x": 278,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 15,
+      "pageIndex": 0,
+      "x": 297,
+      "y": 2,
+      "width": 19,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 19
+    },
+    {
+      "frameIndex": 16,
+      "pageIndex": 0,
+      "x": 318,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    },
+    {
+      "frameIndex": 17,
+      "pageIndex": 0,
+      "x": 337,
+      "y": 2,
+      "width": 17,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 17
+    }
+  ]
+}

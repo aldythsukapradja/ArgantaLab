@@ -1,0 +1,39 @@
+{
+  "archive": "bint2.dat",
+  "entry": "wboardbk.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 173,
+    "height": 150,
+    "unknown": 0,
+    "pixelDataLength": 26400
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/wboardbk/wboardbk.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\wboardbk\\wboardbk.png",
+      "width": 177,
+      "height": 154,
+      "bytes": 26129
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 173,
+      "height": 150,
+      "top": 0,
+      "left": 0,
+      "bottom": 150,
+      "right": 173
+    }
+  ]
+}

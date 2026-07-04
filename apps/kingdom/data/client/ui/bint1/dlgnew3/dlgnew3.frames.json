@@ -1,0 +1,39 @@
+{
+  "archive": "bint1.dat",
+  "entry": "dlgnew3.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 1024,
+    "height": 768,
+    "unknown": 0,
+    "pixelDataLength": 803016
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/dlgnew3/dlgnew3.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\dlgnew3\\dlgnew3.png",
+      "width": 1028,
+      "height": 772,
+      "bytes": 946437
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 1024,
+      "height": 768,
+      "top": 0,
+      "left": 0,
+      "bottom": 768,
+      "right": 1024
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "archive": "bint1.dat",
+  "entry": "frmpart.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 3,
+    "width": 816,
+    "height": 711,
+    "unknown": 0,
+    "pixelDataLength": 15874
+  },
+  "renderedFrames": 3,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint1/frmpart/frmpart.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint1\\frmpart\\frmpart.png",
+      "width": 841,
+      "height": 715,
+      "bytes": 35843
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 816,
+      "height": 9,
+      "top": 0,
+      "left": 0,
+      "bottom": 9,
+      "right": 816
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 820,
+      "y": 2,
+      "width": 9,
+      "height": 711,
+      "top": 0,
+      "left": 0,
+      "bottom": 711,
+      "right": 9
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 831,
+      "y": 2,
+      "width": 8,
+      "height": 63,
+      "top": 0,
+      "left": 0,
+      "bottom": 63,
+      "right": 8
+    }
+  ]
+}

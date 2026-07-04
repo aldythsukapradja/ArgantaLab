@@ -1,9 +1,2 @@
-# Local-only data layers:
-# 1. Hundreds of MB of images would bloat the repo
-# 2. Scraped nexusatlas.com art + KRU client art must not be published
-#    (see Arganterion IP rules)
-assets/
-core/
-client/
-derived/
-# tracked: links/ (curated join tables), overrides/ (hand tuning)
+# Data is intentionally tracked for the simple GitHub -> Vercel deploy path.
+# Keep this file so the policy is explicit, but do not ignore the asset layers.

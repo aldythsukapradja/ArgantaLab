@@ -1,0 +1,87 @@
+{
+  "archive": "bint0.dat",
+  "entry": "CONNSTAT.EPF",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 5,
+    "width": 19,
+    "height": 14,
+    "unknown": 0,
+    "pixelDataLength": 1470
+  },
+  "renderedFrames": 5,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint0/connstat/connstat.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint0\\connstat\\connstat.png",
+      "width": 107,
+      "height": 18,
+      "bytes": 1440
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 19,
+      "height": 14,
+      "top": 0,
+      "left": 0,
+      "bottom": 14,
+      "right": 19
+    },
+    {
+      "frameIndex": 1,
+      "pageIndex": 0,
+      "x": 23,
+      "y": 2,
+      "width": 19,
+      "height": 14,
+      "top": 0,
+      "left": 0,
+      "bottom": 14,
+      "right": 19
+    },
+    {
+      "frameIndex": 2,
+      "pageIndex": 0,
+      "x": 44,
+      "y": 2,
+      "width": 19,
+      "height": 14,
+      "top": 0,
+      "left": 0,
+      "bottom": 14,
+      "right": 19
+    },
+    {
+      "frameIndex": 3,
+      "pageIndex": 0,
+      "x": 65,
+      "y": 2,
+      "width": 19,
+      "height": 14,
+      "top": 0,
+      "left": 0,
+      "bottom": 14,
+      "right": 19
+    },
+    {
+      "frameIndex": 4,
+      "pageIndex": 0,
+      "x": 86,
+      "y": 2,
+      "width": 19,
+      "height": 14,
+      "top": 0,
+      "left": 0,
+      "bottom": 14,
+      "right": 19
+    }
+  ]
+}

@@ -16,7 +16,7 @@ const MIME = {
 };
 
 // Serves apps/kingdom/data/** at /data/** during dev, so the web app reads
-// the same local-only data layers as Kingdom Command (no copying).
+// the same tracked data layers as production.
 function serveKingdomData() {
   return {
     name: 'serve-kingdom-data',
@@ -36,8 +36,26 @@ function serveKingdomData() {
   };
 }
 
+// Production serves the same URLs from Vercel's static output. The data
+// folder lives one level above the Vite app so it can also power Command/Game.
+function copyKingdomData() {
+  return {
+    name: 'copy-kingdom-data',
+    apply: 'build',
+    closeBundle() {
+      const src = path.join(KINGDOM, 'data');
+      const dest = path.join(__dirname, 'dist', 'data');
+      if (!fs.existsSync(src)) {
+        throw new Error(`Missing Kingdom data folder: ${src}`);
+      }
+      fs.rmSync(dest, { recursive: true, force: true });
+      fs.cpSync(src, dest, { recursive: true });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), serveKingdomData()],
+  plugins: [react(), serveKingdomData(), copyKingdomData()],
   server: { port: 8322 },
   base: './',
 });

@@ -1,0 +1,39 @@
+{
+  "archive": "bint2.dat",
+  "entry": "Letter.epf",
+  "schemaBucket": "ui",
+  "colorStatus": "canonical",
+  "note": "UI archive conversion using paired or archive-local palette.",
+  "header": {
+    "frameCount": 1,
+    "width": 31,
+    "height": 17,
+    "unknown": 0,
+    "pixelDataLength": 561
+  },
+  "renderedFrames": 1,
+  "skippedEmptyFrames": 0,
+  "pages": [
+    {
+      "path": "RPG/Prototype/assets/nexustk-client/pixel-art/canonical/ui/bint2/letter/letter.png",
+      "absolutePath": "C:\\Users\\aldhy\\OneDrive\\Documents\\Baginda's App\\RPG\\Prototype\\assets\\nexustk-client\\pixel-art\\canonical\\ui\\bint2\\letter\\letter.png",
+      "width": 35,
+      "height": 21,
+      "bytes": 855
+    }
+  ],
+  "frames": [
+    {
+      "frameIndex": 0,
+      "pageIndex": 0,
+      "x": 2,
+      "y": 2,
+      "width": 31,
+      "height": 17,
+      "top": 0,
+      "left": 0,
+      "bottom": 17,
+      "right": 31
+    }
+  ]
+}
