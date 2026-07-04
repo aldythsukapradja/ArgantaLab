@@ -5,6 +5,7 @@ import {
   rootCauseChain, financialModel, scaleModel, OFFICE_IDS, NORTH_STAR,
 } from './bridge'
 import { pixelQuery, pixelFacets, pixelSimilar, pixelVocab, pixelPalettes, pixelUsage } from './vault'
+import { valuation, valuationLeverList, valuationNarrative } from './bridge'
 
 let fails = 0
 function ok(cond: unknown, msg: string) {
@@ -92,6 +93,20 @@ ok(pixelVocab().vocab.kind.length > 0 && !!pixelVocab().tiers.T0, 'vocab exposes
 ok(pixelPalettes().palettes.length > 0, 'palettes listed')
 const pu = pixelUsage()
 ok(pu.total > 0 && pu.pct >= 0, 'usage x-ray computes coverage (' + pu.pct + '% wired of ' + pu.total + ')')
+
+head('valuation — the Actuary')
+const val = valuation('2026-07-03')
+ok(val.methods.length === 6, 'six methods returned (' + val.methods.length + ')')
+ok(val.methods.every(m => m.low <= m.high), 'every method low ≤ high')
+ok(val.methods.every(m => ['live', 'partial', 'simulated', 'placeholder'].includes(m.provenance)), 'every method carries a provenance badge')
+ok(val.recommended.low <= val.recommended.high && val.recommended.low > 0, 'recommended range sane (' + val.recommended.low + '–' + val.recommended.high + ')')
+ok(val.synthesized.weightsMode === 'pre-live', 'pre-live weighting while stage.pay is not live')
+const berkus = val.methods.find(m => m.method === 'berkus')!
+ok(berkus.low >= 0.5 && berkus.high <= 1.5, 'Berkus in the pre-traction band')
+const levers = valuationLeverList().levers
+ok(levers.length > 0 && levers[0].node === 'stage.pay', 'top lever is wiring stage.pay live (' + levers.length + ' levers)')
+ok(levers[0].estImpactUsdM > 0, 'top lever has a positive $ impact ($' + levers[0].estImpactUsdM + 'M)')
+ok(!!valuationNarrative().chairs.CFO, 'narrative packages the chair-framing template')
 
 console.log('\n' + (fails === 0 ? '✅ ALL BRIDGE CHECKS PASSED' : `❌ ${fails} CHECK(S) FAILED`))
 process.exit(fails === 0 ? 0 : 1)

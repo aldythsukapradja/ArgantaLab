@@ -184,3 +184,36 @@ export function StackedAreaChart({ data, xKey, series, xFmt, yFmt, height, marke
     </ResponsiveContainer>
   )
 }
+
+// ── Valuation football field — log-scale range bars, one per method ─────────
+export interface FFRow { label: string; sub?: string; low: number; high: number; highlight?: boolean }
+const FF_PROV: Record<string, string> = { partial: 'var(--warn)', simulated: 'var(--acc-text)', live: 'var(--ok)', placeholder: 'var(--tx3)' }
+export function ValuationFootballField({ rows, min = 0.1, max = 8, unit = 'M' }: { rows: FFRow[]; min?: number; max?: number; unit?: string }) {
+  const pos = (v: number) => ((Math.log10(Math.max(v, min)) - Math.log10(min)) / (Math.log10(max) - Math.log10(min))) * 100
+  const ticks = [0.1, 0.3, 1, 3, 8].filter(t => t >= min && t <= max)
+  const fmt = (v: number) => (v < 1 ? '$' + Math.round(v * 1000) + 'K' : '$' + v + unit)
+  return (
+    <div style={{ margin: '6px 0' }}>
+      {rows.map((d, i) => {
+        const l0 = pos(d.low), l1 = pos(d.high)
+        const c = d.highlight ? 'var(--acc)' : (d.sub && FF_PROV[d.sub]) || 'var(--acc-text)'
+        const labelLeft = l1 > 66
+        return (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '132px 1fr', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, textAlign: 'right' }}>{d.label}{d.sub && <div style={{ fontSize: 9.5, fontWeight: 400, color: 'var(--tx3)', marginTop: 1 }}>{d.sub}</div>}</div>
+            <div style={{ position: 'relative', height: 22, background: 'var(--bg3)', borderRadius: 5 }}>
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: l0 + '%', width: Math.max(l1 - l0, 1.2) + '%', borderRadius: 5, background: d.highlight ? 'linear-gradient(90deg,var(--acc),var(--mag))' : c, boxShadow: d.highlight ? '0 0 0 2px color-mix(in srgb,var(--acc) 45%,transparent)' : 'none' }} />
+              <div style={{ position: 'absolute', top: 0, height: 22, display: 'flex', alignItems: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--tx2)', whiteSpace: 'nowrap',
+                ...(labelLeft ? { right: `calc(${100 - l0}% + 8px)` } : { left: `calc(${l1}% + 8px)` }) }}>{fmt(d.low)}–{fmt(d.high)}</div>
+            </div>
+          </div>
+        )
+      })}
+      <div style={{ position: 'relative', height: 14, marginLeft: 144, marginTop: 16 }}>
+        {ticks.map(t => (
+          <span key={t} style={{ position: 'absolute', left: pos(t) + '%', transform: 'translateX(-50%)', fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--tx3)' }}>{fmt(t)}</span>
+        ))}
+      </div>
+    </div>
+  )
+}

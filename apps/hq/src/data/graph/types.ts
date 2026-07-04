@@ -11,6 +11,7 @@ export type NodeKind =
   | 'event' | 'signal' | 'metric'
   | 'architecture' | 'scaleModel' | 'ledger'
   | 'ip' | 'risk' | 'office'
+  | 'valuation'
 
 export type Lever = 'breadth' | 'depth' | 'frequency' | 'efficiency'
 export type Role = 'driver' | 'guardrail' | 'diagnostic'

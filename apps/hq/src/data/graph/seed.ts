@@ -143,8 +143,21 @@ const LANDING: GraphNode[] = [
   guard('sig.deck_no_waitlist', 'Deck, no waitlist', 'land.pitch', 'operations', 'placeholder'),
 ]
 
+// ---------- VALUATION: The Actuary — one node per method, owner Treasury -----
+// No metricLabel (they carry ranges, not a single metric) so they don't perturb
+// coverage(). Each LADDERS_TO stage.pay — the signal that re-rates them all.
+const VALUATION: GraphNode[] = [
+  nd({ id: 'valuation.costToDuplicate', label: 'Cost-to-Duplicate', kind: 'valuation', parent: 'stage.pay', owner: 'treasury', status: 'partial', note: 'Floor — contractor cost to rebuild the codebase.' }),
+  nd({ id: 'valuation.berkus', label: 'Berkus Method', kind: 'valuation', parent: 'stage.pay', owner: 'treasury', status: 'partial', note: 'Five ≤$500K factors; prototype←coverage, rollout←stage.pay.' }),
+  nd({ id: 'valuation.riskFactorSum', label: 'Risk Factor Summation', kind: 'valuation', parent: 'stage.pay', owner: 'treasury', status: 'partial', note: 'Regional baseline ± risk; technology risk←CTO coverage.' }),
+  nd({ id: 'valuation.scorecard', label: 'Scorecard (Bill Payne)', kind: 'valuation', parent: 'stage.pay', owner: 'treasury', status: 'partial', note: 'Regional pre-seed baseline × weights; no live market feed yet.' }),
+  nd({ id: 'valuation.vcMethod', label: 'VC Method', kind: 'valuation', parent: 'stage.pay', owner: 'treasury', status: 'simulated', note: 'Back-solved from a bull-case exit — illustrative.' }),
+  nd({ id: 'valuation.firstChicago', label: 'First Chicago', kind: 'valuation', parent: 'stage.pay', owner: 'treasury', status: 'simulated', note: 'Probability-weights all three Growth-Lab cases.' }),
+  nd({ id: 'valuation.synthesized', label: 'Synthesized range', kind: 'valuation', parent: 'stage.pay', owner: 'treasury', status: 'partial', note: 'Weighted blend; the weights flip when stage.pay goes live.' }),
+]
+
 export const NODES: GraphNode[] = [
-  NORTHSTAR, ...LEVERS, ...STAGES, ...ARGANTA, ...KINETIK, ...HQ, ...LANDING,
+  NORTHSTAR, ...LEVERS, ...STAGES, ...ARGANTA, ...KINETIK, ...HQ, ...LANDING, ...VALUATION,
 ]
 
 // ---------- EDGES -----------------------------------------------------------
