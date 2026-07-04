@@ -13,7 +13,21 @@
   const SUPABASE_ANON =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkYWdkeGdwbmxpYWxrcHBqd29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MzI4NjUsImV4cCI6MjA5NzUwODg2NX0.MpeOrfbyLsBv85K3ZW82EwrOjgYEgDe1PhT-HtWJpWo';
   // Only these Google accounts may open Command. Add more admins here.
-  const ADMIN_EMAILS = ['aldhyt.sukapradja@gmail.com'];
+  const ADMIN_EMAILS = ['aldhyt.sukapradja@gmail.com', 'kinara.apsari27@gmail.com'];
+  const LOG = (...a) => console.log('[kingdom-command-auth]', ...a);
+
+  // Capture the OAuth callback tokens from the URL hash SYNCHRONOUSLY, right
+  // now, before any async work starts. Command loads supabase-js from a CDN
+  // (dynamic import = a real network round-trip), unlike the other apps here
+  // which bundle it at build time and get a client instantly. That gap is a
+  // real window where the library's own automatic detectSessionInUrl can lose
+  // the race and silently find nothing (no error — the gate just reappears).
+  // Grabbing the raw tokens ourselves before that gap opens removes the race:
+  // we hand them to setSession() explicitly once the client exists. Scrub them
+  // from the visible URL immediately too — once captured, they don't need to
+  // sit in the address bar (history, copy-paste, screen shares).
+  const callbackTokens = parseHashTokens(location.hash);
+  if (callbackTokens) history.replaceState(null, '', location.pathname);
 
   // Hide the console immediately (this runs in <head>, before <body> renders,
   // so there's no flash of the dashboard). The rest waits for the DOM.
@@ -58,24 +72,56 @@
       },
     };
 
-    // Load supabase-js from a CDN (Command has no bundler). If it can't load,
-    // the gate stays up with an error rather than silently exposing the app.
+    // Load supabase-js from a CDN (Command has no bundler). `flowType:
+    // 'implicit'` below is set explicitly so behavior can't drift if `@2`
+    // resolves to a newer release later. If the CDN import fails, the gate
+    // stays up with an error rather than silently exposing the app.
     import('https://esm.sh/@supabase/supabase-js@2')
-      .then(({ createClient }) => {
+      .then(async ({ createClient }) => {
         supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
           auth: {
             storageKey: 'kingdom-command-auth',
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: true,
+            flowType: 'implicit',
           },
         });
         wireGoogle();
-        supabase.auth.getSession().then(({ data }) => applySession(data.session));
-        supabase.auth.onAuthStateChange((_e, s) => applySession(s));
+        // We captured the callback tokens synchronously before this import
+        // even started — hand them to the client explicitly rather than
+        // trusting detectSessionInUrl's timing against the URL as it is NOW
+        // (which may already be stale by the time this promise resolves).
+        if (callbackTokens) {
+          LOG('adopting captured OAuth tokens');
+          const { error } = await supabase.auth.setSession(callbackTokens);
+          if (error) {
+            LOG('setSession failed', error.message);
+            gate.error(`Sign-in didn't complete: ${error.message}. Try again.`);
+          }
+        }
+        supabase.auth.getSession().then(({ data }) => {
+          LOG('getSession ->', data.session ? data.session.user?.email : 'no session');
+          applySession(data.session);
+        });
+        supabase.auth.onAuthStateChange((e, s) => {
+          LOG('onAuthStateChange', e, s ? s.user?.email : 'no session');
+          applySession(s);
+        });
       })
-      .catch(() => gate.error('Could not load the auth library. Check your connection and reload.'));
+      .catch((err) => gate.error('Could not load the auth library: ' + (err?.message || err)));
   });
+
+  // Parses `#access_token=...&refresh_token=...` (Supabase's implicit-flow
+  // OAuth callback format) into the shape `setSession()` expects, or null.
+  function parseHashTokens(hash) {
+    if (!hash || hash.length < 2) return null;
+    const params = new URLSearchParams(hash.slice(1));
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (!access_token || !refresh_token) return null;
+    return { access_token, refresh_token };
+  }
 
   function ready(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
@@ -131,36 +177,6 @@
       }
     });
   }
-
-  // The Lab announces itself when it mounts in embed mode; reply with the
-  // session (using the frame's real origin as targetOrigin for safety).
-  window.addEventListener('message', (e) => {
-    const d = e.data;
-    if (d && d.type === 'kingdom-lab-ready' && e.source) {
-      try {
-        e.source.postMessage(sessionMessage(), e.origin && e.origin !== 'null' ? e.origin : '*');
-      } catch (_) {
-        /* ignore */
-      }
-    }
-  });
-
-  // ---- public API (used by views-vault.js Views.lab) ----------------------
-  window.KingdomAuth = {
-    attachFrame(iframe) {
-      frames.add(iframe);
-      iframe.addEventListener('load', broadcastSession, { once: false });
-    },
-    detachFrame(iframe) {
-      frames.delete(iframe);
-    },
-    getSession() {
-      return session;
-    },
-    signOut() {
-      if (supabase) supabase.auth.signOut();
-    },
-  };
 
   // ---- gate DOM -----------------------------------------------------------
   function wireGoogle() {
