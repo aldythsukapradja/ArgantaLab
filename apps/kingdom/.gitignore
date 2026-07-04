@@ -1,0 +1,3 @@
+# Build artifact assembled by scripts/build-deploy.mjs (command/ + data/ +
+# web/dist/ combined for Vercel). Regenerated on every deploy, never commit.
+dist_site/
