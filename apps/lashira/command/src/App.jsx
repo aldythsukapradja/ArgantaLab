@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CROPS, MAPS, LIVESTOCK, PROGRESSION, FARMS, ASSETS, QUESTS, CONFIG } from './data.js';
 import { WorldMap } from './WorldMap.jsx';
+import { PLAYABLE_MAPS, STARDEW_PROTOTYPE_MATERIALS } from '../../shared/world-materials.js';
 
 // Optional Supabase client for the admin gate (reuses the ArgantaLab project).
 const url = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -287,7 +288,34 @@ function Assets() {
           <div style={{ width: 160 }}><Bar pct={Math.round((a.done / a.total) * 100)} tone={a.done ? 'accent' : 'warn'} /></div>
         </div>
       ))}
-      <p className="muted sm">Placeholder in-code art now → PixelLab regenerate via the same texture keys.</p>
+      <p className="muted sm">Prototype source: Spriters Resource Stardew Valley sheets. Production path: regenerate these exact material keys through PixelLab.</p>
+      <div className="asset-section">
+        <h4>Scraped material catalog</h4>
+        <div className="material-grid">
+          {STARDEW_PROTOTYPE_MATERIALS.map((m) => (
+            <a className="material-card" key={m.id} href={m.pageUrl} target="_blank" rel="noreferrer">
+              <span className="material-swatch" />
+              <b>{m.title}</b>
+              <small>{m.dimensions} · {m.fileSize}</small>
+              <span>{m.materialKeys.slice(0, 3).join(' · ')}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+      <div className="asset-section">
+        <h4>Playable map targets</h4>
+        <table className="tbl compact">
+          <thead><tr><th>Map</th><th>Status</th><th>Materials</th><th>Portals</th></tr></thead>
+          <tbody>{PLAYABLE_MAPS.map((m) => (
+            <tr key={m.id}>
+              <td><b>{m.name}</b><br /><span className="mono">{m.id}</span></td>
+              <td>{statusPill(m.status)}</td>
+              <td className="muted">{m.materialKeys.join(' · ')}</td>
+              <td>{m.portals.length}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
     </Card>
   );
 }

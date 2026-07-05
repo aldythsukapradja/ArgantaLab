@@ -194,22 +194,58 @@ body {
 .loading { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 700; }
 
 /* ============ Kingdom Heroes-style canvas HUD ============ */
-.room-full { position: fixed; inset: 0; overflow: hidden; background: #0a0a0c; }
+.room-full {
+  position: fixed; inset: 0; overflow: hidden; background: #0a0a0c;
+  /* ---- Liquid Glass design tokens, copied verbatim from Kingdom Heroes'
+     apps/kingdom/web/src/styles.css .room-full block (Apple iOS 26 language) --- */
+  --font-apple: -apple-system, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
+  --glass-thin: blur(18px) saturate(180%);
+  --glass-regular: blur(30px) saturate(180%);
+  --glass-thick: blur(50px) saturate(180%);
+  --glass-bg: rgba(250, 250, 253, 0.62);
+  --glass-bg-thick: rgba(248, 249, 252, 0.82);
+  --glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.92), inset 0 0 0 0.6px rgba(255, 255, 255, 0.5), inset 0 -7px 14px rgba(120, 140, 180, 0.13);
+  --glass-shadow: 0 1px 2px rgba(10, 14, 26, 0.06), 0 12px 40px -8px rgba(10, 14, 26, 0.24);
+  --glass-shadow-lg: 0 2px 6px rgba(10, 14, 26, 0.08), 0 30px 72px -16px rgba(10, 14, 26, 0.42);
+  --spring: linear(0, 0.06, 0.24, 0.51, 0.79, 0.98, 1.09, 1.12, 1.1, 1.05, 1, 0.985, 0.995, 1);
+  --text-strong: #10141f;
+  --text-muted: #5c6478;
+  font-family: var(--font-apple);
+}
 .room-canvas { position: absolute; inset: 0; }
 .room-canvas canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; outline: none; touch-action: none; }
 .room-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #cbd0e6; font-weight: 700; }
-.stick-zone { position: absolute; left: 0; bottom: 0; width: 45%; height: 55%; z-index: 5; }
-@media (min-width: 900px) { .stick-zone { display: none; } }
+/* nipplejs joystick zone — copied verbatim from Kingdom Heroes: touch anywhere
+   in the lower-left to steer, invisible zone, softened nipple visuals. */
+.stick-zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 58%; z-index: 6; touch-action: none; user-select: none; }
+.stick-zone .nipple .back { opacity: 0.28 !important; }
+.stick-zone .nipple .front {
+  background: radial-gradient(circle at 34% 30%, #ffffffcc, #ffffff5c) !important;
+  box-shadow: 0 3px 10px #0007;
+}
+@media (min-width: 900px) and (pointer: fine) { .stick-zone { display: none; } }
 
-.hud-top { position: absolute; top: 0; left: 0; right: 0; z-index: 12; display: flex; align-items: flex-start; justify-content: space-between; padding: 8px 12px; pointer-events: none; }
-.hud-keys { font-size: 11px; color: #cdd2ea; background: rgba(15,17,32,.5); padding: 4px 10px; border-radius: 999px; backdrop-filter: blur(4px); align-self: center; }
-@media (max-width: 900px) { .hud-keys { display: none; } }
-.top-right { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+/* top bar — Kingdom's gear (copied verbatim) + Lashira's own resource chips
+   (no Kingdom equivalent: Bloom/energy/diamonds are farm-only concepts). */
+.hud-top {
+  position: absolute; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; gap: 10px; pointer-events: none; z-index: 8;
+}
+.top-right { display: flex; align-items: center; gap: 8px; margin-left: auto; pointer-events: auto; }
 .res-strip { display: flex; gap: 6px; }
 .res { background: rgba(20,22,40,.72); border: 1px solid rgba(255,255,255,.14); color: #fff; font-weight: 700; font-size: 12.5px; padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(6px); }
 .res.lock { opacity: .9; }
 @media (max-width: 560px) { .res { font-size: 11px; padding: 5px 8px; } }
-.hud-gear { pointer-events: auto; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(20,22,40,.7); color: #fff; font-size: 18px; cursor: pointer; backdrop-filter: blur(6px); }
+.hud-gear {
+  pointer-events: auto; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--glass-bg-thick); color: #2a3346;
+  backdrop-filter: var(--glass-thin); -webkit-backdrop-filter: var(--glass-thin);
+  border: none; box-shadow: var(--glass-rim), var(--glass-shadow);
+  font-size: 19px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.18s var(--spring), box-shadow 0.15s ease;
+}
+.hud-gear:active { transform: scale(0.92); }
 
 .left-stack { position: absolute; top: 52px; left: 12px; z-index: 11; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .quicknav { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -217,25 +253,61 @@ body {
 .toasts { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .toast { background: rgba(15,17,32,.92); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 
-/* unit-frame card */
+/* ================= unit-frame + HP/MP bars — copied verbatim from Kingdom
+   Heroes' "premium arena HUD (frosted white-grey glass)" block ================= */
 .unit-frame {
-  display: flex; gap: 10px; width: min(340px, 74vw);
-  padding: 10px 12px; border-radius: 16px; background: linear-gradient(180deg, rgba(28,30,54,.92), rgba(18,19,36,.92));
-  border: 1px solid rgba(255,255,255,.12); box-shadow: 0 10px 30px rgba(0,0,0,.4); backdrop-filter: blur(8px);
+  width: min(300px, calc(100vw - 32px));
+  display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center;
+  padding: 9px 11px; border-radius: 18px; corner-shape: superellipse(1.8);
+  color: var(--text-strong); background: var(--glass-bg);
+  backdrop-filter: var(--glass-regular); -webkit-backdrop-filter: var(--glass-regular);
+  border: none; box-shadow: var(--glass-rim), var(--glass-shadow);
 }
-.unit-rank { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
-.unit-main { flex: 1; min-width: 0; }
-.unit-name { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: #fff; }
-.unit-name b { font-size: 15px; font-weight: 800; }
-.unit-name span { font-size: 11px; color: #b7bce0; white-space: nowrap; }
-.unit-exp { height: 4px; border-radius: 3px; background: rgba(255,255,255,.14); margin: 5px 0 6px; overflow: hidden; }
+.unit-rank { width: 38px; height: 38px; display: grid; place-items: center; filter: drop-shadow(0 3px 7px #0007); }
+.unit-rank svg { width: 36px; height: 36px; }
+.unit-main { min-width: 0; }
+.unit-name { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.unit-name b { color: #141a28; font-size: 13px; }
+.unit-name span { color: #66708a; font-size: 10px; }
+.unit-exp { height: 4px; border-radius: 3px; background: rgba(0,0,0,.12); margin: 5px 0 5px; overflow: hidden; }
 .unit-exp span { display: block; height: 100%; background: linear-gradient(90deg, #6f8bf6, #e879b9); }
-.unit-bars { display: flex; flex-direction: column; gap: 4px; }
-.bar { position: relative; height: 16px; border-radius: 5px; background: rgba(0,0,0,.35); overflow: hidden; }
-.bar span { position: absolute; inset: 0; border-radius: 5px; }
-.bar.hp span { background: linear-gradient(90deg, #e2504a, #f0a83a); }
-.bar.mp span { background: linear-gradient(90deg, #3f6fd6, #4fd0e0); }
-.bar b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.unit-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; }
+/* Premium RPG stat bars: deep inset glass track, glossy fill with a top
+   highlight and a slow shimmer sweep, rounded caps, crisp label. */
+.bar {
+  position: relative; height: 16px; border-radius: 999px; overflow: hidden;
+  background: linear-gradient(180deg, #05070d, #141824);
+  border: 1px solid #ffffff2e;
+  box-shadow: inset 0 2px 6px #000b, inset 0 -1px 0 #ffffff14, 0 1px 0 #ffffff12, 0 2px 6px #0006;
+}
+.bar::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), #0000003d calc(10% - 1px) 10%);
+}
+.bar span {
+  position: relative; display: block; height: 100%; border-radius: inherit;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 0 #ffffff7a, inset 0 -3px 7px #00000059, inset -4px 0 7px #ffffff45;
+}
+.bar span::before {
+  content: ''; position: absolute; left: 1px; right: 1px; top: 1px; height: 45%; border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff59, #ffffff00);
+}
+.bar span::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 34%, #ffffff33 48%, transparent 62%);
+  transform: translateX(-70%); animation: bar-shimmer 3.2s ease-in-out infinite;
+}
+@keyframes bar-shimmer { to { transform: translateX(180%); } }
+.bar.hp span { background: linear-gradient(90deg, #a30f0f, #ef4444 42%, #ff9d5c); }
+.bar.mp span { background: linear-gradient(90deg, #1636d6, #3b82f6 42%, #7cf0ff); }
+.bar b {
+  position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
+  gap: 3px; font-size: 9px; font-weight: 800; letter-spacing: 0.01em; color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 3px #000c;
+}
+.bar b svg { width: 9px; height: 9px; filter: drop-shadow(0 1px 2px #000a); opacity: 0.95; }
+/* guardian strip — Lashira-only addition, no Kingdom unit-frame equivalent */
 .guardian-strip { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 8px; border-radius: 9px; background: rgba(16,77,66,.55); }
 .guardian-strip b { font-size: 12px; color: #fff; }
 .guardian-strip small { font-size: 10.5px; color: #a9d8c9; margin-left: auto; }
@@ -244,55 +316,92 @@ body {
 .hero-note { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); z-index: 9; max-width: min(360px, 82vw); text-align: center; font-size: 12px; color: #e7e9ff; background: rgba(139,92,246,.32); border: 1px solid rgba(139,92,246,.5); padding: 8px 14px; border-radius: 12px; backdrop-filter: blur(6px); }
 .hero-note b { color: #fff; }
 
-/* glossy Kingdom Heroes-style action cluster (fan of gems + big sphere) */
-.cluster { position: absolute; right: 12px; bottom: 14px; width: 240px; height: 230px; z-index: 10; pointer-events: none; }
-.ctl { position: absolute; pointer-events: auto; border: 0; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
-.ctl .spark { position: relative; z-index: 2; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
-.ctl::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255,255,255,.5); filter: blur(1.6px); pointer-events: none; }
-.ctl:active { transform: scale(.94); }
+/* ================= action cluster — copied verbatim from Kingdom Heroes'
+   "Ragnarok-M style HUD" / "premium glass action controller" block ================= */
+.cluster { position: absolute; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: 214px; height: 206px; pointer-events: none; }
+.cluster > * { pointer-events: auto; }
+.attack-circle, .skill-circle {
+  position: absolute; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s var(--spring), box-shadow 0.15s ease, filter 0.15s ease;
+  isolation: isolate;
+}
+.attack-circle svg, .skill-circle svg { filter: drop-shadow(0 2px 3px #0009); position: relative; z-index: 1; }
+.attack-circle::before, .skill-circle::before {
+  content: ''; position: absolute; left: 14%; top: 8%; right: 30%; height: 34%;
+  border-radius: 50%; background: linear-gradient(180deg, #ffffffb0, #ffffff00);
+  filter: blur(0.5px); pointer-events: none; z-index: 1;
+}
+.attack-circle {
+  right: 6px; bottom: 4px; width: 94px; height: 94px;
+  background: radial-gradient(circle at 36% 28%, #ffb694 0 6%, #ff7a4a 34%, #e0501d 70%, #9a2f0e 100%);
+  border: 2px solid #ffffffbf;
+  box-shadow: 0 10px 26px -4px #000c, 0 0 22px -4px #ff6a3599, inset 0 3px 9px #ffffff66, inset 0 -8px 16px #00000073;
+}
+.attack-circle:active { transform: scale(0.92); box-shadow: 0 4px 14px -4px #000c, inset 0 4px 12px #00000099; }
+.small-ring { position: static; display: contents; }
+.skill-circle {
+  width: 54px; height: 54px;
+  background: radial-gradient(circle at 36% 28%, #d7cfff 0 6%, #7d6cf6 36%, #5a3fd6 72%, #3a2596 100%);
+  border: 1.6px solid #ffffffa6;
+  box-shadow: 0 7px 18px -3px #000b, 0 0 16px -4px #7c6cf5cc, inset 0 2px 7px #ffffff5e, inset 0 -6px 12px #00000073;
+}
+.skill-circle:active { transform: scale(0.9); box-shadow: 0 3px 10px -3px #000b, inset 0 3px 10px #00000099; }
+.skill-circle .slot {
+  position: absolute; top: -3px; right: -3px; z-index: 2;
+  min-width: 16px; height: 16px; padding: 0 3px; border-radius: 9px;
+  background: #0d1018e6; border: 1px solid #ffffff5e; color: #cdd6ff;
+  font-size: 9.5px; font-weight: 800; line-height: 15px; text-align: center;
+  box-shadow: 0 2px 5px #0009;
+}
+.skill-circle.active {
+  background: radial-gradient(circle at 36% 28%, #ffdca6 0 6%, #f0a83a 36%, #c67d1e 72%, #8a4f0e 100%);
+  box-shadow: 0 0 0 3px rgba(240,168,58,.55), 0 7px 18px -3px #000b, inset 0 2px 7px #ffffff5e, inset 0 -6px 12px #00000073;
+}
+.skill-circle.util {
+  width: 46px; height: 46px;
+  background: radial-gradient(circle at 36% 28%, #dbe2ee 0 6%, #93a0b6 38%, #55627a 74%, #38435a 100%);
+  box-shadow: 0 6px 16px -3px #000b, 0 0 12px -5px #9fb0cccc, inset 0 2px 6px #ffffff5e, inset 0 -5px 11px #00000073;
+}
+/* fan the orbs in an arc up-left of the attack button */
+.small-ring .skill-circle:nth-child(1) { right: 120px; bottom: 8px; }
+.small-ring .skill-circle:nth-child(2) { right: 108px; bottom: 72px; }
+.small-ring .skill-circle:nth-child(3) { right: 62px; bottom: 118px; }
+.small-ring .skill-circle:nth-child(4) { right: 2px;  bottom: 140px; }
+.small-ring .skill-circle:nth-child(5) { right: 156px; bottom: 132px; }
 
-.ctl.gem { width: 58px; height: 58px; font-size: 22px;
-  background: radial-gradient(circle at 34% 26%, #c8b6f9 0%, #8b6cf0 42%, #5a3fbf 100%);
-  box-shadow: 0 6px 14px rgba(50,30,120,.5), inset 0 3px 6px rgba(255,255,255,.55), inset 0 -8px 12px rgba(30,10,80,.55);
-  border: 1px solid rgba(255,255,255,.4); }
-.ctl.gem::after { top: 8px; left: 14px; width: 22px; height: 12px; }
-.ctl.gem.active {
-  background: radial-gradient(circle at 34% 26%, #ffdca6 0%, #f0a83a 45%, #c67d1e 100%);
-  box-shadow: 0 0 0 3px rgba(240,168,58,.55), 0 6px 14px rgba(160,90,20,.5), inset 0 3px 6px rgba(255,255,255,.6), inset 0 -8px 12px rgba(120,60,10,.55); }
-.ctl .badge { position: absolute; top: -3px; right: -3px; width: 20px; height: 20px; border-radius: 50%; background: #241c3a; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,.55); box-shadow: 0 2px 4px rgba(0,0,0,.35); z-index: 3; }
-
-.ctl.util { width: 52px; height: 52px; font-size: 20px;
-  background: radial-gradient(circle at 34% 26%, #9aa6c2 0%, #5b6a86 45%, #38435c 100%);
-  box-shadow: 0 5px 12px rgba(20,30,60,.5), inset 0 3px 6px rgba(255,255,255,.45), inset 0 -6px 10px rgba(10,20,40,.5);
-  border: 1px solid rgba(255,255,255,.35); }
-.ctl.util::after { top: 7px; left: 12px; width: 20px; height: 11px; }
-
-.ctl.attack { width: 88px; height: 88px; font-size: 34px;
-  background: radial-gradient(circle at 36% 26%, #ffc79f 0%, #f0894a 42%, #c0451f 100%);
-  box-shadow: 0 8px 20px rgba(150,55,20,.55), inset 0 4px 8px rgba(255,255,255,.55), inset 0 -10px 14px rgba(110,30,10,.55);
-  border: 1px solid rgba(255,255,255,.45); }
-.ctl.attack::after { top: 12px; left: 22px; width: 30px; height: 15px; }
-
-/* fan positions (bottom-right anchored, mirrors the Heroes controller) */
-.ctl.attack { right: 4px; bottom: 4px; }
-.ctl.g1 { right: 92px; bottom: 10px; }
-.ctl.g2 { right: 122px; bottom: 66px; }
-.ctl.g3 { right: 68px; bottom: 108px; }
-.ctl.pet { right: 150px; bottom: 132px; }
-.ctl.hand { right: 16px; bottom: 106px; }
-@media (max-width: 720px) { .cluster { transform: scale(.88); transform-origin: bottom right; } }
+@media (min-width: 900px) and (pointer: fine) { .cluster { transform: scale(0.86); transform-origin: bottom right; } }
 
 .navbtn { pointer-events: auto; border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 8px 11px; font-weight: 700; font-size: 12.5px; cursor: pointer; background: rgba(20,22,40,.72); color: #fff; backdrop-filter: blur(6px); }
 @media (max-width: 720px) { .navbtn { padding: 7px 9px; font-size: 11.5px; } }
 
-/* settings modal */
-.browser-backdrop { position: absolute; inset: 0; z-index: 40; background: rgba(10,10,14,.55); display: flex; align-items: center; justify-content: center; }
-.settings { width: min(420px, 92vw); background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.4); }
-.browser-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 16px; }
-.closex { border: none; background: var(--soft); border-radius: 8px; width: 30px; height: 30px; font-size: 16px; cursor: pointer; }
-.settings-body { padding: 14px 18px; }
-.settings-body section { margin-bottom: 16px; }
-.settings-body h4 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
-.setrow { display: flex; align-items: center; gap: 10px; }
-.setrow input[type=range] { flex: 1; }
-.settings-empty { color: var(--muted); font-size: 13px; margin: 0; }
+/* ================= settings popup — copied verbatim from Kingdom Heroes'
+   "premium frosted white-grey glass popup with a springy pop-in" ================= */
+.browser-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(8, 11, 20, 0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  animation: backdrop-fade 0.2s ease;
+}
+@keyframes backdrop-fade { from { opacity: 0; } }
+.settings {
+  width: min(420px, 92vw); max-height: 84vh; overflow-y: auto;
+  color: var(--text-strong, #10141f);
+  background: var(--glass-bg-thick, rgba(248, 249, 252, 0.82));
+  backdrop-filter: var(--glass-thick, blur(50px) saturate(180%));
+  -webkit-backdrop-filter: var(--glass-thick, blur(50px) saturate(180%));
+  border: none; border-radius: 28px; corner-shape: superellipse(1.8);
+  box-shadow: var(--glass-rim), var(--glass-shadow-lg, 0 30px 72px -16px rgba(10, 14, 26, 0.42));
+  animation: settings-pop 0.44s var(--spring, cubic-bezier(0.34, 1.4, 0.5, 1));
+}
+@keyframes settings-pop { from { transform: translateY(18px) scale(0.92); opacity: 0; } }
+.browser-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px 6px; font-size: 16px; }
+.closex { background: none; border: none; color: var(--muted, #6d7288); font-size: 15px; cursor: pointer; }
+.settings-body { padding: 6px 18px 18px; }
+.settings-body section { margin-top: 14px; }
+.settings-body h4 { margin: 0 0 7px; color: #6a4df5; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.setrow { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.setrow label { width: 62px; color: #5c6478; font-size: 12.5px; font-weight: 600; }
+.setrow input[type="range"] { flex: 1; accent-color: #6a4df5; }
+.settings-empty { color: var(--muted, #6d7288); font-size: 12.5px; margin: 4px 0; }

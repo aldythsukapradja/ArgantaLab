@@ -1,9 +1,13 @@
-// Kingdom Heroes-style HUD. Unit-frame card replicates Heroes exactly: rank
-// crest, name + Lv, EXP bar, HP (red→orange) + MP (blue→cyan) from the character's
-// real stats, and the guardian strip. Farm resources (Bloom / energy / diamonds)
-// sit in a top-right chip strip. Panel nav sits under the card.
+// HUD — the unit-frame (HP/MP card), settings popup, and action cluster are
+// copied AS IS from Kingdom Heroes (apps/kingdom/web/src/room/TestRoom.jsx):
+// same TierIcon crest, same IconHeart/IconMana bars, same glass settings popup,
+// same skill-circle/attack-circle cluster + slot badges. Farm-specific pieces
+// (tool selection, resource chips, quick-nav) have no Kingdom equivalent and
+// are Lashira's own, laid out so they don't collide with the copied pieces.
 import { useState } from 'react';
 import { computeRank } from '../net/hero.js';
+import TierIcon from '../components/TierIcon.jsx';
+import { IconHeart, IconMana, IconMount } from '../components/HudIcons.jsx';
 
 const TOOLS = [
   { id: 'hoe', icon: '⛏', label: 'Till' },
@@ -11,22 +15,10 @@ const TOOLS = [
   { id: 'can', icon: '💧', label: 'Water' },
 ];
 const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
-const xpPct = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
+const fmt = (n) => Number(n || 0).toLocaleString();
+const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
 
-function Crest({ rank, size = 46 }) {
-  const c = rank?.color || '#f0a83a';
-  return (
-    <span className="unit-rank" title={rank?.name} style={{ width: size, height: size }}>
-      <svg viewBox="0 0 56 56" width={size} height={size}>
-        <path d="M28 5 L47 15 V33 L28 51 L9 33 V15 Z" fill={c} stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
-        <path d="M28 5 L47 15 L28 27 L9 15 Z" fill="#fff" opacity="0.22" />
-        <text x="28" y="36" textAnchor="middle" fontSize="20" fontWeight="800" fill="#fff">{rank?.glyph || '✦'}</text>
-      </svg>
-    </span>
-  );
-}
-
-export function Hud({ snap, game, onUse, onSleep, onOpen, zoom, setZoom, usingHero, hero }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero }) {
   const [showSettings, setShowSettings] = useState(false);
   const rank = computeRank(snap.xp);
   const maxHp = Number(hero?.stats?.maxHp || 100);
@@ -37,8 +29,8 @@ export function Hud({ snap, game, onUse, onSleep, onOpen, zoom, setZoom, usingHe
     <>
       {snap.toast && <div className="toasts"><div className="toast">{snap.toast}</div></div>}
 
+      {/* top bar — gear copied AS IS from Kingdom; resource chips are Lashira's own */}
       <div className="hud-top">
-        <span className="hud-keys">WASD / drag to move · Space use · 1/2/3 tools · Sleep to grow</span>
         <div className="top-right">
           <div className="res-strip">
             <span className="res">🌸 {snap.bloom}</span>
@@ -49,73 +41,81 @@ export function Hud({ snap, game, onUse, onSleep, onOpen, zoom, setZoom, usingHe
         </div>
       </div>
 
-      {/* unit-frame card + quick nav, stacked top-left */}
+      {/* unit-frame + quick nav, stacked top-left. unit-frame markup is the
+          exact Kingdom Heroes shape (TierIcon crest + IconHeart/IconMana bars). */}
       <div className="left-stack">
-      <div className="unit-frame">
-        <Crest rank={rank} />
-        <div className="unit-main">
-          <div className="unit-name">
-            <b>{snap.name}</b>
-            <span>{cap(snap.season)} · Day {snap.day} · Lv {snap.level}</span>
+        <div className="unit-frame">
+          <div className="unit-rank" title={rank.name}>
+            <TierIcon color={rank.color} glyph={rank.glyph} size={38} />
           </div>
-          <div className="unit-exp"><span style={{ width: `${xpPct(snap.xp)}%` }} /></div>
-          <div className="unit-bars">
-            <div className="bar hp"><span style={{ width: '100%' }} /><b>❤ {maxHp}/{maxHp}</b></div>
-            <div className="bar mp"><span style={{ width: '100%' }} /><b>💧 {maxMp}/{maxMp}</b></div>
-          </div>
-          {guardian && (
-            <div className="guardian-strip">
-              <span className="guardian-shield">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2.5 4.5 5.5v6c0 4.4 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5.1 7.5-9.5v-6z" />
-                  <path d="M9.2 11.8l2 2 3.6-3.8" />
-                </svg>
-              </span>
-              <b>{guardian.displayName}</b>
-              <small>{guardian.maxHp} HP · ATK {guardian.attack}</small>
+          <div className="unit-main">
+            <div className="unit-name">
+              <b>{snap.name}</b>
+              <span>{cap(snap.season)} · Day {snap.day} · Lv {fmt(snap.level)}</span>
             </div>
-          )}
+            <div className="unit-exp"><span style={{ width: `${xpProgress(snap.xp)}%` }} /></div>
+            <div className="unit-bars">
+              <div className="bar hp"><span style={{ width: '100%' }} /><b><IconHeart /> {fmt(maxHp)}/{fmt(maxHp)}</b></div>
+              <div className="bar mp"><span style={{ width: '100%' }} /><b><IconMana /> {fmt(maxMp)}/{fmt(maxMp)}</b></div>
+            </div>
+            {guardian && (
+              <div className="guardian-strip">
+                <span className="guardian-shield">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2.5 4.5 5.5v6c0 4.4 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5.1 7.5-9.5v-6z" />
+                    <path d="M9.2 11.8l2 2 3.6-3.8" />
+                  </svg>
+                </span>
+                <b>{guardian.displayName}</b>
+                <small>{fmt(guardian.maxHp)} HP · ATK {fmt(guardian.attack)}</small>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="quicknav">
-        <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
-        <button className="navbtn" onClick={() => onOpen('barn')}>🐄 Barn</button>
-        <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
-        <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
-      </div>
+        <div className="quicknav">
+          <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
+          <button className="navbtn" onClick={() => onOpen('barn')}>🐄 Barn</button>
+          <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
+          <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
+        </div>
       </div>
 
       {!usingHero && (
         <div className="hero-note">Placeholder farmer — build your hero in <b>Kingdom Heroes</b> and it appears here.</div>
       )}
 
-      {/* glossy Kingdom Heroes-style cluster: numbered gem tools arc around the
-          big action sphere, with pet/hand util circles. */}
+      {/* action cluster — attack-circle/skill-circle markup + arc positions
+          copied AS IS from Kingdom Heroes. Slot meaning is farm-specific:
+          3 numbered tools (Till/Plant/Water), Sleep + Mount as the two util
+          orbs, and the big attack-circle applies the selected tool. */}
       <div className="cluster">
-        <button type="button" className="ctl util pet" title="Sleep" onClick={onSleep}>😴</button>
-        <button type="button" className="ctl util hand" title="Use tool" onClick={onUse}>✋</button>
-        {TOOLS.map((t, i) => (
-          <button key={t.id} type="button" title={t.label}
-            className={'ctl gem g' + (i + 1) + (snap.tool === t.id ? ' active' : '')}
-            onClick={() => game.setTool(t.id)}>
-            <span className="spark">{t.icon}</span>
-            <span className="badge">{i + 1}</span>
-          </button>
-        ))}
-        <button type="button" className="ctl attack" onClick={onUse} title="Use tool">
-          <span className="spark">{TOOLS.find((t) => t.id === snap.tool)?.icon || '⤵'}</span>
+        <div className="small-ring">
+          {TOOLS.map((t, i) => (
+            <button key={t.id} type="button" title={t.label}
+              className={'skill-circle' + (snap.tool === t.id ? ' active' : '')}
+              onClick={() => game.setTool(t.id)}>
+              <span>{t.icon}</span><span className="slot">{i + 1}</span>
+            </button>
+          ))}
+          <button type="button" className="skill-circle util" onClick={onSleep} title="sleep">😴</button>
+          <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
+        </div>
+        <button type="button" className="attack-circle" onClick={onUse} aria-label="use tool">
+          {TOOLS.find((t) => t.id === snap.tool)?.icon || '⤵'}
         </button>
       </div>
 
       {showSettings && (
         <div className="browser-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}>
           <div className="settings">
-            <div className="browser-head"><b>Settings</b><button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
+            <div className="browser-head"><b>Settings</b>
+              <button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
             <div className="settings-body">
               <section>
-                <h4>Camera zoom</h4>
+                <h4>Camera</h4>
                 <div className="setrow">
+                  <label>zoom</label>
                   <input type="range" min="0.6" max="3" step="0.1" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
                   <span>{zoom.toFixed(1)}×</span>
                 </div>

@@ -50,7 +50,7 @@ export default function FarmRoom({ profile, hero }) {
       setUsingHero(heroOk);
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk,
-        player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
+        player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
         held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1,
       };
       const unsub = logic.subscribe(setSnap);
@@ -80,6 +80,13 @@ export default function FarmRoom({ profile, hero }) {
     logicRef.current.actionAt(tx, ty);
   }
   function doSleep() { logicRef.current?.sleep(); }
+  // Mount toggle — copied AS IS from Kingdom Heroes' toggleMount(): a silent
+  // no-op when no mount is equipped, exactly matching Kingdom's own behavior
+  // (the util button is never hidden/disabled, it just does nothing).
+  function toggleMount() {
+    const g = G.current; if (!g) return;
+    g.player.mounted = !g.player.mounted && !!g.resources?.mount;
+  }
 
   // ---------- keyboard ----------
   useEffect(() => {
@@ -89,6 +96,7 @@ export default function FarmRoom({ profile, hero }) {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (DIR_BY_KEY[k]) { g.held.add(k); e.preventDefault(); }
       else if (k === ' ' || k === 'e') { doUse(); e.preventDefault(); }
+      else if (k === 'r') toggleMount();
       else if (k === '1') logicRef.current.setTool('hoe');
       else if (k === '2') logicRef.current.setTool('seed');
       else if (k === '3') logicRef.current.setTool('can');
@@ -138,7 +146,8 @@ export default function FarmRoom({ profile, hero }) {
     }
     function step(now) {
       const g = G.current; if (!g) return; const p = g.player;
-      if (p.moveT < 1) p.moveT = Math.min(1, (now - p.moveStart) / WALK_MS);
+      // mounted moves faster — copied AS IS from Kingdom Heroes (WALK_MS * 0.6).
+      if (p.moveT < 1) p.moveT = Math.min(1, (now - p.moveStart) / (p.mounted ? WALK_MS * 0.6 : WALK_MS));
       else if (!p.oneShot) {
         const dir = heldDirection(g);
         if (dir) {
@@ -163,6 +172,10 @@ export default function FarmRoom({ profile, hero }) {
 
     function playerMotion(g) {
       const p = g.player;
+      // mount check copied AS IS from Kingdom Heroes' playerMotion(): the
+      // compositor only draws the mount layer for a motion literally named
+      // 'Riding'+facing (Motion.tbl decides the draw order per motion).
+      if (p.mounted && g.resources?.mount) return 'Riding' + p.facing;
       const w = g.hasWeapon;
       if (p.moveT < 1) return (w ? 'WeaponWalk' : 'NormalWalk') + p.facing;
       return (w ? 'WeaponStandBy' : 'NormalStandBy') + p.facing;
@@ -222,9 +235,13 @@ export default function FarmRoom({ profile, hero }) {
       ctx.strokeRect(ftx * TILE + 2, fty * TILE + 2, TILE - 4, TILE - 4);
 
       // the farmer's foot point = tile center-bottom; shadow + sprite share it.
+      // Widened when mounted (a horse+rider silhouette is much broader than a
+      // standing farmer) — the shadow itself has no Kingdom equivalent to copy.
       const footX = ppx + TILE / 2, footY = ppy + TILE - 5;
       ctx.fillStyle = 'rgba(0,0,0,0.24)';
-      ctx.beginPath(); ctx.ellipse(footX, footY, 16, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(footX, footY, p.mounted ? 26 : 16, p.mounted ? 8 : 6, 0, 0, Math.PI * 2);
+      ctx.fill();
 
       const headTop = drawPlayer(g, ctx, now, footX, footY);
 
@@ -267,7 +284,7 @@ export default function FarmRoom({ profile, hero }) {
         <div className="stick-zone" ref={stickRef} />
         {snap && (
           <>
-            <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onOpen={setPanel}
+            <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
               zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
