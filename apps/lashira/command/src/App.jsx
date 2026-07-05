@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CROPS, MAPS, LIVESTOCK, PROGRESSION, FARMS, ASSETS, QUESTS, CONFIG } from './data.js';
 import { WorldMap } from './WorldMap.jsx';
-import { PLAYABLE_MAPS, STARDEW_PROTOTYPE_MATERIALS } from '../../shared/world-materials.js';
-import { sheetForMaterialId, sheetUrl } from '../../shared/stardew-atlas.js';
+import { PLAYABLE_MAPS } from '../../shared/world-materials.js';
+import {
+  STARDEW_ASSET_CATALOG,
+  STARDEW_CATALOG_META,
+  STARDEW_CATALOG_SECTIONS,
+} from '../../shared/stardew-catalog.js';
 
 // Optional Supabase client for the admin gate (reuses the ArgantaLab project).
 const url = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -281,30 +285,58 @@ function Players() {
 }
 
 function Assets() {
+  const recoveredSheets = STARDEW_ASSET_CATALOG.filter((asset) => asset.localSheet).length;
+  const worldMaterials = STARDEW_ASSET_CATALOG.filter((asset) => asset.runtimeRole === 'world-material').length;
+  const entityMaterials = STARDEW_ASSET_CATALOG.filter((asset) => asset.runtimeRole === 'entity-material').length;
+  const characterReferences = STARDEW_ASSET_CATALOG.filter((asset) => asset.runtimeRole === 'reference-only-character').length;
+
   return (
-    <Card title="PixelLab assets" icon="🎨" right={<span className="muted sm">240 credits</span>}>
+    <Card title="PixelLab assets" icon="🎨" right={<span className="muted sm">{STARDEW_CATALOG_META.total} Stardew sources</span>}>
       {ASSETS.map((a) => (
         <div className="lrow" key={a.kind}>
           <div className="lgrow"><b>{a.kind}</b><small>{a.done}/{a.total}</small></div>
           <div style={{ width: 160 }}><Bar pct={Math.round((a.done / a.total) * 100)} tone={a.done ? 'accent' : 'warn'} /></div>
         </div>
       ))}
-      <p className="muted sm">Prototype source: Spriters Resource Stardew Valley sheets. Production path: regenerate these exact material keys through PixelLab.</p>
+      <p className="muted sm">Source catalogue is now complete for PixelLab recreation. Character sheets are reference-only; the playable controller stays Kingdom Heroes.</p>
+      <div className="catalog-summary">
+        <div><b>{STARDEW_CATALOG_META.total}</b><small>catalogued</small></div>
+        <div><b>{STARDEW_CATALOG_META.cachedIcons}</b><small>local previews</small></div>
+        <div><b>{recoveredSheets}</b><small>runtime sheets</small></div>
+        <div><b>{worldMaterials}</b><small>world materials</small></div>
+        <div><b>{entityMaterials}</b><small>entity materials</small></div>
+        <div><b>{characterReferences}</b><small>character refs</small></div>
+      </div>
       <div className="asset-section">
-        <h4>Scraped material catalog</h4>
-        <div className="material-grid">
-          {STARDEW_PROTOTYPE_MATERIALS.map((m) => {
-            const sheet = sheetForMaterialId(m.id);
-            return (
-              <a className="material-card" key={m.id} href={m.pageUrl} target="_blank" rel="noreferrer">
-                {sheet ? <img className="material-thumb" src={sheetUrl(sheet.key)} alt="" /> : <span className="material-swatch" />}
-                <b>{m.title}</b>
-                <small>{m.dimensions} · {m.fileSize}</small>
-                <span>{sheet ? 'local sheet loaded' : 'cataloged, pending scrape'} · {m.materialKeys.slice(0, 2).join(' · ')}</span>
-              </a>
-            );
-          })}
-        </div>
+        <h4>Stardew source catalogue</h4>
+        <p className="muted sm">Every entry links back to its Spriters Resource sheet. Local previews are cached in the app; full sheets remain PixelLab source references unless already recovered as runtime sheets.</p>
+        {STARDEW_CATALOG_SECTIONS.map(({ section, assets }) => (
+          <div className="catalog-group" key={section}>
+            <div className="catalog-heading">
+              <h5>{section}</h5>
+              <span>{assets.length} assets</span>
+            </div>
+            <div className="material-grid catalog-grid">
+              {assets.map((asset) => (
+                <a
+                  className={'material-card catalog-card' + (asset.localSheet ? ' is-sheet' : '') + (asset.runtimeRole.includes('character') ? ' is-reference' : '')}
+                  key={asset.id}
+                  href={asset.pageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img className="material-thumb" src={asset.localIcon} alt="" />
+                  <b>{asset.title}</b>
+                  <small>#{asset.id} · {asset.runtimeRole.replace(/-/g, ' ')}</small>
+                  <span className="material-note">{asset.localSheet ? 'runtime sheet recovered' : 'catalog preview cached'}</span>
+                  <span className="material-tags">
+                    {asset.materialTags.slice(0, 3).map((tag) => <em key={tag}>{tag}</em>)}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
       <div className="asset-section">
         <h4>Playable map targets</h4>

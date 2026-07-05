@@ -1,9 +1,10 @@
 // HUD — the unit-frame (HP/MP card), settings popup, and action cluster are
 // copied AS IS from Kingdom Heroes (apps/kingdom/web/src/room/TestRoom.jsx):
 // same TierIcon crest, same IconHeart/IconMana bars, same glass settings popup,
-// same skill-circle/attack-circle cluster + slot badges. Farm-specific pieces
-// (tool selection, resource chips, quick-nav) have no Kingdom equivalent and
-// are Lashira's own, laid out so they don't collide with the copied pieces.
+// same skill-circle/attack-circle cluster + slot badges. Polished to be CLEAN:
+// only the card (crest/name/HP/MP) shows persistently — no resource chips.
+// MP bar IS the farm's real energy/stamina meter (one number, not two).
+// Diamonds (the only currency) and the guardian companion live in Settings.
 import { useState } from 'react';
 import { computeRank } from '../net/hero.js';
 import TierIcon from '../components/TierIcon.jsx';
@@ -22,27 +23,21 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
   const [showSettings, setShowSettings] = useState(false);
   const rank = computeRank(snap.xp);
   const maxHp = Number(hero?.stats?.maxHp || 100);
-  const maxMp = Number(hero?.stats?.maxMp || 40);
   const guardian = hero?.guardian;
+  const energyPct = Math.max(0, Math.min(100, (snap.stamina / Math.max(1, snap.maxStamina)) * 100));
 
   return (
     <>
       {snap.toast && <div className="toasts"><div className="toast">{snap.toast}</div></div>}
 
-      {/* top bar — gear copied AS IS from Kingdom; resource chips are Lashira's own */}
+      {/* top bar — the gear is the ONLY persistent chrome besides the card */}
       <div className="hud-top">
-        <div className="top-right">
-          <div className="res-strip">
-            <span className="res">🌸 {snap.bloom}</span>
-            <span className="res">⚡ {snap.stamina}/{snap.maxStamina}</span>
-            <span className="res lock" title="Diamonds come from learning">💎 {snap.diamonds}</span>
-          </div>
-          <button type="button" className="hud-gear" onClick={() => setShowSettings(true)}>⚙</button>
-        </div>
+        <button type="button" className="hud-gear" onClick={() => setShowSettings(true)}>⚙</button>
       </div>
 
       {/* unit-frame + quick nav, stacked top-left. unit-frame markup is the
-          exact Kingdom Heroes shape (TierIcon crest + IconHeart/IconMana bars). */}
+          exact Kingdom Heroes shape (TierIcon crest + IconHeart/IconMana bars).
+          MP bar shows the real farm energy/stamina — one meter, not two. */}
       <div className="left-stack">
         <div className="unit-frame">
           <div className="unit-rank" title={rank.name}>
@@ -56,28 +51,16 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             <div className="unit-exp"><span style={{ width: `${xpProgress(snap.xp)}%` }} /></div>
             <div className="unit-bars">
               <div className="bar hp"><span style={{ width: '100%' }} /><b><IconHeart /> {fmt(maxHp)}/{fmt(maxHp)}</b></div>
-              <div className="bar mp"><span style={{ width: '100%' }} /><b><IconMana /> {fmt(maxMp)}/{fmt(maxMp)}</b></div>
+              <div className="bar mp"><span style={{ width: `${energyPct}%` }} /><b><IconMana /> {fmt(snap.stamina)}/{fmt(snap.maxStamina)}</b></div>
             </div>
-            {guardian && (
-              <div className="guardian-strip">
-                <span className="guardian-shield">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2.5 4.5 5.5v6c0 4.4 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5.1 7.5-9.5v-6z" />
-                    <path d="M9.2 11.8l2 2 3.6-3.8" />
-                  </svg>
-                </span>
-                <b>{guardian.displayName}</b>
-                <small>{fmt(guardian.maxHp)} HP · ATK {fmt(guardian.attack)}</small>
-              </div>
-            )}
           </div>
         </div>
 
         <div className="quicknav">
-          <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
-          <button className="navbtn" onClick={() => onOpen('barn')}>🐄 Barn</button>
-          <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
           <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
+          <button className="navbtn" onClick={() => onOpen('barn')}>🐄 Barn</button>
+          <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
+          <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
         </div>
       </div>
 
@@ -112,6 +95,21 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             <div className="browser-head"><b>Settings</b>
               <button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
             <div className="settings-body">
+              <section>
+                <h4>Diamonds</h4>
+                <div className="setrow diamond-row">
+                  <span className="diamond-count">💎 {fmt(snap.diamonds)}</span>
+                </div>
+              </section>
+              {guardian && (
+                <section>
+                  <h4>Guardian</h4>
+                  <div className="setrow">
+                    <label>🛡</label>
+                    <span>{guardian.displayName} — {fmt(guardian.maxHp)} HP · ATK {fmt(guardian.attack)}</span>
+                  </div>
+                </section>
+              )}
               <section>
                 <h4>Camera</h4>
                 <div className="setrow">

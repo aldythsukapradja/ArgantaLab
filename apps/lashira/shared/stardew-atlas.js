@@ -32,16 +32,16 @@ export async function loadStardewSheets(keys = Object.keys(STARDW_SHEETS)) {
 
 export const STARDW_FRAMES = {
   terrain: {
-    grass: { sheet: 'outdoorsFall', x: 0, y: 88, w: 112, h: 80, tile: 16 },
-    meadow: { sheet: 'grass', x: 0, y: 0, w: 64, h: 224, tile: 16 },
-    dirt: { sheet: 'outdoorsFall', x: 0, y: 306, w: 128, h: 96, tile: 16 },
-    path: { sheet: 'outdoorsFall', x: 108, y: 330, w: 96, h: 80, tile: 16 },
-    cobble: { sheet: 'outdoorsFall', x: 138, y: 640, w: 112, h: 80, tile: 16 },
-    water: { sheet: 'outdoorsFall', x: 0, y: 835, w: 112, h: 80, tile: 16 },
-    shore: { sheet: 'outdoorsFall', x: 470, y: 965, w: 128, h: 96, tile: 16 },
-    mineFloor: { sheet: 'mines', x: 0, y: 0, w: 160, h: 160, tile: 16 },
-    rock: { sheet: 'outdoorsFall', x: 445, y: 0, w: 128, h: 96, tile: 16 },
-    tilled: { sheet: 'outdoorsFall', x: 0, y: 235, w: 96, h: 80, tile: 16 },
+    grass: { sheet: 'outdoorsFall', x: 52, y: 100, w: 8, h: 8, tile: 8 },
+    meadow: { sheet: 'outdoorsFall', x: 16, y: 100, w: 8, h: 8, tile: 8 },
+    dirt: { sheet: 'outdoorsFall', x: 52, y: 116, w: 8, h: 8, tile: 8 },
+    path: { sheet: 'outdoorsFall', x: 52, y: 116, w: 8, h: 8, tile: 8 },
+    cobble: { sheet: 'outdoorsFall', x: 36, y: 292, w: 8, h: 8, tile: 8 },
+    water: { sheet: 'outdoorsFall', x: 72, y: 840, w: 8, h: 8, tile: 8 },
+    shore: { sheet: 'outdoorsFall', x: 52, y: 100, w: 8, h: 8, tile: 8 },
+    mineFloor: { sheet: 'outdoorsFall', x: 36, y: 292, w: 8, h: 8, tile: 8 },
+    rock: { sheet: 'outdoorsFall', x: 36, y: 292, w: 8, h: 8, tile: 8 },
+    tilled: { sheet: 'outdoorsFall', x: 116, y: 292, w: 8, h: 8, tile: 8 },
   },
   props: {
     treeOrange: { sheet: 'outdoorsFall', x: 0, y: 0, w: 48, h: 90 },
@@ -115,6 +115,6 @@ export function drawStardewTile(ctx, sheets, frame, dx, dy, size, vx = 0, vy = 0
   const index = Math.abs((vx * 29 + vy * 47 + vx * vy * 7) % count);
   const sx = frame.x + (index % cols) * unit;
   const sy = frame.y + Math.floor(index / cols) * unit;
-  ctx.drawImage(img, sx, sy, unit, unit, Math.round(dx), Math.round(dy), Math.round(size), Math.round(size));
+  ctx.drawImage(img, sx, sy, unit, unit, Math.round(dx), Math.round(dy), Math.round(size) + 1, Math.round(size) + 1);
   return true;
 }

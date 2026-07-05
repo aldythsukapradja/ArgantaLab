@@ -20,7 +20,12 @@ export class FarmLogic {
   _default() {
     return {
       day: 1, season: 0,
-      bloom: 120,
+      // Diamonds is the ONE currency (no separate farm currency). Local mutable
+      // copies seeded from the real profile so selling/buying feels instant;
+      // NOT yet synced back to Supabase — that's a follow-up RPC, same honest
+      // scaffolding pattern as the rest of this build.
+      diamonds: this.profile?.diamonds ?? 0,
+      xp: this.profile?.xp ?? 0,
       stamina: 40, maxStamina: 40,
       tool: 'hoe', selectedSeed: 'turnip',
       seeds: { turnip: 3, potato: 0, carrot: 0 },
@@ -40,15 +45,15 @@ export class FarmLogic {
   snapshot() {
     const st = this.state;
     return {
-      day: st.day, season: SEASONS[st.season], bloom: st.bloom,
+      day: st.day, season: SEASONS[st.season],
       stamina: st.stamina, maxStamina: st.maxStamina,
       tool: st.tool, selectedSeed: st.selectedSeed,
       seeds: { ...st.seeds }, produce: { ...st.produce },
       livestock: st.livestock.map((a) => ({ ...a })),
       kins: st.kins.map((k) => ({ ...k })),
-      diamonds: this.profile?.diamonds ?? 0,
-      level: this.profile?.level ?? 1,
-      xp: this.profile?.xp ?? 0,
+      diamonds: st.diamonds,
+      xp: st.xp,
+      level: 1 + Math.floor(Math.max(0, st.xp) / 500), // mirrors argantalab_level_from_xp
       role: this.profile?.role ?? 'user',
       name: this.profile?.displayName ?? 'Farmer',
       guest: !!this.profile?.guest,
@@ -105,12 +110,18 @@ export class FarmLogic {
     }
   }
 
+  // Buying always costs Diamonds — for kids this ties farm progress directly to
+  // real learning (their diamonds only ever come from finishing World rings).
   buySeed(id, qty = 1) {
     const crop = CROPS[id]; const cost = crop.seedCost * qty;
-    if (this.state.bloom < cost) { this.flash('Not enough Bloom'); return; }
-    this.state.bloom -= cost; this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
+    if (this.state.diamonds < cost) { this.flash('Not enough 💎 Diamonds'); return; }
+    this.state.diamonds -= cost; this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
     this.flash('Bought ' + qty + '× ' + crop.name + ' seed'); this.save(); this.emit();
   }
+  // Selling rewards differ by role: adults earn Diamonds directly from playing
+  // (normal adult platform rule); kids earn XP instead (mirrors "kids level by
+  // doing, not by earning currency" — applied to farming instead of combat),
+  // never Diamonds, so the kid diamond-from-learning-only rule stays intact.
   sellAll() {
     let gain = 0, any = false;
     for (const [id, n] of Object.entries(this.state.produce)) {
@@ -118,8 +129,11 @@ export class FarmLogic {
       gain += (CROPS[id]?.sell ?? this._animalSell(id)) * n;
     }
     if (!any) { this.flash('Nothing to sell'); return; }
-    this.state.produce = {}; this.state.bloom += gain;
-    this.flash('Sold for ' + gain + ' 🌸'); this.save(); this.emit();
+    this.state.produce = {};
+    const isKid = this.profile?.role === 'kid';
+    if (isKid) { this.state.xp += gain; this.flash('Sold — +' + gain + ' XP'); }
+    else { this.state.diamonds += gain; this.flash('Sold for ' + gain + ' 💎'); }
+    this.save(); this.emit();
   }
   _animalSell(pid) { for (const sp of Object.values(SPECIES)) if (sp.produce === pid) return sp.sell; return 10; }
 

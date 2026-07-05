@@ -135,11 +135,7 @@ body {
 }
 .abtn.primary { background: var(--grad); color: #fff; }
 .abtn.big { padding: 16px 22px; font-size: 17px; }
-.navbtns { display: flex; gap: 6px; }
-.navbtn {
-  border: none; border-radius: 12px; padding: 9px 12px; font-weight: 700; font-size: 13px;
-  cursor: pointer; background: rgba(255,255,255,.92); color: var(--ink); box-shadow: 0 3px 10px rgba(0,0,0,.16);
-}
+.navbtns { display: flex; gap: 6px; } /* unused (Panels-era leftover) */
 
 /* toast */
 .toast {
@@ -225,17 +221,13 @@ body {
 }
 @media (min-width: 900px) and (pointer: fine) { .stick-zone { display: none; } }
 
-/* top bar — Kingdom's gear (copied verbatim) + Lashira's own resource chips
-   (no Kingdom equivalent: Bloom/energy/diamonds are farm-only concepts). */
+/* top bar — Kingdom's gear (copied verbatim). Clean HUD: the gear is the ONLY
+   persistent chrome besides the unit-frame card — no resource chips. Diamonds
+   (the only currency) and the guardian companion live inside the gear popup. */
 .hud-top {
   position: absolute; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px));
-  display: flex; align-items: center; gap: 10px; pointer-events: none; z-index: 8;
+  display: flex; align-items: center; justify-content: flex-end; pointer-events: none; z-index: 8;
 }
-.top-right { display: flex; align-items: center; gap: 8px; margin-left: auto; pointer-events: auto; }
-.res-strip { display: flex; gap: 6px; }
-.res { background: rgba(20,22,40,.72); border: 1px solid rgba(255,255,255,.14); color: #fff; font-weight: 700; font-size: 12.5px; padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(6px); }
-.res.lock { opacity: .9; }
-@media (max-width: 560px) { .res { font-size: 11px; padding: 5px 8px; } }
 .hud-gear {
   pointer-events: auto; width: 44px; height: 44px; border-radius: 50%;
   background: var(--glass-bg-thick); color: #2a3346;
@@ -247,8 +239,30 @@ body {
 }
 .hud-gear:active { transform: scale(0.92); }
 
-.left-stack { position: absolute; top: 52px; left: 12px; z-index: 11; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.quicknav { display: flex; gap: 6px; flex-wrap: wrap; }
+/* card sits flush at the true top, same row as the gear — the only two things
+   on screen besides the joystick and action cluster. The quicknav pill row is
+   width-locked to the card (stretch) and shares its exact glass theme. */
+.left-stack {
+  position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 12px; z-index: 11;
+  width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+}
+.quicknav {
+  display: flex; gap: 2px; padding: 4px; border-radius: 16px; corner-shape: superellipse(1.8);
+  color: var(--text-strong); background: var(--glass-bg);
+  backdrop-filter: var(--glass-regular); -webkit-backdrop-filter: var(--glass-regular);
+  border: none; box-shadow: var(--glass-rim), var(--glass-shadow);
+}
+.navbtn {
+  flex: 1; min-width: 0; pointer-events: auto; border: none; border-radius: 12px;
+  padding: 8px 6px; font-weight: 700; font-size: 12px; cursor: pointer;
+  background: transparent; color: #141a28;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background 0.15s ease, transform 0.18s var(--spring);
+}
+.navbtn:hover { background: rgba(0,0,0,.06); }
+.navbtn:active { transform: scale(0.94); }
+@media (max-width: 380px) { .navbtn { font-size: 11px; padding: 8px 4px; } }
 
 .toasts { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .toast { background: rgba(15,17,32,.92); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
@@ -256,7 +270,7 @@ body {
 /* ================= unit-frame + HP/MP bars — copied verbatim from Kingdom
    Heroes' "premium arena HUD (frosted white-grey glass)" block ================= */
 .unit-frame {
-  width: min(300px, calc(100vw - 32px));
+  width: 100%; /* .left-stack owns the shared width so the pill row aligns to it */
   display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center;
   padding: 9px 11px; border-radius: 18px; corner-shape: superellipse(1.8);
   color: var(--text-strong); background: var(--glass-bg);
@@ -307,11 +321,6 @@ body {
   text-shadow: 0 1px 3px #000, 0 0 3px #000c;
 }
 .bar b svg { width: 9px; height: 9px; filter: drop-shadow(0 1px 2px #000a); opacity: 0.95; }
-/* guardian strip — Lashira-only addition, no Kingdom unit-frame equivalent */
-.guardian-strip { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 8px; border-radius: 9px; background: rgba(16,77,66,.55); }
-.guardian-strip b { font-size: 12px; color: #fff; }
-.guardian-strip small { font-size: 10.5px; color: #a9d8c9; margin-left: auto; }
-.guardian-shield { font-size: 13px; }
 
 .hero-note { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); z-index: 9; max-width: min(360px, 82vw); text-align: center; font-size: 12px; color: #e7e9ff; background: rgba(139,92,246,.32); border: 1px solid rgba(139,92,246,.5); padding: 8px 14px; border-radius: 12px; backdrop-filter: blur(6px); }
 .hero-note b { color: #fff; }
@@ -373,9 +382,6 @@ body {
 
 @media (min-width: 900px) and (pointer: fine) { .cluster { transform: scale(0.86); transform-origin: bottom right; } }
 
-.navbtn { pointer-events: auto; border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 8px 11px; font-weight: 700; font-size: 12.5px; cursor: pointer; background: rgba(20,22,40,.72); color: #fff; backdrop-filter: blur(6px); }
-@media (max-width: 720px) { .navbtn { padding: 7px 9px; font-size: 11.5px; } }
-
 /* ================= settings popup — copied verbatim from Kingdom Heroes'
    "premium frosted white-grey glass popup with a springy pop-in" ================= */
 .browser-backdrop {
@@ -402,6 +408,8 @@ body {
 .settings-body section { margin-top: 14px; }
 .settings-body h4 { margin: 0 0 7px; color: #6a4df5; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 .setrow { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.diamond-row { padding: 2px 0 6px; }
+.diamond-count { font-size: 22px; font-weight: 800; color: #141a28; letter-spacing: -.01em; }
 .setrow label { width: 62px; color: #5c6478; font-size: 12.5px; font-weight: 600; }
 .setrow input[type="range"] { flex: 1; accent-color: #6a4df5; }
 .settings-empty { color: var(--muted, #6d7288); font-size: 12.5px; margin: 4px 0; }

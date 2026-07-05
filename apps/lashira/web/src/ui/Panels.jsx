@@ -34,7 +34,7 @@ function Shop({ snap, game, onClose }) {
   const produceCount = Object.values(snap.produce).reduce((a, b) => a + b, 0);
   return (
     <>
-      <Head title="🛒 Sprout's Shop" sub={`You have 🌸 ${snap.bloom} Bloom`} onClose={onClose} />
+      <Head title="🛒 Sprout's Shop" sub={`You have 💎 ${snap.diamonds} Diamonds`} onClose={onClose} />
       {Object.values(CROPS).map((c) => {
         const locked = c.ring && kid; // learning-gated seeds locked for kids offline
         return (
@@ -43,16 +43,16 @@ function Shop({ snap, game, onClose }) {
             <div className="grow">
               <div className="name">{c.name} seed</div>
               <div className="meta">
-                {c.days} days · sells 🌸{c.sell}
+                {c.days} days · sells for 💎{c.sell}{kid ? ' (as XP for you)' : ''}
                 {locked ? ' · 🔒 finish a learning ring to unlock' : ''}
               </div>
             </div>
             <button
               className="rbtn"
-              disabled={locked || snap.bloom < c.seedCost}
+              disabled={locked || snap.diamonds < c.seedCost}
               onClick={() => game.buySeed(c.id, 1)}
             >
-              Buy 🌸{c.seedCost}
+              Buy 💎{c.seedCost}
             </button>
           </div>
         );
@@ -61,7 +61,7 @@ function Shop({ snap, game, onClose }) {
         <div className="ico">📦</div>
         <div className="grow">
           <div className="name">Sell all produce</div>
-          <div className="meta">{produceCount} item(s) in your bin</div>
+          <div className="meta">{produceCount} item(s) in your bin{kid ? ' · pays out as XP' : ' · pays out as Diamonds'}</div>
         </div>
         <button className="rbtn ghost" disabled={produceCount === 0} onClick={() => game.sellAll()}>Sell all</button>
       </div>
@@ -133,15 +133,15 @@ function Home({ snap, game, onClose }) {
       <Head title="🏡 Farmhouse" sub={`${snap.name}'s home`} onClose={onClose} />
       <div className="row"><div className="ico">🏠</div><div className="grow">
         <div className="name">Stage: Cottage</div>
-        <div className="meta">Upgrades unlock with 🌸 Bloom + your circle's learning rings (coming soon)</div>
+        <div className="meta">Upgrades unlock with 💎 Diamonds + your circle's learning rings (coming soon)</div>
       </div></div>
       <div className="row"><div className="ico">⭐</div><div className="grow">
         <div className="name">Level {snap.level}</div>
-        <div className="meta">{snap.role === 'kid' ? 'Learn the 6 Worlds to level up and move faster' : 'Play to gain XP and level up — faster tools, more energy'}</div>
+        <div className="meta">{snap.role === 'kid' ? 'Learn the 6 Worlds or sell produce to gain XP and level up' : 'Play to gain diamonds and level up — faster tools, more energy'}</div>
       </div></div>
       <div className="row"><div className="ico">💎</div><div className="grow">
         <div className="name">{snap.diamonds} Diamonds</div>
-        <div className="meta">Cosmetics only · earned by learning{snap.guest ? ' (sign in to sync)' : ''}</div>
+        <div className="meta">The only currency · spend on seeds, earn by {snap.role === 'kid' ? 'learning' : 'selling produce'}{snap.guest ? ' (sign in to sync)' : ''}</div>
       </div></div>
       <div className="row" style={{ borderStyle: 'dashed' }}><div className="ico">🌙</div><div className="grow">
         <div className="name">End the day</div>
