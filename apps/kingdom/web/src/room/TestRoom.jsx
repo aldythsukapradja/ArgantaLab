@@ -6,6 +6,8 @@
 // bottom-right, ⚙ settings popup for spawns/skills/zoom.
 import { useEffect, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
+import TierIcon from '../components/TierIcon.jsx';
+import { RANK_TIERS, rankTierIndex } from '../net/account.js';
 import * as data from '../engine/data.js';
 import { loadJson, loadImage } from '../engine/data.js';
 import { resolveStep, paintStep, stepCount } from '../engine/compositor.js';
@@ -61,6 +63,52 @@ function tileOccupied(g, tile, opts = {}) {
 
 function uid(prefix = 'id') {
   return `${prefix}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 9)}`;
+}
+
+// ---- canvas badge images (rank crest + guardian shield) ----
+// The DOM HUD uses <TierIcon>; canvas nameplates can't, so we rasterize the same
+// crest to an <img> once per tier and drawImage it on the nameplate. Same for
+// the guardian shield. Cached at module scope so it's built once.
+function shadeHex(hex, pct) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, Math.max(0, (n >> 16) + Math.round(255 * pct)));
+  const g = Math.min(255, Math.max(0, ((n >> 8) & 255) + Math.round(255 * pct)));
+  const b = Math.min(255, Math.max(0, (n & 255) + Math.round(255 * pct)));
+  return `rgb(${r},${g},${b})`;
+}
+function svgImage(svg) {
+  const img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  return img;
+}
+const CREST_CACHE = [];
+function crestImage(tierIndex) {
+  const i = Math.max(0, Math.min(RANK_TIERS.length - 1, tierIndex | 0));
+  if (CREST_CACHE[i]) return CREST_CACHE[i];
+  const t = RANK_TIERS[i];
+  const light = shadeHex(t.color, 0.2), dark = shadeHex(t.color, -0.28);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">` +
+    `<defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${light}"/><stop offset="1" stop-color="${dark}"/></linearGradient>` +
+    `<radialGradient id="b" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="${t.color}" stop-opacity="0.28"/><stop offset="1" stop-color="${t.color}" stop-opacity="0"/></radialGradient></defs>` +
+    `<circle cx="28" cy="28" r="26" fill="url(#b)"/>` +
+    `<path d="M28 5 L47 15 V33 L28 51 L9 33 V15 Z" fill="url(#a)" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>` +
+    `<path d="M28 5 L47 15 L28 27 L9 15 Z" fill="#ffffff" opacity="0.22"/>` +
+    `<text x="28" y="35" text-anchor="middle" font-size="20" font-weight="800" fill="#ffffff" font-family="system-ui,sans-serif">${t.glyph}</text>` +
+    `<ellipse cx="20" cy="16" rx="5" ry="2.6" fill="#ffffff" opacity="0.55" transform="rotate(-24 20 16)"/></svg>`;
+  CREST_CACHE[i] = svgImage(svg);
+  return CREST_CACHE[i];
+}
+let SHIELD_IMG = null;
+function shieldImage() {
+  if (SHIELD_IMG) return SHIELD_IMG;
+  SHIELD_IMG = svgImage(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">` +
+    `<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fd0a6"/><stop offset="1" stop-color="#1f8863"/></linearGradient></defs>` +
+    `<path d="M12 2 4 5v6c0 4.6 3.3 8.5 8 9.8 4.7-1.3 8-5.2 8-9.8V5z" fill="url(#s)" stroke="#ffffff" stroke-width="1.4" stroke-linejoin="round"/>` +
+    `<path d="M8.6 11.8l2.3 2.3 4-4.2" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  );
+  return SHIELD_IMG;
 }
 
 export default function TestRoom({ spec, account, onPlayerState }) {
@@ -706,15 +754,22 @@ export default function TestRoom({ spec, account, onPlayerState }) {
   function drawNameplate(ctx, ent, [px, py], isMe) {
     const name = isMe ? ent.name : ent.meta?.name || '…';
     const rank = isMe ? ent.rank : ent.meta?.rank;
-    const badge = rank?.glyph || ((isMe ? ent.accountType : ent.meta?.accountType) === 'kid' ? 'K' : '*');
+    const cx = px + TILE / 2;
+    const crest = crestImage(rankTierIndex(rank));
+    const iconSz = 14, padX = 5, gap = 3;
     ctx.font = '9px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    const label = `${badge} ${name}`;
-    const w = ctx.measureText(label).width + 8;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(name).width;
+    const boxW = padX + iconSz + gap + tw + padX;
+    const boxX = cx - boxW / 2, boxY = py - 80;
     ctx.fillStyle = isMe ? '#1d9d55cc' : '#000a';
-    ctx.fillRect(px + TILE / 2 - w / 2, py - 78, w, 12);
+    ctx.fillRect(boxX, boxY, boxW, 16);
+    if (crest.complete && crest.naturalWidth) ctx.drawImage(crest, boxX + padX, boxY + 1, iconSz, iconSz);
     ctx.fillStyle = '#fff';
-    ctx.fillText(label, px + TILE / 2, py - 69);
+    ctx.fillText(name, boxX + padX + iconSz + gap, boxY + 8.5);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
     const hp = ent.hp ?? 100;
     if (hp < (ent.maxHp ?? 100)) {
       ctx.fillStyle = '#000a';
@@ -789,14 +844,22 @@ export default function TestRoom({ spec, account, onPlayerState }) {
     ctx.drawImage(m.sheet, fm.x + fm.fx, fm.y + fm.fy, fm.w, fm.h, ax, ay, fm.w, fm.h);
     ctx.globalAlpha = 1;
     if (m.friendly) {
-      const label = `G ${m.name}`;
+      const cx = px + TILE / 2;
+      const shield = shieldImage();
+      const iconSz = 12, padX = 5, gap = 3;
       ctx.font = '9px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      const w = ctx.measureText(label).width + 8;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(m.name).width;
+      const boxW = padX + iconSz + gap + tw + padX;
+      const boxX = cx - boxW / 2, boxY = py - 40;
       ctx.fillStyle = '#104d42cc';
-      ctx.fillRect(px + TILE / 2 - w / 2, py - 38, w, 12);
+      ctx.fillRect(boxX, boxY, boxW, 15);
+      if (shield.complete && shield.naturalWidth) ctx.drawImage(shield, boxX + padX, boxY + 1.5, iconSz, iconSz);
       ctx.fillStyle = '#fff';
-      ctx.fillText(label, px + TILE / 2, py - 29);
+      ctx.fillText(m.name, boxX + padX + iconSz + gap, boxY + 8);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
     }
     if (m.state !== 'die' && m.hp < m.maxHp) {
       ctx.fillStyle = '#000a';
@@ -911,7 +974,9 @@ export default function TestRoom({ spec, account, onPlayerState }) {
         </div>
 
         <div className="unit-frame">
-          <div className="unit-rank" style={{ '--rank': rank.color }}>{rank.glyph}</div>
+          <div className="unit-rank" title={rank.name}>
+            <TierIcon color={rank.color} glyph={rank.glyph} size={46} />
+          </div>
           <div className="unit-main">
             <div className="unit-name">
               <b>{heroName}</b>
@@ -924,7 +989,12 @@ export default function TestRoom({ spec, account, onPlayerState }) {
             </div>
             {account?.guardian && (
               <div className="guardian-strip">
-                <span>G</span>
+                <span className="guardian-shield" title="Guardian">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2.5 4.5 5.5v6c0 4.4 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5.1 7.5-9.5v-6z" />
+                    <path d="M9.2 11.8l2 2 3.6-3.8" />
+                  </svg>
+                </span>
                 <b>{account.guardian.displayName}</b>
                 <small>{fmt(account.guardian.maxHp)} HP · ATK {fmt(account.guardian.attack)}</small>
               </div>
@@ -1009,7 +1079,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
                 <h4>Camera</h4>
                 <div className="setrow">
                   <label>zoom</label>
-                  <input type="range" min="1" max="3" step="0.2" value={zoom}
+                  <input type="range" min="0.5" max="3" step="0.1" value={zoom}
                     onChange={(e) => setZoom(Number(e.target.value))} />
                   <span>{zoom.toFixed(1)}×</span>
                 </div>

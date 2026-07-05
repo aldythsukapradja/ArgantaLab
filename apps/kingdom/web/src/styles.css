@@ -314,10 +314,13 @@ body {
 /* The host TopBar (~58px, holds the Home button) floats over the arena's top
    edge. Lift the in-arena HUD below it — otherwise the ⚙ (the ONLY way to
    spawn monsters, see friends, and tune skills/camera) hides under the host
-   bar, and the player panel tucks awkwardly beneath it. */
-.arena-only .hud-top { top: calc(60px + env(safe-area-inset-top, 0px)); }
-.arena-only .unit-frame,
-.arena-only .arena-presence { top: calc(110px + env(safe-area-inset-top, 0px)); }
+   bar. The player panel sits on the SAME row as the gear (narrowed so it
+   clears the ⚙ on the right). */
+.arena-only .hud-top,
+.arena-only .unit-frame { top: calc(60px + env(safe-area-inset-top, 0px)); }
+.arena-only .unit-frame { width: min(340px, calc(100vw - 92px)); }
+/* friends panel (desktop only) drops below the gear row so they don't collide */
+.arena-only .arena-presence { top: calc(112px + env(safe-area-inset-top, 0px)); }
 .room-canvas { position: relative; flex: 1; overflow: hidden; background: #0a0a0c; }
 .room-canvas canvas { display: block; width: 100%; height: 100%; outline: none; }
 
@@ -1063,18 +1066,15 @@ body {
   box-shadow: 0 14px 40px #0008, inset 0 1px 0 #ffffff33;
   pointer-events: none;
 }
+/* holds the faceted TierIcon crest — self-contained SVG, no box needed */
 .unit-rank {
   width: 48px;
   height: 48px;
-  border-radius: 16px;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 30% 20%, #fff7, transparent 34%), var(--rank, #f0a83a);
-  color: #241703;
-  font-weight: 1000;
-  font-size: 24px;
-  box-shadow: inset 0 -5px 14px #0004, 0 5px 14px #0005;
+  filter: drop-shadow(0 4px 10px #0007);
 }
+.unit-rank svg { width: 46px; height: 46px; }
 .unit-main { min-width: 0; }
 .unit-name {
   display: flex;
@@ -1092,28 +1092,53 @@ body {
   gap: 7px;
   margin-top: 8px;
 }
+/* Premium RPG stat bars: deep inset glass track, glossy fill with a top
+   highlight and a slow shimmer sweep, rounded caps, crisp label. */
 .bar {
   position: relative;
-  height: 17px;
+  height: 20px;
   border-radius: 999px;
   overflow: hidden;
-  background: #0008;
-  border: 1px solid #ffffff24;
+  background: linear-gradient(180deg, #05070d, #141824);
+  border: 1px solid #ffffff26;
+  box-shadow: inset 0 2px 5px #000a, inset 0 -1px 0 #ffffff12, 0 1px 0 #ffffff0f;
 }
 .bar span {
+  position: relative;
   display: block;
   height: 100%;
   border-radius: inherit;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 0 #ffffff66, inset 0 -3px 7px #00000059;
 }
-.bar.hp span { background: linear-gradient(90deg, #d92f2f, #ff8b52); }
-.bar.mp span { background: linear-gradient(90deg, #2365e8, #5ad6ff); }
+/* gloss on the top half of the fill */
+.bar span::before {
+  content: '';
+  position: absolute; left: 1px; right: 1px; top: 1px; height: 45%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff59, #ffffff00);
+}
+/* slow shimmer sweep */
+.bar span::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 34%, #ffffff33 48%, transparent 62%);
+  transform: translateX(-70%);
+  animation: bar-shimmer 3.2s ease-in-out infinite;
+}
+@keyframes bar-shimmer { to { transform: translateX(180%); } }
+.bar.hp span { background: linear-gradient(90deg, #b21818, #ef4444 46%, #ff9d5c); }
+.bar.mp span { background: linear-gradient(90deg, #1b40e0, #3b82f6 46%, #6fe6f9); }
 .bar b {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 9.5px;
-  text-shadow: 0 1px 4px #000;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 3px #0009;
 }
 .guardian-strip {
   margin-top: 8px;
@@ -1123,15 +1148,15 @@ body {
   color: #ffffffd8;
   font-size: 11.5px;
 }
-.guardian-strip span {
-  width: 18px;
-  height: 18px;
+.guardian-strip .guardian-shield {
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
   border-radius: 7px;
-  background: #2f9e7d;
-  color: #fff;
-  font-weight: 900;
+  background: linear-gradient(180deg, #38b48f, #218a68);
+  box-shadow: inset 0 1px 0 #ffffff55, 0 2px 5px #0006;
+  flex: none;
 }
 .guardian-strip small { color: #ffffffa8; }
 .arena-presence {

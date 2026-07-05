@@ -75,7 +75,9 @@ export const currentUser = async () => (await supabase.auth.getUser()).data.user
 // shows the learner's real rank glyph instead of always falling back to Spark's
 // '*'. Kept as a small local copy rather than a cross-app import — same tier
 // thresholds, so a rank here always matches what ArgantaLab itself shows.
-const RANK_TIERS = [
+// Mirrors ArgantaLab's rank ladder (apps/web/src/lib/rank.ts) — same tier
+// thresholds, so the arena crest always matches what ArgantaLab itself shows.
+export const RANK_TIERS = [
   { name: 'Spark', color: '#f0a83a', glyph: '✦', at: 0 },
   { name: 'Explorer', color: '#5ec257', glyph: '❖', at: 5000 },
   { name: 'Adventurer', color: '#37a8c4', glyph: '✧', at: 15000 },
@@ -83,12 +85,22 @@ const RANK_TIERS = [
   { name: 'Sage', color: '#d9a520', glyph: '★', at: 85000 },
   { name: 'Luminary', color: '#d4476b', glyph: '✷', at: 160000 },
 ];
-function computeRank(xp) {
+export function computeRank(xp) {
   const p = Math.max(0, Number(xp) || 0);
   let idx = 0;
   for (let i = 0; i < RANK_TIERS.length; i++) if (p >= RANK_TIERS[i].at) idx = i;
   const t = RANK_TIERS[idx];
-  return { glyph: t.glyph, name: t.name, color: t.color };
+  return { index: idx, glyph: t.glyph, name: t.name, color: t.color };
+}
+// Resolve a rank object (which may be an old backend letter-grade, or already a
+// tier) back to a tier index so the crest cache can look it up.
+export function rankTierIndex(rank) {
+  if (!rank) return 0;
+  if (Number.isInteger(rank.index)) return rank.index;
+  const byName = RANK_TIERS.findIndex((t) => t.name === rank.name);
+  if (byName >= 0) return byName;
+  const byGlyph = RANK_TIERS.findIndex((t) => t.glyph === rank.glyph);
+  return byGlyph >= 0 ? byGlyph : 0;
 }
 
 function snakeProfile(profile = {}) {
@@ -101,7 +113,9 @@ function snakeProfile(profile = {}) {
     xp,
     level: Number(profile.level ?? 1),
     role: profile.role ?? 'user',
-    rank: profile.rank ?? computeRank(xp),
+    // Always the ArgantaLab learning tier from XP — overrides any backend
+    // letter-grade ("E", "D", …) so the arena shows the on-brand rank crest.
+    rank: computeRank(xp),
   };
 }
 
