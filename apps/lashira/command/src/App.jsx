@@ -138,13 +138,17 @@ export default function App() {
         </div>
       </main>
 
-      {/* mobile bottom tab bar (no drawer on phones) */}
-      <nav className="mobilebar">
-        {GROUPS.map((g) => (
-          <button key={g.id} className={'mtab' + (group.id === g.id ? ' on' : '')} onClick={() => pickGroup(g)}>
-            <span className="mi">{g.icon}</span><span>{g.label}</span>
-          </button>
-        ))}
+      {/* mobile bottom dock (no drawer on phones) — mirrors ArgantaLab's
+          floating pill dock: Dock.tsx / .dock, .dock-row, .dock-item, .dock-ic */}
+      <nav className="dock">
+        <div className="dock-row">
+          {GROUPS.map((g) => (
+            <button key={g.id} className={'dock-item' + (group.id === g.id ? ' on' : '')} onClick={() => pickGroup(g)} aria-current={group.id === g.id ? 'page' : undefined}>
+              <span className="dock-ic">{g.icon}</span>
+              <span>{g.label}</span>
+            </button>
+          ))}
+        </div>
       </nav>
     </div>
   );

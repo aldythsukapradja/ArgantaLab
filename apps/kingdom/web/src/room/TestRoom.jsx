@@ -1035,18 +1035,6 @@ export default function TestRoom({ spec, account, onPlayerState }) {
               <div className="bar hp"><span style={{ width: `${Math.max(0, Math.min(100, (hudState.hp / Math.max(1, hudState.maxHp)) * 100))}%` }} /><b><IconHeart /> {fmt(hudState.hp)}/{fmt(hudState.maxHp)}</b></div>
               <div className="bar mp"><span style={{ width: `${Math.max(0, Math.min(100, (hudState.mp / Math.max(1, hudState.maxMp)) * 100))}%` }} /><b><IconMana /> {fmt(hudState.mp)}/{fmt(hudState.maxMp)}</b></div>
             </div>
-            {account?.guardian && (
-              <div className="guardian-strip">
-                <span className="guardian-shield" title="Guardian">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2.5 4.5 5.5v6c0 4.4 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5.1 7.5-9.5v-6z" />
-                    <path d="M9.2 11.8l2 2 3.6-3.8" />
-                  </svg>
-                </span>
-                <b>{account.guardian.displayName}</b>
-                <small>{fmt(account.guardian.maxHp)} HP · ATK {fmt(account.guardian.attack)}</small>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1118,6 +1106,11 @@ export default function TestRoom({ spec, account, onPlayerState }) {
                   <label>{account?.guardian?.displayName || 'None'}</label>
                   <button onClick={spawnGuardian} disabled={!account?.guardian}>Spawn guardian</button>
                 </div>
+                {account?.guardian && (
+                  <div className="setrow guardian-stats">
+                    <small>{fmt(account.guardian.maxHp)} HP · ATK {fmt(account.guardian.attack)}</small>
+                  </div>
+                )}
               </section>
               <section>
                 <h4>Skill slots</h4>
