@@ -90,16 +90,22 @@ export function Hud({ snap, game, onUse, onSleep, onOpen, zoom, setZoom, usingHe
         <div className="hero-note">Placeholder farmer — build your hero in <b>Kingdom Heroes</b> and it appears here.</div>
       )}
 
+      {/* glossy Kingdom Heroes-style cluster: numbered gem tools arc around the
+          big action sphere, with pet/hand util circles. */}
       <div className="cluster">
-        <div className="small-ring">
-          {TOOLS.map((t) => (
-            <button key={t.id} type="button" title={t.label}
-              className={'skill-circle' + (snap.tool === t.id ? ' active' : '')}
-              onClick={() => game.setTool(t.id)}>{t.icon}<small>{t.label}</small></button>
-          ))}
-          <button type="button" className="skill-circle util" title="Sleep" onClick={onSleep}>😴<small>sleep</small></button>
-        </div>
-        <button type="button" className="attack-circle" onClick={onUse} title="Use tool">⤵</button>
+        <button type="button" className="ctl util pet" title="Sleep" onClick={onSleep}>😴</button>
+        <button type="button" className="ctl util hand" title="Use tool" onClick={onUse}>✋</button>
+        {TOOLS.map((t, i) => (
+          <button key={t.id} type="button" title={t.label}
+            className={'ctl gem g' + (i + 1) + (snap.tool === t.id ? ' active' : '')}
+            onClick={() => game.setTool(t.id)}>
+            <span className="spark">{t.icon}</span>
+            <span className="badge">{i + 1}</span>
+          </button>
+        ))}
+        <button type="button" className="ctl attack" onClick={onUse} title="Use tool">
+          <span className="spark">{TOOLS.find((t) => t.id === snap.tool)?.icon || '⤵'}</span>
+        </button>
       </div>
 
       {showSettings && (

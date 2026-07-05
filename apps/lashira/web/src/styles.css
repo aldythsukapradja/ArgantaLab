@@ -244,24 +244,43 @@ body {
 .hero-note { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); z-index: 9; max-width: min(360px, 82vw); text-align: center; font-size: 12px; color: #e7e9ff; background: rgba(139,92,246,.32); border: 1px solid rgba(139,92,246,.5); padding: 8px 14px; border-radius: 12px; backdrop-filter: blur(6px); }
 .hero-note b { color: #fff; }
 
-/* action cluster */
-.cluster { position: absolute; right: 16px; bottom: 20px; z-index: 10; display: flex; align-items: flex-end; gap: 10px; }
-.small-ring { display: grid; grid-template-columns: repeat(2, auto); gap: 8px; }
-.skill-circle {
-  width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
-  background: radial-gradient(circle at 35% 30%, #8b6cf0, #5a3fbf); color: #fff; font-size: 20px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; gap: 1px;
-  box-shadow: 0 6px 16px rgba(60,40,140,.4);
-}
-.skill-circle small { font-size: 8.5px; font-weight: 700; opacity: .9; }
-.skill-circle.active { background: radial-gradient(circle at 35% 30%, #f0b45a, #d8792c); box-shadow: 0 0 0 3px rgba(240,168,58,.35), 0 6px 16px rgba(160,90,20,.5); }
-.skill-circle.util { background: radial-gradient(circle at 35% 30%, #5b6a86, #38435c); }
-.attack-circle {
-  width: 96px; height: 96px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3);
-  background: radial-gradient(circle at 38% 30%, #f0894a, #c0451f); color: #fff; font-size: 36px; cursor: pointer;
-  box-shadow: 0 8px 22px rgba(160,60,20,.5); display: flex; align-items: center; justify-content: center;
-}
-.attack-circle:active { transform: scale(.96); }
+/* glossy Kingdom Heroes-style action cluster (fan of gems + big sphere) */
+.cluster { position: absolute; right: 12px; bottom: 14px; width: 240px; height: 230px; z-index: 10; pointer-events: none; }
+.ctl { position: absolute; pointer-events: auto; border: 0; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
+.ctl .spark { position: relative; z-index: 2; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+.ctl::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255,255,255,.5); filter: blur(1.6px); pointer-events: none; }
+.ctl:active { transform: scale(.94); }
+
+.ctl.gem { width: 58px; height: 58px; font-size: 22px;
+  background: radial-gradient(circle at 34% 26%, #c8b6f9 0%, #8b6cf0 42%, #5a3fbf 100%);
+  box-shadow: 0 6px 14px rgba(50,30,120,.5), inset 0 3px 6px rgba(255,255,255,.55), inset 0 -8px 12px rgba(30,10,80,.55);
+  border: 1px solid rgba(255,255,255,.4); }
+.ctl.gem::after { top: 8px; left: 14px; width: 22px; height: 12px; }
+.ctl.gem.active {
+  background: radial-gradient(circle at 34% 26%, #ffdca6 0%, #f0a83a 45%, #c67d1e 100%);
+  box-shadow: 0 0 0 3px rgba(240,168,58,.55), 0 6px 14px rgba(160,90,20,.5), inset 0 3px 6px rgba(255,255,255,.6), inset 0 -8px 12px rgba(120,60,10,.55); }
+.ctl .badge { position: absolute; top: -3px; right: -3px; width: 20px; height: 20px; border-radius: 50%; background: #241c3a; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,.55); box-shadow: 0 2px 4px rgba(0,0,0,.35); z-index: 3; }
+
+.ctl.util { width: 52px; height: 52px; font-size: 20px;
+  background: radial-gradient(circle at 34% 26%, #9aa6c2 0%, #5b6a86 45%, #38435c 100%);
+  box-shadow: 0 5px 12px rgba(20,30,60,.5), inset 0 3px 6px rgba(255,255,255,.45), inset 0 -6px 10px rgba(10,20,40,.5);
+  border: 1px solid rgba(255,255,255,.35); }
+.ctl.util::after { top: 7px; left: 12px; width: 20px; height: 11px; }
+
+.ctl.attack { width: 88px; height: 88px; font-size: 34px;
+  background: radial-gradient(circle at 36% 26%, #ffc79f 0%, #f0894a 42%, #c0451f 100%);
+  box-shadow: 0 8px 20px rgba(150,55,20,.55), inset 0 4px 8px rgba(255,255,255,.55), inset 0 -10px 14px rgba(110,30,10,.55);
+  border: 1px solid rgba(255,255,255,.45); }
+.ctl.attack::after { top: 12px; left: 22px; width: 30px; height: 15px; }
+
+/* fan positions (bottom-right anchored, mirrors the Heroes controller) */
+.ctl.attack { right: 4px; bottom: 4px; }
+.ctl.g1 { right: 92px; bottom: 10px; }
+.ctl.g2 { right: 122px; bottom: 66px; }
+.ctl.g3 { right: 68px; bottom: 108px; }
+.ctl.pet { right: 150px; bottom: 132px; }
+.ctl.hand { right: 16px; bottom: 106px; }
+@media (max-width: 720px) { .cluster { transform: scale(.88); transform-origin: bottom right; } }
 
 .navbtn { pointer-events: auto; border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 8px 11px; font-weight: 700; font-size: 12.5px; cursor: pointer; background: rgba(20,22,40,.72); color: #fff; backdrop-filter: blur(6px); }
 @media (max-width: 720px) { .navbtn { padding: 7px 9px; font-size: 11.5px; } }

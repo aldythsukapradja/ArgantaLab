@@ -144,6 +144,12 @@ const IconSpark = () => (
     <path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6z" />
   </svg>
 );
+const IconFriends = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+    <path d="M16 5.2a3.2 3.2 0 0 1 0 5.6" /><path d="M17.5 14.4A5.5 5.5 0 0 1 20.5 19" />
+  </svg>
+);
 
 export default function TestRoom({ spec, account, onPlayerState }) {
   const wrapRef = useRef(null);
@@ -1044,8 +1050,9 @@ export default function TestRoom({ spec, account, onPlayerState }) {
           </div>
         </div>
 
-        <div className="arena-presence">
+        <div className="arena-presence" role="button" tabIndex={0} onClick={() => setShowSettings(true)}>
           <div className="ap-head">
+            <span className="ap-ico"><IconFriends /></span>
             <b>Friends online</b>
             <span className="ap-count">{onlineFriends.filter((f) => f.status !== 'offline').length}</span>
           </div>

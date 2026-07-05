@@ -9,18 +9,22 @@ const anon = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 const supabase = url && anon ? createClient(url, anon, { auth: { storageKey: 'bloomcmd-auth' } }) : null;
 const ADMIN_EMAILS = ['aldhyt.sukapradja@gmail.com'];
 
-const NAV = [
-  { id: 'overview', label: 'Overview', icon: '🏠' },
-  { id: 'world', label: 'World & Maps', icon: '🗺' },
-  { id: 'entities', label: 'Entities & Content', icon: '🌱' },
-  { id: 'progression', label: 'Progression', icon: '⭐' },
-  { id: 'economy', label: 'Economy & Rewards', icon: '🌸' },
-  { id: 'quests', label: 'Quests & Narrative', icon: '📜' },
-  { id: 'players', label: 'Players & Farms', icon: '👥' },
-  { id: 'assets', label: 'PixelLab Assets', icon: '🎨' },
-  { id: 'config', label: 'Config', icon: '⚙' },
-  { id: 'game', label: 'Game (embed)', icon: '🎮' },
+// The 9 sections consolidate into 5 top-level groups; groups with >1 section get
+// a secondary sub-tab bar. Desktop shows a collapsible drawer; mobile shows a
+// bottom tab bar (no drawer).
+const GROUPS = [
+  { id: 'overview', label: 'Overview', icon: '🏠', sections: [{ id: 'overview', label: 'Overview' }] },
+  { id: 'world', label: 'World', icon: '🗺', sections: [{ id: 'world', label: 'World map' }] },
+  { id: 'content', label: 'Content', icon: '🌱', sections: [
+    { id: 'entities', label: 'Entities' }, { id: 'progression', label: 'Progression' },
+    { id: 'economy', label: 'Economy' }, { id: 'quests', label: 'Quests' },
+  ] },
+  { id: 'ops', label: 'Ops', icon: '👥', sections: [
+    { id: 'players', label: 'Players & Farms' }, { id: 'assets', label: 'PixelLab' }, { id: 'config', label: 'Config' },
+  ] },
+  { id: 'game', label: 'Game', icon: '🎮', sections: [{ id: 'game', label: 'Game' }] },
 ];
+const groupOf = (sectionId) => GROUPS.find((g) => g.sections.some((s) => s.id === sectionId)) || GROUPS[0];
 
 const GAME_URL = (import.meta.env.VITE_LASHIRA_GAME_URL || 'http://localhost:5185') + '/?embed=command';
 
@@ -61,6 +65,7 @@ function GameEmbed() {
 export default function App() {
   const [view, setView] = useState('overview');
   const [user, setUser] = useState(null);
+  const [drawer, setDrawer] = useState(true); // desktop drawer open
 
   useEffect(() => {
     if (!supabase) return;
@@ -70,18 +75,21 @@ export default function App() {
   }, []);
 
   const isAdmin = user && ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+  const group = groupOf(view);
+  const pickGroup = (g) => setView(g.sections[0].id);
+  const bleed = view === 'world';
 
   return (
-    <div className="app">
+    <div className={'app' + (drawer ? '' : ' collapsed') + (bleed ? ' bleedmode' : '')}>
       <aside className="sidebar">
         <div className="brand">
           <div className="mark"><i /></div>
           <div><div className="btitle">Bloom Command</div><div className="bsub">LashiraBloom · ops</div></div>
         </div>
         <nav>
-          {NAV.map((n) => (
-            <button key={n.id} className={'navitem' + (view === n.id ? ' on' : '')} onClick={() => setView(n.id)}>
-              <span className="ni">{n.icon}</span>{n.label}
+          {GROUPS.map((g) => (
+            <button key={g.id} className={'navitem' + (group.id === g.id ? ' on' : '')} onClick={() => pickGroup(g)} title={g.label}>
+              <span className="ni">{g.icon}</span><span className="nl">{g.label}</span>
             </button>
           ))}
         </nav>
@@ -90,7 +98,15 @@ export default function App() {
 
       <main className="main">
         <header className="topbar">
-          <div className="crumb">{NAV.find((n) => n.id === view)?.label}</div>
+          <button className="drawer-toggle" onClick={() => setDrawer((d) => !d)} title="Toggle menu" aria-label="Toggle menu">☰</button>
+          <div className="crumb">{group.label}</div>
+          {group.sections.length > 1 && (
+            <div className="subtabs">
+              {group.sections.map((s) => (
+                <button key={s.id} className={'subtab' + (view === s.id ? ' on' : '')} onClick={() => setView(s.id)}>{s.label}</button>
+              ))}
+            </div>
+          )}
           <div className="who">
             {supabase ? (
               user ? (
@@ -108,7 +124,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className={'content' + (view === 'world' ? ' bleed' : '')}>
+        <div className={'content' + (bleed ? ' bleed' : '')}>
           {view === 'overview' && <Overview />}
           {view === 'world' && <World />}
           {view === 'entities' && <Entities canEdit={isAdmin} />}
@@ -121,6 +137,15 @@ export default function App() {
           {view === 'game' && <GameEmbed />}
         </div>
       </main>
+
+      {/* mobile bottom tab bar (no drawer on phones) */}
+      <nav className="mobilebar">
+        {GROUPS.map((g) => (
+          <button key={g.id} className={'mtab' + (group.id === g.id ? ' on' : '')} onClick={() => pickGroup(g)}>
+            <span className="mi">{g.icon}</span><span>{g.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

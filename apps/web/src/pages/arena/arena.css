@@ -145,14 +145,15 @@
   pointer-events: none;
 }
 .arena-toast {
-  background: linear-gradient(180deg, #1b2233f2, #0e1220f2);
-  border: 1px solid #ffffff33; color: #fff;
-  padding: 7px 16px; border-radius: 999px; font-size: 13px; font-weight: 700;
-  box-shadow: 0 8px 24px #0009, inset 0 1px 0 #ffffff26;
-  text-shadow: 0 1px 3px #000a;
-  animation: arena-toast-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: var(--glass-bg-thick);
+  backdrop-filter: var(--glass-thin);
+  -webkit-backdrop-filter: var(--glass-thin);
+  border: none; color: var(--text-strong);
+  padding: 8px 17px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  box-shadow: var(--glass-rim), var(--glass-shadow);
+  animation: arena-toast-in 0.4s var(--spring);
 }
-@keyframes arena-toast-in { from { transform: translateY(12px) scale(0.92); opacity: 0; } }
+@keyframes arena-toast-in { from { transform: translateY(14px) scale(0.9); opacity: 0; } }
 
 /* ---------- part browser popup ---------- */
 .browser-backdrop {
@@ -319,7 +320,28 @@
 .dsw.on { border-color: var(--text); }
 
 /* ---------- fullscreen arena + RPG HUD ---------- */
-.room-full { position: fixed; inset: 0; top: 49px; display: flex; }
+.room-full {
+  position: fixed; inset: 0; top: 49px; display: flex;
+  /* ---- Liquid Glass design tokens (Apple iOS 26 language) ---- */
+  --font-apple: -apple-system, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
+  --glass-thin: blur(18px) saturate(180%);
+  --glass-regular: blur(30px) saturate(180%);
+  --glass-thick: blur(50px) saturate(180%);
+  --glass-bg: rgba(250, 250, 253, 0.62);
+  --glass-bg-thick: rgba(248, 249, 252, 0.82);
+  /* specular rim + hairline edge + bottom refraction — the "lensing" look */
+  --glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.92), inset 0 0 0 0.6px rgba(255, 255, 255, 0.5), inset 0 -7px 14px rgba(120, 140, 180, 0.13);
+  /* layered adaptive shadow: tight ambient + soft key */
+  --glass-shadow: 0 1px 2px rgba(10, 14, 26, 0.06), 0 12px 40px -8px rgba(10, 14, 26, 0.24);
+  --glass-shadow-lg: 0 2px 6px rgba(10, 14, 26, 0.08), 0 30px 72px -16px rgba(10, 14, 26, 0.42);
+  /* physics-based spring easing (approximates SwiftUI spring 0.55/0.8) */
+  --spring: linear(0, 0.06, 0.24, 0.51, 0.79, 0.98, 1.09, 1.12, 1.1, 1.05, 1, 0.985, 0.995, 1);
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --r-panel: 24px;
+  --text-strong: #10141f;
+  --text-muted: #5c6478;
+  font-family: var(--font-apple);
+}
 /* ArgantaLab embed (arenaOnly): no standalone header, so the arena is truly
    fullscreen from the very top. z-index sits in the host's immersive-game tier
    so it covers ArgantaLab's topbar/dock (like the KinQuest/battle overlays).
@@ -354,12 +376,14 @@
 .hud-gear {
   margin-left: auto; pointer-events: auto;
   width: 44px; height: 44px; border-radius: 50%;
-  border: 1.5px solid #ffffff66; background: #000000cc; color: #fff;
-  font-size: 20px; line-height: 1; cursor: pointer;
+  background: var(--glass-bg-thick); color: #2a3346;
+  backdrop-filter: var(--glass-thin); -webkit-backdrop-filter: var(--glass-thin);
+  border: none; box-shadow: var(--glass-rim), var(--glass-shadow);
+  font-size: 19px; line-height: 1; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 14px #0008;
+  transition: transform 0.18s var(--spring), box-shadow 0.15s ease;
 }
-.hud-gear:active { transform: scale(0.94); }
+.hud-gear:active { transform: scale(0.92); }
 
 /* nipplejs joystick zone: touch anywhere in the lower-left to steer. The zone
    is invisible; nipplejs draws the base/knob under the thumb. Kept clear of the
@@ -388,16 +412,17 @@
 /* premium frosted white-grey glass popup with a springy pop-in */
 .settings {
   width: min(460px, 92vw); max-height: 84vh; overflow-y: auto;
-  color: #1c2333;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(231, 236, 246, 0.92));
-  backdrop-filter: blur(24px) saturate(1.5);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 22px;
-  box-shadow: 0 32px 80px -20px rgba(8, 12, 24, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  animation: settings-pop 0.28s cubic-bezier(0.34, 1.4, 0.5, 1);
+  color: var(--text-strong, #10141f);
+  background: var(--glass-bg-thick, rgba(248, 249, 252, 0.82));
+  backdrop-filter: var(--glass-thick, blur(50px) saturate(180%));
+  -webkit-backdrop-filter: var(--glass-thick, blur(50px) saturate(180%));
+  border: none;
+  border-radius: 28px;
+  corner-shape: superellipse(1.8);
+  box-shadow: var(--glass-rim), var(--glass-shadow-lg, 0 30px 72px -16px rgba(10, 14, 26, 0.42));
+  animation: settings-pop 0.44s var(--spring, cubic-bezier(0.34, 1.4, 0.5, 1));
 }
-@keyframes settings-pop { from { transform: translateY(16px) scale(0.94); opacity: 0; } }
+@keyframes settings-pop { from { transform: translateY(18px) scale(0.92); opacity: 0; } }
 .settings-body { padding: 6px 18px 18px; }
 .settings-body section { margin-top: 14px; }
 .settings-body h4 {
@@ -497,7 +522,7 @@
   position: absolute; border-radius: 50%; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   color: #fff; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-  transition: transform 0.09s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  transition: transform 0.18s var(--spring), box-shadow 0.15s ease, filter 0.15s ease;
   isolation: isolate;
 }
 .attack-circle svg, .skill-circle svg { filter: drop-shadow(0 2px 3px #0009); position: relative; z-index: 1; }
@@ -1107,14 +1132,15 @@
   display: grid;
   grid-template-columns: 48px 1fr;
   gap: 10px;
-  padding: 13px 14px;
-  border-radius: 20px;
-  color: #1c2333;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.9), rgba(228, 233, 243, 0.78));
-  backdrop-filter: blur(18px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 46px -10px rgba(8, 12, 24, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(150, 160, 185, 0.25);
+  padding: 13px 15px;
+  border-radius: var(--r-panel);
+  corner-shape: superellipse(1.8);
+  color: var(--text-strong);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-regular);
+  -webkit-backdrop-filter: var(--glass-regular);
+  border: none;
+  box-shadow: var(--glass-rim), var(--glass-shadow);
   pointer-events: none;
 }
 /* holds the faceted TierIcon crest — self-contained SVG, no box needed */
@@ -1234,22 +1260,25 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  color: #1c2333;
+  color: var(--text-strong);
   padding: 12px 13px;
-  border-radius: 18px;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.9), rgba(228, 233, 243, 0.78));
-  backdrop-filter: blur(18px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 46px -10px rgba(8, 12, 24, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  corner-shape: superellipse(1.8);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-regular);
+  -webkit-backdrop-filter: var(--glass-regular);
+  border: none;
+  box-shadow: var(--glass-rim), var(--glass-shadow);
   pointer-events: none;
 }
 .ap-head {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 6px;
   margin-bottom: 5px;
 }
+.ap-ico { display: inline-flex; color: #2f9d78; flex: none; }
 .ap-head b { font-size: 12px; font-weight: 800; letter-spacing: 0.01em; color: #141a28; }
 .ap-count {
+  margin-left: auto;
   min-width: 20px; height: 18px; padding: 0 6px; border-radius: 10px;
   display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff;
   background: linear-gradient(135deg, #2fb083, #1f8e6a);
@@ -1289,14 +1318,47 @@
   .sync-actions { justify-content: stretch; }
   .sync-actions button { flex: 1; }
   .path-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  /* Desktop-only keyboard hint (WASD/space/etc) — meaningless on touch and it
-     was crowding the settings gear button, which is the real controls to find. */
-  .hud-keys { display: none; }
   .hud-top { justify-content: flex-end; }
-  /* The floating friends panel has no room next to the player HUD on a phone
-     width — its content now lives in the settings (gear) modal instead, see
-     the "Friends online" section there. */
-  .arena-presence { display: none; }
+  /* Phone: the full friends list won't fit next to the wide player panel, so
+     collapse it to a compact tappable glass chip (people icon + online count)
+     below the gear. Tapping opens the full list in settings. */
+  .arena-presence {
+    flex-direction: row; align-items: center; gap: 5px;
+    width: auto; padding: 7px 9px; border-radius: 999px;
+    top: calc(112px + env(safe-area-inset-top, 0px)); right: 10px; left: auto;
+    pointer-events: auto; cursor: pointer; z-index: 8;
+    transition: transform 0.18s var(--spring);
+  }
+  .arena-only .arena-presence { top: calc(112px + env(safe-area-inset-top, 0px)); }
+  .arena-presence:active { transform: scale(0.94); }
+  .arena-presence .ap-head { margin-bottom: 0; gap: 5px; }
+  .arena-presence .ap-head b { display: none; }   /* icon + count only on phones */
+  .arena-presence .ap-count { margin-left: 0; }
+  .arena-presence .ap-row,
+  .arena-presence .ap-empty { display: none; }
+}
+
+/* ---- Accessibility (Apple HIG): honor system preferences ---- */
+@media (prefers-reduced-transparency: reduce) {
+  .unit-frame, .arena-presence, .settings, .arena-toast, .hud-gear {
+    background: #f1f3f8 !important;
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    box-shadow: 0 10px 34px rgba(10, 14, 26, 0.28), inset 0 0 0 1px rgba(10, 14, 26, 0.1) !important;
+  }
+}
+@media (prefers-contrast: more) {
+  .unit-frame, .arena-presence, .settings {
+    box-shadow: 0 12px 40px rgba(10, 14, 26, 0.4), inset 0 0 0 1.5px rgba(10, 14, 26, 0.6);
+    color: #05070d;
+  }
+  .unit-name span, .guardian-strip small, .ap-row small, .settings-friend-row small { color: #33384a; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings, .arena-toast, .attack-circle, .skill-circle, .hud-gear, .arena-presence,
+  .browser-backdrop, .bar span::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 
