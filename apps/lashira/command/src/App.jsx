@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { CROPS, MAPS, LIVESTOCK, PROGRESSION, FARMS, ASSETS, QUESTS, CONFIG } from './data.js';
 import { WorldMap } from './WorldMap.jsx';
 import { PLAYABLE_MAPS, STARDEW_PROTOTYPE_MATERIALS } from '../../shared/world-materials.js';
+import { sheetForMaterialId, sheetUrl } from '../../shared/stardew-atlas.js';
 
 // Optional Supabase client for the admin gate (reuses the ArgantaLab project).
 const url = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -292,14 +293,17 @@ function Assets() {
       <div className="asset-section">
         <h4>Scraped material catalog</h4>
         <div className="material-grid">
-          {STARDEW_PROTOTYPE_MATERIALS.map((m) => (
-            <a className="material-card" key={m.id} href={m.pageUrl} target="_blank" rel="noreferrer">
-              <span className="material-swatch" />
-              <b>{m.title}</b>
-              <small>{m.dimensions} · {m.fileSize}</small>
-              <span>{m.materialKeys.slice(0, 3).join(' · ')}</span>
-            </a>
-          ))}
+          {STARDEW_PROTOTYPE_MATERIALS.map((m) => {
+            const sheet = sheetForMaterialId(m.id);
+            return (
+              <a className="material-card" key={m.id} href={m.pageUrl} target="_blank" rel="noreferrer">
+                {sheet ? <img className="material-thumb" src={sheetUrl(sheet.key)} alt="" /> : <span className="material-swatch" />}
+                <b>{m.title}</b>
+                <small>{m.dimensions} · {m.fileSize}</small>
+                <span>{sheet ? 'local sheet loaded' : 'cataloged, pending scrape'} · {m.materialKeys.slice(0, 2).join(' · ')}</span>
+              </a>
+            );
+          })}
         </div>
       </div>
       <div className="asset-section">

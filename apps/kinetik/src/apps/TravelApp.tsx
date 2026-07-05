@@ -37,7 +37,7 @@ export default function TravelApp({ onClose }: { onClose: () => void }) {
   const [pack, setPack] = useState<PackItem[]>([])
   const [exp, setExp] = useState<TripExpense[]>([])
   const [vaultDocs, setVaultDocs] = useState<VaultDoc[]>([])
-  const [sheet, setSheet] = useState<null | 'trip' | 'act' | 'pack' | 'exp'>(null)
+  const [sheet, setSheet] = useState<null | 'trip' | 'act' | 'pack' | 'exp' | 'budget'>(null)
   const [toast, setToast] = useState<string | null>(null)
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 1800) }
 
@@ -88,7 +88,7 @@ export default function TravelApp({ onClose }: { onClose: () => void }) {
   const back = () => { if (openId) setOpenId(null); else onClose() }
 
   return (
-    <AppShell accent={ACCENT} emoji="✈️" title="Travel Planner" subtitle={trip?.title} onBack={back} tabs={trip ? TABS : undefined} tab={dtab} onTab={setDtab} toast={toast}>
+    <AppShell accent={ACCENT} emoji="✈️" title="Travel Planner" subtitle={trip?.title} onBack={back} tabs={trip ? TABS : undefined} tab={dtab} onTab={setDtab} toast={toast} hideTabs={sheet !== null}>
       {!trip ? (
         <>
           {trips === null && <><Skeleton h={150} /><Skeleton h={74} /><Skeleton h={74} /></>}
@@ -209,7 +209,20 @@ export default function TravelApp({ onClose }: { onClose: () => void }) {
 
           {dtab === 'budget' && (
             <>
-              <div className="kap-card"><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--faint)', fontSize: 13 }}>Spent</span><b style={{ fontSize: 20 }}>{money(spent)}</b></div></div>
+              <div className="kap-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--faint)', fontSize: 13 }}>Spent</span><b style={{ fontSize: 20 }}>{money(spent)}</b></div>
+                {trip.budget != null ? (
+                  <>
+                    <div className="kap-bar" style={{ marginTop: 10 }}><i style={{ width: `${Math.min(100, Math.round((spent / trip.budget) * 100))}%`, background: spent > trip.budget ? 'var(--warn)' : undefined }} /></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                      <button onClick={() => setSheet('budget')} style={{ fontSize: 12, color: 'var(--faint)' }}>Plan: {money(trip.budget)} · edit</button>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: spent > trip.budget ? 'var(--warn)' : 'var(--good)' }}>{spent > trip.budget ? `${money(spent - trip.budget)} over` : `${money(trip.budget - spent)} left`}</span>
+                    </div>
+                  </>
+                ) : (
+                  <button className="kap-btn ghost" style={{ marginTop: 10 }} onClick={() => setSheet('budget')}>📝 Plan a trip budget</button>
+                )}
+              </div>
               <div className="kap-sec"><h2>Expenses</h2></div>
               {exp.length === 0 && <div className="kap-empty"><span className="kap-empty-ic">💸</span><b>No expenses yet</b><p>Log what you spend on this trip.</p></div>}
               {exp.map(e => (
@@ -230,6 +243,7 @@ export default function TravelApp({ onClose }: { onClose: () => void }) {
       {sheet === 'act' && trip && <ActSheet onClose={() => setSheet(null)} onSave={async a => { try { await travel.addActivity(cid, trip.id, a); setSheet(null); loadDetail(trip.id) } catch (e) { flash(errMsg(e)) } }} />}
       {sheet === 'pack' && trip && <TextSheet title="Add packing item" placeholder="e.g. Sunscreen" onClose={() => setSheet(null)} onSave={async n => { try { await travel.addPack(cid, trip.id, [{ name: n }]); setSheet(null); loadDetail(trip.id) } catch (e) { flash(errMsg(e)) } }} />}
       {sheet === 'exp' && trip && <ExpSheet onClose={() => setSheet(null)} onSave={async e => { try { await travel.addExpense(cid, trip.id, e); setSheet(null); loadDetail(trip.id) } catch (er) { flash(errMsg(er)) } }} />}
+      {sheet === 'budget' && trip && <BudgetPlanSheet initial={trip.budget} onClose={() => setSheet(null)} onSave={async n => { try { await travel.updateTrip(trip.id, { budget: n }); setSheet(null); reloadTrips() } catch (e) { flash(errMsg(e)) } }} />}
     </AppShell>
   )
 }
@@ -278,6 +292,16 @@ function ExpSheet({ onClose, onSave }: { onClose: () => void; onSave: (e: Partia
       <div className="kap-lbl">Category</div>
       <div className="kap-choices">{CATS.map(([c, ic]) => <button key={c} className={`kap-choice${cat === c ? ' on' : ''}`} onClick={() => { setCat(c); setIcon(ic) }}>{ic} {c}</button>)}</div>
       <button className="kap-btn primary block" style={{ marginTop: 18 }} disabled={!amt} onClick={() => onSave({ name: name.trim() || null, amount: Number(amt) || 0, category: cat, icon })}>Log expense</button>
+    </Sheet>
+  )
+}
+
+function BudgetPlanSheet({ initial, onClose, onSave }: { initial: number | null; onClose: () => void; onSave: (n: number) => void }) {
+  const [v, setV] = useState(initial != null ? String(initial) : '')
+  return (
+    <Sheet title="Plan trip budget" sub="Your planned total spend for this trip — compared against what you actually log." onClose={onClose}>
+      <input className="kap-field" placeholder="Amount (QAR)" inputMode="decimal" value={v} onChange={e => setV(e.target.value)} autoFocus />
+      <button className="kap-btn primary block" style={{ marginTop: 18 }} disabled={!v} onClick={() => onSave(Number(v) || 0)}>Save budget</button>
     </Sheet>
   )
 }

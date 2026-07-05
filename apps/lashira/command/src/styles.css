@@ -187,9 +187,10 @@ nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .asset-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .asset-section h4 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
 .material-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
-.material-card { display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto auto; column-gap: 10px; row-gap: 2px; align-items: center; border: 1px solid var(--line); background: #fffdf7; border-radius: 8px; padding: 10px; color: var(--ink); text-decoration: none; }
+.material-card { display: grid; grid-template-columns: 52px 1fr; grid-template-rows: auto auto auto; column-gap: 10px; row-gap: 2px; align-items: center; border: 1px solid var(--line); background: #fffdf7; border-radius: 8px; padding: 10px; color: var(--ink); text-decoration: none; min-height: 72px; }
 .material-card:hover { border-color: #d8c59a; background: #fff8df; }
 .material-card b { font-size: 13px; }
 .material-card small, .material-card span:last-child { color: var(--muted); font-size: 11px; }
 .material-swatch { grid-row: 1 / span 3; width: 30px; height: 30px; image-rendering: pixelated; background: #7cc35a; box-shadow: inset 0 0 0 4px #9bd76c, 8px 8px 0 #c4985d, 16px 0 0 #6ea7cf; }
+.material-thumb { grid-row: 1 / span 3; width: 52px; height: 52px; object-fit: cover; object-position: top left; image-rendering: pixelated; background: #e0e0e0; border: 1px solid #d8c59a; }
 .tbl.compact td { vertical-align: top; font-size: 12.5px; }

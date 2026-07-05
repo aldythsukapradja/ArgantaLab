@@ -36,12 +36,13 @@ async function ok<T>(p: PromiseLike<{ data: T; error: unknown }>): Promise<T> {
 export interface Trip {
   id: string; title: string; emoji: string; destination: string | null
   startDate: string | null; endDate: string | null; status: string; travelers: string[]
+  budget: number | null
 }
 export interface Activity { id: string; tripId: string; dayDate: string | null; atTime: string | null; emoji: string; name: string; note: string | null; sort: number }
 export interface PackItem { id: string; tripId: string; category: string; name: string; person: string | null; checked: boolean }
 export interface TripExpense { id: string; tripId: string; category: string; name: string | null; icon: string; amount: number }
 
-const mapTrip = (r: any): Trip => ({ id: r.id, title: r.title, emoji: r.emoji || '✈️', destination: r.destination ?? null, startDate: r.start_date ?? null, endDate: r.end_date ?? null, status: r.status || 'planning', travelers: r.travelers ?? [] })
+const mapTrip = (r: any): Trip => ({ id: r.id, title: r.title, emoji: r.emoji || '✈️', destination: r.destination ?? null, startDate: r.start_date ?? null, endDate: r.end_date ?? null, status: r.status || 'planning', travelers: r.travelers ?? [], budget: r.budget != null ? Number(r.budget) : null })
 
 export const travel = {
   async trips(circleId: string): Promise<Trip[]> {
@@ -49,7 +50,7 @@ export const travel = {
     return rows<any>(d).map(mapTrip)
   },
   async createTrip(circleId: string, t: Partial<Trip>): Promise<Trip> {
-    const d = await ok(supabase.from('kinetik_trip').insert({ circle_id: circleId, title: t.title, emoji: t.emoji ?? '✈️', destination: t.destination ?? null, start_date: t.startDate ?? null, end_date: t.endDate ?? null, status: t.status ?? 'planning', travelers: t.travelers ?? [] }).select().single())
+    const d = await ok(supabase.from('kinetik_trip').insert({ circle_id: circleId, title: t.title, emoji: t.emoji ?? '✈️', destination: t.destination ?? null, start_date: t.startDate ?? null, end_date: t.endDate ?? null, status: t.status ?? 'planning', travelers: t.travelers ?? [], budget: t.budget ?? null }).select().single())
     return mapTrip(d)
   },
   async updateTrip(id: string, p: Partial<Trip>): Promise<void> {
@@ -61,6 +62,7 @@ export const travel = {
     if (p.endDate !== undefined) row.end_date = p.endDate
     if (p.status !== undefined) row.status = p.status
     if (p.travelers !== undefined) row.travelers = p.travelers
+    if (p.budget !== undefined) row.budget = p.budget
     await ok(supabase.from('kinetik_trip').update(row).eq('id', id).select())
   },
   async deleteTrip(id: string): Promise<void> { await ok(supabase.from('kinetik_trip').delete().eq('id', id).select()) },

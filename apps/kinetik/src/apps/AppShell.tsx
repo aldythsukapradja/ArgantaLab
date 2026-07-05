@@ -9,7 +9,7 @@ export interface AppTab { key: string; label: string; icon?: string }
 /** Full-screen chrome for a native KinetikCircle app — premium orb header
  *  (accent gradient), title + circle name, optional action slot, theme toggle,
  *  scroll body, optional tab bar, toast. Themed by the app's accent (--c0/--c1). */
-export default function AppShell({ accent, emoji, title, subtitle, onBack, action, tabs, tab, onTab, toast, children }: {
+export default function AppShell({ accent, emoji, title, subtitle, onBack, action, tabs, tab, onTab, toast, hideTabs, children }: {
   accent: [string, string]
   emoji: string
   title: string
@@ -20,6 +20,9 @@ export default function AppShell({ accent, emoji, title, subtitle, onBack, actio
   tab?: string
   onTab?: (k: string) => void
   toast?: string | null
+  /** Hide the floating tab bar — e.g. while a bottom sheet is open, so the
+   *  sheet's own action button never gets covered by the tab bar's glass layer. */
+  hideTabs?: boolean
   children: ReactNode
 }) {
   const circles = useDataStore(s => s.circles)
@@ -45,7 +48,7 @@ export default function AppShell({ accent, emoji, title, subtitle, onBack, actio
 
       <div className="kap-body">{children}</div>
 
-      {tabs && tabs.length > 0 && (
+      {tabs && tabs.length > 0 && !hideTabs && (
         <nav className="kap-tabs">
           {tabs.map(t => (
             <button key={t.key} className={`kap-tab${tab === t.key ? ' on' : ''}`} onClick={() => onTab?.(t.key)} aria-label={t.label} aria-current={tab === t.key ? 'page' : undefined}>
