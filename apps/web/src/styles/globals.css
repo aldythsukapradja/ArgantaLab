@@ -61,6 +61,12 @@ html[data-theme="light"] .topbar{background:linear-gradient(180deg,rgba(234,237,
 .tb-arena.on{background:linear-gradient(135deg,#e0501d,#ff8a5c);box-shadow:0 2px 8px #e0501d55}
 .tb-arena:hover{transform:translateY(-1px)}
 .tb-arena svg{width:15px;height:15px;flex:none}
+/* very narrow phones: keep the ArgantaLab wordmark, drop the Arena/Home pill
+   label to icon-only so the whole bar still fits without squeezing. */
+@media (max-width:400px){
+  .tb-arena{gap:0;padding:7px 10px}
+  .tb-arena-lbl{display:none}
+}
 .xpbar{width:140px;height:5px;border-radius:20px;background:var(--border);overflow:hidden}
 .xpbar i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--accent),var(--cyan));
   box-shadow:0 0 12px var(--glow-a);transition:width 1s var(--ease)}
@@ -463,12 +469,12 @@ body.cine-mode .msub{display:none!important}
   .glist,.worlds{grid-template-columns:1fr 1fr}
   .modgrid.g4,.modgrid.g3{grid-template-columns:1fr 1fr}
   .tb-stats{display:none}
-  /* de-squeeze the top bar on phones: tighter gaps/padding, logo-only brand,
-     slimmer pills — so diamonds + Arena/Home + theme + avatar breathe. */
-  .topbar{gap:9px;padding-left:14px;padding-right:14px}
-  .brand b{display:none}
+  /* de-squeeze the top bar on phones: tighter gaps/padding + slimmer pills so
+     the ArgantaLab brand, diamonds, Arena/Home, theme + avatar all fit. */
+  .topbar{gap:8px;padding-left:12px;padding-right:12px}
+  .brand{font-size:15px;gap:8px}
   .tb-diamonds{padding:6px 10px;font-size:12px}
-  .tb-arena{padding:6px 12px;font-size:12px}
+  .tb-arena{padding:6px 11px;font-size:12px}
   .learn-lab,.mindmap{grid-template-columns:1fr}
   .screen.studio{height:auto;min-height:calc(100vh - 150px)}
   .studio-workspace{grid-template-columns:1fr}

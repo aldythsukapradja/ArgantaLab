@@ -447,6 +447,25 @@ transition tiles not hard seams, no loud repeating fills.
 - Hero class paths (new `class_path` rows). All additive — no re-architecture.
 - Kids: 0 combat XP (learn); adults: capped combat XP. Battle mastery in-game only.
 
+## LashiraBloom as the ArgantaLab world HQ (the map is the product spine)
+
+LashiraBloom is the **headquarters for every ArgantaLab RPG**, and the ArgantaLab
+world map (Bloom Command → World & Maps, a full-bleed Google-Maps surface) is the
+canonical view of that world. It is not just LashiraBloom's 5 maps — it is the
+whole ArgantaLab game universe growing around the HQ:
+
+- **HQ** — LashiraBloom (live, gold ★ pin).
+- **Live/connected** — KinQuest, and Kingdom of Kin as it comes online.
+- **In build plan** — Emberdeep, Bloomridge, and LashiraBloom's own sub-maps.
+- **Open Region — a RESERVED, IN-PLAN slot (not vague "future")**: a concrete
+  expansion tile committed to the build strategy now. Every new ArgantaLab RPG
+  claims an Open Region, plugs into the same identity/economy/level spine, and the
+  world map grows. Treat "Open Region" as an actionable backlog item, not a maybe.
+
+Because the game is embeddable (the plug-and-play auth spine), a new region can be
+a *different* ArgantaLab app that the map simply points at — the world spans
+ArgantaLab, not just LashiraBloom.
+
 ---
 
 ## 11. Landing / login screen

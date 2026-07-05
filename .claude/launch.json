@@ -10,6 +10,7 @@
     { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/web"], "port": 5173, "autoPort": true },
     { "name": "web-arena", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/web","--","--port","5174"], "port": 5174, "autoPort": true },
     { "name": "landing", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/landing"], "port": 5191 },
-    { "name": "lashira", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/lashira/web","--","--port","5185"], "port": 5185, "autoPort": true }
+    { "name": "lashira", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/lashira/web","--","--port","5185"], "port": 5185, "autoPort": true },
+    { "name": "bloom-command", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/lashira/command","--","--port","5186"], "port": 5186, "autoPort": true }
   ]
 }

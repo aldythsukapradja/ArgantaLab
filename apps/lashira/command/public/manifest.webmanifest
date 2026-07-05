@@ -1,0 +1,14 @@
+{
+  "name": "Bloom Command",
+  "short_name": "BloomCmd",
+  "description": "LashiraBloom admin — the RPG-maker command center.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6fc",
+  "theme_color": "#8b5cf6",
+  "categories": ["productivity"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

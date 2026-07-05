@@ -83,6 +83,7 @@ export function resolveStep(tables, loadout, motionName, stepIndex) {
       const anim = m.creature.animations[MOUNT_ANIM[motionDirection(motionName)]];
       if (!anim?.length) continue;
       const fr = anim[stepIndex % anim.length];
+      if (!fr) continue;   // stepIndex out of range/NaN — skip rather than crash the tick
       const fm = m.creature.frames[fr.frame];
       if (!fm) continue;
       out.push({

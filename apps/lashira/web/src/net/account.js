@@ -68,6 +68,23 @@ export async function currentProfile() {
   }
 }
 
+// Subscribe to auth changes (fires when an embed host injects a session via
+// setSession/postMessage). Returns an unsubscribe fn.
+export function onAuth(cb) {
+  if (!hasSupabase) return () => {};
+  const { data } = supabase.auth.onAuthStateChange((_e, s) => cb(s?.user ?? null));
+  return () => data?.subscription?.unsubscribe?.();
+}
+
+// Build a LashiraBloom profile from an auth user (used in embed mode where the
+// host already holds the session).
+export async function profileForUser(user) {
+  if (!user) return null;
+  const name = user.user_metadata?.full_name || user.email?.split('@')[0];
+  const role = (user.email || '').endsWith('@kids.argantalab.app') ? 'kid' : 'user';
+  return await loadProfileRow(user.id, name, role);
+}
+
 export async function signInGoogle() {
   if (!hasSupabase) throw new Error('offline');
   const { error } = await supabase.auth.signInWithOAuth({

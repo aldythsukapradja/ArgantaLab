@@ -111,6 +111,40 @@ function shieldImage() {
   return SHIELD_IMG;
 }
 
+// ---- crisp HUD/control icons (emoji renders inconsistently; SVG stays sharp) ----
+const IconHeart = () => (
+  <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true">
+    <path d="M12 21s-7.2-4.6-9.7-8.7C.6 9 2.6 5.4 6.2 5.4c2.1 0 3.6 1.2 4.6 2.6 1-1.4 2.5-2.6 4.6-2.6 3.6 0 5.6 3.6 3.9 6.9C19.2 16.4 12 21 12 21z" />
+  </svg>
+);
+const IconMana = () => (
+  <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true">
+    <path d="M12 2.5c0 0 7 7.6 7 12.2A7 7 0 0 1 5 14.7C5 10.1 12 2.5 12 2.5z" />
+  </svg>
+);
+const IconSwords = () => (
+  <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="M19 21h2v-2" />
+    <path d="M9.5 17.5 21 6V3h-3L6.5 14.5" /><path d="m11 19-6-6" /><path d="m8 16-4 4" /><path d="M5 21H3v-2" />
+  </svg>
+);
+const IconHand = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12" /><path d="M11 11.5V4a1.5 1.5 0 0 1 3 0v8" />
+    <path d="M14 12V6.5a1.5 1.5 0 0 1 3 0V13" /><path d="M17 12.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2.3a5 5 0 0 1-3.5-1.5L5 15.5a1.6 1.6 0 0 1 2.3-2.3L9 15" />
+  </svg>
+);
+const IconMount = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+    <path d="M3 5c1.6.2 2.7 1 3.5 2.3L8 9l3.5-.4c2.6-.3 5 .8 6.6 2.9l1.9 2.5-2 .3-1.6-1.4-.6 3.9c-.1.9-.9 1.5-1.8 1.4-.8-.1-1.4-.9-1.3-1.7l.5-3.4-2.9.3-1.2 3.7c-.3.8-1.1 1.2-1.9 1-.8-.3-1.2-1.1-1-1.9l1.1-3.4c-1.3-.7-2.2-2-2.4-3.6L3 5z" />
+  </svg>
+);
+const IconSpark = () => (
+  <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">
+    <path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6z" />
+  </svg>
+);
+
 export default function TestRoom({ spec, account, onPlayerState }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -121,10 +155,16 @@ export default function TestRoom({ spec, account, onPlayerState }) {
   const [spawnPick, setSpawnPick] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [skills, setSkills] = useState(() => normalizeSkills(spec.skills));
-  // Phones start at 1× so the whole arena floor is visible, not just the
-  // character up close; desktop keeps a tighter default. Adjustable afterward
-  // via the Camera slider in settings.
-  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 720 ? 1.0 : 1.6));
+  // Camera zoom: default 1×, but remembered per character (the Camera slider in
+  // settings writes it back). So each hero keeps its own preferred framing.
+  const zoomKey = account?.character?.id ? `kingdom-zoom:${account.character.id}` : null;
+  const [zoom, setZoom] = useState(() => {
+    if (zoomKey && typeof localStorage !== 'undefined') {
+      const saved = Number(localStorage.getItem(zoomKey));
+      if (Number.isFinite(saved) && saved >= 0.5 && saved <= 3) return saved;
+    }
+    return 1.0;
+  });
   const [hudState, setHudState] = useState({ hp: 100, maxHp: 100, mp: 40, maxMp: 40 });
   const [peerList, setPeerList] = useState([]);
   const G = useRef(null);
@@ -196,7 +236,10 @@ export default function TestRoom({ spec, account, onPlayerState }) {
     return () => { live = false; };
   }, [JSON.stringify(spec), account?.character?.id, account?.stats?.maxHp, account?.stats?.maxMp]);
 
-  useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
+  useEffect(() => {
+    if (G.current) G.current.zoom = zoom;
+    if (zoomKey) { try { localStorage.setItem(zoomKey, String(zoom)); } catch { /* ignore */ } }
+  }, [zoom, zoomKey]);
 
   async function loadPlayerResources(spec_) {
     const keys = ['body', 'coat', 'face', 'hair', 'helmet', 'weapon', 'shield', 'mantle', 'shoes', 'neck', 'facedec', 'hairdec'];
@@ -963,13 +1006,12 @@ export default function TestRoom({ spec, account, onPlayerState }) {
       <div className="room-canvas" ref={wrapRef}>
         <canvas ref={canvasRef} tabIndex={0} />
         {!ready && <div className="room-loading">Loading Chonsa Arena…</div>}
-        <div className="toasts">
-          {toasts.map((t) => <div key={t.id} className="toast">{t.text}</div>)}
+        <div className="arena-toasts">
+          {toasts.map((t) => <div key={t.id} className="arena-toast">{t.text}</div>)}
         </div>
 
-        {/* top bar */}
+        {/* top bar — just the settings gear (keyboard hints removed) */}
         <div className="hud-top">
-          <span className="hud-keys">WASD · Space attack · 1/2/3 skills · E take · R mount · Q emote</span>
           <button type="button" className="hud-gear" onPointerDown={keepCanvasFocus} onClick={() => setShowSettings(true)}>⚙</button>
         </div>
 
@@ -984,8 +1026,8 @@ export default function TestRoom({ spec, account, onPlayerState }) {
             </div>
             <div className="unit-exp"><span style={{ width: `${xpProgress(profile.xp)}%` }} /></div>
             <div className="unit-bars">
-              <div className="bar hp"><span style={{ width: `${Math.max(0, Math.min(100, (hudState.hp / Math.max(1, hudState.maxHp)) * 100))}%` }} /><b>HP {fmt(hudState.hp)}/{fmt(hudState.maxHp)}</b></div>
-              <div className="bar mp"><span style={{ width: `${Math.max(0, Math.min(100, (hudState.mp / Math.max(1, hudState.maxMp)) * 100))}%` }} /><b>MP {fmt(hudState.mp)}/{fmt(hudState.maxMp)}</b></div>
+              <div className="bar hp"><span style={{ width: `${Math.max(0, Math.min(100, (hudState.hp / Math.max(1, hudState.maxHp)) * 100))}%` }} /><b><IconHeart /> {fmt(hudState.hp)}/{fmt(hudState.maxHp)}</b></div>
+              <div className="bar mp"><span style={{ width: `${Math.max(0, Math.min(100, (hudState.mp / Math.max(1, hudState.maxMp)) * 100))}%` }} /><b><IconMana /> {fmt(hudState.mp)}/{fmt(hudState.maxMp)}</b></div>
             </div>
             {account?.guardian && (
               <div className="guardian-strip">
@@ -1003,13 +1045,17 @@ export default function TestRoom({ spec, account, onPlayerState }) {
         </div>
 
         <div className="arena-presence">
-          <b>Friends online</b>
-          <span>{onlineFriends.filter((f) => f.status !== 'offline').length}</span>
-          {onlineFriends.slice(0, 3).map((f) => (
-            <small key={`${f.source || 'friend'}:${f.character_id || f.profile_id}`}>
-              {f.character_name || f.display_name} · {mapLabel(f.map_id)}
-            </small>
-          ))}
+          <div className="ap-head">
+            <b>Friends online</b>
+            <span className="ap-count">{onlineFriends.filter((f) => f.status !== 'offline').length}</span>
+          </div>
+          {onlineFriends.length ? onlineFriends.slice(0, 4).map((f) => (
+            <div className="ap-row" key={`${f.source || 'friend'}:${f.character_id || f.profile_id}`}>
+              <span className={`ap-dot ${f.status || 'online'}`} />
+              <b>{f.character_name || f.display_name}</b>
+              <small>{mapLabel(f.map_id)}</small>
+            </div>
+          )) : <div className="ap-empty">No friends online yet.</div>}
         </div>
 
         {/* joystick zone (touch / small screens) — nipplejs renders into this */}
@@ -1020,12 +1066,14 @@ export default function TestRoom({ spec, account, onPlayerState }) {
           <div className="small-ring">
             {skills.map((s, i) => (
               <button key={i} className="skill-circle" title={`${s.name || `effect #${s.fx}`}`}
-                type="button" onPointerDown={keepCanvasFocus} onClick={() => doSkill(i)}>✦<small>{s.fx}</small></button>
+                type="button" onPointerDown={keepCanvasFocus} onClick={() => doSkill(i)}>
+                <IconSpark /><span className="slot">{i + 1}</span>
+              </button>
             ))}
-            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={doTake} title="take / crouch">✋</button>
-            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={toggleMount} title="mount">🐎</button>
+            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={doTake} title="take / crouch"><IconHand /></button>
+            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={toggleMount} title="mount"><IconMount /></button>
           </div>
-          <button type="button" className="attack-circle" onPointerDown={keepCanvasFocus} onClick={doAttack}>⚔</button>
+          <button type="button" className="attack-circle" onPointerDown={keepCanvasFocus} onClick={doAttack} aria-label="attack"><IconSwords /></button>
         </div>
       </div>
 
