@@ -31,17 +31,29 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
   // resolve the initial session
   useEffect(() => {
     let alive = true;
+    async function applyUser(user) {
+      if (!alive) return;
+      if (user) {
+        const p = await profileForUser(user);
+        if (alive) setProfile(p);
+      } else if (embedded) {
+        setProfile(null);
+      }
+    }
     (async () => {
-      if (hostUser) { const p = await profileForUser(hostUser); if (alive && p) setProfile(p); }
+      if (hostUser) await applyUser(hostUser);
+      else if (embedded && window.__lashiraEmbeddedAuthUser !== undefined) await applyUser(window.__lashiraEmbeddedAuthUser);
       else if (!embedded) { const p = await currentProfile(); if (alive && p) setProfile(p); }
     })().finally(() => { if (alive) setChecked(true); });
     // In embed mode the session may arrive later (postMessage -> setSession).
-    const unsub = onAuth(async (user) => {
-      if (!alive) return;
-      if (user) { const p = await profileForUser(user); if (alive) setProfile(p); }
-      else if (embedded) setProfile(null); // host signed out
-    });
-    return () => { alive = false; unsub(); };
+    const unsub = onAuth(applyUser);
+    const onHostAuth = (event) => { applyUser(event.detail?.user || null); };
+    if (embedded) window.addEventListener('lashira-host-auth', onHostAuth);
+    return () => {
+      alive = false;
+      unsub();
+      if (embedded) window.removeEventListener('lashira-host-auth', onHostAuth);
+    };
   }, [hostUser, embedded]);
 
   // fetch the Kingdom Heroes character for the signed-in player
@@ -64,7 +76,7 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
   if (!profile.guest && !heroChecked) return <div className="loading">Finding your hero…</div>;
 
   const hasHero = !!(hero?.character && hero?.spec);
-  if (!profile.guest && !hasHero && !playAnyway) {
+  if (!profile.guest && !hasHero && !playAnyway && !embedded) {
     return <CharacterGate profile={profile} onPlayAnyway={() => setPlayAnyway(true)}
       onSignOut={embedded ? undefined : async () => { await signOut(); setProfile(null); setHero(null); setPlayAnyway(false); }} />;
   }

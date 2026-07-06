@@ -13,6 +13,7 @@ import './styles.css';
 const params = new URLSearchParams(window.location.search);
 const embedHost = params.get('embed');
 const commandEmbed = !!embedHost;
+let embeddedAuthApplied = false;
 
 function trustedOrigin(origin) {
   if (!origin || origin === 'null') return true;
@@ -23,16 +24,48 @@ function trustedOrigin(origin) {
 }
 
 if (commandEmbed) {
+  async function applyHostAuth(d) {
+    if (d.session?.access_token) {
+      const { data, error } = await supabase?.auth.setSession({
+        access_token: d.session.access_token,
+        refresh_token: d.session.refresh_token,
+      }) || {};
+      if (error) throw error;
+      embeddedAuthApplied = true;
+      const user = data?.session?.user || data?.user || null;
+      window.__lashiraEmbeddedAuthUser = user;
+      window.dispatchEvent(new CustomEvent('lashira-host-auth', { detail: { user } }));
+      return user;
+    }
+    if (d.signout) {
+      embeddedAuthApplied = true;
+      window.__lashiraEmbeddedAuthUser = null;
+      window.dispatchEvent(new CustomEvent('lashira-host-auth', { detail: { user: null } }));
+    }
+    return null;
+  }
+
   window.addEventListener('message', (e) => {
     const d = e.data;
     if (!d || d.type !== 'lashira-auth' || !trustedOrigin(e.origin)) return;
-    if (d.session?.access_token) {
-      supabase?.auth.setSession({ access_token: d.session.access_token, refresh_token: d.session.refresh_token });
-    } else if (d.signout) {
-      supabase?.auth.signOut();
-    }
+    applyHostAuth(d)
+      .then((user) => {
+        try { window.parent?.postMessage({ type: 'lashira-auth-applied', userId: user?.id || null }, e.origin || '*'); } catch { /* ignore */ }
+      })
+      .catch((err) => {
+        console.warn('LashiraBloom: host auth failed', err?.message || err);
+        try { window.parent?.postMessage({ type: 'lashira-auth-error', message: err?.message || String(err) }, e.origin || '*'); } catch { /* ignore */ }
+      });
   });
+  const requestAuth = () => {
+    try { window.parent?.postMessage({ type: 'lashira-auth-request' }, '*'); } catch { /* ignore */ }
+  };
   try { window.parent?.postMessage({ type: 'lashira-game-ready' }, '*'); } catch { /* ignore */ }
+  requestAuth();
+  const authPoll = window.setInterval(() => {
+    if (embeddedAuthApplied) window.clearInterval(authPoll);
+    else requestAuth();
+  }, 1200);
 }
 
 createRoot(document.getElementById('root')).render(

@@ -10,6 +10,10 @@ import { useUiStore } from '@store/uiStore'
 // every member of the circle who opens KinFarm shares one farm.
 const GAME_URL = import.meta.env.VITE_LASHIRA_GAME_URL || 'http://localhost:5185'
 
+function targetOrigin() {
+  try { return new URL(GAME_URL).origin } catch { return '*' }
+}
+
 export default function Farm() {
   const ref = useRef<HTMLIFrameElement>(null)
   const activeCircleId = useUiStore(s => s.activeCircleId)
@@ -23,17 +27,28 @@ export default function Farm() {
       const msg = s?.access_token
         ? { type: 'lashira-auth', session: { access_token: s.access_token, refresh_token: s.refresh_token } }
         : { type: 'lashira-auth', signout: true }
-      ref.current?.contentWindow?.postMessage(msg, '*')
+      ref.current?.contentWindow?.postMessage(msg, targetOrigin())
     })
   }
 
   useEffect(() => {
     function onMsg(e: MessageEvent) {
-      if (e.data?.type === 'lashira-game-ready') { post(); setStatus('ready') }
+      if (e.data?.type === 'lashira-game-ready' || e.data?.type === 'lashira-auth-request') post()
+      if (e.data?.type === 'lashira-auth-applied') setStatus('ready')
     }
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
   }, [activeCircleId])
+
+  useEffect(() => {
+    setStatus('loading')
+    const timer = window.setInterval(post, 2500)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => post())
+    return () => {
+      window.clearInterval(timer)
+      subscription?.unsubscribe()
+    }
+  }, [activeCircleId, src])
 
   return (
     <div className="farm-embed">
