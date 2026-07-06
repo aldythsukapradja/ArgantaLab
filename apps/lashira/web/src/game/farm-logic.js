@@ -14,6 +14,10 @@ const starterKinArt = {
   kin_pip: { kinKey: 'kin:pixelslime', render: 'pixelslime', assetKey: 'kin.pixelslime', color: '#22c55e' },
   kin_bramble: { kinKey: 'kin:storyfox', render: 'storyfox', assetKey: 'kin.storyfox', color: '#6366f1' },
 };
+const profileProgress = (profile) => ({
+  diamonds: profile?.diamonds ?? 0,
+  xp: profile?.xp ?? 0,
+});
 
 export class FarmLogic {
   // circleId (optional): when the game is embedded inside a KinetikCircle
@@ -63,6 +67,7 @@ export class FarmLogic {
         this.state = {
           ...base,
           ...loaded.data,
+          ...profileProgress(this.profile),
           seeds: { ...base.seeds, ...(loaded.data.seeds || {}) },
           produce: { ...base.produce, ...(loaded.data.produce || {}) },
           plots: { ...base.plots, ...(loaded.data.plots || {}) },
@@ -85,6 +90,7 @@ export class FarmLogic {
         this.state = {
           ...base,
           ...data,
+          ...profileProgress(this.profile),
           seeds: { ...base.seeds, ...(data.seeds || {}) },
           produce: { ...base.produce, ...(data.produce || {}) },
           plots: { ...base.plots, ...(data.plots || {}) },
@@ -157,7 +163,7 @@ export class FarmLogic {
       kins: this.activeKins(),
       diamonds: st.diamonds,
       xp: st.xp,
-      level: 1 + Math.floor(Math.max(0, st.xp) / 500), // mirrors argantalab_level_from_xp
+      level: this.profile?.level ?? (1 + Math.floor(Math.max(0, st.xp) / 500)), // mirrors argantalab_level_from_xp when profile level is unavailable
       role: this.profile?.role ?? 'user',
       name: this.profile?.displayName ?? 'Farmer',
       guest: !!this.profile?.guest,

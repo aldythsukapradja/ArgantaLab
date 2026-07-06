@@ -33,7 +33,7 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     let alive = true;
     (async () => {
       if (hostUser) { const p = await profileForUser(hostUser); if (alive && p) setProfile(p); }
-      else { const p = await currentProfile(); if (alive && p) setProfile(p); }
+      else if (!embedded) { const p = await currentProfile(); if (alive && p) setProfile(p); }
     })().finally(() => { if (alive) setChecked(true); });
     // In embed mode the session may arrive later (postMessage -> setSession).
     const unsub = onAuth(async (user) => {
