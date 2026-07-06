@@ -12,8 +12,15 @@ import { fetchHeroState } from './net/hero.js';
 //     the standalone login; `hostSupabase`+`hostUser` (React embed) or a
 //     postMessage session (iframe embed, adopted in main.jsx) supply the login.
 // This is the plug-and-play test: the game reads its login from the parent app.
-export default function App({ hostSupabase = null, hostUser = null, embedded = false } = {}) {
+export default function App({ hostSupabase = null, hostUser = null, embedded = false, circleId = null } = {}) {
   if (hostSupabase) useHostSupabase(hostSupabase); // point at host client before any auth call
+
+  // ?circle=<id> lets an embedding host (e.g. KinetikCircle) tie the farm save
+  // to a circle instead of the individual account — every member of that
+  // circle who opens the farm shares one save. Prop takes precedence (React
+  // embed); query param covers the iframe embed path.
+  const urlCircleId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('circle') : null;
+  const effCircleId = circleId || urlCircleId || null;
 
   const [profile, setProfile] = useState(null);
   const [checked, setChecked] = useState(false);
@@ -66,5 +73,5 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     ? { ...profile, diamonds: hero.profile.diamonds ?? profile.diamonds, xp: hero.profile.xp ?? profile.xp, level: hero.profile.level ?? profile.level, displayName: hero.profile.display_name || profile.displayName, role: hero.profile.role || profile.role }
     : profile;
 
-  return <FarmRoom profile={eff} hero={hasHero ? hero : null} key={eff.id} />;
+  return <FarmRoom profile={eff} hero={hasHero ? hero : null} circleId={effCircleId} key={eff.id + ':' + (effCircleId || '')} />;
 }

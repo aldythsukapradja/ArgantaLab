@@ -2,12 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CROPS, MAPS, LIVESTOCK, PROGRESSION, FARMS, ASSETS, QUESTS, CONFIG } from './data.js';
 import { WorldMap } from './WorldMap.jsx';
-import { PLAYABLE_MAPS } from '../../shared/world-materials.js';
-import {
-  STARDEW_ASSET_CATALOG,
-  STARDEW_CATALOG_META,
-  STARDEW_CATALOG_SECTIONS,
-} from '../../shared/stardew-catalog.js';
 
 // Optional Supabase client for the admin gate (reuses the ArgantaLab project).
 const url = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -68,14 +62,54 @@ function GameEmbed() {
   );
 }
 
+// Full-screen admin gate — same "Welcome to ___" card design as LashiraBloom's
+// own Welcome.jsx, but Google-only (no kid-PIN flow; Command is admin-only,
+// kids never touch it) and blocking: the dashboard itself only ever renders
+// once an authorized admin is signed in, mirroring Kingdom Command Center's
+// `body:not(.kc-authed) .app { visibility: hidden }` gate.
+function Gate({ user, isAdmin, onSignOut }) {
+  const [busy, setBusy] = useState(false);
+  const denied = user && !isAdmin;
+
+  async function google() {
+    setBusy(true);
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  }
+
+  return (
+    <div className="welcome-bg">
+      <div className="welcome-card">
+        <div className="mark"><i /></div>
+        <h1>Welcome to <span className="grad-text">Bloom Command</span></h1>
+        <p className="sub">{denied ? 'This Google account isn’t an authorized admin.' : 'Sign in — authorized admins only.'}</p>
+
+        {denied ? (
+          <>
+            <p className="err" style={{ marginTop: 0 }}>{user.email}</p>
+            <button className="gbtn" onClick={onSignOut}>Sign out and try another account</button>
+          </>
+        ) : (
+          <button className="gbtn" onClick={google} disabled={busy || !supabase}>
+            <span className="g">G</span> Continue with Google
+          </button>
+        )}
+
+        <p className="hint" style={{ marginTop: 14 }}>Kids build heroes and farm in LashiraBloom, not here.</p>
+        {!supabase && <p className="err">Supabase isn’t configured for this deployment.</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState('overview');
   const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [drawer, setDrawer] = useState(true); // desktop drawer open
 
   useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => setUser(data?.user || null));
+    if (!supabase) { setAuthChecked(true); return; }
+    supabase.auth.getUser().then(({ data }) => { setUser(data?.user || null); setAuthChecked(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user || null));
     return () => sub?.subscription?.unsubscribe?.();
   }, []);
@@ -84,6 +118,9 @@ export default function App() {
   const group = groupOf(view);
   const pickGroup = (g) => setView(g.sections[0].id);
   const bleed = view === 'world';
+
+  if (!authChecked) return <div className="loading">Loading Bloom Command…</div>;
+  if (!isAdmin) return <Gate user={user} isAdmin={isAdmin} onSignOut={() => supabase.auth.signOut()} />;
 
   return (
     <div className={'app' + (drawer ? '' : ' collapsed') + (bleed ? ' bleedmode' : '')}>
@@ -114,19 +151,9 @@ export default function App() {
             </div>
           )}
           <div className="who">
-            {supabase ? (
-              user ? (
-                <>
-                  <span className={'badge ' + (isAdmin ? 'ok' : 'warn')}>{isAdmin ? 'admin' : 'viewer'}</span>
-                  <span className="uemail">{user.email}</span>
-                  <button className="gbtn sm" onClick={() => supabase.auth.signOut()}>Sign out</button>
-                </>
-              ) : (
-                <button className="gbtn sm" onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })}>
-                  <b className="g">G</b> Admin sign in
-                </button>
-              )
-            ) : <span className="badge warn">offline</span>}
+            <span className="badge ok">admin</span>
+            <span className="uemail">{user.email}</span>
+            <button className="gbtn sm" onClick={() => supabase.auth.signOut()}>Sign out</button>
           </div>
         </header>
 
@@ -285,73 +312,15 @@ function Players() {
 }
 
 function Assets() {
-  const recoveredSheets = STARDEW_ASSET_CATALOG.filter((asset) => asset.localSheet).length;
-  const worldMaterials = STARDEW_ASSET_CATALOG.filter((asset) => asset.runtimeRole === 'world-material').length;
-  const entityMaterials = STARDEW_ASSET_CATALOG.filter((asset) => asset.runtimeRole === 'entity-material').length;
-  const characterReferences = STARDEW_ASSET_CATALOG.filter((asset) => asset.runtimeRole === 'reference-only-character').length;
-
   return (
-    <Card title="PixelLab assets" icon="🎨" right={<span className="muted sm">{STARDEW_CATALOG_META.total} Stardew sources</span>}>
+    <Card title="PixelLab assets" icon="🎨" right={<span className="muted sm">240 credits</span>}>
       {ASSETS.map((a) => (
         <div className="lrow" key={a.kind}>
           <div className="lgrow"><b>{a.kind}</b><small>{a.done}/{a.total}</small></div>
           <div style={{ width: 160 }}><Bar pct={Math.round((a.done / a.total) * 100)} tone={a.done ? 'accent' : 'warn'} /></div>
         </div>
       ))}
-      <p className="muted sm">Source catalogue is now complete for PixelLab recreation. Character sheets are reference-only; the playable controller stays Kingdom Heroes.</p>
-      <div className="catalog-summary">
-        <div><b>{STARDEW_CATALOG_META.total}</b><small>catalogued</small></div>
-        <div><b>{STARDEW_CATALOG_META.cachedIcons}</b><small>local previews</small></div>
-        <div><b>{recoveredSheets}</b><small>runtime sheets</small></div>
-        <div><b>{worldMaterials}</b><small>world materials</small></div>
-        <div><b>{entityMaterials}</b><small>entity materials</small></div>
-        <div><b>{characterReferences}</b><small>character refs</small></div>
-      </div>
-      <div className="asset-section">
-        <h4>Stardew source catalogue</h4>
-        <p className="muted sm">Every entry links back to its Spriters Resource sheet. Local previews are cached in the app; full sheets remain PixelLab source references unless already recovered as runtime sheets.</p>
-        {STARDEW_CATALOG_SECTIONS.map(({ section, assets }) => (
-          <div className="catalog-group" key={section}>
-            <div className="catalog-heading">
-              <h5>{section}</h5>
-              <span>{assets.length} assets</span>
-            </div>
-            <div className="material-grid catalog-grid">
-              {assets.map((asset) => (
-                <a
-                  className={'material-card catalog-card' + (asset.localSheet ? ' is-sheet' : '') + (asset.runtimeRole.includes('character') ? ' is-reference' : '')}
-                  key={asset.id}
-                  href={asset.pageUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <img className="material-thumb" src={asset.localIcon} alt="" />
-                  <b>{asset.title}</b>
-                  <small>#{asset.id} · {asset.runtimeRole.replace(/-/g, ' ')}</small>
-                  <span className="material-note">{asset.localSheet ? 'runtime sheet recovered' : 'catalog preview cached'}</span>
-                  <span className="material-tags">
-                    {asset.materialTags.slice(0, 3).map((tag) => <em key={tag}>{tag}</em>)}
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="asset-section">
-        <h4>Playable map targets</h4>
-        <table className="tbl compact">
-          <thead><tr><th>Map</th><th>Status</th><th>Materials</th><th>Portals</th></tr></thead>
-          <tbody>{PLAYABLE_MAPS.map((m) => (
-            <tr key={m.id}>
-              <td><b>{m.name}</b><br /><span className="mono">{m.id}</span></td>
-              <td>{statusPill(m.status)}</td>
-              <td className="muted">{m.materialKeys.join(' · ')}</td>
-              <td>{m.portals.length}</td>
-            </tr>
-          ))}</tbody>
-        </table>
-      </div>
+      <p className="muted sm">Placeholder in-code art now → PixelLab regenerate via the same texture keys.</p>
     </Card>
   );
 }

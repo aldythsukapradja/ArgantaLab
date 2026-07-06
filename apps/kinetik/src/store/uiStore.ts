@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-export type Tab = 'today' | 'calendar' | 'moments' | 'apps' | 'me'
+export type Tab = 'today' | 'calendar' | 'moments' | 'apps' | 'me' | 'farm'
 export type CalView = 'board' | 'month'
 
 /** Saved board layout per circle: which members (in column order) + how many columns. */

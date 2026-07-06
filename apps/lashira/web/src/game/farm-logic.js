@@ -8,11 +8,20 @@ import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 
 export class FarmLogic {
-  constructor(profile) {
+  // circleId (optional): when the game is embedded inside a KinetikCircle
+  // circle, every member of that circle shares ONE farm save — keyed by the
+  // circle, not the individual account. Falls back to a per-profile save
+  // standalone (no circle context). Local-only for now (see the Tier-2 note in
+  // memory: real cross-device shared farm needs the lashira_farm Supabase
+  // tables + realtime sync — this is the "same device, same circle" tier).
+  constructor(profile, circleId = null) {
     this.profile = profile;
+    this.circleId = circleId;
     this.listeners = new Set();
     this.toast = null;
-    this.saveKey = 'lashirabloom_save_v2_' + (profile?.id || 'guest');
+    this.saveKey = circleId
+      ? 'lashirabloom_save_v2_circle_' + circleId
+      : 'lashirabloom_save_v2_' + (profile?.id || 'guest');
     this.state = this._default();
     this._load();
   }
@@ -119,9 +128,10 @@ export class FarmLogic {
     this.flash('Bought ' + qty + '× ' + crop.name + ' seed'); this.save(); this.emit();
   }
   // Selling rewards differ by role: adults earn Diamonds directly from playing
-  // (normal adult platform rule); kids earn XP instead (mirrors "kids level by
-  // doing, not by earning currency" — applied to farming instead of combat),
-  // never Diamonds, so the kid diamond-from-learning-only rule stays intact.
+  // (normal adult platform rule). Kids earn XP instead — but ONLY a flat, tiny
+  // nibble (+1 per sell action, independent of quantity/value), never Diamonds.
+  // This is deliberately NOT a real leveling path: real learning stays the only
+  // meaningful way for a kid to level up. Farming is flavor, not a shortcut.
   sellAll() {
     let gain = 0, any = false;
     for (const [id, n] of Object.entries(this.state.produce)) {
@@ -131,7 +141,7 @@ export class FarmLogic {
     if (!any) { this.flash('Nothing to sell'); return; }
     this.state.produce = {};
     const isKid = this.profile?.role === 'kid';
-    if (isKid) { this.state.xp += gain; this.flash('Sold — +' + gain + ' XP'); }
+    if (isKid) { this.state.xp += 1; this.flash('Sold — +1 XP'); }
     else { this.state.diamonds += gain; this.flash('Sold for ' + gain + ' 💎'); }
     this.save(); this.emit();
   }

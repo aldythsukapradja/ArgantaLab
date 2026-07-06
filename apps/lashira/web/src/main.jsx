@@ -4,12 +4,15 @@ import App from './App.jsx';
 import { supabase } from './net/supabase.js';
 import './styles.css';
 
-// Embed mode: the game runs inside a parent ArgantaLab app / Bloom Command as
-// `?embed=command`. The parent owns login (Google 403s inside an iframe) and
-// posts its session in here; we adopt it on our OWN client via setSession, which
-// fires onAuth and loads the player. Mirrors Kingdom Heroes' main.jsx.
+// Embed mode: the game runs inside ANY parent ArgantaLab app (Bloom Command,
+// KinetikCircle's "KinFarm" pill, etc.) as `?embed=<hostname>` — the value only
+// identifies the host for logging, any non-empty value means "embedded". The
+// parent owns login (Google 403s inside an iframe) and posts its session in
+// here; we adopt it on our OWN client via setSession, which fires onAuth and
+// loads the player. Mirrors Kingdom Heroes' main.jsx.
 const params = new URLSearchParams(window.location.search);
-const commandEmbed = params.get('embed') === 'command';
+const embedHost = params.get('embed');
+const commandEmbed = !!embedHost;
 
 function trustedOrigin(origin) {
   if (!origin || origin === 'null') return true;

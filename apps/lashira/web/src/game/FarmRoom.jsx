@@ -16,7 +16,7 @@ const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const FACE_WORD = { North: 'up', South: 'down', East: 'right', West: 'left' };
 const WALK_MS = 260;
 
-export default function FarmRoom({ profile, hero }) {
+export default function FarmRoom({ profile, hero, circleId = null }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
   const stickRef = useRef(null);
@@ -25,13 +25,13 @@ export default function FarmRoom({ profile, hero }) {
   const [ready, setReady] = useState(false);
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
-  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 720 ? 1.1 : 1.7));
+  const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
   const [usingHero, setUsingHero] = useState(false);
 
   // ---------- init ----------
   useEffect(() => {
     let live = true;
-    const logic = new FarmLogic(profile);
+    const logic = new FarmLogic(profile, circleId);
     logicRef.current = logic;
     if (import.meta.env.DEV) window.__farm = logic;
 
@@ -63,7 +63,7 @@ export default function FarmRoom({ profile, hero }) {
       G.current?._unsub?.();
       logic.save();
     };
-  }, [profile, hero]);
+  }, [profile, hero, circleId]);
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
 

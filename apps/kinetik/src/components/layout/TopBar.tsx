@@ -4,8 +4,25 @@ import { useDataStore } from '@store/dataStore'
 import { IconChevron, IconPlus, IconSun, IconMoon } from '@components/Icons'
 import { CircleEmblem as Emblem, accentOf } from '@components/CircleEmblem'
 
+// KinFarm icons — a sprout default, a home icon once the farm is open (mirrors
+// apps/web's Arena pill: same button toggles both ways, icon+label swap).
+function IconSprout({ width = 15, height = 15 }: { width?: number; height?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={width} height={height} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22V13" /><path d="M12 13C12 13 5 13 5 6c7 0 7 7 7 7Z" /><path d="M12 13C12 13 19 13 19 6c-7 0-7 7-7 7Z" />
+    </svg>
+  )
+}
+function IconHome({ width = 15, height = 15 }: { width?: number; height?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={width} height={height} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h14V10" />
+    </svg>
+  )
+}
+
 export default function TopBar() {
-  const { activeCircleId, setCircle, go, theme, toggleTheme } = useUiStore()
+  const { activeCircleId, setCircle, go, theme, toggleTheme, tab } = useUiStore()
   const circles = useDataStore(s => s.circles)
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement | null>(null)
@@ -70,10 +87,21 @@ export default function TopBar() {
           )}
         </div>
 
-        {/* right — theme switcher */}
-        <button className="topbar-theme" onClick={toggleTheme} aria-label="Toggle light or dark mode">
-          {theme === 'dark' ? <IconSun width={18} height={18} /> : <IconMoon width={18} height={18} />}
-        </button>
+        {/* right — KinFarm teaser pill + theme switcher */}
+        <div className="tb-right">
+          <button
+            className={`tb-farm${tab === 'farm' ? ' on' : ''}`}
+            onClick={() => go(tab === 'farm' ? 'today' : 'farm')}
+            title={tab === 'farm' ? 'Return home' : 'Open KinFarm'}
+          >
+            {tab === 'farm'
+              ? <><IconHome /><span className="tb-farm-lbl">Home</span></>
+              : <><IconSprout /><span className="tb-farm-lbl">KinFarm</span></>}
+          </button>
+          <button className="topbar-theme" onClick={toggleTheme} aria-label="Toggle light or dark mode">
+            {theme === 'dark' ? <IconSun width={18} height={18} /> : <IconMoon width={18} height={18} />}
+          </button>
+        </div>
       </div>
     </header>
   )

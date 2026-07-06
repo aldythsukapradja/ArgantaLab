@@ -10,6 +10,40 @@ html, body, #root { height: 100%; margin: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; }
 .grad-text, .btitle { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+/* ---------- admin gate (matches LashiraBloom's own Welcome card design) ---------- */
+.loading { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 700; }
+.welcome-bg {
+  height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background:
+    radial-gradient(900px 340px at 20% -10%, rgba(111,139,246,.18), transparent 60%),
+    radial-gradient(820px 320px at 90% 0%, rgba(232,121,185,.16), transparent 55%),
+    var(--bg);
+  overflow: auto;
+}
+.welcome-card {
+  width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 24px; padding: 30px 26px; box-shadow: 0 24px 60px rgba(31,35,64,.12); text-align: center;
+}
+.mark {
+  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
+  background: var(--grad); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 12px 30px rgba(139,92,246,.3);
+}
+.mark i { width: 24px; height: 24px; border-radius: 50%; border: 6px solid #fff; position: relative; display: block; }
+.mark i::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fff; }
+.welcome-card h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.4px; }
+.welcome-card .sub { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
+.welcome-card .gbtn {
+  width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 14px;
+  padding: 13px; font-weight: 700; font-size: 15px; cursor: pointer;
+  display: flex; gap: 10px; align-items: center; justify-content: center;
+}
+.welcome-card .gbtn:hover { background: var(--soft); }
+.welcome-card .gbtn:disabled { opacity: .6; cursor: default; }
+.welcome-card .g { color: #4285F4; font-weight: 800; }
+.welcome-card .hint { color: var(--muted); font-size: 12px; margin: 14px 0 0; }
+.welcome-card .err { color: #c0392b; font-size: 13px; margin: 10px 0; font-weight: 600; }
+
 .app { display: flex; height: 100%; position: relative; }
 .sidebar { width: 232px; flex: 0 0 auto; background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 16px 12px; transition: width .18s ease, padding .18s ease; overflow: hidden; }
 .app.collapsed .sidebar { width: 0; padding: 0; border-right: 0; }

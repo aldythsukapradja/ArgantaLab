@@ -12,6 +12,7 @@ import Moments from '@pages/Moments'
 import Apps from '@pages/Apps'
 import Me from '@pages/Me'
 import Login from '@pages/Login'
+import Farm from '@pages/Farm'
 
 export default function App() {
   const tab = useUiStore(s => s.tab)
@@ -50,14 +51,20 @@ export default function App() {
 
   const booting = status === 'loading' && circles.length === 0
 
+  // KinFarm: full-screen like ArgantaLab's Arena — Sidebar + bottom Nav hide,
+  // TopBar stays (its pill is the only way back, mirroring Arena exactly).
+  const farmOpen = tab === 'farm'
+
   return (
     <div id="app" style={{ ['--c0' as any]: c0, ['--c1' as any]: c1 }}>
-      <Sidebar />
+      {!farmOpen && <Sidebar />}
       <div className="app-body">
         <TopBar />
-        <DataBanner />
-        <main className="main" key={tab}>
-          {booting ? (
+        {!farmOpen && <DataBanner />}
+        <main className={farmOpen ? 'main main-farm' : 'main'} key={tab}>
+          {farmOpen ? (
+            <Farm />
+          ) : booting ? (
             <div className="boot"><span className="boot-orb" /><p>Loading your circle…</p></div>
           ) : (
             <>
@@ -69,7 +76,7 @@ export default function App() {
             </>
           )}
         </main>
-        <Nav />
+        {!farmOpen && <Nav />}
       </div>
     </div>
   )
