@@ -204,7 +204,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       G.current?._unsub?.();
       logic.flushSave?.();
     };
-  }, [profile, hero, circleId]);
+  }, [profile?.id, profile?.displayName, profile?.guest, profile?.diamonds, profile?.xp, profile?.level, profile?.role, heroPresenceKey, circleId]);
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
 
@@ -236,9 +236,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     let closed = false;
     const applyFarmState = (payload) => {
       if (closed || !G.current || !payload?.data) return;
-      const stamp = Number(payload.updatedAt || 0);
-      if (stamp && stamp <= (g.lastRemoteFarmStateAt || 0)) return;
-      g.lastRemoteFarmStateAt = stamp || Date.now();
+      const key = farmStateKey(payload.data);
+      if (!key || key === g.lastFarmStateKey) return;
       g.suppressFarmStateBroadcast = true;
       logicRef.current?.applyRemoteState?.(payload.data);
     };

@@ -21,6 +21,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
 
   let subscribed = false;
   let closed = false;
+  const broadcastPeers = new Map();
   let current = {
     id: selfId,
     name: profile.displayName || 'Farmer',
@@ -37,7 +38,14 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
   });
 
   channel.on('presence', { event: 'sync' }, () => {
-    onPeers(collectPeers(channel, selfId));
+    const peers = collectPeers(channel, selfId);
+    for (const peer of peers) if (peer?.id) broadcastPeers.set(String(peer.id), peer);
+    onPeers([...broadcastPeers.values()]);
+  });
+  channel.on('broadcast', { event: 'player-state' }, ({ payload }) => {
+    if (!payload?.id || payload.id === selfId) return;
+    broadcastPeers.set(String(payload.id), payload);
+    onPeers([...broadcastPeers.values()]);
   });
   channel.on('broadcast', { event: 'farm-state' }, ({ payload }) => {
     if (!payload || payload.sourceId === selfId) return;
@@ -55,6 +63,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
       if (status === 'SUBSCRIBED') {
         subscribed = true;
         channel.track(current);
+        channel.send({ type: 'broadcast', event: 'player-state', payload: current });
         if (pendingState) {
           channel.send({ type: 'broadcast', event: 'farm-state', payload: pendingState });
           pendingState = null;
@@ -69,7 +78,10 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
   return {
     update(patch = {}) {
       current = { ...current, ...patch, updatedAt: Date.now() };
-      if (subscribed) channel.track(current);
+      if (subscribed) {
+        channel.track(current);
+        channel.send({ type: 'broadcast', event: 'player-state', payload: current });
+      }
     },
     sendState(payload = {}) {
       const next = {
