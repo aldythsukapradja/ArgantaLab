@@ -1,4 +1,4 @@
-import { LayoutGrid, TrendingUp, Boxes, Sparkles, Radar } from 'lucide-react'
+import { LayoutGrid, TrendingUp, Boxes, Sparkles, Radar, Vault as VaultIcon } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId } from './store'
 
 // Mobile collapses the rail into reachable groups. Multi-surface groups expose
@@ -10,6 +10,7 @@ export const MGROUPS: Grp[] = [
   { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid, surfaces: ['portfolio'] },
   { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data'] },
   { id: 'command', label: 'Command', Icon: Radar, surfaces: ['command'] },
+  { id: 'vault', label: 'Vault', Icon: VaultIcon, surfaces: ['vault'] },
   { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'broadcast'] },
 ]
 

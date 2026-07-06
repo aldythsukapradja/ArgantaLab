@@ -58,6 +58,7 @@ a{color:inherit;text-decoration:none}
 .main{height:100%;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .topbar{flex-shrink:0;height:54px;display:flex;align-items:center;gap:12px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--bd)}
 .content{flex:1;overflow-y:auto;padding:18px 24px 26px}
+.content.content-flush{padding:0;overflow:hidden;position:relative}
 .content-in{max-width:1180px;margin:0 auto}
 .content-in.wide{max-width:1560px}
 

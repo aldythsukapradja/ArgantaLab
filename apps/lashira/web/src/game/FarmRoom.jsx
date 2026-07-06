@@ -5,11 +5,13 @@
 import { useEffect, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawPlot, drawPlaceholderFarmer, TILE, W, H, WORLD_W, WORLD_H, FIELD, BUILDINGS } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
 import { Hud } from '../ui/Hud.jsx';
 import { Panels } from '../ui/Panels.jsx';
+import { CROPS } from '../data/crops.js';
 
 const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South', ArrowLeft: 'West', a: 'West', ArrowRight: 'East', d: 'East' };
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
@@ -36,7 +38,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     if (import.meta.env.DEV) window.__farm = logic;
 
     (async () => {
-      const { canvas: bg, blocked } = buildFarmMap();
+      await logic.ready;
+      const art = await loadFarmArtOverrides();
+      const { canvas: bg, blocked } = buildFarmMap(art);
       let tables = null, resources = null, hasWeapon = false;
       if (hero?.spec) {
         tables = await loadMotionTables();
@@ -49,9 +53,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const heroOk = !!(tables && resources && Object.keys(resources).length);
       setUsingHero(heroOk);
       G.current = {
-        bg, blocked, tables, resources, hasWeapon, heroOk,
+        bg, blocked, tables, resources, hasWeapon, heroOk, art,
         player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
-        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1,
+        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(),
       };
       const unsub = logic.subscribe(setSnap);
       G.current._unsub = unsub;
@@ -61,7 +65,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     return () => {
       live = false;
       G.current?._unsub?.();
-      logic.save();
+      logic.flushSave?.();
     };
   }, [profile, hero, circleId]);
 
@@ -140,6 +144,84 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
     function blockedAt(g, tx, ty) { return tx < 1 || ty < 1 || tx >= W - 1 || ty >= H - 1 || g.blocked.has(tx + ',' + ty); }
 
+    function ensureActor(g, id, init) {
+      if (!g.actors.has(id)) g.actors.set(id, { id, from: [...init.tile], moveT: 1, moveStart: 0, facing: 'South', idleUntil: 0, seed: id.length * 997, ...init });
+      return g.actors.get(id);
+    }
+    function syncWorldActors(g) {
+      const live = new Set();
+      const state = logicRef.current?.state;
+      if (!state) return;
+      const homes = {
+        cow: { x0: 9, y0: 5, x1: 14, y1: 8 },
+        sheep: { x0: 10, y0: 5, x1: 14, y1: 8 },
+        chicken: { x0: 14, y0: 5, x1: 18, y1: 8 },
+      };
+      const starts = { cow: [11, 6], sheep: [12, 7], chicken: [16, 6] };
+      for (const a of state.livestock || []) {
+        const id = 'animal:' + a.id; live.add(id);
+        const ent = ensureActor(g, id, { kind: 'animal', species: a.species, name: a.name, tile: starts[a.species] || [12, 6], home: homes[a.species] || homes.cow, speedMs: a.species === 'chicken' ? 520 : 780 });
+        ent.species = a.species; ent.name = a.name;
+      }
+      (state.kins || []).forEach((k, i) => {
+        const id = 'kin:' + k.id; live.add(id);
+        const ent = ensureActor(g, id, { kind: 'kin', kin: k, tile: [8 + i, 10], home: { x0: 6, y0: 9, x1: 20, y1: 20 }, speedMs: 620 });
+        ent.kin = k; ent.name = k.name;
+      });
+      if (g.resources?.mount) {
+        const id = 'mount:equipped'; live.add(id);
+        const p = g.player;
+        ensureActor(g, id, { kind: 'mount', tile: [Math.max(6, p.tile[0] - 2), Math.max(6, p.tile[1] - 1)], home: { x0: 6, y0: 6, x1: 14, y1: 11 }, speedMs: 620 });
+      }
+      for (const id of [...g.actors.keys()]) if (!live.has(id)) g.actors.delete(id);
+    }
+    function actorRand(e) {
+      e.seed = (e.seed * 1664525 + 1013904223) >>> 0;
+      return e.seed / 4294967296;
+    }
+    function moveChoice(g, e) {
+      let target = null;
+      if (e.kind === 'kin' && e.kin?.task) {
+        const plots = logicRef.current?.state?.plots || {};
+        for (const [key, plot] of Object.entries(plots)) {
+          if (!plot?.tilled || !plot.cropId) continue;
+          const [tx, ty] = key.split(',').map(Number);
+          if (e.kin.task === 'water' && !plot.watered) { target = [tx, ty]; break; }
+          if (e.kin.task === 'harvest' && plot.growth >= (CROPS[plot.cropId]?.days || 999)) { target = [tx, ty]; break; }
+        }
+      }
+      const dirs = target
+        ? [['East', 1, 0], ['West', -1, 0], ['South', 0, 1], ['North', 0, -1]].sort((a, b) => {
+          const da = Math.abs(e.tile[0] + a[1] - target[0]) + Math.abs(e.tile[1] + a[2] - target[1]);
+          const db = Math.abs(e.tile[0] + b[1] - target[0]) + Math.abs(e.tile[1] + b[2] - target[1]);
+          return da - db;
+        })
+        : [['North', 0, -1], ['South', 0, 1], ['West', -1, 0], ['East', 1, 0]].sort(() => actorRand(e) - 0.5);
+      for (const [dir, dx, dy] of dirs) {
+        const nx = e.tile[0] + dx, ny = e.tile[1] + dy;
+        const inHome = nx >= e.home.x0 && nx <= e.home.x1 && ny >= e.home.y0 && ny <= e.home.y1;
+        if ((target || inHome) && !blockedAt(g, nx, ny)) return [dir, nx, ny];
+      }
+      return null;
+    }
+    function stepWorldActors(g, now) {
+      syncWorldActors(g);
+      for (const e of g.actors.values()) {
+        if (e.moveT < 1) {
+          e.moveT = Math.min(1, (now - e.moveStart) / (e.speedMs || 700));
+          continue;
+        }
+        if (!e.idleUntil) e.idleUntil = now + 400 + actorRand(e) * 1200;
+        if (now < e.idleUntil) continue;
+        const pick = moveChoice(g, e);
+        if (pick) {
+          const [dir, nx, ny] = pick;
+          e.facing = dir; e.from = [...e.tile]; e.tile = [nx, ny]; e.moveT = 0; e.moveStart = now;
+          e.idleUntil = now + (e.kind === 'kin' && e.kin?.task ? 120 : 500 + actorRand(e) * 1000);
+        } else e.idleUntil = now + 800;
+      }
+    }
+
     function tick(now) {
       try { step(now); } catch (err) { if (!tick._e) { tick._e = true; console.error('farm tick error', err); } }
       raf = requestAnimationFrame(tick);
@@ -160,6 +242,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         } else { p.turnHoldDir = null; }
       }
       if (p.oneShot && now - p.oneShotStart > 480) p.oneShot = null;
+      stepWorldActors(g, now);
       draw(g, ctx, canvas, now);
     }
 
@@ -204,6 +287,31 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       drawPlaceholderFarmer(ctx, footX, footY, FACE_WORD[p.facing]);
       return footY - 40;
     }
+    function drawKingdomMount(g, ctx, e, now, footX, footY) {
+      const res = g.resources?.mount;
+      const animName = { North: 'walk_up', South: 'walk_down', East: 'walk_right', West: 'walk_left' }[e.facing] || 'walk_down';
+      const anim = res?.creature?.animations?.[animName];
+      if (res?.sheet && anim?.length) {
+        const frame = anim[Math.floor(now / 220) % anim.length];
+        const fm = res.creature.frames?.[frame.frame];
+        if (fm) {
+          const list = [{
+            sheet: res.sheet,
+            sx: fm.x + fm.fx, sy: fm.y + fm.fy, w: fm.w, h: fm.h,
+            dx: res.creature.origin[0] + fm.fx, dy: res.creature.origin[1] + fm.fy,
+          }];
+          const bb = drawListBBox([list]);
+          if (bb) { paintStep(ctx, list, { x: footX - bb.cx, y: footY - bb.y1 }, 1); return; }
+        }
+      }
+      drawMountPlaceholder(ctx, footX, footY, e.facing, Math.floor(now / 260), g.art);
+    }
+    function drawWorldActor(g, ctx, e, now, footX, footY) {
+      const frame = e.moveT < 1 ? Math.floor(e.moveT * 2) : Math.floor(now / 420);
+      if (e.kind === 'animal') drawAnimalSprite(ctx, e.species, footX, footY, e.facing, frame, g.art);
+      else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
+      else if (e.kind === 'mount') drawKingdomMount(g, ctx, e, now, footX, footY);
+    }
 
     function draw(g, ctx, canvas, now) {
       const cssW = g.viewportW || canvas.clientWidth, cssH = g.viewportH || canvas.clientHeight;
@@ -224,7 +332,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
       // plots
       const plots = logicRef.current.state.plots;
-      for (const [key, plot] of Object.entries(plots)) { const [tx, ty] = key.split(',').map(Number); drawPlot(ctx, tx, ty, plot); }
+      for (const [key, plot] of Object.entries(plots)) { const [tx, ty] = key.split(',').map(Number); drawPlot(ctx, tx, ty, plot, g.art); }
 
       // target: the tile directly in front of the farmer (filled + outlined so
       // it's unambiguous which tile the tool will act on).
@@ -234,16 +342,23 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2;
       ctx.strokeRect(ftx * TILE + 2, fty * TILE + 2, TILE - 4, TILE - 4);
 
-      // the farmer's foot point = tile center-bottom; shadow + sprite share it.
-      // Widened when mounted (a horse+rider silhouette is much broader than a
-      // standing farmer) — the shadow itself has no Kingdom equivalent to copy.
       const footX = ppx + TILE / 2, footY = ppy + TILE - 5;
-      ctx.fillStyle = 'rgba(0,0,0,0.24)';
-      ctx.beginPath();
-      ctx.ellipse(footX, footY, p.mounted ? 26 : 16, p.mounted ? 8 : 6, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      const headTop = drawPlayer(g, ctx, now, footX, footY);
+      let headTop = footY - 40;
+      const actors = [];
+      for (const e of g.actors.values()) {
+        if (e.kind === 'mount' && p.mounted) continue;
+        const [ex, ey] = entityPx(e);
+        actors.push({ type: 'world', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
+      }
+      actors.push({ type: 'player', footX, footY });
+      actors.sort((a, b) => a.footY - b.footY);
+      for (const a of actors) {
+        const wide = a.type === 'player' ? p.mounted : a.e?.kind === 'mount' || a.e?.species === 'cow';
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.beginPath(); ctx.ellipse(a.footX, a.footY, wide ? 24 : 13, wide ? 8 : 5, 0, 0, Math.PI * 2); ctx.fill();
+        if (a.type === 'player') headTop = drawPlayer(g, ctx, now, a.footX, a.footY);
+        else drawWorldActor(g, ctx, a.e, now, a.footX, a.footY);
+      }
 
       // nameplate floats just above the head
       const name = logicRef.current.profile?.displayName || 'Farmer';

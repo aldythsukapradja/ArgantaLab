@@ -32,6 +32,7 @@ export interface CircleCtx {
   user: CircleCtxUser | null
   gameId: string
   live: boolean
+  circleId?: string | null
 }
 
 // ── The injected runtime SDK (dual-mode: bridge when live, else local) ──
@@ -85,7 +86,7 @@ const CIRCLE_RUNTIME = `(function(){
 /** Inject the Circle SDK + per-run config into a game's HTML (host side). */
 export function injectCircle(html: string, ctx: CircleCtx): string {
   const cfg = `<script>window.__CIRCLE__=${JSON.stringify({
-    user: ctx.user, gameId: ctx.gameId, live: ctx.live,
+    user: ctx.user, gameId: ctx.gameId, live: ctx.live, circleId: ctx.circleId ?? null,
   })};</script>`
   const sdk = `<script>${CIRCLE_RUNTIME}</script>`
   const tag = cfg + sdk
@@ -99,9 +100,13 @@ export function circleCtx(gameId: string): CircleCtx {
   const s = useAppStore.getState()
   const signedIn = s.session !== null && s.session !== 'loading'
   const uid = signedIn ? (s.session as { user: { id: string } }).user.id : `guest_${gameId}`
+  const circleId = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('circle')
+    : null
   return {
     gameId,
     live: signedIn && cloudEnabled,
+    circleId,
     user: {
       id: uid,
       name: s.learnerName || 'Player',
@@ -133,6 +138,9 @@ async function handleCircleCall(gameId: string, method: string, args: unknown[])
       diamonds: s.diamonds, xp: s.xp, level: s.level,
     }
   }
+  const circleId = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('circle')
+    : null
 
   switch (method) {
     case 'init':
@@ -187,9 +195,16 @@ async function handleCircleCall(gameId: string, method: string, args: unknown[])
       return await rpc('get_my_game_rank', { p_game: gameId })
 
     case 'saveState':
+      if (circleId) {
+        await rpc('save_circle_game_state', { p_circle: circleId, p_game: gameId, p_slot: String(args[0] ?? 'default'), p_data: args[1] ?? {} })
+        return true
+      }
       await rpc('save_game_state', { p_game: gameId, p_slot: String(args[0] ?? 'default'), p_data: args[1] ?? {} })
       return true
     case 'loadState':
+      if (circleId) {
+        return await rpc('load_circle_game_state', { p_circle: circleId, p_game: gameId, p_slot: String(args[0] ?? 'default') })
+      }
       return await rpc('load_game_state', { p_game: gameId, p_slot: String(args[0] ?? 'default') })
 
     case 'getUnlocks':

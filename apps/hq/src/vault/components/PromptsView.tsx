@@ -13,8 +13,12 @@ const SHELVES = ['HQ', 'KinetikCircle', 'ArgantaLabs', 'LashiraBloom', 'Investor
 type Shelf = typeof SHELVES[number]
 
 function shelfOf(n: VaultNote): Shelf {
-  if (n.fm.tags.includes('design')) return 'Design'
-  if (n.fm.tags.includes('engineering') && n.fm.product === 'HQ' && !n.fm.tags.includes('vault')) return 'Engineering'
+  // craft shelves (Design/Engineering) only claim cross-cutting HQ prompts;
+  // a product prompt tagged "design" still belongs to its product shelf
+  if (n.fm.product === 'HQ') {
+    if (n.fm.tags.includes('design')) return 'Design'
+    if (n.fm.tags.includes('engineering') && !n.fm.tags.includes('vault')) return 'Engineering'
+  }
   return n.fm.product as Shelf
 }
 

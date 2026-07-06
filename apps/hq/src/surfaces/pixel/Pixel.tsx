@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Boxes } from 'lucide-react'
 import { Browser } from './Browser'
 import { UsageView, PalettesView, IngestView } from './views'
+import { LashiraBloomArt } from './LashiraBloomArt'
 import { useVault } from './useVault'
 import { vaultFacets, ingestQueue, listPalettes, TIERS } from '../../data/pixel/engine'
 import type { Tier } from '../../data/pixel/types'
 
-type Seg = 'library' | 'usage' | 'ingest' | 'references' | 'palettes'
+type Seg = 'library' | 'usage' | 'ingest' | 'references' | 'palettes' | 'lashira'
 
 export function Pixel() {
   const [seg, setSeg] = useState<Seg>('references')
@@ -20,6 +21,7 @@ export function Pixel() {
     { id: 'references', label: 'References' },
     { id: 'ingest', label: 'Ingest', badge: pending },
     { id: 'library', label: 'Library' },
+    { id: 'lashira', label: 'LashiraBloom' },
     { id: 'usage', label: 'Usage' },
     { id: 'palettes', label: 'Palettes', badge: palettes },
   ]
@@ -60,6 +62,7 @@ export function Pixel() {
 
       {seg === 'references' && <Browser base={{ canonical: false }} data={vault.items} title="References" blurb="Open-source inspiration, license-tiered. Never edited here — browse, then copy a generation prompt." />}
       {seg === 'library' && <Browser base={{ canonical: true }} data={vault.items} title="Library" blurb="Your canonical, shippable assets — what the Arganta apps actually consume, by id." />}
+      {seg === 'lashira' && <LashiraBloomArt />}
       {seg === 'usage' && <UsageView />}
       {seg === 'ingest' && <IngestView />}
       {seg === 'palettes' && <PalettesView palettes={vault.palettes} items={vault.items} />}

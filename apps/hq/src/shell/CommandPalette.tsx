@@ -2,16 +2,27 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search, CornerDownLeft, LayoutGrid, TrendingUp, Database, Gamepad2, Boxes,
   GraduationCap, Network, Megaphone, Table2, Sparkles, SunMoon, Coins, Radar, Grid2x2,
+  Vault as VaultIcon, Waypoints, Frame, Scale, Terminal, FilePlus2,
 } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId, type CommandTab } from './store'
+import { useVault, type CenterView } from '../vault/store'
 
 interface Cmd { id: string; label: string; hint: string; keywords: string; Icon: typeof Search; run: () => void }
 
 const SURFACE_ICON: Record<SurfaceId, typeof Search> = {
   portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
   game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone, command: Radar,
-  pixel: Grid2x2,
+  pixel: Grid2x2, vault: VaultIcon,
 }
+
+// HQ Vault jumps — land on the Vault surface at a specific view.
+const VAULT_JUMPS: { view: CenterView; label: string; Icon: typeof Search; keywords: string }[] = [
+  { view: 'graph', label: 'Vault · Graph', Icon: Waypoints, keywords: 'knowledge network links notes' },
+  { view: 'canvas', label: 'Vault · Canvas', Icon: Frame, keywords: 'board map strategy' },
+  { view: 'bases', label: 'Vault · Bases', Icon: Database, keywords: 'notes database table' },
+  { view: 'decisions', label: 'Vault · Decisions', Icon: Scale, keywords: 'decision log ledger founder' },
+  { view: 'prompts', label: 'Vault · Prompts', Icon: Terminal, keywords: 'prompt library ai fable' },
+]
 
 // Command sub-tabs surfaced as palette jumps.
 const COMMAND_JUMPS: { tab: CommandTab; label: string }[] = [
@@ -31,10 +42,22 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const cmds = useMemo<Cmd[]>(() => {
-    const surfs: SurfaceId[] = ['portfolio', 'growth', 'data', 'command', 'game', 'app', 'content', 'agents', 'broadcast']
+    const surfs: SurfaceId[] = ['portfolio', 'growth', 'data', 'command', 'vault', 'game', 'app', 'content', 'agents', 'broadcast']
     const out: Cmd[] = surfs.map(s => ({
-      id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s, Icon: SURFACE_ICON[s], run: () => go(s),
+      id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s + (s === 'vault' ? ' notes knowledge obsidian markdown' : ''), Icon: SURFACE_ICON[s], run: () => go(s),
     }))
+    VAULT_JUMPS.forEach(j => out.push({
+      id: 'vault-' + j.view, label: j.label, hint: 'Open', keywords: 'vault ' + j.keywords, Icon: j.Icon,
+      run: () => { go('vault'); useVault.getState().setCenterView(j.view) },
+    }))
+    out.push({
+      id: 'vault-new-note', label: 'Vault · New note', hint: 'Create', keywords: 'vault note create write markdown',
+      Icon: FilePlus2, run: () => {
+        go('vault')
+        const t = window.prompt('New note title')
+        if (t?.trim()) useVault.getState().createNote(t)
+      },
+    })
     COMMAND_JUMPS.forEach(j => out.push({
       id: 'cmd-' + j.tab, label: 'Command · ' + j.label, hint: 'Open', keywords: 'office chief ' + j.tab,
       Icon: Radar, run: () => goOffice(j.tab),

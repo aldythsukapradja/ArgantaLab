@@ -81,8 +81,8 @@ const WIKI_RE = /\[\[([^\[\]|#]+)(?:#[^\[\]|]*)?(?:\|([^\[\]]+))?\]\]/g
 export function parseWikiLinks(body: string): WikiLink[] {
   const out: WikiLink[] = []
   let m: RegExpExecArray | null
-  WIKI_RE.lastIndex = 0
-  while ((m = WIKI_RE.exec(body))) {
+  const re = new RegExp(WIKI_RE.source, WIKI_RE.flags) // local instance — reentrancy-safe
+  while ((m = re.exec(body))) {
     out.push({ raw: m[0], target: m[1].trim(), alias: m[2]?.trim(), start: m.index })
   }
   return out
@@ -242,8 +242,10 @@ export function tokenizeInline(text: string): Inline[] {
   }
   let last = 0
   let m: RegExpExecArray | null
-  INLINE_RE.lastIndex = 0
-  while ((m = INLINE_RE.exec(text))) {
+  // local instance: tokenizeInline recurses, and a shared global regex would
+  // have its lastIndex clobbered by the recursive call → infinite loop
+  const re = new RegExp(INLINE_RE.source, INLINE_RE.flags)
+  while ((m = re.exec(text))) {
     if (m.index > last) pushText(text.slice(last, m.index))
     const s = m[0]
     if (m[1]) out.push({ kind: 'code', text: s.slice(1, -1) })

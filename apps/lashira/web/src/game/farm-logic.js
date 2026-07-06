@@ -6,6 +6,7 @@ import { CROPS, SEASONS, DAYS_PER_SEASON } from '../data/crops.js';
 import { SPECIES, STARTER_LIVESTOCK } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
+import { loadFarmState, saveFarmState } from './farm-save.js';
 
 export class FarmLogic {
   // circleId (optional): when the game is embedded inside a KinetikCircle
@@ -23,7 +24,8 @@ export class FarmLogic {
       ? 'lashirabloom_save_v2_circle_' + circleId
       : 'lashirabloom_save_v2_' + (profile?.id || 'guest');
     this.state = this._default();
-    this._load();
+    this.saveSource = 'initializing';
+    this.ready = this._load();
   }
 
   _default() {
@@ -44,10 +46,54 @@ export class FarmLogic {
       kins: STARTER_KINS.map((k) => ({ ...k })),
     };
   }
-  _load() {
-    try { const raw = localStorage.getItem(this.saveKey); if (raw) this.state = { ...this._default(), ...JSON.parse(raw) }; } catch { /* fresh */ }
+  async _load() {
+    try {
+      const loaded = await loadFarmState({ profile: this.profile, circleId: this.circleId });
+      if (loaded?.data) this.state = { ...this._default(), ...loaded.data };
+      this.saveSource = loaded?.source || 'fresh';
+      return;
+    } catch (err) {
+      console.warn('[farm] cloud load failed, trying local fallback:', err?.message || err);
+      this.saveSource = 'local-fallback-after-cloud-error';
+    }
+    try {
+      const raw = localStorage.getItem(this.saveKey);
+      if (raw) this.state = { ...this._default(), ...JSON.parse(raw) };
+    } catch { /* fresh */ }
   }
-  save() { try { localStorage.setItem(this.saveKey, JSON.stringify(this.state)); } catch { /* quota */ } }
+  serialize() {
+    return {
+      day: this.state.day,
+      season: this.state.season,
+      diamonds: this.state.diamonds,
+      xp: this.state.xp,
+      stamina: this.state.stamina,
+      maxStamina: this.state.maxStamina,
+      tool: this.state.tool,
+      selectedSeed: this.state.selectedSeed,
+      seeds: { ...this.state.seeds },
+      produce: { ...this.state.produce },
+      plots: { ...this.state.plots },
+      livestock: this.state.livestock.map((a) => ({ ...a })),
+      kins: this.state.kins.map((k) => ({ ...k })),
+    };
+  }
+  save() {
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => this.flushSave(), 500);
+  }
+  async flushSave() {
+    clearTimeout(this._saveTimer);
+    const payload = this.serialize();
+    try {
+      const res = await saveFarmState({ profile: this.profile, circleId: this.circleId, data: payload });
+      this.saveSource = res?.source || this.saveSource;
+    } catch (err) {
+      console.warn('[farm] cloud save failed, keeping a local fallback:', err?.message || err);
+      try { localStorage.setItem(this.saveKey, JSON.stringify(payload)); } catch { /* quota */ }
+      this.saveSource = 'local-fallback-after-cloud-error';
+    }
+  }
 
   subscribe(fn) { this.listeners.add(fn); fn(this.snapshot()); return () => this.listeners.delete(fn); }
   emit() { const s = this.snapshot(); this.listeners.forEach((l) => l(s)); }
@@ -66,6 +112,7 @@ export class FarmLogic {
       role: this.profile?.role ?? 'user',
       name: this.profile?.displayName ?? 'Farmer',
       guest: !!this.profile?.guest,
+      saveSource: this.saveSource,
       toast: this.toast,
     };
   }

@@ -14,6 +14,7 @@ import { AgentOrb } from '../components/AgentOrb'
 import { CommandPalette } from './CommandPalette'
 import { Command } from '../surfaces/command/Command'
 import { Pixel } from '../surfaces/pixel/Pixel'
+import { Vault } from '../surfaces/Vault'
 
 function Surface() {
   const { surface } = useHQ()
@@ -28,25 +29,27 @@ function Surface() {
     case 'broadcast': return <Broadcast />
     case 'command': return <Command />
     case 'pixel': return <Pixel />
+    case 'vault': return <Vault />
   }
 }
 
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   const { surface } = useHQ()
   const wide = surface === 'game' || surface === 'app'
+  const full = surface === 'vault' // Vault runs edge-to-edge as its own workspace
   return (
     <div className="hq">
       <Rail who={who} />
       <div className="main">
         <Topbar canSignOut={authed} />
-        {!cloudEnabled && (
+        {!cloudEnabled && !full && (
           <div className="banner">
             Offline preview — add <span className="src" style={{ background: 'transparent', padding: 0 }}>VITE_SUPABASE_URL</span> + anon key to <span className="src" style={{ background: 'transparent', padding: 0 }}>apps/hq/.env.local</span> and sign in to load live data.
           </div>
         )}
         <MobileSubnav />
-        <div className="content">
-          <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>
+        <div className={'content' + (full ? ' content-flush' : '')}>
+          {full ? <Surface /> : <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>}
         </div>
       </div>
       <AgentOrb />

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useVault } from '../store'
 import { exportVault, importVault, downloadFile, noteToMarkdown } from '../storage'
+import { parseFrontmatter, normalizeFrontmatter } from '../markdown'
 import { PRODUCT_COLOR } from '../types'
 
 interface Cmd { id: string; label: string; hint: string; keywords: string; Icon: typeof Search; color?: string; run: () => void }
@@ -101,7 +102,6 @@ export function VaultCommandPalette() {
       }
     } else {
       // markdown → new note
-      const { parseFrontmatter, normalizeFrontmatter } = await import('../markdown')
       const { fm, body } = parseFrontmatter(text)
       const title = (typeof fm.title === 'string' && fm.title) || file.name.replace(/\.md$/i, '')
       st.createNote(title, normalizeFrontmatter(fm, title), body || text)

@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
-  Network, Megaphone, Radar, Grid2x2,
+  Network, Megaphone, Radar, Grid2x2, Vault as VaultIcon,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 
@@ -18,6 +18,9 @@ const GROUPS: Group[] = [
   ] },
   { name: 'Command', items: [
     { id: 'command', label: 'Command', Icon: Radar },
+  ] },
+  { name: 'Knowledge', items: [
+    { id: 'vault', label: 'HQ Vault', Icon: VaultIcon, badge: 'new' },
   ] },
   { name: 'Build', items: [
     { id: 'pixel', label: 'Pixel Vault', Icon: Grid2x2 },

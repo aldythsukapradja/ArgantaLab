@@ -115,11 +115,17 @@ export function VaultShell() {
       <div className="v-ribbon">
         <div className="v-ribbon-mark" title="HQ Vault"><VaultIcon size={16} /></div>
         <button className={'v-rib' + (centerView === 'note' && settings.leftOpen && leftPanel === 'files' ? ' on' : '')}
-          title="Files" onClick={() => { setLeftPanel('files'); setCenterView('note') }}>
+          title="Files" onClick={() => {
+            if (settings.leftOpen && leftPanel === 'files' && centerView === 'note') toggleLeft()
+            else { setLeftPanel('files'); setCenterView('note') }
+          }}>
           <Files size={17} />
         </button>
         <button className={'v-rib' + (settings.leftOpen && leftPanel === 'search' ? ' on' : '')}
-          title="Search" onClick={() => setLeftPanel('search')}>
+          title="Search" onClick={() => {
+            if (settings.leftOpen && leftPanel === 'search') toggleLeft()
+            else setLeftPanel('search')
+          }}>
           <Search size={17} />
         </button>
         <div className="v-rib-sep" />
