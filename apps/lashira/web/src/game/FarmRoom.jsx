@@ -85,6 +85,40 @@ function heroSpecKey(spec) {
   try { return JSON.stringify(spec); } catch { return String(spec); }
 }
 
+function presenceProfileId(profile) {
+  return String(profile?.id || '');
+}
+
+function presenceHostId(g, profile) {
+  const ids = [presenceProfileId(profile), ...g.peerActors.keys()].filter(Boolean).sort();
+  return ids[0] || '';
+}
+
+function worldActorSnapshots(g, includeSharedKins) {
+  const out = [];
+  for (const e of g.actors.values()) {
+    if (e.kind === 'mount') {
+      out.push({
+        id: e.id,
+        kind: 'mount',
+        tile: [...(e.tile || [12, 12])],
+        facing: e.facing || 'South',
+        mode: e.mode || 'wander',
+        hidden: !!e.hidden,
+      });
+    } else if (includeSharedKins && e.kind === 'kin') {
+      out.push({
+        id: e.id,
+        kind: 'kin',
+        tile: [...(e.tile || [12, 12])],
+        facing: e.facing || 'South',
+        kin: e.kin || null,
+      });
+    }
+  }
+  return out;
+}
+
 export default function FarmRoom({ profile, hero, circleId = null }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -128,7 +162,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
         player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
-        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(), peerActors: new Map(), pendingMountCall: false,
+        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(), peerActors: new Map(), peerWorldActors: new Map(), pendingMountCall: false,
         presenceCtrl: null, lastPresenceSnapshot: '', lastPresenceAt: 0,
       };
       const unsub = logic.subscribe(setSnap);
@@ -146,6 +180,17 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
 
+  useEffect(() => {
+    if (!ready) return undefined;
+    const save = () => { logicRef.current?.flushSave?.(); };
+    window.addEventListener('pagehide', save);
+    window.addEventListener('beforeunload', save);
+    return () => {
+      window.removeEventListener('pagehide', save);
+      window.removeEventListener('beforeunload', save);
+    };
+  }, [ready]);
+
   // ---------- live circle presence ----------
   useEffect(() => {
     if (!ready) return undefined;
@@ -155,6 +200,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     g.presenceCtrl?.leave?.();
     g.presenceCtrl = null;
     g.peerActors.clear();
+    g.peerWorldActors.clear();
     setPresence({ count: 0, names: [] });
 
     if (!circleId || !profile || profile.guest) return undefined;
@@ -164,12 +210,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (closed || !G.current) return;
       const now = performance.now();
       const live = new Set();
+      const liveWorld = new Set();
       const names = [];
+      const rows = [];
       for (const peer of peers || []) {
         const tile = readTile(peer.tile);
         if (!tile) continue;
         const id = String(peer.id || '');
-        if (!id || id === profile.id) continue;
+        if (!id || id === presenceProfileId(profile)) continue;
+        rows.push({ id, peer, tile });
         live.add(id);
         names.push(peer.name || 'Farmer');
         let actor = g.peerActors.get(id);
@@ -232,7 +281,54 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           }).catch(() => {});
         }
       }
+
+      const host = [presenceProfileId(profile), ...live].filter(Boolean).sort()[0] || '';
+      for (const { id, peer } of rows) {
+        for (const fa of peer.actors || []) {
+          if (!fa || !fa.id) continue;
+          const kind = fa.kind === 'kin' ? 'kin' : fa.kind === 'mount' ? 'mount' : null;
+          if (!kind) continue;
+          if (kind === 'kin' && id !== host) continue;
+          const tile = readTile(fa.tile);
+          if (!tile) continue;
+          const wid = id + ':' + fa.id;
+          liveWorld.add(wid);
+          let actor = g.peerWorldActors.get(wid);
+          if (!actor) {
+            actor = {
+              id: wid,
+              sourceId: fa.id,
+              ownerId: id,
+              kind,
+              peerMount: kind === 'mount',
+              tile,
+              from: [...tile],
+              moveT: 1,
+              moveStart: now,
+              speedMs: REMOTE_WALK_MS,
+              facing: fa.facing || 'South',
+              mode: fa.mode || 'wander',
+              hidden: !!fa.hidden,
+              kin: fa.kin || null,
+            };
+            g.peerWorldActors.set(wid, actor);
+          } else {
+            const currentTile = actorTileAt(actor, now);
+            if (!sameTile(actor.tile, tile)) {
+              actor.from = currentTile;
+              actor.tile = tile;
+              actor.moveT = 0;
+              actor.moveStart = now;
+            }
+            actor.facing = fa.facing || actor.facing || 'South';
+            actor.mode = fa.mode || actor.mode || 'wander';
+            actor.hidden = !!fa.hidden;
+            actor.kin = fa.kin || actor.kin || null;
+          }
+        }
+      }
       for (const id of [...g.peerActors.keys()]) if (!live.has(id)) g.peerActors.delete(id);
+      for (const id of [...g.peerWorldActors.keys()]) if (!liveWorld.has(id)) g.peerWorldActors.delete(id);
       setPresence({ count: names.length, names: names.slice(0, 4) });
     };
 
@@ -246,6 +342,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       facing: g.player.facing,
       mounted: !!g.player.mounted,
       heroSpec: hero?.spec || null,
+      actors: worldActorSnapshots(g, true),
     });
 
     return () => {
@@ -254,6 +351,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (G.current === g) {
         g.presenceCtrl = null;
         g.peerActors.clear();
+        g.peerWorldActors.clear();
       }
       setPresence({ count: 0, names: [] });
     };
@@ -492,11 +590,17 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const e of g.peerActors.values()) {
         if (e.moveT < 1) e.moveT = Math.min(1, (now - e.moveStart) / (e.speedMs || REMOTE_WALK_MS));
       }
+      for (const e of g.peerWorldActors.values()) {
+        if (e.moveT < 1) e.moveT = Math.min(1, (now - e.moveStart) / (e.speedMs || REMOTE_WALK_MS));
+      }
     }
     function publishPresence(g, now) {
       if (!g.presenceCtrl) return;
       const p = g.player;
-      const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}`;
+      const isHost = presenceHostId(g, profile) === presenceProfileId(profile);
+      const actors = worldActorSnapshots(g, isHost);
+      const actorStamp = actors.map((a) => `${a.id}:${a.tile[0]},${a.tile[1]}:${a.facing}:${a.mode || ''}:${a.hidden ? 1 : 0}`).join('|');
+      const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}:${actorStamp}`;
       if (snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
       g.lastPresenceSnapshot = snapshot;
       g.lastPresenceAt = now;
@@ -506,6 +610,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         facing: p.facing,
         mounted: !!p.mounted,
         heroSpec: hero?.spec || null,
+        actors,
       });
     }
 
@@ -620,6 +725,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const frame = e.moveT < 1 ? Math.floor(e.moveT * 2) : Math.floor(now / 420);
       if (e.kind === 'animal') drawAnimalSprite(ctx, e.species, footX, footY, e.facing, frame, g.art);
       else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
+      else if (e.kind === 'mount' && e.peerMount) drawMountPlaceholder(ctx, footX, footY, e.facing, Math.floor(now / 260), g.art);
       else if (e.kind === 'mount') drawKingdomMount(g, ctx, e, now, footX, footY);
     }
     function drawActorShadow(g, ctx, a) {
@@ -674,8 +780,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const footX = ppx + TILE / 2, footY = ppy + TILE - 5;
       let headTop = footY - 40;
       const actors = [];
+      const hostIsSelf = !circleId || presenceHostId(g, profile) === presenceProfileId(profile);
       for (const e of g.actors.values()) {
         if (e.kind === 'mount' && p.mounted) continue;
+        if (e.kind === 'kin' && !hostIsSelf) continue;
+        const [ex, ey] = entityPx(e);
+        actors.push({ type: 'world', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
+      }
+      for (const e of g.peerWorldActors.values()) {
+        if (e.hidden) continue;
         const [ex, ey] = entityPx(e);
         actors.push({ type: 'world', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
       }

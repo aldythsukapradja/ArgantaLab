@@ -135,7 +135,11 @@ export class FarmLogic {
   }
   save() {
     clearTimeout(this._saveTimer);
-    this._saveTimer = setTimeout(() => this.flushSave(), 500);
+    this._saveTimer = setTimeout(() => this.flushSave(), 200);
+  }
+  saveNow() {
+    clearTimeout(this._saveTimer);
+    return this.flushSave();
   }
   async flushSave() {
     clearTimeout(this._saveTimer);
@@ -305,6 +309,6 @@ export class FarmLogic {
     st.day += 1;
     if (st.day > DAYS_PER_SEASON) { st.day = 1; st.season = (st.season + 1) % SEASONS.length; }
     st.stamina = st.maxStamina;
-    this.save(); this.flash('☀ Day ' + st.day + ' — a new morning'); this.emit();
+    this.saveNow(); this.flash('☀ Day ' + st.day + ' — a new morning'); this.emit();
   }
 }
