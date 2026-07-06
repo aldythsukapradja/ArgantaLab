@@ -20,7 +20,7 @@ const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
 const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   const rank = computeRank(snap.xp);
@@ -83,6 +83,11 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
           <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
         </div>
+        {presence?.count > 0 && (
+          <div className="farm-online" title={presence.names?.join(', ') || 'Friends in farm'}>
+            <i /> <b>{presence.count}</b> live {presence.names?.[0] ? <span>{presence.names.join(', ')}</span> : null}
+          </div>
+        )}
       </div>
 
       {!usingHero && (

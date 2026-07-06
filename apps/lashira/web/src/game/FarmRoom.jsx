@@ -9,6 +9,7 @@ import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, dr
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadAcquiredKins } from './arganta-kin.js';
 import { hasActualKinArt } from './kin-sprite-image.jsx';
+import { joinFarmPresence } from './farm-presence.js';
 import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
 import { Hud } from '../ui/Hud.jsx';
@@ -19,6 +20,7 @@ const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const FACE_WORD = { North: 'up', South: 'down', East: 'right', West: 'left' };
 const WALK_MS = 260;
+const REMOTE_WALK_MS = 280;
 const ANIMAL_VISUAL_COUNT = 5;
 const DIRS = [['East', 1, 0], ['West', -1, 0], ['South', 0, 1], ['North', 0, -1]];
 const KIN_STARTS = [[7, 12], [13, 16], [18, 11], [23, 14], [28, 10], [9, 18], [18, 19], [27, 18], [32, 13], [12, 7], [21, 7], [30, 7]];
@@ -50,6 +52,39 @@ function nearestOpenNeighbor(g, center, from = center) {
   return options[0] || null;
 }
 
+function sameTile(a, b) {
+  return !!a && !!b && Number(a[0]) === Number(b[0]) && Number(a[1]) === Number(b[1]);
+}
+
+function readTile(value) {
+  if (Array.isArray(value) && value.length >= 2) {
+    const x = Number(value[0]), y = Number(value[1]);
+    return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+  }
+  if (value && typeof value === 'object') {
+    const x = Number(value.x), y = Number(value.y);
+    return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+  }
+  return null;
+}
+
+function actorTileAt(e, now = performance.now()) {
+  const t = e.moveT ?? 1;
+  if (e.from && t < 1) {
+    const p = Math.max(0, Math.min(1, (now - e.moveStart) / (e.speedMs || REMOTE_WALK_MS)));
+    return [
+      e.from[0] + (e.tile[0] - e.from[0]) * p,
+      e.from[1] + (e.tile[1] - e.from[1]) * p,
+    ];
+  }
+  return [...(e.tile || [12, 12])];
+}
+
+function heroSpecKey(spec) {
+  if (!spec) return '';
+  try { return JSON.stringify(spec); } catch { return String(spec); }
+}
+
 export default function FarmRoom({ profile, hero, circleId = null }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -61,6 +96,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [panel, setPanel] = useState(null);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
   const [usingHero, setUsingHero] = useState(false);
+  const [presence, setPresence] = useState({ count: 0, names: [] });
+  const heroPresenceKey = heroSpecKey(hero?.spec);
 
   // ---------- init ----------
   useEffect(() => {
@@ -91,7 +128,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
         player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
-        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(), pendingMountCall: false,
+        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(), peerActors: new Map(), pendingMountCall: false,
+        presenceCtrl: null, lastPresenceSnapshot: '', lastPresenceAt: 0,
       };
       const unsub = logic.subscribe(setSnap);
       G.current._unsub = unsub;
@@ -100,12 +138,126 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
     return () => {
       live = false;
+      G.current?.presenceCtrl?.leave?.();
       G.current?._unsub?.();
       logic.flushSave?.();
     };
   }, [profile, hero, circleId]);
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
+
+  // ---------- live circle presence ----------
+  useEffect(() => {
+    if (!ready) return undefined;
+    const g = G.current;
+    if (!g) return undefined;
+
+    g.presenceCtrl?.leave?.();
+    g.presenceCtrl = null;
+    g.peerActors.clear();
+    setPresence({ count: 0, names: [] });
+
+    if (!circleId || !profile || profile.guest) return undefined;
+
+    let closed = false;
+    const applyPeers = (peers) => {
+      if (closed || !G.current) return;
+      const now = performance.now();
+      const live = new Set();
+      const names = [];
+      for (const peer of peers || []) {
+        const tile = readTile(peer.tile);
+        if (!tile) continue;
+        const id = String(peer.id || '');
+        if (!id || id === profile.id) continue;
+        live.add(id);
+        names.push(peer.name || 'Farmer');
+        let actor = g.peerActors.get(id);
+        if (!actor) {
+          actor = {
+            id,
+            kind: 'remote',
+            peer,
+            name: peer.name || 'Farmer',
+            tile,
+            from: [...tile],
+            moveT: 1,
+            moveStart: now,
+            facing: peer.facing || 'South',
+            mounted: !!peer.mounted,
+            speedMs: REMOTE_WALK_MS,
+            resources: null,
+            heroOk: false,
+            hasWeapon: false,
+            specKey: '',
+            loading: null,
+          };
+          g.peerActors.set(id, actor);
+        } else {
+          const currentTile = actorTileAt(actor, now);
+          if (!sameTile(actor.tile, tile)) {
+            actor.from = currentTile;
+            actor.tile = tile;
+            actor.moveT = 0;
+            actor.moveStart = now;
+          }
+          actor.peer = peer;
+          actor.name = peer.name || actor.name || 'Farmer';
+          actor.facing = peer.facing || actor.facing || 'South';
+          actor.mounted = !!peer.mounted;
+        }
+
+        const key = heroSpecKey(peer.heroSpec);
+        if (!key) {
+          actor.specKey = '';
+          actor.resources = null;
+          actor.heroOk = false;
+          actor.loading = null;
+        } else if (actor.specKey !== key) {
+          actor.specKey = key;
+          actor.resources = null;
+          actor.heroOk = false;
+          const tablesReady = g.tables
+            ? Promise.resolve(g.tables)
+            : (g.tablesLoading ||= loadMotionTables().then((tables) => {
+              g.tables = tables;
+              return tables;
+            }).catch(() => null));
+          actor.loading = Promise.all([tablesReady, loadPlayerResources(peer.heroSpec)]).then(([tables, resources]) => {
+            const current = G.current?.peerActors?.get(id);
+            if (!current || current.specKey !== key) return;
+            current.resources = resources;
+            current.hasWeapon = !!resources?.weapon;
+            current.heroOk = !!(tables && resources && Object.keys(resources).length);
+          }).catch(() => {});
+        }
+      }
+      for (const id of [...g.peerActors.keys()]) if (!live.has(id)) g.peerActors.delete(id);
+      setPresence({ count: names.length, names: names.slice(0, 4) });
+    };
+
+    const ctrl = joinFarmPresence({ circleId, profile, hero, onPeers: applyPeers });
+    g.presenceCtrl = ctrl;
+    g.lastPresenceSnapshot = '';
+    g.lastPresenceAt = 0;
+    ctrl.update({
+      name: profile.displayName || 'Farmer',
+      tile: [...g.player.tile],
+      facing: g.player.facing,
+      mounted: !!g.player.mounted,
+      heroSpec: hero?.spec || null,
+    });
+
+    return () => {
+      closed = true;
+      ctrl.leave();
+      if (G.current === g) {
+        g.presenceCtrl = null;
+        g.peerActors.clear();
+      }
+      setPresence({ count: 0, names: [] });
+    };
+  }, [ready, circleId, profile?.id, profile?.displayName, profile?.guest, heroPresenceKey]);
 
   // ---------- actions ----------
   function frontTile() {
@@ -336,6 +488,26 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         } else e.idleUntil = now + 800;
       }
     }
+    function stepPeerActors(g, now) {
+      for (const e of g.peerActors.values()) {
+        if (e.moveT < 1) e.moveT = Math.min(1, (now - e.moveStart) / (e.speedMs || REMOTE_WALK_MS));
+      }
+    }
+    function publishPresence(g, now) {
+      if (!g.presenceCtrl) return;
+      const p = g.player;
+      const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}`;
+      if (snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
+      g.lastPresenceSnapshot = snapshot;
+      g.lastPresenceAt = now;
+      g.presenceCtrl.update({
+        name: profile?.displayName || 'Farmer',
+        tile: [...p.tile],
+        facing: p.facing,
+        mounted: !!p.mounted,
+        heroSpec: hero?.spec || null,
+      });
+    }
 
     function tick(now) {
       try { step(now); } catch (err) { if (!tick._e) { tick._e = true; console.error('farm tick error', err); } }
@@ -358,6 +530,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       }
       if (p.oneShot && now - p.oneShotStart > 480) p.oneShot = null;
       stepWorldActors(g, now);
+      stepPeerActors(g, now);
+      publishPresence(g, now);
       draw(g, ctx, canvas, now);
     }
 
@@ -377,6 +551,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const w = g.hasWeapon;
       if (p.moveT < 1) return (w ? 'WeaponWalk' : 'NormalWalk') + p.facing;
       return (w ? 'WeaponStandBy' : 'NormalStandBy') + p.facing;
+    }
+    function remoteMotion(e) {
+      if (e.mounted && e.resources?.mount) return 'Riding' + e.facing;
+      const w = e.hasWeapon;
+      if (e.moveT < 1) return (w ? 'WeaponWalk' : 'NormalWalk') + e.facing;
+      return (w ? 'WeaponStandBy' : 'NormalStandBy') + e.facing;
     }
 
     // Draws the farmer with its bottom-center EXACTLY on the foot point (tile
@@ -400,6 +580,21 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         }
       }
       drawPlaceholderFarmer(ctx, footX, footY, FACE_WORD[p.facing]);
+      return footY - 40;
+    }
+    function drawRemotePlayer(g, ctx, now, e, footX, footY) {
+      if (e.heroOk) {
+        const motion = remoteMotion(e);
+        const n = stepCount(g.tables, motion);
+        const s = e.moveT < 1 ? Math.floor(e.moveT * n) % n : Math.floor(now / 340) % n;
+        const list = resolveStep(g.tables, e.resources, motion, s);
+        const bb = list.length ? drawListBBox([list]) : null;
+        if (bb) {
+          paintStep(ctx, list, { x: footX - bb.cx, y: footY - bb.y1 }, 1);
+          return footY - (bb.y1 - bb.y0);
+        }
+      }
+      drawPlaceholderFarmer(ctx, footX, footY, FACE_WORD[e.facing]);
       return footY - 40;
     }
     function drawKingdomMount(g, ctx, e, now, footX, footY) {
@@ -428,13 +623,23 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       else if (e.kind === 'mount') drawKingdomMount(g, ctx, e, now, footX, footY);
     }
     function drawActorShadow(g, ctx, a) {
-      const wide = a.type === 'player' ? g.player.mounted : a.e?.kind === 'mount' || a.e?.species === 'cow';
+      const wide = a.type === 'player' ? g.player.mounted : a.e?.kind === 'mount' || a.e?.kind === 'remote' && a.e.mounted || a.e?.species === 'cow';
       const rx = wide ? 20 : 10;
       const ry = wide ? 5 : 3.5;
       ctx.fillStyle = 'rgba(35, 62, 28, 0.16)';
       ctx.beginPath();
       ctx.ellipse(a.footX, a.footY + 1, rx, ry, 0, 0, Math.PI * 2);
       ctx.fill();
+    }
+    function drawNameplate(ctx, label) {
+      ctx.font = '11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(label.name).width; const bw = tw + 16;
+      const ny = Math.min(label.headTop - 12, label.footY - 44);
+      ctx.fillStyle = label.fill || '#1d9d55dd';
+      ctx.fillRect(label.footX - bw / 2, ny - 9, bw, 17);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label.name, label.footX, ny);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
 
     function draw(g, ctx, canvas, now) {
@@ -474,28 +679,30 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const [ex, ey] = entityPx(e);
         actors.push({ type: 'world', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
       }
+      for (const e of g.peerActors.values()) {
+        const [ex, ey] = entityPx(e);
+        actors.push({ type: 'remote', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
+      }
       actors.push({ type: 'player', footX, footY });
       actors.sort((a, b) => a.footY - b.footY);
+      const labels = [];
       for (const a of actors) {
         const actualKin = a.e?.kind === 'kin' && hasActualKinArt(a.e.kin);
         if (!actualKin) drawActorShadow(g, ctx, a);
-        if (a.type === 'player') headTop = drawPlayer(g, ctx, now, a.footX, a.footY);
-        else drawWorldActor(g, ctx, a.e, now, a.footX, a.footY);
+        if (a.type === 'player') {
+          headTop = drawPlayer(g, ctx, now, a.footX, a.footY);
+          labels.push({ name: logicRef.current.profile?.displayName || 'Farmer', footX: a.footX, footY: a.footY, headTop, fill: '#1d9d55dd' });
+        } else if (a.type === 'remote') {
+          const remoteTop = drawRemotePlayer(g, ctx, now, a.e, a.footX, a.footY);
+          labels.push({ name: a.e.name || 'Farmer', footX: a.footX, footY: a.footY, headTop: remoteTop, fill: '#4f46e5dd' });
+        } else drawWorldActor(g, ctx, a.e, now, a.footX, a.footY);
       }
-
-      // nameplate floats just above the head
-      const name = logicRef.current.profile?.displayName || 'Farmer';
-      ctx.font = '11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const tw = ctx.measureText(name).width; const bw = tw + 16;
-      const ny = Math.min(headTop - 12, footY - 44);
-      ctx.fillStyle = '#1d9d55dd'; ctx.fillRect(footX - bw / 2, ny - 9, bw, 17);
-      ctx.fillStyle = '#fff'; ctx.fillText(name, footX, ny);
-      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      for (const label of labels) drawNameplate(ctx, label);
       ctx.restore();
     }
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [ready]);
+  }, [ready, profile?.displayName, heroPresenceKey]);
 
   // ---------- nipplejs ----------
   useEffect(() => {
@@ -523,7 +730,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         {snap && (
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
-              zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} />
+              zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
         )}
