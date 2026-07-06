@@ -11,15 +11,16 @@ function collectPeers(channel, selfId) {
 }
 
 function noopPresence() {
-  return { update: () => {}, leave: () => {} };
+  return { update: () => {}, sendState: () => {}, leave: () => {} };
 }
 
-export function joinFarmPresence({ circleId, profile, hero, onPeers }) {
+export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState }) {
   if (!hasSupabase || !supabase || !circleId || !profile || profile.guest) return noopPresence();
   const selfId = String(profile.id || '').trim();
   if (!selfId) return noopPresence();
 
   let subscribed = false;
+  let closed = false;
   let current = {
     id: selfId,
     name: profile.displayName || 'Farmer',
@@ -29,6 +30,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers }) {
     heroSpec: hero?.spec || null,
     updatedAt: Date.now(),
   };
+  let pendingState = null;
 
   const channel = supabase.channel(`farm:${circleId}`, {
     config: { presence: { key: selfId } },
@@ -37,19 +39,49 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers }) {
   channel.on('presence', { event: 'sync' }, () => {
     onPeers(collectPeers(channel, selfId));
   });
-  channel.subscribe((status) => {
-    if (status === 'SUBSCRIBED') {
-      subscribed = true;
-      channel.track(current);
-    }
+  channel.on('broadcast', { event: 'farm-state' }, ({ payload }) => {
+    if (!payload || payload.sourceId === selfId) return;
+    onFarmState?.(payload);
   });
+  const subscribe = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (token) supabase.realtime?.setAuth?.(token);
+    } catch { /* keep presence best-effort */ }
+    if (closed) return;
+    channel.subscribe((status) => {
+      if (closed) return;
+      if (status === 'SUBSCRIBED') {
+        subscribed = true;
+        channel.track(current);
+        if (pendingState) {
+          channel.send({ type: 'broadcast', event: 'farm-state', payload: pendingState });
+          pendingState = null;
+        }
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        subscribed = false;
+      }
+    });
+  };
+  subscribe();
 
   return {
     update(patch = {}) {
       current = { ...current, ...patch, updatedAt: Date.now() };
       if (subscribed) channel.track(current);
     },
+    sendState(payload = {}) {
+      const next = {
+        ...payload,
+        sourceId: selfId,
+        updatedAt: payload.updatedAt || Date.now(),
+      };
+      if (subscribed) channel.send({ type: 'broadcast', event: 'farm-state', payload: next });
+      else pendingState = next;
+    },
     leave() {
+      closed = true;
       try { supabase.removeChannel(channel); } catch { /* noop */ }
     },
   };

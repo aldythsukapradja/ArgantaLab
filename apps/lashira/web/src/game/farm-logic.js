@@ -32,6 +32,7 @@ export class FarmLogic {
     this.listeners = new Set();
     this.toast = null;
     this.externalKins = [];
+    this.externalKinsLoaded = false;
     this.saveKey = circleId
       ? 'lashirabloom_save_v2_circle_' + circleId
       : 'lashirabloom_save_v2_' + (profile?.id || 'guest');
@@ -101,6 +102,29 @@ export class FarmLogic {
       }
     } catch { /* fresh */ }
   }
+  applyRemoteState(data) {
+    if (!data || typeof data !== 'object') return;
+    const base = this._default();
+    const local = this.state;
+    this.state = {
+      ...base,
+      ...local,
+      ...data,
+      ...profileProgress(this.profile),
+      tool: local.tool,
+      selectedSeed: local.selectedSeed,
+      stamina: local.stamina,
+      maxStamina: local.maxStamina,
+      seeds: { ...base.seeds, ...(local.seeds || {}), ...(data.seeds || {}) },
+      produce: { ...base.produce, ...(local.produce || {}), ...(data.produce || {}) },
+      plots: { ...base.plots, ...(data.plots || {}) },
+      livestock: data.livestock || local.livestock || base.livestock,
+      kins: data.kins || local.kins || base.kins,
+      kinTasks: { ...base.kinTasks, ...(local.kinTasks || {}), ...(data.kinTasks || {}) },
+    };
+    this.save();
+    this.emit();
+  }
   serialize() {
     return {
       day: this.state.day,
@@ -121,10 +145,11 @@ export class FarmLogic {
   }
   setExternalKins(kins) {
     this.externalKins = Array.isArray(kins) ? kins.map((k) => ({ ...k })) : [];
+    this.externalKinsLoaded = true;
     this.emit();
   }
   activeKins() {
-    if (this.externalKins?.length) {
+    if (this.externalKinsLoaded) {
       const tasks = this.state.kinTasks || {};
       return this.externalKins.map((k) => ({
         ...k,

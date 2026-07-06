@@ -29,6 +29,7 @@ if (commandEmbed) {
     if (d.session?.access_token) {
       if (d.session.access_token === embeddedAuthToken && window.__lashiraEmbeddedAuthUser !== undefined) {
         embeddedAuthApplied = true;
+        try { supabase?.realtime?.setAuth?.(d.session.access_token); } catch { /* ignore */ }
         return window.__lashiraEmbeddedAuthUser;
       }
       const { data, error } = await supabase?.auth.setSession({
@@ -36,6 +37,7 @@ if (commandEmbed) {
         refresh_token: d.session.refresh_token,
       }) || {};
       if (error) throw error;
+      try { supabase?.realtime?.setAuth?.(d.session.access_token); } catch { /* ignore */ }
       embeddedAuthApplied = true;
       embeddedAuthToken = d.session.access_token;
       const user = data?.session?.user || data?.user || null;

@@ -94,7 +94,7 @@ function presenceHostId(g, profile) {
   return ids[0] || '';
 }
 
-function worldActorSnapshots(g, includeSharedKins) {
+function worldActorSnapshots(g, includeSharedWorld) {
   const out = [];
   for (const e of g.actors.values()) {
     if (e.kind === 'mount') {
@@ -106,7 +106,7 @@ function worldActorSnapshots(g, includeSharedKins) {
         mode: e.mode || 'wander',
         hidden: !!e.hidden,
       });
-    } else if (includeSharedKins && e.kind === 'kin') {
+    } else if (includeSharedWorld && e.kind === 'kin') {
       out.push({
         id: e.id,
         kind: 'kin',
@@ -114,9 +114,22 @@ function worldActorSnapshots(g, includeSharedKins) {
         facing: e.facing || 'South',
         kin: e.kin || null,
       });
+    } else if (includeSharedWorld && e.kind === 'animal') {
+      out.push({
+        id: e.id,
+        kind: 'animal',
+        species: e.species,
+        name: e.name || e.species,
+        tile: [...(e.tile || [12, 12])],
+        facing: e.facing || 'South',
+      });
     }
   }
   return out;
+}
+
+function farmStateKey(data) {
+  try { return JSON.stringify(data); } catch { return ''; }
 }
 
 export default function FarmRoom({ profile, hero, circleId = null }) {
@@ -158,14 +171,29 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (!live) return;
       const heroOk = !!(tables && resources && Object.keys(resources).length);
       setUsingHero(heroOk);
-      if (acquiredKins.length) logic.setExternalKins(acquiredKins);
+      if (!profile?.guest) logic.setExternalKins(acquiredKins);
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
         player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
         held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(), peerActors: new Map(), peerWorldActors: new Map(), pendingMountCall: false,
-        presenceCtrl: null, lastPresenceSnapshot: '', lastPresenceAt: 0,
+        presenceCtrl: null, lastPresenceSnapshot: '', lastPresenceAt: 0, lastFarmStateKey: '', lastFarmStateAt: 0, suppressFarmStateBroadcast: false,
       };
-      const unsub = logic.subscribe(setSnap);
+      const unsub = logic.subscribe((next) => {
+        setSnap(next);
+        const g = G.current;
+        if (!g || !g.presenceCtrl || !circleId || profile?.guest) return;
+        if (g.suppressFarmStateBroadcast) {
+          g.suppressFarmStateBroadcast = false;
+          g.lastFarmStateKey = farmStateKey(logic.serialize());
+          return;
+        }
+        const data = logic.serialize();
+        const key = farmStateKey(data);
+        if (!key || key === g.lastFarmStateKey) return;
+        g.lastFarmStateKey = key;
+        g.lastFarmStateAt = Date.now();
+        g.presenceCtrl.sendState({ data, updatedAt: g.lastFarmStateAt });
+      });
       G.current._unsub = unsub;
       setReady(true);
     })();
@@ -206,6 +234,14 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     if (!circleId || !profile || profile.guest) return undefined;
 
     let closed = false;
+    const applyFarmState = (payload) => {
+      if (closed || !G.current || !payload?.data) return;
+      const stamp = Number(payload.updatedAt || 0);
+      if (stamp && stamp <= (g.lastRemoteFarmStateAt || 0)) return;
+      g.lastRemoteFarmStateAt = stamp || Date.now();
+      g.suppressFarmStateBroadcast = true;
+      logicRef.current?.applyRemoteState?.(payload.data);
+    };
     const applyPeers = (peers) => {
       if (closed || !G.current) return;
       const now = performance.now();
@@ -286,9 +322,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const { id, peer } of rows) {
         for (const fa of peer.actors || []) {
           if (!fa || !fa.id) continue;
-          const kind = fa.kind === 'kin' ? 'kin' : fa.kind === 'mount' ? 'mount' : null;
+          const kind = fa.kind === 'animal' ? 'animal' : fa.kind === 'kin' ? 'kin' : fa.kind === 'mount' ? 'mount' : null;
           if (!kind) continue;
-          if (kind === 'kin' && id !== host) continue;
+          if ((kind === 'kin' || kind === 'animal') && id !== host) continue;
           const tile = readTile(fa.tile);
           if (!tile) continue;
           const wid = id + ':' + fa.id;
@@ -310,6 +346,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               mode: fa.mode || 'wander',
               hidden: !!fa.hidden,
               kin: fa.kin || null,
+              species: fa.species || null,
+              name: fa.name || fa.species || null,
             };
             g.peerWorldActors.set(wid, actor);
           } else {
@@ -324,6 +362,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
             actor.mode = fa.mode || actor.mode || 'wander';
             actor.hidden = !!fa.hidden;
             actor.kin = fa.kin || actor.kin || null;
+            actor.species = fa.species || actor.species || null;
+            actor.name = fa.name || actor.name || fa.species || null;
           }
         }
       }
@@ -332,7 +372,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       setPresence({ count: names.length, names: names.slice(0, 4) });
     };
 
-    const ctrl = joinFarmPresence({ circleId, profile, hero, onPeers: applyPeers });
+    const ctrl = joinFarmPresence({ circleId, profile, hero, onPeers: applyPeers, onFarmState: applyFarmState });
     g.presenceCtrl = ctrl;
     g.lastPresenceSnapshot = '';
     g.lastPresenceAt = 0;
@@ -783,7 +823,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const hostIsSelf = !circleId || presenceHostId(g, profile) === presenceProfileId(profile);
       for (const e of g.actors.values()) {
         if (e.kind === 'mount' && p.mounted) continue;
-        if (e.kind === 'kin' && !hostIsSelf) continue;
+        if ((e.kind === 'kin' || e.kind === 'animal') && !hostIsSelf) continue;
         const [ex, ey] = entityPx(e);
         actors.push({ type: 'world', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
       }
