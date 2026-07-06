@@ -681,15 +681,55 @@
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .v-right { display: none }
+  .v-right-toggle { display: none }
 }
 @media (max-width: 760px) {
-  .vault { grid-template-columns: 44px auto minmax(0, 1fr) }
-  .v-left { position: absolute; z-index: 60; top: 0; bottom: 25px; left: 44px; box-shadow: var(--v-shadow) }
-  .v-status .v-st:not(.v-st-store):not(.v-st-btn) { display: none }
-  .v-status .v-st-note { display: inline-flex }
-  .vd, .vpr { padding: 18px 14px 80px }
-  .vg-bar, .vc-bar { padding: 8px }
+  .vault { grid-template-columns: 44px minmax(0, 1fr) }
+  .v-ribbon { grid-column: 1 }
+  .v-center { grid-column: 2 }
+  .v-status { grid-column: 1 / -1 }
+
+  /* explorer / search collapse into a slide-over drawer with a scrim */
+  .v-left.v-left-drawer {
+    position: absolute; z-index: 70; top: 0; bottom: 25px; left: 44px;
+    width: min(310px, calc(100% - 44px)); min-width: 0;
+    box-shadow: var(--v-shadow); border-right: 1px solid var(--v-bd);
+    /* clear its own width plus the 44px ribbon offset so nothing peeks */
+    transform: translateX(calc(-100% - 46px)); transition: transform .24s var(--ease, cubic-bezier(.4, 0, .2, 1));
+    will-change: transform; pointer-events: none;
+  }
+  .v-left.v-left-drawer.open { transform: translateX(0); pointer-events: auto }
+  .v-left-scrim { position: absolute; z-index: 65; inset: 0 0 25px 44px; background: rgba(6, 6, 12, .42); animation: fade .18s ease }
+
+  .v-status { gap: 10px; padding: 0 10px }
+  .v-status .v-st:not(.v-st-store) { display: none }
+  .v-status .v-st-note { display: inline-flex; flex: 1; min-width: 0 }
+
+  .vd, .vpr { padding: 18px 14px 30px }
   .vc-hint { display: none }
+
+  /* toolbars stay compact — pillar chips scroll sideways instead of stacking tall */
+  .vg-bar, .vc-bar, .vb-bar { padding: 7px 8px; gap: 7px }
+  .vg-chips { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; -webkit-overflow-scrolling: touch }
+  .vg-chips::-webkit-scrollbar { display: none }
+  .vgx-search { flex: 1 1 130px; min-width: 120px }
+  .vb-filters { flex-wrap: wrap }
+
+  /* graph inspector docks as a bottom sheet */
+  .vg-inspect { left: 8px; right: 8px; bottom: 8px; top: auto; width: auto; max-height: 48% }
+
+  /* editor: no split on a phone; if it was set, stack the panes */
+  .v-modes button:nth-child(3) { display: none }
+  .v-note.split { flex-direction: column }
+  .v-note.split .v-pane-sep { width: auto; height: 1px }
+  .v-editor { padding: 22px 18px 90px }
+  .v-preview { padding: 22px 16px 90px }
+}
+
+/* clear the floating Circle HQ bottom nav (it appears ≤640px). Scoped under
+   .hq to outrank the base `.content.content-flush{padding:0}` rule. */
+@media (max-width: 640px) {
+  .hq .content.content-flush { padding-bottom: calc(84px + env(safe-area-inset-bottom)) }
 }
 
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }

@@ -50,6 +50,20 @@ function timeAgo(ts: number): string {
   return new Date(ts).toLocaleDateString()
 }
 
+// Below 760px the left explorer collapses into a slide-over drawer, so the
+// workspace tracks the viewport rather than persisting a desktop sidebar state.
+function useIsMobile() {
+  const [m, setM] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 760px)')
+    const on = () => setM(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return m
+}
+
 export function VaultShell() {
   const centerView = useVault(s => s.centerView)
   const setCenterView = useVault(s => s.setCenterView)
@@ -108,6 +122,28 @@ export function VaultShell() {
   const hqTheme = useHQ(s => s.theme)
   const resolvedTheme = settings.theme === 'hq' ? hqTheme : settings.theme
 
+  // Mobile drawer: a transient overlay for the explorer/search, independent of
+  // the persisted desktop `leftOpen`. It closes when a note opens or the scrim
+  // is tapped, so the sidebar never traps the reader on a phone.
+  const isMobile = useIsMobile()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  useEffect(() => { setDrawerOpen(false) }, [active])
+  const leftShown = isMobile ? drawerOpen : settings.leftOpen
+
+  const handleLeft = (panel: 'files' | 'search') => {
+    if (isMobile) {
+      setLeftPanel(panel)
+      if (panel === 'files') setCenterView('note')
+      setDrawerOpen(o => !(o && leftPanel === panel))
+    } else if (panel === 'files') {
+      if (settings.leftOpen && leftPanel === 'files' && centerView === 'note') toggleLeft()
+      else { setLeftPanel('files'); setCenterView('note') }
+    } else {
+      if (settings.leftOpen && leftPanel === 'search') toggleLeft()
+      else setLeftPanel('search')
+    }
+  }
+
   return (
     <div className={'vault' + (settings.compact ? ' compact' : '')}
       data-vtheme={resolvedTheme} data-vaccent={settings.accent}>
@@ -115,24 +151,18 @@ export function VaultShell() {
       {/* ── Activity ribbon ─────────────────────────────── */}
       <div className="v-ribbon">
         <div className="v-ribbon-mark" title="HQ Vault"><VaultIcon size={16} /></div>
-        <button className={'v-rib' + (centerView === 'note' && settings.leftOpen && leftPanel === 'files' ? ' on' : '')}
-          title="Files" onClick={() => {
-            if (settings.leftOpen && leftPanel === 'files' && centerView === 'note') toggleLeft()
-            else { setLeftPanel('files'); setCenterView('note') }
-          }}>
+        <button className={'v-rib' + (centerView === 'note' && leftShown && leftPanel === 'files' ? ' on' : '')}
+          title="Files" onClick={() => handleLeft('files')}>
           <Files size={17} />
         </button>
-        <button className={'v-rib' + (settings.leftOpen && leftPanel === 'search' ? ' on' : '')}
-          title="Search" onClick={() => {
-            if (settings.leftOpen && leftPanel === 'search') toggleLeft()
-            else setLeftPanel('search')
-          }}>
+        <button className={'v-rib' + (leftShown && leftPanel === 'search' ? ' on' : '')}
+          title="Search" onClick={() => handleLeft('search')}>
           <Search size={17} />
         </button>
         <div className="v-rib-sep" />
         {RIBBON.map(r => (
           <button key={r.view} className={'v-rib' + (centerView === r.view ? ' on' : '')}
-            title={r.label} onClick={() => setCenterView(r.view)}>
+            title={r.label} onClick={() => { setCenterView(r.view); setDrawerOpen(false) }}>
             <r.Icon size={17} />
           </button>
         ))}
@@ -141,12 +171,13 @@ export function VaultShell() {
         <button className="v-rib" title="Settings" onClick={openSettings}><Settings2 size={17} /></button>
       </div>
 
-      {/* ── Left sidebar ────────────────────────────────── */}
-      {settings.leftOpen && (
-        <div className="v-left">
+      {/* ── Left sidebar (slide-over drawer on mobile) ──── */}
+      {(isMobile || settings.leftOpen) && (
+        <div className={'v-left' + (isMobile ? ' v-left-drawer' : '') + (isMobile && drawerOpen ? ' open' : '')}>
           {leftPanel === 'files' ? <FileExplorer /> : <SearchPanel />}
         </div>
       )}
+      {isMobile && drawerOpen && <div className="v-left-scrim" onClick={() => setDrawerOpen(false)} />}
 
       {/* ── Center ──────────────────────────────────────── */}
       <div className="v-center">
@@ -185,7 +216,7 @@ export function VaultShell() {
                       )
                     })}
                   </div>
-                  <button className={'vg-tool' + (settings.rightOpen ? ' active' : '')} title="Toggle context panel"
+                  <button className={'vg-tool v-right-toggle' + (settings.rightOpen ? ' active' : '')} title="Toggle context panel"
                     onClick={toggleRight}><PanelRight size={14} /></button>
                 </div>
               )}
