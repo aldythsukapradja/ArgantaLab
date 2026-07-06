@@ -191,7 +191,7 @@ body {
 
 /* ============ Kingdom Heroes-style canvas HUD ============ */
 .room-full {
-  position: fixed; inset: 0; overflow: hidden; background: #0a0a0c;
+  position: fixed; inset: 0; overflow: hidden; background: #7cc35a;
   /* ---- Liquid Glass design tokens, copied verbatim from Kingdom Heroes'
      apps/kingdom/web/src/styles.css .room-full block (Apple iOS 26 language) --- */
   --font-apple: -apple-system, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
@@ -201,14 +201,25 @@ body {
   --glass-bg: rgba(250, 250, 253, 0.62);
   --glass-bg-thick: rgba(248, 249, 252, 0.82);
   --glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.92), inset 0 0 0 0.6px rgba(255, 255, 255, 0.5), inset 0 -7px 14px rgba(120, 140, 180, 0.13);
-  --glass-shadow: 0 1px 2px rgba(10, 14, 26, 0.06), 0 12px 40px -8px rgba(10, 14, 26, 0.24);
+  --glass-shadow: 0 1px 2px rgba(10, 14, 26, 0.05), 0 6px 18px -12px rgba(10, 14, 26, 0.20);
   --glass-shadow-lg: 0 2px 6px rgba(10, 14, 26, 0.08), 0 30px 72px -16px rgba(10, 14, 26, 0.42);
   --spring: linear(0, 0.06, 0.24, 0.51, 0.79, 0.98, 1.09, 1.12, 1.1, 1.05, 1, 0.985, 0.995, 1);
   --text-strong: #10141f;
   --text-muted: #5c6478;
   font-family: var(--font-apple);
 }
-.room-canvas { position: absolute; inset: 0; }
+.room-canvas { position: absolute; inset: 0; background: #7cc35a; }
+.room-canvas::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  z-index: 1;
+  pointer-events: none;
+  background: #7cc35a;
+}
 .room-canvas canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; outline: none; touch-action: none; }
 .room-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #cbd0e6; font-weight: 700; }
 /* nipplejs joystick zone — copied verbatim from Kingdom Heroes: touch anywhere

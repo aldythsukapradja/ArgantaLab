@@ -20,6 +20,7 @@ export class FarmLogic {
     this.circleId = circleId;
     this.listeners = new Set();
     this.toast = null;
+    this.externalKins = [];
     this.saveKey = circleId
       ? 'lashirabloom_save_v2_circle_' + circleId
       : 'lashirabloom_save_v2_' + (profile?.id || 'guest');
@@ -44,6 +45,7 @@ export class FarmLogic {
       plots: {},
       livestock: STARTER_LIVESTOCK.map((a, i) => ({ id: 'ls_' + i, species: a.species, name: a.name, affection: 40, fed: false, produce: false })),
       kins: STARTER_KINS.map((k) => ({ ...k })),
+      kinTasks: {},
     };
   }
   async _load() {
@@ -76,7 +78,22 @@ export class FarmLogic {
       plots: { ...this.state.plots },
       livestock: this.state.livestock.map((a) => ({ ...a })),
       kins: this.state.kins.map((k) => ({ ...k })),
+      kinTasks: { ...(this.state.kinTasks || {}) },
     };
+  }
+  setExternalKins(kins) {
+    this.externalKins = Array.isArray(kins) ? kins.map((k) => ({ ...k })) : [];
+    this.emit();
+  }
+  activeKins() {
+    if (this.externalKins?.length) {
+      const tasks = this.state.kinTasks || {};
+      return this.externalKins.map((k) => ({
+        ...k,
+        task: Object.prototype.hasOwnProperty.call(tasks, k.id) ? tasks[k.id] : (k.task ?? null),
+      }));
+    }
+    return this.state.kins.map((k) => ({ ...k }));
   }
   save() {
     clearTimeout(this._saveTimer);
@@ -105,7 +122,7 @@ export class FarmLogic {
       tool: st.tool, selectedSeed: st.selectedSeed,
       seeds: { ...st.seeds }, produce: { ...st.produce },
       livestock: st.livestock.map((a) => ({ ...a })),
-      kins: st.kins.map((k) => ({ ...k })),
+      kins: this.activeKins(),
       diamonds: st.diamonds,
       xp: st.xp,
       level: 1 + Math.floor(Math.max(0, st.xp) / 500), // mirrors argantalab_level_from_xp
@@ -204,16 +221,24 @@ export class FarmLogic {
     const sp = SPECIES[a.species]; this.state.produce[sp.produce] = (this.state.produce[sp.produce] || 0) + 1; a.produce = false;
     this.flash('Collected ' + sp.produceName + ' ' + sp.produceEmoji); this.save(); this.emit();
   }
-  assignKin(id, task) { const k = this.state.kins.find((x) => x.id === id); if (k) { k.task = task; this.save(); this.emit(); } }
+  assignKin(id, task) {
+    if (this.externalKins?.some((x) => x.id === id)) {
+      this.state.kinTasks = { ...(this.state.kinTasks || {}), [id]: task };
+      this.save(); this.emit(); return;
+    }
+    const k = this.state.kins.find((x) => x.id === id);
+    if (k) { k.task = task; this.save(); this.emit(); }
+  }
 
   sleep() {
     const st = this.state;
-    for (const k of st.kins) if (k.task === 'water') for (const p of Object.values(st.plots)) if (p.tilled && p.cropId && !p.watered) p.watered = true;
+    const kins = this.activeKins();
+    for (const k of kins) if (k.task === 'water') for (const p of Object.values(st.plots)) if (p.tilled && p.cropId && !p.watered) p.watered = true;
     for (const p of Object.values(st.plots)) {
       if (p.tilled && p.cropId && p.watered) { const crop = CROPS[p.cropId]; if (p.growth < crop.days) p.growth += 1; }
       p.watered = false;
     }
-    for (const k of st.kins) if (k.task === 'harvest') for (const p of Object.values(st.plots)) {
+    for (const k of kins) if (k.task === 'harvest') for (const p of Object.values(st.plots)) {
       if (p.cropId && p.growth >= CROPS[p.cropId].days) { const crop = CROPS[p.cropId]; st.produce[crop.id] = (st.produce[crop.id] || 0) + 1; p.cropId = null; p.growth = 0; }
     }
     for (const a of st.livestock) if (a.fed) { a.produce = true; a.affection = Math.min(100, a.affection + 3); a.fed = false; }

@@ -1,3 +1,16 @@
+import { ARGANTA_KINS } from './arganta-kins.js';
+
+const argantaKinSlots = ARGANTA_KINS.map((kin) => ({
+  key: `lashira.kin.${kin.render}`,
+  label: `${kin.name} Kin`,
+  category: 'kin',
+  expectedW: 32,
+  expectedH: 40,
+  renderer: 'procedural',
+  status: 'wired',
+  sourceFile: 'apps/lashira/web/src/game/farm-map.js',
+}));
+
 export const LASHIRA_ART_SLOTS = [
   { key: 'lashira.terrain.grass', label: 'Grass tile', category: 'terrain', expectedW: 48, expectedH: 48, renderer: 'procedural', status: 'wired', sourceFile: 'apps/lashira/web/src/game/farm-map.js' },
   { key: 'lashira.terrain.path', label: 'Farm path tile', category: 'terrain', expectedW: 48, expectedH: 48, renderer: 'procedural', status: 'wired', sourceFile: 'apps/lashira/web/src/game/farm-map.js' },
@@ -17,6 +30,7 @@ export const LASHIRA_ART_SLOTS = [
   { key: 'lashira.kin.sprig', label: 'Sprig Kin', category: 'kin', expectedW: 32, expectedH: 40, renderer: 'procedural', status: 'wired', sourceFile: 'apps/lashira/web/src/game/farm-map.js' },
   { key: 'lashira.kin.pip', label: 'Pip Kin', category: 'kin', expectedW: 32, expectedH: 40, renderer: 'procedural', status: 'wired', sourceFile: 'apps/lashira/web/src/game/farm-map.js' },
   { key: 'lashira.kin.bramble', label: 'Bramble Kin', category: 'kin', expectedW: 32, expectedH: 40, renderer: 'procedural', status: 'wired', sourceFile: 'apps/lashira/web/src/game/farm-map.js' },
+  ...argantaKinSlots,
   { key: 'lashira.mount.placeholder', label: 'Fallback mount', category: 'mount', expectedW: 64, expectedH: 48, renderer: 'procedural', status: 'wired', sourceFile: 'apps/lashira/web/src/game/farm-map.js' },
   { key: 'lashira.farmer.placeholder', label: 'Fallback farmer', category: 'character', expectedW: 32, expectedH: 48, renderer: 'procedural', status: 'wired', sourceFile: 'apps/lashira/web/src/game/farm-map.js' },
 ];

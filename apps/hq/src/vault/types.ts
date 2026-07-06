@@ -61,8 +61,10 @@ export interface CanvasEdge { id: string; fromCard: string; toCard: string; labe
 export interface CanvasState { cards: CanvasCard[]; edges: CanvasEdge[] }
 
 // ---- Settings ----
-export type VaultTheme = 'dark' | 'light' | 'system'
-export type AccentKey = 'iris' | 'ember' | 'jade' | 'aurum' | 'rose'
+// 'hq' follows the Circle HQ shell theme (default) so the Vault never clashes
+// with the rest of the operator surface; dark/light are explicit overrides.
+export type VaultTheme = 'hq' | 'dark' | 'light'
+export type AccentKey = 'indigo' | 'iris' | 'ember' | 'jade' | 'aurum' | 'rose'
 export interface VaultSettings {
   theme: VaultTheme
   accent: AccentKey
@@ -74,7 +76,7 @@ export interface VaultSettings {
 }
 
 export const DEFAULT_SETTINGS: VaultSettings = {
-  theme: 'dark', accent: 'iris', fontSize: 15, compact: false,
+  theme: 'hq', accent: 'indigo', fontSize: 15, compact: false,
   leftOpen: true, rightOpen: true, graphDensity: 1,
 }
 

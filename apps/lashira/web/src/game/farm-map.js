@@ -4,6 +4,7 @@
 // swap for PixelLab/real farm tiles later.
 import { CROPS } from '../data/crops.js';
 import { drawOverride } from './farm-art-runtime.js';
+import { drawActualKinSprite } from './kin-sprite-image.jsx';
 
 export const TILE = 48;                       // matches Kingdom Heroes scale
 export const W = 40, H = 26;
@@ -213,9 +214,13 @@ export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', f
 }
 
 export function drawKinSprite(ctx, kin, footX, footY, facing = 'South', frame = 0, art = {}) {
-  const key = `lashira.kin.${String(kin.id || '').replace(/^kin_/, '')}`;
+  const renderKey = kin.render || kin.assetKey?.replace(/^kin\./, '') || String(kin.kinKey || kin.id || '').replace(/^kin[:_]/, '');
+  const key = `lashira.kin.${renderKey}`;
   if (drawNamedOverride(ctx, art, key, footX, footY, 34, 42)) return;
-  const color = '#' + Number(kin.color || 0x8fd67a).toString(16).padStart(6, '0');
+  if (drawActualKinSprite(ctx, kin, footX, footY, frame)) return;
+  const color = typeof kin.color === 'string'
+    ? kin.color
+    : '#' + Number(kin.color || 0x8fd67a).toString(16).padStart(6, '0');
   const bob = frame % 2 ? -2 : 0;
   ctx.save(); ctx.translate(footX, footY + bob); ctx.imageSmoothingEnabled = false;
   const R = (x, y, w, h, c) => rect(ctx, x, y, w, h, c);
@@ -223,7 +228,15 @@ export function drawKinSprite(ctx, kin, footX, footY, facing = 'South', frame = 
   R(-11, -19, 22, 10, '#ffffff55');
   R(-6, -33, 12, 10, '#f2e6bf');
   R(-4, -30, 2, 2, '#172018'); R(3, -30, 2, 2, '#172018');
-  R(-3, -39, 6, 7, color);
+  if (/owl|gull|dove|moth|bee|crane|bat|roc/.test(renderKey)) {
+    R(-16, -24, 8, 12, color); R(8, -24, 8, 12, color);
+  } else if (/turtle|seal|whale|slime|newt|frog/.test(renderKey)) {
+    R(-12, -24, 24, 12, color); R(-9, -28, 18, 4, '#ffffff55');
+  } else if (/fox|cat|lynx|lion|pup|cub|bear|mouse|koala|bunny|hog/.test(renderKey)) {
+    R(-7, -39, 5, 7, color); R(2, -39, 5, 7, color);
+  } else {
+    R(-3, -39, 6, 7, color);
+  }
   R(-15, -22, 6, 5, color); R(9, -22, 6, 5, color);
   if (kin.task === 'water') { R(11, -11, 9, 6, '#79b8e8'); R(18, -8, 3, 3, '#aee4ff'); }
   if (kin.task === 'harvest') { R(10, -13, 8, 8, '#d8a24a'); R(12, -15, 5, 3, '#8fd67a'); }

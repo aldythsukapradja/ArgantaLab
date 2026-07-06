@@ -72,9 +72,31 @@ const snap = loadSnapshot()
 const initialNotes = snap?.notes && Object.keys(snap.notes).length ? snap.notes : seedNotes()
 const initialCanvas = snap?.canvas?.cards ? snap.canvas : seedCanvas()
 const initialSettings: VaultSettings = { ...DEFAULT_SETTINGS, ...(snap?.settings || {}) }
+// Theme v2 migration: the vault used to default to its own dark theme; it now
+// follows the Circle HQ shell ('hq'). Migrate stored snapshots once, then
+// respect whatever the user picks going forward.
+let themeMigrated = false
+try {
+  if (!localStorage.getItem('hq_vault_theme_v3')) {
+    initialSettings.theme = 'hq'
+    initialSettings.accent = 'indigo'
+    localStorage.setItem('hq_vault_theme_v3', '1')
+    themeMigrated = true
+  }
+} catch { /* storage unavailable — default already 'hq' */ }
+if (!['hq', 'dark', 'light'].includes(initialSettings.theme)) initialSettings.theme = 'hq'
+if (!['indigo', 'iris', 'ember', 'jade', 'aurum', 'rose'].includes(initialSettings.accent)) initialSettings.accent = 'indigo'
 const initialTabs = (snap?.tabs || ['hq']).filter(t => initialNotes[t])
 const initialActive = snap?.active && initialNotes[snap.active] ? snap.active : (initialTabs[0] ?? null)
 const initialPinned = (snap?.pinned || []).filter(t => initialNotes[t])
+// Persist the migrated settings right away — otherwise the marker blocks a
+// re-migration while the old snapshot still carries the legacy theme.
+if (themeMigrated && snap) {
+  saveSnapshot({
+    notes: initialNotes, canvas: initialCanvas, settings: initialSettings,
+    tabs: initialTabs, active: initialActive, pinned: initialPinned,
+  })
+}
 
 // ---------- debounced persistence ----------
 

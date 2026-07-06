@@ -7,6 +7,7 @@ import { exportVault, importVault, downloadFile, vaultStats } from '../storage'
 import type { AccentKey, VaultTheme } from '../types'
 
 const ACCENTS: { key: AccentKey; color: string; label: string }[] = [
+  { key: 'indigo', color: '#6366f1', label: 'HQ Indigo' },
   { key: 'iris', color: '#8b7cf6', label: 'Iris' },
   { key: 'ember', color: '#f0a24b', label: 'Ember' },
   { key: 'jade', color: '#4ade80', label: 'Jade' },
@@ -14,7 +15,7 @@ const ACCENTS: { key: AccentKey; color: string; label: string }[] = [
   { key: 'rose', color: '#f472b6', label: 'Rose' },
 ]
 const THEMES: { key: VaultTheme; label: string }[] = [
-  { key: 'dark', label: 'Dark' }, { key: 'light', label: 'Light' }, { key: 'system', label: 'System' },
+  { key: 'hq', label: 'Match HQ' }, { key: 'light', label: 'Light' }, { key: 'dark', label: 'Dark' },
 ]
 
 function Row({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
@@ -69,7 +70,7 @@ export function VaultSettingsSheet() {
 
         <div className="vst-body">
           <div className="vst-sec">Appearance</div>
-          <Row label="Theme" sub="Vault-only — HQ keeps its own theme">
+          <Row label="Theme" sub="Match HQ follows the Circle HQ shell theme">
             <div className="vb-mode">
               {THEMES.map(t => (
                 <button key={t.key} className={settings.theme === t.key ? 'on' : ''}

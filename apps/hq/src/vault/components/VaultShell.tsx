@@ -9,6 +9,7 @@ import {
   HardDrive, Command as CommandIcon, Vault as VaultIcon,
 } from 'lucide-react'
 import { useVault, type CenterView, type EditorMode } from '../store'
+import { useHQ } from '../../shell/store'
 import { FileExplorer } from './FileExplorer'
 import { SearchPanel } from './SearchPanel'
 import { MarkdownEditor } from './MarkdownEditor'
@@ -102,10 +103,10 @@ export function VaultShell() {
     }
   }, [activeNote, index])
 
-  // theme resolution: vault theme is independent of the HQ shell theme
-  const resolvedTheme = settings.theme === 'system'
-    ? (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-    : settings.theme
+  // theme resolution: by default the Vault follows the Circle HQ shell theme
+  // so the workspace reads as one product; dark/light are explicit overrides.
+  const hqTheme = useHQ(s => s.theme)
+  const resolvedTheme = settings.theme === 'hq' ? hqTheme : settings.theme
 
   return (
     <div className={'vault' + (settings.compact ? ' compact' : '')}

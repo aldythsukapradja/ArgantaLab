@@ -5,15 +5,18 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .vault {
-  /* accent presets */
-  --v-acc: #8b7cf6; --v-acc-dim: rgba(139, 124, 246, .16); --v-acc-tx: #a99cff;
+  /* accent presets — default "indigo" matches the Circle HQ shell accent */
+  --v-acc: #6366f1; --v-acc-dim: rgba(99, 102, 241, .14);
 }
-.vault[data-vaccent="ember"] { --v-acc:#f0a24b; --v-acc-dim:rgba(240,162,75,.15); --v-acc-tx:#f5b56e }
-.vault[data-vaccent="jade"]  { --v-acc:#4ade80; --v-acc-dim:rgba(74,222,128,.14); --v-acc-tx:#74e5a0 }
-.vault[data-vaccent="aurum"] { --v-acc:#eab308; --v-acc-dim:rgba(234,179,8,.14);  --v-acc-tx:#f1c232 }
-.vault[data-vaccent="rose"]  { --v-acc:#f472b6; --v-acc-dim:rgba(244,114,182,.15);--v-acc-tx:#f79cc9 }
+.vault[data-vaccent="iris"]  { --v-acc:#8b7cf6; --v-acc-dim:rgba(139,124,246,.16) }
+.vault[data-vaccent="ember"] { --v-acc:#f0a24b; --v-acc-dim:rgba(240,162,75,.15) }
+.vault[data-vaccent="jade"]  { --v-acc:#4ade80; --v-acc-dim:rgba(74,222,128,.14) }
+.vault[data-vaccent="aurum"] { --v-acc:#eab308; --v-acc-dim:rgba(234,179,8,.14) }
+.vault[data-vaccent="rose"]  { --v-acc:#f472b6; --v-acc-dim:rgba(244,114,182,.15) }
 
 .vault[data-vtheme="dark"] {
+  /* readable accent text derived per theme so every preset works both ways */
+  --v-acc-tx: color-mix(in srgb, var(--v-acc) 62%, #ffffff);
   --v-bg0:#0e0e13;          /* ribbon */
   --v-bg1:#14141a;          /* sidebars */
   --v-bg2:#191920;          /* center canvas */
@@ -27,12 +30,15 @@
   color-scheme: dark;
 }
 .vault[data-vtheme="light"] {
-  --v-bg0:#ececf1; --v-bg1:#f4f4f7; --v-bg2:#fbfbfd; --v-bg3:#ececf2; --v-bg4:#e2e2ea;
-  --v-tx:#1d1c26; --v-tx2:#5d5b6d; --v-tx3:#a6a4b5;
-  --v-bd:#e2e1e9; --v-bd2:#d3d2dd;
+  /* mirrors the Circle HQ light palette (theme.css) so the Vault reads as
+     the same product when following the shell theme */
+  --v-acc-tx: color-mix(in srgb, var(--v-acc) 72%, #1e1b4b);
+  --v-bg0:#f4f4f5; --v-bg1:#fafafa; --v-bg2:#ffffff; --v-bg3:#f4f4f5; --v-bg4:#e7e7ea;
+  --v-tx:#18181b; --v-tx2:#52525b; --v-tx3:#a1a1aa;
+  --v-bd:#ececef; --v-bd2:#e0e0e4;
   --v-ok:#16a34a; --v-warn:#d97706; --v-bad:#dc2626;
-  --v-shadow: 0 14px 40px rgba(25,20,60,.14);
-  --v-editor-bg: #fbfbfd;
+  --v-shadow: 0 12px 34px rgba(16,24,40,.12);
+  --v-editor-bg: #ffffff;
   color-scheme: light;
 }
 
@@ -355,24 +361,59 @@
 .vg-zoomers { display: flex; align-items: center; gap: 2px; border: 1px solid var(--v-bd2); border-radius: 8px; padding: 1px 3px; background: var(--v-bg2) }
 .vg-zoomval { font-size: 10.5px; color: var(--v-tx3); min-width: 34px; text-align: center; font-variant-numeric: tabular-nums }
 
-.vg-svg { flex: 1; touch-action: none; cursor: grab; background:
-  radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--v-acc) 4%, transparent), transparent 65%);
+.vg-canvas { flex: 1; touch-action: none; cursor: grab; min-height: 0; background:
+  radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--v-acc) 5%, transparent), transparent 62%);
 }
-.vg-svg:active { cursor: grabbing }
-.vg-edge { stroke: var(--v-bd2); stroke-width: 1.1; opacity: .8; transition: opacity .15s }
-.vg-edge.dim { opacity: .12 }
-.vg-node { cursor: pointer }
-.vg-node.dim { opacity: .18 }
-.vg-node .vg-dot { stroke: transparent; stroke-width: 2; transition: filter .15s }
-.vg-node:hover .vg-dot { filter: brightness(1.25) }
-.vg-node.sel .vg-dot { stroke-width: 2.5 }
-.vg-halo { fill: none; stroke-width: 1.5; opacity: .5; stroke-dasharray: 3 3; animation: vspin 14s linear infinite; transform-origin: center }
-.vg-label {
-  fill: var(--v-tx2); font-size: 10px; text-anchor: middle; pointer-events: none;
-  font-family: var(--font); paint-order: stroke; stroke: var(--v-bg2); stroke-width: 3px; stroke-linejoin: round;
+.vg-canvas:active { cursor: grabbing }
+
+/* graph search */
+.vgx-search { position: relative; display: flex; align-items: center; gap: 7px; min-width: 170px;
+  background: var(--v-bg2); border: 1px solid var(--v-bd2); border-radius: 8px; padding: 4px 9px; color: var(--v-tx3) }
+.vgx-search:focus-within { border-color: var(--v-acc) }
+.vgx-search input { flex: 1; min-width: 0; border: none; outline: none; background: none; color: var(--v-tx); font-size: 12px; font-family: inherit }
+.vgx-search-drop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 265px;
+  background: var(--v-bg1); border: 1px solid var(--v-bd2); border-radius: 10px; box-shadow: var(--v-shadow);
+  padding: 5px; animation: fade .1s ease;
 }
-.vg-node.dim .vg-label { opacity: .4 }
-@keyframes vspin { to { rotate: 360deg } }
+.vgx-search-drop button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; color: var(--v-tx2); font-size: 12px; text-align: left }
+.vgx-search-drop button:hover { background: var(--v-bg3); color: var(--v-tx) }
+.vgx-search-t { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.vgx-search-k { font-size: 9.5px; color: var(--v-tx3) }
+.vgx-search-none { padding: 12px; font-size: 11.5px; color: var(--v-tx3); text-align: center }
+
+/* local-graph banner */
+.vgx-local {
+  position: absolute; top: 56px; left: 12px; z-index: 12;
+  display: flex; align-items: center; gap: 7px; padding: 5px 8px 5px 11px;
+  background: color-mix(in srgb, var(--v-bg1) 88%, transparent); backdrop-filter: blur(4px);
+  border: 1px solid var(--v-acc); border-radius: 99px; color: var(--v-tx2); font-size: 11.5px;
+  animation: fade .12s ease; max-width: calc(100% - 24px);
+}
+.vgx-local svg { color: var(--v-acc-tx); flex: none }
+.vgx-local-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.vgx-local-t b { color: var(--v-tx); font-weight: 600 }
+.vgx-local-d { color: var(--v-tx3); font-size: 10px; margin-left: 3px }
+.vgx-depth { width: 20px; height: 20px; border-radius: 50%; font-size: 10.5px; font-weight: 700; color: var(--v-tx3); border: 1px solid var(--v-bd2) }
+.vgx-depth.on { background: var(--v-acc); border-color: var(--v-acc); color: #fff }
+.vgx-local-x { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; color: var(--v-tx3); padding: 3px 8px; border-radius: 99px }
+.vgx-local-x:hover { background: var(--v-bg3); color: var(--v-tx) }
+
+/* inspector v2 */
+.vgx-in-summary { font-size: 11.5px; color: var(--v-tx2); line-height: 1.55; margin: 2px 0 9px }
+.vgx-in-sec { margin: 4px 0 9px }
+.vgx-in-h { display: flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--v-tx3); margin-bottom: 5px }
+.vgx-in-chips { display: flex; flex-wrap: wrap; gap: 4px }
+.vgx-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--v-tx2); border: 1px solid var(--v-bd); border-radius: 99px; padding: 2.5px 8px }
+.vgx-chip:hover { color: var(--v-tx); border-color: var(--v-acc) }
+.vgx-suggest { display: block; width: 100%; text-align: left; padding: 5px 8px; border-radius: 7px; border: 1px dashed var(--v-bd2) ; margin-bottom: 4px }
+.vgx-suggest:hover { border-color: var(--v-acc) }
+.vgx-suggest-t { display: block; font-size: 11.5px; color: var(--v-tx); font-weight: 550 }
+.vgx-suggest-r { display: block; font-size: 10px; color: var(--v-tx3); margin-top: 1px }
+.vgx-in-actions { display: flex; gap: 6px; margin-top: 10px }
+.vgx-in-actions .vg-open { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto }
+.vgx-act { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--v-bd2); color: var(--v-tx2) }
+.vgx-act:hover { color: var(--v-acc-tx); border-color: var(--v-acc) }
 
 .vg-preview {
   position: absolute; z-index: 8; width: 260px; padding: 11px 13px; pointer-events: none;
@@ -384,8 +425,10 @@
 .vg-pv-meta { font-size: 10px; color: var(--v-tx3) }
 
 .vg-inspect {
-  position: absolute; right: 14px; top: 60px; z-index: 7; width: 235px; padding: 12px 13px;
-  background: var(--v-bg1); border: 1px solid var(--v-bd2); border-radius: 12px; box-shadow: var(--v-shadow);
+  position: absolute; right: 14px; top: 60px; z-index: 7; width: 262px; padding: 12px 13px;
+  max-height: calc(100% - 110px); overflow-y: auto;
+  background: color-mix(in srgb, var(--v-bg1) 92%, transparent); backdrop-filter: blur(6px);
+  border: 1px solid var(--v-bd2); border-radius: 12px; box-shadow: var(--v-shadow);
   animation: fade .12s ease;
 }
 .vg-in-head { display: flex; align-items: center; gap: 7px }

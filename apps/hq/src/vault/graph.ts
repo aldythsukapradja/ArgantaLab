@@ -56,6 +56,44 @@ export function unlinkedMentions(id: string, notes: Record<string, VaultNote>, i
   return out
 }
 
+// ---------- Suggested connections (the "agent hook") ----------
+// Computed heuristically today (shared tags, unlinked mentions); the shape is
+// deliberately the future agent contract: source/target/weight/reason. When a
+// real agent starts proposing links, it feeds the same pipe.
+
+export interface SuggestedEdge { source: string; target: string; weight: number; reason: string }
+
+export function buildSuggestedEdges(notes: Record<string, VaultNote>, index: LinkIndex): SuggestedEdge[] {
+  const out: SuggestedEdge[] = []
+  const ids = Object.keys(notes)
+  const linked = (a: string, b: string) =>
+    index.outgoing[a]?.includes(b) || index.outgoing[b]?.includes(a)
+  const seen = new Set<string>()
+  const pairKey = (a: string, b: string) => (a < b ? a + '|' + b : b + '|' + a)
+
+  // shared-tag similarity (≥2 common tags, not already linked)
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = notes[ids[i]], b = notes[ids[j]]
+      const shared = a.fm.tags.filter(t => b.fm.tags.includes(t) && t !== 'prompt' && t !== 'decision')
+      if (shared.length >= 2 && !linked(a.id, b.id)) {
+        seen.add(pairKey(a.id, b.id))
+        out.push({ source: a.id, target: b.id, weight: shared.length, reason: 'shares #' + shared.join(' #') })
+      }
+    }
+  }
+  // unlinked mentions (note body names another note's title without a wikilink)
+  for (const id of ids) {
+    for (const from of unlinkedMentions(id, notes, index)) {
+      const k = pairKey(from, id)
+      if (seen.has(k) || linked(from, id)) continue
+      seen.add(k)
+      out.push({ source: from, target: id, weight: 1, reason: `mentions “${notes[id].fm.title}”` })
+    }
+  }
+  return out.sort((a, b) => b.weight - a.weight).slice(0, 40)
+}
+
 export function buildGraph(notes: Record<string, VaultNote>, index?: LinkIndex): VaultGraph {
   const ix = index || buildBacklinks(notes)
   const edges: GraphEdge[] = []
@@ -125,16 +163,21 @@ export function tickSim(sim: Sim, width: number, height: number, density = 1) {
   const springLen = 108 * density
   const springK = 0.045
 
-  // pairwise repulsion — fine for a few hundred nodes
-  for (let i = 0; i < nodes.length; i++) {
+  // pairwise repulsion — exact up to ~700 nodes, strided sampling above that
+  // (each frame sees a different subset via the frame-offset, so the layout
+  // still converges; exact Barnes-Hut is the upgrade path past ~2k nodes)
+  const n = nodes.length
+  const step = n > 700 ? Math.ceil(n / 700) : 1
+  const offset = step > 1 ? Math.floor(Math.random() * step) : 0
+  for (let i = 0; i < n; i++) {
     const a = nodes[i]
-    for (let j = i + 1; j < nodes.length; j++) {
+    for (let j = i + 1 + ((i + offset) % step); j < n; j += step) {
       const b = nodes[j]
       let dx = a.x - b.x, dy = a.y - b.y
       let d2 = dx * dx + dy * dy
       if (d2 < 1) { dx = (Math.random() - 0.5); dy = (Math.random() - 0.5); d2 = 1 }
       if (d2 > 340_000) continue
-      const f = (repulsion / d2) * alpha
+      const f = (repulsion / d2) * alpha * step
       const d = Math.sqrt(d2)
       const fx = (dx / d) * f, fy = (dy / d) * f
       if (!a.fixed) { a.vx += fx; a.vy += fy }

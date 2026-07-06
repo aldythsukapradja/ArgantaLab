@@ -15,12 +15,10 @@ const GROUPS: Group[] = [
   { name: 'Analytics', items: [
     { id: 'growth', label: 'Growth', Icon: TrendingUp },
     { id: 'data', label: 'Data', Icon: Database },
+    { id: 'vault', label: 'HQ Vault', Icon: VaultIcon, badge: 'new' },
   ] },
   { name: 'Command', items: [
     { id: 'command', label: 'Command', Icon: Radar },
-  ] },
-  { name: 'Knowledge', items: [
-    { id: 'vault', label: 'HQ Vault', Icon: VaultIcon, badge: 'new' },
   ] },
   { name: 'Build', items: [
     { id: 'pixel', label: 'Pixel Vault', Icon: Grid2x2 },

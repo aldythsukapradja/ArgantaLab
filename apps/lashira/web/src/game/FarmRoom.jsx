@@ -5,8 +5,10 @@
 import { useEffect, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
+import { loadAcquiredKins } from './arganta-kin.js';
+import { hasActualKinArt } from './kin-sprite-image.jsx';
 import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
 import { Hud } from '../ui/Hud.jsx';
@@ -17,6 +19,31 @@ const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const FACE_WORD = { North: 'up', South: 'down', East: 'right', West: 'left' };
 const WALK_MS = 260;
+const ANIMAL_VISUAL_COUNT = 5;
+const DIRS = [['East', 1, 0], ['West', -1, 0], ['South', 0, 1], ['North', 0, -1]];
+
+function blockedAt(g, tx, ty) {
+  return tx < 1 || ty < 1 || tx >= W - 1 || ty >= H - 1 || g.blocked.has(tx + ',' + ty);
+}
+
+function inField(tx, ty) {
+  return tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1;
+}
+
+function nearestOpenNeighbor(g, center, from = center) {
+  const options = [
+    [center[0] + 1, center[1]], [center[0] - 1, center[1]],
+    [center[0], center[1] + 1], [center[0], center[1] - 1],
+    [center[0] + 1, center[1] + 1], [center[0] - 1, center[1] + 1],
+    [center[0] + 1, center[1] - 1], [center[0] - 1, center[1] - 1],
+  ].filter(([tx, ty]) => !blockedAt(g, tx, ty));
+  options.sort((a, b) => (
+    Math.abs(a[0] - from[0]) + Math.abs(a[1] - from[1])
+  ) - (
+    Math.abs(b[0] - from[0]) + Math.abs(b[1] - from[1])
+  ));
+  return options[0] || null;
+}
 
 export default function FarmRoom({ profile, hero, circleId = null }) {
   const wrapRef = useRef(null);
@@ -39,7 +66,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
     (async () => {
       await logic.ready;
-      const art = await loadFarmArtOverrides();
+      const [art, acquiredKins] = await Promise.all([
+        loadFarmArtOverrides(),
+        loadAcquiredKins(profile),
+      ]);
       const { canvas: bg, blocked } = buildFarmMap(art);
       let tables = null, resources = null, hasWeapon = false;
       if (hero?.spec) {
@@ -52,10 +82,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (!live) return;
       const heroOk = !!(tables && resources && Object.keys(resources).length);
       setUsingHero(heroOk);
+      if (acquiredKins.length) logic.setExternalKins(acquiredKins);
       G.current = {
-        bg, blocked, tables, resources, hasWeapon, heroOk, art,
+        bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
         player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
-        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(),
+        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(), pendingMountCall: false,
       };
       const unsub = logic.subscribe(setSnap);
       G.current._unsub = unsub;
@@ -84,12 +115,27 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     logicRef.current.actionAt(tx, ty);
   }
   function doSleep() { logicRef.current?.sleep(); }
-  // Mount toggle — copied AS IS from Kingdom Heroes' toggleMount(): a silent
-  // no-op when no mount is equipped, exactly matching Kingdom's own behavior
-  // (the util button is never hidden/disabled, it just does nothing).
   function toggleMount() {
     const g = G.current; if (!g) return;
-    g.player.mounted = !g.player.mounted && !!g.resources?.mount;
+    if (!g.resources?.mount) return;
+    const mount = g.actors.get('mount:equipped');
+    if (g.player.mounted) {
+      g.player.mounted = false;
+      if (mount) {
+        const tile = nearestOpenNeighbor(g, g.player.tile, mount.tile) || g.player.tile;
+        mount.tile = [...tile]; mount.from = [...tile]; mount.moveT = 1;
+        mount.mode = 'wander'; mount.hidden = false; mount.idleUntil = performance.now() + 260;
+      }
+      return;
+    }
+    if (mount) {
+      mount.mode = 'called';
+      mount.hidden = false;
+      mount.speedMs = 260;
+      mount.idleUntil = 0;
+    } else {
+      g.pendingMountCall = true;
+    }
   }
 
   // ---------- keyboard ----------
@@ -142,7 +188,6 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (g.stick) { const { x, y } = g.stick; if (Math.hypot(x, y) > 0.3) return Math.abs(x) > Math.abs(y) ? (x > 0 ? 'East' : 'West') : (y > 0 ? 'South' : 'North'); }
       return null;
     }
-    function blockedAt(g, tx, ty) { return tx < 1 || ty < 1 || tx >= W - 1 || ty >= H - 1 || g.blocked.has(tx + ',' + ty); }
 
     function ensureActor(g, id, init) {
       if (!g.actors.has(id)) g.actors.set(id, { id, from: [...init.tile], moveT: 1, moveStart: 0, facing: 'South', idleUntil: 0, seed: id.length * 997, ...init });
@@ -152,26 +197,62 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const live = new Set();
       const state = logicRef.current?.state;
       if (!state) return;
-      const homes = {
-        cow: { x0: 9, y0: 5, x1: 14, y1: 8 },
-        sheep: { x0: 10, y0: 5, x1: 14, y1: 8 },
-        chicken: { x0: 14, y0: 5, x1: 18, y1: 8 },
+      const animalConfig = {
+        cow: {
+          names: ['Daisy', 'Bessie', 'Clover', 'Maple', 'Moochi'],
+          home: { x0: 8, y0: 5, x1: 15, y1: 8 },
+          starts: [[9, 6], [11, 6], [13, 6], [10, 8], [14, 8]],
+          speedMs: 1500,
+        },
+        sheep: {
+          names: ['Wooly', 'Cloud', 'Cotton', 'Fleece', 'Mallow'],
+          home: { x0: 14, y0: 5, x1: 21, y1: 8 },
+          starts: [[15, 6], [17, 6], [19, 6], [16, 8], [20, 8]],
+          speedMs: 1450,
+        },
+        chicken: {
+          names: ['Cluck', 'Pip', 'Sunny', 'Pebble', 'Nugget'],
+          home: { x0: 16, y0: 5, x1: 24, y1: 8 },
+          starts: [[17, 6], [19, 6], [22, 6], [18, 8], [23, 8]],
+          speedMs: 1050,
+        },
       };
-      const starts = { cow: [11, 6], sheep: [12, 7], chicken: [16, 6] };
-      for (const a of state.livestock || []) {
-        const id = 'animal:' + a.id; live.add(id);
-        const ent = ensureActor(g, id, { kind: 'animal', species: a.species, name: a.name, tile: starts[a.species] || [12, 6], home: homes[a.species] || homes.cow, speedMs: a.species === 'chicken' ? 520 : 780 });
-        ent.species = a.species; ent.name = a.name;
+      for (const species of ['cow', 'sheep', 'chicken']) {
+        const config = animalConfig[species];
+        const saved = (state.livestock || []).filter((a) => a.species === species);
+        for (let i = 0; i < ANIMAL_VISUAL_COUNT; i++) {
+          const source = saved[i] || saved[0] || {};
+          const id = `animal:${species}:${i}`; live.add(id);
+          const start = config.starts[i] || config.starts[0];
+          const ent = ensureActor(g, id, {
+            kind: 'animal',
+            species,
+            name: source.name || config.names[i] || species,
+            tile: start,
+            home: config.home,
+            speedMs: config.speedMs,
+          });
+          ent.species = species;
+          ent.name = source.name || config.names[i] || species;
+          ent.home = config.home;
+          ent.speedMs = config.speedMs;
+        }
       }
-      (state.kins || []).forEach((k, i) => {
+      const kinSource = (logicRef.current?.activeKins?.() || state.kins || []).slice(0, 12);
+      kinSource.forEach((k, i) => {
         const id = 'kin:' + k.id; live.add(id);
-        const ent = ensureActor(g, id, { kind: 'kin', kin: k, tile: [8 + i, 10], home: { x0: 6, y0: 9, x1: 20, y1: 20 }, speedMs: 620 });
+        const ent = ensureActor(g, id, { kind: 'kin', kin: k, tile: [7 + (i % 7), 10 + Math.floor(i / 7)], home: { x0: 6, y0: 9, x1: 20, y1: 20 }, speedMs: 620 });
         ent.kin = k; ent.name = k.name;
       });
       if (g.resources?.mount) {
         const id = 'mount:equipped'; live.add(id);
         const p = g.player;
-        ensureActor(g, id, { kind: 'mount', tile: [Math.max(6, p.tile[0] - 2), Math.max(6, p.tile[1] - 1)], home: { x0: 6, y0: 6, x1: 14, y1: 11 }, speedMs: 620 });
+        const mountHome = { x0: 2, y0: 2, x1: W - 3, y1: H - 3 };
+        const ent = ensureActor(g, id, { kind: 'mount', tile: [Math.max(7, p.tile[0] - 3), Math.max(6, p.tile[1] - 2)], home: mountHome, speedMs: 620, mode: 'wander', hidden: false });
+        ent.home = mountHome;
+        if (p.mounted) ent.mode = 'ridden';
+        else if (g.pendingMountCall) { ent.mode = 'called'; ent.speedMs = 260; ent.idleUntil = 0; g.pendingMountCall = false; }
+        else if (!ent.mode || ent.mode === 'ridden') ent.mode = 'wander';
       }
       for (const id of [...g.actors.keys()]) if (!live.has(id)) g.actors.delete(id);
     }
@@ -181,7 +262,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
     function moveChoice(g, e) {
       let target = null;
-      if (e.kind === 'kin' && e.kin?.task) {
+      if (e.kind === 'mount' && e.mode === 'called') {
+        target = nearestOpenNeighbor(g, g.player.tile, e.tile) || g.player.tile;
+      } else if (e.kind === 'kin' && e.kin?.task) {
         const plots = logicRef.current?.state?.plots || {};
         for (const [key, plot] of Object.entries(plots)) {
           if (!plot?.tilled || !plot.cropId) continue;
@@ -191,7 +274,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         }
       }
       const dirs = target
-        ? [['East', 1, 0], ['West', -1, 0], ['South', 0, 1], ['North', 0, -1]].sort((a, b) => {
+        ? [...DIRS].sort((a, b) => {
           const da = Math.abs(e.tile[0] + a[1] - target[0]) + Math.abs(e.tile[1] + a[2] - target[1]);
           const db = Math.abs(e.tile[0] + b[1] - target[0]) + Math.abs(e.tile[1] + b[2] - target[1]);
           return da - db;
@@ -200,6 +283,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const [dir, dx, dy] of dirs) {
         const nx = e.tile[0] + dx, ny = e.tile[1] + dy;
         const inHome = nx >= e.home.x0 && nx <= e.home.x1 && ny >= e.home.y0 && ny <= e.home.y1;
+        if (e.kind === 'mount' && e.mode !== 'called' && inField(nx, ny)) continue;
         if ((target || inHome) && !blockedAt(g, nx, ny)) return [dir, nx, ny];
       }
       return null;
@@ -207,17 +291,33 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function stepWorldActors(g, now) {
       syncWorldActors(g);
       for (const e of g.actors.values()) {
+        if (e.kind === 'mount' && g.player.mounted) {
+          e.mode = 'ridden';
+          e.idleUntil = now + 1000;
+          continue;
+        }
         if (e.moveT < 1) {
           e.moveT = Math.min(1, (now - e.moveStart) / (e.speedMs || 700));
           continue;
         }
-        if (!e.idleUntil) e.idleUntil = now + 400 + actorRand(e) * 1200;
+        if (e.kind === 'mount' && e.mode === 'called') {
+          const dist = Math.abs(e.tile[0] - g.player.tile[0]) + Math.abs(e.tile[1] - g.player.tile[1]);
+          if (dist <= 1) {
+            g.player.mounted = true;
+            e.mode = 'ridden';
+            e.hidden = true;
+            e.idleUntil = now + 1000;
+            continue;
+          }
+          e.idleUntil = 0;
+        }
+        if (!e.idleUntil) e.idleUntil = now + (e.kind === 'animal' ? 1100 + actorRand(e) * 2400 : 400 + actorRand(e) * 1200);
         if (now < e.idleUntil) continue;
         const pick = moveChoice(g, e);
         if (pick) {
           const [dir, nx, ny] = pick;
           e.facing = dir; e.from = [...e.tile]; e.tile = [nx, ny]; e.moveT = 0; e.moveStart = now;
-          e.idleUntil = now + (e.kind === 'kin' && e.kin?.task ? 120 : 500 + actorRand(e) * 1000);
+          e.idleUntil = now + (e.kind === 'mount' && e.mode === 'called' ? 20 : e.kind === 'animal' ? 1000 + actorRand(e) * 2600 : e.kind === 'kin' && e.kin?.task ? 120 : 500 + actorRand(e) * 1000);
         } else e.idleUntil = now + 800;
       }
     }
@@ -312,6 +412,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
       else if (e.kind === 'mount') drawKingdomMount(g, ctx, e, now, footX, footY);
     }
+    function drawActorShadow(g, ctx, a) {
+      const wide = a.type === 'player' ? g.player.mounted : a.e?.kind === 'mount' || a.e?.species === 'cow';
+      const rx = wide ? 20 : 10;
+      const ry = wide ? 5 : 3.5;
+      ctx.fillStyle = 'rgba(35, 62, 28, 0.16)';
+      ctx.beginPath();
+      ctx.ellipse(a.footX, a.footY + 1, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     function draw(g, ctx, canvas, now) {
       const cssW = g.viewportW || canvas.clientWidth, cssH = g.viewportH || canvas.clientHeight;
@@ -326,7 +435,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.save();
       ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
       ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle = '#0a0a0c'; ctx.fillRect(0, 0, cssW, cssH);
+      ctx.fillStyle = '#7cc35a'; ctx.fillRect(0, 0, cssW, cssH);
       ctx.scale(z, z); ctx.translate(-Math.round(camX), -Math.round(camY));
       ctx.drawImage(g.bg, 0, 0);
 
@@ -353,9 +462,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       actors.push({ type: 'player', footX, footY });
       actors.sort((a, b) => a.footY - b.footY);
       for (const a of actors) {
-        const wide = a.type === 'player' ? p.mounted : a.e?.kind === 'mount' || a.e?.species === 'cow';
-        ctx.fillStyle = 'rgba(0,0,0,0.22)';
-        ctx.beginPath(); ctx.ellipse(a.footX, a.footY, wide ? 24 : 13, wide ? 8 : 5, 0, 0, Math.PI * 2); ctx.fill();
+        const actualKin = a.e?.kind === 'kin' && hasActualKinArt(a.e.kin);
+        if (!actualKin) drawActorShadow(g, ctx, a);
         if (a.type === 'player') headTop = drawPlayer(g, ctx, now, a.footX, a.footY);
         else drawWorldActor(g, ctx, a.e, now, a.footX, a.footY);
       }
