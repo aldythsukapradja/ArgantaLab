@@ -93,12 +93,14 @@ export default function Apps() {
         ))}
       </div>
 
-      {/* Published CircleHQ apps — secondary shelf */}
-      {apps && apps.length > 0 && (
+      {/* Published CircleHQ apps — secondary shelf. Hidden for now (user
+          request) — code kept as-is, just gated off with `false &&` so it's a
+          one-line flip to bring back, not a re-implementation. */}
+      {false && (apps && apps!.length > 0 && (
         <>
           <div className="apps2-sec rise"><span>From CircleHQ</span><small>{count} {count === 1 ? 'app' : 'apps'}</small></div>
           <div className="apps2-mini rise">
-            {apps.map(a => {
+            {apps!.map(a => {
               const [g0, g1] = gradFor(a.id + a.name)
               const Icon = APP_ICON[iconFor(a.category, a.name)]
               return (
@@ -112,7 +114,7 @@ export default function Apps() {
             })}
           </div>
         </>
-      )}
+      ))}
 
       {open && createPortal(<AppRunner app={open} onClose={() => setOpen(null)} />, document.body)}
       {native && createPortal(<native.Component onClose={() => setNative(null)} />, document.body)}

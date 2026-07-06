@@ -156,13 +156,15 @@ img { max-width: 100%; display: block; }
    ========================================================= */
 .topbar-v2 { padding: 12px 16px 10px; }
 .tb-grid {
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; gap: 8px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
-.tb-grid .tb-wordmark { justify-self: start; }
+.tb-grid .tb-wordmark { flex: 0 0 auto; }
 .topbar-avatar { justify-self: end; }
-.tb-right { justify-self: end; display: flex; align-items: center; gap: 8px; }
-/* KinFarm teaser pill — same pill language as the circle chip (height/shape),
+/* circle chip + Bloom pill + theme switcher, ONE flex cluster with a single
+   uniform gap — the pill sits exactly equidistant from the chip and the theme
+   button, never bunched against either. */
+.tb-cluster { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; }
+/* Bloom teaser pill — same pill language as the circle chip (height/shape),
    own accent, mirrors ArgantaLab's Arena pill: default = launch, active = "Home"
    (same button both ways). Full-screen embed hides Sidebar+Nav while open. */
 .tb-farm {
@@ -186,7 +188,7 @@ img { max-width: 100%; display: block; }
 html[data-theme='dark'] .topbar-theme { box-shadow: none; }
 .topbar-theme:active { transform: scale(0.9); }
 
-.tb-center { position: relative; justify-self: center; }
+.tb-center { position: relative; }
 
 /* the white pill, tinted by the circle theme */
 .circle-chip {
@@ -665,6 +667,19 @@ html[data-theme='dark'] .sb-circle-name { color: color-mix(in srgb, var(--c1) 60
 .sb-caret { color: var(--c1); flex: 0 0 auto; transition: transform 0.24s var(--ease); }
 .sb-caret.up { transform: rotate(-90deg); }
 
+/* Bloom pill — desktop's launcher (TopBar is CSS-hidden at this width), same
+   green-default/orange-Home toggle language as the mobile TopBar version. */
+.sb-farm {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; border: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #3f9142, #5ec27a);
+  box-shadow: 0 3px 12px rgba(63, 145, 66, 0.28);
+  transition: transform 0.14s var(--ease), box-shadow 0.16s var(--ease);
+}
+.sb-farm:active { transform: scale(0.97); }
+.sb-farm.on { background: linear-gradient(135deg, #e0501d, #ff8a5c); box-shadow: 0 3px 12px rgba(224, 80, 29, 0.3); }
+
 .sb-menu {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 60;
   padding: 6px; background: var(--card); border: 0.5px solid var(--border-2);
@@ -728,6 +743,8 @@ html[data-theme='dark'] .sb-menu { box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55); 
   .sb-item-label { font-size: 9.5px; font-weight: 600; }
   .sb-profile { justify-content: center; padding: 8px; }
   .sb-profile-info { display: none; }
+  .sb-farm { width: 46px; height: 46px; border-radius: 50%; padding: 0; margin: 0 auto 10px; }
+  .sb-farm span:last-child { display: none; }
 }
 
 /* ── Responsive show/hide — declared LAST so it wins on source order

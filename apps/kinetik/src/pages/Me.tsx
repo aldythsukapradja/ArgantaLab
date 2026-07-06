@@ -9,7 +9,7 @@ import { fetchMomentCount } from '@repo/momentsRepo'
 import type { World, SocialStats, FamilyMember } from '@repo/kinetikRepo'
 import type { Circle } from '@data/types'
 import { CircleEmblem as Emblem, accentOf } from '@components/CircleEmblem'
-import { IconSun, IconMoon, IconShare, IconPlus, IconLogout, IconTrash, IconChevron, IconPencil } from '@components/Icons'
+import { IconPlus, IconLogout, IconTrash, IconChevron, IconPencil } from '@components/Icons'
 
 const ACCENTS = ['#F43F5E', '#0EA5E9', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899']
 const KID_COLORS = ['#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6', '#F43F5E']
@@ -49,7 +49,7 @@ export default function Me() {
   const circles = useDataStore(s => s.circles)
   const authUser = useDataStore(s => s.me)
   const { addCircle, updateCircle, removeCircle } = useDataStore.getState()
-  const { activeCircleId, setCircle, theme, toggleTheme } = useUiStore()
+  const { activeCircleId, setCircle } = useUiStore()
 
   // Real ArgantaLab family data (owner-only; populates when signed in as owner).
   const [worlds, setWorlds] = useState<World[]>([])
@@ -126,10 +126,8 @@ export default function Me() {
           <div className="me3-name">{name}</div>
           <div className="me3-role"><span className="me3-role-dot" /><span className="me3-role-txt">{myRole ? `${myRole} · ` : ''}{circle.name}</span></div>
         </div>
-        <div className="me3-head-actions">
-          <button className="me3-icon-btn" aria-label="Share profile" onClick={() => alert('Share — coming soon')}><IconShare width={16} height={16} /></button>
-          <button className="me3-icon-btn" aria-label="Toggle theme" onClick={toggleTheme}>{theme === 'dark' ? <IconSun width={16} height={16} /> : <IconMoon width={16} height={16} />}</button>
-        </div>
+        {/* Share + theme-toggle removed — theme is already global (TopBar/Sidebar
+            moon icon); Share had no real implementation yet. */}
       </div>
 
       {/* Stats (real social_stats; Moments from kinetik) */}
@@ -193,10 +191,8 @@ export default function Me() {
       {/* Settings */}
       <div className="me3-sec-head rise"><span className="me3-sec-title">Settings</span></div>
       <div className="me3-card rise">
-        <button className="me3-srow" onClick={toggleTheme}>
-          <span className="me3-sicon" style={{ background: 'color-mix(in srgb, var(--memory) 14%, transparent)', color: 'var(--memory)' }}>{theme === 'dark' ? <IconSun width={17} height={17} /> : <IconMoon width={17} height={17} />}</span>
-          <b>Appearance</b><span className="me3-sval">{theme === 'dark' ? 'Dark' : 'Light'}</span><IconChevron width={16} height={16} className="me3-chev" />
-        </button>
+        {/* Appearance row removed — duplicated the global theme toggle already
+            in TopBar/Sidebar. */}
         <button className="me3-srow me3-danger" onClick={handleLogout}>
           <span className="me3-sicon" style={{ background: 'color-mix(in srgb, var(--care) 14%, transparent)', color: 'var(--care)' }}><IconLogout width={17} height={17} /></span>
           <b>Sign out</b><IconChevron width={16} height={16} className="me3-chev" />

@@ -7,6 +7,22 @@ import { CircleEmblem as Emblem, accentOf } from '@components/CircleEmblem'
 import { IconChevron, IconPlus } from '@components/Icons'
 import { NavToday, NavCalendar, NavMoments, NavApps, NavMe } from '@components/NavIcons'
 
+// Same Bloom pill as TopBar's mobile version (sprout default / home when open).
+function IconSprout({ width = 15, height = 15 }: { width?: number; height?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={width} height={height} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22V13" /><path d="M12 13C12 13 5 13 5 6c7 0 7 7 7 7Z" /><path d="M12 13C12 13 19 13 19 6c-7 0-7 7-7 7Z" />
+    </svg>
+  )
+}
+function IconHome({ width = 15, height = 15 }: { width?: number; height?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={width} height={height} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h14V10" />
+    </svg>
+  )
+}
+
 const ITEMS: { tab: Tab; label: string; Icon: (p: { active: boolean }) => JSX.Element }[] = [
   { tab: 'today', label: 'Today', Icon: NavToday },
   { tab: 'calendar', label: 'Calendar', Icon: NavCalendar },
@@ -56,6 +72,14 @@ export default function Sidebar() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [open])
 
+  // Desktop's version of the mobile TopBar Bloom pill. On desktop the TopBar is
+  // CSS-hidden entirely (`.topbar{display:none}` above the mobile breakpoint),
+  // so this Sidebar is the ONLY place the launcher can live. When the farm is
+  // open, the Sidebar switches to a minimal "way back" mode (brand + circle
+  // name + the pill, now showing Home) instead of unmounting — otherwise a
+  // desktop user opening the farm would have no way back to Kinetik at all.
+  const farmOpen = tab === 'farm'
+
   return (
     <aside className="sidebar" style={{ ['--c0' as any]: a0, ['--c1' as any]: a1 }}>
       {/* brand */}
@@ -67,7 +91,7 @@ export default function Sidebar() {
       {/* circle switcher */}
       <div className="sb-circle" ref={wrapRef}>
         <button className={`sb-circle-btn${open ? ' open' : ''}`} onClick={() => setOpen(o => !o)} aria-haspopup="listbox" aria-expanded={open}>
-          <Emblem accent={[a0, a1]} size={28} active />
+          <Emblem accent={[a0, a1]} active />
           <span className="sb-circle-name">{active?.name ?? 'Your circle'}</span>
           <IconChevron className={`sb-caret${open ? ' up' : ''}`} width={15} height={15} />
         </button>
@@ -91,29 +115,44 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* nav — mirrors the bottom nav: accent active, glass pill, duotone icons */}
-      <nav className="sb-nav">
-        {ITEMS.map((it, i) => {
-          const on = tab === it.tab
-          return (
-            <button key={it.tab} className={`sb-item${on ? ' on' : ''}`} onClick={() => go(it.tab)} aria-current={on ? 'page' : undefined}>
-              <span className="sb-item-ic" ref={el => (iconRefs.current[i] = el)}><it.Icon active={on} /></span>
-              <span className="sb-item-label">{it.label}</span>
-            </button>
-          )
-        })}
-      </nav>
-
-      {/* profile */}
-      <button className="sb-profile" onClick={() => go('me')}>
-        {me?.photoUrl
-          ? <img className="sb-avatar" src={me.photoUrl} alt={name} referrerPolicy="no-referrer" />
-          : <span className="sb-avatar sb-avatar-fb" style={{ background: 'var(--grad)' }}>{initials(name)}</span>}
-        <span className="sb-profile-info">
-          <b>{name}</b>
-          <small>{ROLE_LABEL[myRole]}</small>
-        </span>
+      {/* Bloom pill — below the circle switcher, same toggle logic as TopBar */}
+      <button
+        className={`sb-farm${farmOpen ? ' on' : ''}`}
+        onClick={() => go(farmOpen ? 'today' : 'farm')}
+        title={farmOpen ? 'Return home' : 'Open Bloom'}
+      >
+        {farmOpen
+          ? <><IconHome width={16} height={16} /><span>Home</span></>
+          : <><IconSprout width={16} height={16} /><span>Bloom</span></>}
       </button>
+
+      {!farmOpen && (
+        <>
+          {/* nav — mirrors the bottom nav: accent active, glass pill, duotone icons */}
+          <nav className="sb-nav">
+            {ITEMS.map((it, i) => {
+              const on = tab === it.tab
+              return (
+                <button key={it.tab} className={`sb-item${on ? ' on' : ''}`} onClick={() => go(it.tab)} aria-current={on ? 'page' : undefined}>
+                  <span className="sb-item-ic" ref={el => (iconRefs.current[i] = el)}><it.Icon active={on} /></span>
+                  <span className="sb-item-label">{it.label}</span>
+                </button>
+              )
+            })}
+          </nav>
+
+          {/* profile */}
+          <button className="sb-profile" onClick={() => go('me')}>
+            {me?.photoUrl
+              ? <img className="sb-avatar" src={me.photoUrl} alt={name} referrerPolicy="no-referrer" />
+              : <span className="sb-avatar sb-avatar-fb" style={{ background: 'var(--grad)' }}>{initials(name)}</span>}
+            <span className="sb-profile-info">
+              <b>{name}</b>
+              <small>{ROLE_LABEL[myRole]}</small>
+            </span>
+          </button>
+        </>
+      )}
     </aside>
   )
 }

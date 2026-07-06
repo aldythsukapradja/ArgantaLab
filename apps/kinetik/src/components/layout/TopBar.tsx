@@ -48,56 +48,58 @@ export default function TopBar() {
         {/* left — wordmark */}
         <div className="tb-wordmark"><span className="wm-k">Kinetik</span><span className="wm-c">Circle</span></div>
 
-        {/* center — fancy circle chip + dropdown */}
-        <div className="tb-center" ref={wrapRef}>
-          <button
-            className={`circle-chip${open ? ' open' : ''}`}
-            onClick={() => setOpen(o => !o)}
-            aria-haspopup="listbox"
-            aria-expanded={open}
-          >
-            <Emblem accent={[a0, a1]} active />
-            <span className="cc-name">{active?.name ?? 'Your circle'}</span>
-            <IconChevron className={`cc-caret${open ? ' up' : ''}`} width={15} height={15} />
-          </button>
+        {/* right — circle chip, Bloom pill, theme switcher: ONE flex cluster
+            with a single uniform gap, so the pill sits exactly equidistant
+            from the chip and the theme button (not bunched against either). */}
+        <div className="tb-cluster">
+          <div className="tb-center" ref={wrapRef}>
+            <button
+              className={`circle-chip${open ? ' open' : ''}`}
+              onClick={() => setOpen(o => !o)}
+              aria-haspopup="listbox"
+              aria-expanded={open}
+            >
+              <Emblem accent={[a0, a1]} active />
+              <span className="cc-name">{active?.name ?? 'Your circle'}</span>
+              <IconChevron className={`cc-caret${open ? ' up' : ''}`} width={15} height={15} />
+            </button>
 
-          {open && (
-            <div className="cc-menu" role="listbox">
-              {circles.map(c => {
-                const isOn = c.id === activeCircleId
-                return (
-                  <button
-                    key={c.id}
-                    role="option"
-                    aria-selected={isOn}
-                    className={`cc-item${isOn ? ' on' : ''}`}
-                    onClick={() => { setCircle(c.id); setOpen(false) }}
-                  >
-                    <Emblem accent={accentOf(c)} size={26} />
-                    <span className="cc-item-name">{c.name}</span>
-                    {isOn && <span className="cc-check" aria-hidden>✓</span>}
-                  </button>
-                )
-              })}
-              <button className="cc-item cc-new" onClick={() => { setOpen(false); go('me') }}>
-                <span className="cc-new-ic"><IconPlus width={16} height={16} /></span>
-                <span className="cc-item-name">New circle</span>
-              </button>
-            </div>
-          )}
-        </div>
+            {open && (
+              <div className="cc-menu" role="listbox">
+                {circles.map(c => {
+                  const isOn = c.id === activeCircleId
+                  return (
+                    <button
+                      key={c.id}
+                      role="option"
+                      aria-selected={isOn}
+                      className={`cc-item${isOn ? ' on' : ''}`}
+                      onClick={() => { setCircle(c.id); setOpen(false) }}
+                    >
+                      <Emblem accent={accentOf(c)} size={26} />
+                      <span className="cc-item-name">{c.name}</span>
+                      {isOn && <span className="cc-check" aria-hidden>✓</span>}
+                    </button>
+                  )
+                })}
+                <button className="cc-item cc-new" onClick={() => { setOpen(false); go('me') }}>
+                  <span className="cc-new-ic"><IconPlus width={16} height={16} /></span>
+                  <span className="cc-item-name">New circle</span>
+                </button>
+              </div>
+            )}
+          </div>
 
-        {/* right — KinFarm teaser pill + theme switcher */}
-        <div className="tb-right">
           <button
             className={`tb-farm${tab === 'farm' ? ' on' : ''}`}
             onClick={() => go(tab === 'farm' ? 'today' : 'farm')}
-            title={tab === 'farm' ? 'Return home' : 'Open KinFarm'}
+            title={tab === 'farm' ? 'Return home' : 'Open Bloom'}
           >
             {tab === 'farm'
               ? <><IconHome /><span className="tb-farm-lbl">Home</span></>
-              : <><IconSprout /><span className="tb-farm-lbl">KinFarm</span></>}
+              : <><IconSprout /><span className="tb-farm-lbl">Bloom</span></>}
           </button>
+
           <button className="topbar-theme" onClick={toggleTheme} aria-label="Toggle light or dark mode">
             {theme === 'dark' ? <IconSun width={18} height={18} /> : <IconMoon width={18} height={18} />}
           </button>

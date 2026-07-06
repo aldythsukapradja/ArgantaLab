@@ -51,13 +51,15 @@ export default function App() {
 
   const booting = status === 'loading' && circles.length === 0
 
-  // KinFarm: full-screen like ArgantaLab's Arena — Sidebar + bottom Nav hide,
-  // TopBar stays (its pill is the only way back, mirroring Arena exactly).
+  // Bloom: full-screen like ArgantaLab's Arena. Bottom Nav hides on mobile
+  // (TopBar's pill stays visible as the way back). Sidebar stays MOUNTED on
+  // desktop too (TopBar is CSS-hidden at desktop widths) — it switches to its
+  // own minimal "way back" mode internally so desktop always has a return path.
   const farmOpen = tab === 'farm'
 
   return (
     <div id="app" style={{ ['--c0' as any]: c0, ['--c1' as any]: c1 }}>
-      {!farmOpen && <Sidebar />}
+      <Sidebar />
       <div className="app-body">
         <TopBar />
         {!farmOpen && <DataBanner />}
