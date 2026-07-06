@@ -1,5 +1,5 @@
 // Slide-up panels: Shop, Barn, Kin helpers, Home. Data-driven from the catalogs.
-import { CROPS, STARTER_SEEDS } from '../data/crops.js';
+import { CROPS } from '../data/crops.js';
 import { SPECIES } from '../data/livestock.js';
 import { KIN_TASKS } from '../data/kins.js';
 
@@ -12,6 +12,7 @@ export function Panels({ panel, snap, game, onClose }) {
         {panel === 'barn' && <Barn snap={snap} game={game} onClose={onClose} />}
         {panel === 'kin' && <Kin snap={snap} game={game} onClose={onClose} />}
         {panel === 'house' && <Home snap={snap} game={game} onClose={onClose} />}
+        {panel === 'inventory' && <Inventory snap={snap} game={game} onClose={onClose} />}
       </div>
     </div>
   );
@@ -29,9 +30,45 @@ function Head({ title, sub, onClose }) {
   );
 }
 
+const fmt = (n) => Number(n || 0).toLocaleString();
+
+function produceInfo(id) {
+  const crop = CROPS[id];
+  if (crop) return { id, name: crop.name, icon: crop.emoji, sell: crop.sell };
+  for (const sp of Object.values(SPECIES)) {
+    if (sp.produce === id) return { id, name: sp.produceName, icon: sp.produceEmoji, sell: sp.sell };
+  }
+  return { id, name: id, icon: '📦', sell: 10 };
+}
+
+function produceRows(snap) {
+  return Object.entries(snap.produce || {})
+    .filter(([, count]) => Number(count) > 0)
+    .map(([id, count]) => ({ ...produceInfo(id), count: Number(count) }));
+}
+
+function produceTotal(rows) {
+  return rows.reduce((sum, item) => sum + item.sell * item.count, 0);
+}
+
+function ProducePreview({ rows }) {
+  if (!rows.length) return <div className="empty-note">No produce in your bin yet.</div>;
+  return (
+    <div className="produce-preview">
+      {rows.map((item) => (
+        <span className="produce-chip" key={item.id} title={`${item.name}: ${item.count} x ${item.sell}`}>
+          {item.icon}<b>×{fmt(item.count)}</b><em>💎{fmt(item.sell * item.count)}</em>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Shop({ snap, game, onClose }) {
   const kid = snap.role === 'kid';
-  const produceCount = Object.values(snap.produce).reduce((a, b) => a + b, 0);
+  const rows = produceRows(snap);
+  const produceCount = rows.reduce((a, b) => a + b.count, 0);
+  const total = produceTotal(rows);
   return (
     <>
       <Head title="🛒 Sprout's Shop" sub={`You have 💎 ${snap.diamonds} Diamonds`} onClose={onClose} />
@@ -39,11 +76,11 @@ function Shop({ snap, game, onClose }) {
         const locked = c.ring && kid; // learning-gated seeds locked for kids offline
         return (
           <div className="row" key={c.id}>
-            <div className="ico">{c.emoji}</div>
-            <div className="grow">
-              <div className="name">{c.name} seed</div>
-              <div className="meta">
-                {c.days} days · sells for 💎{c.sell}{kid ? ' (as XP for you)' : ''}
+          <div className="ico">{c.emoji}</div>
+          <div className="grow">
+            <div className="name">{c.name} seed</div>
+            <div className="meta">
+                Owned: {fmt(snap.seeds?.[c.id] || 0)} · {c.days} days · sells for 💎{c.sell}{kid ? ' (as XP for you)' : ''}
                 {locked ? ' · 🔒 finish a learning ring to unlock' : ''}
               </div>
             </div>
@@ -61,9 +98,10 @@ function Shop({ snap, game, onClose }) {
         <div className="ico">📦</div>
         <div className="grow">
           <div className="name">Sell all produce</div>
-          <div className="meta">{produceCount} item(s) in your bin{kid ? ' · pays out as XP' : ' · pays out as Diamonds'}</div>
+          <div className="meta">{produceCount} item(s) · total value 💎{fmt(total)}{kid ? ' · kid payout is +1 XP' : ' · pays out as Diamonds'}</div>
+          <ProducePreview rows={rows} />
         </div>
-        <button className="rbtn ghost" disabled={produceCount === 0} onClick={() => game.sellAll()}>Sell all</button>
+        <button className="rbtn ghost" disabled={produceCount === 0} onClick={() => game.sellAll()}>{kid ? 'Sell +XP' : `Sell 💎${fmt(total)}`}</button>
       </div>
     </>
   );
@@ -127,6 +165,53 @@ function Kin({ snap, game, onClose }) {
   );
 }
 
+function Inventory({ snap, game, onClose }) {
+  const produce = produceRows(snap);
+  const total = produceTotal(produce);
+  const selected = snap.selectedSeed;
+  return (
+    <>
+      <Head title="🎒 Farm Bag" sub="Seeds to plant and produce ready to sell" onClose={onClose} />
+      <div className="bag-section">
+        <div className="bag-title">Seeds</div>
+        {Object.values(CROPS).map((crop) => {
+          const count = Number(snap.seeds?.[crop.id] || 0);
+          return (
+            <div className={'row compact' + (selected === crop.id ? ' selected' : '')} key={crop.id}>
+              <div className="ico">{crop.emoji}</div>
+              <div className="grow">
+                <div className="name">{crop.name} seeds</div>
+                <div className="meta">Owned: {fmt(count)} · grows in {crop.days} days · harvest sells 💎{fmt(crop.sell)}</div>
+              </div>
+              <button className="rbtn ghost" disabled={count <= 0} onClick={() => game.setSeed(crop.id)}>
+                {selected === crop.id ? 'Selected' : 'Plant'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="bag-section">
+        <div className="bag-title">Produce</div>
+        <ProducePreview rows={produce} />
+        {produce.map((item) => (
+          <div className="row compact" key={item.id}>
+            <div className="ico">{item.icon}</div>
+            <div className="grow">
+              <div className="name">{item.name}</div>
+              <div className="meta">Owned: {fmt(item.count)} · {fmt(item.count)} × 💎{fmt(item.sell)} = 💎{fmt(item.count * item.sell)}</div>
+            </div>
+          </div>
+        ))}
+        <div className="sell-total">
+          <span>Total produce value</span>
+          <b>💎{fmt(total)}</b>
+          <button className="rbtn" disabled={produce.length === 0} onClick={() => game.sellAll()}>Sell all</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function Home({ snap, game, onClose }) {
   return (
     <>
@@ -150,4 +235,3 @@ function Home({ snap, game, onClose }) {
     </>
   );
 }
-

@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { computeRank } from '../net/hero.js';
 import TierIcon from '../components/TierIcon.jsx';
 import { IconHeart, IconMana, IconMount } from '../components/HudIcons.jsx';
+import { CROPS } from '../data/crops.js';
 
 const TOOLS = [
   { id: 'hoe', icon: '⛏', label: 'Till' },
@@ -21,10 +22,29 @@ const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 50
 
 export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [showSeeds, setShowSeeds] = useState(false);
   const rank = computeRank(snap.xp);
   const maxHp = Number(hero?.stats?.maxHp || 100);
   const guardian = hero?.guardian;
   const energyPct = Math.max(0, Math.min(100, (snap.stamina / Math.max(1, snap.maxStamina)) * 100));
+  const selectedCrop = CROPS[snap.selectedSeed] || CROPS.turnip;
+  const selectedSeedCount = Number(snap.seeds?.[selectedCrop.id] || 0);
+  const activeTool = TOOLS.find((t) => t.id === snap.tool);
+  const useIcon = snap.tool === 'seed' ? selectedCrop.emoji : (activeTool?.icon || '⤵');
+  const seedRows = Object.values(CROPS);
+  const setTool = (id) => {
+    if (id === 'seed') {
+      game.setTool('seed');
+      setShowSeeds((v) => !v);
+    } else {
+      setShowSeeds(false);
+      game.setTool(id);
+    }
+  };
+  const pickSeed = (id) => {
+    game.setSeed(id);
+    setShowSeeds(false);
+  };
 
   return (
     <>
@@ -61,6 +81,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <button className="navbtn" onClick={() => onOpen('barn')}>🐄 Barn</button>
           <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
           <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
+          <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
         </div>
       </div>
 
@@ -73,19 +94,46 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           3 numbered tools (Till/Plant/Water), Sleep + Mount as the two util
           orbs, and the big attack-circle applies the selected tool. */}
       <div className="cluster">
+        {showSeeds && (
+          <div className="seed-fan" aria-label="seed inventory">
+            <div className="seed-fan-title">Plant</div>
+            {seedRows.map((crop, i) => {
+              const count = Number(snap.seeds?.[crop.id] || 0);
+              const active = snap.selectedSeed === crop.id;
+              return (
+                <button
+                  key={crop.id}
+                  type="button"
+                  className={'seed-fan-item' + (active ? ' active' : '') + (count <= 0 ? ' empty' : '')}
+                  style={{ '--i': i }}
+                  disabled={count <= 0}
+                  title={`${crop.name} seed x${count}`}
+                  onClick={() => pickSeed(crop.id)}
+                >
+                  <span className="seed-emoji">{crop.emoji}</span>
+                  <span className="seed-name">{crop.name}</span>
+                  <b>{count}</b>
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="small-ring">
           {TOOLS.map((t, i) => (
             <button key={t.id} type="button" title={t.label}
               className={'skill-circle' + (snap.tool === t.id ? ' active' : '')}
-              onClick={() => game.setTool(t.id)}>
-              <span>{t.icon}</span><span className="slot">{i + 1}</span>
+              onClick={() => setTool(t.id)}>
+              <span>{t.id === 'seed' ? selectedCrop.emoji : t.icon}</span>
+              {t.id === 'seed' && <span className="tool-count">×{selectedSeedCount}</span>}
+              <span className="slot">{i + 1}</span>
             </button>
           ))}
           <button type="button" className="skill-circle util" onClick={onSleep} title="sleep">😴</button>
           <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
         </div>
         <button type="button" className="attack-circle" onClick={onUse} aria-label="use tool">
-          {TOOLS.find((t) => t.id === snap.tool)?.icon || '⤵'}
+          <span>{useIcon}</span>
+          {snap.tool === 'seed' && <small>×{selectedSeedCount}</small>}
         </button>
       </div>
 

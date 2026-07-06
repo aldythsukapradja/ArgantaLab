@@ -21,9 +21,14 @@ const FACE_WORD = { North: 'up', South: 'down', East: 'right', West: 'left' };
 const WALK_MS = 260;
 const ANIMAL_VISUAL_COUNT = 5;
 const DIRS = [['East', 1, 0], ['West', -1, 0], ['South', 0, 1], ['North', 0, -1]];
+const KIN_STARTS = [[7, 12], [13, 16], [18, 11], [23, 14], [28, 10], [9, 18], [18, 19], [27, 18], [32, 13], [12, 7], [21, 7], [30, 7]];
 
 function blockedAt(g, tx, ty) {
   return tx < 1 || ty < 1 || tx >= W - 1 || ty >= H - 1 || g.blocked.has(tx + ',' + ty);
+}
+
+function borderAt(tx, ty) {
+  return tx < 1 || ty < 1 || tx >= W - 1 || ty >= H - 1;
 }
 
 function inField(tx, ty) {
@@ -124,15 +129,16 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (mount) {
         const tile = nearestOpenNeighbor(g, g.player.tile, mount.tile) || g.player.tile;
         mount.tile = [...tile]; mount.from = [...tile]; mount.moveT = 1;
-        mount.mode = 'wander'; mount.hidden = false; mount.idleUntil = performance.now() + 260;
+        mount.mode = 'wander'; mount.hidden = false; mount.speedMs = 620; mount.idleUntil = performance.now() + 260;
       }
       return;
     }
     if (mount) {
       mount.mode = 'called';
       mount.hidden = false;
-      mount.speedMs = 260;
+      mount.speedMs = 170;
       mount.idleUntil = 0;
+      mount.callStartedAt = performance.now();
     } else {
       g.pendingMountCall = true;
     }
@@ -241,8 +247,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const kinSource = (logicRef.current?.activeKins?.() || state.kins || []).slice(0, 12);
       kinSource.forEach((k, i) => {
         const id = 'kin:' + k.id; live.add(id);
-        const ent = ensureActor(g, id, { kind: 'kin', kin: k, tile: [7 + (i % 7), 10 + Math.floor(i / 7)], home: { x0: 6, y0: 9, x1: 20, y1: 20 }, speedMs: 620 });
-        ent.kin = k; ent.name = k.name;
+        const start = KIN_STARTS[i % KIN_STARTS.length];
+        const home = {
+          x0: Math.max(2, start[0] - 4),
+          y0: Math.max(2, start[1] - 3),
+          x1: Math.min(W - 3, start[0] + 4),
+          y1: Math.min(H - 3, start[1] + 3),
+        };
+        const ent = ensureActor(g, id, { kind: 'kin', kin: k, tile: start, home, speedMs: 760 + (i % 3) * 90 });
+        ent.kin = k; ent.name = k.name; ent.home = home;
       });
       if (g.resources?.mount) {
         const id = 'mount:equipped'; live.add(id);
@@ -251,8 +264,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const ent = ensureActor(g, id, { kind: 'mount', tile: [Math.max(7, p.tile[0] - 3), Math.max(6, p.tile[1] - 2)], home: mountHome, speedMs: 620, mode: 'wander', hidden: false });
         ent.home = mountHome;
         if (p.mounted) ent.mode = 'ridden';
-        else if (g.pendingMountCall) { ent.mode = 'called'; ent.speedMs = 260; ent.idleUntil = 0; g.pendingMountCall = false; }
+        else if (g.pendingMountCall) { ent.mode = 'called'; ent.speedMs = 170; ent.idleUntil = 0; ent.callStartedAt = performance.now(); g.pendingMountCall = false; }
         else if (!ent.mode || ent.mode === 'ridden') ent.mode = 'wander';
+        if (!p.mounted && ent.mode !== 'called') ent.speedMs = 620;
       }
       for (const id of [...g.actors.keys()]) if (!live.has(id)) g.actors.delete(id);
     }
@@ -263,7 +277,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function moveChoice(g, e) {
       let target = null;
       if (e.kind === 'mount' && e.mode === 'called') {
-        target = nearestOpenNeighbor(g, g.player.tile, e.tile) || g.player.tile;
+        target = g.player.tile;
       } else if (e.kind === 'kin' && e.kin?.task) {
         const plots = logicRef.current?.state?.plots || {};
         for (const [key, plot] of Object.entries(plots)) {
@@ -284,7 +298,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const nx = e.tile[0] + dx, ny = e.tile[1] + dy;
         const inHome = nx >= e.home.x0 && nx <= e.home.x1 && ny >= e.home.y0 && ny <= e.home.y1;
         if (e.kind === 'mount' && e.mode !== 'called' && inField(nx, ny)) continue;
-        if ((target || inHome) && !blockedAt(g, nx, ny)) return [dir, nx, ny];
+        const passable = e.kind === 'mount' && e.mode === 'called' ? !borderAt(nx, ny) : !blockedAt(g, nx, ny);
+        if ((target || inHome) && passable) return [dir, nx, ny];
       }
       return null;
     }

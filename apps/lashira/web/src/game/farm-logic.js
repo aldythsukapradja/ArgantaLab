@@ -8,6 +8,13 @@ import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 import { loadFarmState, saveFarmState } from './farm-save.js';
 
+const defaultSeeds = () => Object.fromEntries(Object.keys(CROPS).map((id) => [id, id === 'turnip' ? 3 : 0]));
+const starterKinArt = {
+  kin_sprig: { kinKey: 'kin:sproutling', render: 'sproutling', assetKey: 'kin.sproutling', color: '#a78bfa' },
+  kin_pip: { kinKey: 'kin:pixelslime', render: 'pixelslime', assetKey: 'kin.pixelslime', color: '#22c55e' },
+  kin_bramble: { kinKey: 'kin:storyfox', render: 'storyfox', assetKey: 'kin.storyfox', color: '#6366f1' },
+};
+
 export class FarmLogic {
   // circleId (optional): when the game is embedded inside a KinetikCircle
   // circle, every member of that circle shares ONE farm save — keyed by the
@@ -40,7 +47,7 @@ export class FarmLogic {
       xp: this.profile?.xp ?? 0,
       stamina: 40, maxStamina: 40,
       tool: 'hoe', selectedSeed: 'turnip',
-      seeds: { turnip: 3, potato: 0, carrot: 0 },
+      seeds: defaultSeeds(),
       produce: {},
       plots: {},
       livestock: STARTER_LIVESTOCK.map((a, i) => ({ id: 'ls_' + i, species: a.species, name: a.name, affection: 40, fed: false, produce: false })),
@@ -51,7 +58,19 @@ export class FarmLogic {
   async _load() {
     try {
       const loaded = await loadFarmState({ profile: this.profile, circleId: this.circleId });
-      if (loaded?.data) this.state = { ...this._default(), ...loaded.data };
+      if (loaded?.data) {
+        const base = this._default();
+        this.state = {
+          ...base,
+          ...loaded.data,
+          seeds: { ...base.seeds, ...(loaded.data.seeds || {}) },
+          produce: { ...base.produce, ...(loaded.data.produce || {}) },
+          plots: { ...base.plots, ...(loaded.data.plots || {}) },
+          livestock: loaded.data.livestock || base.livestock,
+          kins: loaded.data.kins || base.kins,
+          kinTasks: { ...base.kinTasks, ...(loaded.data.kinTasks || {}) },
+        };
+      }
       this.saveSource = loaded?.source || 'fresh';
       return;
     } catch (err) {
@@ -60,7 +79,20 @@ export class FarmLogic {
     }
     try {
       const raw = localStorage.getItem(this.saveKey);
-      if (raw) this.state = { ...this._default(), ...JSON.parse(raw) };
+      if (raw) {
+        const data = JSON.parse(raw);
+        const base = this._default();
+        this.state = {
+          ...base,
+          ...data,
+          seeds: { ...base.seeds, ...(data.seeds || {}) },
+          produce: { ...base.produce, ...(data.produce || {}) },
+          plots: { ...base.plots, ...(data.plots || {}) },
+          livestock: data.livestock || base.livestock,
+          kins: data.kins || base.kins,
+          kinTasks: { ...base.kinTasks, ...(data.kinTasks || {}) },
+        };
+      }
     } catch { /* fresh */ }
   }
   serialize() {
@@ -93,7 +125,7 @@ export class FarmLogic {
         task: Object.prototype.hasOwnProperty.call(tasks, k.id) ? tasks[k.id] : (k.task ?? null),
       }));
     }
-    return this.state.kins.map((k) => ({ ...k }));
+    return this.state.kins.map((k) => ({ ...(starterKinArt[k.id] || {}), ...k, ...(k.render ? {} : starterKinArt[k.id] || {}) }));
   }
   save() {
     clearTimeout(this._saveTimer);
@@ -144,7 +176,13 @@ export class FarmLogic {
   }
 
   setTool(tool) { this.state.tool = tool; this.emit(); }
-  setSeed(id) { this.state.selectedSeed = id; this.state.tool = 'seed'; this.emit(); }
+  setSeed(id) {
+    if (!CROPS[id]) return;
+    this.state.selectedSeed = id;
+    this.state.tool = 'seed';
+    this.save();
+    this.emit();
+  }
   _spend(n) { if (this.state.stamina < n) { this.flash('Too tired — sleep to restore energy'); return false; } this.state.stamina -= n; return true; }
 
   // Apply the current tool at a specific tile (harvest ripe first, any tool).
@@ -186,10 +224,15 @@ export class FarmLogic {
   // Buying always costs Diamonds — for kids this ties farm progress directly to
   // real learning (their diamonds only ever come from finishing World rings).
   buySeed(id, qty = 1) {
-    const crop = CROPS[id]; const cost = crop.seedCost * qty;
+    const crop = CROPS[id];
+    if (!crop) return;
+    const cost = crop.seedCost * qty;
     if (this.state.diamonds < cost) { this.flash('Not enough 💎 Diamonds'); return; }
     this.state.diamonds -= cost; this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
-    this.flash('Bought ' + qty + '× ' + crop.name + ' seed'); this.save(); this.emit();
+    this.state.selectedSeed = id;
+    this.state.tool = 'seed';
+    this.flash('Bought ' + qty + '× ' + crop.emoji + ' ' + crop.name + ' seed · now owned: ' + this.state.seeds[id]);
+    this.save(); this.emit();
   }
   // Selling rewards differ by role: adults earn Diamonds directly from playing
   // (normal adult platform rule). Kids earn XP instead — but ONLY a flat, tiny
@@ -198,18 +241,29 @@ export class FarmLogic {
   // meaningful way for a kid to level up. Farming is flavor, not a shortcut.
   sellAll() {
     let gain = 0, any = false;
+    const items = [];
     for (const [id, n] of Object.entries(this.state.produce)) {
       if (n <= 0) continue; any = true;
-      gain += (CROPS[id]?.sell ?? this._animalSell(id)) * n;
+      const info = this._produceInfo(id);
+      gain += info.sell * n;
+      items.push(info.icon + '×' + n);
     }
     if (!any) { this.flash('Nothing to sell'); return; }
     this.state.produce = {};
     const isKid = this.profile?.role === 'kid';
-    if (isKid) { this.state.xp += 1; this.flash('Sold — +1 XP'); }
-    else { this.state.diamonds += gain; this.flash('Sold for ' + gain + ' 💎'); }
+    if (isKid) { this.state.xp += 1; this.flash('Sold ' + items.join(' ') + ' · value 💎' + gain + ' · +1 XP'); }
+    else { this.state.diamonds += gain; this.flash('Sold ' + items.join(' ') + ' = 💎' + gain); }
     this.save(); this.emit();
   }
   _animalSell(pid) { for (const sp of Object.values(SPECIES)) if (sp.produce === pid) return sp.sell; return 10; }
+  _produceInfo(pid) {
+    const crop = CROPS[pid];
+    if (crop) return { id: pid, name: crop.name, icon: crop.emoji, sell: crop.sell };
+    for (const sp of Object.values(SPECIES)) {
+      if (sp.produce === pid) return { id: pid, name: sp.produceName, icon: sp.produceEmoji, sell: sp.sell };
+    }
+    return { id: pid, name: pid, icon: '📦', sell: 10 };
+  }
 
   feedAll() {
     let fed = 0; for (const a of this.state.livestock) if (!a.fed) { a.fed = true; fed++; }

@@ -2,9 +2,9 @@
 // speed up (flavor for now; both tasks work for any Kin). In the full build this
 // roster loads from person_creatures (lib/nexus.ts); offline we seed 3 starters.
 export const STARTER_KINS = [
-  { id: 'kin_sprig', name: 'Sprig', element: 'meadow', color: 0x8fd67a, aptitude: 'water', task: null, happiness: 80 },
-  { id: 'kin_pip', name: 'Pip', element: 'circuit', color: 0x7fb0e6, aptitude: 'harvest', task: null, happiness: 62 },
-  { id: 'kin_bramble', name: 'Bramble', element: 'grove', color: 0xd8a24a, aptitude: 'water', task: null, happiness: 45 },
+  { id: 'kin_sprig', kinKey: 'kin:sproutling', render: 'sproutling', assetKey: 'kin.sproutling', name: 'Sprig', element: 'meadow', color: '#a78bfa', aptitude: 'water', task: null, happiness: 80 },
+  { id: 'kin_pip', kinKey: 'kin:pixelslime', render: 'pixelslime', assetKey: 'kin.pixelslime', name: 'Pip', element: 'circuit', color: '#22c55e', aptitude: 'harvest', task: null, happiness: 62 },
+  { id: 'kin_bramble', kinKey: 'kin:storyfox', render: 'storyfox', assetKey: 'kin.storyfox', name: 'Bramble', element: 'grove', color: '#6366f1', aptitude: 'water', task: null, happiness: 45 },
 ];
 
 // task values: null (idle) | 'water' (auto-water on sleep) | 'harvest' (auto-collect ripe on sleep)

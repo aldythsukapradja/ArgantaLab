@@ -26,7 +26,10 @@ function getKinImage(kin) {
   let img = imageCache.get(cacheKey);
   if (img) return img;
 
-  const markup = renderToStaticMarkup(<KinSprite render={key} color={color} size={100} />);
+  const rawMarkup = renderToStaticMarkup(<KinSprite render={key} color={color} size={100} />);
+  const markup = rawMarkup.includes('xmlns=')
+    ? rawMarkup
+    : rawMarkup.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
   img = new Image();
   img.decoding = 'async';
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markup);
@@ -37,7 +40,7 @@ function getKinImage(kin) {
 export function drawActualKinSprite(ctx, kin, footX, footY, frame = 0) {
   const img = getKinImage(kin);
   if (!img || !img.complete || !img.naturalWidth) return false;
-  const size = 52;
+  const size = 64;
   const bob = frame % 2 ? -2 : 0;
   ctx.drawImage(img, footX - size / 2, footY - size + 5 + bob, size, size);
   return true;
