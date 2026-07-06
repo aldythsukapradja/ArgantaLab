@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Welcome from './ui/Welcome.jsx';
 import CharacterGate from './ui/CharacterGate.jsx';
 import FarmRoom from './game/FarmRoom.jsx';
@@ -27,6 +27,7 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
   const [hero, setHero] = useState(null);
   const [heroChecked, setHeroChecked] = useState(false);
   const [playAnyway, setPlayAnyway] = useState(false);
+  const lastAppliedUserId = useRef(null);
 
   // resolve the initial session
   useEffect(() => {
@@ -34,9 +35,15 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     async function applyUser(user) {
       if (!alive) return;
       if (user) {
+        const nextUserId = String(user.id || '');
+        if (nextUserId && lastAppliedUserId.current === nextUserId) return;
         const p = await profileForUser(user);
-        if (alive) setProfile(p);
+        if (alive) {
+          lastAppliedUserId.current = nextUserId;
+          setProfile((prev) => (prev?.id === p?.id ? { ...prev, ...p } : p));
+        }
       } else if (embedded) {
+        lastAppliedUserId.current = null;
         setProfile(null);
       }
     }
@@ -64,7 +71,7 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     setHeroChecked(false);
     fetchHeroState().then((h) => { if (alive) { setHero(h); setHeroChecked(true); } });
     return () => { alive = false; };
-  }, [profile]);
+  }, [profile?.id, profile?.guest]);
 
   if (import.meta.env.DEV) window.__appState = { checked, profile, embedded, heroChecked };
   if (!checked) return <div className="loading">Loading LashiraBloom…</div>;

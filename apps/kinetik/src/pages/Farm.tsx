@@ -16,12 +16,14 @@ function targetOrigin() {
 
 export default function Farm() {
   const ref = useRef<HTMLIFrameElement>(null)
+  const authedRef = useRef(false)
   const activeCircleId = useUiStore(s => s.activeCircleId)
   const [status, setStatus] = useState<'loading' | 'ready'>('loading')
 
   const src = `${GAME_URL}/?embed=kinetik&circle=${encodeURIComponent(activeCircleId || '')}`
 
-  function post() {
+  function post(force = false) {
+    if (authedRef.current && !force) return
     supabase.auth.getSession().then(({ data }) => {
       const s = data.session
       const msg = s?.access_token
@@ -33,17 +35,24 @@ export default function Farm() {
 
   useEffect(() => {
     function onMsg(e: MessageEvent) {
-      if (e.data?.type === 'lashira-game-ready' || e.data?.type === 'lashira-auth-request') post()
-      if (e.data?.type === 'lashira-auth-applied') setStatus('ready')
+      if (e.data?.type === 'lashira-game-ready' || e.data?.type === 'lashira-auth-request') post(true)
+      if (e.data?.type === 'lashira-auth-applied') {
+        authedRef.current = true
+        setStatus('ready')
+      }
     }
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
   }, [activeCircleId])
 
   useEffect(() => {
+    authedRef.current = false
     setStatus('loading')
     const timer = window.setInterval(post, 2500)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => post())
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      authedRef.current = false
+      post(true)
+    })
     return () => {
       window.clearInterval(timer)
       subscription?.unsubscribe()
@@ -57,7 +66,11 @@ export default function Farm() {
         key={activeCircleId}
         title="KinFarm"
         src={src}
-        onLoad={post}
+        onLoad={() => {
+          authedRef.current = false
+          setStatus('loading')
+          post(true)
+        }}
         allow="fullscreen; gamepad"
       />
       {status === 'loading' && <div className="farm-embed-loading"><span className="boot-orb" /></div>}

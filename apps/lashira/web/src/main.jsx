@@ -14,6 +14,7 @@ const params = new URLSearchParams(window.location.search);
 const embedHost = params.get('embed');
 const commandEmbed = !!embedHost;
 let embeddedAuthApplied = false;
+let embeddedAuthToken = '';
 
 function trustedOrigin(origin) {
   if (!origin || origin === 'null') return true;
@@ -26,12 +27,17 @@ function trustedOrigin(origin) {
 if (commandEmbed) {
   async function applyHostAuth(d) {
     if (d.session?.access_token) {
+      if (d.session.access_token === embeddedAuthToken && window.__lashiraEmbeddedAuthUser !== undefined) {
+        embeddedAuthApplied = true;
+        return window.__lashiraEmbeddedAuthUser;
+      }
       const { data, error } = await supabase?.auth.setSession({
         access_token: d.session.access_token,
         refresh_token: d.session.refresh_token,
       }) || {};
       if (error) throw error;
       embeddedAuthApplied = true;
+      embeddedAuthToken = d.session.access_token;
       const user = data?.session?.user || data?.user || null;
       window.__lashiraEmbeddedAuthUser = user;
       window.dispatchEvent(new CustomEvent('lashira-host-auth', { detail: { user } }));
@@ -39,7 +45,9 @@ if (commandEmbed) {
     }
     if (d.signout) {
       embeddedAuthApplied = true;
+      embeddedAuthToken = '';
       window.__lashiraEmbeddedAuthUser = null;
+      try { await supabase?.auth.signOut(); } catch { /* ignore */ }
       window.dispatchEvent(new CustomEvent('lashira-host-auth', { detail: { user: null } }));
     }
     return null;
