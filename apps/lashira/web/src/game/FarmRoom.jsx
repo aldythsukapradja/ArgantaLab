@@ -2,13 +2,13 @@
 // (TestRoom), so the farmer is the player's real composited Heroes character.
 // Tile-step movement, nipplejs + WASD, camera-follow. Falls back to a placeholder
 // farmer sprite if the Kingdom art host is unreachable.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
 import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
-  tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect,
+  tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
   SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, canAffordSkill,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
@@ -45,9 +45,6 @@ function inField(tx, ty) {
   return tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1;
 }
 
-// The farm's 3 battle skills = the SHARED slots (Bolt/Storm/Mend). Damage/heal
-// scale with level via skillPower; MP is spent from the farm's STAMINA.
-const BATTLE_SKILLS = SKILL_SLOTS;
 const ARENA_MONSTER_COUNT = 5; // how many roam the arena at once
 
 // Deterministic per-id seed (FNV-1a over the whole string) so every actor gets a
@@ -196,6 +193,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const lastDayEventRef = useRef(0);
   const splashTimerRef = useRef(0);
   const heroPresenceKey = heroSpecKey(hero?.spec);
+  // Battle skills = shared behaviour (Bolt/Storm/Mend) + the hero's OWN spell
+  // effects from their Kingdom character (Kingdom is the source of truth for fx).
+  const battleSkills = useMemo(() => battleSkillsFor(hero?.spec?.skills), [heroPresenceKey]);
+  const battleSkillsRef = useRef(battleSkills);
+  useEffect(() => { battleSkillsRef.current = battleSkills; if (G.current) G.current.battleSkills = battleSkills; }, [battleSkills]);
 
   // ---------- init ----------
   useEffect(() => {
@@ -243,7 +245,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         // stamina (skills spend stamina). fx = transient hit sparks for feedback.
         combat: prev?.combat || { on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, deadUntil: 0 },
         monsters: prev?.monsters || [], monsterSeed: 1, fx: prev?.fx || [], nextMonsterSpawn: 0,
-        effectsAll: effectsAll || {}, spellFx: prev?.spellFx || [],
+        effectsAll: effectsAll || {}, spellFx: prev?.spellFx || [], battleSkills: battleSkillsRef.current,
       };
       // Live sync is intent-based: FarmLogic emits a tiny granular intent for
       // every local mutation, and the channel fans it out. UI updates ride the
@@ -642,7 +644,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // host referee (host applies; a non-host sends mob-hit intents).
   function doSkill(i) {
     const g = G.current; if (!g || !g.combat.on) return;
-    const skill = BATTLE_SKILLS[i]; if (!skill) return;
+    const skill = (g.battleSkills || SKILL_SLOTS)[i]; if (!skill) return;
     const cost = Number(skill.manaCost || 0);
     const stamina = logicRef.current?.state?.stamina ?? 0;
     if (!canAffordSkill(stamina, skill)) { logicRef.current?.flash?.('Too tired for ' + (skill.name || 'that skill')); return; }
@@ -1356,7 +1358,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
               zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
-              battle={battle} battleSkills={BATTLE_SKILLS} onStrike={doStrike} onSkill={doSkill} />
+              battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
         )}

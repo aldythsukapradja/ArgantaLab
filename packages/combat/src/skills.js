@@ -34,6 +34,19 @@ export function skillPower(skill, L) {
   return boltDamage(L); // bolt / default
 }
 
+// Merge the shared slot BEHAVIOUR (single/all/heal + MP + scaling) with a hero's
+// own effect visuals. Kingdom is the single source of truth for character stuff,
+// so the `fx` (which spell animation plays) comes from the hero's Kingdom
+// skills; only the behaviour/costs are shared. `heroSkills` = hero.spec.skills.
+export function battleSkillsFor(heroSkills) {
+  const raw = Array.isArray(heroSkills) ? heroSkills : [];
+  return SKILL_SLOTS.map((slot, i) => {
+    const f = Number(raw[i]?.fx);
+    const name = typeof raw[i]?.name === 'string' ? raw[i].name : slot.name;
+    return { ...slot, name, fx: Number.isFinite(f) ? f : slot.fx };
+  });
+}
+
 export function normalizeSkills(skills) {
   return DEFAULT_SKILLS.map((def, i) => ({
     fx: Number.isFinite(Number(skills?.[i]?.fx)) ? Number(skills[i].fx) : def.fx,
