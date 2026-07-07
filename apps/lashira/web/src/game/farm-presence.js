@@ -41,6 +41,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
   let lastStatus = 'init';
   let lastPeerEventAt = 0; // when we last HEARD anything from a peer
   let joinPings = []; // timers that re-assert presence right after a join
+  let pruneTimer = null; // periodic grace-window peer cleanup
   const peers = new Map(); // userId -> latest winning meta/broadcast
 
   let current = {
@@ -68,9 +69,24 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
     subscribed = false;
     clearTimeout(rejoinTimer);
     joinPings.forEach(clearTimeout);
+    clearInterval(pruneTimer);
     try { supabase.removeChannel(channel); } catch { /* noop */ }
     onKicked?.(claim);
   };
+
+  const PEER_GRACE_MS = 6000; // keep a peer this long after we last heard from them
+  // Remove only peers we haven't heard from (presence OR broadcast) in a while —
+  // NOT on every partial presence sync. This is what stops the remote-character
+  // blink caused by presence/broadcast arriving out of step.
+  function prunePeers() {
+    if (closed) return;
+    const now = Date.now();
+    let changed = false;
+    for (const [id, p] of peers) if (now - (p._seen || 0) > PEER_GRACE_MS) { peers.delete(id); changed = true; }
+    onPeers([...peers.values()]);
+    return changed;
+  }
+  pruneTimer = setInterval(prunePeers, 2500);
 
   const scheduleRejoin = () => {
     if (closed || rejoinTimer) return;
@@ -94,20 +110,27 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
     channel.on('presence', { event: 'sync' }, () => {
       if (closed) return;
       const winners = winningPeers(channel.presenceState(), selfId);
-      if (winners.length) lastPeerEventAt = Date.now();
-      const liveIds = new Set(winners.map((w) => String(w.id)));
-      for (const id of [...peers.keys()]) if (!liveIds.has(id)) peers.delete(id); // drop leavers
+      const now = Date.now();
+      if (winners.length) lastPeerEventAt = now;
       for (const w of winners) {
         const prev = peers.get(String(w.id));
-        // presence meta can lag a fresher broadcast — keep the newest of the two
-        if (!prev || (w.updatedAt || 0) >= (prev.updatedAt || 0)) peers.set(String(w.id), w);
+        // presence meta can lag a fresher broadcast — keep the newest of the two,
+        // and stamp _seen so the grace-window prune keeps this peer alive.
+        const next = (!prev || (w.updatedAt || 0) >= (prev.updatedAt || 0)) ? { ...w } : prev;
+        next._seen = now;
+        peers.set(String(w.id), next);
       }
-      onPeers([...peers.values()]);
+      // NOTE: we intentionally do NOT delete peers missing from THIS sync.
+      // A peer's broadcast can arrive a beat before their presence syncs (and
+      // vice-versa); deleting on every partial sync made remote characters
+      // BLINK. Removal happens on a grace timeout in prunePeers() instead.
+      prunePeers();
     });
     channel.on('broadcast', { event: 'player-state' }, ({ payload }) => {
       if (closed || !payload?.id || payload.id === selfId) return;
-      lastPeerEventAt = Date.now();
-      peers.set(String(payload.id), payload);
+      const now = Date.now();
+      lastPeerEventAt = now;
+      peers.set(String(payload.id), { ...payload, _seen: now });
       onPeers([...peers.values()]);
     });
     channel.on('broadcast', { event: 'farm-intent' }, ({ payload }) => {
@@ -202,6 +225,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
       subscribed = false;
       clearTimeout(rejoinTimer);
       joinPings.forEach(clearTimeout);
+      clearInterval(pruneTimer);
       try { supabase.removeChannel(channel); } catch { /* noop */ }
     },
   };
