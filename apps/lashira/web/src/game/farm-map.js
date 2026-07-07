@@ -7,34 +7,92 @@ import { drawOverride } from './farm-art-runtime.js';
 import { drawActualKinSprite } from './kin-sprite-image.jsx';
 
 export const TILE = 48;                       // matches Kingdom Heroes scale
-export const W = 40, H = 34;                  // extra rows at the bottom = the arena
+export const W = 60, H = 48;                  // one overworld: all zones + castle center
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
-export const FIELD = { x0: 6, y0: 10, x1: 20, y1: 20 };
 
-// A separate BATTLE ZONE, walled off below the farm (never overlaps farming).
-// Entering it flips the game into battle mode; monsters roam only here. A gate
-// in the dividing wall (ARENA_WALL_Y) connects it to the farm.
-export const ARENA = { x0: 2, y0: 27, x1: 37, y1: 32 };
-export const ARENA_WALL_Y = 25;               // fence line dividing farm (above) from arena (below)
-export const ARENA_GATE_X = 18;               // 2-wide gate (ARENA_GATE_X .. +1) in that wall
+// Crop field — the Farm (NW), biggest zone. Pre-tilled soil, open (no fence).
+export const FIELD = { x0: 3, y0: 3, x1: 23, y1: 16 };
 
-// Animal pens, to the RIGHT of the crop field. Bottom line (y1) matches the crop
-// field's bottom (y=20) so the whole farm reads as one row of enclosures. Cow +
-// sheep stacked under the Barn/Shop; chicken run on the far right. Each animal's
-// home wander-rect IS its pen (see FarmRoom.syncWorldActors).
-export const PENS = {
-  cow: { x0: 23, y0: 10, x1: 31, y1: 14, gate: 'left' },
-  sheep: { x0: 23, y0: 16, x1: 31, y1: 20, gate: 'left' },
-  chicken: { x0: 33, y0: 12, x1: 37, y1: 20, gate: 'left' },
+// Named zones (terrain painting + prop placement).
+export const ZONES = {
+  garden:  { x0: 2,  y0: 19, x1: 20, y1: 27 },   // flowers + greenhouse (W)
+  plaza:   { x0: 23, y0: 18, x1: 36, y1: 30 },   // shops ring the castle (center)
+  mining:  { x0: 38, y0: 18, x1: 46, y1: 30 },   // stone/gold + dungeon gate (E)
+  forest:  { x0: 48, y0: 18, x1: 57, y1: 30 },   // wood (E)
+  fishing: { x0: 2,  y0: 29, x1: 16, y1: 45 },   // lake (SW)
 };
 
+// Martial south band (combat mode): battleground (left) + PvP arena (right, PVP.x0).
+// inArena() flips combat on across the whole band; monsters roam here.
+export const ARENA = { x0: 17, y0: 33, x1: 57, y1: 45 };
+export const PVP = { x0: 40, y0: 33, x1: 57, y1: 45 };
+export const ARENA_WALL_Y = 32;               // wall dividing the mid-zones from the martial south
+export const ARENA_GATE_X = 28;               // 2-wide gate (ARENA_GATE_X .. +1)
+
+// Animal pens (NE): cow | sheep | chicken columns, combined ≈ farm size.
+export const PENS = {
+  cow: { x0: 35, y0: 4, x1: 40, y1: 15, gate: 'bottom' },
+  sheep: { x0: 42, y0: 4, x1: 47, y1: 15, gate: 'bottom' },
+  chicken: { x0: 49, y0: 4, x1: 55, y1: 15, gate: 'bottom' },
+};
+
+// Castle sits DEAD CENTER (map center tile 30,24). 6×6 → drawn 288×288, centered.
 export const BUILDINGS = [
-  { key: 'house', type: 'house', tx: 4, ty: 3, w: 3, h: 3, label: 'Home' },
-  { key: 'barn', type: 'barn', tx: 10, ty: 3, w: 3, h: 2, label: 'Barn' },
-  { key: 'coop', type: 'coop', tx: 15, ty: 3, w: 2, h: 2, label: 'Coop' },
-  { key: 'shop', type: 'shop', tx: 24, ty: 3, w: 2, h: 2, label: 'Shop' },
-  { key: 'well', type: 'well', tx: 21, ty: 6, w: 1, h: 1, label: 'Well' },
-  { key: 'bin', type: 'bin', tx: 8, ty: 7, w: 1, h: 1, label: 'Bin' },
+  { key: 'house', type: 'house', tx: 27, ty: 21, w: 6, h: 6, label: 'Castle' },
+  { key: 'barn', type: 'barn', tx: 35, ty: 2, w: 3, h: 2, label: 'Barn' },
+  { key: 'coop', type: 'coop', tx: 50, ty: 2, w: 2, h: 2, label: 'Coop' },
+  { key: 'shop', type: 'shop', tx: 30, ty: 16, w: 2, h: 2, label: 'Market' },
+  { key: 'well', type: 'well', tx: 21, ty: 18, w: 1, h: 1, label: 'Well' },
+  { key: 'bin', type: 'bin', tx: 22, ty: 3, w: 1, h: 1, label: 'Bin' },
+];
+
+// Baked landmark / decoration art (placed by buildFarmMap). solid = blocks movement.
+export const PLACEMENTS = [
+  // garden (W)
+  { key: 'lashira.lib.greenhouse', tx: 3, ty: 20, w: 3, h: 3, solid: true },
+  { key: 'lashira.lib.flowers', tx: 8, ty: 21, w: 1, h: 1 },
+  { key: 'lashira.lib.flowers', tx: 12, ty: 24, w: 1, h: 1 },
+  { key: 'lashira.lib.flowers', tx: 16, ty: 21, w: 1, h: 1 },
+  { key: 'lashira.lib.flowers', tx: 10, ty: 26, w: 1, h: 1 },
+  { key: 'lashira.lib.flowers', tx: 18, ty: 25, w: 1, h: 1 },
+  // farm extras
+  { key: 'lashira.lib.windmill', tx: 24, ty: 4, w: 2, h: 3, solid: true },
+  { key: 'lashira.lib.scarecrow', tx: 13, ty: 9, w: 1, h: 1 },
+  // plaza — shops ring the castle
+  { key: 'lashira.lib.fountain', tx: 29, ty: 18, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_seed', tx: 23, ty: 19, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_general', tx: 34, ty: 19, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_blacksmith', tx: 23, ty: 28, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_animal', tx: 34, ty: 28, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_cosmetics', tx: 28, ty: 28, w: 2, h: 2, solid: true },
+  // mining (E) — dungeon gate + ores
+  { key: 'lashira.lib.dungeon_gate', tx: 38, ty: 18, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.ore_gold', tx: 41, ty: 21, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.ore_copper', tx: 44, ty: 19, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.ore_iron', tx: 40, ty: 26, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.ore_gem', tx: 45, ty: 27, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.boulder', tx: 43, ty: 24, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.mine_cart', tx: 39, ty: 29, w: 1, h: 1 },
+  // forest (E)
+  { key: 'lashira.lib.tree_pine', tx: 49, ty: 19, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_pine', tx: 54, ty: 20, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_oak', tx: 51, ty: 24, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_pine', tx: 49, ty: 26, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.bush', tx: 56, ty: 24, w: 1, h: 1 },
+  { key: 'lashira.lib.mushroom', tx: 53, ty: 29, w: 1, h: 1 },
+  { key: 'lashira.lib.stump', tx: 48, ty: 29, w: 1, h: 1 },
+  { key: 'lashira.lib.woodlog', tx: 56, ty: 29, w: 1, h: 1 },
+  // fishing (SW)
+  { key: 'lashira.lib.fishing_dock', tx: 6, ty: 33, w: 3, h: 2 },
+  { key: 'lashira.lib.fishing_reeds', tx: 3, ty: 31, w: 1, h: 1 },
+  { key: 'lashira.lib.fishing_reeds', tx: 14, ty: 32, w: 1, h: 1 },
+  { key: 'lashira.lib.fishing_reeds', tx: 4, ty: 43, w: 1, h: 1 },
+  // martial south
+  { key: 'lashira.lib.signpost', tx: 30, ty: 33, w: 1, h: 1 },
+  { key: 'lashira.lib.arena_wall', tx: 41, ty: 33, w: 2, h: 1, solid: true },
+  { key: 'lashira.lib.scoreboard', tx: 48, ty: 34, w: 1, h: 2, solid: true },
+  { key: 'lashira.lib.stump', tx: 24, ty: 39, w: 1, h: 1 },
+  { key: 'lashira.lib.stump', tx: 34, ty: 42, w: 1, h: 1 },
 ];
 
 export const tileKey = (x, y) => x + ',' + y;
@@ -97,40 +155,46 @@ export function buildFarmMap(art = {}) {
   canvas.width = WORLD_W; canvas.height = WORLD_H;
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  // grass
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const base = (x + y) % 7 === 0 ? '#78bf56' : '#7cc35a';
-    if (!drawOverride(ctx, art, 'lashira.terrain.grass', x * TILE, y * TILE, TILE, TILE)) {
-      rect(ctx, x * TILE, y * TILE, TILE, TILE, base);
-      dots(ctx, (x * 31 + y * 7 + 3), 6, x * TILE, y * TILE, TILE, TILE, '#8fd06a', 3);
-    }
-  }
-  // path
-  for (let y = 6; y <= 10; y++) {
-    if (!drawOverride(ctx, art, 'lashira.terrain.path', 5 * TILE, y * TILE, TILE, TILE)) {
-      rect(ctx, 5 * TILE, y * TILE, TILE, TILE, '#cbb187'); dots(ctx, y * 5, 8, 5 * TILE, y * TILE, TILE, TILE, '#bda079', 3);
-    }
-  }
-  // field soil — the WHOLE field is pre-tilled soil, baked in once (FarmVille:
-  // no tilling; you just tap to plant). Crops render on top per-frame in drawPlot.
-  for (let y = FIELD.y0; y <= FIELD.y1; y++) for (let x = FIELD.x0; x <= FIELD.x1; x++) {
-    drawSoilTile(ctx, x, y, art);
-  }
 
   const blocked = new Set();
   const block = (x, y) => blocked.add(tileKey(x, y));
   const blockRect = (tx, ty, w, h) => { for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) block(x, y); };
+  const fillZone = (r, ca, cb, dc, seed) => {
+    for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) {
+      rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 2 ? ca : cb);
+      if (dc) dots(ctx, x * seed + y * 7, 4, x * TILE, y * TILE, TILE, TILE, dc, 3);
+    }
+  };
+
+  // base grass
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 7 === 0 ? '#78bf56' : '#7cc35a');
+    dots(ctx, (x * 31 + y * 7 + 3), 6, x * TILE, y * TILE, TILE, TILE, '#8fd06a', 3);
+  }
+  // zone terrains
+  fillZone(ZONES.forest, '#5aa03f', '#63a846', '#4a8a34', 17);
+  fillZone(ZONES.mining, '#9a978f', '#8f8c84', '#7d7a72', 23);
+  fillZone(ZONES.plaza, '#d8c9a6', '#cfbf99', null, 0);
+  // fishing water (impassable)
+  for (let y = ZONES.fishing.y0; y <= ZONES.fishing.y1; y++) for (let x = ZONES.fishing.x0; x <= ZONES.fishing.x1; x++) {
+    rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 2 ? '#4f97d6' : '#4389c8');
+    dots(ctx, x * 13 + y * 3, 3, x * TILE, y * TILE, TILE, TILE, '#5aa3e0', 3);
+    block(x, y);
+  }
+  // castle approach path (2-wide, north edge → plaza)
+  for (let y = 2; y < ZONES.plaza.y0; y++) { rect(ctx, 29 * TILE, y * TILE, TILE, TILE, '#cbb187'); rect(ctx, 30 * TILE, y * TILE, TILE, TILE, '#cbb187'); }
+  // martial south: battleground (trodden) + pvp (sand)
+  for (let y = ARENA.y0; y <= ARENA.y1; y++) for (let x = ARENA.x0; x <= ARENA.x1; x++) {
+    const pvp = x >= PVP.x0;
+    rect(ctx, x * TILE, y * TILE, TILE, TILE, pvp ? ((x + y) % 2 ? '#e6d2a0' : '#dcc794') : ((x + y) % 2 ? '#c8a56f' : '#be9a64'));
+    dots(ctx, x * 37 + y * 11, 5, x * TILE, y * TILE, TILE, TILE, pvp ? '#c9b47e' : '#a9854f', 3);
+  }
+  // field soil (baked; crops paint on top per-frame)
+  for (let y = FIELD.y0; y <= FIELD.y1; y++) for (let x = FIELD.x0; x <= FIELD.x1; x++) drawSoilTile(ctx, x, y, art);
 
   // border trees
   for (let x = 0; x < W; x++) { drawTree(ctx, x, 0, art); block(x, 0); drawTree(ctx, x, H - 1, art); block(x, H - 1); }
   for (let y = 1; y < H - 1; y++) { drawTree(ctx, 0, y, art); block(0, y); drawTree(ctx, W - 1, y, art); block(W - 1, y); }
-
-  // field fence (gap at gate)
-  for (let x = FIELD.x0 - 1; x <= FIELD.x1 + 1; x++) {
-    if (!(x === FIELD.x0 + 3)) { drawFence(ctx, x, FIELD.y0 - 1, art); block(x, FIELD.y0 - 1); }
-    drawFence(ctx, x, FIELD.y1 + 1, art); block(x, FIELD.y1 + 1);
-  }
-  for (let y = FIELD.y0; y <= FIELD.y1; y++) { drawFence(ctx, FIELD.x0 - 1, y, art); block(FIELD.x0 - 1, y); drawFence(ctx, FIELD.x1 + 1, y, art); block(FIELD.x1 + 1, y); }
 
   // animal pens (fenced enclosures with a one-tile gate)
   for (const pen of Object.values(PENS)) {
@@ -145,27 +209,22 @@ export function buildFarmMap(art = {}) {
     }
   }
 
-  // buildings
+  // buildings (castle centered)
   for (const b of BUILDINGS) { drawBuilding(ctx, b, art); blockRect(b.tx, b.ty, b.w, b.h); }
-  drawTree(ctx, 3, 20, art); block(3, 20);
 
-  // --- battle arena (below the farm) ---
-  // trodden-earth ground so it reads as a distinct place from the green farm
-  for (let y = ARENA.y0; y <= ARENA.y1; y++) for (let x = ARENA.x0; x <= ARENA.x1; x++) {
-    rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 2 === 0 ? '#c8a56f' : '#be9a64');
-    dots(ctx, x * 37 + y * 11, 5, x * TILE, y * TILE, TILE, TILE, '#a9854f', 3);
+  // baked landmark + decoration placements
+  for (const p of PLACEMENTS) {
+    drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE);
+    if (p.solid) blockRect(p.tx, p.ty, p.w, p.h);
   }
-  // dividing wall between farm and arena, with a 2-wide gate
-  for (let x = 1; x < W - 1; x++) {
+  // keep the fishing dock walkable
+  for (let x = 6; x <= 8; x++) for (let y = 33; y <= 34; y++) blocked.delete(tileKey(x, y));
+
+  // dividing wall (mid-zones ↕ martial south) with a 2-wide gate
+  for (let x = ARENA.x0; x < W - 1; x++) {
     if (x === ARENA_GATE_X || x === ARENA_GATE_X + 1) continue; // gate
     drawFence(ctx, x, ARENA_WALL_Y, art); block(x, ARENA_WALL_Y);
   }
-  // a little "⚔ Arena" signpost beside the gate
-  const sx = (ARENA_GATE_X + 2) * TILE + 6, sy = ARENA_WALL_Y * TILE - 2;
-  rect(ctx, sx + 6, sy - 4, 4, 20, '#7a5230');
-  rect(ctx, sx, sy - 22, 22, 16, '#8a5a34'); rect(ctx, sx + 2, sy - 20, 18, 12, '#a06c3e');
-  ctx.fillStyle = '#f4e4c1'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('⚔', sx + 11, sy - 10); ctx.textAlign = 'left';
 
   return { canvas, blocked };
 }
