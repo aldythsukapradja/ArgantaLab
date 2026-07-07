@@ -349,9 +349,11 @@ export class FarmLogic {
   emit() { const s = this.snapshot(); this.listeners.forEach((l) => l(s)); }
   snapshot() {
     const st = this.state;
+    const operator = this.isOperator();
     return {
       day: st.day, season: SEASONS[st.season],
-      stamina: st.stamina, maxStamina: st.maxStamina,
+      stamina: operator ? st.maxStamina : st.stamina, maxStamina: st.maxStamina,
+      operator,
       tool: st.tool, selectedSeed: st.selectedSeed,
       seeds: { ...st.seeds }, produce: { ...st.produce },
       livestock: st.livestock.map((a) => ({ ...a })),
@@ -385,7 +387,12 @@ export class FarmLogic {
     this.save();
     this.emit();
   }
-  _spend(n) { if (this.state.stamina < n) { this.flash('Too tired — sleep to restore energy'); return false; } this.state.stamina -= n; return true; }
+  isOperator() { return !!this.profile?.operator; }
+  _spend(n) {
+    if (this.isOperator()) return true; // operator: unlimited stamina
+    if (this.state.stamina < n) { this.flash('Too tired — sleep to restore energy'); return false; }
+    this.state.stamina -= n; return true;
+  }
   // Battle: skills spend the farm's stamina (chosen over a separate mana pool).
   spendStamina(n) { if (!this._spend(n)) return false; this.save(); this.emit(); return true; }
   isKid() { return this.profile?.role === 'kid'; }
@@ -458,7 +465,7 @@ export class FarmLogic {
   buySeed(id, qty = 1) {
     const crop = CROPS[id];
     if (!crop) return;
-    const cost = FARM_OPEN_ECONOMY ? 0 : crop.seedCost * qty;
+    const cost = (this.isOperator() || FARM_OPEN_ECONOMY) ? 0 : crop.seedCost * qty; // operator: free
     if (this.state.diamonds < cost) { this.flash('Not enough 💎 Diamonds'); return; }
     this.state.diamonds -= cost; this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
     this.state.selectedSeed = id;

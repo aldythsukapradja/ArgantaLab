@@ -193,10 +193,11 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                 )}
               </section>
               <section className="set-card">
-                <h4>Diamonds</h4>
+                <h4>Diamonds {snap.operator && <em className="op-badge">⚡ OPERATOR</em>}</h4>
                 <div className="setrow diamond-row">
-                  <span className="diamond-count">💎 {fmt(snap.diamonds)}</span>
+                  <span className="diamond-count">💎 {snap.operator ? '∞' : fmt(snap.diamonds)}</span>
                 </div>
+                {snap.operator && <p className="settings-empty">Admin mode — everything free, unlimited stamina.</p>}
               </section>
               <section className="set-card">
                 <h4>Active Kin <em className="set-count">{activeKins.length}/6</em></h4>

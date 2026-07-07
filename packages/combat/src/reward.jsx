@@ -10,11 +10,9 @@ export function RewardToasts({ rewards = [] }) {
     <div className="reward-stack" aria-live="polite">
       {rewards.map((r) => (
         <div key={r.id} className={'reward-pill rp-' + (r.tone || 'gold')}>
-          <span className="reward-disc" aria-hidden="true">{r.icon}</span>
-          <span className="reward-body">
-            <b className="reward-amt">{r.amount}</b>
-            <em className="reward-label">{r.label}</em>
-          </span>
+          <span className="reward-ico" aria-hidden="true">{r.icon}</span>
+          <b className="reward-amt">{r.amount}</b>
+          <span className="reward-label">{r.label}</span>
         </div>
       ))}
     </div>

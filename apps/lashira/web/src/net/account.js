@@ -7,6 +7,12 @@
 import { supabase, hasSupabase } from './supabase.js';
 
 const KID_DOMAIN = '@kids.argantalab.app';
+
+// OPERATOR (admin) — free everything + unlimited stamina. Gated ONLY to these
+// verified account emails (from the Supabase session, not a role/name a client
+// could set). Anyone else — kids, other adults, guests — is never operator.
+const OPERATOR_EMAILS = ['aldhyt.sukapradja@gmail.com'];
+const isOperatorEmail = (email) => OPERATOR_EMAILS.includes((email || '').trim().toLowerCase());
 // Kids' real Supabase password is the 4-digit PIN with a fixed suffix — the
 // SAME scheme Kingdom Heroes and KinetikCircle use (pinToPassword). Standalone
 // login MUST match it or the kid can never sign in outside an embed.
@@ -24,7 +30,8 @@ export function guestProfile(name, role) {
   };
 }
 
-async function loadProfileRow(userId, fallbackName, role) {
+async function loadProfileRow(userId, fallbackName, role, email) {
+  const operator = isOperatorEmail(email);
   // Try to read the real profile; tolerate RLS / missing columns.
   try {
     const { data } = await supabase
@@ -41,6 +48,7 @@ async function loadProfileRow(userId, fallbackName, role) {
         diamonds: data.diamonds ?? 0,
         xp: data.xp ?? 0,
         level: data.level ?? 1,
+        operator,
       };
     }
   } catch (err) {
@@ -54,6 +62,7 @@ async function loadProfileRow(userId, fallbackName, role) {
     diamonds: 0,
     xp: 0,
     level: 1,
+    operator,
   };
 }
 
@@ -66,7 +75,7 @@ export async function currentProfile() {
     const user = data?.user;
     if (!user) return null;
     const name = user.user_metadata?.full_name || user.email?.split('@')[0];
-    return await loadProfileRow(user.id, name, 'user');
+    return await loadProfileRow(user.id, name, 'user', user.email);
   } catch {
     return null;
   }
@@ -86,7 +95,7 @@ export async function profileForUser(user) {
   if (!user) return null;
   const name = user.user_metadata?.full_name || user.email?.split('@')[0];
   const role = (user.email || '').endsWith('@kids.argantalab.app') ? 'kid' : 'user';
-  return await loadProfileRow(user.id, name, role);
+  return await loadProfileRow(user.id, name, role, user.email);
 }
 
 export async function signInGoogle() {
@@ -108,7 +117,7 @@ export async function signInKid(username, pin) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: pinToPassword(pin) });
   if (error) throw error;
   const name = data?.user?.user_metadata?.full_name || clean;
-  return await loadProfileRow(data.user.id, name, 'kid');
+  return await loadProfileRow(data.user.id, name, 'kid', email);
 }
 
 export async function signOut() {
