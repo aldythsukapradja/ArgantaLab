@@ -40,5 +40,26 @@ export function cropHydration(plot, now = Date.now()) {
 export function cropIsRipe(plot, now = Date.now()) { return cropGrowthFrac(plot, now) >= 1; }
 export function cropStageOf(frac) { return frac <= 0 ? 0 : frac >= 1 ? 3 : frac < 0.4 ? 1 : 2; }
 
+// Withering (FarmVille loss-aversion): a ripe crop stays fresh for a grace window,
+// then wilts and is lost. Grace = at least WITHER_GRACE_MS, and never less than the
+// crop's own grow time, so slow crops give you longer to come back.
+export const WITHER_GRACE_MS = 120000; // 2 min minimum fresh window after ripening
+export function cropWitherAt(plot) {
+  if (!plot?.cropId || plot.plantedAt == null) return Infinity;
+  const crop = CROPS[plot.cropId]; if (!crop) return Infinity;
+  return plot.plantedAt + crop.growMs + Math.max(WITHER_GRACE_MS, crop.growMs);
+}
+export function cropIsWithered(plot, now = Date.now()) {
+  return !!plot?.cropId && plot.plantedAt != null && now >= cropWitherAt(plot);
+}
+// 1 = just ripened, 0 = about to wilt — drives the "harvest me before it's gone" bar.
+export function cropFreshFrac(plot, now = Date.now()) {
+  if (!cropIsRipe(plot, now)) return 1;
+  const crop = CROPS[plot.cropId]; if (!crop) return 1;
+  const ripeAt = plot.plantedAt + crop.growMs;
+  const witherAt = cropWitherAt(plot);
+  return clamp01(1 - (now - ripeAt) / (witherAt - ripeAt));
+}
+
 // Starter seeds available in the shop from day one (no learning gate).
 export const STARTER_SEEDS = ['turnip', 'potato', 'carrot'];

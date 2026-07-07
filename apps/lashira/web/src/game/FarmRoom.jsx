@@ -251,6 +251,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         combat: prev?.combat || { on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, deadUntil: 0 },
         monsters: prev?.monsters || [], monsterSeed: 1, fx: prev?.fx || [], nextMonsterSpawn: 0,
         effectsAll: effectsAll || {}, spellFx: prev?.spellFx || [], battleSkills: battleSkillsRef.current,
+        floats: prev?.floats || [], // floating "+1 🥬" harvest-juice pops
       };
       // Live sync is intent-based: FarmLogic emits a tiny granular intent for
       // every local mutation, and the channel fans it out. UI updates ride the
@@ -543,14 +544,29 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const p = G.current.player; const [dx, dy] = DELTA[p.facing];
     return [p.tile[0] + dx, p.tile[1] + dy];
   }
+  // Floating "+1 🥬" harvest pop (FarmVille juice) at a tile.
+  function floatPop(g, tx, ty, text) {
+    g.floats.push({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE - 22, text, start: performance.now(), ttl: 950 });
+    if (g.floats.length > 40) g.floats.shift();
+  }
+  function popHarvestResult(g, res) {
+    if (res?.harvested?.emoji) floatPop(g, res.tx, res.ty, res.harvested.emoji + ' +1');
+    else if (Array.isArray(res?.harvested)) for (const h of res.harvested) floatPop(g, h.tx, h.ty, h.crop.emoji + ' +1');
+  }
   function doUse() {
     const g = G.current; if (!g) return;
     const p = g.player;
     if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = performance.now(); }
     const [tx, ty] = frontTile();
-    // Contextual (same as tapping the land): harvest ripe → till → plant → water.
-    logicRef.current.tapAt(tx, ty);
+    // Contextual (same as tapping the land): harvest ripe → plant → clear wilted.
+    popHarvestResult(g, logicRef.current.tapAt(tx, ty));
   }
+  // Bulk actions for the HUD — FarmVille "do the whole field in one tap".
+  function doHarvestAll() {
+    const g = G.current; if (!g) return;
+    popHarvestResult(g, logicRef.current?.harvestAll?.());
+  }
+  function doPlantAll() { logicRef.current?.plantAll?.(); }
   function doSleep() { logicRef.current?.sleep(); }
   function toggleMount() {
     const g = G.current; if (!g) return;
@@ -1270,7 +1286,20 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const f of g.fx) drawSpark(ctx, f, now);
       // shared spell VFX (skill effects) — kept while still animating
       if (g.spellFx?.length) g.spellFx = g.spellFx.filter((f) => drawEffect(ctx, f, now, TILE));
+      // harvest-juice floats (rise + fade)
+      if (g.floats?.length) { for (const f of g.floats) drawFloat(ctx, f, now); g.floats = g.floats.filter((f) => now - f.start < f.ttl); }
       ctx.restore();
+    }
+    // A rising, fading "+1 🥬" text pop.
+    function drawFloat(ctx, f, now) {
+      const t = (now - f.start) / f.ttl; if (t >= 1) return;
+      ctx.save(); ctx.globalAlpha = 1 - t;
+      ctx.font = 'bold 15px system-ui'; ctx.textAlign = 'center';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(12,16,24,0.65)';
+      ctx.fillStyle = '#fff';
+      const y = f.y - t * 26;
+      ctx.strokeText(f.text, f.x, y); ctx.fillText(f.text, f.x, y);
+      ctx.restore(); ctx.textAlign = 'left';
     }
     // A monster: procedural blob (art later) with facing, a hit flash, a death
     // fade, and a hp bar. Colour by kind so the arena isn't monotone.
@@ -1334,7 +1363,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       }
       // 1) crop plot tap
       if (tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1) {
-        logicRef.current?.tapAt(tx, ty); faceTo(tx, ty); e.preventDefault(); return;
+        popHarvestResult(g, logicRef.current?.tapAt(tx, ty)); faceTo(tx, ty); e.preventDefault(); return;
       }
       // 2) animal tap — nearest pen animal within ~1.2 tiles → contextual feed/pet/collect
       let best = null, bestD = 1.3;
@@ -1380,7 +1409,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
               zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
-              battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill} />
+              battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill}
+              onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
         )}

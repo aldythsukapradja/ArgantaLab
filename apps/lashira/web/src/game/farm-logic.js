@@ -2,18 +2,19 @@
 // the render; this owns the rules and persistence. Kept from the verified v1
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
-import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe } from '../data/crops.js';
+import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
 import { killReward, killXp } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 import { loadFarmState, saveFarmState } from './farm-save.js';
 
-// TESTING: "open" farm economy — the farm can only ADD Diamonds, never drain
-// them (seeds/feed free; selling earns Diamonds; kids and adults identical). This
-// removes the "my learning diamonds will be gone" fear for kid testers. Flip to
-// false to restore real seed prices and the kid/adult learning-gated rules.
-export const FARM_OPEN_ECONOMY = true;
+// The FarmVille loop: 🥇 Gold is the play currency — seeds/feed COST Gold, and
+// selling produce / defeating monsters EARNS Gold, so you reinvest and grow.
+// Everyone (kids too) earns + spends Gold freely; 💎 Diamonds are a separate
+// learning/cosmetic currency the farm never touches (a Diamond shop comes later).
+// The operator gets everything free (see isOperator()).
+export const STARTING_GOLD = 120; // enough to plant the first few beds
 
 // Max Kin a single user can deploy onto the farm at once (per-user loadout cap).
 export const MAX_DEPLOYED_KINS = 6;
@@ -73,6 +74,10 @@ export class FarmLogic {
       // copies seeded from the real profile so selling/buying feels instant;
       // NOT yet synced back to Supabase — that's a follow-up RPC, same honest
       // scaffolding pattern as the rest of this build.
+      // 🥇 Gold = the play currency (crops/animals/tools). Everyone (kids too)
+      // earns + spends it freely. 💎 Diamonds stay the learning/cosmetic currency
+      // — farming never touches them (a Diamond shop comes later).
+      gold: STARTING_GOLD,
       diamonds: this.profile?.diamonds ?? 0,
       xp: this.profile?.xp ?? 0,
       stamina: 40, maxStamina: 40,
@@ -174,6 +179,7 @@ export class FarmLogic {
       selectedSeed: local.selectedSeed,
       stamina: local.stamina,
       maxStamina: local.maxStamina,
+      gold: local.gold ?? base.gold, // 🥇 Gold is per-player — never adopted from a peer
       seeds: { ...base.seeds, ...(data.seeds || {}) },
       produce: { ...base.produce, ...(data.produce || {}) },
       plots: { ...base.plots, ...(data.plots || {}) },
@@ -239,6 +245,7 @@ export class FarmLogic {
       rev: Number(this.state.rev) || 0,
       day: this.state.day,
       season: this.state.season,
+      gold: this.state.gold,
       diamonds: this.state.diamonds,
       xp: this.state.xp,
       stamina: this.state.stamina,
@@ -360,6 +367,7 @@ export class FarmLogic {
       kins: this.activeKins(),
       kinRoster: this.kinRoster(),
       maxKins: MAX_DEPLOYED_KINS,
+      gold: operator ? Infinity : (st.gold ?? STARTING_GOLD),
       diamonds: st.diamonds,
       xp: st.xp,
       level: this.profile?.level ?? (1 + Math.floor(Math.max(0, st.xp) / 500)), // mirrors argantalab_level_from_xp when profile level is unavailable
@@ -404,17 +412,19 @@ export class FarmLogic {
     clearTimeout(this._rewardTimer);
     this._rewardTimer = setTimeout(() => { this.rewards = (this.rewards || []).filter((x) => Date.now() - x.at < 1900); this.emit(); }, 2000);
   }
-  // Battle: a monster kill. ADULTS earn Diamonds + XP (level-scaled, shared
-  // killReward/killXp). KIDS earn NOTHING for now — they play/battle freely with
-  // no economy (so the son can test without spending or fearing loss).
+  // Battle: a monster kill earns 🥇 Gold for EVERYONE (kids too — Gold is play
+  // currency). ADULTS also gain XP; kids never gain play-XP (they level only by
+  // real learning). Level-scaled via the shared killReward/killXp.
   rewardKill(name = 'a monster') {
-    if (this.isKid()) { this.pushReward({ icon: '⚔', amount: '✓', label: 'Defeated ' + name, tone: 'slate' }); return; }
     const L = this._level();
-    const d = killReward(L), x = killXp(L);
-    this.state.diamonds = (Number(this.state.diamonds) || 0) + d;
-    this.state.xp = (Number(this.state.xp) || 0) + x;
-    this.pushReward({ icon: '💎', amount: '+' + d, label: 'Diamonds', tone: 'gold' });
-    this.pushReward({ icon: '⭐', amount: '+' + x, label: 'XP', tone: 'violet' });
+    const g = killReward(L);
+    this.state.gold = (this.state.gold ?? 0) + g;
+    this.pushReward({ icon: '🥇', amount: '+' + g, label: 'Gold', tone: 'gold' });
+    if (!this.isKid()) {
+      const x = killXp(L);
+      this.state.xp = (Number(this.state.xp) || 0) + x;
+      this.pushReward({ icon: '⭐', amount: '+' + x, label: 'XP', tone: 'violet' });
+    }
     this.save(); this.emit();
   }
 
@@ -422,17 +432,20 @@ export class FarmLogic {
   // already — no tilling, no watering. Ripe → harvest; empty → plant; otherwise
   // (still growing) do nothing. This is what the tap-to-farm handler calls.
   tapAt(tx, ty) {
+    const now = Date.now();
     const p = this.state.plots[tileKey(tx, ty)];
-    if (p?.cropId && cropIsRipe(p)) return this._harvest(tx, ty);
+    if (p?.cropId && cropIsWithered(p, now)) return this._clearWithered(tx, ty);
+    if (p?.cropId && cropIsRipe(p, now)) { const crop = this._harvest(tx, ty); return crop ? { harvested: crop, tx, ty } : null; }
     if (!p?.cropId) return this._plant(tx, ty);
     // growing crop — leave it; give a hint so the tap isn't silent
     this.flash(CROPS[p.cropId]?.emoji + ' still growing');
   }
 
+  // Free tapping (FarmVille): farming actions cost NO stamina. Returns the crop
+  // that was harvested (for the caller's harvest juice), or null.
   _harvest(tx, ty) {
     const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
-    if (!p?.cropId || !cropIsRipe(p)) return;
-    if (!this._spend(1)) return;
+    if (!p?.cropId || !cropIsRipe(p)) return null;
     const crop = CROPS[p.cropId];
     st.produce[crop.id] = (st.produce[crop.id] || 0) + 1;
     // Soil stays soil — clear the crop, keep the plot record so it reads as tilled.
@@ -440,7 +453,8 @@ export class FarmLogic {
     this._bump();
     this._intent({ t: 'plot', key, plot: { ...p } });
     this._intent({ t: 'stock', produce: { [crop.id]: st.produce[crop.id] } });
-    this.flash('Harvested ' + crop.name + ' ' + crop.emoji); this.save(); this.emit();
+    this.save(); this.emit();
+    return crop;
   }
   _plant(tx, ty) {
     const key = tileKey(tx, ty); const st = this.state;
@@ -449,7 +463,6 @@ export class FarmLogic {
     if (p?.cropId) { this.flash('Already planted here'); return; }
     const id = st.selectedSeed;
     if ((st.seeds[id] || 0) <= 0) { this.flash('No ' + CROPS[id].name + ' seeds — buy some'); return; }
-    if (!this._spend(1)) return;
     const now = Date.now();
     st.seeds[id] -= 1;
     // Soil is always ready: plant straight onto the tile; growth starts immediately.
@@ -460,26 +473,72 @@ export class FarmLogic {
     this.flash('Planted ' + CROPS[id].name + ' ' + CROPS[id].emoji); this.save(); this.emit();
   }
 
-  // Buying always costs Diamonds — for kids this ties farm progress directly to
-  // real learning (their diamonds only ever come from finishing World rings).
+  // A wilted crop is lost — clear the tile for free (no produce).
+  _clearWithered(tx, ty) {
+    const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
+    if (!p?.cropId) return null;
+    const crop = CROPS[p.cropId];
+    p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+    this._bump();
+    this._intent({ t: 'plot', key, plot: { ...p } });
+    this.flash('🥀 ' + (crop?.name || 'Crop') + ' wilted — cleared'); this.save(); this.emit();
+    return { cleared: crop };
+  }
+  // Harvest EVERY ripe crop in one tap (FarmVille speed). Returns the harvested
+  // tiles so the renderer can pop juice at each.
+  harvestAll() {
+    const st = this.state; const now = Date.now(); const got = [];
+    for (const [key, p] of Object.entries(st.plots)) {
+      if (p?.cropId && !cropIsWithered(p, now) && cropIsRipe(p, now)) {
+        const [tx, ty] = key.split(',').map(Number);
+        const crop = this._harvest(tx, ty);
+        if (crop) got.push({ crop, tx, ty });
+      }
+    }
+    if (!got.length) { this.flash('Nothing ripe to harvest'); return { harvested: [] }; }
+    this.flash('Harvested ' + got.length + ' crop' + (got.length > 1 ? 's' : ''));
+    return { harvested: got };
+  }
+  // Plant the selected seed on EVERY empty soil tile until seeds run out.
+  plantAll() {
+    const st = this.state; const id = st.selectedSeed; const now = Date.now();
+    let planted = 0;
+    for (let ty = FIELD.y0; ty <= FIELD.y1 && (st.seeds[id] || 0) > 0; ty++) {
+      for (let tx = FIELD.x0; tx <= FIELD.x1; tx++) {
+        if ((st.seeds[id] || 0) <= 0) break;
+        const key = tileKey(tx, ty); const p = st.plots[key];
+        if (p?.cropId) continue;
+        st.seeds[id] -= 1;
+        st.plots[key] = { tilled: true, cropId: id, plantedAt: now, wateredAt: null, grown: 0, growth: 0 };
+        this._intent({ t: 'plot', key, plot: { ...st.plots[key] } });
+        planted++;
+      }
+    }
+    if (!planted) { this.flash((st.seeds[id] || 0) <= 0 ? 'No ' + CROPS[id].name + ' seeds' : 'No empty soil'); return; }
+    this._bump();
+    this._intent({ t: 'stock', seeds: { [id]: st.seeds[id] } });
+    this.flash('Planted ' + planted + '× ' + CROPS[id].emoji); this.save(); this.emit();
+  }
+
+  // Seeds cost 🥇 Gold — the spend half of the FarmVille loop (sell for more, buy
+  // more, reinvest). Everyone pays Gold; the operator is free.
   buySeed(id, qty = 1) {
     const crop = CROPS[id];
     if (!crop) return;
-    const cost = (this.isOperator() || FARM_OPEN_ECONOMY) ? 0 : crop.seedCost * qty; // operator: free
-    if (this.state.diamonds < cost) { this.flash('Not enough 💎 Diamonds'); return; }
-    this.state.diamonds -= cost; this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
+    const cost = this.isOperator() ? 0 : crop.seedCost * qty;
+    if ((this.state.gold ?? 0) < cost) { this.flash('Not enough 🥇 Gold — sell some produce'); return; }
+    this.state.gold = (this.state.gold ?? 0) - cost;
+    this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
     this.state.selectedSeed = id;
     this.state.tool = 'seed';
     this._bump();
     this._intent({ t: 'stock', seeds: { [id]: this.state.seeds[id] } });
-    this.flash('Bought ' + qty + '× ' + crop.emoji + ' ' + crop.name + ' seed · now owned: ' + this.state.seeds[id]);
+    this.flash('Bought ' + qty + '× ' + crop.emoji + ' ' + crop.name + (cost ? ' · −🥇' + cost : ''));
     this.save(); this.emit();
   }
-  // Selling rewards differ by role: adults earn Diamonds directly from playing
-  // (normal adult platform rule). Kids earn XP instead — but ONLY a flat, tiny
-  // nibble (+1 per sell action, independent of quantity/value), never Diamonds.
-  // This is deliberately NOT a real leveling path: real learning stays the only
-  // meaningful way for a kid to level up. Farming is flavor, not a shortcut.
+  // Selling produce earns 🥇 Gold — for EVERYONE (kids too; Gold is the play
+  // currency, not the learning one). Only the produce-clearing syncs to the
+  // circle; Gold is per-player for now (shared-pool = a later sync pass).
   sellAll() {
     let gain = 0, any = false;
     const items = [];
@@ -491,15 +550,10 @@ export class FarmLogic {
     }
     if (!any) { this.flash('Nothing to sell'); return; }
     this.state.produce = {};
-    const isKid = this.profile?.role === 'kid';
     this._bump();
     this._intent({ t: 'stock', produceReplace: {} });
-    // Diamonds are PER-PLAYER (their own learning currency + local farm earnings)
-    // — not synced across the circle. Only the produce clearing (above) syncs.
-    // Kids play with NO economy for now (no Diamonds earned or spent); adults
-    // earn Diamonds from selling produce.
-    if (isKid) { this.flash('Sold ' + items.join(' ')); }
-    else { this.state.diamonds += gain; this.pushReward({ icon: '💎', amount: '+' + gain, label: 'Sold produce', tone: 'gold' }); }
+    this.state.gold = (this.state.gold ?? 0) + gain;
+    this.pushReward({ icon: '🥇', amount: '+' + gain, label: 'Sold produce', tone: 'gold' });
     this.save(); this.emit();
   }
   _animalSell(pid) { for (const sp of Object.values(SPECIES)) if (sp.produce === pid) return sp.sell; return 10; }
@@ -526,7 +580,6 @@ export class FarmLogic {
     const a = this.state.livestock.find((x) => x.id === id);
     if (!a) return;
     if (a.fedAt) { this.flash(a.name + ' is already fed'); return; }
-    if (!this._spend(1)) return;
     a.fedAt = Date.now();
     this._bump(); this._syncLivestock();
     const sp = SPECIES[a.species];
@@ -535,7 +588,6 @@ export class FarmLogic {
   petAnimal(id) {
     const a = this.state.livestock.find((x) => x.id === id);
     if (!a) return;
-    if (!this._spend(1)) return;
     a.affection = Math.min(100, (a.affection || 0) + 5);
     this._bump(); this._syncLivestock();
     this.flash('❤ ' + a.name + ' (' + a.affection + ')'); this.save(); this.emit();
@@ -543,7 +595,6 @@ export class FarmLogic {
   collectAnimal(id) {
     const a = this.state.livestock.find((x) => x.id === id);
     if (!a || !animalGoodReady(a)) return;
-    if (!this._spend(1)) return;
     const sp = SPECIES[a.species];
     this.state.produce[sp.produce] = (this.state.produce[sp.produce] || 0) + 1;
     a.fedAt = null; // needs feeding again for the next good

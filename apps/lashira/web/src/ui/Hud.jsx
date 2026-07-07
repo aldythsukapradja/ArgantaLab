@@ -37,7 +37,7 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, onHarvestAll, onPlantAll }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   // Live channel diagnostics, refreshed while Settings is open — a field
@@ -96,6 +96,10 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             </div>
           </div>
         </div>
+
+        <button type="button" className="gold-pill" onClick={() => onOpen('shop')} title="Gold — earn by selling produce, spend on seeds">
+          🥇 <b>{snap.gold === Infinity ? '∞' : fmt(snap.gold)}</b> Gold
+        </button>
 
         <div className="quicknav">
           <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
@@ -158,10 +162,12 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             <span>{selectedCrop.emoji}</span>
             <span className="tool-count">×{selectedSeedCount}</span>
           </button>
+          <button type="button" className="skill-circle util" onClick={onPlantAll} title="Plant all empty soil">🌱</button>
+          <button type="button" className="skill-circle util" onClick={onHarvestAll} title="Harvest all ripe crops">🧺</button>
           <button type="button" className="skill-circle util" onClick={onSleep} title="sleep">😴</button>
           <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
         </div>
-        <button type="button" className="attack-circle" onClick={onUse} aria-label="work the tile in front of you" title="Harvest / till / plant / water the tile ahead — or just tap the land">
+        <button type="button" className="attack-circle" onClick={onUse} aria-label="work the tile in front of you" title="Harvest / plant the tile ahead — or just tap the land">
           <span>👐</span>
         </button>
       </div>
@@ -193,11 +199,12 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                 )}
               </section>
               <section className="set-card">
-                <h4>Diamonds {snap.operator && <em className="op-badge">⚡ OPERATOR</em>}</h4>
-                <div className="setrow diamond-row">
+                <h4>Wallet {snap.operator && <em className="op-badge">⚡ OPERATOR</em>}</h4>
+                <div className="setrow diamond-row" style={{ gap: 14 }}>
+                  <span className="diamond-count">🥇 {snap.gold === Infinity ? '∞' : fmt(snap.gold)}</span>
                   <span className="diamond-count">💎 {snap.operator ? '∞' : fmt(snap.diamonds)}</span>
                 </div>
-                {snap.operator && <p className="settings-empty">Admin mode — everything free, unlimited stamina.</p>}
+                <p className="settings-empty">🥇 Gold runs the farm. 💎 Diamonds are learning-earned — cosmetics only (Diamond shop coming).{snap.operator ? ' · Admin: everything free.' : ''}</p>
               </section>
               <section className="set-card">
                 <h4>Active Kin <em className="set-count">{activeKins.length}/6</em></h4>

@@ -57,7 +57,7 @@ function ProducePreview({ rows }) {
     <div className="produce-preview">
       {rows.map((item) => (
         <span className="produce-chip" key={item.id} title={`${item.name}: ${item.count} x ${item.sell}`}>
-          {item.icon}<b>×{fmt(item.count)}</b><em>💎{fmt(item.sell * item.count)}</em>
+          {item.icon}<b>×{fmt(item.count)}</b><em>🥇{fmt(item.sell * item.count)}</em>
         </span>
       ))}
     </div>
@@ -65,31 +65,31 @@ function ProducePreview({ rows }) {
 }
 
 function Shop({ snap, game, onClose }) {
-  const kid = snap.role === 'kid';
+  const op = snap.gold === Infinity;
+  const gold = op ? Infinity : Number(snap.gold || 0);
   const rows = produceRows(snap);
   const produceCount = rows.reduce((a, b) => a + b.count, 0);
   const total = produceTotal(rows);
   return (
     <>
-      <Head title="🛒 Sprout's Shop" sub={`You have 💎 ${snap.diamonds} Diamonds`} onClose={onClose} />
+      <Head title="🛒 Sprout's Shop" sub={`You have 🥇 ${op ? '∞' : fmt(gold)} Gold`} onClose={onClose} />
       {Object.values(CROPS).map((c) => {
-        const locked = c.ring && kid; // learning-gated seeds locked for kids offline
+        const canAfford = op || gold >= c.seedCost;
         return (
           <div className="row" key={c.id}>
           <div className="ico">{c.emoji}</div>
           <div className="grow">
             <div className="name">{c.name} seed</div>
             <div className="meta">
-                Owned: {fmt(snap.seeds?.[c.id] || 0)} · {c.days} days · sells for 💎{c.sell}{kid ? ' (as XP for you)' : ''}
-                {locked ? ' · 🔒 finish a learning ring to unlock' : ''}
+                Owned: {fmt(snap.seeds?.[c.id] || 0)} · grows fast · sells for 🥇{c.sell}
               </div>
             </div>
             <button
               className="rbtn"
-              disabled={locked || snap.diamonds < c.seedCost}
+              disabled={!canAfford}
               onClick={() => game.buySeed(c.id, 1)}
             >
-              Buy 💎{c.seedCost}
+              Buy 🥇{c.seedCost}
             </button>
           </div>
         );
@@ -98,10 +98,10 @@ function Shop({ snap, game, onClose }) {
         <div className="ico">📦</div>
         <div className="grow">
           <div className="name">Sell all produce</div>
-          <div className="meta">{produceCount} item(s) · total value 💎{fmt(total)}{kid ? ' · kid payout is +1 XP' : ' · pays out as Diamonds'}</div>
+          <div className="meta">{produceCount} item(s) · total value 🥇{fmt(total)}</div>
           <ProducePreview rows={rows} />
         </div>
-        <button className="rbtn ghost" disabled={produceCount === 0} onClick={() => game.sellAll()}>{kid ? 'Sell +XP' : `Sell 💎${fmt(total)}`}</button>
+        <button className="rbtn ghost" disabled={produceCount === 0} onClick={() => game.sellAll()}>{`Sell 🥇${fmt(total)}`}</button>
       </div>
     </>
   );
@@ -193,7 +193,7 @@ function Inventory({ snap, game, onClose }) {
               <div className="ico">{crop.emoji}</div>
               <div className="grow">
                 <div className="name">{crop.name} seeds</div>
-                <div className="meta">Owned: {fmt(count)} · grows in {crop.days} days · harvest sells 💎{fmt(crop.sell)}</div>
+                <div className="meta">Owned: {fmt(count)} · harvest sells 🥇{fmt(crop.sell)}</div>
               </div>
               <button className="rbtn ghost" disabled={count <= 0} onClick={() => game.setSeed(crop.id)}>
                 {selected === crop.id ? 'Selected' : 'Plant'}
@@ -210,13 +210,13 @@ function Inventory({ snap, game, onClose }) {
             <div className="ico">{item.icon}</div>
             <div className="grow">
               <div className="name">{item.name}</div>
-              <div className="meta">Owned: {fmt(item.count)} · {fmt(item.count)} × 💎{fmt(item.sell)} = 💎{fmt(item.count * item.sell)}</div>
+              <div className="meta">Owned: {fmt(item.count)} · {fmt(item.count)} × 🥇{fmt(item.sell)} = 🥇{fmt(item.count * item.sell)}</div>
             </div>
           </div>
         ))}
         <div className="sell-total">
           <span>Total produce value</span>
-          <b>💎{fmt(total)}</b>
+          <b>🥇{fmt(total)}</b>
           <button className="rbtn" disabled={produce.length === 0} onClick={() => game.sellAll()}>Sell all</button>
         </div>
       </div>
@@ -230,15 +230,19 @@ function Home({ snap, game, onClose }) {
       <Head title="🏡 Farmhouse" sub={`${snap.name}'s home`} onClose={onClose} />
       <div className="row"><div className="ico">🏠</div><div className="grow">
         <div className="name">Stage: Cottage</div>
-        <div className="meta">Upgrades unlock with 💎 Diamonds + your circle's learning rings (coming soon)</div>
+        <div className="meta">Upgrade your home with 🥇 Gold + 🪵🪨 materials (coming soon)</div>
       </div></div>
       <div className="row"><div className="ico">⭐</div><div className="grow">
         <div className="name">Level {snap.level}</div>
-        <div className="meta">{snap.role === 'kid' ? 'Learn the 6 Worlds or sell produce to gain XP and level up' : 'Play to gain diamonds and level up — faster tools, more energy'}</div>
+        <div className="meta">{snap.role === 'kid' ? 'Learn the 6 Worlds to gain XP and level up' : 'Play + battle to gain XP and level up — stronger skills'}</div>
+      </div></div>
+      <div className="row"><div className="ico">🥇</div><div className="grow">
+        <div className="name">{snap.gold === Infinity ? '∞' : fmt(snap.gold)} Gold</div>
+        <div className="meta">The play currency · earn by selling produce + battling, spend on seeds{snap.guest ? ' (sign in to sync)' : ''}</div>
       </div></div>
       <div className="row"><div className="ico">💎</div><div className="grow">
-        <div className="name">{snap.diamonds} Diamonds</div>
-        <div className="meta">The only currency · spend on seeds, earn by {snap.role === 'kid' ? 'learning' : 'selling produce'}{snap.guest ? ' (sign in to sync)' : ''}</div>
+        <div className="name">{fmt(snap.diamonds)} Diamonds</div>
+        <div className="meta">Learning currency — for cosmetics only (a Diamond shop is coming)</div>
       </div></div>
       <div className="row" style={{ borderStyle: 'dashed' }}><div className="ico">🌙</div><div className="grow">
         <div className="name">End the day</div>
