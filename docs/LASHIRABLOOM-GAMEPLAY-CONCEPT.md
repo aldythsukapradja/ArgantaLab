@@ -10,26 +10,25 @@ is a shared circle farm).
 
 ---
 
-## 0. Headline change — protect the son's Diamonds (unblock testing)
+## 0. Headline change — SINGLE currency, "opened" for testing
 
 **Problem:** the tester (kid) won't play because spending 💎 Diamonds on seeds
-feels like *losing his hard-earned learning currency.* Diamonds come from
-finishing learning rings — they're precious and should never drain in a game.
+feels like *losing his hard-earned learning currency.*
 
-**Fix — the farm gets its OWN currency, identical for kids and adults:**
-- **🪙 Coins** (working name "Blooms") are the farm's money. Earned only by
-  selling produce / animal goods; spent only on seeds, animals, upgrades.
-- **💎 Diamonds are NEVER spent or reduced in the farm.** They may show as a
-  read-only badge (your real balance) but the farm can't touch them.
-- **Same rules for kids and adults** — one economy, no XP-vs-Diamond split. This
-  "releases" the current kid/adult divergence.
-- Philosophy intact: farming stays *flavor, not a learning shortcut* — Coins
-  can't buy anything in the learning apps; they never convert to Diamonds.
-- Starter grant: everyone begins with enough Coins to plant, so there's zero
-  fear of "using up" anything real. (Old behavior — kids +1 XP on sell, adults
-  Diamonds on sell, seeds cost Diamonds — is fully removed.)
+**Decision (per owner): ONE currency only — Diamonds. No second currency.** For
+now the farm economy is **"open"** so the balance can only go UP, never down —
+behind a temp flag (`FARM_OPEN_ECONOMY`) the owner flips off later.
+- **Open mode:** seeds/feed cost **0**; selling produce + animal goods **earns
+  Diamonds**; identical for kids and adults (the old kid "+1 XP on sell, no
+  diamonds" divergence is removed). Net effect: playing the farm only ADDS
+  Diamonds — the son never sees his number drop.
+- **Later (flag off):** restore real prices (seeds cost Diamonds) and, if
+  desired, the kid/adult learning-gated rules — a one-line switch, no rework.
+- Philosophy note: while "open," farming can mint Diamonds, so it's temporarily a
+  shortcut. That's an explicit, reversible testing choice, not the shipping
+  economy.
 
-Sync: Coins are per-farm shared state (part of the circle save), synced via the
+Sync: the Diamond balance is per-farm shared state (circle save), synced via the
 same intents as everything else.
 
 ---
@@ -46,8 +45,11 @@ Today a crop advances one stage **per day when you sleep**. New per-plot model:
 - Visual stages (sprout → young → mature → ripe) driven by growth %, so the
   reskinned crop art (pumpkin/carrot/turnip stage art) shows at ripe.
 
-Why it fits: crops grow **while the kid is away learning/at school**, so they
-return to tend + harvest — a healthy return loop, not a chore.
+**Grow times (testing = engagement first): MINUTES, capped at 5.**
+Cheap/fast crops ~1–2 min, mid ~3 min, the most expensive crops **max 5 min** to
+ripe (from planted, while kept hydrated). Short enough that a kid plants, waters,
+and harvests in one sitting — the hook. (These are `growMs` constants per crop,
+trivial to re-tune to hours later for the away-and-return loop.)
 
 ## 2. Crop health bar
 
@@ -92,6 +94,55 @@ Animals become interactive like FarmVille livestock:
 
 Sync: feed/pet/collect are per-animal intents (like plot intents); goods-ready
 is derived from `fedAt` timestamp so all family members see the same state.
+
+## 5b. Animal pens — a dedicated pasture area next to the crop field
+
+Today the animals wander loosely near the buildings and overlap. Give them their
+OWN fenced area beside the crop field: **5 cows, 5 sheep, 5 chickens**, each
+species in its own pen so it reads clearly and taps don't get ambiguous.
+
+Farmstead layout (map is 40×26 tiles; crop field left, pens right):
+
+```
+        (buildings row across the top: Home  Barn  Coop  Shop)
+  ══════════════════════ main path ══════════════════════════
+   ┌──────── CROP FIELD ────────┐   ┌──────── COW PASTURE ───────┐
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   │   C        C               │
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   │        C          C        │
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   │   [~feed]   [≈water]   C    │
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   └────────────═+═gate═────────┘
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   ┌──────── SHEEP MEADOW ──────┐
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   │   S    S        S          │
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   │       [~feed]     S    S    │
+   │  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓  │   │   [≈water]                  │
+   └────────────═+═gate═════════┘   └────────────═+═gate═════════┘
+                                    ┌─── CHICKEN RUN ───┐
+    LEGEND                          │  c    c     c     │
+    ▓ crop plot   # fence           │     [~feed]   c   │
+    + gate        C cow             │   c    [≈water]   │
+    S sheep       c chicken         └────────═+═gate════┘
+    [~feed] trough  [≈water] trough
+```
+
+Each pen:
+- **Fenced border** (reuses the reskinned `fence.png`) with a **gate** opening so
+  the farmer can walk in.
+- A **feed trough** `[~feed]` and **water trough** `[≈water]` prop in each pen.
+- The 5 animals **wander within their pen bounds** (home rect = the pen) and are
+  individually animated (§9).
+- **Barn** shelters cows+sheep, **Coop** shelters chickens — pens sit just below
+  their building so the farmstead reads logically.
+- Tap any animal → Feed / Pet / Collect radial (§5). A **ready badge** floats
+  over an animal whose good (🥛/🧶/🥚) is waiting.
+
+Collision/placement: pens occupy the currently-empty right third of the map
+(roughly x22–38, y9–24); the crop `FIELD` rect and building rects are unchanged.
+Fence tiles are added to `blocked` so animals (and the farmer) respect pen walls
+except at gates.
+
+Sync: pen animals are **host-simulated** (one client runs the herd, broadcasts
+positions) exactly as today — just confined to pen rects. Goods are timestamp
+-derived so every family member sees the same "ready to collect."
 
 ## 6. Stamina — day is ONLY for stamina
 
