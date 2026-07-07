@@ -16,6 +16,7 @@ import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compo
 import { Hud } from '../ui/Hud.jsx';
 import { Panels } from '../ui/Panels.jsx';
 import { CROPS } from '../data/crops.js';
+import { SPECIES, animalGoodReady } from '../data/livestock.js';
 
 const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South', ArrowLeft: 'West', a: 'West', ArrowRight: 'East', d: 'East' };
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
@@ -581,6 +582,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           ent.name = source.name || config.names[i] || species;
           ent.home = config.home;
           ent.speedMs = config.speedMs;
+          ent.livestockId = source.id || null; // links the sprite to its livestock record (feed/collect)
         }
       }
       // Max 6 active Kins per player on the shared farm (loadout picker will let
@@ -839,6 +841,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         if (e.species === 'chicken') { bob = moving ? -Math.abs(s) * 7 : -Math.abs(Math.sin(now / 600 + phase)) * 1.5; squash = moving ? Math.abs(s) * 0.6 : 0; }
         else { bob = (moving ? s * 2.5 : Math.sin(now / 700 + phase) * 0.8); squash = moving ? (s * 0.5 + 0.5) * 0.5 : 0; }
         drawAnimalSprite(ctx, e.species, footX, footY + bob, e.facing, frame, g.art, squash);
+        // "good ready" badge — a bobbing produce emoji over the animal
+        const li = e.livestockId && logicRef.current?.state?.livestock?.find((x) => x.id === e.livestockId);
+        if (li && animalGoodReady(li, now)) {
+          const em = SPECIES[e.species]?.produceEmoji || '✨';
+          const by = footY - (e.species === 'chicken' ? 26 : 44) + Math.sin(now / 260) * 3;
+          ctx.save(); ctx.font = '17px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(footX, by, 12, 0, 7); ctx.fill();
+          ctx.fillText(em, footX, by + 1); ctx.restore();
+        }
       }
       else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
       else if (e.kind === 'mount' && e.peerMount) {
@@ -960,18 +971,28 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function onTap(e) {
       const g = G.current; if (!g || !g.cam) return;
       const rect = canvas.getBoundingClientRect();
-      const cssX = e.clientX - rect.left, cssY = e.clientY - rect.top;
-      const tx = Math.floor((g.cam.camX + cssX / g.cam.z) / TILE);
-      const ty = Math.floor((g.cam.camY + cssY / g.cam.z) / TILE);
-      if (tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1) {
-        logicRef.current?.tapAt(tx, ty);
-        // face + a small "act" pose for feedback
-        const [dx, dy] = [tx - g.player.tile[0], ty - g.player.tile[1]];
+      const wx = (g.cam.camX + (e.clientX - rect.left) / g.cam.z) / TILE;
+      const wy = (g.cam.camY + (e.clientY - rect.top) / g.cam.z) / TILE;
+      const tx = Math.floor(wx), ty = Math.floor(wy);
+      const faceTo = (gx, gy) => {
+        const dx = gx - g.player.tile[0], dy = gy - g.player.tile[1];
         if (Math.abs(dx) > Math.abs(dy)) g.player.facing = dx >= 0 ? 'East' : 'West';
         else if (dy !== 0) g.player.facing = dy > 0 ? 'South' : 'North';
         g.player.oneShot = 'Get'; g.player.oneShotStart = performance.now();
-        e.preventDefault();
+      };
+      // 1) crop plot tap
+      if (tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1) {
+        logicRef.current?.tapAt(tx, ty); faceTo(tx, ty); e.preventDefault(); return;
       }
+      // 2) animal tap — nearest pen animal within ~1.2 tiles → contextual feed/pet/collect
+      let best = null, bestD = 1.3;
+      for (const a of g.actors.values()) {
+        if (a.kind !== 'animal' || !a.livestockId) continue;
+        const [ax, ay] = actorTileAt(a);
+        const d = Math.hypot(ax + 0.5 - wx, ay + 0.5 - wy);
+        if (d < bestD) { bestD = d; best = a; }
+      }
+      if (best) { logicRef.current?.tapAnimal(best.livestockId); faceTo(best.tile[0], best.tile[1]); e.preventDefault(); }
     }
     canvas.addEventListener('pointerdown', onTap);
 
