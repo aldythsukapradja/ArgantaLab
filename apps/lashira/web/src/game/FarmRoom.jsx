@@ -7,8 +7,9 @@ import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
 import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import {
-  makeMonster, resolveMelee, resolveSkill, tickMonsterState, monsterExpired,
-  MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, normalizeSkills, canAffordSkill,
+  makeMonster, resolveMelee, resolveSkill, damageMonster, tickMonsterState, monsterExpired,
+  skillTargets, skillDamage, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP,
+  normalizeSkills, canAffordSkill,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
@@ -156,6 +157,21 @@ function worldActorSnapshots(g, isHost, ownerName) {
       });
     }
   }
+  // Arena monsters are shared world critters simulated by the SAME host that owns
+  // the animals — so every circle member fights the same monsters (positions + hp
+  // + state authoritative from the host, like the herd).
+  if (isHost) {
+    for (const m of g.monsters) {
+      out.push({
+        id: m.id,
+        kind: 'monster',
+        mkind: m.kind || 'slime',
+        tile: [...(m.tile || [0, 0])],
+        facing: m.facing || 'South',
+        hp: m.hp, maxHp: m.maxHp, state: m.state || 'stand',
+      });
+    }
+  }
   return out;
 }
 
@@ -291,6 +307,21 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     // Peer's granular change → apply per-field (never re-emitted).
     const applyIntent = (intent) => {
       if (closed) return;
+      // Combat intents are NOT farm state — handle them here, not in FarmLogic.
+      if (intent?.t === 'mob-hit') {
+        const g = G.current; if (!g) return;
+        const hostSelf = !circleId || presenceHostId(g, profile) === presenceProfileId(profile);
+        if (!hostSelf) return; // only the host owns authoritative monster hp
+        const m = g.monsters.find((x) => x.id === intent.id && x.state !== 'die');
+        if (!m) return;
+        const res = damageMonster(m, Number(intent.dmg) || 0, performance.now());
+        if (res.killed) presenceCtrlRef.current?.sendIntent?.({ t: 'mob-dead', id: m.id, by: intent.by, name: m.kind || 'a monster' });
+        return;
+      }
+      if (intent?.t === 'mob-dead') {
+        if (intent.by === presenceProfileId(profile)) logicRef.current?.rewardKill(intent.name || 'a monster');
+        return;
+      }
       logicRef.current?.applyIntent?.(intent);
     };
     // Snapshot response → adopt only if the peer's rev is ahead of ours.
@@ -393,11 +424,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const { id, peer } of rows) {
         for (const fa of peer.actors || []) {
           if (!fa || !fa.id) continue;
-          const kind = fa.kind === 'animal' ? 'animal' : fa.kind === 'kin' ? 'kin' : fa.kind === 'mount' ? 'mount' : null;
+          const kind = fa.kind === 'animal' ? 'animal' : fa.kind === 'kin' ? 'kin' : fa.kind === 'mount' ? 'mount' : fa.kind === 'monster' ? 'monster' : null;
           if (!kind) continue;
           // Kins + mounts are OWNER-simulated (every peer's are shown, with an
-          // owner tag); animals come only from the elected host.
-          if (kind === 'animal' && id !== host) continue;
+          // owner tag); animals AND arena monsters come only from the elected host.
+          if ((kind === 'animal' || kind === 'monster') && id !== host) continue;
           const tile = readTile(fa.tile);
           if (!tile) continue;
           const wid = id + ':' + fa.id;
@@ -422,6 +453,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               kin: fa.kin || null,
               species: fa.species || null,
               name: fa.name || fa.species || null,
+              mkind: fa.mkind || null,
+              hp: fa.hp, maxHp: fa.maxHp, state: fa.state || 'stand', stateStart: 0, seed: hashId(wid),
             };
             g.peerWorldActors.set(wid, actor);
           } else {
@@ -439,6 +472,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
             actor.species = fa.species || actor.species || null;
             actor.name = fa.name || actor.name || fa.species || null;
             actor.owner = fa.owner || peer.name || actor.owner || '';
+            if (kind === 'monster') {
+              actor.hp = fa.hp ?? actor.hp; actor.maxHp = fa.maxHp ?? actor.maxHp;
+              actor.mkind = fa.mkind || actor.mkind;
+              if (fa.state && fa.state !== actor.state) { actor.state = fa.state; if (fa.state === 'die') actor.stateStart = now; }
+            }
           }
         }
       }
@@ -530,22 +568,55 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   function spark(g, tx, ty) {
     g.fx.push({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, start: performance.now(), ttl: 320 });
   }
+  // The hero's weapon swing (falls back through Attack/Pierce/Shoot, then to the
+  // 'Get' pickup only if it has no attack frames at all — so it never "bows").
+  function attackMotionBase(g) {
+    const facing = g.player.facing;
+    for (const base of ['Swing', 'Attack', 'Pierce', 'Shoot']) {
+      if (stepCount(g.tables, base + facing) > 0) return base;
+    }
+    return 'Get';
+  }
   function playSwing(g) {
-    const p = g.player; const now = performance.now();
-    if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = now; }
+    g.player.oneShot = attackMotionBase(g);
+    g.player.oneShotStart = performance.now();
+  }
+  function iAmHost(g) { return !circleId || presenceHostId(g, profile) === presenceProfileId(profile); }
+  // A non-host's view of a host monster on a tile (peerWorldActors), for hitting.
+  function peerMonsterAt(g, tx, ty) {
+    for (const a of g.peerWorldActors.values()) {
+      if (a.kind !== 'monster' || a.state === 'die') continue;
+      const [ax, ay] = actorTileAt(a, performance.now()).map(Math.round);
+      if (ax === tx && ay === ty) return a;
+    }
+    return null;
+  }
+  // Apply `dmg` to whatever monster is on (tx,ty): host hits its own authoritative
+  // monster; a non-host optimistically flashes and sends a mob-hit intent to the
+  // host, which owns hp/death (Kingdom's victim-referee model, host = referee).
+  function hitTile(g, tx, ty, dmg) {
+    const now = performance.now();
+    if (iAmHost(g)) {
+      const res = resolveMelee(g.monsters, tx, ty, dmg, now);
+      if (res) { spark(g, tx, ty); if (res.killed) logicRef.current?.rewardKill(res.monster.kind || 'a monster'); return true; }
+      return false;
+    }
+    const a = peerMonsterAt(g, tx, ty);
+    if (!a) return false;
+    spark(g, tx, ty);
+    a.hp = Math.max(0, (a.hp || 0) - dmg); // optimistic; host broadcast is authoritative
+    presenceCtrlRef.current?.sendIntent?.({ t: 'mob-hit', id: a.sourceId, dmg, by: presenceProfileId(profile) });
+    return true;
   }
   // Basic attack — the faced tile takes MELEE_DAMAGE (shared rule).
   function doStrike() {
     const g = G.current; if (!g || !g.combat.on) return;
     playSwing(g);
     const [tx, ty] = frontTile();
-    const res = resolveMelee(g.monsters, tx, ty, MELEE_DAMAGE, performance.now());
-    if (!res) return;
-    spark(g, tx, ty);
-    if (res.killed) logicRef.current?.rewardKill(res.monster.kind || 'a monster');
+    hitTile(g, tx, ty, MELEE_DAMAGE);
   }
-  // Skill i — spends stamina (shared canAffordSkill), damages the skill's target
-  // tiles via the shared resolveSkill. All three games' skill damage is one source.
+  // Skill i — spends stamina (shared canAffordSkill), hits the skill's target tiles
+  // (shared skillTargets/skillDamage). All games share one skill-damage source.
   function doSkill(i) {
     const g = G.current; if (!g || !g.combat.on) return;
     const skill = BATTLE_SKILLS[i]; if (!skill) return;
@@ -555,9 +626,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     if (cost > 0 && !logicRef.current?.spendStamina(cost)) return;
     playSwing(g);
     const p = g.player;
-    const hits = resolveSkill(g.monsters, skill, p.tile, DELTA[p.facing], performance.now());
-    for (const h of hits) { spark(g, h.monster.tile[0], h.monster.tile[1]); if (h.killed) logicRef.current?.rewardKill(h.monster.kind || 'a monster'); }
-    if (!hits.length) spark(g, ...frontTile());
+    const dmg = skillDamage(skill);
+    const tiles = skillTargets(skill, p.tile, DELTA[p.facing]);
+    let any = false;
+    for (const [tx, ty] of tiles) if (hitTile(g, tx, ty, dmg)) any = true;
+    if (!any) spark(g, ...frontTile());
   }
 
   // ---------- keyboard ----------
@@ -764,7 +837,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const p = g.player;
       const isHost = presenceHostId(g, profile) === presenceProfileId(profile);
       const actors = worldActorSnapshots(g, isHost, profile?.displayName || 'Farmer');
-      const actorStamp = actors.map((a) => `${a.id}:${a.tile[0]},${a.tile[1]}:${a.facing}:${a.mode || ''}:${a.hidden ? 1 : 0}`).join('|');
+      const actorStamp = actors.map((a) => `${a.id}:${a.tile[0]},${a.tile[1]}:${a.facing}:${a.mode || ''}:${a.hidden ? 1 : 0}:${a.hp ?? ''}:${a.state ?? ''}`).join('|');
       const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}:${actorStamp}`;
       if (!force && snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
       g.lastPresenceSnapshot = snapshot;
@@ -841,35 +914,39 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
     function stepBattle(g, now) {
       const p = g.player;
+      // Local battle mode follows MY position (each client toggles its own HUD).
       const on = inArena(p.tile[0], p.tile[1]) && (!g.combat.deadUntil || now > g.combat.deadUntil);
       if (on !== g.combat.on) {
         g.combat.on = on;
         if (on && g.combat.hp <= 0) g.combat.hp = g.combat.maxHp; // heal on entry
         syncBattleState(g);
       }
-      // maintain monster population while the arena is "active" (player present)
-      if (inArena(p.tile[0], p.tile[1])) {
+      // Monsters are shared: only the elected host simulates them (same rule as
+      // the herd), then broadcasts positions/hp/state in the heartbeat. Non-host
+      // clients render the host's monsters via peerWorldActors and never simulate.
+      const hostSelf = !circleId || presenceHostId(g, profile) === presenceProfileId(profile);
+      if (hostSelf) {
         if (g.monsters.length < ARENA_MONSTER_COUNT && now > g.nextMonsterSpawn) {
           spawnArenaMonster(g, now); g.nextMonsterSpawn = now + 900;
         }
-      }
-      // monster AI + state ticks (shared rules)
-      for (const m of g.monsters) {
-        if (m.state === 'die') continue;
-        tickMonsterState(m, now);
-        if (m.moveT < 1) { m.moveT = Math.min(1, (now - m.moveStart) / MONSTER_WALK_MS); continue; }
-        if (now < (m.nextWander || 0)) continue;
-        const dirs = Object.keys(DELTA);
-        const dir = dirs[Math.floor(monsterRand(g) * 4)];
-        const [dx, dy] = DELTA[dir]; const nx = m.tile[0] + dx, ny = m.tile[1] + dy;
-        m.facing = dir;
-        if (inArena(nx, ny) && !blockedAt(g, nx, ny) && !(nx === p.tile[0] && ny === p.tile[1]) && !g.monsters.some((o) => o !== m && o.state !== 'die' && o.tile[0] === nx && o.tile[1] === ny)) {
-          m.from = [...m.tile]; m.tile = [nx, ny]; m.moveT = 0; m.moveStart = now;
+        for (const m of g.monsters) {
+          if (m.state === 'die') continue;
+          tickMonsterState(m, now);
+          if (m.moveT < 1) { m.moveT = Math.min(1, (now - m.moveStart) / MONSTER_WALK_MS); continue; }
+          if (now < (m.nextWander || 0)) continue;
+          const dirs = Object.keys(DELTA);
+          const dir = dirs[Math.floor(monsterRand(g) * 4)];
+          const [dx, dy] = DELTA[dir]; const nx = m.tile[0] + dx, ny = m.tile[1] + dy;
+          m.facing = dir;
+          if (inArena(nx, ny) && !blockedAt(g, nx, ny) && !(nx === p.tile[0] && ny === p.tile[1]) && !g.monsters.some((o) => o !== m && o.state !== 'die' && o.tile[0] === nx && o.tile[1] === ny)) {
+            m.from = [...m.tile]; m.tile = [nx, ny]; m.moveT = 0; m.moveStart = now;
+          }
+          m.nextWander = now + 700 + monsterRand(g) * 1700;
         }
-        m.nextWander = now + 700 + monsterRand(g) * 1700;
+        g.monsters = g.monsters.filter((m) => !monsterExpired(m, now));
+      } else if (g.monsters.length) {
+        g.monsters = []; // host owns the monsters; drop any we simulated as host earlier
       }
-      // cull faded corpses + fx
-      g.monsters = g.monsters.filter((m) => !monsterExpired(m, now));
       g.fx = g.fx.filter((f) => now - f.start < f.ttl);
     }
     function syncBattleState(g) {
@@ -910,10 +987,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function drawPlayer(g, ctx, now, footX, footY) {
       const p = g.player;
       if (g.heroOk) {
-        const motion = p.oneShot ? 'Get' + p.facing : playerMotion(g);
+        // oneShot holds the motion BASE ('Get' for farm work, a weapon swing for
+        // an attack). Fall back to the idle/walk motion if the hero has no frames
+        // for that base — so an attack never freezes on a missing animation.
+        const oneShotMotion = p.oneShot ? p.oneShot + p.facing : null;
+        const hasOne = !!oneShotMotion && stepCount(g.tables, oneShotMotion) > 0;
+        const motion = hasOne ? oneShotMotion : playerMotion(g);
         const n = stepCount(g.tables, motion);
         let s;
-        if (p.oneShot) s = Math.min(n - 1, Math.floor((now - p.oneShotStart) / 160));
+        if (hasOne) s = Math.min(n - 1, Math.floor((now - p.oneShotStart) / 160));
         else if (p.moveT < 1) s = Math.floor(p.moveT * n) % n;
         else s = Math.floor(now / 340) % n;
         const list = resolveStep(g.tables, g.resources, motion, s);
@@ -1067,6 +1149,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const e of g.peerWorldActors.values()) {
         if (e.hidden) continue;
         const [ex, ey] = entityPx(e);
+        if (e.kind === 'monster') { actors.push({ type: 'monster', e, footX: ex + TILE / 2, footY: ey + TILE - 5 }); continue; }
         actors.push({ type: 'world', e, owner: e.kind === 'kin' ? (e.owner || '') : null, footX: ex + TILE / 2, footY: ey + TILE - 5 });
       }
       for (const e of g.peerActors.values()) {
@@ -1113,7 +1196,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const bob = m.moveT < 1 ? Math.sin(now / 90 + (m.seed || 0)) * 2 : Math.sin(now / 400 + (m.seed || 0)) * 1;
       const cx = footX, by = footY + bob;
       const palette = { slime: '#6fca7a', bat: '#8b6fd0', blob: '#d06f8b' };
-      const body = palette[m.kind] || '#6fca7a';
+      const body = palette[m.mkind || m.kind] || '#6fca7a';
       ctx.save(); ctx.globalAlpha = fade;
       // shadow
       ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx, footY + 2, 13, 5, 0, 0, 7); ctx.fill();
