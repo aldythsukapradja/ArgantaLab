@@ -827,7 +827,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
     function drawWorldActor(g, ctx, e, now, footX, footY) {
       const frame = e.moveT < 1 ? Math.floor(e.moveT * 2) : Math.floor(now / 420);
-      if (e.kind === 'animal') drawAnimalSprite(ctx, e.species, footX, footY, e.facing, frame, g.art);
+      if (e.kind === 'animal') {
+        // Each animal bounces on its OWN phase (from its seed) so the herd never
+        // moves in lockstep. Chickens hop; cows/sheep waddle; a gentle idle
+        // breathe when standing still.
+        const moving = e.moveT < 1;
+        const phase = ((e.seed || 1) % 1000) / 1000 * Math.PI * 2;
+        const spd = e.species === 'chicken' ? 150 : 300;
+        const s = Math.sin(now / spd + phase);
+        let bob = 0, squash = 0;
+        if (e.species === 'chicken') { bob = moving ? -Math.abs(s) * 7 : -Math.abs(Math.sin(now / 600 + phase)) * 1.5; squash = moving ? Math.abs(s) * 0.6 : 0; }
+        else { bob = (moving ? s * 2.5 : Math.sin(now / 700 + phase) * 0.8); squash = moving ? (s * 0.5 + 0.5) * 0.5 : 0; }
+        drawAnimalSprite(ctx, e.species, footX, footY + bob, e.facing, frame, g.art, squash);
+      }
       else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
       else if (e.kind === 'mount' && e.peerMount) {
         // Peer's mount → their REAL Kingdom mount skin (loaded from their heroSpec

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRIVATE OS — Closing the Fable Gap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1420;
+    --panel:#101D2E;
+    --panel-2:#0D1826;
+    --line:#24384D;
+    --line-bright:#3A5670;
+    --ink:#DCE6EE;
+    --ink-dim:#7E93A6;
+    --amber:#E8A33D;
+    --cyan:#5ED4C4;
+    --red:#D9705B;
+    --green:#6FBF8B;
+    --grid: rgba(94,212,196,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif; -webkit-font-smoothing:antialiased;}
+  body{
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 120px;}
+
+  /* header / crosshair frame */
+  .frame-top{position:relative;padding:28px 0 18px;border-bottom:1px solid var(--line);}
+  .crosshair{position:absolute;width:14px;height:14px;}
+  .crosshair::before,.crosshair::after{content:'';position:absolute;background:var(--amber);}
+  .crosshair::before{width:14px;height:1px;top:6px;left:0;}
+  .crosshair::after{width:1px;height:14px;left:6px;top:0;}
+  .c-tl{top:-1px;left:-1px;} .c-tr{top:-1px;right:-1px;}
+
+  .eyebrow{display:flex;align-items:center;justify-content:space-between;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;
+    color:var(--ink-dim);text-transform:uppercase;}
+  .eyebrow .status{color:var(--cyan);}
+
+  h1{font-family:'Big Shoulders Display',sans-serif;font-weight:800;
+    font-size:clamp(38px,7vw,74px);line-height:0.94;letter-spacing:-.01em;
+    margin:14px 0 6px;color:#fff;}
+  h1 span{color:var(--amber);}
+  .sub{color:var(--ink-dim);font-size:15px;max-width:640px;line-height:1.55;margin-bottom:4px;}
+
+  /* dial row */
+  .dials{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 6px;}
+  @media(max-width:720px){.dials{grid-template-columns:repeat(2,1fr);}}
+  .dial-card{background:var(--panel);border:1px solid var(--line);padding:16px 14px;}
+  .dial{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;
+    display:flex;align-items:center;justify-content:center;position:relative;}
+  .dial span{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:#fff;}
+  .dial-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-dim);text-align:center;}
+
+  /* section header */
+  .sec{margin-top:64px;}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);
+    padding-bottom:12px;margin-bottom:22px;}
+  .sec-num{font-family:'IBM Plex Mono',monospace;color:var(--amber);font-size:13px;}
+  .sec-title{font-family:'Big Shoulders Display',sans-serif;font-weight:800;
+    font-size:clamp(24px,4vw,36px);color:#fff;letter-spacing:-.01em;}
+  .sec-note{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-dim);
+    text-align:right;}
+
+  /* skill cards */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:720px){.grid-2{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--line);padding:18px 18px 16px;position:relative;}
+  .card:hover{border-color:var(--line-bright);}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;}
+  .card-name{font-weight:600;font-size:15px;color:#fff;}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+    padding:3px 7px;border:1px solid; white-space:nowrap;}
+  .b-build{color:var(--amber);border-color:var(--amber);}
+  .b-connected{color:var(--green);border-color:var(--green);}
+  .b-recommend{color:var(--ink-dim);border-color:var(--line-bright);}
+  .card-desc{font-size:13px;color:var(--ink-dim);line-height:1.55;margin-bottom:10px;}
+  .card-why{font-size:12px;color:var(--cyan);line-height:1.5;}
+
+  .prompt-box{background:var(--panel-2);border:1px solid var(--line);margin-top:12px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;color:#C9D6E0;
+    padding:14px 14px 14px;white-space:pre-wrap;position:relative;}
+  .prompt-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .prompt-tag{color:var(--amber);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;}
+  .copy-btn{background:none;border:1px solid var(--line-bright);color:var(--ink-dim);
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:4px 9px;cursor:pointer;
+    text-transform:uppercase;letter-spacing:.05em;}
+  .copy-btn:hover{color:#fff;border-color:var(--cyan);}
+  .copy-btn.copied{color:var(--green);border-color:var(--green);}
+
+  /* connector map table */
+  .conn-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .conn-table th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.06em;color:var(--ink-dim);
+    border-bottom:1px solid var(--line);padding:8px 10px;}
+  .conn-table td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .conn-table tr:hover td{background:rgba(94,212,196,0.03);}
+  .conn-name{font-weight:600;color:#fff;}
+  .conn-desc{color:var(--ink-dim);font-size:12.5px;line-height:1.5;}
+
+  /* order strip */
+  .order{display:flex;gap:0;margin-top:10px;border:1px solid var(--line);}
+  .order-step{flex:1;padding:14px 12px;border-right:1px solid var(--line);}
+  .order-step:last-child{border-right:none;}
+  .order-num{font-family:'IBM Plex Mono',monospace;color:var(--amber);font-size:11px;}
+  .order-title{font-weight:600;font-size:13px;color:#fff;margin:4px 0 4px;}
+  .order-desc{font-size:11.5px;color:var(--ink-dim);line-height:1.4;}
+  @media(max-width:800px){.order{flex-direction:column;} .order-step{border-right:none;border-bottom:1px solid var(--line);}}
+
+  footer{margin-top:70px;padding-top:20px;border-top:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-dim);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="frame-top">
+    <div class="crosshair c-tl"></div>
+    <div class="crosshair c-tr"></div>
+    <div class="eyebrow">
+      <span>SPEC · PRIVATE-OS-01</span>
+      <span class="status">● CLAUDE ENVIRONMENT</span>
+    </div>
+    <h1>CLOSE THE<br><span>FABLE GAP.</span></h1>
+    <p class="sub">Opus 4.8 is your daily driver from tomorrow. This is the build spec that
+    makes it behave like Fable did — through skills, connectors, and a machine-learning
+    layer that's yours, not rented by the hour.</p>
+  </div>
+
+  <div class="dials" id="dials"></div>
+
+  <!-- SECTION 1 -->
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <span class="sec-title">OPUS-PARITY SKILLSET</span>
+      <span class="sec-note">what Fable does by default,<br>Opus needs a skill to do on purpose</span>
+    </div>
+    <div class="grid-2" id="skills-agentic"></div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <span class="sec-title">MCP CONNECTOR MAP</span>
+      <span class="sec-note">green = already wired · grey = build next</span>
+    </div>
+    <table class="conn-table" id="conn-table"></table>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <span class="sec-title">ML LIBRARY SKILLSET</span>
+      <span class="sec-note">reservoir forecasting + W2F personalization,<br>one skill per capability</span>
+    </div>
+    <div class="grid-2" id="skills-ml"></div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <span class="sec-title">BUILD ORDER</span>
+      <span class="sec-note">do this on Opus, starting tomorrow</span>
+    </div>
+    <div class="order" id="order"></div>
+  </div>
+
+  <footer>
+    <span>ArgantaLab / Circle HQ — private OS spec</span>
+    <span>generated for daily-driver Opus 4.8</span>
+  </footer>
+</div>
+
+<script>
+const dials = [
+  {label:'Planning depth', pct:35, color:'#E8A33D'},
+  {label:'Adversarial review', pct:20, color:'#D9705B'},
+  {label:'Connector coverage', pct:45, color:'#5ED4C4'},
+  {label:'ML tooling', pct:15, color:'#6FBF8B'},
+];
+const dialsEl = document.getElementById('dials');
+dials.forEach(d=>{
+  const el = document.createElement('div');
+  el.className='dial-card';
+  el.innerHTML = `
+    <div class="dial" style="background:conic-gradient(${d.color} ${d.pct*3.6}deg, #1A2A3A 0deg)">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;">
+        <span>${d.pct}%</span>
+      </div>
+    </div>
+    <div class="dial-label">${d.label}</div>`;
+  dialsEl.appendChild(el);
+});
+
+function copyText(btn, text){
+  navigator.clipboard.writeText(text).then(()=>{
+    const old = btn.textContent;
+    btn.textContent = 'Copied';
+    btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent = old; btn.classList.remove('copied');}, 1500);
+  });
+}
+
+function skillCard({name, status, desc, why, prompt}){
+  const div = document.createElement('div');
+  div.className = 'card';
+  const badgeClass = status==='build now' ? 'b-build' : status==='connected' ? 'b-connected' : 'b-recommend';
+  div.innerHTML = `
+    <div class="card-top">
+      <div class="card-name">${name}</div>
+      <div class="badge ${badgeClass}">${status}</div>
+    </div>
+    <div class="card-desc">${desc}</div>
+    ${why ? `<div class="card-why">→ ${why}</div>` : ''}
+    ${prompt ? `<div class="prompt-box">
+      <div class="prompt-label"><span class="prompt-tag">Fable/Opus prompt</span>
+        <button class="copy-btn">Copy</button></div>
+      <div class="prompt-text">${prompt}</div>
+    </div>` : ''}
+  `;
+  if(prompt){
+    const btn = div.querySelector('.copy-btn');
+    btn.addEventListener('click', ()=>copyText(btn, prompt));
+  }
+  return div;
+}
+
+// SECTION 1 — Opus-parity agentic skills
+const agenticSkills = [
+  {
+    name:'long-horizon-planner',
+    status:'build now',
+    desc:'Forces Opus to decompose big work into PLAN-&lt;slug&gt;.md files with exact files to touch, edge cases, and acceptance criteria — before writing any code.',
+    why:'This is Fable\'s actual edge on long tasks: it plans deeper before acting. A skill makes Opus do the same thing deliberately.',
+    prompt:'Create a skill called long-horizon-planner. Trigger: any task touching 3+ files or described as multi-step. Body: before writing code, produce PLAN-<slug>.md with goal, exact files to touch, step order, edge cases a weaker pass would miss, and acceptance criteria I can verify. Do not start implementation until the plan exists.'
+  },
+  {
+    name:'adversarial-reviewer',
+    status:'build now',
+    desc:'A second pass that red-teams its own output — checks for the failure modes it just introduced — before reporting done.',
+    why:'Fable runs adversarial verification by default on agentic tasks. This is the cheapest way to buy that back on Opus.',
+    prompt:'Create a skill called adversarial-reviewer. Trigger: after any code change or plan is produced, before reporting "done". Body: re-read the diff as a skeptical reviewer looking for the 3 most likely ways this breaks in production or edge cases. Fix what you find or flag what needs a human decision. Never report done without this pass.'
+  },
+  {
+    name:'subagent-orchestrator',
+    status:'build now',
+    desc:'Splits a big job into research / implementation / verification roles run as separate Task-tool subagents instead of one linear pass.',
+    why:'This is the actual mechanic behind "ultracode" — Opus can do it too, it just needs to be told to split the work this way.',
+    prompt:'Create a skill called subagent-orchestrator. Trigger: tasks the user frames as "big", "the whole thing", or spanning research+build+verify. Body: split into a research subagent (gather context, read the codebase), an implementation subagent (make the change), and a verification subagent (test/adversarial-review). Run them via the Task tool, then synthesize.'
+  },
+  {
+    name:'context-compaction',
+    status:'build now',
+    desc:'Manages long sessions on a smaller effective context window by periodically harvesting the session into your Obsidian second brain instead of letting context degrade.',
+    why:'Fable\'s edge on long sessions is partly just context. This skill offsets that by writing state out instead of holding it all in the window.',
+    prompt:'Create a skill called context-compaction. Trigger: sessions running long or approaching context limits. Body: summarize decided facts, open threads, and next steps into /wiki or /projects in the Obsidian second brain, then continue from the summary rather than the full history.'
+  },
+];
+const aEl = document.getElementById('skills-agentic');
+agenticSkills.forEach(s=>aEl.appendChild(skillCard(s)));
+
+// SECTION 2 — MCP connector map
+const connectors = [
+  {name:'Circle HQ', status:'connected', desc:'Bridge MCP server on Render — CEO brief, office reports, verdict queue, product ontology graph.'},
+  {name:'Google Drive', status:'connected', desc:'Doc/file search and fetch across your Drive — proposals, plans, notes.'},
+  {name:'Gmail', status:'connected', desc:'Thread search, drafts, labeling — useful for partner/investor outreach threads.'},
+  {name:'Google Calendar', status:'connected', desc:'Event read/write — scheduling around builds and townhalls.'},
+  {name:'Scholar Gateway', status:'connected', desc:'Academic search — feeds your SPE/EAGE/WPC technical paper work.'},
+  {name:'Three.js 3D Viewer', status:'connected', desc:'Renders interactive 3D scenes — matches your cinematic/HUD build style.'},
+  {name:'GitHub', status:'build next', desc:'Direct repo access for ArgantaLab so Opus can open PRs and read issues without a manual paste.'},
+  {name:'Supabase', status:'build next', desc:'Direct DB access to your live spine (arch.supabase is green) — lets Opus query real tables instead of guessing schema.'},
+  {name:'Vercel', status:'build next', desc:'Deploy status + logs for the apps layer (arch.vercel is currently amber) — closes a visibility gap.'},
+  {name:'Sentry / error tracking', status:'recommended', desc:'Wires the blind signals directly: dead_end_quit, build_abandoned, broken_share_link, calendar_open_no_add.'},
+  {name:'Figma', status:'recommended', desc:'Pulls your design tokens straight from source instead of re-deriving them from shipped HTML.'},
+  {name:'Stripe', status:'recommended', desc:'Feeds Treasury\'s stage.pay node with live conversion data instead of simulated.'},
+];
+const connTable = document.getElementById('conn-table');
+connTable.innerHTML = `<tr><th>Connector</th><th>Status</th><th>Why it matters</th></tr>`;
+connectors.forEach(c=>{
+  const badgeClass = c.status==='connected' ? 'b-connected' : c.status==='build next' ? 'b-build' : 'b-recommend';
+  connTable.innerHTML += `<tr>
+    <td class="conn-name">${c.name}</td>
+    <td><span class="badge ${badgeClass}">${c.status}</span></td>
+    <td class="conn-desc">${c.desc}</td>
+  </tr>`;
+});
+
+// SECTION 3 — ML library skillset
+const mlSkills = [
+  {
+    name:'decline-curve-forecaster',
+    status:'build now',
+    desc:'A skill wrapping statsmodels/Prophet-style time-series forecasting, tuned for well production decline and VRR trend projection.',
+    why:'This is a direct lift from your reservoir work — same math, now callable as a skill instead of a one-off script every time.',
+    prompt:'Create a skill called decline-curve-forecaster. Trigger: time-series data on well production, VRR, or pressure history. Body: use pandas + statsmodels (or Prophet if seasonality matters). Fit decline curves (exponential/hyperbolic/harmonic), report R² and residuals, flag wells where the fit breaks down as candidates for workover review.'
+  },
+  {
+    name:'activation-funnel-modeler',
+    status:'build now',
+    desc:'scikit-learn/xgboost skill for modeling signup→active conversion, tied to your real lever.efficiency node (currently the weakest lever).',
+    why:'Directly targets the CAC/conversion problem Treasury flagged — $75 CAC at 2% conversion.',
+    prompt:'Create a skill called activation-funnel-modeler. Trigger: analyzing signup-to-active conversion or CAC data. Body: use pandas for wrangling and scikit-learn/xgboost for a classification model on activation. Report feature importance so we know which funnel step to fix first, not just the aggregate rate.'
+  },
+  {
+    name:'kinetik-recommender',
+    status:'recommended',
+    desc:'Lightweight collaborative-filtering or content-based recommender for Kinetik Buddy personalization inside ArgantaLab.',
+    why:'This is the ML layer behind "depth · engagement" — the lever Operations is currently protecting, not improving.',
+    prompt:'Create a skill called kinetik-recommender. Trigger: personalization or "what should this child see next" logic in ArgantaLab. Body: start with a simple content-based recommender (item features + recent activity), not a full collaborative-filtering system — the data volume doesn\'t justify more yet. Note the threshold at which to upgrade.'
+  },
+  {
+    name:'reservoir-viz-standard',
+    status:'recommended',
+    desc:'matplotlib/plotly skill that renders reservoir plots (pressure maps, VRR, welltest) in a style matching your Power BI/LUMEN output conventions.',
+    why:'Keeps every generated chart consistent with what NOC leadership already expects from your work.',
+    prompt:'Create a skill called reservoir-viz-standard. Trigger: any request to chart reservoir data (pressure, VRR, welltest, pattern maps). Body: use matplotlib/plotly with a fixed style sheet — colors, fonts, and layout matching the LUMEN Power BI training studio conventions. Never default to library defaults for this data.'
+  },
+];
+const mlEl = document.getElementById('skills-ml');
+mlSkills.forEach(s=>mlEl.appendChild(skillCard(s)));
+
+// SECTION 4 — build order
+const order = [
+  {n:'01', t:'Wire the 4 blind signals', d:'dead_end_quit, build_abandoned, broken_share_link, calendar_open_no_add — Sentry connector + instrumentation code.'},
+  {n:'02', t:'Build long-horizon-planner + adversarial-reviewer', d:'These two skills recover most of Fable\'s planning/verification edge on Opus.'},
+  {n:'03', t:'Add GitHub + Supabase connectors', d:'Removes manual paste-in of code/schema — Opus reads your real state directly.'},
+  {n:'04', t:'Build activation-funnel-modeler', d:'Targets the CAC/conversion flag directly — highest-leverage Treasury item.'},
+  {n:'05', t:'Layer in subagent-orchestrator + context-compaction', d:'For anything that would have been an "ultracode" run on Fable.'},
+];
+const orderEl = document.getElementById('order');
+order.forEach(o=>{
+  const div = document.createElement('div');
+  div.className = 'order-step';
+  div.innerHTML = `<div class="order-num">${o.n}</div><div class="order-title">${o.t}</div><div class="order-desc">${o.d}</div>`;
+  orderEl.appendChild(div);
+});
+</script>
+</body>
+</html>

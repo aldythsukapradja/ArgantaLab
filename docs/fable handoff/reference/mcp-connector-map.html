@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP CONNECTOR MAP — Media &amp; Marketing Layer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07100C;
+    --panel:#0C1813;
+    --panel-2:#0A1410;
+    --line:#1C3327;
+    --line-b:#2E5240;
+    --ink:#D6E4DB;
+    --dim:#6E8A79;
+    --lime:#8BE04B;
+    --amber:#E8B84D;
+    --sky:#5CC6D9;
+    --rose:#E0796A;
+    --grid:rgba(139,224,75,0.045);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased;}
+  body{background-image:
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:30px 30px;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px 100px;}
+
+  header{padding:34px 0 22px;border-bottom:1px solid var(--line);position:relative;}
+  .kicker{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;}
+  .kicker .on{color:var(--lime);}
+  h1{font-weight:700;font-size:clamp(30px,5.5vw,52px);line-height:1.02;margin:16px 0 10px;color:#fff;
+    letter-spacing:-.02em;}
+  h1 em{font-style:normal;color:var(--lime);}
+  .lede{color:var(--dim);max-width:680px;font-size:15px;line-height:1.6;}
+  .lede b{color:var(--ink);font-weight:600;}
+
+  /* legend */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:22px 0 0;font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--dim);}
+  .legend span{display:flex;align-items:center;gap:7px;}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .d-have{background:var(--lime);} .d-verified{background:var(--sky);}
+  .d-next{background:var(--amber);} .d-client{background:var(--rose);}
+
+  /* category block */
+  .cat{margin-top:52px;}
+  .cat-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;}
+  .cat-id{font-family:'IBM Plex Mono',monospace;color:var(--lime);font-size:13px;}
+  .cat-name{font-weight:700;font-size:clamp(19px,3vw,26px);color:#fff;letter-spacing:-.01em;}
+  .cat-sub{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--dim);
+    margin-left:auto;text-align:right;line-height:1.4;}
+  .cat-line{height:1px;background:var(--line);margin:10px 0 18px;}
+
+  .rows{display:grid;gap:10px;}
+  .row{display:grid;grid-template-columns:180px 96px 1fr;gap:16px;align-items:start;
+    background:var(--panel);border:1px solid var(--line);padding:15px 16px;}
+  .row:hover{border-color:var(--line-b);}
+  @media(max-width:720px){.row{grid-template-columns:1fr;gap:8px;}}
+  .r-name{font-weight:600;font-size:15px;color:#fff;}
+  .r-url{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--dim);
+    margin-top:4px;word-break:break-all;}
+  .tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+    padding:3px 8px;border:1px solid;white-space:nowrap;display:inline-block;height:fit-content;}
+  .t-have{color:var(--lime);border-color:var(--lime);}
+  .t-verified{color:var(--sky);border-color:var(--sky);}
+  .t-next{color:var(--amber);border-color:var(--amber);}
+  .t-client{color:var(--rose);border-color:var(--rose);}
+  .r-desc{font-size:13px;color:var(--dim);line-height:1.55;}
+  .r-desc b{color:var(--ink);font-weight:600;}
+  .r-why{color:var(--sky);font-size:12px;margin-top:6px;line-height:1.5;}
+
+  /* pipeline strip */
+  .pipe{display:flex;margin-top:14px;border:1px solid var(--line);overflow:hidden;}
+  .pipe-step{flex:1;padding:14px 12px;border-right:1px solid var(--line);position:relative;}
+  .pipe-step:last-child{border-right:none;}
+  .pipe-n{font-family:'IBM Plex Mono',monospace;color:var(--lime);font-size:10.5px;}
+  .pipe-t{font-weight:600;font-size:13px;color:#fff;margin:5px 0 4px;}
+  .pipe-tool{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--amber);}
+  .pipe-d{font-size:11px;color:var(--dim);line-height:1.4;margin-top:4px;}
+  @media(max-width:800px){.pipe{flex-direction:column;}.pipe-step{border-right:none;border-bottom:1px solid var(--line);}}
+
+  .note{background:var(--panel-2);border-left:2px solid var(--amber);padding:14px 16px;margin-top:16px;
+    font-size:13px;color:var(--dim);line-height:1.6;}
+  .note b{color:var(--ink);}
+
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker"><span>MAP · MCP-MEDIA-01</span><span class="on">● NEXT PHASE: MARKETING</span></div>
+    <h1>THE CONNECTOR MAP<br><em>FOR SHIPPING ASSETS.</em></h1>
+    <p class="lede">You're engineering-heavy and media-blind. Marketing needs assets at volume —
+    video, voice, image, and the pipeline to publish them. <b>MCP is the reach-out layer:</b> it lets
+    your agent call specialist generators and distribution surfaces as tools. This maps what to wire,
+    in what order, and what's a connector vs. a decoy.</p>
+    <div class="legend">
+      <span><i class="dot d-have"></i> Already connected</span>
+      <span><i class="dot d-verified"></i> Verified · wire next</span>
+      <span><i class="dot d-next"></i> Recommended</span>
+      <span><i class="dot d-client"></i> Not a connector (client/decoy)</span>
+    </div>
+  </header>
+
+  <!-- 01 MEDIA GEN -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">01</span><span class="cat-name">MEDIA GENERATION</span>
+      <span class="cat-sub">image + video + character consistency<br>one connector, many models</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="rows">
+
+      <div class="row">
+        <div><div class="r-name">Higgsfield</div><div class="r-url">mcp.higgsfield.ai/mcp</div></div>
+        <span class="tag t-verified">verified</span>
+        <div>
+          <div class="r-desc"><b>The single biggest unlock.</b> One OAuth endpoint exposes 30+ image/video
+          models — Veo 3.1, Kling 3.0, Sora 2, Seedance, Flux 2, Nano Banana Pro. Async job polling built for
+          long agent loops. Runs on your Higgsfield plan credits, no API keys.</div>
+          <div class="r-why">→ Soul character-training keeps the same face across hero/UGC/banner —
+          this is what makes a consistent Kin/Arganta brand face across a whole campaign in one session.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><div class="r-name">HeyGen</div><div class="r-url">avatar + talking-head video</div></div>
+        <span class="tag t-next">recommended</span>
+        <div>
+          <div class="r-desc">Avatar video: script → voice → talking-head render in one agentic pass.
+          Has an MCP surface. <b>Different job from Higgsfield</b> — this is presenter/explainer video,
+          not cinematic B-roll.</div>
+          <div class="r-why">→ Good for ArgantaLab explainer/demo videos where a friendly host walks a parent through the app.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><div class="r-name">Pixel art / SVG</div><div class="r-url">native — no connector needed</div></div>
+        <span class="tag t-have">you have this</span>
+        <div>
+          <div class="r-desc">Your Kin characters are already SVG, and Circle HQ has a Pixel Vault.
+          Claude generates SVG/code-based art <b>directly</b> — no external generator required.</div>
+          <div class="r-why">→ This is a <b>skill</b>, not an MCP: encode your palettes + sprite conventions once, reuse forever.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 02 VOICE / AUDIO -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">02</span><span class="cat-name">VOICE &amp; AUDIO</span>
+      <span class="cat-sub">narration, voice cloning,<br>sound for video</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="rows">
+      <div class="row">
+        <div><div class="r-name">ElevenLabs</div><div class="r-url">text-to-speech + voice clone</div></div>
+        <span class="tag t-next">recommended</span>
+        <div>
+          <div class="r-desc">The standard for TTS and voice cloning, with an MCP server. Narration for
+          reels, a consistent brand voice, multilingual (useful — you span Indonesian, English, Arabic markets).</div>
+          <div class="r-why">→ Pairs with Higgsfield: generate the clip there, lay narration here, in one chain.</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">Higgsfield already syncs some audio on video models, so <b>only add ElevenLabs
+    when you need a specific cloned brand voice or standalone narration.</b> Don't wire it just to have it —
+    that's exactly the overkill the effort-scorer is meant to catch.</div>
+  </div>
+
+  <!-- 03 WEB / RESEARCH -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">03</span><span class="cat-name">WEB &amp; RESEARCH</span>
+      <span class="cat-sub">clean web data, competitor +<br>lead intelligence</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="rows">
+      <div class="row">
+        <div><div class="r-name">Firecrawl</div><div class="r-url">npx firecrawl-mcp · OAuth</div></div>
+        <span class="tag t-verified">verified</span>
+        <div>
+          <div class="r-desc">Turns any URL into clean markdown/JSON — strips ads, nav, boilerplate.
+          Search, scrape, crawl, extract. <b>Cuts token cost ~80%</b> vs feeding raw HTML.</div>
+          <div class="r-why">→ Two direct uses: competitor teardown (how do rival kids-learning apps position?)
+          and lead-gen (pull structured lists of schools/partners with contact data as an HTML doc).</div>
+        </div>
+      </div>
+      <div class="row">
+        <div><div class="r-name">Scholar Gateway</div><div class="r-url">already connected</div></div>
+        <span class="tag t-have">you have this</span>
+        <div>
+          <div class="r-desc">Academic search — already wired. Feeds your SPE/EAGE/WPC paper work,
+          separate from the marketing stack but part of the same environment.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 DISTRIBUTION -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">04</span><span class="cat-name">DISTRIBUTION &amp; PUBLISHING</span>
+      <span class="cat-sub">where the asset actually goes<br>after it's made</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="rows">
+      <div class="row">
+        <div><div class="r-name">Meta MCP</div><div class="r-url">ad sets + performance readback</div></div>
+        <span class="tag t-next">recommended</span>
+        <div>
+          <div class="r-desc">Ships creative to Facebook/Instagram ad sets and pulls performance back.
+          Closes the loop: generate → publish → read results → iterate.</div>
+          <div class="r-why">→ Only worth it once you're actually running paid. Given Treasury's flag
+          (fix conversion <b>before</b> ad spend), this is a phase-2 connector, not day one.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div><div class="r-name">Google Drive / Gmail / Calendar</div><div class="r-url">already connected</div></div>
+        <span class="tag t-have">you have this</span>
+        <div>
+          <div class="r-desc">Your existing trio. Drive stores/organizes finished assets; Gmail runs
+          partner + investor outreach threads; Calendar schedules the content cadence.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 DEV / INFRA -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">05</span><span class="cat-name">DEV &amp; INFRASTRUCTURE</span>
+      <span class="cat-sub">so the agent reads your real<br>state, not a paste-in</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="rows">
+      <div class="row">
+        <div><div class="r-name">Circle HQ (Bridge)</div><div class="r-url">circle-hq-bridge.onrender.com/mcp</div></div>
+        <span class="tag t-have">you have this</span>
+        <div><div class="r-desc">Your own MCP — CEO brief, office reports, verdict queue, ontology graph.
+        The spine everything else should ladder into.</div></div>
+      </div>
+      <div class="row">
+        <div><div class="r-name">GitHub</div><div class="r-url">repo access for ArgantaLab</div></div>
+        <span class="tag t-next">wire next</span>
+        <div><div class="r-desc">Direct repo read/PR so the agent stops needing you to paste code in.
+        Highest-leverage dev connector you don't yet have.</div></div>
+      </div>
+      <div class="row">
+        <div><div class="r-name">Supabase</div><div class="r-url">live spine (arch.supabase = green)</div></div>
+        <span class="tag t-next">wire next</span>
+        <div><div class="r-desc">Query your real tables instead of guessing schema. Your spine is already
+        live/green in the graph — the connector just exposes it to the agent.</div></div>
+      </div>
+      <div class="row">
+        <div><div class="r-name">Three.js 3D Viewer</div><div class="r-url">already connected</div></div>
+        <span class="tag t-have">you have this</span>
+        <div><div class="r-desc">Renders interactive 3D — matches your HUD/cinematic build style.
+        For 3D <b>art assets</b> (not scenes), route through Higgsfield's image models instead.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 CLIENTS / DECOYS -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">06</span><span class="cat-name">NOT CONNECTORS — READ THIS</span>
+      <span class="cat-sub">things that look like connectors<br>but aren't</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="rows">
+      <div class="row">
+        <div><div class="r-name">Hermes Agent</div><div class="r-url">MCP client / harness</div></div>
+        <span class="tag t-client">decoy</span>
+        <div>
+          <div class="r-desc"><b>Hermes is a client, not a connector.</b> It's a rival agent harness —
+          same category as Claude Code, OpenClaw, NemoClaw. It <b>consumes</b> MCP servers; it isn't one.</div>
+          <div class="r-why">→ You don't "add Hermes" to Claude. You'd only use it if you were running a
+          different harness. Stay on Claude Code + Cowork; you don't need this.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div><div class="r-name">OpenClaw / NemoClaw</div><div class="r-url">MCP clients</div></div>
+        <span class="tag t-client">decoy</span>
+        <div><div class="r-desc">Same story — alternative agent runtimes, not tools to wire in.
+        They appear in Higgsfield's "compatible clients" list, which is what causes the confusion.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">07</span><span class="cat-name">THE MARKETING PIPELINE</span>
+      <span class="cat-sub">how the connectors chain into<br>one agentic run</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="pipe">
+      <div class="pipe-step">
+        <div class="pipe-n">STEP 01</div><div class="pipe-t">Research</div>
+        <div class="pipe-tool">Firecrawl</div>
+        <div class="pipe-d">Scrape competitors + pull leads. Feed positioning into the brief.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-n">STEP 02</div><div class="pipe-t">Concept + copy</div>
+        <div class="pipe-tool">Claude (native)</div>
+        <div class="pipe-d">Campaign concept, hooks, captions. No connector — this is the model itself.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-n">STEP 03</div><div class="pipe-t">Generate assets</div>
+        <div class="pipe-tool">Higgsfield · +voice ElevenLabs</div>
+        <div class="pipe-d">Video/image with a consistent brand face. Narration if needed.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-n">STEP 04</div><div class="pipe-t">Store + tag</div>
+        <div class="pipe-tool">Google Drive</div>
+        <div class="pipe-d">Named, tagged, organized. Human review checkpoint here.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-n">STEP 05</div><div class="pipe-t">Publish + learn</div>
+        <div class="pipe-tool">Meta MCP (phase 2)</div>
+        <div class="pipe-d">Ship to ad sets, read performance, iterate. Only after conversion is fixed.</div>
+      </div>
+    </div>
+    <div class="note"><b>The whole chain is one subagent-orchestrator run.</b> That's the point of mapping it:
+    each connector is an interchangeable block, and the orchestration — research → concept → generate → store → publish —
+    is the same pattern as your code workflow, pointed at media instead of files. <b>Reserve the pipeline
+    <em>design</em> for Fable today; the connectors themselves you can wire on Opus any day.</b></div>
+  </div>
+
+  <!-- ORDER -->
+  <div class="cat">
+    <div class="cat-head">
+      <span class="cat-id">08</span><span class="cat-name">WIRE ORDER</span>
+      <span class="cat-sub">cheapest path to a working<br>media pipeline</span>
+    </div>
+    <div class="cat-line"></div>
+    <div class="rows">
+      <div class="row"><div><div class="r-name">1 · Firecrawl</div></div><span class="tag t-verified">verified</span>
+        <div class="r-desc">Free tier, instant value (research + leads). Lowest risk first wire.</div></div>
+      <div class="row"><div><div class="r-name">2 · Higgsfield</div></div><span class="tag t-verified">verified</span>
+        <div class="r-desc">The media engine. Train one Soul character for your brand face, then everything reuses it.</div></div>
+      <div class="row"><div><div class="r-name">3 · GitHub + Supabase</div></div><span class="tag t-next">wire next</span>
+        <div class="r-desc">Removes manual paste-in so the agent works on real state. Dev velocity, not marketing — but cheap and compounding.</div></div>
+      <div class="row"><div><div class="r-name">4 · ElevenLabs</div></div><span class="tag t-next">when needed</span>
+        <div class="r-desc">Only when you need a specific cloned brand voice. Not before.</div></div>
+      <div class="row"><div><div class="r-name">5 · Meta MCP</div></div><span class="tag t-next">phase 2</span>
+        <div class="r-desc">After conversion is fixed and you're running paid. Publishing loop comes last.</div></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>ArgantaLab / Circle HQ — MCP media &amp; marketing map</span>
+    <span>verified July 7 2026 · confirm URLs before wiring</span>
+  </footer>
+</div>
+</body>
+</html>

@@ -6,7 +6,7 @@
 .ceo {
   /* LIGHT palette (default) */
   --c-bg: radial-gradient(circle at 50% 40%, #ffffff, #e7effb 72%);
-  --c-panel: rgba(255, 255, 255, .72); --c-panel-bd: rgba(37, 99, 235, .16);
+  --c-panel: rgba(255, 255, 255, .86); --c-panel-bd: rgba(37, 99, 235, .18);
   --c-text: #0f2444; --c-muted: #5b7aa8;
   --c-accent: #2563eb; --c-accent2: #0ea5e9;
   --c-node: #6aa0e8; --c-node-b: #0ea5e9; --c-line: rgba(37, 99, 235, .3); --c-ring: #2f7de0;
@@ -20,7 +20,7 @@
 }
 html[data-theme="dark"] .ceo {
   --c-bg: radial-gradient(circle at 50% 44%, #0e2148, #04060e 72%);
-  --c-panel: rgba(12, 22, 48, .5); --c-panel-bd: rgba(74, 150, 240, .28);
+  --c-panel: rgba(12, 22, 48, .64); --c-panel-bd: rgba(74, 150, 240, .3);
   --c-text: #eaf4ff; --c-muted: #7fa8dd;
   --c-accent: #45c8ff; --c-accent2: #4fe6c8;
   --c-node: #4a86ff; --c-node-b: #7fe8ff; --c-line: rgba(90, 160, 255, .28); --c-ring: #4a86ff;
@@ -49,9 +49,13 @@ html[data-theme="dark"] .ceo {
 
 .ceo-body { flex: 1; display: flex; gap: 14px; padding: 0 18px; min-height: 0; }
 .ceo-col { width: 236px; flex: none; display: flex; flex-direction: column; gap: 12px; justify-content: center; }
-.ceo-core { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; }
-.ceo-greet { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-size: 9px; letter-spacing: .34em; color: var(--c-muted); text-transform: uppercase; }
-.ceo-orb { width: min(48vh, 540px); height: min(48vh, 540px); max-width: 92%; }
+.ceo-core { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-width: 0; min-height: 0; }
+/* keep the whole cockpit inside the viewport — panels stay compact, nothing clips */
+.ceo-col { overflow: hidden; }
+.ceo-row4 .ceo-pnl { overflow: hidden; }
+.ceo-greet { text-align: center; font-size: 9.5px; letter-spacing: .34em; color: var(--c-muted); text-transform: uppercase; }
+.ceo-orbrow { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 0; }
+.ceo-orb { width: min(47vh, 480px); height: min(47vh, 480px); max-width: 100%; flex: none; }
 .ceo-orb svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 26px var(--c-glow)); }
 .ceo-orb g[class^=ceo-r], .ceo-sweep, .ceo-brain { transform-box: view-box; transform-origin: center; will-change: transform; }
 .ceo-rA { animation: ceo-sp 40s linear infinite; } .ceo-rB { animation: ceo-sp 30s linear infinite reverse; }
@@ -60,11 +64,10 @@ html[data-theme="dark"] .ceo {
 .ceo-hub { filter: drop-shadow(0 0 6px var(--c-node-b)); }
 @keyframes ceo-sp { to { transform: rotate(360deg); } }
 
-.ceo-badge { position: absolute; top: 50%; transform: translateY(-50%); text-align: center; }
-.ceo-badge.bL { left: 1%; } .ceo-badge.bR { right: 1%; }
-.ceo-badge .bv { font-size: 16px; font-weight: 800; font-family: var(--mono, monospace); color: var(--c-text); }
+.ceo-badge { text-align: center; flex: none; }
+.ceo-badge .bv { font-size: 17px; font-weight: 800; font-family: var(--mono, monospace); color: var(--c-text); }
 .ceo-badge .bl { font-size: 7px; color: var(--c-muted); text-transform: uppercase; letter-spacing: .06em; }
-.ceo-coreout { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); text-align: center; width: 280px; }
+.ceo-coreout { text-align: center; width: min(300px, 80%); }
 .ceo-co-l { font-size: 7.5px; color: var(--c-muted); letter-spacing: .1em; text-transform: uppercase; }
 .ceo-cobar { width: 100%; margin-top: 3px; }
 
@@ -123,18 +126,36 @@ html[data-theme="dark"] .ceo {
 .hq-cockpit .agent-orb { display: none !important; }
 .hq-cockpit .agent-panel { left: 50% !important; right: auto !important; top: 50% !important; bottom: auto !important; transform: translate(-50%, -50%) !important; }
 
-@media (max-width: 1000px) {
-  .ceo-body { flex-direction: column; overflow-y: auto; }
-  .ceo-col { width: 100%; flex-direction: row; }
-  .ceo-col .ceo-pnl { flex: 1; }
-  .ceo-orb { width: min(64vw, 360px); height: min(64vw, 360px); }
-  .ceo-row4 { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px) {
-  .ceo-col { flex-direction: column; }
-  .ceo-row4 { grid-template-columns: 1fr; }
+/* ONE clean mobile/tablet layout — orb-first, everything stacks, orb sized by
+   viewport WIDTH so it can never overflow. */
+@media (max-width: 900px) {
+  .ceo { overflow-y: auto; }
+  .ceo-body { flex-direction: column; flex: none; overflow: visible; padding: 6px 12px 0; gap: 10px; }
+  .ceo-core { order: -1; min-height: auto; padding: 6px 0 2px; gap: 6px; }
+  .ceo-orbrow { gap: 8px; }
+  .ceo-orb { width: min(78vw, 340px); height: min(78vw, 340px); }
   .ceo-badge { display: none; }
+  .ceo-col { width: 100%; flex-direction: column; gap: 10px; }
+  .ceo-row4 { grid-template-columns: 1fr; padding: 8px 12px 88px; }
+  .ceo-bar { position: sticky; bottom: 0; z-index: 6; background: var(--c-bg); border-top: 1px solid var(--c-panel-bd); padding: 8px 12px; }
+  .ceo-top { padding: 10px 14px; }
+  .ceo-bg { position: fixed; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ceo-rA, .ceo-rB, .ceo-rB2, .ceo-rC, .ceo-sweep, .ceo-brain, .ceo-ring { animation: none !important; }
 }
+
+/* GSAP-animated background (drifting energy blobs + faint data-grid) */
+.ceo-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.ceo-grid { position: absolute; inset: -40px; opacity: .5;
+  background-image: linear-gradient(color-mix(in srgb, var(--c-accent) 7%, transparent) 1px, transparent 1px),
+                    linear-gradient(90deg, color-mix(in srgb, var(--c-accent) 7%, transparent) 1px, transparent 1px);
+  background-size: 38px 38px; }
+.ceo-blob { position: absolute; width: 28vmax; height: 28vmax; border-radius: 50%; filter: blur(72px); }
+.ceo-blob.b1 { background: radial-gradient(circle, var(--c-accent), transparent 66%); top: -12vmax; left: -8vmax; opacity: .12; }
+.ceo-blob.b2 { background: radial-gradient(circle, var(--c-accent2), transparent 66%); bottom: -12vmax; right: -8vmax; opacity: .10; }
+.ceo-blob.b3 { background: radial-gradient(circle, var(--c-slice4), transparent 66%); bottom: -6vmax; left: 20%; opacity: .07; }
+/* content paints above the bg (bg is the first child) */
+.ceo > *:not(.ceo-bg) { position: relative; z-index: 1; }
+
+/* Mobile: orb-first — the first fold is only the orb; panels scroll below. */

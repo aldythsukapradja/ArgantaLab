@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORCHESTRATION SPEC — Circle HQ Layer-3 Router</title>
+<style>
+  :root{
+    --bg:#0b0e13; --panel:#11161f; --panel2:#151c27; --line:#223047;
+    --txt:#c9d5e3; --dim:#7d8ea3; --acc:#4fd1a5; --amber:#e8b34b; --red:#e06c6c; --blue:#5aa9e6;
+    --mono:'Consolas','SF Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font:15px/1.65 'Segoe UI',system-ui,sans-serif;padding:40px 20px}
+  .wrap{max-width:960px;margin:0 auto}
+  header{border:1px solid var(--line);background:var(--panel);padding:28px 32px;margin-bottom:28px}
+  .tag{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--acc)}
+  h1{font-size:26px;letter-spacing:1px;margin:8px 0 10px;color:#fff}
+  .sub{color:var(--dim);max-width:760px}
+  section{border:1px solid var(--line);background:var(--panel);margin-bottom:22px;padding:26px 32px}
+  .snum{font-family:var(--mono);font-size:11px;color:var(--acc);letter-spacing:2px}
+  h2{font-size:18px;margin:4px 0 14px;color:#fff;letter-spacing:.5px}
+  h3{font-size:14px;color:var(--blue);margin:18px 0 6px;text-transform:uppercase;letter-spacing:1px}
+  p{margin:8px 0;color:var(--txt)}
+  .dim{color:var(--dim)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);text-transform:uppercase}
+  td{padding:8px 10px;border-bottom:1px solid #1a2333;vertical-align:top}
+  code,.k{font-family:var(--mono);font-size:12.5px;color:var(--acc);background:#0e1622;padding:1px 5px;border-radius:3px}
+  .gate{color:var(--red)} .warn{color:var(--amber)}
+  .loop{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+  .step{border:1px solid var(--line);background:var(--panel2);padding:10px 14px;flex:1 1 200px;min-width:200px}
+  .step b{color:#fff;font-size:13px;display:block;font-family:var(--mono);letter-spacing:1px}
+  .step span{font-size:12.5px;color:var(--dim)}
+  .rulebox{border-left:3px solid var(--acc);background:var(--panel2);padding:12px 16px;margin:14px 0;font-size:14px}
+  .rulebox.red{border-color:var(--red)}
+  .rulebox.amber{border-color:var(--amber)}
+  ul{margin:8px 0 8px 20px}
+  li{margin:5px 0}
+  footer{color:var(--dim);font-size:12px;font-family:var(--mono);text-align:center;padding:12px}
+</style>
+</head>
+<body><div class="wrap">
+
+<header>
+  <div class="tag">SPEC · HQ-ROUTER-01 · JULY 7 2026 · FABLE FRAME</div>
+  <h1>CIRCLE HQ — LAYER-3 ORCHESTRATION SPEC</h1>
+  <p class="sub">The promotion of Circle HQ from a dashboard you query into a router that acts.
+  Design rule inherited from the vault: <b>the router is a RAIL, not a reasoner</b> — a deterministic
+  protocol any model (Fable today, Opus/Sonnet tomorrow) executes identically. Consistency lives in
+  this structure; the model choice only sets raw capability.</p>
+</header>
+
+<section>
+  <div class="snum">00 · POSITION</div>
+  <h2>Where this sits, and the one founding decision</h2>
+  <p>Layer 3 of the stack: <span class="dim">L0 context readable → L1 memory unified (graph + vault) →
+  L2 skills laddered → <b style="color:#fff">L3 router</b> → L4 connectors as reach.</span></p>
+  <div class="rulebox"><b>Founding decision: the router is a protocol before it is a service.</b>
+  Phase 0 is a checklist executed in-session with zero new infrastructure. Automation (Supabase log,
+  write-path, scheduled runs) is earned by the manual loop running enough times to calibrate the
+  effort-scorer. Building the service first would automate uncalibrated judgment.</div>
+  <p class="dim">Everything below is traceable to the live graph pull of July 7 (RECON.md), the
+  handoff docs, or the vault skeleton — flagged <code>#inferred</code> where it isn't.</p>
+</section>
+
+<section>
+  <div class="snum">01 · THE LOOP</div>
+  <h2>Nine steps, every request, no exceptions</h2>
+  <div class="loop">
+    <div class="step"><b>1 INTAKE</b><span>State the request + deliverable in one line. Classify domain.</span></div>
+    <div class="step"><b>2 LADDER</b><span>Bind to a graph node BEFORE work. No node → _INBOX or reject.</span></div>
+    <div class="step"><b>3 SCORE</b><span>effort-scorer: A/H/S/C/V → model + scaffolding + escalate-if.</span></div>
+    <div class="step"><b>4 ROUTE</b><span>Office path → which skills load, which connectors allowed, which gates apply.</span></div>
+    <div class="step"><b>5 LOAD</b><span>Context pack: node_get, relevant vault files, the skill(s). Bounded; compact if over.</span></div>
+    <div class="step"><b>6 REACH</b><span>Connectors only from the path's allowlist, underneath the router.</span></div>
+    <div class="step"><b>7 RUN</b><span>Execute. Reversible → proceed. Irreversible → stop-and-flag gate.</span></div>
+    <div class="step"><b>8 VERIFY</b><span>Adversarial pass sized by stakes score. Proof = graph movement or acceptance criteria met.</span></div>
+    <div class="step"><b>9 HARVEST</b><span>Write back: vault summary, verdict on the node, run-log row.</span></div>
+  </div>
+  <div class="rulebox"><b>No orphan actions.</b> Step 2 extends the graph's "no orphan opinions" rule
+  from verdicts to work itself. A task that ladders to nothing is either a genuinely new idea
+  (capture in <code>_INBOX/capture.md</code>, ladder later) or busywork (decline). External/reservoir
+  work is the one exception: it ladders to the vault (<code>50-PROFESSIONAL</code>), not the graph.</div>
+  <div class="rulebox amber"><b>RETAIN guard.</b> Nodes under a RETAIN verdict don't spawn work —
+  the router may only route <em>protection</em> (regression checks) at them, never "improvements".
+  41 of the 76 open verdicts are RETAIN; without this guard the router drifts into polishing what works.</div>
+</section>
+
+<section>
+  <div class="snum">02 · ROUTING TABLE</div>
+  <h2>Six offices = six paths</h2>
+  <p class="dim">Goal-office owns the node being served; the path sets skills, reach, and gates.
+  A media task serving <code>lever.breadth</code> is <em>owned</em> by Operations but <em>executes</em>
+  on the builder path — ownership and execution are separate columns on the run-log row.</p>
+  <table>
+    <tr><th>Path</th><th>Routes when</th><th>Skills loaded</th><th>Reach (connectors)</th><th>Gate</th></tr>
+    <tr><td><b>Bridge</b></td><td>Strategy, synthesis, cross-office calls</td><td>long-horizon-planner · adversarial-reviewer</td><td>Circle HQ</td><td>Decisions logged to vault, always</td></tr>
+    <tr><td><b>Operations</b></td><td>Retention, content, funnel, growth</td><td>activation-funnel-modeler · kinetik-recommender · arganta-workflow</td><td>Circle HQ · Firecrawl</td><td class="warn">Funnel conclusions need live-badged data — never model on simulated numbers</td></tr>
+    <tr><td><b>Technology / builder</b></td><td>Code, instrumentation, design, media pipeline</td><td>instrumentation-wiring · subagent-orchestrator · arganta-design-system · arganta-gsap-cinematic · arganta-mcp-connector</td><td>GitHub · Supabase · Higgsfield · Three.js</td><td class="gate">Irreversible changes (migrations, deletions) → human</td></tr>
+    <tr><td><b>Treasury</b></td><td>Pricing, unit economics, valuation</td><td>financial/scale model tools</td><td>Circle HQ</td><td class="gate">No real spend, ever, without human sign-off</td></tr>
+    <tr><td><b>Legal</b></td><td>UGC, consent, IP — and as a CROSS-CUTTING VETO</td><td>(register upkeep)</td><td>Circle HQ</td><td class="gate">Open hold on a target node blocks any monetize/publish run at it</td></tr>
+    <tr><td><b>Guild (CAPO)</b></td><td>The router's own health</td><td>effort-scorer (calibration)</td><td>run-log</td><td>Reviews scorer misses weekly</td></tr>
+  </table>
+  <p class="dim">Domain/reservoir path (decline-curve-forecaster, reservoir-viz-standard) sits outside
+  the office table — routes by topic, ladders to career thread, never touches product connectors.</p>
+</section>
+
+<section>
+  <div class="snum">03 · SCORING & ESCALATION</div>
+  <h2>The scorer is the personality; escalation is observable</h2>
+  <p>Step 3 uses <code>new-skills/effort-scorer.md</code> (thresholds DRAFT — uncalibrated until ~20
+  logged runs). The router adds three hard escalation triggers that override any score:</p>
+  <ul>
+    <li><b>Frame-guessing:</b> the executing model is inventing the frame rather than filling one → one tier up. This is the ambiguity ceiling; scaffolding can't buy it.</li>
+    <li><b>Two failed verifies</b> on the same task → one tier up or human. Never three attempts at the same tier.</li>
+    <li><b>Stakes=2 with verification=2</b> → top tier or human, regardless of total.</li>
+  </ul>
+  <div class="rulebox">Every scoring — hit or miss — is a run-log row. The Guild path reviews the log
+  weekly: which task types were over-provisioned (Fable effort on captions) or under-provisioned
+  (Sonnet guessing at frames). That review is what turns draft thresholds into calibrated ones.</div>
+</section>
+
+<section>
+  <div class="snum">04 · STATE & TELEMETRY</div>
+  <h2>The run-log — one row per loop</h2>
+  <table>
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td><code>run_id · ts</code></td><td>Identity + timestamp</td></tr>
+    <tr><td><code>request</code></td><td>The one-line intake</td></tr>
+    <tr><td><code>node · goal_office · exec_path</code></td><td>The ladder (ownership vs execution)</td></tr>
+    <tr><td><code>score</code></td><td>A_H_S_C_V = total</td></tr>
+    <tr><td><code>model · skills · connectors</code></td><td>What actually ran</td></tr>
+    <tr><td><code>outcome · verify</code></td><td>shipped / partial / failed · pass / fail + what the adversarial pass found</td></tr>
+    <tr><td><code>graph_moved</code></td><td>Did provenance/health change on a fresh pull? (the only "done" proof)</td></tr>
+    <tr><td><code>cost_est</code></td><td>Rough token/credit spend</td></tr>
+  </table>
+  <p>Phase 0 home: <code>vault/40-ROADMAP/router-log.md</code> (append-only). Phase 1 home: a Supabase
+  table the Bridge exposes under the Guild office — <b>which is exactly what upgrades the CAPO's
+  <code>agent_roi</code> SLA from placeholder to live.</b> The router instruments itself first.</p>
+</section>
+
+<section>
+  <div class="snum">05 · EXISTS vs MISSING</div>
+  <h2>Honest inventory (no rounding up)</h2>
+  <h3>Exists today</h3>
+  <ul>
+    <li>Bridge MCP read tools (brief, reports, node_get, verdicts, models) — <span class="warn">caveat: deployment self-describes as read-only seed graph; confirm production endpoint (RECON §9.1)</span></li>
+    <li>13 skills + 2 drafts (instrumentation-wiring, effort-scorer) · vault skeleton (9 files still TO FILL) · connectors: Circle HQ, Drive/Gmail/Calendar, Scholar, Three.js; Firecrawl/Higgsfield verified-not-wired</li>
+  </ul>
+  <h3>Missing (build order)</h3>
+  <table>
+    <tr><th>Phase</th><th>Deliverable</th><th>Owner</th><th>Unblocks</th></tr>
+    <tr><td><b>P0</b></td><td>Router as protocol: <code>new-skills/hq-router.md</code> + vault router-log. Run 20 loops manually.</td><td>Sonnet writes, Aldyth runs</td><td>Everything — zero infra needed</td></tr>
+    <tr><td><b>P1</b></td><td>GitHub + Supabase connectors; run-log → Supabase; Bridge exposes it (Guild)</td><td>Sonnet</td><td>agent_roi SLA live · repo-aware runs</td></tr>
+    <tr><td><b>P2</b></td><td>Graph WRITE path: resolve verdicts, move provenance from ingested events</td><td>Sonnet + Aldyth (schema)</td><td>The resolve loop — 76 verdicts currently frozen at "proposed"</td></tr>
+    <tr><td><b>P3</b></td><td>Scheduled autonomous loops (daily Orient/Route/Harvest/Verify) with all gates armed</td><td>Opus designs guardrails</td><td>The actual "super agent"</td></tr>
+  </table>
+  <div class="rulebox red"><b>P3 precondition, non-negotiable:</b> no scheduled autonomous run until
+  (a) the scorer is calibrated from P0 logs, (b) Legal veto + Treasury spend gate + irreversibility
+  gate are enforced in the write path itself, not in prompt text.</div>
+</section>
+
+<section>
+  <div class="snum">06 · ADVERSARIAL PASS ON THIS SPEC</div>
+  <h2>What a skeptic should poke at</h2>
+  <ul>
+    <li><b>Seed-graph risk propagates:</b> if the Bridge serves seed data, the router would ladder real work to fictional state. Confirming the endpoint is P0-blocking for graph-laddered runs.</li>
+    <li><b>The loop has 9 steps and one user.</b> Real risk it's too heavy for small tasks — mitigation: score total ≤3 collapses steps 4–6 into defaults (one-line log row still required). If even that gets skipped in practice, the protocol has failed the usability test and should shrink, not be enforced harder.</li>
+    <li><b>Ownership/execution split is #inferred</b> — reasoned from the handoff's "media → builder path", not from anything Aldyth said explicitly. Cheap to change; decide at P0.</li>
+    <li><b>Nothing here is validated:</b> zero loops have run. This spec earns trust the same way signals do — by its provenance moving from <code>placeholder</code> (today) to <code>live</code> (20 logged runs).</li>
+  </ul>
+</section>
+
+<footer>ORCHESTRATION SPEC · HQ-ROUTER-01 · written on Fable, July 7 2026 · rides on Sonnet from July 8</footer>
+</div></body>
+</html>

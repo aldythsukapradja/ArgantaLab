@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault'
+export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 export type Theme = 'light' | 'dark'
@@ -12,7 +12,7 @@ const SURFACE_LABEL: Record<SurfaceId, string> = {
   home: 'Home', portfolio: 'Portfolio', data: 'Data', growth: 'Growth',
   content: 'Learn Builder', game: 'Game Builder', app: 'App Builder',
   agents: 'Agent Builder', broadcast: 'Content Builder', command: 'Command',
-  pixel: 'Pixel Vault', vault: 'HQ Vault',
+  pixel: 'Pixel Vault', vault: 'HQ Vault', architecture: 'Architecture',
 }
 export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 

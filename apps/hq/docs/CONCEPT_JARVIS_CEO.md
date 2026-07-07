@@ -108,6 +108,22 @@ P1 shipped a minimal orb; the locked direction is richer: a **grounded AI-Core C
 multi-ring radar dials) surrounded by **real-data panels**, a bottom control bar, **light + dark +
 responsive**, and a **GSAP animated background** (drifting data-grid + particle drift toward the core).
 
+**P1.6 review — orb rebuild (locked after seeing it live):** the SVG node-graph read as a *sparse
+constellation*, not a reactor; top had dead whitespace; badges floated orphaned; mobile had a stuck
+tooltip + cut-off panel. Decisions: **(a) keep LIGHT default** — the orb must read on white via a
+**bright saturated core + crisp dense linework** (not glow, which dies on white); **(b) rebuild the orb
+in React-Three-Fiber** (3D core) — deps `@react-three/fiber` + `three` + `drei` + `postprocessing`
+(subtle bloom tuned for light). Reactor spec: bright blue→white 3D core · **10–14 crisp concentric
+rings** (varied weight, some dashed/segmented) · **graduated tick-bezel** (radar marks) · rotating
+segments + sweep · neural nodes as a *faint inner web behind* the rings. Layout: orb bigger + pulled up
+(kill the top gap), **badges hug the orb** (capacity/integrity), tighter vertical rhythm. Mobile: orb
+fills first fold, **tooltips off**, core-output out of the way, panels as a clean scroll/sheet.
+Perf: one WebGL canvas · instanced points · reduced-motion/mobile → CSS lite fallback · pause offscreen.
+**What already works (keep):** real data grounding (Circles/Members/North-Star/D1/AARRR/activity-mix all
+live), clean panels, recharts, the orb-center/panels/bottom-bar skeleton. **Verification caveat:** the
+headless preview is 0×0 (no screenshots) — the 3D reactor needs the founder's eyes to tune (build →
+review → adjust loop), not one blind shot.
+
 **Fixes from P1 review (locked):**
 - **One orb only** — hide the floating `AgentOrb` FAB on `home`; the center mic *is* the entry point.
 - **Chat opens in the MIDDLE** — clicking the mic opens a **centered** conversation panel over the orb

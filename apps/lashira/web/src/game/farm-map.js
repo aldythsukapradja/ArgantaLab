@@ -224,10 +224,21 @@ function drawNamedOverride(ctx, art, key, footX, footY, w, h) {
   return drawOverride(ctx, art, key, footX - w / 2, footY - h, w, h);
 }
 
-export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}) {
+export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}, squash = 0) {
   // Chickens are noticeably smaller than cows/sheep.
   const [aw, ah] = species === 'chicken' ? [22, 24] : [50, 42];
-  if (drawNamedOverride(ctx, art, `lashira.animal.${species}`, footX, footY + 1, aw, ah)) return;
+  const img = art?.[`lashira.animal.${species}`];
+  if (img && img.naturalWidth > 0) {
+    // face movement direction (sheet art faces right) + a squash-stretch for the
+    // walk bounce (squash 0..1 → wider/flatter).
+    const flip = facing === 'West' ? -1 : 1;
+    const sw = aw * (1 + squash * 0.12), sh = ah * (1 - squash * 0.12);
+    ctx.save(); ctx.imageSmoothingEnabled = false;
+    ctx.translate(footX, footY + 1); ctx.scale(flip, 1);
+    ctx.drawImage(img, -sw / 2, -sh, sw, sh);
+    ctx.restore();
+    return;
+  }
   const dir = facing === 'West' ? -1 : 1;
   const step = frame % 2;
   ctx.save(); ctx.translate(footX, footY); ctx.scale(dir, 1); ctx.imageSmoothingEnabled = false;

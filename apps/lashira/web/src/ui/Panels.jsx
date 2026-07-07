@@ -1,6 +1,6 @@
 // Slide-up panels: Shop, Barn, Kin helpers, Home. Data-driven from the catalogs.
 import { CROPS } from '../data/crops.js';
-import { SPECIES } from '../data/livestock.js';
+import { SPECIES, animalGoodReady, animalGoodFrac } from '../data/livestock.js';
 import { KIN_TASKS } from '../data/kins.js';
 
 export function Panels({ panel, snap, game, onClose }) {
@@ -108,28 +108,28 @@ function Shop({ snap, game, onClose }) {
 }
 
 function Barn({ snap, game, onClose }) {
+  const now = Date.now();
   return (
     <>
-      <Head title="🐄 Barn & Coop" sub="Feed daily → collect produce next morning" onClose={onClose} />
-      <div style={{ marginBottom: 10 }}>
-        <button className="rbtn" onClick={() => game.feedAll()}>🌾 Feed all animals</button>
-      </div>
+      <Head title="🐄 Barn & Coop" sub="Feed an animal → its good is ready a bit later (tap it on the farm too)" onClose={onClose} />
       {snap.livestock.map((a) => {
         const sp = SPECIES[a.species];
-        const hearts = '❤'.repeat(Math.max(1, Math.round(a.affection / 20)));
+        const hearts = '❤'.repeat(Math.max(1, Math.round((a.affection || 0) / 20)));
+        const ready = animalGoodReady(a, now);
+        const frac = animalGoodFrac(a, now);
+        const status = ready ? `${sp.produceName} ready ${sp.produceEmoji}` : a.fedAt ? `${Math.round(frac * 100)}% → ${sp.produceEmoji}` : 'hungry';
         return (
           <div className="row" key={a.id}>
             <div className="ico">{sp.emoji}</div>
             <div className="grow">
               <div className="name">{a.name} <span className="meta">the {sp.name}</span></div>
-              <div className="meta">
-                <span className="hearts">{hearts}</span> · {a.fed ? 'fed ✓' : 'hungry'} ·{' '}
-                {a.produce ? `${sp.produceName} ready ${sp.produceEmoji}` : 'no produce yet'}
-              </div>
+              <div className="meta"><span className="hearts">{hearts}</span> · {status}</div>
             </div>
-            {a.produce
-              ? <button className="rbtn" onClick={() => game.collectProduce(a.id)}>Collect</button>
-              : <button className="rbtn ghost" onClick={() => game.petAnimal(a.id)}>Pet ❤</button>}
+            {ready
+              ? <button className="rbtn" onClick={() => game.collectAnimal(a.id)}>Collect {sp.produceEmoji}</button>
+              : a.fedAt
+                ? <button className="rbtn ghost" onClick={() => game.petAnimal(a.id)}>Pet ❤</button>
+                : <button className="rbtn" onClick={() => game.feedAnimal(a.id)}>🌾 Feed</button>}
           </div>
         );
       })}

@@ -16,11 +16,13 @@ import { Command } from '../surfaces/command/Command'
 import { Pixel } from '../surfaces/pixel/Pixel'
 import { Vault } from '../surfaces/Vault'
 import { Landing } from '../surfaces/Landing'
+import { Architecture } from '../surfaces/Architecture'
 
 function Surface() {
   const { surface } = useHQ()
   switch (surface) {
     case 'home': return <Landing />
+    case 'architecture': return <Architecture />
     case 'data': return <Data />
     case 'growth': return <Growth />
     case 'portfolio': return <Portfolio />
@@ -38,7 +40,7 @@ function Surface() {
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   const { surface } = useHQ()
   const wide = surface === 'game' || surface === 'app'
-  const full = surface === 'vault' // Vault runs edge-to-edge as its own workspace
+  const full = surface === 'vault' || surface === 'architecture' // edge-to-edge workspaces
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button

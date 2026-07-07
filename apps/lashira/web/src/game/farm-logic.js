@@ -3,7 +3,7 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropGrowthFrac, cropIsRipe, HYDRATION_MS } from '../data/crops.js';
-import { SPECIES, STARTER_LIVESTOCK } from '../data/livestock.js';
+import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 import { loadFarmState, saveFarmState } from './farm-save.js';
@@ -69,7 +69,7 @@ export class FarmLogic {
       seeds: defaultSeeds(),
       produce: {},
       plots: {},
-      livestock: STARTER_LIVESTOCK.map((a, i) => ({ id: 'ls_' + i, species: a.species, name: a.name, affection: 40, fed: false, produce: false })),
+      livestock: STARTER_LIVESTOCK.map((a) => ({ ...a })),
       kins: STARTER_KINS.map((k) => ({ ...k })),
       kinTasks: {},
     };
@@ -443,24 +443,42 @@ export class FarmLogic {
     return { id: pid, name: pid, icon: '📦', sell: 10 };
   }
 
-  feedAll() {
-    let fed = 0; for (const a of this.state.livestock) if (!a.fed) { a.fed = true; fed++; }
-    if (fed) { this._bump(); this._intent({ t: 'livestock', livestock: this.state.livestock.map((a) => ({ ...a })) }); }
-    this.flash(fed ? 'Fed ' + fed + ' animal' + (fed > 1 ? 's' : '') : 'All already fed'); this.save(); this.emit();
+  _syncLivestock() { this._intent({ t: 'livestock', livestock: this.state.livestock.map((x) => ({ ...x })) }); }
+
+  // CONTEXTUAL tap on an animal: collect a ready good → else feed → else pet.
+  tapAnimal(id) {
+    const a = this.state.livestock.find((x) => x.id === id);
+    if (!a) return;
+    if (animalGoodReady(a)) return this.collectAnimal(id);
+    if (!a.fedAt) return this.feedAnimal(id);
+    return this.petAnimal(id);
+  }
+  feedAnimal(id) {
+    const a = this.state.livestock.find((x) => x.id === id);
+    if (!a) return;
+    if (a.fedAt) { this.flash(a.name + ' is already fed'); return; }
+    if (!this._spend(1)) return;
+    a.fedAt = Date.now();
+    this._bump(); this._syncLivestock();
+    const sp = SPECIES[a.species];
+    this.flash('Fed ' + a.name + ' — ' + sp.produceEmoji + ' soon'); this.save(); this.emit();
   }
   petAnimal(id) {
     const a = this.state.livestock.find((x) => x.id === id);
     if (!a) return;
-    a.affection = Math.min(100, a.affection + 5);
-    this._bump();
-    this._intent({ t: 'livestock', livestock: this.state.livestock.map((x) => ({ ...x })) });
-    this.flash('❤ ' + a.name); this.save(); this.emit();
+    if (!this._spend(1)) return;
+    a.affection = Math.min(100, (a.affection || 0) + 5);
+    this._bump(); this._syncLivestock();
+    this.flash('❤ ' + a.name + ' (' + a.affection + ')'); this.save(); this.emit();
   }
-  collectProduce(id) {
-    const a = this.state.livestock.find((x) => x.id === id); if (!a || !a.produce) return;
-    const sp = SPECIES[a.species]; this.state.produce[sp.produce] = (this.state.produce[sp.produce] || 0) + 1; a.produce = false;
-    this._bump();
-    this._intent({ t: 'livestock', livestock: this.state.livestock.map((x) => ({ ...x })) });
+  collectAnimal(id) {
+    const a = this.state.livestock.find((x) => x.id === id);
+    if (!a || !animalGoodReady(a)) return;
+    if (!this._spend(1)) return;
+    const sp = SPECIES[a.species];
+    this.state.produce[sp.produce] = (this.state.produce[sp.produce] || 0) + 1;
+    a.fedAt = null; // needs feeding again for the next good
+    this._bump(); this._syncLivestock();
     this._intent({ t: 'stock', produce: { [sp.produce]: this.state.produce[sp.produce] } });
     this.flash('Collected ' + sp.produceName + ' ' + sp.produceEmoji); this.save(); this.emit();
   }
