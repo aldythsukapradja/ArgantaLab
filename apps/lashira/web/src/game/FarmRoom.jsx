@@ -467,7 +467,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const p = g.player;
     if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = performance.now(); }
     const [tx, ty] = frontTile();
-    logicRef.current.actionAt(tx, ty);
+    // Contextual (same as tapping the land): harvest ripe → till → plant → water.
+    logicRef.current.tapAt(tx, ty);
   }
   function doSleep() { logicRef.current?.sleep(); }
   function toggleMount() {

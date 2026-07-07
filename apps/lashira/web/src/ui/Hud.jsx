@@ -12,11 +12,6 @@ import { IconHeart, IconMana, IconMount } from '../components/HudIcons.jsx';
 import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
 
-const TOOLS = [
-  { id: 'hoe', icon: '⛏', label: 'Till' },
-  { id: 'seed', icon: '🌰', label: 'Plant' },
-  { id: 'can', icon: '💧', label: 'Water' },
-];
 const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
 const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
@@ -61,18 +56,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
   const energyPct = Math.max(0, Math.min(100, (snap.stamina / Math.max(1, snap.maxStamina)) * 100));
   const selectedCrop = CROPS[snap.selectedSeed] || CROPS.turnip;
   const selectedSeedCount = Number(snap.seeds?.[selectedCrop.id] || 0);
-  const activeTool = TOOLS.find((t) => t.id === snap.tool);
-  const useIcon = snap.tool === 'seed' ? selectedCrop.emoji : (activeTool?.icon || '⤵');
   const seedRows = Object.values(CROPS);
-  const setTool = (id) => {
-    if (id === 'seed') {
-      game.setTool('seed');
-      setShowSeeds((v) => !v);
-    } else {
-      setShowSeeds(false);
-      game.setTool(id);
-    }
-  };
   const pickSeed = (id) => {
     game.setSeed(id);
     setShowSeeds(false);
@@ -126,10 +110,10 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
         <div className="hero-note">Placeholder farmer — build your hero in <b>Kingdom Heroes</b> and it appears here.</div>
       )}
 
-      {/* action cluster — attack-circle/skill-circle markup + arc positions
-          copied AS IS from Kingdom Heroes. Slot meaning is farm-specific:
-          3 numbered tools (Till/Plant/Water), Sleep + Mount as the two util
-          orbs, and the big attack-circle applies the selected tool. */}
+      {/* action cluster — attack-circle/skill-circle markup + arc positions from
+          Kingdom Heroes. Farming is now TAP-ON-LAND (contextual harvest → till →
+          plant → water), so the cluster is slim: the big orb repeats that action
+          on the tile in front of you, and the ring is Seed-picker / Sleep / Mount. */}
       <div className="cluster">
         {showSeeds && (
           <div className="seed-fan" aria-label="seed inventory">
@@ -155,21 +139,17 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           </div>
         )}
         <div className="small-ring">
-          {TOOLS.map((t, i) => (
-            <button key={t.id} type="button" title={t.label}
-              className={'skill-circle' + (snap.tool === t.id ? ' active' : '')}
-              onClick={() => setTool(t.id)}>
-              <span>{t.id === 'seed' ? selectedCrop.emoji : t.icon}</span>
-              {t.id === 'seed' && <span className="tool-count">×{selectedSeedCount}</span>}
-              <span className="slot">{i + 1}</span>
-            </button>
-          ))}
+          <button type="button" title={`Seed: ${selectedCrop.name} ×${selectedSeedCount}`}
+            className={'skill-circle' + (showSeeds ? ' active' : '')}
+            onClick={() => setShowSeeds((v) => !v)}>
+            <span>{selectedCrop.emoji}</span>
+            <span className="tool-count">×{selectedSeedCount}</span>
+          </button>
           <button type="button" className="skill-circle util" onClick={onSleep} title="sleep">😴</button>
           <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
         </div>
-        <button type="button" className="attack-circle" onClick={onUse} aria-label="use tool">
-          <span>{useIcon}</span>
-          {snap.tool === 'seed' && <small>×{selectedSeedCount}</small>}
+        <button type="button" className="attack-circle" onClick={onUse} aria-label="work the tile in front of you" title="Harvest / till / plant / water the tile ahead — or just tap the land">
+          <span>👐</span>
         </button>
       </div>
 
