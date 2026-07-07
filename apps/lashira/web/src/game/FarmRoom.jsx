@@ -15,7 +15,7 @@ import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
 import { Hud } from '../ui/Hud.jsx';
 import { Panels } from '../ui/Panels.jsx';
-import { CROPS } from '../data/crops.js';
+import { CROPS, cropIsRipe } from '../data/crops.js';
 import { SPECIES, animalGoodReady } from '../data/livestock.js';
 
 const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South', ArrowLeft: 'West', a: 'West', ArrowRight: 'East', d: 'East' };
@@ -37,6 +37,15 @@ function borderAt(tx, ty) {
 
 function inField(tx, ty) {
   return tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1;
+}
+
+// Deterministic per-id seed (FNV-1a over the whole string) so every actor gets a
+// distinct RNG stream even when ids share a length (li_cow_0 … li_cow_4).
+function hashId(id) {
+  let h = 2166136261 >>> 0;
+  const s = String(id);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return (h || 1) >>> 0;
 }
 
 function nearestOpenNeighbor(g, center, from = center) {
@@ -547,7 +556,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
 
     function ensureActor(g, id, init) {
-      if (!g.actors.has(id)) g.actors.set(id, { id, from: [...init.tile], moveT: 1, moveStart: 0, facing: 'South', idleUntil: 0, seed: id.length * 997, ...init });
+      // Seed from the FULL id string (FNV-ish), not id.length — same-species ids
+      // (li_cow_0..4) are all the same length, so length-based seeds collided and
+      // every cow/sheep/chicken shared one RNG stream → they walked in lockstep.
+      if (!g.actors.has(id)) g.actors.set(id, { id, from: [...init.tile], moveT: 1, moveStart: 0, facing: 'South', idleUntil: 0, seed: hashId(id), ...init });
       return g.actors.get(id);
     }
     function syncWorldActors(g) {
@@ -625,10 +637,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       } else if (e.kind === 'kin' && e.kin?.task) {
         const plots = logicRef.current?.state?.plots || {};
         for (const [key, plot] of Object.entries(plots)) {
-          if (!plot?.tilled || !plot.cropId) continue;
+          if (!plot?.cropId) continue;
           const [tx, ty] = key.split(',').map(Number);
-          if (e.kin.task === 'water' && !plot.watered) { target = [tx, ty]; break; }
-          if (e.kin.task === 'harvest' && plot.growth >= (CROPS[plot.cropId]?.days || 999)) { target = [tx, ty]; break; }
+          const ripe = cropIsRipe(plot);
+          // water Kin fusses over growing crops; harvest Kin heads for ripe ones
+          if (e.kin.task === 'water' && !ripe) { target = [tx, ty]; break; }
+          if (e.kin.task === 'harvest' && ripe) { target = [tx, ty]; break; }
         }
       }
       const dirs = target

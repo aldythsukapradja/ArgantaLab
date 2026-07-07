@@ -22,18 +22,19 @@ export const HYDRATION_MS = 120000; // 2 min
 
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 // Growth fraction 0..1 — pure function of timestamps so every client computes the
-// SAME value (sync-free). `grown` = progress locked in at the last watering; since
-// then it keeps growing for up to HYDRATION_MS, then pauses until re-watered.
+// SAME value (sync-free). FarmVille model: once planted, a crop grows continuously
+// in real time until ripe — no watering gate (soil is always ready; pure tap-tap).
 export function cropGrowthFrac(plot, now = Date.now()) {
   if (!plot?.cropId) return 0;
   const crop = CROPS[plot.cropId]; if (!crop) return 0;
   if (plot.plantedAt == null && plot.growth != null) return clamp01(plot.growth / crop.days); // legacy save
-  const since = Math.min(Math.max(0, now - (plot.wateredAt ?? plot.plantedAt ?? now)), HYDRATION_MS);
-  return clamp01(((plot.grown || 0) + since) / crop.growMs);
+  return clamp01((now - plot.plantedAt) / crop.growMs);
 }
-// Hydration 0..1 — decays since last watering; 0 = thirsty (growth paused).
+// Kept only for legacy saves that still carry wateredAt; the live loop never
+// waters now, so an un-watered planted crop reads as fully hydrated.
 export function cropHydration(plot, now = Date.now()) {
-  if (!plot?.cropId || plot.wateredAt == null) return 0;
+  if (!plot?.cropId) return 0;
+  if (plot.wateredAt == null) return 1;
   return clamp01(1 - (now - plot.wateredAt) / HYDRATION_MS);
 }
 export function cropIsRipe(plot, now = Date.now()) { return cropGrowthFrac(plot, now) >= 1; }
