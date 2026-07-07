@@ -965,7 +965,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         {snap && (
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
-              zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId} />
+              zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
+              getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
         )}

@@ -24,6 +24,7 @@ function noopPresence() {
   return {
     update: () => {}, sendIntent: () => {}, sendSnapshot: () => {},
     requestState: () => {}, leave: () => {}, sessionId: null,
+    debug: () => null,
   };
 }
 
@@ -37,6 +38,8 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
   let subscribed = false;
   let closed = false;
   let pendingRequest = false;
+  let lastStatus = 'init';
+  let lastPeerEventAt = 0; // when we last HEARD anything from a peer
   const peers = new Map(); // userId -> latest winning meta/broadcast
 
   let current = {
@@ -67,6 +70,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
   channel.on('presence', { event: 'sync' }, () => {
     if (closed) return;
     const winners = winningPeers(channel.presenceState(), selfId);
+    if (winners.length) lastPeerEventAt = Date.now();
     const liveIds = new Set(winners.map((w) => String(w.id)));
     for (const id of [...peers.keys()]) if (!liveIds.has(id)) peers.delete(id); // drop leavers
     for (const w of winners) {
@@ -78,6 +82,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
   });
   channel.on('broadcast', { event: 'player-state' }, ({ payload }) => {
     if (closed || !payload?.id || payload.id === selfId) return;
+    lastPeerEventAt = Date.now();
     peers.set(String(payload.id), payload);
     onPeers([...peers.values()]);
   });
@@ -95,6 +100,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
   });
 
   channel.subscribe((status) => {
+    lastStatus = status;
     if (closed) return;
     if (status === 'SUBSCRIBED') {
       subscribed = true;
@@ -112,6 +118,21 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
 
   return {
     sessionId,
+    // Live wire diagnostics for the Settings "Circle sync" card — makes the
+    // channel's true state visible in the UI so a field failure pinpoints
+    // itself (join never happened vs died later vs joined-but-silent).
+    debug() {
+      let socket = '?';
+      try { socket = supabase.realtime?.connectionState?.() || '?'; } catch { /* n/a */ }
+      return {
+        session: sessionId.slice(0, 6),
+        status: lastStatus,
+        subscribed,
+        socket,
+        peers: peers.size,
+        lastPeerAgoS: lastPeerEventAt ? Math.round((Date.now() - lastPeerEventAt) / 1000) : -1,
+      };
+    },
     update(patch = {}) {
       if (closed) return;
       current = { ...current, ...patch, sessionId, bootTs, updatedAt: Date.now() };

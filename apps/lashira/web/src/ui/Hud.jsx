@@ -40,9 +40,20 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence, circleId }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence, circleId, getSyncDebug }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
+  // Live channel diagnostics, refreshed while Settings is open — a field
+  // screenshot of this line pinpoints WHERE sync dies (never joined / died
+  // later / joined but hearing nothing).
+  const [syncDebug, setSyncDebug] = useState(null);
+  useEffect(() => {
+    if (!showSettings || !getSyncDebug) return undefined;
+    const tick = () => setSyncDebug(getSyncDebug());
+    tick();
+    const h = setInterval(tick, 1000);
+    return () => clearInterval(h);
+  }, [showSettings, getSyncDebug]);
   const rank = computeRank(snap.xp);
   const maxHp = Number(hero?.stats?.maxHp || 100);
   const circleName = useCircleName(circleId);
@@ -181,6 +192,11 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                     {'💾 ' + (snap.saveSource || 'unknown')}
                   </span>
                 </div>
+                {syncDebug && (
+                  <code className="sync-debug" title="live realtime channel state">
+                    ch:{syncDebug.status}{syncDebug.subscribed ? '✓' : '✗'} · ws:{syncDebug.socket} · peers:{syncDebug.peers} · heard:{syncDebug.lastPeerAgoS < 0 ? 'never' : syncDebug.lastPeerAgoS + 's ago'} · s:{syncDebug.session}
+                  </code>
+                )}
               </section>
               <section className="set-card">
                 <h4>Diamonds</h4>

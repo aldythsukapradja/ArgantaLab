@@ -352,6 +352,11 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--kin-c, #8b5cf6) 20%, transparent);
 }
 .kin-chip b { font-size: 10px; }
+.sync-debug {
+  display: block; margin-top: 8px; padding: 5px 8px; border-radius: 8px;
+  font-family: ui-monospace, Consolas, monospace; font-size: 9.5px; line-height: 1.4;
+  color: #5c6478; background: rgba(24, 32, 52, 0.06); word-break: break-all;
+}
 
 /* New Day splash — the shared calendar tick, visible on EVERY circle member's
    screen at the same moment (sleeper, peers, late joiners). */
