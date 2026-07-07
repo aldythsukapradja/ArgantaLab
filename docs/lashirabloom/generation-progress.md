@@ -41,8 +41,17 @@ Everything else sits in `lib/` ready to wire when the new map/mechanics land.
 - **Optional extras not generated:** emote bubbles ×6, NPC portraits ×8, crop stages 0–2
   (18), animated-object frames (windmill/water/torch), dungeon floor tileset, a few props.
   The pipeline is proven — these can be generated on request.
-- **Big build (separate effort):** the full 60×48 multi-zone map + mechanics (mining/
-  dungeon/PvP/fishing/upgrades) — not attempted unsupervised; art is ready for it.
+- **Map rebuilt (DONE):** `farm-map.js` is now the 60×48 castle-center layout — castle
+  dead-center, farm NW, animal pens NE, garden+greenhouse W, mining+dungeon gate +
+  forest E, fishing lake SW, battleground+PvP walled south. All 82 assets baked in via
+  `PLACEMENTS`. Verified in guest-mode preview; `vite build` passes.
+- **Still open after the rebuild:**
+  - Zone ground is flat-color tinted (grass/soil/water/gray/sand) + hero art on top —
+    the 5 Wang terrain tilesets are NOT autotiled in yet (needs corner-autotile code).
+  - Fences use one horizontal sprite for all sides (busy on vertical pen borders) —
+    add vertical/corner variants.
+  - New-zone GAMEPLAY (real mining/dungeon/PvP/fishing) not wired — only the FarmVille
+    farm loop is live; the layout + art are in place for the mechanics to hook into.
 
 ## How to preview a different castle
 Edit `farm-art-bundled.js` line for `lashira.building.house` → `lib/castle_opt2_fairytale.png`
