@@ -1,7 +1,7 @@
-# CONCEPT — Jarvis-CEO: Circle HQ Twin Brain
+# CONCEPT — CEO Orb: Circle HQ Twin Brain
 
 Status: **Concept locked (P0)** · 2026-07-07 · UI/UX-first, deterministic-first, LLM-portable.
-This is the durable concept doc for the Jarvis-CEO landing + twin-brain program. The living
+This is the durable concept doc for the CEO Orb landing + twin-brain program. The living
 implementation plan lives in the session plan file; this doc is the committed reference.
 
 ---
@@ -12,7 +12,7 @@ Circle HQ (`apps/hq`) is already the *body* of a founder twin brain — it just 
 It has: a 5-kind chart system, 6 deterministic scenario "commands," a 27-agent roster under 6 C-level
 offices, a full Obsidian-style Vault (local-only), and light/dark theming.
 
-**Jarvis-CEO** is the missing membrane: a cinematic, orb-first landing that unifies all of it into one
+**The CEO Orb** is the missing membrane: a cinematic, orb-first landing that unifies all of it into one
 conversational companion. You open HQ and you're looking at a living orb that greets you, briefs you,
 and blooms the right diagnostic on command — the rail/surfaces become destinations the orb flies you
 to, not the front door.
@@ -82,7 +82,7 @@ RPC → a `ChartData` → bloomed as an arc-panel (optionally `go()/goOffice()` 
 | Library | Role |
 |---|---|
 | **Apache ECharts** (+ `echarts-gl`) | Workhorse: line/bars/donut → gauge/radar/sunburst/sankey/treemap/calendar-heatmap. Canvas-fast, animated, tree-shakeable. |
-| **D3.js** | Bespoke radial arc-panels + reticles (the Jarvis look). |
+| **D3.js** | Bespoke radial arc-panels + reticles (the cinematic HUD look). |
 | **react-globe.gl** (three-globe/Three.js) | The animated globe — coordinate points + rising arcs. Same Three ecosystem as the orb. |
 | deck.gl *(later)* | Only if geospatial data outgrows react-globe.gl. |
 
@@ -183,7 +183,7 @@ drawers + an ECharts sankey of data→agent→UI flow.
 
 | # | Layer | Owner | NOW | NEXT |
 |---|---|---|---|---|
-| ① | Visualization / UI | COO | ArgantaLab · KinetikCircle · Circle HQ · Landing · Kingdom · **LashiraBloom** | Jarvis-CEO orb landing · WebGL globe · ECharts/D3 · light+dark |
+| ① | Visualization / UI | COO | ArgantaLab · KinetikCircle · Circle HQ · Landing · Kingdom · **LashiraBloom** | CEO orb landing · WebGL globe · ECharts/D3 · light+dark |
 | ② | Agent | CAPO/CEO | 27-agent OS · 6 offices · CEO orchestrator · S→C→M→G (det) | LLM port (Haiku+Sonnet) · Vault write-back memory |
 | ③ | AI / ML *(mostly future)* | CTO | basic rules / Leitner | mastery adaptation · content-gen · recommendation · RCA |
 | ④ | Data | CTO | Postgres · Auth·RLS · operator RPCs · diamond_ledger · identity spine | materialized views · pg_cron · Vault tables · geo coords · `lashira_farm` |
@@ -199,7 +199,7 @@ The tab also renders a **node-and-edge flow diagram** (NVIDIA-RAG-blueprint styl
 
 1. **Simple** — the 5-layer stack with a single NOW⇄NEXT toggle (dashed = future).
 2. **Current** — the real today, all solid: apps → Supabase tables → operator RPCs → deterministic
-   agent → Jarvis orb. No RAG, no vector store.
+   agent → CEO orb. No RAG, no vector store.
 3. **Future full-scale** — the RAG blueprint: an *ingestion pipeline* (app events → stream/CDC →
    chunk/materialize → embeddings → Vector DB + Knowledge Graph; multimodal for Kinetik moments) and a
    *retrieval pipeline* (orb → guardrails → context manager → Vector-RAG + Graph-RAG → rerank → LLM →
