@@ -12,6 +12,7 @@ import { IconHeart, IconMana, IconMount } from '../components/HudIcons.jsx';
 import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
 import { ActionCluster } from '@arganta/combat/cluster';
+import { RewardToasts } from '@arganta/combat/reward';
 
 const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
@@ -66,6 +67,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
   return (
     <>
       {snap.toast && <div className="toasts"><div className="toast">{snap.toast}</div></div>}
+      <RewardToasts rewards={snap.rewards} />
 
       {/* top bar — the gear is the ONLY persistent chrome besides the card */}
       <div className="hud-top">

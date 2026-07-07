@@ -7,9 +7,9 @@ import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
 import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import {
-  makeMonster, resolveMelee, resolveSkill, damageMonster, tickMonsterState, monsterExpired,
-  skillTargets, skillDamage, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP,
-  normalizeSkills, canAffordSkill,
+  makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
+  tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect,
+  SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, canAffordSkill,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
@@ -18,6 +18,7 @@ import { hasActualKinArt } from './kin-sprite-image.jsx';
 import { joinFarmPresence } from './farm-presence.js';
 import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
+import { effects as loadEffects, effectSheetUrl, loadImage as loadEffectImage } from '../engine/data.js';
 import { Hud } from '../ui/Hud.jsx';
 import { Panels } from '../ui/Panels.jsx';
 import { CROPS, cropIsRipe } from '../data/crops.js';
@@ -44,15 +45,9 @@ function inField(tx, ty) {
   return tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1;
 }
 
-// The farm's 3 battle skills — resolved by the SHARED @arganta/combat rules, so
-// their damage/reach/aoe is edited in one place. `manaCost` here is spent from
-// the farm's STAMINA (chosen over a separate mana pool). Slash = single hard hit,
-// Quake = nova on all 4 neighbours, Bolt = a 3-tile line in front.
-const BATTLE_SKILLS = normalizeSkills([
-  { name: 'Slash', fx: 22, manaCost: 4, damage: 55, reach: 1 },
-  { name: 'Quake', fx: 1, manaCost: 8, damage: 34, aoe: 'adjacent' },
-  { name: 'Bolt', fx: 131, manaCost: 6, damage: 75, reach: 3 },
-]);
+// The farm's 3 battle skills = the SHARED slots (Bolt/Storm/Mend). Damage/heal
+// scale with level via skillPower; MP is spent from the farm's STAMINA.
+const BATTLE_SKILLS = SKILL_SLOTS;
 const ARENA_MONSTER_COUNT = 5; // how many roam the arena at once
 
 // Deterministic per-id seed (FNV-1a over the whole string) so every actor gets a
@@ -211,10 +206,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
     (async () => {
       await logic.ready;
-      const [bundledArt, dbArt, acquiredKins] = await Promise.all([
+      const [bundledArt, dbArt, acquiredKins, effectsAll] = await Promise.all([
         loadBundledArt(),
         loadFarmArtOverrides(),
         loadAcquiredKins(profile),
+        loadEffects().catch(() => ({})), // Kingdom spell-effect catalog (shared fx)
       ]);
       // Layer priority: DB override > bundled sheet art > procedural placeholder.
       const art = { ...bundledArt, ...dbArt };
@@ -247,6 +243,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         // stamina (skills spend stamina). fx = transient hit sparks for feedback.
         combat: prev?.combat || { on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, deadUntil: 0 },
         monsters: prev?.monsters || [], monsterSeed: 1, fx: prev?.fx || [], nextMonsterSpawn: 0,
+        effectsAll: effectsAll || {}, spellFx: prev?.spellFx || [],
       };
       // Live sync is intent-based: FarmLogic emits a tiny granular intent for
       // every local mutation, and the channel fans it out. UI updates ride the
@@ -608,15 +605,41 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     presenceCtrlRef.current?.sendIntent?.({ t: 'mob-hit', id: a.sourceId, dmg, by: presenceProfileId(profile) });
     return true;
   }
-  // Basic attack — the faced tile takes MELEE_DAMAGE (shared rule).
+  // Basic attack — always plays the weapon swing; deals MELEE_DAMAGE to the faced
+  // tile when in the arena. Outside the arena it's just the swing (nothing to hit).
   function doStrike() {
-    const g = G.current; if (!g || !g.combat.on) return;
+    const g = G.current; if (!g) return;
     playSwing(g);
+    if (!g.combat.on) return;
     const [tx, ty] = frontTile();
     hitTile(g, tx, ty, MELEE_DAMAGE);
   }
-  // Skill i — spends stamina (shared canAffordSkill), hits the skill's target tiles
-  // (shared skillTargets/skillDamage). All games share one skill-damage source.
+  // Play a skill's spell VFX (shared effect system) at a tile.
+  function castSpell(g, skill, atTile) {
+    if (!atTile) return;
+    spawnEffect(g.spellFx, g.effectsAll, skill.fx, atTile, (eff) => loadEffectImage(effectSheetUrl(eff)));
+  }
+  function nearestPeerMonster(g, now) {
+    let best = null, bd = Infinity; const p = g.player;
+    for (const a of g.peerWorldActors.values()) {
+      if (a.kind !== 'monster' || a.state === 'die') continue;
+      const [ax, ay] = actorTileAt(a, now);
+      const d = Math.abs(ax - p.tile[0]) + Math.abs(ay - p.tile[1]);
+      if (d < bd) { bd = d; best = a; }
+    }
+    return best;
+  }
+  // Hit a peer (host-owned) monster: optimistic flash + spell + mob-hit intent.
+  function peerHit(g, a, skill, dmg) {
+    if (!a) return false;
+    castSpell(g, skill, a.tile);
+    a.hp = Math.max(0, (a.hp || 0) - dmg);
+    presenceCtrlRef.current?.sendIntent?.({ t: 'mob-hit', id: a.sourceId, dmg, by: presenceProfileId(profile) });
+    return true;
+  }
+  // Skill i — Bolt (single), Storm (all), Mend (heal). MP = stamina; damage/heal
+  // scale with level via the shared skillPower. Damage still routes through the
+  // host referee (host applies; a non-host sends mob-hit intents).
   function doSkill(i) {
     const g = G.current; if (!g || !g.combat.on) return;
     const skill = BATTLE_SKILLS[i]; if (!skill) return;
@@ -626,11 +649,40 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     if (cost > 0 && !logicRef.current?.spendStamina(cost)) return;
     playSwing(g);
     const p = g.player;
-    const dmg = skillDamage(skill);
-    const tiles = skillTargets(skill, p.tile, DELTA[p.facing]);
-    let any = false;
-    for (const [tx, ty] of tiles) if (hitTile(g, tx, ty, dmg)) any = true;
-    if (!any) spark(g, ...frontTile());
+    const L = logicRef.current?._level?.() ?? 1;
+    const now = performance.now();
+
+    if (skill.type === 'heal') {
+      const healed = applyHeal(g.combat, skillPower(skill, L));
+      castSpell(g, skill, p.tile);
+      syncBattleState(g);
+      logicRef.current?.flash?.('Mend +' + healed + ' HP');
+      return;
+    }
+    const dmg = skillPower(skill, L);
+    const hostSelf = iAmHost(g);
+    if (skill.target === 'all') { // Storm — every monster
+      if (hostSelf) {
+        for (const h of resolveSkillAll(g.monsters, dmg, now)) {
+          castSpell(g, skill, h.monster.tile);
+          if (h.killed) logicRef.current?.rewardKill(h.monster.kind || 'a monster');
+        }
+      } else {
+        for (const a of [...g.peerWorldActors.values()]) {
+          if (a.kind === 'monster' && a.state !== 'die') peerHit(g, a, skill, dmg);
+        }
+      }
+      return;
+    }
+    // Bolt — single target (faced tile, else nearest)
+    if (hostSelf) {
+      const res = resolveSkillSingle(g.monsters, p.tile, DELTA[p.facing], dmg, now);
+      if (res) { castSpell(g, skill, res.monster.tile); if (res.killed) logicRef.current?.rewardKill(res.monster.kind || 'a monster'); }
+      else spark(g, ...frontTile());
+    } else {
+      const target = peerMonsterAt(g, ...frontTile()) || nearestPeerMonster(g, now);
+      if (!peerHit(g, target, skill, dmg)) spark(g, ...frontTile());
+    }
   }
 
   // ---------- keyboard ----------
@@ -640,11 +692,17 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function down(e) {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (DIR_BY_KEY[k]) { g.held.add(k); e.preventDefault(); }
-      else if (k === ' ' || k === 'e') { doUse(); e.preventDefault(); }
+      else if (k === ' ' || k === 'e') {
+        // In the crop field, Space works the land; ANYWHERE ELSE it's a hit (swing).
+        const gg = G.current;
+        if (gg && inField(gg.player.tile[0], gg.player.tile[1])) doUse();
+        else doStrike();
+        e.preventDefault();
+      }
       else if (k === 'r') toggleMount();
-      else if (k === '1') logicRef.current.setTool('hoe');
-      else if (k === '2') logicRef.current.setTool('seed');
-      else if (k === '3') logicRef.current.setTool('can');
+      else if (k === '1') doSkill(0);
+      else if (k === '2') doSkill(1);
+      else if (k === '3') doSkill(2);
     }
     function up(e) { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; g.held.delete(k); }
     window.addEventListener('keydown', down);
@@ -1186,6 +1244,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       }
       for (const label of labels) drawNameplate(ctx, label);
       for (const f of g.fx) drawSpark(ctx, f, now);
+      // shared spell VFX (skill effects) — kept while still animating
+      if (g.spellFx?.length) g.spellFx = g.spellFx.filter((f) => drawEffect(ctx, f, now, TILE));
       ctx.restore();
     }
     // A monster: procedural blob (art later) with facing, a hit flash, a death

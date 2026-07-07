@@ -8,7 +8,8 @@
   "module": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./cluster": "./src/cluster.jsx"
+    "./cluster": "./src/cluster.jsx",
+    "./reward": "./src/reward.jsx"
   },
   "sideEffects": false
 }

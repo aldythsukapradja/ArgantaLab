@@ -402,6 +402,34 @@ body {
 .toasts { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .toast { background: rgba(15,17,32,.92); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 
+/* ===== reward pill — the "you got something" card (icon disc + amount + label,
+   colour-coded, frosted glass + glow, spring pop then float-up-fade). Distinct
+   from the flat hint/error .toast above. ===== */
+.reward-stack { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); z-index: 23; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.reward-pill {
+  display: flex; align-items: center; gap: 11px; padding: 8px 16px 8px 8px;
+  border-radius: 16px; corner-shape: superellipse(1.8);
+  background: rgba(24,27,42,.62); backdrop-filter: blur(9px) saturate(1.2); -webkit-backdrop-filter: blur(9px) saturate(1.2);
+  border: 1.5px solid var(--rp-edge, #ffffff55);
+  box-shadow: 0 8px 22px -6px #000a, 0 0 20px -4px var(--rp-glow, #0000), inset 0 1px 0 #ffffff2e;
+  animation: reward-pop .34s cubic-bezier(.34,1.5,.5,1), reward-float 1.9s ease-in forwards;
+}
+.reward-disc {
+  width: 40px; height: 40px; flex: 0 0 auto; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center; font-size: 21px;
+  background: var(--rp-disc, #ffffff22); box-shadow: inset 0 -3px 8px #0003, inset 0 2px 4px #ffffff30;
+}
+.reward-body { display: flex; flex-direction: column; line-height: 1.1; }
+.reward-amt { font-size: 19px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px #0007; }
+.reward-label { font-size: 11.5px; font-style: normal; font-weight: 700; color: var(--rp-label, #ffffffcc); letter-spacing: .02em; }
+.rp-gold   { --rp-edge:#f4c25aa8; --rp-glow:#f0a83a80; --rp-disc:radial-gradient(circle at 38% 30%,#ffe6a6,#e79a24); --rp-label:#ffdfa4; }
+.rp-violet { --rp-edge:#b6a6f6a8; --rp-glow:#7d6cf680; --rp-disc:radial-gradient(circle at 38% 30%,#e5deff,#7d6cf6); --rp-label:#d8ccff; }
+.rp-green  { --rp-edge:#8fd07aa8; --rp-glow:#57c65a80; --rp-disc:radial-gradient(circle at 38% 30%,#d7f3c4,#5aa24a); --rp-label:#cdeeb6; }
+.rp-slate  { --rp-edge:#9fb0cca0; --rp-glow:#55627a66; --rp-disc:radial-gradient(circle at 38% 30%,#dbe2ee,#55627a); --rp-label:#cdd6ff; }
+@keyframes reward-pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes reward-float { 0%,62% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-16px); } }
+@media (prefers-reduced-motion: reduce) { .reward-pill { animation: reward-pop .2s ease, reward-float 1.9s linear forwards; } }
+
 /* ================= unit-frame + HP/MP bars — copied verbatim from Kingdom
    Heroes' "premium arena HUD (frosted white-grey glass)" block ================= */
 .unit-frame {

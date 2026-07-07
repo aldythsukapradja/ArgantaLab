@@ -3,6 +3,7 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe } from '../data/crops.js';
+import { killReward, killXp } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
@@ -40,6 +41,8 @@ export class FarmLogic {
     this.circleId = circleId;
     this.listeners = new Set();
     this.toast = null;
+    this.rewards = []; // transient reward pills (Diamonds/XP/produce) for the HUD
+    this._rid = 0;
     this.externalKins = [];
     this.externalKinsLoaded = false;
     // Kin loadout = which Kin ids this USER deploys onto the farm (max 6).
@@ -363,6 +366,7 @@ export class FarmLogic {
       guest: !!this.profile?.guest,
       saveSource: this.saveSource,
       toast: this.toast,
+      rewards: this.rewards || [],
       dayEvent: this.dayEvent || null,
     };
   }
@@ -384,12 +388,27 @@ export class FarmLogic {
   _spend(n) { if (this.state.stamina < n) { this.flash('Too tired — sleep to restore energy'); return false; } this.state.stamina -= n; return true; }
   // Battle: skills spend the farm's stamina (chosen over a separate mana pool).
   spendStamina(n) { if (!this._spend(n)) return false; this.save(); this.emit(); return true; }
-  // Battle: a monster kill pays out Diamonds (open economy — same for kids/adults).
-  rewardKill(name = 'a monster', diamonds = 3) {
-    this.state.diamonds = (Number(this.state.diamonds) || 0) + diamonds;
-    this.flash('Defeated ' + name + ' · +💎' + diamonds);
+  isKid() { return this.profile?.role === 'kid'; }
+  _level() { return this.profile?.level ?? (1 + Math.floor(Math.max(0, Number(this.state.xp) || 0) / 500)); }
+  // A transient reward pill for the HUD (Diamonds/XP/produce). Auto-expires.
+  pushReward(r) {
+    this.rewards = [...(this.rewards || []), { id: ++this._rid, at: Date.now(), ...r }].slice(-4);
+    this.emit();
+    clearTimeout(this._rewardTimer);
+    this._rewardTimer = setTimeout(() => { this.rewards = (this.rewards || []).filter((x) => Date.now() - x.at < 1900); this.emit(); }, 2000);
+  }
+  // Battle: a monster kill. ADULTS earn Diamonds + XP (level-scaled, shared
+  // killReward/killXp). KIDS earn NOTHING for now — they play/battle freely with
+  // no economy (so the son can test without spending or fearing loss).
+  rewardKill(name = 'a monster') {
+    if (this.isKid()) { this.pushReward({ icon: '⚔', amount: '✓', label: 'Defeated ' + name, tone: 'slate' }); return; }
+    const L = this._level();
+    const d = killReward(L), x = killXp(L);
+    this.state.diamonds = (Number(this.state.diamonds) || 0) + d;
+    this.state.xp = (Number(this.state.xp) || 0) + x;
+    this.pushReward({ icon: '💎', amount: '+' + d, label: 'Diamonds', tone: 'gold' });
+    this.pushReward({ icon: '⭐', amount: '+' + x, label: 'XP', tone: 'violet' });
     this.save(); this.emit();
-    return this.state.diamonds;
   }
 
   // CONTEXTUAL tap on a soil tile (FarmVille one-tap). The whole field is soil
@@ -470,8 +489,10 @@ export class FarmLogic {
     this._intent({ t: 'stock', produceReplace: {} });
     // Diamonds are PER-PLAYER (their own learning currency + local farm earnings)
     // — not synced across the circle. Only the produce clearing (above) syncs.
-    if (isKid && !FARM_OPEN_ECONOMY) { this.state.xp += 1; this.flash('Sold ' + items.join(' ') + ' · value 💎' + gain + ' · +1 XP'); }
-    else { this.state.diamonds += gain; this.flash('Sold ' + items.join(' ') + ' = 💎' + gain); }
+    // Kids play with NO economy for now (no Diamonds earned or spent); adults
+    // earn Diamonds from selling produce.
+    if (isKid) { this.flash('Sold ' + items.join(' ')); }
+    else { this.state.diamonds += gain; this.pushReward({ icon: '💎', amount: '+' + gain, label: 'Sold produce', tone: 'gold' }); }
     this.save(); this.emit();
   }
   _animalSell(pid) { for (const sp of Object.values(SPECIES)) if (sp.produce === pid) return sp.sell; return 10; }
