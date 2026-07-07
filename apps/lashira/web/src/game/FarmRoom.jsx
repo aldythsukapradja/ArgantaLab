@@ -873,6 +873,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       let camX = ppx + TILE / 2 - viewW / 2, camY = ppy + TILE / 2 - viewH / 2;
       camX = WORLD_W > viewW ? Math.max(0, Math.min(camX, WORLD_W - viewW)) : (WORLD_W - viewW) / 2;
       camY = WORLD_H > viewH ? Math.max(0, Math.min(camY, WORLD_H - viewH)) : (WORLD_H - viewH) / 2;
+      g.cam = { camX, camY, z }; // remembered so tap-to-farm can map screen → world tile
 
       ctx.save();
       ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
@@ -940,8 +941,30 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const label of labels) drawNameplate(ctx, label);
       ctx.restore();
     }
+    // ---------- tap-to-farm ----------
+    // Tap a crop plot to do the contextual action (till → plant → water →
+    // harvest), FarmVille-style, right in the farm area. Taps outside the field
+    // are ignored so the joystick still owns movement.
+    function onTap(e) {
+      const g = G.current; if (!g || !g.cam) return;
+      const rect = canvas.getBoundingClientRect();
+      const cssX = e.clientX - rect.left, cssY = e.clientY - rect.top;
+      const tx = Math.floor((g.cam.camX + cssX / g.cam.z) / TILE);
+      const ty = Math.floor((g.cam.camY + cssY / g.cam.z) / TILE);
+      if (tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1) {
+        logicRef.current?.tapAt(tx, ty);
+        // face + a small "act" pose for feedback
+        const [dx, dy] = [tx - g.player.tile[0], ty - g.player.tile[1]];
+        if (Math.abs(dx) > Math.abs(dy)) g.player.facing = dx >= 0 ? 'East' : 'West';
+        else if (dy !== 0) g.player.facing = dy > 0 ? 'South' : 'North';
+        g.player.oneShot = 'Get'; g.player.oneShotStart = performance.now();
+        e.preventDefault();
+      }
+    }
+    canvas.addEventListener('pointerdown', onTap);
+
     raf = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(raf); window.clearInterval(heartbeat); };
+    return () => { cancelAnimationFrame(raf); window.clearInterval(heartbeat); canvas.removeEventListener('pointerdown', onTap); };
   }, [ready, profile?.displayName, heroPresenceKey]);
 
   // ---------- nipplejs ----------

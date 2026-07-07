@@ -2,7 +2,7 @@
 // painted ONCE into an offscreen canvas (like Kingdom's map image), then drawn
 // each frame; plots + crops are painted per-frame on top. All placeholder art —
 // swap for PixelLab/real farm tiles later.
-import { CROPS } from '../data/crops.js';
+import { CROPS, cropGrowthFrac, cropHydration, cropStageOf } from '../data/crops.js';
 import { drawOverride } from './farm-art-runtime.js';
 import { drawActualKinSprite } from './kin-sprite-image.jsx';
 
@@ -148,11 +148,18 @@ function leaf(ctx, x, y, flip = 1) {
   ctx.fillRect(x + 2 * flip, y - 3, 6 * flip, 3);
 }
 
-function cropStage(plot, crop) {
-  if (!plot?.cropId) return -1;
-  if (plot.growth <= 0) return 0;
-  if (plot.growth >= crop.days) return 3;
-  return (plot.growth / crop.days) < 0.4 ? 1 : 2;
+// Floating growth/health bar above a growing crop — fill = growth %, colour =
+// state (gold ripe · green growing+hydrated · amber thirsty), blue pip = hydrated.
+function drawCropHealthBar(ctx, px, py, frac, hyd, ripe, now) {
+  const bw = TILE - 16, bh = 5, bx = px + 8, by = py - 10;
+  ctx.fillStyle = 'rgba(18,22,32,0.55)'; ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+  ctx.fillStyle = ripe ? '#ffcf3f' : hyd <= 0 ? '#e0a020' : '#43c65a';
+  ctx.fillRect(bx, by, Math.max(1, Math.round(bw * frac)), bh);
+  if (!ripe) { ctx.fillStyle = hyd > 0 ? '#4aa3e8' : '#8a6a3e'; ctx.fillRect(bx + bw - Math.round(bw * hyd), by + bh + 2, Math.max(2, Math.round(bw * hyd)), 2); }
+  if (ripe) { // pulse the ripe bar so "harvest me" reads at a glance
+    const a = 0.55 + 0.45 * Math.abs(Math.sin(now / 350));
+    ctx.strokeStyle = `rgba(255,222,90,${a.toFixed(2)})`; ctx.lineWidth = 1.5; ctx.strokeRect(bx - 2, by - 2, bw + 4, bh + 4);
+  }
 }
 
 function drawCropPixels(ctx, cropId, stage, px, py, art = {}) {
@@ -197,16 +204,20 @@ function drawCropPixels(ctx, cropId, stage, px, py, art = {}) {
 export function drawPlot(ctx, tx, ty, plot, art = {}) {
   if (!plot?.tilled) return;
   const px = tx * TILE, py = ty * TILE;
-  const soilKey = plot.watered ? 'lashira.plot.soil.watered' : 'lashira.plot.soil.dry';
+  const now = Date.now();
+  const hyd = cropHydration(plot, now);
+  const wet = hyd > 0; // "watered" look now comes from live hydration, not a flag
+  const soilKey = wet ? 'lashira.plot.soil.watered' : 'lashira.plot.soil.dry';
   if (!drawOverride(ctx, art, soilKey, px, py, TILE, TILE)) {
-    rect(ctx, px + 3, py + 3, TILE - 6, TILE - 6, plot.watered ? '#5d371b' : '#9a6536');
-    rect(ctx, px + 5, py + 5, TILE - 10, 5, plot.watered ? '#76502c' : '#b17843');
-    for (let yy = py + 12; yy < py + TILE - 7; yy += 9) rect(ctx, px + 6, yy, TILE - 12, 3, plot.watered ? '#432613' : '#7e4d28');
-    dots(ctx, tx * 83 + ty * 19, 5, px + 7, py + 10, TILE - 14, TILE - 16, plot.watered ? '#3b2111' : '#704525', 2);
+    rect(ctx, px + 3, py + 3, TILE - 6, TILE - 6, wet ? '#5d371b' : '#9a6536');
+    rect(ctx, px + 5, py + 5, TILE - 10, 5, wet ? '#76502c' : '#b17843');
+    for (let yy = py + 12; yy < py + TILE - 7; yy += 9) rect(ctx, px + 6, yy, TILE - 12, 3, wet ? '#432613' : '#7e4d28');
+    dots(ctx, tx * 83 + ty * 19, 5, px + 7, py + 10, TILE - 14, TILE - 16, wet ? '#3b2111' : '#704525', 2);
   }
   if (!plot.cropId) return;
-  const crop = CROPS[plot.cropId];
-  drawCropPixels(ctx, plot.cropId, cropStage(plot, crop), px, py, art);
+  const frac = cropGrowthFrac(plot, now);
+  drawCropPixels(ctx, plot.cropId, cropStageOf(frac), px, py, art);
+  drawCropHealthBar(ctx, px, py, frac, hyd, frac >= 1, now);
 }
 
 function drawNamedOverride(ctx, art, key, footX, footY, w, h) {

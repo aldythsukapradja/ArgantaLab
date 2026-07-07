@@ -2,7 +2,7 @@
 // the render; this owns the rules and persistence. Kept from the verified v1
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
-import { CROPS, SEASONS, DAYS_PER_SEASON } from '../data/crops.js';
+import { CROPS, SEASONS, DAYS_PER_SEASON, cropGrowthFrac, cropIsRipe, HYDRATION_MS } from '../data/crops.js';
 import { SPECIES, STARTER_LIVESTOCK } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
@@ -306,12 +306,6 @@ export class FarmLogic {
   flash(msg) { this.toast = msg; this.emit(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.emit(); }, 1600); }
 
   inField(tx, ty) { return tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1; }
-  stageOf(p, crop) {
-    if (!p?.cropId) return -1;
-    if (p.growth <= 0) return 0;
-    if (p.growth >= crop.days) return 3;
-    return (p.growth / crop.days) < 0.4 ? 1 : 2;
-  }
 
   setTool(tool) { this.state.tool = tool; this.emit(); }
   setSeed(id) {
@@ -326,51 +320,77 @@ export class FarmLogic {
   }
   _spend(n) { if (this.state.stamina < n) { this.flash('Too tired — sleep to restore energy'); return false; } this.state.stamina -= n; return true; }
 
+  // CONTEXTUAL tap on a plot (FarmVille one-tap): the action is decided by the
+  // plot's state, not a selected tool. This is what the tap-to-farm handler calls.
+  tapAt(tx, ty) {
+    const p = this.state.plots[tileKey(tx, ty)];
+    if (p?.cropId && cropIsRipe(p)) return this._harvest(tx, ty);
+    if (!p || !p.tilled) { this.state.tool = 'hoe'; return this._till(tx, ty); }
+    if (!p.cropId) { this.state.tool = 'seed'; return this._plant(tx, ty); }
+    this.state.tool = 'can'; return this._water(tx, ty);
+  }
+
   // Apply the current tool at a specific tile (harvest ripe first, any tool).
   actionAt(tx, ty) {
-    const key = tileKey(tx, ty);
-    const st = this.state;
-    const p = st.plots[key];
-    if (p && p.cropId && p.growth >= CROPS[p.cropId].days) {
-      const crop = CROPS[p.cropId];
-      st.produce[crop.id] = (st.produce[crop.id] || 0) + 1;
-      p.cropId = null; p.growth = 0; p.watered = false;
-      this._bump();
-      this._intent({ t: 'plot', key, plot: { ...p } });
-      this._intent({ t: 'stock', produce: { [crop.id]: st.produce[crop.id] } });
-      this.flash('Harvested ' + crop.name + ' ' + crop.emoji); this.save(); this.emit(); return;
-    }
-    const tool = st.tool;
-    if (tool === 'hoe') {
-      if (!this.inField(tx, ty)) { this.flash('Till inside the field'); return; }
-      if (p && p.tilled) { this.flash('Already tilled'); return; }
-      if (!this._spend(1)) return;
-      st.plots[key] = { tilled: true, watered: false, cropId: null, growth: 0 };
-      this._bump();
-      this._intent({ t: 'plot', key, plot: { ...st.plots[key] } });
-      this.save(); this.emit(); return;
-    }
-    if (tool === 'seed') {
-      if (!p || !p.tilled) { this.flash('Till the soil first'); return; }
-      if (p.cropId) { this.flash('Already planted here'); return; }
-      const id = st.selectedSeed;
-      if ((st.seeds[id] || 0) <= 0) { this.flash('No ' + CROPS[id].name + ' seeds — buy some'); return; }
-      if (!this._spend(1)) return;
-      st.seeds[id] -= 1; p.cropId = id; p.growth = 0;
-      this._bump();
-      this._intent({ t: 'plot', key, plot: { ...p } });
-      this._intent({ t: 'stock', seeds: { [id]: st.seeds[id] } });
-      this.flash('Planted ' + CROPS[id].name); this.save(); this.emit(); return;
-    }
-    if (tool === 'can') {
-      if (!p || !p.tilled) { this.flash('Nothing to water here'); return; }
-      if (p.watered) { this.flash('Already watered'); return; }
-      if (!this._spend(1)) return;
-      p.watered = true;
-      this._bump();
-      this._intent({ t: 'plot', key, plot: { ...p } });
-      this.save(); this.emit(); return;
-    }
+    const p = this.state.plots[tileKey(tx, ty)];
+    if (p?.cropId && cropIsRipe(p)) return this._harvest(tx, ty);
+    const tool = this.state.tool;
+    if (tool === 'hoe') return this._till(tx, ty);
+    if (tool === 'seed') return this._plant(tx, ty);
+    if (tool === 'can') return this._water(tx, ty);
+  }
+
+  _harvest(tx, ty) {
+    const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
+    if (!p?.cropId || !cropIsRipe(p)) return;
+    if (!this._spend(1)) return;
+    const crop = CROPS[p.cropId];
+    st.produce[crop.id] = (st.produce[crop.id] || 0) + 1;
+    p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+    this._bump();
+    this._intent({ t: 'plot', key, plot: { ...p } });
+    this._intent({ t: 'stock', produce: { [crop.id]: st.produce[crop.id] } });
+    this.flash('Harvested ' + crop.name + ' ' + crop.emoji); this.save(); this.emit();
+  }
+  _till(tx, ty) {
+    const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
+    if (!this.inField(tx, ty)) { this.flash('Till inside the field'); return; }
+    if (p && p.tilled) { this.flash('Already tilled'); return; }
+    if (!this._spend(1)) return;
+    st.plots[key] = { tilled: true, cropId: null, plantedAt: null, wateredAt: null, grown: 0 };
+    this._bump();
+    this._intent({ t: 'plot', key, plot: { ...st.plots[key] } });
+    this.save(); this.emit();
+  }
+  _plant(tx, ty) {
+    const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
+    if (!p || !p.tilled) { this.flash('Till the soil first'); return; }
+    if (p.cropId) { this.flash('Already planted here'); return; }
+    const id = st.selectedSeed;
+    if ((st.seeds[id] || 0) <= 0) { this.flash('No ' + CROPS[id].name + ' seeds — buy some'); return; }
+    if (!this._spend(1)) return;
+    const now = Date.now();
+    st.seeds[id] -= 1;
+    // Planted seeds start hydrated so growth begins immediately (engagement).
+    p.cropId = id; p.plantedAt = now; p.wateredAt = now; p.grown = 0; p.growth = 0;
+    this._bump();
+    this._intent({ t: 'plot', key, plot: { ...p } });
+    this._intent({ t: 'stock', seeds: { [id]: st.seeds[id] } });
+    this.flash('Planted ' + CROPS[id].name + ' ' + CROPS[id].emoji); this.save(); this.emit();
+  }
+  _water(tx, ty) {
+    const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
+    if (!p || !p.cropId) { this.flash('Nothing to water here'); return; }
+    if (!this._spend(1)) return;
+    const now = Date.now();
+    const crop = CROPS[p.cropId];
+    // Lock in the growth earned since the last watering, then refresh hydration.
+    const since = Math.min(Math.max(0, now - (p.wateredAt ?? p.plantedAt ?? now)), HYDRATION_MS);
+    p.grown = Math.min(crop.growMs, (p.grown || 0) + since);
+    p.wateredAt = now;
+    this._bump();
+    this._intent({ t: 'plot', key, plot: { ...p } });
+    this.flash('💧 Watered'); this.save(); this.emit();
   }
 
   // Buying always costs Diamonds — for kids this ties farm progress directly to
@@ -460,29 +480,17 @@ export class FarmLogic {
     }
   }
 
+  // Sleep = RECHARGE ONLY now. Crops grow in real time (not per-day) so sleeping
+  // no longer advances them; it just refills stamina and ticks the day counter
+  // for season flavor. Animal goods likewise moved to real-time (feed timers).
   sleep() {
     const st = this.state;
-    const kins = this.activeKins();
-    for (const k of kins) if (k.task === 'water') for (const p of Object.values(st.plots)) if (p.tilled && p.cropId && !p.watered) p.watered = true;
-    for (const p of Object.values(st.plots)) {
-      if (p.tilled && p.cropId && p.watered) { const crop = CROPS[p.cropId]; if (p.growth < crop.days) p.growth += 1; }
-      p.watered = false;
-    }
-    for (const k of kins) if (k.task === 'harvest') for (const p of Object.values(st.plots)) {
-      if (p.cropId && p.growth >= CROPS[p.cropId].days) { const crop = CROPS[p.cropId]; st.produce[crop.id] = (st.produce[crop.id] || 0) + 1; p.cropId = null; p.growth = 0; }
-    }
-    for (const a of st.livestock) if (a.fed) { a.produce = true; a.affection = Math.min(100, a.affection + 3); a.fed = false; }
     st.day += 1;
     if (st.day > DAYS_PER_SEASON) { st.day = 1; st.season = (st.season + 1) % SEASONS.length; }
     st.stamina = st.maxStamina;
     this._bump();
-    // Day advance carries the post-sleep shared fields so every client lands on
-    // the IDENTICAL morning (growth, watering resets, produce-ready animals).
-    this._intent({
-      t: 'day', day: st.day, season: st.season,
-      plots: { ...st.plots },
-      livestock: st.livestock.map((a) => ({ ...a })),
-    });
+    // Broadcast the day tick (calendar flavor) — carries no crop growth anymore.
+    this._intent({ t: 'day', day: st.day, season: st.season });
     this._dayEvent();
     this.saveNow(); this.emit();
   }
