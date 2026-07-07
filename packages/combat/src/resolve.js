@@ -32,3 +32,38 @@ export function resolveSkill(monsters, skill, originTile, facingDelta, now) {
   }
   return hits;
 }
+
+// SINGLE-target magic (Bolt): the faced tile if a monster is there, else the
+// nearest live monster. Returns { monster, killed } or null.
+export function resolveSkillSingle(monsters, originTile, facingDelta, dmg, now) {
+  const [ox, oy] = originTile; const [dx, dy] = facingDelta || [0, 1];
+  let m = monsters.find((mo) => monsterAttackable(mo) && sameTile(mo, ox + dx, oy + dy));
+  if (!m) {
+    let best = null, bd = Infinity;
+    for (const mo of monsters) {
+      if (!monsterAttackable(mo)) continue;
+      const d = Math.abs(mo.tile[0] - ox) + Math.abs(mo.tile[1] - oy);
+      if (d < bd) { bd = d; best = mo; }
+    }
+    m = best;
+  }
+  if (!m) return null;
+  return { monster: m, ...damageMonster(m, dmg, now) };
+}
+
+// AoE magic (Storm): every live monster takes the damage. Returns the hits.
+export function resolveSkillAll(monsters, dmg, now) {
+  const hits = [];
+  for (const m of monsters) {
+    if (!monsterAttackable(m)) continue;
+    hits.push({ monster: m, ...damageMonster(m, dmg, now) });
+  }
+  return hits;
+}
+
+// Self-heal (Mend): raise hp toward maxHp. Returns the amount actually healed.
+export function applyHeal(combat, amount) {
+  const before = combat.hp;
+  combat.hp = Math.min(combat.maxHp, combat.hp + Math.max(0, amount));
+  return combat.hp - before;
+}
