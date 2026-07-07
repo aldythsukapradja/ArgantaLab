@@ -330,6 +330,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         if (intent.by === presenceProfileId(profile)) logicRef.current?.rewardKill(intent.name || 'a monster');
         return;
       }
+      if (intent?.t === 'spell') { // a peer cast a skill — show its VFX here too
+        const g = G.current; if (g) spawnSpellFx(g, intent.fx, intent.tile);
+        return;
+      }
       logicRef.current?.applyIntent?.(intent);
     };
     // Snapshot response → adopt only if the peer's rev is ahead of ours.
@@ -623,10 +627,18 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const [tx, ty] = frontTile();
     hitTile(g, tx, ty, MELEE_DAMAGE);
   }
-  // Play a skill's spell VFX (shared effect system) at a tile.
+  // Spawn a spell VFX locally (shared effect system).
+  function spawnSpellFx(g, fx, tile) {
+    if (fx == null || !tile) return;
+    spawnEffect(g.spellFx, g.effectsAll, fx, tile, (eff) => loadEffectImage(effectSheetUrl(eff)));
+  }
+  // Play a skill's spell VFX at a tile AND broadcast it so every circle member
+  // sees the same spell (fx ids are the shared Kingdom effect catalog).
   function castSpell(g, skill, atTile) {
     if (!atTile) return;
-    spawnEffect(g.spellFx, g.effectsAll, skill.fx, atTile, (eff) => loadEffectImage(effectSheetUrl(eff)));
+    const tile = [Math.round(atTile[0]), Math.round(atTile[1])];
+    spawnSpellFx(g, skill.fx, tile);
+    presenceCtrlRef.current?.sendIntent?.({ t: 'spell', fx: skill.fx, tile });
   }
   function nearestPeerMonster(g, now) {
     let best = null, bd = Infinity; const p = g.player;
