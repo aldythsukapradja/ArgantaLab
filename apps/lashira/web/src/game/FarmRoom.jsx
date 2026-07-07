@@ -585,8 +585,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           ent.livestockId = source.id || null; // links the sprite to its livestock record (feed/collect)
         }
       }
-      // Max 6 active Kins per player on the shared farm (loadout picker will let
-      // the player choose which — for now the first 6 of the acquired roster).
+      // The Kins this player has DEPLOYED (loadout picker in the Kin panel, per-user,
+      // max 6). activeKins() already applies the loadout + cap; slice is a safety net.
       const kinSource = (logicRef.current?.activeKins?.() || state.kins || []).slice(0, 6);
       kinSource.forEach((k, i) => {
         const id = 'kin:' + k.id; live.add(id);

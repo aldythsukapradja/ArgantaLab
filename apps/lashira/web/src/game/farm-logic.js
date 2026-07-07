@@ -14,6 +14,9 @@ import { loadFarmState, saveFarmState } from './farm-save.js';
 // false to restore real seed prices and the kid/adult learning-gated rules.
 export const FARM_OPEN_ECONOMY = true;
 
+// Max Kin a single user can deploy onto the farm at once (per-user loadout cap).
+export const MAX_DEPLOYED_KINS = 6;
+
 const defaultSeeds = () => Object.fromEntries(Object.keys(CROPS).map((id) => [id, id === 'turnip' ? 3 : 0]));
 const starterKinArt = {
   kin_sprig: { kinKey: 'kin:sproutling', render: 'sproutling', assetKey: 'kin.sproutling', color: '#a78bfa' },
@@ -39,6 +42,11 @@ export class FarmLogic {
     this.toast = null;
     this.externalKins = [];
     this.externalKinsLoaded = false;
+    // Kin loadout = which Kin ids this USER deploys onto the farm (max 6).
+    // Per-user (NOT part of the shared circle save) so each member picks their
+    // own squad; persisted to localStorage and mirrored to peers via presence.
+    this.kinLoadoutKey = 'lashira_kinloadout_' + (profile?.id || 'guest');
+    this.kinLoadout = this._loadKinLoadout();
     // Realtime sync hooks. Every LOCAL mutation emits a tiny granular intent
     // through intentSink (wired to the circle channel by FarmRoom); remote
     // intents arrive via applyIntent and are applied WITHOUT re-emitting.
@@ -247,15 +255,68 @@ export class FarmLogic {
     this.externalKinsLoaded = true;
     this.emit();
   }
-  activeKins() {
+  // Full Kin roster available to this user (external circle roster if loaded,
+  // else the starter squad), with per-Kin task merged in. NOT filtered by loadout.
+  kinRoster() {
+    let list;
     if (this.externalKinsLoaded) {
       const tasks = this.state.kinTasks || {};
-      return this.externalKins.map((k) => ({
+      list = this.externalKins.map((k) => ({
         ...k,
         task: Object.prototype.hasOwnProperty.call(tasks, k.id) ? tasks[k.id] : (k.task ?? null),
       }));
+    } else {
+      list = this.state.kins.map((k) => ({ ...(starterKinArt[k.id] || {}), ...k, ...(k.render ? {} : starterKinArt[k.id] || {}) }));
     }
-    return this.state.kins.map((k) => ({ ...(starterKinArt[k.id] || {}), ...k, ...(k.render ? {} : starterKinArt[k.id] || {}) }));
+    const deployed = this._deployedIds(list);
+    return list.map((k) => ({ ...k, deployed: deployed.has(k.id) }));
+  }
+  // The Kins actually deployed onto the farm (max MAX_DEPLOYED_KINS). Drives the
+  // renderer, snapshots, and the Settings "Active Kin" card.
+  activeKins() {
+    const list = this.kinRoster();
+    return list.filter((k) => k.deployed);
+  }
+  // Resolve the effective deployed-id set. If the user has never chosen a loadout
+  // (null), auto-deploy the first MAX_DEPLOYED_KINS so the farm is never empty.
+  _deployedIds(list) {
+    const ids = list.map((k) => k.id);
+    if (!Array.isArray(this.kinLoadout)) return new Set(ids.slice(0, MAX_DEPLOYED_KINS));
+    const chosen = this.kinLoadout.filter((id) => ids.includes(id)).slice(0, MAX_DEPLOYED_KINS);
+    return new Set(chosen);
+  }
+  _loadKinLoadout() {
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem(this.kinLoadoutKey);
+      const arr = raw ? JSON.parse(raw) : null;
+      return Array.isArray(arr) ? arr : null;
+    } catch { return null; }
+  }
+  _saveKinLoadout() {
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(this.kinLoadoutKey, JSON.stringify(this.kinLoadout || []));
+    } catch {}
+  }
+  // Toggle whether a Kin is deployed. Enforces the MAX_DEPLOYED_KINS cap (adding
+  // past the cap is a no-op with a toast). Persists per-user + re-emits so the
+  // renderer redeploys and presence rebroadcasts this user's owner-simulated Kins.
+  setKinDeployed(kinId, on) {
+    const roster = this.externalKinsLoaded ? this.externalKins : this.state.kins;
+    if (!roster.some((k) => k.id === kinId)) return;
+    // Materialize the current effective loadout so the first toggle is explicit.
+    const current = Array.from(this._deployedIds(roster.map((k) => ({ id: k.id }))));
+    let next;
+    if (on) {
+      if (current.includes(kinId)) return;
+      if (current.length >= MAX_DEPLOYED_KINS) { this.flash(`Only ${MAX_DEPLOYED_KINS} Kin can be deployed`); return; }
+      next = [...current, kinId];
+    } else {
+      if (!current.includes(kinId)) return;
+      next = current.filter((id) => id !== kinId);
+    }
+    this.kinLoadout = next;
+    this._saveKinLoadout();
+    this.emit();
   }
   save() {
     if (this.frozen) return;
@@ -292,6 +353,8 @@ export class FarmLogic {
       seeds: { ...st.seeds }, produce: { ...st.produce },
       livestock: st.livestock.map((a) => ({ ...a })),
       kins: this.activeKins(),
+      kinRoster: this.kinRoster(),
+      maxKins: MAX_DEPLOYED_KINS,
       diamonds: st.diamonds,
       xp: st.xp,
       level: this.profile?.level ?? (1 + Math.floor(Math.max(0, st.xp) / 500)), // mirrors argantalab_level_from_xp when profile level is unavailable

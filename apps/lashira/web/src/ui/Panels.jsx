@@ -138,27 +138,39 @@ function Barn({ snap, game, onClose }) {
 }
 
 function Kin({ snap, game, onClose }) {
+  const roster = snap.kinRoster || snap.kins || [];
+  const maxKins = snap.maxKins || 6;
+  const deployedCount = roster.filter((k) => k.deployed).length;
   return (
     <>
-      <Head title="🍃 Kin Helpers" sub="Assign a Kin a chore — it runs automatically each morning" onClose={onClose} />
-      {snap.kins.map((k) => (
-        <div className="row" key={k.id}>
-          <div className="ico" style={{ background: '#eef7e9' }}>🍃</div>
+      <Head title="🍃 Kin Helpers" sub={`Deploy up to ${maxKins} Kin onto your farm — deployed ${deployedCount}/${maxKins}`} onClose={onClose} />
+      {roster.map((k) => (
+        <div className={'row' + (k.deployed ? '' : ' kin-benched')} key={k.id}>
+          <div className="ico" style={{ background: '#eef7e9', opacity: k.deployed ? 1 : 0.5 }}>🍃</div>
           <div className="grow">
             <div className="name">{k.name} <span className="meta">· {k.element}</span></div>
             <div className="meta"><span className="hearts">{'❤'.repeat(Math.max(1, Math.round(k.happiness / 20)))}</span> · best at {k.aptitude}</div>
-            <div className="assign" style={{ marginTop: 6 }}>
-              {KIN_TASKS.map((t) => (
-                <button
-                  key={String(t.id)}
-                  className={'aopt' + (k.task === t.id ? ' on' : '')}
-                  onClick={() => game.assignKin(k.id, t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+            {k.deployed && (
+              <div className="assign" style={{ marginTop: 6 }}>
+                {KIN_TASKS.map((t) => (
+                  <button
+                    key={String(t.id)}
+                    className={'aopt' + (k.task === t.id ? ' on' : '')}
+                    onClick={() => game.assignKin(k.id, t.id)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          <button
+            className={'rbtn' + (k.deployed ? '' : ' ghost')}
+            disabled={!k.deployed && deployedCount >= maxKins}
+            onClick={() => game.setKinDeployed(k.id, !k.deployed)}
+          >
+            {k.deployed ? 'Deployed ✓' : 'Deploy'}
+          </button>
         </div>
       ))}
     </>
