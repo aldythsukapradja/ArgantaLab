@@ -7,6 +7,7 @@ import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
 import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
+import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
 import { hasActualKinArt } from './kin-sprite-image.jsx';
 import { joinFarmPresence } from './farm-presence.js';
@@ -167,10 +168,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
     (async () => {
       await logic.ready;
-      const [art, acquiredKins] = await Promise.all([
+      const [bundledArt, dbArt, acquiredKins] = await Promise.all([
+        loadBundledArt(),
         loadFarmArtOverrides(),
         loadAcquiredKins(profile),
       ]);
+      // Layer priority: DB override > bundled sheet art > procedural placeholder.
+      const art = { ...bundledArt, ...dbArt };
       const { canvas: bg, blocked } = buildFarmMap(art);
       let tables = null, resources = null, hasWeapon = false;
       if (hero?.spec) {
