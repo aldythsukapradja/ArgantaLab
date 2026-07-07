@@ -45,13 +45,18 @@ Everything else sits in `lib/` ready to wire when the new map/mechanics land.
   dead-center, farm NW, animal pens NE, garden+greenhouse W, mining+dungeon gate +
   forest E, fishing lake SW, battleground+PvP walled south. All 82 assets baked in via
   `PLACEMENTS`. Verified in guest-mode preview; `vite build` passes.
-- **Still open after the rebuild:**
-  - Zone ground is flat-color tinted (grass/soil/water/gray/sand) + hero art on top —
-    the 5 Wang terrain tilesets are NOT autotiled in yet (needs corner-autotile code).
-  - Fences use one horizontal sprite for all sides (busy on vertical pen borders) —
-    add vertical/corner variants.
-  - New-zone GAMEPLAY (real mining/dungeon/PvP/fishing) not wired — only the FarmVille
-    farm loop is live; the layout + art are in place for the mechanics to hook into.
+- **Polish pass DONE (verified in preview):** lush decoration scatter (grass tufts,
+  flowers, mushrooms, rocks) fills the open grass; lily pads on the lake; vertical
+  fence sprite for pen side-borders; feed/water troughs in each pen; forest filled out.
+  88 assets total. `vite build` passes; guest-mode preview clean (no console errors).
+- **Still open (deliberately not done unsupervised):**
+  - Zone ground is flat-color tinted + hero art on top — the 5 Wang terrain tilesets
+    are NOT autotiled in yet (needs corner-autotile code). Reads fine with decoration.
+  - New-zone GAMEPLAY (real mining/dungeon/PvP/fishing interactions) not wired — only
+    the FarmVille farm loop is live. Left for a supervised build (risk of breaking the
+    working farm). Layout + art are all in place for the mechanics to hook into.
+  - Castle default = `castle_opt1_storybook`; swap in `farm-art-bundled.js` to preview
+    opt2/3/4.
 
 ## How to preview a different castle
 Edit `farm-art-bundled.js` line for `lashira.building.house` → `lib/castle_opt2_fairytale.png`
