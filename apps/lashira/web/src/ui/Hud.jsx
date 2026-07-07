@@ -111,7 +111,6 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                   type="button"
                   className={'seed-fan-item' + (active ? ' active' : '') + (count <= 0 ? ' empty' : '')}
                   style={{ '--i': i }}
-                  disabled={count <= 0}
                   title={`${crop.name} seed x${count}`}
                   onClick={() => pickSeed(crop.id)}
                 >

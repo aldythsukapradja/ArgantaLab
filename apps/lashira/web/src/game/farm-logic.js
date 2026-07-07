@@ -212,9 +212,12 @@ export class FarmLogic {
 
   setTool(tool) { this.state.tool = tool; this.emit(); }
   setSeed(id) {
-    if (!CROPS[id]) return;
+    const crop = CROPS[id];
+    if (!crop) return;
     this.state.selectedSeed = id;
     this.state.tool = 'seed';
+    const owned = this.state.seeds[id] || 0;
+    this.flash(owned > 0 ? crop.emoji + ' ' + crop.name + ' selected' : crop.emoji + ' ' + crop.name + ' selected — buy seeds at the Shop');
     this.save();
     this.emit();
   }

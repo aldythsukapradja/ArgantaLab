@@ -33,8 +33,21 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
   };
   let pendingState = null;
 
-  const channel = supabase.channel(`farm:${circleId}`, {
-    config: { presence: { key: selfId } },
+  // Supabase allows only ONE channel per topic per client. React StrictMode
+  // (mount → cleanup → remount) and Vite HMR can leave a stale `farm:<circle>`
+  // channel behind; a new channel on the same topic then never reaches
+  // SUBSCRIBED. Sweep any pre-existing channel on this topic first so ours is
+  // the only one. (The presence effect is also keyed on stable identity so it
+  // no longer re-subscribes when the hero loads mid-session.)
+  const topic = `farm:${circleId}`;
+  try {
+    for (const ch of supabase.getChannels?.() || []) {
+      if (ch.topic === topic || ch.topic === `realtime:${topic}`) supabase.removeChannel(ch);
+    }
+  } catch { /* best-effort */ }
+
+  const channel = supabase.channel(topic, {
+    config: { presence: { key: selfId }, broadcast: { self: false } },
   });
 
   channel.on('presence', { event: 'sync' }, () => {
@@ -51,29 +64,34 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
     if (!payload || payload.sourceId === selfId) return;
     onFarmState?.(payload);
   });
-  const subscribe = async () => {
-    try {
-      const { data } = await supabase.auth.getSession();
+  // Subscribe SYNCHRONOUSLY — this is the exact pattern Kingdom Heroes' joinArena
+  // uses, and it's why Kingdom syncs flawlessly. The previous version awaited
+  // supabase.auth.getSession() BEFORE channel.subscribe(); under React StrictMode
+  // (mount → cleanup → remount) the cleanup set closed=true during that await, so
+  // subscribe() was skipped and the channel was removed — leaving ZERO live
+  // channels and total sync silence. Refreshing the realtime auth token is now a
+  // non-blocking best-effort that never gates the subscribe.
+  supabase.auth.getSession()
+    .then(({ data }) => {
       const token = data?.session?.access_token;
-      if (token) supabase.realtime?.setAuth?.(token);
-    } catch { /* keep presence best-effort */ }
+      if (token && !closed) supabase.realtime?.setAuth?.(token);
+    })
+    .catch(() => { /* keep presence best-effort */ });
+
+  channel.subscribe((status) => {
     if (closed) return;
-    channel.subscribe((status) => {
-      if (closed) return;
-      if (status === 'SUBSCRIBED') {
-        subscribed = true;
-        channel.track(current);
-        channel.send({ type: 'broadcast', event: 'player-state', payload: current });
-        if (pendingState) {
-          channel.send({ type: 'broadcast', event: 'farm-state', payload: pendingState });
-          pendingState = null;
-        }
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        subscribed = false;
+    if (status === 'SUBSCRIBED') {
+      subscribed = true;
+      channel.track(current);
+      channel.send({ type: 'broadcast', event: 'player-state', payload: current });
+      if (pendingState) {
+        channel.send({ type: 'broadcast', event: 'farm-state', payload: pendingState });
+        pendingState = null;
       }
-    });
-  };
-  subscribe();
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      subscribed = false;
+    }
+  });
 
   return {
     update(patch = {}) {

@@ -7,6 +7,10 @@
 import { supabase, hasSupabase } from './supabase.js';
 
 const KID_DOMAIN = '@kids.argantalab.app';
+// Kids' real Supabase password is the 4-digit PIN with a fixed suffix — the
+// SAME scheme Kingdom Heroes and KinetikCircle use (pinToPassword). Standalone
+// login MUST match it or the kid can never sign in outside an embed.
+const pinToPassword = (pin) => `${pin}#aLab`;
 
 export function guestProfile(name, role) {
   return {
@@ -101,7 +105,7 @@ export async function signInKid(username, pin) {
   if (!clean) throw new Error('Enter a username');
   if (!/^\d{4}$/.test(pin || '')) throw new Error('PIN must be 4 digits');
   const email = clean + KID_DOMAIN;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pin });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pinToPassword(pin) });
   if (error) throw error;
   const name = data?.user?.user_metadata?.full_name || clean;
   return await loadProfileRow(data.user.id, name, 'kid');

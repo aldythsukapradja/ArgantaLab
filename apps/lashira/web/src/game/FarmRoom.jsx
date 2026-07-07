@@ -138,6 +138,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const stickRef = useRef(null);
   const G = useRef(null);
   const logicRef = useRef(null);
+  // Presence controller lives in its OWN ref, decoupled from G.current. The init
+  // effect rebuilds G.current whenever profile fields change (e.g. the hero loads
+  // and updates diamonds/xp), which used to orphan a G.current.presenceCtrl — the
+  // channel stayed joined but publishPresence saw null and never broadcast, so
+  // peers saw nothing move. Keeping it here means a G.current rebuild can't sever
+  // the live channel from the game loop.
+  const presenceCtrlRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
@@ -172,16 +179,23 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const heroOk = !!(tables && resources && Object.keys(resources).length);
       setUsingHero(heroOk);
       if (!profile?.guest) logic.setExternalKins(acquiredKins);
+      // Carry live state across a rebuild (this effect re-runs when the hero
+      // avatar loads): keep the player where they stand and preserve the peer
+      // maps the presence effect populates, so a rebuild never wipes the farmer
+      // back to spawn or drops everyone else out of view mid-session.
+      const prev = G.current;
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
-        player: { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
-        held: new Set(), stick: null, zoom, viewportW: 0, viewportH: 0, dpr: 1, actors: new Map(), peerActors: new Map(), peerWorldActors: new Map(), pendingMountCall: false,
-        presenceCtrl: null, lastPresenceSnapshot: '', lastPresenceAt: 0, lastFarmStateKey: '', lastFarmStateAt: 0, suppressFarmStateBroadcast: false,
+        player: prev?.player || { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
+        held: prev?.held || new Set(), stick: prev?.stick || null, zoom, viewportW: prev?.viewportW || 0, viewportH: prev?.viewportH || 0, dpr: prev?.dpr || 1,
+        actors: prev?.actors || new Map(), peerActors: prev?.peerActors || new Map(), peerWorldActors: prev?.peerWorldActors || new Map(), pendingMountCall: false,
+        lastPresenceSnapshot: '', lastPresenceAt: 0, lastFarmStateKey: '', lastFarmStateAt: 0, suppressFarmStateBroadcast: false,
       };
       const unsub = logic.subscribe((next) => {
         setSnap(next);
         const g = G.current;
-        if (!g || !g.presenceCtrl || !circleId || profile?.guest) return;
+        const ctrl = presenceCtrlRef.current;
+        if (!g || !ctrl || !circleId || profile?.guest) return;
         if (g.suppressFarmStateBroadcast) {
           g.suppressFarmStateBroadcast = false;
           g.lastFarmStateKey = farmStateKey(logic.serialize());
@@ -192,7 +206,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         if (!key || key === g.lastFarmStateKey) return;
         g.lastFarmStateKey = key;
         g.lastFarmStateAt = Date.now();
-        g.presenceCtrl.sendState({ data, updatedAt: g.lastFarmStateAt });
+        ctrl.sendState({ data, updatedAt: g.lastFarmStateAt });
       });
       G.current._unsub = unsub;
       setReady(true);
@@ -200,7 +214,6 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
     return () => {
       live = false;
-      G.current?.presenceCtrl?.leave?.();
       G.current?._unsub?.();
       logic.flushSave?.();
     };
@@ -225,8 +238,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const g = G.current;
     if (!g) return undefined;
 
-    g.presenceCtrl?.leave?.();
-    g.presenceCtrl = null;
+    presenceCtrlRef.current?.leave?.();
+    presenceCtrlRef.current = null;
     g.peerActors.clear();
     g.peerWorldActors.clear();
     setPresence({ count: 0, names: [] });
@@ -372,9 +385,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     };
 
     const ctrl = joinFarmPresence({ circleId, profile, hero, onPeers: applyPeers, onFarmState: applyFarmState });
-    g.presenceCtrl = ctrl;
-    g.lastPresenceSnapshot = '';
-    g.lastPresenceAt = 0;
+    presenceCtrlRef.current = ctrl;
+    if (G.current) { G.current.lastPresenceSnapshot = ''; G.current.lastPresenceAt = 0; }
     ctrl.update({
       name: profile.displayName || 'Farmer',
       tile: [...g.player.tile],
@@ -387,14 +399,21 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     return () => {
       closed = true;
       ctrl.leave();
-      if (G.current === g) {
-        g.presenceCtrl = null;
-        g.peerActors.clear();
-        g.peerWorldActors.clear();
+      if (presenceCtrlRef.current === ctrl) presenceCtrlRef.current = null;
+      if (G.current) {
+        G.current.peerActors?.clear?.();
+        G.current.peerWorldActors?.clear?.();
       }
       setPresence({ count: 0, names: [] });
     };
-  }, [ready, circleId, profile?.id, profile?.displayName, profile?.guest, heroPresenceKey]);
+    // Keyed on STABLE identity only (like Kingdom's arena effect). displayName &
+    // heroPresenceKey are intentionally excluded: they change when the hero
+    // loads mid-session, and re-running here would open a SECOND channel on the
+    // same topic that never subscribes. The live heartbeat (publishPresence)
+    // already streams the fresh name/heroSpec every tick, so peers still get the
+    // updated avatar without re-subscribing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, circleId, profile?.id, profile?.guest]);
 
   // ---------- actions ----------
   function frontTile() {
@@ -634,7 +653,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       }
     }
     function publishPresence(g, now) {
-      if (!g.presenceCtrl) return;
+      const ctrl = presenceCtrlRef.current;
+      if (!ctrl) return;
       const p = g.player;
       const isHost = presenceHostId(g, profile) === presenceProfileId(profile);
       const actors = worldActorSnapshots(g, isHost);
@@ -643,7 +663,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
       g.lastPresenceSnapshot = snapshot;
       g.lastPresenceAt = now;
-      g.presenceCtrl.update({
+      ctrl.update({
         name: profile?.displayName || 'Farmer',
         tile: [...p.tile],
         facing: p.facing,
