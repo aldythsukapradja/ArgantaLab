@@ -68,6 +68,8 @@ const BUNDLED = {
   'lashira.lib.small_rock': 'lib/small_rock.png',
   'lashira.lib.lily_pad': 'lib/lily_pad.png',
   'lashira.lib.fence_vertical': 'lib/fence_vertical.png',
+  'lashira.lib.trough_feed': 'lib/trough_feed.png',
+  'lashira.lib.trough_water': 'lib/trough_water.png',
 };
 
 // Resolve against the document base so it works under any deploy path.

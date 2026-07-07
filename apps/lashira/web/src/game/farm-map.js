@@ -87,6 +87,17 @@ export const PLACEMENTS = [
   { key: 'lashira.lib.fishing_reeds', tx: 3, ty: 31, w: 1, h: 1 },
   { key: 'lashira.lib.fishing_reeds', tx: 14, ty: 32, w: 1, h: 1 },
   { key: 'lashira.lib.fishing_reeds', tx: 4, ty: 43, w: 1, h: 1 },
+  // pen troughs (feed + water per pen)
+  { key: 'lashira.lib.trough_feed', tx: 36, ty: 5, w: 1, h: 1 },
+  { key: 'lashira.lib.trough_water', tx: 39, ty: 13, w: 1, h: 1 },
+  { key: 'lashira.lib.trough_feed', tx: 43, ty: 5, w: 1, h: 1 },
+  { key: 'lashira.lib.trough_water', tx: 46, ty: 13, w: 1, h: 1 },
+  { key: 'lashira.lib.trough_feed', tx: 50, ty: 5, w: 1, h: 1 },
+  { key: 'lashira.lib.trough_water', tx: 53, ty: 13, w: 1, h: 1 },
+  // more forest fill
+  { key: 'lashira.lib.tree_oak', tx: 55, ty: 27, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_pine', tx: 52, ty: 27, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.bush', tx: 50, ty: 22, w: 1, h: 1 },
   // martial south
   { key: 'lashira.lib.signpost', tx: 30, ty: 33, w: 1, h: 1 },
   { key: 'lashira.lib.arena_wall', tx: 41, ty: 33, w: 2, h: 1, solid: true },
