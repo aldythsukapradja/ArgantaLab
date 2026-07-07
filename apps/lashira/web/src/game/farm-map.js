@@ -11,6 +11,16 @@ export const W = 40, H = 26;
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
 export const FIELD = { x0: 6, y0: 10, x1: 20, y1: 20 };
 
+// Animal pens, to the RIGHT of the crop field. Bottom line (y1) matches the crop
+// field's bottom (y=20) so the whole farm reads as one row of enclosures. Cow +
+// sheep stacked under the Barn/Shop; chicken run on the far right. Each animal's
+// home wander-rect IS its pen (see FarmRoom.syncWorldActors).
+export const PENS = {
+  cow: { x0: 23, y0: 10, x1: 31, y1: 14, gate: 'left' },
+  sheep: { x0: 23, y0: 16, x1: 31, y1: 20, gate: 'left' },
+  chicken: { x0: 33, y0: 12, x1: 37, y1: 20, gate: 'left' },
+};
+
 export const BUILDINGS = [
   { key: 'house', type: 'house', tx: 4, ty: 3, w: 3, h: 3, label: 'Home' },
   { key: 'barn', type: 'barn', tx: 10, ty: 3, w: 3, h: 2, label: 'Barn' },
@@ -110,9 +120,22 @@ export function buildFarmMap(art = {}) {
   }
   for (let y = FIELD.y0; y <= FIELD.y1; y++) { drawFence(ctx, FIELD.x0 - 1, y, art); block(FIELD.x0 - 1, y); drawFence(ctx, FIELD.x1 + 1, y, art); block(FIELD.x1 + 1, y); }
 
+  // animal pens (fenced enclosures with a one-tile gate)
+  for (const pen of Object.values(PENS)) {
+    const mx = Math.floor((pen.x0 + pen.x1) / 2), my = Math.floor((pen.y0 + pen.y1) / 2);
+    for (let x = pen.x0 - 1; x <= pen.x1 + 1; x++) {
+      if (!(pen.gate === 'top' && x === mx)) { drawFence(ctx, x, pen.y0 - 1, art); block(x, pen.y0 - 1); }
+      if (!(pen.gate === 'bottom' && x === mx)) { drawFence(ctx, x, pen.y1 + 1, art); block(x, pen.y1 + 1); }
+    }
+    for (let y = pen.y0; y <= pen.y1; y++) {
+      if (!(pen.gate === 'left' && y === my)) { drawFence(ctx, pen.x0 - 1, y, art); block(pen.x0 - 1, y); }
+      if (!(pen.gate === 'right' && y === my)) { drawFence(ctx, pen.x1 + 1, y, art); block(pen.x1 + 1, y); }
+    }
+  }
+
   // buildings
   for (const b of BUILDINGS) { drawBuilding(ctx, b, art); blockRect(b.tx, b.ty, b.w, b.h); }
-  drawTree(ctx, 23, 9, art); block(23, 9); drawTree(ctx, 3, 20, art); block(3, 20);
+  drawTree(ctx, 3, 20, art); block(3, 20);
 
   return { canvas, blocked };
 }
@@ -191,7 +214,9 @@ function drawNamedOverride(ctx, art, key, footX, footY, w, h) {
 }
 
 export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}) {
-  if (drawNamedOverride(ctx, art, `lashira.animal.${species}`, footX, footY + 1, species === 'chicken' ? 30 : 50, species === 'chicken' ? 32 : 42)) return;
+  // Chickens are noticeably smaller than cows/sheep.
+  const [aw, ah] = species === 'chicken' ? [22, 24] : [50, 42];
+  if (drawNamedOverride(ctx, art, `lashira.animal.${species}`, footX, footY + 1, aw, ah)) return;
   const dir = facing === 'West' ? -1 : 1;
   const step = frame % 2;
   ctx.save(); ctx.translate(footX, footY); ctx.scale(dir, 1); ctx.imageSmoothingEnabled = false;

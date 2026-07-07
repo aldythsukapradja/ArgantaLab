@@ -8,6 +8,12 @@ import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 import { loadFarmState, saveFarmState } from './farm-save.js';
 
+// TESTING: "open" farm economy — the farm can only ADD Diamonds, never drain
+// them (seeds/feed free; selling earns Diamonds; kids and adults identical). This
+// removes the "my learning diamonds will be gone" fear for kid testers. Flip to
+// false to restore real seed prices and the kid/adult learning-gated rules.
+export const FARM_OPEN_ECONOMY = true;
+
 const defaultSeeds = () => Object.fromEntries(Object.keys(CROPS).map((id) => [id, id === 'turnip' ? 3 : 0]));
 const starterKinArt = {
   kin_sprig: { kinKey: 'kin:sproutling', render: 'sproutling', assetKey: 'kin.sproutling', color: '#a78bfa' },
@@ -372,7 +378,7 @@ export class FarmLogic {
   buySeed(id, qty = 1) {
     const crop = CROPS[id];
     if (!crop) return;
-    const cost = crop.seedCost * qty;
+    const cost = FARM_OPEN_ECONOMY ? 0 : crop.seedCost * qty;
     if (this.state.diamonds < cost) { this.flash('Not enough 💎 Diamonds'); return; }
     this.state.diamonds -= cost; this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
     this.state.selectedSeed = id;
@@ -401,7 +407,9 @@ export class FarmLogic {
     const isKid = this.profile?.role === 'kid';
     this._bump();
     this._intent({ t: 'stock', produceReplace: {} });
-    if (isKid) { this.state.xp += 1; this.flash('Sold ' + items.join(' ') + ' · value 💎' + gain + ' · +1 XP'); }
+    // Diamonds are PER-PLAYER (their own learning currency + local farm earnings)
+    // — not synced across the circle. Only the produce clearing (above) syncs.
+    if (isKid && !FARM_OPEN_ECONOMY) { this.state.xp += 1; this.flash('Sold ' + items.join(' ') + ' · value 💎' + gain + ' · +1 XP'); }
     else { this.state.diamonds += gain; this.flash('Sold ' + items.join(' ') + ' = 💎' + gain); }
     this.save(); this.emit();
   }

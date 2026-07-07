@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
@@ -552,25 +552,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const live = new Set();
       const state = logicRef.current?.state;
       if (!state) return;
+      // 5 spread start tiles inside a pen rect (corners + centre).
+      const penStarts = (p) => {
+        const cx = Math.round((p.x0 + p.x1) / 2), cy = Math.round((p.y0 + p.y1) / 2);
+        return [[p.x0, p.y0], [p.x1, p.y0], [cx, cy], [p.x0, p.y1], [p.x1, p.y1]];
+      };
       const animalConfig = {
-        cow: {
-          names: ['Daisy', 'Bessie', 'Clover', 'Maple', 'Moochi'],
-          home: { x0: 8, y0: 5, x1: 15, y1: 8 },
-          starts: [[9, 6], [11, 6], [13, 6], [10, 8], [14, 8]],
-          speedMs: 1500,
-        },
-        sheep: {
-          names: ['Wooly', 'Cloud', 'Cotton', 'Fleece', 'Mallow'],
-          home: { x0: 14, y0: 5, x1: 21, y1: 8 },
-          starts: [[15, 6], [17, 6], [19, 6], [16, 8], [20, 8]],
-          speedMs: 1450,
-        },
-        chicken: {
-          names: ['Cluck', 'Pip', 'Sunny', 'Pebble', 'Nugget'],
-          home: { x0: 16, y0: 5, x1: 24, y1: 8 },
-          starts: [[17, 6], [19, 6], [22, 6], [18, 8], [23, 8]],
-          speedMs: 1050,
-        },
+        cow: { names: ['Daisy', 'Bessie', 'Clover', 'Maple', 'Moochi'], home: PENS.cow, starts: penStarts(PENS.cow), speedMs: 1500 },
+        sheep: { names: ['Wooly', 'Cloud', 'Cotton', 'Fleece', 'Mallow'], home: PENS.sheep, starts: penStarts(PENS.sheep), speedMs: 1450 },
+        chicken: { names: ['Cluck', 'Pip', 'Sunny', 'Pebble', 'Nugget'], home: PENS.chicken, starts: penStarts(PENS.chicken), speedMs: 1050 },
       };
       for (const species of ['cow', 'sheep', 'chicken']) {
         const config = animalConfig[species];
@@ -815,9 +805,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       drawPlaceholderFarmer(ctx, footX, footY, FACE_WORD[e.facing]);
       return footY - 40;
     }
-    function drawKingdomMount(g, ctx, e, now, footX, footY) {
-      const res = g.resources?.mount;
-      const animName = { North: 'walk_up', South: 'walk_down', East: 'walk_right', West: 'walk_left' }[e.facing] || 'walk_down';
+    // Render a mount from a Kingdom mount RESOURCE (works for the local player and
+    // for peers — a peer's mount resource comes from their broadcast heroSpec).
+    function drawMountFromRes(ctx, res, facing, now, footX, footY) {
+      const animName = { North: 'walk_up', South: 'walk_down', East: 'walk_right', West: 'walk_left' }[facing] || 'walk_down';
       const anim = res?.creature?.animations?.[animName];
       if (res?.sheet && anim?.length) {
         const frame = anim[Math.floor(now / 220) % anim.length];
@@ -829,17 +820,27 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
             dx: res.creature.origin[0] + fm.fx, dy: res.creature.origin[1] + fm.fy,
           }];
           const bb = drawListBBox([list]);
-          if (bb) { paintStep(ctx, list, { x: footX - bb.cx, y: footY - bb.y1 }, 1); return; }
+          if (bb) { paintStep(ctx, list, { x: footX - bb.cx, y: footY - bb.y1 }, 1); return true; }
         }
       }
-      drawMountPlaceholder(ctx, footX, footY, e.facing, Math.floor(now / 260), g.art);
+      return false;
     }
     function drawWorldActor(g, ctx, e, now, footX, footY) {
       const frame = e.moveT < 1 ? Math.floor(e.moveT * 2) : Math.floor(now / 420);
       if (e.kind === 'animal') drawAnimalSprite(ctx, e.species, footX, footY, e.facing, frame, g.art);
       else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
-      else if (e.kind === 'mount' && e.peerMount) drawMountPlaceholder(ctx, footX, footY, e.facing, Math.floor(now / 260), g.art);
-      else if (e.kind === 'mount') drawKingdomMount(g, ctx, e, now, footX, footY);
+      else if (e.kind === 'mount' && e.peerMount) {
+        // Peer's mount → their REAL Kingdom mount skin (loaded from their heroSpec
+        // into the owner's peerActor.resources); placeholder only while loading.
+        const ownerRes = g.peerActors.get(e.ownerId)?.resources?.mount;
+        if (!(ownerRes && drawMountFromRes(ctx, ownerRes, e.facing, now, footX, footY))) {
+          drawMountPlaceholder(ctx, footX, footY, e.facing, Math.floor(now / 260), g.art);
+        }
+      } else if (e.kind === 'mount') {
+        if (!drawMountFromRes(ctx, g.resources?.mount, e.facing, now, footX, footY)) {
+          drawMountPlaceholder(ctx, footX, footY, e.facing, Math.floor(now / 260), g.art);
+        }
+      }
     }
     function drawActorShadow(g, ctx, a) {
       const wide = a.type === 'player' ? g.player.mounted : a.e?.kind === 'mount' || a.e?.kind === 'remote' && a.e.mounted || a.e?.species === 'cow';
