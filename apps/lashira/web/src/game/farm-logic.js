@@ -33,6 +33,13 @@ export class FarmLogic {
     this.toast = null;
     this.externalKins = [];
     this.externalKinsLoaded = false;
+    // Realtime sync hooks. Every LOCAL mutation emits a tiny granular intent
+    // through intentSink (wired to the circle channel by FarmRoom); remote
+    // intents arrive via applyIntent and are applied WITHOUT re-emitting.
+    // `rev` is a monotonic mutation counter used to gate whole-state snapshots
+    // (late joiners) and to reconcile cloud vs local saves — never wall clocks.
+    this.intentSink = null;
+    this.frozen = false; // kicked sessions freeze saves so a zombie tab can't overwrite the shared farm
     this.saveKey = circleId
       ? 'lashirabloom_save_v2_circle_' + circleId
       : 'lashirabloom_save_v2_' + (profile?.id || 'guest');
@@ -43,6 +50,7 @@ export class FarmLogic {
 
   _default() {
     return {
+      rev: 0,
       day: 1, season: 0,
       // Diamonds is the ONE currency (no separate farm currency). Local mutable
       // copies seeded from the real profile so selling/buying feels instant;
@@ -60,80 +68,147 @@ export class FarmLogic {
       kinTasks: {},
     };
   }
+  // Load BOTH the cloud save and the local fallback and keep the most advanced
+  // one (highest rev, then furthest calendar). This heals the split-brain where
+  // one failed cloud write left real progress stranded in localStorage while the
+  // cloud (and therefore every other device) stayed behind — if the local copy
+  // wins, it is pushed back to the cloud immediately.
   async _load() {
+    let cloud = null;
+    let cloudOk = false;
     try {
       const loaded = await loadFarmState({ profile: this.profile, circleId: this.circleId });
-      if (loaded?.data) {
-        const base = this._default();
-        this.state = {
-          ...base,
-          ...loaded.data,
-          ...profileProgress(this.profile),
-          seeds: { ...base.seeds, ...(loaded.data.seeds || {}) },
-          produce: { ...base.produce, ...(loaded.data.produce || {}) },
-          plots: { ...base.plots, ...(loaded.data.plots || {}) },
-          livestock: loaded.data.livestock || base.livestock,
-          kins: loaded.data.kins || base.kins,
-          kinTasks: { ...base.kinTasks, ...(loaded.data.kinTasks || {}) },
-        };
-      }
+      cloud = loaded?.data || null;
+      cloudOk = true;
       this.saveSource = loaded?.source || 'fresh';
-      return;
     } catch (err) {
       console.warn('[farm] cloud load failed, trying local fallback:', err?.message || err);
       this.saveSource = 'local-fallback-after-cloud-error';
     }
+    let local = null;
     try {
       const raw = localStorage.getItem(this.saveKey);
-      if (raw) {
-        const data = JSON.parse(raw);
-        const base = this._default();
-        this.state = {
-          ...base,
-          ...data,
-          ...profileProgress(this.profile),
-          seeds: { ...base.seeds, ...(data.seeds || {}) },
-          produce: { ...base.produce, ...(data.produce || {}) },
-          plots: { ...base.plots, ...(data.plots || {}) },
-          livestock: data.livestock || base.livestock,
-          kins: data.kins || base.kins,
-          kinTasks: { ...base.kinTasks, ...(data.kinTasks || {}) },
-        };
-      }
-    } catch { /* fresh */ }
+      if (raw) local = JSON.parse(raw);
+    } catch { /* corrupt local — ignore */ }
+
+    const revOf = (d) => Number(d?.rev) || 0;
+    const absOf = (d) => (Number(d?.season) || 0) * DAYS_PER_SEASON + (Number(d?.day) || 1);
+    let winner = cloud;
+    let fromLocal = false;
+    if (local && (!cloud || revOf(local) > revOf(cloud) || (revOf(local) === revOf(cloud) && absOf(local) > absOf(cloud)))) {
+      winner = local;
+      fromLocal = true;
+    }
+    if (winner) {
+      const base = this._default();
+      this.state = {
+        ...base,
+        ...winner,
+        ...profileProgress(this.profile),
+        seeds: { ...base.seeds, ...(winner.seeds || {}) },
+        produce: { ...base.produce, ...(winner.produce || {}) },
+        plots: { ...base.plots, ...(winner.plots || {}) },
+        livestock: winner.livestock || base.livestock,
+        kins: winner.kins || base.kins,
+        kinTasks: { ...base.kinTasks, ...(winner.kinTasks || {}) },
+      };
+    }
+    if (fromLocal && cloudOk) {
+      this.saveSource = 'local-ahead-reconciling';
+      this.saveNow(); // push the stranded local progress up so every device converges
+    }
   }
-  applyRemoteState(data) {
-    if (!data || typeof data !== 'object') return;
+  _bump() { this.state.rev = (Number(this.state.rev) || 0) + 1; }
+  _intent(obj) { try { this.intentSink?.(obj); } catch { /* sync is best-effort */ } }
+  _absDay(d = this.state) { return (Number(d?.season) || 0) * DAYS_PER_SEASON + (Number(d?.day) || 1); }
+  freeze() { this.frozen = true; clearTimeout(this._saveTimer); }
+
+  // Whole-state adoption — ONLY for late-joiner snapshots, gated by rev so a
+  // stale peer can never clobber a fresher farm. Personal fields (tool, seed
+  // selection, stamina, diamonds/xp) always stay local.
+  applySnapshot(data, rev = 0) {
+    if (!data || typeof data !== 'object') return false;
+    const remoteRev = Number(rev) || 0;
+    if (remoteRev <= (Number(this.state.rev) || 0)) return false;
     const base = this._default();
     const local = this.state;
-    // The calendar only ever moves forward on a shared farm — never let an adopted
-    // remote state roll the day/season back (e.g. a peer still on Day 1 must not
-    // drag everyone back from Day 4). Take the furthest-along calendar of the two.
-    const localAbs = (local.season || 0) * DAYS_PER_SEASON + (local.day || 1);
-    const remoteAbs = (data.season || 0) * DAYS_PER_SEASON + (data.day || 1);
-    const cal = remoteAbs >= localAbs ? { day: data.day, season: data.season } : { day: local.day, season: local.season };
+    // Belt over the rev gate: the calendar still never rolls backward.
+    const cal = this._absDay(data) >= this._absDay(local)
+      ? { day: data.day, season: data.season }
+      : { day: local.day, season: local.season };
     this.state = {
       ...base,
       ...local,
       ...data,
       ...cal,
+      rev: remoteRev,
       ...profileProgress(this.profile),
       tool: local.tool,
       selectedSeed: local.selectedSeed,
       stamina: local.stamina,
       maxStamina: local.maxStamina,
-      seeds: { ...base.seeds, ...(local.seeds || {}), ...(data.seeds || {}) },
-      produce: { ...base.produce, ...(local.produce || {}), ...(data.produce || {}) },
+      seeds: { ...base.seeds, ...(data.seeds || {}) },
+      produce: { ...base.produce, ...(data.produce || {}) },
       plots: { ...base.plots, ...(data.plots || {}) },
       livestock: data.livestock || local.livestock || base.livestock,
       kins: data.kins || local.kins || base.kins,
-      kinTasks: { ...base.kinTasks, ...(local.kinTasks || {}), ...(data.kinTasks || {}) },
+      kinTasks: { ...base.kinTasks, ...(data.kinTasks || {}) },
     };
+    this.save();
+    this.emit();
+    return true;
+  }
+
+  // Apply a peer's granular change. Field-level, so concurrent actions on
+  // different plots/animals can never wipe each other out (the failure mode of
+  // whole-state last-writer-wins). Never re-emits an intent.
+  applyIntent(intent) {
+    if (!intent || typeof intent !== 'object') return;
+    const st = this.state;
+    switch (intent.t) {
+      case 'plot': {
+        if (!intent.key || !intent.plot) return;
+        st.plots[intent.key] = { ...intent.plot };
+        break;
+      }
+      case 'stock': {
+        // Absolute per-key counts (merge), or full replace after a sell-all.
+        if (intent.seedsReplace) st.seeds = { ...intent.seedsReplace };
+        else if (intent.seeds) st.seeds = { ...st.seeds, ...intent.seeds };
+        if (intent.produceReplace) st.produce = { ...intent.produceReplace };
+        else if (intent.produce) st.produce = { ...st.produce, ...intent.produce };
+        break;
+      }
+      case 'livestock': {
+        if (Array.isArray(intent.livestock)) st.livestock = intent.livestock.map((a) => ({ ...a }));
+        break;
+      }
+      case 'kin-task': {
+        if (!intent.kinId) return;
+        st.kinTasks = { ...(st.kinTasks || {}), [intent.kinId]: intent.task ?? null };
+        const k = st.kins.find((x) => x.id === intent.kinId);
+        if (k) k.task = intent.task ?? null;
+        break;
+      }
+      case 'day': {
+        // Monotonic by construction — only ever adopt a FURTHER calendar.
+        if (this._absDay(intent) <= this._absDay(st)) return;
+        st.day = intent.day; st.season = intent.season;
+        if (intent.plots) st.plots = { ...intent.plots };
+        if (Array.isArray(intent.livestock)) st.livestock = intent.livestock.map((a) => ({ ...a }));
+        st.stamina = st.maxStamina; // the whole family wakes up with the new day
+        this.flash('☀ Day ' + st.day + ' — a new morning');
+        break;
+      }
+      default: return;
+    }
+    this._bump();
     this.save();
     this.emit();
   }
   serialize() {
     return {
+      rev: Number(this.state.rev) || 0,
       day: this.state.day,
       season: this.state.season,
       diamonds: this.state.diamonds,
@@ -166,14 +241,17 @@ export class FarmLogic {
     return this.state.kins.map((k) => ({ ...(starterKinArt[k.id] || {}), ...k, ...(k.render ? {} : starterKinArt[k.id] || {}) }));
   }
   save() {
+    if (this.frozen) return;
     clearTimeout(this._saveTimer);
     this._saveTimer = setTimeout(() => this.flushSave(), 200);
   }
   saveNow() {
+    if (this.frozen) return;
     clearTimeout(this._saveTimer);
     return this.flushSave();
   }
   async flushSave() {
+    if (this.frozen) return;
     clearTimeout(this._saveTimer);
     const payload = this.serialize();
     try {
@@ -239,6 +317,9 @@ export class FarmLogic {
       const crop = CROPS[p.cropId];
       st.produce[crop.id] = (st.produce[crop.id] || 0) + 1;
       p.cropId = null; p.growth = 0; p.watered = false;
+      this._bump();
+      this._intent({ t: 'plot', key, plot: { ...p } });
+      this._intent({ t: 'stock', produce: { [crop.id]: st.produce[crop.id] } });
       this.flash('Harvested ' + crop.name + ' ' + crop.emoji); this.save(); this.emit(); return;
     }
     const tool = st.tool;
@@ -247,6 +328,8 @@ export class FarmLogic {
       if (p && p.tilled) { this.flash('Already tilled'); return; }
       if (!this._spend(1)) return;
       st.plots[key] = { tilled: true, watered: false, cropId: null, growth: 0 };
+      this._bump();
+      this._intent({ t: 'plot', key, plot: { ...st.plots[key] } });
       this.save(); this.emit(); return;
     }
     if (tool === 'seed') {
@@ -256,13 +339,19 @@ export class FarmLogic {
       if ((st.seeds[id] || 0) <= 0) { this.flash('No ' + CROPS[id].name + ' seeds — buy some'); return; }
       if (!this._spend(1)) return;
       st.seeds[id] -= 1; p.cropId = id; p.growth = 0;
+      this._bump();
+      this._intent({ t: 'plot', key, plot: { ...p } });
+      this._intent({ t: 'stock', seeds: { [id]: st.seeds[id] } });
       this.flash('Planted ' + CROPS[id].name); this.save(); this.emit(); return;
     }
     if (tool === 'can') {
       if (!p || !p.tilled) { this.flash('Nothing to water here'); return; }
       if (p.watered) { this.flash('Already watered'); return; }
       if (!this._spend(1)) return;
-      p.watered = true; this.save(); this.emit(); return;
+      p.watered = true;
+      this._bump();
+      this._intent({ t: 'plot', key, plot: { ...p } });
+      this.save(); this.emit(); return;
     }
   }
 
@@ -276,6 +365,8 @@ export class FarmLogic {
     this.state.diamonds -= cost; this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
     this.state.selectedSeed = id;
     this.state.tool = 'seed';
+    this._bump();
+    this._intent({ t: 'stock', seeds: { [id]: this.state.seeds[id] } });
     this.flash('Bought ' + qty + '× ' + crop.emoji + ' ' + crop.name + ' seed · now owned: ' + this.state.seeds[id]);
     this.save(); this.emit();
   }
@@ -296,6 +387,8 @@ export class FarmLogic {
     if (!any) { this.flash('Nothing to sell'); return; }
     this.state.produce = {};
     const isKid = this.profile?.role === 'kid';
+    this._bump();
+    this._intent({ t: 'stock', produceReplace: {} });
     if (isKid) { this.state.xp += 1; this.flash('Sold ' + items.join(' ') + ' · value 💎' + gain + ' · +1 XP'); }
     else { this.state.diamonds += gain; this.flash('Sold ' + items.join(' ') + ' = 💎' + gain); }
     this.save(); this.emit();
@@ -312,21 +405,39 @@ export class FarmLogic {
 
   feedAll() {
     let fed = 0; for (const a of this.state.livestock) if (!a.fed) { a.fed = true; fed++; }
+    if (fed) { this._bump(); this._intent({ t: 'livestock', livestock: this.state.livestock.map((a) => ({ ...a })) }); }
     this.flash(fed ? 'Fed ' + fed + ' animal' + (fed > 1 ? 's' : '') : 'All already fed'); this.save(); this.emit();
   }
-  petAnimal(id) { const a = this.state.livestock.find((x) => x.id === id); if (a) { a.affection = Math.min(100, a.affection + 5); this.flash('❤ ' + a.name); this.save(); this.emit(); } }
+  petAnimal(id) {
+    const a = this.state.livestock.find((x) => x.id === id);
+    if (!a) return;
+    a.affection = Math.min(100, a.affection + 5);
+    this._bump();
+    this._intent({ t: 'livestock', livestock: this.state.livestock.map((x) => ({ ...x })) });
+    this.flash('❤ ' + a.name); this.save(); this.emit();
+  }
   collectProduce(id) {
     const a = this.state.livestock.find((x) => x.id === id); if (!a || !a.produce) return;
     const sp = SPECIES[a.species]; this.state.produce[sp.produce] = (this.state.produce[sp.produce] || 0) + 1; a.produce = false;
+    this._bump();
+    this._intent({ t: 'livestock', livestock: this.state.livestock.map((x) => ({ ...x })) });
+    this._intent({ t: 'stock', produce: { [sp.produce]: this.state.produce[sp.produce] } });
     this.flash('Collected ' + sp.produceName + ' ' + sp.produceEmoji); this.save(); this.emit();
   }
   assignKin(id, task) {
     if (this.externalKins?.some((x) => x.id === id)) {
       this.state.kinTasks = { ...(this.state.kinTasks || {}), [id]: task };
+      this._bump();
+      this._intent({ t: 'kin-task', kinId: id, task });
       this.save(); this.emit(); return;
     }
     const k = this.state.kins.find((x) => x.id === id);
-    if (k) { k.task = task; this.save(); this.emit(); }
+    if (k) {
+      k.task = task;
+      this._bump();
+      this._intent({ t: 'kin-task', kinId: id, task });
+      this.save(); this.emit();
+    }
   }
 
   sleep() {
@@ -344,6 +455,14 @@ export class FarmLogic {
     st.day += 1;
     if (st.day > DAYS_PER_SEASON) { st.day = 1; st.season = (st.season + 1) % SEASONS.length; }
     st.stamina = st.maxStamina;
+    this._bump();
+    // Day advance carries the post-sleep shared fields so every client lands on
+    // the IDENTICAL morning (growth, watering resets, produce-ready animals).
+    this._intent({
+      t: 'day', day: st.day, season: st.season,
+      plots: { ...st.plots },
+      livestock: st.livestock.map((a) => ({ ...a })),
+    });
     this.saveNow(); this.flash('☀ Day ' + st.day + ' — a new morning'); this.emit();
   }
 }

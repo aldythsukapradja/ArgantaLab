@@ -94,7 +94,11 @@ function presenceHostId(g, profile) {
   return ids[0] || '';
 }
 
-function worldActorSnapshots(g, includeSharedWorld) {
+// Ownership model: mounts and KINS are OWNER-simulated — every player broadcasts
+// their own, tagged with their display name so peers can label whose Kin is whose.
+// Animals (cows/sheep/chickens) are shared world critters simulated by ONE host
+// (lowest user id in presence) to avoid duplicate ghost herds.
+function worldActorSnapshots(g, isHost, ownerName) {
   const out = [];
   for (const e of g.actors.values()) {
     if (e.kind === 'mount') {
@@ -106,15 +110,16 @@ function worldActorSnapshots(g, includeSharedWorld) {
         mode: e.mode || 'wander',
         hidden: !!e.hidden,
       });
-    } else if (includeSharedWorld && e.kind === 'kin') {
+    } else if (e.kind === 'kin') {
       out.push({
         id: e.id,
         kind: 'kin',
+        owner: ownerName || '',
         tile: [...(e.tile || [12, 12])],
         facing: e.facing || 'South',
         kin: e.kin || null,
       });
-    } else if (includeSharedWorld && e.kind === 'animal') {
+    } else if (isHost && e.kind === 'animal') {
       out.push({
         id: e.id,
         kind: 'animal',
@@ -126,10 +131,6 @@ function worldActorSnapshots(g, includeSharedWorld) {
     }
   }
   return out;
-}
-
-function farmStateKey(data) {
-  try { return JSON.stringify(data); } catch { return ''; }
 }
 
 export default function FarmRoom({ profile, hero, circleId = null }) {
@@ -145,18 +146,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // peers saw nothing move. Keeping it here means a G.current rebuild can't sever
   // the live channel from the game loop.
   const presenceCtrlRef = useRef(null);
-  // Farm-state sync bookkeeping, kept in refs (survive G.current rebuilds).
-  //   key = JSON of the last state we know about (local or adopted)
-  //   at  = timestamp that state was last CHANGED (by us or the peer we adopted)
-  // Newest timestamp wins globally → converges without flip-flop between peers.
-  const farmSyncRef = useRef({ key: '', at: 0 });
-  const suppressBroadcastRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
   const [usingHero, setUsingHero] = useState(false);
   const [presence, setPresence] = useState({ count: 0, names: [] });
+  const [kickedBy, setKickedBy] = useState(null); // session singleton: newer login elsewhere
   const heroPresenceKey = heroSpecKey(hero?.spec);
 
   // ---------- init ----------
@@ -197,23 +193,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         actors: prev?.actors || new Map(), peerActors: prev?.peerActors || new Map(), peerWorldActors: prev?.peerWorldActors || new Map(), pendingMountCall: false,
         lastPresenceSnapshot: '', lastPresenceAt: 0,
       };
-      const unsub = logic.subscribe((next) => {
-        setSnap(next);
-        const ctrl = presenceCtrlRef.current;
-        if (!ctrl || !circleId || profile?.guest) return;
-        const data = logic.serialize();
-        const key = farmStateKey(data);
-        // This emit came from adopting a peer's state — don't echo it back.
-        if (suppressBroadcastRef.current) {
-          suppressBroadcastRef.current = false;
-          farmSyncRef.current = { key, at: farmSyncRef.current.at };
-          return;
-        }
-        if (!key || key === farmSyncRef.current.key) return;
-        // Genuine LOCAL change → stamp it now and broadcast; our clock wins.
-        farmSyncRef.current = { key, at: Date.now() };
-        ctrl.sendState({ data, updatedAt: farmSyncRef.current.at });
-      });
+      // Live sync is intent-based: FarmLogic emits a tiny granular intent for
+      // every local mutation, and the channel fans it out. UI updates ride the
+      // normal subscribe → snapshot path.
+      logic.intentSink = (intent) => presenceCtrlRef.current?.sendIntent?.(intent);
+      const unsub = logic.subscribe((next) => setSnap(next));
       G.current._unsub = unsub;
       setReady(true);
     })();
@@ -253,15 +237,30 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     if (!circleId || !profile || profile.guest) return undefined;
 
     let closed = false;
-    const applyFarmState = (payload) => {
-      if (closed || !G.current || !payload?.data) return;
-      const key = farmStateKey(payload.data);
-      if (!key || key === farmSyncRef.current.key) return; // already have this exact state
-      const at = Number(payload.updatedAt) || 0;
-      if (at <= farmSyncRef.current.at) return; // our state is same-or-newer → keep ours (our heartbeat will re-assert it)
-      farmSyncRef.current = { key, at };
-      suppressBroadcastRef.current = true;
-      logicRef.current?.applyRemoteState?.(payload.data);
+    // Peer's granular change → apply per-field (never re-emitted).
+    const applyIntent = (intent) => {
+      if (closed) return;
+      logicRef.current?.applyIntent?.(intent);
+    };
+    // Snapshot response → adopt only if the peer's rev is ahead of ours.
+    const applySnapshot = (payload) => {
+      if (closed || !payload?.data) return;
+      logicRef.current?.applySnapshot?.(payload.data, payload.rev);
+    };
+    // A late joiner asked for the current farm — answer with ours.
+    const answerStateRequest = () => {
+      if (closed) return;
+      const logic = logicRef.current;
+      const ctrl = presenceCtrlRef.current;
+      if (!logic || !ctrl) return;
+      ctrl.sendSnapshot({ data: logic.serialize(), rev: logic.state?.rev || 0 });
+    };
+    // Newer login for this user elsewhere → this tab freezes and steps aside.
+    const onKicked = () => {
+      if (closed) return;
+      logicRef.current?.freeze?.();
+      presenceCtrlRef.current = null;
+      setKickedBy(true);
     };
     const applyPeers = (peers) => {
       if (closed || !G.current) return;
@@ -345,7 +344,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           if (!fa || !fa.id) continue;
           const kind = fa.kind === 'animal' ? 'animal' : fa.kind === 'kin' ? 'kin' : fa.kind === 'mount' ? 'mount' : null;
           if (!kind) continue;
-          if ((kind === 'kin' || kind === 'animal') && id !== host) continue;
+          // Kins + mounts are OWNER-simulated (every peer's are shown, with an
+          // owner tag); animals come only from the elected host.
+          if (kind === 'animal' && id !== host) continue;
           const tile = readTile(fa.tile);
           if (!tile) continue;
           const wid = id + ':' + fa.id;
@@ -356,6 +357,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               id: wid,
               sourceId: fa.id,
               ownerId: id,
+              owner: fa.owner || peer.name || '',
               kind,
               peerMount: kind === 'mount',
               tile,
@@ -385,6 +387,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
             actor.kin = fa.kin || actor.kin || null;
             actor.species = fa.species || actor.species || null;
             actor.name = fa.name || actor.name || fa.species || null;
+            actor.owner = fa.owner || peer.name || actor.owner || '';
           }
         }
       }
@@ -393,7 +396,14 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       setPresence({ count: names.length, names: names.slice(0, 4) });
     };
 
-    const ctrl = joinFarmPresence({ circleId, profile, hero, onPeers: applyPeers, onFarmState: applyFarmState });
+    const ctrl = joinFarmPresence({
+      circleId, profile, hero,
+      onPeers: applyPeers,
+      onIntent: applyIntent,
+      onSnapshot: applySnapshot,
+      onStateRequest: answerStateRequest,
+      onKicked,
+    });
     presenceCtrlRef.current = ctrl;
     if (G.current) { G.current.lastPresenceSnapshot = ''; G.current.lastPresenceAt = 0; }
     ctrl.update({
@@ -402,8 +412,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       facing: g.player.facing,
       mounted: !!g.player.mounted,
       heroSpec: hero?.spec || null,
-      actors: worldActorSnapshots(g, true),
+      actors: worldActorSnapshots(g, true, profile.displayName || 'Farmer'),
     });
+    // Late-joiner convergence: ask the room for its freshest farm. Whoever
+    // answers with a higher rev than ours wins (applySnapshot gates on rev).
+    ctrl.requestState();
 
     return () => {
       closed = true;
@@ -561,7 +574,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           ent.speedMs = config.speedMs;
         }
       }
-      const kinSource = (logicRef.current?.activeKins?.() || state.kins || []).slice(0, 12);
+      // Max 6 active Kins per player on the shared farm (loadout picker will let
+      // the player choose which — for now the first 6 of the acquired roster).
+      const kinSource = (logicRef.current?.activeKins?.() || state.kins || []).slice(0, 6);
       kinSource.forEach((k, i) => {
         const id = 'kin:' + k.id; live.add(id);
         const start = KIN_STARTS[i % KIN_STARTS.length];
@@ -666,7 +681,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (!ctrl) return;
       const p = g.player;
       const isHost = presenceHostId(g, profile) === presenceProfileId(profile);
-      const actors = worldActorSnapshots(g, isHost);
+      const actors = worldActorSnapshots(g, isHost, profile?.displayName || 'Farmer');
       const actorStamp = actors.map((a) => `${a.id}:${a.tile[0]},${a.tile[1]}:${a.facing}:${a.mode || ''}:${a.hidden ? 1 : 0}`).join('|');
       const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}:${actorStamp}`;
       if (!force && snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
@@ -682,25 +697,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       });
     }
 
-    // Heartbeat — runs on a TIMER, not requestAnimationFrame, so a backgrounded /
-    // minimized tab (where rAF is throttled to ~0) still re-asserts this player's
-    // position + the shared farm state. This is what makes a peer who joins later,
-    // or a tab that's been in the background, converge to the same day/tiles/animals
-    // instead of drifting (the "Day 4 vs Day 1" bug). Cheap: presence is deduped in
-    // publishPresence, and farm-state carries the true change-timestamp so the most
-    // recently changed state wins globally without flip-flopping.
+    // Presence heartbeat on a TIMER, not requestAnimationFrame — a backgrounded /
+    // minimized tab (where rAF throttles to ~0) keeps its position, mount, kins
+    // and (if host) animals visible to the circle. Farm STATE never rides the
+    // heartbeat: state changes are granular intents sent at the moment they
+    // happen, so there is nothing here that could clobber a peer's live edits.
     const heartbeat = window.setInterval(() => {
       const g = G.current;
-      const ctrl = presenceCtrlRef.current;
-      if (!g || !ctrl) return;
+      if (!g || !presenceCtrlRef.current) return;
       publishPresence(g, performance.now(), true);
-      // Re-assert farm state with its TRUE change-timestamp (0 until we've made a
-      // local change). NEVER stamp Date.now() here — an idle peer doing that would
-      // look "newest" every 2s and could revert the other player's live edits.
-      // Only re-broadcast if we actually have an authoritative state to assert.
-      if (!farmSyncRef.current.at) return;
-      const data = logicRef.current?.serialize?.();
-      if (data) ctrl.sendState({ data, updatedAt: farmSyncRef.current.at });
     }, 2000);
 
     function tick(now) {
@@ -827,13 +832,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.fill();
     }
     function drawNameplate(ctx, label) {
-      ctx.font = '11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const tw = ctx.measureText(label.name).width; const bw = tw + 16;
-      const ny = Math.min(label.headTop - 12, label.footY - 44);
+      const small = !!label.small;
+      ctx.font = (small ? '8px' : '11px') + ' Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(label.name).width; const bw = tw + (small ? 8 : 16);
+      const ny = small ? label.headTop : Math.min(label.headTop - 12, label.footY - 44);
       ctx.fillStyle = label.fill || '#1d9d55dd';
-      ctx.fillRect(label.footX - bw / 2, ny - 9, bw, 17);
+      ctx.fillRect(label.footX - bw / 2, ny - (small ? 6 : 9), bw, small ? 12 : 17);
       ctx.fillStyle = '#fff';
-      ctx.fillText(label.name, label.footX, ny);
+      ctx.fillText(label.name, label.footX, ny + (small ? 0.5 : 0));
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
 
@@ -870,16 +877,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       let headTop = footY - 40;
       const actors = [];
       const hostIsSelf = !circleId || presenceHostId(g, profile) === presenceProfileId(profile);
+      const myName = logicRef.current?.profile?.displayName || 'Farmer';
       for (const e of g.actors.values()) {
         if (e.kind === 'mount' && p.mounted) continue;
-        if ((e.kind === 'kin' || e.kind === 'animal') && !hostIsSelf) continue;
+        // My kins are always mine to draw (owner-simulated); animals draw only
+        // on the elected host so the shared herd exists exactly once.
+        if (e.kind === 'animal' && !hostIsSelf) continue;
         const [ex, ey] = entityPx(e);
-        actors.push({ type: 'world', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
+        actors.push({ type: 'world', e, owner: e.kind === 'kin' ? myName : null, footX: ex + TILE / 2, footY: ey + TILE - 5 });
       }
       for (const e of g.peerWorldActors.values()) {
         if (e.hidden) continue;
         const [ex, ey] = entityPx(e);
-        actors.push({ type: 'world', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
+        actors.push({ type: 'world', e, owner: e.kind === 'kin' ? (e.owner || '') : null, footX: ex + TILE / 2, footY: ey + TILE - 5 });
       }
       for (const e of g.peerActors.values()) {
         const [ex, ey] = entityPx(e);
@@ -897,7 +907,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         } else if (a.type === 'remote') {
           const remoteTop = drawRemotePlayer(g, ctx, now, a.e, a.footX, a.footY);
           labels.push({ name: a.e.name || 'Farmer', footX: a.footX, footY: a.footY, headTop: remoteTop, fill: '#4f46e5dd' });
-        } else drawWorldActor(g, ctx, a.e, now, a.footX, a.footY);
+        } else {
+          drawWorldActor(g, ctx, a.e, now, a.footX, a.footY);
+          // Kin owner tag — tiny pill so it's obvious whose Kin is whose,
+          // color-matched to the owner's nameplate (green = you, indigo = peer).
+          if (a.owner) {
+            const mine = a.owner === myName;
+            labels.push({ name: a.owner, footX: a.footX, footY: a.footY, headTop: a.footY - 30, fill: mine ? '#1d9d55bb' : '#4f46e5bb', small: true });
+          }
+        }
       }
       for (const label of labels) drawNameplate(ctx, label);
       ctx.restore();
@@ -935,6 +953,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
+        )}
+        {kickedBy && (
+          <div className="kicked-overlay">
+            <div className="kicked-card">
+              <b>Signed in on another device</b>
+              <p>This farm session was taken over by a newer login. Nothing was lost — your progress lives in the circle save.</p>
+              <button onClick={() => window.location.reload()}>Play here instead</button>
+            </div>
+          </div>
         )}
       </div>
     </div>

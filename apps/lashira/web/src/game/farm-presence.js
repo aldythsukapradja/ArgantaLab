@@ -1,29 +1,48 @@
+// Realtime circle presence for the shared farm — Supabase channel `farm:<circleId>`.
+//
+// Wire protocol (all peers in one circle):
+//   presence            key `userId:sessionId`, meta = live player card
+//                       (id, name, tile, facing, mounted, heroSpec, actors, bootTs, sessionId)
+//   session-claim       session singleton — newest boot per user wins (farm-session.js)
+//   player-state        live position/actors heartbeat (owner-simulated kins + mount,
+//                       host-simulated animals ride in `actors`)
+//   farm-intent         GRANULAR state change (plot/stock/livestock/kin-task/day) —
+//                       tiny, instant, per-field; can never clobber concurrent actions
+//   state-request       late joiner asks for a snapshot
+//   farm-state          snapshot RESPONSE { data, rev } — adopted only if rev is newer
+//
+// Design notes (learned the hard way — see memory lashirabloom v2.11/v2.12):
+//   • subscribe SYNCHRONOUSLY, no explicit realtime.setAuth (SDK handles it; an
+//     explicit call tears the socket down), no topic sweeping (removes the LIVE
+//     channel under re-runs). This mirrors Kingdom Heroes' proven joinArena.
+//   • whole-state broadcasts are ONLY for late-joiner snapshots, never for live
+//     changes — live changes are intents, so wall-clock skew can't clobber.
 import { supabase, hasSupabase } from '../net/supabase.js';
-
-function collectPeers(channel, selfId) {
-  const state = channel.presenceState();
-  const peers = [];
-  for (const metas of Object.values(state || {})) {
-    const latest = Array.isArray(metas) ? metas[metas.length - 1] : null;
-    if (latest?.id && latest.id !== selfId) peers.push(latest);
-  }
-  return peers;
-}
+import { attachSessionSingleton, newSessionId, winningPeers } from './farm-session.js';
 
 function noopPresence() {
-  return { update: () => {}, sendState: () => {}, leave: () => {} };
+  return {
+    update: () => {}, sendIntent: () => {}, sendSnapshot: () => {},
+    requestState: () => {}, leave: () => {}, sessionId: null,
+  };
 }
 
-export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState }) {
+export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, onSnapshot, onStateRequest, onKicked }) {
   if (!hasSupabase || !supabase || !circleId || !profile || profile.guest) return noopPresence();
   const selfId = String(profile.id || '').trim();
   if (!selfId) return noopPresence();
 
+  const sessionId = newSessionId();
+  const bootTs = Date.now();
   let subscribed = false;
   let closed = false;
-  const broadcastPeers = new Map();
+  let pendingRequest = false;
+  const peers = new Map(); // userId -> latest winning meta/broadcast
+
   let current = {
     id: selfId,
+    sessionId,
+    bootTs,
     name: profile.displayName || 'Farmer',
     tile: [12, 12],
     facing: 'South',
@@ -31,47 +50,60 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
     heroSpec: hero?.spec || null,
     updatedAt: Date.now(),
   };
-  let pendingState = null;
 
-  // One channel per topic, created fresh each time — exactly like Kingdom's
-  // joinArena. The effect cleanup calls leave() (removeChannel) so the previous
-  // channel is gone before the next run. (An earlier "sweep all channels on this
-  // topic" guard turned out to remove the CURRENT live channel on a later effect
-  // run under StrictMode, leaving zero channels — do NOT reintroduce it.)
-  const topic = `farm:${circleId}`;
-  const channel = supabase.channel(topic, {
-    config: { presence: { key: selfId }, broadcast: { self: false } },
+  const channel = supabase.channel(`farm:${circleId}`, {
+    config: { presence: { key: `${selfId}:${sessionId}` }, broadcast: { self: false } },
   });
+
+  const die = (claim) => {
+    if (closed) return;
+    closed = true;
+    subscribed = false;
+    try { supabase.removeChannel(channel); } catch { /* noop */ }
+    onKicked?.(claim);
+  };
+  const session = attachSessionSingleton(channel, { userId: selfId, sessionId, bootTs, onKicked: die });
 
   channel.on('presence', { event: 'sync' }, () => {
-    const peers = collectPeers(channel, selfId);
-    for (const peer of peers) if (peer?.id) broadcastPeers.set(String(peer.id), peer);
-    onPeers([...broadcastPeers.values()]);
+    if (closed) return;
+    const winners = winningPeers(channel.presenceState(), selfId);
+    const liveIds = new Set(winners.map((w) => String(w.id)));
+    for (const id of [...peers.keys()]) if (!liveIds.has(id)) peers.delete(id); // drop leavers
+    for (const w of winners) {
+      const prev = peers.get(String(w.id));
+      // presence meta can lag a fresher broadcast — keep the newest of the two
+      if (!prev || (w.updatedAt || 0) >= (prev.updatedAt || 0)) peers.set(String(w.id), w);
+    }
+    onPeers([...peers.values()]);
   });
   channel.on('broadcast', { event: 'player-state' }, ({ payload }) => {
-    if (!payload?.id || payload.id === selfId) return;
-    broadcastPeers.set(String(payload.id), payload);
-    onPeers([...broadcastPeers.values()]);
+    if (closed || !payload?.id || payload.id === selfId) return;
+    peers.set(String(payload.id), payload);
+    onPeers([...peers.values()]);
+  });
+  channel.on('broadcast', { event: 'farm-intent' }, ({ payload }) => {
+    if (closed || !payload?.intent || payload.src === sessionId) return;
+    onIntent?.(payload.intent, payload);
+  });
+  channel.on('broadcast', { event: 'state-request' }, ({ payload }) => {
+    if (closed || payload?.src === sessionId) return;
+    onStateRequest?.(payload);
   });
   channel.on('broadcast', { event: 'farm-state' }, ({ payload }) => {
-    if (!payload || payload.sourceId === selfId) return;
-    onFarmState?.(payload);
+    if (closed || !payload || payload.src === sessionId) return;
+    onSnapshot?.(payload);
   });
-  // Subscribe SYNCHRONOUSLY and do NOT call realtime.setAuth here — exactly like
-  // Kingdom Heroes' joinArena, which syncs flawlessly. The SDK already applies the
-  // access token to the realtime socket on login / setSession (onAuthStateChange),
-  // so an explicit setAuth is redundant AND harmful: it tears down and reconnects
-  // the WebSocket, which dropped this channel moments after it subscribed — the
-  // "presence shows 1 live but the socket is closed and nothing syncs" bug.
+
   channel.subscribe((status) => {
     if (closed) return;
     if (status === 'SUBSCRIBED') {
       subscribed = true;
+      session.announce();
       channel.track(current);
       channel.send({ type: 'broadcast', event: 'player-state', payload: current });
-      if (pendingState) {
-        channel.send({ type: 'broadcast', event: 'farm-state', payload: pendingState });
-        pendingState = null;
+      if (pendingRequest) {
+        pendingRequest = false;
+        channel.send({ type: 'broadcast', event: 'state-request', payload: { src: sessionId, id: selfId } });
       }
     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       subscribed = false;
@@ -79,24 +111,31 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
   });
 
   return {
+    sessionId,
     update(patch = {}) {
-      current = { ...current, ...patch, updatedAt: Date.now() };
+      if (closed) return;
+      current = { ...current, ...patch, sessionId, bootTs, updatedAt: Date.now() };
       if (subscribed) {
         channel.track(current);
         channel.send({ type: 'broadcast', event: 'player-state', payload: current });
       }
     },
-    sendState(payload = {}) {
-      const next = {
-        ...payload,
-        sourceId: selfId,
-        updatedAt: payload.updatedAt || Date.now(),
-      };
-      if (subscribed) channel.send({ type: 'broadcast', event: 'farm-state', payload: next });
-      else pendingState = next;
+    sendIntent(intent) {
+      if (closed || !subscribed || !intent) return;
+      channel.send({ type: 'broadcast', event: 'farm-intent', payload: { src: sessionId, id: selfId, intent } });
+    },
+    sendSnapshot({ data, rev }) {
+      if (closed || !subscribed || !data) return;
+      channel.send({ type: 'broadcast', event: 'farm-state', payload: { src: sessionId, id: selfId, data, rev: Number(rev) || 0 } });
+    },
+    requestState() {
+      if (closed) return;
+      if (subscribed) channel.send({ type: 'broadcast', event: 'state-request', payload: { src: sessionId, id: selfId } });
+      else pendingRequest = true;
     },
     leave() {
       closed = true;
+      subscribed = false;
       try { supabase.removeChannel(channel); } catch { /* noop */ }
     },
   };
