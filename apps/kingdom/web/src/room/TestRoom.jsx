@@ -18,6 +18,7 @@ import {
   ATTACK_BY_WEAPON, MELEE_DAMAGE, PVP_DAMAGE, MONSTER_WALK_MS,
   normalizeSkills, resolveMelee, tickMonsterState, monsterExpired,
 } from '@arganta/combat';
+import { ActionCluster } from '@arganta/combat/cluster';
 
 const TILE = 48;
 const WALK_MS = 460;
@@ -112,12 +113,6 @@ const IconMana = () => (
     <path d="M12 2.5c0 0 7 7.6 7 12.2A7 7 0 0 1 5 14.7C5 10.1 12 2.5 12 2.5z" />
   </svg>
 );
-const IconSwords = () => (
-  <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="M19 21h2v-2" />
-    <path d="M9.5 17.5 21 6V3h-3L6.5 14.5" /><path d="m11 19-6-6" /><path d="m8 16-4 4" /><path d="M5 21H3v-2" />
-  </svg>
-);
 const IconHand = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12" /><path d="M11 11.5V4a1.5 1.5 0 0 1 3 0v8" />
@@ -127,11 +122,6 @@ const IconHand = () => (
 const IconMount = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
     <path d="M3 5c1.6.2 2.7 1 3.5 2.3L8 9l3.5-.4c2.6-.3 5 .8 6.6 2.9l1.9 2.5-2 .3-1.6-1.4-.6 3.9c-.1.9-.9 1.5-1.8 1.4-.8-.1-1.4-.9-1.3-1.7l.5-3.4-2.9.3-1.2 3.7c-.3.8-1.1 1.2-1.9 1-.8-.3-1.2-1.1-1-1.9l1.1-3.4c-1.3-.7-2.2-2-2.4-3.6L3 5z" />
-  </svg>
-);
-const IconSpark = () => (
-  <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">
-    <path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6z" />
   </svg>
 );
 const IconFriends = () => (
@@ -1044,20 +1034,17 @@ export default function TestRoom({ spec, account, onPlayerState }) {
         {/* joystick zone (touch / small screens) — nipplejs renders into this */}
         <div className="stick-zone" ref={stickZoneRef} />
 
-        {/* action cluster */}
-        <div className="cluster">
-          <div className="small-ring">
-            {skills.map((s, i) => (
-              <button key={i} className="skill-circle" title={`${s.name || `effect #${s.fx}`}`}
-                type="button" onPointerDown={keepCanvasFocus} onClick={() => doSkill(i)}>
-                <IconSpark /><span className="slot">{i + 1}</span>
-              </button>
-            ))}
-            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={doTake} title="take / crouch"><IconHand /></button>
-            <button type="button" className="skill-circle util" onPointerDown={keepCanvasFocus} onClick={toggleMount} title="mount"><IconMount /></button>
-          </div>
-          <button type="button" className="attack-circle" onPointerDown={keepCanvasFocus} onClick={doAttack} aria-label="attack"><IconSwords /></button>
-        </div>
+        {/* action cluster — shared @arganta/combat component (canonical) */}
+        <ActionCluster
+          skills={skills}
+          onSkill={doSkill}
+          onAttack={doAttack}
+          onButtonPointerDown={keepCanvasFocus}
+          utils={[
+            { key: 'take', icon: <IconHand />, onClick: doTake, title: 'take / crouch' },
+            { key: 'mount', icon: <IconMount />, onClick: toggleMount, title: 'mount' },
+          ]}
+        />
       </div>
 
       {showSettings && (

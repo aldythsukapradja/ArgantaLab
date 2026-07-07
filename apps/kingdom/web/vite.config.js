@@ -49,7 +49,7 @@ export default defineConfig({
     alias: {
       // Shared combat system (packages/combat) — single source of truth for
       // damage/skills/monster rules, imported by BOTH Kingdom and the farm.
-      '@arganta/combat': path.resolve(REPO_ROOT, 'packages/combat/src/index.js'),
+      '@arganta/combat': path.resolve(REPO_ROOT, 'packages/combat/src'),
     },
   },
   server: { port: 8322, fs: { allow: [REPO_ROOT] } },

@@ -15,7 +15,7 @@ export default defineConfig({
       '@components': path.resolve(__dirname, '../../web/src/components'),
       // Shared combat system (packages/combat) — single source of truth for
       // damage/skills/monster rules, imported by BOTH the farm and Kingdom.
-      '@arganta/combat': path.resolve(__dirname, '../../../packages/combat/src/index.js'),
+      '@arganta/combat': path.resolve(__dirname, '../../../packages/combat/src'),
     },
   },
   server: {
