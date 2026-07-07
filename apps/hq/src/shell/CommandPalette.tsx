@@ -10,7 +10,7 @@ import { useVault, type CenterView } from '../vault/store'
 interface Cmd { id: string; label: string; hint: string; keywords: string; Icon: typeof Search; run: () => void }
 
 const SURFACE_ICON: Record<SurfaceId, typeof Search> = {
-  portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
+  home: Sparkles, portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
   game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone, command: Radar,
   pixel: Grid2x2, vault: VaultIcon,
 }
@@ -42,7 +42,7 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const cmds = useMemo<Cmd[]>(() => {
-    const surfs: SurfaceId[] = ['portfolio', 'growth', 'data', 'command', 'vault', 'game', 'app', 'content', 'agents', 'broadcast']
+    const surfs: SurfaceId[] = ['home', 'portfolio', 'growth', 'data', 'command', 'vault', 'game', 'app', 'content', 'agents', 'broadcast']
     const out: Cmd[] = surfs.map(s => ({
       id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s + (s === 'vault' ? ' notes knowledge obsidian markdown' : ''), Icon: SURFACE_ICON[s], run: () => go(s),
     }))

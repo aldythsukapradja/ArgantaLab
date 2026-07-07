@@ -40,6 +40,7 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
   let pendingRequest = false;
   let lastStatus = 'init';
   let lastPeerEventAt = 0; // when we last HEARD anything from a peer
+  let joinPings = []; // timers that re-assert presence right after a join
   const peers = new Map(); // userId -> latest winning meta/broadcast
 
   let current = {
@@ -54,67 +55,109 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
     updatedAt: Date.now(),
   };
 
-  const channel = supabase.channel(`farm:${circleId}`, {
-    config: { presence: { key: `${selfId}:${sessionId}` }, broadcast: { self: false } },
-  });
+  // `channel`, `session`, `rejoinTimer`, `rejoinAttempts` are mutable so the
+  // channel can be torn down and rebuilt on an UNEXPECTED drop (auto-rejoin).
+  let channel = null;
+  let session = null;
+  let rejoinTimer = null;
+  let rejoinAttempts = 0;
 
   const die = (claim) => {
     if (closed) return;
     closed = true;
     subscribed = false;
+    clearTimeout(rejoinTimer);
+    joinPings.forEach(clearTimeout);
     try { supabase.removeChannel(channel); } catch { /* noop */ }
     onKicked?.(claim);
   };
-  const session = attachSessionSingleton(channel, { userId: selfId, sessionId, bootTs, onKicked: die });
 
-  channel.on('presence', { event: 'sync' }, () => {
-    if (closed) return;
-    const winners = winningPeers(channel.presenceState(), selfId);
-    if (winners.length) lastPeerEventAt = Date.now();
-    const liveIds = new Set(winners.map((w) => String(w.id)));
-    for (const id of [...peers.keys()]) if (!liveIds.has(id)) peers.delete(id); // drop leavers
-    for (const w of winners) {
-      const prev = peers.get(String(w.id));
-      // presence meta can lag a fresher broadcast — keep the newest of the two
-      if (!prev || (w.updatedAt || 0) >= (prev.updatedAt || 0)) peers.set(String(w.id), w);
-    }
-    onPeers([...peers.values()]);
-  });
-  channel.on('broadcast', { event: 'player-state' }, ({ payload }) => {
-    if (closed || !payload?.id || payload.id === selfId) return;
-    lastPeerEventAt = Date.now();
-    peers.set(String(payload.id), payload);
-    onPeers([...peers.values()]);
-  });
-  channel.on('broadcast', { event: 'farm-intent' }, ({ payload }) => {
-    if (closed || !payload?.intent || payload.src === sessionId) return;
-    onIntent?.(payload.intent, payload);
-  });
-  channel.on('broadcast', { event: 'state-request' }, ({ payload }) => {
-    if (closed || payload?.src === sessionId) return;
-    onStateRequest?.(payload);
-  });
-  channel.on('broadcast', { event: 'farm-state' }, ({ payload }) => {
-    if (closed || !payload || payload.src === sessionId) return;
-    onSnapshot?.(payload);
-  });
+  const scheduleRejoin = () => {
+    if (closed || rejoinTimer) return;
+    rejoinAttempts += 1;
+    const delay = Math.min(15000, 800 * 2 ** (rejoinAttempts - 1)); // 0.8s → 15s cap
+    rejoinTimer = setTimeout(() => {
+      rejoinTimer = null;
+      if (closed) return;
+      try { supabase.removeChannel(channel); } catch { /* noop */ }
+      buildAndSubscribe();
+    }, delay);
+  };
 
-  channel.subscribe((status) => {
-    lastStatus = status;
+  function buildAndSubscribe() {
     if (closed) return;
-    if (status === 'SUBSCRIBED') {
-      subscribed = true;
-      session.announce();
-      channel.track(current);
-      channel.send({ type: 'broadcast', event: 'player-state', payload: current });
-      if (pendingRequest) {
-        pendingRequest = false;
-        channel.send({ type: 'broadcast', event: 'state-request', payload: { src: sessionId, id: selfId } });
+    channel = supabase.channel(`farm:${circleId}`, {
+      config: { presence: { key: `${selfId}:${sessionId}` }, broadcast: { self: false } },
+    });
+    session = attachSessionSingleton(channel, { userId: selfId, sessionId, bootTs, onKicked: die });
+
+    channel.on('presence', { event: 'sync' }, () => {
+      if (closed) return;
+      const winners = winningPeers(channel.presenceState(), selfId);
+      if (winners.length) lastPeerEventAt = Date.now();
+      const liveIds = new Set(winners.map((w) => String(w.id)));
+      for (const id of [...peers.keys()]) if (!liveIds.has(id)) peers.delete(id); // drop leavers
+      for (const w of winners) {
+        const prev = peers.get(String(w.id));
+        // presence meta can lag a fresher broadcast — keep the newest of the two
+        if (!prev || (w.updatedAt || 0) >= (prev.updatedAt || 0)) peers.set(String(w.id), w);
       }
-    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-      subscribed = false;
-    }
-  });
+      onPeers([...peers.values()]);
+    });
+    channel.on('broadcast', { event: 'player-state' }, ({ payload }) => {
+      if (closed || !payload?.id || payload.id === selfId) return;
+      lastPeerEventAt = Date.now();
+      peers.set(String(payload.id), payload);
+      onPeers([...peers.values()]);
+    });
+    channel.on('broadcast', { event: 'farm-intent' }, ({ payload }) => {
+      if (closed || !payload?.intent || payload.src === sessionId) return;
+      onIntent?.(payload.intent, payload);
+    });
+    channel.on('broadcast', { event: 'state-request' }, ({ payload }) => {
+      if (closed || payload?.src === sessionId) return;
+      onStateRequest?.(payload);
+    });
+    channel.on('broadcast', { event: 'farm-state' }, ({ payload }) => {
+      if (closed || !payload || payload.src === sessionId) return;
+      onSnapshot?.(payload);
+    });
+
+    channel.subscribe((status) => {
+      lastStatus = status;
+      if (closed) return;
+      if (status === 'SUBSCRIBED') {
+        subscribed = true;
+        rejoinAttempts = 0; // healthy again
+        session.announce();
+        channel.track(current);
+        channel.send({ type: 'broadcast', event: 'player-state', payload: current });
+        // Ask the room for the freshest farm on every (re)join so a reconnect
+        // re-converges the day/tiles instead of drifting.
+        channel.send({ type: 'broadcast', event: 'state-request', payload: { src: sessionId, id: selfId } });
+        pendingRequest = false;
+        // Close the JOIN RACE: if two clients subscribe within the same beat,
+        // one's initial presence 'sync' can fire before the other's track has
+        // propagated, leaving it stuck "solo". Re-assert presence + re-announce
+        // a couple times so both sides always converge without waiting for the
+        // 2s game heartbeat.
+        joinPings.forEach(clearTimeout);
+        joinPings = [700, 1800, 3500].map((ms) => setTimeout(() => {
+          if (closed || !subscribed) return;
+          session.announce();
+          channel.track(current);
+          channel.send({ type: 'broadcast', event: 'player-state', payload: current });
+        }, ms));
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        // Unexpected drop (not from leave/kick) → rebuild with backoff so a
+        // transient socket hiccup can't leave the farm permanently "0 live".
+        subscribed = false;
+        scheduleRejoin();
+      }
+    });
+  }
+
+  buildAndSubscribe();
 
   return {
     sessionId,
@@ -157,6 +200,8 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onIntent, o
     leave() {
       closed = true;
       subscribed = false;
+      clearTimeout(rejoinTimer);
+      joinPings.forEach(clearTimeout);
       try { supabase.removeChannel(channel); } catch { /* noop */ }
     },
   };

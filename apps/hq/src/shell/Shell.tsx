@@ -15,10 +15,12 @@ import { CommandPalette } from './CommandPalette'
 import { Command } from '../surfaces/command/Command'
 import { Pixel } from '../surfaces/pixel/Pixel'
 import { Vault } from '../surfaces/Vault'
+import { Landing } from '../surfaces/Landing'
 
 function Surface() {
   const { surface } = useHQ()
   switch (surface) {
+    case 'home': return <Landing />
     case 'data': return <Data />
     case 'growth': return <Growth />
     case 'portfolio': return <Portfolio />
@@ -37,6 +39,20 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
   const { surface } = useHQ()
   const wide = surface === 'game' || surface === 'app'
   const full = surface === 'vault' // Vault runs edge-to-edge as its own workspace
+
+  // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
+  // agent chat + command palette (⌘K) stay available; the landing's own Menu button
+  // opens the palette to jump into the light HQ system.
+  if (surface === 'home') {
+    return (
+      <div className="hq-cockpit">
+        <Landing who={who} />
+        <AgentOrb />
+        <CommandPalette />
+      </div>
+    )
+  }
+
   return (
     <div className="hq">
       <Rail who={who} />

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault'
+export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 export type Theme = 'light' | 'dark'
@@ -9,7 +9,7 @@ export type AgentSize = 'small' | 'expanded' | 'full'
 export type CommandTab = 'lobby' | 'bridge' | 'operations' | 'technology' | 'treasury' | 'legal' | 'roster'
 
 const SURFACE_LABEL: Record<SurfaceId, string> = {
-  portfolio: 'Portfolio', data: 'Data', growth: 'Growth',
+  home: 'Home', portfolio: 'Portfolio', data: 'Data', growth: 'Growth',
   content: 'Learn Builder', game: 'Game Builder', app: 'App Builder',
   agents: 'Agent Builder', broadcast: 'Content Builder', command: 'Command',
   pixel: 'Pixel Vault', vault: 'HQ Vault',
@@ -50,7 +50,7 @@ const initialTheme = (): Theme =>
   (localStorage.getItem('hq_theme') as Theme) || 'light'
 
 export const useHQ = create<HQState>((set) => ({
-  surface: 'portfolio',
+  surface: 'home',
   dataTab: 'schema',
   builderSub: 'catalogue',
   commandTab: 'lobby',

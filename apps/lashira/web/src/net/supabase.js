@@ -22,8 +22,25 @@ const anon = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
 function makeClient() {
   if (!url || !anon) return null;
+  // CRITICAL for multiplayer: an EMBEDDED game (KinetikCircle iframe) must NOT
+  // persist its session to localStorage. Two farm windows in the SAME browser
+  // profile are two same-origin iframes (localhost:5185) sharing localStorage —
+  // with the default storageKey their Supabase sessions overwrite each other via
+  // the cross-tab storage-sync listener, the realtime socket's auth token
+  // thrashes, and presence silently dies ("0 live (solo)" on both). sessionStorage
+  // is per-TAB, so each window keeps its own session and each realtime channel is
+  // stable. Standalone keeps localStorage so a reload doesn't drop the login.
+  let storage;
+  if (typeof window !== 'undefined') {
+    try {
+      const embedded = !!new URLSearchParams(window.location.search).get('embed');
+      storage = embedded ? window.sessionStorage : window.localStorage;
+    } catch { /* SSR / no DOM — use SDK default */ }
+  }
   try {
-    return createClient(url, anon, { auth: { storageKey: 'lashira-auth', persistSession: true } });
+    return createClient(url, anon, {
+      auth: { storageKey: 'lashira-auth', persistSession: true, ...(storage ? { storage } : {}) },
+    });
   } catch (err) {
     console.warn('LashiraBloom: Supabase disabled -', err?.message || err);
     return null;

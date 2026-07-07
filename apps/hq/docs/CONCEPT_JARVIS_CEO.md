@@ -45,6 +45,35 @@ to, not the front door.
 
 ---
 
+## 2.5 Tech stack (languages + libraries)
+
+**Foundation** (matches all apps): **TypeScript · React 18 · Vite · Zustand** · Supabase JS client.
+Surfaced on the Simple view as a "Built with" strip (and per-layer on the bands).
+
+| Job | Library |
+|---|---|
+| Cinematic CEO orb (3D) | React Three Fiber + drei + `@react-three/postprocessing` (bloom) |
+| Motion / choreography | GSAP (+ Flip) · Framer Motion |
+| Animated charts | Apache ECharts (+ echarts-gl) · D3.js |
+| Globe (coordinate arcs) | react-globe.gl (three-globe) |
+| Architecture canvas | React Flow (`@xyflow/react`) + ELK.js / Dagre |
+| Voice + audio-reactive | Web Speech API · Web Audio `AnalyserNode` |
+| ML | **TensorFlow.js** (in-browser ML) |
+| AI builders | **Claude · OpenAI** (via MCP) — the product is built primarily in **Claude Code + Codex** |
+| Data / store | **PostgreSQL** via **Supabase** (BaaS) · pgvector (future RAG) |
+| Edge / infra | **Vercel** (edge hosting · CDN · CI/CD) |
+
+The Simple view surfaces this as **per-layer logo pills** (brand marks) nested directly **under each
+architecture band** — UI band shows React/TS/Vite/Zustand + React Flow/D3/ECharts/Three.js/GSAP; Agent
+OS shows TypeScript/MCP; AI/ML shows Claude/OpenAI/TensorFlow.js/MCP; Data shows
+PostgreSQL/Supabase/Vercel; the future RAG band shows pgvector/embeddings (dashed).
+
+**Intelligence — the MCP bridge (key):** the deterministic agent (`Sense→Compute→Match→Generate`) is
+**connected via MCP to Claude and OpenAI**, so the CEO agent is **model-agnostic** — it routes reasoning
+to Claude *or* GPT through MCP, with the deterministic path as the always-on, zero-cost,
+never-hallucinate fallback. In-browser ML (adaptive/recommendation) uses **TensorFlow.js**. This *is*
+the "LLM port" seam (P7): deterministic now → MCP-bridged Claude/OpenAI later, same contract.
+
 ## 3. Design system — cinematic HUD, light default
 
 **Jayse Hansen FUI grammar:** one living orb in a (dark-optional) void, **radial not rectangular**,
@@ -71,6 +100,146 @@ ECharts + D3 + react-globe.gl (§4). Ship a **CSS/OGL lite orb** for low-power/m
 the bottom bar when a surface opens.
 
 ---
+
+### 3.1 Landing (FINAL direction) — AI-Core Command Center, grounded
+
+P1 shipped a minimal orb; the locked direction is richer: a **grounded AI-Core Command Center** — a
+**huge** central CEO orb (dense hundreds-of-node knowledge-graph core = the Vault, polished
+multi-ring radar dials) surrounded by **real-data panels**, a bottom control bar, **light + dark +
+responsive**, and a **GSAP animated background** (drifting data-grid + particle drift toward the core).
+
+**Fixes from P1 review (locked):**
+- **One orb only** — hide the floating `AgentOrb` FAB on `home`; the center mic *is* the entry point.
+- **Chat opens in the MIDDLE** — clicking the mic opens a **centered** conversation panel over the orb
+  (not the corner AgentOrb). Reuse the agent pipeline; reposition/restyle for center.
+- **Much bigger orb** (~60–70vh) with **hundreds of nodes** procedurally generated (sampled from real
+  Vault size; count shown as a readout).
+- **Polished radar rings** — graduated ticks, multiple counter-rotating dials, sweep (reference-grade).
+- **GSAP background** — animated grid + particles flowing into the core; GSAP also drives panel
+  entrance + the "reveal/bloom" choreography.
+- **Light + dark, responsive** — the cockpit is theme-aware (follows HQ toggle): **dark** = deep-navy
+  void + cyan/blue; **light** = near-white (`#f4f7fb`) + blue accents (`#2563eb`/`#0ea5e9`) + dark text,
+  softer glows. Panels reflow (2-col → stacked) down to mobile.
+
+**Panels → REAL data (included; no placeholder — live from RPCs):**
+
+| Panel (ref) | Arganta panel | Source |
+|---|---|---|
+| AI Core Status | CEO Agent core (orb) · 27 agents · ONLINE | `agents.ts` roster + `agentSense` |
+| Global Overview / world | **Reach** — Circles · Members · Active·7d | `hq_kinetik_stats` · `hq_growth_overview` |
+| System Performance | **Performance** — Weekly active · Lessons/day · D1 return (sparklines) | `hq_growth_overview` · `hq_portfolio_vc` |
+| North Star / alignment | **North Star** — weekly two-hook families + alignment vs target + WoW | `hq_growth_overview` |
+| Predictive Insights | **Insights** — growth trend + monetization mid-case ARR / LTV:CAC | `northStar` + `monetization.ts` |
+| Core Output (throughput) | **Diamond economy** — weekly mint-vs-burn bars + sink coverage | `hq_economy` (`mintBurn`, `coverage`) |
+| System Health (vitals) | **AARRR vitals** — 6 pillar gauges | `hq_portfolio_vc` |
+| Active Automations | **Agent OS** — scenarios running / office status | `agents.ts` `deriveStatus` + `scenarios.ts` |
+| Model Status | **AI/ML** — MCP→Claude/OpenAI · builders · mastery accuracy | `agents.ts` · `hq_growth_overview.accuracyPct` |
+| Resource Allocation | **Activity mix** — what kids actually do (donut) | `hq_growth_overview.activityMix` |
+| Bottom bar | Voice(mic) · HUD(toggle) · Data(→Growth) · Diagnostics(→Command) | store `go()` |
+
+**Excluded (NOT our data — dropped, not faked):** CPU/GPU/disk/temp/power hardware vitals, PFLOPS/Tbps
+throughput, threat-detection, generic "confidence %", literal ETA-in-days, and literal world geo
+(no lat/lng yet → the "world" panel is Circles/reach, geo arcs are a *future* layer badged `simulated`).
+
+**Charts:** real **D3.js / ECharts** for every panel (sparklines, mint-burn bars, AARRR gauges,
+activity donut, growth trend); SVG/R3F for the orb. Every value live or an honest `—`.
+
+**Library per visual (production — the inline concept widgets are throwaway sketches):**
+
+| Visual | Library | Panel |
+|---|---|---|
+| Dotted world map + animated arcs | **D3.js + TopoJSON** (`world-atlas`) — *locked* | Reach / Global Overview |
+| Multi-line charts | **ECharts** | Performance |
+| Circle / %-ring gauge | **ECharts gauge** | Capacity · Integrity · vitals |
+| Pie / doughnut | **ECharts pie** | Activity mix · automations ring |
+| Brain / neural graph | **react-force-graph-2d** (canvas, d3-force) | Model Status brain + the giant core |
+| Bar chart | **ECharts bar** | Core Output · Resource allocation |
+| Single line / sparkline | **ECharts** (mini line) | per-metric trends |
+| North Star bar + key number | **D3 / ECharts bar** + bound value | North Star |
+| Central AI-core orb | bespoke SVG/Canvas radar over the force-graph core | centre |
+
+One custom **ECharts light theme** (white cards, `#2563eb`/`#0ea5e9`, hairline grids) + a dark theme,
+switched by the HQ toggle. **Geo = placeholder** (seeded region coords + arcs, badged) that **ports to
+real "usage % by region"** when circle lat/lng lands — no faked precision.
+
+**Entry / login (ported to the look):** the existing operator gate (`auth/Login.tsx`) becomes a **core-boot
+screen** — the AI-core orb powers up (GSAP: rings spin in, nodes ignite), `CIRCLE HQ` wordmark, one
+operator Google sign-in, a boot line (`AUTHENTICATING OPERATOR…`); on success the orb comes online and
+the cockpit reveals. Light + dark, same palette — the door matches the room.
+
+### 3.2 Landing data map — every visual → real metric → North Star (grounded to the 3 apps)
+
+**North Star = W2F (Weekly Two-Hook Families):** a family where, in the same week, a **kid learned**
+([A] ArgantaLab hook) **AND** a **parent coordinated their week** ([K] KinetikCircle hook). [L]
+LashiraBloom = the co-op farm that amplifies retention on both. Kingdom lives inside [K].
+
+| Visual | Metrics (by app) | Look | Motion / interaction | Raw source | Why → W2F |
+|---|---|---|---|---|---|
+| Central AI-core orb | 27 agents online · Vault node count · health | radar dials + dense force-graph core | rings rotate · nodes pulse on refresh · click = talk | `agentSense()` + Vault count | the pane that watches W2F |
+| Reach (world map) | [A] learners · [K] circles/members · [L] farms | dotted map + glowing nodes + arcs | node pulse · arc draw · hover tooltip | `hq_kinetik_stats` · `hq_growth_overview` · geo=placeholder→usage% | pool of families that can become two-hook |
+| Performance (multi-line) | [A] lessons/day, WAU, accuracy · [K] cal/day, moments/wk · [L] sessions/wk | 3 thin trend lines | draw-on · live append · crosshair | `hq_growth_overview` · `hq_portfolio_vc` · `hq_kinetik_stats` · `lashira_bloom_ledger` | both hooks' momentum |
+| North Star (bar+number) | W2F count · alignment vs target · WoW | big number + alignment bar + delta | count-up (GSAP) · bar fill | `hq_portfolio_vc.flywheelCount`/familiesTotal + `kinetik_*` | the North Star itself |
+| Insights (trend+forecast) | [A] economy trend + learn ARPU · [K] retention + sub ARPU · [L] uplift | line + dashed projection + ARR/LTV:CAC | projection draw · band fade | `hq_growth_overview.northStar` + `monetization.ts` + `hq_economy` | trajectory + fundability |
+| Economy (mint vs burn) | [A] learning mints, shop spend · [K] circle wallet · [L] farm-sell/seed | green/magenta weekly bars + coverage% | bars grow · weekly append · hover | `hq_economy` (mintBurn, coverage) · `diamond_ledger` · `lashira_bloom_ledger` | reward loop that makes kids learn |
+| AARRR vitals (6 gauges) | Acq[K] · Activation[A] · Engage[A] · Retention[A/K] · Referral[K] · Monetization | 6 %-ring gauges, health-coloured | sweep to value · hover | `hq_portfolio_vc` · `hq_growth_overview.stickiness` · `monetization.ts` | the funnel that produces W2F |
+| Agent OS (automations) | deterministic scenarios across all 3 apps | status task-list | dots pulse · click = run live | `agents.ts deriveStatus` · `scenarios.ts` | watches W2F levers, flags blockers |
+| AI/ML (brain graph) | [A] mastery accuracy · MCP→Claude/OpenAI · builders | neural force-graph + accuracy ring | nodes fire · edges flow | `hq_growth_overview.accuracyPct` · `skill_mastery` · `item_attempts` | adaptive mastery = the depth-hook engine |
+| Activity mix (donut) | [A] journeys/quests/drills/openworld/games · [K] moments · [L] farm | doughnut by kind + legend | slices sweep · click = filter | `hq_growth_overview.activityMix` · `diamond_ledger` kinds | where engagement comes from |
+| Bottom bar | Voice · HUD · Data→Growth · Diagnostics→Command | control strip + core button | hover glow · route | store `go()` | act on what's surfaced |
+
+Every value live from an `hq_*` RPC or an honest `—`; geo is the only (badged) placeholder;
+CPU/GPU/temp/PFLOPS/threat/fake-confidence are dropped, not faked.
+
+### 3.3 Strategy Room — executive OPEX/CAPEX · revenue · valuation · growth (dual lens)
+
+A cockpit toggle flips **Operational ↔ Strategy**: a **board lens** (revenue · valuation · growth ·
+unit economics) and a **founder-technical lens** (OPEX by layer · $/active · break-even · runway).
+**Pre-revenue reality:** revenue + valuation are **modeled projections anchored to real current
+metrics** — badged `model` (not `live`), inputs shown + editable. Reuses engines already built:
+`monetization.ts` (MRR/ARR/ARPU/LTV/LTV:CAC/payback + forecast), `scaleModel.ts` (**OPEX** per layer +
+$/active vs $0.08 Treasury load), the valuation model + `valuation_snapshot`, `reports/financial.ts`
+(P&L/runway), and the MCP CFO tools (`financial_model`, `valuation_estimate/levers/narrative`, `scale_model`).
+
+**Real anchors:** families (`hq_kinetik_stats.circles`), actives (`hq_growth_overview.wau`), growth
+(`wowPct`+`kFactor`+`d1Retention`), diamond economy (`hq_economy` mint/burn, spend/kid = pay-intent).
+
+| Zone | Metric | Real/Modeled | Visual | Source |
+|---|---|---|---|---|
+| Revenue & growth | Est. MRR/ARR (Low·Mid·High) · growth curve · ARPU/conv | Modeled *from real* | fan chart + projection | `monetization.computeScenario`/`forecastCurve` |
+| Valuation | Est. valuation (range) · levers · history | Modeled | number+band · tornado · line | valuation model · `valuation_snapshot` |
+| Unit economics | LTV · CAC · LTV:CAC · payback · margin | Modeled | gauges | `computeScenario` |
+| OPEX | infra $/mo by layer · $/active vs $0.08 · agent(flat) · burn | Modeled | stacked-area + scale slider · gauge | `scaleModel.costCurve`/`LAYERS` |
+| CAPEX | build/IP investment: content · art (PixelLab) · IP (light — mostly OPEX + sweat equity) | one-time | small tiles | internal estimate |
+| Break-even & runway | families to break-even · runway (cash÷burn) · NPV | Modeled | curve crossing + number | monetization×scaleModel · `financial.ts` |
+| Founder-technical | cost-vs-scale 1k→1M · per-layer drill | Modeled | interactive slider | `scaleModel.LAYERS` |
+
+**Honest CAPEX note:** a solo software startup has ~no true CAPEX — capital = content/curriculum, art
+assets, IP, and founder time (sweat equity); everything else is OPEX. Model it as a small "build & IP"
+tile; do not invent a capital line. Leverage = OPEX stays tiny (deterministic agents hold the LLM bill
+flat) while modeled revenue compounds. **Charts:** ECharts (fan/stacked-area/gauge/line) + D3 (tornado).
+**Ties to North Star:** revenue/valuation are the *downstream* of W2F — more two-hook families → more
+paying families → higher ARR → higher valuation; the Strategy Room shows that chain end-to-end.
+
+### 3.4 Build-ready sign-off
+
+**Layout (light default · dark toggle · responsive):** topbar (brand · CEO-core status · **Operational↔Strategy
+lens toggle** · theme · ⌘K) · left column (2 panels) · giant centre AI-core orb + capacity/integrity
+badges + core-output · right column (2 panels) · bottom row (4 panels) · bottom control bar
+(Voice · HUD · core · Data→Growth · Diagnostics→Command). **One orb only** (FAB hidden); **mic → centred
+chat**. Strategy lens swaps the panels in place (revenue/OPEX/valuation/unit-econ/break-even/CAPEX).
+Responsive 3-col→2-col→stacked; orb scales.
+
+**Locked libraries:** D3 + TopoJSON (map) · ECharts (multi-line/bar/pie/gauge/fan/stacked-area, custom
+light+dark theme) · react-force-graph-2d (brain + core) · GSAP (background + reveals) · bespoke radar orb.
+**Rules:** live or honest `—`; revenue/valuation badged `model` (editable inputs, real-anchored); geo the
+only placeholder; ungroundable metrics dropped.
+
+**Build model:** **Opus** for 100% of the build (one coherent thread; ~95% engineering). Runtime AI =
+Claude/OpenAI via MCP (separate). **Fable = not needed** — optional scoped garnish for the CEO agent's
+spoken voice much later (P6), never the engine.
+
+**P1.5 order (on “go”):** orb + panels first → then login → then Strategy lens. All behind the perf
+gates (sampled force-graph, one WebGL context, lazy charts, pause-offscreen, 60fps/Lighthouse≥90).
 
 ## 4. Charts → deterministic commands (+ premium animated renderers)
 
@@ -176,21 +345,92 @@ Cross-cutting: auth friction (make the operator session sticky), `hq_activity` s
 
 ## 9. Architecture Map tab — the backbone (current + future)
 
-The 5-layer backbone already exists in code (`scaleModel.ts LAYERS` + `graph/seed.ts` ownership graph).
-Promote it from a buried CTO cost model into a **first-class `architecture` surface** (C4 container
-view) with **NOW/NEXT per layer**, rendered with D3/ECharts + the existing scale slider and layer
-drawers + an ECharts sankey of data→agent→UI flow.
+**The operating-system framing.** The architecture isn't a stack of parts — it's one **Arganta OS**
+with the **CEO-Orb as the shell/kernel** at the top, governing everything through the **6 C-level
+agents** (CEO·COO·CTO·CFO·GC·CAPO). Below them: apps (user-space), 27 agents (processes), AI/ML +
+builders (runtime), the Vault (memory), a **Backend-as-a-Service** platform (tool ⇄ Supabase),
+**PostgreSQL** (the store), and **Edge Hosting** (tool ⇄ Vercel). The backbone exists in code (`scaleModel.ts LAYERS` +
+`graph/seed.ts`). Promote it into a **first-class `architecture` surface** (C4 container view) rendered
+in React Flow.
+
+**Corrections to the model — capability names, swappable tool pills.** Layers are named by *capability*
+(vendor-agnostic, since the platform may change): **Relational store** = PostgreSQL (100+ tables);
+**Backend-as-a-Service** = Auth·RLS·Storage·Realtime·Edge Fns·RPC; **Edge Hosting & CDN** = edge
+compute + delivery. Today's vendors are shown as small **⇄ tool pills** (⇄ Supabase, ⇄ Vercel) —
+explicitly swappable later. **AI/ML is NOW**, not future: the **4 AI builders** (App·Game·Content·Agent)
++ **MCP → Claude · OpenAI** + TensorFlow.js + deterministic engines (growth·monetization·valuation·scale·RCA·mastery·pixel).
 
 | # | Layer | Owner | NOW | NEXT |
 |---|---|---|---|---|
-| ① | Visualization / UI | COO | ArgantaLab · KinetikCircle · Circle HQ · Landing · Kingdom · **LashiraBloom** | CEO orb landing · WebGL globe · ECharts/D3 · light+dark |
-| ② | Agent | CAPO/CEO | 27-agent OS · 6 offices · CEO orchestrator · S→C→M→G (det) | LLM port (Haiku+Sonnet) · Vault write-back memory |
-| ③ | AI / ML *(mostly future)* | CTO | basic rules / Leitner | mastery adaptation · content-gen · recommendation · RCA |
-| ④ | Data | CTO | Postgres · Auth·RLS · operator RPCs · diamond_ledger · identity spine | materialized views · pg_cron · Vault tables · geo coords · `lashira_farm` |
-| ⑤ | Infra / Scale | CFO/CTO | Vercel edge · Supabase Pro | CDN · dedicated compute · read-replicas |
+| ① | Visualization / UI | COO | **3 products** — ArgantaLab · KinetikCircle · **LashiraBloom** · unified by Circle HQ | CEO orb landing · WebGL globe · ECharts/D3 · light+dark |
+| ② | Agent | CAPO/CEO | 27-agent OS · 6 offices · CEO orchestrator · S→C→M→G (det) | LLM port via MCP (Claude/OpenAI) · Vault write-back memory |
+| ③ | AI / ML + Builders | CTO | **NOW:** 4 AI builders (App·Game·Content·Agent) · **MCP → Claude · OpenAI** · TensorFlow.js · engines (growth·monetization·valuation·scale·RCA) · learning mastery · pixel | embeddings · RAG retrieval · recommendation · content-gen |
+| ④ | Data + Platform | CTO | **Relational store · PostgreSQL** (100+ tables) + **Backend-as-a-Service** [tool ⇄ Supabase] · Auth·RLS·Storage·Realtime·Edge Fns·RPC | pgvector · materialized views · pg_cron · Vault tables |
+| ⑤ | Edge / delivery | CFO/CTO | **Edge Hosting & CDN** [tool ⇄ Vercel] · edge compute · CI/CD · 5+ projects | dedicated compute · read-replicas |
 
-Extend `Layer` with `now[]`/`next[]` + per-app `state: 'live'|'mvp'|'planned'`; add Kingdom +
-LashiraBloom to `LAYERS.ui`.
+Extend `Layer` with `now[]`/`next[]` + per-app `state: 'live'|'mvp'|'planned'`; add LashiraBloom to
+`LAYERS.ui` (Kingdom lives within KinetikCircle — not a separate UI app).
+
+### The full data backbone — fully transparent (no pop-up)
+
+The map's foundation is the real data spine — **~100+ tables, ~12 domains, 6 storage types** — shown by
+**data type** (what kind of data). **Current and Future render everything inline, fully transparent** —
+every table, column, and FK is a node (no modal to hide behind):
+
+- **① Relational (PostgreSQL):** Identity/circles · Diamond economy · Learning engine · Progress/mastery ·
+  Kinetik apps · HQ · Kingdom · Lashira.
+- **② Artifacts (HTML/code):** Game Builder (`games`, `game_versions`) · App Builder (`hq_app_html`,
+  `app_record`).
+- **③ Media (Storage buckets):** **Moments = video + images** (`kinetik_post_media`) · pixel/game
+  art (`pixel_asset`, `lashira_pixel_art`) · avatars · Kingdom art (CDN).
+- **④ Realtime (presence/WS):** **Kingdom MMORPG map** (`kingdom_character_position`) · co-op sessions ·
+  live reactions.
+- **⑤ Events (append-only):** `diamond_ledger` · `learn_event` · `hq_event` · `kingdom_session_events` ·
+  `artifact_telemetry` → unioned by `hq_activity`.
+- **⑥ Vector (future — pgvector):** Vault embeddings · agent memory.
+
+**Fully transparent (semantic zoom, no pop-up):** Current and Future are the true, complete backbone —
+**all 100+ tables, all 27 agents, the full Vault knowledge base, and every app's features/components
+are nodes on one zoomable React Flow canvas**, grouped into collapsible clusters. Low zoom = layers +
+counts; zoom in = every table/agent/note/feature. Reuse `SchemaModel.tsx`'s ERD rendering *inline* as
+the DB cluster (fed by `hq_schema_model`). **Simple** stays the collapsed overview with the NOW⇄NEXT
+toggle; **Current/Future** hold nothing back.
+
+### Rail placement + premium design language
+
+**Rail:** Analytics group, **directly below HQ Vault** → `architecture` surface. Vault (knowledge) +
+Architecture (structure) are the two adjacent "brain" tabs.
+
+**Premium stack (no constraints):** React Flow (`@xyflow/react`) canvas + semantic zoom/sub-flows ·
+custom **glassmorphism** nodes (`backdrop-filter`) with **neon per-layer glow** · custom **animated
+edges** (SVG gradient stroke + flowing particle) · ELK.js/Dagre auto-layout · **GSAP** (intro cascade,
+camera, future "build-in") · Framer Motion (hover/expand springs, drawer) · animated mesh-gradient +
+drifting blobs for depth · optional R3F CEO-Orb crown with bloom above the canvas.
+
+**Taste (follows the HQ theme — light default, dark follows the app together, not independent):**
+clean HQ surfaces + hairline borders with a polished layer (soft glass, subtle glow, spring motion);
+indigo `--acc` / magenta `--mag` accents; a **mini Jarvis-style CEO orb** (concentric rotating rings +
+reticle ticks + pulsing core) as the crown; **all icons are custom SVG — no emoji**; hover lifts +
+glow, click spring-expands a cluster, GSAP easing (never snaps).
+
+**Big-data readout (the brain's scale):** the Knowledge & Data lane surfaces live counts to show scale —
+**Vault knowledge graph in the millions of nodes**, **PostgreSQL data lake toward billions of rows**
+(+ events/day throughput). **Real data only:** every number is a live COUNT / RPC read — the build
+**never invents numbers** (honest empty states when there's no signal), consistent with the HQ
+analytics principle.
+
+**Page by page:**
+- **① Simple** — CEO-Orb + **North Star live tracking of the 3 products** (registered · weekly logins ·
+  retention · diamond economy · time spent) over a collapsed 5-band overview + NOW⇄NEXT toggle. The pitch.
+- **② Current** — full canvas, all solid; semantic zoom: layer clusters → apps→features · offices→27
+  agents · AI/ML→4 builders+MCP · DB→100+ tables (inline ERD) · Vault→note graph. Animated data-flow
+  edges; realtime edges pulse. Everything inline.
+- **③ Future full-scale** — same canvas; NEXT nodes as **holographic dashed neon** + the RAG lanes
+  (embeddings·Vector-RAG·guardrails·rerank) build in (GSAP + particle assembly); inspector shows each
+  future node's plan + the gap it closes.
+
+Shared shell: glass topbar · neon segmented view-switcher · NOW⇄NEXT toggle · glass minimap · glass
+inspector drawer · ⌘K fly-to search.
 
 ### Three views (one graph, phase-filtered) — built in React Flow
 
@@ -198,8 +438,8 @@ The tab also renders a **node-and-edge flow diagram** (NVIDIA-RAG-blueprint styl
 `phase: 'now'|'next'` field on every node/edge, powering three views:
 
 1. **Simple** — the 5-layer stack with a single NOW⇄NEXT toggle (dashed = future).
-2. **Current** — the real today, all solid: apps → Supabase tables → operator RPCs → deterministic
-   agent → CEO orb. No RAG, no vector store.
+2. **Current** — the real today, all solid: apps → PostgreSQL (via Supabase) → operator RPCs →
+   deterministic agent → CEO orb. No RAG, no vector store.
 3. **Future full-scale** — the RAG blueprint: an *ingestion pipeline* (app events → stream/CDC →
    chunk/materialize → embeddings → Vector DB + Knowledge Graph; multimodal for Kinetik moments) and a
    *retrieval pipeline* (orb → guardrails → context manager → Vector-RAG + Graph-RAG → rerank → LLM →
@@ -211,7 +451,7 @@ dataset. Mermaid for static export; Reaflow fallback. Dark blueprint theme + lig
 
 **RAG-blueprint mapping (the future spine):** UI = orb · Guardrails = RLS+provenance (+child-safety
 NEXT) · Context Manager = `agentSense` · Short-term memory = Vault write-back (NEXT) · LLM = det NOW →
-Haiku+Sonnet NEXT · Vector-RAG = pgvector over Vault (NEXT) · Graph-RAG = ownership graph (exists,
+Claude/OpenAI via MCP NEXT · Vector-RAG = pgvector over Vault (NEXT) · Graph-RAG = ownership graph (exists,
 query NEXT) · Ingestion = table writes NOW → event stream + embeddings NEXT.
 
 **8 architectural gaps to reach full-scale:** (1) no vector store/embeddings (pgvector); (2) no
@@ -220,6 +460,35 @@ chunk/embed); (4) no reranking/hybrid retrieval; (5) no formalized guardrails la
 (child-safety/prompt-injection/PII); (6) no observability/RAG eval; (7) no multimodal ingestion
 (Kinetik moments → captions); (8) short-term memory is ephemeral (→ Vault write-back). These 8 are the
 current→future roadmap the tab visualizes.
+
+### 3 products, unified by Circle HQ
+
+The application is **3 products** (Landing = static marketing; Circle HQ = the OS, not a product):
+- **ArgantaLab** (`apps/web`) — identity · diamonds · learning · games. Owns the `profiles`/`diamond_ledger` spine.
+- **KinetikCircle** (`apps/kinetik`) — circles · **moments (video/image)** · calendar.
+- **LashiraBloom** (`apps/lashira`) — circle farm · pixel art (MVP). Embeds into KinetikCircle.
+
+**Circle HQ** (`apps/hq`) is the unifying OS — reads ALL domains via operator RPCs; the CEO-Orb + this
+Architecture tab live here. All three products share one identity + wallet + circles (no per-app drift),
+rendered as a premium hub-and-spoke — not a plain box diagram.
+
+### Theme + page layout (the 3 architecture pages)
+
+**Theme follows the Kinetik HQ design system** — indigo (`--acc #6366f1`) + magenta (`--mag #ff3d72`),
+hairline borders, clean flat surfaces, **light-default**; light and dark **follow the app theme
+together** (not an independent dark canvas), just more polished (soft glass, subtle glow, spring motion).
+
+Shared shell: **topbar** with the 3-way **view-switcher** + **NOW⇄NEXT toggle** + theme · React Flow
+**canvas** · **legend** · **minimap/zoom** · **inspector drawer** · ⌘K fly-to.
+- **① Simple** — the pitch: CEO-Orb + **North Star live tracking of the 3 products** (registered ·
+  weekly logins · retention · diamond economy · time spent) + a collapsed 5-band layer overview with the
+  NOW⇄NEXT toggle. (Replaces the old C-level row.)
+- **② Current** — the full transparent architecture, all solid: Control (CEO-Orb + C-level) → 3 apps
+  → Agent OS + AI/ML builders → Vault + PostgreSQL → BaaS/Edge. Health
+  strip on top; semantic zoom to every node.
+- **③ Future** — **Current with the dashed future overlaid** on the same graph: net-new RAG pipelines
+  (Guardrails·Context·Vector-RAG·Graph-RAG·LLM + Events·Stream·Embeddings·Multimodal) plus `→ next`
+  upgrade tags on live nodes (Agent OS→LLM port, Vault→write-back, PostgreSQL→pgvector).
 
 ### Full app portfolio
 
@@ -258,7 +527,8 @@ the procedural/PixelLab path (external-tool asset contamination has recurred).
   loop; evening synthesis.
 - **P5** — Motion & depth polish: R3F 3D orb, GSAP bloom/collapse, reticle states, mobile lite-orb.
 - **P6** — Voice + write-back + proactive brief.
-- **P7** — LLM port: swap `agentGenerate`/`routeIntent` (Haiku sense + Sonnet reason); det path stays.
+- **P7** — LLM port **via MCP**: route `agentGenerate`/`routeIntent` to **Claude / ChatGPT through MCP**
+  (model-agnostic); deterministic path stays the always-on fallback.
 
 **Verification per phase:** offline shell (`hq-offline`, port 5179) shows ambient + empty states;
 with an operator session every command blooms a real chart or an honest empty state (no mock numbers);

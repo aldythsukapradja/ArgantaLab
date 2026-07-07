@@ -1,0 +1,107 @@
+/* CEO Orb landing — immersive blue "cockpit". Theme-independent by design: this is
+   the wow-at-the-door; the light HQ system takes over inside a tab. Lite CSS/SVG orb. */
+
+.hq-cockpit { height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
+
+.ceo {
+  position: absolute; inset: 0;
+  font-family: var(--mono, ui-monospace, monospace);
+  color: #cfe4ff;
+  background: radial-gradient(circle at 50% 44%, #0e2148, #04060e 72%);
+  overflow: hidden; isolation: isolate;
+}
+
+/* corner HUD brackets */
+.ceo-brk { position: absolute; width: 26px; height: 26px; border: 1px solid rgba(74, 150, 240, .5); z-index: 5; }
+.ceo-brk.tl { top: 16px; left: 16px; border-right: 0; border-bottom: 0; }
+.ceo-brk.tr { top: 16px; right: 16px; border-left: 0; border-bottom: 0; }
+.ceo-brk.bl { bottom: 16px; left: 16px; border-right: 0; border-top: 0; }
+.ceo-brk.br { bottom: 16px; right: 16px; border-left: 0; border-top: 0; }
+
+.ceo-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 16px 22px; font-size: 9px; letter-spacing: .18em; color: #6f9fd8;
+}
+.ceo-top .ceo-on { justify-self: end; color: #4fe6c8; }
+.ceo-menu {
+  justify-self: center; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 9px; letter-spacing: .14em; font-weight: 700; color: #9cc4f5;
+  padding: 6px 13px; border-radius: 999px; cursor: pointer;
+  background: rgba(30, 86, 200, .18); border: 1px solid rgba(90, 160, 255, .4);
+  box-shadow: 0 2px 12px rgba(30, 70, 160, .35);
+  font-family: inherit;
+}
+.ceo-menu:hover { background: rgba(30, 86, 200, .32); }
+
+.ceo-greet {
+  position: absolute; top: 52px; left: 0; right: 0; text-align: center; z-index: 4;
+  font-size: 9.5px; letter-spacing: .4em; color: #7fa8dd; text-transform: uppercase;
+}
+
+.ceo-center { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; }
+.ceo-orb { width: min(320px, 80vw); height: min(320px, 80vw); filter: drop-shadow(0 0 34px rgba(65, 150, 255, .32)); }
+.ceo-orb svg { width: 100%; height: 100%; display: block; }
+
+/* rotations — GPU transforms only, about the viewBox centre */
+.ceo-orb g[class^=ceo-spin], .ceo-sweep, .ceo-brain { transform-box: view-box; transform-origin: center; will-change: transform; }
+.ceo-spinA { animation: ceo-sp 22s linear infinite; }
+.ceo-spinB { animation: ceo-sp 34s linear infinite reverse; }
+.ceo-spinC { animation: ceo-sp 46s linear infinite; }
+.ceo-spinD { animation: ceo-sp 15s linear infinite reverse; }
+.ceo-sweep { animation: ceo-sp 5s linear infinite; }
+.ceo-brain { animation: ceo-sp 80s linear infinite; }
+.ceo-edges { animation: ceo-eflick 3.4s ease-in-out infinite; }
+.ceo-hub { filter: drop-shadow(0 0 8px #7fe8ff); }
+@keyframes ceo-sp { to { transform: rotate(360deg); } }
+@keyframes ceo-eflick { 0%, 100% { opacity: .38; } 50% { opacity: .62; } }
+
+/* floating panels */
+.ceo-pnl {
+  position: absolute; width: 152px; z-index: 3;
+  background: rgba(12, 28, 64, .42); backdrop-filter: blur(9px);
+  border: 1px solid rgba(74, 150, 240, .32); border-radius: 11px; padding: 9px 11px;
+  box-shadow: 0 0 26px rgba(30, 70, 160, .28), inset 0 0 22px rgba(60, 120, 220, .06);
+}
+.ceo-pnl svg { display: block; width: 100%; }
+.ceo-ph { font-size: 7.5px; letter-spacing: .14em; color: #7fa8dd; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.ceo-ph b { width: 5px; height: 5px; border-radius: 50%; background: #45c8ff; box-shadow: 0 0 6px #45c8ff; }
+.ceo-pnl.p1 { top: 84px; left: 22px; animation: ceo-flt 6.5s ease-in-out infinite; }
+.ceo-pnl.p2 { bottom: 120px; left: 22px; animation: ceo-flt 7.8s ease-in-out infinite; }
+.ceo-pnl.p3 { top: 84px; right: 22px; animation: ceo-flt 7s ease-in-out infinite; }
+.ceo-pnl.p4 { bottom: 120px; right: 22px; animation: ceo-flt 8.4s ease-in-out infinite; }
+@keyframes ceo-flt { 50% { transform: translateY(-7px); } }
+
+.ceo-nsv { font-size: 25px; font-weight: 800; font-family: var(--font, system-ui); color: #eaf4ff; line-height: 1; display: flex; align-items: baseline; gap: 5px; }
+.ceo-nsv em { font-size: 11px; font-style: normal; color: #4fe6c8; }
+.ceo-nsv em.dn { color: #ff7a9c; }
+.ceo-nsl { font-size: 7.5px; letter-spacing: .1em; color: #7fa8dd; margin-top: 4px; }
+.ceo-gv { font-size: 21px; font-weight: 800; font-family: var(--font, system-ui); color: #4fe6c8; text-align: center; margin-top: -28px; }
+
+/* pulse mic */
+.ceo-mic {
+  position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
+  width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer; z-index: 6;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 38%, #8fd4ff, #1e56c8);
+  box-shadow: 0 0 34px rgba(65, 150, 255, .8);
+}
+.ceo-mic:hover { filter: brightness(1.08); }
+.ceo-ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(90, 180, 255, .6); animation: ceo-mring 2.6s ease-out infinite; }
+.ceo-ring.r2 { animation-delay: 1.3s; }
+@keyframes ceo-mring { 0% { transform: scale(1); opacity: .75; } 100% { transform: scale(2.2); opacity: 0; } }
+
+.ceo-foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 8px; letter-spacing: .2em; color: #5f7bb0; z-index: 4; }
+
+/* Respect reduced motion + save battery: stop the ambient loops. */
+@media (prefers-reduced-motion: reduce) {
+  .ceo-spinA, .ceo-spinB, .ceo-spinC, .ceo-spinD, .ceo-sweep, .ceo-brain, .ceo-edges,
+  .ceo-pnl, .ceo-ring, .ceo-hub animate, .ceo-orb animate { animation: none !important; }
+}
+
+/* Mobile: orb-first, panels tuck to the corners smaller. */
+@media (max-width: 640px) {
+  .ceo-pnl { width: 128px; transform: scale(.92); }
+  .ceo-pnl.p1, .ceo-pnl.p3 { top: 72px; }
+  .ceo-pnl.p2, .ceo-pnl.p4 { bottom: 128px; }
+}
