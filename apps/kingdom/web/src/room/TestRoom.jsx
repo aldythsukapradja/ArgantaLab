@@ -13,11 +13,15 @@ import { loadJson, loadImage } from '../engine/data.js';
 import { resolveStep, paintStep, stepCount } from '../engine/compositor.js';
 import { authAvailable, awardMonsterXp } from '../net/account.js';
 import { joinArena } from '../net/arenaNet.js';
+// Shared combat system — single source of truth (also imported by the farm).
+import {
+  ATTACK_BY_WEAPON, MELEE_DAMAGE, PVP_DAMAGE, MONSTER_WALK_MS,
+  normalizeSkills, resolveMelee, tickMonsterState, monsterExpired,
+} from '@arganta/combat';
 
 const TILE = 48;
 const WALK_MS = 460;
 const TURN_HOLD_MS = 140;
-const MONSTER_WALK_MS = 620;
 const SPAWN_KIND_MONSTER = 'monster';
 const DIR_BY_KEY = {
   ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South',
@@ -25,20 +29,6 @@ const DIR_BY_KEY = {
 };
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const MOB_DIR = { South: 'down', North: 'up', East: 'right', West: 'left' };
-const ATTACK_BY_WEAPON = { sword: 'Swing', spear: 'Pierce', bow: 'Shoot', fan: 'Swing' };
-const DEFAULT_SKILLS = [{ fx: 22 }, { fx: 1 }, { fx: 131 }];
-
-function normalizeSkills(skills) {
-  return DEFAULT_SKILLS.map((def, i) => ({
-    fx: Number.isFinite(Number(skills?.[i]?.fx)) ? Number(skills[i].fx) : def.fx,
-    skillId: typeof skills?.[i]?.skillId === 'string' ? skills[i].skillId : null,
-    name: typeof skills?.[i]?.name === 'string' ? skills[i].name : null,
-    path: typeof skills?.[i]?.path === 'string' ? skills[i].path : null,
-    manaCost: Number.isFinite(Number(skills?.[i]?.manaCost)) ? Number(skills[i].manaCost) : null,
-    spellType: typeof skills?.[i]?.spellType === 'string' ? skills[i].spellType : null,
-  }));
-}
-
 const fmt = (n) => Number(n || 0).toLocaleString();
 const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
 const mapLabel = (mapId) => (mapId === 'character_lab' ? 'Character Lab' : mapId === 'buya_arena' ? 'Buya Arena' : (mapId || 'Kingdom').replace(/_/g, ' '));
@@ -347,7 +337,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
           const p = g.player;
           const dist = r ? Math.abs(r.tile[0] - p.tile[0]) + Math.abs(r.tile[1] - p.tile[1]) : 99;
           if (dist <= 1) {
-            p.hp = Math.max(0, p.hp - 25);
+            p.hp = Math.max(0, p.hp - PVP_DAMAGE);
             setHudState((h) => ({ ...h, hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp }));
             net.send('hp', { hp: p.hp });
             if (p.hp <= 0) {
@@ -424,15 +414,13 @@ export default function TestRoom({ spec, account, onPlayerState }) {
       return;
     }
     setTimeout(() => {
-      const m = g.monsters.find((m_) => !m_.friendly && m_.state !== 'die' && m_.tile[0] === tx && m_.tile[1] === ty);
-      if (!m) return;
-      m.hp -= 34;
-      if (m.hp <= 0) {
-        m.state = 'die'; m.stateStart = performance.now();
+      const res = resolveMelee(g.monsters, tx, ty, MELEE_DAMAGE, performance.now());
+      if (!res) return;
+      const m = res.monster;
+      if (res.killed) {
         g.net?.send('monster_state', { id: m.id, state: 'die', hp: 0 });
         rewardMonsterKill(m);
       } else {
-        m.state = 'hit'; m.stateStart = performance.now();
         g.net?.send('monster_state', { id: m.id, state: 'hit', hp: m.hp });
       }
     }, 180);
@@ -717,7 +705,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
 
       for (const m of g.monsters) {
         if (m.state === 'die') continue;
-        if (m.state === 'hit' && now - m.stateStart > 700) m.state = 'stand';
+        tickMonsterState(m, now);
         if (m.moveT < 1) m.moveT = Math.min(1, (now - m.moveStart) / MONSTER_WALK_MS);
         else if (m.aiOwnerId !== account?.character?.id) continue;
         else if (m.state === 'stand' && now > m.nextWander) {
@@ -737,7 +725,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
         }
       }
       g.monsters = g.monsters.filter((m) => {
-        const keep = !(m.state === 'die' && now - m.stateStart > 1400);
+        const keep = !monsterExpired(m, now);
         if (!keep) g.monsterIds.delete(m.id);
         return keep;
       });

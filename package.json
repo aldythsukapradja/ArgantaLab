@@ -1,0 +1,11 @@
+{
+  "name": "argantalab",
+  "private": true,
+  "version": "0.0.0",
+  "description": "ArgantaLab monorepo — shared packages consumed by the apps/* Vite projects.",
+  "workspaces": [
+    "packages/*",
+    "apps/kingdom/web",
+    "apps/lashira/web"
+  ]
+}

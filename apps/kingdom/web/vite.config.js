@@ -41,8 +41,17 @@ function serveKingdomData() {
 // output tree, with data/ as a SIBLING of the deployed app (not nested
 // inside it) — see that script for why. No copy-into-dist step needed here.
 
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+
 export default defineConfig({
   plugins: [react(), serveKingdomData()],
-  server: { port: 8322 },
+  resolve: {
+    alias: {
+      // Shared combat system (packages/combat) — single source of truth for
+      // damage/skills/monster rules, imported by BOTH Kingdom and the farm.
+      '@arganta/combat': path.resolve(REPO_ROOT, 'packages/combat/src/index.js'),
+    },
+  },
+  server: { port: 8322, fs: { allow: [REPO_ROOT] } },
   base: './',
 });

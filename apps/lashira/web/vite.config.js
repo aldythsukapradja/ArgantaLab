@@ -13,6 +13,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '../../web/src'),
       '@components': path.resolve(__dirname, '../../web/src/components'),
+      // Shared combat system (packages/combat) — single source of truth for
+      // damage/skills/monster rules, imported by BOTH the farm and Kingdom.
+      '@arganta/combat': path.resolve(__dirname, '../../../packages/combat/src/index.js'),
     },
   },
   server: {
@@ -20,6 +23,6 @@ export default defineConfig({
     strictPort: false,
     open: true,
     host: true,
-    fs: { allow: [path.resolve(__dirname, '../..')] },
+    fs: { allow: [path.resolve(__dirname, '../../..')] },
   },
 });
