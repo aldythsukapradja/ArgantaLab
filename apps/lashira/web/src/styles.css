@@ -310,6 +310,18 @@ body {
 }
 @keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 
+/* Settings > Circle sync QC pills — show the exact circle bound, live peers, and
+   where the save is going, so a tester can verify the game took the right circle. */
+.sync-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px;
+  border-radius: 999px; font-size: 10.5px; font-weight: 800; line-height: 1.2;
+  background: rgba(120,130,150,.16); color: var(--ink, #cbd5e1);
+  border: 1px solid rgba(150,160,180,.28); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; word-break: break-all;
+}
+.sync-pill.on { background: rgba(34,197,94,.16); color: #16a34a; border-color: rgba(34,197,94,.34); }
+.sync-pill.off { background: rgba(239,68,68,.14); color: #dc2626; border-color: rgba(239,68,68,.32); }
+
 .toasts { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .toast { background: rgba(15,17,32,.92); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 

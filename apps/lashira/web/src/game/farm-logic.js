@@ -106,10 +106,17 @@ export class FarmLogic {
     if (!data || typeof data !== 'object') return;
     const base = this._default();
     const local = this.state;
+    // The calendar only ever moves forward on a shared farm — never let an adopted
+    // remote state roll the day/season back (e.g. a peer still on Day 1 must not
+    // drag everyone back from Day 4). Take the furthest-along calendar of the two.
+    const localAbs = (local.season || 0) * DAYS_PER_SEASON + (local.day || 1);
+    const remoteAbs = (data.season || 0) * DAYS_PER_SEASON + (data.day || 1);
+    const cal = remoteAbs >= localAbs ? { day: data.day, season: data.season } : { day: local.day, season: local.season };
     this.state = {
       ...base,
       ...local,
       ...data,
+      ...cal,
       ...profileProgress(this.profile),
       tool: local.tool,
       selectedSeed: local.selectedSeed,

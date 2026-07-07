@@ -33,19 +33,12 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
   };
   let pendingState = null;
 
-  // Supabase allows only ONE channel per topic per client. React StrictMode
-  // (mount → cleanup → remount) and Vite HMR can leave a stale `farm:<circle>`
-  // channel behind; a new channel on the same topic then never reaches
-  // SUBSCRIBED. Sweep any pre-existing channel on this topic first so ours is
-  // the only one. (The presence effect is also keyed on stable identity so it
-  // no longer re-subscribes when the hero loads mid-session.)
+  // One channel per topic, created fresh each time — exactly like Kingdom's
+  // joinArena. The effect cleanup calls leave() (removeChannel) so the previous
+  // channel is gone before the next run. (An earlier "sweep all channels on this
+  // topic" guard turned out to remove the CURRENT live channel on a later effect
+  // run under StrictMode, leaving zero channels — do NOT reintroduce it.)
   const topic = `farm:${circleId}`;
-  try {
-    for (const ch of supabase.getChannels?.() || []) {
-      if (ch.topic === topic || ch.topic === `realtime:${topic}`) supabase.removeChannel(ch);
-    }
-  } catch { /* best-effort */ }
-
   const channel = supabase.channel(topic, {
     config: { presence: { key: selfId }, broadcast: { self: false } },
   });
@@ -64,20 +57,12 @@ export function joinFarmPresence({ circleId, profile, hero, onPeers, onFarmState
     if (!payload || payload.sourceId === selfId) return;
     onFarmState?.(payload);
   });
-  // Subscribe SYNCHRONOUSLY — this is the exact pattern Kingdom Heroes' joinArena
-  // uses, and it's why Kingdom syncs flawlessly. The previous version awaited
-  // supabase.auth.getSession() BEFORE channel.subscribe(); under React StrictMode
-  // (mount → cleanup → remount) the cleanup set closed=true during that await, so
-  // subscribe() was skipped and the channel was removed — leaving ZERO live
-  // channels and total sync silence. Refreshing the realtime auth token is now a
-  // non-blocking best-effort that never gates the subscribe.
-  supabase.auth.getSession()
-    .then(({ data }) => {
-      const token = data?.session?.access_token;
-      if (token && !closed) supabase.realtime?.setAuth?.(token);
-    })
-    .catch(() => { /* keep presence best-effort */ });
-
+  // Subscribe SYNCHRONOUSLY and do NOT call realtime.setAuth here — exactly like
+  // Kingdom Heroes' joinArena, which syncs flawlessly. The SDK already applies the
+  // access token to the realtime socket on login / setSession (onAuthStateChange),
+  // so an explicit setAuth is redundant AND harmful: it tears down and reconnects
+  // the WebSocket, which dropped this channel moments after it subscribed — the
+  // "presence shows 1 live but the socket is closed and nothing syncs" bug.
   channel.subscribe((status) => {
     if (closed) return;
     if (status === 'SUBSCRIBED') {

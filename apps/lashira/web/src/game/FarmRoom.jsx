@@ -145,6 +145,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // peers saw nothing move. Keeping it here means a G.current rebuild can't sever
   // the live channel from the game loop.
   const presenceCtrlRef = useRef(null);
+  // Farm-state sync bookkeeping, kept in refs (survive G.current rebuilds).
+  //   key = JSON of the last state we know about (local or adopted)
+  //   at  = timestamp that state was last CHANGED (by us or the peer we adopted)
+  // Newest timestamp wins globally → converges without flip-flop between peers.
+  const farmSyncRef = useRef({ key: '', at: 0 });
+  const suppressBroadcastRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
@@ -189,24 +195,24 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         player: prev?.player || { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
         held: prev?.held || new Set(), stick: prev?.stick || null, zoom, viewportW: prev?.viewportW || 0, viewportH: prev?.viewportH || 0, dpr: prev?.dpr || 1,
         actors: prev?.actors || new Map(), peerActors: prev?.peerActors || new Map(), peerWorldActors: prev?.peerWorldActors || new Map(), pendingMountCall: false,
-        lastPresenceSnapshot: '', lastPresenceAt: 0, lastFarmStateKey: '', lastFarmStateAt: 0, suppressFarmStateBroadcast: false,
+        lastPresenceSnapshot: '', lastPresenceAt: 0,
       };
       const unsub = logic.subscribe((next) => {
         setSnap(next);
-        const g = G.current;
         const ctrl = presenceCtrlRef.current;
-        if (!g || !ctrl || !circleId || profile?.guest) return;
-        if (g.suppressFarmStateBroadcast) {
-          g.suppressFarmStateBroadcast = false;
-          g.lastFarmStateKey = farmStateKey(logic.serialize());
-          return;
-        }
+        if (!ctrl || !circleId || profile?.guest) return;
         const data = logic.serialize();
         const key = farmStateKey(data);
-        if (!key || key === g.lastFarmStateKey) return;
-        g.lastFarmStateKey = key;
-        g.lastFarmStateAt = Date.now();
-        ctrl.sendState({ data, updatedAt: g.lastFarmStateAt });
+        // This emit came from adopting a peer's state — don't echo it back.
+        if (suppressBroadcastRef.current) {
+          suppressBroadcastRef.current = false;
+          farmSyncRef.current = { key, at: farmSyncRef.current.at };
+          return;
+        }
+        if (!key || key === farmSyncRef.current.key) return;
+        // Genuine LOCAL change → stamp it now and broadcast; our clock wins.
+        farmSyncRef.current = { key, at: Date.now() };
+        ctrl.sendState({ data, updatedAt: farmSyncRef.current.at });
       });
       G.current._unsub = unsub;
       setReady(true);
@@ -250,8 +256,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const applyFarmState = (payload) => {
       if (closed || !G.current || !payload?.data) return;
       const key = farmStateKey(payload.data);
-      if (!key || key === g.lastFarmStateKey) return;
-      g.suppressFarmStateBroadcast = true;
+      if (!key || key === farmSyncRef.current.key) return; // already have this exact state
+      const at = Number(payload.updatedAt) || 0;
+      if (at <= farmSyncRef.current.at) return; // our state is same-or-newer → keep ours (our heartbeat will re-assert it)
+      farmSyncRef.current = { key, at };
+      suppressBroadcastRef.current = true;
       logicRef.current?.applyRemoteState?.(payload.data);
     };
     const applyPeers = (peers) => {
@@ -652,7 +661,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         if (e.moveT < 1) e.moveT = Math.min(1, (now - e.moveStart) / (e.speedMs || REMOTE_WALK_MS));
       }
     }
-    function publishPresence(g, now) {
+    function publishPresence(g, now, force = false) {
       const ctrl = presenceCtrlRef.current;
       if (!ctrl) return;
       const p = g.player;
@@ -660,7 +669,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const actors = worldActorSnapshots(g, isHost);
       const actorStamp = actors.map((a) => `${a.id}:${a.tile[0]},${a.tile[1]}:${a.facing}:${a.mode || ''}:${a.hidden ? 1 : 0}`).join('|');
       const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}:${actorStamp}`;
-      if (snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
+      if (!force && snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
       g.lastPresenceSnapshot = snapshot;
       g.lastPresenceAt = now;
       ctrl.update({
@@ -672,6 +681,27 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         actors,
       });
     }
+
+    // Heartbeat — runs on a TIMER, not requestAnimationFrame, so a backgrounded /
+    // minimized tab (where rAF is throttled to ~0) still re-asserts this player's
+    // position + the shared farm state. This is what makes a peer who joins later,
+    // or a tab that's been in the background, converge to the same day/tiles/animals
+    // instead of drifting (the "Day 4 vs Day 1" bug). Cheap: presence is deduped in
+    // publishPresence, and farm-state carries the true change-timestamp so the most
+    // recently changed state wins globally without flip-flopping.
+    const heartbeat = window.setInterval(() => {
+      const g = G.current;
+      const ctrl = presenceCtrlRef.current;
+      if (!g || !ctrl) return;
+      publishPresence(g, performance.now(), true);
+      // Re-assert farm state with its TRUE change-timestamp (0 until we've made a
+      // local change). NEVER stamp Date.now() here — an idle peer doing that would
+      // look "newest" every 2s and could revert the other player's live edits.
+      // Only re-broadcast if we actually have an authoritative state to assert.
+      if (!farmSyncRef.current.at) return;
+      const data = logicRef.current?.serialize?.();
+      if (data) ctrl.sendState({ data, updatedAt: farmSyncRef.current.at });
+    }, 2000);
 
     function tick(now) {
       try { step(now); } catch (err) { if (!tick._e) { tick._e = true; console.error('farm tick error', err); } }
@@ -873,7 +903,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.restore();
     }
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelAnimationFrame(raf); window.clearInterval(heartbeat); };
   }, [ready, profile?.displayName, heroPresenceKey]);
 
   // ---------- nipplejs ----------
@@ -902,7 +932,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         {snap && (
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
-              zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} />
+              zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
         )}

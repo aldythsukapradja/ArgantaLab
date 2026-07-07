@@ -20,7 +20,7 @@ const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
 const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence, circleId }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   const rank = computeRank(snap.xp);
@@ -147,6 +147,20 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             <div className="browser-head"><b>Settings</b>
               <button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
             <div className="settings-body">
+              <section>
+                <h4>Circle sync</h4>
+                <div className="setrow" style={{ flexWrap: 'wrap', gap: 6 }}>
+                  <span className={'sync-pill' + (circleId ? ' on' : ' off')} title={circleId || 'no circle bound'}>
+                    {circleId ? '🔗 ' + circleId : '👤 personal (no circle)'}
+                  </span>
+                  <span className={'sync-pill' + ((presence?.count || 0) > 0 ? ' on' : '')} title="players broadcasting on this circle right now">
+                    {(presence?.count || 0) > 0 ? '🟢 ' + presence.count + ' live' + (presence.names?.[0] ? ' · ' + presence.names.join(', ') : '') : '⚪ 0 live (solo)'}
+                  </span>
+                  <span className="sync-pill" title="where this farm's save is going">
+                    {'💾 ' + (snap.saveSource || 'unknown')}
+                  </span>
+                </div>
+              </section>
               <section>
                 <h4>Diamonds</h4>
                 <div className="setrow diamond-row">
