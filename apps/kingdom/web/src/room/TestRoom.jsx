@@ -17,6 +17,7 @@ import { joinArena } from '../net/arenaNet.js';
 import {
   ATTACK_BY_WEAPON, MELEE_DAMAGE, PVP_DAMAGE, MONSTER_WALK_MS,
   normalizeSkills, resolveMelee, tickMonsterState, monsterExpired,
+  SKILL_SLOTS, resolveSkillSingle, resolveSkillAll, applyHeal, skillPower,
 } from '@arganta/combat';
 import { ActionCluster } from '@arganta/combat/cluster';
 
@@ -366,7 +367,10 @@ export default function TestRoom({ spec, account, onPlayerState }) {
   }
   function doSkill(i) {
     const g = G.current; if (!g) return;
-    const cost = Number(skills[i]?.manaCost || 0);
+    // Shared skill behaviour (Bolt single / Storm all / Mend heal) for slot i,
+    // with the hero's own effect visual. Same rules the farm uses.
+    const slot = SKILL_SLOTS[i];
+    const cost = slot ? slot.manaCost : Number(skills[i]?.manaCost || 0);
     if (cost > 0 && g.player.mp < cost) {
       pushToast('Not enough MP.');
       return;
@@ -376,7 +380,29 @@ export default function TestRoom({ spec, account, onPlayerState }) {
       g.player.mp = Math.max(0, g.player.mp - cost);
       setHudState((h) => ({ ...h, mp: g.player.mp, maxMp: g.player.maxMp }));
     }
-    spawnEffect(g, skills[i]?.fx ?? 22, g.player);
+    const fx = skills[i]?.fx ?? slot?.fx ?? 22;
+    const L = account?.profile?.level ?? account?.stats?.level ?? 1;
+    const now = performance.now();
+    if (slot?.type === 'heal') {
+      applyHeal(g.player, skillPower(slot, L));
+      setHudState((h) => ({ ...h, hp: g.player.hp, maxHp: g.player.maxHp }));
+      g.net?.send('hp', { hp: g.player.hp });
+      spawnEffect(g, fx, g.player);
+      return;
+    }
+    const dmg = skillPower(slot, L);
+    const applyHit = (h) => {
+      spawnEffect(g, fx, h.monster);
+      g.net?.send('monster_state', { id: h.monster.id, state: h.killed ? 'die' : 'hit', hp: h.monster.hp });
+      if (h.killed) rewardMonsterKill(h.monster);
+    };
+    if (slot?.target === 'all') {
+      const hits = resolveSkillAll(g.monsters, dmg, now);
+      if (hits.length) hits.forEach(applyHit); else spawnEffect(g, fx, g.player);
+    } else {
+      const res = resolveSkillSingle(g.monsters, g.player.tile, DELTA[g.player.facing], dmg, now);
+      if (res) applyHit(res); else spawnEffect(g, fx, g.player);
+    }
   }
   function doTake() { startOneShot('Get'); }
   function doEmote() { startOneShot('Victory'); }
