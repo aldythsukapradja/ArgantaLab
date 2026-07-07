@@ -11,6 +11,7 @@ import TierIcon from '../components/TierIcon.jsx';
 import { IconHeart, IconMana, IconMount } from '../components/HudIcons.jsx';
 import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
+import { ActionCluster } from '@arganta/combat/cluster';
 
 const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
@@ -35,7 +36,7 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence, circleId, getSyncDebug }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   // Live channel diagnostics, refreshed while Settings is open — a field
@@ -86,7 +87,9 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             </div>
             <div className="unit-exp"><span style={{ width: `${xpProgress(snap.xp)}%` }} /></div>
             <div className="unit-bars">
-              <div className="bar hp"><span style={{ width: '100%' }} /><b><IconHeart /> {fmt(maxHp)}/{fmt(maxHp)}</b></div>
+              {battle?.on
+                ? <div className="bar hp"><span style={{ width: `${Math.max(0, Math.min(100, (battle.hp / Math.max(1, battle.maxHp)) * 100))}%` }} /><b><IconHeart /> {fmt(battle.hp)}/{fmt(battle.maxHp)}</b></div>
+                : <div className="bar hp"><span style={{ width: '100%' }} /><b><IconHeart /> {fmt(maxHp)}/{fmt(maxHp)}</b></div>}
               <div className="bar mp"><span style={{ width: `${energyPct}%` }} /><b><IconMana /> {fmt(snap.stamina)}/{fmt(snap.maxStamina)}</b></div>
             </div>
           </div>
@@ -110,10 +113,18 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
         <div className="hero-note">Placeholder farmer — build your hero in <b>Kingdom Heroes</b> and it appears here.</div>
       )}
 
-      {/* action cluster — attack-circle/skill-circle markup + arc positions from
-          Kingdom Heroes. Farming is now TAP-ON-LAND (contextual harvest → till →
-          plant → water), so the cluster is slim: the big orb repeats that action
-          on the tile in front of you, and the ring is Seed-picker / Sleep / Mount. */}
+      {/* action cluster. In the ARENA it's the SHARED @arganta/combat cluster
+          (same component Kingdom uses): 3 skills + mount + attack. On the farm
+          it's the slim tap-to-farm cluster: Seed-picker / Sleep / Mount + work. */}
+      {battle?.on ? (
+        <ActionCluster
+          skills={battleSkills}
+          onSkill={onSkill}
+          onAttack={onStrike}
+          mp={snap.stamina}
+          utils={[{ key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: 'mount' }]}
+        />
+      ) : (
       <div className="cluster">
         {showSeeds && (
           <div className="seed-fan" aria-label="seed inventory">
@@ -152,6 +163,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <span>👐</span>
         </button>
       </div>
+      )}
 
       {showSettings && (
         <div className="browser-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}>

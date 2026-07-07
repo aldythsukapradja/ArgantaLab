@@ -5,7 +5,11 @@
 import { useEffect, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import {
+  makeMonster, resolveMelee, resolveSkill, tickMonsterState, monsterExpired,
+  MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, normalizeSkills, canAffordSkill,
+} from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
@@ -38,6 +42,17 @@ function borderAt(tx, ty) {
 function inField(tx, ty) {
   return tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1;
 }
+
+// The farm's 3 battle skills — resolved by the SHARED @arganta/combat rules, so
+// their damage/reach/aoe is edited in one place. `manaCost` here is spent from
+// the farm's STAMINA (chosen over a separate mana pool). Slash = single hard hit,
+// Quake = nova on all 4 neighbours, Bolt = a 3-tile line in front.
+const BATTLE_SKILLS = normalizeSkills([
+  { name: 'Slash', fx: 22, manaCost: 4, damage: 55, reach: 1 },
+  { name: 'Quake', fx: 1, manaCost: 8, damage: 34, aoe: 'adjacent' },
+  { name: 'Bolt', fx: 131, manaCost: 6, damage: 75, reach: 3 },
+]);
+const ARENA_MONSTER_COUNT = 5; // how many roam the arena at once
 
 // Deterministic per-id seed (FNV-1a over the whole string) so every actor gets a
 // distinct RNG stream even when ids share a length (li_cow_0 … li_cow_4).
@@ -165,6 +180,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [presence, setPresence] = useState({ count: 0, names: [] });
   const [kickedBy, setKickedBy] = useState(null); // session singleton: newer login elsewhere
   const [daySplash, setDaySplash] = useState(null); // shared New Day banner (local sleep, peer intent, or adopted snapshot)
+  const [battle, setBattle] = useState({ on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP }); // mirror of g.combat for the HUD
+  const battleRef = useRef({ on: false, hp: PLAYER_MAX_HP });
   const lastDayEventRef = useRef(0);
   const splashTimerRef = useRef(0);
   const heroPresenceKey = heroSpecKey(hero?.spec);
@@ -209,6 +226,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         held: prev?.held || new Set(), stick: prev?.stick || null, zoom, viewportW: prev?.viewportW || 0, viewportH: prev?.viewportH || 0, dpr: prev?.dpr || 1,
         actors: prev?.actors || new Map(), peerActors: prev?.peerActors || new Map(), peerWorldActors: prev?.peerWorldActors || new Map(), pendingMountCall: false,
         lastPresenceSnapshot: '', lastPresenceAt: 0,
+        // Battle mode (shared @arganta/combat). `on` tracks whether the player is
+        // in the arena; monsters roam only there; combat HP is separate from farm
+        // stamina (skills spend stamina). fx = transient hit sparks for feedback.
+        combat: prev?.combat || { on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, deadUntil: 0 },
+        monsters: prev?.monsters || [], monsterSeed: 1, fx: prev?.fx || [], nextMonsterSpawn: 0,
       };
       // Live sync is intent-based: FarmLogic emits a tiny granular intent for
       // every local mutation, and the channel fans it out. UI updates ride the
@@ -504,6 +526,40 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
   }
 
+  // ---------- battle actions (bottom-right cluster in the arena) ----------
+  function spark(g, tx, ty) {
+    g.fx.push({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, start: performance.now(), ttl: 320 });
+  }
+  function playSwing(g) {
+    const p = g.player; const now = performance.now();
+    if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = now; }
+  }
+  // Basic attack — the faced tile takes MELEE_DAMAGE (shared rule).
+  function doStrike() {
+    const g = G.current; if (!g || !g.combat.on) return;
+    playSwing(g);
+    const [tx, ty] = frontTile();
+    const res = resolveMelee(g.monsters, tx, ty, MELEE_DAMAGE, performance.now());
+    if (!res) return;
+    spark(g, tx, ty);
+    if (res.killed) logicRef.current?.rewardKill(res.monster.kind || 'a monster');
+  }
+  // Skill i — spends stamina (shared canAffordSkill), damages the skill's target
+  // tiles via the shared resolveSkill. All three games' skill damage is one source.
+  function doSkill(i) {
+    const g = G.current; if (!g || !g.combat.on) return;
+    const skill = BATTLE_SKILLS[i]; if (!skill) return;
+    const cost = Number(skill.manaCost || 0);
+    const stamina = logicRef.current?.state?.stamina ?? 0;
+    if (!canAffordSkill(stamina, skill)) { logicRef.current?.flash?.('Too tired for ' + (skill.name || 'that skill')); return; }
+    if (cost > 0 && !logicRef.current?.spendStamina(cost)) return;
+    playSwing(g);
+    const p = g.player;
+    const hits = resolveSkill(g.monsters, skill, p.tile, DELTA[p.facing], performance.now());
+    for (const h of hits) { spark(g, h.monster.tile[0], h.monster.tile[1]); if (h.killed) logicRef.current?.rewardKill(h.monster.kind || 'a monster'); }
+    if (!hits.length) spark(g, ...frontTile());
+  }
+
   // ---------- keyboard ----------
   useEffect(() => {
     if (!ready) return;
@@ -756,8 +812,71 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (p.oneShot && now - p.oneShotStart > 480) p.oneShot = null;
       stepWorldActors(g, now);
       stepPeerActors(g, now);
+      stepBattle(g, now);
       publishPresence(g, now);
       draw(g, ctx, canvas, now);
+    }
+
+    // ---------- battle mode ----------
+    function monsterRand(g) { g.monsterSeed = (g.monsterSeed * 1664525 + 1013904223) >>> 0; return g.monsterSeed / 4294967296; }
+    function arenaOpenTile(g) {
+      for (let i = 0; i < 60; i++) {
+        const tx = ARENA.x0 + Math.floor(monsterRand(g) * (ARENA.x1 - ARENA.x0 + 1));
+        const ty = ARENA.y0 + Math.floor(monsterRand(g) * (ARENA.y1 - ARENA.y0 + 1));
+        if (blockedAt(g, tx, ty)) continue;
+        if (g.player.tile[0] === tx && g.player.tile[1] === ty) continue;
+        if (g.monsters.some((m) => m.tile[0] === tx && m.tile[1] === ty)) continue;
+        return [tx, ty];
+      }
+      return [ARENA.x0 + 1, ARENA.y0 + 1];
+    }
+    function spawnArenaMonster(g, now) {
+      const tile = arenaOpenTile(g);
+      const kinds = ['slime', 'bat', 'blob'];
+      const m = makeMonster({ id: 'mob:' + (g.monsterSeed >>> 0) + ':' + now, tile, maxHp: MONSTER_MAX_HP });
+      m.kind = kinds[Math.floor(monsterRand(g) * kinds.length)];
+      m.nextWander = now + 400 + monsterRand(g) * 1400;
+      m.seed = (g.monsterSeed >>> 0);
+      g.monsters.push(m);
+    }
+    function stepBattle(g, now) {
+      const p = g.player;
+      const on = inArena(p.tile[0], p.tile[1]) && (!g.combat.deadUntil || now > g.combat.deadUntil);
+      if (on !== g.combat.on) {
+        g.combat.on = on;
+        if (on && g.combat.hp <= 0) g.combat.hp = g.combat.maxHp; // heal on entry
+        syncBattleState(g);
+      }
+      // maintain monster population while the arena is "active" (player present)
+      if (inArena(p.tile[0], p.tile[1])) {
+        if (g.monsters.length < ARENA_MONSTER_COUNT && now > g.nextMonsterSpawn) {
+          spawnArenaMonster(g, now); g.nextMonsterSpawn = now + 900;
+        }
+      }
+      // monster AI + state ticks (shared rules)
+      for (const m of g.monsters) {
+        if (m.state === 'die') continue;
+        tickMonsterState(m, now);
+        if (m.moveT < 1) { m.moveT = Math.min(1, (now - m.moveStart) / MONSTER_WALK_MS); continue; }
+        if (now < (m.nextWander || 0)) continue;
+        const dirs = Object.keys(DELTA);
+        const dir = dirs[Math.floor(monsterRand(g) * 4)];
+        const [dx, dy] = DELTA[dir]; const nx = m.tile[0] + dx, ny = m.tile[1] + dy;
+        m.facing = dir;
+        if (inArena(nx, ny) && !blockedAt(g, nx, ny) && !(nx === p.tile[0] && ny === p.tile[1]) && !g.monsters.some((o) => o !== m && o.state !== 'die' && o.tile[0] === nx && o.tile[1] === ny)) {
+          m.from = [...m.tile]; m.tile = [nx, ny]; m.moveT = 0; m.moveStart = now;
+        }
+        m.nextWander = now + 700 + monsterRand(g) * 1700;
+      }
+      // cull faded corpses + fx
+      g.monsters = g.monsters.filter((m) => !monsterExpired(m, now));
+      g.fx = g.fx.filter((f) => now - f.start < f.ttl);
+    }
+    function syncBattleState(g) {
+      const next = { on: g.combat.on, hp: g.combat.hp, maxHp: g.combat.maxHp };
+      if (battleRef.current.on !== next.on || battleRef.current.hp !== next.hp) {
+        battleRef.current = next; setBattle(next);
+      }
     }
 
     function entityPx(e) {
@@ -954,13 +1073,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const [ex, ey] = entityPx(e);
         actors.push({ type: 'remote', e, footX: ex + TILE / 2, footY: ey + TILE - 5 });
       }
+      for (const m of g.monsters) {
+        const [ex, ey] = entityPx(m);
+        actors.push({ type: 'monster', e: m, footX: ex + TILE / 2, footY: ey + TILE - 5 });
+      }
       actors.push({ type: 'player', footX, footY });
       actors.sort((a, b) => a.footY - b.footY);
       const labels = [];
       for (const a of actors) {
         const actualKin = a.e?.kind === 'kin' && hasActualKinArt(a.e.kin);
-        if (!actualKin) drawActorShadow(g, ctx, a);
-        if (a.type === 'player') {
+        if (a.type !== 'monster' && !actualKin) drawActorShadow(g, ctx, a);
+        if (a.type === 'monster') {
+          drawMonster(g, ctx, a.e, now, a.footX, a.footY);
+        } else if (a.type === 'player') {
           headTop = drawPlayer(g, ctx, now, a.footX, a.footY);
           labels.push({ name: logicRef.current.profile?.displayName || 'Farmer', footX: a.footX, footY: a.footY, headTop, fill: '#1d9d55dd' });
         } else if (a.type === 'remote') {
@@ -977,6 +1102,44 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         }
       }
       for (const label of labels) drawNameplate(ctx, label);
+      for (const f of g.fx) drawSpark(ctx, f, now);
+      ctx.restore();
+    }
+    // A monster: procedural blob (art later) with facing, a hit flash, a death
+    // fade, and a hp bar. Colour by kind so the arena isn't monotone.
+    function drawMonster(g, ctx, m, now, footX, footY) {
+      const fade = m.state === 'die' ? Math.max(0, 1 - (now - m.stateStart) / 1400) : 1;
+      if (fade <= 0) return;
+      const bob = m.moveT < 1 ? Math.sin(now / 90 + (m.seed || 0)) * 2 : Math.sin(now / 400 + (m.seed || 0)) * 1;
+      const cx = footX, by = footY + bob;
+      const palette = { slime: '#6fca7a', bat: '#8b6fd0', blob: '#d06f8b' };
+      const body = palette[m.kind] || '#6fca7a';
+      ctx.save(); ctx.globalAlpha = fade;
+      // shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx, footY + 2, 13, 5, 0, 0, 7); ctx.fill();
+      // body
+      const hitFlash = m.state === 'hit' && (now - m.stateStart) < 200;
+      ctx.fillStyle = hitFlash ? '#ffffff' : body;
+      ctx.beginPath(); ctx.ellipse(cx, by - 12, 14, 12, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = hitFlash ? '#ffffff' : '#ffffff'; // eyes
+      const ex = m.facing === 'West' ? -4 : m.facing === 'East' ? 4 : 0;
+      ctx.beginPath(); ctx.arc(cx - 5 + ex, by - 14, 2.2, 0, 7); ctx.arc(cx + 5 + ex, by - 14, 2.2, 0, 7); ctx.fill();
+      if (!hitFlash) { ctx.fillStyle = '#20303a'; ctx.beginPath(); ctx.arc(cx - 5 + ex, by - 14, 1.1, 0, 7); ctx.arc(cx + 5 + ex, by - 14, 1.1, 0, 7); ctx.fill(); }
+      // hp bar
+      if (m.state !== 'die') {
+        const w = 26, hpx = cx - w / 2, hpy = by - 32, frac = Math.max(0, m.hp / (m.maxHp || 100));
+        ctx.fillStyle = 'rgba(18,22,32,0.6)'; ctx.fillRect(hpx - 1, hpy - 1, w + 2, 5);
+        ctx.fillStyle = frac > 0.5 ? '#57d06a' : frac > 0.25 ? '#e0c020' : '#e0553f';
+        ctx.fillRect(hpx, hpy, Math.round(w * frac), 3);
+      }
+      ctx.restore();
+    }
+    // Hit spark — a quick expanding ring where a blow lands.
+    function drawSpark(ctx, f, now) {
+      const t = (now - f.start) / f.ttl; if (t >= 1) return;
+      ctx.save(); ctx.globalAlpha = 1 - t;
+      ctx.strokeStyle = '#fff2b0'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(f.x, f.y - 14, 6 + t * 16, 0, 7); ctx.stroke();
       ctx.restore();
     }
     // ---------- tap-to-farm ----------
@@ -995,6 +1158,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         else if (dy !== 0) g.player.facing = dy > 0 ? 'South' : 'North';
         g.player.oneShot = 'Get'; g.player.oneShotStart = performance.now();
       };
+      // 0) arena tap — face the tapped tile and strike (attack is tap OR the
+      //    bottom-right attack-circle). No farming happens in the arena.
+      if (g.combat.on) {
+        faceTo(tx, ty);
+        doStrike();
+        e.preventDefault(); return;
+      }
       // 1) crop plot tap
       if (tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1) {
         logicRef.current?.tapAt(tx, ty); faceTo(tx, ty); e.preventDefault(); return;
@@ -1042,7 +1212,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
               zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
-              getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null} />
+              getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
+              battle={battle} battleSkills={BATTLE_SKILLS} onStrike={doStrike} onSkill={doSkill} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
         )}

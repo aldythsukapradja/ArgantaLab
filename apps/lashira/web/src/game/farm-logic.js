@@ -382,6 +382,15 @@ export class FarmLogic {
     this.emit();
   }
   _spend(n) { if (this.state.stamina < n) { this.flash('Too tired — sleep to restore energy'); return false; } this.state.stamina -= n; return true; }
+  // Battle: skills spend the farm's stamina (chosen over a separate mana pool).
+  spendStamina(n) { if (!this._spend(n)) return false; this.save(); this.emit(); return true; }
+  // Battle: a monster kill pays out Diamonds (open economy — same for kids/adults).
+  rewardKill(name = 'a monster', diamonds = 3) {
+    this.state.diamonds = (Number(this.state.diamonds) || 0) + diamonds;
+    this.flash('Defeated ' + name + ' · +💎' + diamonds);
+    this.save(); this.emit();
+    return this.state.diamonds;
+  }
 
   // CONTEXTUAL tap on a soil tile (FarmVille one-tap). The whole field is soil
   // already — no tilling, no watering. Ripe → harvest; empty → plant; otherwise

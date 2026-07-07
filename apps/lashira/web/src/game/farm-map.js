@@ -7,9 +7,16 @@ import { drawOverride } from './farm-art-runtime.js';
 import { drawActualKinSprite } from './kin-sprite-image.jsx';
 
 export const TILE = 48;                       // matches Kingdom Heroes scale
-export const W = 40, H = 26;
+export const W = 40, H = 34;                  // extra rows at the bottom = the arena
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
 export const FIELD = { x0: 6, y0: 10, x1: 20, y1: 20 };
+
+// A separate BATTLE ZONE, walled off below the farm (never overlaps farming).
+// Entering it flips the game into battle mode; monsters roam only here. A gate
+// in the dividing wall (ARENA_WALL_Y) connects it to the farm.
+export const ARENA = { x0: 2, y0: 27, x1: 37, y1: 32 };
+export const ARENA_WALL_Y = 25;               // fence line dividing farm (above) from arena (below)
+export const ARENA_GATE_X = 18;               // 2-wide gate (ARENA_GATE_X .. +1) in that wall
 
 // Animal pens, to the RIGHT of the crop field. Bottom line (y1) matches the crop
 // field's bottom (y=20) so the whole farm reads as one row of enclosures. Cow +
@@ -142,7 +149,30 @@ export function buildFarmMap(art = {}) {
   for (const b of BUILDINGS) { drawBuilding(ctx, b, art); blockRect(b.tx, b.ty, b.w, b.h); }
   drawTree(ctx, 3, 20, art); block(3, 20);
 
+  // --- battle arena (below the farm) ---
+  // trodden-earth ground so it reads as a distinct place from the green farm
+  for (let y = ARENA.y0; y <= ARENA.y1; y++) for (let x = ARENA.x0; x <= ARENA.x1; x++) {
+    rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 2 === 0 ? '#c8a56f' : '#be9a64');
+    dots(ctx, x * 37 + y * 11, 5, x * TILE, y * TILE, TILE, TILE, '#a9854f', 3);
+  }
+  // dividing wall between farm and arena, with a 2-wide gate
+  for (let x = 1; x < W - 1; x++) {
+    if (x === ARENA_GATE_X || x === ARENA_GATE_X + 1) continue; // gate
+    drawFence(ctx, x, ARENA_WALL_Y, art); block(x, ARENA_WALL_Y);
+  }
+  // a little "⚔ Arena" signpost beside the gate
+  const sx = (ARENA_GATE_X + 2) * TILE + 6, sy = ARENA_WALL_Y * TILE - 2;
+  rect(ctx, sx + 6, sy - 4, 4, 20, '#7a5230');
+  rect(ctx, sx, sy - 22, 22, 16, '#8a5a34'); rect(ctx, sx + 2, sy - 20, 18, 12, '#a06c3e');
+  ctx.fillStyle = '#f4e4c1'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('⚔', sx + 11, sy - 10); ctx.textAlign = 'left';
+
   return { canvas, blocked };
+}
+
+// Is a tile inside the battle arena?
+export function inArena(tx, ty) {
+  return tx >= ARENA.x0 && tx <= ARENA.x1 && ty >= ARENA.y0 && ty <= ARENA.y1;
 }
 
 // Per-frame: draw tilled soil + crop for one plot at world coords.
