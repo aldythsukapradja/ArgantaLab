@@ -1,42 +1,49 @@
-# LashiraBloom — Art generation + port progress (autonomous run)
+# LashiraBloom — Art generation + port: RESULTS (overnight run 2026-07-08)
 
-Branch: `lashira-art-library`. Lib folder: `apps/lashira/web/public/farm-art/lib/`.
-Recipe (all map_objects): `high top-down · medium detail · medium shading · selective
-outline`, prompt suffix `", cute top-down farm game, bright warm saturated palette,
-clean readable, Stardew meets Animal Crossing"`. Asset list = manifest §11.
+Branch: `lashira-art-library` · Library: `apps/lashira/web/public/farm-art/lib/`
+Recipe: `high top-down · medium detail · medium shading · selective outline`, cozy-cute
+"Stardew + Animal Crossing" palette. Downloads: `curl -sL .../map-objects/<id>/download`.
 
-Download: `curl -sL https://api.pixellab.ai/mcp/map-objects/<id>/download -o lib/<name>.png`
-(tilesets: `.../tilesets/<id>/image`). No auth header needed.
+## Result: 82 original assets generated, downloaded, committed; core set wired + build-verified.
 
-Wire: add slot→`lib/<name>.png` to `farm-art-bundled.js` BUNDLED map.
+### Castle options (pick one — currently `castle_opt1_storybook` is wired to the house slot)
+- `castle_opt1_storybook` (cream stone, red roofs, cozy) ← wired default
+- `castle_opt2_fairytale` (white stone, blue spires)
+- `castle_opt3_royal` (purple + gold, majestic)
+- `castle_opt4_whimsical` (pastel, teal roofs, Animal-Crossing cute)
 
-## DONE (saved to lib/)
-- [x] terrain_grass_soil (tileset), castle_v0, dungeon_gate, barn, market_stall,
-  ore_gold, tree_oak, flowers, cow, tiger_boss  ← the 10 approved samples
+### Delivered by group
+- **Terrain (5 Wang tilesets):** grass↔soil, ↔path, ↔water, ↔sand, ↔rock
+- **Buildings:** barn, coop, silo, windmill, greenhouse ×3 tiers, 5 shops (seed/general/
+  blacksmith/animal/cosmetics), produce+market stalls, houses ×3 tiers (shack/cottage/
+  farmhouse), 4 castles, well, shipping bin, scarecrow, fences (straight/gate)
+- **Animals:** cow, sheep, chicken (+ troughs, ready-to-add produce icons)
+- **Monsters (woodland, kid-safe):** squirrel, fox, badger, boar, deer, **tiger boss**
+- **Crops (6 ripe):** turnip, potato, carrot, strawberry, corn, pumpkin
+- **Mining/dungeon:** ore ×4 (copper/iron/gold/gem), boulder, mine cart, dungeon gate,
+  chest, barrel, torch
+- **Fishing:** dock, reeds. **Forest:** oak, pine, bush, mushroom, stump, wood-log pile
+- **PvP:** arena wall, arena gate, scoreboard
+- **Interior furniture:** bed, table, rug, bookshelf, fireplace, chest
+- **Deco/UI:** flowers, fountain, signpost, currency icons (gold/wood/stone)
 
-## IN FLIGHT
-- Castle options v1–v4: 8b7ed149 (storybook), e39bfa18 (fairytale), acacb139 (royal), 81f6f910 (whimsical)
+## Wired into the app (`farm-art-bundled.js`) — renders live now
+house→castle_opt1, barn, coop, shop→produce_stall, well, shipping_bin, cow, sheep,
+chicken, tree→oak, fence, and all 6 ripe crops. **`vite build` passes (128 modules).**
+Everything else sits in `lib/` ready to wire when the new map/mechanics land.
 
-## QUEUE (fire ~4/cycle, rate-limited)
-**Terrain (tileset):** grass_path, grass_water, grass_sand, stone_cave, forest_floor · grass_variants(tiles_pro)
-**Deco:** tree_pine, tree_bush, bush_a, bush_b, rock_a, rock_b, stump, fern, tuft_a, tuft_b, mushroom_a, mushroom_b, fence_straight, fence_corner, fence_gate, signpost_a, signpost_b, signpost_c, fountain, woodlog_pile, choppable_tree
-**Farm:** crops 6×4 (turnip/potato/carrot/strawberry/corn/pumpkin × stage0-3)=24, coop, silo, windmill, scarecrow, shipping_bin, tool_rack
-**Animals:** sheep, chicken, trough_feed, trough_water, icon_milk, icon_wool, icon_egg
-**Greenhouse:** greenhouse_t1, greenhouse_t2, greenhouse_t3, greenhouse_beds
-**Shops:** seed_shop, general_store, blacksmith, animal_shop, cosmetics_bank, sign_seed, sign_general, sign_smith, sign_animal, sign_bank
-**Fishing:** dock, reeds, cattails, lily, fish_a, fish_b, fish_c, bobber, bucket
-**Mining:** ore_copper, ore_iron, ore_gem, boulder_a, boulder_b, support_beam, mine_cart, cart_tracks, gate_torch
-**Dungeon:** dungeon_floor(tileset), dungeon_chest, dungeon_crate, dungeon_barrel, dungeon_torch
-**Monsters:** squirrel, fox, badger, boar, deer
-**PvP:** arena_wall_t1, arena_wall_t2, arena_gate, arena_stands, scoreboard, arena_torch
-**Castle:** (pick from v1–v4) + house_t1_shack, house_t2_cottage, house_t3_farmhouse, house_t4_manor, banner_a, banner_b, castle_torch, castle_door, interior_floor(tileset), interior_grand(tileset), furniture×14 (rug, table, chair, bed, bookshelf, chest, trophy, wall_banner, plant, lamp, fireplace, counter, barrel, painting)
-**UI:** popup_frame, shop_frame, button_set, emote×6 (happy/sad/love/wave/sleep/star), currency_gold, currency_wood, currency_stone
+## Follow-ups (NOT done overnight — deliberate)
+- **Re-roll:** `fence_straight.png` came out near-empty (856 b) — regenerate.
+- **Terrain autotiling:** the 5 Wang sets are 16-tile sheets; wiring them needs
+  corner-based autotile code (part of the new-map build), so terrain is still procedural.
+- **Animation:** animals/monsters are static sprites — animated walk/attack/faint sheets
+  are a follow-up pass (PixelLab `animate_character`).
+- **Optional extras not generated:** emote bubbles ×6, NPC portraits ×8, crop stages 0–2
+  (18), animated-object frames (windmill/water/torch), dungeon floor tileset, a few props.
+  The pipeline is proven — these can be generated on request.
+- **Big build (separate effort):** the full 60×48 multi-zone map + mechanics (mining/
+  dungeon/PvP/fishing/upgrades) — not attempted unsupervised; art is ready for it.
 
-## WIRING (after art lands)
-1. Extend `farm-art-bundled.js` BUNDLED: house→best castle, coop, animals(sheep/chicken), tree, crops stage3, shop→market_stall, etc.
-2. Save all to lib/ + this manifest.
-3. Commit per batch. Build-check (`npx vite build`) before finishing.
-4. Leave notes on the new-map/mechanics build (NOT attempted overnight — too large to do unsupervised safely).
-
-## LOG
-- 20:45 branch + lib created; 10 samples saved; 4 castle options firing.
+## How to preview a different castle
+Edit `farm-art-bundled.js` line for `lashira.building.house` → `lib/castle_opt2_fairytale.png`
+(or opt3/opt4), reload. The 4 options are all in `lib/`.
