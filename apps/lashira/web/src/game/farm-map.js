@@ -113,9 +113,15 @@ function drawTree(ctx, x, y, art) {
   ctx.beginPath(); ctx.arc(px + TILE / 2 - 10, py + TILE - 34, 14, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.arc(px + TILE / 2 + 10, py + TILE - 34, 14, 0, 7); ctx.fill();
 }
-function drawFence(ctx, x, y, art) {
+function drawFence(ctx, x, y, art, vertical = false) {
   const px = x * TILE, py = y * TILE;
+  if (vertical && drawOverride(ctx, art, 'lashira.lib.fence_vertical', px, py, TILE, TILE)) return;
   if (drawOverride(ctx, art, 'lashira.prop.fence', px, py, TILE, TILE)) return;
+  if (vertical) {
+    rect(ctx, px + 20, py, 8, TILE, '#b89968'); rect(ctx, px + 34, py, 8, TILE, '#b89968');
+    rect(ctx, px + 16, py + 6, 20, 6, '#9c7f50'); rect(ctx, px + 16, py + TILE - 12, 20, 6, '#9c7f50');
+    return;
+  }
   rect(ctx, px + 6, py + 16, 6, 26, '#9c7f50'); rect(ctx, px + TILE - 12, py + 16, 6, 26, '#9c7f50');
   rect(ctx, px, py + 20, TILE, 6, '#b89968'); rect(ctx, px, py + 32, TILE, 6, '#b89968');
 }
@@ -204,8 +210,8 @@ export function buildFarmMap(art = {}) {
       if (!(pen.gate === 'bottom' && x === mx)) { drawFence(ctx, x, pen.y1 + 1, art); block(x, pen.y1 + 1); }
     }
     for (let y = pen.y0; y <= pen.y1; y++) {
-      if (!(pen.gate === 'left' && y === my)) { drawFence(ctx, pen.x0 - 1, y, art); block(pen.x0 - 1, y); }
-      if (!(pen.gate === 'right' && y === my)) { drawFence(ctx, pen.x1 + 1, y, art); block(pen.x1 + 1, y); }
+      if (!(pen.gate === 'left' && y === my)) { drawFence(ctx, pen.x0 - 1, y, art, true); block(pen.x0 - 1, y); }
+      if (!(pen.gate === 'right' && y === my)) { drawFence(ctx, pen.x1 + 1, y, art, true); block(pen.x1 + 1, y); }
     }
   }
 
@@ -224,6 +230,25 @@ export function buildFarmMap(art = {}) {
   for (let x = ARENA.x0; x < W - 1; x++) {
     if (x === ARENA_GATE_X || x === ARENA_GATE_X + 1) continue; // gate
     drawFence(ctx, x, ARENA_WALL_Y, art); block(x, ARENA_WALL_Y);
+  }
+
+  // lily pads scattered on the lake
+  for (let y = ZONES.fishing.y0; y <= ZONES.fishing.y1; y++) for (let x = ZONES.fishing.x0; x <= ZONES.fishing.x1; x++) {
+    if (((x * 331 + y * 97 + 5) >>> 0) % 100 < 9) drawOverride(ctx, art, 'lashira.lib.lily_pad', x * TILE, y * TILE, TILE, TILE);
+  }
+
+  // lush decoration scatter on OPEN grass (baked, non-blocking) — fills the space
+  // between zones so the world reads full, Animal-Crossing style.
+  const inR = (r, x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+  const inZone = (x, y) => inR(FIELD, x, y) || inR(ZONES.garden, x, y) || inR(ZONES.plaza, x, y)
+    || inR(ZONES.mining, x, y) || inR(ZONES.forest, x, y) || inR(ZONES.fishing, x, y) || inR(ARENA, x, y);
+  const DECO = ['lashira.lib.grass_tuft', 'lashira.lib.grass_tuft', 'lashira.lib.grass_tuft',
+    'lashira.lib.flowers', 'lashira.lib.small_rock', 'lashira.lib.bush', 'lashira.lib.mushroom'];
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    if (blocked.has(tileKey(x, y)) || inZone(x, y)) continue;
+    if ((x === 29 || x === 30) && y < ZONES.plaza.y0) continue; // keep the castle path clear
+    let s = (x * 2749 + y * 911 + 7) >>> 0; s = (s * 1103515245 + 12345) >>> 0;
+    if ((s % 1000) < 150) drawOverride(ctx, art, DECO[(s >>> 8) % DECO.length], x * TILE, y * TILE, TILE, TILE);
   }
 
   return { canvas, blocked };
