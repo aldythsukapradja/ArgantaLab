@@ -5,11 +5,12 @@
 // only the card (crest/name/HP/MP) shows persistently — no resource chips.
 // MP bar IS the farm's real energy/stamina meter (one number, not two).
 // Diamonds (the only currency) and the guardian companion live in Settings.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { computeRank } from '../net/hero.js';
 import TierIcon from '../components/TierIcon.jsx';
 import { IconHeart, IconMana, IconMount } from '../components/HudIcons.jsx';
 import { CROPS } from '../data/crops.js';
+import { supabase, hasSupabase } from '../net/supabase.js';
 
 const TOOLS = [
   { id: 'hoe', icon: '⛏', label: 'Till' },
@@ -20,12 +21,32 @@ const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
 const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
 
+// circle id → human name (the QC pill should read "Keluarga Cerah Ceria", not a
+// uuid). Cached per session so re-opening Settings never refetches.
+const circleNameCache = new Map();
+function useCircleName(circleId) {
+  const [name, setName] = useState(() => circleNameCache.get(circleId) || null);
+  useEffect(() => {
+    if (!circleId || !hasSupabase || circleNameCache.has(circleId)) return undefined;
+    let live = true;
+    supabase.from('circles').select('name').eq('id', circleId).maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) circleNameCache.set(circleId, data.name);
+        if (live && data?.name) setName(data.name);
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [circleId]);
+  return name;
+}
+
 export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence, circleId }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   const rank = computeRank(snap.xp);
   const maxHp = Number(hero?.stats?.maxHp || 100);
-  const guardian = hero?.guardian;
+  const circleName = useCircleName(circleId);
+  const activeKins = (snap.kins || []).slice(0, 6);
   const energyPct = Math.max(0, Math.min(100, (snap.stamina / Math.max(1, snap.maxStamina)) * 100));
   const selectedCrop = CROPS[snap.selectedSeed] || CROPS.turnip;
   const selectedSeedCount = Number(snap.seeds?.[selectedCrop.id] || 0);
@@ -147,11 +168,11 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             <div className="browser-head"><b>Settings</b>
               <button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
             <div className="settings-body">
-              <section>
+              <section className="set-card">
                 <h4>Circle sync</h4>
                 <div className="setrow" style={{ flexWrap: 'wrap', gap: 6 }}>
                   <span className={'sync-pill' + (circleId ? ' on' : ' off')} title={circleId || 'no circle bound'}>
-                    {circleId ? '🔗 ' + circleId : '👤 personal (no circle)'}
+                    {circleId ? '🔗 ' + (circleName || 'circle …' + String(circleId).slice(0, 6)) : '👤 personal (no circle)'}
                   </span>
                   <span className={'sync-pill' + ((presence?.count || 0) > 0 ? ' on' : '')} title="players broadcasting on this circle right now">
                     {(presence?.count || 0) > 0 ? '🟢 ' + presence.count + ' live' + (presence.names?.[0] ? ' · ' + presence.names.join(', ') : '') : '⚪ 0 live (solo)'}
@@ -161,32 +182,33 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                   </span>
                 </div>
               </section>
-              <section>
+              <section className="set-card">
                 <h4>Diamonds</h4>
                 <div className="setrow diamond-row">
                   <span className="diamond-count">💎 {fmt(snap.diamonds)}</span>
                 </div>
               </section>
-              {guardian && (
-                <section>
-                  <h4>Guardian</h4>
-                  <div className="setrow">
-                    <label>🛡</label>
-                    <span>{guardian.displayName} — {fmt(guardian.maxHp)} HP · ATK {fmt(guardian.attack)}</span>
+              <section className="set-card">
+                <h4>Active Kin <em className="set-count">{activeKins.length}/6</em></h4>
+                {activeKins.length ? (
+                  <div className="kin-chip-row">
+                    {activeKins.map((k) => (
+                      <span className="kin-chip" key={k.id} style={{ '--kin-c': k.color || '#8b5cf6' }} title={(k.name || 'Kin') + (k.task ? ' · ' + k.task : '')}>
+                        <i />{k.name || 'Kin'}{k.task ? <b>{k.task === 'water' ? '💧' : '🌾'}</b> : null}
+                      </span>
+                    ))}
                   </div>
-                </section>
-              )}
-              <section>
+                ) : (
+                  <p className="settings-empty">No Kin on the farm yet — befriend them in ArgantaLab.</p>
+                )}
+              </section>
+              <section className="set-card">
                 <h4>Camera</h4>
                 <div className="setrow">
                   <label>zoom</label>
-                  <input type="range" min="0.6" max="3" step="0.1" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
+                  <input type="range" min="0.1" max="3" step="0.1" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
                   <span>{zoom.toFixed(1)}×</span>
                 </div>
-              </section>
-              <section>
-                <h4>Hero</h4>
-                <p className="settings-empty">{usingHero ? 'Rendering your Kingdom Heroes character.' : 'Placeholder farmer (Heroes art not loaded).'}</p>
               </section>
             </div>
           </div>

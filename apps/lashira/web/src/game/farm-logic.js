@@ -122,26 +122,36 @@ export class FarmLogic {
   _intent(obj) { try { this.intentSink?.(obj); } catch { /* sync is best-effort */ } }
   _absDay(d = this.state) { return (Number(d?.season) || 0) * DAYS_PER_SEASON + (Number(d?.day) || 1); }
   freeze() { this.frozen = true; clearTimeout(this._saveTimer); }
+  // Marks a calendar change so EVERY circle member's UI shows the same New Day
+  // splash — the sleeper, peers receiving the day intent, and late joiners
+  // adopting a further-along snapshot.
+  _dayEvent() {
+    this.dayEvent = { day: this.state.day, season: SEASONS[this.state.season], at: Date.now() };
+  }
 
-  // Whole-state adoption — ONLY for late-joiner snapshots, gated by rev so a
-  // stale peer can never clobber a fresher farm. Personal fields (tool, seed
-  // selection, stamina, diamonds/xp) always stay local.
+  // Whole-state adoption — ONLY for late-joiner snapshots. The CALENDAR is the
+  // primary freshness signal (two windows with divergent histories can carry
+  // incomparable rev counters — e.g. many Day-1 actions vs few Day-4 actions —
+  // so day-first ordering is what actually converges them); rev only breaks
+  // same-day ties. Personal fields (tool, seed selection, stamina, diamonds/xp)
+  // always stay local.
   applySnapshot(data, rev = 0) {
     if (!data || typeof data !== 'object') return false;
     const remoteRev = Number(rev) || 0;
-    if (remoteRev <= (Number(this.state.rev) || 0)) return false;
+    const localRev = Number(this.state.rev) || 0;
+    const remoteAbs = this._absDay(data);
+    const localAbs = this._absDay(this.state);
+    const remoteFresher = remoteAbs > localAbs || (remoteAbs === localAbs && remoteRev > localRev);
+    if (!remoteFresher) return false;
     const base = this._default();
     const local = this.state;
-    // Belt over the rev gate: the calendar still never rolls backward.
-    const cal = this._absDay(data) >= this._absDay(local)
-      ? { day: data.day, season: data.season }
-      : { day: local.day, season: local.season };
+    const dayChanged = remoteAbs !== localAbs;
     this.state = {
       ...base,
       ...local,
       ...data,
-      ...cal,
-      rev: remoteRev,
+      day: data.day, season: data.season,
+      rev: Math.max(remoteRev, localRev),
       ...profileProgress(this.profile),
       tool: local.tool,
       selectedSeed: local.selectedSeed,
@@ -154,6 +164,7 @@ export class FarmLogic {
       kins: data.kins || local.kins || base.kins,
       kinTasks: { ...base.kinTasks, ...(data.kinTasks || {}) },
     };
+    if (dayChanged) this._dayEvent();
     this.save();
     this.emit();
     return true;
@@ -197,7 +208,7 @@ export class FarmLogic {
         if (intent.plots) st.plots = { ...intent.plots };
         if (Array.isArray(intent.livestock)) st.livestock = intent.livestock.map((a) => ({ ...a }));
         st.stamina = st.maxStamina; // the whole family wakes up with the new day
-        this.flash('☀ Day ' + st.day + ' — a new morning');
+        this._dayEvent(); // every circle member sees the same New Day splash
         break;
       }
       default: return;
@@ -283,6 +294,7 @@ export class FarmLogic {
       guest: !!this.profile?.guest,
       saveSource: this.saveSource,
       toast: this.toast,
+      dayEvent: this.dayEvent || null,
     };
   }
   flash(msg) { this.toast = msg; this.emit(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.emit(); }, 1600); }
@@ -463,6 +475,7 @@ export class FarmLogic {
       plots: { ...st.plots },
       livestock: st.livestock.map((a) => ({ ...a })),
     });
-    this.saveNow(); this.flash('☀ Day ' + st.day + ' — a new morning'); this.emit();
+    this._dayEvent();
+    this.saveNow(); this.emit();
   }
 }

@@ -153,6 +153,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [usingHero, setUsingHero] = useState(false);
   const [presence, setPresence] = useState({ count: 0, names: [] });
   const [kickedBy, setKickedBy] = useState(null); // session singleton: newer login elsewhere
+  const [daySplash, setDaySplash] = useState(null); // shared New Day banner (local sleep, peer intent, or adopted snapshot)
+  const lastDayEventRef = useRef(0);
+  const splashTimerRef = useRef(0);
   const heroPresenceKey = heroSpecKey(hero?.spec);
 
   // ---------- init ----------
@@ -197,7 +200,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // every local mutation, and the channel fans it out. UI updates ride the
       // normal subscribe → snapshot path.
       logic.intentSink = (intent) => presenceCtrlRef.current?.sendIntent?.(intent);
-      const unsub = logic.subscribe((next) => setSnap(next));
+      const unsub = logic.subscribe((next) => {
+        setSnap(next);
+        // New Day splash — fires on the SAME calendar change everywhere: the
+        // sleeper, peers applying the day intent, and joiners adopting a
+        // further-along snapshot. Makes the sync trigger visible on all screens.
+        const ev = next.dayEvent;
+        if (ev?.at && ev.at !== lastDayEventRef.current) {
+          lastDayEventRef.current = ev.at;
+          setDaySplash(ev);
+          clearTimeout(splashTimerRef.current);
+          splashTimerRef.current = setTimeout(() => setDaySplash(null), 2800);
+        }
+      });
       G.current._unsub = unsub;
       setReady(true);
     })();
@@ -847,7 +862,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function draw(g, ctx, canvas, now) {
       const cssW = g.viewportW || canvas.clientWidth, cssH = g.viewportH || canvas.clientHeight;
       if (cssW <= 0 || cssH <= 0 || !canvas.width || !canvas.height) return;
-      const z = Math.min(4, Math.max(0.6, g.zoom || 1.6));
+      const z = Math.min(4, Math.max(0.1, g.zoom || 1));
       const p = g.player; const [ppx, ppy] = entityPx(p);
       const viewW = cssW / z, viewH = cssH / z;
       let camX = ppx + TILE / 2 - viewW / 2, camY = ppy + TILE / 2 - viewH / 2;
@@ -953,6 +968,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
           </>
+        )}
+        {daySplash && (
+          <div className="day-splash" aria-live="polite">
+            <div className="day-splash-card">
+              <span className="ds-sun">☀</span>
+              <b>Day {daySplash.day}</b>
+              <em>{daySplash.season}</em>
+            </div>
+          </div>
         )}
         {kickedBy && (
           <div className="kicked-overlay">
