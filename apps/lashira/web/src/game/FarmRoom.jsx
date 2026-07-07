@@ -184,6 +184,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
+  // Walk speed multiplier (1x = Kingdom cadence, up to 3x). Persisted per browser.
+  const [speed, setSpeed] = useState(() => {
+    const s = Number(typeof localStorage !== 'undefined' && localStorage.getItem('lashira_speed'));
+    return Number.isFinite(s) && s >= 1 && s <= 3 ? s : 1.5;
+  });
   const [usingHero, setUsingHero] = useState(false);
   const [presence, setPresence] = useState({ count: 0, names: [] });
   const [kickedBy, setKickedBy] = useState(null); // session singleton: newer login elsewhere
@@ -237,7 +242,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
         player: prev?.player || { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
-        held: prev?.held || new Set(), stick: prev?.stick || null, zoom, viewportW: prev?.viewportW || 0, viewportH: prev?.viewportH || 0, dpr: prev?.dpr || 1,
+        held: prev?.held || new Set(), stick: prev?.stick || null, zoom, speed, viewportW: prev?.viewportW || 0, viewportH: prev?.viewportH || 0, dpr: prev?.dpr || 1,
         actors: prev?.actors || new Map(), peerActors: prev?.peerActors || new Map(), peerWorldActors: prev?.peerWorldActors || new Map(), pendingMountCall: false,
         lastPresenceSnapshot: '', lastPresenceAt: 0,
         // Battle mode (shared @arganta/combat). `on` tracks whether the player is
@@ -276,6 +281,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   }, [profile?.id, profile?.displayName, profile?.guest, profile?.diamonds, profile?.xp, profile?.level, profile?.role, heroPresenceKey, circleId]);
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
+  useEffect(() => {
+    if (G.current) G.current.speed = speed;
+    try { localStorage.setItem('lashira_speed', String(speed)); } catch { /* quota */ }
+  }, [speed]);
 
   useEffect(() => {
     if (!ready) return undefined;
@@ -930,8 +939,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
     function step(now) {
       const g = G.current; if (!g) return; const p = g.player;
-      // mounted moves faster — copied AS IS from Kingdom Heroes (WALK_MS * 0.6).
-      if (p.moveT < 1) p.moveT = Math.min(1, (now - p.moveStart) / (p.mounted ? WALK_MS * 0.6 : WALK_MS));
+      // mounted moves faster (WALK_MS * 0.6); the Settings speed slider (1x-3x)
+      // divides the walk time so higher = faster.
+      const walkMs = (p.mounted ? WALK_MS * 0.6 : WALK_MS) / (g.speed || 1);
+      if (p.moveT < 1) p.moveT = Math.min(1, (now - p.moveStart) / walkMs);
       else if (!p.oneShot) {
         const dir = heldDirection(g);
         if (dir) {
@@ -1357,7 +1368,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         {snap && (
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
-              zoom={zoom} setZoom={setZoom} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
+              zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />

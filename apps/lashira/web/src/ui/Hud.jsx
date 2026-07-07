@@ -37,7 +37,7 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   // Live channel diagnostics, refreshed while Settings is open — a field
@@ -214,11 +214,16 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                 )}
               </section>
               <section className="set-card">
-                <h4>Camera</h4>
+                <h4>Camera &amp; movement</h4>
                 <div className="setrow">
                   <label>zoom</label>
                   <input type="range" min="0.1" max="3" step="0.1" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
                   <span>{zoom.toFixed(1)}×</span>
+                </div>
+                <div className="setrow">
+                  <label>speed</label>
+                  <input type="range" min="1" max="3" step="0.1" value={speed ?? 1.5} onChange={(e) => setSpeed(Number(e.target.value))} />
+                  <span>{Number(speed ?? 1.5).toFixed(1)}×</span>
                 </div>
               </section>
             </div>
