@@ -561,15 +561,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       }
       return;
     }
+    // Ride IMMEDIATELY on R (like Kingdom) — no calling the mount to walk over.
     if (mount) {
-      mount.mode = 'called';
-      mount.hidden = false;
-      mount.speedMs = 170;
-      mount.idleUntil = 0;
-      mount.callStartedAt = performance.now();
-    } else {
-      g.pendingMountCall = true;
+      mount.mode = 'ridden'; mount.hidden = true;
+      mount.tile = [...g.player.tile]; mount.from = [...g.player.tile]; mount.moveT = 1;
     }
+    g.player.mounted = true;
+    g.pendingMountCall = false;
   }
 
   // ---------- battle actions (bottom-right cluster in the arena) ----------
