@@ -27,8 +27,8 @@ import { SPECIES, animalGoodReady } from '../data/livestock.js';
 const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South', ArrowLeft: 'West', a: 'West', ArrowRight: 'East', d: 'East' };
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const FACE_WORD = { North: 'up', South: 'down', East: 'right', West: 'left' };
-const WALK_MS = 260;
-const REMOTE_WALK_MS = 280;
+const WALK_MS = 460;        // matches Kingdom Heroes' walk cadence (1 tile / 460ms)
+const REMOTE_WALK_MS = 460;
 const ANIMAL_VISUAL_COUNT = 5;
 const DIRS = [['East', 1, 0], ['West', -1, 0], ['South', 0, 1], ['North', 0, -1]];
 const KIN_STARTS = [[7, 12], [13, 16], [18, 11], [23, 14], [28, 10], [9, 18], [18, 19], [27, 18], [32, 13], [12, 7], [21, 7], [30, 7]];
@@ -646,7 +646,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const g = G.current; if (!g || !g.combat.on) return;
     const skill = (g.battleSkills || SKILL_SLOTS)[i]; if (!skill) return;
     const cost = Number(skill.manaCost || 0);
-    const stamina = logicRef.current?.state?.stamina ?? 0;
+    const isOp = !!logicRef.current?.isOperator?.();
+    const stamina = isOp ? Infinity : (logicRef.current?.state?.stamina ?? 0); // operator: unlimited
     if (!canAffordSkill(stamina, skill)) { logicRef.current?.flash?.('Too tired for ' + (skill.name || 'that skill')); return; }
     if (cost > 0 && !logicRef.current?.spendStamina(cost)) return;
     playSwing(g);
