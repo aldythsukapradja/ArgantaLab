@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Mic, LayoutGrid, Sun, Moon } from 'lucide-react'
 import { useHQ } from '../shell/store'
 import { live, cloudEnabled } from '../data/live'
@@ -22,25 +22,6 @@ const PCT = (v: number | null | undefined) => (v == null ? '—' : Math.round(v)
 // deterministic PRNG so the node cloud is stable across renders
 function mulberry32(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 } }
 
-function useOrbGraph() {
-  return useMemo(() => {
-    const rand = mulberry32(7)
-    const N = 112, cx = 200, cy = 200, R = 104
-    const nodes: { x: number; y: number; b: boolean }[] = []
-    for (let i = 0; i < N; i++) {
-      const a = rand() * Math.PI * 2
-      const r = Math.pow(rand(), 0.6) * R
-      nodes.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, b: rand() < 0.14 })
-    }
-    let d = ''
-    for (let i = 0; i < N; i++) {
-      const near = nodes.map((n, j) => ({ j, dd: (n.x - nodes[i].x) ** 2 + (n.y - nodes[i].y) ** 2 }))
-        .filter(o => o.j !== i).sort((p, q) => p.dd - q.dd).slice(0, 2)
-      for (const o of near) d += `M${nodes[i].x.toFixed(1)} ${nodes[i].y.toFixed(1)}L${nodes[o.j].x.toFixed(1)} ${nodes[o.j].y.toFixed(1)}`
-    }
-    return { nodes, edges: d }
-  }, [])
-}
 
 // AI/ML brain — a dense node cluster masked to a brain-ish ellipse (viewBox 140x60).
 const MINI_BRAIN = (() => {
@@ -62,7 +43,6 @@ const MINI_BRAIN = (() => {
 
 export function Landing({ who = 'Operator' }: { who?: string }) {
   const { openPalette, toggleAgent, go, theme, toggleTheme } = useHQ()
-  const orb = useOrbGraph()
   const [g, setG] = useState<GrowthOverview | null>(null)
   const [e, setE] = useState<EconomyData | null>(null)
   const [k, setK] = useState<KinetikStats | null>(null)

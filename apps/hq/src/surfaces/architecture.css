@@ -1,0 +1,42 @@
+/* Architecture Map — premium React Flow styling (glass cards + layer bands),
+   theme-token driven so it flips light/dark with HQ. */
+
+.af-wrap { height: 100%; display: flex; flex-direction: column; padding: 16px 20px 18px; box-sizing: border-box; }
+
+.af-seg { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--bg3); border: 1px solid var(--bd2); }
+.af-seg button { text-transform: capitalize; font-size: 12px; font-weight: 600; padding: 5px 15px; border-radius: 999px; cursor: pointer; border: none; font-family: inherit; color: var(--tx2); background: transparent; transition: background var(--dur), color var(--dur); }
+.af-seg button.on { background: var(--acc); color: #fff; box-shadow: 0 2px 8px color-mix(in srgb, var(--acc) 45%, transparent); }
+.af-seg button:hover:not(.on) { color: var(--tx); }
+
+.af-canvas { flex: 1; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--bd2); background: var(--bg2); position: relative; }
+
+/* card node */
+.af-card { border-radius: 12px; padding: 10px 13px; width: 176px; box-sizing: border-box;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 86%, var(--bg2)), var(--bg));
+  border: 1px solid var(--bd2); border-left: 3px solid var(--af-c);
+  box-shadow: 0 6px 20px rgba(16, 24, 40, .10), inset 0 1px 0 rgba(255, 255, 255, .05);
+  transition: transform .16s var(--ease), box-shadow .16s var(--ease); }
+.af-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px color-mix(in srgb, var(--af-c) 24%, transparent), inset 0 1px 0 rgba(255, 255, 255, .06); }
+.af-card.next { border-style: dashed; border-color: color-mix(in srgb, var(--af-c) 48%, var(--bd2)); background: color-mix(in srgb, var(--af-c) 5%, var(--bg)); box-shadow: none; }
+.af-card .t { font-weight: 700; font-size: 12.5px; color: var(--tx); line-height: 1.2; }
+.af-card .s { font-size: 9.5px; color: var(--tx3); margin-top: 3px; line-height: 1.3; }
+
+/* layer band (background group) */
+.af-band { width: 100%; height: 100%; border-radius: 16px; position: relative;
+  background: color-mix(in srgb, var(--af-c) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--af-c) 20%, transparent); }
+.af-band .bl { position: absolute; left: 14px; top: 9px; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--af-c); font-weight: 700; opacity: .9; }
+
+/* legend */
+.af-legend { position: absolute; left: 12px; top: 12px; display: flex; gap: 12px; padding: 7px 12px; border-radius: 9px; background: var(--glass); border: 1px solid var(--glass-bd); backdrop-filter: blur(10px); font-size: 10px; z-index: 5; }
+.af-legend span.i { display: flex; align-items: center; gap: 5px; color: var(--tx2); }
+.af-legend span.i i { width: 9px; height: 9px; border-radius: 3px; display: block; }
+
+/* react flow chrome */
+.af-canvas .react-flow__attribution { display: none; }
+.af-canvas .react-flow__controls { box-shadow: var(--shadow-md); border-radius: 9px; overflow: hidden; border: 1px solid var(--bd2); }
+.af-canvas .react-flow__controls-button { background: var(--bg); border-bottom: 1px solid var(--bd); color: var(--tx2); }
+.af-canvas .react-flow__controls-button:hover { background: var(--bg3); }
+.af-canvas .react-flow__minimap { border-radius: 9px; border: 1px solid var(--bd2); overflow: hidden; }
+.af-canvas .react-flow__edge-path { stroke-width: 1.6; }
+.af-canvas .react-flow__handle { border: none; }
