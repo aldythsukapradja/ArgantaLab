@@ -10,10 +10,12 @@ truth) that renders in **both** Obsidian and the **HQ Arganta webapp** (`apps/hq
 Branch: `claude/digital-brain-twin-os-omes01`. All work committed + pushed.
 
 ## Status at a glance (the "one noun, four verbs" model)
-- **NOUN — the vault**: ✅ DONE. 41 md files, 34 are app-loadable knowledge nodes, unified
-  schema + guardrail (`class`) + versioning (`canonical`/`version`) + badges + MOC mind-map spine.
-  Verified clean by `scripts` verifier: 0 duplicate basenames, 0 id collisions, 0 broken links
-  among knowledge notes.
+- **NOUN — the vault**: ✅ DONE + back-filled. 64 md files, **56 app-loadable knowledge nodes**,
+  unified schema + guardrail (`class`) + versioning + badges + MOC spine. Verifier clean:
+  0 dup basenames, 0 id collisions, 0 broken links in knowledge notes.
+- **BACK-FILL (seed.ts → vault-hq)**: ✅ DONE. All 23 seed notes migrated (20 new incl.
+  LashiraBloom pillar, product/decision/prompt notes; 3 pillars merged into existing). vault-hq
+  is now the true **superset** of what the deployed app shows. `seed.ts` is now the stale mirror.
 - **CAPTURE (write raw in)**: ⏳ skill exists as text; not installed to `.claude/skills/` and not
   auto-wired to `_INBOX/`. One real capture done by hand (the IG carousel).
 - **HARVEST (raw→truth)**: rules ✅; the ritual is human + weekly (by design, never automated).
