@@ -265,8 +265,10 @@ export function buildFarmMap(art = {}) {
     drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE);
     if (p.solid) blockRect(p.tx, p.ty, p.w, p.h);
   }
-  // keep the fishing dock walkable
-  for (let x = 6; x <= 8; x++) for (let y = 33; y <= 34; y++) blocked.delete(tileKey(x, y));
+  // WALKWAY into the pond — the whole lake is blocked water, so carve a walkable
+  // shore approach + a dock/pier out over the water. Otherwise you can't move to fish.
+  for (let x = 9; x <= 12; x++) for (let y = 29; y <= 33; y++) blocked.delete(tileKey(x, y)); // approach from the north shore
+  for (let x = 6; x <= 13; x++) for (let y = 33; y <= 37; y++) blocked.delete(tileKey(x, y));  // the dock/pier out over the water
 
   // dividing wall (mid-zones ↕ martial south) with a 2-wide gate
   for (let x = ARENA.x0; x < W - 1; x++) {
@@ -297,8 +299,33 @@ export function buildFarmMap(art = {}) {
     if ((s % 1000) < 45) drawOverride(ctx, art, DECO[(s >>> 8) % DECO.length], x * TILE, y * TILE, TILE, TILE);
   }
 
+  // ===== BASEMAP — the hand-quality image IS the map, painted over everything above
+  // (the procedural art is only a fallback if the image fails to load). Dynamic actors
+  // + clickable component sprites render on top. Verified against the red-dot map. =====
+  if (drawOverride(ctx, art, 'lashira.basemap', 0, 0, WORLD_W, WORLD_H)) {
+    // hide the red placement dots baked into the reference image by cloning a clean
+    // patch of ground from just above each (coords are the image's 1394x1128 space).
+    const sx = WORLD_W / 1394, sy = WORLD_H / 1128, R = 30;
+    for (const [ix, iy] of BASEMAP_DOTS) {
+      const wx = Math.round(ix * sx), wy = Math.round(iy * sy);
+      if (wy - R - 78 < 0) continue;
+      ctx.drawImage(canvas, wx - R, wy - R - 78, R * 2, R * 2, wx - R, wy - R, R * 2, R * 2);
+    }
+  } else if (typeof console !== 'undefined') {
+    console.warn('[farm] basemap.png NOT loaded — showing the ugly procedural fallback. Check farm-art-bundled.js "lashira.basemap".');
+  }
+
   return { canvas, blocked };
 }
+
+// Red placement dots baked into basemap.png (image 1394x1128 coords) — cloned over
+// with nearby ground so they don't show. Detected 2026-07-08.
+const BASEMAP_DOTS = [
+  [380, 266], [1182, 278], [845, 279], [1006, 279], [696, 301], [254, 332], [523, 333],
+  [258, 448], [352, 516], [696, 532], [925, 572], [171, 573], [466, 573], [1201, 576],
+  [266, 635], [954, 798], [232, 818], [276, 847], [496, 877], [696, 878], [1088, 906],
+  [608, 914], [802, 915], [226, 952],
+];
 
 // Is a tile inside the battle arena?
 export function inArena(tx, ty) {
