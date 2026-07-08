@@ -7,8 +7,8 @@
 // Diamonds (the only currency) and the guardian companion live in Settings.
 import { useEffect, useState } from 'react';
 import { computeRank } from '../net/hero.js';
-import TierIcon from '../components/TierIcon.jsx';
-import { IconHeart, IconMana, IconMount } from '../components/HudIcons.jsx';
+import { IconMount } from '../components/HudIcons.jsx';
+import { UnitCard, cardFromSnap, cardFromPeer } from './UnitCard.jsx';
 import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
 import { ActionCluster } from '@arganta/combat/cluster';
@@ -40,6 +40,7 @@ function useCircleName(circleId) {
 export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, onHarvestAll, onPlantAll }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
+  const [showLive, setShowLive] = useState(false);
   // Live channel diagnostics, refreshed while Settings is open — a field
   // screenshot of this line pinpoints WHERE sync dies (never joined / died
   // later / joined but hearing nothing).
@@ -52,10 +53,11 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
     return () => clearInterval(h);
   }, [showSettings, getSyncDebug]);
   const rank = computeRank(snap.xp);
-  const maxHp = Number(snap.maxHp || hero?.stats?.maxHp || 100);
+  // The player's own profile card (battle-aware HP). Same shape the live popup
+  // feeds peer cards — one component, one design.
+  const selfCard = cardFromSnap(snap, battle);
   const circleName = useCircleName(circleId);
   const activeKins = (snap.kins || []).slice(0, 6);
-  const energyPct = Math.max(0, Math.min(100, (snap.stamina / Math.max(1, snap.maxStamina)) * 100));
   const selectedCrop = CROPS[snap.selectedSeed] || CROPS.turnip;
   const selectedSeedCount = Number(snap.seeds?.[selectedCrop.id] || 0);
   const seedRows = Object.values(CROPS);
@@ -69,47 +71,20 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
       {snap.toast && <div className="toasts"><div className="toast">{snap.toast}</div></div>}
       <RewardToasts rewards={snap.rewards} />
 
-      {/* top bar — EXP readout + wallet strip (Wood · Stone · Bloom · Diamond) + gear */}
+      {/* top bar — gear only. The wallet strip moved into the left stack, below
+          the live row (a single place owns the top-left column). */}
       <div className="hud-top">
         <div className="topbar-right">
-          <div className="res-strip">
-            <button className="res res-wood" onClick={() => onOpen('shop')} title="Wood — chop the forest (coming soon)">🪵 {snap.wood === Infinity ? '∞' : fmt(snap.wood)}</button>
-            <button className="res res-stone" onClick={() => onOpen('shop')} title="Stone — mine the quarry (coming soon)">🪨 {snap.stone === Infinity ? '∞' : fmt(snap.stone)}</button>
-            <button className="res res-bloom" onClick={() => onOpen('shop')} title="Bloom — the play currency, earned from every action">🌸 {snap.bloom === Infinity ? '∞' : fmt(snap.bloom)}</button>
-            <button className="res res-diamond" onClick={() => onOpen('shop')} title="Diamonds — learning currency, for cosmetics (Diamond shop coming)">💎 {fmt(snap.diamonds)}</button>
-          </div>
           <button type="button" className="hud-gear" onClick={() => setShowSettings(true)}>⚙</button>
         </div>
       </div>
 
-      {/* unit-frame + quick nav, stacked top-left. unit-frame markup is the
-          exact Kingdom Heroes shape (TierIcon crest + IconHeart/IconMana bars).
-          MP bar shows the real farm energy/stamina — one meter, not two. */}
+      {/* Top-left column, single owner of the whole stack:
+            UnitCard (the one shared profile card) → quicknav → live row → wallet.
+          The UnitCard here and each card in the live popup are the SAME
+          component, so a design change updates every card at once. */}
       <div className="left-stack">
-        <div className="unit-frame">
-          <div className="unit-rank" title={`ArgantaLab rank: ${rank.name}`}>
-            <TierIcon color={rank.color} glyph={rank.glyph} size={38} />
-            <span className="rank-name" style={{ background: rank.color, borderColor: rank.color }}>{rank.name}</span>
-          </div>
-          <div className="unit-main">
-            <div className="unit-name">
-              <b className="uname" title={snap.name}>{snap.name}</b>
-              <span className="utitle"><em className="path-chip">{snap.pathIcon} {snap.title || snap.pathName || 'Guardian'}</em><em className="lv-chip">Lv {fmt(snap.level)}</em></span>
-            </div>
-            <div className="unit-exp-row">
-              <div className="unit-exp" title={`${snap.xpPct ?? 0}% to next level`}><span style={{ width: `${snap.xpPct ?? 0}%` }} /></div>
-              <b className="exp-num" title="XP into this level / XP this level needs">
-                ✨ {snap.level >= 99 ? 'MAX' : `${fmt(snap.xpCur)}/${fmt(snap.xpReq)}`}
-              </b>
-            </div>
-            <div className="unit-bars">
-              {battle?.on
-                ? <div className="bar hp"><span style={{ width: `${Math.max(0, Math.min(100, (battle.hp / Math.max(1, battle.maxHp)) * 100))}%` }} /><b><IconHeart /> {fmt(battle.hp)}/{fmt(battle.maxHp)}</b></div>
-                : <div className="bar hp"><span style={{ width: '100%' }} /><b><IconHeart /> {fmt(maxHp)}/{fmt(maxHp)}</b></div>}
-              <div className="bar mp"><span style={{ width: `${energyPct}%` }} /><b><IconMana /> {fmt(snap.stamina)}/{fmt(snap.maxStamina)}</b></div>
-            </div>
-          </div>
-        </div>
+        <UnitCard card={selfCard} />
 
         <div className="quicknav">
           <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
@@ -118,16 +93,29 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
           <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
         </div>
+
         {(circleName || presence?.count > 0) && (
           <div className="live-row">
-            {circleName && <span className="live-pill circle" title={circleName}>🔗 {circleName}</span>}
-            {presence?.count > 0 && <span className="live-pill count" title={`${presence.count} in the farm now`}>🟢 {presence.count} live</span>}
-            {(presence?.names || []).slice(0, 4).map((n, i) => (
-              <span className="live-pill name" key={i} title={n}>👤 {n}</span>
-            ))}
+            {circleName && (
+              <button type="button" className="live-pill circle" title={circleName} onClick={() => setShowLive(true)}>🔗 {circleName}</button>
+            )}
+            <button type="button" className="live-pill count" title="See who's in the farm now" onClick={() => setShowLive(true)}>
+              🟢 {presence?.count || 0} live
+            </button>
           </div>
         )}
+
+        <div className="res-strip">
+          <button className="res res-wood" onClick={() => onOpen('shop')} title="Wood — chop the forest (coming soon)">🪵 {snap.wood === Infinity ? '∞' : fmt(snap.wood)}</button>
+          <button className="res res-stone" onClick={() => onOpen('shop')} title="Stone — mine the quarry (coming soon)">🪨 {snap.stone === Infinity ? '∞' : fmt(snap.stone)}</button>
+          <button className="res res-bloom" onClick={() => onOpen('shop')} title="Bloom — the play currency, earned from every action">🌸 {snap.bloom === Infinity ? '∞' : fmt(snap.bloom)}</button>
+          <button className="res res-diamond" onClick={() => onOpen('shop')} title="Diamonds — learning currency, for cosmetics (Diamond shop coming)">💎 {fmt(snap.diamonds)}</button>
+        </div>
       </div>
+
+      {showLive && (
+        <LivePopup selfCard={selfCard} peers={presence?.peers || []} circleName={circleName} onClose={() => setShowLive(false)} />
+      )}
 
       {!usingHero && (
         <div className="hero-note">Placeholder farmer — build your hero in <b>Kingdom Heroes</b> and it appears here.</div>
@@ -257,5 +245,34 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
         </div>
       )}
     </>
+  );
+}
+
+// Live popup — tapping the live row opens this. Lists everyone in the farm right
+// now as a full UnitCard (same component as the top-left), the player first.
+function LivePopup({ selfCard, peers, circleName, onClose }) {
+  const entries = [
+    { key: 'self', card: selfCard, you: true },
+    ...(peers || []).map((p) => ({ key: p.id, name: p.name, card: p.card ? cardFromPeer(p) : null })),
+  ];
+  return (
+    <div className="browser-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="live-popup">
+        <div className="browser-head">
+          <b>🟢 In the farm now{circleName ? ' · ' + circleName : ''} <em className="set-count">{entries.length}</em></b>
+          <button className="closex" onClick={onClose}>✕</button>
+        </div>
+        <div className="live-popup-body">
+          {entries.map((e) => (
+            <div className="live-card-wrap" key={e.key}>
+              {e.you && <span className="live-you">YOU</span>}
+              {e.card
+                ? <UnitCard card={e.card} className="in-popup" />
+                : <div className="live-card-loading">👤 {e.name || 'Farmer'} — loading…</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

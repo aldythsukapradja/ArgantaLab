@@ -299,13 +299,43 @@ body {
 /* circle name + live players — one row of FIXED-width pills that ellipsis-truncate */
 .live-row { align-self: flex-start; max-width: 100%; pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 .live-pill {
-  display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 3px; padding: 4px 10px; border-radius: 999px;
   font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: rgba(255,255,255,.82); color: #263042; border: 1px solid rgba(0,0,0,.06); box-shadow: 0 3px 10px -4px #0006;
+  cursor: pointer; font-family: inherit; transition: transform 0.16s var(--spring), background 0.15s ease;
 }
-.live-pill.circle { max-width: 150px; color: #185fa5; }
+.live-pill:hover  { background: rgba(255,255,255,.95); }
+.live-pill:active { transform: scale(0.94); }
+.live-pill.circle { max-width: 170px; color: #185fa5; }
 .live-pill.count  { color: #178a4f; flex: 0 0 auto; }
-.live-pill.name   { max-width: 96px; color: #5a4bb3; }
+
+/* live popup — a grid of full UnitCards for everyone in the farm right now */
+.live-popup {
+  width: min(560px, 94vw); max-height: 84vh; overflow-y: auto;
+  color: var(--text-strong, #10141f);
+  background: var(--glass-bg-thick, rgba(248, 249, 252, 0.82));
+  backdrop-filter: var(--glass-thick, blur(50px) saturate(180%));
+  -webkit-backdrop-filter: var(--glass-thick, blur(50px) saturate(180%));
+  border: none; border-radius: 28px; corner-shape: superellipse(1.8);
+  box-shadow: var(--glass-rim), var(--glass-shadow-lg, 0 30px 72px -16px rgba(10, 14, 26, 0.42));
+  animation: settings-pop 0.44s var(--spring, cubic-bezier(0.34, 1.4, 0.5, 1));
+}
+.live-popup-body {
+  padding: 8px 16px 18px; display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.live-card-wrap { position: relative; }
+.live-card-wrap .unit-frame.in-popup { width: 100%; position: static; }
+.live-you {
+  position: absolute; top: -6px; right: 8px; z-index: 2;
+  font-size: 9px; font-weight: 900; letter-spacing: .08em; color: #fff;
+  background: #178a4f; padding: 2px 7px; border-radius: 999px; box-shadow: 0 3px 8px -3px #0008;
+}
+.live-card-loading {
+  display: flex; align-items: center; justify-content: center; min-height: 96px;
+  border-radius: 18px; background: rgba(255,255,255,.55); color: var(--muted, #6d7288);
+  font-size: 12.5px; font-weight: 700;
+}
 .farm-online {
   align-self: flex-start; max-width: 100%; pointer-events: auto;
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px;
@@ -453,7 +483,7 @@ body {
   background: rgba(18,24,40,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border: 1px solid #6fa8ff44; box-shadow: 0 4px 12px -5px #0009;
 }
-.res-strip { display: inline-flex; align-items: center; gap: 6px; }
+.res-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; pointer-events: auto; }
 /* frosted-glass wallet pills — same design language as the left unit-frame card */
 .res {
   display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px; border-radius: 999px;

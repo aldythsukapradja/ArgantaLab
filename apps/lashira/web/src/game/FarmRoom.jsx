@@ -169,6 +169,17 @@ function worldActorSnapshots(g, isHost, ownerName) {
   return out;
 }
 
+// Compact profile-card stats broadcast on presence so peers can render each
+// other's full UnitCard in the live popup (see UnitCard.cardFromPeer).
+function presenceCardFrom(snap) {
+  if (!snap) return null;
+  return {
+    level: snap.level, path: snap.path, pathName: snap.pathName, pathIcon: snap.pathIcon,
+    title: snap.title, xp: snap.xp, xpPct: snap.xpPct, xpCur: snap.xpCur, xpReq: snap.xpReq,
+    maxHp: snap.maxHp, stamina: snap.stamina, maxStamina: snap.maxStamina,
+  };
+}
+
 export default function FarmRoom({ profile, hero, circleId = null }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -195,7 +206,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     return Number.isFinite(s) && s >= 1 && s <= 3 ? s : 1.5;
   });
   const [usingHero, setUsingHero] = useState(false);
-  const [presence, setPresence] = useState({ count: 0, names: [] });
+  const [presence, setPresence] = useState({ count: 0, names: [], peers: [] });
   const [kickedBy, setKickedBy] = useState(null); // session singleton: newer login elsewhere
   const [daySplash, setDaySplash] = useState(null); // shared New Day banner (local sleep, peer intent, or adopted snapshot)
   const [battle, setBattle] = useState({ on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP }); // mirror of g.combat for the HUD
@@ -329,7 +340,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     presenceCtrlRef.current = null;
     g.peerActors.clear();
     g.peerWorldActors.clear();
-    setPresence({ count: 0, names: [] });
+    setPresence({ count: 0, names: [], peers: [] });
 
     if (!circleId || !profile || profile.guest) return undefined;
 
@@ -384,6 +395,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const live = new Set();
       const liveWorld = new Set();
       const names = [];
+      const peerCards = []; // {id, name, card} for the live popup's UnitCards
       const rows = [];
       for (const peer of peers || []) {
         const tile = readTile(peer.tile);
@@ -393,6 +405,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         rows.push({ id, peer, tile });
         live.add(id);
         names.push(peer.name || 'Farmer');
+        peerCards.push({ id, name: peer.name || 'Farmer', card: peer.card || null });
         let actor = g.peerActors.get(id);
         if (!actor) {
           actor = {
@@ -516,7 +529,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       }
       for (const id of [...g.peerActors.keys()]) if (!live.has(id)) g.peerActors.delete(id);
       for (const id of [...g.peerWorldActors.keys()]) if (!liveWorld.has(id)) g.peerWorldActors.delete(id);
-      setPresence({ count: names.length, names: names.slice(0, 4) });
+      setPresence({ count: names.length, names: names.slice(0, 4), peers: peerCards });
     };
 
     const ctrl = joinFarmPresence({
@@ -535,6 +548,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       facing: g.player.facing,
       mounted: !!g.player.mounted,
       heroSpec: hero?.spec || null,
+      card: presenceCardFrom(logicRef.current?.snapshot?.()),
       actors: worldActorSnapshots(g, true, profile.displayName || 'Farmer'),
     });
     // Late-joiner convergence: ask the room for its freshest farm. Whoever
@@ -549,7 +563,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         G.current.peerActors?.clear?.();
         G.current.peerWorldActors?.clear?.();
       }
-      setPresence({ count: 0, names: [] });
+      setPresence({ count: 0, names: [], peers: [] });
     };
     // Keyed on STABLE identity only (like Kingdom's arena effect). displayName &
     // heroPresenceKey are intentionally excluded: they change when the hero
@@ -976,6 +990,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         facing: p.facing,
         mounted: !!p.mounted,
         heroSpec: hero?.spec || null,
+        card: presenceCardFrom(logicRef.current?.snapshot?.()),
         actors,
       });
     }
@@ -1048,10 +1063,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const on = inArena(p.tile[0], p.tile[1]) && (!g.combat.deadUntil || now > g.combat.deadUntil);
       if (on !== g.combat.on) {
         g.combat.on = on;
-        if (on) { // size the HP pool to the hero's level + path, full on entry
+        if (on) { // size the HP pool to the hero's level + path, FULL on entry
           const lg = logicRef.current;
           g.combat.maxHp = pathMaxHp(lg?.path || 'warrior', lg?._level?.() ?? 1);
-          if (g.combat.hp <= 0 || g.combat.hp > g.combat.maxHp) g.combat.hp = g.combat.maxHp;
+          g.combat.hp = g.combat.maxHp; // enter at full HP — the init hp was a flat
+          // 100 that never refilled to the level-scaled max (the "HP = 100" bug).
         }
         syncBattleState(g);
       }
