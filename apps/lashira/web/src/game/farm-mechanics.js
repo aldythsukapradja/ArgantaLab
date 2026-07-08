@@ -88,6 +88,20 @@ export class FarmMechanics {
   // ---- FISHING ----
   catchFish() { this._add('fish', 1); this._save(); this.emit(); this.flash('🐟 Caught a fish!'); return { fish: 1 }; }
 
+  // ---- LOOT (monster drops) — route each material to the right store ----
+  grantMaterial(k, n) {
+    if (!(n > 0)) return;
+    if (k === 'wood' || k === 'stone') this._gainShared(k, n);
+    else this._add(k, n);
+  }
+  // Grant a rolled drop list [{k,n}] and flash a compact summary.
+  grantDrops(drops) {
+    if (!drops || !drops.length) return;
+    for (const d of drops) this.grantMaterial(d.k, d.n);
+    this._save(); this.emit();
+    this.flash(drops.map((d) => `+${d.n}${MAT_ICON[d.k] || d.k}`).join(' '));
+  }
+
   // ---- BLACKSMITH --- tool upgrade spends wood/stone (shared) ----
   toolTier(tool) { return this.state.tools[tool] || 1; }
   toolCost(tool) { const t = this.toolTier(tool); return { wood: t * 4, stone: t * 6 }; }

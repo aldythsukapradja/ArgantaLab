@@ -12,7 +12,7 @@ import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
   tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
   SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, pathMaxHp, pathForWeapon, canAffordSkill,
-  monsterOf, outgoingDamage,
+  monsterOf, outgoingDamage, rollDrops,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
@@ -374,7 +374,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         return;
       }
       if (intent?.t === 'mob-dead') {
-        if (intent.by === presenceProfileId(profile)) logicRef.current?.rewardKill(intent.name || 'a monster');
+        if (intent.by === presenceProfileId(profile)) rewardAndLoot(intent.name || 'a monster');
         return;
       }
       if (intent?.t === 'spell') { // a peer cast a skill — show its VFX here too
@@ -623,7 +623,17 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const g = G.current; if (!g) return;
     setHotspot(null);
     g.player.tile = [28, 38]; g.player.from = [28, 38]; g.player.moveT = 1;
-    logicRef.current?.flash?.('⚔ Entered the dungeon — clear the beasts!');
+    // Spawn the Tiger BOSS (host-owned, one at a time). Big HP + a token/gem drop
+    // on clear — the top of the gather→craft→fight loop.
+    if (iAmHost(g) && !g.monsters.some((m) => m.kind === 'tiger' && m.state !== 'die')) {
+      const t = monsterOf('tiger');
+      const boss = makeMonster({ id: 'boss:tiger:' + Date.now(), tile: [30, 40], maxHp: t.hp });
+      boss.kind = 'tiger'; boss.atk = t.atk; boss.boss = true;
+      boss.seed = (g.monsterSeed = (g.monsterSeed >>> 0) + 1);
+      boss.nextWander = performance.now() + 800;
+      g.monsters.push(boss);
+    }
+    logicRef.current?.flash?.('⚔ The Tiger stirs… clear the dungeon!');
   }
   function toggleMount() {
     const g = G.current; if (!g) return;
@@ -681,7 +691,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const now = performance.now();
     if (iAmHost(g)) {
       const res = resolveMelee(g.monsters, tx, ty, dmg, now);
-      if (res) { spark(g, tx, ty); if (res.killed) logicRef.current?.rewardKill(res.monster.kind || 'a monster'); return true; }
+      if (res) { spark(g, tx, ty); if (res.killed) rewardAndLoot(res.monster.kind || 'a monster'); return true; }
       return false;
     }
     const a = peerMonsterAt(g, tx, ty);
@@ -703,6 +713,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // Player's dealt damage = level/skill base + the equipped weapon's ATK.
   function playerDamage(base) {
     return outgoingDamage(base, logicRef.current?.state?.weaponTier ?? 1);
+  }
+  // A kill I earned: Bloom/XP (bestiary) + rolled material drops (mech store).
+  // This is what closes the loop — mobs now feed the crafting economy.
+  function rewardAndLoot(kind) {
+    logicRef.current?.rewardKill(kind);
+    mechRef.current?.grantDrops(rollDrops(kind));
   }
   // Spawn a spell VFX locally (shared effect system).
   function spawnSpellFx(g, fx, tile) {
@@ -764,7 +780,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (hostSelf) {
         for (const h of resolveSkillAll(g.monsters, dmg, now)) {
           castSpell(g, skill, h.monster.tile);
-          if (h.killed) logicRef.current?.rewardKill(h.monster.kind || 'a monster');
+          if (h.killed) rewardAndLoot(h.monster.kind || 'a monster');
         }
       } else {
         for (const a of [...g.peerWorldActors.values()]) {
@@ -776,7 +792,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     // Bolt — single target (faced tile, else nearest)
     if (hostSelf) {
       const res = resolveSkillSingle(g.monsters, p.tile, DELTA[p.facing], dmg, now);
-      if (res) { castSpell(g, skill, res.monster.tile); if (res.killed) logicRef.current?.rewardKill(res.monster.kind || 'a monster'); }
+      if (res) { castSpell(g, skill, res.monster.tile); if (res.killed) rewardAndLoot(res.monster.kind || 'a monster'); }
       else spark(g, ...frontTile());
     } else {
       const target = peerMonsterAt(g, ...frontTile()) || nearestPeerMonster(g, now);
@@ -1470,19 +1486,21 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (fade <= 0) return;
       const bob = m.moveT < 1 ? Math.sin(now / 90 + (m.seed || 0)) * 2 : Math.sin(now / 400 + (m.seed || 0)) * 1;
       const cx = footX, by = footY + bob;
+      const scl = m.boss ? 2.1 : 1; // the Tiger boss looms larger
       // colour from the bestiary (placeholder until the PixelLab sheets land).
       const body = monsterOf(m.mkind || m.kind).color || '#6fca7a';
       ctx.save(); ctx.globalAlpha = fade;
       // shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx, footY + 2, 13, 5, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx, footY + 2, 13 * scl, 5 * scl, 0, 0, 7); ctx.fill();
       // body
       const hitFlash = m.state === 'hit' && (now - m.stateStart) < 200;
       ctx.fillStyle = hitFlash ? '#ffffff' : body;
-      ctx.beginPath(); ctx.ellipse(cx, by - 12, 14, 12, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = hitFlash ? '#ffffff' : '#ffffff'; // eyes
-      const ex = m.facing === 'West' ? -4 : m.facing === 'East' ? 4 : 0;
-      ctx.beginPath(); ctx.arc(cx - 5 + ex, by - 14, 2.2, 0, 7); ctx.arc(cx + 5 + ex, by - 14, 2.2, 0, 7); ctx.fill();
-      if (!hitFlash) { ctx.fillStyle = '#20303a'; ctx.beginPath(); ctx.arc(cx - 5 + ex, by - 14, 1.1, 0, 7); ctx.arc(cx + 5 + ex, by - 14, 1.1, 0, 7); ctx.fill(); }
+      ctx.beginPath(); ctx.ellipse(cx, by - 12 * scl, 14 * scl, 12 * scl, 0, 0, 7); ctx.fill();
+      if (m.boss) { ctx.strokeStyle = '#3a1d05'; ctx.lineWidth = 2; ctx.stroke(); } // boss rim
+      ctx.fillStyle = '#ffffff'; // eyes
+      const ex = (m.facing === 'West' ? -4 : m.facing === 'East' ? 4 : 0) * scl;
+      ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.fill();
+      if (!hitFlash) { ctx.fillStyle = '#20303a'; ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.fill(); }
       // hp bar
       if (m.state !== 'die') {
         const w = 26, hpx = cx - w / 2, hpy = by - 32, frac = Math.max(0, m.hp / (m.maxHp || 100));
