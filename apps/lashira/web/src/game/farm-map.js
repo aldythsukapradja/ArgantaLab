@@ -363,7 +363,7 @@ const BASEMAP_DOTS = [
 // bottom-anchored at (footX,footY) at native aspect, width = w tiles, rising upward, so
 // the building sits centered IN the circle. base* = the small solid footprint that
 // blocks movement + is outlined in dev mode.
-export const CASTLE = { footX: 30, footY: 25, w: 5, baseTx: 28, baseTy: 23, baseW: 4, baseH: 3 };
+export const CASTLE = { footX: 29.5, footY: 27, w: 7, baseTx: 28, baseTy: 24, baseW: 4, baseH: 3 };
 
 // ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
 // One entry per meaningful place, for the labelled debug overlay (screen-space
