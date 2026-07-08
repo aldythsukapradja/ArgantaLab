@@ -221,7 +221,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     let live = true;
     const logic = new FarmLogic(profile, circleId);
     logicRef.current = logic;
-    if (import.meta.env.DEV) window.__farm = logic;
+    if (import.meta.env.DEV) { window.__farm = logic; window.__G = G; window.__mech = mechRef; }
 
     (async () => {
       await logic.ready;
@@ -298,7 +298,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // Mechanics store (materials/tools/nodes/house) — decoupled from currency. See
   // docs/lashirabloom/HANDOFF-mechanics-vs-economy.md.
   useEffect(() => {
-    const m = new FarmMechanics(profile?.id || 'guest');
+    const m = new FarmMechanics(profile?.id || 'guest', () => logicRef.current);
     mechRef.current = m;
     const unsub = m.subscribe(setMechSnap);
     return () => unsub();

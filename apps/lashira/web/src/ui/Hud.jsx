@@ -72,9 +72,6 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
       {/* top bar — EXP readout + wallet strip (Wood · Stone · Bloom · Diamond) + gear */}
       <div className="hud-top">
         <div className="topbar-right">
-          <div className="xp-readout" title="XP into this level / XP this level needs">
-            ✨ {snap.level >= 99 ? 'MAX' : `${fmt(snap.xpCur)} / ${fmt(snap.xpReq)}`}
-          </div>
           <div className="res-strip">
             <button className="res res-wood" onClick={() => onOpen('shop')} title="Wood — chop the forest (coming soon)">🪵 {snap.wood === Infinity ? '∞' : fmt(snap.wood)}</button>
             <button className="res res-stone" onClick={() => onOpen('shop')} title="Stone — mine the quarry (coming soon)">🪨 {snap.stone === Infinity ? '∞' : fmt(snap.stone)}</button>
@@ -98,7 +95,12 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
               <b>{snap.name}</b>
               <span>{snap.pathIcon} {snap.pathName || 'Warrior'} · Lv {fmt(snap.level)}</span>
             </div>
-            <div className="unit-exp" title={`${snap.xpPct ?? 0}% to next level`}><span style={{ width: `${snap.xpPct ?? 0}%` }} /></div>
+            <div className="unit-exp-row">
+              <div className="unit-exp" title={`${snap.xpPct ?? 0}% to next level`}><span style={{ width: `${snap.xpPct ?? 0}%` }} /></div>
+              <b className="exp-num" title="XP into this level / XP this level needs">
+                ✨ {snap.level >= 99 ? 'MAX' : `${fmt(snap.xpCur)}/${fmt(snap.xpReq)}`}
+              </b>
+            </div>
             <div className="unit-bars">
               {battle?.on
                 ? <div className="bar hp"><span style={{ width: `${Math.max(0, Math.min(100, (battle.hp / Math.max(1, battle.maxHp)) * 100))}%` }} /><b><IconHeart /> {fmt(battle.hp)}/{fmt(battle.maxHp)}</b></div>

@@ -22,11 +22,13 @@ function Head({ title, sub, onClose }) {
   );
 }
 
-function MatBar({ mech }) {
+function MatBar({ snap, mech }) {
+  // wood/stone live in the economy workspace's snapshot; ore/gem/fish in the mech store.
+  const amt = (k) => (k === 'wood' || k === 'stone') ? (snap?.[k] ?? 0) : (mech?.[k] ?? 0);
   return (
     <div className="produce-preview" style={{ marginBottom: 8 }}>
       {['wood', 'stone', 'ore', 'gem', 'fish'].map((k) => (
-        <span className="produce-chip" key={k}>{MAT_ICON[k]}<b>×{fmt(mech?.[k])}</b></span>
+        <span className="produce-chip" key={k}>{MAT_ICON[k]}<b>×{fmt(amt(k))}</b></span>
       ))}
     </div>
   );
@@ -48,7 +50,7 @@ export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, on
 
 function ShopPanel({ id, snap, game, mech, mechGame, onClose }) {
   if (id === 'seed') return <SeedShop snap={snap} game={game} onClose={onClose} />;
-  if (id === 'smith') return <Blacksmith mech={mech} mechGame={mechGame} onClose={onClose} />;
+  if (id === 'smith') return <Blacksmith snap={snap} mech={mech} mechGame={mechGame} onClose={onClose} />;
   if (id === 'general') return <DisplayShop title="🏪 Hazel — General Store" sub="Tools & supplies" onClose={onClose} rows={[
     ['🪣', 'Watering can', 'Bloom 40'], ['🎣', 'Fishing rod', 'Bloom 60'], ['📦', 'Storage chest', 'Bloom 80'],
   ]} />;
@@ -84,17 +86,17 @@ function SeedShop({ snap, game, onClose }) {
   );
 }
 
-function Blacksmith({ mech, mechGame, onClose }) {
+function Blacksmith({ snap, mech, mechGame, onClose }) {
   const tools = [['pickaxe', '⛏', 'Pickaxe', 'mine gold + gems at Tier 2'], ['axe', '🪓', 'Axe', 'chop hardwood at Tier 2'], ['rod', '🎣', 'Rod', 'better catches']];
   return (
     <>
       <Head title="⚒ Forge — Blacksmith" sub="Upgrade tools with materials" onClose={onClose} />
-      <MatBar mech={mech} />
+      <MatBar snap={snap} mech={mech} />
       {tools.map(([key, ico, name, perk]) => {
         const tier = mech?.tools?.[key] || 1;
         const cost = mechGame.toolCost(key);
         const max = tier >= 3;
-        const afford = (mech?.wood || 0) >= cost.wood && (mech?.stone || 0) >= cost.stone;
+        const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone;
         return (
           <div className="row" key={key}>
             <div className="ico">{ico}</div>
@@ -132,11 +134,11 @@ function CastlePanel({ snap, mech, mechGame, onClose }) {
   const name = TIERS[Math.min(tier - 1, 4)];
   const max = tier >= 5;
   const cost = mechGame.houseCost();
-  const afford = (mech?.wood || 0) >= cost.wood && (mech?.stone || 0) >= cost.stone;
+  const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone;
   return (
     <>
       <Head title={`🏰 Home — ${name}`} sub={`Tier ${tier}/5 · storage ${mech?.house?.storage}`} onClose={onClose} />
-      <MatBar mech={mech} />
+      <MatBar snap={snap} mech={mech} />
       <div className="row">
         <div className="ico">🏗</div>
         <div className="grow">

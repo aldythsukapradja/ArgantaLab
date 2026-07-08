@@ -10,13 +10,17 @@
 
 export const LEVEL_CAP = 99;
 
-// Path archetypes. hp/mp = the level-1 pool; hpPer/mpPer = added each level.
-// Warrior = tanky (most HP, least MP) … Mage = glass cannon (least HP, most MP).
+// Path archetypes. hp/mp = the LEVEL-1 pool; hpPer/mpPer = added each level, tuned
+// so the L99 pools land at the values below (RPG "holy quaternary" spread — cf.
+// Final Fantasy / WoW: fighters = big HP/tiny MP, casters = tiny HP/big MP).
+//   L99 HP:  Warrior 10,018 · Rogue 7,548 · Poet 5,573 · Mage 4,382
+//   L99 MP:  Mage 8,013 · Poet 5,940 · Rogue 3,573 · Warrior 1,990
+//   L99 HP:MP ratio: Warrior 5.0:1 · Rogue 2.1:1 · Poet ~1:1 · Mage 0.55:1
 export const PATHS = {
-  warrior: { id: 'warrior', name: 'Warrior', icon: '⚔️', hp: 130, hpPer: 14, mp: 24, mpPer: 2 },
-  rogue:   { id: 'rogue',   name: 'Rogue',   icon: '🗡️', hp: 105, hpPer: 11, mp: 36, mpPer: 3 },
-  poet:    { id: 'poet',    name: 'Poet',    icon: '✒️', hp: 90,  hpPer: 8,  mp: 50, mpPer: 4 },
-  mage:    { id: 'mage',    name: 'Mage',    icon: '🔮', hp: 70,  hpPer: 6,  mp: 60, mpPer: 5 },
+  warrior: { id: 'warrior', name: 'Warrior', icon: '⚔️', hp: 120, hpPer: 101, mp: 30, mpPer: 20 },
+  rogue:   { id: 'rogue',   name: 'Rogue',   icon: '🗡️', hp: 100, hpPer: 76,  mp: 45, mpPer: 36 },
+  poet:    { id: 'poet',    name: 'Poet',    icon: '✒️', hp: 85,  hpPer: 56,  mp: 60, mpPer: 60 },
+  mage:    { id: 'mage',    name: 'Mage',    icon: '🔮', hp: 70,  hpPer: 44,  mp: 75, mpPer: 81 },
 };
 export function pathOf(id) { return PATHS[id] || PATHS.warrior; }
 
