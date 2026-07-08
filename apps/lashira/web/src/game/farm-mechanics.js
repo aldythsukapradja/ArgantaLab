@@ -7,7 +7,9 @@
 // state field directly and re-emitting so the HUD updates. See
 // docs/lashirabloom/HANDOFF-mechanics-vs-economy.md. Every currency touch is // ECONOMY-SEAM.
 
-export const MAT_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷', fish: '🐟' };
+import { weaponUpgradeCost, armorUpgradeCost, WEAPON_MAX, ARMOR_MAX } from '@arganta/combat';
+
+export const MAT_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷', fish: '🐟', ingot: '🧱', token: '🎟️', shard: '💠', hide: '🟫', essence: '✨', bloom: '🌸' };
 const RESPAWN_MS = { ore: 90_000, tree: 60_000 };   // kid-fast node cooldowns
 const TOOL_MAX = 3, HOUSE_MAX = 5;
 
@@ -22,6 +24,7 @@ export class FarmMechanics {
   _default() {
     return {
       ore: 0, gem: 0, fish: 0,           // mechanics-only materials (economy tracks wood/stone)
+      ingot: 0, token: 0, shard: 0, hide: 0, essence: 0, // craft mats: refining (#47) + boss/mob drops
       tools: { pickaxe: 1, axe: 1, rod: 1 },
       nodes: {},                         // id -> lastGatheredAt (respawn cooldown)
       house: { tier: 1, storage: 60 },
@@ -106,6 +109,44 @@ export class FarmMechanics {
     this._spendShared('wood', c.wood); this._spendShared('stone', c.stone);
     this.state.house.tier = t + 1; this.state.house.storage += 40;
     this._save(); this.emit(); this.flash(`🏰 Home → Tier ${t + 1}`); return true;
+  }
+  // ---- FORGE: weapon/armor gear (bridges both stores) — tier lives in FarmLogic
+  //      (personal, save-preserved); materials come from bloom/wood/stone (economy)
+  //      + ore/gem/fish/ingot/token/shard (this store). Operator = free. ----
+  gearTier(slot) { const l = this.getLogic(); return Number(l?.state?.[slot === 'weapon' ? 'weaponTier' : 'armorTier'] || 1); }
+  gearCost(slot) { const t = this.gearTier(slot); return slot === 'weapon' ? weaponUpgradeCost(t) : armorUpgradeCost(t); }
+  gearMax(slot) { return this.gearTier(slot) >= (slot === 'weapon' ? WEAPON_MAX : ARMOR_MAX); }
+  // What you own of each craft material (unifies both stores for the afford check).
+  materialAmount(k) {
+    if (k === 'bloom' || k === 'wood' || k === 'stone') return this.sharedAmt(k) || (k === 'bloom' ? Number(this.getLogic()?.state?.bloom || 0) : 0);
+    return Number(this.state[k] || 0);
+  }
+  gearAfford(slot) {
+    if (this.getLogic()?.isOperator?.()) return true;
+    const cost = this.gearCost(slot); if (!cost) return false;
+    return Object.entries(cost).every(([k, v]) => this.materialAmount(k) >= v);
+  }
+  upgradeGear(slot) {
+    const l = this.getLogic(); if (!l) return false;
+    if (this.gearMax(slot)) { this.flash('Already max tier'); return false; }
+    const cost = this.gearCost(slot); if (!cost) return false;
+    const op = l.isOperator?.();
+    if (!op && !this.gearAfford(slot)) {
+      const miss = Object.entries(cost).find(([k, v]) => this.materialAmount(k) < v);
+      this.flash('Need more ' + (MAT_ICON[miss?.[0]] || miss?.[0])); return false;
+    }
+    if (!op) {
+      for (const [k, v] of Object.entries(cost)) {
+        if (k === 'bloom') { l.state.bloom = Number(l.state.bloom || 0) - v; }
+        else if (k === 'wood' || k === 'stone') this._spendShared(k, v);
+        else this.state[k] = (Number(this.state[k]) || 0) - v;
+      }
+    }
+    const key = slot === 'weapon' ? 'weaponTier' : 'armorTier';
+    l.state[key] = this.gearTier(slot) + 1; l.save?.(); l.emit?.();
+    this._save(); this.emit();
+    this.flash(`⚒ ${slot} → Tier ${l.state[key]}`);
+    return true;
   }
   // ---- DUNGEON loot (materials only; bloom reward via game.earnBloom — ECONOMY-SEAM) ----
   dungeonLoot() {

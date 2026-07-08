@@ -9,6 +9,10 @@ import { useEffect, useRef, useState } from 'react';
 import { CROPS } from '../data/crops.js';
 import { SPECIES } from '../data/livestock.js';
 import { MAT_ICON } from '../game/farm-mechanics.js';
+import { weaponOf, armorOf } from '@arganta/combat';
+
+// cost object → "🌸500 · 🪵20 · 🪨15 · 🟨5"
+const costLine = (cost) => Object.entries(cost || {}).map(([k, v]) => `${MAT_ICON[k] || k}${v}`).join(' ');
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 const cur = (snap) => (snap?.bloom ?? snap?.gold ?? 0);
@@ -100,10 +104,33 @@ function SeedShop({ snap, game, onClose }) {
 
 function Blacksmith({ snap, mech, mechGame, onClose }) {
   const tools = [['pickaxe', '⛏', 'Pickaxe', 'mine gold + gems at Tier 2'], ['axe', '🪓', 'Axe', 'chop hardwood at Tier 2'], ['rod', '🎣', 'Rod', 'better catches']];
+  const gearRows = [
+    ['weapon', '⚔', 'Weapon', weaponOf(snap?.weaponTier || 1), (t) => `+${weaponOf(t).atk} ATK`],
+    ['armor', '🛡', 'Armor', armorOf(snap?.armorTier || 1), (t) => `+${armorOf(t).def} DEF · +${armorOf(t).hp} HP`],
+  ];
   return (
     <>
-      <Head title="⚒ Forge — Blacksmith" sub="Upgrade tools with materials" onClose={onClose} />
+      <Head title="⚒ Forge — Blacksmith" sub="Craft gear + upgrade tools with materials" onClose={onClose} />
       <MatBar snap={snap} mech={mech} />
+      {gearRows.map(([slot, ico, label, cur, perkAt]) => {
+        const tier = mechGame.gearTier(slot);
+        const max = mechGame.gearMax(slot);
+        const cost = mechGame.gearCost(slot);
+        const afford = mechGame.gearAfford(slot);
+        return (
+          <div className="row" key={slot}>
+            <div className="ico">{ico}</div>
+            <div className="grow">
+              <div className="name">{label} · {cur.name} (T{tier}){max ? ' ★max' : ''}</div>
+              <div className="meta">{perkAt(tier)}{max ? '' : ` → T${tier + 1} · needs ${costLine(cost)}`}</div>
+            </div>
+            <button className="rbtn" disabled={max || !afford} onClick={() => mechGame.upgradeGear(slot)}>{max ? 'Max' : 'Craft'}</button>
+          </div>
+        );
+      })}
+      <div className="phead" style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
+        <div><p className="psub" style={{ margin: 0 }}>Tools (gathering)</p></div>
+      </div>
       {tools.map(([key, ico, name, perk]) => {
         const tier = mech?.tools?.[key] || 1;
         const cost = mechGame.toolCost(key);
