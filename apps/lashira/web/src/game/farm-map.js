@@ -368,7 +368,7 @@ const BASEMAP_DOTS = [
 // cobble detection: the disc spans tx26-33 (8 tiles wide) x ty19-25, center (29.5, 22).
 // The sprite is drawn centered on (cx,cy) at native aspect, width = w tiles (fills the
 // disc). base* = the solid footprint under the building.
-export const CASTLE = { cx: 29.5, cy: 21.5, w: 8, baseTx: 28, baseTy: 22, baseW: 4, baseH: 3 };
+export const CASTLE = { cx: 30.5, cy: 20.5, w: 8, baseTx: 29, baseTy: 21, baseW: 4, baseH: 3 };
 
 // ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
 // One entry per meaningful place, for the labelled debug overlay (screen-space

@@ -42,13 +42,39 @@ export function skillPower(skill, L) {
 // These are ADDITIVE helpers — the old skillPower/MELEE stay untouched, so
 // existing Kingdom PvE is unchanged until a caller opts into the path-scaled ones
 // (PvP does). Keys are the stable path ids from progression.js.
+//
+// Values are the FAIRNESS-TUNED per-hit multipliers from the PvP balance study
+// (docs/lashirabloom/pvp-balance-sim.mjs). NOTE: rogue's phy is intentionally LOW
+// (1.00) because rogue's damage identity is ATTACK SPEED (many fast weak hits),
+// carried by PVP_PROFILE.atkInt below — not per-hit size. These multipliers are
+// calibrated for the PvP model (which adds attack-speed + compressed HP + variance);
+// a future PvE opt-in would need that same model or its own numbers.
 export const PATH_POWER = {
-  warrior: { mag: 0.60, phy: 1.60 },
-  rogue:   { mag: 0.85, phy: 1.30 },
-  poet:    { mag: 1.25, phy: 0.85 },
-  mage:    { mag: 1.50, phy: 0.60 },
+  warrior: { mag: 0.55, phy: 1.55 },
+  rogue:   { mag: 0.70, phy: 1.00 },
+  poet:    { mag: 1.15, phy: 0.80 },
+  mage:    { mag: 1.45, phy: 0.58 },
 };
 export function pathPower(pathId) { return PATH_POWER[pathId] || PATH_POWER.warrior; }
+
+// --- PvP balance PROFILE (CONCEPT SPEC — inert until PvP combat is wired) -------
+// The full per-path PvP identity that makes all four ~50/50 at equal level (see
+// docs/pvp-concept.md §Balance + pvp-balance-sim.mjs). Fairness needs MORE than
+// damage multipliers: a compressed PvP HP curve, per-path ATTACK SPEED + MOVE
+// SPEED, a short bolt reach, and hit variance. This table records the tuned set;
+// the PvP combat layer will consume it (it does not affect PvE or current play).
+//   atkInt = seconds per attack (lower = faster)   moveRel = relative move speed
+//   pvpHpMul = × the PvP HP curve (100 + 70*(L-1))  healMul = × Mend base
+export const PVP_PROFILE = {
+  warrior: { atkInt: 1.10, moveRel: 3.0, pvpHpMul: 1.20, healMul: 0.6 },
+  rogue:   { atkInt: 0.69, moveRel: 3.4, pvpHpMul: 1.06, healMul: 0.8 },
+  poet:    { atkInt: 1.00, moveRel: 2.1, pvpHpMul: 1.03, healMul: 1.3 },
+  mage:    { atkInt: 1.00, moveRel: 2.0, pvpHpMul: 0.80, healMul: 1.0 },
+};
+// Globals for the PvP model (concept): bolt reach 2 tiles, PvP HP curve, hit
+// variance (spread ±18%, 12% crit ×1.6, 8% miss) — see the sim for provenance.
+export const PVP_TUNING = { boltReach: 2, hpCurve: (L) => 100 + 70 * (Math.max(1, L) - 1),
+  spread: 0.18, crit: 0.12, critX: 1.6, miss: 0.08, healAt: 0.30, healMax: 2 };
 
 // Physical attack base — level-scaled (parallels the magic bases so high-level
 // PvP doesn't stall against the big HP pools). Melee/PvP strikes use this.

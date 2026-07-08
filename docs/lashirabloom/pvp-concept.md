@@ -43,82 +43,105 @@ counting KOs into a circle-rank row.
 
 ---
 
-## 2. The four paths (from `progression.js`, unchanged)
+## 2. The four paths + the fairness problem
 
-| Path id | Displayed | Identity | L1 HP / MP | L99 HP / MP |
-|---|---|---|---|---|
-| `warrior` | Guardian ⚔️ | tank, huge HP, **big physical** | 120 / 30 | 10,018 / 1,990 |
-| `rogue` | Shadow 🗡️ | skirmisher, high physical | 100 / 45 | 7,548 / 3,573 |
-| `poet` | Mystic ✨ | caster, 2nd magic | 85 / 60 | 5,573 / 5,940 |
-| `mage` | Arcanist 🔮 | glass cannon, **top magic** | 70 / 75 | 4,382 / 8,013 |
+| Path id | Displayed | Intended PvP identity |
+|---|---|---|
+| `warrior` | Guardian ⚔️ | tanky bruiser — **biggest single hit**, slow, must close to melee |
+| `rogue` | Shadow 🗡️ | skirmisher — **fast, many small hits**, closes fastest |
+| `poet` | Mystic ✨ | attrition caster — **2nd magic** + self-heal sustain, ranged |
+| `mage` | Arcanist 🔮 | glass cannon — **top magic**, frail, punishes from range |
 
-The HP/MP spread already balances PvP for free: the mage hits hardest with magic but has
-the smallest HP pool (dies fast); the warrior soaks damage and clobbers physically but
-his spells are weak. **Damage multipliers reinforce that identity; the pools punish it.**
+The owner's ask: *"adjust the skill so at the same level all 4 have a similar chance to
+win."* I researched this with a duel simulator (`docs/lashirabloom/pvp-balance-sim.mjs`,
+Monte-Carlo, thousands of duels per matchup). Three findings reshaped the design — a naive
+per-path damage table is **nowhere near** fair:
+
+1. **Cost-1, whole-arena Bolt breaks everything.** If a skill is free and hits at any
+   range, *nobody ever melees* → warrior's whole identity is dead → **warrior wins 0%** at
+   every level. Range and MP/reach are balance levers, not flavor.
+2. **The PvE HP pools make fairness impossible to hold across levels.** In `progression.js`
+   warrior HP grows at `hpPer=101` vs mage's `44` — a **2.3× gap by L99**. That gap widens
+   with level while per-hit/kiting don't, so *any* fixed damage table is fair at one level
+   and lopsided at another. **PvP must use its own compressed HP spread.**
+3. **Four fair archetypes need four distinct levers, not one.** With only a
+   damage-multiplier knob, rogue becomes a strictly-worse warrior (a "trap class",
+   **0–19% win rate**). Rogue's identity is **attack speed**, poet's is **sustain**,
+   mage's is **range burst** — none of which is "a bigger number."
+
+**Conclusion: fairness is a whole PvP combat model, not a damage tweak** — compressed HP +
+per-path attack speed + move speed + a short bolt reach + hit variance. The tuned result
+below lands every matchup at ~50/50.
 
 ---
 
-## 3. Per-path damage model (the core new work) ✅ code landed
+## 3. The fair PvP profile (battle-tested) ✅ tuned values landed as spec
 
-Added to `packages/combat/src/skills.js` — additive, so **Kingdom's live PvE is
-untouched** until a caller opts in (PvP does).
+The balanced set, found by simulation and stored in `packages/combat/src/skills.js` as
+`PATH_POWER` (per-hit multipliers) + `PVP_PROFILE` (the rest) + `PVP_TUNING` (globals).
+**Inert** — it changes nothing until PvP combat is wired; Kingdom PvE is untouched.
 
-### 3.1 The multipliers
+### 3.1 Per-path stats
 
-```js
-export const PATH_POWER = {
-  warrior: { mag: 0.60, phy: 1.60 },   // weak magic, biggest physical
-  rogue:   { mag: 0.85, phy: 1.30 },
-  poet:    { mag: 1.25, phy: 0.85 },   // 2nd magic
-  mage:    { mag: 1.50, phy: 0.60 },   // top magic, weakest physical
-};
+| Path | `mag` (magic ×) | `phy` (physical ×) | `atkInt` (s/hit) | `moveRel` | `pvpHpMul` | `healMul` |
+|---|---|---|---|---|---|---|
+| **Warrior** | 0.55 | **1.55** | 1.10 (slow) | 3.0 | **1.20** (tankiest) | 0.6 |
+| **Rogue** | 0.70 | 1.00 | **0.69 (fast)** | **3.4** | 1.06 | 0.8 |
+| **Poet** | 1.15 | 0.80 | 1.00 | 2.1 | 1.03 | **1.3 (best heal)** |
+| **Mage** | **1.45** | 0.58 | 1.00 | 2.0 | **0.80** (frailest) | 1.0 |
+
+Globals (`PVP_TUNING`): bolt **reach = 2 tiles**, PvP **HP curve = `100 + 70·(L-1)`** (one
+shared curve × `pvpHpMul` → a level-*stable* spread, not the divergent PvE pools), hit
+**variance** = ±18% spread + 12% crit (×1.6) + 8% miss, Mend heals `30+10·(L-1)` × `healMul`
+when below 30% HP (max 2/duel).
+
+- **Owner's ordering preserved.** Magic: mage 1.45 > poet 1.15 > rogue 0.70 > warrior 0.55.
+  Physical: warrior 1.55 > rogue 1.00 > poet 0.80 > mage 0.58. ✅
+- **Key insight — rogue's damage is SPEED, not size.** Its `phy` is only 1.00 (a small hit)
+  but `atkInt` 0.69 means it hits ~1.6× as often as the warrior. So warrior = one big
+  slow hit, rogue = a flurry — different feel, similar DPS.
+- **Why warrior is tankiest, mage frailest.** To equalize effective power (`HP × DPS`),
+  the low-DPS warrior needs the most HP and the high-DPS mage the least. The compression
+  is modest (1.20 vs 0.80 = **1.5×**, vs the PvE pools' 2.3×) so it stays fair at all levels.
+
+### 3.2 Simulated win rates (the "battle test")
+
+Row = win% vs column, at level 10 (representative; full run in the sim, levels 1–80):
+
+```
+          warrior  rogue   poet   mage
+ warrior     --     46%    41%    46%
+ rogue       54%     --    45%    46%
+ poet        59%    55%     --    54%
+ mage        53%    54%    46%     --
+ overall:  war 44%  rog 48%  poe 56%  mag 51%
 ```
 
-- **Magic order (mag):** Mage 1.50 > Poet 1.25 > Rogue 0.85 > Warrior 0.60 — exactly
-  the owner's "mage higher, poet second, warrior last."
-- **Physical order (phy):** Warrior 1.60 > Rogue 1.30 > Poet 0.85 > Mage 0.60 — the
-  warrior's "big physical attack."
+Across **levels 5–80 every matchup sits ~40–60%** (RMS deviation from 50% ≈ **7.7 pts**,
+down from **47 pts** on the naive table). Level 1 is slightly poet-favored — a known
+small-pool artifact where the flat heal is proportionally huge; it self-corrects by ~L5.
 
-### 3.2 The seam (two new functions + a level-scaled physical base)
+> **Caveat (honest):** the sim is deterministic-ish, so it *exaggerates* small edges (a
+> real 7% advantage reads as ~60% here). With human skill added, matchups are closer than
+> the table. So these numbers are a *direction*, validated by simulation — **final tuning
+> needs real playtests**, which the sim can't replace.
 
-```js
-export function physBase(L) { return 34 + 10 * (lv(L) - 1); }         // physical now scales w/ level
-export function pathSkillPower(skill, pathId, L) {                    // magic (bolt/storm/mend)
-  return Math.round(skillPower(skill, L) * pathPower(pathId).mag);
-}
-export function pathPhysPower(pathId, L) {                            // melee / PvP strike
-  return Math.round(physBase(L) * pathPower(pathId).phy);
-}
-```
+### 3.3 What this requires the PvP combat layer to add (beyond damage)
 
-Why `physBase` scales with level now: HP pools balloon with level (warrior L99 ≈ 10k HP),
-so a flat 34-damage strike would never end a high-level fight. Scaling physical like the
-magic bases keeps fights the right length at every level. (The old flat `MELEE_DAMAGE=34`
-and `PVP_DAMAGE=25` stay in the file for Kingdom's current PvE; PvP uses the new helpers.)
+The fair result depends on mechanics the engine **doesn't have yet** — this is the real
+build surface (still concept):
 
-### 3.3 What the numbers actually look like
+1. **PvP HP normalization** — use `PVP_TUNING.hpCurve × pvpHpMul`, *not* `pathMaxHp` from
+   the PvE pools. (The single biggest fairness lever.)
+2. **Per-path attack speed** (`atkInt`) — a cooldown on strikes/casts. Rogue's whole
+   identity. The engine currently attacks on tap cadence with no per-path speed.
+3. **Per-path move speed** (`moveRel`) — lets warrior/rogue close before being kited to death.
+4. **Short bolt reach** (2 tiles) — today Bolt targets the nearest actor anywhere; PvP must
+   cap its range or casters kite melee to 0% (finding #1).
+5. **Hit variance** (spread/crit/miss) — makes near-equal builds feel fair (and fun).
 
-**Physical strike** = `pathPhysPower(path, L)` · **Bolt (magic)** = `pathSkillPower(bolt, path, L)`:
-
-| Path | L1 phys / bolt | L10 phys / bolt | L25 phys / bolt |
-|---|---|---|---|
-| **Warrior** | **54** / 24 | **198** / 89 | **438** / 197 |
-| **Rogue** | 44 / 34 | 161 / 126 | 356 / 279 |
-| **Poet** | 29 / 50 | 105 / 185 | 233 / 410 |
-| **Mage** | 20 / **60** | 74 / **222** | 164 / **492** |
-
-Reading it: at every level the **warrior tops the physical column** and the **mage tops
-the magic column**, with poet 2nd magic and rogue 2nd physical — the exact ordering asked
-for. Storm (AoE) and Mend (heal) use the same `mag` multiplier, so casters also heal /
-AoE harder; the warrior's spells are weak across the board — his answer is the strike.
-
-### 3.4 How PvP consumes it (wiring, next step — not yet done)
-
-- **Physical strike** on a player in the PvP zone → `pathPhysPower(attackerPath, attackerL)`.
-- **Skill** on a player → `pathSkillPower(skill, attackerPath, attackerL)` (Mend heals self).
-- The **victim** applies the number to its own HP (existing victim-authoritative model) and,
-  on reaching 0, **faints** and reports a KO to the rank (§4). Attacker path/level come from
-  the hero spec (`pathForWeapon(weapon)` until an explicit class picker exists).
+Damage per hit itself = `pathPhysPower` / `pathSkillPower` (already in the package, now
+carrying the tuned `PATH_POWER`). Mend heals self, scaled by `healMul`.
 
 ---
 
@@ -164,29 +187,36 @@ cross-circle ranked, which this design **drops**.
 
 ---
 
-## 7. Build steps (small)
+## 7. Build steps
 
-0. **Per-path damage helpers** — `PATH_POWER`, `physBase`, `pathSkillPower`, `pathPhysPower`
-   in `@arganta/combat`. ✅ **done** (this doc's landing).
-1. **Player as a hittable target** — extend `hitTile`/`doStrike`/`doSkill` so a peer avatar
-   in the PvP zone takes `pathPhysPower` / `pathSkillPower`; victim self-applies.
-2. **Faint + KO** — downed animation + `pvp-ko` intent.
-3. **`pvp_rank` table + RPC-lite write** — increment W/L on KO.
-4. **Rank board** — signpost popup in-zone + "Circle PvP Rank" in Bloom Command.
-5. **Hearts HUD** in the PvP zone (optional polish).
+0. **Balance profile** — `PATH_POWER` (tuned) + `PVP_PROFILE` + `PVP_TUNING` in
+   `@arganta/combat`. ✅ **landed as inert spec** (this doc's research).
+1. **PvP combat model** (the fairness engine, §3.3): PvP HP normalization, per-path
+   attack speed + move speed, short bolt reach, hit variance. This is the substantive
+   new work — a small `pvpCombat` module consuming the profile.
+2. **Player as a hittable target** — extend `hitTile`/`doStrike`/`doSkill` so a peer avatar
+   in the PvP zone takes path-scaled damage; victim self-applies.
+3. **Faint + KO** — downed animation + `pvp-ko` intent.
+4. **`pvp_rank` table + RPC-lite write** — increment W/L on KO.
+5. **Rank board** — signpost popup in-zone + "Circle PvP Rank" in Bloom Command.
+6. **Hearts HUD** + **playtest-tune** the profile (the sim gives a direction; real duels finalize it).
 
-Steps 1–4 are the game; step 0 (the damage math you asked for) is already in the shared
-package and inert until step 1 calls it.
+The damage *numbers* you asked for are landed (step 0); the *fairness* also needs the
+combat model (step 1), because — per the research — damage multipliers alone can't do it.
 
 ---
 
-## 8. Open confirmations (small)
+## 8. Open confirmations
 
 1. **Rank metric** — plain **wins** (recommended, simplest) or a win/loss ratio?
 2. **Path source** — use `pathForWeapon(hero.weapon)` for now (warrior/rogue/poet/mage
    inferred from the equipped weapon), or wait for an explicit class picker?
-3. **Multiplier feel** — the §3.1 numbers are a first pass. Want warrior's physical even
-   more dominant, or the mage even glassier? One-line tweak in `PATH_POWER`.
+3. **Accept the PvP combat model?** Fairness needs the §3.3 mechanics (compressed HP,
+   attack speed, move speed, short reach, variance) — more than "adjust the skill." OK to
+   build that, or do you want a *simpler-but-less-fair* version (e.g. just the damage
+   multipliers, accepting warrior/mage imbalance)?
+4. **Feel tweaks** — want warrior's hits even bigger / mage even glassier / rogue even
+   faster? Each is a one-line change in `PVP_PROFILE`, then re-run the sim.
 
 ---
 
@@ -201,5 +231,6 @@ and `pvp_rank` becomes `pvp_ranking`. Not now.
 
 ---
 
-*End. Concept + the per-path damage code (in `@arganta/combat`). Player-hit wiring +
+*End. Concept + battle-tested balance (tuned values in `@arganta/combat`, reproducible via
+`docs/lashirabloom/pvp-balance-sim.mjs`). The PvP combat model + player-hit wiring +
 circle-rank table are the remaining build steps.*
