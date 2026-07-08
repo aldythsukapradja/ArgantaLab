@@ -11,7 +11,7 @@ export const W = 60, H = 48;                  // one overworld: all zones + cast
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
 
 // Crop field — the Farm (NW), biggest zone. Pre-tilled soil, open (no fence).
-export const FIELD = { x0: 3, y0: 3, x1: 23, y1: 16 };
+export const FIELD = { x0: 4, y0: 5, x1: 26, y1: 16 };  // snapped to the basemap's tilled soil
 
 // Named zones (terrain painting + prop placement).
 export const ZONES = {
@@ -112,11 +112,11 @@ export const tileKey = (x, y) => x + ',' + y;
 // One row per interactive landmark; adding a mechanic = one row + one handler.
 export const HOTSPOTS = [
   { kind: 'castle', id: 'castle', rect: { x0: 27, y0: 21, x1: 32, y1: 26 } },
-  { kind: 'shop', id: 'seed', rect: { x0: 23, y0: 19, x1: 24, y1: 20 } },
-  { kind: 'shop', id: 'general', rect: { x0: 34, y0: 19, x1: 35, y1: 20 } },
-  { kind: 'shop', id: 'smith', rect: { x0: 23, y0: 28, x1: 24, y1: 29 } },
-  { kind: 'shop', id: 'animal', rect: { x0: 34, y0: 28, x1: 35, y1: 29 } },
-  { kind: 'shop', id: 'cosmetic', rect: { x0: 28, y0: 28, x1: 29, y1: 29 } },
+  { kind: 'shop', id: 'seed', rect: { x0: 9, y0: 17, x1: 11, y1: 19 } },
+  { kind: 'shop', id: 'general', rect: { x0: 13, y0: 20, x1: 15, y1: 22 } },
+  { kind: 'shop', id: 'smith', rect: { x0: 18, y0: 23, x1: 20, y1: 25 } },
+  { kind: 'shop', id: 'animal', rect: { x0: 5, y0: 23, x1: 7, y1: 25 } },
+  { kind: 'shop', id: 'cosmetic', rect: { x0: 9, y0: 26, x1: 11, y1: 28 } },
   { kind: 'sell', id: 'market', rect: { x0: 30, y0: 16, x1: 31, y1: 17 } },
   { kind: 'dungeon', id: 'dungeon', rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
   { kind: 'ore', id: 'ore@51,21', ore: 'gold', rect: { x0: 51, y0: 21, x1: 51, y1: 21 } },
@@ -124,7 +124,7 @@ export const HOTSPOTS = [
   { kind: 'ore', id: 'ore@50,26', ore: 'iron', rect: { x0: 50, y0: 26, x1: 50, y1: 26 } },
   { kind: 'ore', id: 'ore@55,27', ore: 'gem', rect: { x0: 55, y0: 27, x1: 55, y1: 27 } },
   { kind: 'ore', id: 'ore@53,24', ore: 'stone', rect: { x0: 53, y0: 24, x1: 53, y1: 24 } },
-  { kind: 'dock', id: 'dock', rect: { x0: 6, y0: 33, x1: 8, y1: 34 } },
+  { kind: 'dock', id: 'dock', rect: { x0: 9, y0: 35, x1: 12, y1: 36 } },
 ];
 // forest trees (match the tree PLACEMENTS; hard = oak → needs Tier-2 axe)
 for (const [x, y, hard] of [[39, 19, false], [44, 20, false], [41, 24, true], [39, 26, false], [45, 27, true], [42, 27, false]]) {
@@ -265,10 +265,10 @@ export function buildFarmMap(art = {}) {
     drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE);
     if (p.solid) blockRect(p.tx, p.ty, p.w, p.h);
   }
-  // WALKWAY into the pond — the whole lake is blocked water, so carve a walkable
-  // shore approach + a dock/pier out over the water. Otherwise you can't move to fish.
-  for (let x = 9; x <= 12; x++) for (let y = 29; y <= 33; y++) blocked.delete(tileKey(x, y)); // approach from the north shore
-  for (let x = 6; x <= 13; x++) for (let y = 33; y <= 37; y++) blocked.delete(tileKey(x, y));  // the dock/pier out over the water
+  // WALKWAY — the wooden bridge (detected from basemap.png) spans the pond at
+  // y35-36 and meets the EAST shore (x17 grass). Make the bridge deck walkable so
+  // you can walk out over the water; deep water stays blocked.
+  for (let x = 9; x <= 16; x++) for (let y = 35; y <= 36; y++) blocked.delete(tileKey(x, y));
 
   // dividing wall (mid-zones ↕ martial south) with a 2-wide gate
   for (let x = ARENA.x0; x < W - 1; x++) {
@@ -311,6 +311,8 @@ export function buildFarmMap(art = {}) {
       if (wy - R - 78 < 0) continue;
       ctx.drawImage(canvas, wx - R, wy - R - 78, R * 2, R * 2, wx - R, wy - R, R * 2, R * 2);
     }
+    // clickable component sprites the image lacks (castle + shops), drawn ON TOP
+    for (const p of ONTOP) { drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE); if (p.solid) blockRect(p.tx, p.ty, p.w, p.h); }
   } else if (typeof console !== 'undefined') {
     console.warn('[farm] basemap.png NOT loaded — showing the ugly procedural fallback. Check farm-art-bundled.js "lashira.basemap".');
   }
@@ -325,6 +327,18 @@ const BASEMAP_DOTS = [
   [258, 448], [352, 516], [696, 532], [925, 572], [171, 573], [466, 573], [1201, 576],
   [266, 635], [954, 798], [232, 818], [276, 847], [496, 877], [696, 878], [1088, 906],
   [608, 914], [802, 915], [226, 952],
+];
+
+// Clickable component sprites the reference image LACKS (no castle, no shops) —
+// drawn ON TOP of the basemap so they're visible + tappable. Positions match the
+// castle + shop HOTSPOTS. solid = blocks movement.
+const ONTOP = [
+  { key: 'lashira.building.house', tx: 26, ty: 17, w: 6, h: 7, solid: true },   // castle at plaza center
+  { key: 'lashira.lib.shop_seed', tx: 9, ty: 16, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_general', tx: 13, ty: 19, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_blacksmith', tx: 18, ty: 22, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_animal', tx: 5, ty: 22, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_cosmetics', tx: 9, ty: 25, w: 2, h: 2, solid: true },
 ];
 
 // Is a tile inside the battle arena?
