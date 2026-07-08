@@ -11,7 +11,7 @@ export const W = 60, H = 48;                  // one overworld: all zones + cast
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
 
 // Crop field — the Farm (NW), biggest zone. Pre-tilled soil, open (no fence).
-export const FIELD = { x0: 7, y0: 7, x1: 25, y1: 16 };  // INSIDE the basemap's fence (no overlap onto fence/props)
+export const FIELD = { x0: 7, y0: 7, x1: 26, y1: 16 };  // basemap's fenced tilled plot (covers its baked crops, stays inside the fence)
 
 // Named zones (terrain painting + prop placement).
 export const ZONES = {
@@ -358,10 +358,12 @@ const BASEMAP_DOTS = [
 
 // Castle footprint, centered on the plaza crossroads. Collision-only here; the
 // SPRITE is drawn per-frame in FarmRoom so its skin is swappable (Castle panel).
-// Castle DRAW box (tx/ty/w/h) is centered on the plaza roundabout (map center 30,24);
-// the sprite is drawn inside it preserving aspect (FarmRoom). base* = the small solid
-// footprint that actually blocks movement + is outlined in dev mode (not the full box).
-export const CASTLE = { tx: 27, ty: 21, w: 6, h: 6, baseTx: 28, baseTy: 24, baseW: 4, baseH: 3 };
+// Castle is anchored by its FOOT (base-center) on the plaza roundabout — measured
+// from the basemap the cobble disc centers near tile (29.7, 22.8). The sprite is drawn
+// bottom-anchored at (footX,footY) at native aspect, width = w tiles, rising upward, so
+// the building sits centered IN the circle. base* = the small solid footprint that
+// blocks movement + is outlined in dev mode.
+export const CASTLE = { footX: 30, footY: 25, w: 5, baseTx: 28, baseTy: 23, baseW: 4, baseH: 3 };
 
 // ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
 // One entry per meaningful place, for the labelled debug overlay (screen-space
@@ -519,8 +521,9 @@ function drawNamedOverride(ctx, art, key, footX, footY, w, h) {
 }
 
 export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}, squash = 0) {
-  // Chickens are noticeably smaller than cows/sheep.
-  const [aw, ah] = species === 'chicken' ? [22, 24] : [50, 42];
+  // Sized to read next to the (Kingdom-scale) farmer: cows/sheep ~1.5 tiles, chickens
+  // smaller. Chickens are noticeably smaller than cows/sheep.
+  const [aw, ah] = species === 'chicken' ? [36, 38] : [76, 64];
   const img = art?.[`lashira.animal.${species}`];
   if (img && img.naturalWidth > 0) {
     // face movement direction (sheet art faces right) + a squash-stretch for the

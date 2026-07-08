@@ -530,7 +530,9 @@ export class FarmLogic {
       const p = st.plots[key];
       if (!p) { delete st.plots[key]; continue; }
       if (!this.inField(tx, ty)) { delete st.plots[key]; n++; continue; } // orphaned by resize
-      if (p.cropId && cropIsWithered(p, now)) {                            // wilted → lost
+      // wilted (past grace) OR legacy/stuck (a crop with no real-time plantedAt can
+      // never grow or wither) → clear so it doesn't linger on the field forever.
+      if (p.cropId && (cropIsWithered(p, now) || p.plantedAt == null)) {
         p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
         this._intent({ t: 'plot', key, plot: { ...p } }); n++;
       }

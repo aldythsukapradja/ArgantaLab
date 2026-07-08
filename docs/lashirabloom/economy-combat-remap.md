@@ -106,15 +106,18 @@ Balance check: L50 bolt 628 + Iron 60 = 688 vs Grove Blob 800 → ~2 hits; + Myt
 
 Monster HP rescaled to match the damage curve; ATK threatens path HP via DEF.
 
-| Zone | Mob | HP | ATK | XP | 🌸 | Drops |
+Kid-safe woodland roster (owner-locked, manifest §8) with the combat tiers mapped on.
+"Faint" not "die" — no gore.
+
+| Zone | Monster | HP | ATK | XP | 🌸 | Drops |
 |---|---|---|---|---|---|---|
-| Meadow (T1) | Slime | 160 | 8 | 15 | 3 | 🪵1–2 (25%) |
-| Meadow (T1) | Bat | 130 | 12 | 15 | 3 | 🐟1 (15%) |
-| Grove (T2) | Blob | 800 | 32 | 40 | 8 | 🟨1–2 (30%) · 🪨2 |
-| Grove (T2) | Wolf | 1,100 | 48 | 55 | 12 | 🟨2 · Hide (20%) |
-| Cavern (T3) | Golem | 2,600 | 95 | 120 | 25 | 🟨3 · 🔷1 (20%) |
-| Cavern (T3) | Wraith | 2,300 | 120 | 130 | 28 | 🔷1 (25%) · Essence |
-| **Boss** | **Tiger** | 18,000 | 280 | 1,500 | 400 | **Weapon token×1** · 🔷5 · Astral shard (10%) |
+| Meadow (T1) | 🐿️ Squirrel | 130 | 8 | 15 | 3 | 🪵1–2 (25%) |
+| Meadow (T1) | 🦊 Fox | 300 | 20 | 22 | 5 | 🐟1 · Hide (15%) |
+| Grove (T2) | 🦡 Badger | 1,100 | 40 | 55 | 12 | 🟨1–2 (30%) · 🪨2 |
+| Grove (T2) | 🐗 Boar | 1,600 | 70 | 70 | 16 | 🟨2 · Hide (20%) |
+| Cavern (T3) | 🦌 Deer | 2,300 | 100 | 130 | 28 | 🔷1 (25%) · Essence |
+| Cavern (T3) | 🦡 Dire Badger (elite) | 3,300 | 120 | 200 | 45 | 🔷1–2 · 🟨3 |
+| **Boss** | 🐯 **Tiger** | 18,000 | 280 | 1,500 | 400 | **Weapon token×1** · 🔷5 · Astral shard (10%) |
 
 - **Elite variant** (rare spawn): ×3 HP, ×2 loot, guaranteed rare drop.
 - **Boss cadence:** Tiger daily (1 token/day) + a rotating weekly boss for retention.

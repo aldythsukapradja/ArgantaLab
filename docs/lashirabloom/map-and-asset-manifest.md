@@ -85,6 +85,10 @@ Thematic gradient: **homestead north** (farm + animals) · **peaceful west**
 
 ## 3. Economy (FINAL, single consistent model)
 
+> **UPDATE 2026-07-08:** the play currency is now **🌸 Bloom** (not 🥇 Gold) — the
+> code, HUD, and [`economy-combat-remap.md`](./economy-combat-remap.md) all use Bloom.
+> Read every "🥇 Gold" below as "🌸 Bloom". 💎 Diamond (learning/cosmetic) unchanged.
+
 | Token | Type | Earn | Spend |
 |---|---|---|---|
 | 🥇 **Gold** | play currency (shared circle pool) | Mining (gold ore) · Battleground (drops) · selling crops/produce/fish | seeds · animals · feed · tools · gold-part of upgrades |

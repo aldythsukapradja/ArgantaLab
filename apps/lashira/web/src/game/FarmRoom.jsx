@@ -1284,24 +1284,24 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.scale(z, z); ctx.translate(-Math.round(camX), -Math.round(camY));
       ctx.drawImage(g.bg, 0, 0);
 
-      // FARM LAYER — draw OUR tilled soil OPAQUELY over the whole field so it fully
-      // covers the basemap's background crops; interactive crops draw on top below.
+      // FARM LAYER — soil that MATCHES the basemap's tilled plot (#7b4c23) so it blends
+      // seamlessly while covering the baked-in crops; live crops draw on top below.
+      // Subtle furrows (tilled rows), not plank lines.
       for (let ty = FIELD.y0; ty <= FIELD.y1; ty++) for (let tx = FIELD.x0; tx <= FIELD.x1; tx++) {
         const px = tx * TILE, py = ty * TILE;
-        ctx.fillStyle = '#835a34'; ctx.fillRect(px, py, TILE, TILE);
-        ctx.fillStyle = '#96683c'; ctx.fillRect(px, py, TILE, 5);
-        ctx.fillStyle = 'rgba(58,38,18,0.45)';
-        for (let yy = py + 9; yy < py + TILE - 4; yy += 10) ctx.fillRect(px + 2, yy, TILE - 4, 3);
+        ctx.fillStyle = '#7b4c23'; ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = 'rgba(58,34,14,0.30)';               // furrow shadow
+        for (let yy = py + 9; yy < py + TILE - 3; yy += 12) ctx.fillRect(px + 3, yy, TILE - 6, 2);
+        ctx.fillStyle = 'rgba(150,102,58,0.22)';             // furrow highlight
+        for (let yy = py + 9; yy < py + TILE - 3; yy += 12) ctx.fillRect(px + 3, yy + 2, TILE - 6, 1);
       }
 
       // CASTLE — drawn per-frame from the chosen skin (swappable in the Castle panel),
-      // fit inside its box preserving aspect (no stretch) + centered on the plaza.
+      // bottom-anchored at its foot at NATIVE aspect so it sits centered on the plaza.
       const cskin = g.art['lashira.castleskin.' + (g.castleSkin || 'storybook')];
       if (cskin && cskin.naturalWidth > 0) {
-        const bx = CASTLE.tx * TILE, by = CASTLE.ty * TILE, bw = CASTLE.w * TILE, bh = CASTLE.h * TILE;
-        const ar = cskin.naturalWidth / cskin.naturalHeight;
-        let dw = bw, dh = bw / ar; if (dh > bh) { dh = bh; dw = bh * ar; }
-        ctx.drawImage(cskin, bx + (bw - dw) / 2, by + (bh - dh) / 2, dw, dh);
+        const dw = CASTLE.w * TILE, dh = dw * (cskin.naturalHeight / cskin.naturalWidth);
+        ctx.drawImage(cskin, CASTLE.footX * TILE - dw / 2, CASTLE.footY * TILE - dh, dw, dh);
       }
 
       // plots
