@@ -357,6 +357,35 @@ const BASEMAP_DOTS = [
 // SPRITE is drawn per-frame in FarmRoom so its skin is swappable (Castle panel).
 export const CASTLE = { tx: 27, ty: 20, w: 6, h: 7 };
 
+// ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
+// One entry per meaningful place, for the labelled debug overlay (screen-space
+// numbered badges + legend). `walk:true` = players can walk here; `walk:false`
+// = solid / no-walk. `rect` (tile bounds) draws a boundary box; point-only zones
+// use cx/cy. This drives ONLY the overlay — real collision still comes from `blocked`.
+const _zc = (r) => [(r.x0 + r.x1 + 1) / 2, (r.y0 + r.y1 + 1) / 2];
+const _sr = (id) => (HOTSPOTS.find((h) => h.id === id) || { rect: { x0: 0, y0: 0, x1: 0, y1: 0 } }).rect;
+export const ZONES_ANNOT = [
+  { label: 'Farm', walk: true, rect: FIELD, noDraw: true },     // ← Gemini: keep clear
+  { label: 'Castle', walk: false, rect: { x0: CASTLE.tx, y0: CASTLE.ty, x1: CASTLE.tx + CASTLE.w - 1, y1: CASTLE.ty + CASTLE.h - 1 }, custom: true },
+  { label: 'Greenhouse', walk: false, cx: 7, cy: 21 },
+  { label: 'Seed Shop', walk: false, rect: _sr('seed') },
+  { label: 'General Store', walk: false, rect: _sr('general') },
+  { label: 'Blacksmith', walk: false, rect: _sr('smith') },
+  { label: 'Animal Shop', walk: false, rect: _sr('animal') },
+  { label: 'Cosmetics', walk: false, rect: _sr('cosmetic') },
+  { label: 'Market (sell)', walk: false, rect: _sr('market') },
+  { label: 'Cow Pasture', walk: true, rect: PENS.cow },
+  { label: 'Sheep Pen', walk: true, rect: PENS.sheep },
+  { label: 'Chicken Coop', walk: true, rect: PENS.chicken },
+  { label: 'Forest (chop)', walk: false, cx: (ZONES.forest.x0 + ZONES.forest.x1) / 2, cy: (ZONES.forest.y0 + ZONES.forest.y1) / 2 },
+  { label: 'Mine (dig)', walk: false, cx: (ZONES.mining.x0 + ZONES.mining.x1) / 2, cy: (ZONES.mining.y0 + ZONES.mining.y1) / 2 },
+  { label: 'Dungeon Gate', walk: false, rect: _sr('dungeon') },
+  { label: 'Fishing Dock', walk: true, rect: _sr('dock') },
+  { label: 'Pond (water)', walk: false, cx: 5, cy: 40 },
+  { label: 'Battleground', walk: true, rect: ARENA },
+  { label: 'PvP Arena', walk: true, rect: PVP },
+].map((z, i) => { const [cx, cy] = z.rect ? _zc(z.rect) : [z.cx, z.cy]; return { n: i + 1, ...z, cx, cy }; });
+
 // Clickable component sprites the reference image LACKS (shops) — drawn ON TOP of the
 // basemap so they're visible + tappable. Positions match the shop HOTSPOTS. solid = blocks.
 const ONTOP = [

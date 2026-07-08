@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, inArena, hotspotAt, HOTSPOT_MARKERS, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, ZONES_ANNOT, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -199,6 +199,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [hotspot, setHotspot] = useState(null);   // shop/castle/dungeon/dock popup
   const [mechSnap, setMechSnap] = useState(null); // mechanics store snapshot (materials/tools/house)
   const mechRef = useRef(null);
+  const [showLegend, setShowLegend] = useState(true); // labelled-overlay legend
   const [castleSkin, setCastleSkin] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('lashira_castle_skin')) || 'storybook');
   useEffect(() => { if (G.current) G.current.castleSkin = castleSkin; try { localStorage.setItem('lashira_castle_skin', castleSkin); } catch {} }, [castleSkin]);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
@@ -1357,10 +1358,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // harvest-juice floats (rise + fade)
       if (g.floats?.length) { for (const f of g.floats) drawFloat(ctx, f, now); g.floats = g.floats.filter((f) => now - f.start < f.ttl); }
 
-      // COLLISION BOUNDARY — thick red lines on the edge between walkable and blocked,
-      // so you can clearly see where you can't walk (toggle g.showCollision). Drawn as
-      // a soft glow underlay + a bright core so it reads on any terrain.
+      // ── LABELLED DEBUG OVERLAY ────────────────────────────────────────────
+      // Blocked tiles get a red WASH + a thick red seam = "cannot walk here".
+      // (Toggle g.showCollision.)
       if (g.showCollision !== false) {
+        ctx.fillStyle = 'rgba(230,40,40,0.12)';
+        for (const key of g.blocked) { const [bx, by] = key.split(',').map(Number); ctx.fillRect(bx * TILE, by * TILE, TILE, TILE); }
         ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
         for (const key of g.blocked) {
           const [bx, by] = key.split(',').map(Number); const px = bx * TILE, py = by * TILE;
@@ -1369,55 +1372,46 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           if (!g.blocked.has((bx - 1) + ',' + by)) { ctx.moveTo(px, py); ctx.lineTo(px, py + TILE); }
           if (!g.blocked.has((bx + 1) + ',' + by)) { ctx.moveTo(px + TILE, py); ctx.lineTo(px + TILE, py + TILE); }
         }
-        ctx.strokeStyle = 'rgba(120,0,0,0.55)'; ctx.lineWidth = 7; ctx.stroke();     // glow underlay
-        ctx.strokeStyle = 'rgba(255,60,60,0.95)'; ctx.lineWidth = 3.5; ctx.stroke(); // bright core
+        ctx.strokeStyle = 'rgba(120,0,0,0.55)'; ctx.lineWidth = 7; ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,60,60,0.95)'; ctx.lineWidth = 3.5; ctx.stroke();
         ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
       }
 
-      // CUSTOMIZABLE-SPRITE PLACEHOLDER — dashed gold outline round the castle footprint
-      // so it's obvious this sprite is swappable (Castle panel → skin picker).
+      // Zone boundary boxes — FARM emphasised (thick yellow = "keep clear, don't
+      // paint on top"); CASTLE gold (swappable sprite); others thin (green=walk,
+      // white=solid). Numbered badges are drawn screen-space below.
       if (g.showHotspots !== false) {
-        const cx0 = CASTLE.tx * TILE, cy0 = CASTLE.ty * TILE, cw = CASTLE.w * TILE, ch = CASTLE.h * TILE;
-        ctx.save(); ctx.setLineDash([10, 7]); ctx.lineDashOffset = -(now / 60) % 17;
-        ctx.strokeStyle = 'rgba(255,207,74,0.95)'; ctx.lineWidth = 3;
-        ctx.strokeRect(cx0 + 1.5, cy0 + 1.5, cw - 3, ch - 3); ctx.restore();
-        capsule(ctx, cx0 + cw / 2, cy0 - 8, '🎨 Customizable — tap to skin', 'rgba(120,80,0,0.92)');
-      }
-
-      // HOTSPOT STATUS DOTS + CAPSULE LABELS — green = wired + clickable, red = placeholder
-      // not built. Each dot carries a pill naming what it is. Toggle g.showHotspots.
-      if (g.showHotspots !== false) {
-        const pulse = Math.abs(Math.sin(now / 500));
-        for (const mk of HOTSPOT_MARKERS) {
-          const wx = mk.x * TILE, wy = mk.y * TILE, c = mk.ported ? '80,220,110' : '235,70,70';
-          ctx.beginPath(); ctx.arc(wx, wy, 8 + pulse * 9, 0, 7); ctx.strokeStyle = `rgba(${c},${(0.45 * (1 - pulse) + 0.12).toFixed(2)})`; ctx.lineWidth = 3; ctx.stroke();
-          ctx.beginPath(); ctx.arc(wx, wy, 7, 0, 7); ctx.fillStyle = `rgba(${c},0.95)`; ctx.fill();
-          ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5; ctx.stroke();
-          if (mk.label && g.showLabels !== false) capsule(ctx, wx, wy - 12, mk.label, mk.ported ? 'rgba(20,90,45,0.9)' : 'rgba(120,25,25,0.9)');
+        for (const zn of ZONES_ANNOT) {
+          if (!zn.rect) continue;
+          const rx = zn.rect.x0 * TILE, ry = zn.rect.y0 * TILE;
+          const rw = (zn.rect.x1 - zn.rect.x0 + 1) * TILE, rh = (zn.rect.y1 - zn.rect.y0 + 1) * TILE;
+          ctx.save();
+          if (zn.noDraw) { ctx.setLineDash([16, 10]); ctx.lineDashOffset = -(now / 50) % 26; ctx.strokeStyle = 'rgba(255,214,0,0.98)'; ctx.lineWidth = 6; }
+          else if (zn.custom) { ctx.setLineDash([10, 7]); ctx.lineDashOffset = -(now / 60) % 17; ctx.strokeStyle = 'rgba(255,180,40,0.95)'; ctx.lineWidth = 3; }
+          else { ctx.setLineDash([6, 5]); ctx.strokeStyle = zn.walk ? 'rgba(120,235,150,0.8)' : 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; }
+          ctx.strokeRect(rx + 2, ry + 2, rw - 4, rh - 4);
+          ctx.restore();
         }
       }
       ctx.restore();
+
+      // NUMBERED BADGES — screen space so they stay big at any map zoom. Green = you
+      // can walk here, red = solid/no-walk. Numbers key to the on-screen legend.
+      if (g.showHotspots !== false && g.cam) {
+        const { camX, camY, z } = g.cam;
+        ctx.save(); ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 15px system-ui';
+        for (const zn of ZONES_ANNOT) {
+          const sx = (zn.cx * TILE - camX) * z, sy = (zn.cy * TILE - camY) * z;
+          if (sx < -30 || sy < -30 || sx > cssW + 30 || sy > cssH + 30) continue;
+          const col = zn.walk ? '#1f9d4d' : '#d23030';
+          ctx.beginPath(); ctx.arc(sx, sy, 14, 0, 7); ctx.fillStyle = col; ctx.fill();
+          ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+          ctx.fillStyle = '#fff'; ctx.fillText(String(zn.n), sx, sy + 0.5);
+        }
+        ctx.restore(); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      }
       if (g.stickUI) drawStick(ctx, g); // floating joystick (screen space)
-    }
-    // A rounded info pill, centered horizontally at cx with its bottom at bottomY.
-    // Used for hotspot labels + the customizable-sprite tag. World-space (inside cam).
-    function capsule(ctx, cx, bottomY, text, bg) {
-      ctx.save();
-      ctx.font = 'bold 11px system-ui';
-      const padX = 7, h = 17, w = ctx.measureText(text).width + padX * 2;
-      const x = cx - w / 2, y = bottomY - h;
-      ctx.fillStyle = bg;
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill(); }
-      else ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
-      if (ctx.roundRect) ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(text, cx, y + h / 2 + 0.5);
-      // little downward nub so the pill points at its dot
-      ctx.fillStyle = bg; ctx.beginPath();
-      ctx.moveTo(cx - 4, y + h - 0.5); ctx.lineTo(cx + 4, y + h - 0.5); ctx.lineTo(cx, y + h + 4); ctx.fill();
-      ctx.restore();
-      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
     // The drag-joystick: a base ring at the press point + a knob at the thumb.
     function drawStick(ctx, g) {
@@ -1587,6 +1581,22 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         <canvas ref={canvasRef} tabIndex={0} />
         {!ready && <div className="room-loading">Growing your valley…</div>}
         <div className="stick-zone" ref={stickRef} />
+        <div className="map-legend">
+          <button className="map-legend-head" onClick={() => setShowLegend((v) => !v)}>
+            🗺️ Map key <span>{showLegend ? '▾' : '▸'}</span>
+          </button>
+          {showLegend && (
+            <div className="map-legend-body">
+              <div className="map-legend-note"><span className="lg-walk" /> walk · <span className="lg-block" /> no-walk</div>
+              {ZONES_ANNOT.map((z) => (
+                <div className="map-legend-row" key={z.n}>
+                  <span className={'lg-num ' + (z.walk ? 'lg-walk' : 'lg-block')}>{z.n}</span>
+                  <span className="lg-label">{z.label}{z.custom ? ' 🎨' : ''}{z.noDraw ? ' ⛔art' : ''}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         {snap && (
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
