@@ -1,7 +1,9 @@
 # Followups (for Opus/Sonnet after Fable)
 
-> Anything Fable couldn't finish on July 7. Written so a cheaper model continues with zero
-> re-discovery. Full detail: fable-handoff/PLAN-followup.md (this is the vault-side mirror).
+> **Provenance / historical.** Captured July 7 during the Fable vault build. Kept for context,
+> not an active task list. External source docs (the original `fable handoff/` PLAN + spec files)
+> live in the monorepo, outside this vault — this file intentionally does not link out to them,
+> to keep the vault self-contained.
 
 ## Blocked on access (do first when repo is mounted)
 1. **Repo scan** — fill PLAN-instrumentation-wiring.md Step 0 (find the live-signal Supabase
@@ -25,4 +27,5 @@
 12. Media pipeline dry-run (Firecrawl → concept → Pixa/Higgsfield → Drive).
 
 ## Links
-- Roadmap: [[roadmap-tracker]] · Spec: fable-handoff/ORCHESTRATION-SPEC.html
+- Roadmap: [[roadmap-tracker]]
+- *(Original orchestration spec lives in the monorepo's `docs/fable handoff/`, outside this vault.)*

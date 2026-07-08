@@ -22,7 +22,7 @@
 - **arganta-timeline** → ns.w2f
 - **arganta-workflow** → ns.w2f via hq.builders
 
-## Drafted July 7 (in fable-handoff/new-skills/ — install to .claude/skills/)
+## Drafted July 7 (reference copies in `20-SYSTEM/skills/` — install to `.claude/skills/`)
 - **instrumentation-wiring** → owns the 15 blind nodes (see [[sensor-plan]]). ladders_to ns.w2f via lever.efficiency
 - **effort-scorer** → routing triage, thresholds DRAFT. ladders_to hq.agents (see [[effort-scorer]])
 - **hq-router** → the Layer-3 loop as a P0 protocol. ladders_to hq.agents + ns.w2f

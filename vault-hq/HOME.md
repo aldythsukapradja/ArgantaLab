@@ -2,6 +2,11 @@
 
 The entry point to my second brain. Everything links from here.
 
+## Operating manual
+- [[README]] — what this vault is + how to transplant it
+- [[DIGEST]] — how raw input becomes organized knowledge (read this to file things)
+- [[TAXONOMY]] — controlled vocabulary · [[CONVENTIONS]] — naming + links
+
 ## Start here
 - [[persona-core]] — who I am and how I decide (the most important file)
 - [[daily-loop]] — the habit loop I run every day
@@ -31,8 +36,10 @@ The entry point to my second brain. Everything links from here.
 - [[career-thread]] — paper, positioning, narrative
 
 ## Capture
-- [[_INBOX/capture]] — drop anything here, zero friction
+- `60-CAPTURES/_INBOX/` — drop anything here as one new file, zero friction (see [[DIGEST]] §1)
+- `60-CAPTURES/_ARCHIVE/` — interesting, not useful now
 
 ---
-*Convention: this vault is the DISTILLED layer. Raw sessions get harvested into `/projects`,
-never pasted whole. Nothing reaches a "shipped/wiki" state until reviewed.*
+*Convention: this vault is the DISTILLED layer. Raw input lands in `60-CAPTURES/_INBOX/` and is
+harvested by hand into the distilled folders — never pasted whole, never auto-promoted.
+Nothing reaches a distilled/"truth" state until reviewed. Full rules: [[DIGEST]].*
