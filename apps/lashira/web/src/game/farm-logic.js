@@ -3,7 +3,7 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
-import { killReward, killXp } from '@arganta/combat';
+import { killReward, killXp, maxHpForLevel, maxMpForLevel } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
@@ -230,7 +230,7 @@ export class FarmLogic {
         st.day = intent.day; st.season = intent.season;
         if (intent.plots) st.plots = { ...intent.plots };
         if (Array.isArray(intent.livestock)) st.livestock = intent.livestock.map((a) => ({ ...a }));
-        st.stamina = st.maxStamina; // the whole family wakes up with the new day
+        st.stamina = maxMpForLevel(this._level()); // wake up with the level-scaled MP pool
         this._dayEvent(); // every circle member sees the same New Day splash
         break;
       }
@@ -357,9 +357,14 @@ export class FarmLogic {
   snapshot() {
     const st = this.state;
     const operator = this.isOperator();
+    const level = this._level();
+    // HP + MP scale with level (shared curves) — fixes MP stuck at 40 every level.
+    const maxMp = maxMpForLevel(level);
+    const maxHp = maxHpForLevel(level);
     return {
       day: st.day, season: SEASONS[st.season],
-      stamina: operator ? st.maxStamina : st.stamina, maxStamina: st.maxStamina,
+      stamina: operator ? maxMp : Math.min(st.stamina, maxMp), maxStamina: maxMp,
+      maxHp,
       operator,
       tool: st.tool, selectedSeed: st.selectedSeed,
       seeds: { ...st.seeds }, produce: { ...st.produce },
@@ -370,7 +375,7 @@ export class FarmLogic {
       gold: operator ? Infinity : (st.gold ?? STARTING_GOLD),
       diamonds: st.diamonds,
       xp: st.xp,
-      level: this.profile?.level ?? (1 + Math.floor(Math.max(0, st.xp) / 500)), // mirrors argantalab_level_from_xp when profile level is unavailable
+      level,
       role: this.profile?.role ?? 'user',
       name: this.profile?.displayName ?? 'Farmer',
       guest: !!this.profile?.guest,
@@ -404,7 +409,8 @@ export class FarmLogic {
   // Battle: skills spend the farm's stamina (chosen over a separate mana pool).
   spendStamina(n) { if (!this._spend(n)) return false; this.save(); this.emit(); return true; }
   isKid() { return this.profile?.role === 'kid'; }
-  _level() { return this.profile?.level ?? (1 + Math.floor(Math.max(0, Number(this.state.xp) || 0) / 500)); }
+  // Operator (admin) is capped at level 99; everyone else derives from XP.
+  _level() { return this.isOperator() ? 99 : (this.profile?.level ?? (1 + Math.floor(Math.max(0, Number(this.state.xp) || 0) / 500))); }
   // A transient reward pill for the HUD (Diamonds/XP/produce). Auto-expires.
   pushReward(r) {
     this.rewards = [...(this.rewards || []), { id: ++this._rid, at: Date.now(), ...r }].slice(-4);
@@ -625,7 +631,7 @@ export class FarmLogic {
     const st = this.state;
     st.day += 1;
     if (st.day > DAYS_PER_SEASON) { st.day = 1; st.season = (st.season + 1) % SEASONS.length; }
-    st.stamina = st.maxStamina;
+    st.stamina = maxMpForLevel(this._level()); // refill to the level-scaled MP pool
     this._bump();
     // Broadcast the day tick (calendar flavor) — carries no crop growth anymore.
     this._intent({ t: 'day', day: st.day, season: st.season });

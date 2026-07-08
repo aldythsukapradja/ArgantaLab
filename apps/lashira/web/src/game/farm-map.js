@@ -176,36 +176,40 @@ export function buildFarmMap(art = {}) {
   const blocked = new Set();
   const block = (x, y) => blocked.add(tileKey(x, y));
   const blockRect = (tx, ty, w, h) => { for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) block(x, y); };
-  const fillZone = (r, ca, cb, dc, seed) => {
+  const fillZone = (r, base, tint, seed) => {
     for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) {
-      rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 2 ? ca : cb);
-      if (dc) dots(ctx, x * seed + y * 7, 4, x * TILE, y * TILE, TILE, TILE, dc, 3);
+      rect(ctx, x * TILE, y * TILE, TILE, TILE, base);
+      if (tint) dots(ctx, x * seed + y * 13 + 1, 5, x * TILE, y * TILE, TILE, TILE, tint, 3);
     }
   };
+  const pathTile = (x, y) => { rect(ctx, x * TILE, y * TILE, TILE, TILE, '#cdb384'); dots(ctx, x * 17 + y * 5, 3, x * TILE, y * TILE, TILE, TILE, '#c0a675', 2); };
 
-  // base grass
+  // base grass (soft, no checker)
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 7 === 0 ? '#78bf56' : '#7cc35a');
-    dots(ctx, (x * 31 + y * 7 + 3), 6, x * TILE, y * TILE, TILE, TILE, '#8fd06a', 3);
+    rect(ctx, x * TILE, y * TILE, TILE, TILE, '#7cc35a');
+    dots(ctx, (x * 31 + y * 7 + 3), 5, x * TILE, y * TILE, TILE, TILE, '#86ca63', 3);
   }
-  // zone terrains
-  fillZone(ZONES.forest, '#5aa03f', '#63a846', '#4a8a34', 17);
-  fillZone(ZONES.mining, '#9a978f', '#8f8c84', '#7d7a72', 23);
-  fillZone(ZONES.plaza, '#d8c9a6', '#cfbf99', null, 0);
-  // fishing water (impassable)
+  // zone terrains — flat + gentle speckle (no checkerboard)
+  fillZone(ZONES.forest, '#5e9e3f', '#6aac4b', 17);
+  fillZone(ZONES.mining, '#9b988f', '#a7a49c', 23);
+  fillZone(ZONES.plaza, '#d6c6a0', '#e0d2ae', 11);
+  // fishing water
   for (let y = ZONES.fishing.y0; y <= ZONES.fishing.y1; y++) for (let x = ZONES.fishing.x0; x <= ZONES.fishing.x1; x++) {
-    rect(ctx, x * TILE, y * TILE, TILE, TILE, (x + y) % 2 ? '#4f97d6' : '#4389c8');
-    dots(ctx, x * 13 + y * 3, 3, x * TILE, y * TILE, TILE, TILE, '#5aa3e0', 3);
+    rect(ctx, x * TILE, y * TILE, TILE, TILE, '#4b90d0');
+    dots(ctx, x * 13 + y * 3, 3, x * TILE, y * TILE, TILE, TILE, '#579cdc', 3);
     block(x, y);
   }
-  // castle approach path (2-wide, north edge → plaza)
-  for (let y = 2; y < ZONES.plaza.y0; y++) { rect(ctx, 29 * TILE, y * TILE, TILE, TILE, '#cbb187'); rect(ctx, 30 * TILE, y * TILE, TILE, TILE, '#cbb187'); }
   // martial south: battleground (trodden) + pvp (sand)
   for (let y = ARENA.y0; y <= ARENA.y1; y++) for (let x = ARENA.x0; x <= ARENA.x1; x++) {
     const pvp = x >= PVP.x0;
-    rect(ctx, x * TILE, y * TILE, TILE, TILE, pvp ? ((x + y) % 2 ? '#e6d2a0' : '#dcc794') : ((x + y) % 2 ? '#c8a56f' : '#be9a64'));
-    dots(ctx, x * 37 + y * 11, 5, x * TILE, y * TILE, TILE, TILE, pvp ? '#c9b47e' : '#a9854f', 3);
+    rect(ctx, x * TILE, y * TILE, TILE, TILE, pvp ? '#dcc48a' : '#c2a06a');
+    dots(ctx, x * 37 + y * 11, 4, x * TILE, y * TILE, TILE, TILE, pvp ? '#e4ce98' : '#b08a55', 3);
   }
+  // ROYAL ROADS — stone paths radiating from the castle courtyard (kingdom structure)
+  for (let y = 2; y < ZONES.plaza.y0; y++) { pathTile(29, y); pathTile(30, y); }   // N approach
+  for (let x = 2; x <= 26; x++) { pathTile(x, 23); pathTile(x, 24); }               // W road → garden
+  for (let x = 33; x <= 47; x++) { pathTile(x, 23); pathTile(x, 24); }              // E road → mining
+  for (let y = 27; y <= 33; y++) { pathTile(28, y); pathTile(29, y); }              // S spur → arena gate
   // field soil (baked; crops paint on top per-frame)
   for (let y = FIELD.y0; y <= FIELD.y1; y++) for (let x = FIELD.x0; x <= FIELD.x1; x++) drawSoilTile(ctx, x, y, art);
 
@@ -251,15 +255,19 @@ export function buildFarmMap(art = {}) {
   // lush decoration scatter on OPEN grass (baked, non-blocking) — fills the space
   // between zones so the world reads full, Animal-Crossing style.
   const inR = (r, x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+  const penArea = (x, y) => x >= 33 && x <= 57 && y >= 2 && y <= 17;       // keep the pens tidy
+  const onRoad = (x, y) => ((x === 29 || x === 30) && y < ZONES.plaza.y0)
+    || ((y === 23 || y === 24) && ((x >= 2 && x <= 26) || (x >= 33 && x <= 47)))
+    || ((x === 28 || x === 29) && y >= 27 && y <= 33);
   const inZone = (x, y) => inR(FIELD, x, y) || inR(ZONES.garden, x, y) || inR(ZONES.plaza, x, y)
-    || inR(ZONES.mining, x, y) || inR(ZONES.forest, x, y) || inR(ZONES.fishing, x, y) || inR(ARENA, x, y);
-  const DECO = ['lashira.lib.grass_tuft', 'lashira.lib.grass_tuft', 'lashira.lib.grass_tuft',
-    'lashira.lib.flowers', 'lashira.lib.small_rock', 'lashira.lib.bush', 'lashira.lib.mushroom'];
+    || inR(ZONES.mining, x, y) || inR(ZONES.forest, x, y) || inR(ZONES.fishing, x, y) || inR(ARENA, x, y)
+    || penArea(x, y) || onRoad(x, y);
+  // sparse, tasteful — just occasional grass tufts + the odd flower (no weed clutter)
+  const DECO = ['lashira.lib.grass_tuft', 'lashira.lib.grass_tuft', 'lashira.lib.flowers'];
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     if (blocked.has(tileKey(x, y)) || inZone(x, y)) continue;
-    if ((x === 29 || x === 30) && y < ZONES.plaza.y0) continue; // keep the castle path clear
     let s = (x * 2749 + y * 911 + 7) >>> 0; s = (s * 1103515245 + 12345) >>> 0;
-    if ((s % 1000) < 150) drawOverride(ctx, art, DECO[(s >>> 8) % DECO.length], x * TILE, y * TILE, TILE, TILE);
+    if ((s % 1000) < 45) drawOverride(ctx, art, DECO[(s >>> 8) % DECO.length], x * TILE, y * TILE, TILE, TILE);
   }
 
   return { canvas, blocked };

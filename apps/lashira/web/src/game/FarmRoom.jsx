@@ -9,7 +9,7 @@ import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, dr
 import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
   tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
-  SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, canAffordSkill,
+  SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, maxHpForLevel, canAffordSkill,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
@@ -1016,7 +1016,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const on = inArena(p.tile[0], p.tile[1]) && (!g.combat.deadUntil || now > g.combat.deadUntil);
       if (on !== g.combat.on) {
         g.combat.on = on;
-        if (on && g.combat.hp <= 0) g.combat.hp = g.combat.maxHp; // heal on entry
+        if (on) { // size the HP pool to the hero's level, full on entry
+          g.combat.maxHp = maxHpForLevel(logicRef.current?._level?.() ?? 1);
+          if (g.combat.hp <= 0 || g.combat.hp > g.combat.maxHp) g.combat.hp = g.combat.maxHp;
+        }
         syncBattleState(g);
       }
       // Monsters are shared: only the elected host simulates them (same rule as

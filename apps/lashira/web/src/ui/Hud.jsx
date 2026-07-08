@@ -52,7 +52,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
     return () => clearInterval(h);
   }, [showSettings, getSyncDebug]);
   const rank = computeRank(snap.xp);
-  const maxHp = Number(hero?.stats?.maxHp || 100);
+  const maxHp = Number(snap.maxHp || hero?.stats?.maxHp || 100);
   const circleName = useCircleName(circleId);
   const activeKins = (snap.kins || []).slice(0, 6);
   const energyPct = Math.max(0, Math.min(100, (snap.stamina / Math.max(1, snap.maxStamina)) * 100));
