@@ -34,6 +34,37 @@ export function skillPower(skill, L) {
   return boltDamage(L); // bolt / default
 }
 
+// --- PER-PATH power (the class identity for combat, esp. PvP) ------------------
+// Each path multiplies the shared bases: casters hit harder with MAGIC, martials
+// hit harder with PHYSICAL. Ordering matches the design:
+//   Magic:    Mage > Poet > Rogue > Warrior      (mage highest, warrior last)
+//   Physical: Warrior > Rogue > Poet > Mage       (warrior's big-hit identity)
+// These are ADDITIVE helpers — the old skillPower/MELEE stay untouched, so
+// existing Kingdom PvE is unchanged until a caller opts into the path-scaled ones
+// (PvP does). Keys are the stable path ids from progression.js.
+export const PATH_POWER = {
+  warrior: { mag: 0.60, phy: 1.60 },
+  rogue:   { mag: 0.85, phy: 1.30 },
+  poet:    { mag: 1.25, phy: 0.85 },
+  mage:    { mag: 1.50, phy: 0.60 },
+};
+export function pathPower(pathId) { return PATH_POWER[pathId] || PATH_POWER.warrior; }
+
+// Physical attack base — level-scaled (parallels the magic bases so high-level
+// PvP doesn't stall against the big HP pools). Melee/PvP strikes use this.
+export function physBase(L) { return 34 + 10 * (lv(L) - 1); }
+
+// Path-scaled MAGIC power for a slotted skill (bolt/storm/mend all count as
+// spellcasting, so a caster path amplifies damage AND healing).
+export function pathSkillPower(skill, pathId, L) {
+  return Math.round(skillPower(skill, L) * pathPower(pathId).mag);
+}
+
+// Path-scaled PHYSICAL power for a melee / PvP strike.
+export function pathPhysPower(pathId, L) {
+  return Math.round(physBase(L) * pathPower(pathId).phy);
+}
+
 // Merge the shared slot BEHAVIOUR (single/all/heal + MP + scaling) with a hero's
 // own effect visuals. Kingdom is the single source of truth for character stuff,
 // so the `fx` (which spell animation plays) comes from the hero's Kingdom
