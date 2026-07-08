@@ -121,6 +121,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
           <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
           <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
+          <button className="navbtn" onClick={() => onOpen('quests')}>📜 Quests</button>
         </div>
 
         {(circleName || presence?.count > 0) && (

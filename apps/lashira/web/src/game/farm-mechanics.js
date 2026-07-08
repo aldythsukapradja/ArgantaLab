@@ -112,7 +112,7 @@ export class FarmMechanics {
   smelt() {
     if (!this.canSmelt()) { this.flash(`Need 3${MAT_ICON.ore}`); return false; }
     this.state.ore -= SMELT_COST.ore; this._add('ingot', 1);
-    this._save(); this.emit(); this.flash(`🧱 +1 Ingot`); return true;
+    this._save(); this.emit(); this.getLogic()?.questCraftTick?.(); this.flash(`🧱 +1 Ingot`); return true;
   }
   canCook() { return (this.state.fish || 0) >= COOK_COST.fish; }
   cook() {
@@ -135,7 +135,7 @@ export class FarmMechanics {
     const c = this.toolCost(tool);
     if (!this.affordShared(c)) { this.flash(`Need 🪵${c.wood} 🪨${c.stone}`); return false; }
     this._spendShared('wood', c.wood); this._spendShared('stone', c.stone);
-    this.state.tools[tool] = cur + 1; this._save(); this.emit(); this.flash(`⚒ ${tool} → Tier ${cur + 1}`); return true;
+    this.state.tools[tool] = cur + 1; this._save(); this.emit(); this.getLogic()?.questCraftTick?.(); this.flash(`⚒ ${tool} → Tier ${cur + 1}`); return true;
   }
   // ---- CASTLE --- home upgrade spends wood/stone (shared) ----
   houseCost() { const t = this.state.house.tier; return { wood: t * 20, stone: t * 15 }; }
@@ -182,7 +182,7 @@ export class FarmMechanics {
     }
     const key = slot === 'weapon' ? 'weaponTier' : 'armorTier';
     l.state[key] = this.gearTier(slot) + 1; l.save?.(); l.emit?.();
-    this._save(); this.emit();
+    this._save(); this.emit(); l.questCraftTick?.();
     this.flash(`⚒ ${slot} → Tier ${l.state[key]}`);
     return true;
   }

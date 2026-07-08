@@ -12,7 +12,7 @@ import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
   tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
   SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, pathMaxHp, pathForWeapon, canAffordSkill,
-  monsterOf, outgoingDamage, rollDrops,
+  monsterOf, outgoingDamage, rollDrops, SPAWN_TUNING,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { creatureImage } from './creature-sprites.js';
@@ -1086,7 +1086,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function spawnArenaMonster(g, now) {
       const tile = arenaOpenTile(g);
       // Kid-safe woodland roster (bestiary), rescaled HP so combat isn't trivial.
-      const kinds = ['squirrel', 'fox', 'badger', 'boar', 'deer'];
+      // Roster comes from the tuning pipeline (SPAWN_TUNING) so HQ can change it.
+      const kinds = (SPAWN_TUNING.roster && SPAWN_TUNING.roster.length) ? SPAWN_TUNING.roster : ['squirrel', 'fox', 'badger', 'boar', 'deer'];
       const kind = kinds[Math.floor(monsterRand(g) * kinds.length)];
       const mob = monsterOf(kind);
       const m = makeMonster({ id: 'mob:' + (g.monsterSeed >>> 0) + ':' + now, tile, maxHp: mob.hp });
@@ -1115,8 +1116,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // clients render the host's monsters via peerWorldActors and never simulate.
       const hostSelf = !circleId || presenceHostId(g, profile) === presenceProfileId(profile);
       if (hostSelf) {
-        if (g.monsters.length < ARENA_MONSTER_COUNT && now > g.nextMonsterSpawn) {
-          spawnArenaMonster(g, now); g.nextMonsterSpawn = now + 900;
+        if (g.monsters.length < (SPAWN_TUNING.maxConcurrent || ARENA_MONSTER_COUNT) && now > g.nextMonsterSpawn) {
+          spawnArenaMonster(g, now); g.nextMonsterSpawn = now + (SPAWN_TUNING.intervalMs || 900);
         }
         for (const m of g.monsters) {
           if (m.state === 'die') continue;
@@ -1669,7 +1670,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
-            <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
+            <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechRef.current} onClose={() => setPanel(null)} />
             <HotspotPanels hotspot={hotspot} snap={snap} game={logicRef.current} mech={mechSnap}
               mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon}
               castleSkin={castleSkin} onCastleSkin={setCastleSkin} />

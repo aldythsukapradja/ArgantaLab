@@ -3,7 +3,7 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
-import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTitle, levelWithFloor, levelProgress, xpForLevel, weaponOf, armorOf, weaponAtk, armorDef, armorHp, monsterOf } from '@arganta/combat';
+import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTitle, levelWithFloor, levelProgress, xpForLevel, weaponOf, armorOf, weaponAtk, armorDef, armorHp, monsterOf, REWARD_TUNING } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
@@ -19,6 +19,16 @@ export const STARTING_BLOOM = 120; // enough to plant the first few beds
 
 // Max Kin a single user can deploy onto the farm at once (per-user loadout cap).
 export const MAX_DEPLOYED_KINS = 6;
+
+// Daily quests — reset each calendar day; the retention spine. goal = target count,
+// bloom = claim reward. `mat` (optional) = a bonus material granted via the mech store.
+export const QUEST_DEFS = [
+  { id: 'harvest', icon: '🌾', label: 'Harvest crops', goal: 10, bloom: 120 },
+  { id: 'defeat', icon: '⚔', label: 'Defeat monsters', goal: 8, bloom: 150, mat: { k: 'token', n: 1 } },
+  { id: 'craft', icon: '⚒', label: 'Craft or upgrade', goal: 1, bloom: 100, mat: { k: 'gem', n: 1 } },
+];
+const todayKey = () => new Date().toISOString().slice(0, 10);
+const yesterdayKey = () => new Date(Date.now() - 864e5).toISOString().slice(0, 10);
 
 const defaultSeeds = () => Object.fromEntries(Object.keys(CROPS).map((id) => [id, id === 'turnip' ? 3 : 0]));
 const starterKinArt = {
@@ -97,6 +107,9 @@ export class FarmLogic {
       // combat gear — the power axis beyond level. Crafted up at the Forge.
       weaponTier: 1,
       armorTier: 1,
+      // daily quests + login streak (retention).
+      quests: { date: todayKey(), harvest: 0, defeat: 0, craft: 0, claimed: {} },
+      streak: { last: null, count: 0 },
     };
   }
   // Load BOTH the cloud save and the local fallback and keep the most advanced
@@ -193,6 +206,8 @@ export class FarmLogic {
       stone: local.stone ?? base.stone,
       weaponTier: local.weaponTier ?? base.weaponTier, // personal gear — never from a peer
       armorTier: local.armorTier ?? base.armorTier,
+      quests: local.quests ?? base.quests, // personal daily progress
+      streak: local.streak ?? base.streak,
       seeds: { ...base.seeds, ...(data.seeds || {}) },
       produce: { ...base.produce, ...(data.produce || {}) },
       plots: { ...base.plots, ...(data.plots || {}) },
@@ -402,6 +417,9 @@ export class FarmLogic {
       weaponTier: wTier, armorTier: aTier,
       weaponName: weaponOf(wTier).name, armorName: armorOf(aTier).name,
       atk: weaponAtk(wTier), def: armorDef(aTier),
+      // daily quests (progress vs QUEST_DEFS goals) + login streak.
+      quests: { ...(st.quests || { harvest: 0, defeat: 0, craft: 0, claimed: {} }) },
+      streak: st.streak?.count || 0,
       diamonds: st.diamonds,
       xp: st.xp,
       level,
@@ -461,6 +479,32 @@ export class FarmLogic {
     this.state.bloom = (this.state.bloom ?? 0) + n;
     this.pushReward({ icon: '🌸', amount: '+' + n, label, tone: 'bloom' });
   }
+  // ---- DAILY QUESTS + login streak ----
+  // Roll the day if the calendar date changed: reset progress/claims, bump streak.
+  _ensureDaily() {
+    if (!this.state.quests) this.state.quests = { date: todayKey(), harvest: 0, defeat: 0, craft: 0, claimed: {} };
+    if (!this.state.streak) this.state.streak = { last: null, count: 0 };
+    const t = todayKey(), q = this.state.quests, s = this.state.streak;
+    if (q.date !== t) { q.date = t; q.harvest = 0; q.defeat = 0; q.craft = 0; q.claimed = {}; }
+    if (s.last !== t) { s.count = (s.last === yesterdayKey()) ? (s.count || 0) + 1 : 1; s.last = t; }
+  }
+  // Mutate a counter WITHOUT save/emit (callers that already save wrap this).
+  _bumpQuest(key, n = 1) { this._ensureDaily(); this.state.quests[key] = (this.state.quests[key] || 0) + n; }
+  // Standalone craft tick (called by the mech store after a craft/upgrade/refine).
+  questCraftTick() { this._bumpQuest('craft'); this.save(); this.emit(); }
+  // Claim a completed, unclaimed quest → Bloom + (optional) a bonus material the
+  // caller grants via the mech store. Returns the mat descriptor or null.
+  claimQuest(id) {
+    this._ensureDaily();
+    const def = QUEST_DEFS.find((d) => d.id === id); if (!def) return null;
+    const q = this.state.quests;
+    if (q.claimed[id] || (q[id] || 0) < def.goal) return null;
+    q.claimed[id] = true;
+    this.earnBloom(def.bloom, 'Quest · ' + def.label);
+    this.save(); this.emit();
+    return def.mat || null;
+  }
+
   // Restore stamina/MP (clamped to the level+path pool) — used by cooked potions.
   restoreStamina(n) {
     const max = pathMaxMp(this.path || 'warrior', this._level());
@@ -475,13 +519,15 @@ export class FarmLogic {
     // unknown kind (e.g. a legacy 'a monster' string).
     const mob = monsterOf(kind);
     const known = mob && mob.id === kind;
-    const bloom = known ? mob.bloom : killReward(L);
+    // Global reward multipliers from the tuning pipeline (HQ-tunable).
+    const bloom = Math.round((known ? mob.bloom : killReward(L)) * (REWARD_TUNING.bloomMul ?? 1));
     this.earnBloom(bloom, 'Bloom · ' + (known ? mob.name : 'monster'));
     if (!this.isKid()) {
-      const x = known ? mob.xp : killXp(L);
+      const x = Math.round((known ? mob.xp : killXp(L)) * (REWARD_TUNING.xpMul ?? 1));
       this.state.xp = (Number(this.state.xp) || 0) + x;
       this.pushReward({ icon: '⭐', amount: '+' + x, label: 'XP', tone: 'violet' });
     }
+    this._bumpQuest('defeat');
     this.save(); this.emit();
   }
 
@@ -508,6 +554,7 @@ export class FarmLogic {
     st.bloom = (st.bloom ?? 0) + bloom; // silent (the floating +N 🌸 IS the feedback)
     // Soil stays soil — clear the crop, keep the plot record so it reads as tilled.
     p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+    this._bumpQuest('harvest');
     this._bump();
     this._intent({ t: 'plot', key, plot: { ...p } });
     this.save(); this.emit();

@@ -2,8 +2,9 @@
 import { CROPS } from '../data/crops.js';
 import { SPECIES, animalGoodReady, animalGoodFrac } from '../data/livestock.js';
 import { KIN_TASKS } from '../data/kins.js';
+import { QUEST_DEFS } from '../game/farm-logic.js';
 
-export function Panels({ panel, snap, game, onClose }) {
+export function Panels({ panel, snap, game, mech, onClose }) {
   if (!panel) return null;
   return (
     <div className="panel-scrim" onClick={onClose}>
@@ -13,8 +14,42 @@ export function Panels({ panel, snap, game, onClose }) {
         {panel === 'kin' && <Kin snap={snap} game={game} onClose={onClose} />}
         {panel === 'house' && <Home snap={snap} game={game} onClose={onClose} />}
         {panel === 'inventory' && <Inventory snap={snap} game={game} onClose={onClose} />}
+        {panel === 'quests' && <Quests snap={snap} game={game} mech={mech} onClose={onClose} />}
       </div>
     </div>
+  );
+}
+
+function Quests({ snap, game, mech, onClose }) {
+  const q = snap.quests || {};
+  const claim = (id) => {
+    const mat = game.claimQuest?.(id);
+    if (mat && mech?.grantMaterial) { mech.grantMaterial(mat.k, mat.n); mech._save?.(); mech.emit?.(); }
+  };
+  const streak = snap.streak || 0;
+  return (
+    <>
+      <Head title="📜 Daily Quests" sub={`🔥 ${streak} day streak · resets each day`} onClose={onClose} />
+      {QUEST_DEFS.map((d) => {
+        const cur = Number(q[d.id] || 0);
+        const done = cur >= d.goal;
+        const claimed = !!q.claimed?.[d.id];
+        return (
+          <div className="row" key={d.id}>
+            <div className="ico">{d.icon}</div>
+            <div className="grow">
+              <div className="name">{d.label}</div>
+              <div className="meta">{Math.min(cur, d.goal)}/{d.goal} · 🌸{d.bloom}{d.mat ? ` +${d.mat.n} ${d.mat.k}` : ''}</div>
+              <div style={{ height: 5, borderRadius: 3, background: 'rgba(120,120,150,.25)', marginTop: 5, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (cur / d.goal) * 100)}%`, background: claimed ? '#1f9d4d' : '#6a4df5' }} />
+              </div>
+            </div>
+            <button className="rbtn" disabled={!done || claimed} onClick={() => claim(d.id)}>{claimed ? 'Claimed ✓' : done ? 'Claim' : '…'}</button>
+          </div>
+        );
+      })}
+      <div className="empty-note">Keep your streak alive — quests refresh every day.</div>
+    </>
   );
 }
 
