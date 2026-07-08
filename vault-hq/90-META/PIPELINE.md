@@ -1,3 +1,18 @@
+---
+title: PIPELINE
+product: HQ
+type: spec
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-08
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [rail, meta, data-contract]
+---
+
 # PIPELINE — from data dump to one truth, shown in two places
 
 > How raw material you hand me becomes a single source of truth that renders identically in

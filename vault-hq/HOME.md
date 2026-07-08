@@ -1,3 +1,18 @@
+---
+title: HOME
+product: HQ
+type: note
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-08
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [home, moc, index]
+---
+
 # 🧠 HOME — Map of Content
 
 The entry point to my second brain. Everything links from here.
@@ -9,8 +24,8 @@ The entry point to my second brain. Everything links from here.
 - [[TAXONOMY]] — controlled vocabulary · [[CONVENTIONS]] — naming + links
 
 ## Maps of Content (the mind-map spine)
-- [[00-CORE/_MOC|Core]] · [[10-PROJECTS/_MOC|Projects]] · [[20-SYSTEM/_MOC|System]]
-- [[30-DATA/_MOC|Data]] · [[40-ROADMAP/_MOC|Roadmap]] · [[50-PROFESSIONAL/_MOC|Professional]]
+- [[core-moc|Core]] · [[projects-moc|Projects]] · [[system-moc|System]]
+- [[data-moc|Data]] · [[roadmap-moc|Roadmap]] · [[professional-moc|Professional]]
 
 ## Start here
 - [[persona-core]] — who I am and how I decide (the most important file)

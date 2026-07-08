@@ -1,3 +1,18 @@
+---
+title: TAXONOMY
+product: HQ
+type: spec
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-08
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [rail, meta, vocabulary]
+---
+
 # Taxonomy — the controlled vocabulary
 
 > The words the whole vault agrees on — and the words the **HQ Vault app** already uses

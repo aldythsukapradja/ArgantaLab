@@ -1,5 +1,5 @@
 ---
-title: Session Harvest — 2026-07-07 (Fable)
+title: 2026-07-07 Fable Session
 product: HQ
 type: research
 class: reference
@@ -38,7 +38,7 @@ related:
 - This vault, filled: persona-core (5 open questions flagged), trackers, sensor plan updated
 
 ## Open (top of the stack)
-- Repo scan + actual wiring (blocked on repo mount) → [[_INBOX/followup]]
+- Repo scan + actual wiring (blocked on repo mount) → see `90-META/_provenance/followup`
 - Seed-graph-vs-production confirmation — blocks trusting any badge
 - 2%-vs-4% decision · persona-core review · skills install
 

@@ -26,7 +26,7 @@ related:
 > **Sourcing honesty (July 7, 2026):** mined from the curated handoff docs, the live Circle HQ graph,
 > and direct observation of the July 7 working session. Raw Claude Code session history and past vault
 > content were NOT reachable — so patterns here are what I've *written down and encoded*, which may
-> lag what I actually do. Re-mine when history is addressable (see [[_INBOX/followup]]).
+> lag what I actually do. Re-mine when history is addressable (see `90-META/_provenance/followup`).
 
 ## Who I am
 - Aldyth Sukapradja, 37. Reservoir Management & Digital Transformation Lead at North Oil

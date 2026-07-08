@@ -40,7 +40,7 @@ related:
 ## 🌙 Evening — Harvest (10 min)
 - Apply [[skills-index#context-compaction]] to myself.
 - What got decided today? What's still open?
-- Distillation goes to [[10-PROJECTS]] — never raw, never straight to a shipped/wiki state.
+- Distillation goes to [[projects-moc|10-PROJECTS]] — never raw, never straight to a shipped/wiki state.
 - This is what keeps [[persona-core]] fed with real judgment instead of going stale.
 
 ## 📅 Weekly — Verify (30 min)

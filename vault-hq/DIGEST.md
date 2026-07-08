@@ -1,3 +1,18 @@
+---
+title: DIGEST
+product: HQ
+type: spec
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-08
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [rail, meta, operating-manual]
+---
+
 # DIGEST — how raw input becomes organized knowledge
 
 > The operating manual for this vault. Human-readable and AI-readable.

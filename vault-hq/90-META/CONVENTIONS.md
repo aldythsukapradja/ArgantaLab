@@ -1,3 +1,18 @@
+---
+title: CONVENTIONS
+product: HQ
+type: spec
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-08
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [rail, meta, operating-manual]
+---
+
 # Conventions — naming, links, placement
 
 > Small rules that keep the vault portable and the graph view meaningful.

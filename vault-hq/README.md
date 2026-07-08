@@ -1,3 +1,18 @@
+---
+title: README
+product: HQ
+type: note
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-08
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [rail, meta, operating-manual]
+---
+
 # Vault HQ
 
 This folder **is** my second brain. One self-contained unit that plays three roles at once:
