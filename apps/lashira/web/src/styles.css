@@ -262,11 +262,11 @@ body {
   gap: 0; padding: 0; background: transparent; color: inherit; font: inherit; flex-wrap: nowrap;
 }
 .hud-gear {
-  pointer-events: auto; width: 44px; height: 44px; border-radius: 50%;
-  background: var(--glass-bg-thick); color: #2a3346;
-  backdrop-filter: var(--glass-thin); -webkit-backdrop-filter: var(--glass-thin);
-  border: none; box-shadow: var(--glass-rim), var(--glass-shadow);
-  font-size: 19px; line-height: 1; cursor: pointer;
+  pointer-events: auto; width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--glass-bg); color: #2a3346;
+  backdrop-filter: var(--glass-regular); -webkit-backdrop-filter: var(--glass-regular);
+  border: 1px solid rgba(255,255,255,.5); box-shadow: var(--glass-rim), var(--glass-shadow);
+  font-size: 15px; line-height: 1; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: transform 0.18s var(--spring), box-shadow 0.15s ease;
 }
@@ -454,18 +454,19 @@ body {
   border: 1px solid #6fa8ff44; box-shadow: 0 4px 12px -5px #0009;
 }
 .res-strip { display: inline-flex; align-items: center; gap: 6px; }
+/* frosted-glass wallet pills — same design language as the left unit-frame card */
 .res {
-  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px;
-  font-size: 12.5px; font-weight: 800; color: #fff; white-space: nowrap; cursor: pointer;
-  background: rgba(20,23,38,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--res-edge, #ffffff2e); box-shadow: 0 4px 12px -5px #0009, inset 0 1px 0 #ffffff1a;
+  display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 800; color: #263048; white-space: nowrap; cursor: pointer;
+  background: var(--glass-bg); backdrop-filter: var(--glass-regular); -webkit-backdrop-filter: var(--glass-regular);
+  border: 1px solid var(--res-edge, rgba(255,255,255,.5)); box-shadow: var(--glass-rim), var(--glass-shadow);
 }
 .res:active { transform: scale(.95); }
-.res-wood { --res-edge:#b98b5566; color:#e7c79a; }
-.res-stone { --res-edge:#9aa4b066; color:#d7dee7; }
-.res-bloom { --res-edge:#f07bb066; color:#ffc7e2; }
-.res-diamond { --res-edge:#7fd0ff66; color:#bfe9ff; }
-@media (max-width: 560px) { .res, .xp-readout { font-size: 11px; padding: 3px 8px; } .topbar-right { gap: 5px; } }
+.res-wood { --res-edge:#c79a6aaa; }
+.res-stone { --res-edge:#9aa4b0aa; }
+.res-bloom { --res-edge:#f07bb0aa; }
+.res-diamond { --res-edge:#6cc3f0aa; }
+@media (max-width: 560px) { .res { font-size: 11px; padding: 0 9px; height: 28px; } .topbar-right { gap: 5px; } }
 
 /* ================= unit-frame + HP/MP bars — copied verbatim from Kingdom
    Heroes' "premium arena HUD (frosted white-grey glass)" block ================= */
@@ -479,7 +480,12 @@ body {
 }
 .unit-rank { width: 56px; display: flex; flex-direction: column; align-items: center; gap: 2px; filter: drop-shadow(0 3px 7px #0007); }
 .unit-rank svg { width: 34px; height: 34px; }
-.rank-name { max-width: 56px; font-size: 8px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.rank-name {
+  max-width: 60px; font-size: 8px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+  color: #fff; padding: 1.5px 8px; border-radius: 999px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.45); box-shadow: 0 2px 6px -2px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.35);
+}
 .unit-main { min-width: 0; }
 .unit-name { display: flex; justify-content: space-between; gap: 6px; align-items: center; min-width: 0; }
 .uname { color: #141a28; font-size: 13px; font-weight: 800; min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

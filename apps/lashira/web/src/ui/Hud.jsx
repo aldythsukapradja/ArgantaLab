@@ -89,7 +89,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
         <div className="unit-frame">
           <div className="unit-rank" title={`ArgantaLab rank: ${rank.name}`}>
             <TierIcon color={rank.color} glyph={rank.glyph} size={38} />
-            <span className="rank-name" style={{ color: rank.color }}>{rank.name}</span>
+            <span className="rank-name" style={{ background: rank.color, borderColor: rank.color }}>{rank.name}</span>
           </div>
           <div className="unit-main">
             <div className="unit-name">
