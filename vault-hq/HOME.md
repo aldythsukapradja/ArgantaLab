@@ -26,6 +26,7 @@ The entry point to my second brain. Everything links from here.
 ## Maps of Content (the mind-map spine)
 - [[core-moc|Core]] · [[projects-moc|Projects]] · [[system-moc|System]]
 - [[data-moc|Data]] · [[roadmap-moc|Roadmap]] · [[professional-moc|Professional]]
+- [[decisions-moc|Decisions]] · [[prompts-moc|Prompts]]
 
 ## Start here
 - [[persona-core]] — who I am and how I decide (the most important file)

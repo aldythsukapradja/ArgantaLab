@@ -20,5 +20,6 @@ related:
 The lighter lane — story and positioning, not throughput.
 
 - [[career-thread]] — paper, positioning, narrative; how the build compounds
+- [[investor-narrative]] — the capital story / fundraise arc
 
 Parent: [[HOME]]

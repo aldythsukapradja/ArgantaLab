@@ -117,7 +117,8 @@ When I harvest a capture, it moves out of `_INBOX/` and its content lands here:
 | measurement, graph, sensors, coverage | `30-DATA/` |
 | initiative status / what's being built | `40-ROADMAP/` |
 | career, paper, positioning | `50-PROFESSIONAL/` |
-| a decision | a decision note (link it from the relevant area) |
+| a decision | `70-DECISIONS/` (one note per bet; the app's Decisions view renders the ledger) |
+| a reusable prompt | `80-PROMPTS/` (the prompt library) |
 | a visual/design direction | a fable-brief note (text direction, in `10-PROJECTS/` or `40-ROADMAP/`) |
 
 Raw specs and build artifacts do **not** enter the distilled vault. Distill them into a note

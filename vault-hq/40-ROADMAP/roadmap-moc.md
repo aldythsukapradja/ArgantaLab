@@ -21,5 +21,7 @@ Live initiative state — meta-work, kept separate from product ontology.
 
 - [[roadmap-tracker]] — live status of the Fable-class initiatives
 - [[fable-initiatives]] — the Fable-class builds, detailed
+- [[product-roadmap]] — rolling four-quarter product view (every quarter strengthens the loop)
+- [[family-pilot-plan]] — the 8-week, 5-household pilot + week gates
 
 Parent: [[HOME]]

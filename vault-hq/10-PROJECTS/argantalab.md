@@ -42,6 +42,22 @@ related:
 - Open handoff tech→ops: difficulty_mismatch — content needs a pass.
 - Wiring plan exists: PLAN-instrumentation-wiring.md (repo scan is the blocker).
 
+## Learning-engine pillar — product strategy
+> Merged from the seed pillar note. Strategic/product view; the sections above are the live operational state.
+
+The kids' pillar, inspired by the founder's son: drills, quests, ranks and worlds that make practice feel like play. Chosen as the dedicated learning engine in [[decision-argantalabs-as-learning-engine|Decision — ArgantaLabs as Learning Engine]].
+
+### Engine, not app
+ArgantaLabs is an **engine** that other pillars call:
+- [[kinetikcircle|KinetikCircle]] surfaces "today's quest" inside the family plan
+- [[lashirabloom|LashiraBloom]] converts learning XP into world progress
+- Rewards settle in the shared [[argons-economy|Argons Economy]]
+
+### Design laws
+1. A daily session must fit in 12 minutes.
+2. Rank seasons are marathons, not sprints — capped daily gain, rising curve.
+3. Every drill maps to a curriculum node a parent can inspect.
+
 ## Links
 - Measured by: [[sensor-plan]] · [[coverage-tracker]]
 - Design: [[skills-index#arganta-design-system]]

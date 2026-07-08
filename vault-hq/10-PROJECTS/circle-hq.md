@@ -47,6 +47,22 @@ related:
   the production endpoint before trusting badges as measured (RECON §9.1). #known (observed)
 - Graph write-path (verdict resolution, provenance updates from events) doesn't exist yet — P2.
 
+## Founder-OS pillar — product strategy
+> Merged from the seed pillar note. Strategic/product view; the sections above are the live operational state.
+
+HQ is the fourth pillar of Arganta: the cockpit **above** the products. Where [[kinetikcircle|KinetikCircle]] serves the household, [[argantalab|ArgantaLabs]] serves the kids, and [[lashirabloom|LashiraBloom]] binds the family into one world, HQ serves exactly one user — the founder.
+
+### What HQ must answer every morning
+1. Is the family flywheel spinning? → [[product-loop|Product Loop]]
+2. What did the pilot families do yesterday? → [[family-pilot-plan|Family Pilot Plan]]
+3. Is the economy balanced? → [[argons-economy|Argons Economy]]
+4. What am I telling investors this month? → [[investor-narrative|Investor Narrative]]
+
+### Operating principle
+> One person, four products, zero headcount. Every surface in HQ exists to replace a meeting that never happened.
+
+The Vault itself is part of HQ: decisions live in [[founder-decisions|Founder Decisions]], reusable AI instructions live in [[fable-build-prompts|Fable Build Prompts]], and the forward plan lives in [[product-roadmap|Product Roadmap]].
+
 ## Links
 - Consumes: [[persona-core]] · [[skills-index]] · [[mcp-connectors]]
 - Tracked in: [[roadmap-tracker]]
