@@ -768,3 +768,29 @@ body {
 .skin-orbs .so.sk { width: 30px; height: 30px; background: var(--skill-face); border: 1.5px solid var(--skill-edge);
   box-shadow: 0 2px 7px -2px #0008, 0 0 9px -3px var(--skill-glow), inset 0 1px 4px #ffffff4d, inset 0 -4px 8px #00000059; }
 .skin-orbs .so svg { filter: drop-shadow(0 1px 2px #0009); }
+
+/* shop quantity picker */
+.qty-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(8,11,20,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: backdrop-fade .18s ease; }
+.qty-dialog { width: min(320px, 90vw); background: var(--card, #fff); border-radius: 20px; padding: 16px;
+  box-shadow: 0 22px 54px -14px rgba(10,14,26,.55); color: var(--ink, #1f2340);
+  animation: settings-pop .3s var(--spring, cubic-bezier(.34,1.4,.5,1)); }
+.qty-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.qty-ico { font-size: 26px; }
+.qty-head b { font-size: 15px; font-weight: 800; }
+.qty-unit { margin-left: auto; font-size: 12px; color: var(--muted, #6b6f8c); }
+.qty-stepper { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.qty-stepper button { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line, #e7e8f2);
+  background: var(--soft, #f0f1fa); font-size: 22px; font-weight: 800; cursor: pointer; color: var(--ink); }
+.qty-stepper button:active { transform: scale(.94); }
+.qty-stepper input { width: 84px; height: 42px; text-align: center; font-size: 20px; font-weight: 800;
+  border: 1px solid var(--line, #e7e8f2); border-radius: 12px; background: #fff; color: var(--ink); }
+.qty-quick { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
+.qty-quick button { flex: 1; padding: 8px 0; border-radius: 10px; border: 1px solid var(--line, #e7e8f2);
+  background: #fff; font-weight: 800; font-size: 13px; cursor: pointer; color: var(--muted, #6b6f8c); }
+.qty-quick button.on { background: var(--purple, #8b5cf6); color: #fff; border-color: transparent; }
+.qty-quick button:disabled { opacity: .4; cursor: default; }
+.qty-total { text-align: center; font-size: 13px; color: var(--muted, #6b6f8c); margin-bottom: 12px; }
+.qty-total b { font-size: 18px; color: var(--ink); }
+.qty-actions { display: flex; gap: 8px; }
+.qty-actions .rbtn { flex: 1; }

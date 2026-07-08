@@ -10,6 +10,7 @@ import { CROPS } from '../data/crops.js';
 import { SPECIES } from '../data/livestock.js';
 import { MAT_ICON } from '../game/farm-mechanics.js';
 import { weaponOf, armorOf } from '@arganta/combat';
+import { QtyDialog } from './QtyDialog.jsx';
 
 // cost object → "🌸500 · 🪵20 · 🪨15 · 🟨5"
 const costLine = (cost) => Object.entries(cost || {}).map(([k, v]) => `${MAT_ICON[k] || k}${v}`).join(' ');
@@ -82,6 +83,8 @@ function ShopPanel({ id, snap, game, mech, mechGame, onClose }) {
 function SeedShop({ snap, game, onClose }) {
   const op = cur(snap) === Infinity;
   const money = op ? Infinity : Number(cur(snap));
+  const [buying, setBuying] = useState(null); // the crop whose qty dialog is open
+  const maxQty = buying ? (op ? 999 : Math.max(0, Math.floor(money / buying.seedCost))) : 0;
   return (
     <>
       <Head title="🌱 Sprout — Seed Shop" sub={`You have ${op ? '∞' : fmt(money)} 🌸`} onClose={onClose} />
@@ -94,10 +97,19 @@ function SeedShop({ snap, game, onClose }) {
               <div className="name">{c.name} seed</div>
               <div className="meta">Owned {fmt(snap.seeds?.[c.id] || 0)} · sells for 🌸{c.sell}</div>
             </div>
-            <button className="rbtn" disabled={!canAfford} onClick={() => game.buySeed(c.id, 1)}>Buy 🌸{c.seedCost}</button>
+            <button className="rbtn" disabled={!canAfford} onClick={() => setBuying(c)}>Buy 🌸{c.seedCost}</button>
           </div>
         );
       })}
+      {buying && (
+        <QtyDialog
+          item={{ name: buying.name + ' seed', emoji: buying.emoji }}
+          unitCost={buying.seedCost}
+          maxQty={maxQty}
+          onBuy={(n) => game.buySeed(buying.id, n)}
+          onClose={() => setBuying(null)}
+        />
+      )}
     </>
   );
 }

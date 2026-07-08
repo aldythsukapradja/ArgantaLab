@@ -1,8 +1,10 @@
 // Slide-up panels: Shop, Barn, Kin helpers, Home. Data-driven from the catalogs.
+import { useState } from 'react';
 import { CROPS } from '../data/crops.js';
 import { SPECIES, animalGoodReady, animalGoodFrac } from '../data/livestock.js';
 import { KIN_TASKS } from '../data/kins.js';
 import { QUEST_DEFS } from '../game/farm-logic.js';
+import { QtyDialog } from './QtyDialog.jsx';
 
 export function Panels({ panel, snap, game, mech, onClose }) {
   if (!panel) return null;
@@ -102,6 +104,8 @@ function ProducePreview({ rows }) {
 function Shop({ snap, game, onClose }) {
   const op = snap.bloom === Infinity;
   const gold = op ? Infinity : Number(snap.bloom || 0);
+  const [buying, setBuying] = useState(null);
+  const maxQty = buying ? (op ? 999 : Math.max(0, Math.floor(gold / buying.seedCost))) : 0;
   const rows = produceRows(snap);
   const produceCount = rows.reduce((a, b) => a + b.count, 0);
   const total = produceTotal(rows);
@@ -122,13 +126,22 @@ function Shop({ snap, game, onClose }) {
             <button
               className="rbtn"
               disabled={!canAfford}
-              onClick={() => game.buySeed(c.id, 1)}
+              onClick={() => setBuying(c)}
             >
               Buy 🌸{c.seedCost}
             </button>
           </div>
         );
       })}
+      {buying && (
+        <QtyDialog
+          item={{ name: buying.name + ' seed', emoji: buying.emoji }}
+          unitCost={buying.seedCost}
+          maxQty={maxQty}
+          onBuy={(n) => game.buySeed(buying.id, n)}
+          onClose={() => setBuying(null)}
+        />
+      )}
       <div className="row" style={{ marginTop: 12, borderStyle: 'dashed' }}>
         <div className="ico">📦</div>
         <div className="grow">
