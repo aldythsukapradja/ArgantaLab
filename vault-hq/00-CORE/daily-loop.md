@@ -1,4 +1,25 @@
+---
+title: Daily Loop
+product: HQ
+type: note
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [self, decisions]
+tags: [habit, loop, ritual]
+related:
+  - "[[persona-core]]"
+  - "[[effort-scorer]]"
+  - "[[coverage-tracker]]"
+---
+
 # Daily Loop
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > The habit loop that makes the system serve me. Not a checklist — a rhythm. The loop IS the
 > twin's training data: every harvest feeds [[persona-core]], every route confirms [[effort-scorer]].

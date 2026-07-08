@@ -1,4 +1,25 @@
+---
+title: Persona Core
+product: HQ
+type: strategy
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [self, decisions, ai-context]
+tags: [persona, rail, north-star]
+related:
+  - "[[circle-hq]]"
+  - "[[effort-scorer]]"
+  - "[[daily-loop]]"
+---
+
 # Persona Core
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07 — the single most-referenced operational note.
 
 > The single most important file in this vault. Every agent references this to reason like me.
 > Each claim is tagged with its source. `#known` = observed in my work. `#inferred` = a guess to verify with me.

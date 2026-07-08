@@ -1,4 +1,26 @@
+---
+title: Circle HQ
+product: HQ
+type: strategy
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [arganta, ai-context]
+tags: [product, agent-layer, founder-os, pillar]
+related:
+  - "[[persona-core]]"
+  - "[[skills-index]]"
+  - "[[mcp-connectors]]"
+  - "[[roadmap-tracker]]"
+---
+
 # Circle HQ
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > Founder OS — the [[mental-model|Agent layer]] itself. My "super agent."
 

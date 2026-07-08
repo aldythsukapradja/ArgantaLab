@@ -1,4 +1,25 @@
+---
+title: Mental Model
+product: HQ
+type: strategy
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [ai-context, decisions]
+tags: [rails-vs-reasoner, portable, north-star]
+related:
+  - "[[persona-core]]"
+  - "[[daily-loop]]"
+  - "[[model-ladder]]"
+---
+
 # Mental Model
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07 — the portable core; read this first if nothing else.
 
 > The portable core. If a fresh LLM reads only one file to understand my system, it's this one.
 

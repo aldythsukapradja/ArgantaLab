@@ -1,4 +1,24 @@
+---
+title: KinetikCircle
+product: KinetikCircle
+type: strategy
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [arganta, family]
+tags: [product, family-os, pillar]
+related:
+  - "[[sensor-plan]]"
+  - "[[circle-hq]]"
+---
+
 # KinetikCircle
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > Family coordination OS. Part of the [[mental-model|UI/UX layer]].
 

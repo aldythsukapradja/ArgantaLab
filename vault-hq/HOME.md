@@ -5,7 +5,12 @@ The entry point to my second brain. Everything links from here.
 ## Operating manual
 - [[README]] — what this vault is + how to transplant it
 - [[DIGEST]] — how raw input becomes organized knowledge (read this to file things)
+- [[PIPELINE]] — data dump → single source of truth → Obsidian + HQ webapp
 - [[TAXONOMY]] — controlled vocabulary · [[CONVENTIONS]] — naming + links
+
+## Maps of Content (the mind-map spine)
+- [[00-CORE/_MOC|Core]] · [[10-PROJECTS/_MOC|Projects]] · [[20-SYSTEM/_MOC|System]]
+- [[30-DATA/_MOC|Data]] · [[40-ROADMAP/_MOC|Roadmap]] · [[50-PROFESSIONAL/_MOC|Professional]]
 
 ## Start here
 - [[persona-core]] — who I am and how I decide (the most important file)

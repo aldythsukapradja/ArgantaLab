@@ -1,4 +1,25 @@
+---
+title: ArgantaLab
+product: ArgantaLabs
+type: strategy
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [arganta, learning]
+tags: [product, learning-engine, pillar]
+related:
+  - "[[sensor-plan]]"
+  - "[[coverage-tracker]]"
+  - "[[circle-hq]]"
+---
+
 # ArgantaLab
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > Gamified children's learning. Part of the [[mental-model|UI/UX layer]].
 
