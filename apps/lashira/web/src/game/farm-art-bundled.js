@@ -35,6 +35,11 @@ const BUNDLED = {
   'lashira.animal.cow': 'lib/cow.png',
   'lashira.animal.sheep': 'lib/sheep.png',
   'lashira.animal.chicken': 'lib/chicken.png',
+  // Produce "ready to collect" badge icons (game-icons.net, CC BY 3.0 — see
+  // public/farm-art/produce/CREDITS.md). Shown over an animal when its good is ripe.
+  'lashira.produce.milk': 'produce/milk.svg',
+  'lashira.produce.wool': 'produce/wool.svg',
+  'lashira.produce.egg': 'produce/egg.svg',
   'lashira.prop.tree': 'lib/tree_oak.png',
   'lashira.prop.fence': 'lib/fence_straight.png',
   // NOTE: terrain tiles (grass/path) still procedural — the new terrain is a Wang

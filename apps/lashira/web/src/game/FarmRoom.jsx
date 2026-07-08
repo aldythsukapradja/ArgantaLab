@@ -1245,14 +1245,23 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         if (e.species === 'chicken') { bob = moving ? -Math.abs(s) * 7 : -Math.abs(Math.sin(now / 600 + phase)) * 1.5; squash = moving ? Math.abs(s) * 0.6 : 0; }
         else { bob = (moving ? s * 2.5 : Math.sin(now / 700 + phase) * 0.8); squash = moving ? (s * 0.5 + 0.5) * 0.5 : 0; }
         drawAnimalSprite(ctx, e.species, footX, footY + bob, e.facing, frame, g.art, squash);
-        // "good ready" badge — a bobbing produce emoji over the animal
+        // "good ready" badge — the produce LOGO (milk/wool/egg) on a coloured disc,
+        // bobbing over the animal when its good is ripe to collect.
         const li = e.livestockId && logicRef.current?.state?.livestock?.find((x) => x.id === e.livestockId);
         if (li && animalGoodReady(li, now)) {
-          const em = SPECIES[e.species]?.produceEmoji || '✨';
-          const by = footY - (e.species === 'chicken' ? 26 : 44) + Math.sin(now / 260) * 3;
-          ctx.save(); ctx.font = '17px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(footX, by, 12, 0, 7); ctx.fill();
-          ctx.fillText(em, footX, by + 1); ctx.restore();
+          const sp = SPECIES[e.species];
+          const by = footY - (e.species === 'chicken' ? 30 : 52) + Math.sin(now / 260) * 3;
+          const R = 13;
+          const bg = { milk: '#3f8fd0', wool: '#c069a8', egg: '#dd9a2b' }[sp?.produce] || '#555';
+          ctx.save();
+          ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
+          ctx.beginPath(); ctx.arc(footX, by, R, 0, 7); ctx.fillStyle = bg; ctx.fill();
+          ctx.shadowColor = 'transparent';
+          ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+          const icon = g.art['lashira.produce.' + sp?.produce];
+          if (icon && icon.naturalWidth > 0) { const s = R * 1.55; ctx.drawImage(icon, footX - s / 2, by - s / 2, s, s); }
+          else { ctx.font = '15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(sp?.produceEmoji || '✨', footX, by + 1); }
+          ctx.restore();
         }
       }
       else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
