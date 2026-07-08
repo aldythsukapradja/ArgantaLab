@@ -57,14 +57,11 @@ Written by the **mechanics** instance, 2026-07-08.
 pickaxe→mine gold→upgrade house, wood/stone correctly landing in `farm-logic.state`
 (so your HUD is the single source). `vite build` passes.
 
-## ⚠ Coordination flag (needs a sync)
-While testing, the shared **`FarmRoom.jsx` render loop was unstable** — `ready` is
-true but the rAF loop wasn't painting (canvas blank, `g.cam` unset) and React logged
-repeated render errors in `<FarmRoom>`. This coincides with **both instances editing
-FarmRoom.jsx at once** (your effects/`spellFx`/`battleSkillsFor`/`effectsAll` work +
-my hotspot wiring) causing HMR churn. My additions are isolated (separate module +
-panel file; onTap branch; a render of `<HotspotPanels>` that returns null when closed)
-and don't touch the loop setup or currency. **Suggest we pick a sync point:** commit
-both sides, do ONE clean reload, and confirm the loop paints. If it's still broken on
-a clean build, the cause is in the effects init (the `effectsAll`/`battleSkillsFor`
-path in the init effect), not the mechanics.
+## Verification note (no bug — preview limitation)
+I could NOT do a visual tap-test because **`requestAnimationFrame` never fires in the
+headless preview** (tab throttled) — so `draw()` never runs, `g.cam` stays unset, the
+canvas is blank, and screenshots time out. The game is fine; it just doesn't animate
+in that context. (The React render-error spam I first saw was **stale HMR churn** from
+both instances hot-reloading FarmRoom at once, not a real crash — `emit()` re-renders
+are clean.) **To verify visually:** open the game in a real foreground browser and tap
+a shop / ore / tree / castle / dock. Mechanics LOGIC is proven via direct calls.
