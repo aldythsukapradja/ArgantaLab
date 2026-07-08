@@ -34,13 +34,25 @@ function MatBar({ snap, mech }) {
   );
 }
 
-export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, onEnterDungeon }) {
+const CASTLE_SKINS = [
+  ['house', 'Old house'], ['shack', 'Shack'], ['cottage', 'Cottage'], ['farmhouse', 'Farmhouse'],
+  ['storybook', 'Storybook'], ['fairytale', 'Fairytale'], ['royal', 'Royal'], ['whimsical', 'Whimsical'],
+];
+// Thumbnails — mirror farm-art-bundled.js lashira.castleskin.* files.
+const SKIN_FILE = {
+  house: 'house.png', shack: 'lib/house_t1_shack.png', cottage: 'lib/house_t2_cottage.png',
+  farmhouse: 'lib/house_t3_farmhouse.png', storybook: 'lib/castle_opt1_storybook.png',
+  fairytale: 'lib/castle_opt2_fairytale.png', royal: 'lib/castle_opt3_royal.png',
+  whimsical: 'lib/castle_opt4_whimsical.png',
+};
+
+export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, onEnterDungeon, castleSkin, onCastleSkin }) {
   if (!hotspot) return null;
   return (
     <div className="panel-scrim" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         {hotspot.kind === 'shop' && <ShopPanel id={hotspot.id} snap={snap} game={game} mech={mech} mechGame={mechGame} onClose={onClose} />}
-        {hotspot.kind === 'castle' && <CastlePanel snap={snap} mech={mech} mechGame={mechGame} onClose={onClose} />}
+        {hotspot.kind === 'castle' && <CastlePanel snap={snap} mech={mech} mechGame={mechGame} onClose={onClose} castleSkin={castleSkin} onCastleSkin={onCastleSkin} />}
         {hotspot.kind === 'dungeon' && <DungeonPanel snap={snap} onClose={onClose} onEnter={onEnterDungeon} />}
         {hotspot.kind === 'dock' && <FishingPanel mechGame={mechGame} onClose={onClose} />}
       </div>
@@ -128,7 +140,7 @@ function DisplayShop({ title, sub, rows, onClose }) {
   );
 }
 
-function CastlePanel({ snap, mech, mechGame, onClose }) {
+function CastlePanel({ snap, mech, mechGame, onClose, castleSkin, onCastleSkin }) {
   const TIERS = ['Shack', 'Cottage', 'Farmhouse', 'Manor', 'Castle'];
   const tier = mech?.house?.tier || 1;
   const name = TIERS[Math.min(tier - 1, 4)];
@@ -151,6 +163,29 @@ function CastlePanel({ snap, mech, mechGame, onClose }) {
         <div className="ico">🛋</div>
         <div className="grow"><div className="name">Decorate the interior</div><div className="meta">Place furniture inside — coming next</div></div>
       </div>
+      {onCastleSkin && (
+        <div style={{ marginTop: 10 }}>
+          <div className="name" style={{ marginBottom: 6 }}>🎨 Castle skin</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+            {CASTLE_SKINS.map(([id, label]) => {
+              const on = castleSkin === id;
+              return (
+                <button key={id} onClick={() => onCastleSkin(id)} title={label}
+                  style={{
+                    padding: '6px 4px', borderRadius: 8, cursor: 'pointer', font: 'inherit',
+                    border: on ? '2px solid #ffcf4a' : '1px solid rgba(255,255,255,0.18)',
+                    background: on ? 'rgba(255,207,74,0.18)' : 'rgba(255,255,255,0.05)',
+                    color: 'inherit', fontSize: 11, lineHeight: 1.2,
+                  }}>
+                  <img src={new URL('farm-art/' + SKIN_FILE[id], document.baseURI).href} alt={label}
+                    style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', imageRendering: 'pixelated', display: 'block', marginBottom: 3 }} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 }

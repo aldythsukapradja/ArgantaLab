@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, hotspotAt, HOTSPOT_MARKERS, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, inArena, hotspotAt, HOTSPOT_MARKERS, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -199,6 +199,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [hotspot, setHotspot] = useState(null);   // shop/castle/dungeon/dock popup
   const [mechSnap, setMechSnap] = useState(null); // mechanics store snapshot (materials/tools/house)
   const mechRef = useRef(null);
+  const [castleSkin, setCastleSkin] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('lashira_castle_skin')) || 'storybook');
+  useEffect(() => { if (G.current) G.current.castleSkin = castleSkin; try { localStorage.setItem('lashira_castle_skin', castleSkin); } catch {} }, [castleSkin]);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
   // Walk speed multiplier (1x = Kingdom cadence, up to 3x). Persisted per browser.
   const [speed, setSpeed] = useState(() => {
@@ -1271,14 +1273,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.scale(z, z); ctx.translate(-Math.round(camX), -Math.round(camY));
       ctx.drawImage(g.bg, 0, 0);
 
-      // FARM LAYER on top of the basemap — a tilled-plot marker on every empty
-      // farmable tile so you can see where to plant; crops draw on planted ones below.
-      const fplots = logicRef.current.state.plots;
+      // FARM LAYER — draw OUR tilled soil OPAQUELY over the whole field so it fully
+      // covers the basemap's background crops; interactive crops draw on top below.
       for (let ty = FIELD.y0; ty <= FIELD.y1; ty++) for (let tx = FIELD.x0; tx <= FIELD.x1; tx++) {
-        if (fplots[tx + ',' + ty]?.cropId) continue;
-        ctx.fillStyle = 'rgba(74,48,24,0.30)';
-        ctx.fillRect(tx * TILE + 4, ty * TILE + 4, TILE - 8, TILE - 8);
+        const px = tx * TILE, py = ty * TILE;
+        ctx.fillStyle = '#835a34'; ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = '#96683c'; ctx.fillRect(px, py, TILE, 5);
+        ctx.fillStyle = 'rgba(58,38,18,0.45)';
+        for (let yy = py + 9; yy < py + TILE - 4; yy += 10) ctx.fillRect(px + 2, yy, TILE - 4, 3);
       }
+
+      // CASTLE — drawn per-frame from the chosen skin (swappable in the Castle panel).
+      const cskin = g.art['lashira.castleskin.' + (g.castleSkin || 'storybook')];
+      if (cskin && cskin.naturalWidth > 0) ctx.drawImage(cskin, CASTLE.tx * TILE, CASTLE.ty * TILE, CASTLE.w * TILE, CASTLE.h * TILE);
 
       // plots
       const plots = logicRef.current.state.plots;
@@ -1349,6 +1356,20 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (g.spellFx?.length) g.spellFx = g.spellFx.filter((f) => drawEffect(ctx, f, now, TILE));
       // harvest-juice floats (rise + fade)
       if (g.floats?.length) { for (const f of g.floats) drawFloat(ctx, f, now); g.floats = g.floats.filter((f) => now - f.start < f.ttl); }
+
+      // COLLISION BOUNDARY — thin red lines on the edge between walkable and blocked,
+      // so you can see exactly where you can't walk (toggle g.showCollision).
+      if (g.showCollision !== false) {
+        ctx.strokeStyle = 'rgba(235,45,45,0.65)'; ctx.lineWidth = 1.5; ctx.beginPath();
+        for (const key of g.blocked) {
+          const [bx, by] = key.split(',').map(Number); const px = bx * TILE, py = by * TILE;
+          if (!g.blocked.has(bx + ',' + (by - 1))) { ctx.moveTo(px, py); ctx.lineTo(px + TILE, py); }
+          if (!g.blocked.has(bx + ',' + (by + 1))) { ctx.moveTo(px, py + TILE); ctx.lineTo(px + TILE, py + TILE); }
+          if (!g.blocked.has((bx - 1) + ',' + by)) { ctx.moveTo(px, py); ctx.lineTo(px, py + TILE); }
+          if (!g.blocked.has((bx + 1) + ',' + by)) { ctx.moveTo(px + TILE, py); ctx.lineTo(px + TILE, py + TILE); }
+        }
+        ctx.stroke();
+      }
 
       // HOTSPOT STATUS DOTS — green = wired + clickable, red = placeholder not built.
       // Toggle with g.showHotspots (default on). Flip a hotspot's `ported` → dot goes green.
@@ -1541,7 +1562,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
             <HotspotPanels hotspot={hotspot} snap={snap} game={logicRef.current} mech={mechSnap}
-              mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon} />
+              mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon}
+              castleSkin={castleSkin} onCastleSkin={setCastleSkin} />
           </>
         )}
         {daySplash && (

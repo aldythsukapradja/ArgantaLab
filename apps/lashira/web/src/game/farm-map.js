@@ -11,7 +11,7 @@ export const W = 60, H = 48;                  // one overworld: all zones + cast
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
 
 // Crop field — the Farm (NW), biggest zone. Pre-tilled soil, open (no fence).
-export const FIELD = { x0: 4, y0: 5, x1: 26, y1: 16 };  // snapped to the basemap's tilled soil
+export const FIELD = { x0: 6, y0: 6, x1: 26, y1: 16 };  // snapped to the basemap's fenced tilled plot
 
 // Named zones (terrain painting + prop placement).
 export const ZONES = {
@@ -326,7 +326,7 @@ export function buildFarmMap(art = {}) {
       ctx.drawImage(canvas, wx - R, wy - R - 78, R * 2, R * 2, wx - R, wy - R, R * 2, R * 2);
     }
     // clickable component sprites the image lacks (castle + shops), drawn ON TOP
-    for (const p of ONTOP) { drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE); if (p.solid) blockRect(p.tx, p.ty, p.w, p.h); }
+    for (const p of ONTOP) { if (!p.noDraw) drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE); if (p.solid) blockRect(p.tx, p.ty, p.w, p.h); }
   } else if (typeof console !== 'undefined') {
     console.warn('[farm] basemap.png NOT loaded — showing the ugly procedural fallback. Check farm-art-bundled.js "lashira.basemap".');
   }
@@ -343,11 +343,14 @@ const BASEMAP_DOTS = [
   [608, 914], [802, 915], [226, 952],
 ];
 
-// Clickable component sprites the reference image LACKS (no castle, no shops) —
-// drawn ON TOP of the basemap so they're visible + tappable. Positions match the
-// castle + shop HOTSPOTS. solid = blocks movement.
+// Castle footprint, centered on the plaza crossroads. Collision-only here; the
+// SPRITE is drawn per-frame in FarmRoom so its skin is swappable (Castle panel).
+export const CASTLE = { tx: 27, ty: 20, w: 6, h: 7 };
+
+// Clickable component sprites the reference image LACKS (shops) — drawn ON TOP of the
+// basemap so they're visible + tappable. Positions match the shop HOTSPOTS. solid = blocks.
 const ONTOP = [
-  { key: 'lashira.building.house', tx: 26, ty: 17, w: 6, h: 7, solid: true },   // castle at plaza center
+  { key: 'lashira.building.house', tx: CASTLE.tx, ty: CASTLE.ty, w: CASTLE.w, h: CASTLE.h, solid: true, noDraw: true }, // castle collision only
   { key: 'lashira.lib.shop_seed', tx: 9, ty: 16, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_general', tx: 13, ty: 19, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_blacksmith', tx: 18, ty: 22, w: 2, h: 2, solid: true },

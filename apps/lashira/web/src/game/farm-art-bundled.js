@@ -18,6 +18,15 @@ const BUNDLED = {
   // procedural tiles. Dynamic actors + clickable component sprites render on top.
   'lashira.basemap': 'basemap.png',
   'lashira.building.house': 'lib/castle_opt1_storybook.png',
+  // CASTLE SKINS — pickable in the Castle panel. Old house + tiers → castle options.
+  'lashira.castleskin.house': 'house.png',
+  'lashira.castleskin.shack': 'lib/house_t1_shack.png',
+  'lashira.castleskin.cottage': 'lib/house_t2_cottage.png',
+  'lashira.castleskin.farmhouse': 'lib/house_t3_farmhouse.png',
+  'lashira.castleskin.storybook': 'lib/castle_opt1_storybook.png',
+  'lashira.castleskin.fairytale': 'lib/castle_opt2_fairytale.png',
+  'lashira.castleskin.royal': 'lib/castle_opt3_royal.png',
+  'lashira.castleskin.whimsical': 'lib/castle_opt4_whimsical.png',
   'lashira.building.barn': 'lib/barn.png',
   'lashira.building.coop': 'lib/coop.png',
   'lashira.building.shop': 'lib/produce_stall.png',
