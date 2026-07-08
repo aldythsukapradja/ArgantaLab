@@ -296,6 +296,16 @@ body {
 .navbtn:hover { background: rgba(0,0,0,.06); }
 .navbtn:active { transform: scale(0.94); }
 @media (max-width: 380px) { .navbtn { font-size: 11px; padding: 8px 4px; } }
+/* circle name + live players — one row of FIXED-width pills that ellipsis-truncate */
+.live-row { align-self: flex-start; max-width: 100%; pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.live-pill {
+  display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: rgba(255,255,255,.82); color: #263042; border: 1px solid rgba(0,0,0,.06); box-shadow: 0 3px 10px -4px #0006;
+}
+.live-pill.circle { max-width: 150px; color: #185fa5; }
+.live-pill.count  { color: #178a4f; flex: 0 0 auto; }
+.live-pill.name   { max-width: 96px; color: #5a4bb3; }
 .farm-online {
   align-self: flex-start; max-width: 100%; pointer-events: auto;
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px;
@@ -461,18 +471,22 @@ body {
    Heroes' "premium arena HUD (frosted white-grey glass)" block ================= */
 .unit-frame {
   width: 100%; /* .left-stack owns the shared width so the pill row aligns to it */
-  display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center;
+  display: grid; grid-template-columns: 56px 1fr; gap: 8px; align-items: center;
   padding: 9px 11px; border-radius: 18px; corner-shape: superellipse(1.8);
   color: var(--text-strong); background: var(--glass-bg);
   backdrop-filter: var(--glass-regular); -webkit-backdrop-filter: var(--glass-regular);
   border: none; box-shadow: var(--glass-rim), var(--glass-shadow);
 }
-.unit-rank { width: 38px; height: 38px; display: grid; place-items: center; filter: drop-shadow(0 3px 7px #0007); }
-.unit-rank svg { width: 36px; height: 36px; }
+.unit-rank { width: 56px; display: flex; flex-direction: column; align-items: center; gap: 2px; filter: drop-shadow(0 3px 7px #0007); }
+.unit-rank svg { width: 34px; height: 34px; }
+.rank-name { max-width: 56px; font-size: 8px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .unit-main { min-width: 0; }
-.unit-name { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
-.unit-name b { color: #141a28; font-size: 13px; }
-.unit-name span { color: #66708a; font-size: 10px; }
+.unit-name { display: flex; justify-content: space-between; gap: 6px; align-items: center; min-width: 0; }
+.uname { color: #141a28; font-size: 13px; font-weight: 800; min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.utitle { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.path-chip, .lv-chip { font-style: normal; font-size: 9.5px; font-weight: 800; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.path-chip { color: #3a2f6b; background: #ece7ff; border: 1px solid #cfc4f7; }
+.lv-chip { color: #7a5b12; background: #fbeecb; border: 1px solid #ecd79a; }
 .unit-exp-row { display: flex; align-items: center; gap: 6px; margin: 5px 0; }
 .unit-exp { flex: 1; height: 8px; border-radius: 4px; background: rgba(0,0,0,.18); overflow: hidden; box-shadow: inset 0 1px 2px #0006; }
 .unit-exp span { display: block; height: 100%; background: linear-gradient(90deg, #6f8bf6, #e879b9); }

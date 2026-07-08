@@ -16,13 +16,32 @@ export const LEVEL_CAP = 99;
 //   L99 HP:  Warrior 10,018 · Rogue 7,548 · Poet 5,573 · Mage 4,382
 //   L99 MP:  Mage 8,013 · Poet 5,940 · Rogue 3,573 · Warrior 1,990
 //   L99 HP:MP ratio: Warrior 5.0:1 · Rogue 2.1:1 · Poet ~1:1 · Mage 0.55:1
+// Ids stay warrior/rogue/poet/mage (stable keys); the displayed NAMES are the
+// renamed classes (Guardian/Shadow/Mystic/Arcanist).
 export const PATHS = {
-  warrior: { id: 'warrior', name: 'Warrior', icon: '⚔️', hp: 120, hpPer: 101, mp: 30, mpPer: 20 },
-  rogue:   { id: 'rogue',   name: 'Rogue',   icon: '🗡️', hp: 100, hpPer: 76,  mp: 45, mpPer: 36 },
-  poet:    { id: 'poet',    name: 'Poet',    icon: '✒️', hp: 85,  hpPer: 56,  mp: 60, mpPer: 60 },
-  mage:    { id: 'mage',    name: 'Mage',    icon: '🔮', hp: 70,  hpPer: 44,  mp: 75, mpPer: 81 },
+  warrior: { id: 'warrior', name: 'Guardian', icon: '⚔️', hp: 120, hpPer: 101, mp: 30, mpPer: 20 },
+  rogue:   { id: 'rogue',   name: 'Shadow',   icon: '🗡️', hp: 100, hpPer: 76,  mp: 45, mpPer: 36 },
+  poet:    { id: 'poet',    name: 'Mystic',   icon: '✨', hp: 85,  hpPer: 56,  mp: 60, mpPer: 60 },
+  mage:    { id: 'mage',    name: 'Arcanist', icon: '🔮', hp: 70,  hpPer: 44,  mp: 75, mpPer: 81 },
 };
 export function pathOf(id) { return PATHS[id] || PATHS.warrior; }
+
+// Per-path level TITLES (shown in the card in place of the class word). Bands at
+// levels 1/15/30/50/70/90; avoids "Sage" (collides with the ArgantaLab rank).
+const TITLE_BANDS = [1, 15, 30, 50, 70, 90];
+const TITLES = {
+  warrior: ['Recruit', 'Footman', 'Warden', 'Knight', 'Bulwark', 'Vanguard'],
+  rogue:   ['Cutpurse', 'Prowler', 'Stalker', 'Nightblade', 'Reaper', 'Phantom'],
+  poet:    ['Acolyte', 'Seer', 'Oracle', 'Diviner', 'Augur', 'Ascendant'],
+  mage:    ['Apprentice', 'Adept', 'Conjurer', 'Warlock', 'Archmage', 'Grandmagus'],
+};
+export function pathTitle(pathId, level) {
+  const list = TITLES[pathId] || TITLES.warrior;
+  const L = Math.max(1, Number(level) || 1);
+  let idx = 0;
+  for (let i = 0; i < TITLE_BANDS.length; i++) if (L >= TITLE_BANDS[i]) idx = i;
+  return list[idx];
+}
 
 const clampLevel = (L) => Math.max(1, Math.min(LEVEL_CAP, Math.floor(Number(L) || 1)));
 

@@ -87,13 +87,14 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           MP bar shows the real farm energy/stamina — one meter, not two. */}
       <div className="left-stack">
         <div className="unit-frame">
-          <div className="unit-rank" title={rank.name}>
+          <div className="unit-rank" title={`ArgantaLab rank: ${rank.name}`}>
             <TierIcon color={rank.color} glyph={rank.glyph} size={38} />
+            <span className="rank-name" style={{ color: rank.color }}>{rank.name}</span>
           </div>
           <div className="unit-main">
             <div className="unit-name">
-              <b>{snap.name}</b>
-              <span>{snap.pathIcon} {snap.pathName || 'Warrior'} · Lv {fmt(snap.level)}</span>
+              <b className="uname" title={snap.name}>{snap.name}</b>
+              <span className="utitle"><em className="path-chip">{snap.pathIcon} {snap.title || snap.pathName || 'Guardian'}</em><em className="lv-chip">Lv {fmt(snap.level)}</em></span>
             </div>
             <div className="unit-exp-row">
               <div className="unit-exp" title={`${snap.xpPct ?? 0}% to next level`}><span style={{ width: `${snap.xpPct ?? 0}%` }} /></div>
@@ -117,9 +118,13 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
           <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
         </div>
-        {presence?.count > 0 && (
-          <div className="farm-online" title={presence.names?.join(', ') || 'Friends in farm'}>
-            <i /> <b>{presence.count}</b> live {presence.names?.[0] ? <span>{presence.names.join(', ')}</span> : null}
+        {(circleName || presence?.count > 0) && (
+          <div className="live-row">
+            {circleName && <span className="live-pill circle" title={circleName}>🔗 {circleName}</span>}
+            {presence?.count > 0 && <span className="live-pill count" title={`${presence.count} in the farm now`}>🟢 {presence.count} live</span>}
+            {(presence?.names || []).slice(0, 4).map((n, i) => (
+              <span className="live-pill name" key={i} title={n}>👤 {n}</span>
+            ))}
           </div>
         )}
       </div>
@@ -206,6 +211,9 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                     ch:{syncDebug.status}{syncDebug.subscribed ? '✓' : '✗'} · ws:{syncDebug.socket} · peers:{syncDebug.peers} · heard:{syncDebug.lastPeerAgoS < 0 ? 'never' : syncDebug.lastPeerAgoS + 's ago'} · s:{syncDebug.session}
                   </code>
                 )}
+              </section>
+              <section className="set-card">
+                <h4>{snap.pathIcon} {snap.pathName || 'Guardian'} · {snap.title} · Lv {fmt(snap.level)} <em className="set-count">{rank.name}</em></h4>
               </section>
               <section className="set-card">
                 <h4>Wallet {snap.operator && <em className="op-badge">⚡ OPERATOR</em>}</h4>

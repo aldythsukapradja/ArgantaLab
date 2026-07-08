@@ -3,7 +3,7 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
-import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, levelWithFloor, levelProgress, xpForLevel } from '@arganta/combat';
+import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTitle, levelWithFloor, levelProgress, xpForLevel } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
@@ -376,6 +376,7 @@ export class FarmLogic {
       day: st.day, season: SEASONS[st.season],
       stamina: operator ? maxMp : Math.min(st.stamina, maxMp), maxStamina: maxMp,
       maxHp, path, pathName: pathOf(path).name, pathIcon: pathOf(path).icon,
+      title: pathTitle(path, level), // level title shown in the card (replaces the class word)
       xpPct: Math.round(levelProgress(st.xp) * 100),
       // EXP readout: how far into THIS level, and how much this level needs.
       xpCur: Math.max(0, (Number(st.xp) || 0) - xpForLevel(level)),
