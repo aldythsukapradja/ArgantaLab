@@ -13,6 +13,10 @@
 // reference; everything below points at lib/. The house slot shows a CASTLE option
 // (swap lib/castle_opt{1..4}_* to preview the others — see docs/lashirabloom).
 const BUNDLED = {
+  // Full hand-quality basemap (1394x1128) — drawn over the whole world in
+  // buildFarmMap so the ground/props all come from one cohesive image. Dynamic
+  // actors (player/animals/crops) + hotspots render on top. See docs/lashirabloom.
+  'lashira.basemap': 'basemap.png',
   'lashira.building.house': 'lib/castle_opt1_storybook.png',
   'lashira.building.barn': 'lib/barn.png',
   'lashira.building.coop': 'lib/coop.png',

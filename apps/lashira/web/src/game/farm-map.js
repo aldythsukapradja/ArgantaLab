@@ -297,6 +297,12 @@ export function buildFarmMap(art = {}) {
     if ((s % 1000) < 45) drawOverride(ctx, art, DECO[(s >>> 8) % DECO.length], x * TILE, y * TILE, TILE, TILE);
   }
 
+  // If the hand-quality basemap image is available, paint it over EVERYTHING — the
+  // procedural terrain/props above become a fallback that only shows if the image is
+  // missing. Collision (blocked) + hotspots are already built and align with the
+  // image's zones (verified against the red-dot map). Dynamic actors draw on top.
+  drawOverride(ctx, art, 'lashira.basemap', 0, 0, WORLD_W, WORLD_H);
+
   return { canvas, blocked };
 }
 
