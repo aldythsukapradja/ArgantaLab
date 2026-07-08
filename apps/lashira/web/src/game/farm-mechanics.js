@@ -1,28 +1,29 @@
-// Mechanics store — MATERIALS, tools, node cooldowns, house tier, fishing catch.
-// DELIBERATELY DECOUPLED from farm-logic (currency) so the parallel economy
-// workspace (gold→bloom) can't collide with mechanics work. Own localStorage key.
-// See docs/lashirabloom/HANDOFF-mechanics-vs-economy.md.
+// Mechanics store — the parts of the resource loop the ECONOMY workspace does NOT
+// own: ore, gem, fish, tool tiers, node cooldowns, house tier. Its own localStorage.
 //
-// Materials are NOT currency: wood/stone/ore/gem/fish. Mining/chopping/fishing
-// produce them; tool + castle upgrades spend them. Anything that spends/earns
-// BLOOM/DIAMOND is left as an // ECONOMY-SEAM for the other workspace.
+// SHARED resources wood + stone + bloom are owned by farm-logic (economy workspace).
+// This store routes wood/stone THROUGH the live FarmLogic via getLogic() — preferring
+// their method (game.gainMaterial/spendMaterial) if present, else incrementing their
+// state field directly and re-emitting so the HUD updates. See
+// docs/lashirabloom/HANDOFF-mechanics-vs-economy.md. Every currency touch is // ECONOMY-SEAM.
 
 export const MAT_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷', fish: '🐟' };
 const RESPAWN_MS = { ore: 90_000, tree: 60_000 };   // kid-fast node cooldowns
 const TOOL_MAX = 3, HOUSE_MAX = 5;
 
 export class FarmMechanics {
-  constructor(id = 'guest') {
+  constructor(id = 'guest', getLogic = () => null) {
     this.key = 'lashira_mech_' + id;
+    this.getLogic = getLogic;
     this.listeners = new Set();
     this.toast = null;
     this.state = this._load();
   }
   _default() {
     return {
-      wood: 0, stone: 0, ore: 0, gem: 0, fish: 0,
+      ore: 0, gem: 0, fish: 0,           // mechanics-only materials (economy tracks wood/stone)
       tools: { pickaxe: 1, axe: 1, rod: 1 },
-      nodes: {},                       // id -> lastGatheredAt (respawn cooldown)
+      nodes: {},                         // id -> lastGatheredAt (respawn cooldown)
       house: { tier: 1, storage: 60 },
     };
   }
@@ -42,63 +43,74 @@ export class FarmMechanics {
   flash(m) { this.toast = m; this.emit(); clearTimeout(this._t); this._t = setTimeout(() => { this.toast = null; this.emit(); }, 1500); }
   _add(k, n) { this.state[k] = (this.state[k] || 0) + n; }
 
-  // --- node cooldowns (timestamp-derived, like crops) ---
+  // ---- SHARED wood/stone via the economy workspace's FarmLogic (// ECONOMY-SEAM) ----
+  sharedAmt(k) { const l = this.getLogic(); return Number(l?.state?.[k] || 0); }
+  _gainShared(k, n) {
+    const l = this.getLogic(); if (!l) return;
+    if (typeof l.gainMaterial === 'function') l.gainMaterial(k, n);          // preferred (once they add it)
+    else { l.state[k] = (Number(l.state[k]) || 0) + n; l.save?.(); l.emit?.(); } // fallback: their field
+  }
+  _spendShared(k, n) {
+    const l = this.getLogic(); if (!l) return false;
+    if (typeof l.spendMaterial === 'function') return l.spendMaterial(k, n);
+    if ((Number(l.state[k]) || 0) < n) return false;
+    l.state[k] = (Number(l.state[k]) || 0) - n; l.save?.(); l.emit?.(); return true;
+  }
+  affordShared(cost) { return this.sharedAmt('wood') >= cost.wood && this.sharedAmt('stone') >= cost.stone; }
+
+  // ---- node cooldowns (timestamp-derived, like crops) ----
   nodeReady(id, kind) { const t = this.state.nodes[id]; return !t || (Date.now() - t) >= (RESPAWN_MS[kind] || 60000); }
   nodeFrac(id, kind) { const t = this.state.nodes[id]; if (!t) return 1; return Math.min(1, (Date.now() - t) / (RESPAWN_MS[kind] || 60000)); }
 
-  // --- MINING --- node = { id, ore ∈ stone|copper|iron|gold|gem }
+  // ---- MINING --- node = { id, ore ∈ stone|copper|iron|gold|gem } ----
   mine(node) {
     if (!this.nodeReady(node.id, 'ore')) { this.flash('⛏ vein still recovering'); return null; }
-    const tier = this.state.tools.pickaxe;
-    if ((node.ore === 'gold' || node.ore === 'gem') && tier < 2) { this.flash('Need a Tier-2 pickaxe ⚒ (blacksmith)'); return null; }
+    if ((node.ore === 'gold' || node.ore === 'gem') && this.state.tools.pickaxe < 2) { this.flash('Need a Tier-2 pickaxe ⚒ (blacksmith)'); return null; }
     const YIELD = { stone: { stone: 2 }, copper: { stone: 1, ore: 1 }, iron: { stone: 2, ore: 1 }, gold: { ore: 3 }, gem: { gem: 1, ore: 1 } };
     const y = YIELD[node.ore] || { stone: 1 };
-    for (const [k, v] of Object.entries(y)) this._add(k, v);
-    this.state.nodes[node.id] = Date.now();
-    this._save(); this.emit();
+    for (const [k, v] of Object.entries(y)) { if (k === 'wood' || k === 'stone') this._gainShared(k, v); else this._add(k, v); }
+    this.state.nodes[node.id] = Date.now(); this._save(); this.emit();
     this.flash('⛏ ' + Object.entries(y).map(([k, v]) => `+${v}${MAT_ICON[k]}`).join(' '));
     return y;
   }
-  // --- FORESTRY --- node = { id, hard(bool) }
+  // ---- FORESTRY --- node = { id, hard } ----
   chop(node) {
     if (!this.nodeReady(node.id, 'tree')) { this.flash('🌳 tree still regrowing'); return null; }
     if (node.hard && this.state.tools.axe < 2) { this.flash('Need a Tier-2 axe ⚒ (blacksmith)'); return null; }
     const w = node.hard ? 3 : 2;
-    this._add('wood', w);
-    this.state.nodes[node.id] = Date.now();
-    this._save(); this.emit(); this.flash('🪵 +' + w + ' Wood');
+    this._gainShared('wood', w);
+    this.state.nodes[node.id] = Date.now(); this._save(); this.emit(); this.flash('🪵 +' + w + ' Wood');
     return { wood: w };
   }
-  // --- FISHING --- called after the timing minigame lands a catch
+  // ---- FISHING ----
   catchFish() { this._add('fish', 1); this._save(); this.emit(); this.flash('🐟 Caught a fish!'); return { fish: 1 }; }
 
-  // --- BLACKSMITH --- upgrade a tool with materials
+  // ---- BLACKSMITH --- tool upgrade spends wood/stone (shared) ----
   toolTier(tool) { return this.state.tools[tool] || 1; }
   toolCost(tool) { const t = this.toolTier(tool); return { wood: t * 4, stone: t * 6 }; }
-  canAfford(cost) { return (this.state.wood || 0) >= cost.wood && (this.state.stone || 0) >= cost.stone; }
   upgradeTool(tool) {
     const cur = this.toolTier(tool);
     if (cur >= TOOL_MAX) { this.flash('Already max tier'); return false; }
     const c = this.toolCost(tool);
-    if (!this.canAfford(c)) { this.flash(`Need 🪵${c.wood} 🪨${c.stone}`); return false; }
-    this._add('wood', -c.wood); this._add('stone', -c.stone); this.state.tools[tool] = cur + 1;
-    this._save(); this.emit(); this.flash(`⚒ ${tool} → Tier ${cur + 1}`); return true;
+    if (!this.affordShared(c)) { this.flash(`Need 🪵${c.wood} 🪨${c.stone}`); return false; }
+    this._spendShared('wood', c.wood); this._spendShared('stone', c.stone);
+    this.state.tools[tool] = cur + 1; this._save(); this.emit(); this.flash(`⚒ ${tool} → Tier ${cur + 1}`); return true;
   }
-  // --- CASTLE --- upgrade home tier with materials
+  // ---- CASTLE --- home upgrade spends wood/stone (shared) ----
   houseCost() { const t = this.state.house.tier; return { wood: t * 20, stone: t * 15 }; }
   upgradeHouse() {
     const t = this.state.house.tier;
     if (t >= HOUSE_MAX) { this.flash('🏰 Castle is max tier'); return false; }
     const c = this.houseCost();
-    if (!this.canAfford(c)) { this.flash(`Need 🪵${c.wood} 🪨${c.stone}`); return false; }
-    this._add('wood', -c.wood); this._add('stone', -c.stone);
+    if (!this.affordShared(c)) { this.flash(`Need 🪵${c.wood} 🪨${c.stone}`); return false; }
+    this._spendShared('wood', c.wood); this._spendShared('stone', c.stone);
     this.state.house.tier = t + 1; this.state.house.storage += 40;
     this._save(); this.emit(); this.flash(`🏰 Home → Tier ${t + 1}`); return true;
   }
-  // --- DUNGEON loot (materials only; BLOOM reward stays in game.rewardKill — ECONOMY-SEAM) ---
+  // ---- DUNGEON loot (materials only; bloom reward via game.earnBloom — ECONOMY-SEAM) ----
   dungeonLoot() {
     const w = 3 + Math.floor(Math.random() * 4), s = 2 + Math.floor(Math.random() * 4);
-    this._add('wood', w); this._add('stone', s); this._add('gem', 1);
-    this._save(); this.emit(); return { wood: w, stone: s, gem: 1 };
+    this._gainShared('wood', w); this._gainShared('stone', s); this._add('gem', 1);
+    this.emit(); return { wood: w, stone: s, gem: 1 };
   }
 }

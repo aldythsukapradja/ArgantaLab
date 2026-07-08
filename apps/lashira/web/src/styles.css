@@ -242,7 +242,10 @@ body {
 .room-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #cbd0e6; font-weight: 700; }
 /* nipplejs joystick zone — copied verbatim from Kingdom Heroes: touch anywhere
    in the lower-left to steer, invisible zone, softened nipple visuals. */
-.stick-zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 58%; z-index: 6; touch-action: none; user-select: none; }
+/* nipplejs zone retired — movement is now the canvas drag-joystick (drag anywhere
+   to move, tap to interact), so this must NOT capture pointer events. */
+.stick-zone { display: none; }
+.stick-zone.legacy { position: absolute; left: 0; bottom: 0; width: 46%; height: 58%; z-index: 6; touch-action: none; user-select: none; }
 .stick-zone .nipple .back { opacity: 0.28 !important; }
 .stick-zone .nipple .front {
   background: radial-gradient(circle at 34% 30%, #ffffffcc, #ffffff5c) !important;

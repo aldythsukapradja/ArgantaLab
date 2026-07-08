@@ -185,6 +185,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [ready, setReady] = useState(false);
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
+  const [hotspot, setHotspot] = useState(null);   // shop/castle/dungeon/dock popup
+  const [mechSnap, setMechSnap] = useState(null); // mechanics store snapshot (materials/tools/house)
+  const mechRef = useRef(null);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
   // Walk speed multiplier (1x = Kingdom cadence, up to 3x). Persisted per browser.
   const [speed, setSpeed] = useState(() => {
@@ -291,6 +294,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   }, [profile?.id, profile?.displayName, profile?.guest, profile?.diamonds, profile?.xp, profile?.level, profile?.role, heroPresenceKey, circleId]);
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
+
+  // Mechanics store (materials/tools/nodes/house) — decoupled from currency. See
+  // docs/lashirabloom/HANDOFF-mechanics-vs-economy.md.
+  useEffect(() => {
+    const m = new FarmMechanics(profile?.id || 'guest');
+    mechRef.current = m;
+    const unsub = m.subscribe(setMechSnap);
+    return () => unsub();
+  }, [profile?.id]);
   useEffect(() => {
     if (G.current) G.current.speed = speed;
     try { localStorage.setItem('lashira_speed', String(speed)); } catch { /* quota */ }
@@ -577,6 +589,14 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   }
   function doPlantAll() { logicRef.current?.plantAll?.(); }
   function doSleep() { logicRef.current?.sleep(); }
+  // Dungeon v1: the Hollow Gate drops you into the battleground arena (existing
+  // combat). Real instanced floor + Tiger boss + loot-on-clear is a follow-up.
+  function enterDungeon() {
+    const g = G.current; if (!g) return;
+    setHotspot(null);
+    g.player.tile = [28, 38]; g.player.from = [28, 38]; g.player.moveT = 1;
+    logicRef.current?.flash?.('⚔ Entered the dungeon — clear the beasts!');
+  }
   function toggleMount() {
     const g = G.current; if (!g) return;
     if (!g.resources?.mount) return;
@@ -889,7 +909,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       for (const [dir, dx, dy] of dirs) {
         const nx = e.tile[0] + dx, ny = e.tile[1] + dy;
         const inHome = nx >= e.home.x0 && nx <= e.home.x1 && ny >= e.home.y0 && ny <= e.home.y1;
-        if (e.kind === 'mount' && e.mode !== 'called' && inField(nx, ny)) continue;
+        // mounts avoid crops — but only refuse to ENTER the field from OUTSIDE; a
+        // mount already inside (e.g. spawned near the farmer) must be able to walk
+        // out, else it gets trapped when all neighbours are field tiles.
+        if (e.kind === 'mount' && e.mode !== 'called' && inField(nx, ny) && !inField(e.tile[0], e.tile[1])) continue;
         const passable = e.kind === 'mount' && e.mode === 'called' ? !borderAt(nx, ny) : !blockedAt(g, nx, ny);
         if ((target || inHome) && passable) return [dir, nx, ny];
       }
@@ -1302,6 +1325,22 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // harvest-juice floats (rise + fade)
       if (g.floats?.length) { for (const f of g.floats) drawFloat(ctx, f, now); g.floats = g.floats.filter((f) => now - f.start < f.ttl); }
       ctx.restore();
+      if (g.stickUI) drawStick(ctx, g); // floating joystick (screen space)
+    }
+    // The drag-joystick: a base ring at the press point + a knob at the thumb.
+    function drawStick(ctx, g) {
+      const s = g.stickUI; if (!s) return;
+      const R = 42;
+      ctx.save();
+      ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
+      ctx.beginPath(); ctx.arc(s.bx, s.by, R, 0, 7);
+      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = 2; ctx.stroke();
+      let kx = s.kx - s.bx, ky = s.ky - s.by; const d = Math.hypot(kx, ky) || 1;
+      const r = Math.min(R, d); kx = s.bx + (kx / d) * r; ky = s.by + (ky / d) * r;
+      ctx.beginPath(); ctx.arc(kx, ky, 19, 0, 7);
+      ctx.fillStyle = 'rgba(255,255,255,0.72)'; ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 6; ctx.fill();
+      ctx.restore();
     }
     // A rising, fading "+1 🥬" text pop.
     function drawFloat(ctx, f, now) {
@@ -1351,15 +1390,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.beginPath(); ctx.arc(f.x, f.y - 14, 6 + t * 16, 0, 7); ctx.stroke();
       ctx.restore();
     }
-    // ---------- tap-to-farm ----------
-    // Tap a crop plot to do the contextual action (till → plant → water →
-    // harvest), FarmVille-style, right in the farm area. Taps outside the field
-    // are ignored so the joystick still owns movement.
-    function onTap(e) {
+    // A quick TAP (not a drag) interacts with the world at (clientX, clientY):
+    // arena strike · landmark hotspot · crop plot · pen animal.
+    function onTapInteract(clientX, clientY) {
       const g = G.current; if (!g || !g.cam) return;
       const rect = canvas.getBoundingClientRect();
-      const wx = (g.cam.camX + (e.clientX - rect.left) / g.cam.z) / TILE;
-      const wy = (g.cam.camY + (e.clientY - rect.top) / g.cam.z) / TILE;
+      const wx = (g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE;
+      const wy = (g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE;
       const tx = Math.floor(wx), ty = Math.floor(wy);
       const faceTo = (gx, gy) => {
         const dx = gx - g.player.tile[0], dy = gy - g.player.tile[1];
@@ -1367,18 +1404,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         else if (dy !== 0) g.player.facing = dy > 0 ? 'South' : 'North';
         g.player.oneShot = 'Get'; g.player.oneShotStart = performance.now();
       };
-      // 0) arena tap — face the tapped tile and strike (attack is tap OR the
-      //    bottom-right attack-circle). No farming happens in the arena.
-      if (g.combat.on) {
+      if (g.combat.on) { faceTo(tx, ty); doStrike(); return; } // arena: tap = strike
+      const hs = hotspotAt(tx, ty); // shops/castle/dungeon/mining/forestry/fishing
+      if (hs) {
         faceTo(tx, ty);
-        doStrike();
-        e.preventDefault(); return;
+        if (hs.kind === 'ore') mechRef.current?.mine(hs);
+        else if (hs.kind === 'tree') mechRef.current?.chop(hs);
+        else if (hs.kind === 'sell') setPanel('shop');
+        else setHotspot(hs);
+        return;
       }
-      // 1) crop plot tap
       if (tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1) {
-        popHarvestResult(g, logicRef.current?.tapAt(tx, ty)); faceTo(tx, ty); e.preventDefault(); return;
+        popHarvestResult(g, logicRef.current?.tapAt(tx, ty)); faceTo(tx, ty); return;
       }
-      // 2) animal tap — nearest pen animal within ~1.2 tiles → contextual feed/pet/collect
       let best = null, bestD = 1.3;
       for (const a of g.actors.values()) {
         if (a.kind !== 'animal' || !a.livestockId) continue;
@@ -1386,12 +1424,52 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const d = Math.hypot(ax + 0.5 - wx, ay + 0.5 - wy);
         if (d < bestD) { bestD = d; best = a; }
       }
-      if (best) { logicRef.current?.tapAnimal(best.livestockId); faceTo(best.tile[0], best.tile[1]); e.preventDefault(); }
+      if (best) { logicRef.current?.tapAnimal(best.livestockId); faceTo(best.tile[0], best.tile[1]); }
     }
-    canvas.addEventListener('pointerdown', onTap);
+
+    // ---------- unified pointer input: drag = move, tap = interact ----------
+    // A press-and-drag ANYWHERE on the canvas is a floating joystick (trackpad +
+    // touch friendly — this is the "trackpad logic"); a quick tap interacts.
+    let ptr = null;
+    const DRAG_DEAD = 12; // px of movement before a press counts as a drag
+    function onPointerDown(e) {
+      if (e.button != null && e.button !== 0) return;
+      ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false };
+      try { canvas.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
+    }
+    function onPointerMove(e) {
+      if (!ptr || e.pointerId !== ptr.id) return;
+      const dx = e.clientX - ptr.x0, dy = e.clientY - ptr.y0;
+      const dist = Math.hypot(dx, dy);
+      if (!ptr.dragging && dist > DRAG_DEAD) ptr.dragging = true;
+      if (!ptr.dragging) return;
+      const g = G.current; if (!g) return;
+      const mag = Math.min(1, dist / 66);           // full tilt at ~66px drag
+      g.stick = { x: (dx / (dist || 1)) * mag, y: (dy / (dist || 1)) * mag }; // screen down = +y = South
+      const rect = canvas.getBoundingClientRect();
+      g.stickUI = { bx: ptr.x0 - rect.left, by: ptr.y0 - rect.top, kx: e.clientX - rect.left, ky: e.clientY - rect.top };
+    }
+    function onPointerUp(e) {
+      if (!ptr || e.pointerId !== ptr.id) return;
+      const wasDrag = ptr.dragging; const { x0, y0 } = ptr;
+      ptr = null;
+      const g = G.current; if (g) { g.stick = null; g.stickUI = null; }
+      try { canvas.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+      if (!wasDrag) onTapInteract(x0, y0); // it was a tap, not a move
+    }
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
 
     raf = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(raf); window.clearInterval(heartbeat); canvas.removeEventListener('pointerdown', onTap); };
+    return () => {
+      cancelAnimationFrame(raf); window.clearInterval(heartbeat);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerUp);
+    };
   }, [ready, profile?.displayName, heroPresenceKey]);
 
   // ---------- nipplejs ----------
@@ -1425,6 +1503,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
+            <HotspotPanels hotspot={hotspot} snap={snap} game={logicRef.current} mech={mechSnap}
+              mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon} />
           </>
         )}
         {daySplash && (
