@@ -15,6 +15,7 @@ import {
   monsterOf, outgoingDamage, rollDrops,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
+import { creatureImage } from './creature-sprites.js';
 import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
 import { hasActualKinArt } from './kin-sprite-image.jsx';
@@ -1335,7 +1336,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const cskin = g.art['lashira.castleskin.' + (g.castleSkin || 'storybook')];
       if (cskin && cskin.naturalWidth > 0) {
         const dw = CASTLE.w * TILE, dh = dw * (cskin.naturalHeight / cskin.naturalWidth);
-        ctx.drawImage(cskin, CASTLE.footX * TILE - dw / 2, CASTLE.footY * TILE - dh, dw, dh);
+        // CENTER-anchored on the plaza disc so the building sits dead-middle.
+        ctx.drawImage(cskin, CASTLE.cx * TILE - dw / 2, CASTLE.cy * TILE - dh / 2, dw, dh);
       }
 
       // plots
@@ -1501,15 +1503,25 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.save(); ctx.globalAlpha = fade;
       // shadow
       ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx, footY + 2, 13 * scl, 5 * scl, 0, 0, 7); ctx.fill();
-      // body
+      // body — PixelLab sprite if the kind has one loaded, else the procedural blob
       const hitFlash = m.state === 'hit' && (now - m.stateStart) < 200;
-      ctx.fillStyle = hitFlash ? '#ffffff' : body;
-      ctx.beginPath(); ctx.ellipse(cx, by - 12 * scl, 14 * scl, 12 * scl, 0, 0, 7); ctx.fill();
-      if (m.boss) { ctx.strokeStyle = '#3a1d05'; ctx.lineWidth = 2; ctx.stroke(); } // boss rim
-      ctx.fillStyle = '#ffffff'; // eyes
-      const ex = (m.facing === 'West' ? -4 : m.facing === 'East' ? 4 : 0) * scl;
-      ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.fill();
-      if (!hitFlash) { ctx.fillStyle = '#20303a'; ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.fill(); }
+      const sprite = creatureImage(m.kind, m.facing);
+      if (sprite) {
+        const iw = sprite.naturalWidth || 68, ih = sprite.naturalHeight || 68;
+        const s = scl * (TILE * 1.3) / iw;
+        const w = iw * s, h = ih * s;
+        if (hitFlash) ctx.globalAlpha = fade * 0.5; // flash = brief fade on hit
+        ctx.drawImage(sprite, cx - w / 2, footY + 8 - h, w, h);
+        ctx.globalAlpha = fade;
+      } else {
+        ctx.fillStyle = hitFlash ? '#ffffff' : body;
+        ctx.beginPath(); ctx.ellipse(cx, by - 12 * scl, 14 * scl, 12 * scl, 0, 0, 7); ctx.fill();
+        if (m.boss) { ctx.strokeStyle = '#3a1d05'; ctx.lineWidth = 2; ctx.stroke(); } // boss rim
+        ctx.fillStyle = '#ffffff'; // eyes
+        const ex = (m.facing === 'West' ? -4 : m.facing === 'East' ? 4 : 0) * scl;
+        ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.fill();
+        if (!hitFlash) { ctx.fillStyle = '#20303a'; ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.fill(); }
+      }
       // hp bar
       if (m.state !== 'die') {
         const w = 26, hpx = cx - w / 2, hpy = by - 32, frac = Math.max(0, m.hp / (m.maxHp || 100));
