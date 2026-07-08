@@ -3,7 +3,7 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
-import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTitle, levelWithFloor, levelProgress, xpForLevel } from '@arganta/combat';
+import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTitle, levelWithFloor, levelProgress, xpForLevel, weaponOf, armorOf, weaponAtk, armorDef, armorHp, monsterOf } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
@@ -94,6 +94,9 @@ export class FarmLogic {
       livestock: STARTER_LIVESTOCK.map((a) => ({ ...a })),
       kins: STARTER_KINS.map((k) => ({ ...k })),
       kinTasks: {},
+      // combat gear — the power axis beyond level. Crafted up at the Forge.
+      weaponTier: 1,
+      armorTier: 1,
     };
   }
   // Load BOTH the cloud save and the local fallback and keep the most advanced
@@ -188,6 +191,8 @@ export class FarmLogic {
       bloom: local.bloom ?? base.bloom, // per-player wallet — never adopted from a peer
       wood: local.wood ?? base.wood,
       stone: local.stone ?? base.stone,
+      weaponTier: local.weaponTier ?? base.weaponTier, // personal gear — never from a peer
+      armorTier: local.armorTier ?? base.armorTier,
       seeds: { ...base.seeds, ...(data.seeds || {}) },
       produce: { ...base.produce, ...(data.produce || {}) },
       plots: { ...base.plots, ...(data.plots || {}) },
@@ -371,7 +376,9 @@ export class FarmLogic {
     // HP + MP scale with level AND path (warrior tanky … mage caster).
     const path = this.path || 'warrior';
     const maxMp = pathMaxMp(path, level);
-    const maxHp = pathMaxHp(path, level);
+    const wTier = st.weaponTier || 1, aTier = st.armorTier || 1;
+    // armor adds a flat HP bonus on top of the path/level pool.
+    const maxHp = pathMaxHp(path, level) + armorHp(aTier);
     return {
       day: st.day, season: SEASONS[st.season],
       stamina: operator ? maxMp : Math.min(st.stamina, maxMp), maxStamina: maxMp,
@@ -391,6 +398,10 @@ export class FarmLogic {
       bloom: operator ? Infinity : (st.bloom ?? STARTING_BLOOM),
       wood: operator ? Infinity : (st.wood ?? 0),
       stone: operator ? Infinity : (st.stone ?? 0),
+      // combat gear — drives ATK (damage) and DEF (mitigation).
+      weaponTier: wTier, armorTier: aTier,
+      weaponName: weaponOf(wTier).name, armorName: armorOf(aTier).name,
+      atk: weaponAtk(wTier), def: armorDef(aTier),
       diamonds: st.diamonds,
       xp: st.xp,
       level,
@@ -452,11 +463,16 @@ export class FarmLogic {
   }
   // Battle: a monster kill earns 🌸 Bloom for EVERYONE (kids too). ADULTS also gain
   // XP; kids never gain play-XP (they level only by real learning).
-  rewardKill(name = 'a monster') {
+  rewardKill(kind = 'a monster') {
     const L = this._level();
-    this.earnBloom(killReward(L), 'Bloom · monster');
+    // Per-monster reward from the bestiary; fall back to the level curve for an
+    // unknown kind (e.g. a legacy 'a monster' string).
+    const mob = monsterOf(kind);
+    const known = mob && mob.id === kind;
+    const bloom = known ? mob.bloom : killReward(L);
+    this.earnBloom(bloom, 'Bloom · ' + (known ? mob.name : 'monster'));
     if (!this.isKid()) {
-      const x = killXp(L);
+      const x = known ? mob.xp : killXp(L);
       this.state.xp = (Number(this.state.xp) || 0) + x;
       this.pushReward({ icon: '⭐', amount: '+' + x, label: 'XP', tone: 'violet' });
     }

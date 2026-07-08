@@ -8,5 +8,7 @@ export * from './monsters.js';
 export * from './resolve.js';
 export * from './effects.js';
 export * from './progression.js';
+export * from './gear.js';
+export * from './bestiary.js';
 export * from './skins.js';
 export { GameIcon } from './icons/Icon.jsx';

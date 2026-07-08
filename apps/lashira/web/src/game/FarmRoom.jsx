@@ -12,6 +12,7 @@ import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
   tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
   SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, pathMaxHp, pathForWeapon, canAffordSkill,
+  monsterOf, outgoingDamage,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
@@ -697,7 +698,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     playSwing(g);
     if (!g.combat.on) return;
     const [tx, ty] = frontTile();
-    hitTile(g, tx, ty, MELEE_DAMAGE);
+    hitTile(g, tx, ty, playerDamage(MELEE_DAMAGE));
+  }
+  // Player's dealt damage = level/skill base + the equipped weapon's ATK.
+  function playerDamage(base) {
+    return outgoingDamage(base, logicRef.current?.state?.weaponTier ?? 1);
   }
   // Spawn a spell VFX locally (shared effect system).
   function spawnSpellFx(g, fx, tile) {
@@ -753,7 +758,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       logicRef.current?.flash?.('Mend +' + healed + ' HP');
       return;
     }
-    const dmg = skillPower(skill, L);
+    const dmg = playerDamage(skillPower(skill, L)); // + weapon ATK
     const hostSelf = iAmHost(g);
     if (skill.target === 'all') { // Storm — every monster
       if (hostSelf) {
@@ -1063,9 +1068,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
     function spawnArenaMonster(g, now) {
       const tile = arenaOpenTile(g);
-      const kinds = ['slime', 'bat', 'blob'];
-      const m = makeMonster({ id: 'mob:' + (g.monsterSeed >>> 0) + ':' + now, tile, maxHp: MONSTER_MAX_HP });
-      m.kind = kinds[Math.floor(monsterRand(g) * kinds.length)];
+      // Kid-safe woodland roster (bestiary), rescaled HP so combat isn't trivial.
+      const kinds = ['squirrel', 'fox', 'badger', 'boar', 'deer'];
+      const kind = kinds[Math.floor(monsterRand(g) * kinds.length)];
+      const mob = monsterOf(kind);
+      const m = makeMonster({ id: 'mob:' + (g.monsterSeed >>> 0) + ':' + now, tile, maxHp: mob.hp });
+      m.kind = kind;
+      m.atk = mob.atk;
       m.nextWander = now + 400 + monsterRand(g) * 1400;
       m.seed = (g.monsterSeed >>> 0);
       g.monsters.push(m);
@@ -1461,8 +1470,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (fade <= 0) return;
       const bob = m.moveT < 1 ? Math.sin(now / 90 + (m.seed || 0)) * 2 : Math.sin(now / 400 + (m.seed || 0)) * 1;
       const cx = footX, by = footY + bob;
-      const palette = { slime: '#6fca7a', bat: '#8b6fd0', blob: '#d06f8b' };
-      const body = palette[m.mkind || m.kind] || '#6fca7a';
+      // colour from the bestiary (placeholder until the PixelLab sheets land).
+      const body = monsterOf(m.mkind || m.kind).color || '#6fca7a';
       ctx.save(); ctx.globalAlpha = fade;
       // shadow
       ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx, footY + 2, 13, 5, 0, 0, 7); ctx.fill();
