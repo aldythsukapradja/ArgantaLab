@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, hotspotAt, HOTSPOT_MARKERS, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -1271,6 +1271,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.scale(z, z); ctx.translate(-Math.round(camX), -Math.round(camY));
       ctx.drawImage(g.bg, 0, 0);
 
+      // FARM LAYER on top of the basemap — a tilled-plot marker on every empty
+      // farmable tile so you can see where to plant; crops draw on planted ones below.
+      const fplots = logicRef.current.state.plots;
+      for (let ty = FIELD.y0; ty <= FIELD.y1; ty++) for (let tx = FIELD.x0; tx <= FIELD.x1; tx++) {
+        if (fplots[tx + ',' + ty]?.cropId) continue;
+        ctx.fillStyle = 'rgba(74,48,24,0.30)';
+        ctx.fillRect(tx * TILE + 4, ty * TILE + 4, TILE - 8, TILE - 8);
+      }
+
       // plots
       const plots = logicRef.current.state.plots;
       for (const [key, plot] of Object.entries(plots)) { const [tx, ty] = key.split(',').map(Number); drawPlot(ctx, tx, ty, plot, g.art); }
@@ -1340,6 +1349,18 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (g.spellFx?.length) g.spellFx = g.spellFx.filter((f) => drawEffect(ctx, f, now, TILE));
       // harvest-juice floats (rise + fade)
       if (g.floats?.length) { for (const f of g.floats) drawFloat(ctx, f, now); g.floats = g.floats.filter((f) => now - f.start < f.ttl); }
+
+      // HOTSPOT STATUS DOTS — green = wired + clickable, red = placeholder not built.
+      // Toggle with g.showHotspots (default on). Flip a hotspot's `ported` → dot goes green.
+      if (g.showHotspots !== false) {
+        const pulse = Math.abs(Math.sin(now / 500));
+        for (const mk of HOTSPOT_MARKERS) {
+          const wx = mk.x * TILE, wy = mk.y * TILE, c = mk.ported ? '80,220,110' : '235,70,70';
+          ctx.beginPath(); ctx.arc(wx, wy, 8 + pulse * 9, 0, 7); ctx.strokeStyle = `rgba(${c},${(0.45 * (1 - pulse) + 0.12).toFixed(2)})`; ctx.lineWidth = 3; ctx.stroke();
+          ctx.beginPath(); ctx.arc(wx, wy, 7, 0, 7); ctx.fillStyle = `rgba(${c},0.95)`; ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+        }
+      }
       ctx.restore();
       if (g.stickUI) drawStick(ctx, g); // floating joystick (screen space)
     }

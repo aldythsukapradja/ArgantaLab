@@ -113,12 +113,12 @@ export const tileKey = (x, y) => x + ',' + y;
 export const HOTSPOTS = [
   { kind: 'castle', id: 'castle', rect: { x0: 27, y0: 21, x1: 32, y1: 26 } },
   { kind: 'shop', id: 'seed', rect: { x0: 9, y0: 17, x1: 11, y1: 19 } },
-  { kind: 'shop', id: 'general', rect: { x0: 13, y0: 20, x1: 15, y1: 22 } },
+  { kind: 'shop', id: 'general', ported: false, rect: { x0: 13, y0: 20, x1: 15, y1: 22 } },
   { kind: 'shop', id: 'smith', rect: { x0: 18, y0: 23, x1: 20, y1: 25 } },
-  { kind: 'shop', id: 'animal', rect: { x0: 5, y0: 23, x1: 7, y1: 25 } },
-  { kind: 'shop', id: 'cosmetic', rect: { x0: 9, y0: 26, x1: 11, y1: 28 } },
+  { kind: 'shop', id: 'animal', ported: false, rect: { x0: 5, y0: 23, x1: 7, y1: 25 } },
+  { kind: 'shop', id: 'cosmetic', ported: false, rect: { x0: 9, y0: 26, x1: 11, y1: 28 } },
   { kind: 'sell', id: 'market', rect: { x0: 30, y0: 16, x1: 31, y1: 17 } },
-  { kind: 'dungeon', id: 'dungeon', rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
+  { kind: 'dungeon', id: 'dungeon', ported: false, rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
   { kind: 'ore', id: 'ore@51,21', ore: 'gold', rect: { x0: 51, y0: 21, x1: 51, y1: 21 } },
   { kind: 'ore', id: 'ore@54,19', ore: 'copper', rect: { x0: 54, y0: 19, x1: 54, y1: 19 } },
   { kind: 'ore', id: 'ore@50,26', ore: 'iron', rect: { x0: 50, y0: 26, x1: 50, y1: 26 } },
@@ -134,6 +134,20 @@ export function hotspotAt(tx, ty) {
   for (const h of HOTSPOTS) { const r = h.rect; if (tx >= r.x0 && tx <= r.x1 && ty >= r.y0 && ty <= r.y1) return h; }
   return null;
 }
+
+// Status markers for the on-map overlay: one dot per interactive point (tile-center
+// coords). ported=true → green (wired + works), false → red (placeholder). Built
+// from HOTSPOTS + the zone hotspots (farm/animals/battleground/pvp) that route
+// through other tap paths. As a mechanic is wired, flip its `ported` → its dot goes green.
+export const HOTSPOT_MARKERS = (() => {
+  const m = [];
+  for (const h of HOTSPOTS) m.push({ x: (h.rect.x0 + h.rect.x1 + 1) / 2, y: (h.rect.y0 + h.rect.y1 + 1) / 2, ported: h.ported !== false });
+  m.push({ x: (FIELD.x0 + FIELD.x1 + 1) / 2, y: (FIELD.y0 + FIELD.y1 + 1) / 2, ported: true });        // farm
+  for (const p of Object.values(PENS)) m.push({ x: (p.x0 + p.x1 + 1) / 2, y: (p.y0 + p.y1 + 1) / 2, ported: true }); // animals
+  m.push({ x: (ARENA.x0 + PVP.x0) / 2, y: (ARENA.y0 + ARENA.y1 + 1) / 2, ported: true });               // battleground
+  m.push({ x: (PVP.x0 + PVP.x1 + 1) / 2, y: (PVP.y0 + PVP.y1 + 1) / 2, ported: false });                 // pvp
+  return m;
+})();
 
 function rect(ctx, x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 function dots(ctx, seed, count, x0, y0, w, h, c, sz) {
