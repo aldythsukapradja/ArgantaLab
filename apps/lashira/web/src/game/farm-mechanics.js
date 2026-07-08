@@ -9,7 +9,12 @@
 
 import { weaponUpgradeCost, armorUpgradeCost, WEAPON_MAX, ARMOR_MAX } from '@arganta/combat';
 
-export const MAT_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷', fish: '🐟', ingot: '🧱', token: '🎟️', shard: '💠', hide: '🟫', essence: '✨', bloom: '🌸' };
+export const MAT_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷', fish: '🐟', ingot: '🧱', token: '🎟️', shard: '💠', hide: '🟫', essence: '✨', potion: '🧪', bloom: '🌸' };
+
+// Refining recipes: convert dead-end raw mats into craft goods (closes the sinks).
+export const SMELT_COST = { ore: 3 };  // → 1 ingot (feeds weapon/armor T3+)
+export const COOK_COST = { fish: 2 };  // → 1 potion (drink to restore stamina)
+export const POTION_STAMINA = 30;
 const RESPAWN_MS = { ore: 90_000, tree: 60_000 };   // kid-fast node cooldowns
 const TOOL_MAX = 3, HOUSE_MAX = 5;
 
@@ -24,7 +29,7 @@ export class FarmMechanics {
   _default() {
     return {
       ore: 0, gem: 0, fish: 0,           // mechanics-only materials (economy tracks wood/stone)
-      ingot: 0, token: 0, shard: 0, hide: 0, essence: 0, // craft mats: refining (#47) + boss/mob drops
+      ingot: 0, token: 0, shard: 0, hide: 0, essence: 0, potion: 0, // craft mats: refining + boss/mob drops
       tools: { pickaxe: 1, axe: 1, rod: 1 },
       nodes: {},                         // id -> lastGatheredAt (respawn cooldown)
       house: { tier: 1, storage: 60 },
@@ -100,6 +105,25 @@ export class FarmMechanics {
     for (const d of drops) this.grantMaterial(d.k, d.n);
     this._save(); this.emit();
     this.flash(drops.map((d) => `+${d.n}${MAT_ICON[d.k] || d.k}`).join(' '));
+  }
+
+  // ---- REFINING (close the ore/fish dead-ends) ----
+  canSmelt() { return (this.state.ore || 0) >= SMELT_COST.ore; }
+  smelt() {
+    if (!this.canSmelt()) { this.flash(`Need 3${MAT_ICON.ore}`); return false; }
+    this.state.ore -= SMELT_COST.ore; this._add('ingot', 1);
+    this._save(); this.emit(); this.flash(`🧱 +1 Ingot`); return true;
+  }
+  canCook() { return (this.state.fish || 0) >= COOK_COST.fish; }
+  cook() {
+    if (!this.canCook()) { this.flash(`Need 2${MAT_ICON.fish}`); return false; }
+    this.state.fish -= COOK_COST.fish; this._add('potion', 1);
+    this._save(); this.emit(); this.flash(`🧪 +1 Potion`); return true;
+  }
+  drinkPotion() {
+    if ((this.state.potion || 0) < 1) { this.flash('No potions'); return false; }
+    this.state.potion -= 1; this.getLogic()?.restoreStamina?.(POTION_STAMINA);
+    this._save(); this.emit(); this.flash(`🧪 +${POTION_STAMINA} stamina`); return true;
   }
 
   // ---- BLACKSMITH --- tool upgrade spends wood/stone (shared) ----

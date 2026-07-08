@@ -147,6 +147,26 @@ function Blacksmith({ snap, mech, mechGame, onClose }) {
           </div>
         );
       })}
+      <div className="phead" style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
+        <div><p className="psub" style={{ margin: 0 }}>Refine (turn raw mats into craft goods)</p></div>
+      </div>
+      <div className="row">
+        <div className="ico">🧱</div>
+        <div className="grow"><div className="name">Smelt Ingot</div><div className="meta">3🟨 → 1🧱 · feeds weapon/armor T3+ · have {fmt(mech?.ingot || 0)}🧱</div></div>
+        <button className="rbtn" disabled={!mechGame.canSmelt()} onClick={() => mechGame.smelt()}>Smelt</button>
+      </div>
+      <div className="row">
+        <div className="ico">🧪</div>
+        <div className="grow"><div className="name">Cook Potion</div><div className="meta">2🐟 → 1🧪 · restores stamina · have {fmt(mech?.potion || 0)}🧪</div></div>
+        <button className="rbtn" disabled={!mechGame.canCook()} onClick={() => mechGame.cook()}>Cook</button>
+      </div>
+      {(mech?.potion || 0) > 0 && (
+        <div className="row" style={{ borderStyle: 'dashed' }}>
+          <div className="ico">🧪</div>
+          <div className="grow"><div className="name">Drink potion</div><div className="meta">+30 stamina now</div></div>
+          <button className="rbtn ghost" onClick={() => mechGame.drinkPotion()}>Drink</button>
+        </div>
+      )}
     </>
   );
 }

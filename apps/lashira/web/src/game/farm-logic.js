@@ -461,6 +461,12 @@ export class FarmLogic {
     this.state.bloom = (this.state.bloom ?? 0) + n;
     this.pushReward({ icon: '🌸', amount: '+' + n, label, tone: 'bloom' });
   }
+  // Restore stamina/MP (clamped to the level+path pool) — used by cooked potions.
+  restoreStamina(n) {
+    const max = pathMaxMp(this.path || 'warrior', this._level());
+    this.state.stamina = Math.min(max, (Number(this.state.stamina) || 0) + (Number(n) || 0));
+    this.save(); this.emit();
+  }
   // Battle: a monster kill earns 🌸 Bloom for EVERYONE (kids too). ADULTS also gain
   // XP; kids never gain play-XP (they level only by real learning).
   rewardKill(kind = 'a monster') {
