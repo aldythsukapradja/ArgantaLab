@@ -1357,10 +1357,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // harvest-juice floats (rise + fade)
       if (g.floats?.length) { for (const f of g.floats) drawFloat(ctx, f, now); g.floats = g.floats.filter((f) => now - f.start < f.ttl); }
 
-      // COLLISION BOUNDARY — thin red lines on the edge between walkable and blocked,
-      // so you can see exactly where you can't walk (toggle g.showCollision).
+      // COLLISION BOUNDARY — thick red lines on the edge between walkable and blocked,
+      // so you can clearly see where you can't walk (toggle g.showCollision). Drawn as
+      // a soft glow underlay + a bright core so it reads on any terrain.
       if (g.showCollision !== false) {
-        ctx.strokeStyle = 'rgba(235,45,45,0.65)'; ctx.lineWidth = 1.5; ctx.beginPath();
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
         for (const key of g.blocked) {
           const [bx, by] = key.split(',').map(Number); const px = bx * TILE, py = by * TILE;
           if (!g.blocked.has(bx + ',' + (by - 1))) { ctx.moveTo(px, py); ctx.lineTo(px + TILE, py); }
@@ -1368,11 +1369,23 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           if (!g.blocked.has((bx - 1) + ',' + by)) { ctx.moveTo(px, py); ctx.lineTo(px, py + TILE); }
           if (!g.blocked.has((bx + 1) + ',' + by)) { ctx.moveTo(px + TILE, py); ctx.lineTo(px + TILE, py + TILE); }
         }
-        ctx.stroke();
+        ctx.strokeStyle = 'rgba(120,0,0,0.55)'; ctx.lineWidth = 7; ctx.stroke();     // glow underlay
+        ctx.strokeStyle = 'rgba(255,60,60,0.95)'; ctx.lineWidth = 3.5; ctx.stroke(); // bright core
+        ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
       }
 
-      // HOTSPOT STATUS DOTS — green = wired + clickable, red = placeholder not built.
-      // Toggle with g.showHotspots (default on). Flip a hotspot's `ported` → dot goes green.
+      // CUSTOMIZABLE-SPRITE PLACEHOLDER — dashed gold outline round the castle footprint
+      // so it's obvious this sprite is swappable (Castle panel → skin picker).
+      if (g.showHotspots !== false) {
+        const cx0 = CASTLE.tx * TILE, cy0 = CASTLE.ty * TILE, cw = CASTLE.w * TILE, ch = CASTLE.h * TILE;
+        ctx.save(); ctx.setLineDash([10, 7]); ctx.lineDashOffset = -(now / 60) % 17;
+        ctx.strokeStyle = 'rgba(255,207,74,0.95)'; ctx.lineWidth = 3;
+        ctx.strokeRect(cx0 + 1.5, cy0 + 1.5, cw - 3, ch - 3); ctx.restore();
+        capsule(ctx, cx0 + cw / 2, cy0 - 8, '🎨 Customizable — tap to skin', 'rgba(120,80,0,0.92)');
+      }
+
+      // HOTSPOT STATUS DOTS + CAPSULE LABELS — green = wired + clickable, red = placeholder
+      // not built. Each dot carries a pill naming what it is. Toggle g.showHotspots.
       if (g.showHotspots !== false) {
         const pulse = Math.abs(Math.sin(now / 500));
         for (const mk of HOTSPOT_MARKERS) {
@@ -1380,10 +1393,31 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           ctx.beginPath(); ctx.arc(wx, wy, 8 + pulse * 9, 0, 7); ctx.strokeStyle = `rgba(${c},${(0.45 * (1 - pulse) + 0.12).toFixed(2)})`; ctx.lineWidth = 3; ctx.stroke();
           ctx.beginPath(); ctx.arc(wx, wy, 7, 0, 7); ctx.fillStyle = `rgba(${c},0.95)`; ctx.fill();
           ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+          if (mk.label && g.showLabels !== false) capsule(ctx, wx, wy - 12, mk.label, mk.ported ? 'rgba(20,90,45,0.9)' : 'rgba(120,25,25,0.9)');
         }
       }
       ctx.restore();
       if (g.stickUI) drawStick(ctx, g); // floating joystick (screen space)
+    }
+    // A rounded info pill, centered horizontally at cx with its bottom at bottomY.
+    // Used for hotspot labels + the customizable-sprite tag. World-space (inside cam).
+    function capsule(ctx, cx, bottomY, text, bg) {
+      ctx.save();
+      ctx.font = 'bold 11px system-ui';
+      const padX = 7, h = 17, w = ctx.measureText(text).width + padX * 2;
+      const x = cx - w / 2, y = bottomY - h;
+      ctx.fillStyle = bg;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill(); }
+      else ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+      if (ctx.roundRect) ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, cx, y + h / 2 + 0.5);
+      // little downward nub so the pill points at its dot
+      ctx.fillStyle = bg; ctx.beginPath();
+      ctx.moveTo(cx - 4, y + h - 0.5); ctx.lineTo(cx + 4, y + h - 0.5); ctx.lineTo(cx, y + h + 4); ctx.fill();
+      ctx.restore();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
     // The drag-joystick: a base ring at the press point + a knob at the thumb.
     function drawStick(ctx, g) {

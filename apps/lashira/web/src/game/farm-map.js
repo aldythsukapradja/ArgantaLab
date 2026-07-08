@@ -139,13 +139,23 @@ export function hotspotAt(tx, ty) {
 // coords). ported=true → green (wired + works), false → red (placeholder). Built
 // from HOTSPOTS + the zone hotspots (farm/animals/battleground/pvp) that route
 // through other tap paths. As a mechanic is wired, flip its `ported` → its dot goes green.
+const HOTSPOT_LABEL = {
+  castle: '🏰 Castle', seed: '🌱 Seed Shop', general: '🛒 General Store', smith: '⚒️ Blacksmith',
+  animal: '🐮 Animal Shop', cosmetic: '🎀 Cosmetics', market: '💰 Market', dungeon: '⚔️ Dungeon', dock: '🎣 Fishing',
+};
+const PEN_LABEL = { cow: '🐄 Cow Pasture', sheep: '🐑 Sheep Pen', chicken: '🐔 Chicken Coop' };
+function markerLabel(h) {
+  if (h.kind === 'ore') return '⛏️ ' + h.ore[0].toUpperCase() + h.ore.slice(1) + ' Node';
+  if (h.kind === 'tree') return h.hard ? '🌳 Oak (T2 axe)' : '🌲 Tree';
+  return HOTSPOT_LABEL[h.id] || h.id;
+}
 export const HOTSPOT_MARKERS = (() => {
   const m = [];
-  for (const h of HOTSPOTS) m.push({ x: (h.rect.x0 + h.rect.x1 + 1) / 2, y: (h.rect.y0 + h.rect.y1 + 1) / 2, ported: h.ported !== false });
-  m.push({ x: (FIELD.x0 + FIELD.x1 + 1) / 2, y: (FIELD.y0 + FIELD.y1 + 1) / 2, ported: true });        // farm
-  for (const p of Object.values(PENS)) m.push({ x: (p.x0 + p.x1 + 1) / 2, y: (p.y0 + p.y1 + 1) / 2, ported: true }); // animals
-  m.push({ x: (ARENA.x0 + PVP.x0) / 2, y: (ARENA.y0 + ARENA.y1 + 1) / 2, ported: true });               // battleground
-  m.push({ x: (PVP.x0 + PVP.x1 + 1) / 2, y: (PVP.y0 + PVP.y1 + 1) / 2, ported: false });                 // pvp
+  for (const h of HOTSPOTS) m.push({ x: (h.rect.x0 + h.rect.x1 + 1) / 2, y: (h.rect.y0 + h.rect.y1 + 1) / 2, ported: h.ported !== false, label: markerLabel(h) });
+  m.push({ x: (FIELD.x0 + FIELD.x1 + 1) / 2, y: (FIELD.y0 + FIELD.y1 + 1) / 2, ported: true, label: '🌾 Farm' });                 // farm
+  for (const [k, p] of Object.entries(PENS)) m.push({ x: (p.x0 + p.x1 + 1) / 2, y: (p.y0 + p.y1 + 1) / 2, ported: true, label: PEN_LABEL[k] || k }); // animals
+  m.push({ x: (ARENA.x0 + PVP.x0) / 2, y: (ARENA.y0 + ARENA.y1 + 1) / 2, ported: true, label: '🗡️ Battleground' });               // battleground
+  m.push({ x: (PVP.x0 + PVP.x1 + 1) / 2, y: (PVP.y0 + PVP.y1 + 1) / 2, ported: false, label: '🏟️ PvP Arena' });                   // pvp
   return m;
 })();
 
