@@ -16,6 +16,17 @@ import { RewardToasts } from '@arganta/combat/reward';
 
 const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
+
+// Wallet pills: operator = ∞. Otherwise show the FULL comma value until it gets
+// too wide to keep the tray edge-aligned, then abbreviate (1,204,880 → 1.2M).
+// The full value always stays available via the pill's title (see walletTitle).
+const fmtWallet = (n) => {
+  if (n === Infinity) return '∞';
+  const v = Number(n || 0);
+  if (v >= 1e6) return (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
+  return v.toLocaleString();
+};
+const walletTitle = (n) => (n === Infinity ? '' : ` · ${fmt(n)}`);
 const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
 
 // circle id → human name (the QC pill should read "Keluarga Cerah Ceria", not a
@@ -79,12 +90,23 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
         </div>
       </div>
 
-      {/* Top-left column, single owner of the whole stack:
-            UnitCard (the one shared profile card) → quicknav → live row → wallet.
+      {/* Top-left column — single owner of the whole stack, all blocks stretch to
+          ONE width so every left/right edge lines up:
+            profile card → wallet tray (💎 pinned right) → toolbar → live row.
           The UnitCard here and each card in the live popup are the SAME
           component, so a design change updates every card at once. */}
       <div className="left-stack">
         <UnitCard card={selfCard} />
+
+        {/* wallet tray, fused under the card: 🪵🪨🌸 grouped left, divider,
+            💎 pinned to the right edge (learning currency, set apart). */}
+        <div className="res-strip">
+          <button className="res res-wood" onClick={() => onOpen('shop')} title={`Wood — chop the forest (coming soon)${walletTitle(snap.wood)}`}>🪵 {fmtWallet(snap.wood)}</button>
+          <button className="res res-stone" onClick={() => onOpen('shop')} title={`Stone — mine the quarry (coming soon)${walletTitle(snap.stone)}`}>🪨 {fmtWallet(snap.stone)}</button>
+          <button className="res res-bloom" onClick={() => onOpen('shop')} title={`Bloom — the play currency, earned from every action${walletTitle(snap.bloom)}`}>🌸 {fmtWallet(snap.bloom)}</button>
+          <span className="res-div" aria-hidden="true" />
+          <button className="res res-diamond" onClick={() => onOpen('shop')} title={`Diamonds — learning currency, for cosmetics (Diamond shop coming)${walletTitle(snap.diamonds)}`}>💎 {fmtWallet(snap.diamonds)}</button>
+        </div>
 
         <div className="quicknav">
           <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
@@ -96,21 +118,16 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
 
         {(circleName || presence?.count > 0) && (
           <div className="live-row">
-            {circleName && (
-              <button type="button" className="live-pill circle" title={circleName} onClick={() => setShowLive(true)}>🔗 {circleName}</button>
-            )}
+            <button type="button" className="live-pill circle" title={circleName || 'Your circle'} onClick={() => setShowLive(true)}>
+              <span className="circ-ic" aria-hidden="true" />
+              <span className="live-label">{circleName || 'Circle'}</span>
+            </button>
             <button type="button" className="live-pill count" title="See who's in the farm now" onClick={() => setShowLive(true)}>
-              🟢 {presence?.count || 0} live
+              <span className="live-dot" aria-hidden="true" />
+              <span className="live-label">{presence?.count || 0} live</span>
             </button>
           </div>
         )}
-
-        <div className="res-strip">
-          <button className="res res-wood" onClick={() => onOpen('shop')} title="Wood — chop the forest (coming soon)">🪵 {snap.wood === Infinity ? '∞' : fmt(snap.wood)}</button>
-          <button className="res res-stone" onClick={() => onOpen('shop')} title="Stone — mine the quarry (coming soon)">🪨 {snap.stone === Infinity ? '∞' : fmt(snap.stone)}</button>
-          <button className="res res-bloom" onClick={() => onOpen('shop')} title="Bloom — the play currency, earned from every action">🌸 {snap.bloom === Infinity ? '∞' : fmt(snap.bloom)}</button>
-          <button className="res res-diamond" onClick={() => onOpen('shop')} title="Diamonds — learning currency, for cosmetics (Diamond shop coming)">💎 {fmt(snap.diamonds)}</button>
-        </div>
       </div>
 
       {showLive && (
