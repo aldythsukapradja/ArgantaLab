@@ -17,8 +17,8 @@ export const FIELD = { x0: 3, y0: 3, x1: 23, y1: 16 };
 export const ZONES = {
   garden:  { x0: 2,  y0: 19, x1: 20, y1: 27 },   // flowers + greenhouse (W)
   plaza:   { x0: 23, y0: 18, x1: 36, y1: 30 },   // shops ring the castle (center)
-  mining:  { x0: 38, y0: 18, x1: 46, y1: 30 },   // stone/gold + dungeon gate (E)
-  forest:  { x0: 48, y0: 18, x1: 57, y1: 30 },   // wood (E)
+  forest:  { x0: 38, y0: 18, x1: 46, y1: 30 },   // wood (E, inner — swapped)
+  mining:  { x0: 48, y0: 18, x1: 57, y1: 30 },   // stone/gold + dungeon gate (E, outer — swapped)
   fishing: { x0: 2,  y0: 29, x1: 16, y1: 45 },   // lake (SW)
 };
 
@@ -65,23 +65,23 @@ export const PLACEMENTS = [
   { key: 'lashira.lib.shop_blacksmith', tx: 23, ty: 28, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_animal', tx: 34, ty: 28, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_cosmetics', tx: 28, ty: 28, w: 2, h: 2, solid: true },
-  // mining (E) — dungeon gate + ores
-  { key: 'lashira.lib.dungeon_gate', tx: 38, ty: 18, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.ore_gold', tx: 41, ty: 21, w: 1, h: 1, solid: true },
-  { key: 'lashira.lib.ore_copper', tx: 44, ty: 19, w: 1, h: 1, solid: true },
-  { key: 'lashira.lib.ore_iron', tx: 40, ty: 26, w: 1, h: 1, solid: true },
-  { key: 'lashira.lib.ore_gem', tx: 45, ty: 27, w: 1, h: 1, solid: true },
-  { key: 'lashira.lib.boulder', tx: 43, ty: 24, w: 1, h: 1, solid: true },
-  { key: 'lashira.lib.mine_cart', tx: 39, ty: 29, w: 1, h: 1 },
-  // forest (E)
-  { key: 'lashira.lib.tree_pine', tx: 49, ty: 19, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.tree_pine', tx: 54, ty: 20, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.tree_oak', tx: 51, ty: 24, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.tree_pine', tx: 49, ty: 26, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.bush', tx: 56, ty: 24, w: 1, h: 1 },
-  { key: 'lashira.lib.mushroom', tx: 53, ty: 29, w: 1, h: 1 },
-  { key: 'lashira.lib.stump', tx: 48, ty: 29, w: 1, h: 1 },
-  { key: 'lashira.lib.woodlog', tx: 56, ty: 29, w: 1, h: 1 },
+  // mining (E, outer — swapped) — dungeon gate + ores
+  { key: 'lashira.lib.dungeon_gate', tx: 48, ty: 18, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.ore_gold', tx: 51, ty: 21, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.ore_copper', tx: 54, ty: 19, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.ore_iron', tx: 50, ty: 26, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.ore_gem', tx: 55, ty: 27, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.boulder', tx: 53, ty: 24, w: 1, h: 1, solid: true },
+  { key: 'lashira.lib.mine_cart', tx: 49, ty: 29, w: 1, h: 1 },
+  // forest (E, inner — swapped)
+  { key: 'lashira.lib.tree_pine', tx: 39, ty: 19, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_pine', tx: 44, ty: 20, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_oak', tx: 41, ty: 24, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_pine', tx: 39, ty: 26, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.bush', tx: 46, ty: 24, w: 1, h: 1 },
+  { key: 'lashira.lib.mushroom', tx: 43, ty: 29, w: 1, h: 1 },
+  { key: 'lashira.lib.stump', tx: 38, ty: 29, w: 1, h: 1 },
+  { key: 'lashira.lib.woodlog', tx: 46, ty: 29, w: 1, h: 1 },
   // fishing (SW)
   { key: 'lashira.lib.fishing_dock', tx: 6, ty: 33, w: 3, h: 2 },
   { key: 'lashira.lib.fishing_reeds', tx: 3, ty: 31, w: 1, h: 1 },
@@ -94,10 +94,10 @@ export const PLACEMENTS = [
   { key: 'lashira.lib.trough_water', tx: 46, ty: 13, w: 1, h: 1 },
   { key: 'lashira.lib.trough_feed', tx: 50, ty: 5, w: 1, h: 1 },
   { key: 'lashira.lib.trough_water', tx: 53, ty: 13, w: 1, h: 1 },
-  // more forest fill
-  { key: 'lashira.lib.tree_oak', tx: 55, ty: 27, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.tree_pine', tx: 52, ty: 27, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.bush', tx: 50, ty: 22, w: 1, h: 1 },
+  // more forest fill (E, inner — swapped)
+  { key: 'lashira.lib.tree_oak', tx: 45, ty: 27, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.tree_pine', tx: 42, ty: 27, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.bush', tx: 40, ty: 22, w: 1, h: 1 },
   // martial south
   { key: 'lashira.lib.signpost', tx: 30, ty: 33, w: 1, h: 1 },
   { key: 'lashira.lib.arena_wall', tx: 41, ty: 33, w: 2, h: 1, solid: true },

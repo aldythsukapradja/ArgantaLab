@@ -7,3 +7,4 @@ export * from './skills.js';
 export * from './monsters.js';
 export * from './resolve.js';
 export * from './effects.js';
+export * from './progression.js';

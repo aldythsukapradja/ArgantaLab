@@ -85,9 +85,9 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <div className="unit-main">
             <div className="unit-name">
               <b>{snap.name}</b>
-              <span>{cap(snap.season)} · Day {snap.day} · Lv {fmt(snap.level)}</span>
+              <span>{snap.pathIcon} {snap.pathName || 'Warrior'} · Lv {fmt(snap.level)}</span>
             </div>
-            <div className="unit-exp"><span style={{ width: `${xpProgress(snap.xp)}%` }} /></div>
+            <div className="unit-exp" title={`${snap.xpPct ?? 0}% to next level`}><span style={{ width: `${snap.xpPct ?? 0}%` }} /></div>
             <div className="unit-bars">
               {battle?.on
                 ? <div className="bar hp"><span style={{ width: `${Math.max(0, Math.min(100, (battle.hp / Math.max(1, battle.maxHp)) * 100))}%` }} /><b><IconHeart /> {fmt(battle.hp)}/{fmt(battle.maxHp)}</b></div>

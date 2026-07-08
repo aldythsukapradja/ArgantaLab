@@ -9,7 +9,7 @@ import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, dr
 import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
   tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
-  SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, maxHpForLevel, canAffordSkill,
+  SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, pathMaxHp, pathForWeapon, canAffordSkill,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { loadBundledArt } from './farm-art-bundled.js';
@@ -203,6 +203,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const battleSkills = useMemo(() => battleSkillsFor(hero?.spec?.skills), [heroPresenceKey]);
   const battleSkillsRef = useRef(battleSkills);
   useEffect(() => { battleSkillsRef.current = battleSkills; if (G.current) G.current.battleSkills = battleSkills; }, [battleSkills]);
+  // Class path (warrior/rogue/poet/mage) → HP/MP curves. Derived from the hero's
+  // weapon for now (defaults to warrior until a real class picker exists).
+  useEffect(() => {
+    const w = hero?.spec?.weapon;
+    const weaponStr = typeof w === 'string' ? w : (w?.cat || w?.name || w?.id || '');
+    logicRef.current?.setPath?.(pathForWeapon(weaponStr));
+  }, [heroPresenceKey]);
 
   // ---------- init ----------
   useEffect(() => {
@@ -1016,8 +1023,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const on = inArena(p.tile[0], p.tile[1]) && (!g.combat.deadUntil || now > g.combat.deadUntil);
       if (on !== g.combat.on) {
         g.combat.on = on;
-        if (on) { // size the HP pool to the hero's level, full on entry
-          g.combat.maxHp = maxHpForLevel(logicRef.current?._level?.() ?? 1);
+        if (on) { // size the HP pool to the hero's level + path, full on entry
+          const lg = logicRef.current;
+          g.combat.maxHp = pathMaxHp(lg?.path || 'warrior', lg?._level?.() ?? 1);
           if (g.combat.hp <= 0 || g.combat.hp > g.combat.maxHp) g.combat.hp = g.combat.maxHp;
         }
         syncBattleState(g);

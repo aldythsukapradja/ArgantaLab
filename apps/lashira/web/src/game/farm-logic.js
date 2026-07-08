@@ -3,7 +3,7 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
-import { killReward, killXp, maxHpForLevel, maxMpForLevel } from '@arganta/combat';
+import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, levelWithFloor, levelProgress } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
@@ -44,6 +44,9 @@ export class FarmLogic {
     this.toast = null;
     this.rewards = []; // transient reward pills (Diamonds/XP/produce) for the HUD
     this._rid = 0;
+    // Class path (warrior/rogue/poet/mage) — drives HP/MP curves. Derived from the
+    // hero's weapon by FarmRoom (setPath); defaults to warrior until the hero loads.
+    this.path = pathForWeapon(profile?.weapon) || 'warrior';
     this.externalKins = [];
     this.externalKinsLoaded = false;
     // Kin loadout = which Kin ids this USER deploys onto the farm (max 6).
@@ -230,7 +233,7 @@ export class FarmLogic {
         st.day = intent.day; st.season = intent.season;
         if (intent.plots) st.plots = { ...intent.plots };
         if (Array.isArray(intent.livestock)) st.livestock = intent.livestock.map((a) => ({ ...a }));
-        st.stamina = maxMpForLevel(this._level()); // wake up with the level-scaled MP pool
+        st.stamina = pathMaxMp(this.path || 'warrior', this._level()); // wake up with the level+path MP pool
         this._dayEvent(); // every circle member sees the same New Day splash
         break;
       }
@@ -358,13 +361,15 @@ export class FarmLogic {
     const st = this.state;
     const operator = this.isOperator();
     const level = this._level();
-    // HP + MP scale with level (shared curves) — fixes MP stuck at 40 every level.
-    const maxMp = maxMpForLevel(level);
-    const maxHp = maxHpForLevel(level);
+    // HP + MP scale with level AND path (warrior tanky … mage caster).
+    const path = this.path || 'warrior';
+    const maxMp = pathMaxMp(path, level);
+    const maxHp = pathMaxHp(path, level);
     return {
       day: st.day, season: SEASONS[st.season],
       stamina: operator ? maxMp : Math.min(st.stamina, maxMp), maxStamina: maxMp,
-      maxHp,
+      maxHp, path, pathName: pathOf(path).name, pathIcon: pathOf(path).icon,
+      xpPct: Math.round(levelProgress(st.xp) * 100),
       operator,
       tool: st.tool, selectedSeed: st.selectedSeed,
       seeds: { ...st.seeds }, produce: { ...st.produce },
@@ -409,8 +414,15 @@ export class FarmLogic {
   // Battle: skills spend the farm's stamina (chosen over a separate mana pool).
   spendStamina(n) { if (!this._spend(n)) return false; this.save(); this.emit(); return true; }
   isKid() { return this.profile?.role === 'kid'; }
-  // Operator (admin) is capped at level 99; everyone else derives from XP.
-  _level() { return this.isOperator() ? 99 : (this.profile?.level ?? (1 + Math.floor(Math.max(0, Number(this.state.xp) || 0) / 500))); }
+  // Operator (admin) is level 99. Everyone else climbs the shared exponential XP
+  // ladder, but NEVER below their account level — so an existing level-50 hero can
+  // never regress when the curve changes (the son-protection guarantee).
+  _level() {
+    if (this.isOperator()) return 99;
+    const floor = Number(this.profile?.level) || 1;
+    return levelWithFloor(this.state.xp, floor);
+  }
+  setPath(pathId) { if (pathId && pathOf(pathId)) { this.path = pathId; this.emit(); } }
   // A transient reward pill for the HUD (Diamonds/XP/produce). Auto-expires.
   pushReward(r) {
     this.rewards = [...(this.rewards || []), { id: ++this._rid, at: Date.now(), ...r }].slice(-4);
@@ -631,7 +643,7 @@ export class FarmLogic {
     const st = this.state;
     st.day += 1;
     if (st.day > DAYS_PER_SEASON) { st.day = 1; st.season = (st.season + 1) % SEASONS.length; }
-    st.stamina = maxMpForLevel(this._level()); // refill to the level-scaled MP pool
+    st.stamina = pathMaxMp(this.path || 'warrior', this._level()); // refill to the level+path MP pool
     this._bump();
     // Broadcast the day tick (calendar flavor) — carries no crop growth anymore.
     this._intent({ t: 'day', day: st.day, season: st.season });
