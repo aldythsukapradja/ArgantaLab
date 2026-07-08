@@ -3,18 +3,19 @@
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
-import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, levelWithFloor, levelProgress } from '@arganta/combat';
+import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, levelWithFloor, levelProgress, xpForLevel } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 import { loadFarmState, saveFarmState } from './farm-save.js';
 
-// The FarmVille loop: 🥇 Gold is the play currency — seeds/feed COST Gold, and
-// selling produce / defeating monsters EARNS Gold, so you reinvest and grow.
-// Everyone (kids too) earns + spends Gold freely; 💎 Diamonds are a separate
-// learning/cosmetic currency the farm never touches (a Diamond shop comes later).
+// The FarmVille loop: 🌸 Bloom is the play currency — seeds/feed COST Bloom, and
+// ANY in-game action (harvest, sell, defeat a monster, mine, chop) EARNS Bloom,
+// so you reinvest and grow. Everyone (kids too) earns + spends Bloom freely.
+// 🪵 Wood + 🪨 Stone are gathering MATERIALS (forest/mining — for upgrades later).
+// 💎 Diamonds stay the separate learning/cosmetic currency the farm never touches.
 // The operator gets everything free (see isOperator()).
-export const STARTING_GOLD = 120; // enough to plant the first few beds
+export const STARTING_BLOOM = 120; // enough to plant the first few beds
 
 // Max Kin a single user can deploy onto the farm at once (per-user loadout cap).
 export const MAX_DEPLOYED_KINS = 6;
@@ -77,10 +78,12 @@ export class FarmLogic {
       // copies seeded from the real profile so selling/buying feels instant;
       // NOT yet synced back to Supabase — that's a follow-up RPC, same honest
       // scaffolding pattern as the rest of this build.
-      // 🥇 Gold = the play currency (crops/animals/tools). Everyone (kids too)
-      // earns + spends it freely. 💎 Diamonds stay the learning/cosmetic currency
-      // — farming never touches them (a Diamond shop comes later).
-      gold: STARTING_GOLD,
+      // 🌸 Bloom = play currency (all in-game actions earn it). 🪵🪨 = gathering
+      // materials (0 until you chop/mine). 💎 Diamonds = learning/cosmetic (farm
+      // never touches them).
+      bloom: STARTING_BLOOM,
+      wood: 0,
+      stone: 0,
       diamonds: this.profile?.diamonds ?? 0,
       xp: this.profile?.xp ?? 0,
       stamina: 40, maxStamina: 40,
@@ -182,7 +185,9 @@ export class FarmLogic {
       selectedSeed: local.selectedSeed,
       stamina: local.stamina,
       maxStamina: local.maxStamina,
-      gold: local.gold ?? base.gold, // 🥇 Gold is per-player — never adopted from a peer
+      bloom: local.bloom ?? base.bloom, // per-player wallet — never adopted from a peer
+      wood: local.wood ?? base.wood,
+      stone: local.stone ?? base.stone,
       seeds: { ...base.seeds, ...(data.seeds || {}) },
       produce: { ...base.produce, ...(data.produce || {}) },
       plots: { ...base.plots, ...(data.plots || {}) },
@@ -248,7 +253,9 @@ export class FarmLogic {
       rev: Number(this.state.rev) || 0,
       day: this.state.day,
       season: this.state.season,
-      gold: this.state.gold,
+      bloom: this.state.bloom,
+      wood: this.state.wood,
+      stone: this.state.stone,
       diamonds: this.state.diamonds,
       xp: this.state.xp,
       stamina: this.state.stamina,
@@ -370,6 +377,9 @@ export class FarmLogic {
       stamina: operator ? maxMp : Math.min(st.stamina, maxMp), maxStamina: maxMp,
       maxHp, path, pathName: pathOf(path).name, pathIcon: pathOf(path).icon,
       xpPct: Math.round(levelProgress(st.xp) * 100),
+      // EXP readout: how far into THIS level, and how much this level needs.
+      xpCur: Math.max(0, (Number(st.xp) || 0) - xpForLevel(level)),
+      xpReq: level >= 99 ? 0 : (xpForLevel(level + 1) - xpForLevel(level)),
       operator,
       tool: st.tool, selectedSeed: st.selectedSeed,
       seeds: { ...st.seeds }, produce: { ...st.produce },
@@ -377,7 +387,9 @@ export class FarmLogic {
       kins: this.activeKins(),
       kinRoster: this.kinRoster(),
       maxKins: MAX_DEPLOYED_KINS,
-      gold: operator ? Infinity : (st.gold ?? STARTING_GOLD),
+      bloom: operator ? Infinity : (st.bloom ?? STARTING_BLOOM),
+      wood: operator ? Infinity : (st.wood ?? 0),
+      stone: operator ? Infinity : (st.stone ?? 0),
       diamonds: st.diamonds,
       xp: st.xp,
       level,
@@ -430,14 +442,18 @@ export class FarmLogic {
     clearTimeout(this._rewardTimer);
     this._rewardTimer = setTimeout(() => { this.rewards = (this.rewards || []).filter((x) => Date.now() - x.at < 1900); this.emit(); }, 2000);
   }
-  // Battle: a monster kill earns 🥇 Gold for EVERYONE (kids too — Gold is play
-  // currency). ADULTS also gain XP; kids never gain play-XP (they level only by
-  // real learning). Level-scaled via the shared killReward/killXp.
+  // Credit 🌸 Bloom (the play currency) + a reward pill. Any in-game action that
+  // earns Bloom routes through here.
+  earnBloom(n, label = 'Bloom') {
+    if (!(n > 0)) return;
+    this.state.bloom = (this.state.bloom ?? 0) + n;
+    this.pushReward({ icon: '🌸', amount: '+' + n, label, tone: 'bloom' });
+  }
+  // Battle: a monster kill earns 🌸 Bloom for EVERYONE (kids too). ADULTS also gain
+  // XP; kids never gain play-XP (they level only by real learning).
   rewardKill(name = 'a monster') {
     const L = this._level();
-    const g = killReward(L);
-    this.state.gold = (this.state.gold ?? 0) + g;
-    this.pushReward({ icon: '🥇', amount: '+' + g, label: 'Gold', tone: 'gold' });
+    this.earnBloom(killReward(L), 'Bloom · monster');
     if (!this.isKid()) {
       const x = killXp(L);
       this.state.xp = (Number(this.state.xp) || 0) + x;
@@ -453,26 +469,26 @@ export class FarmLogic {
     const now = Date.now();
     const p = this.state.plots[tileKey(tx, ty)];
     if (p?.cropId && cropIsWithered(p, now)) return this._clearWithered(tx, ty);
-    if (p?.cropId && cropIsRipe(p, now)) { const crop = this._harvest(tx, ty); return crop ? { harvested: crop, tx, ty } : null; }
+    if (p?.cropId && cropIsRipe(p, now)) { const r = this._harvest(tx, ty); return r ? { harvested: r.crop, bloom: r.bloom, tx, ty } : null; }
     if (!p?.cropId) return this._plant(tx, ty);
     // growing crop — leave it; give a hint so the tap isn't silent
     this.flash(CROPS[p.cropId]?.emoji + ' still growing');
   }
 
-  // Free tapping (FarmVille): farming actions cost NO stamina. Returns the crop
-  // that was harvested (for the caller's harvest juice), or null.
+  // Free tapping (FarmVille): farming costs NO stamina, and harvesting IS the sale
+  // — you get 🌸 Bloom instantly. Returns { crop, bloom } for the harvest pop.
   _harvest(tx, ty) {
     const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
     if (!p?.cropId || !cropIsRipe(p)) return null;
     const crop = CROPS[p.cropId];
-    st.produce[crop.id] = (st.produce[crop.id] || 0) + 1;
+    const bloom = crop.sell;
+    st.bloom = (st.bloom ?? 0) + bloom; // silent (the floating +N 🌸 IS the feedback)
     // Soil stays soil — clear the crop, keep the plot record so it reads as tilled.
     p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
     this._bump();
     this._intent({ t: 'plot', key, plot: { ...p } });
-    this._intent({ t: 'stock', produce: { [crop.id]: st.produce[crop.id] } });
     this.save(); this.emit();
-    return crop;
+    return { crop, bloom };
   }
   _plant(tx, ty) {
     const key = tileKey(tx, ty); const st = this.state;
@@ -506,15 +522,16 @@ export class FarmLogic {
   // tiles so the renderer can pop juice at each.
   harvestAll() {
     const st = this.state; const now = Date.now(); const got = [];
+    let bloom = 0;
     for (const [key, p] of Object.entries(st.plots)) {
       if (p?.cropId && !cropIsWithered(p, now) && cropIsRipe(p, now)) {
         const [tx, ty] = key.split(',').map(Number);
-        const crop = this._harvest(tx, ty);
-        if (crop) got.push({ crop, tx, ty });
+        const r = this._harvest(tx, ty);
+        if (r) { got.push({ crop: r.crop, tx, ty, bloom: r.bloom }); bloom += r.bloom; }
       }
     }
     if (!got.length) { this.flash('Nothing ripe to harvest'); return { harvested: [] }; }
-    this.flash('Harvested ' + got.length + ' crop' + (got.length > 1 ? 's' : ''));
+    this.flash('Harvested ' + got.length + ' · +🌸' + bloom);
     return { harvested: got };
   }
   // Plant the selected seed on EVERY empty soil tile until seeds run out.
@@ -544,14 +561,14 @@ export class FarmLogic {
     const crop = CROPS[id];
     if (!crop) return;
     const cost = this.isOperator() ? 0 : crop.seedCost * qty;
-    if ((this.state.gold ?? 0) < cost) { this.flash('Not enough 🥇 Gold — sell some produce'); return; }
-    this.state.gold = (this.state.gold ?? 0) - cost;
+    if ((this.state.bloom ?? 0) < cost) { this.flash('Not enough 🌸 Bloom — harvest some crops'); return; }
+    this.state.bloom = (this.state.bloom ?? 0) - cost;
     this.state.seeds[id] = (this.state.seeds[id] || 0) + qty;
     this.state.selectedSeed = id;
     this.state.tool = 'seed';
     this._bump();
     this._intent({ t: 'stock', seeds: { [id]: this.state.seeds[id] } });
-    this.flash('Bought ' + qty + '× ' + crop.emoji + ' ' + crop.name + (cost ? ' · −🥇' + cost : ''));
+    this.flash('Bought ' + qty + '× ' + crop.emoji + ' ' + crop.name + (cost ? ' · −🌸' + cost : ''));
     this.save(); this.emit();
   }
   // Selling produce earns 🥇 Gold — for EVERYONE (kids too; Gold is the play
@@ -570,8 +587,7 @@ export class FarmLogic {
     this.state.produce = {};
     this._bump();
     this._intent({ t: 'stock', produceReplace: {} });
-    this.state.gold = (this.state.gold ?? 0) + gain;
-    this.pushReward({ icon: '🥇', amount: '+' + gain, label: 'Sold produce', tone: 'gold' });
+    this.earnBloom(gain, 'Sold produce');
     this.save(); this.emit();
   }
   _animalSell(pid) { for (const sp of Object.values(SPECIES)) if (sp.produce === pid) return sp.sell; return 10; }
@@ -614,11 +630,10 @@ export class FarmLogic {
     const a = this.state.livestock.find((x) => x.id === id);
     if (!a || !animalGoodReady(a)) return;
     const sp = SPECIES[a.species];
-    this.state.produce[sp.produce] = (this.state.produce[sp.produce] || 0) + 1;
     a.fedAt = null; // needs feeding again for the next good
     this._bump(); this._syncLivestock();
-    this._intent({ t: 'stock', produce: { [sp.produce]: this.state.produce[sp.produce] } });
-    this.flash('Collected ' + sp.produceName + ' ' + sp.produceEmoji); this.save(); this.emit();
+    this.earnBloom(sp.sell, sp.produceEmoji + ' ' + sp.produceName); // collecting IS the sale
+    this.save(); this.emit();
   }
   assignKin(id, task) {
     if (this.externalKins?.some((x) => x.id === id)) {

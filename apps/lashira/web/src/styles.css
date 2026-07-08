@@ -423,6 +423,7 @@ body {
 .reward-amt { font-size: 13.5px; font-weight: 800; color: var(--rp-amt, #fff); }
 .reward-label { font-size: 12px; font-weight: 600; color: #ffffffab; }
 .rp-gold   { --rp-edge:#f4c25a5c; --rp-glow:#f0a83a66; --rp-amt:#ffd98a; }
+.rp-bloom  { --rp-edge:#f07bb05c; --rp-glow:#f07bb066; --rp-amt:#ffc7e2; }
 .rp-violet { --rp-edge:#b6a6f65c; --rp-glow:#7d6cf666; --rp-amt:#d3c6ff; }
 .rp-green  { --rp-edge:#8fd07a5c; --rp-glow:#57c65a66; --rp-amt:#bfe9a8; }
 .rp-slate  { --rp-edge:#9fb0cc5c; --rp-glow:#55627a4d; --rp-amt:#cdd6ff; }
@@ -431,15 +432,27 @@ body {
 @media (prefers-reduced-motion: reduce) { .reward-pill { animation: reward-pop .2s ease, reward-float 1.9s linear forwards; } }
 .op-badge { font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .04em; color: #ffdf8a; background: #f0a83a22; border: 1px solid #f0a83a66; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
 
-/* Gold pill — the play-currency readout (tap → Shop) */
-.gold-pill {
-  display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
-  padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #ffe6a6;
-  background: rgba(28,24,14,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border: 1px solid #f0a83a66; box-shadow: 0 4px 14px -5px #0009, inset 0 1px 0 #ffffff1f; cursor: pointer;
+/* top-right cluster: EXP readout · wallet strip (wood/stone/bloom/diamond) · gear */
+.topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; pointer-events: auto; }
+.xp-readout {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; color: #d9f0ff; white-space: nowrap;
+  background: rgba(18,24,40,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #6fa8ff44; box-shadow: 0 4px 12px -5px #0009;
 }
-.gold-pill b { color: #ffd98a; font-weight: 900; }
-.gold-pill:active { transform: scale(.96); }
+.res-strip { display: inline-flex; align-items: center; gap: 6px; }
+.res {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 800; color: #fff; white-space: nowrap; cursor: pointer;
+  background: rgba(20,23,38,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--res-edge, #ffffff2e); box-shadow: 0 4px 12px -5px #0009, inset 0 1px 0 #ffffff1a;
+}
+.res:active { transform: scale(.95); }
+.res-wood { --res-edge:#b98b5566; color:#e7c79a; }
+.res-stone { --res-edge:#9aa4b066; color:#d7dee7; }
+.res-bloom { --res-edge:#f07bb066; color:#ffc7e2; }
+.res-diamond { --res-edge:#7fd0ff66; color:#bfe9ff; }
+@media (max-width: 560px) { .res, .xp-readout { font-size: 11px; padding: 3px 8px; } .topbar-right { gap: 5px; } }
 
 /* ================= unit-frame + HP/MP bars — copied verbatim from Kingdom
    Heroes' "premium arena HUD (frosted white-grey glass)" block ================= */

@@ -5,7 +5,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { FarmMechanics } from './farm-mechanics.js';
+import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
   tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
@@ -557,8 +559,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     if (g.floats.length > 40) g.floats.shift();
   }
   function popHarvestResult(g, res) {
-    if (res?.harvested?.emoji) floatPop(g, res.tx, res.ty, res.harvested.emoji + ' +1');
-    else if (Array.isArray(res?.harvested)) for (const h of res.harvested) floatPop(g, h.tx, h.ty, h.crop.emoji + ' +1');
+    if (res?.harvested && res.bloom != null) floatPop(g, res.tx, res.ty, '+' + res.bloom + ' 🌸');
+    else if (Array.isArray(res?.harvested)) for (const h of res.harvested) floatPop(g, h.tx, h.ty, '+' + (h.bloom ?? 1) + ' 🌸');
   }
   function doUse() {
     const g = G.current; if (!g) return;

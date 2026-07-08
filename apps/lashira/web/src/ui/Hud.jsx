@@ -69,9 +69,20 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
       {snap.toast && <div className="toasts"><div className="toast">{snap.toast}</div></div>}
       <RewardToasts rewards={snap.rewards} />
 
-      {/* top bar — the gear is the ONLY persistent chrome besides the card */}
+      {/* top bar — EXP readout + wallet strip (Wood · Stone · Bloom · Diamond) + gear */}
       <div className="hud-top">
-        <button type="button" className="hud-gear" onClick={() => setShowSettings(true)}>⚙</button>
+        <div className="topbar-right">
+          <div className="xp-readout" title="XP into this level / XP this level needs">
+            ✨ {snap.level >= 99 ? 'MAX' : `${fmt(snap.xpCur)} / ${fmt(snap.xpReq)}`}
+          </div>
+          <div className="res-strip">
+            <button className="res res-wood" onClick={() => onOpen('shop')} title="Wood — chop the forest (coming soon)">🪵 {snap.wood === Infinity ? '∞' : fmt(snap.wood)}</button>
+            <button className="res res-stone" onClick={() => onOpen('shop')} title="Stone — mine the quarry (coming soon)">🪨 {snap.stone === Infinity ? '∞' : fmt(snap.stone)}</button>
+            <button className="res res-bloom" onClick={() => onOpen('shop')} title="Bloom — the play currency, earned from every action">🌸 {snap.bloom === Infinity ? '∞' : fmt(snap.bloom)}</button>
+            <button className="res res-diamond" onClick={() => onOpen('shop')} title="Diamonds — learning currency, for cosmetics (Diamond shop coming)">💎 {fmt(snap.diamonds)}</button>
+          </div>
+          <button type="button" className="hud-gear" onClick={() => setShowSettings(true)}>⚙</button>
+        </div>
       </div>
 
       {/* unit-frame + quick nav, stacked top-left. unit-frame markup is the
@@ -96,10 +107,6 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             </div>
           </div>
         </div>
-
-        <button type="button" className="gold-pill" onClick={() => onOpen('shop')} title="Gold — earn by selling produce, spend on seeds">
-          🥇 <b>{snap.gold === Infinity ? '∞' : fmt(snap.gold)}</b> Gold
-        </button>
 
         <div className="quicknav">
           <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
@@ -200,11 +207,13 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
               </section>
               <section className="set-card">
                 <h4>Wallet {snap.operator && <em className="op-badge">⚡ OPERATOR</em>}</h4>
-                <div className="setrow diamond-row" style={{ gap: 14 }}>
-                  <span className="diamond-count">🥇 {snap.gold === Infinity ? '∞' : fmt(snap.gold)}</span>
-                  <span className="diamond-count">💎 {snap.operator ? '∞' : fmt(snap.diamonds)}</span>
+                <div className="setrow diamond-row" style={{ gap: 14, flexWrap: 'wrap' }}>
+                  <span className="diamond-count">🌸 {snap.bloom === Infinity ? '∞' : fmt(snap.bloom)}</span>
+                  <span className="diamond-count">🪵 {snap.wood === Infinity ? '∞' : fmt(snap.wood)}</span>
+                  <span className="diamond-count">🪨 {snap.stone === Infinity ? '∞' : fmt(snap.stone)}</span>
+                  <span className="diamond-count">💎 {fmt(snap.diamonds)}</span>
                 </div>
-                <p className="settings-empty">🥇 Gold runs the farm. 💎 Diamonds are learning-earned — cosmetics only (Diamond shop coming).{snap.operator ? ' · Admin: everything free.' : ''}</p>
+                <p className="settings-empty">🌸 Bloom runs the farm (every action earns it). 🪵🪨 gathered for upgrades. 💎 Diamonds are learning-earned — cosmetics only (Diamond shop coming).{snap.operator ? ' · Admin: everything free.' : ''}</p>
               </section>
               <section className="set-card">
                 <h4>Active Kin <em className="set-count">{activeKins.length}/6</em></h4>

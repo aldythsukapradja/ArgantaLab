@@ -108,6 +108,33 @@ export const PLACEMENTS = [
 
 export const tileKey = (x, y) => x + ',' + y;
 
+// ---- HOTSPOTS: the interaction registry. FarmRoom.onTap → hotspotAt() → dispatch.
+// One row per interactive landmark; adding a mechanic = one row + one handler.
+export const HOTSPOTS = [
+  { kind: 'castle', id: 'castle', rect: { x0: 27, y0: 21, x1: 32, y1: 26 } },
+  { kind: 'shop', id: 'seed', rect: { x0: 23, y0: 19, x1: 24, y1: 20 } },
+  { kind: 'shop', id: 'general', rect: { x0: 34, y0: 19, x1: 35, y1: 20 } },
+  { kind: 'shop', id: 'smith', rect: { x0: 23, y0: 28, x1: 24, y1: 29 } },
+  { kind: 'shop', id: 'animal', rect: { x0: 34, y0: 28, x1: 35, y1: 29 } },
+  { kind: 'shop', id: 'cosmetic', rect: { x0: 28, y0: 28, x1: 29, y1: 29 } },
+  { kind: 'sell', id: 'market', rect: { x0: 30, y0: 16, x1: 31, y1: 17 } },
+  { kind: 'dungeon', id: 'dungeon', rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
+  { kind: 'ore', id: 'ore@51,21', ore: 'gold', rect: { x0: 51, y0: 21, x1: 51, y1: 21 } },
+  { kind: 'ore', id: 'ore@54,19', ore: 'copper', rect: { x0: 54, y0: 19, x1: 54, y1: 19 } },
+  { kind: 'ore', id: 'ore@50,26', ore: 'iron', rect: { x0: 50, y0: 26, x1: 50, y1: 26 } },
+  { kind: 'ore', id: 'ore@55,27', ore: 'gem', rect: { x0: 55, y0: 27, x1: 55, y1: 27 } },
+  { kind: 'ore', id: 'ore@53,24', ore: 'stone', rect: { x0: 53, y0: 24, x1: 53, y1: 24 } },
+  { kind: 'dock', id: 'dock', rect: { x0: 6, y0: 33, x1: 8, y1: 34 } },
+];
+// forest trees (match the tree PLACEMENTS; hard = oak → needs Tier-2 axe)
+for (const [x, y, hard] of [[39, 19, false], [44, 20, false], [41, 24, true], [39, 26, false], [45, 27, true], [42, 27, false]]) {
+  HOTSPOTS.push({ kind: 'tree', id: `tree@${x},${y}`, hard, rect: { x0: x, y0: y, x1: x + 1, y1: y + 1 } });
+}
+export function hotspotAt(tx, ty) {
+  for (const h of HOTSPOTS) { const r = h.rect; if (tx >= r.x0 && tx <= r.x1 && ty >= r.y0 && ty <= r.y1) return h; }
+  return null;
+}
+
 function rect(ctx, x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 function dots(ctx, seed, count, x0, y0, w, h, c, sz) {
   let s = seed; const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
