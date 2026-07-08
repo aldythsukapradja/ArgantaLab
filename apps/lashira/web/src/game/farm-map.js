@@ -4,6 +4,7 @@
 // swap for PixelLab/real farm tiles later.
 import { CROPS, cropGrowthFrac, cropStageOf, cropIsWithered, cropFreshFrac } from '../data/crops.js';
 import { drawOverride } from './farm-art-runtime.js';
+import { creatureImage } from './creature-sprites.js';
 import { drawActualKinSprite } from './kin-sprite-image.jsx';
 
 export const TILE = 48;                       // matches Kingdom Heroes scale
@@ -363,7 +364,11 @@ const BASEMAP_DOTS = [
 // bottom-anchored at (footX,footY) at native aspect, width = w tiles, rising upward, so
 // the building sits centered IN the circle. base* = the small solid footprint that
 // blocks movement + is outlined in dev mode.
-export const CASTLE = { footX: 29.5, footY: 24, w: 7, baseTx: 28, baseTy: 22, baseW: 4, baseH: 3 };
+// CENTER-anchored on the plaza roundabout. Measured from the basemap via calibrated
+// cobble detection: the disc spans tx26-33 (8 tiles wide) x ty19-25, center (29.5, 22).
+// The sprite is drawn centered on (cx,cy) at native aspect, width = w tiles (fills the
+// disc). base* = the solid footprint under the building.
+export const CASTLE = { cx: 29.5, cy: 21.5, w: 8, baseTx: 28, baseTy: 22, baseW: 4, baseH: 3 };
 
 // ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
 // One entry per meaningful place, for the labelled debug overlay (screen-space
@@ -523,6 +528,19 @@ function drawNamedOverride(ctx, art, key, footX, footY, w, h) {
 export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}, squash = 0) {
   // Sized to read next to the (Kingdom-scale) farmer: cows/sheep ~1.5 tiles, chickens
   // smaller. Chickens are noticeably smaller than cows/sheep.
+  // PixelLab rotation sprite (facing-correct, no flip) for cow/sheep, if no art
+  // override is set. Chicken has no sheet yet → falls through to the placeholder.
+  if (!art?.[`lashira.animal.${species}`]) {
+    const px = creatureImage(species, facing);
+    if (px) {
+      const iw = px.naturalWidth || 68, ih = px.naturalHeight || 68;
+      const targetH = 64, s = targetH / ih, w = iw * s, h = ih * s;
+      ctx.save(); ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(px, footX - w / 2, footY + 3 - h, w, h);
+      ctx.restore();
+      return;
+    }
+  }
   const [aw, ah] = species === 'chicken' ? [36, 38] : [76, 64];
   const img = art?.[`lashira.animal.${species}`];
   if (img && img.naturalWidth > 0) {
