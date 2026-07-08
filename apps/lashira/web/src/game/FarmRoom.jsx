@@ -209,6 +209,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   useEffect(() => { if (G.current) G.current.devOverlay = devOn; }, [devOn]);
   const [castleSkin, setCastleSkin] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('lashira_castle_skin')) || 'storybook');
   useEffect(() => { if (G.current) G.current.castleSkin = castleSkin; try { localStorage.setItem('lashira_castle_skin', castleSkin); } catch {} }, [castleSkin]);
+  // Periodically clear wilted/orphaned crops so nothing lingers on the field forever.
+  useEffect(() => { const t = window.setInterval(() => logicRef.current?.sweepStalePlots?.(), 30000); return () => window.clearInterval(t); }, []);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
   // Walk speed multiplier (1x = Kingdom cadence, up to 3x). Persisted per browser.
   const [speed, setSpeed] = useState(() => {
@@ -246,6 +248,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
     (async () => {
       await logic.ready;
+      logic.sweepStalePlots(); // clear crops that wilted / orphaned by a field resize
       const [bundledArt, dbArt, acquiredKins, effectsAll] = await Promise.all([
         loadBundledArt(),
         loadFarmArtOverrides(),
@@ -1291,9 +1294,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         for (let yy = py + 9; yy < py + TILE - 4; yy += 10) ctx.fillRect(px + 2, yy, TILE - 4, 3);
       }
 
-      // CASTLE — drawn per-frame from the chosen skin (swappable in the Castle panel).
+      // CASTLE — drawn per-frame from the chosen skin (swappable in the Castle panel),
+      // fit inside its box preserving aspect (no stretch) + centered on the plaza.
       const cskin = g.art['lashira.castleskin.' + (g.castleSkin || 'storybook')];
-      if (cskin && cskin.naturalWidth > 0) ctx.drawImage(cskin, CASTLE.tx * TILE, CASTLE.ty * TILE, CASTLE.w * TILE, CASTLE.h * TILE);
+      if (cskin && cskin.naturalWidth > 0) {
+        const bx = CASTLE.tx * TILE, by = CASTLE.ty * TILE, bw = CASTLE.w * TILE, bh = CASTLE.h * TILE;
+        const ar = cskin.naturalWidth / cskin.naturalHeight;
+        let dw = bw, dh = bw / ar; if (dh > bh) { dh = bh; dw = bh * ar; }
+        ctx.drawImage(cskin, bx + (bw - dw) / 2, by + (bh - dh) / 2, dw, dh);
+      }
 
       // plots
       const plots = logicRef.current.state.plots;
@@ -1365,10 +1374,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // harvest-juice floats (rise + fade)
       if (g.floats?.length) { for (const f of g.floats) drawFloat(ctx, f, now); g.floats = g.floats.filter((f) => now - f.start < f.ttl); }
 
-      // ── LABELLED DEBUG OVERLAY ────────────────────────────────────────────
+      // ── LABELLED DEBUG OVERLAY (operator dev-mode only) ───────────────────
       // Blocked tiles get a red WASH + a thick red seam = "cannot walk here".
-      // (Toggle g.showCollision.)
-      if (g.showCollision !== false) {
+      if (g.devOverlay) {
         ctx.fillStyle = 'rgba(230,40,40,0.12)';
         for (const key of g.blocked) { const [bx, by] = key.split(',').map(Number); ctx.fillRect(bx * TILE, by * TILE, TILE, TILE); }
         ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();

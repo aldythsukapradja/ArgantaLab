@@ -519,6 +519,25 @@ export class FarmLogic {
     this.flash('🥀 ' + (crop?.name || 'Crop') + ' wilted — cleared'); this.save(); this.emit();
     return { cleared: crop };
   }
+  // HOUSEKEEPING (fixes "crops stay forever"): silently clear crops that have
+  // wilted past their grace window, and delete any plot record now sitting OUTSIDE
+  // the field (e.g. after a field resize) so nothing renders on the map forever.
+  // Called on load + on a periodic tick from FarmRoom. Returns count touched.
+  sweepStalePlots() {
+    const st = this.state; const now = Date.now(); let n = 0;
+    for (const key of Object.keys(st.plots)) {
+      const [tx, ty] = key.split(',').map(Number);
+      const p = st.plots[key];
+      if (!p) { delete st.plots[key]; continue; }
+      if (!this.inField(tx, ty)) { delete st.plots[key]; n++; continue; } // orphaned by resize
+      if (p.cropId && cropIsWithered(p, now)) {                            // wilted → lost
+        p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+        this._intent({ t: 'plot', key, plot: { ...p } }); n++;
+      }
+    }
+    if (n) { this._bump(); this.save(); this.emit(); }
+    return n;
+  }
   // Harvest EVERY ripe crop in one tap (FarmVille speed). Returns the harvested
   // tiles so the renderer can pop juice at each.
   harvestAll() {

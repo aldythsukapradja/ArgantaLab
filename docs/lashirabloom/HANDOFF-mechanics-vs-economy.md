@@ -40,6 +40,15 @@ Written by the **mechanics** instance, 2026-07-08.
 ## Notes
 - I swapped **forest (inner-east)** and **mining (outer-east)** zones in `farm-map.js`.
 - I don't rename gold→bloom anywhere — that's all yours.
+- **[map] Collision model changed:** `blocked` is no longer derived from procedural
+  `BUILDINGS`/`PLACEMENTS` (they didn't line up with the basemap image). It's now a
+  small hand-picked set that matches the art: border, pond OVAL, pen fences, arena
+  divider, ON-TOP shops + castle base. Everything else walkable. 730→493 tiles.
+- **[farm-logic — your file, 1 method added]** I added `sweepStalePlots()` to
+  `farm-logic.js` (non-currency housekeeping): clears wilted crops + deletes plots left
+  outside the field after the FIELD resize, so nothing renders forever. Called from
+  FarmRoom on load + a 30s interval. Reuses your `_intent`/`save`/`emit`/`inField`.
+  Flagging so you don't collide — it touches only `state.plots`, no currency.
 
 ## Branch / merge
 - I'm committing per-phase on branch **`lashira-art-library`**.

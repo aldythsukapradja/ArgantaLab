@@ -11,7 +11,7 @@ export const W = 60, H = 48;                  // one overworld: all zones + cast
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
 
 // Crop field — the Farm (NW), biggest zone. Pre-tilled soil, open (no fence).
-export const FIELD = { x0: 6, y0: 6, x1: 26, y1: 16 };  // snapped to the basemap's fenced tilled plot
+export const FIELD = { x0: 7, y0: 7, x1: 25, y1: 16 };  // INSIDE the basemap's fence (no overlap onto fence/props)
 
 // Named zones (terrain painting + prop placement).
 export const ZONES = {
@@ -248,7 +248,10 @@ export function buildFarmMap(art = {}) {
   for (let y = ZONES.fishing.y0; y <= ZONES.fishing.y1; y++) for (let x = ZONES.fishing.x0; x <= ZONES.fishing.x1; x++) {
     rect(ctx, x * TILE, y * TILE, TILE, TILE, '#4b90d0');
     dots(ctx, x * 13 + y * 3, 3, x * TILE, y * TILE, TILE, TILE, '#579cdc', 3);
-    block(x, y);
+    // pond is an OVAL (measured from basemap: ~center 9,38.5), not the full zone —
+    // so the grassy SW shore stays walkable. Bridge deck is re-opened below.
+    const dx = (x - 9) / 6.2, dy = (y - 38.5) / 6.5;
+    if (dx * dx + dy * dy <= 1) block(x, y);
   }
   // martial south: battleground (trodden) + pvp (sand)
   for (let y = ARENA.y0; y <= ARENA.y1; y++) for (let x = ARENA.x0; x <= ARENA.x1; x++) {
@@ -281,14 +284,14 @@ export function buildFarmMap(art = {}) {
     }
   }
 
-  // buildings (castle centered)
-  for (const b of BUILDINGS) { drawBuilding(ctx, b, art); blockRect(b.tx, b.ty, b.w, b.h); }
-
-  // baked landmark + decoration placements
-  for (const p of PLACEMENTS) {
-    drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE);
-    if (p.solid) blockRect(p.tx, p.ty, p.w, p.h);
-  }
+  // COLLISION MODEL: the basemap IMAGE is the map, so collision is NOT derived from
+  // these procedural props anymore (they're painted under the image = invisible, and
+  // their footprints don't line up with the art). We only draw them as a fallback and
+  // block a small hand-picked set that MATCHES the basemap: map border, pond water,
+  // pen fences, the arena divider, the ON-TOP shops + castle base. Everything else is
+  // walkable. (Refine trees/rocks/walls from a dev-mode screenshot later.)
+  for (const b of BUILDINGS) drawBuilding(ctx, b, art);           // draw only (no block)
+  for (const p of PLACEMENTS) drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE); // draw only (no block)
   // WALKWAY — the wooden bridge (detected from basemap.png) spans the pond at
   // y35-36 and meets the EAST shore (x17 grass). Make the bridge deck walkable so
   // you can walk out over the water; deep water stays blocked.
@@ -355,7 +358,10 @@ const BASEMAP_DOTS = [
 
 // Castle footprint, centered on the plaza crossroads. Collision-only here; the
 // SPRITE is drawn per-frame in FarmRoom so its skin is swappable (Castle panel).
-export const CASTLE = { tx: 27, ty: 20, w: 6, h: 7 };
+// Castle DRAW box (tx/ty/w/h) is centered on the plaza roundabout (map center 30,24);
+// the sprite is drawn inside it preserving aspect (FarmRoom). base* = the small solid
+// footprint that actually blocks movement + is outlined in dev mode (not the full box).
+export const CASTLE = { tx: 27, ty: 21, w: 6, h: 6, baseTx: 28, baseTy: 24, baseW: 4, baseH: 3 };
 
 // ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
 // One entry per meaningful place, for the labelled debug overlay (screen-space
@@ -366,7 +372,7 @@ const _zc = (r) => [(r.x0 + r.x1 + 1) / 2, (r.y0 + r.y1 + 1) / 2];
 const _sr = (id) => (HOTSPOTS.find((h) => h.id === id) || { rect: { x0: 0, y0: 0, x1: 0, y1: 0 } }).rect;
 export const ZONES_ANNOT = [
   { label: 'Farm', walk: true, rect: FIELD, noDraw: true },     // ← Gemini: keep clear
-  { label: 'Castle', walk: false, rect: { x0: CASTLE.tx, y0: CASTLE.ty, x1: CASTLE.tx + CASTLE.w - 1, y1: CASTLE.ty + CASTLE.h - 1 }, custom: true },
+  { label: 'Castle', walk: false, rect: { x0: CASTLE.baseTx, y0: CASTLE.baseTy, x1: CASTLE.baseTx + CASTLE.baseW - 1, y1: CASTLE.baseTy + CASTLE.baseH - 1 }, custom: true },
   { label: 'Greenhouse', walk: false, cx: 7, cy: 21 },
   { label: 'Seed Shop', walk: false, rect: _sr('seed') },
   { label: 'General Store', walk: false, rect: _sr('general') },
@@ -389,7 +395,7 @@ export const ZONES_ANNOT = [
 // Clickable component sprites the reference image LACKS (shops) — drawn ON TOP of the
 // basemap so they're visible + tappable. Positions match the shop HOTSPOTS. solid = blocks.
 const ONTOP = [
-  { key: 'lashira.building.house', tx: CASTLE.tx, ty: CASTLE.ty, w: CASTLE.w, h: CASTLE.h, solid: true, noDraw: true }, // castle collision only
+  { key: 'lashira.building.house', tx: CASTLE.baseTx, ty: CASTLE.baseTy, w: CASTLE.baseW, h: CASTLE.baseH, solid: true, noDraw: true }, // castle: base footprint blocks only
   { key: 'lashira.lib.shop_seed', tx: 9, ty: 16, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_general', tx: 13, ty: 19, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_blacksmith', tx: 18, ty: 22, w: 2, h: 2, solid: true },
