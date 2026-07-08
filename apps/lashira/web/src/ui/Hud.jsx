@@ -13,6 +13,11 @@ import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
 import { ActionCluster } from '@arganta/combat/cluster';
 import { RewardToasts } from '@arganta/combat/reward';
+import { SKIN_LIST, DEFAULT_SKIN, skinOf, GameIcon } from '@arganta/combat';
+
+// chosen action-cluster skin, remembered per device.
+const SKIN_KEY = 'lashira_cluster_skin';
+const loadSkin = () => { try { return localStorage.getItem(SKIN_KEY) || DEFAULT_SKIN; } catch { return DEFAULT_SKIN; } };
 
 const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
@@ -52,6 +57,8 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   const [showLive, setShowLive] = useState(false);
+  const [skinId, setSkinId] = useState(loadSkin);
+  const pickSkin = (id) => { setSkinId(id); try { localStorage.setItem(SKIN_KEY, id); } catch { /* ignore */ } };
   // Live channel diagnostics, refreshed while Settings is open — a field
   // screenshot of this line pinpoints WHERE sync dies (never joined / died
   // later / joined but hearing nothing).
@@ -147,6 +154,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           onSkill={onSkill}
           onAttack={onStrike}
           mp={snap.stamina}
+          skin={skinId}
           utils={[{ key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: 'mount' }]}
         />
       ) : (
@@ -243,6 +251,30 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                 ) : (
                   <p className="settings-empty">No Kin on the farm yet — befriend them in ArgantaLab.</p>
                 )}
+              </section>
+              <section className="set-card">
+                <h4>Action skin <em className="set-count">{skinOf(skinId).name}</em></h4>
+                <div className="skin-picker">
+                  {SKIN_LIST.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className={'skin-swatch' + (s.id === skinId ? ' on' : '')}
+                      style={s.vars}
+                      onClick={() => pickSkin(s.id)}
+                      title={s.name}
+                    >
+                      <span className="skin-orbs">
+                        <i className="so sk"><GameIcon name={s.icons.single} size={15} /></i>
+                        <i className="so atk"><GameIcon name={s.icons.attack} size={22} /></i>
+                        <i className="so sk"><GameIcon name={s.icons.heal} size={15} /></i>
+                      </span>
+                      <b>{s.name}</b>
+                      <small>{s.blurb}</small>
+                    </button>
+                  ))}
+                </div>
+                <p className="settings-empty">Repaints the battle buttons (bottom-right). Each skin uses a different game-icons set — pick the look you like.</p>
               </section>
               <section className="set-card">
                 <h4>Camera &amp; movement</h4>

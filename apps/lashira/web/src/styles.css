@@ -611,7 +611,7 @@ body {
 .attack-circle, .skill-circle {
   position: absolute; border-radius: 50%; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  color: var(--orb-ink, #fff); touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: transform 0.18s var(--spring), box-shadow 0.15s ease, filter 0.15s ease;
   isolation: isolate;
 }
@@ -623,17 +623,17 @@ body {
 }
 .attack-circle {
   right: 6px; bottom: 4px; width: 94px; height: 94px;
-  background: radial-gradient(circle at 36% 28%, #ffb694 0 6%, #ff7a4a 34%, #e0501d 70%, #9a2f0e 100%);
-  border: 2px solid #ffffffbf;
-  box-shadow: 0 10px 26px -4px #000c, 0 0 22px -4px #ff6a3599, inset 0 3px 9px #ffffff66, inset 0 -8px 16px #00000073;
+  background: var(--atk-face, radial-gradient(circle at 36% 28%, #ffb694 0 6%, #ff7a4a 34%, #e0501d 70%, #9a2f0e 100%));
+  border: 2px solid var(--atk-edge, #ffffffbf);
+  box-shadow: 0 10px 26px -4px #000c, 0 0 22px -4px var(--atk-glow, #ff6a3599), inset 0 3px 9px #ffffff66, inset 0 -8px 16px #00000073;
 }
 .attack-circle:active { transform: scale(0.92); box-shadow: 0 4px 14px -4px #000c, inset 0 4px 12px #00000099; }
 .small-ring { position: static; display: contents; }
 .skill-circle {
   width: 54px; height: 54px;
-  background: radial-gradient(circle at 36% 28%, #d7cfff 0 6%, #7d6cf6 36%, #5a3fd6 72%, #3a2596 100%);
-  border: 1.6px solid #ffffffa6;
-  box-shadow: 0 7px 18px -3px #000b, 0 0 16px -4px #7c6cf5cc, inset 0 2px 7px #ffffff5e, inset 0 -6px 12px #00000073;
+  background: var(--skill-face, radial-gradient(circle at 36% 28%, #d7cfff 0 6%, #7d6cf6 36%, #5a3fd6 72%, #3a2596 100%));
+  border: 1.6px solid var(--skill-edge, #ffffffa6);
+  box-shadow: 0 7px 18px -3px #000b, 0 0 16px -4px var(--skill-glow, #7c6cf5cc), inset 0 2px 7px #ffffff5e, inset 0 -6px 12px #00000073;
 }
 .skill-circle:active { transform: scale(0.9); box-shadow: 0 3px 10px -3px #000b, inset 0 3px 10px #00000099; }
 .skill-circle .slot {
@@ -654,8 +654,9 @@ body {
 }
 .skill-circle.util {
   width: 46px; height: 46px;
-  background: radial-gradient(circle at 36% 28%, #dbe2ee 0 6%, #93a0b6 38%, #55627a 74%, #38435a 100%);
-  box-shadow: 0 6px 16px -3px #000b, 0 0 12px -5px #9fb0cccc, inset 0 2px 6px #ffffff5e, inset 0 -5px 11px #00000073;
+  background: var(--util-face, radial-gradient(circle at 36% 28%, #dbe2ee 0 6%, #93a0b6 38%, #55627a 74%, #38435a 100%));
+  border-color: var(--util-edge, #ffffffa6);
+  box-shadow: 0 6px 16px -3px #000b, 0 0 12px -5px var(--util-glow, #9fb0cccc), inset 0 2px 6px #ffffff5e, inset 0 -5px 11px #00000073;
 }
 /* fan the orbs in an arc up-left of the attack button */
 .small-ring .skill-circle:nth-child(1) { right: 120px; bottom: 8px; }
@@ -665,6 +666,10 @@ body {
 .small-ring .skill-circle:nth-child(5) { right: 156px; bottom: 132px; }
 .attack-circle { flex-direction: column; gap: 1px; font-size: 28px; }
 .attack-circle small { position: relative; z-index: 2; font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px #000c; }
+/* obsidian skin: brighter neon ring + darker inner so the rim really glows */
+.cluster[data-skin="obsidian"] .attack-circle { box-shadow: 0 10px 26px -4px #000d, 0 0 26px 0 var(--atk-glow), inset 0 2px 6px #ffffff33, inset 0 -8px 16px #000000b0; }
+.cluster[data-skin="obsidian"] .skill-circle { box-shadow: 0 7px 18px -3px #000c, 0 0 20px 0 var(--skill-glow), inset 0 2px 6px #ffffff33, inset 0 -6px 12px #000000b0; }
+.cluster[data-skin="obsidian"] .skill-circle.util { box-shadow: 0 6px 16px -3px #000c, 0 0 18px 0 var(--util-glow), inset 0 2px 6px #ffffff33, inset 0 -5px 11px #000000b0; }
 .seed-fan {
   position: absolute; right: 64px; bottom: 160px; z-index: 4; pointer-events: auto;
   min-width: 230px; padding: 10px; border-radius: 18px;
@@ -728,3 +733,23 @@ body {
 .setrow label { width: 62px; color: #5c6478; font-size: 12.5px; font-weight: 600; }
 .setrow input[type="range"] { flex: 1; accent-color: #6a4df5; }
 .settings-empty { color: var(--muted, #6d7288); font-size: 12.5px; margin: 4px 0; }
+
+/* action-skin picker: one swatch per skin, showing its real orbs + icons */
+.skin-picker { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 4px; }
+.skin-swatch {
+  flex: 1 1 0; min-width: 100px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 8px; border-radius: 16px; cursor: pointer; font-family: inherit;
+  background: rgba(255,255,255,.55); border: 2px solid transparent; color: var(--ink, #1f2340);
+  transition: transform .15s var(--spring), border-color .15s ease, background .15s ease;
+}
+.skin-swatch:hover { transform: translateY(-2px); background: rgba(255,255,255,.8); }
+.skin-swatch.on { border-color: #6a4df5; background: rgba(106,77,245,.12); }
+.skin-swatch b { font-size: 12px; font-weight: 800; }
+.skin-swatch small { font-size: 10px; color: var(--muted, #6b6f8c); }
+.skin-orbs { display: flex; align-items: center; gap: 5px; color: var(--orb-ink, #fff); margin-bottom: 2px; }
+.skin-orbs .so { display: grid; place-items: center; border-radius: 50%; }
+.skin-orbs .so.atk { width: 44px; height: 44px; background: var(--atk-face); border: 2px solid var(--atk-edge);
+  box-shadow: 0 3px 9px -2px #0008, 0 0 11px -3px var(--atk-glow), inset 0 2px 5px #ffffff4d, inset 0 -5px 10px #00000059; }
+.skin-orbs .so.sk { width: 30px; height: 30px; background: var(--skill-face); border: 1.5px solid var(--skill-edge);
+  box-shadow: 0 2px 7px -2px #0008, 0 0 9px -3px var(--skill-glow), inset 0 1px 4px #ffffff4d, inset 0 -4px 8px #00000059; }
+.skin-orbs .so svg { filter: drop-shadow(0 1px 2px #0009); }

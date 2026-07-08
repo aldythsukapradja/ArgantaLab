@@ -5,6 +5,8 @@
 // match the shared Heroes glass CSS both apps already ship, so it looks the same
 // in both. Icons are inlined (Kingdom's) but overridable per-button via props.
 import React from 'react';
+import { GameIcon } from './icons/Icon.jsx';
+import { skinOf, skinRoleForSkill } from './skins.js';
 
 const IconSwords = () => (
   <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -30,17 +32,23 @@ export { IconSwords, IconSpark };
 //               disabled and shows its cost badge (pure additive — Kingdom skills
 //               have manaCost null, so nothing changes there)
 //   onButtonPointerDown  optional (Kingdom passes keepCanvasFocus)
+//   skin        optional skin id. When set, repaints the orbs (inline CSS vars
+//               from the skin registry) and swaps each icon for that skin's
+//               vendored game-icons glyph. When null → unchanged (Kingdom).
 export function ActionCluster({
   skills = [], onSkill, onAttack,
   attackIcon = <IconSwords />, attackLabel = 'attack',
-  utils = [], mp = null, onButtonPointerDown,
+  utils = [], mp = null, onButtonPointerDown, skin = null,
 }) {
+  const sk = skin ? skinOf(skin) : null;
+  const attackNode = sk ? <GameIcon name={sk.icons.attack} size={46} /> : attackIcon;
   return (
-    <div className="cluster">
+    <div className="cluster" data-skin={sk ? sk.id : undefined} style={sk ? sk.vars : undefined}>
       <div className="small-ring">
         {skills.map((s, i) => {
           const cost = Number(s?.manaCost || 0);
           const disabled = mp != null && cost > 0 && mp < cost;
+          const icon = sk ? <GameIcon name={sk.icons[skinRoleForSkill(s, i)]} size={26} /> : <IconSpark />;
           return (
             <button
               key={i}
@@ -51,7 +59,7 @@ export function ActionCluster({
               onPointerDown={onButtonPointerDown}
               onClick={() => onSkill?.(i)}
             >
-              <IconSpark /><span className="slot">{i + 1}</span>
+              {icon}<span className="slot">{i + 1}</span>
               {cost > 0 ? <span className="tool-count">{cost}</span> : null}
             </button>
           );
@@ -65,7 +73,7 @@ export function ActionCluster({
             onPointerDown={onButtonPointerDown}
             onClick={u.onClick}
           >
-            {u.icon}
+            {sk && u.key === 'mount' ? <GameIcon name={sk.icons.mount} size={24} /> : u.icon}
           </button>
         ))}
       </div>
@@ -76,7 +84,7 @@ export function ActionCluster({
         onPointerDown={onButtonPointerDown}
         onClick={onAttack}
       >
-        {attackIcon}
+        {attackNode}
       </button>
     </div>
   );
