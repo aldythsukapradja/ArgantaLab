@@ -53,7 +53,7 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, onHarvestAll, onPlantAll }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   const [showLive, setShowLive] = useState(false);
@@ -206,6 +206,18 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             <div className="browser-head"><b>Settings</b>
               <button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
             <div className="settings-body">
+              {snap.operator && (
+                <section className="set-card dev-card">
+                  <h4>Developer mode <em className="op-badge">⚡ OPERATOR</em></h4>
+                  <div className="setrow" style={{ justifyContent: 'space-between' }}>
+                    <label style={{ width: 'auto' }}>Map overlay <span className="dev-dot walk" /> walk · <span className="dev-dot block" /> no-walk</label>
+                    <button type="button" className={'dev-toggle' + (devMode ? ' on' : '')} onClick={onToggleDev} aria-pressed={devMode}>
+                      <span className="dev-knob" />{devMode ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                  <p className="settings-empty">Draws the red/green collision boxes + numbered map key on the farm. Visible only to you — players never see it.</p>
+                </section>
+              )}
               <section className="set-card">
                 <h4>Circle sync</h4>
                 <div className="setrow" style={{ flexWrap: 'wrap', gap: 6 }}>

@@ -200,6 +200,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [mechSnap, setMechSnap] = useState(null); // mechanics store snapshot (materials/tools/house)
   const mechRef = useRef(null);
   const [showLegend, setShowLegend] = useState(true); // labelled-overlay legend
+  // Developer mode — OPERATOR ONLY. Shows the red/green collision overlay + map
+  // key. Off for everyone by default; a non-operator can never turn it on (the
+  // toggle only appears for operators, and the draw is gated on snap.operator).
+  const [devMode, setDevMode] = useState(() => { try { return localStorage.getItem('lashira_dev_mode') === '1'; } catch { return false; } });
+  const toggleDev = () => setDevMode((v) => { const nv = !v; try { localStorage.setItem('lashira_dev_mode', nv ? '1' : '0'); } catch { /* ignore */ } return nv; });
+  const devOn = !!(snap?.operator && devMode); // effective dev overlay (operator-gated)
+  useEffect(() => { if (G.current) G.current.devOverlay = devOn; }, [devOn]);
   const [castleSkin, setCastleSkin] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('lashira_castle_skin')) || 'storybook');
   useEffect(() => { if (G.current) G.current.castleSkin = castleSkin; try { localStorage.setItem('lashira_castle_skin', castleSkin); } catch {} }, [castleSkin]);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
@@ -1380,7 +1387,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // Zone boundary boxes — FARM emphasised (thick yellow = "keep clear, don't
       // paint on top"); CASTLE gold (swappable sprite); others thin (green=walk,
       // white=solid). Numbered badges are drawn screen-space below.
-      if (g.showHotspots !== false) {
+      if (g.devOverlay) {
         for (const zn of ZONES_ANNOT) {
           if (!zn.rect) continue;
           const rx = zn.rect.x0 * TILE, ry = zn.rect.y0 * TILE;
@@ -1397,7 +1404,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
       // NUMBERED BADGES — screen space so they stay big at any map zoom. Green = you
       // can walk here, red = solid/no-walk. Numbers key to the on-screen legend.
-      if (g.showHotspots !== false && g.cam) {
+      if (g.devOverlay && g.cam) {
         const { camX, camY, z } = g.cam;
         ctx.save(); ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 15px system-ui';
@@ -1581,29 +1588,31 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         <canvas ref={canvasRef} tabIndex={0} />
         {!ready && <div className="room-loading">Growing your valley…</div>}
         <div className="stick-zone" ref={stickRef} />
-        <div className="map-legend">
-          <button className="map-legend-head" onClick={() => setShowLegend((v) => !v)}>
-            🗺️ Map key <span>{showLegend ? '▾' : '▸'}</span>
-          </button>
-          {showLegend && (
-            <div className="map-legend-body">
-              <div className="map-legend-note"><span className="lg-walk" /> walk · <span className="lg-block" /> no-walk</div>
-              {ZONES_ANNOT.map((z) => (
-                <div className="map-legend-row" key={z.n}>
-                  <span className={'lg-num ' + (z.walk ? 'lg-walk' : 'lg-block')}>{z.n}</span>
-                  <span className="lg-label">{z.label}{z.custom ? ' 🎨' : ''}{z.noDraw ? ' ⛔art' : ''}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {devOn && (
+          <div className="map-legend">
+            <button className="map-legend-head" onClick={() => setShowLegend((v) => !v)}>
+              🗺️ Map key <span>{showLegend ? '▾' : '▸'}</span>
+            </button>
+            {showLegend && (
+              <div className="map-legend-body">
+                <div className="map-legend-note"><span className="lg-walk" /> walk · <span className="lg-block" /> no-walk</div>
+                {ZONES_ANNOT.map((z) => (
+                  <div className="map-legend-row" key={z.n}>
+                    <span className={'lg-num ' + (z.walk ? 'lg-walk' : 'lg-block')}>{z.n}</span>
+                    <span className="lg-label">{z.label}{z.custom ? ' 🎨' : ''}{z.noDraw ? ' ⛔art' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {snap && (
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
               zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill}
-              onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} />
+              onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
             <Panels panel={panel} snap={snap} game={logicRef.current} onClose={() => setPanel(null)} />
             <HotspotPanels hotspot={hotspot} snap={snap} game={logicRef.current} mech={mechSnap}
               mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon}

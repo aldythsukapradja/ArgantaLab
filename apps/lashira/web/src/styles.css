@@ -734,6 +734,21 @@ body {
 .setrow input[type="range"] { flex: 1; accent-color: #6a4df5; }
 .settings-empty { color: var(--muted, #6d7288); font-size: 12.5px; margin: 4px 0; }
 
+/* operator-only developer-mode card + switch */
+.dev-card { border: 1px solid #f0a83a55; background: #f0a83a10; border-radius: 14px; padding: 10px 12px; }
+.dev-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; margin: 0 1px; }
+.dev-dot.walk { background: #1f9d4d; }
+.dev-dot.block { background: #d23030; }
+.dev-toggle {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 5px; border-radius: 999px;
+  font-size: 11px; font-weight: 900; letter-spacing: .04em; cursor: pointer; font-family: inherit;
+  color: #6d7288; background: rgba(120,128,150,.16); border: 1px solid rgba(120,128,150,.3);
+  transition: background .15s ease, color .15s ease;
+}
+.dev-toggle .dev-knob { width: 16px; height: 16px; border-radius: 50%; background: #9aa0b4; box-shadow: 0 1px 3px #0004; transition: background .15s ease; }
+.dev-toggle.on { color: #1f7a44; background: rgba(31,157,77,.18); border-color: rgba(31,157,77,.45); }
+.dev-toggle.on .dev-knob { background: #1f9d4d; }
+
 /* action-skin picker: one swatch per skin, showing its real orbs + icons */
 .skin-picker { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 4px; }
 .skin-swatch {
