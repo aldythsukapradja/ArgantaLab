@@ -15,6 +15,17 @@ raw-in-the-inbox (untrusted) or reviewed-and-distilled (trusted). The line betwe
 The honesty rule applies everywhere: never present raw as truth, never present
 inferred as known, never present simulated as measured. Flag inference as inference.
 
+### The guardrail (read this first)
+Two independent axes govern every note — never collapse them:
+- **`class`** = *can I rely on this?* → `brainstorm` | `operational` | `reference`
+- **`canonical` / `version`** = *is this the latest one?*
+
+**The one hard rule the whole system obeys:**
+> Only a note with `class: operational` **AND** `canonical: true` may be treated as truth.
+> `brainstorm` is never citable as truth. `reference` is a source, not truth.
+
+Vocabulary + full field list: [[TAXONOMY]].
+
 ---
 
 ## 1. The intake law (how raw input enters)
@@ -33,23 +44,31 @@ becomes **ONE NEW FILE** in `60-CAPTURES/_INBOX/`.
 
 ## 2. The frontmatter schema (the query contract — keep it stable)
 
-Every note carries this YAML. Stable field names = future AI can query the whole vault.
+Every note carries the **unified schema** — the same fields the HQ Vault app uses, so a note
+opens in Obsidian *and* loads into the app's GraphView/DecisionsView unchanged.
+
+A fresh **capture** in `_INBOX/` starts minimal (`class: brainstorm`, `status: seed`):
 
 ```yaml
 ---
-title:              # short, clear
-status: raw         # raw | reviewing | distilled
-intent:             # capture | digest | decision | action | repo-context | fable-brief | archive
-captured: 2026-07-08
-source:             # where it came from (URL, "Instagram", "meeting", etc.)
-domain:             # one or more from TAXONOMY (see 90-META/TAXONOMY.md)
-confidence:         # low | medium | high
-promoted: false     # flips to true only when I harvest it into the distilled vault
-related:            # [[wikilinks]] to connected notes
+title:
+product:            # HQ | KinetikCircle | ArgantaLabs | LashiraBloom | Investor | Research | Life
+type: capture       # note | strategy | decision | prompt | research | plan | spec | capture
+class: brainstorm   # ← untrusted until harvested
+status: seed        # seed | draft | active | shipped | archived
+canonical: false
+version: v1
+updated: 2026-07-08
+source:             # where it came from
+confidence: low
+domain: []
+tags: []
+related: []
 ---
 ```
 
-Full vocabulary (domains, tags, allowed values) lives in [[TAXONOMY]].
+When harvested into an operational note it gains `class: operational`, `status: active`,
+`canonical: true`, and an `owner`. Full field list + allowed values: [[TAXONOMY]].
 
 ---
 
@@ -95,25 +114,62 @@ or leave them in the source repo. The vault stays the distilled layer.
 
 Runs in the evening loop (see [[daily-loop]]). Not automated.
 
-1. Open `60-CAPTURES/_INBOX/`. Read each un-promoted note.
+1. Open `60-CAPTURES/_INBOX/`. Read each note (all `class: brainstorm`).
 2. Decide: distill it (into the folder from §4), archive it, or drop it.
-3. When distilling: extract the principle into the right note, add `[[wikilinks]]`,
-   set `status: distilled` and `promoted: true` on the source, then move/merge it.
-4. Nothing in `_INBOX/` is trusted until this happens.
+3. When distilling: extract the principle into the right note, add `[[wikilinks]]`, then
+   **flip the axes** — `class: operational`, `status: active`, `canonical: true`, set `owner`.
+   The source capture moves/merges out of `_INBOX/`.
+4. Nothing in `_INBOX/` is trusted until this happens. Brainstorm → operational is the gate.
 
 ---
 
-## 6. The promotion gate (what protects truth)
+## 6. Versioning operational truth (is this the latest?)
 
-Core and "current truth" files — persona, mental-model, and any `*_CURRENT` file —
+Every operational note answers "latest or not?" at a glance via a **badge callout at the top**
+(see [[CONVENTIONS]]) driven by its frontmatter:
+
+| Badge | Frontmatter | Meaning |
+|---|---|---|
+| 🟢 **CANONICAL vN · latest** | `canonical: true`, fresh `updated` | this IS the truth |
+| 🕒 **STALE · verify** | `canonical: true`, `updated` past its freshness window ([[TAXONOMY]]) | latest that exists, but aging |
+| ⚠️ **SUPERSEDED → [[newer]]** | `canonical: false`, `superseded_by` set | not latest — follow the link |
+| 🗄️ **ARCHIVED** | `status: archived` | retired |
+
+**Cutting a new version (living-file style — the default):**
+1. Keep the file's name and slug (so links/backlinks survive).
+2. Bump `version:` and `updated:`; append a `## Changelog` entry (`vN — date — what changed`).
+3. Git history holds the old bytes. No new file.
+
+**Only one `canonical: true` note per topic.** If you must *freeze* an old version (a shipped
+spec, a made decision), copy it to `_versions/<slug>-vN-<date>.md`, mark it `status: archived`
++ `superseded_by`, and leave the living file canonical.
+
+---
+
+## 7. The promotion gate (what protects truth)
+
+Core and canonical files — persona, mental-model, and any `canonical: true` operational note —
 change **only by my hand**. An agent may *propose* a patch and say which file it targets;
-it never applies one. This is the immune system against truth drift.
+it never applies one, and it never sets `canonical: true` itself. This is the immune system
+against truth drift.
 
 ---
 
-## 7. Conventions
+## 8. The mind map (one schema, two renderers)
 
-Naming, wikilink style, and folder-placement rules: [[CONVENTIONS]].
+The graph builds itself from `[[wikilinks]]` + `tags`. Two views, same notes:
+- **Obsidian graph** — open `vault-hq/` in Obsidian.
+- **HQ Vault app GraphView** — the same frontmatter loads into `apps/hq/src/vault`.
+
+To keep the graph readable, each folder has a **Map-of-Content** index note (`_MOC`) that links
+its notes; `HOME` links the MOCs. Filter/color by `class` to see the bright operational-canonical
+core vs the dim brainstorm halo; filter `product: KinetikCircle` to see just that world.
+
+---
+
+## 9. Conventions
+
+Naming, wikilink style, badge callouts, folder-placement rules: [[CONVENTIONS]].
 Controlled vocabulary (domains + tags + field values): [[TAXONOMY]].
 
 ---

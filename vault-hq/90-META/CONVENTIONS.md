@@ -28,6 +28,32 @@
 - Interesting-but-not-now → `60-CAPTURES/_ARCHIVE/`.
 - Distilled knowledge → `00-CORE` … `50-PROFESSIONAL` per [[DIGEST]] §4.
 - Historical build docs / one-time handoffs → `90-META/_provenance/`.
+- Frozen version snapshots → `_versions/` beside the living note.
+
+## The status badge (top of every operational note)
+
+Right under the frontmatter, a one-line callout so "latest or not?" is instant:
+
+```markdown
+> [!success] 🟢 CANONICAL v3 · updated 2026-07-08
+```
+Other states: `> [!warning] ⚠️ SUPERSEDED → [[topic-current]]` ·
+`> [!caution] 🕒 STALE — verify before trusting` · `> [!note] 🗄️ ARCHIVED`.
+Brainstorm notes need no badge (their `class` says it). Badge must match the frontmatter.
+
+## Versioning a note (living-file default)
+
+1. Keep the filename/slug — links and backlinks must survive.
+2. Bump `version` + `updated`; update the badge; append to `## Changelog`.
+3. To retire one in favour of another: set old `canonical: false` + `superseded_by: [[new]]`,
+   new gets `canonical: true` + `supersedes: [[old]]`. Exactly one canonical per topic.
+
+## Maps of Content (the mind-map spine)
+
+- Each numbered folder has an index note named `_MOC.md` (e.g. `10-PROJECTS/_MOC.md`) that
+  links every note in it. `HOME` links the MOCs. This gives the graph a hub-and-spoke shape
+  instead of a hairball.
+- A note with no inbound/outbound link is an orphan — link it from its MOC.
 
 ## Portability check (run before "done")
 
