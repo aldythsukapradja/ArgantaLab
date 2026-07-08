@@ -11,7 +11,7 @@ export const W = 60, H = 48;                  // one overworld: all zones + cast
 export const WORLD_W = W * TILE, WORLD_H = H * TILE;
 
 // Crop field — the Farm (NW), biggest zone. Pre-tilled soil, open (no fence).
-export const FIELD = { x0: 7, y0: 7, x1: 26, y1: 16 };  // basemap's fenced tilled plot (covers its baked crops, stays inside the fence)
+export const FIELD = { x0: 7, y0: 7, x1: 26, y1: 15 };  // basemap's fenced tilled plot — 1 tile up from the bottom fence so soil doesn't overlap it
 
 // Named zones (terrain painting + prop placement).
 export const ZONES = {
@@ -363,7 +363,7 @@ const BASEMAP_DOTS = [
 // bottom-anchored at (footX,footY) at native aspect, width = w tiles, rising upward, so
 // the building sits centered IN the circle. base* = the small solid footprint that
 // blocks movement + is outlined in dev mode.
-export const CASTLE = { footX: 29.5, footY: 27, w: 7, baseTx: 28, baseTy: 24, baseW: 4, baseH: 3 };
+export const CASTLE = { footX: 29.5, footY: 25.5, w: 7, baseTx: 28, baseTy: 23, baseW: 4, baseH: 3 };
 
 // ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
 // One entry per meaningful place, for the labelled debug overlay (screen-space
