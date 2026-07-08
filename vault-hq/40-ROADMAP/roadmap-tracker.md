@@ -1,4 +1,25 @@
+---
+title: Roadmap Tracker
+product: HQ
+type: plan
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [arganta, decisions]
+tags: [roadmap, meta-work, tracker]
+related:
+  - "[[fable-initiatives]]"
+  - "[[model-ladder]]"
+  - "[[persona-core]]"
+---
+
 # Roadmap Tracker
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07 — live vs my check-ins, not real-time telemetry.
 
 > Live status of the Fable-class initiatives. This is META-WORK state — kept separate from graph
 > nodes (initiatives aren't product ontology). Cross-linked to nodes, not living inside them.

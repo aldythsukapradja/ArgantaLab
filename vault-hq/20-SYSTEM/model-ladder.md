@@ -1,4 +1,25 @@
+---
+title: Model Ladder
+product: HQ
+type: strategy
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [ai-context, decisions]
+tags: [rails, scaffolding, cost-engineering]
+related:
+  - "[[effort-scorer]]"
+  - "[[mental-model]]"
+  - "[[roadmap-tracker]]"
+---
+
 # Model Ladder
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > How each model punches one tier up when you supply the missing scaffolding.
 > The gap between tiers is mostly scaffolding (planning, verification, context) — not raw IQ.

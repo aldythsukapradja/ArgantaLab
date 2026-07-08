@@ -1,3 +1,21 @@
+---
+title: "SKILL: instrumentation-wiring"
+product: HQ
+type: spec
+class: reference
+status: draft
+canonical: false
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: medium
+domain: [ai-context]
+tags: [skill, reference, technology]
+related:
+  - "[[sensor-plan]]"
+  - "[[skills-index]]"
+---
+
 # SKILL: instrumentation-wiring
 Knowledge graph link: ladders_to `ns.w2f` via `lever.efficiency` (and each wired node's own lever)
 Office: Technology (CTO)

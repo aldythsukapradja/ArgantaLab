@@ -1,4 +1,24 @@
+---
+title: Coverage Tracker
+product: HQ
+type: note
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [ai-context, money]
+tags: [measurement, metric, north-star]
+related:
+  - "[[sensor-plan]]"
+  - "[[daily-loop]]"
+---
+
 # Coverage Tracker
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07 — coverage.pct = 78% (verify Bridge = production).
 
 > The one honest number. Watch this week over week.
 

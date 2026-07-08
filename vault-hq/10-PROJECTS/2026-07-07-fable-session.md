@@ -1,4 +1,24 @@
+---
+title: Session Harvest — 2026-07-07 (Fable)
+product: HQ
+type: research
+class: reference
+status: shipped
+canonical: false
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: medium
+domain: [arganta, ai-context]
+tags: [session-log, harvest, dated]
+related:
+  - "[[roadmap-tracker]]"
+  - "[[circle-hq]]"
+---
+
 # Session Harvest — 2026-07-07 (Fable, last included day)
+
+> [!note] 📎 REFERENCE · dated session log — a point-in-time snapshot, not living truth.
 
 > Distilled per convention: decided facts, what shipped, what's open. NOT wiki — unreviewed.
 

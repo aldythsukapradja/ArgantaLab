@@ -1,4 +1,24 @@
+---
+title: Skills Index
+product: HQ
+type: note
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [rails, procedural-memory, index]
+related:
+  - "[[knowledge-graph-map]]"
+  - "[[circle-hq]]"
+---
+
 # Skills Index
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > Procedural memory — "what to do when." Each skill is a Rail: deterministic once authored.
 > Every skill ladders to a graph node (no orphan skills). Full detail in [[knowledge-graph-map]].

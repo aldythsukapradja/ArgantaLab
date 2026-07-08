@@ -1,4 +1,24 @@
+---
+title: MCP Connectors
+product: HQ
+type: note
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: medium
+domain: [ai-context]
+tags: [rails, connectors, tools]
+related:
+  - "[[circle-hq]]"
+  - "[[skills-index]]"
+---
+
 # MCP Connectors
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > The agent's reach — its limbs. Wired UNDERNEATH the router, not bolted on top.
 > Rule of thumb: cap the daily-driver stack at ~6-9. Past that, tool-selection accuracy drops.

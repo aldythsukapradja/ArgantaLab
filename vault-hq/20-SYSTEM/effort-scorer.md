@@ -1,4 +1,24 @@
+---
+title: Effort Scorer
+product: HQ
+type: spec
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: medium
+domain: [ai-context, decisions]
+tags: [rails, routing, draft-thresholds]
+related:
+  - "[[model-ladder]]"
+  - "[[daily-loop]]"
+---
+
 # Effort Scorer
+
+> [!caution] 🕒 CANONICAL v1 · thresholds are DRAFT/uncalibrated — the one-question shortcut is trusted; the numeric bands are not (needs ~20 logged runs).
 
 > Pre-flight triage. Score a task BEFORE running so I never over/under-provision a model.
 > A Rail (deterministic thresholds) authored once, ridden by any Reasoner.

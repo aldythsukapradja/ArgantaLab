@@ -1,4 +1,24 @@
+---
+title: Sensor Plan
+product: HQ
+type: plan
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [ai-context, money]
+tags: [measurement, sensors, instrumentation]
+related:
+  - "[[coverage-tracker]]"
+  - "[[skills-index]]"
+---
+
 # Sensor Plan
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07 — 15 blind signals confirmed (Tier 1).
 
 > What's measured, what's blind. A sensor with no consumer is just a log file — see the loop below.
 > Pulled from Circle HQ July 7, 2026 — full six-office pull; this list is CONFIRMED, not sampled.

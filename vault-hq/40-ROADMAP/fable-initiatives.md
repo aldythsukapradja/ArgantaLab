@@ -1,4 +1,25 @@
+---
+title: Fable Initiatives
+product: HQ
+type: plan
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [arganta, decisions]
+tags: [roadmap, fable-class]
+related:
+  - "[[roadmap-tracker]]"
+  - "[[model-ladder]]"
+  - "[[mental-model]]"
+---
+
 # Fable Initiatives
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > The Fable-class builds, detailed. Ranked by priority if runway is limited.
 

@@ -1,4 +1,24 @@
+---
+title: Knowledge Graph Map
+product: HQ
+type: note
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: high
+domain: [ai-context]
+tags: [measurement, index, graph]
+related:
+  - "[[skills-index]]"
+  - "[[sensor-plan]]"
+---
+
 # Knowledge Graph Map
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > Reverse index: the graph's view of the skills. Keep in sync with [[skills-index]].
 > Rule: no orphan skills. Every skill carries a ladders_to line. Health column = July 7 pull.

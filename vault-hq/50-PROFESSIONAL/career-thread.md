@@ -1,4 +1,24 @@
+---
+title: Career Thread
+product: Investor
+type: strategy
+class: operational
+status: active
+canonical: true
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: medium
+domain: [work, learning]
+tags: [positioning, narrative, career]
+related:
+  - "[[persona-core]]"
+  - "[[mental-model]]"
+---
+
 # Career Thread
+
+> [!success] 🟢 CANONICAL v1 · updated 2026-07-07
 
 > Lighter lane — story, not throughput. How the build compounds toward my positioning.
 > Deliberately less metric-driven than the rest of the vault.

@@ -1,3 +1,21 @@
+---
+title: "SKILL: hq-router"
+product: HQ
+type: spec
+class: reference
+status: draft
+canonical: false
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: medium
+domain: [ai-context]
+tags: [skill, reference, guild]
+related:
+  - "[[skills-index]]"
+  - "[[circle-hq]]"
+---
+
 # SKILL: hq-router
 Knowledge graph link: ladders_to `hq.agents` (Guild) and `ns.w2f`
 Status: P0 protocol from ORCHESTRATION-SPEC.html. The router as a checklist — no infrastructure required.

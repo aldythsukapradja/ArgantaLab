@@ -1,3 +1,21 @@
+---
+title: "SKILL: effort-scorer"
+product: HQ
+type: spec
+class: reference
+status: draft
+canonical: false
+version: v1
+updated: 2026-07-07
+owner: aldyth
+confidence: medium
+domain: [ai-context]
+tags: [skill, reference, guild, draft-thresholds]
+related:
+  - "[[effort-scorer]]"
+  - "[[skills-index]]"
+---
+
 # SKILL: effort-scorer
 Knowledge graph link: ladders_to `hq.agents` (Guild/CAPO — agent ROI) and `ns.w2f`
 Status: DRAFT — threshold values are placeholders pending Aldyth's calibration. Do not present scores as calibrated.
