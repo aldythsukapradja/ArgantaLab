@@ -3,10 +3,10 @@
 // external host) so the embed CSP never blocks them. Lazy-loaded + cached; the
 // renderer falls back to the procedural blob until an image finishes loading.
 //
-// Kinds with art today: fox, squirrel, badger, boar, deer (monsters) + cow, sheep
-// (livestock). Tiger + chicken are still placeholders.
+// Kinds with art today: fox, squirrel, badger, boar, deer + tiger boss (monsters)
+// + cow, sheep (livestock). Chicken is still a placeholder.
 
-const KINDS = new Set(['fox', 'squirrel', 'badger', 'boar', 'deer', 'cow', 'sheep']);
+const KINDS = new Set(['fox', 'squirrel', 'badger', 'boar', 'deer', 'tiger', 'cow', 'sheep']);
 const DIR = { South: 'south', North: 'north', East: 'east', West: 'west' };
 const cache = new Map(); // "kind/dir" -> HTMLImageElement
 
