@@ -14,10 +14,13 @@ export const DEFAULT_SKILLS = [{ fx: 22 }, { fx: 1 }, { fx: 131 }];
 // magic (cheap), slot 2 = magic on ALL monsters (pricey), slot 3 = self-heal.
 // MP is spent from mana (Kingdom) / stamina (farm) — same numbers. `fx` = the
 // Kingdom effect id played on cast (placeholder ids; retune from the effect lib).
+// `cdMs` = per-skill cooldown — a rate limit (not the cast animation length) so
+// a skill can't be spammed every frame the way MP-cost alone allowed; roughly
+// scaled to each skill's power/cost (storm's AoE + heal both cool the slowest).
 export const SKILL_SLOTS = [
-  { id: 'bolt', name: 'Magic Bolt', type: 'magic', target: 'single', manaCost: 1, fx: 22, icon: '✦' },
-  { id: 'storm', name: 'Magic Storm', type: 'magic', target: 'all', manaCost: 5, fx: 131, icon: '✷' },
-  { id: 'mend', name: 'Mend', type: 'heal', target: 'self', manaCost: 3, fx: 1, icon: '✚' },
+  { id: 'bolt', name: 'Magic Bolt', type: 'magic', target: 'single', manaCost: 1, cdMs: 900, fx: 22, icon: '✦' },
+  { id: 'storm', name: 'Magic Storm', type: 'magic', target: 'all', manaCost: 5, cdMs: 2600, fx: 131, icon: '✷' },
+  { id: 'mend', name: 'Mend', type: 'heal', target: 'self', manaCost: 3, cdMs: 1800, fx: 1, icon: '✚' },
 ];
 
 // --- level scaling (MP cost fixed; power grows) — one source of truth ---

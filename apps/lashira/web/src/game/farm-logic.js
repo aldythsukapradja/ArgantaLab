@@ -7,7 +7,7 @@ import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTi
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
-import { loadFarmState, saveFarmState } from './farm-save.js';
+import { loadFarmState, saveFarmState, loadMemberFarmState } from './farm-save.js';
 import { sfx } from '../audio/sfx.js';
 
 // The FarmVille loop: 🌸 Bloom is the play currency — seeds/feed COST Bloom, and
@@ -42,6 +42,24 @@ const profileProgress = (profile) => ({
   xp: profile?.xp ?? 0,
 });
 
+// Every DELIBERATE public action that mutates the farm or spends a resource.
+// Neutered on the instance (own-property override, see the constructor) when
+// viewerRole === 'visitor' — a belt-and-suspenders safety net alongside the UI
+// simply never offering these actions in visit mode. save()/saveNow() are
+// separately blocked via the existing `frozen` flag. setPath is deliberately
+// EXCLUDED: it's an automatic background sync from the viewer's own equipped
+// hero weapon (cosmetic HP/MP-curve display only, no farm mutation), not a
+// player-initiated action.
+const VISITOR_LOCKED_ACTIONS = [
+  'setTool', 'setSeed', 'spendStamina', 'restoreStamina', 'claimQuest',
+  'tapAt', 'harvestTile', 'removeCrop', 'plantAt', 'harvestAll', 'plantAll',
+  'buySeed', 'sellAll', 'feedAnimal', 'petAnimal', 'collectAnimal', 'tapAnimal',
+  'assignKin', 'setKinDeployed', 'sleep',
+];
+// Automatic/background housekeeping calls — silently no-op (no flash; nobody
+// deliberately triggered these, so a toast would just be noise on page load).
+const VISITOR_LOCKED_SILENT = ['sweepStalePlots'];
+
 export class FarmLogic {
   // circleId (optional): when the game is embedded inside a KinetikCircle
   // circle, every member of that circle shares ONE farm save — keyed by the
@@ -49,9 +67,18 @@ export class FarmLogic {
   // standalone (no circle context). Local-only for now (see the Tier-2 note in
   // memory: real cross-device shared farm needs the lashira_farm Supabase
   // tables + realtime sync — this is the "same device, same circle" tier).
-  constructor(profile, circleId = null) {
+  //
+  // opts.visitOwnerId (optional): VISIT MODE — read-only view of another
+  // circle member's PERSONAL farm (never the shared circle farm; that's
+  // already open to everyone). Always circle-independent, loaded via the
+  // server-gated load_member_farm_state() RPC, and this instance can never
+  // mutate or persist (see VISITOR_LOCKED_METHODS + the `frozen` flag below).
+  constructor(profile, circleId = null, opts = {}) {
     this.profile = profile;
     this.circleId = circleId;
+    this.visitOwnerId = opts.visitOwnerId || null;
+    this.visitOwnerName = opts.visitOwnerName || null; // for the HUD/banner — this.profile stays the VIEWER's own
+    this.viewerRole = this.visitOwnerId ? 'visitor' : 'owner';
     this.listeners = new Set();
     this.toast = null;
     this.rewards = []; // transient reward pills (Diamonds/XP/produce) for the HUD
@@ -72,13 +99,23 @@ export class FarmLogic {
     // `rev` is a monotonic mutation counter used to gate whole-state snapshots
     // (late joiners) and to reconcile cloud vs local saves — never wall clocks.
     this.intentSink = null;
-    this.frozen = false; // kicked sessions freeze saves so a zombie tab can't overwrite the shared farm
-    this.saveKey = circleId
-      ? 'lashirabloom_save_v2_circle_' + circleId
-      : 'lashirabloom_save_v2_' + (profile?.id || 'guest');
+    this.frozen = this.viewerRole === 'visitor'; // visitors never persist — see save()/saveNow() below
+    this.saveKey = this.visitOwnerId
+      ? null // a visited farm has no local cache of its own — nothing to fall back to
+      : circleId
+        ? 'lashirabloom_save_v2_circle_' + circleId
+        : 'lashirabloom_save_v2_' + (profile?.id || 'guest');
     this.state = this._default();
     this.saveSource = 'initializing';
     this.ready = this._load();
+    if (this.viewerRole === 'visitor') {
+      // Own-property override shadows the prototype method for THIS instance
+      // only — the owner's own FarmLogic is completely unaffected.
+      for (const m of VISITOR_LOCKED_ACTIONS) {
+        this[m] = () => { this.flash('👁 Visiting — only the owner can act here'); return null; };
+      }
+      for (const m of VISITOR_LOCKED_SILENT) this[m] = () => null;
+    }
   }
 
   _default() {
@@ -119,6 +156,7 @@ export class FarmLogic {
   // cloud (and therefore every other device) stayed behind — if the local copy
   // wins, it is pushed back to the cloud immediately.
   async _load() {
+    if (this.viewerRole === 'visitor') return this._loadVisit();
     let cloud = null;
     let cloudOk = false;
     try {
@@ -161,6 +199,35 @@ export class FarmLogic {
     if (fromLocal && cloudOk) {
       this.saveSource = 'local-ahead-reconciling';
       this.saveNow(); // push the stranded local progress up so every device converges
+    }
+  }
+  // VISIT MODE: one-shot read-only load of another member's personal farm via
+  // the server-gated load_member_farm_state() RPC. No local fallback (nothing
+  // to fall back to for a farm that isn't yours), no reconcile-and-push-back —
+  // this instance never writes. Keeps the OWNER's diamonds/xp/etc as saved
+  // (deliberately skips profileProgress(this.profile), which would overlay the
+  // VIEWER's own numbers onto someone else's farm).
+  async _loadVisit() {
+    try {
+      const loaded = await loadMemberFarmState({ ownerId: this.visitOwnerId });
+      const data = loaded?.data || null;
+      this.saveSource = data ? 'visit-cloud' : 'visit-cloud-empty';
+      if (data) {
+        const base = this._default();
+        this.state = {
+          ...base,
+          ...data,
+          seeds: { ...base.seeds, ...(data.seeds || {}) },
+          produce: { ...base.produce, ...(data.produce || {}) },
+          plots: { ...base.plots, ...(data.plots || {}) },
+          livestock: data.livestock || base.livestock,
+          kins: data.kins || base.kins,
+          kinTasks: { ...base.kinTasks, ...(data.kinTasks || {}) },
+        };
+      }
+    } catch (err) {
+      console.warn('[farm] visit load failed:', err?.message || err);
+      this.saveSource = 'visit-error';
     }
   }
   _bump() { this.state.rev = (Number(this.state.rev) || 0) + 1; }
@@ -425,12 +492,15 @@ export class FarmLogic {
       xp: st.xp,
       level,
       role: this.profile?.role ?? 'user',
-      name: this.profile?.displayName ?? 'Farmer',
+      // Whose farm is this: the visited OWNER's name while visiting, else you.
+      name: (this.viewerRole === 'visitor' ? this.visitOwnerName : null) ?? this.profile?.displayName ?? 'Farmer',
       guest: !!this.profile?.guest,
       saveSource: this.saveSource,
       toast: this.toast,
       rewards: this.rewards || [],
       dayEvent: this.dayEvent || null,
+      viewerRole: this.viewerRole, // 'owner' | 'visitor' — gates the controller/actions in the UI
+      visitOwnerName: this.visitOwnerName,
     };
   }
   flash(msg) { this.toast = msg; this.emit(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.emit(); }, 1600); }

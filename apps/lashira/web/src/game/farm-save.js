@@ -52,3 +52,26 @@ export async function saveFarmState({ profile, circleId, data, gameId = FARM_GAM
   return { source: 'local-fallback' };
 }
 
+// Read-only: a circle-mate's PERSONAL farm (visit mode). Gated server-side by
+// migration_lashira_multi_farm.sql's shares_circle_with() — a visitor can never
+// write here (save_lashira_farm_state only ever writes auth.uid()'s own row).
+// Guests/no-cloud have no server session at all, so visiting simply isn't
+// offered to them — callers should hide member tiles in that case.
+export async function loadMemberFarmState({ ownerId, gameId = FARM_GAME_ID, slot = FARM_SAVE_SLOT }) {
+  if (!hasSupabase || !supabase || !ownerId) return { data: null, source: 'unavailable' };
+  const { data, error } = await supabase.rpc('load_member_farm_state', { p_owner: ownerId, p_game: gameId, p_slot: slot });
+  if (error) throw error;
+  return { data: data && typeof data === 'object' ? data : null, source: 'member-cloud' };
+}
+
+// Roster for the Travel picker: every member of a circle you belong to. A plain
+// `circle_members` select is row-limited to your OWN membership row by RLS, so
+// this goes through the list_circle_members() definer RPC instead.
+export async function listCircleMembers(circleId) {
+  const circle = cleanCircleId(circleId);
+  if (!hasSupabase || !supabase || !circle) return [];
+  const { data, error } = await supabase.rpc('list_circle_members', { p_circle: circle });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+

@@ -6,6 +6,23 @@ const imageCache = new Map();
 // never flashes back to placeholders on a transient error.
 let lastGoodOverrides = null;
 
+// EGRESS FIX: this used to pull every active override's full image_data
+// (base64, can be large) on EVERY game boot — the dominant driver behind
+// exceeding the Supabase free-tier egress quota, since it fires on every
+// reload/session. Now a cheap metadata-only query (no bytes) builds a
+// fingerprint of slot_key+updated_at; if it matches what THIS browser cached
+// last time, we reuse the cached bytes instead of re-downloading them. Art
+// changes rarely, so repeat loads pay almost nothing until something actually
+// changes. localStorage write is best-effort (quota-safe, falls back to
+// always-fetch if it can't persist).
+const ART_CACHE_KEY = 'lashira_art_overrides_cache_v1';
+function readArtCache() {
+  try { return JSON.parse(localStorage.getItem(ART_CACHE_KEY) || 'null'); } catch { return null; }
+}
+function writeArtCache(fingerprint, rows) {
+  try { localStorage.setItem(ART_CACHE_KEY, JSON.stringify({ fingerprint, rows })); } catch { /* quota — just re-fetches next time */ }
+}
+
 function loadImage(src) {
   if (!src) return Promise.resolve(null);
   if (!imageCache.has(src)) {
@@ -28,14 +45,35 @@ export async function loadFarmArtOverrides() {
   try {
     const { data: user } = await supabase.auth.getUser();
     if (!user?.user) return lastGoodOverrides || {};
-    const { data, error } = await supabase
+
+    // Cheap check first: which slots are active + when did they last change?
+    // No image bytes travel here.
+    const { data: meta, error: metaErr } = await supabase
       .from('lashira_pixel_art')
-      .select('slot_key,image_data,status')
+      .select('slot_key,status,updated_at')
       .not('image_data', 'is', null)
       .in('status', ['active', 'published', 'wired']);
-    if (error) throw error;
-    if (!data?.length) { lastGoodOverrides = {}; return {}; } // legitimately no custom art → procedural
-    const pairs = await Promise.all(data.map(async (row) => {
+    if (metaErr) throw metaErr;
+    const metaRows = meta || [];
+    if (!metaRows.length) { lastGoodOverrides = {}; writeArtCache('', []); return {}; } // legitimately no custom art → procedural
+    const fingerprint = metaRows.map((r) => `${r.slot_key}:${r.updated_at}`).sort().join('|');
+
+    const cached = readArtCache();
+    let dataRows;
+    if (cached && cached.fingerprint === fingerprint && Array.isArray(cached.rows)) {
+      dataRows = cached.rows; // nothing changed since last time THIS browser fetched — reuse the bytes
+    } else {
+      const { data: full, error: fullErr } = await supabase
+        .from('lashira_pixel_art')
+        .select('slot_key,image_data,status')
+        .not('image_data', 'is', null)
+        .in('status', ['active', 'published', 'wired']);
+      if (fullErr) throw fullErr;
+      dataRows = full || [];
+      writeArtCache(fingerprint, dataRows);
+    }
+
+    const pairs = await Promise.all(dataRows.map(async (row) => {
       const img = await loadImage(row.image_data);
       return img ? [row.slot_key, img] : null; // per-slot fallback: a bad image just drops that one slot
     }));

@@ -14,6 +14,8 @@ import {
   SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, pathMaxHp, pathForWeapon, canAffordSkill,
   monsterOf, outgoingDamage, rollDrops, SPAWN_TUNING, pathSkillPower, pathPower, armorDef,
   MONSTER_AGGRO_RANGE, MONSTER_ATTACK_WINDUP_MS, MONSTER_ATTACK_RECOVER_MS, MONSTER_ATTACK_COOLDOWN_MS, MONSTER_FAINT_MS,
+  MELEE_ATTACK_COOLDOWN_MS,
+  EMOTES,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { creatureFrame } from './creature-sprites.js';
@@ -21,6 +23,7 @@ import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
 import { hasActualKinArt } from './kin-sprite-image.jsx';
 import { joinFarmPresence } from './farm-presence.js';
+import { listCircleMembers } from './farm-save.js';
 import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { defaultFarmerSpec } from '../net/characterRegistry.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
@@ -205,7 +208,8 @@ function presenceCardFrom(snap) {
   };
 }
 
-export default function FarmRoom({ profile, hero, circleId = null }) {
+export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId = null, visitOwnerName = null, homeCircleId = null, onTravel = null }) {
+  const isVisitor = !!visitOwnerId;
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
   const stickRef = useRef(null);
@@ -265,6 +269,22 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const battleSkills = useMemo(() => battleSkillsFor(hero?.spec?.skills), [heroPresenceKey]);
   const battleSkillsRef = useRef(battleSkills);
   useEffect(() => { battleSkillsRef.current = battleSkills; if (G.current) G.current.battleSkills = battleSkills; }, [battleSkills]);
+  // Cooldown UI (the "pie" wipe on the attack/skill orbs) — the 60fps canvas
+  // loop mutates g.combat.atkReadyAt/skillReadyAt directly (no React churn per
+  // frame); this polls at ~11fps, only while in the arena, just to animate the
+  // wipe smoothly without re-rendering the whole room every tick.
+  const [cooldownUI, setCooldownUI] = useState({ attack: 0, skills: [0, 0, 0] });
+  useEffect(() => {
+    if (!battle?.on) { setCooldownUI({ attack: 0, skills: [0, 0, 0] }); return undefined; }
+    const t = window.setInterval(() => {
+      const g = G.current; if (!g) return;
+      const now = performance.now();
+      const frac = (readyAt, total) => Math.max(0, Math.min(1, ((readyAt || 0) - now) / (total || 1)));
+      const skills = (g.battleSkills || SKILL_SLOTS).map((s, i) => frac(g.combat.skillReadyAt?.[i], s?.cdMs || 1000));
+      setCooldownUI({ attack: frac(g.combat.atkReadyAt, MELEE_ATTACK_COOLDOWN_MS), skills });
+    }, 90);
+    return () => window.clearInterval(t);
+  }, [battle?.on]);
   // Class path (warrior/rogue/poet/mage) → HP/MP curves. Derived from the hero's
   // weapon for now (defaults to warrior until a real class picker exists).
   useEffect(() => {
@@ -276,7 +296,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // ---------- init ----------
   useEffect(() => {
     let live = true;
-    const logic = new FarmLogic(profile, circleId);
+    const logic = new FarmLogic(profile, circleId, isVisitor ? { visitOwnerId, visitOwnerName } : {});
     logicRef.current = logic;
     if (import.meta.env.DEV) { window.__farm = logic; window.__G = G; window.__mech = mechRef; }
 
@@ -308,7 +328,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (!live) return;
       const heroOk = !!(tables && resources && Object.keys(resources).length);
       setUsingHero(!!hero?.spec && heroOk); // HUD "your hero" copy = real hero only
-      if (!profile?.guest) logic.setExternalKins(acquiredKins);
+      // Visiting: skip — this would overlay the VIEWER's own Kin roster onto the
+      // visited farm. Leaving externalKinsLoaded false makes kinRoster() fall
+      // back to the OWNER's saved state.kins instead, which is what a visitor
+      // should actually see.
+      if (!profile?.guest && !isVisitor) logic.setExternalKins(acquiredKins);
       // Carry live state across a rebuild (this effect re-runs when the hero
       // avatar loads): keep the player where they stand and preserve the peer
       // maps the presence effect populates, so a rebuild never wipes the farmer
@@ -333,7 +357,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         // Battle mode (shared @arganta/combat). `on` tracks whether the player is
         // in the arena; monsters roam only there; combat HP is separate from farm
         // stamina (skills spend stamina). fx = transient hit sparks for feedback.
-        combat: prev?.combat || { on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, deadUntil: 0 },
+        // atkReadyAt/skillReadyAt = performance.now() timestamps when spammable
+        // actions become usable again (rate-limit gates, not animation lengths).
+        combat: prev?.combat || { on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, deadUntil: 0, atkReadyAt: 0, skillReadyAt: [0, 0, 0] },
         monsters: prev?.monsters || [], monsterSeed: 1, fx: prev?.fx || [], nextMonsterSpawn: 0,
         effectsAll: effectsAll || {}, spellFx: prev?.spellFx || [], battleSkills: battleSkillsRef.current,
         floats: prev?.floats || [], // floating "+1 🥬" harvest-juice pops
@@ -365,7 +391,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       G.current?._unsub?.();
       logic.flushSave?.();
     };
-  }, [profile?.id, profile?.displayName, profile?.guest, profile?.diamonds, profile?.xp, profile?.level, profile?.role, heroPresenceKey, circleId]);
+  }, [profile?.id, profile?.displayName, profile?.guest, profile?.diamonds, profile?.xp, profile?.level, profile?.role, heroPresenceKey, circleId, visitOwnerId, visitOwnerName]);
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
 
@@ -377,6 +403,20 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const unsub = m.subscribe(setMechSnap);
     return () => unsub();
   }, [profile?.id]);
+
+  // Roster for the Travel picker (Home hub) — every member of homeCircleId,
+  // fetched regardless of which scope is CURRENTLY active so you can always
+  // travel back to the circle farm or to a circle-mate from anywhere (your own
+  // farm, a visit, wherever). Guests have no server session to query.
+  const [circleMembers, setCircleMembers] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    if (!homeCircleId || profile?.guest) { setCircleMembers([]); return undefined; }
+    listCircleMembers(homeCircleId)
+      .then((rows) => { if (alive) setCircleMembers(rows); })
+      .catch(() => { if (alive) setCircleMembers([]); });
+    return () => { alive = false; };
+  }, [homeCircleId, profile?.guest]);
   useEffect(() => {
     if (G.current) G.current.speed = speed;
     try { localStorage.setItem('lashira_speed', String(speed)); } catch { /* quota */ }
@@ -783,6 +823,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // tile when in the arena. Outside the arena it's just the swing (nothing to hit).
   function doStrike() {
     const g = G.current; if (!g) return;
+    const now = performance.now();
+    if (now < (g.combat.atkReadyAt || 0)) return; // still on cooldown — spamming does nothing
+    g.combat.atkReadyAt = now + MELEE_ATTACK_COOLDOWN_MS;
     playSwing(g);
     if (!g.combat.on) {
       // outside the arena the swing GATHERS: mine/chop a ready ore/tree in front.
@@ -846,15 +889,18 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   function doSkill(i) {
     const g = G.current; if (!g || !g.combat.on) return;
     const skill = (g.battleSkills || SKILL_SLOTS)[i]; if (!skill) return;
+    const now = performance.now();
+    if (!g.combat.skillReadyAt) g.combat.skillReadyAt = [0, 0, 0];
+    if (now < (g.combat.skillReadyAt[i] || 0)) return; // still on cooldown — spamming does nothing
     const cost = Number(skill.manaCost || 0);
     const isOp = !!logicRef.current?.isOperator?.();
     const stamina = isOp ? Infinity : (logicRef.current?.state?.stamina ?? 0); // operator: unlimited
     if (!canAffordSkill(stamina, skill)) { logicRef.current?.flash?.('Too tired for ' + (skill.name || 'that skill')); return; }
     if (cost > 0 && !logicRef.current?.spendStamina(cost)) return;
+    g.combat.skillReadyAt[i] = now + Number(skill.cdMs || 1000);
     playSwing(g);
     const p = g.player;
     const L = logicRef.current?._level?.() ?? 1;
-    const now = performance.now();
 
     const path = playerPath();
     if (skill.type === 'heal') {
@@ -899,6 +945,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     function down(e) {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (DIR_BY_KEY[k]) { g.held.add(k); e.preventDefault(); }
+      // Visiting: movement stays (handled above), but work/attack/skill keys are
+      // dead — those buttons don't even render in visit mode (see Hud.jsx), so a
+      // keyboard shortcut shouldn't reach around that. Mount ('r') stays: it's
+      // the viewer's own cosmetic, not a farm action.
+      else if (isVisitor) { if (k === 'r') toggleMount(); }
       else if (k === ' ' || k === 'e') {
         // In the crop field, Space works the land; ANYWHERE ELSE it's a hit (swing).
         const gg = G.current;
@@ -1786,6 +1837,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const wy = (g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE;
       const tx = Math.floor(wx), ty = Math.floor(wy);
       g.cursorTile = [tx, ty]; // the white target box follows the tap, not the character's facing
+      // Visiting: look-only — taps just highlight a tile, nothing dispatches (no
+      // hotspot popups, no tile-fan, no gathering/animal taps). Matches "only the
+      // owner can act here" literally, including gathering nodes (their mechanics
+      // store is per-VIEWER, not per-farm — gathering here would be a confusing
+      // edge case, not a real exception to "visit = look, don't touch").
+      if (isVisitor) return;
       const faceTo = (gx, gy) => {
         const dx = gx - g.player.tile[0], dy = gy - g.player.tile[1];
         if (Math.abs(dx) > Math.abs(dy)) g.player.facing = dx >= 0 ? 'East' : 'West';
@@ -1814,7 +1871,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         // HYBRID: sickle tool or a ripe crop = instant action (fast path);
         // an empty/growing tile fans out the action menu at the tap point.
         if (lg?.state?.tool === 'sickle' || ripe) { popHarvestResult(g, lg?.tapAt(tx, ty)); return; }
-        setTileFan({ x: clientX - rect.left, y: clientY - rect.top, tx, ty });
+        setTileFan({ tx, ty, rect: tileRectOnScreen(g, tx, ty) });
         return;
       }
       let best = null, bestD = 1.3;
@@ -1827,16 +1884,23 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (best) { g.cursorTile = [...best.tile]; logicRef.current?.tapAnimal(best.livestockId); faceTo(best.tile[0], best.tile[1]); }
     }
 
+    // The tile's own on-screen rect (canvas-relative px), from the LIVE camera —
+    // used to anchor the tile-fan popup to the tile itself, not the raw tap point
+    // (which can land anywhere inside the tile and would otherwise cover it).
+    function tileRectOnScreen(g, tx, ty) {
+      const z = g.cam.z;
+      return { x: (tx * TILE - g.cam.camX) * z, y: (ty * TILE - g.cam.camY) * z, w: TILE * z, h: TILE * z };
+    }
     // Open the tile fan on ANY field tile (used by long-press — gives the full
     // menu, including Harvest/Sickle on a ripe tile that a plain tap would fast-path).
     function openFieldFan(clientX, clientY) {
-      const g = G.current; if (!g || !g.cam || g.combat.on) return false;
+      const g = G.current; if (!g || !g.cam || g.combat.on || isVisitor) return false;
       const rect = canvas.getBoundingClientRect();
       const tx = Math.floor((g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE);
       const ty = Math.floor((g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE);
       if (!(tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1)) return false;
       g.cursorTile = [tx, ty];
-      setTileFan({ x: clientX - rect.left, y: clientY - rect.top, tx, ty });
+      setTileFan({ tx, ty, rect: tileRectOnScreen(g, tx, ty) });
       return true;
     }
 
@@ -1939,12 +2003,14 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={(name) => { if (name === 'shop') setShopTab('seeds'); setPanel(name); }}
               zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
-              battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill}
+              battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill} cooldownUI={cooldownUI}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
-            <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechSnap} mechGame={mechRef.current} shopTab={shopTab} onClose={() => setPanel(null)} />
+            <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechSnap} mechGame={mechRef.current} shopTab={shopTab} onClose={() => setPanel(null)}
+              selfId={profile?.id} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} />
             {tileFan && (
               <TileFan fan={tileFan} game={logicRef.current} snap={snap}
-                onResult={popFanResult} onClose={() => setTileFan(null)} />
+                onResult={popFanResult} onClose={() => setTileFan(null)}
+                onOpenShop={(tab) => { setShopTab(tab || 'seeds'); setPanel('shop'); }} />
             )}
             <HotspotPanels hotspot={hotspot} snap={snap} game={logicRef.current} mech={mechSnap}
               mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon}

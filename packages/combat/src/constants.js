@@ -7,6 +7,11 @@
 export const MELEE_DAMAGE = 34;   // basic attack on the faced tile (strike)
 export const PVP_DAMAGE = 25;     // player-vs-player hit; victim self-applies it
 
+// Basic-attack cooldown — a rate limit, not an animation length. Without this a
+// player can spam the attack key/button and land damage every keypress; this
+// caps it to a real "swing speed" (~1.8 attacks/sec) regardless of input rate.
+export const MELEE_ATTACK_COOLDOWN_MS = 550;
+
 // Monster state timings (ms)
 export const MONSTER_MAX_HP = 100;
 export const MONSTER_WALK_MS = 620;      // one tile of monster movement

@@ -2,17 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
 import { ImagePlus, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { blankLashiraArtItem, type LashiraArtItem, type LashiraArtStatus } from '../../data/lashira/art'
-import { deleteLashiraArt, fileToDataUrl, loadLashiraArt, saveLashiraArt } from '../../data/lashira/artCloud'
+import { deleteLashiraArt, fileToDataUrl, loadLashiraArt, loadLashiraArtImage, saveLashiraArt } from '../../data/lashira/artCloud'
 
 const STATUSES: LashiraArtStatus[] = ['wired', 'placeholder', 'needs-polish', 'active', 'published', 'deprecated']
 
+// EGRESS FIX: the list no longer carries `imageData` (see artCloud.ts) — only
+// the slot open in the detail panel fetches its real bytes. A grid item that
+// HAS art but hasn't been opened yet shows a badge instead of the real pixels;
+// the detail panel's own Preview pops in the true thumbnail once it loads.
 function Preview({ item }: { item: LashiraArtItem }) {
   if (item.imageData) {
     return <img src={item.imageData} alt={item.label} style={{ width: 64, height: 64, objectFit: 'contain', imageRendering: 'pixelated', background: 'repeating-conic-gradient(#eef 0 25%, #fff 0 50%) 0 0/10px 10px', borderRadius: 8, border: '1px solid var(--bd2)' }} />
   }
   return (
     <div style={{ width: 64, height: 64, display: 'grid', placeItems: 'center', border: '1px dashed var(--bd2)', borderRadius: 8, color: 'var(--tx3)', fontSize: 10, textAlign: 'center', background: 'var(--bg)' }}>
-      procedural
+      {item.hasImage ? '🖼 asset' : 'procedural'}
     </div>
   )
 }
@@ -37,6 +41,19 @@ export function LashiraBloomArt() {
   }
 
   useEffect(() => { refresh() }, [])
+
+  // Selecting a grid item for editing is the ONE place the real bytes are
+  // needed — fetch just this slot's image_data if it has art we haven't
+  // loaded yet (list rows never carry it; see the Preview badge above).
+  useEffect(() => {
+    if (!selected || selected.imageData || !selected.hasImage) return
+    let live = true
+    const slotKey = selected.slotKey
+    loadLashiraArtImage(slotKey).then(imageData => {
+      if (live && imageData) setSelected(s => (s && s.slotKey === slotKey ? { ...s, imageData } : s))
+    })
+    return () => { live = false }
+  }, [selected?.slotKey])
 
   const categories = useMemo(() => ['all', ...Array.from(new Set(items.map(i => i.category))).sort()], [items])
   const filtered = items.filter(i => {

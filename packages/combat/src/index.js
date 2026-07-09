@@ -13,4 +13,5 @@ export * from './bestiary.js';
 export * from './skins.js';
 export * from './tuning.js';
 export * from './tuningRepo.js';
+export * from './emotes.js';
 export { GameIcon } from './icons/Icon.jsx';

@@ -1,0 +1,134 @@
+/* Battle Builder — full-bleed atelier chrome in the Character-Forge feel, on HQ's
+   own theme tokens. Self-scoped under .battleforge with a `bf-` prefix (NOT the
+   `forge`/`f-` names from CharacterForge — both surfaces' CSS lives in the same
+   bundle, so distinct class names avoid any cross-surface collision). */
+.battleforge{
+  --bf-mag:#d6409f;
+  --bf-stage-a:#e4e7f4; --bf-stage-b:#eef1fb;
+  --bf-stage-bg:radial-gradient(120% 90% at 50% -10%, var(--bg3), var(--bg2) 62%);
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  background:var(--bg); color:var(--tx); overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+html[data-theme="dark"] .battleforge{ --bf-stage-a:#1a1a22; --bf-stage-b:#121219; }
+
+/* ---- top bar + tabs (forge chrome) ---- */
+.bf-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.bf-mark{width:30px;height:30px;border-radius:8px;flex:none;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(135deg,var(--acc),var(--bf-mag));box-shadow:0 6px 16px -6px var(--acc);position:relative}
+.bf-mark::after{content:"";position:absolute;inset:6px;border:2px solid #ffffff5c;border-radius:3px}
+.bf-title b{font-size:14px;letter-spacing:.01em}
+.bf-title span{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--tx3)}
+.bf-inv{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--tx2);background:var(--bg2);
+  border:1px solid var(--bd);border-radius:999px;padding:5px 11px}
+.bf-inv b{color:var(--tx)}
+.bf-tbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--bd2);color:var(--tx2);display:grid;place-items:center}
+.bf-tbtn:hover{background:var(--bg3);color:var(--tx)}
+
+.bf-tabs{display:flex;gap:8px;padding:12px 18px 0;flex-wrap:wrap}
+.bf-tab{cursor:pointer;border:1px solid var(--bd);border-bottom:none;background:var(--bg2);color:var(--tx2);
+  border-radius:11px 11px 0 0;padding:10px 15px;display:flex;gap:10px;align-items:center;min-width:180px;font-family:inherit}
+.bf-tab:hover{color:var(--tx)}
+.bf-tab.on{background:var(--bg);color:var(--tx);border-color:var(--acc);box-shadow:0 -2px 0 var(--acc) inset}
+.bf-tab .tn{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-size:13px;flex:none;
+  background:var(--bg3);border:1px solid var(--bd2)}
+.bf-tab.on .tn{background:var(--acc-soft);border-color:var(--acc)}
+.bf-tab .lbl{font-size:13px;font-weight:700}
+.bf-tab .sub{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx3);margin-top:1px}
+.bf-tab .tnum{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--tx3)}
+
+.bf-body{flex:1;min-height:0;border-top:1px solid var(--bd);overflow:auto}
+.bf-pad{padding:18px 20px 26px;max-width:1400px;margin:0 auto}
+
+/* ---- sticky publish bar (Combat tab) ---- */
+.bf-pubbar{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:13px 18px;
+  background:var(--bg);border-top:1px solid var(--bd);box-shadow:0 -8px 20px -16px #0007;margin:18px -20px -26px}
+.bf-pubbtn{margin-left:auto;padding:10px 20px;border-radius:10px;font-weight:600;font-size:13.5px;
+  background:var(--acc);color:#fff;border:1px solid var(--acc)}
+.bf-pubbtn:hover{background:var(--acc-press)}
+.bf-pubbtn:disabled{opacity:.55;cursor:default}
+
+/* ---- custom sliders (PVP path cards) ---- */
+.bf-sl{position:relative;flex:1;height:20px;display:flex;align-items:center}
+.bf-sl-track{position:absolute;left:0;right:0;height:5px;border-radius:99px;background:var(--bg3)}
+.bf-sl-fill{position:absolute;left:0;height:5px;border-radius:99px;background:var(--pc,var(--acc));pointer-events:none}
+.bf-sl input{position:absolute;left:0;width:100%;height:20px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}
+.bf-sl input::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--bg);
+  border:2.5px solid var(--pc,var(--acc));box-shadow:var(--shadow-sm);transition:transform .12s}
+.bf-sl input::-webkit-slider-thumb:hover{transform:scale(1.18)}
+.bf-sl input::-moz-range-thumb{width:15px;height:15px;border:2.5px solid var(--pc,var(--acc));border-radius:50%;background:var(--bg)}
+.bf-step{width:18px;height:18px;border-radius:6px;background:var(--bg3);color:var(--tx2);display:grid;place-items:center;
+  font-size:13px;line-height:1;border:none;cursor:pointer}
+.bf-step:hover{background:var(--acc);color:#fff}
+.bf-spr{image-rendering:pixelated;filter:drop-shadow(0 2px 1px rgba(0,0,0,.15))}
+
+/* ---- Monster Lab — WIDE 3-column workbench (mirrors the Forge layout) ---- */
+.bf-work{display:grid;grid-template-columns:250px minmax(0,1fr) 330px;min-height:100%}
+.bf-col{padding:15px;min-width:0}
+.bf-col.roster{border-right:1px solid var(--bd);background:linear-gradient(180deg,var(--bg2),var(--bg));overflow-y:auto}
+.bf-col.settings{border-left:1px solid var(--bd);background:linear-gradient(180deg,var(--bg2),var(--bg));overflow-y:auto}
+.bf-col.stage{padding:0;display:flex;flex-direction:column;background:var(--bf-stage-bg)}
+.bf-col h4{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--tx3);margin:0 0 10px}
+
+.bf-mrow{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:9px;border:1px solid transparent;
+  width:100%;text-align:left;margin-bottom:3px;cursor:pointer;background:none}
+.bf-mrow:hover{background:var(--bg3)}
+.bf-mrow.on{background:var(--acc-soft);border-color:var(--acc)}
+.bf-mrow img,.bf-mrow .em{width:30px;height:30px;image-rendering:pixelated;flex:none}
+.bf-mrow .nm{font-size:12.5px;font-weight:650;color:var(--tx);text-transform:capitalize}
+.bf-mrow .zn{font-family:var(--mono);font-size:9px;color:var(--tx3)}
+.bf-mtier{margin-left:auto;font-family:var(--mono);font-size:8.5px;padding:2px 6px;border-radius:5px}
+.bf-addm{width:100%;margin-top:8px;padding:9px;border:1px dashed var(--bd3);border-radius:9px;color:var(--tx2);
+  font-size:12px;cursor:pointer;background:none}
+.bf-addm:hover{border-color:var(--acc);color:var(--acc)}
+.bf-note{border-left:3px solid var(--acc);background:var(--acc-soft);border-radius:0 9px 9px 0;padding:10px 12px;
+  font-size:11px;color:var(--tx2);margin-top:12px}
+.bf-note b{color:var(--tx)}
+
+.bf-stage-head{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--bd)}
+.bf-stage-who{font-size:14px;font-weight:750;color:var(--tx);text-transform:capitalize}
+.bf-stage-who small{display:block;font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em}
+.bf-pill{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;border:1px solid var(--bd2);border-radius:999px;padding:4px 9px;color:var(--tx2)}
+.bf-pill.live{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+.bf-pill.clone{color:var(--acc-text);border-color:var(--acc);background:var(--acc-soft)}
+.bf-canvas-hold{flex:1;display:grid;place-items:center;padding:20px;position:relative;min-height:260px}
+.bf-mstage{width:180px;height:180px;background:repeating-conic-gradient(var(--bf-stage-a) 0 25%,var(--bf-stage-b) 0 50%) 0 0/22px 22px;
+  border-radius:14px;border:1px solid var(--bd2);display:grid;place-items:center;box-shadow:0 20px 50px -26px #0009;position:relative;transition:transform .15s}
+.bf-mstage img{width:120px;height:120px;image-rendering:pixelated;filter:drop-shadow(0 3px 2px rgba(0,0,0,.2))}
+.bf-mstage .em{font-size:90px}
+.bf-mtag{position:absolute;left:20px;bottom:16px;font-family:var(--mono);font-size:10px;color:var(--tx2);
+  background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:5px 9px}
+.bf-mctrl{border-top:1px solid var(--bd);padding:11px 16px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--bg)}
+.bf-gbtn{cursor:pointer;font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--bd2);
+  color:var(--tx2);border-radius:7px;padding:6px 10px}
+.bf-gbtn:hover{color:var(--tx)}
+.bf-gbtn.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.bf-gbtn.sq{width:31px;padding:6px 0;text-align:center}
+.bf-cap{font-family:var(--mono);font-size:9.5px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase}
+.bf-rng{accent-color:var(--acc);width:84px}
+
+.bf-setgrp{margin-bottom:15px}
+.bf-slot{display:flex;align-items:center;gap:6px;padding:6px 7px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);margin-bottom:5px}
+.bf-slot .sl{font-size:11.5px;font-weight:600;min-width:80px;color:var(--tx)}
+.bf-arw{cursor:pointer;width:22px;height:22px;border-radius:6px;border:1px solid var(--bd2);background:var(--bg2);
+  color:var(--tx2);display:grid;place-items:center;font-size:10px;flex:none}
+.bf-arw:hover{color:var(--tx)}
+.bf-val{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--tx)}
+.bf-pills{display:flex;gap:5px;flex-wrap:wrap;flex:1;justify-content:flex-end}
+.bf-pp{cursor:pointer;font-size:10.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx2)}
+.bf-pp.on{background:linear-gradient(135deg,var(--acc),var(--bf-mag));border-color:transparent;color:#fff}
+.bf-pp:disabled{opacity:.4;cursor:default}
+.bf-droprow{display:flex;align-items:center;gap:5px;padding:6px 7px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);margin-bottom:5px}
+.bf-droprow select,.bf-droprow input{font-family:var(--mono);font-size:10.5px;background:var(--bg2);border:1px solid var(--bd2);
+  color:var(--tx);border-radius:6px;padding:4px 5px}
+.bf-droprow input[type=number]{width:38px;text-align:center}
+.bf-dropx{width:20px;height:20px;border-radius:6px;background:var(--bg3);color:var(--tx3);display:grid;place-items:center;font-size:12px;flex:none;cursor:pointer}
+.bf-dropx:hover{background:var(--bad-bg,rgba(220,38,38,.12));color:var(--bad)}
+.bf-adddrop{width:100%;padding:6px;border:1px dashed var(--bd3);border-radius:7px;color:var(--tx2);font-size:11px;cursor:pointer;background:none}
+.bf-adddrop:hover{border-color:var(--acc);color:var(--acc)}
+
+@media (max-width:1000px){
+  .bf-work{grid-template-columns:1fr}
+  .bf-col.roster{border-right:none;border-bottom:1px solid var(--bd)}
+  .bf-col.settings{border-left:none;border-top:1px solid var(--bd)}
+}

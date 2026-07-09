@@ -453,6 +453,13 @@ body {
 .settings-friend-row b { color: #232b3d; font-weight: 650; }
 .settings-friend-row small { color: #7a839a; }
 .settings-empty { color: var(--muted); font-size: 12.5px; margin: 4px 0; }
+.emote-fav-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.emote-fav-chip {
+  font-size: 12px; padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #d8dceb; background: #fff; color: #4a5268;
+}
+.emote-fav-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 650; }
+.emote-fav-chip:disabled { opacity: 0.4; cursor: default; }
 
 /* ================= premium lab pass ================= */
 .app header .subtitle { color: var(--muted); font-weight: 400; }
@@ -565,6 +572,9 @@ body {
 .small-ring .skill-circle:nth-child(3) { right: 62px; bottom: 118px; }
 .small-ring .skill-circle:nth-child(4) { right: 2px;  bottom: 140px; }
 .small-ring .skill-circle:nth-child(5) { right: 156px; bottom: 132px; }
+/* Emote orb — stacked directly above wherever Mount sits (nth-child(5) above),
+   not fan-derived, so it stays fixed regardless of util ordering. */
+.skill-circle.emote { right: 156px; bottom: 186px; }
 
 @media (min-width: 900px) and (pointer: fine) {
   .cluster { transform: scale(0.86); transform-origin: bottom right; }

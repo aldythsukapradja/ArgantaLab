@@ -8,7 +8,7 @@ import { data } from '@arganta/heroes-engine'
 
 type Entry = { key: string; cat: string; part: any; label: string; group: string }
 
-function PartThumb({ cat, part, size = 64 }: { cat: string; part: any; size?: number }) {
+export function PartThumb({ cat, part, size = 64 }: { cat: string; part: any; size?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     let live = true
@@ -34,9 +34,13 @@ function PartThumb({ cat, part, size = 64 }: { cat: string; part: any; size?: nu
   return <canvas ref={ref} width={size} height={size} className="f-thumbc" />
 }
 
-export function PartBrowser({ title, entries, value, onPick, onClose }: {
+export function PartBrowser({ title, entries, value, onPick, onClose, lockedKeys, onLocked }: {
   title: string; entries: Entry[]; value: string | null;
   onPick: (e: Entry) => void; onClose: () => void
+  // Shop-gated cosmetics: keys in `lockedKeys` (e.g. 'helmet:15') render 🔒'd instead
+  // of picking — clicking calls onLocked so the caller can point at the Shop tab.
+  // Optional: everything not in the shop catalog stays exactly as free as before.
+  lockedKeys?: Set<string>; onLocked?: (e: Entry) => void
 }) {
   const [q, setQ] = useState('')
   const groups = useMemo(() => {
@@ -72,13 +76,17 @@ export function PartBrowser({ title, entries, value, onPick, onClose }: {
             ))}
           </div>
           <div className="f-browser-grid">
-            {current.map(e => (
-              <button key={e.key} className={'f-bcell' + (e.key === value ? ' sel' : '')}
-                onClick={() => { onPick(e); onClose() }}>
-                <PartThumb cat={e.cat} part={e.part} />
-                <small>{e.label}</small>
-              </button>
-            ))}
+            {current.map(e => {
+              const locked = lockedKeys?.has(e.key)
+              return (
+                <button key={e.key} className={'f-bcell' + (e.key === value ? ' sel' : '') + (locked ? ' locked' : '')}
+                  onClick={() => { if (locked) onLocked?.(e); else { onPick(e); onClose() } }}>
+                  <PartThumb cat={e.cat} part={e.part} />
+                  {locked && <span className="f-lock">🔒</span>}
+                  <small>{e.label}</small>
+                </button>
+              )
+            })}
             {!current.length && <div className="f-browser-empty">no matches</div>}
           </div>
         </div>

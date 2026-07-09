@@ -18,8 +18,11 @@ import {
   ATTACK_BY_WEAPON, MELEE_DAMAGE, PVP_DAMAGE, MONSTER_WALK_MS,
   normalizeSkills, resolveMelee, tickMonsterState, monsterExpired,
   SKILL_SLOTS, resolveSkillSingle, resolveSkillAll, applyHeal, skillPower,
+  EMOTES, loadFavoriteEmotes, saveFavoriteEmotes,
 } from '@arganta/combat';
-import { ActionCluster } from '@arganta/combat/cluster';
+import { ActionCluster, IconEmote } from '@arganta/combat/cluster';
+
+const FAV_EMOTES_KEY = 'kingdom_fav_emotes';
 
 const TILE = 48;
 const WALK_MS = 460;
@@ -142,6 +145,9 @@ export default function TestRoom({ spec, account, onPlayerState }) {
   const [spawnPick, setSpawnPick] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [skills, setSkills] = useState(() => normalizeSkills(spec.skills));
+  const [favEmotes, setFavEmotes] = useState(() => loadFavoriteEmotes(FAV_EMOTES_KEY));
+  const emoteIdxRef = useRef(0);
+  const pickFavEmotes = (list) => { setFavEmotes(list); saveFavoriteEmotes(FAV_EMOTES_KEY, list); };
   // Camera zoom: default 1×, but remembered per character (the Camera slider in
   // settings writes it back). So each hero keeps its own preferred framing.
   const zoomKey = account?.character?.id ? `kingdom-zoom:${account.character.id}` : null;
@@ -405,7 +411,15 @@ export default function TestRoom({ spec, account, onPlayerState }) {
     }
   }
   function doTake() { startOneShot('Get'); }
-  function doEmote() { startOneShot('Victory'); }
+  function doEmote(name) { startOneShot(name); }
+  // The orb cycles through the player's own favorites (Settings), so one tap
+  // always plays a DIFFERENT emote than the last tap rather than repeating one.
+  function cycleEmote() {
+    const list = favEmotes.length ? favEmotes : ['Victory'];
+    const name = list[emoteIdxRef.current % list.length];
+    emoteIdxRef.current = (emoteIdxRef.current + 1) % list.length;
+    doEmote(name);
+  }
   function toggleMount() {
     const g = G.current; if (!g) return;
     g.player.mounted = !g.player.mounted && !!g.player.resources.mount;
@@ -595,7 +609,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
       else if (k === 'r') toggleMount();
       else if (k === ' ') { doAttack(); e.preventDefault(); }   // Space = attack
       else if (k === 'e') doTake();
-      else if (k === 'q') doEmote();
+      else if (k === 'q') cycleEmote();
       else if (k === '1' || k === '2' || k === '3') doSkill(Number(k) - 1);
     }
     function up(e) {
@@ -714,7 +728,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
         }
       }
       if (p.oneShot) {
-        const motion = p.oneShot === 'Victory' ? 'Victory' : p.oneShot + p.facing;
+        const motion = EMOTES.includes(p.oneShot) ? p.oneShot : p.oneShot + p.facing;
         const n = stepCount(g.tables, motion);
         if (now - p.oneShotStart > n * 200 + 80) p.oneShot = null;
       }
@@ -838,7 +852,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
     const hasWeapon = !!r.resources.weapon;
     const mounted = !!r.resources.mount;
     const motion = r.oneShot
-      ? (r.oneShot === 'Victory' ? 'Victory' : r.oneShot.match(/South|North|East|West/) ? r.oneShot : r.oneShot + r.facing)
+      ? (EMOTES.includes(r.oneShot) ? r.oneShot : r.oneShot.match(/South|North|East|West/) ? r.oneShot : r.oneShot + r.facing)
       : mounted ? 'Riding' + r.facing
       : r.moveT < 1 ? (hasWeapon ? 'WeaponWalk' : 'NormalWalk') + r.facing
       : (hasWeapon ? 'WeaponStandBy' : 'NormalStandBy') + r.facing;
@@ -853,7 +867,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
 
   function playerMotion(g) {
     const p = g.player;
-    if (p.oneShot) return p.oneShot === 'Victory' ? 'Victory' : p.oneShot + p.facing;
+    if (p.oneShot) return EMOTES.includes(p.oneShot) ? p.oneShot : p.oneShot + p.facing;
     if (p.mounted) return 'Riding' + p.facing;
     const hasWeapon = !!p.resources.weapon;
     if (p.moveT < 1) return (hasWeapon ? 'WeaponWalk' : 'NormalWalk') + p.facing;
@@ -1069,6 +1083,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
           utils={[
             { key: 'take', icon: <IconHand />, onClick: doTake, title: 'take / crouch' },
             { key: 'mount', icon: <IconMount />, onClick: toggleMount, title: 'mount' },
+            { key: 'emote', icon: <IconEmote />, onClick: cycleEmote, title: 'emote (cycles your favorites)', className: 'emote' },
           ]}
         />
       </div>
@@ -1123,6 +1138,24 @@ export default function TestRoom({ spec, account, onPlayerState }) {
                     <button onClick={() => doSkill(i)}>test</button>
                   </div>
                 ))}
+              </section>
+              <section>
+                <h4>Favorite emotes <small>({favEmotes.length}/4 — the Emote orb cycles these)</small></h4>
+                <div className="emote-fav-grid">
+                  {EMOTES.map((name) => {
+                    const on = favEmotes.includes(name);
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        className={'emote-fav-chip' + (on ? ' on' : '')}
+                        disabled={!on && favEmotes.length >= 4}
+                        onClick={() => pickFavEmotes(on ? favEmotes.filter((e) => e !== name) : [...favEmotes, name])}
+                      >{name}</button>
+                    );
+                  })}
+                </div>
+                <p className="settings-empty">Pick up to 4 — tap the Emote orb (bottom-right) or press Q to cycle through them.</p>
               </section>
               <section>
                 <h4>Camera</h4>

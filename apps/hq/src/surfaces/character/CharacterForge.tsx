@@ -1,79 +1,34 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CompositeStage, data } from '@arganta/heroes-engine'
+import { Search } from 'lucide-react'
 import { PartBrowser } from './PartBrowser'
 import { DyePicker } from './DyePicker'
-import { loadOperatorCharacter, saveOperatorCharacter, type HeroState } from './heroData'
+import { ComposerPanel } from './ComposerPanel'
+import { CharacterSelect } from './CharacterSelect'
+import { NpcStudio } from './NpcStudio'
+import { Shop } from './Shop'
+import { loadRoster, getCharacter, saveCharacter, loadShopCatalog, loadOwnedCosmetics, type RosterEntry, type RosterKind } from './heroData'
+import { useComposer, DEFAULT_SEL, DIRWORD, PATHS } from './composer'
 import './forge.css'
 
-// Character Forge — full-bleed pixel-perfect composer, a faithful clone of Kingdom's
-// Character Lab. STEP 3 (this file): the pickers are LIVE — ◀/▶ steps, a browse-grid
-// pop-up, and dye all mutate the spec that drives the real animated character. The
-// spec loads from + saves to the SAME canonical character the games read
-// (kingdom_get_player_state / kingdom_sync_character_build), so HQ is the single
-// source of truth for LashiraBloom & Kingdom Heroes.
+const PAGE_SIZE = 10
+const KIND_TABS: { id: RosterKind; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'adult', label: 'Adults' }, { id: 'kid', label: 'Kids' }]
 
-type TabId = 'lab' | 'select' | 'npc'
+// Character Forge — full-bleed pixel-perfect composer, a faithful clone of Kingdom's
+// Character Lab, now with all 3 tabs live:
+//  - Lab: real users, live pickers, save-to-games (single source of truth).
+//  - Select: the welcome/pick-your-hero screen, mirrored 1:1 by LashiraBloom later.
+//  - NPC Studio: the same composer aimed at a shared, publicly-readable cast.
+
+type TabId = 'lab' | 'select' | 'npc' | 'shop'
 const TABS: { id: TabId; icon: string; label: string; sub: string; tnum: string }[] = [
   { id: 'lab', icon: '🧬', label: 'Character Lab', sub: 'compose · animate', tnum: 'per user' },
   { id: 'select', icon: '🎴', label: 'Character Select', sub: 'welcome · picker', tnum: '→ Lashira' },
   { id: 'npc', icon: '🧑‍🌾', label: 'NPC Studio', sub: 'roster · cast', tnum: 'shared' },
+  { id: 'shop', icon: '🛍️', label: 'Shop', sub: 'diamonds · gear', tnum: '2k–10k 💎' },
 ]
 
-const SKIN_IDS = [0, 1]
-const DEFAULT_SEL: any = {
-  body: { cat: 'body', id: 0, palette: null },
-  face: { cat: 'face', id: 0, palette: null },
-  hair: { cat: 'hair', id: 0, palette: null },
-  coat: { cat: 'coat', id: 2, palette: null },
-}
-const SLOT_DEFS: any[] = [
-  { key: 'face', cat: 'face', label: 'Face', group: 'Head' },
-  { key: 'hair', cat: 'hair', label: 'Hair', group: 'Head', optional: true },
-  { key: 'helmet', cat: 'helmet', label: 'Helmet', group: 'Head', optional: true },
-  { key: 'facedec', cat: 'facedec', label: 'Face deco', group: 'Head', optional: true },
-  { key: 'hairdec', cat: 'hairdec', label: 'Hair deco', group: 'Head', optional: true },
-  { key: 'skin', special: 'skin', label: 'Skin', group: 'Body & Armor' },
-  { key: 'armor', special: 'armor', label: 'Armor', group: 'Body & Armor' },
-  { key: 'shoes', cat: 'shoes', label: 'Shoes', group: 'Body & Armor', optional: true },
-  { key: 'mantle', cat: 'mantle', label: 'Mantle', group: 'Body & Armor', optional: true },
-  { key: 'neck', cat: 'neck', label: 'Necklace', group: 'Body & Armor', optional: true },
-  { key: 'weapon', cat: 'sword', label: 'Weapon', group: 'Weapon', optional: true, cats: ['sword', 'spear', 'bow', 'fan'] },
-  { key: 'shield', cat: 'shield', label: 'Shield', group: 'Weapon', optional: true },
-]
-const GROUPS = ['Head', 'Body & Armor', 'Weapon']
-const ACTIONS: [string, string][] = [
-  ['Stand', 'NormalStandBy'], ['Walk', 'NormalWalk'], ['Swing', 'Swing'], ['Pierce', 'Pierce'],
-  ['Shoot', 'Shoot'], ['Take', 'Get'], ['Spell', 'Spell'], ['Ride', 'Riding'], ['Bow', 'Bow'],
-]
-const EMOTES = ['Victory', 'Smile', 'Cry', 'Blush', 'Wink', 'Yawn', 'Sleep', 'Dance', 'Angry']
-const DIRWORD: Record<string, string> = { S: 'South', E: 'East', N: 'North', W: 'West' }
-const PATHS = ['Warrior', 'Mage', 'Poet', 'Rogue']
-
-function useCategoryData(cats: string[]) {
-  const [meta, setMeta] = useState<Record<string, any>>({})
-  useEffect(() => {
-    let live = true
-    ;(async () => {
-      const out: Record<string, any> = {}
-      await Promise.all(cats.map(async c => {
-        try {
-          const [parts, palettes] = await Promise.all([data.charParts(c), data.charPalettes(c)])
-          out[c] = { parts, byId: Object.fromEntries(parts.map((p: any) => [p.id, p])), palettes: palettes.length }
-        } catch { out[c] = { parts: [], byId: {}, palettes: 0 } }
-      }))
-      if (live) setMeta(out)
-    })()
-    return () => { live = false }
-  }, [cats.join(',')])
-  return meta
-}
-
-export function CharacterForge() {
-  const [tab, setTab] = useState<TabId>('lab')
-  const [sel, setSel] = useState<any>(DEFAULT_SEL)
-  const [mountOn, setMountOn] = useState(false)
-  const [mountId, setMountId] = useState(0)
-  const [mountCount, setMountCount] = useState(0)
+function CharacterLab() {
+  const composer = useComposer()
   const [base, setBase] = useState('NormalStandBy')
   const [emote, setEmote] = useState('')
   const [dir, setDir] = useState('S')
@@ -85,138 +40,190 @@ export function CharacterForge() {
   const [browse, setBrowse] = useState<any>(null)
   const [dyeFor, setDyeFor] = useState<string | null>(null)
   const [dyeAnchor, setDyeAnchor] = useState<DOMRect | null>(null)
-  const [hero, setHero] = useState<HeroState | null>(null)
+  const [roster, setRoster] = useState<RosterEntry[]>([])
+  const [rosterSource, setRosterSource] = useState<'admin' | 'self' | 'offline'>('offline')
+  const [total, setTotal] = useState(0)
+  const [counts, setCounts] = useState({ all: 0, adult: 0, kid: 0 })
+  const [kind, setKind] = useState<RosterKind>('all')
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const selected = roster.find(r => r.profileId === selectedId) || null
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const allCats = useMemo(() => [...new Set(['body', 'coat', ...SLOT_DEFS.flatMap(s => s.cats || (s.cat ? [s.cat] : []))])], [])
-  const meta = useCategoryData(allCats)
-
-  useEffect(() => { data.mounts().then((m: any[]) => setMountCount(m.length)).catch(() => {}) }, [])
-
-  // Load the operator's REAL character (the same spec the games render).
+  // 🔒 Shop-gated cosmetics: the catalog's item_keys minus whatever the SELECTED
+  // roster user already owns. Everything outside the shop catalog stays exactly as
+  // free as before — this only ever touches the curated 40 shop items.
+  const [shopKeys, setShopKeys] = useState<Set<string>>(new Set())
+  const [ownedKeys, setOwnedKeys] = useState<Set<string>>(new Set())
+  const [lockMsg, setLockMsg] = useState<string | null>(null)
+  useEffect(() => { loadShopCatalog().then(items => setShopKeys(new Set(items.map(i => i.itemKey)))) }, [])
   useEffect(() => {
     let live = true
+    loadOwnedCosmetics(selectedId ?? undefined).then(o => { if (live) setOwnedKeys(o) })
+    return () => { live = false }
+  }, [selectedId])
+  const lockedKeys = useMemo(() => new Set([...shopKeys].filter(k => !ownedKeys.has(k))), [shopKeys, ownedKeys])
+  function flashLocked(label: string) {
+    setLockMsg(`🔒 ${label} — unlock it in the 🛍️ Shop tab first.`)
+    clearTimeout((flashLocked as any)._t)
+    ;(flashLocked as any)._t = setTimeout(() => setLockMsg(null), 2600)
+  }
+
+  useEffect(() => {
+    let live = true
+    setLoading(true)
     ;(async () => {
-      const h = await loadOperatorCharacter()
+      const r = await loadRoster({ search, kind, page, pageSize: PAGE_SIZE })
       if (!live) return
-      setHero(h)
-      if (h?.spec) applySpec(h.spec)
-      if (h?.character?.path_id || h?.character?.pathId) {
-        const p = String(h.character.path_id || h.character.pathId)
-        setPath(p.charAt(0).toUpperCase() + p.slice(1))
-      }
+      setRoster(r.entries); setRosterSource(r.source); setTotal(r.total); setCounts(r.counts)
       setLoading(false)
+      // Auto-select the first row only on first-ever load (not on every page/filter change).
+      if (r.entries.length && selectedId == null) await selectUser(r.entries[0].profileId)
     })()
     return () => { live = false }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind, search, page])
 
-  function applySpec(spec: any) {
-    if (!spec || typeof spec !== 'object') return
-    const { mount, skills, ...parts } = spec
-    if (parts.body) setSel(parts)
-    setMountOn(!!mount)
-    setMountId(mount?.id ?? 0)
+  function runSearch() { setPage(1); setSearch(searchInput.trim()) }
+  function switchKind(k: RosterKind) { setKind(k); setPage(1) }
+
+  async function selectUser(profileId: string) {
+    setSelectedId(profileId); setSaveMsg(null)
+    const c = await getCharacter(profileId)
+    composer.applySpec(c?.spec ?? null)
+    const p = c?.pathId || 'warrior'
+    setPath(p.charAt(0).toUpperCase() + p.slice(1))
   }
 
-  // ---- picker logic (ported from Kingdom's Character Lab) ----
-  const bodyParts = meta.body?.parts || []
-  const skinParts = useMemo(() => bodyParts.filter((p: any) => SKIN_IDS.includes(p.id)), [bodyParts])
-  const armorBodies = useMemo(() => bodyParts.filter((p: any) => !SKIN_IDS.includes(p.id)), [bodyParts])
-  const bodyIsArmor = !SKIN_IDS.includes(sel.body?.id ?? 0)
-  const armorEntries = useMemo(() => {
-    const out: any[] = []
-    for (const p of meta.coat?.parts || []) out.push({ key: `coat:${p.id}`, cat: 'coat', part: p, label: `armor c${p.id}`, group: `coat · set ${Math.floor(p.frame_index / 2600)}` })
-    for (const p of armorBodies) out.push({ key: `body:${p.id}`, cat: 'body', part: p, label: `armor b${p.id}`, group: `body · set ${Math.floor(p.frame_index / 2600)}` })
-    return out
-  }, [meta.coat, armorBodies])
-  const armorValue = bodyIsArmor ? `body:${sel.body?.id}` : sel.coat ? `coat:${sel.coat.id}` : null
-
-  function pickArmor(entry: any) {
-    setSel((prev: any) => {
-      const next = { ...prev }
-      if (entry.cat === 'coat') {
-        if (!SKIN_IDS.includes(next.body?.id)) next.body = { cat: 'body', id: 0, palette: null }
-        next.coat = { cat: 'coat', id: entry.part.id, palette: next.coat?.palette ?? null }
-      } else { next.body = { cat: 'body', id: entry.part.id, palette: null }; delete next.coat }
-      return next
-    })
-  }
-  function pickSkin(entry: any) {
-    setSel((prev: any) => {
-      const next = { ...prev, body: { cat: 'body', id: entry.part.id, palette: prev.body?.palette ?? null } }
-      if (!next.coat) next.coat = { cat: 'coat', id: 2, palette: null }
-      return next
-    })
-  }
-  const pickSlot = (slotKey: string, entry: any) =>
-    setSel((prev: any) => ({ ...prev, [slotKey]: { cat: entry.cat, id: entry.part.id, palette: prev[slotKey]?.palette ?? null } }))
-  function toggle(slot: any) {
-    setSel((prev: any) => {
-      const nxt = { ...prev }
-      if (nxt[slot.key]) delete nxt[slot.key]
-      else nxt[slot.key] = { cat: slot.cat, id: meta[slot.cat]?.parts[0]?.id ?? 0, palette: null }
-      return nxt
-    })
-  }
-  function entriesFor(slot: any): any[] {
-    if (slot.special === 'skin') return skinParts.map((p: any) => ({ key: `body:${p.id}`, cat: 'body', part: p, label: `skin ${p.id === 0 ? 'A' : 'B'}`, group: 'skins' }))
-    if (slot.special === 'armor') return armorEntries
-    const cats = slot.cats || [slot.cat]
-    const out: any[] = []
-    for (const c of cats) for (const p of meta[c]?.parts || []) {
-      const bank = ['face', 'hair', 'helmet', 'facedec', 'hairdec'].includes(c) ? 1000 : 2600
-      out.push({ key: `${c}:${p.id}`, cat: c, part: p, label: `${c} #${p.id}`, group: `${c} · set ${Math.floor(p.frame_index / bank)}` })
-    }
-    return out
-  }
-  function currentKeyFor(slot: any): string | null {
-    if (slot.special === 'skin') return !bodyIsArmor && sel.body ? `body:${sel.body.id}` : null
-    if (slot.special === 'armor') return armorValue
-    const cur = sel[slot.key]
-    return cur ? `${cur.cat}:${cur.id}` : null
-  }
-  function labelFor(slot: any): string {
-    if (slot.special === 'skin') return bodyIsArmor ? '(armor body)' : `skin ${sel.body?.id === 0 ? 'A' : 'B'}`
-    if (slot.special === 'armor') return bodyIsArmor ? `armor b${sel.body.id}` : sel.coat ? `armor c${sel.coat.id}` : '— none —'
-    const cur = sel[slot.key]
-    return cur ? `${cur.cat} #${cur.id}` : '— none —'
-  }
-  const pickFor = (slot: any) => slot.special === 'skin' ? pickSkin : slot.special === 'armor' ? pickArmor : (e: any) => pickSlot(slot.key, e)
-  function stepEntry(entries: any[], curKey: string | null, delta: number, pick: (e: any) => void) {
-    if (!entries.length) return
-    const i = entries.findIndex(e => e.key === curKey)
-    pick(entries[(i + delta + entries.length) % entries.length])
-  }
-  const dyeTargetKey = (slotKey: string) => slotKey === 'skin' ? 'body' : slotKey === 'armor' ? (bodyIsArmor ? 'body' : 'coat') : slotKey
-
-  const hasWeapon = !!sel.weapon
+  const hasWeapon = !!composer.sel.weapon
   let effAction = base
   if (hasWeapon && base === 'NormalStandBy') effAction = 'WeaponStandBy'
   if (hasWeapon && base === 'NormalWalk') effAction = 'WeaponWalk'
   const motionName = emote || effAction + DIRWORD[dir]
-  const spec = useMemo(() => (mountOn ? { ...sel, mount: { id: mountId } } : sel), [sel, mountOn, mountId])
 
-  useEffect(() => { if (mountOn && base !== 'Riding') setBase('Riding') }, [mountOn])
+  useEffect(() => { if (composer.mountOn && base !== 'Riding') setBase('Riding') }, [composer.mountOn])
 
-  function reset() {
-    if (hero?.spec) applySpec(hero.spec)
-    else { setSel(DEFAULT_SEL); setMountOn(false); setMountId(0) }
+  async function reset() {
+    if (selectedId) await selectUser(selectedId)
+    else composer.applySpec(DEFAULT_SEL)
     setBase('NormalStandBy'); setEmote(''); setDir('S'); setSaveMsg(null)
   }
   async function save() {
+    if (!selectedId) { setSaveMsg({ ok: false, text: 'No character selected.' }); return }
     setSaving(true); setSaveMsg(null)
-    const r = await saveOperatorCharacter(spec)
+    const r = await saveCharacter(selectedId, composer.spec, path.toLowerCase())
     setSaveMsg({ ok: r.ok, text: r.message })
-    if (r.ok) setHero(h => h ? { ...h, spec, synced: true } : h)
+    if (r.ok) setRoster(rs => rs.map(x => x.profileId === selectedId ? { ...x, hasHero: true, pathId: path.toLowerCase() } : x))
     setSaving(false)
   }
 
-  const who = hero?.profile?.display_name || hero?.profile?.displayName || hero?.character?.name || 'You'
-  const dyeSlot = dyeFor
-  const dyeTarget = dyeSlot ? dyeTargetKey(dyeSlot) : null
-  const dyeCur = dyeTarget ? sel[dyeTarget] : null
+  const who = selected?.displayName || selected?.name || 'Character'
+  const dyeTarget = dyeFor ? composer.dyeTargetKey(dyeFor) : null
+  const dyeCur = dyeTarget ? composer.sel[dyeTarget] : null
+
+  return (
+    <div className="forge-work">
+      {/* LEFT — platform-wide roster (KinetikCircle), capsules + search + pagination */}
+      <div className="fcol users">
+        <h4>Users · {loading ? 'loading…' : `${total} platform-wide`}</h4>
+
+        <div className="f-kind-toggle">
+          {KIND_TABS.map(t => (
+            <button key={t.id} className={kind === t.id ? 'on' : ''} onClick={() => switchKind(t.id)}>
+              {t.label} <span className="n">{counts[t.id]}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="f-search-row">
+          <input className="f-search" placeholder="Search name or email…" value={searchInput}
+            onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') runSearch() }} />
+          <button className="f-arw" title="Search" onClick={runSearch}><Search size={13} /></button>
+        </div>
+
+        <div className="f-userlist">
+          {roster.length === 0 && !loading && (
+            <div className="f-empty">{rosterSource === 'offline' ? 'Sign in to load characters.' : search ? 'No matches.' : 'No characters found.'}</div>
+          )}
+          {roster.map(u => {
+            const on = u.profileId === selectedId
+            const c = ['#e0603a', '#6366f1', '#22c55e', '#d6409f', '#e0a83a'][(u.displayName.charCodeAt(0) || 0) % 5]
+            return (
+              <div key={u.profileId}>
+                <button className={'f-user' + (on ? ' on' : '')} onClick={() => selectUser(u.profileId)}>
+                  <span className="f-ava" style={{ background: c }}>{(u.displayName || u.name || '?')[0]?.toUpperCase()}</span>
+                  <span>
+                    <span className="nm">{u.displayName || u.name}</span>
+                    <span className="uid">{u.accountType || 'user'} · {u.pathId || '—'}{u.level ? ` · L${u.level}` : ''}{u.guardianName ? ` · guardian: ${u.guardianName}` : ''}</span>
+                  </span>
+                  <span className={'f-badge ' + (u.hasHero ? 'hero' : 'none')}>{u.hasHero ? 'hero' : 'none'}</span>
+                </button>
+                {on && (
+                  <div className="f-userpath">
+                    <span className="f-path-label">Path</span>
+                    <div className="f-pathpills">
+                      {PATHS.map(p => <button key={p} className={'f-pp' + (path === p ? ' on' : '')} onClick={() => setPath(p)}>{p}</button>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {total > PAGE_SIZE && (
+          <div className="f-pagination">
+            <button className="f-arw" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>◀</button>
+            <span className="f-page-label">Page {page} / {pageCount}</span>
+            <button className="f-arw" disabled={page >= pageCount} onClick={() => setPage(p => Math.min(pageCount, p + 1))}>▶</button>
+          </div>
+        )}
+
+        <div className="f-note"><b>Single source of truth.</b> Pick any user, forge their look, and press <b>Save to games</b> — LashiraBloom &amp; Kingdom Heroes render exactly this. {rosterSource === 'self' && <em>(Admin RPC not deployed — showing your own character only.)</em>}</div>
+      </div>
+
+      <ComposerPanel
+        composer={composer}
+        motion={{ base, setBase, emote, setEmote, dir, setDir, playing, setPlaying, speed, setSpeed, scale, setScale, motionName, frame, onStep: (i, n) => setFrame(`step ${i + 1}/${n}`) }}
+        headerLeft={<div className="f-who">{who} <small>{path} · {motionName}</small></div>}
+        headerRight={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span className="f-pill live">● live spec</span>
+            <button className="f-gbtn" onClick={save} disabled={saving} style={{ background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' }}>
+              {saving ? 'Saving…' : 'Save to games'}
+            </button>
+          </div>
+        }
+        onReset={reset}
+        setBrowse={setBrowse}
+        setDyeFor={setDyeFor} setDyeAnchor={setDyeAnchor}
+        path={path.toLowerCase()} level={selected?.level ?? 1}
+      />
+
+      {saveMsg && <div className="f-npc-msg" style={{ color: saveMsg.ok ? 'var(--ok, #16a34a)' : '#e0603a' }}>{saveMsg.text}</div>}
+      {lockMsg && <div className="f-npc-msg" style={{ color: '#d9a12f' }}>{lockMsg}</div>}
+
+      {browse && (
+        <PartBrowser title={`${browse.slot.label} collection`} entries={composer.entriesFor(browse.slot)}
+          value={composer.currentKeyFor(browse.slot)} onPick={composer.pickFor(browse.slot)} onClose={() => setBrowse(null)}
+          lockedKeys={lockedKeys} onLocked={e => flashLocked(e.label)} />
+      )}
+      {dyeFor && dyeCur && dyeTarget && (
+        <DyePicker cat={dyeCur.cat} part={composer.meta[dyeCur.cat]?.byId[dyeCur.id]} value={dyeCur.palette} anchorRect={dyeAnchor}
+          onPick={(pal: number | null) => composer.setSel((prev: any) => ({ ...prev, [dyeTarget]: { ...prev[dyeTarget], palette: pal } }))}
+          onClose={() => setDyeFor(null)} />
+      )}
+    </div>
+  )
+}
+
+export function CharacterForge() {
+  const [tab, setTab] = useState<TabId>('lab')
 
   return (
     <div className="forge">
@@ -237,146 +244,11 @@ export function CharacterForge() {
       </div>
 
       <div className="forge-body">
-        {tab === 'lab' && (
-          <div className="forge-work">
-            {/* LEFT — identity + path */}
-            <div className="fcol users">
-              <h4>Editing character</h4>
-              <div className="f-userlist">
-                <div className="f-user on">
-                  <span className="f-ava" style={{ background: '#6366f1' }}>{who[0]?.toUpperCase()}</span>
-                  <span><span className="nm">{loading ? 'Loading…' : who}</span><span className="uid">{hero?.character ? (hero.synced ? 'synced hero' : 'draft') : hero ? 'no hero yet' : 'offline / guest'}</span></span>
-                  <span className={'f-badge ' + (hero?.character ? 'hero' : 'none')}>{hero?.character ? 'live' : '—'}</span>
-                </div>
-                <div className="f-userpath">
-                  <span className="f-path-label">Path</span>
-                  <div className="f-pathpills">
-                    {PATHS.map(p => <button key={p} className={'f-pp' + (path === p ? ' on' : '')} onClick={() => setPath(p)}>{p}</button>)}
-                  </div>
-                </div>
-              </div>
-              <div className="f-note"><b>Single source of truth.</b> This edits the same character the games render — press <b>Save to games</b> and LashiraBloom &amp; Kingdom Heroes pick it up. <em>(Editing other user IDs needs an admin fetch RPC — next step.)</em></div>
-            </div>
-
-            {/* CENTER — wide stage (real compositor) */}
-            <div className="fcol stage">
-              <div className="f-stage-head">
-                <div className="f-who">{who} <small>{path} · {motionName}</small></div>
-                <div style={{ flex: 1 }} />
-                <span className="f-pill live">● live spec</span>
-                <button className="f-gbtn" onClick={save} disabled={saving} style={{ background: 'var(--acc)', color: '#fff', borderColor: 'var(--acc)' }}>
-                  {saving ? 'Saving…' : 'Save to games'}
-                </button>
-              </div>
-              <div className="f-canvas-hold">
-                <CompositeStage
-                  spec={spec} motionName={motionName} playing={playing}
-                  scale={scale} speed={speed} width={600} height={440}
-                  onStep={(i: number, n: number) => setFrame(`step ${i + 1}/${n}`)}
-                />
-                <div className="f-mtag">{motionName} · {frame || '…'}</div>
-                {saveMsg && <div className="f-savemsg" style={{ color: saveMsg.ok ? 'var(--ok, #16a34a)' : '#e0603a' }}>{saveMsg.text}</div>}
-              </div>
-              <div className="f-controls">
-                <div className="f-btnrow">
-                  {ACTIONS.map(([label, b]) => (
-                    <button key={b} className={'f-gbtn' + (base === b && !emote ? ' on' : '')} onClick={() => { setEmote(''); setBase(b) }}>{label}</button>
-                  ))}
-                  <span style={{ flex: 1 }} />
-                  <select className="f-gbtn" value={emote} onChange={e => setEmote(e.target.value)}>
-                    <option value="">Emote…</option>
-                    {EMOTES.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </div>
-                <div className="f-btnrow">
-                  {['S', 'E', 'N', 'W'].map(d => (
-                    <button key={d} className={'f-gbtn sq' + (dir === d ? ' on' : '')} onClick={() => setDir(d)}>{d}</button>
-                  ))}
-                  <button className="f-gbtn sq" onClick={() => setPlaying(p => !p)}>{playing ? '⏸' : '▶'}</button>
-                  <span className="f-cap">speed</span>
-                  <input className="f-rng" type="range" min={0.25} max={2} step={0.25} value={speed} onChange={e => setSpeed(Number(e.target.value))} />
-                  <span className="f-cap">zoom</span>
-                  <input className="f-rng" type="range" min={1} max={6} step={1} value={scale} onChange={e => setScale(Number(e.target.value))} />
-                  <span style={{ flex: 1 }} />
-                  <button className="f-gbtn danger" onClick={reset}>Reset</button>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT — LIVE pickers */}
-            <div className="fcol pickers">
-              {GROUPS.map(group => (
-                <div key={group} className="f-grp">
-                  <h4>{group}</h4>
-                  {SLOT_DEFS.filter(s => s.group === group).map(slot => {
-                    const curKey = currentKeyFor(slot)
-                    const on = slot.special ? true : !!sel[slot.key]
-                    const dtKey = dyeTargetKey(slot.key)
-                    const dtCat = sel[dtKey]?.cat || (dtKey === 'body' ? 'body' : slot.cat)
-                    const dyeable = on && !!sel[dtKey] && (meta[dtCat]?.palettes ?? 0) > 1
-                    const pick = pickFor(slot)
-                    return (
-                      <div key={slot.key} className="f-slot">
-                        {slot.optional
-                          ? <span className={'f-chk' + (on ? ' on' : '')} onClick={() => toggle(slot)} />
-                          : <span className="f-dot" />}
-                        <span className="f-sl">{slot.label}</span>
-                        <button className="f-arw" onClick={() => stepEntry(entriesFor(slot), curKey, -1, pick)}>◀</button>
-                        <span className="f-val" onClick={() => setBrowse({ slot })}><b>{labelFor(slot)}</b><span>▦</span></span>
-                        <button className="f-arw" onClick={() => stepEntry(entriesFor(slot), curKey, +1, pick)}>▶</button>
-                        {dyeable && <button className="f-dye" title="pick color" onClick={e => { setDyeFor(slot.key); setDyeAnchor(e.currentTarget.getBoundingClientRect()) }} />}
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
-              <div className="f-grp">
-                <h4>Mount</h4>
-                <div className="f-slot">
-                  <span className={'f-chk' + (mountOn ? ' on' : '')} onClick={() => setMountOn(m => !m)} />
-                  <span className="f-sl">Ride</span>
-                  <button className="f-arw" onClick={() => setMountId(m => (m - 1 + Math.max(1, mountCount)) % Math.max(1, mountCount))}>◀</button>
-                  <span className="f-val"><b>{mountId === 0 ? 'Horse' : `mount #${mountId}`}</b><span>/{mountCount || '…'}</span></span>
-                  <button className="f-arw" onClick={() => setMountId(m => (m + 1) % Math.max(1, mountCount))}>▶</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'select' && (
-          <div className="f-soon"><div className="card">
-            <span className="f-step">Step 6</span>
-            <h3>Character Select — the welcome page</h3>
-            <p>The sign-in / pick-your-hero screen, built here as the design source, then mirrored 1:1 by LashiraBloom as its own welcome.</p>
-          </div></div>
-        )}
-        {tab === 'npc' && (
-          <div className="f-soon"><div className="card">
-            <span className="f-step">Step 6</span>
-            <h3>NPC Studio — the shared cast</h3>
-            <p>The same composer aimed at named townsfolk, dressed from the same 2,895 parts and placed by both games.</p>
-          </div></div>
-        )}
+        {tab === 'lab' && <CharacterLab />}
+        {tab === 'select' && <CharacterSelect />}
+        {tab === 'npc' && <NpcStudio />}
+        {tab === 'shop' && <Shop />}
       </div>
-
-      {browse && (
-        <PartBrowser
-          title={`${browse.slot.label} collection`}
-          entries={entriesFor(browse.slot)}
-          value={currentKeyFor(browse.slot)}
-          onPick={pickFor(browse.slot)}
-          onClose={() => setBrowse(null)}
-        />
-      )}
-      {dyeFor && dyeCur && dyeTarget && (
-        <DyePicker
-          cat={dyeCur.cat} part={meta[dyeCur.cat]?.byId[dyeCur.id]} value={dyeCur.palette}
-          anchorRect={dyeAnchor}
-          onPick={(pal: number | null) => setSel((prev: any) => ({ ...prev, [dyeTarget]: { ...prev[dyeTarget], palette: pal } }))}
-          onClose={() => setDyeFor(null)}
-        />
-      )}
     </div>
   )
 }

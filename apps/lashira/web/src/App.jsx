@@ -29,6 +29,14 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
   const [playAnyway, setPlayAnyway] = useState(false);
   const lastAppliedUserId = useRef(null);
 
+  // Multi-farm scope — reachable via the in-game Travel picker (Home hub).
+  // Default stays the CIRCLE farm (unchanged landing for the real, family-used
+  // embed path); personal + visiting are new, additively-reachable destinations.
+  //   { kind: 'circle' }                       -> today's shared circle farm
+  //   { kind: 'personal' }                      -> your own farm, editable
+  //   { kind: 'visit', ownerId, ownerName }      -> read-only view of theirs
+  const [farmScope, setFarmScope] = useState({ kind: 'circle' });
+
   // resolve the initial session
   useEffect(() => {
     let alive = true;
@@ -92,5 +100,25 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     ? { ...profile, diamonds: hero.profile.diamonds ?? profile.diamonds, xp: hero.profile.xp ?? profile.xp, level: hero.profile.level ?? profile.level, displayName: hero.profile.display_name || profile.displayName, role: hero.profile.role || profile.role }
     : profile;
 
-  return <FarmRoom profile={eff} hero={hasHero ? hero : null} circleId={effCircleId} key={eff.id + ':' + (effCircleId || '')} />;
+  // Resolve the ACTIVE scope into what FarmRoom/FarmLogic need. Personal +
+  // visit are both circle-independent (circleId=null); visit additionally
+  // carries the owner's id/name so FarmLogic loads read-only. `homeCircleId`
+  // stays available regardless of active scope so the Travel picker can always
+  // list your circle-mates, even while on your personal farm or visiting.
+  const isVisit = farmScope.kind === 'visit';
+  const scopeCircleId = farmScope.kind === 'circle' ? effCircleId : null;
+  const scopeKey = farmScope.kind === 'circle' ? 'circle:' + (effCircleId || '')
+    : isVisit ? 'visit:' + farmScope.ownerId
+      : 'personal';
+
+  return <FarmRoom
+    profile={eff}
+    hero={hasHero ? hero : null}
+    circleId={scopeCircleId}
+    visitOwnerId={isVisit ? farmScope.ownerId : null}
+    visitOwnerName={isVisit ? farmScope.ownerName : null}
+    homeCircleId={effCircleId}
+    onTravel={setFarmScope}
+    key={eff.id + ':' + scopeKey}
+  />;
 }

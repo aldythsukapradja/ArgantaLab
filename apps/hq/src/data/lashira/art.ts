@@ -11,6 +11,10 @@ export interface LashiraArtItem {
   sourceFile?: string | null
   notes?: string | null
   imageData?: string | null
+  // Whether this slot has custom art in the DB, WITHOUT having fetched the bytes
+  // yet — the list query never carries imageData now (see artCloud.ts); this is
+  // how the grid still shows an accurate "asset vs procedural" badge.
+  hasImage?: boolean
   builtin?: boolean
   updatedAt?: string | null
 }

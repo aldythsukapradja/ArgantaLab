@@ -63,7 +63,15 @@ create policy pixel_art_write on storage.objects for all
   with check (bucket_id = 'pixel-art' and public.is_admin());
 
 -- 4 · consumption view — what the apps/agents read (published, ship-ready)
-create or replace view public.pixel_manifest as
+-- security_invoker=on: without it, Postgres checks RLS as the VIEW OWNER (the
+-- migration runner), not the querying user — Supabase's linter flags this as
+-- "Security Definer View". pixel_asset's own RLS already requires auth.uid() is
+-- not null, so invoker mode just makes the view honor that per-caller instead of
+-- silently running with the creator's rights. Needs Postgres 15+ (Supabase
+-- default since 2023 — if this errors, upgrade PG in Dashboard → Settings →
+-- Infrastructure first).
+create or replace view public.pixel_manifest
+  with (security_invoker = on) as
   select id, name, tier, license, form, animations, storage_path, curated
   from public.pixel_asset
   where status = 'published';

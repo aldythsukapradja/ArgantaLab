@@ -1,5 +1,7 @@
 // Reusable quantity picker — tap Buy on a shop item → pick how many (stepper +
-// 1/5/10/Max quick buttons + live total), then confirm. Used by the seed shops.
+// 1/10/50/100 quick buttons + live total), then confirm. Used by the seed shops.
+// No "Max" button on purpose — a single tap shouldn't be able to blow the whole
+// wallet; big buys still need a few deliberate taps (or the manual stepper).
 import { useState } from 'react';
 
 const fmt = (n) => Number(n || 0).toLocaleString();
@@ -21,10 +23,9 @@ export function QtyDialog({ item, unitCost, maxQty = 999, onBuy, onClose, curren
           <button type="button" onClick={() => setQty((q) => clamp(q + 1))} aria-label="more">+</button>
         </div>
         <div className="qty-quick">
-          {[1, 5, 10].map((n) => (
+          {[1, 10, 50, 100].map((n) => (
             <button type="button" key={n} disabled={n > cap} className={qty === n ? 'on' : ''} onClick={() => setQty(clamp(n))}>{n}</button>
           ))}
-          <button type="button" className={qty === cap ? 'on' : ''} onClick={() => setQty(cap)}>Max</button>
         </div>
         <div className="qty-total">Total <b>{currency}{fmt(total)}</b></div>
         <div className="qty-actions">

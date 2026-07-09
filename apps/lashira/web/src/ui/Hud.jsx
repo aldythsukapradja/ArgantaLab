@@ -55,7 +55,7 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showSeeds, setShowSeeds] = useState(false);
   const [showLive, setShowLive] = useState(false);
@@ -92,6 +92,12 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
   // Sickle is a persistent tool selection: on = taps remove crops; toggling off
   // returns to the seed/plant tool.
   const toggleSickle = () => game.setTool(snap.tool === 'sickle' ? 'seed' : 'sickle');
+  // Visit mode (multi-farm): read-only view of a circle-mate's PERSONAL farm.
+  // FarmLogic already no-ops every mutator server/logic-side (belt +
+  // suspenders); here we just remove the temptation — hide the farm action
+  // wheel entirely (keep Mount: it's the VIEWER's own cosmetic, touches no
+  // farm state) and show a clear banner whose farm this is.
+  const isVisitor = snap.viewerRole === 'visitor';
 
   return (
     <>
@@ -153,16 +159,30 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
         <div className="hero-note">Placeholder farmer — build your hero in <b>Kingdom Heroes</b> and it appears here.</div>
       )}
 
+      {isVisitor && (
+        <div className="visit-banner">
+          👁 Visiting <b>{snap.visitOwnerName || snap.name}</b>'s Farm — look, but only they can work it
+        </div>
+      )}
+
       {/* action cluster. In the ARENA it's the SHARED @arganta/combat cluster
           (same component Kingdom uses): 3 skills + mount + attack. On the farm
-          it's the slim tap-to-farm cluster: Seed-picker / Sleep / Mount + work. */}
-      {battle?.on ? (
+          it's the slim tap-to-farm cluster: Seed-picker / Sleep / Mount + work.
+          VISITING: only Mount stays (the viewer's own cosmetic) — every farm
+          tool is hidden, there's nothing here to tempt-and-block. */}
+      {isVisitor ? (
+        <div className="cluster visit-cluster" style={skinOf(skinId).vars} data-skin={skinId}>
+          <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
+        </div>
+      ) : battle?.on ? (
         <ActionCluster
           skills={battleSkills}
           onSkill={onSkill}
           onAttack={onStrike}
           mp={snap.stamina}
           skin={skinId}
+          cooldowns={cooldownUI?.skills}
+          attackCooldown={cooldownUI?.attack || 0}
           utils={[{ key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: 'mount' }]}
         />
       ) : (

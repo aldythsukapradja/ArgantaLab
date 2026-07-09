@@ -9,13 +9,16 @@ import { MAT_ICON } from '../game/farm-mechanics.js';
 import { Shop } from './Shop.jsx';
 
 // `mech` = the mechanics SNAPSHOT (material counts); `mechGame` = the store (actions).
-export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose }) {
+// `selfId`/`circleMembers`/`homeCircleId`/`onTravel` feed the Home hub's Travel
+// sub-tab (multi-farm: My Farm / Circle Farm / visit a circle-mate's farm).
+export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose, selfId, circleMembers, homeCircleId, onTravel }) {
   if (!panel) return null;
   return (
     <div className="panel-scrim" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         {panel === 'shop' && <Shop snap={snap} game={game} mech={mech} mechGame={mechGame} initialTab={shopTab} onClose={onClose} />}
-        {panel === 'house' && <Home snap={snap} game={game} onClose={onClose} />}
+        {panel === 'house' && <Home snap={snap} game={game} onClose={onClose}
+          selfId={selfId} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} />}
         {panel === 'inventory' && <Bag snap={snap} game={game} mech={mech} onClose={onClose} />}
         {panel === 'quests' && <Quests snap={snap} game={game} mechGame={mechGame} onClose={onClose} />}
       </div>
@@ -188,9 +191,10 @@ const HOME_TABS = [
   { id: 'house', icon: '🏡', label: 'House' },
   { id: 'animals', icon: '🐄', label: 'Animals' },
   { id: 'kin', icon: '🍃', label: 'Kin' },
+  { id: 'travel', icon: '🚪', label: 'Travel' },
 ];
 
-function Home({ snap, game, onClose }) {
+function Home({ snap, game, onClose, selfId, circleMembers, homeCircleId, onTravel }) {
   const [tab, setTab] = useState('house');
   return (
     <>
@@ -205,6 +209,7 @@ function Home({ snap, game, onClose }) {
       {tab === 'house' && <HouseBody snap={snap} game={game} />}
       {tab === 'animals' && <BarnBody snap={snap} game={game} />}
       {tab === 'kin' && <KinBody snap={snap} game={game} />}
+      {tab === 'travel' && <TravelBody snap={snap} game={game} selfId={selfId} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} onClose={onClose} />}
     </>
   );
 }
@@ -295,6 +300,60 @@ function KinBody({ snap, game }) {
           </button>
         </div>
       ))}
+    </>
+  );
+}
+
+// Multi-farm picker: My Farm (personal, always yours) · Circle Farm (shared,
+// co-op, unchanged) · a tile per circle-mate to VISIT (read-only — only the
+// owner can act on their own farm; see FarmLogic's VISITOR_LOCKED_ACTIONS).
+// `onTravel(scope)` bubbles up to App.jsx, which swaps + remounts the room.
+function TravelBody({ game, selfId, circleMembers, homeCircleId, onTravel, onClose }) {
+  if (!onTravel) return <div className="empty-note">Travel isn't available here.</div>;
+  const viewerRole = game?.viewerRole || 'owner';
+  const herePersonal = viewerRole === 'owner' && !game?.circleId;
+  const hereCircle = viewerRole === 'owner' && !!game?.circleId;
+  const hereVisitId = viewerRole === 'visitor' ? game?.visitOwnerId : null;
+  const others = (circleMembers || []).filter((m) => m.member_id !== selfId);
+
+  const go = (scope) => { onTravel(scope); onClose(); };
+
+  return (
+    <>
+      <div className="empty-note">Travel to your own farm, the shared circle farm, or visit a circle-mate's — visiting is look-only, only they can work their farm.</div>
+      <div className="farmtile-grid">
+        <button type="button" className={'farmtile mine' + (herePersonal ? ' here' : '')} onClick={() => go({ kind: 'personal' })}>
+          <span className="ft-ic">🏡</span>
+          <span className="ft-name">My Farm</span>
+          {herePersonal ? <span className="ft-here">Here now</span> : <span className="ft-badge">Play</span>}
+        </button>
+        {homeCircleId && (
+          <button type="button" className={'farmtile circle' + (hereCircle ? ' here' : '')} onClick={() => go({ kind: 'circle' })}>
+            <span className="ft-ic">🌾</span>
+            <span className="ft-name">Circle Farm</span>
+            {hereCircle ? <span className="ft-here">Here now</span> : <span className="ft-badge">Play</span>}
+          </button>
+        )}
+      </div>
+      {others.length > 0 && (
+        <>
+          <div className="bag-title" style={{ marginTop: 14 }}>Visit a circle-mate</div>
+          <div className="farmtile-grid">
+            {others.map((m) => (
+              <button type="button" key={m.member_id}
+                className={'farmtile visit' + (hereVisitId === m.member_id ? ' here' : '')}
+                onClick={() => go({ kind: 'visit', ownerId: m.member_id, ownerName: m.display_name })}>
+                <span className="ft-ic">👁</span>
+                <span className="ft-name">{m.display_name || 'Farmer'}</span>
+                {hereVisitId === m.member_id ? <span className="ft-here">Here now</span> : <span className="ft-badge">Visit</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {!homeCircleId && !others.length && (
+        <div className="empty-note" style={{ marginTop: 10 }}>Join a circle to visit a circle-mate's farm.</div>
+      )}
     </>
   );
 }
