@@ -3,15 +3,51 @@
 // swap ◀ ▶, with a thumbnail strip below. The featured card's action adapts
 // (Buy / Craft / Upgrade / Sell). Merges the old quicknav Shop + the on-map
 // merchant popups; tapping a shop building deep-links here via `initialTab`.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CROPS } from '../data/crops.js';
 import { SPECIES } from '../data/livestock.js';
 import { MAT_ICON } from '../game/farm-mechanics.js';
 import { weaponOf, armorOf } from '@arganta/combat';
 import { QtyDialog } from './QtyDialog.jsx';
 import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem } from '../net/cosmetics.js';
+import { charParts, sheetUrl, loadImage } from '../engine/data.js';
 
 const COSMETIC_ICON = { helmet: '⛑', coat: '🧥', sword: '⚔', shield: '🛡' };
+const COSMETIC_CATS = ['helmet', 'coat', 'sword', 'shield'];
+
+// Real per-part sprite thumbnail — every helmet/coat/sword/shield in the shop
+// otherwise looks identical (one emoji per CATEGORY, 10 items indistinguishable).
+// Same sheet/frame data LashiraBloom already renders the player's own hero from
+// (engine/data.js — same extracted asset set HQ's Character Forge uses), just
+// drawn small. Sized entirely by CSS (.gal-ic / .gal-thumb ancestor rules) so one
+// component serves both the big feature slot and the small thumbnail strip.
+function CosmeticThumb({ cat, part }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const sheet = await loadImage(sheetUrl(cat, part));
+        if (!live || !ref.current) return;
+        const anim = part.animations?.NormalStandBySouth || part.animations?.WeaponStandBySouth
+          || Object.values(part.animations || {}).find((a) => a?.length);
+        const fi = anim?.[0]?.frame ?? 0;
+        const fm = part.frames?.[fi] || part.frames?.find(Boolean);
+        if (!fm) return;
+        const ctx = ref.current.getContext('2d');
+        const size = 96;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, size, size);
+        const s = Math.min(2.5, Math.min(size / Math.max(1, fm.w), size / Math.max(1, fm.h)));
+        ctx.drawImage(sheet, fm.x + fm.fx, fm.y + fm.fy, fm.w, fm.h,
+          (size - fm.w * s) / 2, (size - fm.h * s) / 2, fm.w * s, fm.h * s);
+      } catch { /* sheet missing — leave the canvas blank, no crash */ }
+    })();
+    return () => { live = false; };
+  }, [cat, part?.id]);
+  return <canvas ref={ref} width={96} height={96} className="cosmetic-thumb" />;
+}
+
 const cosmeticStatLine = (it) => [
   it.atk ? `⚔+${it.atk} ATK` : null, it.def ? `🛡+${it.def} DEF` : null, it.hp ? `❤+${it.hp} HP` : null,
 ].filter(Boolean).join(' · ');
@@ -43,11 +79,19 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   const [cosmeticBusy, setCosmeticBusy] = useState(null);
   const [cosmeticMsg, setCosmeticMsg] = useState(null);
   const [diamondOverride, setDiamondOverride] = useState(null);
+  const [partMeta, setPartMeta] = useState({}); // cat -> { byId: {id -> real part, for thumbnails} }
   useEffect(() => {
     let live = true;
     Promise.all([loadShopCatalog(), loadOwnedCosmetics()]).then(([cat, owned]) => {
       if (live) { setShopCatalog(cat); setOwnedCosmetics(owned); }
     });
+    Promise.all(COSMETIC_CATS.map((c) => charParts(c).then((parts) => [c, parts]).catch(() => [c, []])))
+      .then((entries) => {
+        if (!live) return;
+        const out = {};
+        for (const [c, parts] of entries) out[c] = { byId: Object.fromEntries((parts || []).map((p) => [p.id, p])) };
+        setPartMeta(out);
+      });
     return () => { live = false; };
   }, []);
   async function buyCosmetic(item) {
@@ -78,8 +122,8 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   // action: { label, disabled, tone?, onClick } | null }.
   const wares = useMemo(() => buildWares(tab, {
     snap, game, mech, mechGame, op, money, setBuying,
-    shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic,
-  }), [tab, snap, mech, op, money, shopCatalog, ownedCosmetics, cosmeticBusy, diamonds]); // eslint-disable-line react-hooks/exhaustive-deps
+    shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, partMeta,
+  }), [tab, snap, mech, op, money, shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, partMeta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const safeIdx = wares.length ? Math.min(idx, wares.length - 1) : 0;
   const feat = wares[safeIdx] || null;
@@ -149,7 +193,7 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
 
 function buildWares(tab, ctx) {
   const { snap, game, mech, mechGame, op, money, setBuying } = ctx;
-  const { shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic } = ctx;
+  const { shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, partMeta } = ctx;
 
   if (tab === 'seeds') {
     return Object.values(CROPS).map((c) => {
@@ -195,8 +239,10 @@ function buildWares(tab, ctx) {
       const action = owned
         ? { label: busy ? 'Wearing…' : 'Wear', disabled: busy, onClick: () => wearCosmetic(it) }
         : { label: busy ? 'Buying…' : `Buy 💎${fmt(it.price)}`, disabled: busy || !afford, tone: afford ? undefined : 'ghost', onClick: () => buyCosmetic(it) };
+      const realPart = partMeta[it.cat]?.byId?.[it.partId];
       return {
-        key: it.itemKey, icon: COSMETIC_ICON[it.cat] || '✨',
+        key: it.itemKey,
+        icon: realPart ? <CosmeticThumb cat={it.cat} part={realPart} /> : (COSMETIC_ICON[it.cat] || '✨'),
         title: `${it.setLabel || it.cat} #${it.partId}`, badge: owned ? 'Owned' : undefined,
         sub: cosmeticStatLine(it) || 'Cosmetic', action,
       };

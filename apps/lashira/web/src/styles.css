@@ -306,6 +306,11 @@ body {
   position: absolute; right: -3px; top: -3px; min-width: 17px; height: 17px; padding: 0 4px;
   border-radius: 999px; background: #141824; color: #fff; font-size: 9px; line-height: 17px; font-weight: 800; border: 1px solid #fff9;
 }
+/* Real per-part cosmetic sprite thumbnail (Shop.jsx CosmeticThumb) — one canvas,
+   sized by context so it fits both the big feature slot and the small strip. */
+.cosmetic-thumb { image-rendering: pixelated; border-radius: 8px; }
+.gal-ic .cosmetic-thumb { width: 72px; height: 72px; }
+.gal-thumb .cosmetic-thumb { width: 40px; height: 40px; }
 
 /* ── Travel — multi-farm tile grid (My Farm / Circle Farm / visit a member) ── */
 .farmtile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 6px; }
