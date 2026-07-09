@@ -5,17 +5,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, ZONES_ANNOT, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, ZONES_ANNOT, HARVEST_NODES, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
-  tickMonsterState, monsterExpired, skillPower, spawnEffect, drawEffect, battleSkillsFor,
+  tickMonsterState, monsterExpired, spawnEffect, drawEffect, battleSkillsFor,
   SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, pathMaxHp, pathForWeapon, canAffordSkill,
-  monsterOf, outgoingDamage, rollDrops, SPAWN_TUNING,
+  monsterOf, outgoingDamage, rollDrops, SPAWN_TUNING, pathSkillPower, pathPower,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
-import { creatureImage } from './creature-sprites.js';
+import { creatureFrame } from './creature-sprites.js';
 import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
 import { hasActualKinArt } from './kin-sprite-image.jsx';
@@ -709,9 +709,14 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     playSwing(g);
     if (!g.combat.on) return;
     const [tx, ty] = frontTile();
-    hitTile(g, tx, ty, playerDamage(MELEE_DAMAGE));
+    // Physical strike scaled by the path's `phy` multiplier (tunable from HQ), then
+    // the equipped weapon's flat ATK on top. Warrior hits big, mage small.
+    const base = MELEE_DAMAGE * pathPower(playerPath()).phy;
+    hitTile(g, tx, ty, playerDamage(base));
   }
-  // Player's dealt damage = level/skill base + the equipped weapon's ATK.
+  // The player's combat path (from equipped weapon until an explicit class picker).
+  function playerPath() { return logicRef.current?.path || 'warrior'; }
+  // Player's dealt damage = (path-scaled) base + the equipped weapon's ATK.
   function playerDamage(base) {
     return outgoingDamage(base, logicRef.current?.state?.weaponTier ?? 1);
   }
@@ -768,14 +773,17 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const L = logicRef.current?._level?.() ?? 1;
     const now = performance.now();
 
+    const path = playerPath();
     if (skill.type === 'heal') {
-      const healed = applyHeal(g.combat, skillPower(skill, L));
+      // Mend scales with the path's magic multiplier — casters heal more.
+      const healed = applyHeal(g.combat, pathSkillPower(skill, path, L));
       castSpell(g, skill, p.tile);
       syncBattleState(g);
       logicRef.current?.flash?.('Mend +' + healed + ' HP');
       return;
     }
-    const dmg = playerDamage(skillPower(skill, L)); // + weapon ATK
+    // Magic damage scaled by the path's `mag` multiplier (tunable from HQ), + weapon ATK.
+    const dmg = playerDamage(pathSkillPower(skill, path, L));
     const hostSelf = iAmHost(g);
     if (skill.target === 'all') { // Storm — every monster
       if (hostSelf) {
@@ -1246,7 +1254,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         let bob = 0, squash = 0;
         if (e.species === 'chicken') { bob = moving ? -Math.abs(s) * 7 : -Math.abs(Math.sin(now / 600 + phase)) * 1.5; squash = moving ? Math.abs(s) * 0.6 : 0; }
         else { bob = (moving ? s * 2.5 : Math.sin(now / 700 + phase) * 0.8); squash = moving ? (s * 0.5 + 0.5) * 0.5 : 0; }
-        drawAnimalSprite(ctx, e.species, footX, footY + bob, e.facing, frame, g.art, squash);
+        drawAnimalSprite(ctx, e.species, footX, footY + bob, e.facing, frame, g.art, squash, moving, now);
         // "good ready" badge — the produce LOGO (milk/wool/egg) on a coloured disc,
         // bobbing over the animal when its good is ripe to collect.
         const li = e.livestockId && logicRef.current?.state?.livestock?.find((x) => x.id === e.livestockId);
@@ -1339,6 +1347,39 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const dw = CASTLE.w * TILE, dh = dw * (cskin.naturalHeight / cskin.naturalWidth);
         // CENTER-anchored on the plaza disc so the building sits dead-middle.
         ctx.drawImage(cskin, CASTLE.cx * TILE - dw / 2, CASTLE.cy * TILE - dh / 2, dw, dh);
+      }
+
+      // HARVEST NODES — ore (Mine) + trees (Forest). Draw the READY sprite while
+      // gatherable, the DEPLETED sprite (small_rock / stump) during the respawn
+      // cooldown, plus a pulsing ready-ring or a regrow arc so state is obvious.
+      const mech = mechRef.current;
+      if (mech) {
+        for (const n of HARVEST_NODES) {
+          const isTree = n.kind === 'tree';
+          const ready = mech.nodeReady(n.id, isTree ? 'tree' : 'ore');
+          const key = ready ? n.art : n.depleted;
+          const img = key && g.art[key];
+          const tx = n.rect.x0, ty = n.rect.y0;
+          // trees are 2 wide × drawn tall (canopy up); ore is a single tile.
+          const dw = isTree ? 2 * TILE : TILE, dh = isTree ? 3 * TILE : TILE;
+          const dx = tx * TILE, dy = isTree ? (ty - 1) * TILE : ty * TILE;
+          if (img && img.naturalWidth > 0) ctx.drawImage(img, dx, dy, dw, dh);
+          const cx = dx + dw / 2, gy = (ty + (isTree ? 1 : 0.5)) * TILE;
+          if (ready) {
+            // pulsing ring — green = gather now, amber = tool-tier locked (gold/gem/oak)
+            const locked = (n.ore === 'gold' || n.ore === 'gem') ? (mech.state.tools.pickaxe < 2)
+              : n.hard ? (mech.state.tools.axe < 2) : false;
+            const pulse = Math.abs(Math.sin(now / 480));
+            ctx.beginPath(); ctx.arc(cx, gy, 9 + pulse * 5, 0, 7);
+            ctx.strokeStyle = locked ? `rgba(240,180,60,${(0.5 * (1 - pulse) + 0.2).toFixed(2)})` : `rgba(90,220,120,${(0.5 * (1 - pulse) + 0.2).toFixed(2)})`;
+            ctx.lineWidth = 3; ctx.stroke();
+          } else {
+            // regrow arc (fills as the node recovers)
+            const frac = mech.nodeFrac(n.id, isTree ? 'tree' : 'ore');
+            ctx.beginPath(); ctx.arc(cx, gy, 8, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2.5; ctx.stroke();
+          }
+        }
       }
 
       // plots
@@ -1506,7 +1547,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx, footY + 2, 13 * scl, 5 * scl, 0, 0, 7); ctx.fill();
       // body — PixelLab sprite if the kind has one loaded, else the procedural blob
       const hitFlash = m.state === 'hit' && (now - m.stateStart) < 200;
-      const sprite = creatureImage(m.kind, m.facing);
+      const sprite = creatureFrame(m.kind, m.facing, m.moveT < 1 && m.state !== 'die', now);
       if (sprite) {
         const iw = sprite.naturalWidth || 68, ih = sprite.naturalHeight || 68;
         const s = scl * (TILE * 1.3) / iw;
@@ -1529,6 +1570,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         ctx.fillStyle = 'rgba(18,22,32,0.6)'; ctx.fillRect(hpx - 1, hpy - 1, w + 2, 5);
         ctx.fillStyle = frac > 0.5 ? '#57d06a' : frac > 0.25 ? '#e0c020' : '#e0553f';
         ctx.fillRect(hpx, hpy, Math.round(w * frac), 3);
+        // NAMEPLATE — the mob's bestiary name on a pill above the hp bar. Boss = gold
+        // + 👑; elites (deer/boar) amber; common mobs slate.
+        const def = monsterOf(m.mkind || m.kind);
+        const label = (m.boss ? '👑 ' : '') + (def.name || 'Beast');
+        const pill = m.boss ? 'rgba(150,90,10,0.94)' : (def.hp >= 1500 ? 'rgba(120,70,20,0.9)' : 'rgba(28,32,46,0.85)');
+        ctx.font = (m.boss ? 'bold 13px' : '600 11px') + ' system-ui, sans-serif';
+        const nh = m.boss ? 18 : 15, nw = ctx.measureText(label).width + 12, nx = cx - nw / 2, ny = hpy - 5 - nh;
+        ctx.fillStyle = pill;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(nx, ny, nw, nh, 7); ctx.fill(); } else ctx.fillRect(nx, ny, nw, nh);
+        if (m.boss) { ctx.strokeStyle = 'rgba(255,215,120,0.9)'; ctx.lineWidth = 1.5; if (ctx.roundRect) ctx.stroke(); }
+        ctx.fillStyle = m.boss ? '#ffe9a8' : '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, cx, ny + nh / 2 + 0.5);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
       }
       ctx.restore();
     }

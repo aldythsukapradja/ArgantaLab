@@ -4,7 +4,7 @@
 // swap for PixelLab/real farm tiles later.
 import { CROPS, cropGrowthFrac, cropStageOf, cropIsWithered, cropFreshFrac } from '../data/crops.js';
 import { drawOverride } from './farm-art-runtime.js';
-import { creatureImage } from './creature-sprites.js';
+import { creatureFrame } from './creature-sprites.js';
 import { drawActualKinSprite } from './kin-sprite-image.jsx';
 
 export const TILE = 48;                       // matches Kingdom Heroes scale
@@ -120,17 +120,30 @@ export const HOTSPOTS = [
   { kind: 'shop', id: 'cosmetic', ported: false, rect: { x0: 9, y0: 26, x1: 11, y1: 28 } },
   { kind: 'sell', id: 'market', rect: { x0: 30, y0: 16, x1: 31, y1: 17 } },
   { kind: 'dungeon', id: 'dungeon', ported: false, rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
-  { kind: 'ore', id: 'ore@51,21', ore: 'gold', rect: { x0: 51, y0: 21, x1: 51, y1: 21 } },
-  { kind: 'ore', id: 'ore@54,19', ore: 'copper', rect: { x0: 54, y0: 19, x1: 54, y1: 19 } },
-  { kind: 'ore', id: 'ore@50,26', ore: 'iron', rect: { x0: 50, y0: 26, x1: 50, y1: 26 } },
-  { kind: 'ore', id: 'ore@55,27', ore: 'gem', rect: { x0: 55, y0: 27, x1: 55, y1: 27 } },
-  { kind: 'ore', id: 'ore@53,24', ore: 'stone', rect: { x0: 53, y0: 24, x1: 53, y1: 24 } },
   { kind: 'dock', id: 'dock', rect: { x0: 9, y0: 35, x1: 12, y1: 36 } },
 ];
-// forest trees (match the tree PLACEMENTS; hard = oak → needs Tier-2 axe)
-for (const [x, y, hard] of [[39, 19, false], [44, 20, false], [41, 24, true], [39, 26, false], [45, 27, true], [42, 27, false]]) {
-  HOTSPOTS.push({ kind: 'tree', id: `tree@${x},${y}`, hard, rect: { x0: x, y0: y, x1: x + 1, y1: y + 1 } });
+
+// ── HARVEST NODES: ore (Mine, tx45-59) + trees (Forest grove, tx37-44) mapped onto
+// the basemap deposits. Each node draws its READY sprite while gatherable and its
+// DEPLETED sprite (small_rock / stump) during the respawn cooldown. mine()/chop()
+// read node.ore / node.hard and tier-gate internally (gold+gem = T2 pickaxe, oak = T2 axe).
+const ORE_ART = { stone: 'lashira.lib.boulder', copper: 'lashira.lib.ore_copper', iron: 'lashira.lib.ore_iron', gold: 'lashira.lib.ore_gold', gem: 'lashira.lib.ore_gem' };
+const ORE_NODES = [ // [ore, x, y]  (✓ = pixel-confirmed on the basemap)
+  ['gem', 47, 29], ['gold', 50, 24], ['copper', 49, 30], ['iron', 53, 22], ['stone', 51, 31],
+  ['copper', 56, 25], ['gold', 57, 20], ['iron', 52, 27], ['stone', 55, 30],
+];
+const TREE_NODES = [ // [x, y, hard]  (hard = oak, needs Tier-2 axe)
+  [38, 17, false], [42, 18, false], [37, 20, false], [43, 21, true], [39, 23, false],
+  [41, 26, true], [38, 28, false], [43, 28, false], [40, 30, false],
+];
+for (const [ore, x, y] of ORE_NODES) {
+  HOTSPOTS.push({ kind: 'ore', id: `ore@${x},${y}`, ore, art: ORE_ART[ore], depleted: 'lashira.lib.small_rock', rect: { x0: x, y0: y, x1: x, y1: y } });
 }
+for (const [x, y, hard] of TREE_NODES) {
+  HOTSPOTS.push({ kind: 'tree', id: `tree@${x},${y}`, hard, art: hard ? 'lashira.lib.tree_oak' : 'lashira.lib.tree_pine', depleted: 'lashira.lib.stump', rect: { x0: x, y0: y, x1: x + 1, y1: y + 1 } });
+}
+// Render + collision list for FarmRoom (the ore/tree hotspots, in draw order: trees behind).
+export const HARVEST_NODES = HOTSPOTS.filter((h) => h.kind === 'ore' || h.kind === 'tree');
 export function hotspotAt(tx, ty) {
   for (const h of HOTSPOTS) { const r = h.rect; if (tx >= r.x0 && tx <= r.x1 && ty >= r.y0 && ty <= r.y1) return h; }
   return null;
@@ -303,6 +316,9 @@ export function buildFarmMap(art = {}) {
     if (x === ARENA_GATE_X || x === ARENA_GATE_X + 1) continue; // gate
     drawFence(ctx, x, ARENA_WALL_Y, art); block(x, ARENA_WALL_Y);
   }
+
+  // harvest nodes (ore + trees) block their footprint — solid whether ripe or depleted.
+  for (const n of HARVEST_NODES) blockRect(n.rect.x0, n.rect.y0, n.rect.x1 - n.rect.x0 + 1, n.rect.y1 - n.rect.y0 + 1);
 
   // lily pads scattered on the lake
   for (let y = ZONES.fishing.y0; y <= ZONES.fishing.y1; y++) for (let x = ZONES.fishing.x0; x <= ZONES.fishing.x1; x++) {
@@ -525,13 +541,13 @@ function drawNamedOverride(ctx, art, key, footX, footY, w, h) {
   return drawOverride(ctx, art, key, footX - w / 2, footY - h, w, h);
 }
 
-export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}, squash = 0) {
+export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}, squash = 0, moving = false, now = 0) {
   // Sized to read next to the (Kingdom-scale) farmer: cows/sheep ~1.5 tiles, chickens
   // smaller. Chickens are noticeably smaller than cows/sheep.
   // PixelLab rotation sprite (facing-correct, no flip) for cow/sheep, if no art
   // override is set. Chicken has no sheet yet → falls through to the placeholder.
   if (!art?.[`lashira.animal.${species}`]) {
-    const px = creatureImage(species, facing);
+    const px = creatureFrame(species, facing, moving, now);
     if (px) {
       const iw = px.naturalWidth || 68, ih = px.naturalHeight || 68;
       const targetH = 64, s = targetH / ih, w = iw * s, h = ih * s;
