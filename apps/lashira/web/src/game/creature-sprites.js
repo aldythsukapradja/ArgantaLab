@@ -10,9 +10,11 @@
 // sheep. Chicken is still a placeholder.
 
 const KINDS = new Set(['fox', 'squirrel', 'badger', 'boar', 'deer', 'tiger', 'cow', 'sheep']);
-const WALK = new Set(['fox', 'cow', 'sheep']); // kinds with a downloaded walk cycle
+// kind -> walk-cycle frame count (template walks = 4 frames, v3 walks = 9). Only
+// kinds whose frames are actually downloaded belong here; others stay static.
+const WALK = new Map([['fox', 4], ['cow', 4], ['sheep', 4], ['deer', 4], ['squirrel', 9], ['badger', 9], ['boar', 9]]);
 const DIR = { South: 'south', North: 'north', East: 'east', West: 'west' };
-const WALK_FRAMES = 4, WALK_MS = 130; // per-frame duration of the walk cycle
+const WALK_MS = 130; // per-frame duration of the walk cycle
 const cache = new Map(); // path key -> HTMLImageElement
 
 export function hasCreatureSprite(kind) { return KINDS.has(kind); }
@@ -39,8 +41,9 @@ export function creatureImage(kind, facing) {
 export function creatureFrame(kind, facing, moving, now) {
   if (!KINDS.has(kind) || typeof Image === 'undefined') return null;
   const dir = DIR[facing] || 'south';
-  if (moving && WALK.has(kind)) {
-    const f = Math.floor((now || 0) / WALK_MS) % WALK_FRAMES;
+  const frames = WALK.get(kind);
+  if (moving && frames) {
+    const f = Math.floor((now || 0) / WALK_MS) % frames;
     const walk = loadImg(kind + '/walk/' + dir + '/' + f);
     if (walk) return walk;
   }
