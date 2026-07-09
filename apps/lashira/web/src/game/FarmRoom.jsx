@@ -5,14 +5,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
   tickMonsterState, monsterExpired, spawnEffect, drawEffect, battleSkillsFor,
   SKILL_SLOTS, MELEE_DAMAGE, MONSTER_WALK_MS, MONSTER_MAX_HP, PLAYER_MAX_HP, pathMaxHp, pathForWeapon, canAffordSkill,
-  monsterOf, outgoingDamage, rollDrops, SPAWN_TUNING, pathSkillPower, pathPower,
+  monsterOf, outgoingDamage, rollDrops, SPAWN_TUNING, pathSkillPower, pathPower, armorDef,
+  MONSTER_AGGRO_RANGE, MONSTER_ATTACK_WINDUP_MS, MONSTER_ATTACK_RECOVER_MS, MONSTER_ATTACK_COOLDOWN_MS, MONSTER_FAINT_MS,
 } from '@arganta/combat';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { creatureFrame } from './creature-sprites.js';
@@ -1604,7 +1605,9 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const s = scl * (TILE * 1.3) / iw;
         const w = iw * s, h = ih * s;
         if (hitFlash) ctx.globalAlpha = fade * 0.5; // flash = brief fade on hit
+        ctx.imageSmoothingEnabled = false; // CRISP pixel art (no bilinear blur when scaled up)
         ctx.drawImage(sprite, cx - w / 2, footY + 8 - h, w, h);
+        ctx.imageSmoothingEnabled = true;
         ctx.globalAlpha = fade;
       } else {
         ctx.fillStyle = hitFlash ? '#ffffff' : body;

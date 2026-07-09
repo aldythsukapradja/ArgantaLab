@@ -386,6 +386,12 @@ const BASEMAP_DOTS = [
 // disc). base* = the solid footprint under the building.
 export const CASTLE = { cx: 30.5, cy: 20.5, w: 8, baseTx: 29, baseTy: 21, baseW: 4, baseH: 3 };
 
+// Player spawn — the courtyard directly in front of the castle door (south of the
+// solid base at y21–23, clear of the shops at y19/y28). Fresh sessions start here
+// instead of mid-field, so you "arrive home" at the castle. If it ever ends up
+// solid (skin swap), FarmRoom nudges to the nearest open neighbour.
+export const SPAWN = [30, 25];
+
 // ── NUMBERED ANNOTATION ZONES ─────────────────────────────────────────────
 // One entry per meaningful place, for the labelled debug overlay (screen-space
 // numbered badges + legend). `walk:true` = players can walk here; `walk:false`
@@ -550,14 +556,17 @@ export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', f
     const px = creatureFrame(species, facing, moving, now);
     if (px) {
       const iw = px.naturalWidth || 68, ih = px.naturalHeight || 68;
-      const targetH = 64, s = targetH / ih, w = iw * s, h = ih * s;
+      // BIGGER livestock — sprites have ~30% transparent padding, so a larger
+      // target height makes the animal read at ~1.6 tiles next to the farmer.
+      const targetH = species === 'chicken' ? 84 : 112;
+      const s = targetH / ih, w = iw * s, h = ih * s;
       ctx.save(); ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(px, footX - w / 2, footY + 3 - h, w, h);
+      ctx.drawImage(px, footX - w / 2, footY + 4 - h, w, h);
       ctx.restore();
       return;
     }
   }
-  const [aw, ah] = species === 'chicken' ? [36, 38] : [76, 64];
+  const [aw, ah] = species === 'chicken' ? [56, 60] : [96, 80];
   const img = art?.[`lashira.animal.${species}`];
   if (img && img.naturalWidth > 0) {
     // face movement direction (sheet art faces right) + a squash-stretch for the
