@@ -2,12 +2,13 @@
 // the render; this owns the rules and persistence. Kept from the verified v1
 // engine so the whole loop (till/plant/water/grow/harvest/sell, livestock, Kin
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
-import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe, cropIsWithered } from '../data/crops.js';
+import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe } from '../data/crops.js';
 import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTitle, levelWithFloor, levelProgress, xpForLevel, weaponOf, armorOf, weaponAtk, armorDef, armorHp, monsterOf, REWARD_TUNING } from '@arganta/combat';
 import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 import { loadFarmState, saveFarmState } from './farm-save.js';
+import { sfx } from '../audio/sfx.js';
 
 // The FarmVille loop: 🌸 Bloom is the play currency — seeds/feed COST Bloom, and
 // ANY in-game action (harvest, sell, defeat a monster, mine, chop) EARNS Bloom,
@@ -501,6 +502,7 @@ export class FarmLogic {
     if (q.claimed[id] || (q[id] || 0) < def.goal) return null;
     q.claimed[id] = true;
     this.earnBloom(def.bloom, 'Quest · ' + def.label);
+    sfx.play('quest');
     this.save(); this.emit();
     return def.mat || null;
   }
@@ -535,30 +537,66 @@ export class FarmLogic {
   // already — no tilling, no watering. Ripe → harvest; empty → plant; otherwise
   // (still growing) do nothing. This is what the tap-to-farm handler calls.
   tapAt(tx, ty) {
-    const now = Date.now();
     const p = this.state.plots[tileKey(tx, ty)];
-    if (p?.cropId && cropIsWithered(p, now)) return this._clearWithered(tx, ty);
-    if (p?.cropId && cropIsRipe(p, now)) { const r = this._harvest(tx, ty); return r ? { harvested: r.crop, bloom: r.bloom, tx, ty } : null; }
+    // Sickle selected → remove whatever's planted here (or a no-op hint).
+    if (this.state.tool === 'sickle') {
+      if (p?.cropId) return this.removeCrop(tx, ty);
+      this.flash('🌾 Nothing to cut here'); return null;
+    }
+    if (p?.cropId && cropIsRipe(p)) return this._harvest(tx, ty);
     if (!p?.cropId) return this._plant(tx, ty);
     // growing crop — leave it; give a hint so the tap isn't silent
     this.flash(CROPS[p.cropId]?.emoji + ' still growing');
+    return null;
   }
 
-  // Free tapping (FarmVille): farming costs NO stamina, and harvesting IS the sale
-  // — you get 🌸 Bloom instantly. Returns { crop, bloom } for the harvest pop.
+  // Harvest a ripe crop → the crop becomes an ITEM in your 🎒 Bag (produce), NOT
+  // instant cash. You sell the bag for 🌸 Bloom later (Shop / Sell all). The plant
+  // then REGROWS (all crops re-harvest) — the ripen timer resets so the same bed
+  // keeps producing until you sickle it. Returns { crop, emoji, tx, ty } for the
+  // harvest-juice pop (the floating +🥬 IS the feedback).
   _harvest(tx, ty) {
     const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
     if (!p?.cropId || !cropIsRipe(p)) return null;
     const crop = CROPS[p.cropId];
-    const bloom = crop.sell;
-    st.bloom = (st.bloom ?? 0) + bloom; // silent (the floating +N 🌸 IS the feedback)
-    // Soil stays soil — clear the crop, keep the plot record so it reads as tilled.
-    p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+    st.produce[crop.id] = (st.produce[crop.id] || 0) + 1; // → the bag
+    if (crop.regrow) {
+      // Reset so it takes `regrow` ms to ripen again from now (backdate plantedAt).
+      p.plantedAt = Date.now() - Math.max(0, crop.growMs - crop.regrow);
+      p.wateredAt = null; p.grown = 0; p.growth = 0;
+    } else {
+      // Single-harvest crop — clear it (keep the plot record so it reads as tilled).
+      p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+    }
     this._bumpQuest('harvest');
     this._bump();
     this._intent({ t: 'plot', key, plot: { ...p } });
+    this._intent({ t: 'stock', produce: { [crop.id]: st.produce[crop.id] } });
+    sfx.play('harvest');
     this.save(); this.emit();
-    return { crop, bloom };
+    return { crop, emoji: crop.emoji, tx, ty };
+  }
+  // Harvest a specific tile regardless of the selected tool (used by the fan-out
+  // "Harvest" button, which must not be hijacked by the sickle tool).
+  harvestTile(tx, ty) { return this._harvest(tx, ty); }
+  // Sickle: remove a plant from a tile entirely (growing, ripe, or regrowing) — no
+  // produce, frees the tile to replant. Reuses the crop-clearing path.
+  removeCrop(tx, ty) {
+    const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
+    if (!p?.cropId) { this.flash('Nothing planted here'); return null; }
+    const crop = CROPS[p.cropId];
+    p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+    this._bump();
+    this._intent({ t: 'plot', key, plot: { ...p } });
+    sfx.play('sickle');
+    this.flash('🌾 ' + (crop?.name || 'Crop') + ' removed'); this.save(); this.emit();
+    return { removed: crop, tx, ty };
+  }
+  // Public plant used by the tile fan-out: optionally switch the selected seed
+  // first (crop selection on the tile), then plant it here.
+  plantAt(tx, ty, seedId = null) {
+    if (seedId && CROPS[seedId]) this.state.selectedSeed = seedId;
+    return this._plant(tx, ty);
   }
   _plant(tx, ty) {
     const key = tileKey(tx, ty); const st = this.state;
@@ -574,35 +612,24 @@ export class FarmLogic {
     this._bump();
     this._intent({ t: 'plot', key, plot: { ...st.plots[key] } });
     this._intent({ t: 'stock', seeds: { [id]: st.seeds[id] } });
+    sfx.play('plant');
     this.flash('Planted ' + CROPS[id].name + ' ' + CROPS[id].emoji); this.save(); this.emit();
   }
 
-  // A wilted crop is lost — clear the tile for free (no produce).
-  _clearWithered(tx, ty) {
-    const key = tileKey(tx, ty); const st = this.state; const p = st.plots[key];
-    if (!p?.cropId) return null;
-    const crop = CROPS[p.cropId];
-    p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
-    this._bump();
-    this._intent({ t: 'plot', key, plot: { ...p } });
-    this.flash('🥀 ' + (crop?.name || 'Crop') + ' wilted — cleared'); this.save(); this.emit();
-    return { cleared: crop };
-  }
-  // HOUSEKEEPING (fixes "crops stay forever"): silently clear crops that have
-  // wilted past their grace window, and delete any plot record now sitting OUTSIDE
-  // the field (e.g. after a field resize) so nothing renders on the map forever.
+  // HOUSEKEEPING: delete any plot record sitting OUTSIDE the field (e.g. after a
+  // field resize), and clear legacy/stuck crops with no real-time plantedAt (they
+  // could never grow). Ripe crops no longer expire — they wait for you (and now
+  // regrow after harvest), so this no longer clears anything time-based.
   // Called on load + on a periodic tick from FarmRoom. Returns count touched.
   sweepStalePlots() {
-    const st = this.state; const now = Date.now(); let n = 0;
+    const st = this.state; let n = 0;
     for (const key of Object.keys(st.plots)) {
       const [tx, ty] = key.split(',').map(Number);
       const p = st.plots[key];
       if (!p) { delete st.plots[key]; continue; }
       if (!this.inField(tx, ty)) { delete st.plots[key]; n++; continue; } // orphaned by resize
-      // wilted (past grace) OR legacy/stuck (a crop with no real-time plantedAt can
-      // never grow or wither) → clear so it doesn't linger on the field forever.
-      if (p.cropId && (cropIsWithered(p, now) || p.plantedAt == null)) {
-        p.cropId = null; p.plantedAt = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
+      if (p.cropId && p.plantedAt == null) {
+        p.cropId = null; p.wateredAt = null; p.grown = 0; p.growth = 0;
         this._intent({ t: 'plot', key, plot: { ...p } }); n++;
       }
     }
@@ -612,17 +639,16 @@ export class FarmLogic {
   // Harvest EVERY ripe crop in one tap (FarmVille speed). Returns the harvested
   // tiles so the renderer can pop juice at each.
   harvestAll() {
-    const st = this.state; const now = Date.now(); const got = [];
-    let bloom = 0;
+    const st = this.state; const got = [];
     for (const [key, p] of Object.entries(st.plots)) {
-      if (p?.cropId && !cropIsWithered(p, now) && cropIsRipe(p, now)) {
+      if (p?.cropId && cropIsRipe(p)) {
         const [tx, ty] = key.split(',').map(Number);
         const r = this._harvest(tx, ty);
-        if (r) { got.push({ crop: r.crop, tx, ty, bloom: r.bloom }); bloom += r.bloom; }
+        if (r) got.push({ crop: r.crop, emoji: r.emoji, tx, ty });
       }
     }
     if (!got.length) { this.flash('Nothing ripe to harvest'); return { harvested: [] }; }
-    this.flash('Harvested ' + got.length + ' · +🌸' + bloom);
+    this.flash('🎒 Harvested ' + got.length + ' — sell at the Shop');
     return { harvested: got };
   }
   // Plant the selected seed on EVERY empty soil tile until seeds run out.
@@ -659,6 +685,7 @@ export class FarmLogic {
     this.state.tool = 'seed';
     this._bump();
     this._intent({ t: 'stock', seeds: { [id]: this.state.seeds[id] } });
+    sfx.play('buy');
     this.flash('Bought ' + qty + '× ' + crop.emoji + ' ' + crop.name + (cost ? ' · −🌸' + cost : ''));
     this.save(); this.emit();
   }
@@ -679,6 +706,7 @@ export class FarmLogic {
     this._bump();
     this._intent({ t: 'stock', produceReplace: {} });
     this.earnBloom(gain, 'Sold produce');
+    sfx.play('sell');
     this.save(); this.emit();
   }
   _animalSell(pid) { for (const sp of Object.values(SPECIES)) if (sp.produce === pid) return sp.sell; return 10; }
@@ -722,8 +750,12 @@ export class FarmLogic {
     if (!a || !animalGoodReady(a)) return;
     const sp = SPECIES[a.species];
     a.fedAt = null; // needs feeding again for the next good
+    const pid = sp.produce;
+    this.state.produce[pid] = (this.state.produce[pid] || 0) + 1; // → the bag (sell later)
     this._bump(); this._syncLivestock();
-    this.earnBloom(sp.sell, sp.produceEmoji + ' ' + sp.produceName); // collecting IS the sale
+    this._intent({ t: 'stock', produce: { [pid]: this.state.produce[pid] } });
+    this.pushReward({ icon: sp.produceEmoji, amount: '+1', label: sp.produceName, tone: 'bloom' });
+    sfx.play('collect');
     this.save(); this.emit();
   }
   assignKin(id, task) {
@@ -754,6 +786,7 @@ export class FarmLogic {
     // Broadcast the day tick (calendar flavor) — carries no crop growth anymore.
     this._intent({ t: 'day', day: st.day, season: st.season });
     this._dayEvent();
+    sfx.play('sleep');
     this.saveNow(); this.emit();
   }
 }

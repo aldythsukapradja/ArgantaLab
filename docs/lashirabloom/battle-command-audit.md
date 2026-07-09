@@ -9,27 +9,35 @@ Run it yourself: `node packages/combat/tests/coverage-audit.mjs` (matrix) +
 
 ## Verdict (short)
 
-**No — not yet all you need. It's a tested, safe FOUNDATION that controls ~⅓ of the surface
-live.** The **enemy / spawn / exp / loot-currency axis is genuinely controllable today**
-(change it in HQ → it applies in the game). The **player / gear / skill / boss-mechanic /
-content-authoring axis is not** — either not carried by the config, or carried but not read
-by the shipped game. And critically: **you can *tune* existing monsters but you cannot *add*
-one from HQ** — the roster is code, not data.
+**Not yet the *whole* command center, but now controlling ~⅖ of the surface live** — up from
+⅓ after roadmap steps 1–3 landed (2026-07-08). The **enemy / spawn / exp / loot / player-path
+axis is genuinely controllable today** (change it in HQ → it applies in the game). Still open:
+**gear / skill-loadout / boss-mechanic / content-authoring**. And critically: **you can *tune*
+existing monsters but not yet *add* one from HQ** — the roster is code, not data.
 
-Coverage from the automated audit: **10 / 31 levers controllable live now (32%).**
+Coverage from the automated audit: **19 / 31 levers controllable live now (61%)** — was 10/31,
+after roadmap steps 1–6 (loot drops · enemy speed · player-path damage · gear · base damage
+curves · HP/MP pools · XP ladder · skill MP costs).
 
 ## What works TODAY (● = tune in HQ → live in game)
 
 | Axis | Levers |
 |---|---|
-| **PvE enemies** | Enemy HP · Enemy ATK (damage to player) |
+| **Player** | Path magic × / physical × (now read by the farm's melee + skills) ✅ *new* |
+| **PvE enemies** | Enemy HP · Enemy ATK · Enemy speed ✅ *new* |
 | **Spawn** | Max concurrent · Respawn interval · Roster |
 | **Boss** | Boss stats (Tiger hp/atk/xp/bloom) |
 | **Exp** | Kill XP per enemy · Global XP × |
-| **Loot (currency)** | Kill Bloom per enemy · Global Bloom × |
+| **Loot** | Kill Bloom · Global Bloom × · **Drop tables (material · count · rate)** ✅ *new* |
+| **Gear** | Weapon ATK tiers · Armor DEF / HP tiers ✅ *new* |
+| **Player (curves)** | Melee + skill base damage curves · HP/MP pools per path · XP ladder ✅ *new* |
+| **Skills** | Per-slot MP cost (targeting/loadout still fixed → partial) ✅ *new* |
 
-These are backed by the round-trip pipeline (publish → `combat_tuning` → `bootCombatTuning`
-→ live `BESTIARY` / `SPAWN_TUNING` / `REWARD_TUNING`), with operator gate + safe fallback.
+Backed by the round-trip pipeline (publish → `combat_tuning` → `bootCombatTuning` → live
+`BESTIARY` / `SPAWN_TUNING` / `REWARD_TUNING` / `PATH_POWER` / `ZONE_MOBS`), operator-gated,
+safe fallback. **Balance note:** wiring path multipliers into live PvE shifts current damage
+— a warrior-path player now melees ×1.55 (harder) and casts ×0.55 (softer); mage the reverse.
+Intended path identity, bounded, and now operator-tunable.
 
 ## The gaps (21 / 31), in three kinds
 
@@ -75,12 +83,12 @@ Kingdom consumes it.
 
 ## Roadmap to a true command center (prioritized)
 
-1. **Loot drop tables → config** (`enemies[id].drops`; `rollDrops` already reads `BESTIARY.drops`) — cheap, closes the loot gap you named.
-2. **Enemy speed + zone gating → config** (`speedMs`, `ZONE_MOBS`) — cheap.
-3. **Make player-damage read the tuning** — route the farm's melee/skill through
-   `pathPhysPower`/`pathSkillPower` (+ `DAMAGE_TUNING` base curves). Turns the whole inert
-   "Player" section live in PvE, not just the sim. Medium.
-4. **Gear → config** (`WEAPON_TIERS`/`ARMOR_TIERS` mutable + carried) — medium; the real balance lever.
+1. ✅ **DONE — Loot drop tables → config** (`enemies[id].drops`, sanitized; `rollDrops` reads `BESTIARY.drops`).
+2. ✅ **DONE — Enemy speed + zone rosters → config** (`speedMs`, `ZONE_MOBS`). (Zones are tunable; the single arena still spawns from `SPAWN_TUNING.roster`, so zone gating is "partial" until multi-zone spawning lands.)
+3. ✅ **DONE — Player damage reads the tuning** — farm melee = `MELEE_DAMAGE × path.phy` + weapon; skills/heal = `pathSkillPower` (× `path.mag`) + weapon. `PATH_POWER` is now live in PvE, not just the sim. (Base curves still hardcoded — `DAMAGE_TUNING` not yet read.)
+4. ✅ **DONE — Gear → config** (`gear.weapons.t*`/`gear.armor.t*`, keyed by tier so partial edits merge; `applyTuning` writes `WEAPON_TIERS`/`ARMOR_TIERS`; game already reads `weaponOf`/`armorOf`). Upgrade *costs* still hardcoded — a cheap follow-up.
+5. ✅ **DONE — Progression → config.** `damage.{phys,bolt,storm,mend}` base curves (skills.js `DAMAGE_BASE`, read by `boltDamage`/`physBase`), `pools.<path>` HP/MP (progression `PATHS`, read by `pathMaxHp`), `xp.{base,growth}` ladder (`XP_LADDER`, read by `xpForLevel`, growth clamped > 1). ⚠ XP-ladder + pool edits recompute levels/HP for everyone — powerful, use carefully.
+6. ✅ **DONE (partial) — Skills → config.** Per-slot `skills.<id>.manaCost` is live; targeting/type/loadout still fixed. **← next: step 7 registry-as-DB (add monsters from HQ)**
 5. **Progression → config** (per-path HP/MP pools + XP-ladder params) — medium.
 6. **Skills → config** (MP cost / damage / targeting per slot) — medium.
 7. **Registry-as-DATA** — move BESTIARY/skills/subclasses to DB rows so HQ can *add* content

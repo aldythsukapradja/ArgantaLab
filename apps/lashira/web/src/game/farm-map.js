@@ -2,7 +2,7 @@
 // painted ONCE into an offscreen canvas (like Kingdom's map image), then drawn
 // each frame; plots + crops are painted per-frame on top. All placeholder art —
 // swap for PixelLab/real farm tiles later.
-import { CROPS, cropGrowthFrac, cropStageOf, cropIsWithered, cropFreshFrac } from '../data/crops.js';
+import { CROPS, cropGrowthFrac, cropStageOf } from '../data/crops.js';
 import { drawOverride } from './farm-art-runtime.js';
 import { creatureFrame } from './creature-sprites.js';
 import { drawActualKinSprite } from './kin-sprite-image.jsx';
@@ -507,40 +507,33 @@ function drawCropPixels(ctx, cropId, stage, px, py, art = {}) {
   }
 }
 
-// A withered crop — droopy brown X so "lost, clear me" reads at a glance.
-function drawWiltedCrop(ctx, px, py) {
-  const cx = px + TILE / 2, base = py + TILE - 12;
-  ctx.strokeStyle = '#7c5a34'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(cx - 8, base); ctx.lineTo(cx + 7, base - 12); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 6, base + 1); ctx.lineTo(cx - 7, base - 11); ctx.stroke();
-  ctx.fillStyle = '#5f4425'; ctx.beginPath(); ctx.arc(cx + 7, base - 12, 2.4, 0, 7); ctx.arc(cx - 7, base - 11, 2.4, 0, 7); ctx.fill();
-}
-
-// Per-frame: draw the CROP + a bar for one plot. Soil is baked into the map bg, so
-// this only paints what grows on top. Ripe crops show a FRESH bar that shrinks +
-// reddens (harvest me before I wilt); withered crops show the wilt.
+// Per-frame: draw the CROP + a status marker for one plot. Soil is baked into the
+// map bg, so this only paints what grows on top. Ripe crops no longer expire —
+// they wait for you (and regrow after harvest) — so instead of a wither countdown
+// they show a cheerful "ready" tick badge, the same visual language as the animal
+// good-ready disc.
 export function drawPlot(ctx, tx, ty, plot, art = {}) {
   if (!plot?.cropId) return;
   const px = tx * TILE, py = ty * TILE;
   const now = Date.now();
-  if (cropIsWithered(plot, now)) { drawWiltedCrop(ctx, px, py); return; }
   const frac = cropGrowthFrac(plot, now);
   const ripe = frac >= 1;
   drawCropPixels(ctx, plot.cropId, cropStageOf(frac), px, py, art);
-  if (ripe) drawFreshBar(ctx, px, py, cropFreshFrac(plot, now), now);
+  if (ripe) drawReadyBadge(ctx, px, py, now);
   else drawCropHealthBar(ctx, px, py, frac, false, now);
 }
-// Ripe countdown: full gold → shrinks to red, pulses faster as it empties.
-function drawFreshBar(ctx, px, py, fresh, now) {
-  const bw = TILE - 16, bh = 5, bx = px + 8, by = py - 10;
-  ctx.fillStyle = 'rgba(18,22,32,0.55)'; ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
-  const warn = fresh < 0.35;
-  const pulse = 0.55 + 0.45 * Math.abs(Math.sin(now / (warn ? 200 : 360)));
-  ctx.fillStyle = warn ? `rgba(224,85,63,${pulse.toFixed(2)})` : '#ffcf3f';
-  ctx.fillRect(bx, by, Math.max(1, Math.round(bw * fresh)), bh);
-  const a = 0.5 + 0.5 * Math.abs(Math.sin(now / 350));
-  ctx.strokeStyle = warn ? `rgba(224,85,63,${a.toFixed(2)})` : `rgba(255,222,90,${a.toFixed(2)})`;
-  ctx.lineWidth = 1.5; ctx.strokeRect(bx - 2, by - 2, bw + 4, bh + 4);
+// Ripe: a small green disc with a white checkmark, gently bobbing above the crop.
+function drawReadyBadge(ctx, px, py, now) {
+  const cx = px + TILE / 2, cy = py - 6 + Math.sin(now / 320) * 2.5;
+  const R = 9;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fillStyle = '#3fae56'; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(cx - 3.8, cy); ctx.lineTo(cx - 0.8, cy + 3); ctx.lineTo(cx + 4.2, cy - 3.4); ctx.stroke();
+  ctx.restore();
 }
 
 function drawNamedOverride(ctx, art, key, footX, footY, w, h) {

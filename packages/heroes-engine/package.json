@@ -1,0 +1,17 @@
+{
+  "name": "@arganta/heroes-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared paper-doll character compositor for ArgantaLab — Kingdom Heroes, LashiraBloom and Circle HQ render characters through this one engine (canvas 2D, DSC part sheets from the Kingdom host, palette-index re-dye). Extracted from Kingdom Heroes.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./stage": "./src/CompositeStage.jsx"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "sideEffects": false
+}

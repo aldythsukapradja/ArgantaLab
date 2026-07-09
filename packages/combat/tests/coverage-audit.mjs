@@ -10,8 +10,10 @@
 //   node packages/combat/tests/coverage-audit.mjs
 
 import { COMBAT_DEFAULTS, applyTuning, resetTuning, SPAWN_TUNING, REWARD_TUNING } from '../src/tuning.js';
-import { PATH_POWER, PVP_PROFILE, PVP_TUNING } from '../src/skills.js';
-import { BESTIARY } from '../src/bestiary.js';
+import { PATH_POWER, PVP_PROFILE, PVP_TUNING, boltDamage, physBase, SKILL_SLOTS } from '../src/skills.js';
+import { BESTIARY, ZONE_MOBS } from '../src/bestiary.js';
+import { weaponAtk, armorDef } from '../src/gear.js';
+import { pathMaxHp, xpForLevel } from '../src/progression.js';
 
 // walk a dotted path in the default config
 const at = (obj, path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
@@ -21,22 +23,22 @@ const at = (obj, path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]
 // game-read status.
 const LEVERS = [
   // group, name, cfgPath, liveProbe (fn -> changed?), game
-  ['Player', 'Path magic/physical ×', 'paths.mage.mag', () => probe({ paths: { mage: { mag: 1.2 } } }, () => PATH_POWER.mage.mag), 'no'],
+  ['Player', 'Path magic/physical ×', 'paths.mage.mag', () => probe({ paths: { mage: { mag: 1.2 } } }, () => PATH_POWER.mage.mag), 'yes'],
   ['Player', 'PvP profile (atkInt/move/hp/heal)', 'paths.rogue.atkInt', () => probe({ paths: { rogue: { atkInt: 0.8 } } }, () => PVP_PROFILE.rogue.atkInt), 'no'],
-  ['Player', 'Melee base damage', null, null, 'yes'],
-  ['Player', 'Skill base curves', 'damage.boltBase.base', () => [true, false], 'partial'],
-  ['Player', 'HP / MP pools (per path/level)', null, null, 'yes'],
-  ['Player', 'XP ladder / level curve', null, null, 'yes'],
-  ['Skills', '3-slot loadout · MP cost · targeting', null, null, 'yes'],
+  ['Player', 'Melee base damage', 'damage.phys.base', () => probe({ damage: { phys: { base: 50 } } }, () => physBase(1)), 'yes'],
+  ['Player', 'Skill base curves', 'damage.bolt.base', () => probe({ damage: { bolt: { base: 88 } } }, () => boltDamage(1)), 'yes'],
+  ['Player', 'HP / MP pools (per path/level)', 'pools.warrior.hp', () => probe({ pools: { warrior: { hp: 200 } } }, () => pathMaxHp('warrior', 1)), 'yes'],
+  ['Player', 'XP ladder / level curve', 'xp.base', () => probe({ xp: { base: 120 } }, () => xpForLevel(2)), 'yes'],
+  ['Skills', 'MP cost · targeting · loadout', 'skills.bolt.manaCost', () => probe({ skills: { bolt: { manaCost: 6 } } }, () => SKILL_SLOTS.find(s => s.id === 'bolt').manaCost), 'partial'],
   ['Skills', 'Add new attack types', null, null, 'no'],
-  ['Gear',   'Weapon ATK tiers', null, null, 'yes'],
-  ['Gear',   'Armor DEF / HP tiers', null, null, 'yes'],
+  ['Gear',   'Weapon ATK tiers', 'gear.weapons.t3.atk', () => probe({ gear: { weapons: { t3: { atk: 300 } } } }, () => weaponAtk(3)), 'yes'],
+  ['Gear',   'Armor DEF / HP tiers', 'gear.armor.t3.def', () => probe({ gear: { armor: { t3: { def: 90 } } } }, () => armorDef(3)), 'yes'],
   ['Gear',   'Upgrade costs', null, null, 'yes'],
   ['PvE',    'Enemy HP', 'enemies.boar.hp', () => probe({ enemies: { boar: { hp: 999 } } }, () => BESTIARY.boar.hp), 'yes'],
   ['PvE',    'Enemy ATK (damage to player)', 'enemies.boar.atk', () => probe({ enemies: { boar: { atk: 55 } } }, () => BESTIARY.boar.atk), 'yes'],
-  ['PvE',    'Enemy speed', null, null, 'yes'],
+  ['PvE',    'Enemy speed', 'enemies.boar.speedMs', () => probe({ enemies: { boar: { speedMs: 400 } } }, () => BESTIARY.boar.speedMs), 'yes'],
   ['PvE',    'Enemy behavior / AI', null, null, 'no'],
-  ['PvE',    'Zone gating (which mob, where)', null, null, 'partial'],
+  ['PvE',    'Zone gating (which mob, where)', 'zones.meadow', () => probe({ zones: { meadow: ['squirrel'] } }, () => ZONE_MOBS.meadow.length), 'partial'],
   ['Spawn',  'Max concurrent', 'spawn.maxConcurrent', () => probe({ spawn: { maxConcurrent: 8 } }, () => SPAWN_TUNING.maxConcurrent), 'yes'],
   ['Spawn',  'Respawn interval', 'spawn.intervalMs', () => probe({ spawn: { intervalMs: 600 } }, () => SPAWN_TUNING.intervalMs), 'yes'],
   ['Spawn',  'Roster', 'spawn.roster', () => probe({ spawn: { roster: ['squirrel'] } }, () => SPAWN_TUNING.roster.length), 'yes'],
@@ -47,7 +49,7 @@ const LEVERS = [
   ['Exp',    'Global XP multiplier', 'rewards.xpMul', () => probe({ rewards: { xpMul: 3 } }, () => REWARD_TUNING.xpMul), 'yes'],
   ['Loot',   'Kill Bloom (per enemy)', 'enemies.fox.bloom', () => probe({ enemies: { fox: { bloom: 44 } } }, () => BESTIARY.fox.bloom), 'yes'],
   ['Loot',   'Global Bloom multiplier', 'rewards.bloomMul', () => probe({ rewards: { bloomMul: 2 } }, () => REWARD_TUNING.bloomMul), 'yes'],
-  ['Loot',   'Drop tables (material · rate)', null, null, 'yes'],
+  ['Loot',   'Drop tables (material · rate)', 'enemies.fox.drops', () => probe({ enemies: { fox: { drops: [{ k: 'gem', min: 1, max: 1, p: 1 }] } } }, () => JSON.stringify(BESTIARY.fox.drops)), 'yes'],
   ['PvP',    'PvP damage / HP / reach', 'pvp.boltReach', () => probe({ pvp: { boltReach: 4 } }, () => PVP_TUNING.boltReach), 'no'],
   ['Scale',  'Add new monster from HQ (no deploy)', null, null, 'no'],
   ['Scale',  'Add subclass', null, null, 'no'],

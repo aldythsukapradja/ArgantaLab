@@ -17,6 +17,8 @@ import { Pixel } from '../surfaces/pixel/Pixel'
 import { Vault } from '../surfaces/Vault'
 import { Landing } from '../surfaces/Landing'
 import { Architecture } from '../surfaces/Architecture'
+import { BattleBuilder } from '../surfaces/battle/BattleBuilder'
+import { CharacterForge } from '../surfaces/character/CharacterForge'
 
 function Surface() {
   const { surface } = useHQ()
@@ -34,13 +36,15 @@ function Surface() {
     case 'command': return <Command />
     case 'pixel': return <Pixel />
     case 'vault': return <Vault />
+    case 'battle': return <BattleBuilder />
+    case 'character': return <CharacterForge />
   }
 }
 
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   const { surface } = useHQ()
-  const wide = surface === 'game' || surface === 'app'
-  const full = surface === 'vault' || surface === 'architecture' // edge-to-edge workspaces
+  const wide = surface === 'game' || surface === 'app' || surface === 'battle'
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' // edge-to-edge workspaces
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button

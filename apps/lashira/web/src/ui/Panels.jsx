@@ -1,49 +1,62 @@
-// Slide-up panels: Shop, Barn, Kin helpers, Home. Data-driven from the catalogs.
+// Slide-up panels: Shop (unified gallery), Bag (RPG grid), Home (hub with
+// House/Animals/Kin sub-tabs), Quests. Data-driven from the catalogs.
 import { useState } from 'react';
 import { CROPS } from '../data/crops.js';
 import { SPECIES, animalGoodReady, animalGoodFrac } from '../data/livestock.js';
 import { KIN_TASKS } from '../data/kins.js';
 import { QUEST_DEFS } from '../game/farm-logic.js';
-import { QtyDialog } from './QtyDialog.jsx';
+import { MAT_ICON } from '../game/farm-mechanics.js';
+import { Shop } from './Shop.jsx';
 
-export function Panels({ panel, snap, game, mech, onClose }) {
+// `mech` = the mechanics SNAPSHOT (material counts); `mechGame` = the store (actions).
+export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose }) {
   if (!panel) return null;
   return (
     <div className="panel-scrim" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
-        {panel === 'shop' && <Shop snap={snap} game={game} onClose={onClose} />}
-        {panel === 'barn' && <Barn snap={snap} game={game} onClose={onClose} />}
-        {panel === 'kin' && <Kin snap={snap} game={game} onClose={onClose} />}
+        {panel === 'shop' && <Shop snap={snap} game={game} mech={mech} mechGame={mechGame} initialTab={shopTab} onClose={onClose} />}
         {panel === 'house' && <Home snap={snap} game={game} onClose={onClose} />}
-        {panel === 'inventory' && <Inventory snap={snap} game={game} onClose={onClose} />}
-        {panel === 'quests' && <Quests snap={snap} game={game} mech={mech} onClose={onClose} />}
+        {panel === 'inventory' && <Bag snap={snap} game={game} mech={mech} onClose={onClose} />}
+        {panel === 'quests' && <Quests snap={snap} game={game} mechGame={mechGame} onClose={onClose} />}
       </div>
     </div>
   );
 }
 
-function Quests({ snap, game, mech, onClose }) {
+const fmt = (n) => Number(n || 0).toLocaleString();
+const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
+
+function Head({ title, sub, onClose }) {
+  return (
+    <div className="phead">
+      <div><h2>{title}</h2><p className="psub">{sub}</p></div>
+      <button className="xbtn" onClick={onClose}>✕</button>
+    </div>
+  );
+}
+
+function Quests({ snap, game, mechGame, onClose }) {
   const q = snap.quests || {};
   const claim = (id) => {
     const mat = game.claimQuest?.(id);
-    if (mat && mech?.grantMaterial) { mech.grantMaterial(mat.k, mat.n); mech._save?.(); mech.emit?.(); }
+    if (mat && mechGame?.grantMaterial) { mechGame.grantMaterial(mat.k, mat.n); mechGame._save?.(); mechGame.emit?.(); }
   };
   const streak = snap.streak || 0;
   return (
     <>
       <Head title="📜 Daily Quests" sub={`🔥 ${streak} day streak · resets each day`} onClose={onClose} />
       {QUEST_DEFS.map((d) => {
-        const cur = Number(q[d.id] || 0);
-        const done = cur >= d.goal;
+        const curN = Number(q[d.id] || 0);
+        const done = curN >= d.goal;
         const claimed = !!q.claimed?.[d.id];
         return (
           <div className="row" key={d.id}>
             <div className="ico">{d.icon}</div>
             <div className="grow">
               <div className="name">{d.label}</div>
-              <div className="meta">{Math.min(cur, d.goal)}/{d.goal} · 🌸{d.bloom}{d.mat ? ` +${d.mat.n} ${d.mat.k}` : ''}</div>
+              <div className="meta">{Math.min(curN, d.goal)}/{d.goal} · 🌸{d.bloom}{d.mat ? ` +${d.mat.n} ${d.mat.k}` : ''}</div>
               <div style={{ height: 5, borderRadius: 3, background: 'rgba(120,120,150,.25)', marginTop: 5, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, (cur / d.goal) * 100)}%`, background: claimed ? '#1f9d4d' : '#6a4df5' }} />
+                <div style={{ height: '100%', width: `${Math.min(100, (curN / d.goal) * 100)}%`, background: claimed ? '#1f9d4d' : '#6a4df5' }} />
               </div>
             </div>
             <button className="rbtn" disabled={!done || claimed} onClick={() => claim(d.id)}>{claimed ? 'Claimed ✓' : done ? 'Claim' : '…'}</button>
@@ -55,20 +68,7 @@ function Quests({ snap, game, mech, onClose }) {
   );
 }
 
-function Head({ title, sub, onClose }) {
-  return (
-    <div className="phead">
-      <div>
-        <h2>{title}</h2>
-        <p className="psub">{sub}</p>
-      </div>
-      <button className="xbtn" onClick={onClose}>✕</button>
-    </div>
-  );
-}
-
-const fmt = (n) => Number(n || 0).toLocaleString();
-
+// ─────────────────────────── RPG grid Bag ───────────────────────────
 function produceInfo(id) {
   const crop = CROPS[id];
   if (crop) return { id, name: crop.name, icon: crop.emoji, sell: crop.sell };
@@ -77,89 +77,170 @@ function produceInfo(id) {
   }
   return { id, name: id, icon: '📦', sell: 10 };
 }
+const MAT_NAME = { wood: 'Wood', stone: 'Stone', ore: 'Ore', gem: 'Gem', fish: 'Fish', ingot: 'Ingot', token: 'Token', shard: 'Shard', hide: 'Hide', essence: 'Essence', potion: 'Potion' };
+const MAT_DESC = { wood: 'Build & upgrade material', stone: 'Build & upgrade material', ore: 'Smelt into ingots at the Forge', gem: 'Rare crafting material', fish: 'Cook into a potion at the Forge', ingot: 'Feeds weapon/armor upgrades', token: 'Quest reward token', shard: 'Rare boss drop', hide: 'Beast drop', essence: 'Magical crafting essence', potion: 'Drink to restore stamina' };
 
-function produceRows(snap) {
-  return Object.entries(snap.produce || {})
-    .filter(([, count]) => Number(count) > 0)
-    .map(([id, count]) => ({ ...produceInfo(id), count: Number(count) }));
+const BAG_CATS = [
+  { id: 'all', icon: '🎒', label: 'All' },
+  { id: 'seeds', icon: '🌱', label: 'Seeds' },
+  { id: 'produce', icon: '🧺', label: 'Produce' },
+  { id: 'materials', icon: '⛏', label: 'Materials' },
+  { id: 'gear', icon: '⚔', label: 'Gear' },
+];
+
+function bagGroups(snap, mech) {
+  const seeds = Object.values(CROPS).map((c) => ({
+    key: 'seed-' + c.id, type: 'seed', icon: c.emoji, name: c.name + ' seed',
+    count: Number(snap.seeds?.[c.id] || 0), cropId: c.id,
+    desc: `Plant to grow ${c.name} · harvest sells 🌸${c.sell}`,
+  }));
+  const produce = Object.entries(snap.produce || {}).filter(([, n]) => Number(n) > 0).map(([id, n]) => {
+    const info = produceInfo(id);
+    return { key: 'prod-' + id, type: 'produce', icon: info.icon, name: info.name, count: Number(n), sell: info.sell,
+      desc: `Sells 🌸${info.sell} each · 🌸${fmt(info.sell * Number(n))} total` };
+  });
+  const matAmt = (k) => (k === 'wood' || k === 'stone') ? Number(snap[k] || 0) : Number(mech?.[k] || 0);
+  const materials = Object.keys(MAT_NAME).map((k) => ({
+    key: 'mat-' + k, type: 'material', icon: MAT_ICON[k], name: MAT_NAME[k], count: matAmt(k), desc: MAT_DESC[k],
+  }));
+  const gear = [
+    { key: 'gear-weapon', type: 'gear', icon: '⚔', name: snap.weaponName || 'Weapon', tier: snap.weaponTier || 1, desc: `+${snap.atk || 0} ATK · upgrade at the ⚒ Forge` },
+    { key: 'gear-armor', type: 'gear', icon: '🛡', name: snap.armorName || 'Armor', tier: snap.armorTier || 1, desc: `+${snap.def || 0} DEF · upgrade at the ⚒ Forge` },
+    ...['pickaxe', 'axe', 'rod'].map((k) => ({ key: 'tool-' + k, type: 'gear', icon: { pickaxe: '⛏', axe: '🪓', rod: '🎣' }[k], name: cap(k), tier: mech?.tools?.[k] || 1, desc: `Tier ${mech?.tools?.[k] || 1} · upgrade at the ⚒ Forge` })),
+  ];
+  return { seeds, produce, materials, gear };
 }
 
-function produceTotal(rows) {
-  return rows.reduce((sum, item) => sum + item.sell * item.count, 0);
-}
+function Bag({ snap, game, mech, onClose }) {
+  const [catId, setCatId] = useState('all');
+  const [selKey, setSelKey] = useState(null);
+  const groups = bagGroups(snap, mech);
 
-function ProducePreview({ rows }) {
-  if (!rows.length) return <div className="empty-note">No produce in your bin yet.</div>;
-  return (
-    <div className="produce-preview">
-      {rows.map((item) => (
-        <span className="produce-chip" key={item.id} title={`${item.name}: ${item.count} x ${item.sell}`}>
-          {item.icon}<b>×{fmt(item.count)}</b><em>🌸{fmt(item.sell * item.count)}</em>
-        </span>
-      ))}
-    </div>
-  );
-}
+  // used stacks (for the capacity meter) = non-empty seed/produce/material stacks + gear.
+  const used = groups.seeds.filter((i) => i.count > 0).length + groups.produce.length
+    + groups.materials.filter((i) => i.count > 0).length + groups.gear.length;
+  const total = mech?.house?.storage || 60;
 
-function Shop({ snap, game, onClose }) {
-  const op = snap.bloom === Infinity;
-  const gold = op ? Infinity : Number(snap.bloom || 0);
-  const [buying, setBuying] = useState(null);
-  const maxQty = buying ? (op ? 999 : Math.max(0, Math.floor(gold / buying.seedCost))) : 0;
-  const rows = produceRows(snap);
-  const produceCount = rows.reduce((a, b) => a + b.count, 0);
-  const total = produceTotal(rows);
+  const view = catId === 'all'
+    ? [...groups.seeds.filter((i) => i.count > 0), ...groups.produce, ...groups.materials.filter((i) => i.count > 0), ...groups.gear]
+    : catId === 'seeds' ? groups.seeds
+      : catId === 'produce' ? groups.produce
+        : catId === 'materials' ? groups.materials.filter((i) => i.count > 0)
+          : groups.gear;
+
+  const sel = view.find((i) => i.key === selKey) || null;
+  // pad the grid with faint empty slots for RPG feel (up to the next row).
+  const cols = 5;
+  const pad = Math.max(0, (Math.ceil(Math.max(view.length + 1, 10) / cols) * cols) - view.length);
+
+  const detailAction = (it) => {
+    if (!it) return null;
+    if (it.type === 'seed') {
+      const on = snap.selectedSeed === it.cropId;
+      return <button className={'rbtn' + (on ? ' ghost' : '')} disabled={it.count <= 0} onClick={() => game.setSeed(it.cropId)}>{on ? 'Selected ✓' : 'Select'}</button>;
+    }
+    if (it.type === 'produce') return <button className="rbtn" onClick={() => game.sellAll()}>Sell all</button>;
+    return null;
+  };
+
   return (
     <>
-      <Head title="🛒 Sprout's Shop" sub={`You have 🌸 ${op ? '∞' : fmt(gold)} Bloom`} onClose={onClose} />
-      {Object.values(CROPS).map((c) => {
-        const canAfford = op || gold >= c.seedCost;
-        return (
-          <div className="row" key={c.id}>
-          <div className="ico">{c.emoji}</div>
-          <div className="grow">
-            <div className="name">{c.name} seed</div>
-            <div className="meta">
-                Owned: {fmt(snap.seeds?.[c.id] || 0)} · grows fast · sells for 🌸{c.sell}
-              </div>
-            </div>
-            <button
-              className="rbtn"
-              disabled={!canAfford}
-              onClick={() => setBuying(c)}
-            >
-              Buy 🌸{c.seedCost}
-            </button>
-          </div>
-        );
-      })}
-      {buying && (
-        <QtyDialog
-          item={{ name: buying.name + ' seed', emoji: buying.emoji }}
-          unitCost={buying.seedCost}
-          maxQty={maxQty}
-          onBuy={(n) => game.buySeed(buying.id, n)}
-          onClose={() => setBuying(null)}
-        />
-      )}
-      <div className="row" style={{ marginTop: 12, borderStyle: 'dashed' }}>
-        <div className="ico">📦</div>
-        <div className="grow">
-          <div className="name">Sell all produce</div>
-          <div className="meta">{produceCount} item(s) · total value 🌸{fmt(total)}</div>
-          <ProducePreview rows={rows} />
-        </div>
-        <button className="rbtn ghost" disabled={produceCount === 0} onClick={() => game.sellAll()}>{`Sell 🌸${fmt(total)}`}</button>
+      <Head title="🎒 Bag" sub={`🌸 ${snap.bloom === Infinity ? '∞' : fmt(snap.bloom)} · 💎 ${fmt(snap.diamonds)} · ${used}/${total} slots`} onClose={onClose} />
+      <div className="ptabs">
+        {BAG_CATS.map((c) => (
+          <button key={c.id} className={'ptab' + (catId === c.id ? ' on' : '')} onClick={() => { setCatId(c.id); setSelKey(null); }}>
+            <span>{c.icon}</span><small>{c.label}</small>
+          </button>
+        ))}
       </div>
+
+      {!view.length ? (
+        <div className="empty-note">Nothing in this pouch yet.</div>
+      ) : (
+        <div className="bag-grid">
+          {view.map((it) => (
+            <button key={it.key} className={'bagcell ' + it.type + (selKey === it.key ? ' sel' : '') + (it.count === 0 ? ' zero' : '')}
+              title={it.name} onClick={() => setSelKey(it.key)}>
+              <span className="bag-ic">{it.icon}</span>
+              {it.type === 'gear' ? <b className="bag-tier">T{it.tier}</b> : (it.count > 1 && <b className="bag-n">×{fmt(it.count)}</b>)}
+            </button>
+          ))}
+          {Array.from({ length: pad }).map((_, i) => <span key={'e' + i} className="bagcell empty" />)}
+        </div>
+      )}
+
+      {sel && (
+        <div className="bag-detail">
+          <span className={'bag-detail-ic ' + sel.type}>{sel.icon}</span>
+          <div className="grow">
+            <div className="name">{sel.name}{sel.type === 'gear' ? ` · T${sel.tier}` : sel.count != null ? ` ×${fmt(sel.count)}` : ''}</div>
+            <div className="meta">{sel.desc}</div>
+          </div>
+          {detailAction(sel)}
+        </div>
+      )}
     </>
   );
 }
 
-function Barn({ snap, game, onClose }) {
+// ─────────────────────────── Home hub ───────────────────────────
+const HOME_TABS = [
+  { id: 'house', icon: '🏡', label: 'House' },
+  { id: 'animals', icon: '🐄', label: 'Animals' },
+  { id: 'kin', icon: '🍃', label: 'Kin' },
+];
+
+function Home({ snap, game, onClose }) {
+  const [tab, setTab] = useState('house');
+  return (
+    <>
+      <Head title="🏡 Home" sub={`${snap.name}'s homestead`} onClose={onClose} />
+      <div className="ptabs">
+        {HOME_TABS.map((t) => (
+          <button key={t.id} className={'ptab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>
+            <span>{t.icon}</span><small>{t.label}</small>
+          </button>
+        ))}
+      </div>
+      {tab === 'house' && <HouseBody snap={snap} game={game} />}
+      {tab === 'animals' && <BarnBody snap={snap} game={game} />}
+      {tab === 'kin' && <KinBody snap={snap} game={game} />}
+    </>
+  );
+}
+
+function HouseBody({ snap, game }) {
+  return (
+    <>
+      <div className="row"><div className="ico">🏠</div><div className="grow">
+        <div className="name">Stage: Cottage</div>
+        <div className="meta">Upgrade your home at the 🏰 Castle with 🪵🪨 materials</div>
+      </div></div>
+      <div className="row"><div className="ico">⭐</div><div className="grow">
+        <div className="name">Level {snap.level}</div>
+        <div className="meta">{snap.role === 'kid' ? 'Learn the 6 Worlds to gain XP and level up' : 'Play + battle to gain XP and level up — stronger skills'}</div>
+      </div></div>
+      <div className="row"><div className="ico">🌸</div><div className="grow">
+        <div className="name">{snap.bloom === Infinity ? '∞' : fmt(snap.bloom)} Bloom</div>
+        <div className="meta">The play currency · earn by selling produce + battling, spend on seeds{snap.guest ? ' (sign in to sync)' : ''}</div>
+      </div></div>
+      <div className="row"><div className="ico">💎</div><div className="grow">
+        <div className="name">{fmt(snap.diamonds)} Diamonds</div>
+        <div className="meta">Learning currency — for cosmetics only (a Diamond shop is coming)</div>
+      </div></div>
+      <div className="row" style={{ borderStyle: 'dashed' }}><div className="ico">🌙</div><div className="grow">
+        <div className="name">End the day</div>
+        <div className="meta">Crops grow, animals give produce, energy restores</div>
+      </div><button className="rbtn" onClick={() => game.sleep()}>Sleep</button></div>
+    </>
+  );
+}
+
+function BarnBody({ snap, game }) {
   const now = Date.now();
   return (
     <>
-      <Head title="🐄 Barn & Coop" sub="Feed an animal → its good is ready a bit later (tap it on the farm too)" onClose={onClose} />
+      <div className="empty-note">Feed an animal → its good is ready a bit later (tap it on the farm too).</div>
       {snap.livestock.map((a) => {
         const sp = SPECIES[a.species];
         const hearts = '❤'.repeat(Math.max(1, Math.round((a.affection || 0) / 20)));
@@ -185,13 +266,13 @@ function Barn({ snap, game, onClose }) {
   );
 }
 
-function Kin({ snap, game, onClose }) {
+function KinBody({ snap, game }) {
   const roster = snap.kinRoster || snap.kins || [];
   const maxKins = snap.maxKins || 6;
   const deployedCount = roster.filter((k) => k.deployed).length;
   return (
     <>
-      <Head title="🍃 Kin Helpers" sub={`Deploy up to ${maxKins} Kin onto your farm — deployed ${deployedCount}/${maxKins}`} onClose={onClose} />
+      <div className="empty-note">Deploy up to {maxKins} Kin onto your farm — deployed {deployedCount}/{maxKins}.</div>
       {roster.map((k) => (
         <div className={'row' + (k.deployed ? '' : ' kin-benched')} key={k.id}>
           <div className="ico" style={{ background: '#eef7e9', opacity: k.deployed ? 1 : 0.5 }}>🍃</div>
@@ -201,101 +282,19 @@ function Kin({ snap, game, onClose }) {
             {k.deployed && (
               <div className="assign" style={{ marginTop: 6 }}>
                 {KIN_TASKS.map((t) => (
-                  <button
-                    key={String(t.id)}
-                    className={'aopt' + (k.task === t.id ? ' on' : '')}
-                    onClick={() => game.assignKin(k.id, t.id)}
-                  >
+                  <button key={String(t.id)} className={'aopt' + (k.task === t.id ? ' on' : '')} onClick={() => game.assignKin(k.id, t.id)}>
                     {t.label}
                   </button>
                 ))}
               </div>
             )}
           </div>
-          <button
-            className={'rbtn' + (k.deployed ? '' : ' ghost')}
-            disabled={!k.deployed && deployedCount >= maxKins}
-            onClick={() => game.setKinDeployed(k.id, !k.deployed)}
-          >
+          <button className={'rbtn' + (k.deployed ? '' : ' ghost')} disabled={!k.deployed && deployedCount >= maxKins}
+            onClick={() => game.setKinDeployed(k.id, !k.deployed)}>
             {k.deployed ? 'Deployed ✓' : 'Deploy'}
           </button>
         </div>
       ))}
-    </>
-  );
-}
-
-function Inventory({ snap, game, onClose }) {
-  const produce = produceRows(snap);
-  const total = produceTotal(produce);
-  const selected = snap.selectedSeed;
-  return (
-    <>
-      <Head title="🎒 Farm Bag" sub="Seeds to plant and produce ready to sell" onClose={onClose} />
-      <div className="bag-section">
-        <div className="bag-title">Seeds</div>
-        {Object.values(CROPS).map((crop) => {
-          const count = Number(snap.seeds?.[crop.id] || 0);
-          return (
-            <div className={'row compact' + (selected === crop.id ? ' selected' : '')} key={crop.id}>
-              <div className="ico">{crop.emoji}</div>
-              <div className="grow">
-                <div className="name">{crop.name} seeds</div>
-                <div className="meta">Owned: {fmt(count)} · harvest sells 🌸{fmt(crop.sell)}</div>
-              </div>
-              <button className="rbtn ghost" disabled={count <= 0} onClick={() => game.setSeed(crop.id)}>
-                {selected === crop.id ? 'Selected' : 'Plant'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-      <div className="bag-section">
-        <div className="bag-title">Produce</div>
-        <ProducePreview rows={produce} />
-        {produce.map((item) => (
-          <div className="row compact" key={item.id}>
-            <div className="ico">{item.icon}</div>
-            <div className="grow">
-              <div className="name">{item.name}</div>
-              <div className="meta">Owned: {fmt(item.count)} · {fmt(item.count)} × 🌸{fmt(item.sell)} = 🌸{fmt(item.count * item.sell)}</div>
-            </div>
-          </div>
-        ))}
-        <div className="sell-total">
-          <span>Total produce value</span>
-          <b>🌸{fmt(total)}</b>
-          <button className="rbtn" disabled={produce.length === 0} onClick={() => game.sellAll()}>Sell all</button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function Home({ snap, game, onClose }) {
-  return (
-    <>
-      <Head title="🏡 Farmhouse" sub={`${snap.name}'s home`} onClose={onClose} />
-      <div className="row"><div className="ico">🏠</div><div className="grow">
-        <div className="name">Stage: Cottage</div>
-        <div className="meta">Upgrade your home with 🌸 Bloom + 🪵🪨 materials (coming soon)</div>
-      </div></div>
-      <div className="row"><div className="ico">⭐</div><div className="grow">
-        <div className="name">Level {snap.level}</div>
-        <div className="meta">{snap.role === 'kid' ? 'Learn the 6 Worlds to gain XP and level up' : 'Play + battle to gain XP and level up — stronger skills'}</div>
-      </div></div>
-      <div className="row"><div className="ico">🌸</div><div className="grow">
-        <div className="name">{snap.bloom === Infinity ? '∞' : fmt(snap.bloom)} Bloom</div>
-        <div className="meta">The play currency · earn by selling produce + battling, spend on seeds{snap.guest ? ' (sign in to sync)' : ''}</div>
-      </div></div>
-      <div className="row"><div className="ico">💎</div><div className="grow">
-        <div className="name">{fmt(snap.diamonds)} Diamonds</div>
-        <div className="meta">Learning currency — for cosmetics only (a Diamond shop is coming)</div>
-      </div></div>
-      <div className="row" style={{ borderStyle: 'dashed' }}><div className="ico">🌙</div><div className="grow">
-        <div className="name">End the day</div>
-        <div className="meta">Crops grow, animals give produce, energy restores</div>
-      </div><button className="rbtn" onClick={() => game.sleep()}>Sleep</button></div>
     </>
   );
 }

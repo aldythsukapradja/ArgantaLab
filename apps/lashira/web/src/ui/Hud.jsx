@@ -14,6 +14,8 @@ import { supabase, hasSupabase } from '../net/supabase.js';
 import { ActionCluster } from '@arganta/combat/cluster';
 import { RewardToasts } from '@arganta/combat/reward';
 import { SKIN_LIST, DEFAULT_SKIN, skinOf, GameIcon } from '@arganta/combat';
+import { sfx } from '../audio/sfx.js';
+import { ambient } from '../audio/ambient.js';
 
 // chosen action-cluster skin, remembered per device.
 const SKIN_KEY = 'lashira_cluster_skin';
@@ -58,6 +60,10 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
   const [showSeeds, setShowSeeds] = useState(false);
   const [showLive, setShowLive] = useState(false);
   const [skinId, setSkinId] = useState(loadSkin);
+  const [sfxMuted, setSfxMuted] = useState(() => sfx.isMuted());
+  const [sfxVol, setSfxVol] = useState(() => sfx.getVolume());
+  const [ambOn, setAmbOn] = useState(() => ambient.isEnabled());
+  const [ambVol, setAmbVol] = useState(() => ambient.getVolume());
   const pickSkin = (id) => { setSkinId(id); try { localStorage.setItem(SKIN_KEY, id); } catch { /* ignore */ } };
   // Live channel diagnostics, refreshed while Settings is open — a field
   // screenshot of this line pinpoints WHERE sync dies (never joined / died
@@ -120,9 +126,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
 
         <div className="quicknav">
           <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
-          <button className="navbtn" onClick={() => onOpen('barn')}>🐄 Barn</button>
           <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
-          <button className="navbtn" onClick={() => onOpen('kin')}>🍃 Kin</button>
           <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
           <button className="navbtn" onClick={() => onOpen('quests')}>📜 Quests</button>
         </div>
@@ -195,7 +199,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           </button>
           <button type="button" className="skill-circle util" onClick={onPlantAll} title="Plant all empty soil">🌱</button>
           <button type="button" className="skill-circle util" onClick={onHarvestAll} title="Harvest all ripe crops">🧺</button>
-          <button type="button" className={'skill-circle util' + (snap.tool === 'sickle' ? ' active' : '')} onClick={onToggleSickle} title="Sickle — tap crops to remove them">🌾</button>
+          <button type="button" className={'skill-circle util' + (snap.tool === 'sickle' ? ' active' : '')} onClick={toggleSickle} title="Sickle — tap crops to remove them">🌾</button>
           <button type="button" className="skill-circle util" onClick={onSleep} title="sleep">😴</button>
           <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
         </div>
@@ -292,6 +296,35 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                   ))}
                 </div>
                 <p className="settings-empty">Repaints the battle buttons (bottom-right). Each skin uses a different game-icons set — pick the look you like.</p>
+              </section>
+              <section className="set-card">
+                <h4>Sound</h4>
+                <div className="setrow" style={{ justifyContent: 'space-between' }}>
+                  <label style={{ width: 'auto' }}>Sound effects</label>
+                  <button type="button" className={'dev-toggle' + (!sfxMuted ? ' on' : '')}
+                    onClick={() => { const m = !sfxMuted; setSfxMuted(m); sfx.setMuted(m); if (!m) sfx.play('tap'); }}>
+                    <span className="dev-knob" />{sfxMuted ? 'OFF' : 'ON'}
+                  </button>
+                </div>
+                <div className="setrow">
+                  <label>volume</label>
+                  <input type="range" min="0" max="1" step="0.05" value={sfxVol} disabled={sfxMuted}
+                    onChange={(e) => { const v = Number(e.target.value); setSfxVol(v); sfx.setVolume(v); }} />
+                  <span>{Math.round(sfxVol * 100)}%</span>
+                </div>
+                <div className="setrow" style={{ justifyContent: 'space-between' }}>
+                  <label style={{ width: 'auto' }}>Ambience &amp; music</label>
+                  <button type="button" className={'dev-toggle' + (ambOn ? ' on' : '')}
+                    onClick={() => { const on = !ambOn; setAmbOn(on); ambient.setEnabled(on); }}>
+                    <span className="dev-knob" />{ambOn ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                <div className="setrow">
+                  <label>volume</label>
+                  <input type="range" min="0" max="1" step="0.05" value={ambVol} disabled={!ambOn}
+                    onChange={(e) => { const v = Number(e.target.value); setAmbVol(v); ambient.setVolume(v); }} />
+                  <span>{Math.round(ambVol * 100)}%</span>
+                </div>
               </section>
               <section className="set-card">
                 <h4>Camera &amp; movement</h4>

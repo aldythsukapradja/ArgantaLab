@@ -22,11 +22,14 @@ import { loadAcquiredKins } from './arganta-kin.js';
 import { hasActualKinArt } from './kin-sprite-image.jsx';
 import { joinFarmPresence } from './farm-presence.js';
 import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
+import { defaultFarmerSpec } from '../net/characterRegistry.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
 import { effects as loadEffects, effectSheetUrl, loadImage as loadEffectImage } from '../engine/data.js';
 import { Hud } from '../ui/Hud.jsx';
 import { Panels } from '../ui/Panels.jsx';
 import { TileFan } from '../ui/TileFan.jsx';
+import { sfx } from '../audio/sfx.js';
+import { ambient } from '../audio/ambient.js';
 import { CROPS, cropIsRipe } from '../data/crops.js';
 import { SPECIES, animalGoodReady } from '../data/livestock.js';
 
@@ -51,7 +54,25 @@ function inField(tx, ty) {
   return tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1;
 }
 
+// Is a live monster on (or moving through) this tile? Used for BODY-BLOCKING —
+// the player can't overlap a monster (checks the tile AND a mid-step `from` so
+// you can't slip through one during its walk). `self` excludes a monster from its
+// own check (monster-vs-monster movement).
+function monsterAt(g, tx, ty, self = null) {
+  return g.monsters.some((o) => o !== self && o.state !== 'die'
+    && ((o.tile[0] === tx && o.tile[1] === ty)
+      || (o.from && o.moveT < 1 && o.from[0] === tx && o.from[1] === ty)));
+}
+const chebyshev = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
+function faceToward(from, to) {
+  const dx = to[0] - from[0], dy = to[1] - from[1];
+  if (Math.abs(dx) > Math.abs(dy)) return dx >= 0 ? 'East' : 'West';
+  return dy >= 0 ? 'South' : 'North';
+}
+
 const ARENA_MONSTER_COUNT = 5; // how many roam the arena at once
+// on-map shop building id → unified Shop sub-tab (tapping a shop deep-links there).
+const SHOP_TAB_FOR = { seed: 'seeds', general: 'general', smith: 'forge', animal: 'animals', cosmetic: 'cosmetics', market: 'sell' };
 
 // Deterministic per-id seed (FNV-1a over the whole string) so every actor gets a
 // distinct RNG stream even when ids share a length (li_cow_0 … li_cow_4).
@@ -202,6 +223,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [panel, setPanel] = useState(null);
   const [hotspot, setHotspot] = useState(null);   // shop/castle/dungeon/dock popup
   const [tileFan, setTileFan] = useState(null);   // radial tile action menu (plant/harvest/sickle)
+  const [shopTab, setShopTab] = useState('seeds'); // unified Shop initial sub-tab
   // Harvest-juice pop for actions taken from the tile fan (render scope, so it
   // can't reach the effect-local floatPop — pushes straight to G.current.floats).
   const popFanResult = (r) => {
@@ -221,7 +243,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   useEffect(() => { if (G.current) G.current.devOverlay = devOn; }, [devOn]);
   const [castleSkin, setCastleSkin] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('lashira_castle_skin')) || 'storybook');
   useEffect(() => { if (G.current) G.current.castleSkin = castleSkin; try { localStorage.setItem('lashira_castle_skin', castleSkin); } catch {} }, [castleSkin]);
-  // Periodically clear wilted/orphaned crops so nothing lingers on the field forever.
+  // Periodically clear legacy/orphaned plot records so nothing lingers forever.
   useEffect(() => { const t = window.setInterval(() => logicRef.current?.sweepStalePlots?.(), 30000); return () => window.clearInterval(t); }, []);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
   // Walk speed multiplier (1x = Kingdom cadence, up to 3x). Persisted per browser.
@@ -260,7 +282,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
 
     (async () => {
       await logic.ready;
-      logic.sweepStalePlots(); // clear crops that wilted / orphaned by a field resize
+      logic.sweepStalePlots(); // clear legacy-stuck / orphaned (field-resize) plot records
       const [bundledArt, dbArt, acquiredKins, effectsAll] = await Promise.all([
         loadBundledArt(),
         loadFarmArtOverrides(),
@@ -270,17 +292,22 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // Layer priority: DB override > bundled sheet art > procedural placeholder.
       const art = { ...bundledArt, ...dbArt };
       const { canvas: bg, blocked } = buildFarmMap(art);
+      // Avatar art: the player's real Kingdom hero when they have one, otherwise
+      // the "default-farmer" preset Circle HQ publishes (the single source of
+      // truth for the fallback look). Either way it composites through the same
+      // engine; a genuine failure still drops to the procedural placeholder.
+      const avatarSpec = hero?.spec || defaultFarmerSpec();
       let tables = null, resources = null, hasWeapon = false;
-      if (hero?.spec) {
+      if (avatarSpec) {
         tables = await loadMotionTables();
         if (tables) {
-          resources = await loadPlayerResources(hero.spec);
+          resources = await loadPlayerResources(avatarSpec);
           hasWeapon = !!resources?.weapon;
         }
       }
       if (!live) return;
       const heroOk = !!(tables && resources && Object.keys(resources).length);
-      setUsingHero(heroOk);
+      setUsingHero(!!hero?.spec && heroOk); // HUD "your hero" copy = real hero only
       if (!profile?.guest) logic.setExternalKins(acquiredKins);
       // Carry live state across a rebuild (this effect re-runs when the hero
       // avatar loads): keep the player where they stand and preserve the peer
@@ -310,6 +337,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         monsters: prev?.monsters || [], monsterSeed: 1, fx: prev?.fx || [], nextMonsterSpawn: 0,
         effectsAll: effectsAll || {}, spellFx: prev?.spellFx || [], battleSkills: battleSkillsRef.current,
         floats: prev?.floats || [], // floating "+1 🥬" harvest-juice pops
+        cursorTile: prev?.cursorTile || null, // last tapped/acted-on tile (drives the white target box)
       };
       // Live sync is intent-based: FarmLogic emits a tiny granular intent for
       // every local mutation, and the channel fans it out. UI updates ride the
@@ -630,12 +658,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const g = G.current; if (!g) return;
     const p = g.player;
     const [tx, ty] = frontTile();
+    g.cursorTile = [tx, ty]; // manual swing button acts on the faced tile — sync the highlight to it
     // Facing an ore/tree node → SWING to gather (the weapon IS the tool). The front
     // tile is adjacent by definition, so no distance check needed here.
     const hs = hotspotAt(tx, ty);
     if (hs && (hs.kind === 'ore' || hs.kind === 'tree')) { playSwing(g); gatherNode(g, hs); return; }
     if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = performance.now(); }
-    // Contextual (same as tapping the land): harvest ripe → plant → clear wilted.
+    // Contextual (same as tapping the land): sickle removes → harvest ripe → plant.
     popHarvestResult(g, logicRef.current.tapAt(tx, ty));
   }
   // Bulk actions for the HUD — FarmVille "do the whole field in one tap".
@@ -666,6 +695,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   function toggleMount() {
     const g = G.current; if (!g) return;
     if (!g.resources?.mount) return;
+    sfx.play('mount');
     const mount = g.actors.get('mount:equipped');
     if (g.player.mounted) {
       g.player.mounted = false;
@@ -703,6 +733,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   function playSwing(g) {
     g.player.oneShot = attackMotionBase(g);
     g.player.oneShotStart = performance.now();
+    sfx.play('swing');
   }
   // ---- SWING-TO-GATHER: the weapon swing IS the tool. ----
   const GATHER_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷' };
@@ -738,7 +769,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const now = performance.now();
     if (iAmHost(g)) {
       const res = resolveMelee(g.monsters, tx, ty, dmg, now);
-      if (res) { spark(g, tx, ty); if (res.killed) rewardAndLoot(res.monster.kind || 'a monster'); return true; }
+      if (res) { spark(g, tx, ty); sfx.play(res.killed ? 'die' : 'hit'); if (res.killed) rewardAndLoot(res.monster.kind || 'a monster'); return true; }
       return false;
     }
     const a = peerMonsterAt(g, tx, ty);
@@ -1117,7 +1148,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           if (p.facing !== dir) { p.facing = dir; p.turnHoldDir = dir; p.turnHoldStart = now; }
           else if (!(p.turnHoldDir === dir && now - p.turnHoldStart < 90)) {
             const [dx, dy] = DELTA[dir]; const nx = p.tile[0] + dx, ny = p.tile[1] + dy;
-            if (!blockedAt(g, nx, ny)) { p.from = [...p.tile]; p.tile = [nx, ny]; p.moveT = 0; p.moveStart = now; }
+            // body-block: map collision OR a live monster tile (no overlapping mobs).
+            if (!blockedAt(g, nx, ny) && !monsterAt(g, nx, ny)) { p.from = [...p.tile]; p.tile = [nx, ny]; p.moveT = 0; p.moveStart = now; }
             p.turnHoldDir = null;
           }
         } else { p.turnHoldDir = null; }
@@ -1179,20 +1211,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         if (g.monsters.length < (SPAWN_TUNING.maxConcurrent || ARENA_MONSTER_COUNT) && now > g.nextMonsterSpawn) {
           spawnArenaMonster(g, now); g.nextMonsterSpawn = now + (SPAWN_TUNING.intervalMs || 900);
         }
-        for (const m of g.monsters) {
-          if (m.state === 'die') continue;
-          tickMonsterState(m, now);
-          if (m.moveT < 1) { m.moveT = Math.min(1, (now - m.moveStart) / MONSTER_WALK_MS); continue; }
-          if (now < (m.nextWander || 0)) continue;
-          const dirs = Object.keys(DELTA);
-          const dir = dirs[Math.floor(monsterRand(g) * 4)];
-          const [dx, dy] = DELTA[dir]; const nx = m.tile[0] + dx, ny = m.tile[1] + dy;
-          m.facing = dir;
-          if (inArena(nx, ny) && !blockedAt(g, nx, ny) && !(nx === p.tile[0] && ny === p.tile[1]) && !g.monsters.some((o) => o !== m && o.state !== 'die' && o.tile[0] === nx && o.tile[1] === ny)) {
-            m.from = [...m.tile]; m.tile = [nx, ny]; m.moveT = 0; m.moveStart = now;
-          }
-          m.nextWander = now + 700 + monsterRand(g) * 1700;
-        }
+        for (const m of g.monsters) stepMonsterAI(g, m, now, p);
         g.monsters = g.monsters.filter((m) => !monsterExpired(m, now));
       } else if (g.monsters.length) {
         g.monsters = []; // host owns the monsters; drop any we simulated as host earlier
@@ -1204,6 +1223,64 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (battleRef.current.on !== next.on || battleRef.current.hp !== next.hp) {
         battleRef.current = next; setBattle(next);
       }
+    }
+
+    // Host-simulated monster AI: chase the player when in range, then TELEGRAPH an
+    // attack (windup you can step out of) and strike on a cooldown; otherwise
+    // wander. Movement is collision-aware (map + other mobs + the player).
+    function stepMonsterAI(g, m, now, p) {
+      if (m.state === 'die') return;
+      tickMonsterState(m, now);
+      if (m.moveT < 1) { m.moveT = Math.min(1, (now - m.moveStart) / MONSTER_WALK_MS); return; }
+      // mid-attack: land the blow at the end of the windup (only if still adjacent
+      // — stepping away dodges it), then recover back to standing.
+      if (m.state === 'attack') {
+        if (!m.struck && now - m.stateStart >= MONSTER_ATTACK_WINDUP_MS) {
+          m.struck = true;
+          if (g.combat.on && !faintActive(g, now) && chebyshev(m.tile, p.tile) <= 1) monsterStrikePlayer(g, m, now);
+        }
+        if (now - m.stateStart >= MONSTER_ATTACK_WINDUP_MS + MONSTER_ATTACK_RECOVER_MS) { m.state = 'stand'; m.struck = false; }
+        return;
+      }
+      const range = chebyshev(m.tile, p.tile);
+      const aggro = g.combat.on && !faintActive(g, now) && range <= (m.aggro || MONSTER_AGGRO_RANGE);
+      if (aggro && range <= 1) {
+        m.facing = faceToward(m.tile, p.tile);
+        if (now >= (m.nextAttack || 0)) { m.state = 'attack'; m.stateStart = now; m.struck = false; m.nextAttack = now + (m.atkMs || MONSTER_ATTACK_COOLDOWN_MS); sfx.play('monsterAttack'); }
+        return;
+      }
+      if (now < (m.nextWander || 0)) return;
+      const dir = aggro ? faceToward(m.tile, p.tile) : Object.keys(DELTA)[Math.floor(monsterRand(g) * 4)];
+      const [dx, dy] = DELTA[dir]; const nx = m.tile[0] + dx, ny = m.tile[1] + dy;
+      m.facing = dir;
+      if (inArena(nx, ny) && !blockedAt(g, nx, ny) && !(nx === p.tile[0] && ny === p.tile[1]) && !monsterAt(g, nx, ny, m)) {
+        m.from = [...m.tile]; m.tile = [nx, ny]; m.moveT = 0; m.moveStart = now;
+      }
+      m.nextWander = now + (aggro ? 130 : 700 + monsterRand(g) * 1700); // chase faster than idle
+    }
+    function faintActive(g, now) { return g.combat.deadUntil && now < g.combat.deadUntil; }
+    // A monster's blow lands on the player: armor DEF mitigates half its value;
+    // spark + floating damage for feedback; 0 HP → faint (harmless knockback+heal).
+    function monsterStrikePlayer(g, m, now) {
+      const def = armorDef(logicRef.current?.state?.armorTier ?? 1);
+      const dmg = Math.max(1, Math.round((Number(m.atk) || 6) - def * 0.5));
+      g.combat.hp = Math.max(0, g.combat.hp - dmg);
+      const [px, py] = entityPx(g.player);
+      g.fx.push({ x: px + TILE / 2, y: py + TILE / 2, start: performance.now(), ttl: 320 });
+      g.floats.push({ x: px + TILE / 2, y: py + TILE - 26, text: '-' + dmg, start: performance.now(), ttl: 820 });
+      sfx.play('hurt');
+      if (g.combat.hp <= 0) faintPlayer(g, now); else syncBattleState(g);
+    }
+    // Faint = kid-safe: no loss. Knock the player north of the arena wall (combat
+    // toggles off there), heal to full, brief timeout before you can re-enter.
+    function faintPlayer(g, now) {
+      g.combat.deadUntil = now + MONSTER_FAINT_MS;
+      g.combat.hp = g.combat.maxHp;
+      const safe = [ARENA_GATE_X, ARENA_WALL_Y - 1];
+      g.player.tile = [...safe]; g.player.from = [...safe]; g.player.moveT = 1;
+      g.floats.push({ x: safe[0] * TILE + TILE / 2, y: safe[1] * TILE, text: '💫 Fainted! Recovering…', start: performance.now(), ttl: 1600 });
+      sfx.play('faint');
+      g.combat.on = false; syncBattleState(g);
     }
 
     function entityPx(e) {
@@ -1438,9 +1515,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const plots = logicRef.current.state.plots;
       for (const [key, plot] of Object.entries(plots)) { const [tx, ty] = key.split(',').map(Number); drawPlot(ctx, tx, ty, plot, g.art); }
 
-      // target: the tile directly in front of the farmer (filled + outlined so
-      // it's unambiguous which tile the tool will act on).
-      const [ftx, fty] = [p.tile[0] + DELTA[p.facing][0], p.tile[1] + DELTA[p.facing][1]];
+      // target: the tile you last TAPPED/acted on (filled + outlined so it's
+      // unambiguous which tile the tool acted on) — NOT the character's facing.
+      // Falls back to the tile ahead of the farmer only until the first tap.
+      const [ftx, fty] = g.cursorTile || [p.tile[0] + DELTA[p.facing][0], p.tile[1] + DELTA[p.facing][1]];
       ctx.fillStyle = 'rgba(255,255,255,0.16)';
       ctx.fillRect(ftx * TILE + 2, fty * TILE + 2, TILE - 4, TILE - 4);
       ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2;
@@ -1540,6 +1618,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       }
       ctx.restore();
 
+      drawAmbientFx(g, ctx, cssW, cssH, now); // drifting petals + light motes (screen space)
+
       // NUMBERED BADGES — screen space so they stay big at any map zoom. Green = you
       // can walk here, red = solid/no-walk. Numbers key to the on-screen legend.
       if (g.devOverlay && g.cam) {
@@ -1557,6 +1637,43 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         ctx.restore(); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
       }
       if (g.stickUI) drawStick(ctx, g); // floating joystick (screen space)
+    }
+    // Ambient background FX (screen space): cozy cherry-blossom petals drifting
+    // down + soft rising light motes. Deterministic, cheap, decorative. Honors
+    // prefers-reduced-motion. Season/zone-aware tinting can hook in here later.
+    function drawAmbientFx(g, ctx, w, h, now) {
+      let A = g.ambient;
+      if (!A) {
+        g.reduceMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const rnd = (a, b) => a + Math.random() * (b - a);
+        A = g.ambient = {
+          last: now,
+          petals: Array.from({ length: 18 }, () => ({ x: rnd(0, w), y: rnd(0, h), s: rnd(4, 8), vy: rnd(10, 26), vx: rnd(-8, 8), ph: rnd(0, 6.28), sp: rnd(0.6, 1.6), rot: rnd(0, 6.28) })),
+          motes: Array.from({ length: 14 }, () => ({ x: rnd(0, w), y: rnd(0, h), r: rnd(1, 2.6), vy: rnd(-6, -2), vx: rnd(-4, 4), ph: rnd(0, 6.28), a: rnd(0.2, 0.5) })),
+        };
+      }
+      if (g.reduceMotion) return;
+      const dt = Math.min(0.05, (now - A.last) / 1000); A.last = now;
+      ctx.save();
+      ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
+      for (const p of A.petals) {
+        p.ph += dt * p.sp;
+        p.x += (p.vx + Math.sin(p.ph) * 14) * dt; p.y += p.vy * dt; p.rot += dt * p.sp;
+        if (p.y > h + 12) { p.y = -12; p.x = Math.random() * w; }
+        if (p.x < -14) p.x = w + 14; else if (p.x > w + 14) p.x = -14;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffc7de';
+        ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.6, 0, 0, 6.283); ctx.fill();
+        ctx.restore();
+      }
+      for (const m of A.motes) {
+        m.ph += dt; m.x += (m.vx + Math.sin(m.ph) * 8) * dt; m.y += m.vy * dt;
+        if (m.y < -8) { m.y = h + 8; m.x = Math.random() * w; }
+        ctx.globalAlpha = m.a * (0.5 + 0.5 * Math.sin(m.ph * 2));
+        ctx.fillStyle = '#fffbe6';
+        ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.283); ctx.fill();
+      }
+      ctx.restore();
     }
     // The drag-joystick: a base ring at the press point + a knob at the thumb.
     function drawStick(ctx, g) {
@@ -1618,6 +1735,18 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 2.2 * scl, 0, 7); ctx.fill();
         if (!hitFlash) { ctx.fillStyle = '#20303a'; ctx.beginPath(); ctx.arc(cx - 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.arc(cx + 5 * scl + ex, by - 14 * scl, 1.1 * scl, 0, 7); ctx.fill(); }
       }
+      // ATTACK TELEGRAPH — a pulsing red "!" during the windup so the strike is
+      // readable (step out of range to dodge it).
+      if (m.state === 'attack' && (now - m.stateStart) < MONSTER_ATTACK_WINDUP_MS) {
+        const t = (now - m.stateStart) / MONSTER_ATTACK_WINDUP_MS;
+        ctx.globalAlpha = fade * (0.45 + 0.55 * Math.abs(Math.sin(now / 45)));
+        ctx.fillStyle = '#ff3b30';
+        ctx.font = 'bold ' + Math.round(20 * scl) + 'px system-ui';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('!', cx, by - 30 * scl - t * 4);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.globalAlpha = fade;
+      }
       // hp bar
       if (m.state !== 'die') {
         const w = 26, hpx = cx - w / 2, hpy = by - 32, frac = Math.max(0, m.hp / (m.maxHp || 100));
@@ -1656,6 +1785,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const wx = (g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE;
       const wy = (g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE;
       const tx = Math.floor(wx), ty = Math.floor(wy);
+      g.cursorTile = [tx, ty]; // the white target box follows the tap, not the character's facing
       const faceTo = (gx, gy) => {
         const dx = gx - g.player.tile[0], dy = gy - g.player.tile[1];
         if (Math.abs(dx) > Math.abs(dy)) g.player.facing = dx >= 0 ? 'East' : 'West';
@@ -1671,7 +1801,8 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
           if (nodeAdjacent(g, hs)) { playSwing(g); gatherNode(g, hs); }
           else mechRef.current?.flash?.('Get closer to swing');
         }
-        else if (hs.kind === 'sell') setPanel('shop');
+        else if (hs.kind === 'sell') { setShopTab('sell'); setPanel('shop'); }
+        else if (hs.kind === 'shop') { setShopTab(SHOP_TAB_FOR[hs.id] || 'seeds'); setPanel('shop'); }
         else setHotspot(hs);
         return;
       }
@@ -1693,7 +1824,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         const d = Math.hypot(ax + 0.5 - wx, ay + 0.5 - wy);
         if (d < bestD) { bestD = d; best = a; }
       }
-      if (best) { logicRef.current?.tapAnimal(best.livestockId); faceTo(best.tile[0], best.tile[1]); }
+      if (best) { g.cursorTile = [...best.tile]; logicRef.current?.tapAnimal(best.livestockId); faceTo(best.tile[0], best.tile[1]); }
     }
 
     // Open the tile fan on ANY field tile (used by long-press — gives the full
@@ -1704,6 +1835,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const tx = Math.floor((g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE);
       const ty = Math.floor((g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE);
       if (!(tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1)) return false;
+      g.cursorTile = [tx, ty];
       setTileFan({ x: clientX - rect.left, y: clientY - rect.top, tx, ty });
       return true;
     }
@@ -1717,6 +1849,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     const LONGPRESS_MS = 450;
     function onPointerDown(e) {
       if (e.button != null && e.button !== 0) return;
+      sfx.arm(); ambient.start(); // audio contexts may only start from a user gesture
       ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false, longFired: false, lpTimer: 0 };
       try { canvas.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
       const px = e.clientX, py = e.clientY, self = ptr;
@@ -1803,12 +1936,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         )}
         {snap && (
           <>
-            <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={setPanel}
+            <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={(name) => { if (name === 'shop') setShopTab('seeds'); setPanel(name); }}
               zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
-            <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechRef.current} onClose={() => setPanel(null)} />
+            <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechSnap} mechGame={mechRef.current} shopTab={shopTab} onClose={() => setPanel(null)} />
             {tileFan && (
               <TileFan fan={tileFan} game={logicRef.current} snap={snap}
                 onResult={popFanResult} onClose={() => setTileFan(null)} />

@@ -14,8 +14,10 @@
 //  3. applyTuning() mutates the LIVE exported objects in place, so every importer
 //     (the combat engine) sees the new numbers without a re-import.
 
-import { PATH_POWER, PVP_PROFILE, PVP_TUNING } from './skills.js';
-import { BESTIARY } from './bestiary.js';
+import { PATH_POWER, PVP_PROFILE, PVP_TUNING, DAMAGE_BASE, SKILL_SLOTS } from './skills.js';
+import { BESTIARY, ZONE_MOBS } from './bestiary.js';
+import { WEAPON_TIERS, ARMOR_TIERS } from './gear.js';
+import { PATHS as PATH_POOLS, XP_LADDER } from './progression.js';
 
 export const TUNING_VERSION = 1;
 const PATHS = ['warrior', 'rogue', 'poet', 'mage'];
@@ -26,14 +28,9 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 // writes back into BESTIARY in place, so spawns pick up the new numbers.
 const ENEMY_IDS = Object.keys(BESTIARY);
 
-// Player attack base curves (additive mutable — new PvP/combat reads these; the
-// legacy boltDamage()/MELEE_DAMAGE stay untouched for Kingdom).
-export const DAMAGE_TUNING = {
-  physBase:  { base: 34, perLevel: 10 },
-  boltBase:  { base: 40, perLevel: 12 },
-  stormBase: { base: 24, perLevel: 8 },
-  mendBase:  { base: 30, perLevel: 10 },
-};
+// Player attack base curves live in skills.js DAMAGE_BASE (boltDamage/physBase read
+// it) — re-export under the old name for back-compat.
+export { DAMAGE_BASE as DAMAGE_TUNING };
 
 // SPAWN — how the arena/battleground populates (mutable; FarmRoom reads these).
 // maxConcurrent = how many roam at once, intervalMs = respawn pacing, roster =
@@ -60,14 +57,24 @@ export const COMBAT_DEFAULTS = Object.freeze({
     critX: PVP_TUNING.critX, miss: PVP_TUNING.miss, healAt: PVP_TUNING.healAt,
     healMax: PVP_TUNING.healMax, hp: { base: 100, perLevel: 70 },
   },
-  damage: clone(DAMAGE_TUNING),
+  damage: clone(DAMAGE_BASE),        // player melee/skill base curves (phys/bolt/storm/mend)
+  pools: PATH_POOLS ? Object.keys(PATH_POOLS).reduce((a, p) => { const x = PATH_POOLS[p]; a[p] = { hp: x.hp, hpPer: x.hpPer, mp: x.mp, mpPer: x.mpPer }; return a; }, {}) : {},
+  xp: { base: XP_LADDER.base, growth: XP_LADDER.growth },   // level ladder
+  skills: SKILL_SLOTS.reduce((a, s) => { a[s.id] = { manaCost: s.manaCost }; return a; }, {}), // MP cost per slot
   enemies: ENEMY_IDS.reduce((acc, id) => {
     const e = BESTIARY[id];
-    acc[id] = { hp: e.hp, atk: e.atk, xp: e.xp, bloom: e.bloom }; // stats + rewards
+    // stats + rewards + speed + the loot drop table (material · count · rate)
+    acc[id] = { hp: e.hp, atk: e.atk, xp: e.xp, bloom: e.bloom, speedMs: e.speedMs, drops: clone(e.drops || []) };
     return acc;
   }, {}),
+  zones: clone(ZONE_MOBS),       // which mobs roam each zone (meadow/grove/cavern)
   spawn: clone(SPAWN_TUNING),
   rewards: clone(REWARD_TUNING),
+  // Gear power axis, keyed by tier so partial edits deep-merge cleanly.
+  gear: {
+    weapons: WEAPON_TIERS.reduce((a, t) => { a['t' + t.tier] = { atk: t.atk }; return a; }, {}),
+    armor: ARMOR_TIERS.reduce((a, t) => { a['t' + t.tier] = { def: t.def, hp: t.hp }; return a; }, {}),
+  },
 });
 
 // ── Deep merge an override onto the defaults → the EFFECTIVE config ────────────
@@ -104,6 +111,20 @@ export function validateTuning(override) {
   if (cfg.pvp.boltReach < 1 || cfg.pvp.boltReach > 8) warnings.push('boltReach outside [1,8]');
   return { ok: errors.length === 0, errors, warnings };
 }
+// A loot table is [{ k:material, min, max, p:0..1 }]. Drop malformed rows so a bad
+// publish can't break kill rewards (or mint a material with a >1 probability).
+function sanitizeDrops(drops) {
+  const out = [];
+  for (const d of drops) {
+    if (!d || typeof d.k !== 'string' || !d.k) continue;
+    const min = Math.max(0, Math.floor(Number(d.min) || 0));
+    const max = Math.max(min, Math.floor(Number(d.max) || min));
+    const p = Math.min(1, Math.max(0, Number(d.p)));
+    if (max > 0 && p > 0) out.push({ k: d.k, min, max, p });
+  }
+  return out;
+}
+
 // Clamp every numeric into a safe range so a bad override can't produce NaN combat.
 function clampConfig(cfg) {
   for (const p of PATHS) for (const k of Object.keys(RANGE)) {
@@ -134,7 +155,30 @@ export function applyTuning(configOrOverride) {
     critX: cfg.pvp.critX, miss: cfg.pvp.miss, healAt: cfg.pvp.healAt, healMax: cfg.pvp.healMax,
     hpCurve: (L) => cfg.pvp.hp.base + cfg.pvp.hp.perLevel * (Math.max(1, L) - 1),
   });
-  Object.assign(DAMAGE_TUNING, cfg.damage);
+  // Player base curves (melee/skill damage) — skills.js boltDamage/physBase read these.
+  for (const k of ['phys', 'bolt', 'storm', 'mend']) {
+    const c = cfg.damage && cfg.damage[k]; if (!c) continue;
+    if (Number.isFinite(c.base)) DAMAGE_BASE[k].base = Math.max(0, c.base);
+    if (Number.isFinite(c.perLevel)) DAMAGE_BASE[k].perLevel = Math.max(0, c.perLevel);
+  }
+  // HP/MP pools per path (pathMaxHp/pathMaxMp read PATHS).
+  if (cfg.pools) for (const p of Object.keys(cfg.pools)) {
+    const q = cfg.pools[p]; if (!q || !PATH_POOLS[p]) continue;
+    if (Number.isFinite(q.hp)) PATH_POOLS[p].hp = Math.max(1, q.hp);
+    if (Number.isFinite(q.hpPer)) PATH_POOLS[p].hpPer = Math.max(0, q.hpPer);
+    if (Number.isFinite(q.mp)) PATH_POOLS[p].mp = Math.max(1, q.mp);
+    if (Number.isFinite(q.mpPer)) PATH_POOLS[p].mpPer = Math.max(0, q.mpPer);
+  }
+  // XP ladder (growth must stay > 1 or xpForLevel divides by zero).
+  if (cfg.xp) {
+    if (Number.isFinite(cfg.xp.base)) XP_LADDER.base = Math.max(1, cfg.xp.base);
+    if (Number.isFinite(cfg.xp.growth)) XP_LADDER.growth = Math.min(1.5, Math.max(1.001, cfg.xp.growth));
+  }
+  // Skill MP costs (per slot id).
+  if (cfg.skills) for (const s of SKILL_SLOTS) {
+    const v = cfg.skills[s.id] && cfg.skills[s.id].manaCost;
+    if (Number.isFinite(v)) s.manaCost = Math.max(0, v);
+  }
   for (const id of Object.keys(cfg.enemies)) {
     if (!BESTIARY[id]) continue;
     const e = cfg.enemies[id];
@@ -142,6 +186,14 @@ export function applyTuning(configOrOverride) {
     if (Number.isFinite(e.atk)) BESTIARY[id].atk = Math.max(0, e.atk);
     if (Number.isFinite(e.xp)) BESTIARY[id].xp = Math.max(0, e.xp);
     if (Number.isFinite(e.bloom)) BESTIARY[id].bloom = Math.max(0, e.bloom);
+    if (Number.isFinite(e.speedMs)) BESTIARY[id].speedMs = Math.min(5000, Math.max(100, e.speedMs));
+    if (Array.isArray(e.drops)) BESTIARY[id].drops = sanitizeDrops(e.drops);
+  }
+  if (cfg.zones && typeof cfg.zones === 'object') {
+    for (const z of Object.keys(cfg.zones)) {
+      const list = cfg.zones[z];
+      if (Array.isArray(list)) ZONE_MOBS[z] = list.filter((k) => BESTIARY[k]); // only real mobs
+    }
   }
   if (cfg.spawn) {
     SPAWN_TUNING.maxConcurrent = Math.min(20, Math.max(1, Math.round(cfg.spawn.maxConcurrent) || 5));
@@ -151,6 +203,17 @@ export function applyTuning(configOrOverride) {
   if (cfg.rewards) {
     REWARD_TUNING.xpMul = Math.min(10, Math.max(0, Number(cfg.rewards.xpMul) || 1));
     REWARD_TUNING.bloomMul = Math.min(10, Math.max(0, Number(cfg.rewards.bloomMul) || 1));
+  }
+  if (cfg.gear) {
+    const setTier = (tiers, key, field, v) => {
+      const t = tiers.find((x) => 't' + x.tier === key);
+      if (t && Number.isFinite(v)) t[field] = Math.max(0, v);
+    };
+    for (const k of Object.keys(cfg.gear.weapons || {})) setTier(WEAPON_TIERS, k, 'atk', cfg.gear.weapons[k].atk);
+    for (const k of Object.keys(cfg.gear.armor || {})) {
+      setTier(ARMOR_TIERS, k, 'def', cfg.gear.armor[k].def);
+      setTier(ARMOR_TIERS, k, 'hp', cfg.gear.armor[k].hp);
+    }
   }
   return cfg;
 }
@@ -177,9 +240,9 @@ function duel(cfg, a, b, L, rand) {
   const curve = (c, l) => c.base + c.perLevel * (l - 1);
   const mk = (p) => {
     const s = cfg.paths[p];
-    const dP = Math.round(curve(D.physBase, L) * s.phy), dB = Math.round(curve(D.boltBase, L) * s.mag);
+    const dP = Math.round(curve(D.phys, L) * s.phy), dB = Math.round(curve(D.bolt, L) * s.mag);
     const hp = (cfg.pvp.hp.base + cfg.pvp.hp.perLevel * (L - 1)) * s.pvpHpMul;
-    return { hp, maxHp: hp, dP, dB, heal: curve(D.mendBase, L) * s.healMul, ranged: dB > dP, atkInt: s.atkInt, move: s.moveRel, cd: rand() * s.atkInt, healed: 0 };
+    return { hp, maxHp: hp, dP, dB, heal: curve(D.mend, L) * s.healMul, ranged: dB > dP, atkInt: s.atkInt, move: s.moveRel, cd: rand() * s.atkInt, healed: 0 };
   };
   const A = mk(a), B = mk(b); let dist = 6 + rand() * 3; const dt = 0.06, R = cfg.pvp.boltReach, T = cfg.pvp;
   const roll = (base) => { if (rand() < T.miss) return 0; let d = base * (1 - T.spread + rand() * 2 * T.spread); if (rand() < T.crit) d *= T.critX; return d; };

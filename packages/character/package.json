@@ -1,0 +1,13 @@
+{
+  "name": "@arganta/character",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared character-appearance registry for ArgantaLab — Circle HQ publishes ONE canonical set of character specs (the compositor loadout) and Kingdom Heroes + LashiraBloom read it. HQ is the single source of truth for what a character looks like; rendering stays per-app via the shared compositor.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "sideEffects": false
+}

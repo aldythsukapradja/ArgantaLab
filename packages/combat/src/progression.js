@@ -60,12 +60,14 @@ export function pathForWeapon(weapon) {
 }
 
 // --- Exponential XP ladder ---
-const XP_BASE = 65, XP_GROWTH = 1.07;
+// Mutable so the tuning pipeline can retune the climb. `growth` must stay > 1.
+export const XP_LADDER = { base: 65, growth: 1.07 };
 // TOTAL xp required to REACH level L (level 1 = 0).
 export function xpForLevel(level) {
   const n = clampLevel(level);
   if (n <= 1) return 0;
-  return Math.round(XP_BASE * (Math.pow(XP_GROWTH, n - 1) - 1) / (XP_GROWTH - 1));
+  const b = XP_LADDER.base, g = XP_LADDER.growth;
+  return Math.round(b * (Math.pow(g, n - 1) - 1) / (g - 1));
 }
 // Level implied by a raw XP total (capped at 99).
 export function levelFromXp(xp) {

@@ -3,12 +3,16 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import { supabase } from './net/supabase.js';
 import { initCombatTuning } from './net/combatTuning.js';
+import { initCharacterRegistry } from './net/characterRegistry.js';
 import './styles.css';
 
 // Pull + apply the combat tuning Circle HQ published (fire-and-forget, safe:
 // falls back to package defaults if absent/offline). The active config is a
 // public RPC so it applies even before embed auth resolves.
 initCombatTuning();
+// Pull the character-appearance registry HQ published (same fire-and-forget,
+// public-read contract) so the shared/default farmer + NPC looks are HQ's.
+initCharacterRegistry();
 
 // Embed mode: the game runs inside ANY parent ArgantaLab app (Bloom Command,
 // KinetikCircle's "KinFarm" pill, etc.) as `?embed=<hostname>` — the value only

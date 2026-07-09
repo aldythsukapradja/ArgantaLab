@@ -21,10 +21,20 @@ export const SKILL_SLOTS = [
 ];
 
 // --- level scaling (MP cost fixed; power grows) — one source of truth ---
+// Base curves live in a MUTABLE object so the tuning pipeline (tuning.js) can
+// retune melee/skill damage without editing these functions. Defaults equal the
+// old constants exactly, so Kingdom PvE is unchanged until a tuning is applied.
+export const DAMAGE_BASE = {
+  phys:  { base: 34, perLevel: 10 },
+  bolt:  { base: 40, perLevel: 12 },
+  storm: { base: 24, perLevel: 8 },
+  mend:  { base: 30, perLevel: 10 },
+};
 const lv = (L) => Math.max(1, Number(L) || 1);
-export function boltDamage(L) { return 40 + 12 * (lv(L) - 1); }
-export function stormDamage(L) { return 24 + 8 * (lv(L) - 1); } // per monster (AoE)
-export function mendHeal(L) { return 30 + 10 * (lv(L) - 1); }
+const curveAt = (c, L) => c.base + c.perLevel * (lv(L) - 1);
+export function boltDamage(L) { return curveAt(DAMAGE_BASE.bolt, L); }
+export function stormDamage(L) { return curveAt(DAMAGE_BASE.storm, L); } // per monster (AoE)
+export function mendHeal(L) { return curveAt(DAMAGE_BASE.mend, L); }
 export function killReward(L) { return 2 + Math.floor(lv(L) / 2); } // Diamonds per kill
 export function killXp(L) { return 15 + 5 * (lv(L) - 1); }         // XP per kill (adults)
 // Power (damage or heal) a slotted skill produces at a level.
@@ -78,7 +88,7 @@ export const PVP_TUNING = { boltReach: 2, hpCurve: (L) => 100 + 70 * (Math.max(1
 
 // Physical attack base — level-scaled (parallels the magic bases so high-level
 // PvP doesn't stall against the big HP pools). Melee/PvP strikes use this.
-export function physBase(L) { return 34 + 10 * (lv(L) - 1); }
+export function physBase(L) { return curveAt(DAMAGE_BASE.phys, L); }
 
 // Path-scaled MAGIC power for a slotted skill (bolt/storm/mend all count as
 // spellcasting, so a caster path amplifies damage AND healing).

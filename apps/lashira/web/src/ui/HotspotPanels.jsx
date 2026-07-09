@@ -1,22 +1,12 @@
-// Hotspot popups — Shops (what each sells), Castle, Dungeon, Fishing. Rendered by
-// FarmRoom next to <Panels>. Kept SEPARATE from Panels.jsx so the parallel economy
-// workspace (currency display) and this mechanics work don't collide.
-//
-// Currency: read defensively as `snap.bloom ?? snap.gold`. Functional buys that need
-// currency route through the existing FarmLogic methods (game.buySeed). Currency-only
-// wares are shown but marked // ECONOMY-SEAM until bloom is wired.
+// Hotspot popups — Castle (home upgrade + skin), Dungeon, Fishing. Rendered by
+// FarmRoom next to <Panels>. The MERCHANT shops (seed/general/blacksmith/animal/
+// cosmetic) moved into the unified gallery Shop (Shop.jsx) — tapping a shop
+// building now opens that Shop at the matching sub-tab, so this file only owns the
+// non-shop landmarks.
 import { useEffect, useRef, useState } from 'react';
-import { CROPS } from '../data/crops.js';
-import { SPECIES } from '../data/livestock.js';
 import { MAT_ICON } from '../game/farm-mechanics.js';
-import { weaponOf, armorOf } from '@arganta/combat';
-import { QtyDialog } from './QtyDialog.jsx';
-
-// cost object → "🌸500 · 🪵20 · 🪨15 · 🟨5"
-const costLine = (cost) => Object.entries(cost || {}).map(([k, v]) => `${MAT_ICON[k] || k}${v}`).join(' ');
 
 const fmt = (n) => Number(n || 0).toLocaleString();
-const cur = (snap) => (snap?.bloom ?? snap?.gold ?? 0);
 
 function Head({ title, sub, onClose }) {
   return (
@@ -56,146 +46,11 @@ export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, on
   return (
     <div className="panel-scrim" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
-        {hotspot.kind === 'shop' && <ShopPanel id={hotspot.id} snap={snap} game={game} mech={mech} mechGame={mechGame} onClose={onClose} />}
         {hotspot.kind === 'castle' && <CastlePanel snap={snap} mech={mech} mechGame={mechGame} onClose={onClose} castleSkin={castleSkin} onCastleSkin={onCastleSkin} />}
         {hotspot.kind === 'dungeon' && <DungeonPanel snap={snap} onClose={onClose} onEnter={onEnterDungeon} />}
         {hotspot.kind === 'dock' && <FishingPanel mechGame={mechGame} onClose={onClose} />}
       </div>
     </div>
-  );
-}
-
-function ShopPanel({ id, snap, game, mech, mechGame, onClose }) {
-  if (id === 'seed') return <SeedShop snap={snap} game={game} onClose={onClose} />;
-  if (id === 'smith') return <Blacksmith snap={snap} mech={mech} mechGame={mechGame} onClose={onClose} />;
-  if (id === 'general') return <DisplayShop title="🏪 Hazel — General Store" sub="Tools & supplies" onClose={onClose} rows={[
-    ['🪣', 'Watering can', 'Bloom 40'], ['🎣', 'Fishing rod', 'Bloom 60'], ['📦', 'Storage chest', 'Bloom 80'],
-  ]} />;
-  if (id === 'animal') return <DisplayShop title="🐮 Willa — Animal Shop" sub="Livestock & feed" onClose={onClose} rows={
-    Object.values(SPECIES).map((s) => [s.emoji, s.name, 'Bloom ' + (s.buy || 200)]).concat([['🌾', 'Feed ×10', 'Bloom 10']])
-  } />;
-  if (id === 'cosmetic') return <DisplayShop title="💎 Bank & Cosmetics" sub="Diamonds — cosmetics only" onClose={onClose} rows={[
-    ['🎩', 'Farmer hat', '💎 5'], ['🌈', 'Rainbow trail', '💎 8'], ['🏦', 'Store items', 'free'],
-  ]} />;
-  return null;
-}
-
-function SeedShop({ snap, game, onClose }) {
-  const op = cur(snap) === Infinity;
-  const money = op ? Infinity : Number(cur(snap));
-  const [buying, setBuying] = useState(null); // the crop whose qty dialog is open
-  const maxQty = buying ? (op ? 999 : Math.max(0, Math.floor(money / buying.seedCost))) : 0;
-  return (
-    <>
-      <Head title="🌱 Sprout — Seed Shop" sub={`You have ${op ? '∞' : fmt(money)} 🌸`} onClose={onClose} />
-      {Object.values(CROPS).map((c) => {
-        const canAfford = op || money >= c.seedCost;
-        return (
-          <div className="row" key={c.id}>
-            <div className="ico">{c.emoji}</div>
-            <div className="grow">
-              <div className="name">{c.name} seed</div>
-              <div className="meta">Owned {fmt(snap.seeds?.[c.id] || 0)} · sells for 🌸{c.sell}</div>
-            </div>
-            <button className="rbtn" disabled={!canAfford} onClick={() => setBuying(c)}>Buy 🌸{c.seedCost}</button>
-          </div>
-        );
-      })}
-      {buying && (
-        <QtyDialog
-          item={{ name: buying.name + ' seed', emoji: buying.emoji }}
-          unitCost={buying.seedCost}
-          maxQty={maxQty}
-          onBuy={(n) => game.buySeed(buying.id, n)}
-          onClose={() => setBuying(null)}
-        />
-      )}
-    </>
-  );
-}
-
-function Blacksmith({ snap, mech, mechGame, onClose }) {
-  const tools = [['pickaxe', '⛏', 'Pickaxe', 'mine gold + gems at Tier 2'], ['axe', '🪓', 'Axe', 'chop hardwood at Tier 2'], ['rod', '🎣', 'Rod', 'better catches']];
-  const gearRows = [
-    ['weapon', '⚔', 'Weapon', weaponOf(snap?.weaponTier || 1), (t) => `+${weaponOf(t).atk} ATK`],
-    ['armor', '🛡', 'Armor', armorOf(snap?.armorTier || 1), (t) => `+${armorOf(t).def} DEF · +${armorOf(t).hp} HP`],
-  ];
-  return (
-    <>
-      <Head title="⚒ Forge — Blacksmith" sub="Craft gear + upgrade tools with materials" onClose={onClose} />
-      <MatBar snap={snap} mech={mech} />
-      {gearRows.map(([slot, ico, label, cur, perkAt]) => {
-        const tier = mechGame.gearTier(slot);
-        const max = mechGame.gearMax(slot);
-        const cost = mechGame.gearCost(slot);
-        const afford = mechGame.gearAfford(slot);
-        return (
-          <div className="row" key={slot}>
-            <div className="ico">{ico}</div>
-            <div className="grow">
-              <div className="name">{label} · {cur.name} (T{tier}){max ? ' ★max' : ''}</div>
-              <div className="meta">{perkAt(tier)}{max ? '' : ` → T${tier + 1} · needs ${costLine(cost)}`}</div>
-            </div>
-            <button className="rbtn" disabled={max || !afford} onClick={() => mechGame.upgradeGear(slot)}>{max ? 'Max' : 'Craft'}</button>
-          </div>
-        );
-      })}
-      <div className="phead" style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
-        <div><p className="psub" style={{ margin: 0 }}>Tools (gathering)</p></div>
-      </div>
-      {tools.map(([key, ico, name, perk]) => {
-        const tier = mech?.tools?.[key] || 1;
-        const cost = mechGame.toolCost(key);
-        const max = tier >= 3;
-        const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone;
-        return (
-          <div className="row" key={key}>
-            <div className="ico">{ico}</div>
-            <div className="grow">
-              <div className="name">{name} · Tier {tier}{max ? ' (max)' : ''}</div>
-              <div className="meta">{perk}{max ? '' : ` · needs 🪵${cost.wood} 🪨${cost.stone}`}</div>
-            </div>
-            <button className="rbtn" disabled={max || !afford} onClick={() => mechGame.upgradeTool(key)}>{max ? 'Max' : 'Upgrade'}</button>
-          </div>
-        );
-      })}
-      <div className="phead" style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
-        <div><p className="psub" style={{ margin: 0 }}>Refine (turn raw mats into craft goods)</p></div>
-      </div>
-      <div className="row">
-        <div className="ico">🧱</div>
-        <div className="grow"><div className="name">Smelt Ingot</div><div className="meta">3🟨 → 1🧱 · feeds weapon/armor T3+ · have {fmt(mech?.ingot || 0)}🧱</div></div>
-        <button className="rbtn" disabled={!mechGame.canSmelt()} onClick={() => mechGame.smelt()}>Smelt</button>
-      </div>
-      <div className="row">
-        <div className="ico">🧪</div>
-        <div className="grow"><div className="name">Cook Potion</div><div className="meta">2🐟 → 1🧪 · restores stamina · have {fmt(mech?.potion || 0)}🧪</div></div>
-        <button className="rbtn" disabled={!mechGame.canCook()} onClick={() => mechGame.cook()}>Cook</button>
-      </div>
-      {(mech?.potion || 0) > 0 && (
-        <div className="row" style={{ borderStyle: 'dashed' }}>
-          <div className="ico">🧪</div>
-          <div className="grow"><div className="name">Drink potion</div><div className="meta">+30 stamina now</div></div>
-          <button className="rbtn ghost" onClick={() => mechGame.drinkPotion()}>Drink</button>
-        </div>
-      )}
-    </>
-  );
-}
-
-function DisplayShop({ title, sub, rows, onClose }) {
-  return (
-    <>
-      <Head title={title} sub={sub} onClose={onClose} />
-      {rows.map(([ico, name, price], i) => (
-        <div className="row" key={i}>
-          <div className="ico">{ico}</div>
-          <div className="grow"><div className="name">{name}</div><div className="meta">{price}</div></div>
-          <button className="rbtn ghost" disabled title="Enabled with the economy pass">Soon</button>
-        </div>
-      ))}
-      <div className="empty-note">Buying here unlocks with the Bloom economy pass.</div>
-    </>
   );
 }
 
@@ -214,7 +69,7 @@ function CastlePanel({ snap, mech, mechGame, onClose, castleSkin, onCastleSkin }
         <div className="ico">🏗</div>
         <div className="grow">
           <div className="name">{max ? 'Castle — fully upgraded ★' : `Upgrade → ${TIERS[tier]}`}</div>
-          <div className="meta">{max ? 'The grandest home in the realm.' : `+storage, grander exterior · needs 🪵${cost.wood} 🪨${cost.stone}`}</div>
+          <div className="meta">{max ? 'The grandest home in the realm.' : `+storage (bigger bag), grander exterior · needs 🪵${cost.wood} 🪨${cost.stone}`}</div>
         </div>
         <button className="rbtn" disabled={max || !afford} onClick={() => mechGame.upgradeHouse()}>{max ? 'Max' : 'Upgrade'}</button>
       </div>
@@ -249,7 +104,7 @@ function CastlePanel({ snap, mech, mechGame, onClose, castleSkin, onCastleSkin }
   );
 }
 
-function DungeonPanel({ snap, onClose, onEnter }) {
+function DungeonPanel({ onClose, onEnter }) {
   return (
     <>
       <Head title="🏰 The Hollow Gate" sub="A 1-floor dungeon — friendly beasts guard the loot" onClose={onClose} />

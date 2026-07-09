@@ -11,8 +11,10 @@ import {
 } from '../src/tuning.js';
 import { SPAWN_TUNING, REWARD_TUNING } from '../src/tuning.js';
 import { publishTuning, loadActiveTuning, bootCombatTuning } from '../src/tuningRepo.js';
-import { PATH_POWER, PVP_PROFILE, PVP_TUNING } from '../src/skills.js';
-import { BESTIARY } from '../src/bestiary.js';
+import { PATH_POWER, PVP_PROFILE, PVP_TUNING, pathPower, pathSkillPower, boltDamage, SKILL_SLOTS } from '../src/skills.js';
+import { BESTIARY, ZONE_MOBS } from '../src/bestiary.js';
+import { WEAPON_TIERS, ARMOR_TIERS, weaponAtk, armorDef } from '../src/gear.js';
+import { pathMaxHp, xpForLevel, XP_LADDER } from '../src/progression.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => { if (cond) { pass++; console.log('  ✓', name, extra); } else { fail++; console.log('  ✗ FAIL:', name, extra); } };
@@ -93,6 +95,45 @@ ok('applyTuning updates spawn roster (filtered to real enemies)', SPAWN_TUNING.r
 ok('applyTuning updates global XP/Bloom multipliers', REWARD_TUNING.xpMul === 2 && REWARD_TUNING.bloomMul === 1.5);
 applyTuning({ spawn: { maxConcurrent: 999 }, rewards: { xpMul: -5 } });
 ok('spawn/reward values are clamped to safe ranges', SPAWN_TUNING.maxConcurrent <= 20 && REWARD_TUNING.xpMul >= 0);
+
+// 8b. LOOT drop tables + enemy speed + zones flow to live objects (roadmap 1–2).
+applyTuning({
+  enemies: { squirrel: { speedMs: 300, drops: [{ k: 'gem', min: 1, max: 3, p: 0.5 }, { k: 'BAD' }, { k: 'ore', min: 2, max: 1, p: 5 }] } },
+  zones: { meadow: ['squirrel', 'boar', 'ghost'] },
+});
+ok('applyTuning updates enemy speed live', BESTIARY.squirrel.speedMs === 300);
+ok('applyTuning updates loot drop table live', BESTIARY.squirrel.drops[0].k === 'gem' && BESTIARY.squirrel.drops[0].max === 3);
+ok('bad drop rows are dropped, p clamped ≤1, min≤max fixed', BESTIARY.squirrel.drops.length === 2 && BESTIARY.squirrel.drops[1].p <= 1 && BESTIARY.squirrel.drops[1].max >= BESTIARY.squirrel.drops[1].min);
+ok('applyTuning updates zone rosters (filters non-existent mobs)', ZONE_MOBS.meadow.join(',') === 'squirrel,boar');
+
+// 8c. Player-damage read: the multipliers the GAME now reads reflect the tuning.
+applyTuning({ paths: { warrior: { phy: 1.9 }, mage: { mag: 1.7 } } });
+ok('pathPower reflects applied physical × (game melee reads this)', approx(pathPower('warrior').phy, 1.9));
+const boltLike = { id: 'bolt' };
+ok('pathSkillPower reflects applied magic × (game skills read this)', pathSkillPower(boltLike, 'mage', 10) > pathSkillPower(boltLike, 'warrior', 10));
+
+// 8d. GEAR power axis (roadmap 4) — weapon ATK + armor DEF/HP flow to live tiers.
+applyTuning({ gear: { weapons: { t3: { atk: 250 } }, armor: { t3: { def: 80, hp: 1200 } } } });
+ok('applyTuning updates weapon ATK live (game reads weaponAtk)', weaponAtk(3) === 250 && WEAPON_TIERS.find(t => t.tier === 3).atk === 250);
+ok('applyTuning updates armor DEF/HP live', armorDef(3) === 80 && ARMOR_TIERS.find(t => t.tier === 3).hp === 1200);
+resetTuning();
+ok('resetTuning restores gear tiers', weaponAtk(3) === COMBAT_DEFAULTS.gear.weapons.t3.atk);
+
+// 8e. Progression (pools + XP ladder), skills (MP cost), base curves (roadmap 5–6).
+applyTuning({
+  damage: { bolt: { base: 80, perLevel: 20 } },
+  pools: { mage: { hp: 90, hpPer: 60 } },
+  xp: { base: 100, growth: 1.1 },
+  skills: { bolt: { manaCost: 4 } },
+});
+ok('applyTuning updates skill base curve (game boltDamage reads it)', boltDamage(1) === 80 && boltDamage(2) === 100);
+ok('applyTuning updates HP pool (game pathMaxHp reads it)', pathMaxHp('mage', 1) === 90);
+ok('applyTuning updates XP ladder (game xpForLevel reads it)', xpForLevel(2) === 100);
+ok('applyTuning updates skill MP cost', SKILL_SLOTS.find(s => s.id === 'bolt').manaCost === 4);
+applyTuning({ xp: { growth: 0.5 } }); // invalid — would divide by zero
+ok('XP growth clamped > 1 (no divide-by-zero)', XP_LADDER.growth > 1 && Number.isFinite(xpForLevel(50)));
+resetTuning();
+ok('resetTuning restores base curve + pool + xp + skill cost', boltDamage(1) === 40 && pathMaxHp('mage', 1) === COMBAT_DEFAULTS.pools.mage.hp && SKILL_SLOTS.find(s => s.id === 'bolt').manaCost === 1);
 
 // 9. resetTuning restores every default (no permanent drift from a bad publish).
 resetTuning();

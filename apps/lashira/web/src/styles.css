@@ -216,6 +216,82 @@ body {
 .sell-total span { color: var(--muted); font-size: 12px; font-weight: 700; }
 .sell-total b { font-size: 17px; color: #141a28; margin-left: auto; }
 .hearts { color: #e15b7a; font-size: 13px; }
+
+/* ── panel sub-tab bar (Home / Bag / Shop) ── */
+.ptabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
+.ptab {
+  flex: 1 0 auto; min-width: 58px; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 7px 8px; border-radius: 12px; cursor: pointer; font: inherit;
+  border: 1px solid var(--line); background: #fff; color: var(--muted);
+}
+.ptab span { font-size: 18px; line-height: 1; }
+.ptab small { font-size: 10px; font-weight: 800; }
+.ptab.on { border-color: var(--purple); background: var(--soft); color: var(--ink); box-shadow: 0 2px 8px rgba(106,77,245,.15); }
+
+/* ── RPG grid Bag ── */
+.bag-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.bagcell {
+  position: relative; aspect-ratio: 1; border-radius: 14px; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #f7f8fd; border: 1.5px solid var(--line); transition: transform .12s, box-shadow .12s;
+}
+.bagcell:active { transform: scale(.94); }
+.bagcell.seed { border-color: #bfe3b0; background: #f1f9ec; }
+.bagcell.produce { border-color: #f0d9a6; background: #fdf6e7; }
+.bagcell.material { border-color: #c8cede; background: #f4f6fb; }
+.bagcell.gear { border-color: #cdbdf5; background: #f6f2ff; }
+.bagcell.zero { opacity: .4; filter: grayscale(.5); }
+.bagcell.empty { background: rgba(120,120,150,.06); border-style: dashed; border-color: rgba(120,120,150,.25); cursor: default; }
+.bagcell.sel { box-shadow: 0 0 0 3px rgba(106,77,245,.35); border-color: var(--purple); }
+.bag-ic { font-size: 26px; line-height: 1; }
+.bag-n, .bag-tier {
+  position: absolute; right: 3px; bottom: 3px; min-width: 18px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: #141824; color: #fff; font-size: 10px; line-height: 16px; font-weight: 800;
+  text-align: center; border: 1px solid #ffffff66;
+}
+.bag-tier { background: #6a4df5; }
+.bag-detail {
+  display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 12px;
+  border-radius: 16px; background: #fff; border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(10,14,26,.06);
+}
+.bag-detail-ic { width: 48px; height: 48px; border-radius: 12px; background: var(--soft); display: flex; align-items: center; justify-content: center; font-size: 28px; flex: 0 0 auto; }
+.bag-detail .grow { flex: 1; }
+.bag-detail .name { font-weight: 800; font-size: 15px; }
+.bag-detail .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+/* ── gallery Shop ── */
+.gallery { display: flex; flex-direction: column; gap: 12px; }
+.gallery-stage { position: relative; display: flex; align-items: center; justify-content: center; }
+.gal-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: #fff;
+  font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink); box-shadow: 0 3px 10px rgba(10,14,26,.12);
+}
+.gal-arrow.left { left: 2px; }
+.gal-arrow.right { right: 2px; }
+.gal-arrow:active { transform: translateY(-50%) scale(.9); }
+.gal-feature {
+  width: 100%; text-align: center; padding: 20px 52px; border-radius: 18px;
+  background: linear-gradient(180deg, #faf9ff, #f3f1fb); border: 1px solid var(--line);
+}
+.gal-feature.soon { opacity: .82; }
+.gal-ic { font-size: 62px; line-height: 1; margin-bottom: 8px; }
+.gal-title { font-size: 17px; font-weight: 800; color: var(--ink); }
+.gal-badge { font-style: normal; font-size: 11px; font-weight: 800; color: #6a4df5; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #efeaff; }
+.gal-sub { color: var(--muted); font-size: 12.5px; margin: 4px 0 12px; min-height: 30px; }
+.gal-buy { min-width: 120px; }
+.gal-thumbs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; }
+.gal-thumb {
+  position: relative; flex: 0 0 auto; width: 52px; height: 52px; border-radius: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+  background: #f7f8fd; border: 1.5px solid var(--line);
+}
+.gal-thumb.on { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(106,77,245,.25); }
+.gal-thumb b {
+  position: absolute; right: -3px; top: -3px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; background: #141824; color: #fff; font-size: 9px; line-height: 17px; font-weight: 800; border: 1px solid #fff9;
+}
+
 .assign { display: flex; gap: 6px; }
 .assign .aopt { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); }
 .assign .aopt.on { border-color: var(--purple); color: var(--ink); background: var(--soft); }
@@ -658,12 +734,19 @@ body {
   border-color: var(--util-edge, #ffffffa6);
   box-shadow: 0 6px 16px -3px #000b, 0 0 12px -5px var(--util-glow, #9fb0cccc), inset 0 2px 6px #ffffff5e, inset 0 -5px 11px #00000073;
 }
-/* fan the orbs in an arc up-left of the attack button */
+/* fan the orbs in an arc up-left of the attack button (6 orbs: seed · plant-all ·
+   harvest-all · sickle · sleep · mount) */
 .small-ring .skill-circle:nth-child(1) { right: 120px; bottom: 8px; }
-.small-ring .skill-circle:nth-child(2) { right: 108px; bottom: 72px; }
-.small-ring .skill-circle:nth-child(3) { right: 62px; bottom: 118px; }
-.small-ring .skill-circle:nth-child(4) { right: 2px;  bottom: 140px; }
-.small-ring .skill-circle:nth-child(5) { right: 156px; bottom: 132px; }
+.small-ring .skill-circle:nth-child(2) { right: 116px; bottom: 62px; }
+.small-ring .skill-circle:nth-child(3) { right: 82px;  bottom: 108px; }
+.small-ring .skill-circle:nth-child(4) { right: 30px;  bottom: 138px; }
+.small-ring .skill-circle:nth-child(5) { right: 162px; bottom: 116px; }
+.small-ring .skill-circle:nth-child(6) { right: 166px; bottom: 56px; }
+/* sickle (or any util) selected → gold rim, same language as the active seed orb */
+.skill-circle.util.active {
+  background: radial-gradient(circle at 36% 28%, #ffdca6 0 6%, #f0a83a 36%, #c67d1e 72%, #8a4f0e 100%);
+  box-shadow: 0 0 0 3px rgba(240,168,58,.55), 0 6px 16px -3px #000b, inset 0 2px 6px #ffffff5e, inset 0 -5px 11px #00000073;
+}
 .attack-circle { flex-direction: column; gap: 1px; font-size: 28px; }
 .attack-circle small { position: relative; z-index: 2; font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px #000c; }
 /* obsidian skin: brighter neon ring + darker inner so the rim really glows */
@@ -699,6 +782,44 @@ body {
 }
 @keyframes seed-pop { from { opacity: 0; transform: translate(12px, 16px) scale(.94); } }
 @keyframes seed-item-in { from { opacity: 0; transform: translateY(8px) scale(.9); } }
+
+/* ── Tile fan-out — radial action menu on a tapped/long-pressed field tile ── */
+.tilefan-backdrop { position: absolute; inset: 0; z-index: 40; }
+.tilefan {
+  position: absolute; transform: translate(-50%, -50%);
+  min-width: 132px; max-width: 240px; padding: 8px;
+  display: flex; flex-direction: column; gap: 7px; align-items: stretch;
+  background: rgba(255,255,255,.86); backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,.9); border-radius: 16px;
+  box-shadow: 0 12px 30px -8px rgba(10,14,26,.4), inset 0 1px 0 #fff;
+  animation: tilefan-in .16s cubic-bezier(.2,1.3,.4,1);
+}
+@keyframes tilefan-in { from { opacity: 0; transform: translate(-50%, -46%) scale(.86); } }
+.tilefan-title { text-align: center; font-size: 11px; font-weight: 900; color: #3a4256; letter-spacing: .02em; }
+.tilefan-empty { text-align: center; font-size: 11px; font-weight: 700; color: #6a7286; padding: 2px 4px 4px; }
+.tilefan-seeds { display: grid; grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); gap: 6px; }
+.tilefan-seed {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 7px 4px 5px; border-radius: 12px; cursor: pointer;
+  background: #fff; border: 1.5px solid #e3e6ef; box-shadow: 0 3px 8px rgba(10,14,26,.08);
+}
+.tilefan-seed:active { transform: scale(.93); }
+.tilefan-seed.active { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,.2); }
+.tilefan-seed .tf-emoji { font-size: 22px; line-height: 1; }
+.tilefan-seed b {
+  position: absolute; right: -4px; top: -4px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; background: #141824; color: #fff; font-size: 9px; line-height: 17px;
+  border: 1px solid #ffffff99;
+}
+.tilefan-row { display: flex; gap: 6px; }
+.tilefan-btn {
+  flex: 1; padding: 9px 8px; border-radius: 12px; cursor: pointer; white-space: nowrap;
+  font-size: 12px; font-weight: 800; color: #fff; border: none;
+  box-shadow: 0 4px 10px -3px rgba(10,14,26,.35), inset 0 1px 0 #ffffff55;
+}
+.tilefan-btn:active { transform: scale(.94); }
+.tilefan-btn.go { background: linear-gradient(180deg, #34c759, #1f9e46); }
+.tilefan-btn.cut { background: linear-gradient(180deg, #e0885a, #b5622f); }
 
 @media (min-width: 900px) and (pointer: fine) { .cluster { transform: scale(0.86); transform-origin: bottom right; } }
 

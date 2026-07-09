@@ -16,6 +16,9 @@ export default defineConfig({
       // Shared combat system (packages/combat) — single source of truth for
       // damage/skills/monster rules, imported by BOTH the farm and Kingdom.
       '@arganta/combat': path.resolve(__dirname, '../../../packages/combat/src'),
+      // Shared character-appearance registry (packages/character) — Circle HQ is
+      // the source of truth for the default/NPC looks; both games read it.
+      '@arganta/character': path.resolve(__dirname, '../../../packages/character/src'),
     },
   },
   server: {

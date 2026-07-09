@@ -13,6 +13,15 @@ export const MONSTER_WALK_MS = 620;      // one tile of monster movement
 export const MONSTER_HIT_MS = 700;       // 'hit' flash duration before → 'stand'
 export const MONSTER_DIE_FADE_MS = 1400; // 'die' fade before the corpse is culled
 
+// Monster aggression — arena mobs chase the player and strike back (two-sided
+// combat). Attacks are TELEGRAPHED (a windup you can step out of) and armor DEF
+// mitigates the blow; a faint is a harmless knockback + heal (no loss).
+export const MONSTER_AGGRO_RANGE = 5;         // tiles: within this a mob chases you
+export const MONSTER_ATTACK_WINDUP_MS = 360;  // telegraph before the blow lands (dodge window)
+export const MONSTER_ATTACK_RECOVER_MS = 260; // recovery after a strike
+export const MONSTER_ATTACK_COOLDOWN_MS = 1100; // minimum gap between a mob's strikes
+export const MONSTER_FAINT_MS = 3000;         // player faint/knockback timeout
+
 // Player combat pools at level 1 (the base the level curves grow from).
 export const PLAYER_MAX_HP = 100;
 export const PLAYER_MAX_MP = 40;
