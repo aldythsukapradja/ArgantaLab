@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, ZONES_ANNOT, HARVEST_NODES, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -277,9 +277,19 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       // maps the presence effect populates, so a rebuild never wipes the farmer
       // back to spawn or drops everyone else out of view mid-session.
       const prev = G.current;
+      // Fresh spawn = the castle courtyard (SPAWN); nudge to the nearest open tile
+      // if that exact one is solid under the current castle skin.
+      const spawnTile = (() => {
+        const [sx, sy] = SPAWN;
+        if (!blocked.has(sx + ',' + sy)) return [sx, sy];
+        for (const [dx, dy] of [[0, 1], [0, 2], [1, 0], [-1, 0], [1, 1], [-1, 1], [0, 3]]) {
+          if (!blocked.has((sx + dx) + ',' + (sy + dy))) return [sx + dx, sy + dy];
+        }
+        return [sx, sy];
+      })();
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
-        player: prev?.player || { tile: [12, 12], from: [12, 12], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
+        player: prev?.player || { tile: [...spawnTile], from: [...spawnTile], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
         held: prev?.held || new Set(), stick: prev?.stick || null, zoom, speed, viewportW: prev?.viewportW || 0, viewportH: prev?.viewportH || 0, dpr: prev?.dpr || 1,
         actors: prev?.actors || new Map(), peerActors: prev?.peerActors || new Map(), peerWorldActors: prev?.peerWorldActors || new Map(), pendingMountCall: false,
         lastPresenceSnapshot: '', lastPresenceAt: 0,
@@ -606,8 +616,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   function doUse() {
     const g = G.current; if (!g) return;
     const p = g.player;
-    if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = performance.now(); }
     const [tx, ty] = frontTile();
+    // Facing an ore/tree node → SWING to gather (the weapon IS the tool). The front
+    // tile is adjacent by definition, so no distance check needed here.
+    const hs = hotspotAt(tx, ty);
+    if (hs && (hs.kind === 'ore' || hs.kind === 'tree')) { playSwing(g); gatherNode(g, hs); return; }
+    if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = performance.now(); }
     // Contextual (same as tapping the land): harvest ripe → plant → clear wilted.
     popHarvestResult(g, logicRef.current.tapAt(tx, ty));
   }
@@ -675,6 +689,23 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     g.player.oneShot = attackMotionBase(g);
     g.player.oneShotStart = performance.now();
   }
+  // ---- SWING-TO-GATHER: the weapon swing IS the tool. ----
+  const GATHER_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷' };
+  // Chebyshev distance from the player to a node's rect ≤ 1 (you're next to it).
+  function nodeAdjacent(g, hs) {
+    const [px, py] = g.player.tile, r = hs.rect;
+    const nx = Math.max(r.x0, Math.min(px, r.x1)), ny = Math.max(r.y0, Math.min(py, r.y1));
+    return Math.abs(px - nx) <= 1 && Math.abs(py - ny) <= 1;
+  }
+  // Mine/chop a node: chip spark on the node + a rising +yield float. mine()/chop()
+  // handle the cooldown + tier gate (they flash the reason and return null if blocked).
+  function gatherNode(g, hs) {
+    const m = mechRef.current; if (!m) return;
+    const res = hs.kind === 'ore' ? m.mine(hs) : m.chop(hs);
+    const gx = hs.rect.x0, gy = hs.rect.y0;
+    spark(g, gx, gy);
+    if (res) floatPop(g, gx, gy, Object.entries(res).map(([k, v]) => '+' + v + (GATHER_ICON[k] || '')).join(' '));
+  }
   function iAmHost(g) { return !circleId || presenceHostId(g, profile) === presenceProfileId(profile); }
   // A non-host's view of a host monster on a tile (peerWorldActors), for hitting.
   function peerMonsterAt(g, tx, ty) {
@@ -707,7 +738,13 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   function doStrike() {
     const g = G.current; if (!g) return;
     playSwing(g);
-    if (!g.combat.on) return;
+    if (!g.combat.on) {
+      // outside the arena the swing GATHERS: mine/chop a ready ore/tree in front.
+      const [ftx, fty] = frontTile();
+      const hs = hotspotAt(ftx, fty);
+      if (hs && (hs.kind === 'ore' || hs.kind === 'tree')) gatherNode(g, hs);
+      return;
+    }
     const [tx, ty] = frontTile();
     // Physical strike scaled by the path's `phy` multiplier (tunable from HQ), then
     // the equipped weapon's flat ATK on top. Warrior hits big, mage small.
@@ -1539,7 +1576,7 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (fade <= 0) return;
       const bob = m.moveT < 1 ? Math.sin(now / 90 + (m.seed || 0)) * 2 : Math.sin(now / 400 + (m.seed || 0)) * 1;
       const cx = footX, by = footY + bob;
-      const scl = m.boss ? 2.1 : 1; // the Tiger boss looms larger
+      const scl = m.boss ? 3.4 : 1; // the Tiger boss looms MUCH larger (~4 tiles)
       // colour from the bestiary (placeholder until the PixelLab sheets land).
       const body = monsterOf(m.mkind || m.kind).color || '#6fca7a';
       ctx.save(); ctx.globalAlpha = fade;
@@ -1612,8 +1649,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       const hs = hotspotAt(tx, ty); // shops/castle/dungeon/mining/forestry/fishing
       if (hs) {
         faceTo(tx, ty);
-        if (hs.kind === 'ore') mechRef.current?.mine(hs);
-        else if (hs.kind === 'tree') mechRef.current?.chop(hs);
+        if (hs.kind === 'ore' || hs.kind === 'tree') {
+          // swing to gather — but only if you're standing next to the node.
+          if (nodeAdjacent(g, hs)) { playSwing(g); gatherNode(g, hs); }
+          else mechRef.current?.flash?.('Get closer to swing');
+        }
         else if (hs.kind === 'sell') setPanel('shop');
         else setHotspot(hs);
         return;
