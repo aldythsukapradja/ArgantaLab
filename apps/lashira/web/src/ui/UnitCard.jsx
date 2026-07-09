@@ -12,7 +12,10 @@ import { IconHeart, IconMana } from '../components/HudIcons.jsx';
 const fmt = (n) => Number(n || 0).toLocaleString();
 const clampPct = (n) => Math.max(0, Math.min(100, Number(n) || 0));
 
-export function UnitCard({ card, className = '' }) {
+// `pvpHearts` (optional): a node rendered ABOVE the name row — used for the
+// chunky-hearts PvP HP display (see PvpHearts.jsx). Additive only: peer cards
+// and every non-PvP context simply don't pass it, so nothing else changes.
+export function UnitCard({ card, className = '', pvpHearts = null }) {
   if (!card) return null;
   const {
     rank, name, pathIcon, pathName, title, level,
@@ -27,6 +30,7 @@ export function UnitCard({ card, className = '' }) {
         <span className="rank-name" style={{ background: rank?.color, borderColor: rank?.color }}>{rank?.name}</span>
       </div>
       <div className="unit-main">
+        {pvpHearts}
         <div className="unit-name">
           <b className="uname" title={name}>{name}</b>
           <span className="utitle">

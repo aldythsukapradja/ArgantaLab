@@ -106,6 +106,11 @@ export function resolveStep(tables, loadout, motionName, stepIndex) {
       if (!eq?.part || !eq.sheet) continue;
       // draw each part once (substituted keys own no slot of their own)
       if (!substituted && slot !== firstSlotFor(tables, key)) continue;
+      // A gear part with no frames for this motion is skipped, not drawn wrong.
+      // This is why weapon/shield vanish during emotes — those two categories
+      // carry ZERO emote frames in the source data (confirmed: 0/15, every
+      // other slot has all 15) — treated as an intentional "sheathe to
+      // gesture," matching how most RPGs handle social emotes while armed.
       const anim = eq.part.animations?.[motionName];
       if (!anim?.length) continue;
       const fr = anim[stepIndex % anim.length];

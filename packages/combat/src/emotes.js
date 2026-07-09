@@ -8,6 +8,14 @@ export const EMOTES = ['Victory', 'Smile', 'Cry', 'Blush', 'Wink', 'Yawn', 'Slee
 export const FAVORITES_MAX = 4;
 export const DEFAULT_FAVORITE_EMOTES = ['Victory', 'Smile', 'Dance', 'Wink'];
 
+// Friendly glyph per emote for the fan-out picker's small orbs (46px circles
+// read an emoji far better than a name at that size).
+export const EMOTE_EMOJI = {
+  Victory: '🏆', Smile: '😊', Cry: '😢', Blush: '☺️', Wink: '😉', Yawn: '🥱',
+  Sleep: '😴', Surprise: '😮', Angry: '😠', Merong: '😝', Kongi: '🤔',
+  Pish: '😤', Dance: '💃', Cold: '🥶', HandToMouth: '🤭',
+};
+
 // storageKey is app-specific ('kingdom_fav_emotes' / 'lashira_fav_emotes') so each
 // app keeps its own device preference under its own existing localStorage namespace.
 export function loadFavoriteEmotes(storageKey) {

@@ -5,21 +5,23 @@
 // only the card (crest/name/HP/MP) shows persistently — no resource chips.
 // MP bar IS the farm's real energy/stamina meter (one number, not two).
 // Diamonds (the only currency) and the guardian companion live in Settings.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { computeRank } from '../net/hero.js';
 import { IconMount } from '../components/HudIcons.jsx';
 import { UnitCard, cardFromSnap, cardFromPeer } from './UnitCard.jsx';
+import { PvpHearts } from './PvpHearts.jsx';
 import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
-import { ActionCluster } from '@arganta/combat/cluster';
+import { ActionCluster, IconEmote } from '@arganta/combat/cluster';
 import { RewardToasts } from '@arganta/combat/reward';
-import { SKIN_LIST, DEFAULT_SKIN, skinOf, GameIcon } from '@arganta/combat';
+import { SKIN_LIST, DEFAULT_SKIN, skinOf, GameIcon, EMOTES, EMOTE_EMOJI, loadFavoriteEmotes, saveFavoriteEmotes } from '@arganta/combat';
 import { sfx } from '../audio/sfx.js';
 import { ambient } from '../audio/ambient.js';
 
 // chosen action-cluster skin, remembered per device.
 const SKIN_KEY = 'lashira_cluster_skin';
 const loadSkin = () => { try { return localStorage.getItem(SKIN_KEY) || DEFAULT_SKIN; } catch { return DEFAULT_SKIN; } };
+const FAV_EMOTES_KEY = 'lashira_fav_emotes';
 
 const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 const fmt = (n) => Number(n || 0).toLocaleString();
@@ -55,8 +57,43 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [favEmotes, setFavEmotes] = useState(() => loadFavoriteEmotes(FAV_EMOTES_KEY));
+  const [emoteFanOpen, setEmoteFanOpen] = useState(false);
+  const emoteFanTimerRef = useRef(0);
+  const pickFavEmotes = (list) => { setFavEmotes(list); saveFavoriteEmotes(FAV_EMOTES_KEY, list); };
+  function toggleEmoteFan() {
+    clearTimeout(emoteFanTimerRef.current);
+    setEmoteFanOpen((open) => {
+      const next = !open;
+      if (next) emoteFanTimerRef.current = setTimeout(() => setEmoteFanOpen(false), 4000);
+      return next;
+    });
+  }
+  function playEmote(name) {
+    onEmote?.(name);
+    setEmoteFanOpen(false);
+    clearTimeout(emoteFanTimerRef.current);
+  }
+  const emoteUtils = emoteFanOpen
+    ? (favEmotes.length ? favEmotes : ['Victory']).map((name, i) => ({
+        key: 'fan:' + name, icon: <span style={{ fontSize: 20 }}>{EMOTE_EMOJI[name] || '❔'}</span>,
+        onClick: () => playEmote(name), title: name, className: 'fan-item fan-item-' + (i + 1),
+      }))
+    : [{ key: 'emote', icon: <IconEmote />, onClick: toggleEmoteFan, title: 'emote (pick a favorite)', className: 'emote' }];
+  // Long-press Harvest All to toggle Sickle mode instead — folds a rarely-used
+  // persistent tool into the button players already reach for most, rather than
+  // giving it its own permanent orb.
+  const harvestPressRef = useRef({ timer: 0, longFired: false });
+  function harvestPointerDown() {
+    harvestPressRef.current.longFired = false;
+    harvestPressRef.current.timer = setTimeout(() => { harvestPressRef.current.longFired = true; toggleSickle(); }, 480);
+  }
+  function harvestPointerUp() {
+    clearTimeout(harvestPressRef.current.timer);
+    if (!harvestPressRef.current.longFired) onHarvestAll();
+  }
   const [showSeeds, setShowSeeds] = useState(false);
   const [showLive, setShowLive] = useState(false);
   const [skinId, setSkinId] = useState(loadSkin);
@@ -118,7 +155,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           The UnitCard here and each card in the live popup are the SAME
           component, so a design change updates every card at once. */}
       <div className="left-stack">
-        <UnitCard card={selfCard} />
+        <UnitCard card={selfCard} pvpHearts={battle?.pvp ? <PvpHearts hp={battle.hp} maxHp={battle.maxHp} /> : null} />
 
         {/* wallet tray, fused under the card: 🪵🪨🌸 grouped left, divider,
             💎 pinned to the right edge (learning currency, set apart). */}
@@ -137,18 +174,10 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           <button className="navbtn" onClick={() => onOpen('quests')}>📜 Quests</button>
         </div>
 
-        {(circleName || presence?.count > 0) && (
-          <div className="live-row">
-            <button type="button" className="live-pill circle" title={circleName || 'Your circle'} onClick={() => setShowLive(true)}>
-              <span className="circ-ic" aria-hidden="true" />
-              <span className="live-label">{circleName || 'Circle'}</span>
-            </button>
-            <button type="button" className="live-pill count" title="See who's in the farm now" onClick={() => setShowLive(true)}>
-              <span className="live-dot" aria-hidden="true" />
-              <span className="live-label">{presence?.count || 0} live</span>
-            </button>
-          </div>
-        )}
+        {/* Circle name + live-player status moved into Settings → Circle sync
+            (it already showed this, richer — with peer names). Tap either
+            sync-pill there to open the same "who's online" popup this used
+            to open from here. */}
       </div>
 
       {showLive && (
@@ -183,10 +212,13 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           skin={skinId}
           cooldowns={cooldownUI?.skills}
           attackCooldown={cooldownUI?.attack || 0}
-          utils={[{ key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: 'mount' }]}
+          utils={[
+            { key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: 'mount' },
+            ...emoteUtils,
+          ]}
         />
       ) : (
-      <div className="cluster" style={skinOf(skinId).vars} data-skin={skinId}>
+      <div className="cluster farm" style={skinOf(skinId).vars} data-skin={skinId}>
         {showSeeds && (
           <div className="seed-fan" aria-label="seed inventory">
             <div className="seed-fan-title">Plant</div>
@@ -218,10 +250,18 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
             <span className="tool-count">×{selectedSeedCount}</span>
           </button>
           <button type="button" className="skill-circle util" onClick={onPlantAll} title="Plant all empty soil">🌱</button>
-          <button type="button" className="skill-circle util" onClick={onHarvestAll} title="Harvest all ripe crops">🧺</button>
-          <button type="button" className={'skill-circle util' + (snap.tool === 'sickle' ? ' active' : '')} onClick={toggleSickle} title="Sickle — tap crops to remove them">🌾</button>
-          <button type="button" className="skill-circle util" onClick={onSleep} title="sleep">😴</button>
+          <button type="button" className={'skill-circle util' + (snap.tool === 'sickle' ? ' active' : '')}
+            onPointerDown={harvestPointerDown} onPointerUp={harvestPointerUp} onPointerLeave={harvestPointerUp}
+            title="Harvest all ripe crops — hold to toggle Sickle (remove instead of collect)">
+            {snap.tool === 'sickle' ? '🌾' : '🧺'}
+          </button>
           <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
+          {emoteFanOpen
+            ? favEmotes.map((name, i) => (
+                <button key={name} type="button" className={'skill-circle util fan-item fan-item-' + (i + 1)}
+                  onClick={() => playEmote(name)} title={name}>{EMOTE_EMOJI[name] || '❔'}</button>
+              ))
+            : <button type="button" className="skill-circle util emote" onClick={toggleEmoteFan} title="emote (pick a favorite)"><IconEmote /></button>}
         </div>
         <button type="button" className="attack-circle" onClick={onUse} aria-label="work the tile in front of you" title="Swing at the tile ahead — chop trees, mine ore, harvest or plant crops">
           <span>{snap.tool === 'sickle' ? '🌾' : '👐'}</span>
@@ -249,13 +289,16 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
               )}
               <section className="set-card">
                 <h4>Circle sync</h4>
+                {/* Circle name + live-player status live here now (moved off the
+                    main HUD) — tap either to open the full "who's online" popup,
+                    same as the HUD pills used to. */}
                 <div className="setrow" style={{ flexWrap: 'wrap', gap: 6 }}>
-                  <span className={'sync-pill' + (circleId ? ' on' : ' off')} title={circleId || 'no circle bound'}>
+                  <button type="button" className={'sync-pill' + (circleId ? ' on' : ' off')} title={circleId || 'no circle bound'} onClick={() => setShowLive(true)}>
                     {circleId ? '🔗 ' + (circleName || 'circle …' + String(circleId).slice(0, 6)) : '👤 personal (no circle)'}
-                  </span>
-                  <span className={'sync-pill' + ((presence?.count || 0) > 0 ? ' on' : '')} title="players broadcasting on this circle right now">
+                  </button>
+                  <button type="button" className={'sync-pill' + ((presence?.count || 0) > 0 ? ' on' : '')} title="players broadcasting on this circle right now" onClick={() => setShowLive(true)}>
                     {(presence?.count || 0) > 0 ? '🟢 ' + presence.count + ' live' + (presence.names?.[0] ? ' · ' + presence.names.join(', ') : '') : '⚪ 0 live (solo)'}
-                  </span>
+                  </button>
                   <span className="sync-pill" title="where this farm's save is going">
                     {'💾 ' + (snap.saveSource || 'unknown')}
                   </span>
@@ -318,6 +361,24 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                 <p className="settings-empty">Repaints the battle buttons (bottom-right). Each skin uses a different game-icons set — pick the look you like.</p>
               </section>
               <section className="set-card">
+                <h4>Favorite emotes <em className="set-count">{favEmotes.length}/4</em></h4>
+                <div className="emote-fav-grid">
+                  {EMOTES.map((name) => {
+                    const on = favEmotes.includes(name);
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        className={'emote-fav-chip' + (on ? ' on' : '')}
+                        disabled={!on && favEmotes.length >= 4}
+                        onClick={() => pickFavEmotes(on ? favEmotes.filter((e) => e !== name) : [...favEmotes, name])}
+                      >{name}</button>
+                    );
+                  })}
+                </div>
+                <p className="settings-empty">Pick up to 4 — tap the Emote orb (bottom-right, above Mount) to fan them out, then tap one to play it.</p>
+              </section>
+              <section className="set-card">
                 <h4>Sound</h4>
                 <div className="setrow" style={{ justifyContent: 'space-between' }}>
                   <label style={{ width: 'auto' }}>Sound effects</label>
@@ -344,6 +405,13 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
                   <input type="range" min="0" max="1" step="0.05" value={ambVol} disabled={!ambOn}
                     onChange={(e) => { const v = Number(e.target.value); setAmbVol(v); ambient.setVolume(v); }} />
                   <span>{Math.round(ambVol * 100)}%</span>
+                </div>
+              </section>
+              <section className="set-card">
+                <h4>Rest</h4>
+                <div className="setrow" style={{ justifyContent: 'space-between' }}>
+                  <label style={{ width: 'auto' }}>Sleep — refill stamina for the night</label>
+                  <button type="button" onClick={() => { onSleep?.(); setShowSettings(false); }}>😴 Sleep</button>
                 </div>
               </section>
               <section className="set-card">

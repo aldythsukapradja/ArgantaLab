@@ -575,6 +575,15 @@ body {
 /* Emote orb — stacked directly above wherever Mount sits (nth-child(5) above),
    not fan-derived, so it stays fixed regardless of util ordering. */
 .skill-circle.emote { right: 156px; bottom: 186px; }
+/* Fan-out: the 4 favorites pop up in a vertical stack directly above the orb
+   (same x, increasing bottom) — simple and collision-free against the orb,
+   mount, and each other, without needing a live-tuned radial arrangement. */
+.skill-circle.fan-item { animation: fan-pop 0.22s var(--spring) backwards; }
+.skill-circle.fan-item-1 { right: 156px; bottom: 236px; animation-delay: 0.02s; }
+.skill-circle.fan-item-2 { right: 156px; bottom: 284px; animation-delay: 0.06s; }
+.skill-circle.fan-item-3 { right: 156px; bottom: 332px; animation-delay: 0.10s; }
+.skill-circle.fan-item-4 { right: 156px; bottom: 380px; animation-delay: 0.14s; }
+@keyframes fan-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 @media (min-width: 900px) and (pointer: fine) {
   .cluster { transform: scale(0.86); transform-origin: bottom right; }

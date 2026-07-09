@@ -200,6 +200,7 @@ body {
 .rbtn:disabled { opacity: .5; cursor: default; }
 .seed-pick { display: flex; gap: 8px; flex-wrap: wrap; }
 .empty-note { color: var(--muted); font-size: 12px; padding: 8px 0; }
+.shop-msg { color: var(--ink); font-weight: 700; background: var(--soft); border-radius: 10px; padding: 7px 11px; margin: -4px 0 8px; }
 .produce-preview { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
 .produce-chip {
   display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 999px;
@@ -407,6 +408,13 @@ body {
   position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 12px; z-index: 11;
   width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; align-items: stretch;
 }
+/* PvP hearts — the big at-a-glance HP read while in the PvP arena (kid-safety:
+   chunky hearts, not a thin bar). Sits INSIDE the UnitCard, right above the
+   name row (see UnitCard's pvpHearts slot) — a compact inline row matching the
+   card's own light glass theme, not a separate floating pill. */
+.pvp-hearts { display: flex; gap: 2px; margin-bottom: 3px; }
+.pvp-heart { font-size: 13px; line-height: 1; color: rgba(20,26,40,.16); transition: color .15s, transform .15s; }
+.pvp-heart.full { color: #ff3b52; text-shadow: 0 1px 1px rgba(0,0,0,.18); }
 .quicknav {
   display: flex; gap: 2px; padding: 4px; border-radius: 16px; corner-shape: superellipse(1.8);
   color: var(--text-strong); background: var(--glass-bg);
@@ -497,8 +505,15 @@ body {
   background: rgba(120,130,150,.16); color: var(--ink, #cbd5e1);
   border: 1px solid rgba(150,160,180,.28); max-width: 100%;
   overflow: hidden; text-overflow: ellipsis; word-break: break-all;
+  font-family: inherit; cursor: default; transition: transform 0.16s var(--spring), background 0.15s ease;
 }
+/* The circle-name + live-count pills are real <button>s now (they open the
+   "who's online" popup) — everything else about .sync-pill stays informational. */
+button.sync-pill { cursor: pointer; }
+button.sync-pill:hover { background: rgba(120,130,150,.24); }
+button.sync-pill:active { transform: scale(0.96); }
 .sync-pill.on { background: rgba(34,197,94,.16); color: #16a34a; border-color: rgba(34,197,94,.34); }
+button.sync-pill.on:hover { background: rgba(34,197,94,.24); }
 .sync-pill.off { background: rgba(239,68,68,.14); color: #dc2626; border-color: rgba(239,68,68,.32); }
 
 /* Premium Settings: each section is a soft card; the header pops. */
@@ -795,6 +810,23 @@ body {
 .small-ring .skill-circle:nth-child(4) { right: 30px;  bottom: 138px; }
 .small-ring .skill-circle:nth-child(5) { right: 162px; bottom: 116px; }
 .small-ring .skill-circle:nth-child(6) { right: 166px; bottom: 56px; }
+/* Emote orb — stacked directly above Mount. The farm ring is now down to just
+   4 members (seed/plant/harvest/mount — Sickle folded into a Harvest All
+   long-press, Sleep moved to Settings), so Mount lands on the SAME nth-child(4)
+   slot in farm as it already does in battle — one shared position for both.
+   NOTE: this makes emote the ring's 5th child, colliding with the nth-child(5)
+   arc rule above — `.small-ring .skill-circle.emote` matches that rule's
+   specificity (3 simple selectors) and wins on source order (declared after it)
+   rather than relying on a losing lower-specificity override. Same reasoning
+   applies to the fan-out items below: fan-item-1/2 land on the 5th/6th slots
+   (colliding with the SAME two pre-existing rules) in both modes. */
+.small-ring .skill-circle.emote { right: 30px; bottom: 192px; }
+.small-ring .skill-circle.fan-item { animation: fan-pop 0.22s var(--spring) backwards; }
+.small-ring .skill-circle.fan-item-1 { right: 30px; bottom: 242px; animation-delay: 0.02s; }
+.small-ring .skill-circle.fan-item-2 { right: 30px; bottom: 290px; animation-delay: 0.06s; }
+.small-ring .skill-circle.fan-item-3 { right: 30px; bottom: 338px; animation-delay: 0.10s; }
+.small-ring .skill-circle.fan-item-4 { right: 30px; bottom: 386px; animation-delay: 0.14s; }
+@keyframes fan-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 /* sickle (or any util) selected → gold rim, same language as the active seed orb */
 .skill-circle.util.active {
   background: radial-gradient(circle at 36% 28%, #ffdca6 0 6%, #f0a83a 36%, #c67d1e 72%, #8a4f0e 100%);
@@ -944,6 +976,15 @@ body {
 .skin-swatch b { font-size: 12px; font-weight: 800; }
 .skin-swatch small { font-size: 10px; color: var(--muted, #6b6f8c); }
 .skin-orbs { display: flex; align-items: center; gap: 5px; color: var(--orb-ink, #fff); margin-bottom: 2px; }
+.emote-fav-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.emote-fav-chip {
+  font-size: 12px; padding: 6px 11px; border-radius: 999px; cursor: pointer; font-family: inherit;
+  border: 2px solid transparent; background: rgba(255,255,255,.55); color: var(--ink, #1f2340);
+  transition: transform .15s var(--spring), border-color .15s ease, background .15s ease;
+}
+.emote-fav-chip:hover { transform: translateY(-2px); background: rgba(255,255,255,.8); }
+.emote-fav-chip.on { border-color: #6a4df5; background: rgba(106,77,245,.12); font-weight: 700; }
+.emote-fav-chip:disabled { opacity: .4; cursor: default; transform: none; }
 .skin-orbs .so { display: grid; place-items: center; border-radius: 50%; }
 .skin-orbs .so.atk { width: 44px; height: 44px; background: var(--atk-face); border: 2px solid var(--atk-edge);
   box-shadow: 0 3px 9px -2px #0008, 0 0 11px -3px var(--atk-glow), inset 0 2px 5px #ffffff4d, inset 0 -5px 10px #00000059; }

@@ -5,6 +5,7 @@
 // non-shop landmarks.
 import { useEffect, useRef, useState } from 'react';
 import { MAT_ICON } from '../game/farm-mechanics.js';
+import { listPvpRank } from '../game/pvp-rank.js';
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 
@@ -41,7 +42,7 @@ const SKIN_FILE = {
   whimsical: 'lib/castle_opt4_whimsical.png',
 };
 
-export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, onEnterDungeon, castleSkin, onCastleSkin }) {
+export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, onEnterDungeon, castleSkin, onCastleSkin, circleId, selfId, circleMembers }) {
   if (!hotspot) return null;
   return (
     <div className="panel-scrim" onClick={onClose}>
@@ -49,6 +50,7 @@ export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, on
         {hotspot.kind === 'castle' && <CastlePanel snap={snap} mech={mech} mechGame={mechGame} onClose={onClose} castleSkin={castleSkin} onCastleSkin={onCastleSkin} />}
         {hotspot.kind === 'dungeon' && <DungeonPanel snap={snap} onClose={onClose} onEnter={onEnterDungeon} />}
         {hotspot.kind === 'dock' && <FishingPanel mechGame={mechGame} onClose={onClose} />}
+        {hotspot.kind === 'pvprank' && <PvpRankPanel circleId={circleId} selfId={selfId} circleMembers={circleMembers} onClose={onClose} />}
       </div>
     </div>
   );
@@ -152,6 +154,48 @@ function FishingPanel({ mechGame, onClose }) {
           ? <button className="rbtn" onClick={cast}>Cast 🎣</button>
           : <button className={'rbtn' + (phase === 'bite' ? '' : ' ghost')} onClick={reel}>Reel! 🐟</button>}
       </div>
+    </>
+  );
+}
+
+// Circle PvP rank board — the scoreboard prop's popup. Wins-first (tiebreak
+// win-rate then streak, matching listPvpRank's ordering); rank is JUST W/L, it
+// mints no Gold/Diamonds/XP (see pvp-concept.md §4).
+function PvpRankPanel({ circleId, selfId, circleMembers, onClose }) {
+  const [rows, setRows] = useState(null); // null = loading
+  useEffect(() => {
+    let alive = true;
+    if (!circleId) { setRows([]); return undefined; }
+    listPvpRank(circleId).then((r) => { if (alive) setRows(r); });
+    return () => { alive = false; };
+  }, [circleId]);
+
+  const nameOf = (id) => circleMembers?.find((m) => m.member_id === id)?.display_name || 'Farmer';
+  // Members with no pvp_rank row yet (0-0) still deserve a spot on the board.
+  const known = new Set((rows || []).map((r) => r.profile_id));
+  const zeros = (circleMembers || []).filter((m) => !known.has(m.member_id))
+    .map((m) => ({ profile_id: m.member_id, wins: 0, losses: 0, streak: 0 }));
+  const board = [...(rows || []), ...zeros];
+
+  return (
+    <>
+      <Head title="🏆 PvP Rank" sub="Every knockout in the arena — climb your circle's board" onClose={onClose} />
+      {rows === null && <div className="empty-note">Loading the board…</div>}
+      {rows !== null && !board.length && <div className="empty-note">Nobody's fought yet — be the first!</div>}
+      {board.map((r, i) => {
+        const total = r.wins + r.losses;
+        const rate = total ? Math.round((r.wins / total) * 100) : 0;
+        return (
+          <div className={'row' + (r.profile_id === selfId ? ' selected' : '')} key={r.profile_id}>
+            <div className="ico">{i === 0 && r.wins > 0 ? '👑' : i + 1}</div>
+            <div className="grow">
+              <div className="name">{nameOf(r.profile_id)}{r.profile_id === selfId ? ' (you)' : ''}</div>
+              <div className="meta">{r.wins}W – {r.losses}L · {rate}% win rate{r.streak > 1 ? ` · 🔥 ${r.streak} streak` : ''}</div>
+            </div>
+          </div>
+        );
+      })}
+      <div className="empty-note">Enter the PvP arena (east of the battleground) to duel — a knockout here is recorded, nothing else.</div>
     </>
   );
 }

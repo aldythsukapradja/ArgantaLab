@@ -54,10 +54,17 @@ export async function fetchHeroState() {
 export async function loadPlayerResources(spec) {
   const out = {};
   if (!spec) return out;
-  const keys = ['body', 'coat', 'face', 'hair', 'helmet', 'weapon', 'shield', 'mantle', 'shoes', 'neck', 'facedec', 'hairdec'];
+  const keys = ['body', 'coat', 'face', 'hair', 'helmet', 'weapon', 'shield', 'mantle', 'shoes', 'neck', 'facedec', 'hairdec', 'emotion'];
   await Promise.all(keys.map(async (key) => {
     try {
-      const sel = spec[key];
+      // 'emotion' (Layer.tbl slot 3, paired with face's slot 2) carries the
+      // actual visual for 13 of the 15 emotes — face itself only differs for
+      // Victory/HandToMouth. It's the SAME part-id count as face (39/39) and
+      // is never independently chosen, so no saved spec ever sets it — derive
+      // it from whichever face is equipped instead of reading it verbatim.
+      const sel = key === 'emotion'
+        ? (spec.emotion || (spec.face ? { cat: 'emotion', id: spec.face.id, palette: null } : null))
+        : spec[key];
       if (!sel || sel.id == null) return;
       const cat = sel.cat || key;
       const parts = await data.charParts(cat);

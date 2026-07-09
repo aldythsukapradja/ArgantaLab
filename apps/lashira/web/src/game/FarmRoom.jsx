@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -16,7 +16,10 @@ import {
   MONSTER_AGGRO_RANGE, MONSTER_ATTACK_WINDUP_MS, MONSTER_ATTACK_RECOVER_MS, MONSTER_ATTACK_COOLDOWN_MS, MONSTER_FAINT_MS,
   MELEE_ATTACK_COOLDOWN_MS,
   EMOTES,
+  pathPhysPower,
+  pvpMaxHp, pvpAttackCooldownMs, pvpMoveMultiplier, pvpBoltReach, rollPvpDamage, canPvpHeal, pvpHealMul,
 } from '@arganta/combat';
+import { recordPvpKo } from './pvp-rank.js';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
 import { creatureFrame } from './creature-sprites.js';
 import { loadBundledArt } from './farm-art-bundled.js';
@@ -65,6 +68,19 @@ function monsterAt(g, tx, ty, self = null) {
   return g.monsters.some((o) => o !== self && o.state !== 'die'
     && ((o.tile[0] === tx && o.tile[1] === ty)
       || (o.from && o.moveT < 1 && o.from[0] === tx && o.from[1] === ty)));
+}
+// PvP: block walking through another PLAYER's tile (mirrors monsterAt). Peers
+// are positioned from their heartbeat broadcast (a beat laggier than local
+// monster state), so this is "don't visually overlap", not pixel-perfect —
+// good enough for a duel to feel real. Scoped to the PvP zone only (farm-wide
+// would add unwanted friction to two family members farming side by side).
+function peerPlayerBlockedAt(g, tx, ty) {
+  const now = performance.now();
+  for (const a of g.peerActors.values()) {
+    const t = actorTileAt(a, now).map(Math.round);
+    if (t[0] === tx && t[1] === ty) return true;
+  }
+  return false;
 }
 const chebyshev = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
 function faceToward(from, to) {
@@ -259,8 +275,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   const [presence, setPresence] = useState({ count: 0, names: [], peers: [] });
   const [kickedBy, setKickedBy] = useState(null); // session singleton: newer login elsewhere
   const [daySplash, setDaySplash] = useState(null); // shared New Day banner (local sleep, peer intent, or adopted snapshot)
-  const [battle, setBattle] = useState({ on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP }); // mirror of g.combat for the HUD
-  const battleRef = useRef({ on: false, hp: PLAYER_MAX_HP });
+  const [battle, setBattle] = useState({ on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, pvp: false }); // mirror of g.combat/g.pvp for the HUD
+  const battleRef = useRef({ on: false, hp: PLAYER_MAX_HP, pvp: false });
   const lastDayEventRef = useRef(0);
   const splashTimerRef = useRef(0);
   const heroPresenceKey = heroSpecKey(hero?.spec);
@@ -360,6 +376,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         // atkReadyAt/skillReadyAt = performance.now() timestamps when spammable
         // actions become usable again (rate-limit gates, not animation lengths).
         combat: prev?.combat || { on: false, hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, deadUntil: 0, atkReadyAt: 0, skillReadyAt: [0, 0, 0] },
+        // PvP (the zone's own ruleset, layered on top of combat.on): `on` tracks
+        // being inside the PvP sub-rectangle specifically; healsUsed is the
+        // per-duel Mend counter (resets whenever you (re)enter the zone).
+        pvp: prev?.pvp || { on: false, healsUsed: 0 },
         monsters: prev?.monsters || [], monsterSeed: 1, fx: prev?.fx || [], nextMonsterSpawn: 0,
         effectsAll: effectsAll || {}, spellFx: prev?.spellFx || [], battleSkills: battleSkillsRef.current,
         floats: prev?.floats || [], // floating "+1 🥬" harvest-juice pops
@@ -468,6 +488,21 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       }
       if (intent?.t === 'spell') { // a peer cast a skill — show its VFX here too
         const g = G.current; if (g) spawnSpellFx(g, intent.fx, intent.tile);
+        return;
+      }
+      if (intent?.t === 'pvp-hit') {
+        // Victim-authoritative: I apply damage to MY OWN hp whenever it's aimed
+        // at me. Deliberately NOT also re-checking my own g.pvp.on here — the
+        // ATTACKER already verified they were in the zone before this was ever
+        // sent (that's the real gate), and re-checking on the receiving end too
+        // was found to silently swallow EVERY hit (melee AND skills) whenever
+        // the two clients' zone-state read even a beat out of sync — a pure
+        // false-negative risk with no real anti-cheat value in a trusted circle.
+        if (intent.targetId !== presenceProfileId(profile)) return;
+        const g = G.current; if (!g) return;
+        const dmg = Number(intent.dmg) || 0;
+        if (dmg > 0) g.combat.hp = Math.max(0, g.combat.hp - dmg);
+        if (g.combat.hp <= 0) pvpFaintPlayer(g, intent.by); else syncBattleState(g);
         return;
       }
       logicRef.current?.applyIntent?.(intent);
@@ -714,6 +749,16 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   }
   function doPlantAll() { logicRef.current?.plantAll?.(); }
   function doSleep() { logicRef.current?.sleep(); }
+  // Plays a bare (non-directional) emote motion via the SAME oneShot mechanism
+  // as the attack swing / Get animation — never interrupts one already playing.
+  // Local-only for now (peers don't see it yet — Lashira's presence sync doesn't
+  // broadcast oneShot at all today, unlike Kingdom's arena; a real follow-up).
+  function doEmote(name) {
+    const g = G.current; if (!g) return;
+    const p = g.player;
+    if (p.oneShot) return;
+    p.oneShot = name; p.oneShotStart = performance.now();
+  }
   // Dungeon v1: the Hollow Gate drops you into the battleground arena (existing
   // combat). Real instanced floor + Tiger boss + loot-on-clear is a follow-up.
   function enterDungeon() {
@@ -824,9 +869,14 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   function doStrike() {
     const g = G.current; if (!g) return;
     const now = performance.now();
+    // PvP gets its own per-path attack speed (rogue fast/small, warrior slow/big
+    // — its whole identity per the balance research); everywhere else keeps the
+    // flat PvE cooldown.
+    const cdMs = g.pvp.on ? pvpAttackCooldownMs(playerPath()) : MELEE_ATTACK_COOLDOWN_MS;
     if (now < (g.combat.atkReadyAt || 0)) return; // still on cooldown — spamming does nothing
-    g.combat.atkReadyAt = now + MELEE_ATTACK_COOLDOWN_MS;
+    g.combat.atkReadyAt = now + cdMs;
     playSwing(g);
+    if (g.pvp.on) { pvpStrike(g); return; }
     if (!g.combat.on) {
       // outside the arena the swing GATHERS: mine/chop a ready ore/tree in front.
       const [ftx, fty] = frontTile();
@@ -883,6 +933,122 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     presenceCtrlRef.current?.sendIntent?.({ t: 'mob-hit', id: a.sourceId, dmg, by: presenceProfileId(profile) });
     return true;
   }
+  // ---------- PvP: player-vs-player, entirely separate from the monster-combat
+  // code above (kept untouched) so PvE can't regress. Victim-authoritative, same
+  // trust posture as monster hits: the attacker computes the (already variance-
+  // rolled) damage and SENDS it — never touches the target's HP directly. The
+  // victim applies it to their own g.combat.hp on the receiving end (applyIntent
+  // 'pvp-hit', below) and reports their own KO (pvp_record_ko). ----------
+  // A peer player standing on (tx,ty), with a rounded current tile for matching.
+  function peerPlayerAt(g, tx, ty) {
+    const now = performance.now();
+    for (const [id, a] of g.peerActors) {
+      const t = actorTileAt(a, now).map(Math.round);
+      if (t[0] === tx && t[1] === ty) return { id, actor: a, tile: t };
+    }
+    return null;
+  }
+  // Every peer currently standing inside the PvP rectangle (for Storm's "all",
+  // and Bolt's within-reach fallback).
+  function peerPlayersInPvp(g) {
+    const now = performance.now();
+    const out = [];
+    for (const [id, a] of g.peerActors) {
+      const t = actorTileAt(a, now).map(Math.round);
+      if (inPvp(t[0], t[1])) out.push({ id, actor: a, tile: t });
+    }
+    return out;
+  }
+  // Broadcast a PvP hit to a specific peer + local feedback (spark/float/sfx) at
+  // their current rendered spot. I never touch their HP — they apply it to
+  // themselves on the other end.
+  function pvpHitPeer(g, targetId, dmg, crit, miss) {
+    if (!targetId) return;
+    presenceCtrlRef.current?.sendIntent?.({ t: 'pvp-hit', targetId, dmg, by: presenceProfileId(profile) });
+    const a = g.peerActors.get(targetId);
+    if (a) {
+      const [px, py] = entityPx(a);
+      spark(g, Math.round(px / TILE), Math.round(py / TILE));
+      g.floats.push({ x: px + TILE / 2, y: py + TILE - 26, text: miss ? 'MISS' : (crit ? '💥' : '') + '-' + dmg, start: performance.now(), ttl: 820 });
+    }
+    sfx.play(miss ? 'swing' : 'hit');
+  }
+  // Basic PvP strike: the faced tile, path-scaled physical + weapon ATK, with
+  // hit variance (spread/crit/miss) — the balance research's per-path DPS model
+  // (warrior = one big slow hit, rogue = a fast flurry) lives in the per-path
+  // cooldown, not here; this is just "how hard does one hit land".
+  function pvpStrike(g) {
+    const p = g.player;
+    const [tx, ty] = frontTile();
+    // Prefer the exact faced tile, but fall back to ANY adjacent tile (8
+    // directions, incl. diagonals) — remote players are positioned from their
+    // last heartbeat broadcast, a beat laggier than local monster state, so
+    // requiring exact cardinal alignment made melee whiff almost constantly.
+    let target = peerPlayerAt(g, tx, ty);
+    if (!target) {
+      let bd = Infinity;
+      for (const t of peerPlayersInPvp(g)) {
+        const d = chebyshev(p.tile, t.tile);
+        if (d <= 1 && d < bd) { bd = d; target = t; }
+      }
+    }
+    if (!target) { spark(g, tx, ty); logicRef.current?.flash?.('⚔ No one in range'); return; }
+    const path = playerPath();
+    const L = logicRef.current?._level?.() ?? 1;
+    const base = playerDamage(pathPhysPower(path, L));
+    const { dmg, crit, miss } = rollPvpDamage(base);
+    pvpHitPeer(g, target.id, dmg, crit, miss);
+  }
+  // PvP skill cast: Bolt (short capped reach — unlimited range was the balance
+  // sim's #1 fairness-breaker, letting casters kite melee to 0% wins), Storm
+  // (every peer currently in the zone), Mend (self, capped — see canPvpHeal).
+  function pvpCast(g, i, skill) {
+    const p = g.player;
+    const path = playerPath();
+    const L = logicRef.current?._level?.() ?? 1;
+    if (skill.type === 'heal') {
+      const hpFrac = g.combat.maxHp ? g.combat.hp / g.combat.maxHp : 1;
+      if (!canPvpHeal(hpFrac, g.pvp.healsUsed || 0)) { logicRef.current?.flash?.('Mend only works below 30% HP (2 per duel)'); return; }
+      const healed = Math.round(pathSkillPower(skill, path, L) * pvpHealMul(path));
+      g.pvp.healsUsed = (g.pvp.healsUsed || 0) + 1;
+      g.combat.hp = Math.min(g.combat.maxHp, g.combat.hp + healed);
+      castSpell(g, skill, p.tile);
+      syncBattleState(g);
+      logicRef.current?.flash?.('Mend +' + healed + ' HP');
+      return;
+    }
+    const baseDmg = playerDamage(pathSkillPower(skill, path, L));
+    const selfId = presenceProfileId(profile);
+    if (skill.target === 'all') { // Storm — every OTHER peer in the PvP zone
+      const targets = peerPlayersInPvp(g).filter((t) => t.id !== selfId);
+      if (!targets.length) { logicRef.current?.flash?.('✷ No one else in the arena'); return; }
+      for (const t of targets) {
+        const { dmg, crit, miss } = rollPvpDamage(baseDmg);
+        castSpell(g, skill, t.tile);
+        pvpHitPeer(g, t.id, dmg, crit, miss);
+      }
+      return;
+    }
+    // Bolt — capped reach straight ahead; else the nearest peer within reach.
+    const reach = pvpBoltReach();
+    let target = null;
+    for (let d = 1; d <= reach && !target; d++) {
+      const [dx, dy] = DELTA[p.facing];
+      target = peerPlayerAt(g, p.tile[0] + dx * d, p.tile[1] + dy * d);
+    }
+    if (!target) {
+      let bd = Infinity;
+      for (const t of peerPlayersInPvp(g)) {
+        if (t.id === selfId) continue;
+        const d = chebyshev(p.tile, t.tile);
+        if (d <= reach && d < bd) { bd = d; target = t; }
+      }
+    }
+    if (!target) { spark(g, ...frontTile()); logicRef.current?.flash?.('✦ Out of range'); return; } // nobody within reach
+    const { dmg, crit, miss } = rollPvpDamage(baseDmg);
+    castSpell(g, skill, target.tile);
+    pvpHitPeer(g, target.id, dmg, crit, miss);
+  }
   // Skill i — Bolt (single), Storm (all), Mend (heal). MP = stamina; damage/heal
   // scale with level via the shared skillPower. Damage still routes through the
   // host referee (host applies; a non-host sends mob-hit intents).
@@ -899,6 +1065,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     if (cost > 0 && !logicRef.current?.spendStamina(cost)) return;
     g.combat.skillReadyAt[i] = now + Number(skill.cdMs || 1000);
     playSwing(g);
+    if (g.pvp.on) { pvpCast(g, i, skill); return; }
     const p = g.player;
     const L = logicRef.current?._level?.() ?? 1;
 
@@ -1075,11 +1242,17 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       e.seed = (e.seed * 1664525 + 1013904223) >>> 0;
       return e.seed / 4294967296;
     }
+    // Kin auto-water/auto-harvest — TEMPORARILY DISABLED (2026-07-09, user request):
+    // right now this runs continuously in real time with no cap, which is a real
+    // exploit vector (unattended, unlimited free crop upkeep). Re-enable once it's
+    // gated to once/day. Kins with a task assigned still exist, they just wander
+    // like an idle Kin until this flips back on.
+    const AUTO_KIN_TASK_ENABLED = false;
     function moveChoice(g, e) {
       let target = null;
       if (e.kind === 'mount' && e.mode === 'called') {
         target = g.player.tile;
-      } else if (e.kind === 'kin' && e.kin?.task) {
+      } else if (AUTO_KIN_TASK_ENABLED && e.kind === 'kin' && e.kin?.task) {
         const plots = logicRef.current?.state?.plots || {};
         for (const [key, plot] of Object.entries(plots)) {
           if (!plot?.cropId) continue;
@@ -1190,8 +1363,12 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     function step(now) {
       const g = G.current; if (!g) return; const p = g.player;
       // mounted moves faster (WALK_MS * 0.6); the Settings speed slider (1x-3x)
-      // divides the walk time so higher = faster.
-      const walkMs = (p.mounted ? WALK_MS * 0.6 : WALK_MS) / (g.speed || 1);
+      // divides the walk time so higher = faster. In the PvP zone specifically,
+      // each path also gets its own move speed (rogue closes fastest, mage/poet
+      // are meant to kite) — a fairness lever from the balance research, not a
+      // farm-wide change.
+      const pvpMoveMul = g.pvp?.on ? pvpMoveMultiplier(logicRef.current?.path || 'warrior') : 1;
+      const walkMs = (p.mounted ? WALK_MS * 0.6 : WALK_MS) / (g.speed || 1) / pvpMoveMul;
       if (p.moveT < 1) p.moveT = Math.min(1, (now - p.moveStart) / walkMs);
       else if (!p.oneShot) {
         const dir = heldDirection(g);
@@ -1199,13 +1376,18 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           if (p.facing !== dir) { p.facing = dir; p.turnHoldDir = dir; p.turnHoldStart = now; }
           else if (!(p.turnHoldDir === dir && now - p.turnHoldStart < 90)) {
             const [dx, dy] = DELTA[dir]; const nx = p.tile[0] + dx, ny = p.tile[1] + dy;
-            // body-block: map collision OR a live monster tile (no overlapping mobs).
-            if (!blockedAt(g, nx, ny) && !monsterAt(g, nx, ny)) { p.from = [...p.tile]; p.tile = [nx, ny]; p.moveT = 0; p.moveStart = now; }
+            // body-block: map collision OR a live monster tile (no overlapping mobs)
+            // OR, in the PvP zone, another player's tile (no overlapping duelists).
+            if (!blockedAt(g, nx, ny) && !monsterAt(g, nx, ny) && !(g.pvp?.on && peerPlayerBlockedAt(g, nx, ny))) {
+              p.from = [...p.tile]; p.tile = [nx, ny]; p.moveT = 0; p.moveStart = now;
+            }
             p.turnHoldDir = null;
           }
         } else { p.turnHoldDir = null; }
       }
-      if (p.oneShot && now - p.oneShotStart > 480) p.oneShot = null;
+      // Emotes get a longer window than a quick attack/work swing (480ms) — a
+      // social gesture needs enough time to actually read as one.
+      if (p.oneShot && now - p.oneShotStart > (EMOTES.includes(p.oneShot) ? 2200 : 480)) p.oneShot = null;
       stepWorldActors(g, now);
       stepPeerActors(g, now);
       stepBattle(g, now);
@@ -1215,16 +1397,19 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
 
     // ---------- battle mode ----------
     function monsterRand(g) { g.monsterSeed = (g.monsterSeed * 1664525 + 1013904223) >>> 0; return g.monsterSeed / 4294967296; }
+    // Monsters spawn/roam only in the BATTLEGROUND (arena minus the PvP
+    // rectangle) — the PvP arena is player-only, so a duel never turns into an
+    // unplanned three-way with a wandering boar.
     function arenaOpenTile(g) {
       for (let i = 0; i < 60; i++) {
-        const tx = ARENA.x0 + Math.floor(monsterRand(g) * (ARENA.x1 - ARENA.x0 + 1));
-        const ty = ARENA.y0 + Math.floor(monsterRand(g) * (ARENA.y1 - ARENA.y0 + 1));
+        const tx = BATTLEGROUND.x0 + Math.floor(monsterRand(g) * (BATTLEGROUND.x1 - BATTLEGROUND.x0 + 1));
+        const ty = BATTLEGROUND.y0 + Math.floor(monsterRand(g) * (BATTLEGROUND.y1 - BATTLEGROUND.y0 + 1));
         if (blockedAt(g, tx, ty)) continue;
         if (g.player.tile[0] === tx && g.player.tile[1] === ty) continue;
         if (g.monsters.some((m) => m.tile[0] === tx && m.tile[1] === ty)) continue;
         return [tx, ty];
       }
-      return [ARENA.x0 + 1, ARENA.y0 + 1];
+      return [BATTLEGROUND.x0 + 1, BATTLEGROUND.y0 + 1];
     }
     function spawnArenaMonster(g, now) {
       const tile = arenaOpenTile(g);
@@ -1243,14 +1428,26 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     function stepBattle(g, now) {
       const p = g.player;
       // Local battle mode follows MY position (each client toggles its own HUD).
-      const on = inArena(p.tile[0], p.tile[1]) && (!g.combat.deadUntil || now > g.combat.deadUntil);
-      if (on !== g.combat.on) {
+      const faintGate = !g.combat.deadUntil || now > g.combat.deadUntil;
+      const on = inArena(p.tile[0], p.tile[1]) && faintGate;
+      // The PvP sub-rectangle's own ruleset, layered on top of `on` (pvpOn implies
+      // on, since PVP ⊂ ARENA geometrically) — fair-model HP, not the PvE pool.
+      const pvpOn = on && inPvp(p.tile[0], p.tile[1]);
+      if (on !== g.combat.on || pvpOn !== g.pvp.on) {
+        const wasPvp = g.pvp.on;
         g.combat.on = on;
-        if (on) { // size the HP pool to the hero's level + path, FULL on entry
+        g.pvp.on = pvpOn;
+        if (on) {
+          // (Re)entering combat OR crossing the PvP boundary while already in
+          // combat — resize the HP pool to whichever ruleset we're in now and
+          // refill, so both a fresh arena entry and a PvP boundary cross feel
+          // like a clean slate (the init hp was a flat 100 that never refilled
+          // to the level-scaled max — the old "HP = 100" bug).
           const lg = logicRef.current;
-          g.combat.maxHp = pathMaxHp(lg?.path || 'warrior', lg?._level?.() ?? 1);
-          g.combat.hp = g.combat.maxHp; // enter at full HP — the init hp was a flat
-          // 100 that never refilled to the level-scaled max (the "HP = 100" bug).
+          const path = lg?.path || 'warrior', level = lg?._level?.() ?? 1;
+          g.combat.maxHp = pvpOn ? pvpMaxHp(path, level) : pathMaxHp(path, level);
+          g.combat.hp = g.combat.maxHp;
+          if (pvpOn && !wasPvp) g.pvp.healsUsed = 0; // fresh duel counter
         }
         syncBattleState(g);
       }
@@ -1270,8 +1467,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       g.fx = g.fx.filter((f) => now - f.start < f.ttl);
     }
     function syncBattleState(g) {
-      const next = { on: g.combat.on, hp: g.combat.hp, maxHp: g.combat.maxHp };
-      if (battleRef.current.on !== next.on || battleRef.current.hp !== next.hp) {
+      const next = { on: g.combat.on, hp: g.combat.hp, maxHp: g.combat.maxHp, pvp: g.pvp.on };
+      if (battleRef.current.on !== next.on || battleRef.current.hp !== next.hp || battleRef.current.pvp !== next.pvp) {
         battleRef.current = next; setBattle(next);
       }
     }
@@ -1304,7 +1501,9 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       const dir = aggro ? faceToward(m.tile, p.tile) : Object.keys(DELTA)[Math.floor(monsterRand(g) * 4)];
       const [dx, dy] = DELTA[dir]; const nx = m.tile[0] + dx, ny = m.tile[1] + dy;
       m.facing = dir;
-      if (inArena(nx, ny) && !blockedAt(g, nx, ny) && !(nx === p.tile[0] && ny === p.tile[1]) && !monsterAt(g, nx, ny, m)) {
+      // Monsters never cross into the PvP rectangle (even mid-chase) — it's
+      // player-only, so fleeing there is a safe "no monsters allowed" retreat.
+      if (inArena(nx, ny) && !inPvp(nx, ny) && !blockedAt(g, nx, ny) && !(nx === p.tile[0] && ny === p.tile[1]) && !monsterAt(g, nx, ny, m)) {
         m.from = [...m.tile]; m.tile = [nx, ny]; m.moveT = 0; m.moveStart = now;
       }
       m.nextWander = now + (aggro ? 130 : 700 + monsterRand(g) * 1700); // chase faster than idle
@@ -1332,6 +1531,15 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       g.floats.push({ x: safe[0] * TILE + TILE / 2, y: safe[1] * TILE, text: '💫 Fainted! Recovering…', start: performance.now(), ttl: 1600 });
       sfx.play('faint');
       g.combat.on = false; syncBattleState(g);
+    }
+    // PvP faint = kid-safe, same knockback/heal/timeout treatment as a monster
+    // faint (no loss) — the one thing that IS recorded is the KO itself, onto
+    // the circle rank (the victim reports it; see pvp-concept.md §4 for why
+    // that's the right trust posture for a family/friend circle).
+    function pvpFaintPlayer(g, winnerId) {
+      faintPlayer(g, performance.now());
+      g.pvp.on = false; // faintPlayer already ejects the player out of the arena
+      if (winnerId && circleId) recordPvpKo({ circleId, winnerId });
     }
 
     function entityPx(e) {
@@ -1366,9 +1574,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       const p = g.player;
       if (g.heroOk) {
         // oneShot holds the motion BASE ('Get' for farm work, a weapon swing for
-        // an attack). Fall back to the idle/walk motion if the hero has no frames
-        // for that base — so an attack never freezes on a missing animation.
-        const oneShotMotion = p.oneShot ? p.oneShot + p.facing : null;
+        // an attack, or a bare EMOTE name with no facing suffix). Fall back to
+        // the idle/walk motion if the hero has no frames for that base — so an
+        // attack (or emote) never freezes on a missing animation.
+        const oneShotMotion = p.oneShot ? (EMOTES.includes(p.oneShot) ? p.oneShot : p.oneShot + p.facing) : null;
         const hasOne = !!oneShotMotion && stepCount(g.tables, oneShotMotion) > 0;
         const motion = hasOne ? oneShotMotion : playerMotion(g);
         const n = stepCount(g.tables, motion);
@@ -2000,7 +2209,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         )}
         {snap && (
           <>
-            <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onOpen={(name) => { if (name === 'shop') setShopTab('seeds'); setPanel(name); }}
+            <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onEmote={doEmote} onOpen={(name) => { if (name === 'shop') setShopTab('seeds'); setPanel(name); }}
               zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill} cooldownUI={cooldownUI}
@@ -2014,7 +2223,12 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
             )}
             <HotspotPanels hotspot={hotspot} snap={snap} game={logicRef.current} mech={mechSnap}
               mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon}
-              castleSkin={castleSkin} onCastleSkin={setCastleSkin} />
+              castleSkin={castleSkin} onCastleSkin={setCastleSkin}
+              circleId={homeCircleId} selfId={profile?.id} circleMembers={circleMembers} />
+            {/* Note: the rank BOARD reads homeCircleId (viewable from any farm scope
+                — personal/visit/circle); actual PvP combat still requires being on
+                the shared circle farm (circleId truthy) since that's the only scope
+                with peers on the realtime channel to fight. */}
           </>
         )}
         {daySplash && (

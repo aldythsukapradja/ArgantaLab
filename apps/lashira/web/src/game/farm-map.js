@@ -121,6 +121,9 @@ export const HOTSPOTS = [
   { kind: 'sell', id: 'market', rect: { x0: 30, y0: 16, x1: 31, y1: 17 } },
   { kind: 'dungeon', id: 'dungeon', ported: false, rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
   { kind: 'dock', id: 'dock', rect: { x0: 9, y0: 35, x1: 12, y1: 36 } },
+  // the scoreboard prop already sits inside the PvP rectangle — the natural
+  // spot for the circle rank board (tap it to see who's winning).
+  { kind: 'pvprank', id: 'pvprank', rect: { x0: 48, y0: 34, x1: 48, y1: 35 } },
 ];
 
 // ── HARVEST NODES: ore (Mine, tx45-59) + trees (Forest grove, tx37-44) mapped onto
@@ -156,6 +159,7 @@ export function hotspotAt(tx, ty) {
 const HOTSPOT_LABEL = {
   castle: '🏰 Castle', seed: '🌱 Seed Shop', general: '🛒 General Store', smith: '⚒️ Blacksmith',
   animal: '🐮 Animal Shop', cosmetic: '🎀 Cosmetics', market: '💰 Market', dungeon: '⚔️ Dungeon', dock: '🎣 Fishing',
+  pvprank: '🏆 PvP Rank',
 };
 const PEN_LABEL = { cow: '🐄 Cow Pasture', sheep: '🐑 Sheep Pen', chicken: '🐔 Chicken Coop' };
 function markerLabel(h) {
@@ -169,7 +173,7 @@ export const HOTSPOT_MARKERS = (() => {
   m.push({ x: (FIELD.x0 + FIELD.x1 + 1) / 2, y: (FIELD.y0 + FIELD.y1 + 1) / 2, ported: true, label: '🌾 Farm' });                 // farm
   for (const [k, p] of Object.entries(PENS)) m.push({ x: (p.x0 + p.x1 + 1) / 2, y: (p.y0 + p.y1 + 1) / 2, ported: true, label: PEN_LABEL[k] || k }); // animals
   m.push({ x: (ARENA.x0 + PVP.x0) / 2, y: (ARENA.y0 + ARENA.y1 + 1) / 2, ported: true, label: '🗡️ Battleground' });               // battleground
-  m.push({ x: (PVP.x0 + PVP.x1 + 1) / 2, y: (PVP.y0 + PVP.y1 + 1) / 2, ported: false, label: '🏟️ PvP Arena' });                   // pvp
+  m.push({ x: (PVP.x0 + PVP.x1 + 1) / 2, y: (PVP.y0 + PVP.y1 + 1) / 2, ported: true, label: '🏟️ PvP Arena' });                   // pvp
   return m;
 })();
 
@@ -436,6 +440,16 @@ const ONTOP = [
 export function inArena(tx, ty) {
   return tx >= ARENA.x0 && tx <= ARENA.x1 && ty >= ARENA.y0 && ty <= ARENA.y1;
 }
+// The PvP sub-rectangle specifically (right portion of the martial band) — for
+// the fair player-vs-player ruleset (see @arganta/combat pvp.js). Monsters are
+// kept OUT of this rectangle (see spawnArenaMonster in FarmRoom.jsx) so PvP
+// reads as its own arena, not "fight a boar while also dueling a friend".
+export function inPvp(tx, ty) {
+  return tx >= PVP.x0 && tx <= PVP.x1 && ty >= PVP.y0 && ty <= PVP.y1;
+}
+// Battleground = the arena band MINUS the PvP rectangle — where monsters
+// spawn/roam (PvE only).
+export const BATTLEGROUND = { x0: ARENA.x0, y0: ARENA.y0, x1: PVP.x0 - 1, y1: ARENA.y1 };
 
 // Per-frame: draw tilled soil + crop for one plot at world coords.
 function leaf(ctx, x, y, flip = 1) {

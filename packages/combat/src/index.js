@@ -14,4 +14,5 @@ export * from './skins.js';
 export * from './tuning.js';
 export * from './tuningRepo.js';
 export * from './emotes.js';
+export * from './pvp.js';
 export { GameIcon } from './icons/Icon.jsx';

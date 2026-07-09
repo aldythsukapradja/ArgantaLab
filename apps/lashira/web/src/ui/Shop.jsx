@@ -3,12 +3,18 @@
 // swap ◀ ▶, with a thumbnail strip below. The featured card's action adapts
 // (Buy / Craft / Upgrade / Sell). Merges the old quicknav Shop + the on-map
 // merchant popups; tapping a shop building deep-links here via `initialTab`.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CROPS } from '../data/crops.js';
 import { SPECIES } from '../data/livestock.js';
 import { MAT_ICON } from '../game/farm-mechanics.js';
 import { weaponOf, armorOf } from '@arganta/combat';
 import { QtyDialog } from './QtyDialog.jsx';
+import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem } from '../net/cosmetics.js';
+
+const COSMETIC_ICON = { helmet: '⛑', coat: '🧥', sword: '⚔', shield: '🛡' };
+const cosmeticStatLine = (it) => [
+  it.atk ? `⚔+${it.atk} ATK` : null, it.def ? `🛡+${it.def} DEF` : null, it.hp ? `❤+${it.hp} HP` : null,
+].filter(Boolean).join(' · ');
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 const cur = (snap) => (snap?.bloom ?? snap?.gold ?? 0);
@@ -28,13 +34,52 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   const [idx, setIdx] = useState(0);
   const [buying, setBuying] = useState(null); // crop with an open qty dialog
 
+  // 🛍️ Cosmetics — shared with HQ's Character Forge Shop (same catalog + ownership
+  // tables, same Supabase project: migration_character_shop.sql). Loaded once per
+  // Shop open (this panel mounts fresh each time). diamondOverride keeps the header
+  // in sync right after a buy without needing to touch FarmLogic's own diamonds field.
+  const [shopCatalog, setShopCatalog] = useState([]);
+  const [ownedCosmetics, setOwnedCosmetics] = useState(new Set());
+  const [cosmeticBusy, setCosmeticBusy] = useState(null);
+  const [cosmeticMsg, setCosmeticMsg] = useState(null);
+  const [diamondOverride, setDiamondOverride] = useState(null);
+  useEffect(() => {
+    let live = true;
+    Promise.all([loadShopCatalog(), loadOwnedCosmetics()]).then(([cat, owned]) => {
+      if (live) { setShopCatalog(cat); setOwnedCosmetics(owned); }
+    });
+    return () => { live = false; };
+  }, []);
+  async function buyCosmetic(item) {
+    if (ownedCosmetics.has(item.itemKey) || cosmeticBusy) return;
+    setCosmeticBusy(item.itemKey); setCosmeticMsg(null);
+    const r = await buyCosmeticItem(item.itemKey);
+    setCosmeticMsg(r.message);
+    if (r.ok) { setOwnedCosmetics((o) => new Set(o).add(item.itemKey)); if (r.balance != null) setDiamondOverride(r.balance); }
+    setCosmeticBusy(null);
+  }
+  async function wearCosmetic(item) {
+    if (cosmeticBusy) return;
+    setCosmeticBusy(item.itemKey); setCosmeticMsg(null);
+    const r = await equipCosmeticItem(item.itemKey);
+    if (r.ok) {
+      setCosmeticMsg('Equipped! Reloading to show your new look…');
+      setTimeout(() => window.location.reload(), 900);
+    } else {
+      setCosmeticMsg(r.message); setCosmeticBusy(null);
+    }
+  }
+
   const op = cur(snap) === Infinity;
   const money = op ? Infinity : Number(cur(snap));
+  const diamonds = diamondOverride ?? snap.diamonds;
 
   // Build the ware list for the active tab. Each ware: { icon, title, sub, badge?,
   // action: { label, disabled, tone?, onClick } | null }.
-  const wares = useMemo(() => buildWares(tab, { snap, game, mech, mechGame, op, money, setBuying }),
-    [tab, snap, mech, op, money]); // eslint-disable-line react-hooks/exhaustive-deps
+  const wares = useMemo(() => buildWares(tab, {
+    snap, game, mech, mechGame, op, money, setBuying,
+    shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic,
+  }), [tab, snap, mech, op, money, shopCatalog, ownedCosmetics, cosmeticBusy, diamonds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const safeIdx = wares.length ? Math.min(idx, wares.length - 1) : 0;
   const feat = wares[safeIdx] || null;
@@ -44,7 +89,7 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   return (
     <>
       <div className="phead">
-        <div><h2>🛒 Market Row</h2><p className="psub">You have 🌸 {op ? '∞' : fmt(money)} · 💎 {fmt(snap.diamonds)}</p></div>
+        <div><h2>🛒 Market Row</h2><p className="psub">You have 🌸 {op ? '∞' : fmt(money)} · 💎 {fmt(diamonds)}</p></div>
         <button className="xbtn" onClick={onClose}>✕</button>
       </div>
 
@@ -55,6 +100,8 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
           </button>
         ))}
       </div>
+
+      {cosmeticMsg && tab === 'cosmetics' && <div className="empty-note shop-msg">{cosmeticMsg}</div>}
 
       {!wares.length ? (
         <div className="empty-note">{tab === 'sell' ? 'Your bag has nothing to sell yet — harvest some crops.' : 'Nothing here yet.'}</div>
@@ -102,6 +149,7 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
 
 function buildWares(tab, ctx) {
   const { snap, game, mech, mechGame, op, money, setBuying } = ctx;
+  const { shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic } = ctx;
 
   if (tab === 'seeds') {
     return Object.values(CROPS).map((c) => {
@@ -137,11 +185,24 @@ function buildWares(tab, ctx) {
   }
 
   if (tab === 'cosmetics') {
-    return [
-      ['🎩', 'Farmer hat', 'A dapper look', '💎 5'],
-      ['🌈', 'Rainbow trail', 'Sparkle as you walk', '💎 8'],
-      ['🏰', 'Castle skins', 'Restyle your home (in Home)', 'free'],
-    ].map(([icon, title, sub, price], i) => ({ key: 'c' + i, icon, title, sub, soon: true, action: { label: price, disabled: true, tone: 'ghost', onClick: () => {} } }));
+    // Shared with HQ's Character Forge Shop — same catalog + ownership, same
+    // Supabase project. Buy spends diamonds; Wear equips it onto YOUR character
+    // (patches one composer-spec slot, reloads to show it — see net/cosmetics.js).
+    const gear = shopCatalog.map((it) => {
+      const owned = ownedCosmetics.has(it.itemKey);
+      const afford = diamonds >= it.price;
+      const busy = cosmeticBusy === it.itemKey;
+      const action = owned
+        ? { label: busy ? 'Wearing…' : 'Wear', disabled: busy, onClick: () => wearCosmetic(it) }
+        : { label: busy ? 'Buying…' : `Buy 💎${fmt(it.price)}`, disabled: busy || !afford, tone: afford ? undefined : 'ghost', onClick: () => buyCosmetic(it) };
+      return {
+        key: it.itemKey, icon: COSMETIC_ICON[it.cat] || '✨',
+        title: `${it.setLabel || it.cat} #${it.partId}`, badge: owned ? 'Owned' : undefined,
+        sub: cosmeticStatLine(it) || 'Cosmetic', action,
+      };
+    });
+    gear.push({ key: 'castle', icon: '🏰', title: 'Castle skins', sub: 'Restyle your home (in Home)', soon: true, action: { label: 'free', disabled: true, tone: 'ghost', onClick: () => {} } });
+    return gear;
   }
 
   if (tab === 'sell') {

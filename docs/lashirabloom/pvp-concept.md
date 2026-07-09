@@ -1,8 +1,48 @@
 # LashiraBloom — PvP Arena Concept (SIMPLE model + per-path damage)
 
-Status: **CONCEPT + first code landed.** Dated 2026-07-08. Rewritten to the owner's
-simple spec (2026-07-08). Companion to the [map manifest](./map-and-asset-manifest.md)
+Status: **BUILT 2026-07-09** (full fairness model, per §8.3's answer). Dated
+2026-07-08, built the day after. Companion to the [map manifest](./map-and-asset-manifest.md)
 (zone + economy) and [systems architecture](./mmorpg-architecture.md).
+
+## BUILD NOTES (2026-07-09)
+All 6 steps in §7 are done. What actually landed, file by file:
+- `packages/combat/src/pvp.js` (NEW): `pvpMaxHp`, `pvpAttackCooldownMs`,
+  `pvpMoveMultiplier` (normalized to warrior=1.0x), `pvpBoltReach`,
+  `rollPvpDamage` (spread/crit/miss), `canPvpHeal`, `pvpHealMul` — all consuming
+  the already-tuned PATH_POWER/PVP_PROFILE/PVP_TUNING unchanged.
+- `farm-map.js`: `inPvp(tx,ty)` + `BATTLEGROUND` (arena minus the PvP rect) —
+  monsters now spawn/chase ONLY in battleground, never crossing into PvP even
+  mid-chase. New `pvprank` hotspot at the existing scoreboard prop tile.
+- `FarmRoom.jsx`: `g.pvp = {on, healsUsed}` layered on `g.combat`; `stepBattle`
+  resizes HP to `pvpMaxHp` (not the PvE pool) on any PvP-boundary cross and
+  resets the heal counter; `step()` applies the per-path move multiplier only
+  in PvP; `doStrike`/`doSkill` delegate to new `pvpStrike`/`pvpCast` when
+  `g.pvp.on` (PvE monster-combat code path left 100% untouched — zero risk of
+  regression); new `peerPlayerAt`/`peerPlayersInPvp` target peers instead of
+  monsters; victim-authoritative `pvp-hit` intent (attacker sends, victim
+  applies to their OWN hp, matching §6 exactly); `pvpFaintPlayer` reuses the
+  monster-faint knockback/heal treatment + calls `pvp_record_ko`.
+- `supabase/migration_lashira_pvp.sql` (NEW, NOT yet run): `pvp_rank` table
+  (member-readable, no direct writes) + `pvp_record_ko(p_circle,p_winner)` —
+  called by the DOWNED player, increments both rows in one trip.
+- `game/pvp-rank.js` (NEW): client wrappers (`recordPvpKo`, `listPvpRank`).
+- `ui/PvpHearts.jsx` (NEW) + `Hud.jsx`: 5-heart chunky HP display, shown
+  alongside (not replacing) the normal UnitCard while `battle.pvp` is true.
+- `ui/HotspotPanels.jsx`: `PvpRankPanel` — wins-first board (tiebreak win-rate
+  then streak), includes 0-0 members who haven't fought yet.
+- Verified: pure fairness-math checked via a standalone script (warrior 876 HP
+  vs mage 584 at L10 ✓, warrior 1100ms/rogue 690ms attack cooldown ✓, move
+  multipliers 1.0/1.13/0.67 ✓, Bolt capped at 2 ✓, heal gate ✓, damage variance
+  ~7.5% miss/~11% crit over 5000 rolls, both near the ~8%/~12% targets).
+  `npm run build` clean; combat tests 50/50. Live-verified via `window.__G` +
+  synthetic keydown (same technique as the earlier attack-cooldown check): with
+  `g.pvp.on` forced true, the attack cooldown measured ~1040ms — the per-path
+  PvP value (1100 for warrior), NOT the flat PvE 550ms — confirming the branch
+  actually fires end-to-end. **NOT dual-client tested** — this sandbox can't
+  drive two independent peers; the victim-authoritative sync design mirrors
+  the already-proven monster peer-hit pattern exactly, but a real two-device
+  duel is the one thing only a live playtest can confirm.
+- Migration NOT yet run in Supabase (same convention as prior migrations).
 
 The earlier two-tier (Friendly + cross-circle Ranked + server-adjudication) design is
 **dropped** — see §9 for what was cut and why. This is the whole thing now.

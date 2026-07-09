@@ -106,16 +106,65 @@ create table person_cosmetic_items (
 -- (buy_cosmetic_item(p_item_key) — same shape as buy_mount())
 ```
 
-## 6. Build order (when approved)
+## 6. Mirroring into LashiraBloom (concept — confirmed: same Supabase project)
 
-1. Migration: `shop_cosmetic_catalog` + `person_cosmetic_items` + `buy_cosmetic_item()`,
-   seeded with the 40 rows above (mirrors `migration_mounts.sql` 1:1).
-2. `CharacterForge.tsx`: add the Shop tab + `ShopBrowser` component (gallery-style,
-   reuse `PartThumb` from `PartBrowser.tsx` for real sprite previews).
-3. `PartBrowser.tsx`: lock state for un-owned catalog items (🔒 + CTA), read from
-   `person_cosmetic_items`.
-4. `heroData.ts`: `loadOwnedCosmetics()` / `buyCosmeticItem()` client calls.
-5. Verify: buy flow (balance check, insufficient-funds path, already-owned path),
-   locked→unlocked handoff into the Lab picker, spec still round-trips to
-   Kingdom/LashiraBloom unchanged (diamonds/stats are metadata, not new spec fields —
-   the composer spec shape (`{cat,id,palette}`) doesn't change).
+Both apps point at the same project (`bdagdxgpnlialkppjwor` — checked `.env.local` in
+each), so `shop_cosmetic_catalog` and `person_cosmetic_items` are **already** one shared
+truth, not something to sync. Change a price in Supabase → both apps see it on next
+load. Buy an item from either surface → `buy_cosmetic_item()` records it once, both
+surfaces see it owned. No extra plumbing needed for catalog + ownership.
+
+**The one real gap: equipping.** The only thing that currently writes a player's
+composer spec (`hq_character_save`, `migration_hq_character_admin.sql`) is gated on
+`hq_is_operator()` — a normal LashiraBloom player has no self-service door to actually
+*wear* a purchase, only to own it. Closing that needs one new, narrow RPC:
+
+```sql
+-- equip_cosmetic_item(p_item_key) — mirrors equip_mount()'s safety shape: verifies
+-- ownership, patches exactly ONE slot in the spec (never a full rewrite), writes the
+-- same synced_spec_json/draft_spec_json/appearance_json.spec fields hq_character_save
+-- already writes (per its own comment: written to all three so every reader,
+-- including kingdom_get_player_state(), sees it). Callable by any authenticated
+-- player for their OWN character — not operator-gated.
+```
+
+Slot mapping (catalog `cat` → composer spec key, from `composer.ts` SLOT_DEFS):
+`helmet→spec.helmet`, `sword→spec.weapon` (weapon's `cat` field stays `'sword'`),
+`shield→spec.shield`, `coat→spec.coat` **+ reset `spec.body` to skin id 0 if it's
+currently an armor-body id** — same rule `pickArmor()` already applies in the Lab, or a
+bought coat can render invisible under a full armor-body sprite.
+
+**UI landing spot:** `apps/lashira/web/src/ui/Shop.jsx`'s existing **Cosmetics** tab —
+currently a stub (`🎩 Farmer hat 💎 5`, not wired to real items). Replace its wares with
+`shop_cosmetic_catalog` rows, gate Buy/Wear on `my_cosmetic_items`, call
+`buy_cosmetic_item` (identical to HQ) and the new `equip_cosmetic_item` for Wear. Same
+gallery shape the tab already has (featured item + thumbnail strip) — no new UI pattern.
+
+## 7. Build order
+
+### HQ side — DONE (built this pass)
+1. ✅ Migration `migration_character_shop.sql`: `shop_cosmetic_catalog` +
+   `person_cosmetic_items` + `buy_cosmetic_item()` + `my_cosmetic_items()`, seeded with
+   the 40 rows above (mirrors `migration_mounts.sql` 1:1). **Not yet run against the
+   live database** — needs a paste-and-run in Supabase → SQL Editor.
+2. ✅ `CharacterForge.tsx`: Shop tab + `Shop.tsx` (gallery-style, reuses `PartThumb`
+   from `PartBrowser.tsx` for real sprite previews).
+3. ✅ `PartBrowser.tsx`: lock state for un-owned catalog items (🔒 + CTA), read from
+   `my_cosmetic_items` for whichever roster user is selected.
+4. ✅ `heroData.ts`: `loadShopCatalog()` / `loadOwnedCosmetics()` / `buyCosmeticItem()`
+   / `getMyDiamondBalance()` client calls.
+5. ⬜ Verify against the live DB once the migration is run: buy flow (balance check,
+   insufficient-funds path, already-owned path), locked→unlocked handoff into the Lab
+   picker. `tsc` + `vite build` both pass; UI-only smoke test done in offline mode
+   (tabs render, Shop shows the "not deployed yet" message pre-migration, as designed).
+
+### LashiraBloom side — next (this session's latest ask)
+6. ⬜ New migration: `equip_cosmetic_item(p_item_key)` RPC (§6) — ownership-gated,
+   patches one spec slot, writes `synced_spec_json`/`draft_spec_json`/
+   `appearance_json.spec` together (same fields `hq_character_save` writes).
+7. ⬜ `apps/lashira/web/src/ui/Shop.jsx`: replace the Cosmetics tab's stub wares with
+   real `shop_cosmetic_catalog` rows + Buy (`buy_cosmetic_item`, same RPC as HQ) + Wear
+   (`equip_cosmetic_item`, new).
+8. ⬜ Verify: buy in LashiraBloom → shows owned in HQ's Shop tab (and vice versa,
+   same `person_cosmetic_items` row); Wear in LashiraBloom → the equipped part renders
+   immediately (spec change flows through `kingdom_get_player_state` on next load).

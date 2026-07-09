@@ -30,6 +30,21 @@ export function guestProfile(name, role) {
   };
 }
 
+// Diamonds are a REAL server-authoritative column (migration_character_shop.sql's
+// buy_cosmetic_item checks it for real) — unlike Bloom/stamina, which are pure
+// client-local state and can just read as Infinity for the operator. So the
+// operator's "everything free" treatment here is a real top-up RPC
+// (migration_operator_diamonds.sql), re-verified server-side from the JWT — not
+// a client flag. Fire-and-forget; on success, use ITS returned balance so the
+// UI shows it immediately instead of waiting on a stale read.
+async function topUpOperatorDiamonds(fallback) {
+  try {
+    const { data, error } = await supabase.rpc('grant_operator_diamonds');
+    if (!error && data?.ok) return Number(data.balance);
+  } catch { /* migration not deployed yet — fall through */ }
+  return fallback;
+}
+
 async function loadProfileRow(userId, fallbackName, role, email) {
   const operator = isOperatorEmail(email);
   // Try to read the real profile; tolerate RLS / missing columns.
@@ -40,6 +55,7 @@ async function loadProfileRow(userId, fallbackName, role, email) {
       .eq('id', userId)
       .maybeSingle();
     if (data) {
+      const diamonds = operator ? await topUpOperatorDiamonds(data.diamonds ?? 0) : (data.diamonds ?? 0);
       return {
         id: data.id,
         guest: false,

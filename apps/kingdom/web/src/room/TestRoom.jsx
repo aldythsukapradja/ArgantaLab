@@ -18,7 +18,7 @@ import {
   ATTACK_BY_WEAPON, MELEE_DAMAGE, PVP_DAMAGE, MONSTER_WALK_MS,
   normalizeSkills, resolveMelee, tickMonsterState, monsterExpired,
   SKILL_SLOTS, resolveSkillSingle, resolveSkillAll, applyHeal, skillPower,
-  EMOTES, loadFavoriteEmotes, saveFavoriteEmotes,
+  EMOTES, EMOTE_EMOJI, loadFavoriteEmotes, saveFavoriteEmotes,
 } from '@arganta/combat';
 import { ActionCluster, IconEmote } from '@arganta/combat/cluster';
 
@@ -146,8 +146,17 @@ export default function TestRoom({ spec, account, onPlayerState }) {
   const [showSettings, setShowSettings] = useState(false);
   const [skills, setSkills] = useState(() => normalizeSkills(spec.skills));
   const [favEmotes, setFavEmotes] = useState(() => loadFavoriteEmotes(FAV_EMOTES_KEY));
-  const emoteIdxRef = useRef(0);
+  const [emoteFanOpen, setEmoteFanOpen] = useState(false);
+  const emoteFanTimerRef = useRef(0);
   const pickFavEmotes = (list) => { setFavEmotes(list); saveFavoriteEmotes(FAV_EMOTES_KEY, list); };
+  function toggleEmoteFan() {
+    clearTimeout(emoteFanTimerRef.current);
+    setEmoteFanOpen((open) => {
+      const next = !open;
+      if (next) emoteFanTimerRef.current = setTimeout(() => setEmoteFanOpen(false), 4000);
+      return next;
+    });
+  }
   // Camera zoom: default 1×, but remembered per character (the Camera slider in
   // settings writes it back). So each hero keeps its own preferred framing.
   const zoomKey = account?.character?.id ? `kingdom-zoom:${account.character.id}` : null;
@@ -235,10 +244,17 @@ export default function TestRoom({ spec, account, onPlayerState }) {
   }, [zoom, zoomKey]);
 
   async function loadPlayerResources(spec_) {
-    const keys = ['body', 'coat', 'face', 'hair', 'helmet', 'weapon', 'shield', 'mantle', 'shoes', 'neck', 'facedec', 'hairdec'];
+    const keys = ['body', 'coat', 'face', 'hair', 'helmet', 'weapon', 'shield', 'mantle', 'shoes', 'neck', 'facedec', 'hairdec', 'emotion'];
     const out = {};
     await Promise.all(keys.map(async (key) => {
-      const sel = spec_[key];
+      // 'emotion' (Layer.tbl slot 3, paired with face's slot 2) carries the
+      // actual visual for 13 of the 15 emotes — face itself only differs for
+      // Victory/HandToMouth. It's the SAME part-id count as face (39/39) and
+      // is never independently chosen, so no saved spec ever sets it — derive
+      // it from whichever face is equipped instead of reading it verbatim.
+      const sel = key === 'emotion'
+        ? (spec_.emotion || (spec_.face ? { cat: 'emotion', id: spec_.face.id, palette: null } : null))
+        : spec_[key];
       if (!sel || sel.id == null) return;
       const cat = sel.cat || key;
       const parts = await data.charParts(cat);
@@ -411,15 +427,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
     }
   }
   function doTake() { startOneShot('Get'); }
-  function doEmote(name) { startOneShot(name); }
-  // The orb cycles through the player's own favorites (Settings), so one tap
-  // always plays a DIFFERENT emote than the last tap rather than repeating one.
-  function cycleEmote() {
-    const list = favEmotes.length ? favEmotes : ['Victory'];
-    const name = list[emoteIdxRef.current % list.length];
-    emoteIdxRef.current = (emoteIdxRef.current + 1) % list.length;
-    doEmote(name);
-  }
+  function doEmote(name) { startOneShot(name); setEmoteFanOpen(false); clearTimeout(emoteFanTimerRef.current); }
   function toggleMount() {
     const g = G.current; if (!g) return;
     g.player.mounted = !g.player.mounted && !!g.player.resources.mount;
@@ -609,7 +617,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
       else if (k === 'r') toggleMount();
       else if (k === ' ') { doAttack(); e.preventDefault(); }   // Space = attack
       else if (k === 'e') doTake();
-      else if (k === 'q') cycleEmote();
+      else if (k === 'q') toggleEmoteFan();
       else if (k === '1' || k === '2' || k === '3') doSkill(Number(k) - 1);
     }
     function up(e) {
@@ -1083,7 +1091,12 @@ export default function TestRoom({ spec, account, onPlayerState }) {
           utils={[
             { key: 'take', icon: <IconHand />, onClick: doTake, title: 'take / crouch' },
             { key: 'mount', icon: <IconMount />, onClick: toggleMount, title: 'mount' },
-            { key: 'emote', icon: <IconEmote />, onClick: cycleEmote, title: 'emote (cycles your favorites)', className: 'emote' },
+            ...(emoteFanOpen
+              ? (favEmotes.length ? favEmotes : ['Victory']).map((name, i) => ({
+                  key: 'fan:' + name, icon: <span style={{ fontSize: 20 }}>{EMOTE_EMOJI[name] || '❔'}</span>,
+                  onClick: () => doEmote(name), title: name, className: 'fan-item fan-item-' + (i + 1),
+                }))
+              : [{ key: 'emote', icon: <IconEmote />, onClick: toggleEmoteFan, title: 'emote (pick a favorite)', className: 'emote' }])
           ]}
         />
       </div>
@@ -1140,7 +1153,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
                 ))}
               </section>
               <section>
-                <h4>Favorite emotes <small>({favEmotes.length}/4 — the Emote orb cycles these)</small></h4>
+                <h4>Favorite emotes <small>({favEmotes.length}/4 — tap the Emote orb to fan these out)</small></h4>
                 <div className="emote-fav-grid">
                   {EMOTES.map((name) => {
                     const on = favEmotes.includes(name);
@@ -1155,7 +1168,7 @@ export default function TestRoom({ spec, account, onPlayerState }) {
                     );
                   })}
                 </div>
-                <p className="settings-empty">Pick up to 4 — tap the Emote orb (bottom-right) or press Q to cycle through them.</p>
+                <p className="settings-empty">Pick up to 4 — tap the Emote orb (bottom-right) or press Q to fan them out, then tap one to play it.</p>
               </section>
               <section>
                 <h4>Camera</h4>
