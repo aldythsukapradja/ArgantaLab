@@ -25,6 +25,7 @@ import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compo
 import { effects as loadEffects, effectSheetUrl, loadImage as loadEffectImage } from '../engine/data.js';
 import { Hud } from '../ui/Hud.jsx';
 import { Panels } from '../ui/Panels.jsx';
+import { TileFan } from '../ui/TileFan.jsx';
 import { CROPS, cropIsRipe } from '../data/crops.js';
 import { SPECIES, animalGoodReady } from '../data/livestock.js';
 
@@ -199,6 +200,14 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
   const [hotspot, setHotspot] = useState(null);   // shop/castle/dungeon/dock popup
+  const [tileFan, setTileFan] = useState(null);   // radial tile action menu (plant/harvest/sickle)
+  // Harvest-juice pop for actions taken from the tile fan (render scope, so it
+  // can't reach the effect-local floatPop — pushes straight to G.current.floats).
+  const popFanResult = (r) => {
+    const g = G.current; if (!g || !r) return;
+    const list = Array.isArray(r.harvested) ? r.harvested : (r.emoji ? [{ tx: r.tx, ty: r.ty, emoji: r.emoji }] : []);
+    for (const h of list) g.floats.push({ x: h.tx * TILE + TILE / 2, y: h.ty * TILE + TILE - 22, text: '+' + (h.emoji || '🌾'), start: performance.now(), ttl: 950 });
+  };
   const [mechSnap, setMechSnap] = useState(null); // mechanics store snapshot (materials/tools/house)
   const mechRef = useRef(null);
   const [showLegend, setShowLegend] = useState(true); // labelled-overlay legend
@@ -610,8 +619,11 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     if (g.floats.length > 40) g.floats.shift();
   }
   function popHarvestResult(g, res) {
-    if (res?.harvested && res.bloom != null) floatPop(g, res.tx, res.ty, '+' + res.bloom + ' 🌸');
-    else if (Array.isArray(res?.harvested)) for (const h of res.harvested) floatPop(g, h.tx, h.ty, '+' + (h.bloom ?? 1) + ' 🌸');
+    if (!res) return;
+    // Bulk harvest → a pop at each tile; single harvest → one pop. Harvest now
+    // yields the crop ITEM (into the bag), so the juice shows the crop emoji.
+    if (Array.isArray(res.harvested)) { for (const h of res.harvested) floatPop(g, h.tx, h.ty, '+' + (h.emoji || '🌾')); return; }
+    if (res.emoji && res.tx != null) floatPop(g, res.tx, res.ty, '+' + res.emoji);
   }
   function doUse() {
     const g = G.current; if (!g) return;
@@ -680,8 +692,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
   // 'Get' pickup only if it has no attack frames at all — so it never "bows").
   function attackMotionBase(g) {
     const facing = g.player.facing;
-    for (const base of ['Swing', 'Attack', 'Pierce', 'Shoot']) {
-      if (stepCount(g.tables, base + facing) > 0) return base;
+    if (g.tables) { // no hero motion tables (guest / hero not loaded yet) → 'Get' pickup
+      for (const base of ['Swing', 'Attack', 'Pierce', 'Shoot']) {
+        if (stepCount(g.tables, base + facing) > 0) return base;
+      }
     }
     return 'Get';
   }
@@ -1659,7 +1673,15 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
         return;
       }
       if (tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1) {
-        popHarvestResult(g, logicRef.current?.tapAt(tx, ty)); faceTo(tx, ty); return;
+        faceTo(tx, ty);
+        const lg = logicRef.current;
+        const plot = lg?.state?.plots?.[tx + ',' + ty];
+        const ripe = !!(plot?.cropId && cropIsRipe(plot));
+        // HYBRID: sickle tool or a ripe crop = instant action (fast path);
+        // an empty/growing tile fans out the action menu at the tap point.
+        if (lg?.state?.tool === 'sickle' || ripe) { popHarvestResult(g, lg?.tapAt(tx, ty)); return; }
+        setTileFan({ x: clientX - rect.left, y: clientY - rect.top, tx, ty });
+        return;
       }
       let best = null, bestD = 1.3;
       for (const a of g.actors.values()) {
@@ -1671,21 +1693,39 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
       if (best) { logicRef.current?.tapAnimal(best.livestockId); faceTo(best.tile[0], best.tile[1]); }
     }
 
+    // Open the tile fan on ANY field tile (used by long-press — gives the full
+    // menu, including Harvest/Sickle on a ripe tile that a plain tap would fast-path).
+    function openFieldFan(clientX, clientY) {
+      const g = G.current; if (!g || !g.cam || g.combat.on) return false;
+      const rect = canvas.getBoundingClientRect();
+      const tx = Math.floor((g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE);
+      const ty = Math.floor((g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE);
+      if (!(tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1)) return false;
+      setTileFan({ x: clientX - rect.left, y: clientY - rect.top, tx, ty });
+      return true;
+    }
+
     // ---------- unified pointer input: drag = move, tap = interact ----------
     // A press-and-drag ANYWHERE on the canvas is a floating joystick (trackpad +
-    // touch friendly — this is the "trackpad logic"); a quick tap interacts.
+    // touch friendly — this is the "trackpad logic"); a quick tap interacts; a
+    // press held still (~450ms) long-presses → full tile fan-out.
     let ptr = null;
     const DRAG_DEAD = 12; // px of movement before a press counts as a drag
+    const LONGPRESS_MS = 450;
     function onPointerDown(e) {
       if (e.button != null && e.button !== 0) return;
-      ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false };
+      ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false, longFired: false, lpTimer: 0 };
       try { canvas.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
+      const px = e.clientX, py = e.clientY, self = ptr;
+      self.lpTimer = window.setTimeout(() => {
+        if (ptr === self && !self.dragging && openFieldFan(px, py)) self.longFired = true;
+      }, LONGPRESS_MS);
     }
     function onPointerMove(e) {
       if (!ptr || e.pointerId !== ptr.id) return;
       const dx = e.clientX - ptr.x0, dy = e.clientY - ptr.y0;
       const dist = Math.hypot(dx, dy);
-      if (!ptr.dragging && dist > DRAG_DEAD) ptr.dragging = true;
+      if (!ptr.dragging && dist > DRAG_DEAD) { ptr.dragging = true; window.clearTimeout(ptr.lpTimer); }
       if (!ptr.dragging) return;
       const g = G.current; if (!g) return;
       const mag = Math.min(1, dist / 66);           // full tilt at ~66px drag
@@ -1695,11 +1735,12 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
     }
     function onPointerUp(e) {
       if (!ptr || e.pointerId !== ptr.id) return;
-      const wasDrag = ptr.dragging; const { x0, y0 } = ptr;
+      window.clearTimeout(ptr.lpTimer);
+      const wasDrag = ptr.dragging; const longFired = ptr.longFired; const { x0, y0 } = ptr;
       ptr = null;
       const g = G.current; if (g) { g.stick = null; g.stickUI = null; }
       try { canvas.releasePointerCapture(e.pointerId); } catch { /* noop */ }
-      if (!wasDrag) onTapInteract(x0, y0); // it was a tap, not a move
+      if (!wasDrag && !longFired) onTapInteract(x0, y0); // it was a tap, not a move or long-press
     }
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
@@ -1765,6 +1806,10 @@ export default function FarmRoom({ profile, hero, circleId = null }) {
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
             <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechRef.current} onClose={() => setPanel(null)} />
+            {tileFan && (
+              <TileFan fan={tileFan} game={logicRef.current} snap={snap}
+                onResult={popFanResult} onClose={() => setTileFan(null)} />
+            )}
             <HotspotPanels hotspot={hotspot} snap={snap} game={logicRef.current} mech={mechSnap}
               mechGame={mechRef.current} onClose={() => setHotspot(null)} onEnterDungeon={enterDungeon}
               castleSkin={castleSkin} onCastleSkin={setCastleSkin} />

@@ -83,6 +83,9 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
     game.setSeed(id);
     setShowSeeds(false);
   };
+  // Sickle is a persistent tool selection: on = taps remove crops; toggling off
+  // returns to the seed/plant tool.
+  const toggleSickle = () => game.setTool(snap.tool === 'sickle' ? 'seed' : 'sickle');
 
   return (
     <>
@@ -159,7 +162,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           utils={[{ key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: 'mount' }]}
         />
       ) : (
-      <div className="cluster">
+      <div className="cluster" style={skinOf(skinId).vars} data-skin={skinId}>
         {showSeeds && (
           <div className="seed-fan" aria-label="seed inventory">
             <div className="seed-fan-title">Plant</div>
@@ -192,11 +195,12 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onOpen, zoom, s
           </button>
           <button type="button" className="skill-circle util" onClick={onPlantAll} title="Plant all empty soil">🌱</button>
           <button type="button" className="skill-circle util" onClick={onHarvestAll} title="Harvest all ripe crops">🧺</button>
+          <button type="button" className={'skill-circle util' + (snap.tool === 'sickle' ? ' active' : '')} onClick={onToggleSickle} title="Sickle — tap crops to remove them">🌾</button>
           <button type="button" className="skill-circle util" onClick={onSleep} title="sleep">😴</button>
           <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
         </div>
-        <button type="button" className="attack-circle" onClick={onUse} aria-label="work the tile in front of you" title="Harvest / plant the tile ahead — or just tap the land">
-          <span>👐</span>
+        <button type="button" className="attack-circle" onClick={onUse} aria-label="work the tile in front of you" title="Swing at the tile ahead — chop trees, mine ore, harvest or plant crops">
+          <span>{snap.tool === 'sickle' ? '🌾' : '👐'}</span>
         </button>
       </div>
       )}
