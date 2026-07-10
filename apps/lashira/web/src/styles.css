@@ -912,6 +912,31 @@ button.sync-pill.on:hover { background: rgba(34,197,94,.24); }
   display: grid; grid-template-columns: repeat(3, 68px); gap: 8px; justify-content: center;
   animation: seed-pop .18s ease;
 }
+
+.realm-room canvas { background: #5f9f61; }
+.realm-settings {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  z-index: 12;
+}
+.realm-cluster {
+  --atk-face: radial-gradient(circle at 36% 28%, #fff2c7 0 8%, var(--realm-color, #7c6cff) 42%, #42316f 100%);
+  --atk-glow: color-mix(in srgb, var(--realm-color, #7c6cff) 72%, #ffffff 28%);
+}
+.realm-cluster .attack-circle {
+  font-size: 13px;
+  line-height: 1.05;
+  text-align: center;
+  padding: 0 10px;
+}
+.realm-cluster .attack-circle span {
+  position: relative;
+  z-index: 2;
+  max-width: 74px;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 3px #000c;
+}
 .seed-fan-title { grid-column: 1 / -1; color: #5c6478; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
 .seed-fan-item {
   position: relative; width: 68px; height: 58px; border: 1px solid #dfe3ef; border-radius: 15px;

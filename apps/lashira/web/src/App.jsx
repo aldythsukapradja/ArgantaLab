@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import Welcome from './ui/Welcome.jsx';
 import CharacterGate from './ui/CharacterGate.jsx';
 import FarmRoom from './game/FarmRoom.jsx';
+import RealmMapRoom from './game/RealmMapRoom.jsx';
 import { currentProfile, profileForUser, onAuth, signOut } from './net/account.js';
 import { useHostSupabase } from './net/supabase.js';
 import { fetchHeroState } from './net/hero.js';
+import { loadOpenworldState } from './game/openworld-save.js';
 
 // Dual-mode, mirroring Kingdom Heroes:
 //   • standalone (no props)      -> own Welcome/login.
@@ -28,6 +30,8 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
   const [heroChecked, setHeroChecked] = useState(false);
   const [playAnyway, setPlayAnyway] = useState(false);
   const lastAppliedUserId = useRef(null);
+  const [worldScope, setWorldScope] = useState(null);
+  const [hqSpawn, setHqSpawn] = useState(null);
 
   // Multi-farm scope — reachable via the in-game Travel picker (Home hub).
   // Default stays the CIRCLE farm (unchanged landing for the real, family-used
@@ -81,6 +85,22 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     return () => { alive = false; };
   }, [profile?.id, profile?.guest]);
 
+  useEffect(() => {
+    if (!profile || profile.guest) return undefined;
+    let alive = true;
+    loadOpenworldState(profile, null)
+      .then(({ data }) => {
+        if (!alive || !data?.currentRealmId) return;
+        setWorldScope({
+          realmId: data.currentRealmId,
+          hqTile: data.hqTile || null,
+          hqFacing: data.hqFacing || 'South',
+        });
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [profile?.id, profile?.guest]);
+
   if (import.meta.env.DEV) window.__appState = { checked, profile, embedded, heroChecked };
   if (!checked) return <div className="loading">Loading LashiraBloom…</div>;
 
@@ -111,6 +131,21 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     : isVisit ? 'visit:' + farmScope.ownerId
       : 'personal';
 
+  if (worldScope?.realmId) {
+    return <RealmMapRoom
+      profile={eff}
+      hero={hasHero ? hero : null}
+      realmId={worldScope.realmId}
+      hqTile={worldScope.hqTile}
+      hqFacing={worldScope.hqFacing}
+      onExit={(returnTile) => {
+        setHqSpawn({ tile: returnTile || worldScope.hqTile || null, facing: worldScope.hqFacing || 'South' });
+        setWorldScope(null);
+      }}
+      key={eff.id + ':realm:' + worldScope.realmId}
+    />;
+  }
+
   return <FarmRoom
     profile={eff}
     hero={hasHero ? hero : null}
@@ -119,6 +154,13 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
     visitOwnerName={isVisit ? farmScope.ownerName : null}
     homeCircleId={effCircleId}
     onTravel={setFarmScope}
-    key={eff.id + ':' + scopeKey}
+    onPortalTravel={(realmId, ctx) => setWorldScope({
+      realmId,
+      hqTile: ctx?.hqTile || null,
+      hqFacing: ctx?.hqFacing || 'South',
+    })}
+    initialTile={hqSpawn?.tile || null}
+    initialFacing={hqSpawn?.facing || 'South'}
+    key={eff.id + ':' + scopeKey + ':' + (hqSpawn?.tile ? hqSpawn.tile.join(',') : 'spawn')}
   />;
 }

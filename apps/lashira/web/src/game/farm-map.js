@@ -6,6 +6,7 @@ import { CROPS, cropGrowthFrac, cropStageOf } from '../data/crops.js';
 import { drawOverride } from './farm-art-runtime.js';
 import { creatureFrame } from './creature-sprites.js';
 import { drawActualKinSprite } from './kin-sprite-image.jsx';
+import { WORLD_PORTALS } from './world-map-registry.js';
 
 export const TILE = 48;                       // matches Kingdom Heroes scale
 export const W = 60, H = 48;                  // one overworld: all zones + castle center
@@ -117,6 +118,7 @@ export const tileKey = (x, y) => x + ',' + y;
 // ---- HOTSPOTS: the interaction registry. FarmRoom.onTap → hotspotAt() → dispatch.
 // One row per interactive landmark; adding a mechanic = one row + one handler.
 export const HOTSPOTS = [
+  ...WORLD_PORTALS.map((p) => ({ kind: 'realm', id: p.id, portal: p, rect: p.hqHotspot })),
   { kind: 'castle', id: 'castle', rect: { x0: 27, y0: 21, x1: 32, y1: 26 } },
   { kind: 'shop', id: 'seed', rect: { x0: 9, y0: 17, x1: 11, y1: 19 } },
   { kind: 'shop', id: 'general', ported: false, rect: { x0: 13, y0: 20, x1: 15, y1: 22 } },
@@ -162,6 +164,8 @@ export function hotspotAt(tx, ty) {
 // from HOTSPOTS + the zone hotspots (farm/animals/battleground/pvp) that route
 // through other tap paths. As a mechanic is wired, flip its `ported` → its dot goes green.
 const HOTSPOT_LABEL = {
+  lashira_keep: 'Lashira Keep', bloomwall_pass: 'Bloomwall Pass', hearthrush_kitchen: 'Hearthrush Kitchen',
+  fountain_festival: 'Fountain Festival', emberring_arena: 'Emberring Arena',
   castle: '🏰 Castle', seed: '🌱 Seed Shop', general: '🛒 General Store', smith: '⚒️ Blacksmith',
   animal: '🐮 Animal Shop', cosmetic: '🎀 Cosmetics', market: '💰 Market', dungeon: '⚔️ Dungeon', dock: '🎣 Fishing',
   pvprank: '🏆 PvP Rank',
@@ -170,6 +174,7 @@ const PEN_LABEL = { cow: '🐄 Cow Pasture', sheep: '🐑 Sheep Pen', chicken: '
 function markerLabel(h) {
   if (h.kind === 'ore') return '⛏️ ' + h.ore[0].toUpperCase() + h.ore.slice(1) + ' Node';
   if (h.kind === 'tree') return h.hard ? '🌳 Oak (T2 axe)' : '🌲 Tree';
+  if (h.kind === 'realm') return h.portal?.name || HOTSPOT_LABEL[h.id] || h.id;
   return HOTSPOT_LABEL[h.id] || h.id;
 }
 export const HOTSPOT_MARKERS = (() => {
@@ -360,15 +365,9 @@ export function buildFarmMap(art = {}) {
   // (the procedural art is only a fallback if the image fails to load). Dynamic actors
   // + clickable component sprites render on top. Verified against the red-dot map. =====
   if (drawOverride(ctx, art, 'lashira.basemap', 0, 0, WORLD_W, WORLD_H)) {
-    // hide the red placement dots baked into the reference image by cloning a clean
-    // patch of ground from just above each (coords are the image's 1394x1128 space).
-    const sx = WORLD_W / 1394, sy = WORLD_H / 1128, R = 30;
-    for (const [ix, iy] of BASEMAP_DOTS) {
-      const wx = Math.round(ix * sx), wy = Math.round(iy * sy);
-      if (wy - R - 78 < 0) continue;
-      ctx.drawImage(canvas, wx - R, wy - R - 78, R * 2, R * 2, wx - R, wy - R, R * 2, R * 2);
-    }
-    // clickable component sprites the image lacks (castle + shops), drawn ON TOP
+    // The current basemap is clean. Older builds cloned square patches over red
+    // placement dots; on the new art that patcher creates visible square artifacts.
+    // Keep the intended component sprites and collision, but do no patch cloning.
     for (const p of ONTOP) { if (!p.noDraw) drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE); if (p.solid) blockRect(p.tx, p.ty, p.w, p.h); }
   } else if (typeof console !== 'undefined') {
     console.warn('[farm] basemap.png NOT loaded — showing the ugly procedural fallback. Check farm-art-bundled.js "lashira.basemap".');
@@ -376,15 +375,6 @@ export function buildFarmMap(art = {}) {
 
   return { canvas, blocked };
 }
-
-// Red placement dots baked into basemap.png (image 1394x1128 coords) — cloned over
-// with nearby ground so they don't show. Detected 2026-07-08.
-const BASEMAP_DOTS = [
-  [380, 266], [1182, 278], [845, 279], [1006, 279], [696, 301], [254, 332], [523, 333],
-  [258, 448], [352, 516], [696, 532], [925, 572], [171, 573], [466, 573], [1201, 576],
-  [266, 635], [954, 798], [232, 818], [276, 847], [496, 877], [696, 878], [1088, 906],
-  [608, 914], [802, 915], [226, 952],
-];
 
 // Castle footprint, centered on the plaza crossroads. Collision-only here; the
 // SPRITE is drawn per-frame in FarmRoom so its skin is swappable (Castle panel).

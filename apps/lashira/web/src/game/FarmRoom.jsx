@@ -21,6 +21,7 @@ import {
 } from '@arganta/combat';
 import { recordPvpKo } from './pvp-rank.js';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
+import { WORLD_PORTALS } from './world-map-registry.js';
 import { creatureFrame } from './creature-sprites.js';
 import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
@@ -223,7 +224,7 @@ function presenceCardFrom(snap) {
   };
 }
 
-export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId = null, visitOwnerName = null, homeCircleId = null, onTravel = null }) {
+export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId = null, visitOwnerName = null, homeCircleId = null, onTravel = null, onPortalTravel = null, initialTile = null, initialFacing = 'South' }) {
   const isVisitor = !!visitOwnerId;
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -359,7 +360,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       // Fresh spawn = the castle courtyard (SPAWN); nudge to the nearest open tile
       // if that exact one is solid under the current castle skin.
       const spawnTile = (() => {
-        const [sx, sy] = SPAWN;
+        const seed = readTile(initialTile) || SPAWN;
+        const [sx, sy] = seed;
         if (!blocked.has(sx + ',' + sy)) return [sx, sy];
         for (const [dx, dy] of [[0, 1], [0, 2], [1, 0], [-1, 0], [1, 1], [-1, 1], [0, 3]]) {
           if (!blocked.has((sx + dx) + ',' + (sy + dy))) return [sx + dx, sy + dy];
@@ -368,7 +370,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       })();
       G.current = {
         bg, blocked, tables, resources, hasWeapon, heroOk, art, acquiredKins,
-        player: prev?.player || { tile: [...spawnTile], from: [...spawnTile], moveT: 1, moveStart: 0, facing: 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
+        player: prev?.player || { tile: [...spawnTile], from: [...spawnTile], moveT: 1, moveStart: 0, facing: initialFacing || 'South', mounted: false, oneShot: null, oneShotStart: 0, turnHoldDir: null, turnHoldStart: 0 },
         held: prev?.held || new Set(), stick: prev?.stick || null, zoom, speed, viewportW: prev?.viewportW || 0, viewportH: prev?.viewportH || 0, dpr: prev?.dpr || 1,
         actors: prev?.actors || new Map(), peerActors: prev?.peerActors || new Map(), peerWorldActors: prev?.peerWorldActors || new Map(), pendingMountCall: false,
         lastPresenceSnapshot: '', lastPresenceAt: 0,
@@ -413,7 +415,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       G.current?._unsub?.();
       logic.flushSave?.();
     };
-  }, [profile?.id, profile?.displayName, profile?.guest, profile?.diamonds, profile?.xp, profile?.level, profile?.role, heroPresenceKey, circleId, visitOwnerId, visitOwnerName]);
+  }, [profile?.id, profile?.displayName, profile?.guest, profile?.diamonds, profile?.xp, profile?.level, profile?.role, heroPresenceKey, circleId, visitOwnerId, visitOwnerName, initialTile?.[0], initialTile?.[1], initialFacing]);
 
   useEffect(() => { if (G.current) G.current.zoom = zoom; }, [zoom]);
 
@@ -1792,6 +1794,37 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       ctx.fillText(label.name, label.footX, ny + (small ? 0.5 : 0));
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
+    function drawWorldPortalGlows(ctx, now) {
+      const pulse = (Math.sin(now / 520) + 1) / 2;
+      for (const portal of WORLD_PORTALS) {
+        const r = portal.hqHotspot;
+        if (!r) continue;
+        const x = r.x0 * TILE;
+        const y = r.y0 * TILE;
+        const w = (r.x1 - r.x0 + 1) * TILE;
+        const h = (r.y1 - r.y0 + 1) * TILE;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = portal.color || '#8ef5ff';
+        ctx.shadowBlur = 14 + pulse * 14;
+        ctx.fillStyle = `rgba(255,255,255,${0.05 + pulse * 0.05})`;
+        ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+        ctx.strokeStyle = portal.color || '#8ef5ff';
+        ctx.globalAlpha = 0.45 + pulse * 0.35;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x + 5, y + 5, w - 10, h - 10);
+        ctx.beginPath();
+        ctx.arc(cx, cy, 12 + pulse * 7, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 0.22 + pulse * 0.2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(w, h) / 2 + pulse * 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
 
     function draw(g, ctx, canvas, now) {
       const cssW = g.viewportW || canvas.clientWidth, cssH = g.viewportH || canvas.clientHeight;
@@ -1811,17 +1844,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       ctx.scale(z, z); ctx.translate(-Math.round(camX), -Math.round(camY));
       ctx.drawImage(g.bg, 0, 0);
 
-      // FARM LAYER — soil that MATCHES the basemap's tilled plot (#7b4c23) so it blends
-      // seamlessly while covering the baked-in crops; live crops draw on top below.
-      // Subtle furrows (tilled rows), not plank lines.
-      for (let ty = FIELD.y0; ty <= FIELD.y1; ty++) for (let tx = FIELD.x0; tx <= FIELD.x1; tx++) {
-        const px = tx * TILE, py = ty * TILE;
-        ctx.fillStyle = '#7b4c23'; ctx.fillRect(px, py, TILE, TILE);
-        ctx.fillStyle = 'rgba(58,34,14,0.30)';               // furrow shadow
-        for (let yy = py + 9; yy < py + TILE - 3; yy += 12) ctx.fillRect(px + 3, yy, TILE - 6, 2);
-        ctx.fillStyle = 'rgba(150,102,58,0.22)';             // furrow highlight
-        for (let yy = py + 9; yy < py + TILE - 3; yy += 12) ctx.fillRect(px + 3, yy + 2, TILE - 6, 1);
-      }
+      // The generated basemap owns the farm soil visuals. Live crops draw on top
+      // below, but we do not paint a procedural tile grid over the field.
 
       // CASTLE — drawn per-frame from the chosen skin (swappable in the Castle panel),
       // bottom-anchored at its foot at NATIVE aspect so it sits centered on the plaza.
@@ -1843,7 +1867,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           const key = ready ? n.art : n.depleted;
           const img = key && g.art[key];
           const tx = n.rect.x0, ty = n.rect.y0;
-          // trees are 2 wide × drawn tall (canopy up); ore is a single tile.
+          // trees are 2 wide x drawn tall (canopy up); ore is a single tile.
           const dw = isTree ? 2 * TILE : TILE, dh = isTree ? 3 * TILE : TILE;
           const dx = tx * TILE, dy = isTree ? (ty - 1) * TILE : ty * TILE;
           if (img && img.naturalWidth > 0) ctx.drawImage(img, dx, dy, dw, dh);
@@ -1864,6 +1888,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           }
         }
       }
+
+      drawWorldPortalGlows(ctx, now);
 
       // plots
       const plots = logicRef.current.state.plots;
@@ -2156,7 +2182,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       const hs = hotspotAt(tx, ty); // shops/castle/dungeon/mining/forestry/fishing
       if (hs) {
         faceTo(tx, ty);
-        if (hs.kind === 'ore' || hs.kind === 'tree') {
+        if (hs.kind === 'realm') {
+          onPortalTravel?.(hs.id, { hqTile: [...g.player.tile], hqFacing: g.player.facing, portal: hs.portal });
+        }
+        else if (hs.kind === 'ore' || hs.kind === 'tree') {
           // swing to gather — but only if you're standing next to the node.
           if (nodeAdjacent(g, hs)) { playSwing(g); gatherNode(g, hs); }
           else mechRef.current?.flash?.('Get closer to swing');
