@@ -30,6 +30,7 @@ const html = String.raw`<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LashiraBloom 5 Worlds Prototype</title>
+  <link rel="icon" href="data:," />
   <style>
     :root {
       color-scheme: dark;
@@ -44,6 +45,7 @@ const html = String.raw`<!doctype html>
       --red: #ff6b5f;
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #101610; font-family: Inter, ui-sans-serif, system-ui, Segoe UI, Arial, sans-serif; }
     button { font: inherit; }
     #app { position: fixed; inset: 0; background: #172016; }

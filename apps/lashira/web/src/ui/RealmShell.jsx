@@ -1,7 +1,13 @@
-import { useState } from 'react';
-import { ActionCluster } from '@arganta/combat/cluster';
+import { useRef, useState } from 'react';
+import { ActionCluster, IconEmote } from '@arganta/combat/cluster';
+import { EMOTES, EMOTE_EMOJI, loadFavoriteEmotes } from '@arganta/combat';
+import { IconMount } from '../components/HudIcons.jsx';
 import { UnitCard } from './UnitCard.jsx';
 import { SettingsSheet } from './SettingsSheet.jsx';
+
+// Same key the farm's Hud.jsx uses — favorite emotes carry over between the
+// farm and every realm instead of each surface keeping its own list.
+const FAV_EMOTES_KEY = 'lashira_fav_emotes';
 
 // ── RealmShell — the ONE four-corner HUD every realm renders through (IMPL §0).
 // No realm builds its own corners; it only supplies data + a controller spec.
@@ -30,6 +36,7 @@ export default function RealmShell({
   objective, meter, controller, onAction, onExit,
   heroNote, capsNote, now = 0, children,
   camZoom, onCamZoom,
+  hasMount, mounted, onToggleMount, onEmote,
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const primary = controller?.primary || null;
@@ -42,6 +49,40 @@ export default function RealmShell({
     if (cooldownPct(action, now) > 0) return;
     onAction?.(action.id);
   };
+
+  // Mount + emote — the SAME cosmetic orbs the farm's cluster always has,
+  // present in every realm's controller (not something each realm module
+  // asks for). Exit lives in Settings now, so any realm-supplied 'menu' util
+  // is dropped here to avoid a duplicate exit affordance.
+  // Read fresh each render (cheap localStorage read) rather than a useState
+  // snapshot — favorites are picked in the farm's Settings, not here, so a
+  // realm should always see whatever was last saved there.
+  const favEmotes = loadFavoriteEmotes(FAV_EMOTES_KEY);
+  const [emoteFanOpen, setEmoteFanOpen] = useState(false);
+  const emoteFanTimerRef = useRef(0);
+  const toggleEmoteFan = () => {
+    clearTimeout(emoteFanTimerRef.current);
+    setEmoteFanOpen((open) => {
+      const next = !open;
+      if (next) emoteFanTimerRef.current = window.setTimeout(() => setEmoteFanOpen(false), 4000);
+      return next;
+    });
+  };
+  const playEmote = (name) => {
+    onEmote?.(name);
+    setEmoteFanOpen(false);
+    clearTimeout(emoteFanTimerRef.current);
+  };
+  const emoteUtils = emoteFanOpen
+    ? (favEmotes.length ? favEmotes : EMOTES.slice(0, 4)).map((name, i) => ({
+        key: 'fan:' + name, icon: <span style={{ fontSize: 20 }}>{EMOTE_EMOJI[name] || '❔'}</span>,
+        onClick: () => playEmote(name), title: name, className: 'fan-item fan-item-' + (i + 1),
+      }))
+    : [{ key: 'emote', icon: <IconEmote />, onClick: toggleEmoteFan, title: 'emote (pick a favorite)', className: 'emote' }];
+  const mountUtil = hasMount
+    ? [{ key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: mounted ? 'dismount' : 'mount', className: mounted ? 'on' : undefined }]
+    : [];
+  const composeUtils = (realmUtils) => [...mountUtil, ...emoteUtils, ...(realmUtils || []).filter((u) => u.id !== 'menu' && u.key !== 'menu')];
 
   return (
     <div className="room-full">

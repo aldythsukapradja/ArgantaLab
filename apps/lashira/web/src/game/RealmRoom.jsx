@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { pathForWeapon, battleSkillsFor, pathSkillPower, pathPhysPower, pathMaxHp, pathMaxMp, pathOf, pathTitle, levelWithFloor, levelProgress, xpForLevel, pvpMaxHp, resistMul, spawnEffect, drawEffect } from '@arganta/combat';
+import { pathForWeapon, battleSkillsFor, pathSkillPower, pathPhysPower, pathMaxHp, pathMaxMp, pathOf, pathTitle, levelWithFloor, levelProgress, xpForLevel, pvpMaxHp, resistMul, spawnEffect, drawEffect, EMOTES } from '@arganta/combat';
 import { computeRank, loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { defaultFarmerSpec } from '../net/characterRegistry.js';
 import { drawPlaceholderFarmer, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
@@ -117,6 +117,8 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState('');
   const [usingHero, setUsingHero] = useState(false);
+  const [hasMount, setHasMount] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [, setHudTick] = useState(0);
   const [nowMs, setNowMs] = useState(0);
   const [battle, setBattle] = useState({ on: false, hp: 0, maxHp: 0 });
@@ -265,6 +267,8 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       modRef.current = module;
 
       setUsingHero(!!hero?.spec && G.current.heroOk);
+      setHasMount(!!resources?.mount);
+      setMounted(false);
       setReady(true);
       savePos(false);
       if (import.meta.env.DEV) window.__realm = G;
@@ -468,7 +472,9 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     const drawPlayer = (g, ctx2, now, footX, footY) => {
       const p = g.player;
       if (g.heroOk) {
-        const oneShotMotion = p.oneShot ? (p.oneShot + p.facing) : null;
+        // Emotes (Victory, Smile, …) are bare/non-directional motions — same
+        // lookup rule FarmRoom's oneShot uses — everything else gets a facing suffix.
+        const oneShotMotion = p.oneShot ? (EMOTES.includes(p.oneShot) ? p.oneShot : p.oneShot + p.facing) : null;
         const hasOne = !!oneShotMotion && stepCount(g.tables, oneShotMotion) > 0;
         const motion = hasOne ? oneShotMotion : playerMotion(g);
         const n = stepCount(g.tables, motion);
@@ -652,6 +658,20 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     rewardRef.current?.flush?.();
     savePos(true).finally(() => onExit?.(map.hqReturn));
   };
+  // Mount + emote — the SAME cosmetic actions the farm's cluster has, always
+  // present in the real ActionCluster (not something each realm module has to
+  // ask for). Mount toggles the existing 'Riding' motion (playerMotion() above
+  // already supports it); emote plays a bare, non-directional oneShot.
+  const toggleMount = () => {
+    const g = G.current; if (!g) return;
+    g.player.mounted = !g.player.mounted;
+    setMounted(g.player.mounted);
+  };
+  const doEmote = (name) => {
+    const g = G.current; if (!g) return;
+    const p = g.player; if (p.oneShot) return;
+    p.oneShot = name; p.oneShotStart = performance.now();
+  };
 
   exitRef.current = exit;
   const mod = modRef.current;
@@ -676,6 +696,10 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       capsNote={ready ? hud.caps : ''}
       camZoom={camZoomMul}
       onCamZoom={setCamZoom}
+      hasMount={hasMount}
+      mounted={mounted}
+      onToggleMount={toggleMount}
+      onEmote={doEmote}
     >
       <canvas ref={canvasRef} tabIndex={0} />
       <div className="room-canvas-wrap" ref={wrapRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
