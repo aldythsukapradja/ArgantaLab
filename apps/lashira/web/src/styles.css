@@ -208,6 +208,19 @@ body {
 }
 .produce-chip b { font-size: 11px; }
 .produce-chip em { font-style: normal; color: #627045; font-weight: 800; }
+/* ── Fishing dock: reel-timing bar (sweeping marker + a sweet zone to tap) ── */
+.fish-bar {
+  position: relative; height: 22px; border-radius: 11px; margin: 4px 0 10px;
+  background: linear-gradient(180deg, #dbe7fb, #c3d7f4); border: 1px solid var(--line); overflow: hidden;
+}
+.fish-zone {
+  position: absolute; top: 0; bottom: 0; background: rgba(139,92,246,.32);
+  border-left: 2px solid var(--purple); border-right: 2px solid var(--purple);
+}
+.fish-marker {
+  position: absolute; top: -3px; bottom: -3px; width: 4px; margin-left: -2px;
+  background: #fff; border-radius: 3px; box-shadow: 0 0 0 2px #1f2340, 0 2px 6px rgba(0,0,0,.3);
+}
 .bag-section { margin-top: 14px; }
 .bag-title { font-size: 12px; font-weight: 900; color: #6a4df5; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 8px; }
 .sell-total {
@@ -419,19 +432,19 @@ body {
   position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 12px; z-index: 11;
   width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; align-items: stretch;
 }
-/* PvP hearts — the big at-a-glance HP read while in the PvP arena (kid-safety:
-   chunky hearts, not a thin bar). Sits INSIDE the UnitCard, right above the
-   name row (see UnitCard's pvpHearts slot) — a compact inline row matching the
-   card's own light glass theme, not a separate floating pill. */
-.pvp-hearts { display: flex; gap: 2px; margin-bottom: 3px; }
-.pvp-heart { font-size: 13px; line-height: 1; color: rgba(20,26,40,.16); transition: color .15s, transform .15s; }
-.pvp-heart.full { color: #ff3b52; text-shadow: 0 1px 1px rgba(0,0,0,.18); }
-/* TEMP diagnostic badge — remove once PvP is confirmed working live. */
-.pvp-zone-badge {
-  align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800;
-  background: rgba(120,120,150,.7); color: #fff; backdrop-filter: blur(6px);
+/* Location-aware zone pill — always-on "where am I" label pinned to the
+   BOTTOM-LEFT corner (🌾 Farm / ⚔️ PvP Arena / ⛏️ Mines / …). Glass to match the
+   card; turns red in the PvP arena so it doubles as a "combat live here" cue.
+   pointer-events:none so it never intercepts the drag-to-move gesture. */
+.zone-pill {
+  position: absolute; z-index: 9; pointer-events: none;
+  left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 5px 13px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  color: var(--text-strong); background: var(--glass-bg);
+  backdrop-filter: var(--glass-regular); -webkit-backdrop-filter: var(--glass-regular);
+  box-shadow: var(--glass-rim), var(--glass-shadow); white-space: nowrap;
 }
-.pvp-zone-badge.on { background: rgba(224,60,60,.85); }
+.zone-pill.pvp { color: #fff; background: rgba(224,60,60,.9); box-shadow: 0 4px 14px -4px rgba(224,60,60,.6), inset 0 1px 0 rgba(255,255,255,.3); }
 .quicknav {
   display: flex; gap: 2px; padding: 4px; border-radius: 16px; corner-shape: superellipse(1.8);
   color: var(--text-strong); background: var(--glass-bg);
@@ -754,6 +767,41 @@ button.sync-pill.on:hover { background: rgba(34,197,94,.24); }
   padding: 8px 16px; border-radius: 999px; backdrop-filter: blur(8px); box-shadow: 0 6px 18px rgba(10,14,26,.18);
 }
 .visit-banner b { color: #6a4df5; }
+
+/* Fishing fast-travel FAB — a persistent quick-access icon so you don't have to
+   walk all the way to the lake; tapping it warps you onto the dock + opens the
+   Fishing panel directly (see FarmRoom.jsx goFishing()). Right-mid, clear of
+   the top-left unit card and the bottom-right skill cluster. */
+.fish-fab-wrap { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); z-index: 9; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.fish-fab {
+  position: relative; width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff; cursor: pointer;
+  font-size: 28px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  /* warm gold/orange — reads against blue water, green grass, or brown dirt alike
+     (a blue FAB nearly vanished over the lake, see the dock-teleport bug report) */
+  background: radial-gradient(circle at 32% 26%, #ffdd7a, #ff8c2e 72%);
+  box-shadow: 0 4px 14px rgba(20,40,90,.4), inset 0 2px 3px rgba(255,255,255,.7), inset 0 -3px 5px rgba(0,0,0,.2);
+  animation: fish-fab-pulse 1.6s ease-in-out infinite;
+}
+.fish-fab::after {
+  content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid #fff;
+  animation: fish-fab-ring 1.6s ease-out infinite; pointer-events: none;
+}
+.fish-fab-label {
+  font-size: 10px; font-weight: 800; color: #fff; background: rgba(20,24,36,.55);
+  padding: 2px 8px; border-radius: 999px; letter-spacing: .02em; white-space: nowrap;
+}
+.fish-fab:active { transform: scale(.92); }
+@keyframes fish-fab-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes fish-fab-ring {
+  0% { opacity: .9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fish-fab, .fish-fab::after { animation: none; }
+}
 .cluster.visit-cluster { width: 66px; height: 66px; }
 .cluster.visit-cluster .skill-circle.util { right: 6px; bottom: 6px; }
 

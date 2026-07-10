@@ -27,8 +27,13 @@ export const ZONES = {
 // inArena() flips combat on across the whole band; monsters roam here.
 export const ARENA = { x0: 17, y0: 33, x1: 57, y1: 45 };
 export const PVP = { x0: 40, y0: 33, x1: 57, y1: 45 };
-export const ARENA_WALL_Y = 32;               // wall dividing the mid-zones from the martial south
-export const ARENA_GATE_X = 28;               // 2-wide gate (ARENA_GATE_X .. +1)
+// Measured directly against the basemap art (pixel-scanned the fence/gate
+// pixels, not eyeballed): the wall's real fence row sits at tile 33 and the
+// ornate gate + garden path sit at tiles 30-31 — the old 32/28 values were
+// blocking/opening tiles a full 1-2 tiles off from what the art shows, so a
+// creature standing perfectly in-bounds could visually clip the fence.
+export const ARENA_WALL_Y = 33;               // wall dividing the mid-zones from the martial south
+export const ARENA_GATE_X = 30;               // 2-wide gate (ARENA_GATE_X .. +1)
 
 // Animal pens (NE): cow | sheep | chicken columns, combined ≈ farm size.
 export const PENS = {
@@ -120,7 +125,7 @@ export const HOTSPOTS = [
   { kind: 'shop', id: 'cosmetic', ported: false, rect: { x0: 9, y0: 26, x1: 11, y1: 28 } },
   { kind: 'sell', id: 'market', rect: { x0: 30, y0: 16, x1: 31, y1: 17 } },
   { kind: 'dungeon', id: 'dungeon', ported: false, rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
-  { kind: 'dock', id: 'dock', rect: { x0: 9, y0: 35, x1: 12, y1: 36 } },
+  { kind: 'dock', id: 'dock', rect: { x0: 12, y0: 37, x1: 15, y1: 38 } },
   // the scoreboard prop already sits inside the PvP rectangle — the natural
   // spot for the circle rank board (tap it to see who's winning).
   { kind: 'pvprank', id: 'pvprank', rect: { x0: 48, y0: 34, x1: 48, y1: 35 } },
@@ -310,10 +315,14 @@ export function buildFarmMap(art = {}) {
   // walkable. (Refine trees/rocks/walls from a dev-mode screenshot later.)
   for (const b of BUILDINGS) drawBuilding(ctx, b, art);           // draw only (no block)
   for (const p of PLACEMENTS) drawOverride(ctx, art, p.key, p.tx * TILE, p.ty * TILE, p.w * TILE, p.h * TILE); // draw only (no block)
-  // WALKWAY — the wooden bridge (detected from basemap.png) spans the pond at
-  // y35-36 and meets the EAST shore (x17 grass). Make the bridge deck walkable so
-  // you can walk out over the water; deep water stays blocked.
-  for (let x = 9; x <= 16; x++) for (let y = 35; y <= 36; y++) blocked.delete(tileKey(x, y));
+  // WALKWAY — the wooden bridge spans the pond and meets the EAST shore. Make
+  // the bridge deck walkable so you can walk out over the water; deep water
+  // stays blocked. RE-MEASURED against basemap.png (2026-07-10, pixel-sampled:
+  // the deck's real footprint is image x≈240-380/y≈860-940 → tile x≈10-16.4,
+  // y≈36.6-38.9) — the original x9-16/y35-36 carve was 2 tiles too far north,
+  // which is why the dock hotspot rendered floating in open water instead of
+  // on the bridge (see the dev no-walk overlay). Widened +1 tile of margin.
+  for (let x = 9; x <= 17; x++) for (let y = 36; y <= 39; y++) blocked.delete(tileKey(x, y));
 
   // dividing wall (mid-zones ↕ martial south) with a 2-wide gate
   for (let x = ARENA.x0; x < W - 1; x++) {
@@ -403,6 +412,13 @@ export const SPAWN = [30, 25];
 // use cx/cy. This drives ONLY the overlay — real collision still comes from `blocked`.
 const _zc = (r) => [(r.x0 + r.x1 + 1) / 2, (r.y0 + r.y1 + 1) / 2];
 const _sr = (id) => (HOTSPOTS.find((h) => h.id === id) || { rect: { x0: 0, y0: 0, x1: 0, y1: 0 } }).rect;
+
+// World-space anchor for the always-on fishing beacon (FarmRoom draws a
+// pulsing 🎣 marker here every frame, screen-projected via the camera, so
+// players can SEE where the dock hotspot is instead of hunting for it).
+// Derived from the real dock rect so it can never drift out of sync with it.
+const [_dockCx, _dockCy] = _zc(_sr('dock'));
+export const DOCK_MARKER = { cx: _dockCx, cy: _dockCy };
 export const ZONES_ANNOT = [
   { label: 'Farm', walk: true, rect: FIELD, noDraw: true },     // ← Gemini: keep clear
   { label: 'Castle', walk: false, rect: { x0: CASTLE.baseTx, y0: CASTLE.baseTy, x1: CASTLE.baseTx + CASTLE.baseW - 1, y1: CASTLE.baseTy + CASTLE.baseH - 1 }, custom: true },
@@ -450,6 +466,37 @@ export function inPvp(tx, ty) {
 // Battleground = the arena band MINUS the PvP rectangle — where monsters
 // spawn/roam (PvE only).
 export const BATTLEGROUND = { x0: ARENA.x0, y0: ARENA.y0, x1: PVP.x0 - 1, y1: ARENA.y1 };
+
+// The clickable castle footprint (matches the 'castle' HOTSPOT rect) — used by
+// zoneOf so standing at/near home base reads "Castle" rather than "Shops".
+const CASTLE_RECT = { x0: 27, y0: 21, x1: 32, y1: 26 };
+
+// Location-aware zone resolver: which named place is tile (tx,ty) in? Returns
+// { key, label } for the HUD's zone pill. Specific/nested zones (pens, PvP,
+// castle) are checked BEFORE the broader ones they sit inside, so the most
+// meaningful name wins. Anything not in a named zone reads as open meadow.
+export function zoneOf(tx, ty) {
+  const inR = (r) => r && tx >= r.x0 && tx <= r.x1 && ty >= r.y0 && ty <= r.y1;
+  // animal pens (NE) — most specific
+  if (inR(PENS.cow)) return { key: 'cow', label: '🐄 Cow Pasture' };
+  if (inR(PENS.sheep)) return { key: 'sheep', label: '🐑 Sheep Pen' };
+  if (inR(PENS.chicken)) return { key: 'chicken', label: '🐔 Chicken Coop' };
+  // martial south — PvP rectangle before the wider hunting band it sits in
+  if (inPvp(tx, ty)) return { key: 'pvp', label: '⚔️ PvP Arena' };
+  if (inR(ARENA)) return { key: 'hunting', label: '🗡️ Hunting Ground' };
+  // farm field
+  if (inR(FIELD)) return { key: 'farm', label: '🌾 Farm' };
+  // east zones
+  if (inR(ZONES.mining)) return { key: 'mining', label: '⛏️ Mines' };
+  if (inR(ZONES.forest)) return { key: 'forest', label: '🌲 Forest' };
+  // west / SW
+  if (inR(ZONES.fishing)) return { key: 'fishing', label: '🎣 Fishing Lake' };
+  if (inR(ZONES.garden)) return { key: 'garden', label: '🌷 Garden' };
+  // central plaza — castle (home base) before the shops that ring it
+  if (inR(CASTLE_RECT)) return { key: 'castle', label: '🏰 Castle' };
+  if (inR(ZONES.plaza)) return { key: 'shops', label: '🛒 Shops' };
+  return { key: 'meadow', label: '🌿 Meadow' };
+}
 
 // Per-frame: draw tilled soil + crop for one plot at world coords.
 function leaf(ctx, x, y, flip = 1) {

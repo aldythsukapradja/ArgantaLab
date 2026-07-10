@@ -4,8 +4,9 @@
 // building now opens that Shop at the matching sub-tab, so this file only owns the
 // non-shop landmarks.
 import { useEffect, useRef, useState } from 'react';
-import { MAT_ICON } from '../game/farm-mechanics.js';
+import { MAT_ICON, FISH_SPECIES } from '../game/farm-mechanics.js';
 import { listPvpRank } from '../game/pvp-rank.js';
+import { sfx } from '../audio/sfx.js';
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 
@@ -49,7 +50,7 @@ export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, on
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         {hotspot.kind === 'castle' && <CastlePanel snap={snap} mech={mech} mechGame={mechGame} onClose={onClose} castleSkin={castleSkin} onCastleSkin={onCastleSkin} />}
         {hotspot.kind === 'dungeon' && <DungeonPanel snap={snap} onClose={onClose} onEnter={onEnterDungeon} />}
-        {hotspot.kind === 'dock' && <FishingPanel mechGame={mechGame} onClose={onClose} />}
+        {hotspot.kind === 'dock' && <FishingPanel mech={mech} mechGame={mechGame} onClose={onClose} />}
         {hotspot.kind === 'pvprank' && <PvpRankPanel circleId={circleId} selfId={selfId} circleMembers={circleMembers} onClose={onClose} />}
       </div>
     </div>
@@ -123,40 +124,128 @@ function DungeonPanel({ onClose, onEnter }) {
   );
 }
 
-// Simple cast → reel timing minigame.
-function FishingPanel({ mechGame, onClose }) {
-  const [phase, setPhase] = useState('idle'); // idle | casting | bite | done
-  const t1 = useRef(null), t2 = useRef(null);
-  useEffect(() => () => { clearTimeout(t1.current); clearTimeout(t2.current); }, []);
+// Cast → bite → REEL-on-the-mark minigame. A marker sweeps a bar during the
+// bite; tapping while it's inside the (rod-tier-sized) sweet zone lands a
+// catch, and HOW centered the tap was feeds catchFish()'s quality roll — a
+// dead-center tap has real odds at the rare species, a grazing hit mostly
+// nets a Minnow. Rod tier widens the zone + gives a bit more time (a real,
+// felt reason to upgrade — the old version rolled a fixed 1-fish/always-hit
+// regardless of gear).
+const ZONE_W = { 1: 34, 2: 44, 3: 56 };   // sweet-zone width, % of bar — kid-friendly, not a twitch check
+const BITE_MS = { 1: 2400, 2: 2700, 3: 3000 }; // time to react before it gets away
+const SWEEP_MS = 1000;                    // one-way sweep duration of the marker (slower = easier to time)
+
+function FishingPanel({ mech, mechGame, onClose }) {
+  const [phase, setPhase] = useState('idle'); // idle | casting | bite | miss | done
+  const [pos, setPos] = useState(50);
+  const [zone, setZone] = useState({ center: 50, width: 20 });
+  const [caught, setCaught] = useState(null);
+  const raf = useRef(null), tCast = useRef(null), tBite = useRef(null), tMsg = useRef(null);
+  const rodTier = mech?.tools?.rod || 1;
+
+  useEffect(() => () => {
+    clearTimeout(tCast.current); clearTimeout(tBite.current); clearTimeout(tMsg.current);
+    if (raf.current) cancelAnimationFrame(raf.current);
+  }, []);
+
+  const sweep = () => {
+    const start = performance.now();
+    const step = (now) => {
+      const t = (now - start) % (SWEEP_MS * 2);
+      const frac = t < SWEEP_MS ? t / SWEEP_MS : 2 - t / SWEEP_MS; // ping-pong 0..1..0
+      setPos(frac * 100);
+      raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+  };
+
+  const miss = () => {
+    if (raf.current) cancelAnimationFrame(raf.current);
+    clearTimeout(tBite.current);
+    sfx.play('error');
+    setPhase('miss');
+    tMsg.current = setTimeout(() => setPhase('idle'), 1000);
+  };
+
   const cast = () => {
-    setPhase('casting');
-    t1.current = setTimeout(() => {
+    setPhase('casting'); setCaught(null);
+    tCast.current = setTimeout(() => {
+      const width = ZONE_W[rodTier] || 20;
+      const center = width / 2 + Math.random() * (100 - width);
+      setZone({ center, width });
       setPhase('bite');
-      t2.current = setTimeout(() => setPhase('idle'), 1200); // miss window
+      sfx.play('tap');
+      sweep();
+      tBite.current = setTimeout(miss, BITE_MS[rodTier] || 1500);
     }, 900 + Math.random() * 1600);
   };
+
   const reel = () => {
-    if (phase !== 'bite') { clearTimeout(t1.current); clearTimeout(t2.current); setPhase('idle'); return; }
-    clearTimeout(t2.current); mechGame.catchFish(); setPhase('done');
-    t1.current = setTimeout(() => setPhase('idle'), 900);
+    if (phase !== 'bite') { // cancel mid-cast
+      clearTimeout(tCast.current); clearTimeout(tBite.current);
+      if (raf.current) cancelAnimationFrame(raf.current);
+      setPhase('idle'); return;
+    }
+    if (raf.current) cancelAnimationFrame(raf.current);
+    clearTimeout(tBite.current);
+    const dist = Math.abs(pos - zone.center);
+    if (dist > zone.width / 2) { miss(); return; }
+    const quality = 1 - dist / (zone.width / 2);
+    const species = mechGame.catchFish(quality);
+    sfx.play(species.rarity === 'common' ? 'collect' : species.rarity === 'uncommon' ? 'harvest' : 'reward');
+    setCaught(species); setPhase('done');
+    tMsg.current = setTimeout(() => setPhase('idle'), 1200);
   };
+
+  const fishBag = mech?.fishBag || {};
+  const fishTotal = mech?.fish || 0;
+  const fishValue = FISH_SPECIES_VALUE(fishBag);
+
   return (
     <>
-      <Head title="🎣 Fishing dock" sub="Cast, wait for the bite, then reel!" onClose={onClose} />
+      <Head title="🎣 Fishing dock" sub={`Rod Tier ${rodTier} · cast, wait for the bite, tap the zone!`} onClose={onClose} />
       <div className="row" style={{ justifyContent: 'center', minHeight: 90, alignItems: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 40 }}>{phase === 'bite' ? '❗🐟' : phase === 'done' ? '🎉🐟' : phase === 'casting' ? '🌀' : '🎣'}</div>
-          <div className="meta">{phase === 'idle' ? 'Ready to cast' : phase === 'casting' ? 'Waiting for a bite…' : phase === 'bite' ? 'REEL NOW!' : 'Nice catch!'}</div>
+          <div style={{ fontSize: 40 }}>
+            {phase === 'bite' ? '❗🎣' : phase === 'miss' ? '💦' : phase === 'done' ? caught?.icon + '🎉' : phase === 'casting' ? '🌀' : '🎣'}
+          </div>
+          <div className="meta">
+            {phase === 'idle' ? 'Ready to cast'
+              : phase === 'casting' ? 'Waiting for a bite…'
+              : phase === 'bite' ? 'Tap when the marker is in the zone!'
+              : phase === 'miss' ? 'It got away…'
+              : `Caught a ${caught?.name}!${caught?.rarity !== 'common' ? ' ✨' : ''}`}
+          </div>
         </div>
       </div>
+      {phase === 'bite' && (
+        <div className="fish-bar">
+          <div className="fish-zone" style={{ left: `${zone.center - zone.width / 2}%`, width: `${zone.width}%` }} />
+          <div className="fish-marker" style={{ left: `${pos}%` }} />
+        </div>
+      )}
       <div className="row" style={{ borderStyle: 'dashed', justifyContent: 'center', gap: 10 }}>
-        {phase === 'idle' || phase === 'done'
-          ? <button className="rbtn" onClick={cast}>Cast 🎣</button>
-          : <button className={'rbtn' + (phase === 'bite' ? '' : ' ghost')} onClick={reel}>Reel! 🐟</button>}
+        {phase === 'idle' || phase === 'done' || phase === 'miss'
+          ? <button className="rbtn" disabled={phase === 'miss'} onClick={cast}>Cast 🎣</button>
+          : <button className={'rbtn' + (phase === 'bite' ? '' : ' ghost')} onClick={reel}>{phase === 'bite' ? 'Reel! 🐟' : 'Cancel'}</button>}
       </div>
+      {fishTotal > 0 && (
+        <div className="row" style={{ marginTop: 4 }}>
+          <div className="ico">🎒</div>
+          <div className="grow">
+            <div className="name">Your catch: {fishTotal} fish</div>
+            <div className="meta">
+              {FISH_SPECIES.filter((f) => fishBag[f.id] > 0).map((f) => `${f.icon}×${fishBag[f.id]}`).join(' ') || '—'}
+              {' · worth 🌸'}{fishValue}
+            </div>
+          </div>
+          <button className="rbtn" disabled={!fishValue} onClick={() => mechGame.sellFish()}>Sell all</button>
+        </div>
+      )}
     </>
   );
 }
+const FISH_SPECIES_VALUE = (bag) => FISH_SPECIES.reduce((a, f) => a + (bag[f.id] || 0) * f.sell, 0);
 
 // Circle PvP rank board — the scoreboard prop's popup. Wins-first (tiebreak
 // win-rate then streak, matching listPvpRank's ordering); rank is JUST W/L, it

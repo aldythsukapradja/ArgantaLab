@@ -13,10 +13,24 @@ export const MAT_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷',
 
 // Refining recipes: convert dead-end raw mats into craft goods (closes the sinks).
 export const SMELT_COST = { ore: 3 };  // → 1 ingot (feeds weapon/armor T3+)
-export const COOK_COST = { fish: 2 };  // → 1 potion (drink to restore stamina)
+export const COOK_COST = { fish: 2 };  // → 1 potion (drink to restore stamina), any species mix
 export const POTION_STAMINA = 30;
 const RESPAWN_MS = { ore: 90_000, tree: 60_000 };   // kid-fast node cooldowns
 const TOOL_MAX = 3, HOUSE_MAX = 5;
+
+// ---- FISH SPECIES: rarity ladder for the dock minigame. `weight` = base roll
+// share at zero skill/rod luck; rarer species get boosted by catch quality +
+// rod tier (see catchFish). `sell` feeds sellFish(); cooking always costs
+// COOK_COST.fish regardless of species (cheapest consumed first, see cook()).
+export const FISH_SPECIES = [
+  { id: 'minnow', name: 'Minnow', icon: '🐟', rarity: 'common', weight: 60, sell: 4 },
+  { id: 'bluegill', name: 'Bluegill', icon: '🐠', rarity: 'uncommon', weight: 27, sell: 9 },
+  { id: 'puffer', name: 'Puffer', icon: '🐡', rarity: 'rare', weight: 10, sell: 20 },
+  { id: 'goldkoi', name: 'Gold Koi', icon: '🎏', rarity: 'legendary', weight: 3, sell: 60 },
+];
+const clamp01 = (n) => (n < 0 ? 0 : n > 1 ? 1 : n);
+// Extra "luck" per rod tier — shifts the catch roll toward rarer species.
+const ROD_LUCK = [0, 0.12, 0.28];
 
 export class FarmMechanics {
   constructor(id = 'guest', getLogic = () => null) {
@@ -28,7 +42,7 @@ export class FarmMechanics {
   }
   _default() {
     return {
-      ore: 0, gem: 0, fish: 0,           // mechanics-only materials (economy tracks wood/stone)
+      ore: 0, gem: 0, fish: {},           // mechanics-only materials (economy tracks wood/stone); fish keyed by FISH_SPECIES id
       ingot: 0, token: 0, shard: 0, hide: 0, essence: 0, potion: 0, // craft mats: refining + boss/mob drops
       tools: { pickaxe: 1, axe: 1, rod: 1 },
       nodes: {},                         // id -> lastGatheredAt (respawn cooldown)
@@ -41,13 +55,18 @@ export class FarmMechanics {
       const raw = typeof localStorage !== 'undefined' && localStorage.getItem(this.key);
       const d = raw ? JSON.parse(raw) : null;
       if (!d) return d0;
-      return { ...d0, ...d, tools: { ...d0.tools, ...(d.tools || {}) }, house: { ...d0.house, ...(d.house || {}) }, nodes: { ...(d.nodes || {}) } };
+      // migrate pre-species saves: fish was a flat number → treat as minnows.
+      const fish = (typeof d.fish === 'number') ? { minnow: d.fish } : { ...(d.fish || {}) };
+      return { ...d0, ...d, fish, tools: { ...d0.tools, ...(d.tools || {}) }, house: { ...d0.house, ...(d.house || {}) }, nodes: { ...(d.nodes || {}) } };
     } catch { return d0; }
   }
   _save() { try { localStorage.setItem(this.key, JSON.stringify(this.state)); } catch { /* quota */ } }
   subscribe(fn) { this.listeners.add(fn); fn(this.snapshot()); return () => this.listeners.delete(fn); }
   emit() { const s = this.snapshot(); this.listeners.forEach((l) => l(s)); }
-  snapshot() { return { ...this.state, tools: { ...this.state.tools }, house: { ...this.state.house }, toast: this.toast }; }
+  // `fish` here is an AGGREGATE total (back-compat with the existing flat-number
+  // readers, e.g. HotspotPanels' MatBar / Panels' bag capacity count);
+  // `fishBag` carries the real per-species breakdown for the Bag + dock UI.
+  snapshot() { return { ...this.state, tools: { ...this.state.tools }, house: { ...this.state.house }, fish: this.totalFish(), fishBag: { ...this.state.fish }, toast: this.toast }; }
   flash(m) { this.toast = m; this.emit(); clearTimeout(this._t); this._t = setTimeout(() => { this.toast = null; this.emit(); }, 1500); }
   _add(k, n) { this.state[k] = (this.state[k] || 0) + n; }
 
@@ -90,8 +109,32 @@ export class FarmMechanics {
     this.state.nodes[node.id] = Date.now(); this._save(); this.emit(); this.flash('🪵 +' + w + ' Wood');
     return { wood: w };
   }
-  // ---- FISHING ----
-  catchFish() { this._add('fish', 1); this._save(); this.emit(); this.flash('🐟 Caught a fish!'); return { fish: 1 }; }
+  // ---- FISHING ---- quality ∈ 0..1 = how centered the reel-timing tap was in
+  // the bite's sweet zone (see FishingPanel); rod tier adds extra luck on top.
+  // Both push the roll toward rarer species (weight boosted exponentially by
+  // rarity index) rather than changing the odds of catching SOMETHING at all.
+  totalFish() { return FISH_SPECIES.reduce((a, f) => a + (this.state.fish[f.id] || 0), 0); }
+  fishValue() { return FISH_SPECIES.reduce((a, f) => a + (this.state.fish[f.id] || 0) * f.sell, 0); }
+  catchFish(quality = 0.5) {
+    const luck = clamp01(quality) * 0.6 + (ROD_LUCK[this.toolTier('rod') - 1] || 0);
+    const boosted = FISH_SPECIES.map((f, i) => f.weight * Math.pow(1 + luck * 3, i));
+    const total = boosted.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total, species = FISH_SPECIES[0];
+    for (let i = 0; i < FISH_SPECIES.length; i++) { r -= boosted[i]; if (r <= 0) { species = FISH_SPECIES[i]; break; } }
+    this.state.fish[species.id] = (this.state.fish[species.id] || 0) + 1;
+    this._save(); this.emit();
+    this.flash(`${species.icon} Caught a ${species.name}!${species.rarity !== 'common' ? ' ✨' : ''}`);
+    return species;
+  }
+  sellFish() {
+    const gain = this.fishValue();
+    if (!gain) { this.flash('No fish to sell'); return false; }
+    for (const f of FISH_SPECIES) this.state.fish[f.id] = 0;
+    this.getLogic()?.earnBloom?.(gain, 'Sold fish');
+    this._save(); this.emit();
+    this.flash(`🌸 +${gain} from fish`);
+    return true;
+  }
 
   // ---- LOOT (monster drops) — route each material to the right store ----
   grantMaterial(k, n) {
@@ -114,10 +157,16 @@ export class FarmMechanics {
     this.state.ore -= SMELT_COST.ore; this._add('ingot', 1);
     this._save(); this.emit(); this.getLogic()?.questCraftTick?.(); this.flash(`🧱 +1 Ingot`); return true;
   }
-  canCook() { return (this.state.fish || 0) >= COOK_COST.fish; }
+  canCook() { return this.totalFish() >= COOK_COST.fish; }
   cook() {
-    if (!this.canCook()) { this.flash(`Need 2${MAT_ICON.fish}`); return false; }
-    this.state.fish -= COOK_COST.fish; this._add('potion', 1);
+    if (!this.canCook()) { this.flash(`Need ${COOK_COST.fish}${MAT_ICON.fish}`); return false; }
+    let need = COOK_COST.fish;
+    for (const f of [...FISH_SPECIES].sort((a, b) => a.sell - b.sell)) { // commonest first, saves rare fish for selling
+      if (need <= 0) break;
+      const have = this.state.fish[f.id] || 0, take = Math.min(have, need);
+      this.state.fish[f.id] = have - take; need -= take;
+    }
+    this._add('potion', 1);
     this._save(); this.emit(); this.flash(`🧪 +1 Potion`); return true;
   }
   drinkPotion() {

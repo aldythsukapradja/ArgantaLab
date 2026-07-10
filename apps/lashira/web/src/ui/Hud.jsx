@@ -9,12 +9,11 @@ import { useEffect, useRef, useState } from 'react';
 import { computeRank } from '../net/hero.js';
 import { IconMount } from '../components/HudIcons.jsx';
 import { UnitCard, cardFromSnap, cardFromPeer } from './UnitCard.jsx';
-import { PvpHearts } from './PvpHearts.jsx';
 import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
 import { ActionCluster, IconEmote } from '@arganta/combat/cluster';
 import { RewardToasts } from '@arganta/combat/reward';
-import { SKIN_LIST, DEFAULT_SKIN, skinOf, GameIcon, EMOTES, EMOTE_EMOJI, loadFavoriteEmotes, saveFavoriteEmotes } from '@arganta/combat';
+import { SKIN_LIST, DEFAULT_SKIN, skinOf, GameIcon, FARM_ICONS, EMOTES, EMOTE_EMOJI, loadFavoriteEmotes, saveFavoriteEmotes } from '@arganta/combat';
 import { sfx } from '../audio/sfx.js';
 import { ambient } from '../audio/ambient.js';
 
@@ -57,7 +56,7 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, zoneLabel, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
   const [showSettings, setShowSettings] = useState(false);
   const [favEmotes, setFavEmotes] = useState(() => loadFavoriteEmotes(FAV_EMOTES_KEY));
   const [emoteFanOpen, setEmoteFanOpen] = useState(false);
@@ -95,6 +94,21 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
     if (!harvestPressRef.current.longFired) onHarvestAll();
   }
   const [showSeeds, setShowSeeds] = useState(false);
+  const seedFanRef = useRef(null);
+  const seedBtnRef = useRef(null);
+  // Auto-close the seed fan on any click outside it (same mousedown+contains
+  // pattern the dye/skill/emote pop-ups already use) — previously it only
+  // closed by picking a seed or tapping the toggle button again.
+  useEffect(() => {
+    if (!showSeeds) return undefined;
+    function close(e) {
+      if (seedFanRef.current?.contains(e.target)) return;
+      if (seedBtnRef.current?.contains(e.target)) return;
+      setShowSeeds(false);
+    }
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [showSeeds]);
   const [showLive, setShowLive] = useState(false);
   const [skinId, setSkinId] = useState(loadSkin);
   const [sfxMuted, setSfxMuted] = useState(() => sfx.isMuted());
@@ -102,6 +116,20 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
   const [ambOn, setAmbOn] = useState(() => ambient.isEnabled());
   const [ambVol, setAmbVol] = useState(() => ambient.getVolume());
   const pickSkin = (id) => { setSkinId(id); try { localStorage.setItem(SKIN_KEY, id); } catch { /* ignore */ } };
+  // Plant All / Harvest All 6h cooldown — the wipe overlay needs a live "now" to
+  // animate against; a 30s tick is plenty smooth for a multi-hour cooldown
+  // without re-rendering constantly (matches the syncDebug interval pattern below).
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const cooldownActive = Date.now() < (snap.plantAllReadyAt || 0) || Date.now() < (snap.harvestAllReadyAt || 0);
+  useEffect(() => {
+    if (!cooldownActive) return undefined;
+    const h = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(h);
+  }, [cooldownActive]);
+  const cdFrac = (readyAt) => {
+    const remain = (readyAt || 0) - nowTick;
+    return remain > 0 ? Math.min(1, remain / (6 * 60 * 60 * 1000)) : 0;
+  };
   // Live channel diagnostics, refreshed while Settings is open — a field
   // screenshot of this line pinpoints WHERE sync dies (never joined / died
   // later / joined but hearing nothing).
@@ -154,8 +182,16 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
             profile card → wallet tray (💎 pinned right) → toolbar → live row.
           The UnitCard here and each card in the live popup are the SAME
           component, so a design change updates every card at once. */}
+      {/* Location-aware zone pill — always shows where you are (🌾 Farm /
+          ⚔️ PvP Arena / ⛏️ Mines / …). Anchored to the bottom-left corner;
+          non-interactive so it never steals the drag-to-move gesture. Turns
+          red in the PvP arena so it doubles as the "combat is live here" cue. */}
+      {zoneLabel && (
+        <div className={'zone-pill' + (battle?.pvp ? ' pvp' : '')}>{zoneLabel}</div>
+      )}
+
       <div className="left-stack">
-        <UnitCard card={selfCard} pvpHearts={battle?.pvp ? <PvpHearts hp={battle.hp} maxHp={battle.maxHp} /> : null} />
+        <UnitCard card={selfCard} />
 
         {/* wallet tray, fused under the card: 🪵🪨🌸 grouped left, divider,
             💎 pinned to the right edge (learning currency, set apart). */}
@@ -201,7 +237,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
           tool is hidden, there's nothing here to tempt-and-block. */}
       {isVisitor ? (
         <div className="cluster visit-cluster" style={skinOf(skinId).vars} data-skin={skinId}>
-          <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
+          <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><GameIcon name={skinOf(skinId).icons.mount} size={24} /></button>
         </div>
       ) : battle?.on ? (
         <ActionCluster
@@ -220,7 +256,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
       ) : (
       <div className="cluster farm" style={skinOf(skinId).vars} data-skin={skinId}>
         {showSeeds && (
-          <div className="seed-fan" aria-label="seed inventory">
+          <div className="seed-fan" aria-label="seed inventory" ref={seedFanRef}>
             <div className="seed-fan-title">Plant</div>
             {seedRows.map((crop, i) => {
               const count = Number(snap.seeds?.[crop.id] || 0);
@@ -243,19 +279,24 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
           </div>
         )}
         <div className="small-ring">
-          <button type="button" title={`Seed: ${selectedCrop.name} ×${selectedSeedCount}`}
+          <button type="button" ref={seedBtnRef} title={`Seed: ${selectedCrop.name} ×${selectedSeedCount}`}
             className={'skill-circle' + (showSeeds ? ' active' : '')}
             onClick={() => setShowSeeds((v) => !v)}>
             <span>{selectedCrop.emoji}</span>
             <span className="tool-count">×{selectedSeedCount}</span>
           </button>
-          <button type="button" className="skill-circle util" onClick={onPlantAll} title="Plant all empty soil">🌱</button>
-          <button type="button" className={'skill-circle util' + (snap.tool === 'sickle' ? ' active' : '')}
+          <button type="button" className={'skill-circle util' + (cdFrac(snap.plantAllReadyAt) > 0 ? ' cooling' : '')}
+            onClick={onPlantAll} title="Plant all empty soil">
+            <GameIcon name={FARM_ICONS.plant} size={22} />
+            {cdFrac(snap.plantAllReadyAt) > 0 && <span className="cd-wipe" style={{ '--cd': cdFrac(snap.plantAllReadyAt) }} aria-hidden="true" />}
+          </button>
+          <button type="button" className={'skill-circle util' + (snap.tool === 'sickle' ? ' active' : '') + (cdFrac(snap.harvestAllReadyAt) > 0 ? ' cooling' : '')}
             onPointerDown={harvestPointerDown} onPointerUp={harvestPointerUp} onPointerLeave={harvestPointerUp}
             title="Harvest all ripe crops — hold to toggle Sickle (remove instead of collect)">
-            {snap.tool === 'sickle' ? '🌾' : '🧺'}
+            <GameIcon name={snap.tool === 'sickle' ? FARM_ICONS.sickle : FARM_ICONS.harvest} size={22} />
+            {cdFrac(snap.harvestAllReadyAt) > 0 && <span className="cd-wipe" style={{ '--cd': cdFrac(snap.harvestAllReadyAt) }} aria-hidden="true" />}
           </button>
-          <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><IconMount /></button>
+          <button type="button" className="skill-circle util" onClick={onToggleMount} title="mount"><GameIcon name={skinOf(skinId).icons.mount} size={24} /></button>
           {emoteFanOpen
             ? favEmotes.map((name, i) => (
                 <button key={name} type="button" className={'skill-circle util fan-item fan-item-' + (i + 1)}
@@ -264,7 +305,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
             : <button type="button" className="skill-circle util emote" onClick={toggleEmoteFan} title="emote (pick a favorite)"><IconEmote /></button>}
         </div>
         <button type="button" className="attack-circle" onClick={onUse} aria-label="work the tile in front of you" title="Swing at the tile ahead — chop trees, mine ore, harvest or plant crops">
-          <span>{snap.tool === 'sickle' ? '🌾' : '👐'}</span>
+          <GameIcon name={snap.tool === 'sickle' ? FARM_ICONS.sickle : FARM_ICONS.work} size={40} />
         </button>
       </div>
       )}

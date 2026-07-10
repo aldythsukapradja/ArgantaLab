@@ -103,6 +103,34 @@ const CUES = {
   hurt: (s) => { s.tone({ type: 'square', f0: 240, f1: 110, t: 0.16, gain: 0.2 }); s.noise({ t: 0.1, gain: 0.14, lp: 1000 }); },
   faint: (s) => s.tone({ type: 'sine', f0: 320, f1: 70, t: 0.6, gain: 0.22 }),
   die: (s) => { s.noise({ t: 0.22, gain: 0.2, lp: 1800 }); s.tone({ type: 'triangle', f0: 400, f1: 120, t: 0.2, gain: 0.14 }); },
+
+  // Take / crouch ("duck") — a quiet thud+dip, distinct from the swing/hit cues.
+  take: (s) => { s.noise({ t: 0.08, gain: 0.14, lp: 1200 }); s.tone({ type: 'sine', f0: 260, f1: 180, t: 0.09, gain: 0.12 }); },
+
+  // One cue per emote (keys match the EMOTES catalog exactly, capitalized —
+  // case-sensitive so these don't collide with the lowercase action cues above).
+  Victory: (s) => {
+    s.tone({ type: 'triangle', f0: 660, f1: 880, t: 0.12, gain: 0.22 });
+    s.tone({ type: 'triangle', f0: 880, f1: 1175, t: 0.14, gain: 0.2, delay: 0.1 });
+    s.tone({ type: 'sine', f0: 1568, t: 0.12, gain: 0.14, delay: 0.2 });
+  },
+  Smile: (s) => s.tone({ type: 'sine', f0: 700, f1: 950, t: 0.1, gain: 0.18 }),
+  Cry: (s) => {
+    s.tone({ type: 'sine', f0: 500, f1: 340, t: 0.22, gain: 0.16 });
+    s.tone({ type: 'sine', f0: 420, f1: 280, t: 0.2, gain: 0.12, delay: 0.18 });
+  },
+  Blush: (s) => s.tone({ type: 'sine', f0: 1000, f1: 1300, t: 0.09, gain: 0.12 }),
+  Wink: (s) => { s.tone({ type: 'square', f0: 900, t: 0.05, gain: 0.14 }); s.tone({ type: 'square', f0: 900, t: 0.05, gain: 0.14, delay: 0.1 }); },
+  Yawn: (s) => s.tone({ type: 'sine', f0: 380, f1: 220, t: 0.4, gain: 0.16 }),
+  Sleep: (s) => { s.tone({ type: 'sine', f0: 440, f1: 180, t: 0.5, gain: 0.18 }); s.tone({ type: 'sine', f0: 900, t: 0.25, gain: 0.08, delay: 0.3 }); },
+  Surprise: (s) => s.tone({ type: 'square', f0: 300, f1: 900, t: 0.12, gain: 0.2 }),
+  Angry: (s) => { s.tone({ type: 'sawtooth', f0: 150, f1: 100, t: 0.18, gain: 0.2 }); s.noise({ t: 0.1, gain: 0.14, lp: 800 }); },
+  Merong: (s) => { s.tone({ type: 'triangle', f0: 520, t: 0.08, gain: 0.18 }); s.tone({ type: 'triangle', f0: 660, t: 0.1, gain: 0.16, delay: 0.09 }); },
+  Kongi: (s) => { s.tone({ type: 'sine', f0: 500, t: 0.08, gain: 0.14 }); s.tone({ type: 'sine', f0: 400, t: 0.1, gain: 0.12, delay: 0.1 }); },
+  Pish: (s) => s.noise({ t: 0.1, gain: 0.16, lp: 2200, hp: 1200 }),
+  Dance: (s) => { [440, 550, 660, 550].forEach((f, i) => s.tone({ type: 'triangle', f0: f, t: 0.09, gain: 0.16, delay: i * 0.09 })); },
+  Cold: (s) => { [700, 650, 700, 650, 700].forEach((f, i) => s.tone({ type: 'sine', f0: f, t: 0.05, gain: 0.1, delay: i * 0.06 })); },
+  HandToMouth: (s) => { s.tone({ type: 'sine', f0: 800, f1: 1000, t: 0.06, gain: 0.12 }); s.tone({ type: 'sine', f0: 900, f1: 1100, t: 0.06, gain: 0.1, delay: 0.07 }); },
 };
 
 export const sfx = new Sfx();

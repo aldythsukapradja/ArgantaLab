@@ -5,7 +5,7 @@ import { CROPS } from '../data/crops.js';
 import { SPECIES, animalGoodReady, animalGoodFrac } from '../data/livestock.js';
 import { KIN_TASKS } from '../data/kins.js';
 import { QUEST_DEFS } from '../game/farm-logic.js';
-import { MAT_ICON } from '../game/farm-mechanics.js';
+import { MAT_ICON, FISH_SPECIES } from '../game/farm-mechanics.js';
 import { Shop } from './Shop.jsx';
 
 // `mech` = the mechanics SNAPSHOT (material counts); `mechGame` = the store (actions).
@@ -19,7 +19,7 @@ export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose, se
         {panel === 'shop' && <Shop snap={snap} game={game} mech={mech} mechGame={mechGame} initialTab={shopTab} onClose={onClose} />}
         {panel === 'house' && <Home snap={snap} game={game} onClose={onClose}
           selfId={selfId} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} />}
-        {panel === 'inventory' && <Bag snap={snap} game={game} mech={mech} onClose={onClose} />}
+        {panel === 'inventory' && <Bag snap={snap} game={game} mech={mech} mechGame={mechGame} onClose={onClose} />}
         {panel === 'quests' && <Quests snap={snap} game={game} mechGame={mechGame} onClose={onClose} />}
       </div>
     </div>
@@ -80,8 +80,10 @@ function produceInfo(id) {
   }
   return { id, name: id, icon: '📦', sell: 10 };
 }
-const MAT_NAME = { wood: 'Wood', stone: 'Stone', ore: 'Ore', gem: 'Gem', fish: 'Fish', ingot: 'Ingot', token: 'Token', shard: 'Shard', hide: 'Hide', essence: 'Essence', potion: 'Potion' };
-const MAT_DESC = { wood: 'Build & upgrade material', stone: 'Build & upgrade material', ore: 'Smelt into ingots at the Forge', gem: 'Rare crafting material', fish: 'Cook into a potion at the Forge', ingot: 'Feeds weapon/armor upgrades', token: 'Quest reward token', shard: 'Rare boss drop', hide: 'Beast drop', essence: 'Magical crafting essence', potion: 'Drink to restore stamina' };
+// 'fish' is intentionally excluded here — it gets its own per-species rows in
+// bagGroups() (see FISH_SPECIES) instead of one flat aggregate row.
+const MAT_NAME = { wood: 'Wood', stone: 'Stone', ore: 'Ore', gem: 'Gem', ingot: 'Ingot', token: 'Token', shard: 'Shard', hide: 'Hide', essence: 'Essence', potion: 'Potion' };
+const MAT_DESC = { wood: 'Build & upgrade material', stone: 'Build & upgrade material', ore: 'Smelt into ingots at the Forge', gem: 'Rare crafting material', ingot: 'Feeds weapon/armor upgrades', token: 'Quest reward token', shard: 'Rare boss drop', hide: 'Beast drop', essence: 'Magical crafting essence', potion: 'Drink to restore stamina' };
 
 const BAG_CATS = [
   { id: 'all', icon: '🎒', label: 'All' },
@@ -106,6 +108,11 @@ function bagGroups(snap, mech) {
   const materials = Object.keys(MAT_NAME).map((k) => ({
     key: 'mat-' + k, type: 'material', icon: MAT_ICON[k], name: MAT_NAME[k], count: matAmt(k), desc: MAT_DESC[k],
   }));
+  const fish = FISH_SPECIES.map((f) => ({
+    key: 'fish-' + f.id, type: 'material', fishId: f.id, icon: f.icon, name: f.name, count: Number(mech?.fishBag?.[f.id] || 0),
+    desc: `${cap(f.rarity)} catch · sells 🌸${f.sell} each · cooks into potions at the Forge`,
+  }));
+  materials.push(...fish);
   const gear = [
     { key: 'gear-weapon', type: 'gear', icon: '⚔', name: snap.weaponName || 'Weapon', tier: snap.weaponTier || 1, desc: `+${snap.atk || 0} ATK · upgrade at the ⚒ Forge` },
     { key: 'gear-armor', type: 'gear', icon: '🛡', name: snap.armorName || 'Armor', tier: snap.armorTier || 1, desc: `+${snap.def || 0} DEF · upgrade at the ⚒ Forge` },
@@ -114,7 +121,7 @@ function bagGroups(snap, mech) {
   return { seeds, produce, materials, gear };
 }
 
-function Bag({ snap, game, mech, onClose }) {
+function Bag({ snap, game, mech, mechGame, onClose }) {
   const [catId, setCatId] = useState('all');
   const [selKey, setSelKey] = useState(null);
   const groups = bagGroups(snap, mech);
@@ -143,6 +150,7 @@ function Bag({ snap, game, mech, onClose }) {
       return <button className={'rbtn' + (on ? ' ghost' : '')} disabled={it.count <= 0} onClick={() => game.setSeed(it.cropId)}>{on ? 'Selected ✓' : 'Select'}</button>;
     }
     if (it.type === 'produce') return <button className="rbtn" onClick={() => game.sellAll()}>Sell all</button>;
+    if (it.fishId) return <button className="rbtn" disabled={it.count <= 0} onClick={() => mechGame.sellFish()}>Sell all fish</button>;
     return null;
   };
 

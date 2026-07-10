@@ -38,18 +38,14 @@ export const EMOTES = ['Victory', 'Smile', 'Cry', 'Blush', 'Wink', 'Yawn', 'Slee
 export const DIRWORD: Record<string, string> = { S: 'South', E: 'East', N: 'North', W: 'West' }
 export const PATHS = ['Warrior', 'Mage', 'Poet', 'Rogue']
 
-// Skills — ported verbatim from Kingdom's Character Lab: 3 slots, each holding a
-// client visual effect (fx id) and OPTIONALLY a scraped spell identity (skillId/
-// name/path/manaCost/spellType) picked from the real spell catalog, level-gated.
-export const DEFAULT_SKILLS = [{ fx: 22, skillId: null }, { fx: 1, skillId: null }, { fx: 131, skillId: null }] as const
+// Skills — 3 fixed slots (single-target / hits-everything / self-heal — the
+// combat engine hardcodes this order in @arganta/combat's SKILL_SLOTS, it was
+// never actually configurable). The ONLY thing a slot carries here is which
+// client visual effect plays; there is no "bind a spell to this slot" concept.
+export const DEFAULT_SKILLS = [{ fx: 22 }, { fx: 1 }, { fx: 131 }] as const
 export function normalizeSkills(skills: any): any[] {
   return DEFAULT_SKILLS.map((def, i) => ({
     fx: Number.isFinite(Number(skills?.[i]?.fx)) ? Number(skills[i].fx) : def.fx,
-    skillId: typeof skills?.[i]?.skillId === 'string' ? skills[i].skillId : null,
-    name: typeof skills?.[i]?.name === 'string' ? skills[i].name : null,
-    path: typeof skills?.[i]?.path === 'string' ? skills[i].path : null,
-    manaCost: Number.isFinite(Number(skills?.[i]?.manaCost)) ? Number(skills[i].manaCost) : null,
-    spellType: typeof skills?.[i]?.spellType === 'string' ? skills[i].spellType : null,
   }))
 }
 
@@ -82,12 +78,10 @@ export function useComposer() {
   const [mountId, setMountId] = useState(0)
   const [mountCount, setMountCount] = useState(0)
   const [skills, setSkills] = useState<any[]>(() => normalizeSkills(undefined))
-  const [skillCatalog, setSkillCatalog] = useState<any[]>([])
   const [effects, setEffects] = useState<any[]>([])
   const meta = useCategoryData(ALL_CATS)
 
   useEffect(() => { data.mounts().then((m: any[]) => setMountCount(m.length)).catch(() => {}) }, [])
-  useEffect(() => { data.loadJson(data.dataUrl('/data/core/skills.json')).then(setSkillCatalog).catch(() => setSkillCatalog([])) }, [])
   useEffect(() => { data.effects().then(setEffects).catch(() => setEffects([])) }, [])
 
   function applySpec(spec: any) {
@@ -105,27 +99,12 @@ export function useComposer() {
   function setSkillFx(slot: number, fx: number) {
     setSkills(arr => arr.map((s, i) => (i === slot ? { ...s, fx } : s)))
   }
-  function setSkillScrape(slot: number, skillId: string) {
-    const entry = skillCatalog.find((s: any) => s.id === skillId)
-    setSkills(arr => arr.map((s, i) => {
-      if (i !== slot) return s
-      if (!entry) return { ...s, skillId: null, name: null, path: null, manaCost: null, spellType: null }
-      return { ...s, skillId: entry.id, name: entry.name, path: entry.pathSlug, manaCost: entry.manaCost ?? null, spellType: entry.spellType ?? null }
-    }))
-  }
   function stepSkill(slot: number, delta: number) {
     if (!availableEffects.length) return
     const cur = skills[slot]?.fx ?? DEFAULT_SKILLS[slot]?.fx ?? availableEffects[0].id
     const i = availableEffects.findIndex((e: any) => e.id === cur)
     const next = availableEffects[(i + delta + availableEffects.length) % availableEffects.length] || availableEffects[0]
     setSkillFx(slot, next.id)
-  }
-  // Spells available for a given path + character level (mirrors Kingdom's pathSkills).
-  function skillsForPath(pathSlug: string, level: number): any[] {
-    return skillCatalog
-      .filter((s: any) => !pathSlug || (s.pathSlug || '').toLowerCase() === pathSlug.toLowerCase())
-      .filter((s: any) => !Number.isFinite(level) || Number(s.levelNumber || 0) <= level)
-      .sort((a: any, b: any) => (Number(a.levelNumber || 0) - Number(b.levelNumber || 0)) || a.name.localeCompare(b.name))
   }
 
   const bodyParts = meta.body?.parts || []
@@ -213,6 +192,6 @@ export function useComposer() {
   return {
     sel, setSel, mountOn, setMountOn, mountId, setMountId, mountCount, meta, spec,
     applySpec, entriesFor, currentKeyFor, labelFor, pickFor, stepEntry, toggle, dyeTargetKey,
-    skills, skillCatalog, availableEffects, skillLabel, setSkillFx, setSkillScrape, stepSkill, skillsForPath,
+    skills, availableEffects, skillLabel, setSkillFx, stepSkill,
   }
 }

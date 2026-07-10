@@ -83,6 +83,17 @@ export const CLUSTER_SKINS = {
   },
 };
 
+// Farm tool icons — same vendored game-icons.net set as the combat skins, so the
+// farm cluster reads as "the same instrument" as the attack/skill orbs instead of
+// a mismatched row of colorful emoji. One shared set (not skin-variant like combat's
+// icons.attack/single/etc — farm doesn't need 3 alternates to compare live).
+export const FARM_ICONS = {
+  plant: 'lorc__sprout',
+  harvest: 'lorc__wheat',
+  sickle: 'delapouite__sickle',
+  work: 'delapouite__watering-can', // the main "work the tile ahead" action, when not in Sickle mode
+};
+
 export const SKIN_LIST = Object.values(CLUSTER_SKINS);
 export const DEFAULT_SKIN = 'brass';
 export function skinOf(id) { return CLUSTER_SKINS[id] || CLUSTER_SKINS[DEFAULT_SKIN]; }

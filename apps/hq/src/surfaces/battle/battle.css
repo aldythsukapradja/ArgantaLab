@@ -38,7 +38,92 @@ html[data-theme="dark"] .battleforge{ --bf-stage-a:#1a1a22; --bf-stage-b:#121219
 .bf-tab .tnum{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--tx3)}
 
 .bf-body{flex:1;min-height:0;border-top:1px solid var(--bd);overflow:auto}
-.bf-pad{padding:18px 20px 26px;max-width:1400px;margin:0 auto}
+.bf-pad{padding:20px 26px 30px;max-width:1880px;margin:0 auto}
+/* BUG FIX: every dashboard grid in this surface used className="grid" with an
+   inline grid-template-columns, but `.grid` was never actually defined with
+   display:grid anywhere in HQ — so it silently rendered as a plain block and
+   every "column" stacked full-width instead (the cause of both "empty gutter"
+   and "one giant card per row"). Scoped to .battleforge so it can't leak into
+   (or collide with) any other surface. */
+.battleforge .grid{display:grid}
+/* SAME BUG, second instance: className="chead"/"num" were used throughout this
+   surface for years but neither was ever defined — headers had no flex
+   alignment and numbers had no tabular spacing. Fixed the same way: scoped,
+   additive rules so nothing outside .battleforge is affected. */
+.battleforge .chead{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.battleforge .chead h3{font-size:13px;font-weight:700;margin:0;color:var(--tx)}
+.battleforge .num{font-variant-numeric:tabular-nums}
+/* THIRD instance of the same bug: `.card` provides bg/border/radius/shadow but
+   NO padding anywhere in HQ — every other surface compensates with an inline
+   `style={{padding:16}}` on each card (see Growth.tsx), which this file's
+   Overview cards simply never got, so content sat flush against the border.
+   Fixed at the class level instead of patching each div, so it can't regress. */
+.battleforge .card{padding:16px}
+.battleforge .card.bf-kpi{padding:14px 16px} /* higher specificity — wins over the rule above */
+
+/* Section header — icon badge + title, used to introduce a block of cards
+   within a tab (e.g. "PVP · Path balance") instead of a bare floating label. */
+.bf-sec{display:flex;align-items:center;gap:10px;margin:26px 0 12px}
+.bf-sec:first-child{margin-top:0}
+.bf-sec .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;flex:none}
+.bf-sec .tt{font-size:14px;font-weight:700;color:var(--tx)}
+.bf-sec .sb{font-size:11px;color:var(--tx3);margin-left:2px}
+.bf-sec .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--bd2),transparent)}
+
+/* ---- KPI strip (Overview) ---- */
+.bf-kpis{grid-template-columns:repeat(4,1fr);gap:14px}
+@media (max-width:900px){.bf-kpis{grid-template-columns:repeat(2,1fr)}}
+.bf-kpi .k{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)}
+.bf-kpi .v{font-size:27px;font-weight:800;letter-spacing:-.02em;margin-top:3px;line-height:1;color:var(--tx)}
+.bf-kpi .s{font-size:11px;margin-top:5px;color:var(--tx2)}
+
+/* ---- attention feed (Overview) ---- */
+.bf-att{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--bd);border-radius:9px;margin-bottom:7px;background:var(--bg)}
+.bf-att .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.bf-att .tx{flex:1;font-size:12px}
+.bf-att .go{font-family:var(--mono);font-size:9.5px;color:var(--acc-text);background:var(--acc-soft);border:none;padding:4px 9px;border-radius:6px;cursor:pointer}
+.bf-att .go:hover{background:var(--acc);color:#fff}
+
+/* ---- zone coverage bar (Overview) ---- */
+.bf-zbar{display:flex;gap:3px;height:26px;border-radius:8px;overflow:hidden;margin:8px 0}
+.bf-zseg{display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;min-width:30px}
+.bf-zleg{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--tx2)}
+.bf-zleg i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:middle}
+
+/* ---- PvP fairness rail (PVP tab) ---- */
+.bf-rail{display:flex;align-items:center;gap:20px;flex-wrap:wrap} /* padding comes from the generic .card rule */
+.bf-rail .hot{border-left:3px solid var(--warn);padding:7px 11px;background:var(--bg2);border-radius:8px;font-size:12px}
+.bf-rail .hot .e{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
+
+/* ---- value-on-thumb slider — the fill's own thumb carries the number, so
+   there's no dead track space and no separate numeric column. `.bad` flips
+   the whole row red INLINE (used by PVP ordering validation) with zero
+   layout-height change — nothing else on the page reflows. ---- */
+.bf-vrow{display:flex;align-items:center;gap:10px;margin:8px 0}
+.bf-vrow.bad .bf-vl{color:var(--bad)}
+.bf-vl{font-size:10.5px;color:var(--tx2);display:flex;align-items:center;gap:2px;flex:none}
+.bf-vs{position:relative;flex:1;height:24px;display:flex;align-items:center}
+.bf-vtrack{position:absolute;left:0;right:0;height:6px;border-radius:99px;background:var(--bg3)}
+.bf-vrow.bad .bf-vtrack{background:var(--bad-bg)}
+.bf-vfill{position:absolute;left:0;height:6px;border-radius:99px;background:var(--pc,var(--acc));pointer-events:none}
+.bf-vrow.bad .bf-vfill{background:var(--bad)}
+.bf-vthumb{position:absolute;transform:translateX(-50%);pointer-events:none;font-family:var(--mono);font-size:10px;font-weight:800;color:#fff;
+  background:var(--pc,var(--acc));border-radius:6px;padding:2px 6px;box-shadow:var(--shadow-sm);white-space:nowrap;min-width:34px;text-align:center}
+.bf-vrow.bad .bf-vthumb{background:var(--bad)}
+.bf-vs input{position:absolute;left:0;width:100%;height:24px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer;opacity:0}
+
+/* ---- Bestiary world-dial strip (top of the tab, above the workbench) ---- */
+.bf-wbar{padding:14px 18px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);flex:none}
+
+/* ---- Rewards teaser ---- */
+.bf-teaser{max-width:820px;margin:26px auto;text-align:center;color:var(--tx2)}
+.bf-teaser .big{font-size:40px;margin-bottom:8px}
+.bf-teaser h2{font-size:17px;color:var(--tx);margin-bottom:6px}
+.bf-teaser .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:18px;text-align:left}
+.bf-teaser .col{border:1px solid var(--bd2);border-radius:11px;padding:13px;background:var(--bg)}
+.bf-teaser .col b{font-size:12.5px;color:var(--tx)}
+.bf-teaser .col p{font-size:11px;color:var(--tx3);margin-top:4px;line-height:1.5}
+@media (max-width:820px){.bf-teaser .cols{grid-template-columns:1fr}}
 
 /* ---- sticky publish bar (Combat tab) ---- */
 .bf-pubbar{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:13px 18px;
@@ -98,7 +183,14 @@ html[data-theme="dark"] .battleforge{ --bf-stage-a:#1a1a22; --bf-stage-b:#121219
 .bf-mstage .em{font-size:90px}
 .bf-mtag{position:absolute;left:20px;bottom:16px;font-family:var(--mono);font-size:10px;color:var(--tx2);
   background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:5px 9px}
-.bf-mctrl{border-top:1px solid var(--bd);padding:11px 16px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--bg)}
+/* Rotate hint — arrow/WASD is the only way to turn the monster now (no S/E/N/W
+   buttons), so this caption is the sole affordance telling anyone the keys exist. */
+.bf-khint{position:absolute;left:20px;top:14px;font-family:var(--mono);font-size:9.5px;color:var(--tx3);
+  background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:5px 9px;letter-spacing:.02em}
+/* Play/zoom toolbar — lives INSIDE the canvas (bottom-right) instead of a
+   separate control bar below it, so the stage + its controls are one unit. */
+.bf-cctrl{position:absolute;right:20px;bottom:16px;display:flex;align-items:center;gap:8px;
+  background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:6px 10px;box-shadow:var(--shadow-sm)}
 .bf-gbtn{cursor:pointer;font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--bd2);
   color:var(--tx2);border-radius:7px;padding:6px 10px}
 .bf-gbtn:hover{color:var(--tx)}

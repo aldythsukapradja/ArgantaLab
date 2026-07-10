@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, zoneOf, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -37,14 +37,13 @@ import { TileFan } from '../ui/TileFan.jsx';
 import { sfx } from '../audio/sfx.js';
 import { ambient } from '../audio/ambient.js';
 import { CROPS, cropIsRipe } from '../data/crops.js';
-import { SPECIES, animalGoodReady } from '../data/livestock.js';
+import { SPECIES, MAX_PER_SPECIES, animalGoodReady } from '../data/livestock.js';
 
 const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South', ArrowLeft: 'West', a: 'West', ArrowRight: 'East', d: 'East' };
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
 const FACE_WORD = { North: 'up', South: 'down', East: 'right', West: 'left' };
 const WALK_MS = 460;        // matches Kingdom Heroes' walk cadence (1 tile / 460ms)
 const REMOTE_WALK_MS = 460;
-const ANIMAL_VISUAL_COUNT = 5;
 const DIRS = [['East', 1, 0], ['West', -1, 0], ['South', 0, 1], ['North', 0, -1]];
 const KIN_STARTS = [[7, 12], [13, 16], [18, 11], [23, 14], [28, 10], [9, 18], [18, 19], [27, 18], [32, 13], [12, 7], [21, 7], [30, 7]];
 
@@ -263,6 +262,9 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   useEffect(() => { if (G.current) G.current.devOverlay = devOn; }, [devOn]);
   const [castleSkin, setCastleSkin] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('lashira_castle_skin')) || 'storybook');
   useEffect(() => { if (G.current) G.current.castleSkin = castleSkin; try { localStorage.setItem('lashira_castle_skin', castleSkin); } catch {} }, [castleSkin]);
+  // Location-aware zone label ("🌾 Farm" / "⚔️ PvP Arena" / …) shown in the HUD.
+  // Updated from the game loop only when the player crosses into a new zone.
+  const [zoneLabel, setZoneLabel] = useState('');
   // Periodically clear legacy/orphaned plot records so nothing lingers forever.
   useEffect(() => { const t = window.setInterval(() => logicRef.current?.sweepStalePlots?.(), 30000); return () => window.clearInterval(t); }, []);
   const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
@@ -492,16 +494,31 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       }
       if (intent?.t === 'pvp-hit') {
         // Victim-authoritative: I apply damage to MY OWN hp whenever it's aimed
-        // at me. Deliberately NOT also re-checking my own g.pvp.on here — the
-        // ATTACKER already verified they were in the zone before this was ever
-        // sent (that's the real gate), and re-checking on the receiving end too
-        // was found to silently swallow EVERY hit (melee AND skills) whenever
-        // the two clients' zone-state read even a beat out of sync — a pure
-        // false-negative risk with no real anti-cheat value in a trusted circle.
-        if (intent.targetId !== presenceProfileId(profile)) return;
+        // at me. Deliberately NOT re-checking my own g.pvp.on here — the ATTACKER
+        // already verified they were in the zone before sending (that's the real
+        // gate); re-checking here too silently swallowed hits on any beat of
+        // cross-client zone-state skew.
+        const myId = presenceProfileId(profile);
+        // TEMP diagnostic — only fires on a MISMATCH (the normal path is silent).
+        // If this ever shows during a real duel, the bug is an id-format mismatch
+        // between how the attacker keys me and how I identify myself.
+        if (String(intent.targetId) !== String(myId)) {
+          if (intent.targetId != null) logicRef.current?.flash?.(`⚠ pvp-hit not for me: for=${String(intent.targetId).slice(0, 8)} me=${String(myId).slice(0, 8)}`);
+          return;
+        }
         const g = G.current; if (!g) return;
         const dmg = Number(intent.dmg) || 0;
+        // Size + activate my combat pool BEFORE subtracting, so the hit lands on
+        // my real PvP HP (not a phantom default that would insta-faint) and the
+        // HUD actually shows the drop.
+        ensurePvpCombat(g);
         if (dmg > 0) g.combat.hp = Math.max(0, g.combat.hp - dmg);
+        // spark + floating damage on ME so the hit is felt, not just numeric.
+        const [mpx, mpy] = entityPx(g.player);
+        g.fx.push({ x: mpx + TILE / 2, y: mpy + TILE / 2, start: performance.now(), ttl: 320 });
+        g.floats.push({ x: mpx + TILE / 2, y: mpy + TILE - 26, text: '-' + dmg, start: performance.now(), ttl: 820 });
+        sfx.play('hurt');
+        logicRef.current?.flash?.(`💥 took ${dmg} · hp ${g.combat.hp}/${g.combat.maxHp}`);
         if (g.combat.hp <= 0) pvpFaintPlayer(g, intent.by); else syncBattleState(g);
         return;
       }
@@ -738,7 +755,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     // tile is adjacent by definition, so no distance check needed here.
     const hs = hotspotAt(tx, ty);
     if (hs && (hs.kind === 'ore' || hs.kind === 'tree')) { playSwing(g); gatherNode(g, hs); return; }
-    if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = performance.now(); }
+    if (!p.oneShot) { p.oneShot = 'Get'; p.oneShotStart = performance.now(); sfx.play('take'); }
     // Contextual (same as tapping the land): sickle removes → harvest ripe → plant.
     popHarvestResult(g, logicRef.current.tapAt(tx, ty));
   }
@@ -758,6 +775,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     const p = g.player;
     if (p.oneShot) return;
     p.oneShot = name; p.oneShotStart = performance.now();
+    sfx.play(name);
   }
   // Dungeon v1: the Hollow Gate drops you into the battleground arena (existing
   // combat). Real instanced floor + Tiger boss + loot-on-clear is a follow-up.
@@ -776,6 +794,17 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       g.monsters.push(boss);
     }
     logicRef.current?.flash?.('⚔ The Tiger stirs… clear the dungeon!');
+  }
+  // Fast-travel fishing button: warp straight onto the dock bridge (a walkable
+  // tile inside the bridge carve, see farm-map.js buildFarmMap) and pop the
+  // Fishing panel right away — same teleport pattern as enterDungeon() above,
+  // so you don't have to walk the whole way to the lake to go fish.
+  function goFishing() {
+    const g = G.current; if (!g) return;
+    setPanel(null);
+    const tile = [13, 37];
+    g.player.tile = tile; g.player.from = tile; g.player.moveT = 1;
+    setHotspot({ kind: 'dock', id: 'dock' });
   }
   function toggleMount() {
     const g = G.current; if (!g) return;
@@ -997,6 +1026,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     const L = logicRef.current?._level?.() ?? 1;
     const base = playerDamage(pathPhysPower(path, L));
     const { dmg, crit, miss } = rollPvpDamage(base);
+    // TEMP diagnostic — confirms the attacker's OWN logic found a target and
+    // fired; if the victim's HP never moves despite seeing this, the bug is on
+    // the receiving/intent side, not the targeting side.
+    logicRef.current?.flash?.(miss ? '⚔ Miss!' : `⚔ Hit ${target.actor?.name || 'them'} for ${dmg}`);
     pvpHitPeer(g, target.id, dmg, crit, miss);
   }
   // PvP skill cast: Bolt (short capped reach — unlimited range was the balance
@@ -1025,6 +1058,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       for (const t of targets) {
         const { dmg, crit, miss } = rollPvpDamage(baseDmg);
         castSpell(g, skill, t.tile);
+        logicRef.current?.flash?.(miss ? '✷ Miss!' : `✷ Hit ${t.actor?.name || 'them'} for ${dmg}`);
         pvpHitPeer(g, t.id, dmg, crit, miss);
       }
       return;
@@ -1047,6 +1081,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     if (!target) { spark(g, ...frontTile()); logicRef.current?.flash?.('✦ Out of range'); return; } // nobody within reach
     const { dmg, crit, miss } = rollPvpDamage(baseDmg);
     castSpell(g, skill, target.tile);
+    logicRef.current?.flash?.(miss ? '✦ Miss!' : `✦ Hit ${target.actor?.name || 'them'} for ${dmg}`);
     pvpHitPeer(g, target.id, dmg, crit, miss);
   }
   // Skill i — Bolt (single), Storm (all), Mend (heal). MP = stamina; damage/heal
@@ -1178,10 +1213,18 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       const live = new Set();
       const state = logicRef.current?.state;
       if (!state) return;
-      // 5 spread start tiles inside a pen rect (corners + centre).
+      // Up to MAX_PER_SPECIES spread start tiles inside a pen rect — a 2-col grid
+      // (pens grow via the Shop past the starter 5, so this must scale to 8).
       const penStarts = (p) => {
-        const cx = Math.round((p.x0 + p.x1) / 2), cy = Math.round((p.y0 + p.y1) / 2);
-        return [[p.x0, p.y0], [p.x1, p.y0], [cx, cy], [p.x0, p.y1], [p.x1, p.y1]];
+        const cols = 2, rows = Math.ceil(MAX_PER_SPECIES / cols);
+        const pts = [];
+        for (let i = 0; i < MAX_PER_SPECIES; i++) {
+          const row = Math.floor(i / cols), col = i % cols;
+          const x = col ? p.x1 - 1 : p.x0 + 1;
+          const y = rows > 1 ? Math.round(p.y0 + 1 + (row * (p.y1 - p.y0 - 2)) / (rows - 1)) : Math.round((p.y0 + p.y1) / 2);
+          pts.push([x, y]);
+        }
+        return pts;
       };
       const animalConfig = {
         cow: { names: ['Daisy', 'Bessie', 'Clover', 'Maple', 'Moochi'], home: PENS.cow, starts: penStarts(PENS.cow), speedMs: 1500 },
@@ -1191,8 +1234,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       for (const species of ['cow', 'sheep', 'chicken']) {
         const config = animalConfig[species];
         const saved = (state.livestock || []).filter((a) => a.species === species);
-        for (let i = 0; i < ANIMAL_VISUAL_COUNT; i++) {
-          const source = saved[i] || saved[0] || {};
+        // Render one sprite per OWNED animal — pens grow past 5 via the Shop, so
+        // this must track the real count, not a fixed visual cap.
+        for (let i = 0; i < saved.length; i++) {
+          const source = saved[i] || {};
           const id = `animal:${species}:${i}`; live.add(id);
           const start = config.starts[i] || config.starts[0];
           const ent = ensureActor(g, id, {
@@ -1350,10 +1395,20 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     // and (if host) animals visible to the circle. Farm STATE never rides the
     // heartbeat: state changes are granular intents sent at the moment they
     // happen, so there is nothing here that could clobber a peer's live edits.
+    // ALSO advances the shared herd + arena monsters here (not just re-broadcasts
+    // them) — stepWorldActors/stepMonsterWorld are wall-clock driven (compare
+    // `now` against stored timestamps), so calling them off a timer is safe even
+    // while the rAF tick is also running. Without this, a backgrounded host's tab
+    // throttles rAF to ~0, stepWorldActors stops advancing, and the WHOLE circle
+    // sees the herd/monsters as frozen — heartbeat kept the broadcast alive but
+    // the positions inside it were stale.
     const heartbeat = window.setInterval(() => {
       const g = G.current;
       if (!g || !presenceCtrlRef.current) return;
-      publishPresence(g, performance.now(), true);
+      const now = performance.now();
+      stepWorldActors(g, now);
+      stepMonsterWorld(g, now, g.player);
+      publishPresence(g, now, true);
     }, 2000);
 
     function tick(now) {
@@ -1391,6 +1446,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       stepWorldActors(g, now);
       stepPeerActors(g, now);
       stepBattle(g, now);
+      // zone label — recompute only when the player's tile changes zone (cheap;
+      // setState only on an actual crossing, never per-frame).
+      const zk = zoneOf(p.tile[0], p.tile[1]);
+      if (zk.key !== g.lastZoneKey) { g.lastZoneKey = zk.key; setZoneLabel(zk.label); }
       publishPresence(g, now);
       draw(g, ctx, canvas, now);
     }
@@ -1433,27 +1492,44 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       // The PvP sub-rectangle's own ruleset, layered on top of `on` (pvpOn implies
       // on, since PVP ⊂ ARENA geometrically) — fair-model HP, not the PvE pool.
       const pvpOn = on && inPvp(p.tile[0], p.tile[1]);
-      if (on !== g.combat.on || pvpOn !== g.pvp.on) {
-        const wasPvp = g.pvp.on;
+      const wasOn = g.combat.on, wasPvp = g.pvp.on;
+      if (on !== wasOn || pvpOn !== wasPvp) {
         g.combat.on = on;
         g.pvp.on = pvpOn;
         if (on) {
-          // (Re)entering combat OR crossing the PvP boundary while already in
-          // combat — resize the HP pool to whichever ruleset we're in now and
-          // refill, so both a fresh arena entry and a PvP boundary cross feel
-          // like a clean slate (the init hp was a flat 100 that never refilled
-          // to the level-scaled max — the old "HP = 100" bug).
           const lg = logicRef.current;
           const path = lg?.path || 'warrior', level = lg?._level?.() ?? 1;
-          g.combat.maxHp = pvpOn ? pvpMaxHp(path, level) : pathMaxHp(path, level);
-          g.combat.hp = g.combat.maxHp;
-          if (pvpOn && !wasPvp) g.pvp.healsUsed = 0; // fresh duel counter
+          const newMaxHp = pvpOn ? pvpMaxHp(path, level) : pathMaxHp(path, level);
+          if (!wasOn) {
+            // FRESH entry from completely outside the arena band → clean
+            // slate, full refill (the old "HP=100" bug this originally fixed).
+            g.combat.maxHp = newMaxHp;
+            g.combat.hp = newMaxHp;
+          } else {
+            // Already IN combat — just crossed the PvP<->battleground line
+            // (the PvP rectangle shares two edges with the outer arena, so
+            // this can also fire when stepping straight out to the farm).
+            // Resize to the new ruleset's curve but CARRY OVER the HP
+            // FRACTION — never a full heal. This was the actual live bug:
+            // every crossing silently topped you back to 100%, so any damage
+            // that had just landed a moment earlier appeared to do nothing.
+            const frac = g.combat.maxHp > 0 ? g.combat.hp / g.combat.maxHp : 1;
+            g.combat.maxHp = newMaxHp;
+            g.combat.hp = Math.max(0, Math.min(newMaxHp, Math.round(newMaxHp * frac)));
+          }
+          if (pvpOn && !wasPvp) g.pvp.healsUsed = 0; // fresh duel counter, entering PvP specifically
         }
         syncBattleState(g);
       }
-      // Monsters are shared: only the elected host simulates them (same rule as
-      // the herd), then broadcasts positions/hp/state in the heartbeat. Non-host
-      // clients render the host's monsters via peerWorldActors and never simulate.
+      stepMonsterWorld(g, now, p);
+      g.fx = g.fx.filter((f) => now - f.start < f.ttl);
+    }
+    // Monsters are shared: only the elected host simulates them (same rule as
+    // the herd), then broadcasts positions/hp/state in the heartbeat. Non-host
+    // clients render the host's monsters via peerWorldActors and never simulate.
+    // Called from the rAF tick AND the background-safe heartbeat (see heartbeat
+    // below) so the herd keeps moving even while the host's tab is backgrounded.
+    function stepMonsterWorld(g, now, p) {
       const hostSelf = !circleId || presenceHostId(g, profile) === presenceProfileId(profile);
       if (hostSelf) {
         if (g.monsters.length < (SPAWN_TUNING.maxConcurrent || ARENA_MONSTER_COUNT) && now > g.nextMonsterSpawn) {
@@ -1464,13 +1540,31 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       } else if (g.monsters.length) {
         g.monsters = []; // host owns the monsters; drop any we simulated as host earlier
       }
-      g.fx = g.fx.filter((f) => now - f.start < f.ttl);
     }
     function syncBattleState(g) {
       const next = { on: g.combat.on, hp: g.combat.hp, maxHp: g.combat.maxHp, pvp: g.pvp.on };
       if (battleRef.current.on !== next.on || battleRef.current.hp !== next.hp || battleRef.current.pvp !== next.pvp) {
         battleRef.current = next; setBattle(next);
       }
+    }
+    // Make sure MY local combat pool is real, PvP-sized, and battle-visible right
+    // before an incoming PvP hit lands. Without this a big hit could zero a
+    // still-at-default ~100 pool → faint → heal-to-full (reads as "no damage
+    // taken"), and a stale combat.on=false would hide the HP drop in the HUD
+    // (which shows FULL hp when out of combat). This is the receiver-side
+    // robustness that makes damage actually stick + show regardless of whether
+    // my own zone-transition timing had already sized me up.
+    function ensurePvpCombat(g) {
+      const lg = logicRef.current;
+      const path = lg?.path || 'warrior', level = lg?._level?.() ?? 1;
+      const properMax = pvpMaxHp(path, level);
+      if (g.combat.maxHp !== properMax) {
+        const frac = g.combat.maxHp > 0 ? g.combat.hp / g.combat.maxHp : 1;
+        g.combat.maxHp = properMax;
+        g.combat.hp = Math.round(properMax * frac);
+      }
+      g.combat.on = true;
+      g.pvp.on = true;
     }
 
     // Host-simulated monster AI: chase the player when in range, then TELEGRAPH an
@@ -2056,7 +2150,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         const dx = gx - g.player.tile[0], dy = gy - g.player.tile[1];
         if (Math.abs(dx) > Math.abs(dy)) g.player.facing = dx >= 0 ? 'East' : 'West';
         else if (dy !== 0) g.player.facing = dy > 0 ? 'South' : 'North';
-        g.player.oneShot = 'Get'; g.player.oneShotStart = performance.now();
+        g.player.oneShot = 'Get'; g.player.oneShotStart = performance.now(); sfx.play('take');
       };
       if (g.combat.on) { faceTo(tx, ty); doStrike(); return; } // arena: tap = strike
       const hs = hotspotAt(tx, ty); // shops/castle/dungeon/mining/forestry/fishing
@@ -2213,6 +2307,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
               zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill} cooldownUI={cooldownUI}
+              zoneLabel={zoneLabel}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
             <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechSnap} mechGame={mechRef.current} shopTab={shopTab} onClose={() => setPanel(null)}
               selfId={profile?.id} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} />
@@ -2229,6 +2324,12 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
                 — personal/visit/circle); actual PvP combat still requires being on
                 the shared circle farm (circleId truthy) since that's the only scope
                 with peers on the realtime channel to fight. */}
+            {!panel && !hotspot && (
+              <div className="fish-fab-wrap">
+                <button className="fish-fab" title="Go fishing" onClick={goFishing}>🎣</button>
+                <span className="fish-fab-label">Fish!</span>
+              </div>
+            )}
           </>
         )}
         {daySplash && (

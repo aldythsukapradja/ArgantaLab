@@ -4,7 +4,7 @@
 // automation) is unchanged — only the renderer swapped to Kingdom's canvas-2D.
 import { CROPS, SEASONS, DAYS_PER_SEASON, cropIsRipe } from '../data/crops.js';
 import { killReward, killXp, pathMaxHp, pathMaxMp, pathOf, pathForWeapon, pathTitle, levelWithFloor, levelProgress, xpForLevel, weaponOf, armorOf, weaponAtk, armorDef, armorHp, monsterOf, REWARD_TUNING } from '@arganta/combat';
-import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, animalGoodReady } from '../data/livestock.js';
+import { SPECIES, STARTER_LIVESTOCK, GOODS_MS, MAX_PER_SPECIES, ANIMAL_NAMES, animalGoodReady } from '../data/livestock.js';
 import { STARTER_KINS } from '../data/kins.js';
 import { FIELD, tileKey } from './farm-map.js';
 import { loadFarmState, saveFarmState, loadMemberFarmState } from './farm-save.js';
@@ -28,6 +28,7 @@ export const QUEST_DEFS = [
   { id: 'defeat', icon: '⚔', label: 'Defeat monsters', goal: 8, bloom: 150, mat: { k: 'token', n: 1 } },
   { id: 'craft', icon: '⚒', label: 'Craft or upgrade', goal: 1, bloom: 100, mat: { k: 'gem', n: 1 } },
 ];
+const BULK_ACTION_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6h — Plant All / Harvest All
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const yesterdayKey = () => new Date(Date.now() - 864e5).toISOString().slice(0, 10);
 
@@ -53,7 +54,7 @@ const profileProgress = (profile) => ({
 const VISITOR_LOCKED_ACTIONS = [
   'setTool', 'setSeed', 'spendStamina', 'restoreStamina', 'claimQuest',
   'tapAt', 'harvestTile', 'removeCrop', 'plantAt', 'harvestAll', 'plantAll',
-  'buySeed', 'sellAll', 'feedAnimal', 'petAnimal', 'collectAnimal', 'tapAnimal',
+  'buySeed', 'buyAnimal', 'sellAll', 'feedAnimal', 'petAnimal', 'collectAnimal', 'tapAnimal',
   'assignKin', 'setKinDeployed', 'sleep',
 ];
 // Automatic/background housekeeping calls — silently no-op (no flash; nobody
@@ -148,6 +149,11 @@ export class FarmLogic {
       // daily quests + login streak (retention).
       quests: { date: todayKey(), harvest: 0, defeat: 0, craft: 0, claimed: {} },
       streak: { last: null, count: 0 },
+      // Bulk-action cooldowns (ms epoch when next usable) — persisted+synced state,
+      // not a local timer, so it survives reload and can't be cleared by wiping
+      // localStorage. 0 = ready now.
+      plantAllReadyAt: 0,
+      harvestAllReadyAt: 0,
     };
   }
   // Load BOTH the cloud save and the local fallback and keep the most advanced
@@ -501,6 +507,8 @@ export class FarmLogic {
       dayEvent: this.dayEvent || null,
       viewerRole: this.viewerRole, // 'owner' | 'visitor' — gates the controller/actions in the UI
       visitOwnerName: this.visitOwnerName,
+      plantAllReadyAt: st.plantAllReadyAt || 0,
+      harvestAllReadyAt: st.harvestAllReadyAt || 0,
     };
   }
   flash(msg) { this.toast = msg; this.emit(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.emit(); }, 1600); }
@@ -708,8 +716,18 @@ export class FarmLogic {
   }
   // Harvest EVERY ripe crop in one tap (FarmVille speed). Returns the harvested
   // tiles so the renderer can pop juice at each.
+  // Formats a ms duration as "Nh" / "Nm" for the cooldown toast.
+  _cooldownLabel(ms) {
+    const mins = Math.ceil(ms / 60000);
+    return mins >= 60 ? Math.ceil(mins / 60) + 'h' : mins + 'm';
+  }
   harvestAll() {
-    const st = this.state; const got = [];
+    const st = this.state; const now = Date.now();
+    if (now < (st.harvestAllReadyAt || 0)) {
+      this.flash('⏳ Harvest All cooling down — ' + this._cooldownLabel(st.harvestAllReadyAt - now));
+      return { harvested: [] };
+    }
+    const got = [];
     for (const [key, p] of Object.entries(st.plots)) {
       if (p?.cropId && cropIsRipe(p)) {
         const [tx, ty] = key.split(',').map(Number);
@@ -718,12 +736,18 @@ export class FarmLogic {
       }
     }
     if (!got.length) { this.flash('Nothing ripe to harvest'); return { harvested: [] }; }
-    this.flash('🎒 Harvested ' + got.length + ' — sell at the Shop');
+    st.harvestAllReadyAt = now + BULK_ACTION_COOLDOWN_MS;
+    this.flash('🎒 Harvested ' + got.length + ' — sell at the Shop — Harvest All resting 6h');
+    this.save(); this.emit();
     return { harvested: got };
   }
   // Plant the selected seed on EVERY empty soil tile until seeds run out.
   plantAll() {
     const st = this.state; const id = st.selectedSeed; const now = Date.now();
+    if (now < (st.plantAllReadyAt || 0)) {
+      this.flash('⏳ Plant All cooling down — ' + this._cooldownLabel(st.plantAllReadyAt - now));
+      return;
+    }
     let planted = 0;
     for (let ty = FIELD.y0; ty <= FIELD.y1 && (st.seeds[id] || 0) > 0; ty++) {
       for (let tx = FIELD.x0; tx <= FIELD.x1; tx++) {
@@ -737,9 +761,10 @@ export class FarmLogic {
       }
     }
     if (!planted) { this.flash((st.seeds[id] || 0) <= 0 ? 'No ' + CROPS[id].name + ' seeds' : 'No empty soil'); return; }
+    st.plantAllReadyAt = now + BULK_ACTION_COOLDOWN_MS;
     this._bump();
     this._intent({ t: 'stock', seeds: { [id]: st.seeds[id] } });
-    this.flash('Planted ' + planted + '× ' + CROPS[id].emoji); this.save(); this.emit();
+    this.flash('Planted ' + planted + '× ' + CROPS[id].emoji + ' — Plant All resting 6h'); this.save(); this.emit();
   }
 
   // Seeds cost 🥇 Gold — the spend half of the FarmVille loop (sell for more, buy
@@ -790,6 +815,25 @@ export class FarmLogic {
   }
 
   _syncLivestock() { this._intent({ t: 'livestock', livestock: this.state.livestock.map((x) => ({ ...x })) }); }
+
+  // Grow a pen past its starter 5, up to MAX_PER_SPECIES. Costs Bloom (free for
+  // the operator, same rule as buySeed).
+  buyAnimal(species) {
+    const sp = SPECIES[species];
+    if (!sp) return;
+    const owned = this.state.livestock.filter((a) => a.species === species);
+    if (owned.length >= MAX_PER_SPECIES) { this.flash(sp.name + ' pen is full'); return; }
+    const cost = this.isOperator() ? 0 : sp.buy;
+    if ((this.state.bloom ?? 0) < cost) { this.flash('Not enough 🌸 Bloom for a ' + sp.name); return; }
+    this.state.bloom = (this.state.bloom ?? 0) - cost;
+    const usedNames = new Set(owned.map((a) => a.name));
+    const name = (ANIMAL_NAMES[species] || []).find((n) => !usedNames.has(n)) || (sp.name + ' ' + (owned.length + 1));
+    this.state.livestock.push({ id: `li_${species}_${Date.now().toString(36)}`, species, name, affection: 40, fedAt: null });
+    this._bump(); this._syncLivestock();
+    this.flash('Bought ' + name + ' the ' + sp.name + ' ' + sp.emoji);
+    sfx.play('buy');
+    this.save(); this.emit();
+  }
 
   // CONTEXTUAL tap on an animal: collect a ready good → else feed → else pet.
   tapAnimal(id) {
