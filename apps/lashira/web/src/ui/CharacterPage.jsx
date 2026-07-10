@@ -159,10 +159,6 @@ export function CharacterPage({ snap, game, battleSkills, heroTables, heroResour
       {tab === 'equipment' && (
         <>
           <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: 300 }}>
-            <div className="cpage-av" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-              <HeroAvatar tables={heroTables} resources={heroResources} hasWeapon={heroHasWeapon} size={260} />
-              <span className="cpage-live">live preview</span>
-            </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="cpage-slotgrid">
                 {SLOTS.map((s) => (
@@ -200,6 +196,10 @@ export function CharacterPage({ snap, game, battleSkills, heroTables, heroResour
                   })}
                 </div>
               </div>
+            </div>
+            <div className="cpage-av" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+              <HeroAvatar tables={heroTables} resources={heroResources} hasWeapon={heroHasWeapon} size={260} />
+              <span className="cpage-live">live preview</span>
             </div>
           </div>
           <div className="empty-note" style={{ marginTop: 9, textAlign: 'center' }}>Tap Equip and the hero repaints instantly — no reload.</div>
