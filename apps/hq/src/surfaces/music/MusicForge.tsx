@@ -309,11 +309,19 @@ function Visualizer({ audioRef, transportRef, eventsRef, playing }:
       g.strokeStyle = web; g.beginPath(); g.arc(x, y, gr, a0, a0 + span); g.stroke()
       g.strokeStyle = col; g.beginPath(); g.arc(x, y, gr, a0, a0 + span * (on ? level : 0)); g.stroke()
       // instrument icon
-      g.globalAlpha = on ? 1 : 0.4; g.font = '16px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'
+      g.globalAlpha = on ? 1 : 0.4; g.font = '19px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'
       g.fillText(ROLE_ICON[role] || '●', x, y + 1); g.globalAlpha = 1
-      // label
-      const ang = angle(role), lx = cx + Math.cos(ang) * (R + 34), ly = cy + Math.sin(ang) * (R + 34)
-      g.fillStyle = tx2; g.font = '9px ui-monospace'; g.fillText(ROLE_LABEL[role], lx, ly)
+      // label — bigger, uppercase, role-coloured, with the assigned instrument beneath
+      const ang = angle(role), lx = cx + Math.cos(ang) * (R + 42), ly = cy + Math.sin(ang) * (R + 40)
+      g.textAlign = 'center'; g.textBaseline = 'middle'
+      g.font = '700 13.5px "Segoe UI", system-ui, sans-serif'
+      try { (g as any).letterSpacing = '0.07em' } catch { /* older browsers */ }
+      g.fillStyle = on ? col : tx2
+      g.fillText(ROLE_LABEL[role].toUpperCase(), lx, ly)
+      try { (g as any).letterSpacing = '0px' } catch { /* noop */ }
+      const instId = role === 'drums' ? (theme?.roles?.drums?.kit || '') : (theme?.roles?.[role]?.inst || '')
+      const instName = role === 'drums' ? instId : ((INSTRUMENTS as any)[instId]?.label || '')
+      if (instName) { g.font = '10.5px ui-monospace'; g.fillStyle = tx2; g.fillText(instName, lx, ly + 15) }
     })
   }
 
