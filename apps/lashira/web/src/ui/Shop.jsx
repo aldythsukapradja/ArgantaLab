@@ -5,9 +5,7 @@
 // merchant popups; tapping a shop building deep-links here via `initialTab`.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CROPS } from '../data/crops.js';
-import { SPECIES } from '../data/livestock.js';
-import { MAT_ICON } from '../game/farm-mechanics.js';
-import { weaponOf, armorOf } from '@arganta/combat';
+import { SPECIES, MAX_PER_SPECIES } from '../data/livestock.js';
 import { QtyDialog } from './QtyDialog.jsx';
 import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem, enhanceCosmeticItem, enhanceCost, ENHANCE_MAX } from '../net/cosmetics.js';
 import { charParts, sheetUrl, loadImage } from '../engine/data.js';
@@ -67,7 +65,6 @@ const cosmeticStatLine = (it, level = 0) => {
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 const cur = (snap) => (snap?.bloom ?? snap?.gold ?? 0);
-const costLine = (cost) => Object.entries(cost || {}).map(([k, v]) => `${MAT_ICON[k] || k}${v}`).join(' ');
 
 const TABS = [
   { id: 'seeds', icon: '🌱', label: 'Seeds' },
@@ -82,7 +79,7 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   const [tab, setTab] = useState(TABS.some((t) => t.id === initialTab) ? initialTab : 'seeds');
   const [idx, setIdx] = useState(0);
   const [buying, setBuying] = useState(null); // crop with an open qty dialog
-  const [cosmeticCat, setCosmeticCat] = useState('helmet'); // Cosmetics sub-tab
+  const [slotCat, setSlotCat] = useState('helmet'); // Helmet/Coat/Weapon/Shield — shared by the Cosmetics + Forge sub-tab rows
 
   // 🛍️ Cosmetics — shared with HQ's Character Forge Shop (same catalog + ownership
   // tables, same Supabase project: migration_character_shop.sql). Loaded once per
@@ -159,14 +156,15 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   // action: { label, disabled, tone?, onClick } | null }.
   const wares = useMemo(() => buildWares(tab, {
     snap, game, mech, mechGame, op, money, setBuying,
-    shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, enhanceItem, partMeta, cosmeticCat,
-  }), [tab, snap, mech, op, money, shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, partMeta, cosmeticCat]); // eslint-disable-line react-hooks/exhaustive-deps
+    shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, enhanceItem, partMeta, slotCat,
+  }), [tab, snap, mech, op, money, shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, partMeta, slotCat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const safeIdx = wares.length ? Math.min(idx, wares.length - 1) : 0;
   const feat = wares[safeIdx] || null;
   const go = (d) => { if (wares.length) setIdx((safeIdx + d + wares.length) % wares.length); };
   const pickTab = (id) => { setTab(id); setIdx(0); };
-  const pickCosmeticCat = (id) => { setCosmeticCat(id); setIdx(0); };
+  const pickSlot = (id) => { setSlotCat(id); setIdx(0); };
+  const showSlotTabs = tab === 'cosmetics' || tab === 'forge';
 
   return (
     <>
@@ -183,17 +181,17 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
         ))}
       </div>
 
-      {tab === 'cosmetics' && (
+      {showSlotTabs && (
         <div className="ptabs ptabs-sub">
           {COSMETIC_SUBTABS.map((t) => (
-            <button key={t.id} className={'ptab sub' + (cosmeticCat === t.id ? ' on' : '')} onClick={() => pickCosmeticCat(t.id)}>
+            <button key={t.id} className={'ptab sub' + (slotCat === t.id ? ' on' : '')} onClick={() => pickSlot(t.id)}>
               <span>{t.icon}</span><small>{t.label}</small>
             </button>
           ))}
         </div>
       )}
 
-      {cosmeticMsg && tab === 'cosmetics' && <div className="empty-note shop-msg">{cosmeticMsg}</div>}
+      {cosmeticMsg && showSlotTabs && <div className="empty-note shop-msg">{cosmeticMsg}</div>}
 
       {!wares.length ? (
         <div className="empty-note">{tab === 'sell' ? 'Your bag has nothing to sell yet — harvest some crops.' : 'Nothing here yet.'}</div>
@@ -241,7 +239,7 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
 
 function buildWares(tab, ctx) {
   const { snap, game, mech, mechGame, op, money, setBuying } = ctx;
-  const { shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, partMeta, cosmeticCat } = ctx;
+  const { shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, partMeta, slotCat } = ctx;
 
   if (tab === 'seeds') {
     return Object.values(CROPS).map((c) => {
@@ -257,13 +255,18 @@ function buildWares(tab, ctx) {
   }
 
   if (tab === 'animals') {
-    const animals = Object.values(SPECIES).map((s) => ({
-      key: 'a-' + s.id, icon: s.emoji, title: s.name,
-      sub: `Gives ${s.produceEmoji} ${s.produceName} · sells 🌸${s.sell}`,
-      soon: true, action: { label: `Buy 🌸${s.buy || 200}`, disabled: true, tone: 'ghost', onClick: () => {} },
-    }));
-    animals.push({ key: 'feed', icon: '🌾', title: 'Feed ×10', sub: 'Keep your animals happy', soon: true, action: { label: 'Buy 🌸10', disabled: true, tone: 'ghost', onClick: () => {} } });
-    return animals;
+    return Object.values(SPECIES).map((s) => {
+      const owned = (snap.livestock || []).filter((a) => a.species === s.id).length;
+      const full = owned >= MAX_PER_SPECIES;
+      const afford = op || money >= s.buy;
+      return {
+        key: 'a-' + s.id, icon: s.emoji, count: owned || null, title: s.name,
+        sub: `Gives ${s.produceEmoji} ${s.produceName} · sells 🌸${s.sell} · ${owned}/${MAX_PER_SPECIES} in the ${s.home}`,
+        action: full
+          ? { label: `${s.home === 'coop' ? 'Coop' : 'Barn'} full`, disabled: true, tone: 'ghost', onClick: () => {} }
+          : { label: `Buy 🌸${s.buy}`, disabled: !afford, onClick: () => game.buyAnimal(s.id) },
+      };
+    });
   }
 
   if (tab === 'forge') return forgeWares(ctx);
@@ -271,7 +274,6 @@ function buildWares(tab, ctx) {
   if (tab === 'general') {
     return [
       ['🪣', 'Watering can', 'Speeds crop growth', 'Bloom 40'],
-      ['🎣', 'Fishing rod', 'Catch fish at the dock', 'Bloom 60'],
       ['📦', 'Storage chest', 'Expand your bag', 'Bloom 80'],
     ].map(([icon, title, sub, price], i) => ({ key: 'g' + i, icon, title, sub, soon: true, action: { label: price, disabled: true, tone: 'ghost', onClick: () => {} } }));
   }
@@ -282,7 +284,7 @@ function buildWares(tab, ctx) {
     // (patches one composer-spec slot, reloads to show it — see net/cosmetics.js).
     // Sub-tabbed by category (Helmet/Coat/Weapon/Shield) so 40 items don't blur
     // into one indistinguishable swipe.
-    const gear = shopCatalog.filter((it) => it.cat === cosmeticCat).map((it) => {
+    const gear = shopCatalog.filter((it) => it.cat === slotCat).map((it) => {
       const owned = ownedCosmetics.has(it.itemKey);
       const afford = diamonds >= it.price;
       const busy = cosmeticBusy === it.itemKey;
@@ -298,7 +300,8 @@ function buildWares(tab, ctx) {
         sub: cosmeticStatLine(it, level) || 'Cosmetic', action,
       };
     });
-    if (cosmeticCat === 'coat') gear.push({ key: 'castle', icon: '🏰', title: 'Castle skins', sub: 'Restyle your home (in Home)', soon: true, action: { label: 'free', disabled: true, tone: 'ghost', onClick: () => {} } });
+    if (slotCat === 'coat') gear.push({ key: 'castle', icon: '🏰', title: 'Castle skins', sub: 'Restyle your home (in Home)', soon: true, action: { label: 'free', disabled: true, tone: 'ghost', onClick: () => {} } });
+    if (!gear.length) return [{ key: 'cos-empty', icon: COSMETIC_ICON[slotCat] || '✨', title: `No ${slotCat === 'sword' ? 'weapon' : slotCat} yet`, sub: 'Nothing in this slot — check the other sub-tabs', soon: true, action: null }];
     return gear;
   }
 
@@ -320,63 +323,53 @@ function buildWares(tab, ctx) {
   return [];
 }
 
+// The Forge is now an ENHANCEMENT hub, grouped by the SAME 4 slots as Cosmetics
+// (Helmet/Coat/Weapon/Shield). Each slot lists the items you OWN in it, ready to
+// level up (wood/stone/bloom — diamonds buy the piece in Cosmetics; playing levels
+// it up). The Weapon slot also holds your farming & fishing TOOLS (pickaxe/axe/rod),
+// the "weapons" of gathering. The old account weapon/armor tiers + smelt/cook/drink
+// refine actions were removed per the slot-grouping.
 function forgeWares(ctx) {
   const { snap, mech, mechGame } = ctx;
-  const { shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, partMeta, enhanceItem } = ctx;
+  const { shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, partMeta, enhanceItem, slotCat } = ctx;
   const list = [];
-  // Gear: weapon + armor (Craft/Upgrade tiers).
-  for (const [slot, icon] of [['weapon', '⚔'], ['armor', '🛡']]) {
-    const tier = mechGame.gearTier(slot);
-    const max = mechGame.gearMax(slot);
-    const cost = mechGame.gearCost(slot);
-    const afford = mechGame.gearAfford(slot);
-    const def = slot === 'weapon' ? weaponOf(tier) : armorOf(tier);
-    const perk = slot === 'weapon' ? `+${weaponOf(tier).atk} ATK` : `+${armorOf(tier).def} DEF · +${armorOf(tier).hp} HP`;
-    list.push({
-      key: slot, icon, title: `${def.name}`, badge: `T${tier}${max ? ' ★' : ''}`,
-      sub: max ? `${perk} · maxed` : `${perk} · → T${tier + 1} needs ${costLine(cost)}`,
-      action: { label: max ? 'Max' : 'Craft', disabled: max || !afford, onClick: () => mechGame.upgradeGear(slot) },
-    });
-  }
-  // Tools: pickaxe / axe / rod.
-  for (const [key, icon, name, perk] of [['pickaxe', '⛏', 'Pickaxe', 'mine gold + gems'], ['axe', '🪓', 'Axe', 'chop hardwood'], ['rod', '🎣', 'Rod', 'better catches']]) {
-    const tier = mech?.tools?.[key] || 1;
-    const cost = mechGame.toolCost(key);
-    const max = tier >= 3;
-    const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone;
-    list.push({
-      key, icon, title: name, badge: `T${tier}${max ? ' ★' : ''}`,
-      sub: max ? `${perk} · maxed` : `${perk} · → T${tier + 1} needs 🪵${cost.wood} 🪨${cost.stone}`,
-      action: { label: max ? 'Max' : 'Upgrade', disabled: max || !afford, onClick: () => mechGame.upgradeTool(key) },
-    });
-  }
-  // Refine.
-  list.push({ key: 'smelt', icon: '🧱', title: 'Smelt Ingot', sub: `3🟨 → 1🧱 · have ${fmt(mech?.ingot || 0)}🧱`, action: { label: 'Smelt', disabled: !mechGame.canSmelt(), onClick: () => mechGame.smelt() } });
-  list.push({ key: 'cook', icon: '🧪', title: 'Cook Potion', sub: `2🐟 → 1🧪 · have ${fmt(mech?.potion || 0)}🧪`, action: { label: 'Cook', disabled: !mechGame.canCook(), onClick: () => mechGame.cook() } });
-  if ((mech?.potion || 0) > 0) list.push({ key: 'drink', icon: '🧪', title: 'Drink potion', sub: '+30 stamina now', action: { label: 'Drink', tone: 'ghost', disabled: false, onClick: () => mechGame.drinkPotion() } });
 
-  // ✨ Enhance your gear — per-OWNED-cosmetic leveling, separate from the account-
-  // level weapon/armor tiers above. Diamonds bought the piece; wood/stone/bloom
-  // level it up (see net/cosmetics.js — no diamonds spent here, ever).
-  const ownedItems = shopCatalog.filter((it) => ownedCosmetics.has(it.itemKey));
-  if (!ownedItems.length) {
-    list.push({ key: 'enh-empty', icon: '✨', title: 'Enhance your gear', sub: 'Buy a helmet, coat, weapon, or shield in Cosmetics first', soon: true, action: { label: 'Visit Cosmetics', disabled: true, tone: 'ghost', onClick: () => {} } });
-  } else {
-    for (const it of ownedItems) {
-      const level = cosmeticLevels[it.itemKey] || 0;
-      const maxed = level >= ENHANCE_MAX;
-      const cost = enhanceCost(level + 1);
-      const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone && (snap?.bloom || 0) >= cost.bloom;
-      const realPart = partMeta[it.cat]?.byId?.[it.partId];
-      const busy = cosmeticBusy === it.itemKey;
+  // Enhance owned cosmetic items of the selected slot.
+  const ownedItems = shopCatalog.filter((it) => it.cat === slotCat && ownedCosmetics.has(it.itemKey));
+  for (const it of ownedItems) {
+    const level = cosmeticLevels[it.itemKey] || 0;
+    const maxed = level >= ENHANCE_MAX;
+    const cost = enhanceCost(level + 1);
+    const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone && (snap?.bloom || 0) >= cost.bloom;
+    const realPart = partMeta[it.cat]?.byId?.[it.partId];
+    const busy = cosmeticBusy === it.itemKey;
+    list.push({
+      key: 'enh-' + it.itemKey,
+      icon: realPart ? <CosmeticThumb cat={it.cat} part={realPart} /> : (COSMETIC_ICON[it.cat] || '✨'),
+      title: `${it.setLabel || it.cat} #${it.partId}`, badge: level > 0 ? `+${level}` : undefined,
+      sub: maxed ? `${cosmeticStatLine(it, level)} · MAX level` : `${cosmeticStatLine(it, level)} · → Lv${level + 1} needs 🪵${cost.wood} 🪨${cost.stone} 🌸${cost.bloom}`,
+      action: { label: maxed ? 'Max' : (busy ? 'Enhancing…' : 'Enhance'), disabled: maxed || busy || !afford, tone: maxed ? 'ghost' : undefined, onClick: () => enhanceItem(it, level) },
+    });
+  }
+
+  // Weapon slot → also the farming & fishing tools (pickaxe / axe / rod).
+  if (slotCat === 'sword') {
+    for (const [key, icon, name, perk] of [['pickaxe', '⛏', 'Pickaxe', 'mine gold + gems'], ['axe', '🪓', 'Axe', 'chop hardwood'], ['rod', '🎣', 'Rod', 'better catches']]) {
+      const tier = mech?.tools?.[key] || 1;
+      const cost = mechGame.toolCost(key);
+      const max = tier >= 3;
+      const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone;
       list.push({
-        key: 'enh-' + it.itemKey,
-        icon: realPart ? <CosmeticThumb cat={it.cat} part={realPart} /> : (COSMETIC_ICON[it.cat] || '✨'),
-        title: `${it.setLabel || it.cat} #${it.partId}`, badge: level > 0 ? `+${level}` : undefined,
-        sub: maxed ? `${cosmeticStatLine(it, level)} · MAX level` : `${cosmeticStatLine(it, level)} · → Lv${level + 1} needs 🪵${cost.wood} 🪨${cost.stone} 🌸${cost.bloom}`,
-        action: { label: maxed ? 'Max' : (busy ? 'Enhancing…' : 'Enhance'), disabled: maxed || busy || !afford, tone: maxed ? 'ghost' : undefined, onClick: () => enhanceItem(it, level) },
+        key, icon, title: name, badge: `T${tier}${max ? ' ★' : ''}`,
+        sub: max ? `${perk} · maxed` : `${perk} · → T${tier + 1} needs 🪵${cost.wood} 🪨${cost.stone}`,
+        action: { label: max ? 'Max' : 'Upgrade', disabled: max || !afford, onClick: () => mechGame.upgradeTool(key) },
       });
     }
+  }
+
+  if (!list.length) {
+    const slotName = slotCat === 'sword' ? 'weapon' : slotCat;
+    list.push({ key: 'forge-empty', icon: COSMETIC_ICON[slotCat] || '✨', title: `No ${slotName} to enhance yet`, sub: `Buy a ${slotName} in the Cosmetics tab first`, soon: true, action: { label: 'Visit Cosmetics', disabled: true, tone: 'ghost', onClick: () => {} } });
   }
   return list;
 }

@@ -52,7 +52,15 @@ export async function equipCosmeticItem(itemKey) {
   if (!hasSupabase) return { ok: false, message: 'Offline — sign in to equip.' };
   try {
     const { data, error } = await supabase.rpc('equip_cosmetic_item', { p_item_key: itemKey });
-    if (error) return { ok: false, message: error.message };
+    if (error) {
+      // The RPC ships in migration_character_shop_equip.sql — if that one isn't run
+      // yet, PostgREST returns PGRST202 "function not found". Turn that raw string
+      // into an actionable operator message instead of a scary DB error.
+      if (error.code === 'PGRST202' || /Could not find the function/i.test(error.message || '')) {
+        return { ok: false, message: '⚙️ Wear needs a DB update — run migration_character_shop_equip.sql in Supabase.' };
+      }
+      return { ok: false, message: error.message };
+    }
     if (!data?.ok) {
       const text = data?.error === 'no_character' ? (data.message || 'No character yet.') : 'Equip failed.';
       return { ok: false, message: text };
