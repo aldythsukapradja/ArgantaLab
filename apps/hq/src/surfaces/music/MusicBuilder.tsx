@@ -6,6 +6,7 @@ import {
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { Scope, type ScopeHandle } from './Scope'
 import { Analytics } from './Analytics'
+import { MusicForge } from './MusicForge'
 import './music.css'
 
 // Music Builder — HQ's SFX authoring surface. Edits ride as a small "override"
@@ -128,11 +129,14 @@ export function MusicBuilder() {
         <div className="mbf-title"><b>Music Builder</b><span>Circle HQ · Build</span></div>
         <div className="mbf-credit"><span className="dot" />ElevenLabs: not connected · Synth mode only</div>
         {pubMsg && <span className="mbf-pubtoast" style={{ color: pubMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>{pubMsg.text}</span>}
-        {!cloudEnabled && <span className="pill pill-mut" style={{ color: 'var(--warn)' }}>offline</span>}
-        <button className="mbf-pubbtn-top" disabled={publishing || !cloudEnabled || dirty.length === 0} onClick={publish}>
-          {publishing ? 'Publishing…' : 'Publish'}
-          <span className="badge">{dirty.length}</span>
-        </button>
+        {tab !== 'music' && !cloudEnabled && <span className="pill pill-mut" style={{ color: 'var(--warn)' }}>offline</span>}
+        {/* Music Forge carries its own Publish → map button; the top-bar publish is the SFX one. */}
+        {tab !== 'music' && (
+          <button className="mbf-pubbtn-top" disabled={publishing || !cloudEnabled || dirty.length === 0} onClick={publish}>
+            {publishing ? 'Publishing…' : 'Publish'}
+            <span className="badge">{dirty.length}</span>
+          </button>
+        )}
       </div>
 
       <div className="mbf-tabs">
@@ -143,7 +147,7 @@ export function MusicBuilder() {
           <div className="tn">🔊</div><div><span className="lbl">SFX Forge</span><span className="sub">{Object.keys(DEFAULT_SFX_RECIPES).length} cues · {dirty.length} pending</span></div>
         </div>
         <div className={'mbf-tab' + (tab === 'music' ? ' on' : '')} onClick={() => setTab('music')}>
-          <div className="tn">🎼</div><div><span className="lbl">Music Forge</span><span className="sub">not wired yet</span></div>
+          <div className="tn">🎼</div><div><span className="lbl">Music Forge</span><span className="sub">6 maps · generative</span></div>
         </div>
       </div>
 
@@ -241,14 +245,7 @@ export function MusicBuilder() {
           </div>
         )}
 
-        {tab === 'music' && (
-          <div className="mbf-scroll">
-            <div className="mbf-sec"><div className="ic" style={{ background: 'var(--warn-bg)' }}>🚧</div><div className="tt">Music Forge</div><div className="sb">no recipe table yet</div><div className="ln" /></div>
-            <div className="mbf-note">
-              All 6 realms currently share one hardcoded ambient pad (<code>apps/lashira/web/src/audio/ambient.js</code>) — it isn't data-driven yet the way SFX cues now are, so there's nothing here to edit safely without inventing a fake control. Bringing the pad's voices/birdsong into <code>@arganta/audio</code> as a second recipe table (mirroring exactly what SFX Forge just did) is the next real step. Publish (top bar) is already wired to the same <code>audio_library</code> row SFX Forge uses — there's only ever one table.
-            </div>
-          </div>
-        )}
+        {tab === 'music' && <MusicForge />}
 
       </div>
     </div>

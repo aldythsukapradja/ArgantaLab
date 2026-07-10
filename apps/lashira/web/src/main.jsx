@@ -6,6 +6,7 @@ import { initCombatTuning } from './net/combatTuning.js';
 import { initCharacterRegistry } from './net/characterRegistry.js';
 import { initAudioLibrary } from './net/audioLibrary.js';
 import { initAudioUsage } from './net/audioUsage.js';
+import { initMusic } from './net/musicLibrary.js';
 import './styles.css';
 
 // Pull + apply the combat tuning Circle HQ published (fire-and-forget, safe:
@@ -21,6 +22,9 @@ initAudioLibrary();
 // Start batching + periodically flushing SFX play counts so Music Builder can
 // show real usage numbers (including the 15 emote cues static grep can't see).
 initAudioUsage();
+// Pull the generative-music THEMES HQ's Music Forge published (per map) — the
+// ambient bed plays these; falls back to package default themes if none.
+initMusic();
 
 // Embed mode: the game runs inside ANY parent ArgantaLab app (Bloom Command,
 // KinetikCircle's "KinFarm" pill, etc.) as `?embed=<hostname>` — the value only

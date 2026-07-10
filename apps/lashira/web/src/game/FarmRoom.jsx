@@ -2342,7 +2342,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     const LONGPRESS_MS = 450;
     function onPointerDown(e) {
       if (e.button != null && e.button !== 0) return;
-      sfx.arm(); ambient.start(); // audio contexts may only start from a user gesture
+      sfx.arm(); ambient.setRealm('farm'); ambient.start(); // audio contexts may only start from a user gesture
       ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false, longFired: false, lpTimer: 0 };
       try { canvas.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
       const px = e.clientX, py = e.clientY, self = ptr;

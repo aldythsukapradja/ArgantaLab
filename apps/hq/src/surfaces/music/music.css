@@ -188,3 +188,67 @@ html[data-theme="dark"] .mbf{ --mbf-mel:#2dd4bf; }
 .mbf-recrow .dot{width:7px;height:7px;border-radius:50%;flex:none}
 .mbf-recrow .nm{font-size:12px;font-weight:600;color:var(--tx);flex:1}
 .mbf-recrow .t{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+
+/* ================= Music Forge — generative studio ================= */
+.mf{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--bg);color:var(--tx);overflow:hidden}
+.mf-top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--bd);flex:none}
+.mf-title b{font-size:14px}.mf-title span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)}
+.mf-toast{margin-left:auto;font-size:11.5px;font-weight:600}
+.mf-pub{margin-left:auto;display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-weight:600;font-size:12.5px;
+  background:linear-gradient(135deg,var(--acc),var(--mbf-mel,#0ea5a3));color:#fff;border:none;cursor:pointer;box-shadow:0 4px 12px -4px var(--acc)}
+.mf-pub:hover{filter:brightness(1.06)}.mf-pub:disabled{opacity:.5;cursor:default;box-shadow:none}
+.mf-toast + .mf-pub{margin-left:0}
+
+.mf-body{flex:1;min-height:0;display:grid;grid-template-columns:230px minmax(0,1fr) 300px;border-top:1px solid var(--bd)}
+@media(max-width:1000px){.mf-body{grid-template-columns:1fr;overflow-y:auto}}
+
+/* left rail */
+.mf-rail{border-right:1px solid var(--bd);background:var(--bg2);overflow-y:auto;padding:12px}
+.mf-railh{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px}
+.mf-trk{display:flex;align-items:center;gap:9px;padding:8px 8px;border-radius:10px;cursor:pointer;border:1px solid transparent;margin-bottom:4px}
+.mf-trk:hover{background:var(--bg3)}.mf-trk.on{background:var(--acc-soft);border-color:var(--acc)}
+.mf-trk .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:15px;flex:none;background:var(--bg3)}
+.mf-trk.on .ic{background:var(--bg)}
+.mf-trk .nm{flex:1;min-width:0}.mf-trk .nm b{font-size:12.5px;font-weight:650;display:block}.mf-trk .nm span{font-size:9.5px;color:var(--tx3);font-family:var(--mono)}
+.mf-trk .play{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);cursor:pointer}
+.mf-trk.on .play{background:var(--acc);color:#fff;border-color:var(--acc)}
+.mf-railnote{margin-top:12px;font-size:10.5px;color:var(--tx3);line-height:1.6}
+.mf-railnote code{font-family:var(--mono);background:var(--bg3);padding:1px 4px;border-radius:4px}
+
+/* center stage */
+.mf-stage{display:flex;flex-direction:column;padding:16px 20px;min-height:0;overflow:hidden}
+.mf-now{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.mf-bigplay{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--mbf-mel,#0ea5a3));color:#fff;border:none;cursor:pointer;display:grid;place-items:center;box-shadow:0 10px 24px -8px var(--acc);flex:none;transition:transform .12s}
+.mf-bigplay:hover{transform:scale(1.05)}
+.mf-meta b{font-size:18px;font-weight:750}.mf-meta .sub{font-size:12px;color:var(--tx2);margin-top:2px}
+.mf-ro{margin-left:auto;text-align:right;font-family:var(--mono);font-size:11px;color:var(--tx3)}.mf-ro b{display:block;color:var(--acc-text);font-size:16px}
+/* Theme-aware stage: a soft accent-tinted well that follows light/dark like the
+   rest of Circle HQ (was hardcoded black). */
+.mf-viz{flex:1;min-height:280px;width:100%;display:block;border-radius:16px;border:1px solid var(--bd2);
+  background:radial-gradient(90% 90% at 50% 42%, color-mix(in srgb, var(--acc) 9%, var(--bg2)), var(--bg2) 72%);
+  box-shadow:inset 0 1px 0 color-mix(in srgb, var(--tx) 5%, transparent), 0 12px 34px -24px rgba(16,24,40,.35)}
+
+/* right controls */
+.mf-ctrl{border-left:1px solid var(--bd);background:var(--bg);overflow-y:auto;padding:14px 16px}
+.mf-ctrl h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin:16px 0 8px}
+.mf-ctrl h4:first-child{margin-top:0}
+.mf-selrow{display:flex;gap:8px;margin:7px 0}
+.mf-selrow label{font-size:11px;color:var(--tx2);flex:0 0 32px;align-self:center}
+.mf-selrow select{flex:1;padding:6px 8px;border-radius:7px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx);font-size:12px;min-width:0}
+.mf-sl{display:flex;align-items:center;gap:10px;margin:7px 0}
+.mf-sl label{font-size:11px;color:var(--tx2);flex:0 0 54px}.mf-sl input{flex:1;accent-color:var(--acc)}
+.mf-sl .v{font-family:var(--mono);font-size:10.5px;color:var(--tx3);flex:0 0 50px;text-align:right}
+.mf-progpills{display:flex;flex-wrap:wrap;gap:6px}
+.mf-progpills button{font-family:var(--mono);font-size:10px;padding:5px 8px;border-radius:8px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);cursor:pointer}
+.mf-progpills button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.mf-role{border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-bottom:6px;background:var(--bg2)}
+.mf-rolehead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.mf-rolehead .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.mf-rolehead .rl{font-size:12px;font-weight:650;flex:1}
+.mf-rolebody{display:flex;align-items:center;gap:8px}
+.mf-rolebody select{flex:1;padding:5px 7px;border-radius:6px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx);font-size:11.5px;min-width:0}
+.mf-rolebody input{flex:0 0 72px}
+.mf-sw{width:34px;height:19px;border-radius:99px;background:var(--bg3);border:1px solid var(--bd2);position:relative;cursor:pointer;flex:none}
+.mf-sw.on{background:var(--acc-soft);border-color:var(--acc)}
+.mf-sw::after{content:'';position:absolute;top:1px;left:1px;width:15px;height:15px;border-radius:50%;background:var(--tx3);transition:transform .14s}
+.mf-sw.on::after{background:var(--acc);transform:translateX(15px)}

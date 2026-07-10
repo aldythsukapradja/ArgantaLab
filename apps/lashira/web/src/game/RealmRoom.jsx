@@ -12,6 +12,8 @@ import { getRealmModule } from './realms/index.js';
 import { joinFarmPresence } from './farm-presence.js';
 import { recordPvpKo } from './pvp-rank.js';
 import RealmShell from '../ui/RealmShell.jsx';
+import { sfx } from '../audio/sfx.js';
+import { ambient } from '../audio/ambient.js';
 
 const REMOTE_WALK_MS = 440;
 
@@ -607,6 +609,8 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     };
     const onPointerDown = (e) => {
       if (e.button != null && e.button !== 0) return;
+      // Audio may only start from a gesture; switch the bed to this realm's theme.
+      sfx.arm(); ambient.setRealm(map.id); ambient.start();
       ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY }; moved = false;
       try { canvas.setPointerCapture(e.pointerId); } catch {}
     };
