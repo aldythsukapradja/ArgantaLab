@@ -368,6 +368,15 @@ body {
 .cpage-item small { font-size: 9.5px; font-weight: 700; color: var(--ink); }
 .cpage-item:disabled { opacity: .6; cursor: default; }
 
+/* Skills tab — real looping spell VFX (SkillFxPreview) replaces the plain icon. */
+.skillfx-row .ico { display: none; }
+.skillfx-stage {
+  flex: 0 0 56px; width: 56px; height: 56px; border-radius: 12px;
+  background: radial-gradient(circle, var(--soft) 0%, #f3f2fb 70%); border: 1.5px solid var(--line);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.skillfx-canvas { width: 56px; height: 56px; image-rendering: pixelated; }
+
 /* ── Home hub — cottage skin picker (mirrors the Castle hotspot's, same catalog) ── */
 .home-skinpick { margin-top: 10px; }
 .home-skingrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }

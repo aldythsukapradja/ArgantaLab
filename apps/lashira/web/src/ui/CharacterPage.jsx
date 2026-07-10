@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { pathSkillPower } from '@arganta/combat';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
 import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem } from '../net/cosmetics.js';
-import { charParts } from '../engine/data.js';
+import { charParts, effects as loadEffects, effectSheetUrl, loadImage as loadEffectImage } from '../engine/data.js';
 import { CosmeticThumb, COSMETIC_ICON, cosmeticStatLine } from './Shop.jsx';
 
 const TABS = [
@@ -67,6 +67,78 @@ function HeroAvatar({ tables, resources, hasWeapon, size = 176 }) {
     paintStep(ctx, list, { x: size / 2 - bb.cx * scale, y: size * 0.5 - bb.cy * scale }, scale);
   }, [tables, resources, hasWeapon, size]);
   return <canvas ref={ref} width={size} height={size} style={{ width: '100%', height: '100%', imageRendering: 'pixelated' }} />;
+}
+
+// Animated real spell VFX (same effects.json + sprite sheets the battle
+// cluster plays on cast) looping on its own clock — not a static icon, and not
+// a fake CSS placeholder. Reuses the effect's own frames/animation/origin data;
+// only the tile-anchored positioning from drawEffect() is swapped for
+// centering in a small fixed canvas.
+const effectsCatalogP = { current: null };
+function useEffectsCatalog() {
+  const [all, setAll] = useState(null);
+  useEffect(() => {
+    let live = true;
+    if (!effectsCatalogP.current) effectsCatalogP.current = loadEffects().catch(() => null);
+    effectsCatalogP.current.then((e) => { if (live) setAll(e || {}); });
+    return () => { live = false; };
+  }, []);
+  return all;
+}
+function SkillFxPreview({ fxId, size = 56 }) {
+  const ref = useRef(null);
+  const effectsAll = useEffectsCatalog();
+  useEffect(() => {
+    const canvas = ref.current; if (!canvas || !effectsAll) return;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, size, size);
+    const eff = effectsAll[fxId];
+    if (!eff?.sheet || !eff.animation?.length) return undefined;
+    const [ox, oy] = eff.origin || [0, 0];
+    const steps = eff.animation
+      .map((s) => ({ frame: eff.frames[s.frame], alpha: s.alpha != null ? s.alpha : 1, d: Math.min(1500, Math.max(60, s.delay || 100)) }))
+      .filter((s) => s.frame);
+    if (!steps.length) return undefined;
+    // eff.origin/frame.fx/fy are staged for a full combat viewport (a cast can
+    // travel far from its anchor point across frames), so naively centering one
+    // frame at a time drew most casts off-canvas. Instead: find the bbox the
+    // WHOLE animation occupies across every frame it uses, then fit+center that
+    // once — same contain-fit idea as HeroAvatar's crop fix above.
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const s of steps) {
+      const fx = ox + s.frame.fx, fy = oy + s.frame.fy;
+      x0 = Math.min(x0, fx); y0 = Math.min(y0, fy);
+      x1 = Math.max(x1, fx + s.frame.w); y1 = Math.max(y1, fy + s.frame.h);
+    }
+    const bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0);
+    const pad = size * 0.12;
+    const scale = Math.max(0.15, Math.min(2, Math.min((size - pad * 2) / bw, (size - pad * 2) / bh)));
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    let raf = 0; let alive = true;
+    loadEffectImage(effectSheetUrl(eff)).then((sheet) => {
+      if (!alive) return;
+      const total = steps.reduce((sum, s) => sum + s.d, 0);
+      const start = performance.now();
+      function tick(now) {
+        if (!alive) return;
+        let t = (now - start) % total;
+        let step = steps[0];
+        for (const s of steps) { if (t < s.d) { step = s; break; } t -= s.d; }
+        ctx.clearRect(0, 0, size, size);
+        const f = step.frame;
+        const dx = size / 2 + (ox + f.fx - cx) * scale;
+        const dy = size / 2 + (oy + f.fy - cy) * scale;
+        ctx.globalAlpha = step.alpha;
+        ctx.drawImage(sheet, f.x + f.fx, f.y + f.fy, f.w, f.h, dx, dy, f.w * scale, f.h * scale);
+        ctx.globalAlpha = 1;
+        raf = requestAnimationFrame(tick);
+      }
+      raf = requestAnimationFrame(tick);
+    }).catch(() => {});
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, [effectsAll, fxId, size]);
+  return <canvas ref={ref} width={size} height={size} className="skillfx-canvas" />;
 }
 
 function Head({ title, sub, onClose }) {
@@ -230,10 +302,10 @@ export function CharacterPage({ snap, game, battleSkills, heroTables, heroResour
             const power = pathSkillPower(sk, snap.path, snap.level);
             const isHeal = sk.type === 'heal';
             return (
-              <div className="row" key={sk.id}>
-                <div className="ico">{sk.icon}</div>
+              <div className="row skillfx-row" key={sk.id}>
+                <div className="skillfx-stage"><SkillFxPreview fxId={sk.fx} /></div>
                 <div className="grow">
-                  <div className="name">{sk.name}</div>
+                  <div className="name">{sk.icon} {sk.name}</div>
                   <div className="meta">{isHeal ? `+${power} HP heal` : sk.target === 'all' ? `${power} dmg × each monster` : `${power} dmg`} · {sk.manaCost} MP · {Math.round(sk.cdMs / 100) / 10}s cooldown</div>
                 </div>
               </div>
