@@ -33,6 +33,13 @@ const fmt = (n) => Number(n || 0).toLocaleString();
 // The real composited hero, drawn idle-standing — same compositor FarmRoom uses,
 // just a static portrait instead of the walking loop. Re-draws whenever `resources`
 // changes identity, which is exactly what a live equip produces.
+//
+// Fit BOTH axes inside the box (classic "contain" fit), not just width — a held
+// effect (a torch flame, a weapon glow) can widen the bbox a lot without adding
+// much height, or a tall pose can do the opposite; scaling off one axis alone let
+// the other axis overflow and get clipped by the canvas edge. Centering on the
+// bbox's own centroid (not foot-anchoring) means whatever the pose/effect shape
+// is, it always lands fully inside the frame with even padding.
 function HeroAvatar({ tables, resources, hasWeapon, size = 176 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -40,14 +47,24 @@ function HeroAvatar({ tables, resources, hasWeapon, size = 176 }) {
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, size, size);
+    // Soft stage: a faint radial vignette + a contact-shadow ellipse near the
+    // bottom, so the portrait reads as a "stage" instead of a flat blank tile.
+    const vignette = ctx.createRadialGradient(size / 2, size * 0.42, size * 0.15, size / 2, size * 0.5, size * 0.62);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.06)');
+    ctx.fillStyle = vignette; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+    ctx.beginPath(); ctx.ellipse(size / 2, size * 0.93, size * 0.22, size * 0.045, 0, 0, Math.PI * 2); ctx.fill();
     if (!tables || !resources || !Object.keys(resources).length) return;
     const motion = (hasWeapon ? 'WeaponStandBy' : 'NormalStandBy') + 'South';
     if (!stepCount(tables, motion)) return;
     const list = resolveStep(tables, resources, motion, 0);
     const bb = drawListBBox([list]);
     if (!bb) return;
-    const scale = Math.max(1, Math.min(4, (size * 0.82) / Math.max(1, bb.x1 - bb.x0)));
-    paintStep(ctx, list, { x: size / 2 - bb.cx * scale, y: size * 0.93 - bb.y1 * scale }, scale);
+    const pad = size * 0.1;
+    const bw = Math.max(1, bb.x1 - bb.x0), bh = Math.max(1, bb.y1 - bb.y0);
+    const scale = Math.max(0.5, Math.min(4, Math.min((size - pad * 2) / bw, (size - pad * 2) / bh)));
+    paintStep(ctx, list, { x: size / 2 - bb.cx * scale, y: size * 0.5 - bb.cy * scale }, scale);
   }, [tables, resources, hasWeapon, size]);
   return <canvas ref={ref} width={size} height={size} style={{ width: '100%', height: '100%', imageRendering: 'pixelated' }} />;
 }
