@@ -4,6 +4,7 @@ import App from './App.jsx';
 import { supabase } from './net/supabase.js';
 import { initCombatTuning } from './net/combatTuning.js';
 import { initCharacterRegistry } from './net/characterRegistry.js';
+import { initAudioLibrary } from './net/audioLibrary.js';
 import './styles.css';
 
 // Pull + apply the combat tuning Circle HQ published (fire-and-forget, safe:
@@ -13,6 +14,9 @@ initCombatTuning();
 // Pull the character-appearance registry HQ published (same fire-and-forget,
 // public-read contract) so the shared/default farmer + NPC looks are HQ's.
 initCharacterRegistry();
+// Pull the SFX library Circle HQ's Music Builder published (same pattern) —
+// falls back to the built-in synth recipes if nothing's been published yet.
+initAudioLibrary();
 
 // Embed mode: the game runs inside ANY parent ArgantaLab app (Bloom Command,
 // KinetikCircle's "KinFarm" pill, etc.) as `?embed=<hostname>` — the value only

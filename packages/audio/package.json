@@ -1,0 +1,11 @@
+{
+  "name": "@arganta/audio",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared synthesized-audio engine + cue library for ArgantaLab games. Circle HQ's Music Builder edits the SAME data + DSP LashiraBloom's sfx.js plays — edit in HQ, publish, both sound the same.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "sideEffects": false
+}

@@ -32,6 +32,8 @@ If a document conflicts with this file, treat this index plus `portal-hotspot-pl
 | 7 | `parallel-game-realm-matrix.md` | Game pillar matrix, mechanics, complexity, and reuse |
 | 8 | `retention-pillar-research.md` | Viral analogs and retention rationale |
 | 9 | `openworld-stronghold-command-architecture.md` | Battle-tested stronghold/endgame architecture |
+| 10 | `MAP-full-element-inventory.md` | Ground-truth element inventory, **auto-synced** — run `npm run map:sync` in `apps/lashira/web` after touching farm-map.js/world-map-registry.js/realms/*.js, before touching any coordinate |
+| 11 | `CONCEPT-portal-markers-and-openworld-builder.md` | Simplified circular portal markers + the Openworld Builder (Circle HQ surface) concept and toolset |
 
 ## 3. Player-facing portals
 

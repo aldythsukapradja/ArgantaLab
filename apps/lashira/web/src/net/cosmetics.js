@@ -69,6 +69,29 @@ export async function equipCosmeticItem(itemKey) {
   } catch (e) { return { ok: false, message: e?.message || 'Equip failed.' }; }
 }
 
+// Onboarding-only: the coat picked in the "Build your look" wizard is granted
+// free, ONCE (migration_lashira_starter_outfit.sql — server-guarded, refuses if
+// the caller already owns any coat item). Best-effort: the character's spec
+// already carries the look regardless (kingdom_sync_character_build writes it
+// directly), so a failure here never blocks finishing onboarding — it only means
+// the Shop won't yet show that coat as "owned".
+export async function grantStarterOutfit(itemKey) {
+  if (!hasSupabase) return { ok: false, message: 'Offline.' };
+  try {
+    const { data, error } = await supabase.rpc('grant_starter_outfit', { p_item_key: itemKey });
+    if (error) {
+      if (error.code === 'PGRST202' || /Could not find the function/i.test(error.message || '')) {
+        return { ok: false, message: 'Starter outfit grant needs a DB update.' };
+      }
+      return { ok: false, message: error.message };
+    }
+    if (!data?.ok) {
+      return { ok: false, message: data?.error === 'already_granted' ? 'Starter outfit already claimed.' : 'Could not grant starter outfit.' };
+    }
+    return { ok: true };
+  } catch (e) { return { ok: false, message: e?.message || 'Grant failed.' }; }
+}
+
 // ENHANCE_MAX levels, +10% of the item's own base stat per level (cumulative). Cost
 // is checked + spent CLIENT-SIDE (wood/stone/bloom — see the migration header for
 // why); this RPC only bumps the shared level itself, requires ownership, caps at 5.

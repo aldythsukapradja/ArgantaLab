@@ -154,7 +154,9 @@ export async function getMyDiamondBalance(): Promise<number> {
 }
 
 // ---- self helper (fallback + identity) ----
-async function loadOperatorSelf(): Promise<(RosterEntry & { spec?: any }) | null> {
+// Exported for Skill Forge's "caster" viewer — the operator's OWN real hero, so
+// the live effect preview shows an actual composed character, not a placeholder.
+export async function loadOperatorSelf(): Promise<(RosterEntry & { spec?: any }) | null> {
   try {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth?.user) return null

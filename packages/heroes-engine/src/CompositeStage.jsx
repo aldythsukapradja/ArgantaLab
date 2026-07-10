@@ -60,11 +60,18 @@ async function loadResources(spec) {
 export default function CompositeStage({
   spec, motionName, playing = true, stepOverride = null,
   scale = 3, speed = 1, width = 260, height = 260, onStep,
+  // oneShot: play motionName's frames 0..n-1 ONCE (hold the last frame), then
+  // call onComplete() exactly once — for a real "perform this skill" trigger
+  // (Skill Forge's cast) instead of an endlessly looping pose. Additive/
+  // backward-compatible: omit both and behavior is identical to before.
+  oneShot = false, onComplete,
 }) {
   const canvasRef = useRef(null);
   const [tables, setTables] = useState(null);
   const [resources, setResources] = useState(null);
   const stateRef = useRef({ step: 0, last: 0 });
+  const prevMotionRef = useRef(motionName);
+  const firedCompleteRef = useRef(false);
 
   useEffect(() => { data.motionTables().then(setTables); }, []);
 
@@ -73,6 +80,17 @@ export default function CompositeStage({
     loadResources(spec).then((r) => { if (live) setResources(r); });
     return () => { live = false; };
   }, [JSON.stringify(spec)]);
+
+  // A motion change always restarts from frame 0 — critical for oneShot casts
+  // (Swing/Spell must start clean on every press, never mid-loop from the
+  // previous motion) and harmless for looping motions too.
+  useEffect(() => {
+    if (prevMotionRef.current !== motionName) {
+      prevMotionRef.current = motionName;
+      stateRef.current = { step: 0, last: 0 };
+      firedCompleteRef.current = false;
+    }
+  }, [motionName]);
 
   useEffect(() => {
     if (!tables || !resources) return;
@@ -107,16 +125,20 @@ export default function CompositeStage({
       const st = stateRef.current;
       if (!st.last) st.last = now;
       if (playing && now - st.last >= STEP_MS) {
-        st.step = (st.step + 1) % n;
-        st.last = now;
-        draw(st.step);
+        if (oneShot && st.step >= n - 1) {
+          if (!firedCompleteRef.current) { firedCompleteRef.current = true; onComplete?.(); }
+        } else {
+          st.step = oneShot ? Math.min(n - 1, st.step + 1) : (st.step + 1) % n;
+          st.last = now;
+          draw(st.step);
+        }
       }
       raf = requestAnimationFrame(loop);
     }
     draw(stateRef.current.step % n);
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [tables, resources, motionName, playing, stepOverride, scale, speed]);
+  }, [tables, resources, motionName, playing, stepOverride, scale, speed, oneShot]);
 
   return (
     <canvas

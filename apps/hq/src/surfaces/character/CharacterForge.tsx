@@ -5,6 +5,7 @@ import { DyePicker } from './DyePicker'
 import { ComposerPanel } from './ComposerPanel'
 import { CharacterSelect } from './CharacterSelect'
 import { NpcStudio } from './NpcStudio'
+import { SkillForge } from './SkillForge'
 import { Shop } from './Shop'
 import { loadRoster, getCharacter, saveCharacter, loadShopCatalog, loadOwnedCosmetics, type RosterEntry, type RosterKind } from './heroData'
 import { useComposer, DEFAULT_SEL, DIRWORD, PATHS } from './composer'
@@ -19,11 +20,12 @@ const KIND_TABS: { id: RosterKind; label: string }[] = [{ id: 'all', label: 'All
 //  - Select: the welcome/pick-your-hero screen, mirrored 1:1 by LashiraBloom later.
 //  - NPC Studio: the same composer aimed at a shared, publicly-readable cast.
 
-type TabId = 'lab' | 'select' | 'npc' | 'shop'
+type TabId = 'lab' | 'select' | 'npc' | 'skills' | 'shop'
 const TABS: { id: TabId; icon: string; label: string; sub: string; tnum: string }[] = [
   { id: 'lab', icon: '🧬', label: 'Character Lab', sub: 'compose · animate', tnum: 'per user' },
   { id: 'select', icon: '🎴', label: 'Character Select', sub: 'welcome · picker', tnum: '→ Lashira' },
   { id: 'npc', icon: '🧑‍🌾', label: 'NPC Studio', sub: 'roster · cast', tnum: 'shared' },
+  { id: 'skills', icon: '⚡', label: 'Skill Forge', sub: 'path · tier · balance', tnum: '4×3×6' },
   { id: 'shop', icon: '🛍️', label: 'Shop', sub: 'diamonds · gear', tnum: '2k–10k 💎' },
 ]
 
@@ -202,7 +204,6 @@ function CharacterLab() {
         onReset={reset}
         setBrowse={setBrowse}
         setDyeFor={setDyeFor} setDyeAnchor={setDyeAnchor}
-        path={path.toLowerCase()} level={selected?.level ?? 1}
       />
 
       {saveMsg && <div className="f-npc-msg" style={{ color: saveMsg.ok ? 'var(--ok, #16a34a)' : '#e0603a' }}>{saveMsg.text}</div>}
@@ -243,10 +244,11 @@ export function CharacterForge() {
         ))}
       </div>
 
-      <div className="forge-body">
+      <div className="forge-body" style={{ overflow: tab === 'lab' || tab === 'npc' || tab === 'skills' ? 'hidden' : 'auto' }}>
         {tab === 'lab' && <CharacterLab />}
         {tab === 'select' && <CharacterSelect />}
         {tab === 'npc' && <NpcStudio />}
+        {tab === 'skills' && <SkillForge />}
         {tab === 'shop' && <Shop />}
       </div>
     </div>

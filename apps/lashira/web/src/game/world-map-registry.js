@@ -25,6 +25,11 @@ export const WORLD_MAPS = {
     spawn: [30, 40],
     color: '#2ca64e',
     actions: ['Scout', 'Inspect', 'Map'],
+    // Tower defense needs to read tower/monster/hero detail clearly — the
+    // default 0.42 open-world floor (tuned for wandering the whole map) makes
+    // everything too small. Tighter zoom follows the player around the lane
+    // instead of showing the whole 60x48 world at once.
+    camZoom: 1.05,
   },
   hearthrush_kitchen: {
     id: 'hearthrush_kitchen',
@@ -32,7 +37,9 @@ export const WORLD_MAPS = {
     shortName: 'Kitchen',
     theme: 'cooking / service',
     file: 'Worldmap/hearthrush-kitchen.png',
-    hqHotspot: { x0: 29, y0: 16, x1: 30, y1: 17 },
+    // x29 only — leaves the Market sell hotspot (x30-31) reachable (fixes BT-1
+    // shadowing; the kitchen counter sits beside the market, not on top of it).
+    hqHotspot: { x0: 29, y0: 16, x1: 29, y1: 17 },
     hqReturn: [30, 18],
     spawn: [30, 36],
     color: '#f6a42c',
@@ -61,6 +68,7 @@ export const WORLD_MAPS = {
     spawn: [30, 28],
     color: '#da2a31',
     actions: ['Ready', 'Inspect', 'Map'],
+    pvp: true, // the only realm with a live-PvP combat pool (RealmRoom gates it on this)
   },
 };
 

@@ -82,9 +82,23 @@ html[data-theme="dark"] .forge{ --stage-a:#1a1a22; --stage-b:#121219; }
 .f-pill.live{color:#16a34a;border-color:rgba(34,197,94,.35)}
 .f-canvas-hold{flex:1;display:grid;place-items:center;padding:20px;position:relative;min-height:280px}
 .f-canvas-hold canvas{image-rendering:pixelated;border-radius:12px;border:1px solid var(--bd2);max-width:100%;height:auto;box-shadow:0 20px 50px -26px #0009}
-.f-mtag{position:absolute;left:20px;bottom:16px;font-family:var(--mono);font-size:10px;color:var(--tx2);
-  background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:5px 9px}
-.f-controls{border-top:1px solid var(--bd);padding:11px 16px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+/* Rotate hint — arrow/WASD is the only way to turn the character now (no S/E/N/W
+   buttons), so this caption is the sole affordance telling anyone the keys exist. */
+.f-khint{position:absolute;left:20px;top:14px;font-family:var(--mono);font-size:9.5px;color:var(--tx3);
+  background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:5px 9px;letter-spacing:.02em}
+/* Quick ride on/off — lives on the stage since it changes what's rendered there;
+   which mount to ride stays a picker in the right column, like every other slot. */
+.f-ridepill{position:absolute;right:20px;top:14px;font-size:11px;padding:6px 11px;border-radius:999px;
+  border:1px solid var(--bd2);background:var(--bg2);color:var(--tx2);cursor:pointer}
+.f-ridepill.on{background:linear-gradient(135deg,var(--acc),var(--forge-mag));border-color:transparent;color:#fff}
+/* Everything else (poses, emote, reset, play/speed/zoom, the frame tag) now
+   lives in ONE full-width bar docked to the canvas bottom — previously poses/
+   emote/reset sat in a SEPARATE bar below the canvas while play/speed/zoom
+   floated over it, which is exactly the two-bars-stacked clutter that was
+   being complained about. */
+.f-cfoot{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:10px 16px;background:var(--bg2);border-top:1px solid var(--bd)}
+.f-mtag{font-family:var(--mono);font-size:10px;color:var(--tx2);flex:none}
 .f-btnrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .f-gbtn{cursor:pointer;font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--bd2);color:var(--tx2);border-radius:7px;padding:6px 10px}
 .f-gbtn:hover{color:var(--tx)}
@@ -112,7 +126,8 @@ html[data-theme="dark"] .forge{ --stage-a:#1a1a22; --stage-b:#121219; }
 .f-chk.on::after{content:"✓";position:absolute;inset:-2px 0 0;color:#fff;font-size:10px;text-align:center}
 .f-dot{width:7px;height:7px;border-radius:2px;background:var(--acc);flex:none;margin:0 4px}
 .f-skill-slot{flex-wrap:wrap;gap:5px 6px}
-.f-skill-select{flex:1;min-width:120px;font-size:10.5px;padding:5px 7px;border-radius:6px;border:1px solid var(--bd2);background:var(--bg2);color:var(--tx2)}
+.f-skill-slot .f-sl{display:flex;flex-direction:column;gap:1px;min-width:118px}
+.f-skill-slot .f-sl small{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--tx3)}
 .f-pathpills{display:flex;gap:6px;flex-wrap:wrap}
 .f-pp{cursor:pointer;font-size:11px;padding:6px 11px;border-radius:999px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx2)}
 .f-pp.on{background:linear-gradient(135deg,var(--acc),var(--forge-mag));border-color:transparent;color:#fff}
@@ -217,4 +232,158 @@ html[data-theme="dark"] .forge{ --stage-a:#1a1a22; --stage-b:#121219; }
   .forge-work{grid-template-columns:1fr}
   .fcol.users{border-right:none;border-bottom:1px solid var(--bd)}
   .fcol.pickers{border-left:none;border-top:1px solid var(--bd)}
+}
+
+/* ============================================================================
+   ⚡ Skill Forge tab — 3-col authoring workbench + benchmark + resistance =====
+   ============================================================================ */
+/* BUG FIX: this was position:absolute;inset:0 — the same rule .forge and
+   .battleforge use, but THOSE mount at the page root. SkillForge mounts INSIDE
+   .forge-body (a plain flex child, no position set), so inset:0 skipped past it
+   and resolved against the next positioned ancestor: .forge itself — painting
+   over the whole Character Forge shell, tab bar included. Fixed to fill its
+   actual flex slot instead, the same way .forge-work (Character Lab) does. */
+.skillforge{height:100%;display:flex;flex-direction:column;background:var(--bg);color:var(--tx);overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.sf-grid{flex:1;min-height:0;display:grid;grid-template-columns:236px minmax(0,1fr) 340px}
+.sf-col{min-width:0;padding:14px;overflow-y:auto}
+.sf-col h4{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);margin:0 0 9px}
+.sf-col h4 small{font-family:inherit;letter-spacing:0;text-transform:none;color:var(--tx3);opacity:.75;margin-left:6px}
+.sf-left{border-right:1px solid var(--bd);background:linear-gradient(180deg,var(--bg2),var(--bg));display:flex;flex-direction:column}
+.sf-right{border-left:1px solid var(--bd);background:linear-gradient(180deg,var(--bg2),var(--bg))}
+.sf-center{display:flex;flex-direction:column;background:var(--forge-stage-bg,radial-gradient(120% 90% at 50% -10%,var(--bg3),var(--bg2) 62%));padding:0}
+
+/* -- left: path cards + slot pills -- */
+.sf-paths{display:flex;flex-direction:column;gap:6px}
+.sf-pathcard{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);
+  cursor:pointer;text-align:left;width:100%;border-left:3px solid var(--pc)}
+.sf-pathcard:hover{background:var(--bg3)}
+.sf-pathcard.on{border-color:var(--pc);box-shadow:0 0 0 1px var(--pc) inset}
+.sf-pathcard .em{font-size:16px}
+.sf-pathcard .nm{font-size:12.5px;font-weight:650;flex:1}
+.sf-pathcard .win{font-family:var(--mono);font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.sf-slots{display:flex;flex-direction:column;gap:6px}
+.sf-slotpill{display:flex;flex-direction:column;gap:1px;padding:8px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);cursor:pointer;text-align:left}
+.sf-slotpill:hover{background:var(--bg3)}
+.sf-slotpill.on{background:var(--acc-soft);border-color:var(--acc)}
+.sf-slotpill b{font-size:12px;color:var(--tx)}
+.sf-slotpill small{font-family:var(--mono);font-size:9px;color:var(--tx3)}
+
+/* -- left: benchmark -- */
+/* was margin-top:auto — with the position:absolute bug fixed above, sf-left's
+   height is now correctly bounded to the viewport, so auto-margin was stretching
+   this across whatever leftover space that (mis)computed height left over.
+   Fixed spacing instead so the column reads as one continuous flow. */
+.sf-bench{margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)}
+.sf-benchrow{display:flex;align-items:center;gap:12px}
+.sf-wb{display:flex;align-items:center;gap:6px;margin:4px 0}
+.sf-wb .l{font-size:12px;width:16px}
+.sf-wb .t{flex:1;height:12px;background:var(--bg3);border-radius:6px;overflow:hidden;position:relative}
+.sf-wb .t i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;transition:width .4s}
+.sf-wb .v{font-family:var(--mono);font-size:11px;font-weight:700;width:22px;text-align:right;font-variant-numeric:tabular-nums}
+.sf-hint{font-size:10.5px;color:var(--tx3);line-height:1.5;margin:8px 0 0}
+
+/* -- center: live viewer -- */
+.sf-stagehead{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--bg)}
+.sf-stagehead .who{font-size:15px;font-weight:750}
+.sf-stagehead .pill{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--bd2);border-radius:999px;padding:4px 9px;color:var(--tx2)}
+.sf-stagehead .pill.live{color:#16a34a;border-color:rgba(34,197,94,.35)}
+.sf-tag{position:absolute;left:24px;bottom:20px;font-family:var(--mono);font-size:10.5px;color:var(--tx2);background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:5px 9px}
+.sf-tag b{color:var(--tx)}
+
+/* -- center: THE REAL DUEL — one shared base-map arena. Caster (left) faces
+   the target (right); pressing Cast plays the real Swing/Spell motion once,
+   then the impact reaction fires (shake+flash+damage-number on the target, or
+   a green heal-flash+heal-number on the caster) with the bound effect fx
+   mounted only for that moment. Replaces the old two-panel always-idle
+   viewers (see git history) with an actually-testable skill. -- */
+.sf-arena{flex:1;min-height:220px;position:relative;display:flex;align-items:center;justify-content:space-between;
+  padding:20px 36px;border-radius:13px;border:1px solid var(--bd2);overflow:hidden;background:#5c9a4e}
+.sf-arena-bg{position:absolute;inset:0;background-image:url('/farm-art/basemap.png');background-repeat:no-repeat;
+  background-position:80% 81%;background-size:350% 400%;image-rendering:pixelated;filter:brightness(.92)}
+html[data-theme="dark"] .sf-arena-bg{filter:brightness(.6) saturate(.9)}
+.sf-duel-side{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:150px}
+.sf-duel-side .sf-vhead{background:#0b0d1cd0;color:#fff;border:none;border-radius:999px;padding:4px 12px}
+.sf-duel-figure{position:relative;display:flex;align-items:center;justify-content:center;min-height:120px}
+.sf-duel-figure canvas{filter:drop-shadow(0 8px 10px rgba(0,0,0,.35))}
+.sf-duel-figure.hit{animation:sf-shake .4s ease, sf-flash .4s ease}
+.sf-duel-figure.healflash::after{content:"";position:absolute;inset:-14px;border-radius:50%;
+  background:radial-gradient(circle,rgba(74,222,128,.5),transparent 70%);animation:sf-healpulse .9s ease}
+@keyframes sf-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes sf-flash{0%,100%{filter:none}30%{filter:brightness(2.2) saturate(0) contrast(1.6)}}
+@keyframes sf-healpulse{0%{opacity:0;transform:scale(.6)}40%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(1.4)}}
+.sf-castbtn{position:relative;z-index:2;flex:none;padding:12px 22px;border-radius:999px;border:none;
+  background:var(--acc);color:#fff;font-weight:800;font-size:13px;cursor:pointer;
+  box-shadow:0 10px 24px -8px var(--acc);transition:transform .12s,opacity .2s}
+.sf-castbtn:active{transform:scale(.94)}
+.sf-castbtn:disabled{opacity:.6;cursor:default}
+.sf-dmgnum{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-weight:900;
+  font-size:22px;animation:sf-rise .9s ease forwards;pointer-events:none}
+.sf-dmgnum.dmg{color:#ef4444;text-shadow:0 2px 4px rgba(0,0,0,.5)}
+.sf-dmgnum.heal{color:#4ade80;text-shadow:0 2px 4px rgba(0,0,0,.5)}
+@keyframes sf-rise{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}20%{opacity:1;transform:translate(-50%,-6px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-46px) scale(1)}}
+.sf-vhead{display:flex;align-items:center;gap:6px;padding:8px 12px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}
+.sf-vmonster{display:flex;flex-direction:column;align-items:center;gap:4px}
+.sf-vmonster.lead .bf-mstage{width:120px;height:120px}
+.sf-vmonster:not(.lead) .bf-mstage{width:56px;height:56px;opacity:.6}
+.sf-vempty{font-family:var(--mono);font-size:10.5px;color:#fff;text-align:center;padding:12px;max-width:70%;
+  background:#0b0d1cd0;border-radius:9px}
+.sf-veffect{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:6px;
+  background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:6px;box-shadow:0 8px 20px -12px #0007;z-index:3}
+.sf-vcap{padding:6px 12px;font-size:10.5px;color:var(--tx3);text-align:center;border-top:1px solid var(--bd);background:var(--bg2)}
+
+/* -- center: skill values -- */
+.sf-values{border-top:1px solid var(--bd);background:var(--bg);padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 22px}
+.sf-vgrp h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin:0 0 7px}
+.sf-vgrp h4 small{letter-spacing:0;text-transform:none;opacity:.7;margin-left:5px}
+.sf-shape{display:flex;align-items:center;gap:5px;margin-top:8px;flex-wrap:wrap}
+.sf-shape .lbl{font-size:10.5px;color:var(--tx2);margin-right:2px}
+.sf-shbtn{font-family:var(--mono);font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--bd2);background:var(--bg2);color:var(--tx2);cursor:pointer}
+.sf-shbtn:hover{color:var(--tx)}
+.sf-shbtn.on{background:var(--acc);border-color:var(--acc);color:#fff}
+
+/* -- right: tier ladder -- */
+.sf-ladder{display:flex;flex-direction:column;gap:5px}
+.sf-tier{display:flex;align-items:center;gap:8px;padding:6px 7px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);cursor:pointer}
+.sf-tier.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.sf-tier .lv{display:flex;flex-direction:column;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx);width:52px;flex:none;line-height:1.25}
+.sf-tier .lv small{font-weight:500;font-size:8.5px;color:var(--tx3)}
+.sf-tier input{flex:1;min-width:0;font-size:12px;font-weight:600;background:var(--bg2);border:1px solid var(--bd2);border-radius:6px;padding:5px 7px;color:var(--tx)}
+.sf-tier input:focus{outline:none;border-color:var(--acc)}
+.sf-tier .fx{font-family:var(--mono);font-size:10px;padding:5px 7px;border-radius:6px;border:1px solid var(--bd2);background:var(--bg2);color:var(--tx2);cursor:pointer;flex:none}
+.sf-tier .fx:hover{color:var(--acc);border-color:var(--acc)}
+
+/* -- right: resistance -- */
+.sf-resist{display:flex;flex-direction:column;gap:8px}
+.sf-resrow{border:1px solid var(--bd);border-radius:9px;padding:7px 9px;background:var(--bg)}
+.sf-resrow .rp{font-size:11px;font-weight:650;display:block;margin-bottom:3px}
+.sf-resrow .rs{display:flex;flex-direction:column;gap:2px}
+
+/* -- value-on-thumb slider (shared) -- */
+.sf-vrow{display:flex;align-items:center;gap:9px;margin:5px 0}
+.sf-vl{font-size:10.5px;color:var(--tx2);width:64px;flex:none}
+.sf-vs{position:relative;flex:1;height:22px;display:flex;align-items:center}
+.sf-vtrack{position:absolute;left:0;right:0;height:5px;border-radius:99px;background:var(--bg3)}
+.sf-vfill{position:absolute;left:0;height:5px;border-radius:99px;background:var(--pc,var(--acc));pointer-events:none}
+.sf-vthumb{position:absolute;transform:translateX(-50%);pointer-events:none;font-family:var(--mono);font-size:9.5px;font-weight:800;color:#fff;
+  background:var(--pc,var(--acc));border-radius:5px;padding:1px 5px;min-width:34px;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sf-vs input{position:absolute;left:0;width:100%;height:22px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer;opacity:0}
+
+/* -- sticky publish bar -- */
+.sf-pubbar{flex:none;display:flex;align-items:center;gap:11px;padding:11px 18px;background:var(--bg);border-top:1px solid var(--bd);box-shadow:0 -8px 20px -16px #0007;flex-wrap:wrap}
+.sf-pubbar .mono{font-family:var(--mono);font-size:11.5px;color:var(--tx2)}
+.sf-pubbar .mono b{color:var(--tx)}
+.sf-pubbar .pill{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg3);color:var(--tx2)}
+.sf-pubbar .pill.warn{background:var(--warn-bg,#fdf1dc);color:var(--warn,#d97706)}
+.sf-pubbar .msg{font-size:11.5px}
+.sf-reset{font-size:12px;color:var(--tx2);border:1px solid var(--bd2);border-radius:8px;padding:7px 12px;background:var(--bg2);cursor:pointer}
+.sf-pub{padding:9px 18px;border-radius:10px;font-weight:600;font-size:13px;background:var(--acc);color:#fff;border:1px solid var(--acc);cursor:pointer}
+.sf-pub:hover{background:var(--acc-press,var(--acc))}
+.sf-pub:disabled{opacity:.55;cursor:default}
+
+@media (max-width:1000px){
+  .sf-grid{grid-template-columns:1fr;overflow-y:auto}
+  .sf-left{border-right:none;border-bottom:1px solid var(--bd)}
+  .sf-right{border-left:none;border-top:1px solid var(--bd)}
 }

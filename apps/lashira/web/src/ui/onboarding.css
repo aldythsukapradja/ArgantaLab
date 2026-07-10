@@ -1,0 +1,126 @@
+/* LashiraBloom onboarding wizard — built on the shared ArgantaLab login chrome
+   (--purple / --pink / --grad / .mark / card+field shapes already in styles.css).
+   Scoped under .ob-root so nothing here leaks into the farm HUD. */
+
+.ob-root {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(900px 480px at 50% -8%, rgba(232,121,185,.16), transparent),
+    radial-gradient(700px 420px at 100% 100%, rgba(77,159,255,.14), transparent),
+    var(--soft, #f0f1fa);
+  overflow-y: auto;
+}
+.ob-card {
+  width: 100%; max-width: 380px; background: var(--card, #fff);
+  border: 1px solid var(--line, #e7e8f2); border-radius: 24px;
+  box-shadow: 0 30px 70px -30px rgba(31,35,64,.45);
+  padding: 24px 22px 22px; position: relative;
+}
+
+.ob-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; min-height: 20px; }
+.ob-dots { display: flex; gap: 6px; }
+.ob-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line, #e7e8f2); transition: all .25s ease; }
+.ob-dots i.on { width: 20px; border-radius: 4px; background: var(--grad, linear-gradient(90deg,#4d9fff,#8b5cf6,#e879b9)); }
+.ob-exit { border: none; background: none; color: var(--muted, #6b6f8c); font-size: 12px; font-weight: 700; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.ob-exit:hover { background: var(--soft, #f0f1fa); }
+
+.ob-step { animation: ob-in .32s cubic-bezier(.2,.7,.3,1); }
+@keyframes ob-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.ob-mark {
+  width: 56px; height: 56px; border-radius: 16px; margin: 4px auto 14px;
+  background: var(--grad, linear-gradient(90deg,#4d9fff,#8b5cf6,#e879b9));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 12px 26px rgba(139,92,246,.32);
+}
+.ob-mark i { width: 20px; height: 20px; border-radius: 50%; border: 5px solid #fff; position: relative; display: block; }
+.ob-mark i::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #fff; }
+
+.ob-eyebrow { text-align: center; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 800; color: var(--purple, #8b5cf6); margin-bottom: 6px; }
+.ob-h { text-align: center; font-size: 23px; font-weight: 800; letter-spacing: -.3px; margin: 0 0 6px; color: var(--ink, #1f2340); text-wrap: balance; }
+.ob-sub { text-align: center; font-size: 13px; color: var(--muted, #6b6f8c); margin: 0 0 18px; }
+.grad-text { background: var(--grad, linear-gradient(90deg,#4d9fff,#8b5cf6,#e879b9)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* live avatar stage */
+.ob-stage {
+  margin: 0 auto 16px; border-radius: 18px;
+  background: linear-gradient(180deg, var(--soft, #f0f1fa), rgba(232,121,185,.08));
+  border: 1px solid var(--line, #e7e8f2);
+  display: grid; place-items: center; position: relative; overflow: hidden;
+}
+.ob-hero-canvas { display: block; }
+.ob-stage-empty { color: var(--muted, #6b6f8c); font-size: 12px; }
+.ob-confetti { position: absolute; inset: 0; pointer-events: none; }
+
+/* name field */
+.ob-field {
+  width: 100%; font-size: 16px; padding: 13px 14px; border-radius: 14px;
+  border: 1px solid var(--line, #e7e8f2); background: var(--card, #fff);
+  color: var(--ink, #1f2340); margin-bottom: 8px; outline: none;
+}
+.ob-field:focus { border-color: var(--purple, #8b5cf6); box-shadow: 0 0 0 3px rgba(139,92,246,.14); }
+
+/* path grid */
+.ob-paths { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.ob-path {
+  border-radius: 16px; border: 1px solid var(--line, #e7e8f2); background: var(--card, #fff);
+  padding: 14px 10px; text-align: center; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.ob-path:hover { transform: translateY(-1px); }
+.ob-path .ic { font-size: 26px; display: block; margin-bottom: 6px; }
+.ob-path .nm { font-weight: 800; font-size: 14px; color: var(--ink, #1f2340); }
+.ob-path .fl { font-size: 11px; color: var(--muted, #6b6f8c); margin-top: 2px; }
+.ob-path.on { border-color: var(--purple, #8b5cf6); box-shadow: 0 0 0 3px rgba(139,92,246,.2); }
+
+/* slot stepper (look + ride) */
+.ob-slot { margin-bottom: 10px; }
+.ob-slot-label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; font-weight: 800; color: var(--muted, #6b6f8c); text-align: center; margin-bottom: 6px; }
+.ob-note { font-size: 11px; color: var(--purple, #8b5cf6); text-align: center; margin: 4px 0 0; font-weight: 600; }
+.ob-stepper { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.ob-arrow {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line, #e7e8f2);
+  background: var(--card, #fff); color: var(--ink, #1f2340); font-weight: 800; font-size: 15px;
+  display: grid; place-items: center; cursor: pointer;
+}
+.ob-arrow:hover { background: var(--soft, #f0f1fa); }
+.ob-stepper .val { min-width: 96px; text-align: center; font-weight: 700; font-size: 13px; color: var(--ink, #1f2340); }
+
+/* ride option chips */
+.ob-rides { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.ob-ride {
+  border-radius: 14px; border: 1px solid var(--line, #e7e8f2); background: var(--card, #fff);
+  padding: 12px 8px; text-align: center; cursor: pointer; font-weight: 700; font-size: 13px; color: var(--ink, #1f2340);
+}
+.ob-ride .ic { font-size: 22px; display: block; margin-bottom: 4px; }
+.ob-ride.on { border-color: var(--purple, #8b5cf6); box-shadow: 0 0 0 3px rgba(139,92,246,.2); }
+
+/* recap */
+.ob-recap {
+  border: 1px dashed var(--line, #e7e8f2); border-radius: 14px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; font-size: 13px; color: var(--muted, #6b6f8c);
+}
+.ob-recap b { color: var(--ink, #1f2340); }
+
+/* buttons */
+.ob-cta {
+  width: 100%; border: none; color: #fff; border-radius: 14px; padding: 14px;
+  font-weight: 800; font-size: 15px; cursor: pointer; background: var(--grad, linear-gradient(90deg,#4d9fff,#8b5cf6,#e879b9));
+  box-shadow: 0 10px 24px -10px rgba(139,92,246,.42);
+}
+.ob-cta:disabled { opacity: .5; cursor: default; box-shadow: none; }
+.ob-ghost {
+  width: 100%; border: 1px solid var(--line, #e7e8f2); background: transparent; color: var(--muted, #6b6f8c);
+  border-radius: 14px; padding: 12px; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 8px;
+}
+.ob-ghost:hover { background: var(--soft, #f0f1fa); }
+.ob-row { display: flex; gap: 10px; margin-top: 8px; }
+.ob-row .ob-cta, .ob-row .ob-ghost { margin-top: 0; }
+.ob-back { flex: 0 0 auto; width: auto; padding: 12px 16px; }
+.ob-err { color: #c0392b; font-size: 13px; margin: 10px 0 0; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-step { animation: none; }
+  .ob-dots i { transition: none; }
+}

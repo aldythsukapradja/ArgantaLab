@@ -9,7 +9,7 @@ import { data } from '@arganta/heroes-engine'
 function effectLabel(e: any) { return `effect #${String(e?.id ?? 0).padStart(3, '0')}` }
 function effectGroup(e: any) { const start = Math.floor((e?.id ?? 0) / 50) * 50; return `Effects ${String(start).padStart(3, '0')}-${String(start + 49).padStart(3, '0')}` }
 
-function EffectLivePreview({ effect, size = 200 }: { effect: any; size?: number }) {
+export function EffectLivePreview({ effect, size = 200 }: { effect: any; size?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     let live = true, raf = 0

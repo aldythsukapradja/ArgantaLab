@@ -81,21 +81,18 @@ export function ComposerPanel({
               🐴 Ride: {mountOn ? 'on' : 'off'}
             </button>
           )}
-          <div className="f-mtag">{motion.motionName} · {motion.frame || '…'}</div>
-          <div className="f-cctrl">
+          <div className="f-cfoot">
+            <span className="f-mtag">{motion.motionName} · {motion.frame || '…'}</span>
+            <div className="f-btnrow" style={{ flex: '1 1 auto' }}>
+              {ACTIONS.map(([label, b]) => (
+                <button key={b} className={'f-gbtn' + (motion.base === b && !motion.emote ? ' on' : '')} onClick={() => { motion.setEmote(''); motion.setBase(b) }}>{label}</button>
+              ))}
+            </div>
             <button className="f-gbtn sq" onClick={() => motion.setPlaying(p => !p)} title="Play / pause">{motion.playing ? '⏸' : '▶'}</button>
             <span className="f-cap">speed</span>
             <input className="f-rng" type="range" min={0.25} max={2} step={0.25} value={motion.speed} onChange={e => motion.setSpeed(Number(e.target.value))} />
             <span className="f-cap">zoom</span>
             <input className="f-rng" type="range" min={1} max={6} step={1} value={motion.scale} onChange={e => motion.setScale(Number(e.target.value))} />
-          </div>
-        </div>
-        <div className="f-controls">
-          <div className="f-btnrow">
-            {ACTIONS.map(([label, b]) => (
-              <button key={b} className={'f-gbtn' + (motion.base === b && !motion.emote ? ' on' : '')} onClick={() => { motion.setEmote(''); motion.setBase(b) }}>{label}</button>
-            ))}
-            <span style={{ flex: 1 }} />
             <button className={'f-gbtn' + (motion.emote ? ' on' : '')} onClick={() => setEmoteOpen(true)}>{motion.emote || 'Emote…'} <span style={{ opacity: .6 }}>▦</span></button>
             <button className="f-gbtn danger" onClick={onReset}>Reset</button>
           </div>

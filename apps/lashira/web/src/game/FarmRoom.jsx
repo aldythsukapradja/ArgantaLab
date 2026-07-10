@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, zoneOf, hotspotAt, DOCK_MARKER, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, PVP_GATE, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, zoneOf, hotspotAt, DOCK_MARKER, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -271,7 +271,11 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   const [zoneLabel, setZoneLabel] = useState('');
   // Periodically clear legacy/orphaned plot records so nothing lingers forever.
   useEffect(() => { const t = window.setInterval(() => logicRef.current?.sweepStalePlots?.(), 30000); return () => window.clearInterval(t); }, []);
-  const [zoom, setZoom] = useState(1); // default 1x on every screen size; adjustable in Settings
+  // Default zoom: 1x on desktop, 0.5x on mobile (≤760px — same breakpoint the
+  // rest of the app's mobile layout uses) so the touch controls/HUD have room
+  // and more of the play space is visible on a small screen. Still just the
+  // Settings slider's starting point — live-adjustable, not persisted.
+  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 760 ? 0.5 : 1));
   // Walk speed multiplier (1x = Kingdom cadence, up to 3x). Persisted per browser.
   const [speed, setSpeed] = useState(() => {
     const s = Number(typeof localStorage !== 'undefined' && localStorage.getItem('lashira_speed'));
@@ -976,24 +980,26 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     const fy = e.from && t < 1 ? e.from[1] + (e.tile[1] - e.from[1]) * t : e.tile[1];
     return [fx * TILE, fy * TILE];
   }
-  // Faint = kid-safe: no loss. Knock the player north of the arena wall (combat
-  // toggles off there), heal to full, brief timeout before you can re-enter.
-  function faintPlayer(g, now) {
+  // Faint = kid-safe: no loss. Knock the player back to `safeTile` (defaults to
+  // just north of the arena wall — OUT of the whole arena, the PvE-faint
+  // behavior), heal to full, brief timeout before you can re-enter combat.
+  function faintPlayer(g, now, safeTile = [ARENA_GATE_X, ARENA_WALL_Y - 1]) {
     g.combat.deadUntil = now + MONSTER_FAINT_MS;
     g.combat.hp = g.combat.maxHp;
-    const safe = [ARENA_GATE_X, ARENA_WALL_Y - 1];
-    g.player.tile = [...safe]; g.player.from = [...safe]; g.player.moveT = 1;
-    g.floats.push({ x: safe[0] * TILE + TILE / 2, y: safe[1] * TILE, text: '💫 Fainted! Recovering…', start: performance.now(), ttl: 1600 });
+    g.player.tile = [...safeTile]; g.player.from = [...safeTile]; g.player.moveT = 1;
+    g.floats.push({ x: safeTile[0] * TILE + TILE / 2, y: safeTile[1] * TILE, text: '💫 Fainted! Recovering…', start: performance.now(), ttl: 1600 });
     sfx.play('faint');
     g.combat.on = false; syncBattleState(g);
   }
-  // PvP faint = kid-safe, same knockback/heal/timeout treatment as a monster
-  // faint (no loss) — the one thing that IS recorded is the KO itself, onto
-  // the circle rank (the victim reports it; see pvp-concept.md §4 for why
-  // that's the right trust posture for a family/friend circle).
+  // PvP faint = kid-safe, same heal/timeout treatment as a monster faint (no
+  // loss) — but knocked back to the PvP ring's OWN entry (PVP_GATE, the
+  // bottom of the courtyard) instead of being ejected out of the whole arena,
+  // so a duel loss doesn't strand the loser back at the farm gate. The one
+  // thing that IS recorded is the KO itself, onto the circle rank (the victim
+  // reports it; see pvp-concept.md §4 for why that's the right trust posture
+  // for a family/friend circle).
   function pvpFaintPlayer(g, winnerId) {
-    faintPlayer(g, performance.now());
-    g.pvp.on = false; // faintPlayer already ejects the player out of the arena
+    faintPlayer(g, performance.now(), PVP_GATE);
     if (winnerId && circleId) recordPvpKo({ circleId, winnerId });
   }
   // Basic attack — always plays the weapon swing; deals MELEE_DAMAGE to the faced

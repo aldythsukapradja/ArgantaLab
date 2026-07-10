@@ -14,7 +14,7 @@
 //  3. applyTuning() mutates the LIVE exported objects in place, so every importer
 //     (the combat engine) sees the new numbers without a re-import.
 
-import { PATH_POWER, PVP_PROFILE, PVP_TUNING, DAMAGE_BASE, SKILL_SLOTS } from './skills.js';
+import { PATH_POWER, PVP_PROFILE, PVP_TUNING, DAMAGE_BASE, SKILL_SLOTS, SKILL_MATRIX, RESIST } from './skills.js';
 import { BESTIARY, ZONE_MOBS } from './bestiary.js';
 import { WEAPON_TIERS, ARMOR_TIERS } from './gear.js';
 import { PATHS as PATH_POOLS, XP_LADDER } from './progression.js';
@@ -70,6 +70,11 @@ export const COMBAT_DEFAULTS = Object.freeze({
   zones: clone(ZONE_MOBS),       // which mobs roam each zone (meadow/grove/cavern)
   spawn: clone(SPAWN_TUNING),
   rewards: clone(REWARD_TUNING),
+  // Skill Forge authoring: per-path/slot/tier {name, fx, shape?} + per-path
+  // resistance. skillMatrix keys are strings ('0'/'1'/'2') so partial edits
+  // deep-merge per slot; resist defaults neutral so it changes nothing unpicked.
+  skillMatrix: clone(SKILL_MATRIX),
+  resist: clone(RESIST),
   // Gear power axis, keyed by tier so partial edits deep-merge cleanly.
   gear: {
     weapons: WEAPON_TIERS.reduce((a, t) => { a['t' + t.tier] = { atk: t.atk }; return a; }, {}),
@@ -109,6 +114,23 @@ export function validateTuning(override) {
     else if (v < RANGE[k][0] || v > RANGE[k][1]) warnings.push(`${p}.${k}=${v} outside [${RANGE[k][0]}, ${RANGE[k][1]}]`);
   }
   if (cfg.pvp.boltReach < 1 || cfg.pvp.boltReach > 8) warnings.push('boltReach outside [1,8]');
+  // Resistance: warn on out-of-band values. Read the RAW override (not the merged
+  // cfg, which clampConfig has already pulled back into range) so the operator is
+  // actually told their value got clamped rather than the warning silently dying.
+  const rawResist = override?.resist;
+  if (rawResist) for (const p of Object.keys(rawResist)) for (const t of ['phys', 'mag']) {
+    const v = rawResist[p]?.[t];
+    if (v != null && (v < -0.6 || v > 0.6)) warnings.push(`${p} ${t} resist ${v} outside [−0.6, 0.6] — will clamp`);
+  }
+  // Skill matrix: every authored cell needs a non-empty name + a finite fx.
+  if (cfg.skillMatrix) for (const p of Object.keys(cfg.skillMatrix)) for (const s of Object.keys(cfg.skillMatrix[p] || {})) {
+    const row = cfg.skillMatrix[p][s];
+    if (!Array.isArray(row)) continue;
+    row.forEach((cell, i) => {
+      if (cell && (typeof cell.name !== 'string' || !cell.name.trim())) warnings.push(`${p} skill ${s} tier ${i} has a blank name`);
+      if (cell && cell.fx != null && !Number.isFinite(Number(cell.fx))) errors.push(`${p} skill ${s} tier ${i} fx is not a number`);
+    });
+  }
   return { ok: errors.length === 0, errors, warnings };
 }
 // A loot table is [{ k:material, min, max, p:0..1 }]. Drop malformed rows so a bad
@@ -132,6 +154,11 @@ function clampConfig(cfg) {
     cfg.paths[p][k] = Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : COMBAT_DEFAULTS.paths[p][k];
   }
   cfg.pvp.boltReach = Math.min(8, Math.max(1, cfg.pvp.boltReach || 2));
+  // Resistance clamped to [−0.6, 0.6] (resistMul then bounds the multiplier too).
+  if (cfg.resist) for (const p of PATHS) for (const t of ['phys', 'mag']) {
+    const v = cfg.resist[p]?.[t];
+    if (cfg.resist[p]) cfg.resist[p][t] = Number.isFinite(v) ? Math.min(0.6, Math.max(-0.6, v)) : 0;
+  }
   return cfg;
 }
 
@@ -215,6 +242,30 @@ export function applyTuning(configOrOverride) {
       setTier(ARMOR_TIERS, k, 'hp', cfg.gear.armor[k].hp);
     }
   }
+  // Skill matrix — write each authored path/slot's tier row back in place. Only
+  // sanitized cells (a string name, a finite fx, an allowed shape) are kept.
+  if (cfg.skillMatrix) for (const p of Object.keys(cfg.skillMatrix)) {
+    if (!SKILL_MATRIX[p]) continue;
+    for (const s of Object.keys(cfg.skillMatrix[p])) {
+      const row = cfg.skillMatrix[p][s];
+      if (!Array.isArray(row) || !SKILL_MATRIX[p][s]) continue;
+      SKILL_MATRIX[p][s] = row.map((cell, i) => {
+        const prev = SKILL_MATRIX[p][s][i] || {};
+        const name = typeof cell?.name === 'string' && cell.name.trim() ? cell.name : prev.name;
+        const fx = Number.isFinite(Number(cell?.fx)) ? Number(cell.fx) : prev.fx;
+        const shape = ['line', 'nova', 'cross', 'all', 'self'].includes(cell?.shape) ? cell.shape : prev.shape;
+        return shape ? { name, fx, shape } : { name, fx };
+      });
+    }
+  }
+  // Resistance — write the neutral-defaulted, clamped values into the live table.
+  if (cfg.resist) for (const p of Object.keys(cfg.resist)) {
+    if (!RESIST[p]) continue;
+    for (const t of ['phys', 'mag']) {
+      const v = cfg.resist[p][t];
+      if (Number.isFinite(v)) RESIST[p][t] = Math.min(0.6, Math.max(-0.6, v));
+    }
+  }
   return cfg;
 }
 export function resetTuning() { return applyTuning(COMBAT_DEFAULTS); }
@@ -242,7 +293,14 @@ function duel(cfg, a, b, L, rand) {
     const s = cfg.paths[p];
     const dP = Math.round(curve(D.phys, L) * s.phy), dB = Math.round(curve(D.bolt, L) * s.mag);
     const hp = (cfg.pvp.hp.base + cfg.pvp.hp.perLevel * (L - 1)) * s.pvpHpMul;
-    return { hp, maxHp: hp, dP, dB, heal: curve(D.mend, L) * s.healMul, ranged: dB > dP, atkInt: s.atkInt, move: s.moveRel, cd: rand() * s.atkInt, healed: 0 };
+    return { path: p, hp, maxHp: hp, dP, dB, heal: curve(D.mend, L) * s.healMul, ranged: dB > dP, atkInt: s.atkInt, move: s.moveRel, cd: rand() * s.atkInt, healed: 0 };
+  };
+  // Defender's per-path resistance multiplier by damage type (bolt=magic, phys).
+  // Mirrors skills.resistMul but reads cfg.resist so the sim benchmarks exactly
+  // what will be published — a positive resist shrinks incoming, a weakness grows it.
+  const resMul = (defPath, type) => {
+    const r = cfg.resist?.[defPath]?.[type];
+    return Number.isFinite(r) ? Math.min(2, Math.max(0.2, 1 - r)) : 1;
   };
   const A = mk(a), B = mk(b); let dist = 6 + rand() * 3; const dt = 0.06, R = cfg.pvp.boltReach, T = cfg.pvp;
   const roll = (base) => { if (rand() < T.miss) return 0; let d = base * (1 - T.spread + rand() * 2 * T.spread); if (rand() < T.crit) d *= T.critX; return d; };
@@ -253,7 +311,7 @@ function duel(cfg, a, b, L, rand) {
     const mv = (pa !== 0 && dist > reachOf(pa) ? A.move * dt : 0) + (pb !== 0 && dist > reachOf(pb) ? B.move * dt : 0);
     if (mv) dist = Math.max(0.5, dist - mv);
     A.cd -= dt; B.cd -= dt;
-    const fire = (U, k, o) => { if (U.cd > 0 || (k !== 0 && dist > reachOf(k))) return; U.cd = U.atkInt; if (k === 0) { U.hp = Math.min(U.maxHp, U.hp + U.heal); U.healed++; } else o.hp -= roll(k === 1 ? U.dB : U.dP); };
+    const fire = (U, k, o) => { if (U.cd > 0 || (k !== 0 && dist > reachOf(k))) return; U.cd = U.atkInt; if (k === 0) { U.hp = Math.min(U.maxHp, U.hp + U.heal); U.healed++; } else o.hp -= roll(k === 1 ? U.dB : U.dP) * resMul(o.path, k === 1 ? 'mag' : 'phys'); };
     fire(A, pa, B); fire(B, pb, A);
     if (A.hp <= 0 && B.hp <= 0) return 0.5; if (B.hp <= 0) return 1; if (A.hp <= 0) return 0;
   }

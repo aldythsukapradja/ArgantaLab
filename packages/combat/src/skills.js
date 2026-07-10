@@ -108,12 +108,21 @@ export function pathPhysPower(pathId, L) {
 // own effect visuals. Kingdom is the single source of truth for character stuff,
 // so the `fx` (which spell animation plays) comes from the hero's Kingdom
 // skills; only the behaviour/costs are shared. `heroSkills` = hero.spec.skills.
-export function battleSkillsFor(heroSkills) {
+// When pathId + level are given, the SKILL MATRIX supplies the path's evolving
+// name + effect for the hero's current tier. A hero's OWN spec still wins when
+// they deliberately customized it in Character Lab (a name, or an fx that differs
+// from the slot's canonical default); an untouched hero inherits the path/tier
+// identity authored in the Skill Forge. shape (warrior's nova, etc.) rides along.
+export function battleSkillsFor(heroSkills, pathId, level) {
   const raw = Array.isArray(heroSkills) ? heroSkills : [];
   return SKILL_SLOTS.map((slot, i) => {
     const f = Number(raw[i]?.fx);
-    const name = typeof raw[i]?.name === 'string' ? raw[i].name : slot.name;
-    return { ...slot, name, fx: Number.isFinite(f) ? f : slot.fx };
+    const customName = typeof raw[i]?.name === 'string' && raw[i].name.trim() ? raw[i].name : null;
+    const customFx = Number.isFinite(f) && f !== slot.fx ? f : null; // != canonical ⇒ operator picked it
+    const cell = pathId ? SKILL_MATRIX[pathId]?.[i]?.[skillTierIndex(level)] : null;
+    const name = customName || (pathId ? skillNameFor(pathId, i, level) : slot.name);
+    const fx = customFx != null ? customFx : (pathId ? skillFxFor(pathId, i, level) : slot.fx);
+    return { ...slot, name, fx, shape: cell?.shape || slot.shape };
   });
 }
 
@@ -144,16 +153,114 @@ export function skillDamage(skill) {
 }
 
 // Which tiles a skill hits, given the caster's tile + facing delta [dx,dy].
-//   aoe (adjacent): the caster's tile + its 4 neighbours (a nova).
+//   shape 'nova' (or legacy aoe): the caster's tile + its 4 neighbours — the
+//     "attack everything left/right/up/down around me" warrior pattern.
+//   shape 'cross': the 4 cardinals extended to `reach` in every direction.
 //   otherwise: a straight line of `reach` tiles in front (reach 1 = melee range).
 export function skillTargets(skill, originTile, facingDelta) {
   const [ox, oy] = originTile;
-  if (skill?.aoe) {
+  const shape = skill?.shape || (skill?.aoe ? 'nova' : 'line');
+  if (shape === 'nova') {
     return [[ox, oy], [ox + 1, oy], [ox - 1, oy], [ox, oy + 1], [ox, oy - 1]];
   }
-  const [dx, dy] = facingDelta || [0, 1];
   const reach = Math.max(1, Number(skill?.reach || 1));
+  if (shape === 'cross') {
+    const tiles = [[ox, oy]];
+    for (let i = 1; i <= reach; i++) tiles.push([ox + i, oy], [ox - i, oy], [ox, oy + i], [ox, oy - i]);
+    return tiles;
+  }
+  const [dx, dy] = facingDelta || [0, 1];
   const tiles = [];
   for (let i = 1; i <= reach; i++) tiles.push([ox + dx * i, oy + dy * i]);
   return tiles;
+}
+
+// ============================================================================
+// SKILL MATRIX + RESISTANCE — the Skill Forge authoring model (HQ) ============
+// ============================================================================
+// A per-PATH, per-SLOT, per-TIER identity for the 3 skills. The 3 slots stay
+// fixed by SKILL_SLOTS (single / all-multi / self-heal); this layers each path's
+// own NAME + effect (fx) + optional target SHAPE on top, evolving across six
+// level bands so a skill is renamed AND re-animated as the hero levels. Both
+// games import this; HQ's Skill Forge publishes overrides through the tuning
+// pipeline (tuning.js) and applyTuning writes them back here in place.
+//
+// These are MUTABLE exports (like PATH_POWER) so a published config updates them
+// live for every importer without a re-import.
+
+// The six milestones a skill's name/effect can change at — deliberately the SAME
+// bands as progression.js's per-path TITLES, so "Warden" the title and the skill
+// it unlocks step up together instead of on two different clocks.
+export const SKILL_TIER_BANDS = [1, 15, 30, 50, 70, 90];
+
+// Index into a tier band for a given level (0..5).
+export function skillTierIndex(level) {
+  const L = Math.max(1, Number(level) || 1);
+  let idx = 0;
+  for (let i = 0; i < SKILL_TIER_BANDS.length; i++) if (L >= SKILL_TIER_BANDS[i]) idx = i;
+  return idx;
+}
+
+// Default fx per slot = the slot's canonical effect, used at EVERY tier until an
+// operator authors a per-tier effect in the Skill Forge (so the live viewer can
+// never point at a missing effect id — a published override replaces these).
+const _names = (list, fx) => list.map((name) => ({ name, fx }));
+
+// name sets: [slot0 single, slot1 multi, slot2 heal] × 6 tiers, one per path.
+export const SKILL_MATRIX = {
+  warrior: {
+    0: _names(['Slash', 'Cleave', 'Rend', 'Sunder', 'Ruin', 'Cataclysm'], 22),
+    1: _names(['Sweep', 'Whirl', 'Tempest', 'Maelstrom', 'Cyclone', 'Annihilation'], 131),
+    2: _names(['Bandage', 'Second Wind', 'Rally', 'Iron Will', 'Unbroken', 'Undying'], 1),
+  },
+  rogue: {
+    0: _names(['Jab', 'Puncture', 'Backstab', 'Gut', 'Eviscerate', 'Execute'], 22),
+    1: _names(['Fan of Knives', 'Flurry', 'Barrage', 'Volley', 'Bladestorm', 'Thousand Cuts'], 131),
+    2: _names(['Patch Up', 'Quick Bind', 'Adrenaline', 'Numbing Draught', 'Vitality', 'Deathless'], 1),
+  },
+  poet: {
+    0: _names(['Verse', 'Lament', 'Dirge', 'Requiem', 'Elegy', 'Epitaph'], 22),
+    1: _names(['Chorus', 'Refrain', 'Anthem', 'Symphony', 'Crescendo', 'Finale'], 131),
+    2: _names(['Hymn', 'Ballad', 'Sonnet', 'Ode', 'Psalm', 'Benediction'], 1),
+  },
+  mage: {
+    0: _names(['Spark', 'Bolt', 'Arc', 'Blast', 'Nova', 'Singularity'], 22),
+    1: _names(['Ember Storm', 'Firestorm', 'Meteor', 'Comet', 'Ragnarok', 'Armageddon'], 131),
+    2: _names(['Warmth', 'Renew', 'Restore', 'Rejuvenate', 'Sanctuary', 'Rebirth'], 1),
+  },
+};
+
+// The name shown for a path's skill slot at a given level (falls back cleanly).
+export function skillNameFor(pathId, slotIdx, level) {
+  const row = SKILL_MATRIX[pathId]?.[slotIdx];
+  if (!row || !row.length) return SKILL_SLOTS[slotIdx]?.name || 'Skill';
+  return row[skillTierIndex(level)]?.name || SKILL_SLOTS[slotIdx]?.name || 'Skill';
+}
+// The effect id for a path's skill slot at a given level.
+export function skillFxFor(pathId, slotIdx, level) {
+  const row = SKILL_MATRIX[pathId]?.[slotIdx];
+  const canon = SKILL_SLOTS[slotIdx]?.fx ?? 0;
+  if (!row || !row.length) return canon;
+  const cell = row[skillTierIndex(level)];
+  return Number.isFinite(cell?.fx) ? cell.fx : canon;
+}
+
+// --- PER-PATH RESISTANCE / WEAKNESS -----------------------------------------
+// A defender's path reduces (resist, +) or amplifies (weakness, −) incoming
+// damage BY TYPE. Range [−0.6, 0.6]; a value of r means damage × (1 − r), so
+// +0.4 = takes 60%, −0.4 = takes 140%. DEFAULT ALL-ZERO (neutral) so adding the
+// axis changes nothing until an operator authors it and watches the benchmark.
+export const RESIST = {
+  warrior: { phys: 0, mag: 0 },
+  rogue:   { phys: 0, mag: 0 },
+  poet:    { phys: 0, mag: 0 },
+  mage:    { phys: 0, mag: 0 },
+};
+// Damage multiplier a defender's path applies to an incoming hit of `type`
+// ('phys' | 'mag'). Clamped to a safe [0.2, 2.0] so a bad publish can't null or
+// runaway damage. Unknown type/path → 1.0 (no effect), so it fails safe.
+export function resistMul(defenderPathId, type) {
+  const r = RESIST[defenderPathId]?.[type === 'mag' ? 'mag' : type === 'phys' ? 'phys' : null];
+  if (!Number.isFinite(r)) return 1;
+  return Math.min(2, Math.max(0.2, 1 - r));
 }

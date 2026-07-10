@@ -28,6 +28,11 @@ export const ZONES = {
 // inArena() flips combat on across the whole band; monsters roam here.
 export const ARENA = { x0: 17, y0: 33, x1: 57, y1: 45 };
 export const PVP = { x0: 40, y0: 33, x1: 57, y1: 45 };
+// Where a PvP loser respawns: the bottom (south edge) of the PvP courtyard
+// itself, NOT ejected all the way back out through the outer ARENA_GATE_X
+// gate (that's the PvE-faint behavior) — a duel loss just knocks you to the
+// near edge of the ring, still inside the arena, so the fight can continue.
+export const PVP_GATE = [Math.round((PVP.x0 + PVP.x1) / 2), PVP.y1 - 1];
 // Measured directly against the basemap art (pixel-scanned the fence/gate
 // pixels, not eyeballed): the wall's real fence row sits at tile 33 and the
 // ornate gate + garden path sit at tiles 30-31 — the old 32/28 values were

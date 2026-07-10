@@ -87,6 +87,19 @@ class Ambient {
     this.pad = null; this.master = null;
   }
 
+  // Briefly dips the bed so a prominent sfx cue (harvest, victory, a hit...)
+  // cuts through instead of getting masked — called from sfx.js, not user-facing.
+  duck(ms = 180, amount = 0.45) {
+    if (!this.running || !this.master || !this.ctx) return;
+    const g = this.master.gain;
+    const now = this.ctx.currentTime;
+    const base = this._gain();
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(base * (1 - amount), now + 0.03);
+    g.linearRampToValueAtTime(base, now + 0.03 + ms / 1000);
+  }
+
   isEnabled() { return this.enabled; }
   setEnabled(on) {
     this.enabled = !!on; this._set(LS_ON, on ? '1' : '0');
