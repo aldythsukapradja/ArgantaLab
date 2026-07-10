@@ -19,6 +19,12 @@ export default defineConfig({
       // Shared character-appearance registry (packages/character) — Circle HQ is
       // the source of truth for the default/NPC looks; both games read it.
       '@arganta/character': path.resolve(__dirname, '../../../packages/character/src'),
+      // Shared audio library (packages/audio) — HQ Music Builder publishes SFX
+      // recipes; the game boots them via net/audioLibrary.js. Aliased like the
+      // others so Vercel's subfolder `npm install` (which doesn't set up the
+      // monorepo workspace symlinks) can still resolve it. Without this, the
+      // build fails with "Rollup failed to resolve import @arganta/audio".
+      '@arganta/audio': path.resolve(__dirname, '../../../packages/audio/src'),
     },
   },
   server: {
