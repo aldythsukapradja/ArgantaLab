@@ -480,7 +480,10 @@ export function createBloomwallModule(api) {
             attack: { cooldownMs: ATK_CD, cooldownUntil: cd.until('atk') },
             mp: null, // Bloomwall gates skills on cooldown only (no depleting pool)
             skin: 'brass', // the real PvP/PvE default skin — warm gold, matches the reference exactly
-            utils: [{ id: 'menu', key: 'menu', icon: '↩', title: 'Exit to HQ' }],
+            // No 'menu'/exit util here — RealmShell always injects Mount + Emote
+            // itself and Exit now lives in Settings, so a realm has nothing left
+            // to add here unless it has its own extra action.
+            utils: [],
           },
         };
       }

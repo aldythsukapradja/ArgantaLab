@@ -82,7 +82,13 @@ export default function RealmShell({
   const mountUtil = hasMount
     ? [{ key: 'mount', icon: <IconMount />, onClick: onToggleMount, title: mounted ? 'dismount' : 'mount', className: mounted ? 'on' : undefined }]
     : [];
-  const composeUtils = (realmUtils) => [...mountUtil, ...emoteUtils, ...(realmUtils || []).filter((u) => u.id !== 'menu' && u.key !== 'menu')];
+  // Realm-supplied utils, minus 'menu' (Exit now lives in Settings — see the
+  // gear above — so a second Exit orb in the cluster would be redundant),
+  // mapped onto the shared onAction dispatch.
+  const realmUtils = (cluster?.utils || [])
+    .filter((u) => u.id !== 'menu' && u.key !== 'menu')
+    .map((u) => ({ ...u, onClick: () => onAction?.(u.id) }));
+  const clusterUtils = [...mountUtil, ...emoteUtils, ...realmUtils];
 
   return (
     <div className="room-full">
@@ -143,12 +149,23 @@ export default function RealmShell({
             skin={cluster.skin ?? null}
             onSkill={(i) => onAction?.('skill:' + i)}
             onAttack={() => onAction?.('attack')}
-            utils={(cluster.utils || []).map((u) => ({ ...u, onClick: () => onAction?.(u.id) }))}
+            utils={clusterUtils}
           />
         ) : (
         <div className="cluster farm realm-cluster">
           <div className="small-ring">
-            {ring.map((a) => {
+            {[...mountUtil, ...emoteUtils].map((u) => (
+              <button
+                key={u.key}
+                type="button"
+                className={'skill-circle util' + (u.className ? ' ' + u.className : '')}
+                onClick={u.onClick}
+                title={u.title}
+              >
+                {u.icon}
+              </button>
+            ))}
+            {ring.filter((a) => a.id !== 'menu').map((a) => {
               const cp = cooldownPct(a, now);
               const disabled = !!a.disabledReason || cp > 0;
               return (
