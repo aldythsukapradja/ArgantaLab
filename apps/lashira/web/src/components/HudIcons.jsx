@@ -40,3 +40,59 @@ export const IconFriends = () => (
     <path d="M16 5.2a3.2 3.2 0 0 1 0 5.6" /><path d="M17.5 14.4A5.5 5.5 0 0 1 20.5 19" />
   </svg>
 );
+
+// ---- Settings "Command Sheet" row icons (new, hand-authored in this same
+// 24x24 minimal style — NOT from Kingdom Heroes) — see docs/lashirabloom/
+// Openworld Bloom Concept/DESIGN-unified-settings-command-sheet.md. These
+// replace colorful pictorial emoji (🔊🎵🏃🔍🛠📍🚪⚙) that render wildly
+// differently per OS/browser, with crisp currentColor-tinted glyphs — same
+// rationale as the block above. Default size 18; override via width/height.
+export const IconGear = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3.1" />
+    <path d="M12 2.5v3.4M12 18.1v3.4M4.63 4.63l2.4 2.4M16.97 16.97l2.4 2.4M2.5 12h3.4M18.1 12h3.4M4.63 19.37l2.4-2.4M16.97 7.03l2.4-2.4" />
+  </svg>
+);
+export const IconSpeaker = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+    <path d="M4 9.5v5h3.6l5.2 4V5.5l-5.2 4H4z" fill="currentColor" />
+    <path d="M16.3 8.6a5.4 5.4 0 0 1 0 6.8M19 6a9 9 0 0 1 0 12" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+  </svg>
+);
+export const IconMusic = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="6.3" cy="18" r="2.7" fill="currentColor" stroke="none" />
+    <circle cx="17.3" cy="16" r="2.7" fill="currentColor" stroke="none" />
+    <path d="M9 18V5.3L20 3v12.7" />
+  </svg>
+);
+export const IconSpeed = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 16a8 8 0 1 1 16 0" />
+    <path d="M12 16l4.3-5" />
+    <circle cx="12" cy="16" r="1.2" fill="currentColor" stroke="none" />
+  </svg>
+);
+export const IconZoom = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="10.4" cy="10.4" r="6.4" />
+    <path d="M15.1 15.1L20.5 20.5" />
+    <path d="M7.6 10.4h5.6" />
+  </svg>
+);
+export const IconWrench = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+    <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.5-2.5z" fill="currentColor" />
+  </svg>
+);
+export const IconPin = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+    <path fillRule="evenodd" clipRule="evenodd" d="M12 22s7-7.4 7-12.5A7 7 0 0 0 5 9.5C5 14.6 12 22 12 22zm0-9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" fill="currentColor" />
+  </svg>
+);
+export const IconDoor = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M15 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h9" />
+    <path d="M10 12h11m0 0l-3.5-3.5M21 12l-3.5 3.5" />
+  </svg>
+);

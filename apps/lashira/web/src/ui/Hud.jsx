@@ -6,7 +6,6 @@
 // MP bar IS the farm's real energy/stamina meter (one number, not two).
 // Diamonds (the only currency) and the guardian companion live in Settings.
 import { useEffect, useRef, useState } from 'react';
-import { computeRank } from '../net/hero.js';
 import { IconMount } from '../components/HudIcons.jsx';
 import { UnitCard, cardFromSnap, cardFromPeer } from './UnitCard.jsx';
 import { CROPS } from '../data/crops.js';
@@ -14,28 +13,12 @@ import { supabase, hasSupabase } from '../net/supabase.js';
 import { ActionCluster, IconEmote } from '@arganta/combat/cluster';
 import { RewardToasts } from '@arganta/combat/reward';
 import { SKIN_LIST, DEFAULT_SKIN, skinOf, GameIcon, FARM_ICONS, EMOTES, EMOTE_EMOJI, loadFavoriteEmotes, saveFavoriteEmotes } from '@arganta/combat';
-import { sfx } from '../audio/sfx.js';
-import { ambient } from '../audio/ambient.js';
+import { SettingsSheet } from './SettingsSheet.jsx';
 
 // chosen action-cluster skin, remembered per device.
 const SKIN_KEY = 'lashira_cluster_skin';
 const loadSkin = () => { try { return localStorage.getItem(SKIN_KEY) || DEFAULT_SKIN; } catch { return DEFAULT_SKIN; } };
 const FAV_EMOTES_KEY = 'lashira_fav_emotes';
-
-const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
-const fmt = (n) => Number(n || 0).toLocaleString();
-
-// Wallet pills: operator = ∞. Otherwise show the FULL comma value until it gets
-// too wide to keep the tray edge-aligned, then abbreviate (1,204,880 → 1.2M).
-// The full value always stays available via the pill's title (see walletTitle).
-const fmtWallet = (n) => {
-  if (n === Infinity) return '∞';
-  const v = Number(n || 0);
-  if (v >= 1e6) return (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
-  return v.toLocaleString();
-};
-const walletTitle = (n) => (n === Infinity ? '' : ` · ${fmt(n)}`);
-const xpProgress = (xp) => Math.round(((Math.max(0, Number(xp || 0)) % 500) / 500) * 100);
 
 // circle id → human name (the QC pill should read "Keluarga Cerah Ceria", not a
 // uuid). Cached per session so re-opening Settings never refetches.
@@ -110,12 +93,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
     return () => document.removeEventListener('mousedown', close);
   }, [showSeeds]);
   const [showLive, setShowLive] = useState(false);
-  const [confirmCircle, setConfirmCircle] = useState(null); // circle pending a switch-confirm
   const [skinId, setSkinId] = useState(loadSkin);
-  const [sfxMuted, setSfxMuted] = useState(() => sfx.isMuted());
-  const [sfxVol, setSfxVol] = useState(() => sfx.getVolume());
-  const [ambOn, setAmbOn] = useState(() => ambient.isEnabled());
-  const [ambVol, setAmbVol] = useState(() => ambient.getVolume());
   const pickSkin = (id) => { setSkinId(id); try { localStorage.setItem(SKIN_KEY, id); } catch { /* ignore */ } };
   // Plant All / Harvest All 6h cooldown — the wipe overlay needs a live "now" to
   // animate against; a 30s tick is plenty smooth for a multi-hour cooldown
@@ -142,7 +120,6 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
     const h = setInterval(tick, 1000);
     return () => clearInterval(h);
   }, [showSettings, getSyncDebug]);
-  const rank = computeRank(snap.xp);
   // The player's own profile card (battle-aware HP). Same shape the live popup
   // feeds peer cards — one component, one design.
   const selfCard = cardFromSnap(snap, battle);
@@ -192,17 +169,14 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
       )}
 
       <div className="left-stack">
-        <UnitCard card={selfCard} />
-
-        {/* wallet tray, fused under the card: 🪵🪨🌸 grouped left, divider,
-            💎 pinned to the right edge (learning currency, set apart). */}
-        <div className="res-strip">
-          <button className="res res-wood" onClick={() => onOpen('shop')} title={`Wood — chop the forest (coming soon)${walletTitle(snap.wood)}`}>🪵 {fmtWallet(snap.wood)}</button>
-          <button className="res res-stone" onClick={() => onOpen('shop')} title={`Stone — mine the quarry (coming soon)${walletTitle(snap.stone)}`}>🪨 {fmtWallet(snap.stone)}</button>
-          <button className="res res-bloom" onClick={() => onOpen('shop')} title={`Bloom — the play currency, earned from every action${walletTitle(snap.bloom)}`}>🌸 {fmtWallet(snap.bloom)}</button>
-          <span className="res-div" aria-hidden="true" />
-          <button className="res res-diamond" onClick={() => onOpen('shop')} title={`Diamonds — learning currency, for cosmetics (Diamond shop coming)${walletTitle(snap.diamonds)}`}>💎 {fmtWallet(snap.diamonds)}</button>
-        </div>
+        {/* Wallet pills now render INSIDE the card itself (UnitCard's optional
+            `wallet` row, 4 equal-width cells at HP/MP-bar text size) — no
+            longer a separate strip below it. Same tap-to-open-Shop behavior. */}
+        <UnitCard
+          card={selfCard}
+          wallet={{ wood: snap.wood, stone: snap.stone, bloom: snap.bloom, diamonds: snap.diamonds }}
+          onWalletTap={() => onOpen('shop')}
+        />
 
         <div className="quicknav">
           <button className="navbtn" onClick={() => onOpen('character')}>👤 Me</button>
@@ -313,218 +287,40 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
       )}
 
       {showSettings && (
-        <div className="browser-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}>
-          <div className="settings">
-            <div className="browser-head"><b>Settings</b>
-              <button className="closex" onClick={() => setShowSettings(false)}>✕</button></div>
-            <div className="settings-body">
-              {snap.operator && (
-                <section className="set-card dev-card">
-                  <h4>Developer mode <em className="op-badge">⚡ OPERATOR</em></h4>
-                  <div className="setrow" style={{ justifyContent: 'space-between' }}>
-                    <label style={{ width: 'auto' }}>Map overlay <span className="dev-dot walk" /> walk · <span className="dev-dot block" /> no-walk</label>
-                    <button type="button" className={'dev-toggle' + (devMode ? ' on' : '')} onClick={onToggleDev} aria-pressed={devMode}>
-                      <span className="dev-knob" />{devMode ? 'ON' : 'OFF'}
-                    </button>
-                  </div>
-                  <p className="settings-empty">Draws the red/green collision boxes + numbered map key on the farm. Visible only to you — players never see it.</p>
-                </section>
-              )}
-              <section className="set-card">
-                <h4>Circle sync</h4>
-                {/* Live-player status + save target. Tap either pill to open the
-                    full "who's online" popup, same as the HUD pills used to. */}
-                <div className="setrow" style={{ flexWrap: 'wrap', gap: 6 }}>
-                  <button type="button" className={'sync-pill' + ((presence?.count || 0) > 0 ? ' on' : '')} title="players broadcasting on this circle right now" onClick={() => setShowLive(true)}>
-                    {(presence?.count || 0) > 0 ? '🟢 ' + presence.count + ' live' + (presence.names?.[0] ? ' · ' + presence.names.join(', ') : '') : '⚪ 0 live (solo)'}
-                  </button>
-                  <span className="sync-pill" title="where this farm's save is going">
-                    {'💾 ' + (snap.saveSource || 'unknown')}
-                  </span>
-                </div>
-                {syncDebug && (
-                  <code className="sync-debug" title="live realtime channel state">
-                    ch:{syncDebug.status}{syncDebug.subscribed ? '✓' : '✗'} · ws:{syncDebug.socket} · peers:{syncDebug.peers} · heard:{syncDebug.lastPeerAgoS < 0 ? 'never' : syncDebug.lastPeerAgoS + 's ago'} · s:{syncDebug.session}
-                  </code>
-                )}
-              </section>
-              {onSelectCircle && (
-                <section className="set-card">
-                  <h4>Your circles <em className="set-count">{myCircles.length || 1}</em></h4>
-                  {/* SELECTOR (not just a label): pick which circle's shared farm
-                      is active. Switching remounts the farm into that circle;
-                      distinct from Travel's read-only "visit a circle-mate". */}
-                  <div className="circle-select">
-                    {myCircles.length === 0 && (
-                      <div className="circle-row active">
-                        <span className="cr-dot" />
-                        <span className="cr-name">{circleName || (circleId ? 'This circle' : 'Personal farm')}
-                          <small>{circleId ? 'the only circle here' : 'no circle — just you'}</small></span>
-                        <span className="cr-active">Active</span>
-                      </div>
-                    )}
-                    {myCircles.map((c) => {
-                      const isActive = c.id === activeCircleId;
-                      return (
-                        <div key={c.id} className={'circle-row' + (isActive ? ' active' : '')}>
-                          <span className="cr-dot" />
-                          <span className="cr-name">{c.emoji || '👥'} {c.name}
-                            <small>{c.memberCount} member{c.memberCount === 1 ? '' : 's'}{c.isOwner ? ' · you lead' : ''}</small></span>
-                          {isActive
-                            ? <span className="cr-active">Active</span>
-                            : <button type="button" className="cr-switch" onClick={() => setConfirmCircle(c)}>Switch</button>}
-                        </div>
-                      );
-                    })}
-                    {activeCircleId && myCircles.length > 0 && (
-                      <div className={'circle-row' + (!activeCircleId ? ' active' : '')}>
-                        <span className="cr-dot personal" />
-                        <span className="cr-name">🏡 Personal farm<small>just yours, no circle</small></span>
-                        <button type="button" className="cr-switch" onClick={() => setConfirmCircle({ id: null, name: 'Personal farm' })}>Switch</button>
-                      </div>
-                    )}
-                  </div>
-                  {confirmCircle && (
-                    <div className="circle-confirm">
-                      <p>Switch to <b>{confirmCircle.name}</b>? Your farm view changes — nothing is lost.</p>
-                      <div className="cc-row">
-                        <button type="button" className="cc-no" onClick={() => setConfirmCircle(null)}>Cancel</button>
-                        <button type="button" className="cc-yes" onClick={() => { onSelectCircle(confirmCircle.id); setConfirmCircle(null); setShowSettings(false); }}>Switch</button>
-                      </div>
-                    </div>
-                  )}
-                </section>
-              )}
-              <section className="set-card">
-                <h4>{snap.pathIcon} {snap.pathName || 'Guardian'} · {snap.title} · Lv {fmt(snap.level)} <em className="set-count">{rank.name}</em></h4>
-              </section>
-              <section className="set-card">
-                <h4>Wallet {snap.operator && <em className="op-badge">⚡ OPERATOR</em>}</h4>
-                <div className="setrow diamond-row" style={{ gap: 14, flexWrap: 'wrap' }}>
-                  <span className="diamond-count">🌸 {snap.bloom === Infinity ? '∞' : fmt(snap.bloom)}</span>
-                  <span className="diamond-count">🪵 {snap.wood === Infinity ? '∞' : fmt(snap.wood)}</span>
-                  <span className="diamond-count">🪨 {snap.stone === Infinity ? '∞' : fmt(snap.stone)}</span>
-                  <span className="diamond-count">💎 {fmt(snap.diamonds)}</span>
-                </div>
-                <p className="settings-empty">🌸 Bloom runs the farm (every action earns it). 🪵🪨 gathered for upgrades. 💎 Diamonds are learning-earned — cosmetics only (Diamond shop coming).{snap.operator ? ' · Admin: everything free.' : ''}</p>
-              </section>
-              <section className="set-card">
-                <h4>Active Kin <em className="set-count">{activeKins.length}/6</em></h4>
-                {activeKins.length ? (
-                  <div className="kin-chip-row">
-                    {activeKins.map((k) => (
-                      <span className="kin-chip" key={k.id} style={{ '--kin-c': k.color || '#8b5cf6' }} title={(k.name || 'Kin') + (k.task ? ' · ' + k.task : '')}>
-                        <i />{k.name || 'Kin'}{k.task ? <b>{k.task === 'water' ? '💧' : '🌾'}</b> : null}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="settings-empty">No Kin on the farm yet — befriend them in ArgantaLab.</p>
-                )}
-              </section>
-              <section className="set-card">
-                <h4>Action skin <em className="set-count">{skinOf(skinId).name}</em></h4>
-                <div className="skin-picker">
-                  {SKIN_LIST.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className={'skin-swatch' + (s.id === skinId ? ' on' : '')}
-                      style={s.vars}
-                      onClick={() => pickSkin(s.id)}
-                      title={s.name}
-                    >
-                      <span className="skin-orbs">
-                        <i className="so sk"><GameIcon name={s.icons.single} size={15} /></i>
-                        <i className="so atk"><GameIcon name={s.icons.attack} size={22} /></i>
-                        <i className="so sk"><GameIcon name={s.icons.heal} size={15} /></i>
-                      </span>
-                      <b>{s.name}</b>
-                      <small>{s.blurb}</small>
-                    </button>
-                  ))}
-                </div>
-                <p className="settings-empty">Repaints the battle buttons (bottom-right). Each skin uses a different game-icons set — pick the look you like.</p>
-              </section>
-              <section className="set-card">
-                <h4>Favorite emotes <em className="set-count">{favEmotes.length}/4</em></h4>
-                <div className="emote-fav-grid">
-                  {EMOTES.map((name) => {
-                    const on = favEmotes.includes(name);
-                    return (
-                      <button
-                        key={name}
-                        type="button"
-                        className={'emote-fav-chip' + (on ? ' on' : '')}
-                        disabled={!on && favEmotes.length >= 4}
-                        onClick={() => pickFavEmotes(on ? favEmotes.filter((e) => e !== name) : [...favEmotes, name])}
-                      >{name}</button>
-                    );
-                  })}
-                </div>
-                <p className="settings-empty">Pick up to 4 — tap the Emote orb (bottom-right, above Mount) to fan them out, then tap one to play it.</p>
-              </section>
-              <section className="set-card">
-                <h4>Sound</h4>
-                <div className="setrow" style={{ justifyContent: 'space-between' }}>
-                  <label style={{ width: 'auto' }}>Sound effects</label>
-                  <button type="button" className={'dev-toggle' + (!sfxMuted ? ' on' : '')}
-                    onClick={() => { const m = !sfxMuted; setSfxMuted(m); sfx.setMuted(m); if (!m) sfx.play('tap'); }}>
-                    <span className="dev-knob" />{sfxMuted ? 'OFF' : 'ON'}
-                  </button>
-                </div>
-                <div className="setrow">
-                  <label>volume</label>
-                  <input type="range" min="0" max="1" step="0.05" value={sfxVol} disabled={sfxMuted}
-                    onChange={(e) => { const v = Number(e.target.value); setSfxVol(v); sfx.setVolume(v); }} />
-                  <span>{Math.round(sfxVol * 100)}%</span>
-                </div>
-                <div className="setrow" style={{ justifyContent: 'space-between' }}>
-                  <label style={{ width: 'auto' }}>Ambience &amp; music</label>
-                  <button type="button" className={'dev-toggle' + (ambOn ? ' on' : '')}
-                    onClick={() => { const on = !ambOn; setAmbOn(on); ambient.setEnabled(on); }}>
-                    <span className="dev-knob" />{ambOn ? 'ON' : 'OFF'}
-                  </button>
-                </div>
-                <div className="setrow">
-                  <label>volume</label>
-                  <input type="range" min="0" max="1" step="0.05" value={ambVol} disabled={!ambOn}
-                    onChange={(e) => { const v = Number(e.target.value); setAmbVol(v); ambient.setVolume(v); }} />
-                  <span>{Math.round(ambVol * 100)}%</span>
-                </div>
-              </section>
-              <section className="set-card">
-                <h4>Rest</h4>
-                <div className="setrow" style={{ justifyContent: 'space-between' }}>
-                  <label style={{ width: 'auto' }}>Sleep — refill stamina for the night</label>
-                  <button type="button" onClick={() => { onSleep?.(); setShowSettings(false); }}>😴 Sleep</button>
-                </div>
-              </section>
-              <section className="set-card">
-                <h4>Camera &amp; movement</h4>
-                <div className="setrow">
-                  <label>zoom</label>
-                  <input type="range" min="0.1" max="3" step="0.1" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
-                  <span>{zoom.toFixed(1)}×</span>
-                </div>
-                <div className="setrow">
-                  <label>speed</label>
-                  <input type="range" min="1" max="3" step="0.1" value={speed ?? 1.5} onChange={(e) => setSpeed(Number(e.target.value))} />
-                  <span>{Number(speed ?? 1.5).toFixed(1)}×</span>
-                </div>
-              </section>
-              {onSignOut && (
-                <section className="set-card">
-                  {/* Standalone only — an embedded session (KinetikCircle/ArgantaLab)
-                      belongs to the host app, which owns sign-in/out; App.jsx only
-                      passes onSignOut down when NOT embedded. */}
-                  <h4>Account</h4>
-                  <button type="button" className="signout-btn" onClick={() => onSignOut()}>🚪 Sign out</button>
-                </section>
-              )}
-            </div>
-          </div>
-        </div>
+        <SettingsSheet
+          world={{ name: circleName || 'Kingdom hub', color: '#8b5cf6', operator: snap.operator }}
+          hero={{
+            card: selfCard,
+            wallet: { wood: snap.wood, stone: snap.stone, bloom: snap.bloom, diamonds: snap.diamonds },
+            kins: activeKins,
+            onOpenCharacter: () => { onOpen('character'); setShowSettings(false); },
+            onWalletTap: () => { onOpen('shop'); setShowSettings(false); },
+          }}
+          circle={{
+            live: { count: presence?.count || 0, names: presence?.names || [] },
+            syncDebug,
+            operator: snap.operator,
+            onOpenLive: () => setShowLive(true),
+            circles: onSelectCircle ? myCircles : undefined,
+            activeCircleId,
+            onSelectCircle: onSelectCircle ? (id) => { onSelectCircle(id); setShowSettings(false); } : undefined,
+            locationLabel: zoneLabel || (circleId ? circleName || 'This circle' : 'Personal farm'),
+          }}
+          play={{
+            worldActions: isVisitor ? [] : [{ id: 'sleep', icon: '😴', label: 'Sleep — refill stamina for the night', onClick: () => { onSleep?.(); setShowSettings(false); } }],
+            speed: { value: speed ?? 1.5, min: 1, max: 3, step: 0.1, onChange: setSpeed },
+            zoom: { value: zoom, min: 0.1, max: 3, step: 0.1, onChange: setZoom },
+            skin: { list: SKIN_LIST, activeId: skinId, onPick: pickSkin },
+            emotes: { all: EMOTES, favorites: favEmotes, max: 4, onSet: pickFavEmotes },
+          }}
+          sound={{}}
+          system={{
+            dev: snap.operator ? { overlayOn: devMode, onToggleOverlay: onToggleDev } : null,
+            account: onSignOut ? { onSignOut } : null,
+          }}
+          onExit={null}
+          onClose={() => setShowSettings(false)}
+        />
       )}
     </>
   );

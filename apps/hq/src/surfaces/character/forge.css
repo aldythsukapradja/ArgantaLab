@@ -297,24 +297,38 @@ html[data-theme="dark"] .forge{ --stage-a:#1a1a22; --stage-b:#121219; }
    a green heal-flash+heal-number on the caster) with the bound effect fx
    mounted only for that moment. Replaces the old two-panel always-idle
    viewers (see git history) with an actually-testable skill. -- */
-.sf-arena{flex:1;min-height:220px;position:relative;display:flex;align-items:center;justify-content:space-between;
-  padding:20px 36px;border-radius:13px;border:1px solid var(--bd2);overflow:hidden;background:#5c9a4e}
-.sf-arena-bg{position:absolute;inset:0;background-image:url('/farm-art/basemap.png');background-repeat:no-repeat;
-  background-position:80% 81%;background-size:350% 400%;image-rendering:pixelated;filter:brightness(.92)}
-html[data-theme="dark"] .sf-arena-bg{filter:brightness(.6) saturate(.9)}
+.sf-arena{flex:1;min-height:240px;position:relative;display:flex;align-items:center;justify-content:space-between;
+  padding:20px 36px;border-radius:13px;border:1px solid var(--bd2);overflow:hidden;background:#2f4f3a}
+/* Real Emberring Arena art (apps/hq/public/farm-art/Worldmap/emberring-arena.png,
+   1152×928), COVER-scaled — same ratio both axes, crops instead of warping
+   (the old 350%/400% split was the actual stretch bug). backgroundPosition is
+   driven by the D-pad below so an operator can pick which part of the art shows. */
+.sf-arena-bg{position:absolute;inset:0;background-image:url('/farm-art/Worldmap/emberring-arena.png');
+  background-repeat:no-repeat;background-size:cover;filter:brightness(.94);transition:background-position .12s var(--ease,ease-out)}
+html[data-theme="dark"] .sf-arena-bg{filter:brightness(.62) saturate(.9)}
+.sf-arena-vignette{position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.32), inset 0 0 14px rgba(0,0,0,.22);
+  background:radial-gradient(120% 100% at 50% 100%, rgba(0,0,0,.22), transparent 60%)}
+
 .sf-duel-side{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:150px}
-.sf-duel-side .sf-vhead{background:#0b0d1cd0;color:#fff;border:none;border-radius:999px;padding:4px 12px}
+.sf-duel-side .sf-vhead{background:var(--glass, rgba(11,13,28,.55));backdrop-filter:blur(10px) saturate(1.4);
+  color:#fff;border:1px solid var(--glass-bd, rgba(255,255,255,.14));border-radius:999px;padding:4px 12px}
 .sf-duel-figure{position:relative;display:flex;align-items:center;justify-content:center;min-height:120px}
 .sf-duel-figure canvas{filter:drop-shadow(0 8px 10px rgba(0,0,0,.35))}
 .sf-duel-figure.hit{animation:sf-shake .4s ease, sf-flash .4s ease}
 .sf-duel-figure.healflash::after{content:"";position:absolute;inset:-14px;border-radius:50%;
   background:radial-gradient(circle,rgba(74,222,128,.5),transparent 70%);animation:sf-healpulse .9s ease}
+/* Grounds the figure on the new photoreal-ish arena floor instead of looking
+   pasted on top — same "stand on something" instinct as Bloomwall's foot-shadow. */
+.sf-footshadow{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:74px;height:18px;
+  border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.4),transparent 75%);z-index:0}
 @keyframes sf-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 @keyframes sf-flash{0%,100%{filter:none}30%{filter:brightness(2.2) saturate(0) contrast(1.6)}}
 @keyframes sf-healpulse{0%{opacity:0;transform:scale(.6)}40%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(1.4)}}
 .sf-castbtn{position:relative;z-index:2;flex:none;padding:12px 22px;border-radius:999px;border:none;
-  background:var(--acc);color:#fff;font-weight:800;font-size:13px;cursor:pointer;
-  box-shadow:0 10px 24px -8px var(--acc);transition:transform .12s,opacity .2s}
+  background:linear-gradient(135deg,var(--acc),var(--acc-press));color:#fff;font-weight:800;font-size:13px;cursor:pointer;
+  box-shadow:0 10px 26px -8px var(--acc), inset 0 1px 0 rgba(255,255,255,.25);transition:transform .12s,opacity .2s,box-shadow .2s}
+.sf-castbtn:hover:not(:disabled){box-shadow:0 12px 30px -6px var(--acc), inset 0 1px 0 rgba(255,255,255,.3)}
 .sf-castbtn:active{transform:scale(.94)}
 .sf-castbtn:disabled{opacity:.6;cursor:default}
 .sf-dmgnum{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-weight:900;
@@ -328,10 +342,28 @@ html[data-theme="dark"] .sf-arena-bg{filter:brightness(.6) saturate(.9)}
 .sf-vmonster.lead .bf-mstage{width:120px;height:120px}
 .sf-vmonster:not(.lead) .bf-mstage{width:56px;height:56px;opacity:.6}
 .sf-vempty{font-family:var(--mono);font-size:10.5px;color:#fff;text-align:center;padding:12px;max-width:70%;
-  background:#0b0d1cd0;border-radius:9px}
+  background:var(--glass, rgba(11,13,28,.55));backdrop-filter:blur(10px);border:1px solid var(--glass-bd, rgba(255,255,255,.14));border-radius:9px}
 .sf-veffect{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:6px;
   background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:6px;box-shadow:0 8px 20px -12px #0007;z-index:3}
 .sf-vcap{padding:6px 12px;font-size:10.5px;color:var(--tx3);text-align:center;border-top:1px solid var(--bd);background:var(--bg2)}
+
+/* Pan D-pad — glass cluster, bottom-right of the arena. Nudges background-
+   position; the center dot recenters. Same visual family as the scope/stage
+   control clusters elsewhere in HQ (bf-cctrl, mbf-scope-play). */
+.sf-pandpad{position:absolute;right:12px;bottom:12px;z-index:2;width:76px;height:76px;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:2px;
+  background:var(--glass, rgba(11,13,28,.55));backdrop-filter:blur(10px) saturate(1.4);
+  border:1px solid var(--glass-bd, rgba(255,255,255,.14));border-radius:14px;padding:4px;box-shadow:0 8px 20px -10px #000a}
+.sf-pandpad button{border:none;background:rgba(255,255,255,.08);color:#fff;border-radius:6px;cursor:pointer;
+  display:grid;place-items:center;font-size:11px;line-height:1;transition:background .12s,transform .08s}
+.sf-pandpad button:hover{background:var(--acc)}
+.sf-pandpad button:active{transform:scale(.88)}
+.sf-pandpad .up{grid-column:2;grid-row:1}
+.sf-pandpad .left{grid-column:1;grid-row:2}
+.sf-pandpad .center{grid-column:2;grid-row:2;background:rgba(255,255,255,.14)}
+.sf-pandpad .center::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
+.sf-pandpad .right{grid-column:3;grid-row:2}
+.sf-pandpad .down{grid-column:2;grid-row:3}
 
 /* -- center: skill values -- */
 .sf-values{border-top:1px solid var(--bd);background:var(--bg);padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 22px}

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { pathForWeapon, battleSkillsFor, pathSkillPower, pathPhysPower, pathMaxHp, pathMaxMp, pathOf, pathTitle, levelWithFloor, levelProgress, xpForLevel, pvpMaxHp, resistMul } from '@arganta/combat';
+import { pathForWeapon, battleSkillsFor, pathSkillPower, pathPhysPower, pathMaxHp, pathMaxMp, pathOf, pathTitle, levelWithFloor, levelProgress, xpForLevel, pvpMaxHp, resistMul, spawnEffect, drawEffect } from '@arganta/combat';
 import { computeRank, loadMotionTables, loadPlayerResources } from '../net/hero.js';
 import { defaultFarmerSpec } from '../net/characterRegistry.js';
 import { drawPlaceholderFarmer, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { loadOpenworldState, saveOpenworldState } from './openworld-save.js';
 import { worldAssetUrl, worldMapById } from './world-map-registry.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
+import { effects as loadEffects, effectSheetUrl, loadImage as loadEffectImage } from '../engine/data.js';
 import { makeRewardSession } from './realm-rewards.js';
 import { getRealmModule } from './realms/index.js';
 import { joinFarmPresence } from './farm-presence.js';
@@ -120,6 +121,21 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
   const [nowMs, setNowMs] = useState(0);
   const [battle, setBattle] = useState({ on: false, hp: 0, maxHp: 0 });
   const battleRef = useRef(battle);
+  // User-adjustable camera zoom multiplier on top of the realm's base camZoom
+  // (v1.5 §18 follow-up: a settings slider, since the fixed camZoom fix alone
+  // isn't always the right size for every screen/eye). Persisted like
+  // sfx/ambient volume; read via a ref inside the rAF draw loop so the slider
+  // doesn't need to tear down/rebuild the render effect on every drag tick.
+  const [camZoomMul, setCamZoomMul] = useState(() => {
+    try { return parseFloat(localStorage.getItem('lashira_realm_camzoom')) || 1; } catch { return 1; }
+  });
+  const camZoomMulRef = useRef(camZoomMul);
+  camZoomMulRef.current = camZoomMul;
+  const setCamZoom = (v) => {
+    const clamped = Math.max(0.6, Math.min(2, Number(v) || 1));
+    setCamZoomMul(clamped);
+    try { localStorage.setItem('lashira_realm_camzoom', String(clamped)); } catch { /* private mode */ }
+  };
   const card = useMemo(() => xpCard(profile, hero), [profile?.displayName, profile?.xp, profile?.level, profile?.operator, hero?.spec]);
   const accountType = profile?.role === 'kid' ? 'kid' : 'adult';
   // The card overlaid with the LIVE PvP pool while Arena combat is active —
@@ -211,10 +227,11 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     let live = true;
     (async () => {
       setReady(false);
-      const [img, loaded, tables] = await Promise.all([
+      const [img, loaded, tables, effectsAll] = await Promise.all([
         loadImage(worldAssetUrl(map)),
         loadOpenworldState(profile, null).catch(() => ({ data: null })),
         loadMotionTables(),
+        loadEffects().catch(() => ({})), // shared spell-VFX catalog (same one FarmRoom casts) — a realm's skill cast should look identical
       ]);
       const avatarSpec = hero?.spec || defaultFarmerSpec();
       const resources = tables ? await loadPlayerResources(avatarSpec) : null;
@@ -237,6 +254,7 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
         held: new Set(), stick: null, cam: { camX: 0, camY: 0, z: 1 },
         player: { tile: [...spawn], from: [...spawn], moveT: 1, moveStart: 0, facing: savedPos?.facing || 'South', mounted: false, oneShot: null, oneShotStart: 0 },
         peerActors: new Map(), floats: [], combat: null,
+        effectsAll: effectsAll || {}, spellFx: [], // the same shared spell-VFX system FarmRoom's doSkill casts
       };
       if (map.pvp) { ensureRealmCombat(G.current); syncBattleState(G.current); }
 
@@ -371,8 +389,17 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       heroCombat: () => {
         const path = realPathId(hero);
         const level = card.level || 1;
-        const skill = battleSkillsFor(hero?.spec?.skills, path, level)[0]; // slot 0 = single-target
-        return { path, level, skill, skillPower: pathSkillPower(skill, path, level), physPower: pathPhysPower(path, level) };
+        // All 3 real equipped skill slots (name/fx/manaCost/cdMs from the shared
+        // SKILL_SLOTS, name/effect from the hero's Skill Forge tier) + each
+        // slot's path-scaled magic power. `skill`/`skillPower` (slot 0) stay for
+        // back-compat with arena.js; `skills` is the full kit the ActionCluster
+        // controller renders (v1.5 §18.4).
+        const slots = battleSkillsFor(hero?.spec?.skills, path, level);
+        const skills = slots.map((sk) => ({ ...sk, power: pathSkillPower(sk, path, level) }));
+        return {
+          path, level, skills, skill: skills[0], skillPower: skills[0].power,
+          physPower: pathPhysPower(path, level), mp: card.mp, maxMp: card.maxMp,
+        };
       },
       // give the module a way to face the player toward a tile (juice)
       facePlayer: (tx, ty) => {
@@ -393,6 +420,16 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
           : kind === 'cast' ? castMotionBase(g)
           : 'Get';
         p.oneShot = motion; p.oneShotStart = performance.now();
+      },
+      // Play a skill's real spell VFX (the same shared effect catalog/animation
+      // FarmRoom's doSkill casts — a realm's cast should look identical, not
+      // just play the body-swing pose). `fx` = the skill's effect id; `tile` =
+      // where the effect anchors (target tile for a burst, the caster's own
+      // tile for a self-heal).
+      castEffect: (fx, tile) => {
+        if (fx == null || !tile) return;
+        const t = [Math.round(tile[0]), Math.round(tile[1])];
+        spawnEffect(g.spellFx, g.effectsAll, fx, t, (eff) => loadEffectImage(effectSheetUrl(eff)));
       },
       // Live circle-mates sharing this realm right now — {id, name, tile}. Only
       // meaningful in realms that opt into PvP (Arena); other realms still get
@@ -514,7 +551,7 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       const vw = canvas.width / dpr, vh = canvas.height / dpr;
       ctx.clearRect(0, 0, vw, vh);
       const [px, py] = entityPxOf(g.player);
-      const zoom = Math.max(vw / WORLD_W, vh / WORLD_H, map.camZoom ?? 0.42);
+      const zoom = Math.max(vw / WORLD_W, vh / WORLD_H, (map.camZoom ?? 0.42) * camZoomMulRef.current);
       const camX = Math.max(0, Math.min(WORLD_W - vw / zoom, px - vw / zoom / 2 + TILE / 2));
       const camY = Math.max(0, Math.min(WORLD_H - vh / zoom, py - vh / zoom / 2 + TILE / 2));
       g.cam = { camX, camY, z: zoom };
@@ -533,6 +570,7 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       if (modRef.current?.movement !== false) drawPlayer(g, ctx, now, px + TILE / 2, py + TILE);
       // module world-space overlay OVER the player (enemies, popups)
       modRef.current?.drawOver?.(ctx, now);
+      if (g.spellFx?.length) g.spellFx = g.spellFx.filter((f) => drawEffect(ctx, f, now, TILE));
       drawFloats(ctx, now);
       ctx.restore();
 
@@ -546,6 +584,10 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       const g = G.current; if (!g) return;
       if (DIR_BY_KEY[k]) { g.held.add(k); e.preventDefault(); }
       else if (k === 'Escape') exit();
+      // Desktop shortcuts for the real ActionCluster (matches FarmRoom's battle
+      // keys): Space = basic attack, 1/2/3 = the 3 equipped skill slots.
+      else if (k === ' ') { e.preventDefault(); modRef.current?.onAction?.('attack'); }
+      else if (k === '1' || k === '2' || k === '3') { modRef.current?.onAction?.('skill:' + (Number(k) - 1)); }
     };
     const up = (e) => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; G.current?.held.delete(k); };
 
@@ -632,6 +674,8 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       now={nowMs}
       heroNote={!usingHero ? 'Placeholder farmer — build your hero in Kingdom Heroes.' : ''}
       capsNote={ready ? hud.caps : ''}
+      camZoom={camZoomMul}
+      onCamZoom={setCamZoom}
     >
       <canvas ref={canvasRef} tabIndex={0} />
       <div className="room-canvas-wrap" ref={wrapRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />

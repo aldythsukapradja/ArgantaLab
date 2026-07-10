@@ -276,3 +276,44 @@ Extends the same canvas-drawn fan-out mechanism (§11, built in v1.3) to tapping
 - Tapping a placed tower opens a fan with up to 4 slots: **Upgrade** (only shown/enabled while `tier < 2`), and the 3 targeting modes — **Nearest**, **First**, **Strongest** — as direct picks instead of a blind repeated-tap cycle, with the currently active mode visually highlighted.
 - Reuses the exact same `s.fan` state shape already built for the build-picker (§0.3) — just a different `icons` array and a different tap handler branch (upgrade this tower / set this mode, instead of place this tower type).
 - No new interaction pattern to learn: same tap-to-open, same tap-an-icon-to-pick, same tap-elsewhere-to-cancel feel as the build fan.
+
+## 17. Honest reflection after the live screenshot (v1.5, concept)
+
+A real in-game screenshot (Keyla, Oracle Lv44, wave 3/10) surfaced that the v1.2/v1.4 work was **partly wrong or incomplete**, and that the way it was "verified" has a blind spot. Recording this candidly so the next pass fixes root causes, not symptoms:
+
+- **Monster scale was only half-fixed.** The camera-zoom fix (§8/§12) made the *hero* and *towers* read well, but monsters are still tiny (~0.85 tile). Cause: their sprite height is a hardcoded `targetH = 42` in `drawOver`, set while tuning blind against the wrong zoom. §8 explicitly said "revisit the size multipliers once seen at readable scale" — and that step was skipped. So foxes render at roughly half a tower's height and read as bugs. This is a real miss, not a matter of taste.
+- **The bottom-right controller was NOT actually swapped to the real component.** §15 claimed "reuse the real `ActionCluster`," but the build only copied the `cd-wipe` cooldown CSS class into `RealmShell`'s own hand-rolled markup. `RealmShell` still does **not** render `packages/combat/src/cluster.jsx`'s `ActionCluster` — no skill orbs, no numbered slot badges, primary is a text button. That is a different component that merely shares some CSS, and the summary language ("uses the same pie-wipe the real ActionCluster uses") oversold it.
+- **"Verified in-browser" overclaimed for anything visual.** Every "verified" this session was a dynamic-import + *offscreen* canvas render — that validates logic (placement, wave flow, projectile tween math) but NOT the on-screen scale/layout a player sees, because the automated preview tab runs hidden. Three consecutive screenshots from the user caught scale/layout problems marked "verified." Going forward: logic gets "logic-verified"; anything visual is "needs a human eyeball" until the user confirms, and offscreen renders will be judged at the game's real viewport/zoom and a large enough crop to judge scale honestly.
+
+## 18. Four-corner HUD overhaul + monster scale (v1.5, concept — this is what the user asked for)
+
+The user's directive, mapped to the four corners and the monster size:
+
+### 18.1 Monster scale (the actual bug)
+- Bump regular-monster `targetH` from `42` to about `TILE * 1.15` (~55px, ~1.15 tiles) — clearly readable, still smaller than a tower (1.9 tiles) and the hero, but no longer a speck. Boss (Tiger) from `150` to about `TILE * 3.4` to stay imposing. Tie both to `TILE` (not hardcoded px) so a future zoom/scale change can't silently shrink them again.
+- Optional nicety: a per-kind size factor (squirrel < fox < badger < boar < deer) so the bestiary's real size differences read, since they're visually distinct creatures. Small table, cheap.
+
+### 18.2 Bottom-left → move under the character name, make it fancy (declutter the corner)
+- Today `RealmShell` pins objective + Core/Defense meter to the **bottom-left corner**, where it crowds the screen edge and the meter label gets clipped ("Blo…").
+- Move that block **up into the `left-stack`, directly under the `UnitCard`** (the character card), so the whole left column reads as one cohesive stack: character card → realm status. Free the bottom-left corner entirely.
+- "Fancy not boring": a glass panel matching the `UnitCard` aesthetic, accented with the realm color — wave shown as a styled badge ("Wave 3 / 10"), Core HP as an icon meter (shield/heart), Defense Lv as a chip, current-objective as a slim caption. Not a plain text line + raw bar.
+
+### 18.3 Top-right → the real settings affordance (CONFIRMED: full sheet, SHARED component)
+- Today: a bare `↩` exit arrow. The main farm page has a `⚙` gear opening a glass settings sheet — but that sheet is **inline JSX inside `Hud.jsx`**, so it's farm-only and not reusable.
+- **Confirmed direction:** extract that settings sheet into ONE **shared component** (e.g. `GameSettingsSheet`, living alongside `ActionCluster` in `packages/combat/src/` or a shared UI module) that BOTH the farm `Hud.jsx` and every realm's `RealmShell.jsx` render. Edit it once → every game changes. This is the "shared, change-one-changes-all" requirement.
+- **How the same sheet works in contexts with different data:** the sheet becomes fully prop-driven, and each section renders **only when its data/handlers are supplied**. The farm passes the full set (dev mode, circle sync, bloom econ, kins, skins, emotes, sign-out, audio, help) → sees everything. A realm passes the universally-relevant subset (audio, controller skin, help, exit-to-HQ) → the farm-only sections simply don't render, no errors, no empty shells. Same component, same styling, same code path — just conditional sections.
+- **Scope note (flagging honestly):** this is a real refactor, not a copy-paste — the farm sheet currently reaches into ~a dozen farm props (`snap`, `game`, `presence`, `circleId`, `myCircles`, `onSelectCircle`, `onSignOut`, `devMode`, `onToggleDev`, kins/skins/emotes data). Extracting it cleanly means giving each of those an explicit prop and a "render only if provided" guard. Bigger than the other three items, but it's the thing that makes settings shared across all games as requested.
+- Add the `⚙` gear to `RealmShell`'s top-right (keep exit reachable from inside the sheet, matching the farm).
+
+### 18.4 Bottom-right → the actual PVP/PVE `ActionCluster` (the real one this time · CONFIRMED: full hero kit)
+- Render `ActionCluster` from `packages/combat/src/cluster.jsx` in the realm's bottom-right, replacing `RealmShell`'s hand-rolled block. This is the genuine structural change §15 should have made.
+- **Mapping for Bloomwall (the interesting part):** give the hero their *real* combat kit, exactly like PvP/PvE — the big crossed-swords **attack** button = basic melee/attack, and **3 skill orbs** = the hero's 3 equipped skills (from `battleSkillsFor`, e.g. bolt/storm/mend), each with real stamina cost + numbered slot badge + pie-wipe cooldown. The passive walking-melee (§2.5) stays as ambient contact damage; the attack button becomes an active burst. This makes the Bloomwall hero *play* like the real combat hero — which is what "use exactly the PVP/PVE controller" implies, not just a visual reskin of one button.
+- **Plumbing (contained, but real — this is not a CSS swap):**
+  1. `api.heroCombat()` currently returns one skill; extend it to return all 3 skills + level + stamina so the module can build the cluster spec.
+  2. Extend `RealmShell`'s controller contract: a realm may return an optional `cluster` spec (`skills[]`, `cooldowns[]`, `attackCooldown`, `mp`, `skin`, `utils`). When present, `RealmShell` imports and renders `ActionCluster`; when absent, it falls back to today's `{primary, ring}` so the other four realms keep working untouched.
+  3. Route `ActionCluster`'s callbacks through the existing `onAction`: `onAttack → onAction('attack')`, `onSkill(i) → onAction('skill:' + i)`.
+  4. Bloomwall's `onAction` handles `'attack'` (hero basic strike on nearby enemies) and `'skill:i'` (cast equipped skill i — damage in radius, spend stamina, start that slot's cooldown). Per-slot cooldowns via the existing `makeCooldowns`, reported back as fractions for the pie-wipe.
+- **Gameplay implication to confirm:** this gives the Bloomwall hero a full 3-skill + attack kit instead of the current single "Hero Skill" button. That's a meaningful upgrade (more to do during a wave), and the natural reading of the request — but it changes hero feel, so it's worth an explicit yes before building.
+
+### 18.5 Verification plan (fixing the blind spot)
+- Monster scale + the three corners are all **visual** — so after building, judge them at the game's real viewport aspect and `camZoom`, at a large crop, and then **ask the user to eyeball a screenshot** before calling any of it done. No more "verified" on visual work without a human confirm.

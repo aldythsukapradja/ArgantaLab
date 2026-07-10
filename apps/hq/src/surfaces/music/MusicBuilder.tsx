@@ -1,9 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_SFX_RECIPES, cueGroups, mergeAudioLibrary, validateAudioLibrary,
-  publishAudioLibrary, createMasterChain, playRecipe,
+  publishAudioLibrary, callSitesFor, isDynamicOnly, loadUsage, loadUsageTrend,
 } from '@arganta/audio'
 import { supabase, cloudEnabled } from '../../lib/supabase'
+import { Scope, type ScopeHandle } from './Scope'
+import { Analytics } from './Analytics'
 import './music.css'
 
 // Music Builder — HQ's SFX authoring surface. Edits ride as a small "override"
@@ -19,9 +21,9 @@ import './music.css'
 // Forge (there is only ever one audio_library row), it just has nothing of
 // its own to add to it yet.
 //
-// LAYOUT: one non-scrolling workbench — a roster (each row plays itself
-// inline, no separate "select then find the stage" step) beside a settings
-// panel, both with their OWN internal scroll so the outer page never does.
+// LAYOUT: Publish lives in the TOP bar (one button, one draft, both tabs read
+// it — not a separate table). SFX Forge is a one-page workbench: only the
+// cue roster scrolls; the scope + controls are sized to fit the viewport.
 
 type Layer = Record<string, any>
 type Kind = 'tone' | 'noise'
@@ -61,6 +63,19 @@ export function MusicBuilder() {
   const [selected, setSelected] = useState('harvest')
   const [publishing, setPublishing] = useState(false)
   const [pubMsg, setPubMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [usage, setUsage] = useState<Record<string, { play_count: number; last_played: string | null }>>({})
+  const [usageLoaded, setUsageLoaded] = useState(false)
+  const [trend, setTrend] = useState<{ day: string; plays: number }[] | null>(null)
+
+  // Live usage — real numbers once supabase/migration_audio_usage.sql is run
+  // and players have actually triggered cues. Never blocks the UI on failure.
+  // Trend (Phase 4) needs the separate migration_audio_usage_daily.sql — null
+  // means "not built yet", distinct from an empty array ("built, no data").
+  useEffect(() => {
+    if (!cloudEnabled) { setUsageLoaded(true); return }
+    loadUsage(supabase).then((u: any) => { setUsage(u || {}); setUsageLoaded(true) })
+    loadUsageTrend(supabase, 30).then((t: any) => setTrend(t))
+  }, [])
 
   const effective = useMemo(() => mergeAudioLibrary(draft), [draft])
   const recipe: Layer[] = effective[selected] || []
@@ -68,22 +83,16 @@ export function MusicBuilder() {
   const dirty = Object.keys(draft)
   const isDirty = (name: string) => draft[name] != null
 
-  const audioRef = useRef<{ ctx: AudioContext; master: GainNode; reverbBus: GainNode } | null>(null)
-  function ensureAudio() {
-    if (!audioRef.current) {
-      const AC = window.AudioContext || (window as any).webkitAudioContext
-      const ctx: AudioContext = new AC()
-      const { master, reverbBus } = createMasterChain(ctx, 0.7)
-      audioRef.current = { ctx, master, reverbBus }
-    }
-    if (audioRef.current.ctx.state === 'suspended') audioRef.current.ctx.resume()
-    return audioRef.current
-  }
-  // Plays any cue directly from its roster row — no need to select it first.
+  // ALL playback goes through the Scope's imperative handle so the roster
+  // buttons and the scope's own button share one audio context + the SAME
+  // animation loop — one sound, the chart always animates (no desynced
+  // double-playback). Playing a roster row also selects it so the chart
+  // matches what you hear.
+  const scopeRef = useRef<ScopeHandle>(null)
   function playCue(name: string, e?: React.MouseEvent) {
     e?.stopPropagation()
-    const a = ensureAudio()
-    playRecipe(a.ctx, a.master, a.reverbBus, effective[name] || [])
+    setSelected(name)
+    scopeRef.current?.play(effective[name] || [])
   }
 
   function patchLayer0(patch: Partial<Layer>) {
@@ -100,29 +109,15 @@ export function MusicBuilder() {
       const v = validateAudioLibrary(draft)
       if (!v.ok) { setPubMsg({ ok: false, text: 'Invalid: ' + v.errors.join('; ') }); return }
       await publishAudioLibrary(supabase, draft, { note: 'HQ Music Builder' })
-      setPubMsg({ ok: true, text: `Published ${dirty.length} cue(s) to LashiraBloom. Applies on next game boot.` })
+      setPubMsg({ ok: true, text: `Published ${dirty.length} cue(s). Applies on next game boot.` })
       setDraft({})
     } catch (e: any) {
       setPubMsg({ ok: false, text: `Publish failed: ${e?.message || e}` })
     } finally { setPublishing(false) }
+    window.setTimeout(() => setPubMsg(null), 5000)
   }
 
-  // One shared publish bar — rendered at the bottom of BOTH SFX Forge and
-  // Music Forge (per design note: same audio_library row, not a separate
-  // table/tab). `extra` lets Music Forge show its own empty-state caption.
-  function PublishBar({ extra }: { extra?: React.ReactNode }) {
-    return (
-      <div className="mbf-pubbar">
-        {extra}
-        {pubMsg && <span style={{ fontSize: 11, color: pubMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>{pubMsg.text}</span>}
-        {!cloudEnabled && <span className="pill pill-mut" style={{ color: 'var(--warn)' }}>offline — run migration_audio_library.sql</span>}
-        <span className="mbf-pubspend">{dirty.length} pending · $0 spend</span>
-        <button className="mbf-pubbtn" disabled={publishing || !cloudEnabled || dirty.length === 0} onClick={publish}>
-          {publishing ? 'Publishing…' : `Publish ${dirty.length} change${dirty.length === 1 ? '' : 's'}`}
-        </button>
-      </div>
-    )
-  }
+  function selectAndEdit(name: string) { setSelected(name); setTab('sfx') }
 
   return (
     <div className="mbf">
@@ -132,6 +127,12 @@ export function MusicBuilder() {
         </div>
         <div className="mbf-title"><b>Music Builder</b><span>Circle HQ · Build</span></div>
         <div className="mbf-credit"><span className="dot" />ElevenLabs: not connected · Synth mode only</div>
+        {pubMsg && <span className="mbf-pubtoast" style={{ color: pubMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>{pubMsg.text}</span>}
+        {!cloudEnabled && <span className="pill pill-mut" style={{ color: 'var(--warn)' }}>offline</span>}
+        <button className="mbf-pubbtn-top" disabled={publishing || !cloudEnabled || dirty.length === 0} onClick={publish}>
+          {publishing ? 'Publishing…' : 'Publish'}
+          <span className="badge">{dirty.length}</span>
+        </button>
       </div>
 
       <div className="mbf-tabs">
@@ -150,23 +151,7 @@ export function MusicBuilder() {
 
         {tab === 'overview' && (
           <div className="mbf-scroll">
-            <div className="grid mbf-kpis">
-              <div className="card mbf-kpi"><div className="k">Cues in library</div><div className="v">{Object.keys(DEFAULT_SFX_RECIPES).length}</div><div className="s">across action / combat / emote</div></div>
-              <div className="card mbf-kpi"><div className="k">Edited this session</div><div className="v">{dirty.length}</div><div className="s">{dirty.length ? dirty.join(', ') : 'nothing yet'}</div></div>
-              <div className="card mbf-kpi"><div className="k">Provider mix</div><div className="v" style={{ color: 'var(--acc-text)' }}>100%</div><div className="s">synth · $0 spend</div></div>
-              <div className="card mbf-kpi"><div className="k">Cloud publish</div><div className="v" style={{ color: cloudEnabled ? 'var(--ok)' : 'var(--tx3)', fontSize: 17 }}>{cloudEnabled ? 'Connected' : 'Offline'}</div><div className="s">{cloudEnabled ? 'ready to publish' : 'run migration_audio_library.sql'}</div></div>
-            </div>
-            <div className="mbf-sec"><div className="ic" style={{ background: 'var(--acc-soft)' }}>🎚️</div><div className="tt">Provider mix</div><div className="sb">what's rendering each asset today</div><div className="ln" /></div>
-            <div className="card">
-              <div className="mbf-mixbar"><div className="mbf-mixseg" style={{ width: '100%', background: 'var(--acc)' }}>{Object.keys(DEFAULT_SFX_RECIPES).length} synth cues</div></div>
-              <div className="mbf-mixleg"><span><i style={{ background: 'var(--acc)' }} />Synth (free, WebAudio)</span><span><i style={{ background: 'var(--bd3)' }} />ElevenLabs (0 generated)</span></div>
-            </div>
-            {!cloudEnabled && (
-              <>
-                <div className="mbf-sec"><div className="ic" style={{ background: 'var(--warn-bg)' }}>⚠️</div><div className="tt">Attention</div><div className="sb" /><div className="ln" /></div>
-                <div className="mbf-att"><span className="dot" style={{ background: 'var(--warn)' }} /><span className="tx">Offline preview — connect Supabase + run <b>supabase/migration_audio_library.sql</b> once to enable Publish.</span></div>
-              </>
-            )}
+            <Analytics usage={usage} usageLoaded={usageLoaded} cloudEnabled={cloudEnabled} trend={trend} onSelectCue={selectAndEdit} />
           </div>
         )}
 
@@ -182,6 +167,9 @@ export function MusicBuilder() {
                       <div key={name} className={'mbf-row' + (selected === name ? ' on' : '')} onClick={() => setSelected(name)}>
                         <button className="mbf-rowplay" onClick={(e) => playCue(name, e)} title={`Play ${name}`}><PlayIcon /></button>
                         <span className="nm">{name}</span>
+                        {usageLoaded && cloudEnabled && (
+                          <span className="mbf-plays" title="live plays (all-time)">{(usage[name]?.play_count ?? 0).toLocaleString()}</span>
+                        )}
                         <span className={'pv' + (isDirty(name) ? ' dirty' : '')}>{isDirty(name) ? 'EDITED' : 'SYNTH'}</span>
                       </div>
                     ))}
@@ -191,9 +179,18 @@ export function MusicBuilder() {
 
               <div className="mbf-col settings2">
                 <div className="mbf-edithead">
-                  <button className="mbf-play" onClick={() => playCue(selected)}><PlayIcon size={16} /></button>
                   <div className="mbf-stage-who">{selected}<small>{recipe.length} layer{recipe.length === 1 ? '' : 's'} · editing layer 1</small></div>
+                  <div className="mbf-usebar-inline">
+                    <span title="live plays (all-time)">{cloudEnabled ? (usageLoaded ? (usage[selected]?.play_count ?? 0).toLocaleString() : '…') : '—'} plays</span>
+                    <span className="mono" title="static call site(s)">
+                      {callSitesFor(selected).length === 0 ? <span style={{ color: 'var(--warn)' }}>no static site</span> : callSitesFor(selected)[0].site}
+                      {callSitesFor(selected).length > 1 ? ` +${callSitesFor(selected).length - 1}` : ''}
+                    </span>
+                    {isDynamicOnly(selected) && <span className="mbf-dynflag" title="Dispatched dynamically — static grep can't confirm which cue actually fires">dynamic</span>}
+                  </div>
                 </div>
+
+                <Scope ref={scopeRef} recipe={recipe} />
 
                 <div className="mbf-grid2">
                   <div className="mbf-selrow">
@@ -241,20 +238,15 @@ export function MusicBuilder() {
                 </div>
               </div>
             </div>
-
-            <PublishBar />
           </div>
         )}
 
         {tab === 'music' && (
-          <div className="mbf-tabpane">
-            <div className="mbf-scroll" style={{ flex: 1 }}>
-              <div className="mbf-sec"><div className="ic" style={{ background: 'var(--warn-bg)' }}>🚧</div><div className="tt">Music Forge</div><div className="sb">no recipe table yet</div><div className="ln" /></div>
-              <div className="mbf-note">
-                All 6 realms currently share one hardcoded ambient pad (<code>apps/lashira/web/src/audio/ambient.js</code>) — it isn't data-driven yet the way SFX cues now are, so there's nothing here to edit safely without inventing a fake control. Bringing the pad's voices/birdsong into <code>@arganta/audio</code> as a second recipe table (mirroring exactly what SFX Forge just did) is the next real step. Publish below is already wired to the same <code>audio_library</code> row SFX Forge uses — there's only ever one table.
-              </div>
+          <div className="mbf-scroll">
+            <div className="mbf-sec"><div className="ic" style={{ background: 'var(--warn-bg)' }}>🚧</div><div className="tt">Music Forge</div><div className="sb">no recipe table yet</div><div className="ln" /></div>
+            <div className="mbf-note">
+              All 6 realms currently share one hardcoded ambient pad (<code>apps/lashira/web/src/audio/ambient.js</code>) — it isn't data-driven yet the way SFX cues now are, so there's nothing here to edit safely without inventing a fake control. Bringing the pad's voices/birdsong into <code>@arganta/audio</code> as a second recipe table (mirroring exactly what SFX Forge just did) is the next real step. Publish (top bar) is already wired to the same <code>audio_library</code> row SFX Forge uses — there's only ever one table.
             </div>
-            <PublishBar extra={dirty.length === 0 ? <span style={{ fontSize: 11, color: 'var(--tx3)' }}>No music edits yet — nothing to add from this tab</span> : undefined} />
           </div>
         )}
 

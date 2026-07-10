@@ -8,7 +8,7 @@
 // The context is created lazily and only starts after a real user gesture
 // (autoplay policy) — call sfx.arm() from a pointerdown/keydown listener once.
 
-import { createMasterChain, scheduleTone, scheduleNoise, SFX_RECIPES } from '@arganta/audio';
+import { createMasterChain, scheduleTone, scheduleNoise, SFX_RECIPES, logPlay } from '@arganta/audio';
 import { ambient } from './ambient.js';
 
 const CAN_AUDIO = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
@@ -61,6 +61,7 @@ class Sfx {
     if (!recipe) { this.tone({ type: 'sine', f0: 620, t: 0.06, gain: 0.16 }); return; } // unknown cue → quiet tap
     for (const layer of recipe) (layer.kind === 'noise' ? this.noise(layer) : this.tone(layer));
     if (PROMINENT.has(name)) { try { ambient.duck(); } catch { /* ambient not running */ } }
+    logPlay(name); // buffered in-memory; net/audioUsage.js flushes it as one batched RPC
   }
 }
 

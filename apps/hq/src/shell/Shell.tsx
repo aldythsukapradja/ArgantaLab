@@ -19,7 +19,7 @@ import { Landing } from '../surfaces/Landing'
 import { Architecture } from '../surfaces/Architecture'
 import { BattleBuilder } from '../surfaces/battle/BattleBuilder'
 import { CharacterForge } from '../surfaces/character/CharacterForge'
-import { WorldStage } from '../surfaces/world/WorldStage'
+import { OpenworldBuilder } from '../surfaces/world/OpenworldBuilder'
 import { MusicBuilder } from '../surfaces/music/MusicBuilder'
 
 function Surface() {
@@ -40,7 +40,7 @@ function Surface() {
     case 'vault': return <Vault />
     case 'battle': return <BattleBuilder />
     case 'character': return <CharacterForge />
-    case 'world': return <WorldStage />
+    case 'world': return <OpenworldBuilder />
     case 'music': return <MusicBuilder />
   }
 }

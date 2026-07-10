@@ -5,6 +5,7 @@ import { supabase } from './net/supabase.js';
 import { initCombatTuning } from './net/combatTuning.js';
 import { initCharacterRegistry } from './net/characterRegistry.js';
 import { initAudioLibrary } from './net/audioLibrary.js';
+import { initAudioUsage } from './net/audioUsage.js';
 import './styles.css';
 
 // Pull + apply the combat tuning Circle HQ published (fire-and-forget, safe:
@@ -17,6 +18,9 @@ initCharacterRegistry();
 // Pull the SFX library Circle HQ's Music Builder published (same pattern) —
 // falls back to the built-in synth recipes if nothing's been published yet.
 initAudioLibrary();
+// Start batching + periodically flushing SFX play counts so Music Builder can
+// show real usage numbers (including the 15 emote cues static grep can't see).
+initAudioUsage();
 
 // Embed mode: the game runs inside ANY parent ArgantaLab app (Bloom Command,
 // KinetikCircle's "KinFarm" pill, etc.) as `?embed=<hostname>` — the value only

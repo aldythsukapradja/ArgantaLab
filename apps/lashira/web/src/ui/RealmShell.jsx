@@ -1,14 +1,22 @@
+import { useState } from 'react';
+import { ActionCluster } from '@arganta/combat/cluster';
 import { UnitCard } from './UnitCard.jsx';
+import { SettingsSheet } from './SettingsSheet.jsx';
 
 // ── RealmShell — the ONE four-corner HUD every realm renders through (IMPL §0).
 // No realm builds its own corners; it only supplies data + a controller spec.
-//   top-left     CharacterStatusPanel (UnitCard + realm/resource strip)
+//   top-left     CharacterStatusPanel (UnitCard + realm/resource strip + status)
 //   top-right    SettingsButton (return to HQ)
-//   bottom-left  LocationInfoPanel (realm · objective · meter)
-//   bottom-right ActionController (1 primary + ring of skills, from `controller`)
+//   bottom-right ActionController (from `controller`)
 //
-// `controller` = { primary:GameAction, ring:GameAction[] }
-// GameAction    = { id, label, icon, cooldownMs?, cooldownUntil?, disabledReason?, kind? }
+// The controller can be EITHER:
+//   { primary:GameAction, ring:GameAction[] }              — simple mode (default)
+//   { cluster: {...} }                                     — the real PvP/PvE ActionCluster
+// A realm that supplies `cluster` gets the exact bottom-right combat controller
+// the farm's battle mode uses (attack + numbered skill orbs + pie-wipe cooldowns).
+// GameAction  = { id, label, icon, cooldownMs?, cooldownUntil?, disabledReason?, kind? }
+// cluster     = { skills:[{name,fx,manaCost,cooldownMs?,cooldownUntil?}], attack:{cooldownMs?,cooldownUntil?},
+//                 mp?, skin?, utils:[{id,icon,title}] }  — onSkill(i)/onAttack/util route through onAction
 
 function cooldownPct(action, now) {
   if (!action?.cooldownUntil || !action?.cooldownMs) return 0;
@@ -18,12 +26,15 @@ function cooldownPct(action, now) {
 }
 
 export default function RealmShell({
-  card, realmName, realmColor, shortName, theme,
+  card, realmName, realmColor, theme,
   objective, meter, controller, onAction, onExit,
   heroNote, capsNote, now = 0, children,
+  camZoom, onCamZoom,
 }) {
+  const [showSettings, setShowSettings] = useState(false);
   const primary = controller?.primary || null;
   const ring = controller?.ring || [];
+  const cluster = controller?.cluster || null;
   const meterPct = meter && meter.max ? Math.max(0, Math.min(100, (meter.value / meter.max) * 100)) : null;
 
   const fire = (action) => {
@@ -37,40 +48,63 @@ export default function RealmShell({
       <div className="room-canvas realm-room" style={{ '--realm-color': realmColor }}>
         {children /* canvas + module DOM overlay slot */}
 
-        {/* top-left: character + realm strip */}
+        {/* top-left column: character card → live status panel. The realm/theme
+            chip row was removed (redundant with the bottom-left realm-name pill);
+            the status (objective + meter) used to sit alone in the bottom-left
+            corner where it crowded the edge; it now lives here under the card
+            so the whole left column reads as one stack (v1.5 §18.2). */}
         <div className="left-stack">
           <UnitCard card={card} />
-          <div className="res-strip">
-            <span className="res res-wood">Realm</span>
-            <span className="res res-bloom">{shortName}</span>
-            <span className="res-div" aria-hidden="true" />
-            <span className="res res-diamond">{theme}</span>
+          <div className="realm-status" style={{ '--realm-color': realmColor }}>
+            <div className="rs-obj">{objective || realmName}</div>
+            {meterPct != null && (
+              <div className="rs-meter" title={meter.label || ''}>
+                <span className="rs-fill" style={{ width: meterPct + '%' }} />
+                <b>{meter.label || ''}</b>
+              </div>
+            )}
+            {capsNote && <div className="rs-caps">{capsNote}</div>}
           </div>
         </div>
 
         {/* top-center: realm name */}
         <div className="zone-pill">{realmName}</div>
 
-        {/* top-right: settings / exit */}
+        {/* top-right: settings gear (opens the shared SettingsSheet, same one
+            the farm uses — edit once, changes everywhere). Exit-to-HQ lives
+            inside the sheet. */}
         <div className="realm-settings">
-          <button type="button" className="hud-gear" onClick={onExit} title="Return to HQ">↩</button>
+          <button type="button" className="hud-gear" onClick={() => setShowSettings(true)} title="Settings">⚙</button>
         </div>
-
-        {/* bottom-left: location / objective / meter */}
-        <div className="realm-info">
-          <div className="realm-info-obj">{objective || realmName}</div>
-          {meterPct != null && (
-            <div className="realm-meter" title={meter.label || ''}>
-              <span style={{ width: meterPct + '%', background: realmColor }} />
-              <b>{meter.label || ''}</b>
-            </div>
-          )}
-          {capsNote && <div className="realm-caps">{capsNote}</div>}
-        </div>
+        {showSettings && (
+          <SettingsSheet
+            world={{ name: realmName || 'Settings', color: realmColor }}
+            hero={{ card }}
+            circle={{ locationLabel: `${realmName || 'Realm'}${theme ? ' · ' + theme : ''}` }}
+            play={camZoom != null ? { zoom: { value: camZoom, min: 0.6, max: 2, step: 0.05, onChange: onCamZoom } } : null}
+            sound={{}}
+            system={{ help: `You're in ${realmName || 'a realm'} (${theme || ''}). Tap the map to act; use the controller bottom-right. Exit returns you to the Kingdom hub.`, exitLabel: 'Exit to Kingdom' }}
+            onExit={onExit}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
 
         {heroNote && <div className="hero-note">{heroNote}</div>}
 
-        {/* bottom-right: action controller (1 primary + ring) */}
+        {/* bottom-right: action controller — the real PvP/PvE ActionCluster
+            when the realm supplies a `cluster` spec, else the simple primary+ring. */}
+        {cluster ? (
+          <ActionCluster
+            skills={cluster.skills || []}
+            cooldowns={(cluster.skills || []).map((sk) => cooldownPct(sk, now))}
+            attackCooldown={cooldownPct(cluster.attack, now)}
+            mp={cluster.mp ?? null}
+            skin={cluster.skin ?? null}
+            onSkill={(i) => onAction?.('skill:' + i)}
+            onAttack={() => onAction?.('attack')}
+            utils={(cluster.utils || []).map((u) => ({ ...u, onClick: () => onAction?.(u.id) }))}
+          />
+        ) : (
         <div className="cluster farm realm-cluster">
           <div className="small-ring">
             {ring.map((a) => {
@@ -105,6 +139,7 @@ export default function RealmShell({
             </button>
           )}
         </div>
+        )}
       </div>
     </div>
   );

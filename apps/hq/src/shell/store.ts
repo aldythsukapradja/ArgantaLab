@@ -13,7 +13,7 @@ const SURFACE_LABEL: Record<SurfaceId, string> = {
   content: 'Learn Builder', game: 'Game Builder', app: 'App Builder',
   agents: 'Agent Builder', broadcast: 'Content Builder', command: 'Command',
   pixel: 'Pixel Vault', vault: 'HQ Vault', architecture: 'Architecture', battle: 'Battle Builder',
-  character: 'Character Forge', world: 'World Stage', music: 'Music Builder',
+  character: 'Character Forge', world: 'Openworld Builder', music: 'Music Builder',
 }
 export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 

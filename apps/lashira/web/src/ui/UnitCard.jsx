@@ -12,10 +12,32 @@ import { IconHeart, IconMana } from '../components/HudIcons.jsx';
 const fmt = (n) => Number(n || 0).toLocaleString();
 const clampPct = (n) => Math.max(0, Math.min(100, Number(n) || 0));
 
+// Wallet pill display value: abbreviate anything 1,000+ (14,591 -> 14.6K;
+// 1,204,880 -> 1.2M) so 4 equal-width cells stay readable at HP/MP-bar text
+// size; the full precise value still shows in the pill's title tooltip.
+const fmtWalletShort = (n) => {
+  if (n === Infinity) return '∞';
+  const v = Number(n || 0);
+  if (v >= 1e6) return (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
+  if (v >= 1e3) return (v / 1e3).toFixed(v >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K';
+  return v.toLocaleString();
+};
+
+const WALLET_PILLS = [
+  { key: 'wood', icon: '🪵', label: 'Wood' },
+  { key: 'stone', icon: '🪨', label: 'Stone' },
+  { key: 'bloom', icon: '🌸', label: 'Bloom' },
+  { key: 'diamonds', icon: '💎', label: 'Diamonds' },
+];
+
 // `pvpHearts` (optional): a node rendered ABOVE the name row — used for the
 // chunky-hearts PvP HP display (see PvpHearts.jsx). Additive only: peer cards
 // and every non-PvP context simply don't pass it, so nothing else changes.
-export function UnitCard({ card, className = '', pvpHearts = null }) {
+// `wallet` (optional): {wood,stone,bloom,diamonds} — renders a 4-equal-column
+// row of resource pills INSIDE the card, at the same text size as the HP/MP
+// numbers. Additive only: peers don't broadcast their wallet over presence,
+// so their cards simply omit this row (see cardFromPeer below).
+export function UnitCard({ card, className = '', pvpHearts = null, wallet = null, onWalletTap = null }) {
   if (!card) return null;
   const {
     rank, name, pathIcon, pathName, title, level,
@@ -48,6 +70,21 @@ export function UnitCard({ card, className = '', pvpHearts = null }) {
           <div className="bar hp"><span style={{ width: `${hpPct}%` }} /><b><IconHeart /> {fmt(hp)}/{fmt(maxHp)}</b></div>
           <div className="bar mp"><span style={{ width: `${mpPct}%` }} /><b><IconMana /> {fmt(mp)}/{fmt(maxMp)}</b></div>
         </div>
+        {wallet && (
+          <div className="unit-wallet">
+            {WALLET_PILLS.map(({ key, icon, label }) => (
+              <button
+                key={key}
+                type="button"
+                className={'uw-pill uw-' + key}
+                onClick={onWalletTap ? () => onWalletTap(key) : undefined}
+                title={`${label} · ${fmt(wallet[key])}`}
+              >
+                {icon} {fmtWalletShort(wallet[key])}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

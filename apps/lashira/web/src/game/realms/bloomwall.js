@@ -59,6 +59,19 @@ const TOWERS = {
 };
 const MODE_ICON = { nearest: '🎯', first: '🏁', strongest: '💪' };
 
+// On-screen monster sizing — absolute px per kind, not a TILE fraction,
+// because the first pass (§18.1, a flat TILE*1.15 factor) still read as
+// specks next to the hero and towers: creature-sprite art carries the same
+// kind of transparent padding livestock sprites do, so a modest bounding-box
+// bump doesn't translate 1:1 into visible pixel size. These are picked to
+// read clearly next to a ~1.9-tile tower and a full hero sprite, smallest
+// (squirrel) still meaningfully smaller than largest (deer/boar).
+const MON_SIZE = { squirrel: 64, fox: 72, badger: 88, boar: 96, deer: 92, tiger: 300 };
+function monsterHeight(kind, boss) {
+  if (boss) return MON_SIZE.tiger;
+  return MON_SIZE[kind] || 70;
+}
+
 // TD-local overlay on top of the real bestiary stats: resist per damage type
 // (+ reduces, − amplifies, same convention as the shared combat RESIST table)
 // and a control-resist for slow/root. Local to Bloomwall — never mutates
@@ -226,22 +239,76 @@ export function createBloomwallModule(api) {
     api.bumpHud();
   }
 
-  function heroSkill() {
-    if (!cd.ready('skill')) return;
+  // The hero fights with the REAL PvP/PvE kit (v1.5 §18.4): a basic attack +
+  // the 3 equipped Skill-Forge slots, rendered in the shared ActionCluster.
+  // Behavior is keyed off the skill's own `type`/`target` fields — the SAME
+  // convention FarmRoom's doSkill uses (skill.type==='heal', skill.target
+  // ==='all') — not a hardcoded slot index, so a reordered/custom loadout
+  // still behaves correctly:
+  //   type 'heal'          — Mend → repairs the Bloom Core (the defense's self-heal)
+  //   target 'all'         — Storm-family — every foe in radius
+  //   otherwise            — Bolt-family — single-target, nearest foe in reach
+  const HERO_REACH = 2.4, HERO_AOE = 2.8, ATK_CD = 700;
+  const DEFAULT_SKILL = [
+    { id: 'bolt', name: 'Bolt', type: 'magic', target: 'single', fx: 22, cdMs: 900 },
+    { id: 'storm', name: 'Storm', type: 'magic', target: 'all', fx: 131, cdMs: 2600 },
+    { id: 'mend', name: 'Mend', type: 'heal', target: 'self', fx: 1, cdMs: 1800 },
+  ];
+
+  function heroAttack() {
+    if (!cd.ready('atk')) return;
     const hc = api.heroCombat ? api.heroCombat() : null;
-    const dmg = hc?.skillPower || 28;
-    const name = hc?.skill?.name || 'Hero Blast';
     const p = api.player();
+    let best = null, bd = HERO_REACH;
+    for (const e of s.enemies) { const d = euclid(p.tile[0], p.tile[1], e.x, e.y); if (d < bd) { bd = d; best = e; } }
+    api.playMotion('strike');
+    cd.trigger('atk', ATK_CD);
+    if (best) {
+      best.hp -= (hc ? hc.physPower : 20) * tdResist(best.kind, 'phys');
+      s.hits.push({ x: cx(best.x), y: cx(best.y), life: 220 });
+      if (best.hp <= 0) killEnemy(best);
+    }
+  }
+
+  function heroCastSkill(slot) {
+    const key = 'sk' + slot;
+    if (!cd.ready(key)) return;
+    const hc = api.heroCombat ? api.heroCombat() : null;
+    const sk = hc?.skills?.[slot] || DEFAULT_SKILL[slot];
+    if (!sk) return;
+    const name = sk.name || 'Skill';
+    const p = api.player();
+    api.playMotion('cast');
+    cd.trigger(key, sk.cdMs || 1200);
+
+    if (sk.type === 'heal') { // Mend → repairs the Bloom Core
+      const before = s.coreHp;
+      s.coreHp = Math.min(s.coreMax, s.coreHp + 3);
+      if (api.castEffect) api.castEffect(sk.fx, p.tile);
+      api.flash(s.coreHp > before ? `${name} — Core +${s.coreHp - before}` : `${name}`);
+      api.bumpHud();
+      return;
+    }
+    const power = sk.power || 30;
     let hit = 0;
-    for (let i = s.enemies.length - 1; i >= 0; i--) {
-      const e = s.enemies[i];
-      if (euclid(p.tile[0], p.tile[1], e.x, e.y) <= 2.6) {
-        e.hp -= dmg * tdResist(e.kind, 'mag'); hit++;
-        if (e.hp <= 0) killEnemy(e);
+    if (sk.target === 'all') { // Storm-family — every foe in radius
+      for (let i = s.enemies.length - 1; i >= 0; i--) {
+        const e = s.enemies[i];
+        if (euclid(p.tile[0], p.tile[1], e.x, e.y) <= HERO_AOE) {
+          e.hp -= power * tdResist(e.kind, 'mag'); hit++;
+          if (api.castEffect) api.castEffect(sk.fx, [e.x, e.y]);
+          if (e.hp <= 0) killEnemy(e);
+        }
+      }
+    } else { // Bolt-family — single-target, nearest foe in reach
+      let best = null, bd = HERO_REACH + 0.6;
+      for (const e of s.enemies) { const d = euclid(p.tile[0], p.tile[1], e.x, e.y); if (d < bd) { bd = d; best = e; } }
+      if (best) {
+        best.hp -= power * 1.6 * tdResist(best.kind, 'mag'); hit = 1;
+        if (api.castEffect) api.castEffect(sk.fx, [best.x, best.y]);
+        if (best.hp <= 0) killEnemy(best);
       }
     }
-    cd.trigger('skill', 12000);
-    api.playMotion('cast'); // Hero Skill is the hero's equipped magic skill — casts, doesn't swing
     api.flash(hit ? `${name}! ${hit} hit` : `${name}!`);
   }
 
@@ -393,20 +460,34 @@ export function createBloomwallModule(api) {
       openFan(tx, ty);
     },
     onAction(id) {
-      if (id === 'primary') { if (s.phase === 'wave') heroSkill(); else startWave(); }
+      if (id === 'primary') startWave();
+      else if (id === 'attack') heroAttack();
+      else if (id === 'skill:0') heroCastSkill(0);
+      else if (id === 'skill:1') heroCastSkill(1);
+      else if (id === 'skill:2') heroCastSkill(2);
       else if (id === 'menu') api.exit();
     },
     controller() {
       const inWave = s.phase === 'wave';
-      const hc = api.heroCombat ? api.heroCombat() : null;
+      // Mid-wave: the real PvP/PvE ActionCluster (attack + the hero's 3 real
+      // skill slots, pie-wipe cooldowns). Otherwise: a simple Start/Retry button.
+      if (inWave) {
+        const hc = api.heroCombat ? api.heroCombat() : null;
+        const slots = hc?.skills || DEFAULT_SKILL;
+        return {
+          cluster: {
+            skills: slots.map((sk, i) => ({ ...sk, cooldownMs: sk.cdMs || 1200, cooldownUntil: cd.until('sk' + i) })),
+            attack: { cooldownMs: ATK_CD, cooldownUntil: cd.until('atk') },
+            mp: null, // Bloomwall gates skills on cooldown only (no depleting pool)
+            skin: 'brass', // the real PvP/PvE default skin — warm gold, matches the reference exactly
+            utils: [{ id: 'menu', key: 'menu', icon: '↩', title: 'Exit to HQ' }],
+          },
+        };
+      }
       const primaryLabel = s.phase === 'lost' ? 'Retry' : s.phase === 'won' ? (s.wave < 10 ? 'Next Wave' : 'Continue → Endless') : 'Start Wave';
       return {
-        primary: inWave
-          ? { id: 'primary', label: hc?.skill?.name || 'Hero Skill', icon: '✷', kind: 'primary', cooldownMs: 12000, cooldownUntil: cd.until('skill') }
-          : { id: 'primary', label: primaryLabel, icon: '⚔', kind: 'primary' },
-        ring: [
-          { id: 'menu', label: 'Exit', icon: '↩', kind: 'utility' },
-        ],
+        primary: { id: 'primary', label: primaryLabel, icon: '⚔', kind: 'primary' },
+        ring: [{ id: 'menu', label: 'Exit', icon: '↩', kind: 'utility' }],
       };
     },
     hud() {
@@ -493,23 +574,23 @@ export function createBloomwallModule(api) {
       for (const e of s.enemies) {
         const X = cx(e.x), Y = cx(e.y);
         const sprite = creatureFrame(e.kind, e.facing || 'South', true, now || performance.now());
+        const targetH = monsterHeight(e.kind, e.boss);
         ctx.save();
         if (sprite) {
           const iw = sprite.naturalWidth || 96, ih = sprite.naturalHeight || 96;
-          const targetH = e.boss ? 150 : 42;
           const sc = targetH / ih, w = iw * sc, h = ih * sc;
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(sprite, X - w / 2, Y - h * 0.85, w, h);
         } else {
           ctx.fillStyle = monsterOf(e.kind).color || '#3a2b4a';
-          ctx.beginPath(); ctx.arc(X, Y, e.boss ? 22 : 12, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(X, Y, targetH * 0.32, 0, Math.PI * 2); ctx.fill();
         }
         if (e.boss) {
           ctx.font = '700 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd76a';
           ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 3;
-          ctx.strokeText('👑 Tiger', X, Y - 56); ctx.fillText('👑 Tiger', X, Y - 56);
+          ctx.strokeText('👑 Tiger', X, Y - targetH * 0.7); ctx.fillText('👑 Tiger', X, Y - targetH * 0.7);
         }
-        const barW = e.boss ? 56 : 26, barY = Y - (e.boss ? 66 : 20);
+        const barW = e.boss ? 56 : 30, barY = Y - targetH * 0.92;
         ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(X - barW / 2, barY, barW, 5);
         ctx.fillStyle = e.hp / e.maxHp > 0.5 ? '#57c98a' : e.hp / e.maxHp > 0.25 ? '#e0b83c' : '#e05c5c';
         ctx.fillRect(X - barW / 2, barY, barW * Math.max(0, e.hp / e.maxHp), 5);

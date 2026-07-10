@@ -121,23 +121,19 @@ const WORLD_MAPS = loadConst(regSrc, 'WORLD_MAPS');
 const kitchenSrc = readFileSync(path.join(REALMS_DIR, 'kitchen.jsx'), 'utf8');
 const STATIONS = loadLocalConst(kitchenSrc, 'STATIONS');
 
-// bloomwall.js's lane geometry is actively evolving (real bestiary monsters,
-// forking lanes) — extract defensively so a future reshape warns instead of
-// crashing the sync. Current shape (2026-07-10): LEAD_IN -> fork into
-// BRANCH_A/BRANCH_B at SPLIT -> MERGE -> TAIL -> CORE; PADS is now an array
-// of { tile:[x,y] } objects (was plain [x,y] pairs).
+// bloomwall.js's lane geometry has actively evolved this session (from a fixed
+// 4-pad row, to a forking 2-lane/8-pad system, to today's single traced lane
+// with FREE tower placement — no fixed pads at all, any legal tile near the
+// lane works). Extract defensively so a future reshape warns instead of
+// crashing the sync. Current shape (2026-07-10): `PATH` = single traced
+// lane, `CORE = PATH[last]`, `TOWERS` = the placeable tower catalog (no
+// fixed world position — towers go wherever the player taps).
 const bloomwallSrc = readFileSync(path.join(REALMS_DIR, 'bloomwall.js'), 'utf8');
-let BW_LEAD_IN = null, BW_BRANCH_A = null, BW_BRANCH_B = null, BW_CORE = null, BW_PADS = null;
+let BW_PATH = null, BW_CORE = null, BW_TOWERS = null;
 try {
-  BW_LEAD_IN = loadLocalConst(bloomwallSrc, 'LEAD_IN');
-  BW_CORE = loadLocalConst(bloomwallSrc, 'CORE');
-  const MERGE = loadLocalConst(bloomwallSrc, 'MERGE');
-  const SPLIT = BW_LEAD_IN ? BW_LEAD_IN[BW_LEAD_IN.length - 1] : null;
-  BW_BRANCH_A = loadLocalConst(bloomwallSrc, 'BRANCH_A', { SPLIT, MERGE });
-  BW_BRANCH_B = loadLocalConst(bloomwallSrc, 'BRANCH_B', { SPLIT, MERGE });
-  BW_PADS = loadLocalConst(bloomwallSrc, 'PADS');
-  // fall back to the older flat-array shape if PADS.tile isn't present
-  if (BW_PADS && BW_PADS.length && !BW_PADS[0].tile) BW_PADS = BW_PADS.map((p) => ({ tile: p }));
+  BW_PATH = loadLocalConst(bloomwallSrc, 'PATH');
+  BW_CORE = BW_PATH ? loadLocalConst(bloomwallSrc, 'CORE', { PATH: BW_PATH }) : null;
+  BW_TOWERS = loadLocalConst(bloomwallSrc, 'TOWERS');
 } catch (e) { console.warn('  [warn] bloomwall.js lane extraction partially failed — its geometry may have reshaped again:', e.message); }
 
 const keepSrc = readFileSync(path.join(REALMS_DIR, 'keep.js'), 'utf8');
@@ -218,12 +214,10 @@ md.push('### 1.9 Realm module coordinates (what the CODE currently assumes — c
 md.push('**Hearthrush Kitchen** `STATIONS`:');
 for (const [k, s] of Object.entries(STATIONS)) md.push(`- \`${k}\`: tile ${s.tx},${s.ty}, ${s.w}×${s.h}, icon ${s.icon}`);
 md.push('');
-if (BW_LEAD_IN && BW_CORE && BW_PADS) {
-  md.push('**Bloomwall Pass**: `LEAD_IN` = ' + BW_LEAD_IN.map((p) => `[${p.join(',')}]`).join(' → '));
-  if (BW_BRANCH_A) md.push('  → fork **Branch A** (upper, shorter) = ' + BW_BRANCH_A.map((p) => `[${p.join(',')}]`).join(' → '));
-  if (BW_BRANCH_B) md.push('  → fork **Branch B** (lower, winding) = ' + BW_BRANCH_B.map((p) => `[${p.join(',')}]`).join(' → '));
+if (BW_PATH && BW_CORE) {
+  md.push('**Bloomwall Pass**: `PATH` (' + BW_PATH.length + ' points) = ' + BW_PATH.map((p) => `[${p.join(',')}]`).join(' → '));
   md.push(`  → \`CORE\` = [${BW_CORE.join(',')}]`);
-  md.push(`- \`PADS\` (${BW_PADS.length}): ` + BW_PADS.map((p) => `[${p.tile.join(',')}]`).join(', '));
+  md.push('- Tower placement is FREE (no fixed pads) — any tile far enough from the lane is buildable. Tower catalog' + (BW_TOWERS ? ` (${Object.keys(BW_TOWERS).length})` : '') + ': ' + (BW_TOWERS ? Object.values(BW_TOWERS).map((t) => `${t.icon} ${t.name}`).join(', ') : '⚠ not extracted'));
 } else {
   md.push('**Bloomwall Pass**: ⚠ lane geometry extraction incomplete — `bloomwall.js` has reshaped since this script was last updated; re-check `scripts/gen-map-inventory.mjs` against the current file.');
 }
@@ -257,3 +251,62 @@ console.log('✓ Synced Kingdom map section into', DOC_PATH);
 console.log('  zones:', Object.keys(ZONES).length + 2, '· buildings:', BUILDINGS.length, '· placements:', PLACEMENTS.length,
   '· hotspots:', HOTSPOTS.filter(h => h.kind !== 'ore' && h.kind !== 'tree').length, '· portals:', Object.keys(WORLD_MAPS).length,
   '· ore nodes:', ORE_NODES.length, '· tree nodes:', TREE_NODES.length);
+
+// ---------- openworld-manifest.json — the data source the Openworld Builder
+// (Circle HQ surface) loads, so it starts populated with EVERY real component
+// instead of demo stubs. Same extracted variables as the markdown above —
+// one extraction, two outputs, so they can never drift from each other. ----------
+const fileOf = (id) => (id === 'kingdom' ? 'basemap.png' : WORLD_MAPS[id]?.file || null);
+const manifest = {
+  version: 1,
+  generatedAt: new Date().toISOString(),
+  maps: {
+    kingdom: {
+      image: 'basemap.png', grid: [60, 48],
+      zones: { field: FIELD, ...ZONES, arena: ARENA, pvp: PVP, ...Object.fromEntries(Object.entries(PENS).map(([k, r]) => [`pen_${k}`, r])) },
+      buildings: BUILDINGS,
+      placements: PLACEMENTS,
+      ontop: ONTOP,
+      hotspots: HOTSPOTS.map((h) => ({ kind: h.kind, id: h.id, rect: h.rect, ported: h.ported !== false })),
+      portals: Object.entries(WORLD_MAPS).map(([id, p]) => ({ id, name: p.name, color: p.color, hqHotspot: p.hqHotspot, hqReturn: p.hqReturn, spawn: p.spawn })),
+      harvestNodes: {
+        ore: ORE_NODES.map(([ore, x, y]) => ({ ore, x, y })),
+        trees: TREE_NODES.map(([x, y, hard]) => ({ x, y, hard })),
+      },
+      special: { castle: CASTLE, spawn: SPAWN, arenaWallY: ARENA_WALL_Y, arenaGateX: ARENA_GATE_X },
+    },
+    hearthrush_kitchen: {
+      image: fileOf('hearthrush_kitchen'), grid: [60, 48],
+      objects: Object.entries(STATIONS).map(([k, s]) => ({ id: k, kind: 'station', tile: [s.tx, s.ty], size: [s.w, s.h], icon: s.icon })),
+    },
+    bloomwall_pass: {
+      image: fileOf('bloomwall_pass'), grid: [60, 48],
+      lane: BW_PATH || [],
+      objects: BW_CORE ? [{ id: 'core', kind: 'core', tile: BW_CORE }] : [],
+      towerCatalog: BW_TOWERS ? Object.values(BW_TOWERS).map((t) => ({ id: t.id, name: t.name, icon: t.icon })) : [],
+      placement: 'free', // no fixed pads — any legal tile near the lane is buildable
+    },
+    lashira_keep: {
+      image: fileOf('lashira_keep'), grid: [60, 48],
+      objects: KEEP_DEFAULTS.map((d) => ({ id: d.key, kind: 'district', tile: [d.tx, d.ty], icon: d.icon, label: d.name })),
+    },
+    fountain_festival: {
+      image: fileOf('fountain_festival'), grid: [60, 48], objects: [],
+      note: 'board is a DOM overlay, no fixed world-space coordinates in code',
+    },
+    emberring_arena: {
+      image: fileOf('emberring_arena'), grid: [60, 48], objects: [],
+      note: 'training-dummy spawns are fully random in code, no fixed coordinates',
+    },
+  },
+};
+const manifestJson = JSON.stringify(manifest, null, 2);
+const LASHIRA_MANIFEST_PATH = path.join(ROOT, 'public', 'farm-art', 'openworld-manifest.json');
+const HQ_MANIFEST_PATH = path.join(REPO_ROOT, 'apps', 'hq', 'public', 'farm-art', 'openworld-manifest.json');
+writeFileSync(LASHIRA_MANIFEST_PATH, manifestJson, 'utf8');
+try {
+  writeFileSync(HQ_MANIFEST_PATH, manifestJson, 'utf8');
+  console.log('✓ Wrote openworld-manifest.json to lashira/public + hq/public (Builder data source)');
+} catch (e) {
+  console.warn('  [warn] wrote lashira manifest but could not copy into apps/hq/public (Builder will be stale):', e.message);
+}

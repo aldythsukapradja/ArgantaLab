@@ -31,7 +31,7 @@ const GROUPS: Group[] = [
     { id: 'broadcast', label: 'Content Builder', Icon: Megaphone },
     { id: 'battle', label: 'Battle Builder', Icon: Swords },
     { id: 'character', label: 'Character Forge', Icon: UserRound },
-    { id: 'world', label: 'World Stage', Icon: Map },
+    { id: 'world', label: 'Openworld Builder', Icon: Map },
     { id: 'music', label: 'Music Builder', Icon: Music2 },
   ] },
 ]

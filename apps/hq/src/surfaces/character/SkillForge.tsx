@@ -37,6 +37,8 @@ const SLOTS = [
 // visually read as more-than-one instead of the same single-target shot.
 const TARGET_LEAD = 'boar'
 const TARGET_FLANK = ['squirrel', 'fox']
+const PAN_STEP = 8 // % per D-pad tap, clamped 0-100
+const clampPct = (v: number) => Math.max(0, Math.min(100, v))
 const SHAPES: { id: string; label: string; hint: string }[] = [
   { id: 'line', label: 'Line', hint: 'straight ahead, reach tiles' },
   { id: 'nova', label: 'Nova', hint: 'self + 4 around (all surrounding)' },
@@ -122,6 +124,11 @@ export function SkillForge() {
   // heal-number; the bound effect fx mounts here, not always-on) -> idle.
   const [phase, setPhase] = useState<'idle' | 'casting' | 'impact'>('idle')
   const [tables, setTables] = useState<any>(null)
+  // Arena background pan — the Emberring Arena art is cover-scaled (no
+  // stretch), so this just picks WHICH part of it shows through. % of
+  // background-position, nudged by the D-pad in the arena's corner.
+  const [panX, setPanX] = useState(50)
+  const [panY, setPanY] = useState(42)
 
   useEffect(() => { data.effects().then(setEffects).catch(() => setEffects([])) }, [])
   useEffect(() => { data.motionTables().then(setTables) }, [])
@@ -259,7 +266,8 @@ export function SkillForge() {
               flashes the caster and floats a heal number. The bound effect fx
               mounts only at impact, not always-on. */}
           <div className="sf-arena">
-            <div className="sf-arena-bg" aria-hidden="true" />
+            <div className="sf-arena-bg" aria-hidden="true" style={{ backgroundPosition: `${panX}% ${panY}%` }} />
+            <div className="sf-arena-vignette" aria-hidden="true" />
 
             <div className="sf-duel-side sf-duel-caster">
               <div className="sf-vhead">Caster{hero ? ' · ' + hero.name : ''}</div>
@@ -267,6 +275,7 @@ export function SkillForge() {
               {hero === null && <div className="sf-vempty">No saved hero on your operator account yet — compose one in Character Lab.</div>}
               {hero && (
                 <div className={'sf-duel-figure' + (phase === 'impact' && slot.kind === 'heal' ? ' healflash' : '')}>
+                  <div className="sf-footshadow" aria-hidden="true" />
                   <CompositeStage
                     spec={hero.spec} motionName={casterMotion} playing scale={2.6} width={150} height={150}
                     oneShot={phase === 'casting'} onComplete={onCastComplete}
@@ -286,6 +295,7 @@ export function SkillForge() {
             <div className="sf-duel-side sf-duel-target">
               <div className="sf-vhead">{slot.i === 1 ? 'Targets · multi' : 'Target'}</div>
               <div className={'sf-duel-figure' + (phase === 'impact' && slot.kind !== 'heal' ? ' hit' : '')}>
+                <div className="sf-footshadow" aria-hidden="true" />
                 <div className="sf-vmonster lead"><MonsterStage id={TARGET_LEAD} dir="W" playing zoom={1} /></div>
                 {slot.i === 1 && TARGET_FLANK.map(id => <div key={id} className="sf-vmonster"><MonsterThumb id={id} size={56} /></div>)}
                 {phase === 'impact' && slot.kind !== 'heal' && <div className="sf-dmgnum dmg">-{tierDamage}</div>}
@@ -293,6 +303,14 @@ export function SkillForge() {
                   <div className="sf-veffect"><EffectLivePreview effect={effectById[previewFx]} size={80} /></div>
                 )}
               </div>
+            </div>
+
+            <div className="sf-pandpad" title="Pan the arena background">
+              <button className="up" onClick={() => setPanY(v => clampPct(v - PAN_STEP))}>▲</button>
+              <button className="left" onClick={() => setPanX(v => clampPct(v - PAN_STEP))}>◀</button>
+              <button className="center" onClick={() => { setPanX(50); setPanY(42) }} title="Recenter" />
+              <button className="right" onClick={() => setPanX(v => clampPct(v + PAN_STEP))}>▶</button>
+              <button className="down" onClick={() => setPanY(v => clampPct(v + PAN_STEP))}>▼</button>
             </div>
           </div>
           <div className="sf-vcap">
