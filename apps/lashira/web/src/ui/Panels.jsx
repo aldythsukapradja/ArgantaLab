@@ -8,20 +8,22 @@ import { QUEST_DEFS } from '../game/farm-logic.js';
 import { MAT_ICON, FISH_SPECIES } from '../game/farm-mechanics.js';
 import { Shop } from './Shop.jsx';
 import { CharacterPage } from './CharacterPage.jsx';
+import { CASTLE_SKINS, castleSkinLabel, castleSkinThumbUrl } from '../data/castle-skins.js';
 
 // `mech` = the mechanics SNAPSHOT (material counts); `mechGame` = the store (actions).
 // `selfId`/`circleMembers`/`homeCircleId`/`onTravel` feed the Home hub's Travel
 // sub-tab (multi-farm: My Farm / Circle Farm / visit a circle-mate's farm).
 // `onGearChanged` = live re-composite after an equip (Shop's Wear, Character Page's
 // Equipment tab) — no page reload; `battleSkills` feeds the Character Page's Skills tab.
-export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose, selfId, circleMembers, homeCircleId, onTravel, onGearChanged, battleSkills, heroTables, heroResources, heroHasWeapon }) {
+export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose, selfId, circleMembers, homeCircleId, onTravel, onGearChanged, battleSkills, heroTables, heroResources, heroHasWeapon, castleSkin, onCastleSkin }) {
   if (!panel) return null;
   return (
     <div className="panel-scrim" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         {panel === 'shop' && <Shop snap={snap} game={game} mech={mech} mechGame={mechGame} initialTab={shopTab} onClose={onClose} onGearChanged={onGearChanged} />}
-        {panel === 'house' && <Home snap={snap} game={game} onClose={onClose}
-          selfId={selfId} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} />}
+        {panel === 'house' && <Home snap={snap} game={game} mech={mech} onClose={onClose}
+          selfId={selfId} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel}
+          castleSkin={castleSkin} onCastleSkin={onCastleSkin} />}
         {panel === 'inventory' && <Bag snap={snap} game={game} mech={mech} mechGame={mechGame} onClose={onClose} />}
         {panel === 'quests' && <Quests snap={snap} game={game} mechGame={mechGame} onClose={onClose} />}
         {panel === 'character' && <CharacterPage snap={snap} game={game} battleSkills={battleSkills} onClose={onClose} onGearChanged={onGearChanged}
@@ -207,7 +209,7 @@ const HOME_TABS = [
   { id: 'travel', icon: '🚪', label: 'Travel' },
 ];
 
-function Home({ snap, game, onClose, selfId, circleMembers, homeCircleId, onTravel }) {
+function Home({ snap, game, mech, onClose, selfId, circleMembers, homeCircleId, onTravel, castleSkin, onCastleSkin }) {
   const [tab, setTab] = useState('house');
   return (
     <>
@@ -219,7 +221,7 @@ function Home({ snap, game, onClose, selfId, circleMembers, homeCircleId, onTrav
           </button>
         ))}
       </div>
-      {tab === 'house' && <HouseBody snap={snap} game={game} />}
+      {tab === 'house' && <HouseBody snap={snap} game={game} mech={mech} castleSkin={castleSkin} onCastleSkin={onCastleSkin} />}
       {tab === 'animals' && <BarnBody snap={snap} game={game} />}
       {tab === 'kin' && <KinBody snap={snap} game={game} />}
       {tab === 'travel' && <TravelBody snap={snap} game={game} selfId={selfId} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} onClose={onClose} />}
@@ -227,11 +229,15 @@ function Home({ snap, game, onClose, selfId, circleMembers, homeCircleId, onTrav
   );
 }
 
-function HouseBody({ snap, game }) {
+const HOUSE_TIERS = ['Shack', 'Cottage', 'Farmhouse', 'Manor', 'Castle'];
+
+function HouseBody({ snap, game, mech, castleSkin, onCastleSkin }) {
+  const tier = mech?.house?.tier || 1;
+  const tierName = HOUSE_TIERS[Math.min(tier - 1, 4)];
   return (
     <>
       <div className="row"><div className="ico">🏠</div><div className="grow">
-        <div className="name">Stage: Cottage</div>
+        <div className="name">Stage: {tierName} <small style={{ opacity: 0.6, fontWeight: 400 }}>· tier {tier}/5</small></div>
         <div className="meta">Upgrade your home at the 🏰 Castle with 🪵🪨 materials</div>
       </div></div>
       <div className="row"><div className="ico">⭐</div><div className="grow">
@@ -250,6 +256,22 @@ function HouseBody({ snap, game }) {
         <div className="name">End the day</div>
         <div className="meta">Crops grow, animals give produce, energy restores</div>
       </div><button className="rbtn" onClick={() => game.sleep()}>Sleep</button></div>
+      {onCastleSkin && (
+        <div className="home-skinpick">
+          <div className="name" style={{ marginBottom: 6 }}>🎨 Cottage skin <small style={{ opacity: 0.6, fontWeight: 400 }}>· {castleSkinLabel(castleSkin)}</small></div>
+          <div className="home-skingrid">
+            {CASTLE_SKINS.map(([id, label]) => {
+              const on = castleSkin === id;
+              return (
+                <button type="button" key={id} className={'home-skin' + (on ? ' on' : '')} onClick={() => onCastleSkin(id)} title={label}>
+                  <img src={castleSkinThumbUrl(id)} alt={label} />
+                  <small>{label}</small>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 }

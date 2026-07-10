@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MAT_ICON, FISH_SPECIES } from '../game/farm-mechanics.js';
 import { listPvpRank } from '../game/pvp-rank.js';
 import { sfx } from '../audio/sfx.js';
+import { CASTLE_SKINS, castleSkinThumbUrl } from '../data/castle-skins.js';
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 
@@ -30,18 +31,6 @@ function MatBar({ snap, mech }) {
     </div>
   );
 }
-
-const CASTLE_SKINS = [
-  ['house', 'Old house'], ['shack', 'Shack'], ['cottage', 'Cottage'], ['farmhouse', 'Farmhouse'],
-  ['storybook', 'Storybook'], ['fairytale', 'Fairytale'], ['royal', 'Royal'], ['whimsical', 'Whimsical'],
-];
-// Thumbnails — mirror farm-art-bundled.js lashira.castleskin.* files.
-const SKIN_FILE = {
-  house: 'house.png', shack: 'lib/house_t1_shack.png', cottage: 'lib/house_t2_cottage.png',
-  farmhouse: 'lib/house_t3_farmhouse.png', storybook: 'lib/castle_opt1_storybook.png',
-  fairytale: 'lib/castle_opt2_fairytale.png', royal: 'lib/castle_opt3_royal.png',
-  whimsical: 'lib/castle_opt4_whimsical.png',
-};
 
 export function HotspotPanels({ hotspot, snap, game, mech, mechGame, onClose, onEnterDungeon, castleSkin, onCastleSkin, circleId, selfId, circleMembers }) {
   if (!hotspot) return null;
@@ -94,7 +83,7 @@ function CastlePanel({ snap, mech, mechGame, onClose, castleSkin, onCastleSkin }
                     background: on ? 'rgba(255,207,74,0.18)' : 'rgba(255,255,255,0.05)',
                     color: 'inherit', fontSize: 11, lineHeight: 1.2,
                   }}>
-                  <img src={new URL('farm-art/' + SKIN_FILE[id], document.baseURI).href} alt={label}
+                  <img src={castleSkinThumbUrl(id)} alt={label}
                     style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', imageRendering: 'pixelated', display: 'block', marginBottom: 3 }} />
                   {label}
                 </button>

@@ -68,7 +68,7 @@ body {
   display: flex; gap: 10px; align-items: center; justify-content: center;
 }
 .gbtn:hover { background: var(--soft); }
-.gbtn .g { color: #4285F4; font-weight: 800; }
+.gbtn svg { flex-shrink: 0; }
 .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 .divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1px; margin: 18px 0 12px; }
 .divider::before, .divider::after { content: ""; height: 1px; background: var(--line); flex: 1; }
@@ -77,12 +77,14 @@ body {
   font-size: 15px; margin-bottom: 10px; outline: none; background: #fff;
 }
 .field:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(139,92,246,.12); }
-.role-row { display: flex; gap: 10px; margin-bottom: 10px; }
-.role-btn {
-  flex: 1; border: 1px solid var(--line); background: #fff; border-radius: 14px; padding: 11px;
-  font-weight: 700; font-size: 14px; cursor: pointer; color: var(--muted);
+/* Single toggle into (and back out of) the kid username+PIN flow — adults only
+   ever sign in via the Google button above, so there's no separate "Grown-up"
+   pill to choose (a default state already covers it). */
+.kid-toggle {
+  display: block; margin: 0 auto 12px; border: none; background: none;
+  color: var(--purple); font-weight: 700; font-size: 13px; cursor: pointer; padding: 4px 6px;
 }
-.role-btn.active { border-color: var(--purple); color: var(--ink); background: var(--soft); }
+.kid-toggle:hover { text-decoration: underline; }
 .cta {
   width: 100%; border: none; color: #fff; border-radius: 14px; padding: 14px;
   font-weight: 800; font-size: 16px; cursor: pointer; background: var(--grad);
@@ -365,6 +367,18 @@ body {
 }
 .cpage-item small { font-size: 9.5px; font-weight: 700; color: var(--ink); }
 .cpage-item:disabled { opacity: .6; cursor: default; }
+
+/* ── Home hub — cottage skin picker (mirrors the Castle hotspot's, same catalog) ── */
+.home-skinpick { margin-top: 10px; }
+.home-skingrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.home-skin {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 4px; border-radius: 10px; cursor: pointer; font: inherit;
+  background: #fff; border: 1.5px solid var(--line); color: var(--muted);
+}
+.home-skin img { width: 100%; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; display: block; }
+.home-skin small { font-size: 9.5px; font-weight: 700; }
+.home-skin.on { border-color: var(--purple); background: var(--soft); color: var(--ink); }
 
 /* ── Travel — multi-farm tile grid (My Farm / Circle Farm / visit a member) ── */
 .farmtile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 6px; }
@@ -1022,6 +1036,35 @@ button.sync-pill.on:hover { background: rgba(34,197,94,.24); }
   display: flex; align-items: center; justify-content: center;
   animation: backdrop-fade 0.2s ease;
 }
+/* A popover opened FROM INSIDE another popup (e.g. the "who's online" list, or a
+   circle picker, launched from within Settings) must sit above the settings
+   backdrop — otherwise, at the same z-index, later-in-DOM Settings paints over it
+   and the popover is invisible behind the screen you opened it from. Sits above
+   Settings (50), below the Shop quantity scrim (60). */
+.browser-backdrop.popover { z-index: 55; }
+
+/* ---- circle selector (Settings → Your circles) ---- */
+.circle-select { display: flex; flex-direction: column; gap: 6px; }
+.circle-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff;
+}
+.circle-row.active { border-color: var(--purple); background: rgba(139, 92, 246, 0.06); }
+.circle-row .cr-dot {
+  width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); flex-shrink: 0;
+}
+.circle-row.active .cr-dot { border-color: var(--purple); background: radial-gradient(circle at 35% 35%, var(--purple), var(--pink)); }
+.circle-row .cr-dot.personal { border-style: dashed; }
+.circle-row .cr-name { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--ink); display: flex; flex-direction: column; line-height: 1.25; }
+.circle-row .cr-name small { font-size: 11px; font-weight: 500; color: var(--muted); }
+.circle-row .cr-active { font-size: 10.5px; font-weight: 800; color: var(--purple); background: rgba(139, 92, 246, 0.14); padding: 3px 9px; border-radius: 999px; }
+.circle-row .cr-switch { font-size: 11.5px; font-weight: 800; color: var(--muted); background: var(--soft); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.circle-row .cr-switch:hover { color: var(--ink); border-color: var(--purple); }
+.circle-confirm { margin-top: 10px; padding: 12px 14px; border: 1px dashed var(--purple); border-radius: 12px; background: rgba(139, 92, 246, 0.05); }
+.circle-confirm p { margin: 0 0 10px; font-size: 13px; color: var(--ink); }
+.circle-confirm .cc-row { display: flex; gap: 8px; }
+.circle-confirm .cc-no { flex: 1; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--muted); }
+.circle-confirm .cc-yes { flex: 1; border: none; color: #fff; border-radius: 10px; padding: 9px; font-weight: 800; font-size: 13px; cursor: pointer; background: var(--grad); }
 @keyframes backdrop-fade { from { opacity: 0; } }
 .settings {
   width: min(420px, 92vw); max-height: 84vh; overflow-y: auto;
@@ -1051,6 +1094,13 @@ button.sync-pill.on:hover { background: rgba(34,197,94,.24); }
 .dev-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; margin: 0 1px; }
 .dev-dot.walk { background: #1f9d4d; }
 .dev-dot.block { background: #d23030; }
+.signout-btn {
+  width: 100%; text-align: center; padding: 10px; border-radius: 12px;
+  font-size: 13px; font-weight: 800; letter-spacing: .01em; cursor: pointer; font-family: inherit;
+  color: #b3261e; background: rgba(179, 38, 30, 0.08); border: 1px solid rgba(179, 38, 30, 0.25);
+}
+.signout-btn:hover { background: rgba(179, 38, 30, 0.14); }
+
 .dev-toggle {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 5px; border-radius: 999px;
   font-size: 11px; font-weight: 900; letter-spacing: .04em; cursor: pointer; font-family: inherit;

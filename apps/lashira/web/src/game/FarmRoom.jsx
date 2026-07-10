@@ -226,7 +226,7 @@ function presenceCardFrom(snap) {
   };
 }
 
-export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId = null, visitOwnerName = null, homeCircleId = null, onTravel = null, onPortalTravel = null, initialTile = null, initialFacing = 'South' }) {
+export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId = null, visitOwnerName = null, homeCircleId = null, myCircles = [], activeCircleId = null, onSelectCircle = null, onSignOut = null, onTravel = null, onPortalTravel = null, initialTile = null, initialFacing = 'South' }) {
   const isVisitor = !!visitOwnerId;
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -879,6 +879,20 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     g.player.oneShotStart = performance.now();
     sfx.play('swing');
   }
+  // Magic skills (Bolt/Storm/Mend) should visibly CAST, not swing a weapon —
+  // the hero sprite sheet has a real 'Spell{facing}' pose distinct from
+  // 'Swing{facing}' (see extractor-manifest.json motions); fall back to the
+  // weapon-swing motion only if this hero has no Spell frames (e.g. bare-handed).
+  function castMotionBase(g) {
+    const facing = g.player.facing;
+    if (g.tables && stepCount(g.tables, 'Spell' + facing) > 0) return 'Spell';
+    return attackMotionBase(g);
+  }
+  function playCast(g) {
+    g.player.oneShot = castMotionBase(g);
+    g.player.oneShotStart = performance.now();
+    sfx.play('swing');
+  }
   // ---- SWING-TO-GATHER: the weapon swing IS the tool. ----
   const GATHER_ICON = { wood: '🪵', stone: '🪨', ore: '🟨', gem: '🔷' };
   // Chebyshev distance from the player to a node's rect ≤ 1 (you're next to it).
@@ -922,6 +936,65 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     a.hp = Math.max(0, (a.hp || 0) - dmg); // optimistic; host broadcast is authoritative
     presenceCtrlRef.current?.sendIntent?.({ t: 'mob-hit', id: a.sourceId, dmg, by: presenceProfileId(profile) });
     return true;
+  }
+  // Component-level (NOT nested in the render-loop useEffect) — the live-presence
+  // effect's applyIntent('pvp-hit') handler needs these too, and a function
+  // declared inside one useEffect's closure is invisible to a sibling effect's
+  // closure. This was the actual PvP-damage bug: ensurePvpCombat/entityPx/
+  // faintPlayer/pvpFaintPlayer/syncBattleState used to live inside the render
+  // loop's useEffect, so calling them from applyIntent threw a silent
+  // ReferenceError the instant a pvp-hit intent arrived — the victim's hp
+  // subtraction (and every line after it: float, sfx, flash, faint) never ran.
+  function syncBattleState(g) {
+    const next = { on: g.combat.on, hp: g.combat.hp, maxHp: g.combat.maxHp, pvp: g.pvp.on };
+    if (battleRef.current.on !== next.on || battleRef.current.hp !== next.hp || battleRef.current.pvp !== next.pvp) {
+      battleRef.current = next; setBattle(next);
+    }
+  }
+  // Make sure MY local combat pool is real, PvP-sized, and battle-visible right
+  // before an incoming PvP hit lands. Without this a big hit could zero a
+  // still-at-default ~100 pool → faint → heal-to-full (reads as "no damage
+  // taken"), and a stale combat.on=false would hide the HP drop in the HUD
+  // (which shows FULL hp when out of combat). This is the receiver-side
+  // robustness that makes damage actually stick + show regardless of whether
+  // my own zone-transition timing had already sized me up.
+  function ensurePvpCombat(g) {
+    const lg = logicRef.current;
+    const path = lg?.path || 'warrior', level = lg?._level?.() ?? 1;
+    const properMax = pvpMaxHp(path, level);
+    if (g.combat.maxHp !== properMax) {
+      const frac = g.combat.maxHp > 0 ? g.combat.hp / g.combat.maxHp : 1;
+      g.combat.maxHp = properMax;
+      g.combat.hp = Math.round(properMax * frac);
+    }
+    g.combat.on = true;
+    g.pvp.on = true;
+  }
+  function entityPx(e) {
+    const t = e.moveT ?? 1;
+    const fx = e.from && t < 1 ? e.from[0] + (e.tile[0] - e.from[0]) * t : e.tile[0];
+    const fy = e.from && t < 1 ? e.from[1] + (e.tile[1] - e.from[1]) * t : e.tile[1];
+    return [fx * TILE, fy * TILE];
+  }
+  // Faint = kid-safe: no loss. Knock the player north of the arena wall (combat
+  // toggles off there), heal to full, brief timeout before you can re-enter.
+  function faintPlayer(g, now) {
+    g.combat.deadUntil = now + MONSTER_FAINT_MS;
+    g.combat.hp = g.combat.maxHp;
+    const safe = [ARENA_GATE_X, ARENA_WALL_Y - 1];
+    g.player.tile = [...safe]; g.player.from = [...safe]; g.player.moveT = 1;
+    g.floats.push({ x: safe[0] * TILE + TILE / 2, y: safe[1] * TILE, text: '💫 Fainted! Recovering…', start: performance.now(), ttl: 1600 });
+    sfx.play('faint');
+    g.combat.on = false; syncBattleState(g);
+  }
+  // PvP faint = kid-safe, same knockback/heal/timeout treatment as a monster
+  // faint (no loss) — the one thing that IS recorded is the KO itself, onto
+  // the circle rank (the victim reports it; see pvp-concept.md §4 for why
+  // that's the right trust posture for a family/friend circle).
+  function pvpFaintPlayer(g, winnerId) {
+    faintPlayer(g, performance.now());
+    g.pvp.on = false; // faintPlayer already ejects the player out of the arena
+    if (winnerId && circleId) recordPvpKo({ circleId, winnerId });
   }
   // Basic attack — always plays the weapon swing; deals MELEE_DAMAGE to the faced
   // tile when in the arena. Outside the arena it's just the swing (nothing to hit).
@@ -1062,7 +1135,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     // fired; if the victim's HP never moves despite seeing this, the bug is on
     // the receiving/intent side, not the targeting side.
     logicRef.current?.flash?.(miss ? '⚔ Miss!' : `⚔ Hit ${target.actor?.name || 'them'} for ${dmg}`);
-    pvpHitPeer(g, target.id, dmg, crit, miss);
+    pvpHitPeer(g, target.id, dmg, crit, miss, 'phys');
   }
   // PvP skill cast: Bolt (short capped reach — unlimited range was the balance
   // sim's #1 fairness-breaker, letting casters kite melee to 0% wins), Storm
@@ -1091,7 +1164,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         const { dmg, crit, miss } = rollPvpDamage(baseDmg);
         castSpell(g, skill, t.tile);
         logicRef.current?.flash?.(miss ? '✷ Miss!' : `✷ Hit ${t.actor?.name || 'them'} for ${dmg}`);
-        pvpHitPeer(g, t.id, dmg, crit, miss);
+        pvpHitPeer(g, t.id, dmg, crit, miss, 'mag');
       }
       return;
     }
@@ -1114,7 +1187,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     const { dmg, crit, miss } = rollPvpDamage(baseDmg);
     castSpell(g, skill, target.tile);
     logicRef.current?.flash?.(miss ? '✦ Miss!' : `✦ Hit ${target.actor?.name || 'them'} for ${dmg}`);
-    pvpHitPeer(g, target.id, dmg, crit, miss);
+    pvpHitPeer(g, target.id, dmg, crit, miss, 'mag');
   }
   // Skill i — Bolt (single), Storm (all), Mend (heal). MP = stamina; damage/heal
   // scale with level via the shared skillPower. Damage still routes through the
@@ -1131,7 +1204,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     if (!canAffordSkill(stamina, skill)) { logicRef.current?.flash?.('Too tired for ' + (skill.name || 'that skill')); return; }
     if (cost > 0 && !logicRef.current?.spendStamina(cost)) return;
     g.combat.skillReadyAt[i] = now + Number(skill.cdMs || 1000);
-    playSwing(g);
+    playCast(g);
     if (g.pvp.on) { pvpCast(g, i, skill); return; }
     const p = g.player;
     const L = logicRef.current?._level?.() ?? 1;
@@ -1573,32 +1646,6 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         g.monsters = []; // host owns the monsters; drop any we simulated as host earlier
       }
     }
-    function syncBattleState(g) {
-      const next = { on: g.combat.on, hp: g.combat.hp, maxHp: g.combat.maxHp, pvp: g.pvp.on };
-      if (battleRef.current.on !== next.on || battleRef.current.hp !== next.hp || battleRef.current.pvp !== next.pvp) {
-        battleRef.current = next; setBattle(next);
-      }
-    }
-    // Make sure MY local combat pool is real, PvP-sized, and battle-visible right
-    // before an incoming PvP hit lands. Without this a big hit could zero a
-    // still-at-default ~100 pool → faint → heal-to-full (reads as "no damage
-    // taken"), and a stale combat.on=false would hide the HP drop in the HUD
-    // (which shows FULL hp when out of combat). This is the receiver-side
-    // robustness that makes damage actually stick + show regardless of whether
-    // my own zone-transition timing had already sized me up.
-    function ensurePvpCombat(g) {
-      const lg = logicRef.current;
-      const path = lg?.path || 'warrior', level = lg?._level?.() ?? 1;
-      const properMax = pvpMaxHp(path, level);
-      if (g.combat.maxHp !== properMax) {
-        const frac = g.combat.maxHp > 0 ? g.combat.hp / g.combat.maxHp : 1;
-        g.combat.maxHp = properMax;
-        g.combat.hp = Math.round(properMax * frac);
-      }
-      g.combat.on = true;
-      g.pvp.on = true;
-    }
-
     // Host-simulated monster AI: chase the player when in range, then TELEGRAPH an
     // attack (windup you can step out of) and strike on a cooldown; otherwise
     // wander. Movement is collision-aware (map + other mobs + the player).
@@ -1647,34 +1694,6 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       sfx.play('hurt');
       if (g.combat.hp <= 0) faintPlayer(g, now); else syncBattleState(g);
     }
-    // Faint = kid-safe: no loss. Knock the player north of the arena wall (combat
-    // toggles off there), heal to full, brief timeout before you can re-enter.
-    function faintPlayer(g, now) {
-      g.combat.deadUntil = now + MONSTER_FAINT_MS;
-      g.combat.hp = g.combat.maxHp;
-      const safe = [ARENA_GATE_X, ARENA_WALL_Y - 1];
-      g.player.tile = [...safe]; g.player.from = [...safe]; g.player.moveT = 1;
-      g.floats.push({ x: safe[0] * TILE + TILE / 2, y: safe[1] * TILE, text: '💫 Fainted! Recovering…', start: performance.now(), ttl: 1600 });
-      sfx.play('faint');
-      g.combat.on = false; syncBattleState(g);
-    }
-    // PvP faint = kid-safe, same knockback/heal/timeout treatment as a monster
-    // faint (no loss) — the one thing that IS recorded is the KO itself, onto
-    // the circle rank (the victim reports it; see pvp-concept.md §4 for why
-    // that's the right trust posture for a family/friend circle).
-    function pvpFaintPlayer(g, winnerId) {
-      faintPlayer(g, performance.now());
-      g.pvp.on = false; // faintPlayer already ejects the player out of the arena
-      if (winnerId && circleId) recordPvpKo({ circleId, winnerId });
-    }
-
-    function entityPx(e) {
-      const t = e.moveT ?? 1;
-      const fx = e.from && t < 1 ? e.from[0] + (e.tile[0] - e.from[0]) * t : e.tile[0];
-      const fy = e.from && t < 1 ? e.from[1] + (e.tile[1] - e.from[1]) * t : e.tile[1];
-      return [fx * TILE, fy * TILE];
-    }
-
     function playerMotion(g) {
       const p = g.player;
       // mount check copied AS IS from Kingdom Heroes' playerMotion(): the
@@ -2406,13 +2425,15 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           <>
             <Hud snap={snap} game={logicRef.current} onUse={doUse} onSleep={doSleep} onToggleMount={toggleMount} onEmote={doEmote} onOpen={(name) => { if (name === 'shop') setShopTab('seeds'); setPanel(name); }}
               zoom={zoom} setZoom={setZoom} speed={speed} setSpeed={setSpeed} usingHero={usingHero} hero={hero} presence={presence} circleId={circleId}
+              myCircles={myCircles} activeCircleId={activeCircleId} onSelectCircle={onSelectCircle} onSignOut={onSignOut}
               getSyncDebug={() => presenceCtrlRef.current?.debug?.() || null}
               battle={battle} battleSkills={battleSkills} onStrike={doStrike} onSkill={doSkill} cooldownUI={cooldownUI}
               zoneLabel={zoneLabel}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
             <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechSnap} mechGame={mechRef.current} shopTab={shopTab} onClose={() => setPanel(null)}
               selfId={profile?.id} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} onGearChanged={refreshHeroLook} battleSkills={battleSkills}
-              heroTables={G.current?.tables} heroResources={G.current?.resources} heroHasWeapon={G.current?.hasWeapon} />
+              heroTables={G.current?.tables} heroResources={G.current?.resources} heroHasWeapon={G.current?.hasWeapon}
+              castleSkin={castleSkin} onCastleSkin={setCastleSkin} />
             {tileFan && (
               <TileFan fan={tileFan} game={logicRef.current} snap={snap}
                 onResult={popFanResult} onClose={() => setTileFan(null)}

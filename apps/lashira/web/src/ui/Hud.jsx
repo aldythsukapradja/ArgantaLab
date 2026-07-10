@@ -56,7 +56,7 @@ function useCircleName(circleId) {
   return name;
 }
 
-export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, zoneLabel, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
+export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, myCircles = [], activeCircleId = null, onSelectCircle = null, onSignOut = null, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, zoneLabel, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
   const [showSettings, setShowSettings] = useState(false);
   const [favEmotes, setFavEmotes] = useState(() => loadFavoriteEmotes(FAV_EMOTES_KEY));
   const [emoteFanOpen, setEmoteFanOpen] = useState(false);
@@ -110,6 +110,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
     return () => document.removeEventListener('mousedown', close);
   }, [showSeeds]);
   const [showLive, setShowLive] = useState(false);
+  const [confirmCircle, setConfirmCircle] = useState(null); // circle pending a switch-confirm
   const [skinId, setSkinId] = useState(loadSkin);
   const [sfxMuted, setSfxMuted] = useState(() => sfx.isMuted());
   const [sfxVol, setSfxVol] = useState(() => sfx.getVolume());
@@ -204,11 +205,11 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
         </div>
 
         <div className="quicknav">
+          <button className="navbtn" onClick={() => onOpen('character')}>👤 Me</button>
           <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
           <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
           <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
           <button className="navbtn" onClick={() => onOpen('quests')}>📜 Quests</button>
-          <button className="navbtn" onClick={() => onOpen('character')}>👤 Me</button>
         </div>
 
         {/* Circle name + live-player status moved into Settings → Circle sync
@@ -331,13 +332,9 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
               )}
               <section className="set-card">
                 <h4>Circle sync</h4>
-                {/* Circle name + live-player status live here now (moved off the
-                    main HUD) — tap either to open the full "who's online" popup,
-                    same as the HUD pills used to. */}
+                {/* Live-player status + save target. Tap either pill to open the
+                    full "who's online" popup, same as the HUD pills used to. */}
                 <div className="setrow" style={{ flexWrap: 'wrap', gap: 6 }}>
-                  <button type="button" className={'sync-pill' + (circleId ? ' on' : ' off')} title={circleId || 'no circle bound'} onClick={() => setShowLive(true)}>
-                    {circleId ? '🔗 ' + (circleName || 'circle …' + String(circleId).slice(0, 6)) : '👤 personal (no circle)'}
-                  </button>
                   <button type="button" className={'sync-pill' + ((presence?.count || 0) > 0 ? ' on' : '')} title="players broadcasting on this circle right now" onClick={() => setShowLive(true)}>
                     {(presence?.count || 0) > 0 ? '🟢 ' + presence.count + ' live' + (presence.names?.[0] ? ' · ' + presence.names.join(', ') : '') : '⚪ 0 live (solo)'}
                   </button>
@@ -351,6 +348,53 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
                   </code>
                 )}
               </section>
+              {onSelectCircle && (
+                <section className="set-card">
+                  <h4>Your circles <em className="set-count">{myCircles.length || 1}</em></h4>
+                  {/* SELECTOR (not just a label): pick which circle's shared farm
+                      is active. Switching remounts the farm into that circle;
+                      distinct from Travel's read-only "visit a circle-mate". */}
+                  <div className="circle-select">
+                    {myCircles.length === 0 && (
+                      <div className="circle-row active">
+                        <span className="cr-dot" />
+                        <span className="cr-name">{circleName || (circleId ? 'This circle' : 'Personal farm')}
+                          <small>{circleId ? 'the only circle here' : 'no circle — just you'}</small></span>
+                        <span className="cr-active">Active</span>
+                      </div>
+                    )}
+                    {myCircles.map((c) => {
+                      const isActive = c.id === activeCircleId;
+                      return (
+                        <div key={c.id} className={'circle-row' + (isActive ? ' active' : '')}>
+                          <span className="cr-dot" />
+                          <span className="cr-name">{c.emoji || '👥'} {c.name}
+                            <small>{c.memberCount} member{c.memberCount === 1 ? '' : 's'}{c.isOwner ? ' · you lead' : ''}</small></span>
+                          {isActive
+                            ? <span className="cr-active">Active</span>
+                            : <button type="button" className="cr-switch" onClick={() => setConfirmCircle(c)}>Switch</button>}
+                        </div>
+                      );
+                    })}
+                    {activeCircleId && myCircles.length > 0 && (
+                      <div className={'circle-row' + (!activeCircleId ? ' active' : '')}>
+                        <span className="cr-dot personal" />
+                        <span className="cr-name">🏡 Personal farm<small>just yours, no circle</small></span>
+                        <button type="button" className="cr-switch" onClick={() => setConfirmCircle({ id: null, name: 'Personal farm' })}>Switch</button>
+                      </div>
+                    )}
+                  </div>
+                  {confirmCircle && (
+                    <div className="circle-confirm">
+                      <p>Switch to <b>{confirmCircle.name}</b>? Your farm view changes — nothing is lost.</p>
+                      <div className="cc-row">
+                        <button type="button" className="cc-no" onClick={() => setConfirmCircle(null)}>Cancel</button>
+                        <button type="button" className="cc-yes" onClick={() => { onSelectCircle(confirmCircle.id); setConfirmCircle(null); setShowSettings(false); }}>Switch</button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
               <section className="set-card">
                 <h4>{snap.pathIcon} {snap.pathName || 'Guardian'} · {snap.title} · Lv {fmt(snap.level)} <em className="set-count">{rank.name}</em></h4>
               </section>
@@ -469,6 +513,15 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
                   <span>{Number(speed ?? 1.5).toFixed(1)}×</span>
                 </div>
               </section>
+              {onSignOut && (
+                <section className="set-card">
+                  {/* Standalone only — an embedded session (KinetikCircle/ArgantaLab)
+                      belongs to the host app, which owns sign-in/out; App.jsx only
+                      passes onSignOut down when NOT embedded. */}
+                  <h4>Account</h4>
+                  <button type="button" className="signout-btn" onClick={() => onSignOut()}>🚪 Sign out</button>
+                </section>
+              )}
             </div>
           </div>
         </div>
@@ -485,7 +538,10 @@ function LivePopup({ selfCard, peers, circleName, onClose }) {
     ...(peers || []).map((p) => ({ key: p.id, name: p.name, card: p.card ? cardFromPeer(p) : null })),
   ];
   return (
-    <div className="browser-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    // `popover`: this opens from INSIDE Settings, so it must sit ABOVE the
+    // settings backdrop (both were .browser-backdrop z:50 — this one lost the
+    // tie by DOM order and rendered behind it). See styles.css .popover (z:55).
+    <div className="browser-backdrop popover" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="live-popup">
         <div className="browser-head">
           <b>🟢 In the farm now{circleName ? ' · ' + circleName : ''} <em className="set-count">{entries.length}</em></b>
