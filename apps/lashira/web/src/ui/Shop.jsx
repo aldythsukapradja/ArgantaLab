@@ -9,11 +9,17 @@ import { SPECIES } from '../data/livestock.js';
 import { MAT_ICON } from '../game/farm-mechanics.js';
 import { weaponOf, armorOf } from '@arganta/combat';
 import { QtyDialog } from './QtyDialog.jsx';
-import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem } from '../net/cosmetics.js';
+import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem, enhanceCosmeticItem, enhanceCost, ENHANCE_MAX } from '../net/cosmetics.js';
 import { charParts, sheetUrl, loadImage } from '../engine/data.js';
 
 const COSMETIC_ICON = { helmet: '⛑', coat: '🧥', sword: '⚔', shield: '🛡' };
 const COSMETIC_CATS = ['helmet', 'coat', 'sword', 'shield'];
+const COSMETIC_SUBTABS = [
+  { id: 'helmet', icon: '⛑', label: 'Helmet' },
+  { id: 'coat', icon: '🧥', label: 'Coat' },
+  { id: 'sword', icon: '⚔', label: 'Weapon' },
+  { id: 'shield', icon: '🛡', label: 'Shield' },
+];
 
 // Real per-part sprite thumbnail — every helmet/coat/sword/shield in the shop
 // otherwise looks identical (one emoji per CATEGORY, 10 items indistinguishable).
@@ -48,9 +54,16 @@ function CosmeticThumb({ cat, part }) {
   return <canvas ref={ref} width={96} height={96} className="cosmetic-thumb" />;
 }
 
-const cosmeticStatLine = (it) => [
-  it.atk ? `⚔+${it.atk} ATK` : null, it.def ? `🛡+${it.def} DEF` : null, it.hp ? `❤+${it.hp} HP` : null,
-].filter(Boolean).join(' · ');
+// +10% of the item's OWN base stat per enhance level (cumulative) — see
+// migration_character_shop_enhance.sql. level=0 (unenhanced) = just the base stat.
+const cosmeticStatLine = (it, level = 0) => {
+  const mult = 1 + level * 0.1;
+  return [
+    it.atk ? `⚔+${Math.round(it.atk * mult)} ATK` : null,
+    it.def ? `🛡+${Math.round(it.def * mult)} DEF` : null,
+    it.hp ? `❤+${Math.round(it.hp * mult)} HP` : null,
+  ].filter(Boolean).join(' · ');
+};
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 const cur = (snap) => (snap?.bloom ?? snap?.gold ?? 0);
@@ -69,6 +82,7 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   const [tab, setTab] = useState(TABS.some((t) => t.id === initialTab) ? initialTab : 'seeds');
   const [idx, setIdx] = useState(0);
   const [buying, setBuying] = useState(null); // crop with an open qty dialog
+  const [cosmeticCat, setCosmeticCat] = useState('helmet'); // Cosmetics sub-tab
 
   // 🛍️ Cosmetics — shared with HQ's Character Forge Shop (same catalog + ownership
   // tables, same Supabase project: migration_character_shop.sql). Loaded once per
@@ -76,14 +90,16 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   // in sync right after a buy without needing to touch FarmLogic's own diamonds field.
   const [shopCatalog, setShopCatalog] = useState([]);
   const [ownedCosmetics, setOwnedCosmetics] = useState(new Set());
+  const [cosmeticLevels, setCosmeticLevels] = useState({}); // item_key -> enhance level (0-5)
   const [cosmeticBusy, setCosmeticBusy] = useState(null);
   const [cosmeticMsg, setCosmeticMsg] = useState(null);
   const [diamondOverride, setDiamondOverride] = useState(null);
   const [partMeta, setPartMeta] = useState({}); // cat -> { byId: {id -> real part, for thumbnails} }
   useEffect(() => {
     let live = true;
-    Promise.all([loadShopCatalog(), loadOwnedCosmetics()]).then(([cat, owned]) => {
-      if (live) { setShopCatalog(cat); setOwnedCosmetics(owned); }
+    Promise.all([loadShopCatalog(), loadOwnedCosmetics()]).then(([cat, own]) => {
+      if (!live) return;
+      setShopCatalog(cat); setOwnedCosmetics(own.owned); setCosmeticLevels(own.levels);
     });
     Promise.all(COSMETIC_CATS.map((c) => charParts(c).then((parts) => [c, parts]).catch(() => [c, []])))
       .then((entries) => {
@@ -100,6 +116,27 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
     const r = await buyCosmeticItem(item.itemKey);
     setCosmeticMsg(r.message);
     if (r.ok) { setOwnedCosmetics((o) => new Set(o).add(item.itemKey)); if (r.balance != null) setDiamondOverride(r.balance); }
+    setCosmeticBusy(null);
+  }
+  // Materials are spent CLIENT-side (same trust model as mine()/chop()/toolCost() —
+  // wood/stone aren't a real synced column yet, see the migration header) only AFTER
+  // the RPC confirms the level actually went up, so a failed enhance never costs you.
+  async function enhanceItem(item, level) {
+    if (cosmeticBusy) return;
+    const cost = enhanceCost(level + 1);
+    if ((snap.wood || 0) < cost.wood || (snap.stone || 0) < cost.stone || (snap.bloom || 0) < cost.bloom) {
+      setCosmeticMsg(`Need 🪵${cost.wood} 🪨${cost.stone} 🌸${cost.bloom}`); return;
+    }
+    setCosmeticBusy(item.itemKey); setCosmeticMsg(null);
+    const r = await enhanceCosmeticItem(item.itemKey);
+    if (r.ok) {
+      game.state.wood = Math.max(0, (game.state.wood || 0) - cost.wood);
+      game.state.stone = Math.max(0, (game.state.stone || 0) - cost.stone);
+      game.state.bloom = Math.max(0, (game.state.bloom || 0) - cost.bloom);
+      game.save?.(); game.emit?.();
+      setCosmeticLevels((lv) => ({ ...lv, [item.itemKey]: r.level }));
+    }
+    setCosmeticMsg(r.message);
     setCosmeticBusy(null);
   }
   async function wearCosmetic(item) {
@@ -122,13 +159,14 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
   // action: { label, disabled, tone?, onClick } | null }.
   const wares = useMemo(() => buildWares(tab, {
     snap, game, mech, mechGame, op, money, setBuying,
-    shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, partMeta,
-  }), [tab, snap, mech, op, money, shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, partMeta]); // eslint-disable-line react-hooks/exhaustive-deps
+    shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, enhanceItem, partMeta, cosmeticCat,
+  }), [tab, snap, mech, op, money, shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, partMeta, cosmeticCat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const safeIdx = wares.length ? Math.min(idx, wares.length - 1) : 0;
   const feat = wares[safeIdx] || null;
   const go = (d) => { if (wares.length) setIdx((safeIdx + d + wares.length) % wares.length); };
   const pickTab = (id) => { setTab(id); setIdx(0); };
+  const pickCosmeticCat = (id) => { setCosmeticCat(id); setIdx(0); };
 
   return (
     <>
@@ -144,6 +182,16 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
           </button>
         ))}
       </div>
+
+      {tab === 'cosmetics' && (
+        <div className="ptabs ptabs-sub">
+          {COSMETIC_SUBTABS.map((t) => (
+            <button key={t.id} className={'ptab sub' + (cosmeticCat === t.id ? ' on' : '')} onClick={() => pickCosmeticCat(t.id)}>
+              <span>{t.icon}</span><small>{t.label}</small>
+            </button>
+          ))}
+        </div>
+      )}
 
       {cosmeticMsg && tab === 'cosmetics' && <div className="empty-note shop-msg">{cosmeticMsg}</div>}
 
@@ -193,7 +241,7 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
 
 function buildWares(tab, ctx) {
   const { snap, game, mech, mechGame, op, money, setBuying } = ctx;
-  const { shopCatalog, ownedCosmetics, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, partMeta } = ctx;
+  const { shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, diamonds, buyCosmetic, wearCosmetic, partMeta, cosmeticCat } = ctx;
 
   if (tab === 'seeds') {
     return Object.values(CROPS).map((c) => {
@@ -232,7 +280,9 @@ function buildWares(tab, ctx) {
     // Shared with HQ's Character Forge Shop — same catalog + ownership, same
     // Supabase project. Buy spends diamonds; Wear equips it onto YOUR character
     // (patches one composer-spec slot, reloads to show it — see net/cosmetics.js).
-    const gear = shopCatalog.map((it) => {
+    // Sub-tabbed by category (Helmet/Coat/Weapon/Shield) so 40 items don't blur
+    // into one indistinguishable swipe.
+    const gear = shopCatalog.filter((it) => it.cat === cosmeticCat).map((it) => {
       const owned = ownedCosmetics.has(it.itemKey);
       const afford = diamonds >= it.price;
       const busy = cosmeticBusy === it.itemKey;
@@ -240,14 +290,15 @@ function buildWares(tab, ctx) {
         ? { label: busy ? 'Wearing…' : 'Wear', disabled: busy, onClick: () => wearCosmetic(it) }
         : { label: busy ? 'Buying…' : `Buy 💎${fmt(it.price)}`, disabled: busy || !afford, tone: afford ? undefined : 'ghost', onClick: () => buyCosmetic(it) };
       const realPart = partMeta[it.cat]?.byId?.[it.partId];
+      const level = cosmeticLevels[it.itemKey] || 0;
       return {
         key: it.itemKey,
         icon: realPart ? <CosmeticThumb cat={it.cat} part={realPart} /> : (COSMETIC_ICON[it.cat] || '✨'),
-        title: `${it.setLabel || it.cat} #${it.partId}`, badge: owned ? 'Owned' : undefined,
-        sub: cosmeticStatLine(it) || 'Cosmetic', action,
+        title: `${it.setLabel || it.cat} #${it.partId}`, badge: owned ? (level > 0 ? `+${level}` : 'Owned') : undefined,
+        sub: cosmeticStatLine(it, level) || 'Cosmetic', action,
       };
     });
-    gear.push({ key: 'castle', icon: '🏰', title: 'Castle skins', sub: 'Restyle your home (in Home)', soon: true, action: { label: 'free', disabled: true, tone: 'ghost', onClick: () => {} } });
+    if (cosmeticCat === 'coat') gear.push({ key: 'castle', icon: '🏰', title: 'Castle skins', sub: 'Restyle your home (in Home)', soon: true, action: { label: 'free', disabled: true, tone: 'ghost', onClick: () => {} } });
     return gear;
   }
 
@@ -269,7 +320,9 @@ function buildWares(tab, ctx) {
   return [];
 }
 
-function forgeWares({ snap, mech, mechGame }) {
+function forgeWares(ctx) {
+  const { snap, mech, mechGame } = ctx;
+  const { shopCatalog, ownedCosmetics, cosmeticLevels, cosmeticBusy, partMeta, enhanceItem } = ctx;
   const list = [];
   // Gear: weapon + armor (Craft/Upgrade tiers).
   for (const [slot, icon] of [['weapon', '⚔'], ['armor', '🛡']]) {
@@ -301,6 +354,30 @@ function forgeWares({ snap, mech, mechGame }) {
   list.push({ key: 'smelt', icon: '🧱', title: 'Smelt Ingot', sub: `3🟨 → 1🧱 · have ${fmt(mech?.ingot || 0)}🧱`, action: { label: 'Smelt', disabled: !mechGame.canSmelt(), onClick: () => mechGame.smelt() } });
   list.push({ key: 'cook', icon: '🧪', title: 'Cook Potion', sub: `2🐟 → 1🧪 · have ${fmt(mech?.potion || 0)}🧪`, action: { label: 'Cook', disabled: !mechGame.canCook(), onClick: () => mechGame.cook() } });
   if ((mech?.potion || 0) > 0) list.push({ key: 'drink', icon: '🧪', title: 'Drink potion', sub: '+30 stamina now', action: { label: 'Drink', tone: 'ghost', disabled: false, onClick: () => mechGame.drinkPotion() } });
+
+  // ✨ Enhance your gear — per-OWNED-cosmetic leveling, separate from the account-
+  // level weapon/armor tiers above. Diamonds bought the piece; wood/stone/bloom
+  // level it up (see net/cosmetics.js — no diamonds spent here, ever).
+  const ownedItems = shopCatalog.filter((it) => ownedCosmetics.has(it.itemKey));
+  if (!ownedItems.length) {
+    list.push({ key: 'enh-empty', icon: '✨', title: 'Enhance your gear', sub: 'Buy a helmet, coat, weapon, or shield in Cosmetics first', soon: true, action: { label: 'Visit Cosmetics', disabled: true, tone: 'ghost', onClick: () => {} } });
+  } else {
+    for (const it of ownedItems) {
+      const level = cosmeticLevels[it.itemKey] || 0;
+      const maxed = level >= ENHANCE_MAX;
+      const cost = enhanceCost(level + 1);
+      const afford = (snap?.wood || 0) >= cost.wood && (snap?.stone || 0) >= cost.stone && (snap?.bloom || 0) >= cost.bloom;
+      const realPart = partMeta[it.cat]?.byId?.[it.partId];
+      const busy = cosmeticBusy === it.itemKey;
+      list.push({
+        key: 'enh-' + it.itemKey,
+        icon: realPart ? <CosmeticThumb cat={it.cat} part={realPart} /> : (COSMETIC_ICON[it.cat] || '✨'),
+        title: `${it.setLabel || it.cat} #${it.partId}`, badge: level > 0 ? `+${level}` : undefined,
+        sub: maxed ? `${cosmeticStatLine(it, level)} · MAX level` : `${cosmeticStatLine(it, level)} · → Lv${level + 1} needs 🪵${cost.wood} 🪨${cost.stone} 🌸${cost.bloom}`,
+        action: { label: maxed ? 'Max' : (busy ? 'Enhancing…' : 'Enhance'), disabled: maxed || busy || !afford, tone: maxed ? 'ghost' : undefined, onClick: () => enhanceItem(it, level) },
+      });
+    }
+  }
   return list;
 }
 

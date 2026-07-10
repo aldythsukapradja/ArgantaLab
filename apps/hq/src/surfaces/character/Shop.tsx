@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PartThumb } from './PartBrowser'
 import { useCategoryData } from './composer'
-import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, getMyDiamondBalance, type ShopItem } from './heroData'
+import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem, getMyDiamondBalance, type ShopItem } from './heroData'
 
 // 🛍️ Shop — the curated cosmetic catalog (docs/CHARACTER-FORGE-SHOP-CONCEPT.md):
 // 4 categories capped at 10 items each, 2,000-10,000 💎, stats scale with price.
@@ -41,6 +41,15 @@ export function Shop() {
     if (r.ok) { setOwned(o => new Set(o).add(item.itemKey)); if (r.balance != null) setBalance(r.balance) }
     setBuying(null)
   }
+  // Same convenience LashiraBloom's Shop already has — equips onto the OPERATOR'S OWN
+  // account (matches buy's scope). Reload to actually see it, same as LashiraBloom.
+  async function wear(item: ShopItem) {
+    if (buying) return
+    setBuying(item.itemKey); setMsg(null)
+    const r = await equipCosmeticItem(item.itemKey)
+    if (r.ok) { setMsg({ ok: true, text: 'Equipped! Reloading to show your new look…' }); setTimeout(() => window.location.reload(), 900) }
+    else { setMsg({ ok: false, text: r.message }); setBuying(null) }
+  }
 
   const statLine = (it: ShopItem) => [
     it.atk ? `⚔ +${it.atk} ATK` : null,
@@ -78,7 +87,11 @@ export function Shop() {
                     {part ? <PartThumb cat={it.cat} part={part} /> : <div className="f-thumbc" style={{ width: 64, height: 64 }} />}
                     <div className="shop-stat">{statLine(it)}</div>
                     <div className="shop-price">{isOwned ? 'Owned ✓' : `💎 ${it.price.toLocaleString()}`}</div>
-                    {!isOwned && (
+                    {isOwned ? (
+                      <button className="f-gbtn" disabled={buying === it.itemKey} onClick={() => wear(it)}>
+                        {buying === it.itemKey ? 'Wearing…' : 'Wear'}
+                      </button>
+                    ) : (
                       <button className="f-gbtn" disabled={!afford || buying === it.itemKey} onClick={() => buy(it)}>
                         {buying === it.itemKey ? 'Buying…' : afford ? 'Buy' : 'Need more 💎'}
                       </button>

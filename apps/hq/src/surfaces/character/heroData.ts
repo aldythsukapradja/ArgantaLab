@@ -126,6 +126,23 @@ export async function buyCosmeticItem(itemKey: string): Promise<{ ok: boolean; m
     return { ok: true, message: data.already ? 'Already owned.' : 'Purchased!', balance: data.balance }
   } catch (e) { return { ok: false, message: (e as any)?.message || 'Purchase failed.' } }
 }
+// Equip = wear it. Patches ONE slot in the OPERATOR'S OWN composer spec (same self-
+// referential scope as buy_cosmetic_item / equip_mount — mirrors
+// apps/lashira/web/src/net/cosmetics.js's equipCosmeticItem exactly, same RPC). The
+// Lab's roster view loads a DIFFERENT user's spec, so a reload here is what actually
+// shows the change if you're looking at your own character afterward.
+export async function equipCosmeticItem(itemKey: string): Promise<{ ok: boolean; message: string }> {
+  if (!cloudEnabled) return { ok: false, message: 'Offline — sign in to equip.' }
+  try {
+    const { data, error } = await supabase.rpc('equip_cosmetic_item', { p_item_key: itemKey })
+    if (error) return { ok: false, message: error.message }
+    if (!data?.ok) {
+      const text = data?.error === 'no_character' ? (data.message || 'No character yet.') : 'Equip failed.'
+      return { ok: false, message: text }
+    }
+    return { ok: true, message: 'Equipped!' }
+  } catch (e) { return { ok: false, message: (e as any)?.message || 'Equip failed.' } }
+}
 export async function getMyDiamondBalance(): Promise<number> {
   if (!cloudEnabled) return 0
   try {

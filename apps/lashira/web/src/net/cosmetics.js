@@ -19,13 +19,15 @@ export async function loadShopCatalog() {
   } catch { return []; }
 }
 
+// Returns BOTH ownership (Set of item_keys) and each item's enhance level (0-5,
+// migration_character_shop_enhance.sql) from the same call.
 export async function loadOwnedCosmetics() {
-  if (!hasSupabase) return new Set();
+  if (!hasSupabase) return { owned: new Set(), levels: {} };
   try {
     const { data, error } = await supabase.rpc('my_cosmetic_items', { p_person: null });
-    if (error || !data) return new Set();
-    return new Set(data.owned || []);
-  } catch { return new Set(); }
+    if (error || !data) return { owned: new Set(), levels: {} };
+    return { owned: new Set(data.owned || []), levels: data.levels || {} };
+  } catch { return { owned: new Set(), levels: {} }; }
 }
 
 export async function buyCosmeticItem(itemKey) {
@@ -57,4 +59,22 @@ export async function equipCosmeticItem(itemKey) {
     }
     return { ok: true, message: 'Equipped!' };
   } catch (e) { return { ok: false, message: e?.message || 'Equip failed.' }; }
+}
+
+// ENHANCE_MAX levels, +10% of the item's own base stat per level (cumulative). Cost
+// is checked + spent CLIENT-SIDE (wood/stone/bloom — see the migration header for
+// why); this RPC only bumps the shared level itself, requires ownership, caps at 5.
+export const ENHANCE_MAX = 5;
+export const enhanceCost = (nextLevel) => ({ wood: nextLevel * 8, stone: nextLevel * 10, bloom: nextLevel * 150 });
+export async function enhanceCosmeticItem(itemKey) {
+  if (!hasSupabase) return { ok: false, message: 'Offline — sign in to enhance.' };
+  try {
+    const { data, error } = await supabase.rpc('enhance_cosmetic_item', { p_item_key: itemKey });
+    if (error) return { ok: false, message: error.message };
+    if (!data?.ok) {
+      const text = data?.error === 'max_level' ? 'Already max level.' : data?.error === 'not_owned' ? "You don't own this yet." : 'Enhance failed.';
+      return { ok: false, message: text };
+    }
+    return { ok: true, level: data.level, message: `✨ Enhanced to Lv${data.level}!` };
+  } catch (e) { return { ok: false, message: e?.message || 'Enhance failed.' }; }
 }

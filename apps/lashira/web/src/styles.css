@@ -228,6 +228,12 @@ body {
 .ptab span { font-size: 18px; line-height: 1; }
 .ptab small { font-size: 10px; font-weight: 800; }
 .ptab.on { border-color: var(--purple); background: var(--soft); color: var(--ink); box-shadow: 0 2px 8px rgba(106,77,245,.15); }
+/* Second-level sub-tabs (Cosmetics: Helmet/Coat/Weapon/Shield) — same shape, a
+   size down so the hierarchy (tab → sub-tab) reads at a glance. */
+.ptabs-sub { margin-top: -4px; margin-bottom: 10px; }
+.ptab.sub { min-width: 46px; padding: 5px 6px; border-radius: 10px; }
+.ptab.sub span { font-size: 15px; }
+.ptab.sub small { font-size: 9px; }
 
 /* ── RPG grid Bag ── */
 .bag-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
@@ -420,6 +426,12 @@ body {
 .pvp-hearts { display: flex; gap: 2px; margin-bottom: 3px; }
 .pvp-heart { font-size: 13px; line-height: 1; color: rgba(20,26,40,.16); transition: color .15s, transform .15s; }
 .pvp-heart.full { color: #ff3b52; text-shadow: 0 1px 1px rgba(0,0,0,.18); }
+/* TEMP diagnostic badge — remove once PvP is confirmed working live. */
+.pvp-zone-badge {
+  align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800;
+  background: rgba(120,120,150,.7); color: #fff; backdrop-filter: blur(6px);
+}
+.pvp-zone-badge.on { background: rgba(224,60,60,.85); }
 .quicknav {
   display: flex; gap: 2px; padding: 4px; border-radius: 16px; corner-shape: superellipse(1.8);
   color: var(--text-strong); background: var(--glass-bg);

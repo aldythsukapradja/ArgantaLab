@@ -168,3 +168,93 @@ gallery shape the tab already has (featured item + thumbnail strip) — no new U
 8. ⬜ Verify: buy in LashiraBloom → shows owned in HQ's Shop tab (and vice versa,
    same `person_cosmetic_items` row); Wear in LashiraBloom → the equipped part renders
    immediately (spec change flows through `kingdom_get_player_state` on next load).
+
+**Status update (live-tested, both real)**: 1,000,000 💎 operator top-up confirmed
+working end-to-end; per-item sprite thumbnails confirmed rendering distinctly (real
+`engine/data.js` sheets, not the placeholder emoji). Both are DONE, not just planned.
+
+## 8. Fine-tune pass 2 (concept, no build yet)
+
+### 8a. Cosmetics sub-tabs — Helmet / Coat / Weapon / Shield
+
+Right now Cosmetics is one flat 40-item gallery — helmet, coat, sword, and shield all
+mixed in a single ◀▶ swipe + one thumbnail strip (visible in the screenshot: a helmet
+sits next to a sword next to a coat, no grouping). Add a second-level tab row **inside**
+the Cosmetics panel, reusing the exact same `.ptabs`/`.ptab` component the shop already
+uses for its top-level Seeds/Animals/Forge/General/Cosmetics/Sell row — one level down,
+filtering `shopCatalog` to just that category:
+
+`⛑ Helmet` · `🧥 Coat` · `⚔ Weapon` · `🛡 Shield`
+
+("Weapon" not "Sword" — matches the composer's own `SLOT_DEFS` label, which already
+groups sword/spear/bow/fan under "Weapon.") No new visual language, no architectural
+risk — same pattern, one level deeper. Default lands on Helmet (array order); revisit
+if a specific merchant deep-link should pre-select a category later.
+
+### 8b. HQ's own Shop tab gets Wear too (confirmed: operator-only, symmetric with LashiraBloom)
+
+`apps/hq/src/surfaces/character/Shop.tsx` currently only has **Buy** — when an item is
+owned it just shows "Owned ✓" with no action. Add a **Wear** button there too, calling
+the SAME `equip_cosmetic_item` RPC LashiraBloom's Shop already calls (new
+`equipCosmeticItem()` in `heroData.ts`, mirroring `apps/lashira/web/src/net/cosmetics.js`
+1:1). Scope stays exactly what it already is: self-referential, onto the **signed-in
+operator's own account** — same as Buy already is, same as `equip_mount()`'s own
+precedent. Not a new access tier, not opening HQ to non-operator players — purely "the
+convenience LashiraBloom's shop already has, now in HQ too," so an operator testing from
+HQ doesn't have to hop apps just to equip what they bought. Small: one new client
+function + one button + the existing reload-to-show-it pattern.
+
+### 8c. Forge item enhancement — Lv 1 → 2 → 3 → 4…
+
+A new, **per-item** power axis, separate from the existing account-level
+`weaponTier`/`armorTier` Blacksmith upgrade (that stays exactly as-is). Each cosmetic
+item you *own* gets its own enhancement level, tracked per `(owner_id, item_key)` —
+needs one new column:
+
+```sql
+alter table public.person_cosmetic_items add column if not exists enhance_level int not null default 0;
+```
+
+**Proposed scale** (tunable, same spirit as the base shop pricing — a proposal, not
+final): **5 levels**, each level = **+10% of the item's own base stat**, cumulative (Lv5
+= +50% over base). Percentage-of-base (not a flat bonus) is deliberate: it keeps pricier
+items ahead of a maxed cheap item — e.g. a maxed Lv5 2,000💎 sword (+20 ATK base → +30)
+still trails an un-enhanced 10,000💎 sword (+200 ATK), preserving the shop's price/rarity
+signal instead of letting grinding flatten it.
+
+**Cost — wood/stone/bloom, deliberately NOT diamonds.** Diamonds buy the *starting*
+piece; enhancing it back into playing the game (grinding materials) is what makes that
+specific piece stronger over time — same "buying never beats crafting at the ceiling"
+principle from §3. Cost scales per level, mirroring the existing linear-in-tier pattern
+already used for tools/house (`farm-mechanics.js`: `toolCost = { wood: t*4, stone: t*6 }`) —
+e.g. `wood: lvl*8, stone: lvl*10, bloom: lvl*150` as a starting point.
+
+**No fail/destroy risk** — guaranteed success on paying the cost. Matches this project's
+consistent "gentle rules" design (the Dungeon panel already states the philosophy
+outright: *"Faint = you just leave, keep what you gathered"*) — a punishing
+enhance-can-fail-and-destroy-your-item system (classic in some MMOs) would be the wrong
+tone here.
+
+**Where it lives:** a new section in the Forge tab, "✨ Enhance your gear" — below the
+existing Weapon/Armor/Tools/Refine sections, one row per item you *own* (empty + a hint
+to visit Cosmetics first if you own nothing), showing current level, stat readout
+(base → enhanced), and an Enhance button with its cost, disabled if unaffordable or
+already Lv5. Visual: a small "+N" badge on the item's thumbnail once enhanced (reads
+like a classic "+3 Sword"), visible in both the Forge list and the Cosmetics gallery.
+
+**Trust model — matches the rest of the economy, not a new weak spot.** Unlike diamonds
+(server-authoritative, atomic RPC — `buy_cosmetic_item` really checks the real balance),
+wood/stone are **client-trusted everywhere already** in LashiraBloom today —
+`mine()`/`chop()`/`toolCost()`/`houseCost()` are all local state mutations with no
+server verification. So `enhance_cosmetic_item(p_item_key)` following that same pattern
+(client deducts wood/stone locally, then a simple RPC bumps `enhance_level`) isn't a new
+gap — it's consistent with how every other material spend in this game already works.
+The alternative (promoting wood/stone to a real server-verified column so the RPC can
+check+spend atomically like diamonds) is the same bigger, separate project already
+flagged as a gap in an earlier pass — not required to ship enhancement.
+
+**Honesty flag, inherited from §3's open decision:** like the base shop stats,
+enhancement's ATK/DEF/HP bonus would be *displayed* immediately but is **not** summed
+into real combat math (`packages/combat/src/gear.js`) until that separate, deliberate
+wiring decision gets made — same deferred status as before, now just bigger numbers to
+defer.
