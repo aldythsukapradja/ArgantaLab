@@ -29,6 +29,10 @@ const SLOTS = [
   { id: 'hair', icon: '✂️', label: 'Hair', soon: true },
 ];
 const fmt = (n) => Number(n || 0).toLocaleString();
+// Per-path accent (warrior/rogue/poet/mage → Guardian/Shadow/Mystic/Arcanist),
+// reusing the app's existing 4-color token set rather than inventing new ones.
+const PATH_ACCENT = { warrior: 'var(--blue)', rogue: 'var(--pink)', poet: 'var(--green)', mage: 'var(--purple)' };
+const pathAccent = (path) => PATH_ACCENT[path] || 'var(--purple)';
 
 // The real composited hero, drawn idle-standing — same compositor FarmRoom uses,
 // just a static portrait instead of the walking loop. Re-draws whenever `resources`
@@ -201,13 +205,17 @@ export function CharacterPage({ snap, game, battleSkills, heroTables, heroResour
   const slot = SLOTS.find((s) => s.id === slotId);
   const slotItems = shopCatalog.filter((it) => it.cat === slotId);
 
+  const accent = pathAccent(snap.path);
+
   return (
     <>
-      <Head title={`👤 ${snap.name}`} sub={`${snap.pathIcon} ${snap.pathName} · ${snap.title} · level ${snap.level}`} onClose={onClose} />
+      <div className="cpage-banner" style={{ '--accent': accent }}>
+        <Head title={`👤 ${snap.name}`} sub={`${snap.pathIcon} ${snap.pathName} · ${snap.title} · level ${snap.level}`} onClose={onClose} />
+      </div>
 
-      <div className="ptabs">
+      <div className="ptabs cpage-tabs">
         {TABS.map((t) => (
-          <button key={t.id} className={'ptab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>
+          <button key={t.id} className={'ptab' + (tab === t.id ? ' on' : '')} style={tab === t.id ? { '--accent': accent } : undefined} onClick={() => setTab(t.id)}>
             <span>{t.icon}</span><small>{t.label}</small>
           </button>
         ))}
@@ -226,22 +234,20 @@ export function CharacterPage({ snap, game, battleSkills, heroTables, heroResour
                 <div className="empty-note" style={{ padding: '4px 0 10px' }}>Levels up by learning — finish lessons to earn XP.</div>
               ) : (
                 <>
-                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 3 }}>Experience to level {Math.min(99, snap.level + 1)}</div>
-                  <div style={{ height: 7, borderRadius: 999, background: 'rgba(120,120,150,.18)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${snap.xpPct}%`, background: 'var(--purple)' }} />
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', margin: '3px 0 11px' }}>{fmt(snap.xpCur)} / {fmt(snap.xpReq)}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>Experience to level {Math.min(99, snap.level + 1)}</div>
+                  <div className="cpage-xpbar"><div className="cpage-xpfill" style={{ width: `${snap.xpPct}%`, '--accent': accent }} /></div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 12px' }}>{fmt(snap.xpCur)} / {fmt(snap.xpReq)}</div>
                 </>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto auto 1fr', gap: '7px 8px', alignItems: 'center', fontSize: 12 }}>
-                <span>❤️</span><span style={{ color: 'var(--muted)' }}>HP</span><b style={{ textAlign: 'right' }}>{fmt(snap.maxHp)}</b>
-                <span>💧</span><span style={{ color: 'var(--muted)' }}>MP</span><b style={{ textAlign: 'right' }}>{fmt(snap.maxStamina)}</b>
-                <span>⚔</span><span style={{ color: 'var(--muted)' }}>Weapon</span><b style={{ textAlign: 'right' }}>{snap.weaponName} <small style={{ color: 'var(--muted)' }}>+{snap.atk} ATK</small></b>
-                <span>🛡</span><span style={{ color: 'var(--muted)' }}>Armor</span><b style={{ textAlign: 'right' }}>{snap.armorName} <small style={{ color: 'var(--muted)' }}>+{snap.def} DEF</small></b>
-              </div>
             </div>
           </div>
-          <div className="empty-note" style={{ marginTop: 14 }}>Cosmetic gear's own ATK/DEF/HP (Equipment tab) is a look + a future power layer — it doesn't add to the numbers above yet.</div>
+          <div className="cpage-statgrid">
+            <div className="cpage-stat"><span className="cpage-stat-ic">❤️</span><div><small>HP</small><b>{fmt(snap.maxHp)}</b></div></div>
+            <div className="cpage-stat"><span className="cpage-stat-ic">💧</span><div><small>MP</small><b>{fmt(snap.maxStamina)}</b></div></div>
+            <div className="cpage-stat"><span className="cpage-stat-ic">⚔</span><div><small>Weapon</small><b>{snap.weaponName} <em>+{snap.atk} ATK</em></b></div></div>
+            <div className="cpage-stat"><span className="cpage-stat-ic">🛡</span><div><small>Armor</small><b>{snap.armorName} <em>+{snap.def} DEF</em></b></div></div>
+          </div>
+          <div className="empty-note" style={{ marginTop: 12 }}>Cosmetic gear's own ATK/DEF/HP (Equipment tab) is a look + a future power layer — it doesn't add to the numbers above yet.</div>
         </>
       )}
 

@@ -334,6 +334,28 @@ body {
 .gal-thumb .cosmetic-thumb { width: 40px; height: 40px; }
 
 /* ── Character Page ("Me") — live avatar + slot grid + item picker ── */
+/* Path-tinted banner behind the header (Guardian blue / Shadow pink / Mystic
+   green / Arcanist purple) — a quiet identity cue instead of a flat white bar. */
+.cpage-banner {
+  margin: -4px -4px 12px; padding: 10px 12px 2px; border-radius: 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent, var(--purple)) 12%, transparent), transparent 85%);
+}
+.cpage-banner .phead { margin-bottom: 6px; }
+.cpage-tabs .ptab.on { border-color: var(--accent, var(--purple)); box-shadow: 0 2px 8px color-mix(in srgb, var(--accent, var(--purple)) 25%, transparent); }
+.cpage-xpbar { height: 8px; border-radius: 999px; background: rgba(120,120,150,.16); overflow: hidden; }
+.cpage-xpfill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent, var(--purple)), var(--pink)); transition: width .3s ease; }
+.cpage-statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.cpage-stat {
+  display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 13px;
+  background: var(--card); border: 1.5px solid var(--line); box-shadow: 0 2px 6px rgba(10,14,26,.05);
+}
+.cpage-stat-ic {
+  width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px; background: var(--soft);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.cpage-stat small { display: block; font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+.cpage-stat b { font-size: 13px; }
+.cpage-stat b em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--muted); margin-left: 3px; }
 .cpage-av {
   border-radius: 16px; background: var(--soft); border: 1.5px solid var(--line);
   display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -369,7 +391,7 @@ body {
 .cpage-item:disabled { opacity: .6; cursor: default; }
 
 /* Skills tab — real looping spell VFX (SkillFxPreview) replaces the plain icon. */
-.skillfx-row .ico { display: none; }
+.skillfx-row { box-shadow: 0 2px 7px rgba(10,14,26,.05); }
 .skillfx-stage {
   flex: 0 0 56px; width: 56px; height: 56px; border-radius: 12px;
   background: radial-gradient(circle, var(--soft) 0%, #f3f2fb 70%); border: 1.5px solid var(--line);
