@@ -234,6 +234,12 @@ export function SkillForge() {
               </button>
             ))}
           </div>
+          {/* Cast lives right under the skill it fires — was a floating button
+              in the middle of the arena, disconnected from the slot picker
+              above it. */}
+          <button type="button" className="sf-castbtn sf-castbtn-rail" onClick={cast} disabled={phase !== 'idle' || !hero}>
+            {phase === 'idle' ? '▶ Cast' : phase === 'casting' ? 'Casting…' : 'Impact!'}
+          </button>
 
           <div className="sf-bench">
             <h4>Benchmark</h4>
@@ -281,7 +287,7 @@ export function SkillForge() {
                 <div className={'sf-duel-figure' + (phase === 'impact' && slot.kind === 'heal' ? ' healflash' : '')}>
                   <div className="sf-footshadow" aria-hidden="true" />
                   <CompositeStage
-                    spec={hero.spec} motionName={casterMotion} playing scale={2.0} width={150} height={150}
+                    spec={hero.spec} motionName={casterMotion} playing fitHeight={100} width={170} height={150}
                     background="transparent"
                     oneShot={phase === 'casting'} onComplete={onCastComplete}
                   />
@@ -292,10 +298,6 @@ export function SkillForge() {
                 </div>
               )}
             </div>
-
-            <button type="button" className="sf-castbtn" onClick={cast} disabled={phase !== 'idle' || !hero}>
-              {phase === 'idle' ? '▶ Cast' : phase === 'casting' ? 'Casting…' : 'Impact!'}
-            </button>
 
             <div className="sf-duel-side sf-duel-target">
               <div className="sf-vhead">{slot.i === 1 ? 'Targets · multi' : 'Target'}</div>

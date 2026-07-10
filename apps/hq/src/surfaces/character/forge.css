@@ -272,6 +272,8 @@ html[data-theme="dark"] .forge{ --stage-a:#1a1a22; --stage-b:#121219; }
 .sf-slotpill.on{background:var(--acc-soft);border-color:var(--acc)}
 .sf-slotpill b{font-size:12px;color:var(--tx)}
 .sf-slotpill small{font-family:var(--mono);font-size:9px;color:var(--tx3)}
+/* Cast, moved out of the arena to sit directly under the skill it fires. */
+.sf-castbtn-rail{width:100%;margin-top:10px;text-align:center}
 
 /* -- left: benchmark -- */
 /* was margin-top:auto — with the position:absolute bug fixed above, sf-left's

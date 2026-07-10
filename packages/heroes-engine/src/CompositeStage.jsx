@@ -74,6 +74,16 @@ export default function CompositeStage({
   // 'transparent' (or any CSS background) to drop it, e.g. on a scene where the
   // hero should sit directly on the artwork with no box behind it.
   background = CHECKER_BG,
+  // Auto-fit the sprite to a target on-canvas HEIGHT (px), overriding `scale`.
+  // A hardcoded `scale` is a guess that only holds for one body's proportions
+  // (kid vs adult sheets differ) and easily clips a wide swing frame off the
+  // canvas edge. fitHeight instead measures the motion's real union bbox
+  // (already computed below for centering) and derives the scale that makes
+  // it exactly `fitHeight` tall — same sizing language as a neighboring
+  // sprite that's rendered at a fixed CSS box (e.g. MonsterStage's 120px),
+  // and clipping-proof by construction as long as the canvas itself has
+  // enough width for the (now-known) scaled bbox width too.
+  fitHeight = null,
 }) {
   const canvasRef = useRef(null);
   const [tables, setTables] = useState(null);
@@ -115,14 +125,19 @@ export default function CompositeStage({
     const allSteps = [];
     for (let s = 0; s < n; s++) allSteps.push(resolveStep(tables, resources, motionName, s));
     const bbox = drawListBBox(allSteps);
+    // fitHeight overrides the manual `scale`: derive the scale that makes the
+    // motion's tallest extent exactly fitHeight px, so sizing is consistent
+    // across different hero body proportions and the swing's full arc (bbox
+    // already unions every step, e.g. a mid-swing sword) never clips.
+    const effScale = fitHeight && bbox ? fitHeight / Math.max(1, bbox.y1 - bbox.y0) : scale;
 
     function draw(stepIndex) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const list = resolveStep(tables, resources, motionName, stepIndex);
       const anchor = bbox
-        ? { x: canvas.width / 2 - bbox.cx * scale, y: canvas.height / 2 - bbox.cy * scale }
+        ? { x: canvas.width / 2 - bbox.cx * effScale, y: canvas.height / 2 - bbox.cy * effScale }
         : { x: canvas.width / 2, y: canvas.height / 2 };
-      paintStep(ctx, list, anchor, scale);
+      paintStep(ctx, list, anchor, effScale);
       onStep?.(stepIndex, n, list);
     }
 
@@ -147,7 +162,7 @@ export default function CompositeStage({
     draw(stateRef.current.step % n);
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [tables, resources, motionName, playing, stepOverride, scale, speed, oneShot]);
+  }, [tables, resources, motionName, playing, stepOverride, scale, fitHeight, speed, oneShot]);
 
   return (
     <canvas
