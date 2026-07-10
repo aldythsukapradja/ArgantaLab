@@ -7,7 +7,7 @@ import {
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { EffectLivePreview, SkillBrowser } from './SkillBrowser'
 import { loadOperatorSelf } from './heroData'
-import { MonsterStage, MonsterThumb } from '../battle/MonsterStage'
+import { MonsterStage } from '../battle/MonsterStage'
 import '../battle/battle.css'
 
 // Skill Forge — the 4-path × 3-skill × 6-tier command center. Authors each
@@ -296,12 +296,21 @@ export function SkillForge() {
               <div className="sf-vhead">{slot.i === 1 ? 'Targets · multi' : 'Target'}</div>
               <div className={'sf-duel-figure' + (phase === 'impact' && slot.kind !== 'heal' ? ' hit' : '')}>
                 <div className="sf-footshadow" aria-hidden="true" />
-                <div className="sf-vmonster lead"><MonsterStage id={TARGET_LEAD} dir="W" playing zoom={1} /></div>
-                {slot.i === 1 && TARGET_FLANK.map(id => <div key={id} className="sf-vmonster"><MonsterThumb id={id} size={56} /></div>)}
-                {phase === 'impact' && slot.kind !== 'heal' && <div className="sf-dmgnum dmg">-{tierDamage}</div>}
-                {phase === 'impact' && slot.kind !== 'heal' && effectById[previewFx] && (
-                  <div className="sf-veffect"><EffectLivePreview effect={effectById[previewFx]} size={80} /></div>
-                )}
+                {/* Every target — lead + flank alike — is the same animated
+                    MonsterStage at the same size, so "multi" reads as an even
+                    group of enemies instead of one big monster next to two
+                    shrunken icons. Each gets its OWN impact effect + damage
+                    number landing directly on its body, not one shared card
+                    floating above the whole row. */}
+                {[TARGET_LEAD, ...(slot.i === 1 ? TARGET_FLANK : [])].map((id) => (
+                  <div key={id} className="sf-vmonster">
+                    <MonsterStage id={id} dir="W" playing zoom={1} />
+                    {phase === 'impact' && slot.kind !== 'heal' && <div className="sf-dmgnum dmg">-{tierDamage}</div>}
+                    {phase === 'impact' && slot.kind !== 'heal' && effectById[previewFx] && (
+                      <div className="sf-veffect"><EffectLivePreview effect={effectById[previewFx]} size={96} /></div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 

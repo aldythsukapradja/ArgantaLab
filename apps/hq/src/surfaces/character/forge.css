@@ -313,7 +313,7 @@ html[data-theme="dark"] .sf-arena-bg{filter:brightness(.62) saturate(.9)}
 .sf-duel-side{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:150px}
 .sf-duel-side .sf-vhead{background:var(--glass, rgba(11,13,28,.55));backdrop-filter:blur(10px) saturate(1.4);
   color:#fff;border:1px solid var(--glass-bd, rgba(255,255,255,.14));border-radius:999px;padding:4px 12px}
-.sf-duel-figure{position:relative;display:flex;align-items:center;justify-content:center;min-height:120px}
+.sf-duel-figure{position:relative;display:flex;align-items:center;justify-content:center;gap:14px;min-height:120px}
 .sf-duel-figure canvas{filter:drop-shadow(0 8px 10px rgba(0,0,0,.35))}
 .sf-duel-figure.hit{animation:sf-shake .4s ease, sf-flash .4s ease}
 .sf-duel-figure.healflash::after{content:"";position:absolute;inset:-14px;border-radius:50%;
@@ -338,13 +338,19 @@ html[data-theme="dark"] .sf-arena-bg{filter:brightness(.62) saturate(.9)}
 @keyframes sf-rise{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}20%{opacity:1;transform:translate(-50%,-6px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-46px) scale(1)}}
 .sf-vhead{display:flex;align-items:center;gap:6px;padding:8px 12px;
   font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}
-.sf-vmonster{display:flex;flex-direction:column;align-items:center;gap:4px}
-.sf-vmonster.lead .bf-mstage{width:120px;height:120px}
-.sf-vmonster:not(.lead) .bf-mstage{width:56px;height:56px;opacity:.6}
+/* Every target renders at the SAME footprint — lead or flank, single-target or
+   multi — so a "Storm"-style group never reads as one big monster next to two
+   shrunken icons (the old .lead/:not(.lead) split + opacity dim). */
+.sf-vmonster{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}
+.sf-vmonster .bf-mstage{width:120px;height:120px}
 .sf-vempty{font-family:var(--mono);font-size:10.5px;color:#fff;text-align:center;padding:12px;max-width:70%;
   background:var(--glass, rgba(11,13,28,.55));backdrop-filter:blur(10px);border:1px solid var(--glass-bd, rgba(255,255,255,.14));border-radius:9px}
-.sf-veffect{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:6px;
-  background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:6px;box-shadow:0 8px 20px -12px #0007;z-index:3}
+/* Lands the bound effect directly on the character's body (centered over the
+   figure it's nested in) instead of a bordered card floating above them —
+   an attack's impact should read as hitting the target, a heal's glow as
+   wrapping the caster, not a UI chip parked over empty air. */
+.sf-veffect{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;z-index:3}
 .sf-vcap{padding:6px 12px;font-size:10.5px;color:var(--tx3);text-align:center;border-top:1px solid var(--bd);background:var(--bg2)}
 
 /* Pan D-pad — glass cluster, bottom-right of the arena. Nudges background-
