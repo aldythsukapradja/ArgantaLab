@@ -3,19 +3,14 @@ import type { ReactNode } from 'react'
 import { CompositeStage } from '@arganta/heroes-engine'
 import { GROUPS, SLOT_DEFS, ACTIONS } from './composer'
 import { EmoteBrowser } from './EmoteBrowser'
-import { SkillBrowser } from './SkillBrowser'
 
 // The stage + pickers (center/right columns), shared by the Lab and NPC Studio
 // tabs — only WHO is being edited differs; the composing surface is identical.
-
-// The 3 skill slots are fixed by @arganta/combat's SKILL_SLOTS (single-target /
-// hits-everything / self-heal, always in that order) — not a choice made here.
-// This is display copy only; the ONLY editable thing per slot is the fx.
-const SKILL_META = [
-  { label: 'Skill 1 · Single', sub: 'one target, low cost' },
-  { label: 'Skill 2 · Multi', sub: 'hits every monster, high cost' },
-  { label: 'Skill 3 · Heal', sub: 'self only' },
-]
+//
+// NOTE: the per-character Skills fx picker was REMOVED here — skill authoring
+// (name/effect/tier/balance) now lives in the dedicated Skill Forge tab. The
+// saved spec still CARRIES skills (useComposer keeps them, defaults + whatever
+// Skill Forge publishes), it's just no longer edited from Character Lab.
 
 export function ComposerPanel({
   composer, motion, headerLeft, headerRight, mountSection = true, onReset,
@@ -35,10 +30,8 @@ export function ComposerPanel({
 }) {
   const {
     sel, meta, mountOn, setMountOn, mountId, setMountId, mountCount, entriesFor, currentKeyFor, labelFor, pickFor, stepEntry, toggle, dyeTargetKey,
-    skills, availableEffects, skillLabel, setSkillFx, stepSkill,
   } = composer
   const [emoteOpen, setEmoteOpen] = useState(false)
-  const [skillBrowse, setSkillBrowse] = useState<{ slot: number } | null>(null)
 
   // Arrow keys or WASD rotate the stage. Ignored while a text field elsewhere
   // in the composer has focus (search box, dye picker, etc.) so typing "s" or
@@ -139,30 +132,10 @@ export function ComposerPanel({
             <p className="f-cap" style={{ marginTop: 4 }}>On/off toggle lives on the stage — top-right of the canvas.</p>
           </div>
         )}
-        <div className="f-grp">
-          <h4>Skills</h4>
-          {skills.map((skill: any, i: number) => (
-            <div key={i} className="f-slot f-skill-slot">
-              <span className="f-dot" />
-              <span className="f-sl">
-                <b>{SKILL_META[i]?.label || `Skill ${i + 1}`}</b>
-                <small>{SKILL_META[i]?.sub}</small>
-              </span>
-              <button className="f-arw" onClick={() => stepSkill(i, -1)}>◀</button>
-              <span className="f-val" onClick={() => setSkillBrowse({ slot: i })}><b>{skillLabel(skill.fx)}</b><span>▦</span></span>
-              <button className="f-arw" onClick={() => stepSkill(i, +1)}>▶</button>
-            </div>
-          ))}
-          <p className="f-cap" style={{ marginTop: 4 }}>Role is fixed (single / multi / heal) — only the effect is a choice.</p>
-        </div>
       </div>
 
       {emoteOpen && (
         <EmoteBrowser spec={composer.spec} value={motion.emote} onPick={motion.setEmote} onClose={() => setEmoteOpen(false)} />
-      )}
-      {skillBrowse && (
-        <SkillBrowser title={`Skill ${skillBrowse.slot + 1} effect`} effects={availableEffects}
-          value={skills[skillBrowse.slot]?.fx} onPick={(e: any) => setSkillFx(skillBrowse.slot, e.id)} onClose={() => setSkillBrowse(null)} />
       )}
     </>
   )

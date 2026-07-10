@@ -281,7 +281,8 @@ export function SkillForge() {
                 <div className={'sf-duel-figure' + (phase === 'impact' && slot.kind === 'heal' ? ' healflash' : '')}>
                   <div className="sf-footshadow" aria-hidden="true" />
                   <CompositeStage
-                    spec={hero.spec} motionName={casterMotion} playing scale={2.6} width={150} height={150}
+                    spec={hero.spec} motionName={casterMotion} playing scale={2.0} width={150} height={150}
+                    background="transparent"
                     oneShot={phase === 'casting'} onComplete={onCastComplete}
                   />
                   {phase === 'impact' && slot.kind === 'heal' && <div className="sf-dmgnum heal">+{tierDamage}</div>}

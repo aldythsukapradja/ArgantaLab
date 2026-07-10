@@ -10,6 +10,18 @@ export function loadJson(url) {
       url,
       fetch(url).then((r) => {
         if (!r.ok) throw new Error(`fetch ${url} -> ${r.status}`);
+        // Guard the silent-blank failure mode: when VITE_KINGDOM_DATA_BASE is
+        // unset in a deployed EMBED (HQ/LashiraBloom), DATA_ROOT falls back to
+        // same-origin and an SPA rewrite answers /data/* with index.html at
+        // HTTP 200. r.json() would then throw a cryptic parse error and the
+        // character/monster silently blanks. Detect the HTML and fail LOUDLY
+        // with the actual cause so it's diagnosable, not a mystery blank.
+        const ct = r.headers.get('content-type') || '';
+        if (ct.includes('text/html')) {
+          throw new Error(
+            `data host returned HTML for ${url} — VITE_KINGDOM_DATA_BASE is likely unset in this deploy (falling back to same-origin, which serves index.html for /data/*).`
+          );
+        }
         return r.json();
       })
     );

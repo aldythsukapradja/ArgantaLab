@@ -57,6 +57,11 @@ async function loadResources(spec) {
   return out;
 }
 
+// Default canvas backdrop — the checkerboard that reads as "transparent" in the
+// Character Lab preview. Callers that composite the hero ONTO a scene (e.g.
+// Skill Forge's arena) pass background="transparent" so only the sprite shows.
+const CHECKER_BG = 'repeating-conic-gradient(var(--stage-a) 0% 25%, var(--stage-b) 0% 50%) 0 0 / 24px 24px';
+
 export default function CompositeStage({
   spec, motionName, playing = true, stepOverride = null,
   scale = 3, speed = 1, width = 260, height = 260, onStep,
@@ -65,6 +70,10 @@ export default function CompositeStage({
   // (Skill Forge's cast) instead of an endlessly looping pose. Additive/
   // backward-compatible: omit both and behavior is identical to before.
   oneShot = false, onComplete,
+  // Canvas backdrop. Default = the checkerboard "transparent" preview. Pass
+  // 'transparent' (or any CSS background) to drop it, e.g. on a scene where the
+  // hero should sit directly on the artwork with no box behind it.
+  background = CHECKER_BG,
 }) {
   const canvasRef = useRef(null);
   const [tables, setTables] = useState(null);
@@ -145,7 +154,7 @@ export default function CompositeStage({
       ref={canvasRef}
       width={width}
       height={height}
-      style={{ imageRendering: 'pixelated', background: 'repeating-conic-gradient(var(--stage-a) 0% 25%, var(--stage-b) 0% 50%) 0 0 / 24px 24px' }}
+      style={{ imageRendering: 'pixelated', background }}
     />
   );
 }
