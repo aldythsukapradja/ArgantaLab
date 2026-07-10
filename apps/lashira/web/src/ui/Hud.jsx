@@ -208,6 +208,7 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
           <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
           <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
           <button className="navbtn" onClick={() => onOpen('quests')}>📜 Quests</button>
+          <button className="navbtn" onClick={() => onOpen('character')}>👤 Me</button>
         </div>
 
         {/* Circle name + live-player status moved into Settings → Circle sync

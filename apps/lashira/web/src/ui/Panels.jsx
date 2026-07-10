@@ -7,20 +7,25 @@ import { KIN_TASKS } from '../data/kins.js';
 import { QUEST_DEFS } from '../game/farm-logic.js';
 import { MAT_ICON, FISH_SPECIES } from '../game/farm-mechanics.js';
 import { Shop } from './Shop.jsx';
+import { CharacterPage } from './CharacterPage.jsx';
 
 // `mech` = the mechanics SNAPSHOT (material counts); `mechGame` = the store (actions).
 // `selfId`/`circleMembers`/`homeCircleId`/`onTravel` feed the Home hub's Travel
 // sub-tab (multi-farm: My Farm / Circle Farm / visit a circle-mate's farm).
-export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose, selfId, circleMembers, homeCircleId, onTravel }) {
+// `onGearChanged` = live re-composite after an equip (Shop's Wear, Character Page's
+// Equipment tab) — no page reload; `battleSkills` feeds the Character Page's Skills tab.
+export function Panels({ panel, snap, game, mech, mechGame, shopTab, onClose, selfId, circleMembers, homeCircleId, onTravel, onGearChanged, battleSkills, heroTables, heroResources, heroHasWeapon }) {
   if (!panel) return null;
   return (
     <div className="panel-scrim" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
-        {panel === 'shop' && <Shop snap={snap} game={game} mech={mech} mechGame={mechGame} initialTab={shopTab} onClose={onClose} />}
+        {panel === 'shop' && <Shop snap={snap} game={game} mech={mech} mechGame={mechGame} initialTab={shopTab} onClose={onClose} onGearChanged={onGearChanged} />}
         {panel === 'house' && <Home snap={snap} game={game} onClose={onClose}
           selfId={selfId} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} />}
         {panel === 'inventory' && <Bag snap={snap} game={game} mech={mech} mechGame={mechGame} onClose={onClose} />}
         {panel === 'quests' && <Quests snap={snap} game={game} mechGame={mechGame} onClose={onClose} />}
+        {panel === 'character' && <CharacterPage snap={snap} game={game} battleSkills={battleSkills} onClose={onClose} onGearChanged={onGearChanged}
+          heroTables={heroTables} heroResources={heroResources} heroHasWeapon={heroHasWeapon} />}
       </div>
     </div>
   );

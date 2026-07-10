@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, zoneOf, hotspotAt, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, zoneOf, hotspotAt, DOCK_MARKER, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -18,6 +18,7 @@ import {
   EMOTES,
   pathPhysPower,
   pvpMaxHp, pvpAttackCooldownMs, pvpMoveMultiplier, pvpBoltReach, rollPvpDamage, canPvpHeal, pvpHealMul,
+  resistMul,
 } from '@arganta/combat';
 import { recordPvpKo } from './pvp-rank.js';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
@@ -28,13 +29,14 @@ import { loadAcquiredKins } from './arganta-kin.js';
 import { hasActualKinArt } from './kin-sprite-image.jsx';
 import { joinFarmPresence } from './farm-presence.js';
 import { listCircleMembers } from './farm-save.js';
-import { loadMotionTables, loadPlayerResources } from '../net/hero.js';
+import { loadMotionTables, loadPlayerResources, fetchHeroState } from '../net/hero.js';
 import { defaultFarmerSpec } from '../net/characterRegistry.js';
 import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compositor.js';
 import { effects as loadEffects, effectSheetUrl, loadImage as loadEffectImage } from '../engine/data.js';
 import { Hud } from '../ui/Hud.jsx';
 import { Panels } from '../ui/Panels.jsx';
 import { TileFan } from '../ui/TileFan.jsx';
+import PortalModal from '../ui/PortalModal.jsx';
 import { sfx } from '../audio/sfx.js';
 import { ambient } from '../audio/ambient.js';
 import { CROPS, cropIsRipe } from '../data/crops.js';
@@ -242,6 +244,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   const [snap, setSnap] = useState(null);
   const [panel, setPanel] = useState(null);
   const [hotspot, setHotspot] = useState(null);   // shop/castle/dungeon/dock popup
+  const [portalPrompt, setPortalPrompt] = useState(null); // realm launch/lock confirm modal
   const [tileFan, setTileFan] = useState(null);   // radial tile action menu (plant/harvest/sickle)
   const [shopTab, setShopTab] = useState('seeds'); // unified Shop initial sub-tab
   // Harvest-juice pop for actions taken from the tile fan (render scope, so it
@@ -283,9 +286,15 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   const lastDayEventRef = useRef(0);
   const splashTimerRef = useRef(0);
   const heroPresenceKey = heroSpecKey(hero?.spec);
-  // Battle skills = shared behaviour (Bolt/Storm/Mend) + the hero's OWN spell
-  // effects from their Kingdom character (Kingdom is the source of truth for fx).
-  const battleSkills = useMemo(() => battleSkillsFor(hero?.spec?.skills), [heroPresenceKey]);
+  // Battle skills = shared behaviour (Bolt/Storm/Mend) + the path's evolving
+  // name/effect authored in HQ's Skill Forge for the hero's current level tier
+  // (a hero's own Character-Lab customization still wins). Names step at tier
+  // bands (15 levels apart), so recomputing on hero swap is enough — a mid-
+  // session tier crossing refreshes on the next hero reload.
+  const battleSkills = useMemo(
+    () => battleSkillsFor(hero?.spec?.skills, logicRef.current?.path, logicRef.current?._level?.() ?? 1),
+    [heroPresenceKey],
+  );
   const battleSkillsRef = useRef(battleSkills);
   useEffect(() => { battleSkillsRef.current = battleSkills; if (G.current) G.current.battleSkills = battleSkills; }, [battleSkills]);
   // Cooldown UI (the "pie" wipe on the attack/skill orbs) — the 60fps canvas
@@ -509,7 +518,12 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           return;
         }
         const g = G.current; if (!g) return;
-        const dmg = Number(intent.dmg) || 0;
+        // Victim-authoritative resistance: I know MY OWN path for certain, so the
+        // defender's per-path resist/weakness (× by damage type — phys or mag)
+        // is applied HERE, not attacker-side. Unknown type ⇒ resistMul returns 1
+        // (no change), so an older attacker that doesn't send `type` is harmless.
+        const raw = Number(intent.dmg) || 0;
+        const dmg = Math.max(0, Math.round(raw * resistMul(playerPath(), intent.type)));
         // Size + activate my combat pool BEFORE subtracting, so the hit lands on
         // my real PvP HP (not a phantom default that would insta-faint) and the
         // HUD actually shows the drop.
@@ -747,6 +761,20 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     // yields the crop ITEM (into the bag), so the juice shows the crop emoji.
     if (Array.isArray(res.harvested)) { for (const h of res.harvested) floatPop(g, h.tx, h.ty, '+' + (h.emoji || '🌾')); return; }
     if (res.emoji && res.tx != null) floatPop(g, res.tx, res.ty, '+' + res.emoji);
+  }
+  // LIVE re-composite after an equip/wear change (Shop, Character Page) — no
+  // page reload. Re-fetches the fresh spec (picks up whatever the equip RPC just
+  // wrote) and reruns loadPlayerResources; g.tables is untouched (motion tables
+  // never change), so this is far cheaper than the full mount-time rebuild.
+  async function refreshHeroLook() {
+    const g = G.current; if (!g) return;
+    const fresh = await fetchHeroState().catch(() => null);
+    const spec = fresh?.spec || hero?.spec || defaultFarmerSpec();
+    const resources = await loadPlayerResources(spec).catch(() => null);
+    if (!G.current) return; // room may have unmounted mid-fetch
+    const heroOk = !!(g.tables && resources && Object.keys(resources).length);
+    g.resources = resources; g.hasWeapon = !!resources?.weapon; g.heroOk = heroOk;
+    setUsingHero(!!spec && heroOk);
   }
   function doUse() {
     const g = G.current; if (!g) return;
@@ -993,9 +1021,11 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
   // Broadcast a PvP hit to a specific peer + local feedback (spark/float/sfx) at
   // their current rendered spot. I never touch their HP — they apply it to
   // themselves on the other end.
-  function pvpHitPeer(g, targetId, dmg, crit, miss) {
+  function pvpHitPeer(g, targetId, dmg, crit, miss, type) {
     if (!targetId) return;
-    presenceCtrlRef.current?.sendIntent?.({ t: 'pvp-hit', targetId, dmg, by: presenceProfileId(profile) });
+    // `type` ('phys' | 'mag') lets the VICTIM apply their own path resistance —
+    // physical strikes send 'phys', Bolt/Storm send 'mag'.
+    presenceCtrlRef.current?.sendIntent?.({ t: 'pvp-hit', targetId, dmg, type, by: presenceProfileId(profile) });
     const a = g.peerActors.get(targetId);
     if (a) {
       const [px, py] = entityPx(a);
@@ -2000,6 +2030,37 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
 
       drawAmbientFx(g, ctx, cssW, cssH, now); // drifting petals + light motes (screen space)
 
+      // FISHING BEACON — an always-on pulsing 🎣 marker sitting right on the
+      // dock hotspot (world-anchored via DOCK_MARKER, screen-projected through
+      // the camera like the debug badges below, but visible to every player,
+      // not just devOverlay). Bobs + rings so it reads against any background
+      // (water/grass/dirt). Tapping it teleports you onto the dock + opens the
+      // panel directly — see the hit-test in onTapInteract.
+      if (g.cam) {
+        const { camX, camY, z } = g.cam;
+        // lifted ~0.9 tile above the dock's tile-center so it floats over the
+        // bridge railing instead of sitting on/behind the deck (user feedback:
+        // "put it a little bit upwards from the bridge").
+        const mx = (DOCK_MARKER.cx * TILE - camX) * z, my = (DOCK_MARKER.cy * TILE - camY) * z - 0.9 * TILE * z;
+        if (mx > -40 && my > -40 && mx < cssW + 40 && my < cssH + 40) {
+          ctx.save(); ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
+          const bob = Math.sin(now / 420) * 5;
+          const pulseT = (now % 1400) / 1400; // 0..1 expanding-ring cycle
+          ctx.globalAlpha = 1 - pulseT;
+          ctx.beginPath(); ctx.arc(mx, my + bob, 16 + pulseT * 16, 0, Math.PI * 2);
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+          ctx.globalAlpha = 1;
+          const r = 19 + Math.sin(now / 260) * 2;
+          const grad = ctx.createRadialGradient(mx - r * 0.3, my + bob - r * 0.3, 2, mx, my + bob, r);
+          grad.addColorStop(0, '#ffe28a'); grad.addColorStop(1, '#ff8c2e');
+          ctx.beginPath(); ctx.arc(mx, my + bob, r, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
+          ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+          ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('🎣', mx, my + bob + 1);
+          ctx.restore(); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        }
+      }
+
       // NUMBERED BADGES — screen space so they stay big at any map zoom. Green = you
       // can walk here, red = solid/no-walk. Numbers key to the on-screen legend.
       if (g.devOverlay && g.cam) {
@@ -2162,6 +2223,14 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     function onTapInteract(clientX, clientY) {
       const g = G.current; if (!g || !g.cam) return;
       const rect = canvas.getBoundingClientRect();
+      // Fishing beacon: tapping the pulsing 🎣 marker (drawn every frame above)
+      // teleports you onto the dock + opens the panel directly — a bigger,
+      // forgiving target than the raw hotspot rect, from anywhere it's visible.
+      if (!isVisitor) {
+        const { camX, camY, z } = g.cam;
+        const mx = (DOCK_MARKER.cx * TILE - camX) * z, my = (DOCK_MARKER.cy * TILE - camY) * z - 0.9 * TILE * z;
+        if (Math.hypot((clientX - rect.left) - mx, (clientY - rect.top) - my) <= 24 * z) { goFishing(); return; }
+      }
       const wx = (g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE;
       const wy = (g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE;
       const tx = Math.floor(wx), ty = Math.floor(wy);
@@ -2183,7 +2252,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       if (hs) {
         faceTo(tx, ty);
         if (hs.kind === 'realm') {
-          onPortalTravel?.(hs.id, { hqTile: [...g.player.tile], hqFacing: g.player.facing, portal: hs.portal });
+          // No instant teleport (IMPL §BT-2). Open the confirm modal; the realms
+          // are the CIRCLE's — lock them unless we're in circle scope (§1.2).
+          const locked = !circleId || !!profile?.guest;
+          setPortalPrompt({ portal: hs.portal, locked, tile: [...g.player.tile], facing: g.player.facing });
         }
         else if (hs.kind === 'ore' || hs.kind === 'tree') {
           // swing to gather — but only if you're standing next to the node.
@@ -2339,7 +2411,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
               zoneLabel={zoneLabel}
               onHarvestAll={doHarvestAll} onPlantAll={doPlantAll} devMode={devMode} onToggleDev={toggleDev} />
             <Panels panel={panel} snap={snap} game={logicRef.current} mech={mechSnap} mechGame={mechRef.current} shopTab={shopTab} onClose={() => setPanel(null)}
-              selfId={profile?.id} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} />
+              selfId={profile?.id} circleMembers={circleMembers} homeCircleId={homeCircleId} onTravel={onTravel} onGearChanged={refreshHeroLook} battleSkills={battleSkills}
+              heroTables={G.current?.tables} heroResources={G.current?.resources} heroHasWeapon={G.current?.hasWeapon} />
             {tileFan && (
               <TileFan fan={tileFan} game={logicRef.current} snap={snap}
                 onResult={popFanResult} onClose={() => setTileFan(null)}
@@ -2353,13 +2426,20 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
                 — personal/visit/circle); actual PvP combat still requires being on
                 the shared circle farm (circleId truthy) since that's the only scope
                 with peers on the realtime channel to fight. */}
-            {!panel && !hotspot && (
-              <div className="fish-fab-wrap">
-                <button className="fish-fab" title="Go fishing" onClick={goFishing}>🎣</button>
-                <span className="fish-fab-label">Fish!</span>
-              </div>
-            )}
           </>
+        )}
+        {portalPrompt && (
+          <PortalModal
+            portal={portalPrompt.portal}
+            locked={portalPrompt.locked}
+            accountType={profile?.role === 'kid' ? 'kid' : 'adult'}
+            onClose={() => setPortalPrompt(null)}
+            onEnter={() => {
+              const pp = portalPrompt;
+              setPortalPrompt(null);
+              onPortalTravel?.(pp.portal.id, { hqTile: pp.tile, hqFacing: pp.facing, portal: pp.portal });
+            }}
+          />
         )}
         {daySplash && (
           <div className="day-splash" aria-live="polite">

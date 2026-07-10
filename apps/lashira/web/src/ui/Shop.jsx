@@ -10,7 +10,7 @@ import { QtyDialog } from './QtyDialog.jsx';
 import { loadShopCatalog, loadOwnedCosmetics, buyCosmeticItem, equipCosmeticItem, enhanceCosmeticItem, enhanceCost, ENHANCE_MAX } from '../net/cosmetics.js';
 import { charParts, sheetUrl, loadImage } from '../engine/data.js';
 
-const COSMETIC_ICON = { helmet: '⛑', coat: '🧥', sword: '⚔', shield: '🛡' };
+export const COSMETIC_ICON = { helmet: '⛑', coat: '🧥', sword: '⚔', shield: '🛡' };
 const COSMETIC_CATS = ['helmet', 'coat', 'sword', 'shield'];
 const COSMETIC_SUBTABS = [
   { id: 'helmet', icon: '⛑', label: 'Helmet' },
@@ -25,7 +25,7 @@ const COSMETIC_SUBTABS = [
 // (engine/data.js — same extracted asset set HQ's Character Forge uses), just
 // drawn small. Sized entirely by CSS (.gal-ic / .gal-thumb ancestor rules) so one
 // component serves both the big feature slot and the small thumbnail strip.
-function CosmeticThumb({ cat, part }) {
+export function CosmeticThumb({ cat, part }) {
   const ref = useRef(null);
   useEffect(() => {
     let live = true;
@@ -54,7 +54,7 @@ function CosmeticThumb({ cat, part }) {
 
 // +10% of the item's OWN base stat per enhance level (cumulative) — see
 // migration_character_shop_enhance.sql. level=0 (unenhanced) = just the base stat.
-const cosmeticStatLine = (it, level = 0) => {
+export const cosmeticStatLine = (it, level = 0) => {
   const mult = 1 + level * 0.1;
   return [
     it.atk ? `⚔+${Math.round(it.atk * mult)} ATK` : null,
@@ -75,7 +75,7 @@ const TABS = [
   { id: 'sell', icon: '🧺', label: 'Sell' },
 ];
 
-export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose }) {
+export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose, onGearChanged }) {
   const [tab, setTab] = useState(TABS.some((t) => t.id === initialTab) ? initialTab : 'seeds');
   const [idx, setIdx] = useState(0);
   const [buying, setBuying] = useState(null); // crop with an open qty dialog
@@ -141,11 +141,12 @@ export function Shop({ snap, game, mech, mechGame, initialTab = 'seeds', onClose
     setCosmeticBusy(item.itemKey); setCosmeticMsg(null);
     const r = await equipCosmeticItem(item.itemKey);
     if (r.ok) {
-      setCosmeticMsg('Equipped! Reloading to show your new look…');
-      setTimeout(() => window.location.reload(), 900);
+      setCosmeticMsg('Equipped!');
+      await onGearChanged?.(); // live re-composite on the farm — no reload
     } else {
-      setCosmeticMsg(r.message); setCosmeticBusy(null);
+      setCosmeticMsg(r.message);
     }
+    setCosmeticBusy(null);
   }
 
   const op = cur(snap) === Infinity;
