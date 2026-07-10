@@ -209,6 +209,10 @@ export function SkillForge() {
 
   return (
     <div className="skillforge">
+      <div className="sf-topactions">
+        <button className="sf-reset" onClick={reset} disabled={!dirty} style={{ opacity: dirty ? 1 : 0.5 }}>↺ Reset</button>
+        <button className="sf-pub" onClick={publish} disabled={publishing || !cloudEnabled}>{publishing ? 'Publishing…' : '⚡ Publish to both games'}</button>
+      </div>
       <div className="sf-grid">
         {/* LEFT — paths, slots, benchmark */}
         <div className="sf-col sf-left">
@@ -389,8 +393,6 @@ export function SkillForge() {
         {valid.warnings.length > 0 && <span className="pill warn">⚠ {valid.warnings.length} warning{valid.warnings.length === 1 ? '' : 's'}</span>}
         {!cloudEnabled && <span className="pill warn">offline preview — run migration_combat_tuning.sql to publish live</span>}
         {pubMsg && <span className="msg" style={{ color: pubMsg.ok ? 'var(--ok, #16a34a)' : 'var(--bad, #dc2626)' }}>{pubMsg.text}</span>}
-        <button className="sf-reset" onClick={reset} disabled={!dirty} style={{ marginLeft: 'auto', opacity: dirty ? 1 : 0.5 }}>↺ Reset</button>
-        <button className="sf-pub" onClick={publish} disabled={publishing || !cloudEnabled}>{publishing ? 'Publishing…' : '⚡ Publish to both games'}</button>
       </div>
 
       {fxBrowse && (
