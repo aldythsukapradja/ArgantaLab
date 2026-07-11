@@ -2,8 +2,16 @@
 // Local-first: everything here serializes to localStorage, no backend required.
 
 export type Product = 'HQ' | 'KinetikCircle' | 'ArgantaLabs' | 'LashiraBloom' | 'Investor' | 'Research'
-export type NoteType = 'note' | 'strategy' | 'decision' | 'prompt' | 'research' | 'plan' | 'spec'
-export type NoteStatus = 'seed' | 'draft' | 'active' | 'shipped' | 'archived'
+// Note types follow the main Arganta knowledge base: the classic vault types plus
+// the KB's structural types (moc, layer, journey, lesson, atlas, map, method).
+export type NoteType =
+  | 'note' | 'strategy' | 'decision' | 'prompt' | 'research' | 'plan' | 'spec'
+  | 'moc' | 'layer' | 'journey' | 'lesson' | 'atlas' | 'map' | 'method'
+// Status follows the main KB's living-document vocabulary; the legacy vault
+// statuses stay valid so older snapshots keep loading.
+export type NoteStatus =
+  | 'living' | 'baseline' | 'frozen' | 'current' | 'superseded'
+  | 'seed' | 'draft' | 'active' | 'shipped' | 'archived'
 export type Confidence = 'low' | 'medium' | 'high'
 
 export interface Frontmatter {
@@ -12,9 +20,14 @@ export interface Frontmatter {
   type: NoteType
   status: NoteStatus
   tags: string[]
-  updated: string          // ISO date (yyyy-mm-dd)
+  updated: string          // ISO date (yyyy-mm-dd) — accepts `date:` from main-KB notes
   owner: string
   confidence: Confidence
+  // main-KB layer fields — optional, present on layer/stack notes
+  maturity?: string        // hardened | proven | functional | drifting | zero
+  leverage?: string        // high | medium | low | highest | meta
+  health?: string          // green | amber | red
+  layer?: string           // e.g. data | engine | app-ui | agentic | distribution
   [key: string]: string | string[] | undefined
 }
 
@@ -105,6 +118,7 @@ export const PRODUCT_COLOR: Record<Product, string> = {
 }
 
 export const STATUS_LABEL: Record<NoteStatus, string> = {
+  living: 'Living', baseline: 'Baseline', frozen: 'Frozen', current: 'Current', superseded: 'Superseded',
   seed: 'Seed', draft: 'Draft', active: 'Active', shipped: 'Shipped', archived: 'Archived',
 }
 

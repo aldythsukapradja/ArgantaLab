@@ -42,7 +42,7 @@ export function SearchPanel() {
           <div className="vs-idle">
             <Search size={20} />
             <p>Search across titles, properties and note bodies.</p>
-            <p className="vs-hint">Try “Argons”, “retention” or “pilot”.</p>
+            <p className="vs-hint">Try “Diamonds”, “Bloom”, “retention” or “wedge”.</p>
           </div>
         )}
         {q.trim() !== '' && hits.length === 0 && (

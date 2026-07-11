@@ -102,7 +102,11 @@ export function searchNotes(q: string, notes: Record<string, VaultNote>): Search
 
 export type SortKey = 'title' | 'product' | 'status' | 'updated' | 'confidence'
 const CONF_RANK = { low: 0, medium: 1, high: 2 } as const
-const STATUS_RANK = { seed: 0, draft: 1, active: 2, shipped: 3, archived: 4 } as const
+const STATUS_RANK: Record<string, number> = {
+  // main-KB living-doc order first, then legacy vault statuses
+  living: 0, baseline: 1, current: 2, frozen: 3, superseded: 4,
+  seed: 5, draft: 6, active: 7, shipped: 8, archived: 9,
+}
 
 export function sortNotes(list: VaultNote[], key: SortKey, dir: 1 | -1): VaultNote[] {
   const arr = [...list]

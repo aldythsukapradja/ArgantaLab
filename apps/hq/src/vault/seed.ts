@@ -1,7 +1,10 @@
-// HQ Vault — seed content. A real founder vault, not lorem ipsum: the four
-// Arganta pillars, the loop that connects them, the capital narrative, the
-// decision log and the prompt library — densely wikilinked so backlinks,
-// graph and canvas are alive on first open.
+// HQ Vault — seed content, grounded to the Arganta main knowledge base
+// (knowledge-base/ in the repo, snapshot commit a00b826, 2026-07-11).
+// Every claim here is verified against code/schema: 96k LOC, one Supabase
+// (71 tables, 147 RPCs), 7 front-ends on a shared packages spine — and
+// 0 external users. Aspirational fictions removed; the notes now tell the truth
+// in the main KB's format. Densely wikilinked so graph, backlinks and canvas
+// stay alive on first open.
 
 import type { VaultNote, CanvasState } from './types'
 import { slugify } from './types'
@@ -12,51 +15,53 @@ const RAW: string[] = [
 `---
 title: HQ
 product: HQ
-type: strategy
-status: active
-tags: [pillar, founder-os, north-star]
-updated: 2026-07-06
+type: moc
+status: living
+tags: [pillar, founder-os, agentic, north-star]
+date: 2026-07-11
 owner: Aldyth
 confidence: high
 ---
 # HQ — the founder operating system
 
-HQ is the fourth pillar of Arganta: the cockpit **above** the products. Where [[KinetikCircle]] serves the household, [[ArgantaLabs]] serves the kids, and [[LashiraBloom]] binds the family into one world, HQ serves exactly one user — the founder.
+HQ is the cockpit **above** the products. Where [[KinetikCircle]] serves the household, [[ArgantaLabs]] serves the kids, and [[LashiraBloom]] binds the family into one world, HQ serves exactly one user — the founder. Grounded state: 25,820 LOC, **6 offices consolidating 27 agents**, and **The Bridge** (an MCP seat) live on Render with 20 read-only tools.
 
-## What HQ must answer every morning
+## What HQ answers every morning
 1. Is the family flywheel spinning? → [[Product Loop]]
-2. What did the pilot families do yesterday? → [[Family Pilot Plan]]
-3. Is the economy balanced? → [[Argons Economy]]
-4. What am I telling investors this month? → [[Investor Narrative]]
+2. Who used anything yesterday? → [[Family Pilot Plan]]
+3. Is the economy honest? → [[The Economy]]
+4. What is the real story for investors? → [[Investor Narrative]]
 
-## Operating principle
-> One person, four products, zero headcount. Every surface in HQ exists to replace a meeting that never happened.
+## The honest state
+> The instrumentation is done. hq_growth_overview() computes DAU, WAU, MAU, stickiness, north-star. It runs. It reads **0**. It is a cockpit pointed at an empty room.
 
-The Vault itself is part of HQ: decisions live in [[Founder Decisions]], reusable AI instructions live in [[Fable Build Prompts]], and the forward plan lives in [[Product Roadmap]].
+HQ is read-only over ArgantaLabs' tables; its provenance is mostly *simulated* / *placeholder* — not a bug, an honestly-labelled placeholder that flips to *live* the moment a real user appears. See [[Founder Decisions]] for why it stays read-only, and [[Fable Build Prompts]] for how it was built.
 
 ## Current focus
-- [ ] Ship HQ Vault (this workspace)
-- [x] Command cockpit with six offices
-- [ ] Wire pilot telemetry into Growth
-- [ ] Draft the seed round memo from [[Investor Narrative]]
+- [x] Command cockpit with six offices + Bridge live on Render
+- [ ] Get the first non-household user so the dashboards stop reading 0 ([[Family Pilot Plan]])
+- [ ] Name the wedge in writing ([[Product Roadmap]])
 `,
 // ------------------------------------------------------- KinetikCircle
 `---
 title: KinetikCircle
 product: KinetikCircle
-type: strategy
-status: active
+type: moc
+status: living
 tags: [pillar, family-os, retention]
-updated: 2026-07-05
+date: 2026-07-11
 owner: Aldyth
 confidence: high
 ---
 # KinetikCircle — the family operating system
 
-The household shell. Calendar, meals, chores, rituals — the boring-but-daily surface that earns the right to be opened every single morning. Inspired by (and stress-tested on) the founder's wife, who is the archetypal organizing parent.
+The household shell: calendar, moments, chores, four mini-apps (Padel, Kitchen, Travel, Vault). The boring-but-daily surface that earns the right to be opened every morning. Grounded state: 7,234 LOC, functional, ships native via Capacitor — **0 external users**.
 
 ## Position in the loop
-KinetikCircle is the **entry pillar** of the [[Product Loop]]: parents arrive for organization, then discover [[ArgantaLabs]] for the kids and [[LashiraBloom]] as the shared world. See the founding call in [[Decision — KinetikCircle as Family Shell]].
+KinetikCircle is the **entry pillar** of the [[Product Loop]]: parents arrive for organization, then discover [[ArgantaLabs]] for the kids and [[LashiraBloom]] as the shared world. Founding call: [[Decision — KinetikCircle as Family Shell]].
+
+## The identity spine (a decision that held)
+KinetikCircle reuses the existing **circles** model — circleId / personId / appId, never familyId / memberId — so one identity serves every app. See [[Founder Decisions]].
 
 ## Who it is for
 | Persona | Job to be done |
@@ -65,115 +70,107 @@ KinetikCircle is the **entry pillar** of the [[Product Loop]]: parents arrive fo
 | Partner | See the plan, take a lane |
 | Kids | Know what is expected, earn recognition |
 
-## Beliefs
-- The parent who plans the week is the **economic buyer** of the whole ecosystem.
-- Utility first, delight second: streaks and gardens come *after* the calendar works.
-- Family data never leaves the circle — trust is the moat. See [[Market Research]] for the competitor trust gap.
-
 ## Open threads
-- [ ] Minifarm hand-off into [[LashiraBloom]]
+- [ ] An invite used by someone **not** named Sukapradja (the real bar)
 - [ ] Weekly ritual → quest bridge with [[ArgantaLabs]]
 `,
 // -------------------------------------------------------- ArgantaLabs
 `---
 title: ArgantaLabs
 product: ArgantaLabs
-type: strategy
-status: active
+type: moc
+status: living
 tags: [pillar, learning, kids]
-updated: 2026-07-04
+date: 2026-07-11
 owner: Aldyth
 confidence: high
 ---
 # ArgantaLabs — the learning and growth engine
 
-The kids' pillar, inspired by the founder's son: drills, quests, ranks and worlds that make practice feel like play. Chosen as the dedicated learning engine in [[Decision — ArgantaLabs as Learning Engine]].
+The kids' pillar and the **most complete product** in the repo: 34,196 LOC, 13 content packs, an adaptive learn engine, streaks, quests, badges, a parent dashboard, KinQuest, Arena and the Game Builder + Circle Game SDK. Chosen as the dedicated learning engine in [[Decision — ArgantaLabs as Learning Engine]].
 
 ## Engine, not app
-ArgantaLabs is an **engine** that other pillars call:
-- [[KinetikCircle]] surfaces "today's quest" inside the family plan
-- [[LashiraBloom]] converts learning XP into world progress
-- Rewards settle in the shared [[Argons Economy]]
+ArgantaLabs is an **engine** other pillars call:
+- [[KinetikCircle]] can surface today's quest inside the family plan
+- [[LashiraBloom]] converts learning effort into world power
+- Rewards settle in the shared [[The Economy]] — **kids earn Diamonds only from learning**, never from game actions
 
-## Design laws
-1. A daily session must fit in 12 minutes.
-2. Rank seasons are marathons, not sprints — capped daily gain, rising curve.
-3. Every drill maps to a curriculum node a parent can inspect.
+## The single write path
+All learning flows through one RPC — log_learn_event — which updates skill mastery and the daily summary server-side. One source of truth, no client-side score fudging. See [[Founder Decisions]].
 
-## Signals to watch
-Weekly active learners, streak retention D30, parent-inspection rate. Targets tracked in [[Product Roadmap]] and reported through [[HQ]].
+## The honest gap
+> Most complete ≠ validated. There is **no educator sign-off** and **0 external learners**. Activation is the weakest lever and the landing / top-of-funnel is unmeasured — the door is dark while the room is empty.
+
+Targets and the distribution plan: [[Product Roadmap]] and [[Family Pilot Plan]].
 `,
 // -------------------------------------------------------- LashiraBloom
 `---
 title: LashiraBloom
 product: LashiraBloom
-type: strategy
-status: draft
-tags: [pillar, world, mmorpg, retention]
-updated: 2026-07-03
+type: moc
+status: living
+tags: [pillar, world, rpg, retention]
+date: 2026-07-11
 owner: Aldyth
-confidence: medium
+confidence: high
 ---
 # LashiraBloom — the family world
 
-A Stardew-inspired family MMORPG, inspired by the founder's daughter. The farm is the *retention layer* that makes leaving the ecosystem feel like abandoning a garden. Rationale in [[Decision — LashiraBloom as Retention World]].
+A Stardew-inspired family RPG built on the Kingdom spine over four heavy days (P6, 100+ commits): a farm loop (1–8) plus tiered combat (1–16) on a 60×48 castle-center map with an 82-asset art library. Rationale: [[Decision — LashiraBloom as Retention World]].
 
-## The unification bet
-LashiraBloom absorbs two loose ends:
-- the **Arena** progress from [[ArgantaLabs]] (kids' effort becomes world power)
-- the **minifarm** from [[KinetikCircle]] (household rituals water real crops)
+## The reuse bet that paid off
+Combat, skills, scaling and VFX come from the shared **@arganta/combat** package — the same engine Kingdom and HQ consume. The Kingdom canvas compositor was copied in wholesale to ship fast (still un-extracted; that's debt). See [[Founder Decisions]].
 
-Adults play, kids learn: grown-ups can farm freely, but growth multipliers come from the kids' learning streaks — the household literally blooms when the children do. Currency flows through the [[Argons Economy]].
+## The currency, corrected
+The play currency is **Bloom 🌸** — it was specced as open Diamonds, respecced as Gold, and shipped as Bloom, all inside ~24h (2026-07-08). Diamonds remain the cross-app skins currency; Bloom is Lashira's. Full model: [[The Economy]].
 
-## World pillars
-- A shared plot per family circle, visible to every member
-- Seasons synchronized with [[ArgantaLabs]] rank seasons
-- No dark-pattern timers: crops wait politely, they never rot
+## Adults play, kids learn
+Grown-ups farm freely; growth multipliers come from the kids' learning streaks in [[ArgantaLabs]]. No rot timers — crops wait politely.
 
-## Status
-Playable farm slice built; economy hookup and family plot sync are next — see [[Product Roadmap]] and the pilot gates in [[Family Pilot Plan]].
+## The honest gap
+> Real farm + real combat, **0 players**. There is no onboarding for a stranger and no reason to return that isn't "dad built it." Retention (daily quests + streak) is the missing layer.
 `,
 // -------------------------------------------------------- Product Loop
 `---
 title: Product Loop
 product: HQ
 type: strategy
-status: active
+status: living
 tags: [flywheel, strategy, north-star]
-updated: 2026-07-02
+date: 2026-07-11
 owner: Aldyth
 confidence: high
 ---
 # The Product Loop
 
-One family, four surfaces, a single flywheel:
+One family, four surfaces, a single intended flywheel:
 
 1. **Organize** — the parent runs the week in [[KinetikCircle]]
 2. **Learn** — the kid clears a quest in [[ArgantaLabs]]
-3. **Bloom** — effort waters the family plot in [[LashiraBloom]]
+3. **Bloom** — effort waters the family world in [[LashiraBloom]]
 4. **Observe** — the founder reads the pulse in [[HQ]] and tunes the loop
 
-Each hop mints or spends **Argons** (see [[Argons Economy]]), so the loop is measurable end-to-end.
+Each hop mints or spends currency (see [[The Economy]]), so the loop is measurable end-to-end.
 
-> The loop is the product. The apps are just doors into it.
+> The loop is the product; the apps are doors into it. Grounded caveat: the loop is **built in code but has 0 users flowing through it** — a flywheel with nothing on it. Building the loop was platform work; spinning it is distribution work, and that hasn't started.
 
-## Loop health metrics
+## Loop health metrics (targets — all currently 0)
 | Hop | Metric | Target |
 | --- | --- | --- |
 | Organize → Learn | quest-open rate from planner | 40% |
-| Learn → Bloom | XP→bloom conversion | 90% |
+| Learn → Bloom | learning → world conversion | 90% |
 | Bloom → Organize | next-morning planner return | 70% |
 
-Pilot instrumentation lives in [[Family Pilot Plan]]; the pitch version of this diagram anchors [[Investor Narrative]].
+Distribution plan: [[Family Pilot Plan]]. Pitch framing: [[Investor Narrative]].
 `,
 // -------------------------------------------------- Investor Narrative
 `---
 title: Investor Narrative
 product: Investor
 type: strategy
-status: draft
+status: living
 tags: [fundraise, pitch, capital]
-updated: 2026-06-28
+date: 2026-07-11
 owner: Aldyth
 confidence: medium
 ---
@@ -185,125 +182,127 @@ confidence: medium
 1. Wedge: [[KinetikCircle]] wins the organizing parent (weekly utility)
 2. Expansion: [[ArgantaLabs]] wins the kids (daily learning)
 3. Moat: [[LashiraBloom]] binds the family (shared world, sunk emotional cost)
-4. Proof: [[HQ]] shows one founder can run all of it with agents
+4. Proof: [[HQ]] shows one founder + agents can run all of it
 
-## Why now
-AI collapsed the cost of building a four-product ecosystem solo — the build log in [[Fable Build Prompts]] *is* the demo. Family-software incumbents each own a slice; nobody owns the loop (evidence: [[Market Research]]).
+## Why now — and the honest proof state
+AI collapsed the cost of building a four-product ecosystem solo. The build **is** the demo: 96k LOC, one Supabase spine (71 tables, 147 RPCs), 7 front-ends, one founder — in 22 days. The build log lives in [[Fable Build Prompts]].
+
+> The honest number is the risk: **external users = 0.** The asset is the substrate and the velocity, not traction. The raise is to buy distribution, not to keep building.
 
 ## The honest risks
-- Multi-product focus risk → answered by the [[Product Loop]] flywheel discipline
-- Kids-product trust bar → answered by circle-private data and no ads, ever
-- Solo-founder risk → answered by the agent-run [[HQ]] cockpit
-
-Numbers and pilot gates: [[Family Pilot Plan]] and [[Argons Economy]].
+- Multi-product focus risk → the [[Product Loop]] discipline, but a wedge is still unnamed
+- Kids-product trust bar → circle-private data, no ads ever
+- Zero-traction risk → the whole plan in [[Family Pilot Plan]]
 `,
 // -------------------------------------------------- Family Pilot Plan
 `---
 title: Family Pilot Plan
 product: HQ
 type: plan
-status: active
-tags: [pilot, validation, metrics]
-updated: 2026-07-01
+status: living
+tags: [distribution, validation, milestones]
+date: 2026-07-11
 owner: Aldyth
 confidence: medium
 ---
-# Family Pilot Plan
+# Family Pilot Plan — the distribution ladder
 
-Five real households (starting with the founder's own) run the full loop for eight weeks. The pilot exists to prove **one number**: a family that completes onboarding is still active in all three surfaces at week 8.
+> Grounded correction: there is **no pilot cohort yet**. External users = 0; all activity is the founder's household. This note is not a status board of live families — it is the plan to get the first stranger. Distribution is the work; features are not.
 
-## Cohort
-| Family | Kids | Entry door | Status |
-| --- | --- | --- | --- |
-| Sukapradja (founder) | 2 | [[KinetikCircle]] | live |
-| Pilot B | 1 | [[KinetikCircle]] | onboarding |
-| Pilot C | 3 | [[ArgantaLabs]] | recruited |
-| Pilot D | 2 | [[LashiraBloom]] | recruited |
-| Pilot E | 2 | [[KinetikCircle]] | shortlist |
+## The rule
+A milestone is not done until a person **not in the family** does the thing. Code shipping is not a milestone — behaviour is.
 
-## Week gates
-- **W1–2** — planner habit: ≥4 planner days/week
-- **W3–4** — learning habit: kid streak ≥5 days via [[ArgantaLabs]]
-- **W5–6** — bloom habit: family plot watered in [[LashiraBloom]]
-- **W7–8** — loop proof: all three surfaces touched in one day, twice a week
+## The ladder (from the main KB milestone tracker)
+| # | Milestone | Signal |
+| --- | --- | --- |
+| M0 | Repo hygiene | .git < 100 MB, CI green, one lockfile |
+| M1 | Name the wedge | ONE product named as the tip of the spear, in writing |
+| M2 | Stranger #1 | hq_growth_overview().learners ≥ 1 non-household |
+| M3 | Ten strangers | wau ≥ 10, none named Sukapradja |
+| M4 | Retention signal | D7 retention ≥ 20% on those ten |
+| M5 | First revenue | 1 paid Diamond top-up from a stranger |
 
-Earned Argons per family are the cross-surface tracer — definitions in [[Argons Economy]]. Results feed [[Investor Narrative]] directly.
+## Next physical step
+Pick the wedge ([[Product Roadmap]]), point one channel at one audience, instrument the top of the funnel so the first stranger is actually *seen*. Feeds [[Investor Narrative]] directly.
 `,
-// ----------------------------------------------------- Argons Economy
+// ----------------------------------------------------- The Economy
 `---
-title: Argons Economy
+title: The Economy
 product: HQ
 type: spec
-status: draft
-tags: [economy, currency, balance]
-updated: 2026-06-30
+status: living
+tags: [economy, currency, diamonds, bloom]
+date: 2026-07-11
 owner: Aldyth
-confidence: medium
+confidence: high
 ---
-# Argons Economy
+# The Economy — Diamonds & Bloom
 
-**Argons** are the single currency that moves through every pillar — the accounting layer of the [[Product Loop]].
+Grounded correction: there is no "Argons". The real ecosystem runs **two currencies**, and the rules below are enforced in the schema (diamond_ledger, RPC wallet_*).
 
-## Minting (sources)
-| Source | Surface | Rate |
-| --- | --- | --- |
-| Completed chore/ritual | [[KinetikCircle]] | 5–15 ⬡ |
-| Cleared drill/quest | [[ArgantaLabs]] | 10–40 ⬡ (daily-capped) |
-| Harvest & world events | [[LashiraBloom]] | 5–25 ⬡ |
+## Diamonds — the cross-app wallet
+- **Single source of truth: [[ArgantaLabs]].** Kids earn Diamonds **only** from learning apps or approved guardian events — **never** from game actions.
+- Diamonds buy **skins/cosmetics only, never power**.
+- Append-only ledger (diamond_ledger); every move goes through wallet_earn / wallet_spend / wallet_reconcile.
+- Diamonds never convert to real money.
 
-## Burning (sinks)
-- Cosmetics, mounts and plot upgrades in [[LashiraBloom]]
-- Quest re-rolls and season passes in [[ArgantaLabs]]
-- Family reward shelf (parent-defined real-world treats) in [[KinetikCircle]]
+## Bloom 🌸 — LashiraBloom's play currency
+- Earned and spent inside [[LashiraBloom]] (farming, world events). Was Gold, renamed Bloom on 2026-07-08.
+- Buys Lashira cosmetics and plot upgrades. Kept separate from Diamonds so play can't mint power.
 
 ## Balance laws
-1. **Learning is the richest faucet** — the economy must always pay kids more per minute for learning than for anything else.
-2. Daily caps everywhere; an uncapped faucet killed every economy we studied in [[Market Research]].
-3. Sinks scale with family size so multi-kid circles never inflate.
-4. Argons never convert to real money. Real-world rewards are parent-granted, not market-priced.
+1. **Learning is the only faucet that mints Diamonds** — the economy pays kids for learning, not for playing.
+2. Adults play freely; multipliers flow from the kids' learning streaks.
+3. No rot timers, no real-money bridge.
 
-Season tuning cadence and cap curves ship with each rank season — tracked in [[Product Roadmap]].
+See [[Founder Decisions]] for the Gold → Bloom call and the diamonds-single-source rule.
 `,
 // -------------------------------------------------- Founder Decisions
 `---
 title: Founder Decisions
 product: HQ
-type: note
-status: active
+type: decision
+status: living
 tags: [decisions, log, index]
-updated: 2026-07-06
+date: 2026-07-11
 owner: Aldyth
 confidence: high
 ---
-# Founder Decisions
+# Founder Decisions — the log that held
 
-The append-only log of bets. One note per decision, frontmatter carries the metadata, the Decisions view renders the ledger.
+The append-only ledger of bets, grounded to the main KB decision log (§13). These have **held** in code.
 
-## Ratified
-- [[Decision — KinetikCircle as Family Shell]] — the organizing parent is the wedge
-- [[Decision — ArgantaLabs as Learning Engine]] — learning is an engine, not an app
-- [[Decision — LashiraBloom as Retention World]] — the world is the moat
+## Ratified & holding
+- **2026-06-23** — KinetikCircle uses the existing **circles**, not kinetik_circles (one identity model). → [[KinetikCircle]]
+- **2026-06-23** — Supabase is the single source of truth; kill placeholder UI (no fake data).
+- **2026-07-01** — 27 agents consolidated into **six offices** (reduce surface). → [[HQ]]
+- **2026-07-07** — **@arganta/combat** is canonical; Kingdom and [[LashiraBloom]] consume it (single source).
+- **2026-07-08** — Gold → **Bloom 🌸** (brand coherence). → [[The Economy]]
+- HQ is **read-only** over ArgantaLabs' tables — a cockpit is not an engine.
+- The Bridge is a deterministic, provenance-badged seed — nothing fake renders as real.
 
-## Under consideration
-- Vault-first knowledge discipline: every strategic thought becomes a note in [[HQ]] Vault within 24h
-- Pilot expansion beyond five families before or after the seed raise ([[Family Pilot Plan]])
+## The open decision (this is M1)
+- **Which product is the wedge?** Unanswered. Until one app is named the tip of the spear in writing, effort spreads thin. → [[Product Roadmap]] · [[Family Pilot Plan]]
 
 > A decision note is cheap. Re-litigating the same argument every quarter is not.
+
+## Founding bets (detail)
+- [[Decision — KinetikCircle as Family Shell]] · [[Decision — ArgantaLabs as Learning Engine]] · [[Decision — LashiraBloom as Retention World]]
 `,
 // ---------------------------------------------- Fable Build Prompts
 `---
 title: Fable Build Prompts
 product: HQ
-type: note
-status: active
+type: prompt
+status: living
 tags: [prompts, ai, index, engineering]
-updated: 2026-07-06
+date: 2026-07-11
 owner: Aldyth
 confidence: high
 ---
 # Fable Build Prompts
 
-The prompt library index. Arganta is built by one founder driving AI agents, which makes prompts **capital** — versioned, reusable, compounding. The Prompts view groups them by pillar and craft.
+The prompt library index. Arganta is built by one founder driving AI agents, which makes prompts **capital** — versioned, reusable, compounding. The 96k-LOC build log *is* the demo behind [[Investor Narrative]]. The Prompts view groups these by pillar and craft.
 
 ## Shelves
 - **HQ** — [[Prompt — HQ Vault Build]]
@@ -317,7 +316,7 @@ The prompt library index. Arganta is built by one founder driving AI agents, whi
 
 ## House rules for prompts
 1. State the mission before the task list.
-2. Pin the effort split (build vs. polish) or agents will gold-plate the wrong thing.
+2. Pin the effort split (build vs. polish) or agents gold-plate the wrong thing.
 3. Always demand acceptance criteria back.
 `,
 // ---------------------------------------------------- Market Research
@@ -325,15 +324,15 @@ The prompt library index. Arganta is built by one founder driving AI agents, whi
 title: Market Research
 product: Research
 type: research
-status: active
+status: living
 tags: [market, competitors, research]
-updated: 2026-06-25
+date: 2026-07-11
 owner: Aldyth
 confidence: medium
 ---
 # Market Research
 
-Standing scan of the family-software landscape. Updated monthly; feeds [[Investor Narrative]] and pressure-tests the [[Product Loop]].
+Standing scan of the family-software landscape. Feeds [[Investor Narrative]] and pressure-tests the [[Product Loop]].
 
 ## The slice owners
 | Category | Players | What they own | What they miss |
@@ -343,113 +342,87 @@ Standing scan of the family-software landscape. Updated monthly; feeds [[Investo
 | Family games | Minecraft Realms | The fun | No utility, no learning loop |
 | Chore-reward apps | Greenlight, BusyKid | The allowance | Money ≠ meaning |
 
-## The gap
-Nobody owns the **loop** — organizer → learner → shared world. Each incumbent optimizes one surface and treats the family as an account, not a circle. That gap is the whole thesis behind [[KinetikCircle]] + [[ArgantaLabs]] + [[LashiraBloom]].
+## The gap (the thesis)
+Nobody owns the **loop** — organizer → learner → shared world. Each incumbent optimizes one surface and treats the family as an account, not a circle. That gap is the whole bet behind [[KinetikCircle]] + [[ArgantaLabs]] + [[LashiraBloom]].
 
 ## Economy autopsies
-Studied five reward economies; every one that died, died of an uncapped faucet or a real-money bridge. Both are banned in [[Argons Economy]].
-
-## Watchlist
-- [ ] Apple Family surfaces at WWDC
-- [ ] Duolingo family-plan gamification moves
-- [ ] EU CSAM/child-data regulation drafts (trust moat, see [[KinetikCircle]])
+Every reward economy studied that died, died of an uncapped faucet or a real-money bridge. Both are banned in [[The Economy]].
 `,
 // ---------------------------------------------------- Product Roadmap
 `---
 title: Product Roadmap
 product: HQ
 type: plan
-status: active
-tags: [roadmap, planning, quarters]
-updated: 2026-07-05
+status: living
+tags: [roadmap, distribution, planning]
+date: 2026-07-11
 owner: Aldyth
 confidence: medium
 ---
-# Product Roadmap
+# Product Roadmap — grounded
 
-Rolling four-quarter view. The only roadmap rule: **every quarter must strengthen the loop**, not a single app. Loop definition: [[Product Loop]].
+> The build phase is over; the product is built (96k LOC, 7 apps, one spine). The only roadmap rule now: **every move must produce a user, not a feature.** Polish is not progress.
 
-## Q3 2026 — Prove the loop
-- HQ Vault ships inside [[HQ]] *(this workspace)*
-- [[KinetikCircle]] minifarm → [[LashiraBloom]] plot hand-off
-- [[ArgantaLabs]] season 2 with capped rank curve
-- Pilot W1–W8 gates run ([[Family Pilot Plan]])
+## Now — get to Stranger #1
+- **Name the wedge** (M1) — one product as the tip of the spear, in writing ([[Founder Decisions]])
+- Instrument the top of the funnel so the first stranger is seen
+- Point one channel at one audience ([[Family Pilot Plan]])
 
-## Q4 2026 — Tighten the economy
-- [[Argons Economy]] v1 across all three surfaces
-- Family reward shelf in [[KinetikCircle]]
-- First cross-surface season event
+## Next — hygiene that unblocks scale
+- Repo: .git < 100 MB, kill the 3× asset duplication, add CI (M0)
+- Align dependency drift (React 18/19, Capacitor 6/8) on the wedge app
 
-## Q1 2027 — Tell the story
-- Seed round on pilot data ([[Investor Narrative]])
-- Waitlist opens for cohort 2 families
-
-## Q2 2027 — Widen the doors
-- [[LashiraBloom]] multi-family neighborhoods
-- ArgantaLabs curriculum marketplace exploration ([[Market Research]] gate first)
+## Later — only after users exist
+- Retention layer in [[LashiraBloom]] (daily quests + streak)
+- Educator validation for [[ArgantaLabs]] content
+- Seed round on real pilot data ([[Investor Narrative]])
 `,
 // ---------------------------------------- Decision 1: KinetikCircle
 `---
 title: Decision — KinetikCircle as Family Shell
 product: KinetikCircle
 type: decision
-status: shipped
+status: frozen
 tags: [decision, wedge, strategy]
-updated: 2026-05-12
+date: 2026-05-12
 owner: Aldyth
 confidence: high
 ---
 # Decision — KinetikCircle as the family shell
 
 ## Decision
-[[KinetikCircle]] is the ecosystem's front door: the household organizer is the wedge product, and every other pillar mounts into it.
+[[KinetikCircle]] is the ecosystem's front door: the household organizer is the candidate wedge, and every other pillar mounts into it.
 
-## Context
-Three candidate wedges: the organizer, the kids' learning app, or the game world. Only one can be the door families walk through first.
-
-## Options considered
-1. **Organizer-first** — daily utility for the buyer (the organizing parent)
-2. **Learning-first** — kids love it, but parents evaluate it like homework
-3. **World-first** — highest delight, hardest trust sell for a new brand
-
-## Why option 1
-The organizing parent is the economic buyer, the installer, and the enforcer of habits. Win the planner and the kids arrive by decree; win the kid and the parent still has veto. Utility survives motivation dips — fun does not.
+## Why
+The organizing parent is the economic buyer, the installer, and the enforcer of habits. Win the planner and the kids arrive by decree. Utility survives motivation dips — fun does not.
 
 ## Consequences
 - [[ArgantaLabs]] and [[LashiraBloom]] surface *inside* the circle rather than standing alone
 - Onboarding, billing and trust all speak parent-first
-- Pilot entry doors weighted toward the planner ([[Family Pilot Plan]])
+- Still open: whether the organizer is *the* wedge is M1 in [[Founder Decisions]] — proposed here, not yet proven with a user
 `,
 // ---------------------------------------- Decision 2: ArgantaLabs
 `---
 title: Decision — ArgantaLabs as Learning Engine
 product: ArgantaLabs
 type: decision
-status: shipped
+status: frozen
 tags: [decision, learning, architecture]
-updated: 2026-05-20
+date: 2026-05-20
 owner: Aldyth
 confidence: high
 ---
 # Decision — ArgantaLabs as the learning engine
 
 ## Decision
-[[ArgantaLabs]] is built as an **engine with surfaces**, not a destination app: drills, quests, ranks and XP are services that [[KinetikCircle]] and [[LashiraBloom]] call.
+[[ArgantaLabs]] is built as an **engine with surfaces**, not a destination app: drills, quests, ranks and learning events are services other pillars call.
 
-## Context
-The learning experience kept wanting to leak into the other pillars — quests in the family planner, XP in the farm. Duplicating logic per app was already hurting at two integrations.
-
-## Options considered
-1. **Standalone app** — cleanest brand, weakest loop
-2. **Engine + embedded surfaces** — one progression system, many doors
-3. **Merge into the game** — fun, but learning becomes decoration
-
-## Why option 2
-The loop ([[Product Loop]]) needs learning effort to be *legible everywhere* — a quest cleared at breakfast must move the farm by dinner. One engine, one XP ledger, one rank season, rendered wherever the family already is.
+## Why
+The loop ([[Product Loop]]) needs learning effort to be legible everywhere — a quest cleared at breakfast should move the world by dinner. One engine, one event path (log_learn_event), one rank season.
 
 ## Consequences
-- Single source of truth for XP feeding the [[Argons Economy]]
-- Rank seasons stay marathon-shaped (daily caps) across every surface
+- Single source of truth for learning feeding [[The Economy]] — Diamonds mint from learning only
+- Rank seasons stay marathon-shaped (daily caps)
 - The engine ships SDK-style; surfaces stay thin
 `,
 // ---------------------------------------- Decision 3: LashiraBloom
@@ -457,63 +430,50 @@ The loop ([[Product Loop]]) needs learning effort to be *legible everywhere* —
 title: Decision — LashiraBloom as Retention World
 product: LashiraBloom
 type: decision
-status: active
+status: current
 tags: [decision, retention, world]
-updated: 2026-06-08
+date: 2026-06-08
 owner: Aldyth
 confidence: medium
 ---
 # Decision — LashiraBloom as the retention world
 
 ## Decision
-[[LashiraBloom]] is the ecosystem's retention layer: a persistent family world whose growth is fed by real household activity, unifying the ArgantaLabs Arena and the KinetikCircle minifarm.
+[[LashiraBloom]] is the ecosystem's retention layer: a persistent family world whose growth is fed by real household activity, reusing the shared @arganta/combat engine.
 
-## Context
-Organizers get replaced by a cheaper organizer; learning apps get dropped at semester's end. The ecosystem needed something a family *accumulates* — sunk emotional value that makes switching feel like loss.
-
-## Options considered
-1. **Points & badges** — cheap, weightless, instantly forgettable
-2. **Separate casual game** — fun but disconnected from real family effort
-3. **Persistent world fed by the loop** — the farm only blooms when the family actually lives well
-
-## Why option 3
-A garden watered by six months of real chores, real streaks and real family rituals cannot be exported to a competitor. The world *is* the moat — and it is honest: it reflects effort, it never sells it back.
+## Why
+Organizers get replaced; learning apps get dropped at semester's end. The ecosystem needed something a family *accumulates* — sunk emotional value that makes switching feel like loss.
 
 ## Consequences
 - Adults play freely; multipliers come from kids' learning ([[ArgantaLabs]])
-- All value flows settle in [[Argons Economy]] — no rot timers, no real-money bridge
-- Pilot gate W5–W6 measures the bloom habit ([[Family Pilot Plan]])
+- All value settles in [[The Economy]] — Bloom for play, no real-money bridge
+- Open risk: the retention layer (daily quests + streak) is **not yet built**, and there are 0 players to retain
 `,
 // -------------------------------------------------- Prompt: HQ Vault
 `---
 title: Prompt — HQ Vault Build
 product: HQ
 type: prompt
-status: shipped
+status: frozen
 tags: [prompt, engineering, vault]
-updated: 2026-07-06
+date: 2026-07-06
 owner: Aldyth
 confidence: high
 ---
 # Prompt — HQ Vault Build
 
-The prompt that built this workspace. Kept verbatim-in-spirit as the house template for **feature-first agent builds**.
+The prompt that built this workspace. Kept as the house template for **feature-first agent builds**.
 
 ## Mission framing
 > Build a premium Obsidian-inspired knowledge workspace inside HQ. Spend 80% of effort on the new feature, 15% integrating it, 5% on the old shell. Feature first, polish second, no fake buttons.
 
 ## Structure that made it work
 1. Product context (four pillars, who each serves)
-2. Explicit UX reference model (ribbon, explorer, tabs, graph, canvas, bases…)
-3. Legal guardrail — emulate interaction model, never assets or branding
-4. Local-first constraint: no backend, no auth, IndexedDB/localStorage
-5. Pure-function contract: parseFrontmatter, buildBacklinks, buildGraph…
-6. 23 acceptance flows the result is graded against
-
-## Reuse checklist
-- [ ] Swap the mission paragraph
-- [ ] Rewrite the acceptance flows for the new feature
-- [ ] Keep the effort split line — it prevents gold-plating old screens
+2. Explicit UX reference model (ribbon, explorer, tabs, graph, canvas, bases)
+3. Legal guardrail — emulate the interaction model, never assets or branding
+4. Local-first constraint: no backend, localStorage
+5. Pure-function contract: parseFrontmatter, buildBacklinks, buildGraph
+6. Acceptance flows the result is graded against
 
 Related craft: [[Prompt — Engineering Review Pass]] · index: [[Fable Build Prompts]]
 `,
@@ -522,9 +482,9 @@ Related craft: [[Prompt — Engineering Review Pass]] · index: [[Fable Build Pr
 title: Prompt — Weekly Planner Flow
 product: KinetikCircle
 type: prompt
-status: active
+status: living
 tags: [prompt, design, planner]
-updated: 2026-06-18
+date: 2026-06-18
 owner: Aldyth
 confidence: medium
 ---
@@ -546,9 +506,9 @@ Index: [[Fable Build Prompts]]
 title: Prompt — Quest Design System
 product: ArgantaLabs
 type: prompt
-status: active
+status: living
 tags: [prompt, design, quests]
-updated: 2026-06-15
+date: 2026-06-15
 owner: Aldyth
 confidence: medium
 ---
@@ -557,7 +517,7 @@ confidence: medium
 For generating [[ArgantaLabs]] quest chains that respect the engine's design laws.
 
 ## Prompt body
-> Design a 5-step quest chain for a 9-year-old practicing multiplication. Constraints: 12-minute daily session, daily XP cap (see [[Argons Economy]]), difficulty rises only after two clean days, and every step maps to a curriculum node a parent can read in one sentence. Deliver: chain table, XP schedule, failure-day behavior.
+> Design a 5-step quest chain for a 9-year-old practicing multiplication. Constraints: 12-minute daily session, daily Diamond cap (see [[The Economy]] — Diamonds mint from learning only), difficulty rises only after two clean days, and every step maps to a curriculum node a parent can read in one sentence. Deliver: chain table, reward schedule, failure-day behavior.
 
 ## Grading
 - Marathon rule: a kid who plays every day for a week must NOT finish the season early
@@ -572,19 +532,19 @@ product: LashiraBloom
 type: prompt
 status: draft
 tags: [prompt, economy, balancing]
-updated: 2026-06-20
+date: 2026-06-20
 owner: Aldyth
 confidence: low
 ---
 # Prompt — Farm Loop Balancing
 
-For tuning the [[LashiraBloom]] farm against the [[Argons Economy]] balance laws.
+For tuning the [[LashiraBloom]] farm against the [[The Economy]] balance laws.
 
 ## Prompt body
-> Simulate a family of four (two kids, streaks of 60% and 90%) playing the farm for 30 days. Apply the current faucet/sink table from Argons Economy. Report: net Argon balance per member per week, time-to-first-mount, and any point where an adult could out-earn a learning kid. Flag every violation of the "learning is the richest faucet" law.
+> Simulate a family of four (two kids, streaks of 60% and 90%) playing the farm for 30 days. Apply the current Bloom faucet/sink table. Report: net Bloom balance per member per week, time-to-first-cosmetic, and any point where an adult could out-earn a learning kid in Diamonds. Flag every case where play mints power instead of skins.
 
 ## Grading
-- Zero faucet-law violations
+- Play never mints Diamonds (learning-only faucet holds)
 - No sink priced above 2 weeks of honest play for a median kid
 
 Index: [[Fable Build Prompts]]
@@ -594,9 +554,9 @@ Index: [[Fable Build Prompts]]
 title: Prompt — Investor One-Pager
 product: Investor
 type: prompt
-status: active
+status: living
 tags: [prompt, fundraise, writing]
-updated: 2026-06-22
+date: 2026-06-22
 owner: Aldyth
 confidence: medium
 ---
@@ -605,7 +565,7 @@ confidence: medium
 Compresses [[Investor Narrative]] into a single page for a cold intro.
 
 ## Prompt body
-> Write a one-page memo from the Investor Narrative note. Structure: one-line thesis, the loop diagram in words (from [[Product Loop]]), why-now in two sentences, the three honest risks with their answers, and the pilot proof plan (from [[Family Pilot Plan]]). Voice: calm, specific, zero superlatives. Hard limit 420 words.
+> Write a one-page memo from the Investor Narrative note. Structure: one-line thesis, the loop diagram in words (from [[Product Loop]]), why-now in two sentences, the honest zero-traction risk with its answer, and the distribution plan (from [[Family Pilot Plan]]). Voice: calm, specific, zero superlatives. Hard limit 420 words.
 
 ## Grading
 - A stranger can repeat the thesis after one read
@@ -618,9 +578,9 @@ Index: [[Fable Build Prompts]]
 title: Prompt — Market Research Sweep
 product: Research
 type: prompt
-status: active
+status: living
 tags: [prompt, research, monthly]
-updated: 2026-06-25
+date: 2026-06-25
 owner: Aldyth
 confidence: medium
 ---
@@ -642,9 +602,9 @@ Index: [[Fable Build Prompts]]
 title: Prompt — Design Critique Pass
 product: HQ
 type: prompt
-status: active
+status: living
 tags: [prompt, design, critique]
-updated: 2026-06-10
+date: 2026-06-10
 owner: Aldyth
 confidence: high
 ---
@@ -657,7 +617,7 @@ House critique ritual for any new Arganta surface, run before ship.
 
 ## Grading
 - The 9pm-parent reviewer always goes first
-- Fix list caps at five items — more means the screen needs a rethink, not fixes
+- Fix list caps at five items — more means the screen needs a rethink
 
 Index: [[Fable Build Prompts]]
 `,
@@ -666,9 +626,9 @@ Index: [[Fable Build Prompts]]
 title: Prompt — Engineering Review Pass
 product: HQ
 type: prompt
-status: active
+status: living
 tags: [prompt, engineering, review]
-updated: 2026-06-12
+date: 2026-06-12
 owner: Aldyth
 confidence: high
 ---
@@ -677,7 +637,7 @@ confidence: high
 Standard review pass for agent-built features across the Arganta repos.
 
 ## Prompt body
-> Review the diff feature-first: (1) do the acceptance flows actually work end-to-end, (2) is state local-first and resilient to reload, (3) any fake buttons or dead UI, (4) type-check and build clean, (5) does it leak scope into unrelated modules. Report only defects you verified, ranked by user impact. No style nits unless they break the design system.
+> Review the diff feature-first: (1) do the acceptance flows work end-to-end, (2) is state local-first and resilient to reload, (3) any fake buttons or dead UI, (4) type-check and build clean, (5) does it leak scope into unrelated modules. Report only defects you verified, ranked by user impact. No style nits unless they break the design system.
 
 ## Grading
 - A finding without a reproduction is an opinion
@@ -717,9 +677,9 @@ export function seedCanvas(): CanvasState {
       N('c-bloom', 'lashirabloom', 80, 530, 'jade'),
       N('c-inv', 'investor-narrative', 850, 530, 'rose'),
       { id: 'c-loop', type: 'text', x: 468, y: 66, w: 254, h: 96, color: 'graphite',
-        text: '**The loop is the product.**\nOrganize → Learn → Bloom → Observe.' },
+        text: '**The loop is the product.**\nOrganize → Learn → Bloom → Observe. (0 users on it yet.)' },
       { id: 'c-econ', type: 'text', x: 468, y: 560, w: 254, h: 96, color: 'graphite',
-        text: 'Argons settle every hop — learning must stay the richest faucet.' },
+        text: 'Diamonds mint from learning only; Bloom is play. Learning is the single faucet.' },
     ],
     edges: [
       { id: 'e1', fromCard: 'c-kin', toCard: 'c-hq', label: 'organize' },
@@ -727,7 +687,7 @@ export function seedCanvas(): CanvasState {
       { id: 'e3', fromCard: 'c-bloom', toCard: 'c-hq', label: 'bloom' },
       { id: 'e4', fromCard: 'c-hq', toCard: 'c-inv', label: 'proof' },
       { id: 'e5', fromCard: 'c-kin', toCard: 'c-bloom', label: 'minifarm' },
-      { id: 'e6', fromCard: 'c-labs', toCard: 'c-bloom', label: 'xp → bloom' },
+      { id: 'e6', fromCard: 'c-labs', toCard: 'c-bloom', label: 'learn → world' },
     ],
   }
 }

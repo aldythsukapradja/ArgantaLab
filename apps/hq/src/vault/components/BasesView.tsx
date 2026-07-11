@@ -9,7 +9,8 @@ import { wordCount } from '../markdown'
 import type { Product, NoteStatus } from '../types'
 import { PRODUCTS, PRODUCT_COLOR, STATUS_LABEL } from '../types'
 
-const STATUSES: NoteStatus[] = ['seed', 'draft', 'active', 'shipped', 'archived']
+const STATUSES: NoteStatus[] = ['living', 'baseline', 'frozen', 'current', 'superseded',
+  'seed', 'draft', 'active', 'shipped', 'archived']
 const CONF_COLOR = { low: 'var(--v-bad)', medium: 'var(--v-warn)', high: 'var(--v-ok)' } as const
 
 const COLS: { key: SortKey | 'type' | 'tags'; label: string; sortable: boolean }[] = [

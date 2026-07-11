@@ -13,8 +13,10 @@ import { PRODUCTS, PRODUCT_COLOR, STATUS_LABEL } from '../types'
 
 type RTab = 'props' | 'links' | 'outline'
 
-const TYPES: NoteType[] = ['note', 'strategy', 'decision', 'prompt', 'research', 'plan', 'spec']
-const STATUSES: NoteStatus[] = ['seed', 'draft', 'active', 'shipped', 'archived']
+const TYPES: NoteType[] = ['moc', 'note', 'strategy', 'decision', 'prompt', 'research', 'plan', 'spec',
+  'layer', 'journey', 'lesson', 'atlas', 'map', 'method']
+const STATUSES: NoteStatus[] = ['living', 'baseline', 'frozen', 'current', 'superseded',
+  'seed', 'draft', 'active', 'shipped', 'archived']
 const CONFS: Confidence[] = ['low', 'medium', 'high']
 
 function PropRow({ label, children }: { label: string; children: React.ReactNode }) {

@@ -56,19 +56,23 @@ export function serializeFrontmatter(fm: Frontmatter): string {
 /** Coerce a partial frontmatter into a complete one with safe defaults. */
 export function normalizeFrontmatter(p: Partial<Frontmatter>, fallbackTitle: string): Frontmatter {
   const products: Product[] = ['HQ', 'KinetikCircle', 'ArgantaLabs', 'LashiraBloom', 'Investor', 'Research']
-  const types: NoteType[] = ['note', 'strategy', 'decision', 'prompt', 'research', 'plan', 'spec']
-  const statuses: NoteStatus[] = ['seed', 'draft', 'active', 'shipped', 'archived']
+  const types: NoteType[] = ['note', 'strategy', 'decision', 'prompt', 'research', 'plan', 'spec',
+    'moc', 'layer', 'journey', 'lesson', 'atlas', 'map', 'method']
+  const statuses: NoteStatus[] = ['living', 'baseline', 'frozen', 'current', 'superseded',
+    'seed', 'draft', 'active', 'shipped', 'archived']
   const confs: Confidence[] = ['low', 'medium', 'high']
   const pick = <T extends string>(v: unknown, opts: T[], dflt: T): T =>
     typeof v === 'string' && (opts as string[]).includes(v) ? v as T : dflt
+  // main-KB notes carry `date:`; legacy vault notes carry `updated:` — accept either.
+  const dateVal = typeof p.date === 'string' ? p.date : undefined
   return {
     ...p,
     title: typeof p.title === 'string' && p.title ? p.title : fallbackTitle,
     product: pick(p.product, products, 'HQ'),
     type: pick(p.type, types, 'note'),
-    status: pick(p.status, statuses, 'draft'),
+    status: pick(p.status, statuses, 'living'),
     tags: Array.isArray(p.tags) ? p.tags : [],
-    updated: typeof p.updated === 'string' && p.updated ? p.updated : todayISO(),
+    updated: (typeof p.updated === 'string' && p.updated) ? p.updated : (dateVal || todayISO()),
     owner: typeof p.owner === 'string' && p.owner ? p.owner : 'Aldyth',
     confidence: pick(p.confidence, confs, 'medium'),
   }
