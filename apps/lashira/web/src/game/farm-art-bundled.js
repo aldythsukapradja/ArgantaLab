@@ -32,9 +32,13 @@ const BUNDLED = {
   'lashira.building.shop': 'lib/produce_stall.png',
   'lashira.prop.well': 'lib/well.png',
   'lashira.prop.shipping_bin': 'lib/shipping_bin.png',
-  'lashira.animal.cow': 'lib/cow.png',
-  'lashira.animal.sheep': 'lib/sheep.png',
-  'lashira.animal.chicken': 'lib/chicken.png',
+  // Cow / sheep / chicken deliberately have NO bundled sheet here: the live
+  // animals render from the PixelLab 4-direction creature sprites + walk /
+  // eating / rest-idle / idle animations under public/farm-art/creatures/
+  // (see creature-sprites.js). A bundled 'lashira.animal.<species>' key would
+  // SHADOW that path — drawAnimalSprite only reaches creatureFrame when the
+  // key is absent — so these are left out on purpose. (lib/cow|sheep|chicken.png
+  // remain on disk for the HQ Pixel Vault / DB-override path only.)
   // Produce "ready to collect" badge icons (game-icons.net, CC BY 3.0 — see
   // public/farm-art/produce/CREDITS.md). Shown over an animal when its good is ripe.
   'lashira.produce.milk': 'produce/milk.svg',
