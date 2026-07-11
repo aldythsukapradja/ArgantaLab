@@ -123,6 +123,10 @@ export const STATUS_LABEL: Record<NoteStatus, string> = {
   seed: 'Seed', draft: 'Draft', active: 'Active', shipped: 'Shipped', archived: 'Archived',
 }
 
+// Seed edition. The vault's localStorage key derives from this, so bumping it
+// guarantees a fresh reseed — an old snapshot can never shadow a new seed.
+export const SEED_VERSION = '2026-07-12-graph-319'
+
 export const slugify = (s: string) =>
   s.trim().toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'untitled'
 

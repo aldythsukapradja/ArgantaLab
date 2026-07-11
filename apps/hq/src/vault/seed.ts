@@ -12,9 +12,9 @@ import type { VaultNote, CanvasState } from './types'
 import { parseFrontmatter, normalizeFrontmatter } from './markdown'
 import { KB_NOTES } from './kb.generated'
 
-// Bump when the seed content changes so existing local vaults re-seed once
-// (otherwise the first-run snapshot in localStorage pins the old notes forever).
-export const SEED_VERSION = '2026-07-12-graph-319'
+// Seed edition lives in types.ts (storage's localStorage key derives from it).
+// Re-exported here so existing imports from './seed' keep working.
+export { SEED_VERSION } from './types'
 
 // ---------- Build the seed vault ----------
 // Notes come from the single markdown KB (knowledge-base/**/*.md) via the
