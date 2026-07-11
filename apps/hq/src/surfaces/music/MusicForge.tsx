@@ -1,10 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Component, Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { scaleBand } from 'd3-scale'
 import {
   MUSIC_THEMES, MusicTransport, INSTRUMENTS, KITS, SCALES, CHORD_PROGS, NOTE_BASE,
   ROLES, ROLE_LABEL, createMasterChain, publishMusicLibrary, loadActiveMusic,
 } from '@arganta/audio'
 import { supabase, cloudEnabled } from '../../lib/supabase'
+
+// The 3D "Conductor Orb" (Three.js) is lazy-loaded (its own chunk). If WebGL is
+// unavailable or the scene throws, VizBoundary swaps in the 2D fallback so the
+// studio never crashes.
+const Conductor3D = lazy(() => import('./Conductor3D'))
+
+class VizBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  componentDidCatch(e: any) { console.warn('[music] 3D visualizer failed, using 2D:', e?.message || e) }
+  render() { return this.state.failed ? this.props.fallback : this.props.children }
+}
 
 // Music Forge — the generative-music STUDIO. A theme (key/scale/tempo/chord-loop
 // + an instrument assigned to each musical ROLE) is composed live by the
@@ -41,6 +53,8 @@ export function MusicForge() {
   const [themes, setThemes] = useState<Record<string, Theme>>(() => clone(MUSIC_THEMES))
   const [realm, setRealm] = useState('farm')
   const [playing, setPlaying] = useState(false)
+  // 3D "Conductor Orb" by default (Canvas2D fallback for reduced-motion / opt-out)
+  const [viz3d, setViz3d] = useState(() => !(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches))
   const [publishing, setPublishing] = useState(false)
   const [pubMsg, setPubMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const T = themes[realm]
@@ -123,7 +137,7 @@ export function MusicForge() {
           <div className="mf-railnote">Every map is a <b>theme</b> — a parameter set. Publish routes it straight to that map. Add a zone → add a theme with a new <code>realm</code>. Same engine, no files.</div>
         </div>
 
-        {/* CENTER — stage + d3 visualizer */}
+        {/* CENTER — stage + visualizer (3D Conductor Orb, or Canvas2D fallback) */}
         <div className="mf-stage">
           <div className="mf-now">
             <button className="mf-bigplay" onClick={() => (playing ? stop() : play())}>
@@ -132,9 +146,19 @@ export function MusicForge() {
                 : <svg width={24} height={24} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>}
             </button>
             <div className="mf-meta"><b>{T.name}</b><div className="sub">{T.mood} · {T.root} {T.scale} · {T.prog}</div></div>
+            <div className="mf-vizseg">
+              <button className={viz3d ? 'on' : ''} onClick={() => setViz3d(true)}>3D</button>
+              <button className={!viz3d ? 'on' : ''} onClick={() => setViz3d(false)}>2D</button>
+            </div>
             <div className="mf-ro"><b id="mf-chord">—</b><span id="mf-key">press play</span></div>
           </div>
-          <Visualizer audioRef={audio} transportRef={transport} eventsRef={events} playing={playing} />
+          {viz3d
+            ? <VizBoundary fallback={<Visualizer audioRef={audio} transportRef={transport} eventsRef={events} playing={playing} />}>
+                <Suspense fallback={<div className="mf-viz mf-vizloading">loading 3D…</div>}>
+                  <Conductor3D audioRef={audio} transportRef={transport} eventsRef={events} playing={playing} />
+                </Suspense>
+              </VizBoundary>
+            : <Visualizer audioRef={audio} transportRef={transport} eventsRef={events} playing={playing} />}
         </div>
 
         {/* RIGHT — theme editor */}

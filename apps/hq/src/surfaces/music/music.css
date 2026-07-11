@@ -226,10 +226,25 @@ html[data-theme="dark"] .mbf{ --mbf-mel:#2dd4bf; }
 .mf-ro{margin-left:auto;text-align:right;font-family:var(--mono);font-size:12px;color:var(--tx3)}
 .mf-ro b{display:block;color:var(--acc-text);font-size:22px;letter-spacing:.02em}
 /* Theme-aware stage: a soft accent-tinted well that follows light/dark like the
-   rest of Circle HQ (was hardcoded black). */
-.mf-viz{flex:1;min-height:280px;width:100%;display:block;border-radius:16px;border:1px solid var(--bd2);
+   rest of Circle HQ (was hardcoded black). The 3D Conductor Orb's canvas is
+   transparent, so this same themed well is its background too. overflow:hidden
+   clips the 3D canvas to the rounded corners. */
+.mf-viz{flex:1;min-height:280px;width:100%;display:block;border-radius:16px;border:1px solid var(--bd2);overflow:hidden;position:relative;
   background:radial-gradient(90% 90% at 50% 42%, color-mix(in srgb, var(--acc) 9%, var(--bg2)), var(--bg2) 72%);
   box-shadow:inset 0 1px 0 color-mix(in srgb, var(--tx) 5%, transparent), 0 12px 34px -24px rgba(16,24,40,.35)}
+.mf-vizloading{display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--tx3)}
+/* r3f wraps the canvas in a div that gets .mf-viz; make the inner canvas fill it */
+.mf-viz canvas{display:block;width:100%!important;height:100%!important}
+
+/* 2D/3D toggle over the stage */
+.mf-vizseg{display:inline-flex;background:var(--bg3);border-radius:9px;padding:3px;gap:2px}
+.mf-vizseg button{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:7px;border:none;background:none;color:var(--tx3);cursor:pointer}
+.mf-vizseg button.on{background:var(--bg);color:var(--acc-text);box-shadow:var(--shadow-sm)}
+
+/* billboarded satellite labels inside the 3D scene */
+.mf3d-label{font:800 12px "Segoe UI",system-ui,sans-serif;letter-spacing:.06em;white-space:nowrap;
+  text-shadow:0 1px 3px color-mix(in srgb, var(--bg) 80%, transparent), 0 0 10px color-mix(in srgb, var(--bg) 60%, transparent);
+  transform:translateY(2px);user-select:none}
 
 /* right controls */
 .mf-ctrl{border-left:1px solid var(--bd);background:var(--bg);overflow-y:auto;padding:14px 16px}

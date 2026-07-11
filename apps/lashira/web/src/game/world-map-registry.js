@@ -9,6 +9,8 @@ export const WORLD_MAPS = {
     theme: 'city / stronghold',
     file: 'Worldmap/lashira-keep.png',
     hqHotspot: { x0: 27, y0: 21, x1: 32, y1: 26 },
+    // marker: circular badge center (tile-corner units, i.e. (x0+x1+1)/2) + icon
+    marker: [30, 24], icon: '🏰',
     hqReturn: [30, 25],
     spawn: [30, 24],
     color: '#7c6cff',
@@ -21,6 +23,7 @@ export const WORLD_MAPS = {
     theme: 'defense / adventure',
     file: 'Worldmap/bloomwall-pass.png',
     hqHotspot: { x0: 28, y0: 32, x1: 31, y1: 33 },
+    marker: [30, 33], icon: '🛡️',
     hqReturn: [30, 33],
     spawn: [30, 40],
     color: '#2ca64e',
@@ -40,6 +43,7 @@ export const WORLD_MAPS = {
     // x29 only — leaves the Market sell hotspot (x30-31) reachable (fixes BT-1
     // shadowing; the kitchen counter sits beside the market, not on top of it).
     hqHotspot: { x0: 29, y0: 16, x1: 29, y1: 17 },
+    marker: [29.5, 17], icon: '🍽️',
     hqReturn: [30, 18],
     spawn: [30, 36],
     color: '#f6a42c',
@@ -52,6 +56,7 @@ export const WORLD_MAPS = {
     theme: 'events / puzzle',
     file: 'Worldmap/fountain-festival.png',
     hqHotspot: { x0: 14, y0: 26, x1: 16, y1: 29 },
+    marker: [15.5, 28], icon: '🎡',
     hqReturn: [15, 29],
     spawn: [30, 26],
     color: '#e53770',
@@ -64,6 +69,7 @@ export const WORLD_MAPS = {
     theme: 'social competition',
     file: 'Worldmap/emberring-arena.png',
     hqHotspot: { x0: 47, y0: 37, x1: 48, y1: 39 },
+    marker: [48, 38.5], icon: '⚔️',
     hqReturn: [48, 38],
     spawn: [30, 28],
     color: '#da2a31',

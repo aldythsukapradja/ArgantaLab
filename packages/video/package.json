@@ -1,0 +1,11 @@
+{
+  "name": "@arganta/video",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic, zero-asset video engine for Circle HQ's Video Builder. Paste text -> synthesized voice (WebAudio, no model, no asset); layers -> canvas frames; export -> a real MP4/WebM. Same recipe in, same content out. Sibling of @arganta/audio.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "sideEffects": false
+}

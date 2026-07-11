@@ -63,6 +63,10 @@ const HIGH_INSIGHT = [
   'profiles', 'item_attempts', 'diamond_ledger', 'node_progress', 'quest_progress',
   'skill_mastery', 'games', 'items', 'circles', 'circle_members', 'kinetik_post',
   'kinetik_broadcast', 'learn_state', 'worlds',
+  // Newer surfaces — Studio, LashiraBloom, Kingdom, Music Forge, Nexus, ArgantaCup
+  'game_scores', 'character_registry', 'person_cosmetic_items', 'person_mounts',
+  'lashira_farm_saves', 'pvp_rank', 'kingdom_npcs', 'person_creatures',
+  'audio_library', 'music_library', 'competitions', 'competition_entrants',
 ]
 
 function TablesView({ model }: { model: Model }) {
