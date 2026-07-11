@@ -2275,6 +2275,15 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     function onTapInteract(clientX, clientY) {
       const g = G.current; if (!g || !g.cam) return;
       const rect = canvas.getBoundingClientRect();
+      // DEV inspector: in operator dev mode, ANY tap records the tapped tile so its
+      // [x,y] shows on the map (see the readout in the dev overlay) — even if the tap
+      // also opens a marker/panel below. Makes it easy to reposition markers/hotspots/
+      // zones by reading real coordinates straight off the map.
+      if (g.devOverlay) {
+        const dtx = Math.floor((g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE);
+        const dty = Math.floor((g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE);
+        g.cursorTile = [dtx, dty];
+      }
       // Fishing beacon: tapping the pulsing 🎣 marker (drawn every frame above)
       // teleports you onto the dock + opens the panel directly — a bigger,
       // forgiving target than the raw hotspot rect, from anywhere it's visible.
