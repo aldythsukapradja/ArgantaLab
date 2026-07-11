@@ -5,14 +5,18 @@ import { useMemo, useState } from 'react'
 import {
   ChevronRight, FilePlus2, FolderOpen, Hash, Clock3, MoreHorizontal,
   Pencil, Copy, Trash2, Pin, FileText, Scale, Terminal, FlaskConical, Map as MapIcon, FileCode2,
+  Compass, Layers, Route, GraduationCap, Boxes, Wrench,
 } from 'lucide-react'
 import { useVault } from '../store'
 import type { VaultNote, NoteType, Product } from '../types'
 import { PRODUCTS, PRODUCT_COLOR } from '../types'
 
-const TYPE_ICON: Record<NoteType, typeof FileText> = {
+// Partial so adding a NoteType never breaks the build — NoteRow falls back to FileText.
+const TYPE_ICON: Partial<Record<NoteType, typeof FileText>> = {
   note: FileText, strategy: MapIcon, decision: Scale, prompt: Terminal,
   research: FlaskConical, plan: MapIcon, spec: FileCode2,
+  moc: Compass, layer: Layers, journey: Route, lesson: GraduationCap,
+  atlas: Boxes, map: MapIcon, method: Wrench,
 }
 
 function NoteRow({ note, active, onMenu }: { note: VaultNote; active: boolean; onMenu: (id: string, x: number, y: number) => void }) {
