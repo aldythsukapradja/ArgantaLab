@@ -8,6 +8,7 @@ import { live } from './live'
 import type { GrowthOverview, EconomyData, SchemaInsights, ContentMatrix, PortfolioVc } from './types'
 import type { OfficeId } from './graph/types'
 import { PRESETS, DEFAULT_GLOBALS, computeScenario } from './monetization'
+import { agentMessages } from '@arganta/ai'
 
 export type Model = 'sonnet' | 'haiku' | 'det'
 export type Tier = 'executive' | 'argantalab' | 'kinetik' | 'growth' | 'platform' | 'brand'
@@ -370,4 +371,42 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
   return `**COO Agent** ${liveTag}\n\n` +
     `I run a 5-layer pipeline over the live Circle data:\n⚡ Sense → 🔢 Compute → 🎯 Match → ✦ Generate → 📬 Deliver\n\n` +
     `Try: **"daily brief"**, **"focus"**, **"blockers"**, **"economy"**, or **"agent status"**.`
+}
+
+// ── The Generate layer, now LLM-backed ───────────────────────────────────────
+// Sense/Compute/Match stay deterministic; only this final synthesis step calls a
+// model — and ONLY over the real computed facts (never free recall). If no live
+// model is reachable (mock / offline / error) it degrades to the scripted
+// template above, so it can never fabricate numbers.
+const INTENT_ROLE: Record<Intent, string> = {
+  brief: 'COO', focus: 'CPO', blockers: 'COO', economy: 'CFO', monetization: 'CFO', agents: 'COO', general: 'COO',
+}
+
+// Flatten the computed facts + matched signals into the text the model reasons over.
+export function agentFacts(c: Computed, signals: Signal[], s: Sensed): string {
+  const f = (k: string, v: number | null, suf = '') => `${k}: ${v == null ? '—' : v + suf}`
+  return [
+    `data source: ${s.source}`,
+    f('weekly active', c.wau), f('WoW change', c.wowPct, '%'), f('stickiness', c.stickiness, '%'),
+    f('activation', c.activation, '%'), f('day-1 comeback', c.d1Retention, '%'), f('flywheel', c.flywheelPct, '%'),
+    f('lessons (7d)', c.lessons7d), f('learners', c.learners), f('public games', c.gamesPublic),
+    f('recurring earn', c.recurringMint), f('burn/spent', c.burn), f('sink coverage', c.coverage, '%'), f('spend per kid', c.spentPerKid),
+    f('mastery accuracy', c.accuracy, '%'), f('content live', c.contentLivePct, '%'),
+    'signals: ' + (signals.map((x) => `[${x.tone}] ${x.text}`).join(' | ') || 'none'),
+  ].join('\n')
+}
+
+// The seam: try the LLM (grounded in agentFacts); fall back to the template.
+export async function aiGenerate(
+  prompt: string, intent: Intent, c: Computed, signals: Signal[], s: Sensed, ai: { chat: (o: unknown) => Promise<{ text: string; provider: string }> },
+): Promise<string> {
+  const role = (INTENT_ROLE[intent] || 'COO') + ' Agent'
+  const task = intent === 'economy' || intent === 'monetization' ? 'analyze' : 'brief'
+  try {
+    const res = await ai.chat({ task, messages: agentMessages(role, agentFacts(c, signals, s), prompt) })
+    if (res && res.provider !== 'mock' && res.text && res.text.trim().length >= 20) {
+      return res.text.trim() + `\n\n_(${role} · ${res.provider} · ${s.source})_`
+    }
+  } catch { /* fall through to the deterministic template */ }
+  return agentGenerate(intent, c, signals, s)
 }

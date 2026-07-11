@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Sparkles, X, Send, Crown, FileText, ChevronDown } from 'lucide-react'
 import {
   PIPELINE, MODEL_META, AGENTS,
-  agentSense, agentCompute, agentMatch, agentGenerate, routeIntent,
+  agentSense, agentCompute, agentMatch, aiGenerate, routeIntent,
   type Model, type Sensed, type Computed, type Signal,
 } from '../data/agents'
+import { ai, aiLive } from '../lib/ai'
+import { orchestrate } from '../data/agentTools'
 import { SCENARIOS, scenarioById } from '../data/scenarios'
 import { OFFICE_CHAT, officeById } from '../data/graph/agents'
 import type { OfficeId } from '../data/graph/types'
@@ -109,10 +111,19 @@ export function AgentOrb() {
     const signals: Signal[] = agentMatch(computed)
     update(s => { s[2] = { ...s[2], label: `Match — ${signals.length} signal${signals.length !== 1 ? 's' : ''}`, done: true } })
     await sleep(240)
-    // ✦ Generate (Sonnet)
-    await sleep(520)
-    const out = agentGenerate(routeIntent(prompt), computed, signals, sensed)
-    update(s => { s[3] = { ...s[3], label: 'Generate — narrative ready', done: true } })
+    // ✦ Generate — agentic tool-calling when a model is connected, then the
+    // grounded-LLM synthesis, then the deterministic template. Layered fallback
+    // means offline is 100% the verified deterministic path.
+    let out = ''
+    if (aiLive) {
+      try {
+        const orch = await orchestrate(prompt, ai, (name) => update(s => { s[3] = { ...s[3], label: 'Orchestrate — ' + name + '()' } }))
+        out = orch.text
+        if (orch.calls.length) update(s => { s[3] = { ...s[3], label: `Generate — ${orch.calls.length} tool call${orch.calls.length !== 1 ? 's' : ''}`, done: true } })
+      } catch { /* fall through to grounded synthesis */ }
+    }
+    if (!out) out = await aiGenerate(prompt, routeIntent(prompt), computed, signals, sensed, ai)
+    update(s => { s[3] = { ...s[3], done: true, label: s[3].done ? s[3].label : (aiLive ? 'Generate — model synthesis' : 'Generate — narrative ready') } })
     await sleep(120)
     update(s => { s[4] = { ...s[4], label: 'Deliver — streaming', done: true } })
 

@@ -1,0 +1,11 @@
+{
+  "name": "@arganta/ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One provider-agnostic LLM runtime for Circle HQ — the Video Director chat AND the C-suite agents share it. OpenAI-compatible surface over WebLLM (local), a free-tier proxy (Gemini/Groq), and a deterministic mock. Tiered by task, free by default.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "sideEffects": false
+}

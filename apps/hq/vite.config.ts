@@ -11,6 +11,7 @@ export default defineConfig({
     '@arganta/character': path.resolve(__dirname, '../../packages/character/src/index.js'),
     '@arganta/audio': path.resolve(__dirname, '../../packages/audio/src/index.js'),
     '@arganta/video': path.resolve(__dirname, '../../packages/video/src/index.js'),
+    '@arganta/ai': path.resolve(__dirname, '../../packages/ai/src/index.js'),
     // Character Forge renders the real animated character through Kingdom's engine.
     '@arganta/heroes-engine': path.resolve(__dirname, '../../packages/heroes-engine/src/index.js'),
   } },

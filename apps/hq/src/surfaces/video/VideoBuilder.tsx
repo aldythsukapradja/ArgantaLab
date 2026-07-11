@@ -4,10 +4,13 @@ import {
   recomputeDuration, drawFrame, renderVoice, voiceList, bufferPeaks,
   exportVideo, downloadBlob, startClips,
   listAssets, uploadAsset, importStock, loadImage, saveRender,
+  localStoryboard, storyboardToProject,
 } from '@arganta/video'
+import { storyboardMessages, coerceStoryboard, STORYBOARD_SCHEMA } from '@arganta/ai'
 import { DEFAULT_SFX_RECIPES, createMasterChain, playRecipe } from '@arganta/audio'
 import { supabase, cloudEnabled } from '../../lib/supabase'
-import { Play, Pause, Plus, Eye, EyeOff, Trash2, ChevronUp, ChevronDown, Mic, Music2, Film, Download, Layers, Upload, Cloud, Sparkles } from 'lucide-react'
+import { ai, aiLive } from '../../lib/ai'
+import { Play, Pause, Plus, Eye, EyeOff, Trash2, ChevronUp, ChevronDown, Mic, Music2, Film, Download, Layers, Upload, Cloud, Sparkles, Wand2, X, Send } from 'lucide-react'
 import './video.css'
 
 // cinematic first — GSAP-choreographed; the rest are the simple built-ins
@@ -48,6 +51,13 @@ export function VideoBuilder() {
   const [mediaBusy, setMediaBusy] = useState(false)
   const [impQuery, setImpQuery] = useState('calm family home')
   const fileRef = useRef<HTMLInputElement>(null)
+  // Director chat
+  const [dirOpen, setDirOpen] = useState(false)
+  const [dirPrompt, setDirPrompt] = useState('')
+  const [dirBusy, setDirBusy] = useState(false)
+  const [dirMsgs, setDirMsgs] = useState<{ role: 'user' | 'agent'; text: string }[]>([
+    { role: 'agent', text: 'Describe a video — “a 30s reel about our family calendar app, upbeat, 3 scenes”. I’ll build it; you edit anything below.' },
+  ])
 
   const projectRef = useRef(project); useEffect(() => { projectRef.current = project }, [project])
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -184,24 +194,55 @@ export function VideoBuilder() {
     update((p) => { const arr = kind === 'layer' ? p.layers : p.audio; const c = arr.find((x: any) => x.id === id); if (c) c.start = Math.max(0, Math.round(start * 10) / 10) })
   }
 
+  // Render voice for `script` and fold it (+ captions + wave) into a project,
+  // returning a NEW project. Shared by manual Generate and the Director.
+  async function voiceIntoProject(base: any, script: string, vId: string) {
+    const { buffer, words, duration } = await renderVoice(script, vId)
+    const peaks = bufferPeaks(buffer, 220)
+    const pal = PALETTES.find((x: any) => x.id === base.palette) || PALETTES[0]
+    const layers = base.layers.filter((l: any) => !l.fromVoice).map((l: any) => ({ ...l }))
+    const cap = captionLayer(words, { dur: duration, accent: pal.accent, yN: 0.8 }); (cap as any).fromVoice = true
+    const wav = waveLayer(peaks, { dur: duration, color: '#06b6d4', yN: 0.63 }); (wav as any).fromVoice = true
+    layers.push(wav, cap)
+    const audio = base.audio.filter((a: any) => a.kind !== 'voice')
+    audio.push({ id: 'voice', kind: 'voice', buffer, start: 0, dur: duration, gain: 1, text: script })
+    const p = { ...base, layers, audio, meta: { ...base.meta, voiceText: script, voiceId: vId } }
+    recomputeDuration(p); return { p, words, duration }
+  }
+
   async function generateVoice() {
     if (!voiceText.trim()) { setStatus('Paste some text first.'); return }
     setBusy('voice'); setStatus('Synthesizing voice…')
     try {
-      const { buffer, words, duration } = await renderVoice(voiceText.trim(), voiceId)
-      const peaks = bufferPeaks(buffer, 220)
-      const pal = PALETTES.find((x: any) => x.id === project.palette) || PALETTES[0]
-      setProject((prev: any) => {
-        const layers = prev.layers.filter((l: any) => !l.fromVoice).map((l: any) => ({ ...l }))
-        const cap = captionLayer(words, { dur: duration, accent: pal.accent, yN: 0.8 }); (cap as any).fromVoice = true
-        const wav = waveLayer(peaks, { dur: duration, color: '#06b6d4', yN: 0.63 }); (wav as any).fromVoice = true
-        layers.push(wav, cap)
-        const audio = prev.audio.filter((a: any) => a.kind !== 'voice')
-        audio.push({ id: 'voice', kind: 'voice', buffer, start: 0, dur: duration, gain: 1, text: voiceText })
-        const p = { ...prev, layers, audio, meta: { ...prev.meta, voiceText, voiceId } }; recomputeDuration(p); return p
-      })
+      const { p, words, duration } = await voiceIntoProject(projectRef.current, voiceText.trim(), voiceId)
+      setProject(p)
       setStatus(`Voice ready · ${duration.toFixed(1)}s · ${words.length} words. Captions + wave added.`)
     } catch (e: any) { setStatus('Voice failed: ' + (e?.message || e)) } finally { setBusy('') }
+  }
+
+  // ---- Director: prompt → storyboard → editable project ----
+  async function runDirector(prompt: string) {
+    if (!prompt.trim() || dirBusy) return
+    setDirBusy(true); setDirPrompt('')
+    setDirMsgs((m) => [...m, { role: 'user', text: prompt }])
+    try {
+      const r = await ai.chatJSON({ task: 'storyboard', schema: STORYBOARD_SCHEMA, messages: storyboardMessages(prompt) })
+      const useLocal = r.provider === 'mock' || !r.json || !Array.isArray(r.json.scenes) || r.json.scenes.length === 0
+      const sb = coerceStoryboard(useLocal ? localStoryboard(prompt) : r.json, { prompt })
+      let proj = storyboardToProject(sb)
+      let dur = 0
+      try { const v = await voiceIntoProject(proj, sb.voiceScript, sb.voiceId); proj = v.p; dur = v.duration } catch { /* voice optional */ }
+      for (const s of (proj._directives?.sfx || [])) {
+        const rec = (DEFAULT_SFX_RECIPES as any)[s.cue]; if (!rec) continue
+        try { const buf = await renderCue(rec); proj.audio.push({ id: 'sfx_' + s.cue + '_' + Math.random().toString(36).slice(2), kind: 'sfx', cue: s.cue, buffer: buf, start: s.atSec || 0, dur: buf.duration, gain: 0.6 }) } catch { /* skip */ }
+      }
+      recomputeDuration(proj)
+      playheadRef.current = 0; setProject(proj); setSelId(null)
+      setVoiceText(sb.voiceScript); setVoiceId(sb.voiceId)
+      const via = useLocal ? (aiLive ? 'local draft — model returned nothing usable' : 'local draft — connect a model for sharper copy') : 'AI · ' + r.provider
+      const scn = sb.scenes.filter((s: any) => (s.text || '').trim()).length
+      setDirMsgs((m) => [...m, { role: 'agent', text: `Built a **${sb.format}** · ${scn} scenes · ${dur ? dur.toFixed(1) + 's' : 'no voice'} · palette ${sb.palette}. Voice + captions added — edit anything below. _(${via})_` }])
+    } catch (e: any) { setDirMsgs((m) => [...m, { role: 'agent', text: 'Failed: ' + (e?.message || e) }]) } finally { setDirBusy(false) }
   }
   async function playVoiceOnly() {
     const clip = project.audio.find((a: any) => a.kind === 'voice'); if (!clip) return
@@ -269,6 +310,9 @@ export function VideoBuilder() {
         </div>
         <div className="vbx-spacer" />
         {status && <span className="vbx-status" title={status}>{status}</span>}
+        <button className={'vbx-directorbtn' + (dirOpen ? ' on' : '')} onClick={() => setDirOpen((o) => !o)}>
+          <Wand2 size={14} /> Director
+        </button>
         <button className="vbx-export" disabled={busy !== ''} onClick={doExport}>
           <Download size={14} /> {busy === 'export' ? `Rendering ${Math.round(exportPct * 100)}%` : 'Export video'}
         </button>
@@ -277,6 +321,36 @@ export function VideoBuilder() {
       <div className="vbx-main">
         <div className="vbx-stage">
           <span className="vbx-stagebadge">{fmtDef.label} · {fmtDef.w}×{fmtDef.h} · {fmtDef.aspect}</span>
+
+          {dirOpen && (
+            <div className="vbx-dir">
+              <div className="vbx-dir-head">
+                <Wand2 size={14} /> <b>Director</b>
+                <span className="vbx-dir-tag">{aiLive ? 'AI connected' : 'local mode'}</span>
+                <button className="vbx-ic" onClick={() => setDirOpen(false)} aria-label="Close"><X size={14} /></button>
+              </div>
+              <div className="vbx-dir-msgs">
+                {dirMsgs.map((m, i) => (
+                  <div key={i} className={'vbx-dir-msg ' + m.role}>
+                    <div className="bubble" dangerouslySetInnerHTML={{ __html: m.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/_\((.+?)\)_/g, '<span class="via">($1)</span>') }} />
+                  </div>
+                ))}
+                {dirBusy && <div className="vbx-dir-msg agent"><div className="bubble"><span className="vbx-dots"><i /><i /><i /></span></div></div>}
+              </div>
+              <div className="vbx-dir-quick">
+                {['30s reel about our family calendar app, upbeat', 'short: 3 tips to plan a family week', 'long explainer: how our diamond rewards work'].map((q) => (
+                  <button key={q} className="vbx-chip" disabled={dirBusy} onClick={() => runDirector(q)}>{q.split(':')[0].split(' about')[0].slice(0, 22)}</button>
+                ))}
+              </div>
+              <div className="vbx-dir-input">
+                <input value={dirPrompt} disabled={dirBusy} placeholder="Describe your video…"
+                  onChange={(e) => setDirPrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && dirPrompt.trim()) runDirector(dirPrompt.trim()) }} />
+                <button className="vbx-dir-send" disabled={dirBusy || !dirPrompt.trim()} onClick={() => runDirector(dirPrompt.trim())} aria-label="Send"><Send size={14} /></button>
+              </div>
+            </div>
+          )}
+
           <div className="vbx-stagebox">
             <canvas ref={canvasRef} className="vbx-canvas" />
           </div>

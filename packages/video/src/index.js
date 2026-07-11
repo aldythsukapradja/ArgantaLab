@@ -9,3 +9,4 @@ export * from './render.js';
 export * from './project.js';
 export * from './cinematic.js';
 export * from './assets.js';
+export * from './director.js';
