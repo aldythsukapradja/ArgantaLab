@@ -382,3 +382,36 @@
 .pladder-step.now { border-color: var(--violet); background: color-mix(in srgb, var(--violet) 10%, transparent); }
 .pladder-step b { font-family: var(--serif); font-weight: 500; font-size: clamp(16px, 2vw, 22px); }
 .pladder-step span { font-size: 11px; color: var(--muted); }
+
+/* ══════════ P2: Jarvis orb + agent ticker (About panel 2) ══════════ */
+.jarvis { display: flex; gap: clamp(14px, 3vw, 34px); align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; max-width: 720px; }
+.jarvis-orbwrap { position: relative; width: clamp(180px, 30vw, 260px); flex: none; }
+.jarvis-orb { width: 100%; height: auto; display: block; filter: drop-shadow(0 0 30px rgba(139,92,246,.25)); }
+@keyframes jSpin { to { transform: rotate(360deg); } }
+@keyframes jSpinR { to { transform: rotate(-360deg); } }
+.jarvis-orb g[class^="j-r"] { transform-origin: 200px 200px; }
+.j-rA { animation: jSpin 26s linear infinite; }
+.j-rB { animation: jSpinR 34s linear infinite; }
+.j-rB2 { animation: jSpin 18s linear infinite; }
+.j-rC { animation: jSpinR 44s linear infinite; }
+.j-sweep { transform-origin: 200px 200px; animation: jSpin 6s linear infinite; }
+.j-core { animation: jCore 3.2s ease-in-out infinite; transform-origin: 200px 200px; }
+@keyframes jCore { 0%,100% { r: 40px; } 50% { r: 44px; } }
+.jarvis-orbwrap[data-pulse] .j-core { filter: drop-shadow(0 0 18px #8b5cf6); }
+.jarvis-badge { position: absolute; top: 6px; right: -6px; display: flex; flex-direction: column; align-items: center; padding: 6px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-solid); box-shadow: 0 6px 18px rgba(0,0,0,.14); }
+.jarvis-badge b { font-family: var(--serif); font-size: 20px; line-height: 1; }
+.jarvis-badge span { font-size: 10px; color: var(--muted); }
+.jarvis-side { flex: 1; min-width: 240px; max-width: 360px; display: flex; flex-direction: column; gap: 8px; }
+.jarvis-tickhead { font-size: 11.5px; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.j-live { display: inline-flex; align-items: center; gap: 5px; color: #10b981; font-weight: 800; }
+.j-live i { width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: jBlink 1.6s ease-in-out infinite; }
+@keyframes jBlink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.jarvis-feed { display: flex; flex-direction: column; gap: 6px; }
+.jarvis-ev { display: flex; align-items: center; gap: 9px; padding: 7px 11px; border: 1px solid var(--border); border-left: 3px solid var(--ac); border-radius: 10px; background: var(--card); font-size: 12px; }
+.jarvis-ev.new { animation: jEvIn .5s cubic-bezier(.16,1,.3,1) both; }
+@keyframes jEvIn { from { opacity: 0; transform: translateY(-8px); } }
+.jarvis-ev-stage { font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ac); flex: none; width: 56px; }
+.jarvis-ev-txt { color: var(--ink); }
+.jarvis-ev-txt b { font-weight: 700; }
+.jarvis-pipe { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+.jarvis-pipe-st { font-size: 9.5px; font-weight: 700; color: var(--muted); padding: 3px 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); }

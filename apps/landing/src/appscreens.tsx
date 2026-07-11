@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Buddy from './components/Buddy'
 import OrgFlow from './components/OrgFlow'
+import { JarvisOrb } from './components/JarvisOrb'
 import { AGENTS, OFFICES } from './data/agents'
 import { SITE } from './lib/site'
 
@@ -127,6 +128,7 @@ export function About() {
             <span className="scr-kick">The company · six offices</span>
             <h2 className="abx-teamlead">A company that <em>runs itself.</em></h2>
           </div>
+          <JarvisOrb />
           <OrgFlow />
           <div className="abx-legend">{OFFICES.map(o => <span key={o.id}><i style={{ background: o.accent }} />{o.label}</span>)}</div>
         </section>
