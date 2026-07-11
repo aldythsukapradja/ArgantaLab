@@ -588,6 +588,8 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     };
 
     const down = (e) => {
+      // Any first gesture (keyboard too, not just a canvas tap) unlocks audio.
+      sfx.arm(); ambient.setRealm(map.id); ambient.start();
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       const g = G.current; if (!g) return;
       if (DIR_BY_KEY[k]) { g.held.add(k); e.preventDefault(); }
@@ -599,8 +601,15 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     };
     const up = (e) => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; G.current?.held.delete(k); };
 
-    // pointer: a TAP (small move) hits the module; a DRAG is the joystick
+    // pointer: a TAP (small move) hits the module; a DRAG is the joystick;
+    // two fingers PINCH-ZOOM the realm camera (scales camZoomMul).
     let ptr = null, moved = false;
+    const pointers = new Map(); // pointerId -> {x,y}
+    let pinch = null;           // { d0, zoom0 } while two fingers are down
+    const pinchDist = () => { const q = [...pointers.values()]; return Math.hypot(q[0].x - q[1].x, q[0].y - q[1].y) || 1; };
+    // Realm zoom is a multiplier on the base camZoom; update the ref immediately
+    // for a smooth gesture, and setCamZoom to sync/persist the slider.
+    const applyPinchZoom = (nz) => { camZoomMulRef.current = Math.max(0.6, Math.min(2, nz)); setCamZoom(nz); };
     const toTile = (e) => {
       const g = G.current, rect = canvas.getBoundingClientRect(), z = g.cam.z || 1;
       const wx = (e.clientX - rect.left) / z + g.cam.camX;
@@ -611,10 +620,19 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       if (e.button != null && e.button !== 0) return;
       // Audio may only start from a gesture; switch the bed to this realm's theme.
       sfx.arm(); ambient.setRealm(map.id); ambient.start();
-      ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY }; moved = false;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       try { canvas.setPointerCapture(e.pointerId); } catch {}
+      if (pointers.size === 2) { // enter pinch — cancel the joystick
+        ptr = null; const g = G.current; if (g) g.stick = null;
+        pinch = { d0: pinchDist(), zoom0: camZoomMulRef.current || 1 };
+        return;
+      }
+      if (pointers.size > 2) return;
+      ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY }; moved = false;
     };
     const onPointerMove = (e) => {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pointers.size >= 2) { applyPinchZoom(pinch.zoom0 * (pinchDist() / pinch.d0)); return; }
       if (!ptr || e.pointerId !== ptr.id) return;
       const dx = e.clientX - ptr.x0, dy = e.clientY - ptr.y0, dist = Math.hypot(dx, dy);
       if (dist > 12) moved = true;
@@ -625,13 +643,20 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       }
     };
     const onPointerUp = (e) => {
+      pointers.delete(e.pointerId);
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+      if (pinch) { // end pinch when a finger lifts; require re-press to move
+        if (pointers.size < 2) pinch = null;
+        if (ptr && ptr.id === e.pointerId) ptr = null;
+        return;
+      }
       if (!ptr || e.pointerId !== ptr.id) return;
       const g = G.current;
       if (!moved && g) { const [tx, ty] = toTile(e); modRef.current?.onTapWorld?.(tx, ty); }
       if (g) g.stick = null;
       ptr = null;
-      try { canvas.releasePointerCapture(e.pointerId); } catch {}
     };
+    const onWheel = (e) => { e.preventDefault(); applyPinchZoom((camZoomMulRef.current || 1) * Math.exp(-e.deltaY * 0.0015)); };
 
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
@@ -639,6 +664,7 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
     raf = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(raf);
@@ -649,6 +675,7 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', onPointerUp);
+      canvas.removeEventListener('wheel', onWheel);
       window.clearTimeout(posTimer);
       savePos(false);
     };

@@ -300,8 +300,22 @@ export class MusicTransport {
   }
   _tick() {
     if (!this.playing) return;
+    const ctx = this.ctx;
+    // BACKLOG CLAMP — if the scheduler was starved (a heavy world-load frame, or
+    // a backgrounded tab throttling setTimeout) the audio clock races ahead of
+    // _t. DON'T dump the missed steps as a burst of past-due notes — Web Audio
+    // plays past start-times immediately, so that backlog is exactly the
+    // "overlapping" cacophony on world change. Resync to just ahead of now.
+    if (this._t < ctx.currentTime) this._t = ctx.currentTime + 0.05;
+    // While the tab is hidden, keep the clock fresh but schedule nothing
+    // (inaudible anyway, and avoids a catch-up pile on return).
+    if (typeof document !== 'undefined' && document.hidden) {
+      this._t = ctx.currentTime + 0.05;
+      this._timer = setTimeout(() => this._tick(), 200);
+      return;
+    }
     const T = this.theme, spb = 60 / T.bpm, s16 = spb / 4;
-    while (this._t < this.ctx.currentTime + 0.12) {
+    while (this._t < ctx.currentTime + 0.12) {
       let t = this._t;
       if (this._step % 2 === 1) t += T.swing * s16; // swing offbeats
       this._scheduleStep(t);

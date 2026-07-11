@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
-  Network, Megaphone, Radar, Grid2x2, Vault as VaultIcon, Sparkles, Workflow, Swords, UserRound, Map, Music2,
+  Network, Megaphone, Radar, Grid2x2, Vault as VaultIcon, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 
@@ -33,6 +33,7 @@ const GROUPS: Group[] = [
     { id: 'character', label: 'Character Forge', Icon: UserRound },
     { id: 'world', label: 'Openworld Builder', Icon: Map },
     { id: 'music', label: 'Music Builder', Icon: Music2 },
+    { id: 'video', label: 'Video Builder', Icon: Film },
   ] },
 ]
 

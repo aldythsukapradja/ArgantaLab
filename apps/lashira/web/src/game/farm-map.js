@@ -192,6 +192,37 @@ export const HOTSPOT_MARKERS = (() => {
   return m;
 })();
 
+// ── MAP MARKERS: the floating circular "logo" badges drawn over each landmark
+// (the same look as the 🎣 fishing beacon, unified for every hotspot). Each is a
+// screen-space badge whose tap is hit-tested BEFORE the arena combat-strike branch,
+// which is what makes the Emberring Arena (and every landmark) reliably clickable
+// even while standing inside the on-map combat band. Excludes gather nodes (ore/
+// tree — they have their own ready-rings), the castle (its footprint stays tappable
+// via the rect fallback, and the Keep badge already sits on it), and the dock (its
+// dedicated 🎣 beacon is the reference visual and keeps its fast-travel teleport).
+const MARKER_ICON = { seed: '🌱', general: '🛒', smith: '⚒️', animal: '🐮', cosmetic: '🎀', market: '💰', dungeon: '⚔️', pvprank: '🏆' };
+const MARKER_COLOR = { shop: '#5aa9ff', sell: '#f2b23a', dungeon: '#b46bff', pvprank: '#ffcf3a' };
+export const MAP_MARKERS = (() => {
+  const out = [];
+  for (const h of HOTSPOTS) {
+    if (h.kind === 'ore' || h.kind === 'tree' || h.kind === 'castle' || h.kind === 'dock') continue;
+    const isRealm = h.kind === 'realm';
+    const src = isRealm && Array.isArray(h.portal?.marker) ? h.portal.marker : [(h.rect.x0 + h.rect.x1 + 1) / 2, (h.rect.y0 + h.rect.y1 + 1) / 2];
+    out.push({
+      kind: h.kind,
+      id: h.id,
+      portal: h.portal || null,
+      cx: src[0],
+      cy: src[1],
+      icon: isRealm ? (h.portal?.icon || '⭐') : (MARKER_ICON[h.id] || '📍'),
+      color: isRealm ? (h.portal?.color || '#8ef5ff') : (MARKER_COLOR[h.kind] || '#8ef5ff'),
+      name: markerLabel(h),
+      lift: 0.9, // tiles lifted above the tile-center so the badge floats over the art
+    });
+  }
+  return out;
+})();
+
 function rect(ctx, x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 function dots(ctx, seed, count, x0, y0, w, h, c, sz) {
   let s = seed; const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };

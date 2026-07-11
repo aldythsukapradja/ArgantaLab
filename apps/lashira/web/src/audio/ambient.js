@@ -1,11 +1,11 @@
-// Ambient audio bed — now the GENERATIVE MUSIC engine (@arganta/audio's
+// Ambient audio bed — the GENERATIVE MUSIC engine (@arganta/audio's
 // MusicTransport) instead of a single pad. Each map has its own theme; the
 // bed composes it live (zero assets, CSP-safe, never loops identically). HQ's
 // Music Forge authors the themes and publishes them per realm; the game boots
 // them (initMusic) so the bed is whatever the operator shipped, else the
 // package defaults. SSR-safe (no-op without WebAudio). Started on the first
-// user gesture (autoplay policy). Keeps the same public API the game already
-// uses (start/stop/setEnabled/setVolume/duck) + a new setRealm(realmId).
+// user gesture (autoplay policy). Public API: start/stop/setEnabled/setVolume/
+// duck + setRealm(realmId) + refreshTheme().
 
 import { MusicTransport, createMasterChain, ACTIVE_THEMES } from '@arganta/audio';
 
@@ -22,40 +22,86 @@ class Ambient {
     this.transport = null;
     this.running = false;
     this.realm = 'farm';
+    this._swapTimer = null;
     this.enabled = this._get(LS_ON, '1') === '1';
     this.volume = clamp(parseFloat(this._get(LS_VOL, '0.5')) || 0.5);
   }
   _get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }
   _set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
   _gain() { return this.volume * 0.45; } // music bed sits under the action SFX
+  _themeFor(realm) { return ACTIVE_THEMES[realm] || ACTIVE_THEMES.farm; }
 
-  // Called on the first gesture. Builds + starts the bed if enabled.
+  // Build a fresh master chain + transport playing `realm`'s theme at `gain0`.
+  _build(realm, gain0) {
+    const { master, reverbBus } = createMasterChain(this.ctx, gain0);
+    this.master = master; this.revBus = reverbBus;
+    this.transport = new MusicTransport(this.ctx, { master, revBus: reverbBus });
+    this.transport.setTheme(this._themeFor(realm));
+    this.transport.start();
+  }
+
+  // Called on the first gesture. Builds + starts the bed if enabled. RESUME-
+  // AWARE: only starts the transport once the context is actually running, and
+  // rolls back on failure so the NEXT gesture can retry (no stuck `running`).
   start() {
     if (!CAN_AUDIO || this.running || !this.enabled) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     this.ctx = this.ctx || new AC();
-    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-    const { master, reverbBus } = createMasterChain(this.ctx, this._gain());
-    this.master = master; this.revBus = reverbBus;
-    this.transport = new MusicTransport(this.ctx, { master, revBus: reverbBus });
-    this.transport.setTheme(ACTIVE_THEMES[this.realm] || ACTIVE_THEMES.farm);
-    this.transport.start();
     this.running = true;
+    const go = () => {
+      if (!this.running) return;              // disabled while resuming
+      if (this.ctx.state !== 'running') { this._rollback(); return; } // couldn't unlock → allow retry
+      this._build(this.realm, this._gain());
+    };
+    if (this.ctx.state === 'running') go();
+    else this.ctx.resume().then(go).catch(() => this._rollback());
+  }
+  // Undo a failed start so a later gesture can try again (don't latch running).
+  _rollback() {
+    this.running = false;
+    try { this.transport?.stop(); } catch { /* ignore */ }
+    try { this.master?.disconnect(); } catch { /* ignore */ }
+    this.transport = null; this.master = null; this.revBus = null;
   }
 
-  // Switch the map's theme. Live-swaps if playing (with a short dip so the
-  // change doesn't jar); remembers the realm for the next start() otherwise.
+  // Switch the map's theme with a CLEAN HANDOFF: fade the old bed out, then
+  // hard-stop + disconnect the old graph (which cuts ALL ringing tails — the
+  // long pads/reverb that used to bleed into the next world), build a fresh
+  // transport for the new theme, and fade it in. Coalesces rapid switches.
   setRealm(realmId) {
-    if (!realmId || realmId === this.realm) { this.realm = realmId || this.realm; return; }
+    if (!realmId) return;
+    if (realmId === this.realm && this.running) return; // already on it
     this.realm = realmId;
-    if (this.running && this.transport) {
-      this.duck(400, 0.7);
-      this.transport.setTheme(ACTIVE_THEMES[realmId] || ACTIVE_THEMES.farm);
+    if (!this.running || !this.transport) return;        // start() will use this.realm
+    const ctx = this.ctx, oldMaster = this.master, oldTransport = this.transport;
+    const now = ctx.currentTime;
+    if (oldMaster) {
+      const g = oldMaster.gain;
+      g.cancelScheduledValues(now); g.setValueAtTime(g.value, now);
+      g.linearRampToValueAtTime(0.0001, now + 0.28);
     }
+    clearTimeout(this._swapTimer);
+    this._swapTimer = setTimeout(() => {
+      if (!this.running) return;                          // disabled mid-swap
+      try { oldTransport?.stop(); } catch { /* ignore */ }
+      try { oldMaster?.disconnect(); } catch { /* ignore */ } // cuts old tails
+      this._build(this.realm, 0.0001);
+      const g = this.master.gain, t = ctx.currentTime;
+      g.cancelScheduledValues(t); g.setValueAtTime(0.0001, t);
+      g.linearRampToValueAtTime(this._gain(), t + 0.4);
+    }, 300);
+  }
+
+  // Adopt a newly-published theme for the CURRENT realm without a realm change
+  // (initMusic calls this after boot, so a bed that started on defaults swaps
+  // to the operator's published theme live). Same realm → no tail issue.
+  refreshTheme() {
+    if (this.running && this.transport) this.transport.setTheme(this._themeFor(this.realm));
   }
 
   stop() {
     this.running = false;
+    clearTimeout(this._swapTimer); this._swapTimer = null;
     try { this.transport?.stop(); } catch { /* ignore */ }
     try { this.master?.disconnect(); } catch { /* ignore */ }
     this.transport = null; this.master = null; this.revBus = null;

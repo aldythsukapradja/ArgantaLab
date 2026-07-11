@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
-import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, PVP_GATE, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, inArena, inPvp, zoneOf, hotspotAt, DOCK_MARKER, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
+import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, PVP_GATE, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, MAP_MARKERS, inArena, inPvp, zoneOf, hotspotAt, DOCK_MARKER, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
@@ -22,7 +22,6 @@ import {
 } from '@arganta/combat';
 import { recordPvpKo } from './pvp-rank.js';
 import { loadFarmArtOverrides } from './farm-art-runtime.js';
-import { WORLD_PORTALS } from './world-map-registry.js';
 import { creatureFrame } from './creature-sprites.js';
 import { loadBundledArt } from './farm-art-bundled.js';
 import { loadAcquiredKins } from './arganta-kin.js';
@@ -1256,6 +1255,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     if (!ready) return;
     const g = G.current;
     function down(e) {
+      // Any first gesture (keyboard too, not just a canvas tap) unlocks audio.
+      sfx.arm(); ambient.setRealm('farm'); ambient.start();
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (DIR_BY_KEY[k]) { g.held.add(k); e.preventDefault(); }
       // Visiting: movement stays (handled above), but work/attack/skill keys are
@@ -1849,36 +1850,59 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       ctx.fillText(label.name, label.footX, ny + (small ? 0.5 : 0));
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
-    function drawWorldPortalGlows(ctx, now) {
-      const pulse = (Math.sin(now / 520) + 1) / 2;
-      for (const portal of WORLD_PORTALS) {
-        const r = portal.hqHotspot;
-        if (!r) continue;
-        const x = r.x0 * TILE;
-        const y = r.y0 * TILE;
-        const w = (r.x1 - r.x0 + 1) * TILE;
-        const h = (r.y1 - r.y0 + 1) * TILE;
-        const cx = x + w / 2;
-        const cy = y + h / 2;
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.shadowColor = portal.color || '#8ef5ff';
-        ctx.shadowBlur = 14 + pulse * 14;
-        ctx.fillStyle = `rgba(255,255,255,${0.05 + pulse * 0.05})`;
-        ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
-        ctx.strokeStyle = portal.color || '#8ef5ff';
-        ctx.globalAlpha = 0.45 + pulse * 0.35;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x + 5, y + 5, w - 10, h - 10);
-        ctx.beginPath();
-        ctx.arc(cx, cy, 12 + pulse * 7, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 0.22 + pulse * 0.2;
-        ctx.beginPath();
-        ctx.arc(cx, cy, Math.max(w, h) / 2 + pulse * 10, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+    // MAP MARKERS — one glossy circular "logo" badge per landmark (the same look
+    // as the 🎣 fishing beacon), drawn in SCREEN SPACE so it stays a crisp, finger-
+    // friendly target at any map zoom. Bobs + a colored expanding ring; a name pill
+    // fades in when the player is near. Tap is hit-tested in onTapInteract BEFORE
+    // the arena combat-strike branch — which is what makes every landmark (the
+    // Emberring Arena especially) reliably clickable from inside the combat band.
+    function pillPath(ctx, x, y, w, h, r) {
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+      else { ctx.beginPath(); ctx.rect(x, y, w, h); }
+    }
+    function drawMapMarkers(ctx, g, cssW, cssH, now) {
+      if (!g.cam) return;
+      const { camX, camY, z } = g.cam;
+      const p = g.player;
+      const pcx = p.tile[0] + 0.5, pcy = p.tile[1] + 0.5;
+      ctx.save();
+      ctx.setTransform(g.dpr || 1, 0, 0, g.dpr || 1, 0, 0);
+      const bob = Math.sin(now / 420) * 4;
+      const pulseT = (now % 1400) / 1400;
+      const R = 18;
+      for (const m of MAP_MARKERS) {
+        const mx = (m.cx * TILE - camX) * z, my = (m.cy * TILE - camY) * z - m.lift * TILE * z + bob;
+        if (mx < -50 || my < -50 || mx > cssW + 50 || my > cssH + 50) continue;
+        // expanding ring in the marker color
+        ctx.globalAlpha = (1 - pulseT) * 0.9;
+        ctx.beginPath(); ctx.arc(mx, my, 15 + pulseT * 15, 0, Math.PI * 2);
+        ctx.strokeStyle = m.color; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.globalAlpha = 1;
+        // ground shadow
+        ctx.beginPath(); ctx.ellipse(mx, my + R + 3, 12, 4, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fill();
+        // glossy disc
+        const grad = ctx.createRadialGradient(mx - R * 0.35, my - R * 0.4, 2, mx, my, R);
+        grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+        grad.addColorStop(0.5, m.color);
+        grad.addColorStop(1, m.color);
+        ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+        // icon
+        ctx.font = 'bold 19px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(m.icon, mx, my + 1);
+        // name pill on approach (≤5 tiles) — keeps the map uncluttered at distance
+        if (m.name && Math.hypot(m.cx - pcx, m.cy - pcy) <= 5) {
+          ctx.font = '600 12px system-ui';
+          const tw = ctx.measureText(m.name).width;
+          const pw = tw + 16, ph = 18, px0 = mx - pw / 2, py0 = my - R - ph - 6;
+          ctx.globalAlpha = 0.92; pillPath(ctx, px0, py0, pw, ph, 9);
+          ctx.fillStyle = 'rgba(16,18,26,0.82)'; ctx.fill();
+          ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+          ctx.fillText(m.name, mx, py0 + ph / 2 + 0.5);
+        }
       }
+      ctx.restore(); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
 
     function draw(g, ctx, canvas, now) {
@@ -1944,7 +1968,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         }
       }
 
-      drawWorldPortalGlows(ctx, now);
+      // (map-marker badges are drawn later, in SCREEN space, so they stay crisp
+      // and finger-sized at any zoom — see drawMapMarkers near the fishing beacon.)
 
       // plots
       const plots = logicRef.current.state.plots;
@@ -2054,6 +2079,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       ctx.restore();
 
       drawAmbientFx(g, ctx, cssW, cssH, now); // drifting petals + light motes (screen space)
+
+      drawMapMarkers(ctx, g, cssW, cssH, now); // circular landmark "logo" badges (screen space)
 
       // FISHING BEACON — an always-on pulsing 🎣 marker sitting right on the
       // dock hotspot (world-anchored via DOCK_MARKER, screen-projected through
@@ -2256,6 +2283,26 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         const mx = (DOCK_MARKER.cx * TILE - camX) * z, my = (DOCK_MARKER.cy * TILE - camY) * z - 0.9 * TILE * z;
         if (Math.hypot((clientX - rect.left) - mx, (clientY - rect.top) - my) <= 24 * z) { goFishing(); return; }
       }
+      // MAP MARKERS: the circular landmark badges are hit-tested here — in SCREEN
+      // space at a fixed finger-sized radius, and BEFORE the arena combat-strike
+      // branch below. That ordering is the fix for "can't click to enter the
+      // Emberring Arena": the arena badge sits inside the on-map combat band, so a
+      // plain tile-tap there becomes a sword swing; the badge tap opens the realm
+      // regardless of combat state. Same top-priority pattern as the fishing beacon.
+      if (!isVisitor) {
+        const { camX, camY, z } = g.cam;
+        for (const m of MAP_MARKERS) {
+          const mx = (m.cx * TILE - camX) * z, my = (m.cy * TILE - camY) * z - m.lift * TILE * z;
+          if (Math.hypot((clientX - rect.left) - mx, (clientY - rect.top) - my) > 22) continue;
+          if (m.kind === 'realm') {
+            const locked = !circleId || !!profile?.guest;
+            setPortalPrompt({ portal: m.portal, locked, tile: [...g.player.tile], facing: g.player.facing });
+          } else if (m.kind === 'sell') { setShopTab('sell'); setPanel('shop'); }
+          else if (m.kind === 'shop') { setShopTab(SHOP_TAB_FOR[m.id] || 'seeds'); setPanel('shop'); }
+          else { setHotspot({ kind: m.kind, id: m.id }); }
+          return;
+        }
+      }
       const wx = (g.cam.camX + (clientX - rect.left) / g.cam.z) / TILE;
       const wy = (g.cam.camY + (clientY - rect.top) / g.cam.z) / TILE;
       const tx = Math.floor(wx), ty = Math.floor(wy);
@@ -2338,19 +2385,38 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
     // touch friendly — this is the "trackpad logic"); a quick tap interacts; a
     // press held still (~450ms) long-presses → full tile fan-out.
     let ptr = null;
+    const pointers = new Map(); // pointerId -> {x,y} — tracked for 2-finger pinch
+    let pinch = null;           // { d0, zoom0 } while two fingers are down
     const DRAG_DEAD = 12; // px of movement before a press counts as a drag
     const LONGPRESS_MS = 450;
+    const ZMIN = 0.45, ZMAX = 3; // pinch/wheel zoom band (draw clamps 0.1..4)
+    // Apply a new zoom immediately to the live camera AND to React state (so the
+    // Settings slider stays in sync). Session-only — not persisted, matching the slider.
+    const applyZoom = (nz) => { const z = Math.max(ZMIN, Math.min(ZMAX, nz)); if (G.current) G.current.zoom = z; setZoom(z); };
+    const pinchDist = () => { const q = [...pointers.values()]; return Math.hypot(q[0].x - q[1].x, q[0].y - q[1].y) || 1; };
     function onPointerDown(e) {
       if (e.button != null && e.button !== 0) return;
       sfx.arm(); ambient.setRealm('farm'); ambient.start(); // audio contexts may only start from a user gesture
-      ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false, longFired: false, lpTimer: 0 };
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       try { canvas.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
+      // Second finger down → PINCH-ZOOM: cancel any pending joystick/long-press and
+      // remember the starting finger spread + zoom.
+      if (pointers.size === 2) {
+        if (ptr) { window.clearTimeout(ptr.lpTimer); ptr = null; }
+        const g = G.current; if (g) { g.stick = null; g.stickUI = null; }
+        pinch = { d0: pinchDist(), zoom0: (G.current?.zoom) || 1 };
+        return;
+      }
+      if (pointers.size > 2) return; // ignore 3rd+ fingers
+      ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false, longFired: false, lpTimer: 0 };
       const px = e.clientX, py = e.clientY, self = ptr;
       self.lpTimer = window.setTimeout(() => {
         if (ptr === self && !self.dragging && openFieldFan(px, py)) self.longFired = true;
       }, LONGPRESS_MS);
     }
     function onPointerMove(e) {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pointers.size >= 2) { applyZoom(pinch.zoom0 * (pinchDist() / pinch.d0)); return; }
       if (!ptr || e.pointerId !== ptr.id) return;
       const dx = e.clientX - ptr.x0, dy = e.clientY - ptr.y0;
       const dist = Math.hypot(dx, dy);
@@ -2363,18 +2429,33 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       g.stickUI = { bx: ptr.x0 - rect.left, by: ptr.y0 - rect.top, kx: e.clientX - rect.left, ky: e.clientY - rect.top };
     }
     function onPointerUp(e) {
+      pointers.delete(e.pointerId);
+      try { canvas.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+      // Lifting a finger mid-pinch: end pinch; a lone remaining finger must re-press
+      // to move (don't snap the joystick to it mid-gesture).
+      if (pinch) {
+        if (pointers.size < 2) pinch = null;
+        if (ptr && ptr.id === e.pointerId) { window.clearTimeout(ptr.lpTimer); ptr = null; }
+        return;
+      }
       if (!ptr || e.pointerId !== ptr.id) return;
       window.clearTimeout(ptr.lpTimer);
       const wasDrag = ptr.dragging; const longFired = ptr.longFired; const { x0, y0 } = ptr;
       ptr = null;
       const g = G.current; if (g) { g.stick = null; g.stickUI = null; }
-      try { canvas.releasePointerCapture(e.pointerId); } catch { /* noop */ }
       if (!wasDrag && !longFired) onTapInteract(x0, y0); // it was a tap, not a move or long-press
+    }
+    // Desktop / trackpad: wheel — and trackpad pinch, which arrives as ctrl+wheel —
+    // zoom the map too, into the same clamped band.
+    function onWheel(e) {
+      e.preventDefault();
+      applyZoom(((G.current?.zoom) || 1) * Math.exp(-e.deltaY * 0.0015));
     }
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
 
     raf = requestAnimationFrame(tick);
     return () => {
@@ -2383,6 +2464,7 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', onPointerUp);
+      canvas.removeEventListener('wheel', onWheel);
     };
   }, [ready, profile?.displayName, heroPresenceKey]);
 
