@@ -4,6 +4,7 @@ import OrgFlow from './components/OrgFlow'
 import { JarvisOrb } from './components/JarvisOrb'
 import { AGENTS, OFFICES } from './data/agents'
 import { SITE } from './lib/site'
+import { ensureGsap, gsap, SplitText, EASE, prefersReduced } from './lib/motion'
 
 export type Tab = 'home' | 'products' | 'about' | 'pitch' | 'command'
 export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }) => void
@@ -12,6 +13,28 @@ export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }
 export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) => void }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const heroRef = useRef<HTMLDivElement>(null)
+
+  // signature entrance: SplitText line-mask reveal on the H1, then a staggered
+  // cascade of the surrounding hero bits. Degrades to instant under reduced-motion.
+  useEffect(() => {
+    const root = heroRef.current
+    // skip when reduced-motion OR the tab is hidden (rAF is paused → would leave
+    // the from-state stuck; the static hero is already visible and correct)
+    if (!root || prefersReduced() || document.visibilityState === 'hidden') return
+    ensureGsap()
+    const h1 = root.querySelector('.scr-h1') as HTMLElement | null
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: EASE.out } })
+      if (h1) {
+        const split = new SplitText(h1, { type: 'lines', linesClass: 'st-line' })
+        tl.from(split.lines, { yPercent: 115, opacity: 0, duration: 0.9, stagger: 0.12 }, 0.1)
+      }
+      tl.from(root.querySelectorAll('.scr-kick, .scr-lede, .scr-cta, .scr-wait'), { y: 18, opacity: 0, duration: 0.6, stagger: 0.08 }, 0.5)
+        .from(root.querySelector('.scr-hero-buddy'), { scale: 0.7, opacity: 0, duration: 0.7, ease: EASE.soft }, 0)
+    }, root)
+    return () => ctx.revert()
+  }, [])
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.includes('@')) return
@@ -20,7 +43,7 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
     setSent(true)
   }
   return (
-    <div className="scr scr-home">
+    <div className="scr scr-home" ref={heroRef}>
       <div className="scr-hero">
         <div className="scr-hero-buddy"><Buddy mood="wave" size={112} /></div>
         <span className="scr-kick">{SITE.hero.kicker}</span>
