@@ -7,10 +7,8 @@ name: Vault KB — single source
 
 on:
   pull_request:
-    paths: ['apps/hq/**', 'knowledge-base/**']
   push:
     branches: ['claude/argantalabs-knowledge-base-bn3h75']
-    paths: ['apps/hq/**', 'knowledge-base/**']
 
 jobs:
   vault:
