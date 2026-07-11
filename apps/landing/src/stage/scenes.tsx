@@ -9,6 +9,7 @@ import { TOWN_KIN, TOWN_HABITATS, SHOP_COSMETICS, SHOP_MOUNTS } from '../data/ki
 import { PIPELINE, AGENTS } from '../data/agents'
 import OrgChart from '../components/OrgChart'
 import { SITE } from '../lib/site'
+import { AppEmbed } from '../embed/AppEmbed'
 import { useIsActive } from './active'
 
 export const SCENE_W = 1180
@@ -617,6 +618,69 @@ export function CASpine() {
       <p className="lede wide reveal">One identity, one membership, one source of truth. Build once on the circle — every app inherits trust, roles and privacy for free.</p>
       <Chips items={['Shared identity', 'Roles & privacy', 'One data spine', 'Add apps anytime']} />
     </Center>
+  )
+}
+
+// ════════════════════════ LASHIRABLOOM FLIGHT ════════════════════════
+const BLOOM = '#65a30d'
+export function BloomArrive() {
+  return (
+    <Center>
+      <div className="bloom-sky reveal" aria-hidden><span className="bloom-sun" />{['🌾', '🌻', '🌱', '🍅', '🐔'].map((e, i) => <span key={i} className="bloom-crop" style={{ ['--i' as string]: i }}>{e}</span>)}</div>
+      <Kicker tone={BLOOM}>LashiraBloom</Kicker>
+      <h2 className="headline reveal">A farm the whole family <Grad>tends together.</Grad></h2>
+      <p className="lede wide reveal">A cozy farming RPG on the Arganta spine — plant, grow, decorate, explore. The parents' weekend game and the kids' learning world are the same world.</p>
+    </Center>
+  )
+}
+export function BloomGrow() {
+  return (
+    <Split
+      left={<>
+        <Kicker tone={BLOOM}>Plant · grow · harvest</Kicker>
+        <h2 className="headline sm reveal">A living farm that <Grad>rewards showing up.</Grad></h2>
+        <p className="lede reveal">Till the soil, plant seeds, water daily, harvest and sell. A calm loop with real progression — the Stardew rhythm, built for a family circle.</p>
+        <Chips items={['Seasons & crops', 'Animals & barns', 'Decorate your plot', 'Daily rewards']} />
+      </>}
+      right={<div className="bloom-plot reveal">{Array.from({ length: 12 }).map((_, i) => <span key={i} className="bloom-tile" style={{ ['--i' as string]: i }}>{['🌱', '🌾', '🥕', '🍓', '🌻', '🍅'][i % 6]}</span>)}</div>}
+    />
+  )
+}
+export function BloomTogether() {
+  return (
+    <Center>
+      <Kicker tone={BLOOM}>The two-hook loop</Kicker>
+      <h2 className="headline sm reveal">Adults play. Kids learn. <Grad>Same world.</Grad></h2>
+      <div className="bloom-loop reveal">
+        <div className="bloom-loop-c"><b>Parents play</b><span>weekend farming, decorating, exploring</span></div>
+        <span className="bloom-loop-arrow">→</span>
+        <div className="bloom-loop-c"><b>fuels the kids' learning</b><span>playtime converts into learning energy</span></div>
+      </div>
+      <p className="lede wide reveal">{SITE.products[1].wedge}</p>
+    </Center>
+  )
+}
+export function BloomRealms() {
+  return (
+    <Center>
+      <Kicker tone={BLOOM}>Beyond the farm</Kicker>
+      <h2 className="headline sm reveal">Step out into <Grad>the realms.</Grad></h2>
+      <div className="bloom-realms reveal">{[['🏘️', 'Town'], ['🌲', 'Forest'], ['⛰️', 'Mountain'], ['🏖️', 'Shore'], ['🏰', 'Keep']].map(([e, n]) => <div key={n} className="bloom-realm"><span>{e}</span><b>{n}</b></div>)}</div>
+      <p className="lede wide reveal">A farm that opens into a whole world — towns to visit, realms to explore, characters to meet. Every hour outside becomes a place inside.</p>
+    </Center>
+  )
+}
+export function BloomLive() {
+  return (
+    <Split
+      left={<>
+        <Kicker tone={BLOOM}>Playable now</Kicker>
+        <h2 className="headline sm reveal">Not a mockup — <Grad>the real game.</Grad></h2>
+        <p className="lede reveal">This is LashiraBloom running live. Tap "Go live" and play it right here, on phone or desktop.</p>
+        <Chips items={['Real deployed build', 'Guest — no signup', 'Phone & desktop']} />
+      </>}
+      right={<div className="bloom-embed reveal"><AppEmbed app="lashira" scene="farm" defaultFrame="phone" /></div>}
+    />
   )
 }
 

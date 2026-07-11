@@ -36,7 +36,17 @@ export const FLIGHTS: FlightDef[] = [
     ],
   },
   {
-    id: 'circleapps', title: 'Circle Apps', product: true, laneY: 5200,
+    id: 'lashira', title: 'LashiraBloom', product: true, laneY: 5200,
+    scenes: [
+      { id: 'arrive', title: 'The farm', el: <S.BloomArrive /> },
+      { id: 'grow', title: 'Plant & grow', el: <S.BloomGrow /> },
+      { id: 'together', title: 'Play together', el: <S.BloomTogether /> },
+      { id: 'realms', title: 'The realms', el: <S.BloomRealms /> },
+      { id: 'live', title: 'Play it live', el: <S.BloomLive /> },
+    ],
+  },
+  {
+    id: 'circleapps', title: 'Circle Apps', product: true, laneY: 6900,
     scenes: [
       { id: 'overview', title: 'Circle Apps', el: <S.CAOverview /> },
       { id: 'montage', title: 'The suite', el: <S.CAMontage /> },
@@ -57,7 +67,7 @@ export const FLIGHTS: FlightDef[] = [
     ],
   },
   {
-    id: 'vision', title: 'Vision', product: false, laneY: 6900,
+    id: 'vision', title: 'Vision', product: false, laneY: 8600,
     scenes: [
       { id: 'child', title: 'One child', el: <S.VChild /> },
       { id: 'family', title: 'One family', el: <S.VFamily /> },
