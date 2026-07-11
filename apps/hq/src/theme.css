@@ -18,6 +18,9 @@ html[data-theme="light"]{
   --bd:#ececef; --bd2:#e0e0e4; --bd3:#d4d4d8;
   --ok:#16a34a; --ok-bg:#dcfce7; --warn:#d97706; --warn-bg:#fef3c7;
   --bad:#dc2626; --bad-bg:#fee2e2; --tl:#0d9488; --tl-bg:#ccfbf1; --amb:#b45309; --amb-bg:#fef3c7;
+  /* Chart categorical palette — fixed slot order, CVD-validated per mode
+     (dataviz six checks: lightness band, chroma, adjacent-pair CVD, contrast). */
+  --ch1:#6366f1; --ch2:#0d9488; --ch3:#db2777; --ch4:#d97706; --ch5:#7c3aed; --ch6:#0891b2;
   --glass:rgba(255,255,255,.72); --glass-bd:rgba(16,24,40,.07);
   --builder-grad:radial-gradient(760px 540px at 5% 0%, rgba(99,102,241,.14), transparent 56%), radial-gradient(820px 600px at 99% 100%, rgba(255,61,114,.10), transparent 56%), radial-gradient(620px 540px at 84% 6%, rgba(45,212,191,.075), transparent 56%), var(--canvas);
   --stage:radial-gradient(300px 240px at 28% 16%, rgba(99,102,241,.20), transparent 70%), radial-gradient(340px 280px at 84% 94%, rgba(255,61,114,.15), transparent 70%), linear-gradient(160deg,#f4f5fc,#eceffb);
@@ -31,6 +34,8 @@ html[data-theme="dark"]{
   --acc-soft:#1e1b3a; --acc-text:#a5b4fc;
   --ok:#4ade80; --ok-bg:#14321f; --warn:#fbbf24; --warn-bg:#3a2a08;
   --bad:#f87171; --bad-bg:#3a1414; --tl:#2dd4bf; --tl-bg:#0c2e2a; --amb:#fbbf24; --amb-bg:#3a2a08;
+  /* Same slot order as light; steps re-picked for the dark surface band. */
+  --ch1:#6366f1; --ch2:#0d9488; --ch3:#ec4899; --ch4:#d97706; --ch5:#8b5cf6; --ch6:#0891b2;
   --glass:rgba(22,22,30,.62); --glass-bd:rgba(255,255,255,.08);
   --builder-grad:radial-gradient(760px 540px at 5% 0%, rgba(99,102,241,.20), transparent 56%), radial-gradient(820px 600px at 99% 100%, rgba(255,61,114,.16), transparent 56%), radial-gradient(620px 540px at 84% 6%, rgba(45,212,191,.10), transparent 56%), var(--canvas);
   --stage:radial-gradient(300px 240px at 28% 16%, rgba(99,102,241,.30), transparent 70%), radial-gradient(340px 280px at 84% 94%, rgba(255,61,114,.20), transparent 70%), linear-gradient(160deg,#161826,#0d0e17);

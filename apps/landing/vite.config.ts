@@ -5,7 +5,11 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { '@': resolve(__dirname, 'src') },
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      // Shared time-on-page tracker (HQ Portfolio reads the beats via hq_engagement)
+      '@arganta/usage': resolve(__dirname, '../../packages/usage/src/index.js'),
+    },
   },
   build: {
     chunkSizeWarningLimit: 1100,

@@ -3,7 +3,9 @@ import { LineChart as LineIcon, BarChart3, PieChart, Grid3x3, LayoutGrid } from 
 import type { GrowthPoint, RetentionData } from '../data/types'
 import { LineChart } from './LineChart'
 import { CohortHeat } from './CohortHeat'
-import { compact } from '../lib/format'
+import { DonutD3 } from './d3/DonutD3'
+import { HBars } from './d3/HBars'
+import { slotColor } from './d3/chartkit'
 
 // ── Scalable chart system ─────────────────────────────────────────────────
 // One discriminated union + one <ChartView> dispatcher. Adding a future chart =
@@ -33,8 +35,8 @@ export const CHART_KINDS: { kind: ChartKind; label: string; Icon: typeof LineIco
   { kind: 'kpis', label: 'KPI tiles', Icon: LayoutGrid, blurb: 'Headline metric cards' },
 ]
 
-const PALETTE = ['var(--acc)', 'var(--mag)', 'var(--ok)', 'var(--warn)', 'var(--tl)', 'var(--bad)']
-export const chartColor = (i: number) => PALETTE[i % PALETTE.length]
+// Fixed-order categorical slots — CVD-validated per theme (see theme.css).
+export const chartColor = (i: number) => slotColor(i)
 
 export function ChartView({ data }: { data: ChartData }): ReactNode {
   switch (data.kind) {
@@ -46,56 +48,15 @@ export function ChartView({ data }: { data: ChartData }): ReactNode {
   }
 }
 
-function Bars({ bars, unit }: { bars: Bar[]; unit?: string }) {
+// D3-backed marks: horizontal bars with rounded data-ends + hover tooltips.
+function Bars({ bars }: { bars: Bar[]; unit?: string }) {
   if (!bars.length) return null
-  const max = Math.max(1, ...bars.map(b => b.value))
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-      {bars.map((b, i) => (
-        <div key={b.label} className="row" style={{ gap: 12 }}>
-          <div style={{ width: 150, fontSize: 12.5, color: 'var(--tx2)', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.label}</div>
-          <div style={{ flex: 1, height: 24, background: 'var(--bg3)', borderRadius: 7, overflow: 'hidden' }}>
-            <div style={{ width: `${Math.max(3, Math.round((100 * b.value) / max))}%`, height: '100%', borderRadius: 7, background: b.color || chartColor(i), transition: 'width .5s var(--ease)' }} />
-          </div>
-          <div style={{ width: 70, textAlign: 'right', fontSize: 12.5, fontWeight: 600 }}>{compact(b.value)}{unit || ''}</div>
-        </div>
-      ))}
-    </div>
-  )
+  return <HBars bars={bars.map((b, i) => ({ label: b.label, value: b.value, color: b.color || chartColor(i) }))} />
 }
 
+// D3 arc donut — 2px surface gaps, hover lift, tooltip, legend with shares.
 function Donut({ slices, centerLabel, centerValue }: { slices: Slice[]; centerLabel?: string; centerValue?: string }) {
-  const total = slices.reduce((s, x) => s + x.value, 0) || 1
-  const R = 64, SW = 22, C = 2 * Math.PI * R
-  let off = 0
-  return (
-    <div className="row" style={{ gap: 22, flexWrap: 'wrap', alignItems: 'center' }}>
-      <svg viewBox="0 0 160 160" width="160" height="160" style={{ flex: 'none' }}>
-        <circle cx="80" cy="80" r={R} fill="none" stroke="var(--bg3)" strokeWidth={SW} />
-        {slices.map((s) => {
-          const len = (s.value / total) * C
-          const el = (
-            <circle key={s.label} cx="80" cy="80" r={R} fill="none" stroke={s.color} strokeWidth={SW}
-              strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-off} transform="rotate(-90 80 80)"
-              style={{ transition: 'stroke-dasharray .5s var(--ease)' }} />
-          )
-          off += len
-          return el
-        })}
-        {centerValue && <text x="80" y="78" fontSize={22} fontWeight={700} fill="var(--tx)" textAnchor="middle">{centerValue}</text>}
-        {centerLabel && <text x="80" y="98" fontSize={10} fill="var(--tx3)" textAnchor="middle">{centerLabel}</text>}
-      </svg>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-        {slices.map(s => (
-          <div key={s.label} className="row" style={{ gap: 8, fontSize: 12.5 }}>
-            <span style={{ width: 11, height: 11, borderRadius: 3, background: s.color, flex: 'none' }} />
-            <span style={{ color: 'var(--tx2)' }}>{s.label}</span>
-            <span style={{ fontWeight: 600, marginLeft: 'auto' }}>{compact(s.value)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  return <DonutD3 slices={slices} centerLabel={centerLabel} centerValue={centerValue} />
 }
 
 function KpiTiles({ items }: { items: KpiItem[] }) {

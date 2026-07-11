@@ -14,6 +14,8 @@ export default defineConfig({
       '@data': path.resolve(__dirname, './src/data'),
       '@repo': path.resolve(__dirname, './src/repo'),
       '@pages': path.resolve(__dirname, './src/pages'),
+      // Shared time-on-page tracker (HQ Portfolio reads the beats via hq_engagement)
+      '@arganta/usage': path.resolve(__dirname, '../../packages/usage/src/index.js'),
     },
   },
   server: { port: 5180 },

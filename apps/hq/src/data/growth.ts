@@ -15,6 +15,8 @@ export const KIND_LABEL: Record<string, string> = {
   spend: 'Spent in shop', deduct: 'Penalties / refunds',
   journey: 'Journey nodes', quest: 'LifeQuests', drill: 'Skill drills',
   openworld: 'Open-world play', harvest: 'World harvest', coop: 'Co-op play',
+  lesson: 'Lessons', game: 'Game play', cup_prize: 'Cup prizes',
+  arena: 'Arena battles', bloom: 'Circle farm', daily: 'Daily rewards',
 }
 export const kindLabel = (k: string): string => KIND_LABEL[k] ?? k.charAt(0).toUpperCase() + k.slice(1)
 

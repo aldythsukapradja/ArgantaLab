@@ -7,6 +7,7 @@ import { initCharacterRegistry } from './net/characterRegistry.js';
 import { initAudioLibrary } from './net/audioLibrary.js';
 import { initAudioUsage } from './net/audioUsage.js';
 import { initMusic } from './net/musicLibrary.js';
+import { startUsageTracker } from '@arganta/usage';
 import './styles.css';
 
 // Pull + apply the combat tuning Circle HQ published (fire-and-forget, safe:
@@ -25,6 +26,9 @@ initAudioUsage();
 // Pull the generative-music THEMES HQ's Music Forge published (per map) — the
 // ambient bed plays these; falls back to package default themes if none.
 initMusic();
+// Time-on-page beats → app_usage_beats (Circle HQ Portfolio reads hq_engagement).
+// App.jsx keeps window.__usagePage current (welcome/onboarding/farm/realm:<id>).
+startUsageTracker({ supabase, app: 'lashira', getPage: () => window.__usagePage || 'home' });
 
 // Embed mode: the game runs inside ANY parent ArgantaLab app (Bloom Command,
 // KinetikCircle's "KinFarm" pill, etc.) as `?embed=<hostname>` — the value only

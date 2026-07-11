@@ -193,6 +193,17 @@ export default function App({ hostSupabase = null, hostUser = null, embedded = f
   );
 
   if (import.meta.env.DEV) window.__appState = { checked, profile, embedded, heroChecked };
+
+  // Where-am-I marker for the shared usage tracker (started in main.jsx):
+  // welcome → onboarding → farm (personal/circle/visit) → realm:<id>.
+  window.__usagePage = !checked || (embedded && !profile) ? 'loading'
+    : !profile ? 'welcome'
+      : needsOnboarding(hero, profile) ? 'onboarding'
+        : worldScope?.realmId ? 'realm:' + worldScope.realmId
+          : farmScope.kind === 'visit' ? 'farm-visit'
+            : farmScope.kind === 'circle' && activeCircleId ? 'farm-circle'
+              : 'farm-personal';
+
   if (!checked) return <div className="loading">Loading LashiraBloom…</div>;
 
   // Embedded and no session yet -> wait for the host to hand one down.

@@ -148,6 +148,35 @@ export interface PortfolioVc {
   generatedAt: string
 }
 
+// ── Engagement · time-on-page (hq_engagement RPC over app_usage_beats) ──
+export interface EngagementApp { app: string; seconds: number; users: number; sessions: number }
+export interface EngagementPage { app: string; page: string; seconds: number; users: number }
+export interface EngagementDay { day: string; app: string; seconds: number }
+export interface EngagementPunch { dow: number; hour: number; seconds: number }
+export interface EngagementUserApp { app: string; seconds: number }
+export interface EngagementUser {
+  id: string
+  name: string
+  role: string
+  seconds: number
+  sessions: number
+  lastSeen: string
+  topApp: string | null
+  topPage: string | null
+  perApp: EngagementUserApp[] | null
+}
+export interface EngagementData {
+  days: number
+  totalSeconds: number
+  totalUsers: number
+  apps: EngagementApp[]
+  pages: EngagementPage[]
+  daily: EngagementDay[]
+  punch: EngagementPunch[]
+  users: EngagementUser[]
+  generatedAt: string
+}
+
 export interface FunnelStage { stage: string; count: number }
 export interface AcquisitionData {
   funnel: FunnelStage[]

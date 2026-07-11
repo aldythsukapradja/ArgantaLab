@@ -14,5 +14,7 @@ export default defineConfig({
     '@arganta/ai': path.resolve(__dirname, '../../packages/ai/src/index.js'),
     // Character Forge renders the real animated character through Kingdom's engine.
     '@arganta/heroes-engine': path.resolve(__dirname, '../../packages/heroes-engine/src/index.js'),
+    // Time-on-page tracker — the same beats every app sends; HQ tracks itself too.
+    '@arganta/usage': path.resolve(__dirname, '../../packages/usage/src/index.js'),
   } },
 })

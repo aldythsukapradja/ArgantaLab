@@ -13,6 +13,8 @@ export default defineConfig({
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@store': path.resolve(__dirname, './src/store'),
       '@types': path.resolve(__dirname, './src/types'),
+      // Shared time-on-page tracker (HQ Portfolio reads the beats via hq_engagement)
+      '@arganta/usage': path.resolve(__dirname, '../../packages/usage/src/index.js'),
     },
   },
   server: {

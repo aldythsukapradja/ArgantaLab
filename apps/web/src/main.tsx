@@ -4,6 +4,8 @@ import App from './App.tsx'
 import { useAppStore } from './store/appStore'
 import { initNative } from './lib/native'
 import { initEmbedGuest } from './lib/embedGuest'
+import { startUsageTracker } from '@arganta/usage'
+import { supabase, cloudEnabled } from './lib/supabase'
 
 // Hydrate theme before first render
 const { theme } = useAppStore.getState()
@@ -14,6 +16,16 @@ void initNative()
 
 // Landing-embed bridge — no-op unless framed with ?embed=<nonce>
 initEmbedGuest()
+
+// Time-on-page beats → app_usage_beats (Circle HQ Portfolio reads hq_engagement)
+startUsageTracker({
+  supabase: cloudEnabled ? supabase : null,
+  app: 'arganta',
+  getPage: () => {
+    const s = useAppStore.getState()
+    return s.activeTab || s.lastTab || 'home'
+  },
+})
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

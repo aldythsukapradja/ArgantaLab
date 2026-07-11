@@ -1,5 +1,5 @@
 import { supabase, cloudEnabled } from '../lib/supabase'
-import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix, GrowthOverview, RetentionData, AcquisitionData, EconomyData, PortfolioVc } from './types'
+import type { SchemaModel, SchemaInsights, Ontology, ContentMatrix, GrowthOverview, RetentionData, AcquisitionData, EconomyData, PortfolioVc, EngagementData } from './types'
 
 export interface PublishedGame {
   id: string
@@ -123,6 +123,9 @@ export const live = {
   growthOverview: () => rpc<GrowthOverview>('hq_growth_overview'),
   portfolioVc: () => rpc<PortfolioVc>('hq_portfolio_vc'),
   retention: () => rpc<RetentionData>('hq_retention'),
+  // Time-on-page rollup (needs migration_hq_engagement.sql). Null until the
+  // migration runs / the caller isn't an operator — the UI shows a setup hint.
+  engagement: (days = 14) => rpc<EngagementData>('hq_engagement', { p_days: days }),
   acquisition: () => rpc<AcquisitionData>('hq_acquisition'),
   economy: () => rpc<EconomyData>('hq_economy'),
   tablePreview: (table: string, limit = 20) =>

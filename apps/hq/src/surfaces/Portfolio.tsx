@@ -1,12 +1,19 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  GraduationCap, Users, MessageSquare, Heart, Circle,
+  GraduationCap, Users, MessageSquare, Heart, Circle, Sprout,
   UserPlus, Zap, Flame, Repeat, Share2, Coins, Shuffle, TrendingUp, Info, Gem, Clock, CalendarClock,
+  Timer, MonitorSmartphone, Activity, Moon,
 } from 'lucide-react'
 import { live } from '../data/live'
-import type { SchemaInsights, GrowthOverview, EconomyData, PortfolioVc, GrowthPoint } from '../data/types'
+import type { SchemaInsights, GrowthOverview, EconomyData, PortfolioVc, EngagementData } from '../data/types'
 import type { KinetikStats } from '../data/live'
 import { chartColor } from '../components/charts'
+import { AreaTrend } from '../components/d3/AreaTrend'
+import { DonutD3 } from '../components/d3/DonutD3'
+import { HBars } from '../components/d3/HBars'
+import { StackedCols } from '../components/d3/StackedCols'
+import { PunchCard } from '../components/d3/PunchCard'
+import { fmtDur, appColor, appLabel } from '../components/d3/chartkit'
 import { PRESETS, DEFAULT_GLOBALS, computeScenario } from '../data/monetization'
 import { Empty, Loading } from '../components/Empty'
 import { compact, pct } from '../lib/format'
@@ -38,6 +45,17 @@ function KMark({ size = 34 }: { size?: number }) {
   )
 }
 
+function LashiraMark({ size = 34 }: { size?: number }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: 9, display: 'grid', placeItems: 'center',
+      background: 'linear-gradient(135deg,#34d399,#0d9488)',
+    }}>
+      <Sprout size={18} color="#fff" />
+    </div>
+  )
+}
+
 // AARRR pillar accents — each stat is colour-tagged by the funnel stage it
 // belongs to, so the card reads as acquisition → engagement → retention → money.
 const PILLAR = {
@@ -58,12 +76,17 @@ function StatCell({ label, value, icon, src, pillar, tone }: {
   )
 }
 
+const RANGES = [7, 14, 30] as const
+
 export function Portfolio() {
   const [i, setI] = useState<SchemaInsights | null | undefined>(undefined)
   const [k, setK] = useState<KinetikStats | null | undefined>(undefined)
   const [o, setO] = useState<GrowthOverview | null | undefined>(undefined)
   const [e, setE] = useState<EconomyData | null | undefined>(undefined)
   const [v, setV] = useState<PortfolioVc | null | undefined>(undefined)
+  const [days, setDays] = useState<number>(14)
+  const [eng, setEng] = useState<EngagementData | null | undefined>(undefined)
+  const [engLoading, setEngLoading] = useState(false)
 
   useEffect(() => {
     live.schemaInsights().then(setI)
@@ -73,23 +96,46 @@ export function Portfolio() {
     live.portfolioVc().then(setV)
   }, [])
 
+  // The date range scopes the whole "where time goes" read. Refetch keeps the
+  // previous frame at reduced opacity — no skeleton, no layout jump.
+  useEffect(() => {
+    let alive = true
+    setEngLoading(true)
+    live.engagement(days).then((d) => { if (alive) { setEng(d); setEngLoading(false) } })
+    return () => { alive = false }
+  }, [days])
+
   const loading = i === undefined && k === undefined
   const offline = i === null && k === null
   const hasVc = !!(o || v)
 
+  const lashiraEng = eng?.apps.find(a => a.app === 'lashira') ?? null
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <div className="h1">Portfolio</div>
-        <div className="sub">The investor read on the Arganta ecosystem — acquisition, retention &amp; monetization, every number live</div>
+      <div className="spread" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <div className="h1">Portfolio</div>
+          <div className="sub">The investor read on the Arganta ecosystem — acquisition, engagement, retention &amp; monetization, every number live</div>
+        </div>
+        <div className="seg" role="group" aria-label="Date range">
+          {RANGES.map(r => (
+            <button key={r} className={days === r ? 'on' : ''} onClick={() => setDays(r)}>{r}d</button>
+          ))}
+        </div>
       </div>
 
       {loading && <Loading label="Loading app health…" />}
-      {offline && <Empty title="No live connection">Connect Supabase and sign in as operator — the scorecard and both app cards populate automatically.</Empty>}
+      {offline && <Empty title="No live connection">Connect Supabase and sign in as operator — the scorecard and every app card populate automatically.</Empty>}
 
       {hasVc && <NorthStar o={o ?? null} v={v ?? null} />}
       {hasVc && <Scorecard o={o ?? null} e={e ?? null} v={v ?? null} />}
       {v && v.familiesTotal > 0 && <Flywheel v={v} />}
+
+      {/* ── Where time goes — live time-on-page across every app ── */}
+      {!offline && !loading && (
+        <TimeSpent eng={eng} loading={engLoading} days={days} />
+      )}
 
       {/* ── KinetikCircle ──────────────────────────────────── */}
       {k !== undefined && (
@@ -99,28 +145,29 @@ export function Portfolio() {
           tagline="Private family social & moment-sharing app"
           status={k ? 'Connected' : 'Offline'}
           pill={k ? 'pill-ok' : 'pill-mut'}
-          description="Families create a private Circle and share moments, stories, albums, routines and events — all within a closed group. Platform-authored Discover posts keep the feed alive between real family moments."
+          description="Families create a private Circle and share moments, stories, albums, routines and events — all within a closed group. Platform-authored Discover posts keep the feed alive between real family moments, and the embedded KinFarm pill opens the shared LashiraBloom circle farm."
           features={[
             'Private Circles — one per family, invite-only',
             'Moments feed — photos, videos, stories, kudos',
             'Stories (24h ephemeral) + photo albums',
             'Routines & events (family calendar)',
             'Discover feed — platform-authored broadcast cards',
-            'Reactions + comments; Cheer Squad celebrations',
+            'KinFarm — the embedded LashiraBloom circle farm',
           ]}
         >
           {k && (() => {
             const fw = v && v.familiesTotal > 0 ? Math.round((100 * v.flywheelCount) / v.familiesTotal) : null
+            const kt = eng?.apps.find(a => a.app === 'kinetik')
             return (
             <div className="pstat-grid">
               {/* acquisition */}
               <StatCell pillar="acq" label="Members" value={k.members} icon={<Users size={11} />} src="people" />
               <StatCell pillar="acq" label="Circles" value={k.circles} icon={<Circle size={11} />} src="families" />
-              {/* engagement — family posting + their kids' daily learning */}
+              {/* engagement — family posting + real measured time */}
               <StatCell pillar="eng" label="Posts · 7d" value={k.posts7d} icon={<MessageSquare size={11} />} src="this week" />
               <StatCell pillar="eng" label="Reactions" value={k.reactions} icon={<Heart size={11} />} src="on posts" />
               <StatCell pillar="eng" label="Calendar / day" value={perDay(k.calPerDay)} icon={<CalendarClock size={11} />} src="events + routines" />
-              <StatCell pillar="eng" label="Screen time" value={screenTime(v?.screenMinPerKidDay)} icon={<Clock size={11} />} src="per kid / day" />
+              <StatCell pillar="eng" label={`Time · ${days}d`} value={kt ? fmtDur(kt.seconds) : '—'} icon={<Timer size={11} />} src={kt ? `${kt.users} people · measured` : 'no beats yet'} />
               {/* retention / moat */}
               <StatCell pillar="ret" label="Flywheel" value={fw == null ? '—' : fw + '%'} icon={<Shuffle size={11} />} src="have a learner" />
               {/* monetization */}
@@ -140,24 +187,28 @@ export function Portfolio() {
           tagline="Kids learning super-app — gamified lessons, games & rewards"
           status={i ? 'Connected' : 'Offline'}
           pill={i ? 'pill-ok' : 'pill-mut'}
-          description="An educational super-app for kids with mastery-based lessons, mini-games, diamond rewards, and family circles that connect learners to parents. Circles are shared with KinetikCircle."
+          description="An educational super-app for kids: mastery-based journeys, skill drills, LifeQuests, KinQuest (the Pokémon-style RPG), KinWorld open-world play, mini-games from the builders, and a diamond economy — all connected to the family through circles shared with KinetikCircle."
           features={[
-            'Learn engine — lessons, mastery attempts, XP',
-            'Mini-games authored via Game Builder',
-            'Diamond economy — earn & spend rewards',
-            'Learn Builder for operators to create content',
-            'Circles shared with KinetikCircle',
+            'Learn engine — journeys, mastery attempts, XP, North Star rings',
+            'KinQuest — flagship RPG across 8 regions & Keepers',
+            'KinWorld — PixiJS open-world town + world harvest',
+            'ArgantaCup — guardian-run circle competitions with real prizes',
+            'Diamond economy — earn in play, spend in the shop',
+            'Games & apps published from the HQ builders',
           ]}
         >
-          {i && (
+          {i && (() => {
+            const at = eng?.apps.find(a => a.app === 'arganta')
+            return (
             <div className="pstat-grid">
               {/* acquisition — are new learners arriving, and do they reach first value? */}
               <StatCell pillar="acq" label="New · 7d" value={o?.newLearners7d ?? i.learners} icon={<UserPlus size={11} />}
                 src={o ? signed(o.newWowPct) : 'signups'} tone={o?.newWowPct != null ? (o.newWowPct >= 0 ? 'var(--ok)' : 'var(--warn)') : undefined} />
               <StatCell pillar="acq" label="Activation" value={pctOr(v?.activationRate)} icon={<Zap size={11} />} src="acted in 48h" />
-              {/* engagement — how much each kid does, daily */}
+              {/* engagement — how much each kid does, daily + real measured time */}
               <StatCell pillar="eng" label="Lessons / day" value={perDay(v?.lessonsPerKidDay)} icon={<GraduationCap size={11} />} src="per kid" />
-              <StatCell pillar="eng" label="Screen time" value={screenTime(v?.screenMinPerKidDay)} icon={<Clock size={11} />} src="per kid / day" />
+              <StatCell pillar="eng" label={`Time · ${days}d`} value={at ? fmtDur(at.seconds) : screenTime(v?.screenMinPerKidDay)} icon={<Clock size={11} />}
+                src={at ? `${at.users} people · measured` : 'estimated / kid / day'} />
               {/* retention — do they come back? */}
               <StatCell pillar="ret" label="Comes back daily" value={pctOr(o?.stickiness)} icon={<Repeat size={11} />} src="of monthly kids" />
               <StatCell pillar="ret" label="Next-day return" value={pctOr(v?.d1Retention)} icon={<TrendingUp size={11} />} src="came back" />
@@ -165,27 +216,58 @@ export function Portfolio() {
               <StatCell pillar="mon" label="Diamonds" value={i.diamondsFloat} icon={<Gem size={11} />} src={v?.spentPerActiveKid != null ? `${compact(v.spentPerActiveKid)} spent/kid` : 'float'} />
               <StatCell pillar="mon" label="Rev / family" value={usd2(BLEND_ARPU)} icon={<Coins size={11} />} src="sub + 💎 IAP /mo" />
             </div>
-          )}
+            )
+          })()}
           {!i && <div style={{ fontSize: 12.5, color: 'var(--tx3)', padding: '8px 0' }}>Sign in as operator to see live stats.</div>}
+        </AppCard>
+      )}
+
+      {/* ── LashiraBloom ───────────────────────────────────── */}
+      {!offline && !loading && (
+        <AppCard
+          mark={<LashiraMark size={34} />}
+          name="LashiraBloom"
+          tagline="Stardew-inspired circle farm — adults play, kids learn"
+          status={lashiraEng ? 'Connected' : 'MVP · live'}
+          pill={lashiraEng ? 'pill-ok' : 'pill-tl'}
+          description="A cozy farming RPG on the ArgantaLab spine: every family circle shares one farm (planted in KinetikCircle as the KinFarm pill), plus personal farms, visits, and five portal realms. Adults play for fun; kids' XP routes through the learn engine — the same hero, skills and cosmetics as Kingdom Heroes via the shared packages."
+          features={[
+            'Shared circle farm — one save per family circle',
+            'Forced first-run hero onboarding (name → path → look → ride)',
+            'Five portal realms + multiplayer presence',
+            'Combat, skills & cosmetics from @arganta/combat + heroes-engine',
+            'HQ-published tuning: combat, characters, SFX, music themes',
+          ]}
+        >
+          <div className="pstat-grid">
+            <StatCell pillar="eng" label={`Time · ${days}d`} value={lashiraEng ? fmtDur(lashiraEng.seconds) : '—'} icon={<Timer size={11} />}
+              src={lashiraEng ? 'measured in-game' : 'awaiting first beats'} />
+            <StatCell pillar="acq" label="Players" value={lashiraEng ? lashiraEng.users : '—'} icon={<Users size={11} />} src={`distinct · ${days}d`} />
+            <StatCell pillar="ret" label="Sessions" value={lashiraEng ? lashiraEng.sessions : '—'} icon={<Repeat size={11} />} src={`${days}d`} />
+            <StatCell pillar="mon" label="Model" value="XP → learn" icon={<Sprout size={11} />} src="adults play · kids learn" />
+          </div>
         </AppCard>
       )}
     </div>
   )
 }
 
-// ── North-star hero: weekly engaged accounts ───────────────────────────────
+// ── North-star hero: weekly engaged accounts, now a full D3 trend ───────────
 function NorthStar({ o, v }: { o: GrowthOverview | null; v: PortfolioVc | null }) {
   const engaged = o?.wau ?? null
   const circles = v?.flywheelCount ?? null
   const wow = o?.wowPct ?? null
+  const points = o?.northStar ?? []
   return (
     <div className="card" style={{ padding: '16px 18px' }}>
-      <div className="spread" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(210px,auto) 1fr', gap: 18, alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 11, color: 'var(--tx3)', letterSpacing: '.05em', textTransform: 'uppercase' }}>Ecosystem north star</div>
           <div style={{ fontSize: 12.5, color: 'var(--tx2)', marginTop: 2 }}>Weekly engaged accounts <span style={{ color: 'var(--tx3)' }}>· active learners + circles</span></div>
-          <div className="row" style={{ gap: 12, alignItems: 'baseline', marginTop: 6 }}>
-            <span style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-.02em', lineHeight: 1 }}>{engaged == null ? '—' : compact(engaged)}</span>
+          <div className="row" style={{ gap: 12, alignItems: 'baseline', marginTop: 8 }}>
+            <span style={{ fontSize: 48, fontWeight: 600, letterSpacing: '-.02em', lineHeight: 1 }}>{engaged == null ? '—' : compact(engaged)}</span>
+          </div>
+          <div className="row" style={{ gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
             {wow != null && (
               <span className="row" style={{ gap: 4, fontSize: 12.5, color: wow >= 0 ? 'var(--ok)' : 'var(--bad)' }}>
                 <TrendingUp size={13} /> {signed(wow)}
@@ -194,26 +276,16 @@ function NorthStar({ o, v }: { o: GrowthOverview | null; v: PortfolioVc | null }
             {circles != null && <span style={{ fontSize: 12, color: 'var(--tx3)' }}>· {compact(circles)} active circles</span>}
           </div>
         </div>
-        {o && o.northStar.length > 0 && <SparkLine points={o.northStar} />}
+        {points.length > 1 && (
+          <AreaTrend
+            labels={points.map(p => p.week)}
+            series={[{ key: 'v', label: 'Weekly engaged', color: 'var(--ch1)', area: true }]}
+            data={points.map(p => ({ v: p.value }))}
+            height={130}
+          />
+        )}
       </div>
     </div>
-  )
-}
-
-function SparkLine({ points }: { points: GrowthPoint[] }) {
-  const W = 200, H = 54
-  const n = points.length
-  if (n < 2) return null
-  const max = Math.max(1, ...points.map(p => p.value))
-  const x = (idx: number) => (idx * W) / (n - 1)
-  const y = (val: number) => 6 + (1 - val / max) * (H - 12)
-  const line = points.map((p, idx) => `${idx ? 'L' : 'M'}${x(idx).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Weekly engaged accounts trend" style={{ flex: 'none' }}>
-      <path d={`${line} L${W},${H} L0,${H} Z`} fill="var(--acc-soft)" opacity={0.5} />
-      <path d={line} fill="none" stroke="var(--acc)" strokeWidth={2} strokeLinejoin="round" />
-      <circle cx={x(n - 1)} cy={y(points[n - 1].value)} r={3} fill="var(--acc)" />
-    </svg>
   )
 }
 
@@ -282,6 +354,151 @@ function PillarTile({ p, accent }: { p: Pillar; accent: string }) {
   )
 }
 
+// ── Where time goes — the live time-on-page read (hq_engagement) ────────────
+function TimeSpent({ eng, loading, days }: { eng: EngagementData | null | undefined; loading: boolean; days: number }) {
+  const daily = useMemo(() => {
+    if (!eng) return { labels: [] as string[], series: [] as { key: string; label: string; color: string }[], data: [] as Record<string, number>[] }
+    const apps = eng.apps.map(a => a.app)
+    const dayKeys = Array.from(new Set(eng.daily.map(d => d.day)))
+    const byDay = new Map<string, Record<string, number>>()
+    for (const dk of dayKeys) byDay.set(dk, {})
+    for (const row of eng.daily) byDay.get(row.day)![row.app] = row.seconds
+    return {
+      labels: dayKeys,
+      series: apps.map(a => ({ key: a, label: appLabel(a), color: appColor(a) })),
+      data: dayKeys.map(dk => byDay.get(dk)!),
+    }
+  }, [eng])
+
+  const busiest = useMemo(() => {
+    if (!eng || eng.punch.length === 0) return null
+    const best = eng.punch.reduce((a, b) => (b.seconds > a.seconds ? b : a))
+    const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return `${DOW[best.dow]} ${best.hour}:00`
+  }, [eng])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 11, opacity: loading && eng ? 0.55 : 1, transition: 'opacity .2s' }}>
+      <div className="spread" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div className="row" style={{ gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--tx2)' }}>
+          <Timer size={14} /> Where time goes — measured time-on-page, every app
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--tx3)' }}>visibility + activity gated · beats every ~20s · last {days} days</span>
+      </div>
+
+      {eng === undefined && <Loading label="Loading engagement…" />}
+      {eng === null && (
+        <Empty title="Time tracking needs one migration">
+          Run <span className="src">supabase/migration_hq_engagement.sql</span> in the Supabase SQL editor, then just use the apps —
+          every Arganta surface (ArgantaLab, KinetikCircle, LashiraBloom, HQ, Landing) already ships the tracker and starts
+          reporting the moment the table exists.
+        </Empty>
+      )}
+
+      {eng && eng.totalSeconds === 0 && (
+        <Empty title="No usage beats yet">
+          The pipeline is live — beats appear here within a minute of anyone using any app. Open ArgantaLab or KinetikCircle and watch this fill in.
+        </Empty>
+      )}
+
+      {eng && eng.totalSeconds > 0 && (
+        <>
+          <div className="kpi-grid">
+            <div className="kpi">
+              <div className="kpi-l"><Clock size={13} /> Total time</div>
+              <div className="kpi-v">{fmtDur(eng.totalSeconds)}</div>
+              <div className="kpi-s" style={{ color: 'var(--tx3)' }}>across {eng.apps.length} apps · {days}d</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-l"><Users size={13} /> People tracked</div>
+              <div className="kpi-v">{compact(eng.totalUsers)}</div>
+              <div className="kpi-s" style={{ color: 'var(--tx3)' }}>signed-in + guest devices</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-l"><MonitorSmartphone size={13} /> Most-used app</div>
+              <div className="kpi-v">{eng.apps[0] ? appLabel(eng.apps[0].app) : '—'}</div>
+              <div className="kpi-s" style={{ color: 'var(--tx3)' }}>{eng.apps[0] ? `${fmtDur(eng.apps[0].seconds)} · ${Math.round((100 * eng.apps[0].seconds) / eng.totalSeconds)}% of all time` : ''}</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-l"><Moon size={13} /> Busiest hour</div>
+              <div className="kpi-v">{busiest ?? '—'}</div>
+              <div className="kpi-s" style={{ color: 'var(--tx3)' }}>client-local · punch card below</div>
+            </div>
+          </div>
+
+          <div className="gdash">
+            <div className="card gd-7" style={{ padding: 16 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>Daily time by app</div>
+              <div style={{ fontSize: 11.5, color: 'var(--tx2)', marginBottom: 8 }}>stacked minutes per day — where the ecosystem's attention actually goes</div>
+              <StackedCols labels={daily.labels} series={daily.series} data={daily.data} valueFmt={fmtDur} />
+            </div>
+            <div className="card gd-5" style={{ padding: 16 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>Share of time</div>
+              <div style={{ fontSize: 11.5, color: 'var(--tx2)', marginBottom: 8 }}>the attention split across the portfolio</div>
+              <DonutD3
+                slices={eng.apps.map(a => ({ label: appLabel(a.app), value: a.seconds, color: appColor(a.app) }))}
+                centerValue={fmtDur(eng.totalSeconds)} centerLabel="total" valueFmt={fmtDur}
+              />
+            </div>
+            <div className="card gd-7" style={{ padding: 16 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>Top pages</div>
+              <div style={{ fontSize: 11.5, color: 'var(--tx2)', marginBottom: 10 }}>time per page/scene — the gap map: what earns attention and what nobody opens</div>
+              <HBars
+                bars={eng.pages.slice(0, 12).map(p => ({
+                  label: `${appLabel(p.app)} · ${p.page}`, value: p.seconds, color: appColor(p.app),
+                }))}
+                valueFmt={fmtDur} labelWidth={185}
+              />
+            </div>
+            <div className="card gd-5" style={{ padding: 16 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>Rhythm of the week</div>
+              <div style={{ fontSize: 11.5, color: 'var(--tx2)', marginBottom: 10 }}>hour-of-week heat — when the family actually plays &amp; learns</div>
+              <PunchCard punch={eng.punch} />
+              <UserList eng={eng} />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// Who spends the time — auth users named, guest devices kept honest.
+function UserList({ eng }: { eng: EngagementData }) {
+  if (!eng.users.length) return null
+  const maxS = Math.max(1, ...eng.users.map(u => u.seconds))
+  return (
+    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--bd)' }}>
+      <div className="row" style={{ gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--tx2)', marginBottom: 8 }}>
+        <Activity size={13} /> Who spends the time
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {eng.users.slice(0, 8).map((u) => (
+          <div key={u.id} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div className="row" style={{ gap: 8, fontSize: 12 }}>
+              <span style={{ fontWeight: 600, color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>{u.name}</span>
+              <span className="pill pill-mut" style={{ fontSize: 9.5 }}>{u.role}</span>
+              <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--tx)' }}>{fmtDur(u.seconds)}</span>
+            </div>
+            {/* per-user app split as one thin stacked strip (2px gaps) */}
+            <div className="row" style={{ gap: 2, height: 6 }}>
+              {(u.perApp ?? []).map((pa) => (
+                <span key={pa.app} title={`${appLabel(pa.app)} · ${fmtDur(pa.seconds)}`} style={{
+                  height: 6, borderRadius: 3, background: appColor(pa.app),
+                  width: `${Math.max(2, (100 * pa.seconds) / maxS)}%`,
+                }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 10.5, color: 'var(--tx3)' }}>
+              {u.topPage ?? '—'} · {u.sessions} sessions
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── The flywheel: cross-app moat ────────────────────────────────────────────
 function Flywheel({ v }: { v: PortfolioVc }) {
   const pctVal = v.familiesTotal > 0 ? Math.round((100 * v.flywheelCount) / v.familiesTotal) : 0
@@ -289,7 +506,7 @@ function Flywheel({ v }: { v: PortfolioVc }) {
     <div className="insight" style={{ background: 'var(--acc-soft)', color: 'var(--tx)', alignItems: 'center', border: '1px solid var(--bd2)' }}>
       <Shuffle size={16} style={{ color: 'var(--mag)', flex: 'none' }} />
       <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-        <b>The flywheel · {pctVal}% of circles have an active learner</b> ({compact(v.flywheelCount)} of {compact(v.familiesTotal)}). Families who use KinetikCircle <i>and</i> ArgantaLab reinforce each other — the cross-app loop is the moat, not the count of either product alone.
+        <b>The flywheel · {pctVal}% of circles have an active learner</b> ({compact(v.flywheelCount)} of {compact(v.familiesTotal)}). Families who use KinetikCircle, ArgantaLab <i>and</i> the shared circle farm reinforce each other — the cross-app loop is the moat, not the count of any single product.
       </div>
     </div>
   )

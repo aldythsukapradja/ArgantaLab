@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import type { GrowthOverview, RetentionData, AcquisitionData, EconomyData } from '../data/types'
 import { heroCards, buildScorecard, growthInsight, kindLabel, type Tone, type HeroCard, type GrowthInsight, type ScoreRow } from '../data/growth'
 import { LineChart } from '../components/LineChart'
+import { AreaTrend } from '../components/d3/AreaTrend'
 import { CohortHeat } from '../components/CohortHeat'
 import { ChartView, chartColor } from '../components/charts'
 import { Presentation } from '../components/Presentation'
@@ -433,10 +434,6 @@ function Economy({ e }: { e: EconomyData | null | undefined }) {
               <div style={{ fontSize: 13.5, fontWeight: 600 }}>Mint vs burn · weekly</div>
               <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>diamonds earned from play (mint) against diamonds spent (burn) — the real economic pulse</div>
             </div>
-            <div className="row" style={{ gap: 14, fontSize: 11, color: 'var(--tx2)' }}>
-              <span className="row" style={{ gap: 5 }}><span style={{ width: 11, height: 3, borderRadius: 2, background: 'var(--acc)' }} /> mint</span>
-              <span className="row" style={{ gap: 5 }}><span style={{ width: 11, height: 3, borderRadius: 2, background: 'var(--mag)' }} /> burn</span>
-            </div>
           </div>
           <MintBurnChart points={e.mintBurn} />
         </div>
@@ -462,30 +459,19 @@ function Economy({ e }: { e: EconomyData | null | undefined }) {
   )
 }
 
-// Compact dual-series chart: weekly mint (earn) vs burn (spend). Dependency-free,
-// theme-tokened — the economy counterpart to the north-star line.
+// Weekly mint (earn) vs burn (spend) — D3 dual-series trend with a crosshair
+// tooltip; burn is dashed so the pair never relies on hue alone.
 function MintBurnChart({ points }: { points: { week: string; mint: number; burn: number }[] }) {
-  const W = 760, H = 170, padL = 10, padR = 10, padT = 18, padB = 22
-  const n = points.length
-  if (n === 0) return null
-  const max = Math.max(1, ...points.map(p => Math.max(p.mint, p.burn)))
-  const x = (i: number) => padL + (i * (W - padL - padR)) / Math.max(1, n - 1)
-  const y = (v: number) => padT + (1 - v / max) * (H - padT - padB)
-  const path = (key: 'mint' | 'burn') => points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ')
-  const mintLine = path('mint'), burnLine = path('burn')
-  const base = H - padB
+  if (points.length === 0) return null
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ height: 'auto', display: 'block' }} role="img" aria-label="Weekly mint vs burn">
-      {[0.25, 0.5, 0.75, 1].map(f => {
-        const gy = padT + f * (H - padT - padB)
-        return <line key={f} x1={padL} x2={W - padR} y1={gy} y2={gy} stroke="var(--bd)" strokeWidth={1} />
-      })}
-      <path d={`${mintLine} L${x(n - 1).toFixed(1)},${base} L${x(0).toFixed(1)},${base} Z`} fill="var(--acc-soft)" opacity={0.6} />
-      <path d={mintLine} fill="none" stroke="var(--acc)" strokeWidth={2.5} strokeLinejoin="round" />
-      <path d={burnLine} fill="none" stroke="var(--mag)" strokeWidth={2.5} strokeLinejoin="round" strokeDasharray="5 4" />
-      {points.map((p, i) => <circle key={'m' + i} cx={x(i)} cy={y(p.mint)} r={3} fill="var(--acc)" />)}
-      {points.map((p, i) => <circle key={'b' + i} cx={x(i)} cy={y(p.burn)} r={3} fill="var(--mag)" />)}
-      {points.map((p, i) => <text key={'l' + i} x={x(i)} y={H - 6} fontSize={10} fill="var(--tx3)" textAnchor="middle">{p.week}</text>)}
-    </svg>
+    <AreaTrend
+      labels={points.map(p => p.week)}
+      series={[
+        { key: 'mint', label: 'Mint · earned', color: 'var(--ch1)', area: true },
+        { key: 'burn', label: 'Burn · spent', color: 'var(--ch3)', dash: true },
+      ]}
+      data={points.map(p => ({ mint: p.mint, burn: p.burn }))}
+      height={180}
+    />
   )
 }
