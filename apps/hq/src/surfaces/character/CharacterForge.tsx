@@ -8,11 +8,12 @@ import { NpcStudio } from './NpcStudio'
 import { SkillForge } from './SkillForge'
 import { Shop } from './Shop'
 import { loadRoster, getCharacter, saveCharacter, loadShopCatalog, loadOwnedCosmetics, type RosterEntry, type RosterKind } from './heroData'
-import { useComposer, DEFAULT_SEL, DIRWORD, PATHS } from './composer'
+import { useComposer, DEFAULT_SEL, DIRWORD, PATHS, PATH_LABEL } from './composer'
 import './forge.css'
 
 const PAGE_SIZE = 10
 const KIND_TABS: { id: RosterKind; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'adult', label: 'Adults' }, { id: 'kid', label: 'Kids' }]
+const avatarColor = (name?: string) => ['#e0603a', '#6366f1', '#22c55e', '#d6409f', '#e0a83a'][((name || '?').charCodeAt(0) || 0) % 5]
 
 // Character Forge — full-bleed pixel-perfect composer, a faithful clone of Kingdom's
 // Character Lab, now with all 3 tabs live:
@@ -37,7 +38,8 @@ function CharacterLab() {
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(1)
   const [scale, setScale] = useState(3)
-  const [path, setPath] = useState('Warrior')
+  const [path, setPath] = useState('warrior') // canonical id; label via PATH_LABEL
+  const [browsing, setBrowsing] = useState(false) // roster list is collapsed until requested
   const [frame, setFrame] = useState('')
   const [browse, setBrowse] = useState<any>(null)
   const [dyeFor, setDyeFor] = useState<string | null>(null)
@@ -95,11 +97,10 @@ function CharacterLab() {
   function switchKind(k: RosterKind) { setKind(k); setPage(1) }
 
   async function selectUser(profileId: string) {
-    setSelectedId(profileId); setSaveMsg(null)
+    setSelectedId(profileId); setSaveMsg(null); setBrowsing(false)
     const c = await getCharacter(profileId)
     composer.applySpec(c?.spec ?? null)
-    const p = c?.pathId || 'warrior'
-    setPath(p.charAt(0).toUpperCase() + p.slice(1))
+    setPath(c?.pathId || 'warrior')
   }
 
   const hasWeapon = !!composer.sel.weapon
@@ -118,9 +119,9 @@ function CharacterLab() {
   async function save() {
     if (!selectedId) { setSaveMsg({ ok: false, text: 'No character selected.' }); return }
     setSaving(true); setSaveMsg(null)
-    const r = await saveCharacter(selectedId, composer.spec, path.toLowerCase())
+    const r = await saveCharacter(selectedId, composer.spec, path)
     setSaveMsg({ ok: r.ok, text: r.message })
-    if (r.ok) setRoster(rs => rs.map(x => x.profileId === selectedId ? { ...x, hasHero: true, pathId: path.toLowerCase() } : x))
+    if (r.ok) setRoster(rs => rs.map(x => x.profileId === selectedId ? { ...x, hasHero: true, pathId: path } : x))
     setSaving(false)
   }
 
@@ -130,59 +131,74 @@ function CharacterLab() {
 
   return (
     <div className="forge-work">
-      {/* LEFT — platform-wide roster (KinetikCircle), capsules + search + pagination */}
+      {/* LEFT — collapsed by default: the SELECTED user + their path pills.
+          "Browse" reveals the full roster on demand (was a permanent scrolling
+          list of everyone, which crowded the drawer). */}
       <div className="fcol users">
         <h4>Users · {loading ? 'loading…' : `${total} platform-wide`}</h4>
 
-        <div className="f-kind-toggle">
-          {KIND_TABS.map(t => (
-            <button key={t.id} className={kind === t.id ? 'on' : ''} onClick={() => switchKind(t.id)}>
-              {t.label} <span className="n">{counts[t.id]}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="f-search-row">
-          <input className="f-search" placeholder="Search name or email…" value={searchInput}
-            onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') runSearch() }} />
-          <button className="f-arw" title="Search" onClick={runSearch}><Search size={13} /></button>
-        </div>
-
-        <div className="f-userlist">
-          {roster.length === 0 && !loading && (
-            <div className="f-empty">{rosterSource === 'offline' ? 'Sign in to load characters.' : search ? 'No matches.' : 'No characters found.'}</div>
-          )}
-          {roster.map(u => {
-            const on = u.profileId === selectedId
-            const c = ['#e0603a', '#6366f1', '#22c55e', '#d6409f', '#e0a83a'][(u.displayName.charCodeAt(0) || 0) % 5]
-            return (
-              <div key={u.profileId}>
-                <button className={'f-user' + (on ? ' on' : '')} onClick={() => selectUser(u.profileId)}>
-                  <span className="f-ava" style={{ background: c }}>{(u.displayName || u.name || '?')[0]?.toUpperCase()}</span>
-                  <span>
-                    <span className="nm">{u.displayName || u.name}</span>
-                    <span className="uid">{u.accountType || 'user'} · {u.pathId || '—'}{u.level ? ` · L${u.level}` : ''}{u.guardianName ? ` · guardian: ${u.guardianName}` : ''}</span>
-                  </span>
-                  <span className={'f-badge ' + (u.hasHero ? 'hero' : 'none')}>{u.hasHero ? 'hero' : 'none'}</span>
-                </button>
-                {on && (
-                  <div className="f-userpath">
-                    <span className="f-path-label">Path</span>
-                    <div className="f-pathpills">
-                      {PATHS.map(p => <button key={p} className={'f-pp' + (path === p ? ' on' : '')} onClick={() => setPath(p)}>{p}</button>)}
-                    </div>
-                  </div>
-                )}
+        {selected && (
+          <div className="f-usercard">
+            <div className="f-usercard-top">
+              <span className="f-ava lg" style={{ background: avatarColor(selected.displayName || selected.name) }}>{(selected.displayName || selected.name || '?')[0]?.toUpperCase()}</span>
+              <span className="f-usercard-id">
+                <span className="nm">{selected.displayName || selected.name}</span>
+                <span className="uid">{selected.accountType || 'user'}{selected.level ? ` · L${selected.level}` : ''}{selected.guardianName ? ` · ${selected.guardianName}` : ''}</span>
+              </span>
+              <span className={'f-badge ' + (selected.hasHero ? 'hero' : 'none')}>{selected.hasHero ? 'hero' : 'none'}</span>
+            </div>
+            <div className="f-userpath">
+              <span className="f-path-label">Path</span>
+              <div className="f-pathpills">
+                {PATHS.map(p => <button key={p} className={'f-pp' + (path === p ? ' on' : '')} onClick={() => setPath(p)}>{PATH_LABEL[p]}</button>)}
               </div>
-            )
-          })}
-        </div>
+            </div>
+          </div>
+        )}
 
-        {total > PAGE_SIZE && (
-          <div className="f-pagination">
-            <button className="f-arw" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>◀</button>
-            <span className="f-page-label">Page {page} / {pageCount}</span>
-            <button className="f-arw" disabled={page >= pageCount} onClick={() => setPage(p => Math.min(pageCount, p + 1))}>▶</button>
+        <button className="f-browse-toggle" onClick={() => setBrowsing(b => !b)}>
+          {browsing ? '▲ Hide list' : `▾ Browse ${total || ''} users`.replace('  ', ' ')}
+        </button>
+
+        {browsing && (
+          <div className="f-browse">
+            <div className="f-kind-toggle">
+              {KIND_TABS.map(t => (
+                <button key={t.id} className={kind === t.id ? 'on' : ''} onClick={() => switchKind(t.id)}>
+                  {t.label} <span className="n">{counts[t.id]}</span>
+                </button>
+              ))}
+            </div>
+            <div className="f-search-row">
+              <input className="f-search" placeholder="Search name or email…" value={searchInput}
+                onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') runSearch() }} />
+              <button className="f-arw" title="Search" onClick={runSearch}><Search size={13} /></button>
+            </div>
+            <div className="f-userlist">
+              {roster.length === 0 && !loading && (
+                <div className="f-empty">{rosterSource === 'offline' ? 'Sign in to load characters.' : search ? 'No matches.' : 'No characters found.'}</div>
+              )}
+              {roster.map(u => {
+                const on = u.profileId === selectedId
+                return (
+                  <button key={u.profileId} className={'f-user' + (on ? ' on' : '')} onClick={() => selectUser(u.profileId)}>
+                    <span className="f-ava" style={{ background: avatarColor(u.displayName || u.name) }}>{(u.displayName || u.name || '?')[0]?.toUpperCase()}</span>
+                    <span>
+                      <span className="nm">{u.displayName || u.name}</span>
+                      <span className="uid">{u.accountType || 'user'} · {u.pathId ? PATH_LABEL[u.pathId] || u.pathId : '—'}{u.level ? ` · L${u.level}` : ''}</span>
+                    </span>
+                    <span className={'f-badge ' + (u.hasHero ? 'hero' : 'none')}>{u.hasHero ? 'hero' : 'none'}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {total > PAGE_SIZE && (
+              <div className="f-pagination">
+                <button className="f-arw" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>◀</button>
+                <span className="f-page-label">Page {page} / {pageCount}</span>
+                <button className="f-arw" disabled={page >= pageCount} onClick={() => setPage(p => Math.min(pageCount, p + 1))}>▶</button>
+              </div>
+            )}
           </div>
         )}
 
@@ -192,7 +208,7 @@ function CharacterLab() {
       <ComposerPanel
         composer={composer}
         motion={{ base, setBase, emote, setEmote, dir, setDir, playing, setPlaying, speed, setSpeed, scale, setScale, motionName, frame, onStep: (i, n) => setFrame(`step ${i + 1}/${n}`) }}
-        headerLeft={<div className="f-who">{who} <small>{path} · {motionName}</small></div>}
+        headerLeft={<div className="f-who">{who} <small>{PATH_LABEL[path] || path} · {motionName}</small></div>}
         headerRight={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span className="f-pill live">● live spec</span>

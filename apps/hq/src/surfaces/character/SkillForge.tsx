@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { data, CompositeStage, stepCount } from '@arganta/heroes-engine'
 import {
   mergeTuning, fairnessSummary, validateTuning, publishTuning,
-  SKILL_TIER_BANDS, pathTitle,
+  SKILL_TIER_BANDS, pathTitle, pvpMaxHp, monsterOf,
 } from '@arganta/combat'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { EffectLivePreview, SkillBrowser } from './SkillBrowser'
@@ -51,7 +51,13 @@ const SHAPES: { id: string; label: string; hint: string }[] = [
 // game's attackMotionBase/castMotionBase (RealmRoom.jsx), reimplemented here
 // against this hero's own real motion tables so a hero with no Spell frames
 // falls back to its weapon swing instead of a broken/blank pose.
-const CASTER_FACING = 'East' // CompositeStage motion suffix ('Swing'+East). MonsterStage's target uses its own single-letter dir="W".
+// Default facing = the two combatants look AT each other (caster East toward the
+// target on the right, target West toward the caster). WASD/arrows override both
+// to one shared cardinal so you can inspect the pair from any side.
+const VIEW_TO_FULL: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West' }
+const WASD_TO_VIEW: Record<string, 'N' | 'S' | 'E' | 'W'> = {
+  w: 'N', s: 'S', a: 'W', d: 'E', arrowup: 'N', arrowdown: 'S', arrowleft: 'W', arrowright: 'E',
+}
 function attackMotionBase(tables: any, facing: string): string {
   if (tables) {
     for (const base of ['Swing', 'Attack', 'Pierce', 'Shoot']) {
@@ -85,6 +91,17 @@ function VSlider({ label, val, lo, hi, step, color = 'var(--acc)', fmt, onChange
         <div className="sf-vthumb" style={{ left: pct + '%' }}>{fmt ? fmt(val) : val}</div>
         <input type="range" min={lo} max={hi} step={step} value={val} onChange={e => onChange(parseFloat(e.target.value))} />
       </div>
+    </div>
+  )
+}
+
+// A combatant HP bar for the duel sim — value on the fill, animates on change.
+function HpBar({ hp, max, color }: { hp: number; max: number; color: string }) {
+  const pct = Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100))
+  return (
+    <div className="sf-hpbar" title={`${Math.round(hp)} / ${Math.round(max)} HP`}>
+      <div className="sf-hpfill" style={{ width: pct + '%', background: color }} />
+      <span className="sf-hptxt">{Math.round(hp)}<i>/{Math.round(max)}</i></span>
     </div>
   )
 }
@@ -124,6 +141,12 @@ export function SkillForge() {
   // heal-number; the bound effect fx mounts here, not always-on) -> idle.
   const [phase, setPhase] = useState<'idle' | 'casting' | 'impact'>('idle')
   const [tables, setTables] = useState<any>(null)
+  // Shared view direction (null = the default face-each-other pose). WASD sets
+  // a cardinal that rotates BOTH caster and target to it.
+  const [view, setView] = useState<'N' | 'S' | 'E' | 'W' | null>(null)
+  // Live health simulator: both combatants track HP, casting depletes/heals it.
+  const [casterHp, setCasterHp] = useState(0)
+  const [targetHps, setTargetHps] = useState<number[]>([])
   // Arena background pan — the Emberring Arena art is cover-scaled (no
   // stretch), so this just picks WHICH part of it shows through. % of
   // background-position, nudged by the D-pad in the arena's corner.
@@ -153,16 +176,44 @@ export function SkillForge() {
     + (draft.resist ? 1 : 0) + (draft.paths ? 1 : 0) + (draft.damage ? 1 : 0) + (draft.skills ? 1 : 0)
   const dirty = stagedGroups > 0
 
-  // Switching path/skill/tier mid-animation would leave a stuck popup/flash on
-  // the wrong context — snap back to idle whenever the selection changes.
-  useEffect(() => { setPhase('idle') }, [selPath, selSlot, selTier])
+  // Facing: default is face-each-other; WASD (view) rotates both to one cardinal.
+  const casterFacing = view ? VIEW_TO_FULL[view] : 'East'
+  const targetDir = view || 'W'
+  // The combatants for this skill: Single/Heal → the lead alone; Multi → +2 flank.
+  const targetIds = [TARGET_LEAD, ...(slot.i === 1 ? TARGET_FLANK : [])]
+  const casterMaxHp = pvpMaxHp(selPath, tierLevel)
+  const leadMon = monsterOf(TARGET_LEAD)
+
+  // Reset the sim (idle + full HP) whenever the selection changes. Heal starts
+  // the caster at 45% so the restore is actually visible; damage skills start
+  // everyone full so the depletion reads clean.
+  useEffect(() => {
+    setPhase('idle')
+    setCasterHp(slot.kind === 'heal' ? Math.round(casterMaxHp * 0.45) : casterMaxHp)
+    setTargetHps(targetIds.map(id => monsterOf(id).hp))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selPath, selSlot, selTier])
+
+  // WASD/arrows rotate the shared view (ignored while typing in a field).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      const v = WASD_TO_VIEW[e.key.toLowerCase()]
+      if (!v) return
+      e.preventDefault()
+      setView(v)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Skill 1 (Single) swings a weapon; Skill 2 (Multi) and Skill 3 (Heal) cast a
   // spell — the exact contract the shipped realm controllers use.
   const castKind: 'strike' | 'cast' = slot.i === 0 ? 'strike' : 'cast'
   const casterMotion = phase === 'casting'
-    ? (castKind === 'strike' ? attackMotionBase(tables, CASTER_FACING) : castMotionBase(tables, CASTER_FACING)) + CASTER_FACING
-    : idleMotionBase(tables, CASTER_FACING)
+    ? (castKind === 'strike' ? attackMotionBase(tables, casterFacing) : castMotionBase(tables, casterFacing)) + casterFacing
+    : idleMotionBase(tables, casterFacing)
 
   function cast() {
     if (phase !== 'idle' || !hero) return
@@ -170,6 +221,15 @@ export function SkillForge() {
   }
   function onCastComplete() {
     setPhase('impact')
+    // Apply the skill to the health sim at impact.
+    if (slot.kind === 'heal') {
+      setCasterHp(h => Math.min(casterMaxHp, h + tierDamage))
+    } else {
+      setTargetHps(hps => hps.map(h => Math.max(0, h - tierDamage)))
+      // Any target that just dropped to 0 revives to full after a beat, so the
+      // KO reads as a clear "defeated → reset" instead of a stuck empty bar.
+      window.setTimeout(() => setTargetHps(hps => hps.map((h, i) => h <= 0 ? monsterOf(targetIds[i]).hp : h)), 1100)
+    }
     window.setTimeout(() => setPhase('idle'), 900)
   }
 
@@ -206,6 +266,7 @@ export function SkillForge() {
   const pathMul = slot.kind === 'heal' ? effective.paths[selPath].healMul : effective.paths[selPath].mag
   const tierDamage = Math.round(curveAt(tierLevel) * pathMul)
   const shapeNow = cell.shape || (slot.i === 1 ? 'all' : 'line')
+  const hitsToKo = Math.max(1, Math.ceil(leadMon.hp / Math.max(1, tierDamage)))
 
   return (
     <div className="skillforge">
@@ -227,19 +288,19 @@ export function SkillForge() {
             ))}
           </div>
           <h4 style={{ marginTop: 16 }}>Skill</h4>
+          {/* Cast is the last item INSIDE the slot group, so the 3 skill pills +
+              the fire button read as one unit — Cast acts on whichever pill is
+              selected. */}
           <div className="sf-slots">
             {SLOTS.map(s => (
               <button key={s.i} className={'sf-slotpill' + (s.i === selSlot ? ' on' : '')} onClick={() => setSelSlot(s.i)}>
                 <b>Skill {s.i + 1} · {s.role}</b><small>{s.sub}</small>
               </button>
             ))}
+            <button type="button" className="sf-castbtn sf-castbtn-rail" onClick={cast} disabled={phase !== 'idle' || !hero}>
+              {phase === 'idle' ? '▶ Cast ' + slot.role : phase === 'casting' ? 'Casting…' : 'Impact!'}
+            </button>
           </div>
-          {/* Cast lives right under the skill it fires — was a floating button
-              in the middle of the arena, disconnected from the slot picker
-              above it. */}
-          <button type="button" className="sf-castbtn sf-castbtn-rail" onClick={cast} disabled={phase !== 'idle' || !hero}>
-            {phase === 'idle' ? '▶ Cast' : phase === 'casting' ? 'Casting…' : 'Impact!'}
-          </button>
 
           <div className="sf-bench">
             <h4>Benchmark</h4>
@@ -279,15 +340,21 @@ export function SkillForge() {
             <div className="sf-arena-bg" aria-hidden="true" style={{ backgroundPosition: `${panX}% ${panY}%` }} />
             <div className="sf-arena-vignette" aria-hidden="true" />
 
+            <div className="sf-wasdhint" aria-hidden="true">WASD · rotate both</div>
+
             <div className="sf-duel-side sf-duel-caster">
-              <div className="sf-vhead">Caster{hero ? ' · ' + hero.name : ''}</div>
+              <div className="sf-nameplate">
+                <b>{hero ? hero.name : 'Caster'}</b>
+                <span>{META[selPath].name} · {pathTitle(selPath, tierLevel)}</span>
+              </div>
+              {hero && <HpBar hp={casterHp} max={casterMaxHp} color={META[selPath].color} />}
               {hero === undefined && <div className="sf-vempty">loading your hero…</div>}
               {hero === null && <div className="sf-vempty">No saved hero on your operator account yet — compose one in Character Lab.</div>}
               {hero && (
                 <div className={'sf-duel-figure' + (phase === 'impact' && slot.kind === 'heal' ? ' healflash' : '')}>
                   <div className="sf-footshadow" aria-hidden="true" />
                   <CompositeStage
-                    spec={hero.spec} motionName={casterMotion} playing fitHeight={100} width={170} height={150}
+                    spec={hero.spec} motionName={casterMotion} playing fitHeight={168} width={240} height={210}
                     background="transparent"
                     oneShot={phase === 'casting'} onComplete={onCastComplete}
                   />
@@ -300,18 +367,19 @@ export function SkillForge() {
             </div>
 
             <div className="sf-duel-side sf-duel-target">
-              <div className="sf-vhead">{slot.i === 1 ? 'Targets · multi' : 'Target'}</div>
+              <div className="sf-nameplate target">
+                <b>{leadMon.name}{slot.i === 1 ? ` +${TARGET_FLANK.length}` : ''}</b>
+                <span>≈ {hitsToKo} hit{hitsToKo === 1 ? '' : 's'} to KO</span>
+              </div>
               <div className={'sf-duel-figure' + (phase === 'impact' && slot.kind !== 'heal' ? ' hit' : '')}>
                 <div className="sf-footshadow" aria-hidden="true" />
                 {/* Every target — lead + flank alike — is the same animated
-                    MonsterStage at the same size, so "multi" reads as an even
-                    group of enemies instead of one big monster next to two
-                    shrunken icons. Each gets its OWN impact effect + damage
-                    number landing directly on its body, not one shared card
-                    floating above the whole row. */}
-                {[TARGET_LEAD, ...(slot.i === 1 ? TARGET_FLANK : [])].map((id) => (
-                  <div key={id} className="sf-vmonster">
-                    <MonsterStage id={id} dir="W" playing zoom={1} />
+                    MonsterStage at the same size, each with its own HP bar +
+                    impact effect + damage number landing on its body. */}
+                {targetIds.map((id, i) => (
+                  <div key={id + ':' + i} className="sf-vmonster">
+                    <MonsterStage id={id} dir={targetDir} playing zoom={1.4} />
+                    <HpBar hp={targetHps[i] ?? monsterOf(id).hp} max={monsterOf(id).hp} color={monsterOf(id).color || '#c0432f'} />
                     {phase === 'impact' && slot.kind !== 'heal' && <div className="sf-dmgnum dmg">-{tierDamage}</div>}
                     {phase === 'impact' && slot.kind !== 'heal' && effectById[previewFx] && (
                       <div className="sf-veffect"><EffectLivePreview effect={effectById[previewFx]} size={96} /></div>

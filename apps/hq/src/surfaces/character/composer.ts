@@ -36,7 +36,13 @@ export const ACTIONS: [string, string][] = [
 export const EMOTES = ['Victory', 'Smile', 'Cry', 'Blush', 'Wink', 'Yawn', 'Sleep',
   'Surprise', 'Angry', 'Merong', 'Kongi', 'Pish', 'Dance', 'Cold', 'HandToMouth']
 export const DIRWORD: Record<string, string> = { S: 'South', E: 'East', N: 'North', W: 'West' }
-export const PATHS = ['Warrior', 'Mage', 'Poet', 'Rogue']
+// Canonical path IDs (what saves + the games read) in the current display order.
+// The user-facing NAMES use the latest convention (Guardian/Shadow/Mystic/
+// Arcanist), matching Skill Forge — but the saved pathId stays the engine id.
+export const PATHS = ['warrior', 'rogue', 'poet', 'mage']
+export const PATH_LABEL: Record<string, string> = {
+  warrior: 'Guardian', rogue: 'Shadow', poet: 'Mystic', mage: 'Arcanist',
+}
 
 // Skills — 3 fixed slots (single-target / hits-everything / self-heal — the
 // combat engine hardcodes this order in @arganta/combat's SKILL_SLOTS, it was
