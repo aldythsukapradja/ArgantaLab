@@ -28,6 +28,6 @@ jobs:
         run: npm run build:vault-seed
       - name: Fail if the derived seed drifted from the KB source
         run: git diff --exit-code -- apps/hq/src/vault/kb.generated.ts
-      - name: Type-check HQ (verifies the vault compiles)
+      - name: Build HQ (tsc + vite build — mirrors the Vercel deploy)
         working-directory: apps/hq
-        run: npm run type-check
+        run: npm run build
