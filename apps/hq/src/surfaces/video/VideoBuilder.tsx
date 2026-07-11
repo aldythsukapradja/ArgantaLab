@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  blankProject, formatList, PALETTES, textLayer, captionLayer, waveLayer,
+  blankProject, formatList, PALETTES, textLayer, captionLayer, waveLayer, imageLayer,
   recomputeDuration, drawFrame, renderVoice, voiceList, bufferPeaks,
   exportVideo, downloadBlob, startClips,
+  listAssets, uploadAsset, importStock, loadImage, saveRender,
 } from '@arganta/video'
 import { DEFAULT_SFX_RECIPES, createMasterChain, playRecipe } from '@arganta/audio'
-import { Play, Pause, Plus, Eye, EyeOff, Trash2, ChevronUp, ChevronDown, Mic, Music2, Film, Download, Layers } from 'lucide-react'
+import { supabase, cloudEnabled } from '../../lib/supabase'
+import { Play, Pause, Plus, Eye, EyeOff, Trash2, ChevronUp, ChevronDown, Mic, Music2, Film, Download, Layers, Upload, Cloud, Sparkles } from 'lucide-react'
 import './video.css'
 
 // cinematic first — GSAP-choreographed; the rest are the simple built-ins
@@ -19,7 +21,7 @@ const SFX_CUES = ['reward', 'quest', 'collect', 'harvest', 'tap', 'mount', 'take
   .filter((c) => (DEFAULT_SFX_RECIPES as any)[c])
 
 // track hues (fixed, but clips sit on token-neutral lanes with color-mix so they read in both themes)
-const HUE = { background: '#64748b', text: '#6366f1', caption: '#a855f7', waveform: '#06b6d4', voice: '#f59e0b', sfx: '#10b981' } as const
+const HUE = { background: '#64748b', text: '#6366f1', caption: '#a855f7', waveform: '#06b6d4', voice: '#f59e0b', sfx: '#10b981', image: '#14b8a6', music: '#ec4899' } as const
 
 const fmt = (s: number) => { s = Math.max(0, s); const m = Math.floor(s / 60); const r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(1)}` }
 
@@ -40,6 +42,12 @@ export function VideoBuilder() {
   const [exportPct, setExportPct] = useState(0)
   const [status, setStatus] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
+  // media library (Supabase Storage)
+  const [assets, setAssets] = useState<any[]>([])
+  const [assetKind, setAssetKind] = useState<'all' | 'image' | 'audio' | 'video'>('all')
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const [impQuery, setImpQuery] = useState('calm family home')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const projectRef = useRef(project); useEffect(() => { projectRef.current = project }, [project])
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -86,6 +94,61 @@ export function VideoBuilder() {
     }
     raf = requestAnimationFrame(loop); return () => cancelAnimationFrame(raf)
   }, []) // eslint-disable-line
+
+  // ---- media library ----
+  function refreshAssets() { if (cloudEnabled) listAssets(supabase, { kind: assetKind === 'all' ? undefined : assetKind }).then(setAssets) }
+  useEffect(() => { refreshAssets() }, [assetKind]) // eslint-disable-line
+
+  async function addImage(img: HTMLImageElement, url: string, name?: string) {
+    const t = imageLayer(img, url, { name: name || 'Image', dur: 4, start: Math.round(playheadRef.current * 10) / 10 })
+    // place a new image just under the text layers so captions/titles stay on top
+    update((p) => { const bgIdx = p.layers.findIndex((l: any) => l.type === 'background'); p.layers.splice(bgIdx + 1, 0, t) })
+    setSelId(t.id)
+  }
+  async function addAudioBuffer(buffer: AudioBuffer, name: string, kind: 'music' | 'sfx' = 'music') {
+    update((p) => { p.audio.push({ id: kind + '_' + Date.now(), kind, buffer, start: Math.round(playheadRef.current * 10) / 10, dur: buffer.duration, gain: kind === 'music' ? 0.5 : 0.7, name }) })
+  }
+
+  async function onPickFile(file: File) {
+    if (!file) return
+    const kind = file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : file.type.startsWith('video/') ? 'video' : 'image'
+    setMediaBusy(true); setStatus(`Adding ${file.name}…`)
+    try {
+      if (kind === 'image') {
+        const localUrl = URL.createObjectURL(file)
+        const img = await loadImage(localUrl)
+        if (img) await addImage(img, localUrl, file.name)
+        if (cloudEnabled) { const a = await uploadAsset(supabase, file, { kind, width: img?.naturalWidth, height: img?.naturalHeight }); refreshAssets(); setStatus(`Image added + stored in Supabase (${a.name}).`) }
+        else setStatus('Image added (local — connect Supabase to store it).')
+      } else if (kind === 'audio') {
+        const actx = ensureCtx(); const buf = await actx.decodeAudioData(await file.arrayBuffer())
+        await addAudioBuffer(buf, file.name, 'music')
+        if (cloudEnabled) { await uploadAsset(supabase, file, { kind, duration: buf.duration }); refreshAssets() }
+        setStatus(`Music added to timeline${cloudEnabled ? ' + stored' : ''}.`)
+      } else if (kind === 'video') {
+        if (cloudEnabled) { await uploadAsset(supabase, file, { kind }); refreshAssets(); setStatus('Video stored in library. (On-canvas video compositing is the next WebCodecs step.)') }
+        else setStatus('Connect Supabase to store video assets.')
+      }
+    } catch (e: any) { setStatus('Media failed: ' + (e?.message || e)) } finally { setMediaBusy(false) }
+  }
+
+  async function useAsset(a: any) {
+    setMediaBusy(true); setStatus(`Loading ${a.name}…`)
+    try {
+      if (a.kind === 'image') { const img = await loadImage(a.url); if (img) await addImage(img, a.url, a.name); setStatus(`Placed “${a.name}”.`) }
+      else if (a.kind === 'audio') { const actx = ensureCtx(); const buf = await actx.decodeAudioData(await (await fetch(a.url)).arrayBuffer()); await addAudioBuffer(buf, a.name, 'music'); setStatus(`Added music “${a.name}”.`) }
+      else setStatus('Video compositing on canvas is the next WebCodecs step — the clip is in your library.')
+    } catch (e: any) { setStatus('Load failed: ' + (e?.message || e)) } finally { setMediaBusy(false) }
+  }
+
+  async function doImportStock(provider: 'pexels' | 'pixabay', kind: 'image' | 'video') {
+    if (!cloudEnabled) { setStatus('Connect Supabase to import stock.'); return }
+    setMediaBusy(true); setStatus(`Importing ${kind}s for “${impQuery}” from ${provider}…`)
+    try {
+      const r = await importStock(supabase, { provider, query: impQuery, count: 8, kind })
+      setStatus(`Imported ${r.imported} ${kind}(s) from ${provider} into your bucket.`); refreshAssets()
+    } catch (e: any) { setStatus('Import failed: ' + (e?.message || e) + ' — is the import-stock function deployed + keys set?') } finally { setMediaBusy(false) }
+  }
 
   function ensureCtx() { if (!actxRef.current) { const AC = (window as any).AudioContext || (window as any).webkitAudioContext; actxRef.current = new AC() } return actxRef.current! }
   function stopSources() { srcsRef.current.forEach((s) => { try { s.stop() } catch { /* */ } }); srcsRef.current = [] }
@@ -156,7 +219,9 @@ export function VideoBuilder() {
     try {
       const { blob, ext, duration } = await exportVideo(projectRef.current, { onProgress: setExportPct })
       const name = `video-forge-${Date.now()}.${ext}`; downloadBlob(blob, name)
-      setStatus(`Exported ${name} · ${duration.toFixed(1)}s · ${(blob.size / 1024).toFixed(0)} KB`)
+      let extra = ''
+      if (cloudEnabled) { try { const { url } = await saveRender(supabase, blob, { name: 'video-forge', ext, duration }); extra = ' · saved to Supabase' + (url ? ' ✓' : ''); refreshAssets() } catch { extra = ' · (Supabase save failed)' } }
+      setStatus(`Exported ${name} · ${duration.toFixed(1)}s · ${(blob.size / 1024).toFixed(0)} KB${extra}`)
     } catch (e: any) { setStatus('Export failed: ' + (e?.message || e)) } finally { setBusy(''); setExportPct(0) }
   }
 
@@ -167,9 +232,11 @@ export function VideoBuilder() {
     const audioClips = (k: string) => P.audio.filter((a: any) => a.kind === k).map((a: any) => ({ kind: 'audio' as const, id: a.id, start: a.start || 0, dur: a.dur || 1, label: a.kind === 'voice' ? 'voice' : (a.cue || 'sfx') }))
     return [
       { key: 'text', label: 'Text', hue: HUE.text, clips: layerClips('text') },
+      { key: 'image', label: 'Media', hue: HUE.image, clips: layerClips('image') },
       { key: 'caption', label: 'Captions', hue: HUE.caption, clips: layerClips('caption') },
       { key: 'waveform', label: 'Wave', hue: HUE.waveform, clips: layerClips('waveform') },
       { key: 'voice', label: 'Voice', hue: HUE.voice, clips: audioClips('voice') },
+      { key: 'music', label: 'Music', hue: HUE.music, clips: audioClips('music') },
       { key: 'sfx', label: 'SFX', hue: HUE.sfx, clips: audioClips('sfx') },
       { key: 'background', label: 'BG', hue: HUE.background, clips: P.layers.filter((l: any) => l.type === 'background').map((l: any) => ({ kind: 'layer' as const, id: l.id, start: 0, dur: P.duration, label: 'background' })) },
     ]
@@ -237,6 +304,34 @@ export function VideoBuilder() {
             <div className="vbx-ph"><Music2 size={13} /> Sound · from Music Builder<span className="badge">@arganta/audio</span></div>
             <div className="vbx-chipwrap">{SFX_CUES.map((c) => <button key={c} className="vbx-chip vbx-cue" onClick={() => addSfx(c)}><Plus size={11} /> {c}</button>)}</div>
             <span className="vbx-mini">{project.audio.filter((a: any) => a.kind === 'sfx').length} SFX on timeline · lands at playhead</span>
+          </div>
+
+          <div className="vbx-panel">
+            <div className="vbx-ph"><Cloud size={13} /> Media · Supabase<span className="badge">{cloudEnabled ? 'video-assets' : 'offline'}</span></div>
+            <div className="vbx-row">
+              <button className="vbx-btn accent" onClick={() => fileRef.current?.click()} disabled={mediaBusy}><Upload size={12} /> Upload</button>
+              <input className="vbx-sel" value={impQuery} onChange={(e) => setImpQuery(e.target.value)} placeholder="stock search…" />
+            </div>
+            <div className="vbx-chipwrap">
+              <button className="vbx-chip vbx-cue" disabled={mediaBusy} onClick={() => doImportStock('pexels', 'image')}><Sparkles size={11} /> Pexels photos</button>
+              <button className="vbx-chip vbx-cue" disabled={mediaBusy} onClick={() => doImportStock('pixabay', 'image')}>Pixabay</button>
+              <button className="vbx-chip vbx-cue" disabled={mediaBusy} onClick={() => doImportStock('pexels', 'video')}>Pexels video</button>
+            </div>
+            <div className="vbx-chipwrap">
+              {(['all', 'image', 'audio', 'video'] as const).map((k) => (
+                <span key={k} className={'vbx-chip' + (assetKind === k ? ' on' : '')} onClick={() => setAssetKind(k)}>{k}</span>
+              ))}
+            </div>
+            {assets.length > 0 ? (
+              <div className="vbx-mediagrid">
+                {assets.map((a) => (
+                  <button key={a.id} className="vbx-mediaitem" title={a.name + (a.attribution ? ' · ' + a.attribution : '')} onClick={() => useAsset(a)}
+                    style={{ ['--cc' as any]: (HUE as any)[a.kind] || HUE.image }}>
+                    {a.kind === 'image' && a.thumb ? <img src={a.thumb} alt={a.name} /> : <span className="mi-ph">{a.kind === 'audio' ? '♪' : a.kind === 'video' ? '▶' : a.kind}</span>}
+                  </button>
+                ))}
+              </div>
+            ) : <span className="vbx-mini">{cloudEnabled ? 'No assets yet — Upload or import stock.' : 'Offline — connect Supabase (run migration_video_assets.sql) to browse your library. Upload still works locally.'}</span>}
           </div>
 
           <div className="vbx-panel">
@@ -320,6 +415,9 @@ export function VideoBuilder() {
           </div>
         </div>
       </div>
+
+      <input ref={fileRef} type="file" accept="image/*,audio/*,video/*" style={{ display: 'none' }}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile(f); e.currentTarget.value = '' }} />
     </div>
   )
 }

@@ -188,7 +188,9 @@ export function applyPostFx(ctx, project, t, W, H) {
     const fi = Math.floor(t * (project.format?.fps || 30));
     const r = mulberry32(fi + 7);
     const ox = Math.floor(r() * S), oy = Math.floor(r() * S);
-    ctx.save(); ctx.globalAlpha = 0.5; ctx.globalCompositeOperation = 'overlay';
+    // 'source-over' (normal alpha), NOT 'overlay': GPU blend modes are not
+    // bit-exact across calls, which would break the deterministic guarantee.
+    ctx.save(); ctx.globalAlpha = 0.6;
     for (let y = -oy; y < H; y += S) for (let x = -ox; x < W; x += S) ctx.drawImage(tile, x, y);
     ctx.restore();
   }

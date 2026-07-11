@@ -8,3 +8,4 @@ export * from './layers.js';
 export * from './render.js';
 export * from './project.js';
 export * from './cinematic.js';
+export * from './assets.js';

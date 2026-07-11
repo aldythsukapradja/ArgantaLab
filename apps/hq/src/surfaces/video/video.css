@@ -68,6 +68,16 @@
 .vbx-chip:hover{border-color:var(--bd3);color:var(--tx)}
 .vbx-chip.on{background:var(--acc-soft);border-color:transparent;color:var(--acc-text);font-weight:600}
 .vbx-cue:hover{border-color:var(--acc);color:var(--acc-text)}
+.vbx-cue:disabled{opacity:.5;cursor:default}
+
+/* media grid */
+.vbx-mediagrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:186px;overflow-y:auto}
+.vbx-mediaitem{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--bd2);
+  background:var(--bg2);cursor:pointer;padding:0;transition:border-color var(--dur)}
+.vbx-mediaitem:hover{border-color:var(--cc,var(--acc))}
+.vbx-mediaitem img{width:100%;height:100%;object-fit:cover;display:block}
+.vbx-mediaitem .mi-ph{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);
+  font-size:11px;color:var(--cc,var(--tx3));text-transform:uppercase}
 
 /* layers list */
 .vbx-layers{display:flex;flex-direction:column;gap:5px}

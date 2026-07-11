@@ -103,6 +103,27 @@ function drawText(ctx, l, lt, d, W, H) {
   ctx.restore();
 }
 
+function drawImageLayer(ctx, l, lt, d, W, H) {
+  const img = l.img;
+  if (!img || !img.complete || !img.naturalWidth) return;
+  const enter = easeOut(clamp(lt / 0.6, 0, 1));
+  const outStart = d - 0.4;
+  const exit = lt > outStart ? clamp((lt - outStart) / 0.4, 0, 1) : 0;
+  ctx.globalAlpha = clamp((l.opacity ?? 1) * enter * (1 - exit), 0, 1);
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  let scale = l.fit === 'contain' ? Math.min(W / iw, H / ih) : Math.max(W / iw, H / ih);
+  let k = 1, px = 0, py = 0;
+  if (l.anim === 'kenburns') {
+    const p = clamp(lt / Math.max(1, d), 0, 1);
+    k = 1 + 0.1 * p; px = Math.sin(p * 1.2) * W * 0.022; py = Math.cos(p) * H * 0.022;
+  }
+  scale *= (l.scale || 1) * k;
+  const dw = iw * scale, dh = ih * scale;
+  const cx = (l.xN ?? 0.5) * W + px, cy = (l.yN ?? 0.5) * H + py;
+  ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+  ctx.globalAlpha = 1;
+}
+
 function drawCaption(ctx, l, lt, W, H) {
   const words = l.words || [];
   if (!words.length) return;
@@ -185,6 +206,7 @@ export function drawFrame(ctx, project, t, W, H) {
     const loc = local(l, t); if (!loc) continue;
     ctx.save();
     if (l.type === 'text') drawText(ctx, l, loc.lt, loc.d, W, H);
+    else if (l.type === 'image') drawImageLayer(ctx, l, loc.lt, loc.d, W, H);
     else if (l.type === 'caption') drawCaption(ctx, l, loc.lt, W, H);
     else if (l.type === 'waveform') drawWaveform(ctx, l, loc.lt, W, H);
     ctx.restore();

@@ -40,6 +40,14 @@ export const captionLayer = (words, opts = {}) => ({
   yN: opts.yN ?? 0.8, size: opts.size ?? 52, color: '#ffffff', activeColor: opts.accent ?? '#ff8a3d',
   start: opts.start ?? 0, dur: opts.dur ?? 4, group: opts.group ?? 3,
 });
+// An image placed from the Supabase media library (or a local file). `img` is a
+// live HTMLImageElement; `url` lets it reload. Default = full-bleed cover with a
+// slow Ken Burns push for a cinematic feel.
+export const imageLayer = (img, url, opts = {}) => ({
+  id: uid('img'), type: 'image', name: opts.name || 'Image', img, url,
+  fit: opts.fit || 'cover', xN: 0.5, yN: 0.5, scale: 1, opacity: opts.opacity ?? 1,
+  anim: opts.anim || 'kenburns', start: opts.start ?? 0, dur: opts.dur ?? 4,
+});
 export const waveLayer = (peaks, opts = {}) => ({
   id: uid('wave'), type: 'waveform', name: 'Voice wave', peaks: Array.from(peaks || []),
   yN: opts.yN ?? 0.62, heightN: 0.12, color: opts.color ?? '#33cfd6',
