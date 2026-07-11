@@ -36,10 +36,9 @@ tags: [kb/baseline, repo]
 - Diamonds buy skins only, never power. #known
 
 ### Documentation
-- ~130 markdown docs across root, `apps/*`, `docs/*`, `supabase/`, now indexed by
-  [`docs/README.md`](../../docs/README.md) (the static "what exists" map). #known
-- Self-indexed subtrees: `apps/kingdom/docs/mmorpg-handoff-index.md`,
-  `docs/lashirabloom/Openworld Bloom Concept/INDEX.md`, and the fable vault [[HOME]]. #known
+- ~130 markdown docs across root, `apps/*`, `docs/*`, `supabase/`, indexed by a static
+  `docs/README.md` in the repo (the "what exists" map). #known
+- Self-indexed subtrees exist for the MMORPG docs, the Openworld Bloom concept, and the fable vault. #known
 
 ## Why it's here / what it's for
 The repo is the substrate under every product thread. Changes to the invariants above (data spine,
@@ -47,13 +46,10 @@ kids-vs-adults, diamond rules) ripple into *every* game and app — so the repo 
 its deltas are worth watching closely.
 
 ## Open threads
-- LashiraBloom carries three overlapping doc layers not yet reconciled against each other
-  (see the gaps note in [`docs/README.md`](../../docs/README.md)). #assumed
+- LashiraBloom carries three overlapping doc layers not yet reconciled against each other. #assumed
 - Likely-stale build artifact: `apps/kingdom/dist_site/data/derived/audit.md` duplicates the source
   audit. #assumed
-- Top-of-funnel instrumentation is blind (from the vault). See [[argantalab]]. #known
+- Top-of-funnel instrumentation is blind — activation is the weakest lever while it's unmeasured. #known
 
 ## Links
-- Static doc map: [`docs/README.md`](../../docs/README.md)
-- Distilled project note: [[argantalab]]
-- Measurement: [[sensor-plan]] · [[coverage-tracker]]
+- Related threads: (add `[[…]]` as you author them — e.g. the AI stack, the knowledge-graph brain)
