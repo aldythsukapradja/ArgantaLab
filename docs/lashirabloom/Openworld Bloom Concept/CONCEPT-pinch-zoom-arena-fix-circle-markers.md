@@ -215,6 +215,16 @@ All three built into `apps/lashira/web`; `npm run build` clean (187 modules).
   0.45–3× in the hub / 0.6–2× multiplier in realms), joystick suspended during pinch;
   `wheel` (+ trackpad ctrl+wheel) zooms on desktop. Session-only; Settings slider stays synced.
 
+### Dev-mode coordinate inspector (added 2026-07-11)
+`FarmRoom.jsx`: while operator **dev mode** is on, tapping any tile now records it
+(`onTapInteract` hoists a `g.cursorTile` capture above the marker/panel dispatch), and
+the dev overlay draws a pill above that tile showing `x N, y N` plus what's on it
+(hotspot/portal name, else the zone label) and outlines the exact tile. Purpose: place
+markers/hotspots/zones by reading real coordinates straight off the map. Operator-gated
+(same `g.devOverlay` flag as the numbered-badge overlay); invisible to normal players.
+Verified the descriptor's data path live (hotspotAt/zoneOf): (48,38)→"Emberring Arena",
+(10,18)→"seed", (30,16)→"market", (48,18)→"dungeon", (2,2)→"🌿 Meadow".
+
 **Verified** (via the Vite dev server, since this game's rAF canvas is frozen in the
 headless preview — a known limitation): imported the real bundle and confirmed
 `MAP_MARKERS` = 13 with correct kinds/icons/coords; replayed the exact `onTapInteract`
