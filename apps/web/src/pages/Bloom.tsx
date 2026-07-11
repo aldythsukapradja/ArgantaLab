@@ -12,7 +12,10 @@ import { supabase } from '@/lib/supabase'
 // host Google session down via `lashira-auth` once it announces
 // `lashira-game-ready`. No `circle` param → the farm save is per-account (the
 // game falls back to a per-profile save when no circle is supplied).
-const GAME_URL = import.meta.env.VITE_LASHIRA_GAME_URL || 'https://lashirabloom-game.vercel.app'
+// Live deployed game. NB: the canonical alias is `lashirabloom-game-one`
+// (Vercel suffixed `-one`; the bare `lashirabloom-game.vercel.app` alias 404s).
+// Same URL the landing app embeds via VITE_EMBED_LASHIRA.
+const GAME_URL = import.meta.env.VITE_LASHIRA_GAME_URL || 'https://lashirabloom-game-one.vercel.app'
 
 function targetOrigin() {
   try { return new URL(GAME_URL).origin } catch { return '*' }
