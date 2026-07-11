@@ -3,10 +3,12 @@
 // the snapshot is versioned so a future IndexedDB/Supabase sync can migrate it.
 
 import type { VaultNote, VaultSnapshot, CanvasState, VaultSettings, Product, NoteStatus } from './types'
-import { DEFAULT_SETTINGS } from './types'
+import { DEFAULT_SETTINGS, SEED_VERSION } from './types'
 import { serializeFrontmatter, wordCount } from './markdown'
 
-const KEY = 'hq_vault_v1'
+// Key includes the seed edition: a new seed can never be shadowed by an old
+// snapshot (that was the bug where the vault kept showing the pre-reground notes).
+const KEY = 'hq_vault_' + SEED_VERSION
 
 export function loadSnapshot(): VaultSnapshot | null {
   try {
