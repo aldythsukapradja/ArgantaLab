@@ -9,6 +9,15 @@ export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }
 
 // ─────────────── HOME (fit-to-viewport) ───────────────
 export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) => void }) {
+  const [email, setEmail] = useState('')
+  const [sent, setSent] = useState(false)
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email.includes('@')) return
+    // waitlist table not wired yet → mailto fallback so no signup is ever lost
+    window.location.href = `mailto:${SITE.brand.email}?subject=Waitlist&body=${encodeURIComponent(email)}`
+    setSent(true)
+  }
   return (
     <div className="scr scr-home">
       <div className="scr-hero">
@@ -20,8 +29,17 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
           <button className="scr-btn primary" onClick={() => onLaunch('editorial', { present: true })}>▸ Watch the story</button>
           <button className="scr-btn" onClick={() => onTab('products')}>Explore products</button>
         </div>
+        <form className="scr-wait" onSubmit={submit}>
+          {sent ? <span className="scr-wait-ok">✓ Thanks — check your mail app to confirm.</span> : <>
+            <input className="scr-wait-in" type="email" inputMode="email" placeholder="you@family.com" value={email} onChange={e => setEmail(e.target.value)} aria-label="Email for the waitlist" />
+            <button className="scr-wait-btn" type="submit">Join the waitlist</button>
+          </>}
+        </form>
       </div>
-      <div className="scr-thesis"><span>{SITE.thesis.a}</span><span className="g">{SITE.thesis.b}</span></div>
+      <div className="scr-trust">
+        <span className="scr-trust-l">{SITE.trust.line}</span>
+        <div className="scr-trust-chips">{SITE.trust.chips.map(c => <span key={c} className="scr-trust-chip">{c}</span>)}</div>
+      </div>
       <div className="scr-proof">{SITE.proof.map(([n, t]) => <div key={t} className="scr-proof-i"><b>{n}</b><span>{t}</span></div>)}</div>
     </div>
   )
@@ -31,7 +49,7 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
 export function Products({ onLaunch }: { onLaunch: Launch }) {
   return (
     <div className="scr scr-products">
-      <div className="scr-head"><span className="scr-kick">Products</span><h2 className="scr-h2">Three products, <em>one circle.</em></h2></div>
+      <div className="scr-head"><span className="scr-kick">Products</span><h2 className="scr-h2">Four surfaces, <em>one circle.</em></h2></div>
       <div className="prodlist">
         {SITE.products.map(p => (
           <button key={p.id} className="prodx" style={{ ['--wc' as string]: p.color }} onClick={() => onLaunch('general', { flight: p.id })}>
@@ -49,7 +67,7 @@ export function Products({ onLaunch }: { onLaunch: Launch }) {
   )
 }
 
-// ─────────────── ABOUT (cinematic two-panel presentation) ───────────────
+// ─────────────── ABOUT (cinematic three-panel presentation) ───────────────
 const ABOUT_STATS: [string, string][] = [
   ['1', 'human CEO'],
   [String(AGENTS.length), 'AI agents'],
@@ -59,7 +77,7 @@ const ABOUT_STATS: [string, string][] = [
 
 export function About() {
   const [i, setI] = useState(0)
-  const N = 2
+  const N = 3
   const wheelAcc = useRef(0)
   const lastHop = useRef(0)
   const go = useCallback((d: number) => setI(v => Math.max(0, Math.min(N - 1, v + d))), [])
@@ -93,11 +111,11 @@ export function About() {
       <div className="abx-stage">
         <section className={`abx-panel ${cls(0)}`} aria-hidden={i !== 0}>
           <div className="abx-founder">
-            <div className="abx-halo"><span className="abx-halo-ring" /><Buddy mood="happy" size={104} /></div>
+            <div className="abx-halo"><span className="abx-halo-ring" /><span className="abx-monogram">{SITE.founder.monogram}</span></div>
             <span className="scr-kick">About {SITE.brand.name}</span>
             <h2 className="abx-lead">Built by <em>one parent</em>.<br />Run by <em>{AGENTS.length} agents</em>.</h2>
             <p className="abx-quote">"{SITE.founder.quote}"</p>
-            <div className="abx-sign"><b>{SITE.founder.name}</b><span>{SITE.founder.role} <em className="scr-note">· {SITE.founder.note}</em></span></div>
+            <div className="abx-sign"><b>{SITE.founder.name}</b><span>{SITE.founder.role}</span></div>
           </div>
           <div className="abx-strip">
             {ABOUT_STATS.map(([n, l]) => <div key={l} className="abx-stat"><b>{n}</b><span>{l}</span></div>)}
@@ -111,6 +129,18 @@ export function About() {
           </div>
           <OrgFlow />
           <div className="abx-legend">{OFFICES.map(o => <span key={o.id}><i style={{ background: o.accent }} />{o.label}</span>)}</div>
+        </section>
+
+        <section className={`abx-panel abx-humans ${cls(2)}`} aria-hidden={i !== 2}>
+          <div className="abx-teamhead">
+            <span className="scr-kick">The humans</span>
+            <h2 className="abx-teamlead">{SITE.humans.line}</h2>
+          </div>
+          <div className="abx-humans-grid">
+            {SITE.humans.does.map(d => <div key={d} className="abx-human-card">{d}</div>)}
+          </div>
+          <div className="abx-stack">{SITE.humans.stack.map(s => <span key={s} className="abx-stack-chip">{s}</span>)}</div>
+          <a className="abx-cta" href={`mailto:${SITE.brand.email}?subject=Working%20with%20Arganta`}>{SITE.humans.cta}</a>
         </section>
       </div>
 

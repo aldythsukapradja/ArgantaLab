@@ -77,7 +77,7 @@ const SLIDES: Slide[] = [
     <div className="ed-device">
       <div className="kt-screen">
         <div className="kt-hero">
-          <div className="kt-hero-txt"><span className="kt-eyebrow">TUESDAY, JUNE 30</span><b className="kt-greet">Good evening, Aldyth</b><span className="kt-sub">All 7 done — beautiful work.</span></div>
+          <div className="kt-hero-txt"><span className="kt-eyebrow">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}</span><b className="kt-greet">Good evening, Aldyth</b><span className="kt-sub">All 7 done — beautiful work.</span></div>
           <div className="kt-ring"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" className="kt-ring-t" /><circle cx="40" cy="40" r="34" className="kt-ring-b" transform="rotate(-90 40 40)" /></svg><span className="kt-ring-c"><b>7</b><i>of 7</i></span></div>
         </div>
         <div className="kt-flowlbl">TODAY'S FLOW</div>
@@ -113,7 +113,7 @@ const SLIDES: Slide[] = [
       <div>
         <span className="ed-kick">The founder</span>
         <h2 className="ed-display xs">Built by a parent, for parents.</h2>
-        <p className="ed-body">{SITE.founder.name} — {SITE.founder.quote} <span className="ed-note">({SITE.founder.note})</span></p>
+        <p className="ed-body">{SITE.founder.name} — {SITE.founder.quote}</p>
       </div>
     </div>
   </> },

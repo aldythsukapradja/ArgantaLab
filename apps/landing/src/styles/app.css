@@ -98,6 +98,39 @@
 .abx-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .abx-legend i { width: 8px; height: 8px; border-radius: 50%; }
 
+/* ── P1: waitlist + trust (Home) ── */
+.scr-wait { display: flex; gap: 8px; margin-top: 4px; width: min(100%, 400px); }
+.scr-wait-in { flex: 1; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--ink); font-size: 14px; backdrop-filter: blur(var(--glass-blur)); }
+.scr-wait-in::placeholder { color: var(--muted); }
+.scr-wait-btn { padding: 12px 20px; border-radius: 999px; border: 1px solid var(--violet); background: var(--violet); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.scr-wait-ok { font-size: 13.5px; color: var(--violet); font-weight: 600; padding: 6px 0; }
+.scr-trust { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.scr-trust-l { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.scr-trust-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.scr-trust-chip { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--ink); backdrop-filter: blur(var(--glass-blur)); }
+
+/* ── P1: About monogram + humans panel ── */
+.abx-monogram { position: relative; z-index: 1; display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; background: var(--grad); color: #fff; font-family: var(--serif); font-weight: 600; font-size: 38px; letter-spacing: .02em; box-shadow: 0 12px 30px rgba(139, 92, 246, .38); }
+.abx-humans { justify-content: flex-start; gap: 14px; }
+.abx-humans-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: min(100%, 460px); }
+.abx-human-card { padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); font-size: 13.5px; font-weight: 600; text-align: center; backdrop-filter: blur(var(--glass-blur)); }
+.abx-stack { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
+.abx-stack-chip { font-size: 11.5px; font-weight: 600; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted); }
+.abx-cta { font-weight: 700; color: var(--violet); text-decoration: none; font-size: 14.5px; }
+
+/* ── P1: Fact provenance chips (deck) ── */
+.fact { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--card); backdrop-filter: blur(var(--glass-blur)); }
+.fact-l { font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+.fact-v { font-family: var(--serif); font-weight: 500; font-size: clamp(24px, 3.4vw, 34px); line-height: 1; }
+.fact-v.soon { font-size: 18px; color: var(--muted); font-style: italic; }
+.fact-bench { font-size: 11px; color: var(--muted); }
+.fact-chip { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .02em; }
+.fact-chip i { font-style: normal; font-size: 8px; }
+.fact-live { background: rgba(16, 185, 129, .15); color: #059669; }
+.fact-modeled { background: rgba(139, 92, 246, .15); color: #7c3aed; }
+.fact-pending { background: rgba(148, 163, 184, .18); color: #64748b; }
+.prov-legend { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
 /* org chart (bespoke zoomable SVG) */
 .orgflow { position: relative; flex: 1; width: 100%; min-height: 0; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: color-mix(in srgb, var(--card) 40%, transparent); --of-edge: color-mix(in srgb, var(--violet) 40%, transparent); opacity: 0; transition: opacity .6s ease .1s; }
 .abx-panel.active .orgflow { opacity: 1; }

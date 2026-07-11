@@ -99,6 +99,25 @@ export function costCurve(points = 24): ScalePoint[] {
   return out
 }
 
+// ── per-PAYER unit economics — the number a VC computes in 30 seconds ──
+// Household-level break-even (462 families) hides that at low conversion the CAC
+// per *payer* is high. This exposes it honestly: LTV/payer = effArpu × margin / churn;
+// CAC/payer = CAC-per-new-active ÷ conversion. Mid ≈ 2.9× · Low ≈ 0.7× · High ≈ 14×.
+// The framing (in the deck): conversion is the one lever; invite-led CAC ($1.50) buys
+// time to fix it. This is the Treasury office's own position, shown before it's asked.
+export interface PayerEcon { ltv: number; cacPerPayer: number; ratio: number }
+export function payerEcon(a: Assumptions): PayerEcon {
+  const margin = 1 - PROCESSING
+  const ltv = (effArpu(a.listPrice) * margin) / a.churn
+  const cacPerPayer = a.cac / a.conv
+  return { ltv, cacPerPayer, ratio: ltv / cacPerPayer }
+}
+export const PAYER = {
+  low: payerEcon(CASES.low),
+  mid: payerEcon(CASES.mid),
+  high: payerEcon(CASES.high),
+}
+
 // ── precomputed headline for the mid (base) case — cite these anywhere ──
 const MID = runModel(CASES.mid, 24)
 export const ECON = {

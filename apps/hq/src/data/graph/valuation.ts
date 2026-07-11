@@ -15,7 +15,10 @@ export interface MethodResult { method: VMethod; label: string; low: number; hig
 
 // ---- founder-editable constants — the "config node", never inferred ---------
 export const VAL_CONFIG = {
-  costToDuplicate: { low: 0.15, high: 0.30 },                       // $M — offline git-log script, refreshed quarterly
+  // $M — measured 2026-07-11: 122k source LOC across 7 apps + packages (git ls-files,
+  // node_modules/dist/assets excluded; lashira 19.7k + kingdom 11.4k + forges landed since
+  // the prior quarter's 0.15–0.30 reading) × $3–5/LOC contractor replication. Refresh quarterly.
+  costToDuplicate: { low: 0.35, high: 0.60 },
   berkus: { idea: 0.40, team: 0.20, relationships: 0.10, factorMax: 0.50, rolloutFloor: 0.015, rolloutLive: 0.485, band: 0.30 },
   rfs: { baselineLow: 4.0, baselineHigh: 5.25, step: 0.25 },        // regional baseline ± step per risk category
   scorecard: { low: 4.0, high: 5.0 },                              // regional pre-seed baseline × weights

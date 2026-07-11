@@ -38,7 +38,7 @@ export const FLIGHTS: FlightDef[] = [
   {
     id: 'circleapps', title: 'Circle Apps', product: true, laneY: 5200,
     scenes: [
-      { id: 'overview', title: 'Nine apps', el: <S.CAOverview /> },
+      { id: 'overview', title: 'Circle Apps', el: <S.CAOverview /> },
       { id: 'montage', title: 'The suite', el: <S.CAMontage /> },
       { id: 'spine', title: 'The shared spine', el: <S.CASpine /> },
     ],

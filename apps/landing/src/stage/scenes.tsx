@@ -6,8 +6,9 @@ import AvatarSprite from '../components/AvatarSprite'
 import MountSprite from '../components/MountSprite'
 import { WORLDS, RING_LABELS } from '../data/worlds'
 import { TOWN_KIN, TOWN_HABITATS, SHOP_COSMETICS, SHOP_MOUNTS } from '../data/kinworld'
-import { PIPELINE } from '../data/agents'
+import { PIPELINE, AGENTS } from '../data/agents'
 import OrgChart from '../components/OrgChart'
+import { SITE } from '../lib/site'
 import { useIsActive } from './active'
 
 export const SCENE_W = 1180
@@ -593,7 +594,7 @@ export function CAOverview() {
   return (
     <Center>
       <Kicker tone="#10b981">Circle Apps</Kicker>
-      <h2 className="headline reveal">Nine apps.<br /><Grad>One platform.</Grad></h2>
+      <h2 className="headline reveal">Four live.<br /><Grad>Nine planned.</Grad></h2>
       <p className="lede wide reveal">Not a super-app — a constellation of focused, task-shaped apps, each powered by the same trusted circle.</p>
     </Center>
   )
@@ -716,13 +717,13 @@ export function CBuilders() {
   )
 }
 export function CModel() {
-  const TIERS = [['Family', '$ / month', 'all products, one circle'], ['Partner', 'per seat', 'tutors · clubs · schools'], ['Platform', 'rev-share', 'circle app makers']]
+  const TIERS = [['Family', '$6.99 / mo', 'all products, one circle'], ['Partner', 'per seat', 'tutors · clubs · schools'], ['Platform', 'rev-share', 'circle app makers']]
   return (
     <Center>
       <Kicker>Business model · go-to-market</Kicker>
       <h2 className="headline sm reveal">Built to <Grad>compound.</Grad></h2>
       <div className="tiers reveal">{TIERS.map(([n, p, d]) => <div key={n} className="tier"><b>{n}</b><span className="tier-price">{p}</span><small>{d}</small></div>)}</div>
-      <p className="lede reveal" style={{ opacity: 0.7 }}>Placeholder pricing — final numbers to be supplied.</p>
+      <p className="lede reveal" style={{ opacity: 0.7 }}>◐ Modeled base case — ~$6.48 effective ARPU after annual & seasonal discounts.</p>
     </Center>
   )
 }
@@ -731,13 +732,13 @@ export function CTractionAsk() {
     <Split
       left={<>
         <Kicker>Traction · team</Kicker>
-        <h2 className="headline sm reveal">Built by parents,<br /><Grad>for families.</Grad></h2>
-        <div className="kpibig reveal">{[['3', 'products live'], ['8', 'AI agents'], ['9', 'circle apps'], ['—', 'pilot families']].map(([v, l]) => <div key={l} className="kpibig-cell"><b>{v}</b><span>{l}</span></div>)}</div>
-        <p className="lede reveal" style={{ opacity: 0.7 }}>Real metrics to be supplied.</p>
+        <h2 className="headline sm reveal">One founder,<br /><Grad>an agent company.</Grad></h2>
+        <div className="kpibig reveal">{[[String(SITE.velocity.products.length), 'products live'], [String(AGENTS.length), 'AI agents'], [String(SITE.substrate.frontEnds), 'front-ends'], [SITE.velocity.stat.loc, 'lines shipped']].map(([v, l]) => <div key={l} className="kpibig-cell"><b>{v}</b><span>{l}</span></div>)}</div>
+        <p className="lede reveal" style={{ opacity: 0.7 }}>{SITE.substrate.line} {SITE.substrate.detail}</p>
       </>}
       right={<div className="ask reveal">
         <h3>The ask</h3>
-        <p>Raise to scale the agent workforce and reach the first 10,000 families.</p>
+        <p>{SITE.ask.headline} Scale the agent workforce, prove the paywall, ignite the two-hook flywheel.</p>
         <div className="ask-actions"><a className="btn-primary" href="mailto:hello@arganta.app?subject=Investing%20in%20Arganta">Talk to us →</a></div>
       </div>}
     />

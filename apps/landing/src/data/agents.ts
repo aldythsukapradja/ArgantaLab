@@ -1,5 +1,8 @@
 // The REAL Circle HQ agent roster (ported verbatim from apps/hq/src/data/agents.ts,
-// static parts only — no live/Supabase deps). One human CEO, 25 specialist agents.
+// static parts only — no live/Supabase deps). One human CEO, 27 specialist agents,
+// reconciled under six offices. The C-suite is LLM-backed through one governed seam
+// (agentGenerate); everything below it is deterministic-first (SQL + math), LLM only
+// to phrase. That "deterministic-first, one LLM seam" split is the cost story.
 export type Model = 'sonnet' | 'haiku' | 'det'
 export type Tier = 'executive' | 'argantalab' | 'kinetik' | 'growth' | 'platform' | 'brand'
 
@@ -17,7 +20,7 @@ export const TIER_META: Record<Tier, { label: string; accent: string }> = {
   brand: { label: 'Brand & Story', accent: '#ec4899' },
 }
 export const MODEL_META: Record<Model, { label: string; bg: string; fg: string }> = {
-  sonnet: { label: 'Sonnet 4.6', bg: 'rgba(6,182,212,.16)', fg: '#0891b2' },
+  sonnet: { label: 'Sonnet 5', bg: 'rgba(6,182,212,.16)', fg: '#0891b2' },
   haiku: { label: 'Haiku 4.5', bg: 'rgba(16,185,129,.16)', fg: '#059669' },
   det: { label: 'Deterministic', bg: 'rgba(148,163,184,.18)', fg: '#64748b' },
 }
