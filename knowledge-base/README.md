@@ -12,8 +12,20 @@ changed between them. It answers *"how is this evolving?"*
 
 **Baseline:** `2026-07-11`. Everything after it is measured *against* it.
 
-> This folder is self-contained. Drop it anywhere inside your Obsidian vault and every link below
-> resolves. Nothing points outside the folder.
+> This folder is self-contained. Drop it anywhere inside your Obsidian vault and every internal link
+> resolves. Source docs in the repo are referenced as `code` paths, never links, so nothing dangles.
+
+## Start here (the baseline)
+
+Today's baseline has four pillars — read them in this order:
+
+1. [[00-MASTER-KB]] — the living **NOW**: one-substrate truth, schema, deploy, status board, debt.
+2. [[00-arc|The Journey]] — how we got here in 8 phases (`journey/P0..P7`), each with what shipped,
+   what was **abandoned**, and what it **taught**.
+3. **Lessons** (`journey/lessons/`) — 9 distilled, reusable learnings, each evidenced against real
+   docs + code. Linked from [[00-arc]].
+4. [[00-doc-atlas|The Doc Atlas]] — all 130 markdown files, each judged against the code:
+   current / partial / superseded / concept-unbuilt / reference / archive.
 
 ---
 
