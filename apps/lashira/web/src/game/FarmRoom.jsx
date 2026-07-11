@@ -2127,6 +2127,32 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
           ctx.fillStyle = '#fff'; ctx.fillText(String(zn.n), sx, sy + 0.5);
         }
+        // DEV COORDINATE READOUT — the last-tapped tile's [x,y] (+ what's on it),
+        // drawn as a pill above that tile so authoring markers/hotspots/zones is a
+        // matter of tapping and reading the number.
+        if (g.cursorTile) {
+          const [cxT, cyT] = g.cursorTile;
+          const midx = (cxT * TILE - camX) * z + (TILE * z) / 2;
+          const topy = (cyT * TILE - camY) * z;
+          // outline the exact tile so it's unambiguous which one the coord refers to
+          ctx.strokeStyle = 'rgba(120,180,255,0.95)'; ctx.lineWidth = 2;
+          ctx.strokeRect((cxT * TILE - camX) * z, topy, TILE * z, TILE * z);
+          const hs = hotspotAt(cxT, cyT);
+          const here = hs ? (hs.portal?.name || hs.id) : (zoneOf(cxT, cyT)?.label || '');
+          const label = `x ${cxT}, y ${cyT}`;
+          ctx.font = 'bold 13px ui-monospace, SFMono-Regular, monospace';
+          const tw1 = ctx.measureText(label).width;
+          ctx.font = '11px system-ui';
+          const tw2 = here ? ctx.measureText(here).width : 0;
+          const pw = Math.max(tw1, tw2) + 16, ph = here ? 34 : 22, px0 = midx - pw / 2, py0 = topy - ph - 6;
+          pillPath(ctx, px0, py0, pw, ph, 8);
+          ctx.fillStyle = 'rgba(16,20,30,0.92)'; ctx.fill();
+          ctx.strokeStyle = 'rgba(120,180,255,0.95)'; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.font = 'bold 13px ui-monospace, SFMono-Regular, monospace'; ctx.fillStyle = '#cfe6ff';
+          ctx.fillText(label, midx, py0 + (here ? 12 : ph / 2));
+          if (here) { ctx.font = '11px system-ui'; ctx.fillStyle = '#9fb4c8'; ctx.fillText(here, midx, py0 + 25); }
+        }
         ctx.restore(); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
       }
       if (g.stickUI) drawStick(ctx, g); // floating joystick (screen space)
