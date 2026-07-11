@@ -41,6 +41,38 @@ Align → Verify → Synthesize → Wire → Audit → Commit → Deliver
 - **Opinionated** — a verdict, a "so what", a wayforward. Neutral inventory is the Master KB's job; everything else takes a position.
 - **Provenance** — mark facts `#known` (verified) vs `#assumed` (belief). Never render a guess as a fact.
 
+## One KB, two surfaces — no silent contradictions
+
+The knowledge base is **one set of markdown files**, rendered in two places. There is no second copy to drift.
+
+```
+knowledge-base/**/*.md   ── the single source ──┐
+   │                                            │
+   ├─▶ Obsidian: open the folder (plug-and-play)│  same markdown,
+   │                                            │  same format,
+   └─▶ HQ Vault: node apps/hq/scripts/build-vault-seed.mjs
+          → apps/hq/src/vault/kb.generated.ts (DERIVED — never hand-edit)
+```
+
+- **`knowledge-base/founder/*.md`** is what the HQ Vault seeds from. Edit the markdown, run
+  `npm run build:vault-seed` in `apps/hq`, commit the `.md` **and** the regenerated file together.
+- Both surfaces speak the same front-matter (the vault's `types.ts` adopted the main-KB schema:
+  `type: moc/layer/…`, `status: living/baseline/…`, `maturity/leverage`). Obsidian ignores the
+  vault-only extras (`product`, `confidence`); the vault ignores nothing.
+- Callouts (`> [!abstract]`) now render in the vault too, so the format is faithful in both.
+
+### The contradiction rule
+Because there is one source, two notes can't *silently* disagree. When they genuinely must diverge
+(a concept was replaced, a number changed), the divergence is made **explicit and versioned**, never
+left implicit:
+
+1. Mark the losing note `status: superseded` and point `supersedes:` / a link at what replaced it
+   (the [[00-doc-atlas|atlas]]'s superseded-chains are exactly this).
+2. State *why* and *when* in the note — a dated line, `#known` vs `#assumed` provenance.
+3. Commit it. **git is the version control**: the diff is the record of what changed and why.
+
+A contradiction that isn't marked-and-dated is a bug in the KB, not a fact about the world.
+
 ## Playbooks
 
 ### ▸ Run an extraction (the weekly delta)
