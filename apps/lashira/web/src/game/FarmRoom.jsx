@@ -7,6 +7,7 @@ import nipplejs from 'nipplejs';
 import { FarmLogic } from './farm-logic.js';
 import { buildFarmMap, drawAnimalSprite, drawKinSprite, drawMountPlaceholder, drawPlot, drawPlaceholderFarmer, FIELD, PENS, ARENA, BATTLEGROUND, ARENA_GATE_X, ARENA_WALL_Y, PVP_GATE, CASTLE, SPAWN, ZONES_ANNOT, HARVEST_NODES, MAP_MARKERS, inArena, inPvp, zoneOf, hotspotAt, DOCK_MARKER, TILE, W, H, WORLD_W, WORLD_H } from './farm-map.js';
 import { FarmMechanics } from './farm-mechanics.js';
+import { drawUnitHpBar } from './realms/util.js';
 import { HotspotPanels } from '../ui/HotspotPanels.jsx';
 import {
   makeMonster, resolveMelee, resolveSkillSingle, resolveSkillAll, applyHeal, damageMonster,
@@ -39,7 +40,7 @@ import PortalModal from '../ui/PortalModal.jsx';
 import { sfx } from '../audio/sfx.js';
 import { ambient } from '../audio/ambient.js';
 import { CROPS, cropIsRipe } from '../data/crops.js';
-import { SPECIES, MAX_PER_SPECIES, animalGoodReady } from '../data/livestock.js';
+import { SPECIES, MAX_PER_SPECIES, animalGoodReady, animalGoodFrac } from '../data/livestock.js';
 
 const DIR_BY_KEY = { ArrowUp: 'North', w: 'North', ArrowDown: 'South', s: 'South', ArrowLeft: 'West', a: 'West', ArrowRight: 'East', d: 'East' };
 const DELTA = { North: [0, -1], South: [0, 1], East: [1, 0], West: [-1, 0] };
@@ -614,6 +615,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           actor.facing = peer.facing || actor.facing || 'South';
           actor.mounted = !!peer.mounted;
         }
+        // Live battle pool for the overhead HP bar (present only while they're
+        // fighting). Authoritative from their broadcast — overwrites any
+        // optimistic value we applied locally when landing a hit.
+        actor.chp = peer.chp; actor.cmhp = peer.cmhp; actor.inCombat = !!peer.inCombat; actor.pvp = !!peer.pvp;
 
         const key = heroSpecKey(peer.heroSpec);
         if (!key) {
@@ -724,6 +729,9 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       heroSpec: hero?.spec || null,
       card: presenceCardFrom(logicRef.current?.snapshot?.()),
       actors: worldActorSnapshots(g, true, profile.displayName || 'Farmer'),
+      // Live battle pool for peers' overhead HP bars (off at join; the recurring
+      // publishPresence heartbeat keeps it fresh once a fight starts).
+      chp: g.combat?.on ? g.combat.hp : undefined, cmhp: g.combat?.on ? g.combat.maxHp : undefined, inCombat: !!g.combat?.on, pvp: !!g.pvp?.on,
     });
     // Late-joiner convergence: ask the room for its freshest farm. Whoever
     // answers with a higher rev than ours wins (applySnapshot gates on rev).
@@ -1109,6 +1117,10 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       const [px, py] = entityPx(a);
       spark(g, Math.round(px / TILE), Math.round(py / TILE));
       g.floats.push({ x: px + TILE / 2, y: py + TILE - 26, text: miss ? 'MISS' : (crit ? '💥' : '') + '-' + dmg, start: performance.now(), ttl: 820 });
+      // Optimistic: drop the enemy's overhead bar the moment my hit lands (not a
+      // miss), instead of waiting for their next heartbeat. Their broadcast
+      // reconciles the exact value; PvP so the bar reads red.
+      if (!miss && a.cmhp) { a.chp = Math.max(0, (a.chp ?? a.cmhp) - dmg); a.inCombat = true; a.pvp = true; }
     }
     sfx.play(miss ? 'swing' : 'hit');
   }
@@ -1487,7 +1499,11 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
       const isHost = presenceHostId(g, profile) === presenceProfileId(profile);
       const actors = worldActorSnapshots(g, isHost, profile?.displayName || 'Farmer');
       const actorStamp = actors.map((a) => `${a.id}:${a.tile[0]},${a.tile[1]}:${a.facing}:${a.mode || ''}:${a.hidden ? 1 : 0}:${a.hp ?? ''}:${a.state ?? ''}`).join('|');
-      const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}:${actorStamp}`;
+      // Include my live combat HP in the dedup stamp so taking a hit while
+      // standing still still forces a rebroadcast — otherwise peers' bar of me
+      // would freeze until I moved.
+      const combatStamp = g.combat?.on ? `${g.combat.hp}/${g.combat.maxHp}:${g.pvp?.on ? 1 : 0}` : '';
+      const snapshot = `${p.tile[0]},${p.tile[1]}:${p.facing}:${p.mounted ? 1 : 0}:${heroPresenceKey}:${combatStamp}:${actorStamp}`;
       if (!force && snapshot === g.lastPresenceSnapshot && now - g.lastPresenceAt < 2500) return;
       g.lastPresenceSnapshot = snapshot;
       g.lastPresenceAt = now;
@@ -1499,6 +1515,8 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         heroSpec: hero?.spec || null,
         card: presenceCardFrom(logicRef.current?.snapshot?.()),
         actors,
+        // Live battle pool → peers' overhead HP bar over me.
+        chp: g.combat?.on ? g.combat.hp : undefined, cmhp: g.combat?.on ? g.combat.maxHp : undefined, inCombat: !!g.combat?.on, pvp: !!g.pvp?.on,
       });
     }
 
@@ -1795,24 +1813,70 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         let bob = 0, squash = 0;
         if (e.species === 'chicken') { bob = moving ? -Math.abs(s) * 7 : -Math.abs(Math.sin(now / 600 + phase)) * 1.5; squash = moving ? Math.abs(s) * 0.6 : 0; }
         else { bob = (moving ? s * 2.5 : Math.sin(now / 700 + phase) * 0.8); squash = moving ? (s * 0.5 + 0.5) * 0.5 : 0; }
-        drawAnimalSprite(ctx, e.species, footX, footY + bob, e.facing, frame, g.art, squash, moving, now);
-        // "good ready" badge — the produce LOGO (milk/wool/egg) on a coloured disc,
-        // bobbing over the animal when its good is ripe to collect.
+        // Looked up BEFORE drawAnimalSprite so its eating/rest-idle vendored
+        // animation (cow/sheep only — see creature-sprites.js STATE_ANIMS) can
+        // reflect the same feed/produce cycle as the HUD badges below.
         const li = e.livestockId && logicRef.current?.state?.livestock?.find((x) => x.id === e.livestockId);
-        if (li && animalGoodReady(li, now)) {
+        const critterState = li ? (li.fedAt && !animalGoodReady(li, now) ? 'producing' : (!li.fedAt ? 'resting' : null)) : null;
+        drawAnimalSprite(ctx, e.species, footX, footY + bob, e.facing, frame, g.art, squash, moving, now, critterState);
+        // Per-animal HUD: a heart (affection, ALWAYS shown, left) + one of three
+        // mutually-exclusive status badges (right) — needs feeding / producing
+        // (progress ring) / ready to collect (the original produce-logo disc).
+        if (li) {
           const sp = SPECIES[e.species];
           const by = footY - (e.species === 'chicken' ? 30 : 52) + Math.sin(now / 260) * 3;
-          const R = 13;
-          const bg = { milk: '#3f8fd0', wool: '#c069a8', egg: '#dd9a2b' }[sp?.produce] || '#555';
+          const heartX = footX - 15, statusX = footX + 15;
+
+          const aff = li.affection || 0;
+          const heartTier = aff >= 70 ? 'high' : aff >= 40 ? 'mid' : 'low';
+          const heartImg = g.art['lashira.icon.heart_' + heartTier];
           ctx.save();
-          ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
-          ctx.beginPath(); ctx.arc(footX, by, R, 0, 7); ctx.fillStyle = bg; ctx.fill();
-          ctx.shadowColor = 'transparent';
-          ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
-          const icon = g.art['lashira.produce.' + sp?.produce];
-          if (icon && icon.naturalWidth > 0) { const s = R * 1.55; ctx.drawImage(icon, footX - s / 2, by - s / 2, s, s); }
-          else { ctx.font = '15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(sp?.produceEmoji || '✨', footX, by + 1); }
+          ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+          if (heartImg && heartImg.naturalWidth > 0) { const s = 15; ctx.drawImage(heartImg, heartX - s / 2, by - s / 2, s, s); }
+          else {
+            const heartCol = aff >= 70 ? '#e0335a' : aff >= 40 ? '#e88fae' : '#9a9a9a';
+            ctx.font = '13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = heartCol; ctx.fillText('❤', heartX, by);
+          }
           ctx.restore();
+
+          if (animalGoodReady(li, now)) {
+            // ready — the produce LOGO (milk/wool/egg) on a coloured disc.
+            const R = 13;
+            const bg = { milk: '#3f8fd0', wool: '#c069a8', egg: '#dd9a2b' }[sp?.produce] || '#555';
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
+            ctx.beginPath(); ctx.arc(statusX, by, R, 0, 7); ctx.fillStyle = bg; ctx.fill();
+            ctx.shadowColor = 'transparent';
+            ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+            const icon = g.art['lashira.produce.' + sp?.produce];
+            if (icon && icon.naturalWidth > 0) { const s = R * 1.55; ctx.drawImage(icon, statusX - s / 2, by - s / 2, s, s); }
+            else { ctx.font = '15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(sp?.produceEmoji || '✨', statusX, by + 1); }
+            ctx.restore();
+          } else if (li.fedAt) {
+            // producing — faint product icon (reuses the same ready-state image,
+            // already loaded) + a fill ring tracking animalGoodFrac.
+            const R = 11, frac = animalGoodFrac(li, now);
+            const prodImg = g.art['lashira.produce.' + sp?.produce];
+            ctx.save();
+            ctx.globalAlpha = 0.55;
+            if (prodImg && prodImg.naturalWidth > 0) { const s = R * 1.4; ctx.drawImage(prodImg, statusX - s / 2, by - s / 2, s, s); }
+            else { ctx.font = '13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(sp?.produceEmoji || '✨', statusX, by); }
+            ctx.globalAlpha = 1;
+            ctx.beginPath(); ctx.arc(statusX, by, R, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.beginPath(); ctx.arc(statusX, by, R, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+            ctx.strokeStyle = '#3fd07a'; ctx.lineWidth = 2.5; ctx.stroke();
+            ctx.restore();
+          } else {
+            // needs feeding
+            const feedImg = g.art['lashira.icon.feed'];
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+            if (feedImg && feedImg.naturalWidth > 0) { const s = 16; ctx.drawImage(feedImg, statusX - s / 2, by - s / 2, s, s); }
+            else { ctx.font = '15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🌾', statusX, by); }
+            ctx.restore();
+          }
         }
       }
       else if (e.kind === 'kin') drawKinSprite(ctx, e.kin, footX, footY, e.facing, frame, g.art);
@@ -1888,17 +1952,28 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         grad.addColorStop(1, m.color);
         ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
         ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
-        // icon
-        ctx.font = 'bold 19px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(m.icon, mx, my + 1);
+        // icon — prefer the image (canvas fillText has no emoji-font fallback,
+        // so raw emoji can silently render blank on mobile); emoji only if
+        // the image key is missing or hasn't loaded.
+        const mIcon = m.iconKey && g.art['lashira.marker.' + m.iconKey];
+        if (mIcon && mIcon.naturalWidth > 0) {
+          const s = R * 1.15; ctx.drawImage(mIcon, mx - s / 2, my - s / 2, s, s);
+        } else {
+          ctx.font = 'bold 19px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(m.icon, mx, my + 1);
+        }
         // name pill on approach (≤5 tiles) — keeps the map uncluttered at distance
         if (m.name && Math.hypot(m.cx - pcx, m.cy - pcy) <= 5) {
-          ctx.font = '600 12px system-ui';
+          // textAlign/baseline set explicitly here (not inherited from the icon
+          // block above) — that block now skips them entirely when it draws an
+          // image icon, which left this fillText using a stale non-'center'
+          // alignment and pushed the name text outside its own pill.
+          ctx.font = '600 12px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           const tw = ctx.measureText(m.name).width;
           const pw = tw + 16, ph = 18, px0 = mx - pw / 2, py0 = my - R - ph - 6;
           ctx.globalAlpha = 0.92; pillPath(ctx, px0, py0, pw, ph, 9);
           ctx.fillStyle = 'rgba(16,18,26,0.82)'; ctx.fill();
-          ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+          ctx.globalAlpha = 1; ctx.fillStyle = '#fff';
           ctx.fillText(m.name, mx, py0 + ph / 2 + 0.5);
         }
       }
@@ -2022,9 +2097,14 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
         } else if (a.type === 'player') {
           headTop = drawPlayer(g, ctx, now, a.footX, a.footY);
           labels.push({ name: logicRef.current.profile?.displayName || 'Farmer', footX: a.footX, footY: a.footY, headTop, fill: '#1d9d55dd' });
+          // My own overhead HP bar while fighting (arena mob or PvP) — the same
+          // bar peers see over me, sitting just above my nameplate.
+          if (g.combat?.on) drawUnitHpBar(ctx, a.footX, Math.min(headTop - 12, a.footY - 44) - 17, g.combat.hp, g.combat.maxHp, { pvp: g.pvp?.on });
         } else if (a.type === 'remote') {
           const remoteTop = drawRemotePlayer(g, ctx, now, a.e, a.footX, a.footY);
           labels.push({ name: a.e.name || 'Farmer', footX: a.footX, footY: a.footY, headTop: remoteTop, fill: '#4f46e5dd' });
+          // Peer's overhead HP bar — only while they broadcast being in a fight.
+          if (a.e.inCombat && a.e.cmhp) drawUnitHpBar(ctx, a.footX, Math.min(remoteTop - 12, a.footY - 44) - 17, a.e.chp, a.e.cmhp, { pvp: a.e.pvp });
         } else {
           drawWorldActor(g, ctx, a.e, now, a.footX, a.footY);
           // Kin owner tag — tiny pill so it's obvious whose Kin is whose,
@@ -2107,8 +2187,13 @@ export default function FarmRoom({ profile, hero, circleId = null, visitOwnerId 
           grad.addColorStop(0, '#ffe28a'); grad.addColorStop(1, '#ff8c2e');
           ctx.beginPath(); ctx.arc(mx, my + bob, r, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
           ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
-          ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('🎣', mx, my + bob + 1);
+          const fishIcon = g.art['lashira.marker.fish'];
+          if (fishIcon && fishIcon.naturalWidth > 0) {
+            const s = r * 1.15; ctx.drawImage(fishIcon, mx - s / 2, my + bob - s / 2, s, s);
+          } else {
+            ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('🎣', mx, my + bob + 1);
+          }
           ctx.restore(); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         }
       }

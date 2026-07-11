@@ -7,6 +7,7 @@
 // Diamonds (the only currency) and the guardian companion live in Settings.
 import { useEffect, useRef, useState } from 'react';
 import { IconMount } from '../components/HudIcons.jsx';
+import TierIcon from '../components/TierIcon.jsx';
 import { UnitCard, cardFromSnap, cardFromPeer } from './UnitCard.jsx';
 import { CROPS } from '../data/crops.js';
 import { supabase, hasSupabase } from '../net/supabase.js';
@@ -19,6 +20,43 @@ import { SettingsSheet } from './SettingsSheet.jsx';
 const SKIN_KEY = 'lashira_cluster_skin';
 const loadSkin = () => { try { return localStorage.getItem(SKIN_KEY) || DEFAULT_SKIN; } catch { return DEFAULT_SKIN; } };
 const FAV_EMOTES_KEY = 'lashira_fav_emotes';
+
+// Whether the top-left HUD stack is minimized to just the SPARK orb. Remembered
+// per device. First run (no stored choice): collapse on phone-sized screens,
+// where the full card + quicknav otherwise cover a big chunk of the play field.
+const HUD_MIN_KEY = 'lashira_hud_min';
+const loadHudMin = () => {
+  try {
+    const v = localStorage.getItem(HUD_MIN_KEY);
+    if (v === '1') return true;
+    if (v === '0') return false;
+    return window.matchMedia('(max-width: 640px)').matches;
+  } catch { return false; }
+};
+const clampPct = (n) => Math.max(0, Math.min(100, Number(n) || 0));
+
+// Collapsed HUD — the SPARK crest wrapped in a thin HP (top, red) / MP (bottom,
+// blue) ring, so vitals stay glanceable even minimized. Tap to expand the full
+// card. The ring uses SVG pathLength=100 so each semicircle fills by percent.
+function HudOrb({ card, onExpand }) {
+  const hpPct = clampPct((card.hp / Math.max(1, card.maxHp)) * 100);
+  const mpPct = clampPct((card.mp / Math.max(1, card.maxMp)) * 100);
+  const C = 26, R = 22;
+  const topArc = `M ${C - R} ${C} A ${R} ${R} 0 0 1 ${C + R} ${C}`;
+  const botArc = `M ${C + R} ${C} A ${R} ${R} 0 0 1 ${C - R} ${C}`;
+  return (
+    <button type="button" className="hud-orb" onClick={onExpand}
+      title={`${card.name || 'You'} · HP ${Math.round(hpPct)}% · tap to expand`} aria-label="Expand HUD">
+      <svg className="orb-ring" viewBox="0 0 52 52" width="52" height="52" aria-hidden="true">
+        <path d={topArc} className="orb-track" pathLength="100" />
+        <path d={botArc} className="orb-track" pathLength="100" />
+        <path d={topArc} className="orb-hp" pathLength="100" style={{ strokeDasharray: `${hpPct} 100` }} />
+        <path d={botArc} className="orb-mp" pathLength="100" style={{ strokeDasharray: `${mpPct} 100` }} />
+      </svg>
+      <span className="orb-gem"><TierIcon color={card.rank?.color || '#8b5cf6'} glyph={card.rank?.glyph || '◆'} size={30} /></span>
+    </button>
+  );
+}
 
 // circle id → human name (the QC pill should read "Keluarga Cerah Ceria", not a
 // uuid). Cached per session so re-opening Settings never refetches.
@@ -41,6 +79,8 @@ function useCircleName(circleId) {
 
 export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen, zoom, setZoom, speed, setSpeed, usingHero, hero, presence, circleId, myCircles = [], activeCircleId = null, onSelectCircle = null, onSignOut = null, getSyncDebug, battle, battleSkills = [], onStrike, onSkill, cooldownUI, zoneLabel, onHarvestAll, onPlantAll, devMode = false, onToggleDev }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [hudMin, setHudMin] = useState(loadHudMin);
+  const setHudMinPersist = (v) => { setHudMin(v); try { localStorage.setItem(HUD_MIN_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
   const [favEmotes, setFavEmotes] = useState(() => loadFavoriteEmotes(FAV_EMOTES_KEY));
   const [emoteFanOpen, setEmoteFanOpen] = useState(false);
   const emoteFanTimerRef = useRef(0);
@@ -151,6 +191,10 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
           the live row (a single place owns the top-left column). */}
       <div className="hud-top">
         <div className="topbar-right">
+          {!hudMin && (
+            <button type="button" className="hud-min" onClick={() => setHudMinPersist(true)}
+              title="Minimize HUD" aria-label="Minimize HUD">▢</button>
+          )}
           <button type="button" className="hud-gear" onClick={() => setShowSettings(true)}>⚙</button>
         </div>
       </div>
@@ -168,23 +212,32 @@ export function Hud({ snap, game, onUse, onSleep, onToggleMount, onEmote, onOpen
         <div className={'zone-pill' + (battle?.pvp ? ' pvp' : '')}>{zoneLabel}</div>
       )}
 
-      <div className="left-stack">
-        {/* Wallet pills now render INSIDE the card itself (UnitCard's optional
-            `wallet` row, 4 equal-width cells at HP/MP-bar text size) — no
-            longer a separate strip below it. Same tap-to-open-Shop behavior. */}
-        <UnitCard
-          card={selfCard}
-          wallet={{ wood: snap.wood, stone: snap.stone, bloom: snap.bloom, diamonds: snap.diamonds }}
-          onWalletTap={() => onOpen('shop')}
-        />
+      {/* Minimizable: collapsed → just the SPARK orb; expanded → card + quicknav
+          that spring out of the orb's corner. Auto-collapses on phones (see
+          loadHudMin) so the stack stops covering gameplay; choice is remembered. */}
+      <div className={'left-stack' + (hudMin ? ' minimized' : '')}>
+        {hudMin ? (
+          <HudOrb card={selfCard} onExpand={() => setHudMinPersist(false)} />
+        ) : (
+          <>
+            {/* Wallet pills now render INSIDE the card itself (UnitCard's optional
+                `wallet` row, 4 equal-width cells at HP/MP-bar text size) — no
+                longer a separate strip below it. Same tap-to-open-Shop behavior. */}
+            <UnitCard
+              card={selfCard}
+              wallet={{ wood: snap.wood, stone: snap.stone, bloom: snap.bloom, diamonds: snap.diamonds }}
+              onWalletTap={() => onOpen('shop')}
+            />
 
-        <div className="quicknav">
-          <button className="navbtn" onClick={() => onOpen('character')}>👤 Me</button>
-          <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
-          <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
-          <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
-          <button className="navbtn" onClick={() => onOpen('quests')}>📜 Quests</button>
-        </div>
+            <div className="quicknav">
+              <button className="navbtn" onClick={() => onOpen('character')}>👤 Me</button>
+              <button className="navbtn" onClick={() => onOpen('house')}>🏡 Home</button>
+              <button className="navbtn" onClick={() => onOpen('shop')}>🛒 Shop</button>
+              <button className="navbtn" onClick={() => onOpen('inventory')}>🎒 Bag</button>
+              <button className="navbtn" onClick={() => onOpen('quests')}>📜 Quests</button>
+            </div>
+          </>
+        )}
 
         {/* Circle name + live-player status moved into Settings → Circle sync
             (it already showed this, richer — with peer names). Tap either

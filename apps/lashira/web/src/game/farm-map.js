@@ -43,9 +43,9 @@ export const ARENA_GATE_X = 30;               // 2-wide gate (ARENA_GATE_X .. +1
 
 // Animal pens (NE): cow | sheep | chicken columns, combined ≈ farm size.
 export const PENS = {
-  cow: { x0: 35, y0: 4, x1: 40, y1: 15, gate: 'bottom' },
-  sheep: { x0: 42, y0: 4, x1: 47, y1: 15, gate: 'bottom' },
-  chicken: { x0: 49, y0: 4, x1: 55, y1: 15, gate: 'bottom' },
+  cow: { x0: 35, y0: 6, x1: 40, y1: 14, gate: 'bottom' },
+  sheep: { x0: 42, y0: 6, x1: 47, y1: 14, gate: 'bottom' },
+  chicken: { x0: 49, y0: 6, x1: 55, y1: 14, gate: 'bottom' },
 };
 
 // Castle sits DEAD CENTER (map center tile 30,24). 6×6 → drawn 288×288, centered.
@@ -53,7 +53,7 @@ export const BUILDINGS = [
   { key: 'house', type: 'house', tx: 27, ty: 21, w: 6, h: 6, label: 'Castle' },
   { key: 'barn', type: 'barn', tx: 35, ty: 2, w: 3, h: 2, label: 'Barn' },
   { key: 'coop', type: 'coop', tx: 50, ty: 2, w: 2, h: 2, label: 'Coop' },
-  { key: 'shop', type: 'shop', tx: 30, ty: 16, w: 2, h: 2, label: 'Market' },
+  { key: 'shop', type: 'shop', tx: 22, ty: 16, w: 2, h: 2, label: 'Market' },
   { key: 'well', type: 'well', tx: 21, ty: 18, w: 1, h: 1, label: 'Well' },
   { key: 'bin', type: 'bin', tx: 22, ty: 3, w: 1, h: 1, label: 'Bin' },
 ];
@@ -127,11 +127,16 @@ export const HOTSPOTS = [
   { kind: 'castle', id: 'castle', rect: { x0: 27, y0: 21, x1: 32, y1: 26 } },
   { kind: 'shop', id: 'seed', rect: { x0: 9, y0: 17, x1: 11, y1: 19 } },
   { kind: 'shop', id: 'general', ported: false, rect: { x0: 13, y0: 20, x1: 15, y1: 22 } },
-  { kind: 'shop', id: 'smith', rect: { x0: 18, y0: 23, x1: 20, y1: 25 } },
-  { kind: 'shop', id: 'animal', ported: false, rect: { x0: 5, y0: 23, x1: 7, y1: 25 } },
+  // smith + animal moved off the W royal road (y23-24) south into the garden's
+  // clear band (y25-27) — their old rects straddled the walking path.
+  { kind: 'shop', id: 'smith', rect: { x0: 18, y0: 25, x1: 20, y1: 27 } },
+  { kind: 'shop', id: 'animal', ported: false, rect: { x0: 5, y0: 25, x1: 7, y1: 27 } },
   { kind: 'shop', id: 'cosmetic', ported: false, rect: { x0: 9, y0: 26, x1: 11, y1: 28 } },
-  { kind: 'sell', id: 'market', rect: { x0: 30, y0: 16, x1: 31, y1: 17 } },
-  { kind: 'dungeon', id: 'dungeon', ported: false, rect: { x0: 48, y0: 18, x1: 49, y1: 19 } },
+  { kind: 'sell', id: 'market', rect: { x0: 22, y0: 16, x1: 23, y1: 17 } },
+  // Badge/tap-zone only, relocated to the battleground band near the arena
+  // gate — the dungeon-gate ART is still baked into the mine's basemap tiles
+  // (48,18); this is a placeholder move until that art gets its own asset.
+  { kind: 'dungeon', id: 'dungeon', ported: false, rect: { x0: 34, y0: 34, x1: 35, y1: 35 } },
   { kind: 'dock', id: 'dock', rect: { x0: 12, y0: 37, x1: 15, y1: 38 } },
   // the scoreboard prop already sits inside the PvP rectangle — the natural
   // spot for the circle rank board (tap it to see who's winning).
@@ -201,6 +206,12 @@ export const HOTSPOT_MARKERS = (() => {
 // via the rect fallback, and the Keep badge already sits on it), and the dock (its
 // dedicated 🎣 beacon is the reference visual and keeps its fast-travel teleport).
 const MARKER_ICON = { seed: '🌱', general: '🛒', smith: '⚒️', animal: '🐮', cosmetic: '🎀', market: '💰', dungeon: '⚔️', pvprank: '🏆' };
+// iconKey → 'lashira.marker.<key>' image (see farm-art-bundled.js). Preferred
+// over the emoji above, which stays only as a last-resort fallback if the
+// image somehow fails to load (canvas fillText has no emoji-font fallback,
+// so raw emoji can silently render blank on some mobile browsers/webviews).
+const MARKER_ICON_KEY = { seed: 'seed', general: 'cart', smith: 'anvil', animal: 'livestock', cosmetic: 'ribbon', market: 'coin', dungeon: 'sword', pvprank: 'trophy' };
+const REALM_ICON_KEY = { lashira_keep: 'castle', bloomwall_pass: 'shield', hearthrush_kitchen: 'cooking', fountain_festival: 'festival', emberring_arena: 'sword' };
 const MARKER_COLOR = { shop: '#5aa9ff', sell: '#f2b23a', dungeon: '#b46bff', pvprank: '#ffcf3a' };
 export const MAP_MARKERS = (() => {
   const out = [];
@@ -215,6 +226,7 @@ export const MAP_MARKERS = (() => {
       cx: src[0],
       cy: src[1],
       icon: isRealm ? (h.portal?.icon || '⭐') : (MARKER_ICON[h.id] || '📍'),
+      iconKey: isRealm ? (REALM_ICON_KEY[h.id] || null) : (MARKER_ICON_KEY[h.id] || null),
       color: isRealm ? (h.portal?.color || '#8ef5ff') : (MARKER_COLOR[h.kind] || '#8ef5ff'),
       name: markerLabel(h),
       lift: 0.9, // tiles lifted above the tile-center so the badge floats over the art
@@ -335,16 +347,17 @@ export function buildFarmMap(art = {}) {
   for (let x = 0; x < W; x++) { drawTree(ctx, x, 0, art); block(x, 0); drawTree(ctx, x, H - 1, art); block(x, H - 1); }
   for (let y = 1; y < H - 1; y++) { drawTree(ctx, 0, y, art); block(0, y); drawTree(ctx, W - 1, y, art); block(W - 1, y); }
 
-  // animal pens (fenced enclosures with a one-tile gate)
+  // animal pens (fenced enclosures) — full perimeter blocked here; the wide
+  // bottom gates + side passages are carved open AFTER harvest-node blocking
+  // below (must run last, see PEN_OPENINGS carve).
   for (const pen of Object.values(PENS)) {
-    const mx = Math.floor((pen.x0 + pen.x1) / 2), my = Math.floor((pen.y0 + pen.y1) / 2);
     for (let x = pen.x0 - 1; x <= pen.x1 + 1; x++) {
-      if (!(pen.gate === 'top' && x === mx)) { drawFence(ctx, x, pen.y0 - 1, art); block(x, pen.y0 - 1); }
-      if (!(pen.gate === 'bottom' && x === mx)) { drawFence(ctx, x, pen.y1 + 1, art); block(x, pen.y1 + 1); }
+      drawFence(ctx, x, pen.y0 - 1, art); block(x, pen.y0 - 1);
+      drawFence(ctx, x, pen.y1 + 1, art); block(x, pen.y1 + 1);
     }
     for (let y = pen.y0; y <= pen.y1; y++) {
-      if (!(pen.gate === 'left' && y === my)) { drawFence(ctx, pen.x0 - 1, y, art, true); block(pen.x0 - 1, y); }
-      if (!(pen.gate === 'right' && y === my)) { drawFence(ctx, pen.x1 + 1, y, art, true); block(pen.x1 + 1, y); }
+      drawFence(ctx, pen.x0 - 1, y, art, true); block(pen.x0 - 1, y);
+      drawFence(ctx, pen.x1 + 1, y, art, true); block(pen.x1 + 1, y);
     }
   }
 
@@ -373,6 +386,34 @@ export function buildFarmMap(art = {}) {
 
   // harvest nodes (ore + trees) block their footprint — solid whether ripe or depleted.
   for (const n of HARVEST_NODES) blockRect(n.rect.x0, n.rect.y0, n.rect.x1 - n.rect.x0 + 1, n.rect.y1 - n.rect.y0 + 1);
+
+  // ROAD FIX — the tree harvest node at (39,23) sits astride the E royal road
+  // (y23-24, garden→mining), blocking the path. Carve its footprint walkable
+  // AFTER the harvest-node block loop above (must run last or it gets
+  // re-blocked) — tree sprite unchanged, still harvestable via hotspotAt,
+  // just no longer solid, same pattern as the bridge deck carve above.
+  for (let x = 39; x <= 40; x++) for (let y = 23; y <= 24; y++) blocked.delete(tileKey(x, y));
+
+  // PEN OPENINGS — wide bottom gates (cow/sheep only, no chicken gate) + side
+  // passages between pens (cow↔sheep at x41, sheep↔chicken at x48). Carved
+  // AFTER the pen perimeter block above (player-only; animals stay rect-
+  // clamped to PENS via moveChoice()'s inHome check, so they can't reach
+  // these openings regardless).
+  const PEN_OPENINGS = [
+    '36,15', '37,15', '38,15', '39,15', // cow bottom gate (x36-39)
+    '43,15', '44,15', '45,15', '46,15', // sheep bottom gate (x43-46)
+    '41,9',                             // cow <-> sheep side passage
+    '48,9',                             // sheep <-> chicken side passage
+  ];
+  for (const k of PEN_OPENINGS) { const [ox, oy] = k.split(',').map(Number); blocked.delete(tileKey(ox, oy)); }
+
+  // PEN BUILDINGS — the barn/coop shed sprites baked into the basemap art had
+  // no collision at all (walk-through). Solid footprints matching the art;
+  // none of these overlap the openings carved above.
+  blockRect(35, 12, 2, 2); // cow barn
+  blockRect(44, 6, 4, 3);  // sheep barn
+  blockRect(51, 6, 5, 4);  // chicken coop (top)
+  blockRect(53, 12, 3, 2); // chicken shed (bottom)
 
   // lily pads scattered on the lake
   for (let y = ZONES.fishing.y0; y <= ZONES.fishing.y1; y++) for (let x = ZONES.fishing.x0; x <= ZONES.fishing.x1; x++) {
@@ -473,8 +514,8 @@ const ONTOP = [
   { key: 'lashira.building.house', tx: CASTLE.baseTx, ty: CASTLE.baseTy, w: CASTLE.baseW, h: CASTLE.baseH, solid: true, noDraw: true }, // castle: base footprint blocks only
   { key: 'lashira.lib.shop_seed', tx: 9, ty: 16, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_general', tx: 13, ty: 19, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.shop_blacksmith', tx: 18, ty: 22, w: 2, h: 2, solid: true },
-  { key: 'lashira.lib.shop_animal', tx: 5, ty: 22, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_blacksmith', tx: 18, ty: 25, w: 2, h: 2, solid: true },
+  { key: 'lashira.lib.shop_animal', tx: 5, ty: 25, w: 2, h: 2, solid: true },
   { key: 'lashira.lib.shop_cosmetics', tx: 9, ty: 25, w: 2, h: 2, solid: true },
 ];
 
@@ -627,13 +668,16 @@ function drawNamedOverride(ctx, art, key, footX, footY, w, h) {
   return drawOverride(ctx, art, key, footX - w / 2, footY - h, w, h);
 }
 
-export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}, squash = 0, moving = false, now = 0) {
+export function drawAnimalSprite(ctx, species, footX, footY, facing = 'South', frame = 0, art = {}, squash = 0, moving = false, now = 0, state = null) {
   // Sized to read next to the (Kingdom-scale) farmer: cows/sheep ~1.5 tiles, chickens
   // smaller. Chickens are noticeably smaller than cows/sheep.
-  // PixelLab rotation sprite (facing-correct, no flip) for cow/sheep, if no art
-  // override is set. Chicken has no sheet yet → falls through to the placeholder.
+  // PixelLab rotation sprite (facing-correct, no flip) for cow/sheep/chicken,
+  // if no art override is set; falls through to the hand-drawn placeholder
+  // below only if the image genuinely fails to load.
+  // `state` ('producing'/'resting', from the livestock feed/produce cycle) picks
+  // an eating/idle animation when not moving, if the species has one vendored.
   if (!art?.[`lashira.animal.${species}`]) {
-    const px = creatureFrame(species, facing, moving, now);
+    const px = creatureFrame(species, facing, moving, now, state);
     if (px) {
       const iw = px.naturalWidth || 68, ih = px.naturalHeight || 68;
       // BIGGER livestock — sprites have ~30% transparent padding, so a larger

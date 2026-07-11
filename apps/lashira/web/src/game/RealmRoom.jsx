@@ -9,6 +9,7 @@ import { resolveStep, paintStep, stepCount, drawListBBox } from '../engine/compo
 import { effects as loadEffects, effectSheetUrl, loadImage as loadEffectImage } from '../engine/data.js';
 import { makeRewardSession } from './realm-rewards.js';
 import { getRealmModule } from './realms/index.js';
+import { drawUnitHpBar } from './realms/util.js';
 import { joinFarmPresence } from './farm-presence.js';
 import { recordPvpKo } from './pvp-rank.js';
 import RealmShell from '../ui/RealmShell.jsx';
@@ -196,6 +197,10 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       const [px, py] = entityPxOf(a);
       g.floats = g.floats || [];
       g.floats.push({ x: px + TILE / 2, y: py + TILE - 26, text: '-' + dmg, start: performance.now(), ttl: 820 });
+      // Optimistic: drop the enemy's overhead bar the instant I land the hit,
+      // instead of waiting up to 500ms for their next heartbeat to report it.
+      // Their own broadcast then reconciles the exact value.
+      if (a.cmhp) { a.chp = Math.max(0, (a.chp ?? a.cmhp) - dmg); a.inCombat = true; }
     }
   }
   // Kid-safe KO: heal to full + report the KO onto the circle's pvp_rank
@@ -338,6 +343,10 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
           actor.name = peer.name || actor.name;
           actor.facing = peer.facing || actor.facing;
         }
+        // Live battle pool for the overhead HP bar (only present while they're
+        // fighting). Authoritative from their own broadcast — overwrites any
+        // optimistic value we applied when landing a hit.
+        actor.chp = peer.chp; actor.cmhp = peer.cmhp; actor.inCombat = !!peer.inCombat; actor.pvp = !!peer.pvp;
       }
       for (const id of [...g.peerActors.keys()]) if (!live.has(id)) g.peerActors.delete(id);
     };
@@ -357,7 +366,13 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
     // rendered positions close enough for a habit-loop realm's pace.
     const hb = window.setInterval(() => {
       const gg = G.current; if (!gg) return;
-      ctrl.update({ name: profile.displayName || 'Farmer', tile: [...gg.player.tile], facing: gg.player.facing });
+      const c = gg.combat;
+      ctrl.update({
+        name: profile.displayName || 'Farmer', tile: [...gg.player.tile], facing: gg.player.facing,
+        // Overhead HP bar: share the live combat pool so peers can draw my bar.
+        // Realms colour the bar by health (no explicit PvP-mode flag here).
+        chp: c?.on ? c.hp : undefined, cmhp: c?.on ? c.maxHp : undefined, inCombat: !!c?.on,
+      });
     }, 500);
 
     return () => {
@@ -532,6 +547,9 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       ctx2.strokeText(a.name || 'Farmer', footX, footY - TILE * 1.35);
       ctx2.fillStyle = '#fff'; ctx2.fillText(a.name || 'Farmer', footX, footY - TILE * 1.35);
       ctx2.restore();
+      // Overhead HP bar — only while they're actually in a fight (from their
+      // broadcast). Sits just above the nameplate.
+      if (a.inCombat && a.cmhp) drawUnitHpBar(ctx2, footX, footY - TILE * 1.35 - 14, a.chp, a.cmhp, { pvp: a.pvp });
     };
     // Floating "-N" damage text from a received pvp-hit (see the presence
     // effect's applyIntent below), world-space so it tracks the player.
@@ -576,6 +594,9 @@ export default function RealmRoom({ profile, hero, realmId, circleId = null, hqT
       ctx.fillStyle = 'rgba(0,0,0,.22)';
       ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 8, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
       if (modRef.current?.movement !== false) drawPlayer(g, ctx, now, px + TILE / 2, py + TILE);
+      // My own overhead HP bar while in combat — same bar peers see over me, so
+      // the fight reads consistently for everyone.
+      if (g.combat?.on) drawUnitHpBar(ctx, px + TILE / 2, py + TILE - TILE * 1.35 - 14, g.combat.hp, g.combat.maxHp, { pvp: g.pvp?.on || g.combat.pvp });
       // module world-space overlay OVER the player (enemies, popups)
       modRef.current?.drawOver?.(ctx, now);
       if (g.spellFx?.length) g.spellFx = g.spellFx.filter((f) => drawEffect(ctx, f, now, TILE));

@@ -55,6 +55,7 @@ export interface GraphNode {
   tags: string[]
   linkCount: number          // in + out degree
   orphan: boolean
+  layer?: string             // L0..L7 architectural layer (from fm.layer); drives the layer colour/cluster dimension
 }
 export interface GraphEdge { source: string; target: string }
 export interface VaultGraph { nodes: GraphNode[]; edges: GraphEdge[] }

@@ -94,6 +94,45 @@ export function buildSuggestedEdges(notes: Record<string, VaultNote>, index: Lin
   return out.sort((a, b) => b.weight - a.weight).slice(0, 40)
 }
 
+// ---- Architectural layer (L0..L7) attribution ----
+// The layer is a derived VIEW classification (not note content), so it is computed
+// here from the strongest available signals rather than hand-authored per note:
+//   • the atomized graph nodes carry an exact type (dep→L0, table→L1, doc→L6),
+//   • layer hub notes name themselves (id `L{n}-…`),
+//   • anything linking a layer hub inherits it,
+//   • the rest fall back to tag/type heuristics.
+// This makes the "layer" colour/cluster dimension meaningful for every node.
+const LAYER_OF_HUB: Record<string, string> = {
+  'l0-toolchain': 'L0', 'l1-data': 'L1', 'l2-engine-spine': 'L2', 'l3-app-ui': 'L3',
+  'l4-assets-content': 'L4', 'l5-agentic': 'L5', 'l6-knowledge-base': 'L6', 'l7-distribution': 'L7',
+}
+function deriveLayer(note: VaultNote, outgoing: string[]): string | undefined {
+  const fm = note.fm
+  if (typeof fm.layer === 'string' && /^L[0-7]$/.test(fm.layer)) return fm.layer
+  const idm = note.id.match(/^L([0-7])-/i)
+  if (idm) return 'L' + idm[1]
+  // NOTE: the vault normalises unknown note types (dep-node/table-node/doc-node)
+  // to 'note', so these must key off tags + hub links, not fm.type.
+  const t = fm.type as string
+  if (t === 'dep-node') return 'L0'
+  if (t === 'table-node') return 'L1'
+  if (t === 'doc-node') return 'L6'
+  for (const target of outgoing) { const l = LAYER_OF_HUB[target.toLowerCase()]; if (l) return l }
+  if (['atlas', 'map', 'method', 'moc', 'journey', 'lesson'].includes(t)) return 'L6'
+  const tags = (fm.tags || []).map(s => s.toLowerCase())
+  const has = (...xs: string[]) => xs.some(x => tags.includes(x))
+  if (has('doc', 'atlas', 'kb', 'knowledge-base')) return 'L6'          // the 130 doc-nodes
+  if (has('dependency', 'toolchain')) return 'L0'                        // dep-nodes
+  if (has('data', 'table', 'schema', 'supabase', 'rpc')) return 'L1'
+  if (has('engine', 'spine', 'package', 'combat', 'sdk')) return 'L2'
+  if (has('asset', 'assets', 'pixel', 'audio', 'content', 'curriculum', 'art')) return 'L4'
+  if (has('agent', 'agentic', 'hq', 'command', 'bridge', 'ceo')) return 'L5'
+  if (has('distribution', 'landing', 'growth', 'launch', 'marketing')) return 'L7'
+  if (has('app', 'ui', 'surface', 'ux')) return 'L3'
+  if (has('toolchain', 'dependency', 'build', 'tooling')) return 'L0'
+  return undefined
+}
+
 export function buildGraph(notes: Record<string, VaultNote>, index?: LinkIndex): VaultGraph {
   const ix = index || buildBacklinks(notes)
   const edges: GraphEdge[] = []
@@ -104,6 +143,7 @@ export function buildGraph(notes: Record<string, VaultNote>, index?: LinkIndex):
     return {
       id: n.id, title: n.fm.title, product: n.fm.product, type: n.fm.type,
       tags: n.fm.tags, linkCount: deg, orphan: deg === 0,
+      layer: deriveLayer(n, ix.outgoing[n.id] || []),
     }
   })
   return { nodes, edges }

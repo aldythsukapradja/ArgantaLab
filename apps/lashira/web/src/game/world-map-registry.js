@@ -40,11 +40,12 @@ export const WORLD_MAPS = {
     shortName: 'Kitchen',
     theme: 'cooking / service',
     file: 'Worldmap/hearthrush-kitchen.png',
-    // x29 only — leaves the Market sell hotspot (x30-31) reachable (fixes BT-1
-    // shadowing; the kitchen counter sits beside the market, not on top of it).
-    hqHotspot: { x0: 29, y0: 16, x1: 29, y1: 17 },
-    marker: [29.5, 17], icon: '🍽️',
-    hqReturn: [30, 18],
+    // Relocated off the cramped farm/plaza seam (was x29, wedged against the
+    // Market building's solid footprint) into the garden shop row, beside the
+    // Well — leaves the Market sell hotspot (now x22-23) reachable alongside it.
+    hqHotspot: { x0: 21, y0: 16, x1: 21, y1: 17 },
+    marker: [21.5, 17], icon: '🍽️',
+    hqReturn: [22, 18],
     spawn: [30, 36],
     color: '#f6a42c',
     actions: ['Prep', 'Inspect', 'Map'],

@@ -140,7 +140,7 @@ export const useVault = create<VaultState>((set, get) => {
     active: initialActive,
     pinned: initialPinned,
     centerView: 'note',
-    editorMode: 'edit',
+    editorMode: 'preview',   // notes open in reading mode by default; Ctrl+E cycles to edit/split
     leftPanel: 'files',
     searchQuery: '',
     canvas: initialCanvas,

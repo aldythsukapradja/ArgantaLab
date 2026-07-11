@@ -16,6 +16,11 @@ import { MarkdownEditor } from './MarkdownEditor'
 import { Preview } from './Preview'
 import { RightPanel } from './RightPanel'
 import { GraphView } from './GraphView'
+import { GraphViewV3 } from './GraphViewV3'
+
+// Graph engine v3 (PIXI + d3-force) is the default; the legacy canvas graph is
+// still reachable as a fallback via ?graph=v1.
+const GRAPH_V1 = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('graph') === 'v1'
 import { CanvasView } from './CanvasView'
 import { BasesView } from './BasesView'
 import { DecisionsView } from './DecisionsView'
@@ -245,7 +250,7 @@ export function VaultShell() {
           </>
         )}
 
-        {centerView === 'graph' && <GraphView />}
+        {centerView === 'graph' && (GRAPH_V1 ? <GraphView /> : <GraphViewV3 />)}
         {centerView === 'canvas' && <CanvasView />}
         {centerView === 'bases' && <BasesView />}
         {centerView === 'decisions' && <div className="v-page"><DecisionsView /></div>}

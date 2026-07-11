@@ -1,6 +1,6 @@
 # Openworld Bloom Concept - Read First
 
-Status: concept and build-planning spine. Last updated 2026-07-10.
+Status: concept, build-planning spine, and current single HTML prototype handoff. Last updated 2026-07-11.
 
 This folder is the source of truth for the LashiraBloom openworld hub concept. The current Kingdom basemap is the playable headquarters. Five player-facing portals sit on top of that map, and every new game mode must plug into the same economy, account rules, character system, HUD shell, and command-center controls.
 
@@ -24,16 +24,17 @@ If a document conflicts with this file, treat this index plus `portal-hotspot-pl
 | Order | File | Why to read it |
 |---|---|---|
 | 1 | `INDEX.md` | Current mental model, rules, and file map |
-| 2 | `portal-hotspot-plan.md` | Canonical portal IDs, names, coordinates, and reward rules |
-| 3 | `shared-game-shell-component-strategy.md` | Shared four-corner game UI and design ground truth |
-| 4 | `roadmap-and-build-plan.md` | Today plan, basemap prompts, and implementation sequence |
-| 5 | `architecture-spine-and-world-builder-design.md` | Circle HQ page structure, command center, and admin tabs |
-| 6 | `resource-economy-command-center-plan.md` | Economy, resources, HP/MP, adult/kid account model |
-| 7 | `parallel-game-realm-matrix.md` | Game pillar matrix, mechanics, complexity, and reuse |
-| 8 | `retention-pillar-research.md` | Viral analogs and retention rationale |
-| 9 | `openworld-stronghold-command-architecture.md` | Battle-tested stronghold/endgame architecture |
-| 10 | `MAP-full-element-inventory.md` | Ground-truth element inventory, **auto-synced** — run `npm run map:sync` in `apps/lashira/web` after touching farm-map.js/world-map-registry.js/realms/*.js, before touching any coordinate |
-| 11 | `CONCEPT-portal-markers-and-openworld-builder.md` | Simplified circular portal markers + the Openworld Builder (Circle HQ surface) concept and toolset |
+| 2 | `HANDOFF-single-html-5world-current.md` | Current built prototype state, run instructions, controls, limitations, and next steps |
+| 3 | `portal-hotspot-plan.md` | Canonical portal IDs, names, coordinates, and reward rules |
+| 4 | `shared-game-shell-component-strategy.md` | Shared four-corner game UI and design ground truth |
+| 5 | `roadmap-and-build-plan.md` | Today plan, basemap prompts, and implementation sequence |
+| 6 | `architecture-spine-and-world-builder-design.md` | Circle HQ page structure, command center, and admin tabs |
+| 7 | `resource-economy-command-center-plan.md` | Economy, resources, HP/MP, adult/kid account model |
+| 8 | `parallel-game-realm-matrix.md` | Game pillar matrix, mechanics, complexity, and reuse |
+| 9 | `retention-pillar-research.md` | Viral analogs and retention rationale |
+| 10 | `openworld-stronghold-command-architecture.md` | Battle-tested stronghold/endgame architecture |
+| 11 | `MAP-full-element-inventory.md` | Ground-truth element inventory, **auto-synced** — run `npm run map:sync` in `apps/lashira/web` after touching farm-map.js/world-map-registry.js/realms/*.js, before touching any coordinate |
+| 12 | `CONCEPT-portal-markers-and-openworld-builder.md` | Simplified circular portal markers + the Openworld Builder (Circle HQ surface) concept and toolset |
 
 ## 3. Player-facing portals
 

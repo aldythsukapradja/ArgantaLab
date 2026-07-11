@@ -40,6 +40,27 @@ const BUNDLED = {
   'lashira.produce.milk': 'produce/milk.svg',
   'lashira.produce.wool': 'produce/wool.svg',
   'lashira.produce.egg': 'produce/egg.svg',
+  // Map-marker + animal-HUD icons — hand-authored flat SVGs (own art, no
+  // license needed), replacing raw emoji canvas fillText which silently
+  // fails to render on some mobile browsers/webviews (no emoji-font
+  // fallback for canvas text). See drawMapMarkers / drawWorldActor.
+  'lashira.marker.castle': 'marker/castle.svg',
+  'lashira.marker.shield': 'marker/shield.svg',
+  'lashira.marker.cooking': 'marker/cooking.svg',
+  'lashira.marker.festival': 'marker/festival.svg',
+  'lashira.marker.sword': 'marker/sword.svg',
+  'lashira.marker.seed': 'marker/seed.svg',
+  'lashira.marker.cart': 'marker/cart.svg',
+  'lashira.marker.anvil': 'marker/anvil.svg',
+  'lashira.marker.livestock': 'marker/livestock.svg',
+  'lashira.marker.ribbon': 'marker/ribbon.svg',
+  'lashira.marker.coin': 'marker/coin.svg',
+  'lashira.marker.trophy': 'marker/trophy.svg',
+  'lashira.marker.fish': 'marker/fish.svg',
+  'lashira.icon.feed': 'marker/feed.svg',
+  'lashira.icon.heart_low': 'marker/heart_low.svg',
+  'lashira.icon.heart_mid': 'marker/heart_mid.svg',
+  'lashira.icon.heart_high': 'marker/heart_high.svg',
   'lashira.prop.tree': 'lib/tree_oak.png',
   'lashira.prop.fence': 'lib/fence_straight.png',
   // NOTE: terrain tiles (grass/path) still procedural — the new terrain is a Wang

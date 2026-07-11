@@ -511,6 +511,51 @@ body {
 .left-stack {
   position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 12px; z-index: 11;
   width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+  transform-origin: top left; /* expand grows OUT of the orb's corner */
+}
+/* Expanded: spring out of the corner (plays each time .minimized is removed).
+   Collapsed: the stack shrinks to just the SPARK orb. */
+.left-stack:not(.minimized) { animation: hud-expand 0.42s var(--spring, cubic-bezier(0.34, 1.4, 0.5, 1)); }
+.left-stack.minimized { width: auto; gap: 0; }
+@keyframes hud-expand {
+  from { opacity: 0; transform: scale(0.72); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* Collapsed SPARK orb — faceted crest inside a thin HP(top)/MP(bottom) ring. */
+.hud-orb {
+  position: relative; width: 52px; height: 52px; padding: 0; border: none; cursor: pointer;
+  background: transparent; pointer-events: auto;
+  filter: drop-shadow(0 5px 12px rgba(10, 14, 26, 0.42));
+  animation: orb-pop 0.4s var(--spring, cubic-bezier(0.34, 1.4, 0.5, 1));
+  transition: transform 0.18s var(--spring, cubic-bezier(0.34, 1.4, 0.5, 1));
+}
+.hud-orb:active { transform: scale(0.9); }
+.orb-ring { position: absolute; inset: 0; overflow: visible; }
+.orb-track { fill: none; stroke: rgba(8, 10, 18, 0.55); stroke-width: 4; }
+.orb-hp { fill: none; stroke: #ef4444; stroke-width: 4; stroke-linecap: round; transition: stroke-dasharray 0.35s ease; }
+.orb-mp { fill: none; stroke: #3b82f6; stroke-width: 4; stroke-linecap: round; transition: stroke-dasharray 0.35s ease; }
+.orb-gem {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  animation: orb-breathe 2.6s ease-in-out infinite; /* gentle "I'm tappable" pulse */
+}
+@keyframes orb-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes orb-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+/* Minimize control — pairs with the gear in the top-right chrome cluster. */
+.hud-min {
+  pointer-events: auto; width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--glass-bg); color: #2a3346;
+  backdrop-filter: var(--glass-regular); -webkit-backdrop-filter: var(--glass-regular);
+  border: 1px solid rgba(255, 255, 255, .5); box-shadow: var(--glass-rim), var(--glass-shadow);
+  font-size: 13px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.18s var(--spring, cubic-bezier(0.34, 1.4, 0.5, 1));
+}
+.hud-min:active { transform: scale(0.92); }
+@media (prefers-reduced-motion: reduce) {
+  .left-stack:not(.minimized) { animation: hud-fade 0.2s ease; }
+  .hud-orb { animation: hud-fade 0.2s ease; }
+  .orb-gem { animation: none; }
+  @keyframes hud-fade { from { opacity: 0; } to { opacity: 1; } }
 }
 /* Location-aware zone pill — always-on "where am I" label pinned to the
    BOTTOM-LEFT corner (🌾 Farm / ⚔️ PvP Arena / ⛏️ Mines / …). Glass to match the

@@ -59,6 +59,38 @@ export function drawRing(ctx, wx, wy, r, pct, color) {
   ctx.restore();
 }
 
+// Overhead unit HP bar (world space) — the SAME bar for the local player and
+// every peer in a fight, so a battle reads consistently across both rooms.
+// Centred at footX, its TOP at `topY`; colour goes red→amber→green with health
+// (all-red in a PvP duel so an enemy always reads as hostile). Draws nothing
+// once the unit is dead/empty so faint sprites don't keep a full-width track.
+export function drawUnitHpBar(ctx, footX, topY, hp, maxHp, { pvp = false, w = 36, h = 5 } = {}) {
+  const max = Math.max(1, Number(maxHp) || 0);
+  const cur = Math.max(0, Math.min(max, Number(hp) || 0));
+  const frac = cur / max;
+  if (frac <= 0) return;
+  const x = footX - w / 2, y = topY;
+  ctx.save();
+  // track
+  roundRect(ctx, x, y, w, h, h / 2);
+  ctx.fillStyle = 'rgba(8,10,18,.72)';
+  ctx.fill();
+  // fill
+  const fill = pvp ? '#e64545'
+    : frac > 0.55 ? '#4ccd5a'
+    : frac > 0.28 ? '#f0b23a'
+    : '#e64545';
+  roundRect(ctx, x + 1, y + 1, Math.max(0, (w - 2) * frac), h - 2, (h - 2) / 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  // border
+  roundRect(ctx, x, y, w, h, h / 2);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,.55)';
+  ctx.stroke();
+  ctx.restore();
+}
+
 // Cooldown-aware controller action builder.
 export function action(id, label, icon, opts = {}) {
   return { id, label, icon, kind: opts.kind || 'skill', cooldownMs: opts.cooldownMs, cooldownUntil: opts.cooldownUntil, disabledReason: opts.disabledReason };
