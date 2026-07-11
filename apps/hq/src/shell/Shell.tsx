@@ -50,7 +50,7 @@ function Surface() {
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   const { surface } = useHQ()
   const wide = surface === 'game' || surface === 'app'
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' // edge-to-edge workspaces
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'broadcast' // edge-to-edge workspaces
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button
