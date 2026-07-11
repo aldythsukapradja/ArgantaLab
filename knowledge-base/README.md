@@ -33,6 +33,8 @@ Today's baseline has four pillars — read them in this order:
 > **Master KB** = by product · **Layer tracker** = by stack layer · **Journey** = by time ·
 > **Atlas** = by document. Same baseline, four ways to slice it.
 
+For *how* any of this gets built and kept alive, see [[METHOD]] — the ritual behind every note.
+
 ---
 
 ## The model in one picture
