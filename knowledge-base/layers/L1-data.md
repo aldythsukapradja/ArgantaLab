@@ -23,6 +23,9 @@ cssclasses: [wide-tables]
 - **45 migration files** + base `schema.sql` + `seed_content.sql` + `kinetik_schema.sql`.
 - **Invariant (holds):** GitHub stores code/migrations/schema history; Supabase stores game truth, ledgers, live state. Kids' diamonds + education EXP are single-sourced here. (§13, [[database-is-the-only-source-of-truth]])
 
+> [!tip] Every table, individually mapped
+> All 71 tables — domain, purpose, defining file, primary RPC(s), and which apps use them — are in the [[maps/table-map|Table Map]]. This card is the summary; that map is the detail.
+
 ### Migration tracker (45, grouped by domain)
 
 > [!info] Filenames aren't dated — order is by domain, not time. This table is the standing index; append new migrations as rows.

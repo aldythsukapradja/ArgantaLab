@@ -30,6 +30,8 @@ cssclasses: [wide-tables]
  L2  │  ENGINE / SPINE    packages/* — the moat        │  🟢 proven
      ├───────────────────────────────────────────────┤
  L1  │  DATA              Supabase · 71 tbl · 147 rpc  │  🟢 hardened
+     ├───────────────────────────────────────────────┤
+ L0  │  TOOLCHAIN         React·Vite·TS · 60 deps      │  🟡 drifting
      └───────────────────────────────────────────────┘
 ```
 
@@ -40,6 +42,7 @@ cssclasses: [wide-tables]
 
 | Layer | Maturity | Leverage | Wayforward signal |
 |---|---|---|---|
+| [[L0-toolchain\|L0 · Toolchain]] | 🟡 drifting | 🔴 low (hygiene) | Align versions on the wedge · one charting stack · fix D7 |
 | [[L1-data\|L1 · Data]] | 🟢 hardened | 🟢 high (stable) | Add migration tracker (done) · test the money paths (D5) |
 | [[L2-engine-spine\|L2 · Engine / Spine]] | 🟢 proven | 🟡 medium | Extract the copied engine (D3) · widen the moat |
 | [[L3-app-ui\|L3 · App / UI]] | 🟢 heavy | 🟡 medium | Stop adding surfaces — pick the wedge (M1) |
@@ -59,6 +62,7 @@ cssclasses: [wide-tables]
 
 - **Down** to [[00-MASTER-KB]] (§ per layer: §2/§6 engine, §3 data, §8 agentic…) and the [[00-doc-atlas]] verdicts.
 - **Sideways** to [[00-arc|the Journey]] — each layer's *Lessons* link the `journey/lessons/` that shaped it.
+- **Detail maps:** [[maps/table-map|Table Map]] (all 71 tables) under [[L1-data|L1]]; [[tech-evolution|Tech Evolution]] under [[L0-toolchain|L0]].
 - Debt items (D1–D8) are tagged to the layer that owns them.
 
 ## Update ritual

@@ -26,8 +26,10 @@ Today's baseline has four pillars — read them in this order:
    docs + code. Linked from [[00-arc]].
 4. [[00-doc-atlas|The Doc Atlas]] — all 130 markdown files, each judged against the code:
    current / partial / superseded / concept-unbuilt / reference / archive.
-5. [[00-stack|The Layer Tracker]] — the vertical cut: 7 stack layers (`layers/`), each a living
-   health card scored on **Maturity × Leverage**, with its own *what changed / lessons / wayforward*.
+5. [[00-stack|The Layer Tracker]] — the vertical cut: 8 stack layers (`layers/`, L0–L7), each a
+   living health card scored on **Maturity × Leverage**, with its own *what changed / lessons /
+   wayforward*. Detail maps hang off it: [[maps/table-map|Table Map]] (all 71 tables) and
+   [[tech-evolution|Tech Evolution]] (what entered the stack, when, why it drifted).
 
 > [!info] The four axes
 > **Master KB** = by product · **Layer tracker** = by stack layer · **Journey** = by time ·
