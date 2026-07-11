@@ -3,6 +3,7 @@ import { ThemeToggle, useTheme } from './theme'
 import { Home, Products, About, type Tab, type Launch } from './appscreens'
 import PitchDeck from './PitchDeck'
 import HubBgLazy from './HubBgLazy'
+import { LoginButton } from './auth/LoginButton'
 
 function Mark({ size = 22 }: { size?: number }) {
   return (
@@ -40,7 +41,7 @@ export default function AppShell({ tab, onTab, onLaunch }: { tab: Tab; onTab: (t
             <button key={t.id} className={`appx-topnav-t${tab === t.id ? ' on' : ''}`} onClick={() => onTab(t.id)}>{t.label}</button>
           ))}
         </nav>
-        <ThemeToggle />
+        <span className="appx-top-r"><LoginButton /><ThemeToggle /></span>
       </header>
 
       <main className="appx-content">
