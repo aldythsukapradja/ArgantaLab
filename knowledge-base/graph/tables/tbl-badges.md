@@ -1,0 +1,20 @@
+---
+title: badges
+type: table-node
+product: ArgantaLabs
+status: current
+tags: [table, data]
+date: 2026-07-11
+---
+
+# `badges`
+
+Domain: Learning · ArgantaLabs · defined in `schema.sql`
+
+**Purpose:** Badge catalogue.
+
+**Key RPC(s):** —
+
+**Used by:** web
+
+In [[table-map]] · layer [[L1-data]].

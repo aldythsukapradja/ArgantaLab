@@ -14,7 +14,7 @@ import { KB_NOTES } from './kb.generated'
 
 // Bump when the seed content changes so existing local vaults re-seed once
 // (otherwise the first-run snapshot in localStorage pins the old notes forever).
-export const SEED_VERSION = '2026-07-12-full-kb'
+export const SEED_VERSION = '2026-07-12-graph-319'
 
 // ---------- Build the seed vault ----------
 // Notes come from the single markdown KB (knowledge-base/**/*.md) via the
