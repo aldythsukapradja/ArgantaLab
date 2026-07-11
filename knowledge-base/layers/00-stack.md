@@ -62,7 +62,7 @@ cssclasses: [wide-tables]
 
 - **Down** to [[00-MASTER-KB]] (§ per layer: §2/§6 engine, §3 data, §8 agentic…) and the [[00-doc-atlas]] verdicts.
 - **Sideways** to [[00-arc|the Journey]] — each layer's *Lessons* link the `journey/lessons/` that shaped it.
-- **Detail maps:** [[maps/table-map|Table Map]] (all 71 tables) under [[L1-data|L1]]; [[tech-evolution|Tech Evolution]] under [[L0-toolchain|L0]].
+- **Detail maps:** [[table-map|Table Map]] (all 71 tables) under [[L1-data|L1]]; [[tech-evolution|Tech Evolution]] under [[L0-toolchain|L0]].
 - Debt items (D1–D8) are tagged to the layer that owns them.
 
 ## Update ritual

@@ -21,7 +21,7 @@ cssclasses: [wide-tables]
 ### Languages & runtimes
 - **TypeScript** (5 `tsconfig`) + some plain JS (game engines). **Node** for the Bridge (`tsx`).
 - **Build:** Vite everywhere (5 `vite.config`). **Native:** Capacitor (iOS + Android) on `web` + `kinetik`.
-- **SQL** (PostgreSQL/Supabase) for the data layer — see [[maps/table-map|Table Map]].
+- **SQL** (PostgreSQL/Supabase) for the data layer — see [[table-map|Table Map]].
 
 ### Dependencies by purpose (60 unique)
 
@@ -72,4 +72,4 @@ cssclasses: [wide-tables]
 4. See [[tech-evolution]] for *why* each library was adopted and when it drifted.
 
 ## Links
-[[00-stack]] · [[tech-evolution|Tech evolution timeline]] · [[maps/table-map|Table Map]] · [[00-MASTER-KB#4 · Deployment]] · [[L1-data]]
+[[00-stack]] · [[tech-evolution|Tech evolution timeline]] · [[table-map|Table Map]] · [[00-MASTER-KB#4 · Deployment]] · [[L1-data]]

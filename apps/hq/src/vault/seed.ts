@@ -9,29 +9,27 @@
 // 96k LOC, one Supabase (71 tables / 147 RPCs), 7 front-ends, 0 external users.
 
 import type { VaultNote, CanvasState } from './types'
-import { slugify } from './types'
 import { parseFrontmatter, normalizeFrontmatter } from './markdown'
-import { KB_RAW } from './kb.generated'
+import { KB_NOTES } from './kb.generated'
 
 // Bump when the seed content changes so existing local vaults re-seed once
 // (otherwise the first-run snapshot in localStorage pins the old notes forever).
-export const SEED_VERSION = '2026-07-11-grounded-kb'
-
-// The raw markdown notes, derived from knowledge-base/founder/*.md.
-const RAW: string[] = KB_RAW
+export const SEED_VERSION = '2026-07-12-full-kb'
 
 // ---------- Build the seed vault ----------
+// Notes come from the single markdown KB (knowledge-base/**/*.md) via the
+// generated kb.generated.ts. The note id IS the file basename, so [[wikilinks]]
+// resolve identically here and in Obsidian.
 
 export function seedNotes(): Record<string, VaultNote> {
   const now = Date.now()
   const notes: Record<string, VaultNote> = {}
-  RAW.forEach((raw, i) => {
-    const { fm, body } = parseFrontmatter(raw)
-    const full = normalizeFrontmatter(fm, 'Untitled ' + i)
-    const id = slugify(full.title)
-    notes[id] = {
-      id, fm: full, body: body.trimStart(),
-      createdAt: now - (RAW.length - i) * 86_400_000,
+  KB_NOTES.forEach((n, i) => {
+    const { fm, body } = parseFrontmatter(n.md)
+    const full = normalizeFrontmatter(fm, n.id)
+    notes[n.id] = {
+      id: n.id, fm: full, body: body.trimStart(),
+      createdAt: now - (KB_NOTES.length - i) * 86_400_000,
       updatedAt: new Date(full.updated + 'T12:00:00').getTime() || now,
     }
   })

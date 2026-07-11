@@ -1,0 +1,33 @@
+name: Vault KB — single source
+
+# Enforces the "one KB, no contradiction" invariant:
+#  1. the HQ Vault seed must be regenerable from knowledge-base/**/*.md, and
+#     the committed derived file must match (no drift / no second copy), and
+#  2. the HQ app must type-check (verifies the vault code compiles).
+
+on:
+  pull_request:
+    paths: ['apps/hq/**', 'knowledge-base/**']
+  push:
+    branches: ['claude/argantalabs-knowledge-base-bn3h75']
+    paths: ['apps/hq/**', 'knowledge-base/**']
+
+jobs:
+  vault:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install HQ deps
+        working-directory: apps/hq
+        run: npm install --no-audit --no-fund
+      - name: Regenerate the vault seed from the markdown KB
+        working-directory: apps/hq
+        run: npm run build:vault-seed
+      - name: Fail if the derived seed drifted from the KB source
+        run: git diff --exit-code -- apps/hq/src/vault/kb.generated.ts
+      - name: Type-check HQ (verifies the vault compiles)
+        working-directory: apps/hq
+        run: npm run type-check

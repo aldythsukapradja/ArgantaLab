@@ -24,7 +24,7 @@ cssclasses: [wide-tables]
 - **Invariant (holds):** GitHub stores code/migrations/schema history; Supabase stores game truth, ledgers, live state. Kids' diamonds + education EXP are single-sourced here. (§13, [[database-is-the-only-source-of-truth]])
 
 > [!tip] Every table, individually mapped
-> All 71 tables — domain, purpose, defining file, primary RPC(s), and which apps use them — are in the [[maps/table-map|Table Map]]. This card is the summary; that map is the detail.
+> All 71 tables — domain, purpose, defining file, primary RPC(s), and which apps use them — are in the [[table-map|Table Map]]. This card is the summary; that map is the detail.
 
 ### Migration tracker (45, grouped by domain)
 
