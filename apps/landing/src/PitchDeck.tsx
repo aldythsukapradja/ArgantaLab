@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHqPitch, growthCurve, retentionCurve, type PitchData } from './lib/hq'
-import { CASES, runModel, costCurve, ECON } from './lib/econ'
+import { CASES, runModel, costCurve, ECON, PAYER } from './lib/econ'
 import { AGENTS, OFFICES } from './data/agents'
 import { SITE } from './lib/site'
 import PitchChart from './components/PitchChart'
+import { ScatterMap, RangePlot, PayerBars, Velocity } from './components/DeckCharts'
+import { Fact, ProvLegend } from './components/Fact'
+import { AppEmbed } from './embed/AppEmbed'
 
 // ── inline investor pitch — a cinematic slide presentation inside the Pitch tab.
 // Every static fact comes from SITE; every modelled number from ECON (mirrors HQ);
@@ -48,7 +51,8 @@ const SLIDES: Slide[] = [
   { id: 'cover', chapter: SITE.brand.name, el: () => <>
     <span className="pkick">Investor pitch · Seed · 2026</span>
     <h1 className="pdisplay xl">Turn screen time into<br /><em>intelligence time.</em></h1>
-    <p className="psub">{SITE.brand.tagline}. Every metric here is a <b>live aggregate</b> from our own operator system — benchmarked to YC / edtech quartiles, revenue ratios marked pending, never faked.</p>
+    <p className="psub">{SITE.brand.tagline}. Numbers here are <b>live where measured, modeled where marked</b> — every figure wears its provenance, never faked.</p>
+    <ProvLegend />
   </> },
   { id: 'thesis', chapter: 'The thesis', el: () => <>
     <h2 className="pdisplay">{SITE.thesis.a}<br /><em>{SITE.thesis.b}</em></h2>
@@ -71,9 +75,9 @@ const SLIDES: Slide[] = [
   </> },
   { id: 'market', chapter: 'The market', el: () => <>
     <span className="pkick">The market</span>
-    <h2 className="pdisplay sm">A <em>generational</em> market.</h2>
-    <div className="pgrid3">{SITE.market.refs.map(r => <div key={r.l} className="mcard"><b className="mcard-v">{r.n}</b><span className="mcard-what">{r.l}</span></div>)}</div>
-    <p className="psub sm"><span className="pnote">{SITE.market.note}</span></p>
+    <h2 className="pdisplay sm">Nobody owns <em>both halves.</em></h2>
+    <div className="pchartwrap wide"><ScatterMap points={SITE.competitors.map(c => ({ name: c.name, x: c.x, y: c.y, us: 'us' in c ? c.us : false }))} /></div>
+    <p className="psub sm">Roblox has the hours, Duolingo the habit, Life360 the family — each owns one axis. <b>Learning × the family graph is the open corner.</b> <span className="pnote">{SITE.market.note}</span></p>
   </> },
   { id: 'whynow', chapter: 'Why now', el: () => <>
     <span className="pkick">Why now</span>
@@ -91,6 +95,12 @@ const SLIDES: Slide[] = [
     <h2 className="pdisplay sm">One OS, <em>three products.</em></h2>
     <div className="pgrid3">{SITE.products.map(p => <div key={p.id} className="mcard" style={{ ['--ac' as string]: p.color }}><span className="mcard-l" style={{ color: p.color }}>{p.name}</span><span className="mcard-what">{p.line}</span></div>)}</div>
     <p className="psub sm">Land with learning. Expand into the family's whole operating system. One account, one wallet, one trusted graph.</p>
+  </> },
+  { id: 'bloom', chapter: 'The product · live', el: () => <>
+    <span className="pkick">LashiraBloom · playable now</span>
+    <h2 className="pdisplay sm">Adults play. Kids learn. <em>Same world.</em></h2>
+    <div className="pembed"><AppEmbed app="lashira" scene="farm" defaultFrame="phone" /></div>
+    <p className="psub sm">{SITE.products[1].wedge}</p>
   </> },
   { id: 'engagement', chapter: 'Traction · engagement', el: d => <>
     <span className="pkick">It works · engagement</span>
@@ -181,6 +191,16 @@ const SLIDES: Slide[] = [
       <Stat v={`${money(ECON.contributionPerActive)}`} l="contribution / active" />
     </div>
   </> },
+  { id: 'payer', chapter: 'Unit economics · per payer', el: () => <>
+    <span className="pkick">The per-payer truth</span>
+    <h2 className="pdisplay sm">Conversion is <em>the one lever.</em></h2>
+    <div className="pchartwrap"><PayerBars cases={[
+      { label: 'Low · 2%', ltv: PAYER.low.ltv, cac: PAYER.low.cacPerPayer, ratio: PAYER.low.ratio },
+      { label: 'Mid · 4%', ltv: PAYER.mid.ltv, cac: PAYER.mid.cacPerPayer, ratio: PAYER.mid.ratio },
+      { label: 'High · 8%', ltv: PAYER.high.ltv, cac: PAYER.high.cacPerPayer, ratio: PAYER.high.ratio },
+    ]} /></div>
+    <p className="psub sm">At 2% conversion a payer costs more than they return (0.7×). At 4% it's 2.9×, at 8% it's 14×. <b>Invite-led CAC ($1.50) buys time to move conversion</b> — the honest risk, and the plan to retire it.</p>
+  </> },
   { id: 'model', chapter: 'The model', el: () => <>
     <span className="pkick">The model · a fan of outcomes</span>
     <h2 className="pdisplay sm">A defensible <em>fan of outcomes.</em></h2>
@@ -220,8 +240,24 @@ const SLIDES: Slide[] = [
     <div className="pgrid3">
       <div className="mcard" style={{ ['--ac' as string]: '#8b5cf6' }}><b className="mcard-v">{AGENTS.length}</b><span className="mcard-l">AI-agent company · {OFFICES.length} offices</span><span className="mcard-what">One founder, a full org of agents — deterministic-first, ships daily, scales without headcount.</span></div>
       <div className="mcard" style={{ ['--ac' as string]: '#06b6d4' }}><span className="mcard-l" style={{ color: '#06b6d4' }}>Two-hook circles</span><span className="mcard-what">Every family deepens a trusted graph — kid pull × parent stick, a retention no single-hook app can copy.</span></div>
-      <div className="mcard" style={{ ['--ac' as string]: '#10b981' }}><span className="mcard-l" style={{ color: '#10b981' }}>Content depth</span><span className="mcard-what">Six worlds × six age stages — thousands of authored, adaptive learning items.</span></div>
+      <div className="mcard" style={{ ['--ac' as string]: '#10b981' }}><span className="mcard-l" style={{ color: '#10b981' }}>One substrate</span><span className="mcard-what">{SITE.substrate.frontEnds} front-ends on one spine ({SITE.substrate.tables} tables · {SITE.substrate.rpcs} RPCs). Competitors rebuild the spine, not clone an app.</span></div>
     </div>
+  </> },
+  { id: 'velocity', chapter: 'The proof', el: () => <>
+    <span className="pkick">Velocity</span>
+    <h2 className="pdisplay sm">One founder. <em>An agent OS.</em></h2>
+    <div className="pchartwrap wide"><Velocity items={[
+      ...SITE.velocity.products.map(p => ({ label: p, kind: 'product' as const })),
+      ...SITE.velocity.builders.map(b => ({ label: b, kind: 'builder' as const })),
+    ]} /></div>
+    <p className="psub sm">{SITE.velocity.stat.loc} lines · {SITE.velocity.stat.commits} commits · {SITE.velocity.stat.apps} apps in 12 months — {SITE.velocity.line}</p>
+  </> },
+  { id: 'valuation', chapter: 'Valuation', el: () => <>
+    <span className="pkick">Computed, not negotiated</span>
+    <h2 className="pdisplay sm">Valuation is <em>an output.</em></h2>
+    <div className="pchartwrap wide"><RangePlot methods={SITE.valuation.methods.map(m => ({ label: m.label, low: m.low, high: m.high }))} band={{ low: SITE.valuation.now.low, high: SITE.valuation.now.high }} /></div>
+    <div className="pladder">{SITE.valuation.ladder.map((s, i) => <div key={s.step} className={`pladder-step${i === 0 ? ' now' : ''}`}><b>${s.range[0]}–{s.range[1]}M</b><span>{s.step}</span></div>)}</div>
+    <p className="psub sm"><span className="fact-chip fact-modeled"><i>◐</i>modeled</span> Six methods off the same graph that runs the company. {SITE.valuation.lever}</p>
   </> },
   { id: 'traction', chapter: 'Traction · today', el: d => <>
     <span className="pkick">Traction · live catalog</span>
