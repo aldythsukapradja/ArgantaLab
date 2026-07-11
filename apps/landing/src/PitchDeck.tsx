@@ -109,7 +109,7 @@ const SLIDES: Slide[] = [
       <Metric label="Weekly two-hook families" value={fmt(d?.flywheelCount)} bench="the North Star" what="Households where a kid learned AND a parent coordinated, same week." />
       <Metric label="Weekly active learners" value={fmt(d?.wau)} bench="the pulse" what="Unique kids who used the app in the last 7 days." />
       <Metric label="Stickiness · DAU/MAU" value={fmt(d?.stickiness ?? undefined, '%')} bench="> 20% strong · > 50% elite" what="Share of monthly users active on an average day." />
-      <Metric label="Depth · attempts/active" value={fmt(d?.depth)} bench="> 4 healthy · > 8 deep" what="Questions each active learner attempts per week." />
+      <Metric label="Depth · actions/active" value={fmt(d?.depth)} bench="> 8 is deep engagement" what="Learning actions each active kid takes per week — every touchpoint, not just quiz taps." />
     </div>
   </> },
   { id: 'growth', chapter: 'Traction · compounding', el: () => <>
@@ -169,7 +169,7 @@ const SLIDES: Slide[] = [
     <h2 className="pdisplay sm">Kids already <em>spend.</em> Parents will pay.</h2>
     <div className="pgrid3">
       <Metric label="Spend / active kid · 30d" value={fmt(d?.spentPerActiveKid)} bench="pay-intent proxy" what="Argons kids choose to spend — demand signal." />
-      <Metric label="Sink coverage" value={fmt(d?.econCoverage ?? undefined, '%')} bench="healthy economy" what="Spent ÷ recurring mint — a balanced economy." />
+      <Metric label="Sink pressure" value={fmt(d?.econCoverage ?? undefined, '%')} bench="> 100% = demand outstrips earn" what="Spent ÷ recurring mint. Above 100% means kids want to spend faster than they earn — the shop pull is real." />
       <Metric label="Argons in float" value={fmt(d?.econFloat)} bench="engagement stock" what="Earned-but-unspent — stored motivation." />
     </div>
   </> },

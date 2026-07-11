@@ -93,7 +93,11 @@ as $$
     'lessonsPerKidDay', (select case when kids > 0 then round(n / kids / 30.0, 1) end from les),
     'spentPerActiveKid', (select case when spenders > 0 then round(total / spenders) end from spend30),
     'learners',       (select count(*) from profiles),
-    'kids',           (select count(*) from child_profiles),
+    -- kids: the local-first runtime keeps child accounts in profiles.role, not the
+    -- (largely empty) child_profiles table — count the real signal, fall back to it
+    'kids',           (select greatest(
+                          (select count(*) from profiles where role = 'kid'),
+                          (select count(*) from child_profiles))),
     'circles',        (select count(*) from circles),
     'familiesTotal',  (select count(*) from circles where kind = 'family'),
     'worldsLive',     (select count(*) from worlds where status = 'live'),
