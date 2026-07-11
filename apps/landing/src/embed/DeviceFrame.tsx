@@ -30,11 +30,21 @@ export function DeviceFrame({ frame, label, children }: { frame: Frame; label?: 
     const measure = () => {
       const bw = el.clientWidth, bh = el.clientHeight
       if (bw > 0 && bh > 0) setScale(Math.min(bw / outerW, bh / outerH, 1))
+      return bw > 0 && bh > 0
     }
-    measure()
-    const ro = new ResizeObserver(measure)
+    // slides mount hidden/transformed, so one measurement isn't enough:
+    // retry on rAF until we get a real box, re-measure on resize, on element
+    // resize (RO) AND on visibility (IO — catches display/transform reveals
+    // that never fire a ResizeObserver).
+    let tries = 0
+    const retry = () => { if (!measure() && tries++ < 30) requestAnimationFrame(retry) }
+    retry()
+    const ro = new ResizeObserver(() => measure())
     ro.observe(el)
-    return () => ro.disconnect()
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) measure() })
+    io.observe(el)
+    window.addEventListener('resize', measure)
+    return () => { ro.disconnect(); io.disconnect(); window.removeEventListener('resize', measure) }
   }, [outerW, outerH])
 
   return (

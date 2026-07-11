@@ -8,6 +8,7 @@ import { WORLDS, RING_LABELS } from '../data/worlds'
 import { TOWN_KIN, TOWN_HABITATS, SHOP_COSMETICS, SHOP_MOUNTS } from '../data/kinworld'
 import { PIPELINE, AGENTS } from '../data/agents'
 import OrgChart from '../components/OrgChart'
+import { JarvisOrb } from '../components/JarvisOrb'
 import { SITE } from '../lib/site'
 import { AppEmbed } from '../embed/AppEmbed'
 import { useIsActive } from './active'
@@ -64,10 +65,11 @@ export function Hub({ onPick }: { onPick: (id: string) => void }) {
 }
 
 // ════════════════════════ SUB-HUB (products) ════════════════════════
+// Owner order: KinetikCircle → ArgantaLab → LashiraBloom (Circle Apps hidden for now)
 const PRODUCTS = [
-  { id: 'argantalab', name: 'ArgantaLab', color: '#8b5cf6', tag: 'Six-world learning', line: 'Kids learn, build, pitch and ship — parents see real growth.' },
   { id: 'kinetik', name: 'KinetikCircle', color: '#06b6d4', tag: 'The family OS', line: 'Routines, calendar, moments — the rhythm of family life.' },
-  { id: 'circleapps', name: 'Circle Apps', color: '#10b981', tag: 'One platform, nine apps', line: 'Padel, kitchen, travel, vault — every task, one circle.' },
+  { id: 'argantalab', name: 'ArgantaLab', color: '#8b5cf6', tag: 'Six-world learning', line: 'Kids learn, build, pitch and ship — parents see real growth.' },
+  { id: 'lashira', name: 'LashiraBloom', color: '#65a30d', tag: 'The family plays together', line: 'A farm RPG the whole family plays — adults play, kids learn.' },
 ]
 export function SubHub({ onPick }: { onPick: (id: string) => void }) {
   return (
@@ -250,7 +252,7 @@ export function ALShop() {
     <Split
       left={<>
         <Kicker tone="#f59e0b">The Shop</Kicker>
-        <h2 className="headline sm reveal">Spend Argons on<br /><Grad>a look that's theirs.</Grad></h2>
+        <h2 className="headline sm reveal">Spend diamonds on<br /><Grad>a look that's theirs.</Grad></h2>
         <p className="lede reveal">Earned by learning, spent on cosmetics and mounts. Real choices, real motivation — and parents set the rules behind the wallet.</p>
         <div className="shop-mounts reveal">{SHOP_MOUNTS.map(m => (
           <div key={m.name} className="shop-mount"><MountSprite render={m.render} color={m.color} size={64} /><span className="shop-price">{m.price} ✦</span></div>
@@ -656,7 +658,7 @@ export function BloomTogether() {
         <span className="bloom-loop-arrow">→</span>
         <div className="bloom-loop-c"><b>fuels the kids' learning</b><span>playtime converts into learning energy</span></div>
       </div>
-      <p className="lede wide reveal">{SITE.products[1].wedge}</p>
+      <p className="lede wide reveal">{SITE.products.find(p => p.id === 'lashira')!.wedge}</p>
     </Center>
   )
 }
@@ -724,17 +726,18 @@ export function CWedge() {
   )
 }
 
-const AGENT_STATS = [['1', 'human CEO'], ['26', 'AI agents'], ['3', 'products run'], ['24/7', 'always on']]
-const AGENT_PROPS = ['Lean by default', 'Real-time KPIs', 'Agile decisions', 'Scales without headcount']
+const AGENT_STATS = [['1', 'human CEO'], [String(AGENTS.length), 'AI agents'], ['6', 'offices'], ['24/7', 'always on']]
 export function CAgents() {
   return (
-    <Center>
-      <Kicker>The agentic engine · Circle HQ</Kicker>
-      <h2 className="headline sm reveal">A company run by <Grad>agents.</Grad></h2>
-      <div className="agent-stats reveal">{AGENT_STATS.map(([v, l]) => <div key={l} className="agent-stat"><b>{v}</b><span>{l}</span></div>)}</div>
-      <div className="agent-props reveal">{AGENT_PROPS.map(p => <span key={p} className="prop-chip">{p}</span>)}</div>
-      <div className="reveal" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}><OrgChart /></div>
-    </Center>
+    <Split
+      left={<>
+        <Kicker>The agentic engine · Circle HQ</Kicker>
+        <h2 className="headline sm reveal">A company run by <Grad>agents.</Grad></h2>
+        <p className="lede reveal">One human sets direction. Twenty-seven agents across six offices sense, compute, decide and ship — around the clock, on live data, never on vibes.</p>
+        <div className="agent-stats reveal">{AGENT_STATS.map(([v, l]) => <div key={l} className="agent-stat"><b>{v}</b><span>{l}</span></div>)}</div>
+      </>}
+      right={<div className="reveal cagents-orb"><JarvisOrb big /></div>}
+    />
   )
 }
 
@@ -745,10 +748,10 @@ export function CMetrics() {
   return (
     <Split
       left={<>
-        <Kicker>Command center · insight</Kicker>
-        <h2 className="headline sm reveal">One brain, <Grad>every metric.</Grad></h2>
-        <p className="lede reveal">Circle HQ reads the same live data the agents act on — growth, retention, the Argon economy, portfolio health — so decisions are made on signal, not vibes.</p>
-        <div className="metric-kpis reveal">{[['D7', '—%'], ['WAK', '—'], ['LTV', '$—']].map(([l, v]) => <div key={l} className="metric-kpi"><b>{v}</b><span>{l}</span></div>)}</div>
+        <Kicker>The living knowledge system</Kicker>
+        <h2 className="headline sm reveal">A brain wired to <Grad>sensors.</Grad></h2>
+        <p className="lede reveal">{SITE.brain.detail}</p>
+        <div className="metric-kpis reveal">{[[String(SITE.brain.nodes), 'graph nodes'], [String(SITE.brain.sensors), 'RPC sensors'], [`${SITE.brain.coveragePct}%`, 'instrumented ◐']].map(([v, l]) => <div key={l} className="metric-kpi"><b>{v}</b><span>{l}</span></div>)}</div>
       </>}
       right={<div className="chartcard reveal">
         <div className="chart-head"><b>Weekly active · trend</b><span className="chart-up">▲ growth</span></div>

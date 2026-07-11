@@ -60,7 +60,7 @@ export function AppEmbed({
   const src = live ? frameUrl(EMBEDS[app], nonceRef.current, scene) : ''
 
   return (
-    <div className="aembed">
+    <div className="aembed" data-frame={frame}>
       <div className="aembed-frame">
         <DeviceFrame frame={frame} label={live ? EMBED_LABEL[app] : undefined}>
           {live ? (

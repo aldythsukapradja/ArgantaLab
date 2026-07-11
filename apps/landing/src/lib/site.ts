@@ -70,16 +70,25 @@ export const SITE = {
     chips: ['No ads', 'No strangers', 'Private circles', 'COPPA / GDPR-K posture'],
   },
 
+  // Owner-set order: KinetikCircle → ArgantaLab → LashiraBloom. Circle Apps is
+  // hidden for now (hidden: true) — data kept so un-hiding is a one-flag change.
   products: [
-    { id: 'argantalab', name: 'ArgantaLab', color: '#8b5cf6', tag: 'The kid’s pull', line: 'Learn, build & ship games — with KinQuest, the RPG that teaches.',
-      wedge: 'Roblox has the hours, Duolingo has the habit — neither shows a parent what grew.' },
-    { id: 'lashira', name: 'LashiraBloom', color: '#65a30d', tag: 'The family plays together', line: 'A farm RPG the whole family plays — adults play, kids learn, same world.',
-      wedge: 'The first family game where a parent’s playtime funds the kid’s learning — no incumbent has this loop.' },
     { id: 'kinetik', name: 'KinetikCircle', color: '#06b6d4', tag: 'The parent’s stick', line: 'Today, calendar, moments — the rhythm of family life.',
-      wedge: 'Skylight and Cozi organize the week; none of them know what your kid learned today.' },
+      wedge: 'Skylight and Cozi organize the week; none of them know what your kid learned today.', hidden: false },
+    { id: 'argantalab', name: 'ArgantaLab', color: '#8b5cf6', tag: 'The kid’s pull', line: 'Learn, build & ship games — with KinQuest, the RPG that teaches.',
+      wedge: 'Roblox has the hours, Duolingo has the habit — neither shows a parent what grew.', hidden: false },
+    { id: 'lashira', name: 'LashiraBloom', color: '#65a30d', tag: 'The family plays together', line: 'A farm RPG the whole family plays — adults play, kids learn, same world.',
+      wedge: 'The first family game where a parent’s playtime funds the kid’s learning — no incumbent has this loop.', hidden: false },
     { id: 'circleapps', name: 'Circle Apps', color: '#10b981', tag: 'One platform, many apps', line: 'Travel, Matchday, Kitchen, Vault — every task, one circle.',
-      wedge: 'Every app inherits the trusted circle — no new graph to build, ever.' },
+      wedge: 'Every app inherits the trusted circle — no new graph to build, ever.', hidden: true },
   ],
+  // the company's brain — the living knowledge system (mirrors the HQ ontology graph)
+  brain: {
+    line: 'A living knowledge graph, wired to sensors.',
+    detail: 'Every RPC is a sensor. Sensors feed a 76-node ontology graph; every node carries a provenance badge (live / modeled / pending) and a health state; six offices read the graph and file verdicts. The company doesn’t look at dashboards — it runs on a nervous system.',
+    nodes: 76, sensors: 147, coveragePct: 78,
+    flow: ['Sensors · 147 RPCs', 'Knowledge graph · 76 nodes', 'Six offices · verdicts', 'One human · the call'],
+  },
 
   // the moat argument: seven front-ends on one spine (owner's platform doc)
   substrate: {

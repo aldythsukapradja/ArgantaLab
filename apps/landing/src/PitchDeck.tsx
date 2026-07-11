@@ -93,14 +93,14 @@ const SLIDES: Slide[] = [
   { id: 'product', chapter: 'The product', el: () => <>
     <span className="pkick">The product</span>
     <h2 className="pdisplay sm">One OS, <em>three products.</em></h2>
-    <div className="pgrid3">{SITE.products.map(p => <div key={p.id} className="mcard" style={{ ['--ac' as string]: p.color }}><span className="mcard-l" style={{ color: p.color }}>{p.name}</span><span className="mcard-what">{p.line}</span></div>)}</div>
+    <div className="pgrid3">{SITE.products.filter(p => !p.hidden).map(p => <div key={p.id} className="mcard" style={{ ['--ac' as string]: p.color }}><span className="mcard-l" style={{ color: p.color }}>{p.name}</span><span className="mcard-what">{p.line}</span></div>)}</div>
     <p className="psub sm">Land with learning. Expand into the family's whole operating system. One account, one wallet, one trusted graph.</p>
   </> },
   { id: 'bloom', chapter: 'The product · live', el: () => <>
     <span className="pkick">LashiraBloom · playable now</span>
     <h2 className="pdisplay sm">Adults play. Kids learn. <em>Same world.</em></h2>
     <div className="pembed"><AppEmbed app="lashira" scene="farm" defaultFrame="phone" /></div>
-    <p className="psub sm">{SITE.products[1].wedge}</p>
+    <p className="psub sm">{SITE.products.find(p => p.id === 'lashira')!.wedge}</p>
   </> },
   { id: 'engagement', chapter: 'Traction · engagement', el: d => <>
     <span className="pkick">It works · engagement</span>
@@ -165,12 +165,12 @@ const SLIDES: Slide[] = [
     </div>
   </> },
   { id: 'economy', chapter: 'The economy', el: d => <>
-    <span className="pkick">The Argon economy</span>
+    <span className="pkick">The diamond economy</span>
     <h2 className="pdisplay sm">Kids already <em>spend.</em> Parents will pay.</h2>
     <div className="pgrid3">
-      <Metric label="Spend / active kid · 30d" value={fmt(d?.spentPerActiveKid)} bench="pay-intent proxy" what="Argons kids choose to spend — demand signal." />
+      <Metric label="Spend / active kid · 30d" value={fmt(d?.spentPerActiveKid)} bench="pay-intent proxy" what="Diamonds kids choose to spend — demand signal." />
       <Metric label="Sink pressure" value={fmt(d?.econCoverage ?? undefined, '%')} bench="> 100% = demand outstrips earn" what="Spent ÷ recurring mint. Above 100% means kids want to spend faster than they earn — the shop pull is real." />
-      <Metric label="Argons in float" value={fmt(d?.econFloat)} bench="engagement stock" what="Earned-but-unspent — stored motivation." />
+      <Metric label="Diamonds in float" value={fmt(d?.econFloat)} bench="engagement stock" what="Earned-but-unspent — stored motivation." />
     </div>
   </> },
   { id: 'econ', chapter: 'Unit economics', el: () => <>
@@ -179,7 +179,7 @@ const SLIDES: Slide[] = [
     <div className="pchartwrap">
       <PitchChart
         height={196}
-        series={[{ color: '#10b981', pts: CASH, area: true }]}
+        series={[{ color: '#10b981', pts: CASH }]}
         xTicks={MONTH_TICKS}
         refLine={{ v: 0, label: 'break-even' }}
         marker={{ i: CASH_MARK, v: CASH[CASH_MARK], label: MID.firstPositiveMonth ? `cash-positive · mo ${MID.firstPositiveMonth}` : 'trajectory' }}
@@ -218,8 +218,8 @@ const SLIDES: Slide[] = [
     <p className="psub sm">Subscription (${CASES.mid.listPrice}/mo list · ~{money(ECON.effArpu)} effective ARPU) through one driver model, Low→High. The base case reaches a <b>{money(ECON.arrRunRate)} ARR run-rate</b> in 24 months — not a single hopeful number, a range.</p>
   </> },
   { id: 'scale', chapter: 'The architecture', el: () => <>
-    <span className="pkick">Built to scale · cheaply</span>
-    <h2 className="pdisplay sm">A whole company for <em>~{money(ECON.agentOsCostMo)}/mo.</em></h2>
+    <span className="pkick">Built to scale</span>
+    <h2 className="pdisplay sm">Cost per family <em>falls with scale.</em></h2>
     <div className="pchartwrap">
       <PitchChart
         height={190}
@@ -229,10 +229,22 @@ const SLIDES: Slide[] = [
       />
     </div>
     <div className="pstats">
-      <Stat v={money(ECON.agentOsCostMo)} l={`${AGENTS.length}-agent OS / mo`} />
-      <Stat v={`$${ECON.infraPerActive.toFixed(2)}`} l="infra / active" />
-      <Stat v="deterministic" l="SQL + math, LLM only phrases" />
+      <Stat v={`$${ECON.infraPerActive.toFixed(2)}`} l="infra / active · modeled" />
+      <Stat v="software-only" l="no per-family headcount" />
+      <Stat v="deterministic-first" l="LLM only at the seams" />
     </div>
+    <p className="psub sm">Serving a family costs software, not people: the agents are code, content is authored once, and per-active infra trends toward <b>${ECON.infraPerActive.toFixed(2)}</b> at scale. Margin expands as families grow.</p>
+  </> },
+  { id: 'brain', chapter: 'The brain', el: () => <>
+    <span className="pkick">The living knowledge system</span>
+    <h2 className="pdisplay sm">{SITE.brain.line}</h2>
+    <div className="pflow">{SITE.brain.flow.map((f, i) => <span key={f} className="pflow-step" style={{ ['--i' as string]: i }}>{f}{i < SITE.brain.flow.length - 1 && <i className="pflow-arrow">→</i>}</span>)}</div>
+    <div className="pstats">
+      <Stat v={String(SITE.brain.nodes)} l="graph nodes · live ontology" />
+      <Stat v={String(SITE.brain.sensors)} l="RPC sensors" />
+      <Stat v={`${SITE.brain.coveragePct}%`} l="instrumented · ◐" />
+    </div>
+    <p className="psub sm">{SITE.brain.detail}</p>
   </> },
   { id: 'moat', chapter: 'The moat', el: () => <>
     <span className="pkick">The moat</span>

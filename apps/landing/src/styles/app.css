@@ -428,3 +428,31 @@
 
 /* ── P6: SplitText line-mask (hero reveal) ── */
 .st-line { overflow: hidden; }
+
+/* ══════════ Owner fix round ══════════ */
+/* About "the machine" — side-by-side, BIG Jarvis */
+.abx-machine { display: flex; align-items: center; gap: clamp(18px, 3.5vw, 44px); width: 100%; height: 100%; min-height: 0; }
+.abx-machine-l { flex: 0 0 44%; display: flex; justify-content: center; min-width: 0; }
+.abx-machine-r { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; overflow: hidden; }
+.jarvis.big { flex-direction: column; max-width: 420px; }
+.jarvis.big .jarvis-orbwrap { width: clamp(240px, 26vw, 360px); }
+.jarvis.big .jarvis-side { max-width: 400px; width: 100%; }
+@media (max-width: 900px) {
+  .abx-machine { flex-direction: column; overflow-y: auto; justify-content: flex-start; }
+  .abx-machine-l { flex: none; }
+  .jarvis.big .jarvis-orbwrap { width: clamp(180px, 45vw, 240px); }
+}
+/* CAgents scene orb */
+.cagents-orb { display: flex; justify-content: center; width: 100%; }
+.cagents-orb .jarvis.big .jarvis-orbwrap { width: clamp(220px, 24vw, 320px); }
+/* brain slide flow rail */
+.pflow { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.pflow-step { display: inline-flex; align-items: center; gap: 10px; font-size: clamp(12px, 1.3vw, 14.5px); font-weight: 700; padding: 10px 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); backdrop-filter: blur(var(--glass-blur)); }
+.pflow-arrow { font-style: normal; color: var(--violet); margin-left: 4px; }
+/* frame-aware embed slots — desktop frame needs width to be legible */
+.pembed { position: relative; z-index: 2; }
+.pembed:has(.aembed[data-frame="desktop"]), .bloom-embed:has(.aembed[data-frame="desktop"]) { max-width: min(92%, 760px); }
+/* poster text sized in DEVICE pixels — stays readable after the frame scales down */
+.aembed-poster-lbl { font-size: 40px; }
+.aembed-go { font-size: 26px; padding: 16px 34px; }
+.aembed-locked { font-size: 22px; }

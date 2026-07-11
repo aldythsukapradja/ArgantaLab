@@ -30,7 +30,7 @@ export const AGENTS: Agent[] = [
   { id: 'coo', name: 'COO Agent', role: 'Chief Operations Officer', tier: 'executive', model: 'sonnet', reportsTo: 'ceo', mission: 'Runs the portfolio rhythm. Sends the Founder Daily Brief.' },
   { id: 'cpo', name: 'CPO Agent', role: 'Chief Product Officer', tier: 'executive', model: 'sonnet', reportsTo: 'coo', mission: 'Owns the wedge, prevents feature explosion.' },
   { id: 'cto', name: 'CTO Agent', role: 'Chief Technology Officer', tier: 'executive', model: 'sonnet', reportsTo: 'coo', mission: 'Protects architecture, schema, sandboxing, tech-debt.' },
-  { id: 'cfo', name: 'CFO Agent', role: 'Chief Financial Officer', tier: 'executive', model: 'sonnet', reportsTo: 'coo', mission: 'Protects money, runway, the Argon economy. Models CAC/LTV.' },
+  { id: 'cfo', name: 'CFO Agent', role: 'Chief Financial Officer', tier: 'executive', model: 'sonnet', reportsTo: 'coo', mission: 'Protects money, runway, the diamond economy. Models CAC/LTV.' },
   { id: 'gc', name: 'GC Agent', role: 'General Counsel · Trust', tier: 'executive', model: 'sonnet', reportsTo: 'coo', mission: 'COPPA / GDPR-K, child protection, parent consent.' },
   { id: 'vp-arg', name: 'VP ArgantaLab', role: 'VP Product', tier: 'argantalab', model: 'sonnet', reportsTo: 'cpo', mission: 'Owns ArgantaLab. Are kids learning, building, sharing?' },
   { id: 'pm-game', name: 'PM Game Builder', role: 'Product Manager', tier: 'argantalab', model: 'haiku', reportsTo: 'vp-arg', mission: 'Makes the game builder magical, safe, shareable.' },

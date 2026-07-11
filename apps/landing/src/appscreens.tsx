@@ -11,8 +11,6 @@ export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }
 
 // ─────────────── HOME (fit-to-viewport) ───────────────
 export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) => void }) {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
   const heroRef = useRef<HTMLDivElement>(null)
 
   // signature entrance: SplitText line-mask reveal on the H1, then a staggered
@@ -30,18 +28,11 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
         const split = new SplitText(h1, { type: 'lines', linesClass: 'st-line' })
         tl.from(split.lines, { yPercent: 115, opacity: 0, duration: 0.9, stagger: 0.12 }, 0.1)
       }
-      tl.from(root.querySelectorAll('.scr-kick, .scr-lede, .scr-cta, .scr-wait'), { y: 18, opacity: 0, duration: 0.6, stagger: 0.08 }, 0.5)
+      tl.from(root.querySelectorAll('.scr-kick, .scr-lede, .scr-cta'), { y: 18, opacity: 0, duration: 0.6, stagger: 0.08 }, 0.5)
         .from(root.querySelector('.scr-hero-buddy'), { scale: 0.7, opacity: 0, duration: 0.7, ease: EASE.soft }, 0)
     }, root)
     return () => ctx.revert()
   }, [])
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email.includes('@')) return
-    // waitlist table not wired yet → mailto fallback so no signup is ever lost
-    window.location.href = `mailto:${SITE.brand.email}?subject=Waitlist&body=${encodeURIComponent(email)}`
-    setSent(true)
-  }
   return (
     <div className="scr scr-home" ref={heroRef}>
       <div className="scr-hero">
@@ -53,12 +44,6 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
           <button className="scr-btn primary" onClick={() => onLaunch('editorial', { present: true })}>▸ Watch the story</button>
           <button className="scr-btn" onClick={() => onTab('products')}>Explore products</button>
         </div>
-        <form className="scr-wait" onSubmit={submit}>
-          {sent ? <span className="scr-wait-ok">✓ Thanks — check your mail app to confirm.</span> : <>
-            <input className="scr-wait-in" type="email" inputMode="email" placeholder="you@family.com" value={email} onChange={e => setEmail(e.target.value)} aria-label="Email for the waitlist" />
-            <button className="scr-wait-btn" type="submit">Join the waitlist</button>
-          </>}
-        </form>
       </div>
       <div className="scr-trust">
         <span className="scr-trust-l">{SITE.trust.line}</span>
@@ -73,9 +58,9 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
 export function Products({ onLaunch }: { onLaunch: Launch }) {
   return (
     <div className="scr scr-products">
-      <div className="scr-head"><span className="scr-kick">Products</span><h2 className="scr-h2">Four surfaces, <em>one circle.</em></h2></div>
+      <div className="scr-head"><span className="scr-kick">Products</span><h2 className="scr-h2">Three products, <em>one circle.</em></h2></div>
       <div className="prodlist">
-        {SITE.products.map(p => (
+        {SITE.products.filter(p => !p.hidden).map(p => (
           <button key={p.id} className="prodx" style={{ ['--wc' as string]: p.color }} onClick={() => onLaunch('general', { flight: p.id })}>
             <span className="prodx-dot" style={{ background: p.color }} />
             <div className="prodx-body">
@@ -147,13 +132,17 @@ export function About() {
         </section>
 
         <section className={`abx-panel abx-team ${cls(1)}`} aria-hidden={i !== 1}>
-          <div className="abx-teamhead">
-            <span className="scr-kick">The company · six offices</span>
-            <h2 className="abx-teamlead">A company that <em>runs itself.</em></h2>
+          <div className="abx-machine">
+            <div className="abx-machine-l"><JarvisOrb big /></div>
+            <div className="abx-machine-r">
+              <div className="abx-teamhead">
+                <span className="scr-kick">The company · six offices</span>
+                <h2 className="abx-teamlead">A company that <em>runs itself.</em></h2>
+              </div>
+              <OrgFlow />
+              <div className="abx-legend">{OFFICES.map(o => <span key={o.id}><i style={{ background: o.accent }} />{o.label}</span>)}</div>
+            </div>
           </div>
-          <JarvisOrb />
-          <OrgFlow />
-          <div className="abx-legend">{OFFICES.map(o => <span key={o.id}><i style={{ background: o.accent }} />{o.label}</span>)}</div>
         </section>
 
         <section className={`abx-panel abx-humans ${cls(2)}`} aria-hidden={i !== 2}>

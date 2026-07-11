@@ -28,7 +28,7 @@ function makeEvent(tick: number) {
   return { id: tick, stage: stage.name, office: office.label, accent: office.accent, verb }
 }
 
-export function JarvisOrb() {
+export function JarvisOrb({ big = false }: { big?: boolean }) {
   const [feed, setFeed] = useState(() => Array.from({ length: 5 }, (_, i) => makeEvent(1000 - i)))
   const [pulse, setPulse] = useState(0)
 
@@ -41,7 +41,7 @@ export function JarvisOrb() {
   }, [])
 
   return (
-    <div className="jarvis">
+    <div className={`jarvis${big ? ' big' : ''}`}>
       <div className="jarvis-orbwrap" data-pulse={pulse % 2}>
         <svg viewBox="0 0 400 400" className="jarvis-orb" role="img" aria-label="Autonomous company core">
           <defs>
