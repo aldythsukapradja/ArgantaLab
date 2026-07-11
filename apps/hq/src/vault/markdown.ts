@@ -130,6 +130,7 @@ export type Block =
   | { kind: 'h'; level: number; text: string }
   | { kind: 'p'; text: string }
   | { kind: 'quote'; lines: string[] }
+  | { kind: 'callout'; variant: string; title: string; lines: string[] }
   | { kind: 'ul'; items: { text: string; depth: number; task?: 'open' | 'done' }[] }
   | { kind: 'ol'; items: { text: string; depth: number }[] }
   | { kind: 'code'; lang: string; code: string }
@@ -159,11 +160,16 @@ export function tokenizeBlocks(body: string): Block[] {
     if (h) { blocks.push({ kind: 'h', level: h[1].length, text: h[2] }); i++; continue }
     // hr
     if (/^(\*{3,}|-{3,}|_{3,})\s*$/.test(ln)) { blocks.push({ kind: 'hr' }); i++; continue }
-    // blockquote
+    // blockquote — may be an Obsidian callout: > [!type] Optional title
     if (/^>\s?/.test(ln)) {
       const buf: string[] = []
       while (i < lines.length && /^>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^>\s?/, '')); i++ }
-      blocks.push({ kind: 'quote', lines: buf })
+      const co = buf[0]?.match(/^\[!(\w+)\][-+]?\s*(.*)$/)
+      if (co) {
+        blocks.push({ kind: 'callout', variant: co[1].toLowerCase(), title: co[2].trim(), lines: buf.slice(1) })
+      } else {
+        blocks.push({ kind: 'quote', lines: buf })
+      }
       continue
     }
     // table: header row + separator row

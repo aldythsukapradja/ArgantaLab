@@ -7,7 +7,7 @@ import type {
 } from './types'
 import { DEFAULT_SETTINGS, slugify, todayISO, uid } from './types'
 import { buildBacklinks, type LinkIndex } from './graph'
-import { seedNotes, seedCanvas } from './seed'
+import { seedNotes, seedCanvas, SEED_VERSION } from './seed'
 import { loadSnapshot, saveSnapshot, clearSnapshot } from './storage'
 import { normalizeFrontmatter } from './markdown'
 
@@ -69,8 +69,12 @@ interface VaultState {
 // ---------- hydrate ----------
 
 const snap = loadSnapshot()
-const initialNotes = snap?.notes && Object.keys(snap.notes).length ? snap.notes : seedNotes()
-const initialCanvas = snap?.canvas?.cards ? snap.canvas : seedCanvas()
+// Re-seed once when the seed edition changes: the founder KB is the seed, so a
+// content bump should reach existing vaults instead of being pinned by the
+// first-run snapshot. User settings/tabs are preserved; seed notes refresh.
+const needsReseed = !snap || snap.seedVersion !== SEED_VERSION
+const initialNotes = (!needsReseed && snap?.notes && Object.keys(snap.notes).length) ? snap.notes : seedNotes()
+const initialCanvas = (!needsReseed && snap?.canvas?.cards) ? snap.canvas : seedCanvas()
 const initialSettings: VaultSettings = { ...DEFAULT_SETTINGS, ...(snap?.settings || {}) }
 // Theme v2 migration: the vault used to default to its own dark theme; it now
 // follows the Circle HQ shell ('hq'). Migrate stored snapshots once, then
@@ -91,8 +95,9 @@ const initialActive = snap?.active && initialNotes[snap.active] ? snap.active : 
 const initialPinned = (snap?.pinned || []).filter(t => initialNotes[t])
 // Persist the migrated settings right away — otherwise the marker blocks a
 // re-migration while the old snapshot still carries the legacy theme.
-if (themeMigrated && snap) {
+if ((themeMigrated || needsReseed) && snap) {
   saveSnapshot({
+    seedVersion: SEED_VERSION,
     notes: initialNotes, canvas: initialCanvas, settings: initialSettings,
     tabs: initialTabs, active: initialActive, pinned: initialPinned,
   })
@@ -106,6 +111,7 @@ function schedulePersist(get: () => VaultState, set: (p: Partial<VaultState>) =>
   saveTimer = setTimeout(() => {
     const s = get()
     const savedAt = saveSnapshot({
+      seedVersion: SEED_VERSION,
       notes: s.notes, canvas: s.canvas, settings: s.settings,
       tabs: s.tabs, active: s.active, pinned: s.pinned,
     })

@@ -54,6 +54,18 @@ function BlockView({ b }: { b: Block }) {
     case 'hr': return <hr className="v-hr" />
     case 'quote':
       return <blockquote className="v-quote">{b.lines.map((l, i) => <p key={i}><Inl text={l} /></p>)}</blockquote>
+    case 'callout': {
+      const label = b.title || (b.variant.charAt(0).toUpperCase() + b.variant.slice(1))
+      const body = b.lines.filter(l => l.trim())
+      return (
+        <div className={'v-callout v-callout-' + b.variant}>
+          <div className="v-callout-h"><Inl text={label} /></div>
+          {body.length > 0 && (
+            <div className="v-callout-body">{body.map((l, i) => <p key={i}><Inl text={l} /></p>)}</div>
+          )}
+        </div>
+      )
+    }
     case 'code':
       return (
         <pre className="v-pre">

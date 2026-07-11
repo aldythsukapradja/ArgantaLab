@@ -219,6 +219,21 @@
   border-radius: 0 8px 8px 0; padding: 10px 16px; margin: 0 0 1em; color: var(--v-tx2); font-style: italic;
 }
 .v-quote p { margin: 0; font-size: 13.5px }
+/* Obsidian-style callouts (main-KB format renders natively) */
+.v-callout {
+  border: 1px solid var(--v-bd); border-left: 3px solid var(--v-acc);
+  background: var(--v-acc-dim); border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 0 0 1em;
+}
+.v-callout-h { font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--v-tx); text-transform: capitalize; }
+.v-callout-body { margin-top: 6px; }
+.v-callout-body p { margin: 0 0 .4em; font-size: 13.5px; color: var(--v-tx2); }
+.v-callout-body p:last-child { margin-bottom: 0; }
+.v-callout-tip, .v-callout-success, .v-callout-check { border-left-color: var(--v-ok); }
+.v-callout-tip .v-callout-h, .v-callout-success .v-callout-h, .v-callout-check .v-callout-h { color: var(--v-ok); }
+.v-callout-warning, .v-callout-caution, .v-callout-todo, .v-callout-important { border-left-color: var(--v-warn); }
+.v-callout-warning .v-callout-h, .v-callout-caution .v-callout-h, .v-callout-todo .v-callout-h, .v-callout-important .v-callout-h { color: var(--v-warn); }
+.v-callout-danger, .v-callout-bug, .v-callout-failure, .v-callout-error { border-left-color: var(--v-bad); }
+.v-callout-danger .v-callout-h, .v-callout-bug .v-callout-h, .v-callout-failure .v-callout-h, .v-callout-error .v-callout-h { color: var(--v-bad); }
 .v-pre {
   position: relative; background: var(--v-bg1); border: 1px solid var(--v-bd); border-radius: 9px;
   padding: 13px 15px; margin: 0 0 1em; overflow-x: auto; font-family: var(--mono); font-size: 12px; line-height: 1.6;

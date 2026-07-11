@@ -10,6 +10,10 @@ import type { VaultNote, CanvasState } from './types'
 import { slugify } from './types'
 import { parseFrontmatter, normalizeFrontmatter } from './markdown'
 
+// Bump when the seed content changes so existing local vaults re-seed once
+// (otherwise the first-run snapshot in localStorage pins the old notes forever).
+export const SEED_VERSION = '2026-07-11-grounded-kb'
+
 const RAW: string[] = [
 // ------------------------------------------------------------------ HQ
 `---

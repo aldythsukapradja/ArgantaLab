@@ -96,6 +96,7 @@ export const DEFAULT_SETTINGS: VaultSettings = {
 // ---- Persisted snapshot ----
 export interface VaultSnapshot {
   version: 1
+  seedVersion?: string       // which seed edition first populated this snapshot
   notes: Record<string, VaultNote>
   canvas: CanvasState
   settings: VaultSettings
