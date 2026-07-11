@@ -11,7 +11,7 @@ type Route =
   | { view: 'editorial'; present: boolean }
   | { view: 'general'; flight?: string }
 
-const TABS: Tab[] = ['home', 'products', 'about', 'pitch']
+const TABS: Tab[] = ['home', 'products', 'about', 'pitch', 'command']
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')

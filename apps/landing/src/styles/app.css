@@ -415,3 +415,13 @@
 .jarvis-ev-txt b { font-weight: 700; }
 .jarvis-pipe { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
 .jarvis-pipe-st { font-size: 9.5px; font-weight: 700; color: var(--muted); padding: 3px 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); }
+
+/* ── P2-follow: operator Command tab ── */
+.appx-screen.scroll { overflow-y: auto; }
+.cmd { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; padding: clamp(16px, 3vh, 30px) clamp(16px, 4vw, 36px) 40px; }
+.cmd-head { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.cmd-jarvis { display: flex; justify-content: center; padding: 8px 0; }
+.cmd-hq { border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--card); }
+.cmd-hq-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.cmd-hq-open { color: var(--violet); text-decoration: none; font-weight: 700; }
+.cmd-hq-frame { height: min(72vh, 720px); }

@@ -5,7 +5,7 @@ import { JarvisOrb } from './components/JarvisOrb'
 import { AGENTS, OFFICES } from './data/agents'
 import { SITE } from './lib/site'
 
-export type Tab = 'home' | 'products' | 'about' | 'pitch'
+export type Tab = 'home' | 'products' | 'about' | 'pitch' | 'command'
 export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }) => void
 
 // ─────────────── HOME (fit-to-viewport) ───────────────
