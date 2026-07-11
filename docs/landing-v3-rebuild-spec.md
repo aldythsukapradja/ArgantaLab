@@ -219,15 +219,15 @@ Short form (About stats strip context): "One parent, building the company his ow
 
 ## 10. Phase plan — one Opus session each
 
-| Phase | Scope | Definition of done |
+| Phase | Scope | Status (2026-07-11) |
 |---|---|---|
-| **P1 Content truth** | §7 C1–C15 + §8 story + §9.1 SQL wiring | zero placeholders render; all facts match this spec; live metrics light up when env present; build green |
-| **P0 Foundation** | §1.2 embed system (embeds/bridge/AppEmbed/DeviceFrame both frames) + §1.3 auth port + §1.5 deps + motion.ts + §2 code-side (headers + embed patches in lab/kinetik/lashira/hq: `?embed` nonce, bridge listener, scene router, demo mode) | an `AppEmbed` of each app renders in phone AND desktop frames on localhost against deployed URLs; operator login flips HQ embed live; origin/nonce validation tested |
-| **P2 Jarvis** | §1.4 port (Orb, Cockpit, AgentTicker, boot) + About panel 2 + Command tab + teaser | cockpit boots with public data; operator mode shows live RPCs; ticker streams; lite fallback on mobile |
-| **P3 Deck v3** | §4 all 26 slides + d3 chart system (11 charts) + `<Fact>` chips + Observer nav | every slide fits 390×844 & desktop non-scroll; charts draw in; embeds mount on slides 9–11, 22; provenance on every number |
-| **P4 Tabs & flights** | §3 Home/Products/About + §5 Editorial + §6 Bloom flight & scene fixes | 4 product cards live; Bloom flight flies; About 3 panels |
-| **P5 Deploy pass** | §2 dashboard-dependent verification, env plumbing, poster screenshots for all embeds (phone+desktop), Lighthouse/mobile perf pass | all embeds live on deployed domains; site works with zero env (posters only) and full env (live) |
-| **P6 Cinematic layer** | motion audit plan: SplitText/Flip/DrawSVG passes, ScrollSmoother editorial, MotionPath camera flight, sky shaders | the earlier motion-rebuild table items #1–8, on top of finished content |
+| **P1 Content truth** | §7 C1–C15 + §8 story + §9.1 SQL wiring | ✅ SHIPPED (commit c40d3394) — verified: zero placeholder leaks, all facts fixed, SQL live (hq_public_pitch→200), founder monogram, trust/waitlist/humans, LashiraBloom product. Remaining: C16 live-data-quality relabels (depth/econCoverage/kids) — deferred into P4 |
+| **P0 Foundation** | §1.2 embed system + §1.3 auth + §1.5 deps + §2 code-side | ✅ SHIPPED (f97198d7) — verified: embeds.ts (domain-agnostic), bridge.ts (nonce/origin), DeviceFrame phone+desktop, AppEmbed poster→go-live, auth ◆ button, supabase/d3 chunks. Lashira loads in-frame (200). **NOT done: cross-app bridge listeners** (`?embed` handler in web/kinetik/hq) — needed for Lab/Kinetik/HQ operator-live embeds → P4 |
+| **P3 Deck v3** | §4 slides + d3 charts + `<Fact>` chips | ✅ SHIPPED (fc4acb1a) — 25 slides verified: LashiraBloom live embed, valuation RangePlot+ladder, velocity swimlane, competition ScatterMap, per-payer PayerBars, provenance legend. DeckCharts.tsx (d3). Remaining: Observer nav (still wheel-accumulator), C16 relabels |
+| **P2 Jarvis** | §1.4 Orb + ticker + placements | ◐ CORE SHIPPED (d78a3af5) — JarvisOrb (CSS-SVG reactor) + live agent ticker in About panel 2, verified advancing. **NOT done: full R3F orb, operator Command tab (embedded HQ), pitch-slide-22 mini-cockpit** → P2-follow |
+| **P4 Tabs & flights** | Products live embeds + Bloom flight + cross-app patches + C16 | ☐ TODO — Products 4-card live embeds; Bloom flight in General deck (laneY≈6100); cross-app `?embed` listeners in web/kinetik/hq (each needs its own repo + deploy + verify); C16 data relabels |
+| **P5 Deploy pass** | poster images, env verify, perf | ☐ TODO — landing Vercel env (owner set it; redeploys on each push now); poster screenshots for embeds; mobile perf pass |
+| **P6 Cinematic layer** | SplitText/Flip/DrawSVG/ScrollSmoother/MotionPath, sky shaders | ☐ TODO — the motion-rebuild table, on top of finished content |
 
 Session kickoff prompt template: *"Read docs/landing-v3-rebuild-spec.md. Execute phase Pn exactly as specced. Do not renegotiate architecture decisions in §1–2. Verify per the phase's definition of done. Commit to main."*
 
