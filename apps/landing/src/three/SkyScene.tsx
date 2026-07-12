@@ -1,122 +1,81 @@
-// "Daybreak" — a clean cinematic sky. A few large faceted gems drift around the
-// periphery (never behind the hero text), over soft depth clouds. Light mode reads
-// as calm premium whitespace; dark mode lets the gems glow like jewels.
+// The flight-deck backdrop — the SAME per-pixel shader nebula as the tab shell
+// (nebulaShader.ts), so the whole site reads as one background system. This
+// replaces the old flat-shaded "gem" octahedrons + cloud sprites, which read as
+// cartoonish confetti floating over the premium glass-card scenes. The camera's
+// focus point (focusRef, driven by the flight's world-space position) gently
+// parallaxes the nebula instead of a real mouse — the scene still feels alive
+// as you fly between lanes, without anything ever looking stretched or pixelated.
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-
-function softSprite(inner: string, outer: string): THREE.Texture {
-  const c = document.createElement('canvas')
-  c.width = c.height = 128
-  const g = c.getContext('2d')!
-  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64)
-  grd.addColorStop(0, inner)
-  grd.addColorStop(1, outer)
-  g.fillStyle = grd
-  g.fillRect(0, 0, 128, 128)
-  return new THREE.CanvasTexture(c)
-}
+import { NEBULA_VERT, NEBULA_FRAG } from './nebulaShader'
 
 export default function SkyScene({ focusRef, dark }: { focusRef: React.MutableRefObject<{ x: number; y: number }>; dark: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const frameRef = useRef<number>(0)
   const darkRef = useRef(dark)
   darkRef.current = dark
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'low-power' })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setClearColor(0x000000, 0)
     let w = window.innerWidth, h = window.innerHeight
     renderer.setSize(w, h)
 
-    const mobile = w < 820
+    const uniforms = {
+      uTime: { value: 0 },
+      uRes: { value: new THREE.Vector2(w * renderer.getPixelRatio(), h * renderer.getPixelRatio()) },
+      uDark: { value: darkRef.current ? 1 : 0 },
+      uMouse: { value: new THREE.Vector2(0, 0) },
+      uStars: { value: 0.7 },   // slightly calmer than the hub — real UI sits on top here
+    }
     const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(58, w / h, 0.1, 200)
-    camera.position.z = mobile ? 26 : 20
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+    const quad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: NEBULA_FRAG, uniforms, depthTest: false, depthWrite: false }),
+    )
+    scene.add(quad)
 
-    // ── soft depth clouds (few, gentle — never grey smudges) ──
-    const cloudTex = softSprite('rgba(255,255,255,0.9)', 'rgba(255,255,255,0)')
-    const clouds: THREE.Sprite[] = []
-    for (let i = 0; i < (mobile ? 4 : 7); i++) {
-      const op = 0.22 + Math.random() * 0.16
-      const m = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, opacity: op, depthWrite: false })
-      const s = new THREE.Sprite(m)
-      s.userData.op = op
-      s.position.set((Math.random() - 0.5) * 78, (Math.random() - 0.5) * 46, -16 - Math.random() * 20)
-      const sc = 22 + Math.random() * 26
-      s.scale.set(sc, sc * 0.6, 1)
-      scene.add(s); clouds.push(s)
-    }
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 
-    // ── faceted gems, biased to the PERIPHERY so the centre stays clean ──
-    const crystals: THREE.Mesh[] = []
-    const geo = new THREE.OctahedronGeometry(1, 0)
-    const cols = [0xa78bfa, 0x60a5fa, 0x34d399, 0xfbbf24, 0xf472b6, 0x22d3ee]
-    const n = mobile ? 7 : 12
-    for (let i = 0; i < n; i++) {
-      const col = cols[i % cols.length]
-      const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0, metalness: 0.35, roughness: 0.18, transparent: true, opacity: 0.82, flatShading: true })
-      const m = new THREE.Mesh(geo, mat)
-      const ang = (i / n) * Math.PI * 2 + Math.random() * 0.6
-      const rad = (mobile ? 16 : 17) + Math.random() * (mobile ? 8 : 13)
-      m.position.set(Math.cos(ang) * rad, Math.sin(ang) * rad * 0.72, (Math.random() - 0.5) * 14 - 3)
-      m.scale.setScalar((mobile ? 0.7 : 0.9) + Math.random() * (mobile ? 0.8 : 1.4))
-      m.userData.spin = 0.15 + Math.random() * 0.25
-      scene.add(m); crystals.push(m)
-    }
-
-    const amb = new THREE.AmbientLight(0xffffff, 0.9); scene.add(amb)
-    const sun = new THREE.DirectionalLight(0xfff2d0, 1.4); sun.position.set(-6, 10, 8); scene.add(sun)
-    const fill = new THREE.DirectionalLight(0xc4b5fd, 0.7); fill.position.set(8, -4, 6); scene.add(fill)
-
-    let start: number | null = null
-    const animate = (time: number) => {
-      if (!start) start = time
-      const t = (time - start) / 1000
-      const d = darkRef.current
-      crystals.forEach((g, i) => {
-        const sp = g.userData.spin as number
-        g.rotation.x = t * sp + i
-        g.rotation.y = t * sp * 0.8 + i * 0.7
-        g.position.y += Math.sin(t * 0.35 + i) * 0.004
-        const m = g.material as THREE.MeshStandardMaterial
-        m.emissiveIntensity += ((d ? 0.6 : 0) - m.emissiveIntensity) * 0.05
-        m.opacity += ((d ? 0.92 : 0.8) - m.opacity) * 0.05
-      })
-      clouds.forEach((s, i) => {
-        s.position.x += 0.003 + (i % 3) * 0.0015
-        if (s.position.x > 44) s.position.x = -44
-        const base = s.userData.op as number
-        s.material.opacity += ((d ? base * 0.5 : base) - s.material.opacity) * 0.05
-      })
-      amb.intensity += ((d ? 0.6 : 0.9) - amb.intensity) * 0.05
-      sun.intensity += ((d ? 1.0 : 1.4) - sun.intensity) * 0.05
-
+    let frame = 0
+    let running = false
+    const draw = (time: number) => {
+      uniforms.uTime.value = time / 1000
+      uniforms.uDark.value += ((darkRef.current ? 1 : 0) - uniforms.uDark.value) * 0.05
       const f = focusRef.current
-      camera.position.x += (f.x * 0.0013 - camera.position.x) * 0.04
-      camera.position.y += (-f.y * 0.0013 - camera.position.y) * 0.04
-      camera.lookAt(0, 0, 0)
-      renderer.render(scene, camera)
-      frameRef.current = requestAnimationFrame(animate)
+      const tx = clamp(f.x / 20000, -0.5, 0.5)
+      const ty = clamp(-f.y / 10000, -0.5, 0.5)
+      uniforms.uMouse.value.x += (tx - uniforms.uMouse.value.x) * 0.03
+      uniforms.uMouse.value.y += (ty - uniforms.uMouse.value.y) * 0.03
+      renderer.render(scene, cam)
+      if (running) frame = requestAnimationFrame(draw)
     }
-    frameRef.current = requestAnimationFrame(animate)
+    const start = () => { if (!running && !reduced) { running = true; frame = requestAnimationFrame(draw) } }
+    const stop = () => { running = false; cancelAnimationFrame(frame) }
+
+    uniforms.uDark.value = darkRef.current ? 1 : 0
+    draw(1200)
+    if (!reduced) start()
+
+    const onVis = () => (document.visibilityState === 'hidden' ? stop() : start())
+    document.addEventListener('visibilitychange', onVis)
 
     const onResize = () => {
       w = window.innerWidth; h = window.innerHeight
       renderer.setSize(w, h)
-      camera.aspect = w / h
-      camera.updateProjectionMatrix()
+      uniforms.uRes.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio())
+      if (reduced) draw(1200)
     }
     window.addEventListener('resize', onResize)
 
     return () => {
-      cancelAnimationFrame(frameRef.current)
+      stop()
+      document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('resize', onResize)
-      renderer.dispose()
-      scene.clear()
+      quad.geometry.dispose(); (quad.material as THREE.Material).dispose(); renderer.dispose()
     }
   }, [focusRef])
 
