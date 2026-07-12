@@ -21,6 +21,7 @@ function sceneSize() {
 function fitScale(zoomOut = false) {
   const { w, h } = sceneSize()
   const vw = window.innerWidth, vh = window.innerHeight
+  if (!vw || !vh || !w || !h) return 1   // 0-size viewport (hidden/headless) → sane default, never NaN
   const mobile = vw < 820
   const base = Math.max(0.34, Math.min(mobile ? 1.0 : 1.06, (vw * 0.97) / w, (vh * 0.95) / h))
   return zoomOut && !mobile ? base * 0.82 : base
@@ -56,7 +57,7 @@ export default function GeneralDeck({ flight, onExit }: { flight?: string; onExi
   const [view, setView] = useState<View>(flight && FLIGHT_BY_ID[flight] ? { mode: 'flight', f: flight, i: 0 } : { mode: 'hub' })
   const [size, setSize] = useState(() => sceneSize())
   const stageRef = useRef<HTMLDivElement>(null)
-  const cam = useRef({ x: HUB_POS.x, y: HUB_POS.y, s: fitScale(true) })
+  const cam = useRef({ x: HUB_POS.x, y: HUB_POS.y, s: fitScale(true), r: 0 })
   const focusRef = useRef({ x: HUB_POS.x, y: HUB_POS.y })
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const didInit = useRef(false)
@@ -66,8 +67,11 @@ export default function GeneralDeck({ flight, onExit }: { flight?: string; onExi
   const applyCam = useCallback(() => {
     const el = stageRef.current
     if (!el) return
-    const { x, y, s } = cam.current
-    el.style.transform = `translate3d(${window.innerWidth / 2 - x * s}px, ${window.innerHeight / 2 - y * s}px, 0) scale(${s})`
+    const { x, y, s, r } = cam.current
+    if (![x, y, s, r].every(Number.isFinite)) return   // never write an invalid transform
+    // rotate about the VIEWPORT CENTER (the camera's focus), not the stage origin:
+    // translate to center → bank → zoom → pull the focus point under the lens
+    el.style.transform = `translate(${window.innerWidth / 2}px, ${window.innerHeight / 2}px) rotate(${r}deg) scale(${s}) translate(${-x}px, ${-y}px)`
     focusRef.current.x = x; focusRef.current.y = y
   }, [])
 
@@ -84,13 +88,33 @@ export default function GeneralDeck({ flight, onExit }: { flight?: string; onExi
     const p = posOf(v)
     const s = fitScale(v.mode !== 'flight')
     const id = viewId(v)
-    if (instant) { cam.current = { x: p.x, y: p.y, s }; applyCam(); revealScene(id); return }
+    if (instant) { cam.current = { x: p.x, y: p.y, s, r: 0 }; applyCam(); revealScene(id); return }
+    // ── glider flight: travel a quadratic arc (not a straight line) and BANK
+    // into the turn — rotation peaks mid-flight and lands level (sin(π)=0).
+    const from = { x: cam.current.x, y: cam.current.y }
+    const dx = p.x - from.x, dy = p.y - from.y
+    const dist = Math.hypot(dx, dy) || 1
+    const lift = Math.min(300, dist * 0.16)                    // arc height
+    const cxp = (from.x + p.x) / 2 - (dy / dist) * lift        // control point,
+    const cyp = (from.y + p.y) / 2 + (dx / dist) * lift        // ⟂ to travel
+    const maxBank = Math.min(3.2, dist / 1100) * (dx >= 0 ? -1 : 1)
+    const prog = { t: 0 }
     const travelS = s * 0.56
     const tl = gsap.timeline({ onUpdate: applyCam })
-    tl.to(cam.current, { x: p.x, y: p.y, duration: 1.25, ease: 'power2.inOut' }, 0)
+    tl.to(prog, {
+      t: 1, duration: 1.25, ease: 'power2.inOut',
+      onUpdate: () => {
+        const t = prog.t, u = 1 - t
+        cam.current.x = u * u * from.x + 2 * u * t * cxp + t * t * p.x
+        cam.current.y = u * u * from.y + 2 * u * t * cyp + t * t * p.y
+        cam.current.r = Math.sin(t * Math.PI) * maxBank
+      },
+      onComplete: () => { cam.current.x = p.x; cam.current.y = p.y; cam.current.r = 0 },
+    }, 0)
     tl.to(cam.current, { s: travelS, duration: 0.55, ease: 'power2.in' }, 0)
     tl.to(cam.current, { s, duration: 0.72, ease: 'power3.out' }, 0.55)
     tlRef.current = tl
+    applyCam()   // one synchronous write at flight start — never a bare stage
     revealScene(id)
   }, [applyCam, revealScene])
 
