@@ -1,5 +1,15 @@
 # HANDOVER → Opus · Portfolio "Mission Control" pixel-perfect pass
 
+> **STATUS: SUPERSEDED.** The founder asked whether Sonnet could do this pass
+> instead of switching to Opus — it did, in-session, same day. See the commit
+> after 73b73874 for the actual pixel-perfect pass (north-star strip
+> extracted into `NorthStarStrip`, sparse-data states, `McEmpty` unified
+> empty-state language, fleet-matrix zebra rows, a real `.mc { flex:1 }` vs
+> `.mc-wrap { height:auto }` sizing bug found and fixed at the stacking
+> breakpoints, full desktop/tablet/phone/dark-mode battle test). This doc is
+> kept as a historical record of the audit findings below, which are still
+> accurate — only the "needs Opus" framing is stale.
+
 > For the next session (Opus). State as of commit on 2026-07-12, branch `main`.
 > The founder's verdict on v1 of Mission Control: **"still very ugly, not
 > responsive, not pixel perfect."** Your job is the design-quality pass — the

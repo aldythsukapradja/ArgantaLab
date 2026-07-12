@@ -12,7 +12,7 @@ import { StackedCols } from '../components/d3/StackedCols'
 import { PunchCard } from '../components/d3/PunchCard'
 import { Meter, VCols, Spark } from '../components/d3/micro'
 import { fmtDur, appColor, appLabel } from '../components/d3/chartkit'
-import { FunnelRail, AttentionPanel, WhoWhen, FleetMatrix } from '../surfaces/Portfolio'
+import { NorthStarStrip, FunnelRail, AttentionPanel, WhoWhen, FleetMatrix } from '../surfaces/Portfolio'
 import type {
   SchemaInsights, GrowthOverview, EconomyData, PortfolioVc, RetentionData,
   EngagementData, PowerCurve, AudienceData, GeoData,
@@ -119,31 +119,39 @@ const eng: EngagementData = {
   ],
   generatedAt: '',
 }
-const pw: PowerCurve = {
-  days: 14,
-  histogram: Array.from({ length: 14 }, (_, idx) => ({
-    daysActive: idx + 1,
-    users: [4, 2, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 2, 3][idx],
-  })),
-  totalUsers: 17, generatedAt: '',
-}
+const pw: PowerCurve = SPARSE
+  ? { days: 14, histogram: Array.from({ length: 14 }, (_, idx) => ({ daysActive: idx + 1, users: idx === 0 ? 2 : 0 })), totalUsers: 2, generatedAt: '' }
+  : {
+      days: 14,
+      histogram: Array.from({ length: 14 }, (_, idx) => ({
+        daysActive: idx + 1,
+        users: [4, 2, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 2, 3][idx],
+      })),
+      totalUsers: 17, generatedAt: '',
+    }
 const au: AudienceData = {
-  roles: [{ role: 'kid', count: 8 }, { role: 'user', count: 5 }, { role: 'operator', count: 2 }],
-  ageBands: [{ band: '6–8', count: 3 }, { band: '9–12', count: 4 }, { band: '18+', count: 7 }, { band: 'unknown', count: 1 }],
+  roles: SPARSE
+    ? [{ role: 'operator', count: 1 }, { role: 'user', count: 1 }, { role: 'kid', count: 1 }]
+    : [{ role: 'kid', count: 8 }, { role: 'user', count: 5 }, { role: 'operator', count: 2 }],
+  ageBands: SPARSE
+    ? [{ band: 'unknown', count: 3 }]
+    : [{ band: '6–8', count: 3 }, { band: '9–12', count: 4 }, { band: '18+', count: 7 }, { band: 'unknown', count: 1 }],
   genders: [{ gender: 'female', count: 6 }, { gender: 'male', count: 7 }, { gender: 'unspecified', count: 2 }],
   devices: SPARSE
     ? [{ device: 'unknown', seconds: 2100 }, { device: 'desktop', seconds: 1200 }, { device: 'mobile', seconds: 140 }]
     : [{ device: 'mobile', seconds: 61000 }, { device: 'desktop', seconds: 38000 }, { device: 'tablet', seconds: 9000 }],
   generatedAt: '',
 }
-const geo: GeoData = {
-  regions: [
-    { tz: 'Asia/Jakarta', users: 6, seconds: 88000 }, { tz: 'Europe/Paris', users: 2, seconds: 14000 },
-    { tz: 'Asia/Singapore', users: 1, seconds: 4000 },
-  ],
-  referrers: [{ ref: 'google.com', sessions: 4 }, { ref: 'linkedin.com', sessions: 2 }],
-  generatedAt: '',
-}
+const geo: GeoData = SPARSE
+  ? { regions: [{ tz: 'Asia/Jakarta', users: 1, seconds: 3600 }], referrers: [], generatedAt: '' }
+  : {
+      regions: [
+        { tz: 'Asia/Jakarta', users: 6, seconds: 88000 }, { tz: 'Europe/Paris', users: 2, seconds: 14000 },
+        { tz: 'Asia/Singapore', users: 1, seconds: 4000 },
+      ],
+      referrers: [{ ref: 'google.com', sessions: 4 }, { ref: 'linkedin.com', sessions: 2 }],
+      generatedAt: '',
+    }
 
 // ── harness ────────────────────────────────────────────────────────────────
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -155,36 +163,21 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
+// Reproduces the real Shell's height budget: Portfolio is a "full" surface
+// (Shell.tsx → .content-flush, zero padding), so .mc-wrap gets exactly
+// 100vh minus the 54px topbar — matched here so overflow that would be
+// invisible in the app is caught in the harness too.
 function MissionControlPreview() {
+  const [days, setDays] = React.useState(14)
   return (
-    <div className="mc" style={{ minHeight: 660 }}>
-      <div className="card mc-ns">
-        <div>
-          <div className="mc-lbl">Ecosystem north star</div>
-          <div className="mc-hero">5</div>
-          <div style={{ fontSize: 11, color: 'var(--bad)', fontWeight: 650 }}>▼ 44.4% WoW <span style={{ color: 'var(--tx3)', fontWeight: 500 }}>· 4 active circles</span></div>
-        </div>
-        <div className="mc-chips">
-          <span className="mc-chip">Activation <b>57.9%</b></span>
-          <span className="mc-chip">Lessons/day <b>15.5</b></span>
-          <span className="mc-chip">Time/kid <b>14m</b></span>
-          <span className="mc-chip">D1 return <b>62.8%</b></span>
-          <span className="mc-chip">Invites <b>10/11</b></span>
-        </div>
-        <div className="mc-trend">
-          <AreaTrend labels={o.northStar.map(p => p.week)}
-            series={[{ key: 'v', label: 'Weekly engaged', color: 'var(--ch1)', area: true }]}
-            data={o.northStar.map(p => ({ v: p.value }))} height={76} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-          <div className="seg"><button>7d</button><button className="on">14d</button><button>30d</button></div>
-          <div className="mc-live"><span className="mc-dot" />live · updated now</div>
-        </div>
+    <div className="mc-wrap" style={{ height: 'calc(100vh - 54px)', border: '1px dashed var(--bd3)' }}>
+      <div className="mc">
+        <NorthStarStrip o={o} v={v} days={days} setDays={setDays} ago={3} />
+        <FunnelRail o={o} v={v} e={e} r={r} />
+        <AttentionPanel o={o} e={e} eng={eng} pw={pw} days={days} hasBeats={true} />
+        <WhoWhen eng={eng} au={au} geo={geo} hasBeats={true} />
+        <FleetMatrix i={i} k={k} o={o} v={v} eng={eng} days={days} />
       </div>
-      <FunnelRail o={o} v={v} e={e} r={r} />
-      <AttentionPanel o={o} e={e} eng={eng} pw={pw} days={14} hasBeats={true} />
-      <WhoWhen eng={eng} au={au} geo={geo} hasBeats={true} />
-      <FleetMatrix i={i} k={k} o={o} v={v} eng={eng} days={14} />
     </div>
   )
 }

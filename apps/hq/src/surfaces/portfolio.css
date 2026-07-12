@@ -1,5 +1,8 @@
 /* Portfolio · Mission Control — one page, edge-to-edge, no scroll ≥1180px.
-   Theme-token driven; every panel is a .card in the HQ visual language. */
+   Theme-token driven; every panel is a .card in the HQ visual language.
+
+   Local rhythm scale (used consistently across this surface only):
+     4 / 8 / 12 / 16 / 20 — never an odd value outside this set. */
 
 .mc-wrap { height: 100%; overflow: auto; padding: 10px 16px 12px; box-sizing: border-box;
   display: flex; flex-direction: column; }
@@ -15,80 +18,128 @@
 
 .mc .card { min-width: 0; min-height: 0; }
 
-/* ── north-star strip ── */
-.mc-ns { display: flex; align-items: center; gap: 18px; padding: 10px 16px; flex-wrap: wrap; }
-.mc-hero { font-size: 38px; font-weight: 650; letter-spacing: -.02em; line-height: 1; }
+/* ── north-star strip ──────────────────────────────────────────────────────
+   Three columns, one visual row: IDENTITY (hero) | TREND STACK (chips over
+   trend, its own 2-row rhythm) | CONTROLS (range + live). Everything
+   vertically centers on the trend stack's height, so the row never looks
+   like several unrelated widgets glued together. */
+.mc-ns { display: grid; grid-template-columns: auto minmax(240px, 1fr) auto;
+  align-items: center; gap: 24px; padding: 14px 20px; }
+.mc-ns-id { display: flex; flex-direction: column; gap: 3px; min-width: 128px; }
 .mc-lbl { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--tx3); }
-.mc-chips { display: flex; gap: 6px; flex-wrap: wrap; max-width: 420px; }
+.mc-hero { font-size: 40px; font-weight: 650; letter-spacing: -.02em; line-height: 1; font-variant-numeric: normal; }
+.mc-delta { font-size: 11.5px; font-weight: 650; }
+.mc-delta .ctx { color: var(--tx3); font-weight: 500; }
+
+.mc-ns-mid { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mc-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .mc-chip { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; background: var(--bg3);
-  color: var(--tx2); border: 1px solid var(--bd); white-space: nowrap; }
-.mc-chip b { color: var(--tx); }
-.mc-trend { flex: 1 1 240px; min-width: 200px; }
+  color: var(--tx2); border: 1px solid var(--bd); white-space: nowrap; line-height: 1.5; }
+.mc-chip b { color: var(--tx); font-variant-numeric: tabular-nums; }
+.mc-trend { min-width: 0; }
+
+.mc-ns-ctrl { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
 .mc-live { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--tx3); white-space: nowrap; }
-.mc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+.mc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none;
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 50%, transparent); animation: mc-pulse 2.2s infinite; }
 @keyframes mc-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent) }
   70% { box-shadow: 0 0 0 6px transparent } 100% { box-shadow: 0 0 0 0 transparent } }
 @media (prefers-reduced-motion: reduce) { .mc-dot { animation: none } }
 
 /* ── panels ── */
-.mc-panel { padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; overflow: hidden; }
+.mc-panel { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
 .mc-t { font-size: 12.5px; font-weight: 650; }
 .mc-s { font-size: 10.5px; color: var(--tx3); margin-top: 1px; }
-.mc-sec { font-size: 11px; font-weight: 650; color: var(--tx2); }
-.mc-note { font-size: 10px; color: var(--tx3); line-height: 1.45; }
+.mc-sec { font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--tx3); }
+.mc-note { font-size: 10.5px; color: var(--tx3); line-height: 1.5; }
 .mc-fill { flex: 1; min-height: 0; }
+.mc-div { border: none; border-top: 1px solid var(--bd); margin: 2px 0; }
 
 /* funnel rows */
-.mc-frow { display: grid; grid-template-columns: 84px 1fr 52px; gap: 8px; align-items: center; font-size: 11.5px; }
-.mc-frow .nm { color: var(--tx2); font-weight: 600; white-space: nowrap; }
+.mc-frow { display: grid; grid-template-columns: 82px 1fr minmax(46px, auto); gap: 10px; align-items: center; font-size: 11.5px; }
+.mc-frow .nm { color: var(--tx2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mc-frow .v { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* attention tabs */
-.mc-tabs { display: flex; gap: 12px; font-size: 11px; color: var(--tx3); margin-left: auto; }
-.mc-tabs button { font-size: 11px; color: var(--tx3); padding: 2px 0; border-bottom: 2px solid transparent; cursor: pointer; }
+.mc-tabs { display: flex; gap: 12px; font-size: 11px; color: var(--tx3); margin-left: auto; flex: none; }
+.mc-tabs button { font-size: 11px; color: var(--tx3); padding: 2px 0; border-bottom: 2px solid transparent; cursor: pointer; transition: color var(--dur); }
+.mc-tabs button:hover { color: var(--tx2); }
 .mc-tabs button.on { color: var(--acc-text); font-weight: 700; border-bottom-color: var(--acc); }
-.mc-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.mc-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
 /* who & when */
-.mc-strip { display: flex; height: 9px; border-radius: 5px; overflow: hidden; gap: 2px; }
+.mc-strip { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; }
 .mc-strip i { display: block; }
-.mc-spl { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--tx3); margin-top: 3px; gap: 6px; flex-wrap: wrap; }
+.mc-spl { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--tx3); margin-top: 4px; gap: 6px; flex-wrap: wrap; }
+
+/* ── unified empty / awaiting-data language ──────────────────────────────
+   One visual system for "nothing here yet, and here's exactly why": a
+   quiet dashed frame, a short headline, one line of context. Used for the
+   migration hint, sparse-data hints and every "needs v3" note so they read
+   as one family instead of three ad-hoc styles. */
+.mc-empty { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 3px; height: 100%; min-height: 72px; padding: 10px 14px;
+  border: 1px dashed var(--bd2); border-radius: var(--r-md); background: var(--bg2); }
+.mc-empty .h { font-size: 11.5px; font-weight: 650; color: var(--tx2); }
+.mc-empty .b { font-size: 10.5px; color: var(--tx3); line-height: 1.5; max-width: 320px; }
+.mc-empty.mc-empty-inline { min-height: 0; padding: 8px 12px; }
 
 /* ── fleet matrix ── */
-.mc-fl { padding: 12px 14px; overflow: hidden; }
+.mc-fl { padding: 12px 14px 10px; overflow: hidden; }
 .mc-mx-scroll { overflow-x: auto; }
-.mc-mx { display: grid; grid-template-columns: 96px repeat(5, minmax(118px, 1fr)); gap: 0 10px; min-width: 700px; }
-.mc-mx .hd { display: flex; flex-direction: column; gap: 4px; padding-bottom: 7px; border-bottom: 1px solid var(--bd); min-width: 0; }
+.mc-mx { display: grid; grid-template-columns: 104px repeat(5, minmax(122px, 1fr)); column-gap: 12px; min-width: 720px; }
+.mc-mx .hd { display: flex; flex-direction: column; gap: 5px; padding-bottom: 8px; border-bottom: 1.5px solid var(--bd2); min-width: 0; }
 .mc-mx .hd .nm { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.mc-mx .hd .nm i { width: 9px; height: 9px; border-radius: 3px; flex: none; }
-.mc-mx .hd .st { font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px; width: fit-content; }
+.mc-mx .hd .nm i { width: 8px; height: 8px; border-radius: 2.5px; flex: none; }
+.mc-mx .hd .st { font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px; width: fit-content; letter-spacing: .01em; }
 .mc-mx .st.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
 .mc-mx .st.mut { background: var(--bg3); color: var(--tx3); }
+.mc-mx .spark-row { height: 18px; border-bottom: 1px solid var(--bd); }
 .mc-mx .rl { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tx3);
-  display: flex; align-items: center; border-bottom: 1px solid var(--bd); }
+  display: flex; align-items: center; border-bottom: 1px solid var(--bd); padding: 6px 0; }
 .mc-mx .cell { display: flex; align-items: baseline; gap: 5px; border-bottom: 1px solid var(--bd);
-  padding: 2px 0; min-width: 0; }
+  padding: 6px 0; min-width: 0; }
 .mc-mx .cell .v { font-size: 14px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mc-mx .cell .v.dim { color: var(--tx3); font-weight: 500; }
 .mc-mx .cell .u { font-size: 9.5px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mc-mx .rl:last-of-type, .mc-mx .cell:last-of-type { border-bottom: none; }
 
-/* ── responsive: stack below 1180px (page scrolls; matrix scrolls sideways) ── */
+/* ── responsive ──────────────────────────────────────────────────────────
+   ≥1180: fixed one-page grid, no scroll (enforced by .mc-wrap flex:1).
+   1024–1180: same 3-row shape but attention takes the full second row,
+   funnel/who-when share it below — still no page scroll target, but we no
+   longer force it since content depth is unpredictable at this width.
+   700–1024: single column stack, page scrolls.
+   <700: phone — tighter type, matrix keeps its own h-scroll. */
 @media (max-width: 1180px) {
-  .mc { grid-template-rows: none;
+  /* .mc is a flex:1 child of .mc-wrap for the no-scroll desktop case; once
+     the page is allowed to scroll, .mc-wrap goes height:auto and .mc must
+     drop flex:1 too — a flex-basis:0 item inside an auto-height flex
+     container has no real space to grow into, so it collapses instead of
+     sizing to its grid content. Switching to flex:none restores natural
+     content-based sizing for every row below this breakpoint. */
+  .mc { flex: none; grid-template-rows: none;
     grid-template-areas: "ns ns ns ns ns ns ns ns ns ns ns ns"
       "at at at at at at at at at at at at"
       "fu fu fu fu fu fu wh wh wh wh wh wh"
       "fl fl fl fl fl fl fl fl fl fl fl fl"; }
   .mc-wrap { height: auto; }
 }
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .mc { grid-template-areas: "ns ns ns ns ns ns ns ns ns ns ns ns"
       "at at at at at at at at at at at at"
       "fu fu fu fu fu fu fu fu fu fu fu fu"
       "wh wh wh wh wh wh wh wh wh wh wh wh"
       "fl fl fl fl fl fl fl fl fl fl fl fl"; }
   .mc-duo { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  /* single stacked column — each zone spans full width (grid default
+     stretch; do NOT set justify-items here, it shrinks zones to content
+     width instead of letting them fill the row). */
+  .mc-ns { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px; }
+  .mc-ns-ctrl { flex-direction: row; align-items: center; justify-content: space-between; }
   .mc-hero { font-size: 32px; }
+  .mc-frow { grid-template-columns: 74px 1fr auto; gap: 8px; }
+  .mc-mx { grid-template-columns: 88px repeat(5, minmax(108px, 1fr)); }
 }

@@ -31,6 +31,17 @@ const usd2 = (n: number) => '$' + n.toFixed(2)
 const RANGES = [7, 14, 30] as const
 const REFRESH_MS = 45_000
 
+/** One visual language for "nothing here yet" — replaces the three ad-hoc
+ * empty styles v1 had (a centered card, a bare .mc-note line, a custom hint). */
+function McEmpty({ headline, body, inline = false }: { headline: string; body: string; inline?: boolean }) {
+  return (
+    <div className={'mc-empty' + (inline ? ' mc-empty-inline' : '')}>
+      <div className="h">{headline}</div>
+      <div className="b">{body}</div>
+    </div>
+  )
+}
+
 interface Pulse {
   i: SchemaInsights | null
   k: KinetikStats | null
@@ -102,37 +113,7 @@ export function Portfolio() {
     <div className="mc-wrap">
       <div className="mc" style={{ opacity: flight ? 0.65 : 1, transition: 'opacity .25s' }}>
 
-        {/* ── north-star strip ── */}
-        <div className="card mc-ns">
-          <div>
-            <div className="mc-lbl">Ecosystem north star</div>
-            <div className="mc-hero">{o ? compact(o.wau) : '—'}</div>
-            <div style={{ fontSize: 11, color: o?.wowPct != null && o.wowPct < 0 ? 'var(--bad)' : 'var(--ok)', fontWeight: 650 }}>
-              {o?.wowPct == null ? 'weekly engaged accounts' : `${o.wowPct > 0 ? '▲ +' : '▼ '}${Math.abs(o.wowPct)}% WoW`}
-              <span style={{ color: 'var(--tx3)', fontWeight: 500 }}> · {v ? compact(v.flywheelCount) : '—'} active circles</span>
-            </div>
-          </div>
-          <div className="mc-chips" role="list" aria-label="North-star input metrics">
-            <span className="mc-chip">Activation <b>{v?.activationRate == null ? '—' : pct(v.activationRate)}</b></span>
-            <span className="mc-chip">Lessons/day <b>{v?.lessonsPerKidDay ?? '—'}</b></span>
-            <span className="mc-chip">Time/kid <b>{v?.screenMinPerKidDay == null ? '—' : Math.round(v.screenMinPerKidDay) + 'm'}</b></span>
-            <span className="mc-chip">D1 return <b>{v?.d1Retention == null ? '—' : pct(v.d1Retention)}</b></span>
-            <span className="mc-chip">Invites <b>{v ? `${compact(v.invitesAccepted)}/${compact(v.invitesSent)}` : '—'}</b></span>
-          </div>
-          <div className="mc-trend">
-            {o && o.northStar.length > 1 && (
-              <AreaTrend labels={o.northStar.map(p => p.week)}
-                series={[{ key: 'v', label: 'Weekly engaged', color: 'var(--ch1)', area: true }]}
-                data={o.northStar.map(p => ({ v: p.value }))} height={70} />
-            )}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-            <div className="seg" role="group" aria-label="Date range">
-              {RANGES.map(rg => <button key={rg} className={days === rg ? 'on' : ''} onClick={() => setDays(rg)}>{rg}d</button>)}
-            </div>
-            <div className="mc-live"><span className="mc-dot" />live · updated {ago == null ? '—' : ago < 5 ? 'now' : ago + 's ago'}</div>
-          </div>
-        </div>
+        <NorthStarStrip o={o} v={v} days={days} setDays={setDays} ago={ago} />
 
         {/* ── funnel rail ── */}
         <FunnelRail o={o} v={v} e={e} r={r} />
@@ -145,6 +126,52 @@ export function Portfolio() {
 
         {/* ── fleet matrix ── */}
         <FleetMatrix i={i} k={k} o={o} v={v} eng={eng} days={days} />
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────── north-star strip ─────────────────────────── */
+// Three columns, one visual row: IDENTITY | chips-over-trend | CONTROLS.
+// Exported so the visual harness renders the exact real markup (no drift).
+export function NorthStarStrip({ o, v, days, setDays, ago }: {
+  o: GrowthOverview | null; v: PortfolioVc | null; days: number; setDays: (d: number) => void; ago: number | null
+}) {
+  return (
+    <div className="card mc-ns">
+      <div className="mc-ns-id">
+        <div className="mc-lbl">Ecosystem north star</div>
+        <div className="mc-hero">{o ? compact(o.wau) : '—'}</div>
+        <div className="mc-delta" style={{ color: o?.wowPct != null && o.wowPct < 0 ? 'var(--bad)' : 'var(--ok)' }}>
+          {o?.wowPct == null ? 'weekly engaged accounts' : `${o.wowPct > 0 ? '▲ +' : '▼ '}${Math.abs(o.wowPct)}% WoW`}
+          <span className="ctx"> · {v ? compact(v.flywheelCount) : '—'} circles</span>
+        </div>
+      </div>
+
+      <div className="mc-ns-mid">
+        <div className="mc-chips" role="list" aria-label="North-star input metrics">
+          <span className="mc-chip">Activation <b>{v?.activationRate == null ? '—' : pct(v.activationRate)}</b></span>
+          <span className="mc-chip">Lessons/d <b>{v?.lessonsPerKidDay ?? '—'}</b></span>
+          <span className="mc-chip">Time/kid <b>{v?.screenMinPerKidDay == null ? '—' : Math.round(v.screenMinPerKidDay) + 'm'}</b></span>
+          <span className="mc-chip">D1 return <b>{v?.d1Retention == null ? '—' : pct(v.d1Retention)}</b></span>
+          <span className="mc-chip">Invites <b>{v ? `${compact(v.invitesAccepted)}/${compact(v.invitesSent)}` : '—'}</b></span>
+        </div>
+        <div className="mc-trend">
+          {o && o.northStar.some(p => p.value > 0) ? (
+            <AreaTrend labels={o.northStar.map(p => p.week)}
+              series={[{ key: 'v', label: 'Weekly engaged', color: 'var(--ch1)', area: true }]}
+              data={o.northStar.map(p => ({ v: p.value }))} height={54} />
+          ) : (
+            <McEmpty inline headline="No engaged weeks yet" body="The trend fills in as accounts return." />
+          )}
+        </div>
+      </div>
+
+      <div className="mc-ns-ctrl">
+        <div className="seg" role="group" aria-label="Date range">
+          {RANGES.map(rg => <button key={rg} className={days === rg ? 'on' : ''} onClick={() => setDays(rg)}>{rg}d</button>)}
+        </div>
+        <div className="mc-live"><span className="mc-dot" />live · updated {ago == null ? '—' : ago < 5 ? 'now' : ago + 's ago'}</div>
       </div>
     </div>
   )
@@ -192,14 +219,19 @@ export function FunnelRail({ o, v, e, r }: { o: GrowthOverview | null; v: Portfo
         </div>
       ))}
       <div className="mc-fill" />
+      <hr className="mc-div" />
       <div>
         <div className="mc-sec">Retention curve · cohort average</div>
-        {curve ? (
-          <AreaTrend labels={curve.map(p => p.label)}
-            series={[{ key: 'v', label: '% still active', color: 'var(--ch2)', area: true }]}
-            data={curve.map(p => ({ v: p.value }))} height={72} valueFmt={x => Math.round(x) + '%'} />
-        ) : <div className="mc-note">Cohorts appear once learners sign up across multiple weeks.</div>}
-        <div className="mc-note">The a16z read: a curve that flattens = product-market pull.</div>
+        <div style={{ marginTop: 7 }}>
+          {curve ? (
+            <>
+              <AreaTrend labels={curve.map(p => p.label)}
+                series={[{ key: 'v', label: '% still active', color: 'var(--ch2)', area: true }]}
+                data={curve.map(p => ({ v: p.value }))} height={64} valueFmt={x => Math.round(x) + '%'} />
+              <div className="mc-note" style={{ marginTop: 4 }}>The a16z read: a curve that flattens = product-market pull.</div>
+            </>
+          ) : <McEmpty inline headline="No cohorts yet" body="Appears once learners sign up across multiple weeks." />}
+        </div>
       </div>
     </div>
   )
@@ -229,8 +261,17 @@ export function AttentionPanel({ o, e, eng, pw, days, hasBeats }: {
     }
   }, [eng])
 
+  // Fewer than 3 days of history: a stacked-column chart reads as "broken" —
+  // one bar floating in empty air. Show the honest shape instead: today's
+  // split by app as ranked bars, framed as day-one rather than a trend.
+  const sparse = !!daily && daily.labels.length < 3
+
   const mix = (o?.activityMix ?? []).filter(m => m.events > 0)
   const power = pw?.histogram?.map(b => ({ label: b.daysActive + 'd', value: b.users })) ?? null
+  // A histogram with 1-2 lit bars out of 14 reads as a broken chart, not a
+  // curve — the shape only becomes informative once repeat visits exist.
+  const powerUsers = power?.reduce((s, b) => s + b.value, 0) ?? 0
+  const powerReady = !!power && powerUsers >= 4
 
   return (
     <div className="card mc-panel mc-at">
@@ -247,13 +288,21 @@ export function AttentionPanel({ o, e, eng, pw, days, hasBeats }: {
       </div>
 
       <div className="mc-fill">
-        {tab === 'attention' && (daily
-          ? <StackedCols labels={daily.labels} series={daily.series} data={daily.data} height={140} valueFmt={fmtDur} />
-          : <MigrationHint />)}
+        {tab === 'attention' && (
+          !daily ? <McEmpty headline="One paste turns this on"
+            body={`Run migration_hq_engagement_v3.sql — every app already ships the tracker, and this fills within minutes of anyone using anything.`} />
+          : sparse ? (
+            <div>
+              <div className="mc-note" style={{ marginBottom: 6 }}>Day one — {daily.labels.length === 1 ? 'today' : `the last ${daily.labels.length} days`}. The daily trend appears once there's more history to compare.</div>
+              <HBars barH={16} labelWidth={110} valueFmt={fmtDur}
+                bars={eng!.apps.map(a => ({ label: appLabel(a.app), value: a.seconds, color: appColor(a.app) }))} />
+            </div>
+          ) : <StackedCols labels={daily.labels} series={daily.series} data={daily.data} height={140} valueFmt={fmtDur} />
+        )}
         {tab === 'mix' && (mix.length > 0
           ? <DonutD3 slices={mix.map((m, idx) => ({ label: kindLabel(m.kind), value: m.events, color: slotColor(idx) }))}
               centerValue={compact(mix.reduce((s, m) => s + m.events, 0))} centerLabel="actions · 30d" size={150} />
-          : <div className="mc-note">Learning actions appear here as kids play.</div>)}
+          : <McEmpty inline headline="No learning actions yet" body="Journey nodes, quests and drills appear here as kids play." />)}
         {tab === 'economy' && (e?.mintBurn && e.mintBurn.length > 0
           ? <AreaTrend labels={e.mintBurn.map(p => p.week)}
               series={[
@@ -261,41 +310,29 @@ export function AttentionPanel({ o, e, eng, pw, days, hasBeats }: {
                 { key: 'burn', label: 'Burn · spent', color: 'var(--ch3)', dash: true },
               ]}
               data={e.mintBurn.map(p => ({ mint: p.mint, burn: p.burn }))} height={140} />
-          : <div className="mc-note">Diamond flows appear here via the ledger.</div>)}
+          : <McEmpty inline headline="No diamond flows yet" body="Mint (earned) and burn (spent) appear here via the ledger." />)}
       </div>
 
       <div className="mc-duo">
         <div>
           <div className="mc-sec">Power-user curve · days active of {days}</div>
-          {power && power.some(b => b.value > 0)
-            ? <VCols values={power} height={84} labelEvery={Math.max(2, Math.floor(power.length / 5))} ariaLabel="Power-user curve" />
-            : <div className="mc-note" style={{ marginTop: 6 }}>Needs <span className="src">migration_hq_engagement_v3.sql</span> — then this shows the a16z habit histogram (right side growing = habit forming).</div>}
+          <div style={{ marginTop: 7 }}>
+            {powerReady
+              ? <VCols values={power!} height={84} labelEvery={Math.max(2, Math.floor(power!.length / 5))} ariaLabel="Power-user curve" />
+              : <McEmpty inline headline={power ? 'Building the curve' : 'Needs v3 migration'}
+                  body={power ? `${powerUsers} ${powerUsers === 1 ? 'person has' : 'people have'} shown up so far — the a16z habit shape (right side growing) appears with more repeat visits.` : 'Then this shows who keeps coming back, and how often.'} />}
+          </div>
         </div>
         <div>
           <div className="mc-sec">Top pages · the gap map</div>
-          {eng && eng.pages.length > 0
-            ? <div style={{ marginTop: 6 }}>
-                {/* color carries the app (same slots everywhere); label stays the page */}
-                <HBars bars={eng.pages.slice(0, 4).map(p => ({
+          <div style={{ marginTop: 7 }}>
+            {eng && eng.pages.length > 0
+              ? <HBars bars={eng.pages.slice(0, 4).map(p => ({
+                  // color carries the app (same slots everywhere); label stays the page
                   label: p.page, value: p.seconds, color: appColor(p.app),
                 }))} valueFmt={fmtDur} labelWidth={110} barH={12} />
-              </div>
-            : <div className="mc-note" style={{ marginTop: 6 }}>Time per page/scene lands here the moment beats flow — low bars on shipped surfaces are the gaps.</div>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MigrationHint() {
-  return (
-    <div style={{ display: 'grid', placeItems: 'center', height: '100%', minHeight: 120 }}>
-      <div style={{ textAlign: 'center', maxWidth: 420 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 650 }}>One paste turns this on</div>
-        <div className="mc-note" style={{ marginTop: 4 }}>
-          Run <span className="src">supabase/migration_hq_engagement_v3.sql</span> in the Supabase SQL editor.
-          All five apps already ship the tracker — minutes later this fills with measured cross-app attention,
-          the moat metric only Arganta can show.
+              : <McEmpty inline headline="No pages tracked yet" body="Time per page/scene lands here the moment beats flow — low bars on shipped surfaces are the gaps to fix." />}
+          </div>
         </div>
       </div>
     </div>
@@ -312,6 +349,12 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
   const devices = (au?.devices ?? []).filter(d => d.device !== 'unknown')
   const devTotal = devices.reduce((s, x) => s + x.seconds, 0)
   const region = (tz: string) => tz.includes('/') ? tz.split('/').pop()!.replace(/_/g, ' ') : tz
+  // A punch card with only a handful of lit cells in a 168-cell grid reads as
+  // "mostly broken", not "day one" — name it plainly instead until there's a
+  // real week of rhythm to show.
+  const litCells = new Set((eng?.punch ?? []).filter(p => p.seconds > 0).map(p => `${p.dow}:${p.hour}`)).size
+  const punchReady = hasBeats && !!eng && litCells >= 6
+
   return (
     <div className="card mc-panel mc-wh">
       <div className="mc-t">Who &amp; when</div>
@@ -321,14 +364,17 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
           slices={eng.apps.map(a => ({ label: appLabel(a.app), value: a.seconds, color: appColor(a.app) }))}
           centerValue={fmtDur(eng.totalSeconds)} centerLabel="total" valueFmt={fmtDur} />
       ) : (
-        <div className="mc-note">Share-of-time donut lights up with the beats pipeline (v3 migration).</div>
+        <McEmpty inline headline="Needs v3 migration" body="Share of time across every app appears here once beats flow." />
       )}
 
       <div>
         <div className="mc-sec">Rhythm of the week</div>
-        {hasBeats && eng && eng.punch.length > 0
-          ? <PunchCard punch={eng.punch} />
-          : <div className="mc-note">Hour-of-week heat: when the family actually plays &amp; learns.</div>}
+        <div style={{ marginTop: 6 }}>
+          {punchReady
+            ? <PunchCard punch={eng!.punch} />
+            : <McEmpty inline headline={hasBeats ? 'Building the rhythm' : 'Needs v3 migration'}
+                body={hasBeats ? `${litCells} time ${litCells === 1 ? 'slot' : 'slots'} logged so far — the weekly heat map fills in as more sessions land.` : 'Hour-of-week heat: when the family actually plays & learns.'} />}
+        </div>
       </div>
 
       {au && (
@@ -336,7 +382,7 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
           <div className="mc-sec">Audience</div>
           {roleTotal > 0 && (
             <>
-              <div className="mc-strip" style={{ marginTop: 5 }} role="img" aria-label="Accounts by role">
+              <div className="mc-strip" style={{ marginTop: 6 }} role="img" aria-label="Accounts by role">
                 {au.roles.map((x, idx) => (
                   <i key={x.role} title={`${x.role} · ${x.count}`} style={{ width: `${Math.max(3, (100 * x.count) / roleTotal)}%`, background: slotColor(idx) }} />
                 ))}
@@ -346,7 +392,7 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
           )}
           {devTotal > 0 && (
             <>
-              <div className="mc-strip" style={{ marginTop: 6 }} role="img" aria-label="Time by device">
+              <div className="mc-strip" style={{ marginTop: 8 }} role="img" aria-label="Time by device">
                 {devices.map((x, idx) => (
                   <i key={x.device} title={`${x.device} · ${fmtDur(x.seconds)}`} style={{ width: `${Math.max(3, (100 * x.seconds) / devTotal)}%`, background: slotColor(idx + 4) }} />
                 ))}
@@ -355,23 +401,23 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
             </>
           )}
           {au.ageBands.some(b => b.band !== 'unknown' && b.count > 0) && (
-            <div className="mc-spl" style={{ marginTop: 5 }}>
+            <div className="mc-spl" style={{ marginTop: 6 }}>
               <span>ages · {au.ageBands.filter(b => b.band !== 'unknown').map(b => `${b.band} ${b.count}`).join(' · ')}</span>
             </div>
           )}
         </div>
       )}
-      {!au && <div className="mc-note">Audience splits (roles · age bands · devices) need the v3 migration.</div>}
+      {!au && <McEmpty inline headline="Needs v3 migration" body="Roles, age bands and devices appear here — aggregate-only, never per-kid." />}
 
       <div className="mc-fill" />
       <div>
         <div className="mc-sec">Regions · timezone, kid-safe</div>
-        {geo && geo.regions.length > 0
-          ? <div style={{ marginTop: 5 }}>
-              <HBars bars={geo.regions.slice(0, 3).map(g => ({ label: region(g.tz), value: g.seconds, color: slotColor(5) }))}
+        <div style={{ marginTop: 6 }}>
+          {geo && geo.regions.length > 0
+            ? <HBars bars={geo.regions.slice(0, 3).map(g => ({ label: region(g.tz), value: g.seconds, color: slotColor(5) }))}
                 valueFmt={fmtDur} labelWidth={86} barH={10} />
-            </div>
-          : <div className="mc-note">Coarse regions from client timezone — never GPS/IP for kids. Fills after v3.</div>}
+            : <McEmpty inline headline="No regions yet" body="Coarse regions from client timezone — never GPS/IP for kids." />}
+        </div>
       </div>
     </div>
   )
@@ -437,7 +483,7 @@ export function FleetMatrix({ i, k, o, v, eng, days }: {
       cellTime('lashira'),
       t('lashira') && t('lashira')!.users > 0 ? { v: (t('lashira')!.sessions / t('lashira')!.users).toFixed(1), u: 'sess / player' } : DASH,
       avgSess('lashira'),
-      { v: 'XP→learn', u: 'kids earn by learning' },
+      { v: 'XP→learn', u: 'reward model' },
     ] },
     { app: 'hq', name: 'Circle HQ', cells: [
       t('hq') ? { v: compact(t('hq')!.users), u: 'operators' } : DASH,
@@ -480,13 +526,16 @@ export function FleetMatrix({ i, k, o, v, eng, days }: {
               <div key={a.app} className="hd">
                 <span className="nm"><i style={{ background: appColor(a.app) }} />{a.name}</span>
                 <span className={'st ' + (connected ? 'ok' : 'mut')}>{connected ? 'Connected' : 'awaiting beats'}</span>
-                {spark.filter(s => s > 0).length > 1 ? <Spark values={spark} color={appColor(a.app)} height={18} /> : <div style={{ height: 18 }} />}
+                <div className="spark-row">
+                  {spark.filter(s => s > 0).length > 1 && <Spark values={spark} color={appColor(a.app)} height={18} />}
+                </div>
               </div>
             )
           })}
-          {/* metric rows */}
+          {/* metric rows — alternating tint so a 5-column, 8-row grid stays
+              scannable left-to-right without re-counting columns each time */}
           {ROWS.map((row, ri) => (
-            <FleetRow key={row} label={row} cells={APPS.map(a => a.cells[ri])} />
+            <FleetRow key={row} label={row} cells={APPS.map(a => a.cells[ri])} zebra={ri % 2 === 1} />
           ))}
         </div>
       </div>
@@ -494,12 +543,13 @@ export function FleetMatrix({ i, k, o, v, eng, days }: {
   )
 }
 
-function FleetRow({ label, cells }: { label: string; cells: Cell[] }) {
+function FleetRow({ label, cells, zebra }: { label: string; cells: Cell[]; zebra: boolean }) {
+  const bg = zebra ? { background: 'var(--bg2)' } : undefined
   return (
     <>
-      <div className="rl">{label}</div>
+      <div className="rl" style={bg}>{label}</div>
       {cells.map((c, idx) => (
-        <div key={idx} className="cell">
+        <div key={idx} className="cell" style={bg}>
           <span className={'v' + (c.dim ? ' dim' : '')}>{c.v}</span>
           {c.u && <span className="u">{c.u}</span>}
         </div>
