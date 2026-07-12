@@ -1,0 +1,433 @@
+<title>Portfolio v3 — Glance redesign concept</title>
+<style>
+  :root {
+    --bg:#ffffff; --bg2:#fafafa; --bg3:#f3f3f5; --canvas:#f6f6f8;
+    --ink:#141417; --ink2:#55555f; --ink3:#9a9aa4;
+    --bd:#ececef; --bd2:#e2e2e6;
+    --acc:#6366f1; --acc-soft:#eef1ff; --acc-ink:#4338ca;
+    --ok:#16a34a; --watch:#d97706; --bad:#dc2626;
+    --a1:#6366f1; --a2:#0d9488; --a3:#db2777; --a4:#d97706; --a5:#7c3aed;
+    --sh:0 1px 2px rgba(18,18,25,.05);
+    --sh2:0 4px 20px rgba(18,18,25,.06);
+    --r:14px; --r2:9px;
+    --font:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){ :root{
+    --bg:#111117; --bg2:#16161d; --bg3:#1e1e26; --canvas:#0b0b0f;
+    --ink:#f3f3f5; --ink2:#a3a3ad; --ink3:#6a6a76;
+    --bd:#25252e; --bd2:#2f2f3a; --acc-soft:#1c1a38; --acc-ink:#a5b4fc;
+    --ok:#4ade80; --watch:#fbbf24; --bad:#f87171;
+    --a3:#ec4899; --a5:#8b5cf6;
+    --sh:0 1px 2px rgba(0,0,0,.4); --sh2:0 6px 24px rgba(0,0,0,.35);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#111117; --bg2:#16161d; --bg3:#1e1e26; --canvas:#0b0b0f;
+    --ink:#f3f3f5; --ink2:#a3a3ad; --ink3:#6a6a76;
+    --bd:#25252e; --bd2:#2f2f3a; --acc-soft:#1c1a38; --acc-ink:#a5b4fc;
+    --ok:#4ade80; --watch:#fbbf24; --bad:#f87171;
+    --a3:#ec4899; --a5:#8b5cf6;
+    --sh:0 1px 2px rgba(0,0,0,.4); --sh2:0 6px 24px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"]{
+    --bg:#ffffff; --bg2:#fafafa; --bg3:#f3f3f5; --canvas:#f6f6f8;
+    --ink:#141417; --ink2:#55555f; --ink3:#9a9aa4;
+    --bd:#ececef; --bd2:#e2e2e6; --acc-soft:#eef1ff; --acc-ink:#4338ca;
+    --ok:#16a34a; --watch:#d97706; --bad:#dc2626;
+    --a3:#db2777; --a5:#7c3aed;
+    --sh:0 1px 2px rgba(18,18,25,.05); --sh2:0 4px 20px rgba(18,18,25,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--canvas);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .mono{font-variant-numeric:tabular-nums}
+  .cap{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+
+  /* ── app chrome (context only) ── */
+  .top{height:52px;display:flex;align-items:center;gap:12px;padding:0 22px;border-bottom:1px solid var(--bd);background:var(--bg)}
+  .top .mark{width:22px;height:22px;border-radius:6px;background:var(--a3);display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800}
+  .top .crumb{font-size:13px;color:var(--ink3)} .top .crumb b{color:var(--ink);font-weight:600}
+  .top .sp{flex:1}
+  .tbtn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--ink2);border:1px solid transparent;cursor:pointer}
+  .tbtn:hover{background:var(--bg3)}
+
+  /* ── deck ── */
+  .deck{padding:12px 18px;display:grid;gap:11px;grid-template-rows:auto auto auto;max-width:1840px;margin:0 auto}
+  .card{background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r);box-shadow:var(--sh)}
+  .pad{padding:16px 18px}
+  .htitle{font-size:14.5px;font-weight:650;letter-spacing:-.01em}
+  .hsub{font-size:10.5px;color:var(--ink3);margin-top:2px}
+  .divi{height:1px;background:var(--bd);border:0}
+
+  /* ── 1 · PULSE ── */
+  .pulse{display:grid;grid-template-columns:290px 1fr;gap:0;overflow:hidden;height:186px}
+  .pulse-id{padding:14px 20px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--bd)}
+  .pulse-id .num{font-size:50px;font-weight:650;letter-spacing:-.03em;line-height:.98;margin-top:2px}
+  .pulse-id .delta{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:650;color:var(--bad);margin-top:4px}
+  .pulse-id .delta .ctx{color:var(--ink3);font-weight:500}
+  .pulse-main{display:flex;flex-direction:column;min-width:0}
+  .pulse-head{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 18px 0}
+  .seg{display:inline-flex;padding:3px;background:var(--bg3);border:1px solid var(--bd2);border-radius:999px;gap:2px}
+  .seg button{font-size:11px;font-weight:600;color:var(--ink3);padding:4px 12px;border-radius:999px;border:0;background:transparent;cursor:pointer;font-family:inherit}
+  .seg button.on{background:var(--bg);color:var(--ink);box-shadow:var(--sh)}
+  .live{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink3);margin-top:8px;justify-content:flex-end;padding-right:2px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 50%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  @media(prefers-reduced-motion:reduce){.dot{animation:none}}
+  .trend{flex:1;min-height:0;padding:0 10px}
+  .inputs{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--bd)}
+  .inputs .i{padding:9px 16px;border-right:1px solid var(--bd)}
+  .inputs .i:last-child{border-right:0}
+  .inputs .i .l{font-size:10px;color:var(--ink3);font-weight:600}
+  .inputs .i .v{font-size:16px;font-weight:650;letter-spacing:-.01em;margin-top:1px}
+  .inputs .i .v b{color:var(--ink)} .inputs .i .v span{color:var(--ink3);font-weight:500;font-size:12px}
+
+  /* ── mid band ── */
+  .mid{display:grid;grid-template-columns:minmax(270px,3fr) minmax(0,5.6fr) minmax(250px,3fr);gap:12px}
+
+  /* ── 2 · FUNNEL (bullet rows) ── */
+  .funnel{display:flex;flex-direction:column;gap:0}
+  .frow{display:grid;grid-template-columns:1fr 96px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)}
+  .frow:last-of-type{border-bottom:0}
+  .frow .fl{font-size:12px;color:var(--ink2);font-weight:600}
+  .frow .track{position:relative;height:7px;border-radius:4px;background:var(--bg3);margin-top:6px}
+  .frow .track .zone{position:absolute;top:0;bottom:0;right:0;border-radius:4px;background:color-mix(in srgb,var(--ok) 9%,transparent)}
+  .frow .track .val{position:absolute;top:0;bottom:0;left:0;border-radius:4px}
+  .frow .track .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink3);opacity:.55;border-radius:2px}
+  .frow .fr{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+  .frow .fr .n{font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .frow .sdot{width:8px;height:8px;border-radius:50%;flex:none}
+
+  /* ── 3 · MOAT ── */
+  .moat-bars{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+  .mbar{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center}
+  .mbar .ml{font-size:12px;color:var(--ink2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mbar .mt{height:18px;border-radius:5px;background:var(--bg3);overflow:hidden}
+  .mbar .mt i{display:block;height:100%;border-radius:5px}
+  .mbar .mv{font-size:13px;font-weight:700;min-width:40px;text-align:right}
+
+  .moatgrid{display:grid;grid-template-columns:132px 1fr;gap:18px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
+  .donut-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .donut{width:104px;height:104px;border-radius:50%;position:relative;
+    -webkit-mask:radial-gradient(circle,transparent 56%,#000 57%);mask:radial-gradient(circle,transparent 56%,#000 57%)}
+  .donut .c{position:absolute;inset:0;display:grid;place-items:center}
+  .donut-lab{text-align:center;margin-top:6px}
+  .donut-lab .dv{font-size:18px;font-weight:700;letter-spacing:-.01em}
+  .donut-lab .dl{font-size:10px;color:var(--ink3)}
+  .pages{display:flex;flex-direction:column;gap:8px}
+  .prow{display:grid;grid-template-columns:120px 1fr auto;gap:10px;align-items:center}
+  .prow .pl{font-size:11.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prow .pt{height:8px;border-radius:4px;background:var(--bg3);overflow:hidden}
+  .prow .pt i{display:block;height:100%;border-radius:4px}
+  .prow .pv{font-size:11.5px;font-weight:700;min-width:34px;text-align:right}
+
+  .spark-note{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
+  .spark-note .txt{font-size:11px;color:var(--ink3);line-height:1.45}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:10.5px;color:var(--ink2)}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:8px;height:8px;border-radius:2.5px}
+
+  /* ── 4 · CONTEXT ribbon ── */
+  .context{display:grid;grid-template-columns:1.4fr 1.6fr 1fr;gap:0}
+  .ctx-cell{padding:12px 18px;border-right:1px solid var(--bd);display:flex;flex-direction:column;gap:7px}
+  .ctx-cell:last-child{border-right:0}
+  .ctx-head{display:flex;align-items:baseline;justify-content:space-between}
+  .ctx-more{font-size:10px;color:var(--acc);font-weight:600}
+  .rolebar{display:flex;height:9px;border-radius:5px;overflow:hidden;gap:2px}
+  .rolebar i{display:block}
+  .rolelab{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3)}
+  .punch{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:center}
+  .punch .grid{display:grid;grid-template-columns:repeat(24,1fr);grid-template-rows:repeat(7,9px);gap:2px}
+  .punch .grid i{border-radius:2px;background:var(--a1)}
+  .punch .days{display:grid;grid-template-rows:repeat(7,9px);font-size:8px;color:var(--ink3);gap:2px;text-align:right;line-height:9px}
+  .where{display:flex;align-items:center;gap:12px}
+  .where .globe{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--a2) 12%,transparent);color:var(--a2);font-size:18px;flex:none}
+  .where .wv{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .where .wl{font-size:11px;color:var(--ink3)}
+
+  /* ── 5 · FLEET ── */
+  .fleet .fhead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .fmx{display:grid;grid-template-columns:110px repeat(5,1fr);column-gap:14px}
+  .fmx .hd{padding-bottom:9px;border-bottom:1.5px solid var(--bd2);display:flex;flex-direction:column;gap:4px}
+  .fmx .hd .nm{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;white-space:nowrap}
+  .fmx .hd .nm i{width:8px;height:8px;border-radius:2.5px;flex:none}
+  .fmx .hd .st{font-size:9px;font-weight:700;padding:1px 8px;border-radius:999px;width:fit-content;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+  .fmx .rl{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;padding:5px 6px;border-bottom:1px solid var(--bd)}
+  .fmx .cell{display:flex;align-items:baseline;gap:5px;padding:5px 6px;border-bottom:1px solid var(--bd)}
+  .fmx .cell .v{font-size:14px;font-weight:700;letter-spacing:-.01em}
+  .fmx .cell .v.dim{color:var(--ink3);font-weight:500}
+  .fmx .cell .u{font-size:9.5px;color:var(--ink3);white-space:nowrap}
+  .fmx .rl.z,.fmx .cell.z{background:var(--bg2)}
+  .fmx .rl.last,.fmx .cell.last{border-bottom:0}
+
+  /* ── annotations (the pitch, below the fold) ── */
+  .why{max-width:1840px;margin:22px auto 60px;padding:0 18px}
+  .why h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+  .why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .why-card{background:var(--bg);border:1px solid var(--bd2);border-radius:12px;padding:16px 18px}
+  .why-card h3{font-size:13.5px;font-weight:650;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+  .why-card h3 .k{width:22px;height:22px;border-radius:7px;background:var(--acc-soft);color:var(--acc-ink);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+  .why-card p{font-size:12px;color:var(--ink2);line-height:1.55}
+  .why-card .old{color:var(--bad);font-weight:600} .why-card .new{color:var(--ok);font-weight:600}
+  .ribbon{max-width:1840px;margin:16px auto 0;padding:0 18px}
+  .ribbon .r{background:color-mix(in srgb,var(--acc) 8%,transparent);border:1px solid color-mix(in srgb,var(--acc) 22%,transparent);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--ink);display:flex;gap:10px;align-items:flex-start}
+
+  @media(max-width:1180px){
+    .pulse{grid-template-columns:1fr} .pulse-id{border-right:0;border-bottom:1px solid var(--bd)}
+    .mid{grid-template-columns:1fr 1fr} .context{grid-template-columns:1fr}
+    .ctx-cell{border-right:0;border-bottom:1px solid var(--bd)}
+    .fmx{grid-template-columns:96px repeat(5,minmax(96px,1fr));overflow-x:auto}
+  }
+  @media(max-width:760px){ .mid{grid-template-columns:1fr} .inputs{grid-template-columns:repeat(2,1fr)} }
+</style>
+
+<div class="top">
+  <span class="mark">◆</span>
+  <span class="crumb">Circle HQ / <b>Portfolio</b></span>
+  <span class="sp"></span>
+  <button class="tbtn" id="theme" title="Toggle theme">◐</button>
+</div>
+
+<div class="deck">
+
+  <!-- ═══ 1 · PULSE ═══ -->
+  <div class="card pulse">
+    <div class="pulse-id">
+      <span class="cap">Ecosystem north star</span>
+      <span class="num mono">5</span>
+      <span class="delta"><span>▼ 37.5%</span><span class="ctx">WoW · 4 active circles</span></span>
+      <div style="flex:1"></div>
+      <span class="hsub">Weekly engaged accounts — active learners + circles. The one number the whole company moves.</span>
+    </div>
+    <div class="pulse-main">
+      <div class="pulse-head">
+        <div><div class="htitle">Momentum</div><div class="hsub">distinct weekly engaged accounts · last 8 weeks</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end">
+          <div class="seg"><button>7d</button><button class="on">14d</button><button>30d</button></div>
+          <div class="live"><span class="dot"></span>live · updated 29s ago</div>
+        </div>
+      </div>
+      <div class="trend"><svg id="ns" viewBox="0 0 900 150" preserveAspectRatio="none" width="100%" height="100%" style="display:block"></svg></div>
+      <div class="inputs">
+        <div class="i"><div class="l">Activation</div><div class="v mono"><b>57.9%</b></div></div>
+        <div class="i"><div class="l">Lessons / day</div><div class="v mono"><b>14.4</b></div></div>
+        <div class="i"><div class="l">Time / kid / day</div><div class="v mono"><b>14m</b></div></div>
+        <div class="i"><div class="l">D1 return</div><div class="v mono"><b>72.5%</b></div></div>
+        <div class="i"><div class="l">Invites accepted</div><div class="v mono"><b>10</b><span>/11</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MID BAND ═══ -->
+  <div class="mid">
+
+    <!-- 2 · FUNNEL -->
+    <div class="card pad">
+      <div class="htitle">The growth funnel</div>
+      <div class="hsub">AARRR · number is the truth, bar shows vs benchmark, dot is the verdict</div>
+      <div class="funnel" style="margin-top:10px" id="funnel"></div>
+      <div class="spark-note">
+        <svg width="96" height="26" viewBox="0 0 96 26" style="flex:none">
+          <path d="M2,6 L34,14 L66,19 L94,20" fill="none" stroke="var(--a2)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="2" cy="6" r="2.6" fill="var(--a2)"/><circle cx="94" cy="20" r="2.6" fill="var(--a2)" stroke="var(--bg)" stroke-width="1.5"/>
+        </svg>
+        <span class="txt">Retention curve holds W0→W3. A flattening tail is the a16z signal for product-market pull. <b style="color:var(--acc)">Full cohort triangle in Growth →</b></span>
+      </div>
+    </div>
+
+    <!-- 3 · MOAT -->
+    <div class="card pad">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <div><div class="htitle">Where attention goes — the moat</div><div class="hsub">measured time-on-page across every app · last 14 days</div></div>
+        <span class="ctx-more" style="font-size:11px">2.9h total</span>
+      </div>
+      <div class="moat-bars" id="moatbars"></div>
+      <div class="moatgrid">
+        <div class="donut-wrap">
+          <div class="donut" id="donut"><div class="c"></div></div>
+        </div>
+        <div>
+          <div class="cap" style="margin-bottom:8px">Top pages · the gap map</div>
+          <div class="pages" id="pages"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- share / legend column folds into moat on wide; kept as moat's donut. Third mid col = compact insight -->
+    <div class="card pad" style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="htitle">Read of the week</div><div class="hsub">what the numbers are telling you</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="ins" style="display:flex;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--bad);margin-top:5px;flex:none"></span>
+          <span style="font-size:12px;color:var(--ink2);line-height:1.5"><b style="color:var(--ink)">Re-engage before you acquire.</b> WAU is down 37.5% and acquisition is at −100% — the leak is retention, not top-of-funnel.</span></div>
+        <div class="ins" style="display:flex;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);margin-top:5px;flex:none"></span>
+          <span style="font-size:12px;color:var(--ink2);line-height:1.5"><b style="color:var(--ink)">The moat is intact.</b> 100% of circles have an active learner — the cross-app loop is working even as the raw count dips.</span></div>
+        <div class="ins" style="display:flex;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:var(--watch);margin-top:5px;flex:none"></span>
+          <span style="font-size:12px;color:var(--ink2);line-height:1.5"><b style="color:var(--ink)">Engagement is the watch item.</b> Stickiness 13.3% sits below the 20% habit benchmark — the next lever to pull.</span></div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="legend">
+        <span><i style="background:var(--a4)"></i>Circle HQ</span><span><i style="background:var(--a1)"></i>ArgantaLab</span>
+        <span><i style="background:var(--a5)"></i>Landing</span><span><i style="background:var(--a2)"></i>KinetikCircle</span>
+        <span><i style="background:var(--a3)"></i>LashiraBloom</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 4 · CONTEXT ribbon ═══ -->
+  <div class="card context">
+    <div class="ctx-cell">
+      <div class="ctx-head"><span class="cap">Who · by role</span><span class="ctx-more">breakdown in Growth →</span></div>
+      <div class="rolebar"><i style="width:58%;background:var(--a1)"></i><i style="width:37%;background:var(--a2)"></i><i style="width:5%;background:var(--a4)"></i></div>
+      <div class="rolelab"><span>kids · 11</span><span>users · 7</span><span>operator · 1</span></div>
+    </div>
+    <div class="ctx-cell">
+      <div class="ctx-head"><span class="cap">When · rhythm of the week</span><span class="ctx-more">peaks Sun evenings</span></div>
+      <div class="punch"><div class="days" id="pdays"></div><div class="grid" id="pgrid"></div></div>
+    </div>
+    <div class="ctx-cell">
+      <div class="ctx-head"><span class="cap">Where · top region</span><span class="ctx-more">map in Growth →</span></div>
+      <div class="where"><span class="globe">🌍</span><div><div class="wv mono">Qatar</div><div class="wl">1.8h · timezone-derived, kid-safe</div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ 5 · FLEET ═══ -->
+  <div class="card pad fleet">
+    <div class="fhead"><div class="htitle">App fleet — the same 8 questions, answered by every product</div><div class="hsub">grey cells fill as the beats pipeline reports</div></div>
+    <div class="fmx" id="fmx"></div>
+  </div>
+</div>
+
+<!-- ═══ THE PITCH ═══ -->
+<div class="ribbon"><div class="r">
+  <span style="font-size:15px">💡</span>
+  <span><b>The one decision:</b> this concept moves the analyst charts — power-user histogram, cohort triangle, region map, device split, per-page detail — off Portfolio and <b>into the Growth tab</b>. That trade is what buys the breathing room. Portfolio becomes the 60-second glance; Growth stays the drill-down.</span>
+</div></div>
+
+<div class="why">
+  <h2>Why this reads as "pixel perfect" and the old one didn't</h2>
+  <div class="why-grid">
+    <div class="why-card"><h3><span class="k">1</span>Fewer, bigger, confident</h3>
+      <p>The old screen crammed <span class="old">7 modules</span> in and shrank each until nothing had presence — flat gray text everywhere. This shows <span class="new">5 zones</span>, each large enough to land. Hierarchy is the fix, not smaller pixels.</p></div>
+    <div class="why-card"><h3><span class="k">2</span>An honest funnel</h3>
+      <p>Old bars were normalized to a benchmark, so "<span class="old">−100%</span>" looked catastrophic and "1143%" maxed out — unreadable. New: the <span class="new">number is the truth</span>, the bar just shows where you sit vs benchmark, a dot is the verdict.</p></div>
+    <div class="why-card"><h3><span class="k">3</span>One design system</h3>
+      <p>Old mixed sentence-case titles, <span class="old">ALL-CAPS section headers</span> and cryptic keys ("num", "farm-perso…"). New: one type scale, one micro-label style, an 8px rhythm, humanized labels, tabular figures.</p></div>
+    <div class="why-card"><h3><span class="k">4</span>The moat gets the stage</h3>
+      <p>Measured cross-app attention is the story only Arganta can tell, so it's the <span class="new">centerpiece</span> — big ranked bars + share donut — not a sliver fighting a broken-looking histogram for space.</p></div>
+    <div class="why-card"><h3><span class="k">5</span>Context, not clutter</h3>
+      <p>The old right rail crammed <span class="old">5 sub-charts</span> into one narrow column. New: one elegant <span class="new">who · when · where ribbon</span>; the deep breakdowns each get real room in Growth.</p></div>
+    <div class="why-card"><h3><span class="k">6</span>Sparse-aware by design</h3>
+      <p>Day-one data stays honest ranked bars framed as "early days," never a shrunk chart pretending to be a trend. It looks <span class="new">intentional</span>, not broken.</p></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  try{var t=localStorage.getItem('pv3theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(e){}
+  var seed=9; function rnd(){return (seed=(seed*16807)%2147483647)/2147483647}
+  var app={a1:getC('--a1'),a2:getC('--a2'),a3:getC('--a3'),a4:getC('--a4'),a5:getC('--a5')};
+  function getC(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#888'}
+
+  // north-star trend
+  (function(){
+    var svg=document.getElementById('ns'); var W=900,H=150,pad=14;
+    var vals=[3,3,4,5,6,12,8,5]; var wk=['05-18','05-25','06-01','06-08','06-15','06-22','06-29','07-06'];
+    var max=13,n=vals.length;
+    var X=function(i){return pad+i*(W-pad*2)/(n-1)}, Y=function(v){return 18+(1-v/max)*(H-40)};
+    var d='',a=''; vals.forEach(function(v,i){d+=(i?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1)+' '});
+    a=d+'L'+X(n-1).toFixed(1)+','+(H-16)+' L'+X(0).toFixed(1)+','+(H-16)+' Z';
+    var g='<defs><linearGradient id="ng" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+app.a1+'" stop-opacity=".18"/><stop offset="1" stop-color="'+app.a1+'" stop-opacity="0"/></linearGradient></defs>';
+    [0.25,0.5,0.75].forEach(function(f){var gy=18+f*(H-40);g+='<line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+gy+'" y2="'+gy+'" stroke="var(--bd)" stroke-width="1"/>'});
+    g+='<path d="'+a+'" fill="url(#ng)"/><path d="'+d+'" fill="none" stroke="'+app.a1+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    g+='<circle cx="'+X(n-1)+'" cy="'+Y(vals[n-1])+'" r="4.5" fill="'+app.a1+'" stroke="var(--bg)" stroke-width="2.5"/>';
+    g+='<text x="'+(X(n-1)-8)+'" y="'+(Y(vals[n-1])-10)+'" font-size="13" font-weight="700" fill="var(--ink2)" text-anchor="end">5</text>';
+    wk.forEach(function(w,i){g+='<text x="'+X(i)+'" y="'+(H-3)+'" font-size="9.5" fill="var(--ink3)" text-anchor="middle">'+w+'</text>'});
+    svg.innerHTML=g;
+  })();
+
+  // funnel bullet rows
+  (function(){
+    var rows=[
+      {l:'Acquisition',n:'−100%',pct:2,status:'bad'},
+      {l:'Activation',n:'57.9%',pct:88,status:'ok'},
+      {l:'Engagement',n:'13.3%',pct:40,status:'watch'},
+      {l:'Retention D1',n:'72.5%',pct:95,status:'ok'},
+      {l:'Referral k',n:'10.0',pct:92,status:'ok'},
+      {l:'Monetization',n:'1143%',pct:100,status:'ok'}
+    ];
+    var sc={ok:getC('--ok'),watch:getC('--watch'),bad:getC('--bad')};
+    var acc={ok:app.a2,watch:app.a4,bad:sc.bad};
+    document.getElementById('funnel').innerHTML=rows.map(function(r){
+      return '<div class="frow"><div><div class="fl">'+r.l+'</div>'+
+        '<div class="track"><span class="zone" style="width:42%"></span><span class="val" style="width:'+r.pct+'%;background:'+acc[r.status]+'"></span><span class="tick" style="left:58%"></span></div></div>'+
+        '<div class="fr"><span class="n mono">'+r.n+'</span><span class="sdot" style="background:'+sc[r.status]+'"></span></div></div>';
+    }).join('');
+  })();
+
+  // moat ranked bars
+  (function(){
+    var bars=[
+      {l:'Circle HQ',v:'1.2h',pct:100,c:app.a4},
+      {l:'ArgantaLab',v:'1.2h',pct:98,c:app.a1},
+      {l:'Landing',v:'23m',pct:32,c:app.a5},
+      {l:'KinetikCircle',v:'1m',pct:3,c:app.a2},
+      {l:'LashiraBloom',v:'40s',pct:2,c:app.a3}
+    ];
+    document.getElementById('moatbars').innerHTML=bars.map(function(b){
+      return '<div class="mbar"><span class="ml">'+b.l+'</span><span class="mt"><i style="width:'+Math.max(3,b.pct)+'%;background:'+b.c+'"></i></span><span class="mv mono">'+b.v+'</span></div>';
+    }).join('');
+    // donut
+    var d=document.getElementById('donut');
+    var stops=[[app.a4,43],[app.a1,42],[app.a5,14],[app.a2,1]]; // lashira ~0 omitted
+    var acc=0,seg=[]; stops.forEach(function(s){var a0=acc, a1=acc+s[1]; seg.push(s[0]+' '+a0+'% '+a1+'%'); acc=a1;});
+    d.style.background='conic-gradient('+seg.join(',')+', var(--bg3) '+acc+'% 100%)';
+    d.querySelector('.c').innerHTML='<div class="donut-lab"><div class="dv mono">2.9h</div><div class="dl">total</div></div>';
+    // top pages (humanized labels)
+    var pages=[{l:'Number practice',v:'27m',pct:100,c:app.a1},{l:'Music studio',v:'23m',pct:85,c:app.a4},{l:'Portfolio',v:'17m',pct:63,c:app.a4},{l:'Parent hub',v:'11m',pct:41,c:app.a1}];
+    document.getElementById('pages').innerHTML=pages.map(function(p){
+      return '<div class="prow"><span class="pl">'+p.l+'</span><span class="pt"><i style="width:'+p.pct+'%;background:'+p.c+'"></i></span><span class="pv mono">'+p.v+'</span></div>';
+    }).join('');
+  })();
+
+  // context punch
+  (function(){
+    var days=['Sun','','','Wed','','','Sat'];
+    document.getElementById('pdays').innerHTML=days.map(function(d){return '<span>'+d+'</span>'}).join('');
+    var g='';
+    for(var r=0;r<7;r++)for(var c=0;c<24;c++){
+      var evening=(c>=18&&c<=22)?0.85:(c>=8&&c<=11?0.4:0.12);
+      var wknd=(r===0||r===6)?1.4:1;
+      var v=Math.min(1,Math.max(0,(rnd()*0.4+evening)*wknd-0.12));
+      g+='<i style="opacity:'+(v<0.06?0.06:(0.14+v*0.86).toFixed(2))+'"></i>';
+    }
+    document.getElementById('pgrid').innerHTML=g;
+  })();
+
+  // fleet matrix
+  (function(){
+    var apps=[
+      {nm:'KinetikCircle',c:app.a2,cells:[['18','members'],['4','circles'],['0','posts·7d'],['3','reactions'],['1m','14d'],['10.7','cal/day'],['100%','flywheel'],['$0.40','sub/fam']]},
+      {nm:'ArgantaLab',c:app.a1,cells:[['19','learners'],['0','new·7d'],['14.4','lessons/d'],['82%','accuracy'],['1.2h','14d'],['13.3%','stickiness'],['72.5%','D1 back'],['$0.96','sub+IAP']]},
+      {nm:'LashiraBloom',c:app.a3,cells:[['1','players'],['3','scenes'],['5s','in realms'],['Personal farm','top page'],['40s','14d'],['2.0','sess/player'],['20s','avg session'],['XP→learn','reward']]},
+      {nm:'Circle HQ',c:app.a4,cells:[['2','operators'],['17','surfaces'],['Music studio','top page'],['421','interactions'],['1.2h','14d'],['1/14','days active'],['7m','avg session'],['$0','infra/mo']]},
+      {nm:'Landing',c:app.a5,cells:[['4','visitors'],['7','sections'],['Products','top page'],['161','interactions'],['23m','14d'],['2.8','visits/pp'],['2m','avg session'],['—','—']]}
+    ];
+    var rows=['People','Reach','Core action','Depth','Time','Habit','Comeback','Value'];
+    var h='<div class="hd"></div>';
+    apps.forEach(function(a){h+='<div class="hd"><span class="nm"><i style="background:'+a.c+'"></i>'+a.nm+'</span><span class="st">Connected</span></div>';});
+    rows.forEach(function(rl,ri){
+      var z=ri%2===1?' z':''; var last=ri===rows.length-1?' last':'';
+      h+='<div class="rl'+z+last+'">'+rl+'</div>';
+      apps.forEach(function(a){var cell=a.cells[ri];var dim=(cell[0]==='—'||cell[0]==='0')?' dim':'';
+        h+='<div class="cell'+z+last+'"><span class="v'+dim+' mono">'+cell[0]+'</span><span class="u">'+cell[1]+'</span></div>';});
+    });
+    document.getElementById('fmx').innerHTML=h;
+  })();
+
+  document.getElementById('theme').onclick=function(){
+    var d=document.documentElement; var cur=d.getAttribute('data-theme');
+    var next=cur==='dark'?'light':(cur==='light'?'dark':(matchMedia('(prefers-color-scheme:dark)').matches?'light':'dark'));
+    try{localStorage.setItem('pv3theme',next);}catch(e){}
+    d.setAttribute('data-theme',next); location.reload();
+  };
+})();
+</script>
