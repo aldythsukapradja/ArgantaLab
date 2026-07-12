@@ -51,7 +51,7 @@ function McEmpty({ headline, body, inline = false }: { headline: string; body: s
 // card elsewhere in HQ); ArgantaLab/Circle HQ reuse the exact icon+color
 // their own nav rail uses (GraduationCap/mag and CircleDashed/mag); Lashira
 // and Landing get a coherent new mark in their app-slot color.
-function AppLogo({ app, size = 22 }: { app: string; size?: number }) {
+function AppLogo({ app, size = 20 }: { app: string; size?: number }) {
   if (app === 'kinetik') {
     return (
       <svg width={size} height={size} viewBox="0 0 44 44" role="img" aria-label="KinetikCircle" style={{ flex: 'none' }}>

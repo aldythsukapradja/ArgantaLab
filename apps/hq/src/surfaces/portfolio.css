@@ -108,20 +108,20 @@
 .mc-empty.mc-empty-inline { min-height: 0; padding: 8px 12px; }
 
 /* ── fleet matrix ── */
-.mc-fl { padding: 10px 14px 8px; overflow-y: auto; overflow-x: hidden; }
+.mc-fl { padding: 8px 14px 6px; overflow-y: auto; overflow-x: hidden; }
 .mc-mx-scroll { overflow-x: auto; }
 .mc-mx { display: grid; grid-template-columns: 104px repeat(5, minmax(122px, 1fr)); column-gap: 12px; min-width: 720px; }
-.mc-mx .hd { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; border-bottom: 1.5px solid var(--bd2); min-width: 0; }
-.mc-mx .hd .nm { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
-.mc-mx .hd .st { font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px; width: fit-content; letter-spacing: .01em; margin-left: 30px; }
+.mc-mx .hd { display: flex; flex-direction: column; gap: 4px; padding-bottom: 5px; border-bottom: 1.5px solid var(--bd2); min-width: 0; }
+.mc-mx .hd .nm { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.mc-mx .hd .st { font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px; width: fit-content; letter-spacing: .01em; margin-left: 27px; }
 .mc-mx .st.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
 .mc-mx .st.mut { background: var(--bg3); color: var(--tx3); }
-.mc-mx .spark-row { height: 16px; border-bottom: 1px solid var(--bd); }
+.mc-mx .spark-row { height: 15px; border-bottom: 1px solid var(--bd); }
 .mc-mx .rl { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tx3);
-  display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--bd); padding: 5px 0; }
+  display: flex; align-items: center; gap: 5px; border-bottom: 1px solid var(--bd); padding: 4px 0; }
 .mc-mx .rl-ic { flex: none; color: var(--tx3); opacity: .85; }
 .mc-mx .cell { display: flex; align-items: center; gap: 5px; border-bottom: 1px solid var(--bd);
-  padding: 5px 0; min-width: 0; }
+  padding: 4px 0; min-width: 0; }
 .mc-mx .cell svg { flex: none; }
 .mc-mx .cell .v { font-size: 14px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mc-mx .cell .v.dim { color: var(--tx3); font-weight: 500; }
