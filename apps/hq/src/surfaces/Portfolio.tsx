@@ -275,9 +275,10 @@ export function AttentionPanel({ o, e, eng, pw, days, hasBeats }: {
           <div className="mc-sec">Top pages · the gap map</div>
           {eng && eng.pages.length > 0
             ? <div style={{ marginTop: 6 }}>
+                {/* color carries the app (same slots everywhere); label stays the page */}
                 <HBars bars={eng.pages.slice(0, 4).map(p => ({
-                  label: `${appLabel(p.app)} · ${p.page}`, value: p.seconds, color: appColor(p.app),
-                }))} valueFmt={fmtDur} labelWidth={150} barH={12} />
+                  label: p.page, value: p.seconds, color: appColor(p.app),
+                }))} valueFmt={fmtDur} labelWidth={110} barH={12} />
               </div>
             : <div className="mc-note" style={{ marginTop: 6 }}>Time per page/scene lands here the moment beats flow — low bars on shipped surfaces are the gaps.</div>}
         </div>
@@ -306,7 +307,10 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
   eng: EngagementData | null; au: AudienceData | null; geo: GeoData | null; hasBeats: boolean
 }) {
   const roleTotal = au?.roles.reduce((s, x) => s + x.count, 0) ?? 0
-  const devTotal = au?.devices.reduce((s, x) => s + x.seconds, 0) ?? 0
+  // beats older than the v3 sensor columns have device=null → 'unknown';
+  // exclude them so the split reflects real device signal, not history
+  const devices = (au?.devices ?? []).filter(d => d.device !== 'unknown')
+  const devTotal = devices.reduce((s, x) => s + x.seconds, 0)
   const region = (tz: string) => tz.includes('/') ? tz.split('/').pop()!.replace(/_/g, ' ') : tz
   return (
     <div className="card mc-panel mc-wh">
@@ -343,11 +347,11 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
           {devTotal > 0 && (
             <>
               <div className="mc-strip" style={{ marginTop: 6 }} role="img" aria-label="Time by device">
-                {au.devices.map((x, idx) => (
+                {devices.map((x, idx) => (
                   <i key={x.device} title={`${x.device} · ${fmtDur(x.seconds)}`} style={{ width: `${Math.max(3, (100 * x.seconds) / devTotal)}%`, background: slotColor(idx + 4) }} />
                 ))}
               </div>
-              <div className="mc-spl">{au.devices.slice(0, 3).map(x => <span key={x.device}>{x.device} {Math.round((100 * x.seconds) / devTotal)}%</span>)}</div>
+              <div className="mc-spl">{devices.slice(0, 3).map(x => <span key={x.device}>{x.device} {Math.round((100 * x.seconds) / devTotal)}%</span>)}</div>
             </>
           )}
           {au.ageBands.some(b => b.band !== 'unknown' && b.count > 0) && (

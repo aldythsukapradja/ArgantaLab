@@ -20,6 +20,9 @@ import type {
 import type { KinetikStats } from '../data/live'
 
 // ── deterministic sample pulse ──────────────────────────────────────────────
+// ?sparse=1 mimics day-one real data (single beat day, one dominant app, no
+// lashira, legacy 'unknown' devices) — the shape that exposed the v1 layout bugs.
+const SPARSE = new URLSearchParams(window.location.search).has('sparse')
 let seed = 11
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
 
@@ -66,34 +69,50 @@ const r: RetentionData = {
   ],
   generatedAt: '',
 }
-const engDaily = days14.flatMap(day => apps.map(app => ({
-  day, app,
-  seconds: Math.round({ arganta: 2200, kinetik: 1100, lashira: 1500, hq: 700, landing: 150 }[app]! * (0.4 + rnd())),
-})))
+const engDaily = SPARSE
+  ? [
+      { day: '07-12', app: 'hq', seconds: 1740 },
+      { day: '07-12', app: 'landing', seconds: 900 },
+      { day: '07-12', app: 'arganta', seconds: 780 },
+      { day: '07-12', app: 'kinetik', seconds: 25 },
+    ]
+  : days14.flatMap(day => apps.map(app => ({
+      day, app,
+      seconds: Math.round({ arganta: 2200, kinetik: 1100, lashira: 1500, hq: 700, landing: 150 }[app]! * (0.4 + rnd())),
+    })))
 const eng: EngagementData = {
   days: 14,
   totalSeconds: engDaily.reduce((s, d) => s + d.seconds, 0),
   totalUsers: 9, totalClicks: 4180,
   apps: apps.map(app => {
     const s = engDaily.filter(d => d.app === app).reduce((x, d) => x + d.seconds, 0)
-    const users = { arganta: 6, kinetik: 5, lashira: 4, hq: 1, landing: 7 }[app]!
-    const sessions = users * (3 + Math.round(rnd() * 4))
+    const users = SPARSE ? { arganta: 1, kinetik: 1, lashira: 0, hq: 1, landing: 3 }[app]! : { arganta: 6, kinetik: 5, lashira: 4, hq: 1, landing: 7 }[app]!
+    const sessions = Math.max(1, users * (SPARSE ? 1 : 3 + Math.round(rnd() * 4)))
     return { app, seconds: s, users, sessions, clicks: Math.round(s / 9), avgSession: Math.round(s / sessions) }
-  }).sort((a, b) => b.seconds - a.seconds),
-  pages: [
-    { app: 'arganta', page: 'kinquest', seconds: 9600, users: 5, clicks: 900 },
-    { app: 'lashira', page: 'farm-circle', seconds: 7100, users: 4, clicks: 720 },
-    { app: 'arganta', page: 'learn', seconds: 5200, users: 6, clicks: 610 },
-    { app: 'kinetik', page: 'moments', seconds: 4400, users: 5, clicks: 380 },
-    { app: 'lashira', page: 'realm:emberpeak', seconds: 2900, users: 3, clicks: 340 },
-    { app: 'kinetik', page: 'calendar', seconds: 2100, users: 4, clicks: 190 },
-    { app: 'hq', page: 'portfolio', seconds: 1900, users: 1, clicks: 210 },
-    { app: 'landing', page: 'hub', seconds: 900, users: 7, clicks: 60 },
-  ],
+  }).filter(a => a.seconds > 0).sort((a, b) => b.seconds - a.seconds),
+  pages: SPARSE
+    ? [
+        { app: 'hq', page: 'portfolio', seconds: 480, users: 1, clicks: 120 },
+        { app: 'arganta', page: 'arena', seconds: 360, users: 1, clicks: 80 },
+        { app: 'hq', page: 'architecture', seconds: 300, users: 1, clicks: 40 },
+        { app: 'landing', page: 'products', seconds: 240, users: 2, clicks: 22 },
+      ]
+    : [
+        { app: 'arganta', page: 'kinquest', seconds: 9600, users: 5, clicks: 900 },
+        { app: 'lashira', page: 'farm-circle', seconds: 7100, users: 4, clicks: 720 },
+        { app: 'arganta', page: 'learn', seconds: 5200, users: 6, clicks: 610 },
+        { app: 'kinetik', page: 'moments', seconds: 4400, users: 5, clicks: 380 },
+        { app: 'lashira', page: 'realm:emberpeak', seconds: 2900, users: 3, clicks: 340 },
+        { app: 'kinetik', page: 'calendar', seconds: 2100, users: 4, clicks: 190 },
+        { app: 'hq', page: 'portfolio', seconds: 1900, users: 1, clicks: 210 },
+        { app: 'landing', page: 'hub', seconds: 900, users: 7, clicks: 60 },
+      ],
   daily: engDaily,
-  punch: Array.from({ length: 70 }, (_, idx) => ({
-    dow: idx % 7, hour: (6 + idx * 3) % 24, seconds: Math.round(200 + rnd() * 3200),
-  })),
+  punch: SPARSE
+    ? [{ dow: 6, hour: 9, seconds: 1200 }, { dow: 6, hour: 10, seconds: 1400 }, { dow: 6, hour: 14, seconds: 800 }]
+    : Array.from({ length: 70 }, (_, idx) => ({
+        dow: idx % 7, hour: (6 + idx * 3) % 24, seconds: Math.round(200 + rnd() * 3200),
+      })),
   users: [
     { id: 'u1', name: 'Kinara', role: 'kid', seconds: 15200, sessions: 21, lastSeen: '', topApp: 'arganta', topPage: 'arganta · kinquest', perApp: [{ app: 'arganta', seconds: 9800 }, { app: 'lashira', seconds: 4100 }, { app: 'kinetik', seconds: 1300 }] },
     { id: 'u2', name: 'Aldyth', role: 'operator', seconds: 12400, sessions: 18, lastSeen: '', topApp: 'hq', topPage: 'hq · portfolio', perApp: [{ app: 'hq', seconds: 8800 }, { app: 'kinetik', seconds: 2400 }, { app: 'lashira', seconds: 1200 }] },
@@ -112,7 +131,9 @@ const au: AudienceData = {
   roles: [{ role: 'kid', count: 8 }, { role: 'user', count: 5 }, { role: 'operator', count: 2 }],
   ageBands: [{ band: '6–8', count: 3 }, { band: '9–12', count: 4 }, { band: '18+', count: 7 }, { band: 'unknown', count: 1 }],
   genders: [{ gender: 'female', count: 6 }, { gender: 'male', count: 7 }, { gender: 'unspecified', count: 2 }],
-  devices: [{ device: 'mobile', seconds: 61000 }, { device: 'desktop', seconds: 38000 }, { device: 'tablet', seconds: 9000 }],
+  devices: SPARSE
+    ? [{ device: 'unknown', seconds: 2100 }, { device: 'desktop', seconds: 1200 }, { device: 'mobile', seconds: 140 }]
+    : [{ device: 'mobile', seconds: 61000 }, { device: 'desktop', seconds: 38000 }, { device: 'tablet', seconds: 9000 }],
   generatedAt: '',
 }
 const geo: GeoData = {

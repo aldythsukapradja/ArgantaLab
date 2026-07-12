@@ -25,6 +25,11 @@ export default defineConfig({
       // monorepo workspace symlinks) can still resolve it. Without this, the
       // build fails with "Rollup failed to resolve import @arganta/audio".
       '@arganta/audio': path.resolve(__dirname, '../../../packages/audio/src'),
+      // Shared time-on-page tracker — MUST be aliased for the same Vercel
+      // subfolder-install reason; without it the production build fails with
+      // "Rollup failed to resolve import @arganta/usage" and the deployed
+      // game (the KinFarm embed) silently ships without the tracker.
+      '@arganta/usage': path.resolve(__dirname, '../../../packages/usage/src/index.js'),
     },
   },
   server: {

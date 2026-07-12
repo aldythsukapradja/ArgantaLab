@@ -40,7 +40,7 @@ export function PunchCard({ punch }: { punch: EngagementPunch[] }) {
       <div ref={tipWrap} style={{ position: 'relative' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', height: 'auto' }} role="img" aria-label="Time-of-week heat map">
           {DOW.map((d, r) => (
-            <text key={d} x={labelW - 6} y={14 + r * (cell + gap) + cell / 2 + 3} fontSize={9.5} fill="var(--tx3)" textAnchor="end">{d}</text>
+            <text key={d} x={labelW - 6} y={14 + r * (cell + gap) + cell / 2 + 2.5} fontSize={8} fill="var(--tx3)" textAnchor="end">{d}</text>
           ))}
           {[0, 6, 12, 18].map((h) => (
             <text key={h} x={labelW + h * (cell + gap) + cell / 2} y={8} fontSize={9} fill="var(--tx3)" textAnchor="middle">

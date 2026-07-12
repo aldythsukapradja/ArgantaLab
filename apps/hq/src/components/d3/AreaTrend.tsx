@@ -66,7 +66,16 @@ export function AreaTrend({ labels, series, data, height = 200, valueFmt = compa
   // hover index is derived from the tooltip's x (container px → viewBox px)
   const hoverI: number | null = tip ? nearest((tip.x / Math.max(1, width)) * W) : null
 
-  const ticks = y.ticks(4)
+  // Tick budget scales with plot height so short charts (strip trends, rail
+  // curves) never pile labels on top of each other; d3 can overshoot the ask,
+  // so thin the list back to budget by stride.
+  const plotH = H - padT - padB
+  const tickBudget = Math.max(2, Math.min(4, Math.floor(plotH / 34)))
+  let ticks = y.ticks(tickBudget)
+  if (ticks.length > tickBudget + 1) {
+    const stride = Math.ceil(ticks.length / (tickBudget + 1))
+    ticks = ticks.filter((_, i) => i % stride === 0)
+  }
 
   return (
     <div ref={wrapRef}>
@@ -76,7 +85,11 @@ export function AreaTrend({ labels, series, data, height = 200, valueFmt = compa
           {ticks.map((t) => (
             <g key={t}>
               <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke="var(--bd)" strokeWidth={1} />
-              <text x={W - padR + 5} y={y(t) + 3.5} fontSize={9.5} fill="var(--tx3)">{valueFmt(t)}</text>
+              {/* baseline tick keeps its gridline but drops the label — it would
+                  collide with the x-axis labels sharing that row */}
+              {y(t) < H - padB - 11 && (
+                <text x={W - padR + 5} y={y(t) + 3.5} fontSize={9.5} fill="var(--tx3)">{valueFmt(t)}</text>
+              )}
             </g>
           ))}
           {tip && hoverI != null && (
