@@ -11,5 +11,8 @@
     "./cluster": "./src/cluster.jsx",
     "./reward": "./src/reward.jsx"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
 }
