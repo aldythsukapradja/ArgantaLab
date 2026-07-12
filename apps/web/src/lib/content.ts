@@ -103,16 +103,16 @@ export async function bumpContentVersion(): Promise<void> {
   } catch { /* ignore */ }
 }
 
-// Stage neighbours, nearest-first, so a thin stage borrows from adjacent ones.
+// Stage neighbours, capped to ±1 — a thin stage may borrow from the adjacent
+// stage, but never drifts further (a Tiny learner must never see Legend items).
+// Wave 1 filled every cell to a 15-item floor within ±1 stage, so this cap is safe.
 const STAGE_ORDER = ['tiny', 'starter', 'explorer', 'builder', 'champion', 'legend']
-function stageFallback(stage: string): string[] {
+export function stageFallback(stage: string): string[] {
   const i = STAGE_ORDER.indexOf(stage)
   if (i < 0) return ['explorer']
-  const out: string[] = []
-  for (let d = 0; d < STAGE_ORDER.length; d++) {
-    if (STAGE_ORDER[i - d]) out.push(STAGE_ORDER[i - d])
-    if (d && STAGE_ORDER[i + d]) out.push(STAGE_ORDER[i + d])
-  }
+  const out = [stage]
+  if (STAGE_ORDER[i - 1]) out.push(STAGE_ORDER[i - 1])
+  if (STAGE_ORDER[i + 1]) out.push(STAGE_ORDER[i + 1])
   return out
 }
 

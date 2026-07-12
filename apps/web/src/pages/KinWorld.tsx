@@ -17,7 +17,7 @@ import { bumpQuest } from '@lib/quests'
 import { DRILLS_BY_WORLD, type DrillItem } from '@/data/drills'
 import type { Item } from '@/data/learn'
 import { renderItem } from '@components/learn2/interactions'
-import { recordAttempt } from '@lib/adaptive'
+import { recordAttempt, seedRating } from '@lib/adaptive'
 import { logLearnEvent } from '@lib/analytics'
 import KinSprite from '@components/openworld/KinSprite'
 import KinWorldGame from '@components/openworld/KinWorldGame'
@@ -49,7 +49,7 @@ const DEX_NO: Record<string, number> = Object.fromEntries(KIN.map((k, i) => [k.i
 const pad = (n: number) => String(n).padStart(3, '0')
 
 export default function KinWorld() {
-  const { go, session, addToast, learnerName, openKinQuest } = useAppStore()
+  const { go, session, addToast, learnerName, openKinQuest, stageKey } = useAppStore()
   const [active, setActive] = useState<KinDef | null>(null)
   const [roster, setRoster] = useState<KinInstance[]>([])
   const [loading, setLoading] = useState(true)
@@ -100,7 +100,7 @@ export default function KinWorld() {
 
   const onHarvestAnswer = async (correct: boolean) => {
     if (!task) return
-    recordAttempt(task.world, task.skill, correct)
+    recordAttempt(task.world, task.skill, correct, seedRating(task), stageKey)
     logLearnEvent(task as Item, correct, Date.now() - taskShownAt.current)
     if (!correct) {
       addToast('Not quite — one more to unlock the harvest! 🌱', '🤔')

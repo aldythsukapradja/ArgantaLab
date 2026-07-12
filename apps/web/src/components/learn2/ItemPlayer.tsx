@@ -3,7 +3,7 @@ import type { World, JourneyNode } from '@/data/learn'
 import type { Item } from '@/data/learn'
 import { useAppStore } from '@store/appStore'
 import { getItems } from '@lib/content'
-import { pickItems, recordAttempt, repairItem } from '@lib/adaptive'
+import { pickItems, recordAttempt, repairItem, seedRating } from '@lib/adaptive'
 import { logLearnEvent } from '@lib/analytics'
 import { bumpQuest } from '@lib/quests'
 import { renderItem } from './interactions'
@@ -59,7 +59,7 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
     getItems(world.key, node.skills, stageKey, node.itemCount + 4).then(pool => {
       if (cancelled) return
       poolRef.current = pool
-      const picked = pickItems(pool, Math.min(node.itemCount, pool.length || node.itemCount))
+      const picked = pickItems(pool, Math.min(node.itemCount, pool.length || node.itemCount), stageKey)
       picked.forEach(p => usedRef.current.add(p.id))
       setQueue(picked.length ? picked : [])
     })
@@ -76,14 +76,14 @@ export default function ItemPlayer({ world, node, onExit, onComplete }: Props) {
     if (answered || !item) return
     setAnswered(true)
     setLastCorrect(correct)
-    recordAttempt(item.world, item.skill, correct)
+    recordAttempt(item.world, item.skill, correct, seedRating(item), stageKey)
     logLearnEvent(item, correct, Date.now() - shownAt.current)
     if (correct) {
       setCorrectCount(c => c + 1)
       earnedXp.current += item.xp ?? 10
     } else {
       // Mistake repair: queue one easier item of the same skill (capped to +2 total)
-      const repair = repairItem(poolRef.current, item, usedRef.current)
+      const repair = repairItem(poolRef.current, item, usedRef.current, stageKey)
       if (repair && queue && queue.length < node.itemCount + 2) {
         usedRef.current.add(repair.id)
         setQueue([...queue, repair])

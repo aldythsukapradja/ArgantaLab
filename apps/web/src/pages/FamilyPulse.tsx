@@ -4,7 +4,7 @@ import { useAppStore } from '@store/appStore'
 import {
   listKids, loadKidDashboard, masteryGrid, computeGaps, bloomDistribution,
   competencyScores, currentStreak, weekActiveDays, avgMinutesPerDay, stageOf,
-  type KidDashboard, type Gap, type GapReason,
+  type KidDashboard, type Gap, type GapReason, type MasteryLevel,
 } from '@lib/parentDash'
 import type { CloudProfile } from '@lib/cloudAuth'
 import { isOnline } from '@lib/cloudAuth'
@@ -30,6 +30,21 @@ const GAP_META: Record<GapReason, { label: string; emoji: string; color: string;
 
 function Bar({ pct, color }: { pct: number; color: string }) {
   return <div className="par-bar"><i style={{ width: `${pct}%`, background: color }} /></div>
+}
+const LEVEL_META: Record<MasteryLevel, { label: string; color: string }> = {
+  'not-started': { label: 'Not started', color: 'var(--t3, #9aa0a6)' },
+  attempted: { label: 'Attempted', color: '#FFA23A' },
+  familiar: { label: 'Familiar', color: '#7C9CF5' },
+  proficient: { label: 'Proficient', color: '#3DE08A' },
+  mastered: { label: 'Mastered', color: '#F5C542' },
+}
+function LevelChip({ level, pct }: { level: MasteryLevel; pct: number | null }) {
+  const m = LEVEL_META[level]
+  return (
+    <span className="par-level-chip" style={{ background: `${m.color}22`, color: m.color }} title={pct === null ? m.label : `${m.label} — ${pct}%`}>
+      {m.label}
+    </span>
+  )
 }
 function StatCard({ value, label, suffix = '', prefix = '', na = false }: { value: number; label: string; suffix?: string; prefix?: string; na?: boolean }) {
   const n = useCountUp(value)
@@ -332,6 +347,7 @@ export default function FamilyPulse() {
                     {cells.map(c => (
                       <div key={c.skill.key} className="par-strand">
                         <span className="par-strand-name">{c.skill.label}</span>
+                        <LevelChip level={c.level} pct={c.pct} />
                         <Bar pct={c.pct ?? 0} color={c.pct === null ? 'var(--border)' : w.color} />
                         <span className="par-strand-pct">{c.pct === null ? '—' : `${c.pct}%`}</span>
                       </div>

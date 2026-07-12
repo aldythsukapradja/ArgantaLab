@@ -130,15 +130,34 @@ export function stageOf(dob: string | null) {
 }
 function iso(d: Date) { return d.toISOString().slice(0, 10) }
 
+// ── Mastery levels (Khan-style: a state a parent can act on, not a raw %) ──
+// mastered requires BOTH high mastery AND a survived spaced-repetition cycle
+// (box ≥ 4) — "retained, not just answered once." Thresholds are final; see
+// docs/curriculum-wave2-spec.md for the rationale, do not re-tune ad hoc.
+export type MasteryLevel = 'not-started' | 'attempted' | 'familiar' | 'proficient' | 'mastered'
+export function masteryLevel(m: { mastery: number; box: number } | undefined, attempted: boolean): MasteryLevel {
+  if (!m && !attempted) return 'not-started'
+  const x = m?.mastery ?? 0, box = m?.box ?? 1
+  if (x >= 0.85 && box >= 4) return 'mastered'
+  if (x >= 0.6) return 'proficient'
+  if (x >= 0.35) return 'familiar'
+  return 'attempted'
+}
+
 // ── Mastery grid (worlds × skills, null = never attempted) ──────
-export interface GridCell { world: World; skill: { key: string; label: string }; pct: number | null }
+export interface GridCell { world: World; skill: { key: string; label: string }; pct: number | null; level: MasteryLevel }
 export function masteryGrid(dash: KidDashboard): { world: World; cells: GridCell[] }[] {
   const map = new Map(dash.mastery.map(m => [`${m.world}/${m.skill}`, m]))
   return WORLDS.map(w => ({
     world: w,
     cells: w.skills.map(s => {
       const m = map.get(`${w.key}/${s.key}`)
-      return { world: w, skill: { key: s.key, label: s.label }, pct: m ? Math.round(m.mastery * 100) : null }
+      return {
+        world: w,
+        skill: { key: s.key, label: s.label },
+        pct: m ? Math.round(m.mastery * 100) : null,
+        level: masteryLevel(m, !!m),
+      }
     }),
   }))
 }

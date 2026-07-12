@@ -20,7 +20,7 @@ import type { DrillItem } from '@/data/drills'
 import { DRILLS_BY_WORLD } from '@/data/drills'
 import { useAppStore } from '@store/appStore'
 import { logLearnEvent } from '@lib/analytics'
-import { recordAttempt } from '@lib/adaptive'
+import { recordAttempt, seedRating } from '@lib/adaptive'
 import { bumpQuest } from '@lib/quests'
 import { renderItem } from '@components/learn2/interactions'
 import {
@@ -166,7 +166,7 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
   const onQuestionResult = (correct: boolean) => {
     if (phase !== 'question') return
     const ns = onAnswer(s, { correct, energyPerCorrect: ENERGY_PER_CORRECT, autoHit: AUTO_HIT })
-    recordAttempt(item.world, item.skill, correct)
+    recordAttempt(item.world, item.skill, correct, seedRating(item), stageKey)
     logLearnEvent(item as Item, correct, Date.now() - shownAt.current)
     if (correct) earnedXp.current += xpForTurn(item.difficulty ?? 2, 1, ns.combo)
     setS(ns); setLastCorrect(correct)
@@ -199,7 +199,7 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
   const onPowerUpResult = (correct: boolean) => {
     if (phase !== 'powerup') return
     const ans = onAnswer(s, { correct, energyPerCorrect: ENERGY_PER_CORRECT, autoHit: AUTO_HIT })
-    recordAttempt(item.world, item.skill, correct)
+    recordAttempt(item.world, item.skill, correct, seedRating(item), stageKey)
     logLearnEvent(item as Item, correct, Date.now() - shownAt.current)
     if (correct) earnedXp.current += xpForTurn(item.difficulty ?? 2, 1, ans.combo)
     setLastCorrect(correct)
@@ -217,7 +217,7 @@ export default function OpenworldPlayer({ world, kinId, coop = false, onExit }: 
   // ── befriend phase: skill-gated capture ──
   const onCaptureResult = (correct: boolean) => {
     if (phase !== 'capture') return
-    recordAttempt(item.world, item.skill, correct)
+    recordAttempt(item.world, item.skill, correct, seedRating(item), stageKey)
     logLearnEvent(item as Item, correct, Date.now() - shownAt.current)
     if (correct) earnedXp.current += xpForTurn(item.difficulty ?? 2, 1, s.combo)
     const { state, success } = attemptCapture(s, { answeredCorrect: correct, roll: Math.random(), mountBoost: 0 })

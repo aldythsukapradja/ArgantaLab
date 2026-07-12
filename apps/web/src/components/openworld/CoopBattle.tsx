@@ -14,7 +14,7 @@ import type { DrillItem } from '@/data/drills'
 import { DRILLS_BY_WORLD } from '@/data/drills'
 import { useAppStore } from '@store/appStore'
 import { logLearnEvent } from '@lib/analytics'
-import { recordAttempt } from '@lib/adaptive'
+import { recordAttempt, seedRating } from '@lib/adaptive'
 import { bumpQuest } from '@lib/quests'
 import { earnDiamonds } from '@lib/wallet'
 import { markSectionToday } from '@lib/sectionDaily'
@@ -43,7 +43,7 @@ class ItemBoundary extends Component<{ children: ReactNode; onSkip: () => void }
 }
 
 export default function CoopBattle({ world, joinSessionId, onExit }: { world: World; joinSessionId?: string; onExit: () => void }) {
-  const { activeCircleId, session, addToast, learnerName, resolvedOutfit } = useAppStore()
+  const { activeCircleId, session, addToast, learnerName, resolvedOutfit, stageKey } = useAppStore()
   const myId = session && session !== 'loading' ? session.user.id : null
 
   // My equipped mount + my teammates' avatars (shared live via session presence)
@@ -151,7 +151,7 @@ export default function CoopBattle({ world, joinSessionId, onExit }: { world: Wo
   // server (it decrements MY hearts). The server owns all the numbers.
   const onAnswer = async (correct: boolean) => {
     if (!st || !item) return
-    recordAttempt(world.key, item.skill, correct)
+    recordAttempt(world.key, item.skill, correct, seedRating(item), stageKey)
     logLearnEvent(item as Item, correct, Date.now() - shownAt.current)
     if (correct) { setAwaitMove(true) }
     else { const s = await coopAct(st.id, 'strike', false); if (s) setSt(s); drawNext() }

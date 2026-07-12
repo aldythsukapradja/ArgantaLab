@@ -4,7 +4,7 @@ import type { Item } from '@/data/learn'
 import type { Drill, DrillItem } from '@/data/drills'
 import { useAppStore } from '@store/appStore'
 import { logLearnEvent } from '@lib/analytics'
-import { recordAttempt } from '@lib/adaptive'
+import { recordAttempt, seedRating } from '@lib/adaptive'
 import { bumpQuest } from '@lib/quests'
 import { earnDiamonds } from '@lib/wallet'
 import { markSectionToday } from '@lib/sectionDaily'
@@ -119,7 +119,7 @@ export default function DrillPlayer({ world, drill, onExit }: Props) {
   const handleResult = (correct: boolean) => {
     if (answered || !item) return
     setAnswered(true); setLastCorrect(correct)
-    recordAttempt(item.world, item.skill, correct)
+    recordAttempt(item.world, item.skill, correct, seedRating(item), stageKey)
     logLearnEvent(item as Item, correct, Date.now() - shownAt.current)
     if (correct) { setCorrectCount(c => c + 1); earnedXp.current += item.xp ?? 4 }
   }
