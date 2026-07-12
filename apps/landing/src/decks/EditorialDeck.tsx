@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Lenis from 'lenis'
 import Buddy from '../components/Buddy'
 import Ring from '../components/Ring'
 import KinSprite from '../components/KinSprite'
@@ -128,22 +129,73 @@ const SLIDES: Slide[] = [
 ]
 
 export default function EditorialDeck({ present = false, onExit }: { present?: boolean; onExit?: () => void }) {
+  // ── W5: the story is a SCROLL now — sticky slide-cards pile as you scroll,
+  // Lenis smooths the ride, the existing .active CSS still runs each reveal.
+  // Content untouched; only the engine changed (was a stepped wheel-pager).
   const [idx, setIdx] = useState(0)
   const [playing, setPlaying] = useState(present)
+  const [pct, setPct] = useState(0)
   const n = SLIDES.length
-  const lastHop = useRef(0)
-  const wheelAcc = useRef(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const lenisRef = useRef<Lenis | null>(null)
+  const idxRef = useRef(0)
+  idxRef.current = idx
 
-  const goTo = useCallback((i: number) => setIdx(Math.max(0, Math.min(n - 1, i))), [n])
-  const step = useCallback((d: number) => setIdx(i => Math.max(0, Math.min(n - 1, i + d))), [n])
-  const manual = useCallback((d: number) => { setPlaying(false); step(d) }, [step])
+  const goTo = useCallback((i: number) => {
+    const root = rootRef.current
+    const el = root?.querySelectorAll<HTMLElement>('.slide')[Math.max(0, Math.min(n - 1, i))]
+    if (!root || !el) return
+    if (lenisRef.current) lenisRef.current.scrollTo(el.offsetTop, { duration: 1.1 })
+    else root.scrollTo({ top: el.offsetTop, behavior: 'smooth' })
+  }, [n])
+  const manual = useCallback((d: number) => { setPlaying(false); goTo(idxRef.current + d) }, [goTo])
 
-  // auto-present
+  // active slide from scroll position (IO at 55% visibility)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const els = [...root.querySelectorAll('.slide')]
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) setIdx(els.indexOf(e.target)) })
+    }, { root, threshold: 0.55 })
+    els.forEach(el => io.observe(el))
+    const onScroll = () => {
+      const max = root.scrollHeight - root.clientHeight
+      setPct(max > 0 ? root.scrollTop / max : 0)
+      // belt + braces: idx straight from geometry (IO can lag / be throttled)
+      const vh = root.clientHeight
+      if (vh > 0) setIdx(Math.max(0, Math.min(els.length - 1, Math.round(root.scrollTop / vh))))
+    }
+    root.addEventListener('scroll', onScroll, { passive: true })
+    return () => { io.disconnect(); root.removeEventListener('scroll', onScroll) }
+  }, [])
+
+  // Lenis smoothing (skipped under reduced-motion; rAF pauses with the tab)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const lenis = new Lenis({ wrapper: root, content: root.querySelector('.slides') as HTMLElement, duration: 1.15 })
+    lenisRef.current = lenis
+    let frame = 0, running = false
+    const loop = (t: number) => { lenis.raf(t); if (running) frame = requestAnimationFrame(loop) }
+    const start = () => { if (!running) { running = true; frame = requestAnimationFrame(loop) } }
+    const stop = () => { running = false; cancelAnimationFrame(frame) }
+    start()
+    const onVis = () => (document.visibilityState === 'hidden' ? stop() : start())
+    document.addEventListener('visibilitychange', onVis)
+    return () => { stop(); document.removeEventListener('visibilitychange', onVis); lenis.destroy(); lenisRef.current = null }
+  }, [])
+
+  // present mode: auto-scroll section→section; any hand on the wheel takes over
   useEffect(() => {
     if (!playing) return
-    const id = setInterval(() => setIdx(i => (i + 1) % n), 4200)
-    return () => clearInterval(id)
-  }, [playing, n])
+    const id = setInterval(() => goTo((idxRef.current + 1) % n), 4200)
+    const root = rootRef.current
+    const grab = () => setPlaying(false)
+    root?.addEventListener('wheel', grab, { passive: true, once: true })
+    root?.addEventListener('touchstart', grab, { passive: true, once: true })
+    return () => { clearInterval(id); root?.removeEventListener('wheel', grab); root?.removeEventListener('touchstart', grab) }
+  }, [playing, n, goTo])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -155,32 +207,8 @@ export default function EditorialDeck({ present = false, onExit }: { present?: b
     return () => window.removeEventListener('keydown', onKey)
   }, [manual, onExit])
 
-  useEffect(() => {
-    const onWheel = (e: WheelEvent) => {
-      const now = performance.now()
-      if (now - lastHop.current < 700) return
-      wheelAcc.current += e.deltaY
-      if (Math.abs(wheelAcc.current) > 80) { const d = wheelAcc.current > 0 ? 1 : -1; wheelAcc.current = 0; lastHop.current = now; manual(d) }
-    }
-    window.addEventListener('wheel', onWheel, { passive: true })
-    return () => window.removeEventListener('wheel', onWheel)
-  }, [manual])
-
-  useEffect(() => {
-    let x0 = 0, y0 = 0
-    const ts = (e: TouchEvent) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY }
-    const te = (e: TouchEvent) => {
-      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0
-      const d = Math.abs(dx) > Math.abs(dy) ? -dx : -dy
-      if (d > 45) manual(1); else if (d < -45) manual(-1)
-    }
-    window.addEventListener('touchstart', ts, { passive: true })
-    window.addEventListener('touchend', te, { passive: true })
-    return () => { window.removeEventListener('touchstart', ts); window.removeEventListener('touchend', te) }
-  }, [manual])
-
   return (
-    <div className="edp">
+    <div className="edp scrolly" ref={rootRef}>
       <header className="ed-nav">
         <button className="ed-back" onClick={onExit}>← Back</button>
         <span className="ed-brand">Arganta</span>
@@ -209,7 +237,7 @@ export default function EditorialDeck({ present = false, onExit }: { present?: b
       </div>
 
       <div className="edp-count">{String(idx + 1).padStart(2, '0')} <i>/ {String(n).padStart(2, '0')}</i></div>
-      <div className="edp-progress"><i style={{ width: `${(idx / (n - 1)) * 100}%` }} /></div>
+      <div className="edp-progress"><i style={{ width: `${pct * 100}%` }} /></div>
     </div>
   )
 }

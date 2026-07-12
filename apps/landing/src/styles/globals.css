@@ -790,3 +790,14 @@ html.page-scroll #root { height: auto; min-height: 100%; }
 .bloom-realm span { font-size: 34px; }
 .bloom-realm b { font-size: 13px; }
 .bloom-embed { width: 100%; height: min(64vh, 560px); max-width: 340px; margin: 0 auto; }
+
+/* ══ W5: Editorial scroll-film (sticky card pile) ══ */
+.edp.scrolly { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; }
+.edp.scrolly::-webkit-scrollbar { display: none; }
+.edp.scrolly .slides { position: static; }
+/* each slide is a sticky full-screen card — the next one scrolls up OVER it */
+.edp.scrolly .slide { position: sticky; top: 0; height: 100vh; height: 100dvh; opacity: 1; pointer-events: auto; background: var(--sky); }
+/* the pile: the card underneath settles back as it's covered; the incoming one is full */
+.edp.scrolly .slide { transform: none; filter: none; transition: none; }
+.edp.scrolly .slide.prev { transform: scale(.965); filter: blur(2px) brightness(.92); transition: transform .6s cubic-bezier(.16,1,.3,1), filter .6s ease; }
+/* content reveals still fire per-card via .active (unchanged CSS below) */
