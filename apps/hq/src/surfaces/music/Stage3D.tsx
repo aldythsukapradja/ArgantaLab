@@ -47,6 +47,28 @@ function readLevel(audioRef: any): number {
   return s / (n * 255)
 }
 
+// ── shared orbital geometry constants (stations + camera math read the SAME
+// numbers, so "does it fit the frustum" is computed, not eyeballed) ─────────
+const STATION_R = 2.85      // station orbit radius
+const LABEL_DROP = 0.55     // label anchor sits this far below a station (+margin)
+const ORBIT_TILT = -0.16    // radians — a gentle dial tilt, not the old -0.42
+                             // (that steeper tilt was what read as "an ugly oval")
+const MIN_Z_MARGIN = 1.08
+
+/** The camera distance below which the tilted orbital plane clips the frustum
+ *  (top/bottom from the tilt+label offset, left/right from the aspect ratio).
+ *  Exact trig, not a guessed constant — stays correct if the geometry above
+ *  ever changes, and adapts live to the stage's actual aspect ratio. */
+function minCameraZ(fovDeg: number, aspect: number): number {
+  const halfTan = Math.tan((fovDeg * Math.PI) / 360)
+  const yLocal = -(STATION_R + LABEL_DROP)                      // worst case: bottom station's label
+  const worldY = yLocal * Math.cos(ORBIT_TILT)
+  const worldZ = yLocal * Math.sin(ORBIT_TILT)                  // tilt shifts it toward/away from camera
+  const minZv = worldZ + Math.abs(worldY) / halfTan             // vertical fit
+  const minZh = STATION_R / (halfTan * Math.max(aspect, 0.001)) // horizontal fit (narrow/portrait stages)
+  return Math.max(minZv, minZh) * MIN_Z_MARGIN
+}
+
 // Ashima / Stefan Gustavson simplex noise 3D (public domain).
 const SNOISE = `
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
@@ -118,8 +140,10 @@ function Core({ audioRef, colA, colB, levelRef }: any) {
 }
 
 // ── the spectrum ring: radial EQ drawn in shader space on the orbital plane ──
+// An idle shimmer (a slow per-bin sine floor) keeps the ring visibly alive
+// even at rest, instead of reading as a flat, gap-toothed dashed circle.
 const RING_FRAG = `
-uniform sampler2D uFreq; uniform vec3 uColA; uniform vec3 uColB; uniform float uAudio;
+uniform sampler2D uFreq; uniform vec3 uColA; uniform vec3 uColB; uniform float uAudio; uniform float uTime;
 varying vec2 vPos;
 void main(){
   float ang = atan(vPos.y, vPos.x);
@@ -128,16 +152,18 @@ void main(){
   float bins = 72.0;
   float bin = floor(t * bins);
   float v = texture2D(uFreq, vec2((bin + 0.5) / bins, 0.5)).r;
+  float idle = 0.05 + 0.05 * sin(uTime * 0.6 + bin * 0.35);
+  v = max(v, idle);
   float inner = 1.62;
   float outer = inner + 0.06 + v * 0.42;
   // soft radial extent with rounded tip
-  float body = smoothstep(inner - 0.015, inner + 0.02, r) * (1.0 - smoothstep(outer - 0.07, outer + 0.015, r));
-  // gaps between bars (rounded bar shape)
+  float body = smoothstep(inner - 0.02, inner + 0.03, r) * (1.0 - smoothstep(outer - 0.08, outer + 0.02, r));
+  // gaps between bars — widened + softened so idle reads as a glow, not dashes
   float f = fract(t * bins);
-  float bar = smoothstep(0.10, 0.32, f) * (1.0 - smoothstep(0.68, 0.90, f));
-  float a = body * bar * (0.25 + v * 0.85);
-  vec3 col = mix(uColA, uColB, v);
-  gl_FragColor = vec4(col * (0.6 + v * 1.2), a);
+  float bar = smoothstep(0.14, 0.34, f) * (1.0 - smoothstep(0.66, 0.86, f));
+  float a = body * bar * (0.3 + v * 0.85);
+  vec3 col = mix(uColA, uColB, clamp(v * 0.85 + 0.15 * sin(uTime * 0.25 + bin * 0.1), 0.0, 1.0));
+  gl_FragColor = vec4(col * (0.65 + v * 1.2), a);
 }`
 const RING_VERT = `
 varying vec2 vPos;
@@ -150,11 +176,12 @@ function SpectrumRing({ audioRef, colA, colB }: any) {
     return t
   }, [])
   const uniforms = useMemo(() => ({
-    uFreq: { value: tex }, uAudio: { value: 0 },
+    uFreq: { value: tex }, uAudio: { value: 0 }, uTime: { value: 0 },
     uColA: { value: new THREE.Color(colA) }, uColB: { value: new THREE.Color(colB) },
   }), [tex])
   useEffect(() => { uniforms.uColA.value.set(colA); uniforms.uColB.value.set(colB) }, [colA, colB, uniforms])
-  useFrame(() => {
+  useFrame((state) => {
+    uniforms.uTime.value = state.clock.elapsedTime
     const a = audioRef.current
     if (!a) return
     const src: Uint8Array = a.freq // refreshed each frame by Core's readLevel
@@ -176,6 +203,34 @@ function SpectrumRing({ audioRef, colA, colB }: any) {
   )
 }
 
+// ── the dial track: a continuous gradient glow-ring beneath the bars, always
+// visible regardless of audio — this is what turns "a plain dashed oval"
+// into a proper instrument dial. Per-vertex hue sweep (accent → magenta). ──
+function DialTrack({ colA, colB, levelRef }: any) {
+  const mat = useRef<THREE.MeshStandardMaterial>(null)
+  const geo = useMemo(() => {
+    const g = new THREE.TorusGeometry(1.58, 0.032, 16, 128)
+    const pos = g.attributes.position
+    const colors = new Float32Array(pos.count * 3)
+    const cA = new THREE.Color(colA), cB = new THREE.Color(colB)
+    for (let i = 0; i < pos.count; i++) {
+      const ang = Math.atan2(pos.getY(i), pos.getX(i))
+      const t = (ang + Math.PI) / (Math.PI * 2)
+      const c = cA.clone().lerp(cB, t)
+      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    return g
+  }, [colA, colB])
+  useFrame(() => { if (mat.current) mat.current.emissiveIntensity = 0.24 + (levelRef?.current || 0) * 0.55 })
+  return (
+    <mesh geometry={geo}>
+      <meshStandardMaterial ref={mat} vertexColors color="#ffffff" emissive="#ffffff" emissiveIntensity={0.24}
+        roughness={0.28} metalness={0.12} transparent opacity={0.92} />
+    </mesh>
+  )
+}
+
 // ── role stations: emissive orb + halo + ripple ──────────────────────────────
 // (labels live in a DOM overlay outside the canvas — see LabelLayer — so they
 // survive the post-processing pipeline and stay crisp/theme-native)
@@ -188,7 +243,7 @@ function Station({ role, index, total, eventsRef, theme, anchors }: any) {
   const anchor = useRef<THREE.Group>(null)
   useEffect(() => { anchors.current[role] = anchor.current; return () => { delete anchors.current[role] } }, [role, anchors])
   const ang = (index / total) * Math.PI * 2 - Math.PI / 2
-  const R = 2.85
+  const R = STATION_R
   const pos: [number, number, number] = [Math.cos(ang) * R, Math.sin(ang) * R, 0]
   const col = ROLE_COLOR[role]
   const on = theme?.roles?.[role]?.on ?? true
@@ -262,7 +317,7 @@ function Streaks({ eventsRef, total }: any) {
     const m: Record<string, THREE.Vector3> = {}
     ;(ROLES as string[]).forEach((role: string, i: number) => {
       const a = (i / total) * Math.PI * 2 - Math.PI / 2
-      m[role] = new THREE.Vector3(Math.cos(a) * 2.85, Math.sin(a) * 2.85, 0)
+      m[role] = new THREE.Vector3(Math.cos(a) * STATION_R, Math.sin(a) * STATION_R, 0)
     })
     return m
   }, [total])
@@ -366,12 +421,21 @@ function Backdrop({ top, bottom, tint }: any) {
   )
 }
 
+// Dollies to a distance derived from the ACTUAL stage size + fov, so the
+// tilted dial never clips regardless of how wide/narrow/short the panel is
+// (this replaces two hand-picked z values that clipped the bottom station).
 function CameraRig({ playing }: { playing: boolean }) {
-  const { camera, pointer } = useThree()
-  useEffect(() => { gsap.to(camera.position, { z: playing ? 5.6 : 6.6, duration: 1.2, ease: 'power2.out' }) }, [playing, camera])
+  const { camera, pointer, size } = useThree()
+  useEffect(() => {
+    const persp = camera as THREE.PerspectiveCamera
+    const aspect = size.width / Math.max(1, size.height)
+    const minZ = minCameraZ(persp.fov, aspect)
+    const targetZ = playing ? minZ : minZ * 1.1
+    gsap.to(camera.position, { z: targetZ, duration: 1.2, ease: 'power2.out' })
+  }, [playing, camera, size.width, size.height])
   useFrame(() => {
-    camera.position.x += (pointer.x * 0.45 - camera.position.x) * 0.03
-    camera.position.y += (pointer.y * 0.3 - camera.position.y) * 0.03
+    camera.position.x += (pointer.x * 0.35 - camera.position.x) * 0.03
+    camera.position.y += (pointer.y * 0.22 - camera.position.y) * 0.03
     camera.lookAt(0, 0, 0)
   })
   return null
@@ -394,14 +458,14 @@ export default function Stage3D({ audioRef, eventsRef, playing, theme }: any) {
   const total = (ROLES as string[]).length
   return (
     <div className="msx-viz msx-3dhost">
-      <Canvas dpr={[1, 1.75]} camera={{ position: [0, 0, 6.6], fov: 50 }} gl={{ antialias: true }}>
+      <Canvas dpr={[1, 1.75]} camera={{ position: [0, 0, 8.4], fov: 50 }} gl={{ antialias: true }}>
         <Backdrop top={colors.bg2} bottom={colors.bg} tint={colors.acc} />
         <ambientLight intensity={0.65} />
         <pointLight position={[4, 4, 5]} intensity={1.0} color={colors.acc} />
         <pointLight position={[-4, -2, 2]} intensity={0.5} color={colors.mag} />
         <Core audioRef={audioRef} colA={colors.acc} colB={colors.mag} levelRef={levelRef} />
         {/* the orbital plane: spectrum ring + stations + streaks share one gentle tilt + drift */}
-        <OrbitalPlane audioRef={audioRef} eventsRef={eventsRef} theme={theme} total={total} colors={colors} anchors={anchors} />
+        <OrbitalPlane audioRef={audioRef} eventsRef={eventsRef} theme={theme} total={total} colors={colors} anchors={anchors} levelRef={levelRef} />
         <Dust color={colors.acc} levelRef={levelRef} />
         <CameraRig playing={playing} />
         <LabelProjector anchors={anchors} chips={chips} />
@@ -428,11 +492,12 @@ export default function Stage3D({ audioRef, eventsRef, playing, theme }: any) {
   )
 }
 
-function OrbitalPlane({ audioRef, eventsRef, theme, colors, total, anchors }: any) {
+function OrbitalPlane({ audioRef, eventsRef, theme, colors, total, anchors, levelRef }: any) {
   const grp = useRef<THREE.Group>(null)
   useFrame((_s, dt) => { if (grp.current) grp.current.rotation.z += dt * 0.014 })
   return (
-    <group ref={grp} rotation={[-0.42, 0, 0]}>
+    <group ref={grp} rotation={[ORBIT_TILT, 0, 0]}>
+      <DialTrack colA={colors.acc} colB={colors.mag} levelRef={levelRef} />
       <SpectrumRing audioRef={audioRef} colA={colors.acc} colB={colors.mag} />
       {(ROLES as string[]).map((role: string, i: number) => (
         <Station key={role} role={role} index={i} total={total} eventsRef={eventsRef} theme={theme} anchors={anchors} />
