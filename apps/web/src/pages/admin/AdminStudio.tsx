@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '@store/appStore'
-import { WORLDS, INTERACTIONS, STAGES, type Item, type InteractionKey } from '@/data/learn'
-import { adminListItems, adminUpsertItem, adminDeleteItem, adminBulkInsert, type ItemDraft } from '@lib/content'
+import { WORLDS, INTERACTIONS, STAGES, LOCAL_ITEMS, type Item, type InteractionKey } from '@/data/learn'
+import { adminListItems, adminUpsertItem, adminDeleteItem, adminBulkInsert, adminSyncBundled, type ItemDraft } from '@lib/content'
 import { renderItem } from '@components/learn2/interactions'
 import { buildAuthorPrompt, payloadTemplate } from './authorPrompt'
 
@@ -24,6 +24,7 @@ export default function AdminStudio() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [bulk, setBulk] = useState('')
   const [msg, setMsg] = useState('')
+  const [syncing, setSyncing] = useState(false)
 
   const refresh = () => {
     adminListItems(world).then(rows => {
@@ -61,6 +62,21 @@ export default function AdminStudio() {
         <div className="adm-warn">⚠️ Supabase content tables aren't reachable (run <code>schema.sql</code> + set your profile <code>role='admin'</code>). You can still build the LLM prompt and preview locally.</div>
       )}
       {msg && <div className="adm-msg">{msg}</div>}
+
+      {cloudOk && (
+        <div className="adm-sync">
+          <button className="adm-syncbtn" disabled={syncing} onClick={async () => {
+            setSyncing(true); setMsg('Syncing bundled content to cloud…')
+            const res = await adminSyncBundled()
+            setSyncing(false)
+            setMsg(res.ok
+              ? `✅ Sync complete — added ${res.added} new, skipped ${res.skipped} already live. ${res.added ? 'Devices will refresh automatically.' : ''}`
+              : `Sync failed: ${res.error}`)
+            if (res.ok && res.added) refresh()
+          }}>{syncing ? '⏳ Syncing…' : '🔄 Sync bundled → cloud'}</button>
+          <span className="adm-dim">Pushes the {LOCAL_ITEMS.length} bundled offline questions into the live cloud table (skips any already there). Safe to run repeatedly.</span>
+        </div>
+      )}
 
       <div className="adm-worldbar">
         {WORLDS.map(w => (

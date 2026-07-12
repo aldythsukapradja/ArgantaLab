@@ -1554,6 +1554,9 @@ html[data-theme="light"] .jx-card.locked{background:#e7e2f0;color:var(--t3)}
 .adm-warn{padding:12px 14px;border-radius:var(--r-md);background:color-mix(in srgb,var(--gold) 14%,transparent);border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);font-size:13px;color:var(--t1)}
 .adm-warn code,.adm-hint code,.adm-bulk code,.adm-dim code{background:var(--panel-2);padding:1px 6px;border-radius:5px;font-size:12px}
 .adm-msg{padding:10px 14px;border-radius:var(--r-md);background:var(--panel-2);border:1px solid var(--border);font-size:13px;font-weight:600}
+.adm-sync{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 14px;border-radius:var(--r-md);background:var(--panel-2);border:1px dashed var(--border)}
+.adm-syncbtn{padding:9px 16px;border-radius:var(--r-md);border:none;background:var(--accent,#5b8cff);color:#fff;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+.adm-syncbtn:disabled{opacity:.6;cursor:default}
 .adm-worldbar{display:flex;gap:7px;flex-wrap:wrap}
 .adm-wchip{padding:8px 13px;border-radius:30px;background:var(--panel);border:1px solid var(--border);font-size:12.5px;font-weight:650;color:var(--t2)}
 .adm-wchip.on{font-weight:750}

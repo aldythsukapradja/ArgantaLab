@@ -182,6 +182,59 @@ export async function adminDeleteItem(id: string): Promise<boolean> {
   try { const { error } = await supabase.from('items').delete().eq('id', id); invalidateContentCache(); await bumpContentVersion(); return !error } catch { return false }
 }
 
+// ── Sync bundled offline pack → cloud ──────────────────────────
+// The app serves questions from the cloud `items` table once it's seeded, but
+// new items authored in the bundled TS packs (contentPack15/16…) never reach a
+// live device on their own. This pushes every bundled item that isn't already
+// in the cloud, matched by content signature so it's safe to run repeatedly
+// (re-running only adds what's genuinely new).
+
+// Order-independent JSON so a payload read back from Postgres jsonb (which does
+// not preserve key order) still matches the bundled source → idempotent sync.
+function stableStringify(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v)
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']'
+  const o = v as Record<string, unknown>
+  return '{' + Object.keys(o).sort().map(k => JSON.stringify(k) + ':' + stableStringify(o[k])).join(',') + '}'
+}
+function itemSig(i: { world: string; skill: string; type: string; stage: string; prompt: string; payload: unknown }): string {
+  return [i.world, i.skill, i.type, i.stage, i.prompt, stableStringify(i.payload ?? {})].join('|')
+}
+
+export async function adminSyncBundled(): Promise<{ ok: boolean; added: number; skipped: number; error?: string }> {
+  if (!cloudEnabled) return { ok: false, added: 0, skipped: 0, error: 'cloud not configured' }
+  try {
+    // Pull the signature of every existing cloud item (any status) to dedupe against.
+    const { data, error } = await supabase.from('items').select('world_key,skill_key,interaction_type,stage_key,prompt,payload')
+    if (error) return { ok: false, added: 0, skipped: 0, error: error.message }
+    const have = new Set((data ?? []).map(r => itemSig({
+      world: (r as Record<string, unknown>).world_key as string,
+      skill: (r as Record<string, unknown>).skill_key as string,
+      type: (r as Record<string, unknown>).interaction_type as string,
+      stage: (r as Record<string, unknown>).stage_key as string,
+      prompt: (r as Record<string, unknown>).prompt as string,
+      payload: (r as Record<string, unknown>).payload,
+    })))
+    const missing = LOCAL_ITEMS.filter(i => !have.has(itemSig(i)))
+    const skipped = LOCAL_ITEMS.length - missing.length
+    if (!missing.length) return { ok: true, added: 0, skipped }
+    const drafts: ItemDraft[] = missing.map(i => ({
+      world_key: i.world, skill_key: i.skill, interaction_type: i.type, stage_key: i.stage,
+      difficulty: i.difficulty, prompt: i.prompt, payload: i.payload,
+      hint: i.hint, explanation: i.explanation, xp: i.xp, diamonds: i.diamonds,
+      status: 'live', bloom: i.bloom,
+    }))
+    // Chunk so a large first sync never hits a request-size limit.
+    let added = 0
+    for (let k = 0; k < drafts.length; k += 200) {
+      const res = await adminBulkInsert(drafts.slice(k, k + 200))
+      if (!res.ok) return { ok: false, added, skipped, error: res.error }
+      added += res.count
+    }
+    return { ok: true, added, skipped }
+  } catch (e) { return { ok: false, added: 0, skipped: 0, error: String(e) } }
+}
+
 /** Bulk insert items from a parsed JSON array (the LLM authoring format). */
 export async function adminBulkInsert(items: ItemDraft[]): Promise<{ ok: boolean; count: number; error?: string }> {
   try {
