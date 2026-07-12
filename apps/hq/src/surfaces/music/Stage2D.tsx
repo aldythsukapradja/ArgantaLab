@@ -58,12 +58,18 @@ export function Stage2D({ audioRef, transportRef, eventsRef, playing, theme }: a
   }, []) // eslint-disable-line
 
   function draw(c: HTMLCanvasElement) {
-    const dpr = window.devicePixelRatio || 1
     const rect = c.getBoundingClientRect()
-    c.width = Math.max(1, rect.width * dpr); c.height = Math.max(1, rect.height * dpr)
+    // Guard: before layout settles (or if the element is detached) the box can
+    // be 0 or the canvas's intrinsic 300×150 — skip rather than paint garbage.
+    if (rect.width < 2 || rect.height < 2) return
+    const dpr = Math.min(2, window.devicePixelRatio || 1)          // cap DPR — no runaway buffers
+    const W = Math.min(2400, Math.round(rect.width))               // cap CSS px too (safety net)
+    const H = Math.min(2400, Math.round(rect.height))
+    const bw = Math.max(1, Math.round(W * dpr)), bh = Math.max(1, Math.round(H * dpr))
+    if (c.width !== bw || c.height !== bh) { c.width = bw; c.height = bh } // only resize on real change
     const g = c.getContext('2d')!
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
-    const W = rect.width, H = rect.height, cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.31
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.31
     g.clearRect(0, 0, W, H)
 
     const cs = getComputedStyle(c)
@@ -212,5 +218,13 @@ export function Stage2D({ audioRef, transportRef, eventsRef, playing, theme }: a
     void transportRef
   }
 
-  return <canvas ref={canvasRef} className="msx-viz" />
+  // Canvas lives INSIDE a positioned .msx-viz div (matching Stage3D) so the
+  // `.msx-viz canvas{width/height:100%}` rule sizes it — a bare absolutely-
+  // positioned <canvas> is a replaced element and ignores inset:0, collapsing
+  // to its intrinsic 300×150 (that was the tiny "2D not working" tile).
+  return (
+    <div className="msx-viz">
+      <canvas ref={canvasRef} />
+    </div>
+  )
 }
