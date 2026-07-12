@@ -73,8 +73,10 @@ export function AppEmbed({
               allow="fullscreen; autoplay; gamepad"
             />
           ) : (
-            <button className="aembed-poster" onClick={mayGoLive ? goLive : undefined} disabled={!mayGoLive}
+            <button className="aembed-poster" data-app={app} onClick={mayGoLive ? goLive : undefined} disabled={!mayGoLive}
               style={poster ? { backgroundImage: `url(${poster})` } : undefined}>
+              <span className="aembed-poster-ui" aria-hidden><i /><i /><i /></span>
+              <span className="aembed-poster-glyph" aria-hidden>{({ lab: '🎮', kinetik: '📅', lashira: '🌾', hq: '◆' } as Record<string, string>)[app]}</span>
               <span className="aembed-poster-lbl">{EMBED_LABEL[app]}</span>
               {mayGoLive
                 ? <span className="aembed-go">▶ Go live</span>

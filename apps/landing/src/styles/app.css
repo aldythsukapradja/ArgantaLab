@@ -480,3 +480,14 @@
 .prodx-peek-screen em { font-size: 8px; font-style: normal; color: var(--muted); }
 @media (hover: none), (max-width: 700px) { .prodx-peek { display: none; } }
 .prodx-fly { position: fixed !important; inset: 0 !important; z-index: 70; border-radius: 0 !important; border-left-width: 0 !important; }
+
+/* ══ W6: branded embed posters ══ */
+.aembed-poster[data-app="lashira"] { background: linear-gradient(165deg, #ecfccb, #d9f99d 45%, #bbf7d0); color: #2a3d10; }
+.aembed-poster[data-app="lab"]     { background: linear-gradient(165deg, #ede9fe, #ddd6fe 45%, #cffafe); color: #2a1e5c; }
+.aembed-poster[data-app="kinetik"] { background: linear-gradient(165deg, #cffafe, #a5f3fc 45%, #e0e7ff); color: #0c3d47; }
+.aembed-poster[data-app="hq"]      { background: linear-gradient(165deg, #1e1b3a, #2a2555 45%, #101024); color: #cbd5ff; }
+.aembed-poster-glyph { font-size: 84px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.18)); }
+.aembed-poster-ui { position: absolute; top: 26px; left: 26px; right: 26px; display: flex; flex-direction: column; gap: 12px; opacity: .35; }
+.aembed-poster-ui i { height: 16px; border-radius: 8px; background: currentColor; opacity: .35; }
+.aembed-poster-ui i:nth-child(1) { width: 42%; } .aembed-poster-ui i:nth-child(2) { width: 68%; } .aembed-poster-ui i:nth-child(3) { width: 30%; }
+.aembed-poster { position: relative; }
