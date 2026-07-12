@@ -30,6 +30,33 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
       }
       tl.from(root.querySelectorAll('.scr-kick, .scr-lede, .scr-cta'), { y: 18, opacity: 0, duration: 0.6, stagger: 0.08 }, 0.5)
         .from(root.querySelector('.scr-hero-buddy'), { scale: 0.7, opacity: 0, duration: 0.7, ease: EASE.soft }, 0)
+
+      // proof numbers count up ("5.5h" → 0→5.5, suffix kept)
+      root.querySelectorAll<HTMLElement>('.scr-proof-i b').forEach((el, i) => {
+        const m = el.textContent?.match(/^([\d.]+)(.*)$/)
+        if (!m) return
+        const target = parseFloat(m[1]), suffix = m[2] ?? ''
+        const dec = m[1].includes('.') ? 1 : 0
+        const o = { v: 0 }
+        tl.to(o, {
+          v: target, duration: 1.1, ease: 'power2.out',
+          onUpdate: () => { el.textContent = o.v.toFixed(dec) + suffix },
+        }, 0.55 + i * 0.08)
+      })
+
+      // magnetic CTAs (pointer-fine devices only)
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        root.querySelectorAll<HTMLElement>('.scr-btn').forEach(btn => {
+          const qx = gsap.quickTo(btn, 'x', { duration: 0.35, ease: 'power3.out' })
+          const qy = gsap.quickTo(btn, 'y', { duration: 0.35, ease: 'power3.out' })
+          btn.addEventListener('mousemove', e => {
+            const r = btn.getBoundingClientRect()
+            qx((e.clientX - r.left - r.width / 2) * 0.22)
+            qy((e.clientY - r.top - r.height / 2) * 0.3)
+          })
+          btn.addEventListener('mouseleave', () => { qx(0); qy(0) })
+        })
+      }
     }, root)
     return () => ctx.revert()
   }, [])
