@@ -456,3 +456,16 @@
 .aembed-poster-lbl { font-size: 40px; }
 .aembed-go { font-size: 26px; padding: 16px 34px; }
 .aembed-locked { font-size: 22px; }
+
+/* ══════════ W2: GSAP-owned deck entrances + brain graph ══════════ */
+/* when GSAP runs the choreography, silence the CSS fallback stagger (keep pShine) */
+.pdeck.gsapon .pslide-in > * { animation-name: none; }
+.pdeck.gsapon .pslide.active .pbignum,
+.pdeck.gsapon .pslide.active .mcard.hero .mcard-v { animation: pShine 3.4s ease-in-out infinite; }
+/* brain graph — edges draw, nodes pop, hubs breathe */
+.braing-edge { stroke: color-mix(in srgb, var(--violet) 38%, transparent); stroke-width: 1; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .9s ease; transition-delay: calc(var(--i) * .035s); }
+.pslide.active .braing-edge { stroke-dashoffset: 0; }
+.braing-node { fill: color-mix(in srgb, var(--ink) 55%, transparent); opacity: 0; transition: opacity .5s ease; transition-delay: calc(.3s + var(--i) * .02s); }
+.braing-node.hub { fill: var(--violet); filter: drop-shadow(0 0 8px rgba(139,92,246,.7)); animation: braingHub 2.6s ease-in-out infinite; }
+.pslide.active .braing-node { opacity: .9; }
+@keyframes braingHub { 0%,100% { r: 5px; } 50% { r: 6.5px; } }

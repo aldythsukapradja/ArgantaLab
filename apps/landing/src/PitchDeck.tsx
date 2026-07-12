@@ -4,9 +4,10 @@ import { CASES, runModel, costCurve, ECON, PAYER } from './lib/econ'
 import { AGENTS, OFFICES } from './data/agents'
 import { SITE } from './lib/site'
 import PitchChart from './components/PitchChart'
-import { ScatterMap, RangePlot, PayerBars, Velocity } from './components/DeckCharts'
-import { Fact, ProvLegend } from './components/Fact'
+import { ScatterMap, RangePlot, PayerBars, Velocity, BrainGraph } from './components/DeckCharts'
+import { ProvLegend } from './components/Fact'
 import { AppEmbed } from './embed/AppEmbed'
+import { ensureGsap, gsap, SplitText, EASE, prefersReduced } from './lib/motion'
 
 // ── inline investor pitch — a cinematic slide presentation inside the Pitch tab.
 // Every static fact comes from SITE; every modelled number from ECON (mirrors HQ);
@@ -238,13 +239,13 @@ const SLIDES: Slide[] = [
   { id: 'brain', chapter: 'The brain', el: () => <>
     <span className="pkick">The living knowledge system</span>
     <h2 className="pdisplay sm">{SITE.brain.line}</h2>
+    <div className="pchartwrap wide"><BrainGraph /></div>
     <div className="pflow">{SITE.brain.flow.map((f, i) => <span key={f} className="pflow-step" style={{ ['--i' as string]: i }}>{f}{i < SITE.brain.flow.length - 1 && <i className="pflow-arrow">→</i>}</span>)}</div>
     <div className="pstats">
       <Stat v={String(SITE.brain.nodes)} l="graph nodes · live ontology" />
       <Stat v={String(SITE.brain.sensors)} l="RPC sensors" />
       <Stat v={`${SITE.brain.coveragePct}%`} l="instrumented · ◐" />
     </div>
-    <p className="psub sm">{SITE.brain.detail}</p>
   </> },
   { id: 'moat', chapter: 'The moat', el: () => <>
     <span className="pkick">The moat</span>
@@ -301,9 +302,48 @@ export default function PitchDeck() {
   const n = SLIDES.length
   const wheelAcc = useRef(0)
   const lastHop = useRef(0)
+  const deckRef = useRef<HTMLDivElement>(null)
 
   const go = useCallback((d: number) => setIdx(i => Math.max(0, Math.min(n - 1, i + d))), [n])
   const manual = useCallback((d: number) => go(d), [go])
+
+  // ── per-slide choreography: GSAP takes ownership of the entrance (headline
+  // line-mask + child cascade + number count-ups). CSS pslIn stays as the
+  // fallback when reduced-motion / hidden tab — we only add .gsapon when we run.
+  useEffect(() => {
+    if (prefersReduced() || document.visibilityState === 'hidden') return
+    ensureGsap()
+    const root = deckRef.current
+    const slide = root?.querySelectorAll<HTMLElement>('.pslide')[idx]
+    if (!root || !slide) return
+    root.classList.add('gsapon')
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: EASE.out } })
+      const head = slide.querySelector<HTMLElement>('.pdisplay')
+      if (head) {
+        const split = new SplitText(head, { type: 'lines', linesClass: 'st-line' })
+        tl.from(split.lines, { yPercent: 112, opacity: 0, duration: 0.85, stagger: 0.1 }, 0.05)
+      }
+      tl.from(slide.querySelectorAll('.pslide-in > *:not(.pdisplay)'), { y: 24, opacity: 0, duration: 0.6, stagger: 0.07 }, 0.22)
+      // count-ups on every numeric fact ($1.50 · 462 · 47% · 39.6k · 5.5)
+      slide.querySelectorAll<HTMLElement>('.mcard-v, .pstat b, .pbignum, .pladder-step b').forEach(el => {
+        const node = el.childNodes[0]
+        const full = node?.textContent ?? ''
+        const m = full.trim().match(/^([$€]?)(\d[\d,]*\.?\d*)(.*)$/)
+        if (!node || !m) return
+        const target = parseFloat(m[2].replace(/,/g, ''))
+        if (!isFinite(target)) return
+        const dec = (m[2].split('.')[1] || '').length
+        const o = { v: 0 }
+        tl.to(o, {
+          v: target, duration: 0.9, ease: 'power2.out',
+          onUpdate: () => { node.textContent = m[1] + o.v.toFixed(dec) + m[3] },
+          onComplete: () => { node.textContent = full },
+        }, 0.35)
+      })
+    }, slide)
+    return () => ctx.revert()
+  }, [idx])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -325,7 +365,7 @@ export default function PitchDeck() {
   const cur = SLIDES[idx]
 
   return (
-    <div className="pdeck" onWheel={onWheel}>
+    <div className="pdeck" ref={deckRef} onWheel={onWheel}>
       <div className="pdeck-prog"><i style={{ width: `${pct}%` }} /></div>
       <div className="pdeck-rail">
         <span className="pdeck-chapter">{cur.chapter}</span>

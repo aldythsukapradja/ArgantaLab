@@ -123,6 +123,49 @@ export function Velocity({ items, w = 620, h = 300 }: {
   )
 }
 
+// ── BrainGraph (brain slide) — a deterministic knowledge-graph cluster: nodes on
+// a hash-scattered ellipse, each wired to its 3 nearest neighbours, a few "office"
+// hubs glowing. Same node cloud every render (seeded PRNG); edges draw in and
+// nodes pop via CSS keyed to .pslide.active.
+function mulberry32(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 } }
+const BRAIN = (() => {
+  const rand = mulberry32(76)
+  const nodes: { x: number; y: number; hub: boolean }[] = []
+  const cx = 310, cy = 130, rx = 285, ry = 108
+  let tries = 0
+  while (nodes.length < 76 && tries < 2000) {
+    tries++
+    const x = cx + (rand() * 2 - 1) * rx, y = cy + (rand() * 2 - 1) * ry
+    const nx = (x - cx) / rx, ny = (y - cy) / ry
+    if (nx * nx + ny * ny <= 1) nodes.push({ x, y, hub: false })
+  }
+  // six office hubs — the biggest, brightest nodes
+  for (let k = 0; k < 6; k++) nodes[Math.floor(rand() * nodes.length)].hub = true
+  const edges: [number, number][] = []
+  nodes.forEach((a, i) => {
+    nodes.map((b, j) => ({ j, d: (b.x - a.x) ** 2 + (b.y - a.y) ** 2 }))
+      .filter(o => o.j !== i).sort((p, q) => p.d - q.d).slice(0, 3)
+      .forEach(o => { if (o.j > i) edges.push([i, o.j]) })
+  })
+  return { nodes, edges }
+})()
+
+export function BrainGraph({ w = 620, h = 260 }: { w?: number; h?: number }) {
+  return (
+    <svg className="d3c braing" viewBox={`0 0 ${w} ${h}`} role="img" aria-label="The living knowledge graph">
+      <g className="braing-edges">
+        {BRAIN.edges.map(([a, b], i) => (
+          <line key={i} x1={BRAIN.nodes[a].x} y1={BRAIN.nodes[a].y} x2={BRAIN.nodes[b].x} y2={BRAIN.nodes[b].y}
+            pathLength={1} className="braing-edge" style={{ ['--i' as string]: i % 24 }} />
+        ))}
+      </g>
+      {BRAIN.nodes.map((n, i) => (
+        <circle key={i} cx={n.x} cy={n.y} r={n.hub ? 5 : 2.2} className={`braing-node${n.hub ? ' hub' : ''}`} style={{ ['--i' as string]: i % 30 }} />
+      ))}
+    </svg>
+  )
+}
+
 // ── Line/area (growth, retention, cash, ARR fan, scale) — d3-scaled, multi-series ──
 export function LineArea({ series, xTicks, refLine, w = 620, h = 260, yMax }: {
   series: { color: string; pts: number[]; area?: boolean; dashed?: boolean; label?: string }[]

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PIPELINE, OFFICES } from '../data/agents'
+import { ensureGsap, gsap, EASE, prefersReduced } from '../lib/motion'
 
 // ── JarvisOrb — the autonomous-company centerpiece, ported from the Circle HQ CEO
 // cockpit's "lite" reactor (SVG + CSS, 60fps, no WebGL — so it animates anywhere,
@@ -31,17 +32,49 @@ function makeEvent(tick: number) {
 export function JarvisOrb({ big = false }: { big?: boolean }) {
   const [feed, setFeed] = useState(() => Array.from({ length: 5 }, (_, i) => makeEvent(1000 - i)))
   const [pulse, setPulse] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduce) return
     let tick = 1001
-    const id = setInterval(() => { setFeed(f => [makeEvent(tick++), ...f].slice(0, 5)); setPulse(p => p + 1) }, 2200)
-    return () => clearInterval(id)
+    // battery: the ticker pauses with the tab
+    let id: ReturnType<typeof setInterval> | null = null
+    const play = () => { if (!id) id = setInterval(() => { setFeed(f => [makeEvent(tick++), ...f].slice(0, 5)); setPulse(p => p + 1) }, 2200) }
+    const halt = () => { if (id) { clearInterval(id); id = null } }
+    const onVis = () => (document.visibilityState === 'hidden' ? halt() : play())
+    play(); document.addEventListener('visibilitychange', onVis)
+    return () => { halt(); document.removeEventListener('visibilitychange', onVis) }
+  }, [])
+
+  // boot sequence: the orb powers on — rings flicker in, core ignites, panels
+  // cascade. Runs when the orb first becomes visible; opacity-only on the ring
+  // groups (their spin lives in CSS transforms — never fight it).
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || prefersReduced() || document.visibilityState === 'hidden') return
+    ensureGsap()
+    let done = false
+    const io = new IntersectionObserver(es => {
+      if (done || !es.some(e => e.isIntersecting)) return
+      done = true; io.disconnect()
+      const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: EASE.out } })
+        tl.from(root.querySelector('.jarvis-orb'), { scale: 0.82, opacity: 0, duration: 0.9, ease: EASE.soft }, 0)
+          .from(root.querySelectorAll('.jarvis-orb > g, .jarvis-orb > circle'), { opacity: 0, duration: 0.5, stagger: 0.07 }, 0.15)
+          .from(root.querySelector('.jarvis-badge'), { y: -10, opacity: 0, duration: 0.5 }, 0.7)
+          .from(root.querySelectorAll('.jarvis-tickhead, .jarvis-ev'), { x: 16, opacity: 0, duration: 0.45, stagger: 0.06 }, 0.55)
+          .from(root.querySelectorAll('.jarvis-pipe-st'), { y: 8, opacity: 0, duration: 0.35, stagger: 0.05 }, 0.9)
+      }, root)
+      // one-shot: no revert needed — end state is the natural state
+      void ctx
+    })
+    io.observe(root)
+    return () => io.disconnect()
   }, [])
 
   return (
-    <div className={`jarvis${big ? ' big' : ''}`}>
+    <div className={`jarvis${big ? ' big' : ''}`} ref={rootRef}>
       <div className="jarvis-orbwrap" data-pulse={pulse % 2}>
         <svg viewBox="0 0 400 400" className="jarvis-orb" role="img" aria-label="Autonomous company core">
           <defs>
