@@ -469,3 +469,14 @@
 .braing-node.hub { fill: var(--violet); filter: drop-shadow(0 0 8px rgba(139,92,246,.7)); animation: braingHub 2.6s ease-in-out infinite; }
 .pslide.active .braing-node { opacity: .9; }
 @keyframes braingHub { 0%,100% { r: 5px; } 50% { r: 6.5px; } }
+
+/* ══════════ W3: product card peek + Flip-to-stage ══════════ */
+.prodx { position: relative; overflow: hidden; }
+.prodx-peek { position: absolute; right: 54px; top: 50%; transform: translateY(-40%) rotate(4deg); opacity: 0; pointer-events: none; transition: opacity .35s ease, transform .45s cubic-bezier(.16,1,.3,1); }
+.prodx:hover .prodx-peek { opacity: 1; transform: translateY(-50%) rotate(-2deg); }
+.prodx-peek-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 92px; height: 148px; border-radius: 16px; border: 2px solid color-mix(in srgb, var(--wc) 45%, transparent); box-shadow: 0 14px 34px color-mix(in srgb, var(--wc) 28%, transparent); backdrop-filter: blur(4px); }
+.prodx-peek-screen i { font-style: normal; font-size: 30px; }
+.prodx-peek-screen b { font-size: 9.5px; font-weight: 800; }
+.prodx-peek-screen em { font-size: 8px; font-style: normal; color: var(--muted); }
+@media (hover: none), (max-width: 700px) { .prodx-peek { display: none; } }
+.prodx-fly { position: fixed !important; inset: 0 !important; z-index: 70; border-radius: 0 !important; border-left-width: 0 !important; }

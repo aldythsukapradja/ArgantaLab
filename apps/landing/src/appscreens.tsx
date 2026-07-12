@@ -4,7 +4,7 @@ import OrgFlow from './components/OrgFlow'
 import { JarvisOrb } from './components/JarvisOrb'
 import { AGENTS, OFFICES } from './data/agents'
 import { SITE } from './lib/site'
-import { ensureGsap, gsap, SplitText, EASE, prefersReduced } from './lib/motion'
+import { ensureGsap, gsap, SplitText, Flip, EASE, prefersReduced } from './lib/motion'
 
 export type Tab = 'home' | 'products' | 'about' | 'pitch' | 'command'
 export type Launch = (deck: string, opt?: { present?: boolean; flight?: string }) => void
@@ -82,19 +82,41 @@ export function Home({ onLaunch, onTab }: { onLaunch: Launch; onTab: (t: Tab) =>
 }
 
 // ─────────────── PRODUCTS (fit, each card → its presentation) ───────────────
+const PEEK_GLYPH: Record<string, string> = { kinetik: '📅', argantalab: '🎮', lashira: '🌾', circleapps: '🧩' }
+
 export function Products({ onLaunch }: { onLaunch: Launch }) {
+  // Flip-to-stage: the clicked card grows to fill the viewport, THEN the flight
+  // mounts — "the card becomes the stage". Instant nav under reduced-motion,
+  // hidden tabs, or touch devices.
+  const launch = useCallback((e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    const nav = () => onLaunch('general', { flight: id })
+    const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    if (prefersReduced() || document.visibilityState === 'hidden' || !fine) return nav()
+    ensureGsap()
+    const card = e.currentTarget
+    const state = Flip.getState(card)
+    card.classList.add('prodx-fly')
+    Flip.from(state, { duration: 0.55, ease: 'power3.inOut', absolute: true, onComplete: nav })
+    gsap.to(card.querySelectorAll('.prodx-body, .prodx-go, .prodx-dot'), { opacity: 0, duration: 0.3 })
+  }, [onLaunch])
+
   return (
     <div className="scr scr-products">
       <div className="scr-head"><span className="scr-kick">Products</span><h2 className="scr-h2">Three products, <em>one circle.</em></h2></div>
       <div className="prodlist">
         {SITE.products.filter(p => !p.hidden).map(p => (
-          <button key={p.id} className="prodx" style={{ ['--wc' as string]: p.color }} onClick={() => onLaunch('general', { flight: p.id })}>
+          <button key={p.id} className="prodx" style={{ ['--wc' as string]: p.color }} onClick={e => launch(e, p.id)}>
             <span className="prodx-dot" style={{ background: p.color }} />
             <div className="prodx-body">
               <span className="prodx-tag" style={{ color: p.color }}>{p.tag}</span>
               <h3 className="prodx-name">{p.name}</h3>
               <p className="prodx-line">{p.line}</p>
             </div>
+            <span className="prodx-peek" aria-hidden>
+              <span className="prodx-peek-screen" style={{ background: `linear-gradient(160deg, ${p.color}33, ${p.color}0f)` }}>
+                <i>{PEEK_GLYPH[p.id]}</i><b style={{ color: p.color }}>{p.name}</b><em>tap to fly in</em>
+              </span>
+            </span>
             <span className="prodx-go" style={{ color: p.color }}>▸</span>
           </button>
         ))}
