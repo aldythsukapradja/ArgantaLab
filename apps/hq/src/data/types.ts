@@ -149,8 +149,8 @@ export interface PortfolioVc {
 }
 
 // ── Engagement · time-on-page (hq_engagement RPC over app_usage_beats) ──
-export interface EngagementApp { app: string; seconds: number; users: number; sessions: number }
-export interface EngagementPage { app: string; page: string; seconds: number; users: number }
+export interface EngagementApp { app: string; seconds: number; users: number; sessions: number; clicks?: number; avgSession?: number | null }
+export interface EngagementPage { app: string; page: string; seconds: number; users: number; clicks?: number }
 export interface EngagementDay { day: string; app: string; seconds: number }
 export interface EngagementPunch { dow: number; hour: number; seconds: number }
 export interface EngagementUserApp { app: string; seconds: number }
@@ -169,11 +169,32 @@ export interface EngagementData {
   days: number
   totalSeconds: number
   totalUsers: number
+  totalClicks?: number
   apps: EngagementApp[]
   pages: EngagementPage[]
   daily: EngagementDay[]
   punch: EngagementPunch[]
   users: EngagementUser[]
+  generatedAt: string
+}
+
+// ── Power-user curve (hq_power_curve) — a16z L14 histogram ──
+export interface PowerBucket { daysActive: number; users: number }
+export interface PowerCurve { days: number; histogram: PowerBucket[]; totalUsers: number; generatedAt: string }
+
+// ── Audience splits (hq_audience) — aggregate-only ──
+export interface AudienceData {
+  roles: { role: string; count: number }[]
+  ageBands: { band: string; count: number }[]
+  genders: { gender: string; count: number }[]
+  devices: { device: string; seconds: number }[]
+  generatedAt: string
+}
+
+// ── Coarse geo (hq_geo) — timezone regions, kid-safe ──
+export interface GeoData {
+  regions: { tz: string; users: number; seconds: number }[]
+  referrers: { ref: string; sessions: number }[]
   generatedAt: string
 }
 

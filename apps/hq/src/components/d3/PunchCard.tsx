@@ -25,7 +25,8 @@ export function PunchCard({ punch }: { punch: EngagementPunch[] }) {
 
   const W = Math.max(320, width)
   const labelW = 30
-  const cell = Math.max(8, Math.floor((W - labelW) / 24) - 2)
+  // cell clamped so the grid stays compact on wide rails and readable on narrow
+  const cell = Math.min(12, Math.max(8, Math.floor((W - labelW) / 24) - 2))
   const gap = 2
   const H = 14 + 7 * (cell + gap)
 

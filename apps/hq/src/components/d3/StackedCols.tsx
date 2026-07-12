@@ -44,6 +44,7 @@ export function StackedCols({ labels, series, data, height = 190, valueFmt = com
           ))}
           {labels.map((l, i) => {
             const cx = (xb(i) ?? 0) + (xb.bandwidth() - bw) / 2
+            const step = (W - padL - padR) / labels.length
             let acc = 0
             return (
               <g key={l + i}
@@ -56,7 +57,8 @@ export function StackedCols({ labels, series, data, height = 190, valueFmt = com
                   </div>
                 ))}
                 onPointerLeave={hide}>
-                <rect x={xb(i) ?? 0} y={padT - 6} width={xb.bandwidth()} height={H - padT - padB + 6} fill="transparent" />
+                {/* hit target spans the full column step, gaps included */}
+                <rect x={padL + i * step} y={0} width={step} height={H} fill="transparent" />
                 {series.map((s) => {
                   const v = data[i]?.[s.key] ?? 0
                   if (v <= 0) return null

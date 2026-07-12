@@ -8,6 +8,13 @@
 // tab-hide, attributed to the signed-in user when there is one and to a
 // stable anonymous client id otherwise.
 //
+// v2 sensors (all coarse, first-party, kid-safe — no GPS/IP, no fingerprints):
+//   tz (IANA timezone → region), locale, device class, viewport bucket,
+//   clicks per beat window, session-entry flag, referrer host (has value on
+//   the landing page; empty for direct/app navigation).
+// If the DB still has the v1 table (no sensor columns), the insert falls back
+// to the legacy shape automatically.
+//
 // Zero dependencies; the host app passes its own Supabase client. Every
 // failure path is swallowed — analytics must never break the product.
 
@@ -31,6 +38,25 @@ function clientId() {
   return id
 }
 
+function sensors() {
+  const s = { tz: null, locale: null, device: null, vw: null, ref: null }
+  try { s.tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null } catch { /* old engines */ }
+  try { s.locale = navigator.language || null } catch { /* ignore */ }
+  try {
+    const w = window.innerWidth || 0
+    s.vw = Math.min(32000, Math.round(w / 10) * 10)
+    const touch = 'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 1
+    s.device = w < 700 ? 'mobile' : touch && w < 1100 ? 'tablet' : 'desktop'
+  } catch { /* ignore */ }
+  try {
+    if (document.referrer) {
+      const host = new URL(document.referrer).hostname
+      if (host && host !== window.location.hostname) s.ref = host.slice(0, 80)
+    }
+  } catch { /* ignore */ }
+  return s
+}
+
 /**
  * Start the usage tracker. Returns a stop() function.
  * @param {object}   opts
@@ -45,25 +71,36 @@ export function startUsageTracker({ supabase, app, getPage }) {
 
   const cid = clientId()
   const sessionId = 's_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
+  const sense = sensors()
   const page = () => {
     try { return String(getPage?.() || 'home').slice(0, 80) } catch { return 'home' }
   }
 
   let lastInput = Date.now()
-  let buckets = new Map()          // page -> seconds counted, not yet flushed
+  let buckets = new Map()          // page -> { secs, clicks } counted, not yet flushed
   let stopped = false
   let flushing = false
+  let sentEntry = false
+  let legacyShape = false          // v1 table without sensor columns
+
+  const bump = (p, secs, clicks) => {
+    const b = buckets.get(p) || { secs: 0, clicks: 0 }
+    b.secs += secs
+    b.clicks += clicks
+    buckets.set(p, b)
+  }
 
   const onInput = () => { lastInput = Date.now() }
-  const INPUT_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll']
+  const onClick = () => { lastInput = Date.now(); bump(page(), 0, 1) }
+  const INPUT_EVENTS = ['pointermove', 'keydown', 'wheel', 'touchstart', 'scroll']
   for (const ev of INPUT_EVENTS) window.addEventListener(ev, onInput, { passive: true, capture: true })
+  window.addEventListener('pointerdown', onClick, { passive: true, capture: true })
 
   const tick = setInterval(() => {
     if (stopped) return
     if (document.visibilityState !== 'visible') return
     if (Date.now() - lastInput > IDLE_MS) return
-    const p = page()
-    buckets.set(p, (buckets.get(p) || 0) + TICK_MS / 1000)
+    bump(page(), TICK_MS / 1000, 0)
   }, TICK_MS)
 
   async function flush() {
@@ -77,19 +114,40 @@ export function startUsageTracker({ supabase, app, getPage }) {
       const userId = data?.session?.user?.id ?? null
       const now = new Date()
       const rows = []
-      for (const [p, secs] of snapshot) {
-        const s = Math.min(MAX_BEAT_SECS, Math.round(secs))
+      for (const [p, b] of snapshot) {
+        const s = Math.min(MAX_BEAT_SECS, Math.round(b.secs))
         if (s < 1) continue
-        rows.push({
+        const row = {
           app, page: p, secs: s,
           user_id: userId, client_id: cid, session_id: sessionId,
           local_hour: now.getHours(), local_dow: now.getDay(),
-        })
+        }
+        if (!legacyShape) {
+          row.tz = sense.tz
+          row.locale = sense.locale
+          row.device = sense.device
+          row.vw = sense.vw
+          row.clicks = Math.min(30000, b.clicks)
+          row.entry = !sentEntry
+          row.ref = sense.ref
+        }
+        rows.push(row)
       }
       if (rows.length) {
-        const { error } = await supabase.from('app_usage_beats').insert(rows)
-        // table not migrated yet / offline — put the seconds back and retry later
-        if (error) for (const r of rows) buckets.set(r.page, (buckets.get(r.page) || 0) + r.secs)
+        let { error } = await supabase.from('app_usage_beats').insert(rows)
+        if (error && !legacyShape && /column/i.test(error.message || '')) {
+          // v1 table — retry once with the legacy shape, then stay legacy
+          legacyShape = true
+          const legacyRows = rows.map(({ app, page, secs, user_id, client_id, session_id, local_hour, local_dow }) =>
+            ({ app, page, secs, user_id, client_id, session_id, local_hour, local_dow }))
+          ;({ error } = await supabase.from('app_usage_beats').insert(legacyRows))
+        }
+        if (error) {
+          // table missing / offline — put the seconds back and retry later
+          for (const r of rows) bump(r.page, r.secs, r.clicks || 0)
+        } else {
+          sentEntry = true
+        }
       }
     } catch {
       /* analytics never throws */
@@ -108,6 +166,7 @@ export function startUsageTracker({ supabase, app, getPage }) {
     clearInterval(tick)
     clearInterval(flusher)
     for (const ev of INPUT_EVENTS) window.removeEventListener(ev, onInput, { capture: true })
+    window.removeEventListener('pointerdown', onClick, { capture: true })
     document.removeEventListener('visibilitychange', onHide)
     window.removeEventListener('pagehide', onHide)
     void flush()

@@ -58,7 +58,7 @@ function PlayIcon({ size = 12 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
 }
 
-export function MusicBuilder() {
+export function LegacyContent() {
   const [tab, setTab] = useState<'overview' | 'sfx' | 'music'>('overview')
   const [draft, setDraft] = useState<Record<string, Layer[]>>({})
   const [selected, setSelected] = useState('harvest')
@@ -126,7 +126,7 @@ export function MusicBuilder() {
         <div className="mbf-mark">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
         </div>
-        <div className="mbf-title"><b>Music Builder</b><span>Circle HQ · Build</span></div>
+        <div className="mbf-title"><b>Legacy tools</b><span>Overview · SFX Forge · Music Forge</span></div>
         <div className="mbf-credit"><span className="dot" />ElevenLabs: not connected · Synth mode only</div>
         {pubMsg && <span className="mbf-pubtoast" style={{ color: pubMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>{pubMsg.text}</span>}
         {tab !== 'music' && !cloudEnabled && <span className="pill pill-mut" style={{ color: 'var(--warn)' }}>offline</span>}

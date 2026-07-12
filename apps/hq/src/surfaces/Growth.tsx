@@ -7,12 +7,13 @@ import {
 import { live } from '../data/live'
 import type { KinetikStats } from '../data/live'
 import { supabase } from '../lib/supabase'
-import type { GrowthOverview, RetentionData, AcquisitionData, EconomyData } from '../data/types'
+import type { GrowthOverview, RetentionData, AcquisitionData, EconomyData, EngagementData } from '../data/types'
 import { heroCards, buildScorecard, growthInsight, kindLabel, type Tone, type HeroCard, type GrowthInsight, type ScoreRow } from '../data/growth'
 import { LineChart } from '../components/LineChart'
 import { AreaTrend } from '../components/d3/AreaTrend'
 import { CohortHeat } from '../components/CohortHeat'
 import { ChartView, chartColor } from '../components/charts'
+import { appColor, fmtDur } from '../components/d3/chartkit'
 import { Presentation } from '../components/Presentation'
 import { Monetization } from './Monetization'
 import { Empty, Loading } from '../components/Empty'
@@ -45,6 +46,7 @@ export function Growth() {
   const [k, setK] = useState<KinetikStats | null | undefined>(undefined)
   const [a, setA] = useState<AcquisitionData | null | undefined>(undefined)
   const [e, setE] = useState<EconomyData | null | undefined>(undefined)
+  const [eng, setEng] = useState<EngagementData | null | undefined>(undefined)
   const [present, setPresent] = useState(false)
   const [who, setWho] = useState('Operator')
 
@@ -53,6 +55,7 @@ export function Growth() {
     live.growthOverview().then(setO)
     live.acquisition().then(setA)
     live.economy().then(setE)
+    live.engagement(30).then(setEng)
     supabase.auth.getUser().then(({ data }) => {
       const n = (data.user?.user_metadata?.name as string) || data.user?.email?.split('@')[0]
       if (n) setWho(n)
@@ -94,7 +97,7 @@ export function Growth() {
         </Empty>
       )}
       {tab === 'overview' && (k !== undefined || o !== undefined) && (
-        <Overview o={o ?? null} k={k ?? null} heroes={heroes} score={score} insight={insight} />
+        <Overview o={o ?? null} k={k ?? null} eng={eng ?? null} heroes={heroes} score={score} insight={insight} />
       )}
       {o && tab === 'retention' && <Retention o={o} />}
       {o && tab === 'acquisition' && <Acquisition o={o} a={a} />}
@@ -141,11 +144,12 @@ function KinetikSnapshot({ k }: { k: KinetikStats }) {
   )
 }
 
-function Overview({ o, k, heroes, score, insight }: { o: GrowthOverview | null; k: KinetikStats | null; heroes: HeroCard[]; score: ScoreRow[]; insight: GrowthInsight | null }) {
+function Overview({ o, k, eng, heroes, score, insight }: { o: GrowthOverview | null; k: KinetikStats | null; eng: EngagementData | null; heroes: HeroCard[]; score: ScoreRow[]; insight: GrowthInsight | null }) {
   const [drill, setDrill] = useState<string | null>(null)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
       {k && <KinetikSnapshot k={k} />}
+      {eng && <LashiraSnapshot eng={eng} />}
 
       {!o && !k && (
         <Empty title="Connect Supabase to see growth metrics">
@@ -170,7 +174,7 @@ function Overview({ o, k, heroes, score, insight }: { o: GrowthOverview | null; 
       </div>}
 
       {o && (() => {
-        const hasMix = (o.activityMix ?? []).some(m => m.events > 0)
+        const hasMix = (o.activityMix ?? []).some(m => m.events > 0) || (eng?.apps.length ?? 0) > 0
         return (
         <div className="gdash">
           <div className={'card ' + (hasMix ? 'gd-7' : 'gd-12')} style={{ padding: 16 }}>
@@ -184,7 +188,7 @@ function Overview({ o, k, heroes, score, insight }: { o: GrowthOverview | null; 
             <LineChart points={o.northStar} />
           </div>
 
-          {hasMix && <ActivityMix o={o} className="gd-5" />}
+          {hasMix && <UsersActivity o={o} k={k} eng={eng} className="gd-5" />}
 
           <div className="gd-12">
             <div className="spread" style={{ marginBottom: 8 }}>
@@ -248,25 +252,113 @@ function HeroMetric({ h }: { h: HeroCard }) {
   )
 }
 
-// What kids actually do — live breakdown of earn-activity by type (last 30d).
-// This is the honest answer to "are lessons being completed?" and doubles as a
-// content-investment map: where engagement actually concentrates.
-function ActivityMix({ o, className = '' }: { o: GrowthOverview; className?: string }) {
+// What users actually do — per app (last 30d). ArgantaLab reads the learning
+// ledger; every other app reads measured time per page/scene from the beats
+// pipeline. One panel, one question: where does each product's usage go?
+function UsersActivity({ o, k, eng, className = '' }: { o: GrowthOverview; k: KinetikStats | null; eng: EngagementData | null; className?: string }) {
+  const APPS: { id: string; label: string }[] = [
+    { id: 'arganta', label: 'ArgantaLab' },
+    { id: 'kinetik', label: 'Kinetik' },
+    { id: 'lashira', label: 'Lashira' },
+    { id: 'hq', label: 'HQ' },
+    { id: 'landing', label: 'Landing' },
+  ]
+  const [app, setApp] = useState('arganta')
+
   const mix = (o.activityMix ?? []).filter(m => m.events > 0)
-  if (mix.length === 0) return null
-  const totalEvents = mix.reduce((s, m) => s + m.events, 0)
-  const top = mix[0]
-  const slices = mix.map((m, i) => ({ label: kindLabel(m.kind), value: m.events, color: chartColor(i) }))
+  const pagesFor = (id: string) => (eng?.pages ?? []).filter(p => p.app === id)
+
+  let body: ReactNode
+  let sub = ''
+  if (app === 'arganta' && mix.length > 0) {
+    const totalEvents = mix.reduce((s, m) => s + m.events, 0)
+    sub = `${compact(totalEvents)} learning actions across ${mix.length} types — where to invest content next`
+    body = <ChartView data={{
+      kind: 'donut',
+      slices: mix.map((m, i) => ({ label: kindLabel(m.kind), value: m.events, color: chartColor(i) })),
+      centerValue: compact(totalEvents), centerLabel: 'actions',
+    }} />
+  } else if (app === 'kinetik' && k) {
+    sub = 'family actions this period — posting vs planning vs discovering'
+    body = <ChartView data={{ kind: 'bars', bars: [
+      { label: 'Posts · 7d', value: k.posts7d, color: appColor('kinetik') },
+      { label: 'Reactions', value: k.reactions, color: appColor('kinetik') },
+      { label: 'Discover views', value: k.broadcastViews, color: appColor('kinetik') },
+      { label: 'Broadcasts live', value: k.broadcastsPublished, color: appColor('kinetik') },
+    ].filter(b => b.value > 0) }} />
+  } else {
+    const pages = pagesFor(app)
+    if (pages.length > 0) {
+      const total = pages.reduce((s, p) => s + p.seconds, 0)
+      sub = `${fmtDur(total)} of measured time by ${app === 'lashira' ? 'scene' : app === 'hq' ? 'surface' : 'section'} · last 30d`
+      body = <ChartView data={{
+        kind: 'donut',
+        slices: pages.slice(0, 6).map((p, i) => ({ label: p.page, value: p.seconds, color: chartColor(i) })),
+        centerValue: fmtDur(total), centerLabel: 'time',
+      }} />
+    } else {
+      sub = 'measured time per page/scene'
+      body = (
+        <Empty title="Awaiting usage beats">
+          Fills from the time-on-page pipeline (<span className="src">migration_hq_engagement_v3.sql</span>).
+        </Empty>
+      )
+    }
+  }
+
   return (
     <div className={'card ' + className} style={{ padding: 16 }}>
-      <div className="spread" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+      <div className="spread" style={{ marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <div className="row" style={{ gap: 6, fontSize: 13.5, fontWeight: 600 }}><Sparkles size={14} /> What kids actually do · last 30d</div>
-          <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{compact(totalEvents)} learning actions across {mix.length} activity types — drives where to invest content next</div>
+          <div className="row" style={{ gap: 6, fontSize: 13.5, fontWeight: 600 }}><Sparkles size={14} /> What users actually do</div>
+          <div style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{sub}</div>
         </div>
-        <span className="pill pill-ok">{kindLabel(top.kind)} leads · {Math.round((100 * top.events) / totalEvents)}%</span>
       </div>
-      <ChartView data={{ kind: 'donut', slices, centerValue: compact(totalEvents), centerLabel: 'actions' }} />
+      <div className="row" style={{ gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
+        {APPS.map(a => (
+          <button key={a.id} className="chip" onClick={() => setApp(a.id)}
+            style={{ fontSize: 10.5, padding: '2px 9px',
+              background: app === a.id ? appColor(a.id) : 'var(--bg3)',
+              color: app === a.id ? '#fff' : 'var(--tx2)', borderColor: 'transparent' }}>
+            {a.label}
+          </button>
+        ))}
+      </div>
+      {body}
+    </div>
+  )
+}
+
+// LashiraBloom snapshot — measured play from the beats pipeline (the game has
+// no server-side action ledger yet; time IS the honest signal).
+function LashiraSnapshot({ eng }: { eng: EngagementData }) {
+  const a = eng.apps.find(x => x.app === 'lashira')
+  if (!a) return null
+  const pages = eng.pages.filter(p => p.app === 'lashira')
+  const realms = pages.filter(p => p.page.startsWith('realm')).reduce((s, p) => s + p.seconds, 0)
+  const top = pages[0]
+  const metrics: { label: string; value: string; icon: ReactNode; sub: string }[] = [
+    { label: 'Players', value: compact(a.users), icon: <Users size={13} />, sub: `last ${eng.days}d` },
+    { label: 'Time played', value: fmtDur(a.seconds), icon: <Activity size={13} />, sub: 'measured in-game' },
+    { label: 'Sessions', value: compact(a.sessions), icon: <CalendarClock size={13} />, sub: a.users > 0 ? (a.sessions / a.users).toFixed(1) + ' per player' : '' },
+    { label: 'Avg session', value: a.sessions > 0 ? fmtDur(a.avgSession ?? a.seconds / a.sessions) : '—', icon: <Eye size={13} />, sub: 'depth per sit-down' },
+    { label: 'Realm time', value: realms > 0 ? fmtDur(realms) : '—', icon: <Gem size={13} />, sub: 'portal worlds' },
+    { label: 'Top scene', value: top ? top.page : '—', icon: <Sparkles size={13} />, sub: top ? fmtDur(top.seconds) : '' },
+  ]
+  return (
+    <div className="card" style={{ padding: '11px 15px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div className="row" style={{ gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--tx2)' }}>
+        <Coins size={13} /> LashiraBloom
+      </div>
+      <div className="kstrip">
+        {metrics.map(m => (
+          <div key={m.label}>
+            <div className="kc-l">{m.icon} {m.label}</div>
+            <div className="kc-v" style={{ fontSize: m.value.length > 8 ? 14 : undefined }}>{m.value}</div>
+            <div className="kc-s">{m.sub}</div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
