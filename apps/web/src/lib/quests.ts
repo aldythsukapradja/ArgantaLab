@@ -71,8 +71,15 @@ export interface QuestDef {
 
 // Mirror the Home North Star knobs so the Quest chain tells the SAME story
 // (hardcoded to avoid a circular import — dailyRings imports getCounters here).
-const FOCUS_XP = 120
-const RINGS_GOAL = 6
+// Keep these in lockstep with DAILY_CIRCLE_XP / DAILY_DRILLS / DAILY_KIN in
+// lib/dailyRings.ts — a mismatch here lets a kid "complete" this chain at a
+// lower bar than what actually fills the Home circle.
+// Exported (not just local) so a test can assert these stay locked to
+// dailyRings.ts's values instead of silently drifting apart again.
+export const FOCUS_XP = 500
+export const RINGS_GOAL = 6
+export const DRILLS_GOAL = 6
+export const BEFRIEND_GOAL = 2
 
 export const QUESTS: QuestDef[] = [
   // ── the daily chain: mirrors the Home North Star and is driven by the SAME
@@ -80,8 +87,8 @@ export const QUESTS: QuestDef[] = [
   //    advances the chain — no device-local desync. Steps 3–5 are action counters.
   { id: 'd_focus',    scope: 'daily', step: 1, label: 'Focus',    title: `Earn ${FOCUS_XP} XP today`, icon: '🔥', metric: () => 0, cloud: 'xp',    target: FOCUS_XP,   reward: { diamonds: 10 }, route: 'learn' },
   { id: 'd_learn',    scope: 'daily', step: 2, label: 'Learn',    title: 'Fill your 6 skill rings',   icon: '🎯', metric: () => 0, cloud: 'rings', target: RINGS_GOAL, reward: { diamonds: 14 }, route: 'learn' },
-  { id: 'd_build',    scope: 'daily', step: 3, label: 'Practice', title: 'Finish 3 drills',           icon: '🎲', metric: c => c.drill,    target: 3, reward: { diamonds: 16 }, route: 'learn' },
-  { id: 'd_befriend', scope: 'daily', step: 4, label: 'Befriend', title: 'Befriend a kin',            icon: '💗', metric: c => c.befriend, target: 1, reward: { diamonds: 18 }, route: 'kinworld' },
+  { id: 'd_build',    scope: 'daily', step: 3, label: 'Practice', title: `Finish ${DRILLS_GOAL} drills`,       icon: '🎲', metric: c => c.drill,    target: DRILLS_GOAL, reward: { diamonds: 16 }, route: 'learn' },
+  { id: 'd_befriend', scope: 'daily', step: 4, label: 'Befriend', title: `Befriend ${BEFRIEND_GOAL} kin`,      icon: '💗', metric: c => c.befriend, target: BEFRIEND_GOAL, reward: { diamonds: 18 }, route: 'kinworld' },
   { id: 'd_show',     scope: 'daily', step: 5, label: 'Master',   title: 'Win a boss battle',         icon: '⚔️', metric: c => c.boss,     target: 1, reward: { diamonds: 15 }, route: 'learn' },
   // ── weekly ──
   { id: 'w_nodes', scope: 'weekly', title: 'Complete 10 lessons this week', icon: '🏅', metric: c => c.nodes, target: 10, reward: { diamonds: 40, xp: 50 } },

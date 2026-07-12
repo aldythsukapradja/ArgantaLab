@@ -31,7 +31,10 @@ const RING_LABEL: Record<string, string> = {
   NUM: 'Number', WRD: 'Word', WON: 'Wonder', LOG: 'Logic', WLD: 'World', LIF: 'Life',
 }
 const WORLD_KEYS = WORLDS.map(w => w.key)
-const NS_FOCUS_XP = 120, NS_SPREAD = 3
+// Kept in lockstep with DAILY_CIRCLE_XP / DAILY_KIN in lib/dailyRings.ts — this
+// crest computes its own Focus/Kin goals rather than reading dailyCircle(), so
+// a change there needs mirroring here too (see the same note in lib/quests.ts).
+const NS_FOCUS_XP = 500, NS_KIN = 2, NS_SPREAD = 3
 const PALETTE = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ef4444', '#14b8a6']
 
 function Ring({ pct, color }: { pct: number; color: string }) {
@@ -60,7 +63,7 @@ function KidSnapshot({ xp, diamonds, todayXp, kins }: {
   const goals = [
     { name: 'Focus',  color: '#f0a83a', frac: Math.min(1, xpSum / NS_FOCUS_XP), on: xpSum >= NS_FOCUS_XP },
     { name: 'Rings',  color: '#37a8c4', frac: ringsN / 6,                        on: ringsN >= 6 },
-    { name: 'Kin',    color: '#ec4899', frac: (kins ?? 0) >= 1 ? 1 : 0,          on: (kins ?? 0) >= 1 },
+    { name: 'Kin',    color: '#ec4899', frac: Math.min(1, (kins ?? 0) / NS_KIN), on: (kins ?? 0) >= NS_KIN },
     { name: 'Spread', color: '#7a4fd0', frac: Math.min(1, spread / NS_SPREAD),   on: spread >= NS_SPREAD },
   ]
   const done = goals.filter(g => g.on).length

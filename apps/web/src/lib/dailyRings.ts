@@ -10,10 +10,15 @@ import { tzOffsetMin } from './day'
 //  (worldRing in learnProgress.ts) stay on the Profile/Learn pages unchanged.
 // ============================================================
 
-// XP that fills ONE world's daily ring. Single tunable knob: calibrated so a
-// focused ~10-minute subject session fills a ring, and the 45–60 min/day target
-// lights up several rings across the orbit. Bump this to make the goal harder.
-export const DAILY_WORLD_XP_GOAL = 80
+// XP that fills ONE world's daily ring. Recalibrated against MEASURED content
+// density (avg item.xp ≈ 10.4, avg single drill round ≈ 48xp / ~2 real minutes
+// — see src/data/__pacing_audit.test.ts): at ~25xp/min blended pace, the OLD
+// goal of 80 filled in ~3 minutes (one drill round), not the intended ~10 —
+// content had grown denser since this was last tuned and nobody revisited it.
+// 170xp/ring ≈ 7 minutes/ring; all 6 rings ≈ 41 real minutes, the dominant
+// lever for the 45–60 min/day target (the other 3 circle pips layer on top,
+// mostly overlapping since drill/kin XP also counts toward its world's ring).
+export const DAILY_WORLD_XP_GOAL = 170
 
 /** Today's XP per world (UPPERCASE world key → xp), from the cloud event log,
  *  scoped to the kid's LOCAL day. Server-authoritative; empty when offline or
@@ -44,10 +49,17 @@ export function ringPct(xp: number): number {
 // ============================================================
 import { getCounters } from './quests'
 
-export const DAILY_CIRCLE_XP = 120 // focused-effort goal (well above the old flat 80)
-export const DAILY_DRILLS = 3      // "clear 3 quests" (drill/practice signal)
+// Recalibrated alongside DAILY_WORLD_XP_GOAL (see comment above) — at old
+// values, 3 quick drill rounds (~7 real minutes, ~150xp measured) alone
+// cleared BOTH the old effort goal (120) and the old quest goal (3), letting
+// "the circle" go full in well under 10 minutes. New values require real
+// breadth: rings (unchanged, still the dominant lever) forces all 6 subjects;
+// effort and quest now need a genuinely larger, less-gameable slice of the
+// same ~45–60 min session, not a side effect of one lucky round.
+export const DAILY_CIRCLE_XP = 500 // focused-effort goal (~20 real minutes at measured pace)
+export const DAILY_DRILLS = 6      // "clear 6 quests" — roughly one dedicated round per world
 export const DAILY_RINGS = 6       // all six world rings
-export const DAILY_KIN = 1
+export const DAILY_KIN = 2
 const WORLD_KEYS = ['NUM', 'WRD', 'WON', 'LOG', 'WLD', 'LIF']
 
 // The North Star: a core-4 daily set spanning what kids actually do. Every goal
