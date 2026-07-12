@@ -6,3 +6,4 @@ export * from './recipes.js';
 export * from './repo.js';
 export * from './usage.js';
 export * from './music.js';
+export * from './classical.js';

@@ -10,11 +10,12 @@
 import { Component, Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Music2, Wand2, X, Send, Play, Pause, Plus, Disc3, History, Rocket,
-  SlidersHorizontal, ListMusic, Drum as DrumIcon, Download,
+  SlidersHorizontal, ListMusic, Drum as DrumIcon, Download, Library, Music3,
 } from 'lucide-react'
 import {
   MUSIC_THEMES, MusicTransport, INSTRUMENTS, KITS, SCALES, CHORD_PROGS, NOTE_BASE,
   ROLES, ROLE_LABEL, createMasterChain, publishMusicLibrary, loadActiveMusic,
+  CLASSICAL_PIECES, CLASSICAL_MOODS, REALM_ANTHEM, classicalPiece, scheduleClassicalPiece,
 } from '@arganta/audio'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { ai, aiLive } from '../../lib/ai'
@@ -59,6 +60,11 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
   const [publishing, setPublishing] = useState(false)
   const [recBars, setRecBars] = useState(8)
   const [recording, setRecording] = useState(false)
+  // classical library — a curated set of public-domain themes, one anthem per map
+  const [anthems, setAnthems] = useState<Record<string, string | null>>(() => ({ ...REALM_ANTHEM }))
+  const [classicalMood, setClassicalMood] = useState<string>('all')
+  const [anthemPlayingId, setAnthemPlayingId] = useState<string | null>(null)
+  const anthemTimerRef = useRef<number | undefined>(undefined)
   // composer chat
   const [botOpen, setBotOpen] = useState(false)
   const [botPrompt, setBotPrompt] = useState('')
@@ -72,14 +78,21 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
   useEffect(() => {
     if (!cloudEnabled) return
     loadActiveMusic(supabase).then((r: any) => {
-      if (r?.music && Object.keys(r.music).length) setThemes(prev => {
-        const next = clone(prev)
-        for (const rk of Object.keys(r.music)) {
-          if (next[rk]) next[rk] = { ...next[rk], ...r.music[rk], roles: { ...next[rk].roles, ...(r.music[rk].roles || {}) } }
-          else next[rk] = r.music[rk]
-        }
-        return next
-      })
+      if (r?.music && Object.keys(r.music).length) {
+        setThemes(prev => {
+          const next = clone(prev)
+          for (const rk of Object.keys(r.music)) {
+            if (next[rk]) next[rk] = { ...next[rk], ...r.music[rk], roles: { ...next[rk].roles, ...(r.music[rk].roles || {}) } }
+            else next[rk] = r.music[rk]
+          }
+          return next
+        })
+        // anthem picks ride along inside each published theme (an extra field
+        // the game's own sanitizer ignores) — pull them back out here.
+        const loaded: Record<string, string | null> = {}
+        for (const rk of Object.keys(r.music)) if ('anthem' in r.music[rk]) loaded[rk] = r.music[rk].anthem
+        if (Object.keys(loaded).length) setAnthems(prev => ({ ...prev, ...loaded }))
+      }
     })
   }, [])
 
@@ -113,7 +126,7 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
   function stop() { transport.current?.stop(); setPlaying(false) }
   // live-apply edits while playing
   useEffect(() => { if (playing) transport.current?.setTheme(T) }, [JSON.stringify(T)]) // eslint-disable-line
-  useEffect(() => () => { transport.current?.stop() }, [])
+  useEffect(() => () => { transport.current?.stop(); window.clearTimeout(anthemTimerRef.current) }, [])
 
   const patch = (p: Partial<Theme>) => setThemes(prev => ({ ...prev, [realm]: { ...prev[realm], ...p } }))
   const patchRole = (role: string, p: any) => setThemes(prev => ({ ...prev, [realm]: { ...prev[realm], roles: { ...prev[realm].roles, [role]: { ...prev[realm].roles[role], ...p } } } }))
@@ -129,6 +142,7 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
     const rk = slug(name)
     if (themes[rk]) { setStatus('That map already exists.'); return }
     setThemes(prev => ({ ...prev, [rk]: { ...clone(prev[realm]), realm: rk, name: name.trim() } }))
+    setAnthems(prev => ({ ...prev, [rk]: prev[realm] ?? null }))
     setRealm(rk)
     setStatus(`Added “${name.trim()}” — publish routes it to realm “${rk}”.`)
   }
@@ -136,11 +150,37 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
   async function publish() {
     setPublishing(true)
     try {
-      await publishMusicLibrary(supabase, themes, { note: 'HQ Music Studio' })
+      // fold each map's anthem pick into its theme payload — the game's own
+      // sanitizer drops unknown fields, so this is purely an HQ-side extra.
+      const withAnthems = Object.fromEntries(
+        Object.entries(themes).map(([rk, th]) => [rk, { ...(th as object), anthem: anthems[rk] ?? null }]),
+      )
+      await publishMusicLibrary(supabase, withAnthems, { note: 'HQ Music Studio' })
       setStatus(`Published ${Object.keys(themes).length} map themes — live in-game on next boot.`)
     } catch (e: any) { setStatus(`Publish failed: ${e?.message || e}`) }
     finally { setPublishing(false) }
   }
+
+  // ---- classical library: preview + per-map anthem assignment ----
+  const anthemFor = (rk: string) => anthems[rk] ?? null
+  const setAnthemForRealm = (rk: string, id: string | null) => setAnthems(prev => ({ ...prev, [rk]: id }))
+
+  function playAnthem(id: string) {
+    const piece = classicalPiece(id)
+    if (!piece) return
+    if (playing) stop() // the anthem plays through the same master bus — don't let the generative bed clash
+    const a = ensureAudio()
+    if (a.ctx.state === 'suspended') a.ctx.resume()
+    const onNote = (role: string) => { events.current.push({ role, born: performance.now() }); if (events.current.length > 120) events.current.shift() }
+    const { duration } = scheduleClassicalPiece(a.ctx, a.master, a.revBus, piece, { onNote })
+    setAnthemPlayingId(id)
+    window.clearTimeout(anthemTimerRef.current)
+    anthemTimerRef.current = window.setTimeout(() => setAnthemPlayingId(null), duration * 1000)
+    setStatus(`“${piece.title}” — ${piece.composer} · public-domain melody, synthesized live (no audio file).`)
+  }
+
+  const classicalList = classicalMood === 'all' ? CLASSICAL_PIECES : CLASSICAL_PIECES.filter((p: any) => p.mood === classicalMood)
+  const currentAnthem = anthemFor(realm)
 
   // ---- record N bars off the master bus (the studio's Export) ----
   async function record() {
@@ -321,6 +361,42 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
           </div>
 
           <div className="msx-panel">
+            <div className="msx-ph"><Library size={13} /> Classical Library<span className="badge">public domain</span></div>
+            <div className="msx-row">
+              <span className="msx-mini">this map's anthem</span>
+              {currentAnthem ? (
+                <>
+                  <button className="msx-chip on" onClick={() => playAnthem(currentAnthem)}>
+                    <Play size={10} /> {classicalPiece(currentAnthem)?.title}
+                  </button>
+                  <button className="msx-ic" title="Clear anthem" onClick={() => setAnthemForRealm(realm, null)}><X size={12} /></button>
+                </>
+              ) : <span className="msx-mini">none set</span>}
+            </div>
+            <div className="msx-chipwrap">
+              <span className={'msx-chip' + (classicalMood === 'all' ? ' on' : '')} onClick={() => setClassicalMood('all')}>all</span>
+              {CLASSICAL_MOODS.map((m: string) => (
+                <span key={m} className={'msx-chip' + (classicalMood === m ? ' on' : '')} onClick={() => setClassicalMood(m)}>{m}</span>
+              ))}
+            </div>
+            <div className="msx-classicallist">
+              {classicalList.map((p: any) => (
+                <div key={p.id} className={'msx-classicalrow' + (anthemPlayingId === p.id ? ' live' : '')}>
+                  <button className="msx-ic" title={`Preview “${p.title}”`} onClick={() => playAnthem(p.id)}><Play size={11} /></button>
+                  <div className="meta">
+                    <b>{p.title}</b>
+                    <span>{p.composer}{p.died ? ` · d. ${p.died}` : ''} · {p.year}</span>
+                  </div>
+                  {currentAnthem === p.id
+                    ? <span className="msx-chip on">this map's anthem</span>
+                    : <button className="msx-chip" onClick={() => setAnthemForRealm(realm, p.id)}>set as anthem</button>}
+                </div>
+              ))}
+            </div>
+            <span className="msx-mini">Public-domain melodies — every composer died 70+ years ago, or (Spanish Romance) is historically anonymous — synthesized live here, zero audio files. A modern <i>recording</i> of the same piece is still copyrighted; only the notes are free.</span>
+          </div>
+
+          <div className="msx-panel">
             <div className="msx-ph"><Download size={13} /> Output<span className="badge">master bus</span></div>
             <div className="msx-row">
               <span className="msx-mini">record</span>
@@ -350,6 +426,7 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
               <div className="meta">
                 <b>{th.name}</b>
                 <span>{th.mood} · {th.bpm} bpm · {th.root}</span>
+                {anthemFor(rk) && <span className="anthem"><Music3 size={9} /> {classicalPiece(anthemFor(rk)!)?.title}</span>}
               </div>
               <button className="msx-mapplay" onClick={e => { e.stopPropagation(); if (rk === realm && playing) stop(); else selectMap(rk, true) }}
                 aria-label={rk === realm && playing ? 'Pause' : 'Play'}>
