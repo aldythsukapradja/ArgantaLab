@@ -44,7 +44,7 @@
 .mc-delta { font-size: 12px; font-weight: 650; }
 .mc-delta .ctx { color: var(--tx3); font-weight: 500; }
 
-.mc-ns-mid { display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 640px; }
+.mc-ns-mid { display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 640px; justify-self: center; }
 .mc-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .mc-chip { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; background: var(--bg3);
   color: var(--tx2); border: 1px solid var(--bd); white-space: nowrap; line-height: 1.5; }
