@@ -3,7 +3,35 @@
 // Draw-in animation via pathLength=1 + CSS stroke-dashoffset keyed to .pslide.active
 // (matches the existing PitchChart so everything animates on slide-in).
 import { scaleLinear } from 'd3-scale'
-import { line as d3line, area as d3area, curveMonotoneX } from 'd3-shape'
+import { line as d3line, area as d3area, curveMonotoneX, arc as d3arc } from 'd3-shape'
+
+// ── OfficeDials (autonomous-company slide) — six arc gauges, one per office. Each
+// is an instrumentation-coverage dial; the value arc sweeps in (CSS keyed to the
+// active slide) over a faint track. The row reads as "six offices, monitored".
+export function OfficeDials({ offices, r = 34, w = 700 }: {
+  offices: { label: string; accent: string; cov: number }[]; r?: number; w?: number
+}) {
+  const cell = w / offices.length
+  const cy = r + 8, h = cy + 34
+  const track = d3arc<number>().innerRadius(r - 5).outerRadius(r).startAngle(-2.3).endAngle(2.3)({} as never) || ''
+  return (
+    <svg className="d3c ofdials" viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Office instrumentation health">
+      {offices.map((o, i) => {
+        const cx = i * cell + cell / 2
+        const end = -2.3 + (o.cov / 100) * 4.6
+        const val = d3arc<number>().innerRadius(r - 5).outerRadius(r).startAngle(-2.3).endAngle(end).cornerRadius(3)({} as never) || ''
+        return (
+          <g key={o.label} transform={`translate(${cx} ${cy})`} className="ofdial" style={{ ['--i' as string]: i, ['--ac' as string]: o.accent }}>
+            <path d={track} className="ofdial-track" />
+            <path d={val} className="ofdial-val" pathLength={1} />
+            <text y={4} className="ofdial-pct">{o.cov}</text>
+            <text y={r + 20} className="ofdial-lbl">{o.label}</text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
 
 // ── Competition 2-axis positioning map (slide 5) ──
 // x = learning depth, y = family coordination. Every incumbent on one axis; us in

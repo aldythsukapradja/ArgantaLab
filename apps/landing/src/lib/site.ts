@@ -90,6 +90,17 @@ export const SITE = {
     flow: ['Sensors · 147 RPCs', 'Knowledge graph · 76 nodes', 'Six offices · verdicts', 'One human · the call'],
   },
 
+  // the six offices' instrumentation coverage — the mini-cockpit's health dials.
+  // Modeled from the HQ graph's per-office coverage (overall 78%, CTO ~69%); ◐.
+  offices: [
+    { id: 'bridge',     label: 'Bridge',     accent: '#8b5cf6', cov: 82 },
+    { id: 'operations', label: 'Operations', accent: '#a855f7', cov: 80 },
+    { id: 'technology', label: 'Technology', accent: '#06b6d4', cov: 69 },
+    { id: 'treasury',   label: 'Treasury',   accent: '#10b981', cov: 74 },
+    { id: 'legal',      label: 'Legal',      accent: '#f59e0b', cov: 88 },
+    { id: 'guild',      label: 'The Guild',  accent: '#ef4444', cov: 76 },
+  ] as { id: string; label: string; accent: string; cov: number }[],
+
   // the moat argument: seven front-ends on one spine (owner's platform doc)
   substrate: {
     line: 'Seven front-ends. One spine.',

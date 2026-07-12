@@ -4,9 +4,10 @@ import { CASES, runModel, costCurve, ECON, PAYER } from './lib/econ'
 import { AGENTS, OFFICES } from './data/agents'
 import { SITE } from './lib/site'
 import PitchChart from './components/PitchChart'
-import { ScatterMap, RangePlot, PayerBars, Velocity, BrainGraph } from './components/DeckCharts'
+import { ScatterMap, RangePlot, PayerBars, Velocity, BrainGraph, OfficeDials } from './components/DeckCharts'
 import { ProvLegend } from './components/Fact'
 import { AppEmbed } from './embed/AppEmbed'
+import { JarvisOrb } from './components/JarvisOrb'
 import { ensureGsap, gsap, SplitText, EASE, prefersReduced } from './lib/motion'
 
 // ── inline investor pitch — a cinematic slide presentation inside the Pitch tab.
@@ -246,6 +247,13 @@ const SLIDES: Slide[] = [
       <Stat v={String(SITE.brain.sensors)} l="RPC sensors" />
       <Stat v={`${SITE.brain.coveragePct}%`} l="instrumented · ◐" />
     </div>
+  </> },
+  { id: 'autonomous', chapter: 'The company', el: () => <>
+    <span className="pkick">The autonomous company</span>
+    <h2 className="pdisplay sm">One human. 27 agents. <em>Watch it run.</em></h2>
+    <div className="pcockpit"><JarvisOrb /></div>
+    <div className="pchartwrap wide"><OfficeDials offices={SITE.offices} /></div>
+    <p className="psub sm"><span className="fact-chip fact-modeled"><i>◐</i>coverage modeled</span> Six offices, each an instrumentation dial. The agents sense, compute, decide and ship — the human makes the call. This isn’t a slide of the company; it’s the company, running.</p>
   </> },
   { id: 'moat', chapter: 'The moat', el: () => <>
     <span className="pkick">The moat</span>
