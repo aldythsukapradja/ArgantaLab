@@ -30,6 +30,7 @@ function rowToItem(r: Record<string, unknown>): Item {
     explanation: (r.explanation as string) ?? undefined,
     xp: (r.xp as number) ?? 10,
     diamonds: (r.diamonds as number) ?? 0,
+    bloom: (r.bloom as string) ?? undefined,   // present only once migration_item_bloom.sql is run
   }
 }
 
@@ -157,6 +158,7 @@ export interface ItemDraft {
   xp?: number
   diamonds?: number
   status?: string
+  bloom?: string
 }
 
 export async function adminUpsertItem(d: ItemDraft): Promise<{ ok: boolean; error?: string }> {
@@ -167,6 +169,7 @@ export async function adminUpsertItem(d: ItemDraft): Promise<{ ok: boolean; erro
       hint: d.hint ?? null, explanation: d.explanation ?? null, xp: d.xp ?? 10,
       diamonds: d.diamonds ?? 0, status: d.status ?? 'live',
     }
+    if (d.bloom) row.bloom = d.bloom   // only when tagged (column added by migration_item_bloom.sql)
     if (d.id) row.id = d.id
     const { error } = await supabase.from('items').upsert(row)
     invalidateContentCache(); await bumpContentVersion()
@@ -187,6 +190,7 @@ export async function adminBulkInsert(items: ItemDraft[]): Promise<{ ok: boolean
       stage_key: d.stage_key ?? 'explorer', difficulty: d.difficulty ?? 2, prompt: d.prompt,
       payload: d.payload ?? {}, hint: d.hint ?? null, explanation: d.explanation ?? null,
       xp: d.xp ?? 10, diamonds: d.diamonds ?? 0, status: d.status ?? 'live',
+      ...(d.bloom ? { bloom: d.bloom } : {}),   // only when tagged (migration_item_bloom.sql)
     }))
     const { error, data } = await supabase.from('items').insert(rows).select('id')
     invalidateContentCache(); await bumpContentVersion()

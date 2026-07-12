@@ -40,6 +40,7 @@ export interface Item {
   explanation?: string
   xp?: number
   diamonds?: number
+  bloom?: string                // optional Bloom override ('analyze' on a reasoning mcq, etc.)
 }
 
 export interface Skill { key: string; label: string; band: number }

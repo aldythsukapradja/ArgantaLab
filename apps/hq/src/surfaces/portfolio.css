@@ -29,15 +29,22 @@
    trend, its own 2-row rhythm) | CONTROLS (range + live). Everything
    vertically centers on the trend stack's height, so the row never looks
    like several unrelated widgets glued together. */
+/* At very wide viewports minmax(240px,1fr) let the chips+trend column
+   balloon far past what its content needs, leaving a huge visually-dead gap
+   (the near-flat trend line has no ink for most of its width) between the
+   chips and the range controls — reading as "squeezed" identity block next
+   to a mostly-empty expanse, not an intentional composition. Capping the
+   column keeps the strip's proportions stable regardless of monitor width;
+   any true leftover space is neutral card background, not stretched chart. */
 .mc-ns { display: grid; grid-template-columns: auto minmax(240px, 1fr) auto;
-  align-items: center; gap: 24px; padding: 12px 20px; }
-.mc-ns-id { display: flex; flex-direction: column; gap: 3px; min-width: 128px; }
-.mc-lbl { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--tx3); }
-.mc-hero { font-size: 40px; font-weight: 650; letter-spacing: -.02em; line-height: 1; font-variant-numeric: normal; }
-.mc-delta { font-size: 11.5px; font-weight: 650; }
+  align-items: center; gap: 28px; padding: 12px 22px; }
+.mc-ns-id { display: flex; flex-direction: column; gap: 4px; min-width: 168px; flex: none; }
+.mc-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--tx3); }
+.mc-hero { font-size: 44px; font-weight: 650; letter-spacing: -.02em; line-height: 1; font-variant-numeric: normal; }
+.mc-delta { font-size: 12px; font-weight: 650; }
 .mc-delta .ctx { color: var(--tx3); font-weight: 500; }
 
-.mc-ns-mid { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mc-ns-mid { display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 640px; }
 .mc-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .mc-chip { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; background: var(--bg3);
   color: var(--tx2); border: 1px solid var(--bd); white-space: nowrap; line-height: 1.5; }

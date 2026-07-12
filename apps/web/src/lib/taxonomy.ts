@@ -15,7 +15,11 @@ const BLOOM_BY_TYPE: Record<string, Bloom> = {
   code: 'create', party: 'create',
 }
 
-export function bloomFor(type: string): Bloom {
+// An item may carry an explicit `bloom` override (e.g. a reasoning-heavy mcq
+// that deserves 'analyze' even though mcq defaults to 'understand'). The
+// override wins; otherwise fall back to the interaction-type default.
+export function bloomFor(type: string, override?: string): Bloom {
+  if (override && BLOOM_ORDER.includes(override as Bloom)) return override as Bloom
   return BLOOM_BY_TYPE[type] ?? 'understand'
 }
 

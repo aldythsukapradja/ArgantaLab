@@ -17,7 +17,7 @@ export function logLearnEvent(item: Item, correct: boolean, timeMs: number) {
       p_skill: item.skill,
       p_stage: item.stage,
       p_interaction: item.type,
-      p_bloom: bloomFor(item.type),
+      p_bloom: bloomFor(item.type, item.bloom),
       p_competency: competencyFor(item.world, item.skill),
       p_difficulty: item.difficulty ?? 2,
       p_correct: correct,
