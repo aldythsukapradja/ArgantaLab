@@ -25,8 +25,11 @@ export function PunchCard({ punch }: { punch: EngagementPunch[] }) {
 
   const W = Math.max(320, width)
   const labelW = 30
-  // cell clamped so the grid stays compact on wide rails and readable on narrow
-  const cell = Math.min(12, Math.max(8, Math.floor((W - labelW) / 24) - 2))
+  // cell clamped so the grid stays compact on wide rails and readable on
+  // narrow. Floor is 10, not lower — an 8px day-label needs ~9-10px of row
+  // pitch (cell+gap) to clear its own neighbor; going smaller caused real
+  // "Sun/Mon" label collisions, not just a tighter look.
+  const cell = Math.min(11, Math.max(10, Math.floor((W - labelW) / 24) - 2))
   const gap = 2
   const H = 14 + 7 * (cell + gap)
 

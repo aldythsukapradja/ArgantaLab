@@ -160,7 +160,7 @@ export function NorthStarStrip({ o, v, days, setDays, ago }: {
           {o && o.northStar.some(p => p.value > 0) ? (
             <AreaTrend labels={o.northStar.map(p => p.week)}
               series={[{ key: 'v', label: 'Weekly engaged', color: 'var(--ch1)', area: true }]}
-              data={o.northStar.map(p => ({ v: p.value }))} height={54} />
+              data={o.northStar.map(p => ({ v: p.value }))} height={46} />
           ) : (
             <McEmpty inline headline="No engaged weeks yet" body="The trend fills in as accounts return." />
           )}
@@ -227,7 +227,7 @@ export function FunnelRail({ o, v, e, r }: { o: GrowthOverview | null; v: Portfo
             <>
               <AreaTrend labels={curve.map(p => p.label)}
                 series={[{ key: 'v', label: '% still active', color: 'var(--ch2)', area: true }]}
-                data={curve.map(p => ({ v: p.value }))} height={64} valueFmt={x => Math.round(x) + '%'} />
+                data={curve.map(p => ({ v: p.value }))} height={56} valueFmt={x => Math.round(x) + '%'} />
               <div className="mc-note" style={{ marginTop: 4 }}>The a16z read: a curve that flattens = product-market pull.</div>
             </>
           ) : <McEmpty inline headline="No cohorts yet" body="Appears once learners sign up across multiple weeks." />}
@@ -287,7 +287,11 @@ export function AttentionPanel({ o, e, eng, pw, days, hasBeats }: {
         </div>
       </div>
 
-      <div className="mc-fill">
+      {/* NOT .mc-fill — that class is flex:1;min-height:0, meant only for
+          empty spacers (FunnelRail/WhoWhen). Wrapping real chart content in
+          it let the chart shrink below its own natural height while
+          overflow stayed visible, so it visually spilled onto mc-duo below. */}
+      <div className="mc-at-chart">
         {tab === 'attention' && (
           !daily ? <McEmpty headline="One paste turns this on"
             body={`Run migration_hq_engagement_v3.sql — every app already ships the tracker, and this fills within minutes of anyone using anything.`} />
@@ -360,7 +364,7 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
       <div className="mc-t">Who &amp; when</div>
 
       {hasBeats && eng ? (
-        <DonutD3 size={88} dense
+        <DonutD3 size={68} dense
           slices={eng.apps.map(a => ({ label: appLabel(a.app), value: a.seconds, color: appColor(a.app) }))}
           centerValue={fmtDur(eng.totalSeconds)} centerLabel="total" valueFmt={fmtDur} />
       ) : (
@@ -369,7 +373,7 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
 
       <div>
         <div className="mc-sec">Rhythm of the week</div>
-        <div style={{ marginTop: 6 }}>
+        <div style={{ marginTop: 5 }}>
           {punchReady
             ? <PunchCard punch={eng!.punch} />
             : <McEmpty inline headline={hasBeats ? 'Building the rhythm' : 'Needs v3 migration'}
@@ -382,7 +386,7 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
           <div className="mc-sec">Audience</div>
           {roleTotal > 0 && (
             <>
-              <div className="mc-strip" style={{ marginTop: 6 }} role="img" aria-label="Accounts by role">
+              <div className="mc-strip" style={{ marginTop: 5 }} role="img" aria-label="Accounts by role">
                 {au.roles.map((x, idx) => (
                   <i key={x.role} title={`${x.role} · ${x.count}`} style={{ width: `${Math.max(3, (100 * x.count) / roleTotal)}%`, background: slotColor(idx) }} />
                 ))}
@@ -392,7 +396,7 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
           )}
           {devTotal > 0 && (
             <>
-              <div className="mc-strip" style={{ marginTop: 8 }} role="img" aria-label="Time by device">
+              <div className="mc-strip" style={{ marginTop: 6 }} role="img" aria-label="Time by device">
                 {devices.map((x, idx) => (
                   <i key={x.device} title={`${x.device} · ${fmtDur(x.seconds)}`} style={{ width: `${Math.max(3, (100 * x.seconds) / devTotal)}%`, background: slotColor(idx + 4) }} />
                 ))}
@@ -401,7 +405,7 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
             </>
           )}
           {au.ageBands.some(b => b.band !== 'unknown' && b.count > 0) && (
-            <div className="mc-spl" style={{ marginTop: 6 }}>
+            <div className="mc-spl" style={{ marginTop: 5 }}>
               <span>ages · {au.ageBands.filter(b => b.band !== 'unknown').map(b => `${b.band} ${b.count}`).join(' · ')}</span>
             </div>
           )}
@@ -412,10 +416,10 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
       <div className="mc-fill" />
       <div>
         <div className="mc-sec">Regions · timezone, kid-safe</div>
-        <div style={{ marginTop: 6 }}>
+        <div style={{ marginTop: 5 }}>
           {geo && geo.regions.length > 0
             ? <HBars bars={geo.regions.slice(0, 3).map(g => ({ label: region(g.tz), value: g.seconds, color: slotColor(5) }))}
-                valueFmt={fmtDur} labelWidth={86} barH={10} />
+                valueFmt={fmtDur} labelWidth={86} barH={9} />
             : <McEmpty inline headline="No regions yet" body="Coarse regions from client timezone — never GPS/IP for kids." />}
         </div>
       </div>

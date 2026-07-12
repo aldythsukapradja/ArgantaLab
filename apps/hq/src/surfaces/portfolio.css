@@ -6,9 +6,15 @@
 
 .mc-wrap { height: 100%; overflow: auto; padding: 10px 16px 12px; box-sizing: border-box;
   display: flex; flex-direction: column; }
+/* Row sizing at ≥1180px: ns is small and content-sized; the funnel/attention/
+   who-when trio and the fleet matrix SHARE the remaining space (1.3fr : 1fr)
+   rather than the fleet matrix claiming its full natural height unconditionally
+   — both groups have overflow-y:auto on their cards, so if a group's fair
+   share is still tight, IT scrolls internally instead of starving its
+   neighbor or (the bug this replaced) silently clipping/overlapping content. */
 .mc { flex: 1; min-height: 0; display: grid; gap: 10px;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1.3fr) minmax(0, 1fr);
   grid-template-areas:
     "ns ns ns ns ns ns ns ns ns ns ns ns"
     "fu fu fu at at at at at at wh wh wh"
@@ -24,7 +30,7 @@
    vertically centers on the trend stack's height, so the row never looks
    like several unrelated widgets glued together. */
 .mc-ns { display: grid; grid-template-columns: auto minmax(240px, 1fr) auto;
-  align-items: center; gap: 24px; padding: 14px 20px; }
+  align-items: center; gap: 24px; padding: 12px 20px; }
 .mc-ns-id { display: flex; flex-direction: column; gap: 3px; min-width: 128px; }
 .mc-lbl { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--tx3); }
 .mc-hero { font-size: 40px; font-weight: 650; letter-spacing: -.02em; line-height: 1; font-variant-numeric: normal; }
@@ -47,7 +53,15 @@
 @media (prefers-reduced-motion: reduce) { .mc-dot { animation: none } }
 
 /* ── panels ── */
-.mc-panel { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+/* overflow-y:auto (not hidden) is a deliberate safety net: at a real-world
+   viewport shorter than we can enumerate, a panel's natural content can
+   exceed its grid-allocated height. Auto-scroll means that shows up as a
+   (rare) internal scrollbar instead of silently clipped content — content
+   loss is worse than an edge-case scrollbar. */
+.mc-panel { padding: 11px 14px; display: flex; flex-direction: column; gap: 7px; overflow-y: auto; overflow-x: hidden; }
+/* the top chart in "Where attention goes" — sized to its own content, never
+   shrunk (see the comment at its call site in Portfolio.tsx). */
+.mc-at-chart { flex: none; }
 .mc-t { font-size: 12.5px; font-weight: 650; }
 .mc-s { font-size: 10.5px; color: var(--tx3); margin-top: 1px; }
 .mc-sec { font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--tx3); }
@@ -67,10 +81,12 @@
 .mc-tabs button.on { color: var(--acc-text); font-weight: 700; border-bottom-color: var(--acc); }
 .mc-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-/* who & when */
-.mc-strip { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; }
+/* who & when — a narrow rail stacking several sections, so this local
+   rhythm is tighter than the base panel scale. */
+.mc-strip { display: flex; height: 7px; border-radius: 3.5px; overflow: hidden; gap: 2px; }
 .mc-strip i { display: block; }
-.mc-spl { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--tx3); margin-top: 4px; gap: 6px; flex-wrap: wrap; }
+.mc-spl { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--tx3); margin-top: 3px; gap: 6px; flex-wrap: wrap; }
+.mc-wh { gap: 6px; }
 
 /* ── unified empty / awaiting-data language ──────────────────────────────
    One visual system for "nothing here yet, and here's exactly why": a
@@ -85,20 +101,20 @@
 .mc-empty.mc-empty-inline { min-height: 0; padding: 8px 12px; }
 
 /* ── fleet matrix ── */
-.mc-fl { padding: 12px 14px 10px; overflow: hidden; }
+.mc-fl { padding: 10px 14px 8px; overflow-y: auto; overflow-x: hidden; }
 .mc-mx-scroll { overflow-x: auto; }
 .mc-mx { display: grid; grid-template-columns: 104px repeat(5, minmax(122px, 1fr)); column-gap: 12px; min-width: 720px; }
-.mc-mx .hd { display: flex; flex-direction: column; gap: 5px; padding-bottom: 8px; border-bottom: 1.5px solid var(--bd2); min-width: 0; }
+.mc-mx .hd { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; border-bottom: 1.5px solid var(--bd2); min-width: 0; }
 .mc-mx .hd .nm { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .mc-mx .hd .nm i { width: 8px; height: 8px; border-radius: 2.5px; flex: none; }
 .mc-mx .hd .st { font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px; width: fit-content; letter-spacing: .01em; }
 .mc-mx .st.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
 .mc-mx .st.mut { background: var(--bg3); color: var(--tx3); }
-.mc-mx .spark-row { height: 18px; border-bottom: 1px solid var(--bd); }
+.mc-mx .spark-row { height: 16px; border-bottom: 1px solid var(--bd); }
 .mc-mx .rl { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tx3);
-  display: flex; align-items: center; border-bottom: 1px solid var(--bd); padding: 6px 0; }
+  display: flex; align-items: center; border-bottom: 1px solid var(--bd); padding: 4px 0; }
 .mc-mx .cell { display: flex; align-items: baseline; gap: 5px; border-bottom: 1px solid var(--bd);
-  padding: 6px 0; min-width: 0; }
+  padding: 4px 0; min-width: 0; }
 .mc-mx .cell .v { font-size: 14px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mc-mx .cell .v.dim { color: var(--tx3); font-weight: 500; }
 .mc-mx .cell .u { font-size: 9.5px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
