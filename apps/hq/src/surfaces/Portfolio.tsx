@@ -1,4 +1,8 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  Users, Compass, Zap, Layers, Clock, Repeat, TrendingUp, Coins, Gem,
+  GraduationCap, Sprout, CircleDashed, Rocket, Circle,
+} from 'lucide-react'
 import './portfolio.css'
 import { live } from '../data/live'
 import type {
@@ -38,6 +42,40 @@ function McEmpty({ headline, body, inline = false }: { headline: string; body: s
     <div className={'mc-empty' + (inline ? ' mc-empty-inline' : '')}>
       <div className="h">{headline}</div>
       <div className="b">{body}</div>
+    </div>
+  )
+}
+
+// ── App marks — the fleet header's real brand identities, not color dots.
+// KinetikCircle reuses its own circle-in-square gradient mark (see the app
+// card elsewhere in HQ); ArgantaLab/Circle HQ reuse the exact icon+color
+// their own nav rail uses (GraduationCap/mag and CircleDashed/mag); Lashira
+// and Landing get a coherent new mark in their app-slot color.
+function AppLogo({ app, size = 22 }: { app: string; size?: number }) {
+  if (app === 'kinetik') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 44 44" role="img" aria-label="KinetikCircle" style={{ flex: 'none' }}>
+        <defs>
+          <linearGradient id="km-fleet" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#22D3EE" /><stop offset="1" stopColor="#8B5CF6" />
+          </linearGradient>
+        </defs>
+        <rect width="44" height="44" rx="10" fill="url(#km-fleet)" />
+        <circle cx="22" cy="22" r="9" fill="none" stroke="#fff" strokeWidth="3.4" />
+        <circle cx="29" cy="15.5" r="2.9" fill="#fff" />
+      </svg>
+    )
+  }
+  const cfg: Record<string, { bg: string; Icon: typeof GraduationCap }> = {
+    arganta: { bg: 'var(--mag)', Icon: GraduationCap },
+    hq: { bg: 'var(--mag)', Icon: CircleDashed },
+    lashira: { bg: 'var(--ch2)', Icon: Sprout },
+    landing: { bg: 'var(--ch5)', Icon: Rocket },
+  }
+  const { bg, Icon } = cfg[app] ?? { bg: 'var(--bg3)', Icon: Circle }
+  return (
+    <div style={{ width: size, height: size, borderRadius: size * 0.23, background: bg, display: 'grid', placeItems: 'center', flex: 'none' }}>
+      <Icon size={Math.round(size * 0.54)} color="#fff" />
     </div>
   )
 }
@@ -430,8 +468,10 @@ export function WhoWhen({ eng, au, geo, hasBeats }: {
 /* ─────────────────────────── fleet matrix ─────────────────────────── */
 // The 8-question contract, written ONCE in full words down the left; each app
 // answers in its own terms via a small unit label. Nothing truncates.
-interface Cell { v: string; u?: string; dim?: boolean }
+interface Cell { v: string; u?: string; dim?: boolean; icon?: ReactNode }
 const DASH: Cell = { v: '—', dim: true }
+// Row-level icons — the question each row asks, at a glance.
+const ROW_ICONS = [Users, Compass, Zap, Layers, Clock, Repeat, TrendingUp, Coins]
 
 export function FleetMatrix({ i, k, o, v, eng, days }: {
   i: SchemaInsights | null; k: KinetikStats | null; o: GrowthOverview | null
@@ -487,7 +527,9 @@ export function FleetMatrix({ i, k, o, v, eng, days }: {
       cellTime('lashira'),
       t('lashira') && t('lashira')!.users > 0 ? { v: (t('lashira')!.sessions / t('lashira')!.users).toFixed(1), u: 'sess / player' } : DASH,
       avgSess('lashira'),
-      { v: 'XP→learn', u: 'reward model' },
+      // Lashira's economy is denominated in diamonds (the shared learn-engine
+      // currency), not $ — the value column tells that story directly.
+      { v: 'Diamonds', u: 'earn by learning', icon: <Gem size={12} color={appColor('lashira')} /> },
     ] },
     { app: 'hq', name: 'Circle HQ', cells: [
       t('hq') ? { v: compact(t('hq')!.users), u: 'operators' } : DASH,
@@ -528,7 +570,7 @@ export function FleetMatrix({ i, k, o, v, eng, days }: {
             const connected = a.app === 'kinetik' ? !!k : a.app === 'arganta' ? !!i : !!t(a.app)
             return (
               <div key={a.app} className="hd">
-                <span className="nm"><i style={{ background: appColor(a.app) }} />{a.name}</span>
+                <span className="nm"><AppLogo app={a.app} />{a.name}</span>
                 <span className={'st ' + (connected ? 'ok' : 'mut')}>{connected ? 'Connected' : 'awaiting beats'}</span>
                 <div className="spark-row">
                   {spark.filter(s => s > 0).length > 1 && <Spark values={spark} color={appColor(a.app)} height={18} />}
@@ -539,7 +581,7 @@ export function FleetMatrix({ i, k, o, v, eng, days }: {
           {/* metric rows — alternating tint so a 5-column, 8-row grid stays
               scannable left-to-right without re-counting columns each time */}
           {ROWS.map((row, ri) => (
-            <FleetRow key={row} label={row} cells={APPS.map(a => a.cells[ri])} zebra={ri % 2 === 1} />
+            <FleetRow key={row} label={row} Icon={ROW_ICONS[ri]} cells={APPS.map(a => a.cells[ri])} zebra={ri % 2 === 1} />
           ))}
         </div>
       </div>
@@ -547,13 +589,14 @@ export function FleetMatrix({ i, k, o, v, eng, days }: {
   )
 }
 
-function FleetRow({ label, cells, zebra }: { label: string; cells: Cell[]; zebra: boolean }) {
+function FleetRow({ label, Icon, cells, zebra }: { label: string; Icon: typeof Users; cells: Cell[]; zebra: boolean }) {
   const bg = zebra ? { background: 'var(--bg2)' } : undefined
   return (
     <>
-      <div className="rl" style={bg}>{label}</div>
+      <div className="rl" style={bg}><Icon size={12} className="rl-ic" />{label}</div>
       {cells.map((c, idx) => (
         <div key={idx} className="cell" style={bg}>
+          {c.icon}
           <span className={'v' + (c.dim ? ' dim' : '')}>{c.v}</span>
           {c.u && <span className="u">{c.u}</span>}
         </div>
