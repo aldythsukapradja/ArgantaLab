@@ -1,9 +1,11 @@
 # Jarvis Digital Twin — Design Audit and Build Blueprint
 
-**Status:** design recommendation for founder review  
+**Status:** superseded by the ultrawide single-orb revision
 **Scope:** separate standalone prototype at `apps/hq/prototypes/jarvis-digital-twin.html`  
 **Production landing:** unchanged until design lock  
 **Audit date:** 2026-07-13
+
+> **Superseded:** Founder review of the first working prototype removed the rail, founder kernel, persistent sensor wings, headline/brief block, and five-lens pill from the center composition. The current design/build direction is [Jarvis Digital Twin v2 — Ultrawide Single-Orb Revision](./jarvis-digital-twin-v2-ultrawide-plan.md).
 
 ## 0. Executive verdict
 
@@ -887,4 +889,3 @@ The design is ready to build only when all answers are yes:
 ## 15. Final design sentence
 
 > Jarvis is a living aperture into Arganta: evidence enters through the company’s senses, memory resolves behind the iris, Command turns it into supervised work, and every consequential path stops at Aldyth.
-

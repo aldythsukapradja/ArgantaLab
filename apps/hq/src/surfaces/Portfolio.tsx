@@ -1,86 +1,62 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
-  Users, Compass, Zap, Layers, Clock, Repeat, TrendingUp, Coins, Gem,
-  GraduationCap, Sprout, CircleDashed, Rocket, Circle,
+  ArrowDownRight, ArrowUpRight, CheckCircle2, ChevronRight, Circle,
+  CircleDashed, Clock3, Compass, ExternalLink, GraduationCap, Layers3, LayoutDashboard,
+  Lightbulb, LoaderCircle, Monitor, Repeat2, Rocket, ShieldCheck, Smartphone, Sparkles,
+  Sprout, TrendingUp, Users, X, Zap,
 } from 'lucide-react'
+import { gsap } from 'gsap'
 import './portfolio.css'
 import { live } from '../data/live'
-import type {
-  SchemaInsights, GrowthOverview, EconomyData, PortfolioVc, EngagementData,
-  PowerCurve, AudienceData, GeoData, RetentionData,
-} from '../data/types'
 import type { KinetikStats } from '../data/live'
+import type {
+  AudienceData, EconomyData, EngagementData, GeoData, GrowthOverview,
+  PortfolioVc, PowerCurve, RetentionData, SchemaInsights,
+} from '../data/types'
 import { AreaTrend } from '../components/d3/AreaTrend'
 import { DonutD3 } from '../components/d3/DonutD3'
 import { HBars } from '../components/d3/HBars'
-import { StackedCols } from '../components/d3/StackedCols'
 import { PunchCard } from '../components/d3/PunchCard'
-import { Meter, VCols, Spark } from '../components/d3/micro'
-import { fmtDur, appColor, appLabel, slotColor } from '../components/d3/chartkit'
-import { PRESETS, DEFAULT_GLOBALS, computeScenario } from '../data/monetization'
-import { kindLabel } from '../data/growth'
+import { Spark, VCols } from '../components/d3/micro'
+import { PortfolioWorldMap } from '../components/d3/PortfolioWorldMap'
+import { appColor, appLabel, fmtDur, slotColor } from '../components/d3/chartkit'
+import { valuationEstimate } from '../data/graph/valuation'
 import { Empty, Loading } from '../components/Empty'
 import { compact, pct } from '../lib/format'
 
-// Portfolio · Mission Control — one page, edge-to-edge, no scroll at desktop.
-// Reading order: are we growing? (north-star strip) → where does the funnel
-// leak? (left rail) → where does attention go? (center + right) → how is each
-// app doing? (fleet matrix, same 8-question contract per app). Every number
-// is a live RPC; panels that need the beats pipeline degrade honestly until
-// migration_hq_engagement_v3.sql has been run.
-
-const SUB_ARPU = PRESETS.mid.conv * PRESETS.mid.price
-const BLEND_ARPU = computeScenario(PRESETS.mid, 1000, DEFAULT_GLOBALS).arpu
-const usd2 = (n: number) => '$' + n.toFixed(2)
-const RANGES = [7, 14, 30] as const
+const RANGES = [
+  { days: 7, label: '7 days' },
+  { days: 14, label: '14 days' },
+  { days: 30, label: '30 days' },
+  { days: 36500, label: 'All time' },
+] as const
+const AUDIT_VALUATION = {
+  asOf: '13 Jul 2026', low: 1.8, point: 2.2, high: 2.8, safeCap: 2.5,
+  qarPoint: 8.0, qarSafe: 9.1, confidence: 'Medium-low',
+} as const
 const REFRESH_MS = 45_000
+const APP_ORDER = ['arganta', 'kinetik', 'lashira', 'hq', 'landing'] as const
+export type ProductId = typeof APP_ORDER[number]
+type Health = 'good' | 'watch' | 'quiet'
+type PreviewMode = 'desktop' | 'mobile'
+type InspectorView = 'overview' | PreviewMode
 
-/** One visual language for "nothing here yet" — replaces the three ad-hoc
- * empty styles v1 had (a centered card, a bare .mc-note line, a custom hint). */
-function McEmpty({ headline, body, inline = false }: { headline: string; body: string; inline?: boolean }) {
-  return (
-    <div className={'mc-empty' + (inline ? ' mc-empty-inline' : '')}>
-      <div className="h">{headline}</div>
-      <div className="b">{body}</div>
-    </div>
-  )
+const PRODUCT_PREVIEWS: Record<ProductId, string> = {
+  arganta: 'https://lab.arganta.app/',
+  landing: 'https://www.arganta.app/',
+  hq: 'https://hq.arganta.app/',
+  lashira: 'https://lashirabloom-game-one.vercel.app/',
+  kinetik: 'https://circle.arganta.app/',
 }
-
-// ── App marks — the fleet header's real brand identities, not color dots.
-// KinetikCircle reuses its own circle-in-square gradient mark (see the app
-// card elsewhere in HQ); ArgantaLab/Circle HQ reuse the exact icon+color
-// their own nav rail uses (GraduationCap/mag and CircleDashed/mag); Lashira
-// and Landing get a coherent new mark in their app-slot color.
-function AppLogo({ app, size = 20 }: { app: string; size?: number }) {
-  if (app === 'kinetik') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 44 44" role="img" aria-label="KinetikCircle" style={{ flex: 'none' }}>
-        <defs>
-          <linearGradient id="km-fleet" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#22D3EE" /><stop offset="1" stopColor="#8B5CF6" />
-          </linearGradient>
-        </defs>
-        <rect width="44" height="44" rx="10" fill="url(#km-fleet)" />
-        <circle cx="22" cy="22" r="9" fill="none" stroke="#fff" strokeWidth="3.4" />
-        <circle cx="29" cy="15.5" r="2.9" fill="#fff" />
-      </svg>
-    )
-  }
-  const cfg: Record<string, { bg: string; Icon: typeof GraduationCap }> = {
-    arganta: { bg: 'var(--mag)', Icon: GraduationCap },
-    hq: { bg: 'var(--mag)', Icon: CircleDashed },
-    lashira: { bg: 'var(--ch2)', Icon: Sprout },
-    landing: { bg: 'var(--ch5)', Icon: Rocket },
-  }
-  const { bg, Icon } = cfg[app] ?? { bg: 'var(--bg3)', Icon: Circle }
-  return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.23, background: bg, display: 'grid', placeItems: 'center', flex: 'none' }}>
-      <Icon size={Math.round(size * 0.54)} color="#fff" />
-    </div>
-  )
+const PREVIEW_VIEWPORTS: Record<PreviewMode, { width: number; height: number; radius: number }> = {
+  desktop: { width: 1440, height: 900, radius: 18 },
+  mobile: { width: 390, height: 844, radius: 42 },
 }
+const PREVIEW_CHROME_HEIGHT = 38
 
-interface Pulse {
+const rangeShort = (days: number) => days === 36500 ? 'all time' : `${days}d`
+
+export interface Pulse {
   i: SchemaInsights | null
   k: KinetikStats | null
   o: GrowthOverview | null
@@ -91,6 +67,37 @@ interface Pulse {
   pw: PowerCurve | null
   au: AudienceData | null
   geo: GeoData | null
+}
+
+export interface ProductCardModel {
+  id: ProductId
+  name: string
+  role: string
+  connected: boolean
+  health: Health
+  healthLabel: string
+  primary: string
+  primaryLabel: string
+  primaryValue: number | null
+  primaryUnit: string
+  primaryPeriod?: string
+  secondary: { value: string; label: string }[]
+  interpretation: string
+  spark: number[]
+}
+
+interface DetailMetric {
+  label: string
+  value: string
+  context: string
+  icon: typeof Users
+}
+
+interface AttentionItem {
+  tone: 'critical' | 'watch' | 'positive'
+  label: string
+  detail: string
+  product: string
 }
 
 function useLivePulse(days: number) {
@@ -105,7 +112,7 @@ function useLivePulse(days: number) {
     const [i, k, o, e, v, r, eng, pw, au, geo] = await Promise.all([
       live.schemaInsights(), live.kinetikStats(), live.growthOverview(),
       live.economy(), live.portfolioVc(), live.retention(),
-      live.engagement(days), live.powerCurve(days), live.audience(), live.geo(30),
+      live.engagement(days), live.powerCurve(Math.min(days, 90)), live.audience(), live.geo(days),
     ])
     if (!alive.current) return
     setPulse({ i, k, o, e, v, r, eng, pw, au, geo })
@@ -116,491 +123,676 @@ function useLivePulse(days: number) {
   useEffect(() => {
     alive.current = true
     void fetchAll()
-    const iv = setInterval(() => {
+    const refresh = setInterval(() => {
       if (document.visibilityState === 'visible') void fetchAll()
     }, REFRESH_MS)
-    const tick = setInterval(() => forceTick(t => t + 1), 5000)
-    return () => { alive.current = false; clearInterval(iv); clearInterval(tick) }
+    const clock = setInterval(() => forceTick(t => t + 1), 5000)
+    return () => { alive.current = false; clearInterval(refresh); clearInterval(clock) }
   }, [fetchAll])
 
   return { pulse, flight, stamp }
+}
+
+export function AppLogo({ app, size = 28 }: { app: string; size?: number }) {
+  if (app === 'kinetik') {
+    return (
+      <span className="pf-logo" style={{ width: size, height: size, borderRadius: size * .27, overflow: 'hidden' }}>
+        <svg width="100%" height="100%" viewBox="0 0 44 44" role="img" aria-label="KinetikCircle">
+          <defs><linearGradient id={`pf-kinetik-${size}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#22D3EE" /><stop offset="1" stopColor="#8B5CF6" /></linearGradient></defs>
+          <rect width="44" height="44" rx="11" fill={`url(#pf-kinetik-${size})`} />
+          <circle cx="22" cy="22" r="9" fill="none" stroke="#fff" strokeWidth="3.4" />
+          <circle cx="29" cy="15.5" r="2.9" fill="#fff" />
+        </svg>
+      </span>
+    )
+  }
+  const cfg: Record<string, { bg: string; Icon: typeof GraduationCap }> = {
+    arganta: { bg: 'var(--ch1)', Icon: GraduationCap },
+    lashira: { bg: 'var(--ch2)', Icon: Sprout },
+    hq: { bg: 'var(--mag)', Icon: CircleDashed },
+    landing: { bg: 'var(--ch5)', Icon: Rocket },
+  }
+  const { bg, Icon } = cfg[app] ?? { bg: 'var(--bg3)', Icon: Circle }
+  return <span className="pf-logo" style={{ width: size, height: size, borderRadius: size * .27, background: bg }}><Icon size={Math.round(size * .52)} color="#fff" /></span>
+}
+
+function dailyFor(eng: EngagementData | null, app: string) {
+  if (!eng) return []
+  const days = Array.from(new Set(eng.daily.map(d => d.day)))
+  return days.map(day => eng.daily.find(d => d.day === day && d.app === app)?.seconds ?? 0)
+}
+
+function topPage(eng: EngagementData | null, app: string) {
+  return eng?.pages.find(p => p.app === app) ?? null
+}
+
+function engagementFor(eng: EngagementData | null, app: string) {
+  return eng?.apps.find(a => a.app === app) ?? null
+}
+
+export function buildProducts(p: Pulse, days: number): ProductCardModel[] {
+  const { i, k, o, v, eng } = p
+  const a = (id: string) => engagementFor(eng, id)
+  const page = (id: string) => topPage(eng, id)
+  const models: ProductCardModel[] = [
+    {
+      id: 'arganta', name: 'ArgantaLab', role: 'Learning engine', connected: !!i,
+      health: o?.wowPct != null && o.wowPct < 0 ? 'watch' : 'good',
+      healthLabel: o?.wowPct != null && o.wowPct < 0 ? 'Needs attention' : 'Healthy',
+      primary: o ? compact(o.wau) : '—', primaryLabel: 'weekly active learners',
+      primaryValue: o?.wau ?? null, primaryUnit: 'weekly learners',
+      secondary: [
+        { value: v?.lessonsPerKidDay == null ? '—' : String(v.lessonsPerKidDay), label: 'lessons / day' },
+        { value: o?.stickiness == null ? '—' : pct(o.stickiness), label: 'stickiness' },
+      ],
+      interpretation: o?.wowPct == null ? 'Waiting for a comparable week.' : o.wowPct < 0 ? `Weekly engagement is down ${Math.abs(o.wowPct)}%.` : `Weekly engagement is up ${o.wowPct}%.`,
+      spark: dailyFor(eng, 'arganta'),
+    },
+    {
+      id: 'kinetik', name: 'KinetikCircle', role: 'Circle coordination', connected: !!k,
+      health: k && k.posts7d > 0 ? 'good' : 'watch', healthLabel: k && k.posts7d > 0 ? 'Active' : 'Low activity',
+      primary: k ? compact(k.members) : '—', primaryLabel: 'circle members',
+      primaryValue: k?.members ?? null, primaryUnit: 'members',
+      secondary: [
+        { value: k ? compact(k.circles) : '—', label: 'circles' },
+        { value: k ? compact(k.posts7d) : '—', label: 'posts · 7d' },
+      ],
+      interpretation: k?.posts7d ? `${k.posts7d} posts kept circles moving this week.` : 'The network exists; recent posting is quiet.',
+      spark: dailyFor(eng, 'kinetik'),
+    },
+    {
+      id: 'lashira', name: 'LashiraBloom', role: 'Play and progression', connected: !!a('lashira'),
+      health: a('lashira') ? 'good' : 'quiet', healthLabel: a('lashira') ? 'Reporting' : 'Awaiting signal',
+      primary: a('lashira') ? compact(a('lashira')!.users) : '—', primaryLabel: 'active players',
+      primaryValue: a('lashira')?.users ?? null,
+      primaryUnit: a('lashira')?.users === 1 ? 'active player' : 'active players',
+      secondary: [
+        { value: a('lashira') ? fmtDur(a('lashira')!.seconds) : '—', label: `attention · ${rangeShort(days)}` },
+        { value: page('lashira')?.page ?? '—', label: 'top scene' },
+      ],
+      interpretation: a('lashira') ? `${page('lashira')?.page ?? 'Gameplay'} is earning the most time.` : 'Open the game once after a green deploy to verify beats.',
+      spark: dailyFor(eng, 'lashira'),
+    },
+    {
+      id: 'hq', name: 'Circle HQ', role: 'Founder operating system', connected: !!a('hq'),
+      health: a('hq') ? 'good' : 'quiet', healthLabel: a('hq') ? 'Live' : 'Awaiting signal',
+      primary: a('hq') ? fmtDur(a('hq')!.seconds) : '—', primaryLabel: `operator attention · ${rangeShort(days)}`,
+      primaryValue: a('hq') ? Math.round(a('hq')!.seconds / 360) / 10 : null,
+      primaryUnit: 'h attention', primaryPeriod: rangeShort(days),
+      secondary: [
+        { value: a('hq') ? compact(a('hq')!.users) : '—', label: 'operators' },
+        { value: page('hq')?.page ?? '—', label: 'top workspace' },
+      ],
+      interpretation: page('hq') ? `${page('hq')!.page} is the most-used HQ surface.` : 'HQ usage will appear after the next heartbeat.',
+      spark: dailyFor(eng, 'hq'),
+    },
+    {
+      id: 'landing', name: 'Landing', role: 'Acquisition surface', connected: !!a('landing'),
+      health: a('landing') && a('landing')!.users > 1 ? 'good' : 'watch', healthLabel: a('landing') && a('landing')!.users > 1 ? 'Receiving visits' : 'Thin traffic',
+      primary: a('landing') ? compact(a('landing')!.users) : '—', primaryLabel: `visitors · ${rangeShort(days)}`,
+      primaryValue: a('landing')?.users ?? null,
+      primaryUnit: 'visitors', primaryPeriod: rangeShort(days),
+      secondary: [
+        { value: a('landing') ? fmtDur(a('landing')!.avgSession ?? 0) : '—', label: 'average visit' },
+        { value: page('landing')?.page ?? '—', label: 'top section' },
+      ],
+      interpretation: a('landing') ? `${page('landing')?.page ?? 'The site'} gets the deepest visits.` : 'Traffic instrumentation has not reported yet.',
+      spark: dailyFor(eng, 'landing'),
+    },
+  ]
+  return models
+}
+
+function buildAttention(p: Pulse, products: ProductCardModel[]): AttentionItem[] {
+  const { o, v, eng } = p
+  const items: AttentionItem[] = []
+  if (o?.wowPct != null && o.wowPct < 0) items.push({ tone: 'critical', label: 'Weekly engagement is falling', detail: `${Math.abs(o.wowPct)}% fewer active learners than the previous week.`, product: 'ArgantaLab' })
+  if (v?.d1Retention != null && v.d1Retention < 40) items.push({ tone: 'critical', label: 'Next-day return is below target', detail: `${pct(v.d1Retention)} return the next day; the working benchmark is 40%.`, product: 'Retention' })
+  const external = eng?.apps.filter(app => app.app !== 'hq') ?? []
+  const externalSeconds = external.reduce((sum, app) => sum + app.seconds, 0)
+  const top = external[0]
+  if (top && externalSeconds > 0 && top.seconds / externalSeconds > .55) items.push({ tone: 'watch', label: 'External attention is concentrated', detail: `${appLabel(top.app)} owns ${Math.round(100 * top.seconds / externalSeconds)}% of customer-facing time.`, product: appLabel(top.app) })
+  const disconnected = products.find(x => !x.connected)
+  if (disconnected) items.push({ tone: 'watch', label: `${disconnected.name} is not reporting`, detail: 'The portfolio cannot judge retention or depth until usage beats arrive.', product: disconnected.name })
+  if (v?.activationRate != null && v.activationRate >= 50) items.push({ tone: 'positive', label: 'Activation is holding', detail: `${pct(v.activationRate)} of new accounts reach a meaningful action within 48 hours.`, product: 'Ecosystem' })
+  if (items.length === 0) items.push({ tone: 'positive', label: 'No urgent portfolio signal', detail: 'The connected products are inside their current operating bands.', product: 'Ecosystem' })
+  return items.slice(0, 3)
+}
+
+function portfolioNarrative(p: Pulse) {
+  const { o, eng } = p
+  if (!o) return 'The portfolio is connected, but the north-star rollup is still loading its first comparable period.'
+  const top = eng?.apps.find(app => app.app !== 'hq')
+  if (o.wowPct != null && o.wowPct < 0) return `Weekly engagement is down ${Math.abs(o.wowPct)}%. ${top ? `${appLabel(top.app)} currently earns the most measured attention.` : 'Attention data will show where the change originated.'}`
+  if (o.wowPct != null && o.wowPct > 0) return `Weekly engagement is up ${o.wowPct}%. ${top ? `${appLabel(top.app)} is leading the portfolio.` : ''}`
+  return `${compact(o.wau)} people were meaningfully active this week. The next job is turning activity into a repeatable habit.`
 }
 
 export function Portfolio() {
   const [days, setDays] = useState<number>(14)
   const { pulse, flight, stamp } = useLivePulse(days)
 
-  if (pulse === undefined) return <div className="mc-wrap"><Loading label="Loading mission control…" /></div>
-  const { i, k, o, e, v, r, eng, pw, au, geo } = pulse
-  const offline = !i && !k && !o && !v
+  if (pulse === undefined) return <div className="pf-wrap"><Loading label="Loading portfolio brief…" /></div>
+  const offline = !pulse.i && !pulse.k && !pulse.o && !pulse.v
+  if (offline) return <div className="pf-wrap"><Empty title="Portfolio Brief needs a live connection">Connect Supabase and sign in as operator. The brief will assemble itself from the existing portfolio signals.</Empty></div>
 
-  if (offline) {
-    return (
-      <div className="mc-wrap">
-        <Empty title="Mission Control needs a live connection">
-          Connect Supabase and sign in as operator — every panel populates automatically.
-        </Empty>
-      </div>
-    )
-  }
-
-  const hasBeats = !!eng && eng.totalSeconds > 0
   const ago = stamp ? Math.max(0, Math.round((Date.now() - stamp) / 1000)) : null
 
-  return (
-    <div className="mc-wrap">
-      <div className="mc" style={{ opacity: flight ? 0.65 : 1, transition: 'opacity .25s' }}>
-
-        <NorthStarStrip o={o} v={v} days={days} setDays={setDays} ago={ago} />
-
-        {/* ── funnel rail ── */}
-        <FunnelRail o={o} v={v} e={e} r={r} />
-
-        {/* ── attention center ── */}
-        <AttentionPanel o={o} e={e} eng={eng} pw={pw} days={days} hasBeats={hasBeats} />
-
-        {/* ── who & when rail ── */}
-        <WhoWhen eng={eng} au={au} geo={geo} hasBeats={hasBeats} />
-
-        {/* ── fleet matrix ── */}
-        <FleetMatrix i={i} k={k} o={o} v={v} eng={eng} days={days} />
-      </div>
-    </div>
-  )
+  return <PortfolioBrief pulse={pulse} days={days} setDays={setDays} ago={ago} flight={flight} />
 }
 
-/* ─────────────────────────── north-star strip ─────────────────────────── */
-// Three columns, one visual row: IDENTITY | chips-over-trend | CONTROLS.
-// Exported so the visual harness renders the exact real markup (no drift).
-export function NorthStarStrip({ o, v, days, setDays, ago }: {
-  o: GrowthOverview | null; v: PortfolioVc | null; days: number; setDays: (d: number) => void; ago: number | null
+export function PortfolioBrief({ pulse, days, setDays, ago = 0, flight = false }: {
+  pulse: Pulse; days: number; setDays: (days: number) => void; ago?: number | null; flight?: boolean
 }) {
+  const [selected, setSelected] = useState<ProductId | null>(null)
+  const products = buildProducts(pulse, days)
+  const attention = buildAttention(pulse, products)
+
+  useEffect(() => {
+    if (!selected) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelected(null) }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [selected])
+
   return (
-    <div className="card mc-ns">
-      <div className="mc-ns-id">
-        <div className="mc-lbl">Ecosystem north star</div>
-        <div className="mc-hero">{o ? compact(o.wau) : '—'}</div>
-        <div className="mc-delta" style={{ color: o?.wowPct != null && o.wowPct < 0 ? 'var(--bad)' : 'var(--ok)' }}>
-          {o?.wowPct == null ? 'weekly engaged accounts' : `${o.wowPct > 0 ? '▲ +' : '▼ '}${Math.abs(o.wowPct)}% WoW`}
-          <span className="ctx"> · {v ? compact(v.flywheelCount) : '—'} circles</span>
+    <div className="pf-wrap">
+      <div className="pf-shell">
+        <PortfolioHeader pulse={pulse} days={days} setDays={setDays} ago={ago} flight={flight} />
+        <div className="pf-command-grid">
+          <AttentionOverview eng={pulse.eng} days={days} />
+          <FounderAttention items={attention} />
         </div>
+        <ProductFleet products={products} onSelect={setSelected} />
       </div>
-
-      <div className="mc-ns-mid">
-        <div className="mc-chips" role="list" aria-label="North-star input metrics">
-          <span className="mc-chip">Activation <b>{v?.activationRate == null ? '—' : pct(v.activationRate)}</b></span>
-          <span className="mc-chip">Lessons/d <b>{v?.lessonsPerKidDay ?? '—'}</b></span>
-          <span className="mc-chip">Time/kid <b>{v?.screenMinPerKidDay == null ? '—' : Math.round(v.screenMinPerKidDay) + 'm'}</b></span>
-          <span className="mc-chip">D1 return <b>{v?.d1Retention == null ? '—' : pct(v.d1Retention)}</b></span>
-          <span className="mc-chip">Invites <b>{v ? `${compact(v.invitesAccepted)}/${compact(v.invitesSent)}` : '—'}</b></span>
-        </div>
-        <div className="mc-trend">
-          {o && o.northStar.some(p => p.value > 0) ? (
-            <AreaTrend labels={o.northStar.map(p => p.week)}
-              series={[{ key: 'v', label: 'Weekly engaged', color: 'var(--ch1)', area: true }]}
-              data={o.northStar.map(p => ({ v: p.value }))} height={46} />
-          ) : (
-            <McEmpty inline headline="No engaged weeks yet" body="The trend fills in as accounts return." />
-          )}
-        </div>
-      </div>
-
-      <div className="mc-ns-ctrl">
-        <div className="seg" role="group" aria-label="Date range">
-          {RANGES.map(rg => <button key={rg} className={days === rg ? 'on' : ''} onClick={() => setDays(rg)}>{rg}d</button>)}
-        </div>
-        <div className="mc-live"><span className="mc-dot" />live · updated {ago == null ? '—' : ago < 5 ? 'now' : ago + 's ago'}</div>
-      </div>
+      {selected && <ProductDetail product={products.find(product => product.id === selected)!} pulse={pulse} days={days} onClose={() => setSelected(null)} />}
     </div>
   )
 }
 
-/* ─────────────────────────── funnel rail ─────────────────────────── */
-// Each bar is normalized so the benchmark tick sits at 60% — a bar crossing
-// its tick is above benchmark. Value shown raw; benchmarks from the unicorn
-// scorecard (a16z / edtech quartiles).
-export function FunnelRail({ o, v, e, r }: { o: GrowthOverview | null; v: PortfolioVc | null; e: EconomyData | null; r: RetentionData | null }) {
-  const TICK = 60
-  const norm = (val: number | null | undefined, bench: number) =>
-    val == null ? 0 : Math.min(100, Math.max(2, (val / bench) * TICK))
-  const rows: { nm: string; val: string; w: number; c: string }[] = [
-    { nm: 'Acquisition', val: o?.newWowPct == null ? (o ? compact(o.newLearners7d) + ' new' : '—') : `${o.newWowPct > 0 ? '+' : ''}${o.newWowPct}%`,
-      w: norm(o?.newWowPct != null ? Math.max(0, o.newWowPct) : null, 5), c: slotColor(0) },
-    { nm: 'Activation', val: v?.activationRate == null ? '—' : pct(v.activationRate), w: norm(v?.activationRate, 50), c: slotColor(0) },
-    { nm: 'Engagement', val: o?.stickiness == null ? '—' : pct(o.stickiness), w: norm(o?.stickiness, 20), c: slotColor(1) },
-    { nm: 'Retention D1', val: v?.d1Retention == null ? '—' : pct(v.d1Retention), w: norm(v?.d1Retention, 40), c: 'var(--ok)' },
-    { nm: 'Referral k', val: v?.kFactor == null ? '—' : v.kFactor.toFixed(1), w: norm(v?.kFactor, 1), c: slotColor(4) },
-    { nm: 'Monetization', val: e?.coverage == null ? '—' : pct(e.coverage), w: norm(e?.coverage, 50), c: slotColor(2) },
+export function PortfolioHeader({ pulse, days, setDays, ago, flight }: {
+  pulse: Pulse; days: number; setDays: (d: number) => void; ago: number | null; flight: boolean
+}) {
+  const { o, v } = pulse
+  const down = o?.wowPct != null && o.wowPct < 0
+  return (
+    <header className="pf-header">
+      <div className="pf-header-copy">
+        <div className="pf-eyebrow"><span className="pf-live-dot" />Portfolio brief <span>· live company signal</span></div>
+        <div className="pf-headline-row">
+          <div className="pf-hero-number">{o ? compact(o.wau) : '—'}</div>
+          <div>
+            <h1>Weekly engaged</h1>
+            <div className={`pf-delta ${down ? 'down' : 'up'}`}>
+              {down ? <ArrowDownRight size={15} /> : <ArrowUpRight size={15} />}
+              {o?.wowPct == null ? 'Awaiting comparison' : `${Math.abs(o.wowPct)}% week over week`}
+            </div>
+          </div>
+        </div>
+        <p className="pf-narrative">{portfolioNarrative(pulse)}</p>
+      </div>
+
+      <div className="pf-header-side">
+        <div className="pf-period" role="group" aria-label="Portfolio date range">
+          {RANGES.map(range => <button key={range.days} className={days === range.days ? 'on' : ''} onClick={() => setDays(range.days)}>{range.label}</button>)}
+        </div>
+        <div className="pf-refresh"><span className={flight ? 'spinning' : ''} />{flight ? 'Refreshing signals' : `Updated ${ago == null ? '—' : ago < 5 ? 'just now' : `${ago}s ago`}`}</div>
+        <div className="pf-inputs">
+          <div><span>Activation</span><b>{v?.activationRate == null ? '—' : pct(v.activationRate)}</b></div>
+          <div><span>D1 return</span><b>{v?.d1Retention == null ? '—' : pct(v.d1Retention)}</b></div>
+          <div><span>Lessons / day</span><b>{v?.lessonsPerKidDay ?? '—'}</b></div>
+          <div><span>Active circles</span><b>{v ? compact(v.flywheelCount) : '—'}</b></div>
+        </div>
+      </div>
+    </header>
+  )
+}
+
+export function AttentionOverview({ eng, days }: { eng: EngagementData | null; days: number }) {
+  const external = (eng?.apps ?? []).filter(app => app.app !== 'hq' && app.seconds > 0)
+  const externalTotal = external.reduce((sum, app) => sum + app.seconds, 0)
+  const allApps = (eng?.apps ?? []).filter(app => app.seconds > 0)
+  return (
+    <section className="card pf-attention">
+      <div className="pf-section-head">
+        <div><div className="pf-kicker">Attention</div><h2>Where the portfolio earns time</h2><p>Customer-facing products are separated from Circle HQ, the internal development platform · last {days === 36500 ? 'all time' : `${days} days`}.</p></div>
+      </div>
+      {!eng || allApps.length === 0 ? <PortfolioEmpty headline="Attention has not arrived yet" body="The live usage trackers are connected; this view fills as products are used." /> : (
+        <div className="pf-attention-visuals">
+          <div className="pf-donut-panel">
+            <div className="pf-chart-label"><span>External portfolio</span><b>Customer-facing share of time</b></div>
+            {external.length ? <DonutD3 size={190} centerValue={fmtDur(externalTotal)} centerLabel="external time" valueFmt={fmtDur}
+              slices={external.map(app => ({ label: appLabel(app.app), value: app.seconds, color: appColor(app.app) }))} />
+              : <PortfolioEmpty headline="No external usage yet" body="Circle HQ is intentionally excluded from this donut." />}
+          </div>
+          <div className="pf-bars-panel">
+            <div className="pf-chart-label"><span>Operating context</span><b>All measured attention</b><small>Circle HQ appears only here.</small></div>
+            <HBars labelWidth={112} barH={18} valueFmt={fmtDur} bars={allApps.map(app => ({ label: appLabel(app.app), value: app.seconds, color: appColor(app.app) }))} />
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function FounderAttention({ items }: { items: AttentionItem[] }) {
+  return (
+    <aside className="card pf-founder">
+      <div className="pf-section-head compact">
+        <div><div className="pf-kicker"><Sparkles size={13} />Founder attention</div><h2>What deserves a decision</h2><p>Derived from current portfolio signals—not a separate data source.</p></div>
+      </div>
+      <div className="pf-attention-list">
+        {items.map((item, index) => (
+          <div className={`pf-attention-item ${item.tone}`} key={item.label}>
+            <span className="pf-rank">0{index + 1}</span>
+            <div><div className="pf-item-meta"><span>{item.product}</span><i /></div><h3>{item.label}</h3><p>{item.detail}</p></div>
+            <ChevronRight size={17} />
+          </div>
+        ))}
+      </div>
+      <div className="pf-founder-note"><Lightbulb size={15} /><span>The brief prioritizes direction, return, concentration, and missing signal. It never invents a metric.</span></div>
+    </aside>
+  )
+}
+
+export function ProductFleet({ products, onSelect }: { products: ProductCardModel[]; onSelect: (id: ProductId) => void }) {
+  return (
+    <section className="pf-fleet">
+      <div className="pf-section-head inline">
+        <div><div className="pf-kicker">Product fleet</div><h2>Five products, one operating view</h2></div>
+        <p>Select a product to inspect its operating detail.</p>
+      </div>
+      <div className="pf-product-grid">
+        {products.map(product => (
+          <button key={product.id} className="pf-product-card" onClick={() => onSelect(product.id)} aria-haspopup="dialog">
+            <div className="pf-product-top">
+              <AppLogo app={product.id} />
+              <div className="pf-product-name"><b>{product.name}</b><span>{product.role}</span></div>
+              <span className={`pf-health ${product.health}`}><i />{product.healthLabel}</span>
+            </div>
+            <div className="pf-product-primary">
+              <b>{product.primaryValue != null ? compact(product.primaryValue) : product.primary} <i>{product.primaryUnit}</i></b>
+              <span>{product.primaryPeriod ? `${product.primaryPeriod} · ` : ''}{product.primaryLabel}</span>
+            </div>
+            <div className="pf-product-secondary">
+              {product.secondary.map(metric => <div key={metric.label}><b>{metric.value}</b><span>{metric.label}</span></div>)}
+            </div>
+            <div className="pf-product-spark">{product.spark.filter(Boolean).length > 1 ? <Spark values={product.spark} color={appColor(product.id)} height={34} /> : <span>Trend builds with repeat visits</span>}</div>
+            <p className="pf-product-read">{product.interpretation}</p>
+            <div className="pf-inspect">Inspect product <ChevronRight size={14} /></div>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function detailMetrics(product: ProductCardModel, p: Pulse, days: number): DetailMetric[] {
+  const { i, k, o, v, e, eng } = p
+  const a = engagementFor(eng, product.id)
+  const page = topPage(eng, product.id)
+  const common: DetailMetric[] = [
+    { label: 'People', value: a ? compact(a.users) : '—', context: 'measured active people', icon: Users },
+    { label: 'Attention', value: a ? fmtDur(a.seconds) : '—', context: `total · ${rangeShort(days)}`, icon: Clock3 },
+    { label: 'Average session', value: a?.avgSession ? fmtDur(a.avgSession) : '—', context: 'active session time', icon: Repeat2 },
+    { label: 'Top surface', value: page?.page ?? '—', context: 'most attention', icon: Compass },
+  ]
+  if (product.id === 'arganta') return [
+    { label: 'Learners', value: i ? compact(i.learners) : '—', context: 'registered learners', icon: Users },
+    { label: 'Core action', value: v?.lessonsPerKidDay == null ? '—' : String(v.lessonsPerKidDay), context: 'lessons per active kid / day', icon: Zap },
+    { label: 'Depth', value: o?.accuracyPct == null ? '—' : pct(o.accuracyPct), context: 'learning accuracy', icon: Layers3 },
+    { label: 'Comeback', value: v?.d1Retention == null ? '—' : pct(v.d1Retention), context: 'next-day return', icon: Repeat2 },
+    { label: 'Habit', value: o?.stickiness == null ? '—' : pct(o.stickiness), context: 'DAU / MAU', icon: TrendingUp },
+    { label: 'Economy', value: e?.coverage == null ? '—' : pct(e.coverage), context: 'recurring mint covered by spend', icon: Sparkles },
+  ]
+  if (product.id === 'kinetik') return [
+    { label: 'People', value: k ? compact(k.members) : '—', context: 'circle members', icon: Users },
+    { label: 'Reach', value: k ? compact(k.circles) : '—', context: 'connected circles', icon: Compass },
+    { label: 'Core action', value: k ? compact(k.posts7d) : '—', context: 'posts over 7 days', icon: Zap },
+    { label: 'Depth', value: k ? compact(k.reactions) : '—', context: 'reactions', icon: Layers3 },
+    { label: 'Habit', value: k?.calPerDay == null ? '—' : String(k.calPerDay), context: 'calendar actions / day', icon: Repeat2 },
+    { label: 'Flywheel', value: v && v.familiesTotal ? pct(100 * v.flywheelCount / v.familiesTotal) : '—', context: 'active family circles', icon: TrendingUp },
+  ]
+  return [...common, {
+    label: 'Interactions', value: a?.clicks ? compact(a.clicks) : '—', context: 'measured clicks', icon: Zap,
+  }, {
+    label: 'Frequency', value: a?.users ? (a.sessions / a.users).toFixed(1) : '—', context: 'sessions per person', icon: TrendingUp,
+  }]
+}
+
+function InspectorViewSwitcher({ view, onChange }: { view: InspectorView; onChange: (view: InspectorView) => void }) {
+  const options: { view: InspectorView; label: string; Icon: typeof LayoutDashboard }[] = [
+    { view: 'overview', label: 'Overview', Icon: LayoutDashboard },
+    { view: 'desktop', label: 'Desktop', Icon: Monitor },
+    { view: 'mobile', label: 'Mobile', Icon: Smartphone },
   ]
 
-  // Average retention across the live weekly cohorts → the W0→W4 curve.
-  const curve = useMemo(() => {
-    if (!r || r.cohorts.length === 0) return null
-    const pts = r.horizons.map((h, idx) => {
-      const vals = r.cohorts.map(c => c.ret[idx]).filter((x): x is number => x != null)
-      return { label: h, value: vals.length ? Math.round(vals.reduce((s, x) => s + x, 0) / vals.length) : null }
-    }).filter(p => p.value != null) as { label: string; value: number }[]
-    return pts.length >= 2 ? pts : null
-  }, [r])
+  const choose = (nextView: InspectorView, button: HTMLButtonElement) => {
+    if (nextView === view) return
+    gsap.fromTo(button, { scale: .94 }, { scale: 1, duration: .42, ease: 'back.out(2.4)', overwrite: true })
+    onChange(nextView)
+  }
 
   return (
-    <div className="card mc-panel mc-fu">
-      <div>
-        <div className="mc-t">The growth funnel</div>
-        <div className="mc-s">AARRR · tick = benchmark · bar past tick = healthy</div>
-      </div>
-      {rows.map(row => (
-        <div key={row.nm} className="mc-frow">
-          <span className="nm">{row.nm}</span>
-          <Meter pct={row.w} tick={TICK} color={row.c} />
-          <span className="v">{row.val}</span>
-        </div>
+    <div className="pf-inspector-modes" role="group" aria-label="Product inspector view">
+      {options.map(({ view: option, label, Icon }) => (
+        <button
+          type="button"
+          key={option}
+          className={view === option ? 'on' : ''}
+          aria-pressed={view === option}
+          onClick={event => choose(option, event.currentTarget)}
+        >
+          <Icon size={14} />{label}
+        </button>
       ))}
-      <div className="mc-fill" />
-      <hr className="mc-div" />
-      <div>
-        <div className="mc-sec">Retention curve · cohort average</div>
-        <div style={{ marginTop: 7 }}>
-          {curve ? (
-            <>
-              <AreaTrend labels={curve.map(p => p.label)}
-                series={[{ key: 'v', label: '% still active', color: 'var(--ch2)', area: true }]}
-                data={curve.map(p => ({ v: p.value }))} height={56} valueFmt={x => Math.round(x) + '%'} />
-              <div className="mc-note" style={{ marginTop: 4 }}>The a16z read: a curve that flattens = product-market pull.</div>
-            </>
-          ) : <McEmpty inline headline="No cohorts yet" body="Appears once learners sign up across multiple weeks." />}
-        </div>
-      </div>
     </div>
   )
 }
 
-/* ─────────────────────────── attention center ─────────────────────────── */
-type AtTab = 'attention' | 'mix' | 'economy'
+function LiveProductPreview({ product, mode }: { product: ProductCardModel; mode: PreviewMode }) {
+  const [loaded, setLoaded] = useState(false)
+  const [fit, setFit] = useState(100)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const deviceRef = useRef<HTMLDivElement>(null)
+  const veilRef = useRef<HTMLDivElement>(null)
+  const firstLayout = useRef(true)
+  const previousMode = useRef<PreviewMode>(mode)
+  const url = PRODUCT_PREVIEWS[product.id]
+  const hostname = new URL(url).hostname
+  const viewport = PREVIEW_VIEWPORTS[mode]
 
-export function AttentionPanel({ o, e, eng, pw, days, hasBeats }: {
-  o: GrowthOverview | null; e: EconomyData | null; eng: EngagementData | null
-  pw: PowerCurve | null; days: number; hasBeats: boolean
-}) {
-  const [tab, setTab] = useState<AtTab>(hasBeats ? 'attention' : 'mix')
-  useEffect(() => { if (hasBeats) setTab('attention') }, [hasBeats])
+  useEffect(() => setLoaded(false), [url])
 
-  const daily = useMemo(() => {
-    if (!eng) return null
-    const apps = eng.apps.map(a => a.app)
-    const dayKeys = Array.from(new Set(eng.daily.map(d => d.day)))
-    if (dayKeys.length === 0) return null
-    const byDay = new Map<string, Record<string, number>>(dayKeys.map(dk => [dk, {}]))
-    for (const row of eng.daily) byDay.get(row.day)![row.app] = row.seconds
-    return {
-      labels: dayKeys,
-      series: apps.map(a => ({ key: a, label: appLabel(a), color: appColor(a) })),
-      data: dayKeys.map(dk => byDay.get(dk)!),
+  useLayoutEffect(() => {
+    const stage = stageRef.current
+    const device = deviceRef.current
+    const veil = veilRef.current
+    if (!stage || !device || !veil) return
+
+    let lastWidth = 0
+    let lastHeight = 0
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const modeChanged = previousMode.current !== mode
+
+    const fitDevice = (animate: boolean, animateModeChange = false) => {
+      const bounds = stage.getBoundingClientRect()
+      if (!bounds.width || !bounds.height) return
+      lastWidth = bounds.width
+      lastHeight = bounds.height
+      const inset = bounds.width < 560 ? 24 : 46
+      const deviceHeight = viewport.height + PREVIEW_CHROME_HEIGHT
+      const scale = Math.max(.12, Math.min(
+        1,
+        (bounds.width - inset) / viewport.width,
+        (bounds.height - inset) / deviceHeight,
+      ))
+      setFit(current => Math.abs(current - Math.round(scale * 100)) > 0 ? Math.round(scale * 100) : current)
+
+      gsap.killTweensOf([device, veil])
+      const target = {
+        width: viewport.width,
+        height: deviceHeight,
+        scale,
+        borderRadius: viewport.radius,
+        xPercent: -50,
+        yPercent: -50,
+        transformOrigin: '50% 50%',
+      }
+
+      if (!animate || reducedMotion || firstLayout.current) {
+        gsap.set(device, target)
+        gsap.set(veil, { opacity: 0 })
+        firstLayout.current = false
+        return
+      }
+
+      const duration = animateModeChange ? .9 : .38
+      const timeline = gsap.timeline({ defaults: { overwrite: 'auto' } })
+      timeline
+        .to(veil, { opacity: animateModeChange ? .28 : .12, duration: .16, ease: 'power2.out' }, 0)
+        .to(device, { ...target, duration, ease: animateModeChange ? 'expo.inOut' : 'power3.out' }, 0)
+        .to(veil, { opacity: 0, duration: .4, ease: 'power2.out' }, Math.max(.12, duration * .52))
     }
-  }, [eng])
 
-  // Fewer than 3 days of history: a stacked-column chart reads as "broken" —
-  // one bar floating in empty air. Show the honest shape instead: today's
-  // split by app as ranked bars, framed as day-one rather than a trend.
-  const sparse = !!daily && daily.labels.length < 3
+    fitDevice(true, modeChanged)
+    previousMode.current = mode
 
-  const mix = (o?.activityMix ?? []).filter(m => m.events > 0)
-  const power = pw?.histogram?.map(b => ({ label: b.daysActive + 'd', value: b.users })) ?? null
-  // A histogram with 1-2 lit bars out of 14 reads as a broken chart, not a
-  // curve — the shape only becomes informative once repeat visits exist.
-  const powerUsers = power?.reduce((s, b) => s + b.value, 0) ?? 0
-  const powerReady = !!power && powerUsers >= 4
+    const resizeObserver = new ResizeObserver(entries => {
+      const bounds = entries[0]?.contentRect
+      if (!bounds || (Math.abs(bounds.width - lastWidth) < 1 && Math.abs(bounds.height - lastHeight) < 1)) return
+      fitDevice(true, false)
+    })
+    resizeObserver.observe(stage)
+
+    return () => {
+      resizeObserver.disconnect()
+      gsap.killTweensOf([device, veil])
+    }
+  }, [mode, viewport.height, viewport.radius, viewport.width])
 
   return (
-    <div className="card mc-panel mc-at">
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div className="mc-t">Where attention goes</div>
-          <div className="mc-s">measured time-on-page · visibility + activity gated · last {days}d</div>
+    <section className="pf-live-preview" style={{ '--pf-live-accent': appColor(product.id) } as CSSProperties} aria-label={`${product.name} live product preview`}>
+      <div className="pf-live-toolbar">
+        <div className="pf-live-heading">
+          <span>Live product</span>
+          <b>Responsive application canvas</b>
         </div>
-        <div className="mc-tabs" role="tablist">
-          <button role="tab" aria-selected={tab === 'attention'} className={tab === 'attention' ? 'on' : ''} onClick={() => setTab('attention')}>Attention</button>
-          <button role="tab" aria-selected={tab === 'mix'} className={tab === 'mix' ? 'on' : ''} onClick={() => setTab('mix')}>Learning mix</button>
-          <button role="tab" aria-selected={tab === 'economy'} className={tab === 'economy' ? 'on' : ''} onClick={() => setTab('economy')}>Mint vs burn</button>
+        <div className="pf-live-tools">
+          <span className="pf-live-fit" aria-live="polite">Fit · {fit}%</span>
         </div>
       </div>
 
-      {/* NOT .mc-fill — that class is flex:1;min-height:0, meant only for
-          empty spacers (FunnelRail/WhoWhen). Wrapping real chart content in
-          it let the chart shrink below its own natural height while
-          overflow stayed visible, so it visually spilled onto mc-duo below. */}
-      <div className="mc-at-chart">
-        {tab === 'attention' && (
-          !daily ? <McEmpty headline="One paste turns this on"
-            body={`Run migration_hq_engagement_v3.sql — every app already ships the tracker, and this fills within minutes of anyone using anything.`} />
-          : sparse ? (
-            <div>
-              <div className="mc-note" style={{ marginBottom: 6 }}>Day one — {daily.labels.length === 1 ? 'today' : `the last ${daily.labels.length} days`}. The daily trend appears once there's more history to compare.</div>
-              <HBars barH={16} labelWidth={110} valueFmt={fmtDur}
-                bars={eng!.apps.map(a => ({ label: appLabel(a.app), value: a.seconds, color: appColor(a.app) }))} />
+      <div className="pf-live-stage" ref={stageRef} data-mode={mode}>
+        <div className="pf-live-stage-glow" />
+        <div className="pf-live-device" ref={deviceRef} data-mode={mode}>
+          <div className="pf-live-browserbar">
+            <span className="pf-live-traffic" aria-hidden="true"><i /><i /><i /></span>
+            <span className="pf-live-address">{hostname}</span>
+            <a href={url} target="_blank" rel="noreferrer" aria-label={`Open ${product.name} in a new tab`} title="Open live app">
+              <ExternalLink size={15} />
+            </a>
+          </div>
+          <iframe
+            className="pf-live-iframe"
+            src={url}
+            title={`${product.name} live ${mode} preview`}
+            loading="eager"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allow="fullscreen; clipboard-read; clipboard-write"
+            allowFullScreen
+            onLoad={() => setLoaded(true)}
+          />
+          <div className="pf-live-veil" ref={veilRef} />
+          <div className={`pf-live-loading${loaded ? ' loaded' : ''}`} aria-hidden={loaded}>
+            <LoaderCircle size={20} />
+            <span>Opening {product.name}</span>
+          </div>
+          <span className="pf-live-home" aria-hidden="true" />
+        </div>
+      </div>
+      <p className="pf-live-caption">Interactive live surface · {viewport.width} × {viewport.height} viewport, scaled to fit</p>
+    </section>
+  )
+}
+
+export function ProductDetail({ product, pulse, days, onClose }: { product: ProductCardModel; pulse: Pulse; days: number; onClose: () => void }) {
+  const [view, setView] = useState<InspectorView>('overview')
+  const viewPanelRef = useRef<HTMLDivElement>(null)
+  const overviewLayoutRef = useRef<HTMLDivElement>(null)
+  const { eng, r, pw, au, geo } = pulse
+  const labels = eng ? Array.from(new Set(eng.daily.map(d => d.day))) : []
+  const values = dailyFor(eng, product.id)
+  const pages = eng?.pages.filter(page => page.app === product.id).slice(0, 5) ?? []
+  const metrics = detailMetrics(product, pulse, days)
+  const roleTotal = au?.roles.reduce((sum, role) => sum + role.count, 0) ?? 0
+  const devices = (au?.devices ?? []).filter(device => device.device !== 'unknown')
+  const deviceTotal = devices.reduce((sum, device) => sum + device.seconds, 0)
+  const retentionCurve = useMemo(() => {
+    if (!r?.cohorts.length) return []
+    return r.horizons.map((horizon, index) => {
+      const points = r.cohorts.map(cohort => cohort.ret[index]).filter((value): value is number => value != null)
+      return { horizon, value: points.length ? Math.round(points.reduce((sum, value) => sum + value, 0) / points.length) : 0 }
+    })
+  }, [r])
+  const power = pw?.histogram.map(bucket => ({ label: `${bucket.daysActive}d`, value: bucket.users })) ?? []
+
+  useLayoutEffect(() => {
+    const panel = viewPanelRef.current
+    if (!panel) return
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reducedMotion) {
+      gsap.set(panel, { clearProps: 'all' })
+      return
+    }
+    gsap.fromTo(
+      panel,
+      { opacity: 0, y: 9, scale: .992 },
+      { opacity: 1, y: 0, scale: 1, duration: .42, ease: 'power3.out', clearProps: 'transform', overwrite: true },
+    )
+    return () => { gsap.killTweensOf(panel) }
+  }, [view])
+
+  useLayoutEffect(() => {
+    if (view !== 'overview') return
+    const panel = viewPanelRef.current
+    const layout = overviewLayoutRef.current
+    if (!panel || !layout) return
+
+    let frame = 0
+    const fitOverview = () => {
+      layout.style.width = '100%'
+      layout.style.height = 'calc(100% - 12px)'
+      layout.style.transform = 'none'
+      layout.style.transformOrigin = '0 0'
+
+      if (panel.clientWidth < 760) return
+      const main = layout.querySelector<HTMLElement>('.pf-detail-main')
+      const signals = layout.querySelector<HTMLElement>('.pf-signals')
+      const availableHeight = Math.max(1, panel.clientHeight - 12)
+      const contentHeight = Math.max(main?.scrollHeight ?? 0, signals?.scrollHeight ?? 0)
+      const requiredHeight = Math.max(availableHeight, contentHeight + 32)
+      const scale = Math.min(1, availableHeight / requiredHeight)
+      if (scale >= .995) return
+
+      layout.style.width = `${100 / scale}%`
+      layout.style.height = `${requiredHeight}px`
+      layout.style.transform = `scale(${scale})`
+    }
+    const scheduleFit = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => { frame = window.requestAnimationFrame(fitOverview) })
+    }
+
+    scheduleFit()
+    const settleTimer = window.setTimeout(scheduleFit, 320)
+    const resizeObserver = new ResizeObserver(scheduleFit)
+    resizeObserver.observe(panel)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(settleTimer)
+      resizeObserver.disconnect()
+    }
+  }, [view])
+
+  return (
+    <div className="pf-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className={`card pf-detail view-${view}`} data-view={view} style={{ '--pf-live-accent': appColor(product.id) } as CSSProperties} role="dialog" aria-modal="true" aria-labelledby="pf-product-dialog-title">
+      <div className="pf-detail-head">
+        <div className="pf-detail-title"><AppLogo app={product.id} size={34} /><div><div className="pf-kicker">Selected product</div><h2 id="pf-product-dialog-title">{product.name} operating detail</h2><p>{product.interpretation}</p></div></div>
+        <InspectorViewSwitcher view={view} onChange={setView} />
+        <div className="pf-detail-actions"><span className={`pf-health ${product.health}`}><i />{product.healthLabel}</span><button className="pf-modal-close" onClick={onClose} aria-label="Close product inspector" autoFocus><X size={18} /></button></div>
+      </div>
+
+      <div className="pf-inspector-panel" ref={viewPanelRef} key={view === 'overview' ? 'overview' : 'live'}>
+      {view === 'overview' ? <div className="pf-detail-layout" ref={overviewLayoutRef}>
+        <div className="pf-detail-main">
+          <div className="pf-metric-grid">
+            {metrics.map(({ label, value, context, icon: Icon }) => <div className="pf-metric" key={label}><Icon size={15} /><span>{label}</span><b>{value}</b><small>{context}</small></div>)}
+          </div>
+          <div className="pf-detail-charts">
+            <div className="pf-subpanel">
+              <div className="pf-subhead"><div><span>Daily attention</span><b>{product.name} rhythm</b></div><span>{rangeShort(days)} view</span></div>
+              {labels.length >= 3 && values.some(Boolean)
+                ? <AreaTrend labels={labels} series={[{ key: 'value', label: product.name, color: appColor(product.id), area: true }]} data={values.map(value => ({ value }))} height={180} valueFmt={fmtDur} />
+                : <PortfolioEmpty headline="A trend needs three days" body="Daily activity will replace this state after repeat visits." />}
             </div>
-          ) : <StackedCols labels={daily.labels} series={daily.series} data={daily.data} height={140} valueFmt={fmtDur} />
-        )}
-        {tab === 'mix' && (mix.length > 0
-          ? <DonutD3 slices={mix.map((m, idx) => ({ label: kindLabel(m.kind), value: m.events, color: slotColor(idx) }))}
-              centerValue={compact(mix.reduce((s, m) => s + m.events, 0))} centerLabel="actions · 30d" size={150} />
-          : <McEmpty inline headline="No learning actions yet" body="Journey nodes, quests and drills appear here as kids play." />)}
-        {tab === 'economy' && (e?.mintBurn && e.mintBurn.length > 0
-          ? <AreaTrend labels={e.mintBurn.map(p => p.week)}
-              series={[
-                { key: 'mint', label: 'Mint · earned', color: 'var(--ch1)', area: true },
-                { key: 'burn', label: 'Burn · spent', color: 'var(--ch3)', dash: true },
-              ]}
-              data={e.mintBurn.map(p => ({ mint: p.mint, burn: p.burn }))} height={140} />
-          : <McEmpty inline headline="No diamond flows yet" body="Mint (earned) and burn (spent) appear here via the ledger." />)}
-      </div>
-
-      <div className="mc-duo">
-        <div>
-          <div className="mc-sec">Power-user curve · days active of {days}</div>
-          <div style={{ marginTop: 7 }}>
-            {powerReady
-              ? <VCols values={power!} height={84} labelEvery={Math.max(2, Math.floor(power!.length / 5))} ariaLabel="Power-user curve" />
-              : <McEmpty inline headline={power ? 'Building the curve' : 'Needs v3 migration'}
-                  body={power ? `${powerUsers} ${powerUsers === 1 ? 'person has' : 'people have'} shown up so far — the a16z habit shape (right side growing) appears with more repeat visits.` : 'Then this shows who keeps coming back, and how often.'} />}
+            <div className="pf-subpanel">
+              <div className="pf-subhead"><div><span>Top surfaces</span><b>Where depth accumulates</b></div></div>
+              {pages.length ? <HBars bars={pages.map(page => ({ label: page.page, value: page.seconds, color: appColor(product.id) }))} valueFmt={fmtDur} labelWidth={118} barH={17} />
+                : <PortfolioEmpty headline="No surfaces tracked" body="Page and scene depth appears as usage beats arrive." />}
+            </div>
+          </div>
+          <div className="pf-intelligence-grid">
+            <ValuationAuditPanel />
+            <div className="pf-intel-panel pf-map-panel">
+              <div className="pf-subhead"><div><span>Live reach</span><b>Timezone activity map</b></div><small>Coarse · kid-safe · never GPS/IP</small></div>
+              {geo?.regions.length ? <PortfolioWorldMap geo={geo} height={230} /> : <PortfolioEmpty headline="No timezone signal yet" body="The map renders only live hq_geo regions." />}
+            </div>
           </div>
         </div>
-        <div>
-          <div className="mc-sec">Top pages · the gap map</div>
-          <div style={{ marginTop: 7 }}>
-            {eng && eng.pages.length > 0
-              ? <HBars bars={eng.pages.slice(0, 4).map(p => ({
-                  // color carries the app (same slots everywhere); label stays the page
-                  label: p.page, value: p.seconds, color: appColor(p.app),
-                }))} valueFmt={fmtDur} labelWidth={110} barH={12} />
-              : <McEmpty inline headline="No pages tracked yet" body="Time per page/scene lands here the moment beats flow — low bars on shipped surfaces are the gaps to fix." />}
+
+        <aside className="pf-signals">
+          <div className="pf-subhead"><div><span>Ecosystem context</span><b>Signals around this product</b></div></div>
+          <div className="pf-signal-block">
+            <span>Retention curve</span>
+            {retentionCurve.length >= 2 ? <AreaTrend labels={retentionCurve.map(point => point.horizon)} series={[{ key: 'value', label: 'Still active', color: 'var(--ch2)', area: true }]} data={retentionCurve.map(point => ({ value: point.value }))} height={100} valueFmt={value => `${Math.round(value)}%`} /> : <small>No cohorts yet</small>}
           </div>
-        </div>
+          <div className="pf-signal-block">
+            <span>Power-user curve</span>
+            {power.some(point => point.value > 0) ? <VCols values={power} height={76} labelEvery={3} ariaLabel="Power user curve" /> : <small>Repeat visits will form the curve.</small>}
+          </div>
+          {eng && eng.punch.filter(point => point.seconds > 0).length >= 6 && <div className="pf-signal-block"><span>Weekly rhythm</span><PunchCard punch={eng.punch} /></div>}
+          {roleTotal > 0 && <SplitSignal label="Audience" items={au!.roles.map((role, index) => ({ label: `${role.role} ${role.count}`, value: role.count, color: slotColor(index) }))} total={roleTotal} />}
+          {deviceTotal > 0 && <SplitSignal label="Devices" items={devices.map((device, index) => ({ label: `${device.device} ${Math.round(100 * device.seconds / deviceTotal)}%`, value: device.seconds, color: slotColor(index + 3) }))} total={deviceTotal} />}
+          <div className="pf-signal-block">
+            <span>Regions · timezone, kid-safe</span>
+            {geo?.regions.length ? <HBars bars={geo.regions.slice(0, 3).map(region => ({ label: region.tz.split('/').pop()!.replace(/_/g, ' '), value: region.seconds, color: 'var(--ch6)' }))} valueFmt={fmtDur} labelWidth={88} barH={10} /> : <small>No coarse region signal yet.</small>}
+          </div>
+        </aside>
+      </div> : <div className="pf-detail-layout pf-detail-layout-live">
+        <LiveProductPreview product={product} mode={view} />
+      </div>}
       </div>
+    </section>
     </div>
   )
 }
 
-/* ─────────────────────────── who & when rail ─────────────────────────── */
-export function WhoWhen({ eng, au, geo, hasBeats }: {
-  eng: EngagementData | null; au: AudienceData | null; geo: GeoData | null; hasBeats: boolean
-}) {
-  const roleTotal = au?.roles.reduce((s, x) => s + x.count, 0) ?? 0
-  // beats older than the v3 sensor columns have device=null → 'unknown';
-  // exclude them so the split reflects real device signal, not history
-  const devices = (au?.devices ?? []).filter(d => d.device !== 'unknown')
-  const devTotal = devices.reduce((s, x) => s + x.seconds, 0)
-  const region = (tz: string) => tz.includes('/') ? tz.split('/').pop()!.replace(/_/g, ' ') : tz
-  // A punch card with only a handful of lit cells in a 168-cell grid reads as
-  // "mostly broken", not "day one" — name it plainly instead until there's a
-  // real week of rhythm to show.
-  const litCells = new Set((eng?.punch ?? []).filter(p => p.seconds > 0).map(p => `${p.dow}:${p.hour}`)).size
-  const punchReady = hasBeats && !!eng && litCells >= 6
-
+export function ValuationAuditPanel({ compact = false }: { compact?: boolean } = {}) {
+  const engine = valuationEstimate(AUDIT_VALUATION.asOf)
+  const max = Math.max(6, ...engine.methods.map(method => method.high))
+  const pctOf = (value: number) => `${Math.max(0, Math.min(100, 100 * value / max))}%`
   return (
-    <div className="card mc-panel mc-wh">
-      <div className="mc-t">Who &amp; when</div>
-
-      {hasBeats && eng ? (
-        <DonutD3 size={68} dense
-          slices={eng.apps.map(a => ({ label: appLabel(a.app), value: a.seconds, color: appColor(a.app) }))}
-          centerValue={fmtDur(eng.totalSeconds)} centerLabel="total" valueFmt={fmtDur} />
-      ) : (
-        <McEmpty inline headline="Needs v3 migration" body="Share of time across every app appears here once beats flow." />
-      )}
-
-      <div>
-        <div className="mc-sec">Rhythm of the week</div>
-        <div style={{ marginTop: 5 }}>
-          {punchReady
-            ? <PunchCard punch={eng!.punch} />
-            : <McEmpty inline headline={hasBeats ? 'Building the rhythm' : 'Needs v3 migration'}
-                body={hasBeats ? `${litCells} time ${litCells === 1 ? 'slot' : 'slots'} logged so far — the weekly heat map fills in as more sessions land.` : 'Hour-of-week heat: when the family actually plays & learns.'} />}
-        </div>
+    <div className={`pf-intel-panel pf-valuation${compact ? ' compact' : ''}`}>
+      <div className="pf-subhead"><div><span>Arganta valuation</span><b>Latest valuation audit</b></div><small>Snapshot · {AUDIT_VALUATION.asOf}</small></div>
+      <div className="pf-valuation-hero">
+        <div><span>Audit point estimate</span><b>${AUDIT_VALUATION.point.toFixed(1)}M</b><small>≈ QAR {AUDIT_VALUATION.qarPoint.toFixed(1)}M</small></div>
+        <div><span>Defensible pre-money range</span><b>${AUDIT_VALUATION.low.toFixed(1)}M–${AUDIT_VALUATION.high.toFixed(1)}M</b><small>{AUDIT_VALUATION.confidence} confidence</small></div>
+        <div><span>Fundraising opening</span><b>${AUDIT_VALUATION.safeCap.toFixed(1)}M SAFE</b><small>≈ QAR {AUDIT_VALUATION.qarSafe.toFixed(1)}M</small></div>
       </div>
-
-      {au && (
-        <div>
-          <div className="mc-sec">Audience</div>
-          {roleTotal > 0 && (
-            <>
-              <div className="mc-strip" style={{ marginTop: 5 }} role="img" aria-label="Accounts by role">
-                {au.roles.map((x, idx) => (
-                  <i key={x.role} title={`${x.role} · ${x.count}`} style={{ width: `${Math.max(3, (100 * x.count) / roleTotal)}%`, background: slotColor(idx) }} />
-                ))}
-              </div>
-              <div className="mc-spl">{au.roles.slice(0, 3).map(x => <span key={x.role}>{x.role} {x.count}</span>)}</div>
-            </>
-          )}
-          {devTotal > 0 && (
-            <>
-              <div className="mc-strip" style={{ marginTop: 6 }} role="img" aria-label="Time by device">
-                {devices.map((x, idx) => (
-                  <i key={x.device} title={`${x.device} · ${fmtDur(x.seconds)}`} style={{ width: `${Math.max(3, (100 * x.seconds) / devTotal)}%`, background: slotColor(idx + 4) }} />
-                ))}
-              </div>
-              <div className="mc-spl">{devices.slice(0, 3).map(x => <span key={x.device}>{x.device} {Math.round((100 * x.seconds) / devTotal)}%</span>)}</div>
-            </>
-          )}
-          {au.ageBands.some(b => b.band !== 'unknown' && b.count > 0) && (
-            <div className="mc-spl" style={{ marginTop: 5 }}>
-              <span>ages · {au.ageBands.filter(b => b.band !== 'unknown').map(b => `${b.band} ${b.count}`).join(' · ')}</span>
-            </div>
-          )}
+      <div className="pf-valuation-scale">
+        <div className="pf-value-track">
+          <i className="audit-band" style={{ left: pctOf(AUDIT_VALUATION.low), width: pctOf(AUDIT_VALUATION.high - AUDIT_VALUATION.low) }} />
+          <i className="audit-point" style={{ left: pctOf(AUDIT_VALUATION.point) }} />
+          <i className="safe-point" style={{ left: pctOf(AUDIT_VALUATION.safeCap) }} />
         </div>
-      )}
-      {!au && <McEmpty inline headline="Needs v3 migration" body="Roles, age bands and devices appear here — aggregate-only, never per-kid." />}
-
-      <div className="mc-fill" />
-      <div>
-        <div className="mc-sec">Regions · timezone, kid-safe</div>
-        <div style={{ marginTop: 5 }}>
-          {geo && geo.regions.length > 0
-            ? <HBars bars={geo.regions.slice(0, 3).map(g => ({ label: region(g.tz), value: g.seconds, color: slotColor(5) }))}
-                valueFmt={fmtDur} labelWidth={86} barH={9} />
-            : <McEmpty inline headline="No regions yet" body="Coarse regions from client timezone — never GPS/IP for kids." />}
-        </div>
+        <div className="pf-value-axis"><span>$0</span><span>${(max / 2).toFixed(1)}M</span><span>${max.toFixed(0)}M</span></div>
       </div>
+      {!compact && <>
+        <div className="pf-methods">
+          {engine.methods.map(method => <div className="pf-method" key={method.method}><span>{method.label}</span><div><i style={{ left: pctOf(method.low), width: pctOf(method.high - method.low) }} /></div><b>${method.low.toFixed(2)}–{method.high.toFixed(2)}M</b></div>)}
+        </div>
+        <div className="pf-audit-note"><ShieldCheck size={14} /><span>Authoritative run: 13 Jul audit. The six-method engine is shown only as a reproducibility cross-check; it does not replace the audited conclusion.</span></div>
+      </>}
     </div>
   )
 }
 
-/* ─────────────────────────── fleet matrix ─────────────────────────── */
-// The 8-question contract, written ONCE in full words down the left; each app
-// answers in its own terms via a small unit label. Nothing truncates.
-interface Cell { v: string; u?: string; dim?: boolean; icon?: ReactNode }
-const DASH: Cell = { v: '—', dim: true }
-// Row-level icons — the question each row asks, at a glance.
-const ROW_ICONS = [Users, Compass, Zap, Layers, Clock, Repeat, TrendingUp, Coins]
-
-export function FleetMatrix({ i, k, o, v, eng, days }: {
-  i: SchemaInsights | null; k: KinetikStats | null; o: GrowthOverview | null
-  v: PortfolioVc | null; eng: EngagementData | null; days: number
-}) {
-  const t = (app: string) => eng?.apps.find(a => a.app === app) ?? null
-  const pages = (app: string) => eng?.pages.filter(p => p.app === app) ?? []
-  const dailyFor = (app: string): number[] => {
-    if (!eng) return []
-    const dayKeys = Array.from(new Set(eng.daily.map(d => d.day)))
-    return dayKeys.map(dk => eng.daily.find(d => d.day === dk && d.app === app)?.seconds ?? 0)
-  }
-  const cellTime = (app: string): Cell => {
-    const a = t(app)
-    return a ? { v: fmtDur(a.seconds), u: `${days}d` } : DASH
-  }
-  const avgSess = (app: string): Cell => {
-    const a = t(app)
-    if (!a || !a.sessions) return DASH
-    return { v: fmtDur(a.avgSession ?? Math.round(a.seconds / a.sessions)), u: 'avg session' }
-  }
-  const topPage = (app: string): Cell => {
-    const p = pages(app)[0]
-    return p ? { v: p.page.length > 11 ? p.page.slice(0, 10) + '…' : p.page, u: 'top page' } : DASH
-  }
-
-  const APPS: { app: string; name: string; cells: Cell[] }[] = [
-    { app: 'kinetik', name: 'KinetikCircle', cells: [
-      k ? { v: compact(k.members), u: 'members' } : DASH,
-      k ? { v: compact(k.circles), u: 'circles' } : DASH,
-      k ? { v: compact(k.posts7d), u: 'posts · 7d' } : DASH,
-      k ? { v: compact(k.reactions), u: 'reactions' } : DASH,
-      cellTime('kinetik'),
-      k?.calPerDay != null ? { v: String(k.calPerDay), u: 'cal / day' } : DASH,
-      v && v.familiesTotal > 0 ? { v: Math.round((100 * v.flywheelCount) / v.familiesTotal) + '%', u: 'flywheel' } : DASH,
-      { v: usd2(SUB_ARPU), u: 'sub / fam' },
-    ] },
-    { app: 'arganta', name: 'ArgantaLab', cells: [
-      i ? { v: compact(i.learners), u: 'learners' } : DASH,
-      o ? { v: compact(o.newLearners7d), u: 'new · 7d' } : DASH,
-      v?.lessonsPerKidDay != null ? { v: String(v.lessonsPerKidDay), u: 'lessons / d' } : DASH,
-      o?.accuracyPct != null ? { v: pct(o.accuracyPct), u: 'accuracy' } : DASH,
-      cellTime('arganta'),
-      o?.stickiness != null ? { v: pct(o.stickiness), u: 'stickiness' } : DASH,
-      v?.d1Retention != null ? { v: pct(v.d1Retention), u: 'D1 back' } : DASH,
-      { v: usd2(BLEND_ARPU), u: 'sub+IAP / fam' },
-    ] },
-    { app: 'lashira', name: 'LashiraBloom', cells: [
-      t('lashira') ? { v: compact(t('lashira')!.users), u: 'players' } : DASH,
-      pages('lashira').length ? { v: String(pages('lashira').length), u: 'scenes seen' } : DASH,
-      (() => { const s = pages('lashira').filter(p => p.page.startsWith('realm')).reduce((x, p) => x + p.seconds, 0); return s > 0 ? { v: fmtDur(s), u: 'in realms' } : DASH })(),
-      topPage('lashira'),
-      cellTime('lashira'),
-      t('lashira') && t('lashira')!.users > 0 ? { v: (t('lashira')!.sessions / t('lashira')!.users).toFixed(1), u: 'sess / player' } : DASH,
-      avgSess('lashira'),
-      // Lashira's economy is denominated in diamonds (the shared learn-engine
-      // currency), not $ — the value column tells that story directly.
-      { v: 'Diamonds', u: 'earn by learning', icon: <Gem size={12} color={appColor('lashira')} /> },
-    ] },
-    { app: 'hq', name: 'Circle HQ', cells: [
-      t('hq') ? { v: compact(t('hq')!.users), u: 'operators' } : DASH,
-      pages('hq').length ? { v: String(pages('hq').length), u: 'surfaces used' } : DASH,
-      topPage('hq'),
-      t('hq')?.clicks ? { v: compact(t('hq')!.clicks!), u: 'interactions' } : DASH,
-      cellTime('hq'),
-      dailyFor('hq').filter(s => s > 0).length ? { v: `${dailyFor('hq').filter(s => s > 0).length}/${days}`, u: 'days active' } : DASH,
-      avgSess('hq'),
-      { v: '$0', u: 'infra / mo' },
-    ] },
-    { app: 'landing', name: 'Landing', cells: [
-      t('landing') ? { v: compact(t('landing')!.users), u: 'visitors' } : DASH,
-      pages('landing').length ? { v: String(pages('landing').length), u: 'sections seen' } : DASH,
-      topPage('landing'),
-      t('landing')?.clicks ? { v: compact(t('landing')!.clicks!), u: 'interactions' } : DASH,
-      cellTime('landing'),
-      t('landing') && t('landing')!.users > 0 ? { v: (t('landing')!.sessions / t('landing')!.users).toFixed(1), u: 'visits / person' } : DASH,
-      avgSess('landing'),
-      DASH,
-    ] },
-  ]
-
-  const ROWS = ['People', 'Reach', 'Core action', 'Depth', 'Time', 'Habit', 'Comeback', 'Value']
-
-  return (
-    <div className="card mc-fl">
-      <div className="spread" style={{ marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
-        <div className="mc-t">App fleet — the same 8 questions, answered by every product</div>
-        <div className="mc-s">grey cells fill as the beats pipeline reports</div>
-      </div>
-      <div className="mc-mx-scroll">
-        <div className="mc-mx">
-          {/* header row */}
-          <div className="hd" aria-hidden="true" />
-          {APPS.map(a => {
-            const spark = dailyFor(a.app)
-            const connected = a.app === 'kinetik' ? !!k : a.app === 'arganta' ? !!i : !!t(a.app)
-            return (
-              <div key={a.app} className="hd">
-                <span className="nm"><AppLogo app={a.app} />{a.name}</span>
-                <span className={'st ' + (connected ? 'ok' : 'mut')}>{connected ? 'Connected' : 'awaiting beats'}</span>
-                <div className="spark-row">
-                  {spark.filter(s => s > 0).length > 1 && <Spark values={spark} color={appColor(a.app)} height={18} />}
-                </div>
-              </div>
-            )
-          })}
-          {/* metric rows — alternating tint so a 5-column, 8-row grid stays
-              scannable left-to-right without re-counting columns each time */}
-          {ROWS.map((row, ri) => (
-            <FleetRow key={row} label={row} Icon={ROW_ICONS[ri]} cells={APPS.map(a => a.cells[ri])} zebra={ri % 2 === 1} />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+function SplitSignal({ label, items, total }: { label: string; items: { label: string; value: number; color: string }[]; total: number }) {
+  return <div className="pf-signal-block"><span>{label}</span><div className="pf-split-bar">{items.map(item => <i key={item.label} title={item.label} style={{ width: `${Math.max(3, 100 * item.value / total)}%`, background: item.color }} />)}</div><div className="pf-split-labels">{items.slice(0, 3).map(item => <small key={item.label}>{item.label}</small>)}</div></div>
 }
 
-function FleetRow({ label, Icon, cells, zebra }: { label: string; Icon: typeof Users; cells: Cell[]; zebra: boolean }) {
-  const bg = zebra ? { background: 'var(--bg2)' } : undefined
-  return (
-    <>
-      <div className="rl" style={bg}><Icon size={12} className="rl-ic" />{label}</div>
-      {cells.map((c, idx) => (
-        <div key={idx} className="cell" style={bg}>
-          {c.icon}
-          <span className={'v' + (c.dim ? ' dim' : '')}>{c.v}</span>
-          {c.u && <span className="u">{c.u}</span>}
-        </div>
-      ))}
-    </>
-  )
+function PortfolioEmpty({ headline, body }: { headline: string; body: string }) {
+  return <div className="pf-empty"><CheckCircle2 size={18} /><div><b>{headline}</b><span>{body}</span></div></div>
 }

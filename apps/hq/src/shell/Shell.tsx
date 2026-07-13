@@ -1,27 +1,34 @@
+import { lazy, Suspense } from 'react'
 import { Rail } from './Rail'
 import { Topbar } from './Topbar'
 import { MobileNav, MobileSubnav } from './MobileNav'
 import { useHQ } from './store'
 import { cloudEnabled } from '../lib/supabase'
-import { Data } from '../surfaces/Data'
-import { Growth } from '../surfaces/Growth'
-import { Portfolio } from '../surfaces/Portfolio'
-import { Content } from '../surfaces/Content'
-import { Agents } from '../surfaces/Agents'
-import { Broadcast } from '../surfaces/Broadcast'
-import { GameBuilder, AppBuilder } from '../surfaces/builders/BuilderShell'
 import { AgentOrb } from '../components/AgentOrb'
 import { CommandPalette } from './CommandPalette'
-import { Command } from '../surfaces/command/Command'
-import { Pixel } from '../surfaces/pixel/Pixel'
-import { Vault } from '../surfaces/Vault'
 import { Landing } from '../surfaces/Landing'
-import { Architecture } from '../surfaces/Architecture'
-import { BattleBuilder } from '../surfaces/battle/BattleBuilder'
-import { CharacterForge } from '../surfaces/character/CharacterForge'
-import { OpenworldBuilder } from '../surfaces/world/OpenworldBuilder'
-import { MusicBuilder } from '../surfaces/music/MusicBuilder'
-import { VideoBuilder } from '../surfaces/video/VideoBuilder'
+
+const Data = lazy(() => import('../surfaces/Data').then(module => ({ default: module.Data })))
+const Growth = lazy(() => import('../surfaces/Growth').then(module => ({ default: module.Growth })))
+const Portfolio = lazy(() => import('../surfaces/Portfolio').then(module => ({ default: module.Portfolio })))
+const Content = lazy(() => import('../surfaces/Content').then(module => ({ default: module.Content })))
+const Agents = lazy(() => import('../surfaces/Agents').then(module => ({ default: module.Agents })))
+const Broadcast = lazy(() => import('../surfaces/Broadcast').then(module => ({ default: module.Broadcast })))
+const GameBuilder = lazy(() => import('../surfaces/builders/BuilderShell').then(module => ({ default: module.GameBuilder })))
+const AppBuilder = lazy(() => import('../surfaces/builders/BuilderShell').then(module => ({ default: module.AppBuilder })))
+const Command = lazy(() => import('../surfaces/command/Command').then(module => ({ default: module.Command })))
+const Pixel = lazy(() => import('../surfaces/pixel/Pixel').then(module => ({ default: module.Pixel })))
+const Vault = lazy(() => import('../surfaces/Vault').then(module => ({ default: module.Vault })))
+const Architecture = lazy(() => import('../surfaces/Architecture').then(module => ({ default: module.Architecture })))
+const BattleBuilder = lazy(() => import('../surfaces/battle/BattleBuilder').then(module => ({ default: module.BattleBuilder })))
+const CharacterForge = lazy(() => import('../surfaces/character/CharacterForge').then(module => ({ default: module.CharacterForge })))
+const OpenworldBuilder = lazy(() => import('../surfaces/world/OpenworldBuilder').then(module => ({ default: module.OpenworldBuilder })))
+const MusicBuilder = lazy(() => import('../surfaces/music/MusicBuilder').then(module => ({ default: module.MusicBuilder })))
+const VideoBuilder = lazy(() => import('../surfaces/video/VideoBuilder').then(module => ({ default: module.VideoBuilder })))
+
+function SurfaceLoading() {
+  return <div className="auth-wrap" role="status" aria-label="Loading workspace"><div className="spin" /></div>
+}
 
 function Surface() {
   const { surface } = useHQ()
@@ -77,7 +84,9 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
         )}
         <MobileSubnav />
         <div className={'content' + (full ? ' content-flush' : '')}>
-          {full ? <Surface /> : <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>}
+          <Suspense fallback={<SurfaceLoading />}>
+            {full ? <Surface /> : <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>}
+          </Suspense>
         </div>
       </div>
       <AgentOrb />

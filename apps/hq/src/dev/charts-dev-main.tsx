@@ -1,4 +1,4 @@
-// DEV-ONLY chart harness (charts-dev.html) — renders the Mission Control
+// DEV-ONLY chart harness (charts-dev.html) — renders the Portfolio Brief
 // panels + every D3 chart with sample data so marks/tooltips/themes/layout
 // can be eyeballed without an operator session. Not part of the app bundle.
 import React from 'react'
@@ -12,7 +12,7 @@ import { StackedCols } from '../components/d3/StackedCols'
 import { PunchCard } from '../components/d3/PunchCard'
 import { Meter, VCols, Spark } from '../components/d3/micro'
 import { fmtDur, appColor, appLabel } from '../components/d3/chartkit'
-import { NorthStarStrip, FunnelRail, AttentionPanel, WhoWhen, FleetMatrix } from '../surfaces/Portfolio'
+import { PortfolioBrief, type Pulse } from '../surfaces/Portfolio'
 import type {
   SchemaInsights, GrowthOverview, EconomyData, PortfolioVc, RetentionData,
   EngagementData, PowerCurve, AudienceData, GeoData,
@@ -143,11 +143,15 @@ const au: AudienceData = {
   generatedAt: '',
 }
 const geo: GeoData = SPARSE
-  ? { regions: [{ tz: 'Asia/Jakarta', users: 1, seconds: 3600 }], referrers: [], generatedAt: '' }
+  ? { regions: [
+      { tz: 'Asia/Qatar', users: 2, seconds: 11200 },
+      { tz: 'Asia/Riyadh', users: 1, seconds: 1620 },
+      { tz: 'Asia/Jakarta', users: 1, seconds: 1 },
+    ], referrers: [], generatedAt: '' }
   : {
       regions: [
-        { tz: 'Asia/Jakarta', users: 6, seconds: 88000 }, { tz: 'Europe/Paris', users: 2, seconds: 14000 },
-        { tz: 'Asia/Singapore', users: 1, seconds: 4000 },
+        { tz: 'Asia/Qatar', users: 6, seconds: 88000 }, { tz: 'Europe/Paris', users: 2, seconds: 14000 },
+        { tz: 'Asia/Singapore', users: 1, seconds: 4000 }, { tz: 'Asia/Jakarta', users: 1, seconds: 2200 },
       ],
       referrers: [{ ref: 'google.com', sessions: 4 }, { ref: 'linkedin.com', sessions: 2 }],
       generatedAt: '',
@@ -163,21 +167,15 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
-// Reproduces the real Shell's height budget: Portfolio is a "full" surface
-// (Shell.tsx → .content-flush, zero padding), so .mc-wrap gets exactly
-// 100vh minus the 54px topbar — matched here so overflow that would be
-// invisible in the app is caught in the harness too.
+// Reproduces the real Shell's height budget: Portfolio is a full surface
+// (Shell.tsx → .content-flush, zero padding). The brief owns its own scroll
+// container so the header and responsive evidence layout are tested together.
 function MissionControlPreview() {
   const [days, setDays] = React.useState(14)
+  const pulse: Pulse = { i, k, o, e, v, r, eng, pw, au, geo }
   return (
-    <div className="mc-wrap" style={{ height: 'calc(100vh - 54px)', border: '1px dashed var(--bd3)' }}>
-      <div className="mc">
-        <NorthStarStrip o={o} v={v} days={days} setDays={setDays} ago={3} />
-        <FunnelRail o={o} v={v} e={e} r={r} />
-        <AttentionPanel o={o} e={e} eng={eng} pw={pw} days={days} hasBeats={true} />
-        <WhoWhen eng={eng} au={au} geo={geo} hasBeats={true} />
-        <FleetMatrix i={i} k={k} o={o} v={v} eng={eng} days={days} />
-      </div>
+    <div style={{ height: 'calc(100vh - 54px)', border: '1px dashed var(--bd3)' }}>
+      <PortfolioBrief pulse={pulse} days={days} setDays={setDays} ago={3} />
     </div>
   )
 }
@@ -186,9 +184,9 @@ function Harness() {
   const [theme, setTheme] = React.useState<'light' | 'dark'>('light')
   React.useEffect(() => { document.documentElement.setAttribute('data-theme', theme) }, [theme])
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
+    <div style={{ maxWidth: 1720, margin: '0 auto', padding: 24 }}>
       <div className="spread" style={{ marginBottom: 16 }}>
-        <div className="h1">Mission Control + D3 chart harness (sample data)</div>
+        <div className="h1">Portfolio Brief + D3 chart harness (sample data)</div>
         <button className="chip" data-testid="theme-toggle" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}>theme: {theme}</button>
       </div>
 
