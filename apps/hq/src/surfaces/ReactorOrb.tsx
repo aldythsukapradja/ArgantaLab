@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { gsap } from 'gsap'
 import * as THREE from 'three'
 import { KB_NOTES } from '../vault/kb.generated'
@@ -30,11 +31,11 @@ const DARK: Palette = {
 type LayerId = 'knowledge' | 'aiml' | 'agent' | 'ui' | 'platform'
 
 const ARCHITECTURE_LAYERS: { id: LayerId; color: string; radius: number; thickness: number; segments: number; gap: number; speed: number; phase: number }[] = [
-  { id: 'knowledge', color: '#8b5cf6', radius: 1.08, thickness: .014, segments: 18, gap: .28, speed: -.015, phase: .02 },
-  { id: 'aiml', color: '#18b9a6', radius: 1.35, thickness: .018, segments: 12, gap: .22, speed: .012, phase: .21 },
-  { id: 'agent', color: '#ff4f7d', radius: 1.64, thickness: .024, segments: 7, gap: .18, speed: -.009, phase: .05 },
-  { id: 'ui', color: '#6366f1', radius: 1.94, thickness: .016, segments: 14, gap: .32, speed: .007, phase: .14 },
-  { id: 'platform', color: '#647eaa', radius: 2.24, thickness: .022, segments: 10, gap: .2, speed: -.005, phase: .08 },
+  { id: 'knowledge', color: '#8b5cf6', radius: 1.08, thickness: .022, segments: 18, gap: .28, speed: -.015, phase: .02 },
+  { id: 'aiml', color: '#18b9a6', radius: 1.38, thickness: .028, segments: 12, gap: .22, speed: .012, phase: .21 },
+  { id: 'agent', color: '#ff4f7d', radius: 1.71, thickness: .036, segments: 7, gap: .18, speed: -.009, phase: .05 },
+  { id: 'ui', color: '#6366f1', radius: 2.05, thickness: .025, segments: 14, gap: .32, speed: .007, phase: .14 },
+  { id: 'platform', color: '#647eaa', radius: 2.4, thickness: .033, segments: 10, gap: .2, speed: -.005, phase: .08 },
 ]
 
 const PRODUCT_ROTATION_SECONDS = 160
@@ -587,7 +588,7 @@ function ArchitectureRings({ palette, tier, timeScale, immediate, reducedMotion 
     // living systems instead of one static striped ball.
     segmentMaterialRefs.current.forEach((materials, layerIndex) => {
       const layer = ARCHITECTURE_LAYERS[layerIndex]
-      const base = palette.blending === THREE.NormalBlending ? .62 : .52
+      const base = palette.blending === THREE.NormalBlending ? .82 : .74
       const scanSpeed = 1.1 + layerIndex * .45
       const direction = layer.speed < 0 ? -1 : 1
       materials.forEach((material, index) => {
@@ -607,7 +608,7 @@ function ArchitectureRings({ palette, tier, timeScale, immediate, reducedMotion 
           <group key={layer.id} ref={node => { if (node) refs.current[layerIndex] = node }} rotation={[0, 0, layer.phase]}>
             <mesh>
               <torusGeometry args={[layer.radius + .045, .005, 4, 128]} />
-              <meshBasicMaterial color={layer.color} transparent opacity={palette.blending === THREE.NormalBlending ? .2 : .13} blending={palette.blending} depthWrite={false} />
+              <meshBasicMaterial color={layer.color} transparent opacity={palette.blending === THREE.NormalBlending ? .28 : .2} blending={palette.blending} depthWrite={false} />
             </mesh>
             {Array.from({ length: layer.segments }, (_, index) => (
               <mesh key={index} rotation={[0, 0, index * sector]}>
@@ -615,7 +616,7 @@ function ArchitectureRings({ palette, tier, timeScale, immediate, reducedMotion 
                 <meshBasicMaterial ref={node => {
                   if (!node) return
                   ;(segmentMaterialRefs.current[layerIndex] ??= [])[index] = node
-                }} color={layer.color} transparent opacity={palette.blending === THREE.NormalBlending ? .62 : .52}
+                }} color={layer.color} transparent opacity={palette.blending === THREE.NormalBlending ? .82 : .74}
                   blending={palette.blending} depthWrite={false} toneMapped={false} />
               </mesh>
             ))}
@@ -853,6 +854,8 @@ function EnergyCore({ palette, timeScale, immediate, reducedMotion }: {
   const dustMaterial = useRef<THREE.ShaderMaterial>(null)
   const shockwave = useRef<THREE.Mesh>(null)
   const shockMaterial = useRef<THREE.MeshBasicMaterial>(null)
+  const bladeGroup = useRef<THREE.Group>(null)
+  const casingGroup = useRef<THREE.Group>(null)
   const uniforms = useMemo(() => ({
     uTime: { value: 0 }, uCore: { value: new THREE.Color(palette.core) }, uHot: { value: new THREE.Color(palette.coreHot) },
   }), [palette])
@@ -890,12 +893,16 @@ function EnergyCore({ palette, timeScale, immediate, reducedMotion }: {
     return () => { timeline.kill() }
   }, [immediate, timeScale])
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (material.current) material.current.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime
     if (dustMaterial.current) dustMaterial.current.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime
     if (pulse.current) {
       const amount = reducedMotion ? 1 : 1 + Math.sin(state.clock.elapsedTime * .72) * .024
       pulse.current.scale.setScalar(amount)
+    }
+    if (!reducedMotion) {
+      if (bladeGroup.current) bladeGroup.current.rotation.z += delta * .32
+      if (casingGroup.current) casingGroup.current.rotation.z -= delta * .05
     }
   })
 
@@ -908,6 +915,36 @@ function EnergyCore({ palette, timeScale, immediate, reducedMotion }: {
           <shaderMaterial ref={dustMaterial} vertexShader={RING_DUST_VERTEX} fragmentShader={RING_DUST_FRAGMENT} uniforms={dustUniforms}
             transparent depthWrite={false} blending={palette.blending} toneMapped={false} />
         </points>
+        {/* Turbine core: a faceted blade fan spinning one way inside a
+            bolted casing ring spinning the other — this is the piece that
+            actually reads as a mechanical arc-reactor chest-piece rather
+            than a glowing ball with a couple of decorative lines. */}
+        <group ref={bladeGroup}>
+          {Array.from({ length: 8 }, (_, index) => {
+            const wedge = Math.PI * 2 / 8
+            const gap = wedge * .16
+            return (
+              <mesh key={`blade-${index}`} rotation={[0, 0, index * wedge + gap / 2]}>
+                <ringGeometry args={[.34, .59, 3, 1, 0, wedge - gap]} />
+                <meshBasicMaterial color={index % 2 === 0 ? palette.cyan : palette.blue} transparent
+                  opacity={.55} blending={palette.blending} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+              </mesh>
+            )
+          })}
+        </group>
+        <group ref={casingGroup}>
+          <mesh><torusGeometry args={[.95, .026, 6, 100]} /><meshBasicMaterial color={palette.line} transparent opacity={.5} blending={palette.blending} depthWrite={false} toneMapped={false} /></mesh>
+          {Array.from({ length: 24 }, (_, index) => {
+            const sector = Math.PI * 2 / 24
+            const arc = sector * .68
+            return (
+              <mesh key={`bolt-${index}`} rotation={[0, 0, index * sector]}>
+                <torusGeometry args={[.95, .034, 4, 6, arc]} />
+                <meshBasicMaterial color={palette.cyan} transparent opacity={.32} blending={palette.blending} depthWrite={false} toneMapped={false} />
+              </mesh>
+            )
+          })}
+        </group>
         {/* Arc-reactor chest-piece detail: radiating spokes over a segmented
             notch ring, both facing the camera — the classic Stark reactor
             silhouette instead of a plain glowing ball. */}
@@ -940,16 +977,21 @@ function EnergyCore({ palette, timeScale, immediate, reducedMotion }: {
   )
 }
 
+// A tilted camera reads a wide-radius ring as a keystoned, uneven curve
+// rather than a clean circle at this fov/distance — reverted to straight-on.
+const CAMERA_BASE: [number, number, number] = [0, 0, 9.25]
+
 function CameraDrift({ reducedMotion }: { reducedMotion: boolean }) {
   useFrame((state) => {
     if (reducedMotion) {
-      state.camera.position.set(0, 0, 9.25)
+      state.camera.position.set(...CAMERA_BASE)
       state.camera.lookAt(0, 0, 0)
       return
     }
     const time = state.clock.elapsedTime
-    state.camera.position.x = Math.sin(time * .05) * .09
-    state.camera.position.y = Math.cos(time * .039) * .065
+    state.camera.position.x = CAMERA_BASE[0] + Math.sin(time * .05) * .09
+    state.camera.position.y = CAMERA_BASE[1] + Math.cos(time * .039) * .065
+    state.camera.position.z = CAMERA_BASE[2]
     state.camera.lookAt(0, 0, 0)
   })
   return null
@@ -1016,7 +1058,7 @@ export function ReactorOrb({
   const dpr: [number, number] = tier === 'high' ? [1, 1.25] : tier === 'medium' ? [1, 1.4] : [1, 1]
 
   return (
-    <Canvas key={bootKey} camera={{ position: [0, 0, 9.25], fov: 43 }} dpr={dpr}
+    <Canvas key={bootKey} camera={{ position: CAMERA_BASE, fov: 43 }} dpr={dpr}
       gl={{ alpha: true, antialias: tier !== 'low', premultipliedAlpha: false, powerPreference: 'high-performance' }}
       onCreated={({ gl, scene }) => { gl.setClearColor(0x000000, 0); scene.background = null }}
       style={{ width: '100%', height: '100%', display: 'block' }}>
@@ -1029,6 +1071,11 @@ export function ReactorOrb({
       <KnowledgeField palette={palette} tier={tier} timeScale={timeScale} immediate={immediate} reducedMotion={reducedMotion} />
       <EnergyCore palette={palette} timeScale={timeScale} immediate={immediate} reducedMotion={reducedMotion} />
       <BootCompletion duration={duration} onComplete={onBootComplete} />
+      {tier !== 'low' && (
+        <EffectComposer multisampling={0}>
+          <Bloom mipmapBlur luminanceThreshold={.18} luminanceSmoothing={.35} intensity={tier === 'high' ? 1.05 : .8} radius={.55} />
+        </EffectComposer>
+      )}
     </Canvas>
   )
 }
