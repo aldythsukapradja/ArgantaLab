@@ -30,6 +30,8 @@
 .model-chip { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--bg3); border-radius: var(--r-sm); padding: 6px 9px; font-size: 11.5px; }
 .model-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .model-exec { color: var(--tx3); font-size: 10px; flex: 0 0 auto; }
+.model-score { flex: 0 0 auto; font-weight: 800; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); }
+.model-score[data-good="true"] { background: var(--ok-bg); color: var(--ok); }
 .tier-0 { border-top: 3px solid #37d67a; } .tier-1 { border-top: 3px solid #3b82f6; }
 .tier-2 { border-top: 3px solid #f0b429; } .tier-3 { border-top: 3px solid #ef8060; }
 

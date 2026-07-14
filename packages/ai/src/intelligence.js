@@ -26,14 +26,19 @@ import { runValidators } from './validators.js';
  * @param {object} [o.benchmarks]      per-model BenchmarkResult map
  * @param {object} [o.runtime]         override device profile (else auto-detected lazily)
  * @param {object} [o.agentPolicy]     AgentModelPolicy for approval-threshold checks
+ * @param {object} [o.benchmarks]      per-model BenchmarkResult map (WS-8) — mutable
+ *   via setBenchmarks(); the app layer refreshes it from rollupBenchmarks() as
+ *   agent_runs volume grows, so ranking/floor decisions get real data over time
+ *   with no code change needed here.
  * @param {(record:object)=>any} [o.sink]  optional persistence hook (WS-5) —
  *   called fire-and-forget with every runRecord (never awaited, never lets a
  *   write failure affect the caller). Keeps this package Supabase-free; the app
  *   layer wires the real write (see apps/hq/src/lib/ai.ts).
  */
 export function createIntelligence(o) {
-  const { llm, health = {}, benchmarks = {}, sink } = o;
+  const { llm, health = {}, sink } = o;
   let registry = o.registry || [];
+  let benchmarks = o.benchmarks || {};
   let runtimeCache = o.runtime || null;
   const runs = [];
 
@@ -156,6 +161,8 @@ export function createIntelligence(o) {
   return {
     ask,
     setRegistry: (r) => { registry = r; },
+    setBenchmarks: (b) => { benchmarks = b; }, // WS-8 — app layer refreshes from rollupBenchmarks()
+    getBenchmarks: () => benchmarks,
     getRuns: () => [...runs],
     sovereignCompletionRate: () => sovereignCompletionRate(runs),
     capoEconomics: () => capoEconomics(runs),

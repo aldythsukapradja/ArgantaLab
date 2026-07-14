@@ -7,7 +7,7 @@
 // (WS-5) comes from the agent_runs_recent/agent_runs_capo RPCs when online.
 
 import { useEffect, useMemo, useState } from 'react'
-import { MODEL_REGISTRY_CATALOG, COST_LABEL } from '@arganta/ai'
+import { MODEL_REGISTRY_CATALOG, COST_LABEL, rollupBenchmarks } from '@arganta/ai'
 import { getSessionRuns } from '../../lib/ai'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import './rack.css'
@@ -71,10 +71,16 @@ export function ModelRack() {
     return () => { cancelled = true }
   }, [tick])
 
+  const rawMerged = useMemo(() => [...sessionRuns, ...liveRuns], [sessionRuns, liveRuns])
+
   const allRuns = useMemo(() => {
-    const merged = [...sessionRuns, ...liveRuns].map((r) => norm(r as Run))
+    const merged = rawMerged.map((r) => norm(r as Run))
     return merged.sort((a, b) => +new Date(b.at) - +new Date(a.at)).slice(0, 60)
-  }, [sessionRuns, liveRuns])
+  }, [rawMerged])
+
+  // WS-8 — the same rollup the router uses for ranking, shown here so the
+  // score is visible + auditable, not just an internal number affecting routing.
+  const benchmarks = useMemo(() => rollupBenchmarks(rawMerged, { minSamples: 3 }), [rawMerged])
 
   const scr = useMemo(() => {
     const eligible = allRuns.filter((r) => r.status !== 'rejected')
@@ -117,12 +123,15 @@ export function ModelRack() {
               <div className="tier-stat">{models.length} model{models.length === 1 ? '' : 's'} · {runsHere.length} run{runsHere.length === 1 ? '' : 's'}</div>
               <div className="tier-models">
                 {models.length === 0 && <div className="tier-empty">none registered</div>}
-                {models.map((m: any) => (
-                  <div key={m.id} className="model-chip" title={m.apiModel}>
-                    <span className="model-name">{m.name || m.id}</span>
-                    <span className="model-exec">{m.execution}</span>
-                  </div>
-                ))}
+                {models.map((m: any) => {
+                  const b = benchmarks[m.apiModel]
+                  return (
+                    <div key={m.id} className="model-chip" title={b ? `${b.n} runs · ${b.averageLatencyMs}ms avg` : m.apiModel}>
+                      <span className="model-name">{m.name || m.id}</span>
+                      {b ? <span className="model-score" data-good={b.score >= 80}>{b.score}</span> : <span className="model-exec">{m.execution}</span>}
+                    </div>
+                  )
+                })}
               </div>
             </section>
           )

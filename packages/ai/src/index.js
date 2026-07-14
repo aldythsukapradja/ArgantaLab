@@ -16,3 +16,4 @@ export * from './rack.js';          // WS-1 · sovereign model manifest + device
 export * from './registry.js';      // WS-2 · MODEL_REGISTRY builder
 export { createIntelligence } from './intelligence.js'; // WS-2 · selectModel-driven facade
 export * from './validators.js'; // WS-4 · schema/grounding/policy/cost/quality + runValidators
+export * from './benchmarks.js'; // WS-8 · rollupBenchmarks (bootstrapped from real validated usage)

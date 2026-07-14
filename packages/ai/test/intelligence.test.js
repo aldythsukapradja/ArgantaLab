@@ -48,6 +48,18 @@ test('WS-4 escalation: exhausting the ladder with requireHumanOnFailure marks th
   assert.ok(runs.every((r) => r.status === 'escalated' || r.status === 'failed'));
 });
 
+test('WS-8: setBenchmarks() feeds real rollup data into subsequent ask() calls (visible in the returned provenance chain via getBenchmarks)', async () => {
+  const registry = buildRegistry({ webllm: true });
+  const intel = createIntelligence({ llm: stubLLM(), registry, runtime: { webgpu: true, vramMB: null } });
+  assert.deepEqual(intel.getBenchmarks(), {});
+  const rollup = { 'Qwen3.5-0.8B-q4f16_1-MLC': { score: 95, averageLatencyMs: 50, schemaPassRate: 0.9, n: 10 } };
+  intel.setBenchmarks(rollup);
+  assert.deepEqual(intel.getBenchmarks(), rollup);
+  // still routes successfully with real benchmark data feeding the rank
+  const res = await intel.ask('classify', { dataClass: 'public', messages: [] });
+  assert.equal(res.rejected, false);
+});
+
 test('routes a public/classify task to the sovereign rack when webllm is available', async () => {
   const registry = buildRegistry({ webllm: true });
   const intel = createIntelligence({ llm: stubLLM(), registry, runtime: { webgpu: true, vramMB: null } });

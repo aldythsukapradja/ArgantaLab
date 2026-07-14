@@ -102,7 +102,9 @@ export function rankCandidates(models, weights = RANK_WEIGHTS, benchmarks = {}) 
   return [...models].sort((a, b) => (a.costClass - b.costClass) || (score(b) - score(a)));
 }
 
-// crude default until the WS-6 benchmark suite lands
+// Cold-start default — used only until a model accrues enough real runs for
+// WS-8's rollupBenchmarks() to produce a genuine score (see benchmarks.js).
+// Deliberately conservative-by-tier, not a claim of measured quality.
 const benchmarkDefault = (m) => (m.costClass === 0 ? 62 : m.costClass === 1 ? 74 : m.costClass === 2 ? 82 : 90);
 
 // ---- escalation ladder ----------------------------------------------------

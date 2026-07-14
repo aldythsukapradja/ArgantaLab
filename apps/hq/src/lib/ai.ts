@@ -1,4 +1,4 @@
-import { createLLM, createIntelligence, buildRegistry, SOVEREIGN_MODELS } from '@arganta/ai'
+import { createLLM, createIntelligence, buildRegistry, SOVEREIGN_MODELS, rollupBenchmarks } from '@arganta/ai'
 import { supabase, cloudEnabled } from './supabase'
 
 // The single Circle AI runtime. Shared by the Video Director chat AND the C-suite
@@ -71,6 +71,12 @@ export function getSessionRuns() { return [...sessionRuns] }
 export function logAgentRun(run: Record<string, unknown>) {
   sessionRuns.push({ ...run, createdAt: run.createdAt || new Date().toISOString() })
   if (sessionRuns.length > 200) sessionRuns.shift()
+  // WS-8: recompute the benchmark rollup from real session usage after every
+  // run, so ranking/floor decisions get genuine data as it accrues — no
+  // separate eval harness, no manual "turn on scaling" step. Cheap (session
+  // is capped at 200 rows) and self-contained; `intelligence` is always
+  // initialized by the time a real run is ever logged (see below).
+  intelligence.setBenchmarks(rollupBenchmarks(sessionRuns))
   if (!cloudEnabled) return
   supabase.rpc('agent_run_log', { run }).then(({ error }: { error: { message: string } | null }) => {
     if (error) console.warn('[agent_run_log]', error.message)
