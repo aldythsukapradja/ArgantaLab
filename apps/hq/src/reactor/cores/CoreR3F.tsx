@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { OrbitControls } from '@react-three/drei'
@@ -8,7 +8,10 @@ import type { ProductId, SceneState } from '../contract'
 import { DPR_CAP, allowHeavyPost, type QualityTier } from '../useQualityTier'
 import { DEFAULT_LAYERS, type ReactorLayerSpec } from '../model/layers'
 import { choreoFor, clusterFlare } from '../model/choreography'
+import { layerPosition } from '../model/layout'
 import { ReactorLayer } from './ReactorLayer'
+import { Sparks } from './Sparks'
+import { makeLabelTexture } from './labelTexture'
 
 // ─────────────────────────────────────────────────────────────────────────
 // CoreR3F — renders the 7-layer model and drives the axial explosion.
@@ -35,12 +38,13 @@ function Lights({ dark }: { dark: boolean }) {
   )
 }
 
-function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, onSelectProduct, onHoverProduct }: {
+function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLayerId, onSelectProduct, onHoverProduct }: {
   sceneRef: React.MutableRefObject<SceneState>
   manualRef: React.MutableRefObject<number | null>
   layers: ReactorLayerSpec[]
   tier: QualityTier
   interactive: boolean
+  dark: boolean
   selectedLayerId: string | null
   onSelectProduct?: (id: ProductId) => void
   onHoverProduct?: (id: ProductId | null) => void
@@ -49,13 +53,25 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
   const pulseRefs = useRef<(THREE.Mesh | null)[]>([])
   const spineRef = useRef<THREE.Mesh>(null)
   const hubRefs = useRef<(THREE.Mesh | null)[]>([])
+  const labelRefs = useRef<(THREE.Sprite | null)[]>([])
+  const sparkRef = useRef(0)
   const expl = useRef(0)
+
+  // HUD labels — one billboard sprite per layer, built once per theme.
+  const labelMaterials = useMemo(
+    () => layers.map(l => new THREE.SpriteMaterial({
+      map: makeLabelTexture(l.label, l.micro, dark), transparent: true, opacity: 0,
+      depthWrite: false, depthTest: false, toneMapped: false,
+    })),
+    [layers, dark],
+  )
+  useEffect(() => () => labelMaterials.forEach(m => m.dispose()), [labelMaterials])
 
   useFrame((rs, dt) => {
     const scene = sceneRef.current
     const rm = scene.reducedMotion
     const smooth = rm ? 0.12 : 0.5
-    const target = choreoFor(scene.state)
+    const target = choreoFor(scene.state, scene.choreography)
     const explTarget = manualRef.current != null ? manualRef.current : target.explosion
     expl.current = THREE.MathUtils.damp(expl.current, explTarget, 3.2, dt)
 
@@ -63,10 +79,18 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
     // explicit speaking states — the orb "speaks" through the whole story.
     const speaking = scene.speaker !== null
     const t = rs.clock.elapsedTime
+
+    // Spark intensity: a big burst on ignition, a steadier shower during
+    // outward-execution beats, off otherwise.
+    const sparkTarget = scene.state === 'booting' ? 1
+      : scene.state === 'do' || scene.state === 'architecture-unfold' ? 0.5
+      : scene.state === 'think' || scene.state === 'know' ? 0.22 : 0
+    sparkRef.current = sparkTarget
     layers.forEach((spec, i) => {
       const g = groupRefs.current[i]
       if (!g) return
-      g.position.z = THREE.MathUtils.lerp(spec.zRest, spec.zExploded, expl.current)
+      const [px, py, pz] = layerPosition(spec, target.layout, expl.current, i, layers.length)
+      g.position.set(px, py, pz)
       if (!rm) g.rotation.z += spec.spin * dt * (0.35 + expl.current)
       const flare = clusterFlare(target.flare, spec.cluster)
       const s = 0.94 + flare * 0.1
@@ -98,10 +122,14 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
     // rest it collapses to nothing (invisible dot facing the camera); as the
     // reactor opens it extends to skewer all seven, with a hub where it
     // pierces each layer.
+    // The spine follows the axial fan; it fades out for the non-axial layouts
+    // (triad/orbital/helix scatter the layers off-axis, where an axle reads
+    // wrong). It threads the actual layer z-extent for the axial family.
+    const axial = target.layout === 'axial' || target.layout === 'iris'
     let zLo = Infinity
     let zHi = -Infinity
-    layers.forEach(spec => {
-      const z = THREE.MathUtils.lerp(spec.zRest, spec.zExploded, expl.current)
+    layers.forEach((spec, i) => {
+      const z = layerPosition(spec, target.layout, expl.current, i, layers.length)[2]
       if (z < zLo) zLo = z
       if (z > zHi) zHi = z
     })
@@ -110,13 +138,23 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
       const len = Math.max(0.001, (zHi - zLo) * 1.12)
       beam.position.z = (zLo + zHi) / 2
       beam.scale.set(1, len, 1) // local Y → world Z after the mesh's rotation
-      ;(beam.material as THREE.MeshBasicMaterial).opacity = expl.current * 0.3
+      ;(beam.material as THREE.MeshBasicMaterial).opacity = expl.current * (axial ? 0.3 : 0.05)
     }
     hubRefs.current.forEach((m, i) => {
       const spec = layers[i]
       if (!m || !spec) return
-      m.position.z = THREE.MathUtils.lerp(spec.zRest, spec.zExploded, expl.current)
-      m.scale.setScalar(expl.current * 0.9)
+      const p = layerPosition(spec, target.layout, expl.current, i, layers.length)
+      m.position.set(axial ? 0 : p[0], axial ? 0 : p[1], p[2])
+      m.scale.setScalar(expl.current * (axial ? 0.9 : 0.5))
+    })
+
+    // HUD labels ride beside each layer and fade in once expanded.
+    labelRefs.current.forEach((sp, i) => {
+      const spec = layers[i]
+      if (!sp || !spec) return
+      const p = layerPosition(spec, target.layout, expl.current, i, layers.length)
+      sp.position.set(p[0] + spec.radius * 0.72 + 0.35, p[1] + 0.12, p[2])
+      ;(sp.material as THREE.SpriteMaterial).opacity = Math.max(0, expl.current - 0.15) * 0.92
     })
 
     // Flow pulses travelling the axis — visible only once the reactor fans
@@ -146,6 +184,7 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
             blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
         </mesh>
       ))}
+      <Sparks intensityRef={sparkRef} reducedMotion={sceneRef.current.reducedMotion} />
       {/* Shared Spine axle — rotated so its height runs along the depth axis. */}
       <mesh ref={spineRef} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.001, 1]}>
         <cylinderGeometry args={[0.02, 0.02, 1, 8]} />
@@ -158,6 +197,10 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
           <meshBasicMaterial color="#4be5bd" transparent opacity={0.7}
             blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
         </mesh>
+      ))}
+      {layers.map((spec, i) => (
+        <sprite key={`label-${spec.id}`} ref={el => { labelRefs.current[i] = el }}
+          material={labelMaterials[i]} scale={[1.5, 0.47, 1]} />
       ))}
     </group>
   )
@@ -221,7 +264,7 @@ export function CoreR3F({
         style={{ width: '100%', height: '100%', display: 'block' }}>
         <Lights dark={dark} />
         <Rig sceneRef={sceneRef} manualRef={manualRef} layers={layers} tier={tier}
-          interactive={interactive} selectedLayerId={selectedLayerId}
+          interactive={interactive} dark={dark} selectedLayerId={selectedLayerId}
           onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
         {interactive && (
           // Every layer is a flat ring facing +Z; swinging the camera a full

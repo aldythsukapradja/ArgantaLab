@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { type ThreeEvent } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
@@ -7,6 +6,7 @@ import type { ProductId } from '../contract'
 import type { QualityTier } from '../useQualityTier'
 import { PRODUCT_ORBIT_META } from '../../surfaces/reactorModel'
 import { getProductIconTexture } from './productIcons'
+import { KnowledgeField } from './knowledgeField'
 
 // ─────────────────────────────────────────────────────────────────────────
 // ReactorLayer — draws one layer spec. Pure presentation: the parent Rig owns
@@ -19,12 +19,15 @@ function LayerMaterial({ spec, selected }: { spec: ReactorLayerSpec; selected: b
   const emphasis = selected ? 1.4 : 1
   switch (spec.material) {
     case 'metal':
-      return <meshStandardMaterial color={spec.color} roughness={0.28} metalness={0.9}
+      // Clearcoat gives a subtle wet-metal sheen (cheap — no extra render pass).
+      return <meshPhysicalMaterial color={spec.color} roughness={0.26} metalness={0.9}
+        clearcoat={0.6} clearcoatRoughness={0.35}
         emissive={spec.color} emissiveIntensity={selected ? 0.5 : 0.08} wireframe={spec.wireframe} />
     case 'glass':
       return <meshPhysicalMaterial color={spec.color} emissive={spec.color}
-        emissiveIntensity={2.6 * emphasis} roughness={0.1} metalness={0.05} transmission={0.25}
-        thickness={0.5} transparent opacity={0.9} toneMapped={false} wireframe={spec.wireframe} />
+        emissiveIntensity={2.6 * emphasis} roughness={0.08} metalness={0.05} transmission={0.25}
+        thickness={0.5} clearcoat={1} clearcoatRoughness={0.12}
+        transparent opacity={0.9} toneMapped={false} wireframe={spec.wireframe} />
     case 'wire':
       return <meshBasicMaterial color={spec.color} wireframe transparent opacity={0.5 * emphasis}
         blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
@@ -35,30 +38,6 @@ function LayerMaterial({ spec, selected }: { spec: ReactorLayerSpec; selected: b
 }
 
 /** Vault memory shell — a sphere of glowing points. */
-function ParticleShell({ spec, tier }: { spec: ReactorLayerSpec; tier: QualityTier }) {
-  const geo = useMemo(() => {
-    const count = tier === 'high' ? 1400 : tier === 'medium' ? 800 : 320
-    const pos = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      const r = spec.radius * (0.85 + Math.random() * 0.3)
-      const a = Math.random() * Math.PI * 2
-      const b = Math.acos(2 * Math.random() - 1)
-      pos[i * 3] = r * Math.sin(b) * Math.cos(a)
-      pos[i * 3 + 1] = r * Math.sin(b) * Math.sin(a) * 0.7
-      pos[i * 3 + 2] = r * Math.cos(b) * 0.5
-    }
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    return g
-  }, [spec.radius, tier])
-  return (
-    <points geometry={geo}>
-      <pointsMaterial color={spec.color} size={0.05} transparent opacity={0.75} depthWrite={false}
-        blending={THREE.AdditiveBlending} sizeAttenuation toneMapped={false} />
-    </points>
-  )
-}
-
 export function ReactorLayer({ spec, tier, selected = false, onSelectProduct, onHoverProduct }: {
   spec: ReactorLayerSpec
   tier: QualityTier
@@ -151,7 +130,8 @@ export function ReactorLayer({ spec, tier, selected = false, onSelectProduct, on
     }
 
     case 'particles':
-      return <ParticleShell spec={spec} tier={tier} />
+      // The KNOW layer's real Vault-derived memory field.
+      return <KnowledgeField radius={spec.radius} color={spec.color} tier={tier} />
 
     case 'products':
       // Glossy iOS-style app tiles — a squircle carrying each product glyph.
