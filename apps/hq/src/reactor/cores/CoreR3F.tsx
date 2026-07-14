@@ -11,7 +11,13 @@ import { choreoFor, clusterFlare } from '../model/choreography'
 import { layerPosition } from '../model/layout'
 import { ReactorLayer } from './ReactorLayer'
 import { Sparks } from './Sparks'
-import { makeRingTextTexture, TEXT_RADIUS_FRAC } from './ringText'
+import { makeRingTextTexture, TEXT_CANVAS_SIZE, TEXT_RADIUS_FRAC } from './ringText'
+
+// Target absolute (world-space) label height — kept the same across every
+// ring so a small-radius ring's text doesn't shrink to nothing and a
+// large-radius ring's text doesn't balloon.
+const WORLD_TEXT_HEIGHT = 0.22
+const TEXT_SIZE = TEXT_CANVAS_SIZE
 
 // ─────────────────────────────────────────────────────────────────────────
 // CoreR3F — renders the 7-layer model and drives the axial explosion.
@@ -58,17 +64,27 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
   const expl = useRef(0)
 
   // Ring text — the layer name curved along its ring. Built once per theme.
-  // The tiny Command Core ring (radius < 0.9) is skipped (too cramped); it's
-  // the bright unlabelled centre, like the reference.
+  // Command Core AND Think (radius < 1.3) are skipped: both sit right against
+  // the bright core, whose bloom swallows any text painted that close in.
+  // Font size is computed PER LAYER, inversely to its radius, so every ring's
+  // label reads at the same absolute on-screen height — without this, a
+  // fixed canvas font on a plane that scales with radius makes small rings'
+  // text tiny and large rings' text oversized. Each label's start angle is
+  // spread across the full circle (not clustered) so labels on nearby rings
+  // don't visually collide from an oblique camera angle.
+  const labeled = useMemo(() => layers.map((l, i) => ({ l, i })).filter(({ l }) => l.radius >= 1.3), [layers])
   const labelMaterials = useMemo(
-    () => layers.map((l, i) => {
-      if (l.radius < 0.9) return null
+    () => layers.map(l => {
+      if (l.radius < 1.3) return null
+      const slot = labeled.findIndex(x => x.l.id === l.id)
+      const startDeg = -90 + (slot / Math.max(1, labeled.length)) * 360
+      const fontPx = THREE.MathUtils.clamp(WORLD_TEXT_HEIGHT * TEXT_SIZE * TEXT_RADIUS_FRAC / l.radius, 26, 58)
       const ink = dark ? '#dffaff' : '#1a3a54'
       const glow = dark ? l.color : 'rgba(255,255,255,.9)'
-      const map = makeRingTextTexture(`${l.label} · ${l.micro}`, ink, { startDeg: -90 + (i % 3 - 1) * 46, glow })
+      const map = makeRingTextTexture(`${l.label} · ${l.micro}`, ink, { startDeg, fontPx, glow })
       return new THREE.MeshBasicMaterial({ map, transparent: true, opacity: 0, depthWrite: false, toneMapped: false })
     }),
-    [layers, dark],
+    [layers, dark, labeled],
   )
   useEffect(() => () => labelMaterials.forEach(m => { m?.map?.dispose(); m?.dispose() }), [labelMaterials])
 

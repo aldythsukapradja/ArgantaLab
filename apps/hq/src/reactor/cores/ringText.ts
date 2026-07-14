@@ -9,6 +9,10 @@ import * as THREE from 'three'
 // ─────────────────────────────────────────────────────────────────────────
 
 const SIZE = 1024
+/** The canvas resolution, exported so callers can compute a font size that
+ * yields a consistent absolute (world-space) text height regardless of which
+ * layer's — differently sized — ring the texture ends up mapped onto. */
+export const TEXT_CANVAS_SIZE = SIZE
 /** Text baseline radius as a fraction of half the canvas. */
 export const TEXT_RADIUS_FRAC = 0.4
 
