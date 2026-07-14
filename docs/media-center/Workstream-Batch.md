@@ -33,7 +33,7 @@ tests; **Fable** reviews only after a working creative milestone. One workstream
 | **2** | 2 | `MODEL_REGISTRY` builder + `selectModel`-driven `intelligence.ask()` facade, truthful per-call model override in `adapter.js` | ✅ done — `ai/registry.js`, `ai/intelligence.js`, 10/10 tests |
 | **3** | 2 | Truthful provider gateway (`llm-proxy` rewrite, real upstream adapters) | not started |
 | **4** | 3 | Validation + escalation runner | not started |
-| **5** | 3 | Metering impl: `agent_runs` Supabase migration + writes | not started (ledger is in-memory only so far) |
+| **5** | 3 | Metering impl: `agent_runs` Supabase migration + writes | ✅ done — `supabase/migration_agent_runs.sql`, both LLM + media domains write |
 | **6** | 4 | Media Center intelligence — Analytics "Ask AI" insight (opt-in, sovereign-only) | ✅ slice done — `analytics-intelligence.ts`; copy/storyboard for other tabs not started |
 | **7** | 4 | [[Model-Rack]] surface + tier UI → Fable review | not started |
 | **8** | 5 | Benchmarks + CAPO economics | not started |
@@ -41,7 +41,9 @@ tests; **Fable** reviews only after a working creative milestone. One workstream
 | **T** | 5–6 | Per-tab engines ([[Tab-Brand]]→[[Tab-Analytics]]→…) | not started |
 
 ## Gates
-Contract Freeze after **A** (done) · Persistence Freeze after **D+5** (D done, 5 not started — ledger is in-memory, no Supabase writes yet).
+Contract Freeze after **A** ✅ · Persistence Freeze after **D+5** ✅ — both done,
+`agent_runs` is a real Supabase table (migration not yet applied to the live
+project; run `supabase/migration_agent_runs.sql` to activate).
 
 ## First shippable slice — BUILT, verified honest
 **A ✅ → 1 ✅ → 2 ✅ → 6-slice ✅.** Real pipeline wired end-to-end: type a
