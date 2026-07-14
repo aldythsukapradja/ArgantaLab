@@ -52,16 +52,19 @@ export const RANK_WEIGHTS = { expectedCost: 0.30, quality: 0.35, latency: 0.15, 
  * runtime, provider health, quota, benchmark floor; ranks the survivors.
  *
  * @param {object[]} registry  ModelSpec[]
- * @param {{task:string,dataClass:string,runtime?:object,health?:object,benchmarks?:object}} ctx
+ * @param {{task:string,dataClass:string,runtime?:object,health?:object,benchmarks?:object,minCostClass?:number}} ctx
  * @returns {{model:object|null, considered:number, reason:string, band:[number,number]}}
  */
 export function selectModel(registry, ctx) {
   const { task, dataClass, runtime = {}, health = {}, benchmarks = {} } = ctx;
   const policy = resolveTaskPolicy(task);
 
-  // cost band = task's [min,max] intersected with what the data class permits
+  // cost band = task's [min,max] intersected with what the data class permits.
+  // ctx.minCostClass raises the floor for THIS call only — used by WS-4's
+  // escalation runner to retry at a higher tier after a validation failure,
+  // without mutating the task policy itself.
   const dataAllowed = allowedCostClasses(dataClass); // Set of allowed costClasses
-  const lo = policy.min;
+  const lo = Math.max(policy.min, ctx.minCostClass ?? 0);
   const hi = policy.max;
 
   const candidates = registry

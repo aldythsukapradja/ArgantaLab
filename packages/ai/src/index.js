@@ -15,3 +15,4 @@ export * from './ledger.js';      // WS-D · agent_runs metering + CAPO
 export * from './rack.js';          // WS-1 · sovereign model manifest + device profiling
 export * from './registry.js';      // WS-2 · MODEL_REGISTRY builder
 export { createIntelligence } from './intelligence.js'; // WS-2 · selectModel-driven facade
+export * from './validators.js'; // WS-4 · schema/grounding/policy/cost/quality + runValidators

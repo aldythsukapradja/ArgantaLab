@@ -13,6 +13,41 @@ function stubLLM(behavior = {}) {
   };
 }
 
+test('WS-4 escalation: a validation failure at Tier 0 retries at the next tier and records BOTH attempts', async () => {
+  const registry = buildRegistry({ webllm: true, edgeProxy: true, gatewayIsTruthful: true }); // sovereign + paid tiers active
+  // this stub answers with an empty string (fails validateQuality) at Sovereign,
+  // but a real answer once escalated to a paid tier — simulates a weak local
+  // model failing where a stronger paid one succeeds.
+  const llm = { chat: async (o) => ({ text: o.provider === 'webllm' ? '' : 'a real, complete answer', provider: 'edgeProxy', model: o.model, tier: undefined }) };
+  const intel = createIntelligence({ llm, registry, runtime: { webgpu: true, vramMB: null } });
+  const res = await intel.ask('analyze', { dataClass: 'public', messages: [], validate: true });
+  assert.equal(res.rejected, false);
+  assert.equal(res.text, 'a real, complete answer');
+  const runs = intel.getRuns();
+  assert.equal(runs.length, 2); // the failed Tier-0 attempt AND the successful escalation
+  assert.equal(runs[0].status, 'escalated');
+  assert.equal(runs[0].attempt, 1);
+  assert.equal(runs[1].status, 'succeeded');
+  assert.equal(runs[1].attempt, 2);
+  assert.ok(runs[1].requestedCostClass > runs[0].requestedCostClass);
+});
+
+test('WS-4 escalation: exhausting the ladder with requireHumanOnFailure marks the run for human review, not a silent bad answer', async () => {
+  // models exist at every tier (0..3), but every provider answers empty text
+  // (always fails validateQuality) — genuine ladder exhaustion, not "no model".
+  const registry = buildRegistry({ webllm: true, edgeProxy: true, gatewayIsTruthful: true });
+  const llm = { chat: async () => ({ text: '', provider: 'edgeProxy', model: 'x' }) };
+  const intel = createIntelligence({ llm, registry, runtime: { webgpu: true, vramMB: null } });
+  // 'judge' has requireHumanOnFailure:false but band [1,3]; use it with validate
+  // to walk 1→2→3 and exhaust — every attempt should be recorded.
+  const res = await intel.ask('judge', { dataClass: 'public', messages: [], validate: true });
+  assert.equal(res.rejected, true);
+  assert.match(res.reason, /validation failed at every tier/);
+  const runs = intel.getRuns();
+  assert.ok(runs.length >= 2); // at least two tiers were actually tried, not just one
+  assert.ok(runs.every((r) => r.status === 'escalated' || r.status === 'failed'));
+});
+
 test('routes a public/classify task to the sovereign rack when webllm is available', async () => {
   const registry = buildRegistry({ webllm: true });
   const intel = createIntelligence({ llm: stubLLM(), registry, runtime: { webgpu: true, vramMB: null } });

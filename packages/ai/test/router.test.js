@@ -41,6 +41,11 @@ test('high-risk task enforces a paid floor: legal-review min = Frontier', () => 
   assert.equal(model.costClass, 3);
 });
 
+test('minCostClass forces the search floor up for a single call (WS-4 escalation retry)', () => {
+  const { model } = selectModel(REG, { task: 'summarize', dataClass: 'public', minCostClass: 2 });
+  assert.equal(model.costClass, 2); // would normally be 0 (Sovereign), forced to Economy
+});
+
 test('escalation walks up within the band, then human', () => {
   assert.equal(nextCostClass(0, 'analyze'), 1);
   assert.equal(nextCostClass(3, 'analyze'), null); // capped at max
