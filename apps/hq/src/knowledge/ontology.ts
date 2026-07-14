@@ -85,10 +85,13 @@ export function deriveOntologyType(note: VaultNote): OntologyType {
   if (t === 'spec' || t === 'plan') return 'Architecture'
   if (t === 'research') return 'Signal'
 
+  // governance / command → the Command Core region (via Founder/Office types)
+  if (id.includes('founder') || has('founder')) return 'Founder'
+  if (id === 'hq' || id === 'p5-hq-command' || id.includes('command') || has('ceo', 'bridge', 'governance', 'command', 'office')) return 'Office'
   // tag / keyword heuristics
   if (has('supabase', 'schema', 'rpc', 'data')) return 'Data Source'
   if (has('api')) return 'API'
-  if (has('agent', 'agentic', 'ceo', 'bridge', 'command')) return 'Agent'
+  if (has('agent', 'agentic')) return 'Agent'
   if (has('metric', 'kpi', 'growth')) return 'Metric'
   if (has('deploy', 'distribution', 'vercel', 'launch')) return 'Deployment'
   if (has('product') || id.includes('product') || id.includes('roadmap')) return 'Product'

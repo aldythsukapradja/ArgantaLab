@@ -1,7 +1,8 @@
-// WS3 — the Cognitive Cortex surface. A read-only brain-shaped digital twin over
-// the REAL vault: left hemisphere analytic, right creative, front→back THINK ·
-// KNOW · DO, animated by a cognition simulation. Additive + read-only — clicking
-// a neuron opens the real note in the 2D Vault. WebGL-fallback to the 2D graph.
+// WS3 — the Cognitive Cortex surface. A read-only brain over the REAL vault: a
+// wrinkled two-hemisphere cortex whose neurons are grouped into the 7 reactor
+// spine regions (Command Core … Sense) and the THINK · KNOW · DO triad, firing
+// like real neurons. Clicking a neuron opens its real note. Crash-safe: any 3D
+// failure degrades to the 2D graph instead of a blank.
 
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Brain, ExternalLink, X, AlertTriangle, Activity, Play } from 'lucide-react'
@@ -12,36 +13,22 @@ import '../vault/vault.css'
 import { buildKnowledgeModel } from './model'
 import { KnowledgeScene } from './KnowledgeScene'
 import { useKnowledge } from './store'
-import { neuronCloud, COGNITION_COLOR, COGNITION_LABEL, COGNITION_HINT, type Cognition } from './brain'
+import {
+  corticalTissue, REGIONS, REGION_BY_ID, TRIAD_COLOR, TRIAD_LABEL, TRIAD_HINT,
+  type Triad,
+} from './brain'
 import { ONTOLOGY_COLOR } from './ontology'
 import { PROVENANCE_META } from './provenance'
-
-// Never let a 3D failure blank the surface: catch any render/WebGL error and
-// fall back to the operational 2D graph, showing the real reason on screen.
-class SceneBoundary extends Component<{ fallback: (msg: string) => ReactNode; children: ReactNode }, { error: string | null }> {
-  state = { error: null as string | null }
-  static getDerivedStateFromError(err: unknown) { return { error: (err as Error)?.message || String(err) } }
-  componentDidCatch(err: unknown) { console.error('[KnowledgeSurface] 3D scene failed:', err) }
-  render() { return this.state.error ? this.props.fallback(this.state.error) : this.props.children }
-}
 
 function hasWebGL(): boolean {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false }
 }
+const TRIADS: Triad[] = ['think', 'know', 'do']
 
-const COGS: Cognition[] = ['think', 'know', 'do']
-
-// Top-level boundary: ANY crash in the surface (even before the chrome renders)
-// shows the real error on screen instead of a blank, so it can be diagnosed
-// without opening devtools.
+// ── top-level boundary: never blank, print the error on screen ──────────────
 export function KnowledgeSurface() {
-  return (
-    <SurfaceBoundary>
-      <KnowledgeSurfaceInner />
-    </SurfaceBoundary>
-  )
+  return <SurfaceBoundary><KnowledgeSurfaceInner /></SurfaceBoundary>
 }
-
 class SurfaceBoundary extends Component<{ children: ReactNode }, { error: string | null; stack: string }> {
   state = { error: null as string | null, stack: '' }
   static getDerivedStateFromError(err: unknown) { return { error: (err as Error)?.message || String(err), stack: (err as Error)?.stack || '' } }
@@ -57,6 +44,12 @@ class SurfaceBoundary extends Component<{ children: ReactNode }, { error: string
     )
   }
 }
+class SceneBoundary extends Component<{ fallback: (msg: string) => ReactNode; children: ReactNode }, { error: string | null }> {
+  state = { error: null as string | null }
+  static getDerivedStateFromError(err: unknown) { return { error: (err as Error)?.message || String(err) } }
+  componentDidCatch(err: unknown) { console.error('[KnowledgeSurface] 3D scene failed:', err) }
+  render() { return this.state.error ? this.props.fallback(this.state.error) : this.props.children }
+}
 
 function KnowledgeSurfaceInner() {
   const notes = useVault((s) => s.notes)
@@ -64,12 +57,15 @@ function KnowledgeSurfaceInner() {
   const webgl = useMemo(hasWebGL, [])
 
   const model = useMemo(() => buildKnowledgeModel(notes), [notes])
-  const cloud = useMemo(() => neuronCloud(6500), [])
+  const tissue = useMemo(() => corticalTissue(9000), [])
 
   const selected = useKnowledge((s) => s.selected)
   const setSelected = useKnowledge((s) => s.setSelected)
-  const cogFilter = useKnowledge((s) => s.cogFilter)
-  const setCogFilter = useKnowledge((s) => s.setCogFilter)
+  const setFocus = useKnowledge((s) => s.setFocus)
+  const triadFilter = useKnowledge((s) => s.triadFilter)
+  const setTriadFilter = useKnowledge((s) => s.setTriadFilter)
+  const regionFilter = useKnowledge((s) => s.regionFilter)
+  const setRegionFilter = useKnowledge((s) => s.setRegionFilter)
   const hemiFilter = useKnowledge((s) => s.hemiFilter)
   const setHemiFilter = useKnowledge((s) => s.setHemiFilter)
   const simRunning = useKnowledge((s) => s.simRunning)
@@ -77,8 +73,7 @@ function KnowledgeSurfaceInner() {
 
   const selNode = selected ? model.byId.get(selected) : null
 
-  // Render heartbeat: if the 3D scene never draws a frame (R3F failed to init on
-  // this GPU/tab for any reason), fall back to the 2D graph instead of a blank.
+  // heartbeat: if the scene never draws a frame, fall back to the 2D graph
   const drewRef = useRef(false)
   const [dead, setDead] = useState(false)
   useEffect(() => {
@@ -90,20 +85,12 @@ function KnowledgeSurfaceInner() {
     return () => { clearTimeout(t); document.removeEventListener('visibilitychange', onVis) }
   }, [])
 
-  // R3F only builds its scene once it measures a size > 0, and that measurement
-  // is driven by rAF / ResizeObserver — both of which a backgrounded tab pauses,
-  // so the canvas can stay blank (nothing ever initialises). A window `resize`
-  // event forces R3F to re-measure synchronously, so we always mount the canvas
-  // and kick it awake on mount, on container resize, and on visibility change.
+  // measure container + kick R3F awake (see the vite/rAF notes in history)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 1, h: 1 })
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
-    // Observer only reads the container size (drives the imperative Resizer). It
-    // must NOT dispatch a window resize — that would feed back into itself and
-    // loop. The one-shot kicks below bootstrap R3F's own measurement (so its
-    // scene initialises even if rAF was paused during mount) without looping.
     const ro = new ResizeObserver(() => setSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 }))
     ro.observe(el)
     setSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 })
@@ -115,93 +102,95 @@ function KnowledgeSurfaceInner() {
   }, [])
 
   const openRealNote = (noteId: string) => { useVault.getState().openNote(noteId); go('vault') }
+  const fallback = (msg: string) => (
+    <div className="vault" style={{ position: 'absolute', inset: 0 }}>
+      <div style={banner}>{msg} — showing the 2D knowledge graph.</div>
+      <div style={{ position: 'absolute', inset: '34px 0 0' }}><GraphViewV3 /></div>
+    </div>
+  )
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#04050d', overflow: 'hidden' }}>
-      {/* Force the WebGL canvas to fill via CSS regardless of R3F's (rAF-gated)
-          measurement — guarantees it's never a tiny 300×150 corner ("blank"). */}
       <style>{`.kg-canvas canvas{width:100%!important;height:100%!important;display:block}`}</style>
       {webgl && !dead ? (
-        <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
-          <SceneBoundary fallback={(msg) => (
-            <div className="vault" style={{ position: 'absolute', inset: 0 }}>
-              <div style={banner}>3D cortex unavailable ({msg}) — showing the 2D knowledge graph.</div>
-              <div style={{ position: 'absolute', inset: '34px 0 0' }}><GraphViewV3 /></div>
-            </div>
-          )}>
+        <div ref={wrapRef} className="kg-canvas" style={{ position: 'absolute', inset: 0 }}>
+          <SceneBoundary fallback={(msg) => fallback('3D cortex unavailable (' + msg + ')')}>
             <Suspense fallback={<Loading />}>
-              <KnowledgeScene model={model} cloud={cloud} width={size.w} height={size.h}
-                onFrame={() => { if (!drewRef.current) { drewRef.current = true } }} />
+              <KnowledgeScene model={model} tissue={tissue} width={size.w} height={size.h}
+                onFrame={() => { drewRef.current = true }} />
             </Suspense>
           </SceneBoundary>
         </div>
-      ) : webgl && dead ? (
-        <div className="vault" style={{ position: 'absolute', inset: 0 }}>
-          <div style={banner}>3D cortex didn't start on this device — showing the 2D knowledge graph.</div>
-          <div style={{ position: 'absolute', inset: '34px 0 0' }}><GraphViewV3 /></div>
-        </div>
-      ) : (
-        <div className="vault" style={{ position: 'absolute', inset: 0 }}>
-          <div style={banner}>WebGL unavailable — showing the 2D knowledge graph.</div>
-          <div style={{ position: 'absolute', inset: '34px 0 0' }}><GraphViewV3 /></div>
-        </div>
-      )}
+      ) : webgl && dead ? fallback("3D cortex didn't start on this device")
+        : fallback('WebGL unavailable')}
 
-      {/* hemisphere labels — left analytic, right creative */}
+      {/* hemisphere labels */}
       {webgl && (
         <>
           <SideLabel side="left" title="ANALYTIC" sub="left hemisphere · data · logic · structure"
-            active={hemiFilter === 'left'} onClick={() => setHemiFilter(hemiFilter === 'left' ? null : 'left')} count={model.counts.left} />
+            active={hemiFilter === 'left'} onClick={() => setHemiFilter(hemiFilter === 'left' ? null : 'left')} count={model.hemiCounts.left} />
           <SideLabel side="right" title="CREATIVE" sub="right hemisphere · product · narrative · design"
-            active={hemiFilter === 'right'} onClick={() => setHemiFilter(hemiFilter === 'right' ? null : 'right')} count={model.counts.right} />
+            active={hemiFilter === 'right'} onClick={() => setHemiFilter(hemiFilter === 'right' ? null : 'right')} count={model.hemiCounts.right} />
         </>
       )}
 
-      {/* title + node count */}
+      {/* title */}
       <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', alignItems: 'center', gap: 11, pointerEvents: 'none' }}>
         <div style={{ width: 32, height: 32, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,#8b7cf6,#38bdf8)', boxShadow: '0 0 20px #8b7cf699' }}>
           <Brain size={18} color="#fff" />
         </div>
         <div>
           <div style={{ fontSize: 14.5, fontWeight: 800, color: '#eef2ff', letterSpacing: 0.3 }}>Cognitive Cortex</div>
-          <div style={{ fontSize: 10.5, color: '#8891b5', letterSpacing: 0.5 }}>{model.counts.total} REAL NEURONS · DIGITAL TWIN OF THE VAULT</div>
+          <div style={{ fontSize: 10.5, color: '#8891b5', letterSpacing: 0.5 }}>{model.nodes.length} REAL NEURONS · 7-REGION BRAIN OF THE VAULT</div>
         </div>
       </div>
 
-      {/* THINK · KNOW · DO triad + simulation control (top-center) */}
+      {/* THINK · KNOW · DO + simulate (top-center) */}
       {webgl && (
         <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto' }}>
-          {COGS.map((c) => {
-            const on = cogFilter === c
-            const col = COGNITION_COLOR[c]
-            const count = model.counts[c]
+          {TRIADS.map((c) => {
+            const on = triadFilter === c, col = TRIAD_COLOR[c]
             return (
-              <button key={c} title={COGNITION_HINT[c]} onClick={() => setCogFilter(on ? null : c)}
+              <button key={c} title={TRIAD_HINT[c]} onClick={() => setTriadFilter(on ? null : c)}
                 style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? col : col + '44'), background: on ? col + '26' : 'rgba(8,10,22,.6)', color: on ? '#fff' : '#cdd5f0', backdropFilter: 'blur(10px)', fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>
                 <span style={{ width: 9, height: 9, borderRadius: 9, background: col, boxShadow: `0 0 8px ${col}` }} />
-                {COGNITION_LABEL[c]}
-                <span style={{ fontSize: 10.5, opacity: 0.6, fontWeight: 500 }}>{count}</span>
+                {TRIAD_LABEL[c]}<span style={{ fontSize: 10.5, opacity: 0.6, fontWeight: 500 }}>{model.triadCounts[c]}</span>
               </button>
             )
           })}
-          <button onClick={() => setSim(!simRunning)} title="Cognition simulation: a THINK→KNOW→DO wave firing the neurons"
+          <button onClick={() => setSim(!simRunning)} title="Neuron-firing simulation: action potentials fire along the axons"
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (simRunning ? '#4ade8088' : '#34407a'), background: simRunning ? '#4ade8018' : 'rgba(8,10,22,.6)', color: simRunning ? '#86efac' : '#cdd5f0', backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
-            {simRunning ? <Activity size={13} /> : <Play size={12} />} {simRunning ? 'Simulating' : 'Simulate'}
+            {simRunning ? <Activity size={13} /> : <Play size={12} />} {simRunning ? 'Firing' : 'Fire'}
           </button>
         </div>
       )}
 
-      {/* provenance legend (bottom-left) */}
+      {/* 7-region spine legend (bottom-center) */}
       {webgl && (
-        <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 14, alignItems: 'center', background: 'rgba(8,10,22,.6)', border: '1px solid #232c52', borderRadius: 12, padding: '9px 14px', backdropFilter: 'blur(10px)' }}>
+        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5, alignItems: 'center', background: 'rgba(8,10,22,.62)', border: '1px solid #232c52', borderRadius: 999, padding: '6px 8px', backdropFilter: 'blur(10px)', pointerEvents: 'auto', maxWidth: '78vw', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {REGIONS.map((r) => {
+            const on = regionFilter === r.id
+            return (
+              <button key={r.id} title={`${r.label} · ${r.verb} · ${TRIAD_LABEL[r.triad]}`} onClick={() => setRegionFilter(on ? null : r.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? r.color : 'transparent'), background: on ? r.color + '22' : 'transparent', color: on ? '#fff' : '#c3ccea', fontSize: 11.5, fontWeight: 600 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 9, background: r.color, boxShadow: `0 0 7px ${r.color}` }} />
+                {r.label}<span style={{ fontSize: 10, opacity: 0.55 }}>{model.regionCounts[r.id]}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* provenance (bottom-left) */}
+      {webgl && (
+        <div style={{ position: 'absolute', bottom: 62, left: 16, display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(8,10,22,.6)', border: '1px solid #232c52', borderRadius: 12, padding: '7px 12px', backdropFilter: 'blur(10px)' }}>
           <span style={{ fontSize: 10, color: '#8891b5', letterSpacing: 0.6 }}>PROVENANCE</span>
           {(['live', 'partial', 'simulated', 'placeholder'] as const).map((p) => (
-            <span key={p} title={PROVENANCE_META[p].hint} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#cdd5f0' }}>
-              <span style={{ width: 10, height: 10, borderRadius: 10, background: '#8b7cf6', opacity: p === 'live' ? 1 : p === 'partial' ? 0.65 : p === 'simulated' ? 0.42 : 0.25, boxShadow: p === 'live' ? '0 0 7px #8b7cf6' : 'none' }} />
+            <span key={p} title={PROVENANCE_META[p].hint} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#cdd5f0' }}>
+              <span style={{ width: 9, height: 9, borderRadius: 9, background: '#8b7cf6', opacity: p === 'live' ? 1 : p === 'partial' ? 0.65 : p === 'simulated' ? 0.42 : 0.25 }} />
               {PROVENANCE_META[p].label}
             </span>
           ))}
-          <span style={{ fontSize: 11, color: '#93a4d8', borderLeft: '1px solid #232c52', paddingLeft: 12 }}>brightness = how grounded</span>
         </div>
       )}
 
@@ -210,13 +199,13 @@ function KnowledgeSurfaceInner() {
         <div style={{ position: 'absolute', right: 16, top: 16, width: 280, background: 'rgba(9,11,24,.85)', border: '1px solid #2a3566', borderRadius: 14, padding: 16, backdropFilter: 'blur(14px)', boxShadow: '0 16px 50px rgba(0,0,0,.55)', pointerEvents: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8 }}>
             <div style={{ fontSize: 15.5, fontWeight: 700, color: '#f0f3ff', lineHeight: 1.25 }}>{selNode.label}</div>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8891b5', flex: 'none' }}><X size={16} /></button>
+            <button onClick={() => { setSelected(null); setFocus(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8891b5', flex: 'none' }}><X size={16} /></button>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '10px 0' }}>
-            <Chip color={COGNITION_COLOR[selNode.cognition]}>{COGNITION_LABEL[selNode.cognition]}</Chip>
+            <Chip color={REGION_BY_ID.get(selNode.region)!.color}>{REGION_BY_ID.get(selNode.region)!.label}</Chip>
+            <Chip color={TRIAD_COLOR[selNode.triad]}>{TRIAD_LABEL[selNode.triad]}</Chip>
             <Chip color={ONTOLOGY_COLOR[selNode.ontology]}>{selNode.ontology}</Chip>
             <Chip color={PROVENANCE_META[selNode.provenance].color}>{PROVENANCE_META[selNode.provenance].label}</Chip>
-            {selNode.spine && <Chip color="#a78bfa">Spine</Chip>}
           </div>
           <p style={{ fontSize: 12.5, color: '#aab4da', lineHeight: 1.55, margin: '0 0 14px' }}>{selNode.summary || 'No summary available.'}</p>
           {selNode.noteId ? (
@@ -228,13 +217,7 @@ function KnowledgeSurfaceInner() {
               <AlertTriangle size={15} /> Missing source
             </div>
           )}
-          <div style={{ marginTop: 10, fontSize: 10.5, color: '#6b769e' }}>{selNode.hemisphere === 'left' ? 'Analytic' : selNode.hemisphere === 'right' ? 'Creative' : 'Executive'} hemisphere · {selNode.degree} links</div>
-        </div>
-      )}
-
-      {model.missing.length > 0 && (
-        <div style={{ position: 'absolute', bottom: 16, right: 16, fontSize: 11, color: '#fbbf24', background: '#f59e0b18', border: '1px solid #f59e0b44', padding: '6px 11px', borderRadius: 8 }}>
-          {model.missing.length} spine node(s) missing a source
+          <div style={{ marginTop: 10, fontSize: 10.5, color: '#6b769e' }}>{selNode.hemisphere === 'left' ? 'Analytic' : selNode.hemisphere === 'right' ? 'Creative' : 'Executive'} · {selNode.degree} links</div>
         </div>
       )}
     </div>
@@ -245,22 +228,19 @@ function SideLabel({ side, title, sub, active, onClick, count }: { side: 'left' 
   const col = side === 'left' ? '#7dd3fc' : '#c4b5fd'
   return (
     <button onClick={onClick} title={`Isolate the ${title.toLowerCase()} hemisphere`}
-      style={{ position: 'absolute', top: '46%', ...(side === 'left' ? { left: 16 } : { right: 16 }), transform: 'translateY(-50%)', textAlign: side, pointerEvents: 'auto', maxWidth: 160, cursor: 'pointer', background: active ? col + '1a' : 'transparent', border: '1px solid ' + (active ? col + '66' : 'transparent'), borderRadius: 12, padding: '8px 12px' }}>
+      style={{ position: 'absolute', top: '44%', ...(side === 'left' ? { left: 16 } : { right: 16 }), transform: 'translateY(-50%)', textAlign: side, pointerEvents: 'auto', maxWidth: 160, cursor: 'pointer', background: active ? col + '1a' : 'transparent', border: '1px solid ' + (active ? col + '66' : 'transparent'), borderRadius: 12, padding: '8px 12px' }}>
       <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 2, color: col, opacity: active ? 1 : 0.8 }}>{title}</div>
       <div style={{ fontSize: 10, color: '#5a6690', letterSpacing: 0.3, marginTop: 3, lineHeight: 1.4 }}>{sub}</div>
       <div style={{ fontSize: 10, color: col, opacity: 0.7, marginTop: 3 }}>{count} neurons</div>
     </button>
   )
 }
-
 function Chip({ color, children }: { color: string; children: React.ReactNode }) {
   return <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: color + '22', color, border: '1px solid ' + color + '55' }}>{children}</span>
 }
-
 function Loading() {
   return <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#8891b5', fontSize: 13 }}>Waking the cortex…</div>
 }
-
 const banner: React.CSSProperties = {
   position: 'absolute', top: 0, left: 0, right: 0, height: 34, display: 'grid', placeItems: 'center',
   background: '#1a1520', color: '#fbbf24', fontSize: 12, borderBottom: '1px solid #33251a', zIndex: 5,
