@@ -44,7 +44,7 @@ export interface KModel {
   hemiCounts: { left: number; right: number }
 }
 
-const LAYOUT_KEY = 'knowledge_brain_v2'
+const LAYOUT_KEY = 'knowledge_brain_v3'
 
 function firstParagraph(body: string | undefined): string {
   if (!body || typeof body !== 'string') return ''
@@ -92,7 +92,7 @@ export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
         id, noteId: id, label: note.fm.title || id, ontology,
         provenance: deriveProvenance(note), region, triad, hemisphere, hero: false, pos,
         // small neurons — points, not balloons. Gentle degree scaling only.
-        r: 0.12 + Math.min(0.16, Math.sqrt(deg) * 0.04),
+        r: 0.10 + Math.min(0.10, Math.sqrt(deg) * 0.028),
         summary: firstParagraph(note.body), degree: deg,
       }
       index.set(id, nodes.length)
@@ -109,7 +109,7 @@ export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
     if (!cur || n.degree > cur.degree) heroByRegion.set(n.region, n)
   }
   // heroes read as heroes via their label + ring, not size — keep them small
-  for (const h of heroByRegion.values()) { h.hero = true; h.r = Math.max(h.r, 0.24) }
+  for (const h of heroByRegion.values()) { h.hero = true; h.r = Math.max(h.r, 0.2) }
   const commandHero = heroByRegion.get('command') || null
   const commandId = commandHero?.id || null
 

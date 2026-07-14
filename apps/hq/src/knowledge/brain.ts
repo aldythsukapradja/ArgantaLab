@@ -89,25 +89,45 @@ function h(str: string): number {
   return (x >>> 0) / 4294967295
 }
 
-/** A point on the wrinkled dorsal cortical sheet of one hemisphere.
- *  u: 0 = occipital (back) → 1 = frontal pole (front). v: 0 = medial (fissure)
- *  → 1 = lateral (outer edge). Returns a brain-surface position with gyri. */
-export function corticalPoint(side: -1 | 1, u: number, v: number): [number, number, number] {
-  // egg taper: widest ~u=0.55, frontal pole rounded, occipital narrower
-  const wf = Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, u * 0.86 + 0.09))), 0.72)
-  const z = (u - 0.44) * 2 * BRAIN.length
-  const x = side * (BRAIN.hemiGap + v * BRAIN.width * (0.35 + 0.65 * wf))
-  // dorsal dome — highest along the medial ridge, falling to lateral + poles
-  let y = BRAIN.height * (0.34 * Math.cos(v * 1.5) + 0.5 * wf) - 0.2
-  // gyral folds (sulci/gyri) displaced mostly on the surface normal (≈ up)
-  const fold = (Math.sin(u * 23 + v * 14) * 0.5 + Math.sin(v * 31 - u * 11) * 0.5) * BRAIN.gyral
-  y += fold
-  return [x + fold * 0.28 * side, y, z + fold * 0.24]
+// ── volumetric hemisphere fill ──────────────────────────────────────────────
+// Earlier versions placed every point on the dorsal cortical SHELL (a 2D
+// surface). Seen from directly above, a shell's lateral edge is nearly tangent
+// to the camera, so points pile up per screen-pixel there and trace a bright
+// silhouette rim front-to-back — the "long lines" artifact. Filling the
+// hemisphere as a solid EGG-SHAPED VOLUME (real depth in Y, real spread in X)
+// removes that edge entirely and naturally spreads dense regions out instead
+// of clumping them into a thin band.
+
+/** Ellipsoid taper at anterior-posterior position u (0=occipital, 1=frontal):
+ *  0 at the poles, 1 at the widest point (~u=0.55). Shared by every point so
+ *  the lobe reads as one consistent egg shape. */
+function taperAt(u: number): number {
+  return Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, u * 0.86 + 0.09))), 0.72)
 }
 
-/** Deterministic cortical position for a note in a region + hemisphere. Neurons
- *  form a SPARSE volumetric cloud filling the region's cortical patch — never a
- *  thin sheet or a line. */
+/** A point INSIDE the hemisphere volume at anterior-posterior `u` and
+ *  medial→lateral fill `latT` (0 = at the fissure, 1 = outer rim), filling the
+ *  full dorsal-ventral depth rather than sitting on the outer shell. */
+function volumePoint(side: -1 | 1, u: number, latT: number, seedY: number, wobbleSeed: number): [number, number, number] {
+  const wf = taperAt(u)
+  const z = (u - 0.44) * 2 * BRAIN.length
+  const maxLat = BRAIN.width * (0.35 + 0.65 * wf)
+  const lat = latT * maxLat
+  const x = side * (BRAIN.hemiGap + lat)
+  // depth fill: the lobe is tallest mid-length, thinner near the poles, and
+  // tapers as you move laterally (an egg cross-section, not a flat disc)
+  const maxY = BRAIN.height * (0.5 + 0.5 * wf) * (1 - (lat / (maxLat + 0.001)) * 0.35)
+  const y = (seedY - 0.5) * 2 * maxY - 0.15
+  // gentle gyral wobble for organic texture — small, never enough to re-create a shell
+  const wobble = (Math.sin(u * 23 + latT * 14 + wobbleSeed * 6.28) * 0.5
+    + Math.sin(latT * 31 - u * 11 + wobbleSeed * 3.1) * 0.5) * BRAIN.gyral * 0.3
+  return [x + wobble * 0.3 * side, y + wobble, z + wobble * 0.25]
+}
+
+/** Deterministic volumetric position for a note in a region + hemisphere.
+ *  Fills the region's full anterior-posterior band (with a soft overlap into
+ *  neighbours) AND the full medial→lateral and dorsal-ventral extent — a real
+ *  cloud through the lobe, never a thin sheet or a line. */
 export function regionPoint(id: string, region: RegionId, hemi: Hemisphere): [number, number, number] {
   const r = REGION_BY_ID.get(region)!
   const a = h(id), b = h(id + '~1'), c = h(id + '~2'), d = h(id + '~3'), e = h(id + '~4')
@@ -116,24 +136,26 @@ export function regionPoint(id: string, region: RegionId, hemi: Hemisphere): [nu
     return [(a - 0.5) * 1.8, -0.4 + (b - 0.5) * 1.4, 0.4 + (c - 0.5) * 2.0]
   }
   const side: -1 | 1 = hemi === 'right' ? 1 : hemi === 'left' ? -1 : (a < 0.5 ? -1 : 1)
-  // spread across the FULL band (u) and width (v); sense hugs the lateral rim
-  const u = r.u0 + (r.u1 - r.u0) * b
-  const v = region === 'sense' ? 0.7 + c * 0.3 : 0.1 + c * 0.82
-  const p = corticalPoint(side, u, v)
-  // volumetric jitter breaks any line/sheet into an organic sparse cloud
-  return [p[0] + (d - 0.5) * 1.5, p[1] + (e - 0.5) * 1.1, p[2] + (a - 0.5) * 1.5]
+  const bandLo = Math.max(0, r.u0 - 0.05), bandHi = Math.min(1, r.u1 + 0.05)
+  const u = bandLo + (bandHi - bandLo) * b
+  // sense hugs the outer rim (sensory cortex wraps the lateral surface); the
+  // rest fill medial→lateral with a mild outward bias so the cortex still
+  // reads denser near the surface without recreating a hard shell edge.
+  const latT = region === 'sense' ? 0.72 + c * 0.28 : Math.sqrt(c) * 0.92 + 0.04
+  return volumePoint(side, u, latT, d, e)
 }
 
-/** Which region owns a given (u,v) cortical coord — for colouring the tissue. */
-function regionForUV(u: number, v: number): RegionId {
-  if (v > 0.88) return 'sense'
+/** Which region owns a given (u, latT) coord — for colouring the tissue. */
+function regionForUV(u: number, latT: number): RegionId {
+  if (latT > 0.86) return 'sense'
   for (const r of REGIONS) { if (r.id === 'sense' || r.id === 'command') continue; if (u >= r.u0 && u < r.u1) return r.id }
   return u >= 0.58 ? 'think' : 'experience'
 }
 
-/** Dense cortical-surface tissue: thousands of neuron somas covering the two
- *  wrinkled hemispheres, coloured by region. This is what makes it read as a
- *  brain. Returns interleaved xyz + a region index per point. */
+/** Dense cortical VOLUME tissue: thousands of points filling the two
+ *  wrinkled hemisphere lobes (not their surface), coloured by region. This is
+ *  what makes it read as a solid brain body instead of a hollow shell.
+ *  Returns interleaved xyz + a region index per point. */
 export function corticalTissue(count: number): { positions: Float32Array; region: Uint8Array } {
   const positions = new Float32Array(count * 3)
   const region = new Uint8Array(count)
@@ -141,10 +163,11 @@ export function corticalTissue(count: number): { positions: Float32Array; region
   for (let i = 0; i < count; i++) {
     const s = 't' + i
     const side: -1 | 1 = h(s) < 0.5 ? -1 : 1
-    const u = h(s + '~1'), v = h(s + '~2')
-    const p = corticalPoint(side, u, v)
+    const u = h(s + '~1'), c = h(s + '~2'), d = h(s + '~3'), e = h(s + '~4')
+    const latT = Math.sqrt(c)
+    const p = volumePoint(side, u, latT, d, e)
     positions[i * 3] = p[0]; positions[i * 3 + 1] = p[1]; positions[i * 3 + 2] = p[2]
-    region[i] = idx[regionForUV(u, v)]
+    region[i] = idx[regionForUV(u, latT)]
   }
   return { positions, region }
 }
