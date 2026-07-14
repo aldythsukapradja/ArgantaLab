@@ -50,7 +50,8 @@ export interface KModel {
 const LAYOUT_KEY = 'knowledge_cortex_v1'
 const SPINE_ANCHOR = new Map(SPINE.map((s) => [s.anchor, s]))
 
-function firstParagraph(body: string): string {
+function firstParagraph(body: string | undefined): string {
+  if (!body || typeof body !== 'string') return ''
   const m = body.split(/\n\s*\n/).map((s) => s.trim()).find((s) => s && !s.startsWith('#') && !s.startsWith('>') && !s.startsWith('|') && !s.startsWith('```'))
   if (!m) return ''
   const plain = m.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => a || t).replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').trim()
@@ -78,39 +79,45 @@ export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
   const index = new Map<string, number>()
   const counts = { total: 0, think: 0, know: 0, do: 0, left: 0, right: 0 }
 
-  // every real note → a neuron
+  // every real note → a neuron. Guard each note so one malformed row (e.g. a
+  // hand-created note missing frontmatter fields) can never blank the surface.
   const ids = Object.keys(notes)
   ids.forEach((id) => {
-    const note = notes[id]
-    const spine = SPINE_ANCHOR.get(id)
-    const ontology = spine ? spine.ontology : deriveOntologyType(note)
-    const cognition = cognitionOf(ontology)
-    const hemisphere = hemisphereOf(ontology)
-    const pos = persisted[id] || brainPosition(id, cognition, hemisphere)
-    layout[id] = pos
-    const deg = degreeOf(id)
-    const kn: KNode = {
-      id,
-      noteId: id,
-      label: spine ? spine.label : note.fm.title,
-      ontology,
-      provenance: deriveProvenance(note),
-      cognition,
-      hemisphere,
-      spine: !!spine,
-      spineIndex: spine ? SPINE.findIndex((s) => s.anchor === id) : -1,
-      pos,
-      r: spine ? 1.05 : 0.38 + Math.min(0.62, Math.sqrt(deg) * 0.13),
-      summary: spine ? spine.caption : firstParagraph(note.body),
-      degree: deg,
+    try {
+      const note = notes[id]
+      if (!note || !note.fm) return
+      const spine = SPINE_ANCHOR.get(id)
+      const ontology = spine ? spine.ontology : deriveOntologyType(note)
+      const cognition = cognitionOf(ontology)
+      const hemisphere = hemisphereOf(ontology)
+      const pos = persisted[id] || brainPosition(id, cognition, hemisphere)
+      layout[id] = pos
+      const deg = degreeOf(id)
+      const kn: KNode = {
+        id,
+        noteId: id,
+        label: (spine ? spine.label : note.fm.title) || id,
+        ontology,
+        provenance: deriveProvenance(note),
+        cognition,
+        hemisphere,
+        spine: !!spine,
+        spineIndex: spine ? SPINE.findIndex((s) => s.anchor === id) : -1,
+        pos,
+        r: spine ? 1.05 : 0.38 + Math.min(0.62, Math.sqrt(deg) * 0.13),
+        summary: spine ? spine.caption : firstParagraph(note.body),
+        degree: deg,
+      }
+      index.set(id, nodes.length)
+      nodes.push(kn)
+      byId.set(id, kn)
+      counts.total++
+      counts[cognition]++
+      if (hemisphere === 'left') counts.left++
+      else if (hemisphere === 'right') counts.right++
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn('[cortex] skipped note', id, e)
     }
-    index.set(id, nodes.length)
-    nodes.push(kn)
-    byId.set(id, kn)
-    counts.total++
-    counts[cognition]++
-    if (hemisphere === 'left') counts.left++
-    else if (hemisphere === 'right') counts.right++
   })
 
   // spine anchors that don't resolve → record as missing (still rare)

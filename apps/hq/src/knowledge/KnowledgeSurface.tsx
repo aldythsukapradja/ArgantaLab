@@ -31,7 +31,34 @@ function hasWebGL(): boolean {
 
 const COGS: Cognition[] = ['think', 'know', 'do']
 
+// Top-level boundary: ANY crash in the surface (even before the chrome renders)
+// shows the real error on screen instead of a blank, so it can be diagnosed
+// without opening devtools.
 export function KnowledgeSurface() {
+  return (
+    <SurfaceBoundary>
+      <KnowledgeSurfaceInner />
+    </SurfaceBoundary>
+  )
+}
+
+class SurfaceBoundary extends Component<{ children: ReactNode }, { error: string | null; stack: string }> {
+  state = { error: null as string | null, stack: '' }
+  static getDerivedStateFromError(err: unknown) { return { error: (err as Error)?.message || String(err), stack: (err as Error)?.stack || '' } }
+  componentDidCatch(err: unknown) { console.error('[KnowledgeSurface] crashed:', err) }
+  render() {
+    if (!this.state.error) return this.props.children
+    return (
+      <div style={{ position: 'absolute', inset: 0, background: '#0a0c16', color: '#e6e9f5', padding: 28, overflow: 'auto', fontFamily: 'ui-monospace, monospace' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#fca5a5', marginBottom: 10 }}>Cognitive Cortex failed to render</div>
+        <div style={{ fontSize: 13, color: '#fbbf24', marginBottom: 14 }}>{this.state.error}</div>
+        <pre style={{ fontSize: 11, color: '#8891b5', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{this.state.stack.split('\n').slice(0, 12).join('\n')}</pre>
+      </div>
+    )
+  }
+}
+
+function KnowledgeSurfaceInner() {
   const notes = useVault((s) => s.notes)
   const go = useHQ((s) => s.go)
   const webgl = useMemo(hasWebGL, [])

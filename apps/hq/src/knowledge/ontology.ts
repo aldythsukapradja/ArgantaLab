@@ -60,9 +60,10 @@ export const ONTOLOGY_FAMILY: Record<OntologyType, OntologyFamily> = {
  *  note id conventions + frontmatter type/tags (the same signals the vault's own
  *  layer-attribution uses). Falls back to Document — never invents authority. */
 export function deriveOntologyType(note: VaultNote): OntologyType {
-  const id = note.id.toLowerCase()
-  const t = String(note.fm.type)
-  const tags = (note.fm.tags || []).map((s) => s.toLowerCase())
+  const id = String(note?.id || '').toLowerCase()
+  const fm = note?.fm || ({} as VaultNote['fm'])
+  const t = String(fm.type || '')
+  const tags = (Array.isArray(fm.tags) ? fm.tags : []).map((s) => String(s).toLowerCase())
   const has = (...xs: string[]) => xs.some((x) => tags.includes(x))
 
   // id-convention families (the atomised graph nodes)
