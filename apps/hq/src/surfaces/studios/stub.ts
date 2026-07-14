@@ -32,6 +32,8 @@ export function stubGenerate(
   provider: string,
   runtime = 'stub',
   estCost = 0,
+  okStatus: 'deferred' | 'succeeded' = 'deferred',
+  extraProvenance: Record<string, any> = {},
 ): StudioResult {
   if (stage >= MATURITY.PREMIUM && !approved) {
     return {
@@ -41,9 +43,11 @@ export function stubGenerate(
   }
   const premium = stage >= MATURITY.PREMIUM
   return {
-    status: 'deferred',
+    // premium always defers to a paid MCP provider; otherwise use the caller's
+    // status (real deterministic engines report 'succeeded', pure stubs 'deferred')
+    status: premium ? 'deferred' : okStatus,
     runtime: premium ? 'mcp' : runtime,
-    descriptor: { engine: provider, kind },
+    descriptor: { [premium ? 'tool' : 'engine']: provider, kind },
     provenance: {
       provider,
       tier: stage,
@@ -52,6 +56,7 @@ export function stubGenerate(
       cost: premium ? estCost : 0,
       estimated: premium,
       spec: { kind },
+      ...extraProvenance,
     },
   }
 }
