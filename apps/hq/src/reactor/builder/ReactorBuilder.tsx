@@ -4,7 +4,8 @@ import { useCinemaScenario, type CinemaFrame } from '../useCinemaScenario'
 import { useQualityTier } from '../useQualityTier'
 import { useReactorEditor } from './editorStore'
 import { useHQ } from '../../shell/store'
-import type { LayerMaterial } from '../model/layers'
+import { SHARED_SPINE_NODES, type LayerMaterial, type ReactorNode } from '../model/layers'
+import { ProvenanceBadge } from './ProvenanceBadge'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Reactor Builder — HQ Build-tab surface.
@@ -41,12 +42,27 @@ function styles(dark: boolean) {
   }
 }
 
+function NodeList({ dark, nodes }: { dark: boolean; nodes: ReactorNode[] }) {
+  return (
+    <div style={{ display: 'grid', gap: 4 }}>
+      {nodes.map(node => (
+        <div key={node.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+          padding: '4px 2px', borderBottom: `1px solid ${dark ? 'rgba(255,255,255,.05)' : 'rgba(20,60,100,.06)'}` }}>
+          <span style={{ fontSize: 11.5 }}>{node.name}</span>
+          <ProvenanceBadge provenance={node.provenance} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function LayerInspector({ dark }: { dark: boolean }) {
   const { layers, selectedLayerId, select, updateLayer, toggleVisible } = useReactorEditor()
   const s = styles(dark)
   const sel = layers.find(l => l.id === selectedLayerId)
+  const divider = `1px solid ${dark ? 'rgba(132,220,255,.12)' : 'rgba(20,60,100,.1)'}`
   return (
-    <div style={{ ...s.card, position: 'absolute', top: 16, left: 16, width: 250, maxHeight: 'calc(100% - 150px)', overflow: 'auto', padding: 12 }}>
+    <div style={{ ...s.card, position: 'absolute', top: 16, left: 16, width: 270, maxHeight: 'calc(100% - 150px)', overflow: 'auto', padding: 12 }}>
       <div style={{ ...s.label, marginBottom: 8 }}>Layers · {layers.length}</div>
       {layers.map(l => (
         <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -55,34 +71,54 @@ function LayerInspector({ dark }: { dark: boolean }) {
             <span style={{ width: 9, height: 9, borderRadius: 3, background: l.color, flexShrink: 0 }} />
             {l.label}<span style={{ marginLeft: 'auto', opacity: 0.5, fontSize: 9, textTransform: 'none', fontStyle: 'italic' }}>{l.micro}</span>
           </button>
-          <button onClick={() => toggleVisible(l.id)} title="toggle" style={{ ...s.chip(false), padding: '5px 7px' }}>{l.visible ? '👁' : '—'}</button>
+          <button onClick={() => toggleVisible(l.id)} title="toggle visibility" style={{ ...s.chip(false), padding: '5px 7px' }}>{l.visible ? '●' : '○'}</button>
         </div>
       ))}
 
       {sel && (
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${dark ? 'rgba(132,220,255,.12)' : 'rgba(20,60,100,.1)'}`, display: 'grid', gap: 10 }}>
-          <div style={s.label}>Edit · {sel.label}</div>
-          <label style={{ display: 'grid', gap: 4 }}><span style={s.label}>Color</span>
-            <input type="color" value={sel.color} onChange={e => updateLayer(sel.id, { color: e.target.value })} style={{ width: '100%', height: 26, background: 'none', border: 'none' }} />
-          </label>
-          <div style={{ display: 'grid', gap: 4 }}><span style={s.label}>Material</span>
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {MATERIALS.map(m => <button key={m} style={s.chip(sel.material === m)} onClick={() => updateLayer(sel.id, { material: m })}>{m}</button>)}
-            </div>
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: divider, display: 'grid', gap: 10 }}>
+          <div>
+            <div style={s.label}>{sel.label} · {sel.micro}</div>
+            <div style={{ fontSize: 11.5, lineHeight: 1.5, opacity: 0.8, marginTop: 4 }}>{sel.purpose}</div>
           </div>
-          {([['radius', 0.3, 4, 0.05], ['zRest', -1, 1, 0.05], ['zExploded', -6, 6, 0.1], ['spin', -0.2, 0.2, 0.01]] as const).map(([key, min, max, step]) => (
-            <label key={key} style={{ display: 'grid', gap: 3 }}>
-              <span style={s.label}>{key} · {Number(sel[key]).toFixed(2)}</span>
-              <input type="range" min={min} max={max} step={step} value={sel[key] as number}
-                onChange={e => updateLayer(sel.id, { [key]: parseFloat(e.target.value) } as Record<string, number>)} />
+
+          <div>
+            <div style={{ ...s.label, marginBottom: 4 }}>Contents · {sel.nodes.length}</div>
+            <NodeList dark={dark} nodes={sel.nodes} />
+          </div>
+
+          <div style={{ display: 'grid', gap: 10, paddingTop: 8, borderTop: divider }}>
+            <div style={s.label}>Appearance</div>
+            <label style={{ display: 'grid', gap: 4 }}><span style={s.label}>Color</span>
+              <input type="color" value={sel.color} onChange={e => updateLayer(sel.id, { color: e.target.value })} style={{ width: '100%', height: 26, background: 'none', border: 'none' }} />
             </label>
-          ))}
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input type="checkbox" checked={sel.wireframe} onChange={e => updateLayer(sel.id, { wireframe: e.target.checked })} />
-            <span style={s.label}>Wireframe ghost</span>
-          </label>
+            <div style={{ display: 'grid', gap: 4 }}><span style={s.label}>Material</span>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {MATERIALS.map(m => <button key={m} style={s.chip(sel.material === m)} onClick={() => updateLayer(sel.id, { material: m })}>{m}</button>)}
+              </div>
+            </div>
+            {([['radius', 0.3, 4, 0.05], ['zRest', -1, 1, 0.05], ['zExploded', -6, 6, 0.1], ['spin', -0.2, 0.2, 0.01]] as const).map(([key, min, max, step]) => (
+              <label key={key} style={{ display: 'grid', gap: 3 }}>
+                <span style={s.label}>{key} · {Number(sel[key]).toFixed(2)}</span>
+                <input type="range" min={min} max={max} step={step} value={sel[key] as number}
+                  onChange={e => updateLayer(sel.id, { [key]: parseFloat(e.target.value) } as Record<string, number>)} />
+              </label>
+            ))}
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="checkbox" checked={sel.wireframe} onChange={e => updateLayer(sel.id, { wireframe: e.target.checked })} />
+              <span style={s.label}>Wireframe ghost</span>
+            </label>
+          </div>
         </div>
       )}
+
+      {/* Shared Spine — cross-cutting foundation, listed separately. Never an
+          eighth selectable layer: it has no ring, no visibility toggle here. */}
+      <div style={{ marginTop: 14, paddingTop: 12, borderTop: divider }}>
+        <div style={s.label}>Shared Spine</div>
+        <div style={{ fontSize: 10.5, opacity: 0.65, marginTop: 3, marginBottom: 8 }}>Cross-cutting foundation — not a ring.</div>
+        <NodeList dark={dark} nodes={SHARED_SPINE_NODES} />
+      </div>
     </div>
   )
 }
