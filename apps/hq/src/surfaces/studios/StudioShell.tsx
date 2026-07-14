@@ -143,31 +143,37 @@ export function StudioShell(p: Props) {
           )}
         </header>
 
-        {/* composer — at the top */}
+        {/* composer — one unified box at the top (textarea + inner toolbar) */}
         <form className="composer" onSubmit={submit} ref={composerRef}>
-          <div className="tier-select">
-            <button type="button" className={'stage-pill s' + p.stage} onClick={() => setStageMenu(v => !v)} title="Choose generation tier">
-              <span className="sp-dot" />{STAGES[p.stage]?.label}<span className="sp-caret">⌄</span>
-            </button>
-            {stageMenu && (
-              <div className="tier-menu">
-                <div className="tier-menu-h">Generation tier</div>
-                {STAGES.map(st => (
-                  <button key={st.s} type="button" className={'tier-opt s' + st.s + (p.stage === st.s ? ' on' : '')} onClick={() => { p.onStage(st.s); setStageMenu(false) }}>
-                    <span className="sp-dot" />
-                    <span className="tier-main"><b>{st.label}</b><i>{st.note}</i></span>
-                    {p.stage === st.s && <span className="tier-check">✓</span>}
-                  </button>
-                ))}
+          <div className="composer-box">
+            <textarea className="prompt-in" value={p.prompt} rows={1} placeholder={placeholder}
+              onChange={e => p.onPrompt(e.target.value)} onKeyDown={onKey} autoFocus />
+            <div className="composer-bar">
+              <div className="tier-select">
+                <button type="button" className={'stage-pill s' + p.stage} onClick={() => setStageMenu(v => !v)} title="Choose generation tier">
+                  <span className="sp-dot" />{STAGES[p.stage]?.label}<span className="sp-caret">⌄</span>
+                </button>
+                {stageMenu && (
+                  <div className="tier-menu">
+                    <div className="tier-menu-h">Generation tier</div>
+                    {STAGES.map(st => (
+                      <button key={st.s} type="button" className={'tier-opt s' + st.s + (p.stage === st.s ? ' on' : '')} onClick={() => { p.onStage(st.s); setStageMenu(false) }}>
+                        <span className="sp-dot" />
+                        <span className="tier-main"><b>{st.label}</b><i>{st.note}</i></span>
+                        {p.stage === st.s && <span className="tier-check">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+              <div className="composer-actions">
+                {p.controlsExtra && <div className="extra">{p.controlsExtra}</div>}
+                <button type="submit" className="run" disabled={p.busy || !p.prompt.trim()}>
+                  <Sparkle />{p.busy ? 'Working…' : (p.generateLabel || 'Generate')}
+                </button>
+              </div>
+            </div>
           </div>
-          <textarea className="prompt-in" value={p.prompt} rows={1} placeholder={placeholder}
-            onChange={e => p.onPrompt(e.target.value)} onKeyDown={onKey} />
-          {p.controlsExtra && <div className="extra">{p.controlsExtra}</div>}
-          <button type="submit" className="run" disabled={p.busy || !p.prompt.trim()}>
-            <span className="run-spark" aria-hidden>✦</span>{p.busy ? 'Working…' : (p.generateLabel || 'Generate')}
-          </button>
         </form>
 
         {/* the result dominates */}
@@ -203,6 +209,16 @@ export function StudioShell(p: Props) {
         </main>
       </div>
     </div>
+  )
+}
+
+/** A twinkling 4-point sparkle (main star + companion) for the Make button. */
+function Sparkle() {
+  return (
+    <svg className="run-spark" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+      <path className="spark-a" d="M12 1.5c.3 3.9 1.4 6.3 3 7.9s4 2.7 7.5 3.1c-3.5.4-5.9 1.5-7.5 3.1s-2.7 4-3 7.9c-.3-3.9-1.4-6.3-3-7.9s-4-2.7-7.5-3.1c3.5-.4 5.9-1.5 7.5-3.1s2.7-4 3-7.9Z" />
+      <path className="spark-b" d="M19.5 2.2c.15 1.7.6 2.6 1.3 3.3s1.6 1.1 3.2 1.3c-1.6.2-2.5.6-3.2 1.3s-1.1 1.6-1.3 3.3c-.15-1.7-.6-2.6-1.3-3.3s-1.6-1.1-3.2-1.3c1.6-.2 2.5-.6 3.2-1.3s1.15-1.6 1.3-3.3Z" />
+    </svg>
   )
 }
 

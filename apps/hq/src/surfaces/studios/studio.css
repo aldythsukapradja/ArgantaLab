@@ -28,8 +28,8 @@
 .versions { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; }
 .ver { display: flex; align-items: center; border-radius: 10px; position: relative; }
 .ver:hover { background: var(--panel-2, #f1eefa); }
-.ver-hit { display: flex; align-items: center; gap: 9px; border: 0; background: transparent; padding: 8px 9px; cursor: pointer; color: inherit; text-align: left; flex: 1; min-width: 0; }
-.ver-ico { font-size: 15px; flex: 0 0 auto; width: 20px; text-align: center; }
+.ver-hit { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; padding: 7px 8px; cursor: pointer; color: inherit; text-align: left; flex: 1; min-width: 0; }
+.ver-ico { font-size: 15px; flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: linear-gradient(135deg, #7c3aad18, #ef806018); }
 .ver-main { display: grid; min-width: 0; }
 .ver-main b { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ver-main i { font-size: 10.5px; opacity: .5; font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: capitalize; }
@@ -113,11 +113,16 @@
 .chart-reason { padding: 2px 14px 10px; font-size: 11.5px; opacity: .6; }
 
 /* ---- prompt bar: type, Enter, done --------------------------------------- */
-/* composer — sits at the TOP, below the tabs */
-.composer { display: flex; align-items: center; gap: 8px; padding: 10px 16px 12px; }
+/* composer — one unified box at the TOP (AI-Elements PromptInput anatomy:
+   textarea on top, inner toolbar below with tier-select left, submit right) */
+.composer { padding: 12px 16px 6px; }
+.composer-box { display: flex; flex-direction: column; gap: 2px; background: var(--panel, #fff); border: 1px solid var(--line, #e3dff2); border-radius: 20px; padding: 8px 8px 8px 6px; box-shadow: 0 6px 26px #00000010, 0 1px 0 #ffffff40 inset; transition: border-color .16s ease, box-shadow .16s ease; }
+.composer-box:focus-within { border-color: #7c3aad55; box-shadow: 0 8px 34px #7c3aad20; }
+.composer-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 6px; }
+.composer-actions { display: flex; align-items: center; gap: 8px; }
 .tier-select { position: relative; flex: 0 0 auto; }
-.stage-pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line, #dcd7ee); background: var(--panel, #fff); color: inherit; border-radius: 999px; padding: 9px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
-.stage-pill:hover { border-color: #7c3aad55; }
+.stage-pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid transparent; background: var(--panel-2, #f1eefa); color: inherit; border-radius: 999px; padding: 8px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .14s, border-color .14s; }
+.stage-pill:hover { border-color: #7c3aad44; background: var(--panel, #fff); }
 .stage-pill .sp-dot { width: 8px; height: 8px; border-radius: 50%; background: #17924f; }
 .stage-pill .sp-caret { opacity: .5; font-size: 11px; margin-left: 1px; }
 .stage-pill.s1 .sp-dot { background: #3b82f6; } .stage-pill.s2 .sp-dot { background: #f0b429; } .stage-pill.s3 .sp-dot { background: #ef8060; }
@@ -134,28 +139,46 @@
 .tier-check { color: #7c3aad; font-weight: 800; }
 .tier-opt.on { background: var(--panel-2, #f1eefa); }
 .prompt-in {
-  flex: 1; min-width: 0; resize: none; border: 1px solid var(--line, #dcd7ee); border-radius: 14px;
-  padding: 13px 16px; font: inherit; font-size: 14px; line-height: 1.35; background: var(--panel, #fff); color: inherit;
-  max-height: 96px; box-shadow: 0 2px 14px #0000000d;
+  width: 100%; resize: none; border: 0; background: transparent; color: inherit;
+  padding: 11px 12px 6px; font: inherit; font-size: 15px; line-height: 1.4; max-height: 128px;
 }
-.prompt-in:focus { outline: none; border-color: #7c3aad; box-shadow: 0 2px 18px #7c3aad22; }
-/* polished, fancy Make button */
+.prompt-in:focus { outline: none; }
+.prompt-in::placeholder { color: currentColor; opacity: .38; }
+/* Make button — animated rotating conic-gradient border + glow (@property) */
+@property --run-a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 .run {
-  flex: 0 0 auto; border: 0; border-radius: 14px; padding: 13px 22px; font-weight: 700; font-size: 14px; cursor: pointer; color: #fff;
-  display: inline-flex; align-items: center; gap: 8px; position: relative; overflow: hidden;
-  background: linear-gradient(135deg, #7c3aad 0%, #9b4fd0 55%, #ef8060 140%);
-  background-size: 180% 100%; background-position: 0% 0%;
-  box-shadow: 0 4px 18px #7c3aad55, inset 0 1px 0 #ffffff2e;
-  transition: transform .12s ease, box-shadow .2s ease, background-position .5s ease;
+  flex: 0 0 auto; position: relative; z-index: 0; isolation: isolate;
+  border: 0; border-radius: 13px; padding: 12px 20px; font-weight: 700; font-size: 14px; cursor: pointer; color: #fff;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #6d2f9e, #9b4fd0);
+  box-shadow: inset 0 1px 0 #ffffff33;
+  transition: transform .12s ease, filter .2s ease;
 }
-.run:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 9px 28px #7c3aad77; background-position: 100% 0%; }
+/* crisp rotating ring */
+.run::before {
+  content: ''; position: absolute; inset: -2px; z-index: -1; border-radius: 15px;
+  background: conic-gradient(from var(--run-a), #7c3aad, #ef8060, #f0b429, #70e7ff, #9b4fd0, #7c3aad);
+  animation: run-spin 4s linear infinite;
+}
+/* blurred glow underneath */
+.run::after {
+  content: ''; position: absolute; inset: -4px; z-index: -2; border-radius: 17px; filter: blur(11px); opacity: .5;
+  background: conic-gradient(from var(--run-a), #7c3aad, #ef8060, #f0b429, #70e7ff, #9b4fd0, #7c3aad);
+  animation: run-spin 4s linear infinite;
+}
+@keyframes run-spin { to { --run-a: 360deg; } }
+.run:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
+.run:hover:not(:disabled)::after { opacity: .8; }
 .run:active:not(:disabled) { transform: translateY(0); }
-.run:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
-.run-spark { font-size: 13px; filter: drop-shadow(0 0 6px #ffffffaa); animation: spark 2.4s ease-in-out infinite; }
-@keyframes spark { 0%, 100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.22) rotate(12deg); } }
-/* subtle sheen sweep */
-.run::after { content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; background: linear-gradient(100deg, transparent, #ffffff55, transparent); transform: skewX(-18deg); transition: left .6s ease; }
-.run:hover:not(:disabled)::after { left: 130%; }
+.run:disabled { cursor: not-allowed; }
+.run:disabled::before, .run:disabled::after { opacity: 0; }
+.run:disabled { background: var(--panel-2, #e9e6f4); color: var(--fg, #1a1730); opacity: .5; box-shadow: none; }
+/* the twinkling sparkle */
+.run-spark { flex: 0 0 auto; filter: drop-shadow(0 0 5px #ffffffcc); }
+.run-spark .spark-a { transform-origin: 12px 12px; animation: twinkle 2.6s ease-in-out infinite; }
+.run-spark .spark-b { transform-origin: 19.5px 6.5px; animation: twinkle 2.6s ease-in-out .5s infinite; }
+@keyframes twinkle { 0%, 100% { opacity: .65; transform: scale(.82) rotate(0deg); } 50% { opacity: 1; transform: scale(1.12) rotate(18deg); } }
+@media (prefers-reduced-motion: reduce) { .run::before, .run::after, .run-spark .spark-a, .run-spark .spark-b { animation: none; } }
 .extra { display: flex; align-items: center; gap: 6px; }
 .ghost { border: 1px solid var(--line, #dcd7ee); background: var(--panel, #fff); border-radius: 11px; padding: 9px 12px; font-weight: 600; font-size: 12.5px; cursor: pointer; color: inherit; white-space: nowrap; }
 .prog { position: relative; height: 34px; min-width: 90px; border-radius: 10px; background: var(--panel-2, #ece9f6); display: grid; place-items: center; font-size: 12px; font-weight: 700; overflow: hidden; }
