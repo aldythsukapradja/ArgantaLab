@@ -27,14 +27,16 @@ export interface Region {
 
 // The 7 spine regions — reactor colours (Experience nudged to emerald so all 7
 // read distinctly). Order = the reactor spine order = the Act V trace order.
+// Contiguous anterior→posterior bands, widths roughly proportional to how many
+// notes land in each region (Know dominates the vault, so it owns the mid band).
 export const REGIONS: Region[] = [
-  { id: 'command', label: 'Command Core', verb: 'govern', triad: 'think', color: '#70e7ff', u0: 0.42, u1: 0.58, anchor: [0, -0.6, 0.4] },
-  { id: 'think', label: 'Think', verb: 'decide', triad: 'think', color: '#45e8ff', u0: 0.74, u1: 1.0, anchor: [0, 1.4, 5.2] },
-  { id: 'know', label: 'Know', verb: 'remember', triad: 'know', color: '#9a72ff', u0: 0.30, u1: 0.46, anchor: [0, 0.9, -1.4] },
-  { id: 'orchestrate', label: 'Orchestrate', verb: 'coordinate', triad: 'do', color: '#35d8ed', u0: 0.58, u1: 0.66, anchor: [0, 1.6, 1.9] },
-  { id: 'act', label: 'Act', verb: 'execute', triad: 'do', color: '#ffc46b', u0: 0.46, u1: 0.58, anchor: [0, 1.7, 0.4] },
-  { id: 'experience', label: 'Experience', verb: 'serve', triad: 'do', color: '#4ade80', u0: 0.0, u1: 0.30, anchor: [0, 1.0, -5.2] },
-  { id: 'sense', label: 'Sense', verb: 'learn', triad: 'know', color: '#4be5bd', u0: 0.0, u1: 1.0, anchor: [0, 0.2, 0] },
+  { id: 'command', label: 'Command Core', verb: 'govern', triad: 'think', color: '#70e7ff', u0: 0.44, u1: 0.56, anchor: [0, -0.5, 0.4] },
+  { id: 'think', label: 'Think', verb: 'decide', triad: 'think', color: '#4bd4ff', u0: 0.80, u1: 1.0, anchor: [0, 1.3, 6.0] },
+  { id: 'know', label: 'Know', verb: 'remember', triad: 'know', color: '#9a72ff', u0: 0.14, u1: 0.54, anchor: [0, 1.4, -1.4] },
+  { id: 'orchestrate', label: 'Orchestrate', verb: 'coordinate', triad: 'do', color: '#22d3c8', u0: 0.70, u1: 0.80, anchor: [0, 1.7, 4.4] },
+  { id: 'act', label: 'Act', verb: 'execute', triad: 'do', color: '#ffb347', u0: 0.54, u1: 0.70, anchor: [0, 1.7, 2.4] },
+  { id: 'experience', label: 'Experience', verb: 'serve', triad: 'do', color: '#4ade80', u0: 0.0, u1: 0.14, anchor: [0, 1.0, -5.6] },
+  { id: 'sense', label: 'Sense', verb: 'learn', triad: 'know', color: '#4be5bd', u0: 0.0, u1: 1.0, anchor: [0, 0.4, 0] },
 ]
 
 export const REGION_BY_ID = new Map(REGIONS.map((r) => [r.id, r]))

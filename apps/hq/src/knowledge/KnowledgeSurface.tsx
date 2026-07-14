@@ -54,10 +54,15 @@ class SceneBoundary extends Component<{ fallback: (msg: string) => ReactNode; ch
 function KnowledgeSurfaceInner() {
   const notes = useVault((s) => s.notes)
   const go = useHQ((s) => s.go)
+  const dark = useHQ((s) => s.theme) === 'dark'
   const webgl = useMemo(hasWebGL, [])
+  // chrome palette that follows the app theme (canvas theme lives in the scene)
+  const ui = dark
+    ? { rootBg: '#04050d', glass: 'rgba(8,10,22,.62)', border: '#232c52', tx: '#eef2ff', tx2: '#8891b5', tx3: '#cdd5f0' }
+    : { rootBg: '#eaeef7', glass: 'rgba(255,255,255,.82)', border: '#ccd6ec', tx: '#0b1020', tx2: '#5b6690', tx3: '#28324f' }
 
   const model = useMemo(() => buildKnowledgeModel(notes), [notes])
-  const tissue = useMemo(() => corticalTissue(9000), [])
+  const tissue = useMemo(() => corticalTissue(13000), [])
 
   const selected = useKnowledge((s) => s.selected)
   const setSelected = useKnowledge((s) => s.setSelected)
@@ -110,13 +115,13 @@ function KnowledgeSurfaceInner() {
   )
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: '#04050d', overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', inset: 0, background: ui.rootBg, overflow: 'hidden' }}>
       <style>{`.kg-canvas canvas{width:100%!important;height:100%!important;display:block}`}</style>
       {webgl && !dead ? (
         <div ref={wrapRef} className="kg-canvas" style={{ position: 'absolute', inset: 0 }}>
           <SceneBoundary fallback={(msg) => fallback('3D cortex unavailable (' + msg + ')')}>
             <Suspense fallback={<Loading />}>
-              <KnowledgeScene model={model} tissue={tissue} width={size.w} height={size.h}
+              <KnowledgeScene model={model} tissue={tissue} width={size.w} height={size.h} dark={dark}
                 onFrame={() => { drewRef.current = true }} />
             </Suspense>
           </SceneBoundary>
@@ -140,8 +145,8 @@ function KnowledgeSurfaceInner() {
           <Brain size={18} color="#fff" />
         </div>
         <div>
-          <div style={{ fontSize: 14.5, fontWeight: 800, color: '#eef2ff', letterSpacing: 0.3 }}>Cognitive Cortex</div>
-          <div style={{ fontSize: 10.5, color: '#8891b5', letterSpacing: 0.5 }}>{model.nodes.length} REAL NEURONS · 7-REGION BRAIN OF THE VAULT</div>
+          <div style={{ fontSize: 14.5, fontWeight: 800, color: ui.tx, letterSpacing: 0.3 }}>Cognitive Cortex</div>
+          <div style={{ fontSize: 10.5, color: ui.tx2, letterSpacing: 0.5 }}>{model.nodes.length} REAL NEURONS · 7-REGION BRAIN OF THE VAULT</div>
         </div>
       </div>
 
@@ -152,14 +157,14 @@ function KnowledgeSurfaceInner() {
             const on = triadFilter === c, col = TRIAD_COLOR[c]
             return (
               <button key={c} title={TRIAD_HINT[c]} onClick={() => setTriadFilter(on ? null : c)}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? col : col + '44'), background: on ? col + '26' : 'rgba(8,10,22,.6)', color: on ? '#fff' : '#cdd5f0', backdropFilter: 'blur(10px)', fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? col : col + '44'), background: on ? col + '26' : ui.glass, color: on ? '#fff' : ui.tx3, backdropFilter: 'blur(10px)', fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>
                 <span style={{ width: 9, height: 9, borderRadius: 9, background: col, boxShadow: `0 0 8px ${col}` }} />
                 {TRIAD_LABEL[c]}<span style={{ fontSize: 10.5, opacity: 0.6, fontWeight: 500 }}>{model.triadCounts[c]}</span>
               </button>
             )
           })}
           <button onClick={() => setSim(!simRunning)} title="Neuron-firing simulation: action potentials fire along the axons"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (simRunning ? '#4ade8088' : '#34407a'), background: simRunning ? '#4ade8018' : 'rgba(8,10,22,.6)', color: simRunning ? '#86efac' : '#cdd5f0', backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (simRunning ? '#4ade8088' : '#34407a'), background: simRunning ? '#4ade8018' : ui.glass, color: simRunning ? '#86efac' : ui.tx3, backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
             {simRunning ? <Activity size={13} /> : <Play size={12} />} {simRunning ? 'Firing' : 'Fire'}
           </button>
         </div>
@@ -167,12 +172,12 @@ function KnowledgeSurfaceInner() {
 
       {/* 7-region spine legend (bottom-center) */}
       {webgl && (
-        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5, alignItems: 'center', background: 'rgba(8,10,22,.62)', border: '1px solid #232c52', borderRadius: 999, padding: '6px 8px', backdropFilter: 'blur(10px)', pointerEvents: 'auto', maxWidth: '78vw', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 999, padding: '6px 8px', backdropFilter: 'blur(10px)', pointerEvents: 'auto', maxWidth: '78vw', flexWrap: 'wrap', justifyContent: 'center' }}>
           {REGIONS.map((r) => {
             const on = regionFilter === r.id
             return (
               <button key={r.id} title={`${r.label} · ${r.verb} · ${TRIAD_LABEL[r.triad]}`} onClick={() => setRegionFilter(on ? null : r.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? r.color : 'transparent'), background: on ? r.color + '22' : 'transparent', color: on ? '#fff' : '#c3ccea', fontSize: 11.5, fontWeight: 600 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? r.color : 'transparent'), background: on ? r.color + '22' : 'transparent', color: on ? '#fff' : ui.tx3, fontSize: 11.5, fontWeight: 600 }}>
                 <span style={{ width: 9, height: 9, borderRadius: 9, background: r.color, boxShadow: `0 0 7px ${r.color}` }} />
                 {r.label}<span style={{ fontSize: 10, opacity: 0.55 }}>{model.regionCounts[r.id]}</span>
               </button>
@@ -183,10 +188,10 @@ function KnowledgeSurfaceInner() {
 
       {/* provenance (bottom-left) */}
       {webgl && (
-        <div style={{ position: 'absolute', bottom: 62, left: 16, display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(8,10,22,.6)', border: '1px solid #232c52', borderRadius: 12, padding: '7px 12px', backdropFilter: 'blur(10px)' }}>
-          <span style={{ fontSize: 10, color: '#8891b5', letterSpacing: 0.6 }}>PROVENANCE</span>
+        <div style={{ position: 'absolute', bottom: 62, left: 16, display: 'flex', gap: 12, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 12, padding: '7px 12px', backdropFilter: 'blur(10px)' }}>
+          <span style={{ fontSize: 10, color: ui.tx2, letterSpacing: 0.6 }}>PROVENANCE</span>
           {(['live', 'partial', 'simulated', 'placeholder'] as const).map((p) => (
-            <span key={p} title={PROVENANCE_META[p].hint} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#cdd5f0' }}>
+            <span key={p} title={PROVENANCE_META[p].hint} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: ui.tx3 }}>
               <span style={{ width: 9, height: 9, borderRadius: 9, background: '#8b7cf6', opacity: p === 'live' ? 1 : p === 'partial' ? 0.65 : p === 'simulated' ? 0.42 : 0.25 }} />
               {PROVENANCE_META[p].label}
             </span>
@@ -196,10 +201,10 @@ function KnowledgeSurfaceInner() {
 
       {/* inspector */}
       {selNode && (
-        <div style={{ position: 'absolute', right: 16, top: 16, width: 280, background: 'rgba(9,11,24,.85)', border: '1px solid #2a3566', borderRadius: 14, padding: 16, backdropFilter: 'blur(14px)', boxShadow: '0 16px 50px rgba(0,0,0,.55)', pointerEvents: 'auto' }}>
+        <div style={{ position: 'absolute', right: 16, top: 16, width: 280, background: ui.glass, border: '1px solid #2a3566', borderRadius: 14, padding: 16, backdropFilter: 'blur(14px)', boxShadow: '0 16px 50px rgba(0,0,0,.55)', pointerEvents: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8 }}>
             <div style={{ fontSize: 15.5, fontWeight: 700, color: '#f0f3ff', lineHeight: 1.25 }}>{selNode.label}</div>
-            <button onClick={() => { setSelected(null); setFocus(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8891b5', flex: 'none' }}><X size={16} /></button>
+            <button onClick={() => { setSelected(null); setFocus(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ui.tx2, flex: 'none' }}><X size={16} /></button>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '10px 0' }}>
             <Chip color={REGION_BY_ID.get(selNode.region)!.color}>{REGION_BY_ID.get(selNode.region)!.label}</Chip>

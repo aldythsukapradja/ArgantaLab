@@ -91,7 +91,8 @@ export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
       const kn: KNode = {
         id, noteId: id, label: note.fm.title || id, ontology,
         provenance: deriveProvenance(note), region, triad, hemisphere, hero: false, pos,
-        r: 0.34 + Math.min(0.6, Math.sqrt(deg) * 0.12),
+        // small neurons — points, not balloons. Gentle degree scaling only.
+        r: 0.12 + Math.min(0.16, Math.sqrt(deg) * 0.04),
         summary: firstParagraph(note.body), degree: deg,
       }
       index.set(id, nodes.length)
@@ -107,7 +108,8 @@ export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
     const cur = heroByRegion.get(n.region)
     if (!cur || n.degree > cur.degree) heroByRegion.set(n.region, n)
   }
-  for (const h of heroByRegion.values()) { h.hero = true; h.r = Math.max(h.r, 0.95) }
+  // heroes read as heroes via their label + ring, not size — keep them small
+  for (const h of heroByRegion.values()) { h.hero = true; h.r = Math.max(h.r, 0.24) }
   const commandHero = heroByRegion.get('command') || null
   const commandId = commandHero?.id || null
 
