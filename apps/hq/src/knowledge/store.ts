@@ -1,47 +1,46 @@
-// WS3 — knowledge-surface local state. Kept out of the global HQ store: this is
-// the module's own manual-mode controls + the (mock) auto-tour clock. The R3F
-// scene reads it across the Canvas reconciler boundary without prop-drilling.
+// WS3 — knowledge-surface local state. The R3F cortex reads it across the Canvas
+// reconciler boundary without prop-drilling.
 
 import { create } from 'zustand'
 import type { Provenance } from './provenance'
-import type { OntologyType } from './ontology'
+import type { Cognition, Hemisphere } from './brain'
 
 export interface KState {
   hovered: string | null
   selected: string | null
-  /** id of the node the camera should frame; null = whole-graph overview */
+  /** id of the node the camera should frame; null = whole-brain overview */
   focus: string | null
-  /** neighbour set to spotlight (others dim); null = no spotlight */
-  spotlight: Set<string> | null
-  tourActive: boolean
-  tourLabel: string | null
+  /** isolate one cognition band (think/know/do); null = all */
+  cogFilter: Cognition | null
+  /** isolate one hemisphere; null = both */
+  hemiFilter: Hemisphere | null
   provFilter: Provenance | null
-  typeFilter: OntologyType | null
+  /** the THINK→KNOW→DO cognition wave is animating */
+  simRunning: boolean
 
   setHovered: (id: string | null) => void
   setSelected: (id: string | null) => void
   setFocus: (id: string | null) => void
-  setSpotlight: (s: Set<string> | null) => void
-  setTour: (active: boolean, label?: string | null) => void
+  setCogFilter: (c: Cognition | null) => void
+  setHemiFilter: (h: Hemisphere | null) => void
   setProvFilter: (p: Provenance | null) => void
-  setTypeFilter: (t: OntologyType | null) => void
+  setSim: (on: boolean) => void
 }
 
 export const useKnowledge = create<KState>((set) => ({
   hovered: null,
   selected: null,
   focus: null,
-  spotlight: null,
-  tourActive: false,
-  tourLabel: null,
+  cogFilter: null,
+  hemiFilter: null,
   provFilter: null,
-  typeFilter: null,
+  simRunning: true,
 
   setHovered: (hovered) => set({ hovered }),
   setSelected: (selected) => set({ selected }),
   setFocus: (focus) => set({ focus }),
-  setSpotlight: (spotlight) => set({ spotlight }),
-  setTour: (tourActive, tourLabel = null) => set({ tourActive, tourLabel }),
+  setCogFilter: (cogFilter) => set({ cogFilter }),
+  setHemiFilter: (hemiFilter) => set({ hemiFilter }),
   setProvFilter: (provFilter) => set({ provFilter }),
-  setTypeFilter: (typeFilter) => set({ typeFilter }),
+  setSim: (simRunning) => set({ simRunning }),
 }))

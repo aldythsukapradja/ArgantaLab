@@ -1,22 +1,27 @@
-// WS3 — the graph model. Turns the REAL vault (kb notes + link graph) into a
-// curated, grounded, spatially-stable 3D constellation:
-//   • the 8-node hero spine (Act V), each grounded to a real note,
-//   • plus each spine node's real 1-hop neighbourhood (bounded for perf),
-//   • ontology type + provenance attached to every node,
-//   • deterministic seeded 3D positions, persisted so spatial memory holds.
+// WS3 — the cortex model. Turns the REAL vault (all kb notes + link graph) into
+// a dense, brain-shaped neural constellation:
+//   • every real note becomes a neuron, placed by ontology → hemisphere +
+//     THINK/KNOW/DO cognition band (see brain.ts),
+//   • real wikilinks become white-matter tracts (cross-hemisphere = callosum),
+//   • the 8-node canonical spine stays flagged as deep hero structure,
+//   • ontology type + provenance + cognition attached to every node,
+//   • positions are deterministic + persisted so spatial memory holds.
 
 import type { VaultNote } from '../vault/types'
 import { buildBacklinks, buildGraph, buildSuggestedEdges } from '../vault/graph'
 import { deriveOntologyType, type OntologyType } from './ontology'
 import { deriveProvenance, type Provenance, type EdgeProvenance } from './provenance'
+import { brainPosition, cognitionOf, hemisphereOf, type Cognition, type Hemisphere } from './brain'
 import { SPINE } from './spine'
 
 export interface KNode {
-  id: string                 // scene id: spine key for hero nodes, else the note id
+  id: string                 // note id (spine anchors keep their real id)
   noteId: string | null      // real vault note id (null = missing source)
   label: string
   ontology: OntologyType
   provenance: Provenance
+  cognition: Cognition
+  hemisphere: Hemisphere
   spine: boolean
   spineIndex: number         // 0..7 for hero nodes, -1 otherwise
   pos: [number, number, number]
@@ -29,57 +34,27 @@ export interface KEdge {
   a: string
   b: string
   provenance: EdgeProvenance
-  spine: boolean             // hero-path edge (the canonical sequence)
+  spine: boolean
+  callosal: boolean          // crosses hemispheres (corpus callosum)
 }
 
 export interface KModel {
   nodes: KNode[]
   edges: KEdge[]
   byId: Map<string, KNode>
+  index: Map<string, number> // node id → instance index
   missing: string[]          // spine keys whose anchor note is missing
+  counts: { total: number; think: number; know: number; do: number; left: number; right: number }
 }
 
-const LAYOUT_KEY = 'knowledge_layout_v1'
-const MAX_NEIGHBORS = 11     // per spine node
-const HERO_SPAN = 13         // spine arc half-width
-
-// --- deterministic hash → unit helpers (stable positions from a node id) ---
-function hash(str: string): number {
-  let h = 2166136261
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) }
-  return (h >>> 0) / 4294967295
-}
-const hash2 = (s: string) => hash(s + '::b')
-const hash3 = (s: string) => hash(s + '::c')
+const LAYOUT_KEY = 'knowledge_cortex_v1'
+const SPINE_ANCHOR = new Map(SPINE.map((s) => [s.anchor, s]))
 
 function firstParagraph(body: string): string {
   const m = body.split(/\n\s*\n/).map((s) => s.trim()).find((s) => s && !s.startsWith('#') && !s.startsWith('>') && !s.startsWith('|') && !s.startsWith('```'))
   if (!m) return ''
   const plain = m.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => a || t).replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').trim()
   return plain.length > 180 ? plain.slice(0, 180) + '…' : plain
-}
-
-// Hero spine positions: a slow, rising S-curve through space so the path reads
-// as a journey left→right. Fixed, never seeded — this is the memorable anchor.
-function spinePos(i: number): [number, number, number] {
-  const t = i / (SPINE.length - 1)      // 0..1
-  const x = (t - 0.5) * 2 * HERO_SPAN
-  const y = Math.sin(t * Math.PI * 1.15) * 3.2 - 0.4
-  const z = Math.sin(t * Math.PI * 2) * 4.2
-  return [x, y, z]
-}
-
-// Neighbour positions: a deterministic point on a shell around its spine parent.
-function neighborPos(parent: [number, number, number], id: string, k: number): [number, number, number] {
-  const u = hash(id), v = hash2(id), w = hash3(id)
-  const theta = u * Math.PI * 2
-  const phi = Math.acos(2 * v - 1)
-  const radius = 3.1 + w * 2.6 + (k % 3) * 0.35
-  return [
-    parent[0] + Math.sin(phi) * Math.cos(theta) * radius,
-    parent[1] + Math.cos(phi) * radius * 0.72,
-    parent[2] + Math.sin(phi) * Math.sin(theta) * radius,
-  ]
 }
 
 function loadLayout(): Record<string, [number, number, number]> {
@@ -90,99 +65,80 @@ function saveLayout(map: Record<string, [number, number, number]>) {
 }
 
 export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
-  const index = buildBacklinks(notes)
-  const graph = buildGraph(notes, index)
-  const suggested = buildSuggestedEdges(notes, index)
-  const degreeOf = (id: string) => (index.outgoing[id]?.length || 0) + (index.backlinks[id]?.length || 0)
+  const ix = buildBacklinks(notes)
+  const graph = buildGraph(notes, ix)
+  const suggested = buildSuggestedEdges(notes, ix)
+  const degreeOf = (id: string) => (ix.outgoing[id]?.length || 0) + (ix.backlinks[id]?.length || 0)
 
   const persisted = loadLayout()
   const layout: Record<string, [number, number, number]> = {}
-  const posFor = (id: string, fallback: [number, number, number]): [number, number, number] => {
-    const p = persisted[id] || fallback
-    layout[id] = p
-    return p
-  }
 
   const nodes: KNode[] = []
   const byId = new Map<string, KNode>()
-  const missing: string[] = []
-  const claimed = new Set<string>()       // note ids already placed (spine wins)
+  const index = new Map<string, number>()
+  const counts = { total: 0, think: 0, know: 0, do: 0, left: 0, right: 0 }
 
-  // --- hero spine ---
-  SPINE.forEach((s, i) => {
-    const note = notes[s.anchor]
-    if (!note) missing.push(s.key)
-    const pos = posFor(s.key, spinePos(i))
+  // every real note → a neuron
+  const ids = Object.keys(notes)
+  ids.forEach((id) => {
+    const note = notes[id]
+    const spine = SPINE_ANCHOR.get(id)
+    const ontology = spine ? spine.ontology : deriveOntologyType(note)
+    const cognition = cognitionOf(ontology)
+    const hemisphere = hemisphereOf(ontology)
+    const pos = persisted[id] || brainPosition(id, cognition, hemisphere)
+    layout[id] = pos
+    const deg = degreeOf(id)
     const kn: KNode = {
-      id: s.key,
-      noteId: note ? s.anchor : null,
-      label: s.label,
-      ontology: s.ontology,
+      id,
+      noteId: id,
+      label: spine ? spine.label : note.fm.title,
+      ontology,
       provenance: deriveProvenance(note),
-      spine: true,
-      spineIndex: i,
+      cognition,
+      hemisphere,
+      spine: !!spine,
+      spineIndex: spine ? SPINE.findIndex((s) => s.anchor === id) : -1,
       pos,
-      r: 1.0,
-      summary: s.caption,
-      degree: note ? degreeOf(s.anchor) : 0,
+      r: spine ? 0.9 : 0.28 + Math.min(0.5, Math.sqrt(deg) * 0.11),
+      summary: spine ? spine.caption : firstParagraph(note.body),
+      degree: deg,
     }
-    nodes.push(kn); byId.set(kn.id, kn)
-    if (note) claimed.add(s.anchor)
+    index.set(id, nodes.length)
+    nodes.push(kn)
+    byId.set(id, kn)
+    counts.total++
+    counts[cognition]++
+    if (hemisphere === 'left') counts.left++
+    else if (hemisphere === 'right') counts.right++
   })
 
-  // --- real 1-hop neighbourhoods ---
+  // spine anchors that don't resolve → record as missing (still rare)
+  const missing = SPINE.filter((s) => !notes[s.anchor]).map((s) => s.key)
+
+  // real wikilink tracts
   const edges: KEdge[] = []
-  // hero-path edges (the canonical narrative sequence) — always confirmed
-  for (let i = 0; i < SPINE.length - 1; i++) edges.push({ a: SPINE[i].key, b: SPINE[i + 1].key, provenance: 'confirmed', spine: true })
-
-  const neighborOwner = new Map<string, string>()   // noteId -> owning spine key
-
-  SPINE.forEach((s) => {
-    if (!notes[s.anchor]) return
-    const parentPos = byId.get(s.key)!.pos
-    const neigh = new Set<string>([...(index.outgoing[s.anchor] || []), ...(index.backlinks[s.anchor] || [])])
-    const picks = [...neigh]
-      .filter((nid) => nid !== s.anchor && !claimed.has(nid) && notes[nid])
-      .sort((a, b) => degreeOf(b) - degreeOf(a))
-      .slice(0, MAX_NEIGHBORS)
-
-    picks.forEach((nid, k) => {
-      claimed.add(nid)
-      neighborOwner.set(nid, s.key)
-      const note = notes[nid]
-      const pos = posFor(nid, neighborPos(parentPos, nid, k))
-      const deg = degreeOf(nid)
-      const kn: KNode = {
-        id: nid,
-        noteId: nid,
-        label: note.fm.title,
-        ontology: deriveOntologyType(note),
-        provenance: deriveProvenance(note),
-        spine: false,
-        spineIndex: -1,
-        pos,
-        r: 0.42 + Math.min(0.34, Math.sqrt(deg) * 0.09),
-        summary: firstParagraph(note.body),
-        degree: deg,
-      }
-      nodes.push(kn); byId.set(kn.id, kn)
-      // spine → neighbour edge (real link, so confirmed)
-      edges.push({ a: s.key, b: nid, provenance: 'confirmed', spine: false })
-    })
-  })
-
-  // real links BETWEEN selected neighbours (cross-links make it feel alive)
-  for (const e of graph.edges) {
-    if (!byId.has(e.source) || !byId.has(e.target)) continue
-    if (byId.get(e.source)!.spine || byId.get(e.target)!.spine) continue
-    edges.push({ a: e.source, b: e.target, provenance: 'confirmed', spine: false })
+  const seen = new Set<string>()
+  const pushEdge = (a: string, b: string, provenance: EdgeProvenance) => {
+    const na = byId.get(a), nb = byId.get(b)
+    if (!na || !nb) return
+    const key = a < b ? a + '|' + b : b + '|' + a
+    if (seen.has(key)) return
+    seen.add(key)
+    const callosal = na.hemisphere !== 'mid' && nb.hemisphere !== 'mid' && na.hemisphere !== nb.hemisphere
+    edges.push({ a, b, provenance, spine: false, callosal })
   }
-  // suggested links among selected nodes (dotted)
-  for (const e of suggested) {
-    if (!byId.has(e.source) || !byId.has(e.target)) continue
-    edges.push({ a: e.source, b: e.target, provenance: 'suggested', spine: false })
+  for (const e of graph.edges) pushEdge(e.source, e.target, 'confirmed')
+  for (const e of suggested) pushEdge(e.source, e.target, 'suggested')
+
+  // hero-path edges (the canonical spine sequence) — always present + flagged
+  for (let i = 0; i < SPINE.length - 1; i++) {
+    const a = SPINE[i].anchor, b = SPINE[i + 1].anchor
+    if (!byId.get(a) || !byId.get(b)) continue
+    const na = byId.get(a)!, nb = byId.get(b)!
+    edges.push({ a, b, provenance: 'confirmed', spine: true, callosal: na.hemisphere !== 'mid' && nb.hemisphere !== 'mid' && na.hemisphere !== nb.hemisphere })
   }
 
   saveLayout(layout)
-  return { nodes, edges, byId, missing }
+  return { nodes, edges, byId, index, missing, counts }
 }
