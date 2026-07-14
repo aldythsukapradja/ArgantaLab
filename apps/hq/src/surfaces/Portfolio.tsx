@@ -39,7 +39,7 @@ const APP_ORDER = ['arganta', 'kinetik', 'lashira', 'hq', 'landing'] as const
 export type ProductId = typeof APP_ORDER[number]
 type Health = 'good' | 'watch' | 'quiet'
 type PreviewMode = 'desktop' | 'mobile'
-type InspectorView = 'overview' | PreviewMode
+export type InspectorView = 'overview' | PreviewMode
 
 const PRODUCT_PREVIEWS: Record<ProductId, string> = {
   arganta: 'https://lab.arganta.app/',
@@ -616,8 +616,9 @@ function LiveProductPreview({ product, mode }: { product: ProductCardModel; mode
   )
 }
 
-export function ProductDetail({ product, pulse, days, onClose }: { product: ProductCardModel; pulse: Pulse; days: number; onClose: () => void }) {
-  const [view, setView] = useState<InspectorView>('overview')
+export function ProductDetail({ product, pulse, days, onClose, view: viewProp }: { product: ProductCardModel; pulse: Pulse; days: number; onClose: () => void; view?: InspectorView }) {
+  const [internalView, setView] = useState<InspectorView>('overview')
+  const view = viewProp ?? internalView // the Director can drive the tab during the cinematic
   const viewPanelRef = useRef<HTMLDivElement>(null)
   const overviewLayoutRef = useRef<HTMLDivElement>(null)
   const { eng, r, pw, au, geo } = pulse

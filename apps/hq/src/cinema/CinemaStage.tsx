@@ -1,25 +1,20 @@
-// CinemaStage — WS1 · E1 P1+P2. The full cinematic mounted OVER the real CEO Orb
-// (Landing). The Director (useCinema) runs the 46-scene narrative on the audio
-// clock; the reactor core is the centre, driven per scene through CoreSlot
-// (renderer 'ws2' → WS2's real R3F reactor). Narration karaoke + transport ride
-// on top. Normal cockpit is untouched — this only mounts while playing.
+// CinemaStage — the in-place cinematic overlay for the CEO Orb. It does NOT
+// cover the cockpit: the real reactor + instruments stay on screen and
+// choreograph. This layer only paints the narration, transport and exit, and
+// is otherwise pointer-transparent. Landing owns the Director (useCinema) and
+// drives the reactor + instruments from its SceneState; this is presentational.
 import { useEffect } from 'react'
 import { X, Play, Pause, SkipBack, SkipForward, RotateCcw } from 'lucide-react'
-import { useCinema } from './director'
+import type { CinemaApi } from './director'
 import { ACTS } from './scenario'
-import { CoreSlot } from './slots/CoreSlot'
 import { KaraokeLine } from '../lib/karaoke/KaraokeLine'
 import { useCinemaStore, mergeScene } from './store'
 import './cinema-stage.css'
 
-export function CinemaStage({ onExit }: { onExit: () => void }) {
-  const c = useCinema()
+export function CinemaStage({ cinema: c, onExit }: { cinema: CinemaApi; onExit: () => void }) {
   const { overrides } = useCinemaStore()
   const scene = mergeScene(c.scene, overrides[c.scene.id])
   const act = ACTS[c.scene.act]
-
-  // Entering is a user gesture (the "Play cinematic" click) — start the film.
-  useEffect(() => { c.startAuto() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -34,14 +29,10 @@ export function CinemaStage({ onExit }: { onExit: () => void }) {
   }, [c, onExit])
 
   return (
-    <div className="cine" data-act={c.scene.act} style={{ ['--act-accent' as string]: act.accent }}>
+    <div className="cine-layer" style={{ ['--act-accent' as string]: act.accent }}>
       <div className="cine-top">
         <span className="cine-kicker">ACT {act.roman} · {act.title}</span>
         <button className="cine-exit" onClick={onExit} title="Exit cinematic (Esc)"><X size={16} /> Exit</button>
-      </div>
-
-      <div className="cine-reactor">
-        <CoreSlot state={c.state.core} product={c.state.product} progress={c.progress} reducedMotion={c.state.mode === 'paused'} />
       </div>
 
       <div className="cine-narr">
@@ -53,22 +44,15 @@ export function CinemaStage({ onExit }: { onExit: () => void }) {
       </div>
 
       <footer className="cine-transport">
+        <div className="cine-prog"><i style={{ width: `${(((c.index + c.progress) / c.total) * 100).toFixed(1)}%` }} /></div>
         <div className="cine-ctrl">
-          <button onClick={c.prev} title="Previous (←)"><SkipBack size={17} /></button>
-          <button className="cine-play" onClick={c.toggle} title="Play / Pause (Space)">{c.playing ? <Pause size={19} /> : <Play size={19} />}</button>
-          <button onClick={c.next} title="Next (→)"><SkipForward size={17} /></button>
-          <button onClick={c.replay} title="Replay"><RotateCcw size={15} /></button>
+          <button onClick={c.prev} title="Previous (←)"><SkipBack size={15} /></button>
+          <button className="cine-play" onClick={c.toggle} title="Play / Pause (Space)">{c.playing ? <Pause size={16} /> : <Play size={16} />}</button>
+          <button onClick={c.next} title="Next (→)"><SkipForward size={15} /></button>
+          <button onClick={c.replay} title="Replay"><RotateCcw size={13} /></button>
+          <span className="cine-count">{String(c.index + 1).padStart(2, '0')}/{c.total}</span>
         </div>
-        <div className="cine-rail">
-          {ACT_SEGMENTS.map(seg => (
-            <div key={seg.act} className={'cine-seg' + (c.scene.act === seg.act ? ' on' : c.scene.act > seg.act ? ' past' : '')}
-              style={{ ['--seg-accent' as string]: ACTS[seg.act as 1].accent }} title={`Act ${ACTS[seg.act as 1].roman}`} />
-          ))}
-        </div>
-        <span className="cine-count">{String(c.index + 1).padStart(2, '0')} / {c.total}</span>
       </footer>
     </div>
   )
 }
-
-const ACT_SEGMENTS = [1, 2, 3, 4, 5, 6, 7].map(a => ({ act: a }))

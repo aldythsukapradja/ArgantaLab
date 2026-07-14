@@ -10,6 +10,19 @@ export type Act = 1 | 2 | 3 | 4 | 5 | 6 | 7
 export type Mode = 'normal' | 'guided' | 'auto' | 'paused' | 'director'
 export type Voice = 'JM' | 'KF' // only these two voices were recorded
 
+// ── Landing instrument choreography (E0/B1) ───────────────────────────────
+// The six live cockpit instruments the cinematic can spotlight.
+export type InstrumentId = 'reach' | 'engaged' | 'valuation' | 'products' | 'access' | 'rhythm'
+export const INSTRUMENTS: readonly InstrumentId[] = ['reach', 'engaged', 'valuation', 'products', 'access', 'rhythm']
+
+// The animation vocabulary a scene can invoke on an instrument. `recede` is the
+// implicit default for any instrument not named by a direction while playing.
+export type StageEffect = 'recede' | 'focus' | 'glow' | 'trace' | 'pulse' | 'enlarge'
+export const STAGE_EFFECTS: readonly StageEffect[] = ['recede', 'focus', 'glow', 'trace', 'pulse', 'enlarge']
+
+/** One stage direction: apply `effect` to `target` (or every instrument on 'all'). */
+export interface StageDirection { target: InstrumentId | 'all' | 'none'; effect: StageEffect }
+
 // ── CoreSlot (WS2 reactor) ────────────────────────────────────────────────
 export type CoreState =
   | 'offline' | 'booting' | 'idle' | 'listening'
@@ -54,6 +67,7 @@ export interface SceneState {
   product?: ProductId
   core: CoreState
   nodes: NodesState
-  focusInstrument?: string // Landing instrument id, or 'all' / 'none'
+  focusInstrument?: string // Landing instrument id, or 'all' / 'none' (legacy single-focus)
+  stage: StageDirection[] // per-instrument choreography for this beat
   progress: number
 }

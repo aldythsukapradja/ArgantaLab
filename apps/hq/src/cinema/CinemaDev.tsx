@@ -14,6 +14,7 @@ import { NodesSlot } from './slots/NodesSlot'
 import { KaraokeLine } from '../lib/karaoke/KaraokeLine'
 import { RENDERERS } from './registry'
 import { useCinemaStore, mergeScene } from './store'
+import { INSTRUMENTS, STAGE_EFFECTS, type InstrumentId, type StageEffect, type StageDirection } from './contract'
 import { speakBrowser, TTS_TIERS, type TtsTier, type SpeakHandle } from '../lib/tts/tts'
 import { Volume2, Square } from 'lucide-react'
 import './cinema.css'
@@ -27,6 +28,15 @@ const CORE_TEXT: Record<string, string> = {
 }
 const PRODUCT_NAME: Record<string, string> = {
   arganta: 'ArgantaLab', kinetik: 'KinetikCircle', lashira: 'LashiraBloom', landing: 'Landing', hq: 'Circle HQ',
+}
+const INSTR_LABEL: Record<InstrumentId, string> = {
+  reach: 'World Reach', engaged: 'Weekly Engaged', valuation: 'Valuation',
+  products: 'Five Products', access: 'Access & Attention', rhythm: 'Visit Rhythm',
+}
+function resolveStageMap(dirs: StageDirection[]): Record<InstrumentId, StageEffect> {
+  const m = Object.fromEntries(INSTRUMENTS.map(i => [i, 'recede'])) as Record<InstrumentId, StageEffect>
+  for (const d of dirs) { if (d.target === 'all') INSTRUMENTS.forEach(i => { m[i] = d.effect }); else if (d.target !== 'none') m[d.target] = d.effect }
+  return m
 }
 
 export function CinemaDev() {
@@ -98,6 +108,14 @@ export function CinemaDev() {
   const editedCount = Object.keys(overrides).length
   const audioReplaced = !!overrides[base.id]?.audioSrc
   const textChanged = !!(overrides[base.id]?.narration || overrides[base.id]?.idea)
+
+  // Stage · instrument choreography for this scene (override or derived default).
+  const stageMap = resolveStageMap(overrides[base.id]?.stage ?? c.state.stage)
+  const stageAuthored = !!overrides[base.id]?.stage
+  const setInstrumentFx = (id: InstrumentId, effect: StageEffect) => {
+    const next = { ...stageMap, [id]: effect }
+    editScene(base.id, { stage: INSTRUMENTS.filter(i => next[i] !== 'recede').map(i => ({ target: i, effect: next[i] })) })
+  }
 
   return (
     <div className="cin" style={{ ['--act-accent' as string]: act.accent }}>
@@ -227,6 +245,23 @@ export function CinemaDev() {
                 </div>
               </div>
               {textChanged && !audioReplaced && <div className="cin-warn">Text edited — the clip still plays the original recording. Use Speak to preview, Replace to bake a new clip, or Re-record text for the TTS pipeline.</div>}
+            </div>
+
+            <div className="cin-field">
+              <span>Stage · instrument choreography {stageAuthored && <em>edited</em>}
+                {stageAuthored && <button className="cin-stage-auto" onClick={() => useCinemaStore.getState().clearField(base.id, 'stage')}>reset to auto</button>}
+              </span>
+              <div className="cin-stage-grid">
+                {INSTRUMENTS.map(id => (
+                  <div className="cin-stage-row" key={id}>
+                    <b>{INSTR_LABEL[id]}</b>
+                    <select value={stageMap[id]} onChange={e => setInstrumentFx(id, e.target.value as StageEffect)}
+                      data-fx={stageMap[id]}>
+                      {STAGE_EFFECTS.map(fx => <option key={fx} value={fx}>{fx}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="cin-meta-strip">
