@@ -66,6 +66,9 @@ function saveLayout(map: Record<string, [number, number, number]>) {
 }
 
 export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
+  // Guard against a broken/empty vault store (null notes, corrupted snapshot) so
+  // the surface degrades to an empty cortex instead of crashing to a blank.
+  if (!notes || typeof notes !== 'object') notes = {}
   const ix = buildBacklinks(notes)
   const graph = buildGraph(notes, ix)
   const suggested = buildSuggestedEdges(notes, ix)
