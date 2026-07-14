@@ -119,32 +119,34 @@ export function MediaCenter() {
   }
 
   // ---- generate -------------------------------------------------------------
-  async function onGenerate(force = false, override?: string) {
-    const text = (override ?? prompt).trim()
+  async function onGenerate(opts: { force?: boolean; prompt?: string; kind?: Kind; stage?: number } = {}) {
+    const k = opts.kind ?? kind
+    const st = opts.stage ?? stage
+    const text = (opts.prompt ?? prompt).trim()
     if (!text) return
     setBusy(true); setResult(null)
-    const ok = approved || force
+    const ok = approved || !!opts.force
     try {
       let res: any
-      if (REAL.has(kind)) {
-        const spec = kind === 'image' ? { prompt: text, width: 768, height: 768 } : { prompt: text }
-        res = generate({ kind, spec, maturityStage: stage, approved: ok })
+      if (REAL.has(k)) {
+        const spec = k === 'image' ? { prompt: text, width: 768, height: 768 } : { prompt: text }
+        res = generate({ kind: k, spec, maturityStage: st, approved: ok })
         setResult(res)
         if (res.status === 'failed') return
-        if (kind === 'image' && res.status === 'succeeded') {
+        if (k === 'image' && res.status === 'succeeded') {
           if (imgUrl) URL.revokeObjectURL(imgUrl)
           setImgUrl(URL.createObjectURL(new Blob([res.output.bytes], { type: res.output.mime || 'image/png' })))
-        } else if (kind === 'music') {
+        } else if (k === 'music') {
           stopAudio()
           const a = ensureAudio()
           if (a.ctx.state === 'suspended') await a.ctx.resume()
           a.transport.setTheme(localCompose(text || 'calm bright', Object.values(MUSIC_THEMES)[0]))
           a.transport.start(); setPlaying(true)
-        } else if (kind === 'video') {
+        } else if (k === 'video') {
           setVideoUrl(null); startPreview(buildVideoProject(text))
         }
-      } else if (kind === 'analytics') {
-        res = stubGenerate('analytics', stage, ok, 'analytics-engine', 'browser', 0, 'succeeded')
+      } else if (k === 'analytics') {
+        res = stubGenerate('analytics', st, ok, 'analytics-engine', 'browser', 0, 'succeeded')
         if (res.status !== 'failed') {
           const a = analyze(text); setAnalysis(a)
           res.provenance.provider = `analytics · ${a.chart}`
@@ -153,15 +155,15 @@ export function MediaCenter() {
         setResult(res)
       } else {
         // deterministic HTML / brand / scene / campaign engines
-        const provider = 'deterministic-' + kind
-        res = stubGenerate(kind, stage, ok, provider, 'browser', 0, 'succeeded')
+        const provider = 'deterministic-' + k
+        res = stubGenerate(k, st, ok, provider, 'browser', 0, 'succeeded')
         if (res.status !== 'failed') {
           const b = makeBrand(text)
-          if (kind === 'website') setSiteHtml(makeWebsite(text, b))
-          else if (kind === 'deck') setDeckHtml(makeDeck(text, b))
-          else if (kind === 'brand') setBrand(b)
-          else if (kind === 'scene') setBrand(b)
-          else if (kind === 'campaign') {
+          if (k === 'website') setSiteHtml(makeWebsite(text, b))
+          else if (k === 'deck') setDeckHtml(makeDeck(text, b))
+          else if (k === 'brand') setBrand(b)
+          else if (k === 'scene') setBrand(b)
+          else if (k === 'campaign') {
             const img = generate({ kind: 'image', spec: { prompt: text, width: 512, height: 512 }, maturityStage: 0 })
             const url = img.status === 'succeeded' ? URL.createObjectURL(new Blob([img.output.bytes], { type: 'image/png' })) : null
             setCampaign({ brand: b, site: makeWebsite(text, b), deck: makeDeck(text, b), img: url })
@@ -171,9 +173,18 @@ export function MediaCenter() {
         setResult(res)
         if (res.status === 'failed') return
       }
-      const label = kind === 'music' ? 'audio' : kind
-      setHistory(h => [{ label, sub: STAGES[stage]?.label, cost: res.provenance?.cost ?? 0, status: res.status }, ...h].slice(0, 12))
+      const label = k === 'music' ? 'audio' : k
+      setHistory(h => [{ kind: k, prompt: text, stage: st, label, sub: STAGES[st]?.label, cost: res.provenance?.cost ?? 0, status: res.status, time: Date.now() }, ...h].slice(0, 12))
     } finally { setBusy(false) }
+  }
+
+  // Restore a version — deterministic engines reproduce it byte-identically.
+  function onRestore(h: HistoryItem) {
+    const k = (h.kind as Kind) || kind
+    if (k !== kind) setKind(k)
+    if (h.prompt != null) setPrompt(h.prompt)
+    if (h.stage != null) setStage(h.stage)
+    onGenerate({ kind: k, prompt: h.prompt, stage: h.stage })
   }
 
   async function onExportVideo() {
@@ -193,7 +204,22 @@ export function MediaCenter() {
   const seg = SEGMENTS.find(s => s.id === kind)!
   const genVerb = kind === 'music' ? 'audio' : seg.label.toLowerCase()
 
-  const ask = (s: string) => { setPrompt(s); onGenerate(false, s) }
+  const ask = (s: string) => { setPrompt(s); onGenerate({ prompt: s }) }
+
+  // download helpers for the drawer Output section
+  const dlUrl = (name: string, url: string) => { const a = document.createElement('a'); a.href = url; a.download = name; a.click() }
+  const dlText = (name: string, text: string, mime = 'text/html') => dlUrl(name, URL.createObjectURL(new Blob([text], { type: mime })))
+  const brandCss = (b: BrandKit) => `:root{\n  --bg:${b.colors.bg};\n  --mid:${b.colors.mid};\n  --accent:${b.colors.accent};\n  --font-head:${b.fonts.head};\n  --font-body:${b.fonts.body};\n}`
+
+  const outputActions = (
+    <>
+      {kind === 'image' && imgUrl && <button className="ghost" onClick={() => dlUrl('media.png', imgUrl)}>⬇ PNG</button>}
+      {kind === 'website' && siteHtml && <button className="ghost" onClick={() => dlText('landing.html', siteHtml)}>⬇ HTML</button>}
+      {kind === 'deck' && deckHtml && <button className="ghost" onClick={() => dlText('deck.html', deckHtml)}>⬇ HTML</button>}
+      {kind === 'brand' && brand && <button className="ghost" onClick={() => dlText('brand.css', brandCss(brand), 'text/css')}>⬇ CSS</button>}
+      {kind === 'video' && videoUrl && <button className="ghost" onClick={() => dlUrl('media.webm', videoUrl)}>⬇ Video</button>}
+    </>
+  )
 
   const controlsExtra = (
     <>
@@ -221,8 +247,10 @@ export function MediaCenter() {
       onGenerate={() => onGenerate()}
       busy={busy}
       result={result}
-      onApprove={() => { setApproved(true); onGenerate(true) }}
+      onApprove={() => { setApproved(true); onGenerate({ force: true }) }}
       history={history}
+      onRestore={onRestore}
+      outputActions={outputActions}
       controlsExtra={controlsExtra}
     >
       {kind === 'image' ? (
