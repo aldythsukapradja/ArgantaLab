@@ -44,6 +44,12 @@ const DEFAULT_PROMPT: Partial<Record<Kind, string>> = {
   analytics: 'ARR as we scale families',
 }
 
+const PLACEHOLDER: Record<Kind, string> = {
+  image: 'Describe an image…', music: 'Describe the music…', video: 'Paste a script or line…',
+  website: 'Describe the site you want…', brand: 'Describe the brand…', deck: 'Outline your deck…',
+  scene: 'Describe a 3D scene…', campaign: 'Describe the campaign…', analytics: 'Ask about your data…',
+}
+
 export function MediaCenter() {
   const [kind, setKind] = useState<Kind>('image')
   const [stage, setStage] = useState<number>(MATURITY.DETERMINISTIC)
@@ -113,13 +119,15 @@ export function MediaCenter() {
   }
 
   // ---- generate -------------------------------------------------------------
-  async function onGenerate(force = false) {
+  async function onGenerate(force = false, override?: string) {
+    const text = (override ?? prompt).trim()
+    if (!text) return
     setBusy(true); setResult(null)
     const ok = approved || force
     try {
       let res: any
       if (REAL.has(kind)) {
-        const spec = kind === 'image' ? { prompt, width: 768, height: 768 } : { prompt }
+        const spec = kind === 'image' ? { prompt: text, width: 768, height: 768 } : { prompt: text }
         res = generate({ kind, spec, maturityStage: stage, approved: ok })
         setResult(res)
         if (res.status === 'failed') return
@@ -130,15 +138,15 @@ export function MediaCenter() {
           stopAudio()
           const a = ensureAudio()
           if (a.ctx.state === 'suspended') await a.ctx.resume()
-          a.transport.setTheme(localCompose(prompt || 'calm bright', Object.values(MUSIC_THEMES)[0]))
+          a.transport.setTheme(localCompose(text || 'calm bright', Object.values(MUSIC_THEMES)[0]))
           a.transport.start(); setPlaying(true)
         } else if (kind === 'video') {
-          setVideoUrl(null); startPreview(buildVideoProject(prompt))
+          setVideoUrl(null); startPreview(buildVideoProject(text))
         }
       } else if (kind === 'analytics') {
         res = stubGenerate('analytics', stage, ok, 'analytics-engine', 'browser', 0, 'succeeded')
         if (res.status !== 'failed') {
-          const a = analyze(prompt); setAnalysis(a)
+          const a = analyze(text); setAnalysis(a)
           res.provenance.provider = `analytics · ${a.chart}`
           res.descriptor = { engine: a.source, kind: 'analytics' }
         }
@@ -148,15 +156,15 @@ export function MediaCenter() {
         const provider = 'deterministic-' + kind
         res = stubGenerate(kind, stage, ok, provider, 'browser', 0, 'succeeded')
         if (res.status !== 'failed') {
-          const b = makeBrand(prompt)
-          if (kind === 'website') setSiteHtml(makeWebsite(prompt, b))
-          else if (kind === 'deck') setDeckHtml(makeDeck(prompt, b))
+          const b = makeBrand(text)
+          if (kind === 'website') setSiteHtml(makeWebsite(text, b))
+          else if (kind === 'deck') setDeckHtml(makeDeck(text, b))
           else if (kind === 'brand') setBrand(b)
           else if (kind === 'scene') setBrand(b)
           else if (kind === 'campaign') {
-            const img = generate({ kind: 'image', spec: { prompt, width: 512, height: 512 }, maturityStage: 0 })
+            const img = generate({ kind: 'image', spec: { prompt: text, width: 512, height: 512 }, maturityStage: 0 })
             const url = img.status === 'succeeded' ? URL.createObjectURL(new Blob([img.output.bytes], { type: 'image/png' })) : null
-            setCampaign({ brand: b, site: makeWebsite(prompt, b), deck: makeDeck(prompt, b), img: url })
+            setCampaign({ brand: b, site: makeWebsite(text, b), deck: makeDeck(text, b), img: url })
           }
           res.provenance.seed = b.seed
         }
@@ -185,16 +193,15 @@ export function MediaCenter() {
   const seg = SEGMENTS.find(s => s.id === kind)!
   const genVerb = kind === 'music' ? 'audio' : seg.label.toLowerCase()
 
+  const ask = (s: string) => { setPrompt(s); onGenerate(false, s) }
+
   const controlsExtra = (
     <>
       {kind === 'music' && playing && <button className="ghost" onClick={stopAudio}>■ Stop</button>}
       {kind === 'video' && projectRef.current && (
         exportPct == null
-          ? <button className="ghost" onClick={onExportVideo}>⬇ Render real video file</button>
+          ? <button className="ghost" onClick={onExportVideo}>⬇ Export file</button>
           : <div className="prog"><i style={{ width: `${Math.round(exportPct * 100)}%` }} />{Math.round(exportPct * 100)}%</div>
-      )}
-      {kind === 'analytics' && (
-        <div className="samples">{SAMPLES.map(s => <button key={s} className="samp" onClick={() => setPrompt(s)}>{s}</button>)}</div>
       )}
     </>
   )
@@ -209,8 +216,8 @@ export function MediaCenter() {
       onStage={(s) => { setStage(s); setApproved(false); setResult(null) }}
       prompt={prompt}
       onPrompt={setPrompt}
-      promptLabel={kind === 'analytics' ? 'Ask a question' : REAL.has(kind) ? 'Prompt / spec' : 'Brief'}
-      generateLabel={kind === 'analytics' ? 'Analyze' : `Generate ${genVerb}`}
+      promptPlaceholder={PLACEHOLDER[kind]}
+      generateLabel={kind === 'analytics' ? 'Analyze' : `Make ${genVerb}`}
       onGenerate={() => onGenerate()}
       busy={busy}
       result={result}
@@ -241,7 +248,12 @@ export function MediaCenter() {
       ) : kind === 'campaign' ? (
         <CampaignMatrix c={campaign} />
       ) : (
-        analysis ? <Suspense fallback={<div className="empty">Rendering chart…</div>}><AnalyticsChart a={analysis} /></Suspense> : <div className="empty">Ask a question — I'll pick the right chart</div>
+        analysis ? <Suspense fallback={<div className="empty">Rendering chart…</div>}><AnalyticsChart a={analysis} /></Suspense> : (
+          <div className="ask-empty">
+            <p>Ask about your data — I'll pick the right chart.</p>
+            <div className="ask-chips">{SAMPLES.map(s => <button key={s} className="samp" onClick={() => ask(s)}>{s}</button>)}</div>
+          </div>
+        )
       )}
     </StudioShell>
   )

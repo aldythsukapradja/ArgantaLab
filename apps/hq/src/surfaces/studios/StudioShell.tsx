@@ -1,27 +1,44 @@
 // StudioShell — the shared non-scrollable cockpit for every Studio surface.
-// Owns the chrome (title · optional segments · maturity chips · prompt +
-// Generate · provenance panel · history filmstrip · premium approval gate) and
-// leaves the STAGE preview + any studio-specific controls to the caller.
 //
-// This is the Marketing Fabric principle in UI form: one shell, many outputs.
+// Redesigned for the simplest possible loop, learned from v0 / Suno / Julius:
+//   type a prompt → get the result instantly. That's it.
+//
+// The result DOMINATES the page. One prompt bar at the bottom (Enter to run).
+// The maturity + provenance spine is preserved but recedes into two subtle
+// affordances: a stage pill in the prompt bar, and a provenance chip on the
+// result (click to expand full lineage). No side panels, no history clutter.
 
+import { useState, Component } from 'react'
 import { MATURITY } from '@arganta/media-core'
 import './studio.css'
 import type { ReactNode } from 'react'
+
+// A render error in one segment (e.g. a lost WebGL context in the 3D Scene, or a
+// chart glitch) must never white-screen the whole hub. This contains it and
+// resets when you switch segments (the `key` prop remounts it).
+class StageBoundary extends Component<{ children: ReactNode }, { err: boolean }> {
+  state = { err: false }
+  static getDerivedStateFromError() { return { err: true } }
+  componentDidCatch() {}
+  render() {
+    return this.state.err
+      ? <div className="empty err">This preview hit an error<br /><small>(often a WebGL/context limit) — switch segment or regenerate.</small></div>
+      : this.props.children
+  }
+}
 
 export interface Segment { id: string; label: string; hint?: string }
 export interface HistoryItem { label: string; sub?: string; cost?: number; status?: string }
 
 export const STAGES = [
-  { s: MATURITY.DETERMINISTIC, label: 'Deterministic', note: 'free · reproducible' },
-  { s: MATURITY.FREE_API, label: 'Free API', note: 'free' },
-  { s: MATURITY.ECONOMICAL, label: 'Economical', note: 'low $' },
-  { s: MATURITY.PREMIUM, label: 'Premium', note: 'approval' },
+  { s: MATURITY.DETERMINISTIC, label: 'Free', note: 'deterministic · reproducible' },
+  { s: MATURITY.FREE_API, label: 'Free API', note: 'free hosted' },
+  { s: MATURITY.ECONOMICAL, label: 'Economical', note: 'low cost' },
+  { s: MATURITY.PREMIUM, label: 'Premium', note: 'needs approval' },
 ]
 
 interface Props {
   title: string
-  tagline?: string
   segments?: Segment[]
   segment?: string
   onSegment?: (id: string) => void
@@ -38,89 +55,80 @@ interface Props {
   onApprove?: () => void
   history?: HistoryItem[]
   controlsExtra?: ReactNode
-  children?: ReactNode // the stage preview
+  children?: ReactNode // the result
 }
 
 export function StudioShell(p: Props) {
+  const [showProv, setShowProv] = useState(false)
   const gated = p.result?.status === 'failed' && p.result?.error?.code === 'approval_required'
+  const errored = p.result?.status === 'failed' && !gated
   const prov = p.result?.provenance
+  const placeholder = p.promptPlaceholder || `${p.promptLabel || 'Type a prompt'}…`
+
+  const submit = (e?: React.FormEvent) => { e?.preventDefault(); if (!p.busy) p.onGenerate() }
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() }
+  }
 
   return (
     <div className="studio">
-      {/* top bar */}
-      <header className="studio-top">
-        <div className="studio-title"><span className="studio-dot" /> {p.title}
-          {p.tagline && <small>· {p.tagline}</small>}
-        </div>
+      {/* thin top bar: brand + segment pills */}
+      <header className="studio-bar">
+        <span className="studio-brand"><span className="studio-dot" />{p.title}</span>
         {p.segments && (
-          <div className="seg">
+          <nav className="seg-tabs">
             {p.segments.map(s => (
-              <button key={s.id} className={'seg-btn' + (p.segment === s.id ? ' on' : '')} onClick={() => p.onSegment?.(s.id)} title={s.hint}>{s.label}</button>
+              <button key={s.id} className={'seg-tab' + (p.segment === s.id ? ' on' : '')} onClick={() => p.onSegment?.(s.id)} title={s.hint}>{s.label}</button>
             ))}
-          </div>
+          </nav>
         )}
-        <div className="stages">
-          {STAGES.map(st => (
-            <button key={st.s} className={'stage-chip s' + st.s + (p.stage === st.s ? ' on' : '')} onClick={() => p.onStage(st.s)}>
-              <b>{st.label}</b><i>{st.note}</i>
-            </button>
-          ))}
-        </div>
       </header>
 
-      {/* work band */}
-      <div className="studio-band">
-        <aside className="panel controls">
-          <label className="fld">
-            <span>{p.promptLabel || 'Prompt / spec'}</span>
-            <textarea value={p.prompt} onChange={e => p.onPrompt(e.target.value)} rows={5} placeholder={p.promptPlaceholder || 'Describe what to generate…'} />
-          </label>
-          <button className="gen" onClick={p.onGenerate} disabled={p.busy}>{p.busy ? 'Generating…' : (p.generateLabel || 'Generate')}</button>
-          {p.controlsExtra}
-        </aside>
-
-        <main className="panel stage">
-          {gated ? (
-            <div className="gate">
-              <div className="lock">🔒</div>
-              <h3>Premium is approval-gated</h3>
-              <p>Stage&nbsp;3 requires explicit approval before any paid provider runs.</p>
-              <button className="gen" onClick={() => p.onApprove?.()}>Request premium approval</button>
-            </div>
-          ) : p.children}
-        </main>
-
-        <aside className="panel prov">
-          <h4>Provenance</h4>
-          {p.result ? (
-            p.result.status === 'failed' && !gated ? (
-              <div className="prov-err">✗ {p.result.error.code}<br /><small>{p.result.error.message}</small></div>
-            ) : (
-              <dl>
-                <dt>Status</dt><dd className={'st-' + p.result.status}>{p.result.status}</dd>
-                <dt>Provider</dt><dd>{prov?.provider}</dd>
-                <dt>Runtime</dt><dd>{p.result.runtime}</dd>
-                <dt>Stage</dt><dd>{prov?.maturityLabel} ({prov?.maturityStage})</dd>
-                {p.result.downgraded && <><dt>Routed</dt><dd className="warn">↓ cheapest capable</dd></>}
-                <dt>Cost</dt><dd>{prov?.estimated ? '~' : ''}${prov?.cost ?? 0}</dd>
-                {prov?.seed != null && <><dt>Seed</dt><dd>{prov.seed}</dd></>}
-                {prov?.checksum && <><dt>Checksum</dt><dd className="mono">{prov.checksum.slice(0, 16)}</dd></>}
-                {p.result.descriptor && <><dt>Fulfil via</dt><dd className="mono">{p.result.descriptor.engine || p.result.descriptor.tool}</dd></>}
-              </dl>
-            )
-          ) : <div className="empty">Generate to see lineage</div>}
-        </aside>
-      </div>
-
-      {/* history filmstrip — the only internally-scrolling zone */}
-      <footer className="studio-strip">
-        {(!p.history || p.history.length === 0) && <span className="strip-empty">Recent generations appear here</span>}
-        {p.history?.map((h, i) => (
-          <div key={i} className={'chip st-' + (h.status || 'deferred')}>
-            <b>{h.label}</b>{h.sub && <span>{h.sub}</span>}<i>${h.cost ?? 0}</i>
+      {/* the result dominates */}
+      <main className="studio-stage">
+        {gated ? (
+          <div className="gate">
+            <div className="lock">🔒</div>
+            <h3>Premium — one tap to approve</h3>
+            <p>This stage uses a paid provider. Approve to run it.</p>
+            <button className="gen" onClick={() => p.onApprove?.()}>Approve &amp; generate</button>
           </div>
-        ))}
-      </footer>
+        ) : errored ? (
+          <div className="empty err">✗ {p.result.error.code}<br /><small>{p.result.error.message}</small></div>
+        ) : <StageBoundary key={p.segment}>{p.children}</StageBoundary>}
+
+        {/* subtle provenance chip on the result */}
+        {prov && !gated && !errored && (
+          <div className={'prov-chip' + (showProv ? ' open' : '')} onClick={() => setShowProv(v => !v)}>
+            <span className="pc-dot" data-s={prov.maturityStage} />
+            {prov.provider} · {prov.estimated ? '~' : ''}${prov.cost ?? 0}
+            {showProv && (
+              <div className="prov-pop" onClick={e => e.stopPropagation()}>
+                <b>Provenance</b>
+                <div><i>status</i><span className={'st-' + p.result.status}>{p.result.status}</span></div>
+                <div><i>runtime</i><span>{p.result.runtime}</span></div>
+                <div><i>stage</i><span>{prov.maturityLabel}</span></div>
+                {p.result.downgraded && <div><i>routed</i><span className="warn">↓ cheapest</span></div>}
+                {prov.seed != null && <div><i>seed</i><span>{prov.seed}</span></div>}
+                {prov.checksum && <div><i>checksum</i><span className="mono">{prov.checksum.slice(0, 16)}</span></div>}
+                {p.result.descriptor && <div><i>source</i><span className="mono">{p.result.descriptor.engine || p.result.descriptor.tool}</span></div>}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* one prompt bar — type, Enter, done */}
+      <form className="prompt-bar" onSubmit={submit}>
+        <button type="button" className={'stage-pill s' + p.stage} title={STAGES[p.stage]?.note}
+          onClick={() => p.onStage((p.stage + 1) % 4)}>
+          <span className="sp-dot" />{STAGES[p.stage]?.label}
+        </button>
+        <textarea className="prompt-in" value={p.prompt} rows={1} placeholder={placeholder}
+          onChange={e => p.onPrompt(e.target.value)} onKeyDown={onKey} />
+        {p.controlsExtra && <div className="extra">{p.controlsExtra}</div>}
+        <button type="submit" className="run" disabled={p.busy}>{p.busy ? '…' : (p.generateLabel || 'Generate')}</button>
+      </form>
     </div>
   )
 }
@@ -132,8 +140,7 @@ export function StubStage({ icon, title, body, result }: { icon: string; title: 
     <div className="stub-card">
       <div className="big">{icon}</div>
       <h3>{title}</h3>
-      <p>{done ? 'Routed through the maturity engine — real generator not wired yet. See provenance →' : body}</p>
-      <span className="stub-tag">{done ? `${result.provenance?.maturityLabel} · $${result.provenance?.cost ?? 0}` : 'shell ready · engine stubbed'}</span>
+      <p>{done ? 'Routed through the maturity engine — real generator not wired yet.' : body}</p>
     </div>
   )
 }
