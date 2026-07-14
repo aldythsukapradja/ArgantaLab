@@ -25,6 +25,16 @@ test('chatJSON extracts JSON even when the model wraps it in prose/fences', () =
   assert.equal(extractJSON('not json at all'), null);
 });
 
+test('edgeProxy: when the gateway falls back to a different cost tier, the ACTUAL tier is reported, not the requested one', async () => {
+  // WS-3: the gateway may fall back from Sponsored(1) to Economy(2) on a 429.
+  // The adapter must surface that truthfully, not silently keep claiming tier 1.
+  const ai = createLLM({ edgeProxy: { invoke: async () => ({ data: { text: 'hi', provider: 'deepseek', model: 'deepseek-chat', costClass: 2, costUsd: 0.0002 }, error: null }) } });
+  const out = await ai.chat({ task: 'brief', messages: [{ role: 'user', content: 'x' }] }); // 'brief' legacy-routes to tier 1
+  assert.equal(out.provider, 'edgeProxy');
+  assert.equal(out.tier, 2); // actual, not the requested tier-1
+  assert.equal(out.model, 'deepseek-chat');
+});
+
 test('existing task-based callers are unaffected (no provider/model passed)', async () => {
   const ai = createLLM({});
   const out = await ai.chatJSON({ task: 'storyboard', messages: [{ role: 'user', content: 'hi' }] });

@@ -75,7 +75,10 @@ function edgeProxyProvider({ invoke }) {
       const { data, error } = await invoke({ messages, json, schema, tools, temperature, seed, model });
       if (error) throw new Error(error.message || String(error));
       if (data?.error) throw new Error(data.error);
-      const out = { text: data?.text || '', toolCalls: data?.toolCalls || [], model: data?.model || model || null, actualProvider: data?.provider || null, costUsd: data?.costUsd, inputTokens: data?.inputTokens, outputTokens: data?.outputTokens, latencyMs: data?.latencyMs };
+      // data.model is what we requested (gateway echoes it); data.actualModel is
+      // what it truly sent upstream if the requested one wasn't available —
+      // prefer the latter for truthful provenance.
+      const out = { text: data?.text || '', toolCalls: data?.toolCalls || [], model: data?.actualModel || data?.model || model || null, actualProvider: data?.provider || null, actualCostClass: data?.costClass, costUsd: data?.costUsd, inputTokens: data?.inputTokens, outputTokens: data?.outputTokens, latencyMs: data?.latencyMs };
       if (onToken && out.text) chunkEmit(out.text, onToken); // proxy is non-streaming; simulate
       return out;
     },
@@ -174,9 +177,11 @@ export function createLLM(config = {}) {
     const requestedModel = args.model || r.model;
     try {
       const out = await provider.run({ ...args, model: requestedModel });
-      // truthful provenance: prefer what the provider says it ACTUALLY used
-      // over what we merely requested — never collapse to a generic label.
-      return { ...out, provider: provider.id, tier: r.tier, model: out.model || requestedModel || null };
+      // truthful provenance: prefer what the provider says it ACTUALLY used —
+      // e.g. the gateway may have fallen back to a different cost tier on a
+      // 429/5xx — over what we merely requested. Never collapse to a generic
+      // label or silently keep claiming the originally-requested tier.
+      return { ...out, provider: provider.id, tier: out.actualCostClass ?? r.tier, model: out.model || requestedModel || null };
     } catch (e) {
       if (provider.id !== 'mock') { // degrade to mock rather than throw
         const out = await providers.mock.run(args);

@@ -15,7 +15,9 @@ import { SOVEREIGN_MODELS } from './rack.js';
 // entry also carries `gatewayProvider` for the truthful-return contract.
 const NON_SOVEREIGN_CATALOG = [
   // Tier 1 — Sponsored (free quotas)
-  modelSpec({ id: 'gemini-flash-free', name: 'Gemini Flash (free)', provider: 'edgeProxy', apiModel: 'gemini-1.5-flash', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 1000000, priority: 30 }).spec,
+  // apiModel matches the ALREADY-DEPLOYED supabase/functions/llm-proxy default
+  // (gemini-2.0-flash) — do not drift these apart without updating both.
+  modelSpec({ id: 'gemini-flash-free', name: 'Gemini Flash (free)', provider: 'edgeProxy', apiModel: 'gemini-2.0-flash', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 1000000, priority: 30 }).spec,
   modelSpec({ id: 'groq-llama-free', name: 'Groq Llama (free)', provider: 'edgeProxy', apiModel: 'llama-3.3-70b-versatile', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 32 }).spec,
   // Tier 2 — Economy (cheap paid)
   modelSpec({ id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'edgeProxy', apiModel: 'deepseek-chat', costClass: 2, execution: 'external-api', capabilities: { chat: true, json: true, reasoning: true, code: true }, dataClasses: ['public', 'internal'], contextWindow: 64000, pricing: { inputUsdPerMillion: 0.14, outputUsdPerMillion: 0.28 }, priority: 40 }).spec,
