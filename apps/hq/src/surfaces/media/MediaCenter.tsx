@@ -119,7 +119,7 @@ export function MediaCenter() {
   }
 
   // ---- generate -------------------------------------------------------------
-  async function onGenerate(opts: { force?: boolean; prompt?: string; kind?: Kind; stage?: number } = {}) {
+  async function onGenerate(opts: { force?: boolean; prompt?: string; kind?: Kind; stage?: number; silent?: boolean } = {}) {
     const k = opts.kind ?? kind
     const st = opts.stage ?? stage
     const text = (opts.prompt ?? prompt).trim()
@@ -173,6 +173,7 @@ export function MediaCenter() {
         setResult(res)
         if (res.status === 'failed') return
       }
+      if (opts.silent) return // restore — don't add a new version
       const label = k === 'music' ? 'audio' : k
       setHistory(h => [{ kind: k, prompt: text, stage: st, label, sub: STAGES[st]?.label, cost: res.provenance?.cost ?? 0, status: res.status, time: Date.now() }, ...h].slice(0, 12))
     } finally { setBusy(false) }
@@ -186,7 +187,7 @@ export function MediaCenter() {
     if (k !== kind) setKind(k)
     if (h.prompt != null) setPrompt(h.prompt)
     if (h.stage != null) setStage(h.stage)
-    onGenerate({ kind: k, prompt: h.prompt, stage: h.stage })
+    onGenerate({ kind: k, prompt: h.prompt, stage: h.stage, silent: true })
   }
 
   async function onExportVideo() {

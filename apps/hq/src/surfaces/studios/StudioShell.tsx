@@ -151,7 +151,8 @@ export function StudioShell(p: Props) {
             <div className="composer-bar">
               <div className="tier-select">
                 <button type="button" className={'stage-pill s' + p.stage} onClick={() => setStageMenu(v => !v)} title="Choose generation tier">
-                  <span className="sp-dot" />{STAGES[p.stage]?.label}<span className="sp-caret">⌄</span>
+                  <span className="sp-dot" />{STAGES[p.stage]?.label}
+                  <svg className="sp-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
                 {stageMenu && (
                   <div className="tier-menu">
