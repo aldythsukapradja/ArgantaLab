@@ -100,7 +100,7 @@ export function buildKnowledgeModel(notes: Record<string, VaultNote>): KModel {
       spine: !!spine,
       spineIndex: spine ? SPINE.findIndex((s) => s.anchor === id) : -1,
       pos,
-      r: spine ? 0.9 : 0.28 + Math.min(0.5, Math.sqrt(deg) * 0.11),
+      r: spine ? 1.05 : 0.38 + Math.min(0.62, Math.sqrt(deg) * 0.13),
       summary: spine ? spine.caption : firstParagraph(note.body),
       degree: deg,
     }

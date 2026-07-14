@@ -3,7 +3,7 @@
 // KNOW · DO, animated by a cognition simulation. Additive + read-only — clicking
 // a neuron opens the real note in the 2D Vault. WebGL-fallback to the 2D graph.
 
-import { Suspense, useEffect, useMemo } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Brain, ExternalLink, X, AlertTriangle, Activity, Play } from 'lucide-react'
 import { useVault } from '../vault/store'
 import { useHQ } from '../shell/store'
@@ -41,25 +41,38 @@ export function KnowledgeSurface() {
 
   const selNode = selected ? model.byId.get(selected) : null
 
-  // R3F measures its parent on mount; a lazy Suspense boundary can read 0×0 for
-  // the first frame. Nudge a resize once mounted so the canvas fills. Timers (not
-  // rAF) so it fires even before the tab is first painted.
+  // Bulletproof sizing: R3F measures its parent once on mount, and a lazy Suspense
+  // boundary can hand it a 0×0 container (canvas freezes at the 300×150 default →
+  // looks blank). Instead we measure the container with a ResizeObserver (fires
+  // regardless of tab visibility) and only mount the Canvas once it has real size.
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
   useEffect(() => {
-    const t1 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 60)
-    const t2 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 300)
-    const onVis = () => window.dispatchEvent(new Event('resize'))
-    document.addEventListener('visibilitychange', onVis)
-    return () => { clearTimeout(t1); clearTimeout(t2); document.removeEventListener('visibilitychange', onVis) }
+    const el = wrapRef.current
+    if (!el) return
+    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight })
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    measure()
+    return () => ro.disconnect()
   }, [])
+  const sized = size.w > 0 && size.h > 0
 
   const openRealNote = (noteId: string) => { useVault.getState().openNote(noteId); go('vault') }
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#04050d', overflow: 'hidden' }}>
+      {/* Force the WebGL canvas to fill via CSS regardless of R3F's (rAF-gated)
+          measurement — guarantees it's never a tiny 300×150 corner ("blank"). */}
+      <style>{`.kg-canvas canvas{width:100%!important;height:100%!important;display:block}`}</style>
       {webgl ? (
-        <Suspense fallback={<Loading />}>
-          <KnowledgeScene model={model} cloud={cloud} />
-        </Suspense>
+        <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
+          {sized && (
+            <Suspense fallback={<Loading />}>
+              <KnowledgeScene model={model} cloud={cloud} width={size.w} height={size.h} />
+            </Suspense>
+          )}
+        </div>
       ) : (
         <div className="vault" style={{ position: 'absolute', inset: 0 }}>
           <div style={banner}>WebGL unavailable — showing the 2D knowledge graph.</div>
