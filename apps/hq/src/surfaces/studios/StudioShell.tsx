@@ -1,12 +1,16 @@
 // StudioShell — the shared non-scrollable cockpit for every Studio surface.
 //
-// UX: type a prompt → get the result instantly. The result dominates; one prompt
-// bar sits at the bottom (Enter to run). A collapsible LEFT DRAWER holds version
-// history + the current output's actions. Inside the prompt bar, a Claude-style
-// PILL opens a popup to pick the tier (Free / Free API / Economical / Premium).
-// The maturity + provenance spine is preserved but stays out of the way.
+// Layout (learned from Claude Code's session sidebar + AI-SDK's PromptInput):
+//   ┌────────┬───────────────────────────────┐
+//   │ drawer │ brand · segment tabs          │
+//   │ search │ COMPOSER (tier ▾ · prompt · ✨)│  ← composer at the TOP
+//   │ versns │───────────────────────────────│
+//   │ output │        RESULT (dominates)     │
+//   └────────┴───────────────────────────────┘
+// Type → Enter/Cmd+Enter → result. Versions are searchable + restorable; the
+// tier picker is a Claude-style popup; the maturity+provenance spine recedes.
 
-import { useState, useEffect, useRef, Component } from 'react'
+import { useState, useEffect, useRef, useMemo, Component } from 'react'
 import { MATURITY } from '@arganta/media-core'
 import './studio.css'
 import type { ReactNode } from 'react'
@@ -23,8 +27,6 @@ export const STAGES = [
 const KIND_ICON: Record<string, string> = { image: '🖼️', music: '🎵', video: '🎬', website: '🌐', brand: '🎨', deck: '🎞️', scene: '🧊', campaign: '🚀', analytics: '📊' }
 const ago = (t?: number) => { if (!t) return ''; const s = (Date.now() - t) / 1000; return s < 60 ? 'now' : s < 3600 ? `${Math.floor(s / 60)}m` : `${Math.floor(s / 3600)}h` }
 
-// A render error in one segment (e.g. a lost WebGL context in the 3D Scene) must
-// never white-screen the hub. Contained here; resets when the `key` changes.
 class StageBoundary extends Component<{ children: ReactNode }, { err: boolean }> {
   state = { err: false }
   static getDerivedStateFromError() { return { err: true } }
@@ -53,6 +55,7 @@ interface Props {
   onApprove?: () => void
   history?: HistoryItem[]
   onRestore?: (h: HistoryItem) => void
+  onDelete?: (h: HistoryItem) => void
   outputActions?: ReactNode
   controlsExtra?: ReactNode
   children?: ReactNode // the result
@@ -62,10 +65,11 @@ export function StudioShell(p: Props) {
   const [showProv, setShowProv] = useState(false)
   const [stageMenu, setStageMenu] = useState(false)
   const [drawer, setDrawer] = useState(true)
-  const barRef = useRef<HTMLFormElement>(null)
+  const [q, setQ] = useState('')
+  const composerRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
-    const close = (e: MouseEvent) => { if (barRef.current && !barRef.current.contains(e.target as Node)) setStageMenu(false) }
+    const close = (e: MouseEvent) => { if (composerRef.current && !composerRef.current.contains(e.target as Node)) setStageMenu(false) }
     if (stageMenu) document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [stageMenu])
@@ -75,24 +79,44 @@ export function StudioShell(p: Props) {
   const prov = p.result?.provenance
   const placeholder = p.promptPlaceholder || 'Type a prompt…'
 
+  const versions = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    const h = p.history || []
+    return s ? h.filter(v => `${v.prompt || ''} ${v.label} ${v.kind || ''}`.toLowerCase().includes(s)) : h
+  }, [p.history, q])
+
   const submit = (e?: React.FormEvent) => { e?.preventDefault(); if (!p.busy) p.onGenerate() }
-  const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() }
+  }
 
   return (
     <div className={'studio' + (drawer ? ' drawer-open' : '')}>
-      {/* left drawer: versions + output */}
+      {/* left drawer: search · versions · output */}
       <aside className="studio-drawer">
         <button className="drawer-toggle" onClick={() => setDrawer(d => !d)} title={drawer ? 'Collapse' : 'Expand'}>{drawer ? '‹' : '›'}</button>
         {drawer && (
           <div className="drawer-body">
-            <div className="drawer-sec">Versions</div>
+            <div className="drawer-search">
+              <span className="ds-ico">⌕</span>
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search versions…" />
+              {q && <button className="ds-clear" onClick={() => setQ('')}>×</button>}
+            </div>
+            <div className="drawer-sec">Versions <span className="sec-count">{versions.length}</span></div>
             <div className="versions">
               {(!p.history || p.history.length === 0) && <div className="drawer-empty">Your generations appear here</div>}
-              {p.history?.map((h, i) => (
-                <button key={i} className={'ver st-' + (h.status || 'deferred')} onClick={() => p.onRestore?.(h)} title="Restore this version">
-                  <span className="ver-ico">{KIND_ICON[h.kind || ''] || '•'}</span>
-                  <span className="ver-main"><b>{h.label}</b><i>{h.sub} · ${h.cost ?? 0} · {ago(h.time)}</i></span>
-                </button>
+              {p.history && p.history.length > 0 && versions.length === 0 && <div className="drawer-empty">No matches for “{q}”</div>}
+              {versions.map((h, i) => (
+                <div key={i} className={'ver st-' + (h.status || 'deferred')}>
+                  <button className="ver-hit" onClick={() => p.onRestore?.(h)} title="Restore this version">
+                    <span className="ver-ico">{KIND_ICON[h.kind || ''] || '•'}</span>
+                    <span className="ver-main">
+                      <b>{h.prompt || h.label}</b>
+                      <i>{h.label} · {h.sub} · ${h.cost ?? 0} · {ago(h.time)}</i>
+                    </span>
+                  </button>
+                  {p.onDelete && <button className="ver-del" title="Remove" onClick={() => p.onDelete?.(h)}>×</button>}
+                </div>
               ))}
             </div>
             {(prov && !gated && !errored) && (
@@ -106,7 +130,7 @@ export function StudioShell(p: Props) {
         )}
       </aside>
 
-      {/* main column: bar · result · prompt */}
+      {/* main column: bar · composer (top) · result */}
       <div className="studio-main">
         <header className="studio-bar">
           <span className="studio-brand"><span className="studio-dot" />{p.title}</span>
@@ -119,6 +143,34 @@ export function StudioShell(p: Props) {
           )}
         </header>
 
+        {/* composer — at the top */}
+        <form className="composer" onSubmit={submit} ref={composerRef}>
+          <div className="tier-select">
+            <button type="button" className={'stage-pill s' + p.stage} onClick={() => setStageMenu(v => !v)} title="Choose generation tier">
+              <span className="sp-dot" />{STAGES[p.stage]?.label}<span className="sp-caret">⌄</span>
+            </button>
+            {stageMenu && (
+              <div className="tier-menu">
+                <div className="tier-menu-h">Generation tier</div>
+                {STAGES.map(st => (
+                  <button key={st.s} type="button" className={'tier-opt s' + st.s + (p.stage === st.s ? ' on' : '')} onClick={() => { p.onStage(st.s); setStageMenu(false) }}>
+                    <span className="sp-dot" />
+                    <span className="tier-main"><b>{st.label}</b><i>{st.note}</i></span>
+                    {p.stage === st.s && <span className="tier-check">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <textarea className="prompt-in" value={p.prompt} rows={1} placeholder={placeholder}
+            onChange={e => p.onPrompt(e.target.value)} onKeyDown={onKey} />
+          {p.controlsExtra && <div className="extra">{p.controlsExtra}</div>}
+          <button type="submit" className="run" disabled={p.busy || !p.prompt.trim()}>
+            <span className="run-spark" aria-hidden>✦</span>{p.busy ? 'Working…' : (p.generateLabel || 'Generate')}
+          </button>
+        </form>
+
+        {/* the result dominates */}
         <main className="studio-stage">
           {gated ? (
             <div className="gate">
@@ -149,31 +201,6 @@ export function StudioShell(p: Props) {
             </div>
           )}
         </main>
-
-        {/* one prompt bar — pill (popup) · input · run */}
-        <form className="prompt-bar" onSubmit={submit} ref={barRef}>
-          <div className="tier-select">
-            <button type="button" className={'stage-pill s' + p.stage} onClick={() => setStageMenu(v => !v)} title="Choose tier">
-              <span className="sp-dot" />{STAGES[p.stage]?.label}<span className="sp-caret">⌄</span>
-            </button>
-            {stageMenu && (
-              <div className="tier-menu">
-                <div className="tier-menu-h">Generation tier</div>
-                {STAGES.map(st => (
-                  <button key={st.s} type="button" className={'tier-opt s' + st.s + (p.stage === st.s ? ' on' : '')} onClick={() => { p.onStage(st.s); setStageMenu(false) }}>
-                    <span className="sp-dot" />
-                    <span className="tier-main"><b>{st.label}</b><i>{st.note}</i></span>
-                    {p.stage === st.s && <span className="tier-check">✓</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <textarea className="prompt-in" value={p.prompt} rows={1} placeholder={placeholder}
-            onChange={e => p.onPrompt(e.target.value)} onKeyDown={onKey} />
-          {p.controlsExtra && <div className="extra">{p.controlsExtra}</div>}
-          <button type="submit" className="run" disabled={p.busy}>{p.busy ? '…' : (p.generateLabel || 'Generate')}</button>
-        </form>
       </div>
     </div>
   )

@@ -178,6 +178,8 @@ export function MediaCenter() {
     } finally { setBusy(false) }
   }
 
+  function onDelete(h: HistoryItem) { setHistory(hs => hs.filter(x => x !== h)) }
+
   // Restore a version — deterministic engines reproduce it byte-identically.
   function onRestore(h: HistoryItem) {
     const k = (h.kind as Kind) || kind
@@ -250,6 +252,7 @@ export function MediaCenter() {
       onApprove={() => { setApproved(true); onGenerate({ force: true }) }}
       history={history}
       onRestore={onRestore}
+      onDelete={onDelete}
       outputActions={outputActions}
       controlsExtra={controlsExtra}
     >
