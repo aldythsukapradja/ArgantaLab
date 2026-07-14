@@ -122,6 +122,17 @@
 .ai-badge { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ok); font-weight: 700; }
 .ai-insight.on p { margin: 0; font-size: 13px; color: var(--tx); line-height: 1.4; }
 
+/* S1/S2 — floating "Ask AI" pill over a website/deck iframe preview */
+.mini-ai-assist {
+  position: absolute; right: 12px; bottom: 12px; z-index: 4;
+  border: 1px solid var(--bd2); background: var(--bg); color: var(--tx2);
+  border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+.mini-ai-assist:hover:not(:disabled) { border-color: var(--acc); color: var(--tx); }
+.mini-ai-assist:disabled { cursor: wait; opacity: .8; }
+.mini-ai-assist.done { border-color: var(--ok); color: var(--ok); background: var(--ok-bg); }
+
 /* ---- composer — one unified box at the TOP (AI-Elements anatomy) --------- */
 .composer { padding: 12px 16px 6px; }
 .composer-box { display: flex; flex-direction: column; gap: 2px; background: var(--bg); border: 1px solid var(--bd); border-radius: var(--r-xl); padding: 8px 8px 8px 6px; box-shadow: var(--shadow-md); transition: border-color .16s var(--ease), box-shadow .16s var(--ease); }

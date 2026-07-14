@@ -13,9 +13,10 @@ import { blankProject, textLayer, drawFrame, recomputeDuration, exportVideo } fr
 import { localCompose } from '../music/composer'
 import { StudioShell, STAGES, type HistoryItem } from '../studios/StudioShell'
 import { stubGenerate } from '../studios/stub'
-import { makeBrand, makeWebsite, makeDeck, type BrandKit } from '../studios/engines'
+import { makeBrand, makeWebsite, makeDeck, type BrandKit, type WebsiteCopy } from '../studios/engines'
 import { analyze, SAMPLES, type Analysis } from '../studios/analytics'
 import { askInsight, type Insight } from '../studios/analytics-intelligence'
+import { askWebsiteCopy, askDeckOutline } from '../studios/content-intelligence'
 import { onModelProgress, logAgentRun } from '../../lib/ai'
 
 const SceneCanvas = lazy(() => import('../studios/SceneCanvas').then(m => ({ default: m.SceneCanvas })))
@@ -62,6 +63,14 @@ export function MediaCenter() {
   const [siteHtml, setSiteHtml] = useState<string | null>(null)
   const [deckHtml, setDeckHtml] = useState<string | null>(null)
   const [brand, setBrand] = useState<BrandKit | null>(null)
+  // S1/S2 — the brand + brief used for the last Website/Deck generation, kept
+  // around so "Ask AI" can regenerate with better copy without re-running Generate.
+  const [websiteCtx, setWebsiteCtx] = useState<{ text: string; brand: BrandKit } | null>(null)
+  const [deckCtx, setDeckCtx] = useState<{ text: string; brand: BrandKit } | null>(null)
+  const [websiteAi, setWebsiteAi] = useState<{ copy: WebsiteCopy; provenance: any } | null>(null)
+  const [deckAi, setDeckAi] = useState<{ scenes: string[]; provenance: any } | null>(null)
+  const [websiteAiState, setWebsiteAiState] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [deckAiState, setDeckAiState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [insight, setInsight] = useState<Insight | null>(null)
   const [insightState, setInsightState] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -182,8 +191,14 @@ export function MediaCenter() {
         res = stubGenerate(k, st, ok, provider, 'browser', 0, 'succeeded')
         if (res.status !== 'failed') {
           const b = makeBrand(text)
-          if (k === 'website') setSiteHtml(makeWebsite(text, b))
-          else if (k === 'deck') setDeckHtml(makeDeck(text, b))
+          if (k === 'website') {
+            setSiteHtml(makeWebsite(text, b)); setWebsiteCtx({ text, brand: b })
+            setWebsiteAi(null); setWebsiteAiState('idle') // new generation → prior AI copy no longer applies
+          }
+          else if (k === 'deck') {
+            setDeckHtml(makeDeck(text, b)); setDeckCtx({ text, brand: b })
+            setDeckAi(null); setDeckAiState('idle')
+          }
           else if (k === 'brand') setBrand(b)
           else if (k === 'scene') setBrand(b)
           else if (k === 'campaign') {
@@ -227,6 +242,29 @@ export function MediaCenter() {
       if (res) { setInsight(res); setInsightState('idle') } else { setInsightState('error') }
     } catch { setInsightState('error') }
     finally { unsub(); setInsightProgress(null) }
+  }
+
+  // S1 — opt-in AI-assisted website copy. Regenerates the same deterministic
+  // template with a real headline + features instead of the raw-text extraction.
+  async function askWebsiteAI() {
+    if (!websiteCtx || websiteAiState === 'loading') return
+    setWebsiteAiState('loading')
+    try {
+      const res = await askWebsiteCopy(websiteCtx.text)
+      if (res) { setWebsiteAi({ copy: res.data, provenance: res.provenance }); setSiteHtml(makeWebsite(websiteCtx.text, websiteCtx.brand, res.data)); setWebsiteAiState('idle') }
+      else setWebsiteAiState('error')
+    } catch { setWebsiteAiState('error') }
+  }
+
+  // S2 — opt-in AI-assisted deck outline (topic → real per-scene scripts).
+  async function askDeckAI() {
+    if (!deckCtx || deckAiState === 'loading') return
+    setDeckAiState('loading')
+    try {
+      const res = await askDeckOutline(deckCtx.text)
+      if (res) { setDeckAi({ scenes: res.data, provenance: res.provenance }); setDeckHtml(makeDeck(deckCtx.text, deckCtx.brand, res.data)); setDeckAiState('idle') }
+      else setDeckAiState('error')
+    } catch { setDeckAiState('error') }
   }
 
   async function onExportVideo() {
@@ -309,9 +347,19 @@ export function MediaCenter() {
           {videoUrl && <video className="preview-video" src={videoUrl} controls autoPlay loop />}
         </div>
       ) : kind === 'website' ? (
-        siteHtml ? <iframe className="preview-frame" title="website" srcDoc={siteHtml} /> : <div className="empty">Your landing page will render here</div>
+        siteHtml ? (
+          <div className="frame-stage">
+            <iframe className="preview-frame" title="website" srcDoc={siteHtml} />
+            <MiniAiAssist state={websiteAiState} done={!!websiteAi} onAsk={askWebsiteAI} label="Ask AI for real copy" />
+          </div>
+        ) : <div className="empty">Your landing page will render here</div>
       ) : kind === 'deck' ? (
-        deckHtml ? <iframe className="preview-frame" title="deck" srcDoc={deckHtml} /> : <div className="empty">Your slide deck will play here</div>
+        deckHtml ? (
+          <div className="frame-stage">
+            <iframe className="preview-frame" title="deck" srcDoc={deckHtml} />
+            <MiniAiAssist state={deckAiState} done={!!deckAi} onAsk={askDeckAI} label="Ask AI to expand outline" />
+          </div>
+        ) : <div className="empty">Your slide deck will play here</div>
       ) : kind === 'brand' ? (
         brand ? <BrandPreview b={brand} /> : <div className="empty">Your brand kit will appear here</div>
       ) : kind === 'scene' ? (
@@ -361,6 +409,17 @@ function AiInsightBar({ state, insight, progress, onAsk }: { state: 'idle' | 'lo
     <div className="ai-insight">
       <button className="ai-ask" onClick={onAsk}>🧠 Ask AI for an insight {state === 'error' ? '(retry — no local model available?)' : ''}</button>
     </div>
+  )
+}
+
+// S1/S2 — a compact floating "Ask AI" pill over an iframe preview (Website/
+// Deck). Same opt-in discipline: never auto-fires, the deterministic HTML is
+// already showing underneath while this is idle/loading/error.
+function MiniAiAssist({ state, done, onAsk, label }: { state: 'idle' | 'loading' | 'error'; done: boolean; onAsk: () => void; label: string }) {
+  return (
+    <button className={'mini-ai-assist' + (done ? ' done' : '')} onClick={onAsk} disabled={state === 'loading'}>
+      {state === 'loading' ? '⏳ Thinking…' : done ? '✨ AI-enhanced' : `🧠 ${label}${state === 'error' ? ' (retry)' : ''}`}
+    </button>
   )
 }
 

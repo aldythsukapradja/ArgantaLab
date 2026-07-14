@@ -44,9 +44,17 @@ function parts(brief: string) {
   return { headline, feats }
 }
 
-/** Self-contained landing-page HTML from a brief. Renders in an iframe; exports as one file. */
-export function makeWebsite(brief: string, brand = makeBrand(brief)): string {
-  const { headline, feats } = parts(brief)
+/** AI-provided copy (S1) that can override the deterministic extraction below. */
+export interface WebsiteCopy { headline: string; features: string[] }
+
+/** Self-contained landing-page HTML from a brief. Renders in an iframe; exports
+ *  as one file. `aiCopy` (S1, optional) overrides the deterministic headline/
+ *  features when present — the deterministic extraction is always the fallback,
+ *  never a hard dependency. */
+export function makeWebsite(brief: string, brand = makeBrand(brief), aiCopy?: WebsiteCopy | null): string {
+  const extracted = parts(brief)
+  const headline = aiCopy?.headline || extracted.headline
+  const feats = aiCopy?.features?.length ? aiCopy.features : extracted.feats
   const c = brand.colors
   const cards = feats.map((f, i) => `<div class="card"><div class="n">0${i + 1}</div><h3>${esc(f.split(' ').slice(0, 4).join(' '))}</h3><p>${esc(f)}</p></div>`).join('')
   return `<!doctype html><html><head><meta charset="utf8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
@@ -67,10 +75,13 @@ footer{padding:5vh 6vw;text-align:center;opacity:.6;font-size:13px;background:${
 </body></html>`
 }
 
-/** Self-contained cinematic slide deck HTML from an outline. Arrow-key + auto nav. */
-export function makeDeck(outline: string, brand = makeBrand(outline)): string {
+/** Self-contained cinematic slide deck HTML from an outline. Arrow-key + auto
+ *  nav. `aiScenes` (S2, optional) overrides the deterministic comma/line split
+ *  with AI-expanded "Title: supporting sentence" entries — same fallback rule
+ *  as makeWebsite: deterministic extraction never depends on AI succeeding. */
+export function makeDeck(outline: string, brand = makeBrand(outline), aiScenes?: string[] | null): string {
   const c = brand.colors
-  const scenes = outline.split(/[,\n]+/).map(s => s.trim()).filter(Boolean)
+  const scenes = aiScenes?.length ? aiScenes : outline.split(/[,\n]+/).map(s => s.trim()).filter(Boolean)
   const list = (scenes.length ? scenes : ['Problem', 'Insight', 'Product', 'Traction', 'The ask'])
   const slides = list.map((s, i) => {
     const [title, ...rest] = s.split(':')
