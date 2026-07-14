@@ -10,7 +10,7 @@ export const MGROUPS: Grp[] = [
   { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid, surfaces: ['portfolio'] },
   { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data', 'vault'] },
   { id: 'command', label: 'Command', Icon: Radar, surfaces: ['command'] },
-  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video'] },
+  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'reactor'] },
 ]
 
 export function MobileNav() {

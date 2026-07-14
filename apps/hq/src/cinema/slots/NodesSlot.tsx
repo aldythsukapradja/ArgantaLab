@@ -1,0 +1,34 @@
+// NodesSlot — WS3's 3D knowledge nodes plug in here. P0 ships the 'placeholder'
+// fallback: a simple spine of the Founder→…→Products path that lights up as the
+// storyline traces it. When WS3 lands, set RENDERERS.nodes = 'ws3'.
+import type { NodesSlotProps } from '../contract'
+import { RENDERERS } from '../registry'
+
+const SPINE = ['Founder', 'Jarvis', 'Command', 'Vault', 'Data', 'Architecture', 'Agents', 'Products']
+
+function PlaceholderNodes({ state }: NodesSlotProps) {
+  if (!state.visible) return null
+  const litCount = state.path?.length ?? 0
+  return (
+    <div className="cin-nodes">
+      <div className="cin-nodes-head">
+        {state.tour ? `AUTO TOUR ${state.tour}` : 'ARCHITECTURE'}
+        <span>2D placeholder · swap to WS3 3D nodes</span>
+      </div>
+      <div className="cin-nodes-spine">
+        {SPINE.map((n, i) => (
+          <div key={n} className="cin-node" data-lit={i < litCount || n === state.focusNode}>
+            <i /><span>{n}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function NodesSlot(props: NodesSlotProps) {
+  const renderer = props.renderer ?? RENDERERS.nodes
+  // if (renderer === 'ws3') return <Ws3KnowledgeNodes {...props} />  // WS3 fills apps/hq/src/knowledge
+  void renderer
+  return <PlaceholderNodes {...props} />
+}
