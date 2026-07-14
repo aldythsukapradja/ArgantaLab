@@ -68,7 +68,7 @@ function KnowledgeSurfaceInner() {
     : { rootBg: '#eaeef7', glass: 'rgba(255,255,255,.82)', border: '#ccd6ec', tx: '#0b1020', tx2: '#5b6690', tx3: '#28324f' }
 
   const model = useMemo(() => buildKnowledgeModel(notes), [notes])
-  const tissue = useMemo(() => corticalTissue(16000), [])
+  const tissue = useMemo(() => corticalTissue(22000), [])
 
   const selected = useKnowledge((s) => s.selected)
   const setSelected = useKnowledge((s) => s.setSelected)

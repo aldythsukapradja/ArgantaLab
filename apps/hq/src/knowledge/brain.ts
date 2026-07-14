@@ -73,14 +73,17 @@ export const triadOf = (r: RegionId): Triad => (REGION_BY_ID.get(r)?.triad ?? 'k
 
 // ── cortical geometry ───────────────────────────────────────────────────────
 // Camera looks down -Y with a slight tilt, so X = left/right, Z = front/back
-// (+Z frontal), Y = dorsal height. Each hemisphere is a domed, wrinkled,
-// egg-shaped sheet; the two are split by a longitudinal fissure at x≈0.
+// (+Z frontal), Y = dorsal height. Two wrinkled hemisphere lobes split by a
+// longitudinal fissure at x≈0. The TISSUE is the brain body (dense, folded); the
+// note-neurons are brighter points sitting on it, spread evenly across their
+// region's zone — NOT biased to the lateral edge (that edge bias + a zero-
+// thickness shell were what produced the "colored lines" and the bright rim).
 export const BRAIN = {
-  hemiGap: 1.0,    // half-width of the longitudinal fissure (clear central valley)
-  width: 4.3,      // lateral half-extent of a hemisphere
-  length: 7.4,     // half front-back extent
-  height: 3.0,     // dorsal dome height
-  gyral: 0.5,      // fold amplitude
+  hemiGap: 1.25,   // half-width of the longitudinal fissure (clear central valley)
+  width: 5.8,      // lateral half-extent of a hemisphere
+  length: 7.8,     // half front-back extent (brain is only ~1.3× longer than wide)
+  height: 3.6,     // dorsal dome height
+  gyral: 0.95,     // fold amplitude (strong → visibly wrinkled)
 }
 
 function h(str: string): number {
@@ -88,88 +91,97 @@ function h(str: string): number {
   for (let i = 0; i < str.length; i++) { x ^= str.charCodeAt(i); x = Math.imul(x, 16777619) }
   return (x >>> 0) / 4294967295
 }
+const smoothstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 
-// ── volumetric hemisphere fill ──────────────────────────────────────────────
-// Earlier versions placed every point on the dorsal cortical SHELL (a 2D
-// surface). Seen from directly above, a shell's lateral edge is nearly tangent
-// to the camera, so points pile up per screen-pixel there and trace a bright
-// silhouette rim front-to-back — the "long lines" artifact. Filling the
-// hemisphere as a solid EGG-SHAPED VOLUME (real depth in Y, real spread in X)
-// removes that edge entirely and naturally spreads dense regions out instead
-// of clumping them into a thin band.
-
-/** Ellipsoid taper at anterior-posterior position u (0=occipital, 1=frontal):
- *  0 at the poles, 1 at the widest point (~u=0.55). Shared by every point so
- *  the lobe reads as one consistent egg shape. */
+/** Egg taper at anterior-posterior u (0=occipital, 1=frontal pole): 0 at the
+ *  poles, ~1 at the widest point. Gives the lobe its rounded brain silhouette. */
 function taperAt(u: number): number {
   return Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, u * 0.86 + 0.09))), 0.72)
 }
 
-/** A point INSIDE the hemisphere volume at anterior-posterior `u` and
- *  medial→lateral fill `latT` (0 = at the fissure, 1 = outer rim), filling the
- *  full dorsal-ventral depth rather than sitting on the outer shell. */
-function volumePoint(side: -1 | 1, u: number, latT: number, seedY: number, wobbleSeed: number): [number, number, number] {
-  const wf = taperAt(u)
-  const z = (u - 0.44) * 2 * BRAIN.length
-  const maxLat = BRAIN.width * (0.35 + 0.65 * wf)
-  const lat = latT * maxLat
-  const x = side * (BRAIN.hemiGap + lat)
-  // depth fill: the lobe is tallest mid-length, thinner near the poles, and
-  // tapers as you move laterally (an egg cross-section, not a flat disc)
-  const maxY = BRAIN.height * (0.5 + 0.5 * wf) * (1 - (lat / (maxLat + 0.001)) * 0.35)
-  const y = (seedY - 0.5) * 2 * maxY - 0.15
-  // gentle gyral wobble for organic texture — small, never enough to re-create a shell
-  const wobble = (Math.sin(u * 23 + latT * 14 + wobbleSeed * 6.28) * 0.5
-    + Math.sin(latT * 31 - u * 11 + wobbleSeed * 3.1) * 0.5) * BRAIN.gyral * 0.3
-  return [x + wobble * 0.3 * side, y + wobble, z + wobble * 0.25]
+/** Multi-octave gyral fold displacement — the sulci/gyri that make it read as
+ *  brain tissue rather than a smooth balloon. */
+function gyral(u: number, v: number, side: number): number {
+  return (Math.sin(u * 16 + v * 8 + side * 2) * 0.5
+    + Math.sin(v * 23 - u * 6) * 0.3
+    + Math.sin(u * 37 + v * 30) * 0.2) * BRAIN.gyral
 }
 
-/** Deterministic volumetric position for a note in a region + hemisphere.
- *  Fills the region's full anterior-posterior band (with a soft overlap into
- *  neighbours) AND the full medial→lateral and dorsal-ventral extent — a real
- *  cloud through the lobe, never a thin sheet or a line. */
+/** A point on the wrinkled dorsal cortical surface of one hemisphere.
+ *  u = 0 occipital (back) → 1 frontal (front). v = 0 medial (fissure) → 1
+ *  lateral (outer). Rounded dome (bulges at the crown), strong gyri. */
+export function corticalSurface(side: -1 | 1, u: number, v: number): [number, number, number] {
+  const wf = taperAt(u)
+  const z = (u - 0.45) * 2 * BRAIN.length
+  const lat = v * BRAIN.width * (0.42 + 0.58 * wf)
+  const x = side * (BRAIN.hemiGap * 0.55 + lat)
+  const dome = Math.cos(Math.min(1.45, v * 1.35)) * Math.cos((u - 0.45) * 1.5)
+  const g = gyral(u, v, side)
+  const y = BRAIN.height * (0.22 + 0.64 * Math.max(0, dome) * wf) + g
+  return [x + g * 0.3 * side, y, z + g * 0.26]
+}
+
+/** Deterministic cortical position for a note in a region + hemisphere. Spread
+ *  EVENLY across the region's zone (both hemispheres, medial→lateral, its
+ *  anterior-posterior band with soft overlap), sitting just above the wrinkled
+ *  surface with light organic jitter. No lateral-edge bias → no lines. */
 export function regionPoint(id: string, region: RegionId, hemi: Hemisphere): [number, number, number] {
   const r = REGION_BY_ID.get(region)!
   const a = h(id), b = h(id + '~1'), c = h(id + '~2'), d = h(id + '~3'), e = h(id + '~4')
   if (region === 'command') {
     // deep-central hub: a loose cluster around the thalamic anchor, below the cortex
-    return [(a - 0.5) * 1.8, -0.4 + (b - 0.5) * 1.4, 0.4 + (c - 0.5) * 2.0]
+    return [(a - 0.5) * 2.0, -0.5 + (b - 0.5) * 1.5, 0.4 + (c - 0.5) * 2.2]
   }
   const side: -1 | 1 = hemi === 'right' ? 1 : hemi === 'left' ? -1 : (a < 0.5 ? -1 : 1)
-  const bandLo = Math.max(0, r.u0 - 0.05), bandHi = Math.min(1, r.u1 + 0.05)
+  const bandLo = Math.max(0, r.u0 - 0.06), bandHi = Math.min(1, r.u1 + 0.06)
   const u = bandLo + (bandHi - bandLo) * b
-  // sense hugs the outer rim (sensory cortex wraps the lateral surface); the
-  // rest fill medial→lateral with a mild outward bias so the cortex still
-  // reads denser near the surface without recreating a hard shell edge.
-  const latT = region === 'sense' ? 0.72 + c * 0.28 : Math.sqrt(c) * 0.92 + 0.04
-  return volumePoint(side, u, latT, d, e)
+  // even medial→lateral spread (sense wraps the outer surface); capped short of
+  // the very edge so nothing piles on the silhouette
+  const v = region === 'sense' ? 0.66 + c * 0.26 : 0.06 + c * 0.84
+  const p = corticalSurface(side, u, v)
+  return [p[0] + (d - 0.5) * 0.85, p[1] + 0.22 + (e - 0.5) * 0.6, p[2] + (a - 0.5) * 0.85]
 }
 
-/** Which region owns a given (u, latT) coord — for colouring the tissue. */
-function regionForUV(u: number, latT: number): RegionId {
-  if (latT > 0.86) return 'sense'
+/** Which region owns a given (u, v) cortical coord — for colouring the tissue. */
+function regionForUV(u: number, v: number): RegionId {
+  if (v > 0.82) return 'sense'
   for (const r of REGIONS) { if (r.id === 'sense' || r.id === 'command') continue; if (u >= r.u0 && u < r.u1) return r.id }
   return u >= 0.58 ? 'think' : 'experience'
 }
 
-/** Dense cortical VOLUME tissue: thousands of points filling the two
- *  wrinkled hemisphere lobes (not their surface), coloured by region. This is
- *  what makes it read as a solid brain body instead of a hollow shell.
- *  Returns interleaved xyz + a region index per point. */
-export function corticalTissue(count: number): { positions: Float32Array; region: Uint8Array } {
+/** Camera-target centroid for a region (used by the gentle lean). */
+export function regionCentroid(region: RegionId): [number, number, number] {
+  if (region === 'command') return [0, -0.2, 0.4]
+  const r = REGION_BY_ID.get(region)!
+  const um = (r.u0 + r.u1) / 2
+  return [0, BRAIN.height * 0.35, (um - 0.45) * 2 * BRAIN.length]
+}
+
+/** Dense wrinkled cortical tissue — the brain BODY. Points cover both
+ *  hemisphere surfaces with real thickness (a cortical ribbon, so the lateral
+ *  edge is soft, not a bright silhouette line), a rim/pole fade, and a region
+ *  index + a per-point dim factor the scene multiplies into brightness. */
+export function corticalTissue(count: number): { positions: Float32Array; region: Uint8Array; fade: Float32Array } {
   const positions = new Float32Array(count * 3)
   const region = new Uint8Array(count)
+  const fade = new Float32Array(count)
   const idx: Record<RegionId, number> = { command: 0, think: 1, know: 2, orchestrate: 3, act: 4, experience: 5, sense: 6 }
   for (let i = 0; i < count; i++) {
     const s = 't' + i
     const side: -1 | 1 = h(s) < 0.5 ? -1 : 1
-    const u = h(s + '~1'), c = h(s + '~2'), d = h(s + '~3'), e = h(s + '~4')
-    const latT = Math.sqrt(c)
-    const p = volumePoint(side, u, latT, d, e)
-    positions[i * 3] = p[0]; positions[i * 3 + 1] = p[1]; positions[i * 3 + 2] = p[2]
-    region[i] = idx[regionForUV(u, latT)]
+    const u = h(s + '~1'), v = h(s + '~2'), depth = h(s + '~3')
+    const p = corticalSurface(side, u, v)
+    // thickness: sink some points below the surface into a cortical ribbon
+    positions[i * 3] = p[0] - depth * 0.18 * side
+    positions[i * 3 + 1] = p[1] - depth * 0.9
+    positions[i * 3 + 2] = p[2]
+    region[i] = idx[regionForUV(u, v)]
+    // fade toward the lateral edge + the poles so the silhouette softens
+    const rim = 1 - smoothstep(0.74, 1.0, v)
+    const pole = 0.4 + 0.6 * taperAt(u)
+    fade[i] = rim * pole * (0.6 + 0.4 * (1 - depth))
   }
-  return { positions, region }
+  return { positions, region, fade }
 }
 
 export const REGION_INDEX: RegionId[] = ['command', 'think', 'know', 'orchestrate', 'act', 'experience', 'sense']

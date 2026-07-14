@@ -1,70 +1,109 @@
-// WS3 — the Cognitive Cortex. A wrinkled two-hemisphere brain over the REAL
-// vault, seen from above. Every note is a small neuron on the cortical surface,
-// grouped into the 7 reactor-spine regions; real wikilinks are CURVED axons;
-// action-potential pulses fire along them; Command Core is the central hub. The
-// whole scene follows the app's light/dark theme.
+// WS3 — the Cognitive Cortex. A dense, wrinkled two-hemisphere brain over the
+// REAL vault: the cortical TISSUE is the brain body; note-neurons are brighter
+// points on it, grouped into the 7 reactor-spine regions; real wikilinks are
+// curved axons with firing pulses. When a context is active (a cinematic beat,
+// a filter, or a selection) that region lights and everything else greys out —
+// so the audience sees which part of the brain is engaged. The camera never
+// zooms out: it sways gently left/right, breathes a little, and leans toward
+// whatever is active. Follows the app light/dark theme.
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Html } from '@react-three/drei'
+import { Html } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import type { KModel } from './model'
-import { REGIONS, REGION_BY_ID, REGION_INDEX, type RegionId } from './brain'
+import { REGIONS, REGION_BY_ID, REGION_INDEX, regionCentroid, type RegionId, type Triad } from './brain'
 import { useKnowledge } from './store'
-import { activationFor } from './activation'
+import { activationFor, activeRegionSet } from './activation'
 
 const PROV = { live: 1, partial: 0.72, simulated: 0.5, placeholder: 0.34 } as Record<string, number>
 const RCOL: Record<RegionId, THREE.Color> = REGIONS.reduce((m, r) => { m[r.id] = new THREE.Color(r.color); return m }, {} as Record<RegionId, THREE.Color>)
+const TRIAD_REGIONS: Record<Triad, Set<RegionId>> = { think: new Set(), know: new Set(), do: new Set() }
+REGIONS.forEach((r) => TRIAD_REGIONS[r.triad].add(r.id))
 
 interface Theme {
   clear: string; fog: string; fogNear: number; fogFar: number
   tissueScale: number; tissueOpacity: number; blend: THREE.Blending
   axon: string; axonOpacity: number; pulseOpacity: number
   bloomI: number; bloomT: number; vignette: number
-  base: number; provW: number; spike: number; active: number
+  base: number; provW: number; spike: number
   labelText: string; labelBg: string; commandColor: string; commandCore: string; ring: string
+  grey: string; greyDim: number
 }
 function theme(dark: boolean): Theme {
   return dark ? {
-    clear: '#04050d', fog: '#04050d', fogNear: 26, fogFar: 72,
-    tissueScale: 0.62, tissueOpacity: 0.6, blend: THREE.AdditiveBlending,
-    axon: '#2b3a6b', axonOpacity: 0.16, pulseOpacity: 0.95,
-    bloomI: 0.95, bloomT: 0.22, vignette: 0.9,
-    base: 0.52, provW: 0.42, spike: 1.6, active: 0.5,
+    clear: '#04050d', fog: '#04050d', fogNear: 34, fogFar: 90,
+    tissueScale: 0.74, tissueOpacity: 0.7, blend: THREE.AdditiveBlending,
+    axon: '#2b3a6b', axonOpacity: 0.14, pulseOpacity: 0.95,
+    bloomI: 0.9, bloomT: 0.22, vignette: 0.9,
+    base: 0.55, provW: 0.42, spike: 1.5,
     labelText: '#fff', labelBg: 'rgba(6,9,20,.6)', commandColor: '#70e7ff', commandCore: '#d6f7ff', ring: '#eef2ff',
+    grey: '#525c7c', greyDim: 0.85,
   } : {
-    clear: '#eaeef7', fog: '#eaeef7', fogNear: 30, fogFar: 82,
-    tissueScale: 0.95, tissueOpacity: 0.62, blend: THREE.NormalBlending,
-    axon: '#93a0c8', axonOpacity: 0.5, pulseOpacity: 0.92,
-    bloomI: 0.32, bloomT: 0.55, vignette: 0.32,
-    base: 0.86, provW: 0.2, spike: 0.55, active: 0.3,
+    clear: '#eaeef7', fog: '#eaeef7', fogNear: 34, fogFar: 92,
+    tissueScale: 0.92, tissueOpacity: 0.6, blend: THREE.NormalBlending,
+    axon: '#9aa6cc', axonOpacity: 0.4, pulseOpacity: 0.92,
+    bloomI: 0.3, bloomT: 0.55, vignette: 0.32,
+    base: 0.86, provW: 0.2, spike: 0.55,
     labelText: '#0b1020', labelBg: 'rgba(255,255,255,.82)', commandColor: '#0891b2', commandCore: '#0e7490', ring: '#1e293b',
+    grey: '#b7c0d4', greyDim: 0.9,
   }
 }
 
-const bez = (a: number, c: number, b: number, t: number) => { const it = 1 - t; return it * it * a + 2 * it * t * c + t * t * b }
-function control(a: THREE.Vector3, b: THREE.Vector3): THREE.Vector3 {
-  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, mz = (a.z + b.z) / 2
-  const len = a.distanceTo(b); const out = Math.hypot(mx, mz) || 1
-  return new THREE.Vector3(mx + (mx / out) * len * 0.14, my + len * 0.34 + 0.5, mz + (mz / out) * len * 0.14)
+// ── shared "what's active" — computed once per frame, read by tissue+neurons+camera ──
+const ACTIVE: { regions: Set<RegionId> | null; hemi: 'left' | 'right' | null; key: string } = { regions: null, hemi: null, key: '' }
+function ActiveController({ model }: { model: KModel }) {
+  useFrame(() => {
+    const st = useKnowledge.getState()
+    let regions: Set<RegionId> | null = null
+    let hemi: 'left' | 'right' | null = null
+    const hf = st.hemiFilter === 'left' || st.hemiFilter === 'right' ? st.hemiFilter : null
+    if (st.scene) regions = activeRegionSet(st.scene)
+    else if (st.regionFilter) { regions = new Set([st.regionFilter]); hemi = hf }
+    else if (st.triadFilter) { regions = TRIAD_REGIONS[st.triadFilter]; hemi = hf }
+    else if (hf) hemi = hf
+    else { const sel = st.selected || st.hovered; if (sel) { const n = model.byId.get(sel); if (n) regions = new Set([n.region]) } }
+    ACTIVE.regions = regions; ACTIVE.hemi = hemi
+    ACTIVE.key = (regions ? [...regions].sort().join(',') : '*') + '|' + (hemi || '*')
+  })
+  return null
 }
 
 // ─────────────── cortical tissue (the brain body) ───────────────
-function CorticalTissue({ tissue, th }: { tissue: { positions: Float32Array; region: Uint8Array }; th: Theme }) {
+function CorticalTissue({ tissue, th }: { tissue: { positions: Float32Array; region: Uint8Array; fade: Float32Array }; th: Theme }) {
   const ref = useRef<THREE.Points>(null)
+  const grey = useMemo(() => new THREE.Color(th.grey), [th.grey])
+  const N = tissue.region.length
+  const hemi = useMemo(() => {
+    const a = new Uint8Array(N)
+    for (let i = 0; i < N; i++) a[i] = tissue.positions[i * 3] < 0 ? 0 : 1 // 0 left, 1 right
+    return a
+  }, [tissue, N])
   const geo = useMemo(() => {
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(tissue.positions, 3))
-    const colors = new Float32Array(tissue.positions.length)
-    for (let i = 0; i < tissue.region.length; i++) {
-      const c = RCOL[REGION_INDEX[tissue.region[i]]]
-      colors[i * 3] = c.r * th.tissueScale; colors[i * 3 + 1] = c.g * th.tissueScale; colors[i * 3 + 2] = c.b * th.tissueScale
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 3), 3))
     return g
-  }, [tissue, th.tissueScale])
-  useFrame((s) => { if (ref.current) ref.current.rotation.y = Math.sin(s.clock.elapsedTime * 0.03) * 0.01 })
+  }, [tissue, N])
+  const lastKey = useRef('')
+  const tmp = useMemo(() => new THREE.Color(), [])
+  useFrame((s) => {
+    if (ref.current) ref.current.rotation.y = Math.sin(s.clock.elapsedTime * 0.02) * 0.008
+    if (ACTIVE.key === lastKey.current) return
+    lastKey.current = ACTIVE.key
+    const colors = (geo.getAttribute('color') as THREE.BufferAttribute).array as Float32Array
+    for (let i = 0; i < N; i++) {
+      const rid = REGION_INDEX[tissue.region[i]]
+      const inR = !ACTIVE.regions || ACTIVE.regions.has(rid)
+      const inH = ACTIVE.hemi == null || (hemi[i] === 0 ? 'left' : 'right') === ACTIVE.hemi
+      const f = tissue.fade[i]
+      if (inR && inH) { tmp.copy(RCOL[rid]).multiplyScalar(th.tissueScale * f) }
+      else { tmp.copy(grey).multiplyScalar(th.greyDim * 0.5 * f) }
+      colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b
+    }
+    ;(geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true
+  })
   return (
     <points ref={ref} geometry={geo}>
       <pointsMaterial size={0.05} sizeAttenuation vertexColors transparent opacity={th.tissueOpacity} depthWrite={false} blending={th.blend} toneMapped={false} />
@@ -73,6 +112,12 @@ function CorticalTissue({ tissue, th }: { tissue: { positions: Float32Array; reg
 }
 
 // ─────────────── curved axons + firing pulses ───────────────
+const bez = (a: number, c: number, b: number, t: number) => { const it = 1 - t; return it * it * a + 2 * it * t * c + t * t * b }
+function control(a: THREE.Vector3, b: THREE.Vector3): THREE.Vector3 {
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, mz = (a.z + b.z) / 2
+  const len = a.distanceTo(b); const out = Math.hypot(mx, mz) || 1
+  return new THREE.Vector3(mx + (mx / out) * len * 0.12, my + len * 0.3 + 0.6, mz + (mz / out) * len * 0.12)
+}
 function Axons({ model, th }: { model: KModel; th: Theme }) {
   const SEG = 12, PMAX = 1600
   const { lineGeo, A, C, B, pcol, pcount } = useMemo(() => {
@@ -95,7 +140,6 @@ function Axons({ model, th }: { model: KModel; th: Theme }) {
   const pulses = useRef<THREE.Points>(null)
   const pgeo = useMemo(() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pcount * 3), 3)); g.setAttribute('color', new THREE.BufferAttribute(pcol, 3)); return g }, [pcount, pcol])
   const phase = useMemo(() => Float32Array.from({ length: pcount }, () => Math.random()), [pcount])
-
   useFrame((state) => {
     if (!pulses.current) return
     const on = useKnowledge.getState().simRunning; const t = state.clock.elapsedTime * (on ? 0.16 : 0.03)
@@ -111,7 +155,7 @@ function Axons({ model, th }: { model: KModel; th: Theme }) {
   )
 }
 
-// ─────────────── neurons (instanced) + firing ───────────────
+// ─────────────── neurons (instanced) + firing + grey-out ───────────────
 function Neurons({ model, th }: { model: KModel; th: Theme }) {
   const ref = useRef<THREE.InstancedMesh>(null)
   const setHovered = useKnowledge((s) => s.setHovered), setSelected = useKnowledge((s) => s.setSelected), setFocus = useKnowledge((s) => s.setFocus)
@@ -127,29 +171,26 @@ function Neurons({ model, th }: { model: KModel; th: Theme }) {
     mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }, [model, data])
   const tmp = useMemo(() => new THREE.Color(), [])
+  const grey = useMemo(() => new THREE.Color(th.grey), [th.grey])
   useFrame((state) => {
     const mesh = ref.current; if (!mesh || !mesh.instanceColor) return
     const st = useKnowledge.getState(); const t = state.clock.elapsedTime
-    // Run 2: when a cinematic scene is active, region activation (from the
-    // narration/audio-envelope, via activation.ts) drives brightness instead of
-    // the ambient THINK→KNOW→DO sweep; individual neurons still spike a little
-    // for organic texture, scaled by how active their region is right now.
     const act = activationFor(st.scene)
-    const cyc = (t * 0.11) % 3; const activeTriad = cyc < 1 ? 'think' : cyc < 2 ? 'know' : 'do'
     for (let i = 0; i < N; i++) {
-      const d = data[i]; let b = th.base + d.prov * th.provW
+      const d = data[i]
+      const inR = !ACTIVE.regions || ACTIVE.regions.has(d.region)
+      const inH = ACTIVE.hemi == null || d.hemisphere === ACTIVE.hemi
+      const inP = !st.provFilter || d.provName === st.provFilter
+      if (!(inR && inH && inP)) { tmp.copy(grey).multiplyScalar(th.greyDim * 0.9); mesh.setColorAt(i, tmp); continue }
+      let b = th.base + d.prov * th.provW
       if (act) {
         const w = act[d.region] ?? 0.08
         b += w * th.spike
-        if (st.simRunning) b += Math.pow(Math.max(0, Math.sin(t * d.rate + d.phase)), 16) * th.spike * 0.35 * (0.4 + w)
+        if (st.simRunning) b += Math.pow(Math.max(0, Math.sin(t * d.rate + d.phase)), 16) * th.spike * 0.4 * (0.4 + w)
       } else if (st.simRunning) {
-        b += Math.pow(Math.max(0, Math.sin(t * d.rate + d.phase)), 16) * th.spike; if (d.triad === activeTriad) b += th.active
+        b += Math.pow(Math.max(0, Math.sin(t * d.rate + d.phase)), 16) * th.spike
       }
       if (st.selected === d.id) b += 1.6; else if (st.hovered === d.id) b += 0.9
-      if (st.triadFilter && d.triad !== st.triadFilter) b *= 0.08
-      if (st.regionFilter && d.region !== st.regionFilter) b *= 0.08
-      if (st.hemiFilter && d.hemisphere !== st.hemiFilter) b *= 0.08
-      if (st.provFilter && d.provName !== st.provFilter) b *= 0.1
       tmp.copy(d.color).multiplyScalar(b); mesh.setColorAt(i, tmp)
     }
     mesh.instanceColor.needsUpdate = true
@@ -170,7 +211,6 @@ function CommandCore({ model, th }: { model: KModel; th: Theme }) {
   const pos = node ? node.pos : [0, -0.4, 0.4] as [number, number, number]
   useFrame((s) => {
     const st = useKnowledge.getState()
-    // Run 2: Command Core pulses harder while a cinematic scene carries intensity
     const boost = st.scene ? 0.7 + st.scene.intensity * 1.1 : 1
     const t = s.clock.elapsedTime, pulse = 1 + Math.sin(t * 2.2) * 0.12 * boost
     if (ref.current) ref.current.scale.setScalar(0.42 * pulse * Math.min(1.35, boost))
@@ -189,9 +229,9 @@ function RegionLabels({ model, th }: { model: KModel; th: Theme }) {
     <group>
       {REGIONS.map((r) => {
         const hero = model.nodes.find((n) => n.hero && n.region === r.id)
-        const p = hero ? [hero.pos[0], hero.pos[1] + 0.7, hero.pos[2]] : r.anchor
+        const p = hero ? [hero.pos[0], hero.pos[1] + 0.9, hero.pos[2]] : r.anchor
         return (
-          <Html key={r.id} center position={p as [number, number, number]} distanceFactor={17} style={{ pointerEvents: 'none' }} zIndexRange={[16, 0]}>
+          <Html key={r.id} center position={p as [number, number, number]} distanceFactor={19} style={{ pointerEvents: 'none' }} zIndexRange={[16, 0]}>
             <div style={{ whiteSpace: 'nowrap', fontSize: r.id === 'command' ? 12.5 : 11, fontWeight: 700, color: th.labelText, letterSpacing: 0.4, textShadow: `0 0 12px ${r.color}`, padding: '2px 9px', borderRadius: 7, background: th.labelBg, border: `1px solid ${r.color}88` }}>{r.label}</div>
           </Html>
         )
@@ -205,7 +245,7 @@ function ActiveRing({ model, th }: { model: KModel; th: Theme }) {
   useFrame(() => {
     const st = useKnowledge.getState(); const id = st.selected || st.hovered
     const n = id ? model.byId.get(id) : null; const m = ref.current; if (!m) return
-    if (n) { m.visible = true; m.position.set(...n.pos); m.scale.setScalar(Math.max(0.5, n.r * 3.2)); m.rotation.z += 0.03; m.rotation.x = Math.PI / 2.4 }
+    if (n) { m.visible = true; m.position.set(...n.pos); m.scale.setScalar(Math.max(0.5, n.r * 3.4)); m.rotation.z += 0.03; m.rotation.x = Math.PI / 2.4 }
     else m.visible = false
   })
   return <mesh ref={ref} visible={false}><torusGeometry args={[1, 0.05, 8, 40]} /><meshBasicMaterial color={th.ring} toneMapped={false} transparent opacity={0.9} /></mesh>
@@ -218,31 +258,50 @@ function Resizer({ width, height }: { width: number; height: number }) {
   useEffect(() => { if (width < 2 || height < 2) return; setSize(width, height); const c = camera as THREE.PerspectiveCamera; c.aspect = width / height; c.updateProjectionMatrix() }, [width, height, setSize, camera])
   return null
 }
-function CameraRig({ model }: { model: KModel }) {
-  const controls = useRef<any>(null); const { camera } = useThree()
-  const focus = useKnowledge((s) => s.focus); const arrived = useRef(true); const last = useRef<string | null>(null)
-  const dPos = useRef(new THREE.Vector3(0, 16, 14)); const dTgt = useRef(new THREE.Vector3(0, 0, 0))
-  useFrame(() => {
-    if (focus !== last.current) {
-      last.current = focus; arrived.current = false
-      const n = focus ? model.byId.get(focus) : null
-      if (n) { const p = new THREE.Vector3(...n.pos); dTgt.current.copy(p); dPos.current.set(p.x + 3, p.y + 6, p.z + 7) }
-      else { dTgt.current.set(0, 0, 0); dPos.current.set(0, 16, 14) }
+
+// Gentle auto-camera: never zooms out. It sways left/right, breathes a little,
+// and leans slowly toward whatever region is active. No manual orbit — the
+// motion is the whole point (audience-facing), and node picking still works.
+const BASE_RADIUS = 20.5
+function CameraRig() {
+  const { camera } = useThree()
+  const target = useRef(new THREE.Vector3(0, 0.4, 0.5))
+  const tTgt = useMemo(() => new THREE.Vector3(), [])
+  const tPos = useMemo(() => new THREE.Vector3(), [])
+  useFrame((state) => {
+    const t = state.clock.elapsedTime
+    const regions = ACTIVE.regions
+    let cy = 0.4, cz = 0.5
+    if (regions && regions.size >= 1 && regions.size <= 3) {
+      let y = 0, z = 0; regions.forEach((r) => { const c = regionCentroid(r); y += c[1]; z += c[2] })
+      cy = (y / regions.size) * 0.4 + 0.3; cz = (z / regions.size) * 0.5
     }
-    if (!arrived.current) { camera.position.lerp(dPos.current, 0.06); const c = controls.current; if (c) { c.target.lerp(dTgt.current, 0.06); c.update() } if (camera.position.distanceTo(dPos.current) < 0.4) arrived.current = true }
+    target.current.lerp(tTgt.set(0, cy, cz), 0.02)
+    const zoomIn = regions && regions.size <= 3 ? 2.5 : 0        // lean IN on a focused context
+    const breathe = Math.abs(Math.sin(t * 0.1)) * 1.4            // inward-only breathing
+    const radius = BASE_RADIUS - zoomIn - breathe
+    const az = Math.sin(t * 0.08) * 0.34                         // ±19° left/right sway
+    const pol = 0.56 + Math.sin(t * 0.05) * 0.04                 // more top-down (reads as a brain)
+    tPos.set(
+      target.current.x + radius * Math.sin(pol) * Math.sin(az),
+      target.current.y + radius * Math.cos(pol),
+      target.current.z + radius * Math.sin(pol) * Math.cos(az),
+    )
+    camera.position.lerp(tPos, 0.03)
+    camera.lookAt(target.current)
   })
-  return <OrbitControls ref={controls} enablePan={false} enableDamping dampingFactor={0.08} minDistance={5} maxDistance={60} rotateSpeed={0.55} />
+  return null
 }
 
 export function KnowledgeScene({ model, tissue, width, height, dark, onFrame }: {
-  model: KModel; tissue: { positions: Float32Array; region: Uint8Array }; width: number; height: number; dark: boolean; onFrame?: () => void
+  model: KModel; tissue: { positions: Float32Array; region: Uint8Array; fade: Float32Array }; width: number; height: number; dark: boolean; onFrame?: () => void
 }) {
   const th = useMemo(() => theme(dark), [dark])
   return (
-    <Canvas style={{ width, height }} dpr={[1, 2]} camera={{ position: [0, 16, 14], fov: 50, near: 0.1, far: 400 }}
+    <Canvas style={{ width, height }} dpr={[1, 2]} camera={{ position: [0, 17, 18], fov: 50, near: 0.1, far: 400 }}
       gl={{ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true }}
       onCreated={({ gl }) => gl.setClearColor(th.clear, 1)}>
-      <DebugExpose /><Heartbeat onFrame={onFrame} /><Resizer width={width} height={height} />
+      <DebugExpose /><Heartbeat onFrame={onFrame} /><Resizer width={width} height={height} /><ActiveController model={model} />
       <fog attach="fog" args={[th.fog, th.fogNear, th.fogFar]} />
       <ambientLight intensity={0.5} />
       <CorticalTissue tissue={tissue} th={th} />
@@ -251,7 +310,7 @@ export function KnowledgeScene({ model, tissue, width, height, dark, onFrame }: 
       <CommandCore model={model} th={th} />
       <ActiveRing model={model} th={th} />
       <RegionLabels model={model} th={th} />
-      <CameraRig model={model} />
+      <CameraRig />
       <EffectComposer>
         <Bloom intensity={th.bloomI} luminanceThreshold={th.bloomT} luminanceSmoothing={0.88} mipmapBlur radius={0.75} />
         <Vignette eskil={false} offset={0.2} darkness={th.vignette} />

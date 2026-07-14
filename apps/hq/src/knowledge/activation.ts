@@ -43,15 +43,29 @@ const SCENE_OVERRIDE: Record<string, Partial<Record<RegionId, number>>> = {
   '6.5': { orchestrate: 0.7, act: 1 },                                   // DO builds the package
 }
 
+function weightsFor(scene: SceneState) {
+  return (scene.sceneId && SCENE_OVERRIDE[scene.sceneId]) || BASE[scene.state] || {}
+}
+
 /** Per-region 0..1 activation for the current scene, or null when there's no
  *  active cinematic (the caller falls back to the ambient sim). */
 export function activationFor(scene: SceneState | null): Record<RegionId, number> | null {
   if (!scene) return null
-  const weights = (scene.sceneId && SCENE_OVERRIDE[scene.sceneId]) || BASE[scene.state] || {}
+  const weights = weightsFor(scene)
   const intensity = Math.max(0.15, Math.min(1, scene.intensity ?? 0.5))
   const out = {} as Record<RegionId, number>
   for (const r of ALL_REGIONS) out[r] = (weights[r] ?? 0.06) * intensity
   return out
+}
+
+/** The set of regions considered "lit" for this scene (weight ≥ 0.5) — used to
+ *  grey out everything else. When nothing crosses the bar (a quiet/idle beat)
+ *  every region counts as lit, so the whole brain stays visible undimmed. */
+export function activeRegionSet(scene: SceneState): Set<RegionId> {
+  const weights = weightsFor(scene)
+  const s = new Set<RegionId>()
+  for (const r of ALL_REGIONS) if ((weights[r] ?? 0) >= 0.5) s.add(r)
+  return s.size ? s : new Set(ALL_REGIONS)
 }
 
 /** Which region the camera should frame for this state — a region id to frame
