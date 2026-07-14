@@ -121,7 +121,7 @@ function KnowledgeSurfaceInner() {
         <div ref={wrapRef} className="kg-canvas" style={{ position: 'absolute', inset: 0 }}>
           <SceneBoundary fallback={(msg) => fallback('3D cortex unavailable (' + msg + ')')}>
             <Suspense fallback={<Loading />}>
-              <KnowledgeScene model={model} tissue={tissue} width={size.w} height={size.h} dark={dark}
+              <KnowledgeScene key={dark ? 'dark' : 'light'} model={model} tissue={tissue} width={size.w} height={size.h} dark={dark}
                 onFrame={() => { drewRef.current = true }} />
             </Suspense>
           </SceneBoundary>

@@ -105,19 +105,23 @@ export function corticalPoint(side: -1 | 1, u: number, v: number): [number, numb
   return [x + fold * 0.28 * side, y, z + fold * 0.24]
 }
 
-/** Deterministic cortical position for a note in a region + hemisphere. */
+/** Deterministic cortical position for a note in a region + hemisphere. Neurons
+ *  form a SPARSE volumetric cloud filling the region's cortical patch — never a
+ *  thin sheet or a line. */
 export function regionPoint(id: string, region: RegionId, hemi: Hemisphere): [number, number, number] {
   const r = REGION_BY_ID.get(region)!
-  const a = h(id), b = h(id + '~1'), c = h(id + '~2')
+  const a = h(id), b = h(id + '~1'), c = h(id + '~2'), d = h(id + '~3'), e = h(id + '~4')
   if (region === 'command') {
-    // deep-central hub: a tight cluster around the thalamic anchor, below the cortex
-    return [(a - 0.5) * 1.4, -0.4 + (b - 0.5) * 1.2, 0.4 + (c - 0.5) * 1.6]
+    // deep-central hub: a loose cluster around the thalamic anchor, below the cortex
+    return [(a - 0.5) * 1.8, -0.4 + (b - 0.5) * 1.4, 0.4 + (c - 0.5) * 2.0]
   }
   const side: -1 | 1 = hemi === 'right' ? 1 : hemi === 'left' ? -1 : (a < 0.5 ? -1 : 1)
+  // spread across the FULL band (u) and width (v); sense hugs the lateral rim
   const u = r.u0 + (r.u1 - r.u0) * b
-  // sense hugs the lateral rim; others spread medially→laterally
-  const v = region === 'sense' ? 0.82 + c * 0.18 : 0.12 + c * 0.74
-  return corticalPoint(side, u, v)
+  const v = region === 'sense' ? 0.7 + c * 0.3 : 0.1 + c * 0.82
+  const p = corticalPoint(side, u, v)
+  // volumetric jitter breaks any line/sheet into an organic sparse cloud
+  return [p[0] + (d - 0.5) * 1.5, p[1] + (e - 0.5) * 1.1, p[2] + (a - 0.5) * 1.5]
 }
 
 /** Which region owns a given (u,v) cortical coord — for colouring the tissue. */
