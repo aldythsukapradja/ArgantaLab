@@ -25,6 +25,9 @@ const CharacterForge = lazy(() => import('../surfaces/character/CharacterForge')
 const OpenworldBuilder = lazy(() => import('../surfaces/world/OpenworldBuilder').then(module => ({ default: module.OpenworldBuilder })))
 const MusicBuilder = lazy(() => import('../surfaces/music/MusicBuilder').then(module => ({ default: module.MusicBuilder })))
 const VideoBuilder = lazy(() => import('../surfaces/video/VideoBuilder').then(module => ({ default: module.VideoBuilder })))
+const MediaCenter = lazy(() => import('../surfaces/media/MediaCenter').then(module => ({ default: module.MediaCenter })))
+const CinemaDev = lazy(() => import('../cinema/CinemaDev').then(module => ({ default: module.CinemaDev })))
+const KnowledgeSurface = lazy(() => import('../knowledge/KnowledgeSurface').then(module => ({ default: module.KnowledgeSurface })))
 
 function SurfaceLoading() {
   return <div className="auth-wrap" role="status" aria-label="Loading workspace"><div className="spin" /></div>
@@ -51,13 +54,16 @@ function Surface() {
     case 'world': return <OpenworldBuilder />
     case 'music': return <MusicBuilder />
     case 'video': return <VideoBuilder />
+    case 'media': return <MediaCenter />
+    case 'knowledge': return <KnowledgeSurface />
+    case 'cinema': return <CinemaDev />
   }
 }
 
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   const { surface } = useHQ()
   const wide = surface === 'game' || surface === 'app'
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'broadcast' || surface === 'portfolio' // edge-to-edge workspaces
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' // edge-to-edge workspaces
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button

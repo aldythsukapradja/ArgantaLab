@@ -1,0 +1,16 @@
+{
+  "name": "@arganta/media-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-agnostic media generation router. One generate() call, maturity-staged routing: deterministic & free first, premium only after approval.",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node demo.js"
+  }
+}

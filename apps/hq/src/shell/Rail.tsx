@@ -1,6 +1,7 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
-  Network, Megaphone, Radar, Grid2x2, Vault as VaultIcon, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film,
+  Network, Megaphone, Radar, Grid2x2, Vault as VaultIcon, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film, Wand2,
+  Orbit,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 
@@ -11,12 +12,14 @@ type Group = { name: string; items: Item[] }
 const GROUPS: Group[] = [
   { name: 'Products', items: [
     { id: 'home', label: 'CEO Orb', Icon: Sparkles },
+    { id: 'cinema', label: 'Cinema', Icon: Film, badge: 'wip' },
     { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid },
   ] },
   { name: 'Analytics', items: [
     { id: 'growth', label: 'Growth', Icon: TrendingUp },
     { id: 'data', label: 'Data', Icon: Database },
     { id: 'vault', label: 'HQ Vault', Icon: VaultIcon },
+    { id: 'knowledge', label: 'Knowledge', Icon: Orbit, badge: '3d' },
     { id: 'architecture', label: 'Architecture', Icon: Workflow },
   ] },
   { name: 'Command', items: [
@@ -34,6 +37,7 @@ const GROUPS: Group[] = [
     { id: 'world', label: 'Openworld Builder', Icon: Map },
     { id: 'music', label: 'Music Builder', Icon: Music2 },
     { id: 'video', label: 'Video Builder', Icon: Film },
+    { id: 'media', label: 'Media Center', Icon: Wand2, badge: 'new' },
   ] },
 ]
 
