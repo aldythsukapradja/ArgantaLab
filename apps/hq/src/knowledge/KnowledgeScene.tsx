@@ -226,12 +226,20 @@ function Resizer({ width, height }: { width: number; height: number }) {
   const setSize = useThree((s) => s.setSize)
   const camera = useThree((s) => s.camera)
   useEffect(() => {
-    if (!width || !height) return
+    if (width < 2 || height < 2) return
     setSize(width, height)
     const cam = camera as THREE.PerspectiveCamera
     cam.aspect = width / height
     cam.updateProjectionMatrix()
   }, [width, height, setSize, camera])
+  return null
+}
+
+// dev-only: expose the R3F root so a headless (rAF-paused) tab can force a manual
+// render + pixel readback for verification.
+function DebugExpose() {
+  const state = useThree()
+  useEffect(() => { if (import.meta.env.DEV) (window as unknown as { __kg?: unknown }).__kg = state }, [state])
   return null
 }
 
@@ -267,9 +275,10 @@ export function KnowledgeScene({ model, cloud, width, height }: { model: KModel;
       style={{ width, height }}
       dpr={[1, 2]}
       camera={{ position: [0, 19, 14], fov: 50, near: 0.1, far: 400 }}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      gl={{ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true }}
       onCreated={({ gl }) => gl.setClearColor('#04050d', 1)}
     >
+      <DebugExpose />
       <Resizer width={width} height={height} />
       <fog attach="fog" args={['#04050d', 28, 76]} />
       <ambientLight intensity={0.5} />
