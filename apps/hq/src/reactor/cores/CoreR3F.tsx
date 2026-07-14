@@ -92,7 +92,8 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
     const scene = sceneRef.current
     const rm = scene.reducedMotion
     const smooth = rm ? 0.12 : 0.5
-    const target = choreoFor(scene.state, scene.choreography)
+    const beatProgress = scene.sceneDuration > 0 ? THREE.MathUtils.clamp(scene.sceneTime / scene.sceneDuration, 0, 1) : 0
+    const target = choreoFor(scene.state, scene.choreography, beatProgress)
     const explTarget = manualRef.current != null ? manualRef.current : target.explosion
     expl.current = THREE.MathUtils.damp(expl.current, explTarget, 3.2, dt)
 

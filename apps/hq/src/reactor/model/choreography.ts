@@ -37,16 +37,28 @@ const FLAT: Record<Cluster, number> = { core: 1.0, think: 0.7, know: 0.7, do: 0.
 const dim = (over: Partial<Record<Cluster, number>>): Record<Cluster, number> =>
   ({ core: 0.9, think: 0.4, know: 0.4, do: 0.4, signal: 0.4, ...over })
 
-export function choreoFor(state: CoreState, choreography?: ChoreographyId): ChoreoTarget {
-  return { ...baseFor(state), layout: choreography ?? DEFAULT_CHOREOGRAPHY[state] }
+const ARCH_FLARE: Record<Cluster, number> = { core: 1.1, think: 1.1, know: 1.1, do: 1.1, signal: 0.9 }
+
+function easeOutCubic(t: number) { return 1 - (1 - t) ** 3 }
+function easeInCubic(t: number) { return t ** 3 }
+
+/**
+ * @param progress 0..1 elapsed within the current beat (scene.sceneTime /
+ * scene.sceneDuration). Used by beats whose explosion amount animates across
+ * the scene's own duration rather than sitting at one fixed value.
+ */
+export function choreoFor(state: CoreState, choreography?: ChoreographyId, progress = 0): ChoreoTarget {
+  return { ...baseFor(state, progress), layout: choreography ?? DEFAULT_CHOREOGRAPHY[state] }
 }
 
-function baseFor(state: CoreState): Omit<ChoreoTarget, 'layout'> {
+function baseFor(state: CoreState, progress: number): Omit<ChoreoTarget, 'layout'> {
   switch (state) {
     case 'offline':
       return { camera: FRONT, explosion: 0, exposure: 0.72, flare: dim({ core: 0.15, think: 0.12, know: 0.12, do: 0.12, signal: 0.12 }) }
     case 'booting':
-      return { camera: FRONT, explosion: 0, exposure: 1.05, flare: FLAT }
+      // Ignition: the reactor visibly cracks open as it powers on — a small
+      // "breath" — then settles flat once idle takes over.
+      return { camera: FRONT, explosion: 0.32 * easeOutCubic(progress), exposure: 1.05, flare: FLAT }
     case 'idle':
     case 'listening':
     case 'jarvis-speaking':
@@ -63,10 +75,18 @@ function baseFor(state: CoreState): Omit<ChoreoTarget, 'layout'> {
     case 'vault-entry':
       return { camera: [0, 0, 13.5], explosion: 0.5, exposure: 1.25, flare: dim({ core: 0.9, know: 1.6 }) }
     case 'architecture-unfold':
-      return { camera: WIDE, explosion: 1, exposure: 1.42, flare: { core: 1.1, think: 1.1, know: 1.1, do: 1.1, signal: 0.9 } }
+      return { camera: WIDE, explosion: 1, exposure: 1.42, flare: ARCH_FLARE }
     case 'popup-open':
       return { camera: FRONT, explosion: 0, exposure: 0.95, flare: dim({ core: 0.4, think: 0.35, know: 0.35, do: 0.35, signal: 0.35 }) }
-    default: // return
+    case 'return': {
+      // Recombination: hold the full-system reveal (the send-off, matching
+      // architecture-unfold's reach) then fold back to the flat resting
+      // emblem as the scene plays out — the actual "recombining" motion,
+      // landing at the collapsed idle pose by the time it ends.
+      const close = easeInCubic(progress)
+      return { camera: THREE_Q, explosion: 0.85 * (1 - close), exposure: 1.42 - 0.27 * close, flare: ARCH_FLARE }
+    }
+    default:
       return { camera: FRONT, explosion: 0, exposure: 1.15, flare: FLAT }
   }
 }
