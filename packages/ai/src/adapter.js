@@ -31,8 +31,8 @@ function mockProvider() {
     async run({ messages, json, tools }) {
       const last = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
       if (tools?.length) return { text: `_(mock)_ I'd call a tool here, but no live model is connected. Facts above stand on their own.`, toolCalls: [] };
-      if (json) return { text: '{}', toolCalls: [] }; // director/agent use their own local fallback when provider==='mock'
-      return { text: `_(mock reply — connect WebLLM or a free key)_ You said: "${String(last).slice(0, 160)}"`, toolCalls: [] };
+      if (json) return { text: '{}', toolCalls: [], model: 'mock' }; // director/agent use their own local fallback when provider==='mock'
+      return { text: `_(mock reply — connect WebLLM or a free key)_ You said: "${String(last).slice(0, 160)}"`, toolCalls: [], model: 'mock' };
     },
   };
 }
@@ -53,48 +53,72 @@ function openaiCompatProvider({ baseUrl, apiKey, model, headers }) {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`LLM ${res.status}: ${(await res.text()).slice(0, 200)}`);
-      if (onToken && res.body) return await readSSE(res, onToken);
+      if (onToken && res.body) { const r = await readSSE(res, onToken); return { ...r, model: r.model || model }; }
       const d = await res.json();
       const msg = d.choices?.[0]?.message || {};
-      return { text: msg.content || '', toolCalls: (msg.tool_calls || []).map(normalizeToolCall) };
+      // prefer the API's own echoed model (truthful — some gateways route to a
+      // different concrete model than requested) over our requested `model`.
+      return { text: msg.content || '', toolCalls: (msg.tool_calls || []).map(normalizeToolCall), model: d.model || model };
     },
   };
 }
 
-// The browser reaches Gemini/Groq through our operator-gated Edge Function, so
-// the key never ships in client JS. `invoke(body)` = supabase.functions.invoke.
+// The browser reaches Gemini/Groq/DeepSeek/Claude through our operator-gated
+// Edge Function, so keys never ship in client JS. `invoke(body)` =
+// supabase.functions.invoke. WS-3 upgrades the function itself to be a truthful
+// gateway (real provider/model/usage/cost/health/quota returned, never a
+// generic label) — this provider already threads whatever it returns through.
 function edgeProxyProvider({ invoke }) {
   return {
     id: 'edgeProxy',
-    async run({ messages, json, schema, tools, temperature = 0.6, seed, onToken }) {
-      const { data, error } = await invoke({ messages, json, schema, tools, temperature, seed });
+    async run({ messages, json, schema, tools, temperature = 0.6, seed, onToken, model }) {
+      const { data, error } = await invoke({ messages, json, schema, tools, temperature, seed, model });
       if (error) throw new Error(error.message || String(error));
       if (data?.error) throw new Error(data.error);
-      const out = { text: data?.text || '', toolCalls: data?.toolCalls || [] };
+      const out = { text: data?.text || '', toolCalls: data?.toolCalls || [], model: data?.model || model || null, actualProvider: data?.provider || null, costUsd: data?.costUsd, inputTokens: data?.inputTokens, outputTokens: data?.outputTokens, latencyMs: data?.latencyMs };
       if (onToken && out.text) chunkEmit(out.text, onToken); // proxy is non-streaming; simulate
       return out;
     },
   };
 }
 
-// In-browser, WebGPU, weights from your Supabase bucket. Dep (@mlc-ai/web-llm) is
-// dynamically imported so the package builds without it; install to enable.
-function webllmProvider({ modelId, appConfig }) {
+// In-browser, WebGPU, local Tier-0 inference (WS-1 Sovereign Rack). Weights come
+// from @mlc-ai/web-llm's OWN prebuilt catalog (MLC-hosted on HF CDN) unless a
+// custom `appConfig` is supplied. Dep is dynamically imported so the package
+// builds without it; install to enable. See rack.js for the curated model list
+// + device profiling that picks `modelId`.
+function webllmProvider({ modelId: defaultModelId, appConfig, onProgress }) {
   let engineP = null;
-  const ensure = async () => {
+  let loadedModelId = null;
+  // ensure(model) — (re)loads the engine only when the requested model differs
+  // from what's currently loaded, so registry-driven per-task model switching
+  // (0.8B for a quick classify vs 9B for a brief) doesn't re-download needlessly
+  // when consecutive calls agree, but DOES switch when the router asks for a
+  // different sovereign model.
+  const ensure = async (model) => {
+    const want = model || defaultModelId;
+    if (!want) throw new Error('webllm: no modelId configured or requested');
+    if (loadedModelId !== want) engineP = null;
     if (!engineP) engineP = (async () => {
       // Non-static specifier so the bundler never tries to resolve it at build
       // time — WebLLM is an OPTIONAL dep, imported only when actually enabled.
       const spec = '@mlc-ai/' + 'web-llm';
       const webllm = await import(/* @vite-ignore */ spec);
-      return webllm.CreateMLCEngine(modelId, { appConfig });
+      const cfg = appConfig || webllm.prebuiltAppConfig;
+      const engine = await webllm.CreateMLCEngine(want, {
+        appConfig: cfg,
+        initProgressCallback: onProgress ? (p) => onProgress({ progress: p.progress, text: p.text, modelId: want }) : undefined,
+      });
+      loadedModelId = want;
+      return engine;
     })();
     return engineP;
   };
   return {
     id: 'webllm', ensure,
-    async run({ messages, json, tools, temperature = 0.6, seed, onToken, signal }) {
-      const engine = await ensure();
+    async run({ messages, json, tools, temperature = 0.6, seed, onToken, signal, model }) {
+      const engine = await ensure(model);
+      const usedModel = loadedModelId; // truthful: what actually loaded, not just what was requested
       const req = { messages, temperature, stream: !!onToken };
       if (seed != null) req.seed = seed;
       if (json) req.response_format = { type: 'json_object' };
@@ -103,11 +127,11 @@ function webllmProvider({ modelId, appConfig }) {
         let text = '';
         const stream = await engine.chat.completions.create(req);
         for await (const chunk of stream) { const d = chunk.choices?.[0]?.delta?.content || ''; if (d) { text += d; onToken(d); } if (signal?.aborted) break; }
-        return { text, toolCalls: [] };
+        return { text, toolCalls: [], model: usedModel };
       }
       const d = await engine.chat.completions.create(req);
       const msg = d.choices?.[0]?.message || {};
-      return { text: msg.content || '', toolCalls: (msg.tool_calls || []).map(normalizeToolCall) };
+      return { text: msg.content || '', toolCalls: (msg.tool_calls || []).map(normalizeToolCall), model: usedModel };
     },
   };
 }
@@ -142,10 +166,17 @@ export function createLLM(config = {}) {
 
   async function call(task, args) {
     const r = route(task, cfg);
-    const provider = providers[r.provider] || providers.mock;
+    // args.provider/args.model let a caller (e.g. the WS-2 registry-driven
+    // intelligence facade) force an exact provider+model chosen by selectModel(),
+    // bypassing the legacy tier map without breaking existing task-based callers.
+    const providerId = args.provider || r.provider;
+    const provider = providers[providerId] || providers.mock;
+    const requestedModel = args.model || r.model;
     try {
-      const out = await provider.run({ ...args, model: r.model });
-      return { ...out, provider: provider.id, tier: r.tier };
+      const out = await provider.run({ ...args, model: requestedModel });
+      // truthful provenance: prefer what the provider says it ACTUALLY used
+      // over what we merely requested — never collapse to a generic label.
+      return { ...out, provider: provider.id, tier: r.tier, model: out.model || requestedModel || null };
     } catch (e) {
       if (provider.id !== 'mock') { // degrade to mock rather than throw
         const out = await providers.mock.run(args);
@@ -157,12 +188,12 @@ export function createLLM(config = {}) {
 
   return {
     info: () => ({ available, providers: Object.keys(providers) }),
-    chat: (o) => call(o.task || 'reason', { messages: o.messages, temperature: o.temperature, seed: o.seed }),
-    chatStream: (o, onToken) => call(o.task || 'brief', { messages: o.messages, temperature: o.temperature, seed: o.seed, onToken }),
+    chat: (o) => call(o.task || 'reason', { messages: o.messages, temperature: o.temperature, seed: o.seed, provider: o.provider, model: o.model }),
+    chatStream: (o, onToken) => call(o.task || 'brief', { messages: o.messages, temperature: o.temperature, seed: o.seed, onToken, provider: o.provider, model: o.model }),
     async chatJSON(o) {
-      const out = await call(o.task || 'storyboard', { messages: o.messages, json: true, schema: o.schema, temperature: o.temperature ?? 0.5, seed: o.seed });
+      const out = await call(o.task || 'storyboard', { messages: o.messages, json: true, schema: o.schema, temperature: o.temperature ?? 0.5, seed: o.seed, provider: o.provider, model: o.model });
       return { ...out, json: extractJSON(out.text) };
     },
-    chatTools: (o) => call(o.task || 'orchestrate', { messages: o.messages, tools: o.tools, temperature: o.temperature ?? 0.4 }),
+    chatTools: (o) => call(o.task || 'orchestrate', { messages: o.messages, tools: o.tools, temperature: o.temperature ?? 0.4, provider: o.provider, model: o.model }),
   };
 }

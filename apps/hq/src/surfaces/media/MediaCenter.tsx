@@ -15,6 +15,8 @@ import { StudioShell, STAGES, type HistoryItem } from '../studios/StudioShell'
 import { stubGenerate } from '../studios/stub'
 import { makeBrand, makeWebsite, makeDeck, type BrandKit } from '../studios/engines'
 import { analyze, SAMPLES, type Analysis } from '../studios/analytics'
+import { askInsight, type Insight } from '../studios/analytics-intelligence'
+import { onModelProgress } from '../../lib/ai'
 
 const SceneCanvas = lazy(() => import('../studios/SceneCanvas').then(m => ({ default: m.SceneCanvas })))
 const AnalyticsChart = lazy(() => import('../studios/AnalyticsChart').then(m => ({ default: m.AnalyticsChart })))
@@ -61,6 +63,9 @@ export function MediaCenter() {
   const [deckHtml, setDeckHtml] = useState<string | null>(null)
   const [brand, setBrand] = useState<BrandKit | null>(null)
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [insight, setInsight] = useState<Insight | null>(null)
+  const [insightState, setInsightState] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [insightProgress, setInsightProgress] = useState<{ pct: number; text: string } | null>(null)
   const [campaign, setCampaign] = useState<any>(null)
   const [playing, setPlaying] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -149,6 +154,7 @@ export function MediaCenter() {
         res = stubGenerate('analytics', st, ok, 'analytics-engine', 'browser', 0, 'succeeded')
         if (res.status !== 'failed') {
           const a = analyze(text); setAnalysis(a)
+          setInsight(null); setInsightState('idle') // new chart → any prior AI insight no longer applies
           res.provenance.provider = `analytics · ${a.chart}`
           res.descriptor = { engine: a.source, kind: 'analytics' }
         }
@@ -188,6 +194,20 @@ export function MediaCenter() {
     if (h.prompt != null) setPrompt(h.prompt)
     if (h.stage != null) setStage(h.stage)
     onGenerate({ kind: k, prompt: h.prompt, stage: h.stage, silent: true })
+  }
+
+  // WS-6 slice — opt-in sovereign-model insight on the current chart. Never
+  // auto-fires (the model may need a first-run download of ~1.6GB+), so this
+  // is only invoked from an explicit button click.
+  async function askAiInsight() {
+    if (!analysis || insightState === 'loading') return
+    setInsightState('loading'); setInsightProgress(null)
+    const unsub = onModelProgress((p) => setInsightProgress({ pct: Math.round((p.progress || 0) * 100), text: p.text }))
+    try {
+      const res = await askInsight(prompt, analysis)
+      if (res) { setInsight(res); setInsightState('idle') } else { setInsightState('error') }
+    } catch { setInsightState('error') }
+    finally { unsub(); setInsightProgress(null) }
   }
 
   async function onExportVideo() {
@@ -280,7 +300,14 @@ export function MediaCenter() {
       ) : kind === 'campaign' ? (
         <CampaignMatrix c={campaign} />
       ) : (
-        analysis ? <Suspense fallback={<div className="empty">Rendering chart…</div>}><AnalyticsChart a={analysis} /></Suspense> : (
+        analysis ? (
+          <Suspense fallback={<div className="empty">Rendering chart…</div>}>
+            <div className="analytics-wrap">
+              <AnalyticsChart a={analysis} />
+              <AiInsightBar state={insightState} insight={insight} progress={insightProgress} onAsk={askAiInsight} />
+            </div>
+          </Suspense>
+        ) : (
           <div className="ask-empty">
             <p>Ask about your data — I'll pick the right chart.</p>
             <div className="ask-chips">{SAMPLES.map(s => <button key={s} className="samp" onClick={() => ask(s)}>{s}</button>)}</div>
@@ -288,6 +315,33 @@ export function MediaCenter() {
         )
       )}
     </StudioShell>
+  )
+}
+
+// WS-6 slice — surfaces the sovereign (Tier 0, local) insight below a chart.
+// Opt-in only; the deterministic chart above never waits on this. Provenance
+// is shown honestly: costClass 0 = "Sovereign · local · $0", never a paid claim.
+function AiInsightBar({ state, insight, progress, onAsk }: { state: 'idle' | 'loading' | 'error'; insight: Insight | null; progress: { pct: number; text: string } | null; onAsk: () => void }) {
+  if (insight) {
+    const p = insight.provenance
+    return (
+      <div className="ai-insight on">
+        <span className="ai-badge">🧠 {p?.actualCostClass === 0 ? 'Sovereign · local · $0' : `${p?.actualProvider || 'AI'} · $${p?.costUsd ?? 0}`}</span>
+        <p>{insight.text}</p>
+      </div>
+    )
+  }
+  if (state === 'loading') {
+    return (
+      <div className="ai-insight">
+        <button className="ai-ask" disabled>⏳ {progress ? `Loading local model… ${progress.pct}%` : 'Thinking…'}</button>
+      </div>
+    )
+  }
+  return (
+    <div className="ai-insight">
+      <button className="ai-ask" onClick={onAsk}>🧠 Ask AI for an insight {state === 'error' ? '(retry — no local model available?)' : ''}</button>
+    </div>
   )
 }
 

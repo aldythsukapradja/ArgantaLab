@@ -10,3 +10,8 @@ export * from './modelspec.js';   // WS-A · model registry contract
 export * from './policy.js';      // WS-B · task policy + selectModel + escalation
 export * from './governance.js';  // WS-C · data-class + cost governance
 export * from './ledger.js';      // WS-D · agent_runs metering + CAPO
+
+// ── Sonnet implementation batch (WS-1, WS-2) ───────────────────────────────
+export * from './rack.js';          // WS-1 · sovereign model manifest + device profiling
+export * from './registry.js';      // WS-2 · MODEL_REGISTRY builder
+export { createIntelligence } from './intelligence.js'; // WS-2 · selectModel-driven facade
