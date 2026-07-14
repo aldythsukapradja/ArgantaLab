@@ -60,12 +60,17 @@ const intelligenceLLM = createLLM({
 const intelligenceRegistry = buildRegistry({ webllm: true, edgeProxy: cloudEnabled, gatewayIsTruthful: false })
 
 // ── WS-5 metering: persist every run to agent_runs (migration_agent_runs.sql) ──
-// Fire-and-forget, never awaited — a write failure never affects the UI.
-// camelCase keys match runRecord() exactly; the RPC reads them via ->> so this
-// needs no field renaming. Exported so non-LLM domains (Media Center's
-// @arganta/media-core generations) can log through the same ledger without
-// going through the LLM-specific `intelligence.ask()`.
+// The ONE choke point every domain funnels through — intelligence.ask() (via
+// its `sink`) AND Media Center's direct @arganta/media-core generations both
+// call this. So it's also where we mirror an in-memory session view (WS-7's
+// Model Rack reads getSessionRuns()) — this keeps the offline/no-Supabase case
+// fully observable, not just whatever happens to route through intelligence.
+const sessionRuns: Record<string, unknown>[] = []
+export function getSessionRuns() { return [...sessionRuns] }
+
 export function logAgentRun(run: Record<string, unknown>) {
+  sessionRuns.push({ ...run, createdAt: run.createdAt || new Date().toISOString() })
+  if (sessionRuns.length > 200) sessionRuns.shift()
   if (!cloudEnabled) return
   supabase.rpc('agent_run_log', { run }).then(({ error }: { error: { message: string } | null }) => {
     if (error) console.warn('[agent_run_log]', error.message)
