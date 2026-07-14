@@ -37,6 +37,29 @@ test('no sovereign model fits the device and no other tier is registered → rej
   assert.equal(res.provenance.status, 'rejected');
 });
 
+test('sink (WS-5 persistence hook) fires for every run, fire-and-forget, without blocking or throwing', async () => {
+  const registry = buildRegistry({ webllm: true });
+  const sunk = [];
+  const intel = createIntelligence({
+    llm: stubLLM(), registry, runtime: { webgpu: true, vramMB: null },
+    sink: (r) => { sunk.push(r); throw new Error('a broken sink must never break ask()'); },
+  });
+  const res = await intel.ask('tag', { dataClass: 'public', messages: [] });
+  assert.equal(res.rejected, false); // sink throwing didn't propagate
+  await new Promise((r) => setTimeout(r, 0)); // let the fire-and-forget microtask settle
+  assert.equal(sunk.length, 1);
+  assert.equal(sunk[0].task, 'tag');
+});
+
+test('a rejected/degraded run is ALSO sunk (needed for observability, not just successes)', async () => {
+  const sunk = [];
+  const intel = createIntelligence({ llm: stubLLM(), registry: [], sink: (r) => sunk.push(r) });
+  await intel.ask('summarize', { dataClass: 'public', messages: [] });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(sunk.length, 1);
+  assert.equal(sunk[0].status, 'rejected');
+});
+
 test('every ask() call is recorded in the truthful runs ledger', async () => {
   const registry = buildRegistry({ webllm: true });
   const intel = createIntelligence({ llm: stubLLM(), registry, runtime: { webgpu: true, vramMB: null } });

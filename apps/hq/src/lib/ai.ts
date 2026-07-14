@@ -59,4 +59,17 @@ const intelligenceLLM = createLLM({
 // truthfully meter.
 const intelligenceRegistry = buildRegistry({ webllm: true, edgeProxy: cloudEnabled, gatewayIsTruthful: false })
 
-export const intelligence = createIntelligence({ llm: intelligenceLLM, registry: intelligenceRegistry })
+// ── WS-5 metering: persist every run to agent_runs (migration_agent_runs.sql) ──
+// Fire-and-forget, never awaited — a write failure never affects the UI.
+// camelCase keys match runRecord() exactly; the RPC reads them via ->> so this
+// needs no field renaming. Exported so non-LLM domains (Media Center's
+// @arganta/media-core generations) can log through the same ledger without
+// going through the LLM-specific `intelligence.ask()`.
+export function logAgentRun(run: Record<string, unknown>) {
+  if (!cloudEnabled) return
+  supabase.rpc('agent_run_log', { run }).then(({ error }: { error: { message: string } | null }) => {
+    if (error) console.warn('[agent_run_log]', error.message)
+  })
+}
+
+export const intelligence = createIntelligence({ llm: intelligenceLLM, registry: intelligenceRegistry, sink: logAgentRun })

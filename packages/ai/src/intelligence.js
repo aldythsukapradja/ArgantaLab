@@ -19,12 +19,24 @@ import { detectDevice } from './rack.js';
  * @param {object} [o.benchmarks]      per-model BenchmarkResult map
  * @param {object} [o.runtime]         override device profile (else auto-detected lazily)
  * @param {object} [o.agentPolicy]     AgentModelPolicy for approval-threshold checks
+ * @param {(record:object)=>any} [o.sink]  optional persistence hook (WS-5) —
+ *   called fire-and-forget with every runRecord (never awaited, never lets a
+ *   write failure affect the caller). Keeps this package Supabase-free; the app
+ *   layer wires the real write (see apps/hq/src/lib/ai.ts).
  */
 export function createIntelligence(o) {
-  const { llm, health = {}, benchmarks = {} } = o;
+  const { llm, health = {}, benchmarks = {}, sink } = o;
   let registry = o.registry || [];
   let runtimeCache = o.runtime || null;
   const runs = [];
+
+  // records a run in memory AND fires the optional persistence sink (WS-5) —
+  // fire-and-forget, never awaited, never lets a write failure affect the caller.
+  function emit(r) {
+    runs.push(r);
+    if (sink) { try { Promise.resolve(sink(r)).catch(() => {}); } catch { /* swallow */ } }
+    return r;
+  }
 
   async function runtime() {
     if (runtimeCache) return runtimeCache;
@@ -84,7 +96,7 @@ export function createIntelligence(o) {
       status: failed ? 'failed' : 'succeeded',
       error: out.error || (silentlyMocked ? `requested ${picked.provider} but adapter fell back to mock (not available / failed to load)` : null),
     });
-    runs.push(record);
+    emit(record);
 
     if (failed) return { text: null, json: null, provenance: record, approval, rejected: true, reason: record.error };
     return { text: out.text, json: out.json, provenance: record, approval, rejected: false };
@@ -92,7 +104,7 @@ export function createIntelligence(o) {
 
   function degrade(task, dataClass, reason) {
     const record = runRecord({ domain: 'llm', task, dataClass, status: 'rejected', error: reason, actualProvider: 'mock', actualModel: 'mock' });
-    runs.push(record);
+    emit(record);
     return { text: null, json: null, provenance: record, approval: { required: false, reasons: [] }, rejected: true, reason };
   }
 

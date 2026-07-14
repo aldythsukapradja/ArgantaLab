@@ -16,7 +16,7 @@ import { stubGenerate } from '../studios/stub'
 import { makeBrand, makeWebsite, makeDeck, type BrandKit } from '../studios/engines'
 import { analyze, SAMPLES, type Analysis } from '../studios/analytics'
 import { askInsight, type Insight } from '../studios/analytics-intelligence'
-import { onModelProgress } from '../../lib/ai'
+import { onModelProgress, logAgentRun } from '../../lib/ai'
 
 const SceneCanvas = lazy(() => import('../studios/SceneCanvas').then(m => ({ default: m.SceneCanvas })))
 const AnalyticsChart = lazy(() => import('../studios/AnalyticsChart').then(m => ({ default: m.AnalyticsChart })))
@@ -131,13 +131,30 @@ export function MediaCenter() {
     if (!text) return
     setBusy(true); setResult(null)
     const ok = approved || !!opts.force
+    // WS-5 metering — one ledger row per generation attempt, success OR failure
+    // (a blocked/rejected attempt — e.g. approval_required — is observability
+    // data too, same principle as intelligence.js's degrade() path). Real
+    // revenue data flows through Analytics even on the deterministic path, so
+    // it's classified confidential like the AI insight path (ADR-0003).
+    const logMediaRun = (r: any) => {
+      const prov = r.provenance || {}
+      logAgentRun({
+        runId: crypto.randomUUID(), domain: 'media', task: k,
+        dataClass: k === 'analytics' ? 'confidential' : 'public',
+        requestedCostClass: st, actualCostClass: prov.maturityStage ?? st,
+        requestedProvider: prov.provider ?? null, requestedModel: null,
+        actualProvider: prov.provider ?? null, actualModel: null,
+        costUsd: prov.cost ?? 0, status: r.status === 'failed' ? 'failed' : 'succeeded',
+        error: r.status === 'failed' ? r.error?.code ?? null : null,
+      })
+    }
     try {
       let res: any
       if (REAL.has(k)) {
         const spec = k === 'image' ? { prompt: text, width: 768, height: 768 } : { prompt: text }
         res = generate({ kind: k, spec, maturityStage: st, approved: ok })
         setResult(res)
-        if (res.status === 'failed') return
+        if (res.status === 'failed') { logMediaRun(res); return }
         if (k === 'image' && res.status === 'succeeded') {
           if (imgUrl) URL.revokeObjectURL(imgUrl)
           setImgUrl(URL.createObjectURL(new Blob([res.output.bytes], { type: res.output.mime || 'image/png' })))
@@ -177,8 +194,10 @@ export function MediaCenter() {
           res.provenance.seed = b.seed
         }
         setResult(res)
-        if (res.status === 'failed') return
+        if (res.status === 'failed') { logMediaRun(res); return }
       }
+      logMediaRun(res)
+
       if (opts.silent) return // restore — don't add a new version
       const label = k === 'music' ? 'audio' : k
       setHistory(h => [{ kind: k, prompt: text, stage: st, label, sub: STAGES[st]?.label, cost: res.provenance?.cost ?? 0, status: res.status, time: Date.now() }, ...h].slice(0, 12))
