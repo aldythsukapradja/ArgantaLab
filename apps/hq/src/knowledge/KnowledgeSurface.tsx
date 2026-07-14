@@ -3,7 +3,7 @@
 // KNOW · DO, animated by a cognition simulation. Additive + read-only — clicking
 // a neuron opens the real note in the 2D Vault. WebGL-fallback to the 2D graph.
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Brain, ExternalLink, X, AlertTriangle, Activity, Play } from 'lucide-react'
 import { useVault } from '../vault/store'
 import { useHQ } from '../shell/store'
@@ -15,6 +15,15 @@ import { useKnowledge } from './store'
 import { neuronCloud, COGNITION_COLOR, COGNITION_LABEL, COGNITION_HINT, type Cognition } from './brain'
 import { ONTOLOGY_COLOR } from './ontology'
 import { PROVENANCE_META } from './provenance'
+
+// Never let a 3D failure blank the surface: catch any render/WebGL error and
+// fall back to the operational 2D graph, showing the real reason on screen.
+class SceneBoundary extends Component<{ fallback: (msg: string) => ReactNode; children: ReactNode }, { error: string | null }> {
+  state = { error: null as string | null }
+  static getDerivedStateFromError(err: unknown) { return { error: (err as Error)?.message || String(err) } }
+  componentDidCatch(err: unknown) { console.error('[KnowledgeSurface] 3D scene failed:', err) }
+  render() { return this.state.error ? this.props.fallback(this.state.error) : this.props.children }
+}
 
 function hasWebGL(): boolean {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false }
@@ -41,6 +50,19 @@ export function KnowledgeSurface() {
 
   const selNode = selected ? model.byId.get(selected) : null
 
+  // Render heartbeat: if the 3D scene never draws a frame (R3F failed to init on
+  // this GPU/tab for any reason), fall back to the 2D graph instead of a blank.
+  const drewRef = useRef(false)
+  const [dead, setDead] = useState(false)
+  useEffect(() => {
+    let t = 0
+    const arm = () => { clearTimeout(t); t = window.setTimeout(() => { if (!drewRef.current) setDead(true) }, 5000) }
+    if (!document.hidden) arm()
+    const onVis = () => { if (!document.hidden && !drewRef.current) arm() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearTimeout(t); document.removeEventListener('visibilitychange', onVis) }
+  }, [])
+
   // R3F only builds its scene once it measures a size > 0, and that measurement
   // is driven by rAF / ResizeObserver — both of which a backgrounded tab pauses,
   // so the canvas can stay blank (nothing ever initialises). A window `resize`
@@ -51,15 +73,16 @@ export function KnowledgeSurface() {
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
-    const measure = () => {
-      setSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 })
-      window.dispatchEvent(new Event('resize'))
-    }
-    const ro = new ResizeObserver(measure)
+    // Observer only reads the container size (drives the imperative Resizer). It
+    // must NOT dispatch a window resize — that would feed back into itself and
+    // loop. The one-shot kicks below bootstrap R3F's own measurement (so its
+    // scene initialises even if rAF was paused during mount) without looping.
+    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 }))
     ro.observe(el)
-    measure()
-    const kicks = [0, 100, 400, 1200].map((ms) => window.setTimeout(measure, ms))
-    const onVis = () => measure()
+    setSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 })
+    const kick = () => window.dispatchEvent(new Event('resize'))
+    const kicks = [0, 120, 500].map((ms) => window.setTimeout(kick, ms))
+    const onVis = () => { if (!document.hidden) kick() }
     document.addEventListener('visibilitychange', onVis)
     return () => { ro.disconnect(); kicks.forEach(clearTimeout); document.removeEventListener('visibilitychange', onVis) }
   }, [])
@@ -71,11 +94,24 @@ export function KnowledgeSurface() {
       {/* Force the WebGL canvas to fill via CSS regardless of R3F's (rAF-gated)
           measurement — guarantees it's never a tiny 300×150 corner ("blank"). */}
       <style>{`.kg-canvas canvas{width:100%!important;height:100%!important;display:block}`}</style>
-      {webgl ? (
+      {webgl && !dead ? (
         <div ref={wrapRef} style={{ position: 'absolute', inset: 0 }}>
-          <Suspense fallback={<Loading />}>
-            <KnowledgeScene model={model} cloud={cloud} width={size.w} height={size.h} />
-          </Suspense>
+          <SceneBoundary fallback={(msg) => (
+            <div className="vault" style={{ position: 'absolute', inset: 0 }}>
+              <div style={banner}>3D cortex unavailable ({msg}) — showing the 2D knowledge graph.</div>
+              <div style={{ position: 'absolute', inset: '34px 0 0' }}><GraphViewV3 /></div>
+            </div>
+          )}>
+            <Suspense fallback={<Loading />}>
+              <KnowledgeScene model={model} cloud={cloud} width={size.w} height={size.h}
+                onFrame={() => { if (!drewRef.current) { drewRef.current = true } }} />
+            </Suspense>
+          </SceneBoundary>
+        </div>
+      ) : webgl && dead ? (
+        <div className="vault" style={{ position: 'absolute', inset: 0 }}>
+          <div style={banner}>3D cortex didn't start on this device — showing the 2D knowledge graph.</div>
+          <div style={{ position: 'absolute', inset: '34px 0 0' }}><GraphViewV3 /></div>
         </div>
       ) : (
         <div className="vault" style={{ position: 'absolute', inset: 0 }}>

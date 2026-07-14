@@ -243,6 +243,13 @@ function DebugExpose() {
   return null
 }
 
+// Signals the surface that the scene has actually drawn a frame; if this never
+// fires, the surface falls back to the 2D graph instead of showing a blank.
+function Heartbeat({ onFrame }: { onFrame?: () => void }) {
+  useFrame(() => { onFrame?.() })
+  return null
+}
+
 function CameraRig({ model }: { model: KModel }) {
   const controls = useRef<any>(null)
   const { camera } = useThree()
@@ -268,7 +275,7 @@ function CameraRig({ model }: { model: KModel }) {
 }
 
 // ─────────────── scene root ───────────────
-export function KnowledgeScene({ model, cloud, width, height }: { model: KModel; cloud: { positions: Float32Array; bands: Uint8Array }; width: number; height: number }) {
+export function KnowledgeScene({ model, cloud, width, height, onFrame }: { model: KModel; cloud: { positions: Float32Array; bands: Uint8Array }; width: number; height: number; onFrame?: () => void }) {
   return (
     <Canvas
       className="kg-canvas"
@@ -279,6 +286,7 @@ export function KnowledgeScene({ model, cloud, width, height }: { model: KModel;
       onCreated={({ gl }) => gl.setClearColor('#04050d', 1)}
     >
       <DebugExpose />
+      <Heartbeat onFrame={onFrame} />
       <Resizer width={width} height={height} />
       <fog attach="fog" args={['#04050d', 28, 76]} />
       <ambientLight intensity={0.5} />
