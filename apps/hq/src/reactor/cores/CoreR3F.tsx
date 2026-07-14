@@ -170,16 +170,27 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
     })
 
     // Ring text lies on each layer's ring (its own plane, so it tilts with the
-    // camera in the exploded view). Legible on the concentric axial layouts —
-    // visible even at rest so the emblem reads as the labelled HUD — and faded
-    // for the scattered layouts (triad/orbital/helix) where it would overlap.
+    // camera in the exploded view). It is SILENT by default — standby/idle
+    // shows no text at all. A label only surfaces when the current narrative
+    // beat is actually about that layer (its cluster is the flared one, e.g.
+    // 'think' flares the Think ring only), during the full architecture
+    // reveal (every label, the grand overview), or while the founder is
+    // manually scrubbing the explosion in Edit mode (so it's inspectable
+    // while authoring). It fades in on arrival and — since 'return' keeps
+    // labels relevant while explosion itself is animating back to 0 — fades
+    // out again as the reactor folds closed, landing back at silent standby.
+    const manualControl = manualRef.current != null
+    const bigReveal = scene.state === 'architecture-unfold' || scene.state === 'return'
     labelRefs.current.forEach((mesh, i) => {
       const spec = layers[i]
       const mat = labelMaterials[i]
       if (!mesh || !spec || !mat) return
       const p = layerPosition(spec, target.layout, expl.current, i, layers.length)
       mesh.position.set(axial ? 0 : p[0], axial ? 0 : p[1], p[2] + 0.02)
-      mat.opacity = axial ? 0.55 + 0.35 * expl.current : 0.1 * (1 - expl.current)
+      const flaredHere = clusterFlare(target.flare, spec.cluster) > 1.05
+      const relevant = manualControl || bigReveal || flaredHere
+      const targetOpacity = relevant ? expl.current * (bigReveal ? 0.85 : 0.95) : 0
+      mat.opacity = THREE.MathUtils.damp(mat.opacity, targetOpacity, 4, dt)
     })
 
     // Flow pulses travelling the axis — visible only once the reactor fans

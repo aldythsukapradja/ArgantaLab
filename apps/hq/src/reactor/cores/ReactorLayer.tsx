@@ -49,24 +49,33 @@ export function ReactorLayer({ spec, tier, selected = false, onSelectProduct, on
 
   switch (spec.kind) {
     case 'core':
+      // emissiveIntensity 2-3 with toneMapped=false clips straight to pure
+      // white — no shading, no falloff, reads as a flat featureless blob.
+      // toneMapped + a lower intensity lets ACES compress the highlight so
+      // the sphere's roundness/shading actually shows, and a thin rim ring
+      // gives it a defined edge against the black background.
       return (
         <group>
           <mesh>
             <sphereGeometry args={[spec.radius, 48, 48]} />
-            <meshStandardMaterial color="#1597ff" emissive="#f8feff" emissiveIntensity={selected ? 3 : 2}
-              roughness={0.12} metalness={0.1} toneMapped={false} />
+            <meshStandardMaterial color="#1597ff" emissive="#f8feff" emissiveIntensity={selected ? 1.7 : 1.25}
+              roughness={0.2} metalness={0.15} toneMapped />
           </mesh>
-          {/* radiating spokes */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[spec.radius * 1.05, spec.radius * 0.035, 12, 48]} />
+            <meshBasicMaterial color="#bfefff" transparent opacity={0.65} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </mesh>
+          {/* radiating spokes — pushed clear of the glow halo so they stay legible */}
           {Array.from({ length: 12 }, (_, i) => {
             const a = i * (Math.PI / 6)
             return (
-              <mesh key={i} position={[Math.cos(a) * spec.radius * 1.3, Math.sin(a) * spec.radius * 1.3, 0.02]} rotation={[0, 0, a]}>
-                <planeGeometry args={[spec.radius * 0.5, 0.03]} />
-                <meshBasicMaterial color={spec.color} transparent opacity={0.55} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+              <mesh key={i} position={[Math.cos(a) * spec.radius * 1.55, Math.sin(a) * spec.radius * 1.55, 0.02]} rotation={[0, 0, a]}>
+                <planeGeometry args={[spec.radius * 0.6, 0.035]} />
+                <meshBasicMaterial color={spec.color} transparent opacity={0.75} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
               </mesh>
             )
           })}
-          <pointLight color={spec.color} intensity={selected ? 6 : 4} distance={13} />
+          <pointLight color={spec.color} intensity={selected ? 4 : 2.6} distance={11} />
         </group>
       )
 
