@@ -1,0 +1,13 @@
+/* Karaoke styles — travel with the component so <KaraokeLine> looks right
+   anywhere it's mounted (Cinema tab, Landing cinematic, agent, video…).
+   Theme-aware; the active-word glow uses --tint if the host sets one. */
+.kara{position:relative}
+.kara-line{display:flex;justify-content:center;align-items:baseline;flex-wrap:wrap;gap:.16em .34em;line-height:1.45}
+.kara-word{font-size:clamp(11px,.82vw,14px);font-weight:540;color:var(--tx3);
+  transition:color .16s ease,opacity .16s ease,transform .16s ease,text-shadow .16s ease;transform:translateY(.5px)}
+.kara-word.done{color:var(--tx2)}
+.kara-word.active{color:var(--tx);font-weight:650;transform:translateY(0) scale(1.04);
+  text-shadow:0 0 10px color-mix(in srgb,var(--tint,#45e8ff) 70%,transparent),0 0 20px color-mix(in srgb,var(--tint,#45e8ff) 35%,transparent)}
+.kara-word.upcoming{color:var(--tx3);opacity:.6}
+.kara-idx{position:absolute;right:2px;top:-2px;font:700 6px var(--mono,ui-monospace,monospace);color:var(--tx3);letter-spacing:.08em}
+@media(prefers-reduced-motion:reduce){.kara-word{transition:none!important}}

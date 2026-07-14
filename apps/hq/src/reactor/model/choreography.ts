@@ -28,9 +28,11 @@ const FRONT: [number, number, number] = [0, 0, 18]
 const THREE_Q: [number, number, number] = [6.5, 3.8, 17]
 const WIDE: [number, number, number] = [8.5, 5, 18]
 
-const FLAT: Record<Cluster, number> = { core: 0.9, think: 0.7, know: 0.7, do: 0.7, signal: 0.6 }
+const FLAT: Record<Cluster, number> = { core: 1.0, think: 0.7, know: 0.7, do: 0.7, signal: 0.6 }
+// Command Core (cluster 'core') stays bright/stable across beats — authority,
+// not activity — so it never dims as far as the other clusters.
 const dim = (over: Partial<Record<Cluster, number>>): Record<Cluster, number> =>
-  ({ core: 0.6, think: 0.4, know: 0.4, do: 0.4, signal: 0.4, ...over })
+  ({ core: 0.9, think: 0.4, know: 0.4, do: 0.4, signal: 0.4, ...over })
 
 export function choreoFor(state: CoreState): ChoreoTarget {
   switch (state) {

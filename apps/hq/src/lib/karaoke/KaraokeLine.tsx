@@ -4,6 +4,7 @@
 // word-by-word highlight. Both are reusable anywhere narration plays.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildKaraoke, resolveAt, type KaraokeResolution } from './karaoke'
+import './karaoke.css'
 
 export function useKaraoke(
   audio: HTMLAudioElement | null,

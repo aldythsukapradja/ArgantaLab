@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity, Boxes, ChevronRight, Clock3, Command, Coins, Gauge,
+  Activity, Boxes, ChevronRight, Clapperboard, Clock3, Command, Coins, Gauge,
   LayoutGrid, MapPin, Mic, Moon, Power, RefreshCw, Repeat2, Sparkles,
   Sun, TrendingUp, Users, X,
 } from 'lucide-react'
@@ -22,6 +22,7 @@ import type { ReactorSignalState } from './reactorModel'
 import './landing.css'
 
 const ReactorOrb = lazy(() => import('./ReactorOrb').then(module => ({ default: module.ReactorOrb })))
+const CinemaStage = lazy(() => import('../cinema/CinemaStage').then(module => ({ default: module.CinemaStage })))
 
 const REFRESH_MS = 45_000
 const emptyPulse: Pulse = {
@@ -248,6 +249,7 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
   const [booted, setBooted] = useState(false)
   const [skipBoot, setSkipBoot] = useState(false)
   const [quickBoot, setQuickBoot] = useState(() => typeof window !== 'undefined' && window.sessionStorage.getItem('ld-reactor-booted') === '1')
+  const [cinemaOn, setCinemaOn] = useState(false)
   const isMobile = useMediaQuery('(max-width: 680px)')
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
@@ -303,6 +305,7 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
         </button>
         <div className={`ld-live ${hasLiveSignal ? 'on' : ''}`}><i />{liveLabel}<span>· {updatedLabel}</span></div>
         <div className="ld-actions">
+          <button onClick={() => setCinemaOn(true)} aria-label="Play cinematic" title="Play cinematic"><Clapperboard size={15} /></button>
           <button onClick={replayBoot} aria-label="Replay reactor ignition" title="Replay reactor ignition"><Power size={15} /></button>
           <button onClick={() => void refresh()} aria-label="Refresh live signals" title="Refresh live signals"><RefreshCw size={15} className={refreshing ? 'spin' : ''} /></button>
           <button onClick={openPalette} aria-label="Open HQ menu" title="Open HQ menu"><LayoutGrid size={15} /></button>
@@ -317,11 +320,13 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
           <div className="ld-stage-aura" aria-hidden="true" />
           <div className="ld-reactor-shell">
             <div className="ld-orb">
-              <Suspense fallback={null}>
-                <ReactorOrb dark={theme === 'dark'} selectedProduct={selected} onSelectProduct={openProduct}
-                  onHoverProduct={setHoveredProduct} signalState={signalState} bootKey={bootKey}
-                  quickBoot={quickBoot} skipBoot={skipBoot} reducedMotion={reducedMotion} onBootComplete={finishBoot} />
-              </Suspense>
+              {!cinemaOn && (
+                <Suspense fallback={null}>
+                  <ReactorOrb dark={theme === 'dark'} selectedProduct={selected} onSelectProduct={openProduct}
+                    onHoverProduct={setHoveredProduct} signalState={signalState} bootKey={bootKey}
+                    quickBoot={quickBoot} skipBoot={skipBoot} reducedMotion={reducedMotion} onBootComplete={finishBoot} />
+                </Suspense>
+              )}
             </div>
 
             <button className="ld-core-open" onClick={() => setChartsOpen(true)}
@@ -351,6 +356,7 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
       {!hasLiveSignal && <div className="ld-provenance"><Sparkles size={12} /> No demo values · connect and sign in to populate the live instruments</div>}
       {isMobile && <MobileInstruments open={chartsOpen} onClose={() => setChartsOpen(false)} {...instrumentProps} />}
       {selected && <ProductDetail product={products.find(product => product.id === selected)!} pulse={pulse} days={30} onClose={() => setSelected(null)} />}
+      {cinemaOn && <Suspense fallback={null}><CinemaStage onExit={() => setCinemaOn(false)} /></Suspense>}
     </main>
   )
 }

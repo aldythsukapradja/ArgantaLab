@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { OrbitControls } from '@react-three/drei'
 import { easing } from 'maath'
 import * as THREE from 'three'
@@ -22,6 +22,27 @@ import { ReactorLayer } from './ReactorLayer'
 // OrbitControls (rotate/pan/zoom) and hands the camera to the founder, and
 // `manualExplosion` scrubs the accordion independent of the scenario.
 // ─────────────────────────────────────────────────────────────────────────
+
+// Shared Spine — the cross-cutting foundation (Supabase, identity, SDK, infra).
+// Not a ring: a vertical structural backbone running through every layer. It
+// stays fixed while the rings fan apart, reading as the axis they hang on.
+function SharedSpine({ dark }: { dark: boolean }) {
+  const metal = dark ? '#3a5766' : '#9fb3c4'
+  return (
+    <group>
+      <mesh>
+        <cylinderGeometry args={[0.05, 0.05, 9, 12]} />
+        <meshStandardMaterial color={metal} roughness={0.35} metalness={0.85} transparent opacity={0.7} />
+      </mesh>
+      {[-3.2, -1.6, 0, 1.6, 3.2].map((y, i) => (
+        <mesh key={i} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.12, 0.02, 8, 24]} />
+          <meshBasicMaterial color="#4be5bd" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
 
 function Lights({ dark }: { dark: boolean }) {
   return (
@@ -46,6 +67,7 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
   onHoverProduct?: (id: ProductId | null) => void
 }) {
   const groupRefs = useRef<(THREE.Group | null)[]>([])
+  const pulseRefs = useRef<(THREE.Mesh | null)[]>([])
   const expl = useRef(0)
 
   useFrame((rs, dt) => {
@@ -56,7 +78,9 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
     const explTarget = manualRef.current != null ? manualRef.current : target.explosion
     expl.current = THREE.MathUtils.damp(expl.current, explTarget, 3.2, dt)
 
-    const speaking = scene.state === 'jarvis-speaking' || scene.state === 'specialist-speaking'
+    // Breathe whenever a voice is narrating (speaker set), not only in the two
+    // explicit speaking states — the orb "speaks" through the whole story.
+    const speaking = scene.speaker !== null
     const t = rs.clock.elapsedTime
     layers.forEach((spec, i) => {
       const g = groupRefs.current[i]
@@ -87,6 +111,17 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
       rs.camera.lookAt(0, 0, 0)
       easing.damp(rs.gl, 'toneMappingExposure', target.exposure, smooth, dt)
     }
+
+    // Flow pulses travelling the axis — visible only once the reactor fans
+    // open. First four move inward (Sense→…→Core), last four outward (Core→…).
+    pulseRefs.current.forEach((m, i) => {
+      if (!m) return
+      const inward = i < 4
+      const phase = (t * 0.35 + i * 0.25) % 1
+      const z = (inward ? 1 - phase : phase) * 4.2 * expl.current * (inward ? 1 : -1)
+      m.position.set(0, ((i % 4) - 1.5) * 0.06, z)
+      m.scale.setScalar(rm ? 0 : expl.current * (0.5 + 0.5 * Math.sin(phase * Math.PI)))
+    })
   })
 
   return (
@@ -96,6 +131,13 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
           <ReactorLayer spec={spec} tier={tier} selected={spec.id === selectedLayerId}
             onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
         </group>
+      ))}
+      {Array.from({ length: 8 }, (_, i) => (
+        <mesh key={`pulse-${i}`} ref={el => { pulseRefs.current[i] = el }} scale={0}>
+          <sphereGeometry args={[0.05, 10, 10]} />
+          <meshBasicMaterial color={i < 4 ? '#4be5bd' : '#ffc46b'} transparent opacity={0.9}
+            blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        </mesh>
       ))}
     </group>
   )
@@ -116,10 +158,9 @@ export function CoreR3F({
   onHoverProduct?: (id: ProductId | null) => void
 }) {
   const heavy = allowHeavyPost(tier)
-  // Scene background follows the HQ theme. Light mode drops the dark vignette
-  // teardrop entirely; dark keeps a soft one.
-  const bgColor = dark ? 0x02060a : 0xeef4fb
-  const fogColor = dark ? 0x02060a : 0xeef4fb
+  // Flat field, theme-matched to the surface behind it. No fog, no vignette,
+  // and a tight bloom (below) so nothing bleeds a "teardrop" halo onto the bg.
+  const bgColor = dark ? 0x05090f : 0xeef3f9
   const wrap = useRef<HTMLDivElement>(null)
   const sceneRef = useRef(scene)
   sceneRef.current = scene
@@ -155,18 +196,18 @@ export function CoreR3F({
           gl.toneMapping = THREE.ACESFilmicToneMapping
           gl.toneMappingExposure = 1.15
           gl.setClearColor(bgColor, noPost ? 1 : 0)
-          s.fog = new THREE.FogExp2(fogColor, dark ? 0.016 : 0.01)
+          s.fog = null
         }}
         style={{ width: '100%', height: '100%', display: 'block' }}>
         <Lights dark={dark} />
+        <SharedSpine dark={dark} />
         <Rig sceneRef={sceneRef} manualRef={manualRef} layers={layers} tier={tier}
           interactive={interactive} selectedLayerId={selectedLayerId}
           onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
         {interactive && <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} target={[0, 0, 0]} minDistance={6} maxDistance={44} />}
         {!noPost && (
           <EffectComposer multisampling={heavy ? 4 : 0}>
-            <Bloom mipmapBlur luminanceThreshold={dark ? 0.32 : 0.55} luminanceSmoothing={0.4} intensity={heavy ? (dark ? 1.15 : 0.7) : 0.6} radius={0.7} />
-            <Vignette eskil={false} offset={0.4} darkness={dark ? 0.5 : 0.18} />
+            <Bloom mipmapBlur luminanceThreshold={dark ? 0.5 : 0.62} luminanceSmoothing={0.3} intensity={heavy ? (dark ? 0.9 : 0.6) : 0.5} radius={0.38} />
           </EffectComposer>
         )}
       </Canvas>

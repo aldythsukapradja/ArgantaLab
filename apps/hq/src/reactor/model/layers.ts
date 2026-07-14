@@ -30,6 +30,8 @@ export type LayerMaterial = 'metal' | 'glass' | 'wire' | 'glow'
 export interface ReactorLayerSpec {
   id: string
   label: string
+  /** One-word role verb shown in the inspector (govern/decide/…). */
+  micro: string
   cluster: LayerCluster
   kind: LayerKind
   /** Ring/disc radius (world units). */
@@ -54,30 +56,34 @@ export interface ReactorLayerSpec {
   visible: boolean
 }
 
-// Front (core) → back (platform), staggered so the exploded fan is legible.
-// Radii ascend so the compressed pose reads as concentric rings (ref 3).
+// Revised seven-layer model (docs/…-Arganta-Reactor-Layers.md):
+//   Command Core → Think → Know → Orchestrate → Act → Experience → Sense.
+// Platform is NOT a ring here — it becomes the Shared Spine (a central axis).
+// Cluster grouping feeds the story: THINK={Command Core,Think}, KNOW={Know},
+// DO={Orchestrate,Act,Experience}, FEEDBACK={Sense}. Command Core stays fixed,
+// bright and central (authority, not activity). IDs are stable node keys.
 export const DEFAULT_LAYERS: ReactorLayerSpec[] = [
-  { id: 'core', label: 'Core', cluster: 'core', kind: 'core',
+  { id: 'command-core', label: 'Command Core', micro: 'govern', cluster: 'core', kind: 'core',
     radius: 0.5, thickness: 0.05, zRest: 0.6, zExploded: 0, color: '#70e7ff',
-    material: 'glow', wireframe: false, spin: 0.0, hud: 'REACTOR CORE', visible: true },
-  { id: 'intelligence', label: 'Intelligence', cluster: 'think', kind: 'disc',
-    radius: 1.2, thickness: 0.06, zRest: 0.4, zExploded: 1.3, color: '#45e8ff',
-    material: 'glass', wireframe: false, spin: 0.08, hud: 'THINK · reasoning', visible: true },
-  { id: 'knowledge', label: 'Knowledge', cluster: 'know', kind: 'particles',
-    radius: 1.7, thickness: 0.04, zRest: 0.2, zExploded: 2.7, color: '#9a72ff',
-    material: 'glow', wireframe: false, spin: 0.04, hud: 'KNOW · Vault memory', visible: true },
-  { id: 'agents', label: 'Agents', cluster: 'do', kind: 'coil',
-    radius: 2.0, thickness: 0.05, zRest: 0.0, zExploded: -1.3, color: '#ffc46b',
-    material: 'metal', wireframe: false, spin: -0.06, count: 12, hud: 'DO · execution', visible: true },
-  { id: 'products', label: 'Products', cluster: 'do', kind: 'products',
-    radius: 2.7, thickness: 0.05, zRest: -0.1, zExploded: -2.5, color: '#35d8ed',
-    material: 'metal', wireframe: false, spin: 0.03, hud: 'Five products', visible: true },
-  { id: 'platform', label: 'Platform', cluster: 'do', kind: 'segments',
-    radius: 3.1, thickness: 0.06, zRest: -0.3, zExploded: -3.8, color: '#647eaa',
-    material: 'metal', wireframe: false, spin: -0.02, count: 12, hud: 'Platform', visible: true },
-  { id: 'signal', label: 'Signal', cluster: 'signal', kind: 'signal',
-    radius: 3.45, thickness: 0.02, zRest: 0.5, zExploded: 3.9, color: '#4be5bd',
-    material: 'wire', wireframe: true, spin: 0.01, count: 24, hud: 'Provenance', visible: true },
+    material: 'glow', wireframe: false, spin: 0.0, hud: 'COMMAND CORE · govern', visible: true },
+  { id: 'think', label: 'Think', micro: 'decide', cluster: 'think', kind: 'disc',
+    radius: 1.05, thickness: 0.06, zRest: 0.4, zExploded: 1.4, color: '#45e8ff',
+    material: 'glass', wireframe: false, spin: 0.08, hud: 'THINK · decide', visible: true },
+  { id: 'know', label: 'Know', micro: 'remember', cluster: 'know', kind: 'particles',
+    radius: 1.5, thickness: 0.04, zRest: 0.2, zExploded: 2.7, color: '#9a72ff',
+    material: 'glow', wireframe: false, spin: 0.04, hud: 'KNOW · remember', visible: true },
+  { id: 'orchestrate', label: 'Orchestrate', micro: 'coordinate', cluster: 'do', kind: 'ring',
+    radius: 1.95, thickness: 0.03, zRest: 0.05, zExploded: -1.2, color: '#35d8ed',
+    material: 'wire', wireframe: true, spin: -0.05, count: 12, hud: 'ORCHESTRATE · coordinate', visible: true },
+  { id: 'act', label: 'Act', micro: 'execute', cluster: 'do', kind: 'coil',
+    radius: 2.3, thickness: 0.05, zRest: -0.05, zExploded: -2.4, color: '#ffc46b',
+    material: 'metal', wireframe: false, spin: -0.06, count: 12, hud: 'ACT · execute', visible: true },
+  { id: 'experience', label: 'Experience', micro: 'serve', cluster: 'do', kind: 'products',
+    radius: 2.75, thickness: 0.05, zRest: -0.15, zExploded: 3.6, color: '#35d8ed',
+    material: 'metal', wireframe: false, spin: 0.03, hud: 'EXPERIENCE · serve', visible: true },
+  { id: 'sense', label: 'Sense', micro: 'learn', cluster: 'signal', kind: 'signal',
+    radius: 3.35, thickness: 0.02, zRest: 0.45, zExploded: 4.4, color: '#4be5bd',
+    material: 'wire', wireframe: true, spin: 0.01, count: 28, hud: 'SENSE · learn', visible: true },
 ]
 
 /** A deep clone for editable Builder state (never mutate DEFAULT_LAYERS). */

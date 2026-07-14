@@ -1,0 +1,59 @@
+/* CinemaStage — full-bleed cinematic overlay on the CEO Orb (Landing).
+   Theme-aware: darkens the live cockpit behind, reactor centred, narration low. */
+.cine{
+  position:fixed;inset:0;z-index:120;display:grid;
+  grid-template-rows:auto 1fr auto auto;
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--act-accent) 12%, transparent), transparent 46%),
+    color-mix(in srgb, var(--canvas) 88%, #000 12%);
+  backdrop-filter:blur(3px);
+  color:var(--tx);font-family:var(--font);animation:cine-in .5s var(--ease);
+  --act-accent:#6366f1;
+}
+@keyframes cine-in{from{opacity:0}to{opacity:1}}
+.cine *{box-sizing:border-box}
+
+.cine-top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;z-index:2}
+.cine-kicker{font:800 10px var(--mono);letter-spacing:.22em;color:var(--act-accent);
+  text-shadow:0 0 16px color-mix(in srgb,var(--act-accent) 45%,transparent)}
+.cine-exit{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:var(--r-md);
+  border:1px solid var(--bd2);background:var(--glass);backdrop-filter:blur(12px);color:var(--tx2);
+  font-size:11px;font-weight:600;transition:all var(--dur)}
+.cine-exit:hover{color:var(--tx);border-color:var(--bd3)}
+
+/* reactor centre — CoreSlot(ws2) fills this */
+.cine-reactor{position:relative;min-height:0;display:grid;place-items:center}
+.cine-reactor>*{width:min(70vh,60vw,720px);aspect-ratio:1;max-height:100%}
+
+/* narration */
+.cine-narr{text-align:center;padding:0 24px 6px;z-index:2}
+.cine-idea{font-size:clamp(18px,2vw,30px);font-weight:650;letter-spacing:-.02em;line-height:1.12;text-wrap:balance;color:var(--tx)}
+.cine-narr .kara{margin-top:10px}
+.cine-narr .kara-line{font-size:clamp(12px,.9vw,15px)}
+.cine-speaker{margin-top:10px;display:inline-flex;align-items:center;gap:6px;font:700 8px var(--mono);
+  letter-spacing:.12em;color:var(--tx3)}
+.cine-speaker i{width:6px;height:6px;border-radius:50%}
+.cine-speaker i.JM{background:#45e8ff;box-shadow:0 0 8px #45e8ff}
+.cine-speaker i.KF{background:#ff72b8;box-shadow:0 0 8px #ff72b8}
+
+/* transport */
+.cine-transport{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;
+  margin:14px 22px 20px;padding:10px 14px;border:1px solid var(--bd);border-radius:var(--r-xl);
+  background:var(--glass);backdrop-filter:blur(20px);box-shadow:var(--shadow-lg);z-index:2}
+.cine-ctrl{display:flex;align-items:center;gap:6px}
+.cine-ctrl button{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--tx2);transition:background var(--dur)}
+.cine-ctrl button:hover{background:var(--bg3);color:var(--tx)}
+.cine-play{background:var(--acc)!important;color:#fff!important;width:40px!important;height:40px!important}
+.cine-play:hover{background:var(--acc-press)!important}
+.cine-rail{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cine-seg{height:6px;border-radius:99px;background:var(--bg3);transition:all var(--dur)}
+.cine-seg.past{background:color-mix(in srgb,var(--seg-accent) 40%,transparent)}
+.cine-seg.on{background:var(--seg-accent);box-shadow:0 0 10px color-mix(in srgb,var(--seg-accent) 60%,transparent)}
+.cine-count{font:700 11px var(--mono);color:var(--tx3);font-variant-numeric:tabular-nums;min-width:56px;text-align:right}
+
+@media(max-width:640px){
+  .cine-reactor>*{width:86vw}
+  .cine-transport{grid-template-columns:auto 1fr;gap:10px}
+  .cine-count{display:none}
+}
+@media(prefers-reduced-motion:reduce){.cine{animation:none}}

@@ -4,7 +4,6 @@ import { Topbar } from './Topbar'
 import { MobileNav, MobileSubnav } from './MobileNav'
 import { useHQ } from './store'
 import { cloudEnabled } from '../lib/supabase'
-import { AgentOrb } from '../components/AgentOrb'
 import { CommandPalette } from './CommandPalette'
 import { Landing } from '../surfaces/Landing'
 
@@ -74,7 +73,6 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
     return (
       <div className="hq-cockpit">
         <Landing who={who} />
-        <AgentOrb />
         <CommandPalette />
       </div>
     )
@@ -97,7 +95,6 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
           </Suspense>
         </div>
       </div>
-      {surface !== 'media' && <AgentOrb />}
       <MobileNav />
       <CommandPalette />
     </div>
