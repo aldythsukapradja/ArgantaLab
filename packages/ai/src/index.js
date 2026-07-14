@@ -1,4 +1,12 @@
-// @arganta/ai — the shared LLM runtime. See docs/circle-ai-llm-runtime-mapping.md.
+// @arganta/ai — the shared LLM runtime. See docs/circle-ai-llm-runtime-mapping.md
+// and docs/media-center/Intelligence-Router.md (Four-Tier Router).
 export * from './schemas.js';
-export * from './router.js';
+export * from './router.js';   // legacy task→tier→provider (deprecated by policy.js; kept for existing consumers)
 export * from './adapter.js';
+
+// ── Four-Tier LLM Router — Opus contract batch (WS-A..D) ──────────────────
+export * from './tiers.js';       // WS-A · ontology
+export * from './modelspec.js';   // WS-A · model registry contract
+export * from './policy.js';      // WS-B · task policy + selectModel + escalation
+export * from './governance.js';  // WS-C · data-class + cost governance
+export * from './ledger.js';      // WS-D · agent_runs metering + CAPO

@@ -23,6 +23,15 @@ export const MATURITY = Object.freeze({
 
 export const MATURITY_LABEL = ['deterministic', 'free-api', 'economical', 'premium'];
 
+// ── costClass alignment (WS-A) ────────────────────────────────────────────
+// media-core's maturityStage IS the Four-Tier Router's costClass — same 0..3.
+// Alias so both packages speak one taxonomy. See @arganta/ai/tiers.js and
+// docs/adr/0002-media-core-costclass-alignment.md.
+export const COST_CLASS = MATURITY; // { SOVEREIGN:0, SPONSORED:1, ECONOMY:2, FRONTIER:3 } by value
+export const COST_LABEL = ['Sovereign', 'Sponsored', 'Economy', 'Frontier'];
+/** map a maturityStage (0..3) to its costClass — identity, but explicit. */
+export const toCostClass = (maturityStage) => maturityStage;
+
 /** Stage at/above which a job may not run without an explicit approval. */
 export const APPROVAL_REQUIRED_AT = MATURITY.PREMIUM;
 
