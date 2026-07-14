@@ -24,20 +24,23 @@ import { ReactorLayer } from './ReactorLayer'
 // ─────────────────────────────────────────────────────────────────────────
 
 // Shared Spine — the cross-cutting foundation (Supabase, identity, SDK, infra).
-// Not a ring: a vertical structural backbone running through every layer. It
-// stays fixed while the rings fan apart, reading as the axis they hang on.
-function SharedSpine({ dark }: { dark: boolean }) {
-  const metal = dark ? '#3a5766' : '#9fb3c4'
+// Not a ring: a faint structural axis running through the layers, sized to
+// the reactor's own footprint so it never pokes out past the outer ring — a
+// hint of a backbone, not a line drawn across the whole frame.
+function SharedSpine({ dark, maxRadius }: { dark: boolean; maxRadius: number }) {
+  const height = maxRadius * 1.7
+  const tickAt = [-0.55, 0, 0.55].map(f => f * maxRadius)
+  const metal = dark ? '#4a6a7a' : '#b7c6d4'
   return (
     <group>
       <mesh>
-        <cylinderGeometry args={[0.05, 0.05, 9, 12]} />
-        <meshStandardMaterial color={metal} roughness={0.35} metalness={0.85} transparent opacity={0.7} />
+        <cylinderGeometry args={[0.014, 0.014, height, 8]} />
+        <meshBasicMaterial color={metal} transparent opacity={dark ? 0.22 : 0.28} toneMapped={false} />
       </mesh>
-      {[-3.2, -1.6, 0, 1.6, 3.2].map((y, i) => (
+      {tickAt.map((y, i) => (
         <mesh key={i} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.12, 0.02, 8, 24]} />
-          <meshBasicMaterial color="#4be5bd" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+          <torusGeometry args={[0.05, 0.006, 6, 16]} />
+          <meshBasicMaterial color="#4be5bd" transparent opacity={0.3} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
         </mesh>
       ))}
     </group>
@@ -161,6 +164,7 @@ export function CoreR3F({
   // Flat field, theme-matched to the surface behind it. No fog, no vignette,
   // and a tight bloom (below) so nothing bleeds a "teardrop" halo onto the bg.
   const bgColor = dark ? 0x05090f : 0xeef3f9
+  const maxRadius = Math.max(...layers.map(l => l.radius), 0.5)
   const wrap = useRef<HTMLDivElement>(null)
   const sceneRef = useRef(scene)
   sceneRef.current = scene
@@ -200,11 +204,21 @@ export function CoreR3F({
         }}
         style={{ width: '100%', height: '100%', display: 'block' }}>
         <Lights dark={dark} />
-        <SharedSpine dark={dark} />
+        <SharedSpine dark={dark} maxRadius={maxRadius} />
         <Rig sceneRef={sceneRef} manualRef={manualRef} layers={layers} tier={tier}
           interactive={interactive} selectedLayerId={selectedLayerId}
           onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
-        {interactive && <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} target={[0, 0, 0]} minDistance={6} maxDistance={44} />}
+        {interactive && (
+          // Every layer is a flat ring facing +Z; swinging the camera a full
+          // 90° in either azimuth (to the X axis) or polar (to the Y axis)
+          // views them edge-on and collapses them into thin slivers. Clamp
+          // both to a generous but bounded range — still a real orbit, never
+          // the degenerate profile view.
+          <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} target={[0, 0, 0]}
+            minDistance={6} maxDistance={44}
+            minPolarAngle={Math.PI * 0.24} maxPolarAngle={Math.PI * 0.76}
+            minAzimuthAngle={-Math.PI * 0.32} maxAzimuthAngle={Math.PI * 0.32} />
+        )}
         {!noPost && (
           <EffectComposer multisampling={heavy ? 4 : 0}>
             <Bloom mipmapBlur luminanceThreshold={dark ? 0.5 : 0.62} luminanceSmoothing={0.3} intensity={heavy ? (dark ? 0.9 : 0.6) : 0.5} radius={0.38} />
