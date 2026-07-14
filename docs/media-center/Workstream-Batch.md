@@ -36,7 +36,7 @@ tests; **Fable** reviews only after a working creative milestone. One workstream
 | **5** | 3 | Metering impl: `agent_runs` Supabase migration + writes | ✅ done — migration **applied to the live project** (founder ran it); both LLM + media domains write |
 | **6** | 4 | Media Center intelligence — Analytics "Ask AI" insight (opt-in, sovereign-only) | ✅ slice done — `analytics-intelligence.ts`; copy/storyboard for Website/Deck/Video not started |
 | **7** | 4 | [[Model-Rack]] surface + tier UI → Fable review | ✅ done — `surfaces/rack/ModelRack.tsx`, verified live (real run appears in feed with truthful provenance) |
-| **8** | 5 | Benchmarks + CAPO economics | **gated** — needs a product decision: which task classes to benchmark and what ground truth defines "quality" for HQ-specific work (see note below) |
+| **8** | 5 | Benchmarks + CAPO economics | ✅ done (v1, simplest-start) — `ai/benchmarks.js` rolls up real BenchmarkResults from validated `agent_runs`, no curated eval set; visible as a score badge in [[Model-Rack]] |
 | **9** | 5 | Agent model policies ([[agent-os-v2]]) | **blocked** — depends on the AgentSpec registry, which per [[agent-os-v2]] is "grand design... NOT built" |
 | **T** | 5–6 | Per-tab engines ([[Tab-Brand]]→[[Tab-Analytics]]→…) | not started — long-tail backlog, not a single atomic workstream |
 
@@ -44,9 +44,17 @@ tests; **Fable** reviews only after a working creative milestone. One workstream
 Contract Freeze after **A** ✅ · Persistence Freeze after **D+5** ✅ — both done,
 `agent_runs` is live in the Supabase project.
 
-**Two real gates hit (2026-07-14):**
-- **WS-8** needs a founder decision: which `TaskClass`es matter enough to benchmark, what counts as ground truth per task (a fixed eval set? human-graded? another model as judge?), and whether to start the `BenchmarkResult` table now or defer until enough `agent_runs` volume exists to make static test cases worthwhile.
-- **WS-9** is blocked, not decision-gated — the `AgentSpec` registry it depends on doesn't exist yet ([[agent-os-v2]] is a design doc, not a build). Building that registry is its own initiative, out of scope for the intelligence router.
+**WS-8 resolution (2026-07-14):** founder called it — simplest way to start,
+scale later. Bootstrap `BenchmarkResult`s from real validated `agent_runs`
+instead of a curated eval harness (that's the "scale" half, deferred: static
+test sets, human grading, model-as-judge, `benchmarks.__floor` gating). Below
+`minSamples` a model has no entry and the cold-start default applies — scaling
+up needs no manual flip, it just accrues.
+
+**WS-9 remains blocked, not decision-gated** — the `AgentSpec` registry it
+depends on doesn't exist yet ([[agent-os-v2]] is a design doc, not a build).
+Building that registry is its own initiative, out of scope for the
+intelligence router.
 
 ## First shippable slice — BUILT, verified honest
 **A ✅ → 1 ✅ → 2 ✅ → 6-slice ✅.** Real pipeline wired end-to-end: type a
