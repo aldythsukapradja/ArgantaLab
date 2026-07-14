@@ -4,6 +4,7 @@
 import { create } from 'zustand'
 import type { Provenance } from './provenance'
 import type { Triad, RegionId, Hemisphere } from './brain'
+import type { SceneState } from './contract'
 
 export interface KState {
   hovered: string | null
@@ -13,7 +14,11 @@ export interface KState {
   regionFilter: RegionId | null     // isolate one of the 7 regions
   hemiFilter: Hemisphere | null
   provFilter: Provenance | null
-  simRunning: boolean               // neuron-firing simulation on
+  simRunning: boolean               // ambient neuron-firing simulation on
+  /** Run 2: the current cinematic beat, or null when no cinematic is playing —
+   *  the scene never reads audio; it only reacts to this. */
+  scene: SceneState | null
+  cinematicCaption: string | null
 
   setHovered: (id: string | null) => void
   setSelected: (id: string | null) => void
@@ -23,6 +28,7 @@ export interface KState {
   setHemiFilter: (h: Hemisphere | null) => void
   setProvFilter: (p: Provenance | null) => void
   setSim: (on: boolean) => void
+  setScene: (s: SceneState | null, caption?: string | null) => void
 }
 
 export const useKnowledge = create<KState>((set) => ({
@@ -34,6 +40,8 @@ export const useKnowledge = create<KState>((set) => ({
   hemiFilter: null,
   provFilter: null,
   simRunning: true,
+  scene: null,
+  cinematicCaption: null,
 
   setHovered: (hovered) => set({ hovered }),
   setSelected: (selected) => set({ selected }),
@@ -43,4 +51,5 @@ export const useKnowledge = create<KState>((set) => ({
   setHemiFilter: (hemiFilter) => set({ hemiFilter }),
   setProvFilter: (provFilter) => set({ provFilter }),
   setSim: (simRunning) => set({ simRunning }),
+  setScene: (scene, caption = null) => set({ scene, cinematicCaption: caption }),
 }))

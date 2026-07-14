@@ -1,48 +1,54 @@
-// WS3 — the semantic contract WS3 receives from the Cinema Director (WS1).
-//
-// The real `cinema/contract.ts` does not exist yet. This is the MOCK: it mirrors
-// the shape WS1 will emit (derived from the WS1 stage/act table) so the whole 3D
-// module is built against a stable interface. When the real Director lands, this
-// file is the single import seam to swap — nothing in the scene reads audio or
-// drives the story; it only reacts to `SceneState`.
+// WS3 — the semantic contract the Cognitive Cortex receives from the Cinema
+// Director (WS1). The real `cinema/contract.ts` does not exist yet — this is
+// the MOCK, and it deliberately mirrors the SHAPE of the reactor's own
+// `SceneState` (apps/hq/src/reactor/contract.ts) so brain ⇄ reactor ⇄ cinema
+// speak one language: WS1 emits one `SceneState`, WS2 (reactor) and WS3 (this
+// brain) each react to it independently. When the real Director lands, this
+// file is the single import seam to swap — the brain never reads audio, never
+// drives the story, and never reaches into the reactor.
 
-export type CinemaStage = 'cockpit' | 'guided' | 'auto'
-export type Triad = 'think' | 'know' | 'do'
+/**
+ * Mirrors the reactor's `CoreState` — the same 14 semantic states, grouped by
+ * the THINK · KNOW · DO anatomy. Kept as its own local type (not imported from
+ * reactor/) so `apps/hq/src/knowledge/**` stays self-contained per the WS3
+ * boundary; the values are identical so activation.ts maps 1:1 onto both.
+ */
+export type CoreState =
+  | 'offline' | 'booting' | 'idle' | 'listening'
+  | 'jarvis-speaking' | 'specialist-speaking'
+  | 'think' | 'know' | 'do'
+  | 'product-focus' | 'popup-open' | 'vault-entry'
+  | 'architecture-unfold' | 'return'
 
-// The graph's own phases inside Acts V/VI, plus the continuity states that let
-// the reactor (WS2) dissolve into the graph and back (WS2 `vault-entry` /
-// `architecture-unfold` / `return`).
-export type GraphPhase =
-  | 'idle'
-  | 'vault-entry'        // reactor dissolves → graph blooms in
-  | 'core-path'          // Act V: trace the 8-node spine
-  | 'architecture-unfold'// widen to the neighbourhoods
-  | 'locate'             // Act VI: find the weak node
-  | 'reveal'             // expose unwired exits
-  | 'do-package'         // instrumentation package, stops at approval
-  | 'return'             // fold back to the CEO Orb
+export type Speaker = 'jarvis' | 'specialist' | null
 
-export type TourId = 'A' | 'B' | 'C' | 'D'
-
+/**
+ * The one payload WS1 emits each frame/beat. The brain only reads `state`,
+ * `intensity`, `focusProduct` and the scene identity/timing fields — it never
+ * touches `choreography` (that's the reactor's own visual vocabulary).
+ */
 export interface SceneState {
-  sceneId: string
-  stage: CinemaStage
+  state: CoreState
+  /** 0..1 energy on the audio clock; drives how hard regions fire. */
+  intensity: number
+  speaker: Speaker
+  /** Which product is focused (Act III), else null. */
+  focusProduct: string | null
+  /** Seconds elapsed inside the current beat. */
+  sceneTime: number
+  /** Clip length of the current beat in seconds; 0 when unknown. */
+  sceneDuration: number
+  /** Scene key from the manifest (e.g. "5.2") — drives per-scene overrides. */
+  sceneId?: string
   act: 1 | 2 | 3 | 4 | 5 | 6 | 7
-  triad?: Triad
-  graphPhase: GraphPhase
-  /** Node the story is pointing at right now (a real vault note id). */
-  focusedNode?: string
-  /** Ordered path the story is tracing (real vault note ids). */
-  focusPath?: string[]
-  /** manual = founder drives; auto = the Director drives. */
-  mode: 'manual' | 'auto'
-  tour?: TourId
 }
 
 export const RESTING_SCENE: SceneState = {
-  sceneId: 'manual',
-  stage: 'cockpit',
+  state: 'idle',
+  intensity: 0.3,
+  speaker: null,
+  focusProduct: null,
+  sceneTime: 0,
+  sceneDuration: 0,
   act: 1,
-  graphPhase: 'idle',
-  mode: 'manual',
 }

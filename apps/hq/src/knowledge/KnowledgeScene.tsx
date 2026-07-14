@@ -12,6 +12,7 @@ import * as THREE from 'three'
 import type { KModel } from './model'
 import { REGIONS, REGION_BY_ID, REGION_INDEX, type RegionId } from './brain'
 import { useKnowledge } from './store'
+import { activationFor } from './activation'
 
 const PROV = { live: 1, partial: 0.72, simulated: 0.5, placeholder: 0.34 } as Record<string, number>
 const RCOL: Record<RegionId, THREE.Color> = REGIONS.reduce((m, r) => { m[r.id] = new THREE.Color(r.color); return m }, {} as Record<RegionId, THREE.Color>)
@@ -129,10 +130,21 @@ function Neurons({ model, th }: { model: KModel; th: Theme }) {
   useFrame((state) => {
     const mesh = ref.current; if (!mesh || !mesh.instanceColor) return
     const st = useKnowledge.getState(); const t = state.clock.elapsedTime
+    // Run 2: when a cinematic scene is active, region activation (from the
+    // narration/audio-envelope, via activation.ts) drives brightness instead of
+    // the ambient THINK→KNOW→DO sweep; individual neurons still spike a little
+    // for organic texture, scaled by how active their region is right now.
+    const act = activationFor(st.scene)
     const cyc = (t * 0.11) % 3; const activeTriad = cyc < 1 ? 'think' : cyc < 2 ? 'know' : 'do'
     for (let i = 0; i < N; i++) {
       const d = data[i]; let b = th.base + d.prov * th.provW
-      if (st.simRunning) { b += Math.pow(Math.max(0, Math.sin(t * d.rate + d.phase)), 16) * th.spike; if (d.triad === activeTriad) b += th.active }
+      if (act) {
+        const w = act[d.region] ?? 0.08
+        b += w * th.spike
+        if (st.simRunning) b += Math.pow(Math.max(0, Math.sin(t * d.rate + d.phase)), 16) * th.spike * 0.35 * (0.4 + w)
+      } else if (st.simRunning) {
+        b += Math.pow(Math.max(0, Math.sin(t * d.rate + d.phase)), 16) * th.spike; if (d.triad === activeTriad) b += th.active
+      }
       if (st.selected === d.id) b += 1.6; else if (st.hovered === d.id) b += 0.9
       if (st.triadFilter && d.triad !== st.triadFilter) b *= 0.08
       if (st.regionFilter && d.region !== st.regionFilter) b *= 0.08
@@ -157,9 +169,12 @@ function CommandCore({ model, th }: { model: KModel; th: Theme }) {
   const node = model.commandId ? model.byId.get(model.commandId) : null
   const pos = node ? node.pos : [0, -0.4, 0.4] as [number, number, number]
   useFrame((s) => {
-    const t = s.clock.elapsedTime, pulse = 1 + Math.sin(t * 2.2) * 0.12
-    if (ref.current) ref.current.scale.setScalar(0.42 * pulse)
-    if (glow.current) { glow.current.scale.setScalar(0.9 + Math.sin(t * 2.2) * 0.12); (glow.current.material as THREE.Material & { opacity: number }).opacity = (0.14 + Math.sin(t * 2.2) * 0.04) }
+    const st = useKnowledge.getState()
+    // Run 2: Command Core pulses harder while a cinematic scene carries intensity
+    const boost = st.scene ? 0.7 + st.scene.intensity * 1.1 : 1
+    const t = s.clock.elapsedTime, pulse = 1 + Math.sin(t * 2.2) * 0.12 * boost
+    if (ref.current) ref.current.scale.setScalar(0.42 * pulse * Math.min(1.35, boost))
+    if (glow.current) { glow.current.scale.setScalar((0.9 + Math.sin(t * 2.2) * 0.12) * Math.min(1.5, boost)); (glow.current.material as THREE.Material & { opacity: number }).opacity = (0.14 + Math.sin(t * 2.2) * 0.04) * Math.min(1.4, boost) }
   })
   return (
     <group position={pos}>

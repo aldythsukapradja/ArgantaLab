@@ -5,7 +5,7 @@
 // failure degrades to the 2D graph instead of a blank.
 
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Brain, ExternalLink, X, AlertTriangle, Activity, Play } from 'lucide-react'
+import { Brain, ExternalLink, X, AlertTriangle, Activity, Play, Film, Square } from 'lucide-react'
 import { useVault } from '../vault/store'
 import { useHQ } from '../shell/store'
 import { GraphViewV3 } from '../vault/components/GraphViewV3'
@@ -15,10 +15,13 @@ import { KnowledgeScene } from './KnowledgeScene'
 import { useKnowledge } from './store'
 import {
   corticalTissue, REGIONS, REGION_BY_ID, TRIAD_COLOR, TRIAD_LABEL, TRIAD_HINT,
-  type Triad,
+  type Triad, type RegionId,
 } from './brain'
 import { ONTOLOGY_COLOR } from './ontology'
 import { PROVENANCE_META } from './provenance'
+import { MOCK_SCRIPT, sceneStateForBeat } from './mockDirector'
+import { cameraRegionFor } from './activation'
+import type { KModel } from './model'
 
 function hasWebGL(): boolean {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false }
@@ -75,8 +78,53 @@ function KnowledgeSurfaceInner() {
   const setHemiFilter = useKnowledge((s) => s.setHemiFilter)
   const simRunning = useKnowledge((s) => s.simRunning)
   const setSim = useKnowledge((s) => s.setSim)
+  const setScene = useKnowledge((s) => s.setScene)
+  const cinematicCaption = useKnowledge((s) => s.cinematicCaption)
 
   const selNode = selected ? model.byId.get(selected) : null
+
+  // ── Run 2: the mock Cinema Director ─────────────────────────────────────
+  // Steps through MOCK_SCRIPT on a timer (a stand-in for the audio clock),
+  // emitting a SceneState per beat. The scene never reads audio itself — it
+  // only reacts to what this player (or, later, the real WS1 Director) hands
+  // it via setScene. Camera framing is derived the same way real narration
+  // would drive it: cameraRegionFor(state) → a region's hero neuron, or the
+  // whole-brain overview, or "leave it" for dormant/popup beats.
+  const [cinematicOn, setCinematicOn] = useState(false)
+  const cineTimers = useRef<number[]>([])
+  const clearCineTimers = () => { cineTimers.current.forEach(clearTimeout); cineTimers.current = [] }
+  useEffect(() => () => clearCineTimers(), [])
+
+  const focusRegion = (region: RegionId, m: KModel) => {
+    const hero = m.nodes.find((n) => n.hero && n.region === region)
+    setFocus(hero ? hero.id : null)
+  }
+
+  const stopCinematic = () => {
+    clearCineTimers()
+    setCinematicOn(false)
+    setScene(null, null)
+    setFocus(null)
+  }
+
+  const playCinematic = () => {
+    clearCineTimers()
+    setSelected(null)
+    setCinematicOn(true)
+    let t = 0
+    MOCK_SCRIPT.forEach((beat) => {
+      cineTimers.current.push(window.setTimeout(() => {
+        setScene(sceneStateForBeat(beat), beat.caption)
+        const camTarget = cameraRegionFor(beat.state)
+        if (camTarget === 'overview') setFocus(null)
+        else if (camTarget) focusRegion(camTarget, model)
+        // camTarget === null → leave the camera exactly where it is
+      }, t))
+      t += beat.hold
+    })
+    // deterministic return to the resting whole-brain frame
+    cineTimers.current.push(window.setTimeout(() => stopCinematic(), t))
+  }
 
   // heartbeat: if the scene never draws a frame, fall back to the 2D graph
   const drewRef = useRef(false)
@@ -167,6 +215,20 @@ function KnowledgeSurfaceInner() {
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (simRunning ? '#4ade8088' : '#34407a'), background: simRunning ? '#4ade8018' : ui.glass, color: simRunning ? '#86efac' : ui.tx3, backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
             {simRunning ? <Activity size={13} /> : <Play size={12} />} {simRunning ? 'Firing' : 'Fire'}
           </button>
+          <button onClick={() => (cinematicOn ? stopCinematic() : playCinematic())}
+            title="Mirror the 46-scene cinematic narration — the mapped brain region lights up per beat"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (cinematicOn ? '#f472b688' : '#34407a'), background: cinematicOn ? '#f472b618' : ui.glass, color: cinematicOn ? '#f9a8d4' : ui.tx3, backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
+            {cinematicOn ? <Square size={12} /> : <Film size={13} />} {cinematicOn ? 'Stop' : 'Cinematic'}
+          </button>
+        </div>
+      )}
+
+      {/* Run 2: cinematic caption — mirrors the narration beat currently lighting the brain */}
+      {webgl && cinematicOn && cinematicCaption && (
+        <div style={{ position: 'absolute', bottom: 66, left: '50%', transform: 'translateX(-50%)', maxWidth: 640, textAlign: 'center', pointerEvents: 'none' }}>
+          <div style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 12, background: ui.glass, border: '1px solid #f472b655', backdropFilter: 'blur(10px)', color: ui.tx, fontSize: 13.5, lineHeight: 1.5, boxShadow: '0 10px 32px rgba(0,0,0,.35)' }}>
+            {cinematicCaption}
+          </div>
         </div>
       )}
 
