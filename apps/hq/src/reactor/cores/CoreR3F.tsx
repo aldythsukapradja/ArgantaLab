@@ -11,7 +11,7 @@ import { choreoFor, clusterFlare } from '../model/choreography'
 import { layerPosition } from '../model/layout'
 import { ReactorLayer } from './ReactorLayer'
 import { Sparks } from './Sparks'
-import { makeLabelTexture } from './labelTexture'
+import { makeRingTextTexture, TEXT_RADIUS_FRAC } from './ringText'
 
 // ─────────────────────────────────────────────────────────────────────────
 // CoreR3F — renders the 7-layer model and drives the axial explosion.
@@ -53,19 +53,24 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
   const pulseRefs = useRef<(THREE.Mesh | null)[]>([])
   const spineRef = useRef<THREE.Mesh>(null)
   const hubRefs = useRef<(THREE.Mesh | null)[]>([])
-  const labelRefs = useRef<(THREE.Sprite | null)[]>([])
+  const labelRefs = useRef<(THREE.Mesh | null)[]>([])
   const sparkRef = useRef(0)
   const expl = useRef(0)
 
-  // HUD labels — one billboard sprite per layer, built once per theme.
+  // Ring text — the layer name curved along its ring. Built once per theme.
+  // The tiny Command Core ring (radius < 0.9) is skipped (too cramped); it's
+  // the bright unlabelled centre, like the reference.
   const labelMaterials = useMemo(
-    () => layers.map(l => new THREE.SpriteMaterial({
-      map: makeLabelTexture(l.label, l.micro, dark), transparent: true, opacity: 0,
-      depthWrite: false, depthTest: false, toneMapped: false,
-    })),
+    () => layers.map((l, i) => {
+      if (l.radius < 0.9) return null
+      const ink = dark ? '#dffaff' : '#1a3a54'
+      const glow = dark ? l.color : 'rgba(255,255,255,.9)'
+      const map = makeRingTextTexture(`${l.label} · ${l.micro}`, ink, { startDeg: -90 + (i % 3 - 1) * 46, glow })
+      return new THREE.MeshBasicMaterial({ map, transparent: true, opacity: 0, depthWrite: false, toneMapped: false })
+    }),
     [layers, dark],
   )
-  useEffect(() => () => labelMaterials.forEach(m => m.dispose()), [labelMaterials])
+  useEffect(() => () => labelMaterials.forEach(m => { m?.map?.dispose(); m?.dispose() }), [labelMaterials])
 
   useFrame((rs, dt) => {
     const scene = sceneRef.current
@@ -148,13 +153,17 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
       m.scale.setScalar(expl.current * (axial ? 0.9 : 0.5))
     })
 
-    // HUD labels ride beside each layer and fade in once expanded.
-    labelRefs.current.forEach((sp, i) => {
+    // Ring text lies on each layer's ring (its own plane, so it tilts with the
+    // camera in the exploded view). Legible on the concentric axial layouts —
+    // visible even at rest so the emblem reads as the labelled HUD — and faded
+    // for the scattered layouts (triad/orbital/helix) where it would overlap.
+    labelRefs.current.forEach((mesh, i) => {
       const spec = layers[i]
-      if (!sp || !spec) return
+      const mat = labelMaterials[i]
+      if (!mesh || !spec || !mat) return
       const p = layerPosition(spec, target.layout, expl.current, i, layers.length)
-      sp.position.set(p[0] + spec.radius * 0.72 + 0.35, p[1] + 0.12, p[2])
-      ;(sp.material as THREE.SpriteMaterial).opacity = Math.max(0, expl.current - 0.15) * 0.92
+      mesh.position.set(axial ? 0 : p[0], axial ? 0 : p[1], p[2] + 0.02)
+      mat.opacity = axial ? 0.55 + 0.35 * expl.current : 0.1 * (1 - expl.current)
     })
 
     // Flow pulses travelling the axis — visible only once the reactor fans
@@ -198,10 +207,18 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
             blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
         </mesh>
       ))}
-      {layers.map((spec, i) => (
-        <sprite key={`label-${spec.id}`} ref={el => { labelRefs.current[i] = el }}
-          material={labelMaterials[i]} scale={[1.5, 0.47, 1]} />
-      ))}
+      {layers.map((spec, i) => {
+        const mat = labelMaterials[i]
+        if (!mat) return null
+        // Plane side sized so the texture's text baseline (TEXT_RADIUS_FRAC of
+        // the half-canvas) lands on this layer's ring radius.
+        const side = spec.radius / TEXT_RADIUS_FRAC
+        return (
+          <mesh key={`label-${spec.id}`} ref={el => { labelRefs.current[i] = el }} material={mat} scale={[side, side, 1]}>
+            <planeGeometry args={[1, 1]} />
+          </mesh>
+        )
+      })}
     </group>
   )
 }
