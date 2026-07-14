@@ -23,30 +23,6 @@ import { ReactorLayer } from './ReactorLayer'
 // `manualExplosion` scrubs the accordion independent of the scenario.
 // ─────────────────────────────────────────────────────────────────────────
 
-// Shared Spine — the cross-cutting foundation (Supabase, identity, SDK, infra).
-// Not a ring: a faint structural axis running through the layers, sized to
-// the reactor's own footprint so it never pokes out past the outer ring — a
-// hint of a backbone, not a line drawn across the whole frame.
-function SharedSpine({ dark, maxRadius }: { dark: boolean; maxRadius: number }) {
-  const height = maxRadius * 1.7
-  const tickAt = [-0.55, 0, 0.55].map(f => f * maxRadius)
-  const metal = dark ? '#4a6a7a' : '#b7c6d4'
-  return (
-    <group>
-      <mesh>
-        <cylinderGeometry args={[0.014, 0.014, height, 8]} />
-        <meshBasicMaterial color={metal} transparent opacity={dark ? 0.22 : 0.28} toneMapped={false} />
-      </mesh>
-      {tickAt.map((y, i) => (
-        <mesh key={i} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.05, 0.006, 6, 16]} />
-          <meshBasicMaterial color="#4be5bd" transparent opacity={0.3} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
 function Lights({ dark }: { dark: boolean }) {
   return (
     <>
@@ -71,6 +47,8 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
 }) {
   const groupRefs = useRef<(THREE.Group | null)[]>([])
   const pulseRefs = useRef<(THREE.Mesh | null)[]>([])
+  const spineRef = useRef<THREE.Mesh>(null)
+  const hubRefs = useRef<(THREE.Mesh | null)[]>([])
   const expl = useRef(0)
 
   useFrame((rs, dt) => {
@@ -115,6 +93,32 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
       easing.damp(rs.gl, 'toneMappingExposure', target.exposure, smooth, dt)
     }
 
+    // Shared Spine — the axle the layers hang on. It runs along the depth
+    // axis (the direction the layers fan) and threads through every one. At
+    // rest it collapses to nothing (invisible dot facing the camera); as the
+    // reactor opens it extends to skewer all seven, with a hub where it
+    // pierces each layer.
+    let zLo = Infinity
+    let zHi = -Infinity
+    layers.forEach(spec => {
+      const z = THREE.MathUtils.lerp(spec.zRest, spec.zExploded, expl.current)
+      if (z < zLo) zLo = z
+      if (z > zHi) zHi = z
+    })
+    const beam = spineRef.current
+    if (beam) {
+      const len = Math.max(0.001, (zHi - zLo) * 1.12)
+      beam.position.z = (zLo + zHi) / 2
+      beam.scale.set(1, len, 1) // local Y → world Z after the mesh's rotation
+      ;(beam.material as THREE.MeshBasicMaterial).opacity = expl.current * 0.3
+    }
+    hubRefs.current.forEach((m, i) => {
+      const spec = layers[i]
+      if (!m || !spec) return
+      m.position.z = THREE.MathUtils.lerp(spec.zRest, spec.zExploded, expl.current)
+      m.scale.setScalar(expl.current * 0.9)
+    })
+
     // Flow pulses travelling the axis — visible only once the reactor fans
     // open. First four move inward (Sense→…→Core), last four outward (Core→…).
     pulseRefs.current.forEach((m, i) => {
@@ -142,6 +146,19 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, selectedLayerId, 
             blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
         </mesh>
       ))}
+      {/* Shared Spine axle — rotated so its height runs along the depth axis. */}
+      <mesh ref={spineRef} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.001, 1]}>
+        <cylinderGeometry args={[0.02, 0.02, 1, 8]} />
+        <meshBasicMaterial color="#7fe8ff" transparent opacity={0}
+          blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+      </mesh>
+      {layers.map((spec, i) => (
+        <mesh key={`hub-${spec.id}`} ref={el => { hubRefs.current[i] = el }} scale={0}>
+          <sphereGeometry args={[0.055, 12, 12]} />
+          <meshBasicMaterial color="#4be5bd" transparent opacity={0.7}
+            blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
     </group>
   )
 }
@@ -164,7 +181,6 @@ export function CoreR3F({
   // Flat field, theme-matched to the surface behind it. No fog, no vignette,
   // and a tight bloom (below) so nothing bleeds a "teardrop" halo onto the bg.
   const bgColor = dark ? 0x05090f : 0xeef3f9
-  const maxRadius = Math.max(...layers.map(l => l.radius), 0.5)
   const wrap = useRef<HTMLDivElement>(null)
   const sceneRef = useRef(scene)
   sceneRef.current = scene
@@ -204,7 +220,6 @@ export function CoreR3F({
         }}
         style={{ width: '100%', height: '100%', display: 'block' }}>
         <Lights dark={dark} />
-        <SharedSpine dark={dark} maxRadius={maxRadius} />
         <Rig sceneRef={sceneRef} manualRef={manualRef} layers={layers} tier={tier}
           interactive={interactive} selectedLayerId={selectedLayerId}
           onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
