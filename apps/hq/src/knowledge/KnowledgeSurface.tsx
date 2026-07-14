@@ -5,7 +5,10 @@
 // failure degrades to the 2D graph instead of a blank.
 
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Brain, ExternalLink, X, AlertTriangle, Activity, Play, Film, Square } from 'lucide-react'
+import {
+  Brain, ExternalLink, X, AlertTriangle, Activity, Play, Pause, Film,
+  SkipBack, SkipForward, RotateCcw, Gauge,
+} from 'lucide-react'
 import { useVault } from '../vault/store'
 import { useHQ } from '../shell/store'
 import { GraphViewV3 } from '../vault/components/GraphViewV3'
@@ -83,48 +86,113 @@ function KnowledgeSurfaceInner() {
 
   const selNode = selected ? model.byId.get(selected) : null
 
-  // ── Run 2: the mock Cinema Director ─────────────────────────────────────
-  // Steps through MOCK_SCRIPT on a timer (a stand-in for the audio clock),
-  // emitting a SceneState per beat. The scene never reads audio itself — it
-  // only reacts to what this player (or, later, the real WS1 Director) hands
-  // it via setScene. Camera framing is derived the same way real narration
-  // would drive it: cameraRegionFor(state) → a region's hero neuron, or the
-  // whole-brain overview, or "leave it" for dormant/popup beats.
-  const [cinematicOn, setCinematicOn] = useState(false)
-  const cineTimers = useRef<number[]>([])
-  const clearCineTimers = () => { cineTimers.current.forEach(clearTimeout); cineTimers.current = [] }
-  useEffect(() => () => clearCineTimers(), [])
+  // ── Run 2/3: the mock Cinema Director, now a real transport ─────────────
+  // A clock-driven player (not pre-scheduled timeouts) so it can be scrubbed,
+  // paused, sped up, and jumped beat-by-beat or act-by-act — mirroring the
+  // real cinema's transport (prev/next/scrub/act-tabs). It emits a SceneState
+  // per beat; the scene never reads audio itself, only what this player (or,
+  // later, the real WS1 Director) hands it via setScene. Camera framing is
+  // derived the same way real narration would drive it: cameraRegionFor(state)
+  // → a region's hero neuron, the whole-brain overview, or "leave it" for
+  // dormant/popup beats.
+  const TICK_MS = 120
+  const totalMs = useMemo(() => MOCK_SCRIPT.reduce((s, b) => s + b.hold, 0), [])
+  const [cineActive, setCineActive] = useState(false)   // engaged at all (playing or paused)
+  const [cinePlaying, setCinePlaying] = useState(false) // actively advancing
+  const [cineIndex, setCineIndex] = useState(0)         // current beat
+  const [cineElapsed, setCineElapsed] = useState(0)      // ms into current beat
+  const [cineSpeed, setCineSpeed] = useState(1)          // 1 | 2 | 4
+
+  // "latest" refs so the persistent interval always reads current values
+  // without needing to be torn down and recreated every tick.
+  const cineIndexRef = useRef(0); cineIndexRef.current = cineIndex
+  const cineElapsedRef = useRef(0); cineElapsedRef.current = cineElapsed
+  const cineSpeedRef = useRef(1); cineSpeedRef.current = cineSpeed
 
   const focusRegion = (region: RegionId, m: KModel) => {
     const hero = m.nodes.find((n) => n.hero && n.region === region)
     setFocus(hero ? hero.id : null)
   }
 
-  const stopCinematic = () => {
-    clearCineTimers()
-    setCinematicOn(false)
-    setScene(null, null)
-    setFocus(null)
+  // Push a beat's SceneState + camera framing. `elapsedMs` also refreshes the
+  // caption (a scrub/seek always shows the beat it lands on).
+  const pushBeat = (idx: number, elapsedMs: number, moveCamera: boolean) => {
+    const beat = MOCK_SCRIPT[idx]; if (!beat) return
+    setScene(sceneStateForBeat(beat, elapsedMs / 1000), beat.caption)
+    if (moveCamera) {
+      const camTarget = cameraRegionFor(beat.state)
+      if (camTarget === 'overview') setFocus(null)
+      else if (camTarget) focusRegion(camTarget, model)
+      // camTarget === null → leave the camera exactly where it is
+    }
   }
 
-  const playCinematic = () => {
-    clearCineTimers()
-    setSelected(null)
-    setCinematicOn(true)
-    let t = 0
-    MOCK_SCRIPT.forEach((beat) => {
-      cineTimers.current.push(window.setTimeout(() => {
-        setScene(sceneStateForBeat(beat), beat.caption)
-        const camTarget = cameraRegionFor(beat.state)
-        if (camTarget === 'overview') setFocus(null)
-        else if (camTarget) focusRegion(camTarget, model)
-        // camTarget === null → leave the camera exactly where it is
-      }, t))
-      t += beat.hold
-    })
-    // deterministic return to the resting whole-brain frame
-    cineTimers.current.push(window.setTimeout(() => stopCinematic(), t))
+  /** Jump to an exact beat + elapsed offset — used by scrub, prev/next, act
+   *  tabs and restart. Always reapplies immediately (no waiting for a tick). */
+  const seekTo = (idx: number, elapsedMs = 0) => {
+    const clamped = Math.max(0, Math.min(MOCK_SCRIPT.length - 1, idx))
+    setCineIndex(clamped); setCineElapsed(elapsedMs)
+    pushBeat(clamped, elapsedMs, true)
   }
+
+  const seekToFraction = (frac: number) => {
+    const target = Math.max(0, Math.min(totalMs, frac * totalMs))
+    let acc = 0
+    for (let i = 0; i < MOCK_SCRIPT.length; i++) {
+      const hold = MOCK_SCRIPT[i].hold
+      if (acc + hold > target || i === MOCK_SCRIPT.length - 1) { seekTo(i, Math.max(0, Math.min(hold, target - acc))); return }
+      acc += hold
+    }
+  }
+
+  const enterCinematic = () => {
+    setSelected(null)
+    setCineActive(true)
+    setCinePlaying(true)
+    seekTo(0, 0)
+  }
+  const exitCinematic = () => {
+    setCinePlaying(false); setCineActive(false)
+    setCineIndex(0); setCineElapsed(0)
+    setScene(null, null); setFocus(null)
+  }
+  const togglePlayPause = () => setCinePlaying((p) => !p)
+  const restart = () => seekTo(0, 0)
+  const prevBeat = () => seekTo(cineIndex - 1, 0)
+  const nextBeat = () => seekTo(cineIndex + 1, 0)
+  const jumpToAct = (act: number) => {
+    const idx = MOCK_SCRIPT.findIndex((b) => b.act === act)
+    if (idx >= 0) seekTo(idx, 0)
+  }
+  const cycleSpeed = () => setCineSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))
+
+  // The single persistent ticking driver — only restarts when play/pause toggles.
+  useEffect(() => {
+    if (!cinePlaying) return
+    const iv = window.setInterval(() => {
+      const idx = cineIndexRef.current
+      const beat = MOCK_SCRIPT[idx]
+      if (!beat) return
+      const next = cineElapsedRef.current + TICK_MS * cineSpeedRef.current
+      if (next >= beat.hold) {
+        const ni = idx + 1
+        if (ni >= MOCK_SCRIPT.length) { exitCinematic(); return }
+        setCineIndex(ni); setCineElapsed(0)
+        pushBeat(ni, 0, true)
+      } else {
+        setCineElapsed(next)
+        pushBeat(idx, next, false)
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, TICK_MS)
+    return () => clearInterval(iv)
+  }, [cinePlaying])
+  useEffect(() => () => { setScene(null, null) }, []) // unmount safety: never leave the scene "on"
+
+  const cineBeat = MOCK_SCRIPT[cineIndex]
+  const cineElapsedBefore = useMemo(() => MOCK_SCRIPT.slice(0, cineIndex).reduce((s, b) => s + b.hold, 0), [cineIndex])
+  const cineProgress = totalMs > 0 ? (cineElapsedBefore + cineElapsed) / totalMs : 0
+  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
 
   // heartbeat: if the scene never draws a frame, fall back to the 2D graph
   const drewRef = useRef(false)
@@ -215,49 +283,85 @@ function KnowledgeSurfaceInner() {
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (simRunning ? '#4ade8088' : '#34407a'), background: simRunning ? '#4ade8018' : ui.glass, color: simRunning ? '#86efac' : ui.tx3, backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
             {simRunning ? <Activity size={13} /> : <Play size={12} />} {simRunning ? 'Firing' : 'Fire'}
           </button>
-          <button onClick={() => (cinematicOn ? stopCinematic() : playCinematic())}
-            title="Mirror the 46-scene cinematic narration — the mapped brain region lights up per beat"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (cinematicOn ? '#f472b688' : '#34407a'), background: cinematicOn ? '#f472b618' : ui.glass, color: cinematicOn ? '#f9a8d4' : ui.tx3, backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
-            {cinematicOn ? <Square size={12} /> : <Film size={13} />} {cinematicOn ? 'Stop' : 'Cinematic'}
-          </button>
+          {!cineActive && (
+            <button onClick={enterCinematic}
+              title="Mirror the cinematic narration — the mapped brain region lights up per beat"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid #34407a', background: ui.glass, color: ui.tx3, backdropFilter: 'blur(10px)', fontWeight: 600, fontSize: 12 }}>
+              <Film size={13} /> Cinematic
+            </button>
+          )}
         </div>
       )}
 
-      {/* Run 2: cinematic caption — mirrors the narration beat currently lighting the brain */}
-      {webgl && cinematicOn && cinematicCaption && (
-        <div style={{ position: 'absolute', bottom: 66, left: '50%', transform: 'translateX(-50%)', maxWidth: 640, textAlign: 'center', pointerEvents: 'none' }}>
+      {/* Run 2/3: cinematic caption — mirrors the narration beat currently lighting the brain */}
+      {webgl && cineActive && cinematicCaption && cineBeat && (
+        <div style={{ position: 'absolute', bottom: 138, left: '50%', transform: 'translateX(-50%)', maxWidth: 640, textAlign: 'center', pointerEvents: 'none' }}>
+          <div style={{ fontSize: 10.5, color: ui.tx2, letterSpacing: 0.8, marginBottom: 5, fontWeight: 700 }}>
+            ACT {ROMAN[cineBeat.act]} · SCENE {cineBeat.sceneId} · {cineIndex + 1}/{MOCK_SCRIPT.length}
+          </div>
           <div style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 12, background: ui.glass, border: '1px solid #f472b655', backdropFilter: 'blur(10px)', color: ui.tx, fontSize: 13.5, lineHeight: 1.5, boxShadow: '0 10px 32px rgba(0,0,0,.35)' }}>
             {cinematicCaption}
           </div>
         </div>
       )}
 
-      {/* 7-region spine legend (bottom-center) */}
-      {webgl && (
-        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 999, padding: '6px 8px', backdropFilter: 'blur(10px)', pointerEvents: 'auto', maxWidth: '78vw', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {REGIONS.map((r) => {
-            const on = regionFilter === r.id
-            return (
-              <button key={r.id} title={`${r.label} · ${r.verb} · ${TRIAD_LABEL[r.triad]}`} onClick={() => setRegionFilter(on ? null : r.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? r.color : 'transparent'), background: on ? r.color + '22' : 'transparent', color: on ? '#fff' : ui.tx3, fontSize: 11.5, fontWeight: 600 }}>
-                <span style={{ width: 9, height: 9, borderRadius: 9, background: r.color, boxShadow: `0 0 7px ${r.color}` }} />
-                {r.label}<span style={{ fontSize: 10, opacity: 0.55 }}>{model.regionCounts[r.id]}</span>
-              </button>
-            )
-          })}
-        </div>
+      {webgl && !cineActive && (
+        <>
+          {/* 7-region spine legend (bottom-center) */}
+          <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 999, padding: '6px 8px', backdropFilter: 'blur(10px)', pointerEvents: 'auto', maxWidth: '78vw', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {REGIONS.map((r) => {
+              const on = regionFilter === r.id
+              return (
+                <button key={r.id} title={`${r.label} · ${r.verb} · ${TRIAD_LABEL[r.triad]}`} onClick={() => setRegionFilter(on ? null : r.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (on ? r.color : 'transparent'), background: on ? r.color + '22' : 'transparent', color: on ? '#fff' : ui.tx3, fontSize: 11.5, fontWeight: 600 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 9, background: r.color, boxShadow: `0 0 7px ${r.color}` }} />
+                  {r.label}<span style={{ fontSize: 10, opacity: 0.55 }}>{model.regionCounts[r.id]}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* provenance (bottom-left) */}
+          <div style={{ position: 'absolute', bottom: 62, left: 16, display: 'flex', gap: 12, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 12, padding: '7px 12px', backdropFilter: 'blur(10px)' }}>
+            <span style={{ fontSize: 10, color: ui.tx2, letterSpacing: 0.6 }}>PROVENANCE</span>
+            {(['live', 'partial', 'simulated', 'placeholder'] as const).map((p) => (
+              <span key={p} title={PROVENANCE_META[p].hint} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: ui.tx3 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 9, background: '#8b7cf6', opacity: p === 'live' ? 1 : p === 'partial' ? 0.65 : p === 'simulated' ? 0.42 : 0.25 }} />
+                {PROVENANCE_META[p].label}
+              </span>
+            ))}
+          </div>
+        </>
       )}
 
-      {/* provenance (bottom-left) */}
-      {webgl && (
-        <div style={{ position: 'absolute', bottom: 62, left: 16, display: 'flex', gap: 12, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 12, padding: '7px 12px', backdropFilter: 'blur(10px)' }}>
-          <span style={{ fontSize: 10, color: ui.tx2, letterSpacing: 0.6 }}>PROVENANCE</span>
-          {(['live', 'partial', 'simulated', 'placeholder'] as const).map((p) => (
-            <span key={p} title={PROVENANCE_META[p].hint} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: ui.tx3 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 9, background: '#8b7cf6', opacity: p === 'live' ? 1 : p === 'partial' ? 0.65 : p === 'simulated' ? 0.42 : 0.25 }} />
-              {PROVENANCE_META[p].label}
-            </span>
-          ))}
+      {/* Run 3: cinematic transport — replaces the manual legends while active */}
+      {webgl && cineActive && (
+        <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', width: 'min(760px, 92vw)', display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'auto' }}>
+          {/* act tabs */}
+          <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+            {[1, 2, 3, 4, 5, 6, 7].map((act) => (
+              <button key={act} onClick={() => jumpToAct(act)} title={`Jump to Act ${ROMAN[act]}`}
+                style={{ padding: '4px 10px', borderRadius: 999, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: '1px solid ' + (cineBeat?.act === act ? '#f472b6' : ui.border), background: cineBeat?.act === act ? '#f472b626' : ui.glass, color: cineBeat?.act === act ? (dark ? '#f9a8d4' : '#be185d') : ui.tx3 }}>
+                {ROMAN[act]}
+              </button>
+            ))}
+          </div>
+          {/* transport row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: ui.glass, border: '1px solid ' + ui.border, borderRadius: 14, padding: '8px 12px', backdropFilter: 'blur(10px)', boxShadow: '0 10px 32px rgba(0,0,0,.3)' }}>
+            <button onClick={restart} title="Restart" style={transportBtn(ui)}><RotateCcw size={14} /></button>
+            <button onClick={prevBeat} title="Previous scene" style={transportBtn(ui)}><SkipBack size={14} /></button>
+            <button onClick={togglePlayPause} title={cinePlaying ? 'Pause' : 'Play'} style={{ ...transportBtn(ui), background: '#f472b622', border: '1px solid #f472b666' }}>
+              {cinePlaying ? <Pause size={15} /> : <Play size={15} />}
+            </button>
+            <button onClick={nextBeat} title="Next scene" style={transportBtn(ui)}><SkipForward size={14} /></button>
+            <input type="range" min={0} max={1} step={0.001} value={cineProgress}
+              onChange={(e) => seekToFraction(parseFloat(e.target.value))}
+              title="Scrub the cinematic timeline" style={{ flex: 1, accentColor: '#f472b6', cursor: 'pointer' }} />
+            <button onClick={cycleSpeed} title="Playback speed" style={{ ...transportBtn(ui), width: 'auto', padding: '0 9px', gap: 4, display: 'flex', alignItems: 'center' }}>
+              <Gauge size={13} /> <span style={{ fontSize: 11.5, fontWeight: 700 }}>{cineSpeed}×</span>
+            </button>
+            <button onClick={exitCinematic} title="Exit cinematic" style={transportBtn(ui)}><X size={14} /></button>
+          </div>
         </div>
       )}
 
@@ -301,6 +405,12 @@ function SideLabel({ side, title, sub, active, onClick, count }: { side: 'left' 
       <div style={{ fontSize: 10, color: col, opacity: 0.7, marginTop: 3 }}>{count} neurons</div>
     </button>
   )
+}
+function transportBtn(ui: { glass: string; border: string; tx3: string }): React.CSSProperties {
+  return {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30,
+    borderRadius: 999, border: '1px solid ' + ui.border, background: ui.glass, color: ui.tx3, cursor: 'pointer',
+  }
 }
 function Chip({ color, children }: { color: string; children: React.ReactNode }) {
   return <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: color + '22', color, border: '1px solid ' + color + '55' }}>{children}</span>
