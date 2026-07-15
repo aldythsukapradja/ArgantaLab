@@ -115,7 +115,7 @@ const STACK_OF: Record<string, StackId> = {
   memory: 'ml', rag: 'ml',
   vault: 'data', postgres: 'data',
   builder: 'app', media: 'app', tools: 'app',
-  hqb: 'client', arganta: 'client', kinetik: 'client', lashira: 'client', kingdom: 'client', landing: 'client',
+  hqb: 'client', arganta: 'client', kinetik: 'client', lashira: 'client', landing: 'client',
   'client-tier': 'client',
   ledger: 'observ', beats: 'observ', events: 'observ',
   supabase: 'platform', cloudflare: 'platform', vercel: 'platform',
@@ -212,7 +212,6 @@ const NODES: NodeDef[] = [
   { id: 'arganta', layer: 'experience', label: 'ArgantaLab', sub: 'learn · KinQuest · diamonds', prov: 'partial', logos: [L.react, L.ts], seriesKey: 'arganta' },
   { id: 'kinetik', layer: 'experience', label: 'KinetikCircle', sub: 'circles · moments · KinFarm', prov: 'partial', logos: [L.react, L.ts], seriesKey: 'kinetik' },
   { id: 'lashira', layer: 'experience', label: 'LashiraBloom', sub: 'circle farm · 5 realms', prov: 'partial', logos: [L.react], seriesKey: 'lashira' },
-  { id: 'kingdom', layer: 'experience', label: 'Kingdom Heroes', sub: 'character lab · MMORPG spine', prov: 'partial', logos: [L.react] },
   { id: 'landing', layer: 'experience', label: 'Landing', sub: 'living company page', prov: 'partial', logos: [L.react, L.ts], seriesKey: 'landing' },
 
   // Sense — learn
@@ -239,7 +238,7 @@ const NODES: NodeDef[] = [
 // C4 altitude fix: in System/Scale, don't show 6 products as peers of a
 // technology like PostgreSQL — one Client-tier CONTAINER, drill down for the
 // component-level detail. Core view (the mental model) keeps them as peers.
-const CLIENT_TIER_IDS = ['hqb', 'arganta', 'kinetik', 'lashira', 'kingdom', 'landing']
+const CLIENT_TIER_IDS = ['hqb', 'arganta', 'kinetik', 'lashira', 'landing']
 const CLIENT_CONTAINER: NodeDef = {
   id: 'client-tier', layer: 'experience', label: 'Client Applications', sub: `${CLIENT_TIER_IDS.length} products · the presentation tier`, prov: 'partial',
   swap: 'any web frontend — React/Vite today, the contract is framework-agnostic',
@@ -260,7 +259,7 @@ const EDGES: EdgeDef[] = [
   { s: 'builder', t: 'hqb' }, { s: 'media', t: 'hqb' },
   { s: 'hqb', t: 'beats', flow: true },
   { s: 'arganta', t: 'beats' }, { s: 'kinetik', t: 'beats' }, { s: 'lashira', t: 'beats' },
-  { s: 'kingdom', t: 'beats' }, { s: 'landing', t: 'beats' },
+  { s: 'landing', t: 'beats' },
   { s: 'beats', t: 'postgres', flow: true }, { s: 'ledger', t: 'rack' }, { s: 'events', t: 'router' },
   { s: 'memory', t: 'postgres' }, { s: 'postgres', t: 'supabase' },
   { s: 'cfai', t: 'cloudflare' }, { s: 'media', t: 'cloudflare' }, { s: 'gateway', t: 'supabase' },
