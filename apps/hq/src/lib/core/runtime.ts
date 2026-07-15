@@ -24,7 +24,13 @@ export interface CoreCallModelResult {
  * recognizes as "no live model" (honest degrade, never a fabricated answer).
  */
 export function makeCoreCallModel(o: { dataClass?: string; runId: string } ) {
-  const dataClass = o.dataClass ?? 'internal'
+  // 'public' by default — general conversation is free to route through the
+  // Sponsored tier (same precedent as content-intelligence.ts's Website/Deck
+  // copy). 'internal' blocks costClass 1 by governance (ADR-0003), which would
+  // silently force every ordinary chat message to a paid Economy model. Tools
+  // that touch real sensitive data (analyze) declare their OWN stricter
+  // dataClass at the tool-spec level regardless of this default.
+  const dataClass = o.dataClass ?? 'public'
   return async function coreCallModel({ messages, tools }: { messages: unknown[]; tools: unknown[] }): Promise<CoreCallModelResult> {
     const { model: picked, reason } = selectModel(intelligenceRegistry, { task: 'orchestrate', dataClass })
     if (!picked || !isRouteAllowed(picked, dataClass)) {

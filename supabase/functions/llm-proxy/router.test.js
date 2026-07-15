@@ -48,6 +48,22 @@ test('needsTools excludes anthropic-shape candidates (tool translation not imple
   assert.equal(pickCandidates(available, { needsTools: false }).length > 0, true);
 });
 
+test('needsTools excludes anthropic-shape candidates even for an EXACT model/force request (regression: a client-driven selectModel() model id must not bypass the exclusion — Claude has no tool_use translation and would silently hallucinate fake tool calls instead of erroring)', () => {
+  const available = { ANTHROPIC_API_KEY: 'z', GEMINI_API_KEY: 'x' };
+  // exact MODEL request for an anthropic-shape model, tools required: falls
+  // through to cost-based selection among the tools-capable pool (same honest-
+  // degrade behavior as "exact model unavailable"), never silently uses Claude.
+  const byModel = pickCandidates(available, { model: 'claude-haiku-4-5', needsTools: true });
+  assert.equal(byModel.length, 1);
+  assert.equal(byModel[0].name, 'gemini');
+  // exact provider FORCE for an anthropic-shape entry, tools required: force
+  // has no fallback path, so this must come back empty, not silently ignore needsTools.
+  assert.deepEqual(pickCandidates(available, { force: 'anthropic-haiku', needsTools: true }), []);
+  // without needsTools, both exact-match paths still work exactly as before
+  assert.equal(pickCandidates(available, { model: 'claude-haiku-4-5' })[0].name, 'anthropic-haiku');
+  assert.equal(pickCandidates(available, { force: 'anthropic-haiku' })[0].name, 'anthropic-haiku');
+});
+
 test('never returns more than 2 candidates (bounded in-request fallback)', () => {
   const allKeys = Object.fromEntries(PROVIDER_CATALOG.map((e) => [e.envKey, 'x']));
   assert.ok(pickCandidates(allKeys).length <= 2);

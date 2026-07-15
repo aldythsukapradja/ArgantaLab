@@ -59,6 +59,15 @@ export function resolveUrl(entry, accountId) {
  */
 export function pickCandidates(available, opts = {}) {
   let pool = PROVIDER_CATALOG.filter((e) => isAvailable(e, available));
+  // needsTools applies BEFORE force/model resolve, not after — an anthropic-
+  // shape entry can never legally serve a tool-calling request (no tool_use
+  // translation exists), so it must be excluded from the pool those exact-match
+  // branches search too. Skipping this for exact-model requests was a real bug:
+  // a client-driven selectModel() model id would bypass the exclusion entirely
+  // and Claude Haiku/Sonnet/Opus would silently receive a tools-array it can't
+  // honor — the model then hallucinates fake tool-call-shaped text instead of
+  // erroring, a truthfulness violation this router exists to prevent.
+  if (opts.needsTools) pool = pool.filter((e) => e.shape !== 'anthropic');
   if (opts.force) {
     const forced = pool.find((e) => e.name === opts.force);
     return forced ? [forced] : [];
@@ -67,7 +76,6 @@ export function pickCandidates(available, opts = {}) {
     const byModel = pool.find((e) => e.model === opts.model);
     if (byModel) return [byModel];
   }
-  if (opts.needsTools) pool = pool.filter((e) => e.shape !== 'anthropic');
   if (opts.costClass != null) pool = pool.filter((e) => e.costClass === opts.costClass);
   return [...pool].sort((a, b) => a.costClass - b.costClass).slice(0, 2);
 }

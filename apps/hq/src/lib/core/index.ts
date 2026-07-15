@@ -13,7 +13,19 @@ export { createThread, loadMessages, listRecentThreads, type CoreMessage }
 const SYSTEM_PROMPT = `You are Arganta Core, the founder's digital-twin assistant for ArgantaLab.
 You can make real things: images, voice clips, websites, slide decks, brand kits, and data charts —
 via tools, not by describing them. Use tools when the founder asks you to MAKE or SHOW something.
+Once a tool call succeeds, do NOT call it again for the same request — respond to the founder in text
+instead. Every turn must end with a text reply to the founder, even a short one.
 Be concise and direct. Never invent numbers or claim something was made when a tool failed — say so plainly.`
+
+// Every stop reason must produce SOME reply — a silent empty message (e.g.
+// the loop exhausting max-steps mid tool-call-spree) is a real UX dead end,
+// not just a missing "nice to have". Honest, not a fabricated answer.
+const FALLBACK_TEXT_FOR: Record<string, string> = {
+  'no-model': '(No live model reachable right now — nothing was fabricated. Check your Cloudflare/Supabase connection.)',
+  'max-steps': '(Ran out of turns before finishing — see the actions above. Try asking again, more specifically.)',
+  budget: '(Stopped to stay within this session\'s cost budget — see the actions above.)',
+  error: '(Something went wrong mid-turn — see the actions above.)',
+}
 
 export interface SendMessageResult {
   text: string
@@ -40,18 +52,26 @@ export async function sendMessage(threadId: string, userText: string): Promise<S
   await appendMessage({ id: crypto.randomUUID(), threadId, role: 'user', content: userText })
 
   const runId = crypto.randomUUID()
-  const callModel = makeCoreCallModel({ dataClass: 'internal', runId })
+  const callModel = makeCoreCallModel({ dataClass: 'public', runId })
 
   // Adapter boundary (see tools.ts comment): coreExecuteTool returns a richer
   // {data, block, costUsd} shape than loop.js's frozen executeTool contract
   // wants (a flat object it shows the model AND reads .costUsd off of).
-  // Flatten here; stash blocks in a side-channel keyed by tool name+order so
-  // they can be attached to the final assistant message after the loop ends.
+  // Flatten here for the loop; build the RICH tool-trail block here too
+  // (provider/model included) rather than reconstructing from loop.js's trail
+  // entries, which only carry {name,ok,costUsd,latencyMs} by design (C1-frozen
+  // shape) — this is the only place that still has the full tool result.
   const collectedBlocks: Record<string, unknown>[] = []
+  const trailBlocks: Record<string, unknown>[] = []
   const executeTool = async (name: string, args: Record<string, unknown>) => {
+    const t0 = performance.now()
     const result: ToolResult = await coreExecuteTool(name, args)
+    const latencyMs = Math.round(performance.now() - t0)
+    const flat = { ...(result.data as object), costUsd: result.costUsd ?? 0 }
+    const ok = !('error' in flat)
+    trailBlocks.push(makeBlock('tool-trail', { tool: name, provider: (flat as any).provider ?? null, model: (flat as any).model ?? null, costUsd: result.costUsd ?? 0, latencyMs, ok }))
     if (result.block) collectedBlocks.push(makeBlock(blockKindFor(name), result.block))
-    return { ...(result.data as object), costUsd: result.costUsd ?? 0 }
+    return flat
   }
 
   const tools = toOpenAITools(availableTools(undefined, { autonomous: false, maxCostClass: 1 }))
@@ -59,14 +79,8 @@ export async function sendMessage(threadId: string, userText: string): Promise<S
     messages, tools, callModel, executeTool, maxSteps: 4, autonomyLevel: AUTONOMY.ON_DEMAND,
   })
 
-  const trailBlocks = trail
-    .filter((t: any) => t.type === 'tool')
-    .map((t: any) => makeBlock('tool-trail', { tool: t.name, ok: t.ok, latencyMs: t.latencyMs, costUsd: t.costUsd }))
-
   const costUsd = trail.reduce((s: number, t: any) => s + (t.costUsd || 0), 0)
-  const finalText = stopReason === 'no-model'
-    ? '(No live model reachable right now — nothing was fabricated. Check your Cloudflare/Supabase connection.)'
-    : text
+  const finalText = text || FALLBACK_TEXT_FOR[stopReason] || `(Stopped: ${stopReason}. Nothing was fabricated.)`
 
   const blocks = [...trailBlocks, ...(finalText ? [makeBlock('text', { text: finalText })] : []), ...collectedBlocks]
   await appendMessage({ id: crypto.randomUUID(), threadId, role: 'assistant', content: finalText, blocks, runId })
