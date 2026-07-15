@@ -1,16 +1,14 @@
-import { useMemo, useState } from 'react'
-import { Hand, Mic, Sparkles, Volume2, X } from 'lucide-react'
-import { cloudEnabled } from '../lib/supabase'
+import { useMemo } from 'react'
+import { Hand, Mic, Sparkles, X } from 'lucide-react'
 import type { RegistryEntry } from './registry'
 import type { CommandCategory } from './intents'
-import { generateReplyAudio } from './generateReplies'
 import './copilot.css'
 
 // ─────────────────────────────────────────────────────────────────────────
 // CopilotHelp — the voice/gesture cheat-sheet. Renders straight from the live
 // command registry (so it always matches what actually works), grouped by
-// category, with a gesture legend. The operator gets a "Generate voice
-// replies" button that runs the Cloudflare-Aura pre-gen pass.
+// category, with a gesture legend. Everyday-use popup, so no operator-only
+// controls here — "Generate voice replies" lives in the Copilot control tab.
 // ─────────────────────────────────────────────────────────────────────────
 
 const CATEGORY_ORDER: { id: CommandCategory; label: string }[] = [
@@ -27,21 +25,12 @@ export interface CopilotHelpProps {
 }
 
 export function CopilotHelp({ entries, source, onClose }: CopilotHelpProps) {
-  const [gen, setGen] = useState<{ running: boolean; done: number; total: number; note: string }>({ running: false, done: 0, total: 0, note: '' })
-
   const grouped = useMemo(() => {
     return CATEGORY_ORDER.map(cat => ({
       ...cat,
       items: entries.filter(e => e.category === cat.id),
     })).filter(g => g.items.length)
   }, [entries])
-
-  const runGenerate = async () => {
-    setGen({ running: true, done: 0, total: 0, note: 'Starting…' })
-    const result = await generateReplyAudio((done, total, label) => setGen({ running: true, done, total, note: label }))
-    setGen({ running: false, done: result.generated, total: result.attempted, note:
-      `${result.generated} generated · ${result.skipped} skipped · ${result.failed} failed` })
-  }
 
   return (
     <div className="cp-help-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -82,14 +71,6 @@ export function CopilotHelp({ entries, source, onClose }: CopilotHelpProps) {
 
         <footer className="cp-help-foot">
           <span className="cp-source">{source === 'db' ? 'Live from command registry' : 'Built-in commands'}</span>
-          {cloudEnabled && (
-            <button className="cp-gen" onClick={runGenerate} disabled={gen.running}>
-              <Volume2 size={13} />
-              {gen.running
-                ? `Generating ${gen.done}/${gen.total}… ${gen.note}`
-                : gen.note || 'Generate voice replies (Aura)'}
-            </button>
-          )}
         </footer>
       </section>
     </div>
