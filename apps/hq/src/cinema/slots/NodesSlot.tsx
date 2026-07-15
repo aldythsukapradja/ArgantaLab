@@ -1,8 +1,9 @@
-// NodesSlot — WS3's 3D knowledge nodes plug in here. P0 ships the 'placeholder'
-// fallback: a simple spine of the Founder→…→Products path that lights up as the
-// storyline traces it. When WS3 lands, set RENDERERS.nodes = 'ws3'.
+// NodesSlot — WS3's 3D knowledge nodes plug in here. The 'placeholder' fallback
+// is a simple spine of the Founder→…→Products path that lights up as the
+// storyline traces it; RENDERERS.nodes = 'ws3' renders the real Cognitive Cortex.
 import type { NodesSlotProps } from '../contract'
 import { RENDERERS } from '../registry'
+import { KnowledgeCinemaSlot } from '../../knowledge/CinemaBridge'
 
 const SPINE = ['Founder', 'Jarvis', 'Command', 'Vault', 'Data', 'Architecture', 'Agents', 'Products']
 
@@ -28,7 +29,6 @@ function PlaceholderNodes({ state }: NodesSlotProps) {
 
 export function NodesSlot(props: NodesSlotProps) {
   const renderer = props.renderer ?? RENDERERS.nodes
-  // if (renderer === 'ws3') return <Ws3KnowledgeNodes {...props} />  // WS3 fills apps/hq/src/knowledge
-  void renderer
+  if (renderer === 'ws3') return <KnowledgeCinemaSlot {...props} />
   return <PlaceholderNodes {...props} />
 }

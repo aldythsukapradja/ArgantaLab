@@ -56,7 +56,28 @@ export interface NodesSlotProps {
   renderer?: 'placeholder' | 'ws3'
   reducedMotion?: boolean
   quality?: Quality
+  /** Additive (optional): the same CoreState the reactor got this beat. WS3's
+   *  Cognitive Cortex activation is keyed off this — "core state think/know/do
+   *  drives the region activation" (see deriveState.ts's nodesFor comment). */
+  core?: CoreState
+  /** Additive (optional): the scene id (e.g. "5.2") — lets WS3 apply its own
+   *  per-scene activation overrides for the Act V/VI spine trace + proof sweep. */
+  sceneId?: string
 }
+
+// ── Action selector (founder-facing authoring layer) ──────────────────────
+// A friendlier verb+target over the low-level CoreState/NodesState the slots
+// consume. The baseline per scene is derived (deriveState.ts's actionFor,
+// mirroring coreFor/nodesFor); the Cinema Director store lets the founder
+// override it per scene, and an override REPLACES the derived `core` for that
+// beat (via deriveState.ts's coreForAction) — one dropdown drives both the
+// reactor and the brain, never drifting apart. No override = today's behaviour,
+// byte-identical.
+export type SceneAction = 'ignite' | 'open' | 'focus' | 'reveal' | 'close' | 'return' | 'hold'
+export const SCENE_ACTIONS: readonly SceneAction[] = ['ignite', 'open', 'focus', 'reveal', 'close', 'return', 'hold']
+export type ActionTarget = 'think' | 'know' | 'do' | 'vault' | 'architecture' | ProductId | 'all'
+export const ACTION_TARGETS: readonly ActionTarget[] = ['think', 'know', 'do', 'vault', 'architecture', 'arganta', 'kinetik', 'lashira', 'landing', 'hq', 'all']
+export interface SceneActionDirective { action: SceneAction; target?: ActionTarget }
 
 // ── The single semantic value WS1 emits every scene ───────────────────────
 export interface SceneState {

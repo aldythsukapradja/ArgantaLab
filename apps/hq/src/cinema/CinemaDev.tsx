@@ -14,9 +14,13 @@ import { NodesSlot } from './slots/NodesSlot'
 import { KaraokeLine } from '../lib/karaoke/KaraokeLine'
 import { RENDERERS } from './registry'
 import { useCinemaStore, mergeScene } from './store'
-import { INSTRUMENTS, STAGE_EFFECTS, type InstrumentId, type StageEffect, type StageDirection } from './contract'
+import {
+  INSTRUMENTS, STAGE_EFFECTS, SCENE_ACTIONS, ACTION_TARGETS,
+  type InstrumentId, type StageEffect, type StageDirection, type SceneAction, type ActionTarget,
+} from './contract'
+import { actionFor, coreForAction } from './deriveState'
 import { speakBrowser, TTS_TIERS, type TtsTier, type SpeakHandle } from '../lib/tts/tts'
-import { Volume2, Square } from 'lucide-react'
+import { Volume2, Square, GripVertical, GripHorizontal } from 'lucide-react'
 import './cinema.css'
 
 const CORE_TEXT: Record<string, string> = {
@@ -53,6 +57,47 @@ export function CinemaDev() {
   const speakRef = useRef<SpeakHandle | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const importRef = useRef<HTMLInputElement>(null)
+
+  // Adjustable right-hand inspector drawer width (persisted) + the stage's
+  // reactor/brain vertical split ratio (also persisted, also draggable).
+  const [inspW, setInspW] = useState(() => Number(localStorage.getItem('hq_cin_insp_w')) || 300)
+  const [splitPct, setSplitPct] = useState(() => Number(localStorage.getItem('hq_cin_split_pct')) || 58)
+  const dragRef = useRef<{ mode: 'insp' | 'split'; startX: number; startY: number; startW: number; startPct: number; stageEl: HTMLDivElement | null } | null>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const onDragMove = (e: PointerEvent) => {
+    const d = dragRef.current; if (!d) return
+    if (d.mode === 'insp') {
+      const next = Math.max(260, Math.min(560, d.startW - (e.clientX - d.startX)))
+      setInspW(next)
+    } else {
+      const rect = d.stageEl?.getBoundingClientRect()
+      if (!rect) return
+      const next = Math.max(28, Math.min(82, d.startPct + ((e.clientY - d.startY) / rect.height) * 100))
+      setSplitPct(next)
+    }
+  }
+  const onDragEnd = () => {
+    dragRef.current = null
+    window.removeEventListener('pointermove', onDragMove)
+    window.removeEventListener('pointerup', onDragEnd)
+    document.body.style.cursor = ''
+    localStorage.setItem('hq_cin_insp_w', String(inspW))
+    localStorage.setItem('hq_cin_split_pct', String(splitPct))
+    // both embedded WebGL canvases need to re-measure after a manual resize
+    window.dispatchEvent(new Event('resize'))
+  }
+  const startInspDrag = (e: React.PointerEvent) => {
+    dragRef.current = { mode: 'insp', startX: e.clientX, startY: 0, startW: inspW, startPct: 0, stageEl: null }
+    window.addEventListener('pointermove', onDragMove)
+    window.addEventListener('pointerup', onDragEnd)
+    document.body.style.cursor = 'col-resize'
+  }
+  const startSplitDrag = (e: React.PointerEvent) => {
+    dragRef.current = { mode: 'split', startX: 0, startY: e.clientY, startW: 0, startPct: splitPct, stageEl: stageRef.current }
+    window.addEventListener('pointermove', onDragMove)
+    window.addEventListener('pointerup', onDragEnd)
+    document.body.style.cursor = 'row-resize'
+  }
 
   const grouped = useMemo(() => {
     const by: Record<number, Scene[]> = {}
@@ -117,8 +162,20 @@ export function CinemaDev() {
     editScene(base.id, { stage: INSTRUMENTS.filter(i => next[i] !== 'recede').map(i => ({ target: i, effect: next[i] })) })
   }
 
+  // Action selector — a founder-facing verb+target over the low-level core
+  // state. No override = today's exact baseline; an override REPLACES the
+  // derived `core` for this one scene, so the reactor AND the WS3 brain (which
+  // keys its region activation off `core`) move together — one dropdown.
+  const actionOv = overrides[base.id]?.action
+  const actionAuthored = !!actionOv
+  const effectiveAction = actionOv ?? actionFor(base)
+  const effectiveCore = actionAuthored ? coreForAction(actionOv) : st.core
+  const setAction = (patch: Partial<{ action: SceneAction; target: ActionTarget | undefined }>) => {
+    editScene(base.id, { action: { ...effectiveAction, ...patch } })
+  }
+
   return (
-    <div className="cin" style={{ ['--act-accent' as string]: act.accent }}>
+    <div className="cin" style={{ ['--act-accent' as string]: act.accent, ['--insp-w' as string]: `${inspW}px` }}>
       {/* ── Left: grouped scene list ──────────────────────────────── */}
       <aside className="cin-list">
         <div className="cin-list-head">
@@ -147,15 +204,25 @@ export function CinemaDev() {
         </div>
       </aside>
 
-      {/* ── Centre: cinematic stage ───────────────────────────────── */}
+      {/* ── Centre: cinematic stage — top reactor, bottom brain, always both visible ── */}
       <section className="cin-stage">
         <div className="cin-stage-top">
           <span className="cin-kicker">ACT {act.roman} · {act.title}</span>
           <span className="cin-scenetag">Scene {scene.id}</span>
         </div>
-        <div className="cin-core-wrap">
-          <CoreSlot state={st.core} product={st.product} progress={c.progress} />
-          <NodesSlot state={st.nodes} progress={c.progress} />
+        <div className="cin-split" ref={stageRef} style={{ ['--split' as string]: `${splitPct}%` }}>
+          <div className="cin-split-top">
+            <CoreSlot state={effectiveCore} product={st.product} progress={c.progress} />
+          </div>
+          <div className="cin-split-handle" onPointerDown={startSplitDrag} title="Drag to resize reactor / brain">
+            <GripHorizontal size={13} />
+          </div>
+          <div className="cin-split-bottom">
+            {/* Always mounted (not gated by nodes.visible) — the founder can see
+                the brain react to every scene while authoring, per beat. */}
+            <NodesSlot state={{ ...st.nodes, visible: true }} progress={c.progress} core={effectiveCore} sceneId={scene.id} />
+            <span className="cin-split-label">COGNITIVE CORTEX · WS3</span>
+          </div>
         </div>
         <div className="cin-narrative">
           <div className="cin-idea">{scene.idea}</div>
@@ -167,8 +234,11 @@ export function CinemaDev() {
         </div>
       </section>
 
-      {/* ── Right: EDITABLE inspector + version control ───────────── */}
+      {/* ── Right: EDITABLE inspector + version control (adjustable width) ── */}
       <aside className="cin-inspector">
+        <div className="cin-insp-handle" onPointerDown={startInspDrag} title="Drag to resize the Editor drawer">
+          <GripVertical size={13} />
+        </div>
         <div className="cin-insp-head">
           <Pencil size={13} /> <b>Editor</b>
           <button className={'cin-hist-btn' + (showHistory ? ' on' : '')} onClick={() => setShowHistory(h => !h)} title="Version history">
@@ -245,6 +315,32 @@ export function CinemaDev() {
                 </div>
               </div>
               {textChanged && !audioReplaced && <div className="cin-warn">Text edited — the clip still plays the original recording. Use Speak to preview, Replace to bake a new clip, or Re-record text for the TTS pipeline.</div>}
+            </div>
+
+            <div className="cin-field">
+              <span>Action <em>drives the reactor + brain together</em> {actionAuthored && <em>edited</em>}
+                {actionAuthored && <button className="cin-stage-auto" onClick={() => useCinemaStore.getState().clearField(base.id, 'action')}>reset to auto</button>}
+              </span>
+              <div className="cin-stage-grid">
+                <div className="cin-stage-row">
+                  <b>Verb</b>
+                  <select value={effectiveAction.action} data-fx={effectiveAction.action === 'hold' ? 'recede' : 'focus'}
+                    onChange={e => setAction({ action: e.target.value as SceneAction })}>
+                    {SCENE_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div className="cin-stage-row">
+                  <b>Target</b>
+                  <select value={effectiveAction.target ?? ''} data-fx={effectiveAction.target ? 'focus' : 'recede'}
+                    onChange={e => setAction({ target: (e.target.value || undefined) as ActionTarget | undefined })}>
+                    <option value="">— none —</option>
+                    {ACTION_TARGETS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="cin-insp-note">
+                <Boxes size={11} /> Resolves to core <em>{effectiveCore}</em>{actionAuthored ? ' · override active' : ' · baseline (no override)'}
+              </div>
             </div>
 
             <div className="cin-field">

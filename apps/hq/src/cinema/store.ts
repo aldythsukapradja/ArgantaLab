@@ -5,7 +5,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { SCENES, NARRATION, type Scene } from './scenario'
-import type { StageDirection } from './contract'
+import type { StageDirection, SceneActionDirective } from './contract'
 
 export interface SceneEdit {
   idea?: string
@@ -15,6 +15,7 @@ export interface SceneEdit {
   audioSrc?: string   // data: URL of a replacement clip (offline-safe)
   audioName?: string  // original filename of the replacement, for display
   stage?: StageDirection[] // authored instrument choreography for this scene
+  action?: SceneActionDirective // authored action selector — overrides `core` for this scene
 }
 
 export interface CinemaVersion {

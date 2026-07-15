@@ -4,5 +4,5 @@
 //   nodes: 'placeholder' → 'ws3'   when WS3 knowledge nodes land
 export const RENDERERS = {
   core: 'ws2' as 'legacy' | 'ws2' | 'media',
-  nodes: 'placeholder' as 'placeholder' | 'ws3',
+  nodes: 'ws3' as 'placeholder' | 'ws3',
 }
