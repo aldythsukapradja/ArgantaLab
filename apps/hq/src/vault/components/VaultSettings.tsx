@@ -1,9 +1,10 @@
 // HQ Vault — settings sheet: theme, accent, editor, layout, data management.
 
-import { useRef } from 'react'
-import { X, Download, Upload, RotateCcw, HardDrive } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { X, Download, Upload, RotateCcw, HardDrive, BrainCircuit } from 'lucide-react'
 import { useVault } from '../store'
 import { exportVault, importVault, downloadFile, vaultStats } from '../storage'
+import { syncVaultToMemory, type SyncResult } from '../embed'
 import type { AccentKey, VaultTheme } from '../types'
 
 const ACCENTS: { key: AccentKey; color: string; label: string }[] = [
@@ -37,9 +38,18 @@ export function VaultSettingsSheet() {
   const update = useVault(s => s.updateSettings)
   const notes = useVault(s => s.notes)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncProgress, setSyncProgress] = useState<{ done: number; total: number } | null>(null)
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null)
 
   if (!open) return null
   const stats = vaultStats(notes)
+
+  const doSync = async () => {
+    setSyncing(true); setSyncResult(null); setSyncProgress({ done: 0, total: Object.keys(notes).length })
+    const res = await syncVaultToMemory(notes, (done, total) => setSyncProgress({ done, total }))
+    setSyncResult(res); setSyncing(false); setSyncProgress(null)
+  }
 
   const doExport = () => {
     const st = useVault.getState()
@@ -112,6 +122,15 @@ export function VaultSettingsSheet() {
           </Row>
 
           <div className="vst-sec">Data</div>
+          <Row label="Sync to Core memory" sub={
+            syncing ? `Embedding… ${syncProgress ? `${syncProgress.done}/${syncProgress.total} notes` : ''}`
+              : syncResult ? `${syncResult.chunksEmbedded} chunks embedded across ${syncResult.notesProcessed} notes${syncResult.errors.length ? ` · ${syncResult.errors.length} issue(s)` : ''} · $${syncResult.costUsd.toFixed(4)}`
+              : 'Lets Arganta Core recall your notes in chat — re-run after big edits'
+          }>
+            <button className="vc-btn" onClick={doSync} disabled={syncing}>
+              <BrainCircuit size={13} /> {syncing ? 'Syncing…' : 'Sync'}
+            </button>
+          </Row>
           <Row label="Export vault" sub="Everything as JSON — notes, canvas, settings">
             <button className="vc-btn" onClick={doExport}><Download size={13} /> Export</button>
           </Row>

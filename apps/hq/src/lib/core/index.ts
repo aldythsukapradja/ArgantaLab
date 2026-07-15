@@ -7,6 +7,8 @@ import { runAgentLoop, toOpenAITools, availableTools, makeBlock, AUTONOMY, TOOL_
 import { makeCoreCallModel } from './runtime'
 import { coreExecuteTool, WIRED_BUILDER_SPECS, type ToolResult } from './tools'
 import { createThread, appendMessage, loadMessages, listRecentThreads, type CoreMessage } from './thread'
+import { embedTextViaGateway } from '../mediaGateway'
+import { supabase, cloudEnabled } from '../supabase'
 
 export { createThread, loadMessages, listRecentThreads, type CoreMessage }
 
@@ -27,6 +29,36 @@ const FALLBACK_TEXT_FOR: Record<string, string> = {
   'max-steps': '(Ran out of turns before finishing — see the actions above. Try asking again, more specifically.)',
   budget: '(Stopped to stay within this session\'s cost budget — see the actions above.)',
   error: '(Something went wrong mid-turn — see the actions above.)',
+}
+
+// C5 · Auto-recall — runs every turn, BEFORE the loop, unconditionally
+// (unlike search_vault, which the model must decide to call). Deliberately
+// a TIGHTER dataClass ceiling than search_vault's manual 'confidential':
+// this is background/automatic access, not an explicit human-in-the-loop
+// tool call, so it earns less trust to see the founder's most sensitive
+// notes (same ADR-0003 spirit — how deliberate an access is shapes how much
+// it's allowed to see). Founder can still reach confidential notes by
+// explicitly asking Core to search the Vault, which routes through
+// search_vault's higher ceiling instead.
+const AUTO_RECALL_MAX_DATA_CLASS = 'internal'
+const AUTO_RECALL_K = 4
+const AUTO_RECALL_MIN_SIMILARITY = 0.5
+
+async function autoRecall(query: string): Promise<{ block: Record<string, unknown> | null; systemAddendum: string | null; costUsd: number }> {
+  if (!cloudEnabled) return { block: null, systemAddendum: null, costUsd: 0 }
+  const e = await embedTextViaGateway({ text: query })
+  if (!e) return { block: makeBlock('tool-trail', { tool: 'auto_recall', provider: null, model: null, costUsd: 0, latencyMs: 0, ok: false }), systemAddendum: null, costUsd: 0 }
+
+  const { data, error } = await supabase.rpc('memory_search', { p_embedding: e.embedding, p_k: AUTO_RECALL_K, p_max_data_class: AUTO_RECALL_MAX_DATA_CLASS })
+  const block = makeBlock('tool-trail', { tool: 'auto_recall', provider: e.provider, model: e.model, costUsd: e.costUsd, latencyMs: e.latencyMs, ok: !error })
+  if (error || !data) return { block, systemAddendum: null, costUsd: e.costUsd }
+
+  const hits = (data as any[]).filter((r) => r.similarity >= AUTO_RECALL_MIN_SIMILARITY)
+  if (!hits.length) return { block, systemAddendum: null, costUsd: e.costUsd }
+
+  const addendum = "Relevant context recalled from the founder's Vault (may or may not apply to this specific message — use your judgment, don't force a connection):\n" +
+    hits.map((h) => `- ${h.content}`).join('\n')
+  return { block, systemAddendum: addendum, costUsd: e.costUsd }
 }
 
 export interface SendMessageResult {
@@ -50,9 +82,10 @@ export interface SendMessageResult {
  * lands).
  */
 export async function sendMessage(threadId: string, userText: string, opts: { signal?: AbortSignal } = {}): Promise<SendMessageResult> {
-  const history = await loadMessages(threadId)
+  const [history, recall] = await Promise.all([loadMessages(threadId), autoRecall(userText)])
   const messages: any[] = [
     { role: 'system', content: SYSTEM_PROMPT },
+    ...(recall.systemAddendum ? [{ role: 'system', content: recall.systemAddendum }] : []),
     ...history.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user', content: userText },
   ]
@@ -70,7 +103,7 @@ export async function sendMessage(threadId: string, userText: string, opts: { si
   // entries, which only carry {name,ok,costUsd,latencyMs} by design (C1-frozen
   // shape) — this is the only place that still has the full tool result.
   const collectedBlocks: Record<string, unknown>[] = []
-  const trailBlocks: Record<string, unknown>[] = []
+  const trailBlocks: Record<string, unknown>[] = recall.block ? [recall.block] : []
   const executeTool = async (name: string, args: Record<string, unknown>) => {
     const t0 = performance.now()
     const result: ToolResult = await coreExecuteTool(name, args)
@@ -108,7 +141,7 @@ export async function sendMessage(threadId: string, userText: string, opts: { si
 
   const { text, stopReason } = result
   const trail = aborted ? [] : result.trail
-  const costUsd = trail.reduce((s: number, t: any) => s + (t.costUsd || 0), 0)
+  const costUsd = recall.costUsd + trail.reduce((s: number, t: any) => s + (t.costUsd || 0), 0)
   const finalText = aborted
     ? '(Stopped — you ended this turn. Actions completed above are real; nothing after that ran.)'
     : (text || FALLBACK_TEXT_FOR[stopReason] || `(Stopped: ${stopReason}. Nothing was fabricated.)`)
