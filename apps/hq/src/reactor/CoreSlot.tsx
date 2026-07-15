@@ -16,12 +16,18 @@ import { Core2D } from './cores/Core2D'
 const CoreR3F = lazy(() => import('./cores/CoreR3F').then(m => ({ default: m.CoreR3F })))
 const CoreMedia = lazy(() => import('./cores/CoreMedia').then(m => ({ default: m.CoreMedia })))
 
-export function CoreSlot({ renderer = 'r3f', state, media, onSelectProduct, onHoverProduct }: {
+export function CoreSlot({ renderer = 'r3f', state, media, onSelectProduct, onHoverProduct, interactive = false, centered = false, manualExplosion = null }: {
   renderer?: RendererId
   state: SceneState
   media?: MediaManifest
   onSelectProduct?: (id: ProductId) => void
   onHoverProduct?: (id: ProductId | null) => void
+  /** Hand the camera to the founder (OrbitControls: scroll-zoom, drag-rotate). */
+  interactive?: boolean
+  /** Glue to centre (no pan) + RIGHT-mouse drag explodes the reactor. */
+  centered?: boolean
+  /** Scrub the axial explosion directly (0..1) — overrides the scenario. */
+  manualExplosion?: number | null
 }) {
   const tier = useQualityTier()
 
@@ -42,7 +48,7 @@ export function CoreSlot({ renderer = 'r3f', state, media, onSelectProduct, onHo
 
   return (
     <Suspense fallback={<Core2D scene={state} tier={tier} onSelectProduct={onSelectProduct} />}>
-      <CoreR3F scene={state} tier={tier} onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
+      <CoreR3F scene={state} tier={tier} interactive={interactive} centered={centered} manualExplosion={manualExplosion} onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
     </Suspense>
   )
 }

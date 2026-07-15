@@ -1,0 +1,40 @@
+/* CinemaNodes — the full-stage cortex deep-dive. Sits above the cockpit/reactor
+   (z-100) but below the cinematic chrome (z-500). The dive reads as pushing
+   THROUGH the reactor core INTO the mind: the cortex grows out of the core and
+   settles, firing.
+
+   It mounts EARLY (Act III) but stays invisible — data-revealed="off" — so all
+   the heavy R3F/model warmup happens behind the reactor. When the beat reaches
+   the deep-dive (4.2+) React flips data-revealed="on" and it fades/grows in.
+   This keeps the 4.1→4.2 hand-off smooth instead of hanging.
+
+   Reveal uses CSS *transitions*, not keyframes: the cinematic re-renders every
+   frame while playing, which restarts (and so freezes) any gated keyframe
+   animation. Transitions just interpolate to the target and survive re-renders. */
+.cine-dive{
+  position:fixed;inset:0;z-index:100;
+  background:var(--canvas);
+  opacity:0;pointer-events:none; /* warming: rendered, invisible, behind the reactor */
+  transition:opacity 1.1s var(--ease);
+}
+.cine-dive[data-revealed="on"]{opacity:1;pointer-events:auto}
+/* the brain grows out of the core (where the reactor was), settling to full */
+.cine-dive-canvas{position:absolute;inset:0;transform-origin:50% 47%;
+  transform:scale(.62);transition:transform 1.6s cubic-bezier(.16,.9,.24,1),filter 1.6s var(--ease);
+  filter:brightness(1.5) saturate(1.25)}
+.cine-dive[data-revealed="on"] .cine-dive-canvas{transform:scale(1);filter:none}
+/* seam-hiding radial kept in the DOM but idle — a persistent screen-blend wash
+   would fog the cortex, and the pre-warm + fade already hides the hand-off. */
+.cine-dive-flash{display:none}
+.cine-dive-label{
+  position:absolute;top:56px;left:50%;transform:translateX(-50%);z-index:4;pointer-events:none;opacity:0;
+  font:800 9px var(--mono);letter-spacing:.22em;color:var(--tx2);
+  text-shadow:0 0 16px color-mix(in srgb,#8b7cf6 40%,transparent);
+  transition:opacity 1.4s var(--ease)}
+.cine-dive[data-revealed="on"] .cine-dive-label{opacity:1}
+.cine-dive-fallback{position:absolute;inset:0;display:grid;place-items:center;color:var(--tx2);font-size:14px}
+
+@media(prefers-reduced-motion:reduce){
+  .cine-dive,.cine-dive-canvas,.cine-dive-flash,.cine-dive-label{transition:none}
+  .cine-dive-canvas{transform:scale(1);filter:none}
+}

@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { LucideIcon } from 'lucide-react'
 import {
   Activity, Boxes, ChevronRight, Clapperboard, Clock3, Command, Coins, Gauge,
-  LayoutGrid, MapPin, Mic, Moon, Power, RefreshCw, Repeat2, Sparkles,
+  Hand, HelpCircle, LayoutGrid, MapPin, Mic, Moon, Power, RefreshCw, Repeat2, Sparkles,
   Sun, TrendingUp, Users, X,
 } from 'lucide-react'
 import { useHQ } from '../shell/store'
@@ -29,6 +29,7 @@ import { useCinema } from '../cinema/director'
 import { useCinemaStore } from '../cinema/store'
 import { INSTRUMENTS, type InstrumentId, type StageEffect, type StageDirection } from '../cinema/contract'
 import { ACTS } from '../cinema/scenario'
+import { useCopilotStore } from '../copilot/store'
 
 type StageMap = Partial<Record<InstrumentId, StageEffect>> | null
 
@@ -47,7 +48,9 @@ function fxOf(id: InstrumentId, stageMap: StageMap): string | undefined {
   return stageMap[id] ?? 'recede'       // named effect, else recede
 }
 const CinemaStage = lazy(() => import('../cinema/CinemaStage').then(module => ({ default: module.CinemaStage })))
+const CinemaNodes = lazy(() => import('../cinema/CinemaNodes').then(module => ({ default: module.CinemaNodes })))
 
+const INSPECTOR_VIEWS: InspectorView[] = ['overview', 'desktop', 'mobile']
 const REFRESH_MS = 45_000
 const emptyPulse: Pulse = {
   i: null, k: null, o: null, e: null, v: null, r: null,
@@ -266,7 +269,7 @@ function MobileInstruments({ open, onClose, ...props }: InstrumentProps & { open
 }
 
 export function Landing({ who: _who = 'Operator' }: { who?: string }) {
-  const { go, openPalette, toggleAgent, theme, toggleTheme } = useHQ()
+  const { go, openPalette, closePalette, paletteOpen, agentOpen, closeAgent, theme, toggleTheme } = useHQ()
   const { pulse = emptyPulse, refresh, refreshing, updatedAt } = useLandingPulse()
   const [selected, setSelected] = useState<ProductId | null>(null)
   const [hoveredProduct, setHoveredProduct] = useState<ProductId | null>(null)
@@ -289,7 +292,86 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
   const liveLabel = !cloudEnabled ? 'CONNECTION REQUIRED' : hasLiveSignal ? 'LIVE SIGNAL' : 'AWAITING SIGNAL'
   const updatedLabel = updatedAt ? new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'
 
-  const openProduct = useCallback((id: ProductId) => setSelected(id), [])
+  const [productView, setProductView] = useState<InspectorView>('overview')
+  const openProduct = useCallback((id: ProductId) => { setSelected(id); setProductView('overview') }, [])
+
+  // "activate" opens the cinematic — same action as the topbar clapperboard.
+  const playCinema = useCallback(() => setCinemaOn(true), [])
+
+  // "close" / pinch closes whatever's actually open here, in priority order:
+  // cinema, then the product popup, then the agent panel, then the command
+  // palette. A no-op if nothing is open.
+  const closeWhatIsOpen = useCallback(() => {
+    if (cinemaOn) { setCinemaOn(false); return }
+    if (selected) { setSelected(null); return }
+    if (agentOpen) { closeAgent(); return }
+    if (paletteOpen) { closePalette(); return }
+  }, [cinemaOn, selected, agentOpen, closeAgent, paletteOpen, closePalette])
+
+  // Gesture swipe: cycle the 5 product cards, or the Overview→Desktop→Mobile
+  // inspector view when a popup is open.
+  const cycleProduct = useCallback((dir: 'left' | 'right') => {
+    setSelected(current => {
+      const ids = products.map(p => p.id)
+      if (!ids.length) return current
+      const idx = current ? ids.indexOf(current) : -1
+      const next = idx === -1
+        ? (dir === 'right' ? 0 : ids.length - 1)
+        : (idx + (dir === 'right' ? 1 : -1) + ids.length) % ids.length
+      return ids[next]
+    })
+  }, [products])
+  const cycleProductView = useCallback((dir: 'left' | 'right') => {
+    setProductView(current => {
+      const idx = INSPECTOR_VIEWS.indexOf(current)
+      const next = (idx + (dir === 'right' ? 1 : -1) + INSPECTOR_VIEWS.length) % INSPECTOR_VIEWS.length
+      return INSPECTOR_VIEWS[next]
+    })
+  }, [])
+  const handleGestureSwipe = useCallback((dir: 'left' | 'right') => {
+    if (selected) cycleProductView(dir)
+    else cycleProduct(dir)
+  }, [selected, cycleProductView, cycleProduct])
+
+  // The copilot lives globally (GlobalCopilot in Shell) so it survives
+  // navigation. While the orb is on screen, Landing injects its surface-local
+  // actions + swipe behaviour so "open lashira" / "activate" / swipe act
+  // directly here instead of routing through the navigate-home bridge. Landing
+  // reads armed/amplitude from the store to keep the orb pulsing to the voice.
+  const setContext = useCopilotStore(s => s.setContext)
+  const clearContext = useCopilotStore(s => s.clearContext)
+  const consumePending = useCopilotStore(s => s.consumePending)
+  const setSuppressed = useCopilotStore(s => s.setSuppressed)
+  const toggleVoice = useCopilotStore(s => s.toggleVoice)
+  const toggleGesture = useCopilotStore(s => s.toggleGesture)
+  const openHelp = useCopilotStore(s => s.openHelp)
+  const voiceArmed = useCopilotStore(s => s.armed)
+  const voiceAmplitude = useCopilotStore(s => s.amplitude)
+  const gestureActive = useCopilotStore(s => s.gestureActive)
+  const gestureLoading = useCopilotStore(s => s.gestureLoading)
+
+  // "show desktop/mobile/overview" only means something while a popup is open.
+  const setProductViewCtx = useCallback((view: InspectorView) => {
+    if (selected) setProductView(view)
+  }, [selected])
+
+  useEffect(() => {
+    setContext({
+      actions: { openProduct, playCinema, close: closeWhatIsOpen, refresh: () => void refresh(), setProductView: setProductViewCtx },
+      onSwipe: handleGestureSwipe,
+    })
+    return () => clearContext()
+  }, [setContext, clearContext, openProduct, playCinema, closeWhatIsOpen, handleGestureSwipe, refresh, setProductViewCtx])
+
+  // Apply a product/cinema requested from another surface (navigate-home bridge).
+  useEffect(() => {
+    const { product, cinema: wantCinema } = consumePending()
+    if (product) openProduct(product)
+    if (wantCinema) setCinemaOn(true)
+  }, [consumePending, openProduct])
+
+  // Hide the global bottom-left dock during the cinema/boot takeover.
+  useEffect(() => { setSuppressed(cinemaOn); return () => setSuppressed(false) }, [cinemaOn, setSuppressed])
   const finishBoot = useCallback(() => {
     setBooted(true)
     window.sessionStorage.setItem('ld-reactor-booted', '1')
@@ -314,8 +396,10 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
 
   // Enter/exit the cinematic: start the film on open, pause on close.
   useEffect(() => {
-    if (cinemaOn && !prevCinema.current) cinema.startAuto()
-    else if (!cinemaOn && prevCinema.current) cinema.pause()
+    if (cinemaOn && !prevCinema.current) {
+      cinema.startAuto()
+      void import('../cinema/CinemaNodes') // warm the heavy cortex chunk before Act V
+    } else if (!cinemaOn && prevCinema.current) cinema.pause()
     prevCinema.current = cinemaOn
   }, [cinemaOn, cinema])
 
@@ -349,7 +433,11 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
         choreography: DEFAULT_CHOREOGRAPHY[cinema.state.core], signal: signalState, reducedMotion,
         sceneTime: cinema.progress, sceneDuration: 1, sceneId: cinema.scene.id,
       }
-    : sceneFromLegacyProps({ dark: theme === 'dark', selectedProduct: selected, signalState, skipBoot, reducedMotion })
+    : voiceArmed
+      // The orb only *animates* to the voice (a breathing pulse on live mic
+      // amplitude) — it never restructures or explodes while listening.
+      ? { ...IDLE_SCENE, state: 'listening', intensity: 0.3 + voiceAmplitude * 0.7, signal: signalState, reducedMotion }
+      : sceneFromLegacyProps({ dark: theme === 'dark', selectedProduct: selected, signalState, skipBoot, reducedMotion })
 
   // Act III auto-demo: the product popup opens on the scene's product and cycles
   // Overview → Desktop → Mobile with the narration beats, matching the recorded story.
@@ -358,8 +446,16 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
   const cinemaView: InspectorView = cinemaBeat === 'demo' ? (cinema.progress < 0.5 ? 'desktop' : 'mobile') : 'overview'
   const cinemaPopupModel = cinemaPopupOpen ? products.find(p => p.id === cinema.scene.product) ?? null : null
 
+  // Deep-dive: Acts IV–VI dissolve the reactor into the real 3D cortex.
+  // Mount the cortex EARLY (from Act III) so its heavy build (model + tissue +
+  // R3F/shader warmup) happens behind the reactor while a product clip plays —
+  // otherwise the whole init hits the main thread at 4.1→4.2 and the transition
+  // hangs. It stays mounted-but-hidden until `nodesRevealed`, then fades in.
+  const nodesRevealed = cinemaOn && cinema.state.nodes.visible
+  const mountNodes = cinemaOn && cinema.scene.act >= 3 && cinema.scene.act <= 6
+
   return (
-    <main className="ld" data-theme={theme} data-cinema={cinemaOn ? 'on' : 'off'} data-mobile-charts={chartsOpen ? 'open' : 'closed'}
+    <main className="ld" data-theme={theme} data-cinema={cinemaOn ? 'on' : 'off'} data-dive={nodesRevealed ? 'on' : 'off'} data-mobile-charts={chartsOpen ? 'open' : 'closed'}
       style={cinemaOn ? ({ ['--act-accent']: ACTS[cinema.scene.act].accent } as React.CSSProperties) : undefined}>
       <div className="ld-grid-field" aria-hidden="true" />
       <header className="ld-topbar">
@@ -374,6 +470,13 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
           <button onClick={() => void refresh()} aria-label="Refresh live signals" title="Refresh live signals"><RefreshCw size={15} className={refreshing ? 'spin' : ''} /></button>
           <button onClick={openPalette} aria-label="Open HQ menu" title="Open HQ menu"><LayoutGrid size={15} /></button>
           <button onClick={toggleTheme} aria-label="Switch color theme" title="Switch color theme">{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button>
+          <button onClick={toggleGesture} className={gestureActive ? 'ld-gesture-on' : ''}
+            aria-label={gestureActive ? 'Turn off hand gesture (camera)' : 'Turn on hand gesture (camera)'}
+            aria-pressed={gestureActive}
+            title={gestureActive ? 'Hand gesture on — swipe to cycle products/views, pinch to close' : gestureLoading ? 'Loading hand model…' : 'Turn on hand gesture (uses camera)'}>
+            <Hand size={15} className={gestureLoading ? 'spin' : ''} />
+          </button>
+          <button onClick={openHelp} aria-label="Voice & gesture commands" title="Voice & gesture commands"><HelpCircle size={15} /></button>
         </div>
       </header>
 
@@ -384,7 +487,8 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
           <div className="ld-stage-aura" aria-hidden="true" />
           <div className="ld-reactor-shell">
             <div className="ld-orb">
-              <ReactorCore key={bootKey} renderer="r3f" state={reactorScene}
+              <ReactorCore key={bootKey} renderer="r3f" state={reactorScene} interactive={!cinemaOn} centered={!cinemaOn}
+                manualExplosion={cinemaOn && cinema.scene.id === '4.1' ? cinema.progress : null}
                 onSelectProduct={cinemaOn ? undefined : openProduct}
                 onHoverProduct={cinemaOn ? undefined : setHoveredProduct} />
             </div>
@@ -408,7 +512,12 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
       <nav className="ld-dock" aria-label="HQ sections">
         <button onClick={() => go('portfolio')}><LayoutGrid size={18} /><span>Portfolio</span></button>
         <button onClick={() => go('growth')}><TrendingUp size={18} /><span>Analytics</span></button>
-        <button className="ld-mic" onClick={() => toggleAgent()} aria-label="Talk to Jarvis"><span /><Mic size={22} /></button>
+        <button className={`ld-mic ${voiceArmed ? 'is-listening' : ''}`}
+          onClick={toggleVoice}
+          aria-pressed={voiceArmed}
+          aria-label={voiceArmed ? 'Stop voice commands' : 'Start voice commands'}>
+          <span /><Mic size={22} />
+        </button>
         <button onClick={() => go('command')}><Command size={18} /><span>Command</span></button>
         <button onClick={() => go('game')}><Boxes size={18} /><span>Build</span></button>
       </nav>
@@ -417,8 +526,11 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
       {isMobile && <MobileInstruments open={chartsOpen} onClose={() => setChartsOpen(false)} {...instrumentProps} />}
       {cinemaPopupModel
         ? <ProductDetail product={cinemaPopupModel} pulse={pulse} days={30} view={cinemaView} onClose={() => { /* Director-controlled during the cinematic */ }} />
-        : selected && <ProductDetail product={products.find(product => product.id === selected)!} pulse={pulse} days={30} onClose={() => setSelected(null)} />}
+        : selected && <ProductDetail product={products.find(product => product.id === selected)!} pulse={pulse} days={30}
+            view={productView} onViewChange={setProductView} onClose={() => setSelected(null)} />}
+      {mountNodes && <Suspense fallback={null}><CinemaNodes scene={cinema.state} revealed={nodesRevealed} /></Suspense>}
       {cinemaOn && <Suspense fallback={null}><CinemaStage cinema={cinema} onExit={() => setCinemaOn(false)} /></Suspense>}
+      {/* Copilot HUD / flash / cheat-sheet now live globally in <GlobalCopilot> (Shell). */}
     </main>
   )
 }

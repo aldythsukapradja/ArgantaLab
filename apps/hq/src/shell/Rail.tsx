@@ -1,9 +1,11 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
   Network, Megaphone, Radar, Grid2x2, Vault as VaultIcon, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film, Wand2,
-  Orbit, Atom, Cpu,
+  Orbit, Atom, Cpu, Mic2,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
+import { useCopilotStore } from '../copilot/store'
+import { CopilotDock } from '../copilot/CopilotDock'
 
 type Item = { id: SurfaceId; label: string; Icon: typeof LayoutGrid; badge?: string }
 type Group = { name: string; items: Item[] }
@@ -25,6 +27,7 @@ const GROUPS: Group[] = [
   ] },
   { name: 'Command', items: [
     { id: 'command', label: 'Command', Icon: Radar },
+    { id: 'copilot', label: 'Copilot', Icon: Mic2, badge: 'new' },
   ] },
   { name: 'Build', items: [
     { id: 'pixel', label: 'Pixel Vault', Icon: Grid2x2 },
@@ -46,6 +49,16 @@ const GROUPS: Group[] = [
 export function Rail({ who }: { who: string }) {
   const { surface, go } = useHQ()
   const initials = who.slice(0, 2).toUpperCase()
+
+  const armed = useCopilotStore(s => s.armed)
+  const voiceStatus = useCopilotStore(s => s.voiceStatus)
+  const gestureActive = useCopilotStore(s => s.gestureActive)
+  const gestureLoading = useCopilotStore(s => s.gestureLoading)
+  const gestureStatus = useCopilotStore(s => s.gestureStatus)
+  const toggleVoice = useCopilotStore(s => s.toggleVoice)
+  const toggleGesture = useCopilotStore(s => s.toggleGesture)
+  const openHelp = useCopilotStore(s => s.openHelp)
+
   return (
     <nav className="rail" aria-label="Primary">
       <div className="rail-logo">
@@ -66,6 +79,12 @@ export function Rail({ who }: { who: string }) {
           ))}
         </div>
       ))}
+
+      <CopilotDock
+        armed={armed} voiceStatus={voiceStatus}
+        gestureActive={gestureActive} gestureLoading={gestureLoading} gestureStatus={gestureStatus}
+        onToggleVoice={toggleVoice} onToggleGesture={toggleGesture} onOpenHelp={openHelp}
+        inline />
 
       <div className="rail-foot">
         <div className="avatar">{initials}</div>

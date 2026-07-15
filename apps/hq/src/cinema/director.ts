@@ -100,11 +100,16 @@ export function useCinema(): CinemaApi {
     const a = audioRef.current; if (!a) return
     if (a.paused) startAuto(); else pause()
   }, [startAuto, pause])
-  const jump = useCallback((i: number) => { setMode(m => (m === 'auto' ? 'paused' : m)); setIndex(Math.max(0, Math.min(SCENES.length - 1, i))) }, [])
+  // Jumping/skipping keeps the current mode — Auto keeps rolling through to the
+  // end until the founder explicitly pauses; the load effect autoplays the new
+  // scene whenever we're playing or in Auto.
+  const jump = useCallback((i: number) => { setIndex(Math.max(0, Math.min(SCENES.length - 1, i))) }, [])
   const next = useCallback(() => jump(index + 1), [index, jump])
   const prev = useCallback(() => jump(index - 1), [index, jump])
   const startGuided = useCallback(() => { setMode('guided'); load(index, true) }, [index, load])
   const replay = useCallback(() => { const a = audioRef.current; if (a) { a.currentTime = 0; a.play().catch(() => {}) } }, [])
+
+  useEffect(() => { if (import.meta.env.DEV) (window as unknown as { __cinema?: unknown }).__cinema = { mode: () => modeRef.current, audio: () => audioRef.current, jump: (i: number) => setIndex(Math.max(0, Math.min(SCENES.length - 1, i))) } }, [])
 
   const scene = SCENES[index]
   const state = useMemo(() => deriveState(scene, mode, progress), [scene, mode, progress])

@@ -32,7 +32,19 @@ export const MEDIA_CATALOG = [
     envKeys: ['CF_ACCOUNT_ID', 'CF_API_TOKEN'], // same secrets as cloudflare-flux — nothing new to set
     pricing: { usdPer1kChars: 0.015 }, // Cloudflare's published Aura-1 rate; still inside the same free daily neuron quota as image/text
   },
+  {
+    name: 'cloudflare-bge', kind: 'embed', costClass: 1, shape: 'cf-embed',
+    model: '@cf/baai/bge-base-en-v1.5', // 768-dim — verified live against the real account (2026-07-15)
+    envKeys: ['CF_ACCOUNT_ID', 'CF_API_TOKEN'], // same secrets, nothing new to set
+    pricing: null, // free allocation → truthfully $0
+  },
 ];
+
+/** bge-base-en-v1.5's fixed output width — the memory_chunk migration's vector
+ * column width MUST match this exactly (pgvector similarity ops require equal
+ * dimensions), so it's exported as the one source of truth rather than a
+ * number copy-pasted into a migration. */
+export const EMBED_DIMENSIONS = 768;
 
 export const isAvailable = (e, available) => e.envKeys.every((k) => !!available[k]);
 
@@ -90,6 +102,20 @@ export function toCloudflareTtsRequest({ accountId, model, text, speaker = 'orio
  * normal case. Defensive: some Workers AI models wrap output in JSON even for
  * binary kinds, so the caller still needs to branch on this rather than assume. */
 export const isBinaryAudioContentType = (contentType) => !!contentType && !contentType.includes('application/json');
+
+// ── Cloudflare Workers AI — text embeddings (BAAI bge-base-en-v1.5) ─────────
+// Same account-scoped URL shape as image/tts. Response IS JSON (unlike Aura's
+// raw bytes): { result: { data: [[...768 floats...]], shape: [n, 768] } }.
+// Batches are supported (text: string[]) but C2 only ever sends one string at
+// a time — kept as an array param anyway so batching is a non-breaking future
+// change, not a new function.
+export function toCloudflareEmbedRequest({ accountId, model, text }) {
+  return { url: `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, body: { text: [text] } };
+}
+export function fromCloudflareEmbedResponse(json) {
+  const vec = json?.result?.data?.[0];
+  return Array.isArray(vec) && vec.length === EMBED_DIMENSIONS ? { embedding: vec, dims: vec.length } : null;
+}
 
 // ── Cloudflare GraphQL Analytics — Workers AI neuron quota ──────────────────
 // Verified live against the real account (2026-07-15): dataset name, field

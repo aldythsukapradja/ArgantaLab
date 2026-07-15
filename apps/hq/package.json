@@ -12,6 +12,7 @@
     "build:vault-seed": "node scripts/build-vault-seed.mjs"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.17",
     "@mlc-ai/web-llm": "^0.2.84",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",

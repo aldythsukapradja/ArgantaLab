@@ -6,6 +6,7 @@ import {
   toModalImageRequest, fromModalImageResponse, isRetryableStatus,
   toCloudflareTtsRequest, isBinaryAudioContentType,
   toNeuronQuotaQuery, fromNeuronQuotaResponse, FREE_NEURONS_PER_DAY,
+  toCloudflareEmbedRequest, fromCloudflareEmbedResponse, EMBED_DIMENSIONS,
 } from './router.js';
 
 const CF = { CF_ACCOUNT_ID: 'acc', CF_API_TOKEN: 'tok' };
@@ -131,6 +132,31 @@ test('neuron quota response: sums totalNeurons across models and sorts heaviest-
 
 test('free daily allocation is the published 10,000 neurons — not invented', () => {
   assert.equal(FREE_NEURONS_PER_DAY, 10000);
+});
+
+test('Sponsored embeddings pick Cloudflare bge when its keys are set (same keys as image/tts)', () => {
+  const c = pickMediaCandidates(CF, { kind: 'embed', costClass: 1 });
+  assert.equal(c[0].name, 'cloudflare-bge');
+  assert.equal(c[0].model, '@cf/baai/bge-base-en-v1.5');
+});
+
+test('Cloudflare embed request wraps the text in a batch array; response extracts the vector', () => {
+  const req = toCloudflareEmbedRequest({ accountId: 'acc', model: '@cf/baai/bge-base-en-v1.5', text: 'a founder note' });
+  assert.match(req.url, /accounts\/acc\/ai\/run\/@cf\/baai\/bge-base-en-v1\.5$/);
+  assert.deepEqual(req.body.text, ['a founder note']);
+  const vec768 = Array(768).fill(0.01);
+  const parsed = fromCloudflareEmbedResponse({ result: { data: [vec768], shape: [1, 768] } });
+  assert.equal(parsed.dims, 768);
+  assert.equal(parsed.embedding.length, 768);
+});
+
+test('embed response is rejected (not silently truncated/padded) if the dimension count is ever wrong', () => {
+  assert.equal(fromCloudflareEmbedResponse({ result: { data: [Array(5).fill(0)] } }), null);
+  assert.equal(fromCloudflareEmbedResponse({}), null);
+});
+
+test('EMBED_DIMENSIONS is the one source of truth the memory_chunk migration must match', () => {
+  assert.equal(EMBED_DIMENSIONS, 768);
 });
 
 test('retryable status: 429 and 5xx move to the next candidate, 4xx does not', () => {

@@ -4,9 +4,10 @@
 // upstream provider/model/cost/latency it used, tries a bounded cheaper fallback
 // on a retryable failure, never a generic label.
 //
-// v1 = IMAGE + TTS. kind:'image' returns { imageBase64, ... }; kind:'tts'
-// returns { audioBase64, ... } — both share provider/model/costClass/costUsd/
-// latencyMs/fallbackFrom.
+// v1 = IMAGE + TTS + EMBED. kind:'image' returns { imageBase64, ... }; kind:'tts'
+// returns { audioBase64, ... }; kind:'embed' returns { embedding, dims, ... }
+// (768-dim, @cf/baai/bge-base-en-v1.5 — feeds pgvector memory_chunk, C2) — all
+// share provider/model/costClass/costUsd/latencyMs/fallbackFrom.
 //
 // Deploy:  supabase functions deploy media-proxy
 // Secrets (Sponsored — Cloudflare Workers AI, free tier — covers BOTH image and
@@ -32,6 +33,7 @@ import {
   toModalImageRequest, fromModalImageResponse, isRetryableStatus,
   toCloudflareTtsRequest, isBinaryAudioContentType,
   toNeuronQuotaQuery, fromNeuronQuotaResponse, FREE_NEURONS_PER_DAY,
+  toCloudflareEmbedRequest, fromCloudflareEmbedResponse,
 } from './router.js'
 
 // Deno's btoa() only accepts a string; for binary audio bytes we build that
@@ -59,6 +61,19 @@ function availableKeys(): Record<string, boolean> {
 
 async function callCandidate(entry: any, prompt: string, voice?: string) {
   const t0 = performance.now()
+  if (entry.shape === 'cf-embed') {
+    const req = toCloudflareEmbedRequest({ accountId: Deno.env.get('CF_ACCOUNT_ID')!, model: entry.model, text: prompt })
+    const r = await fetch(req.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('CF_API_TOKEN')}` },
+      body: JSON.stringify(req.body),
+    })
+    const latencyMs = Math.round(performance.now() - t0)
+    if (!r.ok) return { ok: false as const, status: r.status, latencyMs, errText: (await r.text()).slice(0, 300) }
+    const parsed = fromCloudflareEmbedResponse(await r.json())
+    if (!parsed) return { ok: false as const, status: 502, latencyMs, errText: 'cloudflare returned no embedding (or wrong dimensions)' }
+    return { ok: true as const, ...parsed, latencyMs, costUsd: priceUsd(entry) }
+  }
   if (entry.shape === 'cf-tts') {
     const req = toCloudflareTtsRequest({ accountId: Deno.env.get('CF_ACCOUNT_ID')!, model: entry.model, text: prompt, ...(voice ? { speaker: voice } : {}) })
     const r = await fetch(req.url, {
@@ -149,9 +164,11 @@ Deno.serve(async (req) => {
       const entry = candidates[i]
       const res = await callCandidate(entry, prompt, voice)
       if (res.ok) {
+        const payload = kind === 'tts' ? { audioBase64: (res as any).audioBase64, mime: res.mime }
+          : kind === 'embed' ? { embedding: (res as any).embedding, dims: (res as any).dims }
+          : { imageBase64: (res as any).imageBase64, mime: res.mime }
         return json({
-          ...(kind === 'tts' ? { audioBase64: (res as any).audioBase64 } : { imageBase64: (res as any).imageBase64 }),
-          mime: res.mime,
+          ...payload,
           provider: entry.name, model: entry.model, costClass: entry.costClass,
           costUsd: res.costUsd, latencyMs: res.latencyMs,
           fallbackFrom: i > 0 ? candidates[0].costClass : null,

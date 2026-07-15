@@ -207,6 +207,9 @@ html[data-theme="dark"] .ld {
 .ld-dock .ld-mic:hover { color: white; transform: translateY(-14px) scale(1.02); }
 .ld-mic > span { position: absolute; inset: -9px; border: 1px solid color-mix(in srgb, var(--ld-cyan) 45%, transparent); border-radius: 50%; animation: ld-mic-ring 2.7s ease-out infinite; }
 @keyframes ld-mic-ring { 0% { transform: scale(.78); opacity: 0; } 30% { opacity: .75; } 100% { transform: scale(1.18); opacity: 0; } }
+.ld-dock .ld-mic.is-listening { background: radial-gradient(circle at 42% 31%, #b9ffe0, #21d18f 45%, #0c7a54 77%); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ld-surface-strong) 86%, transparent), 0 0 0 7px color-mix(in srgb, var(--ld-green) 55%, transparent), 0 0 44px rgba(33, 209, 143, .6); }
+.ld-mic.is-listening > span { border-color: color-mix(in srgb, var(--ld-green) 60%, transparent); animation-duration: 1.3s; }
+.ld-actions button.ld-gesture-on { color: var(--ld-green); background: color-mix(in srgb, var(--ld-green) 16%, transparent); border-radius: 8px; }
 .ld-provenance { position: fixed; z-index: 22; left: 18px; bottom: 18px; display: flex; align-items: center; gap: 6px; color: var(--ld-muted); font: 7px var(--mono); letter-spacing: .04em; }
 
 /* Re-theme the shared Portfolio charts inside the landing cockpit. */

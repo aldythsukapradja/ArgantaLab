@@ -17,7 +17,7 @@ import { AreaTrend } from '../components/d3/AreaTrend'
 import { DonutD3 } from '../components/d3/DonutD3'
 import { HBars } from '../components/d3/HBars'
 import { PunchCard } from '../components/d3/PunchCard'
-import { Spark, VCols } from '../components/d3/micro'
+import { SparkArea, VCols } from '../components/d3/micro'
 import { PortfolioWorldMap } from '../components/d3/PortfolioWorldMap'
 import { appColor, appLabel, fmtDur, slotColor } from '../components/d3/chartkit'
 import { valuationEstimate } from '../data/graph/valuation'
@@ -417,7 +417,7 @@ export function ProductFleet({ products, onSelect }: { products: ProductCardMode
             <div className="pf-product-secondary">
               {product.secondary.map(metric => <div key={metric.label}><b>{metric.value}</b><span>{metric.label}</span></div>)}
             </div>
-            <div className="pf-product-spark">{product.spark.filter(Boolean).length > 1 ? <Spark values={product.spark} color={appColor(product.id)} height={34} /> : <span>Trend builds with repeat visits</span>}</div>
+            <div className="pf-product-spark">{product.spark.filter(Boolean).length > 1 ? <SparkArea values={product.spark} color={appColor(product.id)} height={34} /> : <span>Trend builds with repeat visits</span>}</div>
             <p className="pf-product-read">{product.interpretation}</p>
             <div className="pf-inspect">Inspect product <ChevronRight size={14} /></div>
           </button>
@@ -616,9 +616,10 @@ function LiveProductPreview({ product, mode }: { product: ProductCardModel; mode
   )
 }
 
-export function ProductDetail({ product, pulse, days, onClose, view: viewProp }: { product: ProductCardModel; pulse: Pulse; days: number; onClose: () => void; view?: InspectorView }) {
-  const [internalView, setView] = useState<InspectorView>('overview')
-  const view = viewProp ?? internalView // the Director can drive the tab during the cinematic
+export function ProductDetail({ product, pulse, days, onClose, view: viewProp, onViewChange }: { product: ProductCardModel; pulse: Pulse; days: number; onClose: () => void; view?: InspectorView; onViewChange?: (view: InspectorView) => void }) {
+  const [internalView, setInternalView] = useState<InspectorView>('overview')
+  const view = viewProp ?? internalView // the Director (or the voice/gesture copilot) can drive the tab externally
+  const setView = (next: InspectorView) => { setInternalView(next); onViewChange?.(next) }
   const viewPanelRef = useRef<HTMLDivElement>(null)
   const overviewLayoutRef = useRef<HTMLDivElement>(null)
   const { eng, r, pw, au, geo } = pulse
