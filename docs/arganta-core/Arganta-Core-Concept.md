@@ -8,6 +8,34 @@ tags: [arganta-core, chat, agentic, cloudflare, supabase, digital-twin, moc]
 
 # Arganta Core — the digital twin brain
 
+## TL;DR (plain language)
+
+**Build your own ChatGPT.** One chat window — Arganta Core — where the founder
+types and gets things back: images, websites, full apps, voice, charts, and
+later video/music. The difference from ChatGPT: it runs on infrastructure the
+founder already pays for (Cloudflare free tier + Supabase Pro), it remembers
+the company (Vault, threads, ledger), it shows the TRUE provider/cost of every
+answer, it can consult the C-Level agents, and eventually it works while the
+founder sleeps.
+
+**What "give me everything" means, capability by capability:**
+
+| Ask for… | Today | Fully chat-native after |
+|---|---|---|
+| Image | ✅ real (Cloudflare FLUX, $0) | C3 |
+| Voice / speech | ✅ real (Aura-1, $0) | C3 |
+| Chart / analytics | ✅ real live data | C3 |
+| Website | ✅ instant deterministic engine | C3 (basic) · B2 (AI-revised, templated) |
+| App (tracker, dashboard, CRM…) | 🟡 templates exist, generation is copy-paste-external | B1–B3 |
+| Publish to a real URL | 🟡 Circle catalog only | B5 (`build.arganta.app`) |
+| Remember past chats + Vault | ✅ storage live (pgvector) | C5 (auto-recall) |
+| Music | 🟡 synth only — no free music-gen model exists anywhere | paid tier (on hold) |
+| Video | 🟡 canvas/deterministic only — no free video-gen model exists | paid tier (on hold) |
+| Work while you sleep | ❌ | C7 |
+
+The chat window itself (the Face) arrives at C4b — before that, capabilities
+are verified through code, not conversation.
+
 A first-party chat surface — ChatGPT/Claude-grade UX but under founder control —
 that fronts everything already built: the four-tier router, the Media Center
 engines, the 7-region cortex (WS3), the 7-layer reactor (WS2), the C-Level
