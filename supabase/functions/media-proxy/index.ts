@@ -1,0 +1,109 @@
+// media-proxy — the browser reaches Sponsored/Economy MEDIA generators THROUGH
+// this, so provider keys never ship in client JS. Operator-gated. The media twin
+// of llm-proxy (docs/media-center/Compute-Substrate.md): returns the REAL
+// upstream provider/model/cost/latency it used, tries a bounded cheaper fallback
+// on a retryable failure, never a generic label.
+//
+// v1 = IMAGE. Returns { imageBase64, mime, provider, model, costClass, ... }.
+//
+// Deploy:  supabase functions deploy media-proxy
+// Secrets (Sponsored — Cloudflare Workers AI, free tier):
+//   supabase secrets set CF_ACCOUNT_ID=xxxxx
+//   supabase secrets set CF_API_TOKEN=xxxxx            (token with Workers AI Run)
+//   → dash.cloudflare.com → AI → Workers AI (grab account id + create API token)
+// Secrets (Economy — Modal, after `modal deploy modal/media_image.py`):
+//   supabase secrets set MODAL_IMAGE_URL=https://<you>--arganta-media-image.modal.run
+//   supabase secrets set MODAL_TOKEN=<the shared secret you set in the app>
+//
+// All routing/translation/pricing lives in router.js (pure, unit-tested under
+// plain Node — see router.test.js) so this file stays a thin Deno shell.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  pickMediaCandidates, priceUsd,
+  toCloudflareImageRequest, fromCloudflareImageResponse,
+  toModalImageRequest, fromModalImageResponse, isRetryableStatus,
+} from './router.js'
+
+const OPERATOR = 'aldhyt.sukapradja@gmail.com'
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
+
+function availableKeys(): Record<string, boolean> {
+  const keys = ['CF_ACCOUNT_ID', 'CF_API_TOKEN', 'MODAL_IMAGE_URL', 'MODAL_TOKEN']
+  return Object.fromEntries(keys.map((k) => [k, !!Deno.env.get(k)]))
+}
+
+async function callCandidate(entry: any, prompt: string) {
+  const t0 = performance.now()
+  if (entry.shape === 'cf-image') {
+    const req = toCloudflareImageRequest({ accountId: Deno.env.get('CF_ACCOUNT_ID')!, model: entry.model, prompt })
+    const r = await fetch(req.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('CF_API_TOKEN')}` },
+      body: JSON.stringify(req.body),
+    })
+    const latencyMs = Math.round(performance.now() - t0)
+    if (!r.ok) return { ok: false as const, status: r.status, latencyMs, errText: (await r.text()).slice(0, 300) }
+    const parsed = fromCloudflareImageResponse(await r.json())
+    if (!parsed) return { ok: false as const, status: 502, latencyMs, errText: 'cloudflare returned no image' }
+    return { ok: true as const, ...parsed, latencyMs, costUsd: priceUsd(entry) }
+  }
+  if (entry.shape === 'modal-image') {
+    const req = toModalImageRequest({ url: Deno.env.get('MODAL_IMAGE_URL')!, prompt })
+    const r = await fetch(req.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('MODAL_TOKEN')}` },
+      body: JSON.stringify(req.body),
+    })
+    const latencyMs = Math.round(performance.now() - t0)
+    if (!r.ok) return { ok: false as const, status: r.status, latencyMs, errText: (await r.text()).slice(0, 300) }
+    const parsed = fromModalImageResponse(await r.json())
+    if (!parsed) return { ok: false as const, status: 502, latencyMs, errText: 'modal returned no image' }
+    return { ok: true as const, ...parsed, latencyMs, costUsd: priceUsd(entry) }
+  }
+  return { ok: false as const, status: 500, latencyMs: 0, errText: `unknown shape ${entry.shape}` }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  try {
+    const url = Deno.env.get('SUPABASE_URL')!
+    const asUser = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: req.headers.get('Authorization') || '' } } })
+    const { data: { user } } = await asUser.auth.getUser()
+    if (!user || (user.email || '').toLowerCase() !== OPERATOR) return json({ error: 'not authorized' }, 403)
+
+    const { kind = 'image', prompt, costClass, provider: force } = await req.json()
+    if (!prompt || typeof prompt !== 'string') return json({ error: 'prompt required' }, 400)
+
+    const candidates = pickMediaCandidates(availableKeys(), { kind, costClass, force })
+    if (candidates.length === 0) {
+      return json({ error: 'No media provider key set for this tier. See supabase/functions/media-proxy/index.ts header for setup.' }, 400)
+    }
+
+    let lastErr = ''
+    for (let i = 0; i < candidates.length; i++) {
+      const entry = candidates[i]
+      const res = await callCandidate(entry, prompt)
+      if (res.ok) {
+        return json({
+          imageBase64: res.imageBase64, mime: res.mime,
+          provider: entry.name, model: entry.model, costClass: entry.costClass,
+          costUsd: res.costUsd, latencyMs: res.latencyMs,
+          fallbackFrom: i > 0 ? candidates[0].costClass : null,
+        })
+      }
+      lastErr = `${entry.name} ${res.status}: ${res.errText}`
+      if (!isRetryableStatus(res.status) || i === candidates.length - 1) {
+        return json({ error: lastErr, provider: entry.name }, 502)
+      }
+      // retryable — fall through to the next cheaper candidate
+    }
+    return json({ error: lastErr || 'all candidates failed' }, 502)
+  } catch (e) {
+    return json({ error: String((e as Error)?.message || e) }, 500)
+  }
+})

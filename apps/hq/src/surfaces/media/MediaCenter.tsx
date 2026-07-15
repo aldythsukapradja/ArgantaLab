@@ -18,6 +18,7 @@ import { analyze, SAMPLES, type Analysis } from '../studios/analytics'
 import { askInsight, type Insight } from '../studios/analytics-intelligence'
 import { askWebsiteCopy, askDeckOutline, askVideoScript } from '../studios/content-intelligence'
 import { onModelProgress, logAgentRun } from '../../lib/ai'
+import { generateImageViaGateway } from '../../lib/mediaGateway'
 
 const SceneCanvas = lazy(() => import('../studios/SceneCanvas').then(m => ({ default: m.SceneCanvas })))
 const AnalyticsChart = lazy(() => import('../studios/AnalyticsChart').then(m => ({ default: m.AnalyticsChart })))
@@ -158,8 +159,8 @@ export function MediaCenter() {
         runId: crypto.randomUUID(), domain: 'media', task: k,
         dataClass: k === 'analytics' ? 'confidential' : 'public',
         requestedCostClass: st, actualCostClass: prov.maturityStage ?? st,
-        requestedProvider: prov.provider ?? null, requestedModel: null,
-        actualProvider: prov.provider ?? null, actualModel: null,
+        requestedProvider: prov.provider ?? null, requestedModel: prov.model ?? null,
+        actualProvider: prov.provider ?? null, actualModel: prov.model ?? null,
         costUsd: prov.cost ?? 0, status: r.status === 'failed' ? 'failed' : 'succeeded',
         error: r.status === 'failed' ? r.error?.code ?? null : null,
       })
@@ -167,6 +168,30 @@ export function MediaCenter() {
     try {
       let res: any
       if (REAL.has(k)) {
+        // Sponsored+ IMAGE (stage ≥ 1) goes through the real compute substrate
+        // (Cloudflare → Sponsored, Modal → Economy) via the media-proxy Edge
+        // Function. Honest fallback: if the gateway is unconfigured/unreachable,
+        // we drop through to the deterministic Stage-0 engine below, and the
+        // ledger records the REAL (downgraded) tier — never a fabricated one.
+        if (k === 'image' && st >= 1) {
+          const g = await generateImageViaGateway({ prompt: text, costClass: st })
+          if (g) {
+            if (imgUrl) URL.revokeObjectURL(imgUrl)
+            setImgUrl(URL.createObjectURL(new Blob([g.bytes as BlobPart], { type: g.mime })))
+            res = {
+              status: 'succeeded',
+              output: { mime: g.mime, bytes: g.bytes },
+              provenance: { provider: g.provider, model: g.model, maturityStage: g.costClass, cost: g.costUsd, latencyMs: g.latencyMs },
+              descriptor: { engine: g.provider, kind: 'image' },
+            }
+            setResult(res)
+            logMediaRun(res)
+            if (opts.silent) return
+            setHistory(h => [{ kind: k, prompt: text, stage: g.costClass, label: 'image', sub: STAGES[g.costClass]?.label, cost: g.costUsd, status: 'succeeded', time: Date.now() }, ...h].slice(0, 12))
+            return
+          }
+          // gateway unavailable → honest downgrade to the deterministic engine
+        }
         const spec = k === 'image' ? { prompt: text, width: 768, height: 768 } : { prompt: text }
         res = generate({ kind: k, spec, maturityStage: st, approved: ok })
         setResult(res)
