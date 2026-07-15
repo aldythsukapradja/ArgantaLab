@@ -1,0 +1,11 @@
+{
+  "name": "@arganta/agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Arganta Core agentic runtime contracts (C1): conversation schema, unified tool registry, pure agentic loop, office delegation, and autonomy/invocation guardrails. Framework-agnostic, sits on @arganta/ai.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "sideEffects": false
+}
