@@ -34,6 +34,12 @@ export interface SendMessageResult {
   blocks: Record<string, unknown>[]
   stopReason: string
   costUsd: number
+  /** Provider/model of the LAST real model call this turn (null if every call
+   * degraded to mock) — surfaces the loop's own trail so the UI can show
+   * truthful provenance even on a plain text reply with no tool calls. C4a
+   * requires this on every assistant message, not just artifact cards. */
+  provider: string | null
+  model: string | null
 }
 
 /**
@@ -84,10 +90,17 @@ export async function sendMessage(threadId: string, userText: string): Promise<S
   const costUsd = trail.reduce((s: number, t: any) => s + (t.costUsd || 0), 0)
   const finalText = text || FALLBACK_TEXT_FOR[stopReason] || `(Stopped: ${stopReason}. Nothing was fabricated.)`
 
+  // The last 'model' trail entry is the call that produced finalText — its
+  // provider/model is the turn's own provenance, truthful even when no tool
+  // ran (loop.js already tracks this; sendMessage just wasn't surfacing it).
+  const lastModelCall = [...trail].reverse().find((t: any) => t.type === 'model')
+  const provider = lastModelCall?.provider ?? null
+  const model = lastModelCall?.model ?? null
+
   const blocks = [...trailBlocks, ...(finalText ? [makeBlock('text', { text: finalText })] : []), ...collectedBlocks]
   await appendMessage({ id: crypto.randomUUID(), threadId, role: 'assistant', content: finalText, blocks, runId })
 
-  return { text: finalText, blocks, stopReason, costUsd }
+  return { text: finalText, blocks, stopReason, costUsd, provider, model }
 }
 
 function blockKindFor(toolName: string): string {
@@ -98,6 +111,8 @@ function blockKindFor(toolName: string): string {
   // no separate 'application' block kind (C1-frozen BLOCK_KINDS) — an app is
   // still a single-file HTML artifact, rendered the same as a website block.
   if (toolName === 'create_application') return 'website'
+  if (toolName === 'revise_artifact') return 'website'
+  if (toolName === 'restore_version') return 'website'
   if (toolName === 'make_deck') return 'deck'
   if (toolName === 'make_brand') return 'brand'
   if (toolName === 'analyze') return 'chart'
