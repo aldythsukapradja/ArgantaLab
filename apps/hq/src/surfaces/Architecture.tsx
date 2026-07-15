@@ -116,6 +116,7 @@ const STACK_OF: Record<string, StackId> = {
   vault: 'data', postgres: 'data',
   builder: 'app', media: 'app', tools: 'app',
   hqb: 'client', arganta: 'client', kinetik: 'client', lashira: 'client', kingdom: 'client', landing: 'client',
+  'client-tier': 'client',
   ledger: 'observ', beats: 'observ', events: 'observ',
   supabase: 'platform', cloudflare: 'platform', vercel: 'platform',
 }
@@ -128,6 +129,10 @@ interface NodeDef {
   seriesKey?: string
   /** Per-item trust & safety posture (badged truthfully, item by item). */
   safety?: { label: string; prov: Prov }[]
+  /** Container node (C4 altitude fix) — ids of the real nodes it groups, drill-down in the inspector. */
+  children?: string[]
+  /** Quantitative headroom — only set where a real measured denominator exists. */
+  util?: { used: number; cap: number; label: string }
 }
 const NODES: NodeDef[] = [
   // Command Core — govern
@@ -221,7 +226,8 @@ const NODES: NodeDef[] = [
 
   // Shared Spine — carry
   { id: 'supabase', layer: 'spine', label: 'Supabase', sub: 'Auth · RLS · Storage · Realtime · pgvector', prov: 'live', logos: [L.sb],
-    swap: 'any Postgres + GoTrue + S3-compatible storage', headroom: 'Pro plan wildly underused — edge invocations 28 / 2M',
+    swap: 'any Postgres + GoTrue + S3-compatible storage', headroom: 'Pro plan wildly underused — measured, not estimated',
+    util: { used: 28, cap: 2_000_000, label: 'edge invocations / month' },
     detail: 'Truth and memory: identity, permissions, storage, realtime, and the vector store. The one place state lives.' },
   { id: 'cloudflare', layer: 'spine', label: 'Cloudflare', sub: 'Workers · R2 · edge · domain', prov: 'partial', logos: [L.cf],
     swap: 'any edge compute + CDN', headroom: 'Workers/Durable Objects/Queues for async, multi-user runtime',
@@ -229,6 +235,18 @@ const NODES: NodeDef[] = [
   { id: 'vercel', layer: 'spine', label: 'Vercel', sub: 'edge hosting · CDN · CI/CD', prov: 'partial', logos: [L.vc],
     swap: 'any static/edge host', detail: 'Delivery — the apps ship to the edge from here.' },
 ]
+
+// C4 altitude fix: in System/Scale, don't show 6 products as peers of a
+// technology like PostgreSQL — one Client-tier CONTAINER, drill down for the
+// component-level detail. Core view (the mental model) keeps them as peers.
+const CLIENT_TIER_IDS = ['hqb', 'arganta', 'kinetik', 'lashira', 'kingdom', 'landing']
+const CLIENT_CONTAINER: NodeDef = {
+  id: 'client-tier', layer: 'experience', label: 'Client Applications', sub: `${CLIENT_TIER_IDS.length} products · the presentation tier`, prov: 'partial',
+  swap: 'any web frontend — React/Vite today, the contract is framework-agnostic',
+  detail: 'One container for every client surface — Circle HQ and the five products. This is Container-level altitude: click into a product below for its own component-level detail, tech and live metrics.',
+  children: CLIENT_TIER_IDS,
+}
+const ALL_NODES: NodeDef[] = [...NODES, CLIENT_CONTAINER]
 
 // Real inter-layer flow. `flow` marks the handful of true, animated data paths.
 interface EdgeDef { s: string; t: string; flow?: boolean; next?: boolean }
@@ -258,12 +276,12 @@ const BAND_W = 1300, BAND_X = 20, BAND_TITLE = 44, BAND_PAD_B = 18, BAND_GAP = 2
 const COLS = 6
 
 interface BandBox { id: string; x: number; y: number; w: number; h: number; label: string; micro: string; c: string }
-function buildLayout(layers: LayerDef[], layerOf: (n: NodeDef) => string, showNext: boolean): { bands: BandBox[]; place: Record<string, { x: number; y: number }> } {
+function buildLayout(nodes: NodeDef[], layers: LayerDef[], layerOf: (n: NodeDef) => string, showNext: boolean): { bands: BandBox[]; place: Record<string, { x: number; y: number }> } {
   const bands: BandBox[] = []
   const place: Record<string, { x: number; y: number }> = {}
   let y = 0
   for (const layer of layers) {
-    const ns = NODES.filter(n => layerOf(n) === layer.id && (showNext || !n.next))
+    const ns = nodes.filter(n => layerOf(n) === layer.id && (showNext || !n.next))
     if (ns.length === 0) continue
     const rows = Math.ceil(ns.length / COLS)
     const h = BAND_TITLE + rows * ROW_H + (rows - 1) * GAP_Y + BAND_PAD_B
@@ -327,6 +345,11 @@ function CardNode({ data, selected }: NodeProps) {
           </span>
         ))}
         {d.scale && SPOF[def.id] && <span className="af-spof" title={'Single point of failure — ' + SPOF[def.id]}>⚠ SPOF</span>}
+        {d.scale && def.util && (
+          <span className="af-util-chip" title={`${compact(def.util.used)} / ${compact(def.util.cap)} ${def.util.label} — measured`}>
+            {compact(def.util.used)}/{compact(def.util.cap)}
+          </span>
+        )}
         {d.scale && def.headroom && <span className="af-10x" title={'10×: ' + def.headroom}>10×</span>}
       </div>
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
@@ -459,25 +482,37 @@ export function Architecture() {
       }))
       return { nodes, edges }
     }
-    const { bands, place } = buildLayout(activeLayers, layerOf, showNext)
+    // C4 altitude fix: collapse the 6 client apps into one container card so a
+    // technology (PostgreSQL) never sits as a visual peer of a product tier.
+    const visibleNodes: NodeDef[] = [...NODES.filter(n => !CLIENT_TIER_IDS.includes(n.id)), CLIENT_CONTAINER]
+    const { bands, place } = buildLayout(visibleNodes, activeLayers, layerOf, showNext)
+    const cards: Node[] = visibleNodes.filter(n => showNext || !n.next).map(n => ({
+      id: n.id, type: 'card', position: place[n.id], zIndex: 1, connectable: false,
+      data: { def: n, c: colorOf(layerOf(n)), stats: n.children ? undefined : stats[n.id], scale: showNext } as CardData,
+    }))
     const bandNodes: Node[] = bands.map(b => ({
       id: 'b-' + b.id, type: 'band', position: { x: b.x, y: b.y }, data: { label: b.label, micro: b.micro, c: b.c } as BandData,
       style: { width: b.w, height: b.h }, draggable: false, selectable: false, connectable: false, zIndex: 0,
     }))
-    const cards: Node[] = NODES.filter(n => showNext || !n.next).map(n => ({
-      id: n.id, type: 'card', position: place[n.id], zIndex: 1, connectable: false,
-      data: { def: n, c: colorOf(layerOf(n)), stats: stats[n.id], scale: showNext } as CardData,
-    }))
     const ids = new Set(cards.map(c => c.id))
-    const edges: Edge[] = EDGES.filter(e => (showNext || !e.next) && ids.has(e.s) && ids.has(e.t)).map((e, i) => ({
-      id: 'e' + i, source: e.s, target: e.t, type: 'pulse', data: { flow: e.flow, next: e.next }, selectable: false, zIndex: 0,
-    }))
+    const remap = (id: string) => CLIENT_TIER_IDS.includes(id) ? CLIENT_CONTAINER.id : id
+    const seen = new Set<string>()
+    const edges: Edge[] = []
+    for (const e of EDGES) {
+      if (!showNext && e.next) continue
+      const s = remap(e.s), t = remap(e.t)
+      if (s === t || !ids.has(s) || !ids.has(t)) continue
+      const key = s + '>' + t + (e.next ? 'n' : 'f')
+      if (seen.has(key)) continue
+      seen.add(key)
+      edges.push({ id: 'e' + edges.length, source: s, target: t, type: 'pulse', data: { flow: e.flow, next: e.next }, selectable: false, zIndex: 0 })
+    }
     return { nodes: [...bandNodes, ...cards], edges }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, lens, showNext, stats])
 
   const liveCount = Object.keys(stats).length
-  const selDef = sel ? NODES.find(n => n.id === sel) ?? null : null
+  const selDef = sel ? ALL_NODES.find(n => n.id === sel) ?? null : null
   const selSeries = selDef?.seriesKey ? series[selDef.seriesKey] : undefined
 
   return (
@@ -489,6 +524,7 @@ export function Architecture() {
             {lens === 'organs'
               ? <>Arganta OS · seven layers, one backbone · <b>Command Core → Sense</b></>
               : <>Classical stack · <b>UI/UX → Infrastructure</b> · agnostic — replicate on any tech stack</>}
+            {view !== 'core' && <span className="af-altitude"> · container-level view</span>}
             <span className="af-edgekey"> · edges = data &amp; control flow</span>
             {liveCount > 0 && <span style={{ color: 'var(--ok)' }}> · {liveCount} nodes reporting live</span>}
           </div>
@@ -546,6 +582,9 @@ export function Architecture() {
           const selColor = colorOf(layerOf(selDef))
           return (
           <div className="af-drawer" style={{ ['--af-c' as string]: selColor }}>
+            {CLIENT_TIER_IDS.includes(selDef.id) && (
+              <button className="af-back" onClick={() => setSel(CLIENT_CONTAINER.id)}>‹ Client Applications</button>
+            )}
             <div className="dh">
               <div>
                 <div className="dl">{selDef.label}</div>
@@ -555,6 +594,21 @@ export function Architecture() {
             </div>
             <span className={'af-prov ' + PROV[selDef.prov].cls}>{PROV[selDef.prov].label}</span>
             {selDef.detail && <p className="dp">{selDef.detail}</p>}
+            {selDef.children && (
+              <div className="af-members">
+                <div className="mh">Products in this tier</div>
+                {selDef.children.map(id => {
+                  const child = ALL_NODES.find(n => n.id === id)
+                  if (!child) return null
+                  return (
+                    <button key={id} className="mrow" onClick={() => setSel(id)}>
+                      <span className="ml">{child.label}</span>
+                      <span className={'af-prov ' + PROV[child.prov].cls}>{PROV[child.prov].label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             {selDef.safety && (
               <div className="af-safety">
                 <div className="sfh">Trust &amp; Safety</div>
@@ -565,6 +619,12 @@ export function Architecture() {
             )}
             {selSeries && selSeries.length > 1 && <Sparkline data={selSeries} c={selColor} />}
             {SPOF[selDef.id] && <div className="af-spof-note">⚠ <b>Single point of failure.</b> {SPOF[selDef.id]}</div>}
+            {selDef.util && (
+              <div className="af-util">
+                <div className="uh"><span>{selDef.util.label} <i className="uv-measured">measured</i></span><span className="uv">{compact(selDef.util.used)} / {compact(selDef.util.cap)}</span></div>
+                <div className="ubar"><div className="ufill" style={{ width: Math.min(100, Math.max(1, (selDef.util.used / selDef.util.cap) * 100)) + '%' }} /></div>
+              </div>
+            )}
             <dl className="dmeta">
               {selDef.tech && <><dt>Tech</dt><dd>{selDef.tech}</dd></>}
               {selDef.repo && <><dt>Where</dt><dd className="mono">{selDef.repo}</dd></>}
