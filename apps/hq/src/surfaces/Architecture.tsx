@@ -126,6 +126,8 @@ interface NodeDef {
   next?: boolean; logos?: Logo[]
   tech?: string; repo?: string; swap?: string; headroom?: string; detail?: string
   seriesKey?: string
+  /** Per-item trust & safety posture (badged truthfully, item by item). */
+  safety?: { label: string; prov: Prov }[]
 }
 const NODES: NodeDef[] = [
   // Command Core — govern
@@ -135,9 +137,15 @@ const NODES: NodeDef[] = [
     detail: 'The ported working brain: a bounded, budgeted, autonomy-gated tool loop that reasons, calls real tools (image, TTS, builder, vault search, office consult) and degrades honestly. Renamed from CEO Orb.' },
   { id: 'clevel', layer: 'command', label: 'C-Level · 6 offices', sub: 'CEO·COO·CTO·CFO·GC·CAPO', prov: 'partial',
     detail: 'Six advisory offices over the ecosystem graph. Read-only today; write-capable agents are the Agent OS v2 roadmap.' },
-  { id: 'gov', layer: 'command', label: 'Governance & Autonomy', sub: 'approval gates · ADR-0003/4', prov: 'partial',
+  { id: 'gov', layer: 'command', label: 'Governance & Trust', sub: 'approval gates · trust & safety', prov: 'partial',
     tech: 'governance.js · autonomy gate', repo: 'packages/ai · packages/agent',
-    detail: 'Data-class guardrails and the autonomy ladder. Confidential data is forced local; side-effecting tools need approval.' },
+    detail: 'Data-class guardrails, the autonomy ladder, and child-safety posture. Confidential data is forced local; side-effecting tools need approval. Because Arganta serves children, consent and data-handling are first-class here — badged honestly below.',
+    safety: [
+      { label: 'Guardian-run circles (structural consent)', prov: 'partial' },
+      { label: 'Age gating', prov: 'placeholder' },
+      { label: 'Verifiable parental consent (COPPA)', prov: 'placeholder' },
+      { label: 'Minor data retention & deletion', prov: 'placeholder' },
+    ] },
 
   // Think — decide
   { id: 'router', layer: 'think', label: 'Four-Tier Router', sub: 'Sovereign → Sponsored → Economy → Frontier', prov: 'live', logos: [L.claude, L.oai],
@@ -547,6 +555,14 @@ export function Architecture() {
             </div>
             <span className={'af-prov ' + PROV[selDef.prov].cls}>{PROV[selDef.prov].label}</span>
             {selDef.detail && <p className="dp">{selDef.detail}</p>}
+            {selDef.safety && (
+              <div className="af-safety">
+                <div className="sfh">Trust &amp; Safety</div>
+                {selDef.safety.map(s => (
+                  <div key={s.label} className="sfr"><i className={PROV[s.prov].cls} /><span className="sfl">{s.label}</span><span className="sfp">{PROV[s.prov].label}</span></div>
+                ))}
+              </div>
+            )}
             {selSeries && selSeries.length > 1 && <Sparkline data={selSeries} c={selColor} />}
             {SPOF[selDef.id] && <div className="af-spof-note">⚠ <b>Single point of failure.</b> {SPOF[selDef.id]}</div>}
             <dl className="dmeta">
