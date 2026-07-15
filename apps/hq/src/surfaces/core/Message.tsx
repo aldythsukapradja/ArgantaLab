@@ -6,6 +6,7 @@ import type { CoreMessage } from '../../lib/core'
 import { asBlocks, MEDIA_BLOCK_KINDS, type CoreBlock } from './blocks'
 import { CoreOrb } from './CoreOrb'
 import { ArtifactCard } from './ArtifactCard'
+import { OFFICE_META } from '../../data/agents'
 
 export function UserMessage({ text }: { text: string }) {
   return (
@@ -27,6 +28,7 @@ export function AssistantMessage({ message, provider, model, streaming, errored 
   const trail = blocks.filter(b => b.kind === 'tool-trail')
   const textBlock = blocks.find(b => b.kind === 'text') as Extract<CoreBlock, { kind: 'text' }> | undefined
   const mediaBlocks = blocks.filter(b => MEDIA_BLOCK_KINDS.has(b.kind))
+  const delegationBlocks = blocks.filter(b => b.kind === 'delegation') as Extract<CoreBlock, { kind: 'delegation' }>[]
   const errorBlocks = blocks.filter(b => b.kind === 'error') as Extract<CoreBlock, { kind: 'error' }>[]
   const savedAny = mediaBlocks.some((b: any) => !!b.assetId)
 
@@ -46,6 +48,7 @@ export function AssistantMessage({ message, provider, model, streaming, errored 
       <div className="core-msg-body">
         {trail.map((t, i) => <ToolTrailLine key={i} block={t as any} />)}
         {errorBlocks.map((b, i) => <BlockedCard key={i} message={b.message} />)}
+        {delegationBlocks.map((b, i) => <DelegationCard key={i} office={b.office} summary={b.summary} />)}
         {mediaBlocks.map((b, i) => <ArtifactCard key={i} block={b} />)}
         {textBlock && <TextReveal text={textBlock.text} skipAnimation={!streaming} />}
         {(provText || savedAny) && (
@@ -69,6 +72,36 @@ function ToolTrailLine({ block }: { block: Extract<CoreBlock, { kind: 'tool-trai
       {block.provider && <> · {block.provider}</>}
       {' · $' + (block.costUsd ?? 0).toFixed(4)}
       {' · ' + ((block.latencyMs ?? 0) / 1000).toFixed(1) + 's'}
+    </div>
+  )
+}
+
+// C6 (ADR-0007 Decision 4) — a delegation must read differently depending on
+// whether it's grounded in live data or a persona opinion. runConsultOffice
+// (lib/core/tools.ts) prepends a `_(tag)_` marker to the summary text (the
+// frozen delegation block kind only carries {office, summary} — no room for
+// a separate `grounded` field — so the trust signal travels IN the text,
+// always first so it survives delegationResponse's 240-char truncation).
+// This card pulls that leading marker back out and renders it as its own
+// chip, same provenance-chip language as ArtifactCard/Model Rack.
+function DelegationCard({ office, summary }: { office: string | null; summary: string | null }) {
+  const meta = office ? OFFICE_META[office as keyof typeof OFFICE_META] : null
+  const text = summary || ''
+  const m = text.match(/^_\(([^)]*)\)_\n\n([\s\S]*)$/)
+  const tag = m?.[1] ?? null
+  const body = m?.[2] ?? text
+  const grounded = tag?.startsWith('Grounded')
+  return (
+    <div className="core-artifact-card core-delegation-card">
+      <div className="core-artifact-body core-delegation-body" style={meta ? { borderLeft: `3px solid ${meta.accent}` } : undefined}>
+        <div className="core-delegation-office mono">{meta?.label ?? office ?? 'Office'}</div>
+        <p className="core-text core-delegation-text">{body}</p>
+      </div>
+      {tag && (
+        <div className="core-artifact-foot">
+          <div className={'core-artifact-chip mono' + (grounded ? ' core-delegation-grounded' : '')}>{tag}</div>
+        </div>
+      )}
     </div>
   )
 }

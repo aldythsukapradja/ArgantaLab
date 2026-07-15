@@ -5,7 +5,8 @@
 // loop.js already catches/records a thrown executor, but each tool degrades
 // honestly on its own path too (never fabricates a result).
 import { toolByName } from '@arganta/agent'
-import { ai, logAgentRun, getSessionRuns } from '../ai'
+import { ai, logAgentRun, getSessionRuns, intelligenceRegistry } from '../ai'
+import { selectModel, isRouteAllowed } from '@arganta/ai'
 import { supabase, cloudEnabled } from '../supabase'
 import { generateImageViaGateway, generateSpeechViaGateway, embedTextViaGateway, getNeuronQuota } from '../mediaGateway'
 import { saveMediaAsset } from '../mediaAssets'
@@ -15,6 +16,8 @@ import { OFFICE_META, routeConcern, delegationResponse, isOffice } from '@argant
 import { BUILDER_TOOL_SPECS, builderToolByName, validateHtml } from '@arganta/builder'
 import { generateWebsite, generateApplication, reviseArtifact } from '../../builder-core/generate'
 import { createArtifact, saveVersion, saveCurrentAsVersion, restoreVersion, getArtifact, listVersions, publishArtifact, publicArtifactUrl } from '../../builder-core/persist'
+import { agentSense, agentCompute, agentMatch, agentFacts, agentGenerate, routeIntent, INTENT_ROLE, AGENTS, TIER_META } from '../../data/agents'
+import { agentMessages } from '@arganta/ai'
 
 export interface ToolResult {
   data: unknown          // what the model reads back (JSON-stringified by the loop)
@@ -83,26 +86,146 @@ async function runSearchVault(args: { query: string; k?: number }): Promise<Tool
   return { data: { results: (data || []).map((r: any) => ({ content: r.content, similarity: r.similarity, source: r.source })) }, costUsd: e.costUsd }
 }
 
-// consult_office — a lightweight, honest v1: frame the office's ownership as a
-// system prompt and ask at the Sponsored floor. NOT the 25-agent live-RPC
-// roster (apps/hq/src/data/agents.ts) — reconciling the two office taxonomies
-// (OfficeId vs Tier) is C6's job; this tool's external contract doesn't change
-// when C6 deepens it.
+// consult_office — C6 (ADR-0007): offices as GROUNDED sub-agents, not just a
+// persona. operations/treasury run the real agents.ts Sense→Compute→Match→
+// Generate pipeline over live Supabase data; bridge/technology/legal have no
+// grounded pipeline yet and honestly stay the C3 persona; roster answers from
+// the real (static) org roster. External contract is unchanged from C3 —
+// {office?, question} in, a delegation block out — only the depth changed.
+const GROUNDED_OFFICES = new Set(['operations', 'treasury'])
+const OFFICE_CHIEF: Record<string, string | null> = {
+  bridge: 'ceo', operations: 'coo', technology: 'cto', treasury: 'cfo', legal: 'gc', roster: null,
+}
+
+// A confidential delegation can ONLY route to Tier 0 (governance.js), and
+// Tier 0 in the browser means WebLLM — the standing "brittle" gap this
+// session's memory already flagged: on a cold load it downloads a real model
+// over the network, and in some environments that never resolves at all
+// rather than failing cleanly. Without a bound, a hung Tier-0 load would
+// hang the ENTIRE chat turn forever — worse than the honest degrade
+// governedOfficeChat already has for a clean failure. 30s is generous enough
+// for a genuine first-load download on a real machine while still giving the
+// founder a real turn back if it's actually stuck.
+const TIER0_TIMEOUT_MS = 30_000
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | 'timeout'> {
+  return Promise.race([p, new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), ms))])
+}
+
+/** selectModel(dataClass)-gated chat, the shape a delegation's Generate step
+ * needs. THE governance enforcement point (ADR-0007 Decision 3): at
+ * dataClass:'confidential', governance.js's DATA_ALLOWED only permits
+ * costClass 0 — selectModel CANNOT return an external candidate no matter
+ * what the legacy task router would have picked, so "confidential facts stay
+ * on Tier 0" is a property of the call, not a promise in a comment. No
+ * capable model → provider:'mock' with empty text, the same honest-degrade
+ * shape every other tool in this file already uses. */
+async function governedOfficeChat(o: { task: string; messages: unknown[] }, dataClass: string, runId: string): Promise<{ text: string; provider: string; model?: string; costUsd?: number }> {
+  const { model: picked, reason } = selectModel(intelligenceRegistry, { task: o.task, dataClass })
+  if (!picked || !isRouteAllowed(picked, dataClass)) {
+    console.warn('[consult_office]', o.task, dataClass, 'no capable model:', reason)
+    return { text: '', provider: 'mock' }
+  }
+  const result = await withTimeout(ai.chat({ task: o.task, messages: o.messages, provider: picked.provider, model: picked.apiModel }), TIER0_TIMEOUT_MS)
+  if (result === 'timeout') {
+    console.warn('[consult_office]', o.task, dataClass, `timed out after ${TIER0_TIMEOUT_MS}ms waiting on`, picked.provider)
+    await logAgentRun({
+      runId, domain: 'llm', task: 'consult_office', dataClass,
+      requestedCostClass: picked.costClass, actualCostClass: picked.costClass,
+      requestedProvider: picked.provider, requestedModel: picked.apiModel,
+      actualProvider: 'mock', actualModel: 'mock', costUsd: 0, status: 'failed',
+      error: `timed out after ${TIER0_TIMEOUT_MS}ms waiting on ${picked.provider}`,
+    })
+    return { text: '', provider: 'mock' }
+  }
+  const out: any = result
+  const silentlyMocked = out.provider === 'mock' && picked.provider !== 'mock'
+  await logAgentRun({
+    runId, domain: 'llm', task: 'consult_office', dataClass,
+    requestedCostClass: picked.costClass, actualCostClass: out.tier ?? picked.costClass,
+    requestedProvider: picked.provider, requestedModel: picked.apiModel,
+    actualProvider: silentlyMocked ? 'mock' : (out.provider ?? picked.provider), actualModel: silentlyMocked ? 'mock' : (out.model ?? picked.apiModel),
+    costUsd: out.costUsd ?? 0, latencyMs: 0, status: silentlyMocked ? 'failed' : 'succeeded',
+    error: silentlyMocked ? `requested ${picked.provider} but adapter fell back to mock` : null,
+  })
+  if (silentlyMocked) return { text: '', provider: 'mock' }
+  return { text: out.text || '', provider: out.provider, model: out.model, costUsd: out.costUsd ?? 0 }
+}
+
 async function runConsultOffice(args: { office?: string; question: string }): Promise<ToolResult> {
   const office = isOffice(args.office) ? args.office! : routeConcern(args.question)
   const meta = OFFICE_META[office as keyof typeof OFFICE_META]
   const runId = crypto.randomUUID()
-  const out = await ai.chat({
-    task: 'brief',
-    messages: [
-      { role: 'system', content: `You are the head of ${meta.label} at a small founder-run company. You own: ${meta.owns}. Answer as that office: concise, decisive, one paragraph max.` },
-      { role: 'user', content: args.question },
-    ],
-  })
-  const silentlyMocked = out.provider === 'mock'
-  await logAgentRun({ runId, domain: 'llm', task: 'consult_office', dataClass: 'internal', requestedCostClass: 0, actualCostClass: out.tier ?? 0, requestedProvider: null, requestedModel: null, actualProvider: silentlyMocked ? 'mock' : out.provider, actualModel: silentlyMocked ? 'mock' : out.model, costUsd: out.costUsd ?? 0, status: silentlyMocked ? 'failed' : 'succeeded' })
-  const resp = delegationResponse({ office, text: silentlyMocked ? '' : out.text, ok: !silentlyMocked })
-  return { data: resp.toolResult, block: resp.block, costUsd: out.costUsd ?? 0 }
+
+  // roster — the meta-office (ADR-0007 Decision 5): grounded in the real,
+  // static org roster, not a live RPC and not a persona guess.
+  if (office === 'roster') {
+    const byTier = AGENTS.reduce<Record<string, number>>((m, a) => { m[a.tier] = (m[a.tier] || 0) + 1; return m }, {})
+    const summary = '_(Org roster · static, not a live RPC)_\n\n' +
+      `${AGENTS.length} agents across 6 tiers: ` +
+      Object.entries(byTier).map(([t, k]) => `${TIER_META[t as keyof typeof TIER_META].label} (${k})`).join(', ') +
+      '. Pipeline is deterministic-first — only the Generate step uses a model.'
+    const resp = delegationResponse({ office, text: summary, ok: true })
+    return { data: { ...resp.toolResult, provider: 'roster-metadata', model: null, grounded: true }, block: resp.block, costUsd: 0 }
+  }
+
+  if (!GROUNDED_OFFICES.has(office)) {
+    // bridge/technology/legal — no grounded live-RPC pipeline exists yet
+    // (ADR-0007 Decisions 1/5): honest persona, same shape C3 shipped, now
+    // actually dataClass-governed at 'internal' (the old code called ai.chat
+    // with zero dataClass awareness — a real, lower-stakes version of the
+    // same latent gap the grounded path closes).
+    const chiefId = OFFICE_CHIEF[office]
+    const chiefTitle = (chiefId && AGENTS.find((a) => a.id === chiefId)?.role) || meta.label
+    const out = await governedOfficeChat({
+      task: 'brief',
+      messages: [
+        { role: 'system', content: `You are the ${chiefTitle} of a small founder-run company (ArgantaLab + KinetikCircle). You own: ${meta.owns}. Answer as that office: concise, decisive, one paragraph max. No live data pipeline grounds this answer yet — this is judgment, not a report, and you should not imply otherwise.` },
+        { role: 'user', content: args.question },
+      ],
+    }, 'internal', runId)
+    const text = out.provider === 'mock' ? '' : `_(Persona · ${chiefTitle} · no live data pipeline)_\n\n${out.text.trim()}`
+    const resp = delegationResponse({ office, text, ok: out.provider !== 'mock' })
+    return { data: { ...resp.toolResult, provider: out.provider, model: out.model, grounded: false }, block: resp.block, costUsd: out.costUsd ?? 0 }
+  }
+
+  // operations / treasury — the grounded path (ADR-0007 Decisions 2/3).
+  const sensed = await agentSense()
+  const computed = agentCompute(sensed)
+  const signals = agentMatch(computed)
+  let intent = routeIntent(args.question)
+  if (intent === 'general') intent = office === 'treasury' ? 'economy' : 'brief'
+  const role = INTENT_ROLE[intent] + ' Agent'
+
+  if (sensed.source === 'offline') {
+    // Nothing live to ground in — the honest deterministic message.
+    // No confidential data is at risk, but there's also nothing real to
+    // synthesize, so no LLM call is made at all.
+    const text = '_(No live data connected)_\n\n' + agentGenerate(intent, computed, signals, sensed)
+    const resp = delegationResponse({ office, text, ok: true })
+    return { data: { ...resp.toolResult, provider: 'deterministic', model: null, grounded: false }, block: resp.block, costUsd: 0 }
+  }
+
+  // Real live data is in the room now — confidential (ADR-0003, same rule
+  // the `analyze` tool already follows). governedOfficeChat's dataClass here
+  // is where "confidential stays local" actually gets enforced.
+  const task = intent === 'economy' || intent === 'monetization' ? 'analyze' : 'brief'
+  const out = await governedOfficeChat(
+    { task, messages: agentMessages(role, agentFacts(computed, signals, sensed), args.question) },
+    'confidential', runId,
+  )
+
+  if (out.provider === 'mock') {
+    // Tier 0 unreachable (the standing WebLLM-brittle gap) — degrade to the
+    // deterministic Match signals (pure arithmetic, safe to show) rather
+    // than fail silently OR reach for a reachable-but-external tier.
+    const text = '_(Signals only · local model unavailable, confidential data was not sent externally)_\n\n' + agentGenerate(intent, computed, signals, sensed)
+    const resp = delegationResponse({ office, text, ok: true })
+    return { data: { ...resp.toolResult, provider: 'deterministic', model: null, grounded: false, degradedReason: 'tier0-unreachable' }, block: resp.block, costUsd: 0 }
+  }
+
+  const text = `_(Grounded · ${role} · ${out.provider} · live data · Tier 0)_\n\n` + out.text.trim()
+  const resp = delegationResponse({ office, text, ok: true })
+  return { data: { ...resp.toolResult, provider: out.provider, model: out.model, grounded: true }, block: resp.block, costUsd: out.costUsd ?? 0 }
 }
 
 function titleFromBrief(brief: string): string {

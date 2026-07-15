@@ -378,7 +378,9 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
 // model — and ONLY over the real computed facts (never free recall). If no live
 // model is reachable (mock / offline / error) it degrades to the scripted
 // template above, so it can never fabricate numbers.
-const INTENT_ROLE: Record<Intent, string> = {
+// C6 (ADR-0007) — Core's delegation executor needs this to label a grounded
+// answer with the real chief's title, same as agentGenerate's own templates.
+export const INTENT_ROLE: Record<Intent, string> = {
   brief: 'COO', focus: 'CPO', blockers: 'COO', economy: 'CFO', monetization: 'CFO', agents: 'COO', general: 'COO',
 }
 
