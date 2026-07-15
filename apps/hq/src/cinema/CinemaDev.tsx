@@ -22,6 +22,8 @@ import {
 } from './contract'
 import { actionFor, coreForAction } from './deriveState'
 import { speakBrowser, synthesize, TTS_TIERS, type TtsTier, type SpeakHandle } from '../lib/tts/tts'
+import { logAgentRun } from '../lib/ai'
+import { saveMediaAsset } from '../lib/mediaAssets'
 import { Volume2, Square, GripVertical, GripHorizontal } from 'lucide-react'
 import './cinema.css'
 
@@ -150,6 +152,27 @@ export function CinemaDev() {
           setTimeout(() => c.reload(true), 30)
         }
         reader.readAsDataURL(res.audio)
+        // Persistence-first (docs/media-center/Persistence-and-Provider-Strategy.md):
+        // log to the truthful ledger AND copy the real bytes into media-artifacts,
+        // linked by the same run_id — only paid tiers produce bytes worth saving
+        // (browser Web Speech has nothing to persist).
+        if (res.runtime === 'api') {
+          const runId = crypto.randomUUID()
+          // await the ledger row before saving the asset — media_asset.run_id
+          // is a foreign key into agent_runs; saving first would race it.
+          logAgentRun({
+            runId, domain: 'media', task: 'tts', dataClass: 'public',
+            requestedCostClass: 1, actualCostClass: 1,
+            requestedProvider: res.provider, requestedModel: res.model ?? null,
+            actualProvider: res.provider, actualModel: res.model ?? null,
+            costUsd: res.cost, status: 'succeeded',
+          }).then(() => res.audio!.arrayBuffer()).then((buf) => {
+            saveMediaAsset({
+              runId, kind: 'tts', bytes: new Uint8Array(buf), mime: res.audio!.type || 'audio/mpeg',
+              prompt: scene.narration, provider: res.provider, model: res.model ?? null, costUsd: res.cost,
+            })
+          })
+        }
       } else {
         setTtsError(res.error === 'approval_required' ? 'Premium needs approval — not wired yet.' : `${res.provider} unavailable — check the tier's provider secrets are deployed.`)
       }

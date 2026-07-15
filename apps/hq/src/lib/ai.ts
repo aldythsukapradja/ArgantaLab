@@ -68,7 +68,10 @@ const intelligenceRegistry = buildRegistry({ webllm: true, edgeProxy: cloudEnabl
 const sessionRuns: Record<string, unknown>[] = []
 export function getSessionRuns() { return [...sessionRuns] }
 
-export function logAgentRun(run: Record<string, unknown>) {
+// Returns a promise so callers that need the row to exist first (e.g.
+// saveMediaAsset's run_id foreign key) can await it — existing fire-and-forget
+// callers are unaffected, they just don't await it, same as before.
+export async function logAgentRun(run: Record<string, unknown>): Promise<void> {
   sessionRuns.push({ ...run, createdAt: run.createdAt || new Date().toISOString() })
   if (sessionRuns.length > 200) sessionRuns.shift()
   // WS-8: recompute the benchmark rollup from real session usage after every
@@ -78,9 +81,8 @@ export function logAgentRun(run: Record<string, unknown>) {
   // initialized by the time a real run is ever logged (see below).
   intelligence.setBenchmarks(rollupBenchmarks(sessionRuns))
   if (!cloudEnabled) return
-  supabase.rpc('agent_run_log', { run }).then(({ error }: { error: { message: string } | null }) => {
-    if (error) console.warn('[agent_run_log]', error.message)
-  })
+  const { error } = await supabase.rpc('agent_run_log', { run })
+  if (error) console.warn('[agent_run_log]', error.message)
 }
 
 export const intelligence = createIntelligence({ llm: intelligenceLLM, registry: intelligenceRegistry, sink: logAgentRun })

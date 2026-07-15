@@ -32,6 +32,7 @@ export interface TtsResult {
   status: 'spoken' | 'deferred' | 'failed'
   runtime: 'browser' | 'api' | 'mcp'
   provider: string
+  model?: string        // real upstream model (e.g. '@cf/deepgram/aura-1') — for provenance/lineage
   tier: TtsTier
   cost: number
   audio?: Blob          // present when a tier produces bytes (2/3, later)
@@ -103,7 +104,7 @@ export async function synthesize(req: TtsRequest): Promise<TtsResult> {
       // gateway unreachable/unconfigured — honest deferral, never fabricated audio
       return { ...base, status: 'deferred', runtime: 'api', provider: 'Cloudflare Aura-1', descriptor: { text: req.text, voice: req.voice, tier: req.tier } }
     }
-    return { ...base, status: 'spoken', runtime: 'api', provider: g.provider, cost: g.costUsd, audio: new Blob([g.bytes as BlobPart], { type: g.mime }) }
+    return { ...base, status: 'spoken', runtime: 'api', provider: g.provider, model: g.model, cost: g.costUsd, audio: new Blob([g.bytes as BlobPart], { type: g.mime }) }
   }
   if (req.tier === 'premium' && !req.approved) {
     return { ...base, status: 'failed', runtime: 'mcp', provider: 'ElevenLabs', error: 'approval_required' }
