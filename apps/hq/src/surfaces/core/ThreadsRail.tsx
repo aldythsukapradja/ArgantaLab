@@ -14,7 +14,7 @@ const REL_TIME = (iso: string) => {
   return `${Math.floor(s / 86400)}d`
 }
 
-export function ThreadsRail({ activeThreadId, onSelectThread, open, onToggle, sheet, refreshKey }: {
+export function ThreadsRail({ activeThreadId, onSelectThread, open, onToggle, sheet, refreshKey, onThreadsLoaded }: {
   activeThreadId: string | null
   onSelectThread: (id: string) => void
   open: boolean
@@ -22,14 +22,17 @@ export function ThreadsRail({ activeThreadId, onSelectThread, open, onToggle, sh
   sheet?: boolean
   /** Bump to force a reload (e.g. after the first message creates a thread). */
   refreshKey?: number
+  /** Reports the loaded count so the empty state (C4a §5) can tell first-open apart from new-thread. */
+  onThreadsLoaded?: (count: number) => void
 }) {
   const [threads, setThreads] = useState<ThreadSummary[] | null>(null)
   const [q, setQ] = useState('')
 
   useEffect(() => {
     let active = true
-    listRecentThreads().then(rows => { if (active) setThreads(rows) })
+    listRecentThreads().then(rows => { if (active) { setThreads(rows); onThreadsLoaded?.(rows.length) } })
     return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 
   const filtered = useMemo(() => {

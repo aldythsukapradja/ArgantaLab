@@ -10,13 +10,22 @@ const ERROR_STOP_REASONS = new Set(['error', 'no-model'])
 
 const THINKING_LONG_MS = 8000
 
-export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifact, compact }: {
+const STARTER_CHIPS = [
+  'Make a brand kit for…',
+  "Chart this week's growth",
+  'Generate an image of…',
+  'Draft a landing page',
+]
+
+export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifact, compact, hasThreads }: {
   threadId: string | null
   onThreadCreated: (id: string) => void
   /** Ceiling shown on the composer's tier pill (display-only — see Composer.tsx). */
   maxCostClass: number
   onArtifact?: (a: { assetId: string; kind: string }) => void
   compact?: boolean
+  /** Whether any thread exists yet — distinguishes first-open from new-thread copy (C4a §5). */
+  hasThreads?: boolean
 }) {
   const [messages, setMessages] = useState<CoreMessage[]>([])
   const [draft, setDraft] = useState('')
@@ -90,9 +99,20 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifa
         {isEmpty ? (
           <div className="core-convo-empty">
             <CoreOrb state="idle" size="hero" />
-            <p className="core-empty-copy">
-              I'm Arganta Core. I can make images, voice, websites, decks, brand kits and charts — for real, on your own infrastructure.
-            </p>
+            {hasThreads ? (
+              <p className="core-empty-copy">What are we making?</p>
+            ) : (
+              <>
+                <p className="core-empty-copy">
+                  I'm Arganta Core. I can make images, voice, websites, decks, brand kits and charts — for real, on your own infrastructure.
+                </p>
+                <div className="core-starter-chips">
+                  {STARTER_CHIPS.map(chip => (
+                    <button key={chip} className="core-starter-chip" onClick={() => setDraft(chip)}>{chip}</button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="core-convo-col">

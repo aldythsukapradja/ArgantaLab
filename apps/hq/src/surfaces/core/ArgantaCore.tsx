@@ -38,6 +38,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   const [cortexOpen, setCortexOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
   const [threadsRefresh, setThreadsRefresh] = useState(0)
+  const [hasThreads, setHasThreads] = useState(false)
   const bumpThreadsRefresh = () => setThreadsRefresh(n => n + 1)
   const selectThread = (id: string) => { setThreadId(id); bumpThreadsRefresh() }
 
@@ -47,6 +48,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
         threadId={threadId} onSelectThread={selectThread} embed={embed}
         maxCostClass={maxCostClass} onArtifact={onArtifact} onClose={onClose}
         threadsRefresh={threadsRefresh} bumpThreadsRefresh={bumpThreadsRefresh}
+        hasThreads={hasThreads} onThreadsLoaded={(n) => setHasThreads(n > 0)}
       />
     )
   }
@@ -54,7 +56,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   if (effectiveMode === MOUNT_MODES.PANEL) {
     return (
       <div className="core core-panel">
-        <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} compact />
+        <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} />
       </div>
     )
   }
@@ -65,17 +67,17 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
       <ThreadsRail
         activeThreadId={threadId} onSelectThread={selectThread}
         open={railOpen} onToggle={() => setRailOpen(o => !o)}
-        refreshKey={threadsRefresh}
+        refreshKey={threadsRefresh} onThreadsLoaded={(n) => setHasThreads(n > 0)}
       />
       <div className="core-center">
-        <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} />
+        <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} hasThreads={hasThreads} />
       </div>
       <CortexPanel open={cortexOpen} onToggle={() => setCortexOpen(o => !o)} />
     </div>
   )
 }
 
-function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtifact, onClose, threadsRefresh, bumpThreadsRefresh }: {
+function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtifact, onClose, threadsRefresh, bumpThreadsRefresh, hasThreads, onThreadsLoaded }: {
   threadId: string | null
   onSelectThread: (id: string) => void
   embed: boolean
@@ -84,6 +86,8 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
   onClose?: () => void
   threadsRefresh: number
   bumpThreadsRefresh: () => void
+  hasThreads: boolean
+  onThreadsLoaded: (count: number) => void
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   return (
@@ -95,7 +99,7 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
         <button className="core-fs-title" onClick={() => setSheetOpen(true)}>Arganta Core</button>
         <button className="core-fs-menu" aria-label="Thread menu">⋯</button>
       </div>
-      <Conversation threadId={threadId} onThreadCreated={(id) => { onSelectThread(id); bumpThreadsRefresh() }} maxCostClass={maxCostClass} onArtifact={onArtifact} compact />
+      <Conversation threadId={threadId} onThreadCreated={(id) => { onSelectThread(id); bumpThreadsRefresh() }} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} />
       {sheetOpen && (
         <div className="core-fs-sheet-overlay" style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN + 1 }} onClick={() => setSheetOpen(false)}>
           <div className="core-fs-sheet" onClick={e => e.stopPropagation()}>
@@ -103,7 +107,7 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
               activeThreadId={threadId}
               onSelectThread={(id) => { onSelectThread(id); setSheetOpen(false) }}
               open onToggle={() => setSheetOpen(false)} sheet
-              refreshKey={threadsRefresh}
+              refreshKey={threadsRefresh} onThreadsLoaded={onThreadsLoaded}
             />
           </div>
         </div>

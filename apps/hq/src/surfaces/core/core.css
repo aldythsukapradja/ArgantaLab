@@ -89,6 +89,13 @@
   align-items: center; text-align: center; gap: 18px;
 }
 .core-empty-copy { font-size: 15px; color: var(--tx2); max-width: 42ch; line-height: 1.55; }
+.core-starter-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 480px; }
+.core-starter-chip {
+  font-size: 12.5px; color: var(--tx2); background: var(--bg); border: 1px solid var(--bd2);
+  border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.core-starter-chip:hover { background: var(--acc-soft); border-color: var(--acc); color: var(--acc-text); }
 
 /* ---------- composer ---------- */
 .core-composer {
