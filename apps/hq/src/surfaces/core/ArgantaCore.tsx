@@ -37,12 +37,16 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   const [threadId, setThreadId] = useState<string | null>(initialThreadId ?? null)
   const [cortexOpen, setCortexOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
+  const [threadsRefresh, setThreadsRefresh] = useState(0)
+  const bumpThreadsRefresh = () => setThreadsRefresh(n => n + 1)
+  const selectThread = (id: string) => { setThreadId(id); bumpThreadsRefresh() }
 
   if (effectiveMode === MOUNT_MODES.FULLSCREEN) {
     return (
       <FullscreenCore
-        threadId={threadId} onSelectThread={setThreadId} embed={embed}
+        threadId={threadId} onSelectThread={selectThread} embed={embed}
         maxCostClass={maxCostClass} onArtifact={onArtifact} onClose={onClose}
+        threadsRefresh={threadsRefresh} bumpThreadsRefresh={bumpThreadsRefresh}
       />
     )
   }
@@ -50,7 +54,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   if (effectiveMode === MOUNT_MODES.PANEL) {
     return (
       <div className="core core-panel">
-        <Conversation threadId={threadId} onThreadCreated={setThreadId} maxCostClass={maxCostClass} onArtifact={onArtifact} compact />
+        <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} compact />
       </div>
     )
   }
@@ -59,24 +63,27 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   return (
     <div className="core core-inline">
       <ThreadsRail
-        activeThreadId={threadId} onSelectThread={setThreadId}
+        activeThreadId={threadId} onSelectThread={selectThread}
         open={railOpen} onToggle={() => setRailOpen(o => !o)}
+        refreshKey={threadsRefresh}
       />
       <div className="core-center">
-        <Conversation threadId={threadId} onThreadCreated={setThreadId} maxCostClass={maxCostClass} onArtifact={onArtifact} />
+        <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} />
       </div>
       <CortexPanel open={cortexOpen} onToggle={() => setCortexOpen(o => !o)} />
     </div>
   )
 }
 
-function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtifact, onClose }: {
+function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtifact, onClose, threadsRefresh, bumpThreadsRefresh }: {
   threadId: string | null
   onSelectThread: (id: string) => void
   embed: boolean
   maxCostClass: number
   onArtifact?: (a: { assetId: string; kind: string }) => void
   onClose?: () => void
+  threadsRefresh: number
+  bumpThreadsRefresh: () => void
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   return (
@@ -88,7 +95,7 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
         <button className="core-fs-title" onClick={() => setSheetOpen(true)}>Arganta Core</button>
         <button className="core-fs-menu" aria-label="Thread menu">⋯</button>
       </div>
-      <Conversation threadId={threadId} onThreadCreated={onSelectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} compact />
+      <Conversation threadId={threadId} onThreadCreated={(id) => { onSelectThread(id); bumpThreadsRefresh() }} maxCostClass={maxCostClass} onArtifact={onArtifact} compact />
       {sheetOpen && (
         <div className="core-fs-sheet-overlay" style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN + 1 }} onClick={() => setSheetOpen(false)}>
           <div className="core-fs-sheet" onClick={e => e.stopPropagation()}>
@@ -96,6 +103,7 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
               activeThreadId={threadId}
               onSelectThread={(id) => { onSelectThread(id); setSheetOpen(false) }}
               open onToggle={() => setSheetOpen(false)} sheet
+              refreshKey={threadsRefresh}
             />
           </div>
         </div>

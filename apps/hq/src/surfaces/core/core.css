@@ -31,8 +31,31 @@
   padding: 12px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .05em; color: var(--tx2); border-bottom: 1px solid var(--bd);
 }
-.core-rail-body { flex: 1; overflow-y: auto; padding: 8px; }
+.core-rail-new {
+  background: none; border: none; color: var(--tx3); cursor: pointer;
+  width: 26px; height: 26px; display: grid; place-items: center; border-radius: var(--r-sm);
+}
+.core-rail-new:hover { background: var(--bg3); color: var(--tx); }
+.core-rail-search {
+  display: flex; align-items: center; gap: 7px; margin: 0 10px 6px; padding: 6px 9px;
+  background: var(--bg); border: 1px solid var(--bd2); border-radius: var(--r-md); color: var(--tx3);
+}
+.core-rail-search input {
+  flex: 1; border: none; background: none; outline: none; color: var(--tx); font-size: 12.5px;
+}
+.core-rail-search input::placeholder { color: var(--tx3); }
+.core-rail-body { flex: 1; overflow-y: auto; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 2px; }
 .core-rail-empty { padding: 16px 10px; font-size: 12.5px; color: var(--tx3); text-align: center; }
+.core-rail-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; text-align: left; padding: 8px 10px; border-radius: var(--r-md);
+  background: none; border: none; color: var(--tx2); cursor: pointer; font-size: 13px;
+  transition: background var(--dur) var(--ease);
+}
+.core-rail-item:hover { background: var(--bg3); color: var(--tx); }
+.core-rail-item.on { background: var(--acc-soft); color: var(--acc-text); font-weight: 500; }
+.core-rail-item-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.core-rail-item-time { font-size: 10.5px; color: var(--tx3); flex-shrink: 0; }
 
 /* ---------- cortex panel ---------- */
 .core-cortex {
