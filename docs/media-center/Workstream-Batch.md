@@ -34,7 +34,7 @@ tests; **Fable** reviews only after a working creative milestone. One workstream
 | **3** | 2 | Truthful provider gateway (`llm-proxy` rewrite, real upstream adapters) | ✅ done — DeepSeek + Anthropic Haiku/Sonnet/Opus added beyond Gemini/Groq, `router.js` pure + 14 tests |
 | **4** | 3 | Validation + escalation runner | ✅ done — `ai/validators.js` (schema/grounding/policy/cost/quality) + escalation loop in `intelligence.js`, every attempt metered |
 | **5** | 3 | Metering impl: `agent_runs` Supabase migration + writes | ✅ done — migration **applied to the live project** (founder ran it); both LLM + media domains write |
-| **6** | 4 | Media Center intelligence — Analytics "Ask AI" insight (opt-in, sovereign-only) | ✅ slice done — `analytics-intelligence.ts`; copy/storyboard for Website/Deck/Video not started |
+| **6** | 4 | Media Center intelligence — "Ask AI" opt-in content assist | ✅ done — Analytics insight (confidential/sovereign-only) + **S1** Website copy, **S2** Deck outline, **S3** Video script (all `public` dataClass, free to route Sponsored/Economy too) |
 | **7** | 4 | [[Model-Rack]] surface + tier UI → Fable review | ✅ done — `surfaces/rack/ModelRack.tsx`, verified live (real run appears in feed with truthful provenance) |
 | **8** | 5 | Benchmarks + CAPO economics | ✅ done (v1, simplest-start) — `ai/benchmarks.js` rolls up real BenchmarkResults from validated `agent_runs`, no curated eval set; visible as a score badge in [[Model-Rack]] |
 | **9** | 5 | Agent model policies ([[agent-os-v2]]) | **blocked** — depends on the AgentSpec registry, which per [[agent-os-v2]] is "grand design... NOT built" |
@@ -54,7 +54,27 @@ up needs no manual flip, it just accrues.
 **WS-9 remains blocked, not decision-gated** — the `AgentSpec` registry it
 depends on doesn't exist yet ([[agent-os-v2]] is a design doc, not a build).
 Building that registry is its own initiative, out of scope for the
-intelligence router.
+intelligence router. Founder call (2026-07-14): defer to later, not this pass.
+
+## Session goal reached (2026-07-14): generate image, video, music, website
+
+All five requested media types are tangible **today**, each on two layers:
+
+| Kind | Deterministic (instant, $0, always works) | AI-assisted (opt-in, "Ask AI") |
+|---|---|---|
+| Image | real PNG (`media-core`) | — (premium MCP path exists, gated, unverified — see S4/S5 below) |
+| Video | canvas + real webm/mp4 export | **S3** — 4-line on-screen script |
+| Music/sound | real synthesized playback (`@arganta/audio`) | — |
+| Website | self-contained landing-page HTML | **S1** — real headline + features |
+| Deck | self-contained cinematic slides | **S2** — real per-scene outline |
+
+**Remaining, not done this session (explicitly deferred by the founder):**
+- **S4/S5** — a real premium media gateway (mirrors `llm-proxy`'s truthful-gateway
+  pattern for Higgsfield/ElevenLabs) so premium Image/Video/Audio generation
+  actually calls out instead of returning a gated descriptor. Needs real
+  provider API keys the founder would set via `supabase secrets set`.
+- **WS-9** — agent model policies, blocked on the unbuilt AgentSpec registry.
+- **WS-T** — deepening individual tabs further (Complexity-Model.md backlog).
 
 ## First shippable slice — BUILT, verified honest
 **A ✅ → 1 ✅ → 2 ✅ → 6-slice ✅.** Real pipeline wired end-to-end: type a
