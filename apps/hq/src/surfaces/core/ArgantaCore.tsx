@@ -55,8 +55,16 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
 
   if (effectiveMode === MOUNT_MODES.PANEL) {
     return (
-      <div className="core core-panel">
-        <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} />
+      <div className="core-panel-overlay" onClick={onClose}>
+        <div className="core core-panel" onClick={e => e.stopPropagation()}>
+          <div className="core-panel-topbar">
+            <span className="core-panel-title">Arganta Core</span>
+            <button className="core-panel-close" onClick={onClose} aria-label="Close Arganta Core">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 3 L12 12 M12 3 L3 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+            </button>
+          </div>
+          <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} />
+        </div>
       </div>
     )
   }
