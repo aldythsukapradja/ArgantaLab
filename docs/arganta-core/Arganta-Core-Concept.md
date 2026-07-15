@@ -23,8 +23,8 @@ states mapped to the cinema contract: idle → listening → thinking → speaki
 | Organ | Role | What exists today | Gap to close |
 |---|---|---|---|
 | **Brain** | reasoning + routing | `@arganta/ai` four-tier router, escalation, validators, benchmarks — live | no multi-turn tool loop |
-| **Memory** | recall + persistence | `agent_runs`, `media_asset`, Vault notes (localStorage) | no threads, no pgvector, no RAG |
-| **Hands** | making + acting | Media Center engines, mediaGateway (image/TTS live), analytics RPCs | not exposed as callable tools |
+| **Memory** | recall + persistence | `agent_runs`, `media_asset`, core_thread/message + pgvector (C2 ✅), Vault notes (localStorage) | RAG wiring (C5) |
+| **Hands** | making + acting | Media Center engines, mediaGateway (image/TTS/embed live), analytics RPCs, **and the [[Single-File-Builder]] (B1–B5) — apps + websites: create/revise/validate/version/publish, Core's strongest hand** | not exposed as callable tools |
 | **Face** | conversation surface | none — everything is button-driven | the whole chat UI |
 | **Heartbeat** | autonomy | pg_cron + pg_net installed, idle | no missions, no service-role path |
 | **Conscience** | governance + truth | dataClass gates, operator gate, provenance chips, cost ledger | extend to tool-permission policy |
@@ -134,18 +134,30 @@ currently truthfully says tools:false).
 | C1 | Foundation contracts | ✅ **SHIPPED** — `@arganta/agent` (thread schema, unified tool registry, pure agentic loop, delegation protocol, autonomy+invocation guardrails, embed/mount contract) + ADR-0004 · 30/30 tests | **Opus** | irreversible interfaces + security posture |
 | C2 | Substrate | ✅ **SHIPPED** — `migration_arganta_core.sql` (core_thread/core_message/memory_chunk+pgvector, live-verified), `embed` kind in media-proxy (CF bge-base-en-v1.5, 768-dim, verified real embed+store+cosine-search round trip), Realtime added to agent_runs/media_asset/core_message. Vault-ify secrets deferred to C7 (ADR-0004 prerequisite) | **Sonnet** | pattern-matches five existing migrations |
 | C3 | Tool loop | client-side agentic loop (call → execute tool → append → re-call, bounded), tool registry impl, honest degrade | **Sonnet** (Opus reviews the loop-termination/budget logic) | mechanical once C1 fixes the contract |
-| C4a | Design language | the "fancier than ChatGPT" layer: motion spec for the orb avatar, message choreography, microcopy voice, empty states | **Fable** | creative/aesthetic judgment |
+| C4a | Design language | the "fancier than ChatGPT" layer: motion spec for the orb avatar, message choreography, microcopy voice, empty states, **artifact preview cards** | **Fable** | creative/aesthetic judgment |
 | C4b | Chat UI build | threads rail, rich blocks, cortex panel, composer, streaming, karaoke playback | **Sonnet** | large but well-specified UI work |
 | C5 | Memory/RAG | embed Vault + threads, `search_vault` tool, auto-recall injection w/ dataClass gates | **Sonnet** | wiring + tests |
 | C6 | Delegation | offices as callable sub-agents over `agentGenerate`, delegation-trail UI | Opus (protocol) → **Sonnet** (impl) | protocol is judgment, impl is wiring |
 | C7 | Heartbeat | pg_cron missions: nightly CAPO rollup, quota watch, morning-brief thread | **Sonnet** after C1's security decision | blocked on service-role design |
-| C8 | Battle-test | E2E scenario suite: 10 golden conversations, cost/quota assertions, persistence checks | **Sonnet** | this session proved the verify loop |
-| C9 | Maximization quick wins | GitHub Actions CI (93 tests), pause idle Supabase project, Analytics:Read scope (#8), enable log drain | **Sonnet** + founder actions | independent of C1–C8, do anytime |
+| C8 | Battle-test | E2E scenario suite: golden conversations incl. the Builder proving slice (landing page + expense tracker), cost/quota assertions, persistence checks | **Sonnet** | this session proved the verify loop |
+| C9 | Maximization quick wins | GitHub Actions CI, pause idle Supabase project, Analytics:Read scope (#8), enable log drain | **Sonnet** + founder actions | independent of everything, do anytime |
 
-Sequencing: C1 → C2 → C3 → C4b (C4a parallel anytime) → C5 → C6 → C7. C8 after
-C3 and again after C7. C9 immediately.
+### B-batches — the Single-File Builder (see [[Single-File-Builder]])
+
+| # | Batch | Delivers | Model | Why this model |
+|---|---|---|---|---|
+| B1 | Builder kernel contracts | `builder-core/` types: SingleFileArtifact (unify with existing `builders/artifact.ts`, don't fork), generalized Application Contract (from circleAppPrompt), TOOL_SPECS **extension** (create/revise/validate/version/publish tools w/ governance — `publish_artifact` = sideEffect, never autonomy-safe), validation rule-set spec, hq_artifact/artifact_version schema decision | **Opus** | extends C1's frozen registry + a publish-governance call |
+| B2 | Generation tools | `generate.ts` + `revise.ts`: Stage-0 deterministic (makeWebsite + template skeletons) → Stage-1 AI via llm-proxy; **component-assembly generation** (skeleton + AI fills sections — the output-token-ceiling mitigation), mode classifier (app vs website) | **Sonnet** | tiered-generation pattern proven 3× this session |
+| B3 | Validation + versions | `validate.ts` deterministic checks (structural/security/quality), `migration_hq_artifacts.sql` (artifact + immutable versions, `run_id` lineage), save/restore RPCs | **Sonnet** | pattern-matches C2's migration exactly |
+| B4 | Portable components | 15–20 portable blocks (nav, heroes, metric grids, charts, tables, kanban, forms, pricing, footer) + `components.ts` registry + selection logic | **Fable** (block design) → **Sonnet** (registry) | blocks are aesthetic judgment; registry is wiring |
+| B5 | Preview + publishing | shared device-preview (Core cards + Builder workspace, ONE renderer), publishing runtime `build.arganta.app/a/:slug` `/w/:slug` (one shared runtime, sandboxed, CSP, no per-artifact deploys) | **Sonnet** + **Opus security sign-off** | public internet surface = new attack surface |
+
+Sequencing: C1 ✅ → C2 ✅ → **C3** → B1 → B2 → B3 → C4b (renders Builder
+artifacts as blocks — the C1 block kinds already anticipated `website`) → B4 →
+B5 → C5 → C6 → C7. C8 after C3 and again after B5/C7. C4a + C9 parallel anytime.
 
 ## See also
+- [[Single-File-Builder]] — the app/website Builder kernel (B1–B5), Core's strongest hand
 - [[../media-center/Persistence-and-Provider-Strategy]] — provider order + persistence-first (holds)
 - [[../media-center/Compute-Substrate]] — the media substrate Arganta Core's hands call
 - [[../agent-os-v2-grand-design]] — the office/mission layer C6/C7 grow into
