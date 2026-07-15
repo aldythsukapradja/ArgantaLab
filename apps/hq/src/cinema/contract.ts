@@ -40,6 +40,13 @@ export interface CoreSlotProps {
   renderer?: 'legacy' | 'ws2' | 'media'
   reducedMotion?: boolean
   quality?: Quality
+  /** Additive (optional): hand the camera to the founder (drag-rotate,
+   *  scroll-zoom) — used by the Cinema Editor's authoring preview. Normal
+   *  playback never sets this; the Director owns framing there. */
+  interactive?: boolean
+  /** Additive (optional): glue the reactor to centre (no pan) while
+   *  interactive, so it can't drift out of a small preview panel. */
+  centered?: boolean
 }
 
 // ── NodesSlot (WS3 knowledge nodes) ───────────────────────────────────────

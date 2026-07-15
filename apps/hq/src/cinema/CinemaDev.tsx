@@ -1,7 +1,9 @@
 // Cinema — WS1 authoring surface with live editing + offline version control.
-// Left: scenes grouped by act (edited scenes flagged). Centre: cinematic stage +
-// live karaoke. Right: an EDITABLE inspector (text, voice, audio replacement) plus
-// a version panel. All edits persist in the Cinema Director store (localStorage).
+// Left: scenes grouped by act (edited scenes flagged). Centre: an EDITABLE
+// inspector (text, voice, audio replacement, action, stage) — wide by default,
+// this is where the founder works. Right: the cinematic stage — reactor (top,
+// interactive) + WS3 brain (bottom), both always mounted, adjustable width.
+// All edits persist in the Cinema Director store (localStorage).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Play, Pause, SkipBack, SkipForward, RotateCcw, Film, Mic, Boxes, Network, Pencil,
@@ -58,17 +60,19 @@ export function CinemaDev() {
   const fileRef = useRef<HTMLInputElement>(null)
   const importRef = useRef<HTMLInputElement>(null)
 
-  // Adjustable right-hand inspector drawer width (persisted) + the stage's
+  // Editor is the wide 1fr centre column by default. The stage (reactor+brain)
+  // is the adjustable-width column on the right (persisted) + its own internal
   // reactor/brain vertical split ratio (also persisted, also draggable).
-  const [inspW, setInspW] = useState(() => Number(localStorage.getItem('hq_cin_insp_w')) || 300)
+  const [stageW, setStageW] = useState(() => Number(localStorage.getItem('hq_cin_stage_w')) || 420)
   const [splitPct, setSplitPct] = useState(() => Number(localStorage.getItem('hq_cin_split_pct')) || 58)
-  const dragRef = useRef<{ mode: 'insp' | 'split'; startX: number; startY: number; startW: number; startPct: number; stageEl: HTMLDivElement | null } | null>(null)
+  const dragRef = useRef<{ mode: 'stage' | 'split'; startX: number; startY: number; startW: number; startPct: number; stageEl: HTMLDivElement | null } | null>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const onDragMove = (e: PointerEvent) => {
     const d = dragRef.current; if (!d) return
-    if (d.mode === 'insp') {
-      const next = Math.max(260, Math.min(560, d.startW - (e.clientX - d.startX)))
-      setInspW(next)
+    if (d.mode === 'stage') {
+      // handle sits on the stage's LEFT edge — dragging left widens the stage
+      const next = Math.max(300, Math.min(760, d.startW - (e.clientX - d.startX)))
+      setStageW(next)
     } else {
       const rect = d.stageEl?.getBoundingClientRect()
       if (!rect) return
@@ -81,13 +85,13 @@ export function CinemaDev() {
     window.removeEventListener('pointermove', onDragMove)
     window.removeEventListener('pointerup', onDragEnd)
     document.body.style.cursor = ''
-    localStorage.setItem('hq_cin_insp_w', String(inspW))
+    localStorage.setItem('hq_cin_stage_w', String(stageW))
     localStorage.setItem('hq_cin_split_pct', String(splitPct))
     // both embedded WebGL canvases need to re-measure after a manual resize
     window.dispatchEvent(new Event('resize'))
   }
-  const startInspDrag = (e: React.PointerEvent) => {
-    dragRef.current = { mode: 'insp', startX: e.clientX, startY: 0, startW: inspW, startPct: 0, stageEl: null }
+  const startStageDrag = (e: React.PointerEvent) => {
+    dragRef.current = { mode: 'stage', startX: e.clientX, startY: 0, startW: stageW, startPct: 0, stageEl: null }
     window.addEventListener('pointermove', onDragMove)
     window.addEventListener('pointerup', onDragEnd)
     document.body.style.cursor = 'col-resize'
@@ -175,7 +179,7 @@ export function CinemaDev() {
   }
 
   return (
-    <div className="cin" style={{ ['--act-accent' as string]: act.accent, ['--insp-w' as string]: `${inspW}px` }}>
+    <div className="cin" style={{ ['--act-accent' as string]: act.accent, ['--stage-w' as string]: `${stageW}px` }}>
       {/* ── Left: grouped scene list ──────────────────────────────── */}
       <aside className="cin-list">
         <div className="cin-list-head">
@@ -204,15 +208,18 @@ export function CinemaDev() {
         </div>
       </aside>
 
-      {/* ── Centre: cinematic stage — top reactor, bottom brain, always both visible ── */}
+      {/* ── Right: cinematic stage — top reactor, bottom brain, always both visible, adjustable width ── */}
       <section className="cin-stage">
+        <div className="cin-stage-handle" onPointerDown={startStageDrag} title="Drag to resize the reactor/brain stage">
+          <GripVertical size={13} />
+        </div>
         <div className="cin-stage-top">
           <span className="cin-kicker">ACT {act.roman} · {act.title}</span>
           <span className="cin-scenetag">Scene {scene.id}</span>
         </div>
         <div className="cin-split" ref={stageRef} style={{ ['--split' as string]: `${splitPct}%` }}>
           <div className="cin-split-top">
-            <CoreSlot state={effectiveCore} product={st.product} progress={c.progress} />
+            <CoreSlot state={effectiveCore} product={st.product} progress={c.progress} interactive centered />
           </div>
           <div className="cin-split-handle" onPointerDown={startSplitDrag} title="Drag to resize reactor / brain">
             <GripHorizontal size={13} />
@@ -234,11 +241,8 @@ export function CinemaDev() {
         </div>
       </section>
 
-      {/* ── Right: EDITABLE inspector + version control (adjustable width) ── */}
+      {/* ── Centre: EDITABLE inspector + version control — wide by default ── */}
       <aside className="cin-inspector">
-        <div className="cin-insp-handle" onPointerDown={startInspDrag} title="Drag to resize the Editor drawer">
-          <GripVertical size={13} />
-        </div>
         <div className="cin-insp-head">
           <Pencil size={13} /> <b>Editor</b>
           <button className={'cin-hist-btn' + (showHistory ? ' on' : '')} onClick={() => setShowHistory(h => !h)} title="Version history">

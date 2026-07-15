@@ -29,12 +29,16 @@ function baselineIntensity(state: CoreState): number {
   }
 }
 
-export function ReactorCoreSlot({ state, product, progress, reducedMotion = false, quality }: {
+export function ReactorCoreSlot({ state, product, progress, reducedMotion = false, quality, interactive = false, centered = false }: {
   state: CoreState
   product?: ProductId
   progress: number
   reducedMotion?: boolean
   quality?: QualityTier
+  /** Hand the camera to the founder (drag-rotate, scroll-zoom) — used by the
+   *  Cinema Editor's authoring preview. Normal playback never sets this. */
+  interactive?: boolean
+  centered?: boolean
 }) {
   const auto = useQualityTier()
   const dark = useHQ(s => s.theme === 'dark')
@@ -53,5 +57,5 @@ export function ReactorCoreSlot({ state, product, progress, reducedMotion = fals
     sceneDuration: 1,
   }
 
-  return <CoreR3F scene={scene} tier={tier} dark={dark} />
+  return <CoreR3F scene={scene} tier={tier} dark={dark} interactive={interactive} centered={centered} />
 }

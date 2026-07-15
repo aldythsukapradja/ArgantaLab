@@ -44,7 +44,8 @@ export function CoreSlot(props: CoreSlotProps) {
   const renderer = props.renderer ?? RENDERERS.core
   if (renderer === 'ws2') {
     return <ReactorCoreSlot state={props.state} product={props.product} progress={props.progress}
-      reducedMotion={props.reducedMotion} quality={props.quality} />
+      reducedMotion={props.reducedMotion} quality={props.quality}
+      interactive={props.interactive} centered={props.centered} />
   }
   // if (renderer === 'media') return <HiggsfieldCore {...props} />
   return <LegacyCore {...props} />
