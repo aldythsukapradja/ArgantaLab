@@ -21,7 +21,7 @@ import {
   type InstrumentId, type StageEffect, type StageDirection, type SceneAction, type ActionTarget,
 } from './contract'
 import { actionFor, coreForAction } from './deriveState'
-import { speakBrowser, TTS_TIERS, type TtsTier, type SpeakHandle } from '../lib/tts/tts'
+import { speakBrowser, synthesize, TTS_TIERS, type TtsTier, type SpeakHandle } from '../lib/tts/tts'
 import { Volume2, Square, GripVertical, GripHorizontal } from 'lucide-react'
 import './cinema.css'
 
@@ -56,6 +56,8 @@ export function CinemaDev() {
   const [copied, setCopied] = useState(false)
   const [tier, setTier] = useState<TtsTier>('experiment')
   const [speaking, setSpeaking] = useState(false)
+  const [ttsBusy, setTtsBusy] = useState(false)
+  const [ttsError, setTtsError] = useState<string | null>(null)
   const speakRef = useRef<SpeakHandle | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const importRef = useRef<HTMLInputElement>(null)
@@ -133,6 +135,26 @@ export function CinemaDev() {
     reader.readAsDataURL(f)
   }
   const onSpeak = async () => {
+    if (tier !== 'experiment') {
+      setTtsError(null)
+      setTtsBusy(true)
+      const res = await synthesize({ text: scene.narration, voice: scene.voice, tier })
+      setTtsBusy(false)
+      if (res.status === 'spoken' && res.audio) {
+        // Same local-override path "Replace" already uses (data URL in the
+        // Cinema store) — a generated clip is a baked clip, same as a manual
+        // upload, and this is what actually persists it across reloads today.
+        const reader = new FileReader()
+        reader.onload = () => {
+          editScene(base.id, { audioSrc: String(reader.result), audioName: `${base.id}-${tier}.mp3` })
+          setTimeout(() => c.reload(true), 30)
+        }
+        reader.readAsDataURL(res.audio)
+      } else {
+        setTtsError(res.error === 'approval_required' ? 'Premium needs approval — not wired yet.' : `${res.provider} unavailable — check the tier's provider secrets are deployed.`)
+      }
+      return
+    }
     if (speaking) { speakRef.current?.cancel(); setSpeaking(false); return }
     setSpeaking(true)
     const h = await speakBrowser(scene.narration, scene.voice)
@@ -301,8 +323,9 @@ export function CinemaDev() {
               <div className="cin-audio">
                 <span className="cin-audio-name">{overrides[base.id]?.audioName ?? base.file}{audioReplaced && <em> · replaced</em>}</span>
                 <div className="cin-audio-btns">
-                  <button className={'cin-btn' + (speaking ? ' primary' : '')} onClick={onSpeak} title="Speak the narration with browser TTS">
-                    {speaking ? <Square size={12} /> : <Volume2 size={12} />} {speaking ? 'Stop' : 'Speak'}
+                  <button className={'cin-btn' + (speaking ? ' primary' : '')} onClick={onSpeak} disabled={ttsBusy}
+                    title={tier === 'experiment' ? 'Speak the narration with browser TTS' : `Generate real audio via ${TTS_TIERS.find(t => t.id === tier)?.provider}`}>
+                    {speaking ? <Square size={12} /> : <Volume2 size={12} />} {ttsBusy ? 'Generating…' : speaking ? 'Stop' : tier === 'experiment' ? 'Speak' : 'Generate'}
                   </button>
                   <button className="cin-btn" onClick={() => fileRef.current?.click()}><Upload size={12} /> Replace</button>
                   <button className="cin-btn" onClick={copyRerecord}>{copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Re-record text'}</button>
@@ -312,12 +335,13 @@ export function CinemaDev() {
                 <div className="cin-tiers">
                   {TTS_TIERS.map(t => (
                     <button key={t.id} className={'cin-tier' + (tier === t.id ? ' on' : '') + (t.wired ? '' : ' soon')}
-                      onClick={() => setTier(t.id)} title={`${t.provider} — ${t.note}`}>
+                      onClick={() => setTier(t.id)} disabled={!t.wired} title={`${t.provider} — ${t.note}`}>
                       {t.label}{!t.wired && <em>soon</em>}
                     </button>
                   ))}
                 </div>
               </div>
+              {ttsError && <div className="cin-warn">{ttsError}</div>}
               {textChanged && !audioReplaced && <div className="cin-warn">Text edited — the clip still plays the original recording. Use Speak to preview, Replace to bake a new clip, or Re-record text for the TTS pipeline.</div>}
             </div>
 

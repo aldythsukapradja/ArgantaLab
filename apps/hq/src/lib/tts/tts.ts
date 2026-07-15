@@ -3,16 +3,23 @@
 //
 //   Tier 1  experiment  — browser Web Speech (SpeechSynthesis). Free, instant,
 //                         speaks aloud for live experimentation. No baked file.
-//   Tier 2  economical  — a cheap hosted TTS API. Returns audio bytes. NOT wired.
+//   Tier 2  economical  — Cloudflare Workers AI (Deepgram Aura-1), via
+//                         media-proxy. Real audio bytes, same account/secrets
+//                         as Media Center's image generation.
 //   Tier 3  premium     — ElevenLabs (via MCP / server). Studio quality.
 //                         Approval-gated. NOT wired.
 //
-// The Cinema editor uses Tier 1 today; Tiers 2–3 return a `deferred` descriptor
+// The Cinema editor uses Tier 1 today; Tier 3 returns a `deferred` descriptor
 // the production pipeline fulfils. Voice map: JM = calm adult male, KF = warm
-// adult female (the only two recorded voices).
+// adult female (the only two recorded voices) — mapped to Aura's named
+// speakers here, same layer that already owns the browser-tier voice mapping.
+
+import { generateSpeechViaGateway } from '../mediaGateway'
 
 export type TtsTier = 'experiment' | 'economical' | 'premium'
 export type TtsVoice = 'JM' | 'KF'
+
+const AURA_SPEAKER: Record<TtsVoice, string> = { JM: 'orion', KF: 'asteria' }
 
 export interface TtsRequest {
   text: string
@@ -34,7 +41,7 @@ export interface TtsResult {
 
 export const TTS_TIERS: { id: TtsTier; label: string; provider: string; wired: boolean; note: string }[] = [
   { id: 'experiment', label: 'Experiment', provider: 'Browser Web Speech', wired: true, note: 'Free · instant preview · no file' },
-  { id: 'economical', label: 'Economical', provider: 'Cheap hosted TTS', wired: false, note: 'Low cost · returns audio · not wired' },
+  { id: 'economical', label: 'Economical', provider: 'Cloudflare Aura-1', wired: true, note: 'Free tier · real audio file' },
   { id: 'premium', label: 'Premium', provider: 'ElevenLabs', wired: false, note: 'Studio quality · approval-gated' },
 ]
 
@@ -90,15 +97,23 @@ export async function synthesize(req: TtsRequest): Promise<TtsResult> {
       return { ...base, status: 'failed', runtime: 'browser', provider: 'Browser Web Speech', error: String(e) }
     }
   }
+  if (req.tier === 'economical') {
+    const g = await generateSpeechViaGateway({ text: req.text, voice: AURA_SPEAKER[req.voice] })
+    if (!g) {
+      // gateway unreachable/unconfigured — honest deferral, never fabricated audio
+      return { ...base, status: 'deferred', runtime: 'api', provider: 'Cloudflare Aura-1', descriptor: { text: req.text, voice: req.voice, tier: req.tier } }
+    }
+    return { ...base, status: 'spoken', runtime: 'api', provider: g.provider, cost: g.costUsd, audio: new Blob([g.bytes as BlobPart], { type: g.mime }) }
+  }
   if (req.tier === 'premium' && !req.approved) {
     return { ...base, status: 'failed', runtime: 'mcp', provider: 'ElevenLabs', error: 'approval_required' }
   }
-  // economical + premium: not wired — hand a descriptor to the production pipeline
+  // premium: not wired yet — hand a descriptor to the production pipeline
   return {
     ...base,
     status: 'deferred',
-    runtime: req.tier === 'premium' ? 'mcp' : 'api',
-    provider: req.tier === 'premium' ? 'ElevenLabs' : 'Cheap hosted TTS',
+    runtime: 'mcp',
+    provider: 'ElevenLabs',
     descriptor: { text: req.text, voice: req.voice, tier: req.tier },
   }
 }

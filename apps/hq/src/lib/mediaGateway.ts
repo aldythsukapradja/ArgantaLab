@@ -57,3 +57,43 @@ export async function generateImageViaGateway(o: { prompt: string; costClass: nu
     return null
   }
 }
+
+export interface GatewayAudio {
+  bytes: Uint8Array
+  mime: string
+  provider: string
+  model: string
+  costClass: number
+  costUsd: number
+  latencyMs: number
+}
+
+/**
+ * Synthesize speech at Sponsored (costClass 1, Cloudflare Aura-1). `voice` is
+ * the raw Aura speaker id (e.g. 'orion'/'asteria') — the JM/KF persona mapping
+ * lives in tts.ts, same layer that already owns the browser-tier voice
+ * mapping. Returns null on any failure so the caller (tts.ts) degrades to its
+ * `deferred` descriptor rather than fabricating audio.
+ */
+export async function generateSpeechViaGateway(o: { text: string; voice: string }): Promise<GatewayAudio | null> {
+  if (!cloudEnabled) return null
+  try {
+    const { data, error } = await supabase.functions.invoke('media-proxy', {
+      body: { kind: 'tts', prompt: o.text, costClass: 1, voice: o.voice },
+    })
+    if (error) { console.warn('[media-proxy]', error.message); return null }
+    if (!data || data.error || !data.audioBase64) { if (data?.error) console.warn('[media-proxy]', data.error); return null }
+    return {
+      bytes: b64ToBytes(data.audioBase64),
+      mime: data.mime || 'audio/mpeg',
+      provider: data.provider || 'unknown',
+      model: data.model || 'unknown',
+      costClass: data.costClass ?? 1,
+      costUsd: data.costUsd ?? 0,
+      latencyMs: data.latencyMs ?? 0,
+    }
+  } catch (e) {
+    console.warn('[media-proxy] threw', (e as Error)?.message)
+    return null
+  }
+}

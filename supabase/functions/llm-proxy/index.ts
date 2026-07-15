@@ -8,16 +8,18 @@
 // Deploy:  supabase functions deploy llm-proxy
 // Secrets: supabase secrets set GEMINI_API_KEY=xxx
 //          supabase secrets set GROQ_API_KEY=xxx
+//          supabase secrets set CF_ACCOUNT_ID=xxx / CF_API_TOKEN=xxx   (Sponsored — same
+//            secrets media-proxy uses; project-level, shared across Edge Functions)
 //          supabase secrets set DEEPSEEK_API_KEY=xxx      (Economy)
 //          supabase secrets set ANTHROPIC_API_KEY=xxx     (Economy Haiku + Frontier Sonnet/Opus)
-// Free keys: aistudio.google.com/apikey · console.groq.com/keys
+// Free keys: aistudio.google.com/apikey · console.groq.com/keys · dash.cloudflare.com (Workers AI)
 //
 // All routing/pricing/translation logic lives in router.js (pure, unit-tested
 // under plain Node — see router.test.js) so this file stays a thin Deno shell.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   pickCandidates, priceUsd, toOpenAICompatBody, fromOpenAICompatResponse,
-  toAnthropicBody, fromAnthropicResponse, isRetryableStatus,
+  toAnthropicBody, fromAnthropicResponse, isRetryableStatus, resolveUrl,
 } from './router.js'
 
 const OPERATOR = 'aldhyt.sukapradja@gmail.com'
@@ -29,7 +31,7 @@ const CORS = {
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 function availableKeys(): Record<string, boolean> {
-  const keys = ['GEMINI_API_KEY', 'GROQ_API_KEY', 'DEEPSEEK_API_KEY', 'ANTHROPIC_API_KEY']
+  const keys = ['GEMINI_API_KEY', 'GROQ_API_KEY', 'DEEPSEEK_API_KEY', 'ANTHROPIC_API_KEY', 'CF_API_TOKEN', 'CF_ACCOUNT_ID']
   return Object.fromEntries(keys.map((k) => [k, !!Deno.env.get(k)]))
 }
 
@@ -49,7 +51,8 @@ async function callCandidate(entry: any, req: { messages: any[]; json?: boolean;
   }
 
   const body = toOpenAICompatBody({ messages: req.messages, model, temperature: req.temperature, seed: req.seed, json: req.json, schema: req.schema, tools: req.tools })
-  const r = await fetch(entry.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(body) })
+  const url = resolveUrl(entry, Deno.env.get('CF_ACCOUNT_ID'))
+  const r = await fetch(url!, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(body) })
   const latencyMs = Math.round(performance.now() - t0)
   if (!r.ok) return { ok: false as const, status: r.status, latencyMs, errText: (await r.text()).slice(0, 300) }
   const d = await r.json()

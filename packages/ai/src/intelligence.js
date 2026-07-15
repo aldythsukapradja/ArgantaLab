@@ -79,6 +79,9 @@ export function createIntelligence(o) {
 
     let minCostClass; // undefined on the first attempt — the task's natural band
     let attempt = 1;
+    let lastAttempt = null; // most recent real attempt's record+reason — carried forward so
+    // "the ladder said try tier N but nothing is registered there" reports what
+    // actually failed, not a generic dead end.
 
     for (;;) {
       const { model: picked, reason } = selectModel(registry, { task, dataClass, runtime: rt, health, benchmarks, minCostClass });
@@ -86,7 +89,10 @@ export function createIntelligence(o) {
       // Defence in depth (ADR-0003): re-verify the governance gate even though
       // selectModel already filtered on it — never trust a single check.
       if (picked && !isRouteAllowed(picked, dataClass)) return degrade(task, dataClass, `governance rejected ${picked.id} for ${dataClass}`);
-      if (!picked) return degrade(task, dataClass, reason);
+      if (!picked) {
+        if (lastAttempt) return { text: null, json: null, provenance: lastAttempt.record, approval: { required: false, reasons: [] }, rejected: true, reason: lastAttempt.record.error };
+        return degrade(task, dataClass, reason);
+      }
 
       const estCostUsd = 0; // pre-call estimate; the gateway (WS-3) returns the actual
       if (missionBudget) {
@@ -96,12 +102,14 @@ export function createIntelligence(o) {
 
       const t0 = performance.now();
       let out;
+      let threw = null;
       try {
         out = schema
           ? await llm.chatJSON({ task, messages, schema, temperature, seed, provider: picked.provider, model: picked.apiModel })
           : await llm.chat({ task, messages, temperature, seed, provider: picked.provider, model: picked.apiModel });
       } catch (e) {
-        return degrade(task, dataClass, `adapter threw: ${e.message}`);
+        threw = e.message;
+        out = { text: null, json: null, provider: 'mock', costUsd: 0, inputTokens: 0, outputTokens: 0 };
       }
       const latencyMs = Math.round(performance.now() - t0);
 
@@ -110,16 +118,22 @@ export function createIntelligence(o) {
       // us REQUESTING a real one, that is a failed route, not a success — a mock
       // reply must never be presented as a genuine Sovereign/Sponsored/Economy/
       // Frontier answer (ADR-0001: "every run shows the true provider and model").
+      // This is a FAILED ATTEMPT, not a dead end: the whole point of the tiered
+      // router is that a tier being unavailable here (WebLLM can't load, a key
+      // is missing, a network call throws) should fall through to the next
+      // tier, exactly like a validation failure does — only an EXHAUSTED ladder
+      // is a genuine rejection.
       const silentlyMocked = out.provider === 'mock' && picked.provider !== 'mock';
-      const adapterFailed = !!out.error || silentlyMocked;
+      const attemptFailed = !!threw || !!out.error || silentlyMocked;
 
-      const validation = !adapterFailed && wantValidation
+      const validation = !attemptFailed && wantValidation
         ? runValidators({
           text: out.text, json: out.json, schema, model: picked, dataClass, sourceData, minLength,
           budget: missionBudget, running, planned: { costClass: picked.costClass, costUsd: out.costUsd ?? estCostUsd, tokens: 0 },
         })
         : null;
       const validationFailed = !!validation && !validation.passed;
+      const attemptError = threw ? `adapter threw: ${threw}` : out.error || (silentlyMocked ? `requested ${picked.provider} but adapter fell back to mock (not available / failed to load)` : null);
 
       const record = runRecord({
         domain: 'llm', task, dataClass,
@@ -129,22 +143,26 @@ export function createIntelligence(o) {
         latencyMs, costUsd: out.costUsd ?? estCostUsd,
         inputTokens: out.inputTokens ?? 0, outputTokens: out.outputTokens ?? 0,
         attempt,
-        status: adapterFailed ? 'failed' : validationFailed ? 'escalated' : 'succeeded',
-        error: out.error || (silentlyMocked ? `requested ${picked.provider} but adapter fell back to mock (not available / failed to load)` : (validationFailed ? validation.notes[0] : null)),
+        status: attemptFailed ? 'failed' : validationFailed ? 'escalated' : 'succeeded',
+        error: attemptError || (validationFailed ? validation.notes[0] : null),
         validationResult: validation || undefined,
       });
 
-      if (adapterFailed) { emit(record); return { text: null, json: null, provenance: record, approval, rejected: true, reason: record.error }; }
-      if (!validationFailed) { emit(record); return { text: out.text, json: out.json, provenance: record, approval, rejected: false }; }
+      if (!attemptFailed && !validationFailed) { emit(record); return { text: out.text, json: out.json, provenance: record, approval, rejected: false }; }
+      lastAttempt = { record };
 
-      // Validation failed — try the next cost class (doc §Escalation Logic).
+      // This attempt failed (adapter error/throw/silent-mock) or validation
+      // failed — try the next cost class (doc §Escalation Logic) before giving
+      // up. Never returns attemptFailed's out.text/out.json (mock/empty) as a
+      // success on the way out.
       const next = nextCostClass(picked.costClass, task);
       if (next == null) {
         // Ladder exhausted at the task's ceiling. High-risk tasks must never
         // silently degrade to an unvalidated answer — flag for human review.
         record.status = policy.requireHumanOnFailure ? 'escalated' : 'failed';
         emit(record);
-        return { text: out.text, json: out.json, provenance: record, approval, rejected: true, reason: `validation failed at every tier: ${validation.notes[0]}`, needsHumanReview: !!policy.requireHumanOnFailure };
+        const reason = attemptFailed ? `failed at every tier: ${attemptError}` : `validation failed at every tier: ${validation.notes[0]}`;
+        return { text: attemptFailed ? null : out.text, json: attemptFailed ? null : out.json, provenance: record, approval, rejected: true, reason, needsHumanReview: !!policy.requireHumanOnFailure };
       }
       emit(record); // this attempt still gets recorded — full observability, not just the winner
       minCostClass = next;

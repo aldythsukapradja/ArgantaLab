@@ -53,11 +53,11 @@ const intelligenceLLM = createLLM({
   webllm: { modelId: DEFAULT_SOVEREIGN_MODEL, onProgress: (p: ModelProgress) => progressListeners.forEach((cb) => cb(p)) },
 })
 
-// gatewayIsTruthful stays false until WS-3 rebuilds llm-proxy to return the real
-// upstream provider/model/cost — until then, non-sovereign registry entries are
-// `preview` (excluded from routing) so we never CLAIM a paid tier we can't yet
-// truthfully meter.
-const intelligenceRegistry = buildRegistry({ webllm: true, edgeProxy: cloudEnabled, gatewayIsTruthful: false })
+// WS-3 shipped a truthful llm-proxy (real upstream provider/model/cost/latency,
+// verified end-to-end incl. the Cloudflare Sponsored addition) — non-sovereign
+// registry entries are `active`, not `preview`, so selectModel can actually
+// route to them.
+const intelligenceRegistry = buildRegistry({ webllm: true, edgeProxy: cloudEnabled, gatewayIsTruthful: true })
 
 // ── WS-5 metering: persist every run to agent_runs (migration_agent_runs.sql) ──
 // The ONE choke point every domain funnels through — intelligence.ask() (via

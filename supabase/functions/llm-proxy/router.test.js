@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   pickCandidates, priceUsd, toOpenAICompatBody, fromOpenAICompatResponse,
-  toAnthropicBody, fromAnthropicResponse, isRetryableStatus, PROVIDER_CATALOG,
+  toAnthropicBody, fromAnthropicResponse, isRetryableStatus, resolveUrl, PROVIDER_CATALOG,
 } from './router.js';
 
 test('no keys set → no candidates (degrades to mock upstream, never throws)', () => {
@@ -73,6 +73,12 @@ test('OpenAI-compat round trip extracts text + real token usage', () => {
   assert.equal(out.outputTokens, 5);
 });
 
+test('OpenAI-compat: a provider that returns already-parsed JSON content (Cloudflare quirk) is normalized back to a string', () => {
+  const out = fromOpenAICompatResponse({ choices: [{ message: { content: { headline: 'Hi', features: ['a'] } } }], usage: {} });
+  assert.equal(typeof out.text, 'string');
+  assert.deepEqual(JSON.parse(out.text), { headline: 'Hi', features: ['a'] });
+});
+
 test('Anthropic system message is lifted out of the array into a top-level field', () => {
   const body = toAnthropicBody({ messages: [{ role: 'system', content: 'be terse' }, { role: 'user', content: 'hi' }], model: 'x' });
   assert.equal(body.system, 'be terse');
@@ -86,6 +92,25 @@ test('Anthropic JSON mode uses the assistant-prefill trick, and the response rea
   const out = fromAnthropicResponse({ content: [{ type: 'text', text: '"a":1}' }], usage: { input_tokens: 3, output_tokens: 2 } }, true);
   assert.equal(out.text, '{"a":1}');
   assert.equal(JSON.parse(out.text).a, 1);
+});
+
+test('Cloudflare needs BOTH its token and account id — a partial key set does not enable it', () => {
+  assert.deepEqual(pickCandidates({ CF_API_TOKEN: 'x' }, { force: 'cloudflare-llama' }), []);
+  const both = pickCandidates({ CF_API_TOKEN: 'x', CF_ACCOUNT_ID: 'acc' }, { force: 'cloudflare-llama' });
+  assert.equal(both[0]?.name, 'cloudflare-llama');
+});
+
+test('Cloudflare joins the Sponsored pool once both keys are set, alongside gemini/groq', () => {
+  const available = { GEMINI_API_KEY: 'x', CF_API_TOKEN: 'y', CF_ACCOUNT_ID: 'acc' };
+  const cands = pickCandidates(available, { costClass: 1 });
+  assert.ok(cands.some((c) => c.name === 'cloudflare-llama'));
+});
+
+test('resolveUrl: static-url entries win outright; account-scoped entries build the URL from the account id', () => {
+  const gemini = PROVIDER_CATALOG.find((e) => e.name === 'gemini');
+  assert.equal(resolveUrl(gemini, 'ignored'), gemini.url);
+  const cf = PROVIDER_CATALOG.find((e) => e.name === 'cloudflare-llama');
+  assert.equal(resolveUrl(cf, 'acc123'), 'https://api.cloudflare.com/client/v4/accounts/acc123/ai/v1/chat/completions');
 });
 
 test('retryable status classification: 429 and 5xx move to the next candidate, 4xx does not', () => {

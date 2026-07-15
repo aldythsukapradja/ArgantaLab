@@ -4,6 +4,7 @@ import {
   MEDIA_CATALOG, pickMediaCandidates, priceUsd,
   toCloudflareImageRequest, fromCloudflareImageResponse,
   toModalImageRequest, fromModalImageResponse, isRetryableStatus,
+  toCloudflareTtsRequest, isBinaryAudioContentType,
 } from './router.js';
 
 const CF = { CF_ACCOUNT_ID: 'acc', CF_API_TOKEN: 'tok' };
@@ -60,6 +61,43 @@ test('Modal request targets the deployed endpoint URL; response extracts base64 
   assert.equal(req.body.prompt, 'a fox');
   assert.equal(fromModalImageResponse({ image_base64: 'PNGDATA' }).imageBase64, 'PNGDATA');
   assert.equal(fromModalImageResponse({}), null);
+});
+
+test('Sponsored TTS picks Cloudflare Aura when its keys are set (same keys as image — nothing new to configure)', () => {
+  const c = pickMediaCandidates(CF, { kind: 'tts', costClass: 1 });
+  assert.equal(c[0].name, 'cloudflare-aura');
+  assert.equal(c[0].model, '@cf/deepgram/aura-1');
+});
+
+test('image and tts candidates never mix — kind filters the pool', () => {
+  const c = pickMediaCandidates({ ...CF, ...MODAL }, { kind: 'tts' });
+  assert.ok(c.every((e) => e.kind === 'tts'));
+});
+
+test('per-character pricing scales with text length; image per-gen pricing ignores units', () => {
+  const aura = MEDIA_CATALOG.find((e) => e.name === 'cloudflare-aura');
+  assert.equal(priceUsd(aura, 1000), 0.015);
+  assert.equal(priceUsd(aura, 0), 0);
+  const modal = MEDIA_CATALOG.find((e) => e.name === 'modal-flux');
+  assert.equal(priceUsd(modal, 999999), priceUsd(modal, 0)); // perGenUsd is flat, not per-unit
+});
+
+test('Cloudflare TTS request builds the account-scoped URL with text/speaker/encoding, defaulting speaker to orion', () => {
+  const req = toCloudflareTtsRequest({ accountId: 'acc', model: '@cf/deepgram/aura-1', text: 'hello' });
+  assert.match(req.url, /accounts\/acc\/ai\/run\/@cf\/deepgram\/aura-1$/);
+  assert.equal(req.body.text, 'hello');
+  assert.equal(req.body.speaker, 'orion');
+  assert.equal(req.body.encoding, 'mp3');
+  const withVoice = toCloudflareTtsRequest({ accountId: 'acc', model: 'x', text: 'hi', speaker: 'asteria' });
+  assert.equal(withVoice.body.speaker, 'asteria');
+});
+
+test('isBinaryAudioContentType: audio/JSON-less content types are binary; an explicit JSON envelope is not', () => {
+  assert.equal(isBinaryAudioContentType('audio/mpeg'), true);
+  assert.equal(isBinaryAudioContentType('application/octet-stream'), true);
+  assert.equal(isBinaryAudioContentType('application/json'), false);
+  assert.equal(isBinaryAudioContentType('application/json; charset=utf-8'), false);
+  assert.equal(isBinaryAudioContentType(null), false);
 });
 
 test('retryable status: 429 and 5xx move to the next candidate, 4xx does not', () => {

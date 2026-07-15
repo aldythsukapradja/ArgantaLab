@@ -34,8 +34,9 @@ Total remaining-to-full-vision: **136 pts** across 9 tabs + [[Spine]] infra.
 ## Foundation & intelligence
 
 - [[Spine]] — shared shell, router, maturity gate, provenance
-- [[Intelligence-Router]] — the Four-Tier LLM brain (**Opus contracts shipped ✅**)
-- [[Compute-Substrate]] — media generation substrate: Cloudflare (Sponsored) + Modal (Economy)
+- [[Intelligence-Router]] — the Four-Tier LLM brain (**Opus contracts shipped ✅**; Cloudflare text tier live ✅)
+- [[Compute-Substrate]] — media generation substrate: Cloudflare (Sponsored, **image + TTS live ✅**) + paid programmable tier
+- [[Persistence-and-Provider-Strategy]] — **persistence-first milestone** + revised provider order (fal.ai primary programmable, Modal cost-triggered, Higgsfield manual studio, Cloudflare-workhorse when async arrives)
 - [[Model-Rack]] — HQ integration + the Model Rack surface (WS-E)
 - [[Workstream-Batch]] — Opus/Sonnet end-to-end split
 - ADRs: [[../adr/0001-four-tier-llm-router|0001]] · [[../adr/0002-media-core-costclass-alignment|0002]] · [[../adr/0003-data-classification-governance|0003]]
@@ -55,7 +56,19 @@ Total remaining-to-full-vision: **136 pts** across 9 tabs + [[Spine]] infra.
 
 ## Global next steps (shared, not per-tab)
 
-- [ ] Supabase durable `media_job` / `media_asset` / `cost_ledger` tables ([[Spine#Persistence]])
-- [ ] `localStorage` persistence for the version drawer
-- [ ] Live premium fulfilment via MCP providers (Higgsfield / PixelLab / ElevenLabs)
-- [ ] Provider price snapshots (estimate vs actual)
+**Milestone: Persistence-First** — the current #1, do before adding models. See
+[[Persistence-and-Provider-Strategy]]. The `agent_runs` ledger + `hq_video_asset`/
+`audio_library`/`music_library` already exist; the gap is that this session's new
+Cloudflare **image** + **TTS** paths are ephemeral (object URL / localStorage) and
+unlinked to the asset tables.
+
+- [ ] Unify a `media_asset` shape; copy every generation's **bytes into a bucket**
+      (never persist only an expiring provider URL); link each asset to its
+      `agent_runs.run_id` (prompt → provider/model → cost → bytes lineage)
+- [ ] Media Center **image** + Cinema **TTS** write through it (wire existing
+      `cinema-audio` `uploadAudio()`); cloud-backed gallery survives refresh
+- [ ] `accepted`/`approved` flag → **cost-per-accepted-asset** in [[Model-Rack]]
+- [ ] **fal.ai** adapter as the primary paid programmable media API (Economy);
+      Modal stays deferred/cost-triggered
+- [ ] (async only, later) `status` lifecycle + webhook reconciliation for fal.ai/Veo video
+- [ ] Live premium fulfilment via MCP providers (Higgsfield manual studio / ElevenLabs)

@@ -4,10 +4,13 @@
 // upstream provider/model/cost/latency it used, tries a bounded cheaper fallback
 // on a retryable failure, never a generic label.
 //
-// v1 = IMAGE. Returns { imageBase64, mime, provider, model, costClass, ... }.
+// v1 = IMAGE + TTS. kind:'image' returns { imageBase64, ... }; kind:'tts'
+// returns { audioBase64, ... } — both share provider/model/costClass/costUsd/
+// latencyMs/fallbackFrom.
 //
 // Deploy:  supabase functions deploy media-proxy
-// Secrets (Sponsored — Cloudflare Workers AI, free tier):
+// Secrets (Sponsored — Cloudflare Workers AI, free tier — covers BOTH image and
+// tts, same account/token, nothing extra to set for TTS):
 //   supabase secrets set CF_ACCOUNT_ID=xxxxx
 //   supabase secrets set CF_API_TOKEN=xxxxx            (token with Workers AI Run)
 //   → dash.cloudflare.com → AI → Workers AI (grab account id + create API token)
@@ -22,7 +25,18 @@ import {
   pickMediaCandidates, priceUsd,
   toCloudflareImageRequest, fromCloudflareImageResponse,
   toModalImageRequest, fromModalImageResponse, isRetryableStatus,
+  toCloudflareTtsRequest, isBinaryAudioContentType,
 } from './router.js'
+
+// Deno's btoa() only accepts a string; for binary audio bytes we build that
+// string in bounded chunks (String.fromCharCode(...bytes) blows the call stack
+// on large arrays — Aura-1 clips can be a few hundred KB).
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  return btoa(binary)
+}
 
 const OPERATOR = 'aldhyt.sukapradja@gmail.com'
 const CORS = {
@@ -37,8 +51,27 @@ function availableKeys(): Record<string, boolean> {
   return Object.fromEntries(keys.map((k) => [k, !!Deno.env.get(k)]))
 }
 
-async function callCandidate(entry: any, prompt: string) {
+async function callCandidate(entry: any, prompt: string, voice?: string) {
   const t0 = performance.now()
+  if (entry.shape === 'cf-tts') {
+    const req = toCloudflareTtsRequest({ accountId: Deno.env.get('CF_ACCOUNT_ID')!, model: entry.model, text: prompt, ...(voice ? { speaker: voice } : {}) })
+    const r = await fetch(req.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('CF_API_TOKEN')}` },
+      body: JSON.stringify(req.body),
+    })
+    const latencyMs = Math.round(performance.now() - t0)
+    if (!r.ok) return { ok: false as const, status: r.status, latencyMs, errText: (await r.text()).slice(0, 300) }
+    const ct = r.headers.get('content-type')
+    if (!isBinaryAudioContentType(ct)) {
+      // Defensive path — Aura-1 normally returns raw bytes, but if Cloudflare
+      // ever wraps this model's output in JSON, don't silently mis-decode it.
+      return { ok: false as const, status: 502, latencyMs, errText: `unexpected content-type from cloudflare-aura: ${ct}` }
+    }
+    const bytes = new Uint8Array(await r.arrayBuffer())
+    if (!bytes.length) return { ok: false as const, status: 502, latencyMs, errText: 'cloudflare returned no audio' }
+    return { ok: true as const, audioBase64: bytesToBase64(bytes), mime: 'audio/mpeg', latencyMs, costUsd: priceUsd(entry, prompt.length) }
+  }
   if (entry.shape === 'cf-image') {
     const req = toCloudflareImageRequest({ accountId: Deno.env.get('CF_ACCOUNT_ID')!, model: entry.model, prompt })
     const r = await fetch(req.url, {
@@ -76,7 +109,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await asUser.auth.getUser()
     if (!user || (user.email || '').toLowerCase() !== OPERATOR) return json({ error: 'not authorized' }, 403)
 
-    const { kind = 'image', prompt, costClass, provider: force } = await req.json()
+    const { kind = 'image', prompt, costClass, provider: force, voice } = await req.json()
     if (!prompt || typeof prompt !== 'string') return json({ error: 'prompt required' }, 400)
 
     const candidates = pickMediaCandidates(availableKeys(), { kind, costClass, force })
@@ -87,10 +120,11 @@ Deno.serve(async (req) => {
     let lastErr = ''
     for (let i = 0; i < candidates.length; i++) {
       const entry = candidates[i]
-      const res = await callCandidate(entry, prompt)
+      const res = await callCandidate(entry, prompt, voice)
       if (res.ok) {
         return json({
-          imageBase64: res.imageBase64, mime: res.mime,
+          ...(kind === 'tts' ? { audioBase64: (res as any).audioBase64 } : { imageBase64: (res as any).imageBase64 }),
+          mime: res.mime,
           provider: entry.name, model: entry.model, costClass: entry.costClass,
           costUsd: res.costUsd, latencyMs: res.latencyMs,
           fallbackFrom: i > 0 ? candidates[0].costClass : null,

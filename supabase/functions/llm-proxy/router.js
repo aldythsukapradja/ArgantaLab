@@ -14,6 +14,13 @@ export const PROVIDER_CATALOG = [
   // Tier 1 — Sponsored (free quotas)
   { name: 'gemini', costClass: 1, shape: 'openai-compat', envKey: 'GEMINI_API_KEY', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.0-flash', pricing: null },
   { name: 'groq', costClass: 1, shape: 'openai-compat', envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', pricing: null },
+  // Cloudflare Workers AI — account-scoped URL (no static `url`; resolveUrl()
+  // builds it from CF_ACCOUNT_ID at call time). Same secrets media-proxy
+  // already uses (project-level, shared across Edge Functions). Llama 3.1 8B
+  // supports OpenAI-compat JSON Mode incl. json_schema — verified against
+  // Cloudflare's docs, not assumed, since this router only ever claims real
+  // capabilities.
+  { name: 'cloudflare-llama', costClass: 1, shape: 'openai-compat', envKey: 'CF_API_TOKEN', accountEnvKey: 'CF_ACCOUNT_ID', url: null, model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', pricing: null },
   // Tier 2 — Economy (cheap paid)
   { name: 'deepseek', costClass: 2, shape: 'openai-compat', envKey: 'DEEPSEEK_API_KEY', url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', pricing: { inputUsdPerMillion: 0.14, outputUsdPerMillion: 0.28 } },
   { name: 'anthropic-haiku', costClass: 2, shape: 'anthropic', envKey: 'ANTHROPIC_API_KEY', url: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5', pricing: { inputUsdPerMillion: 1, outputUsdPerMillion: 5 } },
@@ -23,7 +30,15 @@ export const PROVIDER_CATALOG = [
 ];
 
 /** @param {object} entry @param {Record<string,unknown>} available  env-key presence map */
-export const isAvailable = (entry, available) => !!available[entry.envKey];
+export const isAvailable = (entry, available) => !!available[entry.envKey] && (!entry.accountEnvKey || !!available[entry.accountEnvKey]);
+
+/** Resolve the real fetch URL for an entry. Static `url` wins; account-scoped
+ * entries (Cloudflare) build the URL from their account id at call time. */
+export function resolveUrl(entry, accountId) {
+  if (entry.url) return entry.url;
+  if (entry.accountEnvKey) return `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1/chat/completions`;
+  return null;
+}
 
 /**
  * Candidate providers for this request, cheapest first.
@@ -71,7 +86,14 @@ export function toOpenAICompatBody({ messages, model, temperature = 0.6, seed, j
 export function fromOpenAICompatResponse(d) {
   const msg = d.choices?.[0]?.message || {};
   const toolCalls = (msg.tool_calls || []).map((tc) => { try { return { id: tc.id, name: tc.function?.name, args: JSON.parse(tc.function?.arguments || '{}') }; } catch { return { id: tc.id, name: tc.function?.name, args: {} }; } });
-  return { text: msg.content || '', toolCalls, inputTokens: d.usage?.prompt_tokens ?? 0, outputTokens: d.usage?.completion_tokens ?? 0 };
+  // Most OpenAI-compat providers (Gemini, Groq, DeepSeek) echo `content` as a
+  // JSON-formatted STRING even in JSON mode, per the OpenAI spec. Cloudflare's
+  // Workers AI JSON Mode instead returns an already-parsed object — normalize
+  // it back to a string here so every downstream consumer (extractJSON, etc.)
+  // can treat `text` uniformly regardless of provider quirks.
+  const content = msg.content ?? '';
+  const text = typeof content === 'string' ? content : JSON.stringify(content);
+  return { text, toolCalls, inputTokens: d.usage?.prompt_tokens ?? 0, outputTokens: d.usage?.completion_tokens ?? 0 };
 }
 
 // ── Anthropic Messages API shape (structurally different from OpenAI) ──────

@@ -19,6 +19,13 @@ const NON_SOVEREIGN_CATALOG = [
   // (gemini-2.0-flash) — do not drift these apart without updating both.
   modelSpec({ id: 'gemini-flash-free', name: 'Gemini Flash (free)', provider: 'edgeProxy', apiModel: 'gemini-2.0-flash', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 1000000, priority: 30 }).spec,
   modelSpec({ id: 'groq-llama-free', name: 'Groq Llama (free)', provider: 'edgeProxy', apiModel: 'llama-3.3-70b-versatile', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 32 }).spec,
+  // Cloudflare Workers AI — same free-quota Sponsored tier. jsonSchema:true is
+  // real (verified against Cloudflare's JSON Mode supported-model list, not
+  // assumed — llama-3.3-70b-instruct-fp8-fast is on it); tools:false because
+  // Workers AI's OpenAI-compat endpoint doesn't support tool-call translation
+  // here yet (mirrors the gateway's own `needsTools` exclusion for
+  // anthropic-shape entries).
+  modelSpec({ id: 'cloudflare-llama-free', name: 'Cloudflare Llama (free)', provider: 'edgeProxy', apiModel: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: false, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 24000, priority: 31 }).spec,
   // Tier 2 — Economy (cheap paid)
   modelSpec({ id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'edgeProxy', apiModel: 'deepseek-chat', costClass: 2, execution: 'external-api', capabilities: { chat: true, json: true, reasoning: true, code: true }, dataClasses: ['public', 'internal'], contextWindow: 64000, pricing: { inputUsdPerMillion: 0.14, outputUsdPerMillion: 0.28 }, priority: 40 }).spec,
   modelSpec({ id: 'claude-haiku', name: 'Claude Haiku', provider: 'edgeProxy', apiModel: 'claude-haiku-4-5', costClass: 2, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true, code: true }, dataClasses: ['public', 'internal'], contextWindow: 200000, pricing: { inputUsdPerMillion: 1, outputUsdPerMillion: 5 }, priority: 42 }).spec,

@@ -32,6 +32,45 @@ test('WS-4 escalation: a validation failure at Tier 0 retries at the next tier a
   assert.ok(runs[1].requestedCostClass > runs[0].requestedCostClass);
 });
 
+test('a hard adapter failure at Sovereign (not just a validation failure) escalates to Sponsored instead of rejecting outright', async () => {
+  // Reproduces the exact real-world failure this fix addresses: WebLLM's
+  // module fails to load in the browser, the adapter silently falls back to
+  // its own mock provider — but Sponsored (Gemini/Groq/Cloudflare) is right
+  // there and perfectly capable. The old behavior hard-rejected on ANY adapter
+  // failure without ever trying the next tier; that defeated the whole point
+  // of having redundant tiers.
+  const registry = buildRegistry({ webllm: true, edgeProxy: true, gatewayIsTruthful: true });
+  const llm = {
+    chat: async (o) => o.provider === 'webllm'
+      ? { text: null, provider: 'mock', model: 'mock', error: undefined } // silently-mocked, not thrown
+      : { text: 'a real Sponsored-tier answer', provider: 'edgeProxy', model: o.model, tier: 1 },
+  };
+  const intel = createIntelligence({ llm, registry, runtime: { webgpu: true, vramMB: null } });
+  const res = await intel.ask('copy', { dataClass: 'public', messages: [] }); // 'copy': def 0, max 2, no validation required
+  assert.equal(res.rejected, false);
+  assert.equal(res.text, 'a real Sponsored-tier answer');
+  const runs = intel.getRuns();
+  assert.equal(runs.length, 2); // the failed Sovereign attempt AND the successful Sponsored one
+  assert.equal(runs[0].status, 'failed');
+  assert.match(runs[0].error, /fell back to mock/);
+  assert.equal(runs[1].status, 'succeeded');
+});
+
+test('a genuinely thrown adapter exception (network error, etc) also escalates rather than hard-rejecting', async () => {
+  const registry = buildRegistry({ webllm: true, edgeProxy: true, gatewayIsTruthful: true });
+  const llm = {
+    chat: async (o) => {
+      if (o.provider === 'webllm') throw new Error('WebGPU device lost');
+      return { text: 'recovered at the next tier', provider: 'edgeProxy', model: o.model, tier: 1 };
+    },
+  };
+  const intel = createIntelligence({ llm, registry, runtime: { webgpu: true, vramMB: null } });
+  const res = await intel.ask('copy', { dataClass: 'public', messages: [] });
+  assert.equal(res.rejected, false);
+  assert.equal(res.text, 'recovered at the next tier');
+  assert.match(intel.getRuns()[0].error, /adapter threw: WebGPU device lost/);
+});
+
 test('WS-4 escalation: exhausting the ladder with requireHumanOnFailure marks the run for human review, not a silent bad answer', async () => {
   // models exist at every tier (0..3), but every provider answers empty text
   // (always fails validateQuality) — genuine ladder exhaustion, not "no model".

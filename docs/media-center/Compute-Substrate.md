@@ -20,27 +20,34 @@ run them without owning GPUs, and they slot straight onto the existing
 | costClass | Text (built) | **Media substrate** | Economics |
 |---|---|---|---|
 | 0 Sovereign | browser WebLLM | procedural / on-device (canvas, `@arganta/audio`) | $0, private |
-| 1 **Sponsored** | Gemini/Groq free | **Cloudflare Workers AI** — edge, curated open models (FLUX-1-schnell, MeloTTS, Whisper) | free within allocation |
-| 2 **Economy** | DeepSeek/Haiku | **Modal** — serverless GPU, any open container (FLUX-dev, MusicGen, AnimateDiff, XTTS) | cents/gen, scale-to-zero, no lock-in |
-| 3 Frontier | Claude/Opus | closed premium (Higgsfield, Suno, ElevenLabs) | dollars, best quality |
+| 1 **Sponsored** | Gemini/Groq/**CF** free ✅ | **Cloudflare Workers AI** — image (FLUX-1-schnell ✅), TTS (Aura-1 ✅) | free within allocation |
+| 2 **Economy** | DeepSeek/Haiku | **fal.ai** — per-gen, broad catalog, zero ops (Modal deferred/cost-triggered) | cents/gen |
+| 3 Frontier | Claude/Opus | closed premium (Veo/Suno/ElevenLabs); **Higgsfield = manual studio** | dollars, best quality |
 
-## Per modality
+## Per modality (✅ = live this session)
 
-- **Image:** procedural → CF FLUX-schnell (free) → Modal FLUX-dev → premium
-- **Voice:** formant synth → CF MeloTTS (free) → Modal XTTS → ElevenLabs
-- **Music:** `@arganta/audio` synth → *(CF thin)* → Modal MusicGen / Stable Audio → Suno
-- **Video:** canvas → *(no free tier)* → Modal AnimateDiff / CogVideoX → Higgsfield / Runway
+- **Image:** procedural → **CF FLUX-schnell ✅** → fal.ai (FLUX-dev etc.) → premium
+- **Voice:** formant synth → **CF Aura-1 ✅** → fal.ai / XTTS → ElevenLabs
+- **Music:** `@arganta/audio` synth → *(no CF music model)* → fal.ai MusicGen / Stable Audio → Suno
+- **Video:** canvas → *(no free tier)* → fal.ai (async, webhook) → Veo / Higgsfield studio
 
-## Economy slot — candidates (Modal is the chosen v1)
+> Note: CF's catalog has **no music-generation and no video model** — image + TTS
+> are its full media surface, both now live. Music/video jump straight to fal.ai.
+
+## Economy slot — REVISED: fal.ai is the primary programmable API
+
+Superseded by [[Persistence-and-Provider-Strategy]] (2026-07-15). Earlier this
+note picked Modal as v1 Economy; the strategy review flips that.
 
 | Option | Trade | Verdict |
 |---|---|---|
-| **Modal** (chosen) | own the container, cheapest at scale; needs `modal deploy` | v1 Economy |
-| **fal.ai** | fastest inference + zero ops, per-gen pricing | best drop-in alt; faster to first demo |
-| **Replicate** | broadest catalog; slower cold starts | for experimental models |
+| **fal.ai** (chosen) | fastest inference + zero ops, per-gen pricing, webhook-friendly, broad catalog | **v1 paid programmable media API** |
+| **Modal** | own the container, cheapest at scale; needs `modal deploy` | **deferred — cost-triggered** (introduce only when a fal.ai workload's spend proves self-hosting; image endpoint written but undeployed) |
+| **Replicate** | broadest catalog; slower cold starts | experimental models, later |
+| **Higgsfield** | cinematic camera control, ads/trailers | **manual creative studio, not a backend** — outputs become reusable recipes |
 
-The gateway is provider-neutral, so fal.ai/Replicate are drop-in later — same
-router, different upstream entry.
+The gateway is provider-neutral, so fal.ai/Replicate/Modal are interchangeable
+upstream entries — same router, different adapter.
 
 ## Architecture — reuses everything from WS-3
 
@@ -62,12 +69,15 @@ provider/model/cost/latency, never a generic label). Same **governance**
 
 ## Build plan → [[Workstream-Batch]] "Media Substrate (M)"
 
-| WS | Delivers | Keys needed? |
-|----|----------|--------------|
-| **M1** | `media-proxy/router.js` (pure: pick provider by kind+costClass, per-provider request/response translation, pricing) + node tests | no — build + verify now |
-| **M2** | `media-proxy/index.ts` (Deno: operator-gated, secrets, fetch) — CF FLUX-schnell first | no to build; CF token to run |
-| **M3** | app `mediaGateway.ts` + Media Center Image segment: stage 1 → CF, stage 2 → Modal (tier pill already exists); base64→blob; honest fallback; `agent_runs` log | — |
-| **M4** | `modal/media_image.py` (FLUX/SDXL web endpoint) — **founder runs `modal deploy`** | Modal account |
+| WS | Delivers | Status |
+|----|----------|--------|
+| **M1** | `media-proxy/router.js` (pure: pick provider by kind+costClass, translation, pricing) + node tests | ✅ done (15 tests) |
+| **M2** | `media-proxy/index.ts` (Deno: operator-gated, secrets, fetch) — CF FLUX-schnell | ✅ deployed |
+| **M3** | app `mediaGateway.ts` + Media Center Image: stage 1 → CF; base64→blob; honest fallback; `agent_runs` log | ✅ **live-verified** |
+| **M4** | `modal/media_image.py` (FLUX/SDXL web endpoint) | ✅ written; **deferred** (see strategy — fal.ai leads) |
+| **M5** | **TTS**: CF Aura-1 in `media-proxy` (`kind:'tts'`) + `generateSpeechViaGateway` + Cinema economical tier | ✅ **live-verified** |
+| **M6** | **Persistence-first** — bytes→bucket, `run_id`↔`asset_id` lineage, cloud gallery | ⬜ next (see [[Persistence-and-Provider-Strategy]]) |
+| **M7** | **fal.ai** adapter (Economy programmable) | ⬜ next |
 
 ## What the founder provides
 - **Cloudflare (Sponsored):** account ID + Workers-AI API token →
