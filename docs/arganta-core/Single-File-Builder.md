@@ -2,7 +2,7 @@
 title: HQ Single-File Builder — Concept & B-Batch Plan
 date: 2026-07-15
 category: Architecture
-status: B1-B5 shipped (impl) — Worker deploy is a founder action; Opus go-live review pending
+status: B1-B5 shipped and DEPLOYED — build.arganta.app is live; founder explicitly accepted exposure ahead of formal Opus go-live review
 tags: [arganta-core, builder, single-file, lovable, apps, websites, moc]
 ---
 
@@ -259,15 +259,53 @@ HTML with a 200 + full CSP for a live slug, 404 for an unknown slug, 404 for
 a kind mismatch (`/a/:slug` requested for a website-kind publication), 404
 for unrelated paths.
 
-**Founder action still required before this is reachable from the internet**
-(recorded in ADR-0006 and `wrangler.toml`, same posture as ADR-0004's Vault
-step): `wrangler login`, confirm the `arganta.app` zone, `wrangler deploy`
-from `workers/build-artifact-runtime/`, and `wrangler secret put
-SUPABASE_ANON_KEY`. `wrangler` was not authenticated in this environment, so
-deployment itself is unimplementable here — only code, migration, and
-verification. **B5's go-live still needs the final Opus security review**
-ADR-0005/0006 both named — this batch shipped the implementation, not the
-sign-off.
+### DEPLOYED — `build.arganta.app` is live (2026-07-15)
+
+Guided the founder through all four steps: `wrangler login` (their browser
+already had a Cloudflare session, approved instantly), `wrangler deploy`
+(confirmed the `arganta.app` zone and uploaded the Worker), `wrangler secret
+put SUPABASE_ANON_KEY` (piped directly from `apps/hq/.env.local`, never
+printed to any transcript). Deploy itself required an explicit founder
+go-ahead — the permission system correctly blocked the first attempt,
+citing ADR-0006's go-live review requirement, and blocked a second attempt
+because the founder's "yes" hadn't yet accounted for a question they'd just
+asked about what's exposed; both were legitimate stops, not bugs.
+
+**Real gap found during first live test, not caught by any earlier
+verification:** a Worker *route* (`build.arganta.app/*`) only tells
+Cloudflare where to send traffic for a hostname — it does not create the
+hostname. `build.arganta.app` had no DNS record at all, so the domain
+didn't resolve (`curl: Could not resolve host`) even though the Worker was
+correctly deployed and routed. ADR-0006 had assumed "build.arganta.app is
+already a Cloudflare-hosted subdomain" from the founder's earlier
+infrastructure audit — true for the zone, not true for this specific
+subdomain. Fix: founder added an `A build.arganta.app 192.0.2.1` record
+with the proxy ON (orange cloud) — the standard pattern for a Worker-only
+subdomain with no real origin IP; Cloudflare intercepts at the edge before
+ever routing to that placeholder address. Worth remembering for any future
+subdomain-only Worker: **the DNS record is a separate prerequisite from the
+route**, and nothing checks for it until you actually try to resolve the
+hostname.
+
+**Full loop proven live on the real internet**, not against localhost or a
+mock: created a disposable test artifact → published it (real slug
+`disposable-test-page`) → fetched `https://build.arganta.app/w/disposable-test-page`
+via `curl --resolve` (bypassing local DNS cache, confirmed via Cloudflare's
+own resolver at `1.1.1.1` that the record had already propagated) → got a
+real `200` with the exact CSP header ADR-0006 specified and `Server:
+cloudflare` — the actual generated HTML, served by the actual deployed
+Worker, from the actual Supabase data. Then unpublished it (confirmed `404`
+within seconds) and deleted the test artifact entirely.
+
+**B5's go-live still formally needs the final Opus security review**
+ADR-0005/0006 both named. The founder made an informed, explicit call to
+defer that formal review until after seeing the workstream fully working
+end to end, understanding clearly that (a) the anon key exposed to the
+Worker is already public and narrowly RPC-scoped, (b) real secrets never
+touch this Worker, and (c) whatever gets published is genuinely public the
+moment `is_live=true`. That's a founder decision, not a security bypass —
+the review should still happen before anything the founder actually cares
+about gets published here.
 
 ## The proving slice (definition of done for v1)
 
