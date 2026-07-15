@@ -4,6 +4,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadMessages, sendMessage, type CoreMessage } from '../../lib/core'
 import { UserMessage, AssistantMessage } from './Message'
+import { CoreOrb } from './CoreOrb'
+
+const ERROR_STOP_REASONS = new Set(['error', 'no-model'])
 
 const THINKING_LONG_MS = 8000
 
@@ -19,7 +22,7 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [thinkingLong, setThinkingLong] = useState(false)
-  const [lastProvenance, setLastProvenance] = useState<{ provider: string | null; model: string | null } | null>(null)
+  const [lastProvenance, setLastProvenance] = useState<{ provider: string | null; model: string | null; errored: boolean } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -57,7 +60,7 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
     if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current)
     setThinkingLong(false)
     setSending(false)
-    setLastProvenance({ provider: result.provider, model: result.model })
+    setLastProvenance({ provider: result.provider, model: result.model, errored: ERROR_STOP_REASONS.has(result.stopReason) })
 
     const fresh = await loadMessages(tid)
     setMessages(fresh)
@@ -80,7 +83,7 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
       <div className="core-convo-scroll" ref={scrollRef}>
         {isEmpty ? (
           <div className="core-convo-empty">
-            <div className="core-hero-orb-slot" aria-hidden="true" />
+            <CoreOrb state="idle" size="hero" />
             <p className="core-empty-copy">
               I'm Arganta Core. I can make images, voice, websites, decks, brand kits and charts — for real, on your own infrastructure.
             </p>
@@ -97,6 +100,7 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
                     provider={isLast ? lastProvenance?.provider : undefined}
                     model={isLast ? lastProvenance?.model : undefined}
                     streaming={isLast}
+                    errored={isLast ? lastProvenance?.errored : undefined}
                   />
                 )
               }
@@ -104,7 +108,7 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
             })}
             {sending && (
               <div className="core-msg core-msg-assistant">
-                <div className="core-avatar" aria-hidden="true" />
+                <CoreOrb state={thinkingLong ? 'thinking-long' : 'thinking'} size="avatar" />
                 <div className="core-msg-body">
                   <div className="core-thinking mono">
                     {thinkingLong ? 'Still working — the free tier is slow, not stuck.' : 'thinking…'}

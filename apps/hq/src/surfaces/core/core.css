@@ -88,7 +88,6 @@
   max-width: 760px; margin: 8vh auto 0; display: flex; flex-direction: column;
   align-items: center; text-align: center; gap: 18px;
 }
-.core-hero-orb-slot { width: 96px; height: 96px; border-radius: 50%; background: var(--stage); }
 .core-empty-copy { font-size: 15px; color: var(--tx2); max-width: 42ch; line-height: 1.55; }
 
 /* ---------- composer ---------- */
@@ -126,10 +125,7 @@
   animation: core-msg-in var(--dur-med) var(--ease-out);
 }
 .core-msg-assistant { align-items: flex-start; gap: 12px; animation: core-msg-in var(--dur-med) var(--ease-out); }
-.core-avatar {
-  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; margin-top: 2px;
-  background: var(--stage);
-}
+.core-msg-assistant .core-orb-avatar { margin-top: 2px; }
 .core-msg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .core-text { font-size: 14.5px; line-height: 1.6; color: var(--tx); white-space: pre-wrap; word-break: break-word; cursor: default; }
 .core-thinking { font-size: 12.5px; color: var(--tx3); }
@@ -192,6 +188,75 @@
 }
 .core-fs-sheet .core-rail { width: 100%; height: 100%; }
 
+/* ---------- CoreOrb (Step 4) ---------- */
+.core-orb-hero {
+  width: 96px; height: 96px; border-radius: 50%; overflow: hidden;
+  background: var(--stage);
+}
+.core-orb-avatar {
+  position: relative; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: var(--stage);
+  animation: core-orb-breathe var(--breathe) ease-in-out infinite;
+}
+.core-orb-ring {
+  position: absolute; inset: -2px; border-radius: 50%; border: 1.5px solid var(--acc);
+  opacity: .35; transition: border-color var(--dur-med) var(--ease), opacity var(--dur-med) var(--ease);
+}
+.core-orb-satellite {
+  position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--acc);
+  top: 50%; left: 50%; margin: -2px 0 0 -2px;
+  animation: core-orb-orbit 1.6s linear infinite;
+}
+
+/* idle — slow gentle breathe (base animation), quiet ring */
+.core-orb-avatar[data-orb-state="idle"] .core-orb-ring { opacity: .18; }
+
+/* listening — steady accent ring, faster pulse */
+.core-orb-avatar[data-orb-state="listening"] { animation-duration: calc(var(--breathe) / 2.2); }
+.core-orb-avatar[data-orb-state="listening"] .core-orb-ring { opacity: .7; border-color: var(--acc); }
+
+/* thinking — 2x breathe rate, ring at 60% opacity */
+.core-orb-avatar[data-orb-state="thinking"] { animation-duration: calc(var(--breathe) / 2); }
+.core-orb-avatar[data-orb-state="thinking"] .core-orb-ring { opacity: .6; }
+
+/* thinking-long — same breathe + orbiting satellite dot */
+.core-orb-avatar[data-orb-state="thinking-long"] { animation-duration: calc(var(--breathe) / 2); }
+.core-orb-avatar[data-orb-state="thinking-long"] .core-orb-ring { opacity: .6; }
+
+/* tool-running — ring tinted per category */
+.core-orb-avatar[data-orb-state="tool-running"] .core-orb-ring { opacity: .8; border-width: 2px; }
+.core-orb-avatar[data-tool-category="media"] .core-orb-ring { border-color: var(--acc); }
+.core-orb-avatar[data-tool-category="data"] .core-orb-ring { border-color: var(--tl); }
+.core-orb-avatar[data-tool-category="office"] .core-orb-ring { border-color: var(--mag, var(--acc)); }
+
+/* speaking — crisp full ring, fast pulse */
+.core-orb-avatar[data-orb-state="speaking"] { animation-duration: calc(var(--breathe) / 3); }
+.core-orb-avatar[data-orb-state="speaking"] .core-orb-ring { opacity: 1; border-color: var(--acc); }
+
+/* blocked — warn ring, breathing stops (deliberate stillness) */
+.core-orb-avatar[data-orb-state="blocked"] { animation: none; }
+.core-orb-avatar[data-orb-state="blocked"] .core-orb-ring { opacity: 1; border-color: var(--warn); }
+
+/* error — bad ring, single fade then rests */
+.core-orb-avatar[data-orb-state="error"] { animation: core-orb-error-fade var(--dur-slow) var(--ease-out) forwards; }
+.core-orb-avatar[data-orb-state="error"] .core-orb-ring { opacity: 1; border-color: var(--bad); }
+
+@keyframes core-orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+@keyframes core-orb-orbit {
+  from { transform: rotate(0deg) translateX(15px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(15px) rotate(-360deg); }
+}
+@keyframes core-orb-error-fade {
+  0% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* reduced motion — every orb state holds a static frame, per C4a §1/§2 */
 @media (prefers-reduced-motion: reduce) {
   .core * { transition: none !important; animation: none !important; }
+  .core-orb-static { animation: none !important; }
+  .core-orb-static .core-orb-satellite { display: none; }
 }

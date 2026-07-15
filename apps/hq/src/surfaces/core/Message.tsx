@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CoreMessage } from '../../lib/core'
 import { asBlocks, MEDIA_BLOCK_KINDS, type CoreBlock } from './blocks'
+import { CoreOrb } from './CoreOrb'
 
 export function UserMessage({ text }: { text: string }) {
   return (
@@ -13,11 +14,13 @@ export function UserMessage({ text }: { text: string }) {
   )
 }
 
-export function AssistantMessage({ message, provider, model, streaming }: {
+export function AssistantMessage({ message, provider, model, streaming, errored }: {
   message: CoreMessage
   provider?: string | null
   model?: string | null
   streaming?: boolean
+  /** True when this turn's stopReason was an honest failure (error/no-model). */
+  errored?: boolean
 }) {
   const blocks = asBlocks(message.blocks || [])
   const trail = blocks.filter(b => b.kind === 'tool-trail')
@@ -33,9 +36,11 @@ export function AssistantMessage({ message, provider, model, streaming }: {
   const modelText = model ?? provFallback?.model ?? null
   const costUsd = trail.reduce((s, t: any) => s + (t.costUsd || 0), 0)
 
+  const orbState = errored ? 'error' : streaming ? 'speaking' : 'idle'
+
   return (
     <div className="core-msg core-msg-assistant">
-      <div className="core-avatar" aria-hidden="true" />
+      <CoreOrb state={orbState} size="avatar" />
       <div className="core-msg-body">
         {trail.map((t, i) => <ToolTrailLine key={i} block={t as any} />)}
         {mediaBlocks.map((b, i) => <ArtifactPlaceholder key={i} block={b} />)}
