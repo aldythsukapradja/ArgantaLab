@@ -12,17 +12,27 @@
 // truthfully $0; DeepSeek/Anthropic carry real per-token pricing.
 export const PROVIDER_CATALOG = [
   // Tier 1 — Sponsored (free quotas)
-  { name: 'gemini', costClass: 1, shape: 'openai-compat', envKey: 'GEMINI_API_KEY', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.0-flash', pricing: null },
-  { name: 'groq', costClass: 1, shape: 'openai-compat', envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', pricing: null },
+  // toolsCapable is an honest per-provider claim, not a proxy — see the
+  // needsTools filter below. Gemini/Groq's OpenAI-compat endpoints do real
+  // function-calling; Cloudflare's free Llama accepts a `tools` body without
+  // erroring but is NOT reliable at it (confirmed live: it invents fake tool
+  // names — 'greeting_response', 'generate_text' — that don't exist in the
+  // request's own tools array, burning every step of the caller's loop
+  // instead of either calling a real tool or answering in plain text). This
+  // matches @arganta/ai/registry.js's client-side capabilities.tools:false
+  // for cloudflare-llama-free — this flag is the server-side half of that
+  // same honest claim, not a new opinion.
+  { name: 'gemini', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GEMINI_API_KEY', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.0-flash', pricing: null },
+  { name: 'groq', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', pricing: null },
   // Cloudflare Workers AI — account-scoped URL (no static `url`; resolveUrl()
   // builds it from CF_ACCOUNT_ID at call time). Same secrets media-proxy
   // already uses (project-level, shared across Edge Functions). Llama 3.1 8B
   // supports OpenAI-compat JSON Mode incl. json_schema — verified against
   // Cloudflare's docs, not assumed, since this router only ever claims real
-  // capabilities.
-  { name: 'cloudflare-llama', costClass: 1, shape: 'openai-compat', envKey: 'CF_API_TOKEN', accountEnvKey: 'CF_ACCOUNT_ID', url: null, model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', pricing: null },
+  // capabilities. toolsCapable is deliberately absent/false (see above).
+  { name: 'cloudflare-llama', costClass: 1, shape: 'openai-compat', toolsCapable: false, envKey: 'CF_API_TOKEN', accountEnvKey: 'CF_ACCOUNT_ID', url: null, model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', pricing: null },
   // Tier 2 — Economy (cheap paid)
-  { name: 'deepseek', costClass: 2, shape: 'openai-compat', envKey: 'DEEPSEEK_API_KEY', url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', pricing: { inputUsdPerMillion: 0.14, outputUsdPerMillion: 0.28 } },
+  { name: 'deepseek', costClass: 2, shape: 'openai-compat', toolsCapable: false, envKey: 'DEEPSEEK_API_KEY', url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', pricing: { inputUsdPerMillion: 0.14, outputUsdPerMillion: 0.28 } },
   { name: 'anthropic-haiku', costClass: 2, shape: 'anthropic', envKey: 'ANTHROPIC_API_KEY', url: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5', pricing: { inputUsdPerMillion: 1, outputUsdPerMillion: 5 } },
   // Tier 3 — Frontier (premium reasoning)
   { name: 'anthropic-sonnet', costClass: 3, shape: 'anthropic', envKey: 'ANTHROPIC_API_KEY', url: 'https://api.anthropic.com/v1/messages', model: 'claude-sonnet-5', pricing: { inputUsdPerMillion: 3, outputUsdPerMillion: 15 } },
@@ -52,8 +62,15 @@ export function resolveUrl(entry, accountId) {
  *     the exact model it asked for (recorded truthfully either way).
  *   - `costClass` narrows to one tier; `needsTools` excludes anthropic-shape
  *     entries (tool-call translation isn't implemented yet — see
- *     fromAnthropicResponse). Never returns more than 2 (bounded in-request
- *     fallback — no persistent health/circuit-breaker state yet).
+ *     fromAnthropicResponse) AND any entry not marked `toolsCapable` (an
+ *     honest per-provider claim, not a shape proxy — Cloudflare's free Llama
+ *     accepts a `tools` body without erroring but hallucinates fake tool
+ *     names instead of calling a real one or answering in text; excluding it
+ *     from tool-requiring requests means an unconfigured Gemini/Groq key
+ *     correctly falls through to "no usable key" rather than a model that
+ *     technically responds but can't be trusted with tools). Never returns
+ *     more than 2 (bounded in-request fallback — no persistent health/
+ *     circuit-breaker state yet).
  * @param {Record<string,unknown>} available
  * @param {{force?:string, model?:string, costClass?:number, needsTools?:boolean}} [opts]
  */
@@ -67,7 +84,7 @@ export function pickCandidates(available, opts = {}) {
   // and Claude Haiku/Sonnet/Opus would silently receive a tools-array it can't
   // honor — the model then hallucinates fake tool-call-shaped text instead of
   // erroring, a truthfulness violation this router exists to prevent.
-  if (opts.needsTools) pool = pool.filter((e) => e.shape !== 'anthropic');
+  if (opts.needsTools) pool = pool.filter((e) => e.shape !== 'anthropic' && e.toolsCapable);
   if (opts.force) {
     const forced = pool.find((e) => e.name === opts.force);
     return forced ? [forced] : [];

@@ -64,6 +64,30 @@ test('needsTools excludes anthropic-shape candidates even for an EXACT model/for
   assert.equal(pickCandidates(available, { force: 'anthropic-haiku' })[0].name, 'anthropic-haiku');
 });
 
+test('needsTools excludes cloudflare-llama (live-confirmed unreliable at real tool-calling, not just anthropic-shaped): only CF configured + tools required -> empty, degrades honestly to "no usable key" rather than a model that hallucinates fake tool names', () => {
+  const available = { CF_API_TOKEN: 'x', CF_ACCOUNT_ID: 'y' };
+  assert.deepEqual(pickCandidates(available, { needsTools: true }), []);
+  // without needsTools, cloudflare-llama is still a perfectly valid plain-chat candidate
+  assert.equal(pickCandidates(available, { needsTools: false })[0]?.name, 'cloudflare-llama');
+});
+
+test('needsTools + only-cloudflare-configured EXACT model/force request also comes back empty, not silently using cloudflare-llama (the actual production bug this fix closes)', () => {
+  const available = { CF_API_TOKEN: 'x', CF_ACCOUNT_ID: 'y' };
+  // client asked selectModel() for gemini (the honest tools-capable pick) but
+  // only Cloudflare is configured server-side — must NOT silently fall back
+  // to a model that can't be trusted with tools.
+  assert.deepEqual(pickCandidates(available, { model: 'gemini-2.0-flash', needsTools: true }), []);
+  assert.deepEqual(pickCandidates(available, { force: 'cloudflare-llama', needsTools: true }), []);
+});
+
+test('toolsCapable is an honest claim matching @arganta/ai/registry.js\'s client-side capabilities.tools for every free/cheap entry', () => {
+  const byName = Object.fromEntries(PROVIDER_CATALOG.map((e) => [e.name, e]));
+  assert.equal(byName.gemini.toolsCapable, true);
+  assert.equal(byName.groq.toolsCapable, true);
+  assert.equal(!!byName['cloudflare-llama'].toolsCapable, false);
+  assert.equal(!!byName.deepseek.toolsCapable, false);
+});
+
 test('never returns more than 2 candidates (bounded in-request fallback)', () => {
   const allKeys = Object.fromEntries(PROVIDER_CATALOG.map((e) => [e.envKey, 'x']));
   assert.ok(pickCandidates(allKeys).length <= 2);
