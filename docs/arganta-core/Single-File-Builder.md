@@ -207,6 +207,39 @@ Two modes, one artifact type: **application** (state, CRUD, charts, forms) vs
 **website** (presentation, hero, sections, SEO) — classified from the request
 (*manage/do* → application; *present* → website), overridable.
 
+### B5 🟡 CONTRACT FROZEN — the public runtime ([[../adr/0006-public-artifact-runtime]])
+
+Opus froze *where* published artifacts are served and *how* they stay safe,
+before any of it is built (same posture as ADR-0004/0005). The shape Sonnet
+implements against:
+
+- **Cloudflare Worker** at `build.arganta.app/*` (`/a/:slug` apps, `/w/:slug`
+  sites), NOT a Supabase function — keeps the one public, unauthenticated
+  surface off the project that holds every byte of founder data. `validate.js`
+  ports into the Worker unchanged.
+- **`artifact_publication`** table (additive migration — the frozen
+  `hq_artifact`/`artifact_version` are untouched, so B1's schema test still
+  holds): `{ slug, artifact_id, kind, version_number (pinned), is_live,
+  published_at }`. The published version is **pinned and independent of the
+  draft's `current_version`** — publish v3, keep editing to v5, the public
+  still sees v3 until re-publish. Same draft-vs-distribution split as
+  `hq_artifact` ↔ `hq_app`.
+- **One allowlist, checked twice**: `validate.js`'s `APPROVED_HOSTS` is checked
+  at generation AND becomes the Worker's **CSP** on every serve
+  (`connect-src 'none'` + `img-src 'self' data:` close the exfiltration
+  channels; `'unsafe-inline'` script is the one accepted residual, contained by
+  everything else + the no-`eval` rule).
+- **Serve path**: the Worker reads exactly one public, read-only,
+  live-only RPC (`publication_by_slug`, granted to `anon`) and **re-runs
+  `validateHtml` server-side** before serving — never trust a client-side or
+  publish-time pass alone.
+- **Publish stays human-in-the-loop** (ADR-0004): `publish_artifact` is still
+  the only `sideEffect:true, autonomySafe:false` builder tool; a headless
+  mission can draft but never publish. `is_live=false` is the instant,
+  reversible takedown; nothing is ever hard-deleted.
+- **Founder prerequisite** (like ADR-0004's Vault step): deploy the Worker +
+  add the `build.arganta.app/*` route. No new paid service — Workers free tier.
+
 ## The proving slice (definition of done for v1)
 
 1. "Create a modern company landing page for Arganta" → website mode, template
@@ -229,4 +262,6 @@ automation, public billing, autonomous repair.
 ## See also
 - [[Arganta-Core-Concept]] — the six organs; Builder = the strongest Hand
 - [[../adr/0004-autonomous-invocation-boundary]] — why publish_artifact can't run headless
+- [[../adr/0005-builder-artifact-model-and-publish-safety]] — the artifact model + publish gate
+- [[../adr/0006-public-artifact-runtime]] — B5's Cloudflare Worker runtime + serve-time CSP
 - [[../media-center/Compute-Substrate]] — the tiers generation rides on
