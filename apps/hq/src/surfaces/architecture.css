@@ -53,6 +53,14 @@
 .af-logo.sm { width: 18px; height: 18px; border-radius: 5px; }
 .af-logo.sm svg { width: 11px; height: 11px; }
 .af-10x { margin-left: auto; font-size: 9px; font-weight: 800; letter-spacing: .03em; color: var(--af-c); padding: 2px 6px; border-radius: 6px; background: color-mix(in srgb, var(--af-c) 12%, transparent); border: 1px solid color-mix(in srgb, var(--af-c) 32%, transparent); }
+.af-spof { font-size: 9px; font-weight: 800; letter-spacing: .03em; color: var(--bad); padding: 2px 6px; border-radius: 6px; background: color-mix(in srgb, var(--bad) 12%, transparent); border: 1px solid color-mix(in srgb, var(--bad) 34%, transparent); }
+.af-spof + .af-10x { margin-left: 4px; }
+
+/* lock-in dot (inspector) */
+.af-lock { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.af-lock.lk-portable { background: var(--ok); }
+.af-lock.lk-swappable { background: var(--warn); }
+.af-lock.lk-locked { background: var(--bad); }
 
 /* ── layer band ── */
 .af-band { width: 100%; height: 100%; border-radius: 16px; position: relative;
@@ -108,6 +116,8 @@
 .af-drawer .dx:hover { background: var(--bg3); color: var(--tx); }
 .af-drawer .af-prov { display: inline-block; margin-top: 11px; }
 .af-drawer .dp { font-size: 12px; line-height: 1.5; color: var(--tx2); margin: 11px 0 0; }
+.af-spof-note { margin-top: 12px; padding: 9px 11px; border-radius: 9px; font-size: 11px; line-height: 1.45; color: var(--tx); background: color-mix(in srgb, var(--bad) 9%, transparent); border: 1px solid color-mix(in srgb, var(--bad) 28%, transparent); }
+.af-spof-note b { color: var(--bad); }
 .af-drawer .dmeta { display: grid; grid-template-columns: 74px 1fr; gap: 7px 10px; margin: 14px 0 0; font-size: 11px; }
 .af-drawer .dmeta dt { color: var(--tx3); font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: .06em; padding-top: 2px; }
 .af-drawer .dmeta dd { margin: 0; color: var(--tx); line-height: 1.4; }

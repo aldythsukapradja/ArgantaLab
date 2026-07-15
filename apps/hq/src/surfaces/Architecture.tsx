@@ -93,6 +93,21 @@ const STACK_LAYERS: LayerDef[] = [
   { id: 'observ', label: 'Observability · Telemetry', micro: 'measure', purpose: 'The metered feedback loop — every run, beat and event. Standard sinks.' },
 ]
 
+// Lock-in tier — the portability read a partner needs. `portable` = our own
+// code/data, runs anywhere; `swappable` = a vendor seam with real migration
+// work; `locked` = hard vendor dependency. Defaults to portable (our code).
+type Lock = 'portable' | 'swappable' | 'locked'
+const LOCK_OF: Record<string, Lock> = {
+  supabase: 'swappable', cloudflare: 'swappable', vercel: 'swappable', postgres: 'swappable',
+  memory: 'swappable', gateway: 'swappable', cfai: 'swappable', falai: 'swappable', modal: 'swappable',
+}
+const lockOf = (id: string): Lock => LOCK_OF[id] ?? 'portable'
+const LOCK_LABEL: Record<Lock, string> = { portable: 'Portable · runs on any host', swappable: 'Swappable · vendor seam, migration work', locked: 'Vendor-locked' }
+// Single points of failure — the failure-domain story a CTO probes first.
+const SPOF: Record<string, string> = {
+  supabase: 'Carries identity, the system-of-record, realtime and vectors — one blast radius. Mitigated by portability: data + auth move to any Postgres + GoTrue.',
+}
+
 // Node → classical-stack layer (kept separate so the node defs stay untouched).
 const STACK_OF: Record<string, StackId> = {
   core: 'agentic', clevel: 'agentic', gov: 'agentic', agent: 'agentic', roster: 'agentic', cron: 'agentic',
@@ -303,6 +318,7 @@ function CardNode({ data, selected }: NodeProps) {
             <svg viewBox="0 0 24 24" role="img" aria-label={ic.title}><path d={ic.path} fill={fill(ic.hex)} /></svg>
           </span>
         ))}
+        {d.scale && SPOF[def.id] && <span className="af-spof" title={'Single point of failure — ' + SPOF[def.id]}>⚠ SPOF</span>}
         {d.scale && def.headroom && <span className="af-10x" title={'10×: ' + def.headroom}>10×</span>}
       </div>
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
@@ -532,9 +548,11 @@ export function Architecture() {
             <span className={'af-prov ' + PROV[selDef.prov].cls}>{PROV[selDef.prov].label}</span>
             {selDef.detail && <p className="dp">{selDef.detail}</p>}
             {selSeries && selSeries.length > 1 && <Sparkline data={selSeries} c={selColor} />}
+            {SPOF[selDef.id] && <div className="af-spof-note">⚠ <b>Single point of failure.</b> {SPOF[selDef.id]}</div>}
             <dl className="dmeta">
               {selDef.tech && <><dt>Tech</dt><dd>{selDef.tech}</dd></>}
               {selDef.repo && <><dt>Where</dt><dd className="mono">{selDef.repo}</dd></>}
+              <dt>Lock-in</dt><dd><span className={'af-lock lk-' + lockOf(selDef.id)} />{LOCK_LABEL[lockOf(selDef.id)]}</dd>
               {selDef.swap && <><dt>Swap-class</dt><dd>{selDef.swap}</dd></>}
               {selDef.headroom && <><dt>At 10×</dt><dd>{selDef.headroom}</dd></>}
             </dl>
