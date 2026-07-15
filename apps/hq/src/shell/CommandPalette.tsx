@@ -3,7 +3,7 @@ import {
   Search, CornerDownLeft, LayoutGrid, TrendingUp, Database, Gamepad2, Boxes,
   GraduationCap, Network, Megaphone, Table2, Sparkles, SunMoon, Coins, Radar, Grid2x2,
   Vault as VaultIcon, Waypoints, Frame, Scale, Terminal, FilePlus2, Swords, UserRound, Map, Music2, Film, Wand2,
-  Orbit, Atom, Cpu, Mic2,
+  Orbit, Atom, Cpu, Mic2, MessageCircle,
 } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId, type CommandTab } from './store'
 import { useVault, type CenterView } from '../vault/store'
@@ -13,7 +13,7 @@ interface Cmd { id: string; label: string; hint: string; keywords: string; Icon:
 const SURFACE_ICON: Record<SurfaceId, typeof Search> = {
   home: Sparkles, portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
   game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone, command: Radar,
-  pixel: Grid2x2, vault: VaultIcon, architecture: Waypoints, battle: Swords, character: UserRound, world: Map, music: Music2, video: Film, media: Wand2, knowledge: Orbit, cinema: Film, reactor: Atom, rack: Cpu, copilot: Mic2,
+  pixel: Grid2x2, vault: VaultIcon, architecture: Waypoints, battle: Swords, character: UserRound, world: Map, music: Music2, video: Film, media: Wand2, knowledge: Orbit, cinema: Film, reactor: Atom, rack: Cpu, copilot: Mic2, core: MessageCircle,
 }
 
 // HQ Vault jumps — land on the Vault surface at a specific view.
@@ -43,7 +43,7 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const cmds = useMemo<Cmd[]>(() => {
-    const surfs: SurfaceId[] = ['home', 'portfolio', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack']
+    const surfs: SurfaceId[] = ['core', 'home', 'portfolio', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack']
     const out: Cmd[] = surfs.map(s => ({
       id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s + (s === 'vault' ? ' notes knowledge obsidian markdown' : ''), Icon: SURFACE_ICON[s], run: () => go(s),
     }))

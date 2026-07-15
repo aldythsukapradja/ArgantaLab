@@ -1,0 +1,128 @@
+/* Arganta Core (C4b) — real theme.css tokens only. No new hex colors here;
+   every color traces to --bg/--tx/--bd/--acc/--ok/--warn/--bad/--r-*/--shadow-*
+   (grep '#' must return nothing outside this comment). */
+
+.core { height: 100%; min-height: 0; color: var(--tx); background: var(--canvas); }
+
+/* ---------- inline (desktop HQ surface) ---------- */
+.core-inline {
+  display: grid; grid-template-columns: 248px 1fr 300px;
+  height: 100%; min-height: 0; overflow: hidden;
+}
+.core-inline:has(.core-rail-collapsed) { grid-template-columns: auto 1fr 300px; }
+.core-inline:has(.core-cortex-collapsed) { grid-template-columns: 248px 1fr auto; }
+.core-inline:has(.core-rail-collapsed):has(.core-cortex-collapsed) { grid-template-columns: auto 1fr auto; }
+
+.core-center { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ---------- threads rail ---------- */
+.core-rail {
+  background: var(--bg2); border-right: 1px solid var(--bd);
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+.core-rail-collapsed { width: 28px; align-items: center; padding-top: 10px; }
+.core-rail-expand, .core-rail-collapse {
+  background: none; border: none; color: var(--tx3); cursor: pointer;
+  font-size: 15px; padding: 4px 8px; border-radius: var(--r-sm);
+}
+.core-rail-expand:hover, .core-rail-collapse:hover { background: var(--bg3); color: var(--tx); }
+.core-rail-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--tx2); border-bottom: 1px solid var(--bd);
+}
+.core-rail-body { flex: 1; overflow-y: auto; padding: 8px; }
+.core-rail-empty { padding: 16px 10px; font-size: 12.5px; color: var(--tx3); text-align: center; }
+
+/* ---------- cortex panel ---------- */
+.core-cortex {
+  background: var(--bg2); border-left: 1px solid var(--bd);
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+.core-cortex-collapsed { width: 24px; align-items: center; padding-top: 10px; }
+.core-cortex-expand, .core-cortex-collapse {
+  background: none; border: none; color: var(--tx3); cursor: pointer;
+  font-size: 15px; padding: 4px 8px; border-radius: var(--r-sm);
+}
+.core-cortex-expand:hover, .core-cortex-collapse:hover { background: var(--bg3); color: var(--tx); }
+.core-cortex-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--tx2); border-bottom: 1px solid var(--bd);
+}
+.core-cortex-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.core-cortex-cost { font-size: 11px; color: var(--tx3); }
+.core-cortex-empty { font-size: 12px; color: var(--tx3); }
+
+/* ---------- conversation ---------- */
+.core-convo { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.core-convo-scroll {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 24px 20px 12px;
+}
+.core-convo-col { max-width: 760px; margin: 0 auto; }
+.core-convo-empty {
+  max-width: 760px; margin: 8vh auto 0; display: flex; flex-direction: column;
+  align-items: center; text-align: center; gap: 18px;
+}
+.core-hero-orb-slot { width: 96px; height: 96px; border-radius: 50%; background: var(--stage); }
+.core-empty-copy { font-size: 15px; color: var(--tx2); max-width: 42ch; line-height: 1.55; }
+
+/* ---------- composer ---------- */
+.core-composer {
+  flex-shrink: 0; padding: 10px 20px 18px;
+  background: linear-gradient(to bottom, transparent, var(--canvas) 40%);
+}
+.core-composer-field {
+  max-width: 760px; margin: 0 auto;
+  background: var(--bg); border: 1px solid var(--bd2); border-radius: var(--r-xl);
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+}
+.core-composer-field:focus-within { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-soft); }
+.core-composer-input {
+  flex: 1; border: none; background: none; outline: none; color: var(--tx);
+  font-size: 14px; padding: 6px 4px;
+}
+.core-composer-input::placeholder { color: var(--tx3); }
+
+/* ---------- panel mount (420px slide-over) ---------- */
+.core-panel { width: 420px; box-shadow: var(--shadow-lg); border-left: 1px solid var(--bd); }
+
+/* ---------- fullscreen mount (mobile) ---------- */
+.core-fullscreen {
+  /* z-index set inline from @arganta/agent's Z_LAYERS.CORE_FULLSCREEN — never hardcode it here. */
+  position: fixed; inset: 0;
+  background: var(--canvas); display: flex; flex-direction: column;
+}
+.core-fs-topbar {
+  flex-shrink: 0; height: 52px; display: flex; align-items: center;
+  padding: 0 8px; background: var(--bg); border-bottom: 1px solid var(--bd);
+}
+.core-fs-back {
+  width: 44px; height: 44px; display: grid; place-items: center;
+  background: none; border: none; color: var(--tx); cursor: pointer; border-radius: var(--r-md);
+}
+.core-fs-back:hover { background: var(--bg3); }
+.core-fs-title {
+  flex: 1; text-align: center; font-size: 14px; font-weight: 600; color: var(--tx);
+  background: none; border: none; cursor: pointer; padding: 8px;
+}
+.core-fs-menu {
+  width: 44px; height: 44px; display: grid; place-items: center;
+  background: none; border: none; color: var(--tx2); cursor: pointer; font-size: 18px; border-radius: var(--r-md);
+}
+.core-fs-menu:hover { background: var(--bg3); }
+.core-fs-sheet-overlay {
+  /* sits above the fullscreen Core itself; z-index set inline (Z_LAYERS.CORE_FULLSCREEN + 1). */
+  position: fixed; inset: 0; background: color-mix(in srgb, var(--tx) 32%, transparent);
+}
+.core-fs-sheet {
+  position: absolute; inset: 0; background: var(--bg2);
+  display: flex; flex-direction: column;
+}
+.core-fs-sheet .core-rail { width: 100%; height: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .core * { transition: none !important; animation: none !important; }
+}

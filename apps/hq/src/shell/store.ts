@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot'
+export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 export type Theme = 'light' | 'dark'
@@ -15,7 +15,7 @@ const SURFACE_LABEL: Record<SurfaceId, string> = {
   pixel: 'Pixel Vault', vault: 'HQ Vault', architecture: 'Architecture', battle: 'Battle Builder',
   character: 'Character Forge', world: 'Openworld Builder', music: 'Music Builder',
   video: 'Video Builder', media: 'Media Center', knowledge: 'Knowledge', cinema: 'Cinema',
-  reactor: 'Reactor Builder', rack: 'Model Rack', copilot: 'Copilot',
+  reactor: 'Reactor Builder', rack: 'Model Rack', copilot: 'Copilot', core: 'Arganta Core',
 }
 export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 

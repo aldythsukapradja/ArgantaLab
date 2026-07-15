@@ -43,7 +43,7 @@ const CATEGORIES: CommandCategory[] = ['navigate', 'product', 'control', 'system
 const ALL_SURFACES: SurfaceId[] = [
   'home', 'portfolio', 'data', 'growth', 'content', 'game', 'app', 'agents',
   'broadcast', 'command', 'pixel', 'vault', 'architecture', 'battle', 'character',
-  'world', 'music', 'video', 'media', 'knowledge', 'cinema', 'reactor', 'rack',
+  'world', 'music', 'video', 'media', 'knowledge', 'cinema', 'reactor', 'rack', 'core',
 ]
 
 function blankRow(sort: number): DbRow {

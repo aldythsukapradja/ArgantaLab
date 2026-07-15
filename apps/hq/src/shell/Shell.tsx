@@ -31,6 +31,7 @@ const KnowledgeSurface = lazy(() => import('../knowledge/KnowledgeSurface').then
 const ReactorBuilder = lazy(() => import('../reactor/builder/ReactorBuilder').then(module => ({ default: module.ReactorBuilder })))
 const ModelRack = lazy(() => import('../surfaces/rack/ModelRack').then(module => ({ default: module.ModelRack })))
 const CopilotControl = lazy(() => import('../copilot/CopilotControl').then(module => ({ default: module.CopilotControl })))
+const ArgantaCore = lazy(() => import('../surfaces/core/ArgantaCore').then(module => ({ default: module.ArgantaCore })))
 
 function SurfaceLoading() {
   return <div className="auth-wrap" role="status" aria-label="Loading workspace"><div className="spin" /></div>
@@ -63,13 +64,14 @@ function Surface() {
     case 'rack': return <ModelRack />
     case 'cinema': return <CinemaDev />
     case 'copilot': return <CopilotControl />
+    case 'core': return <ArgantaCore />
   }
 }
 
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   const { surface } = useHQ()
   const wide = surface === 'game' || surface === 'app'
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' // edge-to-edge workspaces
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' // edge-to-edge workspaces
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button
