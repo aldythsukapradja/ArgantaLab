@@ -56,8 +56,10 @@ const intelligenceLLM = createLLM({
 // WS-3 shipped a truthful llm-proxy (real upstream provider/model/cost/latency,
 // verified end-to-end incl. the Cloudflare Sponsored addition) — non-sovereign
 // registry entries are `active`, not `preview`, so selectModel can actually
-// route to them.
-const intelligenceRegistry = buildRegistry({ webllm: true, edgeProxy: cloudEnabled, gatewayIsTruthful: true })
+// route to them. Exported (not module-local) so C3's tool-loop runtime
+// (lib/core/runtime.ts) can call selectModel() directly for tasks
+// intelligence.ask() doesn't support (tool-calling — see orchestrate policy).
+export const intelligenceRegistry = buildRegistry({ webllm: true, edgeProxy: cloudEnabled, gatewayIsTruthful: true })
 
 // ── WS-5 metering: persist every run to agent_runs (migration_agent_runs.sql) ──
 // The ONE choke point every domain funnels through — intelligence.ask() (via
