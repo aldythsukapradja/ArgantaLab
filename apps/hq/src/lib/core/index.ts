@@ -3,16 +3,18 @@
 // persists the turn through the C2 thread/message substrate. This is the
 // FIRST place all three land together — the "digital twin can actually do
 // things in a conversation" milestone.
-import { runAgentLoop, toOpenAITools, availableTools, makeBlock, AUTONOMY } from '@arganta/agent'
+import { runAgentLoop, toOpenAITools, availableTools, makeBlock, AUTONOMY, TOOL_SPECS } from '@arganta/agent'
 import { makeCoreCallModel } from './runtime'
-import { coreExecuteTool, type ToolResult } from './tools'
+import { coreExecuteTool, WIRED_BUILDER_SPECS, type ToolResult } from './tools'
 import { createThread, appendMessage, loadMessages, listRecentThreads, type CoreMessage } from './thread'
 
 export { createThread, loadMessages, listRecentThreads, type CoreMessage }
 
 const SYSTEM_PROMPT = `You are Arganta Core, the founder's digital-twin assistant for ArgantaLab.
-You can make real things: images, voice clips, websites, slide decks, brand kits, and data charts —
-via tools, not by describing them. Use tools when the founder asks you to MAKE or SHOW something.
+You can make real things: images, voice clips, websites, single-file applications, slide decks, brand
+kits, and data charts — via tools, not by describing them. Use tools when the founder asks you to MAKE
+or SHOW something. Prefer create_website/create_application over make_website when the founder wants a
+real usable artifact (vs. a quick throwaway page) — they run real AI generation, not just a template.
 Once a tool call succeeds, do NOT call it again for the same request — respond to the founder in text
 instead. Every turn must end with a text reply to the founder, even a short one.
 Be concise and direct. Never invent numbers or claim something was made when a tool failed — say so plainly.`
@@ -74,7 +76,7 @@ export async function sendMessage(threadId: string, userText: string): Promise<S
     return flat
   }
 
-  const tools = toOpenAITools(availableTools(undefined, { autonomous: false, maxCostClass: 1 }))
+  const tools = toOpenAITools(availableTools([...TOOL_SPECS, ...WIRED_BUILDER_SPECS], { autonomous: false, maxCostClass: 1 }))
   const { text, trail, stopReason } = await runAgentLoop({
     messages, tools, callModel, executeTool, maxSteps: 4, autonomyLevel: AUTONOMY.ON_DEMAND,
   })
@@ -92,6 +94,10 @@ function blockKindFor(toolName: string): string {
   if (toolName === 'generate_image') return 'image'
   if (toolName === 'generate_speech') return 'audio'
   if (toolName === 'make_website') return 'website'
+  if (toolName === 'create_website') return 'website'
+  // no separate 'application' block kind (C1-frozen BLOCK_KINDS) — an app is
+  // still a single-file HTML artifact, rendered the same as a website block.
+  if (toolName === 'create_application') return 'website'
   if (toolName === 'make_deck') return 'deck'
   if (toolName === 'make_brand') return 'brand'
   if (toolName === 'analyze') return 'chart'

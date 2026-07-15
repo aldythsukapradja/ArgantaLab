@@ -84,6 +84,32 @@ validation gate, tool specs, generation prompt, component shape+selector) —
 in `apps/hq/src/builder-core/` (generate/revise/publish call the app engines +
 llm-proxy), mirroring the `@arganta/agent` ↔ `lib/core` split.
 
+### B2 ✅ SHIPPED — generation wired into Arganta Core
+
+`apps/hq/src/builder-core/appShell.ts` (Stage-0 deterministic APPLICATION
+shell — the app twin of `makeWebsite()`: real add/remove CRUD, localStorage,
+empty state, $0/instant) + `generate.ts` (`generateWebsite`/`generateApplication`/
+`reviseArtifact` — Stage-0 deterministic floor → Stage-1 AI via `task:'copy'`,
+validated through B1's `validateHtml()`, honest fallback to Stage-0 if AI is
+unavailable or fails validation — never fabricates success). `create_website`
+and `create_application` are wired as real executors in
+`apps/hq/src/lib/core/tools.ts` (`WIRED_BUILDER_SPECS` merges into the tools
+Arganta Core's chat loop offers the model — grows automatically as B3 wires
+more). Reuses the `'website'` block kind for application HTML too (C1's frozen
+`BLOCK_KINDS` has no separate `'application'` kind — both are single-file HTML).
+Live-verified: both generators produce validated, honest Stage-0 output
+end-to-end through the real tool-executor path. `revise_artifact`,
+`validate_artifact`, `save_version`, `restore_version`, `insert_component`,
+`apply_brand`, `publish_artifact` remain unwired pending B3's artifact
+persistence (`migration_hq_artifacts.sql` + save/restore RPCs) — calling them
+now honestly returns "no executor wired for: X" rather than a fake result.
+
+Known gap (not B2's to fix — B1/Opus-frozen contract): `validateHtml()`'s
+`no-todo` check regexes for the literal word `PLACEHOLDER` case-insensitively,
+which also matches the ordinary HTML `placeholder="…"` attribute on any input
+field — a false-positive **warning** (never blocks generation, since quality
+checks are warn-only). Worth a B3 cleanup pass.
+
 ```
 apps/hq/src/builder-core/
 ├── types.ts        SingleFileArtifact · ArtifactBuildContext · ValidationResult

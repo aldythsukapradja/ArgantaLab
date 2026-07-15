@@ -12,6 +12,8 @@ import { saveMediaAsset } from '../mediaAssets'
 import { makeWebsite, makeDeck, makeBrand } from '../../surfaces/studios/engines'
 import { analyze } from '../../surfaces/studios/analytics'
 import { OFFICE_META, routeConcern, delegationResponse, isOffice } from '@arganta/agent'
+import { BUILDER_TOOL_SPECS, builderToolByName } from '@arganta/builder'
+import { generateWebsite, generateApplication } from '../../builder-core/generate'
 
 export interface ToolResult {
   data: unknown          // what the model reads back (JSON-stringified by the loop)
@@ -102,6 +104,29 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
   return { data: resp.toolResult, block: resp.block, costUsd: out.costUsd ?? 0 }
 }
 
+// create_website / create_application — B2's tiered generation (Stage-0
+// deterministic floor, Stage-1 AI upgrade if it passes @arganta/builder's
+// validation gate). Reuses the 'website' block kind for both (C1's frozen
+// BLOCK_KINDS has no separate 'application' kind; both are single-file HTML
+// artifacts rendered the same way — see Single-File-Builder.md).
+async function runCreateWebsite(args: { brief: string; websiteType?: string }): Promise<ToolResult> {
+  const g = await generateWebsite({ brief: args.brief, websiteType: args.websiteType })
+  return {
+    data: { ok: true, kind: 'website', stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
+    block: { assetId: null, path: null, html: g.html },
+    costUsd: g.costUsd,
+  }
+}
+
+async function runCreateApplication(args: { brief: string; templateId?: string; useCircleSdk?: boolean }): Promise<ToolResult> {
+  const g = await generateApplication({ brief: args.brief, templateId: args.templateId, useCircleSdk: args.useCircleSdk })
+  return {
+    data: { ok: true, kind: 'application', stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
+    block: { assetId: null, path: null, html: g.html },
+    costUsd: g.costUsd,
+  }
+}
+
 async function runCheckQuota(): Promise<ToolResult> {
   const q = await getNeuronQuota()
   return { data: q }
@@ -126,12 +151,19 @@ const EXECUTORS: Record<string, (args: any) => Promise<ToolResult> | ToolResult>
   consult_office: runConsultOffice,
   check_quota: runCheckQuota,
   check_ledger: runCheckLedger,
+  create_website: runCreateWebsite,
+  create_application: runCreateApplication,
 }
+
+// The subset of BUILDER_TOOL_SPECS actually wired to an executor above — the
+// model is only ever offered tools it can succeed at (see index.ts). Grows
+// automatically as B3 (versions/publish) wires more executors, no manual sync.
+export const WIRED_BUILDER_SPECS = BUILDER_TOOL_SPECS.filter((t: any) => t.name in EXECUTORS)
 
 /** The loop's `executeTool` contract. Unknown tool names are refused
  * explicitly rather than silently no-op'd. */
 export async function coreExecuteTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
-  const spec = toolByName(name)
+  const spec = toolByName(name) || builderToolByName(name)
   if (!spec) return { data: { error: `unknown tool: ${name}` } }
   const fn = EXECUTORS[name]
   if (!fn) return { data: { error: `no executor wired for: ${name}` } }
