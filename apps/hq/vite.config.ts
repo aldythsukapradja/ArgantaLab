@@ -36,6 +36,8 @@ export default defineConfig({
     '@arganta/ai': path.resolve(__dirname, '../../packages/ai/src/index.js'),
     // Arganta Core agentic runtime contracts (C1): threads, tools, loop, autonomy.
     '@arganta/agent': path.resolve(__dirname, '../../packages/agent/src/index.js'),
+    // Single-File Builder kernel contracts (B1): artifact types, validation, tool specs, prompts.
+    '@arganta/builder': path.resolve(__dirname, '../../packages/builder/src/index.js'),
     // Media Center's maturity-staged generation router (image/music/video/voice).
     '@arganta/media-core': path.resolve(__dirname, '../../packages/media-core/src/index.js'),
     // Character Forge renders the real animated character through Kingdom's engine.

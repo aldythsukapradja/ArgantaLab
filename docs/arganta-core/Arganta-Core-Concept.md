@@ -174,13 +174,13 @@ currently truthfully says tools:false).
 
 | # | Batch | Delivers | Model | Why this model |
 |---|---|---|---|---|
-| B1 | Builder kernel contracts | `builder-core/` types: SingleFileArtifact (unify with existing `builders/artifact.ts`, don't fork), generalized Application Contract (from circleAppPrompt), TOOL_SPECS **extension** (create/revise/validate/version/publish tools w/ governance — `publish_artifact` = sideEffect, never autonomy-safe), validation rule-set spec, hq_artifact/artifact_version schema decision | **Opus** | extends C1's frozen registry + a publish-governance call |
+| B1 | Builder kernel contracts | ✅ **SHIPPED** — `@arganta/builder` (types+classifier · hq_artifact/artifact_version schema+row-mapping · deterministic validation gate · builder tool specs · generalized generation prompt · portable-component shape+selector) + ADR-0005 · 84/84 tests. Decisions: NEW founder-scoped store not an hq_app extension; `publish_artifact` = sideEffect/not-autonomy-safe (the only outside-world tool); validation gate frozen so generation promises exactly what B5 enforces | **Opus** | extends C1's frozen registry + a publish-governance call |
 | B2 | Generation tools | `generate.ts` + `revise.ts`: Stage-0 deterministic (makeWebsite + template skeletons) → Stage-1 AI via llm-proxy; **component-assembly generation** (skeleton + AI fills sections — the output-token-ceiling mitigation), mode classifier (app vs website) | **Sonnet** | tiered-generation pattern proven 3× this session |
 | B3 | Validation + versions | `validate.ts` deterministic checks (structural/security/quality), `migration_hq_artifacts.sql` (artifact + immutable versions, `run_id` lineage), save/restore RPCs | **Sonnet** | pattern-matches C2's migration exactly |
 | B4 | Portable components | 15–20 portable blocks (nav, heroes, metric grids, charts, tables, kanban, forms, pricing, footer) + `components.ts` registry + selection logic | **Fable** (block design) → **Sonnet** (registry) | blocks are aesthetic judgment; registry is wiring |
 | B5 | Preview + publishing | shared device-preview (Core cards + Builder workspace, ONE renderer), publishing runtime `build.arganta.app/a/:slug` `/w/:slug` (one shared runtime, sandboxed, CSP, no per-artifact deploys) | **Sonnet** + **Opus security sign-off** | public internet surface = new attack surface |
 
-Sequencing: C1 ✅ → C2 ✅ → C3 ✅ → **B1 (next)** → B2 → B3 → C4b (renders
+Sequencing: C1 ✅ → C2 ✅ → C3 ✅ → B1 ✅ → **B2 (next)** → B3 → C4b (renders
 Builder artifacts as blocks — the C1 block kinds already anticipated `website`)
 → B4 → B5 → C5 → C6 → C7. C8 after C3 and again after B5/C7. C4a + C9 parallel
 anytime.

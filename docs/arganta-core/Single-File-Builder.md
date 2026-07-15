@@ -76,7 +76,13 @@ builder implementations. Both operate on the same artifact records.
 5. **Status correction:** C3 is *next*, not underway. C1 (contracts) + C2
    (substrate) are shipped and live-verified; nothing of the loop is wired yet.
 
-## Kernel shape (B1 freezes; matches the strategy doc)
+## Kernel shape — B1 ✅ SHIPPED as `@arganta/builder` (contracts) + ADR-0005
+
+B1 landed the PURE contracts (types/classifier, schema+row-mapping,
+validation gate, tool specs, generation prompt, component shape+selector) —
+84 tests. The kernel below is the SAME shape; B2/B3 add the app-side executors
+in `apps/hq/src/builder-core/` (generate/revise/publish call the app engines +
+llm-proxy), mirroring the `@arganta/agent` ↔ `lib/core` split.
 
 ```
 apps/hq/src/builder-core/

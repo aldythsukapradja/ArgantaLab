@@ -1,0 +1,11 @@
+{
+  "name": "@arganta/builder",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Single-File Builder kernel contracts (B1): artifact types + classifier, storage schema/row-mapping, deterministic HTML validation gate, builder tool specs, generation prompt contract, portable component shape. Framework-agnostic.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "sideEffects": false
+}

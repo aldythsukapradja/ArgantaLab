@@ -10,8 +10,11 @@
 // See docs/arganta-core/Arganta-Core-Concept.md and ADR-0004.
 // ─────────────────────────────────────────────────────────────────────────
 
-/** What backs a tool at runtime (C3 injects the matching executor). */
-export const TOOL_BACKINGS = Object.freeze(['gateway', 'engine', 'analytics', 'memory', 'delegation', 'meta']);
+/** What backs a tool at runtime (C3 injects the matching executor). `builder`
+ * = the Single-File Builder kernel (@arganta/builder, B-batch) — its tool specs
+ * live in that package but conform to this same ToolSpec shape and merge into
+ * the registry at call time. */
+export const TOOL_BACKINGS = Object.freeze(['gateway', 'engine', 'analytics', 'memory', 'delegation', 'meta', 'builder']);
 
 /**
  * @typedef {Object} ToolSpec
