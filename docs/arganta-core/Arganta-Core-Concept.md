@@ -132,7 +132,7 @@ currently truthfully says tools:false).
 | # | Batch | Delivers | Model | Why this model |
 |---|---|---|---|---|
 | C1 | Foundation contracts | ✅ **SHIPPED** — `@arganta/agent` (thread schema, unified tool registry, pure agentic loop, delegation protocol, autonomy+invocation guardrails, embed/mount contract) + ADR-0004 · 30/30 tests | **Opus** | irreversible interfaces + security posture |
-| C2 | Substrate | migrations (threads/messages/memory_chunk + pgvector), embedding kind in llm-proxy (CF bge), Realtime on ledger tables, Vault-ify secrets | **Sonnet** | pattern-matches five existing migrations |
+| C2 | Substrate | ✅ **SHIPPED** — `migration_arganta_core.sql` (core_thread/core_message/memory_chunk+pgvector, live-verified), `embed` kind in media-proxy (CF bge-base-en-v1.5, 768-dim, verified real embed+store+cosine-search round trip), Realtime added to agent_runs/media_asset/core_message. Vault-ify secrets deferred to C7 (ADR-0004 prerequisite) | **Sonnet** | pattern-matches five existing migrations |
 | C3 | Tool loop | client-side agentic loop (call → execute tool → append → re-call, bounded), tool registry impl, honest degrade | **Sonnet** (Opus reviews the loop-termination/budget logic) | mechanical once C1 fixes the contract |
 | C4a | Design language | the "fancier than ChatGPT" layer: motion spec for the orb avatar, message choreography, microcopy voice, empty states | **Fable** | creative/aesthetic judgment |
 | C4b | Chat UI build | threads rail, rich blocks, cortex panel, composer, streaming, karaoke playback | **Sonnet** | large but well-specified UI work |

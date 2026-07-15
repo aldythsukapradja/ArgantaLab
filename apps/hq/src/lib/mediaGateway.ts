@@ -80,6 +80,43 @@ export async function getNeuronQuota(): Promise<NeuronQuota> {
   }
 }
 
+export interface GatewayEmbedding {
+  embedding: number[]
+  dims: number
+  provider: string
+  model: string
+  costUsd: number
+  latencyMs: number
+}
+
+/**
+ * Embed text at Sponsored (costClass 1, Cloudflare bge-base-en-v1.5, 768-dim,
+ * $0). Feeds memory_chunk (pgvector) for search_vault / Vault + thread recall.
+ * Returns null on any failure — the caller skips storing/searching that chunk
+ * rather than inserting a fabricated or zero vector.
+ */
+export async function embedTextViaGateway(o: { text: string }): Promise<GatewayEmbedding | null> {
+  if (!cloudEnabled) return null
+  try {
+    const { data, error } = await supabase.functions.invoke('media-proxy', {
+      body: { kind: 'embed', prompt: o.text, costClass: 1 },
+    })
+    if (error) { console.warn('[media-proxy]', error.message); return null }
+    if (!data || data.error || !Array.isArray(data.embedding)) { if (data?.error) console.warn('[media-proxy]', data.error); return null }
+    return {
+      embedding: data.embedding,
+      dims: data.dims ?? data.embedding.length,
+      provider: data.provider || 'unknown',
+      model: data.model || 'unknown',
+      costUsd: data.costUsd ?? 0,
+      latencyMs: data.latencyMs ?? 0,
+    }
+  } catch (e) {
+    console.warn('[media-proxy] threw', (e as Error)?.message)
+    return null
+  }
+}
+
 export interface GatewayAudio {
   bytes: Uint8Array
   mime: string
