@@ -19,6 +19,19 @@ export interface StoredVersion {
   costUsd: number; validation: unknown; runId: string | null; createdAt: string
 }
 
+export interface Publication {
+  slug: string; artifactId: string; kind: 'application' | 'website'
+  versionNumber: number; isLive: boolean; publishedAt: string
+}
+
+// B5 (ADR-0006) — the public runtime lives at build.arganta.app, served by a
+// Cloudflare Worker (workers/build-artifact-runtime/), NOT this app. This
+// constant is just for building the URL to show the founder after publish.
+export const PUBLIC_ARTIFACT_BASE = 'https://build.arganta.app'
+export function publicArtifactUrl(kind: 'application' | 'website', slug: string): string {
+  return `${PUBLIC_ARTIFACT_BASE}/${kind === 'application' ? 'a' : 'w'}/${slug}`
+}
+
 /** Persists a freshly generated artifact as a new draft + its version 1.
  * Returns null (never throws) if cloud is unavailable — the caller already
  * has the generated HTML in hand and can still show it, just unsaved. */
@@ -94,4 +107,31 @@ export async function listVersions(artifactId: string): Promise<StoredVersion[]>
   const { data, error } = await supabase.rpc('hq_artifact_versions', { p_artifact_id: artifactId })
   if (error) { console.warn('[hq_artifact_versions]', error.message); return [] }
   return (data || []).map((r: any) => versionFromRow(r) as StoredVersion)
+}
+
+// ── B5 publishing (ADR-0006) — assigns/reuses a slug, pins a version,
+// flips hq_artifact.status/visibility. Returns the slug (not the full URL —
+// callers build the URL via publicArtifactUrl, which needs `kind`). ────────
+export async function publishArtifact(artifactId: string, versionNumber?: number): Promise<string | null> {
+  if (!cloudEnabled) return null
+  const { data, error } = await supabase.rpc('hq_artifact_publish', { p_artifact_id: artifactId, p_version_number: versionNumber ?? null })
+  if (error) { console.warn('[hq_artifact_publish]', error.message); return null }
+  return data as string
+}
+
+/** Instant, reversible takedown — never deletes the artifact or its history. */
+export async function unpublishArtifact(artifactId: string): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { error } = await supabase.rpc('hq_artifact_unpublish', { p_artifact_id: artifactId })
+  if (error) { console.warn('[hq_artifact_unpublish]', error.message); return false }
+  return true
+}
+
+export async function getPublication(artifactId: string): Promise<Publication | null> {
+  if (!cloudEnabled) return null
+  const { data, error } = await supabase.rpc('hq_artifact_publication', { p_artifact_id: artifactId })
+  if (error) { console.warn('[hq_artifact_publication]', error.message); return null }
+  const row = (data || [])[0]
+  if (!row) return null
+  return { slug: row.slug, artifactId: row.artifact_id, kind: row.kind, versionNumber: row.version_number, isLive: row.is_live, publishedAt: row.published_at }
 }

@@ -1,9 +1,11 @@
 // C4b Step 5 — one card renders all six media block kinds (C4a §4). Same
 // skeleton, kind-specific body. Provenance chip row matches ModelRack's run
 // modal vocabulary exactly ('✓ saved to Supabase' / '⚠ no saved artifact').
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { mediaAssetPublicUrl } from '../../lib/mediaAssets'
 import { supabase, cloudEnabled } from '../../lib/supabase'
+import { getPublication, unpublishArtifact, publicArtifactUrl } from '../../builder-core/persist'
+import { coreExecuteTool } from '../../lib/core/tools'
 import type { CoreBlock } from './blocks'
 
 export function ArtifactCard({ block }: { block: CoreBlock }) {
@@ -22,6 +24,12 @@ export function ArtifactCard({ block }: { block: CoreBlock }) {
   // show the saved chip only, no accept affordance, until B3/C4b reconcile
   // the two artifact stores.
   const acceptable = saved && (block.kind === 'image' || block.kind === 'audio')
+  // create_website/create_application (B2/B3) persist a real hq_artifact and
+  // share the 'website' block kind (C1's frozen BLOCK_KINDS has no separate
+  // 'application' kind — see Single-File-Builder.md); make_website/make_deck
+  // are deterministic-only and never carry an assetId. That's the exact,
+  // already-established signal for "this is a publishable Builder artifact".
+  const isBuilderArtifact = saved && block.kind === 'website'
 
   const decide = async (value: boolean) => {
     if (!assetId || !cloudEnabled || busy) return
@@ -51,6 +59,67 @@ export function ArtifactCard({ block }: { block: CoreBlock }) {
         {accepted === true && <div className="core-artifact-accepted mono">✓ accepted</div>}
         {accepted === false && <div className="core-artifact-discarded mono">discarded</div>}
       </div>
+      {isBuilderArtifact && <PublishRow artifactId={assetId!} />}
+    </div>
+  )
+}
+
+// B5 (ADR-0006) — publish reuses the SAME validated executor the chat loop
+// calls (coreExecuteTool('publish_artifact', ...)), so a human clicking this
+// button and the model calling the tool go through one code path, one
+// validation gate, never two. Unpublish is UI-only (not a chat tool) — B1's
+// frozen BUILDER_TOOL_SPECS never defined an unpublish tool, and takedown is
+// exactly the kind of instant, low-stakes, founder-initiated action that
+// doesn't need agent governance wrapped around it.
+function PublishRow({ artifactId }: { artifactId: string }) {
+  const [state, setState] = useState<'checking' | 'idle' | 'publishing' | 'published' | 'unpublishing' | 'error'>('checking')
+  const [url, setUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!cloudEnabled) { setState('idle'); return }
+    getPublication(artifactId).then((pub) => {
+      if (cancelled) return
+      if (pub && pub.isLive) { setUrl(publicArtifactUrl(pub.kind, pub.slug)); setState('published') }
+      else setState('idle')
+    })
+    return () => { cancelled = true }
+  }, [artifactId])
+
+  const publish = async () => {
+    setState('publishing'); setError(null)
+    const result = await coreExecuteTool('publish_artifact', { artifactId })
+    const data = result.data as any
+    if (data?.ok && data?.url) { setUrl(data.url); setState('published') }
+    else { setError(data?.error || data?.note || data?.errors?.[0]?.message || 'publish failed'); setState('error') }
+  }
+
+  const unpublish = async () => {
+    setState('unpublishing')
+    const ok = await unpublishArtifact(artifactId)
+    if (ok) { setUrl(null); setState('idle') } else { setState('error'); setError('could not unpublish') }
+  }
+
+  if (state === 'checking') return null
+  const unpublishing = state === 'unpublishing'
+  return (
+    <div className="core-artifact-publish">
+      {state === 'published' && url ? (
+        <>
+          <a className="core-artifact-publink mono" href={url} target="_blank" rel="noopener noreferrer">{url.replace('https://', '')}</a>
+          <button className="core-artifact-btn core-artifact-btn-quiet" onClick={unpublish} disabled={unpublishing}>
+            Unpublish
+          </button>
+        </>
+      ) : (
+        <>
+          <button className="core-artifact-btn" onClick={publish} disabled={state === 'publishing'}>
+            {state === 'publishing' ? 'Publishing…' : 'Publish'}
+          </button>
+          {state === 'error' && error && <span className="core-artifact-pub-error">{error}</span>}
+        </>
+      )}
     </div>
   )
 }

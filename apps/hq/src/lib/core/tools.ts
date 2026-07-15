@@ -14,7 +14,7 @@ import { analyze } from '../../surfaces/studios/analytics'
 import { OFFICE_META, routeConcern, delegationResponse, isOffice } from '@arganta/agent'
 import { BUILDER_TOOL_SPECS, builderToolByName, validateHtml } from '@arganta/builder'
 import { generateWebsite, generateApplication, reviseArtifact } from '../../builder-core/generate'
-import { createArtifact, saveVersion, saveCurrentAsVersion, restoreVersion, getArtifact } from '../../builder-core/persist'
+import { createArtifact, saveVersion, saveCurrentAsVersion, restoreVersion, getArtifact, listVersions, publishArtifact, publicArtifactUrl } from '../../builder-core/persist'
 
 export interface ToolResult {
   data: unknown          // what the model reads back (JSON-stringified by the loop)
@@ -181,6 +181,39 @@ async function runRestoreVersion(args: { artifactId: string; versionNumber: numb
   }
 }
 
+// publish_artifact — the ONE sideEffect:true, autonomySafe:false builder
+// tool (ADR-0005) — a headless mission can never reach this (autonomyGate,
+// ADR-0004); on-demand chat (a human is present) can. Re-runs validateHtml
+// on the exact HTML being published before calling the RPC (ADR-0006
+// Decision 5) — publish-time is a second, independent check on top of
+// whatever validation the version was originally saved with, and the
+// public Worker re-checks a THIRD time at serve. Never publishes something
+// that fails the gate, and tells the founder exactly which check failed.
+async function runPublishArtifact(args: { artifactId: string; versionNumber?: number }): Promise<ToolResult> {
+  const artifact = await getArtifact(args.artifactId)
+  if (!artifact) return { data: { error: `artifact not found: ${args.artifactId}` } }
+
+  let html = artifact.html
+  let versionNumber = args.versionNumber ?? artifact.currentVersion
+  if (args.versionNumber != null && args.versionNumber !== artifact.currentVersion) {
+    const versions = await listVersions(args.artifactId)
+    const target = versions.find((v) => v.versionNumber === args.versionNumber)
+    if (!target) return { data: { error: `no such version ${args.versionNumber} for artifact: ${args.artifactId}` } }
+    html = target.html
+    versionNumber = target.versionNumber
+  }
+
+  const v = validateHtml(html, { kind: artifact.kind })
+  if (!v.ok) {
+    return { data: { ok: false, artifactId: args.artifactId, note: 'publish blocked — the artifact fails validation', errors: v.errors } }
+  }
+
+  const slug = await publishArtifact(args.artifactId, versionNumber)
+  if (!slug) return { data: { error: `could not publish artifact: ${args.artifactId}` } }
+  const url = publicArtifactUrl(artifact.kind, slug)
+  return { data: { ok: true, artifactId: args.artifactId, versionNumber, url, slug } }
+}
+
 async function runCheckQuota(): Promise<ToolResult> {
   const q = await getNeuronQuota()
   return { data: q }
@@ -211,6 +244,7 @@ const EXECUTORS: Record<string, (args: any) => Promise<ToolResult> | ToolResult>
   validate_artifact: runValidateArtifact,
   save_version: runSaveVersion,
   restore_version: runRestoreVersion,
+  publish_artifact: runPublishArtifact,
 }
 
 // The subset of BUILDER_TOOL_SPECS actually wired to an executor above — the

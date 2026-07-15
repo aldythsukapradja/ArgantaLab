@@ -2,7 +2,7 @@
 title: HQ Single-File Builder — Concept & B-Batch Plan
 date: 2026-07-15
 category: Architecture
-status: B1-B4 shipped — B5 (publish runtime) pending
+status: B1-B5 shipped (impl) — Worker deploy is a founder action; Opus go-live review pending
 tags: [arganta-core, builder, single-file, lovable, apps, websites, moc]
 ---
 
@@ -207,38 +207,67 @@ Two modes, one artifact type: **application** (state, CRUD, charts, forms) vs
 **website** (presentation, hero, sections, SEO) — classified from the request
 (*manage/do* → application; *present* → website), overridable.
 
-### B5 🟡 CONTRACT FROZEN — the public runtime ([[../adr/0006-public-artifact-runtime]])
+### B5 ✅ SHIPPED (impl) — the public runtime ([[../adr/0006-public-artifact-runtime]])
 
-Opus froze *where* published artifacts are served and *how* they stay safe,
-before any of it is built (same posture as ADR-0004/0005). The shape Sonnet
-implements against:
+Opus froze the contract (ADR-0006); Sonnet built against it, live-verified
+every layer including the actual Worker code:
 
-- **Cloudflare Worker** at `build.arganta.app/*` (`/a/:slug` apps, `/w/:slug`
-  sites), NOT a Supabase function — keeps the one public, unauthenticated
-  surface off the project that holds every byte of founder data. `validate.js`
-  ports into the Worker unchanged.
-- **`artifact_publication`** table (additive migration — the frozen
-  `hq_artifact`/`artifact_version` are untouched, so B1's schema test still
-  holds): `{ slug, artifact_id, kind, version_number (pinned), is_live,
-  published_at }`. The published version is **pinned and independent of the
-  draft's `current_version`** — publish v3, keep editing to v5, the public
-  still sees v3 until re-publish. Same draft-vs-distribution split as
-  `hq_artifact` ↔ `hq_app`.
-- **One allowlist, checked twice**: `validate.js`'s `APPROVED_HOSTS` is checked
-  at generation AND becomes the Worker's **CSP** on every serve
-  (`connect-src 'none'` + `img-src 'self' data:` close the exfiltration
-  channels; `'unsafe-inline'` script is the one accepted residual, contained by
-  everything else + the no-`eval` rule).
-- **Serve path**: the Worker reads exactly one public, read-only,
-  live-only RPC (`publication_by_slug`, granted to `anon`) and **re-runs
-  `validateHtml` server-side** before serving — never trust a client-side or
-  publish-time pass alone.
-- **Publish stays human-in-the-loop** (ADR-0004): `publish_artifact` is still
-  the only `sideEffect:true, autonomySafe:false` builder tool; a headless
-  mission can draft but never publish. `is_live=false` is the instant,
-  reversible takedown; nothing is ever hard-deleted.
-- **Founder prerequisite** (like ADR-0004's Vault step): deploy the Worker +
-  add the `build.arganta.app/*` route. No new paid service — Workers free tier.
+- **`supabase/migration_artifact_publications.sql`** — the additive
+  `artifact_publication` table (`hq_artifact`/`artifact_version` untouched,
+  B1's schema test still holds) + `hq_artifact_publish`/`_unpublish`/
+  `_publication` (operator-gated) + `publication_by_slug` (the ONE anon-
+  granted, read-only RPC — returns only `{kind, html, version_number}` for
+  `is_live` publications, `[]` for anything else). Slug assignment: title
+  slugified, denylist-checked, short random suffix on collision, **immutable
+  once assigned** — live-verified that republishing the same artifact reuses
+  the exact same slug rather than minting a new one.
+- **`apps/hq/src/builder-core/persist.ts`** — `publishArtifact`,
+  `unpublishArtifact`, `getPublication`, `publicArtifactUrl`.
+- **`publish_artifact` executor** (`lib/core/tools.ts`, `WIRED_BUILDER_SPECS`
+  grew 6→7) — fetches the artifact, re-runs `validateHtml` on the EXACT html
+  being published (a second, independent check on top of whatever validation
+  the version was saved with), only then calls the publish RPC. A failed
+  re-validation returns the specific failing check(s), never a fake success.
+  `unpublish` is deliberately NOT a chat tool — B1's frozen `BUILDER_TOOL_SPECS`
+  never defined one, and takedown is exactly the low-stakes, founder-initiated
+  action that doesn't need agent governance around it; it's UI-only.
+- **`workers/build-artifact-runtime/`** — the actual Cloudflare Worker.
+  `router.js` (pure, tested): `parseRoute` (`/a/:slug` `/w/:slug`, rejects
+  anything else including path traversal), `buildCsp` (ADR-0006 Decision 3
+  verbatim), and `assertCspHostsCoverApprovedHosts` — a drift guard asserting
+  every host in `validate.js`'s `APPROVED_HOSTS` is categorized into the CSP's
+  script/style/font directives, so adding an approved host later without
+  categorizing it for CSP fails a test instead of silently under/over-
+  protecting a served artifact. `index.js` (the fetch handler): calls
+  `publication_by_slug` with the anon key, checks the URL's `/a/`-or-`/w/`
+  kind against the row's real kind, **re-runs `validateHtml` server-side**
+  before serving (never trusts the publish-time pass alone), sets the CSP +
+  `X-Content-Type-Options`/`Referrer-Policy` on every response including
+  error pages, never a `Set-Cookie`.
+- **Publish/Unpublish UI** in `ArtifactCard.tsx` — reuses the SAME
+  `coreExecuteTool('publish_artifact', …)` path a chat-driven publish would
+  take, so a human clicking the button and the model calling the tool share
+  one validation gate, never two.
+
+**Live-verified end to end against the real Supabase project** (not mocked):
+create→publish (real slug+URL returned)→republish (confirmed identical slug
+reused)→`publication_by_slug` returns the row only while `is_live`, `[]`
+once unpublished, `[]` for an unknown slug→unpublish→cleaned up. Then the
+**actual Worker `fetch()` handler** (not just its pure sub-functions) was
+invoked directly against the same live project: served the real published
+HTML with a 200 + full CSP for a live slug, 404 for an unknown slug, 404 for
+a kind mismatch (`/a/:slug` requested for a website-kind publication), 404
+for unrelated paths.
+
+**Founder action still required before this is reachable from the internet**
+(recorded in ADR-0006 and `wrangler.toml`, same posture as ADR-0004's Vault
+step): `wrangler login`, confirm the `arganta.app` zone, `wrangler deploy`
+from `workers/build-artifact-runtime/`, and `wrangler secret put
+SUPABASE_ANON_KEY`. `wrangler` was not authenticated in this environment, so
+deployment itself is unimplementable here — only code, migration, and
+verification. **B5's go-live still needs the final Opus security review**
+ADR-0005/0006 both named — this batch shipped the implementation, not the
+sign-off.
 
 ## The proving slice (definition of done for v1)
 

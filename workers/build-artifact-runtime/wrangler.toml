@@ -1,0 +1,22 @@
+name = "build-artifact-runtime"
+main = "src/index.js"
+compatibility_date = "2026-07-15"
+
+# ADR-0006 Decision 1 — build.arganta.app is a Cloudflare Worker, kept off
+# the Supabase project entirely. FOUNDER PREREQUISITE before this goes live
+# (recorded here, same as ADR-0004's Vault-ify-secrets step):
+#   1. Confirm `arganta.app` is the zone this Cloudflare account manages.
+#   2. `wrangler deploy` from this directory (adds the route below).
+#   3. `wrangler secret put SUPABASE_ANON_KEY` — the anon key is technically
+#      a public value (RLS is the real boundary, and publication_by_slug is
+#      the one function it's granted on), but keeping it a Worker secret
+#      means it's rotatable without a redeploy and never sits in git.
+routes = [
+  { pattern = "build.arganta.app/*", zone_name = "arganta.app" }
+]
+
+[vars]
+# Not secret — this is the same project URL every browser client already
+# calls (apps/hq's VITE_SUPABASE_URL). The anon key is the one held back
+# as a Worker secret, set via `wrangler secret put SUPABASE_ANON_KEY`.
+SUPABASE_URL = "https://bdagdxgpnlialkppjwor.supabase.co"

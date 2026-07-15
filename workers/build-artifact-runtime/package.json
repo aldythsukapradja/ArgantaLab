@@ -1,0 +1,15 @@
+{
+  "name": "build-artifact-runtime",
+  "private": true,
+  "version": "0.0.0",
+  "description": "B5 (ADR-0006) — Cloudflare Worker serving published Single-File Builder artifacts at build.arganta.app.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

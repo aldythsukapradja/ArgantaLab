@@ -197,6 +197,16 @@
 .core-artifact-accepted { font-size: 11px; color: var(--ok); }
 .core-artifact-discarded { font-size: 11px; color: var(--tx3); }
 
+/* ---------- publish row (B5) ---------- */
+.core-artifact-publish {
+  padding: 9px 12px; border-top: 1px solid var(--bd); display: flex;
+  align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.core-artifact-publink { font-size: 11px; color: var(--ok); text-decoration: none; }
+.core-artifact-publink:hover { text-decoration: underline; }
+/* no --err token exists in theme.css (C4a rule: real tokens only, no new hex) — --warn is the closest semantic match */
+.core-artifact-pub-error { font-size: 11px; color: var(--warn); }
+
 .core-artifact-chart { padding: 14px 16px; width: 100%; box-sizing: border-box; background: var(--bg); }
 .core-chart-title { font-size: 12px; font-weight: 600; color: var(--tx2); margin-bottom: 10px; }
 .core-chart-bar-row { display: grid; grid-template-columns: 100px 1fr 44px; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
