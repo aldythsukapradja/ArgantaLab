@@ -12,8 +12,9 @@ import { saveMediaAsset } from '../mediaAssets'
 import { makeWebsite, makeDeck, makeBrand } from '../../surfaces/studios/engines'
 import { analyze } from '../../surfaces/studios/analytics'
 import { OFFICE_META, routeConcern, delegationResponse, isOffice } from '@arganta/agent'
-import { BUILDER_TOOL_SPECS, builderToolByName } from '@arganta/builder'
-import { generateWebsite, generateApplication } from '../../builder-core/generate'
+import { BUILDER_TOOL_SPECS, builderToolByName, validateHtml } from '@arganta/builder'
+import { generateWebsite, generateApplication, reviseArtifact } from '../../builder-core/generate'
+import { createArtifact, saveVersion, saveCurrentAsVersion, restoreVersion, getArtifact } from '../../builder-core/persist'
 
 export interface ToolResult {
   data: unknown          // what the model reads back (JSON-stringified by the loop)
@@ -104,26 +105,79 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
   return { data: resp.toolResult, block: resp.block, costUsd: out.costUsd ?? 0 }
 }
 
+function titleFromBrief(brief: string): string {
+  const first = (brief.split(/[—\-,.\n]/)[0] || 'Untitled').trim()
+  return first.slice(0, 60) || 'Untitled'
+}
+
 // create_website / create_application — B2's tiered generation (Stage-0
 // deterministic floor, Stage-1 AI upgrade if it passes @arganta/builder's
-// validation gate). Reuses the 'website' block kind for both (C1's frozen
-// BLOCK_KINDS has no separate 'application' kind; both are single-file HTML
-// artifacts rendered the same way — see Single-File-Builder.md).
-async function runCreateWebsite(args: { brief: string; websiteType?: string }): Promise<ToolResult> {
+// validation gate), now persisted (B3) as a draft hq_artifact + version 1 so
+// revise/validate/save/restore have something to reference. Reuses the
+// 'website' block kind for both (C1's frozen BLOCK_KINDS has no separate
+// 'application' kind; both are single-file HTML artifacts rendered the same
+// way — see Single-File-Builder.md). Persistence is best-effort: if Supabase
+// is unavailable the artifact is still returned+shown, just without an id —
+// the generation itself never depends on persistence succeeding.
+async function runCreateWebsite(args: { brief: string; websiteType?: string; brandKitId?: string }): Promise<ToolResult> {
   const g = await generateWebsite({ brief: args.brief, websiteType: args.websiteType })
+  const artifactId = await createArtifact({ kind: 'website', title: titleFromBrief(args.brief), g, brandKitId: args.brandKitId })
   return {
-    data: { ok: true, kind: 'website', stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
-    block: { assetId: null, path: null, html: g.html },
+    data: { ok: true, kind: 'website', artifactId, stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
+    block: { assetId: artifactId, path: null, html: g.html },
     costUsd: g.costUsd,
   }
 }
 
-async function runCreateApplication(args: { brief: string; templateId?: string; useCircleSdk?: boolean }): Promise<ToolResult> {
+async function runCreateApplication(args: { brief: string; templateId?: string; useCircleSdk?: boolean; brandKitId?: string }): Promise<ToolResult> {
   const g = await generateApplication({ brief: args.brief, templateId: args.templateId, useCircleSdk: args.useCircleSdk })
+  const artifactId = await createArtifact({ kind: 'application', title: titleFromBrief(args.brief), g, templateId: args.templateId, brandKitId: args.brandKitId })
   return {
-    data: { ok: true, kind: 'application', stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
-    block: { assetId: null, path: null, html: g.html },
+    data: { ok: true, kind: 'application', artifactId, stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
+    block: { assetId: artifactId, path: null, html: g.html },
     costUsd: g.costUsd,
+  }
+}
+
+// revise_artifact — fetches the artifact's current html, revises it (v1 =
+// full-document revision), persists the result as a new immutable version,
+// and updates the artifact's current pointer. Honest degrade: an unknown
+// artifactId or an offline Supabase both fail explicitly, never silently.
+async function runReviseArtifact(args: { artifactId: string; instruction: string }): Promise<ToolResult> {
+  const artifact = await getArtifact(args.artifactId)
+  if (!artifact) return { data: { error: `artifact not found: ${args.artifactId}` } }
+  const g = await reviseArtifact({ currentHtml: artifact.html, instruction: args.instruction, kind: artifact.kind })
+  if (g.stage === 0 && g.provider === 'unchanged') {
+    return { data: { ok: false, artifactId: args.artifactId, note: 'revision unavailable — artifact left unchanged', validation: { ok: g.validation.ok, errors: g.validation.errors } } }
+  }
+  await saveVersion({ artifactId: args.artifactId, g, instruction: args.instruction })
+  return {
+    data: { ok: true, artifactId: args.artifactId, stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
+    block: { assetId: args.artifactId, path: null, html: g.html },
+    costUsd: g.costUsd,
+  }
+}
+
+async function runValidateArtifact(args: { artifactId: string }): Promise<ToolResult> {
+  const artifact = await getArtifact(args.artifactId)
+  if (!artifact) return { data: { error: `artifact not found: ${args.artifactId}` } }
+  const v = validateHtml(artifact.html, { kind: artifact.kind })
+  return { data: { artifactId: args.artifactId, ok: v.ok, errors: v.errors, warnings: v.warnings } }
+}
+
+async function runSaveVersion(args: { artifactId: string }): Promise<ToolResult> {
+  const versionId = await saveCurrentAsVersion(args.artifactId)
+  if (!versionId) return { data: { error: `could not save a version for artifact: ${args.artifactId}` } }
+  return { data: { ok: true, artifactId: args.artifactId, versionId } }
+}
+
+async function runRestoreVersion(args: { artifactId: string; versionNumber: number }): Promise<ToolResult> {
+  const ok = await restoreVersion(args.artifactId, args.versionNumber)
+  if (!ok) return { data: { error: `could not restore version ${args.versionNumber} for artifact: ${args.artifactId}` } }
+  const artifact = await getArtifact(args.artifactId)
+  return {
+    data: { ok: true, artifactId: args.artifactId, versionNumber: args.versionNumber },
+    block: artifact ? { assetId: args.artifactId, path: null, html: artifact.html } : undefined,
   }
 }
 
@@ -153,6 +207,10 @@ const EXECUTORS: Record<string, (args: any) => Promise<ToolResult> | ToolResult>
   check_ledger: runCheckLedger,
   create_website: runCreateWebsite,
   create_application: runCreateApplication,
+  revise_artifact: runReviseArtifact,
+  validate_artifact: runValidateArtifact,
+  save_version: runSaveVersion,
+  restore_version: runRestoreVersion,
 }
 
 // The subset of BUILDER_TOOL_SPECS actually wired to an executor above — the

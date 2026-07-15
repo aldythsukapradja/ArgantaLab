@@ -104,11 +104,42 @@ end-to-end through the real tool-executor path. `revise_artifact`,
 persistence (`migration_hq_artifacts.sql` + save/restore RPCs) — calling them
 now honestly returns "no executor wired for: X" rather than a fake result.
 
-Known gap (not B2's to fix — B1/Opus-frozen contract): `validateHtml()`'s
-`no-todo` check regexes for the literal word `PLACEHOLDER` case-insensitively,
-which also matches the ordinary HTML `placeholder="…"` attribute on any input
-field — a false-positive **warning** (never blocks generation, since quality
-checks are warn-only). Worth a B3 cleanup pass.
+### B3 ✅ SHIPPED — persistence, versioning, `migration_hq_artifacts.sql`
+
+`hq_artifact` (current-state pointer) + `artifact_version` (immutable history,
+`run_id` lineage into `agent_runs`) live in the ArgantaLab Supabase project,
+implementing B1's frozen `ARTIFACT_COLUMNS`/`VERSION_COLUMNS` exactly. Six
+operator-gated SECURITY DEFINER RPCs (`hq_artifact_create`, `_save_version`,
+`_restore_version`, `_get`, `hq_artifacts_recent`, `hq_artifact_versions`),
+same RLS-enabled/no-direct-policy discipline as `migration_arganta_core.sql`.
+`apps/hq/src/builder-core/persist.ts` wraps them through B1's row-mapping
+contract (`artifactFromRow`/`versionFromRow`), mirroring `lib/core/thread.ts`.
+
+`create_website`/`create_application` now persist a draft artifact + version 1
+on generation (best-effort — generation itself never depends on persistence
+succeeding). `revise_artifact` fetches the artifact's current HTML, revises
+it, and saves the result as a new immutable version (`version_number` is
+always `max(existing)+1`, decoupled from the current-version pointer, so a
+restore followed by a new save never collides). `validate_artifact` re-runs
+B1's gate against the stored HTML. `save_version` snapshots the current HTML
+as a manual checkpoint. `restore_version` moves the current pointer back
+without deleting any history. All six now wired as real executors in
+`lib/core/tools.ts` — `WIRED_BUILDER_SPECS` grew from 2 to 6.
+
+**Also fixed while touching `validate.js`:** the `no-todo` false-positive
+where the literal word `PLACEHOLDER` (case-insensitive) matched the ordinary
+HTML `placeholder="…"` attribute — a negative lookahead (`\bPLACEHOLDER\b(?!\s*=)`)
+now tells the two apart; regression test added.
+
+Live-verified end to end in-browser: create → validate → revise (honest
+Stage-0-unavailable degrade, no AI configured in this environment, same known
+limitation as B2/C3) → manual save → restore → confirmed at the SQL layer
+that both versions exist and the restore left `current_version` correct.
+Also caught and worked around a real environment issue, not a code bug: a
+long-lived browser tab's Supabase client can wedge (even `auth.getSession()`
+hangs indefinitely) after many HMR reloads/dev-server restarts in one
+session — a fresh tab resolves instantly. Worth knowing if a future
+verification pass sees inexplicable Supabase hangs.
 
 ```
 apps/hq/src/builder-core/

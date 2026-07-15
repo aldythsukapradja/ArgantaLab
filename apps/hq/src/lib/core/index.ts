@@ -97,7 +97,17 @@ export async function sendMessage(threadId: string, userText: string): Promise<S
   const provider = lastModelCall?.provider ?? null
   const model = lastModelCall?.model ?? null
 
-  const blocks = [...trailBlocks, ...(finalText ? [makeBlock('text', { text: finalText })] : []), ...collectedBlocks]
+  // A blocked tool call (governance refused it, e.g. a non-autonomy-safe tool
+  // requested on-demand) never reaches executeTool, so trailBlocks never sees
+  // it — loop.js's own trail is the only place it's recorded. Surface it
+  // honestly as an 'error' block (BLOCK_KINDS is frozen with no dedicated
+  // 'blocked' kind) rather than silently dropping a refusal the founder should
+  // see. The UI (ArtifactCard's blocked variant) renders this distinctly.
+  const blockedBlocks = trail
+    .filter((t: any) => t.type === 'tool' && t.blocked)
+    .map((t: any) => makeBlock('error', { message: `needs approval to run ${t.name} (${t.blocked}) — not run automatically.` }))
+
+  const blocks = [...trailBlocks, ...blockedBlocks, ...(finalText ? [makeBlock('text', { text: finalText })] : []), ...collectedBlocks]
   await appendMessage({ id: crypto.randomUUID(), threadId, role: 'assistant', content: finalText, blocks, runId })
 
   return { text: finalText, blocks, stopReason, costUsd, provider, model }

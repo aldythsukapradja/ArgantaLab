@@ -70,6 +70,14 @@ test('quality issues are WARNINGS, not errors — they never block a safe docume
   assert.ok(r.warnings.some((w) => w.id === 'no-todo'));
 });
 
+test('no-todo does not false-positive on an ordinary HTML placeholder= attribute (B3 fix)', () => {
+  const withInput = GOOD.replace('<h1>Expenses</h1>', '<h1>Expenses</h1><input placeholder="Add an item…">');
+  const r = validateHtml(withInput, { kind: 'application' });
+  assert.ok(!r.warnings.some((w) => w.id === 'no-todo'));
+  const stillCatchesFiller = GOOD.replace('<h1>Expenses</h1>', '<h1>Expenses</h1><p>PLACEHOLDER content goes here</p>');
+  assert.ok(validateHtml(stillCatchesFiller, { kind: 'application' }).warnings.some((w) => w.id === 'no-todo'));
+});
+
 test('size ceiling is enforced as an error', () => {
   const huge = '<!doctype html><html><head><meta name="viewport" content="x"></head><body>' + 'a'.repeat(MAX_HTML_BYTES) + '</body></html>';
   assert.ok(validateHtml(huge).errors.some((e) => e.id === 'size'));

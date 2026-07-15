@@ -68,7 +68,10 @@ function quality(html, kind) {
   const c = [];
   const lower = html.toLowerCase();
   c.push(CHECK('responsive', 'warn', /@media/.test(html) || /max-width/i.test(html), 'no @media / responsive CSS found'));
-  c.push(CHECK('no-todo', 'warn', !/\b(TODO|FIXME|PLACEHOLDER|lorem ipsum)\b/i.test(html), 'contains TODO / PLACEHOLDER / lorem-ipsum text'));
+  // B3 fix: PLACEHOLDER as filler text is a real smell, but the identical word
+  // is also the standard HTML `placeholder="…"` input attribute — a negative
+  // lookahead for a following `=` tells the two apart without missing either.
+  c.push(CHECK('no-todo', 'warn', !/\b(TODO|FIXME|lorem ipsum)\b|\bPLACEHOLDER\b(?!\s*=)/i.test(html), 'contains TODO / PLACEHOLDER / lorem-ipsum text'));
   c.push(CHECK('has-title', 'warn', /<title>[^<]{1,}<\/title>/i.test(html), 'missing a non-empty <title>'));
   if (kind === 'application') {
     c.push(CHECK('app-has-script', 'warn', lower.includes('<script'), 'an application should have interactive JS'));
