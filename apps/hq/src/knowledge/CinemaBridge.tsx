@@ -88,7 +88,7 @@ function KnowledgeCinemaSlotInner({ progress, core, sceneId }: KnowledgeCinemaPr
   return (
     <div ref={wrapRef} className="kg-cinema-slot" style={{ position: 'absolute', inset: 0 }}>
       <style>{`.kg-cinema-slot canvas{width:100%!important;height:100%!important;display:block}`}</style>
-      <KnowledgeScene model={model} tissue={tissue} width={size.w} height={size.h} dark={dark} autoCamera />
+      <KnowledgeScene key={dark ? 'dark' : 'light'} model={model} tissue={tissue} width={size.w} height={size.h} dark={dark} autoCamera />
     </div>
   )
 }

@@ -44,9 +44,13 @@ function Lights({ dark }: { dark: boolean }) {
   )
 }
 
-function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLayerId, onSelectProduct, onHoverProduct }: {
+function Rig({ sceneRef, dragExplRef, manualExplosion, layers, tier, interactive, dark, selectedLayerId, onSelectProduct, onHoverProduct }: {
   sceneRef: React.MutableRefObject<SceneState>
-  manualRef: React.MutableRefObject<number | null>
+  /** Live mouse-drag override (centered mode) — a ref so useFrame always sees
+   *  the latest value even when nothing else causes this component to re-render. */
+  dragExplRef: React.MutableRefObject<number | null>
+  /** External scrub override (e.g. Cinema Editor's action slider). */
+  manualExplosion: number | null
   layers: ReactorLayerSpec[]
   tier: QualityTier
   interactive: boolean
@@ -94,12 +98,17 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
     const smooth = rm ? 0.12 : 0.5
     const beatProgress = scene.sceneDuration > 0 ? THREE.MathUtils.clamp(scene.sceneTime / scene.sceneDuration, 0, 1) : 0
     const target = choreoFor(scene.state, scene.choreography, beatProgress)
-    const explTarget = manualRef.current != null ? manualRef.current : target.explosion
+    // Read the drag ref every frame (not just on re-render) so a mouse-drag
+    // update is never stranded behind a component that isn't re-rendering.
+    const manualNow = dragExplRef.current != null ? dragExplRef.current : manualExplosion
+    const explTarget = manualNow != null ? manualNow : target.explosion
     expl.current = THREE.MathUtils.damp(expl.current, explTarget, 3.2, dt)
 
     // Breathe whenever a voice is narrating (speaker set), not only in the two
     // explicit speaking states — the orb "speaks" through the whole story.
-    const speaking = scene.speaker !== null
+    // Also breathe on 'listening' (the founder's own mic is live) so the
+    // voice copilot's orb reacts to the founder's voice, not just Jarvis's.
+    const speaking = scene.speaker !== null || scene.state === 'listening'
     const t = rs.clock.elapsedTime
 
     // Spark intensity: a big burst on ignition, a steadier shower during
@@ -180,7 +189,7 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
     // while authoring). It fades in on arrival and — since 'return' keeps
     // labels relevant while explosion itself is animating back to 0 — fades
     // out again as the reactor folds closed, landing back at silent standby.
-    const manualControl = manualRef.current != null
+    const manualControl = manualNow != null
     const bigReveal = scene.state === 'architecture-unfold' || scene.state === 'return'
     labelRefs.current.forEach((mesh, i) => {
       const spec = layers[i]
@@ -252,7 +261,7 @@ function Rig({ sceneRef, manualRef, layers, tier, interactive, dark, selectedLay
 }
 
 export function CoreR3F({
-  scene, tier, layers = DEFAULT_LAYERS, manualExplosion = null, interactive = false,
+  scene, tier, layers = DEFAULT_LAYERS, manualExplosion = null, interactive = false, centered = false,
   selectedLayerId = null, dark = true, onSelectProduct, onHoverProduct,
 }: {
   scene: SceneState
@@ -260,6 +269,8 @@ export function CoreR3F({
   layers?: ReactorLayerSpec[]
   manualExplosion?: number | null
   interactive?: boolean
+  /** Glue the reactor to centre (no pan) and let a RIGHT-mouse drag explode it. */
+  centered?: boolean
   selectedLayerId?: string | null
   dark?: boolean
   onSelectProduct?: (id: ProductId) => void
@@ -272,8 +283,40 @@ export function CoreR3F({
   const wrap = useRef<HTMLDivElement>(null)
   const sceneRef = useRef(scene)
   sceneRef.current = scene
-  const manualRef = useRef(manualExplosion)
-  manualRef.current = manualExplosion
+  const dragExplRef = useRef<number | null>(null) // right-mouse manual explosion (centered mode)
+
+  // Centered mode: a RIGHT-mouse drag explodes the reactor (drag up → expand,
+  // down → recombine); it holds at that level on release. Left drag still
+  // orbits, wheel still zooms; pan is off so the core stays glued to centre.
+  useEffect(() => {
+    if (!interactive || !centered) return
+    const el = wrap.current
+    if (!el) return
+    let dragging = false, startY = 0, startVal = 0
+    // Capture phase on the wrapper: intercept the right button BEFORE it reaches
+    // the canvas, so OrbitControls never treats it as a pan.
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 2) return
+      e.preventDefault(); e.stopPropagation()
+      dragging = true; startY = e.clientY; startVal = dragExplRef.current ?? 0
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) return
+      dragExplRef.current = Math.max(0, Math.min(1, startVal + (startY - e.clientY) / 240))
+    }
+    const stop = (e: PointerEvent) => { if (e.button === 2) dragging = false }
+    const noCtx = (e: MouseEvent) => { e.preventDefault() } // no context menu while right-dragging
+    el.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', stop)
+    el.addEventListener('contextmenu', noCtx)
+    return () => {
+      el.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', stop)
+      el.removeEventListener('contextmenu', noCtx)
+    }
+  }, [interactive, centered])
   const noPost = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nopost')
 
   // Embedded browser panes can miss R3F's initial ResizeObserver callback,
@@ -308,7 +351,7 @@ export function CoreR3F({
         }}
         style={{ width: '100%', height: '100%', display: 'block' }}>
         <Lights dark={dark} />
-        <Rig sceneRef={sceneRef} manualRef={manualRef} layers={layers} tier={tier}
+        <Rig sceneRef={sceneRef} dragExplRef={dragExplRef} manualExplosion={manualExplosion} layers={layers} tier={tier}
           interactive={interactive} dark={dark} selectedLayerId={selectedLayerId}
           onSelectProduct={onSelectProduct} onHoverProduct={onHoverProduct} />
         {interactive && (
@@ -317,7 +360,7 @@ export function CoreR3F({
           // views them edge-on and collapses them into thin slivers. Clamp
           // both to a generous but bounded range — still a real orbit, never
           // the degenerate profile view.
-          <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} target={[0, 0, 0]}
+          <OrbitControls makeDefault enablePan={!centered} enableDamping dampingFactor={0.08} target={[0, 0, 0]}
             minDistance={6} maxDistance={44}
             minPolarAngle={Math.PI * 0.24} maxPolarAngle={Math.PI * 0.76}
             minAzimuthAngle={-Math.PI * 0.32} maxAzimuthAngle={Math.PI * 0.32} />
