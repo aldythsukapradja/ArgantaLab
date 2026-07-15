@@ -1,0 +1,54 @@
+<!--
+id: activity-feed
+name: Activity feed
+category: timeline
+suitableFor: application
+description: Vertical timeline — dot + connecting line per entry, actor/action/time, newest first. Empty state when there is no activity.
+tags: activity, feed, timeline, log, history, events
+-->
+<style>
+  .blk-activity-feed{
+    --af-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --af-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+  }
+  .blk-activity-feed .af-list{ list-style: none; margin: 0; padding: 0; }
+  .blk-activity-feed .af-item{ position: relative; padding: 0 0 22px 26px; }
+  .blk-activity-feed .af-item:last-child{ padding-bottom: 0; }
+  .blk-activity-feed .af-item::before{
+    content: ''; position: absolute; left: 4px; top: 5px; width: 8px; height: 8px; border-radius: 999px;
+    background: var(--brand-accent,#8b7bff);
+  }
+  .blk-activity-feed .af-item::after{
+    content: ''; position: absolute; left: 7.5px; top: 15px; bottom: -2px; width: 1px; background: var(--af-line);
+  }
+  .blk-activity-feed .af-item:last-child::after{ display: none; }
+  .blk-activity-feed .af-text{ font-size: 14px; line-height: 1.5; margin: 0; }
+  .blk-activity-feed .af-actor{ font-weight: 600; }
+  .blk-activity-feed .af-time{ font-size: 12.5px; color: var(--af-mut); margin: 3px 0 0; }
+  .blk-activity-feed .af-empty{ display: none; align-items: center; gap: 10px; color: var(--af-mut); font-size: 13.5px; padding: 24px 0; }
+  .blk-activity-feed[data-empty] .af-list{ display: none; }
+  .blk-activity-feed[data-empty] .af-empty{ display: flex; }
+</style>
+
+<section class="blk blk-activity-feed" data-empty>
+  <ul class="af-list" data-fill="items">
+    <li class="af-item">
+      <p class="af-text"><span class="af-actor" data-fill="actor-1">You</span> <span data-fill="action-1">added a new entry</span></p>
+      <p class="af-time" data-fill="time-1">2 minutes ago</p>
+    </li>
+    <li class="af-item">
+      <p class="af-text"><span class="af-actor" data-fill="actor-2">You</span> <span data-fill="action-2">updated the plan</span></p>
+      <p class="af-time" data-fill="time-2">1 hour ago</p>
+    </li>
+    <li class="af-item">
+      <p class="af-text"><span class="af-actor" data-fill="actor-3">You</span> <span data-fill="action-3">created this</span></p>
+      <p class="af-time" data-fill="time-3">Yesterday</p>
+    </li>
+  </ul>
+  <div class="af-empty">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.6"/><path d="M9 5.5V9l2.6 1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <span>No activity yet.</span>
+  </div>
+</section>

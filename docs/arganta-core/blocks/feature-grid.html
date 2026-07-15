@@ -1,0 +1,54 @@
+<!--
+id: feature-grid
+name: Feature grid
+category: layout
+suitableFor: website
+description: Three-up feature grid (one column on mobile) — accent icon chip, title, two-line body per item.
+tags: features, grid, layout, benefits, cards
+-->
+<style>
+  .blk-feature-grid{
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--brand-bg,#12101f);
+    padding: clamp(48px, 8vw, 96px) clamp(16px, 5vw, 64px);
+  }
+  .blk-feature-grid .fg-grid{
+    display: grid; gap: 20px; max-width: 1080px; margin: 0 auto; grid-template-columns: 1fr;
+  }
+  .blk-feature-grid .fg-card{
+    background: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    border-radius: 14px; padding: 24px;
+  }
+  .blk-feature-grid .fg-icon{
+    display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; margin-bottom: 16px;
+    background: color-mix(in srgb, var(--brand-accent,#8b7bff) 16%, transparent); color: var(--brand-accent,#8b7bff);
+  }
+  .blk-feature-grid .fg-title{ font-family: var(--brand-font-head, Georgia, serif); font-size: 18px; margin: 0 0 8px; }
+  .blk-feature-grid .fg-body{
+    font-size: 14.5px; line-height: 1.55; margin: 0;
+    color: color-mix(in srgb, var(--brand-ink,#f4f2ff) 78%, transparent);
+  }
+  @media (min-width: 720px){ .blk-feature-grid .fg-grid{ grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+<section class="blk blk-feature-grid">
+  <div class="fg-grid" data-fill="items">
+    <div class="fg-card">
+      <div class="fg-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 2.5 3 6v6l6 3.5 6-3.5V6L9 2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+      <h3 class="fg-title">Fast to set up</h3>
+      <p class="fg-body">No configuration marathon — describe what you need and it's ready in minutes.</p>
+    </div>
+    <div class="fg-card">
+      <div class="fg-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1.5 11 6l5 .7-3.6 3.5.9 5-4.3-2.3-4.3 2.3.9-5L2 6.7 7 6 9 1.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+      <h3 class="fg-title">Built to look right</h3>
+      <p class="fg-body">Every screen inherits your brand automatically — no manual styling required.</p>
+    </div>
+    <div class="fg-card">
+      <div class="fg-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="2.5" width="13" height="13" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M6 9h6M9 6v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <h3 class="fg-title">Yours to keep</h3>
+      <p class="fg-body">Every version is saved — revise freely and restore any earlier state.</p>
+    </div>
+  </div>
+</section>

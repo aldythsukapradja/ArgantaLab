@@ -1,0 +1,129 @@
+<!--
+id: chart-line
+name: Line chart
+category: chart
+suitableFor: application
+description: Hand-rolled SVG polyline with an accent area fill, up to two series, 4 gridlines, a hover/focus dot and value label per point. Empty or malformed data renders the empty state.
+tags: chart, line, trend, series, time series
+-->
+<style>
+  .blk-chart-line{
+    --cl-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --cl-soft: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    --cl-grid: color-mix(in srgb, var(--brand-ink,#f4f2ff) 10%, transparent);
+    --cl-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    --cl-area: color-mix(in srgb, var(--brand-accent,#8b7bff) 12%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--cl-soft);
+    border: 1px solid var(--cl-line);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .blk-chart-line .cl-title{
+    font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--cl-mut); margin: 0 0 16px;
+  }
+  .blk-chart-line .cl-svg{ width: 100%; height: auto; display: block; overflow: visible; }
+  .blk-chart-line .cl-gridlines line{ stroke: var(--cl-grid); stroke-width: 1; }
+  .blk-chart-line .cl-axislabel{ font-size: 8.5px; fill: var(--cl-mut); }
+  .blk-chart-line .cl-area{ fill: var(--cl-area); }
+  .blk-chart-line .cl-path{ fill: none; stroke-width: 2; }
+  .blk-chart-line .cl-hit{ fill: transparent; }
+  .blk-chart-line .cl-hit:focus-visible{ outline: none; }
+  .blk-chart-line .cl-dot{ transition: r .12s ease-out; }
+  .blk-chart-line .cl-val{ font-size: 9px; opacity: 0; transition: opacity .12s ease-out; }
+  .blk-chart-line .cl-pt:hover .cl-val, .blk-chart-line .cl-pt:focus-within .cl-val{ opacity: 1; }
+  .blk-chart-line .cl-pt:hover .cl-dot, .blk-chart-line .cl-pt:focus-within .cl-dot{ r: 4.5; }
+  .blk-chart-line .cl-empty{ display: none; align-items: center; gap: 10px; color: var(--cl-mut); font-size: 13.5px; min-height: 140px; }
+  .blk-chart-line[data-empty] .cl-wrap{ display: none; }
+  .blk-chart-line[data-empty] .cl-empty{ display: flex; }
+  @media (prefers-reduced-motion: reduce){ .blk-chart-line .cl-dot, .blk-chart-line .cl-val{ transition: none; } }
+</style>
+
+<section class="blk blk-chart-line" data-empty>
+  <p class="cl-title" data-fill="title">Weekly trend</p>
+
+  <script type="application/json" data-fill="series">[]</script>
+
+  <div class="cl-wrap">
+    <svg class="cl-svg" viewBox="0 0 300 160" role="img" aria-label="Line chart">
+      <g class="cl-gridlines"></g>
+      <g class="cl-areas"></g>
+      <g class="cl-paths"></g>
+      <g class="cl-points"></g>
+      <g class="cl-labels"></g>
+    </svg>
+  </div>
+
+  <div class="cl-empty">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M2 12 L6 8 L9 10.5 L16 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>No data yet.</span>
+  </div>
+</section>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag) { return document.createElementNS(NS, tag); }
+
+  document.querySelectorAll('.blk-chart-line').forEach(function (root) {
+    if (root.dataset.wired) return; root.dataset.wired = '1';
+    var pts = [];
+    try { pts = JSON.parse((root.querySelector('script[data-fill="series"]') || {}).textContent || '[]'); } catch (e) { pts = []; }
+    if (!Array.isArray(pts)) pts = [];
+    pts = pts.filter(function (p) { return p && Array.isArray(p.values) && p.values.length > 0; });
+    if (pts.length < 2) { root.setAttribute('data-empty', ''); return; }
+    root.removeAttribute('data-empty');
+
+    var W = 300, H = 160, padT = 6, padB = 18, chartH = H - padT - padB;
+    var seriesCount = Math.min(2, pts[0].values.length);
+    var maxV = Math.max.apply(null, pts.map(function (p) { return Math.max.apply(null, p.values.slice(0, seriesCount)); }));
+    maxV = maxV || 1;
+    var colors = ['var(--brand-accent,#8b7bff)', 'var(--brand-mid,#2a2450)'];
+    var n = pts.length;
+    var stepX = n > 1 ? W / (n - 1) : 0;
+
+    var gridG = root.querySelector('.cl-gridlines');
+    for (var g = 0; g < 4; g++) {
+      var y = padT + (chartH / 3) * g;
+      var line = el('line');
+      line.setAttribute('x1', 0); line.setAttribute('x2', W); line.setAttribute('y1', y); line.setAttribute('y2', y);
+      gridG.appendChild(line);
+    }
+
+    function yFor(v) { return padT + chartH - (v / maxV) * chartH; }
+
+    for (var s = 0; s < seriesCount; s++) {
+      var coords = pts.map(function (p, i) { return [i * stepX, yFor(p.values[s])]; });
+      var d = coords.map(function (c, i) { return (i === 0 ? 'M' : 'L') + c[0] + ' ' + c[1]; }).join(' ');
+      var path = el('path'); path.setAttribute('class', 'cl-path'); path.setAttribute('d', d); path.setAttribute('stroke', colors[s]);
+      root.querySelector('.cl-paths').appendChild(path);
+
+      if (s === 0) {
+        var areaD = d + ' L' + coords[coords.length - 1][0] + ' ' + (padT + chartH) + ' L' + coords[0][0] + ' ' + (padT + chartH) + ' Z';
+        var area = el('path'); area.setAttribute('class', 'cl-area'); area.setAttribute('d', areaD);
+        root.querySelector('.cl-areas').appendChild(area);
+      }
+
+      coords.forEach(function (c, i) {
+        var pt = el('g'); pt.setAttribute('class', 'cl-pt'); pt.setAttribute('tabindex', '0');
+        var hit = el('circle'); hit.setAttribute('class', 'cl-hit'); hit.setAttribute('cx', c[0]); hit.setAttribute('cy', c[1]); hit.setAttribute('r', 10);
+        var dot = el('circle'); dot.setAttribute('class', 'cl-dot'); dot.setAttribute('cx', c[0]); dot.setAttribute('cy', c[1]); dot.setAttribute('r', 3); dot.setAttribute('fill', colors[s]);
+        var val = el('text'); val.setAttribute('class', 'cl-val'); val.setAttribute('x', c[0]); val.setAttribute('y', c[1] - 8); val.setAttribute('text-anchor', 'middle'); val.setAttribute('fill', colors[s]);
+        val.textContent = String(pts[i].values[s]);
+        var title = el('title'); title.textContent = pts[i].label + ': ' + pts[i].values[s];
+        pt.appendChild(hit); pt.appendChild(dot); pt.appendChild(val); pt.appendChild(title);
+        root.querySelector('.cl-points').appendChild(pt);
+      });
+    }
+
+    pts.forEach(function (p, i) {
+      var label = el('text'); label.setAttribute('class', 'cl-axislabel'); label.setAttribute('x', i * stepX); label.setAttribute('y', H - 4); label.setAttribute('text-anchor', 'middle');
+      label.textContent = p.label;
+      root.querySelector('.cl-labels').appendChild(label);
+    });
+
+    root.querySelector('.cl-svg').setAttribute('aria-label', 'Line chart: ' + pts.map(function (p) { return p.label + ' ' + p.values.join('/'); }).join(', '));
+  });
+})();
+</script>

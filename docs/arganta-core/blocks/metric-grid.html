@@ -1,0 +1,52 @@
+<!--
+id: metric-grid
+name: Metric grid
+category: metric
+suitableFor: application
+description: A 2x2 (mobile) / 4-up (desktop) grid of metric-card anatomy — overline label, value, delta pill per cell. Ships empty; the generator fills entries or leaves data-empty.
+tags: metric, kpi, stat, grid, dashboard, summary
+-->
+<style>
+  .blk-metric-grid{
+    --mg-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --mg-soft: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    --mg-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+  }
+  .blk-metric-grid .mg-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .blk-metric-grid .mg-cell{
+    background: var(--mg-soft); border: 1px solid var(--mg-line); border-radius: 14px; padding: 18px 20px; min-width: 0;
+  }
+  .blk-metric-grid .mg-label{ font-size: 11.5px; text-transform: uppercase; letter-spacing: .13em; color: var(--mg-mut); margin: 0 0 8px; }
+  .blk-metric-grid .mg-row{ display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .blk-metric-grid .mg-value{
+    font-family: var(--brand-font-head, Georgia, serif); font-size: clamp(22px, 3.4vw, 30px);
+    font-weight: 600; margin: 0; font-variant-numeric: tabular-nums;
+  }
+  .blk-metric-grid .mg-delta{
+    font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px;
+    background: color-mix(in srgb, var(--brand-accent,#8b7bff) 16%, transparent); color: var(--brand-accent,#8b7bff);
+  }
+  .blk-metric-grid .mg-delta[data-dir="down"]{ background: var(--mg-soft); color: var(--mg-mut); }
+  .blk-metric-grid .mg-empty{
+    display: none; align-items: center; gap: 10px; color: var(--mg-mut); font-size: 13.5px;
+    padding: 32px 20px; border: 1px dashed var(--mg-line); border-radius: 14px;
+  }
+  .blk-metric-grid[data-empty] .mg-grid{ display: none; }
+  .blk-metric-grid[data-empty] .mg-empty{ display: flex; }
+  @media (min-width: 720px){ .blk-metric-grid .mg-grid{ grid-template-columns: repeat(4, 1fr); } }
+</style>
+
+<section class="blk blk-metric-grid" data-empty>
+  <div class="mg-grid" data-fill="items">
+    <div class="mg-cell"><p class="mg-label" data-fill="label-1">Metric</p><div class="mg-row"><p class="mg-value" data-fill="value-1"></p><span class="mg-delta" data-fill="delta-1" data-dir="up"></span></div></div>
+    <div class="mg-cell"><p class="mg-label" data-fill="label-2">Metric</p><div class="mg-row"><p class="mg-value" data-fill="value-2"></p><span class="mg-delta" data-fill="delta-2" data-dir="up"></span></div></div>
+    <div class="mg-cell"><p class="mg-label" data-fill="label-3">Metric</p><div class="mg-row"><p class="mg-value" data-fill="value-3"></p><span class="mg-delta" data-fill="delta-3" data-dir="up"></span></div></div>
+    <div class="mg-cell"><p class="mg-label" data-fill="label-4">Metric</p><div class="mg-row"><p class="mg-value" data-fill="value-4"></p><span class="mg-delta" data-fill="delta-4" data-dir="up"></span></div></div>
+  </div>
+  <div class="mg-empty">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M2 13 L7 8 L10 11 L16 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>No metrics yet — this fills in once activity is recorded.</span>
+  </div>
+</section>

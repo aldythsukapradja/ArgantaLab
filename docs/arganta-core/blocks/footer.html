@@ -1,0 +1,78 @@
+<!--
+id: footer
+name: Footer
+category: footer
+suitableFor: website
+description: Structural page footer — brand line, two link columns, legal row. Quiet by design; closes any page without competing with it.
+tags: footer, links, legal, structural, bottom
+-->
+<style>
+  .blk-footer{
+    --ft-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --ft-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--brand-bg,#12101f);
+    border-top: 1px solid var(--ft-line);
+    padding: clamp(40px, 6vw, 64px) clamp(16px, 5vw, 64px) 28px;
+  }
+  .blk-footer .ft-grid{
+    display: grid; gap: 32px; max-width: 1080px; margin: 0 auto;
+    grid-template-columns: 1fr;
+  }
+  .blk-footer .ft-brand-name{
+    font-family: var(--brand-font-head, Georgia, serif);
+    font-size: 19px; font-weight: 600; margin: 0 0 8px;
+  }
+  .blk-footer .ft-brand-line{ font-size: 13.5px; color: var(--ft-mut); margin: 0; max-width: 34ch; line-height: 1.55; }
+  .blk-footer .ft-col-title{
+    font-size: 12px; text-transform: uppercase; letter-spacing: .14em;
+    color: var(--ft-mut); margin: 0 0 14px;
+  }
+  .blk-footer ul{ list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .blk-footer .ft-link{
+    display: inline-block; padding: 5px 0; min-height: 32px;
+    font-size: 14px; color: var(--brand-ink,#f4f2ff); text-decoration: none;
+    opacity: .85; transition: opacity .15s ease-out;
+  }
+  .blk-footer .ft-link:hover{ opacity: 1; text-decoration: underline; text-underline-offset: 3px; }
+  .blk-footer .ft-link:focus-visible{ outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: 2px; border-radius: 4px; }
+  .blk-footer .ft-legal{
+    max-width: 1080px; margin: 40px auto 0; padding-top: 20px;
+    border-top: 1px solid var(--ft-line);
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    font-size: 12.5px; color: var(--ft-mut);
+  }
+  @media (min-width: 720px){
+    .blk-footer .ft-grid{ grid-template-columns: 2fr 1fr 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce){ .blk-footer .ft-link{ transition: none; } }
+</style>
+
+<footer class="blk blk-footer">
+  <div class="ft-grid">
+    <div>
+      <p class="ft-brand-name" data-fill="brand">Brand</p>
+      <p class="ft-brand-line" data-fill="brand-line">One line about what this is and who it serves.</p>
+    </div>
+    <nav aria-label="Footer — product">
+      <p class="ft-col-title" data-fill="col1-title">Product</p>
+      <ul data-fill="col1-links">
+        <li><a class="ft-link" href="#">Overview</a></li>
+        <li><a class="ft-link" href="#">Features</a></li>
+        <li><a class="ft-link" href="#">Pricing</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="Footer — company">
+      <p class="ft-col-title" data-fill="col2-title">Company</p>
+      <ul data-fill="col2-links">
+        <li><a class="ft-link" href="#">About</a></li>
+        <li><a class="ft-link" href="#">Contact</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="ft-legal">
+    <span data-fill="legal">© 2026 Brand. All rights reserved.</span>
+    <span data-fill="credit">Made with Arganta</span>
+  </div>
+</footer>

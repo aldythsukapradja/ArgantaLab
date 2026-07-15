@@ -1,0 +1,57 @@
+<!--
+id: nav-bottom
+name: Bottom tab bar
+category: navigation
+suitableFor: application
+description: Fixed mobile bottom tab bar — three to five items with inline icons, safe-area aware, one marked as the current page.
+tags: nav, navigation, bottom bar, tabs, mobile, menu
+-->
+<style>
+  .blk-nav-bottom{
+    --nb-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --nb-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    --nb-tint: color-mix(in srgb, var(--brand-accent,#8b7bff) 16%, transparent);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--brand-bg,#12101f);
+    border-top: 1px solid var(--nb-line);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .blk-nav-bottom .nb-list{
+    list-style: none; margin: 0; padding: 6px 8px; display: flex; justify-content: space-around;
+    max-width: 640px; margin-inline: auto;
+  }
+  .blk-nav-bottom .nb-item{
+    display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 56px; min-height: 44px;
+    padding: 6px 8px; border-radius: 10px; color: var(--nb-mut); text-decoration: none; font-size: 11px;
+  }
+  .blk-nav-bottom .nb-item svg{ flex-shrink: 0; }
+  .blk-nav-bottom .nb-item:focus-visible{ outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: 2px; }
+  .blk-nav-bottom .nb-item[aria-current="page"]{ color: var(--brand-accent,#8b7bff); background: var(--nb-tint); font-weight: 600; }
+</style>
+
+<nav class="blk blk-nav-bottom" aria-label="Primary">
+  <ul class="nb-list" data-fill="items">
+    <li><a class="nb-item" href="#" aria-current="page">
+      <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M2.5 8 9 2.5 15.5 8v7a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <span>Home</span>
+    </a></li>
+    <li><a class="nb-item" href="#">
+      <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="5.2" stroke="currentColor" stroke-width="1.5"/><path d="m15 15-2.6-2.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Search</span>
+    </a></li>
+    <li><a class="nb-item" href="#">
+      <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 2.5v13M2.5 9h13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span>Add</span>
+    </a></li>
+    <li><a class="nb-item" href="#">
+      <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 14V8M9 14V4M15 14v-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Activity</span>
+    </a></li>
+    <li><a class="nb-item" href="#">
+      <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 15c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Account</span>
+    </a></li>
+  </ul>
+</nav>

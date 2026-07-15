@@ -10,3 +10,4 @@ export * from './validate.js';    // B1 · deterministic HTML validation gate (s
 export * from './tools.js';       // B1 · builder tool specs (publish = sideEffect, never autonomy-safe)
 export * from './prompts.js';     // B1 · generalized generation contract (mode-aware, Circle-optional)
 export * from './components.js';  // B1 · portable component shape + selector
+export * from './registry.js';    // B4b · the 20 portable blocks (generated, npm run blocks:build)

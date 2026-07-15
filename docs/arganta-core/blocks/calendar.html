@@ -1,0 +1,61 @@
+<!--
+id: calendar
+name: Calendar
+category: layout
+suitableFor: application
+description: Month grid, 44px cells, today marked with an accent ring, up to three event dots per day (+n overflow). Weekday headers shrink to initials on mobile.
+tags: calendar, month, schedule, dates, events
+-->
+<style>
+  .blk-calendar{
+    --cl-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --cl-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    --cl-out:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 30%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+  }
+  .blk-calendar .cl-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .blk-calendar .cl-month{ font-family: var(--brand-font-head, Georgia, serif); font-size: 17px; margin: 0; }
+  .blk-calendar .cl-weekdays, .blk-calendar .cl-grid{ display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .blk-calendar .cl-weekdays{ margin-bottom: 6px; }
+  .blk-calendar .cl-weekdays span{
+    text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--cl-mut);
+  }
+  .blk-calendar .cl-day{
+    position: relative; min-height: 44px; border-radius: 10px; padding: 6px;
+    background: color-mix(in srgb, var(--brand-ink,#f4f2ff) 5%, transparent);
+    display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 12.5px;
+  }
+  .blk-calendar .cl-day.cl-out{ color: var(--cl-out); background: transparent; }
+  .blk-calendar .cl-day[data-today]{ outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: -2px; font-weight: 700; }
+  .blk-calendar .cl-dots{ display: flex; gap: 3px; }
+  .blk-calendar .cl-dot{ width: 5px; height: 5px; border-radius: 999px; background: var(--brand-accent,#8b7bff); }
+  .blk-calendar .cl-more{ font-size: 9.5px; color: var(--cl-mut); }
+  @media (max-width: 480px){
+    .blk-calendar .cl-weekdays span{ font-size: 0; }
+    .blk-calendar .cl-weekdays span::first-letter{ font-size: 11px; }
+  }
+</style>
+
+<section class="blk blk-calendar">
+  <div class="cl-head">
+    <p class="cl-month" data-fill="month">This month</p>
+  </div>
+  <div class="cl-weekdays">
+    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+  </div>
+  <div class="cl-grid" data-fill="events">
+    <div class="cl-day cl-out">28</div><div class="cl-day cl-out">29</div><div class="cl-day cl-out">30</div>
+    <div class="cl-day">1</div><div class="cl-day">2</div><div class="cl-day">3</div><div class="cl-day">4</div>
+    <div class="cl-day">5</div><div class="cl-day">6</div><div class="cl-day">7</div>
+    <div class="cl-day" data-today>8<span class="cl-dots"><span class="cl-dot"></span></span></div>
+    <div class="cl-day">9</div><div class="cl-day">10</div><div class="cl-day">11</div>
+    <div class="cl-day">12</div><div class="cl-day">13<span class="cl-dots"><span class="cl-dot"></span><span class="cl-dot"></span></span></div><div class="cl-day">14</div>
+    <div class="cl-day">15</div><div class="cl-day">16</div><div class="cl-day">17</div><div class="cl-day">18</div>
+    <div class="cl-day">19</div><div class="cl-day">20</div><div class="cl-day">21<span class="cl-dots"><span class="cl-dot"></span><span class="cl-dot"></span><span class="cl-dot"></span></span><span class="cl-more">+2</span></div>
+    <div class="cl-day">22</div><div class="cl-day">23</div><div class="cl-day">24</div><div class="cl-day">25</div>
+    <div class="cl-day">26</div><div class="cl-day">27</div><div class="cl-day">28</div>
+    <div class="cl-day">29</div><div class="cl-day">30</div><div class="cl-day cl-out">1</div><div class="cl-day cl-out">2</div>
+    <div class="cl-day cl-out">3</div><div class="cl-day cl-out">4</div><div class="cl-day cl-out">5</div>
+  </div>
+</section>

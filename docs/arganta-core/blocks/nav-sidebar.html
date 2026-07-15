@@ -1,0 +1,66 @@
+<!--
+id: nav-sidebar
+name: Sidebar navigation
+category: navigation
+suitableFor: application
+description: Fixed 232px left rail at desktop widths, collapses to a bottom icon bar below 720px. Active item shown as an accent-tint pill.
+tags: nav, navigation, sidebar, rail, app shell, menu
+-->
+<style>
+  .blk-nav-sidebar{
+    --ns-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --ns-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    --ns-tint: color-mix(in srgb, var(--brand-accent,#8b7bff) 16%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--brand-bg,#12101f);
+  }
+  .blk-nav-sidebar .ns-name{
+    font-family: var(--brand-font-head, Georgia, serif); font-size: 17px; font-weight: 700;
+    padding: 18px 18px 14px;
+  }
+  .blk-nav-sidebar .ns-list{ list-style: none; margin: 0; padding: 0 10px; display: grid; gap: 4px; }
+  .blk-nav-sidebar .ns-item{
+    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px;
+    color: var(--brand-ink,#f4f2ff); text-decoration: none; font-size: 14.5px; min-height: 44px;
+  }
+  .blk-nav-sidebar .ns-item svg{ flex-shrink: 0; opacity: .8; }
+  .blk-nav-sidebar .ns-item:hover{ background: var(--ns-line); }
+  .blk-nav-sidebar .ns-item:focus-visible{ outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: 2px; }
+  .blk-nav-sidebar .ns-item[aria-current="page"]{ background: var(--ns-tint); color: var(--brand-accent,#8b7bff); font-weight: 600; }
+  @media (min-width: 720px){
+    .blk-nav-sidebar{ position: sticky; top: 0; width: 232px; height: 100vh; border-right: 1px solid var(--ns-line); overflow-y: auto; }
+  }
+  @media (max-width: 719.98px){
+    .blk-nav-sidebar{
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; width: auto; height: auto;
+      border-top: 1px solid var(--ns-line);
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .blk-nav-sidebar .ns-name{ display: none; }
+    .blk-nav-sidebar .ns-list{ display: flex; justify-content: space-around; padding: 6px 8px; }
+    .blk-nav-sidebar .ns-item{ flex-direction: column; gap: 3px; padding: 6px 10px; font-size: 11px; border-radius: 10px; }
+  }
+</style>
+
+<nav class="blk blk-nav-sidebar" aria-label="Primary">
+  <p class="ns-name" data-fill="app-name">Arganta</p>
+  <ul class="ns-list" data-fill="items">
+    <li><a class="ns-item" href="#" aria-current="page">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9.5" y="2.5" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="2.5" y="9.5" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9.5" y="9.5" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span>Overview</span>
+    </a></li>
+    <li><a class="ns-item" href="#">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 14V8M9 14V4M15 14v-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Activity</span>
+    </a></li>
+    <li><a class="ns-item" href="#">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 6v3l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Schedule</span>
+    </a></li>
+    <li><a class="ns-item" href="#">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 15c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Account</span>
+    </a></li>
+  </ul>
+</nav>

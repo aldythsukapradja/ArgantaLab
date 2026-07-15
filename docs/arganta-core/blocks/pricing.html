@@ -1,0 +1,76 @@
+<!--
+id: pricing
+name: Pricing
+category: pricing
+suitableFor: website
+description: Three pricing tiers (one column on mobile) — the middle tier gets an accent border and a "Popular" pill, each with a checked feature list.
+tags: pricing, plans, tiers, subscription, checkout
+-->
+<style>
+  .blk-pricing{
+    --pr-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --pr-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--brand-bg,#12101f);
+    padding: clamp(48px, 8vw, 96px) clamp(16px, 5vw, 64px);
+  }
+  .blk-pricing .pr-grid{ display: grid; gap: 20px; max-width: 1040px; margin: 0 auto; grid-template-columns: 1fr; align-items: start; }
+  .blk-pricing .pr-card{
+    position: relative; background: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    border: 1px solid var(--pr-line); border-radius: 16px; padding: 26px;
+  }
+  .blk-pricing .pr-card[data-featured]{ border-color: var(--brand-accent,#8b7bff); border-width: 2px; padding: 25px; }
+  .blk-pricing .pr-pill{
+    position: absolute; top: -13px; left: 24px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+    padding: 4px 12px; border-radius: 999px; background: var(--brand-accent,#8b7bff); color: var(--brand-paper,#ffffff);
+  }
+  .blk-pricing .pr-name{ font-family: var(--brand-font-head, Georgia, serif); font-size: 18px; margin: 6px 0 4px; }
+  .blk-pricing .pr-price{ font-size: clamp(28px, 4vw, 34px); font-weight: 700; margin: 0 0 18px; font-variant-numeric: tabular-nums; }
+  .blk-pricing .pr-price span{ font-size: 13px; font-weight: 500; color: var(--pr-mut); }
+  .blk-pricing .pr-feats{ list-style: none; margin: 0 0 22px; padding: 0; display: grid; gap: 10px; }
+  .blk-pricing .pr-feats li{ display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; }
+  .blk-pricing .pr-feats svg{ flex-shrink: 0; margin-top: 2px; color: var(--brand-accent,#8b7bff); }
+  .blk-pricing .pr-cta{
+    display: block; text-align: center; padding: 12px; border-radius: 10px; text-decoration: none;
+    font-weight: 700; font-size: 14.5px; min-height: 44px; line-height: 20px;
+    background: color-mix(in srgb, var(--brand-ink,#f4f2ff) 10%, transparent); color: var(--brand-ink,#f4f2ff);
+  }
+  .blk-pricing .pr-card[data-featured] .pr-cta{ background: var(--brand-accent,#8b7bff); color: var(--brand-paper,#ffffff); }
+  .blk-pricing .pr-cta:focus-visible{ outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: 2px; }
+  @media (min-width: 720px){ .blk-pricing .pr-grid{ grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+<section class="blk blk-pricing">
+  <div class="pr-grid" data-fill="tiers">
+    <div class="pr-card">
+      <p class="pr-name" data-fill="name-1">Starter</p>
+      <p class="pr-price" data-fill="price-1">$0<span>/mo</span></p>
+      <ul class="pr-feats" data-fill="features-1">
+        <li><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 8l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Core features</span></li>
+        <li><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 8l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>1 workspace</span></li>
+      </ul>
+      <a class="pr-cta" href="#">Get started</a>
+    </div>
+    <div class="pr-card" data-featured>
+      <span class="pr-pill">Popular</span>
+      <p class="pr-name" data-fill="name-2">Growth</p>
+      <p class="pr-price" data-fill="price-2">$19<span>/mo</span></p>
+      <ul class="pr-feats" data-fill="features-2">
+        <li><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 8l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Everything in Starter</span></li>
+        <li><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 8l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Unlimited workspaces</span></li>
+        <li><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 8l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Priority support</span></li>
+      </ul>
+      <a class="pr-cta" href="#">Get started</a>
+    </div>
+    <div class="pr-card">
+      <p class="pr-name" data-fill="name-3">Scale</p>
+      <p class="pr-price" data-fill="price-3">$49<span>/mo</span></p>
+      <ul class="pr-feats" data-fill="features-3">
+        <li><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 8l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Everything in Growth</span></li>
+        <li><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 8l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Dedicated support</span></li>
+      </ul>
+      <a class="pr-cta" href="#">Contact us</a>
+    </div>
+  </div>
+</section>

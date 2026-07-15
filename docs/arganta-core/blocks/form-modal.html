@@ -1,0 +1,107 @@
+<!--
+id: form-modal
+name: Form modal
+category: form
+suitableFor: application, website
+description: Dialog card on a soft backdrop with labeled inputs (never placeholder-as-label), an accent submit button, Esc/backdrop close, and a lightweight focus trap. Ships with its own trigger button so it's demonstrable standalone.
+tags: form, modal, dialog, input, create
+-->
+<style>
+  .blk-form-modal{
+    --fm-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 14%, transparent);
+    --fm-soft: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    --fm-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+  }
+  .blk-form-modal .fm-trigger{
+    padding: 11px 20px; border-radius: 10px; border: 0; font-weight: 700; font-size: 14px; min-height: 44px;
+    background: var(--brand-accent,#8b7bff); color: var(--brand-paper,#ffffff); cursor: pointer;
+  }
+  .blk-form-modal .fm-trigger:focus-visible{ outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: 2px; }
+  .blk-form-modal .fm-backdrop{
+    display: none; position: fixed; inset: 0; z-index: 50; align-items: center; justify-content: center; padding: 20px;
+    background: color-mix(in srgb, var(--brand-ink,#f4f2ff) 8%, black 60%);
+  }
+  .blk-form-modal[data-open] .fm-backdrop{ display: flex; }
+  .blk-form-modal .fm-card{
+    width: 100%; max-width: 380px; background: var(--brand-bg,#12101f); border: 1px solid var(--fm-line);
+    border-radius: 16px; padding: 24px;
+  }
+  .blk-form-modal .fm-title{ font-family: var(--brand-font-head, Georgia, serif); font-size: 18px; margin: 0 0 18px; }
+  .blk-form-modal .fm-field{ display: grid; gap: 6px; margin-bottom: 16px; }
+  .blk-form-modal .fm-field label{ font-size: 12.5px; color: var(--fm-mut); }
+  .blk-form-modal .fm-field input, .blk-form-modal .fm-field textarea{
+    font: inherit; font-size: 14.5px; padding: 11px 13px; border-radius: 9px; border: 1px solid var(--fm-line);
+    background: var(--fm-soft); color: var(--brand-ink,#f4f2ff); min-height: 44px;
+  }
+  .blk-form-modal .fm-field input:focus-visible, .blk-form-modal .fm-field textarea:focus-visible{
+    outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: 1px;
+  }
+  .blk-form-modal .fm-actions{ display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+  .blk-form-modal .fm-cancel{
+    padding: 10px 16px; border-radius: 9px; border: 1px solid var(--fm-line); background: transparent;
+    color: var(--brand-ink,#f4f2ff); font-size: 14px; min-height: 44px; cursor: pointer;
+  }
+  .blk-form-modal .fm-submit{
+    padding: 10px 18px; border-radius: 9px; border: 0; background: var(--brand-accent,#8b7bff);
+    color: var(--brand-paper,#ffffff); font-weight: 700; font-size: 14px; min-height: 44px; cursor: pointer;
+  }
+  .blk-form-modal .fm-cancel:focus-visible, .blk-form-modal .fm-submit:focus-visible{
+    outline: 2px solid var(--brand-accent,#8b7bff); outline-offset: 2px;
+  }
+</style>
+
+<section class="blk blk-form-modal">
+  <button class="fm-trigger" type="button" data-open-trigger>Add an item</button>
+  <div class="fm-backdrop">
+    <div class="fm-card" role="dialog" aria-modal="true" aria-labelledby="fm-title">
+      <p class="fm-title" id="fm-title" data-fill="title">Add an item</p>
+      <form data-fill="fields">
+        <div class="fm-field"><label for="fm-name">Name</label><input id="fm-name" type="text" autocomplete="off"></div>
+        <div class="fm-field"><label for="fm-note">Note</label><textarea id="fm-note" rows="3"></textarea></div>
+        <div class="fm-actions">
+          <button class="fm-cancel" type="button" data-close>Cancel</button>
+          <button class="fm-submit" type="submit" data-fill="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  document.querySelectorAll('.blk-form-modal').forEach(function (root) {
+    if (root.dataset.wired) return; root.dataset.wired = '1';
+    var trigger = root.querySelector('[data-open-trigger]');
+    var backdrop = root.querySelector('.fm-backdrop');
+    var card = root.querySelector('.fm-card');
+    var closeBtn = root.querySelector('[data-close]');
+    var form = root.querySelector('form');
+
+    function focusables() { return Array.prototype.slice.call(card.querySelectorAll('input, textarea, button')); }
+    function open() {
+      root.setAttribute('data-open', '');
+      var f = focusables(); if (f[0]) f[0].focus();
+    }
+    function close() {
+      root.removeAttribute('data-open');
+      trigger.focus();
+    }
+    trigger.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+    form.addEventListener('submit', function (e) { e.preventDefault(); close(); });
+    root.addEventListener('keydown', function (e) {
+      if (!root.hasAttribute('data-open')) return;
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Tab') {
+        var f = focusables(); if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+  });
+})();
+</script>

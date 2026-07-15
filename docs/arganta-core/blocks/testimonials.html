@@ -1,0 +1,59 @@
+<!--
+id: testimonials
+name: Testimonials
+category: layout
+suitableFor: website
+description: Two-up testimonial cards — oversized accent quote mark, initials-circle avatar (no image dependency), name and role.
+tags: testimonials, quotes, social proof, reviews
+-->
+<style>
+  .blk-testimonials{
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--brand-bg,#12101f);
+    padding: clamp(48px, 8vw, 96px) clamp(16px, 5vw, 64px);
+  }
+  .blk-testimonials .tm-grid{ display: grid; gap: 20px; max-width: 960px; margin: 0 auto; grid-template-columns: 1fr; }
+  .blk-testimonials .tm-card{
+    background: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    border-radius: 14px; padding: 26px;
+  }
+  .blk-testimonials .tm-mark{
+    font-family: var(--brand-font-head, Georgia, serif); font-size: 44px; line-height: 1; color: var(--brand-accent,#8b7bff);
+    margin: 0 0 4px;
+  }
+  .blk-testimonials .tm-quote{ font-size: 15px; line-height: 1.6; margin: 0 0 20px; }
+  .blk-testimonials .tm-who{ display: flex; align-items: center; gap: 12px; }
+  .blk-testimonials .tm-avatar{
+    width: 40px; height: 40px; border-radius: 999px; flex-shrink: 0; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--brand-accent,#8b7bff) 20%, transparent); color: var(--brand-accent,#8b7bff);
+    font-weight: 700; font-size: 14px;
+  }
+  .blk-testimonials .tm-name{ font-size: 14px; font-weight: 600; margin: 0; }
+  .blk-testimonials .tm-role{
+    font-size: 12.5px; margin: 2px 0 0; color: color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+  }
+  @media (min-width: 720px){ .blk-testimonials .tm-grid{ grid-template-columns: 1fr 1fr; } }
+</style>
+
+<section class="blk blk-testimonials">
+  <div class="tm-grid" data-fill="items">
+    <div class="tm-card">
+      <p class="tm-mark" aria-hidden="true">&ldquo;</p>
+      <p class="tm-quote" data-fill="quote-1">This is exactly the tool I didn't know I needed — set up in an afternoon, still using it every day.</p>
+      <div class="tm-who">
+        <span class="tm-avatar" data-fill="initials-1" aria-hidden="true">AR</span>
+        <div><p class="tm-name" data-fill="name-1">Aria R.</p><p class="tm-role" data-fill="role-1">Founder</p></div>
+      </div>
+    </div>
+    <div class="tm-card">
+      <p class="tm-mark" aria-hidden="true">&ldquo;</p>
+      <p class="tm-quote" data-fill="quote-2">Clean, fast, and it actually looks like something I'd ship — no extra polish needed.</p>
+      <div class="tm-who">
+        <span class="tm-avatar" data-fill="initials-2" aria-hidden="true">JK</span>
+        <div><p class="tm-name" data-fill="name-2">Jordan K.</p><p class="tm-role" data-fill="role-2">Operator</p></div>
+      </div>
+    </div>
+  </div>
+</section>

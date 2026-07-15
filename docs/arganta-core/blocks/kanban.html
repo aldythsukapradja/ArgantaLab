@@ -1,0 +1,63 @@
+<!--
+id: kanban
+name: Kanban board
+category: layout
+suitableFor: application
+description: Horizontal scroll-snap columns (fixed 280px), a count pill per column, static-looking cards (v1, not draggable). Each column shows its own empty state.
+tags: kanban, board, columns, tasks, workflow
+-->
+<style>
+  .blk-kanban{
+    --kb-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --kb-soft: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    --kb-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+  }
+  .blk-kanban .kb-row{
+    display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 8px;
+  }
+  .blk-kanban .kb-col{
+    flex: 0 0 280px; scroll-snap-align: start; background: var(--kb-soft);
+    border: 1px solid var(--kb-line); border-radius: 14px; padding: 14px;
+  }
+  .blk-kanban .kb-col-head{ display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .blk-kanban .kb-col-title{ font-size: 13.5px; font-weight: 600; margin: 0; }
+  .blk-kanban .kb-count{
+    margin-left: auto; font-size: 11.5px; font-variant-numeric: tabular-nums; color: var(--kb-mut);
+    background: color-mix(in srgb, var(--brand-ink,#f4f2ff) 8%, transparent); padding: 2px 8px; border-radius: 999px;
+  }
+  .blk-kanban .kb-cards{ display: grid; gap: 8px; min-height: 44px; }
+  .blk-kanban .kb-card{
+    background: var(--brand-bg,#12101f); border: 1px solid var(--kb-line); border-radius: 10px;
+    padding: 11px 12px; font-size: 13.5px; line-height: 1.4;
+  }
+  .blk-kanban .kb-empty{ display: none; align-items: center; gap: 8px; color: var(--kb-mut); font-size: 12.5px; padding: 12px 0; }
+  .blk-kanban .kb-col[data-empty] .kb-cards{ display: none; }
+  .blk-kanban .kb-col[data-empty] .kb-empty{ display: flex; }
+</style>
+
+<section class="blk blk-kanban">
+  <div class="kb-row" data-fill="columns">
+    <div class="kb-col">
+      <div class="kb-col-head"><p class="kb-col-title" data-fill="col1-title">To do</p><span class="kb-count" data-fill="col1-count">2</span></div>
+      <div class="kb-cards">
+        <div class="kb-card">Draft the launch post</div>
+        <div class="kb-card">Review pricing copy</div>
+      </div>
+      <div class="kb-empty"><span>Nothing here yet.</span></div>
+    </div>
+    <div class="kb-col">
+      <div class="kb-col-head"><p class="kb-col-title" data-fill="col2-title">In progress</p><span class="kb-count" data-fill="col2-count">1</span></div>
+      <div class="kb-cards">
+        <div class="kb-card">Build the onboarding flow</div>
+      </div>
+      <div class="kb-empty"><span>Nothing here yet.</span></div>
+    </div>
+    <div class="kb-col" data-empty>
+      <div class="kb-col-head"><p class="kb-col-title" data-fill="col3-title">Done</p><span class="kb-count" data-fill="col3-count">0</span></div>
+      <div class="kb-cards"></div>
+      <div class="kb-empty"><span>Nothing here yet.</span></div>
+    </div>
+  </div>
+</section>

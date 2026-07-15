@@ -1,0 +1,117 @@
+<!--
+id: chart-bar
+name: Bar chart
+category: chart
+suitableFor: application
+description: Hand-rolled SVG vertical bar chart, up to two series (accent + mid), 4 gridlines, value shown on hover/focus. Empty or malformed data renders the empty state.
+tags: chart, bar, comparison, series, trend
+-->
+<style>
+  .blk-chart-bar{
+    --cb-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --cb-soft: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    --cb-grid: color-mix(in srgb, var(--brand-ink,#f4f2ff) 10%, transparent);
+    --cb-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--cb-soft);
+    border: 1px solid var(--cb-line);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .blk-chart-bar .cb-title{
+    font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--cb-mut); margin: 0 0 16px;
+  }
+  .blk-chart-bar .cb-svg{ width: 100%; height: auto; display: block; }
+  .blk-chart-bar .cb-grid line{ stroke: var(--cb-grid); stroke-width: 1; }
+  .blk-chart-bar .cb-label{ font-size: 8.5px; fill: var(--cb-mut); }
+  .blk-chart-bar .cb-bar{ transition: opacity .15s ease-out; }
+  .blk-chart-bar .cb-bar:hover, .blk-chart-bar .cb-bar:focus-visible{ opacity: .78; outline: none; }
+  .blk-chart-bar .cb-empty{ display: none; align-items: center; gap: 10px; color: var(--cb-mut); font-size: 13.5px; min-height: 140px; }
+  .blk-chart-bar[data-empty] .cb-wrap{ display: none; }
+  .blk-chart-bar[data-empty] .cb-empty{ display: flex; }
+  @media (prefers-reduced-motion: reduce){ .blk-chart-bar .cb-bar{ transition: none; } }
+</style>
+
+<section class="blk blk-chart-bar" data-empty>
+  <p class="cb-title" data-fill="title">Weekly activity</p>
+
+  <script type="application/json" data-fill="series">[]</script>
+
+  <div class="cb-wrap">
+    <svg class="cb-svg" viewBox="0 0 300 160" role="img" aria-label="Bar chart">
+      <g class="cb-grid"></g>
+      <g class="cb-bars"></g>
+      <g class="cb-labels"></g>
+    </svg>
+  </div>
+
+  <div class="cb-empty">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 15V9M9 15V3M15 15v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <span>No data yet.</span>
+  </div>
+</section>
+
+<script>
+(function () {
+  document.querySelectorAll('.blk-chart-bar').forEach(function (root) {
+    if (root.dataset.wired) return; root.dataset.wired = '1';
+    var pts = [];
+    try { pts = JSON.parse((root.querySelector('script[data-fill="series"]') || {}).textContent || '[]'); } catch (e) { pts = []; }
+    if (!Array.isArray(pts)) pts = [];
+    pts = pts.filter(function (p) { return p && Array.isArray(p.values) && p.values.length > 0; });
+    if (!pts.length) { root.setAttribute('data-empty', ''); return; }
+    root.removeAttribute('data-empty');
+
+    var W = 300, H = 160, padB = 18, padT = 6, chartH = H - padB - padT;
+    var maxV = Math.max.apply(null, pts.map(function (p) { return Math.max.apply(null, p.values); }));
+    maxV = maxV || 1;
+    var colors = ['var(--brand-accent,#8b7bff)', 'var(--brand-mid,#2a2450)'];
+    var svg = root.querySelector('.cb-svg');
+    var gridG = root.querySelector('.cb-grid');
+    var barsG = root.querySelector('.cb-bars');
+    var labelsG = root.querySelector('.cb-labels');
+
+    for (var g = 0; g < 4; g++) {
+      var y = padT + (chartH / 3) * g;
+      var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', 0); line.setAttribute('x2', W); line.setAttribute('y1', y); line.setAttribute('y2', y);
+      gridG.appendChild(line);
+    }
+
+    var n = pts.length;
+    var slot = W / n;
+    var seriesCount = Math.min(3, pts[0].values.length);
+    var barW = Math.min(20, (slot * 0.6) / seriesCount);
+
+    pts.forEach(function (p, i) {
+      var cx = slot * i + slot / 2;
+      var groupW = barW * seriesCount + (seriesCount - 1) * 2;
+      var startX = cx - groupW / 2;
+      p.values.slice(0, 3).forEach(function (v, si) {
+        var h = (v / maxV) * chartH;
+        var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('class', 'cb-bar');
+        rect.setAttribute('x', startX + si * (barW + 2));
+        rect.setAttribute('y', padT + chartH - h);
+        rect.setAttribute('width', barW);
+        rect.setAttribute('height', Math.max(h, 1));
+        rect.setAttribute('rx', 3);
+        rect.setAttribute('fill', colors[si] || colors[colors.length - 1]);
+        rect.setAttribute('tabindex', '0');
+        var t = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        t.textContent = p.label + ': ' + v;
+        rect.appendChild(t);
+        barsG.appendChild(rect);
+      });
+      var label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('class', 'cb-label');
+      label.setAttribute('x', cx); label.setAttribute('y', H - 4); label.setAttribute('text-anchor', 'middle');
+      label.textContent = p.label;
+      labelsG.appendChild(label);
+    });
+
+    svg.setAttribute('aria-label', 'Bar chart: ' + pts.map(function (p) { return p.label + ' ' + p.values.join('/'); }).join(', '));
+  });
+})();
+</script>

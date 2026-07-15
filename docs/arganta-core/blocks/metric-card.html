@@ -1,0 +1,58 @@
+<!--
+id: metric-card
+name: Metric card
+category: metric
+suitableFor: application
+description: Single KPI card — overline label, large value, optional delta pill. Ships empty; the generator fills label/value/delta or leaves data-empty.
+tags: metric, kpi, stat, card, dashboard, number
+-->
+<style>
+  .blk-metric-card{
+    --mc-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --mc-soft: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    --mc-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--mc-soft);
+    border: 1px solid var(--mc-line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    min-width: 0;
+  }
+  .blk-metric-card .mc-label{
+    font-size: 12px; text-transform: uppercase; letter-spacing: .14em;
+    color: var(--mc-mut); margin: 0 0 10px;
+  }
+  .blk-metric-card .mc-row{ display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .blk-metric-card .mc-value{
+    font-family: var(--brand-font-head, Georgia, serif);
+    font-size: clamp(28px, 4vw, 38px); line-height: 1.05; font-weight: 600;
+    font-variant-numeric: tabular-nums; margin: 0; overflow-wrap: anywhere;
+  }
+  .blk-metric-card .mc-delta{
+    font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    background: color-mix(in srgb, var(--brand-accent,#8b7bff) 16%, transparent);
+    color: var(--brand-accent,#8b7bff);
+  }
+  .blk-metric-card .mc-delta[data-dir="down"]{ background: var(--mc-soft); color: var(--mc-mut); }
+  .blk-metric-card .mc-delta:empty{ display: none; }
+  /* empty state — shown when the card carries data-empty */
+  .blk-metric-card .mc-empty{ display: none; align-items: center; gap: 10px; color: var(--mc-mut); font-size: 13.5px; }
+  .blk-metric-card .mc-empty svg{ flex-shrink: 0; opacity: .7; }
+  .blk-metric-card[data-empty] .mc-row{ display: none; }
+  .blk-metric-card[data-empty] .mc-empty{ display: flex; }
+</style>
+
+<section class="blk blk-metric-card" data-empty>
+  <p class="mc-label" data-fill="label">Metric</p>
+  <div class="mc-row">
+    <p class="mc-value" data-fill="value"></p>
+    <span class="mc-delta" data-fill="delta" data-dir="up"></span>
+  </div>
+  <div class="mc-empty">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M2 13 L7 8 L10 11 L16 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>No data yet — this fills in once activity is recorded.</span>
+  </div>
+</section>

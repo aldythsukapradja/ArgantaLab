@@ -1,0 +1,123 @@
+<!--
+id: chart-donut
+name: Donut chart
+category: chart
+suitableFor: application, website
+description: Hand-rolled SVG donut with center total and legend. Data enters as JSON segments; empty or malformed data renders the empty state.
+tags: chart, donut, pie, breakdown, share, distribution
+-->
+<style>
+  .blk-chart-donut{
+    --cd-line: color-mix(in srgb, var(--brand-ink,#f4f2ff) 12%, transparent);
+    --cd-soft: color-mix(in srgb, var(--brand-ink,#f4f2ff) 6%, transparent);
+    --cd-mut:  color-mix(in srgb, var(--brand-ink,#f4f2ff) 55%, transparent);
+    --cd-s3:   color-mix(in srgb, var(--brand-ink,#f4f2ff) 45%, transparent);
+    font-family: var(--brand-font-body, system-ui, sans-serif);
+    color: var(--brand-ink,#f4f2ff);
+    background: var(--cd-soft);
+    border: 1px solid var(--cd-line);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .blk-chart-donut .cd-title{
+    font-size: 12px; text-transform: uppercase; letter-spacing: .14em;
+    color: var(--cd-mut); margin: 0 0 16px;
+  }
+  .blk-chart-donut .cd-wrap{ display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .blk-chart-donut .cd-svg{ width: 132px; height: 132px; flex-shrink: 0; }
+  .blk-chart-donut .cd-track{ stroke: var(--cd-line); }
+  .blk-chart-donut .cd-seg{ transition: stroke-width .18s ease-out; }
+  .blk-chart-donut .cd-seg:hover, .blk-chart-donut .cd-seg:focus-visible{ stroke-width: 13; outline: none; }
+  .blk-chart-donut .cd-total{
+    font-family: var(--brand-font-head, Georgia, serif);
+    font-size: 24px; font-weight: 600; fill: var(--brand-ink,#f4f2ff);
+    font-variant-numeric: tabular-nums;
+  }
+  .blk-chart-donut .cd-total-label{ font-size: 9px; letter-spacing: .12em; text-transform: uppercase; fill: var(--cd-mut); }
+  .blk-chart-donut .cd-legend{ list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; min-width: 150px; flex: 1; }
+  .blk-chart-donut .cd-legend li{ display: flex; align-items: center; gap: 9px; font-size: 13.5px; }
+  .blk-chart-donut .cd-dot{ width: 9px; height: 9px; border-radius: 999px; flex-shrink: 0; }
+  .blk-chart-donut .cd-legend .cd-val{ margin-left: auto; color: var(--cd-mut); font-variant-numeric: tabular-nums; }
+  .blk-chart-donut .cd-empty{ display: none; align-items: center; gap: 10px; color: var(--cd-mut); font-size: 13.5px; min-height: 132px; }
+  .blk-chart-donut[data-empty] .cd-wrap{ display: none; }
+  .blk-chart-donut[data-empty] .cd-empty{ display: flex; }
+  @media (prefers-reduced-motion: reduce){ .blk-chart-donut .cd-seg{ transition: none; } }
+</style>
+
+<section class="blk blk-chart-donut" data-empty>
+  <p class="cd-title" data-fill="title">Breakdown</p>
+
+  <script type="application/json" data-fill="segments">
+    []
+  </script>
+
+  <div class="cd-wrap">
+    <svg class="cd-svg" viewBox="0 0 100 100" role="img" aria-label="Donut chart">
+      <circle class="cd-track" cx="50" cy="50" r="40" fill="none" stroke-width="11"></circle>
+      <g class="cd-segs" transform="rotate(-90 50 50)"></g>
+      <text class="cd-total" x="50" y="50" text-anchor="middle" dominant-baseline="middle"></text>
+      <text class="cd-total-label" x="50" y="64" text-anchor="middle" data-fill="total-label">total</text>
+    </svg>
+    <ul class="cd-legend"></ul>
+  </div>
+
+  <div class="cd-empty">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M9 2.5 V9 L13.5 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    <span>Nothing to break down yet.</span>
+  </div>
+</section>
+
+<script>
+(function () {
+  var CIRC = 2 * Math.PI * 40; // r=40 in the 100-viewBox
+  document.querySelectorAll('.blk-chart-donut').forEach(function (root) {
+    if (root.dataset.wired) return; root.dataset.wired = '1';
+    var segs = [];
+    try { segs = JSON.parse((root.querySelector('script[data-fill="segments"]') || {}).textContent || '[]'); } catch (e) { segs = []; }
+    if (!Array.isArray(segs)) segs = [];
+    segs = segs.filter(function (s) { return s && typeof s.value === 'number' && s.value > 0; });
+    if (!segs.length) { root.setAttribute('data-empty', ''); return; }
+    root.removeAttribute('data-empty');
+
+    var total = segs.reduce(function (n, s) { return n + s.value; }, 0);
+    var colors = [
+      'var(--brand-accent,#8b7bff)',
+      'var(--brand-mid,#2a2450)',
+      'var(--cd-s3)'
+    ];
+    var g = root.querySelector('.cd-segs');
+    var legend = root.querySelector('.cd-legend');
+    var svg = root.querySelector('.cd-svg');
+    var offset = 0;
+    segs.slice(0, 3).forEach(function (s, i) {
+      var frac = s.value / total;
+      var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('class', 'cd-seg');
+      c.setAttribute('cx', '50'); c.setAttribute('cy', '50'); c.setAttribute('r', '40');
+      c.setAttribute('fill', 'none');
+      c.setAttribute('stroke', colors[i]);
+      c.setAttribute('stroke-width', '11');
+      c.setAttribute('stroke-dasharray', (frac * CIRC) + ' ' + CIRC);
+      c.setAttribute('stroke-dashoffset', String(-offset * CIRC));
+      c.setAttribute('tabindex', '0');
+      var t = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      t.textContent = s.label + ': ' + s.value + ' (' + Math.round(frac * 100) + '%)';
+      c.appendChild(t);
+      g.appendChild(c);
+      offset += frac;
+
+      var li = document.createElement('li');
+      var dot = document.createElement('span'); dot.className = 'cd-dot'; dot.style.background = colors[i];
+      var name = document.createElement('span'); name.textContent = s.label;
+      var val = document.createElement('span'); val.className = 'cd-val'; val.textContent = Math.round(frac * 100) + '%';
+      li.appendChild(dot); li.appendChild(name); li.appendChild(val);
+      legend.appendChild(li);
+    });
+    root.querySelector('.cd-total').textContent = String(total);
+    svg.setAttribute('aria-label', 'Donut chart: ' + segs.map(function (s) { return s.label + ' ' + s.value; }).join(', '));
+  });
+})();
+</script>

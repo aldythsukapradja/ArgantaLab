@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portable blocks — preview harness</title>
+<style>
+  :root{ color-scheme: dark; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0b0a14;color:#e8e6f5;font-family:system-ui,sans-serif}
+  header{
+    position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:14px;
+    padding:14px 18px;background:#12101f;border-bottom:1px solid #ffffff1a;
+  }
+  header h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.02em}
+  .grp{display:flex;align-items:center;gap:6px;font-size:12px;color:#a9a4c2}
+  .grp button{
+    font:inherit;font-size:12.5px;padding:7px 12px;border-radius:8px;border:1px solid #ffffff2a;
+    background:#1a1830;color:#e8e6f5;cursor:pointer;min-height:32px;
+  }
+  .grp button[aria-pressed="true"]{background:#8b7bff;border-color:#8b7bff;color:#12101f;font-weight:700}
+  .grp button:focus-visible{outline:2px solid #8b7bff;outline-offset:2px}
+  main{padding:24px 18px 80px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 10px}
+  .row h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.12em;color:#a9a4c2}
+  .row .meta{font-size:12px;color:#6d6890}
+  .stage{
+    display:flex;justify-content:center;background:#050409;border:1px solid #ffffff14;border-radius:12px;
+    padding:16px;overflow:auto;
+  }
+  iframe{border:0;display:block;background:transparent;transition:width .18s ease-out}
+  .status{font-size:12px;color:#6d6890;padding:2px 18px 18px}
+  .err{color:#ff8a8a}
+</style>
+</head>
+<body>
+<header>
+  <h1>Portable blocks</h1>
+  <div class="grp" role="group" aria-label="Brand kit">
+    <span>Kit</span>
+    <button data-kit="nocturne" aria-pressed="true">Nocturne</button>
+    <button data-kit="dusk" aria-pressed="false">Dusk</button>
+    <button data-kit="ocean" aria-pressed="false">Ocean</button>
+  </div>
+  <div class="grp" role="group" aria-label="Viewport width">
+    <span>Width</span>
+    <button data-width="375" aria-pressed="true">375</button>
+    <button data-width="1280" aria-pressed="false">1280</button>
+  </div>
+  <div class="grp" role="group" aria-label="Data state">
+    <span>Data</span>
+    <button data-fill="empty" aria-pressed="true">Empty</button>
+    <button data-fill="filled" aria-pressed="false">Filled</button>
+  </div>
+</header>
+<main id="main">
+  <p class="status">Loading blocks…</p>
+</main>
+
+<script>
+(function () {
+  var BLOCK_IDS = [
+    'nav-top', 'nav-sidebar', 'nav-bottom',
+    'hero-centered', 'hero-split',
+    'feature-grid', 'metric-card', 'metric-grid', 'data-table', 'activity-feed', 'gallery', 'testimonials', 'pricing',
+    'kanban', 'calendar', 'form-modal',
+    'chart-line', 'chart-bar', 'chart-donut',
+    'footer',
+  ];
+
+  var KITS = {
+    nocturne: { bg: '#12101f', mid: '#2a2450', accent: '#8b7bff', ink: '#f4f2ff', paper: '#ffffff', head: 'Georgia, serif', body: 'system-ui, sans-serif' },
+    dusk:     { bg: '#181430', mid: '#7c3aad', accent: '#ef8060', ink: '#f7f5ff', paper: '#ffffff', head: 'Georgia, "Times New Roman", serif', body: 'system-ui, sans-serif' },
+    ocean:    { bg: '#081a36', mid: '#186cb2', accent: '#8cd6f0', ink: '#f7f5ff', paper: '#ffffff', head: '"Trebuchet MS", system-ui, sans-serif', body: 'system-ui, sans-serif' },
+  };
+
+  // Sample content used only by this harness in "filled" mode — never present
+  // in the shipped block markup itself (B4a §4: no fake numbers ever ship).
+  var SAMPLE = {
+    'nav-top': { 'brand-name': 'Arganta' },
+    'nav-sidebar': { 'app-name': 'Arganta' },
+    'hero-centered': { overline: 'Founder OS', title: 'Run your company from one screen', sub: 'Arganta Core plans, builds, and remembers alongside you.', cta: 'Get started' },
+    'hero-split': { overline: 'New', title: 'Build apps by talking', sub: 'Describe it once. Arganta Core ships a working artifact.', cta: 'Try it now' },
+    'feature-grid': {},
+    'metric-card': { label: 'Active circles', value: '128', delta: '+12%' },
+    'metric-grid': { 'label-1': 'Circles', 'value-1': '128', 'delta-1': '+12%', 'label-2': 'Members', 'value-2': '542', 'delta-2': '+4%', 'label-3': 'Quests done', 'value-3': '2,190', 'delta-3': '+31%', 'label-4': 'Revenue', 'value-4': '$3.2k', 'delta-4': '+6%' },
+    'data-table': {},
+    'activity-feed': {},
+    'gallery': {},
+    'testimonials': {},
+    'pricing': {},
+    'kanban': {},
+    'calendar': {},
+    'form-modal': { title: 'Add an item' },
+    'chart-line': { series: [{ label: 'Mon', values: [4] }, { label: 'Tue', values: [7] }, { label: 'Wed', values: [5] }, { label: 'Thu', values: [9] }, { label: 'Fri', values: [6] }] },
+    'chart-bar': { series: [{ label: 'Mon', values: [4, 2] }, { label: 'Tue', values: [7, 5] }, { label: 'Wed', values: [5, 6] }, { label: 'Thu', values: [9, 4] }, { label: 'Fri', values: [6, 3] }] },
+    'chart-donut': { segments: [{ label: 'Image', value: 42 }, { label: 'Website', value: 27 }, { label: 'App', value: 18 }] },
+    'footer': { brand: 'Arganta' },
+  };
+
+  var state = { kit: 'nocturne', width: 375, filled: false };
+
+  function kitCss(k) {
+    return ':root{--brand-bg:' + k.bg + ';--brand-mid:' + k.mid + ';--brand-accent:' + k.accent +
+      ';--brand-ink:' + k.ink + ';--brand-paper:' + k.paper +
+      ';--brand-font-head:' + k.head + ';--brand-font-body:' + k.body + ';}' +
+      'body{margin:0;background:var(--brand-bg);}';
+  }
+
+  // JSON data-seam scripts (chart-donut/chart-line/chart-bar) are read by the
+  // block's OWN IIFE once, at initial parse — same as real B2 output, where
+  // the generator bakes real data into the HTML string before it's ever
+  // rendered. So JSON slots must be filled in the RAW HTML STRING, before
+  // srcdoc is set — filling them via later DOM mutation would arrive after
+  // the block's self-wiring script already ran (and guarded itself with
+  // data-wired), so the chart would never re-render.
+  function preFillJsonSeams(html, sample) {
+    if (!sample) return html;
+    Object.keys(sample).forEach(function (slot) {
+      var val = sample[slot];
+      if (val && typeof val === 'object') {
+        var re = new RegExp('(<script type="application/json" data-fill="' + slot + '">)([\\s\\S]*?)(<\/script>)');
+        html = html.replace(re, function (m, open, _mid, close) { return open + JSON.stringify(val) + close; });
+      }
+    });
+    return html;
+  }
+
+  // Plain text/attr seams (non-JSON) are safe to fill after load — the
+  // blocks that carry them (metric-card, footer, nav-top, hero-*, …) don't
+  // self-wire based on their content, so DOM mutation order doesn't matter.
+  function fillDoc(doc, id) {
+    var sample = SAMPLE[id];
+    if (!sample) return;
+    var root = doc.querySelector('.blk-' + id);
+    if (root) root.removeAttribute('data-empty');
+    Object.keys(sample).forEach(function (slot) {
+      var val = sample[slot];
+      if (val && typeof val === 'object') return; // handled pre-render by preFillJsonSeams
+      var els = doc.querySelectorAll('[data-fill="' + slot + '"]');
+      els.forEach(function (el) {
+        if (el.tagName === 'SCRIPT') return;
+        el.textContent = val;
+      });
+    });
+  }
+
+  // Fixed/viewport-anchored blocks (nav rails/bars) leave zero trace in
+  // document flow, so scrollHeight alone can't size their preview — give
+  // them a fixed stage height that reveals the chrome instead.
+  var FIXED_HEIGHT = { 'nav-sidebar': 420, 'nav-bottom': 90 };
+
+  function render() {
+    var main = document.getElementById('main');
+    main.innerHTML = '';
+    BLOCK_IDS.forEach(function (id) {
+      var section = document.createElement('section');
+      var row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = '<h2>' + id + '</h2><span class="meta">' + state.kit + ' · ' + state.width + 'px · ' + (state.filled ? 'filled' : 'empty') + '</span>';
+      var stage = document.createElement('div'); stage.className = 'stage';
+      var iframe = document.createElement('iframe');
+      iframe.width = state.width; iframe.height = FIXED_HEIGHT[id] || 40; iframe.title = id + ' preview';
+      stage.appendChild(iframe);
+      section.appendChild(row); section.appendChild(stage);
+      main.appendChild(section);
+
+      fetch('./' + id + '.html').then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      }).then(function (html) {
+        if (state.filled) html = preFillJsonSeams(html, SAMPLE[id]);
+        var doc = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">' +
+          '<style>' + kitCss(KITS[state.kit]) + '</style></head><body>' + html + '</body></html>';
+        // Poll instead of relying on `load` firing after our handler attaches
+        // (srcdoc + a pre-existing about:blank frame race that event) — robust
+        // regardless of timing, and re-measures as block JS finishes wiring.
+        var filled = false;
+        var tries = 0;
+        var poll = setInterval(function () {
+          tries++;
+          var idoc = iframe.contentDocument;
+          if (idoc && idoc.readyState !== 'loading' && idoc.body && idoc.body.innerHTML.length > 20) {
+            if (!filled) { filled = true; if (state.filled) fillDoc(idoc, id); }
+            var h = idoc.documentElement.scrollHeight;
+            iframe.height = Math.max(h, FIXED_HEIGHT[id] || 40);
+          }
+          if (tries > 30) clearInterval(poll);
+        }, 100);
+        iframe.srcdoc = doc;
+      }).catch(function (e) {
+        stage.innerHTML = '<p class="err">Failed to load ' + id + '.html — ' + e.message + '</p>';
+      });
+    });
+  }
+
+  document.querySelectorAll('[data-kit]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.kit = btn.dataset.kit;
+      document.querySelectorAll('[data-kit]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+      render();
+    });
+  });
+  document.querySelectorAll('[data-width]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.width = Number(btn.dataset.width);
+      document.querySelectorAll('[data-width]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+      render();
+    });
+  });
+  document.querySelectorAll('[data-fill]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.filled = btn.dataset.fill === 'filled';
+      document.querySelectorAll('[data-fill]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
