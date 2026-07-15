@@ -22,7 +22,14 @@ export const PROVIDER_CATALOG = [
   // matches @arganta/ai/registry.js's client-side capabilities.tools:false
   // for cloudflare-llama-free — this flag is the server-side half of that
   // same honest claim, not a new opinion.
-  { name: 'gemini', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GEMINI_API_KEY', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.0-flash', pricing: null },
+  // model is `gemini-flash-latest` (a rolling Google alias to the current free
+  // Flash), NOT the pinned `gemini-2.0-flash` — verified live 2026-07-15 that
+  // this project's key returns HTTP 429 `free_tier_requests limit: 0` for
+  // gemini-2.0-flash (that pin has no free quota here) while gemini-flash-latest
+  // returns 200 and does real function-calling. The alias tracks whichever Flash
+  // Google currently grants free quota, so it's more robust than a pin for a
+  // free-tier Sponsored provider.
+  { name: 'gemini', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GEMINI_API_KEY', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-flash-latest', pricing: null },
   { name: 'groq', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', pricing: null },
   // Cloudflare Workers AI — account-scoped URL (no static `url`; resolveUrl()
   // builds it from CF_ACCOUNT_ID at call time). Same secrets media-proxy
@@ -100,12 +107,22 @@ export function pickCandidates(available, opts = {}) {
 export const priceUsd = (entry, inputTokens = 0, outputTokens = 0) =>
   entry.pricing ? (inputTokens / 1e6) * entry.pricing.inputUsdPerMillion + (outputTokens / 1e6) * entry.pricing.outputUsdPerMillion : 0;
 
+// A caller may hand us tools already in OpenAI "provider-shaped" form
+// ({type:'function', function:{name,description,parameters}}) — that's exactly
+// what @arganta/agent's toOpenAITools() produces and the agent loop's documented
+// contract passes through — OR flat ({name,description,parameters}). Normalize to
+// the flat inner fields so we can re-emit the canonical wrapped shape without
+// double-wrapping (a pre-wrapped tool has no top-level `.name`, which used to
+// produce function declarations with an empty name — Gemini 400s on that,
+// Cloudflare silently hallucinated a fake name instead; both were this bug).
+const toolFields = (t) => (t && t.function ? t.function : t) || {};
+
 // ── OpenAI-compatible shape (Gemini/Groq/DeepSeek) ──────────────────────────
 export function toOpenAICompatBody({ messages, model, temperature = 0.6, seed, json, schema, tools }) {
   const body = { model, messages, temperature, stream: false };
   if (seed != null) body.seed = seed;
   if (json) body.response_format = schema ? { type: 'json_schema', json_schema: { name: 'out', schema } } : { type: 'json_object' };
-  if (tools?.length) { body.tools = tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })); body.tool_choice = 'auto'; }
+  if (tools?.length) { body.tools = tools.map((t) => { const f = toolFields(t); return { type: 'function', function: { name: f.name, description: f.description, parameters: f.parameters } }; }); body.tool_choice = 'auto'; }
   return body;
 }
 export function fromOpenAICompatResponse(d) {

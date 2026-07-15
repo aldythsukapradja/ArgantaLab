@@ -186,16 +186,28 @@ founder choice) → C5 ✅ → C6 ✅ (ADR-0007, protocol + impl) → **C7 (next
 Vault-ify-secrets prerequisite)**. C8 after C3 and again after B5/C7. C9 parallel
 anytime.
 
-**Founder action recommended, now stronger than before:** set `GEMINI_API_KEY`
-(free, aistudio.google.com/apikey) or `GROQ_API_KEY` as a Supabase secret.
-After the 2026-07-15 `toolsCapable` fix, Cloudflare's free Llama can no longer
-be silently used for tool-requiring requests — which is correct (no more
-hallucinated tool calls), but it also means **every tool-requiring message
-(anything the agent loop might need a tool for, including a plain "hi") now
-honestly degrades to "no live model reachable" instead of doing anything at
-all**, since no genuinely tools-capable key is configured server-side yet.
-Setting either key is what turns Arganta Core's tool-calling on for real,
-not just optional performance tuning.
+**Founder action — DONE 2026-07-15:** `GEMINI_API_KEY` is now set as a Supabase
+secret and Arganta Core's chat is LIVE end-to-end (verified: a real Gemini reply
+with `edgeProxy · gemini-flash-latest · $0.0000` provenance). The gateway's
+gemini entry uses model `gemini-flash-latest` (NOT the pinned `gemini-2.0-flash`,
+which returns free-tier quota `limit:0` on this project). `GROQ_API_KEY` is the
+founder's next-planned add — until then Gemini is the sole tools provider, so a
+transient Gemini 503 has no fallback and degrades honestly to "no live model" for
+that turn (correct behavior; Groq will give it a fallback).
+
+**Two real bugs found + fixed while turning tool-calling on (2026-07-15):**
+(1) the gateway hardcoded `gemini-2.0-flash`, which has zero free-tier quota on
+this project — switched to `gemini-flash-latest` (has quota + does real
+function-calling, verified live). (2) THE deeper one: `@arganta/agent`'s
+`toOpenAITools()` sends tools already wrapped as `{type:'function',
+function:{name,…}}` (the agent loop's documented "provider-shaped" contract), but
+the gateway's `toOpenAICompatBody` re-wrapped them reading `t.name` — `undefined`
+on a wrapped tool — so Gemini received function declarations with EMPTY names and
+`400`d the whole request (Cloudflare had silently hallucinated a fake name
+instead — the same double-wrap bug wearing two different masks). Fixed the gateway
+to accept both flat and pre-wrapped tool shapes (`toolFields` normalizer +
+regression test). THIS was the actual reason Core's chat degraded to mock on every
+message, not the earlier `toolsCapable` routing fix.
 
 ## See also
 - [[Single-File-Builder]] — the app/website Builder kernel (B1–B5), Core's strongest hand

@@ -15,9 +15,12 @@ import { SOVEREIGN_MODELS } from './rack.js';
 // entry also carries `gatewayProvider` for the truthful-return contract.
 const NON_SOVEREIGN_CATALOG = [
   // Tier 1 — Sponsored (free quotas)
-  // apiModel matches the ALREADY-DEPLOYED supabase/functions/llm-proxy default
-  // (gemini-2.0-flash) — do not drift these apart without updating both.
-  modelSpec({ id: 'gemini-flash-free', name: 'Gemini Flash (free)', provider: 'edgeProxy', apiModel: 'gemini-2.0-flash', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 1000000, priority: 30 }).spec,
+  // apiModel matches the ALREADY-DEPLOYED supabase/functions/llm-proxy gemini
+  // entry (gemini-flash-latest) — do not drift these apart without updating both.
+  // Was gemini-2.0-flash; changed 2026-07-15 after confirming live that this
+  // project's key returns free_tier_requests limit:0 for gemini-2.0-flash while
+  // gemini-flash-latest has quota + does real tool-calling (router.js has the note).
+  modelSpec({ id: 'gemini-flash-free', name: 'Gemini Flash (free)', provider: 'edgeProxy', apiModel: 'gemini-flash-latest', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 1000000, priority: 30 }).spec,
   modelSpec({ id: 'groq-llama-free', name: 'Groq Llama (free)', provider: 'edgeProxy', apiModel: 'llama-3.3-70b-versatile', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 32 }).spec,
   // Cloudflare Workers AI — same free-quota Sponsored tier. jsonSchema:true is
   // real (verified against Cloudflare's JSON Mode supported-model list, not

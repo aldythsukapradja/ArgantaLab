@@ -76,7 +76,7 @@ test('needsTools + only-cloudflare-configured EXACT model/force request also com
   // client asked selectModel() for gemini (the honest tools-capable pick) but
   // only Cloudflare is configured server-side — must NOT silently fall back
   // to a model that can't be trusted with tools.
-  assert.deepEqual(pickCandidates(available, { model: 'gemini-2.0-flash', needsTools: true }), []);
+  assert.deepEqual(pickCandidates(available, { model: 'gemini-flash-latest', needsTools: true }), []);
   assert.deepEqual(pickCandidates(available, { force: 'cloudflare-llama', needsTools: true }), []);
 });
 
@@ -111,6 +111,19 @@ test('OpenAI-compat round trip extracts text + real token usage', () => {
   assert.equal(out.text, 'hello');
   assert.equal(out.inputTokens, 10);
   assert.equal(out.outputTokens, 5);
+});
+
+test('toOpenAICompatBody accepts BOTH flat tools and already-wrapped OpenAI tools without double-wrapping (regression: @arganta/agent toOpenAITools() sends {type,function:{name}} — reading t.name on that yields undefined, so Gemini got an empty function name and 400d the whole request)', () => {
+  const flat = toOpenAICompatBody({ messages: [], model: 'm', tools: [{ name: 'generate_image', description: 'd', parameters: { type: 'object', properties: {} } }] });
+  const wrapped = toOpenAICompatBody({ messages: [], model: 'm', tools: [{ type: 'function', function: { name: 'generate_image', description: 'd', parameters: { type: 'object', properties: {} } } }] });
+  // both must yield a real, non-empty function name — the exact failure Gemini rejected
+  assert.equal(flat.tools[0].function.name, 'generate_image');
+  assert.equal(wrapped.tools[0].function.name, 'generate_image');
+  assert.equal(flat.tools[0].function.description, 'd');
+  assert.equal(wrapped.tools[0].function.description, 'd');
+  assert.deepEqual(wrapped.tools[0].function.parameters, { type: 'object', properties: {} });
+  // never double-wraps: the inner function object has no nested `.function`
+  assert.equal(wrapped.tools[0].function.function, undefined);
 });
 
 test('OpenAI-compat: a provider that returns already-parsed JSON content (Cloudflare quirk) is normalized back to a string', () => {

@@ -41,6 +41,11 @@ export function makeCoreCallModel(o: { dataClass?: string; runId: string } ) {
     const out = await ai.chatTools({ task: 'orchestrate', messages, tools, provider: picked.provider, model: picked.apiModel })
     const latencyMs = Math.round(performance.now() - t0)
     const silentlyMocked = out.provider === 'mock' && picked.provider !== 'mock'
+    // Surface the underlying provider error when we silently degrade — otherwise
+    // a gateway/tool-schema failure is invisible (the user just sees "no live
+    // model"). Cheap, warn-level, and genuinely useful (it's how the tool-shape
+    // double-wrap bug was found).
+    if (silentlyMocked) console.warn('[core runtime] adapter fell back to mock — underlying error:', (out as { error?: string }).error, '| requested', picked.provider, picked.apiModel)
 
     logAgentRun({
       runId: o.runId, domain: 'llm', task: 'orchestrate', dataClass,
