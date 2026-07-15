@@ -121,25 +121,43 @@ export function corticalSurface(side: -1 | 1, u: number, v: number): [number, nu
   return [x + g * 0.3 * side, y, z + g * 0.26]
 }
 
-/** Deterministic cortical position for a note in a region + hemisphere. Spread
- *  EVENLY across the region's zone (both hemispheres, medial→lateral, its
- *  anterior-posterior band with soft overlap), sitting just above the wrinkled
- *  surface with light organic jitter. No lateral-edge bias → no lines. */
+/** Deterministic position for a note in a region + hemisphere — a genuine
+ *  SCATTER through the region's 3D zone, not a point on a smooth surface curve.
+ *  Earlier versions derived x/y/z all from the same shared (u,v) pair through
+ *  smooth trig functions, so within one region every neuron fell on nearly the
+ *  same 1-D curve (u barely varies inside a region's narrow band, so position
+ *  collapsed to "a function of v alone") — that's what read as a "line" even
+ *  with jitter added on top. Fix: anterior-posterior (z) still zones the note
+ *  into its region's band, but lateral (x), height (y) and an EXTRA depth
+ *  offset each draw from their OWN independent hash — decoupled axes, so
+ *  points genuinely scatter through the volume instead of stringing along a
+ *  curve. The result still sits inside the brain's egg envelope (scaled by the
+ *  taper at that z) so it never floats outside the head. */
 export function regionPoint(id: string, region: RegionId, hemi: Hemisphere): [number, number, number] {
   const r = REGION_BY_ID.get(region)!
   const a = h(id), b = h(id + '~1'), c = h(id + '~2'), d = h(id + '~3'), e = h(id + '~4')
+  const f = h(id + '~5'), g = h(id + '~6'), k = h(id + '~7')
   if (region === 'command') {
     // deep-central hub: a loose cluster around the thalamic anchor, below the cortex
     return [(a - 0.5) * 2.0, -0.5 + (b - 0.5) * 1.5, 0.4 + (c - 0.5) * 2.2]
   }
   const side: -1 | 1 = hemi === 'right' ? 1 : hemi === 'left' ? -1 : (a < 0.5 ? -1 : 1)
   const bandLo = Math.max(0, r.u0 - 0.06), bandHi = Math.min(1, r.u1 + 0.06)
-  const u = bandLo + (bandHi - bandLo) * b
-  // even medial→lateral spread (sense wraps the outer surface); capped short of
-  // the very edge so nothing piles on the silhouette
-  const v = region === 'sense' ? 0.66 + c * 0.26 : 0.06 + c * 0.84
-  const p = corticalSurface(side, u, v)
-  return [p[0] + (d - 0.5) * 0.85, p[1] + 0.22 + (e - 0.5) * 0.6, p[2] + (a - 0.5) * 0.85]
+  const u = bandLo + (bandHi - bandLo) * b            // anterior-posterior zone only
+  const wf = taperAt(u)
+  const maxLat = BRAIN.width * (0.42 + 0.58 * wf)
+  const maxY = BRAIN.height * (0.32 + 0.5 * wf)
+  // lateral (c), height (d) and extra depth (e) are INDEPENDENT of u and of
+  // each other — this is what breaks the curve and makes it read as scattered
+  // separated neurons instead of a strung line.
+  const latT = region === 'sense' ? 0.62 + c * 0.3 : 0.06 + c * 0.86
+  const x = side * (BRAIN.hemiGap * 0.5 + latT * maxLat)
+  const y = (d - 0.5) * 2 * maxY * 0.82 + 0.35
+  const zBase = (u - 0.45) * 2 * BRAIN.length
+  const z = zBase + (e - 0.5) * 2.6                    // extra front-back scatter, decoupled from x/y
+  // fine per-axis noise (independent seeds) so no two notes ever land on a
+  // shared implicit curve even within the same (band, lat) neighbourhood
+  return [x + (f - 0.5) * 1.1, y + (g - 0.5) * 1.1, z + (k - 0.5) * 1.1]
 }
 
 /** Which region owns a given (u, v) cortical coord — for colouring the tissue. */

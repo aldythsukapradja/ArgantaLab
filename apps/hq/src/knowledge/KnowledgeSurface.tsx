@@ -7,7 +7,7 @@
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Brain, ExternalLink, X, AlertTriangle, Activity, Play, Pause, Film,
-  SkipBack, SkipForward, RotateCcw, Gauge,
+  SkipBack, SkipForward, RotateCcw, Gauge, Orbit, Waypoints,
 } from 'lucide-react'
 import { useVault } from '../vault/store'
 import { useHQ } from '../shell/store'
@@ -230,20 +230,30 @@ function KnowledgeSurfaceInner() {
     </div>
   )
 
+  // Navigation: full manual orbit (drag) + zoom (wheel/pinch) + pan always
+  // available in the 3D view; "Auto camera" is the gentle idle sway/lean, on
+  // by default, pausing itself while the founder is actively driving. "2D
+  // Vault" is an explicit escape hatch to the flat graph, independent of the
+  // crash/WebGL fallback below.
+  const [autoCam, setAutoCam] = useState(true)
+  const [manual2D, setManual2D] = useState(false)
+  const show3D = webgl && !dead && !manual2D
+
   return (
     <div style={{ position: 'absolute', inset: 0, background: ui.rootBg, overflow: 'hidden' }}>
       <style>{`.kg-canvas canvas{width:100%!important;height:100%!important;display:block}`}</style>
-      {webgl && !dead ? (
+      {show3D ? (
         <div ref={wrapRef} className="kg-canvas" style={{ position: 'absolute', inset: 0 }}>
           <SceneBoundary fallback={(msg) => fallback('3D cortex unavailable (' + msg + ')')}>
             <Suspense fallback={<Loading />}>
               <KnowledgeScene key={dark ? 'dark' : 'light'} model={model} tissue={tissue} width={size.w} height={size.h} dark={dark}
-                onFrame={() => { drewRef.current = true }} />
+                autoCamera={autoCam} onFrame={() => { drewRef.current = true }} />
             </Suspense>
           </SceneBoundary>
         </div>
-      ) : webgl && dead ? fallback("3D cortex didn't start on this device")
-        : fallback('WebGL unavailable')}
+      ) : manual2D ? fallback('2D Vault view')
+        : webgl && dead ? fallback("3D cortex didn't start on this device")
+        : !webgl ? fallback('WebGL unavailable') : null}
 
       {/* hemisphere labels */}
       {webgl && (
@@ -263,6 +273,25 @@ function KnowledgeSurfaceInner() {
         <div>
           <div style={{ fontSize: 14.5, fontWeight: 800, color: ui.tx, letterSpacing: 0.3 }}>Cognitive Cortex</div>
           <div style={{ fontSize: 10.5, color: ui.tx2, letterSpacing: 0.5 }}>{model.nodes.length} REAL NEURONS · 7-REGION BRAIN OF THE VAULT</div>
+        </div>
+      </div>
+
+      {/* navigation pills — instruction + Auto camera + 2D Vault escape hatch */}
+      <div style={{ position: 'absolute', top: 62, left: 16, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
+        {show3D && (
+          <div style={{ fontSize: 10.5, color: ui.tx2, letterSpacing: 0.3, padding: '3px 10px', borderRadius: 999, background: ui.glass, border: '1px solid ' + ui.border, backdropFilter: 'blur(8px)', width: 'fit-content' }}>
+            Drag to orbit · scroll to zoom · right-drag to pan
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 6, pointerEvents: 'auto' }}>
+          <button onClick={() => setAutoCam((a) => !a)} title="Gentle idle sway/lean when you're not driving the camera"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (autoCam ? '#8b7cf688' : ui.border), background: autoCam ? '#8b7cf626' : ui.glass, color: autoCam ? (dark ? '#c4b5fd' : '#6d28d9') : ui.tx3, backdropFilter: 'blur(8px)', fontWeight: 600, fontSize: 11.5 }}>
+            <Orbit size={12} /> Auto camera
+          </button>
+          <button onClick={() => setManual2D((m) => !m)} title="Switch to the flat 2D knowledge graph"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + ui.border, background: ui.glass, color: ui.tx3, backdropFilter: 'blur(8px)', fontWeight: 600, fontSize: 11.5 }}>
+            {manual2D ? <><Brain size={12} /> 3D Brain</> : <><Waypoints size={12} /> 2D Vault</>}
+          </button>
         </div>
       </div>
 

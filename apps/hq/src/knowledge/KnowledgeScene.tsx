@@ -9,7 +9,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+import { Html, OrbitControls } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import type { KModel } from './model'
@@ -259,42 +259,65 @@ function Resizer({ width, height }: { width: number; height: number }) {
   return null
 }
 
-// Gentle auto-camera: never zooms out. It sways left/right, breathes a little,
-// and leans slowly toward whatever region is active. No manual orbit — the
-// motion is the whole point (audience-facing), and node picking still works.
+// Manual orbit + zoom is the founder's own navigation (drag to orbit, wheel/
+// pinch to zoom, right-drag to pan). The gentle sway/breathe/lean is an IDLE
+// ambient behaviour only: it pauses the instant the founder touches the
+// controls and waits a grace period after release before easing back in —
+// never fights the user's own framing.
 const BASE_RADIUS = 20.5
-function CameraRig() {
+function CameraRig({ autoEnabled }: { autoEnabled: boolean }) {
+  const controlsRef = useRef<any>(null)
   const { camera } = useThree()
   const target = useRef(new THREE.Vector3(0, 0.4, 0.5))
   const tTgt = useMemo(() => new THREE.Vector3(), [])
   const tPos = useMemo(() => new THREE.Vector3(), [])
+  const userActive = useRef(false)
+  const idleSince = useRef(0)
+
+  useEffect(() => {
+    const c = controlsRef.current; if (!c) return
+    const onStart = () => { userActive.current = true }
+    const onEnd = () => { userActive.current = false; idleSince.current = performance.now() }
+    c.addEventListener('start', onStart)
+    c.addEventListener('end', onEnd)
+    return () => { c.removeEventListener('start', onStart); c.removeEventListener('end', onEnd) }
+  }, [])
+
   useFrame((state) => {
-    const t = state.clock.elapsedTime
-    const regions = ACTIVE.regions
-    let cy = 0.4, cz = 0.5
-    if (regions && regions.size >= 1 && regions.size <= 3) {
-      let y = 0, z = 0; regions.forEach((r) => { const c = regionCentroid(r); y += c[1]; z += c[2] })
-      cy = (y / regions.size) * 0.4 + 0.3; cz = (z / regions.size) * 0.5
+    const c = controlsRef.current
+    const idleLongEnough = performance.now() - idleSince.current > 1400
+    if (autoEnabled && c && !userActive.current && idleLongEnough) {
+      const t = state.clock.elapsedTime
+      const regions = ACTIVE.regions
+      let cy = 0.4, cz = 0.5
+      if (regions && regions.size >= 1 && regions.size <= 3) {
+        let y = 0, z = 0; regions.forEach((r) => { const rc = regionCentroid(r); y += rc[1]; z += rc[2] })
+        cy = (y / regions.size) * 0.4 + 0.3; cz = (z / regions.size) * 0.5
+      }
+      target.current.lerp(tTgt.set(0, cy, cz), 0.015)
+      const zoomIn = regions && regions.size <= 3 ? 2 : 0          // lean IN on a focused context
+      const breathe = Math.abs(Math.sin(t * 0.1)) * 1.2            // inward-only breathing
+      const radius = BASE_RADIUS - zoomIn - breathe
+      const az = Math.sin(t * 0.06) * 0.3                          // gentle left/right sway
+      const pol = 0.56 + Math.sin(t * 0.05) * 0.04                 // top-down-ish (reads as a brain)
+      tPos.set(
+        target.current.x + radius * Math.sin(pol) * Math.sin(az),
+        target.current.y + radius * Math.cos(pol),
+        target.current.z + radius * Math.sin(pol) * Math.cos(az),
+      )
+      camera.position.lerp(tPos, 0.02)
+      c.target.lerp(target.current, 0.02)
     }
-    target.current.lerp(tTgt.set(0, cy, cz), 0.02)
-    const zoomIn = regions && regions.size <= 3 ? 2.5 : 0        // lean IN on a focused context
-    const breathe = Math.abs(Math.sin(t * 0.1)) * 1.4            // inward-only breathing
-    const radius = BASE_RADIUS - zoomIn - breathe
-    const az = Math.sin(t * 0.08) * 0.34                         // ±19° left/right sway
-    const pol = 0.56 + Math.sin(t * 0.05) * 0.04                 // more top-down (reads as a brain)
-    tPos.set(
-      target.current.x + radius * Math.sin(pol) * Math.sin(az),
-      target.current.y + radius * Math.cos(pol),
-      target.current.z + radius * Math.sin(pol) * Math.cos(az),
-    )
-    camera.position.lerp(tPos, 0.03)
-    camera.lookAt(target.current)
+    if (c) c.update()
   })
-  return null
+  return (
+    <OrbitControls ref={controlsRef} enablePan enableZoom enableRotate
+      enableDamping dampingFactor={0.08} minDistance={5} maxDistance={46} rotateSpeed={0.55} zoomSpeed={0.85} panSpeed={0.7} />
+  )
 }
 
-export function KnowledgeScene({ model, tissue, width, height, dark, onFrame }: {
-  model: KModel; tissue: { positions: Float32Array; region: Uint8Array; fade: Float32Array }; width: number; height: number; dark: boolean; onFrame?: () => void
+export function KnowledgeScene({ model, tissue, width, height, dark, autoCamera = true, onFrame }: {
+  model: KModel; tissue: { positions: Float32Array; region: Uint8Array; fade: Float32Array }; width: number; height: number; dark: boolean; autoCamera?: boolean; onFrame?: () => void
 }) {
   const th = useMemo(() => theme(dark), [dark])
   return (
@@ -310,7 +333,7 @@ export function KnowledgeScene({ model, tissue, width, height, dark, onFrame }: 
       <CommandCore model={model} th={th} />
       <ActiveRing model={model} th={th} />
       <RegionLabels model={model} th={th} />
-      <CameraRig />
+      <CameraRig autoEnabled={autoCamera} />
       <EffectComposer>
         <Bloom intensity={th.bloomI} luminanceThreshold={th.bloomT} luminanceSmoothing={0.88} mipmapBlur radius={0.75} />
         <Vignette eskil={false} offset={0.2} darkness={th.vignette} />

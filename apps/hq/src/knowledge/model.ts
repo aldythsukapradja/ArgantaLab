@@ -44,7 +44,7 @@ export interface KModel {
   hemiCounts: { left: number; right: number }
 }
 
-const LAYOUT_KEY = 'knowledge_brain_v5'
+const LAYOUT_KEY = 'knowledge_brain_v6'
 
 function firstParagraph(body: string | undefined): string {
   if (!body || typeof body !== 'string') return ''
