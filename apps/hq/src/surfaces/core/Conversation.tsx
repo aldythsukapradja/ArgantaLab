@@ -1,19 +1,19 @@
-// C4b Step 3 — the milestone: real loadMessages/sendMessage turn loop wired
-// into the UI. Composer here is a minimal working input (full richness —
-// tier pill, mic, stop button, auto-grow — arrives at Step 6).
+// C4b — real loadMessages/sendMessage turn loop wired into the UI, plus the
+// full Step 6 composer (tier pill, mic dictation, stop button, session cost).
 import { useEffect, useRef, useState } from 'react'
 import { loadMessages, sendMessage, type CoreMessage } from '../../lib/core'
 import { UserMessage, AssistantMessage } from './Message'
 import { CoreOrb } from './CoreOrb'
+import { Composer } from './Composer'
 
 const ERROR_STOP_REASONS = new Set(['error', 'no-model'])
 
 const THINKING_LONG_MS = 8000
 
-export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCostClass, onArtifact, compact }: {
+export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifact, compact }: {
   threadId: string | null
   onThreadCreated: (id: string) => void
-  /** Ceiling for the composer's tier pill — wired at Step 6. */
+  /** Ceiling shown on the composer's tier pill (display-only — see Composer.tsx). */
   maxCostClass: number
   onArtifact?: (a: { assetId: string; kind: string }) => void
   compact?: boolean
@@ -23,8 +23,11 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
   const [sending, setSending] = useState(false)
   const [thinkingLong, setThinkingLong] = useState(false)
   const [lastProvenance, setLastProvenance] = useState<{ provider: string | null; model: string | null; errored: boolean } | null>(null)
+  const [sessionCostUsd, setSessionCostUsd] = useState(0)
+  const [sessionRuns, setSessionRuns] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (!threadId) { setMessages([]); return }
@@ -44,6 +47,8 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
     setSending(true)
     setThinkingLong(false)
     thinkingTimerRef.current = setTimeout(() => setThinkingLong(true), THINKING_LONG_MS)
+    const controller = new AbortController()
+    abortRef.current = controller
 
     let tid = threadId
     if (!tid) {
@@ -56,11 +61,14 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
     // optimistic user bubble
     setMessages(m => [...m, { id: crypto.randomUUID(), threadId: tid!, role: 'user', content: text, blocks: [], toolCalls: [], runId: null, createdAt: new Date().toISOString() }])
 
-    const result = await sendMessage(tid, text)
+    const result = await sendMessage(tid, text, { signal: controller.signal })
+    abortRef.current = null
     if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current)
     setThinkingLong(false)
     setSending(false)
     setLastProvenance({ provider: result.provider, model: result.model, errored: ERROR_STOP_REASONS.has(result.stopReason) })
+    setSessionCostUsd(c => c + result.costUsd)
+    setSessionRuns(n => n + 1)
 
     const fresh = await loadMessages(tid)
     setMessages(fresh)
@@ -72,9 +80,7 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
     }
   }
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
-  }
+  const stop = () => { abortRef.current?.abort() }
 
   const isEmpty = messages.length === 0 && !sending
 
@@ -119,21 +125,11 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass: _maxCost
           </div>
         )}
       </div>
-      <div className="core-composer">
-        <div className="core-composer-field">
-          <input
-            className="core-composer-input"
-            placeholder="Message Arganta Core…"
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onKeyDown={onKeyDown}
-            disabled={sending}
-          />
-          <button className="core-composer-send" onClick={send} disabled={sending || !draft.trim()} aria-label="Send">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5 L13 7.5 M8 2.5 L13 7.5 L8 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-        </div>
-      </div>
+      <Composer
+        draft={draft} onDraftChange={setDraft} onSend={send} onStop={stop}
+        sending={sending} maxCostClass={maxCostClass}
+        sessionCostUsd={sessionCostUsd} sessionRuns={sessionRuns}
+      />
     </div>
   )
 }

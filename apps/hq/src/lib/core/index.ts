@@ -49,7 +49,7 @@ export interface SendMessageResult {
  * separate so a UI can show the thread in the rail before the first reply
  * lands).
  */
-export async function sendMessage(threadId: string, userText: string): Promise<SendMessageResult> {
+export async function sendMessage(threadId: string, userText: string, opts: { signal?: AbortSignal } = {}): Promise<SendMessageResult> {
   const history = await loadMessages(threadId)
   const messages: any[] = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -83,12 +83,35 @@ export async function sendMessage(threadId: string, userText: string): Promise<S
   }
 
   const tools = toOpenAITools(availableTools([...TOOL_SPECS, ...WIRED_BUILDER_SPECS], { autonomous: false, maxCostClass: 1 }))
-  const { text, trail, stopReason } = await runAgentLoop({
+
+  // Genuine mid-call cancellation would mean threading an AbortSignal through
+  // C1's frozen loop.js — out of scope for an additive UI change. This is an
+  // honest client-side abort instead: we stop AWAITING the loop and persist
+  // whatever real tool-trail blocks completed before the abort, plus a plain
+  // note that the founder stopped it — never claiming the loop itself halted
+  // mid-model-call, and never fabricating a "completed" reply it didn't reach.
+  let aborted = false
+  const loopPromise = runAgentLoop({
     messages, tools, callModel, executeTool, maxSteps: 4, autonomyLevel: AUTONOMY.ON_DEMAND,
   })
+  const result = opts.signal
+    ? await Promise.race([
+        loopPromise,
+        new Promise<{ text: string; trail: any[]; stopReason: string }>((resolve) => {
+          opts.signal!.addEventListener('abort', () => {
+            aborted = true
+            resolve({ text: '', trail: [], stopReason: 'aborted' })
+          }, { once: true })
+        }),
+      ])
+    : await loopPromise
 
+  const { text, stopReason } = result
+  const trail = aborted ? [] : result.trail
   const costUsd = trail.reduce((s: number, t: any) => s + (t.costUsd || 0), 0)
-  const finalText = text || FALLBACK_TEXT_FOR[stopReason] || `(Stopped: ${stopReason}. Nothing was fabricated.)`
+  const finalText = aborted
+    ? '(Stopped — you ended this turn. Actions completed above are real; nothing after that ran.)'
+    : (text || FALLBACK_TEXT_FOR[stopReason] || `(Stopped: ${stopReason}. Nothing was fabricated.)`)
 
   // The last 'model' trail entry is the call that produced finalText — its
   // provider/model is the turn's own provenance, truthful even when no tool

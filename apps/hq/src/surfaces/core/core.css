@@ -107,13 +107,32 @@
   font-size: 14px; padding: 6px 4px;
 }
 .core-composer-input::placeholder { color: var(--tx3); }
+.core-composer-textarea {
+  resize: none; overflow-y: auto; line-height: 22px; max-height: calc(6 * 22px + 16px);
+  font-family: inherit;
+}
 .core-composer-send {
   width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%;
   background: var(--acc); color: #fff; border: none; cursor: pointer;
-  display: grid; place-items: center; transition: opacity var(--dur) var(--ease);
+  display: grid; place-items: center; transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .core-composer-send:disabled { opacity: .35; cursor: default; }
 .core-composer-send:not(:disabled):hover { background: var(--acc-press); }
+.core-composer-stop { background: var(--tx2); }
+.core-composer-stop:hover { background: var(--tx); }
+
+.core-tier-pill {
+  flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: var(--tx3);
+  background: var(--bg3); padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+}
+.core-composer-mic {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; border: none; background: none;
+  color: var(--tx3); cursor: pointer; display: grid; place-items: center;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.core-composer-mic:hover { background: var(--bg3); color: var(--tx); }
+.core-composer-mic-on { color: var(--acc); background: var(--acc-soft); }
+.core-session-ticker { max-width: 760px; margin: 6px auto 0; padding: 0 4px; font-size: 10.5px; color: var(--tx3); }
 
 /* ---------- messages ---------- */
 .core-msg { display: flex; margin-bottom: 18px; }

@@ -34,7 +34,16 @@ export async function loadMessages(threadId: string): Promise<CoreMessage[]> {
 
 /** Persists one message via the row-mapping contract. Best-effort — a failed
  * save is logged, never thrown (the conversation already happened in memory;
- * losing persistence for one message shouldn't crash the turn). */
+ * losing persistence for one message shouldn't crash the turn).
+ *
+ * core_message.run_id foreign-keys to agent_runs, but that row is only
+ * written once a real model call resolves (runtime.ts's logAgentRun runs
+ * partway through coreCallModel — some honest-degrade paths, e.g. no
+ * tools-capable model reachable at all, or a client-side abort, return before
+ * it does). Passing a runId with no matching row trips the FK constraint and
+ * silently drops the WHOLE message (caught live: a stopped turn's reply
+ * vanished on reload). Retry once with runId:null on exactly that constraint
+ * — still truthful, since there genuinely is no logged run behind it. */
 export async function appendMessage(m: {
   id: string; threadId: string; role: CoreMessage['role']; content?: string
   blocks?: Record<string, unknown>[]; toolCalls?: Record<string, unknown>[]; runId?: string | null
@@ -42,5 +51,11 @@ export async function appendMessage(m: {
   if (!cloudEnabled) return
   const row = messageToRow({ ...m, blocks: m.blocks ?? [], toolCalls: m.toolCalls ?? [], runId: m.runId ?? null, createdAt: new Date().toISOString() })
   const { error } = await supabase.rpc('core_message_append', { message: row })
-  if (error) console.warn('[core_message_append]', error.message)
+  if (!error) return
+  if (row.run_id && error.message.includes('core_message_run_id_fkey')) {
+    const { error: retryErr } = await supabase.rpc('core_message_append', { message: { ...row, run_id: null } })
+    if (retryErr) console.warn('[core_message_append retry]', retryErr.message)
+    return
+  }
+  console.warn('[core_message_append]', error.message)
 }
