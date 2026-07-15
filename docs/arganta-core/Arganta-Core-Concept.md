@@ -161,7 +161,7 @@ currently truthfully says tools:false).
 |---|---|---|---|---|
 | C1 | Foundation contracts | ✅ **SHIPPED** — `@arganta/agent` (thread schema, unified tool registry, pure agentic loop, delegation protocol, autonomy+invocation guardrails, embed/mount contract) + ADR-0004 · 30/30 tests | **Opus** | irreversible interfaces + security posture |
 | C2 | Substrate | ✅ **SHIPPED** — `migration_arganta_core.sql` (core_thread/core_message/memory_chunk+pgvector, live-verified), `embed` kind in media-proxy (CF bge-base-en-v1.5, 768-dim, verified real embed+store+cosine-search round trip), Realtime added to agent_runs/media_asset/core_message. Vault-ify secrets deferred to C7 (ADR-0004 prerequisite) | **Sonnet** | pattern-matches five existing migrations |
-| C3 | Tool loop | client-side agentic loop (call → execute tool → append → re-call, bounded), tool registry impl, honest degrade | **Sonnet** (Opus reviews the loop-termination/budget logic) | mechanical once C1 fixes the contract |
+| C3 | Tool loop | ✅ **SHIPPED, live-verified** — `lib/core/{runtime,tools,thread,index}.ts` wires the C1 loop to real models + real tools (image/speech/website/deck/brand/analyze/search_vault/consult_office/quota/ledger). Found + fixed 2 real bugs live: llm-proxy's `needsTools` filter could be bypassed by an exact-model request (Claude would silently hallucinate fake tool calls instead of erroring — a real truthfulness violation); Core's chat defaulted to `dataClass:'internal'`, which governance correctly blocked from the free tier. **Known limitation, not a bug:** Cloudflare's free Llama (the only tools-capable Sponsored provider actually configured — Gemini/Groq keys were never set) is slow (15-40s/call) and unreliable at stopping a tool loop even with explicit prompting — added `GEMINI_API_KEY`/`GROQ_API_KEY` as the recommended fix (they outrank Cloudflare in registry priority) | **Sonnet** (Opus reviews the loop-termination/budget logic) | mechanical once C1 fixes the contract |
 | C4a | Design language | the "fancier than ChatGPT" layer: motion spec for the orb avatar, message choreography, microcopy voice, empty states, **artifact preview cards** | **Fable** | creative/aesthetic judgment |
 | C4b | Chat UI build | threads rail, rich blocks, cortex panel, composer, streaming, karaoke playback | **Sonnet** | large but well-specified UI work |
 | C5 | Memory/RAG | embed Vault + threads, `search_vault` tool, auto-recall injection w/ dataClass gates | **Sonnet** | wiring + tests |
@@ -180,9 +180,18 @@ currently truthfully says tools:false).
 | B4 | Portable components | 15–20 portable blocks (nav, heroes, metric grids, charts, tables, kanban, forms, pricing, footer) + `components.ts` registry + selection logic | **Fable** (block design) → **Sonnet** (registry) | blocks are aesthetic judgment; registry is wiring |
 | B5 | Preview + publishing | shared device-preview (Core cards + Builder workspace, ONE renderer), publishing runtime `build.arganta.app/a/:slug` `/w/:slug` (one shared runtime, sandboxed, CSP, no per-artifact deploys) | **Sonnet** + **Opus security sign-off** | public internet surface = new attack surface |
 
-Sequencing: C1 ✅ → C2 ✅ → **C3** → B1 → B2 → B3 → C4b (renders Builder
-artifacts as blocks — the C1 block kinds already anticipated `website`) → B4 →
-B5 → C5 → C6 → C7. C8 after C3 and again after B5/C7. C4a + C9 parallel anytime.
+Sequencing: C1 ✅ → C2 ✅ → C3 ✅ → **B1 (next)** → B2 → B3 → C4b (renders
+Builder artifacts as blocks — the C1 block kinds already anticipated `website`)
+→ B4 → B5 → C5 → C6 → C7. C8 after C3 and again after B5/C7. C4a + C9 parallel
+anytime.
+
+**Founder action recommended before B1:** set `GEMINI_API_KEY` (free,
+aistudio.google.com/apikey) as a Supabase secret. C3's live test proved the
+loop mechanics work correctly, but the only tools-capable Sponsored provider
+actually configured is Cloudflare's free Llama, which is slow and unreliable
+at ending a tool loop — Gemini outranks it in registry priority and is
+known-reliable at function-calling, so this alone should fix both without any
+more code changes.
 
 ## See also
 - [[Single-File-Builder]] — the app/website Builder kernel (B1–B5), Core's strongest hand
