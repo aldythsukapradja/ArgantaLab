@@ -5,10 +5,18 @@
 // spend/economics. One non-scrollable page, same Spine discipline as Media
 // Center. Session runs come from `intelligence.getRuns()`; persisted history
 // (WS-5) comes from the agent_runs_recent/agent_runs_capo RPCs when online.
+//
+// Persistence-first additions (docs/media-center/Persistence-and-Provider-
+// Strategy.md): a neuron-quota gauge (Cloudflare GraphQL Analytics — honest
+// fallback if the token lacks Analytics:Read), timestamps + per-run metadata
+// on the feed, and a run-detail popup that proves an artifact was actually
+// saved (media_asset, linked by run_id) rather than just claiming it was.
 
 import { useEffect, useMemo, useState } from 'react'
 import { MODEL_REGISTRY_CATALOG, COST_LABEL, rollupBenchmarks } from '@arganta/ai'
 import { getSessionRuns } from '../../lib/ai'
+import { getNeuronQuota, type NeuronQuota } from '../../lib/mediaGateway'
+import { mediaAssetPublicUrl } from '../../lib/mediaAssets'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import './rack.css'
 
@@ -20,9 +28,18 @@ type Run = {
   actualModel?: string | null; actual_model?: string | null
   costUsd?: number; cost_usd?: number
   latencyMs?: number; latency_ms?: number
+  inputTokens?: number; input_tokens?: number
+  outputTokens?: number; output_tokens?: number
   status: string
   createdAt?: string; created_at?: string
   validationResult?: any; validation_result?: any
+}
+
+type Asset = {
+  id: string; run_id: string | null; kind: string; bucket: string; path: string
+  mime: string | null; bytes: number | null; width: number | null; height: number | null
+  duration: number | null; prompt: string | null; provider: string | null; model: string | null
+  cost_usd: number; accepted: boolean | null; created_at: string
 }
 
 // normalize camelCase (in-memory) vs snake_case (Supabase RPC) into one shape
@@ -34,6 +51,8 @@ const norm = (r: Run) => ({
   model: r.actualModel || r.actual_model || null,
   costUsd: r.costUsd ?? r.cost_usd ?? 0,
   latencyMs: r.latencyMs ?? r.latency_ms ?? 0,
+  inputTokens: r.inputTokens ?? r.input_tokens ?? 0,
+  outputTokens: r.outputTokens ?? r.output_tokens ?? 0,
   status: r.status,
   at: r.createdAt || r.created_at || new Date().toISOString(),
   validation: r.validationResult ?? r.validation_result ?? null,
@@ -46,10 +65,31 @@ const TIER_META = [
   { c: 3, name: 'Frontier', note: 'premium reasoning' },
 ]
 
+function relTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime()
+  const s = Math.round(ms / 1000)
+  if (s < 5) return 'now'
+  if (s < 60) return `${s}s`
+  const m = Math.round(s / 60)
+  if (m < 60) return `${m}m`
+  const h = Math.round(m / 60)
+  if (h < 24) return `${h}h`
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+const QUOTA_ERROR_LABEL: Record<string, string> = {
+  insufficient_scope: 'token needs Analytics:Read',
+  unreachable: 'offline',
+  no_data: 'no data yet',
+}
+
 export function ModelRack() {
   const [sessionRuns, setSessionRuns] = useState(() => getSessionRuns())
   const [liveRuns, setLiveRuns] = useState<Run[]>([])
   const [liveCapo, setLiveCapo] = useState<any>(null)
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [quota, setQuota] = useState<NeuronQuota | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
   // poll the in-memory session ledger (no event emitter wired yet — cheap + simple)
@@ -62,11 +102,17 @@ export function ModelRack() {
     if (!cloudEnabled) return
     let cancelled = false
     ;(async () => {
-      const [{ data: recent }, { data: capo }] = await Promise.all([
+      const [{ data: recent }, { data: capo }, { data: assetRows }, q] = await Promise.all([
         supabase.rpc('agent_runs_recent', { p_limit: 50, p_domain: null }),
         supabase.rpc('agent_runs_capo', { p_days: 30 }),
+        supabase.rpc('media_assets_recent', { p_limit: 100 }),
+        getNeuronQuota(),
       ])
-      if (!cancelled) { setLiveRuns((recent as Run[]) || []); setLiveCapo((capo as any[])?.[0] || null) }
+      if (cancelled) return
+      setLiveRuns((recent as Run[]) || [])
+      setLiveCapo((capo as any[])?.[0] || null)
+      setAssets((assetRows as Asset[]) || [])
+      setQuota(q)
     })()
     return () => { cancelled = true }
   }, [tick])
@@ -77,6 +123,12 @@ export function ModelRack() {
     const merged = rawMerged.map((r) => norm(r as Run))
     return merged.sort((a, b) => +new Date(b.at) - +new Date(a.at)).slice(0, 60)
   }, [rawMerged])
+
+  const assetByRunId = useMemo(() => {
+    const m = new Map<string, Asset>()
+    for (const a of assets) if (a.run_id) m.set(a.run_id, a)
+    return m
+  }, [assets])
 
   // WS-8 — the same rollup the router uses for ranking, shown here so the
   // score is visible + auditable, not just an internal number affecting routing.
@@ -97,6 +149,15 @@ export function ModelRack() {
   const spend = liveCapo?.cost_usd ?? allRuns.reduce((s, r) => s + (r.costUsd || 0), 0)
   const frontierCalls = allRuns.filter((r) => r.costClass === 3).length
 
+  const selectedRun = allRuns.find((r) => r.id === selectedId) || null
+  const selectedAsset = selectedId ? assetByRunId.get(selectedId) || null : null
+
+  const setAccepted = async (assetId: string, accepted: boolean) => {
+    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, accepted } : a)))
+    const { error } = await supabase.rpc('media_asset_set_accepted', { p_id: assetId, p_accepted: accepted })
+    if (error) console.warn('[media_asset_set_accepted]', error.message)
+  }
+
   return (
     <div className="rack">
       <header className="rack-top">
@@ -108,6 +169,19 @@ export function ModelRack() {
           </div>
           <div className="kpi"><b>${spend.toFixed(3)}</b><i>spend {cloudEnabled ? '· 30d' : '· session'}</i></div>
           <div className="kpi"><b>{frontierCalls}</b><i>Frontier calls</i></div>
+          {quota && (
+            <div className="kpi" title={quota.error ? QUOTA_ERROR_LABEL[quota.error] || quota.error : `${quota.byModel?.length || 0} models used today`}>
+              {quota.error ? (
+                <><b className="kpi-dim">—</b><i>neurons — {QUOTA_ERROR_LABEL[quota.error] || 'unavailable'}</i></>
+              ) : (
+                <>
+                  <b>{(quota.neuronsUsedToday ?? 0).toLocaleString()}<span className="kpi-of"> / {quota.freePerDay.toLocaleString()}</span></b>
+                  <i>neurons · today</i>
+                  <div className="kpi-bar"><span style={{ width: `${Math.min(100, Math.round(((quota.neuronsUsedToday ?? 0) / quota.freePerDay) * 100))}%` }} /></div>
+                </>
+              )}
+            </div>
+          )}
           {!cloudEnabled && <span className="rack-offline">offline preview — session-only</span>}
           {cloudEnabled && <button className="rack-refresh" onClick={() => setTick((t) => t + 1)}>↻ refresh</button>}
         </div>
@@ -139,21 +213,89 @@ export function ModelRack() {
       </div>
 
       <footer className="rack-feed">
-        <div className="feed-head">Runs <span className="feed-count">{allRuns.length}</span></div>
+        <div className="feed-head">
+          Runs <span className="feed-count">{allRuns.length}</span>
+          <span className="feed-cols">
+            <span>time</span><span>tier</span><span>task</span><span>provider · model</span>
+            <span>meta</span><span>cost</span><span>latency</span><span>status</span><span></span>
+          </span>
+        </div>
         <div className="feed-list">
           {allRuns.length === 0 && <div className="feed-empty">No runs yet — generate something in Media Center.</div>}
-          {allRuns.map((r) => (
-            <div key={r.id} className={`feed-row st-${r.status}`}>
-              <span className={`feed-tier t${r.costClass ?? '-'}`}>{r.costClass != null ? COST_LABEL[r.costClass] : '?'}</span>
-              <span className="feed-task">{r.task || r.domain}</span>
-              <span className="feed-provider">{r.provider || '—'}{r.model ? ` · ${r.model}` : ''}</span>
-              <span className="feed-cost">${(r.costUsd || 0).toFixed(4)}</span>
-              <span className="feed-latency">{r.latencyMs ? `${r.latencyMs}ms` : '—'}</span>
-              <span className={`feed-status s-${r.status}`}>{r.status}</span>
-            </div>
-          ))}
+          {allRuns.map((r) => {
+            const asset = assetByRunId.get(r.id)
+            const meta = r.domain === 'llm' && (r.inputTokens || r.outputTokens)
+              ? `${r.inputTokens + r.outputTokens} tok`
+              : asset?.kind === 'image' && asset.width && asset.height ? `${asset.width}×${asset.height}`
+              : asset?.kind === 'tts' && asset.duration ? `${asset.duration.toFixed(1)}s`
+              : asset?.bytes ? `${Math.round(asset.bytes / 1024)}KB`
+              : '—'
+            return (
+              <button key={r.id} className={`feed-row st-${r.status}`} onClick={() => setSelectedId(r.id)} disabled={!asset}>
+                <span className="feed-time" title={new Date(r.at).toLocaleString()}>{relTime(r.at)}</span>
+                <span className={`feed-tier t${r.costClass ?? '-'}`}>{r.costClass != null ? COST_LABEL[r.costClass] : '?'}</span>
+                <span className="feed-task">{r.task || r.domain}</span>
+                <span className="feed-provider">{r.provider || '—'}{r.model ? ` · ${r.model}` : ''}</span>
+                <span className="feed-meta">{meta}</span>
+                <span className="feed-cost">${(r.costUsd || 0).toFixed(4)}</span>
+                <span className="feed-latency">{r.latencyMs ? `${r.latencyMs}ms` : '—'}</span>
+                <span className={`feed-status s-${r.status}`}>{r.status}</span>
+                <span className="feed-saved" title={asset ? 'artifact saved' : 'no saved artifact'}>{asset ? '📎' : ''}</span>
+              </button>
+            )
+          })}
         </div>
       </footer>
+
+      {selectedRun && (
+        <div className="rack-modal-backdrop" onClick={() => setSelectedId(null)}>
+          <div className="rack-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="rack-modal-head">
+              <b>Run detail</b>
+              <button className="rack-modal-close" onClick={() => setSelectedId(null)}>✕</button>
+            </div>
+            {selectedAsset ? (
+              <>
+                <div className="rack-modal-preview">
+                  {selectedAsset.kind === 'image' ? (
+                    <img src={mediaAssetPublicUrl(selectedAsset.path)} alt={selectedAsset.prompt || ''} />
+                  ) : selectedAsset.kind === 'tts' || selectedAsset.kind === 'audio' || selectedAsset.kind === 'music' ? (
+                    <audio controls src={mediaAssetPublicUrl(selectedAsset.path)} />
+                  ) : (
+                    <div className="rack-modal-noicon">{selectedAsset.kind}</div>
+                  )}
+                </div>
+                <div className="rack-modal-body">
+                  <div className="rack-modal-saved">✓ saved to Supabase</div>
+                  <div className="rack-modal-path">{selectedAsset.bucket}/{selectedAsset.path}</div>
+                  <div className="rack-modal-sub">
+                    {selectedAsset.bytes ? `${Math.round(selectedAsset.bytes / 1024)}KB` : ''}
+                    {selectedAsset.width && selectedAsset.height ? ` · ${selectedAsset.width}×${selectedAsset.height}` : ''}
+                    {selectedAsset.duration ? ` · ${selectedAsset.duration.toFixed(1)}s` : ''}
+                    {selectedAsset.mime ? ` · ${selectedAsset.mime}` : ''}
+                  </div>
+                  {selectedAsset.prompt && <div className="rack-modal-prompt">“{selectedAsset.prompt}”</div>}
+                  <div className="rack-modal-grid">
+                    <span>provider</span><span>{selectedAsset.provider || '—'}</span>
+                    <span>model</span><span>{selectedAsset.model || '—'}</span>
+                    <span>run_id</span><span className="rack-modal-mono">{selectedAsset.run_id}</span>
+                    <span>cost</span><span>${selectedAsset.cost_usd.toFixed(4)}</span>
+                  </div>
+                  <div className="rack-modal-actions">
+                    <button className={'rack-modal-btn' + (selectedAsset.accepted === true ? ' on' : '')} onClick={() => setAccepted(selectedAsset.id, true)}>♥ accept</button>
+                    <button className={'rack-modal-btn' + (selectedAsset.accepted === false ? ' on-bad' : '')} onClick={() => setAccepted(selectedAsset.id, false)}>reject</button>
+                    <a className="rack-modal-btn" href={mediaAssetPublicUrl(selectedAsset.path)} target="_blank" rel="noreferrer">open</a>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="rack-modal-body">
+                <div className="rack-modal-nosave">⚠ no saved artifact for this run — {selectedRun.domain === 'media' ? 'it stayed local-only (save may have failed or the run predates persistence)' : 'text runs don’t persist bytes'}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

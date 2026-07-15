@@ -14,6 +14,11 @@
 //   supabase secrets set CF_ACCOUNT_ID=xxxxx
 //   supabase secrets set CF_API_TOKEN=xxxxx            (token with Workers AI Run)
 //   → dash.cloudflare.com → AI → Workers AI (grab account id + create API token)
+// Optional — for the Model Rack's neuron quota gauge ({action:'quota'}), the
+// SAME token additionally needs "Account Analytics: Read" (a different scope
+// than "Workers AI: Run" — generation keeps working without it, the gauge just
+// reports insufficient_scope until you add it: My Profile → API Tokens → edit
+// the token → add permission).
 // Secrets (Economy — Modal, after `modal deploy modal/media_image.py`):
 //   supabase secrets set MODAL_IMAGE_URL=https://<you>--arganta-media-image.modal.run
 //   supabase secrets set MODAL_TOKEN=<the shared secret you set in the app>
@@ -26,6 +31,7 @@ import {
   toCloudflareImageRequest, fromCloudflareImageResponse,
   toModalImageRequest, fromModalImageResponse, isRetryableStatus,
   toCloudflareTtsRequest, isBinaryAudioContentType,
+  toNeuronQuotaQuery, fromNeuronQuotaResponse, FREE_NEURONS_PER_DAY,
 } from './router.js'
 
 // Deno's btoa() only accepts a string; for binary audio bytes we build that
@@ -109,7 +115,28 @@ Deno.serve(async (req) => {
     const { data: { user } } = await asUser.auth.getUser()
     if (!user || (user.email || '').toLowerCase() !== OPERATOR) return json({ error: 'not authorized' }, 403)
 
-    const { kind = 'image', prompt, costClass, provider: force, voice } = await req.json()
+    const body = await req.json()
+
+    // Neuron quota — a read-only sidecar action, not a generation request.
+    // Requires "Account Analytics: Read" on CF_API_TOKEN — a DIFFERENT scope
+    // than "Workers AI: Run" (used for actual generation), so this can 403
+    // even when image/tts generation works fine. Honest fallback either way.
+    if (body.action === 'quota') {
+      const accountId = Deno.env.get('CF_ACCOUNT_ID')
+      const token = Deno.env.get('CF_API_TOKEN')
+      if (!accountId || !token) return json({ error: 'CF_ACCOUNT_ID/CF_API_TOKEN not set' }, 400)
+      const date = new Date().toISOString().slice(0, 10)
+      const q = toNeuronQuotaQuery({ accountId, date })
+      const r = await fetch(q.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(q.body) })
+      const parsed = fromNeuronQuotaResponse(await r.json())
+      // Always 200 here — this is a read/diagnostic action, not a generation
+      // request, and supabase-js's functions.invoke() discards the response
+      // body on non-2xx status (confirmed this session), which would hide
+      // `error` from the caller. Error info travels in the body instead.
+      return json({ ...parsed, freePerDay: FREE_NEURONS_PER_DAY, date })
+    }
+
+    const { kind = 'image', prompt, costClass, provider: force, voice } = body
     if (!prompt || typeof prompt !== 'string') return json({ error: 'prompt required' }, 400)
 
     const candidates = pickMediaCandidates(availableKeys(), { kind, costClass, force })

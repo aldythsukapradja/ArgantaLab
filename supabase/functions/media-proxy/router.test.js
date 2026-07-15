@@ -5,6 +5,7 @@ import {
   toCloudflareImageRequest, fromCloudflareImageResponse,
   toModalImageRequest, fromModalImageResponse, isRetryableStatus,
   toCloudflareTtsRequest, isBinaryAudioContentType,
+  toNeuronQuotaQuery, fromNeuronQuotaResponse, FREE_NEURONS_PER_DAY,
 } from './router.js';
 
 const CF = { CF_ACCOUNT_ID: 'acc', CF_API_TOKEN: 'tok' };
@@ -98,6 +99,38 @@ test('isBinaryAudioContentType: audio/JSON-less content types are binary; an exp
   assert.equal(isBinaryAudioContentType('application/json'), false);
   assert.equal(isBinaryAudioContentType('application/json; charset=utf-8'), false);
   assert.equal(isBinaryAudioContentType(null), false);
+});
+
+test('neuron quota query targets the GraphQL Analytics endpoint with the right variables', () => {
+  const q = toNeuronQuotaQuery({ accountId: 'acc', date: '2026-07-15' });
+  assert.equal(q.url, 'https://api.cloudflare.com/client/v4/graphql');
+  assert.equal(q.body.variables.accountTag, 'acc');
+  assert.equal(q.body.variables.date, '2026-07-15');
+  assert.match(q.body.query, /aiInferenceAdaptiveGroups/);
+});
+
+test('neuron quota response: an authz error (token missing Analytics:Read) is reported honestly, not as zero usage', () => {
+  // exact shape captured live against the real account — the token has Workers
+  // AI:Run but not Account Analytics:Read, so this is the REAL error, not a guess.
+  const real = { data: null, errors: [{ message: 'not authorized for that account', extensions: { code: 'authz' } }] };
+  assert.deepEqual(fromNeuronQuotaResponse(real), { error: 'insufficient_scope' });
+});
+
+test('neuron quota response: sums totalNeurons across models and sorts heaviest-first', () => {
+  const json = {
+    data: { viewer: { accounts: [{ aiInferenceAdaptiveGroups: [
+      { count: 3, sum: { totalNeurons: 96 }, dimensions: { modelId: '@cf/black-forest-labs/flux-1-schnell' } },
+      { count: 12, sum: { totalNeurons: 340 }, dimensions: { modelId: '@cf/meta/llama-3.3-70b-instruct-fp8-fast' } },
+    ] }] } },
+  };
+  const out = fromNeuronQuotaResponse(json);
+  assert.equal(out.neuronsUsedToday, 436);
+  assert.equal(out.byModel[0].modelId, '@cf/meta/llama-3.3-70b-instruct-fp8-fast'); // heaviest first
+  assert.equal(out.byModel[1].requests, 3);
+});
+
+test('free daily allocation is the published 10,000 neurons — not invented', () => {
+  assert.equal(FREE_NEURONS_PER_DAY, 10000);
 });
 
 test('retryable status: 429 and 5xx move to the next candidate, 4xx does not', () => {

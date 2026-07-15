@@ -58,6 +58,28 @@ export async function generateImageViaGateway(o: { prompt: string; costClass: nu
   }
 }
 
+export interface NeuronQuota {
+  neuronsUsedToday?: number
+  byModel?: { modelId: string; requests: number; neurons: number }[]
+  freePerDay: number
+  date?: string
+  error?: 'insufficient_scope' | 'no_data' | string // insufficient_scope = CF_API_TOKEN needs "Account Analytics: Read"
+}
+
+/** Model Rack's neuron gauge. Always resolves (never throws) — an unreachable
+ * gateway or missing scope comes back as `{error, freePerDay}`, not a crash. */
+export async function getNeuronQuota(): Promise<NeuronQuota> {
+  const fallback: NeuronQuota = { freePerDay: 10000, error: 'unreachable' }
+  if (!cloudEnabled) return fallback
+  try {
+    const { data, error } = await supabase.functions.invoke('media-proxy', { body: { action: 'quota' } })
+    if (error || !data) return fallback
+    return data as NeuronQuota
+  } catch {
+    return fallback
+  }
+}
+
 export interface GatewayAudio {
   bytes: Uint8Array
   mime: string

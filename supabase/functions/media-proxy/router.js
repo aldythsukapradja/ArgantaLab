@@ -91,6 +91,49 @@ export function toCloudflareTtsRequest({ accountId, model, text, speaker = 'orio
  * binary kinds, so the caller still needs to branch on this rather than assume. */
 export const isBinaryAudioContentType = (contentType) => !!contentType && !contentType.includes('application/json');
 
+// ── Cloudflare GraphQL Analytics — Workers AI neuron quota ──────────────────
+// Verified live against the real account (2026-07-15): dataset name, field
+// names, and query shape are all confirmed correct via schema introspection —
+// NOT guessed from docs (Cloudflare's docs don't cover this dataset at all).
+// The free allocation is 10,000 neurons/day (Cloudflare's published pricing).
+// Requires the API token to carry "Account Analytics: Read" — a DIFFERENT
+// scope than "Workers AI: Run" (used for actual generation) — so this can
+// legitimately 403 even when image/tts generation works fine. Honest fallback
+// on that, never a fabricated number.
+export const FREE_NEURONS_PER_DAY = 10000;
+
+export function toNeuronQuotaQuery({ accountId, date }) {
+  return {
+    url: 'https://api.cloudflare.com/client/v4/graphql',
+    body: {
+      query: `query($accountTag: String!, $date: Date!) {
+        viewer {
+          accounts(filter: { accountTag: $accountTag }) {
+            aiInferenceAdaptiveGroups(limit: 100, filter: { date: $date }) {
+              count
+              sum { totalNeurons }
+              dimensions { modelId }
+            }
+          }
+        }
+      }`,
+      variables: { accountTag: accountId, date },
+    },
+  };
+}
+
+export function fromNeuronQuotaResponse(json) {
+  const authzError = json?.errors?.find((e) => e.extensions?.code === 'authz' || /not authorized/i.test(e.message || ''));
+  if (authzError) return { error: 'insufficient_scope' };
+  if (json?.errors?.length) return { error: json.errors[0].message || 'unknown_error' };
+  const rows = json?.data?.viewer?.accounts?.[0]?.aiInferenceAdaptiveGroups;
+  if (!rows) return { error: 'no_data' };
+  const byModel = rows.map((r) => ({ modelId: r.dimensions?.modelId || 'unknown', requests: r.count, neurons: r.sum?.totalNeurons ?? 0 }))
+    .sort((a, b) => b.neurons - a.neurons);
+  const neuronsUsedToday = byModel.reduce((s, m) => s + m.neurons, 0);
+  return { neuronsUsedToday, byModel };
+}
+
 // ── Modal — your deployed web endpoint ─────────────────────────────────────
 // Contract (see modal/media_image.py): POST { prompt } → { image_base64 } (PNG).
 export function toModalImageRequest({ url, prompt }) {
