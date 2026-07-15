@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap, Handle, Position, BackgroundVariant,
   BaseEdge, getSmoothStepPath,
-  type Node, type Edge, type NodeProps, type EdgeProps,
+  type Node, type Edge, type NodeProps, type EdgeProps, type MiniMapNodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import './architecture.css'
@@ -405,6 +405,18 @@ function PulseEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, tar
   )
 }
 
+// Layer bands are 1300px-wide backdrop rectangles — at minimap scale they'd
+// paint over the whole panel and drown out the actual node dots. A `nodeColor`
+// of 'transparent' is not reliable enough here; excluding bands at the render
+// level (return null) is the deterministic fix.
+function MiniNode({ id, x, y, width, height, color, strokeColor, strokeWidth, borderRadius, shapeRendering }: MiniMapNodeProps) {
+  if (id.startsWith('b-')) return null
+  return (
+    <rect x={x} y={y} width={width} height={height} rx={borderRadius} ry={borderRadius}
+      style={{ fill: color, stroke: strokeColor, strokeWidth }} shapeRendering={shapeRendering} />
+  )
+}
+
 const nodeTypes = { card: CardNode, band: BandNode, layer: LayerNode }
 const edgeTypes = { pulse: PulseEdge }
 
@@ -550,8 +562,8 @@ export function Architecture() {
           onPaneClick={() => setSel(null)}>
           <Background variant={BackgroundVariant.Dots} gap={26} size={1} />
           <Controls showInteractive={false} />
-          <MiniMap pannable zoomable maskColor="rgba(0,0,0,.06)"
-            nodeColor={(n) => n.type === 'band' ? 'transparent' : ((n.data as CardData)?.c || (n.data as LayerData)?.c || '#6366f1')}
+          <MiniMap pannable zoomable maskColor="rgba(0,0,0,.06)" nodeComponent={MiniNode}
+            nodeColor={(n) => ((n.data as CardData)?.c || (n.data as LayerData)?.c || '#6366f1')}
             nodeStrokeWidth={0} />
         </ReactFlow>
 
