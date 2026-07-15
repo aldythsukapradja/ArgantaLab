@@ -16,7 +16,7 @@ import { stubGenerate } from '../studios/stub'
 import { makeBrand, makeWebsite, makeDeck, type BrandKit, type WebsiteCopy } from '../studios/engines'
 import { analyze, SAMPLES, type Analysis } from '../studios/analytics'
 import { askInsight, type Insight } from '../studios/analytics-intelligence'
-import { askWebsiteCopy, askDeckOutline } from '../studios/content-intelligence'
+import { askWebsiteCopy, askDeckOutline, askVideoScript } from '../studios/content-intelligence'
 import { onModelProgress, logAgentRun } from '../../lib/ai'
 
 const SceneCanvas = lazy(() => import('../studios/SceneCanvas').then(m => ({ default: m.SceneCanvas })))
@@ -71,6 +71,11 @@ export function MediaCenter() {
   const [deckAi, setDeckAi] = useState<{ scenes: string[]; provenance: any } | null>(null)
   const [websiteAiState, setWebsiteAiState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [deckAiState, setDeckAiState] = useState<'idle' | 'loading' | 'error'>('idle')
+  // S3 — same pattern for Video: the prompt text used for the last generation,
+  // plus the AI script override once fetched.
+  const [videoCtx, setVideoCtx] = useState<string | null>(null)
+  const [videoAi, setVideoAi] = useState<string[] | null>(null)
+  const [videoAiState, setVideoAiState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [insight, setInsight] = useState<Insight | null>(null)
   const [insightState, setInsightState] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -121,10 +126,12 @@ export function MediaCenter() {
   }
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); stopAudio() }, [])
 
-  function buildVideoProject(text: string) {
+  // S3 — `aiLines` (optional) overrides the deterministic sentence-split with a
+  // real AI-written script; the split always remains the instant fallback.
+  function buildVideoProject(text: string, aiLines?: string[] | null) {
     const p = blankProject('short')
     const bg = p.layers[0]
-    const lines = text.split(/[.\n]+/).map(s => s.trim()).filter(Boolean).slice(0, 4)
+    const lines = aiLines?.length ? aiLines : text.split(/[.\n]+/).map(s => s.trim()).filter(Boolean).slice(0, 4)
     const texts = (lines.length ? lines : [text || 'Arganta']).map((line, i) =>
       textLayer(line, { start: i * 1.6, dur: 1.9, yN: 0.4 + (i % 2) * 0.14, anim: i === 0 ? 'cascade' : 'pop' }))
     p.layers = [bg, ...texts]
@@ -174,7 +181,8 @@ export function MediaCenter() {
           a.transport.setTheme(localCompose(text || 'calm bright', Object.values(MUSIC_THEMES)[0]))
           a.transport.start(); setPlaying(true)
         } else if (k === 'video') {
-          setVideoUrl(null); startPreview(buildVideoProject(text))
+          setVideoUrl(null); setVideoCtx(text); setVideoAi(null); setVideoAiState('idle')
+          startPreview(buildVideoProject(text))
         }
       } else if (k === 'analytics') {
         res = stubGenerate('analytics', st, ok, 'analytics-engine', 'browser', 0, 'succeeded')
@@ -267,6 +275,18 @@ export function MediaCenter() {
     } catch { setDeckAiState('error') }
   }
 
+  // S3 — opt-in AI-assisted video script (topic → 4-line on-screen script),
+  // rebuilds the canvas preview in place with the better lines.
+  async function askVideoAI() {
+    if (!videoCtx || videoAiState === 'loading') return
+    setVideoAiState('loading')
+    try {
+      const res = await askVideoScript(videoCtx)
+      if (res) { setVideoAi(res.data); startPreview(buildVideoProject(videoCtx, res.data)); setVideoAiState('idle') }
+      else setVideoAiState('error')
+    } catch { setVideoAiState('error') }
+  }
+
   async function onExportVideo() {
     if (!projectRef.current) return
     setExportPct(0)
@@ -345,6 +365,7 @@ export function MediaCenter() {
         <div className="video-stage">
           <canvas ref={canvasRef} className="preview-canvas" />
           {videoUrl && <video className="preview-video" src={videoUrl} controls autoPlay loop />}
+          {videoCtx && !videoUrl && <MiniAiAssist state={videoAiState} done={!!videoAi} onAsk={askVideoAI} label="Ask AI for a real script" />}
         </div>
       ) : kind === 'website' ? (
         siteHtml ? (

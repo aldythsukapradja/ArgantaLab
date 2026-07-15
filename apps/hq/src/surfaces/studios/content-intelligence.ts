@@ -27,6 +27,22 @@ export async function askWebsiteCopy(brief: string): Promise<AiResult<WebsiteCop
   return { data: { headline: res.json.headline, features: Array.isArray(res.json.features) ? res.json.features.slice(0, 3) : [] }, provenance: res.provenance }
 }
 
+const VIDEO_SCHEMA = { required: ['lines'], properties: { lines: { type: 'array' } } }
+
+/** S3 — topic → a short on-screen script (up to 4 punchy lines) for the video canvas. */
+export async function askVideoScript(topic: string): Promise<AiResult<string[]> | null> {
+  const res = await intelligence.ask('storyboard', {
+    dataClass: 'public',
+    schema: VIDEO_SCHEMA,
+    messages: [
+      { role: 'system', content: 'You write on-screen video captions. Given a topic, return ONLY JSON {"lines": string[]} — exactly 4 short punchy lines (each under 40 characters) that build like a launch-video script: hook, problem, product, call-to-action. No preamble, no markdown fences.' },
+      { role: 'user', content: topic },
+    ],
+  })
+  if (res.rejected || !Array.isArray(res.json?.lines) || res.json.lines.length === 0) return null
+  return { data: res.json.lines.slice(0, 4), provenance: res.provenance }
+}
+
 export async function askDeckOutline(topic: string): Promise<AiResult<string[]> | null> {
   const res = await intelligence.ask('storyboard', {
     dataClass: 'public',
