@@ -137,14 +137,56 @@
 .core-trail-ok { color: var(--tx3); }
 .core-trail-fail { color: var(--bad); }
 
-.core-artifact-placeholder {
-  border: 1px dashed var(--bd2); border-radius: var(--r-lg); padding: 12px 14px;
-  display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--tx3);
-  background: var(--bg3);
-}
-.core-artifact-kind { font-weight: 600; color: var(--tx2); text-transform: capitalize; }
-
 .core-provenance { font-size: 11px; color: var(--tx3); }
+
+/* ---------- artifact card (Step 5) ---------- */
+.core-artifact-card {
+  border: 1px solid var(--bd2); border-radius: var(--r-lg); background: var(--bg);
+  box-shadow: var(--shadow-sm); overflow: hidden; max-width: 480px;
+  animation: core-card-in var(--dur-med) var(--ease-out);
+}
+@keyframes core-card-in {
+  from { opacity: 0; transform: scale(.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+.core-artifact-body { background: var(--bg3); display: flex; align-items: center; justify-content: center; min-height: 60px; }
+.core-artifact-img { width: 100%; max-height: 320px; object-fit: contain; display: block; }
+.core-artifact-audio { width: 100%; padding: 14px; box-sizing: border-box; }
+.core-artifact-frame { width: 100%; height: 280px; border: none; display: block; background: #fff; }
+.core-artifact-empty { padding: 20px; font-size: 12.5px; color: var(--tx3); text-align: center; }
+.core-artifact-foot {
+  padding: 9px 12px; border-top: 1px solid var(--bd); display: flex;
+  align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.core-artifact-chip { font-size: 11px; color: var(--tx3); }
+.core-artifact-actions { display: flex; gap: 6px; }
+.core-artifact-btn {
+  font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: var(--r-sm);
+  border: none; background: none; color: var(--acc-text); cursor: pointer;
+}
+.core-artifact-btn:hover { background: var(--acc-soft); }
+.core-artifact-btn-quiet { color: var(--tx3); }
+.core-artifact-btn-quiet:hover { background: var(--bg3); color: var(--tx); }
+.core-artifact-btn:disabled { opacity: .5; cursor: default; }
+.core-artifact-accepted { font-size: 11px; color: var(--ok); }
+.core-artifact-discarded { font-size: 11px; color: var(--tx3); }
+
+.core-artifact-chart { padding: 14px 16px; width: 100%; box-sizing: border-box; background: var(--bg); }
+.core-chart-title { font-size: 12px; font-weight: 600; color: var(--tx2); margin-bottom: 10px; }
+.core-chart-bar-row { display: grid; grid-template-columns: 100px 1fr 44px; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.core-chart-bar-label { color: var(--tx2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.core-chart-bar-track { height: 8px; border-radius: 999px; background: var(--bg3); overflow: hidden; }
+.core-chart-bar-fill { height: 100%; background: var(--acc); border-radius: 999px; }
+.core-chart-bar-value { text-align: right; color: var(--tx3); }
+.core-chart-source { margin-top: 8px; font-size: 10.5px; color: var(--tx3); }
+
+/* ---------- blocked-tool card (trust-critical, C4a §4) ---------- */
+.core-blocked-card {
+  border-left: 3px solid var(--warn); background: var(--warn-bg); border-radius: var(--r-md);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 480px;
+}
+.core-blocked-card p { font-size: 13px; color: var(--tx); line-height: 1.5; margin: 0; }
+.core-blocked-card .core-artifact-btn-quiet { align-self: flex-start; padding: 4px 12px; border: 1px solid var(--bd2); border-radius: var(--r-sm); }
 
 @keyframes core-msg-in {
   from { opacity: 0; transform: translateY(6px); }

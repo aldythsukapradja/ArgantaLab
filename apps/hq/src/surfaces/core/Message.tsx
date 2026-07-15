@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CoreMessage } from '../../lib/core'
 import { asBlocks, MEDIA_BLOCK_KINDS, type CoreBlock } from './blocks'
 import { CoreOrb } from './CoreOrb'
+import { ArtifactCard } from './ArtifactCard'
 
 export function UserMessage({ text }: { text: string }) {
   return (
@@ -26,6 +27,7 @@ export function AssistantMessage({ message, provider, model, streaming, errored 
   const trail = blocks.filter(b => b.kind === 'tool-trail')
   const textBlock = blocks.find(b => b.kind === 'text') as Extract<CoreBlock, { kind: 'text' }> | undefined
   const mediaBlocks = blocks.filter(b => MEDIA_BLOCK_KINDS.has(b.kind))
+  const errorBlocks = blocks.filter(b => b.kind === 'error') as Extract<CoreBlock, { kind: 'error' }>[]
   const savedAny = mediaBlocks.some((b: any) => !!b.assetId)
 
   // provenance shown: prefer the turn-level provider/model (works even with
@@ -43,7 +45,8 @@ export function AssistantMessage({ message, provider, model, streaming, errored 
       <CoreOrb state={orbState} size="avatar" />
       <div className="core-msg-body">
         {trail.map((t, i) => <ToolTrailLine key={i} block={t as any} />)}
-        {mediaBlocks.map((b, i) => <ArtifactPlaceholder key={i} block={b} />)}
+        {errorBlocks.map((b, i) => <BlockedCard key={i} message={b.message} />)}
+        {mediaBlocks.map((b, i) => <ArtifactCard key={i} block={b} />)}
         {textBlock && <TextReveal text={textBlock.text} skipAnimation={!streaming} />}
         {(provText || savedAny) && (
           <div className="core-provenance mono">
@@ -70,13 +73,17 @@ function ToolTrailLine({ block }: { block: Extract<CoreBlock, { kind: 'tool-trai
   )
 }
 
-function ArtifactPlaceholder({ block }: { block: CoreBlock }) {
-  // Step 5 replaces this with the full ArtifactCard (image/audio/website/
-  // deck/brand/chart bodies + provenance chip row + accept/discard).
+// The trust-critical card (C4a §4): a governance-blocked tool call, rendered
+// distinctly. v1 is dismiss-only — approve-and-resume needs C6/C7's mission
+// runner, so this never shows a fake "Approve" button that can't actually
+// resume the loop.
+function BlockedCard({ message }: { message: string }) {
+  const [dismissed, setDismissed] = useState(false)
+  if (dismissed) return null
   return (
-    <div className="core-artifact-placeholder">
-      <span className="core-artifact-kind">{block.kind}</span>
-      <span className="core-artifact-note">artifact card arrives at Step 5</span>
+    <div className="core-blocked-card">
+      <p>I {message} Approvals arrive in a later build; for now this action stays parked.</p>
+      <button className="core-artifact-btn core-artifact-btn-quiet" onClick={() => setDismissed(true)}>Understood</button>
     </div>
   )
 }
