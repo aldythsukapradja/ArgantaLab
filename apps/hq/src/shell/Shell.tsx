@@ -33,6 +33,8 @@ const ReactorBuilder = lazy(() => import('../reactor/builder/ReactorBuilder').th
 const ModelRack = lazy(() => import('../surfaces/rack/ModelRack').then(module => ({ default: module.ModelRack })))
 const CopilotControl = lazy(() => import('../copilot/CopilotControl').then(module => ({ default: module.CopilotControl })))
 const ArgantaCore = lazy(() => import('../surfaces/core/ArgantaCore').then(module => ({ default: module.ArgantaCore })))
+// BF-4 · Brand Studio — the Brand OS registry as one non-scrollable command deck.
+const BrandStudio = lazy(() => import('../surfaces/brand/BrandStudio').then(module => ({ default: module.BrandStudio })))
 
 function SurfaceLoading() {
   return <div className="auth-wrap" role="status" aria-label="Loading workspace"><div className="spin" /></div>
@@ -66,6 +68,7 @@ function Surface() {
     case 'cinema': return <CinemaDev />
     case 'copilot': return <CopilotControl />
     case 'core': return <ArgantaCore onClose={() => go(coreReturn)} />
+    case 'brand': return <BrandStudio />
   }
 }
 
@@ -74,7 +77,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
   // Edge-to-edge workspaces. GB-3 moved 'game'/'app' here: the Forge is a fixed,
   // non-scrollable page that owns its own viewport, so it must not sit inside
   // .content's scroll container or the panes scroll the page instead of themselves.
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app'
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app' || surface === 'brand'
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button

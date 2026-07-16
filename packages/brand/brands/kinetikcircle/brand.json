@@ -1,6 +1,6 @@
 {
   "id": "kinetikcircle",
-  "name": "KinetikCircle",
+  "name": "Kinetik Circle",
   "status": "living",
 
   "identity": {
@@ -76,6 +76,6 @@
   "routing": {
     "bufferChannelId": null,
     "momentSenderProfileId": "c1c1e000-0000-4000-8000-0000000000c1",
-    "siteUrl": null
+    "siteUrl": "https://circle.arganta.app"
   }
 }

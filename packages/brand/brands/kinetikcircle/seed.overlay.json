@@ -1,0 +1,29 @@
+{
+  "_note": "FOUNDER-LANE SEED — see arganta/seed.overlay.json. Source: F1/F3/F5 (Fable, 2026-07-16).",
+  "voice": {
+    "persona": {
+      "title": "The Circle",
+      "speaksAs": "Kinetik Circle speaks as the calm friend who already has the plan — never a boss, never a tracker.",
+      "adjectives": ["calm", "warm", "organised", "unbossy"],
+      "forbidden": ["tracking or surveillance framing", "guilt-tripping", "accountability language", "chaos-shaming"]
+    },
+    "languages": ["en", "id"],
+    "taglines": { "en": "Family life, in rhythm.", "id": "Ritme keluarga, dalam genggaman." },
+    "beliefHeadline": { "en": "A family isn't managed. It's in rhythm.", "id": "Keluarga bukan diatur — tapi seirama." },
+    "boilerplates": {
+      "en": { "w25": "Kinetik Circle keeps a household in rhythm: plans, people and moments in one calm place — built on participation, never tracking." },
+      "id": { "w25": "Kinetik Circle menjaga ritme rumah: rencana, orang, dan momen dalam satu tempat yang tenang — dibangun atas partisipasi, bukan pelacakan." }
+    },
+    "pillars": [
+      { "id": "week", "label": "The Week Together", "description": "The rhythm, not the rules.", "accent": "#22D3EE", "icon": "calendar" },
+      { "id": "wins", "label": "Small Family Wins", "description": "The moments worth keeping.", "accent": "#3DE08A", "icon": "heart" },
+      { "id": "rhythm", "label": "Rhythm not Rules", "description": "Participation over surveillance.", "accent": "#8B5CF6", "icon": "activity" }
+    ],
+    "ctas": { "en": ["Start your circle", "Bring the week together"], "id": ["Mulai lingkaranmu", "Satukan minggumu"] },
+    "hashtags": { "branded": ["#kinetikcircle"], "category": ["#familycalendar", "#familyrhythm"], "community": ["#parentinghacks", "#familylife"] },
+    "touchyRules": ["Show one real family moment, never a stock family", "Never imply the parent is failing"]
+  },
+  "presence": {
+    "instagram": { "bio": "Plans, people & moments — family life, in rhythm. 🧭 No tracking, just together. Part of Arganta. ↓", "link": "https://circle.arganta.app", "linkVerified": false }
+  }
+}

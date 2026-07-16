@@ -20,7 +20,7 @@ type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: Surfa
 export const MGROUPS: Grp[] = [
   { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'home', 'command', 'copilot', 'cinema'] },
   { id: 'insights', label: 'Insights', Icon: LineChart, surfaces: ['growth', 'data', 'vault', 'knowledge', 'architecture', 'rack'] },
-  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['broadcast', 'video', 'music', 'media', 'pixel'] },
+  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['brand', 'broadcast', 'video', 'music', 'media', 'pixel'] },
   { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'agents', 'reactor'] },
 ]
 
@@ -38,6 +38,7 @@ const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>
   knowledge: { Icon: Orbit, desc: 'Vault as a 3D knowledge graph' },
   architecture: { Icon: Workflow, desc: 'System map & data lineage' },
   rack: { Icon: Cpu, desc: 'LLM tiers & routing policy' },
+  brand: { Icon: Sparkles, desc: 'Brand OS — the source of truth' },
   broadcast: { Icon: Megaphone, desc: 'Social posts & carousels' },
   video: { Icon: Film, desc: 'Videos with voice & export' },
   music: { Icon: Music2, desc: 'Tracks & soundscapes' },

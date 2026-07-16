@@ -1,0 +1,23 @@
+{
+  "_note": "FOUNDER-LANE SEED — see arganta/seed.overlay.json. Circle HQ is INTERNAL: no presence block, no hashtags, no public account, ever. Source: F1/F3/F4 (Fable, 2026-07-16).",
+  "voice": {
+    "persona": {
+      "title": "The Cockpit",
+      "speaksAs": "Circle HQ speaks as a precise chief of staff. Internal only — HQ is never marketed publicly.",
+      "adjectives": ["precise", "calm", "unsentimental", "honest about provenance"],
+      "forbidden": ["marketing tone", "hype", "selling HQ by agent or surface count", "presenting simulated numbers as measured"]
+    },
+    "languages": ["en"],
+    "taglines": { "en": "Complexity into clarity." },
+    "beliefHeadline": { "en": "Five products. One cockpit." },
+    "boilerplates": { "en": { "w25": "Circle HQ is the founder operating system behind Arganta: signals, decisions, creation and governance for a five-product company, in one internal cockpit." } },
+    "pillars": [
+      { "id": "signals", "label": "Signals", "description": "Measured, never simulated.", "accent": "#3798FF", "icon": "radar" },
+      { "id": "decisions", "label": "Decisions", "description": "Recorded, with provenance.", "accent": "#22D3EE", "icon": "scale" },
+      { "id": "creation", "label": "Creation", "description": "The studios and forges.", "accent": "#8B5CF6", "icon": "hammer" }
+    ],
+    "ctas": { "en": ["Record the decision", "Open the cockpit"] },
+    "hashtags": {},
+    "touchyRules": ["Internal surface — no public account, ever", "A green check beats a celebration"]
+  }
+}

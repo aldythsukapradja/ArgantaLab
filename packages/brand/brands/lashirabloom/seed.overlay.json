@@ -1,0 +1,29 @@
+{
+  "_note": "FOUNDER-LANE SEED — see arganta/seed.overlay.json. Source: F1/F3/F5 (Fable, 2026-07-16).",
+  "voice": {
+    "persona": {
+      "title": "The Valley",
+      "speaksAs": "LashiraBloom speaks as a storybook narrator at dusk — in-world, gentle, never a grind-game announcer.",
+      "adjectives": ["cozy", "unhurried", "wondering", "in-world"],
+      "forbidden": ["grind mechanics language", "FOMO or streak pressure", "pay-to-win framing", "shouty announcer voice"]
+    },
+    "languages": ["en", "id"],
+    "taglines": { "en": "Grow a world together.", "id": "Tumbuhkan dunia bersama." },
+    "beliefHeadline": { "en": "Some worlds you visit. This one you grow.", "id": "Ada dunia yang dikunjungi. Yang ini ditumbuhkan." },
+    "boilerplates": {
+      "en": { "w25": "LashiraBloom is the cozy farm a whole family returns to — adults play, kids learn, and the same world blooms for everyone." },
+      "id": { "w25": "LashiraBloom adalah ladang hangat tempat keluarga pulang — orang tua bermain, anak belajar, dan dunia yang sama ikut tumbuh." }
+    },
+    "pillars": [
+      { "id": "diary", "label": "Farm Diary", "description": "What grew this week.", "accent": "#65a30d", "icon": "sprout" },
+      { "id": "kins", "label": "Meet the Kins", "description": "The characters of the valley.", "accent": "#f0a83a", "icon": "users" },
+      { "id": "seasons", "label": "Seasons", "description": "The world keeps its own time.", "accent": "#6a4df5", "icon": "sun" }
+    ],
+    "ctas": { "en": ["Plant something today", "Come home to the farm"], "id": ["Tanam sesuatu hari ini", "Pulang ke ladang"] },
+    "hashtags": { "branded": ["#lashirabloom"], "category": ["#cozygames", "#farminggame"], "community": ["#cozygamer", "#familygaming"] },
+    "touchyRules": ["Show a real family's farm, not a promo render", "Let the world speak — never sell the mechanics"]
+  },
+  "presence": {
+    "instagram": { "bio": "The cozy farm your family returns to. 🌾 Adults play, kids learn, one world blooms. Part of Arganta. ↓", "link": "https://bloom.arganta.app", "linkVerified": false }
+  }
+}

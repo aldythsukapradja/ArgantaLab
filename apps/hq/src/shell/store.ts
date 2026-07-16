@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core'
+export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core' | 'brand'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 /** GB-3 · The Forge (v2 chat-driven builder) is the default; 'legacy' renders
@@ -20,6 +20,7 @@ const SURFACE_LABEL: Record<SurfaceId, string> = {
   character: 'Character Forge', world: 'Openworld Builder', music: 'Music Builder',
   video: 'Video Builder', media: 'Media Center', knowledge: 'Knowledge', cinema: 'Cinema',
   reactor: 'Reactor Builder', rack: 'Model Rack', copilot: 'Copilot', core: 'Arganta Core',
+  brand: 'Brand Studio',
 }
 export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 

@@ -1,7 +1,7 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
   Network, Megaphone, Radar, Grid2x2, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film, Wand2,
-  Orbit, Atom, Cpu, Mic2, MessageCircle, BookOpen, LogOut,
+  Orbit, Atom, Cpu, Mic2, MessageCircle, BookOpen, LogOut, Palette,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 import { useCopilotStore } from '../copilot/store'
@@ -32,6 +32,7 @@ const GROUPS: Group[] = [
     { id: 'rack', label: 'Model Rack', Icon: Cpu },
   ] },
   { name: 'Studio', items: [
+    { id: 'brand', label: 'Brand Studio', Icon: Palette },
     { id: 'broadcast', label: 'Post Studio', Icon: Megaphone },
     { id: 'video', label: 'Video Builder', Icon: Film },
     { id: 'music', label: 'Music Builder', Icon: Music2 },

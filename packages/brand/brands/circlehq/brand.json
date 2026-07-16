@@ -1,0 +1,30 @@
+{
+  "id": "circlehq",
+  "name": "Circle HQ",
+  "status": "living",
+
+  "identity": {
+    "_note": "The internal founder OS — never marketed publicly. Palette is repo-verified from apps/hq/src/surfaces/landing.css's dark cockpit tokens (--ld-bg #030a18, --ld-text #e9f5ff, --ld-muted #7497c0, --ld-line-strong #3798FF): the brand IS the cockpit. mark null until ChatGPT's P0 direction lands; the reactor orb is its existing motif.",
+    "mark": null,
+    "palette": {
+      "bg": "#030a18",
+      "bgAlt": "#07142c",
+      "ink": "#e9f5ff",
+      "soft": "#7497c0",
+      "accent": "#3798FF",
+      "plateBg": "#FFD64B",
+      "plateInk": "#1b1500"
+    },
+    "accents": { "cockpitBlue": "#3798FF", "instrumentCyan": "#22D3EE" },
+    "fonts": { "display": null, "body": null, "mono": null, "embedded": [] },
+    "icons": { "style": null, "set": {} },
+    "motion": { "intro": null, "outro": null, "markAnimation": null },
+    "audio": { "sting": null, "durationMs": 2000 }
+  },
+
+  "kb": { "artDirection": null, "brandMd": null, "refs": [], "prompts": {} },
+  "presence": {},
+  "content": { "templates": {}, "captionFormula": null, "adKit": { "meta": {}, "google": {}, "display": {} }, "ogTemplate": null },
+  "discovery": { "seo": {}, "schemaOrg": null, "ogImage": null, "factSheet": {}, "llmsTxt": null, "keywords": [] },
+  "routing": { "bufferChannelId": null, "momentSenderProfileId": null, "siteUrl": "https://hq.arganta.app" }
+}

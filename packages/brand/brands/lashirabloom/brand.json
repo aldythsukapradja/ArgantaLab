@@ -1,0 +1,30 @@
+{
+  "id": "lashirabloom",
+  "name": "LashiraBloom",
+  "status": "draft",
+
+  "identity": {
+    "_note": "The shared family world. Palette is repo-verified: #65a30d is LashiraBloom's colour in apps/landing/src/lib/site.ts; #f0a83a is the game's own warm gold (apps/lashira/web styles) and doubles as the text plate — a cozy brand should not wear the Lab's electric yellow. mark null until ChatGPT's P0 bloom/sprout direction lands.",
+    "mark": null,
+    "palette": {
+      "bg": "#10182c",
+      "bgAlt": "#1f2340",
+      "ink": "#F4F7EA",
+      "soft": "#9BAA8C",
+      "accent": "#65a30d",
+      "plateBg": "#f0a83a",
+      "plateInk": "#241400"
+    },
+    "accents": { "leaf": "#65a30d", "harvestGold": "#f0a83a", "duskViolet": "#6a4df5" },
+    "fonts": { "display": null, "body": null, "mono": null, "embedded": [] },
+    "icons": { "style": null, "set": {} },
+    "motion": { "intro": null, "outro": null, "markAnimation": null },
+    "audio": { "sting": null, "durationMs": 2000 }
+  },
+
+  "kb": { "artDirection": null, "brandMd": null, "refs": [], "prompts": {} },
+  "presence": {},
+  "content": { "templates": {}, "captionFormula": null, "adKit": { "meta": {}, "google": {}, "display": {} }, "ogTemplate": null },
+  "discovery": { "seo": {}, "schemaOrg": null, "ogImage": null, "factSheet": {}, "llmsTxt": null, "keywords": [] },
+  "routing": { "bufferChannelId": null, "momentSenderProfileId": null, "siteUrl": "https://bloom.arganta.app" }
+}

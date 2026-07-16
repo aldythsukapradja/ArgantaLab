@@ -16,7 +16,12 @@
     },
     "languages": ["en", "id"],
     "taglines": {
-      "en": "Play. Learn. Build. Ship."
+      "en": "Play. Learn. Build. Ship.",
+      "id": "Main. Belajar. Bikin. Rilis."
+    },
+    "beliefHeadline": {
+      "en": "Kids don't need another screen. They need a workshop.",
+      "id": "Anak tidak butuh layar lagi. Mereka butuh bengkel karya."
     },
     "boilerplates": {
       "en": {
