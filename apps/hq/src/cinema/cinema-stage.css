@@ -22,8 +22,14 @@
   font-size:11px;font-weight:600;transition:all var(--dur)}
 .cine-exit:hover{color:var(--tx);border-color:var(--bd3)}
 
-/* narration — display only, sits low over the stage (clear of the corner pill) */
-.cine-narr{align-self:end;text-align:center;padding:0 24px 22px}
+/* bottom stack — caption ALWAYS above, transport ALWAYS below, both in normal
+   flow so a long caption can never cover the play button (was position:fixed,
+   which let a 2-3 line caption overlap the transport pill underneath it). */
+.cine-bottom{pointer-events:none;display:flex;flex-direction:column;align-items:center;
+  gap:14px;padding:0 24px 20px;margin-top:auto}
+
+/* narration — display only, sits above the transport */
+.cine-narr{text-align:center;max-width:720px}
 .cine-idea{font-size:clamp(17px,1.8vw,26px);font-weight:650;letter-spacing:-.02em;line-height:1.14;text-wrap:balance;color:var(--tx);
   text-shadow:0 2px 20px color-mix(in srgb,var(--canvas) 70%,transparent)}
 .cine-narr .kara{margin-top:9px}
@@ -33,15 +39,15 @@
 .cine-speaker i.JM{background:#45e8ff;box-shadow:0 0 8px #45e8ff}
 .cine-speaker i.KF{background:#ff72b8;box-shadow:0 0 8px #ff72b8}
 
-/* transport — small floating pill, bottom-right (clears the cockpit dock) */
-.cine-transport{pointer-events:auto;position:fixed;right:16px;bottom:16px;width:210px;
+/* transport — centered pill below the caption, in normal flow */
+.cine-transport{pointer-events:auto;width:min(280px,100%);
   display:flex;flex-direction:column;gap:7px;padding:9px 11px;border:1px solid var(--bd);border-radius:15px;
   background:var(--glass);backdrop-filter:blur(20px);box-shadow:var(--shadow-lg)}
 .cine-prog{height:3px;border-radius:3px;background:var(--bg3);overflow:hidden}
 .cine-prog i{display:block;height:100%;border-radius:3px;background:var(--act-accent);
   box-shadow:0 0 8px color-mix(in srgb,var(--act-accent) 60%,transparent);transition:width .3s linear}
 .cine-ctrl{display:flex;align-items:center;gap:3px}
-.cine-ctrl button{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--tx2);transition:background var(--dur)}
+.cine-ctrl button{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--tx2);transition:background var(--dur);cursor:pointer}
 .cine-ctrl button:hover{background:var(--bg3);color:var(--tx)}
 .cine-play{background:var(--acc)!important;color:#fff!important;width:34px!important;height:34px!important}
 .cine-play:hover{background:var(--acc-press)!important}

@@ -35,24 +35,29 @@ export function CinemaStage({ cinema: c, onExit }: { cinema: CinemaApi; onExit: 
         <button className="cine-exit" onClick={onExit} title="Exit cinematic (Esc)"><X size={16} /> Exit</button>
       </div>
 
-      <div className="cine-narr">
-        <div className="cine-idea">{scene.idea}</div>
-        <KaraokeLine audio={c.audioEl} text={scene.narration} playing={c.playing} className="cine-kara" />
-        <div className="cine-speaker">
-          <i className={scene.voice} />{scene.voice === 'KF' ? 'KF · Specialist' : 'JM · Jarvis'}
+      {/* Bottom stack: caption always above, transport always below — both in
+          normal flow (not position:fixed) so a long caption can never overlap
+          or cover the play button. */}
+      <div className="cine-bottom">
+        <div className="cine-narr">
+          <div className="cine-idea">{scene.idea}</div>
+          <KaraokeLine audio={c.audioEl} text={scene.narration} playing={c.playing} className="cine-kara" />
+          <div className="cine-speaker">
+            <i className={scene.voice} />{scene.voice === 'KF' ? 'KF · Specialist' : 'JM · Jarvis'}
+          </div>
         </div>
-      </div>
 
-      <footer className="cine-transport">
-        <div className="cine-prog"><i style={{ width: `${(((c.index + c.progress) / c.total) * 100).toFixed(1)}%` }} /></div>
-        <div className="cine-ctrl">
-          <button onClick={c.prev} title="Previous (←)"><SkipBack size={15} /></button>
-          <button className="cine-play" onClick={c.toggle} title="Play / Pause (Space)">{c.playing ? <Pause size={16} /> : <Play size={16} />}</button>
-          <button onClick={c.next} title="Next (→)"><SkipForward size={15} /></button>
-          <button onClick={c.replay} title="Replay"><RotateCcw size={13} /></button>
-          <span className="cine-count">{String(c.index + 1).padStart(2, '0')}/{c.total}</span>
-        </div>
-      </footer>
+        <footer className="cine-transport">
+          <div className="cine-prog"><i style={{ width: `${(((c.index + c.progress) / c.total) * 100).toFixed(1)}%` }} /></div>
+          <div className="cine-ctrl">
+            <button onClick={c.prev} title="Previous (←)"><SkipBack size={15} /></button>
+            <button className="cine-play" onClick={c.toggle} title="Play / Pause (Space)">{c.playing ? <Pause size={16} /> : <Play size={16} />}</button>
+            <button onClick={c.next} title="Next (→)"><SkipForward size={15} /></button>
+            <button onClick={c.replay} title="Replay"><RotateCcw size={13} /></button>
+            <span className="cine-count">{String(c.index + 1).padStart(2, '0')}/{c.total}</span>
+          </div>
+        </footer>
+      </div>
     </div>
   )
 }

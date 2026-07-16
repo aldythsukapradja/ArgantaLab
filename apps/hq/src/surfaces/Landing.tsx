@@ -350,9 +350,9 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
   const gestureActive = useCopilotStore(s => s.gestureActive)
   const gestureLoading = useCopilotStore(s => s.gestureLoading)
 
-  // Mobile mic fan: a tap fans out Voice / Chat petals; long-press (500ms) is
-  // instant voice for the power path. Desktop keeps the one-tap mic. If voice
-  // is already armed, a tap always stops it — the fan never appears mid-listen.
+  // Mic fan (desktop + mobile): a tap fans out Voice / Chat petals; long-press
+  // (500ms) is instant voice for the power path. If voice is already armed, a
+  // tap always stops it — the fan never appears mid-listen.
   const [fanOpen, setFanOpen] = useState(false)
   const micHold = useRef<{ t: number; fired: boolean }>({ t: 0, fired: false })
   const micPressStart = useCallback(() => {
@@ -362,9 +362,9 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
   const micPressEnd = useCallback(() => { window.clearTimeout(micHold.current.t) }, [])
   const handleMicTap = useCallback(() => {
     if (micHold.current.fired) { micHold.current.fired = false; return } // long-press already toggled voice
-    if (!isMobile || voiceArmed) { toggleVoice(); return }
+    if (voiceArmed) { toggleVoice(); return }
     setFanOpen(open => !open)
-  }, [isMobile, voiceArmed, toggleVoice])
+  }, [voiceArmed, toggleVoice])
   useEffect(() => {
     if (!fanOpen) return
     const t = window.setTimeout(() => setFanOpen(false), 5000) // idle auto-dismiss
@@ -372,7 +372,7 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
     window.addEventListener('keydown', onKey)
     return () => { window.clearTimeout(t); window.removeEventListener('keydown', onKey) }
   }, [fanOpen])
-  useEffect(() => { if (cinemaOn || !isMobile) setFanOpen(false) }, [cinemaOn, isMobile])
+  useEffect(() => { if (cinemaOn) setFanOpen(false) }, [cinemaOn])
 
   // "show desktop/mobile/overview" only means something while a popup is open.
   const setProductViewCtx = useCallback((view: InspectorView) => {
@@ -543,12 +543,12 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
         <button onClick={() => go('growth')}><LineChart size={18} /><span>Insights</span></button>
         <button className={`ld-mic ${voiceArmed ? 'is-listening' : ''}`}
           onClick={handleMicTap}
-          onPointerDown={isMobile ? micPressStart : undefined}
-          onPointerUp={isMobile ? micPressEnd : undefined}
-          onPointerLeave={isMobile ? micPressEnd : undefined}
+          onPointerDown={micPressStart}
+          onPointerUp={micPressEnd}
+          onPointerLeave={micPressEnd}
           aria-pressed={voiceArmed}
-          aria-expanded={isMobile ? fanOpen : undefined}
-          aria-label={voiceArmed ? 'Stop voice commands' : isMobile ? 'Open voice or chat' : 'Start voice commands'}>
+          aria-expanded={fanOpen}
+          aria-label={voiceArmed ? 'Stop voice commands' : 'Open voice or chat'}>
           <span /><Mic size={22} />
         </button>
         <button onClick={() => go('broadcast')}><Clapperboard size={18} /><span>Studio</span></button>
