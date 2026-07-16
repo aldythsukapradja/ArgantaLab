@@ -24,7 +24,11 @@ const NON_SOVEREIGN_CATALOG = [
   // priority 28 puts Groq AHEAD of Gemini (30) as the primary Sponsored brain —
   // its free tier is far more generous and ~15ms fast, while Gemini's free quota
   // is tiny and 429s quickly (2026-07-16). Gemini stays the automatic fallback.
-  modelSpec({ id: 'groq-llama-free', name: 'Groq Llama (free)', provider: 'edgeProxy', apiModel: 'llama-3.3-70b-versatile', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 28 }).spec,
+  modelSpec({ id: 'groq-llama-free', name: 'Groq Llama 3.3 70B (free)', provider: 'edgeProxy', apiModel: 'llama-3.3-70b-versatile', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 28 }).spec,
+  // Groq's lighter 8B-Instant — its own much larger free daily token budget
+  // (~500k TPD), so it's the sustainable fallback once the 70B's 100k/day is
+  // spent. priority 29 keeps it just behind the 70B for Auto, but selectable.
+  modelSpec({ id: 'groq-8b-free', name: 'Groq Llama 3.1 8B (free · fast)', provider: 'edgeProxy', apiModel: 'llama-3.1-8b-instant', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 29 }).spec,
   // Cloudflare Workers AI — same free-quota Sponsored tier. jsonSchema:true is
   // real (verified against Cloudflare's JSON Mode supported-model list, not
   // assumed — llama-3.3-70b-instruct-fp8-fast is on it); tools:false because

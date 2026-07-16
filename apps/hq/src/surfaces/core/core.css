@@ -150,6 +150,31 @@
   50% { box-shadow: 0 0 0 3px transparent; }
 }
 @media (prefers-reduced-motion: reduce) { .core-brain-dot { animation: none; } }
+
+/* brain pill as a picker */
+.core-brain-picker { position: relative; flex-shrink: 0; }
+.core-brain-pill { border: none; cursor: pointer; }
+.core-brain-pill:hover { background: color-mix(in srgb, var(--acc) 22%, var(--acc-soft)); }
+.core-brain-caret { margin-left: 1px; opacity: .7; }
+.core-brain-menu {
+  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 20;
+  width: 268px; max-width: 78vw; padding: 5px;
+  background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-lg, 12px);
+  box-shadow: var(--shadow-lg);
+  animation: core-brain-menu-in var(--dur, .14s) var(--ease-out, ease);
+}
+@keyframes core-brain-menu-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.core-brain-opt {
+  display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+  padding: 7px 10px; border: none; background: transparent; border-radius: var(--r-md, 9px); cursor: pointer;
+}
+.core-brain-opt:hover { background: var(--bg3); }
+.core-brain-opt.active { background: var(--acc-soft); }
+.core-brain-opt b { font-size: 12.5px; font-weight: 600; color: var(--tx); display: flex; align-items: center; gap: 6px; }
+.core-brain-opt.active b { color: var(--acc-text); }
+.core-brain-opt i { font-size: 10.5px; font-style: normal; color: var(--tx3); }
+.core-brain-rec { font-size: 8.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); padding: 1px 5px; border-radius: 999px; }
+.core-brain-note { padding: 7px 10px 5px; margin-top: 3px; border-top: 1px solid var(--bd); font-size: 10px; line-height: 1.45; color: var(--tx3); }
 .core-composer-mic {
   width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; border: none; background: none;
   color: var(--tx3); cursor: pointer; display: grid; place-items: center;

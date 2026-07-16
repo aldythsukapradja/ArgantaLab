@@ -14,21 +14,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { CoreOrb } from './CoreOrb'
 import { GEMINI_FREE_RPD_EST, type CoreStatus } from './useCoreStatus'
+import { ModelPicker } from './ModelPicker'
 
 function getRecognitionCtor(): (new () => any) | null {
   if (typeof window === 'undefined') return null
   return (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null
 }
 
-export function Composer({ draft, onDraftChange, onSend, onStop, sending, brainLabel, brainTitle, status, sessionCostUsd, sessionRuns }: {
+export function Composer({ draft, onDraftChange, onSend, onStop, sending, autoLabel, status, sessionCostUsd, sessionRuns }: {
   draft: string
   onDraftChange: (v: string) => void
   onSend: () => void
   onStop: () => void
   sending: boolean
-  /** Friendly name of the LLM ready/last-used (e.g. "Groq Llama 3.3"). */
-  brainLabel: string
-  brainTitle: string
+  /** What the "Auto" setting resolves to right now (e.g. "Groq Llama 3.3"). */
+  autoLabel: string
   status: CoreStatus
   sessionCostUsd: number
   sessionRuns: number
@@ -73,9 +73,7 @@ export function Composer({ draft, onDraftChange, onSend, onStop, sending, brainL
   return (
     <div className="core-composer">
       <div className="core-composer-field">
-        <span className="core-brain-pill mono" title={brainTitle}>
-          <span className="core-brain-dot" aria-hidden />{brainLabel}
-        </span>
+        <ModelPicker autoLabel={autoLabel} />
         <textarea
           ref={taRef}
           className="core-composer-input core-composer-textarea"

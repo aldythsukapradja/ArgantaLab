@@ -26,15 +26,15 @@ test('an exact model request (from selectModel picking a specific ModelSpec) is 
   const available = { GEMINI_API_KEY: 'x', ANTHROPIC_API_KEY: 'z' };
   const cands = pickCandidates(available, { model: 'claude-opus-4-8' });
   assert.equal(cands[0].name, 'anthropic-opus'); // requested model wins first slot
-  assert.ok(cands.length >= 1 && cands.length <= 2); // but a same-pool fallback may ride along
+  assert.ok(cands.length >= 1 && cands.length <= 3); // but same-pool fallbacks may ride along
 });
 
-test('an exact model request keeps a real fallback so a 429 on the pinned model degrades to the other provider, not to mock (the Gemini-quota-exhausted case)', () => {
+test('an exact model request keeps real fallbacks so a 429 on the pinned model degrades to another provider, not to mock (the multi-tier-exhausted case)', () => {
   const available = { GEMINI_API_KEY: 'x', GROQ_API_KEY: 'y' };
   const cands = pickCandidates(available, { model: 'gemini-flash-latest', needsTools: true });
-  assert.equal(cands.length, 2);
   assert.equal(cands[0].name, 'gemini'); // requested first
-  assert.equal(cands[1].name, 'groq');   // fallback present — this is what was missing
+  assert.ok(cands.length >= 2); // at least one fallback present — this is what was missing
+  assert.ok(cands.some((c) => c.name === 'groq' || c.name === 'groq-8b')); // a Groq fallback rides along
 });
 
 test('an exact model request that is unavailable falls through to cost-based selection instead of failing', () => {
@@ -96,9 +96,9 @@ test('toolsCapable is an honest claim matching @arganta/ai/registry.js\'s client
   assert.equal(!!byName.deepseek.toolsCapable, false);
 });
 
-test('never returns more than 2 candidates (bounded in-request fallback)', () => {
+test('never returns more than 3 candidates (bounded in-request fallback)', () => {
   const allKeys = Object.fromEntries(PROVIDER_CATALOG.map((e) => [e.envKey, 'x']));
-  assert.ok(pickCandidates(allKeys).length <= 2);
+  assert.ok(pickCandidates(allKeys).length <= 3);
 });
 
 test('free-tier providers (no pricing) always truthfully cost $0', () => {

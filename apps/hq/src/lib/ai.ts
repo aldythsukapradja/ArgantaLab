@@ -1,5 +1,6 @@
 import { createLLM, createIntelligence, buildRegistry, SOVEREIGN_MODELS, rollupBenchmarks } from '@arganta/ai'
 import { supabase, cloudEnabled } from './supabase'
+import { getPreferredModelId } from './modelPreference'
 
 // The single Circle AI runtime. Shared by the Video Director chat AND the C-suite
 // agents. Free by default:
@@ -14,15 +15,49 @@ import { supabase, cloudEnabled } from './supabase'
 // at your Supabase `models` bucket. Left null so the package builds without the dep.
 const WEBLLM: { modelId: string; appConfig: unknown } | null = null
 
-export const ai = createLLM({
+const rawAi = createLLM({
   edgeProxy: cloudEnabled
     ? { invoke: (body: unknown) => supabase.functions.invoke('llm-proxy', { body: body as Record<string, unknown> }) }
     : undefined,
   webllm: WEBLLM || undefined,
 })
 
+// The founder's picked default brain (modelPreference), applied to any client-side
+// ai.* call that DIDN'T already choose a provider/model. Governed calls (analyze,
+// grounded offices) pass an explicit provider/model from selectModel(dataClass),
+// so they skip this — their data-class routing is never overridden. Auto (no
+// preference) leaves the legacy task-router untouched. `needsTools` guards the
+// tool path: a non-tools pick can't serve chatTools, so we don't inject it there.
+function preferredInjection(needsTools: boolean): { provider: string; model: string } | null {
+  const id = getPreferredModelId()
+  if (!id) return null
+  const spec = (intelligenceRegistry as any[]).find((m) => m.id === id)
+  if (!spec) return null
+  if (needsTools && !spec.capabilities?.tools) return null
+  return { provider: spec.provider, model: spec.apiModel }
+}
+function withPref<A extends { provider?: string; model?: string }, R>(
+  fn: (o: A, ...rest: any[]) => R, needsTools: boolean,
+): (o: A, ...rest: any[]) => R {
+  return (o, ...rest) => {
+    if (o && !o.provider && !o.model) {
+      const inj = preferredInjection(needsTools)
+      if (inj) return fn({ ...o, ...inj }, ...rest)
+    }
+    return fn(o, ...rest)
+  }
+}
+
+export const ai = {
+  ...rawAi,
+  chat: withPref(rawAi.chat, false),
+  chatJSON: withPref(rawAi.chatJSON, false),
+  chatStream: withPref(rawAi.chatStream, false),
+  chatTools: withPref(rawAi.chatTools, true),
+}
+
 // True when a real (non-mock) tier is reachable — used to show honest UI states.
-export const aiLive = ai.info().available.edgeProxy || ai.info().available.webllm
+export const aiLive = rawAi.info().available.edgeProxy || rawAi.info().available.webllm
 
 // ── Four-Tier Intelligence Router (WS-1/WS-2) ──────────────────────────────
 // A SEPARATE runtime + facade from `ai` above — existing call sites (Video

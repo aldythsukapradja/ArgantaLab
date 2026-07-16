@@ -7,6 +7,20 @@
 // everywhere else this session).
 import { selectModel, isRouteAllowed } from '@arganta/ai'
 import { ai, intelligenceRegistry, logAgentRun } from '../ai'
+import { getPreferredModelId } from '../modelPreference'
+
+/** The founder's picked brain, IF it's set, tools-capable, and route-allowed for
+ * this dataClass — otherwise null so we fall back to selectModel()'s auto pick.
+ * Only tools-capable models are honored here: the chat loop always offers tools,
+ * so a non-tools pick would just fail. */
+function preferredToolsModel(dataClass: string): any | null {
+  const id = getPreferredModelId()
+  if (!id) return null
+  const spec = (intelligenceRegistry as any[]).find((m) => m.id === id)
+  if (!spec || !spec.capabilities?.tools) return null
+  if (!isRouteAllowed(spec, dataClass)) return null
+  return spec
+}
 
 export interface CoreCallModelResult {
   text?: string
@@ -32,7 +46,13 @@ export function makeCoreCallModel(o: { dataClass?: string; runId: string } ) {
   // dataClass at the tool-spec level regardless of this default.
   const dataClass = o.dataClass ?? 'public'
   return async function coreCallModel({ messages, tools }: { messages: unknown[]; tools: unknown[] }): Promise<CoreCallModelResult> {
-    const { model: picked, reason } = selectModel(intelligenceRegistry, { task: 'orchestrate', dataClass })
+    // The founder's explicit pick wins over the auto-router when it's usable;
+    // otherwise selectModel() chooses the cheapest capable model as before. The
+    // gateway still keeps a fallback chain, so a chosen model that's momentarily
+    // down (e.g. Gemini out of quota) degrades to another provider, not to mock.
+    const forced = preferredToolsModel(dataClass)
+    const { model: auto, reason } = selectModel(intelligenceRegistry, { task: 'orchestrate', dataClass })
+    const picked = forced || auto
     if (!picked || !isRouteAllowed(picked, dataClass)) {
       console.warn('[core runtime] no tools-capable model:', reason)
       return { provider: 'mock' }

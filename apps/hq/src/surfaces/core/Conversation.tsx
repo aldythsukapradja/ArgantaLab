@@ -5,7 +5,7 @@ import { loadMessages, sendMessage, type CoreMessage } from '../../lib/core'
 import { UserMessage, AssistantMessage } from './Message'
 import { CoreOrb } from './CoreOrb'
 import { Composer } from './Composer'
-import { useCoreStatus, friendlyModel } from './useCoreStatus'
+import { useCoreStatus } from './useCoreStatus'
 
 const ERROR_STOP_REASONS = new Set(['error', 'no-model'])
 // artifact block kinds — a turn that produced one of these did real work, so a
@@ -96,17 +96,11 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifa
 
   const stop = () => { abortRef.current?.abort() }
 
-  // Live model + quota status. Refreshes after every turn (sessionRuns bumps).
+  // Live model + quota status. Refreshes after every turn (sessionRuns bumps)
+  // and whenever the founder changes the model preference.
   const status = useCoreStatus(sessionRuns)
-  const lastModel = lastProvenance?.model
-  const brainLabel = lastModel && lastModel !== 'mock'
-    ? friendlyModel(lastModel)
-    : (status.readyBrain?.label ?? 'connecting…')
-  const brainTitle = lastModel && lastModel !== 'mock'
-    ? `Last reply: ${lastModel} · ${lastProvenance?.provider}`
-    : status.readyBrain
-      ? `Ready: ${status.readyBrain.apiModel} — answers your next message, auto-falls back to another provider if it's busy`
-      : 'Connecting to a model…'
+  // What "Auto" resolves to right now — shown inside the picker's Auto option.
+  const autoLabel = status.readyBrain?.label ?? 'connecting…'
 
   const isEmpty = messages.length === 0 && !sending
 
@@ -164,7 +158,7 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifa
       </div>
       <Composer
         draft={draft} onDraftChange={setDraft} onSend={send} onStop={stop}
-        sending={sending} brainLabel={brainLabel} brainTitle={brainTitle} status={status}
+        sending={sending} autoLabel={autoLabel} status={status}
         sessionCostUsd={sessionCostUsd} sessionRuns={sessionRuns}
       />
     </div>

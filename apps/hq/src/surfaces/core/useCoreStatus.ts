@@ -8,6 +8,7 @@ import { selectModel } from '@arganta/ai'
 import { intelligenceRegistry } from '../../lib/ai'
 import { getNeuronQuota } from '../../lib/mediaGateway'
 import { supabase, cloudEnabled } from '../../lib/supabase'
+import { getPreferredModelId, subscribePreferredModel } from '../../lib/modelPreference'
 
 // Google's published free-tier requests/day for Flash (est.; Gemini exposes no
 // live remaining-quota API). Groq's free tier is far larger and also not exposed
@@ -20,6 +21,7 @@ export function friendlyModel(model: string | null | undefined): string {
   if (!m || m === 'mock') return 'offline'
   if (m.includes('gemini')) return 'Gemini Flash'
   if (m === 'llama-3.3-70b-versatile') return 'Groq Llama 3.3'
+  if (m === 'llama-3.1-8b-instant') return 'Groq Llama 3.1 8B'
   if (m.startsWith('@cf/')) return 'Cloudflare'
   if (m.includes('claude')) return 'Claude'
   if (m.includes('deepseek')) return 'DeepSeek'
@@ -36,10 +38,15 @@ export interface CoreStatus {
 
 export function useCoreStatus(refreshKey: number): CoreStatus {
   const [status, setStatus] = useState<CoreStatus>({ readyBrain: null, neurons: null, geminiToday: 0, groqToday: 0 })
+  const [prefTick, setPrefTick] = useState(0)
+  useEffect(() => subscribePreferredModel(() => setPrefTick((t) => t + 1)), [])
 
   useEffect(() => {
-    // Ready brain — pure, no network. Same routing the loop uses.
-    const picked = selectModel(intelligenceRegistry, { task: 'orchestrate', dataClass: 'public' })?.model as any
+    // Ready brain — pure, no network. The founder's preferred model if set +
+    // tools-capable, otherwise the same selectModel() pick the loop would make.
+    const prefId = getPreferredModelId()
+    const prefSpec = prefId ? (intelligenceRegistry as any[]).find((m) => m.id === prefId && m.capabilities?.tools) : null
+    const picked = (prefSpec || (selectModel(intelligenceRegistry, { task: 'orchestrate', dataClass: 'public' })?.model)) as any
     const readyBrain = picked ? { label: friendlyModel(picked.apiModel), apiModel: picked.apiModel } : null
     setStatus((s) => ({ ...s, readyBrain }))
 
@@ -66,7 +73,7 @@ export function useCoreStatus(refreshKey: number): CoreStatus {
       }))
     })()
     return () => { cancelled = true }
-  }, [refreshKey])
+  }, [refreshKey, prefTick])
 
   return status
 }

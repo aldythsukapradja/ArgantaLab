@@ -28,6 +28,12 @@ export const PROVIDER_CATALOG = [
   // (confirmed live 2026-07-16). Both are genuine tool-callers. Gemini stays as
   // the automatic fallback (and vice-versa — pickCandidates keeps both).
   { name: 'groq', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', pricing: null },
+  // Same Groq key, the lighter 8B-Instant model — it has its OWN, much larger
+  // free-tier daily token budget (~500k TPD vs the 70B's 100k), so it's the
+  // fallback that keeps the chat alive after the 70B's daily tokens are spent
+  // (confirmed live 2026-07-16: heavy testing exhausts 70B fast; each chat turn
+  // ships ~3.5k tokens of tool schemas). Also a real tool-caller.
+  { name: 'groq-8b', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant', pricing: null },
   // model is `gemini-flash-latest` (a rolling Google alias to the current free
   // Flash), NOT the pinned `gemini-2.0-flash` — verified live 2026-07-15 that
   // this project's key returns HTTP 429 `free_tier_requests limit: 0` for
@@ -86,6 +92,12 @@ export function resolveUrl(entry, accountId) {
  * @param {Record<string,unknown>} available
  * @param {{force?:string, model?:string, costClass?:number, needsTools?:boolean}} [opts]
  */
+// Bounded in-request fallback depth. 3 (not 2) so a chosen model can fall
+// through TWO exhausted free tiers to a third — e.g. Gemini (daily requests
+// spent) → Groq 70B (daily tokens spent) → Groq 8B (its own larger budget) —
+// which is exactly the multi-provider exhaustion a heavy free-tier day hits.
+const MAX_CANDIDATES = 3;
+
 export function pickCandidates(available, opts = {}) {
   let pool = PROVIDER_CATALOG.filter((e) => isAvailable(e, available));
   // needsTools applies BEFORE force/model resolve, not after — an anthropic-
@@ -107,14 +119,14 @@ export function pickCandidates(available, opts = {}) {
       // Honor the requested model FIRST, but KEEP the other same-pool providers
       // as fallbacks — otherwise a transient failure on the pinned model (e.g.
       // Gemini 429 when its tiny free quota is spent) dead-ends at 502→mock
-      // ("no live model") instead of falling through to Groq. `force` (not
-      // `model`) is the way to demand exactly one provider with no fallback.
+      // ("no live model") instead of falling through to another provider.
+      // `force` (not `model`) is the way to demand exactly one with no fallback.
       const rest = pool.filter((e) => e !== byModel).sort((a, b) => a.costClass - b.costClass);
-      return [byModel, ...rest].slice(0, 2);
+      return [byModel, ...rest].slice(0, MAX_CANDIDATES);
     }
   }
   if (opts.costClass != null) pool = pool.filter((e) => e.costClass === opts.costClass);
-  return [...pool].sort((a, b) => a.costClass - b.costClass).slice(0, 2);
+  return [...pool].sort((a, b) => a.costClass - b.costClass).slice(0, MAX_CANDIDATES);
 }
 
 export const priceUsd = (entry, inputTokens = 0, outputTokens = 0) =>
