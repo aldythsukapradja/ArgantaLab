@@ -85,9 +85,9 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
         </div>
       ) : (
         <div className="hq">
-          <Rail who={who} />
+          <Rail who={who} authed={authed} />
           <div className="main">
-            <Topbar canSignOut={authed} />
+            <Topbar />
             {!cloudEnabled && !full && (
               <div className="banner">
                 Offline preview — add <span className="src" style={{ background: 'transparent', padding: 0 }}>VITE_SUPABASE_URL</span> + anon key to <span className="src" style={{ background: 'transparent', padding: 0 }}>apps/hq/.env.local</span> and sign in to load live data.
@@ -100,7 +100,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
               </Suspense>
             </div>
           </div>
-          <MobileNav />
+          <MobileNav authed={authed} />
           <CommandPalette />
         </div>
       )}

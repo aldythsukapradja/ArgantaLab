@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import {
   Building2, LineChart, Clapperboard, Hammer, X, LayoutGrid,
   Megaphone, Music2, Wand2, Grid2x2, Gamepad2, Map, Swords, UserRound, Boxes, GraduationCap, Network, Atom, Film,
-  Sparkles, Radar, Mic2, TrendingUp, Database, BookOpen, Orbit, Workflow, Cpu,
+  Sparkles, Radar, Mic2, TrendingUp, Database, BookOpen, Orbit, Workflow, Cpu, LogOut,
 } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId } from './store'
 import { ReactorOrb } from '../surfaces/core/ReactorOrb'
+import { signOut } from '../lib/auth'
 
 // Mobile collapses the rail into reachable groups. Group membership MIRRORS the
 // desktop Rail (shell/Rail.tsx) — Company → Insights → Studio → Forge — so
@@ -27,7 +28,7 @@ export const MGROUPS: Grp[] = [
 // chrome, so it lives here rather than the store.
 const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>> = {
   portfolio: { Icon: LayoutGrid, desc: 'Five products, one operating view' },
-  home: { Icon: Sparkles, desc: 'The CEO Orb cockpit' },
+  home: { Icon: Sparkles, desc: 'The founder cockpit' },
   command: { Icon: Radar, desc: 'C-suite offices & verdicts' },
   copilot: { Icon: Mic2, desc: 'Voice & gesture control' },
   cinema: { Icon: Film, desc: 'Founder keynote cinematic' },
@@ -52,7 +53,7 @@ const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>
   reactor: { Icon: Atom, desc: 'Arc-reactor scene builder' },
 }
 
-function LauncherSheet({ grp, onClose }: { grp: Grp; onClose: () => void }) {
+function LauncherSheet({ grp, authed, onClose }: { grp: Grp; authed: boolean; onClose: () => void }) {
   const { surface, go } = useHQ()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -80,13 +81,20 @@ function LauncherSheet({ grp, onClose }: { grp: Grp; onClose: () => void }) {
               </button>
             )
           })}
+          {grp.id === 'company' && authed && (
+            <button className="mlaunch-card" onClick={() => { onClose(); signOut() }}>
+              <span className="mlc-ic"><LogOut size={19} /></span>
+              <span className="mlc-name">Sign out</span>
+              <span className="mlc-desc">End this session</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-export function MobileNav() {
+export function MobileNav({ authed = false }: { authed?: boolean }) {
   const { surface, go, closeAgent, agentOpen } = useHQ()
   const [launcher, setLauncher] = useState<string | null>(null)
   const activeGroup = MGROUPS.find(g => g.surfaces.includes(surface))?.id
@@ -106,7 +114,7 @@ export function MobileNav() {
 
   return (
     <>
-      {openGrp && <LauncherSheet grp={openGrp} onClose={() => setLauncher(null)} />}
+      {openGrp && <LauncherSheet grp={openGrp} authed={authed} onClose={() => setLauncher(null)} />}
       <nav className="mnav" aria-label="Primary (mobile)">
         {left.map(GroupBtn)}
         <button className={'mnav-item mnav-agent' + (surface === 'core' ? ' on' : '')}

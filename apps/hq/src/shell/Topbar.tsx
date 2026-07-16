@@ -1,9 +1,8 @@
-import { Sun, Moon, Search, LogOut } from 'lucide-react'
+import { Sun, Moon, Search, Home } from 'lucide-react'
 import { useHQ, surfaceLabel } from './store'
-import { signOut } from '../lib/auth'
 
-export function Topbar({ canSignOut }: { canSignOut: boolean }) {
-  const { surface, dataTab, builderSub, theme, toggleTheme, openPalette } = useHQ()
+export function Topbar() {
+  const { surface, dataTab, builderSub, theme, toggleTheme, openPalette, go } = useHQ()
   const isBuilder = surface === 'game' || surface === 'app'
   return (
     <header className="topbar">
@@ -28,11 +27,9 @@ export function Topbar({ canSignOut }: { canSignOut: boolean }) {
       <button className="tbtn" onClick={toggleTheme} aria-label="Toggle theme" title="Toggle theme">
         {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
       </button>
-      {canSignOut && (
-        <button className="tbtn" onClick={signOut} aria-label="Sign out" title="Sign out">
-          <LogOut size={16} />
-        </button>
-      )}
+      <button className="tbtn" onClick={() => go('home')} aria-label="Go to Home" title="Go to Home">
+        <Home size={16} />
+      </button>
     </header>
   )
 }

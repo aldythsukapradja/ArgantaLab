@@ -1,11 +1,12 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
   Network, Megaphone, Radar, Grid2x2, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film, Wand2,
-  Orbit, Atom, Cpu, Mic2, MessageCircle, BookOpen,
+  Orbit, Atom, Cpu, Mic2, MessageCircle, BookOpen, LogOut,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 import { useCopilotStore } from '../copilot/store'
 import { CopilotDock } from '../copilot/CopilotDock'
+import { signOut } from '../lib/auth'
 
 type Item = { id: SurfaceId; label: string; Icon: typeof LayoutGrid; badge?: string }
 type Group = { name: string; items: Item[] }
@@ -15,7 +16,7 @@ type Group = { name: string; items: Item[] }
 // keep the two in sync when a surface is added.
 const GROUPS: Group[] = [
   { name: 'Company', items: [
-    { id: 'home', label: 'Home · CEO Orb', Icon: Sparkles },
+    { id: 'home', label: 'Home', Icon: Sparkles },
     { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid },
     { id: 'command', label: 'Command', Icon: Radar },
     { id: 'core', label: 'Arganta Core', Icon: MessageCircle },
@@ -49,7 +50,7 @@ const GROUPS: Group[] = [
   ] },
 ]
 
-export function Rail({ who }: { who: string }) {
+export function Rail({ who, authed = false }: { who: string; authed?: boolean }) {
   const { surface, go } = useHQ()
   const initials = who.slice(0, 2).toUpperCase()
 
@@ -80,6 +81,12 @@ export function Rail({ who }: { who: string }) {
               {badge && <span className="nav-badge">{badge}</span>}
             </button>
           ))}
+          {g.name === 'Company' && authed && (
+            <button className="nav" onClick={signOut} title="Sign out">
+              <LogOut size={17} />
+              <span>Sign out</span>
+            </button>
+          )}
         </div>
       ))}
 
