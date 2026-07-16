@@ -63,6 +63,44 @@ test('extractExternalHosts finds absolute-URL hosts, ignores relative/data URLs'
   assert.ok(!hosts.some((h) => h.includes('local') || h.includes('data')));
 });
 
+// ── GB-1 · game playability checks ────────────────────────────────────────
+const GOOD_GAME = `<!doctype html><html><head><meta name="viewport" content="width=device-width">
+<title>Snake</title><style>@media(max-width:600px){canvas{width:100%}}</style></head>
+<body><canvas id="c"></canvas><button id="again">Play again</button><script>
+addEventListener('keydown',e=>{});addEventListener('pointerdown',e=>{});
+function loop(){requestAnimationFrame(loop);}loop();
+</script></body></html>`;
+
+test('GB-1: a real game passes clean — surface, loop, input, touch and a restart path', () => {
+  const r = validateHtml(GOOD_GAME, { kind: 'game' });
+  assert.equal(r.ok, true);
+  assert.equal(r.warnings.length, 0, `unexpected warnings: ${r.warnings.map((w) => w.id).join(', ')}`);
+});
+
+test('GB-1: an unplayable game WARNS but is never an error — the gate polices safety, not fun', () => {
+  const noLoop = GOOD_GAME.replace('function loop(){requestAnimationFrame(loop);}loop();', '');
+  const r = validateHtml(noLoop, { kind: 'game' });
+  assert.equal(r.ok, true);  // still safe HTML — publishable if the founder insists
+  assert.ok(r.warnings.some((w) => w.id === 'game-has-loop'));
+
+  const keyboardOnly = GOOD_GAME.replace("addEventListener('pointerdown',e=>{});", '').replace('<button id="again">Play again</button>', '');
+  const r2 = validateHtml(keyboardOnly, { kind: 'game' });
+  assert.ok(r2.warnings.some((w) => w.id === 'game-has-touch'), 'keyboard-only is unplayable on a phone');
+  assert.ok(r2.warnings.some((w) => w.id === 'game-has-restart'));
+});
+
+test('GB-1: game checks apply ONLY to kind:game — an app is not asked for a canvas', () => {
+  const app = validateHtml(GOOD, { kind: 'application' });
+  assert.ok(!app.warnings.some((w) => w.id.startsWith('game-')));
+  const site = validateHtml(GOOD, { kind: 'website' });
+  assert.ok(!site.warnings.some((w) => w.id.startsWith('game-')));
+});
+
+test('GB-1: a game is held to the SAME security gate as everything else', () => {
+  const evilGame = GOOD_GAME.replace('function loop(){', 'eval("cheat()");function loop(){');
+  assert.equal(validateHtml(evilGame, { kind: 'game' }).ok, false);
+});
+
 test('quality issues are WARNINGS, not errors — they never block a safe document', () => {
   const todo = GOOD.replace('<h1>Expenses</h1>', '<h1>Expenses</h1><!-- TODO finish this -->');
   const r = validateHtml(todo, { kind: 'application' });

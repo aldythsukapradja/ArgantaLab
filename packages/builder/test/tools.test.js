@@ -29,8 +29,19 @@ test('publish_artifact is the ONLY side-effecting builder tool, and it is NOT au
 test('create/revise are autonomy-safe (non-publishing drafts) but publish/restore governance holds', () => {
   assert.equal(builderToolByName('create_website').autonomySafe, true);
   assert.equal(builderToolByName('create_application').autonomySafe, true);
+  assert.equal(builderToolByName('create_game').autonomySafe, true);
   assert.equal(builderToolByName('revise_artifact').autonomySafe, true);
   assert.equal(builderToolByName('publish_artifact').autonomySafe, false);
+});
+
+test('GB-1: create_game matches its create_* siblings exactly — a real generation, draft-only', () => {
+  const game = builderToolByName('create_game');
+  const app = builderToolByName('create_application');
+  assert.ok(game, 'create_game must exist');
+  assert.equal(game.costClass, app.costClass);   // real AI generation, same tier
+  assert.equal(game.dataClass, app.dataClass);
+  assert.equal(game.sideEffect, false);          // never reaches the outside world
+  assert.deepEqual(game.params.required, ['brief']);
 });
 
 test('deterministic tools (validate/save/restore/insert/apply) are costClass 0', () => {

@@ -22,9 +22,13 @@ const STARTER_CHIPS = [
   'Draft a landing page',
 ]
 
-export function Conversation({ threadId, onThreadCreated, onArtifact, compact, hasThreads }: {
+export function Conversation({ threadId, onThreadCreated, onArtifact, compact, hasThreads, seed }: {
   threadId: string | null
   onThreadCreated: (id: string) => void
+  /** C5-B7 — a prompt pushed in from the topbar's starter popover. Carries a
+   * nonce so picking the SAME pill twice still re-seeds (a bare string wouldn't
+   * change identity, and the effect would never re-run). */
+  seed?: { text: string; n: number }
   /** Accepted for compatibility with the mount contract; the composer now shows
    * a live model picker instead of a static tier ceiling, so it's unused here. */
   maxCostClass?: number
@@ -54,6 +58,12 @@ export function Conversation({ threadId, onThreadCreated, onArtifact, compact, h
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, sending])
+
+  // A starter pill fills the composer for editing — deliberately NOT auto-sent.
+  useEffect(() => {
+    if (seed?.text) setDraft(seed.text)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.n])
 
   const send = async () => {
     const text = draft.trim()

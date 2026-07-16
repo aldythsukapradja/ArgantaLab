@@ -11,10 +11,10 @@ import { supabase, cloudEnabled } from '../supabase'
 import { generateImageViaGateway, generateSpeechViaGateway, embedTextViaGateway, getNeuronQuota } from '../mediaGateway'
 import { saveMediaAsset } from '../mediaAssets'
 import { makeWebsite, makeDeck, makeBrand } from '../../surfaces/studios/engines'
-import { analyze } from '../../surfaces/studios/analytics'
+import { analyzeQuestion, buildChartSpec, chartById, chartsForOffice, pickChart, isPicker, CHART_REGISTRY, type OfficeKey } from './chartRegistry'
 import { OFFICE_META, routeConcern, delegationResponse, isOffice } from '@arganta/agent'
-import { BUILDER_TOOL_SPECS, builderToolByName, validateHtml } from '@arganta/builder'
-import { generateWebsite, generateApplication, reviseArtifact } from '../../builder-core/generate'
+import { BUILDER_TOOL_SPECS, builderToolByName, validateHtml, classifyGameGenre } from '@arganta/builder'
+import { generateWebsite, generateApplication, generateGame, reviseArtifact } from '../../builder-core/generate'
 import { createArtifact, saveVersion, saveCurrentAsVersion, restoreVersion, getArtifact, listVersions, publishArtifact, publicArtifactUrl } from '../../builder-core/persist'
 import { agentSense, agentCompute, agentMatch, agentFacts, agentGenerate, routeIntent, INTENT_ROLE, AGENTS, TIER_META } from '../../data/agents'
 import { agentMessages } from '@arganta/ai'
@@ -22,6 +22,12 @@ import { agentMessages } from '@arganta/ai'
 export interface ToolResult {
   data: unknown          // what the model reads back (JSON-stringified by the loop)
   block?: Record<string, unknown>  // makeBlock(kind, ...) input the caller renders, if any
+  /** C5-B2 — additional blocks of an EXPLICIT kind, for tools whose answer is
+   * more than one artifact (consult_office returns a delegation AND the chart
+   * that grounds it). `block` above is kind-inferred from the tool name
+   * (blockKindFor); these carry their own kind because a single tool can now
+   * emit several different ones. */
+  extraBlocks?: { kind: string; block: Record<string, unknown> }[]
   costUsd?: number
 }
 
@@ -72,9 +78,59 @@ function runBrand(args: { seed: string }): ToolResult {
   return { data: { ok: true, colors: brand.colors }, block: { assetId: null, path: null, html } }
 }
 
-function runAnalyze(args: { question: string }): ToolResult {
-  const a = analyze(args.question)
-  return { data: { chart: a.chart, title: a.title, source: a.source, points: a.data.length }, block: { spec: a } }
+// C5-B1 — routed through the chart registry, which either returns THE right
+// chart or a picker. The old path called analyze() (studios/analytics.ts) whose
+// fallthrough silently returned the ARR-vs-families model for any unrecognized
+// question — a wrong chart presented as an answer. It cannot do that now: the
+// registry has no fallthrough.
+//
+// What the MODEL reads back matters as much as what renders. On a picker we
+// tell it plainly that nothing was charted and that the founder is choosing, so
+// it can't narrate a chart that isn't there ("The analytics of your Arganta
+// stacks show an area chart…" was the old failure). On a chart with no rows we
+// hand back the honest note, never zeros dressed as a measurement.
+async function runAnalyze(args: { question: string }): Promise<ToolResult> {
+  const spec = await analyzeQuestion(args.question)
+  if (isPicker(spec)) {
+    return {
+      data: {
+        charted: false,
+        reason: 'ambiguous question — no chart was rendered; the founder is picking one from a list',
+        offered: spec.options.map(o => o.title),
+        instruction: 'Do NOT describe any chart or data. Say you were not sure which one they meant and invite them to pick.',
+      },
+      block: { spec },
+    }
+  }
+  return {
+    data: {
+      charted: spec.data.length > 0,
+      chartId: spec.chartId, chart: spec.chart, title: spec.title,
+      office: spec.office, provenance: spec.provenance, source: spec.source,
+      points: spec.data.length,
+      // The rows themselves, capped — the model needs them to actually TALK
+      // about the numbers instead of just naming the chart type.
+      rows: spec.data.slice(0, 24),
+      note: spec.note,
+      instruction: spec.note
+        ? 'This chart has NO data. Say so plainly, quote the note, and do not invent numbers.'
+        : `Provenance is '${spec.provenance}'. Never call a modeled/planned figure a measurement.`,
+    },
+    block: { spec },
+  }
+}
+
+/** C5-B1 — render a registry chart by id, no question involved. Powers the
+ * picker's click-through and the chart card's Refresh, through the same
+ * executor path the model uses (one code path, one set of rules). */
+async function runRenderChart(args: { chartId: string }): Promise<ToolResult> {
+  const entry = chartById(args.chartId)
+  if (!entry) return { data: { error: `unknown chart: ${args.chartId}` } }
+  const spec = await buildChartSpec(entry)
+  return {
+    data: { charted: spec.data.length > 0, chartId: spec.chartId, title: spec.title, provenance: spec.provenance, points: spec.data.length, rows: spec.data.slice(0, 24), note: spec.note },
+    block: { spec },
+  }
 }
 
 async function runSearchVault(args: { query: string; k?: number }): Promise<ToolResult> {
@@ -151,10 +207,42 @@ async function governedOfficeChat(o: { task: string; messages: unknown[] }, data
   return { text: out.text || '', provider: out.provider, model: out.model, costUsd: out.costUsd ?? 0 }
 }
 
+// C5-B2 · office → chart-registry slice. Every office that owns numbers can now
+// SHOW them, not just talk about them. This is deliberately additive: the text
+// path (grounded pipeline / persona / roster) is untouched, and the chart is an
+// extra block alongside it. Legal owns no metrics, so it maps to nothing and
+// stays text-only rather than being handed someone else's chart.
+const OFFICE_CHART_SLICE: Record<string, OfficeKey | null> = {
+  bridge: 'portfolio', operations: 'operations', technology: 'technology',
+  treasury: 'treasury', legal: null, roster: null,
+}
+
+/** Best chart for this office's question, or null. Scoped to the office's own
+ * slice, so the CTO can never answer with the CFO's revenue model. Only returns
+ * a chart that actually HAS rows — an empty chart under a delegation reads as a
+ * broken answer, and the text already stands on its own. */
+async function officeChart(office: string, question: string): Promise<Record<string, unknown> | null> {
+  const slice = OFFICE_CHART_SLICE[office]
+  if (!slice) return null
+  const candidates = chartsForOffice(slice)
+  const pick = pickChart(question)
+  const entry = (pick.best && candidates.includes(pick.best))
+    ? pick.best
+    : pick.alternates.find(a => candidates.includes(a))
+  if (!entry) return null
+  const spec = await buildChartSpec(entry)
+  if (!spec.data.length) return null
+  return { spec }
+}
+
 async function runConsultOffice(args: { office?: string; question: string }): Promise<ToolResult> {
   const office = isOffice(args.office) ? args.office! : routeConcern(args.question)
   const meta = OFFICE_META[office as keyof typeof OFFICE_META]
   const runId = crypto.randomUUID()
+  const chartBlock = await officeChart(office, args.question)
+  const withChart = (r: ToolResult): ToolResult => (chartBlock
+    ? { ...r, extraBlocks: [{ kind: 'chart', block: chartBlock }] }
+    : r)
 
   // roster — the meta-office (ADR-0007 Decision 5): grounded in the real,
   // static org roster, not a live RPC and not a persona guess.
@@ -176,16 +264,25 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
     // same latent gap the grounded path closes).
     const chiefId = OFFICE_CHIEF[office]
     const chiefTitle = (chiefId && AGENTS.find((a) => a.id === chiefId)?.role) || meta.label
+    // C5-B2 — when this office HAS a matching live chart, its numbers go into
+    // the prompt, so the persona reasons about real data instead of vibes. The
+    // tag still says persona: one chart is not the grounded Sense→Compute
+    // pipeline, and overclaiming here would be exactly the dishonesty
+    // ADR-0007 Decision 4 exists to prevent.
+    const chartFacts = chartBlock
+      ? `\n\nLive figures you MAY cite (${(chartBlock.spec as any).title} — provenance: ${(chartBlock.spec as any).provenance}, source: ${(chartBlock.spec as any).source}):\n${JSON.stringify((chartBlock.spec as any).data.slice(0, 16))}\nThe founder can see this chart beside your answer. Cite only these numbers; invent none.`
+      : ''
     const out = await governedOfficeChat({
       task: 'brief',
       messages: [
-        { role: 'system', content: `You are the ${chiefTitle} of a small founder-run company (ArgantaLab + KinetikCircle). You own: ${meta.owns}. Answer as that office: concise, decisive, one paragraph max. No live data pipeline grounds this answer yet — this is judgment, not a report, and you should not imply otherwise.` },
+        { role: 'system', content: `You are the ${chiefTitle} of a small founder-run company (ArgantaLab + KinetikCircle). You own: ${meta.owns}. Answer as that office: concise, decisive, one paragraph max. No live data pipeline grounds this answer yet — this is judgment, not a report, and you should not imply otherwise.${chartFacts}` },
         { role: 'user', content: args.question },
       ],
     }, 'internal', runId)
-    const text = out.provider === 'mock' ? '' : `_(Persona · ${chiefTitle} · no live data pipeline)_\n\n${out.text.trim()}`
+    const tag = chartBlock ? `Persona · ${chiefTitle} · reading one live chart` : `Persona · ${chiefTitle} · no live data pipeline`
+    const text = out.provider === 'mock' ? '' : `_(${tag})_\n\n${out.text.trim()}`
     const resp = delegationResponse({ office, text, ok: out.provider !== 'mock' })
-    return { data: { ...resp.toolResult, provider: out.provider, model: out.model, grounded: false }, block: resp.block, costUsd: out.costUsd ?? 0 }
+    return withChart({ data: { ...resp.toolResult, provider: out.provider, model: out.model, grounded: false, chartShown: !!chartBlock }, block: resp.block, costUsd: out.costUsd ?? 0 })
   }
 
   // operations / treasury — the grounded path (ADR-0007 Decisions 2/3).
@@ -202,7 +299,7 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
     // synthesize, so no LLM call is made at all.
     const text = '_(No live data connected)_\n\n' + agentGenerate(intent, computed, signals, sensed)
     const resp = delegationResponse({ office, text, ok: true })
-    return { data: { ...resp.toolResult, provider: 'deterministic', model: null, grounded: false }, block: resp.block, costUsd: 0 }
+    return withChart({ data: { ...resp.toolResult, provider: 'deterministic', model: null, grounded: false }, block: resp.block, costUsd: 0 })
   }
 
   // Real live data is in the room now — confidential (ADR-0003, same rule
@@ -220,12 +317,12 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
     // than fail silently OR reach for a reachable-but-external tier.
     const text = '_(Signals only · local model unavailable, confidential data was not sent externally)_\n\n' + agentGenerate(intent, computed, signals, sensed)
     const resp = delegationResponse({ office, text, ok: true })
-    return { data: { ...resp.toolResult, provider: 'deterministic', model: null, grounded: false, degradedReason: 'tier0-unreachable' }, block: resp.block, costUsd: 0 }
+    return withChart({ data: { ...resp.toolResult, provider: 'deterministic', model: null, grounded: false, degradedReason: 'tier0-unreachable' }, block: resp.block, costUsd: 0 })
   }
 
   const text = `_(Grounded · ${role} · ${out.provider} · live data · Tier 0)_\n\n` + out.text.trim()
   const resp = delegationResponse({ office, text, ok: true })
-  return { data: { ...resp.toolResult, provider: out.provider, model: out.model, grounded: true }, block: resp.block, costUsd: out.costUsd ?? 0 }
+  return withChart({ data: { ...resp.toolResult, provider: out.provider, model: out.model, grounded: true, chartShown: !!chartBlock }, block: resp.block, costUsd: out.costUsd ?? 0 })
 }
 
 function titleFromBrief(brief: string): string {
@@ -257,6 +354,29 @@ async function runCreateApplication(args: { brief: string; templateId?: string; 
   const artifactId = await createArtifact({ kind: 'application', title: titleFromBrief(args.brief), g, templateId: args.templateId, brandKitId: args.brandKitId })
   return {
     data: { ok: true, kind: 'application', artifactId, stage: g.stage, provider: g.provider, model: g.model, validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings } },
+    block: { assetId: artifactId, path: null, html: g.html },
+    costUsd: g.costUsd,
+  }
+}
+
+// GB-2 · create_game — same tiering + persistence as its siblings. The genre
+// is classified from the brief when the model doesn't name one, and reported
+// back so the founder (and Analytics/Discover) see how it was categorized.
+// Reuses the 'website' block kind for the same C1-frozen reason as apps: a
+// game is still a single-file HTML artifact, rendered identically.
+async function runCreateGame(args: { brief: string; genre?: string; useCircleSdk?: boolean; brandKitId?: string }): Promise<ToolResult> {
+  const genre = args.genre || classifyGameGenre(args.brief)
+  const g = await generateGame({ brief: args.brief, genre, useCircleSdk: args.useCircleSdk })
+  const artifactId = await createArtifact({ kind: 'game', title: titleFromBrief(args.brief), g, brandKitId: args.brandKitId })
+  return {
+    data: {
+      ok: true, kind: 'game', genre, artifactId, stage: g.stage, provider: g.provider, model: g.model,
+      validation: { ok: g.validation.ok, errors: g.validation.errors, warnings: g.validation.warnings },
+      // Stage-0 is a real playable game, but it is NOT the bespoke game the
+      // founder described — saying so is the difference between an honest
+      // fallback and a silent bait-and-switch.
+      note: g.stage === 0 ? 'AI generation was unavailable or failed validation — this is the deterministic playable arcade fallback, skinned to the genre, not a bespoke build of the brief. Tell the founder plainly.' : undefined,
+    },
     block: { assetId: artifactId, path: null, html: g.html },
     costUsd: g.costUsd,
   }
@@ -357,12 +477,14 @@ const EXECUTORS: Record<string, (args: any) => Promise<ToolResult> | ToolResult>
   make_deck: runDeck,
   make_brand: runBrand,
   analyze: runAnalyze,
+  render_chart: runRenderChart,
   search_vault: runSearchVault,
   consult_office: runConsultOffice,
   check_quota: runCheckQuota,
   check_ledger: runCheckLedger,
   create_website: runCreateWebsite,
   create_application: runCreateApplication,
+  create_game: runCreateGame,
   revise_artifact: runReviseArtifact,
   validate_artifact: runValidateArtifact,
   save_version: runSaveVersion,
@@ -375,10 +497,24 @@ const EXECUTORS: Record<string, (args: any) => Promise<ToolResult> | ToolResult>
 // automatically as B3 (versions/publish) wires more executors, no manual sync.
 export const WIRED_BUILDER_SPECS = BUILDER_TOOL_SPECS.filter((t: any) => t.name in EXECUTORS)
 
+// C5-B1 · render_chart is a Core-local tool (C1's TOOL_SPECS is frozen and has
+// no entry for it), declared here in the SAME shape and registered through the
+// same registerToolSpecs seam the builder tools already use — so the autonomy
+// gate governs it exactly like a first-class tool rather than it sneaking past
+// the spec lookup. Same dataClass as `analyze`: it reads the identical live
+// metrics, so it must inherit the identical confidentiality ceiling.
+export const CORE_EXTRA_SPECS = [
+  {
+    name: 'render_chart', title: 'Render a known chart', backing: 'analytics', costClass: 0, dataClass: 'confidential', sideEffect: false, autonomySafe: true,
+    description: `Render one specific chart from the registry by id, grounded in LIVE data. Use this when you already know which chart is wanted; use analyze when interpreting a vague question. Valid ids: ${CHART_REGISTRY.map(c => c.id).join(', ')}.`,
+    params: { type: 'object', properties: { chartId: { type: 'string' } }, required: ['chartId'] },
+  },
+]
+
 /** The loop's `executeTool` contract. Unknown tool names are refused
  * explicitly rather than silently no-op'd. */
 export async function coreExecuteTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
-  const spec = toolByName(name) || builderToolByName(name)
+  const spec = toolByName(name) || builderToolByName(name) || CORE_EXTRA_SPECS.find(s => s.name === name)
   if (!spec) return { data: { error: `unknown tool: ${name}` } }
   const fn = EXECUTORS[name]
   if (!fn) return { data: { error: `no executor wired for: ${name}` } }

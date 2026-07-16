@@ -76,13 +76,25 @@ function quality(html, kind) {
   if (kind === 'application') {
     c.push(CHECK('app-has-script', 'warn', lower.includes('<script'), 'an application should have interactive JS'));
   }
+  if (kind === 'game') {
+    // GB-1 · playability checks. All warn-level BY DESIGN: an unplayable game
+    // is a quality failure, not a security one, and the error-level gate exists
+    // to keep unsafe HTML off the public runtime — not to referee fun. The
+    // founder sees these and decides. (A game missing its loop still shouldn't
+    // silently pass as "ok" in the UI, which is why they're surfaced at all.)
+    c.push(CHECK('game-has-surface', 'warn', /<canvas/i.test(html) || /class=["'][^"']*\b(?:board|grid|stage)\b/i.test(html), 'no <canvas> or board/grid element — a game needs a play surface'));
+    c.push(CHECK('game-has-loop', 'warn', /requestAnimationFrame|setInterval/.test(html), 'no game loop (requestAnimationFrame / setInterval) found'));
+    c.push(CHECK('game-has-input', 'warn', /addEventListener\s*\(\s*["'](?:keydown|keyup|pointerdown|touchstart|click|mousedown)/.test(html), 'no input handling found — the player cannot control anything'));
+    c.push(CHECK('game-has-touch', 'warn', /(?:pointerdown|touchstart|click)/.test(html), 'no touch/pointer input — the game is unplayable on a phone'));
+    c.push(CHECK('game-has-restart', 'warn', /\b(?:restart|reset|play again|tryagain|try again|newgame|new game)\b/i.test(html), 'no restart path found — the player is stuck after game over'));
+  }
   return c;
 }
 
 /**
  * Validate a single-file HTML artifact.
  * @param {string} html
- * @param {{kind?:'application'|'website'}} [opts]
+ * @param {{kind?:'application'|'website'|'game'}} [opts]
  * @returns {{ok:boolean, errors:object[], warnings:object[], checks:object[]}}
  *   ok = no ERROR-level failure. Warnings never block; they surface in the UI
  *   so the founder decides. A structurally-broken or unsafe artifact is never ok.

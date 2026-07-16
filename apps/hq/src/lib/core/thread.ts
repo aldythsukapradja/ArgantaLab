@@ -18,11 +18,93 @@ export async function createThread(title = 'New thread'): Promise<string | null>
   return data as string
 }
 
-export async function listRecentThreads(limit = 50): Promise<{ id: string; title: string; updatedAt: string }[]> {
+export interface ThreadSummary {
+  id: string; title: string; updatedAt: string
+  /** Both are undefined until migration_core_projects.sql is applied — the
+   * drawer treats that as "this deployment has no pinning/projects yet" rather
+   * than inventing defaults that would silently mis-sort the list. */
+  pinned?: boolean
+  projectId?: string | null
+  snippet?: string | null
+}
+
+export async function listRecentThreads(limit = 50): Promise<ThreadSummary[]> {
   if (!cloudEnabled) return []
   const { data, error } = await supabase.rpc('core_threads_recent', { p_limit: limit })
   if (error) { console.warn('[core_threads_recent]', error.message); return [] }
-  return (data || []).map((r: any) => ({ id: r.id, title: r.title, updatedAt: r.updated_at }))
+  return (data || []).map((r: any) => ({ id: r.id, title: r.title, updatedAt: r.updated_at, pinned: r.pinned, projectId: r.project_id }))
+}
+
+// ── C5-B3 · Drawer v2 (needs migration_core_projects.sql) ─────────────────
+// Every function here degrades to a falsy/empty result when the migration
+// hasn't been applied, so the drawer can ASK the DB what it supports instead of
+// assuming. `projectsSupported` is the single probe the UI uses to decide
+// between the full drawer and the honest "run the migration" note — no feature
+// flag to forget to flip.
+
+export interface CoreProject { id: string; name: string; emoji: string | null; context: string | null; updatedAt: string }
+
+/** Why the drawer can't show projects — so the UI names the ACTUAL cause
+ * instead of blaming the migration for what is really an offline session. */
+export type ProjectsSupport = 'ok' | 'offline' | 'needs-migration'
+
+let projectsSupportedCache: ProjectsSupport | null = null
+export async function projectsSupported(): Promise<ProjectsSupport> {
+  if (projectsSupportedCache !== null) return projectsSupportedCache
+  if (!cloudEnabled) { projectsSupportedCache = 'offline'; return 'offline' }
+  const { error } = await supabase.rpc('core_projects_recent', { p_limit: 1 })
+  // An 'operator only' raise means the RPC EXISTS and we simply aren't allowed —
+  // a permission problem, not a missing migration, and it must not be reported
+  // as "run the migration". Only a missing function means unsupported.
+  projectsSupportedCache = (!error || !/does not exist|schema cache/i.test(error.message)) ? 'ok' : 'needs-migration'
+  return projectsSupportedCache
+}
+
+export async function listProjects(): Promise<CoreProject[]> {
+  if (!cloudEnabled) return []
+  const { data, error } = await supabase.rpc('core_projects_recent', { p_limit: 50 })
+  if (error) { console.warn('[core_projects_recent]', error.message); return [] }
+  return (data || []).map((r: any) => ({ id: r.id, name: r.name, emoji: r.emoji, context: r.context, updatedAt: r.updated_at }))
+}
+
+export async function createProject(name: string, emoji?: string, context?: string): Promise<string | null> {
+  if (!cloudEnabled) return null
+  const { data, error } = await supabase.rpc('core_project_create', { p_name: name, p_emoji: emoji ?? null, p_context: context ?? null })
+  if (error) { console.warn('[core_project_create]', error.message); return null }
+  return data as string
+}
+
+export async function deleteProject(id: string): Promise<boolean> {
+  return rpcOk('core_project_delete', { p_id: id })
+}
+export async function renameThread(id: string, title: string): Promise<boolean> {
+  return rpcOk('core_thread_rename', { p_id: id, p_title: title })
+}
+export async function setThreadPinned(id: string, pinned: boolean): Promise<boolean> {
+  return rpcOk('core_thread_set_pinned', { p_id: id, p_pinned: pinned })
+}
+export async function setThreadProject(id: string, projectId: string | null): Promise<boolean> {
+  return rpcOk('core_thread_set_project', { p_id: id, p_project_id: projectId })
+}
+export async function deleteThread(id: string): Promise<boolean> {
+  return rpcOk('core_thread_delete', { p_id: id })
+}
+
+/** Full-text-ish search over titles AND message bodies. Falls back to null when
+ * the migration isn't applied, so the caller can keep title-only filtering
+ * rather than showing an empty result that looks like "nothing matched". */
+export async function searchThreads(query: string): Promise<ThreadSummary[] | null> {
+  if (!cloudEnabled || !query.trim()) return null
+  const { data, error } = await supabase.rpc('core_threads_search', { p_query: query.trim(), p_limit: 30 })
+  if (error) { return null }
+  return (data || []).map((r: any) => ({ id: r.id, title: r.title, updatedAt: r.updated_at, pinned: r.pinned, projectId: r.project_id, snippet: r.snippet }))
+}
+
+async function rpcOk(fn: string, args: Record<string, unknown>): Promise<boolean> {
+  if (!cloudEnabled) return false
+  const { error } = await supabase.rpc(fn, args)
+  if (error) { console.warn(`[${fn}]`, error.message); return false }
+  return true
 }
 
 export async function loadMessages(threadId: string): Promise<CoreMessage[]> {

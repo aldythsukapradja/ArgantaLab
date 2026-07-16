@@ -10,19 +10,39 @@
 // rather than inventing a new task policy; dataClass:'public' matches that
 // same precedent (marketing/app copy about the product is not sensitive).
 import { selectModel, isRouteAllowed } from '@arganta/ai'
-import { buildGenerationPrompt, validateHtml, selectComponents } from '@arganta/builder'
+import { buildGenerationPrompt, validateHtml, selectComponents, PORTABLE_REGISTRY, classifyGameGenre } from '@arganta/builder'
 import { ai, logAgentRun, intelligenceRegistry } from '../lib/ai'
 import { makeBrand, makeWebsite } from '../surfaces/studios/engines'
 import { makeAppShell } from './appShell'
+import { makeGameShell } from './gameShell'
 
-// B4a's portable blocks don't exist yet — an empty registry is honest and
-// forward-compatible: once B4b wires a real one in, selectComponents() here
-// starts returning real hints with zero changes to this file.
-const COMPONENT_REGISTRY: any[] = []
+// BR-0 — B4b's generated registry is now the real one selectComponents() picks
+// from, so generation gets concrete block hints instead of nothing.
+const COMPONENT_REGISTRY: any[] = PORTABLE_REGISTRY as any[]
+
+// The models THIS file can actually reach.
+//
+// intelligenceRegistry is built with `webllm: true` because it's shared with
+// intelligence.ask(), whose own runtime (intelligenceLLM) really does configure
+// web-llm. But we don't call through that runtime — we call `ai.chat`, and the
+// `ai` facade is created with `const WEBLLM = null` (lib/ai.ts), i.e. no browser
+// tier at all. Selecting a browser model here therefore meant ai.chat() silently
+// fell through to `mock`, generateViaAi caught the silent mock and returned null,
+// and EVERY Stage-1 build quietly degraded to the Stage-0 template — even on a
+// machine with a live edge proxy and real Gemini/Groq/Claude behind it. Since
+// 'copy' bands at [0,2] and browser models are costClass 0, the cheapest-capable
+// rule picked one every single time, so Stage-1 could never once fire.
+//
+// Excluding them (rather than enabling web-llm) is the right call: the browser
+// tier's first call downloads ~1.6GB, which lib/ai.ts explicitly says must never
+// happen silently behind a founder's click.
+const CALLABLE_REGISTRY = (intelligenceRegistry as any[]).filter((m) => m.execution !== 'browser')
+
+export type ArtifactKind = 'application' | 'website' | 'game'
 
 export interface GenerateResult {
   html: string
-  kind: 'application' | 'website'
+  kind: ArtifactKind
   stage: 0 | 1
   provider: string
   model: string | null
@@ -68,13 +88,59 @@ export async function generateApplication(o: { brief: string; templateId?: strin
 }
 
 /**
+ * GB-2 · Generate a game: brief → HTML. Identical tiering to its siblings —
+ * Stage-0 is a real playable arcade game (gameShell.ts), Stage-1 AI only
+ * replaces it if it passes the kind:'game' validation gate. The genre is
+ * classified from the brief when the caller doesn't name one, and is passed to
+ * BOTH stages (it skins Stage-0 and briefs Stage-1).
+ *
+ * useCircleSdk defaults TRUE for games, unlike apps: a game without a score
+ * submission is a dead end in the Kinetik catalogue, which is where games go.
+ */
+export async function generateGame(o: { brief: string; genre?: string; useCircleSdk?: boolean }): Promise<GenerateResult> {
+  const runId = crypto.randomUUID()
+  const genre = o.genre || classifyGameGenre(o.brief)
+  const brand = makeBrand(o.brief)
+  const stage0Html = makeGameShell(o.brief, genre, brand)
+  const stage0Validation = validateHtml(stage0Html, { kind: 'game' })
+
+  const ai1 = await generateViaAi({ kind: 'game', brief: o.brief, genre, useCircleSdk: o.useCircleSdk ?? true, runId, task: 'build_game' })
+  if (ai1 && ai1.validation.ok && isActuallyPlayable(ai1.validation)) {
+    return { html: ai1.html, kind: 'game', stage: 1, provider: ai1.provider, model: ai1.model, costUsd: ai1.costUsd, validation: ai1.validation, runId }
+  }
+  return { html: stage0Html, kind: 'game', stage: 0, provider: 'deterministic-game-shell', model: null, costUsd: 0, validation: stage0Validation, runId }
+}
+
+/**
+ * Would this pass as a game at all? Distinct from validateHtml's `ok`, and
+ * deliberately so.
+ *
+ * The kind:'game' playability checks are WARN-level in the gate, because that
+ * gate decides what is safe to serve publicly — it polices safety, not fun, and
+ * it must not refuse to publish a game the founder likes. But the tiering
+ * decision here is a different question: is Stage-1's output *better than the
+ * Stage-0 game we already have in hand*? A document with no play surface and no
+ * loop is not a game, and swapping a real playable arcade game for it because
+ * "no ERRORS were raised" would be the exact bait-and-switch the tiered design
+ * exists to prevent. When the model doesn't deliver a game, the honest floor wins.
+ *
+ * Only the three STRUCTURAL checks gate acceptance. Missing touch input or a
+ * restart path is a flaw the founder can see (and ask the chat to fix) on top of
+ * a real game; missing a canvas and a loop means there's no game to fix.
+ */
+const PLAYABILITY_REQUIRED = ['game-has-surface', 'game-has-loop', 'game-has-input']
+function isActuallyPlayable(v: ReturnType<typeof validateHtml>): boolean {
+  return !v.warnings.some((w: { id: string }) => PLAYABILITY_REQUIRED.includes(w.id))
+}
+
+/**
  * Revise an existing artifact's HTML with a natural-language instruction.
  * v1 = full-document revision (returns the complete updated HTML), per the
  * strategy doc's explicit v1 scope — patch-based editing is later. Falls back
  * to returning the UNCHANGED current HTML (never a broken/invalid revision)
  * when AI is unavailable or the revision fails validation.
  */
-export async function reviseArtifact(o: { currentHtml: string; instruction: string; kind: 'application' | 'website' }): Promise<GenerateResult> {
+export async function reviseArtifact(o: { currentHtml: string; instruction: string; kind: ArtifactKind }): Promise<GenerateResult> {
   const runId = crypto.randomUUID()
   const currentValidation = validateHtml(o.currentHtml, { kind: o.kind })
   const ai1 = await generateViaAi({ kind: o.kind, brief: o.instruction, currentHtml: o.currentHtml, instruction: o.instruction, runId, task: 'revise_artifact' })
@@ -86,19 +152,22 @@ export async function reviseArtifact(o: { currentHtml: string; instruction: stri
 
 // ── shared AI-tier call ─────────────────────────────────────────────────────
 async function generateViaAi(o: {
-  kind: 'application' | 'website'; brief: string; websiteType?: string; useCircleSdk?: boolean
+  kind: ArtifactKind; brief: string; websiteType?: string; genre?: string; useCircleSdk?: boolean
   currentHtml?: string; instruction?: string; runId: string; task: string
 }): Promise<{ html: string; validation: ReturnType<typeof validateHtml>; provider: string; model: string; costUsd: number } | null> {
   const dataClass = 'public'
-  const { model: picked, reason } = selectModel(intelligenceRegistry, { task: 'copy', dataClass })
+  const { model: picked, reason } = selectModel(CALLABLE_REGISTRY, { task: 'copy', dataClass })
   if (!picked || !isRouteAllowed(picked, dataClass)) {
     console.warn('[builder-core generate]', o.task, 'no capable model:', reason)
     return null
   }
 
-  const componentHints = selectComponents(COMPONENT_REGISTRY, { brief: o.brief, kind: o.kind }).map((c: any) => `${c.name} (${c.category}): ${c.description}`)
+  // Blocks are page furniture — selectComponents has nothing useful to say about
+  // a canvas game, and buildGenerationPrompt drops game hints anyway. Skip the work.
+  const componentHints = o.kind === 'game' ? [] :
+    selectComponents(COMPONENT_REGISTRY, { brief: o.brief, kind: o.kind }).map((c: any) => `${c.name} (${c.category}): ${c.description}`)
   const messages = buildGenerationPrompt({
-    kind: o.kind, brief: o.brief, componentHints,
+    kind: o.kind, brief: o.brief, genre: o.genre, componentHints,
     useCircleSdk: o.useCircleSdk, currentHtml: o.currentHtml, instruction: o.instruction,
   })
 

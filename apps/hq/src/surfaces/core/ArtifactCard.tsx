@@ -4,9 +4,15 @@
 import { useEffect, useState } from 'react'
 import { mediaAssetPublicUrl } from '../../lib/mediaAssets'
 import { supabase, cloudEnabled } from '../../lib/supabase'
-import { getPublication, unpublishArtifact, publicArtifactUrl } from '../../builder-core/persist'
+import { getPublication, unpublishArtifact, publicArtifactUrl, getArtifact } from '../../builder-core/persist'
 import { coreExecuteTool } from '../../lib/core/tools'
+import { isPicker, type ChartSpec, type PickerSpec } from '../../lib/core/chartRegistry'
+import { ChartCanvas } from '../studios/AnalyticsChart'
+import { openPreview } from './previewBus'
+import { useHQ } from '../../shell/store'
 import type { CoreBlock } from './blocks'
+
+const PREVIEW_TITLE: Record<string, string> = { website: 'Website', deck: 'Deck', brand: 'Brand kit' }
 
 export function ArtifactCard({ block }: { block: CoreBlock }) {
   const [accepted, setAccepted] = useState<boolean | null>(null)
@@ -18,6 +24,11 @@ export function ArtifactCard({ block }: { block: CoreBlock }) {
   const provider: string | null = anyBlock.provider ?? null
   const costUsd: number = anyBlock.costUsd ?? 0
   const saved = !!assetId
+  // C5-B4 — website/deck/brand blocks carry their generated HTML inline; those
+  // are exactly the ones worth opening in the big pane. Image/audio/chart have
+  // no HTML and stay inline.
+  const previewableHtml: string | null = (block.kind === 'website' || block.kind === 'deck' || block.kind === 'brand')
+    ? ((block as any).html ?? null) : null
   // Direct-to-device download for media artifacts. Supabase public buckets send
   // permissive CORS, so fetch→blob works; if it ever doesn't, fall back to just
   // opening the file (the browser's own save then handles it).
@@ -59,6 +70,18 @@ export function ArtifactCard({ block }: { block: CoreBlock }) {
     if (!error) setAccepted(value)
   }
 
+  // A chart is not a saved asset — it's a live read of a data source, and it
+  // carries its own provenance/source line. The generic foot would stamp every
+  // chart with "⚠ no saved artifact", which reads as a failure when nothing
+  // failed (and is the wrong vocabulary for a chart entirely).
+  if (block.kind === 'chart') {
+    return (
+      <div className="core-artifact-card">
+        <div className="core-artifact-body"><ArtifactBody block={block} path={path} /></div>
+      </div>
+    )
+  }
+
   return (
     <div className="core-artifact-card">
       <div className="core-artifact-body">
@@ -71,6 +94,19 @@ export function ArtifactCard({ block }: { block: CoreBlock }) {
           <span> · {saved ? '✓ saved to Supabase' : '⚠ no saved artifact'}</span>
         </div>
         <div className="core-artifact-actions">
+          {/* C5-B4 — anything with HTML can open in the side pane, where it gets
+              real room plus its code and version history. */}
+          {previewableHtml && (
+            <button
+              className="core-artifact-btn core-artifact-btn-quiet"
+              onClick={() => openPreview({ kind: 'artifact', title: PREVIEW_TITLE[block.kind] ?? 'Artifact', html: previewableHtml, artifactId: assetId })}
+            >
+              Open in pane
+            </button>
+          )}
+          {/* GB-7 — only a persisted Builder artifact can be opened in the
+              Forge; a deterministic make_website/deck has no row to load. */}
+          {isBuilderArtifact && <OpenInBuilderButton artifactId={assetId!} />}
           {downloadUrl && (
             <button className="core-artifact-btn core-artifact-btn-quiet" onClick={downloadAsset} disabled={downloading} aria-label="Download">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ marginRight: 5, verticalAlign: -2 }}><path d="M7 1.5v7M4 6l3 3 3-3M2.5 11.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -89,6 +125,43 @@ export function ArtifactCard({ block }: { block: CoreBlock }) {
       </div>
       {isBuilderArtifact && <PublishRow artifactId={assetId!} />}
     </div>
+  )
+}
+
+/**
+ * GB-7 · the Core → Forge seam. Core built it; the Forge is where it gets
+ * refined by hand.
+ *
+ * The block kind can't tell us WHICH builder to open — C1's frozen BLOCK_KINDS
+ * has one 'website' kind covering websites, apps and games alike, and makeBlock
+ * drops any extra field we'd try to smuggle through. So we resolve the real
+ * kind from the artifact row on click (one RPC, only when the founder actually
+ * asks) rather than guessing from the HTML or widening a frozen contract.
+ */
+function OpenInBuilderButton({ artifactId }: { artifactId: string }) {
+  const openInForge = useHQ((s) => s.openInForge)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(false)
+
+  const open = async () => {
+    if (busy) return
+    setBusy(true)
+    setError(false)
+    const a = await getArtifact(artifactId)
+    setBusy(false)
+    if (!a) { setError(true); return }
+    openInForge(a.kind === 'game' ? 'game' : 'app', artifactId)
+  }
+
+  return (
+    <button
+      className="core-artifact-btn core-artifact-btn-quiet"
+      onClick={open}
+      disabled={busy}
+      title="Open this artifact in the Builder to keep refining it by hand"
+    >
+      {busy ? 'Opening…' : error ? 'Could not open' : 'Open in Builder'}
+    </button>
   )
 }
 
@@ -196,33 +269,102 @@ function ArtifactBody({ block, path }: { block: CoreBlock; path: string | null }
   }
 }
 
-// Renders the `analyze` tool's REAL spec shape (surfaces/studios/analytics.ts
-// Analysis: {chart, title, source, data:any[], encoding:{label|x, value|y}}) —
-// a quiet horizontal-bar rendering regardless of the declared chart type
-// (v1 doesn't attempt heatmap/geo rendering honestly, so it degrades to the
-// same bar list rather than faking a map). Cites its source, never invents one.
+// C5-B1b — chart blocks now render through the SAME recharts/d3 renderer the
+// Analytics studio uses (ChartCanvas), so a pie is a pie and a map is a map.
+// The old code drew every chart — heatmap, geo, everything — as the same grey
+// horizontal bar list, which is why "a lot of charts" looked like one chart.
+//
+// Two shapes arrive here: a ChartSpec, or a PickerSpec (the registry refusing
+// to guess). They are deliberately different cards — a picker must never look
+// like an answer.
+const PROVENANCE_META: Record<string, { label: string; title: string }> = {
+  measured: { label: '● measured', title: 'Observed data from live Supabase aggregates.' },
+  modeled: { label: '◐ modeled', title: 'A projection from our own assumptions — NOT observed data.' },
+  planned: { label: '○ planned', title: 'An intention we have written down — NOT observed data.' },
+}
+
 function ChartBody({ spec }: { spec: any }) {
-  const rows: any[] = Array.isArray(spec?.data) ? spec.data : []
-  const labelKey = spec?.encoding?.label ?? spec?.encoding?.x
-  const valueKey = spec?.encoding?.value ?? spec?.encoding?.y
-  const pairs = rows
-    .map(r => ({ label: labelKey ? r?.[labelKey] : undefined, value: valueKey ? Number(r?.[valueKey]) : undefined }))
-    .filter(p => p.label != null && Number.isFinite(p.value))
-  if (!pairs.length) return <div className="core-artifact-empty">No chart data.</div>
-  const max = Math.max(...pairs.map(p => p.value as number), 1)
+  if (isPicker(spec)) return <ChartPicker spec={spec} />
+  return <ChartCard spec={spec as ChartSpec} />
+}
+
+function ChartCard({ spec: initial }: { spec: ChartSpec }) {
+  const [spec, setSpec] = useState<ChartSpec>(initial)
+  const [refreshing, setRefreshing] = useState(false)
+  const prov = PROVENANCE_META[spec.provenance] ?? PROVENANCE_META.modeled
+
+  // Refresh goes through coreExecuteTool — the same governed executor the model
+  // calls — rather than reaching into the registry directly, so a human clicking
+  // refresh and the agent asking for the chart take one code path.
+  const refresh = async () => {
+    if (refreshing) return
+    setRefreshing(true)
+    const r = await coreExecuteTool('render_chart', { chartId: spec.chartId })
+    const next = (r as any).block?.spec as ChartSpec | undefined
+    if (next) setSpec(next)
+    setRefreshing(false)
+  }
+
   return (
-    <div className="core-artifact-chart">
-      {spec?.title && <div className="core-chart-title">{spec.title}</div>}
-      {pairs.slice(0, 8).map((p, i) => (
-        <div key={i} className="core-chart-bar-row">
-          <span className="core-chart-bar-label">{String(p.label)}</span>
-          <div className="core-chart-bar-track">
-            <div className="core-chart-bar-fill" style={{ width: `${((p.value as number) / max) * 100}%` }} />
-          </div>
-          <span className="core-chart-bar-value mono">{p.value}</span>
+    <div className="core-chart">
+      <div className="core-chart-head">
+        <div className="core-chart-heading">
+          <b>{spec.title}</b>
+          <span className="core-chart-kind mono">{spec.chart}</span>
+          <span className={`core-chart-prov core-prov-${spec.provenance} mono`} title={prov.title}>{prov.label}</span>
         </div>
-      ))}
-      {spec?.source && <div className="core-chart-source">{spec.source}</div>}
+        <button className="core-chart-refresh" onClick={refresh} disabled={refreshing} title="Re-read the live source">
+          {refreshing ? '…' : '↻'}
+        </button>
+      </div>
+      {spec.data.length ? (
+        <div className="core-chart-canvas"><ChartCanvas a={spec as any} /></div>
+      ) : (
+        // The honest empty state. The old renderer said only "No chart data."
+        // for every cause; the registry's fetchers explain WHY (offline, no
+        // operator role, migration not run, no rows yet) and we show that.
+        <div className="core-chart-nodata">
+          <div className="core-chart-nodata-title">No data to chart</div>
+          <p>{spec.note || 'This source returned no rows.'}</p>
+        </div>
+      )}
+      <div className="core-chart-foot mono">{spec.source}</div>
+    </div>
+  )
+}
+
+// The anti-guess card (C5 §3.2). The registry returns this instead of a
+// plausible-looking wrong chart when the question doesn't clearly name one.
+function ChartPicker({ spec }: { spec: PickerSpec }) {
+  const [chosen, setChosen] = useState<ChartSpec | null>(null)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+
+  const choose = async (chartId: string) => {
+    setLoadingId(chartId)
+    const r = await coreExecuteTool('render_chart', { chartId })
+    const next = (r as any).block?.spec as ChartSpec | undefined
+    if (next) setChosen(next)
+    setLoadingId(null)
+  }
+
+  if (chosen) return <ChartCard spec={chosen} />
+  return (
+    <div className="core-chart-picker">
+      <div className="core-chart-picker-head">
+        <b>Which one did you mean?</b>
+        <p>I'm not sure which chart “{spec.question}” is asking for, so I'd rather ask than show you the wrong one.</p>
+      </div>
+      <div className="core-chart-picker-grid">
+        {spec.options.map(o => (
+          <button key={o.chartId} className="core-chart-opt" onClick={() => choose(o.chartId)} disabled={!!loadingId}>
+            <span className="core-chart-opt-title">{o.title}</span>
+            <span className="core-chart-opt-meta mono">
+              {o.office} · {o.chart} · {(PROVENANCE_META[o.provenance] ?? PROVENANCE_META.modeled).label}
+            </span>
+            {loadingId === o.chartId && <span className="core-chart-opt-load mono">loading…</span>}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

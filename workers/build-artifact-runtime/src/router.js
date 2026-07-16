@@ -49,13 +49,19 @@ export const SECURITY_HEADERS = Object.freeze({
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/;
 
-/** `/a/:slug` -> application, `/w/:slug` -> website, anything else -> null.
- * Trailing slash tolerated; slug shape matches _artifact_slugify's output
- * (lowercase alnum + hyphens) so a malformed path never even reaches Supabase. */
+/** The one path-prefix ↔ kind mapping. Mirrors publicArtifactUrl() in
+ * apps/hq/src/builder-core/persist.ts and the reserved-slug denylist in
+ * migration_artifact_game_kind.sql — all three must name the same prefixes. */
+const ROUTE_KINDS = Object.freeze({ a: 'application', w: 'website', g: 'game' });
+
+/** `/a/:slug` -> application, `/w/:slug` -> website, `/g/:slug` -> game (GB-2),
+ * anything else -> null. Trailing slash tolerated; slug shape matches
+ * _artifact_slugify's output (lowercase alnum + hyphens) so a malformed path
+ * never even reaches Supabase. */
 export function parseRoute(pathname) {
-  const m = pathname.match(/^\/(a|w)\/([^/]+)\/?$/);
+  const m = pathname.match(/^\/(a|w|g)\/([^/]+)\/?$/);
   if (!m) return null;
   const slug = m[2];
   if (!SLUG_RE.test(slug)) return null;
-  return { kind: m[1] === 'a' ? 'application' : 'website', slug };
+  return { kind: ROUTE_KINDS[m[1]], slug };
 }

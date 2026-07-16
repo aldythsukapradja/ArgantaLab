@@ -6,7 +6,7 @@
  * end card — the classic carousel arc.
  */
 import {
-  pid, blankBg, type PostDoc, type PostSlide, type PostLayer, type TextLayer,
+  pid, blankBg, FONT_INHERIT, type PostDoc, type PostSlide, type PostLayer, type TextLayer,
   POST_PALETTES,
 } from './postEngine'
 import { LIBRARY } from '../../data/broadcast'
@@ -47,7 +47,11 @@ const T = (over: Partial<TextLayer>): TextLayer => ({
   text: '', xN: 0.5, yN: 0.45, size: 64, weight: 700, color: 'ink', align: 'center',
   // Pill by default: every generated line rides a solid plate so it never
   // disappears into the background image. Decorative marks opt out (highlight:'none').
-  font: 'sans', maxWidthN: 0.8, lineHeight: 1.18, highlight: 'pill',
+  //
+  // Font INHERITS by default (B1) so the doc's global font reaches every stamped
+  // line. Templates that name a face below (the serif quote, the mono source) are
+  // making a deliberate typographic choice and keep it.
+  font: FONT_INHERIT, maxWidthN: 0.8, lineHeight: 1.18, highlight: 'pill',
   ...over,
 })
 

@@ -136,8 +136,70 @@ export interface SlideBg {
   vignette: boolean
 }
 
-// ── Layers ────────────────────────────────────────────────────
-export type PostFont = 'sans' | 'serif' | 'mono'
+// ── Fonts (B1: the registry) ──────────────────────────────────
+// A font is an ID on the doc, never a raw family string: the same reason colors
+// are roles. Swapping the global font re-faces every inheriting layer at once,
+// and a recipe can carry "this design uses Poster headlines" without pinning a
+// family the next machine might not have.
+//
+// 'sans' | 'serif' | 'mono' remain valid ids, so every doc written before this
+// registry existed keeps rendering — they're just three entries in the list now.
+export type PostFont = string
+
+export interface PostFontDef {
+  id: string
+  label: string
+  stack: string
+  /**
+   * Seam for a real self-hosted face. Drop a .woff2 in apps/hq/public/fonts/,
+   * name it here with the family it registers, and loadPostFonts() installs it
+   * before the first draw.
+   *
+   * It MUST be self-hosted. A Google Fonts <link> would render on screen and
+   * then silently taint or drop out of the PNG/JPEG export — the canvas paints
+   * with whatever the browser has already loaded, so an export is only as
+   * reliable as the bytes we ship ourselves. Everything below is a system stack
+   * for exactly this reason: zero files, zero network, identical export.
+   */
+  file?: string
+  family?: string
+}
+
+export const POST_FONTS: PostFontDef[] = [
+  { id: 'sans',     label: 'Sans',     stack: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
+  { id: 'grotesk',  label: 'Grotesk',  stack: '"Helvetica Neue", Helvetica, Arial, sans-serif' },
+  { id: 'humanist', label: 'Humanist', stack: '"Trebuchet MS", "Segoe UI", Tahoma, sans-serif' },
+  { id: 'poster',   label: 'Poster',   stack: 'Impact, Haettenschweiler, "Arial Black", sans-serif' },
+  { id: 'serif',    label: 'Serif',    stack: 'Georgia, "Times New Roman", ui-serif, serif' },
+  { id: 'didone',   label: 'Didone',   stack: '"Playfair Display", Didot, "Bodoni MT", Georgia, serif' },
+  { id: 'slab',     label: 'Slab',     stack: 'Rockwell, "Roboto Slab", "Courier New", Georgia, serif' },
+  { id: 'mono',     label: 'Mono',     stack: 'ui-monospace, "Cascadia Code", Consolas, Menlo, monospace' },
+]
+export const postFont = (id?: string): PostFontDef => POST_FONTS.find(f => f.id === id) || POST_FONTS[0]
+
+/** The sentinel a layer carries to follow the doc's global font. */
+export const FONT_INHERIT = 'inherit'
+
+/** Which font a text layer actually renders in: its own override, else the
+ *  doc's global, else sans. Layers written before B1 carry a literal id and
+ *  keep it — only 'inherit' (or nothing) follows the global. */
+export const resolveFontId = (layerFont: string | undefined, docFontId?: string): string =>
+  (!layerFont || layerFont === FONT_INHERIT) ? (docFontId || 'sans') : layerFont
+
+/** Install every registry face that ships a file. No-op today (all stacks are
+ *  system), but the call site exists so adding a woff2 is a one-line change and
+ *  never a "why is my export the wrong font" bug. */
+export async function loadPostFonts(): Promise<void> {
+  if (typeof document === 'undefined' || !('fonts' in document)) return
+  await Promise.all(POST_FONTS.filter(f => f.file && f.family).map(async f => {
+    try {
+      const face = new FontFace(f.family!, `url(${f.file})`)
+      await face.load()
+      ;(document as any).fonts.add(face)
+    } catch { /* a missing face falls through to the stack — never block a draw */ }
+  }))
+}
+
 export type Highlight = 'none' | 'pill' | 'underline'
 
 export interface TextLayer {
@@ -217,6 +279,9 @@ export interface PostDoc {
   format: string          // PostFormat id
   palette: string         // PostPalette id — the fallback when no brand is set
   brandId?: string        // @arganta/brand id; drives mark, palette, plate, fonts
+  /** B1 — the doc's global font (a POST_FONTS id). Every text layer that doesn't
+   *  override it follows this, so re-facing a whole post is one pick. */
+  fontId?: string
   slides: PostSlide[]
   caption: string
   hashtags: string
@@ -252,20 +317,27 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-const FONT_STACK: Record<PostFont, string> = {
-  sans: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-  serif: 'Georgia, "Times New Roman", ui-serif, serif',
-  mono: 'ui-monospace, "Cascadia Code", Consolas, Menlo, monospace',
+/** Kept for the engine's own chrome (badges, pager, guides) which is not
+ *  founder-styleable — those always speak in the base voices. */
+const FONT_STACK = {
+  get sans() { return postFont('sans').stack },
+  get serif() { return postFont('serif').stack },
+  get mono() { return postFont('mono').stack },
 }
 
-/** A brand's face in front of the engine's stack. Note that naming a face the
+/** A brand's face in front of the registry's stack. Note that naming a face the
  *  browser hasn't loaded changes nothing — it falls straight through to the
  *  stack. That's why "fonts embedded in engine" is its own readiness check:
- *  declaring Inter and shipping Inter are different jobs. */
+ *  declaring Inter and shipping Inter are different jobs.
+ *
+ *  The brand only speaks for the three BASE voices. When the founder explicitly
+ *  picks Poster or Didone in the canvas toolbar, that is a deliberate override
+ *  and the brand must not quietly reclaim it. */
 function fontStack(font: PostFont, brand?: any): string {
+  const def = postFont(font)
   const f = brand?.identity?.fonts
   const face = font === 'mono' ? f?.mono : font === 'sans' ? (f?.display || f?.body) : null
-  return face ? `"${face}", ${FONT_STACK[font]}` : FONT_STACK[font]
+  return face ? `"${face}", ${def.stack}` : def.stack
 }
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -363,11 +435,11 @@ function hexA(hex: string, a: number): string {
 }
 
 // ── Layer painters ────────────────────────────────────────────
-function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPalette, W: number, H: number, plate: Plate, brand?: any) {
+function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPalette, W: number, H: number, plate: Plate, brand?: any, docFontId?: string) {
   const k = W / 1080
   const size = l.size * k
   const text = l.upper ? l.text.toUpperCase() : l.text
-  ctx.font = `${l.weight} ${size}px ${fontStack(l.font, brand)}`
+  ctx.font = `${l.weight} ${size}px ${fontStack(resolveFontId(l.font, docFontId), brand)}`
   ctx.textAlign = l.align
   ctx.textBaseline = 'middle'
   const maxW = l.maxWidthN * W
@@ -549,7 +621,7 @@ export interface RenderEnv {
 // Approximate pixel bounds (top-left x/y + w/h) for a layer, used to click-
 // select and to draw a selection frame. Pass `ctx` so text can be measured;
 // without it, text falls back to its max-width box.
-export function layerBounds(l: PostLayer, W: number, H: number, ctx?: CanvasRenderingContext2D): { x: number; y: number; w: number; h: number } {
+export function layerBounds(l: PostLayer, W: number, H: number, ctx?: CanvasRenderingContext2D, docFontId?: string): { x: number; y: number; w: number; h: number } {
   const k = W / 1080
   const box = (w: number, h: number) => ({ x: l.xN * W - w / 2, y: l.yN * H - h / 2, w, h })
   switch (l.type) {
@@ -557,7 +629,10 @@ export function layerBounds(l: PostLayer, W: number, H: number, ctx?: CanvasRend
       const size = l.size * k
       let lineW = l.maxWidthN * W, lines = Math.max(1, (l.text.match(/\n/g)?.length ?? 0) + 1)
       if (ctx) {
-        ctx.font = `${l.weight} ${size}px ${FONT_STACK[l.font]}`
+        // Measure in the font it actually RENDERS in, or the selection frame and
+        // the floating toolbar anchor to the wrong box the moment a layer uses
+        // anything but sans.
+        ctx.font = `${l.weight} ${size}px ${fontStack(resolveFontId(l.font, docFontId), undefined)}`
         const wrapped = wrapLines(ctx, l.upper ? l.text.toUpperCase() : l.text, l.maxWidthN * W)
         lines = Math.max(1, wrapped.length)
         lineW = Math.min(l.maxWidthN * W, Math.max(1, ...wrapped.map(t => ctx.measureText(t).width)))
@@ -576,21 +651,21 @@ export function layerBounds(l: PostLayer, W: number, H: number, ctx?: CanvasRend
 
 /** Topmost non-hidden layer whose bounds contain the point (canvas pixels), or
  * null. Iterates top→bottom so a headline over a bg image is selected first. */
-export function hitTestLayer(slide: PostSlide, px: number, py: number, W: number, H: number, ctx?: CanvasRenderingContext2D): string | null {
+export function hitTestLayer(slide: PostSlide, px: number, py: number, W: number, H: number, ctx?: CanvasRenderingContext2D, docFontId?: string): string | null {
   for (let i = slide.layers.length - 1; i >= 0; i--) {
     const l = slide.layers[i]
     if (l.hidden) continue
-    const b = layerBounds(l, W, H, ctx)
+    const b = layerBounds(l, W, H, ctx, docFontId)
     if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return l.id
   }
   return null
 }
 
 /** Draw a dashed selection frame around one layer (call after drawSlide). */
-export function drawLayerSelection(ctx: CanvasRenderingContext2D, slide: PostSlide, layerId: string, W: number, H: number) {
+export function drawLayerSelection(ctx: CanvasRenderingContext2D, slide: PostSlide, layerId: string, W: number, H: number, docFontId?: string) {
   const l = slide.layers.find(x => x.id === layerId)
   if (!l) return
-  const b = layerBounds(l, W, H, ctx)
+  const b = layerBounds(l, W, H, ctx, docFontId)
   ctx.save()
   ctx.strokeStyle = 'rgba(120,180,255,0.95)'
   ctx.lineWidth = Math.max(2, W / 540)
@@ -618,7 +693,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, doc: PostDoc, index: nu
     if (l.hidden) continue
     ctx.save()
     if (l.type === 'image') drawImageLayer(ctx, l, pal, W, H, env.getImg(l.url))
-    else if (l.type === 'text') drawTextLayer(ctx, l, pal, W, H, plate, brand)
+    else if (l.type === 'text') drawTextLayer(ctx, l, pal, W, H, plate, brand, doc.fontId)
     else if (l.type === 'emoji') drawEmojiLayer(ctx, l, W, H)
     else if (l.type === 'badge') drawBadgeLayer(ctx, l, pal, W, H)
     else if (l.type === 'brand') drawBrandLayer(ctx, l, pal, W, H, brandName, brand)

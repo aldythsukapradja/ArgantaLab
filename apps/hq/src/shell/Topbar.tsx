@@ -2,7 +2,9 @@ import { Sun, Moon, Search, Home } from 'lucide-react'
 import { useHQ, surfaceLabel } from './store'
 
 export function Topbar() {
-  const { surface, dataTab, builderSub, theme, toggleTheme, openPalette, go } = useHQ()
+  const { surface, dataTab, forgeTab, theme, toggleTheme, openPalette, go } = useHQ()
+  // GB-3 · the builders' crumb now tracks the Forge/Legacy tab — builderSub
+  // (catalogue/studio/analytics) only exists inside the legacy wizard.
   const isBuilder = surface === 'game' || surface === 'app'
   return (
     <header className="topbar">
@@ -11,7 +13,7 @@ export function Topbar() {
         <span>/</span>
         <b>{surfaceLabel(surface)}</b>
         {surface === 'data' && (<><span>/</span><b style={{ textTransform: 'capitalize' }}>{dataTab}</b></>)}
-        {isBuilder && (<><span>/</span><b style={{ textTransform: 'capitalize' }}>{builderSub}</b></>)}
+        {isBuilder && (<><span>/</span><b style={{ textTransform: 'capitalize' }}>{forgeTab}</b></>)}
       </div>
 
       <div style={{ flex: 1 }} />

@@ -12,12 +12,22 @@ test('parseRoute: /a/:slug -> application, /w/:slug -> website', () => {
   assert.deepEqual(parseRoute('/w/my-site/'), { kind: 'website', slug: 'my-site' }); // trailing slash tolerated
 });
 
-test('parseRoute: rejects anything that is not /a/:slug or /w/:slug', () => {
+test('GB-2 parseRoute: /g/:slug -> game', () => {
+  assert.deepEqual(parseRoute('/g/snake'), { kind: 'game', slug: 'snake' });
+  assert.deepEqual(parseRoute('/g/snake/'), { kind: 'game', slug: 'snake' });
+  // the kind must be the CANONICAL one @arganta/builder validates against —
+  // a served game is re-validated with { kind: row.kind } (index.js).
+  assert.equal(parseRoute('/g/snake').kind, 'game');
+});
+
+test('parseRoute: rejects anything that is not /a/:slug, /w/:slug or /g/:slug', () => {
   assert.equal(parseRoute('/'), null);
   assert.equal(parseRoute('/favicon.ico'), null);
   assert.equal(parseRoute('/api/whatever'), null);
   assert.equal(parseRoute('/a/'), null); // empty slug
   assert.equal(parseRoute('/a/one/two'), null); // extra path segment
+  assert.equal(parseRoute('/g/'), null); // empty game slug
+  assert.equal(parseRoute('/x/anything'), null); // unknown prefix
 });
 
 test('parseRoute: rejects malformed slugs (matches _artifact_slugify output shape only)', () => {

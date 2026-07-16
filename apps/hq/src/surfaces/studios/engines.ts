@@ -27,7 +27,12 @@ export function makeBrand(brief: string): BrandKit {
   const seed = hash(brief || 'arganta')
   const palette = PAL_KEYS[seed % PAL_KEYS.length]
   const stops = PALETTES[palette] as number[][]
-  const fonts = FONT_PAIRS[(seed >> 3) % FONT_PAIRS.length]
+  // `>>>`, not `>>`: hash() returns an UNSIGNED 32-bit int, so any seed with the
+  // high bit set (~half of all briefs) went negative under the signed shift, and
+  // a negative JS modulo stays negative — FONT_PAIRS[-2] is undefined, which took
+  // out every engine downstream (makeWebsite/makeDeck/makeAppShell/makeGameShell)
+  // with "cannot read 'body' of undefined".
+  const fonts = FONT_PAIRS[(seed >>> 3) % FONT_PAIRS.length]
   const name = (brief.split(/[—\-,.\n]/)[0] || 'Arganta').trim().slice(0, 28) || 'Arganta'
   return {
     name, palette, fonts, seed,

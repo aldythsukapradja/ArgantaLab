@@ -25,6 +25,13 @@ export const BUILDER_TOOL_SPECS = Object.freeze([
     params: { type: 'object', properties: { brief: { type: 'string' }, templateId: { type: 'string' }, useCircleSdk: { type: 'boolean' }, brandKitId: { type: 'string' } }, required: ['brief'] },
   },
   {
+    // GB-1 · same governance shape as its siblings: real generation (costClass 1),
+    // draft-only, never reaches the outside world on its own.
+    name: 'create_game', title: 'Build a game', backing: 'builder', costClass: 1, dataClass: 'internal', sideEffect: false, autonomySafe: true,
+    description: 'Create a complete single-file playable browser game (arcade/puzzle/platformer/shooter/racing/tower/rpg/…) from a brief. Returns a draft artifact — does NOT publish.',
+    params: { type: 'object', properties: { brief: { type: 'string' }, genre: { type: 'string' }, useCircleSdk: { type: 'boolean' }, brandKitId: { type: 'string' } }, required: ['brief'] },
+  },
+  {
     name: 'revise_artifact', title: 'Revise', backing: 'builder', costClass: 1, dataClass: 'internal', sideEffect: false, autonomySafe: true,
     description: 'Revise an existing artifact with a natural-language instruction, preserving unrelated functionality. Returns the updated HTML as a new draft version.',
     params: { type: 'object', properties: { artifactId: { type: 'string' }, instruction: { type: 'string' } }, required: ['artifactId', 'instruction'] },

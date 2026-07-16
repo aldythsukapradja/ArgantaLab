@@ -5,26 +5,45 @@
 // things in a conversation" milestone.
 import { runAgentLoop, toOpenAITools, availableTools, makeBlock, AUTONOMY, TOOL_SPECS, registerToolSpecs } from '@arganta/agent'
 import { makeCoreCallModel } from './runtime'
-import { coreExecuteTool, WIRED_BUILDER_SPECS, type ToolResult } from './tools'
+import { coreExecuteTool, WIRED_BUILDER_SPECS, CORE_EXTRA_SPECS, type ToolResult } from './tools'
 
 // Make the builder tools (create_website/create_application/revise_artifact/…)
 // resolvable by the loop's autonomy gate — they're OFFERED to the model but live
 // in @arganta/builder, so without this the loop refuses them as `unknown-tool`.
-registerToolSpecs(WIRED_BUILDER_SPECS as any)
+// C5-B1 adds render_chart the same way (Core-local, but governed identically).
+registerToolSpecs([...WIRED_BUILDER_SPECS, ...CORE_EXTRA_SPECS] as any)
 import { createThread, appendMessage, loadMessages, listRecentThreads, type CoreMessage } from './thread'
+// C5-B3 — the drawer's store surface (projects, pin/rename/delete, search).
+export {
+  listProjects, createProject, deleteProject, projectsSupported,
+  renameThread, setThreadPinned, setThreadProject, deleteThread, searchThreads,
+  type ThreadSummary, type CoreProject, type ProjectsSupport,
+} from './thread'
 import { embedTextViaGateway } from '../mediaGateway'
 import { supabase, cloudEnabled } from '../supabase'
 
 export { createThread, loadMessages, listRecentThreads, type CoreMessage }
 
 const SYSTEM_PROMPT = `You are Arganta Core, the founder's digital-twin assistant for ArgantaLab.
-You can make real things: images, voice clips, websites, single-file applications, slide decks, brand
-kits, and data charts — via tools, not by describing them. Use tools when the founder asks you to MAKE
-or SHOW something. Prefer create_website/create_application over make_website when the founder wants a
-real usable artifact (vs. a quick throwaway page) — they run real AI generation, not just a template.
+You can make real things: images, voice clips, websites, single-file applications, playable games, slide
+decks, brand kits, and data charts — via tools, not by describing them. Use tools when the founder asks
+you to MAKE or SHOW something. Prefer create_website/create_application/create_game over make_website
+when the founder wants a real usable artifact (vs. a quick throwaway page) — they run real AI
+generation, not just a template.
+Pick the builder tool by what they asked for: create_game for anything playable (a game, an arcade
+toy, something with a score or levels), create_application for a tool with state (tracker/dashboard/
+planner), create_website for a page that presents information. When it's genuinely ambiguous, ask.
 Once a tool call succeeds, do NOT call it again for the same request — respond to the founder in text
 instead. Every turn must end with a text reply to the founder, even a short one.
-Be concise and direct. Never invent numbers or claim something was made when a tool failed — say so plainly.`
+Be concise and direct. Never invent numbers or claim something was made when a tool failed — say so plainly.
+If a builder tool result carries a 'note' saying it fell back to a deterministic template, relay that
+honestly — never present the fallback as a bespoke build of what they described.
+
+Charts: use analyze for a data question. It answers with the RIGHT chart or, when the question is
+ambiguous, with a picker for the founder to choose from — it never guesses. If a tool result says
+charted:false, NO chart exists: do not describe one, do not invent numbers, just say what happened.
+Respect the provenance field: 'measured' is real observed data, 'modeled' is a projection from our
+own assumptions, 'planned' is an intention. Never call a modeled or planned number a measurement.`
 
 // Every stop reason must produce SOME reply — a silent empty message (e.g.
 // the loop exhausting max-steps mid tool-call-spree) is a real UX dead end,
@@ -129,10 +148,13 @@ export async function sendMessage(threadId: string, userText: string, opts: { si
     const ok = !('error' in flat)
     trailBlocks.push(makeBlock('tool-trail', { tool: name, provider: (flat as any).provider ?? null, model: (flat as any).model ?? null, costUsd: result.costUsd ?? 0, latencyMs, ok }))
     if (result.block) collectedBlocks.push(makeBlock(blockKindFor(name), result.block))
+    // C5-B2 — a tool may answer with more than one artifact (an office returns
+    // its recommendation AND the chart grounding it). These carry their own kind.
+    result.extraBlocks?.forEach((b) => collectedBlocks.push(makeBlock(b.kind, b.block)))
     return flat
   }
 
-  const tools = toOpenAITools(availableTools([...TOOL_SPECS, ...WIRED_BUILDER_SPECS], { autonomous: false, maxCostClass: 1 }))
+  const tools = toOpenAITools(availableTools([...TOOL_SPECS, ...WIRED_BUILDER_SPECS, ...CORE_EXTRA_SPECS], { autonomous: false, maxCostClass: 1 }))
 
   // Genuine mid-call cancellation would mean threading an AbortSignal through
   // C1's frozen loop.js — out of scope for an additive UI change. This is an
@@ -198,14 +220,15 @@ function blockKindFor(toolName: string): string {
   if (toolName === 'generate_speech') return 'audio'
   if (toolName === 'make_website') return 'website'
   if (toolName === 'create_website') return 'website'
-  // no separate 'application' block kind (C1-frozen BLOCK_KINDS) — an app is
-  // still a single-file HTML artifact, rendered the same as a website block.
+  // no separate 'application'/'game' block kind (C1-frozen BLOCK_KINDS) — both
+  // are still single-file HTML artifacts, rendered the same as a website block.
   if (toolName === 'create_application') return 'website'
+  if (toolName === 'create_game') return 'website'
   if (toolName === 'revise_artifact') return 'website'
   if (toolName === 'restore_version') return 'website'
   if (toolName === 'make_deck') return 'deck'
   if (toolName === 'make_brand') return 'brand'
-  if (toolName === 'analyze') return 'chart'
+  if (toolName === 'analyze' || toolName === 'render_chart') return 'chart'
   if (toolName === 'consult_office') return 'delegation'
   return 'text'
 }

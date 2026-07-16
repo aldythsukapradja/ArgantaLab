@@ -14,8 +14,10 @@ const Portfolio = lazy(() => import('../surfaces/Portfolio').then(module => ({ d
 const Content = lazy(() => import('../surfaces/Content').then(module => ({ default: module.Content })))
 const Agents = lazy(() => import('../surfaces/Agents').then(module => ({ default: module.Agents })))
 const Broadcast = lazy(() => import('../surfaces/Broadcast').then(module => ({ default: module.Broadcast })))
-const GameBuilder = lazy(() => import('../surfaces/builders/BuilderShell').then(module => ({ default: module.GameBuilder })))
-const AppBuilder = lazy(() => import('../surfaces/builders/BuilderShell').then(module => ({ default: module.AppBuilder })))
+// GB-3 · the Forge replaces the v1 wizard as the builder surface; the wizard
+// itself is still reachable from the Forge's own Legacy tab.
+const GameBuilder = lazy(() => import('../surfaces/forge/ForgeShell').then(module => ({ default: module.GameForge })))
+const AppBuilder = lazy(() => import('../surfaces/forge/ForgeShell').then(module => ({ default: module.AppForge })))
 const Command = lazy(() => import('../surfaces/command/Command').then(module => ({ default: module.Command })))
 const Pixel = lazy(() => import('../surfaces/pixel/Pixel').then(module => ({ default: module.Pixel })))
 const Vault = lazy(() => import('../surfaces/Vault').then(module => ({ default: module.Vault })))
@@ -69,8 +71,10 @@ function Surface() {
 
 export function Shell({ who = 'Operator', authed = false }: { who?: string; authed?: boolean }) {
   const { surface } = useHQ()
-  const wide = surface === 'game' || surface === 'app'
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' // edge-to-edge workspaces
+  // Edge-to-edge workspaces. GB-3 moved 'game'/'app' here: the Forge is a fixed,
+  // non-scrollable page that owns its own viewport, so it must not sit inside
+  // .content's scroll container or the panes scroll the page instead of themselves.
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app'
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button
@@ -96,7 +100,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
             <MobileSubnav />
             <div className={'content' + (full ? ' content-flush' : '')}>
               <Suspense fallback={<SurfaceLoading />}>
-                {full ? <Surface /> : <div className={'content-in' + (wide ? ' wide' : '')}><Surface /></div>}
+                {full ? <Surface /> : <div className="content-in"><Surface /></div>}
               </Suspense>
             </div>
           </div>

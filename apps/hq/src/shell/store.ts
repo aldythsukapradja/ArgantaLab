@@ -3,6 +3,10 @@ import { create } from 'zustand'
 export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
+/** GB-3 · The Forge (v2 chat-driven builder) is the default; 'legacy' renders
+ * the untouched v1 wizard (BuilderShell) behind a tab, same pattern as the
+ * Music/Content builders' Legacy button. */
+export type ForgeTab = 'forge' | 'legacy'
 export type Theme = 'light' | 'dark'
 export type AgentSize = 'small' | 'expanded' | 'full'
 // Command sub-tabs: the org lobby + the six offices (office ids are stable).
@@ -26,6 +30,8 @@ interface HQState {
   builderSub: BuilderSub
   commandTab: CommandTab           // Command sub-tab: lobby | office id
   studioId: string | null          // artifact being edited in Studio (null = new)
+  forgeTab: ForgeTab               // Forge (v2) vs Legacy (v1 wizard)
+  forgeArtifactId: string | null   // hq_artifact open in the Forge (null = empty state)
   analyticsFocus: string | null    // artifact selected in Analytics detail
   theme: Theme
   agentOpen: boolean               // floating COO/CEO orb open?
@@ -39,6 +45,12 @@ interface HQState {
   setCommandTab: (t: CommandTab) => void
   setBuilderSub: (t: BuilderSub) => void
   openStudio: (id?: string | null) => void
+  setForgeTab: (t: ForgeTab) => void
+  setForgeArtifact: (id: string | null) => void
+  /** GB-7 · the Core→Builder seam: jump to a builder surface with an artifact
+   * already open for manual iteration. Always lands on the Forge tab — the
+   * legacy wizard has no concept of an hq_artifact id. */
+  openInForge: (surface: 'app' | 'game', artifactId: string) => void
   openAnalytics: (focusId?: string | null) => void
   toggleTheme: () => void
   openAgent: (size?: AgentSize) => void
@@ -60,6 +72,8 @@ export const useHQ = create<HQState>((set) => ({
   builderSub: 'catalogue',
   commandTab: 'lobby',
   studioId: null,
+  forgeTab: 'forge',
+  forgeArtifactId: null,
   analyticsFocus: null,
   theme: initialTheme(),
   agentOpen: false,
@@ -69,8 +83,11 @@ export const useHQ = create<HQState>((set) => ({
   setVerdictState: (id, s) => set((st) => ({ verdictState: { ...st.verdictState, [id]: s } })),
   // Entering the Agent (core) full-screen remembers where we came from, so its
   // X returns there instead of a hardcoded default.
+  // Navigating to a builder from the rail/palette starts FRESH (forgeArtifactId
+  // cleared) — openInForge sets `surface` directly for the Core seam, so it
+  // deliberately bypasses this reset and keeps the artifact it was handed.
   go: (surface) => set((st) => ({
-    surface, builderSub: 'catalogue', studioId: null, commandTab: 'lobby',
+    surface, builderSub: 'catalogue', studioId: null, commandTab: 'lobby', forgeArtifactId: null,
     coreReturn: surface === 'core' && st.surface !== 'core' ? st.surface : st.coreReturn,
   })),
   goOffice: (commandTab) => set({ surface: 'command', commandTab }),
@@ -78,6 +95,9 @@ export const useHQ = create<HQState>((set) => ({
   setCommandTab: (commandTab) => set({ commandTab }),
   setBuilderSub: (builderSub) => set({ builderSub }),
   openStudio: (id = null) => set({ builderSub: 'studio', studioId: id }),
+  setForgeTab: (forgeTab) => set({ forgeTab }),
+  setForgeArtifact: (forgeArtifactId) => set({ forgeArtifactId }),
+  openInForge: (surface, forgeArtifactId) => set({ surface, forgeTab: 'forge', forgeArtifactId }),
   openAnalytics: (focusId = null) => set({ builderSub: 'analytics', analyticsFocus: focusId }),
   toggleTheme: () => set((s) => {
     const theme: Theme = s.theme === 'light' ? 'dark' : 'light'

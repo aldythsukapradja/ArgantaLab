@@ -5,10 +5,10 @@
 // shape (same C2 ↔ C3 split, one batch later).
 import { artifactFromRow, versionFromRow } from '@arganta/builder'
 import { supabase, cloudEnabled } from '../lib/supabase'
-import type { GenerateResult } from './generate'
+import type { GenerateResult, ArtifactKind } from './generate'
 
 export interface StoredArtifact {
-  id: string; kind: 'application' | 'website'; title: string; description: string
+  id: string; kind: ArtifactKind; title: string; description: string
   html: string; currentVersion: number; templateId: string | null; brandKitId: string | null
   status: string; visibility: string; createdBy: string; createdAt: string; updatedAt: string
 }
@@ -20,7 +20,7 @@ export interface StoredVersion {
 }
 
 export interface Publication {
-  slug: string; artifactId: string; kind: 'application' | 'website'
+  slug: string; artifactId: string; kind: ArtifactKind
   versionNumber: number; isLive: boolean; publishedAt: string
 }
 
@@ -28,15 +28,16 @@ export interface Publication {
 // Cloudflare Worker (workers/build-artifact-runtime/), NOT this app. This
 // constant is just for building the URL to show the founder after publish.
 export const PUBLIC_ARTIFACT_BASE = 'https://build.arganta.app'
-export function publicArtifactUrl(kind: 'application' | 'website', slug: string): string {
-  return `${PUBLIC_ARTIFACT_BASE}/${kind === 'application' ? 'a' : 'w'}/${slug}`
+const KIND_PATH: Record<ArtifactKind, string> = { application: 'a', website: 'w', game: 'g' }
+export function publicArtifactUrl(kind: ArtifactKind, slug: string): string {
+  return `${PUBLIC_ARTIFACT_BASE}/${KIND_PATH[kind] ?? 'w'}/${slug}`
 }
 
 /** Persists a freshly generated artifact as a new draft + its version 1.
  * Returns null (never throws) if cloud is unavailable — the caller already
  * has the generated HTML in hand and can still show it, just unsaved. */
 export async function createArtifact(o: {
-  kind: 'application' | 'website'; title: string; g: GenerateResult
+  kind: ArtifactKind; title: string; g: GenerateResult
   description?: string; templateId?: string; brandKitId?: string
 }): Promise<string | null> {
   if (!cloudEnabled) return null

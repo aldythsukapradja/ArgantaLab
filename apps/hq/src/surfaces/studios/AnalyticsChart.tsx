@@ -4,7 +4,7 @@
 
 import {
   ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar,
-  PieChart, Pie, Cell, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
+  PieChart, Pie, Cell, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
 import { geoNaturalEarth1, geoPath, geoGraticule10 } from 'd3-geo'
 import type { Analysis } from './analytics'
@@ -30,22 +30,35 @@ export function AnalyticsChart({ a }: { a: Analysis }) {
   )
 }
 
+/** C5-B1b — the chart canvas alone (no title/source chrome), so Arganta Core's
+ * chat card can wrap it in its own provenance header instead of reproducing a
+ * second, drifting copy of every chart renderer. */
+export function ChartCanvas({ a }: { a: Analysis }) {
+  return <Body a={a} fmt={yFmt(a.unit)} />
+}
+
 function Body({ a, fmt }: { a: Analysis; fmt: (n: number) => string }) {
   const grid = <CartesianGrid strokeOpacity={0.12} vertical={false} />
   const tip = <Tooltip formatter={(v: any) => (typeof v === 'number' ? fmt(v) : v)} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
 
   if (a.chart === 'area' || a.chart === 'line') {
     const C = a.chart === 'area' ? AreaChart : LineChart
+    // A line/area chart may carry SEVERAL series (mint vs burn). Previously only
+    // encoding.y was drawn, so any extra series was silently dropped — a chart
+    // that quietly answers half the question. Fall back to [y] when no explicit
+    // series list is given, which is the single-series case unchanged.
+    const keys = a.encoding.series?.length ? a.encoding.series : [a.encoding.y!]
     return (
       <ResponsiveContainer width="100%" height="100%">
         <C data={a.data} margin={{ top: 10, right: 16, bottom: 4, left: 4 }}>
           {grid}
-          <XAxis dataKey={a.encoding.x} tickFormatter={fmtNum} fontSize={11} />
+          <XAxis dataKey={a.encoding.x} tickFormatter={(v: any) => (typeof v === 'number' ? fmtNum(v) : v)} fontSize={11} />
           <YAxis tickFormatter={fmt} fontSize={11} width={48} />
           {tip}
-          {a.chart === 'area'
-            ? <Area type="monotone" dataKey={a.encoding.y!} stroke={COLORS[0]} fill={COLORS[0]} fillOpacity={0.22} strokeWidth={2} />
-            : <Line type="monotone" dataKey={a.encoding.y!} stroke={COLORS[0]} strokeWidth={2} dot={false} />}
+          {keys.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
+          {keys.map((k, i) => (a.chart === 'area'
+            ? <Area key={k} type="monotone" dataKey={k} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.22} strokeWidth={2} />
+            : <Line key={k} type="monotone" dataKey={k} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={false} />))}
         </C>
       </ResponsiveContainer>
     )
