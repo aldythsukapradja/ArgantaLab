@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Building2, LineChart, Clapperboard, Hammer, X, LayoutGrid,
   Megaphone, Music2, Wand2, Grid2x2, Gamepad2, Map, Swords, UserRound, Boxes, GraduationCap, Network, Atom, Film,
+  Sparkles, Radar, Mic2, TrendingUp, Database, BookOpen, Orbit, Workflow, Cpu,
 } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId } from './store'
 import { ReactorOrb } from '../surfaces/core/ReactorOrb'
@@ -11,21 +12,31 @@ import { ReactorOrb } from '../surfaces/core/ReactorOrb'
 // nothing is unreachable on a phone; keep the two in sync when a surface is
 // added. Agent (Arganta Core, the founder's primary conversational interface)
 // sits DEAD CENTER as a raised orb — like the landing dock — and opens
-// full-screen on mobile. Studio/Forge are workbench-heavy, so tapping their tab
-// opens a launcher sheet (icon + what it makes) instead of dumping into the
-// first surface; Company/Insights keep the direct chip sub-bar and jump to
-// their first surface (go(surfaces[0])).
-type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[]; launcher?: boolean }
+// full-screen on mobile. Every tab opens the same launcher sheet (icon + what
+// it does) instead of dumping into the first surface — consistent discovery
+// across all four groups.
+type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[] }
 export const MGROUPS: Grp[] = [
   { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'home', 'command', 'copilot', 'cinema'] },
   { id: 'insights', label: 'Insights', Icon: LineChart, surfaces: ['growth', 'data', 'vault', 'knowledge', 'architecture', 'rack'] },
-  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['broadcast', 'video', 'music', 'media', 'pixel'], launcher: true },
-  { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'agents', 'reactor'], launcher: true },
+  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['broadcast', 'video', 'music', 'media', 'pixel'] },
+  { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'agents', 'reactor'] },
 ]
 
-// Launcher card copy: icon + one line of "what it makes". Mobile-launcher-only
+// Launcher card copy: icon + one line of "what it does". Mobile-launcher-only
 // chrome, so it lives here rather than the store.
 const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>> = {
+  portfolio: { Icon: LayoutGrid, desc: 'Five products, one operating view' },
+  home: { Icon: Sparkles, desc: 'The CEO Orb cockpit' },
+  command: { Icon: Radar, desc: 'C-suite offices & verdicts' },
+  copilot: { Icon: Mic2, desc: 'Voice & gesture control' },
+  cinema: { Icon: Film, desc: 'Founder keynote cinematic' },
+  growth: { Icon: TrendingUp, desc: 'North star & engagement trends' },
+  data: { Icon: Database, desc: 'Schema, tables & ontology' },
+  vault: { Icon: BookOpen, desc: 'Founder notes & knowledge base' },
+  knowledge: { Icon: Orbit, desc: 'Vault as a 3D knowledge graph' },
+  architecture: { Icon: Workflow, desc: 'System map & data lineage' },
+  rack: { Icon: Cpu, desc: 'LLM tiers & routing policy' },
   broadcast: { Icon: Megaphone, desc: 'Social posts & carousels' },
   video: { Icon: Film, desc: 'Videos with voice & export' },
   music: { Icon: Music2, desc: 'Tracks & soundscapes' },
@@ -87,8 +98,7 @@ export function MobileNav() {
     <button key={g.id} className={'mnav-item' + (!agentOpen && surface !== 'core' && activeGroup === g.id ? ' on' : '')}
       onClick={() => {
         if (agentOpen) closeAgent()
-        if (g.launcher) { setLauncher(l => (l === g.id ? null : g.id)); return }
-        setLauncher(null); go(g.surfaces[0])
+        setLauncher(l => (l === g.id ? null : g.id))
       }}>
       <span className="mn-ic"><g.Icon size={20} /></span><span className="mn-lbl">{g.label}</span>
     </button>
