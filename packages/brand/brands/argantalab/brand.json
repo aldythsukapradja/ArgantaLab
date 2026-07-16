@@ -1,0 +1,131 @@
+{
+  "id": "argantalab",
+  "name": "ArgantaLab",
+  "status": "living",
+
+  "identity": {
+    "mark": {
+      "_source": "Transcribed verbatim from the Instagram Profile Pack's logos/argantalab-core-mark.svg and profile-pictures/argantalab-profile-dark.svg (2026-07). Geometry is data so canvas and SVG render identically forever.",
+      "viewBox": 1080,
+      "gradients": {
+        "brand": {
+          "type": "linear",
+          "from": [0, 0],
+          "to": [1, 1],
+          "stops": [[0, "#34E5FF"], [0.38, "#4D9FFF"], [0.72, "#8B5CF6"], [1, "#FF5EA0"]]
+        },
+        "field": {
+          "type": "radial",
+          "cx": 0.5,
+          "cy": 0.42,
+          "r": 0.65,
+          "stops": [[0, "#161B32"], [0.55, "#0B0F19"], [1, "#05070C"]]
+        }
+      },
+      "variants": {
+        "core": [
+          { "kind": "roundRect", "x": 210, "y": 210, "w": 660, "h": 660, "r": 205, "fill": "@brand" },
+          { "kind": "roundRect", "x": 221, "y": 221, "w": 638, "h": 638, "r": 194, "stroke": "#FFFFFF", "strokeOpacity": 0.16, "strokeWidth": 4 },
+          { "kind": "group", "dx": 0, "dy": 8, "shapes": [
+            { "kind": "polygon", "points": [[540, 328], [724, 434], [540, 540], [356, 434]], "fill": "#FFFFFF", "fillOpacity": 0.22, "stroke": "#FFFFFF", "strokeWidth": 20, "strokeLinejoin": "round" },
+            { "kind": "polygon", "points": [[356, 434], [540, 540], [540, 748], [356, 642]], "fill": "#FFFFFF", "fillOpacity": 0.10, "stroke": "#FFFFFF", "strokeWidth": 20, "strokeLinejoin": "round" },
+            { "kind": "polygon", "points": [[540, 540], [724, 434], [724, 642], [540, 748]], "fill": "#FFFFFF", "fillOpacity": 0.16, "stroke": "#FFFFFF", "strokeWidth": 20, "strokeLinejoin": "round" },
+            { "kind": "line", "x1": 540, "y1": 328, "x2": 540, "y2": 540, "stroke": "#FFFFFF", "strokeOpacity": 0.82, "strokeWidth": 15 },
+            { "kind": "circle", "cx": 540, "cy": 540, "r": 34, "fill": "#FFFFFF" },
+            { "kind": "circle", "cx": 540, "cy": 540, "r": 13, "fill": "#8B5CF6" }
+          ] }
+        ],
+        "profile": [
+          { "kind": "roundRect", "x": 0, "y": 0, "w": 1080, "h": 1080, "r": 0, "fill": "@field" },
+          { "kind": "circle", "cx": 540, "cy": 540, "r": 392, "stroke": "@brand", "strokeWidth": 12, "strokeOpacity": 0.92 },
+          { "kind": "circle", "cx": 836, "cy": 285, "r": 28, "fill": "#F8FAFF" },
+          { "kind": "circle", "cx": 836, "cy": 285, "r": 11, "fill": "#8B5CF6" },
+          { "kind": "roundRect", "x": 210, "y": 210, "w": 660, "h": 660, "r": 205, "fill": "@brand" },
+          { "kind": "roundRect", "x": 221, "y": 221, "w": 638, "h": 638, "r": 194, "stroke": "#FFFFFF", "strokeOpacity": 0.16, "strokeWidth": 4 },
+          { "kind": "group", "dx": 0, "dy": 8, "shapes": [
+            { "kind": "polygon", "points": [[540, 328], [724, 434], [540, 540], [356, 434]], "fill": "#FFFFFF", "fillOpacity": 0.22, "stroke": "#FFFFFF", "strokeWidth": 20, "strokeLinejoin": "round" },
+            { "kind": "polygon", "points": [[356, 434], [540, 540], [540, 748], [356, 642]], "fill": "#FFFFFF", "fillOpacity": 0.10, "stroke": "#FFFFFF", "strokeWidth": 20, "strokeLinejoin": "round" },
+            { "kind": "polygon", "points": [[540, 540], [724, 434], [724, 642], [540, 748]], "fill": "#FFFFFF", "fillOpacity": 0.16, "stroke": "#FFFFFF", "strokeWidth": 20, "strokeLinejoin": "round" },
+            { "kind": "line", "x1": 540, "y1": 328, "x2": 540, "y2": 540, "stroke": "#FFFFFF", "strokeOpacity": 0.82, "strokeWidth": 15 },
+            { "kind": "circle", "cx": 540, "cy": 540, "r": 34, "fill": "#FFFFFF" },
+            { "kind": "circle", "cx": 540, "cy": 540, "r": 13, "fill": "#8B5CF6" }
+          ] }
+        ]
+      }
+    },
+
+    "palette": {
+      "bg": "#070A12",
+      "bgAlt": "#0B0F19",
+      "ink": "#F8FAFF",
+      "soft": "#AAB3C5",
+      "accent": "#8B5CF6",
+      "plateBg": "#FFC24B",
+      "plateInk": "#1b1500"
+    },
+    "accents": {
+      "coreBlue": "#4D9FFF",
+      "labPurple": "#8B5CF6",
+      "sparkPink": "#FF5EA0",
+      "signalCyan": "#34E5FF",
+      "growthGreen": "#3DE08A",
+      "questGold": "#FFC24B",
+      "panel": "#121826"
+    },
+    "fonts": {
+      "display": "Inter",
+      "body": "Inter",
+      "mono": "ui-monospace",
+      "embedded": []
+    },
+    "icons": { "style": "outline, 2px stroke, gradient ring container", "set": {} },
+    "motion": { "intro": null, "outro": null, "markAnimation": null },
+    "audio": { "sting": null, "durationMs": 2000 }
+  },
+
+  "kb": {
+    "brandMd": "brands/argantalab/BRAND.md",
+    "refs": [
+      "brands/argantalab/refs/profile-dark.png",
+      "brands/argantalab/refs/cover-start-here.png",
+      "brands/argantalab/refs/cover-kinquest.png",
+      "brands/argantalab/refs/cover-build-log.png",
+      "brands/argantalab/refs/highlight-play.png",
+      "brands/argantalab/refs/horizontal-dark.png"
+    ],
+    "prompts": {
+      "ad-hero": "brands/argantalab/prompts/ad-hero.md",
+      "reel-cover": "brands/argantalab/prompts/reel-cover.md",
+      "og-image": "brands/argantalab/prompts/og-image.md"
+    }
+  },
+
+  "presence": {
+    "instagram": {
+      "avatar": "brands/argantalab/refs/profile-dark.png",
+      "highlights": ["start", "play", "learn", "build", "ship", "updates"]
+    }
+  },
+
+  "content": {
+    "templates": {},
+    "captionFormula": null,
+    "adKit": { "meta": {}, "google": {}, "display": {} },
+    "ogTemplate": null
+  },
+
+  "discovery": {
+    "seo": {},
+    "schemaOrg": null,
+    "ogImage": null,
+    "factSheet": {},
+    "llmsTxt": null,
+    "keywords": []
+  },
+
+  "routing": {
+    "bufferChannelId": "6a57e00480cc80cdcabe68b3",
+    "momentSenderProfileId": null,
+    "siteUrl": "https://lab.arganta.app"
+  }
+}

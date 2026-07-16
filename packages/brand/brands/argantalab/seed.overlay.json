@@ -1,0 +1,72 @@
+{
+  "_note": "FOUNDER-LANE SEED — not a source of truth. migration_brand_registry.sql inserts this into brand_registry.overlay ONCE (on conflict do nothing). After that the DATABASE is authoritative and the founder edits it live in Brand Forge; this file is only the starting point, transcribed from the Instagram Profile Pack's docs/profile-copy.txt and docs/brand-guide.md. Indonesian copy is intentionally empty — BF-6 (Fable) writes it, and readiness() reports the gap honestly until then.",
+
+  "voice": {
+    "persona": {
+      "title": "The Lab",
+      "speaksAs": "The account speaks as The Lab, not as the founder's personal page.",
+      "adjectives": ["inventive", "slightly mysterious", "encouraging", "always building"],
+      "forbidden": [
+        "corporate buzzwords",
+        "fake traction",
+        "exaggerated safety claims",
+        "exaggerated learning claims",
+        "generic AI-agency voice"
+      ]
+    },
+    "languages": ["en", "id"],
+    "taglines": {
+      "en": "Play. Learn. Build. Ship."
+    },
+    "boilerplates": {
+      "en": {
+        "w25": "ArgantaLab is the kid-powered creation studio inside Arganta: play learning games, build with AI-assisted tools, and publish what you make.",
+        "w50": null,
+        "w100": null,
+        "w200": "ArgantaLab is the kid-powered creation studio inside Arganta. Children play learning games, explore six learning worlds, build games with AI-assisted tools, and publish what they make. KinQuest gives the experience a daily adventure loop, while the wider Arganta family system gives parents a trusted view of growth."
+      }
+    },
+    "pitches": {
+      "en": {
+        "parent": "Games that teach. Tools that let kids create. Play, learn, build, ship — inside the Arganta family OS.",
+        "kid": "A game studio you can actually use. Learn the skill. Build the game. Ship it.",
+        "investor": null,
+        "press": null
+      }
+    },
+    "pillars": [
+      { "id": "play", "label": "Play the world", "description": "KinQuest, games and characters.", "accent": "#4D9FFF", "icon": "gamepad" },
+      { "id": "learn", "label": "Learn the skill", "description": "Visible learning moments and challenges.", "accent": "#34E5FF", "icon": "book" },
+      { "id": "build", "label": "Build the thing", "description": "Creation process, prompts, tools and prototypes.", "accent": "#8B5CF6", "icon": "code" },
+      { "id": "ship", "label": "Ship the result", "description": "Published games, player reactions and weekly build logs.", "accent": "#FF5EA0", "icon": "rocket" }
+    ],
+    "hashtags": {},
+    "ctas": {
+      "en": ["Enter the Lab", "Ship your first game", "Built in the Lab", "Adventure becomes learning."]
+    },
+    "emojiPolicy": null,
+    "touchyRules": []
+  },
+
+  "presence": {
+    "instagram": {
+      "handle": "argantalab",
+      "name": "ArgantaLab · Play, Learn & Build",
+      "category": "Education",
+      "bio": "Kids play. Learn. Build. Ship. 🎮\nKinQuest + AI creation tools.\nPart of Arganta — the trusted family OS.\n↓ Enter the Lab",
+      "link": "https://lab.arganta.app",
+      "linkVerified": false,
+      "pinned": [
+        { "id": "start-here", "label": "Start Here — the Play → Learn → Build → Ship loop" },
+        { "id": "meet-kinquest", "label": "Meet KinQuest — the RPG that turns lessons into adventure" },
+        { "id": "what-parents-see", "label": "What Parents See — growth and creations, not raw screen time" }
+      ]
+    }
+  },
+
+  "spine": {
+    "rhythm": [],
+    "playbooks": {},
+    "toneCalendar": []
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@arganta/brand",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Brand OS contract — one BrandDoc per brand across 7 layers, with the two-lane rule enforced by storage itself: agent-lane (identity/KB/templates) lives in git, founder-lane (voice/spine/text) lives in Supabase, and the registry merges them. Every consumer — postEngine, Arganta Core, Buffer, Video Builder, media AIs — reads a brand instead of hard-coding one.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./brands/*": "./brands/*"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "sideEffects": false
+}

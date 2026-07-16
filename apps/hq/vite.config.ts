@@ -44,5 +44,8 @@ export default defineConfig({
     '@arganta/heroes-engine': path.resolve(__dirname, '../../packages/heroes-engine/src/index.js'),
     // Time-on-page tracker — the same beats every app sends; HQ tracks itself too.
     '@arganta/usage': path.resolve(__dirname, '../../packages/usage/src/index.js'),
+    // Brand OS: the BrandDoc contract + registry. postEngine, Arganta Core and
+    // Brand Forge all read a brand from here instead of hard-coding one.
+    '@arganta/brand': path.resolve(__dirname, '../../packages/brand/src/index.js'),
   } },
 })
