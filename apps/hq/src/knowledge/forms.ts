@@ -134,43 +134,64 @@ function constellation(model: KModel, out: Float32Array, p: FormParams) {
     const a = model.index.get(e.a), b = model.index.get(e.b)
     if (a != null && b != null) { ea.push(a); eb.push(b) }
   }
-  const ITER = 90, REP = 42, SPRING = 0.02, IDEAL = 6, COH = 0.006, CENTER = 0.004
+  // Degree per node so the many-edged Command hub doesn't drag its whole
+  // neighbourhood into one crushed point (springs are divided by a node's
+  // degree, and repulsion scales up with it — classic hub stabilisation).
+  const deg = new Float32Array(N)
+  for (let k = 0; k < ea.length; k++) { deg[ea[k]]++; deg[eb[k]]++ }
+  const ITER = 120, REP = 26, SPRING = 0.05, IDEAL = 7, COH = 0.004, CENTER = 0.006, MAXSTEP = 3
   const dx = new Float32Array(N), dy = new Float32Array(N), dz = new Float32Array(N)
   for (let it = 0; it < ITER; it++) {
     dx.fill(0); dy.fill(0); dz.fill(0)
-    const cool = 1 - it / ITER
-    // repulsion (all pairs — fine for a few hundred nodes)
+    const cool = (1 - it / ITER) * 0.85
+    // repulsion (all pairs — fine for a few hundred nodes); hubs push harder
     for (let i = 0; i < N; i++) {
       for (let j = i + 1; j < N; j++) {
         let vx = px[i] - px[j], vy = py[i] - py[j], vz = pz[i] - pz[j]
-        let d2 = vx * vx + vy * vy + vz * vz; if (d2 < 0.01) { vx = (h('r' + i + j) - 0.5); d2 = 0.01 }
-        const f = REP / d2, inv = 1 / Math.sqrt(d2)
+        let d2 = vx * vx + vy * vy + vz * vz
+        if (d2 < 0.25) { vx += h('r' + i + '_' + j) - 0.5; vy += h('s' + i + '_' + j) - 0.5; vz += h('t' + i + '_' + j) - 0.5; d2 = 0.25 }
+        const f = REP * (1 + deg[i] * 0.05 + deg[j] * 0.05) / d2, inv = 1 / Math.sqrt(d2)
         vx *= inv * f; vy *= inv * f; vz *= inv * f
         dx[i] += vx; dy[i] += vy; dz[i] += vz; dx[j] -= vx; dy[j] -= vy; dz[j] -= vz
       }
     }
-    // edge springs toward the ideal link length
+    // edge springs toward the ideal length — normalised by degree so a hub's
+    // many springs don't sum into a collapse
     for (let k = 0; k < ea.length; k++) {
       const i = ea[k], j = eb[k]
       const vx = px[j] - px[i], vy = py[j] - py[i], vz = pz[j] - pz[i]
       const d = Math.sqrt(vx * vx + vy * vy + vz * vz) || 1
       const f = (d - IDEAL) * SPRING
       const ux = vx / d * f, uy = vy / d * f, uz = vz / d * f
-      dx[i] += ux; dy[i] += uy; dz[i] += uz; dx[j] -= ux; dy[j] -= uy; dz[j] -= uz
+      const wi = 1 / (1 + deg[i] * 0.5), wj = 1 / (1 + deg[j] * 0.5)
+      dx[i] += ux * wi; dy[i] += uy * wi; dz[i] += uz * wi
+      dx[j] -= ux * wj; dy[j] -= uy * wj; dz[j] -= uz * wj
     }
-    // per-region cohesion + weak centering
+    // per-region cohesion + weak centering, then a CLAMPED step so nothing
+    // ever explodes (the wild ±700 flings) or crushes to a point
     for (let i = 0; i < N; i++) {
       const c = cen[region[i]]
       dx[i] += (c[0] - px[i]) * COH - px[i] * CENTER
       dy[i] += (c[1] - py[i]) * COH - py[i] * CENTER
       dz[i] += (c[2] - pz[i]) * COH - pz[i] * CENTER
-      px[i] += dx[i] * cool; py[i] += dy[i] * cool; pz[i] += dz[i] * cool
+      let sx = dx[i] * cool, sy = dy[i] * cool, sz = dz[i] * cool
+      const sm = Math.sqrt(sx * sx + sy * sy + sz * sz)
+      if (sm > MAXSTEP) { const s = MAXSTEP / sm; sx *= s; sy *= s; sz *= s }
+      px[i] += sx; py[i] += sy; pz[i] += sz
     }
   }
+  // recenter + normalise to a fixed radius so the graph ALWAYS fills the view
+  // the same way, whatever the forces settled to (no off-screen / tiny blobs)
+  let cx = 0, cy = 0, cz = 0
+  for (let i = 0; i < N; i++) { cx += px[i]; cy += py[i]; cz += pz[i] }
+  cx /= N; cy /= N; cz /= N
+  let maxr = 0.001
+  for (let i = 0; i < N; i++) { const r = Math.hypot(px[i] - cx, py[i] - cy, pz[i] - cz); if (r > maxr) maxr = r }
+  const norm = (13 * p.spread) / maxr
   for (let i = 0; i < N; i++) {
-    out[i * 3] = px[i] * p.spread
-    out[i * 3 + 1] = py[i] * p.spread * p.squash
-    out[i * 3 + 2] = pz[i] * p.spread
+    out[i * 3] = (px[i] - cx) * norm
+    out[i * 3 + 1] = (py[i] - cy) * norm * p.squash
+    out[i * 3 + 2] = (pz[i] - cz) * norm
   }
 }
 

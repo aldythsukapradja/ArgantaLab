@@ -201,7 +201,12 @@ function CorticalTissue({ tissue, th }: { tissue: { positions: Float32Array; reg
 const bez = (a: number, c: number, b: number, t: number) => { const it = 1 - t; return it * it * a + 2 * it * t * c + t * t * b }
 function control(a: THREE.Vector3, b: THREE.Vector3): THREE.Vector3 {
   const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, mz = (a.z + b.z) / 2
-  const len = a.distanceTo(b); const out = Math.hypot(mx, mz) || 1
+  const len = a.distanceTo(b)
+  // The big upward dome is the brain's axon arc over the cortex — for the flat
+  // graph forms (constellation/galaxy/etc.) that turns into wild sky-high arcs,
+  // so only bow the edges gently there.
+  if (FIELD.form !== 'brain') return new THREE.Vector3(mx, my + len * 0.05, mz)
+  const out = Math.hypot(mx, mz) || 1
   return new THREE.Vector3(mx + (mx / out) * len * 0.12, my + len * 0.3 + 0.6, mz + (mz / out) * len * 0.12)
 }
 function Axons({ model, th }: { model: KModel; th: Theme }) {
