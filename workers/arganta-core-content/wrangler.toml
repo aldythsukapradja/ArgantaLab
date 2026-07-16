@@ -1,0 +1,34 @@
+name = "arganta-core-content"
+main = "src/index.js"
+compatibility_date = "2026-07-15"
+
+# Arganta Core Content Engine — POST /v1/generate, powered by Cloudflare
+# Workers AI. Generates carousel copy (text model -> strict JSON) and still
+# images (SDXL -> PNG) for HQ's Content & Video Builders. Separate Worker from
+# build-artifact-runtime; no Supabase binding (HQ owns persistence).
+#
+# FOUNDER PREREQUISITES before this goes live:
+#   1. Enable Workers AI on this Cloudflare account.
+#   2. `wrangler secret put CORE_TOKEN`  — shared bearer the HQ client sends.
+#   3. `wrangler deploy` from this directory.
+#   4. Point HQ at it: set VITE_ARGANTA_CORE_URL (+ token) in apps/hq env.
+#   5. (optional) add a route/custom domain, e.g. core.arganta.app, mirroring
+#      build-artifact-runtime's route block.
+
+# Workers AI binding — env.AI.run(model, input) in src/index.js.
+[ai]
+binding = "AI"
+
+[vars]
+# Overridable model picks. Text must be an instruct chat model; image must
+# accept width/height (SDXL). Swap without a code change.
+TEXT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"
+IMAGE_MODEL = "@cf/bytedance/stable-diffusion-xl-lightning"
+# CORS allowlist (comma-separated) for NON-local origins. Any localhost /
+# 127.0.0.1 origin is allowed automatically at ANY port (see isLocalhostOrigin
+# in router.js) because Vite's autoPort bumps the dev port around — so only
+# production origins need listing here.
+ALLOWED_ORIGINS = "https://hq.arganta.app"
+
+# CORE_TOKEN is a secret, NOT a var — set via `wrangler secret put CORE_TOKEN`.
+# When unset (local `wrangler dev`), the Worker skips auth so it's frictionless.

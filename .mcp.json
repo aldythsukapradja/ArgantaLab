@@ -6,6 +6,10 @@
       "headers": {
         "Authorization": "Bearer ${PIXELLAB_TOKEN}"
       }
+    },
+    "arganta-core-content": {
+      "command": "npx",
+      "args": ["tsx", "tools/arganta-core-mcp/src/server.ts"]
     }
   }
 }

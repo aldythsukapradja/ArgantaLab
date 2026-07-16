@@ -1,0 +1,15 @@
+{
+  "name": "arganta-core-content",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Arganta Core Content Engine — Cloudflare Worker generating carousel copy + still images (Workers AI) for HQ's Content & Video Builders.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

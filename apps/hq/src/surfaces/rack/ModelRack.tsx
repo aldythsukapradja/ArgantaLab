@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MODEL_REGISTRY_CATALOG, COST_LABEL, rollupBenchmarks } from '@arganta/ai'
 import { getSessionRuns } from '../../lib/ai'
 import { getNeuronQuota, type NeuronQuota } from '../../lib/mediaGateway'
+import { getCoreQuota, coreEnabled, type CoreQuota } from '../../lib/argantaCoreClient'
 import { mediaAssetPublicUrl } from '../../lib/mediaAssets'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import './rack.css'
@@ -83,12 +84,20 @@ const QUOTA_ERROR_LABEL: Record<string, string> = {
   no_data: 'no data yet',
 }
 
+// Gemini (the Sponsored chat brain) exposes NO live remaining-quota API, so —
+// unlike the Cloudflare neuron gauge (real GraphQL analytics) — this cap is
+// Google's published free-tier requests/day for Flash, an ESTIMATE that drifts
+// over time. The USAGE number is real: it's counted from the truthful run
+// ledger. Kept as a named constant so it's a one-line edit when Google changes it.
+const GEMINI_FREE_RPD_EST = 250
+
 export function ModelRack() {
   const [sessionRuns, setSessionRuns] = useState(() => getSessionRuns())
   const [liveRuns, setLiveRuns] = useState<Run[]>([])
   const [liveCapo, setLiveCapo] = useState<any>(null)
   const [assets, setAssets] = useState<Asset[]>([])
   const [quota, setQuota] = useState<NeuronQuota | null>(null)
+  const [coreQuota, setCoreQuota] = useState<CoreQuota | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
@@ -114,6 +123,15 @@ export function ModelRack() {
       setAssets((assetRows as Asset[]) || [])
       setQuota(q)
     })()
+    return () => { cancelled = true }
+  }, [tick])
+
+  // Arganta Core quota — independent of Supabase (the Worker itself is the
+  // dependency), so this polls regardless of cloudEnabled.
+  useEffect(() => {
+    if (!coreEnabled) return
+    let cancelled = false
+    getCoreQuota().then(q => { if (!cancelled) setCoreQuota(q) })
     return () => { cancelled = true }
   }, [tick])
 
@@ -149,6 +167,12 @@ export function ModelRack() {
   const spend = liveCapo?.cost_usd ?? allRuns.reduce((s, r) => s + (r.costUsd || 0), 0)
   const frontierCalls = allRuns.filter((r) => r.costClass === 3).length
 
+  // Gemini requests seen in the ledger today (real count vs an estimated cap).
+  const geminiToday = useMemo(() => {
+    const today = new Date().toDateString()
+    return allRuns.filter((r) => (r.model || '').toLowerCase().includes('gemini') && new Date(r.at).toDateString() === today).length
+  }, [allRuns])
+
   const selectedRun = allRuns.find((r) => r.id === selectedId) || null
   const selectedAsset = selectedId ? assetByRunId.get(selectedId) || null : null
 
@@ -182,6 +206,17 @@ export function ModelRack() {
               )}
             </div>
           )}
+          {coreQuota && (
+            <div className="kpi" title={coreQuota.note || 'Arganta Core (Cloudflare Workers AI) free-tier allowance'}>
+              <b className={coreQuota.estimated ? 'kpi-dim' : ''}>{coreQuota.freePerDay.toLocaleString()}</b>
+              <i>Arganta Core · {coreQuota.estimated ? 'est. daily cap' : 'neurons/day'}</i>
+            </div>
+          )}
+          <div className="kpi" title={`Gemini (the chat brain) requests seen in the run ledger today, vs Google's published free-tier requests/day for Flash (≈${GEMINI_FREE_RPD_EST}/day). The usage count is real; the cap is an estimate — Gemini exposes no live remaining-quota API.`}>
+            <b>{geminiToday}<span className="kpi-of"> / {GEMINI_FREE_RPD_EST.toLocaleString()}</span></b>
+            <i>Gemini · today <span className="kpi-dim">est.</span></i>
+            <div className="kpi-bar"><span style={{ width: `${Math.min(100, Math.round((geminiToday / GEMINI_FREE_RPD_EST) * 100))}%` }} /></div>
+          </div>
           {!cloudEnabled && <span className="rack-offline">offline preview — session-only</span>}
           {cloudEnabled && <button className="rack-refresh" onClick={() => setTick((t) => t + 1)}>↻ refresh</button>}
         </div>

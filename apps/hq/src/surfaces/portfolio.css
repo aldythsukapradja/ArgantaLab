@@ -356,11 +356,11 @@
   .pf-inspector-modes button, .pf-inspector-modes button::after, .pf-live-loading { transition: none; }
 }
 
-/* ── responsive composition ──────────────────────────────────────────── */
+/* ── responsive composition (surface — reads the `portfolio` container,
+   i.e. the width of the page content column) ──────────────────────────── */
 @container portfolio (max-width: 1380px) {
   .pf-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .pf-product-card { min-height: 310px; }
-  .pf-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @container portfolio (max-width: 1120px) {
   .pf-header { grid-template-columns: 1fr; gap: 20px; }
@@ -369,15 +369,9 @@
   .pf-inputs { margin-top: 8px; }
   .pf-command-grid { grid-template-columns: 1fr; }
   .pf-founder-note { margin-top: 12px; }
-  .pf-detail-layout { grid-template-columns: 1fr; }
-  .pf-modal-backdrop .pf-detail.view-overview .pf-detail-layout { grid-template-columns: 1fr; overflow-y: auto; }
-  .pf-modal-backdrop .pf-detail.view-overview .pf-detail-main, .pf-modal-backdrop .pf-detail.view-overview .pf-signals { height: auto; overflow: visible; }
-  .pf-signals { padding: 17px 0 0; border-left: 0; border-top: 1px solid var(--bd); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
-  .pf-signals > .pf-subhead { grid-column: 1 / -1; }
 }
 @container portfolio (max-width: 900px) {
   .pf-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pf-detail.view-overview .pf-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @container portfolio (max-width: 620px) {
   .pf-shell { gap: 14px; }
@@ -392,7 +386,7 @@
   .pf-period button { min-height: 38px; }
   .pf-refresh { position: static; order: 3; }
   .pf-inputs { grid-template-columns: 1fr 1fr; }
-  .pf-attention, .pf-founder, .pf-detail { padding: 17px; border-radius: 14px; }
+  .pf-attention, .pf-founder { padding: 17px; border-radius: 14px; }
   .pf-section-head { display: block; }
   .pf-attention-total { margin-top: 12px; text-align: left; }
   .pf-scope { flex-wrap: nowrap; overflow-x: auto; margin-right: -17px; padding-right: 17px; scrollbar-width: none; }
@@ -403,33 +397,55 @@
   .pf-section-head.inline > p { margin-top: 5px; }
   .pf-product-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 12px 0 0; padding: 0; overflow: visible; }
   .pf-product-card { width: 100%; min-height: 0; height: auto; }
-  .pf-detail-head { grid-template-columns: minmax(0, 1fr) auto; align-items: flex-start; gap: 10px; }
-  .pf-detail-head > .pf-health { display: none; }
-  .pf-inspector-modes { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
-  .pf-inspector-modes button { width: 100%; }
-  .pf-detail.view-overview .pf-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pf-detail-charts { grid-template-columns: 1fr; }
-  .pf-signals { grid-template-columns: 1fr; }
-  .pf-signals > .pf-subhead { grid-column: auto; }
 }
 @container portfolio (max-width: 390px) {
   .pf-inputs { grid-template-columns: 1fr; }
   .pf-inputs > div { min-height: 38px; }
   .pf-headline-row h1 { font-size: 17px; }
-  .pf-metric-grid { grid-template-columns: 1fr 1fr; }
-  .pf-metric { min-height: 92px; }
 }
-
 @container portfolio (max-width: 1180px) {
   .pf-attention-visuals { height: auto; min-height: 0; grid-template-columns: 1fr; }
   .pf-donut-panel, .pf-bars-panel { min-height: 238px; }
   .pf-donut-panel { grid-template-columns: 170px minmax(0, 1fr); }
-  .pf-modal-backdrop .pf-detail { width: 94vw; height: 92vh; max-height: 92vh; }
-  .pf-live-stage { height: clamp(500px, 66vh, 640px); }
 }
 @container portfolio (max-width: 620px) {
   .pf-attention-visuals { gap: 10px; }
   .pf-donut-panel { align-items: stretch; }
+}
+
+/* ── product inspector modal — position:fixed, sized in vw/vh, so its
+   breakpoints must read the real viewport (@media). The `portfolio`
+   container above measures the page content column, which is a different
+   width than this modal; using @container portfolio here (as before) picks
+   the wrong breakpoint whenever the two widths diverge, and was the root
+   cause of the overlapping layout at reduced widths. `.pf-metric-grid`
+   overrides use the fully-qualified `.pf-detail.view-overview` selector to
+   match the specificity of its unconditional 6-column base rule (line
+   ~287); a bare `.pf-metric-grid` override here would silently lose to it. */
+@media (max-width: 1180px) {
+  .pf-modal-backdrop .pf-detail { width: 94vw; height: 92vh; max-height: 92vh; }
+  .pf-live-stage { height: clamp(500px, 66vh, 640px); }
+}
+@media (max-width: 1120px) {
+  .pf-modal-backdrop .pf-detail.view-overview .pf-detail-layout { grid-template-columns: 1fr; overflow-y: auto; }
+  .pf-modal-backdrop .pf-detail.view-overview .pf-detail-main,
+  .pf-modal-backdrop .pf-detail.view-overview .pf-signals { height: auto; overflow: visible; }
+  .pf-signals { padding: 17px 0 0; border-left: 0; border-top: 1px solid var(--bd); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+  .pf-signals > .pf-subhead { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+  .pf-detail.view-overview .pf-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .pf-detail { padding: 17px; border-radius: 14px; }
+  .pf-detail-head { grid-template-columns: minmax(0, 1fr) auto; align-items: flex-start; gap: 10px; }
+  .pf-detail-head > .pf-health { display: none; }
+  .pf-inspector-modes { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .pf-inspector-modes button { width: 100%; min-height: 36px; padding-inline: 10px; }
+  .pf-detail.view-overview .pf-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-detail-charts { grid-template-columns: 1fr; }
+  .pf-signals { grid-template-columns: 1fr; }
+  .pf-signals > .pf-subhead { grid-column: auto; }
   .pf-modal-backdrop { padding: 0; }
   .pf-modal-backdrop .pf-detail { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; border: 0; padding: 15px 14px calc(18px + env(safe-area-inset-bottom)); }
   .pf-modal-backdrop .pf-detail-layout { display: block; overflow-y: auto; }
@@ -438,13 +454,16 @@
   .pf-live-preview { padding: 10px; }
   .pf-live-toolbar { align-items: center; flex-direction: row; gap: 9px; }
   .pf-live-tools { width: auto; margin-left: auto; }
-  .pf-inspector-modes button { min-height: 36px; padding-inline: 10px; }
   .pf-live-stage { height: clamp(460px, 70dvh, 620px); }
   .pf-modal-backdrop .pf-detail-layout-live { overflow: hidden; }
   .pf-live-caption { font-size: 9px; }
   .pf-intelligence-grid { grid-template-columns: 1fr; }
   .pf-valuation-hero { grid-template-columns: 1fr; }
   .pf-method { grid-template-columns: 94px minmax(60px,1fr) 78px; }
+}
+@media (max-width: 390px) {
+  .pf-detail.view-overview .pf-metric-grid { grid-template-columns: 1fr 1fr; }
+  .pf-metric { min-height: 92px; }
 }
 
 /* The page shell, unlike the Portfolio container, owns outer padding. */

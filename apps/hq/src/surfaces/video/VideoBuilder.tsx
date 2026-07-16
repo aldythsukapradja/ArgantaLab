@@ -10,7 +10,10 @@ import { storyboardMessages, coerceStoryboard, STORYBOARD_SCHEMA } from '@argant
 import { DEFAULT_SFX_RECIPES, createMasterChain, playRecipe } from '@arganta/audio'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { ai, aiLive } from '../../lib/ai'
-import { Play, Pause, Plus, Eye, EyeOff, Trash2, ChevronUp, ChevronDown, Mic, Music2, Film, Download, Layers, Upload, Cloud, Sparkles, Wand2, X, Send } from 'lucide-react'
+import { generateCopy, generateImage, coreEnabled, extForImageMime } from '../../lib/argantaCoreClient'
+import { listPublishableCircles, publishMoment, type PublishCircle } from '../../lib/momentPublish'
+import { listBufferChannels, publishVideoToBuffer, bufferEnabled, type BufferChannel, type BufferMode } from '../../lib/bufferClient'
+import { Play, Pause, Plus, Eye, EyeOff, Trash2, ChevronUp, ChevronDown, Mic, Music2, Film, Download, Layers, Upload, Cloud, Sparkles, X, Send, Heart, Users, Instagram } from 'lucide-react'
 import './video.css'
 
 // cinematic first — GSAP-choreographed; the rest are the simple built-ins
@@ -41,7 +44,22 @@ export function VideoBuilder() {
   const [selId, setSelId] = useState<string | null>(null)
   const [voiceText, setVoiceText] = useState('Three things your family calendar quietly nailed this week. And the third one is huge.')
   const [voiceId, setVoiceId] = useState('narrator')
-  const [busy, setBusy] = useState<'' | 'voice' | 'export'>('')
+  const [busy, setBusy] = useState<'' | 'voice' | 'export' | 'moment' | 'buffer'>('')
+  // Kinetik moment publishing (S4 — reuses momentPublish.ts, same as Post Studio's O4)
+  const [momentOpen, setMomentOpen] = useState(false)
+  const [circles, setCircles] = useState<PublishCircle[]>([])
+  const [circleId, setCircleId] = useState('')
+  const [circlesLoaded, setCirclesLoaded] = useState(false)
+  const [lastRender, setLastRender] = useState<{ blob: Blob; ext: string; publicUrl: string | null } | null>(null)
+  const [published, setPublished] = useState<string | null>(null)   // success-modal circle name
+  // BF3: publish the exported video to Buffer -> Instagram
+  const [bufferOpen, setBufferOpen] = useState(false)
+  const [bufChannels, setBufChannels] = useState<BufferChannel[]>([])
+  const [bufChannelId, setBufChannelId] = useState('')
+  const [bufChannelsLoaded, setBufChannelsLoaded] = useState(false)
+  const [bufMode, setBufMode] = useState<BufferMode>('addToQueue')
+  const [bufferDone, setBufferDone] = useState<{ channel: string; mode: BufferMode } | null>(null)
+  const [bufferError, setBufferError] = useState<string | null>(null)
   const [exportPct, setExportPct] = useState(0)
   const [status, setStatus] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
@@ -56,8 +74,9 @@ export function VideoBuilder() {
   const [dirPrompt, setDirPrompt] = useState('')
   const [dirBusy, setDirBusy] = useState(false)
   const [dirMsgs, setDirMsgs] = useState<{ role: 'user' | 'agent'; text: string }[]>([
-    { role: 'agent', text: 'Describe a video — “a 30s reel about our family calendar app, upbeat, 3 scenes”. I’ll build it; you edit anything below.' },
+    { role: 'agent', text: 'I’m **Arganta Core**. Describe a video — “a 30s reel about our family calendar app, upbeat, 3 scenes”. I’ll write the script, generate scene backgrounds, and build it; you edit anything below.' },
   ])
+  const [genImages, setGenImages] = useState(coreEnabled)
 
   const projectRef = useRef(project); useEffect(() => { projectRef.current = project }, [project])
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -220,15 +239,44 @@ export function VideoBuilder() {
     } catch (e: any) { setStatus('Voice failed: ' + (e?.message || e)) } finally { setBusy('') }
   }
 
-  // ---- Director: prompt → storyboard → editable project ----
-  async function runDirector(prompt: string) {
+  // ---- Arganta Core: prompt → script → editable project ----
+  // Video formats (short/reel/square/long) don't map 1:1 to Post Formats, but the
+  // palette vocab overlaps (dusk/mint/grape/ember/ocean exist in both) — reused
+  // directly. Maps the SAME copy schema Post Studio uses (slides → scenes) so
+  // this reuses O1–O5 with zero new worker endpoint.
+  function copyToStoryboard(copy: any, prompt: string, currentFormat: string) {
+    const format = /reel/i.test(prompt) ? 'reel' : /long|minute|explainer/i.test(prompt) ? 'long' : /square|feed|1:1/i.test(prompt) ? 'square' : currentFormat || 'short'
+    const palette = PALETTES.some((p: any) => p.id === copy.palette) ? copy.palette : 'dusk'
+    const scenes = (copy.slides || []).map((s: any, i: number) => ({
+      text: [s.headline, s.body].filter(Boolean).join('\n').trim() || ' ',
+      anim: i === 0 ? 'cascade' : 'cinematic',
+      durationSec: 3,
+      imagePrompt: s.imagePrompt,
+    })).filter((s: any) => s.text.trim())
+    return {
+      format, palette,
+      fx: { camera: true, grain: true, vignette: true, sweep: true, letterbox: format === 'long' },
+      scenes: scenes.length ? scenes : [{ text: prompt || 'Your video.', anim: 'cascade', durationSec: 3 }],
+      voiceScript: (copy.caption || prompt || 'Your video.').replace(/#[^\s#]+/g, '').trim(),
+      voiceId: 'narrator',
+      sfx: [{ cue: 'whoosh', atSec: 0 }],
+    }
+  }
+
+  async function runCore(prompt: string) {
     if (!prompt.trim() || dirBusy) return
     setDirBusy(true); setDirPrompt('')
     setDirMsgs((m) => [...m, { role: 'user', text: prompt }])
     try {
-      const r = await ai.chatJSON({ task: 'storyboard', schema: STORYBOARD_SCHEMA, messages: storyboardMessages(prompt) })
-      const useLocal = r.provider === 'mock' || !r.json || !Array.isArray(r.json.scenes) || r.json.scenes.length === 0
-      const sb = coerceStoryboard(useLocal ? localStoryboard(prompt) : r.json, { prompt })
+      const core = coreEnabled ? await generateCopy(prompt, { platform: 'instagram', wantImages: genImages }) : null
+      let sb: any
+      if (core && core.usable) {
+        sb = copyToStoryboard(core.copy, prompt, project.format.id)
+      } else {
+        const r = await ai.chatJSON({ task: 'storyboard', schema: STORYBOARD_SCHEMA, messages: storyboardMessages(prompt) })
+        const useLocal = r.provider === 'mock' || !r.json || !Array.isArray(r.json.scenes) || r.json.scenes.length === 0
+        sb = coerceStoryboard(useLocal ? localStoryboard(prompt) : r.json, { prompt })
+      }
       let proj = storyboardToProject(sb)
       let dur = 0
       try { const v = await voiceIntoProject(proj, sb.voiceScript, sb.voiceId); proj = v.p; dur = v.duration } catch { /* voice optional */ }
@@ -239,10 +287,44 @@ export function VideoBuilder() {
       recomputeDuration(proj)
       playheadRef.current = 0; setProject(proj); setSelId(null)
       setVoiceText(sb.voiceScript); setVoiceId(sb.voiceId)
-      const via = useLocal ? (aiLive ? 'local draft — model returned nothing usable' : 'local draft — connect a model for sharper copy') : 'AI · ' + r.provider
+      const via = core && core.usable ? `Arganta Core · ${core.provenance.model.replace(/^@cf\//, '')}` : (aiLive ? 'local draft — model returned nothing usable' : 'local draft — connect Arganta Core for images + sharper copy')
       const scn = sb.scenes.filter((s: any) => (s.text || '').trim()).length
-      setDirMsgs((m) => [...m, { role: 'agent', text: `Built a **${sb.format}** · ${scn} scenes · ${dur ? dur.toFixed(1) + 's' : 'no voice'} · palette ${sb.palette}. Voice + captions added — edit anything below. _(${via})_` }])
+      setDirMsgs((m) => [...m, { role: 'agent', text: `Built a **${sb.format}** · ${scn} scenes · ${dur ? dur.toFixed(1) + 's' : 'no voice'} · palette ${sb.palette}. Voice + captions added — edit anything below. _(${via})_${genImages && core?.usable ? ' Generating scene backgrounds…' : ''}` }])
+      if (genImages && core && core.usable) {
+        const prompts = (core.copy.slides || []).map((s: any) => s.imagePrompt || '')
+        await generateSceneImages(sb, prompts)
+      }
     } catch (e: any) { setDirMsgs((m) => [...m, { role: 'agent', text: 'Failed: ' + (e?.message || e) }]) } finally { setDirBusy(false) }
+  }
+
+  // Generate one background image per scene (best-effort) and place it as an
+  // image layer spanning that scene's start/duration — under text, above bg.
+  async function generateSceneImages(sb: any, prompts: string[]) {
+    let t = 0; let done = 0
+    for (let i = 0; i < sb.scenes.length; i++) {
+      const scene = sb.scenes[i]; const start = t; t += scene.durationSec || 3
+      const prompt = prompts[i]
+      if (!prompt) continue
+      try {
+        const img = await generateImage({ prompt, format: 'portrait', palette: sb.palette })
+        if (!img) continue
+        let url = URL.createObjectURL(img.blob)
+        if (cloudEnabled) {
+          try {
+            const file = new File([img.blob], `core-${Date.now().toString(36)}.${extForImageMime(img.blob.type)}`, { type: img.blob.type })
+            const a = await uploadAsset(supabase, file, { kind: 'image', width: img.width, height: img.height })
+            url = a.url
+          } catch { /* keep object URL */ }
+        }
+        const el = await loadImage(url)
+        if (!el) continue
+        const layer = imageLayer(el, url, { name: 'Arganta Core', dur: scene.durationSec || 3, start })
+        update((p: any) => { const bgIdx = p.layers.findIndex((l: any) => l.type === 'background'); p.layers.splice(bgIdx + 1, 0, layer) })
+        done++
+      } catch { /* one scene failing never blocks the rest */ }
+    }
+    if (cloudEnabled) refreshAssets()
+    setDirMsgs((m) => [...m, { role: 'agent', text: done ? `Generated **${done} scene background${done > 1 ? 's' : ''}**.` : 'No scene images this time — the script is ready; add photos below.' }])
   }
   async function playVoiceOnly() {
     const clip = project.audio.find((a: any) => a.kind === 'voice'); if (!clip) return
@@ -260,10 +342,68 @@ export function VideoBuilder() {
     try {
       const { blob, ext, duration } = await exportVideo(projectRef.current, { onProgress: setExportPct })
       const name = `video-forge-${Date.now()}.${ext}`; downloadBlob(blob, name)
-      let extra = ''
-      if (cloudEnabled) { try { const { url } = await saveRender(supabase, blob, { name: 'video-forge', ext, duration }); extra = ' · saved to Supabase' + (url ? ' ✓' : ''); refreshAssets() } catch { extra = ' · (Supabase save failed)' } }
+      let extra = '', publicUrl: string | null = null
+      // video-renders is a PUBLIC bucket (migration_video_assets.sql) — the same
+      // upload Buffer needs a reachable URL for, so one save covers both.
+      if (cloudEnabled) { try { const { url } = await saveRender(supabase, blob, { name: 'video-forge', ext, duration }); publicUrl = url || null; extra = ' · saved to Supabase' + (url ? ' ✓' : ''); refreshAssets() } catch { extra = ' · (Supabase save failed)' } }
+      setLastRender({ blob, ext, publicUrl })
       setStatus(`Exported ${name} · ${duration.toFixed(1)}s · ${(blob.size / 1024).toFixed(0)} KB${extra}`)
     } catch (e: any) { setStatus('Export failed: ' + (e?.message || e)) } finally { setBusy(''); setExportPct(0) }
+  }
+
+  // ---- S4: publish the last export as a Kinetik Moment (reuses momentPublish.ts) ----
+  async function openMomentPicker() {
+    if (!cloudEnabled) { setStatus('Connect Supabase & sign in as a circle member to publish moments.'); return }
+    if (!lastRender) { setStatus('Export the video first — Publish sends the last render.'); return }
+    setMomentOpen(o => !o)
+    if (!circlesLoaded) {
+      const list = await listPublishableCircles(supabase)
+      setCircles(list); setCirclesLoaded(true)
+      if (list.length && !circleId) setCircleId(list[0].id)
+    }
+  }
+
+  async function doPublishMoment() {
+    if (!circleId || !lastRender) return
+    setBusy('moment')
+    try {
+      const id = await publishMoment(supabase, {
+        circleId,
+        media: [{ blob: lastRender.blob, kind: 'video', ext: lastRender.ext }],
+        body: (voiceText || '').trim(),
+        kind: 'video',
+      })
+      setMomentOpen(false)
+      if (id) { setPublished(circles.find(c => c.id === circleId)?.name || 'the circle'); setStatus('') }
+      else setStatus('Publish returned no id — check you’re a member of that circle.')
+    } catch (e: any) { setStatus('Publish failed: ' + (e?.message || e)) } finally { setBusy('') }
+  }
+
+  // ---- BF3: publish the exported video to Buffer -> Instagram ----
+  async function openBufferPicker() {
+    if (!lastRender) { setStatus('Export the video first — Buffer sends the last render.'); return }
+    if (!lastRender.publicUrl) { setStatus('Connect Supabase — Buffer needs the render on a public URL.'); return }
+    if (lastRender.ext !== 'mp4') { setStatus('This browser exported .webm, not .mp4 — Instagram requires MP4. Try exporting from Chrome.'); return }
+    setBufferOpen(o => !o)
+    if (!bufChannelsLoaded) {
+      const list = await listBufferChannels()
+      setBufChannels(list); setBufChannelsLoaded(true)
+      const ig = list.find(c => c.service === 'instagram') || list[0]
+      if (ig && !bufChannelId) setBufChannelId(ig.id)
+    }
+  }
+
+  async function doPublishBuffer() {
+    if (!bufChannelId || !lastRender?.publicUrl) return
+    setBusy('buffer')
+    try {
+      const r = await publishVideoToBuffer({ channelId: bufChannelId, text: (voiceText || '').trim(), videoUrl: lastRender.publicUrl, mode: bufMode, channelService: bufChannels.find(c => c.id === bufChannelId)?.service })
+      setBufferOpen(false)
+      setBufferDone({ channel: bufChannels.find(c => c.id === bufChannelId)?.name || 'Instagram', mode: r.mode })
+    } catch (e: any) {
+      setBufferOpen(false)
+      setBufferError(e?.message || String(e))
+    } finally { setBusy('') }
   }
 
   // ---- timeline model ----
@@ -299,6 +439,41 @@ export function VideoBuilder() {
 
   return (
     <div className="vbx">
+      {published && (
+        <div className="vbx-modal-backdrop" onClick={() => setPublished(null)}>
+          <div className="vbx-modal" onClick={e => e.stopPropagation()}>
+            <div className="vbx-modal-icon"><Heart size={28} /></div>
+            <h3>Published to {published} 🎉</h3>
+            <p>Your video is now live in <b>KinetikCircle → Remember</b>. Family members will see it in the feed.</p>
+            <button className="vbx-modal-btn" onClick={() => setPublished(null)}>Done</button>
+          </div>
+        </div>
+      )}
+
+      {bufferDone && (
+        <div className="vbx-modal-backdrop" onClick={() => setBufferDone(null)}>
+          <div className="vbx-modal" onClick={e => e.stopPropagation()}>
+            <div className="vbx-modal-icon vbx-modal-icon--ig"><Instagram size={28} /></div>
+            <h3>{bufferDone.mode === 'shareNow' ? 'Published to' : 'Queued to'} {bufferDone.channel} 🎉</h3>
+            <p>
+              Video sent to <b>Buffer</b>
+              {bufferDone.mode === 'shareNow' ? ' and published now.' : bufferDone.mode === 'shareNext' ? ' for the next queue slot.' : ' — review & approve it in your Buffer queue, and it goes to Instagram.'}
+            </p>
+            <a className="vbx-modal-btn" href="https://publish.buffer.com" target="_blank" rel="noopener noreferrer" onClick={() => setBufferDone(null)}>Open Buffer</a>
+          </div>
+        </div>
+      )}
+
+      {bufferError && (
+        <div className="vbx-modal-backdrop" onClick={() => setBufferError(null)}>
+          <div className="vbx-modal" onClick={e => e.stopPropagation()}>
+            <div className="vbx-modal-icon vbx-modal-icon--err"><X size={28} /></div>
+            <h3>Buffer didn’t accept it</h3>
+            <p><b>Buffer said:</b><br /><span className="vbx-modal-err">{bufferError}</span></p>
+            <button className="vbx-modal-btn" onClick={() => setBufferError(null)}>Got it</button>
+          </div>
+        </div>
+      )}
       {busy === 'export' && <div className="vbx-expbar"><i style={{ width: `${exportPct * 100}%` }} /></div>}
       <div className="vbx-top">
         <div className="vbx-mark"><Film size={15} /></div>
@@ -311,8 +486,63 @@ export function VideoBuilder() {
         <div className="vbx-spacer" />
         {status && <span className="vbx-status" title={status}>{status}</span>}
         <button className={'vbx-directorbtn' + (dirOpen ? ' on' : '')} onClick={() => setDirOpen((o) => !o)}>
-          <Wand2 size={14} /> Director
+          <Sparkles size={14} /> Arganta Core
         </button>
+        <div className="vbx-momentwrap">
+          <button className="vbx-moment" disabled={busy !== '' || !lastRender} title={lastRender ? 'Publish the last export to a KinetikCircle → Remember feed' : 'Export a video first'} onClick={openMomentPicker}>
+            <Heart size={14} /> {busy === 'moment' ? 'Publishing…' : 'Publish to Moment'}
+          </button>
+          {momentOpen && (
+            <div className="vbx-momentpop">
+              <div className="vbx-momenthead"><Users size={13} /> Publish to circle</div>
+              {!cloudEnabled ? (
+                <p className="vbx-mini">Connect Supabase & sign in as a circle member.</p>
+              ) : circles.length === 0 ? (
+                <p className="vbx-mini">{circlesLoaded ? 'No circles you can post into.' : 'Loading circles…'}</p>
+              ) : (
+                <>
+                  <select className="vbx-sel" value={circleId} onChange={e => setCircleId(e.target.value)}>
+                    {circles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <p className="vbx-mini">The last export → one video moment.</p>
+                  <button className="vbx-btn accent" disabled={busy !== '' || !circleId} onClick={doPublishMoment}>
+                    <Heart size={12} /> {busy === 'moment' ? 'Publishing…' : 'Publish now'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        {bufferEnabled && (
+          <div className="vbx-momentwrap">
+            <button className="vbx-buffer" disabled={busy !== '' || !lastRender} title={lastRender ? 'Publish this video to Instagram via Buffer' : 'Export a video first'} onClick={openBufferPicker}>
+              <Instagram size={14} /> {busy === 'buffer' ? 'Publishing…' : 'Send to Buffer'}
+            </button>
+            {bufferOpen && (
+              <div className="vbx-momentpop">
+                <div className="vbx-momenthead"><Send size={13} /> Publish via Buffer</div>
+                {bufChannels.length === 0 ? (
+                  <p className="vbx-mini">{bufChannelsLoaded ? 'No connected channels — add one in Buffer.' : 'Loading channels…'}</p>
+                ) : (
+                  <>
+                    <select className="vbx-sel" value={bufChannelId} onChange={e => setBufChannelId(e.target.value)}>
+                      {bufChannels.map(c => <option key={c.id} value={c.id}>{c.name} · {c.service}</option>)}
+                    </select>
+                    <div className="vbx-row" style={{ gap: 4 }}>
+                      {([['addToQueue', 'Queue'], ['shareNext', 'Next slot'], ['shareNow', 'Now']] as const).map(([m, label]) => (
+                        <span key={m} className={'vbx-chip' + (bufMode === m ? ' on' : '')} onClick={() => setBufMode(m)}>{label}</span>
+                      ))}
+                    </div>
+                    <p className="vbx-mini">The last export → {bufMode === 'shareNow' ? 'publishes now' : bufMode === 'shareNext' ? 'next queue slot' : 'added to your Buffer queue to review'}.</p>
+                    <button className="vbx-btn accent" disabled={busy !== '' || !bufChannelId} onClick={doPublishBuffer}>
+                      <Instagram size={12} /> {busy === 'buffer' ? 'Publishing…' : bufMode === 'shareNow' ? 'Publish now' : 'Send to Buffer'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <button className="vbx-export" disabled={busy !== ''} onClick={doExport}>
           <Download size={14} /> {busy === 'export' ? `Rendering ${Math.round(exportPct * 100)}%` : 'Export video'}
         </button>
@@ -325,8 +555,13 @@ export function VideoBuilder() {
           {dirOpen && (
             <div className="vbx-dir">
               <div className="vbx-dir-head">
-                <Wand2 size={14} /> <b>Director</b>
-                <span className="vbx-dir-tag">{aiLive ? 'AI connected' : 'local mode'}</span>
+                <Sparkles size={14} /> <b>Arganta Core</b>
+                <span className="vbx-dir-tag">{coreEnabled ? 'Cloudflare · live' : aiLive ? 'AI connected' : 'local mode'}</span>
+                {coreEnabled && (
+                  <button className={'vbx-ic vbx-imgtoggle' + (genImages ? ' on' : '')} title={genImages ? 'Generating images: on' : 'Generating images: off'} onClick={() => setGenImages(v => !v)} aria-label="Toggle image generation">
+                    <Sparkles size={14} />
+                  </button>
+                )}
                 <button className="vbx-ic" onClick={() => setDirOpen(false)} aria-label="Close"><X size={14} /></button>
               </div>
               <div className="vbx-dir-msgs">
@@ -339,14 +574,14 @@ export function VideoBuilder() {
               </div>
               <div className="vbx-dir-quick">
                 {['30s reel about our family calendar app, upbeat', 'short: 3 tips to plan a family week', 'long explainer: how our diamond rewards work'].map((q) => (
-                  <button key={q} className="vbx-chip" disabled={dirBusy} onClick={() => runDirector(q)}>{q.split(':')[0].split(' about')[0].slice(0, 22)}</button>
+                  <button key={q} className="vbx-chip" disabled={dirBusy} onClick={() => runCore(q)}>{q.split(':')[0].split(' about')[0].slice(0, 22)}</button>
                 ))}
               </div>
               <div className="vbx-dir-input">
                 <input value={dirPrompt} disabled={dirBusy} placeholder="Describe your video…"
                   onChange={(e) => setDirPrompt(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && dirPrompt.trim()) runDirector(dirPrompt.trim()) }} />
-                <button className="vbx-dir-send" disabled={dirBusy || !dirPrompt.trim()} onClick={() => runDirector(dirPrompt.trim())} aria-label="Send"><Send size={14} /></button>
+                  onKeyDown={(e) => { if (e.key === 'Enter' && dirPrompt.trim()) runCore(dirPrompt.trim()) }} />
+                <button className="vbx-dir-send" disabled={dirBusy || !dirPrompt.trim()} onClick={() => runCore(dirPrompt.trim())} aria-label="Send"><Send size={14} /></button>
               </div>
             </div>
           )}

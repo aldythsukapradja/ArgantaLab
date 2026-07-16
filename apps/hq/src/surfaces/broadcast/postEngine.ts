@@ -159,6 +159,7 @@ export interface PostDoc {
   slides: PostSlide[]
   caption: string
   hashtags: string
+  alt?: string            // accessibility alt text (IG-ready checklist)
   brand: { name: string; handle: string }
 }
 
@@ -472,6 +473,66 @@ export interface RenderEnv {
   getImg: (url: string) => HTMLImageElement | null
 }
 
+// ── Direct manipulation: hit-testing + selection outline ──────────────────
+// Approximate pixel bounds (top-left x/y + w/h) for a layer, used to click-
+// select and to draw a selection frame. Pass `ctx` so text can be measured;
+// without it, text falls back to its max-width box.
+export function layerBounds(l: PostLayer, W: number, H: number, ctx?: CanvasRenderingContext2D): { x: number; y: number; w: number; h: number } {
+  const k = W / 1080
+  const box = (w: number, h: number) => ({ x: l.xN * W - w / 2, y: l.yN * H - h / 2, w, h })
+  switch (l.type) {
+    case 'text': {
+      const size = l.size * k
+      let lineW = l.maxWidthN * W, lines = Math.max(1, (l.text.match(/\n/g)?.length ?? 0) + 1)
+      if (ctx) {
+        ctx.font = `${l.weight} ${size}px ${FONT_STACK[l.font]}`
+        const wrapped = wrapLines(ctx, l.upper ? l.text.toUpperCase() : l.text, l.maxWidthN * W)
+        lines = Math.max(1, wrapped.length)
+        lineW = Math.min(l.maxWidthN * W, Math.max(1, ...wrapped.map(t => ctx.measureText(t).width)))
+      }
+      const lh = size * l.lineHeight
+      return box(lineW + size * 0.4, (lines - 1) * lh + size * 1.5)
+    }
+    case 'emoji': { const s = l.size * k; return box(s, s) }
+    case 'image': return box(l.wN * W, l.hN * H)
+    case 'badge': { const s = l.size * k; return box(l.text.length * s * 0.62 + s * 1.4, s * 1.9) }
+    case 'brand': { const s = l.size * k; return box(l.wordmark ? s * 6.5 : s * 1.5, s * 1.5) }
+    case 'pager': { const s = l.size * k; return box(s * 5, s * 1.6) }
+    case 'divider': { const t = Math.max(l.thick * k, 8); return box(l.wN * W, t * 3) }
+  }
+}
+
+/** Topmost non-hidden layer whose bounds contain the point (canvas pixels), or
+ * null. Iterates top→bottom so a headline over a bg image is selected first. */
+export function hitTestLayer(slide: PostSlide, px: number, py: number, W: number, H: number, ctx?: CanvasRenderingContext2D): string | null {
+  for (let i = slide.layers.length - 1; i >= 0; i--) {
+    const l = slide.layers[i]
+    if (l.hidden) continue
+    const b = layerBounds(l, W, H, ctx)
+    if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return l.id
+  }
+  return null
+}
+
+/** Draw a dashed selection frame around one layer (call after drawSlide). */
+export function drawLayerSelection(ctx: CanvasRenderingContext2D, slide: PostSlide, layerId: string, W: number, H: number) {
+  const l = slide.layers.find(x => x.id === layerId)
+  if (!l) return
+  const b = layerBounds(l, W, H, ctx)
+  ctx.save()
+  ctx.strokeStyle = 'rgba(120,180,255,0.95)'
+  ctx.lineWidth = Math.max(2, W / 540)
+  ctx.setLineDash([W / 90, W / 130])
+  ctx.strokeRect(b.x, b.y, b.w, b.h)
+  ctx.setLineDash([])
+  ctx.fillStyle = 'rgba(120,180,255,0.95)'
+  const r = Math.max(5, W / 150)
+  for (const [cx, cy] of [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]] as const) {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill()
+  }
+  ctx.restore()
+}
+
 export function drawSlide(ctx: CanvasRenderingContext2D, doc: PostDoc, index: number, W: number, H: number, env: RenderEnv) {
   const slide = doc.slides[index]
   if (!slide) return
@@ -494,31 +555,47 @@ export function drawSlide(ctx: CanvasRenderingContext2D, doc: PostDoc, index: nu
 
 /** Safe-area guides for the 9:16 story canvas (IG/TikTok UI chrome zones). */
 export function drawGuides(ctx: CanvasRenderingContext2D, formatId: string, W: number, H: number) {
-  if (formatId !== 'story') return
-  const top = H * 0.13, bottom = H * 0.163            // ≈250px / 310px on 1920
+  const k = W / 1080
   ctx.save()
-  ctx.fillStyle = 'rgba(255,61,114,0.09)'
-  ctx.fillRect(0, 0, W, top)
-  ctx.fillRect(0, H - bottom, W, bottom)
-  ctx.setLineDash([10, 8])
-  ctx.strokeStyle = 'rgba(255,61,114,0.55)'
+  // Story/Reel: the big platform-UI zones top (profile/close) + bottom (caption,
+  // send bar) that get overlaid by IG/TikTok chrome. Keep headlines out of them.
+  if (formatId === 'story') {
+    const top = H * 0.13, bottom = H * 0.163           // ≈250px / 310px on 1920
+    ctx.fillStyle = 'rgba(255,61,114,0.09)'
+    ctx.fillRect(0, 0, W, top)
+    ctx.fillRect(0, H - bottom, W, bottom)
+    ctx.setLineDash([10, 8])
+    ctx.strokeStyle = 'rgba(255,61,114,0.55)'
+    ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(W, top); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(0, H - bottom); ctx.lineTo(W, H - bottom); ctx.stroke()
+    ctx.font = `600 ${26 * k}px ${FONT_STACK.mono}`
+    ctx.fillStyle = 'rgba(255,61,114,0.8)'
+    ctx.textAlign = 'center'
+    ctx.fillText('platform UI — keep clear', W / 2, top - 12 * k)
+  }
+  // Every format: a 5% "keep it inside" frame — content nearer the edge risks
+  // cropping across viewers (grid thumbnails, in-app previews).
+  const mx = W * 0.05, my = H * 0.05
+  ctx.setLineDash([14 * k, 10 * k])
+  ctx.strokeStyle = 'rgba(120,180,255,0.5)'
   ctx.lineWidth = 2
-  ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(W, top); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(0, H - bottom); ctx.lineTo(W, H - bottom); ctx.stroke()
-  ctx.font = `600 ${26 * (W / 1080)}px ${FONT_STACK.mono}`
-  ctx.fillStyle = 'rgba(255,61,114,0.8)'
-  ctx.textAlign = 'center'
-  ctx.fillText('platform UI — keep clear', W / 2, top - 12 * (W / 1080))
+  ctx.strokeRect(mx, my, W - mx * 2, H - my * 2)
   ctx.restore()
 }
 
 // ── Export ────────────────────────────────────────────────────
-export async function renderSlideBlob(doc: PostDoc, index: number, env: RenderEnv): Promise<Blob> {
+export async function renderSlideBlob(doc: PostDoc, index: number, env: RenderEnv, mime: 'image/png' | 'image/jpeg' = 'image/png'): Promise<Blob> {
   const f = postFormat(doc.format)
   const cv = document.createElement('canvas')
   cv.width = f.w; cv.height = f.h
-  drawSlide(cv.getContext('2d')!, doc, index, f.w, f.h, env)
-  return await new Promise<Blob>((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('toBlob failed'))), 'image/png'))
+  const ctx = cv.getContext('2d')!
+  // JPEG has no alpha — paint an opaque base first so any transparency renders
+  // as solid (Instagram's publishing API only accepts JPEG, so Buffer uploads
+  // use this path). PNG keeps its transparency for exports/moments.
+  if (mime === 'image/jpeg') { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, f.w, f.h) }
+  drawSlide(ctx, doc, index, f.w, f.h, env)
+  return await new Promise<Blob>((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('toBlob failed'))), mime, mime === 'image/jpeg' ? 0.92 : undefined))
 }
 
 // ── Caption intelligence (2026 platform rules) ────────────────

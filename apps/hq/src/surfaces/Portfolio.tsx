@@ -621,7 +621,6 @@ export function ProductDetail({ product, pulse, days, onClose, view: viewProp, o
   const view = viewProp ?? internalView // the Director (or the voice/gesture copilot) can drive the tab externally
   const setView = (next: InspectorView) => { setInternalView(next); onViewChange?.(next) }
   const viewPanelRef = useRef<HTMLDivElement>(null)
-  const overviewLayoutRef = useRef<HTMLDivElement>(null)
   const { eng, r, pw, au, geo } = pulse
   const labels = eng ? Array.from(new Set(eng.daily.map(d => d.day))) : []
   const values = dailyFor(eng, product.id)
@@ -655,48 +654,6 @@ export function ProductDetail({ product, pulse, days, onClose, view: viewProp, o
     return () => { gsap.killTweensOf(panel) }
   }, [view])
 
-  useLayoutEffect(() => {
-    if (view !== 'overview') return
-    const panel = viewPanelRef.current
-    const layout = overviewLayoutRef.current
-    if (!panel || !layout) return
-
-    let frame = 0
-    const fitOverview = () => {
-      layout.style.width = '100%'
-      layout.style.height = 'calc(100% - 12px)'
-      layout.style.transform = 'none'
-      layout.style.transformOrigin = '0 0'
-
-      if (panel.clientWidth < 760) return
-      const main = layout.querySelector<HTMLElement>('.pf-detail-main')
-      const signals = layout.querySelector<HTMLElement>('.pf-signals')
-      const availableHeight = Math.max(1, panel.clientHeight - 12)
-      const contentHeight = Math.max(main?.scrollHeight ?? 0, signals?.scrollHeight ?? 0)
-      const requiredHeight = Math.max(availableHeight, contentHeight + 32)
-      const scale = Math.min(1, availableHeight / requiredHeight)
-      if (scale >= .995) return
-
-      layout.style.width = `${100 / scale}%`
-      layout.style.height = `${requiredHeight}px`
-      layout.style.transform = `scale(${scale})`
-    }
-    const scheduleFit = () => {
-      window.cancelAnimationFrame(frame)
-      frame = window.requestAnimationFrame(() => { frame = window.requestAnimationFrame(fitOverview) })
-    }
-
-    scheduleFit()
-    const settleTimer = window.setTimeout(scheduleFit, 320)
-    const resizeObserver = new ResizeObserver(scheduleFit)
-    resizeObserver.observe(panel)
-    return () => {
-      window.cancelAnimationFrame(frame)
-      window.clearTimeout(settleTimer)
-      resizeObserver.disconnect()
-    }
-  }, [view])
-
   return (
     <div className="pf-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className={`card pf-detail view-${view}`} data-view={view} style={{ '--pf-live-accent': appColor(product.id) } as CSSProperties} role="dialog" aria-modal="true" aria-labelledby="pf-product-dialog-title">
@@ -707,7 +664,7 @@ export function ProductDetail({ product, pulse, days, onClose, view: viewProp, o
       </div>
 
       <div className="pf-inspector-panel" ref={viewPanelRef} key={view === 'overview' ? 'overview' : 'live'}>
-      {view === 'overview' ? <div className="pf-detail-layout" ref={overviewLayoutRef}>
+      {view === 'overview' ? <div className="pf-detail-layout">
         <div className="pf-detail-main">
           <div className="pf-metric-grid">
             {metrics.map(({ label, value, context, icon: Icon }) => <div className="pf-metric" key={label}><Icon size={15} /><span>{label}</span><b>{value}</b><small>{context}</small></div>)}

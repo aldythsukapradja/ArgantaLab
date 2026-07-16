@@ -154,6 +154,14 @@ export default function Moments() {
 
   const videos = (feed ?? []).filter(p => p.kind === 'video')
 
+  // Merge Discover broadcasts + family moments into ONE date-sorted timeline
+  // (newest first). Previously ALL broadcasts rendered above ALL moments, so an
+  // old Discover tip could sit above a brand-new family post.
+  const feedTimeline = [
+    ...bcasts.map(b => ({ t: 'b' as const, date: b.publishedAt, b })),
+    ...(feed ?? []).map(p => ({ t: 'p' as const, date: p.createdAt, p })),
+  ].sort((x, y) => +new Date(y.date) - +new Date(x.date))
+
   return (
     <div className="fade-in mom2" ref={rootRef} style={{ ['--c0' as any]: circle.accent[0], ['--c1' as any]: circle.accent[1], transform: pull ? `translateY(${pull}px)` : undefined }}>
       {(pull > 0 || refreshing) && (
@@ -181,12 +189,12 @@ export default function Moments() {
         <div className="mom2-feedwrap">
           <div className="mom2-feedmain">
             <StoriesRail stories={stories} albums={albums ?? []} onAdd={() => setCreating(true)} onOpen={i => setStoryAt(i)} onOpenAlbum={a => setAlbumStoryFor(a)} />
-            {bcasts.map(b => <BroadcastCard key={b.id} b={b} onReact={reactBcast} />)}
             {feed === null && <div className="mom2-empty">Loading…</div>}
-            {feed && feed.length === 0 && bcasts.length === 0 && <EmptyState onCreate={() => setCreating(true)} />}
-            {feed && feed.map(p => (
-              <PostCard key={p.id} post={p} meId={me?.id} nameOf={nameOf} onReact={react} onReward={reward} onComments={() => setOpenPost(p)} onDelete={() => del(p)} onAddToAlbum={() => setAlbumPickFor(p)} onEditDate={() => setEditDateFor(p)} onEditCaption={() => setEditCaptionFor(p)} />
-            ))}
+            {feed && feedTimeline.length === 0 && <EmptyState onCreate={() => setCreating(true)} />}
+            {feedTimeline.map(e => e.t === 'b'
+              ? <BroadcastCard key={'b_' + e.b.id} b={e.b} onReact={reactBcast} />
+              : <PostCard key={e.p.id} post={e.p} meId={me?.id} nameOf={nameOf} onReact={react} onReward={reward} onComments={() => setOpenPost(e.p)} onDelete={() => del(e.p)} onAddToAlbum={() => setAlbumPickFor(e.p)} onEditDate={() => setEditDateFor(e.p)} onEditCaption={() => setEditCaptionFor(e.p)} />
+            )}
           </div>
           <aside className="mom2-rail">
             {(albums ?? []).length > 0 && <>

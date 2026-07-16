@@ -29,7 +29,12 @@ export const SCALES = {
 export const CHORD_PROGS = {
   'I–V–vi–IV': [0, 4, 5, 3], 'I–vi–IV–V': [0, 5, 3, 4], 'vi–IV–I–V': [5, 3, 0, 4],
   'I–IV': [0, 3], 'ii–V–I': [1, 4, 0], 'I–iii–IV–V': [0, 2, 3, 4], 'i–VI–III–VII': [0, 5, 2, 6],
+  // borrowed/mixed-mode progression (punk-rock I–IV–bIII–V): explicit
+  // {semitones-from-root, quality} chords, since no diatonic scale yields
+  // major I, IV, bIII and V together.
+  'I–IV–♭III–V': [{ semi: 0, q: 'maj' }, { semi: 5, q: 'maj' }, { semi: 3, q: 'maj' }, { semi: 7, q: 'maj' }],
 };
+export const CHORD_QUALITIES = { maj: [0, 4, 7], min: [0, 3, 7] };
 export const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 export function degMidi(root, scale, deg, oct = 0) {
   const n = scale.length;
@@ -38,6 +43,16 @@ export function degMidi(root, scale, deg, oct = 0) {
   return root + scale[idx] + 12 * o;
 }
 export const triad = (root, scale, deg, oct = 0) => [0, 2, 4].map((s) => degMidi(root, scale, deg + s, oct));
+// A chord-prog entry is either a scale-degree number (diatonic triad) or an
+// explicit { semi, q } chord (borrowed/non-diatonic, e.g. bIII in a major key).
+function chordTones(root, scale, entry, oct = 0) {
+  if (entry && typeof entry === 'object') return CHORD_QUALITIES[entry.q || 'maj'].map((iv) => root + entry.semi + iv + 12 * oct);
+  return triad(root, scale, entry, oct);
+}
+function chordRootFifth(root, scale, entry, oct = 0) {
+  if (entry && typeof entry === 'object') return { rootMidi: root + entry.semi + 12 * oct, fifthMidi: root + entry.semi + 7 + 12 * oct };
+  return { rootMidi: degMidi(root, scale, entry, oct), fifthMidi: degMidi(root, scale, entry + 4, oct) };
+}
 
 // ---------------------------------------------------------- synth helpers ----
 function route(ctx, out, revBus, g, revAmt) {
@@ -45,6 +60,11 @@ function route(ctx, out, revBus, g, revAmt) {
   if (revAmt > 0 && revBus) { const s = ctx.createGain(); s.gain.value = revAmt; g.connect(s); s.connect(revBus); }
 }
 function panNode(ctx, pan) { const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null; if (p) p.pan.value = pan || 0; return p; }
+function distCurve(amount) {
+  const n = 256, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = (i * 2) / n - 1; curve[i] = ((3 + amount) * x * 20 * Math.PI / 180) / (Math.PI + amount * Math.abs(x)); }
+  return curve;
+}
 function noiseBuf(ctx, dur) {
   const n = Math.floor(ctx.sampleRate * dur), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
@@ -208,6 +228,23 @@ export const INSTRUMENTS = {
     const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f; const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 3.01; const g2 = ctx.createGain(); g2.gain.value = 0.2; o.connect(g); o2.connect(g2); g2.connect(g);
     const p = panNode(ctx, pan); const tail = p ? (g.connect(p), p) : g; route(ctx, out, rev, tail, Math.max(rv, 0.4)); o.start(t); o.stop(t + 0.9); o2.start(t); o2.stop(t + 0.4);
   } },
+  // ---- ROCK BAND (distorted, dry — punk/garage stabs) ----
+  powerChord: { cat: 'Rock', label: 'Power chord stab', fn: (ctx, out, rev, { midi, t, gain, pan, rev: rv }) => {
+    const f = mtof(midi), g = pluckEnv(ctx, t, gain * 0.6, 0.002, 0.1), p = panNode(ctx, pan);
+    const ws = ctx.createWaveShaper(); ws.curve = distCurve(28); ws.oversample = '2x';
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 150;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3800;
+    ws.connect(hp); hp.connect(lp); lp.connect(g);
+    [1, 2].forEach((h, i) => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * h; o.detune.value = i * 4; o.connect(ws); o.start(t); o.stop(t + 0.14); });
+    const tail = p ? (g.connect(p), p) : g; route(ctx, out, rev, tail, Math.min(rv, 0.08));
+  } },
+  muteScratch: { cat: 'Rock', label: 'Muted scratch', fn: (ctx, out, rev, { midi, t, gain, pan, rev: rv }) => {
+    const f = mtof(midi), g = pluckEnv(ctx, t, gain * 0.4, 0.001, 0.04), p = panNode(ctx, pan);
+    const ws = ctx.createWaveShaper(); ws.curve = distCurve(18); ws.oversample = '2x';
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 700; ws.connect(hp); hp.connect(g);
+    const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; o.connect(ws); o.start(t); o.stop(t + 0.05);
+    const tail = p ? (g.connect(p), p) : g; route(ctx, out, rev, tail, Math.min(rv, 0.05));
+  } },
 };
 
 // Drum voices (kits are named bundles for the `drums` role).
@@ -224,6 +261,7 @@ export const KITS = {
   folk: { kick: [0, 8], snare: [4, 12], hat: [2, 6, 10, 14] },
   dj: { kick: [0, 4, 8, 12], hat: [2, 6, 10, 14], clap: [4, 12] },
   orchestral: { kick: [0], snare: [12] },
+  rock: { kick: [0, 8], snare: [4, 12], hat: [0, 2, 4, 6, 8, 10, 12, 14] },
 };
 
 export const ROLES = ['pad', 'harmony', 'bass', 'lead', 'arp', 'drums', 'sparkle'];
@@ -237,11 +275,14 @@ function theme(o) {
     realm: o.realm, name: o.name, icon: o.icon, mood: o.mood,
     root: o.root, scale: o.scale, bpm: o.bpm, prog: o.prog,
     swing: o.swing ?? 0.1, density: o.density ?? 0.6, reverb: o.reverb ?? 0.3,
+    // riffSteps: 16th-note steps (0-15) where a `lead.riff` theme stabs the
+    // current chord instead of the generative euclidean melody.
+    riffSteps: o.riffSteps || [0, 4, 8, 12],
     roles: {
       pad: { inst: 'warmPad', level: 0.5, on: true, ...o.roles?.pad },
       harmony: { inst: 'strings', level: 0.4, on: false, ...o.roles?.harmony },
       bass: { inst: 'upright', level: 0.7, on: true, ...o.roles?.bass },
-      lead: { inst: 'marimba', level: 0.7, on: true, ...o.roles?.lead },
+      lead: { inst: 'marimba', level: 0.7, on: true, riff: false, ...o.roles?.lead },
       arp: { inst: 'harp', level: 0.4, on: true, ...o.roles?.arp },
       drums: { kit: 'soft', level: 0.5, on: false, ...o.roles?.drums },
       sparkle: { inst: 'glockenspiel', level: 0.25, on: true, ...o.roles?.sparkle },
@@ -253,8 +294,9 @@ export const MUSIC_THEMES = {
     roles: { pad: { inst: 'warmPad', level: 0.5 }, harmony: { inst: 'strings', level: 0.35, on: true }, bass: { inst: 'upright', level: 0.65 }, lead: { inst: 'marimba', level: 0.7 }, arp: { inst: 'harp', level: 0.4 }, drums: { kit: 'soft', level: 0.4, on: true }, sparkle: { inst: 'glockenspiel', level: 0.25 } } }),
   bloomwall_pass: theme({ realm: 'bloomwall_pass', name: 'Bloomwall Pass', icon: '🏹', mood: 'Adventurous', root: 'D', scale: 'Dorian', bpm: 106, prog: 'vi–IV–I–V', swing: 0.04, density: 0.78, reverb: 0.22,
     roles: { pad: { inst: 'glassPad', level: 0.45 }, harmony: { inst: 'horn', level: 0.4, on: true }, bass: { inst: 'upright', level: 0.75 }, lead: { inst: 'flute', level: 0.5 }, arp: { inst: 'pizzStrings', level: 0.55 }, drums: { kit: 'folk', level: 0.55, on: true }, sparkle: { inst: 'bells', level: 0.15 } } }),
-  emberring_arena: theme({ realm: 'emberring_arena', name: 'Emberring Arena', icon: '🐗', mood: 'Energetic', root: 'E', scale: 'Mixolydian', bpm: 122, prog: 'I–IV', swing: 0.0, density: 0.88, reverb: 0.15,
-    roles: { pad: { inst: 'glassPad', level: 0.3 }, harmony: { inst: 'brass', level: 0.5, on: true }, bass: { inst: 'sawBass', level: 0.8 }, lead: { inst: 'superSaw', level: 0.55 }, arp: { inst: 'squareLead', level: 0.6 }, drums: { kit: 'dj', level: 0.7, on: true }, sparkle: { inst: 'bells', level: 0.12 } } }),
+  emberring_arena: theme({ realm: 'emberring_arena', name: 'Emberring Arena', icon: '🐗', mood: 'Defiant', root: 'D', scale: 'Mixolydian', bpm: 113, prog: 'I–IV–♭III–V', swing: 0.0, density: 0.75, reverb: 0.08,
+    riffSteps: [0, 6, 8, 14],
+    roles: { pad: { inst: 'glassPad', level: 0, on: false }, harmony: { inst: 'muteScratch', level: 0.45, on: true }, bass: { inst: 'sawBass', level: 0.85 }, lead: { inst: 'powerChord', level: 0.75, riff: true }, arp: { inst: 'squareLead', level: 0, on: false }, drums: { kit: 'rock', level: 0.75, on: true }, sparkle: { inst: 'bells', level: 0, on: false } } }),
   fountain_festival: theme({ realm: 'fountain_festival', name: 'Fountain Festival', icon: '🎪', mood: 'Festive', root: 'G', scale: 'Major', bpm: 112, prog: 'I–vi–IV–V', swing: 0.1, density: 0.82, reverb: 0.24,
     roles: { pad: { inst: 'warmPad', level: 0.4 }, harmony: { inst: 'strings', level: 0.4, on: true }, bass: { inst: 'upright', level: 0.6 }, lead: { inst: 'marimba', level: 0.8 }, arp: { inst: 'guitar', level: 0.5 }, drums: { kit: 'folk', level: 0.55, on: true }, sparkle: { inst: 'glockenspiel', level: 0.5 } } }),
   lashira_keep: theme({ realm: 'lashira_keep', name: 'Lashira Keep', icon: '🏰', mood: 'Regal', root: 'A', scale: 'Minor', bpm: 72, prog: 'i–VI–III–VII', swing: 0.06, density: 0.44, reverb: 0.46,
@@ -329,7 +371,7 @@ export class MusicTransport {
     const prog = CHORD_PROGS[T.prog] || CHORD_PROGS['I–V–vi–IV'];
     const barsPerChord = prog.length <= 2 ? 2 : 1;
     const deg = prog[Math.floor(this._bar / barsPerChord) % prog.length];
-    const chord = triad(root, scale, deg, 0);
+    const chord = chordTones(root, scale, deg, 0);
     const step = this._step, e = this.energy(), dens = T.density * (0.6 + 0.4 * e);
     const R = T.roles, spb = 60 / T.bpm, beat = spb;
     const roleOn = (r) => R[r]?.on && (R[r]?.level ?? 0) > 0.02;
@@ -340,16 +382,22 @@ export class MusicTransport {
     if ((step === 0 || step === 8) && roleOn('harmony')) chord.forEach((m, i) => this._play('harmony', R.harmony.inst, m + 12, t, beat * 2, R.harmony.level * 0.8, [-0.5, 0.2, 0.5][i] || 0));
     // BASS — root on 1, fifth on 3
     if (roleOn('bass')) {
-      if (step === 0) this._play('bass', R.bass.inst, degMidi(root, scale, deg, -1), t, beat, R.bass.level, 0);
-      else if (step === 8) this._play('bass', R.bass.inst, degMidi(root, scale, deg + 4, -1), t, beat, R.bass.level, 0);
+      const { rootMidi, fifthMidi } = chordRootFifth(root, scale, deg, -1);
+      if (step === 0) this._play('bass', R.bass.inst, rootMidi, t, beat, R.bass.level, 0);
+      else if (step === 8) this._play('bass', R.bass.inst, fifthMidi, t, beat, R.bass.level, 0);
     }
     // ARP — arpeggiate chord on off-8ths
     if (roleOn('arp') && step % 2 === 1) {
       const tone = chord[((step - 1) / 2) % chord.length] + 12;
       if (Math.random() < 0.5 + dens * 0.4) this._play('arp', R.arp.inst, tone, t, beat * 0.5, R.arp.level, ((step % 4) - 1.5) * 0.2);
     }
+    // LEAD (riff mode) — clipped chord stabs on fixed steps with silence between,
+    // instead of a generative melody (punk/garage rhythm-guitar riff feel).
+    if (roleOn('lead') && R.lead.riff) {
+      if (T.riffSteps.includes(step)) chord.forEach((m, i) => this._play('lead', R.lead.inst, m, t, beat * 0.3, R.lead.level * (i === 0 ? 1 : 0.7), 0));
+    }
     // LEAD — euclidean melody, pentatonic walk landing on chord tones on strong beats
-    if (roleOn('lead')) {
+    if (roleOn('lead') && !R.lead.riff) {
       const pat = euclid(Math.round(4 + dens * 6), 16);
       if (pat[step] && Math.random() < 0.5 + dens * 0.45) {
         let midi;
@@ -390,11 +438,13 @@ function sanitizeTheme(base, over) {
   t.swing = clamp01(NUM(over.swing, t.swing)) * 0.5;
   t.density = clamp01(NUM(over.density, t.density));
   t.reverb = clamp01(NUM(over.reverb, t.reverb));
+  if (Array.isArray(over.riffSteps)) t.riffSteps = over.riffSteps.filter((n) => Number.isInteger(n) && n >= 0 && n < 16);
   if (over.roles) for (const r of ROLES) {
     const o = over.roles[r]; if (!o) continue;
     t.roles[r] = { ...t.roles[r] };
     if (typeof o.on === 'boolean') t.roles[r].on = o.on;
     if (Number.isFinite(o.level)) t.roles[r].level = clamp01(o.level);
+    if (r === 'lead' && typeof o.riff === 'boolean') t.roles[r].riff = o.riff;
     if (r === 'drums') { if (o.kit && KITS[o.kit]) t.roles[r].kit = o.kit; }
     else if (o.inst && INSTRUMENTS[o.inst]) t.roles[r].inst = o.inst;
   }
