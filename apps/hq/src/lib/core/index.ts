@@ -31,6 +31,18 @@ const FALLBACK_TEXT_FOR: Record<string, string> = {
   error: '(Something went wrong mid-turn — see the actions above.)',
 }
 
+// When a tool already produced a REAL, saved artifact but the FOLLOW-UP model
+// call (the one that writes a caption after the tool ran) couldn't reach a live
+// model, the plain "no live model — nothing was fabricated" reads as "nothing
+// happened" even though the image/site/etc. is right there and saved. This
+// acknowledges the real output truthfully instead. Only used when the loop
+// stopped for a model-availability reason (no-model/max-steps) AND at least one
+// tool produced an artifact block this turn.
+const PARTIAL_SUCCESS_TEXT_FOR: Record<string, string> = {
+  'no-model': "(Done — what you asked for is above and saved. I couldn't add a written note this turn: the follow-up model call didn't reach a live model (often a brief free-tier hiccup). Nothing was faked on top of the real result.)",
+  'max-steps': "(Done — what you asked for is above and saved. I ran out of turns before writing a summary; the artifact itself is real. Ask again if you'd like me to describe or refine it.)",
+}
+
 // C5 · Auto-recall — runs every turn, BEFORE the loop, unconditionally
 // (unlike search_vault, which the model must decide to call). Deliberately
 // a TIGHTER dataClass ceiling than search_vault's manual 'confidential':
@@ -142,9 +154,16 @@ export async function sendMessage(threadId: string, userText: string, opts: { si
   const { text, stopReason } = result
   const trail = aborted ? [] : result.trail
   const costUsd = recall.costUsd + trail.reduce((s: number, t: any) => s + (t.costUsd || 0), 0)
+  // A tool produced a real, saved artifact this turn (image/site/deck/etc.) —
+  // so a "no live model" stop is a PARTIAL success (the artifact is real), not a
+  // total failure. Pick the honest message accordingly.
+  const producedRealArtifact = collectedBlocks.length > 0
   const finalText = aborted
     ? '(Stopped — you ended this turn. Actions completed above are real; nothing after that ran.)'
-    : (text || FALLBACK_TEXT_FOR[stopReason] || `(Stopped: ${stopReason}. Nothing was fabricated.)`)
+    : (text
+        || (producedRealArtifact && PARTIAL_SUCCESS_TEXT_FOR[stopReason])
+        || FALLBACK_TEXT_FOR[stopReason]
+        || `(Stopped: ${stopReason}. Nothing was fabricated.)`)
 
   // The last 'model' trail entry is the call that produced finalText — its
   // provider/model is the turn's own provenance, truthful even when no tool

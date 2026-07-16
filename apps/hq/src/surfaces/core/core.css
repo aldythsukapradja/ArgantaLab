@@ -13,7 +13,9 @@
 .core-inline:has(.core-cortex-collapsed) { grid-template-columns: 248px 1fr auto; }
 .core-inline:has(.core-rail-collapsed):has(.core-cortex-collapsed) { grid-template-columns: auto 1fr auto; }
 
-.core-center { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.core-center { position: relative; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+/* floating "?" affordance, top-right of the conversation pane (inline mount) */
+.core-center-actions { position: absolute; top: 12px; right: 14px; z-index: 5; }
 
 /* ---------- threads rail ---------- */
 .core-rail {
@@ -287,6 +289,17 @@
   background: none; border: none; color: var(--tx2); cursor: pointer; font-size: 18px; border-radius: var(--r-md);
 }
 .core-fs-menu:hover { background: var(--bg3); }
+
+/* ---------- "?" field-guide button (shared across mount modes) ---------- */
+.core-topbar-actions { display: flex; align-items: center; gap: 4px; }
+.core-help-btn {
+  width: 30px; height: 30px; display: grid; place-items: center; border-radius: var(--r-md);
+  background: none; border: 1px solid var(--bd); color: var(--tx3); cursor: pointer;
+  transition: background var(--dur, .15s), color var(--dur, .15s), border-color var(--dur, .15s);
+}
+.core-help-btn:hover { background: var(--acc-soft); color: var(--acc-text); border-color: var(--acc); }
+.core-center-actions .core-help-btn { background: var(--bg2); box-shadow: var(--shadow-sm); }
+.core-fs-topbar .core-help-btn { width: 40px; height: 40px; border: none; }
 .core-fs-sheet-overlay {
   /* sits above the fullscreen Core itself; z-index set inline (Z_LAYERS.CORE_FULLSCREEN + 1). */
   position: fixed; inset: 0; background: color-mix(in srgb, var(--tx) 32%, transparent);

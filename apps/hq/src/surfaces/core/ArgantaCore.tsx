@@ -9,7 +9,21 @@ type MountMode = 'fullscreen' | 'panel' | 'inline'
 import { ThreadsRail } from './ThreadsRail'
 import { Conversation } from './Conversation'
 import { CortexPanel } from './CortexPanel'
+import { CoreHelp } from './CoreHelp'
 import './core.css'
+
+/** The "?" affordance that opens the live Field Guide. Same look everywhere. */
+function HelpButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="core-help-btn" onClick={onClick} aria-label="Open Arganta Core field guide" title="Field guide — what Core can do">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <circle cx="7.5" cy="7.5" r="6.25" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M5.7 5.5a1.8 1.8 0 0 1 3.4.8c0 1.2-1.6 1.4-1.6 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="7.5" cy="11" r=".8" fill="currentColor" />
+      </svg>
+    </button>
+  )
+}
 
 export interface ArgantaCoreProps {
   threadId?: string
@@ -36,6 +50,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   const effectiveMode = resolveMountMode({ viewportWidth, requested: mountMode })
   const [threadId, setThreadId] = useState<string | null>(initialThreadId ?? null)
   const [cortexOpen, setCortexOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
   const [threadsRefresh, setThreadsRefresh] = useState(0)
   const [hasThreads, setHasThreads] = useState(false)
@@ -59,11 +74,15 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
         <div className="core core-panel" onClick={e => e.stopPropagation()}>
           <div className="core-panel-topbar">
             <span className="core-panel-title">Arganta Core</span>
-            <button className="core-panel-close" onClick={onClose} aria-label="Close Arganta Core">
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 3 L12 12 M12 3 L3 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            </button>
+            <div className="core-topbar-actions">
+              <HelpButton onClick={() => setHelpOpen(true)} />
+              <button className="core-panel-close" onClick={onClose} aria-label="Close Arganta Core">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 3 L12 12 M12 3 L3 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+              </button>
+            </div>
           </div>
           <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} />
+          {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
         </div>
       </div>
     )
@@ -78,9 +97,11 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
         refreshKey={threadsRefresh} onThreadsLoaded={(n) => setHasThreads(n > 0)}
       />
       <div className="core-center">
+        <div className="core-center-actions"><HelpButton onClick={() => setHelpOpen(true)} /></div>
         <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} hasThreads={hasThreads} />
       </div>
       <CortexPanel open={cortexOpen} onToggle={() => setCortexOpen(o => !o)} />
+      {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
     </div>
   )
 }
@@ -98,6 +119,7 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
   onThreadsLoaded: (count: number) => void
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   return (
     <div className="core core-fullscreen" data-embed={embed || undefined} style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN }}>
       <div className="core-fs-topbar">
@@ -105,8 +127,9 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3 L5 9 L11 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
         <button className="core-fs-title" onClick={() => setSheetOpen(true)}>Arganta Core</button>
-        <button className="core-fs-menu" aria-label="Thread menu">⋯</button>
+        <HelpButton onClick={() => setHelpOpen(true)} />
       </div>
+      {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
       <Conversation threadId={threadId} onThreadCreated={(id) => { onSelectThread(id); bumpThreadsRefresh() }} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} />
       {sheetOpen && (
         <div className="core-fs-sheet-overlay" style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN + 1 }} onClick={() => setSheetOpen(false)}>

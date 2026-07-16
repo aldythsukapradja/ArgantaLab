@@ -7,6 +7,9 @@ import { CoreOrb } from './CoreOrb'
 import { Composer } from './Composer'
 
 const ERROR_STOP_REASONS = new Set(['error', 'no-model'])
+// artifact block kinds — a turn that produced one of these did real work, so a
+// no-model/max-steps stop is a partial success, not a hard error (don't paint it red).
+const ARTIFACT_KINDS = new Set(['image', 'audio', 'website', 'deck', 'brand', 'chart'])
 
 const THINKING_LONG_MS = 8000
 
@@ -75,7 +78,8 @@ export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifa
     if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current)
     setThinkingLong(false)
     setSending(false)
-    setLastProvenance({ provider: result.provider, model: result.model, errored: ERROR_STOP_REASONS.has(result.stopReason) })
+    const producedArtifact = (result.blocks as any[]).some(b => ARTIFACT_KINDS.has(b.kind))
+    setLastProvenance({ provider: result.provider, model: result.model, errored: ERROR_STOP_REASONS.has(result.stopReason) && !producedArtifact })
     setSessionCostUsd(c => c + result.costUsd)
     setSessionRuns(n => n + 1)
 
