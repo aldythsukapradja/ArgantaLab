@@ -230,17 +230,19 @@ table.tbl tr:last-child td{border-bottom:none}
 
 /* ---------- Responsive ---------- */
 @media (max-width:980px){
-  .hq{grid-template-columns:62px 1fr}
-  .rail-name,.rail-grp,.nav span:not(.nav-badge),.rail-foot div{display:none}
-  .nav{justify-content:center;padding:9px 0}
-  .rail-foot{justify-content:center}
-}
-@media (max-width:640px){
-  .content{padding:16px 14px calc(92px + env(safe-area-inset-bottom))}
+  /* Tablet + large phone: the desktop rail gives way to the mobile bottom dock
+     (Products · Analytics · [Agent] · Command · Build) instead of a cramped
+     icon column, so the Agent orb is reachable on every touch device. The
+     .mnav/.msub/.agent-orb display toggles live in the "Mobile show/hide" block
+     near the end of this file — it MUST come after the base display rules. */
   .hq{grid-template-columns:1fr}
   .rail{display:none}
+  .content{padding:16px 14px calc(92px + env(safe-area-inset-bottom))}
   .main{height:100vh;height:100dvh}
-  /* Data schema fits the viewport on mobile — no page scroll */
+}
+@media (max-width:640px){
+  /* Small-phone-only tweaks — the rail-hide / dock-show layout now lives in the
+     ≤980px block above so tablets get it too. */
   .canvas{height:calc(100dvh - 360px);min-height:280px}
   .legend{display:none}
   .tl-hint{display:none}
@@ -374,8 +376,10 @@ html[data-theme='dark'] .mnav{
 .agent-send:disabled{opacity:.4;cursor:default}
 @media (max-width:560px){.agent-panel.small,.agent-panel.expanded{width:calc(100vw - 20px);right:10px;max-height:74vh}.agent-orb{right:16px;bottom:16px}}
 
-/* Mobile show/hide — placed last so it overrides earlier base display rules. */
-@media (max-width:640px){
+/* Mobile show/hide — placed last so it overrides earlier base display rules.
+   ≤980px so tablets + large phones get the bottom Agent dock, not the desktop
+   rail (the layout half — rail-hide, full-width — is in the ≤980 block above). */
+@media (max-width:980px){
   .mnav{display:flex}
   .msub{display:flex}
   .agent-orb{display:none}
