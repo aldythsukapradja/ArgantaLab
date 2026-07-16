@@ -11,7 +11,7 @@ import { seedNotes, seedCanvas, SEED_VERSION } from './seed'
 import { loadSnapshot, saveSnapshot, clearSnapshot } from './storage'
 import { normalizeFrontmatter } from './markdown'
 
-export type CenterView = 'note' | 'graph' | 'canvas' | 'bases' | 'decisions' | 'prompts'
+export type CenterView = 'knowledge' | 'note' | 'graph' | 'canvas' | 'bases' | 'decisions' | 'prompts'
 export type EditorMode = 'edit' | 'preview' | 'split'
 export type LeftPanel = 'files' | 'search'
 

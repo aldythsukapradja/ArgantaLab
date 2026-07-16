@@ -7,8 +7,10 @@
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Brain, ExternalLink, X, AlertTriangle, Activity, Play, Pause, Film,
-  SkipBack, SkipForward, RotateCcw, Gauge, Orbit, Waypoints,
+  SkipBack, SkipForward, RotateCcw, Gauge, Orbit, Sparkles,
 } from 'lucide-react'
+import { DesignPanel } from './DesignPanel'
+import { useDesign, FORMS } from './design'
 import { useVault } from '../vault/store'
 import { useHQ } from '../shell/store'
 import { GraphViewV3 } from '../vault/components/GraphViewV3'
@@ -222,7 +224,10 @@ function KnowledgeSurfaceInner() {
     return () => { ro.disconnect(); kicks.forEach(clearTimeout); document.removeEventListener('visibilitychange', onVis) }
   }, [])
 
-  const openRealNote = (noteId: string) => { useVault.getState().openNote(noteId); go('vault') }
+  // The canvas lives inside the Vault workspace now, so opening a note just
+  // switches the center view to the editor (openNote sets centerView='note') —
+  // no surface jump. go('vault') stays as a fallback if ever mounted standalone.
+  const openRealNote = (noteId: string) => { const v = useVault.getState(); v.openNote(noteId); if (useHQ.getState().surface !== 'knowledge' && useHQ.getState().surface !== 'vault') go('vault') }
   const fallback = (msg: string) => (
     <div className="vault" style={{ position: 'absolute', inset: 0 }}>
       <div style={banner}>{msg} — showing the 2D knowledge graph.</div>
@@ -236,8 +241,14 @@ function KnowledgeSurfaceInner() {
   // Vault" is an explicit escape hatch to the flat graph, independent of the
   // crash/WebGL fallback below.
   const [autoCam, setAutoCam] = useState(true)
-  const [manual2D, setManual2D] = useState(false)
-  const show3D = webgl && !dead && !manual2D
+  const [designOpen, setDesignOpen] = useState(false)
+  const form = useDesign((s) => s.form)
+  const formLabel = FORMS.find((f) => f.id === form)?.label ?? 'Brain'
+  // The clean 2D graph now lives as the Vault's own "Graph" ribbon tab, so this
+  // surface no longer needs its own (amber-bannered) 2D escape hatch. The 3D
+  // canvas shows whenever WebGL is alive; genuine failures still fall back below.
+  const show3D = webgl && !dead
+  const panelUi = { ...ui, panel: dark ? 'rgba(10,12,26,.86)' : 'rgba(255,255,255,.9)' }
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: ui.rootBg, overflow: 'hidden' }}>
@@ -251,8 +262,7 @@ function KnowledgeSurfaceInner() {
             </Suspense>
           </SceneBoundary>
         </div>
-      ) : manual2D ? fallback('2D Vault view')
-        : webgl && dead ? fallback("3D cortex didn't start on this device")
+      ) : webgl && dead ? fallback("3D cortex didn't start on this device")
         : !webgl ? fallback('WebGL unavailable') : null}
 
       {/* hemisphere labels */}
@@ -276,7 +286,7 @@ function KnowledgeSurfaceInner() {
         </div>
       </div>
 
-      {/* navigation pills — instruction + Auto camera + 2D Vault escape hatch */}
+      {/* navigation pills — instruction + Auto camera + Design Studio */}
       <div style={{ position: 'absolute', top: 62, left: 16, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
         {show3D && (
           <div style={{ fontSize: 10.5, color: ui.tx2, letterSpacing: 0.3, padding: '3px 10px', borderRadius: 999, background: ui.glass, border: '1px solid ' + ui.border, backdropFilter: 'blur(8px)', width: 'fit-content' }}>
@@ -288,12 +298,16 @@ function KnowledgeSurfaceInner() {
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (autoCam ? '#8b7cf688' : ui.border), background: autoCam ? '#8b7cf626' : ui.glass, color: autoCam ? (dark ? '#c4b5fd' : '#6d28d9') : ui.tx3, backdropFilter: 'blur(8px)', fontWeight: 600, fontSize: 11.5 }}>
             <Orbit size={12} /> Auto camera
           </button>
-          <button onClick={() => setManual2D((m) => !m)} title="Switch to the flat 2D knowledge graph"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + ui.border, background: ui.glass, color: ui.tx3, backdropFilter: 'blur(8px)', fontWeight: 600, fontSize: 11.5 }}>
-            {manual2D ? <><Brain size={12} /> 3D Brain</> : <><Waypoints size={12} /> 2D Vault</>}
-          </button>
+          {show3D && (
+            <button onClick={() => setDesignOpen((o) => !o)} title="Open the Design Studio — shape, spread, colours, sparkle"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, cursor: 'pointer', border: '1px solid ' + (designOpen ? '#8b7cf688' : ui.border), background: designOpen ? '#8b7cf626' : ui.glass, color: designOpen ? (dark ? '#c4b5fd' : '#6d28d9') : ui.tx3, backdropFilter: 'blur(8px)', fontWeight: 600, fontSize: 11.5 }}>
+              <Sparkles size={12} /> Design <span style={{ opacity: 0.6, fontWeight: 500 }}>· {formLabel}</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {show3D && <DesignPanel open={designOpen} onClose={() => setDesignOpen(false)} ui={panelUi} dark={dark} />}
 
       {/* THINK · KNOW · DO + simulate (top-center) */}
       {webgl && (

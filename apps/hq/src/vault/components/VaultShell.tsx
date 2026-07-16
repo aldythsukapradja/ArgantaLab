@@ -2,11 +2,11 @@
 // center · right context panel · status bar. Obsidian-inspired interaction
 // model, Arganta graphite skin, fully local-first.
 
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
   Files, Search, Waypoints, Frame, Database, Scale, Terminal, Settings2,
   X, Pin, PanelRight, Pencil, Eye, Columns2, FileText, Download,
-  HardDrive, Command as CommandIcon, Vault as VaultIcon,
+  HardDrive, Command as CommandIcon, Vault as VaultIcon, Orbit,
 } from 'lucide-react'
 import { useVault, type CenterView, type EditorMode } from '../store'
 import { useHQ } from '../../shell/store'
@@ -31,7 +31,13 @@ import { wordCount, parseWikiLinks } from '../markdown'
 import { downloadFile, noteToMarkdown } from '../storage'
 import { PRODUCT_COLOR } from '../types'
 
+// The 3D Knowledge Canvas is the Vault's headline view — the creative space over
+// the same notes. Loaded lazily so the heavy WebGL/three bundle only arrives
+// when the founder actually opens it (and to break the vault↔knowledge cycle).
+const KnowledgeSurface = lazy(() => import('../../knowledge/KnowledgeSurface').then((m) => ({ default: m.KnowledgeSurface })))
+
 const RIBBON: { view: CenterView; Icon: typeof Files; label: string }[] = [
+  { view: 'knowledge', Icon: Orbit, label: 'Knowledge 3D' },
   { view: 'graph', Icon: Waypoints, label: 'Graph' },
   { view: 'canvas', Icon: Frame, label: 'Canvas' },
   { view: 'bases', Icon: Database, label: 'Bases' },
@@ -69,9 +75,13 @@ function useIsMobile() {
   return m
 }
 
-export function VaultShell() {
+export function VaultShell({ forceView }: { forceView?: CenterView } = {}) {
   const centerView = useVault(s => s.centerView)
   const setCenterView = useVault(s => s.setCenterView)
+  // The "Knowledge" rail entry mounts this shell with forceView='knowledge' so
+  // it always lands on the 3D canvas (its headline home); the plain Vault entry
+  // passes nothing and keeps whatever view the founder left it on.
+  useEffect(() => { if (forceView) setCenterView(forceView) }, [forceView, setCenterView])
   const leftPanel = useVault(s => s.leftPanel)
   const setLeftPanel = useVault(s => s.setLeftPanel)
   const settings = useVault(s => s.settings)
@@ -250,6 +260,13 @@ export function VaultShell() {
           </>
         )}
 
+        {centerView === 'knowledge' && (
+          <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 0 }}>
+            <Suspense fallback={<div className="v-note-empty"><Orbit size={26} /><p className="v-note-empty-t">Waking the cortex…</p></div>}>
+              <KnowledgeSurface />
+            </Suspense>
+          </div>
+        )}
         {centerView === 'graph' && (GRAPH_V1 ? <GraphView /> : <GraphViewV3 />)}
         {centerView === 'canvas' && <CanvasView />}
         {centerView === 'bases' && <BasesView />}

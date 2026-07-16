@@ -1,20 +1,21 @@
-import { LayoutGrid, TrendingUp, Boxes, Sparkles, Radar } from 'lucide-react'
+import { LayoutGrid, TrendingUp, Boxes, Radar, MessageCircle } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId } from './store'
 
 // Mobile collapses the rail into reachable groups. Multi-surface groups expose
-// their members as a secondary sub-tab bar; "Agent" opens the orchestrating orb
-// full-screen (the floating orb is hidden on mobile). Command carries its own
-// internal sub-tab bar (lobby + six offices), so it stays a single entry here.
+// their members as a secondary sub-tab bar. Group membership MIRRORS the desktop
+// Rail (shell/Rail.tsx) so nothing is unreachable on a phone — keep the two in
+// sync when a surface is added. The rightmost entry is the Arganta Core chat
+// (the founder's primary conversational interface), full-screen on mobile.
 type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[] }
 export const MGROUPS: Grp[] = [
-  { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid, surfaces: ['portfolio'] },
-  { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data', 'vault'] },
-  { id: 'command', label: 'Command', Icon: Radar, surfaces: ['command'] },
-  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'reactor'] },
+  { id: 'products', label: 'Products', Icon: LayoutGrid, surfaces: ['portfolio', 'home', 'cinema'] },
+  { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data', 'knowledge', 'architecture', 'rack'] },
+  { id: 'command', label: 'Command', Icon: Radar, surfaces: ['command', 'copilot'] },
+  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['pixel', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'reactor', 'media'] },
 ]
 
 export function MobileNav() {
-  const { surface, go, openAgent, closeAgent, agentOpen } = useHQ()
+  const { surface, go, closeAgent, agentOpen } = useHQ()
   const activeGroup = MGROUPS.find(g => g.surfaces.includes(surface))?.id
 
   return (
@@ -25,8 +26,9 @@ export function MobileNav() {
           <span className="mn-ic"><g.Icon size={20} /></span><span className="mn-lbl">{g.label}</span>
         </button>
       ))}
-      <button className={'mnav-item' + (agentOpen ? ' on' : '')} onClick={() => openAgent('full')}>
-        <span className="mn-ic"><Sparkles size={20} /></span><span className="mn-lbl">Agent</span>
+      <button className={'mnav-item' + (surface === 'core' ? ' on' : '')}
+        onClick={() => { if (agentOpen) closeAgent(); go('core') }}>
+        <span className="mn-ic"><MessageCircle size={20} /></span><span className="mn-lbl">Core</span>
       </button>
     </nav>
   )

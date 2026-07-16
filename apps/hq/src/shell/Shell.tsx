@@ -27,7 +27,6 @@ const MusicBuilder = lazy(() => import('../surfaces/music/MusicBuilder').then(mo
 const VideoBuilder = lazy(() => import('../surfaces/video/VideoBuilder').then(module => ({ default: module.VideoBuilder })))
 const MediaCenter = lazy(() => import('../surfaces/media/MediaCenter').then(module => ({ default: module.MediaCenter })))
 const CinemaDev = lazy(() => import('../cinema/CinemaDev').then(module => ({ default: module.CinemaDev })))
-const KnowledgeSurface = lazy(() => import('../knowledge/KnowledgeSurface').then(module => ({ default: module.KnowledgeSurface })))
 const ReactorBuilder = lazy(() => import('../reactor/builder/ReactorBuilder').then(module => ({ default: module.ReactorBuilder })))
 const ModelRack = lazy(() => import('../surfaces/rack/ModelRack').then(module => ({ default: module.ModelRack })))
 const CopilotControl = lazy(() => import('../copilot/CopilotControl').then(module => ({ default: module.CopilotControl })))
@@ -59,7 +58,7 @@ function Surface() {
     case 'music': return <MusicBuilder />
     case 'video': return <VideoBuilder />
     case 'media': return <MediaCenter />
-    case 'knowledge': return <KnowledgeSurface />
+    case 'knowledge': return <Vault forceView="knowledge" />
     case 'reactor': return <ReactorBuilder />
     case 'rack': return <ModelRack />
     case 'cinema': return <CinemaDev />

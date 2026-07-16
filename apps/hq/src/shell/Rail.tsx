@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
-  Network, Megaphone, Radar, Grid2x2, Vault as VaultIcon, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film, Wand2,
+  Network, Megaphone, Radar, Grid2x2, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film, Wand2,
   Orbit, Atom, Cpu, Mic2, MessageCircle,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
@@ -20,7 +20,6 @@ const GROUPS: Group[] = [
   { name: 'Analytics', items: [
     { id: 'growth', label: 'Growth', Icon: TrendingUp },
     { id: 'data', label: 'Data', Icon: Database },
-    { id: 'vault', label: 'HQ Vault', Icon: VaultIcon },
     { id: 'knowledge', label: 'Knowledge', Icon: Orbit, badge: '3d' },
     { id: 'architecture', label: 'Architecture', Icon: Workflow },
     { id: 'rack', label: 'Model Rack', Icon: Cpu, badge: 'new' },
