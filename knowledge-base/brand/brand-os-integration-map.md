@@ -16,7 +16,7 @@ Every connection below replaces a hard-coded brand fact with a registry read. Ad
 
 | # | System | What it consumes | Layer | Today (before) | After |
 |---|---|---|---|---|---|
-| 1 | **Content Builder / Post Studio** (`apps/hq/src/surfaces/broadcast`) | Brand mark, palette, plate colors, fonts via `postEngine`; pillar templates; brand switcher in the top bar | L0 + L3 | K-mark + `@kinetikcircle` hard-coded; single palette set; yellow plate global | `doc.brandId` → registry; every slide brand-correct |
+| 1 | ✅ **Content Builder / Post Studio** (`apps/hq/src/surfaces/broadcast`) | Brand mark, palette, plate colors, fonts via `postEngine`; brand switcher in the top bar. *(Pillar templates still to come — BF-7)* | L0 + L3 | ~~K-mark + `@kinetikcircle` hard-coded; single palette set; yellow plate global~~ | **Shipped BF-3**: `doc.brandId` → `RenderEnv.brand`; every slide brand-correct. The render path reads only agent-lane fields, so it needs no DB |
 | 2 | **Arganta Core worker + MCP** (`workers/arganta-core-content`, `tools/arganta-core-mcp`) | `content_draft(brand, pillar)` → persona block (L1), caption formula, hashtag bank injected into copy generation; new `brand_get`/`brand_update` tools | L1 + L5 | No brand concept — one generic voice | Copy written *as* the brand, EN or ID |
 | 3 | **Buffer → Instagram** (`buffer.js`, `bufferClient.ts`) | Per-brand channel map (channelId ↔ brand); queue-only safety unchanged | L2 | One channel (`argantalab`) implicitly global | Route each draft to its brand's channel |
 | 4 | **Kinetik Moments** (`momentPublish.ts` + brand-sender RPC) | Per-brand sender profile — the "Kinetik Circle" brand author pattern, repeated ×5 | L2 | One brand sender (Kinetik Circle, shipped 2026-07-16) | `brandId` → sender profile id |

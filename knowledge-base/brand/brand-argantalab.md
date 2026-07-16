@@ -35,12 +35,12 @@ The first brand through the [[Brand OS]] mold. Source: the **ArgantaLab Instagra
 | Handle = live Buffer channel | No alt-text guidance |
 | `manifest.json` machine-readable | Inter not in canvas engine; grid monotone risk; link unverified |
 
-## Pipeline collisions found
+## Pipeline collisions found — all fixed by [[Brand OS Build Plan|BF-3]]
 
-1. `postEngine.drawBrandLayer` hard-codes the KinetikCircle K-mark — every carousel queued to @argantalab today carries the wrong logo
-2. `@kinetikcircle` hard-coded in the CTA template
-3. No `argantalab` palette in `POST_PALETTES` (pack cyan `#34E5FF` ≠ kinetik `#22D3EE`)
-4. Lucky break: our text plate `#FFD64B` ≈ Quest Gold `#FFC24B` — the yellow-pill rule fits this brand almost unchanged
+1. ~~`postEngine.drawBrandLayer` hard-codes the KinetikCircle K-mark — every carousel queued to @argantalab carries the wrong logo~~ → **fixed**: the procedural K-mark is deleted; geometry lives in each brand's `identity.mark` and is drawn from data
+2. ~~`@kinetikcircle` hard-coded in the CTA template~~ → **fixed**: the end card signs off with the doc's own handle
+3. ~~No `argantalab` palette in `POST_PALETTES`~~ → **fixed**: `brandPalette()` maps `identity.palette` onto the engine's roles, per-role fallback
+4. Lucky break confirmed: the engine's default plate `#FFD64B` ≈ Quest Gold `#FFC24B`, so ArgantaLab overrides it with one field and the yellow-pill rule fits unchanged
 
 ## What BF-2 canonization produces
 
