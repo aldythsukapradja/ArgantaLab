@@ -23,11 +23,15 @@ validation ok, markdown fences stripped, model content present. A model returnin
 non-game correctly keeps the playable Stage-0 floor; a real game is accepted; the
 website path is unaffected.
 
-**Stage-1 against a real upstream is still unproven — the founder's `llm-proxy`
-Supabase edge function returns a non-2xx status** (undeployed, or no server-side
-key). The adapter falls back to `mock`, `generateViaAi` detects the silent mock and
-honestly downgrades. Deploy the function (and set its key) and Stage-1 fires with no
-code change.
+**Stage-1 against a real upstream is unproven only because the verifier can't sign
+in.** `llm-proxy` is deployed and healthy; it returns `403 {"error":"not authorized"}`
+to an anonymous caller **by design** — index.ts gates on a signed-in user whose email
+equals `OPERATOR` (aldhyt.sukapradja@gmail.com). An earlier note in this doc guessed
+"undeployed, or no server-side key"; that was wrong, corrected here. Sign in to HQ as
+the operator and Stage-1 should fire for real — nothing else is in the way.
+
+(The registry/runtime bug below was a *separate*, auth-independent cause: it would
+have blocked Stage-1 even for a signed-in operator.)
 
 Also unverifiable: rAF animation — the Browser pane reports `document.hidden:true`,
 throttling rAF to 0 in **every** tab. The game loop was instead verified by stepping
