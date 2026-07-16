@@ -12,6 +12,7 @@ import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Layers,
   Type as TypeIcon, Palette, Cloud, Upload, Sparkles, Sticker, MessageSquareText,
   LayoutTemplate, Check, Shuffle, ScanLine, Rocket, Users, Heart, Inbox, Send as SendIcon, Instagram,
+  Image as ImageIcon, Bookmark,
 } from 'lucide-react'
 import { listAssets, uploadAsset, importStock, downloadBlob } from '@arganta/video'
 import { supabase, cloudEnabled } from '../../lib/supabase'
@@ -29,6 +30,13 @@ import {
   pid, type PostDoc, type PostSlide, type PostLayer, type TextLayer, type RenderEnv,
 } from './postEngine'
 import { TEMPLATES, makeSlide, starterDoc, POST_SCHEMA, postMessages, coercePost, localPost, type TemplateContent } from './postTemplates'
+import {
+  readCompose, setRoleText, setTitleSize, setBgImage, setBgDim, clearBg,
+  addPill, setPillText, removePill, toggleElement, type ComposeToggle,
+} from './compose'
+import {
+  extractStyle, applyStyle, listStyles, saveStyle, deleteStyle, parseStyle, type PostStyleRecipe,
+} from './postStyle'
 import './post.css'
 
 const STORE_KEY = 'hq_post_studio_v1'
@@ -106,12 +114,19 @@ export function PostStudio() {
   const [fanoutResult, setFanoutResult] = useState<{ dest: string; label: string; ok: boolean; message: string }[] | null>(null)
   const [guides, setGuides] = useState(false)
   const [tick, setTick] = useState(0)
+  // M1: the inspector's three scopes. Compose = this slide's content (the manual
+  // form), Style = how it looks, Post = caption/checks/brand for the whole post.
+  const [tab, setTab] = useState<'compose' | 'style' | 'post'>('compose')
+  // M3: the saved-style shelf
+  const [styles, setStyles] = useState<PostStyleRecipe[]>(listStyles)
+  const [styleName, setStyleName] = useState('')
   // media library
   const [assets, setAssets] = useState<any[]>([])
   const [impQuery, setImpQuery] = useState('cozy family moment')
   const [mediaBusy, setMediaBusy] = useState(false)
   const [addMode, setAddMode] = useState<'bg' | 'card'>('bg')
   const fileRef = useRef<HTMLInputElement>(null)
+  const composeFileRef = useRef<HTMLInputElement>(null)
   // caption
   const [platform, setPlatform] = useState('instagram')
   const [copied, setCopied] = useState(false)
@@ -196,18 +211,43 @@ export function PostStudio() {
    * Core chat uses (worker output is already template/field-clamped, so this
    * is a straight drop-in), then patch in any per-slide generated image URLs
    * — the worker's coerceCopy preserves slide order 1:1, same list, so a
-   * positional zip is safe. */
+   * positional zip is safe.
+   *
+   * M4 — unless the draft carries a composed doc (docJson), in which case it is
+   * already a PostDoc and lands VERBATIM. Coercing it would re-template the
+   * slides and discard the exact design a style recipe existed to reproduce,
+   * so the two paths must stay mutually exclusive. The brand block below still
+   * runs for both: whoever wrote the draft, the right mark wins (BF-3). */
   function openDraft(d: ContentDraft) {
-    const next = coercePost(d.copy as any, d.brief, doc)
-    d.copy.slides.forEach((s, i) => {
-      if (!s.imageUrl || !next.slides[i]) return
-      const slide = next.slides[i]
-      const old = slide.layers.find(l => l.type === 'image' && (l as any).mode === 'bg')
-      if (old && old.type === 'image') old.url = s.imageUrl
-      else slide.layers.unshift({ id: pid('im'), type: 'image', name: 'Arganta Core', url: s.imageUrl, mode: 'bg', xN: 0.5, yN: 0.5, wN: 1, hN: 1, radius: 0, dim: 0.5, opacity: 1 } as any)
-    })
+    const next = d.docJson
+      ? (JSON.parse(JSON.stringify(d.docJson)) as PostDoc)
+      : coercePost(d.copy as any, d.brief, doc)
+    // The draft remembers which brand wrote it (Arganta Core stamps copy.brandId).
+    // Honour it, or the post renders under whatever brand the studio was last
+    // showing — the wrong-logo bug BF-3 closed, reopened via the inbox.
+    const draftBrand = (d.copy as any)?.brandId
+    if (draftBrand && BRAND_BASES[draftBrand as keyof typeof BRAND_BASES]) {
+      const b: any = BRAND_BASES[draftBrand as keyof typeof BRAND_BASES]
+      next.brandId = b.id
+      next.brand = { name: b.name, handle: '@' + b.id }
+      for (const s of next.slides) {
+        const h = s.layers.find(l => l.type === 'text' && l.name === 'Handle')
+        if (h && h.type === 'text') h.text = '@' + b.id
+      }
+    }
+    // A composed doc already carries its own images in its layers — the
+    // positional zip below is only for coerced briefs.
+    if (!d.docJson) {
+      d.copy.slides.forEach((s, i) => {
+        if (!s.imageUrl || !next.slides[i]) return
+        const slide = next.slides[i]
+        const old = slide.layers.find(l => l.type === 'image' && (l as any).mode === 'bg')
+        if (old && old.type === 'image') old.url = s.imageUrl
+        else slide.layers.unshift({ id: pid('im'), type: 'image', name: 'Arganta Core', url: s.imageUrl, mode: 'bg', xN: 0.5, yN: 0.5, wN: 1, hN: 1, radius: 0, dim: 0.5, opacity: 1 } as any)
+      })
+    }
     setDoc(next); setSel(0); setSelLayer(null); setDraftsOpen(false)
-    setStatus(`Opened draft “${d.brief.slice(0, 40)}${d.brief.length > 40 ? '…' : ''}” — ${next.slides.length} slides on canvas.`)
+    setStatus(`Opened draft “${d.brief.slice(0, 40)}${d.brief.length > 40 ? '…' : ''}” — ${next.slides.length} slides on canvas${d.docJson ? ' · exact design preserved' : ''}.`)
     markDraftConsumed(supabase, d.id)
     setDrafts(prev => prev.map(x => x.id === d.id ? { ...x, consumedAt: new Date().toISOString() } : x))
     // Path C: track this draft so "Approve & publish everywhere" can fan out to
@@ -692,6 +732,55 @@ export function PostStudio() {
     setCopied(true); setTimeout(() => setCopied(false), 1600)
   }
 
+  // ── M2: Compose — the manual form ──
+  // Every field binds to a NAMED layer via compose.ts, so typing here edits the
+  // same layers the templates stamp and the AI fills. No layer concepts leak in.
+  const cv = slide ? readCompose(slide) : null
+
+  /** Compose's image slot is always the background — it bypasses the Media
+   *  panel's bg/card mode so the manual path can't accidentally place a card. */
+  async function onComposeFile(file: File) {
+    if (!file || !file.type.startsWith('image/')) { setStatus('Pick an image file.'); return }
+    setMediaBusy(true)
+    try {
+      const localUrl = URL.createObjectURL(file)
+      patchSlide(s => setBgImage(s, localUrl, file.name))
+      if (cloudEnabled) {
+        const a = await uploadAsset(supabase, file, { kind: 'image' })
+        // Swap the object URL for the stored one: same pixels, but persistent
+        // and same-origin, which is what keeps export/publish from tainting.
+        patchSlide(s => setBgImage(s, a.url, a.name))
+        refreshAssets()
+        setStatus(`Image placed + stored in Supabase (${a.name}).`)
+      } else setStatus('Image placed (local — connect Supabase to keep it in the library).')
+    } catch (e: any) { setStatus('Upload failed: ' + (e?.message || e)) } finally { setMediaBusy(false) }
+  }
+
+  // ── M3: style recipes ──
+  function doSaveStyle() {
+    const name = styleName.trim() || `${TEMPLATES.find(t => t.id === doc.slides[0]?.template)?.label || 'Post'} style`
+    const r = extractStyle(doc, name)
+    setStyles(saveStyle(r)); setStyleName('')
+    setStatus(`Saved style “${r.name}” — ${r.slides.length} slide${r.slides.length > 1 ? 's' : ''}. Copy it to hand to Claude for batch runs.`)
+  }
+  async function copyStyle(r: PostStyleRecipe) {
+    try { await navigator.clipboard.writeText(JSON.stringify(r, null, 2)); setStatus(`Copied “${r.name}” recipe JSON — paste it to Claude with a content table.`) }
+    catch { setStatus('Clipboard blocked — open the console and copy the recipe from there.') }
+  }
+  function doApplyStyle(r: PostStyleRecipe) {
+    setDoc(prev => applyStyle(r, prev)); setSelLayer(null)
+    setStatus(`Applied “${r.name}” — your words, that design.`)
+  }
+  async function importStyle() {
+    try {
+      const json = prompt('Paste a style recipe JSON:')
+      if (!json) return
+      const r = parseStyle(json)
+      setStyles(saveStyle(r))
+      setStatus(`Imported style “${r.name}”.`)
+    } catch (e: any) { setStatus('Not a valid style recipe: ' + (e?.message || e)) }
+  }
+
   function startOver() {
     if (!confirm('Start a fresh post? The current one is replaced (it stays in your browser until then).')) return
     setDoc(starterDoc()); setSel(0); setSelLayer(null); setStatus('Fresh canvas.'); setActiveDraft(null)
@@ -720,6 +809,8 @@ export function PostStudio() {
     <div className="pbx">
       <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) onPickFile(f); e.currentTarget.value = '' }} />
+      <input ref={composeFileRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) onComposeFile(f); e.currentTarget.value = '' }} />
 
       {/* ── moment publish-success modal ── */}
       {published && (
@@ -840,7 +931,11 @@ export function PostStudio() {
                     {drafts.map(d => (
                       <button key={d.id} className={'pbx-draftitem' + (d.consumedAt ? ' seen' : '')} disabled={d.status !== 'ready'} onClick={() => openDraft(d)}>
                         <span className="pbx-draftbrief">{d.brief.slice(0, 54)}{d.brief.length > 54 ? '…' : ''}</span>
-                        <span className="pbx-draftmeta">{d.status === 'error' ? 'error' : `${d.copy.slides.length} slides`} · {new Date(d.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="pbx-draftmeta">
+                          {d.status === 'error' ? 'error' : `${(d.docJson?.slides.length ?? d.copy.slides.length)} slides`}
+                          {d.docJson && ' · styled'}
+                          {' · '}{new Date(d.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
                         {d.publishTo.length > 0 && (
                           <span className="pbx-draftintents">
                             {d.publishTo.map((p, i) => (
@@ -993,7 +1088,106 @@ export function PostStudio() {
         </div>
 
         {/* ── inspector ── */}
+        {/* Three scopes, three tabs (M1). Everything below used to be one nine-
+            panel scroll that mixed slide-scope, post-scope and layer-scope
+            controls; the tabs are the only thing telling you which is which. */}
         <div className="pbx-insp">
+          <div className="pbx-tabs" role="tablist">
+            {([
+              ['compose', 'Compose', 'This slide — image, words, pills'],
+              ['style', 'Style', 'How it looks — layout, palette, layers'],
+              ['post', 'Post', 'Whole post — caption, checks, publish'],
+            ] as const).map(([id, label, hint]) => (
+              <button key={id} role="tab" aria-selected={tab === id} title={hint}
+                className={'pbx-tab' + (tab === id ? ' on' : '')} onClick={() => setTab(id)}>{label}</button>
+            ))}
+          </div>
+
+          {/* ══════════ COMPOSE — the manual form ══════════ */}
+          {tab === 'compose' && cv && slide && (<>
+            <div className="pbx-panel">
+              <div className="pbx-ph"><ImageIcon size={13} /> Image<span className="badge">background</span></div>
+              {cv.imageUrl ? (
+                <div className="pbx-imgslot">
+                  <img src={cv.imageUrl} alt="" />
+                  <button className="pbx-imgx" title="Remove image" onClick={() => patchSlide(s => clearBg(s))}><X size={12} /></button>
+                </div>
+              ) : (
+                <button className="pbx-drop" disabled={mediaBusy} onClick={() => composeFileRef.current?.click()}>
+                  <Upload size={16} /><span>{mediaBusy ? 'Uploading…' : 'Upload an image'}</span>
+                  <small>or pick one from the library in Style</small>
+                </button>
+              )}
+              <div className="pbx-row">
+                <button className="pbx-btn" disabled={mediaBusy} onClick={() => composeFileRef.current?.click()}>
+                  <Upload size={12} /> {cv.imageUrl ? 'Replace' : 'Upload'}
+                </button>
+                {coreEnabled && (
+                  <button className="pbx-btn accent" disabled={mediaBusy} title="Generate a background from this slide's words" onClick={() => genImageForSlide()}>
+                    <Sparkles size={12} /> {mediaBusy ? 'Generating…' : 'Generate'}
+                  </button>
+                )}
+              </div>
+              {cv.imageUrl && (
+                <Slider label={`Darken · ${Math.round(cv.dim * 100)}%`} min={0} max={0.8} step={0.05} value={cv.dim}
+                  onChange={v => patchSlide(s => setBgDim(s, v))} />
+              )}
+            </div>
+
+            <div className="pbx-panel">
+              <div className="pbx-ph"><TypeIcon size={13} /> Words<span className="badge">live on canvas</span></div>
+              <div className="pbx-field">
+                <label>Title</label>
+                <textarea className="pbx-ta" rows={2} value={cv.title} placeholder="The headline that stops the scroll"
+                  onChange={e => patchSlide(s => setRoleText(s, 'title', e.target.value))} />
+              </div>
+              {cv.title && (
+                <Slider label={`Title size · ${cv.titleSize}px`} min={30} max={180} value={cv.titleSize}
+                  onChange={v => patchSlide(s => setTitleSize(s, v))} />
+              )}
+              <div className="pbx-field">
+                <label>Subtitle</label>
+                <textarea className="pbx-ta" rows={2} value={cv.subtitle} placeholder="Supporting line — keep it human."
+                  onChange={e => patchSlide(s => setRoleText(s, 'subtitle', e.target.value))} />
+              </div>
+            </div>
+
+            <div className="pbx-panel">
+              <div className="pbx-ph"><Sticker size={13} /> Pills<span className="badge">{cv.pills.length || 'none'}</span></div>
+              <div className="pbx-pills">
+                {cv.pills.map(p => (
+                  <span key={p.id} className="pbx-pill">
+                    <input value={p.text} size={Math.max(3, p.text.length)}
+                      onChange={e => patchSlide(s => setPillText(s, p.id, e.target.value))} />
+                    <button title="Remove pill" onClick={() => patchSlide(s => removePill(s, p.id))}><X size={10} /></button>
+                  </span>
+                ))}
+                <button className="pbx-chip" onClick={() => patchSlide(s => addPill(s, 'NEW'))}><Plus size={11} /> pill</button>
+              </div>
+            </div>
+
+            <div className="pbx-panel">
+              <div className="pbx-ph"><Layers size={13} /> Elements</div>
+              <div className="pbx-toggles">
+                {([
+                  ['brand', 'Logo', cv.hasBrand],
+                  ['handle', 'Handle', cv.hasHandle],
+                  ['swipe', 'Swipe →', cv.hasSwipe],
+                  ['dots', 'Pager dots', cv.hasDots],
+                ] as [ComposeToggle, string, boolean][]).map(([kind, label, on]) => (
+                  <label key={kind} className={'pbx-toggle' + (on ? ' on' : '')}>
+                    <input type="checkbox" checked={on}
+                      onChange={e => patchSlide(s => toggleElement(s, kind, e.target.checked, doc.brand.handle))} />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+              <span className="pbx-mini">Drag anything on the canvas to place it. Double-click text to edit it there.</span>
+            </div>
+          </>)}
+
+          {/* ══════════ STYLE ══════════ */}
+          {tab === 'style' && (<>
           {/* templates */}
           <div className="pbx-panel">
             <div className="pbx-ph"><LayoutTemplate size={13} /> Layout · this slide<span className="badge">keeps your words</span></div>
@@ -1028,9 +1222,10 @@ export function PostStudio() {
             </div>
           </div>
 
-          {/* text */}
+          {/* extra text layers — Compose covers the title/subtitle/pill roles; this
+              is for a SECOND line of a kind a template didn't stamp. */}
           <div className="pbx-panel">
-            <div className="pbx-ph"><TypeIcon size={13} /> Text<span className="badge">double-click on canvas to edit</span></div>
+            <div className="pbx-ph"><TypeIcon size={13} /> Extra text<span className="badge">beyond Compose</span></div>
             <div className="pbx-chipwrap">
               <button className="pbx-chip" onClick={() => addText('headline')}><Plus size={11} /> headline</button>
               <button className="pbx-chip" onClick={() => addText('body')}><Plus size={11} /> body</button>
@@ -1093,6 +1288,53 @@ export function PostStudio() {
             ) : <span className="pbx-mini">{cloudEnabled ? 'No images yet — Upload or import stock.' : 'Offline — Upload still works (kept in this browser).'}</span>}
           </div>
 
+          {/* layers + selected properties — the power lane, out of Compose's way */}
+          <div className="pbx-panel">
+            <div className="pbx-ph"><Layers size={13} /> Layers</div>
+            <div className="pbx-layers">
+              {slide && [...slide.layers].reverse().map(l => (
+                <div key={l.id} className={'pbx-lrow' + (selLayer === l.id ? ' on' : '')} onClick={() => setSelLayer(l.id)}>
+                  <span className="nm">{l.name}{l.type === 'text' ? ` · “${(l as TextLayer).text.replace(/\n/g, ' ').slice(0, 14)}”` : l.type === 'emoji' ? ` · ${(l as { char: string }).char}` : ''}</span>
+                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); moveLayer(l.id, 1) }} title="Up"><ChevronUp size={13} /></button>
+                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); moveLayer(l.id, -1) }} title="Down"><ChevronDown size={13} /></button>
+                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); patchLayer(l.id, { hidden: !l.hidden }) }} title="Toggle">{l.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); removeLayer(l.id) }} title="Delete"><Trash2 size={13} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {layer && <LayerProps layer={layer} patch={p => patchLayer(layer.id, p)} />}
+
+          {/* ── M3: style recipes — the handoff artifact ── */}
+          <div className="pbx-panel">
+            <div className="pbx-ph"><Bookmark size={13} /> Styles<span className="badge">design without the words</span></div>
+            <span className="pbx-mini">Save this post's design as a reusable recipe: every position, size, font and color kept — text and images swapped for slots. Hand the JSON to Claude with a content table to batch-make more.</span>
+            <div className="pbx-row">
+              <input className="pbx-sel" value={styleName} placeholder="Name this style…"
+                onChange={e => setStyleName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') doSaveStyle() }} />
+              <button className="pbx-btn accent" onClick={doSaveStyle}><Bookmark size={12} /> Save style</button>
+            </div>
+            {styles.length > 0 && (
+              <div className="pbx-styles">
+                {styles.map(r => (
+                  <div key={r.id} className="pbx-styleitem">
+                    <span className="pbx-stylenm" title={`${r.slides.length} slides · ${r.format} · ${new Date(r.createdAt).toLocaleDateString()}`}>{r.name}</span>
+                    <span className="pbx-stylemeta">{r.slides.length}s</span>
+                    <button className="pbx-ic" title="Apply to the current post — your words, this design" onClick={() => doApplyStyle(r)}><Check size={12} /></button>
+                    <button className="pbx-ic" title="Copy recipe JSON for Claude" onClick={() => copyStyle(r)}><CopyIcon size={12} /></button>
+                    <button className="pbx-ic" title="Delete style" onClick={() => setStyles(deleteStyle(r.id))}><Trash2 size={12} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="pbx-chip" onClick={importStyle}><Plus size={11} /> import a recipe</button>
+          </div>
+          </>)}
+
+          {/* ══════════ POST — whole-post scope ══════════ */}
+          {tab === 'post' && (<>
           {/* IG-ready checklist */}
           <div className="pbx-panel">
             <div className="pbx-ph"><Check size={13} /> Instagram-ready<span className={'badge' + (igReady ? ' ok' : '')}>{igReady ? 'all set' : `${igChecks.filter(c => c.ok).length}/${igChecks.length}`}</span></div>
@@ -1133,24 +1375,6 @@ export function PostStudio() {
             </div>
           </div>
 
-          {/* layers + selected properties */}
-          <div className="pbx-panel">
-            <div className="pbx-ph"><Layers size={13} /> Layers</div>
-            <div className="pbx-layers">
-              {slide && [...slide.layers].reverse().map(l => (
-                <div key={l.id} className={'pbx-lrow' + (selLayer === l.id ? ' on' : '')} onClick={() => setSelLayer(l.id)}>
-                  <span className="nm">{l.name}{l.type === 'text' ? ` · “${(l as TextLayer).text.replace(/\n/g, ' ').slice(0, 14)}”` : l.type === 'emoji' ? ` · ${(l as { char: string }).char}` : ''}</span>
-                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); moveLayer(l.id, 1) }} title="Up"><ChevronUp size={13} /></button>
-                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); moveLayer(l.id, -1) }} title="Down"><ChevronDown size={13} /></button>
-                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); patchLayer(l.id, { hidden: !l.hidden }) }} title="Toggle">{l.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
-                  <button className="pbx-ic" onClick={e => { e.stopPropagation(); removeLayer(l.id) }} title="Delete"><Trash2 size={13} /></button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {layer && <LayerProps layer={layer} patch={p => patchLayer(layer.id, p)} />}
-
           {/* brand */}
           <div className="pbx-panel">
             <div className="pbx-ph">Brand</div>
@@ -1160,6 +1384,7 @@ export function PostStudio() {
             </div>
             <span className="pbx-mini">The mark + wordmark on slides use this. CTA handles too.</span>
           </div>
+          </>)}
         </div>
       </div>
 

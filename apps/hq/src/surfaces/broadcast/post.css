@@ -76,6 +76,52 @@
 
 /* ---------------- inspector ---------------- */
 .pbx-insp{background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+
+/* ---------------- inspector tabs (M1: one scope per tab) ---------------- */
+.pbx-tabs{display:flex;gap:2px;padding:8px 10px;border-bottom:1px solid var(--bd);position:sticky;top:0;
+  background:var(--bg);z-index:3;flex:none}
+.pbx-tab{flex:1;font-size:12px;font-weight:600;color:var(--tx3);background:transparent;border:1px solid transparent;
+  border-radius:var(--r-md);padding:7px 6px;cursor:pointer;transition:all var(--dur)}
+.pbx-tab:hover{color:var(--tx);background:var(--bg2)}
+.pbx-tab.on{color:var(--acc-text);background:var(--acc-soft);font-weight:700}
+
+/* ---------------- Compose (M2: the manual form) ---------------- */
+.pbx-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  min-height:104px;border:1.5px dashed var(--bd3);border-radius:var(--r-md);background:var(--bg2);
+  color:var(--tx2);cursor:pointer;font-size:12.5px;font-weight:600;transition:all var(--dur)}
+.pbx-drop:hover:not(:disabled){border-color:var(--acc);color:var(--tx);background:var(--bg3)}
+.pbx-drop:disabled{opacity:.6;cursor:default}
+.pbx-drop small{font-family:var(--mono);font-size:9.5px;color:var(--tx3);font-weight:400}
+.pbx-imgslot{position:relative;border-radius:var(--r-md);overflow:hidden;background:var(--bg3);
+  border:1px solid var(--bd2);max-height:150px}
+.pbx-imgslot img{width:100%;height:100%;max-height:150px;object-fit:cover;display:block}
+.pbx-imgx{position:absolute;top:6px;right:6px;width:22px;height:22px;display:grid;place-items:center;
+  border-radius:99px;border:none;background:rgba(0,0,0,.62);color:#fff;cursor:pointer}
+.pbx-imgx:hover{background:rgba(0,0,0,.85)}
+
+.pbx-pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pbx-pill{display:inline-flex;align-items:center;gap:3px;border-radius:99px;padding:3px 4px 3px 9px;
+  background:var(--acc-soft);border:1px solid transparent}
+.pbx-pill input{background:transparent;border:none;outline:none;font-family:var(--mono);font-size:11px;
+  font-weight:600;color:var(--acc-text);min-width:26px;padding:0}
+.pbx-pill button{width:16px;height:16px;display:grid;place-items:center;border-radius:99px;border:none;
+  background:transparent;color:var(--acc-text);opacity:.6;cursor:pointer;flex:none}
+.pbx-pill button:hover{opacity:1;background:rgba(0,0,0,.12)}
+
+.pbx-toggles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pbx-toggle{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx3);cursor:pointer;
+  padding:7px 9px;border:1px solid var(--bd2);border-radius:var(--r-md);transition:all var(--dur)}
+.pbx-toggle:hover{border-color:var(--bd3);color:var(--tx)}
+.pbx-toggle.on{color:var(--tx);border-color:transparent;background:var(--bg3);font-weight:600}
+.pbx-toggle input{accent-color:var(--acc);cursor:pointer;margin:0}
+
+/* ---------------- Styles shelf (M3) ---------------- */
+.pbx-styles{display:flex;flex-direction:column;gap:3px}
+.pbx-styleitem{display:flex;align-items:center;gap:4px;padding:5px 7px;border-radius:var(--r-sm);
+  border:1px solid var(--bd2);background:var(--bg2)}
+.pbx-styleitem:hover{border-color:var(--bd3)}
+.pbx-stylenm{flex:1;min-width:0;font-size:12px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbx-stylemeta{font-family:var(--mono);font-size:9.5px;color:var(--tx3);flex:none}
 .pbx-panel{border-bottom:1px solid var(--bd);padding:13px 15px;display:flex;flex-direction:column;gap:10px}
 .pbx-ph{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--tx2)}

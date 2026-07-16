@@ -9,12 +9,31 @@
 // surface.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PostDoc } from '../surfaces/broadcast/postEngine'
 
 export interface DraftSlide {
   template: string; headline?: string; body?: string; emoji?: string; badge?: string; source?: string
   imagePrompt?: string; imageUrl?: string
 }
-export interface DraftCopy { palette?: string; slides: DraftSlide[]; caption: string; hashtags: string }
+export interface DraftCopy {
+  palette?: string; slides: DraftSlide[]; caption: string; hashtags: string
+  brandId?: string
+  /**
+   * M4 — the VERBATIM channel. When present this is a fully-composed PostDoc and
+   * HQ loads it byte-for-byte, skipping coercePost entirely.
+   *
+   * Why it exists: coercePost re-templates a draft's copy through makeSlide, which
+   * is right for a plain-English brief (the model returns words, not a design) but
+   * destroys an exact design — every position, size and font the founder set gets
+   * replaced by the template's own numbers. A batch run built from a saved style
+   * recipe is only worth anything if it reproduces those pixels, so it needs a path
+   * that no coercion touches.
+   *
+   * It rides inside `copy` (our own jsonb) rather than a new column, the same trick
+   * brandId uses above — no migration to run before this works.
+   */
+  docJson?: PostDoc
+}
 
 // Path C (Content-Workflow.md §3) — publish intents Claude Code attaches at
 // draft-creation time, and the ACTUAL results after "Approve & publish
@@ -32,6 +51,8 @@ export interface ContentDraft {
   provenance: { provider: string; model: string; latencyMs: number; neurons: number; estimated: boolean } | null
   error: string | null; consumedAt: string | null; createdAt: string
   publishTo: PublishIntent[]; publishedTo: PublishResult[]
+  /** Present when the draft carries a fully-composed design (see DraftCopy.docJson). */
+  docJson: PostDoc | null
 }
 
 function mapRow(r: any): ContentDraft {
@@ -42,6 +63,11 @@ function mapRow(r: any): ContentDraft {
     consumedAt: r.consumed_at ?? null, createdAt: r.created_at,
     publishTo: Array.isArray(r.publish_to) ? r.publish_to : [],
     publishedTo: Array.isArray(r.published_to) ? r.published_to : [],
+    // Only honour a v1 doc with real slides — a malformed one must fall back to
+    // the coercePost path rather than putting a broken canvas in front of you.
+    docJson: r.copy?.docJson?.v === 1 && Array.isArray(r.copy.docJson.slides) && r.copy.docJson.slides.length
+      ? r.copy.docJson as PostDoc
+      : null,
   }
 }
 
