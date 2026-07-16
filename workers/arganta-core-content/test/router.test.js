@@ -3,12 +3,57 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  allowedOrigins, corsHeaders, isAuthed, parseGenerateBody, estimateNeurons, KINDS,
+  allowedOrigins, corsHeaders, isAuthed, parseGenerateBody, estimateNeurons, KINDS, TEXT_PRESETS,
 } from '../router.js';
 import {
   TEMPLATE_IDS, PALETTE_IDS, coerceCopy, extractJson, aspectFor, FORMAT_ASPECT,
 } from '../schema.js';
-import { copyMessages, imagePrompt, brandBlock } from '../prompts.js';
+import { copyMessages, imagePrompt, brandBlock, textMessages, cleanRewrite } from '../prompts.js';
+
+// ── B3: the `text` kind (Post Studio's polish capsule) ──
+test('text kind: accepts a line + preset, clamps length, defaults to polish', () => {
+  assert.ok(KINDS.includes('text'));
+  const r = parseGenerateBody({ kind: 'text', text: '  Octopuses have three hearts  ' });
+  assert.equal(r.ok, true);
+  assert.equal(r.req.text, 'Octopuses have three hearts');
+  assert.equal(r.req.preset, 'polish');
+  const long = parseGenerateBody({ kind: 'text', text: 'x'.repeat(900) });
+  assert.equal(long.req.text.length, 400);
+});
+
+test('text kind: an empty line or unknown preset is a named error, not a default', () => {
+  assert.equal(parseGenerateBody({ kind: 'text', text: '   ' }).code, 'no_text');
+  const bad = parseGenerateBody({ kind: 'text', text: 'hi', preset: 'fancify' });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, 'bad_preset');
+  for (const p of TEXT_PRESETS) {
+    assert.equal(parseGenerateBody({ kind: 'text', text: 'hi', preset: p }).ok, true);
+  }
+});
+
+test('textMessages: sends the line as the user turn and demands one bare line', () => {
+  const m = textMessages('Make this pop', 'punchier');
+  assert.equal(m.length, 2);
+  assert.equal(m[1].content, 'Make this pop');
+  assert.match(m[0].content, /ONLY the rewritten line/);
+  assert.match(m[0].content, /punchier/i);
+});
+
+// The whole point of cleanRewrite: a chatty small model must never land its
+// preamble on the artwork, and a rewrite that balloons is refused outright.
+test('cleanRewrite: strips chatter, quotes and numbering', () => {
+  assert.equal(cleanRewrite('"Three hearts, one octopus"'), 'Three hearts, one octopus');
+  assert.equal(cleanRewrite("Sure! Here's a polished version:\nThree hearts, one octopus"), 'Three hearts, one octopus');
+  assert.equal(cleanRewrite('1. Three hearts, one octopus'), 'Three hearts, one octopus');
+});
+
+test('cleanRewrite: refuses a runaway rewrite rather than re-wrapping the design', () => {
+  const original = 'Three hearts';
+  assert.equal(cleanRewrite('x'.repeat(200), original), '');
+  // short originals still get reasonable room (the 40-char floor)
+  assert.equal(cleanRewrite('Three mighty hearts', original), 'Three mighty hearts');
+  assert.equal(cleanRewrite('', original), '');
+});
 
 // ── vocab drift guards (mirrors postTemplates.ts / postEngine.ts) ──
 test('vocabulary matches the app: 9 templates, 10 palettes, 6 formats', () => {
@@ -63,7 +108,7 @@ test('isAuthed: skipped without CORE_TOKEN, enforced with it', () => {
 test('parseGenerateBody: rejects junk + bad kinds', () => {
   assert.equal(parseGenerateBody(null).ok, false);
   assert.equal(parseGenerateBody({ kind: 'video' }).ok, false);
-  assert.deepEqual(KINDS, ['copy', 'image']);
+  assert.deepEqual(KINDS, ['copy', 'image', 'text']);
 });
 
 test('parseGenerateBody: copy needs a brief', () => {

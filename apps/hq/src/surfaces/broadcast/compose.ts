@@ -88,6 +88,9 @@ export function setRoleText(s: PostSlide, role: 'title' | 'subtitle', text: stri
     : { id: pid('tx'), type: 'text', name: BODY_NAMES[0], text, xN: 0.5, yN: 0.62, size: 42, weight: 500, color: 'soft', align: 'center', font: 'sans', maxWidthN: 0.76, lineHeight: 1.42, highlight: 'pill' })
 }
 
+/** B1 retired the drawer's title-size slider — sizing is a visual call and now
+ *  lives on the canvas toolbar. Kept exported: the binding is the same one the
+ *  toolbar needs if it ever addresses a role rather than a layer id. */
 export function setTitleSize(s: PostSlide, size: number) {
   const t = findText(s, TITLE_NAMES); if (t) t.size = size
 }

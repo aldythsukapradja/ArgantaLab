@@ -12,12 +12,12 @@ import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Layers,
   Type as TypeIcon, Palette, Cloud, Upload, Sparkles, Sticker, MessageSquareText,
   LayoutTemplate, Check, Shuffle, ScanLine, Rocket, Users, Heart, Inbox, Send as SendIcon, Instagram,
-  Image as ImageIcon, Bookmark,
+  Image as ImageIcon, Bookmark, Library,
 } from 'lucide-react'
 import { listAssets, uploadAsset, importStock, downloadBlob } from '@arganta/video'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { ai, aiLive } from '../../lib/ai'
-import { generateCopy, generateImage, coreEnabled, extForImageMime, getCoreQuota, prettyModel, type CoreQuota } from '../../lib/argantaCoreClient'
+import { generateCopy, generateImage, polishText, coreEnabled, extForImageMime, getCoreQuota, prettyModel, type CoreQuota } from '../../lib/argantaCoreClient'
 import { listPublishableCircles, publishMoment, type PublishCircle } from '../../lib/momentPublish'
 import { brandBase, BRAND_BASES, DEFAULT_BRAND_ID } from '@arganta/brand'
 import { listContentDrafts, markDraftConsumed, recordDraftPublish, type ContentDraft } from '../../lib/contentDrafts'
@@ -26,17 +26,23 @@ import { live } from '../../data/live'
 import {
   POST_FORMATS, postFormat, POST_PALETTES, postPalette, BG_VARIANTS,
   CAPTION_RULES, captionRule, STICKERS, drawSlide, drawGuides, renderSlideBlob,
-  hitTestLayer, drawLayerSelection, layerBounds,
-  pid, type PostDoc, type PostSlide, type PostLayer, type TextLayer, type RenderEnv,
+  hitTestLayer, drawLayerSelection, layerBounds, POST_FONTS, FONT_INHERIT, loadPostFonts,
+  pid, type PostDoc, type PostSlide, type PostLayer, type TextLayer, type BadgeLayer, type RenderEnv,
 } from './postEngine'
+import { CanvasTextToolbar, POLISH_PRESETS, type ToolbarPos, type PolishPreset } from './CanvasTextToolbar'
 import { TEMPLATES, makeSlide, starterDoc, POST_SCHEMA, postMessages, coercePost, localPost, type TemplateContent } from './postTemplates'
 import {
-  readCompose, setRoleText, setTitleSize, setBgImage, setBgDim, clearBg,
+  readCompose, setRoleText, setBgImage, setBgDim, clearBg,
   addPill, setPillText, removePill, toggleElement, type ComposeToggle,
 } from './compose'
 import {
   extractStyle, applyStyle, listStyles, saveStyle, deleteStyle, parseStyle, type PostStyleRecipe,
 } from './postStyle'
+// PostLibraryPanel, not PostLibrary: a component file named PostLibrary.tsx
+// would differ from postLibrary.ts only in casing, which collides on Windows
+// and macOS default filesystems.
+import { PostLibrary } from './PostLibraryPanel'
+import { recordPublish, savePost, type LibraryEntry, type PublishMark } from './postLibrary'
 import './post.css'
 
 const STORE_KEY = 'hq_post_studio_v1'
@@ -120,11 +126,19 @@ export function PostStudio() {
   // M3: the saved-style shelf
   const [styles, setStyles] = useState<PostStyleRecipe[]>(listStyles)
   const [styleName, setStyleName] = useState('')
+  // B4: the Post Library. `libEntryId` is which library row the canvas came from
+  // — publish marks land on THAT row instead of forking a near-duplicate.
+  const [libOpen, setLibOpen] = useState(false)
+  const [libEntryId, setLibEntryId] = useState<string | null>(null)
   // media library
   const [assets, setAssets] = useState<any[]>([])
   const [impQuery, setImpQuery] = useState('cozy family moment')
   const [mediaBusy, setMediaBusy] = useState(false)
   const [addMode, setAddMode] = useState<'bg' | 'card'>('bg')
+  // B2 — the per-slide image prompt (separate from impQuery, which is the stock
+  // search box; conflating them is exactly the bug this fixes).
+  const [imgPromptOpen, setImgPromptOpen] = useState(false)
+  const [imgPrompt, setImgPrompt] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const composeFileRef = useRef<HTMLInputElement>(null)
   // caption
@@ -183,6 +197,12 @@ export function PostStudio() {
   // keep selection in range when slides change
   useEffect(() => { if (sel >= doc.slides.length) setSel(doc.slides.length - 1) }, [doc.slides.length, sel])
 
+  // ── fonts ──
+  // Install any self-hosted face BEFORE the first paint, then repaint: canvas
+  // draws with whatever is loaded at draw time, so a late font would silently
+  // render (and export) as the fallback.
+  useEffect(() => { loadPostFonts().then(() => setTick(t => t + 1)) }, [])
+
   // ── main canvas paint ──
   useEffect(() => {
     const cv = canvasRef.current
@@ -191,8 +211,42 @@ export function PostStudio() {
     const ctx = cv.getContext('2d')!
     drawSlide(ctx, doc, Math.min(sel, doc.slides.length - 1), fmt.w, fmt.h, env)
     if (guides) drawGuides(ctx, doc.format, fmt.w, fmt.h)
-    if (selLayer && slide) drawLayerSelection(ctx, slide, selLayer, fmt.w, fmt.h)
+    if (selLayer && slide) drawLayerSelection(ctx, slide, selLayer, fmt.w, fmt.h, doc.fontId)
   }, [doc, sel, guides, tick, fmt.w, fmt.h, env, slide, selLayer])
+
+  // ── B1: where the floating text toolbar sits ──
+  // Derived from DOC STATE, never from the pointer: that way the bar follows a
+  // layer through drags, align snaps and size changes without its own tracking.
+  const [tbPos, setTbPos] = useState<ToolbarPos | null>(null)
+  const tbLayer = layer && (layer.type === 'text' || layer.type === 'badge') && !layer.hidden
+    ? layer as TextLayer | BadgeLayer
+    : null
+  useEffect(() => {
+    if (!tbLayer || !slide) { setTbPos(null); return }
+    const place = () => {
+      const cv = canvasRef.current
+      if (!cv) return
+      const ctx = cv.getContext('2d')
+      if (!ctx) return
+      const r = cv.getBoundingClientRect()
+      const scale = r.width / fmt.w
+      const b = layerBounds(tbLayer, fmt.w, fmt.h, ctx, doc.fontId)
+      const H = 38, GAP = 10
+      const above = r.top + b.y * scale - GAP - H
+      const below = above < 8                       // too close to the top → flip under
+      const top = below ? r.top + (b.y + b.h) * scale + GAP : above
+      // Clamp the centre so the bar can't hang off either edge. Half-width is an
+      // estimate; the CSS also caps max-width, so a mis-estimate degrades to a
+      // slightly off-centre bar rather than an unreachable one.
+      const half = 190
+      const cx = Math.max(half + 8, Math.min(window.innerWidth - half - 8, r.left + (b.x + b.w / 2) * scale))
+      setTbPos({ left: cx, top, below })
+    }
+    place()
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
+    return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place) }
+  }, [tbLayer, slide, doc, fmt.w, fmt.h, tick])
 
   // ── media library ──
   function refreshAssets() { if (cloudEnabled) listAssets(supabase, { kind: 'image' }).then(setAssets) }
@@ -279,7 +333,7 @@ export function PostStudio() {
     if (!slide) return
     const { px, py } = canvasPoint(e)
     const ctx = canvasRef.current!.getContext('2d')!
-    const hit = hitTestLayer(slide, px, py, fmt.w, fmt.h, ctx)
+    const hit = hitTestLayer(slide, px, py, fmt.w, fmt.h, ctx, doc.fontId)
     setSelLayer(hit)
     if (!hit) return
     const l = slide.layers.find(x => x.id === hit)!
@@ -304,12 +358,12 @@ export function PostStudio() {
     const r = cv.getBoundingClientRect()
     const px = (e.clientX - r.left) * (fmt.w / r.width), py = (e.clientY - r.top) * (fmt.h / r.height)
     const ctx = cv.getContext('2d')!
-    const hit = hitTestLayer(slide, px, py, fmt.w, fmt.h, ctx)
+    const hit = hitTestLayer(slide, px, py, fmt.w, fmt.h, ctx, doc.fontId)
     if (!hit) return
     const l = slide.layers.find(x => x.id === hit)
     setSelLayer(hit)
     if (!l || l.type !== 'text') return
-    const b = layerBounds(l, fmt.w, fmt.h, ctx)
+    const b = layerBounds(l, fmt.w, fmt.h, ctx, doc.fontId)
     const scale = r.width / fmt.w
     setEditing({ id: hit, x: r.left + b.x * scale, y: r.top + b.y * scale, w: Math.max(160, b.w * scale) })
   }
@@ -505,14 +559,16 @@ export function PostStudio() {
   }
 
   // ── O7: generate one image for the CURRENT slide, on demand ──
-  // Prompt priority: explicit override → the media search box → the slide's own
-  // headline/body. Uploads to the library (persist + same-origin) and places it
-  // as this slide's background.
+  // Prompt priority: explicit override (the B2 popover) → the prompt this slide
+  // was last generated from → its own headline/body. The stock SEARCH box is no
+  // longer in this chain: it used to silently become the image brief, so typing
+  // "cozy kitchen" to find a photo quietly re-briefed the generator too.
+  // Uploads to the library (persist + same-origin) and places it as the bg.
   async function genImageForSlide(override?: string) {
     if (!coreEnabled) { setStatus('Connect Arganta Core (set VITE_ARGANTA_CORE_URL) to generate images.'); return }
     if (!slide) return
     const c = slideContent(slide)
-    const prompt = (override || impQuery || [c.headline, c.body].filter(Boolean).join(' — ') || 'a warm family lifestyle scene').replace(/\n/g, ' ').trim()
+    const prompt = (override || slide.imagePrompt || [c.headline, c.body].filter(Boolean).join(' — ') || 'a warm family lifestyle scene').replace(/\n/g, ' ').trim()
     setMediaBusy(true); setStatus(`Arganta Core is generating an image for slide ${sel + 1}…`)
     try {
       const img = await generateImage({ prompt, format: doc.format, palette: doc.palette })
@@ -548,7 +604,10 @@ export function PostStudio() {
         downloadBlob(blob, doc.slides.length > 1 ? `${base}-slide-${i + 1}.png` : `${base}.png`)
         if (doc.slides.length > 1) await new Promise(r => setTimeout(r, 350)) // let the browser breathe between downloads
       }
-      setStatus(`Exported ${doc.slides.length} PNG${doc.slides.length > 1 ? 's' : ''} · ${fmt.w}×${fmt.h} — ready to upload anywhere.`)
+      // Export IS a publish: those PNGs leave the building and can land anywhere.
+      // Recording it keeps the library honest about what's out in the world.
+      await markPublished('export', `${doc.slides.length} PNG${doc.slides.length > 1 ? 's' : ''} · ${fmt.w}×${fmt.h}`)
+      setStatus(`Exported ${doc.slides.length} PNG${doc.slides.length > 1 ? 's' : ''} · ${fmt.w}×${fmt.h} — ready to upload anywhere. Saved to the library.`)
     } catch (e: any) {
       setStatus(String(e?.name) === 'SecurityError'
         ? 'Export blocked: an image host refused cross-origin use. Re-add it via Upload (it stores a same-origin copy).'
@@ -572,8 +631,9 @@ export function PostStudio() {
         source: null, emoji: c.emoji || '✨', accent: pal.accent,
         audience: 'circle', status: 'draft', publish_at: null,
       })
+      if (id) await markPublished('feed', 'draft in Discover', id)
       setStatus(id
-        ? 'Sent to the Discover feed as a draft.'
+        ? 'Sent to the Discover feed as a draft. Saved to the library.'
         : 'Could not save — are you signed in as an operator?')
     } catch (e: any) { setStatus('Publish failed: ' + (e?.message || e)) } finally { setBusy('') }
   }
@@ -605,7 +665,9 @@ export function PostStudio() {
       const id = await publishMoment(supabase, { circleId, media, body, kind: 'photo' })
       setMomentOpen(false)
       if (id) {
-        setPublished({ circle: circles.find(c => c.id === circleId)?.name || 'the circle', slides: doc.slides.length })
+        const circleName = circles.find(c => c.id === circleId)?.name || 'the circle'
+        await markPublished('moment', circleName, id)
+        setPublished({ circle: circleName, slides: doc.slides.length })
         setStatus('')
       } else {
         setStatus('Publish returned no id — check you’re a member of that circle.')
@@ -650,7 +712,11 @@ export function PostStudio() {
       const text = (doc.caption + (doc.hashtags ? '\n\n' + doc.hashtags : '')).trim()
       const r = await publishToBuffer({ channelId: bufChannelId, text, imageUrls, mode: bufMode, channelService: bufChannels.find(c => c.id === bufChannelId)?.service })
       setBufferOpen(false)
-      setBufferDone({ channel: bufChannels.find(c => c.id === bufChannelId)?.name || 'Instagram', mode: r.mode, images: r.images })
+      const chName = bufChannels.find(c => c.id === bufChannelId)?.name || 'Instagram'
+      // The mode is part of the record: "queued" and "published now" are very
+      // different claims to make about a post six months from now.
+      await markPublished('buffer', `${chName} · ${r.mode === 'shareNow' ? 'published' : r.mode === 'shareNext' ? 'next slot' : 'queued'}`, r.postId)
+      setBufferDone({ channel: chName, mode: r.mode, images: r.images })
       setStatus('')
     } catch (e: any) {
       setBufferOpen(false)
@@ -689,6 +755,7 @@ export function PostStudio() {
           if (postId) {
             const record = { dest: 'moment' as const, postId, publishedAt: new Date().toISOString(), circleId: intent.circleId }
             await recordDraftPublish(supabase, activeDraft.id, record)
+            await markPublished('moment', circleName, postId)
             newlyPublished.push(record)
             results.push({ dest: 'moment', label: `Moment → ${circleName}`, ok: true, message: 'Published to Kinetik → Remember.' })
           } else {
@@ -708,6 +775,7 @@ export function PostStudio() {
           const r = await publishToBuffer({ channelId: intent.channelId, text, imageUrls, mode: intent.mode || 'addToQueue', channelService: bufChannels.find(c => c.id === intent.channelId)?.service })
           const record = { dest: 'buffer' as const, postId: r.postId, publishedAt: new Date().toISOString(), channelId: intent.channelId, mode: r.mode }
           await recordDraftPublish(supabase, activeDraft.id, record)
+          await markPublished('buffer', `${channelName} · ${r.mode === 'shareNow' ? 'published' : r.mode === 'shareNext' ? 'next slot' : 'queued'}`, r.postId)
           newlyPublished.push(record)
           results.push({ dest: 'buffer', label: `Buffer → ${channelName}`, ok: true, message: r.mode === 'shareNow' ? 'Published now.' : r.mode === 'shareNext' ? 'Next in the Buffer queue.' : 'Queued in Buffer for review.' })
         }
@@ -754,6 +822,123 @@ export function PostStudio() {
         setStatus(`Image placed + stored in Supabase (${a.name}).`)
       } else setStatus('Image placed (local — connect Supabase to keep it in the library).')
     } catch (e: any) { setStatus('Upload failed: ' + (e?.message || e)) } finally { setMediaBusy(false) }
+  }
+
+  // ── B4: the library ──
+  // Every publish path funnels through here BEFORE its success modal, which is
+  // what makes "everything I've published is in the library" true by
+  // construction rather than by remembering to press Save. It never throws:
+  // the post is already out at this point, so bookkeeping must not be able to
+  // turn a successful publish into an error.
+  async function markPublished(dest: PublishMark['dest'], label: string, postId?: string) {
+    const e = await recordPublish(doc, { dest, label, postId, at: new Date().toISOString() }, libEntryId)
+    if (e) setLibEntryId(e.id)
+  }
+
+  async function saveToLibrary() {
+    try {
+      const { entry, forked } = await savePost(doc, { id: libEntryId })
+      setLibEntryId(entry.id)
+      setStatus(forked
+        ? `“${entry.title}” was already published, so this saved as a NEW post — the published one stays exactly as it went out.`
+        : `Saved “${entry.title}” to the library.`)
+    } catch (e: any) { setStatus('Library save failed: ' + (e?.message || e)) }
+  }
+
+  function openFromLibrary(next: PostDoc, entry: LibraryEntry) {
+    setDoc(next); setSel(0); setSelLayer(null)
+    // A published entry is immutable, so what's on the canvas is a NEW post from
+    // here on: drop the link, or saving would look like it edits the original.
+    setLibEntryId(entry.locked ? null : entry.id)
+    setStatus(entry.locked
+      ? `Opened a copy of “${entry.title}” — the published original is untouched; saving makes a new post.`
+      : `Opened “${entry.title}”.`)
+  }
+
+  // ── B2: the image prompt, scoped to one slide ──
+  // Seeded from the slide's own words (or a remembered prompt) so the common
+  // case is one click — but it's editable, because "fine-tune this picture" is
+  // the whole reason the founder opened it.
+  function openImagePrompt() {
+    if (!slide) return
+    const c = slideContent(slide)
+    setImgPrompt(slide.imagePrompt || [c.headline, c.body].filter(Boolean).join(' — ').replace(/\n/g, ' ').trim())
+    setImgPromptOpen(true)
+  }
+  async function runImagePrompt() {
+    const p = imgPrompt.trim()
+    if (!p) return
+    setImgPromptOpen(false)
+    // Remember it on the slide: "Variant" then regenerates from the SAME brief
+    // instead of drifting back to the headline, and the Library keeps it as
+    // provenance for how the picture was made.
+    patchSlide(s => { s.imagePrompt = p })
+    await genImageForSlide(p)
+  }
+
+  // ── B3: ✦ polish one line ──
+  // Scoped to ONE piece of text by design: this is the founder's "fine-tune,
+  // one element at a time" rule. It never touches another layer, and on any
+  // failure the original text stays exactly as it was.
+  const [polishing, setPolishing] = useState<string | null>(null)   // a field key
+  const canPolish = coreEnabled || aiLive
+
+  /** Ask Core (then the free chain) to rewrite `text`. Returns null if nothing
+   *  usable came back — callers keep the original rather than wreck the canvas. */
+  async function rewriteLine(text: string, preset: PolishPreset): Promise<string | null> {
+    const one = text.replace(/\s+/g, ' ').trim()
+    if (!one) return null
+    // 1) Arganta Core's `text` kind — the real path once the Worker is deployed.
+    if (coreEnabled) {
+      try {
+        const r = await polishText(one, preset, { brand: doc.brand })
+        if (r?.text && r.text !== one) return r.text
+      } catch { /* fall through */ }
+    }
+    // 2) The free chain. A Worker deployed before the `text` kind existed answers
+    //    bad_kind, so this is a real path today — not dead code.
+    try {
+      const rule = preset === 'punchier' ? 'Make it punchier and more scroll-stopping, shorter if you can.'
+        : preset === 'simpler' ? 'Say the same thing in plainer, simpler words.'
+        : 'Make it sharper and more premium. Keep the meaning and roughly the same length.'
+      const r = await ai.chatJSON({
+        task: 'copy',
+        schema: { type: 'object', properties: { line: { type: 'string' } }, required: ['line'] },
+        messages: [
+          { role: 'system', content: `You rewrite ONE line of social-post copy. ${rule} Reply as JSON: {"line":"…"} and nothing else.` },
+          { role: 'user', content: one },
+        ],
+      })
+      if (r.provider === 'mock') return null
+      const line = String(r.json?.line || '').replace(/\s+/g, ' ').trim().replace(/^["'“”]|["'“”]$/g, '')
+      // Same runaway guard the Worker applies — a rewrite that balloons has
+      // stopped being a rewrite and would silently re-wrap the layout.
+      if (!line || line === one || line.length > Math.max(40, one.length * 1.6)) return null
+      return line
+    } catch { return null }
+  }
+
+  async function polishRole(role: 'title' | 'subtitle', preset: PolishPreset = 'polish') {
+    if (!cv) return
+    const before = role === 'title' ? cv.title : cv.subtitle
+    setPolishing(role)
+    const next = await rewriteLine(before, preset)
+    setPolishing(null)
+    if (!next) { setStatus('Core didn’t return a usable rewrite — your line is unchanged.'); return }
+    patchSlide(s => setRoleText(s, role, next))
+    setStatus(`✦ ${role === 'title' ? 'Title' : 'Subtitle'} polished — undo by retyping; the original was “${before.slice(0, 40)}”.`)
+  }
+
+  async function polishLayer(id: string, preset: PolishPreset = 'polish') {
+    const l = slide?.layers.find(x => x.id === id)
+    if (!l || (l.type !== 'text' && l.type !== 'badge')) return
+    const before = (l as TextLayer | BadgeLayer).text
+    setPolishing(id)
+    const next = await rewriteLine(before, preset)
+    setPolishing(null)
+    if (!next) { setStatus('Core didn’t return a usable rewrite — your line is unchanged.'); return }
+    patchLayer(id, { text: l.type === 'badge' ? next.toUpperCase().slice(0, 24) : next })
+    setStatus(`✦ Polished — the original was “${before.slice(0, 40)}”.`)
   }
 
   // ── M3: style recipes ──
@@ -875,6 +1060,16 @@ export function PostStudio() {
             <button className="pbx-modal-btn" onClick={() => setFanoutResult(null)}>Done</button>
           </div>
         </div>
+      )}
+
+      {/* ── B4: the Post Library ── */}
+      {libOpen && (
+        <PostLibrary
+          env={env} openEntryId={libEntryId}
+          onOpen={openFromLibrary}
+          onSaveStyleFrom={(d: PostDoc, name: string) => setStyles(saveStyle(extractStyle(d, `${name} style`)))}
+          onClose={() => setLibOpen(false)}
+        />
       )}
 
       {/* ── top bar ── */}
@@ -1048,6 +1243,16 @@ export function PostStudio() {
               onKeyDown={e => { if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) { e.preventDefault(); setEditing(null) } }} />
           )}
 
+          {/* B1 — the floating text toolbar, beside the text it edits. */}
+          {tbLayer && tbPos && (
+            <CanvasTextToolbar
+              layer={tbLayer} pos={tbPos} docFontId={doc.fontId}
+              patch={p => patchLayer(tbLayer.id, p)}
+              canPolish={canPolish} polishing={polishing === tbLayer.id}
+              onPolish={preset => polishLayer(tbLayer.id, preset)}
+            />
+          )}
+
           {botOpen && (
             <div className="pbx-bot">
               <div className="pbx-bot-head">
@@ -1123,9 +1328,35 @@ export function PostStudio() {
                   <Upload size={12} /> {cv.imageUrl ? 'Replace' : 'Upload'}
                 </button>
                 {coreEnabled && (
-                  <button className="pbx-btn accent" disabled={mediaBusy} title="Generate a background from this slide's words" onClick={() => genImageForSlide()}>
-                    <Sparkles size={12} /> {mediaBusy ? 'Generating…' : 'Generate'}
-                  </button>
+                  <div className="pbx-genwrap">
+                    <button className="pbx-btn accent" disabled={mediaBusy}
+                      title="Write a prompt for THIS slide's background"
+                      onClick={() => openImagePrompt()}>
+                      <Sparkles size={12} /> {mediaBusy ? 'Generating…' : 'Generate'}
+                    </button>
+                    {/* B2 — a prompt scoped to this ONE background. It used to
+                        borrow the media search box, so generating quietly reused
+                        whatever you last typed to find stock photos. */}
+                    {imgPromptOpen && (
+                      <>
+                        <div className="pbx-genbackdrop" onClick={() => setImgPromptOpen(false)} />
+                        <div className="pbx-genpop">
+                          <div className="pbx-ph"><Sparkles size={12} /> Image for slide {sel + 1}</div>
+                          <textarea className="pbx-ta" rows={3} autoFocus value={imgPrompt}
+                            placeholder="A warm kitchen at golden hour, steam rising…"
+                            onChange={e => setImgPrompt(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) runImagePrompt() }} />
+                          <span className="pbx-mini">{fmt.aspect} · {pal.label} palette{doc.brandId ? ` · ${brand?.name || doc.brandId} art direction` : ''} ride along.</span>
+                          <div className="pbx-row">
+                            <button className="pbx-btn accent" disabled={mediaBusy || !imgPrompt.trim()} onClick={runImagePrompt}>
+                              <Sparkles size={12} /> {mediaBusy ? 'Generating…' : 'Generate for this slide'}
+                            </button>
+                            <button className="pbx-chip" onClick={() => setImgPromptOpen(false)}>Cancel</button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
               {cv.imageUrl && (
@@ -1135,30 +1366,33 @@ export function PostStudio() {
             </div>
 
             <div className="pbx-panel">
-              <div className="pbx-ph"><TypeIcon size={13} /> Words<span className="badge">live on canvas</span></div>
-              <div className="pbx-field">
-                <label>Title</label>
-                <textarea className="pbx-ta" rows={2} value={cv.title} placeholder="The headline that stops the scroll"
-                  onChange={e => patchSlide(s => setRoleText(s, 'title', e.target.value))} />
-              </div>
-              {cv.title && (
-                <Slider label={`Title size · ${cv.titleSize}px`} min={30} max={180} value={cv.titleSize}
-                  onChange={v => patchSlide(s => setTitleSize(s, v))} />
-              )}
-              <div className="pbx-field">
-                <label>Subtitle</label>
-                <textarea className="pbx-ta" rows={2} value={cv.subtitle} placeholder="Supporting line — keep it human."
-                  onChange={e => patchSlide(s => setRoleText(s, 'subtitle', e.target.value))} />
-              </div>
+              <div className="pbx-ph"><TypeIcon size={13} /> Words<span className="badge">click text on canvas to style</span></div>
+              {(['title', 'subtitle'] as const).map(role => (
+                <div className="pbx-field" key={role}>
+                  <label>
+                    {role === 'title' ? 'Title' : 'Subtitle'}
+                    {/* B3 — the ✦ capsule polishes THIS line only. */}
+                    {canPolish && (cv[role] || '').trim() && (
+                      <PolishCapsule busy={polishing === role} onPick={p => polishRole(role, p)} />
+                    )}
+                  </label>
+                  <textarea
+                    className="pbx-ta" rows={2} value={cv[role]}
+                    placeholder={role === 'title' ? 'The headline that stops the scroll' : 'Supporting line — keep it human.'}
+                    onChange={e => patchSlide(s => setRoleText(s, role, e.target.value))} />
+                </div>
+              ))}
+              <span className="pbx-mini">Size, font and alignment live on the canvas — click a line to get its toolbar.</span>
             </div>
 
             <div className="pbx-panel">
               <div className="pbx-ph"><Sticker size={13} /> Pills<span className="badge">{cv.pills.length || 'none'}</span></div>
               <div className="pbx-pills">
                 {cv.pills.map(p => (
-                  <span key={p.id} className="pbx-pill">
+                  <span key={p.id} className={'pbx-pill' + (polishing === p.id ? ' busy' : '')}>
                     <input value={p.text} size={Math.max(3, p.text.length)}
                       onChange={e => patchSlide(s => setPillText(s, p.id, e.target.value))} />
+                    {canPolish && <button className="pbx-pill-fx" title="Polish this pill" onClick={() => polishLayer(p.id)}><Sparkles size={9} /></button>}
                     <button title="Remove pill" onClick={() => patchSlide(s => removePill(s, p.id))}><X size={10} /></button>
                   </span>
                 ))}
@@ -1215,6 +1449,22 @@ export function PostStudio() {
                 <span key={v} className={'pbx-chip' + (slide?.bg.variant === v ? ' on' : '')} onClick={() => patchSlide(s => { s.bg.variant = v })}>{v}</span>
               ))}
             </div>
+            {/* B1 — the post's global font. Every line that hasn't been given
+                its own face on the canvas follows this. */}
+            <div className="pbx-field">
+              <label>Font · whole post</label>
+              <div className="pbx-chipwrap">
+                {POST_FONTS.map(f => (
+                  <span key={f.id} className={'pbx-chip' + ((doc.fontId || 'sans') === f.id ? ' on' : '')}
+                    style={{ fontFamily: f.stack }}
+                    onClick={() => update(d => { d.fontId = f.id })}>{f.label}</span>
+                ))}
+              </div>
+              <button className="pbx-chip" title="Drop every per-layer font override on this slide so they follow the global font again"
+                onClick={() => patchSlide(s => { for (const l of s.layers) if (l.type === 'text') l.font = FONT_INHERIT })}>
+                <Shuffle size={11} /> reset this slide’s overrides
+              </button>
+            </div>
             <div className="pbx-row">
               <span className={'pbx-chip' + (slide?.bg.grain ? ' on' : '')} onClick={() => patchSlide(s => { s.bg.grain = !s.bg.grain })}>grain</span>
               <span className={'pbx-chip' + (slide?.bg.vignette ? ' on' : '')} onClick={() => patchSlide(s => { s.bg.vignette = !s.bg.vignette })}>vignette</span>
@@ -1257,17 +1507,22 @@ export function PostStudio() {
             <div className="pbx-ph"><Cloud size={13} /> Media · Supabase<span className="badge">{cloudEnabled ? 'video-assets' : 'offline'}</span></div>
             {coreEnabled && (
               <div className="pbx-row">
-                <button className="pbx-btn accent" disabled={mediaBusy} title="Generate a background for this slide from its words (or the search box)" onClick={() => genImageForSlide()}>
+                {/* B2 — both routes go through the slide's own prompt now. Variant
+                    re-rolls the SAME brief (that's what makes it a variant); the
+                    stock search box below is no longer secretly the image prompt. */}
+                <button className="pbx-btn accent" disabled={mediaBusy} title="Write a prompt for this slide's background" onClick={() => openImagePrompt()}>
                   <Sparkles size={12} /> {mediaBusy ? 'Generating…' : 'Generate image'}
                 </button>
-                <button className="pbx-btn" disabled={mediaBusy} title="Generate a fresh variant for this slide" onClick={() => genImageForSlide()}>
+                <button className="pbx-btn" disabled={mediaBusy || !slide?.imagePrompt}
+                  title={slide?.imagePrompt ? `Re-roll: “${slide.imagePrompt.slice(0, 60)}”` : 'Generate an image first — Variant re-rolls its prompt'}
+                  onClick={() => genImageForSlide(slide?.imagePrompt)}>
                   <Shuffle size={12} /> Variant
                 </button>
               </div>
             )}
             <div className="pbx-row">
               <button className="pbx-btn accent" onClick={() => fileRef.current?.click()} disabled={mediaBusy}><Upload size={12} /> Upload</button>
-              <input className="pbx-sel" value={impQuery} onChange={e => setImpQuery(e.target.value)} placeholder={coreEnabled ? 'image prompt / stock search…' : 'stock search…'} />
+              <input className="pbx-sel" value={impQuery} onChange={e => setImpQuery(e.target.value)} placeholder="stock search…" />
             </div>
             <div className="pbx-chipwrap">
               <button className="pbx-chip" disabled={mediaBusy} onClick={() => doImportStock('pexels')}><Sparkles size={11} /> Pexels</button>
@@ -1397,7 +1652,15 @@ export function PostStudio() {
           <button className="pbx-ic" title="Duplicate slide" onClick={dupSlide}><CopyIcon size={13} /></button>
           <button className="pbx-ic" title="Delete slide" onClick={delSlide}><Trash2 size={13} /></button>
           <span className="pbx-striphint">carousel: hook → value → CTA · click a slide to edit</span>
-          <button className="pbx-chip" style={{ marginLeft: 'auto' }} onClick={startOver}>Start over</button>
+          <div className="pbx-row" style={{ marginLeft: 'auto', gap: 6 }}>
+            <button className="pbx-chip" title="Save this post to the library — published posts save as a new version instead of overwriting" onClick={saveToLibrary}>
+              <Bookmark size={11} /> Save
+            </button>
+            <button className="pbx-chip" title="Every post you've made — reusable, with where and when it was published" onClick={() => setLibOpen(true)}>
+              <Library size={11} /> Library
+            </button>
+            <button className="pbx-chip" onClick={startOver}>Start over</button>
+          </div>
         </div>
         <div className="pbx-thumbs">
           {doc.slides.map((s, i) => (
@@ -1411,6 +1674,36 @@ export function PostStudio() {
   )
 }
 
+// ── ✦ polish capsule (B3) ─────────────────────────────────────
+// One click = Polish (the 90% case). The chevron opens the other two intents,
+// so the common action never costs a menu.
+function PolishCapsule({ busy, onPick }: { busy: boolean; onPick: (p: PolishPreset) => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <span className="pbx-fxwrap">
+      <button className={'pbx-fx' + (busy ? ' busy' : '')} disabled={busy}
+        title="Polish this line with Arganta Core" onClick={() => onPick('polish')}>
+        <Sparkles size={10} /> {busy ? 'polishing…' : 'polish'}
+      </button>
+      <button className="pbx-fx pbx-fx-more" disabled={busy} aria-label="More rewrite options" onClick={() => setOpen(o => !o)}>
+        <ChevronDown size={10} />
+      </button>
+      {open && (
+        <>
+          <div className="pbx-fxbackdrop" onClick={() => setOpen(false)} />
+          <div className="pbx-fxmenu" role="menu">
+            {POLISH_PRESETS.map(p => (
+              <button key={p.id} role="menuitem" onClick={() => { setOpen(false); onPick(p.id) }}>
+                {p.label}<small>{p.blurb}</small>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </span>
+  )
+}
+
 // ── selected-layer property editor ────────────────────────────
 function LayerProps({ layer, patch }: { layer: PostLayer; patch: (p: Record<string, unknown>) => void }) {
   const l = layer as any
@@ -1418,23 +1711,14 @@ function LayerProps({ layer, patch }: { layer: PostLayer; patch: (p: Record<stri
     <div className="pbx-panel">
       <div className="pbx-ph">{layer.name} · properties</div>
 
+      {/* B1 — size, weight, align, font, colour and plate moved to the floating
+          canvas toolbar: they are visual decisions and belong next to the
+          artwork. What's left here is what the toolbar can't do well — the text
+          itself, and the box it wraps in. */}
       {layer.type === 'text' && (<>
         <textarea className="pbx-ta" value={l.text} rows={2} onChange={e => patch({ text: e.target.value })} />
-        <Slider label={`Size · ${l.size}px`} min={20} max={220} value={l.size} onChange={v => patch({ size: v })} />
-        <div className="pbx-field"><label>Color</label><div className="pbx-chipwrap">
-          {(['ink', 'soft', 'accent'] as const).map(c => <span key={c} className={'pbx-chip' + (l.color === c ? ' on' : '')} onClick={() => patch({ color: c })}>{c}</span>)}
-        </div></div>
-        <div className="pbx-field"><label>Style</label><div className="pbx-chipwrap">
-          {(['none', 'pill', 'underline'] as const).map(h => <span key={h} className={'pbx-chip' + (l.highlight === h ? ' on' : '')} onClick={() => patch({ highlight: h })}>{h}</span>)}
-          <span className={'pbx-chip' + (l.upper ? ' on' : '')} onClick={() => patch({ upper: !l.upper })}>CAPS</span>
-        </div></div>
-        <div className="pbx-field"><label>Font · weight</label><div className="pbx-chipwrap">
-          {(['sans', 'serif', 'mono'] as const).map(f => <span key={f} className={'pbx-chip' + (l.font === f ? ' on' : '')} onClick={() => patch({ font: f })}>{f}</span>)}
-          {[500, 700, 800].map(w => <span key={w} className={'pbx-chip' + (l.weight === w ? ' on' : '')} onClick={() => patch({ weight: w })}>{w}</span>)}
-        </div></div>
-        <div className="pbx-field"><label>Align</label><div className="pbx-chipwrap">
-          {(['left', 'center', 'right'] as const).map(a => <span key={a} className={'pbx-chip' + (l.align === a ? ' on' : '')} onClick={() => patch({ align: a, xN: a === 'left' ? 0.12 : a === 'right' ? 0.88 : 0.5 })}>{a}</span>)}
-        </div></div>
+        <span className="pbx-mini">Size, font, weight, alignment and colour are on the canvas toolbar — click this layer on the artwork.</span>
+        <Slider label={`Line height · ${l.lineHeight.toFixed(2)}`} min={0.9} max={2} step={0.02} value={l.lineHeight} onChange={v => patch({ lineHeight: v })} />
         <Slider label={`Width · ${Math.round(l.maxWidthN * 100)}%`} min={0.3} max={0.95} step={0.01} value={l.maxWidthN} onChange={v => patch({ maxWidthN: v })} />
       </>)}
 
@@ -1445,10 +1729,9 @@ function LayerProps({ layer, patch }: { layer: PostLayer; patch: (p: Record<stri
         <Slider label={`Size · ${l.size}px`} min={40} max={400} value={l.size} onChange={v => patch({ size: v })} />
       </>)}
 
-      {layer.type === 'badge' && (<>
+      {layer.type === 'badge' && (
         <input className="pbx-sel" value={l.text} onChange={e => patch({ text: e.target.value })} />
-        <Slider label={`Size · ${l.size}px`} min={18} max={64} value={l.size} onChange={v => patch({ size: v })} />
-      </>)}
+      )}
 
       {layer.type === 'image' && (<>
         <div className="pbx-field"><label>Mode</label><div className="pbx-chipwrap">

@@ -82,6 +82,25 @@ export async function generateCopy(brief: string, context: CopyContext = {}): Pr
   return { copy: data.copy as CoreCopy, usable: !!data.usable, provenance: data.provenance }
 }
 
+// ── B3: polish ONE line ───────────────────────────────────────
+export type PolishPreset = 'polish' | 'punchier' | 'simpler'
+export interface PolishResult { text: string; provenance?: CoreProvenance }
+
+/**
+ * Rewrite a single line via the Worker's `text` kind.
+ *
+ * Returns null when the Worker can't do it — including the case where a Worker
+ * deployed BEFORE this feature answers `bad_kind`. That's the honest signal for
+ * the caller to fall back to the free chain rather than showing the founder a
+ * dead sparkle button while their deployment catches up.
+ */
+export async function polishText(text: string, preset: PolishPreset = 'polish', context: { brand?: unknown } = {}): Promise<PolishResult | null> {
+  const data = await post({ kind: 'text', text, preset, context })
+  if (!data || !data.usable || typeof data.text !== 'string' || !data.text.trim()) return null
+  log('copy', data.provenance, true)
+  return { text: data.text, provenance: data.provenance }
+}
+
 function b64ToBlob(b64: string, mime: string): Blob {
   const bin = atob(b64)
   const bytes = new Uint8Array(bin.length)

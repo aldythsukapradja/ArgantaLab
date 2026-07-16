@@ -105,6 +105,61 @@ function stripImagePrompts(ex) {
  * BF-5: when the brand ships art direction (its L0.5 knowledge base, distilled),
  * that replaces the generic house style — so a brand's slide backgrounds look
  * like the brand, not like everyone else's stock photography. */
+/**
+ * The `text` kind: rewrite ONE line, in place.
+ *
+ * This is the Post Studio polish capsule — the founder has a headline on the
+ * canvas and wants it sharper. Unlike copyMessages this must return the line and
+ * NOTHING else: no preamble, no quotes, no alternatives list. Small instruct
+ * models love to be helpful ("Sure! Here are 3 options:"), which would land
+ * verbatim on the artwork, so the instruction is blunt and the client also
+ * sanitises what comes back.
+ *
+ * Length is pinned to the original because this is fine-tuning, not rewriting:
+ * a headline laid out at 108px has a size the founder already chose against the
+ * picture, and tripling its length silently re-wraps their design.
+ */
+const PRESET_RULE = {
+  polish: 'Make it sharper and more premium. Keep the meaning and roughly the same length.',
+  punchier: 'Make it punchier and more scroll-stopping. Shorter than the original if you can.',
+  simpler: 'Say the same thing in plainer, simpler words. Keep it short.',
+};
+
+export function textMessages(text, preset = 'polish', ctx = {}) {
+  const brand = brandBlock(ctx.brand);
+  const rule = PRESET_RULE[preset] || PRESET_RULE.polish;
+  return [
+    {
+      role: 'system',
+      content:
+        'You rewrite a single line of social-post copy.' + brand +
+        `\n${rule}` +
+        '\nReturn ONLY the rewritten line as plain text. No quotes, no preamble, ' +
+        'no explanation, no options, no markdown, no trailing punctuation you did ' +
+        'not need. One line.',
+    },
+    { role: 'user', content: text },
+  ];
+}
+
+/** Strip the ways a small model wraps a "just the line" answer. Pure, so the
+ *  same guard is unit-testable and shared by any caller. */
+export function cleanRewrite(raw, original) {
+  let s = String(raw || '').trim();
+  if (!s) return '';
+  // "Sure! Here's a polished version:" preambles — take the last non-empty line.
+  const lines = s.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    const meaty = lines.filter(l => !/^(sure|here|option|version|rewritten)\b/i.test(l));
+    s = (meaty.length ? meaty : lines)[0];
+  } else { s = lines[0] || ''; }
+  s = s.replace(/^\s*(?:\d+[.)]\s*)?["'“”‘’]?/, '').replace(/["'“”‘’]?\s*$/, '').trim();
+  // A rewrite that balloons has stopped being a rewrite — refuse it rather than
+  // silently re-wrapping a layout the founder sized by eye.
+  if (original && s.length > Math.max(40, original.length * 1.6)) return '';
+  return s;
+}
+
 export function imagePrompt(brief, ctx = {}) {
   const base = String(brief || '').replace(/\b(text|words?|letters?|caption|title|logo)\b/gi, '').trim()
     || 'a warm, cinematic family lifestyle scene';

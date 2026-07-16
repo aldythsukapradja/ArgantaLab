@@ -9,7 +9,7 @@ import {
   corsHeaders, isAuthed, jsonResponse, errorEnvelope, parseGenerateBody, estimateNeurons,
 } from '../router.js';
 import { coerceCopy, extractJson } from '../schema.js';
-import { copyMessages, imagePrompt } from '../prompts.js';
+import { copyMessages, imagePrompt, textMessages, cleanRewrite } from '../prompts.js';
 import {
   BUFFER_API, accountOrgsQuery, extractOrgs, channelsQuery, extractChannels,
   createPostMutation, extractPostResult, parsePublishBody,
@@ -66,6 +66,37 @@ async function runCopy(env, req) {
     },
     // surfaced so callers can see whether the model actually produced usable slides
     usable: copy.slides.length > 0,
+  };
+}
+
+/** The `text` kind — rewrite one line. Low temperature and a tight token budget:
+ *  this is fine-tuning a line the founder already wrote, so drifting off it is
+ *  the failure mode, not being boring. `usable` is false when the model wrapped
+ *  its answer in chatter or ballooned the length past what cleanRewrite allows —
+ *  the caller then keeps the original rather than wrecking the canvas. */
+async function runText(env, req) {
+  const model = env.TEXT_MODEL || TEXT_MODEL_DEFAULT;
+  const started = Date.now();
+  const out = await env.AI.run(model, {
+    messages: textMessages(req.text, req.preset, req.context),
+    max_tokens: 160,
+    temperature: 0.6,
+  });
+  const raw = typeof out === 'string' ? out : (out.response || out.result || '');
+  const text = cleanRewrite(raw, req.text);
+  return {
+    text,
+    usable: !!text && text !== req.text,
+    provenance: {
+      provider: 'cloudflare-workers-ai',
+      model,
+      latencyMs: Date.now() - started,
+      neurons: estimateNeurons('text', {
+        promptTokens: (out.usage && out.usage.prompt_tokens) || 0,
+        completionTokens: (out.usage && out.usage.completion_tokens) || 0,
+      }),
+      estimated: true,
+    },
   };
 }
 
@@ -230,7 +261,8 @@ export default {
     if (!parsed.ok) return send(env, origin, jsonResponse(errorEnvelope(parsed.code, parsed.message), 400));
 
     try {
-      const data = parsed.req.kind === 'copy' ? await runCopy(env, parsed.req) : await runImage(env, parsed.req);
+      const run = parsed.req.kind === 'copy' ? runCopy : parsed.req.kind === 'text' ? runText : runImage
+      const data = await run(env, parsed.req);
       return send(env, origin, jsonResponse({ ok: true, kind: parsed.req.kind, ...data }, 200));
     } catch (e) {
       console.error('[arganta-core-content]', parsed.req.kind, e && e.message);

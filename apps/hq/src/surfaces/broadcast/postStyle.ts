@@ -50,6 +50,10 @@ export interface PostStyleRecipe {
   format: string
   palette: string
   brandId?: string
+  /** B1 — the design's global font. A recipe that dropped this would reproduce
+   *  every position and size faithfully and then render in the wrong typeface,
+   *  which is the one thing a "reproduce my design" feature may not do. */
+  fontId?: string
   /** Slot-bearing skeletons, in order. slides.length is the recipe's slide count. */
   slides: PostSlide[]
   /** Captions are content, but the SHAPE of a caption is style — kept as a
@@ -93,6 +97,7 @@ export function extractStyle(doc: PostDoc, name: string): PostStyleRecipe {
     format: doc.format,
     palette: doc.palette,
     brandId: doc.brandId,
+    fontId: doc.fontId,
     slides: doc.slides.map(s => {
       const pillIndex = { n: 0 }
       return {
@@ -141,10 +146,12 @@ export function fillStyle(recipe: PostStyleRecipe, rows: ContentRow[], meta?: { 
     format: recipe.format,
     palette: recipe.palette,
     brandId: recipe.brandId,
+    fontId: recipe.fontId,
     slides: recipe.slides.map((s, i) => ({
       id: pid('sl'),
       template: s.template,
       bg: JSON.parse(JSON.stringify(s.bg)) as SlideBg,
+      imagePrompt: s.imagePrompt,
       layers: s.layers.map(l => fillLayer(l, rows[i] || {})).filter((l): l is PostLayer => l !== null),
     })),
     caption: meta?.caption ?? recipe.caption,

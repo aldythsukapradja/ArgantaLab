@@ -1,6 +1,45 @@
-# Post Studio v2 — Canvas-first editing + Post Library (handoff plan)
+# Post Studio v2 — Canvas-first editing + Post Library
 
-**Status: CONCEPT — batched for execution. 2026-07-16.**
+**Status: BUILT + verified (B0–B4), 2026-07-16.** Planned and shipped same day.
+
+## What shipped
+
+| Batch | Outcome |
+|---|---|
+| B0 | **Already done by a parallel session** — verified at 414px: 0 clipped pills, popover on-screen, close button, date grouping, Projects hidden. No work needed. |
+| B1 | Canvas text toolbar (`CanvasTextToolbar.tsx`) + 8-font registry + `doc.fontId` global font + drawer duplication retired |
+| B2 | Per-slide image-prompt popover; `slide.imagePrompt` remembered; stock search box freed |
+| B3 | ✦ polish capsule + worker `text` kind (`kind:'text'`, 5 new tests) + free-chain fallback |
+| B4 | `post_library` + immutable published rows + auto-save on every publish path + timeline UI |
+
+**One thing needs you:** run `supabase/migration_post_library.sql` for the cloud
+library. Without it the library silently falls back to localStorage (same shape,
+same immutability rule) rather than showing an empty list that looks like lost work.
+
+**Also pending:** redeploy `workers/arganta-core-content` to activate the `text`
+kind. Until then ✦ polish runs on the free `ai.chatJSON` chain — a real path, not
+dead code, because a worker deployed before this answers `bad_kind`.
+
+### Verified live (hq-offline)
+Toolbar renders anchored controls off the real layer (size 108 → 112, align→left
+snaps xN to 0.12); font override writes `poster`; inheritance chain
+`inherit → doc.fontId 'didone' → resolveFontId 'didone'` with the toolbar reading
+"Global · Didone"; image popover seeds from the slide's words and names the
+format/palette/brand riding along; **immutability proved**: publishing locks the
+row, an edit forks to a new row via `derivedFrom`, the published original's
+caption stays untouched, and delete is refused on locked rows.
+
+### Caught during the build
+- `PostLibrary.tsx` vs `postLibrary.ts` differ only in casing → collides on
+  Windows/macOS and fails to resolve on Linux. The panel is `PostLibraryPanel.tsx`.
+- `layerBounds` indexed the old `FONT_STACK` record directly, so any new font id
+  would have measured as `undefined` and mis-anchored every selection frame.
+
+---
+
+## Original plan (below, for the reasoning)
+
+**Status was: CONCEPT — batched for execution. 2026-07-16.**
 Builds ON TOP of the shipped manual mode (commit `914dfe1e`, see
 docs/post-studio-manual-mode-plan.md). Read that first — it defines the tab
 structure, `compose.ts` named-layer binding, `postStyle.ts` recipes, and the

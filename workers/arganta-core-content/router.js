@@ -69,8 +69,14 @@ export function errorEnvelope(code, message) {
 }
 
 // Recognised request kinds. `copy` = text carousel + caption; `image` = one
-// still. O2/S3 add `script` for the Video Builder.
-export const KINDS = Object.freeze(['copy', 'image']);
+// still; `text` = rewrite ONE line in place (the Post Studio polish capsule).
+// O2/S3 add `script` for the Video Builder.
+export const KINDS = Object.freeze(['copy', 'image', 'text']);
+
+/** Rewrite intents the `text` kind accepts. An unknown preset is an error, not
+ *  a silent default — a mis-typed preset returning "polish" would look like the
+ *  model ignoring you. */
+export const TEXT_PRESETS = Object.freeze(['polish', 'punchier', 'simpler']);
 
 /**
  * Validate + normalise a parsed request body. Returns { ok:true, req } or
@@ -86,6 +92,19 @@ export function parseGenerateBody(raw) {
     if (!brief) return { ok: false, code: 'no_brief', message: 'copy requires a non-empty "brief"' };
     const ctx = raw.context && typeof raw.context === 'object' ? raw.context : {};
     return { ok: true, req: { kind, brief: brief.slice(0, 2000), context: ctx } };
+  }
+
+  if (kind === 'text') {
+    const text = typeof raw.text === 'string' ? raw.text.trim() : '';
+    if (!text) return { ok: false, code: 'no_text', message: 'text requires a non-empty "text" to rewrite' };
+    const preset = typeof raw.preset === 'string' ? raw.preset : 'polish';
+    if (!TEXT_PRESETS.includes(preset)) {
+      return { ok: false, code: 'bad_preset', message: `preset must be one of ${TEXT_PRESETS.join(', ')}` };
+    }
+    const ctx = raw.context && typeof raw.context === 'object' ? raw.context : {};
+    // 400 chars is a headline/subline, not an essay. Clamping here keeps a
+    // runaway paste from spending a carousel's budget on one label.
+    return { ok: true, req: { kind, text: text.slice(0, 400), preset, context: ctx } };
   }
 
   // image

@@ -272,6 +272,10 @@ export interface PostSlide {
   template: string        // which template stamped it (for the copilot + UI)
   bg: SlideBg
   layers: PostLayer[]
+  /** B2 — the brief this slide's background was generated from. Kept so
+   *  "Variant" re-rolls the same idea, and so the Library can show how a
+   *  picture was made rather than just that it exists. */
+  imagePrompt?: string
 }
 
 export interface PostDoc {
