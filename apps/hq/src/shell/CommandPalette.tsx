@@ -43,9 +43,13 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const cmds = useMemo<Cmd[]>(() => {
-    const surfs: SurfaceId[] = ['core', 'home', 'portfolio', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack']
+    const surfs: SurfaceId[] = ['core', 'home', 'portfolio', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack', 'cinema', 'reactor', 'copilot']
+    const KW: Partial<Record<SurfaceId, string>> = {
+      vault: ' notes knowledge obsidian markdown',
+      broadcast: ' content builder posts social carousel instagram',
+    }
     const out: Cmd[] = surfs.map(s => ({
-      id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s + (s === 'vault' ? ' notes knowledge obsidian markdown' : ''), Icon: SURFACE_ICON[s], run: () => go(s),
+      id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s + (KW[s] ?? ''), Icon: SURFACE_ICON[s], run: () => go(s),
     }))
     VAULT_JUMPS.forEach(j => out.push({
       id: 'vault-' + j.view, label: j.label, hint: 'Open', keywords: 'vault ' + j.keywords, Icon: j.Icon,

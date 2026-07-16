@@ -1,49 +1,112 @@
-import { LayoutGrid, TrendingUp, Boxes, Radar } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import {
+  Building2, LineChart, Clapperboard, Hammer, X, LayoutGrid,
+  Megaphone, Music2, Wand2, Grid2x2, Gamepad2, Map, Swords, UserRound, Boxes, GraduationCap, Network, Atom, Film,
+} from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId } from './store'
+import { ReactorOrb } from '../surfaces/core/ReactorOrb'
 
-// Mobile collapses the rail into reachable groups. Multi-surface groups expose
-// their members as a secondary sub-tab bar. Group membership MIRRORS the desktop
-// Rail (shell/Rail.tsx) so nothing is unreachable on a phone — keep the two in
-// sync when a surface is added. Agent (Arganta Core, the founder's primary
-// conversational interface) sits DEAD CENTER as a raised orb — like the landing
-// dock — and opens full-screen on mobile.
-type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[] }
+// Mobile collapses the rail into reachable groups. Group membership MIRRORS the
+// desktop Rail (shell/Rail.tsx) — Company → Insights → Studio → Forge — so
+// nothing is unreachable on a phone; keep the two in sync when a surface is
+// added. Agent (Arganta Core, the founder's primary conversational interface)
+// sits DEAD CENTER as a raised orb — like the landing dock — and opens
+// full-screen on mobile. Studio/Forge are workbench-heavy, so tapping their tab
+// opens a launcher sheet (icon + what it makes) instead of dumping into the
+// first surface; Company/Insights keep the direct chip sub-bar and jump to
+// their first surface (go(surfaces[0])).
+type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[]; launcher?: boolean }
 export const MGROUPS: Grp[] = [
-  { id: 'products', label: 'Products', Icon: LayoutGrid, surfaces: ['portfolio', 'home', 'cinema'] },
-  { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data', 'knowledge', 'architecture', 'rack'] },
-  { id: 'command', label: 'Command', Icon: Radar, surfaces: ['command', 'copilot'] },
-  // broadcast (Content Builder) FIRST → it's the Build tab's default tap target
-  // (go(surfaces[0])) per M1c.
-  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['broadcast', 'pixel', 'game', 'app', 'content', 'agents', 'battle', 'character', 'world', 'music', 'video', 'reactor', 'media'] },
+  { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'home', 'command', 'copilot', 'cinema'] },
+  { id: 'insights', label: 'Insights', Icon: LineChart, surfaces: ['growth', 'data', 'vault', 'knowledge', 'architecture', 'rack'] },
+  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['broadcast', 'video', 'music', 'media', 'pixel'], launcher: true },
+  { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'agents', 'reactor'], launcher: true },
 ]
+
+// Launcher card copy: icon + one line of "what it makes". Mobile-launcher-only
+// chrome, so it lives here rather than the store.
+const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>> = {
+  broadcast: { Icon: Megaphone, desc: 'Social posts & carousels' },
+  video: { Icon: Film, desc: 'Videos with voice & export' },
+  music: { Icon: Music2, desc: 'Tracks & soundscapes' },
+  media: { Icon: Wand2, desc: 'AI image, voice & media runs' },
+  pixel: { Icon: Grid2x2, desc: 'Pixel-art sprite library' },
+  game: { Icon: Gamepad2, desc: '15-genre game engine' },
+  world: { Icon: Map, desc: 'Openworld maps & towns' },
+  battle: { Icon: Swords, desc: 'Monsters & encounters' },
+  character: { Icon: UserRound, desc: 'Heroes, skills & NPCs' },
+  app: { Icon: Boxes, desc: 'Circle app templates' },
+  content: { Icon: GraduationCap, desc: 'Learning drills & lessons' },
+  agents: { Icon: Network, desc: 'Agent workflows' },
+  reactor: { Icon: Atom, desc: 'Arc-reactor scene builder' },
+}
+
+function LauncherSheet({ grp, onClose }: { grp: Grp; onClose: () => void }) {
+  const { surface, go } = useHQ()
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="mlaunch-wrap" role="dialog" aria-modal="true" aria-label={grp.label + ' launcher'}>
+      <div className="mlaunch-backdrop" onClick={onClose} />
+      <div className="mlaunch">
+        <header>
+          <span>{grp.label}</span>
+          <button onClick={onClose} aria-label="Close launcher"><X size={16} /></button>
+        </header>
+        <div className="mlaunch-grid">
+          {grp.surfaces.map(s => {
+            const c = CARD[s]
+            const I = c?.Icon ?? LayoutGrid
+            return (
+              <button key={s} className={'mlaunch-card' + (surface === s ? ' on' : '')}
+                onClick={() => { go(s); onClose() }}>
+                <span className="mlc-ic"><I size={19} /></span>
+                <span className="mlc-name">{surfaceLabel(s)}</span>
+                {c?.desc && <span className="mlc-desc">{c.desc}</span>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function MobileNav() {
   const { surface, go, closeAgent, agentOpen } = useHQ()
+  const [launcher, setLauncher] = useState<string | null>(null)
   const activeGroup = MGROUPS.find(g => g.surfaces.includes(surface))?.id
-  const left = MGROUPS.slice(0, 2)   // Products, Analytics
-  const right = MGROUPS.slice(2)     // Command, Build
+  const left = MGROUPS.slice(0, 2)   // Company, Insights
+  const right = MGROUPS.slice(2)     // Studio, Forge
+  const openGrp = launcher ? MGROUPS.find(g => g.id === launcher) : null
 
   const GroupBtn = (g: Grp) => (
     <button key={g.id} className={'mnav-item' + (!agentOpen && surface !== 'core' && activeGroup === g.id ? ' on' : '')}
-      onClick={() => { if (agentOpen) closeAgent(); go(g.surfaces[0]) }}>
+      onClick={() => {
+        if (agentOpen) closeAgent()
+        if (g.launcher) { setLauncher(l => (l === g.id ? null : g.id)); return }
+        setLauncher(null); go(g.surfaces[0])
+      }}>
       <span className="mn-ic"><g.Icon size={20} /></span><span className="mn-lbl">{g.label}</span>
     </button>
   )
 
   return (
-    <nav className="mnav" aria-label="Primary (mobile)">
-      {left.map(GroupBtn)}
-      <button className={'mnav-item mnav-agent' + (surface === 'core' ? ' on' : '')}
-        onClick={() => { if (agentOpen) closeAgent(); go('core') }} aria-label="Open Arganta Core (Agent)">
-        <span className="mnav-orb" aria-hidden>
-          <span className="mnav-orb-core" />
-          <span className="mnav-orb-ring" />
-          <span className="mnav-orb-sats"><i /><i /><i /></span>
-        </span>
-        <span className="mn-lbl">Agent</span>
-      </button>
-      {right.map(GroupBtn)}
-    </nav>
+    <>
+      {openGrp && <LauncherSheet grp={openGrp} onClose={() => setLauncher(null)} />}
+      <nav className="mnav" aria-label="Primary (mobile)">
+        {left.map(GroupBtn)}
+        <button className={'mnav-item mnav-agent' + (surface === 'core' ? ' on' : '')}
+          onClick={() => { setLauncher(null); if (agentOpen) closeAgent(); go('core') }} aria-label="Open Arganta Core (Agent)">
+          <ReactorOrb size="dock" active={surface === 'core'} />
+          <span className="mn-lbl">Agent</span>
+        </button>
+        {right.map(GroupBtn)}
+      </nav>
+    </>
   )
 }
 

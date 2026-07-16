@@ -279,41 +279,76 @@ html[data-theme='dark'] .mnav{
 .mnav-item.on .mn-ic::before{opacity:1;transform:scale(1)}
 .mnav-item:active .mn-ic{transform:scale(.86)}
 /* Agent orb — raised center dock, mirrors the landing's central orb */
-/* Agent orb — a miniature Arganta Core REACTOR (cyan core + orbiting product
-   pods), CSS-only. Cyan is intentional and theme-exempt (matches the hero orb);
-   the label stays --acc-text. Do NOT mount CoreSlot here — illegible this small. */
+/* ===== Shared Arganta Core REACTOR orb (dock Agent button + chat hero) =====
+   Cyan core + ring + three orbiting product pods, sized by --orb. Cyan is
+   intentional and theme-exempt (matches the hero orb). Global (theme.css) so the
+   dock renders even before the lazy Core surface's core.css loads. See ReactorOrb.tsx. */
+.reactor-orb{--orb:58px;position:relative;display:grid;place-items:center;width:var(--orb);height:var(--orb);border-radius:50%;
+  background:radial-gradient(circle at 50% 38%, #101826, #0a0e16);
+  transition:transform .34s cubic-bezier(.34,1.56,.64,1)}
+.reactor-orb-core{width:calc(var(--orb) * .345);height:calc(var(--orb) * .345);border-radius:50%;
+  background:radial-gradient(circle, #f2fdff 0%, #7fe3ff 45%, #2aa6d6 100%);
+  box-shadow:0 0 calc(var(--orb) * .24) calc(var(--orb) * .034) rgba(57,198,242,.55);
+  animation:reactor-breathe 3.2s ease-in-out infinite}
+.reactor-orb-ring{position:absolute;width:calc(var(--orb) * .55);height:calc(var(--orb) * .55);border-radius:50%;
+  border:1.5px solid rgba(57,198,242,.42)}
+.reactor-orb-sats{position:absolute;width:calc(var(--orb) * .76);height:calc(var(--orb) * .76);animation:reactor-orbit 9s linear infinite}
+.reactor-orb-sats i{position:absolute;width:calc(var(--orb) * .086);height:calc(var(--orb) * .086);border-radius:50%;top:0;left:50%;
+  margin-left:calc(var(--orb) * -.043)}
+.reactor-orb-sats i:nth-child(1){background:#f2b544}
+.reactor-orb-sats i:nth-child(2){background:#3fd0a4;transform-origin:calc(var(--orb) * .043) calc(var(--orb) * .38);transform:rotate(120deg)}
+.reactor-orb-sats i:nth-child(3){background:#7f77dd;transform-origin:calc(var(--orb) * .043) calc(var(--orb) * .38);transform:rotate(240deg)}
+@keyframes reactor-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes reactor-orbit{to{transform:rotate(360deg)}}
+.reactor-orb.on .reactor-orb-core{box-shadow:0 0 calc(var(--orb) * .38) calc(var(--orb) * .05) rgba(57,198,242,.8)}
+.reactor-orb.on .reactor-orb-sats{animation-duration:4.5s}
+.reactor-orb.on::after{content:'';position:absolute;inset:calc(var(--orb) * .05);border-radius:50%;border:1px solid rgba(57,198,242,.3);pointer-events:none}
+@media (prefers-reduced-motion:reduce){.reactor-orb-core,.reactor-orb-sats{animation:none}}
+
+/* dock variant — raised above the bar with a knock-out ring, like the landing mic */
+.reactor-orb-dock{--orb:58px;margin-top:-26px;box-shadow:0 0 0 4px var(--bg),0 10px 24px rgba(0,0,0,.4)}
 .mnav-agent{overflow:visible}
 .mnav-agent .mn-lbl{margin-top:2px;color:var(--acc-text)}
-.mnav-orb{position:relative;display:grid;place-items:center;width:58px;height:58px;border-radius:50%;
-  margin-top:-26px;
-  background:radial-gradient(circle at 50% 38%, #101826, #0a0e16);
-  box-shadow:0 0 0 4px var(--bg),0 10px 24px rgba(0,0,0,.4);
-  transition:transform .34s cubic-bezier(.34,1.56,.64,1)}
-.mnav-orb-core{width:20px;height:20px;border-radius:50%;
-  background:radial-gradient(circle, #f2fdff 0%, #7fe3ff 45%, #2aa6d6 100%);
-  box-shadow:0 0 14px 2px rgba(57,198,242,.55);
-  animation:mnav-core-breathe 3.2s ease-in-out infinite}
-.mnav-orb-ring{position:absolute;width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(57,198,242,.45)}
-.mnav-orb-sats{position:absolute;width:44px;height:44px;animation:mnav-orbit 9s linear infinite}
-.mnav-orb-sats i{position:absolute;width:5px;height:5px;border-radius:50%;top:0;left:50%;margin-left:-2.5px}
-.mnav-orb-sats i:nth-child(1){background:#f2b544}
-.mnav-orb-sats i:nth-child(2){background:#3fd0a4;transform-origin:2.5px 22px;transform:rotate(120deg)}
-.mnav-orb-sats i:nth-child(3){background:#7f77dd;transform-origin:2.5px 22px;transform:rotate(240deg)}
-@keyframes mnav-core-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-@keyframes mnav-orbit{to{transform:rotate(360deg)}}
-.mnav-agent:active .mnav-orb{transform:scale(.9)}
-.mnav-agent.on .mnav-orb-core{box-shadow:0 0 22px 3px rgba(57,198,242,.8)}
-.mnav-agent.on .mnav-orb-sats{animation-duration:4.5s}
-.mnav-agent.on .mnav-orb::after{content:'';position:absolute;inset:3px;border-radius:50%;border:1px solid rgba(57,198,242,.3);pointer-events:none}
-@media (prefers-reduced-motion:reduce){
-  .mnav-orb-core,.mnav-orb-sats{animation:none}
-}
+.mnav-agent:active .reactor-orb-dock{transform:scale(.9)}
+/* hero variant — the chat empty-state avatar */
+.reactor-orb-hero{--orb:104px}
 .msub{display:none;gap:6px;padding:9px 14px;border-bottom:1px solid var(--bd);overflow-x:auto;
   background:var(--bg);flex-shrink:0;scrollbar-width:none}
 .msub::-webkit-scrollbar{display:none}
 .msub button{flex:none;font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:99px;
   border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);white-space:nowrap}
 .msub button.on{background:var(--acc-soft);border-color:transparent;color:var(--acc-text);font-weight:600}
+
+/* ---------- Mobile launcher sheet (Studio / Forge tabs) ---------- */
+/* Bottom sheet above the dock: 2-col grid of "what it makes" cards. */
+.mlaunch-wrap{position:fixed;inset:0;z-index:205}
+.mlaunch-backdrop{position:absolute;inset:0;background:rgba(8,6,16,.45);backdrop-filter:blur(2px);animation:mlaunch-fade .18s var(--ease)}
+.mlaunch{position:absolute;left:50%;transform:translateX(-50%);
+  bottom:calc(84px + env(safe-area-inset-bottom));
+  width:calc(100% - 20px);max-width:520px;max-height:min(62dvh, 480px);overflow-y:auto;
+  border-radius:22px;padding:14px 14px calc(14px + 2px);
+  background:color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter:blur(26px) saturate(1.7);-webkit-backdrop-filter:blur(26px) saturate(1.7);
+  border:0.5px solid color-mix(in srgb, var(--tx) 10%, transparent);
+  box-shadow:0 24px 60px rgba(20,16,40,.28);
+  animation:mlaunch-up .26s cubic-bezier(.34,1.3,.64,1)}
+html[data-theme='dark'] .mlaunch{background:color-mix(in srgb, var(--bg2) 88%, rgba(8,6,16,.6));border-color:rgba(255,255,255,.1)}
+.mlaunch header{display:flex;align-items:center;justify-content:space-between;margin:0 2px 10px}
+.mlaunch header span{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3)}
+.mlaunch header button{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;border:none;background:var(--bg2);color:var(--tx2);cursor:pointer}
+.mlaunch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mlaunch-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;
+  min-height:76px;padding:10px 12px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--bd2);background:var(--bg);color:var(--tx);
+  -webkit-tap-highlight-color:transparent;transition:transform .18s var(--ease),border-color .18s}
+.mlaunch-card:active{transform:scale(.97)}
+.mlaunch-card.on{border-color:color-mix(in srgb, var(--acc) 55%, transparent);background:var(--acc-soft)}
+.mlc-ic{color:var(--acc);margin-bottom:3px}
+.mlc-name{font-size:12.5px;font-weight:600;line-height:1.2}
+.mlc-desc{font-size:10.5px;color:var(--tx3);line-height:1.3}
+@keyframes mlaunch-fade{from{opacity:0}}
+@keyframes mlaunch-up{from{opacity:0;transform:translateX(-50%) translateY(14px)}}
+@media (prefers-reduced-motion:reduce){.mlaunch,.mlaunch-backdrop{animation:none}}
 
 /* ---------- Builder — cloud workspace ---------- */
 /* Flat light (or dark) canvas — no workspace gradient. Cards float with a

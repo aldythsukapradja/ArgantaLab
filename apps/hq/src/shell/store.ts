@@ -11,7 +11,7 @@ export type CommandTab = 'lobby' | 'bridge' | 'operations' | 'technology' | 'tre
 const SURFACE_LABEL: Record<SurfaceId, string> = {
   home: 'Home', portfolio: 'Portfolio', data: 'Data', growth: 'Growth',
   content: 'Learn Builder', game: 'Game Builder', app: 'App Builder',
-  agents: 'Agent Builder', broadcast: 'Content Builder', command: 'Command',
+  agents: 'Agent Builder', broadcast: 'Post Studio', command: 'Command',
   pixel: 'Pixel Vault', vault: 'HQ Vault', architecture: 'Architecture', battle: 'Battle Builder',
   character: 'Character Forge', world: 'Openworld Builder', music: 'Music Builder',
   video: 'Video Builder', media: 'Media Center', knowledge: 'Knowledge', cinema: 'Cinema',

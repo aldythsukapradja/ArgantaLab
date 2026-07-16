@@ -1,9 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity, Boxes, ChevronRight, Clapperboard, Clock3, Command, Coins, Gauge,
-  Hand, HelpCircle, LayoutGrid, MapPin, Mic, Moon, Power, RefreshCw, Repeat2, Sparkles,
-  Sun, TrendingUp, Users, X,
+  Activity, Boxes, Building2, ChevronRight, Clapperboard, Clock3, Coins, Gauge,
+  Hammer, Hand, HelpCircle, LayoutGrid, LineChart, MapPin, Mic, MessageCircle, Moon, Power,
+  RefreshCw, Repeat2, Sparkles, Sun, TrendingUp, Users, X,
 } from 'lucide-react'
 import { useHQ } from '../shell/store'
 import { cloudEnabled, live } from '../data/live'
@@ -350,6 +350,30 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
   const gestureActive = useCopilotStore(s => s.gestureActive)
   const gestureLoading = useCopilotStore(s => s.gestureLoading)
 
+  // Mobile mic fan: a tap fans out Voice / Chat petals; long-press (500ms) is
+  // instant voice for the power path. Desktop keeps the one-tap mic. If voice
+  // is already armed, a tap always stops it — the fan never appears mid-listen.
+  const [fanOpen, setFanOpen] = useState(false)
+  const micHold = useRef<{ t: number; fired: boolean }>({ t: 0, fired: false })
+  const micPressStart = useCallback(() => {
+    micHold.current.fired = false
+    micHold.current.t = window.setTimeout(() => { micHold.current.fired = true; setFanOpen(false); toggleVoice() }, 500)
+  }, [toggleVoice])
+  const micPressEnd = useCallback(() => { window.clearTimeout(micHold.current.t) }, [])
+  const handleMicTap = useCallback(() => {
+    if (micHold.current.fired) { micHold.current.fired = false; return } // long-press already toggled voice
+    if (!isMobile || voiceArmed) { toggleVoice(); return }
+    setFanOpen(open => !open)
+  }, [isMobile, voiceArmed, toggleVoice])
+  useEffect(() => {
+    if (!fanOpen) return
+    const t = window.setTimeout(() => setFanOpen(false), 5000) // idle auto-dismiss
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFanOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => { window.clearTimeout(t); window.removeEventListener('keydown', onKey) }
+  }, [fanOpen])
+  useEffect(() => { if (cinemaOn || !isMobile) setFanOpen(false) }, [cinemaOn, isMobile])
+
   // "show desktop/mobile/overview" only means something while a popup is open.
   const setProductViewCtx = useCallback((view: InspectorView) => {
     if (selected) setProductView(view)
@@ -509,18 +533,41 @@ export function Landing({ who: _who = 'Operator' }: { who?: string }) {
         {!isMobile && <RightInstruments {...instrumentProps} booted={booted} stageMap={stageMap} />}
       </div>
 
+      {/* Dock mirrors the mobile 4-tab taxonomy (Company / Insights / Studio /
+          Forge — see shell/MobileNav.tsx MGROUPS); each button lands on that
+          tab's default surface. On mobile the mic fans out into Voice / Chat
+          (chat = Arganta Core full-screen); if already listening, a tap stops
+          immediately — never fan mid-conversation. Long-press = instant voice. */}
       <nav className="ld-dock" aria-label="HQ sections">
-        <button onClick={() => go('portfolio')}><LayoutGrid size={18} /><span>Portfolio</span></button>
-        <button onClick={() => go('growth')}><TrendingUp size={18} /><span>Analytics</span></button>
+        <button onClick={() => go('portfolio')}><Building2 size={18} /><span>Company</span></button>
+        <button onClick={() => go('growth')}><LineChart size={18} /><span>Insights</span></button>
         <button className={`ld-mic ${voiceArmed ? 'is-listening' : ''}`}
-          onClick={toggleVoice}
+          onClick={handleMicTap}
+          onPointerDown={isMobile ? micPressStart : undefined}
+          onPointerUp={isMobile ? micPressEnd : undefined}
+          onPointerLeave={isMobile ? micPressEnd : undefined}
           aria-pressed={voiceArmed}
-          aria-label={voiceArmed ? 'Stop voice commands' : 'Start voice commands'}>
+          aria-expanded={isMobile ? fanOpen : undefined}
+          aria-label={voiceArmed ? 'Stop voice commands' : isMobile ? 'Open voice or chat' : 'Start voice commands'}>
           <span /><Mic size={22} />
         </button>
-        <button onClick={() => go('command')}><Command size={18} /><span>Command</span></button>
-        <button onClick={() => go('game')}><Boxes size={18} /><span>Build</span></button>
+        <button onClick={() => go('broadcast')}><Clapperboard size={18} /><span>Studio</span></button>
+        <button onClick={() => go('game')}><Hammer size={18} /><span>Forge</span></button>
       </nav>
+
+      {fanOpen && (
+        <div className="ld-fan-wrap" role="menu" aria-label="Voice or chat">
+          <div className="ld-fan-backdrop" onClick={() => setFanOpen(false)} />
+          <button className="ld-fan-petal ld-fan-voice" role="menuitem"
+            onClick={() => { setFanOpen(false); toggleVoice() }}>
+            <Mic size={18} /><span>Voice</span>
+          </button>
+          <button className="ld-fan-petal ld-fan-chat" role="menuitem"
+            onClick={() => { setFanOpen(false); go('core') }}>
+            <MessageCircle size={18} /><span>Chat</span>
+          </button>
+        </div>
+      )}
 
       {!hasLiveSignal && <div className="ld-provenance"><Sparkles size={12} /> No demo values · connect and sign in to populate the live instruments</div>}
       {isMobile && <MobileInstruments open={chartsOpen} onClose={() => setChartsOpen(false)} {...instrumentProps} />}

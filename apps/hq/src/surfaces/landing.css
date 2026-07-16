@@ -209,6 +209,18 @@ html[data-theme="dark"] .ld {
 @keyframes ld-mic-ring { 0% { transform: scale(.78); opacity: 0; } 30% { opacity: .75; } 100% { transform: scale(1.18); opacity: 0; } }
 .ld-dock .ld-mic.is-listening { background: radial-gradient(circle at 42% 31%, #b9ffe0, #21d18f 45%, #0c7a54 77%); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ld-surface-strong) 86%, transparent), 0 0 0 7px color-mix(in srgb, var(--ld-green) 55%, transparent), 0 0 44px rgba(33, 209, 143, .6); }
 .ld-mic.is-listening > span { border-color: color-mix(in srgb, var(--ld-green) 60%, transparent); animation-duration: 1.3s; }
+
+/* ---- Mobile mic fan: Voice / Chat petals arcing above the dock mic ---- */
+.ld-fan-wrap { position: fixed; inset: 0; z-index: 31; }
+.ld-fan-backdrop { position: absolute; inset: 0; background: rgba(4, 8, 18, .35); backdrop-filter: blur(2px); animation: ld-fan-fade .16s ease-out; }
+.ld-fan-petal { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 7px; height: 48px; padding: 0 18px; border: 1px solid var(--ld-line); border-radius: 99px; color: var(--ld-text); font-size: 12.5px; font-weight: 600; background: color-mix(in srgb, var(--ld-surface-strong) 92%, transparent); backdrop-filter: blur(20px) saturate(1.3); box-shadow: 0 14px 44px rgba(0, 0, 0, .35); animation: ld-fan-pop .3s cubic-bezier(.34, 1.5, .64, 1) backwards; }
+.ld-fan-voice { transform: translateX(calc(-100% - 10px)); }
+.ld-fan-voice svg { color: var(--ld-green); }
+.ld-fan-chat { transform: translateX(10px); animation-delay: .06s; }
+.ld-fan-chat svg { color: var(--ld-cyan); }
+@keyframes ld-fan-fade { from { opacity: 0; } }
+@keyframes ld-fan-pop { from { opacity: 0; translate: 0 14px; scale: .82; } }
+@media (prefers-reduced-motion: reduce) { .ld-fan-petal, .ld-fan-backdrop { animation: none; } }
 .ld-actions button.ld-gesture-on { color: var(--ld-green); background: color-mix(in srgb, var(--ld-green) 16%, transparent); border-radius: 8px; }
 .ld-provenance { position: fixed; z-index: 22; left: 18px; bottom: 18px; display: flex; align-items: center; gap: 6px; color: var(--ld-muted); font: 7px var(--mono); letter-spacing: .04em; }
 
