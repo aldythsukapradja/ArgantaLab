@@ -9,6 +9,13 @@ tags: [arganta-core, changelog]
 
 Dated log of what shipped in Arganta Core. Newest first. Back to [[Home]].
 
+## 2026-07-16 — Chat polish (v2)
+- **New thread, one tap.** A pencil button now sits top-right in the chat bar (and the desktop panel) — start a fresh session without hunting through the thread list.
+- **The hero orb is the reactor.** The big orb on an empty chat is now the exact same reactor component as the Agent button in the dock — one glowing core with three orbiting product pods, everywhere.
+- **Download any generated image or audio.** Image and audio artifacts have a Download button that saves the file straight to your phone or desktop.
+- **Real provider logos.** The model picker, the composer pill, and each reply's footer show the actual brand mark (Gemini, Groq, Cloudflare, …) beside the model name.
+- **Dropped "(free)" from model names.** They're just "Gemini Flash", "Groq Llama 3.3 70B" now — the free-usage counts still live inside the picker sheet. See [[Models and Cost]].
+
 ## 2026-07-16 — Mobile polish (M1)
 - **The chat is now full screen on phones and tablets**, ChatGPT/Claude-style. The composer is two rows — your message on top, model picker and send beneath — so nothing gets crushed. Send is a proper thumb-sized button.
 - **The model picker opens as a bottom sheet** on mobile, and today's free usage (Cloudflare neurons, Gemini, Groq, session cost) lives inside it instead of cluttering the composer. See [[Models and Cost]].

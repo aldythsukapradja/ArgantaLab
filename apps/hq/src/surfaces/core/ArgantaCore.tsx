@@ -56,11 +56,14 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   const [hasThreads, setHasThreads] = useState(false)
   const bumpThreadsRefresh = () => setThreadsRefresh(n => n + 1)
   const selectThread = (id: string) => { setThreadId(id); bumpThreadsRefresh() }
+  // New session = reset to the fresh empty state; the first message persists a
+  // real thread (same as ChatGPT's "new chat"). No blank row is pre-created.
+  const newThread = () => { setThreadId(null); bumpThreadsRefresh() }
 
   if (effectiveMode === MOUNT_MODES.FULLSCREEN) {
     return (
       <FullscreenCore
-        threadId={threadId} onSelectThread={selectThread} embed={embed}
+        threadId={threadId} onSelectThread={selectThread} onNewThread={newThread} embed={embed}
         maxCostClass={maxCostClass} onArtifact={onArtifact} onClose={onClose}
         threadsRefresh={threadsRefresh} bumpThreadsRefresh={bumpThreadsRefresh}
         hasThreads={hasThreads} onThreadsLoaded={(n) => setHasThreads(n > 0)}
@@ -75,6 +78,9 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
           <div className="core-panel-topbar">
             <span className="core-panel-title">Arganta Core</span>
             <div className="core-topbar-actions">
+              <button className="core-fs-new" onClick={newThread} aria-label="New thread" title="New thread">
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M11.5 2.6 L15.4 6.5 L7 14.9 L3 15.9 L4 11.9 Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /><path d="M10.6 3.5 L14.5 7.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+              </button>
               <HelpButton onClick={() => setHelpOpen(true)} />
               <button className="core-panel-close" onClick={onClose} aria-label="Close Arganta Core">
                 <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 3 L12 12 M12 3 L3 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
@@ -106,9 +112,10 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   )
 }
 
-function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtifact, onClose, threadsRefresh, bumpThreadsRefresh, hasThreads, onThreadsLoaded }: {
+function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostClass, onArtifact, onClose, threadsRefresh, bumpThreadsRefresh, hasThreads, onThreadsLoaded }: {
   threadId: string | null
   onSelectThread: (id: string) => void
+  onNewThread: () => void
   embed: boolean
   maxCostClass: number
   onArtifact?: (a: { assetId: string; kind: string }) => void
@@ -128,6 +135,9 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
           <svg className="core-fs-title-caret" width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden><path d="M3 4.5 L5.5 7 L8 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
         <div className="core-fs-actions">
+          <button className="core-fs-new" onClick={onNewThread} aria-label="New thread" title="New thread">
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M11.5 2.6 L15.4 6.5 L7 14.9 L3 15.9 L4 11.9 Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /><path d="M10.6 3.5 L14.5 7.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+          </button>
           <HelpButton onClick={() => setHelpOpen(true)} />
           <button className="core-fs-close" onClick={onClose} aria-label="Close and go back">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5 L12.5 12.5 M12.5 3.5 L3.5 12.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { intelligenceRegistry } from '../../lib/ai'
 import { getPreferredModelId, setPreferredModelId, subscribePreferredModel } from '../../lib/modelPreference'
 import { friendlyModel, GEMINI_FREE_RPD_EST, type CoreStatus } from './useCoreStatus'
+import { ProviderLogo } from './ProviderLogo'
 
 interface Opt { id: string; label: string; sub: string }
 
@@ -55,7 +56,7 @@ export function ModelPicker({ autoLabel, status, sessionCostUsd, sessionRuns }: 
         aria-haspopup="menu" aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="core-brain-dot" aria-hidden />
+        <ProviderLogo model={label} size={14} />
         <span className="core-brain-pill-txt">{label}</span>
         <svg className="core-brain-caret" width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden>
           <path d="M2 3.5 L5 6.5 L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -72,7 +73,7 @@ export function ModelPicker({ autoLabel, status, sessionCostUsd, sessionRuns }: 
             </button>
             {opts.map((o) => (
               <button key={o.id} className={'core-brain-opt' + (pref === o.id ? ' active' : '')} role="menuitem" onClick={() => pick(o.id)}>
-                <b>{o.label}</b>
+                <b><ProviderLogo model={o.label} size={16} /> {o.label}</b>
                 <i>{o.sub}</i>
               </button>
             ))}

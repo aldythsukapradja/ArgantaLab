@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { loadMessages, sendMessage, type CoreMessage } from '../../lib/core'
 import { UserMessage, AssistantMessage } from './Message'
 import { CoreOrb } from './CoreOrb'
+import { ReactorOrb } from './ReactorOrb'
 import { Composer } from './Composer'
 import { useCoreStatus } from './useCoreStatus'
 
@@ -110,7 +111,7 @@ export function Conversation({ threadId, onThreadCreated, onArtifact, compact, h
       <div className="core-convo-scroll" ref={scrollRef}>
         {isEmpty ? (
           <div className="core-convo-empty">
-            <CoreOrb state="idle" size="hero" />
+            <ReactorOrb size="hero" />
             {hasThreads ? (
               <p className="core-empty-copy">What are we making?</p>
             ) : (

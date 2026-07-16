@@ -267,8 +267,11 @@
 .core-trail-ok { color: var(--tx3); }
 .core-trail-fail { color: var(--bad); }
 
-.core-provenance { font-size: 11px; color: var(--tx3); }
+.core-provenance { font-size: 11px; color: var(--tx3); display: flex; align-items: center; flex-wrap: wrap; }
+.core-provenance > svg { margin-right: 5px; flex: none; }
 .core-prov-fallback { color: var(--warn); cursor: help; }
+/* provider logo sits inline before the model name in the picker rows */
+.core-brain-opt b > svg { flex: none; }
 
 /* ---------- artifact card (Step 5) ---------- */
 .core-artifact-card {
@@ -392,11 +395,13 @@
 }
 .core-fs-title-caret { color: var(--tx3); flex: none; }
 .core-fs-actions { display: flex; align-items: center; gap: 4px; padding-right: 4px; }
-.core-fs-close {
+.core-fs-close, .core-fs-new {
   width: 40px; height: 40px; display: grid; place-items: center;
   background: none; border: none; color: var(--tx2); cursor: pointer; border-radius: var(--r-md);
 }
-.core-fs-close:hover { background: var(--bg3); color: var(--tx); }
+.core-fs-close:hover, .core-fs-new:hover { background: var(--bg3); color: var(--tx); }
+/* new-thread button in the desktop panel top bar (smaller target there) */
+.core-topbar-actions .core-fs-new { width: 30px; height: 30px; }
 .core-fs-menu {
   width: 44px; height: 44px; display: grid; place-items: center;
   background: none; border: none; color: var(--tx2); cursor: pointer; font-size: 18px; border-radius: var(--r-md);

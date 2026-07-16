@@ -11,12 +11,32 @@ import type { CoreBlock } from './blocks'
 export function ArtifactCard({ block }: { block: CoreBlock }) {
   const [accepted, setAccepted] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const anyBlock = block as any
   const assetId: string | null = anyBlock.assetId ?? null
   const path: string | null = anyBlock.path ?? null
   const provider: string | null = anyBlock.provider ?? null
   const costUsd: number = anyBlock.costUsd ?? 0
   const saved = !!assetId
+  // Direct-to-device download for media artifacts. Supabase public buckets send
+  // permissive CORS, so fetch→blob works; if it ever doesn't, fall back to just
+  // opening the file (the browser's own save then handles it).
+  const downloadUrl = path && (block.kind === 'image' || block.kind === 'audio') ? mediaAssetPublicUrl(path) : null
+  const downloadAsset = async () => {
+    if (!downloadUrl || downloading) return
+    setDownloading(true)
+    const ext = (path?.split('.').pop() || '').replace(/[^a-z0-9]/gi, '').slice(0, 4) || (block.kind === 'image' ? 'png' : 'mp3')
+    try {
+      const res = await fetch(downloadUrl)
+      const blob = await res.blob()
+      const href = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = href; a.download = `arganta-${block.kind}-${Date.now()}.${ext}`
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(href), 1500)
+    } catch { window.open(downloadUrl, '_blank', 'noopener') }
+    setDownloading(false)
+  }
   // Accept/discard wires the media_asset_set_accepted RPC — only image/audio
   // blocks carry a real media_asset id. website/deck/brand/create_* blocks
   // carry an hq_artifact id instead (B1/B3's separate builder store); calling
@@ -50,12 +70,20 @@ export function ArtifactCard({ block }: { block: CoreBlock }) {
           {costUsd > 0 && <span> · ${costUsd.toFixed(4)}</span>}
           <span> · {saved ? '✓ saved to Supabase' : '⚠ no saved artifact'}</span>
         </div>
-        {acceptable && accepted === null && (
-          <div className="core-artifact-actions">
-            <button className="core-artifact-btn" onClick={() => decide(true)} disabled={busy}>Accept</button>
-            <button className="core-artifact-btn core-artifact-btn-quiet" onClick={() => decide(false)} disabled={busy}>Discard</button>
-          </div>
-        )}
+        <div className="core-artifact-actions">
+          {downloadUrl && (
+            <button className="core-artifact-btn core-artifact-btn-quiet" onClick={downloadAsset} disabled={downloading} aria-label="Download">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ marginRight: 5, verticalAlign: -2 }}><path d="M7 1.5v7M4 6l3 3 3-3M2.5 11.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              {downloading ? 'Saving…' : 'Download'}
+            </button>
+          )}
+          {acceptable && accepted === null && (
+            <>
+              <button className="core-artifact-btn" onClick={() => decide(true)} disabled={busy}>Accept</button>
+              <button className="core-artifact-btn core-artifact-btn-quiet" onClick={() => decide(false)} disabled={busy}>Discard</button>
+            </>
+          )}
+        </div>
         {accepted === true && <div className="core-artifact-accepted mono">✓ accepted</div>}
         {accepted === false && <div className="core-artifact-discarded mono">discarded</div>}
       </div>

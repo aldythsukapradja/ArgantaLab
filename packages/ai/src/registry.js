@@ -20,22 +20,22 @@ const NON_SOVEREIGN_CATALOG = [
   // Was gemini-2.0-flash; changed 2026-07-15 after confirming live that this
   // project's key returns free_tier_requests limit:0 for gemini-2.0-flash while
   // gemini-flash-latest has quota + does real tool-calling (router.js has the note).
-  modelSpec({ id: 'gemini-flash-free', name: 'Gemini Flash (free)', provider: 'edgeProxy', apiModel: 'gemini-flash-latest', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 1000000, priority: 30 }).spec,
+  modelSpec({ id: 'gemini-flash-free', name: 'Gemini Flash', provider: 'edgeProxy', apiModel: 'gemini-flash-latest', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 1000000, priority: 30 }).spec,
   // priority 28 puts Groq AHEAD of Gemini (30) as the primary Sponsored brain —
   // its free tier is far more generous and ~15ms fast, while Gemini's free quota
   // is tiny and 429s quickly (2026-07-16). Gemini stays the automatic fallback.
-  modelSpec({ id: 'groq-llama-free', name: 'Groq Llama 3.3 70B (free)', provider: 'edgeProxy', apiModel: 'llama-3.3-70b-versatile', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 28 }).spec,
+  modelSpec({ id: 'groq-llama-free', name: 'Groq Llama 3.3 70B', provider: 'edgeProxy', apiModel: 'llama-3.3-70b-versatile', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 28 }).spec,
   // Groq's lighter 8B-Instant — its own much larger free daily token budget
   // (~500k TPD), so it's the sustainable fallback once the 70B's 100k/day is
   // spent. priority 29 keeps it just behind the 70B for Auto, but selectable.
-  modelSpec({ id: 'groq-8b-free', name: 'Groq Llama 3.1 8B (free · fast)', provider: 'edgeProxy', apiModel: 'llama-3.1-8b-instant', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 29 }).spec,
+  modelSpec({ id: 'groq-8b-free', name: 'Groq Llama 3.1 8B (fast)', provider: 'edgeProxy', apiModel: 'llama-3.1-8b-instant', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, tools: true, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 128000, priority: 29 }).spec,
   // Cloudflare Workers AI — same free-quota Sponsored tier. jsonSchema:true is
   // real (verified against Cloudflare's JSON Mode supported-model list, not
   // assumed — llama-3.3-70b-instruct-fp8-fast is on it); tools:false because
   // Workers AI's OpenAI-compat endpoint doesn't support tool-call translation
   // here yet (mirrors the gateway's own `needsTools` exclusion for
   // anthropic-shape entries).
-  modelSpec({ id: 'cloudflare-llama-free', name: 'Cloudflare Llama (free)', provider: 'edgeProxy', apiModel: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: false, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 24000, priority: 31 }).spec,
+  modelSpec({ id: 'cloudflare-llama-free', name: 'Cloudflare Llama', provider: 'edgeProxy', apiModel: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', costClass: 1, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: false, reasoning: true }, dataClasses: ['public', 'internal'], contextWindow: 24000, priority: 31 }).spec,
   // Tier 2 — Economy (cheap paid)
   modelSpec({ id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'edgeProxy', apiModel: 'deepseek-chat', costClass: 2, execution: 'external-api', capabilities: { chat: true, json: true, reasoning: true, code: true }, dataClasses: ['public', 'internal'], contextWindow: 64000, pricing: { inputUsdPerMillion: 0.14, outputUsdPerMillion: 0.28 }, priority: 40 }).spec,
   modelSpec({ id: 'claude-haiku', name: 'Claude Haiku', provider: 'edgeProxy', apiModel: 'claude-haiku-4-5', costClass: 2, execution: 'external-api', capabilities: { chat: true, json: true, jsonSchema: true, tools: true, reasoning: true, code: true }, dataClasses: ['public', 'internal'], contextWindow: 200000, pricing: { inputUsdPerMillion: 1, outputUsdPerMillion: 5 }, priority: 42 }).spec,

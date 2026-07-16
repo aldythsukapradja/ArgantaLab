@@ -10,6 +10,7 @@ import { OFFICE_META } from '../../data/agents'
 import { friendlyModel } from './useCoreStatus'
 import { getPreferredModelId } from '../../lib/modelPreference'
 import { intelligenceRegistry } from '../../lib/ai'
+import { ProviderLogo, providerOf } from './ProviderLogo'
 
 export function UserMessage({ text }: { text: string }) {
   return (
@@ -68,6 +69,7 @@ export function AssistantMessage({ message, provider, model, streaming, errored 
         {textBlock && <TextReveal text={textBlock.text} skipAnimation={!streaming} />}
         {(brandLabel || savedAny) && (
           <div className="core-provenance mono">
+            {brandLabel && providerOf(modelText) && <ProviderLogo model={modelText} size={12} />}
             {brandLabel && <span>{brandLabel}</span>}
             {fellBackFrom && (
               <span className="core-prov-fallback" title={`You picked ${fellBackFrom}, but it was out of free quota this turn, so Core fell back to ${brandLabel}. Your pick is still saved — it'll be used again once its quota resets.`}>
