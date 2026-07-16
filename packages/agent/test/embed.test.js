@@ -9,10 +9,19 @@ test('mobile ALWAYS resolves to fullscreen, overriding any requested mode (the f
   assert.equal(resolveMountMode({ viewportWidth: MOBILE_MAX_WIDTH, requested: MOUNT_MODES.INLINE }), MOUNT_MODES.FULLSCREEN);
 });
 
+test('the tablet band (641–980) is fullscreen too — matches the ≤980 app dock (2026-07-16 correction)', () => {
+  // regression: at 900px the Core used to mount INLINE with the dock visible;
+  // the breakpoint now tracks the app's mobile nav so fullscreen covers the dock.
+  assert.equal(MOBILE_MAX_WIDTH, 980);
+  assert.equal(resolveMountMode({ viewportWidth: 900, requested: MOUNT_MODES.INLINE }), MOUNT_MODES.FULLSCREEN);
+  assert.equal(resolveMountMode({ viewportWidth: 980 }), MOUNT_MODES.FULLSCREEN);
+});
+
 test('desktop honors the requested mode, defaulting to inline', () => {
   assert.equal(resolveMountMode({ viewportWidth: 1280, requested: MOUNT_MODES.PANEL }), MOUNT_MODES.PANEL);
   assert.equal(resolveMountMode({ viewportWidth: 1280 }), MOUNT_MODES.INLINE);
   assert.equal(resolveMountMode({ viewportWidth: 1280, requested: 'garbage' }), MOUNT_MODES.INLINE);
+  assert.equal(resolveMountMode({ viewportWidth: 1000 }), MOUNT_MODES.INLINE); // just above the band
 });
 
 test('fullscreen covers app chrome; a panel does not', () => {

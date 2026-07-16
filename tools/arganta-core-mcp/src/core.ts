@@ -121,11 +121,12 @@ export async function createDraft(env: Env, client: SupabaseClient, brief: strin
     }
   }
 
-  // 3) persist the draft
+  // 3) persist the draft (+ publish intents, if any — never acted on here)
   const { data, error } = await client.from('content_draft').insert({
     brief, status: 'ready', copy, format,
     palette: copy.palette || opts.palette, platform: opts.platform,
     provenance: copyRes.provenance,
+    publish_to: opts.publishTo || [],
   }).select('id').single()
   if (error) throw new Error(`Draft write failed: ${error.message}`)
   return { id: data.id as string, slides: copy.slides.length, images }
@@ -134,7 +135,7 @@ export async function createDraft(env: Env, client: SupabaseClient, brief: strin
 export async function listDrafts(client: SupabaseClient, limit = 20): Promise<any[]> {
   const { data, error } = await client
     .from('content_draft')
-    .select('id, brief, status, format, slides:copy, consumed_at, created_at')
+    .select('id, brief, status, format, slides:copy, consumed_at, created_at, publish_to, published_to')
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw new Error(error.message)
@@ -142,6 +143,9 @@ export async function listDrafts(client: SupabaseClient, limit = 20): Promise<an
     id: r.id, brief: r.brief, status: r.status, format: r.format,
     slideCount: Array.isArray(r.slides?.slides) ? r.slides.slides.length : 0,
     consumed: !!r.consumed_at, createdAt: r.created_at,
+    // Path C: what was requested vs what actually went out — lets Claude Code
+    // see at a glance whether a hybrid draft still needs the operator's approval.
+    publishTo: r.publish_to || [], publishedTo: r.published_to || [],
   }))
 }
 

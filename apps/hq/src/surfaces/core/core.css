@@ -175,6 +175,14 @@
 .core-brain-opt i { font-size: 10.5px; font-style: normal; color: var(--tx3); }
 .core-brain-rec { font-size: 8.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); padding: 1px 5px; border-radius: 999px; }
 .core-brain-note { padding: 7px 10px 5px; margin-top: 3px; border-top: 1px solid var(--bd); font-size: 10px; line-height: 1.45; color: var(--tx3); }
+.core-brain-pill-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Scrim + grip + usage section — only visible when the menu is a mobile sheet. */
+.core-brain-scrim { display: none; }
+.core-brain-grip { display: none; }
+.core-brain-usage { display: none; }
+.core-brain-usage-h { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tx3); padding: 2px 10px 6px; }
+.core-brain-usage-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 10px; font-size: 12.5px; color: var(--tx2); }
+.core-brain-usage-row span:last-child { font-family: var(--mono, monospace); color: var(--tx); }
 .core-composer-mic {
   width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; border: none; background: none;
   color: var(--tx3); cursor: pointer; display: grid; place-items: center;
@@ -194,19 +202,62 @@
 .core-quota-of { color: var(--tx3); opacity: .6; }
 @media (max-width: 560px) { .core-quota-chips { gap: 8px; } }
 
+/* ===== Mobile composer + picker sheet (≤980px, matches the app dock breakpoint) =====
+   ChatGPT/Claude pattern: input on its own row, controls beneath, telemetry one
+   tap away in the model-picker sheet instead of permanently under the composer. */
+@media (max-width: 980px) {
+  .core-composer { padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .core-composer-field { flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 8px 8px; border-radius: 22px; }
+  /* row 1 — the input, full width; 16px font kills iOS focus-zoom */
+  .core-composer-textarea { order: -1; flex: 1 1 100%; width: 100%; padding: 9px 8px 4px; font-size: 16px; }
+  /* row 2 — controls rail */
+  .core-brain-picker { order: 0; max-width: 46%; }
+  .core-brain-pill { max-width: 100%; }
+  .core-composer-mic { order: 1; margin-left: auto; }
+  .core-composer-send { order: 2; width: 36px; height: 36px; }
+  /* telemetry leaves the canvas → into the picker sheet */
+  .core-status-row { display: none; }
+
+  /* the picker menu becomes a bottom sheet */
+  .core-brain-scrim {
+    display: block; position: fixed; inset: 0; z-index: 1200;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    animation: core-fade-in var(--dur, .16s) var(--ease-out, ease);
+  }
+  .core-brain-menu {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 1201;
+    width: auto; max-width: none;
+    padding: 6px 8px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px 18px 0 0; border-bottom: none;
+    animation: core-sheet-up var(--dur-med, .22s) var(--ease-out, ease);
+  }
+  .core-brain-grip { display: block; width: 36px; height: 4px; border-radius: 99px; background: var(--bd2); margin: 4px auto 8px; }
+  .core-brain-opt { padding: 10px 12px; }
+  .core-brain-opt b { font-size: 14px; }
+  .core-brain-opt i { font-size: 12px; }
+  .core-brain-usage { display: block; margin-top: 4px; border-top: 1px solid var(--bd); padding-top: 6px; }
+
+  /* tighter chat body on phones */
+  .core-msg-assistant .core-orb-avatar { width: 26px; height: 26px; }
+  .core-convo-col { max-width: 680px; }
+}
+@keyframes core-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes core-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
 /* ---------- messages ---------- */
 .core-msg { display: flex; margin-bottom: 18px; }
 .core-msg-user { justify-content: flex-end; }
 .core-bubble {
-  max-width: 85%; background: var(--acc-soft); color: var(--acc-text);
-  border-radius: var(--r-lg); padding: 10px 14px; font-size: 14px; line-height: 1.5;
+  max-width: 84%; background: var(--acc-soft); color: var(--acc-text);
+  border-radius: 18px 18px 4px 18px; padding: 10px 14px; font-size: 15px; line-height: 1.5;
   white-space: pre-wrap; word-break: break-word;
   animation: core-msg-in var(--dur-med) var(--ease-out);
 }
 .core-msg-assistant { align-items: flex-start; gap: 12px; animation: core-msg-in var(--dur-med) var(--ease-out); }
 .core-msg-assistant .core-orb-avatar { margin-top: 2px; }
 .core-msg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.core-text { font-size: 14.5px; line-height: 1.6; color: var(--tx); white-space: pre-wrap; word-break: break-word; cursor: default; }
+.core-text { font-size: 15px; line-height: 1.6; color: var(--tx); white-space: pre-wrap; word-break: break-word; cursor: default; }
 .core-thinking { font-size: 12.5px; color: var(--tx3); }
 
 .core-trail-line {
@@ -325,7 +376,9 @@
 }
 .core-fs-topbar {
   flex-shrink: 0; height: 52px; display: flex; align-items: center;
-  padding: 0 8px; background: var(--bg); border-bottom: 1px solid var(--bd);
+  padding: 0 8px; border-bottom: 1px solid var(--bd);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
 }
 .core-fs-back {
   width: 44px; height: 44px; display: grid; place-items: center;
@@ -333,9 +386,11 @@
 }
 .core-fs-back:hover { background: var(--bg3); }
 .core-fs-title {
-  flex: 1; text-align: left; font-size: 14px; font-weight: 600; color: var(--tx);
+  flex: 1; display: flex; align-items: center; gap: 5px; justify-content: flex-start;
+  font-size: 15px; font-weight: 600; color: var(--tx);
   background: none; border: none; cursor: pointer; padding: 8px 8px 8px 12px;
 }
+.core-fs-title-caret { color: var(--tx3); flex: none; }
 .core-fs-actions { display: flex; align-items: center; gap: 4px; padding-right: 4px; }
 .core-fs-close {
   width: 40px; height: 40px; display: grid; place-items: center;

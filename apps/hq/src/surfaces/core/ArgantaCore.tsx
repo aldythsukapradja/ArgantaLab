@@ -123,7 +123,10 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
   return (
     <div className="core core-fullscreen" data-embed={embed || undefined} style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN }}>
       <div className="core-fs-topbar">
-        <button className="core-fs-title" onClick={() => setSheetOpen(true)}>Arganta Core</button>
+        <button className="core-fs-title" onClick={() => setSheetOpen(true)} aria-label="Arganta Core — open threads">
+          Arganta Core
+          <svg className="core-fs-title-caret" width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden><path d="M3 4.5 L5.5 7 L8 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
         <div className="core-fs-actions">
           <HelpButton onClick={() => setHelpOpen(true)} />
           <button className="core-fs-close" onClick={onClose} aria-label="Close and go back">

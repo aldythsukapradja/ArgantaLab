@@ -12,6 +12,12 @@ const json = (o: unknown) => ({ content: [{ type: 'text' as const, text: JSON.st
 const fail = (msg: string) => ({ isError: true, content: [{ type: 'text' as const, text: msg }] })
 
 const FORMATS = ['portrait', 'square', 'story', 'pin', 'wide', 'link'] as const
+const BUFFER_MODES = ['addToQueue', 'shareNext'] as const // shareNow deliberately absent — never reachable from Claude Code
+
+const PublishIntentSchema = z.union([
+  z.object({ dest: z.literal('moment'), circleId: z.string().describe('the Kinetik circle id to post into') }),
+  z.object({ dest: z.literal('buffer'), channelId: z.string().describe('the Buffer channel id from buffer_channels'), mode: z.enum(BUFFER_MODES).optional() }),
+])
 
 export function registerTools(server: McpServer) {
   server.tool(
@@ -19,21 +25,30 @@ export function registerTools(server: McpServer) {
     'Generate a social-post carousel with Arganta Core (Cloudflare Worker) and drop it into HQ’s ' +
     'Content Builder → Drafts inbox for the operator to edit and publish. Describe the post in plain ' +
     'English; the Worker writes the slides + caption and (unless disabled) generates a background image ' +
-    'per slide. Returns the draft id.',
+    'per slide. Returns the draft id. Optionally attach `publishTo` intents (Path C, hybrid workflow) — ' +
+    'these are just RECORDED on the draft as intent badges, never acted on automatically; the operator ' +
+    'still opens the draft in HQ and clicks "Approve & publish everywhere" once, which composes the real ' +
+    'branded slides (this tool cannot — it runs headless, no canvas) and fans out to every intent.',
     {
       brief: z.string().min(3).describe('what the post is about, e.g. "5-slide carousel about ocean animals, playful"'),
       format: z.enum(FORMATS).optional().describe('post shape (default portrait 4:5)'),
       palette: z.string().optional().describe('preferred palette id, e.g. ocean, dusk, kinetik'),
       platform: z.string().optional().describe('caption target: instagram (default), tiktok, x, linkedin, facebook, pinterest'),
       withImages: z.boolean().optional().describe('generate a background image per slide (default true)'),
+      publishTo: z.array(PublishIntentSchema).optional().describe(
+        'destinations to record as intents, e.g. [{"dest":"moment","circleId":"..."},{"dest":"buffer","channelId":"...","mode":"addToQueue"}]. ' +
+        'Purely declarative — the operator approves the actual publish in HQ.'),
     },
-    async ({ brief, format, palette, platform, withImages }) => {
+    async ({ brief, format, palette, platform, withImages, publishTo }) => {
       try {
         const env = readEnv()
         const client = makeClient(env)
-        const r = await createDraft(env, client, brief, { format, palette, platform, withImages })
+        const r = await createDraft(env, client, brief, { format, palette, platform, withImages, publishTo: publishTo as any })
         return json({ ok: true, draftId: r.id, slides: r.slides, imagesGenerated: r.images,
-          next: 'Open HQ → Content Builder → Arganta Core → Drafts to edit and publish.' })
+          publishIntents: publishTo || [],
+          next: publishTo?.length
+            ? 'Open HQ → Content Builder → Arganta Core → Drafts, then click "Approve & publish everywhere" to fan out to the requested destinations.'
+            : 'Open HQ → Content Builder → Arganta Core → Drafts to edit and publish.' })
       } catch (e: any) { return fail(e?.message || String(e)) }
     },
   )

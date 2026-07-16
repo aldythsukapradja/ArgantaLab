@@ -18,7 +18,7 @@ import { supabase, cloudEnabled } from '../../lib/supabase'
 import { ai, aiLive } from '../../lib/ai'
 import { generateCopy, generateImage, coreEnabled, extForImageMime, getCoreQuota, prettyModel, type CoreQuota } from '../../lib/argantaCoreClient'
 import { listPublishableCircles, publishMoment, type PublishCircle } from '../../lib/momentPublish'
-import { listContentDrafts, markDraftConsumed, type ContentDraft } from '../../lib/contentDrafts'
+import { listContentDrafts, markDraftConsumed, recordDraftPublish, type ContentDraft } from '../../lib/contentDrafts'
 import { listBufferChannels, publishToBuffer, bufferEnabled, type BufferChannel, type BufferMode } from '../../lib/bufferClient'
 import { live } from '../../data/live'
 import {
@@ -80,7 +80,7 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
   const [sel, setSel] = useState(0)
   const [selLayer, setSelLayer] = useState<string | null>(null)
   const [status, setStatus] = useState('')
-  const [busy, setBusy] = useState<'' | 'export' | 'publish' | 'moment' | 'buffer'>('')
+  const [busy, setBusy] = useState<'' | 'export' | 'publish' | 'moment' | 'buffer' | 'approve'>('')
   // Kinetik moment publishing
   const [momentOpen, setMomentOpen] = useState(false)
   const [circles, setCircles] = useState<PublishCircle[]>([])
@@ -100,6 +100,9 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
   const [draftsOpen, setDraftsOpen] = useState(false)
   const [drafts, setDrafts] = useState<ContentDraft[]>([])
   const [draftsBusy, setDraftsBusy] = useState(false)
+  // Path C — the currently-open draft's publish intents + fan-out result
+  const [activeDraft, setActiveDraft] = useState<ContentDraft | null>(null)
+  const [fanoutResult, setFanoutResult] = useState<{ dest: string; label: string; ok: boolean; message: string }[] | null>(null)
   const [guides, setGuides] = useState(false)
   const [tick, setTick] = useState(0)
   // media library
@@ -198,6 +201,17 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
     setStatus(`Opened draft “${d.brief.slice(0, 40)}${d.brief.length > 40 ? '…' : ''}” — ${next.slides.length} slides on canvas.`)
     markDraftConsumed(supabase, d.id)
     setDrafts(prev => prev.map(x => x.id === d.id ? { ...x, consumedAt: new Date().toISOString() } : x))
+    // Path C: track this draft so "Approve & publish everywhere" can fan out to
+    // its recorded intents once you're happy with the composed canvas. Preload
+    // whichever picker lists the intents reference, so names resolve for badges
+    // without you having to open those pickers manually first.
+    setActiveDraft(d)
+    if (d.publishTo.some(p => p.dest === 'moment') && !circlesLoaded) {
+      listPublishableCircles(supabase).then(list => { setCircles(list); setCirclesLoaded(true) })
+    }
+    if (d.publishTo.some(p => p.dest === 'buffer') && !bufChannelsLoaded) {
+      listBufferChannels().then(list => { setBufChannels(list); setBufChannelsLoaded(true) })
+    }
   }
 
   // ── doc edits ──
@@ -599,6 +613,70 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
     } finally { setBusy('') }
   }
 
+  // ── Path C: fan out to every intent Claude Code recorded on the open draft ──
+  // Renders the COMPOSED canvas once per destination format (moments want
+  // private-bucket PNG; Buffer needs public-bucket JPEG — never share one
+  // render between them, see docs/arganta-core/Content-Workflow.md §0). Each
+  // intent is independent: one failing never blocks the others, and only
+  // successes get written back to published_to (failures stay visible so you
+  // can retry that one destination without redoing the ones that worked).
+  function intentKey(p: { dest: string; circleId?: string; channelId?: string }) { return `${p.dest}:${p.circleId || p.channelId}` }
+  const publishedKeys = new Set((activeDraft?.publishedTo || []).map(r => intentKey(r)))
+
+  async function approvePublishEverywhere() {
+    if (!activeDraft || !activeDraft.publishTo.length) return
+    setBusy('approve')
+    const results: { dest: string; label: string; ok: boolean; message: string }[] = []
+    const newlyPublished: NonNullable<ContentDraft['publishedTo']> = []
+    for (const intent of activeDraft.publishTo) {
+      if (publishedKeys.has(intentKey(intent))) continue // already done — retry only what's left
+      try {
+        if (intent.dest === 'moment') {
+          const media = []
+          for (let i = 0; i < doc.slides.length; i++) media.push({ blob: await renderSlideBlob(doc, i, env), kind: 'photo' as const, ext: 'png' })
+          const body = (doc.caption + (doc.hashtags ? '\n\n' + doc.hashtags : '')).trim()
+          const postId = await publishMoment(supabase, { circleId: intent.circleId, media, body, kind: 'photo' })
+          const circleName = circles.find(c => c.id === intent.circleId)?.name || intent.circleId
+          if (postId) {
+            const record = { dest: 'moment' as const, postId, publishedAt: new Date().toISOString(), circleId: intent.circleId }
+            await recordDraftPublish(supabase, activeDraft.id, record)
+            newlyPublished.push(record)
+            results.push({ dest: 'moment', label: `Moment → ${circleName}`, ok: true, message: 'Published to Kinetik → Remember.' })
+          } else {
+            results.push({ dest: 'moment', label: `Moment → ${circleName}`, ok: false, message: 'No id returned — check circle membership.' })
+          }
+        } else {
+          if (doc.slides.length > 10) throw new Error('Instagram carousels allow at most 10 slides — remove a few, then retry.')
+          const imageUrls: string[] = []
+          for (let i = 0; i < doc.slides.length; i++) {
+            const blob = await renderSlideBlob(doc, i, env, 'image/jpeg')
+            const file = new File([blob], `buffer-${pid('img')}.jpg`, { type: 'image/jpeg' })
+            const a = await uploadAsset(supabase, file, { kind: 'image', width: fmt.w, height: fmt.h })
+            imageUrls.push(a.url)
+          }
+          const text = (doc.caption + (doc.hashtags ? '\n\n' + doc.hashtags : '')).trim()
+          const channelName = bufChannels.find(c => c.id === intent.channelId)?.name || intent.channelId
+          const r = await publishToBuffer({ channelId: intent.channelId, text, imageUrls, mode: intent.mode || 'addToQueue', channelService: bufChannels.find(c => c.id === intent.channelId)?.service })
+          const record = { dest: 'buffer' as const, postId: r.postId, publishedAt: new Date().toISOString(), channelId: intent.channelId, mode: r.mode }
+          await recordDraftPublish(supabase, activeDraft.id, record)
+          newlyPublished.push(record)
+          results.push({ dest: 'buffer', label: `Buffer → ${channelName}`, ok: true, message: r.mode === 'shareNow' ? 'Published now.' : r.mode === 'shareNext' ? 'Next in the Buffer queue.' : 'Queued in Buffer for review.' })
+        }
+      } catch (e: any) {
+        const label = intent.dest === 'moment'
+          ? `Moment → ${circles.find(c => c.id === intent.circleId)?.name || intent.circleId}`
+          : `Buffer → ${bufChannels.find(c => c.id === intent.channelId)?.name || intent.channelId}`
+        results.push({ dest: intent.dest, label, ok: false, message: e?.message || String(e) })
+      }
+    }
+    if (newlyPublished.length) {
+      setActiveDraft(prev => prev && prev.id === activeDraft.id ? { ...prev, publishedTo: [...prev.publishedTo, ...newlyPublished] } : prev)
+    }
+    refreshAssets()
+    setFanoutResult(results)
+    setBusy('')
+  }
+
   async function copyCaption() {
     const text = doc.caption + (doc.hashtags ? '\n\n' + doc.hashtags : '')
     try { await navigator.clipboard.writeText(text) } catch { /* ignore */ }
@@ -607,7 +685,7 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
 
   function startOver() {
     if (!confirm('Start a fresh post? The current one is replaced (it stays in your browser until then).')) return
-    setDoc(starterDoc()); setSel(0); setSelLayer(null); setStatus('Fresh canvas.')
+    setDoc(starterDoc()); setSel(0); setSelLayer(null); setStatus('Fresh canvas.'); setActiveDraft(null)
   }
 
   const rule = captionRule(platform)
@@ -677,6 +755,28 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
         </div>
       )}
 
+      {/* ── Path C: fan-out result modal (one row per destination, success or not) ── */}
+      {fanoutResult && (
+        <div className="pbx-modal-backdrop" onClick={() => setFanoutResult(null)}>
+          <div className="pbx-modal" onClick={e => e.stopPropagation()}>
+            <div className={'pbx-modal-icon' + (fanoutResult.every(r => r.ok) ? '' : ' pbx-modal-icon--err')}>
+              {fanoutResult.every(r => r.ok) ? <Check size={28} /> : <X size={28} />}
+            </div>
+            <h3>{fanoutResult.every(r => r.ok) ? 'Published everywhere 🎉' : fanoutResult.some(r => r.ok) ? 'Partly published' : 'Publish failed'}</h3>
+            <div className="pbx-fanoutlist">
+              {fanoutResult.map((r, i) => (
+                <div key={i} className={'pbx-fanoutrow' + (r.ok ? ' ok' : '')}>
+                  <span className="pbx-fanoutdot">{r.ok ? <Check size={11} /> : <X size={11} />}</span>
+                  <span className="pbx-fanoutlabel">{r.label}</span>
+                  <span className="pbx-fanoutmsg">{r.message}</span>
+                </div>
+              ))}
+            </div>
+            <button className="pbx-modal-btn" onClick={() => setFanoutResult(null)}>Done</button>
+          </div>
+        </div>
+      )}
+
       {/* ── top bar ── */}
       <div className="pbx-top">
         <div className="pbx-mark"><Megaphone size={15} /></div>
@@ -715,6 +815,13 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
                       <button key={d.id} className={'pbx-draftitem' + (d.consumedAt ? ' seen' : '')} disabled={d.status !== 'ready'} onClick={() => openDraft(d)}>
                         <span className="pbx-draftbrief">{d.brief.slice(0, 54)}{d.brief.length > 54 ? '…' : ''}</span>
                         <span className="pbx-draftmeta">{d.status === 'error' ? 'error' : `${d.copy.slides.length} slides`} · {new Date(d.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        {d.publishTo.length > 0 && (
+                          <span className="pbx-draftintents">
+                            {d.publishTo.map((p, i) => (
+                              <span key={i} className="pbx-intentbadge">→ {p.dest === 'moment' ? 'Moment' : 'Buffer'}</span>
+                            ))}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -722,6 +829,19 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
               </div>
             )}
           </div>
+        )}
+        {activeDraft && activeDraft.publishTo.length > 0 && (
+          <button
+            className="pbx-approve"
+            disabled={busy !== '' || activeDraft.publishTo.every(p => publishedKeys.has(intentKey(p)))}
+            title="Compose the canvas once, then publish to every destination requested from Claude Code"
+            onClick={approvePublishEverywhere}
+          >
+            <Check size={14} />
+            {busy === 'approve' ? 'Publishing…'
+              : activeDraft.publishTo.every(p => publishedKeys.has(intentKey(p))) ? 'All published ✓'
+              : `Approve & publish everywhere (${activeDraft.publishTo.length - activeDraft.publishTo.filter(p => publishedKeys.has(intentKey(p))).length})`}
+          </button>
         )}
         <div className="pbx-momentwrap">
           <button className="pbx-moment" disabled={busy !== ''} title="Publish this carousel to a KinetikCircle → Remember feed" onClick={openMomentPicker}>

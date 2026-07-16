@@ -12,7 +12,9 @@ export const MGROUPS: Grp[] = [
   { id: 'products', label: 'Products', Icon: LayoutGrid, surfaces: ['portfolio', 'home', 'cinema'] },
   { id: 'analytics', label: 'Analytics', Icon: TrendingUp, surfaces: ['growth', 'data', 'knowledge', 'architecture', 'rack'] },
   { id: 'command', label: 'Command', Icon: Radar, surfaces: ['command', 'copilot'] },
-  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['pixel', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'reactor', 'media'] },
+  // broadcast (Content Builder) FIRST → it's the Build tab's default tap target
+  // (go(surfaces[0])) per M1c.
+  { id: 'build', label: 'Build', Icon: Boxes, surfaces: ['broadcast', 'pixel', 'game', 'app', 'content', 'agents', 'battle', 'character', 'world', 'music', 'video', 'reactor', 'media'] },
 ]
 
 export function MobileNav() {
@@ -33,7 +35,11 @@ export function MobileNav() {
       {left.map(GroupBtn)}
       <button className={'mnav-item mnav-agent' + (surface === 'core' ? ' on' : '')}
         onClick={() => { if (agentOpen) closeAgent(); go('core') }} aria-label="Open Arganta Core (Agent)">
-        <span className="mnav-orb" aria-hidden><span className="mnav-orb-mark">A</span></span>
+        <span className="mnav-orb" aria-hidden>
+          <span className="mnav-orb-core" />
+          <span className="mnav-orb-ring" />
+          <span className="mnav-orb-sats"><i /><i /><i /></span>
+        </span>
         <span className="mn-lbl">Agent</span>
       </button>
       {right.map(GroupBtn)}

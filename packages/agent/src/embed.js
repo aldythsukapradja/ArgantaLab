@@ -16,8 +16,14 @@
  */
 export const MOUNT_MODES = Object.freeze({ FULLSCREEN: 'fullscreen', PANEL: 'panel', INLINE: 'inline' });
 
-/** Breakpoint at/below which mobile rules apply (matches the app's mobile nav). */
-export const MOBILE_MAX_WIDTH = 640;
+/** Breakpoint at/below which mobile rules apply (matches the app's mobile nav).
+ * Corrected 640 → 980 on 2026-07-16: the app's mobile bottom nav moved to ≤980px
+ * (it replaces the cramped icon rail on tablets too), so the OLD 640 left the
+ * Core mounting INLINE at 641–980 — the dock visible, chat squeezed side-by-side —
+ * violating this contract's own stated rule ("on mobile the chat is FULL SCREEN
+ * and covers everything, including the bottom nav bar"). This is a value
+ * correction that RESTORES the frozen intent, not a contract change. */
+export const MOBILE_MAX_WIDTH = 980;
 
 /**
  * The stacking contract. Fullscreen Core MUST sit above the app's mobile nav

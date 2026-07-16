@@ -73,7 +73,7 @@ export function Composer({ draft, onDraftChange, onSend, onStop, sending, autoLa
   return (
     <div className="core-composer">
       <div className="core-composer-field">
-        <ModelPicker autoLabel={autoLabel} />
+        <ModelPicker autoLabel={autoLabel} status={status} sessionCostUsd={sessionCostUsd} sessionRuns={sessionRuns} />
         <textarea
           ref={taRef}
           className="core-composer-input core-composer-textarea"

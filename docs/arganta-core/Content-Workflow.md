@@ -45,7 +45,7 @@ buffer_publish(draftId) ──▶ Buffer queue ✅  ⚠ sends RAW generated imag
 ```
 Best for: authoring while coding, batch briefs. The gap: skipping HQ = skipping Composition.
 
-## 3. Path C — Hybrid (Claude Code → HQ LLM → Moments + Buffer) ◻ THE TARGET
+## 3. Path C — Hybrid (Claude Code → HQ LLM → Moments + Buffer) ✅ SHIPPED
 
 Claude Code writes the *intent*; HQ executes generation AND composition AND publishes to
 both destinations — with you approving once, not babysitting each step.
@@ -83,9 +83,11 @@ Every rule above was paid for with a real failure this week:
 | IG metadata `type` required; then `carousel` enum value ALSO rejected | introspect + live-test every third-party contract; schema ≠ acceptance |
 | tiny model ignores "3 slides" | prompt hint + deterministic clamp in the app — belt and braces |
 
-## 5. Build order for Path C (when you say go)
-| # | Step | Size |
-|---|---|---|
-| C-1 | `publish_to`/`published_to` columns + MCP `publishTo` arg on `content_draft` | S |
-| C-2 | Drafts inbox intent badges + "Approve & publish everywhere" button (fan-out) | M |
-| C-3 | Write-back of results; `content_status` shows them to Claude Code | S |
+## 5. Build order for Path C — SHIPPED 2026-07-16 (Sonnet)
+| # | Step | Size | Status |
+|---|---|---|---|
+| C-1 | `publish_to`/`published_to` columns + MCP `publishTo` arg on `content_draft` | S | ✅ `migration_content_drafts_publish_intents.sql` (run this in Supabase SQL editor — additive, no exec-sql RPC exists to run it for you); `content_draft` tool gained `publishTo` (zod union, `shareNow` excluded at the schema level) |
+| C-2 | Drafts inbox intent badges + "Approve & publish everywhere" button (fan-out) | M | ✅ `PostStudio.tsx`: `activeDraft` tracks the open draft, intent badges in the draft list, gradient approve button (shows remaining count, "All published ✓" once done), per-destination result modal (success/fail rows, never blocks other destinations). Renders PNG→moments (private bucket) and JPEG→Buffer (public bucket) SEPARATELY per §0's invariant |
+| C-3 | Write-back of results; `content_status` shows them to Claude Code | S | ✅ Free — `getDraft`/`listDrafts` already `select('*')`/now include `publish_to`/`published_to`, no new code needed beyond adding the columns to `listDrafts`' select |
+
+All three typecheck clean (HQ + MCP), worker tests 27/27, UI verified in browser (CSS renders correctly: gradient approve button, intent badges, success/fail row styling). **Founder step required:** run `migration_content_drafts_publish_intents.sql` in the Supabase SQL editor before Path C works end-to-end.
