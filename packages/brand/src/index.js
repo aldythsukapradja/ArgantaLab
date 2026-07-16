@@ -10,6 +10,7 @@ export * from './schema.js'
 export * from './specs.js'
 export * from './mark.js'
 export * from './registry.js'
+export * from './voice.js'
 
 import argantalab from '../brands/argantalab/brand.json' with { type: 'json' }
 import kinetikcircle from '../brands/kinetikcircle/brand.json' with { type: 'json' }

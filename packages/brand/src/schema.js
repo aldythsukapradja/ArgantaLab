@@ -70,6 +70,10 @@ export function blankBrand(id = 'untitled', name = 'Untitled') {
       brandMd: null,   // path to BRAND.md
       refs: [],        // canonical style-anchor images
       prompts: {},     // assetType → path of a ready generation brief
+      // The one-paragraph machine-injectable distillation of BRAND.md's visual
+      // world. BRAND.md is for a human or a long-context model to read; this
+      // rides inside every image request, so it has to be short.
+      artDirection: null,
     },
 
     // ── L1 · Voice & persona ──────────────────────── (founder lane)

@@ -232,6 +232,49 @@ test('registry: createRegistry resolves and exposes brands by id', () => {
   assert.equal(reg.get('nope'), null)
 })
 
+// ── BF-5: the brand, compacted for a language model ───────────
+test('voice: voiceBlock carries what a model needs to sound like the brand', async () => {
+  const { voiceBlock } = await import('../src/voice.js')
+  const { doc } = resolveBrand(base, overlay)
+  const v = voiceBlock(doc, { lang: 'en', platform: 'instagram' })
+  assert.equal(v.id, 'argantalab')
+  assert.equal(v.persona.title, 'The Lab')
+  assert.equal(v.handle, '@argantalab')
+  assert.equal(v.tagline, 'Play. Learn. Build. Ship.')
+  assert.match(v.summary, /kid-powered creation studio/)
+  assert.equal(v.pillars.length, 4)
+  assert.ok(v.ctas.includes('Enter the Lab'))
+  assert.ok(v.persona.forbidden.includes('corporate buzzwords'))
+  // the art direction rides along so generated imagery is on-brand too
+  assert.match(v.artDirection, /space-ink/)
+})
+
+test('voice: an unknown language falls back rather than inventing copy', async () => {
+  const { voiceBlock } = await import('../src/voice.js')
+  const { doc } = resolveBrand(base, overlay)
+  const id = voiceBlock(doc, { lang: 'id' })
+  assert.equal(id.lang, 'id')
+  // ArgantaLab declares id but BF-6 hasn't written it yet — fall back to en
+  // copy rather than emit nothing or hallucinate a voice.
+  assert.equal(id.tagline, 'Play. Learn. Build. Ship.')
+})
+
+test('voice: a brand with nothing said about it does not claim a voice', async () => {
+  const { voiceBlock, hasVoice } = await import('../src/voice.js')
+  const { doc } = resolveBrand(JSON.parse(JSON.stringify(base)), {})  // no founder overlay
+  assert.equal(hasVoice(doc), false)
+  const v = voiceBlock(doc)
+  assert.equal(v.persona, undefined, 'no persona should be asserted for a voiceless brand')
+  assert.equal(v.name, 'ArgantaLab')
+  assert.ok(v.artDirection, 'but its art direction is agent-lane and still applies')
+})
+
+test('voice: handle is normalised to @form regardless of how it was typed', async () => {
+  const { voiceBlock } = await import('../src/voice.js')
+  const { doc } = resolveBrand(base, deepMerge(overlay, { presence: { instagram: { handle: 'argantalab' } } }))
+  assert.equal(voiceBlock(doc).handle, '@argantalab')
+})
+
 // ── BF-3: the engine must be able to render any brand ─────────
 test('bases: every shipped brand is structurally valid and carries a mark', async () => {
   const { BRAND_BASES } = await import('../src/index.js')

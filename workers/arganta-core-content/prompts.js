@@ -20,6 +20,40 @@ const EXAMPLE = {
 };
 
 /**
+ * The brand's voice, rendered for a system prompt.
+ *
+ * BF-5: `ctx.brand` used to be `{name, handle}` — enough to name-drop the brand,
+ * nowhere near enough to sound like it. It now carries a voiceBlock from
+ * @arganta/brand (persona, pillars, CTAs, hashtag banks, touchy rules), and this
+ * turns it into instructions.
+ *
+ * Kept terse on purpose: this rides in front of every brief, and the model that
+ * writes the copy is small. A persona essay would crowd out the actual request.
+ * Anything falsy is skipped entirely rather than emitted as an empty heading —
+ * a half-written brand should shrink this block, not fill it with noise.
+ */
+export function brandBlock(b) {
+  if (!b || !b.name) return '';
+  const L = [];
+  const p = b.persona || {};
+  const who = [p.title && `"${p.title}"`, b.handle].filter(Boolean).join(' ');
+  L.push(`You are writing as ${b.name}${who ? ` — ${who}` : ''}.`);
+  if (p.speaksAs) L.push(p.speaksAs);
+  if (b.summary) L.push(`What it is: ${b.summary}`);
+  if (b.tagline) L.push(`Tagline: ${b.tagline}`);
+  if (p.adjectives?.length) L.push(`Voice: ${p.adjectives.join(', ')}.`);
+  if (p.forbidden?.length) L.push(`NEVER: ${p.forbidden.join('; ')}.`);
+  if (b.pillars?.length) L.push(`Content pillars: ${b.pillars.map(x => `${x.label}${x.description ? ` (${x.description})` : ''}`).join(' · ')}`);
+  if (b.ctas?.length) L.push(`Preferred phrases: ${b.ctas.join(' / ')}.`);
+  const tags = [b.hashtags?.branded, b.hashtags?.category, b.hashtags?.community].flat().filter(Boolean);
+  if (tags.length) L.push(`Draw hashtags from: ${tags.join(' ')}`);
+  // The rules that keep an automated post from reading like one.
+  if (b.touchyRules?.length) L.push(`Make it personal: ${b.touchyRules.join('; ')}.`);
+  if (b.lang && b.lang !== 'en') L.push(`Write ALL copy in ${b.lang === 'id' ? 'Bahasa Indonesia' : b.lang}.`);
+  return '\n' + L.join('\n') + '\n';
+}
+
+/**
  * Build the chat messages for the copy pass.
  * @param {string} brief  the user's request
  * @param {object} [ctx]  optional live-doc context (O2 fills this): { format, palette, platform, brand, wantImages }
@@ -27,7 +61,7 @@ const EXAMPLE = {
 export function copyMessages(brief, ctx = {}) {
   const wantImages = ctx.wantImages !== false; // default: include image briefs
   const platform = ctx.platform || 'instagram';
-  const brand = ctx.brand?.name ? ` The brand is "${ctx.brand.name}"${ctx.brand.handle ? ` (${ctx.brand.handle})` : ''}.` : '';
+  const brand = brandBlock(ctx.brand);
   const paletteHint = ctx.palette && PALETTE_IDS.includes(ctx.palette)
     ? ` Prefer the "${ctx.palette}" palette unless the topic clearly wants another.` : '';
   const formatHint = ctx.format ? ` The post is a ${ctx.format} format.` : '';
@@ -66,10 +100,17 @@ function stripImagePrompts(ex) {
 }
 
 /** Turn a slide's brief into a clean image-model prompt. Guards against
- * baked-in text requests (models render garbled letters) and pins style. */
+ * baked-in text requests (models render garbled letters) and pins style.
+ *
+ * BF-5: when the brand ships art direction (its L0.5 knowledge base, distilled),
+ * that replaces the generic house style — so a brand's slide backgrounds look
+ * like the brand, not like everyone else's stock photography. */
 export function imagePrompt(brief, ctx = {}) {
   const base = String(brief || '').replace(/\b(text|words?|letters?|caption|title|logo)\b/gi, '').trim()
     || 'a warm, cinematic family lifestyle scene';
   const mood = ctx.palette ? `, ${ctx.palette} color mood` : '';
-  return `${base}${mood}. Editorial photography, soft natural light, high detail, no text, no watermark, no letters.`;
+  const style = ctx.artDirection
+    ? ` ${String(ctx.artDirection).trim()}`
+    : ' Editorial photography, soft natural light, high detail.';
+  return `${base}${mood}.${style} No text, no watermark, no letters.`;
 }

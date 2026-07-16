@@ -8,7 +8,7 @@ import {
 import {
   TEMPLATE_IDS, PALETTE_IDS, coerceCopy, extractJson, aspectFor, FORMAT_ASPECT,
 } from '../schema.js';
-import { copyMessages, imagePrompt } from '../prompts.js';
+import { copyMessages, imagePrompt, brandBlock } from '../prompts.js';
 
 // ── vocab drift guards (mirrors postTemplates.ts / postEngine.ts) ──
 test('vocabulary matches the app: 9 templates, 10 palettes, 6 formats', () => {
@@ -124,6 +124,71 @@ test('copyMessages: system prompt carries brand + toggles image briefs', () => {
   const noImg = copyMessages('cats', { wantImages: false });
   assert.ok(!noImg[0].content.includes('imagePrompt'));
   assert.equal(withImg[3].content, 'cats');
+});
+
+// ── BF-5: writing AS a brand ──────────────────────────────────
+test('brandBlock: renders a full voice block into instructions', () => {
+  const s = brandBlock({
+    id: 'argantalab', name: 'ArgantaLab', lang: 'en', handle: '@argantalab',
+    persona: {
+      title: 'The Lab', speaksAs: 'The account speaks as The Lab.',
+      adjectives: ['inventive', 'encouraging'], forbidden: ['corporate buzzwords', 'fake traction'],
+    },
+    tagline: 'Play. Learn. Build. Ship.',
+    summary: 'the kid-powered creation studio inside Arganta',
+    pillars: [{ id: 'build', label: 'Build the thing', description: 'process and prototypes' }],
+    ctas: ['Enter the Lab', 'Ship your first game'],
+    hashtags: { branded: ['#argantalab'], category: ['#kidscoding'], community: ['#buildinpublic'] },
+    touchyRules: ['show one real kid creation'],
+  });
+  assert.match(s, /writing as ArgantaLab/);
+  assert.match(s, /"The Lab"/);
+  assert.match(s, /@argantalab/);
+  assert.match(s, /Play\. Learn\. Build\. Ship\./);
+  assert.match(s, /Voice: inventive, encouraging/);
+  assert.match(s, /NEVER: corporate buzzwords; fake traction/);
+  assert.match(s, /Build the thing \(process and prototypes\)/);
+  assert.match(s, /Enter the Lab \/ Ship your first game/);
+  assert.match(s, /#argantalab #kidscoding #buildinpublic/);
+  assert.match(s, /Make it personal: show one real kid creation/);
+});
+
+test('brandBlock: a half-written brand shrinks the block instead of emitting empty headings', () => {
+  const s = brandBlock({ id: 'kinetikcircle', name: 'KinetikCircle', persona: {}, pillars: [], ctas: [], hashtags: {} });
+  assert.match(s, /writing as KinetikCircle/);
+  assert.ok(!/Voice:/.test(s));
+  assert.ok(!/NEVER:/.test(s));
+  assert.ok(!/pillars/i.test(s));
+  assert.ok(!/Make it personal/.test(s));
+});
+
+test('brandBlock: no brand → no block at all', () => {
+  assert.equal(brandBlock(null), '');
+  assert.equal(brandBlock({}), '');
+});
+
+test('brandBlock: a non-English brand demands its own language', () => {
+  const s = brandBlock({ name: 'ArgantaLab', lang: 'id', persona: { title: 'The Lab' } });
+  assert.match(s, /Bahasa Indonesia/);
+  assert.ok(!/Bahasa/.test(brandBlock({ name: 'ArgantaLab', lang: 'en', persona: { title: 'The Lab' } })));
+});
+
+test('copyMessages: the brand voice reaches the system prompt', () => {
+  const msgs = copyMessages('a build log', {
+    brand: { name: 'ArgantaLab', handle: '@argantalab', persona: { title: 'The Lab', adjectives: ['inventive'] }, pillars: [], ctas: [], hashtags: {} },
+  });
+  assert.match(msgs[0].content, /writing as ArgantaLab/);
+  assert.match(msgs[0].content, /The Lab/);
+  assert.match(msgs[0].content, /Output ONLY a JSON object/);
+});
+
+test('imagePrompt: brand art direction replaces the generic house style', () => {
+  const branded = imagePrompt('a glowing cube', { artDirection: 'Deep space-ink ground, one luminous subject, vast negative space.' });
+  assert.match(branded, /Deep space-ink ground/);
+  assert.ok(!/Editorial photography/.test(branded), 'brand art direction must win over the house default');
+  assert.match(branded, /No text, no watermark, no letters\./);
+  // ...and without one, the house style still applies
+  assert.match(imagePrompt('a glowing cube', {}), /Editorial photography/);
 });
 
 test('copyMessages: threads format + palette + revise context', () => {
