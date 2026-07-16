@@ -21,11 +21,12 @@ const STARTER_CHIPS = [
   'Draft a landing page',
 ]
 
-export function Conversation({ threadId, onThreadCreated, maxCostClass, onArtifact, compact, hasThreads }: {
+export function Conversation({ threadId, onThreadCreated, onArtifact, compact, hasThreads }: {
   threadId: string | null
   onThreadCreated: (id: string) => void
-  /** Ceiling shown on the composer's tier pill (display-only — see Composer.tsx). */
-  maxCostClass: number
+  /** Accepted for compatibility with the mount contract; the composer now shows
+   * a live model picker instead of a static tier ceiling, so it's unused here. */
+  maxCostClass?: number
   onArtifact?: (a: { assetId: string; kind: string }) => void
   compact?: boolean
   /** Whether any thread exists yet — distinguishes first-open from new-thread copy (C4a §5). */

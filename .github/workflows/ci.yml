@@ -1,0 +1,60 @@
+name: CI
+
+# Protects the core logic + the HQ app on every push to main and every PR.
+#  1. `test`      — the ~180 pure unit tests across @arganta/* packages AND the
+#                   Edge-Function routers (llm-proxy / media-proxy). This is where
+#                   the load-bearing routing/loop/builder/validation logic lives —
+#                   e.g. the llm-proxy fallback + tool-schema fixes.
+#  2. `typecheck` — `tsc --noEmit` on apps/hq, catching TS regressions in the
+#                   surfaces the unit tests don't exercise.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: Unit tests (packages + edge routers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # The @arganta/* packages are pure ESM with ZERO external deps (only the
+      # agent tests reach across, importing @arganta/ai). Symlink them so
+      # `node --test` resolves the bare specifiers WITHOUT a full workspace
+      # install (which would also pull the heavy game-app workspaces). Fast + hermetic.
+      - name: Link @arganta/* workspace packages
+        run: |
+          mkdir -p node_modules/@arganta
+          for p in ai agent builder media-core; do
+            ln -sfn "$GITHUB_WORKSPACE/packages/$p" "node_modules/@arganta/$p"
+          done
+      - name: Run tests
+        run: >
+          node --test
+          packages/agent/test/*.test.js
+          packages/ai/test/*.test.js
+          packages/builder/test/*.test.js
+          packages/media-core/test/*.test.js
+          supabase/functions/llm-proxy/router.test.js
+          supabase/functions/media-proxy/router.test.js
+
+  typecheck:
+    name: HQ type-check (tsc --noEmit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/hq/package-lock.json
+      - name: Install HQ deps
+        working-directory: apps/hq
+        run: npm install --no-audit --no-fund
+      - name: Type-check
+        working-directory: apps/hq
+        run: npm run type-check

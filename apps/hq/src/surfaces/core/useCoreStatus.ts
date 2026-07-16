@@ -55,14 +55,19 @@ export function useCoreStatus(refreshKey: number): CoreStatus {
     ;(async () => {
       const [neuron, recent] = await Promise.all([
         getNeuronQuota().catch(() => null),
-        supabase.rpc('agent_runs_recent', { p_limit: 100, p_domain: null }).then((r) => (r.data as any[]) || []).catch(() => [] as any[]),
+        // supabase.rpc returns a thenable (not a real Promise) — wrap it so we
+        // can .catch, and type the rows so the filters below aren't implicit-any.
+        Promise.resolve(supabase.rpc('agent_runs_recent', { p_limit: 100, p_domain: null }))
+          .then((r) => ((r.data as any[]) || []))
+          .catch(() => [] as any[]),
       ])
       if (cancelled) return
+      const rows: any[] = recent
       const today = new Date().toDateString()
       const isToday = (r: any) => { const at = r.createdAt || r.created_at; return at && new Date(at).toDateString() === today }
       const modelOf = (r: any) => (r.actualModel || r.actual_model || '').toLowerCase()
-      const geminiToday = recent.filter((r) => isToday(r) && modelOf(r).includes('gemini')).length
-      const groqToday = recent.filter((r) => isToday(r) && modelOf(r) === 'llama-3.3-70b-versatile').length
+      const geminiToday = rows.filter((r) => isToday(r) && modelOf(r).includes('gemini')).length
+      const groqToday = rows.filter((r) => isToday(r) && modelOf(r) === 'llama-3.3-70b-versatile').length
       setStatus((s) => ({
         ...s,
         neurons: neuron
