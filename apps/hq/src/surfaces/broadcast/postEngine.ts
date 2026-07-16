@@ -60,6 +60,14 @@ export const POST_PALETTES: PostPalette[] = [
 ]
 export const postPalette = (id: string): PostPalette => POST_PALETTES.find(p => p.id === id) || POST_PALETTES[0]
 
+// ── Text plate ────────────────────────────────────────────────
+// Every line of body/headline copy sits on a solid pill so it stays legible
+// over ANY Arganta-Core-generated image background (bare text vanished into the
+// artwork). Yellow is the brand default; dark ink rides on top. Independent of
+// the palette accent so the plate reads the same on every post.
+export const PLATE_BG = '#FFD64B'
+export const PLATE_INK = '#1b1500'
+
 /** A layer color is a palette ROLE or a raw hex. Roles re-ink on palette switch. */
 export type Role = 'ink' | 'soft' | 'accent' | 'pillInk' | string
 export const resolveColor = (c: Role, pal: PostPalette): string =>
@@ -312,7 +320,7 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPal
     const lx = l.align === 'left' ? cx : l.align === 'right' ? cx - lw : cx - lw / 2
     if (l.highlight === 'pill' && line.trim()) {
       const padX = size * 0.28, padY = size * 0.16
-      ctx.fillStyle = resolveColor('accent', pal)
+      ctx.fillStyle = PLATE_BG
       roundRect(ctx, lx - padX, y - size / 2 - padY, lw + padX * 2, size + padY * 2, size * 0.24)
       ctx.fill()
     }
@@ -324,7 +332,7 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPal
     if (l.highlight !== 'pill' && pal.dark) {
       ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = size * 0.1; ctx.shadowOffsetY = size * 0.02
     }
-    ctx.fillStyle = l.highlight === 'pill' ? resolveColor('pillInk', pal) : color
+    ctx.fillStyle = l.highlight === 'pill' ? PLATE_INK : color
     ctx.fillText(line, l.align === 'center' ? cx : lx + (l.align === 'right' ? lw : 0), y)
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0
   })

@@ -64,7 +64,12 @@ export async function publishMoment(supabase: SupabaseClient, input: PublishMome
     mediaJson.push({ kind: m.kind, path })
   }
 
-  const { data, error } = await supabase.rpc('kinetik_post_moment', {
+  // Moments from HQ are attributed to the "Kinetik Circle" brand, not the
+  // signed-in operator — this is the single automated social channel, so every
+  // post reads as the brand. Falls back to the operator-authored RPC when the
+  // brand migration (migration_kinetik_circle_brand.sql) hasn't been run yet, so
+  // publishing still works pre-migration (just under the operator's name).
+  const args = {
     p_circle: input.circleId,
     p_kind: input.kind || (input.media[0]?.kind === 'video' ? 'video' : 'photo'),
     p_body: input.body || null,
@@ -73,7 +78,13 @@ export async function publishMoment(supabase: SupabaseClient, input: PublishMome
     p_media: mediaJson,
     p_tags: (input.memberTags || []).filter(t => UUID_RE.test(t)),
     p_is_story: false,
-  })
+  }
+
+  let { data, error } = await supabase.rpc('kinetik_post_moment_as_brand', args)
+  // 404 / PGRST202 / "function does not exist" → brand RPC not deployed yet.
+  if (error && /not exist|could not find|PGRST202|schema cache|404/i.test(`${error.message} ${(error as any).code ?? ''}`)) {
+    ;({ data, error } = await supabase.rpc('kinetik_post_moment', args))
+  }
   if (error) {
     // The most common real cause: operator isn't a member of this circle.
     throw new Error(/permission|member|rls|denied/i.test(error.message)

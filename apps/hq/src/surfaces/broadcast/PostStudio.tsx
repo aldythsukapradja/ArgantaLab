@@ -11,7 +11,7 @@ import {
   Megaphone, Download, X, Send, Plus, Trash2, Copy as CopyIcon,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Layers,
   Type as TypeIcon, Palette, Cloud, Upload, Sparkles, Sticker, MessageSquareText,
-  History, LayoutTemplate, Check, Shuffle, ScanLine, Rocket, Users, Heart, Inbox, Send as SendIcon, Instagram,
+  LayoutTemplate, Check, Shuffle, ScanLine, Rocket, Users, Heart, Inbox, Send as SendIcon, Instagram,
 } from 'lucide-react'
 import { listAssets, uploadAsset, importStock, downloadBlob } from '@arganta/video'
 import { supabase, cloudEnabled } from '../../lib/supabase'
@@ -75,7 +75,7 @@ function clampSlidesToCount<T>(slides: T[], want?: number): T[] {
   return [slides[0], ...slides.slice(1, -1).slice(0, want - 2), slides[slides.length - 1]]
 }
 
-export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
+export function PostStudio() {
   const [doc, setDoc] = useState<PostDoc>(loadDoc)
   const [sel, setSel] = useState(0)
   const [selLayer, setSelLayer] = useState<string | null>(null)
@@ -304,7 +304,7 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
         xN: 0.5, yN: kind === 'headline' ? 0.4 : 0.62,
         size: kind === 'headline' ? 84 : 42, weight: kind === 'headline' ? 800 : 500,
         color: kind === 'headline' ? 'ink' : 'soft', align: 'center', font: 'sans',
-        maxWidthN: 0.8, lineHeight: kind === 'headline' ? 1.18 : 1.42, highlight: 'none',
+        maxWidthN: 0.8, lineHeight: kind === 'headline' ? 1.18 : 1.42, highlight: 'pill',
       })
     })
     setSelLayer(id)
@@ -524,7 +524,7 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
         audience: 'circle', status: 'draft', publish_at: null,
       })
       setStatus(id
-        ? 'Sent to the Discover feed as a draft — review & publish it in Legacy → Catalogue.'
+        ? 'Sent to the Discover feed as a draft.'
         : 'Could not save — are you signed in as an operator?')
     } catch (e: any) { setStatus('Publish failed: ' + (e?.message || e)) } finally { setBusy('') }
   }
@@ -791,9 +791,6 @@ export function PostStudio({ onLegacy }: { onLegacy: () => void }) {
         {status && <span className="pbx-status" title={status}>{status}</span>}
         <button className={'pbx-ghost' + (guides ? ' on' : '')} title="Show safe zones (5% crop frame + platform UI on story)" onClick={() => setGuides(g => !g)}>
           <ScanLine size={14} /> Safe zones
-        </button>
-        <button className="pbx-ghost" title="The previous Content Builder tools (Catalogue · Autopilot · Prompts · Import · Library · Research)" onClick={onLegacy}>
-          <History size={14} /> Legacy
         </button>
         <button className={'pbx-ghost' + (botOpen ? ' on' : '')} onClick={() => setBotOpen(o => !o)}>
           <Sparkles size={14} /> Arganta Core

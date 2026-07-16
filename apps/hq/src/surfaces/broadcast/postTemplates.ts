@@ -41,7 +41,9 @@ export interface TemplateContent {
 const T = (over: Partial<TextLayer>): TextLayer => ({
   id: pid('tx'), type: 'text', name: over.name || 'Text',
   text: '', xN: 0.5, yN: 0.45, size: 64, weight: 700, color: 'ink', align: 'center',
-  font: 'sans', maxWidthN: 0.8, lineHeight: 1.18, highlight: 'none',
+  // Pill by default: every generated line rides a solid plate so it never
+  // disappears into the background image. Decorative marks opt out (highlight:'none').
+  font: 'sans', maxWidthN: 0.8, lineHeight: 1.18, highlight: 'pill',
   ...over,
 })
 
@@ -102,7 +104,7 @@ export function makeSlide(template: string, c: TemplateContent = {}): PostSlide 
     }
     case 'quote': {
       bg.variant = 'rays'
-      L.push(T({ name: 'Mark', text: '❝', yN: 0.16, size: 130, weight: 700, color: 'accent', font: 'serif' }))
+      L.push(T({ name: 'Mark', text: '❝', yN: 0.16, size: 130, weight: 700, color: 'accent', font: 'serif', highlight: 'none' }))
       L.push(T({ name: 'Quote', text: c.headline || 'Play is the work of the child.', yN: 0.45, size: 84, weight: 700, font: 'serif', maxWidthN: 0.8, lineHeight: 1.3 }))
       L.push({ id: pid('dv'), type: 'divider', name: 'Divider', xN: 0.5, yN: 0.66, wN: 0.12, color: 'accent', thick: 8 })
       L.push(T({ name: 'Author', text: c.source || c.body || 'Maria Montessori', yN: 0.72, size: 36, weight: 500, color: 'soft', font: 'mono' }))
@@ -112,7 +114,7 @@ export function makeSlide(template: string, c: TemplateContent = {}): PostSlide 
     case 'number': {
       bg.variant = 'mesh'
       L.push(T({ name: 'Kicker', text: (c.badge || 'BY THE NUMBERS'), yN: 0.16, size: 30, weight: 700, color: 'accent', font: 'mono', upper: true }))
-      L.push(T({ name: 'Number', text: c.headline || '100,000', yN: 0.42, size: 190, weight: 800, highlight: 'none' }))
+      L.push(T({ name: 'Number', text: c.headline || '100,000', yN: 0.42, size: 190, weight: 800 }))
       L.push(T({ name: 'Body', text: c.body || 'times your heart beats every single day — without you thinking about it once.', yN: 0.65, size: 44, weight: 500, color: 'soft', maxWidthN: 0.72, lineHeight: 1.45 }))
       L.push(brand(0.92, true))
       L.push(pager(0.86, 'dots'))
@@ -123,7 +125,7 @@ export function makeSlide(template: string, c: TemplateContent = {}): PostSlide 
       L.push(T({ name: 'Title', text: c.headline || 'Pancakes or waffles?', yN: 0.24, size: 84, weight: 800, maxWidthN: 0.84 }))
       const [a, b] = (c.body || 'Pancakes\nWaffles').split('\n')
       L.push(T({ name: 'Option A', text: (a || 'Option A').trim(), yN: 0.48, size: 60, weight: 800, highlight: 'pill' }))
-      L.push(T({ name: 'or', text: 'or', yN: 0.585, size: 34, weight: 500, color: 'soft', font: 'serif' }))
+      L.push(T({ name: 'or', text: 'or', yN: 0.585, size: 34, weight: 500, color: 'soft', font: 'serif', highlight: 'none' }))
       L.push(T({ name: 'Option B', text: (b || 'Option B').trim(), yN: 0.69, size: 60, weight: 800, highlight: 'pill' }))
       L.push(T({ name: 'Prompt', text: 'tap your side ↓', yN: 0.82, size: 30, weight: 500, color: 'soft', font: 'mono' }))
       L.push(brand(0.92, true))
