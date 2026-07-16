@@ -102,30 +102,76 @@ function galaxy(model: KModel, out: Float32Array, p: FormParams) {
   })
 }
 
-// ── CONSTELLATION — a clustered knowledge graph in space: region centroids sit
-// on a sphere, each note floats around its region's centroid, sized by degree.
-// Deterministic (no worker) so it settles instantly; a true force sim is a
-// later upgrade. ──
+// ── CONSTELLATION — a true 3D force-directed knowledge graph (Obsidian in
+// space). Region centroids seed the initial positions so clusters separate,
+// then a deterministic synchronous relaxation (repulsion + edge springs + a
+// gentle per-region cohesion + centering) resolves the real link structure.
+// ~319 nodes is cheap to relax on the main thread at form-switch, and seeding
+// keeps it stable/reproducible — no worker, settles instantly. ──
 function constellation(model: KModel, out: Float32Array, p: FormParams) {
-  // region centroids on a fibonacci sphere
+  const N = model.nodes.length
   const cen: Record<RegionId, [number, number, number]> = {} as Record<RegionId, [number, number, number]>
-  const CR = 10 * p.spread * p.separation
+  const CR = 10 * p.separation
   ORDER.forEach((r, k) => {
     if (r === 'command') { cen[r] = [0, 0, 0]; return }
     const y = 1 - (k / (ORDER.length - 1)) * 2
     const rad = Math.sqrt(Math.max(0, 1 - y * y))
     const th = GOLDEN * k
-    cen[r] = [Math.cos(th) * rad * CR, y * CR * 0.7 * p.squash, Math.sin(th) * rad * CR]
+    cen[r] = [Math.cos(th) * rad * CR, y * CR * 0.7, Math.sin(th) * rad * CR]
   })
+  // seed near each node's region centroid with a deterministic jitter
+  const px = new Float32Array(N), py = new Float32Array(N), pz = new Float32Array(N)
+  const region: RegionId[] = new Array(N)
   model.nodes.forEach((n, i) => {
-    const c = cen[n.region]
-    // higher-degree nodes hug their centroid; leaves drift out
-    const spreadR = (2.4 - Math.min(1.6, n.degree * 0.12)) * p.spread
-    const a = h(n.id) * Math.PI * 2, b = Math.acos(2 * h(n.id + '~1') - 1), rr = spreadR * Math.cbrt(h(n.id + '~2'))
-    out[i * 3] = c[0] + Math.sin(b) * Math.cos(a) * rr
-    out[i * 3 + 1] = c[1] + Math.sin(b) * Math.sin(a) * rr * p.squash
-    out[i * 3 + 2] = c[2] + Math.cos(b) * rr
+    const c = cen[n.region]; region[i] = n.region
+    px[i] = c[0] + (h(n.id) - 0.5) * 4
+    py[i] = c[1] + (h(n.id + '~1') - 0.5) * 4
+    pz[i] = c[2] + (h(n.id + '~2') - 0.5) * 4
   })
+  // edge index list
+  const ea: number[] = [], eb: number[] = []
+  for (const e of model.edges) {
+    const a = model.index.get(e.a), b = model.index.get(e.b)
+    if (a != null && b != null) { ea.push(a); eb.push(b) }
+  }
+  const ITER = 90, REP = 42, SPRING = 0.02, IDEAL = 6, COH = 0.006, CENTER = 0.004
+  const dx = new Float32Array(N), dy = new Float32Array(N), dz = new Float32Array(N)
+  for (let it = 0; it < ITER; it++) {
+    dx.fill(0); dy.fill(0); dz.fill(0)
+    const cool = 1 - it / ITER
+    // repulsion (all pairs — fine for a few hundred nodes)
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        let vx = px[i] - px[j], vy = py[i] - py[j], vz = pz[i] - pz[j]
+        let d2 = vx * vx + vy * vy + vz * vz; if (d2 < 0.01) { vx = (h('r' + i + j) - 0.5); d2 = 0.01 }
+        const f = REP / d2, inv = 1 / Math.sqrt(d2)
+        vx *= inv * f; vy *= inv * f; vz *= inv * f
+        dx[i] += vx; dy[i] += vy; dz[i] += vz; dx[j] -= vx; dy[j] -= vy; dz[j] -= vz
+      }
+    }
+    // edge springs toward the ideal link length
+    for (let k = 0; k < ea.length; k++) {
+      const i = ea[k], j = eb[k]
+      const vx = px[j] - px[i], vy = py[j] - py[i], vz = pz[j] - pz[i]
+      const d = Math.sqrt(vx * vx + vy * vy + vz * vz) || 1
+      const f = (d - IDEAL) * SPRING
+      const ux = vx / d * f, uy = vy / d * f, uz = vz / d * f
+      dx[i] += ux; dy[i] += uy; dz[i] += uz; dx[j] -= ux; dy[j] -= uy; dz[j] -= uz
+    }
+    // per-region cohesion + weak centering
+    for (let i = 0; i < N; i++) {
+      const c = cen[region[i]]
+      dx[i] += (c[0] - px[i]) * COH - px[i] * CENTER
+      dy[i] += (c[1] - py[i]) * COH - py[i] * CENTER
+      dz[i] += (c[2] - pz[i]) * COH - pz[i] * CENTER
+      px[i] += dx[i] * cool; py[i] += dy[i] * cool; pz[i] += dz[i] * cool
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    out[i * 3] = px[i] * p.spread
+    out[i * 3 + 1] = py[i] * p.spread * p.squash
+    out[i * 3 + 2] = pz[i] * p.spread
+  }
 }
 
 // ── BRAIN — the original cortex layout. Uses each node's baked pos (regionPoint

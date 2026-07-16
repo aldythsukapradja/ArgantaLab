@@ -395,6 +395,31 @@ function ActiveRing({ model, th }: { model: KModel; th: Theme }) {
   return <mesh ref={ref} visible={false}><torusGeometry args={[1, 0.05, 8, 40]} /><meshBasicMaterial color={th.ring} toneMapped={false} transparent opacity={0.9} /></mesh>
 }
 
+// ── atmosphere: an optional nebula backdrop + a faint grid floor. 'void' (the
+// default) draws neither, matching the original clear-colour look. ──
+function Atmosphere({ th }: { th: Theme }) {
+  const background = useDesign((s) => s.background)
+  const grid = useMemo(() => {
+    const g = new THREE.GridHelper(120, 40, new THREE.Color(th.axon), new THREE.Color(th.axon))
+    ;(g.material as THREE.Material & { opacity: number; transparent: boolean }).opacity = 0.12
+    ;(g.material as THREE.Material & { transparent: boolean }).transparent = true
+    g.position.y = -8
+    return g
+  }, [th.axon])
+  const nebulaCol = useMemo(() => new THREE.Color(th.commandColor), [th.commandColor])
+  return (
+    <group>
+      {background === 'grid' && <primitive object={grid} />}
+      {background === 'nebula' && (
+        <mesh scale={70}>
+          <sphereGeometry args={[1, 24, 24]} />
+          <meshBasicMaterial color={nebulaCol} side={THREE.BackSide} transparent opacity={0.06} depthWrite={false} toneMapped={false} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
 function DebugExpose() { const s = useThree(); useEffect(() => { if (import.meta.env.DEV) (window as unknown as { __kg?: unknown }).__kg = s }, [s]); return null }
 function Heartbeat({ onFrame }: { onFrame?: () => void }) { useFrame(() => onFrame?.()); return null }
 function Resizer({ width, height }: { width: number; height: number }) {
@@ -473,6 +498,7 @@ export function KnowledgeScene({ model, tissue, width, height, dark, autoCamera 
       <FormField model={model} />
       <fog attach="fog" args={[th.fog, th.fogNear, th.fogFar]} />
       <ambientLight intensity={0.5} />
+      <Atmosphere th={th} />
       <CorticalTissue tissue={tissue} th={th} />
       <Axons model={model} th={th} />
       <Neurons model={model} th={th} />

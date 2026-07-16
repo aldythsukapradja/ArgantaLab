@@ -14,15 +14,20 @@ import {
 
 interface UI { glass: string; border: string; tx: string; tx2: string; tx3: string; panel: string }
 
-export function DesignPanel({ open, onClose, ui, dark }: { open: boolean; onClose: () => void; ui: UI; dark: boolean }) {
+export function DesignPanel({ open, onClose, ui, dark, compact = false }: { open: boolean; onClose: () => void; ui: UI; dark: boolean; compact?: boolean }) {
   const d = useDesign()
   if (!open) return null
+  // On a phone the studio docks as a bottom sheet (full width, capped height)
+  // instead of a right-side rail that would eat the whole viewport.
+  const shell: React.CSSProperties = compact
+    ? { position: 'absolute', left: 8, right: 8, bottom: 8, maxHeight: '68%', zIndex: 30,
+        background: ui.panel, border: '1px solid ' + ui.border, borderRadius: 16, backdropFilter: 'blur(16px)',
+        boxShadow: '0 20px 60px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column', pointerEvents: 'auto', overflow: 'hidden' }
+    : { position: 'absolute', top: 12, right: 12, bottom: 12, width: 296, zIndex: 30,
+        background: ui.panel, border: '1px solid ' + ui.border, borderRadius: 16, backdropFilter: 'blur(16px)',
+        boxShadow: '0 20px 60px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column', pointerEvents: 'auto', overflow: 'hidden' }
   return (
-    <div style={{
-      position: 'absolute', top: 12, right: 12, bottom: 12, width: 296, zIndex: 30,
-      background: ui.panel, border: '1px solid ' + ui.border, borderRadius: 16, backdropFilter: 'blur(16px)',
-      boxShadow: '0 20px 60px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column', pointerEvents: 'auto', overflow: 'hidden',
-    }}>
+    <div style={shell}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 14px', borderBottom: '1px solid ' + ui.border }}>
         <Sparkles size={15} color="#c4b5fd" />

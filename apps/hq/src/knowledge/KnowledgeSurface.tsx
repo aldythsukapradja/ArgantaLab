@@ -249,6 +249,9 @@ function KnowledgeSurfaceInner() {
   // canvas shows whenever WebGL is alive; genuine failures still fall back below.
   const show3D = webgl && !dead
   const panelUi = { ...ui, panel: dark ? 'rgba(10,12,26,.86)' : 'rgba(255,255,255,.9)' }
+  // Narrow container (phone, or the Vault center on mobile) → collapse the
+  // desktop overlay chrome so the floating pills/panel don't collide.
+  const compact = size.w > 1 && size.w < 640
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: ui.rootBg, overflow: 'hidden' }}>
@@ -265,8 +268,8 @@ function KnowledgeSurfaceInner() {
       ) : webgl && dead ? fallback("3D cortex didn't start on this device")
         : !webgl ? fallback('WebGL unavailable') : null}
 
-      {/* hemisphere labels */}
-      {webgl && (
+      {/* hemisphere labels — hidden on narrow screens (they sit over the brain) */}
+      {webgl && !compact && (
         <>
           <SideLabel side="left" title="ANALYTIC" sub="left hemisphere · data · logic · structure"
             active={hemiFilter === 'left'} onClick={() => setHemiFilter(hemiFilter === 'left' ? null : 'left')} count={model.hemiCounts.left} />
@@ -307,11 +310,13 @@ function KnowledgeSurfaceInner() {
         </div>
       </div>
 
-      {show3D && <DesignPanel open={designOpen} onClose={() => setDesignOpen(false)} ui={panelUi} dark={dark} />}
+      {show3D && <DesignPanel open={designOpen} onClose={() => setDesignOpen(false)} ui={panelUi} dark={dark} compact={compact} />}
 
-      {/* THINK · KNOW · DO + simulate (top-center) */}
+      {/* THINK · KNOW · DO + simulate (top-center; drops below the title + wraps on mobile) */}
       {webgl && (
-        <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto' }}>
+        <div style={compact
+          ? { position: 'absolute', top: 108, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, alignItems: 'center', pointerEvents: 'auto', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '94vw' }
+          : { position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto' }}>
           {TRIADS.map((c) => {
             const on = triadFilter === c, col = TRIAD_COLOR[c]
             return (
@@ -364,8 +369,8 @@ function KnowledgeSurfaceInner() {
             })}
           </div>
 
-          {/* provenance (bottom-left) */}
-          <div style={{ position: 'absolute', bottom: 62, left: 16, display: 'flex', gap: 12, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 12, padding: '7px 12px', backdropFilter: 'blur(10px)' }}>
+          {/* provenance (bottom-left) — hidden on mobile to keep the legend clear */}
+          {!compact && <div style={{ position: 'absolute', bottom: 62, left: 16, display: 'flex', gap: 12, alignItems: 'center', background: ui.glass, border: '1px solid #232c52', borderRadius: 12, padding: '7px 12px', backdropFilter: 'blur(10px)' }}>
             <span style={{ fontSize: 10, color: ui.tx2, letterSpacing: 0.6 }}>PROVENANCE</span>
             {(['live', 'partial', 'simulated', 'placeholder'] as const).map((p) => (
               <span key={p} title={PROVENANCE_META[p].hint} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: ui.tx3 }}>
@@ -373,7 +378,7 @@ function KnowledgeSurfaceInner() {
                 {PROVENANCE_META[p].label}
               </span>
             ))}
-          </div>
+          </div>}
         </>
       )}
 
