@@ -22,6 +22,12 @@ export const PROVIDER_CATALOG = [
   // matches @arganta/ai/registry.js's client-side capabilities.tools:false
   // for cloudflare-llama-free — this flag is the server-side half of that
   // same honest claim, not a new opinion.
+  // Groq is listed FIRST of the free Sponsored pool (so it's the default primary
+  // when no exact model is requested): its free tier is far more generous and
+  // its latency is ~15ms, whereas Gemini's free quota is tiny and 429s quickly
+  // (confirmed live 2026-07-16). Both are genuine tool-callers. Gemini stays as
+  // the automatic fallback (and vice-versa — pickCandidates keeps both).
+  { name: 'groq', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', pricing: null },
   // model is `gemini-flash-latest` (a rolling Google alias to the current free
   // Flash), NOT the pinned `gemini-2.0-flash` — verified live 2026-07-15 that
   // this project's key returns HTTP 429 `free_tier_requests limit: 0` for
@@ -30,7 +36,6 @@ export const PROVIDER_CATALOG = [
   // Google currently grants free quota, so it's more robust than a pin for a
   // free-tier Sponsored provider.
   { name: 'gemini', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GEMINI_API_KEY', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-flash-latest', pricing: null },
-  { name: 'groq', costClass: 1, shape: 'openai-compat', toolsCapable: true, envKey: 'GROQ_API_KEY', url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', pricing: null },
   // Cloudflare Workers AI — account-scoped URL (no static `url`; resolveUrl()
   // builds it from CF_ACCOUNT_ID at call time). Same secrets media-proxy
   // already uses (project-level, shared across Edge Functions). Llama 3.1 8B
@@ -98,7 +103,15 @@ export function pickCandidates(available, opts = {}) {
   }
   if (opts.model) {
     const byModel = pool.find((e) => e.model === opts.model);
-    if (byModel) return [byModel];
+    if (byModel) {
+      // Honor the requested model FIRST, but KEEP the other same-pool providers
+      // as fallbacks — otherwise a transient failure on the pinned model (e.g.
+      // Gemini 429 when its tiny free quota is spent) dead-ends at 502→mock
+      // ("no live model") instead of falling through to Groq. `force` (not
+      // `model`) is the way to demand exactly one provider with no fallback.
+      const rest = pool.filter((e) => e !== byModel).sort((a, b) => a.costClass - b.costClass);
+      return [byModel, ...rest].slice(0, 2);
+    }
   }
   if (opts.costClass != null) pool = pool.filter((e) => e.costClass === opts.costClass);
   return [...pool].sort((a, b) => a.costClass - b.costClass).slice(0, 2);

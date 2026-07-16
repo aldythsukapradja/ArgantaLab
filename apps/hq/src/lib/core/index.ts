@@ -3,9 +3,14 @@
 // persists the turn through the C2 thread/message substrate. This is the
 // FIRST place all three land together — the "digital twin can actually do
 // things in a conversation" milestone.
-import { runAgentLoop, toOpenAITools, availableTools, makeBlock, AUTONOMY, TOOL_SPECS } from '@arganta/agent'
+import { runAgentLoop, toOpenAITools, availableTools, makeBlock, AUTONOMY, TOOL_SPECS, registerToolSpecs } from '@arganta/agent'
 import { makeCoreCallModel } from './runtime'
 import { coreExecuteTool, WIRED_BUILDER_SPECS, type ToolResult } from './tools'
+
+// Make the builder tools (create_website/create_application/revise_artifact/…)
+// resolvable by the loop's autonomy gate — they're OFFERED to the model but live
+// in @arganta/builder, so without this the loop refuses them as `unknown-tool`.
+registerToolSpecs(WIRED_BUILDER_SPECS as any)
 import { createThread, appendMessage, loadMessages, listRecentThreads, type CoreMessage } from './thread'
 import { embedTextViaGateway } from '../mediaGateway'
 import { supabase, cloudEnabled } from '../supabase'

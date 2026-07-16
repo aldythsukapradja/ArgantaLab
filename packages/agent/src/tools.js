@@ -89,7 +89,27 @@ export const TOOL_SPECS = Object.freeze([
   },
 ]);
 
-export const toolByName = (name) => TOOL_SPECS.find((t) => t.name === name) || null;
+// Out-of-package tool specs (the @arganta/builder kernel — see the `builder`
+// backing note above) register here so toolByName — and therefore the loop's
+// autonomy gate — can resolve them. Without this, a model that correctly calls
+// e.g. `create_website` (offered to it via toOpenAITools([...TOOL_SPECS,
+// ...WIRED_BUILDER_SPECS])) gets refused as `unknown-tool`, because the loop
+// resolved the name against TOOL_SPECS alone. TOOL_SPECS itself stays frozen —
+// this is additive registration, not a mutation, realizing the "merge at call
+// time" the backing note always intended.
+const EXTRA_SPECS = [];
+/** Register additional ToolSpecs (idempotent by name; never shadows TOOL_SPECS). */
+export function registerToolSpecs(specs = []) {
+  for (const s of specs) {
+    if (!s || typeof s.name !== 'string') continue;
+    if (TOOL_SPECS.some((t) => t.name === s.name) || EXTRA_SPECS.some((t) => t.name === s.name)) continue;
+    EXTRA_SPECS.push(s);
+  }
+}
+/** All specs currently resolvable (frozen core + registered extras). */
+export const allToolSpecs = () => [...TOOL_SPECS, ...EXTRA_SPECS];
+
+export const toolByName = (name) => TOOL_SPECS.find((t) => t.name === name) || EXTRA_SPECS.find((t) => t.name === name) || null;
 
 /** Filter to the tools a given context may offer the model. Autonomous contexts
  * only ever see autonomySafe tools — a headless mission can't even be TEMPTED to

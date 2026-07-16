@@ -1,14 +1,11 @@
 // C4b Step 6 — the composer (C4a §7): auto-grow textarea, Enter/Shift+Enter,
-// tier ceiling pill, mic dictation, stop-mid-turn, session cost ticker.
+// LIVE brain pill (the actual LLM ready/used, not a generic tier), mic
+// dictation, stop-mid-turn, session cost ticker + free-tier quota chips.
 //
-// Two honest scope notes:
-// - Tier pill is DISPLAY-ONLY (shows the maxCostClass ceiling). Core's
-//   orchestrate task requires a Sponsored floor (runtime.ts) and selectModel
-//   has no per-call ceiling override today — wiring a real multi-tier
-//   selector would mean changing @arganta/ai's routing, out of scope for an
-//   additive UI change. A pill that looked selectable but changed nothing
-//   would be dishonest, so it's a status chip, not a control, until that
-//   routing exists.
+// - The brain pill shows the real model: the one that just answered (truthful
+//   provenance) or, before the first turn, the one selectModel WOULD pick — so
+//   it always names an LLM that is actually ready and usable, never a generic
+//   "Sponsored" label.
 // - Mic does NOT reuse copilot's useVoice hook — that hook's onresult
 //   immediately matches the transcript against the fixed-phrase intent
 //   registry and never returns raw text to its caller, so it can't dictate
@@ -16,21 +13,23 @@
 //   same lifecycle pattern, parallel to useVoice, not a shared instance.
 import { useEffect, useRef, useState } from 'react'
 import { CoreOrb } from './CoreOrb'
-
-const TIER_LABEL: Record<number, string> = { 0: 'Sovereign', 1: 'Sponsored', 2: 'Economical', 3: 'Premium' }
+import { GEMINI_FREE_RPD_EST, type CoreStatus } from './useCoreStatus'
 
 function getRecognitionCtor(): (new () => any) | null {
   if (typeof window === 'undefined') return null
   return (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null
 }
 
-export function Composer({ draft, onDraftChange, onSend, onStop, sending, maxCostClass, sessionCostUsd, sessionRuns }: {
+export function Composer({ draft, onDraftChange, onSend, onStop, sending, brainLabel, brainTitle, status, sessionCostUsd, sessionRuns }: {
   draft: string
   onDraftChange: (v: string) => void
   onSend: () => void
   onStop: () => void
   sending: boolean
-  maxCostClass: number
+  /** Friendly name of the LLM ready/last-used (e.g. "Groq Llama 3.3"). */
+  brainLabel: string
+  brainTitle: string
+  status: CoreStatus
   sessionCostUsd: number
   sessionRuns: number
 }) {
@@ -74,8 +73,8 @@ export function Composer({ draft, onDraftChange, onSend, onStop, sending, maxCos
   return (
     <div className="core-composer">
       <div className="core-composer-field">
-        <span className="core-tier-pill mono" title="Model tier ceiling for this conversation">
-          {TIER_LABEL[maxCostClass] ?? `Tier ${maxCostClass}`}
+        <span className="core-brain-pill mono" title={brainTitle}>
+          <span className="core-brain-dot" aria-hidden />{brainLabel}
         </span>
         <textarea
           ref={taRef}
@@ -110,8 +109,23 @@ export function Composer({ draft, onDraftChange, onSend, onStop, sending, maxCos
           </button>
         )}
       </div>
-      <div className="core-session-ticker mono">
-        session · ${sessionCostUsd.toFixed(4)} · {sessionRuns} run{sessionRuns === 1 ? '' : 's'}
+      <div className="core-status-row mono">
+        <span className="core-session-ticker">
+          session · ${sessionCostUsd.toFixed(4)} · {sessionRuns} run{sessionRuns === 1 ? '' : 's'}
+        </span>
+        <span className="core-quota-chips">
+          {status.neurons && !status.neurons.error && (
+            <span className="core-quota" title={`Cloudflare Workers AI neurons used today / free daily cap (images, voice, embeddings)`}>
+              <b>◆</b> {status.neurons.used.toLocaleString()}<span className="core-quota-of">/{status.neurons.cap.toLocaleString()}</span> neurons
+            </span>
+          )}
+          <span className="core-quota" title={`Gemini requests today vs Google's est. free-tier cap (~${GEMINI_FREE_RPD_EST}/day). Usage is real; cap is an estimate.`}>
+            Gemini {status.geminiToday}<span className="core-quota-of">/{GEMINI_FREE_RPD_EST}</span>
+          </span>
+          <span className="core-quota" title="Groq requests today (free tier is generous; no live remaining-quota API, so no hard cap shown)">
+            Groq {status.groqToday}
+          </span>
+        </span>
       </div>
     </div>
   )

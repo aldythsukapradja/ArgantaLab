@@ -22,11 +22,19 @@ test('force picks the exact provider regardless of cost, or empty if unavailable
   assert.deepEqual(pickCandidates(available, { force: 'deepseek' }), []); // no DEEPSEEK_API_KEY
 });
 
-test('an exact model request (from selectModel picking a specific ModelSpec) is honored over cost-based selection', () => {
+test('an exact model request (from selectModel picking a specific ModelSpec) is honored FIRST but keeps a fallback', () => {
   const available = { GEMINI_API_KEY: 'x', ANTHROPIC_API_KEY: 'z' };
   const cands = pickCandidates(available, { model: 'claude-opus-4-8' });
-  assert.equal(cands.length, 1);
-  assert.equal(cands[0].name, 'anthropic-opus');
+  assert.equal(cands[0].name, 'anthropic-opus'); // requested model wins first slot
+  assert.ok(cands.length >= 1 && cands.length <= 2); // but a same-pool fallback may ride along
+});
+
+test('an exact model request keeps a real fallback so a 429 on the pinned model degrades to the other provider, not to mock (the Gemini-quota-exhausted case)', () => {
+  const available = { GEMINI_API_KEY: 'x', GROQ_API_KEY: 'y' };
+  const cands = pickCandidates(available, { model: 'gemini-flash-latest', needsTools: true });
+  assert.equal(cands.length, 2);
+  assert.equal(cands[0].name, 'gemini'); // requested first
+  assert.equal(cands[1].name, 'groq');   // fallback present — this is what was missing
 });
 
 test('an exact model request that is unavailable falls through to cost-based selection instead of failing', () => {

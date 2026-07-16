@@ -134,6 +134,22 @@
   flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: var(--tx3);
   background: var(--bg3); padding: 3px 9px; border-radius: 999px; white-space: nowrap;
 }
+/* live brain pill — names the actual LLM ready/used */
+.core-brain-pill {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; font-weight: 600; color: var(--acc-text); white-space: nowrap;
+  background: var(--acc-soft); padding: 3px 10px 3px 8px; border-radius: 999px;
+}
+.core-brain-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent);
+  animation: core-brain-pulse 2.4s var(--ease, ease-in-out) infinite;
+}
+@keyframes core-brain-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); }
+  50% { box-shadow: 0 0 0 3px transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .core-brain-dot { animation: none; } }
 .core-composer-mic {
   width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; border: none; background: none;
   color: var(--tx3); cursor: pointer; display: grid; place-items: center;
@@ -141,7 +157,17 @@
 }
 .core-composer-mic:hover { background: var(--bg3); color: var(--tx); }
 .core-composer-mic-on { color: var(--acc); background: var(--acc-soft); }
-.core-session-ticker { max-width: 760px; margin: 6px auto 0; padding: 0 4px; font-size: 10.5px; color: var(--tx3); }
+.core-session-ticker { font-size: 10.5px; color: var(--tx3); white-space: nowrap; }
+/* status row: session ticker (left) + free-tier quota chips (right) */
+.core-status-row {
+  max-width: 760px; margin: 6px auto 0; padding: 0 4px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.core-quota-chips { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 10.5px; color: var(--tx3); }
+.core-quota { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; cursor: default; }
+.core-quota b { color: var(--acc); font-weight: 400; }
+.core-quota-of { color: var(--tx3); opacity: .6; }
+@media (max-width: 560px) { .core-quota-chips { gap: 8px; } }
 
 /* ---------- messages ---------- */
 .core-msg { display: flex; margin-bottom: 18px; }
