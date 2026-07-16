@@ -217,6 +217,7 @@
 .core-trail-fail { color: var(--bad); }
 
 .core-provenance { font-size: 11px; color: var(--tx3); }
+.core-prov-fallback { color: var(--warn); cursor: help; }
 
 /* ---------- artifact card (Step 5) ---------- */
 .core-artifact-card {

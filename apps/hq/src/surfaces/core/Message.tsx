@@ -7,6 +7,9 @@ import { asBlocks, MEDIA_BLOCK_KINDS, type CoreBlock } from './blocks'
 import { CoreOrb } from './CoreOrb'
 import { ArtifactCard } from './ArtifactCard'
 import { OFFICE_META } from '../../data/agents'
+import { friendlyModel } from './useCoreStatus'
+import { getPreferredModelId } from '../../lib/modelPreference'
+import { intelligenceRegistry } from '../../lib/ai'
 
 export function UserMessage({ text }: { text: string }) {
   return (
@@ -40,6 +43,18 @@ export function AssistantMessage({ message, provider, model, streaming, errored 
   const modelText = model ?? provFallback?.model ?? null
   const costUsd = trail.reduce((s, t: any) => s + (t.costUsd || 0), 0)
 
+  // Show the ACTUAL model in plain language ("Groq Llama 3.1 8B"), not the
+  // internal adapter id ("edgeProxy"). `edgeProxy` just means "went through our
+  // gateway" — the real brain is the model after it.
+  const brandLabel = modelText ? friendlyModel(modelText) : (provText === 'mock' ? 'offline' : provText)
+  // If the founder picked a model but a DIFFERENT one actually ran (their pick
+  // was momentarily out of quota and the gateway fell back), say so — only on
+  // the live turn (provider prop is passed), and only when we can name the pick.
+  const prefId = provider != null ? getPreferredModelId() : null
+  const prefSpec = prefId ? (intelligenceRegistry as any[]).find((m) => m.id === prefId) : null
+  const fellBackFrom = prefSpec && modelText && prefSpec.apiModel !== modelText
+    ? friendlyModel(prefSpec.apiModel) : null
+
   const orbState = errored ? 'error' : streaming ? 'speaking' : 'idle'
 
   return (
@@ -51,10 +66,14 @@ export function AssistantMessage({ message, provider, model, streaming, errored 
         {delegationBlocks.map((b, i) => <DelegationCard key={i} office={b.office} summary={b.summary} />)}
         {mediaBlocks.map((b, i) => <ArtifactCard key={i} block={b} />)}
         {textBlock && <TextReveal text={textBlock.text} skipAnimation={!streaming} />}
-        {(provText || savedAny) && (
+        {(brandLabel || savedAny) && (
           <div className="core-provenance mono">
-            {provText && <span>{provText}</span>}
-            {modelText && <span> · {modelText}</span>}
+            {brandLabel && <span>{brandLabel}</span>}
+            {fellBackFrom && (
+              <span className="core-prov-fallback" title={`You picked ${fellBackFrom}, but it was out of free quota this turn, so Core fell back to ${brandLabel}. Your pick is still saved — it'll be used again once its quota resets.`}>
+                {' · '}↩ fell back from {fellBackFrom}
+              </span>
+            )}
             <span> · ${costUsd.toFixed(4)}</span>
             {savedAny && <span> · 📎 saved</span>}
           </div>
