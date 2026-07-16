@@ -143,7 +143,11 @@ export function VaultShell({ forceView }: { forceView?: CenterView } = {}) {
   const isMobile = useIsMobile()
   const [drawerOpen, setDrawerOpen] = useState(false)
   useEffect(() => { setDrawerOpen(false) }, [active])
-  const leftShown = isMobile ? drawerOpen : settings.leftOpen
+  // The 3D Knowledge canvas is an immersive full-bleed view — hide the left
+  // explorer so it gets the whole width (the Files ribbon button still opens it,
+  // which switches to the note view). Everything else keeps its sidebar.
+  const immersive = centerView === 'knowledge'
+  const leftShown = immersive ? false : isMobile ? drawerOpen : settings.leftOpen
 
   const handleLeft = (panel: 'files' | 'search') => {
     if (isMobile) {
@@ -187,7 +191,7 @@ export function VaultShell({ forceView }: { forceView?: CenterView } = {}) {
       </div>
 
       {/* ── Left sidebar (slide-over drawer on mobile) ──── */}
-      {(isMobile || settings.leftOpen) && (
+      {!immersive && (isMobile || settings.leftOpen) && (
         <div className={'v-left' + (isMobile ? ' v-left-drawer' : '') + (isMobile && drawerOpen ? ' open' : '')}>
           {leftPanel === 'files' ? <FileExplorer /> : <SearchPanel />}
         </div>
