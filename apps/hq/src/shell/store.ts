@@ -21,6 +21,7 @@ export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 
 interface HQState {
   surface: SurfaceId
+  coreReturn: SurfaceId            // where the Agent (core) full-screen X returns to
   dataTab: DataTab
   builderSub: BuilderSub
   commandTab: CommandTab           // Command sub-tab: lobby | office id
@@ -54,6 +55,7 @@ const initialTheme = (): Theme =>
 
 export const useHQ = create<HQState>((set) => ({
   surface: 'home',
+  coreReturn: 'portfolio',
   dataTab: 'schema',
   builderSub: 'catalogue',
   commandTab: 'lobby',
@@ -65,7 +67,12 @@ export const useHQ = create<HQState>((set) => ({
   paletteOpen: false,
   verdictState: {},
   setVerdictState: (id, s) => set((st) => ({ verdictState: { ...st.verdictState, [id]: s } })),
-  go: (surface) => set({ surface, builderSub: 'catalogue', studioId: null, commandTab: 'lobby' }),
+  // Entering the Agent (core) full-screen remembers where we came from, so its
+  // X returns there instead of a hardcoded default.
+  go: (surface) => set((st) => ({
+    surface, builderSub: 'catalogue', studioId: null, commandTab: 'lobby',
+    coreReturn: surface === 'core' && st.surface !== 'core' ? st.surface : st.coreReturn,
+  })),
   goOffice: (commandTab) => set({ surface: 'command', commandTab }),
   setDataTab: (dataTab) => set({ dataTab }),
   setCommandTab: (commandTab) => set({ commandTab }),

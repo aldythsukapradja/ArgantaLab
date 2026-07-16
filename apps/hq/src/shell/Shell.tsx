@@ -37,7 +37,7 @@ function SurfaceLoading() {
 }
 
 function Surface() {
-  const { surface } = useHQ()
+  const { surface, go, coreReturn } = useHQ()
   switch (surface) {
     case 'home': return <Landing />
     case 'architecture': return <Architecture />
@@ -63,7 +63,7 @@ function Surface() {
     case 'rack': return <ModelRack />
     case 'cinema': return <CinemaDev />
     case 'copilot': return <CopilotControl />
-    case 'core': return <ArgantaCore />
+    case 'core': return <ArgantaCore onClose={() => go(coreReturn)} />
   }
 }
 

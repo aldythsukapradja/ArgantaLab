@@ -123,11 +123,13 @@ function FullscreenCore({ threadId, onSelectThread, embed, maxCostClass, onArtif
   return (
     <div className="core core-fullscreen" data-embed={embed || undefined} style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN }}>
       <div className="core-fs-topbar">
-        <button className="core-fs-back" onClick={onClose} aria-label="Close Arganta Core">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3 L5 9 L11 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
         <button className="core-fs-title" onClick={() => setSheetOpen(true)}>Arganta Core</button>
-        <HelpButton onClick={() => setHelpOpen(true)} />
+        <div className="core-fs-actions">
+          <HelpButton onClick={() => setHelpOpen(true)} />
+          <button className="core-fs-close" onClick={onClose} aria-label="Close and go back">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5 L12.5 12.5 M12.5 3.5 L3.5 12.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          </button>
+        </div>
       </div>
       {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
       <Conversation threadId={threadId} onThreadCreated={(id) => { onSelectThread(id); bumpThreadsRefresh() }} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} />

@@ -333,9 +333,15 @@
 }
 .core-fs-back:hover { background: var(--bg3); }
 .core-fs-title {
-  flex: 1; text-align: center; font-size: 14px; font-weight: 600; color: var(--tx);
-  background: none; border: none; cursor: pointer; padding: 8px;
+  flex: 1; text-align: left; font-size: 14px; font-weight: 600; color: var(--tx);
+  background: none; border: none; cursor: pointer; padding: 8px 8px 8px 12px;
 }
+.core-fs-actions { display: flex; align-items: center; gap: 4px; padding-right: 4px; }
+.core-fs-close {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  background: none; border: none; color: var(--tx2); cursor: pointer; border-radius: var(--r-md);
+}
+.core-fs-close:hover { background: var(--bg3); color: var(--tx); }
 .core-fs-menu {
   width: 44px; height: 44px; display: grid; place-items: center;
   background: none; border: none; color: var(--tx2); cursor: pointer; font-size: 18px; border-radius: var(--r-md);
