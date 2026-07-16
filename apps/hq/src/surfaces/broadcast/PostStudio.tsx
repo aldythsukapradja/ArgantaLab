@@ -18,6 +18,7 @@ import { supabase, cloudEnabled } from '../../lib/supabase'
 import { ai, aiLive } from '../../lib/ai'
 import { generateCopy, generateImage, coreEnabled, extForImageMime, getCoreQuota, prettyModel, type CoreQuota } from '../../lib/argantaCoreClient'
 import { listPublishableCircles, publishMoment, type PublishCircle } from '../../lib/momentPublish'
+import { brandBase, BRAND_BASES, DEFAULT_BRAND_ID } from '@arganta/brand'
 import { listContentDrafts, markDraftConsumed, recordDraftPublish, type ContentDraft } from '../../lib/contentDrafts'
 import { listBufferChannels, publishToBuffer, bufferEnabled, type BufferChannel, type BufferMode } from '../../lib/bufferClient'
 import { live } from '../../data/live'
@@ -135,6 +136,13 @@ export function PostStudio() {
   const slide = doc.slides[Math.min(sel, doc.slides.length - 1)]
   const layer = useMemo(() => slide?.layers.find(l => l.id === selLayer) || null, [slide, selLayer])
 
+  // ── the doc's brand ──
+  // Everything the renderer needs (mark, palette, plate, fonts) is agent-lane, so
+  // it resolves from the git bases with no database round-trip. The founder-lane
+  // half (voice, handles) arrives from Supabase in BF-5; until then the doc's own
+  // brand.handle carries the sign-off.
+  const brand = useMemo(() => brandBase(doc.brandId || DEFAULT_BRAND_ID), [doc.brandId])
+
   // ── image cache (crossOrigin so export stays untainted) ──
   const env: RenderEnv = useMemo(() => ({
     getImg: (url: string) => {
@@ -149,7 +157,8 @@ export function PostStudio() {
       imgs.current.set(url, im)
       return im
     },
-  }), [])
+    brand,
+  }), [brand])
 
   // ── autosave ──
   useEffect(() => {
@@ -266,7 +275,7 @@ export function PostStudio() {
   }
 
   function applyTemplate(tid: string) {
-    update(d => { const keep = slideContent(d.slides[sel]); d.slides[sel] = makeSlide(tid, keep) })
+    update(d => { const keep = slideContent(d.slides[sel]); d.slides[sel] = makeSlide(tid, { ...keep, handle: d.brand?.handle }) })
     setSelLayer(null)
     setStatus(`Re-laid out as “${TEMPLATES.find(t => t.id === tid)?.label}” — same words, new bones.`)
   }
@@ -781,6 +790,26 @@ export function PostStudio() {
       <div className="pbx-top">
         <div className="pbx-mark"><Megaphone size={15} /></div>
         <div className="pbx-title"><b>Content Builder</b><span>Post Studio · every social format · zero-asset</span></div>
+        {/* Brand picker — re-inks the whole doc: mark, palette, text plate and
+            fonts all come from the chosen brand's registry entry. */}
+        <div className="seg" role="group" aria-label="Brand">
+          {Object.values(BRAND_BASES).map((b: any) => (
+            <button key={b.id} className={(doc.brandId || DEFAULT_BRAND_ID) === b.id ? 'on' : ''}
+              title={`Render as ${b.name} — mark, palette and text plate from the brand registry`}
+              onClick={() => update(d => {
+                d.brandId = b.id
+                // The wordmark + end-card handle are founder-lane text, so they
+                // live on the doc. Carry over sensible defaults on switch; the
+                // founder can still edit them, and BF-5 will source the real
+                // handle from the DB overlay.
+                d.brand = { name: b.name, handle: '@' + b.id }
+                for (const s of d.slides) {
+                  const h = s.layers.find(l => l.type === 'text' && l.name === 'Handle')
+                  if (h && h.type === 'text') h.text = '@' + b.id
+                }
+              })}>{b.name}</button>
+          ))}
+        </div>
         <div className="seg" role="group" aria-label="Format">
           {POST_FORMATS.map(f => (
             <button key={f.id} className={doc.format === f.id ? 'on' : ''} title={`${f.label} · ${f.w}×${f.h} · ${f.platforms}`}

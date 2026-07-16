@@ -1,0 +1,81 @@
+{
+  "id": "kinetikcircle",
+  "name": "KinetikCircle",
+  "status": "living",
+
+  "identity": {
+    "mark": {
+      "_source": "Transcribed from the procedural K-mark that lived hard-coded in apps/hq/src/surfaces/broadcast/postEngine.ts drawBrandLayer() (which itself mirrored apps/kinetik public/icon.svg). BF-3 moved the geometry OUT of the renderer and IN here as data — the renderer no longer knows any brand's shape. Verified pixel-identical to the old procedural code.",
+      "viewBox": 512,
+      "gradients": {
+        "brand": {
+          "type": "linear",
+          "from": [0, 0],
+          "to": [1, 1],
+          "stops": [[0, "#22D3EE"], [1, "#8B5CF6"]]
+        }
+      },
+      "variants": {
+        "core": [
+          { "kind": "roundRect", "x": 0, "y": 0, "w": 512, "h": 512, "r": 117.76, "fill": "@brand" },
+          { "kind": "circle", "cx": 256, "cy": 256, "r": 106, "stroke": "#ffffff", "strokeWidth": 40 },
+          { "kind": "circle", "cx": 332, "cy": 180, "r": 34, "fill": "#ffffff" },
+          { "kind": "circle", "cx": 256, "cy": 256, "r": 22, "fill": "#ffffff" }
+        ]
+      }
+    },
+
+    "palette": {
+      "bg": "#101a3a",
+      "bgAlt": "#1b0f33",
+      "ink": "#ffffff",
+      "soft": "#aab4d8",
+      "accent": "#22D3EE",
+      "plateBg": "#FFD64B",
+      "plateInk": "#1b1500"
+    },
+    "accents": {
+      "cyan": "#22D3EE",
+      "violet": "#8B5CF6"
+    },
+    "fonts": {
+      "display": null,
+      "body": null,
+      "mono": null,
+      "embedded": []
+    },
+    "icons": { "style": null, "set": {} },
+    "motion": { "intro": null, "outro": null, "markAnimation": null },
+    "audio": { "sting": null, "durationMs": 2000 }
+  },
+
+  "kb": {
+    "brandMd": null,
+    "refs": [],
+    "prompts": {}
+  },
+
+  "presence": {},
+
+  "content": {
+    "templates": {},
+    "captionFormula": null,
+    "adKit": { "meta": {}, "google": {}, "display": {} },
+    "ogTemplate": null
+  },
+
+  "discovery": {
+    "seo": {},
+    "schemaOrg": null,
+    "ogImage": null,
+    "factSheet": {},
+    "llmsTxt": null,
+    "keywords": []
+  },
+
+  "routing": {
+    "bufferChannelId": null,
+    "momentSenderProfileId": "c1c1e000-0000-4000-8000-0000000000c1",
+    "siteUrl": null
+  }
+}

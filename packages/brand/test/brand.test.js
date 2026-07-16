@@ -231,3 +231,47 @@ test('registry: createRegistry resolves and exposes brands by id', () => {
   assert.deepEqual(reg.errorsFor('argantalab'), [])
   assert.equal(reg.get('nope'), null)
 })
+
+// ── BF-3: the engine must be able to render any brand ─────────
+test('bases: every shipped brand is structurally valid and carries a mark', async () => {
+  const { BRAND_BASES } = await import('../src/index.js')
+  const ids = Object.keys(BRAND_BASES)
+  assert.ok(ids.includes('argantalab') && ids.includes('kinetikcircle'))
+  for (const [id, b] of Object.entries(BRAND_BASES)) {
+    const { doc, errors } = resolveBrand(b, {})
+    assert.deepEqual(errors, [], `${id} is invalid`)
+    assert.ok(doc.identity.mark?.variants?.core?.length, `${id} has no core mark — postEngine would draw nothing`)
+    assert.ok(doc.identity.palette.accent, `${id} has no accent`)
+  }
+})
+
+test('bases: an unknown brand id falls back to the default rather than rendering blank', async () => {
+  const { brandBase, DEFAULT_BRAND_ID } = await import('../src/index.js')
+  assert.equal(DEFAULT_BRAND_ID, 'kinetikcircle')
+  assert.equal(brandBase('nope').id, 'kinetikcircle')
+  assert.equal(brandBase('argantalab').id, 'argantalab')
+  assert.equal(brandBase(undefined).id, 'kinetikcircle')
+})
+
+test('bases: the two brands are genuinely distinct — no shared hard-coded identity', async () => {
+  const { BRAND_BASES } = await import('../src/index.js')
+  const a = BRAND_BASES.argantalab.identity
+  const k = BRAND_BASES.kinetikcircle.identity
+  assert.notEqual(a.palette.accent, k.palette.accent)
+  assert.notEqual(a.palette.bg, k.palette.bg)
+  assert.notEqual(a.mark.viewBox, k.mark.viewBox)
+  // ArgantaLab overrides the plate to Quest Gold; KinetikCircle takes the engine's default
+  assert.equal(a.palette.plateBg, '#FFC24B')
+  assert.equal(k.palette.plateBg, '#FFD64B')
+})
+
+test('bases: the kinetikcircle mark is the K-mark that used to be hard-coded', async () => {
+  const { BRAND_BASES } = await import('../src/index.js')
+  const svg = markToSvg(BRAND_BASES.kinetikcircle.identity.mark, { size: 512 })
+  assert.match(svg, /viewBox="0 0 512 512"/)
+  assert.match(svg, /stop-color="#22D3EE"/)   // the tile gradient's cyan end
+  assert.match(svg, /stop-color="#8B5CF6"/)   // ...and its violet end
+  assert.match(svg, /<circle [^>]*cx="256" cy="256" r="106"[^>]*stroke-width="40"/) // the ring
+  assert.match(svg, /<circle [^>]*cx="332" cy="180" r="34"/)                        // the satellite
+  assert.match(svg, /<circle [^>]*cx="256" cy="256" r="22"/)                        // the core
+})

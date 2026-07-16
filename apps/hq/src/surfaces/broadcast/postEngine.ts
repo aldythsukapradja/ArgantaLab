@@ -12,7 +12,13 @@
  *    the palette re-inks every slide at once — the "brand kit" behaviour.
  *  · Every layout number is normalized (xN/yN/size vs a 1080 reference), so
  *    switching format is a one-click "magic resize".
+ *  · BF-3: the engine knows NO brand's shape. A doc names a `brandId`, the caller
+ *    resolves it (@arganta/brand) and hands the doc in via RenderEnv.brand; mark,
+ *    palette, text plate and fonts all come from there. Everything the render path
+ *    needs is agent-lane, so drawing never waits on the database.
  */
+
+import { drawMark } from '@arganta/brand'
 
 // ── Platform presets ──────────────────────────────────────────
 export interface PostFormat {
@@ -63,10 +69,56 @@ export const postPalette = (id: string): PostPalette => POST_PALETTES.find(p => 
 // ── Text plate ────────────────────────────────────────────────
 // Every line of body/headline copy sits on a solid pill so it stays legible
 // over ANY Arganta-Core-generated image background (bare text vanished into the
-// artwork). Yellow is the brand default; dark ink rides on top. Independent of
-// the palette accent so the plate reads the same on every post.
+// artwork). Yellow is the default; dark ink rides on top. Independent of the
+// palette accent so the plate reads the same on every post.
+//
+// These are the ENGINE's fallbacks. A brand overrides them via
+// identity.palette.plateBg/plateInk — the brand never has to restate a value it
+// is happy with, which is why blankBrand() ships nulls rather than placeholders.
 export const PLATE_BG = '#FFD64B'
 export const PLATE_INK = '#1b1500'
+
+export interface Plate { bg: string; ink: string }
+export const platePaint = (brand?: any): Plate => ({
+  bg: brand?.identity?.palette?.plateBg || PLATE_BG,
+  ink: brand?.identity?.palette?.plateInk || PLATE_INK,
+})
+
+/** Relative luminance → is this a dark ground? Decides grain/vignette/shadow. */
+function isDarkHex(hex: string): boolean {
+  const h = hex.replace('#', '')
+  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  const r = parseInt(v.slice(0, 2), 16), g = parseInt(v.slice(2, 4), 16), b = parseInt(v.slice(4, 6), 16)
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 < 0.5
+}
+
+/**
+ * A brand's identity.palette expressed as the engine's role-based PostPalette.
+ * The brand wins on every role it defines; anything it leaves null falls back to
+ * the named palette the doc already carried, so a half-designed brand still
+ * renders instead of rendering wrong.
+ */
+export function brandPalette(brand: any, fallbackId: string): PostPalette {
+  const base = postPalette(fallbackId)
+  const p = brand?.identity?.palette
+  if (!p) return base
+  const bg = p.bg || base.colors[0]
+  return {
+    id: brand.id || base.id,
+    label: brand.name || base.label,
+    colors: [bg, p.bgAlt || p.bg || base.colors[1]],
+    ink: p.ink || base.ink,
+    soft: p.soft || base.soft,
+    accent: p.accent || base.accent,
+    pillInk: p.plateInk || base.pillInk,
+    dark: p.bg ? isDarkHex(bg) : base.dark,
+  }
+}
+
+/** Resolve the palette a doc renders with: its brand if one is supplied, else
+ *  the named palette it already had. */
+export const resolvePalette = (doc: PostDoc, brand?: any): PostPalette =>
+  brand ? brandPalette(brand, doc.palette) : postPalette(doc.palette)
 
 /** A layer color is a palette ROLE or a raw hex. Roles re-ink on palette switch. */
 export type Role = 'ink' | 'soft' | 'accent' | 'pillInk' | string
@@ -163,7 +215,8 @@ export interface PostSlide {
 export interface PostDoc {
   v: 1
   format: string          // PostFormat id
-  palette: string         // PostPalette id
+  palette: string         // PostPalette id — the fallback when no brand is set
+  brandId?: string        // @arganta/brand id; drives mark, palette, plate, fonts
   slides: PostSlide[]
   caption: string
   hashtags: string
@@ -203,6 +256,16 @@ const FONT_STACK: Record<PostFont, string> = {
   sans: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   serif: 'Georgia, "Times New Roman", ui-serif, serif',
   mono: 'ui-monospace, "Cascadia Code", Consolas, Menlo, monospace',
+}
+
+/** A brand's face in front of the engine's stack. Note that naming a face the
+ *  browser hasn't loaded changes nothing — it falls straight through to the
+ *  stack. That's why "fonts embedded in engine" is its own readiness check:
+ *  declaring Inter and shipping Inter are different jobs. */
+function fontStack(font: PostFont, brand?: any): string {
+  const f = brand?.identity?.fonts
+  const face = font === 'mono' ? f?.mono : font === 'sans' ? (f?.display || f?.body) : null
+  return face ? `"${face}", ${FONT_STACK[font]}` : FONT_STACK[font]
 }
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -300,11 +363,11 @@ function hexA(hex: string, a: number): string {
 }
 
 // ── Layer painters ────────────────────────────────────────────
-function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPalette, W: number, H: number) {
+function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPalette, W: number, H: number, plate: Plate, brand?: any) {
   const k = W / 1080
   const size = l.size * k
   const text = l.upper ? l.text.toUpperCase() : l.text
-  ctx.font = `${l.weight} ${size}px ${FONT_STACK[l.font]}`
+  ctx.font = `${l.weight} ${size}px ${fontStack(l.font, brand)}`
   ctx.textAlign = l.align
   ctx.textBaseline = 'middle'
   const maxW = l.maxWidthN * W
@@ -320,7 +383,7 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPal
     const lx = l.align === 'left' ? cx : l.align === 'right' ? cx - lw : cx - lw / 2
     if (l.highlight === 'pill' && line.trim()) {
       const padX = size * 0.28, padY = size * 0.16
-      ctx.fillStyle = PLATE_BG
+      ctx.fillStyle = plate.bg
       roundRect(ctx, lx - padX, y - size / 2 - padY, lw + padX * 2, size + padY * 2, size * 0.24)
       ctx.fill()
     }
@@ -332,7 +395,7 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, l: TextLayer, pal: PostPal
     if (l.highlight !== 'pill' && pal.dark) {
       ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = size * 0.1; ctx.shadowOffsetY = size * 0.02
     }
-    ctx.fillStyle = l.highlight === 'pill' ? PLATE_INK : color
+    ctx.fillStyle = l.highlight === 'pill' ? plate.ink : color
     ctx.fillText(line, l.align === 'center' ? cx : lx + (l.align === 'right' ? lw : 0), y)
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0
   })
@@ -404,27 +467,25 @@ function drawBadgeLayer(ctx: CanvasRenderingContext2D, l: BadgeLayer, pal: PostP
   ctx.fillText(text, l.xN * W, l.yN * H + size * 0.04)
 }
 
-/** The KinetikCircle mark (mirrors public/icon.svg) + optional wordmark. */
-function drawBrandLayer(ctx: CanvasRenderingContext2D, l: BrandLayer, pal: PostPalette, W: number, H: number, brandName: string) {
+/**
+ * The brand mark + optional wordmark.
+ *
+ * BF-3: this used to draw the KinetikCircle K-mark procedurally — a hard-coded
+ * shape that stamped the wrong logo onto every carousel bound for @argantalab.
+ * The geometry now lives as DATA in each brand's identity.mark (the K-mark moved
+ * verbatim into brands/kinetikcircle/brand.json), and @arganta/brand's drawMark
+ * renders whichever brand this doc names. The engine no longer knows any brand's
+ * shape — which is exactly why adding brand six needs no code here.
+ */
+function drawBrandLayer(ctx: CanvasRenderingContext2D, l: BrandLayer, pal: PostPalette, W: number, H: number, brandName: string, brand?: any) {
   const k = W / 1080
   const s = l.size * k                    // mark edge
-  ctx.font = `700 ${s * 0.52}px ${FONT_STACK.sans}`
+  ctx.font = `700 ${s * 0.52}px ${fontStack('sans', brand)}`
   const totalW = s + (l.wordmark ? s * 0.3 + ctx.measureText(brandName).width : 0)
   const x0 = l.xN * W - totalW / 2
   const y0 = l.yN * H - s / 2
-  // rounded-square gradient tile
-  const g = ctx.createLinearGradient(x0, y0, x0 + s, y0 + s)
-  g.addColorStop(0, '#22D3EE'); g.addColorStop(1, '#8B5CF6')
-  ctx.fillStyle = g
-  roundRect(ctx, x0, y0, s, s, s * 0.23)
-  ctx.fill()
-  // ring + satellite + core (the K-mark geometry, scaled from 512)
-  const u = s / 512
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 40 * u
-  ctx.beginPath(); ctx.arc(x0 + 256 * u, y0 + 256 * u, 106 * u, 0, Math.PI * 2); ctx.stroke()
-  ctx.fillStyle = '#fff'
-  ctx.beginPath(); ctx.arc(x0 + 332 * u, y0 + 180 * u, 34 * u, 0, Math.PI * 2); ctx.fill()
-  ctx.beginPath(); ctx.arc(x0 + 256 * u, y0 + 256 * u, 22 * u, 0, Math.PI * 2); ctx.fill()
+  const mark = brand?.identity?.mark
+  if (mark) drawMark(ctx, mark, x0, y0, s, 'core')
   if (l.wordmark) {
     ctx.fillStyle = resolveColor('ink', pal)
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
@@ -479,6 +540,9 @@ function drawDividerLayer(ctx: CanvasRenderingContext2D, l: DividerLayer, pal: P
 // ── The one entry point ───────────────────────────────────────
 export interface RenderEnv {
   getImg: (url: string) => HTMLImageElement | null
+  /** The resolved BrandDoc for doc.brandId. The caller resolves it (the engine
+   *  stays a pure function of its inputs and never reaches for a registry). */
+  brand?: any
 }
 
 // ── Direct manipulation: hit-testing + selection outline ──────────────────
@@ -544,17 +608,20 @@ export function drawLayerSelection(ctx: CanvasRenderingContext2D, slide: PostSli
 export function drawSlide(ctx: CanvasRenderingContext2D, doc: PostDoc, index: number, W: number, H: number, env: RenderEnv) {
   const slide = doc.slides[index]
   if (!slide) return
-  const pal = postPalette(doc.palette)
+  const brand = env.brand
+  const pal = resolvePalette(doc, brand)
+  const plate = platePaint(brand)
+  const brandName = brand?.name || doc.brand.name
   ctx.clearRect(0, 0, W, H)
   drawBg(ctx, slide.bg, pal, W, H)
   for (const l of slide.layers) {
     if (l.hidden) continue
     ctx.save()
     if (l.type === 'image') drawImageLayer(ctx, l, pal, W, H, env.getImg(l.url))
-    else if (l.type === 'text') drawTextLayer(ctx, l, pal, W, H)
+    else if (l.type === 'text') drawTextLayer(ctx, l, pal, W, H, plate, brand)
     else if (l.type === 'emoji') drawEmojiLayer(ctx, l, W, H)
     else if (l.type === 'badge') drawBadgeLayer(ctx, l, pal, W, H)
-    else if (l.type === 'brand') drawBrandLayer(ctx, l, pal, W, H, doc.brand.name)
+    else if (l.type === 'brand') drawBrandLayer(ctx, l, pal, W, H, brandName, brand)
     else if (l.type === 'pager') drawPagerLayer(ctx, l, pal, W, H, index, doc.slides.length)
     else if (l.type === 'divider') drawDividerLayer(ctx, l, pal, W, H)
     ctx.restore()

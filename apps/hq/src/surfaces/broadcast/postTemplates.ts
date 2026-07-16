@@ -36,6 +36,10 @@ export interface TemplateContent {
   emoji?: string
   badge?: string
   source?: string
+  /** The account this post closes on. BF-3: was hard-coded '@kinetikcircle',
+   *  which signed every ArgantaLab carousel with the wrong handle. Callers pass
+   *  the doc's own brand handle. */
+  handle?: string
 }
 
 const T = (over: Partial<TextLayer>): TextLayer => ({
@@ -147,7 +151,7 @@ export function makeSlide(template: string, c: TemplateContent = {}): PostSlide 
       L.push(brand(0.36, false))
       L.push(T({ name: 'Title', text: c.headline || 'Enjoyed this?', yN: 0.53, size: 84, weight: 800 }))
       L.push(T({ name: 'Body', text: c.body || 'Follow for one great family moment every day.', yN: 0.65, size: 42, weight: 500, color: 'soft', maxWidthN: 0.7, lineHeight: 1.4 }))
-      L.push(T({ name: 'Handle', text: '@kinetikcircle', yN: 0.78, size: 40, weight: 700, color: 'accent', font: 'mono' }))
+      L.push(T({ name: 'Handle', text: c.handle || '', yN: 0.78, size: 40, weight: 700, color: 'accent', font: 'mono' }))
       break
     }
     default: return makeSlide('fact', c)
@@ -164,10 +168,11 @@ export function starterDoc(): PostDoc {
     slides: [
       makeSlide('hook', { headline: 'Your family calendar\nknows 3 secrets', body: 'and the third one is huge', badge: 'NEW' }),
       makeSlide('fact', { emoji: '🤯', headline: 'It rains diamonds on two planets', body: 'On Neptune and Uranus, pressure turns carbon into diamonds that fall like rain.', source: 'planetary science' }),
-      makeSlide('cta', {}),
+      makeSlide('cta', { handle: '@kinetikcircle' }),
     ],
     caption: 'Three things your family calendar quietly nailed this week — and the third one is huge. 🤯\n\nSave this for tonight’s dinner conversation.',
     hashtags: '#familytime #funfacts #parentinghacks #kidsactivities',
+    brandId: 'kinetikcircle',
     brand: { name: 'KinetikCircle', handle: '@kinetikcircle' },
   }
 }
@@ -237,6 +242,8 @@ export function coercePost(raw: unknown, prompt: string, current: PostDoc): Post
     emoji: s.emoji ? String(s.emoji).slice(0, 4) : undefined,
     badge: s.badge ? String(s.badge).slice(0, 24) : undefined,
     source: s.source ? String(s.source).slice(0, 60) : undefined,
+    // The end card signs off as THIS doc's brand — never a baked-in handle.
+    handle: current.brand?.handle,
   }))
   const doc = made.length ? { ...current, slides: made } : localPost(prompt, current)
   const palId = String(o.palette || '')
@@ -261,7 +268,7 @@ export function localPost(prompt: string, current: PostDoc): PostDoc {
       it.format === 'quote' ? 'quote' : it.format === 'top10' ? 'list' : it.format === 'this_or_that' ? 'versus' : it.format === 'by_numbers' ? 'number' : it.format === 'tip' ? 'tip' : 'fact',
       { headline: it.title, body: it.body, emoji: it.emoji, source: it.source },
     )),
-    makeSlide('cta', {}),
+    makeSlide('cta', { handle: current.brand?.handle }),
   ]
   return {
     ...current,
