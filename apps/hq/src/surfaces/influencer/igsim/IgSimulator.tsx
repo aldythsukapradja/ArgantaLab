@@ -5,10 +5,13 @@
 // Everything is keyed by creatorId, so all five creators ride this pipeline —
 // only the seed differs.
 import { useEffect, useMemo, useState } from 'react'
-import { Layers, Trash2, Send, Sparkles, ClipboardPaste } from 'lucide-react'
+import { Layers, Trash2, Send, Sparkles, ClipboardPaste, Loader2, ExternalLink } from 'lucide-react'
 import type { Creator } from '../influencerData'
 import { LOOK_ORDER } from '../influencerData'
 import { IgPhone } from './IgPhone'
+import { sendToPostStudio } from './bridge'
+import { cloudEnabled } from '../../../lib/supabase'
+import { useHQ } from '../../../shell/store'
 import { DOW, SLOTS, isoDay, uid, usePlan, weekOf, type IgKind, type IgPlanItem, type IgStatus } from './planStore'
 
 const STATUSES: IgStatus[] = ['idea', 'ready', 'sent', 'posted']
@@ -63,6 +66,19 @@ function Composer({ item, creator, onChange, onDelete }: {
   onDelete: () => void
 }) {
   const set = (p: Partial<IgPlanItem>) => onChange({ ...item, ...p })
+  const markStatus = usePlan(s => s.markStatus)
+  const go = useHQ(s => s.go)
+  const [sending, setSending] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function send() {
+    setSending(true); setErr(null)
+    const res = await sendToPostStudio(item, creator)
+    setSending(false)
+    if (res.ok) markStatus(item.id, 'sent', res.draftId)
+    else setErr(res.error)
+  }
+
   return (
     <>
       <div className="inf-h">Composer<span className="spacer" />
@@ -125,10 +141,22 @@ function Composer({ item, creator, onChange, onDelete }: {
         <button className={'inf-pill' + (item.pinned ? ' on' : '')} onClick={() => set({ pinned: !item.pinned })}>📌 pinned</button>
       </div>
 
-      {/* P3 wires this to Post Studio's content_draft inbox. */}
-      <button className="igs-send" disabled title="Wired in P3 — Post Studio bridge">
-        <Send size={11} /> Send to Post Studio
-      </button>
+      {item.status === 'sent' || item.status === 'posted' ? (
+        <button className="igs-send sent" onClick={() => go('broadcast')}>
+          <ExternalLink size={11} /> Open in Post Studio
+        </button>
+      ) : (
+        <button
+          className="igs-send"
+          disabled={!cloudEnabled || sending || !item.caption.trim()}
+          onClick={send}
+          title={!cloudEnabled ? 'Connect Supabase to send drafts' : !item.caption.trim() ? 'Add a caption first' : undefined}
+        >
+          {sending ? <Loader2 size={11} className="igs-spin" /> : <Send size={11} />}
+          {sending ? 'Sending…' : 'Send to Post Studio'}
+        </button>
+      )}
+      {err && <div className="igs-err">{err}</div>}
       <div className="inf-note" style={{ fontSize: 9 }}>Post Studio stays the single publish gate — the bridge lands this in its drafts inbox, never straight to Instagram.</div>
     </>
   )
