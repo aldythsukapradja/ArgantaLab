@@ -3,6 +3,13 @@
 // kits and prompt capsules here are written to be copy-paste safe for any LLM /
 // image model (guardrail-friendly, clearly-adult, disclosed-AI personas).
 
+// A creator's three canonical looks. Cropped straight from the founder's
+// reference sheet (ref.jpeg) — the board IS the canon, so these are the
+// identity refs every future generation must match, never a regeneration.
+export type LookId = 'normal' | 'formal' | 'spicy'
+export type Looks = Record<LookId, string>
+export const LOOK_ORDER: LookId[] = ['normal', 'formal', 'spicy']
+
 export type StoryFrame = { t: string; note: string }
 export type Daypart = { name: 'Morning' | 'Afternoon' | 'Night'; theme: string; frames: StoryFrame[] }
 export type Franchise = { name: string; note: string }
@@ -14,6 +21,7 @@ export type Creator = {
   handle: string
   accent: string
   accentSoft: string
+  looks?: Looks
   archetype: string
   role: string
   age: string
@@ -40,6 +48,11 @@ export const CREATORS: Creator[] = [
     handle: '@arganta',
     accent: '#e8b64c',
     accentSoft: 'rgba(232,182,76,.14)',
+    looks: {
+      normal: '/influencer/arganta-normal.webp',
+      formal: '/influencer/arganta-formal.webp',
+      spicy: '/influencer/arganta-spicy.webp',
+    },
     archetype: 'The Impossible Builder',
     role: 'Founder & Builder',
     age: '32–38 · clearly adult',
@@ -124,6 +137,11 @@ export const CREATORS: Creator[] = [
     handle: '@lashira.ai',
     accent: '#3fb6c9',
     accentSoft: 'rgba(63,182,201,.14)',
+    looks: {
+      normal: '/influencer/lashira-normal.webp',
+      formal: '/influencer/lashira-formal.webp',
+      spicy: '/influencer/lashira-spicy.webp',
+    },
     archetype: 'The AI Systems Architect',
     role: 'Engineer of AURA',
     age: '27–32 · clearly adult',

@@ -52,6 +52,22 @@
   display: grid; place-items: center; font-size: 24px; font-weight: 900;
   color: var(--ink); background: var(--ink-soft); border: 2px solid var(--ink);
 }
+/* Reference-sheet look shot — the canonical crop from the founder's board.
+   Rounded rect (not a circle) so the composed portrait reads as shot. */
+.inf-shot {
+  width: 92px; height: 92px; flex: none; border-radius: 12px;
+  object-fit: cover; border: 1px solid var(--ink); background: var(--bg2);
+}
+.inf-looks { display: flex; gap: 4px; margin-top: 6px; }
+.inf-pill {
+  font-size: 8.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--bd2); background: transparent; color: var(--tx3);
+  transition: all .15s;
+}
+.inf-pill:hover { color: var(--tx); border-color: var(--ink); }
+.inf-pill.on { background: var(--ink); border-color: var(--ink); color: #0a0c11; }
+
 .inf-idhead { display: flex; gap: 12px; align-items: center; }
 .inf-name { font-size: 17px; font-weight: 900; letter-spacing: .06em; color: var(--tx); }
 .inf-arch { font-size: 11px; color: var(--ink); font-weight: 600; }

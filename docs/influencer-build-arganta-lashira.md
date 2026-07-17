@@ -1,5 +1,15 @@
 # Build Handoff — ARGANTA + LASHIRA portrait sets (Normal · Formal · Spicy)
 
+> ## ⚠️ SUPERSEDED for Arganta + Lashira (2026-07-17)
+> The founder supplied `ref.jpeg` — a 1536×1024 sheet that **already contains all 5 characters × Normal/Formal/Spicy** in final art direction. Those cells were cropped directly into `apps/hq/public/influencer/*.webp` and wired into the deck.
+> **Zero credits spent, zero drift possible — the reference IS the asset.**
+> Generation (below) is only needed to (a) produce Kinney/Bloom/Labz look sets if `ref.jpeg` cells prove too small for a given use, or (b) extend beyond the 3 locked looks. When generating, the cropped cells are the **identity references** — never regenerate a face from text.
+>
+> Crop geometry used on `ref.jpeg` (sharp-cli arg order is `extract <top> <left> <width> <height>`):
+> - columns: arganta `left=107 w=275` · lashira `left=393 w=268` · kinney ≈`left=672` · bloom ≈`left=955` · labz ≈`left=1240`
+> - rows (square): normal `top=62` · formal `top=360` · spicy `top=655`
+
+
 > **Executor:** Sonnet (Opus only if QA fails 3× on the same character — see §8).
 > **Status:** APPROVED PLAN — execute top-to-bottom. The founder's reference board (Arganta Creator Studio V1.0) is canon; every output must read as the same person shown there.
 > **Scope:** 2 characters × 3 formats = 6 canonical images, then populate the AI Influencer Studio page.

@@ -1,8 +1,8 @@
 // AI Influencer Studio — one non-scrollable command deck for the five Arganta
 // virtual creators. Read/copy cockpit: identity, daily story rituals, Reels/Post
 // strategy, wardrobe & spice governance, IG launch kit + reusable prompt capsule.
-import { useState } from 'react'
-import { CREATORS, type Creator } from './influencerData'
+import { useEffect, useState } from 'react'
+import { CREATORS, LOOK_ORDER, type Creator, type LookId } from './influencerData'
 import './influencer.css'
 
 function kitText(c: Creator) {
@@ -51,7 +51,11 @@ function Bars({ items }: { items: { name: string; pct: number }[] }) {
 
 export function InfluencerStudio() {
   const [id, setId] = useState(CREATORS[0].id)
+  const [look, setLook] = useState<LookId>('normal')
   const c = CREATORS.find(x => x.id === id) ?? CREATORS[0]
+  // Looks are per-character; a creator without a spicy set shouldn't inherit
+  // the previous character's selection, so reset on every switch.
+  useEffect(() => { setLook('normal') }, [id])
 
   return (
     <div className="inf-root" style={{ ['--ink' as string]: c.accent, ['--ink-soft' as string]: c.accentSoft }}>
@@ -75,11 +79,25 @@ export function InfluencerStudio() {
         <div className="inf-col">
           <div className="inf-card" style={{ flex: 1 }}>
             <div className="inf-idhead">
-              <div className="inf-portrait">{c.name[0]}</div>
+              {c.looks
+                ? <img className="inf-shot" src={c.looks[look]} alt={`${c.name} — ${look} look`} />
+                : <div className="inf-portrait">{c.name[0]}</div>}
               <div>
                 <div className="inf-name">{c.name}</div>
                 <div className="inf-arch">{c.archetype}</div>
                 <div className="inf-handle">{c.handle}</div>
+                {c.looks && (
+                  <div className="inf-looks" role="group" aria-label="Look">
+                    {LOOK_ORDER.map(l => (
+                      <button
+                        key={l}
+                        className={'inf-pill' + (l === look ? ' on' : '')}
+                        aria-pressed={l === look}
+                        onClick={() => setLook(l)}
+                      >{l}</button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <dl className="inf-meta">
