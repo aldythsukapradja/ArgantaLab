@@ -3,7 +3,12 @@
 // strategy, wardrobe & spice governance, IG launch kit + reusable prompt capsule.
 import { useEffect, useState } from 'react'
 import { CREATORS, LOOK_ORDER, type Creator, type LookId } from './influencerData'
+import { IgSimulator } from './igsim/IgSimulator'
 import './influencer.css'
+import './igsim/igsim.css'
+
+/** Strategy = the blueprint deck; Instagram = the plan/preview simulator. */
+type Mode = 'strategy' | 'instagram'
 
 function kitText(c: Creator) {
   return [
@@ -52,6 +57,7 @@ function Bars({ items }: { items: { name: string; pct: number }[] }) {
 export function InfluencerStudio() {
   const [id, setId] = useState(CREATORS[0].id)
   const [look, setLook] = useState<LookId>('normal')
+  const [mode, setMode] = useState<Mode>('strategy')
   const c = CREATORS.find(x => x.id === id) ?? CREATORS[0]
   // Looks are per-character; a creator without a spicy set shouldn't inherit
   // the previous character's selection, so reset on every switch.
@@ -61,7 +67,10 @@ export function InfluencerStudio() {
     <div className="inf-root" style={{ ['--ink' as string]: c.accent, ['--ink-soft' as string]: c.accentSoft }}>
       <div className="inf-top">
         <div className="inf-title">AI INFLUENCER <em>STUDIO</em></div>
-        <div className="inf-sub">5 MINDS · 5 WORLDS · 1 MISSION</div>
+        <div className="inf-mode" role="group" aria-label="Mode">
+          <button className={mode === 'strategy' ? 'on' : ''} onClick={() => setMode('strategy')}>STRATEGY</button>
+          <button className={mode === 'instagram' ? 'on' : ''} onClick={() => setMode('instagram')}>INSTAGRAM</button>
+        </div>
         <div className="inf-tabs">
           {CREATORS.map(x => (
             <button
@@ -74,6 +83,7 @@ export function InfluencerStudio() {
         </div>
       </div>
 
+      {mode === 'instagram' ? <IgSimulator c={c} /> : (
       <div className="inf-body">
         {/* left — identity */}
         <div className="inf-col">
@@ -195,6 +205,7 @@ export function InfluencerStudio() {
           </div>
         </div>
       </div>
+      )}
 
       <div className="inf-foot">
         {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((d, i) => (

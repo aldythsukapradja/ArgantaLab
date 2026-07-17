@@ -1,0 +1,240 @@
+/* IG Simulator — plan rail + phone + composer.
+   The chrome follows HQ's theme tokens; the phone INTERIOR is pinned to
+   Instagram's own dark palette in both themes on purpose (a light-mode
+   "Instagram" would misrepresent how the cinematic portraits actually read). */
+
+.igs-body {
+  flex: 1; display: grid; grid-template-columns: 300px 1fr 320px;
+  gap: 10px; padding: 10px 12px; min-height: 0;
+}
+.igs-rail, .igs-comp { display: flex; flex-direction: column; gap: 7px; overflow: auto; }
+
+/* ── plan rail ── */
+.igs-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.igs-dow {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 0; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--bd); background: var(--bg2); color: var(--tx3);
+}
+.igs-dow b { font-size: 8px; letter-spacing: .06em; }
+.igs-dow span { font-size: 10px; font-weight: 700; color: var(--tx2); }
+.igs-dow:hover { border-color: var(--ink); }
+.igs-dow.on { background: var(--ink-soft); border-color: var(--ink); color: var(--ink); }
+.igs-dow.on span { color: var(--ink); }
+.igs-dow i {
+  position: absolute; top: -4px; right: -3px; font-style: normal; font-size: 8px; font-weight: 800;
+  min-width: 13px; height: 13px; border-radius: 7px; display: grid; place-items: center;
+  background: var(--ink); color: #0a0c11;
+}
+.igs-toast {
+  font-size: 9.5px; font-weight: 700; padding: 5px 8px; border-radius: 6px;
+  background: var(--ink-soft); color: var(--ink); border: 1px solid var(--ink);
+}
+.igs-slots { flex: 1; display: flex; flex-direction: column; gap: 4px; min-height: 60px; overflow: auto; }
+.igs-slot {
+  display: flex; align-items: center; gap: 6px; text-align: left; cursor: pointer;
+  padding: 6px 7px; border-radius: 8px; border: 1px solid var(--bd); background: var(--bg2);
+}
+.igs-slot:hover { border-color: var(--ink); }
+.igs-slot.sel { border-color: var(--ink); background: var(--ink-soft); }
+.igs-k { font-size: 8px; font-weight: 800; letter-spacing: .06em; padding: 2px 5px; border-radius: 4px; flex: none; }
+.igs-k.k-post { background: rgba(99,102,241,.18); color: #8b8ff5; }
+.igs-k.k-reel { background: rgba(236,72,153,.18); color: #f472b6; }
+.igs-k.k-story { background: rgba(45,212,191,.18); color: #2dd4bf; }
+.igs-cap { flex: 1; font-size: 10px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.igs-cap em { color: var(--tx3); }
+.igs-st { font-size: 7.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; flex: none; }
+.igs-st.st-idea { color: var(--tx3); }
+.igs-st.st-ready { color: var(--ok); }
+.igs-st.st-sent { color: var(--warn); }
+.igs-st.st-posted { color: var(--ink); }
+.igs-adds { display: flex; gap: 4px; }
+.igs-seed {
+  display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer;
+  padding: 7px; border-radius: 8px; font-size: 9.5px; font-weight: 700;
+  border: 1px dashed var(--ink); background: transparent; color: var(--ink);
+}
+.igs-seed:hover { background: var(--ink-soft); }
+.igs-icon {
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--bd2); background: transparent; color: var(--tx3);
+}
+.igs-icon:hover { color: var(--ink); border-color: var(--ink); }
+
+/* ── stage ── */
+.igs-stage { display: grid; place-items: center; min-height: 0; overflow: hidden; }
+
+/* ── phone ── */
+.igp-frame {
+  width: 372px; height: 100%; max-height: 780px;
+  border-radius: 34px; padding: 8px; flex: none;
+  background: #0b0b0f; border: 1px solid var(--bd3);
+  box-shadow: 0 22px 60px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.04) inset;
+  display: flex;
+}
+.igp-screen {
+  position: relative; flex: 1; min-height: 0; border-radius: 27px; overflow: hidden;
+  background: #000; color: #fff; display: flex; flex-direction: column;
+  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.igp-status { display: flex; align-items: center; padding: 7px 16px 3px; font-size: 11px; }
+.igp-status .spacer, .igp-nav .spacer, .igp-story-head .spacer { flex: 1; }
+.igp-sig { width: 16px; height: 8px; border-radius: 2px; background: #fff; opacity: .85; }
+.igp-nav { display: flex; align-items: center; gap: 8px; padding: 4px 12px 8px; border-bottom: 1px solid #1c1c1c; }
+.igp-nav b { font-size: 14px; font-weight: 700; }
+.igp-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.igp-scroll::-webkit-scrollbar { width: 0; }
+
+.igp-head { display: flex; align-items: center; gap: 20px; padding: 14px 16px 8px; }
+.igp-av {
+  width: 76px; height: 76px; border-radius: 50%; flex: none; padding: 0; cursor: pointer;
+  border: none; background: #222; overflow: hidden; display: grid; place-items: center;
+  color: #fff; font-weight: 800; font-size: 24px;
+}
+.igp-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+/* Unseen-story ring — IG's gradient, drawn as a padded conic border. */
+.igp-av.ring {
+  padding: 2.5px; background: conic-gradient(from 200deg, #f9ce34, #ee2a7b, #6228d7, #f9ce34);
+}
+.igp-av.ring img { border: 2px solid #000; }
+.igp-stats { flex: 1; display: flex; justify-content: space-around; }
+.igp-stats div { display: flex; flex-direction: column; align-items: center; }
+.igp-stats b { font-size: 15px; font-weight: 700; }
+.igp-stats span { font-size: 11.5px; color: #c9c9c9; }
+
+.igp-bio { padding: 2px 16px 8px; }
+.igp-bio b { font-size: 12.5px; font-weight: 600; display: block; }
+.igp-bio p { margin: 2px 0 0; font-size: 12.5px; line-height: 1.4; white-space: pre-line; color: #e8e8e8; }
+.igp-sim {
+  display: inline-block; margin-top: 6px; font-size: 8px; letter-spacing: .06em;
+  color: #7a7a7a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 1px 5px;
+}
+.igp-actions { display: flex; gap: 6px; padding: 2px 16px 10px; }
+.igp-btn {
+  flex: 1; padding: 6px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600;
+  background: #262626; color: #fff; border: none;
+}
+.igp-btn:hover { background: #333; }
+
+.igp-highs { display: flex; gap: 14px; padding: 2px 16px 12px; overflow-x: auto; scrollbar-width: none; }
+.igp-highs::-webkit-scrollbar { height: 0; }
+.igp-high { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
+.igp-high-c {
+  width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
+  background: #1a1a1a; border: 1px solid #3a3a3a; color: var(--ink);
+  font-size: 17px; font-weight: 800;
+}
+.igp-high span { font-size: 10px; color: #d0d0d0; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.igp-tabs { display: flex; border-top: 1px solid #1c1c1c; }
+.igp-tabs button {
+  flex: 1; display: grid; place-items: center; padding: 8px; cursor: pointer;
+  background: transparent; border: none; border-bottom: 1.5px solid transparent; color: #6e6e6e;
+}
+.igp-tabs button.on { color: #fff; border-bottom-color: #fff; }
+
+.igp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding-bottom: 12px; }
+.igp-tile {
+  position: relative; aspect-ratio: 1; padding: 0; cursor: pointer; overflow: hidden;
+  border: none; background: #141414; display: grid; place-items: center;
+}
+.igp-grid.reels .igp-tile { aspect-ratio: 9 / 16; }
+.igp-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.igp-tile.sel { outline: 2px solid var(--ink); outline-offset: -2px; }
+.igp-tile-ph { font-size: 8.5px; color: #666; padding: 6px; text-align: center; line-height: 1.3; }
+.igp-tile-empty {
+  border: 1px dashed #2f2f2f; background: #0a0a0a; color: #4a4a4a;
+  flex-direction: column; gap: 2px;
+}
+.igp-tile-empty:hover { border-color: var(--ink); color: var(--ink); }
+.igp-tile-empty span { font-size: 8px; }
+.igp-tile-badge { position: absolute; top: 5px; right: 5px; color: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.igp-tile-pin { position: absolute; top: 5px; left: 5px; color: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.igp-tile-dot { position: absolute; bottom: 5px; left: 5px; width: 6px; height: 6px; border-radius: 50%; }
+.igp-tile-dot.s-ready { background: #4ade80; }
+.igp-tile-dot.s-sent { background: #fbbf24; }
+.igp-tile-dot.s-posted { background: #60a5fa; }
+
+/* ── story viewer ── */
+.igp-story {
+  position: absolute; inset: 0; z-index: 5; background: #0a0a12;
+  display: flex; flex-direction: column;
+}
+.igp-story-bars { display: flex; gap: 3px; padding: 8px 8px 4px; }
+.igp-story-bar { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; }
+.igp-story-bar i { display: block; height: 100%; width: 0; background: #fff; }
+.igp-story-bar i.run { animation: igstory 4s linear forwards; }
+@keyframes igstory { from { width: 0 } to { width: 100% } }
+.igp-story-head { display: flex; align-items: center; gap: 7px; padding: 4px 10px 8px; }
+.igp-story-av { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.igp-story-head b { font-size: 12px; }
+.igp-story-slot { font-size: 9px; color: #b9b9b9; text-transform: uppercase; letter-spacing: .06em; }
+.igp-story-head button { background: transparent; border: none; color: #fff; cursor: pointer; display: grid; place-items: center; }
+.igp-story-media { width: 100%; flex: 1; object-fit: cover; min-height: 0; }
+.igp-story-body {
+  padding: 18px 18px 34px; background: linear-gradient(180deg, transparent, var(--ink-soft) 40%, rgba(0,0,0,.55));
+  flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; min-height: 0;
+}
+/* Text story — the ritual-frame fallback. Centered on the creator's accent,
+   the way IG renders a typed story. */
+.igp-story-body.solo {
+  justify-content: center; gap: 12px; padding: 24px;
+  background:
+    radial-gradient(70% 50% at 50% 38%, var(--ink-soft), transparent 70%),
+    linear-gradient(165deg, color-mix(in srgb, var(--ink) 22%, #0a0a12), #0a0a12 70%);
+}
+.igp-story-body.solo .igp-story-text { font-size: 21px; line-height: 1.4; font-weight: 600; }
+.igp-story-title { font-size: 10px; font-weight: 800; letter-spacing: .14em; color: var(--ink); }
+.igp-story-text { font-size: 16px; line-height: 1.35; font-weight: 500; }
+.igp-story-nav { position: absolute; top: 44px; bottom: 0; width: 33%; background: transparent; border: none; cursor: pointer; }
+.igp-story-nav.l { left: 0; }
+.igp-story-nav.r { right: 0; width: 67%; }
+
+/* ── composer ── */
+.igs-l { font-size: 8.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tx3); margin-top: 3px; }
+.igs-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.igs-in, .igs-ta {
+  width: 100%; padding: 6px 8px; border-radius: 7px; font: inherit; font-size: 11px;
+  border: 1px solid var(--bd2); background: var(--bg2); color: var(--tx); outline: none;
+}
+.igs-in:focus, .igs-ta:focus { border-color: var(--ink); }
+.igs-ta { min-height: 120px; resize: vertical; font-family: var(--mono); font-size: 10px; line-height: 1.5; }
+.igs-ta.sm { min-height: 54px; font-family: inherit; font-size: 11px; }
+.igs-prev { width: 100%; border-radius: 8px; border: 1px solid var(--bd2); aspect-ratio: 1; object-fit: cover; }
+.igs-send {
+  display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 6px;
+  padding: 8px; border-radius: 8px; font-size: 10px; font-weight: 800; letter-spacing: .06em;
+  border: 1px solid var(--ink); background: var(--ink); color: #0a0c11; cursor: pointer;
+}
+.igs-send:disabled { opacity: .4; cursor: not-allowed; }
+.igs-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--tx3); text-align: center; padding: 16px; }
+.igs-empty p { margin: 0; font-size: 10.5px; line-height: 1.5; }
+.igs-empty p.dim { font-size: 9.5px; opacity: .7; }
+.inf-pill.on.st-ready { background: var(--ok); border-color: var(--ok); }
+.inf-pill.on.st-sent { background: var(--warn); border-color: var(--warn); }
+
+/* ── batch modal ── */
+.igs-modal {
+  position: absolute; inset: 0; z-index: 20; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--canvas) 72%, transparent); backdrop-filter: blur(3px);
+}
+.igs-modal-in {
+  width: 520px; max-width: 92%; max-height: 80%; overflow: auto;
+  display: flex; flex-direction: column; gap: 8px; padding: 14px;
+  background: var(--bg); border: 1px solid var(--bd2); border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+.igs-modal-foot { display: flex; align-items: center; gap: 6px; }
+.igs-err { font-size: 10px; color: var(--bad); }
+.inf-copy.on { background: var(--ink); color: #0a0c11; }
+
+/* ── mode switch (topbar) ── */
+.inf-mode { display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: var(--bg3); }
+.inf-mode button {
+  padding: 4px 12px; border-radius: 999px; cursor: pointer; font-size: 9.5px; font-weight: 800;
+  letter-spacing: .08em; border: none; background: transparent; color: var(--tx3);
+}
+.inf-mode button.on { background: var(--bg); color: var(--ink); box-shadow: var(--shadow-sm); }
+/* The mode switch + 5 creator tabs are the load-bearing controls; the wordmark
+   is the first thing to go when the deck gets narrow. */
+@media (max-width: 1180px) { .inf-title { display: none } }
