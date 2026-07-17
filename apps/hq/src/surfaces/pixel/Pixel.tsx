@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { Boxes } from 'lucide-react'
 import { Browser } from './Browser'
-import { UsageView, PalettesView, IngestView } from './views'
+import { UsageView, PalettesView, IngestView, ForgeView } from './views'
 import { LashiraBloomArt } from './LashiraBloomArt'
 import { useVault } from './useVault'
 import { vaultFacets, ingestQueue, listPalettes, TIERS } from '../../data/pixel/engine'
 import type { Tier } from '../../data/pixel/types'
 
-type Seg = 'library' | 'usage' | 'ingest' | 'references' | 'palettes' | 'lashira'
+type Seg = 'forge' | 'library' | 'usage' | 'ingest' | 'references' | 'palettes' | 'lashira'
 
 export function Pixel() {
-  const [seg, setSeg] = useState<Seg>('references')
+  const [seg, setSeg] = useState<Seg>('forge')
   const vault = useVault()
   const all = vaultFacets({ includeUnverified: true }, vault.items)
   const tierCounts = Object.fromEntries((all.facets.tier ?? []).map(f => [f.value, f.count])) as Record<Tier, number>
@@ -18,6 +18,7 @@ export function Pixel() {
   const palettes = listPalettes(vault.palettes, vault.items).length
 
   const TABS: { id: Seg; label: string; badge?: number }[] = [
+    { id: 'forge', label: 'Forge' },
     { id: 'references', label: 'References' },
     { id: 'ingest', label: 'Ingest', badge: pending },
     { id: 'library', label: 'Library' },
@@ -60,6 +61,7 @@ export function Pixel() {
         })}
       </div>
 
+      {seg === 'forge' && <ForgeView />}
       {seg === 'references' && <Browser base={{ canonical: false }} data={vault.items} title="References" blurb="Open-source inspiration, license-tiered. Never edited here — browse, then copy a generation prompt." />}
       {seg === 'library' && <Browser base={{ canonical: true }} data={vault.items} title="Library" blurb="Your canonical, shippable assets — what the Arganta apps actually consume, by id." />}
       {seg === 'lashira' && <LashiraBloomArt />}

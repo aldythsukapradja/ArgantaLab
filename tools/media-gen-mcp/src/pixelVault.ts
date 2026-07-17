@@ -138,6 +138,49 @@ export function registerPixelVaultTools(server: McpServer) {
   )
 
   server.tool(
+    'pixel_brief_list',
+    'List pending Pixel Studio Forge briefs (founder-authored generation requests). For each, generate ' +
+    'the asset(s) via the PixelLab MCP (game sprites/tilesets/animations) or ComfyUI pixel-LoRA, call ' +
+    'pixel_vault_ingest for each result, then pixel_brief_resolve to close it.',
+    { status: z.enum(['pending', 'claimed', 'done']).optional().describe('default pending') },
+    async ({ status }) => {
+      try {
+        const { url, headers } = env()
+        const r = await fetch(`${url}/rest/v1/pixel_brief?status=eq.${status || 'pending'}&order=created_at.asc&limit=50`, { headers })
+        if (!r.ok) throw new Error(`brief read failed: HTTP ${r.status}`)
+        const rows: any[] = await r.json() as any[]
+        return { content: [{ type: 'text' as const, text: JSON.stringify({ count: rows.length, briefs: rows }, null, 2) }] }
+      } catch (e: any) {
+        return { isError: true, content: [{ type: 'text' as const, text: e?.message || String(e) }] }
+      }
+    },
+  )
+
+  server.tool(
+    'pixel_brief_resolve',
+    'Mark a Pixel Studio Forge brief done (or cancelled) after generating + ingesting its assets.',
+    {
+      id: z.string().describe('the brief id'),
+      resultCount: z.number().int().min(0).describe('how many ingest rows it produced'),
+      status: z.enum(['done', 'cancelled']).optional().describe('default done'),
+    },
+    async ({ id, resultCount, status }) => {
+      try {
+        const { url, headers } = env()
+        const r = await fetch(`${url}/rest/v1/pixel_brief?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ status: status || 'done', result_count: resultCount, resolved_at: new Date().toISOString() }),
+        })
+        if (!r.ok) throw new Error(`brief resolve failed: HTTP ${r.status}`)
+        return { content: [{ type: 'text' as const, text: JSON.stringify({ ok: true, id }, null, 2) }] }
+      } catch (e: any) {
+        return { isError: true, content: [{ type: 'text' as const, text: e?.message || String(e) }] }
+      }
+    },
+  )
+
+  server.tool(
     'pixel_vault_queue',
     'List the Pixel Vault ingest queue (pending generated art awaiting review), newest first.',
     { status: z.enum(['pending', 'rejected', 'promoted']).optional().describe('default pending') },

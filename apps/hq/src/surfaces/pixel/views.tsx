@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usageSummary, listPalettes, ingestQueue } from '../../data/pixel/engine'
 import { loadIngestQueue, rejectIngest, promoteIngest, type CloudIngestRow } from '../../data/pixel/ingestCloud'
+import { loadBriefs, submitBrief, cancelBrief, type PixelBrief } from '../../data/pixel/briefCloud'
 import { signedThumb } from '../../data/pixel/cloud'
 import type { UsageSite, Palette, VaultItem } from '../../data/pixel/types'
 
@@ -103,6 +104,92 @@ export function PalettesView({ palettes: pals, items }: { palettes: Palette[]; i
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ── Forge — compose a generation brief (S3b: catalogue → builder) ────────────
+// The browser can't call the PixelLab MCP directly, so the Forge composes a
+// brief; Claude fulfills it (PixelLab / ComfyUI pixel-LoRA) and the results land
+// in the Ingest tab via pixel_vault_ingest. Closes brief → generate → ingest.
+const FORGE_KINDS = ['character', 'sprite', 'tile', 'tileset', 'animation', 'ui', 'portrait', 'background', 'icon']
+
+export function ForgeView() {
+  const [kind, setKind] = useState('character')
+  const [prompt, setPrompt] = useState('')
+  const [count, setCount] = useState(1)
+  const [via, setVia] = useState<'pixellab' | 'comfyui'>('pixellab')
+  const [styleRef, setStyleRef] = useState('')
+  const [note, setNote] = useState('')
+  const [briefs, setBriefs] = useState<PixelBrief[] | null | 'loading'>('loading')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const reload = () => loadBriefs().then(setBriefs)
+  useEffect(() => { reload() }, [])
+
+  async function onSubmit() {
+    if (!prompt.trim()) { setMsg('Describe what to generate first.'); return }
+    setBusy(true)
+    try {
+      const id = await submitBrief({ kind, prompt: prompt.trim(), count, styleRefId: styleRef.trim() || undefined, via, note: note.trim() || undefined })
+      setMsg(`Brief queued (${id}). Ask Claude to “fulfil pixel briefs” — results land in Ingest.`)
+      setPrompt(''); setNote(''); reload()
+    } catch (e: any) { setMsg(e?.message || String(e)) }
+    setBusy(false)
+  }
+
+  const usingCloud = Array.isArray(briefs)
+  const inp: React.CSSProperties = { background: 'var(--bg)', border: '1px solid var(--bd2)', borderRadius: 7, padding: '7px 10px', fontSize: 12.5, color: 'var(--tx)' }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Forge a pixel asset</div>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="seg">
+            {(['pixellab', 'comfyui'] as const).map(v => <button key={v} className={via === v ? 'on' : ''} onClick={() => setVia(v)}>{v === 'pixellab' ? 'PixelLab (game)' : 'ComfyUI (pixel LoRA)'}</button>)}
+          </div>
+          <select style={inp} value={kind} onChange={e => setKind(e.target.value)}>{FORGE_KINDS.map(k => <option key={k}>{k}</option>)}</select>
+          <select style={inp} value={count} onChange={e => setCount(+e.target.value)}>{[1, 2, 4, 6, 8, 12].map(n => <option key={n} value={n}>{n} variant{n > 1 ? 's' : ''}</option>)}</select>
+        </div>
+        <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} value={prompt} onChange={e => setPrompt(e.target.value)}
+          placeholder="e.g. a frost-element fox companion, 32×32, side view, cute, icy blue palette" />
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <input style={{ ...inp, flex: 1, minWidth: 180 }} value={styleRef} onChange={e => setStyleRef(e.target.value)} placeholder="style ref vault id (optional) — e.g. asset.char.ember_pup" />
+          <input style={{ ...inp, flex: 1, minWidth: 180 }} value={note} onChange={e => setNote(e.target.value)} placeholder="note to the generator (optional)" />
+        </div>
+        <div className="row" style={{ gap: 10 }}>
+          <button disabled={busy || !usingCloud} onClick={onSubmit}
+            style={{ fontSize: 12.5, cursor: 'pointer', color: 'var(--bg)', background: 'var(--acc)', borderRadius: 7, padding: '7px 16px', fontWeight: 600, opacity: usingCloud ? 1 : 0.5 }}>
+            {busy ? 'Queuing…' : 'Queue brief →'}
+          </button>
+          {!usingCloud && briefs !== 'loading' && <span style={{ fontSize: 11, color: 'var(--warn)' }}>sign in (admin) to queue briefs</span>}
+          {msg && <span style={{ fontSize: 11.5, color: 'var(--tx2)' }}>{msg}</span>}
+        </div>
+        <div style={{ fontSize: 10.5, color: 'var(--tx3)', lineHeight: 1.5 }}>
+          PixelLab = purpose-built game sprites/tilesets/animations. ComfyUI = one-off stylistic pixel images via the pixel LoRA.
+          Every result is stored in the pixel-art bucket and appears in <b>Ingest</b> — nothing ships unreviewed.
+        </div>
+      </div>
+
+      {usingCloud && !!(briefs as PixelBrief[]).length && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {(briefs as PixelBrief[]).map(b => (
+            <div key={b.id} className="spread" style={{ padding: '9px 14px', borderTop: '1px solid var(--bd)', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0 }}>
+                <div className="row" style={{ gap: 8 }}>
+                  <span className="pill pill-mut" style={{ fontSize: 9.5 }}>{b.via}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600 }}>{b.prompt}</span>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2 }}>{b.kind} · {b.count}× {b.style_ref_id ? `· ref ${b.style_ref_id}` : ''} · {b.result_count} made</div>
+              </div>
+              <div className="row" style={{ gap: 8 }}>
+                <span style={{ fontSize: 11, color: b.status === 'done' ? 'var(--ok)' : b.status === 'pending' ? 'var(--warn)' : 'var(--tx3)' }}>{b.status}</span>
+                {b.status === 'pending' && <button onClick={() => cancelBrief(b.id).then(reload)} style={{ fontSize: 10.5, cursor: 'pointer', color: 'var(--tx3)', border: '1px solid var(--bd2)', borderRadius: 6, padding: '2px 8px', background: 'var(--bg)' }}>Cancel</button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
