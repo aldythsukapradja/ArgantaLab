@@ -195,7 +195,7 @@ const hexA = (hex: string, a: number) => {
 /** The actual publishing pipeline, drawing on stage. Not a mockup: makeSlide +
  *  drawSlide with RenderEnv.brand — the same calls Post Studio makes before it
  *  queues to Instagram. Change a hex in brand.json and this changes. */
-function LivePost({ doc, active }: { doc: any; active: boolean }) {
+export function LivePost({ doc, active, w = 300, h = 375 }: { doc: any; active: boolean; w?: number; h?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const [i, setI] = useState(0)
   const handle = doc?.presence?.instagram?.handle
@@ -221,14 +221,13 @@ function LivePost({ doc, active }: { doc: any; active: boolean }) {
     }
     const f = postFormat('portrait')
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    const W = 300, H = 375
-    cv.width = W * dpr; cv.height = H * dpr
+    cv.width = w * dpr; cv.height = h * dpr
     const ctx = cv.getContext('2d')!
-    ctx.setTransform((W / f.w) * dpr, 0, 0, (H / f.h) * dpr, 0, 0)
+    ctx.setTransform((w / f.w) * dpr, 0, 0, (h / f.h) * dpr, 0, 0)
     drawSlide(ctx, post, i, f.w, f.h, { getImg: () => null, brand: doc })
-  }, [doc, i, active])
+  }, [doc, i, active, w, h])
 
-  return <canvas ref={ref} className="bs-post" style={{ width: 300, height: 375 }} />
+  return <canvas ref={ref} className="bs-post" style={{ width: w, height: h }} />
 }
 
 export function SceneWild({ doc, active, onSource }: Omit<SceneProps, 'voice'> & { voice?: any }) {
