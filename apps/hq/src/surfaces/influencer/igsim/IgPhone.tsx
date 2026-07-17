@@ -6,7 +6,7 @@
 // Instagram is dark, and a "light mode Instagram" preview would lie about how
 // the cinematic portraits actually read.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Grid3x3, Clapperboard, Play, Pin, Plus, ChevronLeft, X } from 'lucide-react'
+import { Grid3x3, Clapperboard, Play, Pin, Plus, ChevronLeft, X, Heart, MessageCircle, Send as SendIcon, Bookmark } from 'lucide-react'
 import type { Creator } from '../influencerData'
 import { SLOTS, type IgPlanItem, type IgSlot } from './planStore'
 
@@ -14,15 +14,25 @@ type Tab = 'grid' | 'reels'
 
 const fmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace('.0', '') + 'K' : String(n)
 
-/** Sim-only follower numbers, derived from the creator id so they're stable
- * across renders and obviously not measured. Always rendered behind a SIM chip. */
-function simCounts(c: Creator) {
+/** Deterministic sim-only counters from any string id — stable across renders,
+ * never claims to be measured (always rendered behind a SIM chip). */
+function simHash(seed: string) {
   let h = 0
-  for (const ch of c.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return h
+}
+function simCounts(c: Creator) {
+  const h = simHash(c.id)
   return { followers: 8000 + (h % 14000), following: 120 + (h % 380) }
 }
+function simEngagement(id: string) {
+  const h = simHash(id)
+  return { likes: 40 + (h % 900), comments: 2 + (h % 60) }
+}
 
-function Tile({ item, day, onClick, selected }: { item?: IgPlanItem; day?: string; onClick?: () => void; selected?: boolean }) {
+function Tile({ item, day, onClick, onOpen, selected }: {
+  item?: IgPlanItem; day?: string; onClick?: () => void; onOpen?: () => void; selected?: boolean
+}) {
   if (!item) {
     return (
       <button className="igp-tile igp-tile-empty" onClick={onClick} title={day ? `Plan a post for ${day}` : 'Plan a post'}>
@@ -32,7 +42,12 @@ function Tile({ item, day, onClick, selected }: { item?: IgPlanItem; day?: strin
     )
   }
   return (
-    <button className={'igp-tile' + (selected ? ' sel' : '')} onClick={onClick}>
+    <button
+      className={'igp-tile' + (selected ? ' sel' : '')}
+      onClick={onClick}
+      onDoubleClick={onOpen}
+      title="Click to edit · double-click to preview"
+    >
       {item.media
         ? <img src={item.media} alt="" loading="lazy" />
         : <span className="igp-tile-ph">{item.caption.slice(0, 28) || 'no media'}</span>}
@@ -40,6 +55,43 @@ function Tile({ item, day, onClick, selected }: { item?: IgPlanItem; day?: strin
       {item.pinned && <Pin size={12} className="igp-tile-pin" fill="currentColor" />}
       {item.status !== 'idea' && <i className={'igp-tile-dot s-' + item.status} />}
     </button>
+  )
+}
+
+// ── post/reel overlay — the single-post detail view, tap-to-preview ────────
+function PostOverlay({ c, item, onClose }: { c: Creator; item: IgPlanItem; onClose: () => void }) {
+  const eng = useMemo(() => simEngagement(item.id), [item.id])
+  const isReel = item.kind === 'reel'
+  return (
+    <div className="igp-post" role="dialog" aria-modal="true" aria-label="Post preview">
+      <div className="igp-post-head">
+        <img className="igp-story-av" src={c.looks?.normal} alt="" />
+        <b>{c.igKit.username}</b>
+        {item.pinned && <Pin size={11} className="igp-post-pin" fill="currentColor" />}
+        <span className="spacer" />
+        <button onClick={onClose} aria-label="Close post"><X size={18} /></button>
+      </div>
+      <div className={'igp-post-media' + (isReel ? ' reel' : '')}>
+        {item.media
+          ? <img src={item.media} alt="" />
+          : (
+            <div className="igp-post-solo">
+              <div className="igp-post-solo-text">{item.caption || 'No caption yet.'}</div>
+            </div>
+          )}
+        {isReel && <Play size={40} className="igp-post-playicon" fill="currentColor" />}
+      </div>
+      <div className="igp-post-actions">
+        <Heart size={22} /><MessageCircle size={22} /><SendIcon size={20} />
+        <span className="spacer" /><Bookmark size={20} />
+      </div>
+      <div className="igp-post-body">
+        <div className="igp-post-likes">{eng.likes.toLocaleString()} likes <span className="igp-sim">SIM</span></div>
+        <div className="igp-post-cap"><b>{c.igKit.username}</b> {item.caption || <em>No caption yet.</em>}</div>
+        {item.hashtags && <div className="igp-post-tags">{item.hashtags}</div>}
+        <div className="igp-post-meta">{eng.comments} comments · planned for {item.day}{item.pillar ? ` · ${item.pillar}` : ''}</div>
+      </div>
+    </div>
   )
 }
 
@@ -121,6 +173,7 @@ export function IgPhone({ c, items, selId, onSelect, onAdd, day }: {
 }) {
   const [tab, setTab] = useState<Tab>('grid')
   const [story, setStory] = useState(false)
+  const [openId, setOpenId] = useState<string | null>(null)
   const counts = useMemo(() => simCounts(c), [c])
 
   // Real IG shows posts AND reels in the main grid; the Reels tab filters.
@@ -131,7 +184,12 @@ export function IgPhone({ c, items, selId, onSelect, onAdd, day }: {
   const reels = useMemo(() => feed.filter(i => i.kind === 'reel'), [feed])
   const shown = tab === 'grid' ? feed : reels
 
+  // Switching creators must not leave a stale overlay pointing at another
+  // person's item — same class of bug the look-pill reset guards against.
+  useEffect(() => { setOpenId(null); setStory(false) }, [c.id])
+
   const dayStories = useMemo(() => items.filter(i => i.kind === 'story' && i.day === day), [items, day])
+  const openItem = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId])
 
   /** Story frames: planned items when they exist, otherwise the character's own
    * ritual — so the story rhythm is previewable before a single asset exists. */
@@ -197,9 +255,13 @@ export function IgPhone({ c, items, selId, onSelect, onAdd, day }: {
             <button className={tab === 'reels' ? 'on' : ''} onClick={() => setTab('reels')} aria-label="Reels"><Clapperboard size={17} /></button>
           </div>
 
+          {/* IG only badges pins in the main grid, never inside Reels. */}
+          {tab === 'grid' && shown.some(i => i.pinned) && (
+            <div className="igp-pinned-head"><Pin size={10} fill="currentColor" /> PINNED</div>
+          )}
           <div className={'igp-grid' + (tab === 'reels' ? ' reels' : '')}>
             {shown.map(i => (
-              <Tile key={i.id} item={i} selected={i.id === selId} onClick={() => onSelect(i.id)} />
+              <Tile key={i.id} item={i} selected={i.id === selId} onClick={() => onSelect(i.id)} onOpen={() => setOpenId(i.id)} />
             ))}
             {/* Holes in the grid are the point — plan the gap before followers see it. */}
             {shown.length < 9 && Array.from({ length: 9 - shown.length }).map((_, n) => (
@@ -209,6 +271,7 @@ export function IgPhone({ c, items, selId, onSelect, onAdd, day }: {
         </div>
 
         {story && <StoryViewer c={c} frames={frames} onClose={() => setStory(false)} />}
+        {openItem && <PostOverlay c={c} item={openItem} onClose={() => setOpenId(null)} />}
       </div>
     </div>
   )

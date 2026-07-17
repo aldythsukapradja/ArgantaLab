@@ -126,6 +126,10 @@
 }
 .igp-high span { font-size: 10px; color: #d0d0d0; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.igp-pinned-head {
+  display: flex; align-items: center; gap: 5px; padding: 8px 16px 4px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .08em; color: #8a8a8a;
+}
 .igp-tabs { display: flex; border-top: 1px solid #1c1c1c; }
 .igp-tabs button {
   flex: 1; display: grid; place-items: center; padding: 8px; cursor: pointer;
@@ -189,6 +193,36 @@
 .igp-story-nav { position: absolute; top: 44px; bottom: 0; width: 33%; background: transparent; border: none; cursor: pointer; }
 .igp-story-nav.l { left: 0; }
 .igp-story-nav.r { right: 0; width: 67%; }
+
+/* ── post/reel overlay — single-post detail, double-click a tile ── */
+.igp-post {
+  position: absolute; inset: 0; z-index: 6; background: #000;
+  display: flex; flex-direction: column; color: #fff;
+}
+.igp-post-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #1c1c1c; flex: none; }
+.igp-post-head b { font-size: 12.5px; }
+.igp-post-pin { color: var(--ink); }
+.igp-post-head button { margin-left: auto; background: transparent; border: none; color: #fff; cursor: pointer; display: grid; place-items: center; }
+.igp-post-media {
+  position: relative; width: 100%; aspect-ratio: 1; background: #0a0a0a; flex: none;
+  display: grid; place-items: center; overflow: hidden;
+}
+.igp-post-media.reel { aspect-ratio: 9 / 16; max-height: 60%; }
+.igp-post-media img { width: 100%; height: 100%; object-fit: cover; }
+.igp-post-solo {
+  width: 100%; height: 100%; display: grid; place-items: center; padding: 24px; text-align: center;
+  background: radial-gradient(70% 60% at 50% 40%, var(--ink-soft), transparent 70%), linear-gradient(165deg, color-mix(in srgb, var(--ink) 16%, #0a0a12), #0a0a12 75%);
+}
+.igp-post-solo-text { font-size: 15px; line-height: 1.5; font-weight: 500; color: #eaeaea; }
+.igp-post-playicon { position: absolute; color: rgba(255,255,255,.85); filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); pointer-events: none; }
+.igp-post-actions { display: flex; align-items: center; gap: 14px; padding: 10px 12px 6px; flex: none; }
+.igp-post-body { padding: 0 12px 16px; overflow-y: auto; min-height: 0; }
+.igp-post-likes { font-size: 12.5px; font-weight: 700; margin-bottom: 4px; }
+.igp-post-likes .igp-sim { margin-top: 0; margin-left: 6px; vertical-align: middle; }
+.igp-post-cap { font-size: 12.5px; line-height: 1.45; }
+.igp-post-cap em { color: #8a8a8a; }
+.igp-post-tags { font-size: 12px; color: #6ea8fe; margin-top: 2px; }
+.igp-post-meta { font-size: 10.5px; color: #7a7a7a; margin-top: 6px; }
 
 /* ── composer ── */
 .igs-l { font-size: 8.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tx3); margin-top: 3px; }

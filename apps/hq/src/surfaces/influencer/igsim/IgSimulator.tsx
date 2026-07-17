@@ -164,17 +164,35 @@ function Composer({ item, creator, onChange, onDelete }: {
 
 export function IgSimulator({ c }: { c: Creator }) {
   const items = usePlan(s => s.items)
-  const { upsert, remove, seedIfEmpty } = usePlan()
+  const cloudLoaded = usePlan(s => s.cloudLoaded)
+  const { upsert, remove, seedIfEmpty, loadFromCloud, reconcile } = usePlan()
   const [selId, setSel] = useState<string | null>(null)
   const [batch, setBatch] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const week = useMemo(() => weekOf(new Date()), [])
   const [day, setDay] = useState(() => isoDay(new Date()))
 
+  // P5 — pull the durable plan in before anything auto-seeds, or a fresh
+  // browser would seed Arganta locally and then double up once the cloud
+  // rows land (same id space, so it'd merge as duplicates rather than dedupe).
+  useEffect(() => { void loadFromCloud() }, [loadFromCloud])
+
   // Arganta ships seeded so the sim is useful on first open; the same call
-  // seeds anyone else the moment the founder asks for it.
-  useEffect(() => { if (c.id === 'arganta') seedIfEmpty(c.id, week) }, [c.id, week, seedIfEmpty])
+  // seeds anyone else the moment the founder asks for it. Gated on the cloud
+  // load settling first (or there being no cloud to wait for).
+  const readyToSeed = !cloudEnabled || cloudLoaded
+  useEffect(() => { if (readyToSeed && c.id === 'arganta') seedIfEmpty(c.id, week) }, [readyToSeed, c.id, week, seedIfEmpty])
   useEffect(() => { setSel(null) }, [c.id])
+
+  // Posted-status readback: poll on the same 12s cadence Post Studio's own
+  // inbox uses, so a 'sent' item flips to 'posted' once Buffer/Post Studio
+  // actually publishes it — no new realtime pattern for one surface.
+  useEffect(() => {
+    if (!cloudEnabled) return
+    void reconcile()
+    const id = setInterval(() => void reconcile(), 12000)
+    return () => clearInterval(id)
+  }, [reconcile])
 
   const mine = useMemo(() => items.filter(i => i.creatorId === c.id), [items, c.id])
   const sel = mine.find(i => i.id === selId) ?? null
