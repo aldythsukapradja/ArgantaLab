@@ -149,12 +149,14 @@ export interface AudioResult {
 /** Local ComfyUI ACE-Step 1.5 (music). Zero marginal cost on your GPU. Only used
  * when COMFY_URL is set AND the ACE-Step checkpoint is present; any failure is
  * surfaced so the tool can report it (there is no cloud music fallback — the
- * sovereign-only mandate keeps music fully local). Graph UNVERIFIED 2026-07-17
- * (authored to live node signatures; needs a live run after ComfyUI restart). */
-export async function generateMusicViaLocalComfy(tags: string, seconds: number, lyrics = ''): Promise<AudioResult> {
+ * sovereign-only mandate keeps music fully local). Graph VERIFIED 2026-07-18
+ * against the bundled audio_ace_step_1_5_checkpoint template (real 48kHz MP3). */
+export async function generateMusicViaLocalComfy(tags: string, seconds: number, lyrics = '', opts: { bpm?: number; keyscale?: string } = {}): Promise<AudioResult> {
   const b = (process.env.COMFY_URL || 'http://127.0.0.1:8188').replace(/\/+$/, '')
   const secs = Math.max(4, Math.min(240, seconds || 30))
   const seed = Math.floor(Math.random() * 1e15)
+  const bpm = Math.max(10, Math.min(300, opts.bpm || 120))
+  const keyscale = opts.keyscale || 'C major'
 
   const list = async (folder: string): Promise<string[]> => {
     try { const r = await fetch(`${b}/models/${folder}`); return r.ok ? (await r.json() as string[]) : [] } catch { return [] }
@@ -163,14 +165,16 @@ export async function generateMusicViaLocalComfy(tags: string, seconds: number, 
   const ckpt = checkpoints.find((m) => /ace.?step.*aio/i.test(m)) || checkpoints.find((m) => /ace.?step/i.test(m))
   if (!ckpt) throw new Error('comfyui has no ACE-Step checkpoint (run tools/comfyui/download-media-models.ps1, then restart ComfyUI)')
 
+  // ACE-Step 1.5 AIO graph — the AIO checkpoint needs the 1.5 nodes (verified).
   const graph: Record<string, unknown> = {
-    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: ckpt } },
-    '2': { class_type: 'TextEncodeAceStepAudio', inputs: { clip: ['1', 1], tags, lyrics, lyrics_strength: 1 } },
-    '3': { class_type: 'TextEncodeAceStepAudio', inputs: { clip: ['1', 1], tags: '', lyrics: '', lyrics_strength: 1 } },
-    '4': { class_type: 'EmptyAceStepLatentAudio', inputs: { seconds: secs, batch_size: 1 } },
-    '5': { class_type: 'KSampler', inputs: { model: ['1', 0], seed, steps: 12, cfg: 3, sampler_name: 'euler', scheduler: 'simple', denoise: 1, positive: ['2', 0], negative: ['3', 0], latent_image: ['4', 0] } },
-    '6': { class_type: 'VAEDecode', inputs: { samples: ['5', 0], vae: ['1', 2] } },
-    '7': { class_type: 'SaveAudio', inputs: { audio: ['6', 0], filename_prefix: 'arganta_music' } },
+    '97': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: ckpt } },
+    '78': { class_type: 'ModelSamplingAuraFlow', inputs: { shift: 3, model: ['97', 0] } },
+    '94': { class_type: 'TextEncodeAceStepAudio1.5', inputs: { clip: ['97', 1], tags, lyrics, seed, bpm, duration: secs, timesignature: '4', language: 'en', keyscale, generate_audio_codes: true, cfg_scale: 2.0, temperature: 0.85, top_p: 0.9, top_k: 0, min_p: 0.0 } },
+    '47': { class_type: 'ConditioningZeroOut', inputs: { conditioning: ['94', 0] } },
+    '98': { class_type: 'EmptyAceStep1.5LatentAudio', inputs: { seconds: secs, batch_size: 1 } },
+    '3': { class_type: 'KSampler', inputs: { model: ['78', 0], seed, steps: 8, cfg: 1, sampler_name: 'euler', scheduler: 'simple', denoise: 1, positive: ['94', 0], negative: ['47', 0], latent_image: ['98', 0] } },
+    '18': { class_type: 'VAEDecodeAudio', inputs: { samples: ['3', 0], vae: ['97', 2] } },
+    '104': { class_type: 'SaveAudioMP3', inputs: { audio: ['18', 0], filename_prefix: 'arganta_music', quality: 'V0' } },
   }
   const queue = await fetch(`${b}/prompt`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: graph }) })
   const queued: any = await queue.json().catch(() => null)

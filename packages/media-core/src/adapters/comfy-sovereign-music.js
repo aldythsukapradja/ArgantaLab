@@ -7,11 +7,11 @@
 // or the graph errors, it returns the DEFERRED browser descriptor (the existing
 // @arganta/audio generative engine) so callers always get a usable result.
 //
-// ⚠️ GRAPH UNVERIFIED as of 2026-07-17: authored against the live ComfyUI node
-// signatures (TextEncodeAceStepAudio / EmptyAceStepLatentAudio / SaveAudio) but
-// not yet run end-to-end because the model was still downloading and ComfyUI
-// could not be restarted during LoRA training. First live run may need step/cfg
-// tuning — see docs/media-center/ComfyUI-Sovereign-Fabric-Plan.md Phase O2.
+// ✅ GRAPH VERIFIED 2026-07-18: mirrors ComfyUI's bundled
+// audio_ace_step_1_5_checkpoint template exactly — the AIO checkpoint needs the
+// 1.5 nodes (TextEncodeAceStepAudio1.5 + ModelSamplingAuraFlow shift 3 +
+// EmptyAceStep1.5LatentAudio + ConditioningZeroOut + VAEDecodeAudio) at 8 steps
+// / cfg 1. Rendered a real 48kHz stereo MP3 in ~24s on the 3070 Ti.
 
 import { MATURITY } from '../contracts.js';
 import { musicDeterministicAdapter } from './browser-engines.js';
@@ -38,17 +38,22 @@ function pickAceCheckpoint(checkpoints) {
   );
 }
 
-function buildGraph({ ckpt, tags, lyrics, seconds, seed }) {
-  // Classic ACE-Step graph (stable across versions): the AIO checkpoint feeds
-  // model[0]/clip[1]/vae[2]. Turbo → few steps, low cfg. Negative = empty encode.
+function buildGraph({ ckpt, tags, lyrics, seconds, seed, bpm, keyscale }) {
+  // ACE-Step 1.5 AIO graph (bundled audio_ace_step_1_5_checkpoint template).
+  // The AIO checkpoint feeds model[0]/clip[1]/vae[2]. generate_audio_codes runs
+  // the 4B LM for quality; turbo → 8 steps / cfg 1. Negative = zeroed positive.
   return {
-    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: ckpt } },
-    '2': { class_type: 'TextEncodeAceStepAudio', inputs: { clip: ['1', 1], tags, lyrics, lyrics_strength: 1 } },
-    '3': { class_type: 'TextEncodeAceStepAudio', inputs: { clip: ['1', 1], tags: '', lyrics: '', lyrics_strength: 1 } },
-    '4': { class_type: 'EmptyAceStepLatentAudio', inputs: { seconds, batch_size: 1 } },
-    '5': { class_type: 'KSampler', inputs: { model: ['1', 0], seed, steps: 12, cfg: 3, sampler_name: 'euler', scheduler: 'simple', denoise: 1, positive: ['2', 0], negative: ['3', 0], latent_image: ['4', 0] } },
-    '6': { class_type: 'VAEDecode', inputs: { samples: ['5', 0], vae: ['1', 2] } },
-    '7': { class_type: 'SaveAudio', inputs: { audio: ['6', 0], filename_prefix: 'arganta_music' } },
+    '97': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: ckpt } },
+    '78': { class_type: 'ModelSamplingAuraFlow', inputs: { shift: 3, model: ['97', 0] } },
+    '94': { class_type: 'TextEncodeAceStepAudio1.5', inputs: {
+      clip: ['97', 1], tags, lyrics, seed, bpm, duration: seconds,
+      timesignature: '4', language: 'en', keyscale, generate_audio_codes: true,
+      cfg_scale: 2.0, temperature: 0.85, top_p: 0.9, top_k: 0, min_p: 0.0 } },
+    '47': { class_type: 'ConditioningZeroOut', inputs: { conditioning: ['94', 0] } },
+    '98': { class_type: 'EmptyAceStep1.5LatentAudio', inputs: { seconds, batch_size: 1 } },
+    '3': { class_type: 'KSampler', inputs: { model: ['78', 0], seed, steps: 8, cfg: 1, sampler_name: 'euler', scheduler: 'simple', denoise: 1, positive: ['94', 0], negative: ['47', 0], latent_image: ['98', 0] } },
+    '18': { class_type: 'VAEDecodeAudio', inputs: { samples: ['3', 0], vae: ['97', 2] } },
+    '104': { class_type: 'SaveAudioMP3', inputs: { audio: ['18', 0], filename_prefix: 'arganta_music', quality: 'V0' } },
   };
 }
 
@@ -58,12 +63,14 @@ async function runComfyMusic(spec) {
   const seed = spec.seed != null ? spec.seed >>> 0 : Math.floor(Math.random() * 1e15);
   const tags = spec.tags || spec.prompt || 'warm, gentle, instrumental';
   const lyrics = spec.lyrics || '';
+  const bpm = Math.max(10, Math.min(300, spec.bpm || 120));
+  const keyscale = spec.keyscale || 'C major';
 
   const checkpoints = await listModels(url, 'checkpoints');
   const ckpt = pickAceCheckpoint(checkpoints);
   if (!ckpt) throw new Error('comfyui has no ACE-Step checkpoint (run tools/comfyui/download-media-models.ps1)');
 
-  const graph = buildGraph({ ckpt, tags, lyrics, seconds, seed });
+  const graph = buildGraph({ ckpt, tags, lyrics, seconds, seed, bpm, keyscale });
   const queue = await fetch(`${url}/prompt`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: graph }),
   });
