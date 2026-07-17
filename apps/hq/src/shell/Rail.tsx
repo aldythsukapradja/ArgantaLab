@@ -1,7 +1,7 @@
 import {
   LayoutGrid, Database, TrendingUp, GraduationCap, Gamepad2, Boxes, CircleDashed,
   Network, Megaphone, Radar, Grid2x2, Sparkles, Workflow, Swords, UserRound, Map, Music2, Film, Wand2,
-  Orbit, Atom, Cpu, Mic2, MessageCircle, BookOpen, LogOut, Palette,
+  Orbit, Atom, Cpu, Mic2, MessageCircle, BookOpen, LogOut, Palette, BookUser,
 } from 'lucide-react'
 import { useHQ, type SurfaceId } from './store'
 import { useCopilotStore } from '../copilot/store'
@@ -31,14 +31,17 @@ const GROUPS: Group[] = [
     { id: 'architecture', label: 'Architecture', Icon: Workflow },
     { id: 'rack', label: 'Model Rack', Icon: Cpu },
   ] },
+  // Founder rule: everything inside Studio ends in "Studio" — no Builder, no
+  // Vault, no Center. Surface ids are unchanged; only the labels carry the rule.
   { name: 'Studio', items: [
+    { id: 'biography', label: 'Biography Studio', Icon: BookUser },
     { id: 'brand', label: 'Brand Studio', Icon: Palette },
-    { id: 'influencer', label: 'AI Influencer', Icon: UserRound },
+    { id: 'influencer', label: 'Influencer Studio', Icon: UserRound },
     { id: 'broadcast', label: 'Post Studio', Icon: Megaphone },
-    { id: 'video', label: 'Video Builder', Icon: Film },
-    { id: 'music', label: 'Music Builder', Icon: Music2 },
-    { id: 'media', label: 'Media Center', Icon: Wand2 },
-    { id: 'pixel', label: 'Pixel Vault', Icon: Grid2x2 },
+    { id: 'video', label: 'Video Studio', Icon: Film },
+    { id: 'music', label: 'Music Studio', Icon: Music2 },
+    { id: 'media', label: 'Media Studio', Icon: Wand2 },
+    { id: 'pixel', label: 'Pixel Studio', Icon: Grid2x2 },
   ] },
   { name: 'Forge', items: [
     { id: 'game', label: 'Game Builder', Icon: Gamepad2 },

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Building2, LineChart, Clapperboard, Hammer, X, LayoutGrid,
   Megaphone, Music2, Wand2, Grid2x2, Gamepad2, Map, Swords, UserRound, Boxes, GraduationCap, Network, Atom, Film,
-  Sparkles, Radar, Mic2, TrendingUp, Database, BookOpen, Orbit, Workflow, Cpu, LogOut,
+  Sparkles, Radar, Mic2, TrendingUp, Database, BookOpen, Orbit, Workflow, Cpu, LogOut, BookUser,
 } from 'lucide-react'
 import { useHQ, surfaceLabel, type SurfaceId } from './store'
 import { ReactorOrb } from '../surfaces/core/ReactorOrb'
@@ -20,7 +20,7 @@ type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: Surfa
 export const MGROUPS: Grp[] = [
   { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'home', 'command', 'copilot', 'cinema'] },
   { id: 'insights', label: 'Insights', Icon: LineChart, surfaces: ['growth', 'data', 'vault', 'knowledge', 'architecture', 'rack'] },
-  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['brand', 'influencer', 'broadcast', 'video', 'music', 'media', 'pixel'] },
+  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['biography', 'brand', 'influencer', 'broadcast', 'video', 'music', 'media', 'pixel'] },
   { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'agents', 'reactor'] },
 ]
 
@@ -38,7 +38,9 @@ const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>
   knowledge: { Icon: Orbit, desc: 'Vault as a 3D knowledge graph' },
   architecture: { Icon: Workflow, desc: 'System map & data lineage' },
   rack: { Icon: Cpu, desc: 'LLM tiers & routing policy' },
+  biography: { Icon: BookUser, desc: 'CV, intro deck & founder journey' },
   brand: { Icon: Sparkles, desc: 'Brand OS — the source of truth' },
+  influencer: { Icon: UserRound, desc: 'Five virtual creators' },
   broadcast: { Icon: Megaphone, desc: 'Social posts & carousels' },
   video: { Icon: Film, desc: 'Videos with voice & export' },
   music: { Icon: Music2, desc: 'Tracks & soundscapes' },

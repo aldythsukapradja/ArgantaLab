@@ -37,6 +37,9 @@ const ArgantaCore = lazy(() => import('../surfaces/core/ArgantaCore').then(modul
 const BrandStudio = lazy(() => import('../surfaces/brand/BrandStudio').then(module => ({ default: module.BrandStudio })))
 // AI Influencer Studio — the five virtual creators as one non-scrollable command deck.
 const InfluencerStudio = lazy(() => import('../surfaces/influencer/InfluencerStudio').then(module => ({ default: module.InfluencerStudio })))
+// Biography Studio — the identity engine: one editable master profile per persona,
+// with CV Maker / Intro Deck / Journey as pure lenses over it.
+const BiographyStudio = lazy(() => import('../surfaces/biography/BiographyStudio').then(module => ({ default: module.BiographyStudio })))
 
 function SurfaceLoading() {
   return <div className="auth-wrap" role="status" aria-label="Loading workspace"><div className="spin" /></div>
@@ -72,6 +75,7 @@ function Surface() {
     case 'core': return <ArgantaCore onClose={() => go(coreReturn)} />
     case 'brand': return <BrandStudio />
     case 'influencer': return <InfluencerStudio />
+    case 'biography': return <BiographyStudio />
   }
 }
 
@@ -80,7 +84,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
   // Edge-to-edge workspaces. GB-3 moved 'game'/'app' here: the Forge is a fixed,
   // non-scrollable page that owns its own viewport, so it must not sit inside
   // .content's scroll container or the panes scroll the page instead of themselves.
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app' || surface === 'brand' || surface === 'influencer'
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app' || surface === 'brand' || surface === 'influencer' || surface === 'biography'
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button

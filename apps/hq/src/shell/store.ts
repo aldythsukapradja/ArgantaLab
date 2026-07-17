@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core' | 'brand' | 'influencer'
+export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core' | 'brand' | 'influencer' | 'biography'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 /** GB-3 · The Forge (v2 chat-driven builder) is the default; 'legacy' renders
@@ -16,11 +16,11 @@ const SURFACE_LABEL: Record<SurfaceId, string> = {
   home: 'Home', portfolio: 'Portfolio', data: 'Data', growth: 'Growth',
   content: 'Learn Builder', game: 'Game Builder', app: 'App Builder',
   agents: 'Agent Builder', broadcast: 'Post Studio', command: 'Command',
-  pixel: 'Pixel Vault', vault: 'HQ Vault', architecture: 'Architecture', battle: 'Battle Builder',
-  character: 'Character Forge', world: 'Openworld Builder', music: 'Music Builder',
-  video: 'Video Builder', media: 'Media Center', knowledge: 'Knowledge', cinema: 'Cinema',
+  pixel: 'Pixel Studio', vault: 'HQ Vault', architecture: 'Architecture', battle: 'Battle Builder',
+  character: 'Character Forge', world: 'Openworld Builder', music: 'Music Studio',
+  video: 'Video Studio', media: 'Media Studio', knowledge: 'Knowledge', cinema: 'Cinema',
   reactor: 'Reactor Builder', rack: 'Model Rack', copilot: 'Copilot', core: 'Arganta Core',
-  brand: 'Brand Studio', influencer: 'AI Influencer',
+  brand: 'Brand Studio', influencer: 'Influencer Studio', biography: 'Biography Studio',
 }
 export const surfaceLabel = (s: SurfaceId) => SURFACE_LABEL[s]
 
