@@ -2,8 +2,8 @@
 title: The Method — Build Handoff
 product: Circle HQ
 type: handoff
-status: ready-to-build
-version: 1.0
+status: shipped
+version: 1.1
 tags: [brand, brand-studio, method, handoff, sonnet]
 date: 2026-07-17
 owner: Aldyth
@@ -11,6 +11,19 @@ implementation_owner: Claude Code (Sonnet)
 confidence: high
 ---
 # Build handoff — The Method (Operator tab) + the pill switcher
+
+> **SHIPPED 2026-07-17 (commit e73e52d4).** All M-1..M-5 built and verified live.
+> One real bug caught during verification: the ignition effect listed `phase` in
+> its own dependency array, so `setPhase('ignition')` re-ran the effect before
+> the 2100ms auto-advance timer fired, and the effect's cleanup cancelled that
+> very timer — ignition never auto-cleared without a manual click. Fixed with a
+> `ignitedRef` ref guard so the effect depends only on `view`. Verified: the
+> auto-advance now completes on its own, and it never replays on re-entry.
+>
+> Also: while verifying, a concurrent session added a third **Doctrine** pill to
+> the same `BrandStudio.tsx`/`brand-studio.css`. Those two files are left
+> uncommitted here for that session to land; `Method.tsx`, `methodData.ts` and
+> `scenes.tsx` (fully mine, unblended) are committed standalone.
 
 **For: Sonnet.** Mechanical and schema-bound; every design decision is already made. The canon's content is [[The Method]] — copy from it, don't rewrite it. Founder verdicts locked 2026-07-17: **cards-only v1** (no expand-to-stage) · **KB doc + code registry**.
 
