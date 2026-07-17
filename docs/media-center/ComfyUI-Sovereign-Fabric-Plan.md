@@ -173,6 +173,34 @@ note in `tools/comfyui/README.md`.
 
 ---
 
+# BUILD LOG (what's shipped vs pending)
+
+Committed to main (2026-07-17 overnight):
+- **O0** ✅ env wiring (`MEDIA_PROVIDER_ORDER=local,…`, COMFY_URL) — already set.
+- **S3a** ✅ Pixel Vault Ingest Contract — `pixel_ingest` table, `pixel_vault_ingest`/
+  `pixel_vault_queue` MCP tools, HQ Ingest review (promote→pixel_asset draft T0,
+  reject, signed thumbs). Commit 4ce897bf. MIGRATION RUN by founder.
+- **S1 (foundation)** ✅ Audio Studio (Music Studio renamed). `audio_asset` +
+  `audio-artifacts` bucket + `voice_profile` (migration_audio_media.sql, PENDING
+  run). audioLibrary.ts / voiceRegistry.ts clients. Record→library save. Voice
+  panel with jarvis/lady browser-TTS audition. Commit 0501e196.
+  STILL TODO in S1: SFX tab (promote SFX Forge from Legacy), Ship scope, and the
+  SUPERVISED Cinema/Copilot rewiring to resolve voices by id.
+- **O2** ✅ (code) sovereign music engine — comfy-sovereign-music.js (media-core
+  music:0) + generate_music MCP tool (ACE-Step 1.5). Commit 0501e196.
+  ⚠️ GRAPH UNVERIFIED — needs a live run after ACE-Step finishes downloading +
+  ComfyUI restart (was blocked by LoRA training). First verify: call generate_music.
+- **S3b** ✅ Pixel Forge tab — `pixel_brief` queue (migration_pixel_brief.sql,
+  PENDING run), Forge composer UI, `pixel_brief_list`/`pixel_brief_resolve` MCP
+  tools. Commit 9faef114.
+
+Migrations to RUN in Supabase (morning): migration_audio_media.sql,
+migration_pixel_brief.sql. (migration_pixel_ingest.sql already run.)
+
+Pending (need hardware/founder): O3 SFX (Stable Audio gated dl), O4 voice (TTS
+node install — do AFTER LoRA training), O1 LoRA wiring (training running), O5
+video (Wan dl), O6 3D, S2 Video Studio, S4 shared extraction, O8 hardening.
+
 # Track S — Studio Revamp (HQ surfaces on the Post Studio DNA)
 
 Post Studio (`apps/hq/src/surfaces/broadcast/`, ~1900 lines + engine files) is
