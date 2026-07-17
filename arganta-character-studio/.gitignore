@@ -1,0 +1,15 @@
+# heavy / regenerable artifacts — the system is tracked, the bytes are not
+characters/*/references/raw/
+characters/*/dataset/images/
+characters/*/dataset/rejected/
+characters/*/training/checkpoints/
+characters/*/training/samples/
+characters/*/training/logs/
+characters/*/models/*.safetensors
+characters/*/evaluations/**/*.png
+characters/*/evaluations/**/*.jpg
+characters/*/approved/
+tests/baseline-results/*.png
+tests/regression-results/*.png
+*.ckpt
+*.pt

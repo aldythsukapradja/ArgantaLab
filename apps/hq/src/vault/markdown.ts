@@ -115,7 +115,7 @@ export interface OutlineItem { level: number; text: string; line: number }
 export function outline(body: string): OutlineItem[] {
   const out: OutlineItem[] = []
   let inFence = false
-  body.split('\n').forEach((ln, i) => {
+  body.split(/\r?\n/).forEach((ln, i) => {
     if (/^```/.test(ln)) { inFence = !inFence; return }
     if (inFence) return
     const m = ln.match(/^(#{1,6})\s+(.*)$/)
@@ -138,7 +138,11 @@ export type Block =
   | { kind: 'table'; header: string[]; rows: string[][] }
 
 export function tokenizeBlocks(body: string): Block[] {
-  const lines = body.split('\n')
+  // Split on CRLF *or* LF. Splitting on '\n' alone leaves a trailing '\r' on
+  // every line of a Windows-authored file, and `.` never matches '\r', so a
+  // `(.*)$`-anchored list match (below) returns null and the `!` assertion then
+  // crashes on `m[2]`. Normalising here fixes the whole tokenizer at once.
+  const lines = body.split(/\r?\n/)
   const blocks: Block[] = []
   let i = 0
   while (i < lines.length) {

@@ -47,40 +47,50 @@ export function generate(req = {}, opts = {}) {
     ));
   }
 
-  let out;
-  try {
-    out = adapter.run(spec);
-  } catch (e) {
-    return fail(domainError('adapter_error', e.message, { source: 'render', retryable: true, correlationId, details: { adapter: adapter.id } }));
-  }
-
   const base = {
     kind, spec, stage, provider: adapter.id, tier: adapter.tier,
     runtime: adapter.runtime, correlationId,
     actor: actor || { id: 'system', kind: 'system' },
   };
 
-  // Adapter deferred to a browser engine or a paid MCP tool.
-  if (out && out.deferred) {
-    return { ...deferredResult({ ...base, reason: out.reason, descriptor: out.descriptor, estimatedCost: adapter.cost }), downgraded, routeNote: reason };
-  }
+  const adapterFail = (e) =>
+    fail(domainError('adapter_error', e.message, { source: 'render', retryable: true, correlationId, details: { adapter: adapter.id } }));
 
-  // Adapter produced real bytes here in Node.
-  const checksum = sha256(out.bytes);
-  return {
-    ...mediaResult({
-      ...base,
-      cost: adapter.cost ?? 0,
-      estimated: !!adapter.estimated,
-      seed: out.seed,
-      mime: out.mime,
-      bytes: out.bytes,
-      checksum,
-      extra: out.extra,
-    }),
-    downgraded,
-    routeNote: reason,
+  const finish = (out) => {
+    // Adapter deferred to a browser engine or a paid MCP tool.
+    if (out && out.deferred) {
+      return { ...deferredResult({ ...base, reason: out.reason, descriptor: out.descriptor, estimatedCost: adapter.cost }), downgraded, routeNote: reason };
+    }
+    // Adapter produced real bytes here in Node.
+    const checksum = sha256(out.bytes);
+    return {
+      ...mediaResult({
+        ...base,
+        cost: adapter.cost ?? 0,
+        estimated: !!adapter.estimated,
+        seed: out.seed,
+        mime: out.mime,
+        bytes: out.bytes,
+        checksum,
+        extra: out.extra,
+      }),
+      downgraded,
+      routeNote: reason,
+    };
   };
+
+  let out;
+  try {
+    out = adapter.run(spec);
+  } catch (e) {
+    return adapterFail(e);
+  }
+  // Async adapters (e.g. comfy-local) return a Promise; the call then resolves
+  // to the same MediaJob shape. Sync adapters keep the original sync contract.
+  if (out && typeof out.then === 'function') {
+    return out.then(finish, adapterFail);
+  }
+  return finish(out);
 }
 
 export { createRegistry };

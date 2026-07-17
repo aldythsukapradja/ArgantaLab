@@ -6,24 +6,60 @@
   background:var(--canvas);color:var(--tx);min-height:0;overflow:hidden}
 
 /* ---------------- top bar ---------------- */
-.pbx-top{display:flex;align-items:center;gap:12px;height:54px;padding:0 16px;
+/* min-width:0 lets this grid cell shrink below its content so the pickers can
+   scroll internally instead of pushing the actions off-screen (the old bar's
+   overflow bug). */
+.pbx-top{display:flex;align-items:center;gap:10px;height:54px;padding:0 14px;min-width:0;
   background:var(--bg);border-bottom:1px solid var(--bd);flex:none}
-.pbx-mark{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;flex:none;
-  background:linear-gradient(135deg,var(--acc),var(--mag));box-shadow:var(--shadow-sm)}
-.pbx-title b{font-size:14px;font-weight:600;display:block;line-height:1.15;letter-spacing:-.01em}
-.pbx-title span{font-size:10.5px;color:var(--tx3);font-family:var(--mono);white-space:nowrap}
-.pbx-spacer{flex:1}
-.pbx-status{font-family:var(--mono);font-size:11px;color:var(--tx2);max-width:280px;overflow:hidden;
+.pbx-mark{width:26px;height:26px;display:grid;place-items:center;color:var(--tx);flex:none}
+.pbx-mark svg{width:100%;height:100%;display:block}
+.pbx-title{flex:none}
+.pbx-title b{font-size:12px;font-weight:600;display:block;line-height:1.15;letter-spacing:-.01em}
+.pbx-title span{display:none} /* the tagline was noise — the logo already says where you are */
+.pbx-spacer{flex:1;min-width:8px}
+.pbx-status{font-family:var(--mono);font-size:11px;color:var(--tx2);max-width:220px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
-.pbx-export{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#fff;
-  background:linear-gradient(135deg,var(--acc),var(--acc-press));padding:9px 16px;border-radius:var(--r-md);
-  box-shadow:0 6px 16px -6px var(--acc);transition:filter var(--dur);white-space:nowrap}
-.pbx-export:hover:not(:disabled){filter:brightness(1.06)}
-.pbx-export:disabled{opacity:.6;cursor:default;box-shadow:none}
+
+/* brand + format pickers — compact, scroll horizontally when tight */
+.pbx-pickers{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.pbx-pickers::-webkit-scrollbar{display:none}
+.pbx-brandpick,.pbx-fmtpick{display:inline-flex;align-items:center;gap:2px;padding:3px;background:var(--bg3);border-radius:var(--r-md);flex:none}
+.pbx-brandpick button{display:inline-flex;align-items:center;gap:6px;padding:4px 9px 4px 6px;border-radius:7px;
+  font-size:11.5px;font-weight:600;color:var(--tx2);white-space:nowrap;transition:all var(--dur)}
+.pbx-brandpick button.on{background:var(--bg);color:var(--tx);box-shadow:var(--shadow-sm)}
+.pbx-brandmark{width:16px;height:16px;display:grid;place-items:center;flex:none;color:var(--tx3)}
+.pbx-brandpick button.on .pbx-brandmark{color:var(--acc-text)}
+.pbx-brandmark svg{width:100%;height:100%;display:block}
+.pbx-fmtpick button{padding:5px 9px;border-radius:7px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--tx2);white-space:nowrap;transition:all var(--dur)}
+.pbx-fmtpick button.on{background:var(--bg);color:var(--tx);box-shadow:var(--shadow-sm)}
+
+/* right-side action cluster (Drafts · Publish · Download) */
+.pbx-actions{display:flex;align-items:center;gap:8px;flex:none}
+.pbx-act{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;height:36px;padding:0 13px;border-radius:var(--r-md);white-space:nowrap;transition:all var(--dur)}
 .pbx-ghost{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--tx);
   background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r-md);padding:8px 13px;transition:all var(--dur);white-space:nowrap}
 .pbx-ghost:hover{border-color:var(--acc);color:var(--acc-text)}
 .pbx-ghost.on{background:var(--acc-soft);border-color:transparent;color:var(--acc-text)}
+/* single Publish — the one primary action */
+.pbx-publish{border:none;cursor:pointer;color:#fff;background:linear-gradient(135deg,#ff5f6d,#833ab4 55%,#22D3EE);
+  box-shadow:0 6px 16px -7px #833ab4}
+.pbx-publish:hover:not(:disabled){filter:brightness(1.06)}
+.pbx-publish:disabled{opacity:.6;cursor:default;box-shadow:none}
+.pbx-publish--fan{background:linear-gradient(135deg,#4fd98a,#22D3EE);color:#06121f}
+/* download — icon only */
+.pbx-export{width:36px;height:36px;padding:0;justify-content:center;border:none;cursor:pointer;color:#fff;
+  background:linear-gradient(135deg,var(--acc),var(--acc-press));border-radius:var(--r-md);
+  box-shadow:0 6px 16px -6px var(--acc);transition:filter var(--dur)}
+.pbx-export:hover:not(:disabled){filter:brightness(1.06)}
+.pbx-export:disabled{opacity:.6;cursor:default;box-shadow:none}
+
+/* on-canvas overlay controls (Safe zones · Arganta Core), top-right of the stage */
+.pbx-stagectl{position:absolute;top:12px;right:12px;z-index:6;display:flex;gap:6px}
+.pbx-stagechip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:99px;cursor:pointer;
+  font-size:11px;font-weight:600;color:var(--tx2);background:var(--glass);border:1px solid var(--glass-bd);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all var(--dur)}
+.pbx-stagechip:hover{color:var(--tx);border-color:var(--acc)}
+.pbx-stagechip.on{background:var(--acc-soft);border-color:transparent;color:var(--acc-text)}
 
 /* ---------------- main: stage + inspector ---------------- */
 .pbx-main{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:0;overflow:hidden}
@@ -36,10 +72,10 @@
 .pbx-inline-edit{position:fixed;z-index:40;min-height:38px;padding:6px 9px;border-radius:8px;border:2px solid #78b4ff;
   background:rgba(12,14,22,.94);color:#fff;font:600 15px/1.3 system-ui,sans-serif;text-align:center;resize:none;outline:none;
   box-shadow:0 10px 40px rgba(0,0,0,.5)}
-.pbx-stagebadge{position:absolute;top:12px;left:14px;z-index:3;font-family:var(--mono);font-size:10px;color:var(--tx2);
-  background:var(--glass);border:1px solid var(--glass-bd);backdrop-filter:blur(8px);padding:3px 8px;border-radius:99px}
-.pbx-stageplat{position:absolute;top:12px;right:14px;z-index:3;font-family:var(--mono);font-size:10px;color:var(--tx3);
-  background:var(--glass);border:1px solid var(--glass-bd);backdrop-filter:blur(8px);padding:3px 8px;border-radius:99px}
+/* format/platform info — bottom-left, clear of both the Core panel (which opens
+   top-left) and the overlay chips (top-right) */
+.pbx-stagebadge{position:absolute;bottom:12px;left:14px;z-index:3;font-family:var(--mono);font-size:10px;color:var(--tx2);
+  background:var(--glass);border:1px solid var(--glass-bd);backdrop-filter:blur(8px);padding:3px 9px;border-radius:99px;max-width:calc(100% - 28px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---------------- copilot chat (glass, over the stage) ---------------- */
 /* Portrait side panel on the LEFT — sits beside the canvas (which shifts right
@@ -76,6 +112,9 @@
 
 /* ---------------- inspector ---------------- */
 .pbx-insp{background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+/* the bottom-sheet grabber + backdrop only exist on mobile (see mobile block) */
+.pbx-insp-grab{display:none}
+.pbx-insp-backdrop{display:none}
 
 /* ---------------- inspector tabs (M1: one scope per tab) ---------------- */
 .pbx-tabs{display:flex;gap:2px;padding:8px 10px;border-bottom:1px solid var(--bd);position:sticky;top:0;
@@ -346,18 +385,12 @@
 .pbx-check.on .pbx-checkdot{background:rgba(80,200,120,.18);color:#4fd98a}
 .badge.ok{color:#4fd98a;background:rgba(80,200,120,.16)}
 .pbx-momentwrap{position:relative}
-.pbx-moment{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;color:#fff;background:linear-gradient(135deg,#ff5f6d,#ff8a3d)}
-.pbx-moment:disabled{opacity:.55;cursor:default}
-.pbx-buffer{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;color:#fff;background:linear-gradient(135deg,#833ab4,#fd1d1d 55%,#fcb045)}
-.pbx-buffer:disabled{opacity:.55;cursor:default}
 /* two-class selectors so they beat the base .pbx-modal-icon regardless of source order */
 .pbx-modal-icon.pbx-modal-icon--ig{background:linear-gradient(135deg,#833ab4,#fd1d1d 55%,#fcb045)}
 .pbx-modal-icon.pbx-modal-icon--err{background:linear-gradient(135deg,#ef4444,#b91c1c)}
 .pbx-modal-err{display:block;margin-top:6px;font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--tx2);word-break:break-word}
 a.pbx-modal-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box}
 /* ── Path C: fan-out (Approve & publish everywhere) ── */
-.pbx-approve{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#06121f;background:linear-gradient(135deg,#4fd98a,#22D3EE)}
-.pbx-approve:disabled{opacity:.55;cursor:default}
 .pbx-fanoutlist{display:flex;flex-direction:column;gap:8px;text-align:left;margin:0 0 18px}
 .pbx-fanoutrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--bg3);border:1px solid var(--line)}
 .pbx-fanoutrow.ok{border-color:rgba(80,200,120,.35)}
@@ -417,34 +450,83 @@ a.pbx-modal-btn{display:inline-flex;align-items:center;justify-content:center;te
 .pbx-legacyscroll{flex:1;overflow-y:auto;min-height:0}
 .pbx-legacyscroll>.inner{max-width:1160px;margin:0 auto;padding:20px 22px 60px}
 
-@media (max-width:960px){
-  .pbx-main{grid-template-columns:1fr;grid-template-rows:1fr auto}
-  .pbx-insp{max-height:40vh;border-top:1px solid var(--bd)}
-  .pbx-title span{display:none}
+/* tablet: single column, inspector still docked below (not a sheet yet) */
+@media (max-width:1100px) and (min-width:981px){
+  .pbx-main{grid-template-columns:minmax(0,1fr) 300px}
 }
 
-/* ===== M1c · Content Builder mobile (≤980px, matches the app dock breakpoint) =====
-   Appended block (Opus, 2026-07-16) — CSS-only, keeps the parallel content-worker
-   session's PostStudio.tsx untouched. */
+/* ===== Content Builder mobile (≤980px = the app-dock breakpoint) =====
+   REBUILT: the canvas is the hero. Everything else is chrome that gets out of
+   its way — the inspector becomes a tap-to-open bottom sheet, and the three
+   real actions (Drafts · Publish · Download) live in ONE contiguous bar pinned
+   above the dock (not scattered floating buttons). "Review, then publish." */
 @media (max-width:980px){
-  /* dock clearance — broadcast is a content-flush surface the fixed .mnav overlays */
-  .pbx{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
-  /* top bar → compact icon-only controls (font-size:0 hides bare text nodes; the
-     fixed-size lucide SVGs are unaffected, so no .tsx span is needed) */
+  /* Reserve the bottom for the dock (76px) + the action bar (56px) so the slide
+     strip clears them. The canvas row takes everything that's left. */
+  .pbx{--pbx-dock:76px;--pbx-actbar:56px;
+    padding-bottom:calc(var(--pbx-dock) + var(--pbx-actbar) + env(safe-area-inset-bottom,0px))}
+
+  /* top bar: logo + pickers only — the actions detach into the bottom bar */
+  .pbx-top{padding:0 10px;gap:8px;height:48px}
   .pbx-status{display:none}
-  .pbx-top{padding:0 10px;gap:6px}
-  .pbx-ghost,.pbx-export{font-size:0;gap:0;padding:0;width:40px;height:40px;justify-content:center;flex:none}
-  /* stage inset tightens on phones */
-  .pbx-stagebox{inset:12px}
-  /* main stacks (stage over inspector) at the dock breakpoint, not just ≤960 */
-  .pbx-main{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
-  .pbx-insp{max-height:44vh;-webkit-overflow-scrolling:touch}
-  /* copilot chat → full-width bottom sheet, canvas stays visible above it */
-  .pbx-bot{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:52%}
-  .pbx-stage--bot .pbx-stagebox{left:12px}
-  /* slide strip → compact, snap-scroll */
-  .pbx-thumbs{scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px 12px 10px}
+  .pbx-title{display:none}                       /* the logo alone names the surface */
+  .pbx-spacer{display:none}                      /* actions are detached to the bottom bar */
+  .pbx-pickers{flex:1}                           /* pickers own the row, scroll sideways */
+  .pbx-brandpick button span{display:none}       /* brand → icon only on phones */
+  .pbx-brandpick button{padding:5px 7px;gap:0}
+
+  /* main = the canvas, full-bleed. The inspector leaves the grid (fixed sheet). */
+  .pbx-main{display:block;position:relative;min-height:0}
+  .pbx-stage{height:100%;border-right:none}
+  .pbx-stagebox{inset:14px}
+  .pbx-stagectl{top:10px;right:10px}
+
+  /* Arganta Core → full-width bottom sheet over the canvas */
+  .pbx-bot{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:56%}
+  .pbx-stage--bot .pbx-stagebox{left:14px}
+
+  /* slide strip: JUST the thumbnails + a one-line control row, so the canvas
+     keeps the height. The head is a single scrollable row (was wrapping to 3
+     lines and eating ~110px); the hint text is dropped on phones. */
+  .pbx-striphead{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:6px 12px 0;gap:4px}
+  .pbx-striphead::-webkit-scrollbar{display:none}
+  .pbx-striphead .pbx-row{flex-wrap:nowrap;margin-left:auto;flex:none}
+  .pbx-striphint{display:none}
+  .pbx-thumbs{scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:6px 12px 8px;gap:8px}
   .pbx-thumb,.pbx-addslide{scroll-snap-align:start}
-  .pbx-thumb canvas{height:64px;width:auto}
-  .pbx-addslide{height:64px;width:46px}
+  .pbx-thumb canvas{height:56px;width:auto}
+  .pbx-addslide{height:56px;width:42px}
+
+  /* THE ACTION BAR — one bar, three actions. Publish is the wide primary. */
+  .pbx-actions{position:fixed;left:0;right:0;bottom:calc(var(--pbx-dock) + env(safe-area-inset-bottom,0px));
+    z-index:35;display:flex;align-items:center;gap:10px;height:var(--pbx-actbar);padding:0 14px;
+    background:var(--bg);border-top:1px solid var(--bd);box-shadow:0 -6px 20px -12px rgba(0,0,0,.5)}
+  .pbx-actions .pbx-act{height:42px}
+  .pbx-actions .pbx-pubwrap{flex:1}
+  .pbx-publish{width:100%;justify-content:center;font-size:14px}
+  .pbx-draftswrap .pbx-act .pbx-act-lbl{display:none}   /* Drafts → icon only */
+  .pbx-draftswrap .pbx-act{padding:0 13px}
+  .pbx-export{width:42px;height:42px}
+
+  /* popovers rise above the action bar as full-width sheets */
+  .pbx-draftspop,.pbx-momentpop--pub{position:fixed;left:12px;right:12px;top:auto;
+    bottom:calc(var(--pbx-dock) + var(--pbx-actbar) + 8px + env(safe-area-inset-bottom,0px));
+    width:auto;max-width:none;z-index:36}
+
+  /* INSPECTOR → bottom sheet, hidden until you tap the canvas */
+  .pbx-insp{position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:86vh;border-top:none;
+    border-top-left-radius:18px;border-top-right-radius:18px;box-shadow:0 -24px 60px rgba(0,0,0,.5);
+    transform:translateY(102%);transition:transform .3s cubic-bezier(.2,.8,.2,1);will-change:transform;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  .pbx-insp--open{transform:translateY(0)}
+  .pbx-insp-backdrop{display:block;position:fixed;inset:0;z-index:55;background:rgba(6,8,16,.5);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  .pbx-insp-grab{display:flex;align-items:center;justify-content:center;position:sticky;top:0;z-index:2;
+    width:100%;height:30px;background:var(--bg);border:none;color:var(--tx3);cursor:pointer}
+  .pbx-insp-grab::before{content:"";position:absolute;top:8px;width:38px;height:4px;border-radius:99px;background:var(--bd3)}
+  .pbx-tabs{top:30px}                              /* clears the sticky grabber */
+
+  /* the desktop floating text toolbar is ~380px — too wide for a phone, and
+     formatting now lives in the sheet. Hide it; tap a layer → sheet. */
+  .pbx-ctb{display:none}
 }

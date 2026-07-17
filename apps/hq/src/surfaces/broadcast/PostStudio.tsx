@@ -8,10 +8,10 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Megaphone, Download, X, Send, Plus, Trash2, Copy as CopyIcon,
+  Download, X, Send, Plus, Trash2, Copy as CopyIcon,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Layers,
   Type as TypeIcon, Palette, Cloud, Upload, Sparkles, Sticker, MessageSquareText,
-  LayoutTemplate, Check, Shuffle, ScanLine, Rocket, Users, Heart, Inbox, Send as SendIcon, Instagram,
+  LayoutTemplate, Check, Shuffle, ScanLine, Rocket, Heart, Inbox, Send as SendIcon, Instagram,
   Image as ImageIcon, Bookmark, Library,
 } from 'lucide-react'
 import { listAssets, uploadAsset, importStock, downloadBlob } from '@arganta/video'
@@ -19,7 +19,7 @@ import { supabase, cloudEnabled } from '../../lib/supabase'
 import { ai, aiLive } from '../../lib/ai'
 import { generateCopy, generateImage, polishText, coreEnabled, extForImageMime, getCoreQuota, prettyModel, type CoreQuota } from '../../lib/argantaCoreClient'
 import { listPublishableCircles, publishMoment, type PublishCircle } from '../../lib/momentPublish'
-import { brandBase, BRAND_BASES, DEFAULT_BRAND_ID } from '@arganta/brand'
+import { brandBase, BRAND_BASES, DEFAULT_BRAND_ID, markToSvg, variantForSize } from '@arganta/brand'
 import { listContentDrafts, markDraftConsumed, recordDraftPublish, type ContentDraft } from '../../lib/contentDrafts'
 import { listBufferChannels, publishToBuffer, bufferEnabled, type BufferChannel, type BufferMode } from '../../lib/bufferClient'
 import { live } from '../../data/live'
@@ -97,20 +97,23 @@ export function PostStudio() {
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState<'' | 'export' | 'publish' | 'moment' | 'buffer' | 'approve'>('')
   // Kinetik moment publishing
-  const [momentOpen, setMomentOpen] = useState(false)
   const [circles, setCircles] = useState<PublishCircle[]>([])
   const [circleId, setCircleId] = useState('')
   const [circlesLoaded, setCirclesLoaded] = useState(false)
   // success confirmation modal after a moment is published
   const [published, setPublished] = useState<{ circle: string; slides: number } | null>(null)
   // Buffer → Instagram publishing
-  const [bufferOpen, setBufferOpen] = useState(false)
   const [bufChannels, setBufChannels] = useState<BufferChannel[]>([])
   const [bufChannelId, setBufChannelId] = useState('')
   const [bufChannelsLoaded, setBufChannelsLoaded] = useState(false)
   const [bufMode, setBufMode] = useState<BufferMode>('addToQueue')
   const [bufferDone, setBufferDone] = useState<{ channel: string; mode: BufferMode; images: number } | null>(null)
   const [bufferError, setBufferError] = useState<string | null>(null)
+  // One combined Publish button (Moment + Buffer in a single step) at every width.
+  const [pubOpen, setPubOpen] = useState(false)
+  // Mobile: the inspector (Compose/Style/Post) is a bottom sheet, opened on
+  // tapping the canvas. Desktop ignores this — the inspector is the right column.
+  const [inspOpen, setInspOpen] = useState(false)
   // S7: Drafts inbox — briefs authored in Claude Code via tools/arganta-core-mcp
   const [draftsOpen, setDraftsOpen] = useState(false)
   const [drafts, setDrafts] = useState<ContentDraft[]>([])
@@ -171,6 +174,32 @@ export function PostStudio() {
   // half (voice, handles) arrives from Supabase in BF-5; until then the doc's own
   // brand.handle carries the sign-off.
   const brand = useMemo(() => brandBase(doc.brandId || DEFAULT_BRAND_ID), [doc.brandId])
+
+  // ── the app mark (top bar) — Circle HQ's real logo geometry, not a generic
+  // icon. `currentColor` lets it theme via CSS (.pbx-mark sets color) instead
+  // of baking a light/dark choice into the SVG string.
+  const appMarkSvg = useMemo(() => markToSvg((brandBase('circlehq') as any)?.identity?.mark, {
+    size: 26, tokens: { line: 'currentColor' },
+  }), [])
+
+  // ── brand-picker icons — each brand's real mark, rendered tiny. Gradient ids
+  // are scoped per brand so five inline SVGs on one page can't collide on a
+  // shared id (e.g. every mark that names its gradient "signal"). Line strokes
+  // follow currentColor so the icon themes with its button; gradient fills keep
+  // the brand's own colour.
+  const brandMarks = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const b of Object.values(BRAND_BASES) as any[]) {
+      const mark = b?.identity?.mark
+      if (!mark) { out[b.id] = ''; continue }
+      let svg = markToSvg(mark, { size: 18, variant: variantForSize(mark, 18), tokens: { line: 'currentColor' } })
+      for (const gid of [...svg.matchAll(/id="([^"]+)"/g)].map(m => m[1])) {
+        svg = svg.split(`id="${gid}"`).join(`id="${b.id}-${gid}"`).split(`url(#${gid})`).join(`url(#${b.id}-${gid})`)
+      }
+      out[b.id] = svg
+    }
+    return out
+  }, [])
 
   // ── image cache (crossOrigin so export stays untainted) ──
   const env: RenderEnv = useMemo(() => ({
@@ -350,7 +379,15 @@ export function PostStudio() {
     const ny = Math.max(0.02, Math.min(0.98, d.startYN + (py - d.py0) / fmt.h))
     patchLayer(d.id, { xN: nx, yN: ny })
   }
-  function onCanvasPointerUp() { dragRef.current = null }
+  function onCanvasPointerUp() {
+    const wasDrag = dragRef.current?.moved
+    dragRef.current = null
+    // On phones the inspector is a bottom sheet: a tap (not a drag) on the
+    // canvas raises it so the founder can edit the thing they just touched.
+    if (!wasDrag && typeof window !== 'undefined' && window.matchMedia('(max-width:980px)').matches) {
+      setInspOpen(true)
+    }
+  }
   // Double-click a text layer → inline editor anchored over it.
   function onCanvasDoubleClick(e: React.MouseEvent) {
     if (!slide) return
@@ -639,16 +676,6 @@ export function PostStudio() {
   }
 
   // ── O4: publish the whole carousel as a Kinetik Moment ──
-  async function openMomentPicker() {
-    if (!cloudEnabled) { setStatus('Connect Supabase & sign in as a circle member to publish moments.'); return }
-    setMomentOpen(o => !o)
-    if (!circlesLoaded) {
-      const list = await listPublishableCircles(supabase)
-      setCircles(list); setCirclesLoaded(true)
-      if (list.length && !circleId) setCircleId(list[0].id)
-    }
-  }
-
   async function doPublishMoment() {
     if (!circleId) { setStatus('Pick a circle to publish into.'); return }
     setBusy('moment')
@@ -663,7 +690,7 @@ export function PostStudio() {
       // passing hashtag strings there made the RPC reject the whole post.
       const body = (doc.caption + (doc.hashtags ? '\n\n' + doc.hashtags : '')).trim()
       const id = await publishMoment(supabase, { circleId, media, body, kind: 'photo' })
-      setMomentOpen(false)
+      setPubOpen(false)
       if (id) {
         const circleName = circles.find(c => c.id === circleId)?.name || 'the circle'
         await markPublished('moment', circleName, id)
@@ -680,17 +707,6 @@ export function PostStudio() {
   }
 
   // ── BF2: publish the carousel to Buffer → Instagram ──
-  async function openBufferPicker() {
-    if (!cloudEnabled) { setStatus('Connect Supabase — Buffer needs the rendered slides on a public URL.'); return }
-    setBufferOpen(o => !o)
-    if (!bufChannelsLoaded) {
-      const list = await listBufferChannels()
-      setBufChannels(list); setBufChannelsLoaded(true)
-      const ig = list.find(c => c.service === 'instagram') || list[0]
-      if (ig && !bufChannelId) setBufChannelId(ig.id)
-    }
-  }
-
   async function doPublishBuffer() {
     if (!bufChannelId) { setStatus('Pick a Buffer channel.'); return }
     if (doc.slides.length > 10) { setStatus('Instagram carousels allow at most 10 slides — remove a few.'); return }
@@ -711,7 +727,7 @@ export function PostStudio() {
       refreshAssets()
       const text = (doc.caption + (doc.hashtags ? '\n\n' + doc.hashtags : '')).trim()
       const r = await publishToBuffer({ channelId: bufChannelId, text, imageUrls, mode: bufMode, channelService: bufChannels.find(c => c.id === bufChannelId)?.service })
-      setBufferOpen(false)
+      setPubOpen(false)
       const chName = bufChannels.find(c => c.id === bufChannelId)?.name || 'Instagram'
       // The mode is part of the record: "queued" and "published now" are very
       // different claims to make about a post six months from now.
@@ -719,13 +735,47 @@ export function PostStudio() {
       setBufferDone({ channel: chName, mode: r.mode, images: r.images })
       setStatus('')
     } catch (e: any) {
-      setBufferOpen(false)
+      setPubOpen(false)
       // Loud modal (not a tiny status line) so a Buffer rejection is impossible
       // to miss — it carries the real Buffer/Instagram message.
       setBufferError(String(e?.name) === 'SecurityError'
         ? 'An image host refused cross-origin use. Re-add backgrounds via Upload or Generate, then try again.'
         : (e?.message || String(e)))
     } finally { setBusy('') }
+  }
+
+  // ── One "Publish" button = Moment + Buffer, one after another ──
+  // Reuses the exact same doPublishMoment/doPublishBuffer paths (same renders,
+  // same error handling, same success modals) — this only decides WHICH of
+  // them to run, based on which destination(s) got picked in the merged sheet.
+  async function openPublishPicker() {
+    if (!cloudEnabled) { setStatus('Connect Supabase & sign in to publish.'); return }
+    setPubOpen(o => !o)
+    if (!circlesLoaded) {
+      const list = await listPublishableCircles(supabase)
+      setCircles(list); setCirclesLoaded(true)
+      if (list.length && !circleId) setCircleId(list[0].id)
+    }
+    if (bufferEnabled && !bufChannelsLoaded) {
+      const list = await listBufferChannels()
+      setBufChannels(list); setBufChannelsLoaded(true)
+      const ig = list.find(c => c.service === 'instagram') || list[0]
+      if (ig && !bufChannelId) setBufChannelId(ig.id)
+    }
+  }
+
+  async function doPublishAll() {
+    setPubOpen(false)
+    if (circleId) await doPublishMoment()
+    if (bufferEnabled && bufChannelId) await doPublishBuffer()
+  }
+
+  // The single Publish button routes two ways: if a Claude-Code draft with
+  // recorded intents is open, one click fans out to exactly those destinations
+  // (Path C); otherwise it opens the manual Moment+Buffer picker.
+  function handlePublishClick() {
+    if (draftIntentsPending) approvePublishEverywhere()
+    else openPublishPicker()
   }
 
   // ── Path C: fan out to every intent Claude Code recorded on the open draft ──
@@ -737,6 +787,11 @@ export function PostStudio() {
   // can retry that one destination without redoing the ones that worked).
   function intentKey(p: { dest: string; circleId?: string; channelId?: string }) { return `${p.dest}:${p.circleId || p.channelId}` }
   const publishedKeys = new Set((activeDraft?.publishedTo || []).map(r => intentKey(r)))
+  // An open draft still has destinations Claude Code asked for that haven't gone
+  // out yet — the single Publish button becomes "publish everywhere" in that case.
+  const draftIntentsPending = !!activeDraft && activeDraft.publishTo.length > 0
+    && !activeDraft.publishTo.every(p => publishedKeys.has(intentKey(p)))
+  const pendingIntentCount = activeDraft ? activeDraft.publishTo.filter(p => !publishedKeys.has(intentKey(p))).length : 0
 
   async function approvePublishEverywhere() {
     if (!activeDraft || !activeDraft.publishTo.length) return
@@ -1074,46 +1129,50 @@ export function PostStudio() {
 
       {/* ── top bar ── */}
       <div className="pbx-top">
-        <div className="pbx-mark"><Megaphone size={15} /></div>
+        <div className="pbx-mark" dangerouslySetInnerHTML={{ __html: appMarkSvg }} />
         <div className="pbx-title"><b>Content Builder</b><span>Post Studio · every social format · zero-asset</span></div>
-        {/* Brand picker — re-inks the whole doc: mark, palette, text plate and
-            fonts all come from the chosen brand's registry entry. */}
-        <div className="seg" role="group" aria-label="Brand">
-          {Object.values(BRAND_BASES).map((b: any) => (
-            <button key={b.id} className={(doc.brandId || DEFAULT_BRAND_ID) === b.id ? 'on' : ''}
-              title={`Render as ${b.name} — mark, palette and text plate from the brand registry`}
-              onClick={() => update(d => {
-                d.brandId = b.id
-                // The wordmark + end-card handle are founder-lane text, so they
-                // live on the doc. Carry over sensible defaults on switch; the
-                // founder can still edit them, and BF-5 will source the real
-                // handle from the DB overlay.
-                d.brand = { name: b.name, handle: '@' + b.id }
-                for (const s of d.slides) {
-                  const h = s.layers.find(l => l.type === 'text' && l.name === 'Handle')
-                  if (h && h.type === 'text') h.text = '@' + b.id
-                }
-              })}>{b.name}</button>
-          ))}
-        </div>
-        <div className="seg" role="group" aria-label="Format">
-          {POST_FORMATS.map(f => (
-            <button key={f.id} className={doc.format === f.id ? 'on' : ''} title={`${f.label} · ${f.w}×${f.h} · ${f.platforms}`}
-              onClick={() => update(d => { d.format = f.id })}>{f.aspect}</button>
-          ))}
+        {/* Brand picker — re-inks the whole doc (mark, palette, text plate, fonts).
+            Compact: each option is the brand's real mark + a short label, and the
+            whole strip scrolls horizontally when the bar gets tight. */}
+        <div className="pbx-pickers">
+          <div className="pbx-brandpick" role="group" aria-label="Brand">
+            {Object.values(BRAND_BASES).map((b: any) => (
+              <button key={b.id} className={(doc.brandId || DEFAULT_BRAND_ID) === b.id ? 'on' : ''}
+                title={`Render as ${b.name} — mark, palette and text plate from the brand registry`}
+                onClick={() => update(d => {
+                  d.brandId = b.id
+                  // The wordmark + end-card handle are founder-lane text, so they
+                  // live on the doc. Carry over sensible defaults on switch; the
+                  // founder can still edit them, and BF-5 will source the real
+                  // handle from the DB overlay.
+                  d.brand = { name: b.name, handle: '@' + b.id }
+                  for (const s of d.slides) {
+                    const h = s.layers.find(l => l.type === 'text' && l.name === 'Handle')
+                    if (h && h.type === 'text') h.text = '@' + b.id
+                  }
+                })}>
+                {brandMarks[b.id] && <i className="pbx-brandmark" dangerouslySetInnerHTML={{ __html: brandMarks[b.id] }} />}
+                <span>{b.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="pbx-fmtpick" role="group" aria-label="Format">
+            {POST_FORMATS.map(f => (
+              <button key={f.id} className={doc.format === f.id ? 'on' : ''} title={`${f.label} · ${f.w}×${f.h} · ${f.platforms}`}
+                onClick={() => update(d => { d.format = f.id })}>{f.aspect}</button>
+            ))}
+          </div>
         </div>
         <div className="pbx-spacer" />
         {status && <span className="pbx-status" title={status}>{status}</span>}
-        <button className={'pbx-ghost' + (guides ? ' on' : '')} title="Show safe zones (5% crop frame + platform UI on story)" onClick={() => setGuides(g => !g)}>
-          <ScanLine size={14} /> Safe zones
-        </button>
-        <button className={'pbx-ghost' + (botOpen ? ' on' : '')} onClick={() => setBotOpen(o => !o)}>
-          <Sparkles size={14} /> Arganta Core
-        </button>
+        {/* Right cluster — the only actions. Safe zones + Arganta Core moved onto
+            the canvas (as overlay chips). On phones .pbx-actions detaches into a
+            fixed bottom action bar; here it's an inline group. */}
+        <div className="pbx-actions">
         {cloudEnabled && (
           <div className="pbx-draftswrap">
-            <button className={'pbx-ghost' + (draftsOpen ? ' on' : '')} title="Drafts authored from Claude Code (tools/arganta-core-mcp)" onClick={() => { setDraftsOpen(o => !o); if (!draftsOpen) refreshDrafts() }}>
-              <Inbox size={14} /> Drafts
+            <button className={'pbx-ghost pbx-act' + (draftsOpen ? ' on' : '')} title="Drafts authored from Claude Code (tools/arganta-core-mcp)" onClick={() => { setDraftsOpen(o => !o); if (!draftsOpen) refreshDrafts() }}>
+              <Inbox size={16} /> <span className="pbx-act-lbl">Drafts</span>
               {drafts.filter(d => !d.consumedAt).length > 0 && <span className="pbx-draftbadge">{drafts.filter(d => !d.consumedAt).length}</span>}
             </button>
             {draftsOpen && (
@@ -1146,86 +1205,85 @@ export function PostStudio() {
             )}
           </div>
         )}
-        {activeDraft && activeDraft.publishTo.length > 0 && (
-          <button
-            className="pbx-approve"
-            disabled={busy !== '' || activeDraft.publishTo.every(p => publishedKeys.has(intentKey(p)))}
-            title="Compose the canvas once, then publish to every destination requested from Claude Code"
-            onClick={approvePublishEverywhere}
-          >
-            <Check size={14} />
-            {busy === 'approve' ? 'Publishing…'
-              : activeDraft.publishTo.every(p => publishedKeys.has(intentKey(p))) ? 'All published ✓'
-              : `Approve & publish everywhere (${activeDraft.publishTo.length - activeDraft.publishTo.filter(p => publishedKeys.has(intentKey(p))).length})`}
+        {/* ONE Publish button at every width. With a Claude-Code draft open it
+            fans out to the recorded intents in a click; otherwise it opens the
+            merged Moment + Buffer picker. */}
+        <div className="pbx-momentwrap pbx-pubwrap">
+          <button className={'pbx-publish pbx-act' + (draftIntentsPending ? ' pbx-publish--fan' : '')}
+            disabled={busy !== ''}
+            title={draftIntentsPending ? 'Publish to every destination this draft requested' : 'Publish to your circle and/or Buffer'}
+            onClick={handlePublishClick}>
+            <SendIcon size={16} /> <span className="pbx-act-lbl">
+              {(busy === 'moment' || busy === 'buffer' || busy === 'approve') ? 'Publishing…'
+                : draftIntentsPending ? `Publish all (${pendingIntentCount})`
+                : 'Publish'}
+            </span>
           </button>
-        )}
-        <div className="pbx-momentwrap">
-          <button className="pbx-moment" disabled={busy !== ''} title="Publish this carousel to a KinetikCircle → Remember feed" onClick={openMomentPicker}>
-            <Heart size={14} /> {busy === 'moment' ? 'Publishing…' : 'Publish to Moment'}
-          </button>
-          {momentOpen && (
-            <div className="pbx-momentpop">
-              <div className="pbx-momenthead"><Users size={13} /> Publish to circle</div>
+          {pubOpen && !draftIntentsPending && (
+            <div className="pbx-momentpop pbx-momentpop--pub">
+              <div className="pbx-momenthead"><SendIcon size={13} /> Publish</div>
               {!cloudEnabled ? (
-                <p className="pbx-mini">Connect Supabase & sign in as a circle member.</p>
-              ) : circles.length === 0 ? (
-                <p className="pbx-mini">{circlesLoaded ? 'No circles you can post into.' : 'Loading circles…'}</p>
+                <p className="pbx-mini">Connect Supabase & sign in to publish.</p>
+              ) : circles.length === 0 && (!bufferEnabled || bufChannels.length === 0) ? (
+                <p className="pbx-mini">{circlesLoaded ? 'No circle or Buffer channel available.' : 'Loading…'}</p>
               ) : (
                 <>
-                  <select className="pbx-sel" value={circleId} onChange={e => setCircleId(e.target.value)}>
-                    {circles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  <p className="pbx-mini">{doc.slides.length} slide{doc.slides.length > 1 ? 's' : ''} → one carousel moment · caption + hashtags included.</p>
-                  <button className="pbx-btn accent" disabled={busy !== '' || !circleId} onClick={doPublishMoment}>
-                    <Heart size={12} /> {busy === 'moment' ? 'Publishing…' : 'Publish now'}
+                  {circles.length > 0 && (
+                    <select className="pbx-sel" value={circleId} onChange={e => setCircleId(e.target.value)}>
+                      <option value="">— skip Moment —</option>
+                      {circles.map(c => <option key={c.id} value={c.id}>Moment → {c.name}</option>)}
+                    </select>
+                  )}
+                  {bufferEnabled && bufChannels.length > 0 && (
+                    <>
+                      <select className="pbx-sel" value={bufChannelId} onChange={e => setBufChannelId(e.target.value)}>
+                        <option value="">— skip Buffer —</option>
+                        {bufChannels.map(c => <option key={c.id} value={c.id}>Buffer → {c.name} · {c.service}</option>)}
+                      </select>
+                      <div className="pbx-row" style={{ gap: 4 }}>
+                        {([['addToQueue', 'Queue'], ['shareNext', 'Next slot'], ['shareNow', 'Now']] as const).map(([m, label]) => (
+                          <span key={m} className={'pbx-chip' + (bufMode === m ? ' on' : '')} onClick={() => setBufMode(m)}>{label}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <p className="pbx-mini">
+                    {doc.slides.length} slide{doc.slides.length > 1 ? 's' : ''} →{' '}
+                    {[circleId && 'circle', bufferEnabled && bufChannelId && 'Buffer'].filter(Boolean).join(' + ') || 'pick a destination above'}.
+                  </p>
+                  <button className="pbx-btn accent" disabled={busy !== '' || (!circleId && !(bufferEnabled && bufChannelId))} onClick={doPublishAll}>
+                    <SendIcon size={12} /> {(busy === 'moment' || busy === 'buffer') ? 'Publishing…' : 'Publish'}
                   </button>
                 </>
               )}
             </div>
           )}
         </div>
-        {bufferEnabled && (
-          <div className="pbx-momentwrap">
-            <button className="pbx-buffer" disabled={busy !== ''} title="Publish this carousel to Instagram via Buffer" onClick={openBufferPicker}>
-              <Instagram size={14} /> {busy === 'buffer' ? 'Publishing…' : 'Send to Buffer'}
-            </button>
-            {bufferOpen && (
-              <div className="pbx-momentpop">
-                <div className="pbx-momenthead"><SendIcon size={13} /> Publish via Buffer</div>
-                {!cloudEnabled ? (
-                  <p className="pbx-mini">Connect Supabase — Buffer needs the slides on a public URL.</p>
-                ) : bufChannels.length === 0 ? (
-                  <p className="pbx-mini">{bufChannelsLoaded ? 'No connected channels — add one in Buffer.' : 'Loading channels…'}</p>
-                ) : (
-                  <>
-                    <select className="pbx-sel" value={bufChannelId} onChange={e => setBufChannelId(e.target.value)}>
-                      {bufChannels.map(c => <option key={c.id} value={c.id}>{c.name} · {c.service}</option>)}
-                    </select>
-                    <div className="pbx-row" style={{ gap: 4 }}>
-                      {([['addToQueue', 'Queue'], ['shareNext', 'Next slot'], ['shareNow', 'Now']] as const).map(([m, label]) => (
-                        <span key={m} className={'pbx-chip' + (bufMode === m ? ' on' : '')} onClick={() => setBufMode(m)}>{label}</span>
-                      ))}
-                    </div>
-                    <p className="pbx-mini">{doc.slides.length} slide{doc.slides.length > 1 ? 's' : ''} → {bufMode === 'shareNow' ? 'publishes now' : bufMode === 'shareNext' ? 'next queue slot' : 'added to your Buffer queue to review'}.</p>
-                    <button className="pbx-btn accent" disabled={busy !== '' || !bufChannelId} onClick={doPublishBuffer}>
-                      <Instagram size={12} /> {busy === 'buffer' ? 'Publishing…' : bufMode === 'shareNow' ? 'Publish now' : 'Send to Buffer'}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        <button className="pbx-export" disabled={busy !== ''} onClick={doExport}>
-          <Download size={14} /> {busy === 'export' ? 'Rendering…' : doc.slides.length > 1 ? `Export ${doc.slides.length} slides` : 'Export PNG'}
+        <button className="pbx-export pbx-act" disabled={busy !== ''}
+          title={busy === 'export' ? 'Rendering…' : doc.slides.length > 1 ? `Download ${doc.slides.length} slides (PNG)` : 'Download PNG'}
+          onClick={doExport} aria-label="Download PNG">
+          <Download size={16} />
         </button>
+        </div>
       </div>
 
       {/* ── stage + inspector ── */}
       <div className="pbx-main">
         <div className={'pbx-stage' + (botOpen ? ' pbx-stage--bot' : '')}>
-          <span className="pbx-stagebadge">{fmt.label} · {fmt.w}×{fmt.h} · {fmt.aspect}</span>
-          <span className="pbx-stageplat">{fmt.platforms}</span>
+          {/* On-canvas controls (top-right) — Safe zones + Arganta Core, moved off
+              the top bar so the chrome stays minimal and the tools sit where the
+              work is. */}
+          <div className="pbx-stagectl">
+            <button className={'pbx-stagechip' + (guides ? ' on' : '')} title="Safe zones — 5% crop frame + platform UI" onClick={() => setGuides(g => !g)}>
+              <ScanLine size={13} /> <span>Safe</span>
+            </button>
+            <button className={'pbx-stagechip' + (botOpen ? ' on' : '')} title="Arganta Core — describe a post, get slides + caption" onClick={() => setBotOpen(o => !o)}>
+              <Sparkles size={13} /> <span>Core</span>
+            </button>
+          </div>
+          {/* Format/platform info — bottom-left, and it steps aside when the Core
+              panel is open (that panel used to sit on top of it). */}
+          {!botOpen && <span className="pbx-stagebadge">{fmt.aspect} · {fmt.w}×{fmt.h} · {fmt.platforms}</span>}
           <div className="pbx-stagebox">
             <canvas ref={canvasRef} className="pbx-canvas pbx-canvas--draggable"
               onPointerDown={onCanvasPointerDown} onPointerMove={onCanvasPointerMove}
@@ -1296,7 +1354,11 @@ export function PostStudio() {
         {/* Three scopes, three tabs (M1). Everything below used to be one nine-
             panel scroll that mixed slide-scope, post-scope and layer-scope
             controls; the tabs are the only thing telling you which is which. */}
-        <div className="pbx-insp">
+        {inspOpen && <div className="pbx-insp-backdrop" onClick={() => setInspOpen(false)} />}
+        <div className={'pbx-insp' + (inspOpen ? ' pbx-insp--open' : '')}>
+          {/* Mobile: this whole panel is a bottom sheet. The grabber both signals
+              "drag/close" and gives a tap target to dismiss it. Desktop hides it. */}
+          <button className="pbx-insp-grab" onClick={() => setInspOpen(false)} aria-label="Close editor"><ChevronDown size={18} /></button>
           <div className="pbx-tabs" role="tablist">
             {([
               ['compose', 'Compose', 'This slide — image, words, pills'],
