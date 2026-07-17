@@ -14,6 +14,8 @@ function toRow(item: IgPlanItem) {
     id: item.id, creator_id: item.creatorId, kind: item.kind, day: item.day,
     slot: item.slot ?? null, media: item.media ?? null, look: item.look ?? null,
     caption: item.caption, hashtags: item.hashtags, pillar: item.pillar ?? null,
+    highlight: item.highlight ?? null, platforms: item.platforms ?? ['ig'],
+    platform_captions: item.platformCaptions ?? null, is_concept: !!item.isConcept,
     pinned: !!item.pinned, status: item.status, sent_draft_id: item.sentDraftId ?? null,
     created_at: item.createdAt, updated_at: item.updatedAt,
   }
@@ -23,6 +25,8 @@ function fromRow(r: any): IgPlanItem {
     id: r.id, creatorId: r.creator_id, kind: r.kind, day: r.day,
     slot: r.slot ?? undefined, media: r.media ?? undefined, look: r.look ?? undefined,
     caption: r.caption ?? '', hashtags: r.hashtags ?? '', pillar: r.pillar ?? undefined,
+    highlight: r.highlight ?? undefined, platforms: Array.isArray(r.platforms) && r.platforms.length ? r.platforms : ['ig'],
+    platformCaptions: r.platform_captions ?? undefined, isConcept: !!r.is_concept,
     pinned: !!r.pinned, status: r.status, sentDraftId: r.sent_draft_id ?? undefined,
     createdAt: r.created_at, updatedAt: r.updated_at,
   }

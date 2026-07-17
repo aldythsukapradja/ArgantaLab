@@ -163,13 +163,17 @@ function StoryViewer({ c, frames, onClose }: {
 }
 
 // ── phone ────────────────────────────────────────────────────────────────
-export function IgPhone({ c, items, selId, onSelect, onAdd, day }: {
+export function IgPhone({ c, items, selId, onSelect, onAdd, day, highlightFilter, onHighlightFilter }: {
   c: Creator
   items: IgPlanItem[]
   selId: string | null
   onSelect: (id: string) => void
   onAdd: (kind: 'post' | 'reel') => void
   day: string
+  /** A tapped highlight bubble filters the grid down to that bucket — the
+   * bubbles are conceptual folders (Journey/Builds/Core/…), not decoration. */
+  highlightFilter?: string | null
+  onHighlightFilter?: (h: string | null) => void
 }) {
   const [tab, setTab] = useState<Tab>('grid')
   const [story, setStory] = useState(false)
@@ -179,8 +183,9 @@ export function IgPhone({ c, items, selId, onSelect, onAdd, day }: {
   // Real IG shows posts AND reels in the main grid; the Reels tab filters.
   const feed = useMemo(() => items
     .filter(i => i.kind !== 'story')
+    .filter(i => !highlightFilter || i.highlight === highlightFilter)
     .sort((a, b) => (Number(b.pinned) - Number(a.pinned)) || b.day.localeCompare(a.day)),
-    [items])
+    [items, highlightFilter])
   const reels = useMemo(() => feed.filter(i => i.kind === 'reel'), [feed])
   const shown = tab === 'grid' ? feed : reels
 
@@ -242,13 +247,27 @@ export function IgPhone({ c, items, selId, onSelect, onAdd, day }: {
           </div>
 
           <div className="igp-highs">
-            {c.igKit.highlights.map(h => (
-              <div className="igp-high" key={h}>
-                <div className="igp-high-c">{h[0]}</div>
-                <span>{h}</span>
-              </div>
-            ))}
+            {c.igKit.highlights.map(h => {
+              const n = items.filter(i => i.highlight === h).length
+              const active = highlightFilter === h
+              return (
+                <button
+                  key={h} className={'igp-high' + (active ? ' active' : '')}
+                  onClick={() => onHighlightFilter?.(active ? null : h)}
+                  title={`${h} — ${n} item${n === 1 ? '' : 's'} planned. Tap to ${active ? 'clear filter' : 'filter the grid'}.`}
+                >
+                  <div className="igp-high-c">{h[0]}{n > 0 && <i className="igp-high-n">{n}</i>}</div>
+                  <span>{h}</span>
+                </button>
+              )
+            })}
           </div>
+          {highlightFilter && (
+            <div className="igp-filter-bar">
+              Filtered: <b>{highlightFilter}</b>
+              <button onClick={() => onHighlightFilter?.(null)}>clear ×</button>
+            </div>
+          )}
 
           <div className="igp-tabs">
             <button className={tab === 'grid' ? 'on' : ''} onClick={() => setTab('grid')} aria-label="Grid"><Grid3x3 size={17} /></button>

@@ -13,6 +13,15 @@ export type IgKind = 'post' | 'reel' | 'story'
 export type IgStatus = 'idea' | 'ready' | 'sent' | 'posted'
 export type IgSlot = 'morning' | 'afternoon' | 'night'
 
+/** One master asset, many outlets — the Content OS rule (docs/arganta-content-os.md
+ * §3): a 9:16 reel is the SAME file on IG/TikTok/YT Shorts, only the caption
+ * voice differs, so this is a checklist on one item, never separate items. */
+export type Platform = 'ig' | 'tiktok' | 'youtube' | 'linkedin' | 'x'
+export const PLATFORMS: { id: Platform; label: string }[] = [
+  { id: 'ig', label: 'Instagram' }, { id: 'tiktok', label: 'TikTok' },
+  { id: 'youtube', label: 'YT Shorts' }, { id: 'linkedin', label: 'LinkedIn' }, { id: 'x', label: 'X' },
+]
+
 export interface IgPlanItem {
   id: string
   creatorId: string
@@ -24,11 +33,22 @@ export interface IgPlanItem {
   caption: string
   hashtags: string
   pillar?: string
+  /** Which of the creator's 5 highlight bubbles this belongs under, e.g.
+   * 'Journey' / 'Builds' / 'Core' / 'Operator' / 'BTS' — matches igKit.highlights. */
+  highlight?: string
+  /** Per-platform caption override — falls back to `caption` when absent, so a
+   * TikTok/YT voice pass is optional, not a second draft you're forced to write. */
+  platforms?: Platform[]
+  platformCaptions?: Partial<Record<Platform, string>>
   pinned?: boolean
   status: IgStatus
   sentDraftId?: string
   createdAt: string
   updatedAt: string
+  /** Fast brainstorm entries (see quick-add) start life here — no day/kind
+   * commitment yet, just a spark tagged to a pillar. Promoted to a real plan
+   * item (day assigned) when the founder is ready to schedule it. */
+  isConcept?: boolean
 }
 
 const KEY = 'hq_igsim_v1'
@@ -80,7 +100,7 @@ export function seedWeek(c: Creator, week: string[]): IgPlanItem[] {
   const t = now()
   const mk = (p: Partial<IgPlanItem>): IgPlanItem => ({
     id: uid(), creatorId: c.id, kind: 'post', day: week[0], caption: '', hashtags: '',
-    status: 'idea', createdAt: t, updatedAt: t, ...p,
+    status: 'idea', platforms: ['ig'], createdAt: t, updatedAt: t, ...p,
   })
 
   // Reels on the cadence days (Mon/Wed/Fri/Sun), captioned from the hook bank.
@@ -184,6 +204,9 @@ export const usePlan = create<PlanState>((set, get) => ({
       caption: r.caption ?? '',
       hashtags: r.hashtags ?? '',
       pillar: r.pillar,
+      highlight: r.highlight,
+      platforms: Array.isArray(r.platforms) && r.platforms.length ? r.platforms : ['ig'],
+      platformCaptions: r.platformCaptions,
       pinned: r.pinned,
       status: (['idea', 'ready', 'sent', 'posted'] as const).includes(r.status as IgStatus) ? r.status as IgStatus : 'idea',
       createdAt: t, updatedAt: t,

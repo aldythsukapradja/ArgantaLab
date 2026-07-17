@@ -9,6 +9,26 @@
 }
 .igs-rail, .igs-comp { display: flex; flex-direction: column; gap: 7px; overflow: auto; }
 
+/* ── rail mode tabs (Plan / Ideas) ── */
+.igs-railtabs { display: flex; gap: 3px; }
+.igs-railtabs button {
+  display: flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 800; letter-spacing: .06em;
+  padding: 3px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--bd2); background: transparent; color: var(--tx3);
+}
+.igs-railtabs button.on { background: var(--ink); border-color: var(--ink); color: #0a0c11; }
+
+/* ── concept board ── */
+.igs-concept-add { display: flex; flex-direction: column; gap: 5px; padding-bottom: 6px; border-bottom: 1px solid var(--bd); }
+.igs-concepts { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: auto; min-height: 60px; }
+.igs-concept-group { display: flex; flex-direction: column; gap: 4px; }
+.igs-concept-head { font-size: 8.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); }
+.igs-concept-card {
+  display: flex; align-items: flex-start; gap: 6px; padding: 6px 7px; border-radius: 8px;
+  border: 1px solid var(--bd); background: var(--bg2);
+}
+.igs-concept-text { flex: 1; font-size: 10px; line-height: 1.4; color: var(--tx2); }
+
 /* ── plan rail ── */
 .igs-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .igs-dow {
@@ -48,6 +68,7 @@
 .igs-st.st-ready { color: var(--ok); }
 .igs-st.st-sent { color: var(--warn); }
 .igs-st.st-posted { color: var(--ink); }
+.igs-plat { font-size: 8px; font-weight: 700; color: var(--tx3); flex: none; }
 .igs-adds { display: flex; gap: 4px; }
 .igs-seed {
   display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer;
@@ -118,12 +139,28 @@
 
 .igp-highs { display: flex; gap: 14px; padding: 2px 16px 12px; overflow-x: auto; scrollbar-width: none; }
 .igp-highs::-webkit-scrollbar { height: 0; }
-.igp-high { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
-.igp-high-c {
-  width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
-  background: #1a1a1a; border: 1px solid #3a3a3a; color: var(--ink);
-  font-size: 17px; font-weight: 800;
+.igp-high {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none;
+  background: transparent; border: none; padding: 0; cursor: pointer; font-family: inherit;
 }
+.igp-high-c {
+  position: relative; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
+  background: #1a1a1a; border: 1px solid #3a3a3a; color: var(--ink);
+  font-size: 17px; font-weight: 800; transition: border-color .15s, background .15s;
+}
+.igp-high.active .igp-high-c { border-color: var(--ink); border-width: 2px; background: color-mix(in srgb, var(--ink) 18%, #1a1a1a); }
+.igp-high.active span { color: var(--ink); }
+.igp-high-n {
+  position: absolute; top: -3px; right: -3px; font-style: normal; font-size: 8px; font-weight: 800;
+  min-width: 14px; height: 14px; border-radius: 7px; display: grid; place-items: center;
+  background: var(--ink); color: #0a0c11; border: 1.5px solid #0a0a0a;
+}
+.igp-filter-bar {
+  display: flex; align-items: center; gap: 6px; margin: 0 16px 8px; padding: 5px 10px;
+  border-radius: 8px; background: var(--ink-soft); color: var(--ink); font-size: 10px; font-weight: 600;
+}
+.igp-filter-bar b { font-weight: 800; }
+.igp-filter-bar button { margin-left: auto; background: transparent; border: none; color: var(--ink); font-size: 9.5px; cursor: pointer; font-weight: 700; }
 .igp-high span { font-size: 10px; color: #d0d0d0; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .igp-pinned-head {
@@ -226,6 +263,7 @@
 
 /* ── composer ── */
 .igs-l { font-size: 8.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tx3); margin-top: 3px; }
+.igs-opt { text-transform: none; font-weight: 500; letter-spacing: normal; color: var(--tx3); font-size: 8.5px; margin-left: 4px; }
 .igs-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .igs-in, .igs-ta {
   width: 100%; padding: 6px 8px; border-radius: 7px; font: inherit; font-size: 11px;
