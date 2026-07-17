@@ -88,13 +88,21 @@ One function, `igsim/bridge.ts` → `sendToPostStudio(item, creator)`:
 
 | Phase | Deliverable | Gate |
 |---|---|---|
-| **P1** (Opus) | Mode switch + phone frame + profile view + grid from store + story viewer with ritual fallback; Arganta seeded | Screenshot passes the "is this Instagram?" squint test; deck still non-scrollable; both themes; other 4 creators render their igKit data with empty grids |
-| **P2** (Opus) | Plan rail (week strip + slot list) + composer drawer + batch import + look quick-fill | Add/edit/move/delete round-trips localStorage; batch paste of 10 items lands correctly |
+| ~~**P1** (Opus)~~ **DONE** `4e479336` | Mode switch + phone frame + profile view + grid from store + story viewer with ritual fallback; Arganta seeded | ✅ verified: squint test passes, non-scrollable, both themes, Lashira/Kinney/Bloom/Labz render own igKit + empty grid + seed button |
+| ~~**P2** (Opus)~~ **DONE** `4e479336` | Plan rail (week strip + slot list) + composer drawer + batch import + look quick-fill | ✅ verified: composer edits persist to localStorage and reflect in rail; batch import 29→31 with pinned/kind honored |
 | **P3** (Sonnet) | Post Studio bridge | Row appears in `content_draft`; opens in Post Studio inbox; item flips to `sent` |
 | **P4** (Sonnet) | Reels tab + post overlay polish + pinned handling | Grid/reels parity for all five creators |
 | **P5** (Sonnet, later) | Supabase persistence of the plan (migration `migration_ig_plan.sql`) + posted-status readback from `published_to` | Survives browser wipe; posted items show ✓ |
 
 Rules: one commit per phase, main branch, typecheck + browser verify before each commit. No new nav entries (mode lives inside the existing surface — the CommandPalette hard-coded `surfs` array does NOT need touching). Images: reuse existing look webps; any new sim assets stay under `apps/hq/public/influencer/`.
+
+## 4b · Notes for the P3 executor (from the P1/P2 build)
+
+- **The store is already P3-shaped.** `markStatus(id, 'sent', draftId)` exists and `IgPlanItem.sentDraftId` is defined — the bridge only needs to insert the row and call it. The `Send to Post Studio` button is rendered and `disabled` in `IgSimulator.tsx` (`.igs-send`); wire it there.
+- **Verify with real DOM clicks.** Synthetic mouse clicks from the preview pane frequently miss; assert state via `javascript_tool` (`el.click()` then read back) *and* screenshot.
+- **The pane backgrounds the tab** (`document.hidden === true`), which throttles `setTimeout`, so the story's 4s auto-advance looks stalled under test — it isn't. Don't "fix" it.
+- **Screenshots time out on the CEO Orb landing** (WebGL). Navigate to the surface via the landing's Studio launcher before screenshotting, or open a fresh tab.
+- **Never call `onClose()`/parent setState inside a `setState` updater** — that bug cost a debug cycle here (React: "Cannot update a component while rendering a different component").
 
 ## 5 · Non-goals (now)
 
