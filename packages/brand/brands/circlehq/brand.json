@@ -4,20 +4,46 @@
   "status": "living",
 
   "identity": {
-    "_note": "The internal founder OS — never marketed publicly. Palette is repo-verified from apps/hq/src/surfaces/landing.css's dark cockpit tokens (--ld-bg #030a18, --ld-text #e9f5ff, --ld-muted #7497c0, --ld-line-strong #3798FF): the brand IS the cockpit. mark null until ChatGPT's P0 direction lands; the reactor orb is its existing motif.",
-    "mark": null,
-    "palette": {
-      "bg": "#030a18",
-      "bgAlt": "#07142c",
-      "ink": "#e9f5ff",
-      "soft": "#7497c0",
-      "accent": "#3798FF",
-      "plateBg": "#FFD64B",
-      "plateInk": "#1b1500"
+    "_note": "IDENTITY v2 — the monoline constellation (handoff v2, 2026-07-17). Mark: THE BRIDGE — ring of six office-nodes, founder star at centre, ONE signal strut. '27 agents → six offices'; a read-only cockpit ('a cockpit is not an engine') that reads one honest signal at a time. LOCKED by the founder 2026-07-17; the Gauge and Aperture alternates are archived on the art-director canvas 4a. Transcribed verbatim; note the pack claims ≤7 primitives but this mark is 10 (harmless — the engine has no limit — but the claim was wrong). SUPERSEDES the provisional cockpit-blue palette I derived from landing.css in BS-0. PLATE IS PROVISIONAL — see battle-test M3.",
+    "mark": {
+      "viewBox": 120,
+      "tokens": { "line": "#C4C9D4" },
+      "tokensLight": { "line": "#3A3D45" },
+      "gradients": {
+        "signal": { "type": "linear", "from": [0, 0], "to": [1, 1], "stops": [[0, "#AF9BE8"], [1, "#7A66BC"]] }
+      },
+      "variants": {
+        "core": [
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 38, "stroke": "@line", "strokeWidth": 2.5 },
+          { "kind": "line", "x1": 60, "y1": 60, "x2": 79, "y2": 27, "stroke": "@signal", "strokeWidth": 2.5 },
+          { "kind": "circle", "cx": 98, "cy": 60, "r": 4, "fill": "@line" },
+          { "kind": "circle", "cx": 79, "cy": 93, "r": 4, "fill": "@line" },
+          { "kind": "circle", "cx": 41, "cy": 93, "r": 4, "fill": "@line" },
+          { "kind": "circle", "cx": 22, "cy": 60, "r": 4, "fill": "@line" },
+          { "kind": "circle", "cx": 41, "cy": 27, "r": 4, "fill": "@line" },
+          { "kind": "circle", "cx": 79, "cy": 27, "r": 5, "fill": "#AF9BE8" },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 6, "fill": "#AF9BE8" }
+        ]
+      }
     },
-    "accents": { "cockpitBlue": "#3798FF", "instrumentCyan": "#22D3EE" },
-    "fonts": { "display": null, "body": null, "mono": null, "embedded": [] },
-    "icons": { "style": null, "set": {} },
+
+    "palette": {
+      "bg": "#15161B",
+      "bgAlt": "#101116",
+      "ink": "#F2F1EC",
+      "soft": "#C4C9D4",
+      "accent": "#AF9BE8",
+      "plateBg": "#F2F1EC",
+      "plateInk": "#15161B"
+    },
+    "accents": {
+      "signal": "#AF9BE8",
+      "signalDeep": "#7A66BC",
+      "starpaper": "#F2F1EC",
+      "nightLoam": "#15161B"
+    },
+    "fonts": { "display": "Space Grotesk", "body": "Source Serif 4", "mono": null, "embedded": [] },
+    "icons": { "style": "monoline, 2.5px round-cap struts, one accent star per composition", "set": {} },
     "motion": { "intro": null, "outro": null, "markAnimation": null },
     "audio": { "sting": null, "durationMs": 2000 }
   },

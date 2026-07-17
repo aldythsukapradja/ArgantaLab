@@ -90,31 +90,86 @@ test('specs: instagram has no banner, linkedin does', () => {
 })
 
 // ── Mark: one geometry source, two renderers ──────────────────
-test('mark: argantalab defines both variants', () => {
-  assert.deepEqual(markVariants(base.identity.mark).sort(), ['core', 'profile'])
-})
-
 test('mark: SVG export contains the real pack geometry, not an approximation', () => {
-  const svg = markToSvg(base.identity.mark, { size: 1080, variant: 'core' })
-  assert.match(svg, /viewBox="0 0 1080 1080"/)
-  // the tile
-  assert.match(svg, /<rect [^>]*width="660"[^>]*height="660"[^>]*rx="205"/)
-  // the gradient the tile is painted with, in pack order
-  assert.match(svg, /<linearGradient id="brand"/)
-  assert.match(svg, /stop-color="#34E5FF"/)
-  assert.match(svg, /offset="0.72" stop-color="#8B5CF6"/)
-  // the cube's top face, verbatim from the pack
-  assert.match(svg, /points="540,328 724,434 540,540 356,434"/)
-  // the cube group's translate survives
-  assert.match(svg, /<g transform="translate\(0,8\)">/)
-  // the core dot
-  assert.match(svg, /<circle [^>]*r="13"[^>]*fill="#8B5CF6"/)
+  // Wire Cube (handoff v2) — the hexagon shell, verbatim from the delivered SVG.
+  const svg = markToSvg(base.identity.mark, { size: 120, variant: 'core' })
+  assert.match(svg, /viewBox="0 0 120 120"/)
+  assert.match(svg, /d="M60 18 L92 37 L92 75 L60 94 L28 75 L28 37 Z"/)
+  assert.match(svg, /<linearGradient id="volt"/)
+  assert.match(svg, /stop-color="#7BAEE8"/)
+  assert.match(svg, /stop-color="#4C7BB8"/)
+  // the summit star
+  assert.match(svg, /<circle [^>]*cx="60" cy="18" r="4"[^>]*fill="#7BAEE8"/)
 })
 
-test('mark: the profile variant adds the orbit ring and satellite', () => {
-  const svg = markToSvg(base.identity.mark, { variant: 'profile' })
-  assert.match(svg, /<circle [^>]*cx="540" cy="540" r="392"[^>]*stroke="url\(#brand\)"/)
-  assert.match(svg, /<circle [^>]*cx="836" cy="285" r="28"/)
+// ── BS/A1: the path kind — what v2's marks actually need ──────
+test('mark: path shapes survive the round trip with their exact data', async () => {
+  const { BRAND_BASES } = await import('../src/index.js')
+  // Bloom's centre leaf is a quadratic bézier. Its TRUE bbox is x54.5/w11; its
+  // control points span 49→71. Storing the control-point box would silently
+  // restretch the one gradient in the mark, so the bbox is measured, not guessed.
+  const leaf = BRAND_BASES.lashirabloom.identity.mark.variants.core[0]
+  assert.equal(leaf.kind, 'path')
+  assert.equal(leaf.d, 'M60 22 Q71 44 60 66 Q49 44 60 22 Z')
+  assert.deepEqual(leaf.bbox, { x: 54.5, y: 22, w: 11, h: 44 })
+  assert.equal(leaf.stroke, '@leaf')
+  const svg = markToSvg(BRAND_BASES.lashirabloom.identity.mark)
+  assert.match(svg, /d="M60 22 Q71 44 60 66 Q49 44 60 22 Z"/)
+  assert.match(svg, /stroke="url\(#leaf\)"/)
+})
+
+test('mark: an elliptical arc round-trips (Kinetik Circle\'s broken ring)', async () => {
+  const { BRAND_BASES } = await import('../src/index.js')
+  const svg = markToSvg(BRAND_BASES.kinetikcircle.identity.mark)
+  // The break IS the strategy — participation, not tracking. Losing the arc
+  // would close the ring and invert the brand's argument.
+  assert.match(svg, /d="M60 36 A24 24 0 1 1 39 48"/)
+  assert.match(svg, /stroke-linecap="round"/)
+})
+
+test('mark: colour tokens flip the theme without touching geometry', async () => {
+  const { BRAND_BASES } = await import('../src/index.js')
+  const mark = BRAND_BASES.arganta.identity.mark
+  const dark = markToSvg(mark)
+  const light = markToSvg(mark, { tokens: mark.tokensLight })
+  assert.match(dark, /stroke="#C4C9D4"/)
+  assert.match(light, /stroke="#3A3D45"/)
+  assert.ok(!light.includes('#C4C9D4'))
+  // identical geometry — only the token differs (the pack's own rule)
+  assert.equal(dark.replace(/#C4C9D4/g, 'X'), light.replace(/#3A3D45/g, 'X'))
+})
+
+test('mark: variantForSize picks the ladder rung, falling back honestly', async () => {
+  const { variantForSize } = await import('../src/mark.js')
+  const { BRAND_BASES } = await import('../src/index.js')
+  const mark = BRAND_BASES.argantalab.identity.mark
+  // No compact/glyph exist yet (battle-test M2), so everything falls to core —
+  // which is exactly the gap: a 2.5px stroke on a 120 viewBox is 0.83px at 40.
+  assert.equal(variantForSize(mark, 16), 'core')
+  assert.equal(variantForSize(mark, 512), 'core')
+  const laddered = { variants: { core: [], compact: [], glyph: [] } }
+  assert.equal(variantForSize(laddered, 16), 'glyph')
+  assert.equal(variantForSize(laddered, 64), 'compact')
+  assert.equal(variantForSize(laddered, 400), 'core')
+})
+
+test('identity v2: every brand wears the monoline system', async () => {
+  const { BRAND_BASES, BRAND_ORDER } = await import('../src/index.js')
+  const ACCENT = { arganta: '#DCA254', argantalab: '#7BAEE8', kinetikcircle: '#EC93B5', lashirabloom: '#6EC492', circlehq: '#AF9BE8' }
+  for (const id of BRAND_ORDER) {
+    const i = BRAND_BASES[id].identity
+    assert.ok(i.mark, `${id} has no mark — v2 delivered all five`)
+    assert.equal(i.mark.viewBox, 120, `${id} is not on the v2 canvas`)
+    assert.equal(i.palette.accent, ACCENT[id], `${id} is not on its wavelength`)
+    // one light, five wavelengths: the ground and ink are shared, the hue is not
+    assert.equal(i.palette.bg, '#15161B')
+    assert.equal(i.palette.ink, '#F2F1EC')
+    assert.equal(Object.keys(i.mark.gradients).length, 1, `${id} must have exactly one gradient`)
+    assert.equal(i.fonts.display, 'Space Grotesk')
+  }
+  // ...and no two brands share a hue
+  const hues = BRAND_ORDER.map((id) => BRAND_BASES[id].identity.palette.accent)
+  assert.equal(new Set(hues).size, 5)
 })
 
 // ── Registry: resolve = the two lanes merged ──────────────────
@@ -123,7 +178,7 @@ test('registry: git base + DB overlay resolve into one valid doc', () => {
   assert.deepEqual(errors, [])
   assert.deepEqual(dropped, [])
   // from git (agent lane)
-  assert.equal(doc.identity.palette.plateBg, '#FFC24B')
+  assert.equal(doc.identity.palette.plateBg, '#F2F1EC')
   assert.ok(doc.identity.mark.variants.core.length)
   // from the DB (founder lane)
   assert.equal(doc.voice.persona.title, 'The Lab')
@@ -137,7 +192,7 @@ test('registry: an overlay that reaches into the agent lane is dropped, not hono
   const evil = { ...overlay, identity: { palette: { plateBg: '#ff0000' } } }
   const { doc, dropped } = resolveBrand(base, evil)
   assert.deepEqual(dropped, ['identity.palette.plateBg'])
-  assert.equal(doc.identity.palette.plateBg, '#FFC24B', 'git must win — the DB cannot shadow it')
+  assert.equal(doc.identity.palette.plateBg, '#F2F1EC', 'git must win — the DB cannot shadow it')
 })
 
 test('registry: strict mode throws instead of dropping', () => {
@@ -245,8 +300,11 @@ test('voice: voiceBlock carries what a model needs to sound like the brand', asy
   assert.equal(v.pillars.length, 4)
   assert.ok(v.ctas.includes('Enter the Lab'))
   assert.ok(v.persona.forbidden.includes('corporate buzzwords'))
-  // the art direction rides along so generated imagery is on-brand too
-  assert.match(v.artDirection, /space-ink/)
+  // Art direction is NULL after identity v2: the old "late-night workshop inside
+  // a nebula" paragraph described the superseded visual world, and v2's
+  // replacement lives on an art-director canvas that wasn't in the handoff zip
+  // (battle-test M1). Shipping the old one would art-direct the wrong brand.
+  assert.equal(v.artDirection, null)
 })
 
 test('voice: a declared language returns its own copy, never the English', async () => {
@@ -276,7 +334,9 @@ test('voice: a brand with nothing said about it does not claim a voice', async (
   const v = voiceBlock(doc)
   assert.equal(v.persona, undefined, 'no persona should be asserted for a voiceless brand')
   assert.equal(v.name, 'ArgantaLab')
-  assert.ok(v.artDirection, 'but its art direction is agent-lane and still applies')
+  // Art direction would ride along here even for a voiceless brand (it is
+  // agent-lane) — but v2 hasn't delivered it yet, so there is nothing to carry.
+  assert.equal(v.artDirection, null)
 })
 
 test('voice: handle is normalised to @form regardless of how it was typed', async () => {
@@ -295,15 +355,14 @@ test('bases: every shipped brand is structurally valid and has a palette', async
   }
 })
 
-test('bases: the canonized brands carry a real mark; the rest admit they have none', async () => {
-  const { BRAND_BASES } = await import('../src/index.js')
-  // A mark is code. Only the two transcribed from real artwork have one — the
-  // others must render as an honest "MARK · P0", never a placeholder logo.
-  for (const id of ['argantalab', 'kinetikcircle']) {
-    assert.ok(BRAND_BASES[id].identity.mark?.variants?.core?.length, `${id} lost its mark`)
-  }
-  for (const id of ['arganta', 'lashirabloom', 'circlehq']) {
-    assert.equal(BRAND_BASES[id].identity.mark, null, `${id} must not invent a mark`)
+test('bases: all five carry a real mark — handoff v2 delivered the set', async () => {
+  const { BRAND_BASES, BRAND_ORDER } = await import('../src/index.js')
+  // Before v2 only two brands had artwork and three rendered an honest
+  // "MARK · P0". The monoline constellation completed the portfolio, so the
+  // placeholder path is now unused — but it stays in the renderer, because the
+  // next new brand will need it again.
+  for (const id of BRAND_ORDER) {
+    assert.ok(BRAND_BASES[id].identity.mark?.variants?.core?.length, `${id} has no mark`)
   }
 })
 
@@ -373,25 +432,28 @@ test('bases: an unknown brand id falls back to the default rather than rendering
   assert.equal(brandBase(undefined).id, 'kinetikcircle')
 })
 
-test('bases: the two brands are genuinely distinct — no shared hard-coded identity', async () => {
+test('bases: brands are one system — shared ground, distinct wavelength', async () => {
   const { BRAND_BASES } = await import('../src/index.js')
   const a = BRAND_BASES.argantalab.identity
   const k = BRAND_BASES.kinetikcircle.identity
+  // "One light, five wavelengths": identity v2 SHARES the ground, ink and canvas
+  // on purpose — that is what makes five brands read as one company. Only the
+  // hue and the geometry separate them. (Pre-v2 they shared nothing, which is
+  // why the portfolio looked like five startups.)
+  assert.equal(a.palette.bg, k.palette.bg)
+  assert.equal(a.mark.viewBox, k.mark.viewBox)
   assert.notEqual(a.palette.accent, k.palette.accent)
-  assert.notEqual(a.palette.bg, k.palette.bg)
-  assert.notEqual(a.mark.viewBox, k.mark.viewBox)
-  // ArgantaLab overrides the plate to Quest Gold; KinetikCircle takes the engine's default
-  assert.equal(a.palette.plateBg, '#FFC24B')
-  assert.equal(k.palette.plateBg, '#FFD64B')
+  assert.notDeepEqual(a.mark.variants.core, k.mark.variants.core)
 })
 
-test('bases: the kinetikcircle mark is the K-mark that used to be hard-coded', async () => {
+test('bases: kinetikcircle wears Resonance Rings — the K-mark is superseded', async () => {
   const { BRAND_BASES } = await import('../src/index.js')
-  const svg = markToSvg(BRAND_BASES.kinetikcircle.identity.mark, { size: 512 })
-  assert.match(svg, /viewBox="0 0 512 512"/)
-  assert.match(svg, /stop-color="#22D3EE"/)   // the tile gradient's cyan end
-  assert.match(svg, /stop-color="#8B5CF6"/)   // ...and its violet end
-  assert.match(svg, /<circle [^>]*cx="256" cy="256" r="106"[^>]*stroke-width="40"/) // the ring
-  assert.match(svg, /<circle [^>]*cx="332" cy="180" r="34"/)                        // the satellite
-  assert.match(svg, /<circle [^>]*cx="256" cy="256" r="22"/)                        // the core
+  const svg = markToSvg(BRAND_BASES.kinetikcircle.identity.mark, { size: 120 })
+  assert.match(svg, /viewBox="0 0 120 120"/)
+  assert.match(svg, /stop-color="#EC93B5"/)                       // Pulse
+  assert.match(svg, /<circle [^>]*cx="60" cy="60" r="38"/)        // the outer ring
+  assert.match(svg, /d="M60 36 A24 24 0 1 1 39 48"/)              // the BROKEN ring
+  assert.match(svg, /<circle [^>]*cx="60" cy="22" r="4"/)         // the star on orbit
+  // the procedural K-mark BF-3 rescued out of postEngine is gone from the data
+  assert.ok(!svg.includes('#22D3EE'), 'the old cyan tile must not survive')
 })

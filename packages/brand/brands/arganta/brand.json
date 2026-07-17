@@ -4,25 +4,40 @@
   "status": "draft",
 
   "identity": {
-    "_note": "The masterbrand. mark is NULL on purpose — ChatGPT's P0 concepts have not landed, and the Brand Studio shows that honestly (dashed frame, MARK · P0) rather than inventing a placeholder logo. Palette is repo-verified from the ArgantaLab pack's shared family colors; Growth Green leads because the master promise is 'Grow together'.",
-    "mark": null,
+    "_note": "IDENTITY v2 — the monoline constellation (handoff v2, 2026-07-17). Mark: TWIN PEAKS A — two interlocked A's, star at the younger apex; overlap = the shared account/economy/world ('one substrate', 00-MASTER-KB §0); the gradient A is the one being raised. Geometry transcribed verbatim from handoff/assets/arganta-mark-{dark,light}.svg; bboxes are exact getBBox() values, not control-point approximations. PLATE IS PROVISIONAL: v2 defines no text plate (see brand-handoff-v2-battle-test.md M3) — Starpaper/Night Loam chosen from v2's own grounds so the pipeline does not silently keep the old system's electric yellow. Founder to approve.",
+    "mark": {
+      "viewBox": 120,
+      "tokens": { "line": "#C4C9D4" },
+      "tokensLight": { "line": "#3A3D45" },
+      "gradients": {
+        "ember": { "type": "linear", "from": [0, 0], "to": [1, 1], "stops": [[0, "#DCA254"], [1, "#8F6B3C"]] }
+      },
+      "variants": {
+        "core": [
+          { "kind": "path", "d": "M22 92 L50 22 L78 92 Z", "bbox": { "x": 22, "y": 22, "w": 56, "h": 70 }, "stroke": "@line", "strokeWidth": 2.5, "strokeLinejoin": "round" },
+          { "kind": "path", "d": "M42 92 L70 22 L98 92 Z", "bbox": { "x": 42, "y": 22, "w": 56, "h": 70 }, "stroke": "@ember", "strokeWidth": 2.5, "strokeLinejoin": "round" },
+          { "kind": "circle", "cx": 70, "cy": 22, "r": 4, "fill": "#DCA254" }
+        ]
+      }
+    },
+
     "palette": {
-      "bg": "#070A12",
-      "bgAlt": "#0B1220",
-      "ink": "#F8FAFF",
-      "soft": "#9AA8BF",
-      "accent": "#3DE08A",
-      "plateBg": "#FFC24B",
-      "plateInk": "#1b1500"
+      "bg": "#15161B",
+      "bgAlt": "#101116",
+      "ink": "#F2F1EC",
+      "soft": "#C4C9D4",
+      "accent": "#DCA254",
+      "plateBg": "#F2F1EC",
+      "plateInk": "#15161B"
     },
     "accents": {
-      "growthGreen": "#3DE08A",
-      "signalCyan": "#34E5FF",
-      "labPurple": "#8B5CF6",
-      "questGold": "#FFC24B"
+      "ember": "#DCA254",
+      "emberDeep": "#8F6B3C",
+      "starpaper": "#F2F1EC",
+      "nightLoam": "#15161B"
     },
-    "fonts": { "display": null, "body": null, "mono": null, "embedded": [] },
-    "icons": { "style": null, "set": {} },
+    "fonts": { "display": "Space Grotesk", "body": "Source Serif 4", "mono": null, "embedded": [] },
+    "icons": { "style": "monoline, 2.5px round-cap struts, one accent star per composition", "set": {} },
     "motion": { "intro": null, "outro": null, "markAnimation": null },
     "audio": { "sting": null, "durationMs": 2000 }
   },

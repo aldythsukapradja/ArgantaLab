@@ -4,20 +4,44 @@
   "status": "draft",
 
   "identity": {
-    "_note": "The shared family world. Palette is repo-verified: #65a30d is LashiraBloom's colour in apps/landing/src/lib/site.ts; #f0a83a is the game's own warm gold (apps/lashira/web styles) and doubles as the text plate — a cozy brand should not wear the Lab's electric yellow. mark null until ChatGPT's P0 bloom/sprout direction lands.",
-    "mark": null,
-    "palette": {
-      "bg": "#10182c",
-      "bgAlt": "#1f2340",
-      "ink": "#F4F7EA",
-      "soft": "#9BAA8C",
-      "accent": "#65a30d",
-      "plateBg": "#f0a83a",
-      "plateInk": "#241400"
+    "_note": "IDENTITY v2 — the monoline constellation (handoff v2, 2026-07-17). Mark: BLOOM — five wireframe leaves, gradient centre leaf, seed-star at the root. The retention world = sunk emotional value a family accumulates; the centre leaf is the newest growth, fed by the kids' learning; the seed 'waits politely' — no rot timers, encoding the no-dark-patterns rule. Five QUADRATIC BÉZIERS, which is why the engine needed Path2D (battle-test blocker 1). Note the centre leaf's true bbox is {x:54.5,w:11} — its CONTROL points span 49→71, so approximating would have shifted the one gradient in the mark. PLATE IS PROVISIONAL — see battle-test M3.",
+    "mark": {
+      "viewBox": 120,
+      "tokens": { "line": "#C4C9D4" },
+      "tokensLight": { "line": "#3A3D45" },
+      "gradients": {
+        "leaf": { "type": "linear", "from": [0, 0], "to": [1, 1], "stops": [[0, "#6EC492"], [1, "#3E8F63"]] }
+      },
+      "variants": {
+        "core": [
+          { "kind": "path", "d": "M60 22 Q71 44 60 66 Q49 44 60 22 Z", "bbox": { "x": 54.5, "y": 22, "w": 11, "h": 44 }, "stroke": "@leaf", "strokeWidth": 2.5, "strokeLinejoin": "round" },
+          { "kind": "path", "d": "M32 34 Q54 44 60 66 Q36 58 32 34 Z", "bbox": { "x": 32, "y": 34, "w": 28, "h": 32 }, "stroke": "@line", "strokeWidth": 2.5, "strokeLinejoin": "round" },
+          { "kind": "path", "d": "M88 34 Q66 44 60 66 Q84 58 88 34 Z", "bbox": { "x": 60, "y": 34, "w": 28, "h": 32 }, "stroke": "@line", "strokeWidth": 2.5, "strokeLinejoin": "round" },
+          { "kind": "path", "d": "M20 62 Q42 58 60 66 Q38 76 20 62 Z", "bbox": { "x": 20, "y": 60.67, "w": 40, "h": 9.5 }, "stroke": "@line", "strokeWidth": 2.5, "strokeLinejoin": "round" },
+          { "kind": "path", "d": "M100 62 Q78 58 60 66 Q82 76 100 62 Z", "bbox": { "x": 60, "y": 60.67, "w": 40, "h": 9.5 }, "stroke": "@line", "strokeWidth": 2.5, "strokeLinejoin": "round" },
+          { "kind": "line", "x1": 60, "y1": 66, "x2": 60, "y2": 92, "stroke": "@line", "strokeWidth": 2.5, "strokeLinecap": "round" },
+          { "kind": "circle", "cx": 60, "cy": 96, "r": 3.5, "fill": "#6EC492" }
+        ]
+      }
     },
-    "accents": { "leaf": "#65a30d", "harvestGold": "#f0a83a", "duskViolet": "#6a4df5" },
-    "fonts": { "display": null, "body": null, "mono": null, "embedded": [] },
-    "icons": { "style": null, "set": {} },
+
+    "palette": {
+      "bg": "#15161B",
+      "bgAlt": "#101116",
+      "ink": "#F2F1EC",
+      "soft": "#C4C9D4",
+      "accent": "#6EC492",
+      "plateBg": "#F2F1EC",
+      "plateInk": "#15161B"
+    },
+    "accents": {
+      "leaf": "#6EC492",
+      "leafDeep": "#3E8F63",
+      "starpaper": "#F2F1EC",
+      "nightLoam": "#15161B"
+    },
+    "fonts": { "display": "Space Grotesk", "body": "Source Serif 4", "mono": null, "embedded": [] },
+    "icons": { "style": "monoline, 2.5px round-cap struts, one accent star per composition", "set": {} },
     "motion": { "intro": null, "outro": null, "markAnimation": null },
     "audio": { "sting": null, "durationMs": 2000 }
   },

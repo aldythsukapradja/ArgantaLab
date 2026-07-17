@@ -4,78 +4,48 @@
   "status": "living",
 
   "identity": {
+    "_note": "IDENTITY v2 — the monoline constellation (handoff v2, 2026-07-17). Mark: RESONANCE RINGS — outer ring, BROKEN middle ring, gradient core, star on orbit. The break is the argument: participation, not tracking (F2's anti-Life360 posture) — the strategy is literally in the geometry. The identity model is already a circle in code (circleId/personId, never familyId). SUPERSEDES the procedural K-mark that BF-3 rescued out of postEngine; recoverable from git (commit 7624e110 and earlier). Uses an ELLIPTICAL ARC, which is why the engine needed Path2D (battle-test blocker 1). PLATE IS PROVISIONAL — see battle-test M3.",
     "mark": {
-      "_source": "Transcribed from the procedural K-mark that lived hard-coded in apps/hq/src/surfaces/broadcast/postEngine.ts drawBrandLayer() (which itself mirrored apps/kinetik public/icon.svg). BF-3 moved the geometry OUT of the renderer and IN here as data — the renderer no longer knows any brand's shape. Verified pixel-identical to the old procedural code.",
-      "viewBox": 512,
+      "viewBox": 120,
+      "tokens": { "line": "#C4C9D4" },
+      "tokensLight": { "line": "#3A3D45" },
       "gradients": {
-        "brand": {
-          "type": "linear",
-          "from": [0, 0],
-          "to": [1, 1],
-          "stops": [[0, "#22D3EE"], [1, "#8B5CF6"]]
-        }
+        "pulse": { "type": "linear", "from": [0, 0], "to": [1, 1], "stops": [[0, "#EC93B5"], [1, "#B85F84"]] }
       },
       "variants": {
         "core": [
-          { "kind": "roundRect", "x": 0, "y": 0, "w": 512, "h": 512, "r": 117.76, "fill": "@brand" },
-          { "kind": "circle", "cx": 256, "cy": 256, "r": 106, "stroke": "#ffffff", "strokeWidth": 40 },
-          { "kind": "circle", "cx": 332, "cy": 180, "r": 34, "fill": "#ffffff" },
-          { "kind": "circle", "cx": 256, "cy": 256, "r": 22, "fill": "#ffffff" }
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 38, "stroke": "@line", "strokeWidth": 2.5 },
+          { "kind": "path", "d": "M60 36 A24 24 0 1 1 39 48", "bbox": { "x": 35.79, "y": 36, "w": 48, "h": 48 }, "stroke": "@line", "strokeWidth": 2.5, "strokeLinecap": "round" },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 11, "stroke": "@pulse", "strokeWidth": 2.5 },
+          { "kind": "circle", "cx": 60, "cy": 22, "r": 4, "fill": "#EC93B5" }
         ]
       }
     },
 
     "palette": {
-      "bg": "#101a3a",
-      "bgAlt": "#1b0f33",
-      "ink": "#ffffff",
-      "soft": "#aab4d8",
-      "accent": "#22D3EE",
-      "plateBg": "#FFD64B",
-      "plateInk": "#1b1500"
+      "bg": "#15161B",
+      "bgAlt": "#101116",
+      "ink": "#F2F1EC",
+      "soft": "#C4C9D4",
+      "accent": "#EC93B5",
+      "plateBg": "#F2F1EC",
+      "plateInk": "#15161B"
     },
     "accents": {
-      "cyan": "#22D3EE",
-      "violet": "#8B5CF6"
+      "pulse": "#EC93B5",
+      "pulseDeep": "#B85F84",
+      "starpaper": "#F2F1EC",
+      "nightLoam": "#15161B"
     },
-    "fonts": {
-      "display": null,
-      "body": null,
-      "mono": null,
-      "embedded": []
-    },
-    "icons": { "style": null, "set": {} },
+    "fonts": { "display": "Space Grotesk", "body": "Source Serif 4", "mono": null, "embedded": [] },
+    "icons": { "style": "monoline, 2.5px round-cap struts, one accent star per composition", "set": {} },
     "motion": { "intro": null, "outro": null, "markAnimation": null },
     "audio": { "sting": null, "durationMs": 2000 }
   },
 
-  "kb": {
-    "brandMd": null,
-    "refs": [],
-    "prompts": {}
-  },
-
+  "kb": { "artDirection": null, "brandMd": null, "refs": [], "prompts": {} },
   "presence": {},
-
-  "content": {
-    "templates": {},
-    "captionFormula": null,
-    "adKit": { "meta": {}, "google": {}, "display": {} },
-    "ogTemplate": null
-  },
-
-  "discovery": {
-    "seo": {},
-    "schemaOrg": null,
-    "ogImage": null,
-    "factSheet": {},
-    "llmsTxt": null,
-    "keywords": []
-  },
-
-  "routing": {
-    "bufferChannelId": null,
-    "momentSenderProfileId": "c1c1e000-0000-4000-8000-0000000000c1",
-    "siteUrl": "https://circle.arganta.app"
-  }
+  "content": { "templates": {}, "captionFormula": null, "adKit": { "meta": {}, "google": {}, "display": {} }, "ogTemplate": null },
+  "discovery": { "seo": {}, "schemaOrg": null, "ogImage": null, "factSheet": {}, "llmsTxt": null, "keywords": [] },
+  "routing": { "bufferChannelId": null, "momentSenderProfileId": "c1c1e000-0000-4000-8000-0000000000c1", "siteUrl": "https://circle.arganta.app" }
 }
