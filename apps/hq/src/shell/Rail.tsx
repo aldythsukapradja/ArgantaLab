@@ -33,6 +33,7 @@ const GROUPS: Group[] = [
   ] },
   { name: 'Studio', items: [
     { id: 'brand', label: 'Brand Studio', Icon: Palette },
+    { id: 'influencer', label: 'AI Influencer', Icon: UserRound },
     { id: 'broadcast', label: 'Post Studio', Icon: Megaphone },
     { id: 'video', label: 'Video Builder', Icon: Film },
     { id: 'music', label: 'Music Builder', Icon: Music2 },

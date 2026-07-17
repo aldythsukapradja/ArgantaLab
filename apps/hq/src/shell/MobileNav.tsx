@@ -20,7 +20,7 @@ type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: Surfa
 export const MGROUPS: Grp[] = [
   { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'home', 'command', 'copilot', 'cinema'] },
   { id: 'insights', label: 'Insights', Icon: LineChart, surfaces: ['growth', 'data', 'vault', 'knowledge', 'architecture', 'rack'] },
-  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['brand', 'broadcast', 'video', 'music', 'media', 'pixel'] },
+  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['brand', 'influencer', 'broadcast', 'video', 'music', 'media', 'pixel'] },
   { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'agents', 'reactor'] },
 ]
 

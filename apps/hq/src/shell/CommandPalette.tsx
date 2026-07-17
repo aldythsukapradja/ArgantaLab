@@ -14,7 +14,7 @@ const SURFACE_ICON: Record<SurfaceId, typeof Search> = {
   home: Sparkles, portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
   game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone, command: Radar,
   pixel: Grid2x2, vault: VaultIcon, architecture: Waypoints, battle: Swords, character: UserRound, world: Map, music: Music2, video: Film, media: Wand2, knowledge: Orbit, cinema: Film, reactor: Atom, rack: Cpu, copilot: Mic2, core: MessageCircle,
-  brand: Palette,
+  brand: Palette, influencer: UserRound,
 }
 
 // HQ Vault jumps — land on the Vault surface at a specific view.
@@ -44,7 +44,7 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const cmds = useMemo<Cmd[]>(() => {
-    const surfs: SurfaceId[] = ['core', 'home', 'portfolio', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack', 'cinema', 'reactor', 'copilot']
+    const surfs: SurfaceId[] = ['core', 'home', 'portfolio', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack', 'cinema', 'reactor', 'copilot', 'brand', 'influencer']
     const KW: Partial<Record<SurfaceId, string>> = {
       vault: ' notes knowledge obsidian markdown',
       broadcast: ' content builder posts social carousel instagram',
