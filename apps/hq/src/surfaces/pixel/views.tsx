@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usageSummary, listPalettes, ingestQueue } from '../../data/pixel/engine'
+import { loadIngestQueue, rejectIngest, promoteIngest, type CloudIngestRow } from '../../data/pixel/ingestCloud'
+import { signedThumb } from '../../data/pixel/cloud'
 import type { UsageSite, Palette, VaultItem } from '../../data/pixel/types'
 
 // ── Usage — the render-key coverage x-ray over the other Arganta apps ────────
@@ -105,33 +107,93 @@ export function PalettesView({ palettes: pals, items }: { palettes: Palette[]; i
   )
 }
 
-// ── Ingest — PixelLab output awaiting review (verdict-queue discipline) ───────
+// ── Ingest — generated art awaiting review (S3a contract, verdict-queue) ──────
+// Cloud-first: rows written by the media-gen MCP's pixel_vault_ingest tool land
+// in pixel_ingest; this view reviews them with the signed-in admin session.
+// Offline / signed-out falls back to the read-only seed queue so the tab still
+// demonstrates the flow.
+function IngestThumb({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => { let live = true; signedThumb(path).then(u => { if (live) setUrl(u) }); return () => { live = false } }, [path])
+  return url
+    ? <img src={url} alt="" style={{ width: 56, height: 56, objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 6, border: '1px solid var(--bd2)', background: 'var(--bg3)' }} />
+    : <div style={{ width: 56, height: 56, borderRadius: 6, border: '1px solid var(--bd2)', background: 'var(--bg3)' }} />
+}
+
 export function IngestView() {
-  const queue = ingestQueue()
+  const [cloud, setCloud] = useState<CloudIngestRow[] | null | 'loading'>('loading')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [note, setNote] = useState('')
+  const reload = () => loadIngestQueue().then(setCloud)
+  useEffect(() => { reload() }, [])
+
+  async function onReject(id: string) {
+    setBusy(id)
+    const err = await rejectIngest(id)
+    setNote(err ? `Reject failed: ${err}` : `Rejected ${id}.`)
+    setBusy(null); reload()
+  }
+  async function onPromote(row: CloudIngestRow) {
+    setBusy(row.id)
+    try {
+      const assetId = await promoteIngest(row)
+      setNote(`Promoted → ${assetId} (draft in Library).`)
+    } catch (e: any) { setNote(e?.message || String(e)) }
+    setBusy(null); reload()
+  }
+
+  const seed = ingestQueue()
+  const usingCloud = Array.isArray(cloud)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div className="insight" style={{ background: 'var(--bg3)', alignItems: 'flex-start' }}>
-        <div><div style={{ fontSize: 11.5, lineHeight: 1.5 }}>Nothing enters the canonical Library unreviewed. Generations from the PixelLab MCP land here first — name, tag, then promote or reject. Same discipline as the Command verdict queue.</div></div>
+        <div><div style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+          Nothing enters the canonical Library unreviewed. Every generated pixel asset (PixelLab, ComfyUI) is stored in the
+          pixel-art bucket and lands here via <code>pixel_vault_ingest</code> — name, tag, then promote or reject.
+          {!usingCloud && cloud !== 'loading' && <b> Showing seed examples — sign in (admin) for the live queue.</b>}
+        </div></div>
       </div>
-      {queue.map(it => (
+      {note && <div className="card" style={{ padding: '8px 12px', fontSize: 11.5, color: 'var(--tx2)' }}>{note}</div>}
+
+      {usingCloud && (cloud as CloudIngestRow[]).map(it => (
         <div key={it.id} className="card" style={{ padding: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 3 }}>{(it.swatch ?? []).map((c, i) => <span key={i} style={{ width: 28, height: 28, borderRadius: 4, background: c, border: '1px solid var(--bd2)' }} />)}</div>
+          <IngestThumb path={it.storage_path} />
           <div style={{ flex: 1, minWidth: 160 }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>{it.suggestedName}</div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{it.suggested_name}</div>
             <div className="row" style={{ gap: 6, fontSize: 10.5, color: 'var(--tx3)', flexWrap: 'wrap', marginTop: 2 }}>
-              <span>via {it.generatedVia}</span>
-              <span>· {it.size.w}×{it.size.h}</span>
-              {it.styleRefId && <span>· ref {it.styleRefId}</span>}
+              <span>via {it.generated_via}</span>
+              <span>· {it.kind}</span>
+              {it.size?.w ? <span>· {it.size.w}×{it.size.h}</span> : null}
+              {it.animations?.length ? <span>· {it.animations.length} anim</span> : null}
+              {it.style_ref_id && <span>· ref {it.style_ref_id}</span>}
+              <span style={{ fontFamily: 'var(--mono)' }}>· {it.storage_path}</span>
             </div>
-            <div className="row" style={{ gap: 4, marginTop: 4, flexWrap: 'wrap' }}>{it.suggestedTags.map(t => <span key={t} className="pill pill-mut" style={{ fontSize: 9.5 }}>{t}</span>)}</div>
+            <div className="row" style={{ gap: 4, marginTop: 4, flexWrap: 'wrap' }}>{(it.suggested_tags ?? []).map(t => <span key={t} className="pill pill-mut" style={{ fontSize: 9.5 }}>{t}</span>)}</div>
           </div>
           <div className="row" style={{ gap: 6 }}>
-            <button style={{ fontSize: 11.5, cursor: 'pointer', color: 'var(--tx3)', border: '1px solid var(--bd2)', borderRadius: 6, padding: '4px 10px', background: 'var(--bg)' }}>Reject</button>
-            <button style={{ fontSize: 11.5, cursor: 'pointer', color: 'var(--bg)', background: 'var(--ok)', borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>Promote →</button>
+            <button disabled={busy === it.id} onClick={() => onReject(it.id)}
+              style={{ fontSize: 11.5, cursor: 'pointer', color: 'var(--tx3)', border: '1px solid var(--bd2)', borderRadius: 6, padding: '4px 10px', background: 'var(--bg)' }}>Reject</button>
+            <button disabled={busy === it.id} onClick={() => onPromote(it)}
+              style={{ fontSize: 11.5, cursor: 'pointer', color: 'var(--bg)', background: 'var(--ok)', borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>
+              {busy === it.id ? '…' : 'Promote →'}
+            </button>
           </div>
         </div>
       ))}
-      {!queue.length && <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 40 }}>Queue empty — nothing waiting to review.</div>}
+      {usingCloud && !(cloud as CloudIngestRow[]).length &&
+        <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 40 }}>Queue empty — nothing waiting to review.</div>}
+
+      {!usingCloud && cloud !== 'loading' && seed.map(it => (
+        <div key={it.id} className="card" style={{ padding: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', opacity: 0.75 }}>
+          <div style={{ display: 'flex', gap: 3 }}>{(it.swatch ?? []).map((c, i) => <span key={i} style={{ width: 28, height: 28, borderRadius: 4, background: c, border: '1px solid var(--bd2)' }} />)}</div>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{it.suggestedName} <span style={{ fontSize: 9.5, color: 'var(--tx3)' }}>seed</span></div>
+            <div className="row" style={{ gap: 6, fontSize: 10.5, color: 'var(--tx3)', flexWrap: 'wrap', marginTop: 2 }}>
+              <span>via {it.generatedVia}</span><span>· {it.size.w}×{it.size.h}</span>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

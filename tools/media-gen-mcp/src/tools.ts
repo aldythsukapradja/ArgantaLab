@@ -5,7 +5,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { generateViaCloudflare, generateViaLeonardo, generateViaLocalComfy, generateViaModal, type ImageResult } from './providers'
+import { FORMAT_ASPECT, generateViaCloudflare, generateViaLeonardo, generateViaLocalComfy, generateViaModal, type ImageResult } from './providers'
+import { persistToSupabase } from './persist'
+import { registerPixelVaultTools } from './pixelVault'
 
 const json = (o: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(o, null, 2) }] })
 const fail = (msg: string) => ({ isError: true, content: [{ type: 'text' as const, text: msg }] })
@@ -29,6 +31,7 @@ const ORDER = (process.env.MEDIA_PROVIDER_ORDER || DEFAULT_ORDER.join(','))
 const PROVIDERS = (ORDER.length ? ORDER : DEFAULT_ORDER).map((name) => ({ name, run: ALL_PROVIDERS[name] }))
 
 export function registerTools(server: McpServer) {
+  registerPixelVaultTools(server)
   server.tool(
     'generate_image',
     'Generate an image from a text prompt using free-tier providers, trying each in order and ' +
@@ -51,9 +54,16 @@ export function registerTools(server: McpServer) {
           const path = resolve(outPath || join('generated-media', `image-${Date.now().toString(36)}.${ext}`))
           mkdirSync(dirname(path), { recursive: true })
           writeFileSync(path, result.bytes)
+          const dims = FORMAT_ASPECT[fmt] || FORMAT_ASPECT.square
+          const persisted = await persistToSupabase({
+            bytes: result.bytes, mime: result.mime,
+            provider: result.provider, model: result.model, prompt, format: fmt,
+            width: dims.w, height: dims.h,
+          })
           return json({
             ok: true, provider: result.provider, model: result.model, path,
             mime: result.mime, bytes: result.bytes.length,
+            supabase: persisted,
             failedAttemptsBeforeSuccess: attempts,
           })
         } catch (e: any) {
