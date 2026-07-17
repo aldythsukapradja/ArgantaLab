@@ -90,7 +90,7 @@ One function, `igsim/bridge.ts` → `sendToPostStudio(item, creator)`:
 |---|---|---|
 | ~~**P1** (Opus)~~ **DONE** `4e479336` | Mode switch + phone frame + profile view + grid from store + story viewer with ritual fallback; Arganta seeded | ✅ verified: squint test passes, non-scrollable, both themes, Lashira/Kinney/Bloom/Labz render own igKit + empty grid + seed button |
 | ~~**P2** (Opus)~~ **DONE** `4e479336` | Plan rail (week strip + slot list) + composer drawer + batch import + look quick-fill | ✅ verified: composer edits persist to localStorage and reflect in rail; batch import 29→31 with pinned/kind honored |
-| **P3** (Sonnet) | Post Studio bridge | Row appears in `content_draft`; opens in Post Studio inbox; item flips to `sent` |
+| ~~**P3** (Sonnet)~~ **DONE** `3b693971` | Post Studio bridge | ✅ verified via localStorage state injection (sent-state UI, tile dot, rail chip, Post Studio nav); ⚠️ live insert path unverified — no connected Supabase project in dev. Confirm once `.env.local` has real creds: send an item, check it lands in Post Studio's inbox within 12s. |
 | **P4** (Sonnet) | Reels tab + post overlay polish + pinned handling | Grid/reels parity for all five creators |
 | **P5** (Sonnet, later) | Supabase persistence of the plan (migration `migration_ig_plan.sql`) + posted-status readback from `published_to` | Survives browser wipe; posted items show ✓ |
 
