@@ -17,7 +17,7 @@ const SURFACE_LABEL: Record<SurfaceId, string> = {
   content: 'Learn Builder', game: 'Game Builder', app: 'App Builder',
   agents: 'Agent Builder', broadcast: 'Post Studio', command: 'Command',
   pixel: 'Pixel Studio', vault: 'HQ Vault', architecture: 'Architecture', battle: 'Battle Builder',
-  character: 'Character Forge', world: 'Openworld Builder', music: 'Music Studio',
+  character: 'Character Forge', world: 'Openworld Builder', music: 'Audio Studio',
   video: 'Video Studio', media: 'Media Studio', knowledge: 'Knowledge', cinema: 'Cinema',
   reactor: 'Reactor Builder', rack: 'Model Rack', copilot: 'Copilot', core: 'Arganta Core',
   brand: 'Brand Studio', influencer: 'Influencer Studio', biography: 'Biography Studio',

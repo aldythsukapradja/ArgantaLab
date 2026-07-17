@@ -10,6 +10,8 @@ import {
 import {
   premiumImageAdapter, premiumVideoAdapter, premiumMusicAdapter, premiumVoiceAdapter,
 } from './adapters/premium-mcp.js';
+import { comfySovereignImageAdapter } from './adapters/comfy-sovereign.js';
+import { comfySovereignMusicAdapter } from './adapters/comfy-sovereign-music.js';
 
 /** Always-available fallback so a call never hard-fails on a missing adapter. */
 export const mockAdapter = {
@@ -22,6 +24,10 @@ const BUNDLED = [
   musicDeterministicAdapter, sfxDeterministicAdapter,
   videoDeterministicAdapter, voiceDeterministicAdapter,
   premiumImageAdapter, premiumVideoAdapter, premiumMusicAdapter, premiumVoiceAdapter,
+  // Opt-in Sovereign upgrade: when COMFY_URL is set, local ComfyUI replaces the
+  // deterministic image adapter at image:0 (it still falls back to deterministic
+  // internally if the server is unreachable). Unset = original behaviour.
+  ...(typeof process !== 'undefined' && process.env?.COMFY_URL ? [comfySovereignImageAdapter, comfySovereignMusicAdapter] : []),
 ];
 
 export function createRegistry(extra = []) {

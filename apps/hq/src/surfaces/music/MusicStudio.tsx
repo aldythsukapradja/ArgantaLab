@@ -10,8 +10,10 @@
 import { Component, Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Music2, Wand2, X, Send, Play, Pause, Plus, Disc3, History, Rocket,
-  SlidersHorizontal, ListMusic, Drum as DrumIcon, Download, Library, Music3,
+  SlidersHorizontal, ListMusic, Drum as DrumIcon, Download, Library, Music3, Mic,
 } from 'lucide-react'
+import { saveAudioAsset } from '../../lib/audioLibrary'
+import { loadVoiceProfiles, auditionVoice, SEED_VOICES, type VoiceProfile } from '../../lib/voiceRegistry'
 import {
   MUSIC_THEMES, MusicTransport, INSTRUMENTS, KITS, SCALES, CHORD_PROGS, NOTE_BASE,
   ROLES, ROLE_LABEL, createMasterChain, publishMusicLibrary, loadActiveMusic,
@@ -65,6 +67,10 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
   const [classicalMood, setClassicalMood] = useState<string>('all')
   const [anthemPlayingId, setAnthemPlayingId] = useState<string | null>(null)
   const anthemTimerRef = useRef<number | undefined>(undefined)
+  // S1 — the central voice registry (jarvis/lady), audition via browser TTS
+  const [voices, setVoices] = useState<VoiceProfile[]>(SEED_VOICES)
+  const [voiceLine, setVoiceLine] = useState('Arganta Head Quarters is coming online.')
+  useEffect(() => { loadVoiceProfiles().then(setVoices) }, [])
   // composer chat
   const [botOpen, setBotOpen] = useState(false)
   const [botPrompt, setBotPrompt] = useState('')
@@ -197,6 +203,14 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
       downloadBlob(blob, `${slug(T.name)}-${recBars}bars.webm`)
       setRecording(false)
       setStatus(`Recorded ${recBars} bars of “${T.name}” · ${(blob.size / 1024).toFixed(0)} KB — drop it anywhere.`)
+      // S1: also land it in the Audio Library (best-effort; the download always
+      // happens regardless). Consumers (Video/Post/Cinema) read from there.
+      if (cloudEnabled) {
+        const secs = recBars * 4 * (60 / T.bpm)
+        saveAudioAsset(blob, { name: `${T.name} · ${recBars} bars`, kind: 'music', prompt: `${T.mood} · ${T.root} ${T.scale} · ${T.bpm}bpm`, durationSec: secs, tags: [T.mood, T.scale], provider: 'browser-record', sourceRef: realm })
+          .then(id => setStatus(`Saved to Audio Library (${id}) — available in Video & Post Studio.`))
+          .catch(err => setStatus(`Recorded locally; library save skipped: ${err.message}`))
+      }
     }
     const ms = recBars * 4 * (60 / T.bpm) * 1000
     setRecording(true)
@@ -230,7 +244,7 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
       {/* ── top bar ── */}
       <div className="msx-top">
         <div className="msx-mark"><Music2 size={15} /></div>
-        <div className="msx-title"><b>Music Builder</b><span>Music Studio · generative · zero-asset</span></div>
+        <div className="msx-title"><b>Audio Studio</b><span>music · sfx · voice — Arganta's single source of audio</span></div>
         <div className="seg" role="group" aria-label="Stage">
           <button className={viz3d ? 'on' : ''} onClick={() => setViz3d(true)}>3D</button>
           <button className={!viz3d ? 'on' : ''} onClick={() => setViz3d(false)}>2D</button>
@@ -394,6 +408,18 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
               ))}
             </div>
             <span className="msx-mini">Public-domain melodies — every composer died 70+ years ago, or (Spanish Romance) is historically anonymous — synthesized live here, zero audio files. A modern <i>recording</i> of the same piece is still copyrighted; only the notes are free.</span>
+          </div>
+
+          <div className="msx-panel">
+            <div className="msx-ph"><Mic size={13} /> Voice<span className="badge">central registry</span></div>
+            <input className="msx-sel" style={{ width: '100%' }} value={voiceLine} onChange={e => setVoiceLine(e.target.value)} placeholder="Type a line to audition…" />
+            {voices.map(v => (
+              <div key={v.id} className="msx-row" style={{ justifyContent: 'space-between' }}>
+                <span className="msx-mini"><b>{v.name}</b> · {v.accent} {v.gender}</span>
+                <button className="msx-chip" onClick={() => auditionVoice(voiceLine, v)} title="Audition (browser voice, sovereign)"><Play size={10} /> audition</button>
+              </div>
+            ))}
+            <span className="msx-mini">The one home Copilot &amp; Cinema resolve voices from. Sovereign audition uses the browser voice now; local ComfyUI TTS (Jarvis/Lady) slots in above it — no billing.</span>
           </div>
 
           <div className="msx-panel">

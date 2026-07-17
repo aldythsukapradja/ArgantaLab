@@ -5,7 +5,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { FORMAT_ASPECT, generateViaCloudflare, generateViaLeonardo, generateViaLocalComfy, generateViaModal, type ImageResult } from './providers'
+import { FORMAT_ASPECT, generateViaCloudflare, generateViaLeonardo, generateViaLocalComfy, generateViaModal, generateMusicViaLocalComfy, type ImageResult } from './providers'
 import { persistToSupabase } from './persist'
 import { registerPixelVaultTools } from './pixelVault'
 
@@ -32,6 +32,41 @@ const PROVIDERS = (ORDER.length ? ORDER : DEFAULT_ORDER).map((name) => ({ name, 
 
 export function registerTools(server: McpServer) {
   registerPixelVaultTools(server)
+
+  // Sovereign music — local ComfyUI ACE-Step 1.5 only (no billing path). Saves a
+  // FLAC/MP3 to disk and, if Supabase keys are set, to the media-artifacts bucket
+  // with an audio lineage row. See Phase O2 — graph needs a live verify after the
+  // ACE-Step model finishes downloading + ComfyUI restarts.
+  server.tool(
+    'generate_music',
+    'Generate a music clip locally with ComfyUI ACE-Step 1.5 (sovereign, zero cost — no cloud/billing). ' +
+    'Give a comma-tag style prompt (e.g. "lofi, warm, rainy, mellow piano") and a duration; optional lyrics. ' +
+    'Saves a FLAC/MP3 file and reports the path. Requires the ACE-Step checkpoint (tools/comfyui/download-media-models.ps1) and a running ComfyUI.',
+    {
+      tags: z.string().min(2).describe('comma-separated style tags, e.g. "epic, orchestral, driving drums"'),
+      seconds: z.number().min(4).max(240).optional().describe('duration in seconds (default 30)'),
+      lyrics: z.string().optional().describe('optional lyrics; omit for instrumental'),
+      outPath: z.string().optional().describe('where to save (default: generated-media/music-<ts>.<ext>)'),
+    },
+    async ({ tags, seconds, lyrics, outPath }) => {
+      const secs = seconds || 30
+      try {
+        const r = await generateMusicViaLocalComfy(tags, secs, lyrics || '')
+        const ext = r.mime === 'audio/mpeg' ? 'mp3' : 'flac'
+        const path = resolve(outPath || join('generated-media', `music-${Date.now().toString(36)}.${ext}`))
+        mkdirSync(dirname(path), { recursive: true })
+        writeFileSync(path, r.bytes)
+        const persisted = await persistToSupabase({
+          bytes: r.bytes, mime: r.mime, provider: r.provider, model: r.model,
+          prompt: tags, format: 'audio', kind: 'music', seconds: r.seconds,
+        })
+        return json({ ok: true, provider: r.provider, model: r.model, path, mime: r.mime, seconds: r.seconds, bytes: r.bytes.length, supabase: persisted })
+      } catch (e: any) {
+        return fail(`generate_music failed: ${e?.message || e}`)
+      }
+    },
+  )
+
   server.tool(
     'generate_image',
     'Generate an image from a text prompt using free-tier providers, trying each in order and ' +
