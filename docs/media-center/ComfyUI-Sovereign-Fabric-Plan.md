@@ -186,10 +186,12 @@ Committed to main (2026-07-17 overnight):
   panel with jarvis/lady browser-TTS audition. Commit 0501e196.
   STILL TODO in S1: SFX tab (promote SFX Forge from Legacy), Ship scope, and the
   SUPERVISED Cinema/Copilot rewiring to resolve voices by id.
-- **O2** ✅ (code) sovereign music engine — comfy-sovereign-music.js (media-core
-  music:0) + generate_music MCP tool (ACE-Step 1.5). Commit 0501e196.
-  ⚠️ GRAPH UNVERIFIED — needs a live run after ACE-Step finishes downloading +
-  ComfyUI restart (was blocked by LoRA training). First verify: call generate_music.
+- **O2** ✅ VERIFIED sovereign music engine — comfy-sovereign-music.js (media-core
+  music:0) + generate_music MCP tool (ACE-Step 1.5). Commits 0501e196, 4c119565.
+  Rendered real 48kHz MP3s through the shipped adapter (~24s/clip on the 3070 Ti).
+  Graph = bundled audio_ace_step_1_5_checkpoint (1.5 nodes + ModelSamplingAuraFlow
+  + VAEDecodeAudio + SaveAudioMP3, 8 steps/cfg 1). LoRA (arganta-sd15-v003-high)
+  is present; sovereign IMAGE engine also re-verified end-to-end same session.
 - **S3b** ✅ Pixel Forge tab — `pixel_brief` queue (migration_pixel_brief.sql,
   PENDING run), Forge composer UI, `pixel_brief_list`/`pixel_brief_resolve` MCP
   tools. Commit 9faef114.
