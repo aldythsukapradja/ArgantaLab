@@ -199,9 +199,17 @@ Committed to main (2026-07-17 overnight):
 Migrations to RUN in Supabase (morning): migration_audio_media.sql,
 migration_pixel_brief.sql. (migration_pixel_ingest.sql already run.)
 
+- **O5** ✅ VERIFIED sovereign video engine — comfy-sovereign-video.js (media-core
+  video:0) + generate_video MCP tool (Wan 2.2 TI2V-5B). Commit 4d1980e8. Rendered
+  a real MP4 on the 3070 Ti (8GB) via weight offload; graph = bundled
+  video_wan2_2_5B_ti2v template. Keep small (384²/25 frames) on 8GB.
+
+ALL THREE SOVEREIGN ENGINES LIVE: image (z-image) · music (ACE-Step 1.5) ·
+video (Wan 2.2 5B) — all local, zero cost, verified through shipped adapters.
+
 Pending (need hardware/founder): O3 SFX (Stable Audio gated dl), O4 voice (TTS
-node install — do AFTER LoRA training), O1 LoRA wiring (training running), O5
-video (Wan dl), O6 3D, S2 Video Studio, S4 shared extraction, O8 hardening.
+node install), O1 LoRA wiring (LoRA present, not yet wired into image spec),
+O6 3D (Hunyuan3D dl), S2 Video Studio, S4 shared extraction, O8 hardening.
 
 # Track S — Studio Revamp (HQ surfaces on the Post Studio DNA)
 

@@ -74,7 +74,9 @@ async function runComfyVideo(spec) {
     const histData = await hist.json().catch(() => null);
     const entry = histData?.[promptId];
     if (!entry) continue;
-    const vids = Object.values(entry.outputs || {}).flatMap((o) => o?.video || o?.gifs || []);
+    // SaveVideo emits the MP4 under `images` (with an `animated` flag), not
+    // `video`/`gifs` — check all three so the poll actually completes.
+    const vids = Object.values(entry.outputs || {}).flatMap((o) => o?.video || o?.gifs || o?.images || []);
     if (vids.length) {
       const v = vids[0];
       const q = new URLSearchParams({ filename: v.filename, subfolder: v.subfolder || '', type: v.type || 'output' });
