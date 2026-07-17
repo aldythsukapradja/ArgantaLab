@@ -74,13 +74,19 @@ class ImageModel:
         self.pipe.to("cuda")
 
     @modal.method()
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, width: int = 1024, height: int = 1024, steps: int = 4) -> str:
+        # width/height/steps are OPTIONAL and default to the original values, so
+        # the existing media-proxy contract ({ "prompt": ... }) is unchanged.
+        # FLUX likes multiples of 16; clamp to a sane range to avoid OOM/garbage.
+        width = max(256, min(1536, (int(width) // 16) * 16))
+        height = max(256, min(1536, (int(height) // 16) * 16))
+        steps = max(1, min(12, int(steps)))
         image = self.pipe(
             prompt,
-            num_inference_steps=4,   # schnell is a 4-step distilled model
+            num_inference_steps=steps,   # schnell is a 4-step distilled model
             guidance_scale=0.0,
-            height=1024,
-            width=1024,
+            height=height,
+            width=width,
         ).images[0]
         buf = io.BytesIO()
         image.save(buf, format="PNG")
@@ -103,5 +109,20 @@ def web(data: dict, request):
     if not prompt:
         return JSONResponse({"error": "prompt required"}, status_code=400)
 
-    b64 = ImageModel().generate.remote(prompt)
+    # Optional sizing — absent → original 1024x1024 defaults. Backward compatible.
+    d = data or {}
+    b64 = ImageModel().generate.remote(
+        prompt,
+        width=d.get("width", 1024),
+        height=d.get("height", 1024),
+        steps=d.get("steps", 4),
+    )
     return JSONResponse({"image_base64": b64})
+
+
+@app.function(image=image)
+@modal.fastapi_endpoint(method="GET")
+def health():
+    # Cheap liveness probe for the HQ panel — does NOT spin up the GPU class.
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"ok": True, "service": "arganta-media-image", "model": MODEL})

@@ -1,0 +1,25 @@
+{
+  "name": "media-gen-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP bridge: generate_image tries free-tier providers in order (Cloudflare Workers AI, then Leonardo.ai) and falls back automatically when one is out of daily credits.",
+  "bin": {
+    "media-gen-mcp": "src/server.ts"
+  },
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "stdio": "tsx src/server.ts",
+    "inspect": "npx -y @modelcontextprotocol/inspector tsx src/server.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.3.3"
+  }
+}

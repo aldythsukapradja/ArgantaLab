@@ -42,6 +42,12 @@ export interface Family {
   laws: Law[]
 }
 
+/** The sixth spine item. Not a law family — it is THE DOCTRINE (how we speak
+ *  to the outside world) folded into the same left-hand navigation, after
+ *  Voice, per the founder's explicit call: one spine, not a fourth pill. See
+ *  Doctrine.tsx for the rendered content and doctrineData.ts for its data. */
+export const DOCTRINE_SPINE = { id: 'doctrine', roman: 'VI', label: 'Doctrine', blurb: 'How we speak to the outside world — the marketing canon, grounded to the real products.' }
+
 export const CREED = ['Make it data.', 'Render it live.', 'Name the gap.', 'Spend boldness once.']
 
 /** The vault note id the "Read the canon" link opens. */

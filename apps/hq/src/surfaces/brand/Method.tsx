@@ -23,7 +23,8 @@ import {
 
 const brandAccent = (id: string) => (BRAND_BASES as any)[id]?.identity?.palette?.accent || '#888'
 import { Mark, LivePost } from './scenes'
-import { FAMILIES, CREED, METHOD_NOTE, type Law, type Family } from './methodData'
+import { FAMILIES, CREED, METHOD_NOTE, DOCTRINE_SPINE, type Law, type Family } from './methodData'
+import { Doctrine } from './Doctrine'
 
 const GLYPH: Record<string, string> = { ok: '✓', draft: '✎', warn: '!', missing: '×', na: '–' }
 
@@ -35,9 +36,12 @@ export interface MethodProps {
   onSource: (id: string) => void
 }
 
+type SpineId = Family['id'] | typeof DOCTRINE_SPINE.id
+
 export function Method({ context, live, onSource }: MethodProps) {
-  const [famId, setFamId] = useState<Family['id']>(FAMILIES[0].id)
-  const family = FAMILIES.find(f => f.id === famId) || FAMILIES[0]
+  const [famId, setFamId] = useState<SpineId>(FAMILIES[0].id)
+  const family = FAMILIES.find(f => f.id === famId)
+  const onDoctrine = famId === DOCTRINE_SPINE.id
 
   return (
     <div className="bs-method">
@@ -48,18 +52,26 @@ export function Method({ context, live, onSource }: MethodProps) {
             <em>{f.roman}</em><span>{f.label}</span><i>{f.laws.length}</i>
           </button>
         ))}
-        <button className="bs-fam-canon" onClick={() => onSource(METHOD_NOTE)}>READ THE CANON →</button>
+        <button className={'bs-fam-b' + (onDoctrine ? ' on' : '')} onClick={() => setFamId(DOCTRINE_SPINE.id)} title={DOCTRINE_SPINE.blurb}>
+          <em>{DOCTRINE_SPINE.roman}</em><span>{DOCTRINE_SPINE.label}</span><i>7</i>
+        </button>
+        <button className="bs-fam-canon" onClick={() => onSource(onDoctrine ? 'brand-f9-marketing-doctrine' : METHOD_NOTE)}>READ THE CANON →</button>
         <div className="bs-creed">
           <b>THE CREED</b>
           {CREED.map(line => <span key={line}>{line}</span>)}
         </div>
       </aside>
 
-      <div className="bs-laws">
-        {family.laws.map(law => <LawCard key={law.n} law={law} context={context} live={live} onSource={onSource} />)}
-      </div>
-
-      <Reference context={context} />
+      {onDoctrine ? (
+        <div className="bs-doctrine-embed"><Doctrine onSource={onSource} /></div>
+      ) : (
+        <>
+          <div className="bs-laws">
+            {(family || FAMILIES[0]).laws.map(law => <LawCard key={law.n} law={law} context={context} live={live} onSource={onSource} />)}
+          </div>
+          <Reference context={context} />
+        </>
+      )}
     </div>
   )
 }

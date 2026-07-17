@@ -11,6 +11,7 @@ import { blankBrand, validateBrand, deepMerge, LAYERS } from '../src/schema.js'
 import { validateField, requiredAssets, platformSpec, MATRIX_COLUMNS } from '../src/specs.js'
 import { markToSvg, markVariants } from '../src/mark.js'
 import { resolveBrand, createRegistry, matrix, readiness, platformRow, OK, WARN, MISSING, NA } from '../src/registry.js'
+import { PLATFORM_KIT, listKitPlatforms, kitPlatform, kitStatus } from '../src/kit.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const base = JSON.parse(fs.readFileSync(path.join(here, '../brands/argantalab/brand.json'), 'utf8'))
@@ -456,4 +457,74 @@ test('bases: kinetikcircle wears Resonance Rings — the K-mark is superseded', 
   assert.match(svg, /<circle [^>]*cx="60" cy="22" r="4"/)         // the star on orbit
   // the procedural K-mark BF-3 rescued out of postEngine is gone from the data
   assert.ok(!svg.includes('#22D3EE'), 'the old cyan tile must not survive')
+})
+
+// ── Kit: the Brand Kit / "Fitting Room" asset registry ─────────
+test('kit: every platform is listed, one social/app/web mix, no duplicate ids', () => {
+  const ids = listKitPlatforms().map((p) => p.id)
+  assert.equal(new Set(ids).size, ids.length)
+  assert.ok(ids.includes('instagram') && ids.includes('ios') && ids.includes('android') && ids.includes('splash') && ids.includes('web'))
+  assert.equal(kitPlatform('instagram').category, 'social')
+  assert.equal(kitPlatform('ios').category, 'app')
+  assert.equal(kitPlatform('web').category, 'web')
+  assert.equal(kitPlatform('nope'), null)
+})
+
+test('kit: a blank brand is GAP everywhere — no mark, no palette, no presence', () => {
+  const rows = kitStatus(blankBrand('x', 'X'))
+  const allAssets = rows.flatMap((r) => r.assets)
+  assert.ok(allAssets.every((a) => a.state === 'missing'), 'blankBrand must never read as kit-ready')
+  assert.ok(rows.every((r) => r.pct === 0))
+})
+
+test('kit: a fully-resolved brand is asset-ready for mark/composed kinds; text follows presence', () => {
+  const { doc } = resolveBrand(base, overlay)
+  const rows = kitStatus(doc)
+  const ios = rows.find((r) => r.id === 'ios')
+  assert.ok(ios.assets.every((a) => a.state === 'ok'), 'iOS icons need only mark geometry, which argantalab has')
+  const web = rows.find((r) => r.id === 'web')
+  assert.equal(web.assets.find((a) => a.id === 'favicon32').state, 'ok')
+  // instagram's text assets depend on the founder-lane presence overlay, not on
+  // the mark — a brand can have a perfect logo and zero bio, and the kit must
+  // say so per-asset rather than rolling everything into one platform score.
+  const ig = rows.find((r) => r.id === 'instagram')
+  const igAvatar = ig.assets.find((a) => a.id === 'avatar')
+  assert.equal(igAvatar.state, 'ok')
+})
+
+test('kit: readiness derives — adding a platform here needs no per-brand update', () => {
+  // The whole point of Law 08 applied to the kit: kitStatus() is a pure
+  // function of PLATFORM_KIT + the doc. Calling it twice on the same doc is
+  // stable, and every brand in BRAND_ORDER produces a row for every platform.
+  const { doc } = resolveBrand(base, overlay)
+  const a = kitStatus(doc)
+  const b = kitStatus(doc)
+  assert.deepEqual(a, b)
+  assert.equal(a.length, PLATFORM_KIT.length)
+})
+
+test('kit: display name is audited — the gap that hid a real 32/30 overflow', () => {
+  // registry.js's matrix() checks handle and bio but never `name`, so
+  // ArgantaLab's Instagram display name ("ArgantaLab · Play, Learn & Build",
+  // 32 chars) sat 2 over Instagram's 30 with nothing reporting it. The Fitting
+  // Room's own char counter surfaced it the first time a human opened EDIT.
+  // Pinning both halves: the field is now audited, and this specific string is
+  // still over — delete the second assert only when the copy is actually fixed.
+  const { doc } = resolveBrand(base, overlay)
+  const ig = kitStatus(doc).find((r) => r.id === 'instagram')
+  const name = ig.assets.find((a) => a.id === 'name')
+  assert.ok(name, 'instagram must audit its display name')
+  assert.equal(name.state, 'warn')
+  assert.match(name.note, /2 over the 30 limit/)
+})
+
+test('kit: TikTok bio over the 80-char limit reports warn, not a silent truncation', () => {
+  const doc = deepMerge(blankBrand('x', 'X'), {
+    identity: { mark: base.identity.mark, palette: base.identity.palette },
+    presence: { tiktok: { bio: 'x'.repeat(90) } },
+  })
+  const tiktok = kitStatus(doc).find((r) => r.id === 'tiktok')
+  const bio = tiktok.assets.find((a) => a.id === 'bio')
+  assert.equal(bio.state, 'warn')
+  assert.match(bio.note, /over the 80 limit/)
 })

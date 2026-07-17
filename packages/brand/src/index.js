@@ -8,6 +8,7 @@
 export * from './lanes.js'
 export * from './schema.js'
 export * from './specs.js'
+export * from './kit.js'
 export * from './mark.js'
 export * from './registry.js'
 export * from './voice.js'

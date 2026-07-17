@@ -10,6 +10,10 @@
     "arganta-core-content": {
       "command": "npx",
       "args": ["tsx", "tools/arganta-core-mcp/src/server.ts"]
+    },
+    "media-gen": {
+      "command": "npx",
+      "args": ["tsx", "tools/media-gen-mcp/src/server.ts"]
     }
   }
 }

@@ -7,3 +7,7 @@ dist/
 .DS_Store
 Thumbs.db
 .vite/
+generated-media/
+# ComfyUI models/outputs must never enter git (server lives at C:\ComfyUI anyway)
+**/ComfyUI_windows_portable/
+**/models/checkpoints/*.safetensors

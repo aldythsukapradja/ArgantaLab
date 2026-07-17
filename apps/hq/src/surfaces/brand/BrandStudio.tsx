@@ -14,32 +14,47 @@
  *  · the demo is real           — AppEmbed embeds live apps in deck scenes
  *  · provenance discipline      — nothing simulated is shown as measured
  *
- * The audit (readiness, platform matrix, production queue) is NOT the cover —
- * it is the appendix, one keystroke away in Operator mode. Investors get the
- * show; the founder gets the instruments.
+ * The Operator tab is not an audit dashboard — it is THE METHOD: 20 design laws
+ * in 5 families, the mental models behind every call this system makes. The old
+ * audit (readiness, matrix) still exists, demoted to the specimen for Law 08
+ * ("the audit derives") rather than a page of its own. See ./Method.tsx and
+ * knowledge-base/brand/the-method.md. THE DOCTRINE (how we speak to the
+ * outside world) is folded into that same spine as item VI, after Voice — one
+ * spine, not a fourth pill.
  *
- * Keys: ← → scenes · ↑ / Esc constellation · O operator · any key skips ignition.
+ * Three pills: BRANDING (default — the Fitting Room: every platform, worn
+ * live), OPERATOR (the daily design reference), CINEMATIC (the flight through
+ * the universe, for showing someone). Ignition plays once, on first entry to
+ * Cinematic — not on mount, so opening your reference page costs no ceremony.
+ *
+ * Keys: 1/2/3 switch pills · (Cinematic) ← → scenes · ↑ / Esc constellation ·
+ * any key skips ignition.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BRAND_ORDER, BRAND_ROLE, BRAND_BASES, SEED_OVERLAYS,
-  resolveBrand, voiceBlock, readiness, matrix, LAYERS,
+  resolveBrand, voiceBlock, readiness,
 } from '@arganta/brand'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { useHQ } from '../../shell/store'
 import { useVault } from '../../vault/store'
 import { BRAND_SCENES, SCENE_NAMES, Mark } from './scenes'
+import { Method } from './Method'
+import { Branding } from './Branding'
 import './brand-studio.css'
 
 const SCENES_PER_LANE = BRAND_SCENES.length
+type View = 'branding' | 'operator' | 'cinematic'
 
 export function BrandStudio() {
   const { go } = useHQ()
+  const [view, setView] = useState<View>('branding')
   const [overlays, setOverlays] = useState<Record<string, any> | null>(null)
   const [lane, setLane] = useState(0)          // 0 = constellation, 1..5 = worlds
   const [scene, setScene] = useState(0)
-  const [phase, setPhase] = useState<'ignition' | 'flying'>('ignition')
-  const [operator, setOperator] = useState(false)
+  // Ignition is scoped to Cinematic's first entry — 'unseen' until you switch
+  // to that pill at least once, so the daily Operator view never sits through it.
+  const [phase, setPhase] = useState<'unseen' | 'ignition' | 'flying'>('unseen')
   const rootRef = useRef<HTMLDivElement>(null)
 
   // Founder lane: the DB is authoritative the moment it has rows; the git seed
@@ -62,21 +77,40 @@ export function BrandStudio() {
   const world = lane > 0 ? worlds[lane - 1] : null
   const pal = world?.doc?.identity?.palette || {}
 
-  // ── ignition: plays once, any key skips ──
+  // The Method is "brand-aware": whichever world you last flew into in
+  // Cinematic, else ArgantaLab (the most complete brand — the best classroom).
+  const context = world || worlds.find((w: any) => w.id === 'argantalab') || worlds[0]
+
+  // ── ignition: plays once, on first entry to Cinematic — never on mount.
+  // The Operator view (the default) is a reference page opened many times a
+  // day; it must never sit through ceremony.
+  //
+  // The guard is a REF, not the `phase` state itself. Including `phase` in this
+  // effect's own dependency array was the first version's bug: setPhase
+  // ('ignition') changes `phase`, which re-runs the effect before the timeout
+  // fires, and the effect's cleanup then cancels its own timer — phase gets
+  // stuck at 'ignition' forever, auto-advance never happens. Depending only on
+  // `view`, with a ref to remember "already ignited", breaks that self-trigger.
+  const ignitedRef = useRef(false)
   useEffect(() => {
+    if (view !== 'cinematic' || ignitedRef.current) return
+    ignitedRef.current = true
+    setPhase('ignition')
     const t = setTimeout(() => setPhase('flying'), 2100)
     return () => clearTimeout(t)
-  }, [])
+  }, [view])
 
   const fly = useCallback((l: number, s = 0) => { setLane(l); setScene(s) }, [])
 
-  // ── flight controls ──
+  // ── keyboard: 1/2 switch pills everywhere; flight keys only in Cinematic ──
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (phase === 'ignition') { setPhase('flying'); return }
+      if (view === 'cinematic' && phase === 'ignition') { setPhase('flying'); return }
       const k = e.key
-      if (k === 'o' || k === 'O') { setOperator(v => !v); return }
-      if (operator) { if (k === 'Escape') setOperator(false); return }
+      if (k === '1') { setView('branding'); return }
+      if (k === '2') { setView('operator'); return }
+      if (k === '3') { setView('cinematic'); return }
+      if (view !== 'cinematic') return
       if (k === 'Escape' || k === 'ArrowUp') { fly(0, 0); return }
       if (lane === 0) return
       if (k === 'ArrowRight') { e.preventDefault(); setScene(s => Math.min(s + 1, SCENES_PER_LANE - 1)) }
@@ -84,29 +118,31 @@ export function BrandStudio() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [phase, operator, lane, fly])
+  }, [view, phase, lane, fly])
 
-  // Re-ink: the whole cockpit takes the active world's palette. At the hub it
-  // returns to Arganta's, the parent of the family.
+  // Re-ink: the whole cockpit takes the active world's palette. At the hub (or
+  // in Operator) it takes the context brand's — never a hardcoded default.
   const style = {
-    '--bs-accent': pal.accent || '#3DE08A',
-    '--bs-bg': pal.bg || '#070A12',
-    '--bs-ink': pal.ink || '#F8FAFF',
-    '--bs-soft': pal.soft || '#9AA8BF',
-    '--bs-plate': pal.plateBg || '#FFC24B',
+    '--bs-accent': pal.accent || context?.doc?.identity?.palette?.accent || '#3DE08A',
+    '--bs-bg': pal.bg || context?.doc?.identity?.palette?.bg || '#070A12',
+    '--bs-ink': pal.ink || context?.doc?.identity?.palette?.ink || '#F8FAFF',
+    '--bs-soft': pal.soft || context?.doc?.identity?.palette?.soft || '#9AA8BF',
+    '--bs-plate': pal.plateBg || context?.doc?.identity?.palette?.plateBg || '#FFC24B',
   } as React.CSSProperties
 
-  // The show links to the canon: each scene footnotes the strategy doc it
+  // Both views link to the canon: a law or a scene footnotes the doc it
   // embodies, and this lands the operator on that note in the Vault.
   const openVault = (noteId: string) => {
     try { useVault.getState().openNote(noteId) } catch { /* vault store lazy-inits on its surface */ }
     go('vault')
   }
 
+  const igniting = view === 'cinematic' && phase === 'ignition'
+
   return (
-    <div className={'bs' + (phase === 'ignition' ? ' bs-igniting' : '')} style={style} ref={rootRef}>
-      {/* ── ignition ── */}
-      {phase === 'ignition' && (
+    <div className={'bs' + (view === 'cinematic' ? ' bs-cine' : '') + (igniting ? ' bs-igniting' : '')} style={style} ref={rootRef}>
+      {/* ── ignition (Cinematic only, first entry) ── */}
+      {igniting && (
         <div className="bs-ignition" onClick={() => setPhase('flying')}>
           <div className="bs-ig-mark"><Mark doc={worlds[1]?.doc} size={120} active /></div>
           <div className="bs-ig-label">BRAND SYSTEM ONLINE</div>
@@ -119,45 +155,63 @@ export function BrandStudio() {
         <div className="bs-hud-l">
           <span className="bs-hud-mark" />
           <b>BRAND SYSTEM</b>
-          <span className="bs-crumb">{world ? <>CONSTELLATION <i>/</i> {world.doc.name.toUpperCase()} <i>/</i> {SCENE_NAMES[scene].toUpperCase()}</> : <>CONSTELLATION</>}</span>
+          <div className="bs-pill">
+            <button className={view === 'branding' ? 'on' : ''} onClick={() => setView('branding')}>BRANDING</button>
+            <button className={view === 'operator' ? 'on' : ''} onClick={() => setView('operator')}>OPERATOR</button>
+            <button className={view === 'cinematic' ? 'on' : ''} onClick={() => setView('cinematic')}>CINEMATIC</button>
+          </div>
+          {view === 'branding' && <span className="bs-chip">THE FITTING ROOM</span>}
+          {view === 'operator' && <span className="bs-chip">THE METHOD · 20 LAWS + DOCTRINE</span>}
+          {view === 'cinematic' && <span className="bs-crumb">{world ? <>CONSTELLATION <i>/</i> {world.doc.name.toUpperCase()} <i>/</i> {SCENE_NAMES[scene].toUpperCase()}</> : <>CONSTELLATION</>}</span>}
         </div>
         <div className="bs-hud-r">
           <span className={'bs-sig' + (live ? ' on' : '')}><i />{live ? 'REGISTRY · LIVE' : 'REGISTRY · SEED'}</span>
           <span className="bs-lane-k"><i className="a" />AGENT · GIT</span>
           <span className="bs-lane-k"><i className="f" />FOUNDER · DB</span>
-          <button className={'bs-op-btn' + (operator ? ' on' : '')} onClick={() => setOperator(v => !v)} title="Operator mode — readiness, platform audit, production queue (O)">
-            <i />OPERATOR<b>O</b>
-          </button>
+          {(view === 'operator' || view === 'branding') && context && <span className="bs-chip">CONTEXT · {context.doc.name.toUpperCase()}</span>}
         </div>
       </div>
 
-      {/* ── the flight ── */}
-      <div className="bs-flight">
-        <div className="bs-camera" style={{ transform: `translate3d(${-scene * 100}%, ${-lane * 100}%, 0)` }}>
-          {/* lane 0 · the constellation */}
-          <div className="bs-cell" style={{ left: 0, top: 0 }}>
-            <Constellation worlds={worlds} active={lane === 0 && phase === 'flying'} onEnter={(i) => fly(i + 1, 0)} />
-          </div>
-          {/* lanes 1..5 · the worlds */}
-          {worlds.map((w: any, li: number) => BRAND_SCENES.map((S, si) => (
-            <div key={w.id + si} className="bs-cell" style={{ left: `${si * 100}%`, top: `${(li + 1) * 100}%` }}>
-              <S doc={w.doc} voice={w.voice} active={lane === li + 1 && scene === si && phase === 'flying'} onSource={openVault} />
-            </div>
-          )))}
-        </div>
-      </div>
-
-      {/* ── scene dots ── */}
-      {lane > 0 && (
-        <div className="bs-dots">
-          {SCENE_NAMES.map((n, i) => (
-            <button key={n} className={'bs-dot' + (i === scene ? ' on' : '')} onClick={() => setScene(i)} title={n}><i /><span>{n}</span></button>
-          ))}
-          <button className="bs-dot bs-dot-up" onClick={() => fly(0, 0)} title="Back to the constellation (Esc)"><i />↑</button>
-        </div>
+      {/* ── BRANDING: the Fitting Room — every platform, worn live ── */}
+      {view === 'branding' && context && (
+        <Branding worlds={worlds} contextId={context.id} onSource={openVault}
+          onSaved={(id, overlay) => setOverlays(o => ({ ...(o || {}), [id]: overlay }))} />
       )}
 
-      {operator && <Operator worlds={worlds} lane={lane} live={live} onClose={() => setOperator(false)} onPick={(i) => { fly(i + 1, 0); setOperator(false) }} />}
+      {/* ── OPERATOR: The Method (+ The Doctrine, folded in as spine item VI) ── */}
+      {view === 'operator' && context && (
+        <Method context={context} live={live} onSource={openVault} />
+      )}
+
+      {/* ── CINEMATIC: the flight through the universe ── */}
+      {view === 'cinematic' && (
+        <>
+          <div className="bs-flight">
+            <div className="bs-camera" style={{ transform: `translate3d(${-scene * 100}%, ${-lane * 100}%, 0)` }}>
+              {/* lane 0 · the constellation */}
+              <div className="bs-cell" style={{ left: 0, top: 0 }}>
+                <Constellation worlds={worlds} active={lane === 0 && phase === 'flying'} onEnter={(i) => fly(i + 1, 0)} />
+              </div>
+              {/* lanes 1..5 · the worlds */}
+              {worlds.map((w: any, li: number) => BRAND_SCENES.map((S, si) => (
+                <div key={w.id + si} className="bs-cell" style={{ left: `${si * 100}%`, top: `${(li + 1) * 100}%` }}>
+                  <S doc={w.doc} voice={w.voice} active={lane === li + 1 && scene === si && phase === 'flying'} onSource={openVault} />
+                </div>
+              )))}
+            </div>
+          </div>
+
+          {/* ── scene dots ── */}
+          {lane > 0 && (
+            <div className="bs-dots">
+              {SCENE_NAMES.map((n, i) => (
+                <button key={n} className={'bs-dot' + (i === scene ? ' on' : '')} onClick={() => setScene(i)} title={n}><i /><span>{n}</span></button>
+              ))}
+              <button className="bs-dot bs-dot-up" onClick={() => fly(0, 0)} title="Back to the constellation (Esc)"><i />↑</button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -189,58 +243,7 @@ function Constellation({ worlds, active, onEnter }: { worlds: any[]; active: boo
   )
 }
 
-// ── OPERATOR MODE · the appendix ──────────────────────────────
-const GLYPH: Record<string, string> = { ok: '✓', draft: '✎', warn: '!', missing: '×', na: '–' }
-
-function Operator({ worlds, lane, live, onClose, onPick }: { worlds: any[]; lane: number; live: boolean; onClose: () => void; onPick: (i: number) => void }) {
-  const [sel, setSel] = useState(Math.max(0, lane - 1))
-  const w = worlds[sel]
-  const mtx = useMemo(() => matrix(w.doc), [w])
-  return (
-    <div className="bs-op" role="dialog" aria-label="Operator mode">
-      <div className="bs-op-head">
-        <b>OPERATOR MODE</b>
-        <span>{live ? 'REGISTRY · LIVE' : 'REGISTRY · SEED'} · the audit derives from the spec library — it cannot go stale</span>
-        <div className="bs-hud-r"><button className="bs-op-x" onClick={onClose}>ESC</button></div>
-      </div>
-      <div className="bs-op-body">
-        <div className="bs-op-rail">
-          {worlds.map((x, i) => (
-            <button key={x.id} className={'bs-op-b' + (i === sel ? ' on' : '')} onClick={() => setSel(i)} onDoubleClick={() => onPick(i)}>
-              <span>{x.doc.name}</span><b>{x.r.overall}%</b>
-              <i><em style={{ width: `${x.r.overall}%`, background: x.doc.identity?.palette?.accent || '#888' }} /></i>
-            </button>
-          ))}
-          <p className="bs-op-hint">Double-click a brand to fly into its book.</p>
-        </div>
-        <div className="bs-op-main">
-          <div className="bs-op-layers">
-            {(LAYERS as any[]).map(l => {
-              const lr = w.r.layers[l.id]
-              return (
-                <div key={l.id} className="bs-op-layer" title={`${l.label} · ${lr.done}/${lr.total} · ${l.lane} lane`}>
-                  <i style={{ background: `conic-gradient(${w.doc.identity?.palette?.accent || '#888'} ${lr.pct * 3.6}deg, rgba(255,255,255,.07) 0)` }}><b>{lr.pct}</b></i>
-                  <span>{l.n}</span><em>{l.label}</em>
-                </div>
-              )
-            })}
-          </div>
-          <table className="bs-op-mtx">
-            <thead><tr><th /><th>handle</th><th>avatar</th><th>banner</th><th>bio</th><th>link</th><th>pinned</th><th>tmpl</th></tr></thead>
-            <tbody>
-              {mtx.map((row: any) => (
-                <tr key={row.platformId}>
-                  <td>{row.label}</td>
-                  {['handle', 'avatar', 'banner', 'bio', 'link', 'pinned', 'templates'].map(c => (
-                    <td key={c} className={'c-' + row.cells[c].state} title={`${row.label} ${c}: ${row.cells[c].note}`}>{GLYPH[row.cells[c].state]}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="bs-op-next"><b>NEXT</b>{w.r.next.length ? w.r.next.join(' · ') : 'canonize this brand — agent lane'}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
+// The old Operator overlay (readiness rings, platform matrix, production
+// queue) lived here. It is not deleted — it is demoted to evidence: the
+// specimen for Method's Law 08 ("the audit derives"), in ./Method.tsx
+// SpecimenAudit. See knowledge-base/brand/the-method.md.

@@ -195,18 +195,24 @@ const hexA = (hex: string, a: number) => {
 /** The actual publishing pipeline, drawing on stage. Not a mockup: makeSlide +
  *  drawSlide with RenderEnv.brand — the same calls Post Studio makes before it
  *  queues to Instagram. Change a hex in brand.json and this changes. */
-export function LivePost({ doc, active, w = 300, h = 375 }: { doc: any; active: boolean; w?: number; h?: number }) {
+export function LivePost({ doc, active, w = 300, h = 375, cycle = true, slide = 0 }: {
+  doc: any; active: boolean; w?: number; h?: number
+  /** A feed grid wants stills, not a wall of things flickering in unison —
+   *  the Fitting Room's Instagram replica renders each tile with cycle off. */
+  cycle?: boolean; slide?: number
+}) {
   const ref = useRef<HTMLCanvasElement>(null)
-  const [i, setI] = useState(0)
+  const [i, setI] = useState(slide)
   const handle = doc?.presence?.instagram?.handle
     ? '@' + String(doc.presence.instagram.handle).replace(/^@/, '')
     : '@' + doc.id
 
+  useEffect(() => { if (!cycle) setI(slide) }, [cycle, slide])
   useEffect(() => {
-    if (!active) return
+    if (!active || !cycle) return
     const t = setInterval(() => setI(v => (v + 1) % 2), 3600)
     return () => clearInterval(t)
-  }, [active])
+  }, [active, cycle])
 
   useEffect(() => {
     const cv = ref.current
