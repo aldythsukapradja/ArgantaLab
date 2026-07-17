@@ -203,6 +203,68 @@ export async function generateMusicViaLocalComfy(tags: string, seconds: number, 
   throw new Error('comfyui music timed out after 300s')
 }
 
+export interface VideoResult { bytes: Uint8Array; mime: string; provider: string; model: string }
+
+/** Local ComfyUI Wan 2.2 TI2V-5B (video). Sovereign, zero cost. VERIFIED
+ * 2026-07-18 against the bundled video_wan2_2_5B_ti2v template (real MP4 on 8GB
+ * via weight offload). Keep resolution/frames small on 8GB or it OOMs. */
+export async function generateVideoViaLocalComfy(prompt: string, opts: { width?: number; height?: number; frames?: number; fps?: number; negative?: string } = {}): Promise<VideoResult> {
+  const b = (process.env.COMFY_URL || 'http://127.0.0.1:8188').replace(/\/+$/, '')
+  const grid = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(n / 16) * 16))
+  const width = grid(opts.width || 384, 256, 1280)
+  const height = grid(opts.height || 384, 256, 1280)
+  const length = Math.max(9, Math.min(121, opts.frames || 25))
+  const fps = Math.max(8, Math.min(30, opts.fps || 24))
+  const seed = Math.floor(Math.random() * 1e15)
+  const negative = opts.negative || 'static, blurry, low quality, watermark, distorted'
+
+  const list = async (folder: string): Promise<string[]> => {
+    try { const r = await fetch(`${b}/models/${folder}`); return r.ok ? (await r.json() as string[]) : [] } catch { return [] }
+  }
+  const [diffusion, encoders, vaes] = await Promise.all([list('diffusion_models'), list('text_encoders'), list('vae')])
+  const unet = diffusion.find((m) => /wan.*ti2v.*5b/i.test(m)) || diffusion.find((m) => /wan.*5b/i.test(m))
+  const clipName = encoders.find((m) => /umt5/i.test(m))
+  const vae = vaes.find((m) => /wan.*vae/i.test(m))
+  if (!unet || !clipName || !vae) throw new Error('comfyui missing Wan 2.2 5B files (run tools/comfyui/download-media-models.ps1, then restart ComfyUI)')
+
+  const graph: Record<string, unknown> = {
+    '37': { class_type: 'UNETLoader', inputs: { unet_name: unet, weight_dtype: 'default' } },
+    '38': { class_type: 'CLIPLoader', inputs: { clip_name: clipName, type: 'wan', device: 'default' } },
+    '39': { class_type: 'VAELoader', inputs: { vae_name: vae } },
+    '48': { class_type: 'ModelSamplingSD3', inputs: { shift: 8, model: ['37', 0] } },
+    '6': { class_type: 'CLIPTextEncode', inputs: { clip: ['38', 0], text: prompt } },
+    '7': { class_type: 'CLIPTextEncode', inputs: { clip: ['38', 0], text: negative } },
+    '55': { class_type: 'Wan22ImageToVideoLatent', inputs: { vae: ['39', 0], width, height, length, batch_size: 1 } },
+    '3': { class_type: 'KSampler', inputs: { model: ['48', 0], seed, steps: 20, cfg: 5, sampler_name: 'uni_pc', scheduler: 'simple', denoise: 1, positive: ['6', 0], negative: ['7', 0], latent_image: ['55', 0] } },
+    '8': { class_type: 'VAEDecode', inputs: { samples: ['3', 0], vae: ['39', 0] } },
+    '57': { class_type: 'CreateVideo', inputs: { images: ['8', 0], fps } },
+    '58': { class_type: 'SaveVideo', inputs: { video: ['57', 0], filename_prefix: 'arganta_video', format: 'auto', codec: 'auto' } },
+  }
+  const queue = await fetch(`${b}/prompt`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: graph }) })
+  const queued: any = await queue.json().catch(() => null)
+  const promptId = queued?.prompt_id
+  if (!queue.ok || !promptId) throw new Error(`comfyui video queue failed: HTTP ${queue.status} ${queued?.error?.message || ''}`.trim())
+
+  const deadline = Date.now() + 900_000
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 3000))
+    const hist = await fetch(`${b}/history/${promptId}`)
+    const histData: any = await hist.json().catch(() => null)
+    const entry = histData?.[promptId]
+    if (!entry) continue
+    const vids = Object.values(entry.outputs || {}).flatMap((o: any) => o?.video || o?.gifs || [])
+    if (vids.length) {
+      const v: any = vids[0]
+      const q = new URLSearchParams({ filename: v.filename, subfolder: v.subfolder || '', type: v.type || 'output' })
+      const view = await fetch(`${b}/view?${q}`)
+      if (!view.ok) throw new Error(`comfyui video view failed: HTTP ${view.status}`)
+      return { bytes: new Uint8Array(await view.arrayBuffer()), mime: 'video/mp4', provider: 'local-comfyui-wan22', model: unet }
+    }
+    if (entry.status?.status_str === 'error') throw new Error('comfyui reported a Wan video error (likely OOM — reduce width/height/frames)')
+  }
+  throw new Error('comfyui video timed out after 900s')
+}
+
 /** Modal FLUX.1-schnell — your owned serverless GPU (L40S 48GB), reached THROUGH
  * the deployed media-proxy Edge Function so no token ships client-side here.
  * Only used when MEDIA_PROXY_URL + SUPABASE_ANON_KEY are set. */

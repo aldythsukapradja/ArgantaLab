@@ -5,7 +5,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { FORMAT_ASPECT, generateViaCloudflare, generateViaLeonardo, generateViaLocalComfy, generateViaModal, generateMusicViaLocalComfy, type ImageResult } from './providers'
+import { FORMAT_ASPECT, generateViaCloudflare, generateViaLeonardo, generateViaLocalComfy, generateViaModal, generateMusicViaLocalComfy, generateVideoViaLocalComfy, type ImageResult } from './providers'
 import { persistToSupabase } from './persist'
 import { registerPixelVaultTools } from './pixelVault'
 
@@ -63,6 +63,35 @@ export function registerTools(server: McpServer) {
         return json({ ok: true, provider: r.provider, model: r.model, path, mime: r.mime, seconds: r.seconds, bytes: r.bytes.length, supabase: persisted })
       } catch (e: any) {
         return fail(`generate_music failed: ${e?.message || e}`)
+      }
+    },
+  )
+
+  // Sovereign video — local ComfyUI Wan 2.2 TI2V-5B only (no billing). Small on
+  // 8GB (defaults 384² × 25 frames). Saves an MP4 + optional Supabase lineage.
+  server.tool(
+    'generate_video',
+    'Generate a short video clip locally with ComfyUI Wan 2.2 TI2V-5B (sovereign, zero cost — no cloud/billing). ' +
+    'Text-to-video from a prompt. On 8GB VRAM keep it small (defaults 384x384, 25 frames ≈ 1s); larger is slower ' +
+    'and can OOM. Saves an MP4 and reports the path. Requires the Wan 2.2 5B files + a running ComfyUI.',
+    {
+      prompt: z.string().min(3).describe('what should happen, e.g. "a calm ocean wave at golden hour, gentle motion"'),
+      width: z.number().min(256).max(1280).optional().describe('default 384 (rounded to /16)'),
+      height: z.number().min(256).max(1280).optional().describe('default 384'),
+      frames: z.number().min(9).max(121).optional().describe('frame count (default 25 ≈ 1s @24fps)'),
+      fps: z.number().min(8).max(30).optional().describe('default 24'),
+      outPath: z.string().optional().describe('where to save (default: generated-media/video-<ts>.mp4)'),
+    },
+    async ({ prompt, width, height, frames, fps, outPath }) => {
+      try {
+        const r = await generateVideoViaLocalComfy(prompt, { width, height, frames, fps })
+        const path = resolve(outPath || join('generated-media', `video-${Date.now().toString(36)}.mp4`))
+        mkdirSync(dirname(path), { recursive: true })
+        writeFileSync(path, r.bytes)
+        const persisted = await persistToSupabase({ bytes: r.bytes, mime: r.mime, provider: r.provider, model: r.model, prompt, format: 'video', kind: 'video' })
+        return json({ ok: true, provider: r.provider, model: r.model, path, mime: r.mime, bytes: r.bytes.length, supabase: persisted })
+      } catch (e: any) {
+        return fail(`generate_video failed: ${e?.message || e}`)
       }
     },
   )

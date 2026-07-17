@@ -22,6 +22,7 @@ const BUCKET = process.env.MEDIA_BUCKET || 'media-artifacts'
 const EXT_BY_MIME: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png',
   'audio/mpeg': 'mp3', 'audio/flac': 'flac', 'audio/wav': 'wav', 'audio/webm': 'webm',
+  'video/mp4': 'mp4', 'video/webm': 'webm',
 }
 
 export async function persistToSupabase(opts: {
