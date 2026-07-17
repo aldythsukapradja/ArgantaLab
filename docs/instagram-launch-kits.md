@@ -1,24 +1,25 @@
 # Instagram Launch Kits — the Five Arganta Creators
 
-Copy-paste-ready setup for all five profiles. Everything here mirrors the AI Influencer Studio surface in HQ (Studio → AI Influencer), which is the canonical source. All personas are **disclosed AI characters** — keep the AI line in every bio.
+Copy-paste-ready setup. Everything here mirrors the AI Influencer Studio surface in HQ (Studio → AI Influencer), which is the canonical source.
 
-> Account-creation order suggestion: Arganta → Lashira (the lore pair), then Kinney → Bloom → Labz. Use fresh emails, enable 2FA, switch each to a Creator account, and set category per character below.
+> **⚠️ ALIGNED 2026-07-17 to the canonical creator handoff** (`knowledge-base/brand/arganta-creator-handoff.md` + Biography Studio): **Arganta is NOT an AI character — he is the founder's real digital twin** (first person, real biography, real workspace, Arganta Core). His bio carries **no AI-disclosure line**. Lashira/Kinney/Bloom/Labz remain fictional disclosed-AI characters, but the canon pauses them: **launch Arganta alone first**; the other four wait until his account is credible and live.
 
 ---
 
-## 1 · ARGANTA — The Impossible Builder
+## 1 · ARGANTA — The Systems Builder *(real digital twin — launch this one first)*
 - **Username:** `arganta` (fallbacks: `arganta.builds`, `arganta.hq`)
-- **Name:** ARGANTA · The Impossible Builder
+- **Name:** ARGANTA · The Systems Builder
 - **Category:** Entrepreneur
-- **Bio:**
+- **Bio (canonical recommended cut):**
   ```
-  I build things that should require a company.
-  AI-generated character — real experiments, hidden mission.
-  ⌁ Day 1 of something enormous.
+  I spent 15 years modelling worlds underground.
+  Now I build intelligent systems above it.
+  Building Arganta Core.
   ```
-- **Highlights:** Builds · AI · Fitness · Logs · BTS
-- **Pinned posts:** WHO I AM (cinematic intro) · BUILDER MINDSET (philosophy carousel) · BEYOND LIMITS (best experiment reel)
+- **Highlights:** Journey · Builds · Core · Operator · BTS *(explain the person before the machinery)*
+- **Pinned posts:** WHO I AM (the real 2010→now journey) · THE MENTAL MODEL (geology → agentic AI carousel) · ARGANTA CORE (the operating intelligence, live)
 - **Cadence:** Reels Mon/Wed/Fri/Sun · carousel Tue · premium still Sat · Stories daily
+- **Non-negotiables:** real biography only; employers as descriptive aliases; never AURA/JARVIS — it's **Arganta Core**; no employer-confidential screens; no simulated data as live; no direct Iron Man imitation; not a computer scientist; never "left geology for AI".
 
 ## 2 · LASHIRA — The AI Systems Architect
 - **Username:** `lashira.ai` (fallbacks: `lashira.systems`, `lashira.aura`)
@@ -80,9 +81,9 @@ Copy-paste-ready setup for all five profiles. Everything here mirrors the AI Inf
 
 ## Shared launch checklist (per account)
 1. Creator account, category set, contact hidden, 2FA on.
-2. Profile picture: use the character's Prompt Capsule (HQ → AI Influencer → COPY PROMPT) with the "portrait" scene; 1080×1080 PNG.
-3. Upload 5 highlight covers (existing Creator Studio v1.0 icon set).
+2. Profile picture: **Arganta** = a real photo of the founder in an employer-safe frame (no logos/lanyards — the current headshots carry employer branding and can't be used as-is). **Fictional four** = the character's Prompt Capsule (HQ → AI Influencer → COPY PROMPT); 1080×1080 PNG.
+3. Upload 5 highlight covers (existing Creator Studio v1.0 icon set; Arganta's renamed to Journey/Builds/Core/Operator/BTS).
 4. Publish the 3 pinned posts before following anyone.
 5. First 9 feed posts follow the character's feed-preview grid before any Reels push.
-6. Bio always keeps the AI-disclosure line — recommendation-eligibility guardrail.
-7. Week-4 crossover event: Arganta receives `AURA NODE REQUESTING ACCESS`; Lashira sees `EXTERNAL BUILDER DETECTED`. Neither explains it.
+6. AI-disclosure line: **fictional four only** (recommendation-eligibility guardrail). Arganta is a real personal account — no disclosure lead.
+7. ~~Week-4 AURA crossover~~ **CUT from Arganta** (his intelligence is Arganta Core, never AURA; a real account doesn't join a fictional AI universe). Lashira's AURA lore stays self-contained among the fictional four — and only once they eventually launch.
