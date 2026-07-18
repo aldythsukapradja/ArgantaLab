@@ -91,8 +91,64 @@ export function useOps(pollMs = 10000): OpsState & { refetch: () => void; launch
   return { ...state, refetch, launch }
 }
 
+// --- Heartbeat: "last seen" from Supabase when the bridge is unreachable ---
+export interface Heartbeat { node: string; at: string; bridge_version?: string }
+
+export function useHeartbeat(enabled: boolean, pollMs = 30000): Heartbeat | null {
+  const [hb, setHb] = useState<Heartbeat | null>(null)
+  useEffect(() => {
+    if (!enabled) return
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+    if (!url || !key || !/^https?:\/\//.test(url) || url.includes('placeholder')) return
+    let alive = true
+    const read = async () => {
+      try {
+        const r = await fetch(`${url}/rest/v1/heartbeat?select=node,at,bridge_version&order=at.desc&limit=1`, { headers: { apikey: key } })
+        if (!alive || !r.ok) return
+        const rows = await r.json()
+        setHb(Array.isArray(rows) && rows[0] ? rows[0] : null)
+      } catch { /* offline / not migrated — no last-seen */ }
+    }
+    void read()
+    const t = setInterval(read, pollMs)
+    return () => { alive = false; clearInterval(t) }
+  }, [enabled, pollMs])
+  return hb
+}
+
 // --- Cloud: one honest live probe (Supabase is CORS-open) -----------------
 export type CloudReach = 'ok' | 'down' | 'checking' | 'unknown'
+
+export interface CloudTarget { id: string; label: string; up: boolean; ms: number; detail?: string }
+
+// Deployed arganta-status Worker (workers/arganta-status). Public URL — /status
+// exposes only up/down/latency of public infra, and CORS scopes browser reads
+// to HQ origins. VITE_STATUS_URL overrides (e.g. a custom domain).
+const DEFAULT_STATUS_URL = 'https://arganta-status.aldhyt-sukapradja.workers.dev'
+
+/** Cloud truth from the status Worker (P2). Falls back to link tiles only if the
+ * Worker is unreachable. */
+export function useCloudStatus(pollMs = 30000): CloudTarget[] | null {
+  const [targets, setTargets] = useState<CloudTarget[] | null>(null)
+  useEffect(() => {
+    const base = (import.meta.env.VITE_STATUS_URL as string | undefined) || DEFAULT_STATUS_URL
+    if (!base || !/^https?:\/\//.test(base)) return
+    let alive = true
+    const read = async () => {
+      try {
+        const r = await fetch(`${base.replace(/\/+$/, '')}/status`)
+        if (!alive || !r.ok) return
+        const j = await r.json()
+        setTargets(Array.isArray(j.targets) ? j.targets : null)
+      } catch { /* worker down — keep last known / null */ }
+    }
+    void read()
+    const t = setInterval(read, pollMs)
+    return () => { alive = false; clearInterval(t) }
+  }, [pollMs])
+  return targets
+}
 
 export function useSupabasePing(pollMs = 30000): { reach: CloudReach; ms: number | null } {
   const [reach, setReach] = useState<CloudReach>('checking')
