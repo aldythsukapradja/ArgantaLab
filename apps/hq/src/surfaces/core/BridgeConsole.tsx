@@ -47,25 +47,31 @@ const ENGINES: Record<BridgeEngine, EngineConfig> = {
     name: 'Codex',
     Mark: OpenAIMark,
     accent: '#10A37F',
-    // Codex CLI model ids. The bridge falls back to Codex's own default when id
-    // is ''. Verify against the installed `codex` version if these drift.
+    // On a ChatGPT-account login the MODEL can't be overridden (only the API-key
+    // path allows real model ids), but reasoning EFFORT can — so the picker
+    // offers effort tiers, which the bridge passes as `-c model_reasoning_effort`.
     models: [
-      { id: '', label: 'Default', sub: "Codex's default model" },
-      { id: 'gpt-5.1-codex-max', label: 'Codex Max', sub: 'Most capable' },
-      { id: 'gpt-5.1-codex', label: 'Codex', sub: 'Balanced' },
-      { id: 'gpt-5.1-codex-mini', label: 'Codex Mini', sub: 'Fastest' },
+      { id: '', label: 'Auto', sub: 'Your ChatGPT plan default' },
+      { id: 'high', label: 'High', sub: 'Most thorough (slower)' },
+      { id: 'medium', label: 'Medium', sub: 'Balanced' },
+      { id: 'low', label: 'Low', sub: 'Fastest' },
     ],
     lsPrefix: 'hq_bridge_codex',
-    capsulePrefix: '',               // labels already read "Codex …"
+    capsulePrefix: 'Codex',
     emptyCopy: 'What should Codex do? It runs on your machine in a sandbox — try "refactor the pixel adapter" or "write tests for the audio engine".',
     composerPlaceholder: 'Give Codex a mission…',
   },
 }
 
-/** Read a per-engine setting, falling back to the Claude bridge's saved value
- * (both engines share one bridge, so a token/url set for one works for both). */
-function readSetting(prefix: string, key: string): string {
-  return localStorage.getItem(`${prefix}_${key}`) || (prefix !== 'hq_bridge' ? localStorage.getItem(`hq_bridge_${key}`) || '' : '')
+/** Read a per-engine setting. Token/url fall back to the Claude bridge's saved
+ * value (both engines share one bridge). The MODEL never falls back — models are
+ * engine-specific (a Claude alias like "haiku" is invalid for Codex), so passing
+ * `fallbackToClaude` is opt-in and used only for token/url. */
+function readSetting(prefix: string, key: string, fallbackToClaude = false): string {
+  const own = localStorage.getItem(`${prefix}_${key}`)
+  if (own) return own
+  if (fallbackToClaude && prefix !== 'hq_bridge') return localStorage.getItem(`hq_bridge_${key}`) || ''
+  return ''
 }
 
 type FeedItem =
@@ -82,9 +88,15 @@ export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) 
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [draft, setDraft] = useState('')
   const [running, setRunning] = useState(false)
-  const [token, setToken] = useState(() => readSetting(cfg.lsPrefix, 'token'))
-  const [model, setModel] = useState(() => readSetting(cfg.lsPrefix, 'model'))
-  const [bridgeUrl, setBridgeUrl] = useState(() => readSetting(cfg.lsPrefix, 'url'))
+  const [token, setToken] = useState(() => readSetting(cfg.lsPrefix, 'token', true))
+  // Normalize the saved model to a valid id for THIS engine — a stale/foreign
+  // value (e.g. a Claude "haiku" left in storage) collapses to '' (Auto/Default)
+  // instead of being sent to an engine that rejects it.
+  const [model, setModel] = useState(() => {
+    const saved = readSetting(cfg.lsPrefix, 'model')
+    return cfg.models.some((m) => m.id === saved) ? saved : ''
+  })
+  const [bridgeUrl, setBridgeUrl] = useState(() => readSetting(cfg.lsPrefix, 'url', true))
   const [dialogOpen, setDialogOpen] = useState(false)
   const clientRef = useRef<BridgeClient | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -142,10 +154,12 @@ export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) 
   function run() {
     const c = clientRef.current
     if (!c || status !== 'open' || !draft.trim() || running) return
-    const label = (cfg.models.find((m) => m.id === model) || cfg.models[0]).label
+    // Only send a model the active engine actually offers; anything else → Auto.
+    const validModel = cfg.models.some((m) => m.id === model) ? model : ''
+    const label = (cfg.models.find((m) => m.id === validModel) || cfg.models[0]).label
     runModelRef.current = (cfg.capsulePrefix ? cfg.capsulePrefix + ' ' : '') + label
     push({ kind: 'user', text: draft.trim() })
-    c.startMission(draft.trim(), { model: model || undefined, engine })
+    c.startMission(draft.trim(), { model: validModel || undefined, engine })
     setDraft('')
     setRunning(true)
   }

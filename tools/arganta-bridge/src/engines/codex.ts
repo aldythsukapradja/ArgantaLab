@@ -29,17 +29,31 @@ export function createCodexEngine(defaultModel?: string): MissionEngine {
         ctx.send({ type: 'status', label: 'Planning mission', missionId: ctx.missionId });
 
         const args = ['exec', '--json'];
-        const model = ctx.model || defaultModel;
-        if (model) args.push('--model', model);
+        // `ctx.model` carries the picker choice. On a ChatGPT-account login the
+        // model can't be overridden (only the API-key path allows real model
+        // ids), but reasoning EFFORT can — so the picker sends low|medium|high
+        // and we pass it as a config override. A non-effort value is treated as
+        // a real model id (API-key users / CODEX_MODEL env).
+        const sel = ctx.model || defaultModel;
+        if (sel) {
+          if (['minimal', 'low', 'medium', 'high'].includes(sel)) args.push('-c', `model_reasoning_effort=${sel}`);
+          else args.push('--model', sel);
+        }
         args.push('--sandbox', 'workspace-write');
-        args.push(ctx.prompt);
+        // Prompt goes via STDIN, never argv — codex reads it, and keeping user
+        // content out of the command line means we can safely use a shell on
+        // Windows (needed to resolve the `codex.cmd`/`.ps1` shim) without any
+        // command-injection risk. Only the fixed flags above hit the shell.
+        const useShell = process.platform === 'win32';
 
         let child: ReturnType<typeof spawn>;
         try {
-          child = spawn(CODEX_BIN, args, { cwd: ctx.cwd, env: process.env });
+          child = spawn(CODEX_BIN, args, { cwd: ctx.cwd, env: process.env, shell: useShell, stdio: ['pipe', 'pipe', 'pipe'] });
         } catch (e) {
           return rejectRun(e);
         }
+        // Feed the prompt, then close stdin so codex stops waiting for input.
+        try { child.stdin?.end(ctx.prompt); } catch { /* stdin may already be gone */ }
 
         let stdoutBuf = '';
         let stderrBuf = '';
@@ -56,18 +70,19 @@ export function createCodexEngine(defaultModel?: string): MissionEngine {
         const handleEvent = (o: any) => {
           sawStructured = true;
           const item = o?.item ?? o ?? {};
-          const type = String(o?.type ?? item?.type ?? '').toLowerCase();
+          const type = String(o?.type ?? '').toLowerCase();       // outer event
+          const itemType = String(item?.type ?? '').toLowerCase(); // inner item (item.completed wraps these)
 
           if (!announcedRepo && /(thread|session|task)[._](started|created)/.test(type)) {
             announcedRepo = true;
             send({ type: 'status', label: 'Reading repository', missionId: mid });
             return;
           }
-          if (type.includes('reasoning')) return; // strip chain-of-thought
+          if (itemType.includes('reasoning')) return; // strip chain-of-thought
 
           // Assistant text — emit final messages, skip streaming deltas.
-          const isAgentMsg = type.includes('agent_message') || item?.type === 'agent_message' || (item?.role === 'assistant' && (item?.text || item?.message));
-          if (isAgentMsg && !type.includes('delta')) {
+          const isAgentMsg = itemType === 'agent_message' || (item?.role === 'assistant' && (item?.text || item?.message));
+          if (isAgentMsg && !type.includes('delta') && !itemType.includes('delta')) {
             const text = String(item?.text ?? item?.message ?? o?.text ?? '').trim();
             if (text && text !== lastAgentMessage) {
               lastAgentMessage = text;
@@ -78,7 +93,7 @@ export function createCodexEngine(defaultModel?: string): MissionEngine {
 
           // Command execution.
           const cmd = item?.command ?? o?.command;
-          if (type.includes('command') || cmd) {
+          if (itemType.includes('command') || cmd) {
             const c = String(Array.isArray(cmd) ? cmd.join(' ') : (cmd ?? '')).trim();
             if (c && c !== lastCommand) {
               lastCommand = c;
@@ -88,13 +103,13 @@ export function createCodexEngine(defaultModel?: string): MissionEngine {
           }
 
           // File edits / patches.
-          if (/(file_change|patch|apply_patch|edit)/.test(type)) {
+          if (/(file_change|patch|apply_patch|edit)/.test(itemType)) {
             send({ type: 'tool', tool: 'edit', label: 'Editing files', missionId: mid });
             return;
           }
 
-          // Errors.
-          if (type.includes('error') || o?.error) {
+          // Errors (top-level {type:error}, turn.failed {error}, or an error item).
+          if (type.includes('error') || itemType.includes('error') || o?.error) {
             errorMsg = String(o?.error?.message ?? o?.message ?? item?.message ?? 'Codex reported an error');
           }
         };
@@ -134,13 +149,21 @@ export function createCodexEngine(defaultModel?: string): MissionEngine {
             const raw = stripAnsi(rawFallback).trim();
             if (raw) { lastAgentMessage = raw; send({ type: 'message', text: raw, missionId: mid }); }
           }
-          const ok = code === 0 && !errorMsg;
-          if (!ok && !lastAgentMessage) {
-            const detail = errorMsg || stripAnsi(stderrBuf).trim() || `Codex exited with code ${code}`;
-            // Surface as a failed mission with the detail as the result body.
+          // Exit code is the source of truth for pass/fail — an item-level error
+          // (e.g. a "model metadata not found" warning) must not fail a mission
+          // that codex itself completed with code 0.
+          const ok = code === 0;
+          if (!ok) {
+            const stderr = stripAnsi(stderrBuf).trim();
+            // With shell:true (Windows) a missing binary is a non-zero exit +
+            // "not recognized", not an ENOENT event — give the same friendly hint.
+            const notFound = /not recognized|not found|no such file|command not found/i.test(stderr) && !sawStructured;
+            const detail = notFound
+              ? 'Codex CLI not found. Install it (`npm i -g @openai/codex`) and sign in (`codex login`) on this machine.'
+              : (errorMsg || stderr || lastAgentMessage || `Codex exited with code ${code}`);
             return resolveRun({ ok: false, result: detail, costUsd: undefined });
           }
-          resolveRun({ ok, result: lastAgentMessage, costUsd: undefined });
+          resolveRun({ ok: true, result: lastAgentMessage, costUsd: undefined });
         });
       });
     },

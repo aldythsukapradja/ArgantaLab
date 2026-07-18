@@ -14,7 +14,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { missionStart, missionDone, type ActivityEvent } from './persist.ts';
+import { missionStart, missionDone, heartbeatUpsert, type ActivityEvent } from './persist.ts';
 import { createClaudeEngine } from './engines/claude.ts';
 import { createCodexEngine } from './engines/codex.ts';
 import type { MissionEngine, OutEvent } from './engines/types.ts';
@@ -120,6 +120,17 @@ function listenOn(host: string) {
 
 listenOn('127.0.0.1');
 if (TAILSCALE_IP) listenOn(TAILSCALE_IP);
+
+// Heartbeat: upsert a health snapshot every 60s so the Command Center can show
+// "last seen" when this node is unreachable. Fire once on boot, then interval.
+async function beat() {
+  try {
+    const h = await health();
+    await heartbeatUpsert({ node: h.node, bridge_version: h.bridgeVersion, node_version: h.nodeVersion, engines: h.engines, services: h.services });
+  } catch { /* persistence never throws into the process */ }
+}
+void beat();
+setInterval(beat, 60_000).unref();
 
 wss.on('connection', (ws) => {
   const session = new BridgeSession(ws);

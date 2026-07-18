@@ -1,62 +1,55 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { ThemeProvider } from './theme'
-import AppShell from './AppShell'
-import type { Tab } from './appscreens'
+// Arganta Chat — the shell. Chat is gated to parents; About is the public
+// company page. Old landing hash routes redirect into /about pills (F5).
+import { useCallback, useEffect, useState } from 'react'
+import { useGate, signOut } from './chat/auth'
+import { ChatApp } from './chat/ChatApp'
+import { Login, KidWall } from './chat/Login'
+import { About, type Pill } from './chat/About'
+import { Mark } from './chat/Mark'
+import './chat/theme.css'
 
-const GeneralDeck = lazy(() => import('./decks/GeneralDeck'))
-const EditorialDeck = lazy(() => import('./decks/EditorialDeck'))
+type View = { name: 'chat' } | { name: 'about'; pill: Pill } | { name: 'login' }
 
-type Route =
-  | { view: 'app'; tab: Tab }
-  | { view: 'editorial'; present: boolean }
-  | { view: 'general'; flight?: string }
-
-const TABS: Tab[] = ['home', 'products', 'about', 'pitch', 'command']
-
-function parse(): Route {
-  const h = window.location.hash.replace(/^#\/?/, '')
-  const [a, b] = h.split('/')
-  if (a === 'editorial') return { view: 'editorial', present: b === 'present' }
-  if (a === 'general') return { view: 'general', flight: b || undefined }
-  if ((TABS as string[]).includes(a)) return { view: 'app', tab: a as Tab }
-  return { view: 'app', tab: 'home' }
-}
-function toHash(r: Route): string {
-  if (r.view === 'editorial') return `#/editorial${r.present ? '/present' : ''}`
-  if (r.view === 'general') return `#/general${r.flight ? '/' + r.flight : ''}`
-  return r.tab === 'home' ? '#/' : `#/${r.tab}`
+// old hash → new view (F5 redirect table)
+function parse(): View {
+  const h = window.location.hash.replace(/^#\/?/, '').split('/')[0]
+  if (h === 'about') return { name: 'about', pill: 'about' }
+  if (h === 'home' || h === 'company') return { name: 'about', pill: 'company' }
+  if (h === 'products') return { name: 'about', pill: 'products' }
+  if (h === 'pitch') return { name: 'about', pill: 'pitch' }
+  if (h === 'command' || h === 'login') return { name: 'login' }
+  return { name: 'chat' }
 }
 
 export default function App() {
-  const [route, setRoute] = useState<Route>(() => parse())
+  const gate = useGate()
+  const [view, setView] = useState<View>(() => parse())
 
   useEffect(() => {
-    const onPop = () => setRoute(parse())
+    const onPop = () => setView(parse())
     window.addEventListener('hashchange', onPop)
     return () => window.removeEventListener('hashchange', onPop)
   }, [])
 
-  const nav = useCallback((r: Route) => {
-    const hash = toHash(r)
-    if (window.location.hash !== hash) window.history.pushState(null, '', hash)
-    setRoute(r)
-  }, [])
+  const goAbout = useCallback(() => { window.location.hash = '#/about'; setView({ name: 'about', pill: 'about' }) }, [])
+  const goChat = useCallback(() => { window.location.hash = '#/'; setView({ name: 'chat' }) }, [])
 
-  const onTab = useCallback((tab: Tab) => nav({ view: 'app', tab }), [nav])
-  const onLaunch = useCallback((deck: string, opt?: { present?: boolean; flight?: string }) => {
-    if (deck === 'general') nav({ view: 'general', flight: opt?.flight })
-    else nav({ view: 'editorial', present: opt?.present ?? false })
-  }, [nav])
-  const exit = useCallback(() => nav({ view: 'app', tab: 'home' }), [nav])
-  const exitToProducts = useCallback(() => nav({ view: 'app', tab: 'products' }), [nav])
+  // About is public — always reachable.
+  if (view.name === 'about') {
+    return <About initial={view.pill} onOpenChat={goChat} />
+  }
 
-  return (
-    <ThemeProvider>
-      <Suspense fallback={<div className="app-loading"><span className="app-loading-orb" /></div>}>
-        {route.view === 'app' && <AppShell tab={route.tab} onTab={onTab} onLaunch={onLaunch} />}
-        {route.view === 'general' && <GeneralDeck flight={route.flight} onExit={exitToProducts} />}
-        {route.view === 'editorial' && <EditorialDeck present={route.present} onExit={exit} />}
-      </Suspense>
-    </ThemeProvider>
-  )
+  // Gate for chat.
+  if (gate.state === 'loading') {
+    return <div className="ac-root"><div className="ac-loading"><Mark size={40} breathe="fast" /></div></div>
+  }
+  if (gate.state === 'kid') {
+    return <div className="ac-root"><KidWall name={gate.kidName} /></div>
+  }
+  if (gate.state === 'public' || view.name === 'login') {
+    return <div className="ac-root"><Login onAbout={goAbout} /></div>
+  }
+
+  // Parent, signed in.
+  return <ChatApp name={gate.name} onAbout={goAbout} onSignOut={signOut} />
 }

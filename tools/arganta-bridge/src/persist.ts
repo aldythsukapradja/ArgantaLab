@@ -12,10 +12,11 @@ const headers = { Authorization: `Bearer ${KEY}`, apikey: KEY, 'Content-Type': '
 
 type ActivityEvent = { type: string; label?: string; text?: string; at: string };
 
-async function req(method: string, path: string, body?: unknown): Promise<{ ok: boolean; status: number }> {
+async function req(method: string, path: string, body?: unknown, upsert = false): Promise<{ ok: boolean; status: number }> {
   try {
+    const prefer = upsert ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal';
     const r = await fetch(`${URL}/rest/v1/${path}`, {
-      method, headers: { ...headers, Prefer: 'return=minimal' },
+      method, headers: { ...headers, Prefer: prefer },
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!r.ok) console.warn(`bridge persist ${method} ${path}: HTTP ${r.status}`);
@@ -49,6 +50,17 @@ export async function missionDone(
     status, result, cost_usd: costUsd, activity: activity.slice(-500),
     updated_at: new Date().toISOString(),
   });
+}
+
+/** Upsert the node's heartbeat (schema: migration_command_heartbeat.sql). The
+ * Command Center reads this to show "last seen" when the bridge is unreachable.
+ * Idempotent per node via on_conflict; silently no-ops if the table isn't
+ * migrated yet (404), like the rest of persistence. */
+export async function heartbeatUpsert(row: {
+  node: string; bridge_version: string; node_version: string; engines: unknown; services: unknown;
+}) {
+  if (!ENABLED) return;
+  await req('POST', 'heartbeat?on_conflict=node', { ...row, at: new Date().toISOString() }, true);
 }
 
 export type { ActivityEvent };

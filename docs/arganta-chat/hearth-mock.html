@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arganta Chat — Hearth mock</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap');
+:root{--ground:#F2F1EC;--ground2:#EBEAE3;--ink:#15161B;--soft:#3A3D45;--ember:#DCA254;--ember2:#8F6B3C;--line:rgba(21,22,27,.08)}
+*{margin:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:17px/1.6 Inter,system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.col{width:100%;max-width:720px;margin:0 auto;padding:0 20px;flex:1;display:flex;flex-direction:column}
+.top{display:flex;justify-content:flex-end;padding:16px 0}
+.chats{font:500 15px Inter;color:var(--soft);background:none;border:1px solid var(--line);border-radius:999px;padding:8px 18px;cursor:pointer}
+.hearth{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:24px}
+.mark{width:44px;height:44px;margin:0 auto 18px;animation:breathe 4s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.85;transform:scale(1)}50%{opacity:1;transform:scale(1.015)}}
+h1{font:500 34px/1.2 Fraunces,serif;text-align:center}
+.sub{text-align:center;color:var(--soft);font-size:15px;margin:8px 0 28px}
+.pulse{background:var(--ground2);border-radius:20px;padding:18px 22px;box-shadow:0 2px 16px rgba(21,22,27,.07);border-top:2px solid var(--ember);cursor:pointer;margin-bottom:22px}
+.pulse b{font:600 17px Fraunces,serif}
+.pulse span{display:block;font-size:13px;color:var(--soft);margin-top:4px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:26px}
+.card{background:var(--ground2);border:1px solid var(--line);border-radius:20px;padding:16px 18px;cursor:pointer;text-align:left;transition:border-color .12s}
+.card:hover{border-color:var(--ember)}
+.card b{font:600 15px Fraunces,serif;display:block}
+.card span{font-size:13px;color:var(--soft)}
+.composer{position:sticky;bottom:0;background:var(--ground);padding:12px 0 22px;border-top:1px solid var(--line)}
+.field{display:flex;align-items:center;gap:10px;background:var(--ground2);border-radius:26px;padding:8px 8px 8px 18px}
+.field input{flex:1;border:0;background:none;font:17px Inter;color:var(--ink);outline:none}
+.mic{width:36px;height:36px;border:0;background:none;color:var(--soft);cursor:pointer;font-size:18px}
+.send{width:40px;height:40px;border:0;border-radius:50%;background:linear-gradient(135deg,var(--ember),var(--ember2));color:#fff;font-size:17px;cursor:pointer}
+.demo{max-width:720px;margin:40px auto 60px;padding:0 20px}
+.demo h2{font:600 13px Inter;letter-spacing:.12em;color:var(--soft);text-transform:uppercase;margin-bottom:14px}
+.me{display:flex;justify-content:flex-end;margin-bottom:16px}
+.me div{background:var(--ground2);border-radius:20px 20px 6px 20px;padding:10px 16px;max-width:80%}
+.ans p{margin-bottom:12px}
+.acard{background:var(--ground2);border-radius:20px;padding:18px;box-shadow:0 2px 16px rgba(21,22,27,.07)}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.day{padding:8px 2px;border-radius:12px}
+.day.today{background:rgba(220,162,84,.14)}
+.day em{font:600 13px Inter;font-style:normal;color:var(--soft);display:block}
+.day b{font:600 20px Fraunces,serif;display:block;margin:2px 0}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ember);display:inline-block;margin:1px}
+.evt{font-size:12px;color:var(--soft);margin-top:2px}
+.chips{display:flex;gap:8px;margin-top:14px}
+.chip{font:500 15px Inter;color:var(--ink);background:none;border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer}
+.chip:hover{border-color:var(--ember)}
+</style></head><body>
+<div class="col">
+  <div class="top"><button class="chats">Chats</button></div>
+  <div class="hearth">
+    <svg class="mark" viewBox="0 0 120 120" fill="none"><defs><linearGradient id="e" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DCA254"/><stop offset="1" stop-color="#8F6B3C"/></linearGradient></defs><path d="M22 96 L52 28 L82 96" stroke="#3A3D45" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M50 96 L74 42 L102 96" stroke="url(#e)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="74" cy="34" r="4" fill="url(#e)"/></svg>
+    <h1>Good morning, Aldy.</h1>
+    <p class="sub">What does the family need?</p>
+    <div class="pulse"><b>Swim at 4, Baginda is on a 6-day streak, and the grocery run is tomorrow.</b><span>Tap for the full picture</span></div>
+    <div class="cards">
+      <button class="card"><b>This week</b><span>Everything on the family calendar</span></button>
+      <button class="card"><b>The kids</b><span>Progress, streaks, and what to cheer</span></button>
+      <button class="card"><b>Dinner</b><span>This week's meals and groceries</span></button>
+      <button class="card"><b>A bedtime story</b><span>Starring your kid, ready in seconds</span></button>
+    </div>
+  </div>
+  <div class="composer"><div class="field"><input placeholder="Ask about your week…"><button class="mic">🎙</button><button class="send">↑</button></div></div>
+</div>
+<div class="demo">
+  <h2>Answer card pattern</h2>
+  <div class="me"><div>What's happening this week?</div></div>
+  <div class="ans">
+    <p>A gentle week — three things, all after school. Thursday's the busy one.</p>
+    <div class="acard"><div class="week">
+      <div class="day"><em>Mon</em><b>13</b></div>
+      <div class="day today"><em>Tue</em><b>14</b><span class="dot"></span><div class="evt">Swim 4pm</div></div>
+      <div class="day"><em>Wed</em><b>15</b><div class="evt">Groceries</div></div>
+      <div class="day"><em>Thu</em><b>16</b><span class="dot"></span><span class="dot"></span><div class="evt">Padel · Recital</div></div>
+      <div class="day"><em>Fri</em><b>17</b></div>
+      <div class="day"><em>Sat</em><b>18</b></div>
+      <div class="day"><em>Sun</em><b>19</b></div>
+    </div></div>
+    <div class="chips"><button class="chip">Next week</button><button class="chip">Just weekends</button><button class="chip">Busiest day?</button></div>
+  </div>
+</div>
+</body></html>

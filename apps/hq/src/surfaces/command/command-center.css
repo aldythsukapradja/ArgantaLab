@@ -69,6 +69,8 @@ a.cc-tile:hover { border-color: var(--acc); }
 .cc-start { padding: 5px 14px; font-size: 12px; }
 .cc-start:disabled { opacity: .5; cursor: default; background: var(--bg3); color: var(--tx3); }
 .cc-launch-off { font-size: 12.5px; color: var(--tx2); line-height: 1.5; }
+.cc-lastseen { color: var(--tx); font-weight: 500; margin-bottom: 6px; }
+.cc-lastseen b { color: var(--acc-text, var(--acc)); }
 
 /* PULSE */
 .cc-facts { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }

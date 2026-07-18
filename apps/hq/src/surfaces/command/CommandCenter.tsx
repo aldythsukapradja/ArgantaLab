@@ -9,7 +9,7 @@ import { useHQ } from '../../shell/store'
 import { ClaudeMark } from '../core/ClaudeMark'
 import { OpenAIMark } from '../core/OpenAIMark'
 import { ArgantaMark } from '../core/ArgantaMark'
-import { useOps, useSupabasePing, bridgeConfig, type BridgeReach } from './ops/useOps'
+import { useOps, useSupabasePing, useHeartbeat, useCloudStatus, bridgeConfig, type BridgeReach } from './ops/useOps'
 import { Command } from './Command'
 import './command-center.css'
 
@@ -37,7 +37,10 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
   const go = useHQ((s) => s.go)
   const { health, reach, lastChecked, loading, refetch, launch } = useOps()
   const supa = useSupabasePing()
+  const cloud = useCloudStatus()
+  const hb = useHeartbeat(reach !== 'ok')
   const { token } = bridgeConfig()
+  const cloudTile = (id: string) => cloud?.find((t) => t.id === id)
 
   const engine = (id: string) => health?.engines.find((e) => e.id === id)
   const service = (id: string) => health?.services.find((s) => s.id === id)
@@ -90,14 +93,15 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
             <Tile label="Bridge" state={online ? 'up' : 'down'} detail={online ? 'Claude + Codex' : REACH_COPY[reach]} source="live" />
             <Tile label="ComfyUI" state={!online ? 'unknown' : service('comfy')?.up ? 'up' : 'down'}
               detail={service('comfy')?.detail || 'image gen'} source={online ? 'live' : 'unknown'} />
-            <Tile label="Supabase" state={supa.reach === 'ok' ? 'up' : supa.reach === 'down' ? 'down' : 'unknown'}
-              detail={supa.ms != null ? `${supa.ms}ms` : 'database'} source={supa.reach === 'unknown' ? 'unknown' : 'live'} />
-            <Tile label="Vercel · HQ" state="link" detail="deploys" source="pending"
-              href="https://vercel.com/dashboard" />
-            <Tile label="Cloudflare" state="link" detail="workers · media" source="pending"
-              href="https://dash.cloudflare.com" />
-            <Tile label="Buffer · IG" state="link" detail="publishing" source="pending"
-              href="https://publish.buffer.com" />
+            {/* Supabase: prefer the Worker's probe, else the browser ping. */}
+            {(() => { const c = cloudTile('supabase'); return c
+              ? <Tile label="Supabase" state={c.up ? 'up' : 'down'} detail={c.detail || `${c.ms}ms`} source="live" />
+              : <Tile label="Supabase" state={supa.reach === 'ok' ? 'up' : supa.reach === 'down' ? 'down' : 'unknown'}
+                  detail={supa.ms != null ? `${supa.ms}ms` : 'database'} source={supa.reach === 'unknown' ? 'unknown' : 'live'} /> })()}
+            {/* Vercel / Cloudflare / Buffer: live from the status Worker (P2), else link tiles. */}
+            <CloudTile fallbackLabel="Vercel · HQ" fallbackDetail="deploys" href="https://vercel.com/dashboard" target={cloudTile('vercel')} />
+            <CloudTile fallbackLabel="Cloudflare" fallbackDetail="workers · media" href="https://dash.cloudflare.com" target={cloudTile('cloudflare')} />
+            <CloudTile fallbackLabel="Buffer · IG" fallbackDetail="publishing" href="https://publish.buffer.com" target={cloudTile('buffer')} />
           </div>
           <p className="cc-provenance-note">
             <b>live</b> = probed just now · <b>pending</b> = link only until the status Worker is deployed (P2).
@@ -109,6 +113,7 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
           <h2 className="cc-zone-h">Launch <span>ignition</span></h2>
           {!online ? (
             <div className="cc-launch-off">
+              {hb && <p className="cc-lastseen">Node <b>{hb.node}</b> last seen <b>{timeAgo(new Date(hb.at).getTime())}</b></p>}
               <p>{reach === 'unreachable'
                 ? 'Your PC is off or the bridge isn’t running. Software can’t power on a machine that’s off — turn the laptop on, and the bridge auto-starts at login.'
                 : REACH_COPY[reach]}</p>
@@ -168,6 +173,15 @@ function Tile({ label, state, detail, source, href }: { label: string; state: Ti
   return href
     ? <a className="cc-tile" href={href} target="_blank" rel="noreferrer">{inner}</a>
     : <div className="cc-tile">{inner}</div>
+}
+
+/** A cloud tile that shows live status from the status Worker when available,
+ * else degrades to a link tile marked "pending". */
+function CloudTile({ fallbackLabel, fallbackDetail, href, target }: {
+  fallbackLabel: string; fallbackDetail: string; href: string; target?: { label: string; up: boolean; ms: number; detail?: string }
+}) {
+  if (target) return <Tile label={target.label} state={target.up ? 'up' : 'down'} detail={target.detail || `${target.ms}ms`} source="live" />
+  return <Tile label={fallbackLabel} state="link" detail={fallbackDetail} source="pending" href={href} />
 }
 
 function LaunchRow({ id, label, up, onLaunch }: { id: string; label: string; up: boolean; onLaunch: (s: string) => Promise<{ ok: boolean; message: string }> }) {

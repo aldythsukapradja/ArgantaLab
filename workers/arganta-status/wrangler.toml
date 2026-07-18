@@ -1,0 +1,26 @@
+name = "arganta-status"
+main = "src/index.js"
+compatibility_date = "2026-07-18"
+
+# Arganta Status — cloud-truth probe for the HQ Command Center. One endpoint,
+# GET /status, returns the live reachability of the cloud organs (Vercel apps,
+# Supabase, itself) so the cockpit's INFRASTRUCTURE tiles go green/red instead
+# of "pending". Runs at the edge, 30s cache, CORS-scoped to the HQ origins.
+#
+# FOUNDER PREREQUISITES before this goes live:
+#   1. `wrangler deploy` from this directory (Cloudflare account, no bindings).
+#   2. Point HQ at it: set VITE_STATUS_URL in apps/hq env to the deployed URL
+#      (or a route/custom domain, e.g. status.arganta.app).
+#   3. (optional) `wrangler secret put VERCEL_TOKEN` + set VERCEL_PROJECT vars to
+#      report real deploy state instead of plain site reachability.
+
+[vars]
+# Comma-separated production origins allowed to read /status. Any localhost /
+# 127.0.0.1 origin is allowed automatically at any port (Vite autoPort).
+ALLOWED_ORIGINS = "https://hq.arganta.app"
+# Probe targets (no secrets needed — plain reachability + latency).
+HQ_URL = "https://hq.arganta.app"
+SUPABASE_URL = "https://bdagdxgpnlialkppjwor.supabase.co"
+# SUPABASE_ANON_KEY is safe as a var (it's the public anon key), but left unset
+# here so it isn't committed — set it with the deploy, or the Supabase probe
+# falls back to a plain reachability check of the REST root.
