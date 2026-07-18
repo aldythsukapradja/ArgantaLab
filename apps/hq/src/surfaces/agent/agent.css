@@ -98,6 +98,21 @@
 .ags-bar .fill{height:100%;border-radius:999px;background:var(--acc)}
 .ags-bar .amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--tx2);font-family:var(--mono);font-size:10.5px}
 
+/* missions */
+.ags-mhead{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx3);margin-bottom:12px}
+.ags-mission{border:1px solid var(--bd);border-radius:10px;background:var(--bg2);margin-bottom:8px;overflow:hidden}
+.ags-mission.open{border-color:var(--bd3)}
+.ags-mrow{display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;background:none;border:none;color:var(--tx);font:inherit;cursor:pointer;text-align:left}
+.ags-mrow:hover{background:var(--bg3)}
+.ags-mgoal{flex:1;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ags-mtime{font-size:10.5px;color:var(--tx3);font-family:var(--mono);flex:none}
+.ags-mcost{font-size:10.5px;color:var(--tx2);font-family:var(--mono);flex:none}
+.ags-mbody{border-top:1px solid var(--bd);padding:10px 13px;background:var(--bg)}
+.ags-mact{font-size:11px;color:var(--tx2);line-height:1.6;font-family:var(--mono)}
+.ags-mact .k{display:inline-block;min-width:82px;color:var(--tx3);text-transform:uppercase;font-size:9px;letter-spacing:.04em;font-weight:700}
+.ags-link{background:none;border:none;color:var(--acc);font:inherit;font-size:inherit;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
+.ags-mbody .ags-link{display:inline-block;margin-top:8px;font-size:11.5px}
+
 /* honest empty + author */
 .ags-empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center}
 .ags-empty .box{max-width:420px}
@@ -116,12 +131,23 @@
 .ags-groundbadge{display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:999px;margin-left:6px}
 .ags-groundbadge.g{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
 .ags-groundbadge.p{color:var(--warn,#d9a12f);background:color-mix(in srgb,var(--warn,#d9a12f) 12%,transparent)}
+.ags-edited{display:inline-block;font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:999px;margin-left:6px;color:var(--acc);background:var(--acc-soft,color-mix(in srgb,var(--acc) 14%,transparent))}
 
 .ags-legend{font-size:12px;color:var(--tx3);line-height:1.6}
 .ags-legend b{color:var(--tx2)}
 
+.ags-refresh{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);cursor:pointer;flex:none}
+.ags-refresh:hover{color:var(--tx);border-color:var(--bd3)}
+
 @media (max-width:980px){
   .ags-body{grid-template-columns:1fr}
   .ags-rail{display:none}
+  /* H5 — inspector becomes a bottom sheet when something is selected, instead
+     of being unreachable. Tap the same card again (or the canvas) to dismiss. */
+  .ags-body.has-sel .ags-rail{
+    display:block;position:fixed;left:0;right:0;bottom:0;z-index:40;
+    max-height:52vh;border-left:none;border-top:1px solid var(--bd);
+    border-radius:16px 16px 0 0;box-shadow:0 -12px 44px -14px #0009}
   .ags-author{grid-template-columns:1fr}
+  .ags-authlist{max-height:34vh}
 }

@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow, Background, Controls, BackgroundVariant, Handle, Position,
   BaseEdge, getSmoothStepPath,
   type Node, type Edge, type NodeProps, type EdgeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Network, Users, ListChecks, Coins, PencilRuler, Cpu } from 'lucide-react'
+import { Network, Users, ListChecks, Coins, PencilRuler, Cpu, RefreshCw } from 'lucide-react'
 import {
   AGENT_LAYERS, AGENT_COLORS, AGENT_NODES, AGENT_EDGES, BRAIN_META,
   probeBridge, probeComfy, statusForNode,
@@ -23,6 +23,7 @@ import { Markdown } from '../core/Markdown'
 import { getSessionRuns } from '../../lib/ai'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { compact } from '../../lib/format'
+import { useHQ } from '../../shell/store'
 import './agent.css'
 
 // Agent Studio — the operating room over the SAME agentFabric registry the
@@ -42,6 +43,22 @@ const TABS: { id: Tab; label: string; Icon: typeof Network }[] = [
 
 const BrainMark = ({ mark, size = 13 }: { mark: NonNullable<AgentNode['mark']>; size?: number }) =>
   mark === 'arganta' ? <ArgantaMark size={size} /> : mark === 'claude' ? <ClaudeMark size={size} /> : <OpenAIMark size={size} />
+
+// H2 — Author edits persist as a localStorage overlay merged over the static
+// roster. No Supabase yet (registry tables land later); this keeps edits real
+// across tab switches + reload without pretending a write path exists.
+type AgentOverride = { mission?: string; inputs?: string[]; model?: Model }
+const OVR_KEY = 'hq_agent_overrides_v1'
+function loadOverrides(): Record<string, AgentOverride> {
+  try { return JSON.parse(localStorage.getItem(OVR_KEY) || '{}') } catch { return {} }
+}
+function persistOverrides(all: Record<string, AgentOverride>) {
+  try { localStorage.setItem(OVR_KEY, JSON.stringify(all)) } catch { /* ignore */ }
+}
+function mergeAgent(a: Agent, ovr: Record<string, AgentOverride>): Agent {
+  const o = ovr[a.id]
+  return o ? { ...a, mission: o.mission ?? a.mission, inputs: o.inputs ?? a.inputs, model: o.model ?? a.model } : a
+}
 
 // ── Map layout — stack nodes into their six bands (shares the fabric data,
 // renders its own cards; the atlas view can look different, the data cannot). ──
@@ -112,12 +129,25 @@ export function AgentStudio() {
   const [sel, setSel] = useState<string | null>(null)          // selected fabric node (Map)
   const [selAgent, setSelAgent] = useState<string | null>(null) // selected roster agent
   const [has, setHas] = useState({ growth: false, economy: false, content: false })
+  const [overrides, setOverrides] = useState<Record<string, AgentOverride>>(loadOverrides)
+  const setOverride = (id: string, o: AgentOverride | null) => setOverrides(prev => {
+    const next = { ...prev }
+    if (o === null) delete next[id]; else next[id] = { ...next[id], ...o }
+    persistOverrides(next); return next
+  })
 
-  useEffect(() => {
-    setBridge('checking'); setComfy('checking'); setComfyInfo(null)
+  const refreshProbes = useCallback(() => {
+    setBridge('checking'); setComfy('checking')
     probeBridge().then(setBridge)
     probeComfy().then(({ status, info }) => { setComfy(status); setComfyInfo(info) })
   }, [])
+  useEffect(() => {
+    refreshProbes()
+    const iv = setInterval(refreshProbes, 60_000)
+    return () => clearInterval(iv)
+  }, [refreshProbes])
+  // Re-probe when opening Missions (bridge state is the whole point there).
+  useEffect(() => { if (tab === 'missions') refreshProbes() }, [tab, refreshProbes])
   useEffect(() => {
     Promise.all([import('../../data/live')]).then(([{ live }]) =>
       Promise.all([live.growthOverview(), live.economy(), live.contentMatrix()]).then(([g, e, c]) =>
@@ -137,14 +167,15 @@ export function AgentStudio() {
         <div className="ags-probes">
           <span className={'ags-chip ' + bridge}><i />Bridge {bridge === 'checking' ? '…' : bridge}</span>
           <span className={'ags-chip ' + comfy}><i />ComfyUI {comfy === 'checking' ? '…' : comfy}</span>
+          <button className="ags-refresh" onClick={refreshProbes} title="Re-check bridge + ComfyUI"><RefreshCw size={12} /></button>
         </div>
       </div>
 
       {tab === 'map' && <MapTab bridge={bridge} comfy={comfy} comfyInfo={comfyInfo} sel={sel} setSel={setSel} />}
-      {tab === 'roster' && <RosterTab has={has} sel={selAgent} setSel={setSelAgent} />}
+      {tab === 'roster' && <RosterTab has={has} sel={selAgent} setSel={setSelAgent} overrides={overrides} />}
       {tab === 'missions' && <MissionsTab bridge={bridge} />}
       {tab === 'tokens' && <TokensTab />}
-      {tab === 'author' && <AuthorTab />}
+      {tab === 'author' && <AuthorTab overrides={overrides} setOverride={setOverride} />}
     </div>
   )
 }
@@ -172,7 +203,7 @@ function MapTab({ bridge, comfy, comfyInfo, sel, setSel }: {
   const selDef = sel ? AGENT_NODES.find(n => n.id === sel) ?? null : null
 
   return (
-    <div className="ags-body">
+    <div className={'ags-body' + (selDef ? ' has-sel' : '')}>
       <div className="ags-main">
         <div className="ags-canvas">
           <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView
@@ -234,10 +265,11 @@ function NodeInspector({ def, status, comfyInfo }: { def: AgentNode; status?: Ag
 }
 
 // ── ROSTER ──────────────────────────────────────────────────────────────────
-function RosterTab({ has, sel, setSel }: { has: { growth: boolean; economy: boolean; content: boolean }; sel: string | null; setSel: (s: string | null) => void }) {
-  const selAgent = sel ? AGENTS.find(a => a.id === sel) ?? null : null
+function RosterTab({ has, sel, setSel, overrides }: { has: { growth: boolean; economy: boolean; content: boolean }; sel: string | null; setSel: (s: string | null) => void; overrides: Record<string, AgentOverride> }) {
+  const rawSel = sel ? AGENTS.find(a => a.id === sel) ?? null : null
+  const selAgent = rawSel ? mergeAgent(rawSel, overrides) : null
   return (
-    <div className="ags-body">
+    <div className={'ags-body' + (selAgent ? ' has-sel' : '')}>
       <div className="ags-main">
         <div className="ags-scroll">
           {OFFICE_KEYS.map(office => {
@@ -252,11 +284,11 @@ function RosterTab({ has, sel, setSel }: { has: { growth: boolean; economy: bool
                     const st = deriveStatus(a, has)
                     return (
                       <button key={a.id} className={'ags-agent' + (a.id === sel ? ' sel' : '')} onClick={() => setSel(a.id === sel ? null : a.id)}>
-                        <div className="an">{a.name}{a.orchestrator && ' ★'}</div>
+                        <div className="an">{a.name}{a.orchestrator && ' ★'}{overrides[a.id] && <span className="ags-edited">edited</span>}</div>
                         <div className="ar">{a.role}</div>
                         <div className="af">
                           <span className={'ags-adot ' + st} title={st} />
-                          <ModelPill model={a.model} />
+                          <ModelPill model={mergeAgent(a, overrides).model} />
                         </div>
                       </button>
                     )
@@ -305,30 +337,102 @@ function ModelPill({ model }: { model: Model }) {
 }
 
 // ── MISSIONS ────────────────────────────────────────────────────────────────
+// Reads the persisted `mission` table (the Bridge writes it via service role;
+// anon-readable). This is the cross-socket source of truth — it shows missions
+// no matter which surface's socket ran them, and never touches the live
+// BridgeConsole session. Honest empty when the table is empty or cloud is off.
+type Mission = { id: string; goal: string; status: string; cost_usd: number; engine?: string; activity?: any[]; created_at: string; updated_at?: string }
+function relTime(iso?: string): string {
+  if (!iso) return ''
+  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 60) return `${s}s ago`
+  const m = Math.round(s / 60); if (m < 60) return `${m}m ago`
+  const h = Math.round(m / 60); if (h < 24) return `${h}h ago`
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+const MISSION_CHIP: Record<string, string> = { running: 'checking', done: 'connected', failed: 'offline' }
+
 function MissionsTab({ bridge }: { bridge: AgentStatus }) {
+  const { go } = useHQ()
+  const [missions, setMissions] = useState<Mission[] | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [openId, setOpenId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!cloudEnabled) { setLoaded(true); return }
+    let off = false
+    supabase.from('mission').select('*').order('created_at', { ascending: false }).limit(50)
+      .then(({ data, error }) => {
+        if (off) return
+        if (error) { setMissions(null); setLoaded(true); return }
+        setMissions((data as Mission[]) || []); setLoaded(true)
+      })
+    return () => { off = true }
+  }, [])
+
+  const running = (missions || []).filter(m => m.status === 'running').length
+
+  if (loaded && (!missions || missions.length === 0)) {
+    return (
+      <div className="ags-body full"><div className="ags-main"><div className="ags-empty"><div className="box">
+        <h3>{bridge === 'connected' ? 'Bridge connected — no missions recorded' : 'No missions recorded'}</h3>
+        <p>
+          Missions are Claude Code and Codex runs through the Arganta Bridge. Start one from the
+          Sovereign / Claude / Codex capsules in <button className="ags-link" onClick={() => go('core')}>Arganta Core</button>;
+          persisted runs appear here across every browser and socket.
+          {!cloudEnabled && <><br /><br />Cloud is offline — connect Supabase to read mission history.</>}
+          {cloudEnabled && missions === null && <><br /><br />The <span style={{ fontFamily: 'var(--mono)' }}>mission</span> table isn't migrated yet (<span style={{ fontFamily: 'var(--mono)' }}>migration_missions.sql</span>). No run is ever invented here.</>}
+        </p>
+      </div></div></div></div>
+    )
+  }
+
   return (
     <div className="ags-body full">
-      <div className="ags-main">
-        <div className="ags-empty">
-          <div className="box">
-            <h3>{bridge === 'connected' ? 'Bridge connected — no missions yet' : 'Bridge offline'}</h3>
-            <p>
-              Missions are Claude Code and Codex runs through the Arganta Bridge (WS 127.0.0.1:7717).
-              {bridge === 'connected'
-                ? ' Start one from the Sovereign/Claude/Codex capsules in Arganta Core; running missions, approvals and results will stream here.'
-                : ' Connect the bridge from Arganta Core to run and watch missions here.'}
-              <br /><br />
-              Persisted mission history lands here once <span style={{ fontFamily: 'var(--mono)' }}>migration_missions_engine.sql</span> is applied — until then this reads the live bridge only, and never invents a run that didn't happen.
-            </p>
-          </div>
+      <div className="ags-main"><div className="ags-scroll">
+        <div className="ags-mhead">
+          <span>{missions!.length} mission{missions!.length === 1 ? '' : 's'} · {running} running</span>
+          <span className={'ags-chip ' + bridge} style={{ marginLeft: 'auto' }}><i />Bridge {bridge === 'checking' ? '…' : bridge}</span>
         </div>
-      </div>
+        {missions!.map(m => {
+          const engine = m.engine === 'codex' ? 'openai' : 'claude'
+          const open = openId === m.id
+          const acts = Array.isArray(m.activity) ? m.activity : []
+          return (
+            <div key={m.id} className={'ags-mission' + (open ? ' open' : '')}>
+              <button className="ags-mrow" onClick={() => setOpenId(open ? null : m.id)}>
+                <BrainMark mark={engine} size={14} />
+                <span className="ags-mgoal">{m.goal}</span>
+                <span className={'ags-live ' + (MISSION_CHIP[m.status] || 'offline')}><i />{m.status}</span>
+                <span className="ags-mtime">{relTime(m.updated_at || m.created_at)}</span>
+                {m.cost_usd > 0 && <span className="ags-mcost">${m.cost_usd.toFixed(3)}</span>}
+              </button>
+              {open && (
+                <div className="ags-mbody">
+                  {acts.length > 0
+                    ? acts.slice(-12).map((a: any, i: number) => (
+                        <div key={i} className="ags-mact"><span className="k">{a.type}</span>{a.label || a.text || ''}</div>
+                      ))
+                    : <div className="ags-mact" style={{ color: 'var(--tx3)' }}>No activity trail recorded.</div>}
+                  {m.status === 'running' && <button className="ags-link" onClick={() => go('core')}>Watch / approve in Arganta Core →</button>}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div></div>
     </div>
   )
 }
 
 // ── TOKENOMICS ──────────────────────────────────────────────────────────────
-type NRun = { costClass: number | null; provider: string | null; costUsd: number; status: string }
+type NRun = { costClass: number | null; provider: string | null; costUsd: number; status: string; at: string }
+const TIERS = [
+  { c: 0, name: 'Sovereign', color: '#6366f1' },
+  { c: 1, name: 'Sponsored', color: '#0891b2' },
+  { c: 2, name: 'Economy', color: '#d97706' },
+  { c: 3, name: 'Frontier', color: '#e11d67' },
+]
 function TokensTab() {
   const [session] = useState(() => getSessionRuns())
   const [live, setLive] = useState<any[]>([])
@@ -354,6 +458,7 @@ function TokensTab() {
     provider: r.actualProvider || r.actual_provider || null,
     costUsd: r.costUsd ?? r.cost_usd ?? 0,
     status: r.status,
+    at: r.createdAt || r.created_at || new Date().toISOString(),
   })), [session, live])
 
   const total = runs.length
@@ -361,12 +466,25 @@ function TokensTab() {
   const scr = eligible.length ? Math.round(100 * eligible.filter(r => r.costClass === 0).length / eligible.length) : null
   const spend = capo?.cost_usd ?? runs.reduce((s, r) => s + (r.costUsd || 0), 0)
   const frontier = runs.filter(r => r.costClass === 3).length
-  const byProvider = useMemo(() => {
+
+  const byTier = useMemo(() => TIERS.map(t => ({ ...t, n: runs.filter(r => r.costClass === t.c).length })), [runs])
+  const maxT = Math.max(1, ...byTier.map(t => t.n))
+  // Cost by provider — only providers that actually cost money (costUsd > 0).
+  const costByProvider = useMemo(() => {
     const m = new Map<string, number>()
-    for (const r of runs) { const k = r.provider || 'unknown'; m.set(k, (m.get(k) || 0) + 1) }
+    for (const r of runs) if (r.costUsd > 0) { const k = r.provider || 'unknown'; m.set(k, (m.get(k) || 0) + r.costUsd) }
     return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
   }, [runs])
-  const maxP = Math.max(1, ...byProvider.map(p => p[1]))
+  const maxC = Math.max(1e-9, ...costByProvider.map(p => p[1]))
+  // 14-day daily run trend from real timestamps.
+  const trend = useMemo(() => {
+    const days: string[] = []
+    const now = new Date()
+    for (let i = 13; i >= 0; i--) { const d = new Date(now); d.setDate(now.getDate() - i); days.push(d.toISOString().slice(0, 10)) }
+    const counts = new Map(days.map(d => [d, 0]))
+    for (const r of runs) { const k = r.at.slice(0, 10); if (counts.has(k)) counts.set(k, counts.get(k)! + 1) }
+    return days.map(d => counts.get(d)!)
+  }, [runs])
 
   if (loaded && total === 0) {
     return (
@@ -386,16 +504,36 @@ function TokensTab() {
           <div className="ags-kpi"><div className="kl"><Coins size={12} /> Spend</div><div className="kv">${spend.toFixed(2)}</div><div className="ks">measured, 30d</div></div>
           <div className="ags-kpi"><div className="kl">Frontier calls</div><div className="kv">{frontier}</div><div className="ks" style={{ color: frontier ? 'var(--warn,#d9a12f)' : 'var(--tx3)' }}>{frontier ? 'approval-gated' : 'none — all cheaper tiers'}</div></div>
         </div>
+
         <div className="ags-bars">
-          <h4>Runs by provider</h4>
-          {byProvider.length === 0 ? <div style={{ color: 'var(--tx3)', fontSize: 12 }}>No provider data.</div> : byProvider.map(([p, n]) => (
-            <div key={p} className="ags-bar">
-              <span>{p}</span>
-              <span className="track"><span className="fill" style={{ width: (100 * n / maxP) + '%' }} /></span>
-              <span className="amt">{n}</span>
+          <h4>Runs by tier</h4>
+          {byTier.map(t => (
+            <div key={t.c} className="ags-bar">
+              <span>T{t.c} · {t.name}</span>
+              <span className="track"><span className="fill" style={{ width: (100 * t.n / maxT) + '%', background: t.color }} /></span>
+              <span className="amt">{t.n}</span>
             </div>
           ))}
         </div>
+
+        <div className="ags-bars">
+          <h4>Cost by provider</h4>
+          {costByProvider.length === 0
+            ? <div style={{ color: 'var(--tx3)', fontSize: 12 }}>No paid runs — everything ran on free/local tiers.</div>
+            : costByProvider.map(([p, c]) => (
+              <div key={p} className="ags-bar">
+                <span>{p}</span>
+                <span className="track"><span className="fill" style={{ width: (100 * c / maxC) + '%' }} /></span>
+                <span className="amt">${c.toFixed(3)}</span>
+              </div>
+            ))}
+        </div>
+
+        <div className="ags-bars">
+          <h4>Runs · last 14 days</h4>
+          <Spark data={trend} />
+        </div>
+
         <div className="ags-legend" style={{ padding: '0 2px' }}>
           <p>The old "$2.20 / month" estimate is gone. Note: the Claude and Codex <b>brains</b> run plan-authed on your machine and do <b>not</b> pass through this ledger yet — a known metering gap tracked in the C-Level revamp (CL-2/CL-4).</p>
         </div>
@@ -404,17 +542,53 @@ function TokensTab() {
   )
 }
 
+function Spark({ data }: { data: number[] }) {
+  const w = 560, h = 48, max = Math.max(1, ...data)
+  const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - (v / max) * (h - 6) - 3])
+  const line = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L ')
+  const total = data.reduce((s, v) => s + v, 0)
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: 48, display: 'block' }}>
+        <path d={`${line} L ${w} ${h} L 0 ${h} Z`} fill="color-mix(in srgb, var(--acc) 12%, transparent)" />
+        <path d={line} fill="none" stroke="var(--acc)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div style={{ fontSize: 10.5, color: 'var(--tx3)', marginTop: 4 }}>{total} run{total === 1 ? '' : 's'} over 14 days · {max} peak/day</div>
+    </div>
+  )
+}
+
 // ── AUTHOR ──────────────────────────────────────────────────────────────────
 const GROUNDED = new Set(['operations', 'treasury'])
-function AuthorTab() {
+function AuthorTab({ overrides, setOverride }: { overrides: Record<string, AgentOverride>; setOverride: (id: string, o: AgentOverride | null) => void }) {
   const [id, setId] = useState<string>(AGENTS[0].id)
-  const a = AGENTS.find(x => x.id === id)!
-  const office = officeOf(a)
+  const base = AGENTS.find(x => x.id === id)!
+  const merged = mergeAgent(base, overrides)
+  const office = officeOf(base)
   const grounded = GROUNDED.has(office)
+  const edited = !!overrides[id]
+
+  // Controlled form, reseeded whenever the selected agent (or its override) changes.
+  const [mission, setMission] = useState(merged.mission)
+  const [inputs, setInputs] = useState(merged.inputs.join(', '))
+  const [model, setModel] = useState<Model>(merged.model)
+  useEffect(() => {
+    setMission(merged.mission); setInputs(merged.inputs.join(', ')); setModel(merged.model)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  const dirty = mission !== merged.mission || inputs !== merged.inputs.join(', ') || model !== merged.model
+  function save() {
+    setOverride(id, { mission, inputs: inputs.split(',').map(s => s.trim()).filter(Boolean), model })
+  }
+  function reset() {
+    setOverride(id, null)
+    setMission(base.mission); setInputs(base.inputs.join(', ')); setModel(base.model)
+  }
+
   const [prompt, setPrompt] = useState('Give me the daily brief')
   const [out, setOut] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
   async function runTest() {
     setBusy(true); setOut(null)
     try {
@@ -434,31 +608,35 @@ function AuthorTab() {
           <div className="ags-authlist">
             {AGENTS.map(x => (
               <button key={x.id} className={'ags-agent' + (x.id === id ? ' sel' : '')} style={{ width: '100%', textAlign: 'left', marginBottom: 6 }} onClick={() => { setId(x.id); setOut(null) }}>
-                <div className="an">{x.name}</div>
+                <div className="an">{x.name}{overrides[x.id] && <span className="ags-edited">edited</span>}</div>
                 <div className="ar">{OFFICE_META[officeOf(x)].label}</div>
               </button>
             ))}
           </div>
           <div className="ags-authmain">
-            <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{a.name}
+            <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{base.name}
               <span className={'ags-groundbadge ' + (grounded ? 'g' : 'p')}>{grounded ? 'grounded' : 'persona'}</span>
+              {edited && <span className="ags-edited">edited</span>}
             </h3>
-            <div style={{ color: 'var(--tx3)', fontSize: 12, marginBottom: 16 }}>{a.role} · {OFFICE_META[office].label}</div>
+            <div style={{ color: 'var(--tx3)', fontSize: 12, marginBottom: 16 }}>{base.role} · {OFFICE_META[office].label}</div>
 
-            <div className="ags-field"><label>Mission</label><textarea defaultValue={a.mission} /></div>
-            <div className="ags-field"><label>Reads (data sources)</label><input defaultValue={a.inputs.join(', ')} /></div>
+            <div className="ags-field"><label>Mission</label><textarea value={mission} onChange={e => setMission(e.target.value)} /></div>
+            <div className="ags-field"><label>Reads (data sources)</label><input value={inputs} onChange={e => setInputs(e.target.value)} /></div>
             <div className="ags-field"><label>Model floor</label>
-              <select defaultValue={a.model}>
+              <select value={model} onChange={e => setModel(e.target.value as Model)}>
                 <option value="det">Deterministic (SQL + arithmetic)</option>
                 <option value="haiku">Haiku — sense / classify</option>
                 <option value="sonnet">Sonnet — reason / debate</option>
               </select>
             </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <button className="ags-testbtn" onClick={save} disabled={!dirty}>{edited ? 'Update draft' : 'Save draft'}</button>
+              {edited && <button className="ags-testbtn" style={{ background: 'var(--bg3)', color: 'var(--tx2)' }} onClick={reset}>Reset to default</button>}
+            </div>
             <p style={{ fontSize: 11.5, color: 'var(--tx3)', margin: '0 0 14px' }}>
-              Edits are local drafts for now (registry persistence lands with the Supabase agent tables).
-              {grounded
-                ? ' This office is grounded — the test below runs the real Sense→Compute→Match→Generate pipeline over live data.'
-                : ' This office is still persona — grounding it (CTO, GC, CAPO) is the CL-track; until then the test uses the shared deterministic pipeline as a stand-in.'}
+              Drafts persist locally (registry tables land later). {grounded
+                ? 'This office is grounded — the test runs the real Sense→Compute→Match→Generate pipeline over live data.'
+                : 'This office is still persona — grounding it (CTO, GC, CAPO) is the CL-track; the test uses the shared deterministic pipeline as a stand-in.'}
             </p>
 
             <div className="ags-field"><label>Test prompt</label><input value={prompt} onChange={e => setPrompt(e.target.value)} /></div>
