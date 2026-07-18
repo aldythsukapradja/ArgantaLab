@@ -1,0 +1,38 @@
+/* Core inspector (T1) — Context · Missions slide-over. Same overlay pattern as
+   CoreHelp so it behaves identically in inline / fullscreen / panel mounts. */
+.cin-overlay { position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,.35); display: flex; justify-content: flex-end; }
+.cin { width: min(400px, 100%); height: 100%; background: var(--bg2); border-left: 1px solid var(--bd2); display: flex; flex-direction: column; box-shadow: -12px 0 40px rgba(0,0,0,.25); }
+.cin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--bd); flex: none; }
+.cin-seg button { display: inline-flex; align-items: center; gap: 5px; }
+.cin-x { border: none; background: transparent; color: var(--tx2); cursor: pointer; padding: 4px; }
+
+.cin-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.cin-center { align-items: center; justify-content: center; }
+.cin-empty { font-size: 11.5px; color: var(--tx3); line-height: 1.55; text-align: center; max-width: 280px; margin: 0 auto; }
+.cin-empty code { font-family: var(--mono); background: var(--bg3); padding: 1px 5px; border-radius: 4px; }
+.cin-spin { animation: cin-spin 1s linear infinite; color: var(--tx3); }
+@keyframes cin-spin { to { transform: rotate(360deg); } }
+
+.cin-card { border: 1px solid var(--bd); border-radius: 10px; background: var(--bg); padding: 10px 12px; }
+.cin-card-title { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--tx3); margin-bottom: 6px; }
+.cin-row { display: flex; gap: 12px; padding: 4px 0; border-top: 1px solid var(--bd); }
+.cin-row:first-of-type { border-top: none; }
+.cin-k { font-size: 11px; color: var(--tx3); width: 74px; flex: none; }
+.cin-v { font-size: 11.5px; color: var(--tx); min-width: 0; overflow-wrap: anywhere; }
+
+.cin-missions-head { display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; color: var(--tx3); }
+.cin-refresh { border: 1px solid var(--bd2); background: var(--bg); color: var(--tx2); border-radius: 6px; padding: 3px 7px; cursor: pointer; display: inline-flex; }
+.cin-mission { display: flex; gap: 9px; padding: 9px 11px; border: 1px solid var(--bd); border-radius: 10px; background: var(--bg); }
+.cin-mdot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex: none; background: var(--tx3); }
+.cin-mdot.running { background: var(--warn, #f59e0b); animation: cin-pulse 1.2s ease-in-out infinite; }
+.cin-mdot.done { background: var(--ok, #10b981); }
+.cin-mdot.failed { background: var(--bad, #ef4444); }
+@keyframes cin-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+@media (prefers-reduced-motion: reduce) { .cin-mdot.running { animation: none } }
+.cin-mbody { min-width: 0; }
+.cin-mgoal { font-size: 12px; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cin-msub { display: flex; gap: 8px; font-size: 10px; color: var(--tx3); margin-top: 3px; flex-wrap: wrap; }
+.cin-mengine { font-family: var(--mono); font-weight: 700; color: #D97757; }
+.cin-mengine.codex { color: #10A37F; }
+
+@media (max-width: 640px) { .cin { width: 100%; border-left: none; } }

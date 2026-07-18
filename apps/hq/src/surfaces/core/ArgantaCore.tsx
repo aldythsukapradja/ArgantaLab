@@ -9,6 +9,7 @@ type MountMode = 'fullscreen' | 'panel' | 'inline'
 import { ThreadsRail } from './ThreadsRail'
 import { Conversation } from './Conversation'
 import { BridgeConsole } from './BridgeConsole'
+import { CoreInspector } from './CoreInspector'
 import { ClaudeMark } from './ClaudeMark'
 import { OpenAIMark } from './OpenAIMark'
 import { ArgantaMark } from './ArgantaMark'
@@ -70,6 +71,19 @@ function BrainToggle({ brain, onChange }: { brain: Brain; onChange: (b: Brain) =
   )
 }
 
+/** T1 — the inspector affordance (Context · Missions). Same look everywhere. */
+function InspectorButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="core-help-btn" onClick={onClick} aria-label="Open Core inspector — context and missions" title="Inspector — context & missions">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <rect x="1.6" y="2.2" width="11.8" height="10.6" rx="2" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M9.4 2.2 V12.8" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M3.8 5.4 h3 M3.8 7.5 h3 M3.8 9.6 h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    </button>
+  )
+}
+
 /** The "?" affordance that opens the live Field Guide. Same look everywhere. */
 function HelpButton({ onClick }: { onClick: () => void }) {
   return (
@@ -109,6 +123,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   const [threadId, setThreadId] = useState<string | null>(initialThreadId ?? null)
   const [cortexOpen, setCortexOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [inspOpen, setInspOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
   const [threadsRefresh, setThreadsRefresh] = useState(0)
   const [hasThreads, setHasThreads] = useState(false)
@@ -188,6 +203,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
           <BrainToggle brain={brain} onChange={setBrain} />
           <PreviewButton />
           <StartersButton onPick={pickStarter} />
+          <InspectorButton onClick={() => setInspOpen(true)} />
           <HelpButton onClick={() => setHelpOpen(true)} />
         </div>
         {brain === 'claude'
@@ -200,6 +216,7 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
         ? <PreviewPane target={previewTarget} onTarget={setPreviewTarget} onClose={closePreview} />
         : <CortexPanel open={cortexOpen} onToggle={() => setCortexOpen(o => !o)} />}
       {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
+      {inspOpen && <CoreInspector brain={brain} onClose={() => setInspOpen(false)} />}
     </div>
   )
 }
@@ -224,6 +241,7 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [inspOpen, setInspOpen] = useState(false)
   // Brain mode: Sovereign (LLM Conversation, default) vs local Claude Code or
   // Codex via the Bridge.
   const [brain, setBrain] = useState<Brain>('sovereign')
@@ -238,6 +256,7 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
         <div className="core-fs-actions">
           <PreviewButton />
           <StartersButton onPick={onPickStarter} />
+          <InspectorButton onClick={() => setInspOpen(true)} />
           <button className="core-fs-new" onClick={onNewThread} aria-label="New thread" title="New thread">
             <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M11.5 2.6 L15.4 6.5 L7 14.9 L3 15.9 L4 11.9 Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /><path d="M10.6 3.5 L14.5 7.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
           </button>
@@ -248,6 +267,7 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
         </div>
       </div>
       {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
+      {inspOpen && <CoreInspector brain={brain} onClose={() => setInspOpen(false)} />}
       {brain === 'claude'
         ? <BridgeConsole key="claude" engine="claude" />
         : brain === 'codex'
