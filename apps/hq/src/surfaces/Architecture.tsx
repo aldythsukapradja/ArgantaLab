@@ -23,6 +23,7 @@ import {
   AGENT_LAYERS, AGENT_COLORS, AGENT_NODES, AGENT_EDGES, BRAIN_META,
   probeBridge, probeComfy, type Brain, type AgentStatus,
 } from '../data/agentFabric'
+import { SAFETY_POSTURE } from '../data/safetyPosture'
 
 // Architecture — the Arganta OS backbone as one React Flow graph, reconciled to
 // the reactor's seven-layer model (Command Core → Think → Know → Orchestrate →
@@ -158,12 +159,7 @@ const NODES: NodeDef[] = [
   { id: 'gov', layer: 'command', label: 'Governance & Trust', sub: 'approval gates · trust & safety', prov: 'partial',
     tech: 'governance.js · autonomy gate', repo: 'packages/ai · packages/agent',
     detail: 'Data-class guardrails, the autonomy ladder, and child-safety posture. Confidential data is forced local; side-effecting tools need approval. Because Arganta serves children, consent and data-handling are first-class here — badged honestly below.',
-    safety: [
-      { label: 'Guardian-run circles (structural consent)', prov: 'partial' },
-      { label: 'Age gating', prov: 'placeholder' },
-      { label: 'Verifiable parental consent (COPPA)', prov: 'placeholder' },
-      { label: 'Minor data retention & deletion', prov: 'placeholder' },
-    ] },
+    safety: SAFETY_POSTURE.map(s => ({ label: s.label, prov: s.prov })) },
 
   // Think — decide
   { id: 'router', layer: 'think', label: 'Four-Tier Router', sub: 'Sovereign → Sponsored → Economy → Frontier', prov: 'live', logos: [L.claude, L.oai],

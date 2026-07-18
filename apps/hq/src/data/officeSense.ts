@@ -1,7 +1,8 @@
-// officeSense — grounding for the two offices that own INFRASTRUCTURE, not
-// product metrics: Technology (CTO) and The Guild (CAPO). The operations/
-// treasury path (agentSense) reads product/economy RPCs; those are the wrong
-// facts for "is the AI stack healthy?" and "what does the agent OS cost?".
+// officeSense — grounding for the offices that own INFRASTRUCTURE / GOVERNANCE,
+// not product metrics: Technology (CTO), The Guild (CAPO) and Legal (GC). The
+// operations/treasury path (agentSense) reads product/economy RPCs; those are
+// the wrong facts for "is the AI stack healthy?", "what does the agent OS cost?"
+// and "what is actually enforced for child safety?".
 //
 // Same doctrine as agentSense: deterministic Sense → real facts + tone-tagged
 // signals, LLM only later at Generate (in tools.ts), honest offline degrade.
@@ -13,11 +14,13 @@ import { supabase, cloudEnabled } from '../lib/supabase'
 import { getSessionRuns } from '../lib/ai'
 import { AGENTS } from './agents'
 import { live } from './live'
+import { mustStayLocal, requiresApproval, allowedCostClasses } from '@arganta/ai'
+import { SAFETY_POSTURE, GATED_ACTIONS } from './safetyPosture'
 
 // The offices that give a GROUNDED answer (live data), not persona. Canonical
 // source for the UI so Agent Studio's Author badge can't drift from tools.ts.
 // operations/treasury run agentSense; technology/roster run officeSense below.
-export const GROUNDED_OFFICE_IDS = new Set(['operations', 'treasury', 'technology', 'roster'])
+export const GROUNDED_OFFICE_IDS = new Set(['operations', 'treasury', 'technology', 'roster', 'legal'])
 
 export type OfficeSignal = { tone: 'ok' | 'warn' | 'info'; text: string }
 export interface OfficeFacts {
@@ -138,4 +141,40 @@ export async function capoSense(): Promise<OfficeFacts> {
   ].join('\n')
 
   return { facts, signals, source: runs.length > 0 || cloud ? 'live' : 'offline', role: 'CAPO' }
+}
+
+// ── GC · Legal & Trust — what is actually enforced, and what is still open? ──
+// Grounds on the CONFIGURATION truth: the child-safety posture (honest badges),
+// the data-class guardrails governance.js really enforces, and the autonomy
+// gates the Bridge pauses on. Never claims a placeholder is done.
+export async function gcSense(): Promise<OfficeFacts> {
+  const live_ = SAFETY_POSTURE.filter((s) => s.prov === 'live')
+  const partial = SAFETY_POSTURE.filter((s) => s.prov === 'partial')
+  const placeholder = SAFETY_POSTURE.filter((s) => s.prov === 'placeholder')
+
+  // Real governance reads — these are the enforced rules, not vibes.
+  const restrictedLocal = mustStayLocal('restricted')          // true
+  const frontierApproval = requiresApproval({ costClass: 3, dataClass: 'internal' }).required // true
+  const confidentialClasses = [...allowedCostClasses('confidential')].sort().join(',')          // e.g. "0"
+
+  const signals: OfficeSignal[] = []
+  signals.push({ tone: 'ok', text: `Data-class guardrails enforced: restricted stays local (${restrictedLocal}), frontier calls need approval (${frontierApproval}), confidential limited to cost-class {${confidentialClasses}}` })
+  signals.push({ tone: 'ok', text: `${GATED_ACTIONS.length} side-effecting action classes pause for human approval (deploy, push, migration, spend, destructive fs, external send)` })
+  for (const s of placeholder) signals.push({ tone: 'warn', text: `${s.label} — not built${s.note ? ' (' + s.note + ')' : ''}` })
+  if (partial.length) signals.push({ tone: 'info', text: `Partial: ${partial.map((s) => s.label).join(', ')}` })
+  const blockers = placeholder.filter((s) => /COPPA|consent|age|deletion|moderation/i.test(s.label))
+  if (blockers.length) signals.push({ tone: 'warn', text: `${blockers.length} launch blockers for a public/US consumer launch — consent, age assurance, deletion and moderation must land first` })
+
+  const facts = [
+    `safety posture: ${live_.length} live, ${partial.length} partial, ${placeholder.length} placeholder`,
+    'built/partial: ' + [...live_, ...partial].map((s) => s.label).join('; '),
+    'NOT built: ' + placeholder.map((s) => s.label).join('; '),
+    `restricted data stays local: ${restrictedLocal}`,
+    `frontier (Tier-3) requires approval: ${frontierApproval}`,
+    `confidential data allowed cost-classes: {${confidentialClasses}}`,
+    'gated actions (pause for human): ' + GATED_ACTIONS.join(', '),
+  ].join('\n')
+
+  // Config is always available — this office is never "offline".
+  return { facts, signals, source: 'live', role: 'GC' }
 }

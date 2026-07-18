@@ -17,7 +17,7 @@ import { BUILDER_TOOL_SPECS, builderToolByName, validateHtml, classifyGameGenre 
 import { generateWebsite, generateApplication, generateGame, reviseArtifact } from '../../builder-core/generate'
 import { createArtifact, saveVersion, saveCurrentAsVersion, restoreVersion, getArtifact, listVersions, publishArtifact, publicArtifactUrl } from '../../builder-core/persist'
 import { agentSense, agentCompute, agentMatch, agentFacts, agentGenerate, routeIntent, INTENT_ROLE, AGENTS } from '../../data/agents'
-import { techSense, capoSense } from '../../data/officeSense'
+import { techSense, capoSense, gcSense } from '../../data/officeSense'
 import { agentMessages } from '@arganta/ai'
 
 export interface ToolResult {
@@ -245,13 +245,14 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
     ? { ...r, extraBlocks: [{ kind: 'chart', block: chartBlock }] }
     : r)
 
-  // technology (CTO) + roster (CAPO) — grounded in INFRASTRUCTURE facts (live
-  // probes + the run ledger), not the product-metric pipeline. officeSense.ts
-  // owns the deterministic Sense; only Generate uses a model, dataClass
-  // 'internal' (probe/ledger facts are operational, never confidential). Offline
-  // degrades to the signals with no LLM call — same honesty as operations.
-  if (office === 'technology' || office === 'roster') {
-    const os = office === 'technology' ? await techSense() : await capoSense()
+  // technology (CTO) + roster (CAPO) + legal (GC) — grounded in INFRASTRUCTURE /
+  // GOVERNANCE facts (live probes, the run ledger, the enforced safety config),
+  // not the product-metric pipeline. officeSense.ts owns the deterministic Sense;
+  // only Generate uses a model, dataClass 'internal' (operational facts, never
+  // confidential). Offline degrades to the signals with no LLM call — same
+  // honesty as operations.
+  if (office === 'technology' || office === 'roster' || office === 'legal') {
+    const os = office === 'technology' ? await techSense() : office === 'roster' ? await capoSense() : await gcSense()
     const sigText = os.signals.map(s => `${s.tone === 'warn' ? '⚠️' : s.tone === 'ok' ? '✅' : '→'} ${s.text}`).join('\n')
     if (os.source === 'offline') {
       const text = `_(${os.role} · operational facts · offline)_\n\n${sigText}`
@@ -270,9 +271,10 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
   }
 
   if (!GROUNDED_OFFICES.has(office)) {
-    // bridge/legal — no grounded pipeline yet (technology + roster now run the
-    // officeSense infra path above; CTO/CAPO grounding shipped in batch G).
-    // Honest persona, same shape C3 shipped, now
+    // bridge (CEO) only — the synthesis office has no single pipeline; it stacks
+    // the other chiefs. technology/roster/legal now run the officeSense path
+    // above (CTO/CAPO in batch G, GC in CL-3). Honest persona, same shape C3
+    // shipped, now
     // actually dataClass-governed at 'internal' (the old code called ai.chat
     // with zero dataClass awareness — a real, lower-stakes version of the
     // same latent gap the grounded path closes).
