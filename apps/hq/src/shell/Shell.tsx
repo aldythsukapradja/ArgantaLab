@@ -26,7 +26,7 @@ const BattleBuilder = lazy(() => import('../surfaces/battle/BattleBuilder').then
 const CharacterForge = lazy(() => import('../surfaces/character/CharacterForge').then(module => ({ default: module.CharacterForge })))
 const OpenworldBuilder = lazy(() => import('../surfaces/world/OpenworldBuilder').then(module => ({ default: module.OpenworldBuilder })))
 const MusicBuilder = lazy(() => import('../surfaces/music/MusicBuilder').then(module => ({ default: module.MusicBuilder })))
-const VideoBuilder = lazy(() => import('../surfaces/video/VideoBuilder').then(module => ({ default: module.VideoBuilder })))
+const VideoBuilder = lazy(() => import('../surfaces/video/VideoStudio').then(module => ({ default: module.VideoStudio })))
 const MediaCenter = lazy(() => import('../surfaces/media/MediaCenter').then(module => ({ default: module.MediaCenter })))
 const CinemaDev = lazy(() => import('../cinema/CinemaDev').then(module => ({ default: module.CinemaDev })))
 const ReactorBuilder = lazy(() => import('../reactor/builder/ReactorBuilder').then(module => ({ default: module.ReactorBuilder })))
