@@ -15,7 +15,14 @@ import { homedir, totalmem, freemem, cpus } from 'node:os';
 
 const COMFY_PORT = Number(process.env.COMFY_PORT || 8188);
 
-function monthKey(ts: number): string { return new Date(ts).toISOString().slice(0, 7); }
+// "Day 0" for the spend-history chart — the founder's declared project start.
+// Everything before this date is excluded from the weekly trend (early setup
+// noise); overridable via BRIDGE_PROJECT_START=YYYY-MM-DD.
+const PROJECT_START = Date.parse((process.env.BRIDGE_PROJECT_START || '2026-05-01') + 'T00:00:00Z');
+const WEEK_MS = 7 * 86400e3;
+function weekIndex(ts: number): number { return Math.floor((ts - PROJECT_START) / WEEK_MS); }
+function weekStartIso(idx: number): string { return new Date(PROJECT_START + idx * WEEK_MS).toISOString().slice(0, 10); }
+
 function round(n: number, dp = 4) { const f = 10 ** dp; return Math.round(n * f) / f; }
 
 // --- Claude Code (ccusage-style, ESTIMATE) --------------------------------
@@ -98,7 +105,7 @@ function claudeUsage() {
   const startOfDayUTC = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
   const byModel: Record<string, { label: string; tokens: number; cost: number }> = {};
   const byDay: Record<string, number> = {};
-  const monthly: Record<string, Record<string, { tokens: number; cost: number }>> = {};
+  const weekly: Record<number, Record<string, { tokens: number; cost: number }>> = {};
   let todayTok = 0, todayCost = 0, weekCost = 0, last5hTok = 0, allTok = 0, allCost = 0;
   const seenKeys = new Set<string>();
   for (const e of all) {
@@ -110,10 +117,12 @@ function claudeUsage() {
     allTok += tot; allCost += e.cost;
     const day = new Date(e.ts).toISOString().slice(0, 10);
     byDay[day] = (byDay[day] || 0) + tot;
-    const mo = monthKey(e.ts);
-    const mm = (monthly[mo] ||= {});
-    const mc = (mm[e.label] ||= { tokens: 0, cost: 0 });
-    mc.tokens += tot; mc.cost += e.cost;
+    if (e.ts >= PROJECT_START) {
+      const wi = weekIndex(e.ts);
+      const wm = (weekly[wi] ||= {});
+      const wc = (wm[e.label] ||= { tokens: 0, cost: 0 });
+      wc.tokens += tot; wc.cost += e.cost;
+    }
     if (e.ts >= startOfDayUTC) { todayTok += tot; todayCost += e.cost; }
     if (now - e.ts <= weekMs) weekCost += e.cost;
     if (now - e.ts <= fiveH) last5hTok += tot;
@@ -132,7 +141,7 @@ function claudeUsage() {
     byModel: Object.values(byModel).map((m) => ({ ...m, cost: round(m.cost) })).sort((a, b) => b.tokens - a.tokens),
     days,
     files: fileCache.size,
-    monthly,
+    weekly,
   };
 }
 
@@ -178,16 +187,18 @@ function codexUsage() {
 
   const now = Date.now(), dayMs = 86400e3, weekMs = 7 * dayMs;
   const startOfDayUTC = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
-  const monthly: Record<string, { tokens: number; cost: number }> = {};
+  const weekly: Record<number, { tokens: number; cost: number }> = {};
   let inTok = 0, cachedTok = 0, outTok = 0, todayTok = 0, weekCost = 0;
   for (const c of codexCache.values()) {
     inTok += c.inTok; cachedTok += c.cachedTok; outTok += c.outTok;
     const tot = c.inTok + c.cachedTok + c.outTok;
     const cost = (c.inTok * 1.25 + c.cachedTok * 0.125 + c.outTok * 10) / 1e6;
     const ts = Date.parse(c.day + 'T12:00:00Z');
-    const mo = c.day.slice(0, 7);
-    const mm = (monthly[mo] ||= { tokens: 0, cost: 0 });
-    mm.tokens += tot; mm.cost += cost;
+    if (ts >= PROJECT_START) {
+      const wi = weekIndex(ts);
+      const wm = (weekly[wi] ||= { tokens: 0, cost: 0 });
+      wm.tokens += tot; wm.cost += cost;
+    }
     if (ts >= startOfDayUTC) todayTok += tot;
     if (now - ts <= weekMs) weekCost += cost;
   }
@@ -199,33 +210,29 @@ function codexUsage() {
     today: { tokens: todayTok }, allTime: { tokens: allTok, costUsd: round(allCost) },
     weekCostUsd: round(weekCost),
     inputTokens: inTok, cachedTokens: cachedTok, outputTokens: outTok,
-    monthly,
+    weekly,
   };
 }
 
-/** Combine Claude's per-model monthly map + Codex's single-series monthly map
- * into one chart-ready series, normalized to start at the FIRST month either
- * brain was used (never padded back to some arbitrary calendar start) and
- * filled through the most recent month with data (gaps = zero, not skipped). */
-function combineMonthly(
-  claudeMonthly: Record<string, Record<string, { tokens: number; cost: number }>>,
-  codexMonthly: Record<string, { tokens: number; cost: number }>,
+/** Combine Claude's per-model weekly map + Codex's single-series weekly map
+ * into one chart-ready series, in exact 7-day buckets from PROJECT_START (so
+ * "day 0" always means the same instant in both the actual-date and
+ * normalized-day chart modes). ALWAYS starts at week 0 (never the first week
+ * with data — day 0 is the founder's declared start, not a discovered one)
+ * and fills through the current week, zero-padding empty weeks. */
+function combineWeekly(
+  claudeWeekly: Record<number, Record<string, { tokens: number; cost: number }>>,
+  codexWeekly: Record<number, { tokens: number; cost: number }>,
 ) {
-  const months = new Set([...Object.keys(claudeMonthly), ...Object.keys(codexMonthly)]);
-  if (months.size === 0) return [] as { month: string; byModel: Record<string, { tokens: number; cost: number }> }[];
-  const sorted = [...months].sort();
-  const start = sorted[0], end = sorted[sorted.length - 1];
-  const range: string[] = [];
-  let cursor = new Date(start + '-01T00:00:00Z');
-  const endDate = new Date(end + '-01T00:00:00Z');
-  while (cursor <= endDate) {
-    range.push(cursor.toISOString().slice(0, 7));
-    cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
-  }
-  return range.map((mo) => {
-    const byModel: Record<string, { tokens: number; cost: number }> = { ...(claudeMonthly[mo] || {}) };
-    if (codexMonthly[mo]) byModel.Codex = codexMonthly[mo];
-    return { month: mo, byModel };
+  const nowIdx = weekIndex(Date.now());
+  const idxs = [...Object.keys(claudeWeekly), ...Object.keys(codexWeekly)].map(Number);
+  const maxIdx = Math.max(0, nowIdx, ...idxs);
+  const range: number[] = [];
+  for (let i = 0; i <= maxIdx; i++) range.push(i);
+  return range.map((i) => {
+    const byModel: Record<string, { tokens: number; cost: number }> = { ...(claudeWeekly[i] || {}) };
+    if (codexWeekly[i]) byModel.Codex = codexWeekly[i];
+    return { weekStart: weekStartIso(i), dayOffset: i * 7, byModel };
   });
 }
 
@@ -304,8 +311,8 @@ export async function telemetry() {
   const claude = claudeUsage();
   const codex = codexUsage();
   const comfy = await comfyStats();
-  const monthly = combineMonthly(claude.monthly, codex.monthly);
-  const { monthly: _cm, ...claudeOut } = claude;
-  const { monthly: _xm, ...codexOut } = codex;
-  return { claude: claudeOut, codex: codexOut, comfy, system: systemInfo(), monthly, at: new Date().toISOString() };
+  const weekly = combineWeekly(claude.weekly, codex.weekly);
+  const { weekly: _cw, ...claudeOut } = claude;
+  const { weekly: _xw, ...codexOut } = codex;
+  return { claude: claudeOut, codex: codexOut, comfy, system: systemInfo(), weekly, at: new Date().toISOString() };
 }

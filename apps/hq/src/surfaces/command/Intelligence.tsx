@@ -1,10 +1,11 @@
-// Command Center v2 — the Intelligence band: SPEND (+ monthly history),
+// Command Center v2 — the Intelligence band: SPEND (+ weekly history),
 // WORKLOAD (ComfyUI compute), MODEL MAP, and SYSTEM (local machine health).
 // LLM usage is 'est' (parsed from local logs — no official subscription-quota
 // API exists), ComfyUI + machine numbers are 'live' (measured locally). The
 // MODEL MAP is 'declared' config mirroring packages/ai/src/registry.js (the
 // four-tier router), not a live measurement — it answers "which model is used
 // where".
+import { useState } from 'react'
 import type { Telemetry } from './ops/useOps'
 
 export const fmtTokens = (n: number): string =>
@@ -16,14 +17,13 @@ const fmtDuration = (sec: number): string => {
   const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
-const MONTH_LABEL = (mo: string): string => {
-  const [y, m] = mo.split('-')
-  return new Date(Date.UTC(+y, +m - 1, 1)).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
-}
+/** 'YYYY-MM-DD' -> "May 1" */
+const WEEK_DATE_LABEL = (iso: string): string =>
+  new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
 // Series colors — consistent across the by-model pills and the history chart.
 const SERIES_COLOR: Record<string, string> = {
-  Opus: '#D97757', Sonnet: '#e8a383', Haiku: '#f4c9b0', Fable: '#c9648a', Codex: '#10A37F',
+  Opus: '#D97757', Sonnet: '#e8a383', Haiku: '#f4c9b0', Fable: '#c9648a', Codex: '#10A37F', Sovereign: '#6366f1',
 }
 
 // Declared routing map — mirrors packages/ai/src/registry.js COST_CLASS tiers.
@@ -61,12 +61,26 @@ export function IntelligenceBand({ telemetry: t }: { telemetry: Telemetry | null
               ))}
               <SpendCell label="Sovereign" tokens={null} usd={0} todayTok={null} accent="#6366f1" note={`${comfy?.jobsWeek ?? 0} local jobs this week — no metered cost`} />
             </div>
-            <div className="cc-bymodel">{t.claude.byModel.filter((m) => m.tokens > 0).map((m) => (
-              <span key={m.label} className="cc-bymodel-pill mono" style={{ ['--dot' as string]: SERIES_COLOR[m.label] || 'var(--tx3)' }}>
-                <i className="cc-bymodel-dot" />{m.label} <b>{fmtTokens(m.tokens)}</b>{m.cost > 0 && <i className="cc-bymodel-usd"> · {fmtUsd(m.cost)}</i>}
-              </span>
-            ))}</div>
-            <MonthlyChart monthly={t.monthly} />
+
+            {/* Grouped model pills — Claude's sub-models, Codex, and Sovereign's
+                local media models, each under its own brain label. */}
+            <PillGroup label="Claude">
+              {t.claude.byModel.filter((m) => m.tokens > 0).map((m) => (
+                <Pill key={m.label} color={SERIES_COLOR[m.label] || 'var(--tx3)'} label={m.label} count={m.tokens} usd={m.cost} />
+              ))}
+            </PillGroup>
+            <PillGroup label="Codex">
+              <Pill color={SERIES_COLOR.Codex} label="Codex" count={t.codex.allTime.tokens} usd={t.codex.allTime.costUsd} />
+            </PillGroup>
+            {comfy?.topModels && comfy.topModels.length > 0 && (
+              <PillGroup label="Sovereign" sub="runs, not tokens — local & free">
+                {comfy.topModels.map((m) => (
+                  <Pill key={m.name} color={SERIES_COLOR.Sovereign} label={prettyModel(m.name)} count={m.runs} />
+                ))}
+              </PillGroup>
+            )}
+
+            <WeeklyChart weekly={t.weekly} />
           </>
         ) : <p className="cc-muted">Connect the bridge to see usage.</p>}
       </section>
@@ -169,27 +183,53 @@ function SpendCell({ label, tokens, usd, todayTok, accent, note }: {
   )
 }
 
-/** Dependency-free stacked bar chart: one bar per month, segments colored by
- * model, scaled against the month with the highest total. Normalized to start
- * at the FIRST month either brain was used — never padded back to an
- * arbitrary calendar start. */
-function MonthlyChart({ monthly }: { monthly: Telemetry['monthly'] }) {
-  if (!monthly || monthly.length === 0) return null
-  const totals = monthly.map((m) => Object.values(m.byModel).reduce((s, v) => s + v.cost, 0))
+/** A labeled row of model pills — one per brain (Claude / Codex / Sovereign),
+ * so the "which model ran" breakdown reads as three groups, not one flat list. */
+function PillGroup({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
+  return (
+    <div className="cc-bymodel-group">
+      <div className="cc-bymodel-group-label">{label}{sub && <i>{sub}</i>}</div>
+      <div className="cc-bymodel">{children}</div>
+    </div>
+  )
+}
+function Pill({ color, label, count, usd }: { color: string; label: string; count: number; usd?: number }) {
+  return (
+    <span className="cc-bymodel-pill mono" style={{ ['--dot' as string]: color }}>
+      <i className="cc-bymodel-dot" />{label} <b>{fmtTokens(count)}</b>{usd != null && usd > 0 && <i className="cc-bymodel-usd"> · {fmtUsd(usd)}</i>}
+    </span>
+  )
+}
+
+/** Dependency-free stacked bar chart: one bar per week, segments colored by
+ * model, scaled against the busiest week. Fixed at 7-day buckets from the
+ * founder's declared project start ("day 0"), never the first week with data.
+ * A toggle switches the x-axis between real calendar dates and days-since-
+ * start, both computed from the SAME buckets so they always agree. */
+function WeeklyChart({ weekly }: { weekly: Telemetry['weekly'] }) {
+  const [mode, setMode] = useState<'date' | 'day0'>('date')
+  if (!weekly || weekly.length === 0) return null
+  const totals = weekly.map((w) => Object.values(w.byModel).reduce((s, v) => s + v.cost, 0))
   const max = Math.max(0.01, ...totals)
-  const series = [...new Set(monthly.flatMap((m) => Object.keys(m.byModel)))]
+  const series = [...new Set(weekly.flatMap((w) => Object.keys(w.byModel)))]
   return (
     <div className="cc-chart">
-      <div className="cc-chart-h">Monthly spend by model <span>since first use</span></div>
+      <div className="cc-chart-h">
+        Weekly spend by model <span>since project start</span>
+        <div className="cc-chart-toggle">
+          <button className={mode === 'date' ? 'active' : ''} onClick={() => setMode('date')}>Date</button>
+          <button className={mode === 'day0' ? 'active' : ''} onClick={() => setMode('day0')}>Day 0</button>
+        </div>
+      </div>
       <div className="cc-chart-bars">
-        {monthly.map((m, i) => (
-          <div key={m.month} className="cc-chart-col">
+        {weekly.map((w, i) => (
+          <div key={w.weekStart} className="cc-chart-col">
             <div className="cc-chart-stack" style={{ height: `${Math.max(2, (totals[i] / max) * 100)}%` }}>
-              {series.filter((s) => m.byModel[s]).map((s) => (
-                <div key={s} className="cc-chart-seg" style={{ background: SERIES_COLOR[s] || 'var(--tx3)', flex: m.byModel[s].cost }} title={`${s}: ${fmtUsd(m.byModel[s].cost)}`} />
+              {series.filter((s) => w.byModel[s]).map((s) => (
+                <div key={s} className="cc-chart-seg" style={{ background: SERIES_COLOR[s] || 'var(--tx3)', flex: w.byModel[s].cost }} title={`${s}: ${fmtUsd(w.byModel[s].cost)}`} />
               ))}
             </div>
-            <div className="cc-chart-label mono">{MONTH_LABEL(m.month)}</div>
+            <div className="cc-chart-label mono">{mode === 'date' ? WEEK_DATE_LABEL(w.weekStart) : `D${w.dayOffset}`}</div>
           </div>
         ))}
       </div>
