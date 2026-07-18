@@ -315,11 +315,28 @@ for v1 — tap-to-add at playhead.
 6. Empty-state first-run shows starters; archive+undo works.
 7. No console errors, no horizontal scroll, tap targets ≥44px.
 
-## Order + sizing
+## MASTER EXECUTION ORDER (consolidated with the Tri-Brain T-track, 2026-07-18)
 
-R1 (½ day, blocks all) → R2 (1–1.5 days) → R3 (1.5–2 days) → R4 (1 day) →
-R5 (½–1 day). Every phase browser-verified desktop + mobile viewport, one
-commit each to main. Post Studio itself is NOT touched (S4 rule).
+One sequential plan; each step = one session-sized unit, one commit, DoD run
+(desktop + 375×812 + no console errors). Tri-brain is nearly complete in the
+working tree, so it lands FIRST.
+
+| # | Step | What ships | Verify before commit |
+|---|---|---|---|
+| 1 | **T0 · Land tri-brain** | Commit the uncommitted ArgantaCore/BridgeConsole/bridge-codex work | Tri-Brain-Plan's 5 acceptance checks: no capsule overlap, 3 capsules both mounts, Claude-tab regression (connect/mission/approval), real Codex mission, tsc+build clean incl. bridge |
+| 2 | **R1 · comfyClient + JobStore + SovereignChip** | Browser→ComfyUI client (3 verified graphs + gotchas), app-level job store, chip in all studio top bars + Media Center | Chip states green/amber/gray live; a music render from devtools console lands bytes; kill-server mid-poll → failed state |
+| 3 | **R2 · Audio Studio v2** | Feed+player hero, Generate scope (Simple/Custom→ACE-Step), SFX scope from Legacy, Voice cards, stage dances to MP3s (AnalyserNode) | DoD 7 steps; real song from prompt on desktop AND phone; feed track attaches in Video Builder |
+| 4 | **T1 · Core polish** | 3-scope inspector (Threads/Context/Missions), composer w/ inline brain capsule, orb docking, feed rhythm, mobile sheet | Claude regression again; missions scope shows a live bridge mission; mobile composer above keyboard |
+| 5 | **R3 · Video Studio v2** | Generate\|Edit modes, Wan gallery w/ presets + OOM retry, Generations+Audio drawer tabs in Edit | DoD; prompt→clip→Send to Edit→timeline with R2 music→export MP4 |
+| 6 | **T2 · BrainSeam extraction** | Shared tri-capsule seam component + studio context providers + mission `context` field (bridge server accepts) | Seam mounted in a test harness; context truncation note works; feeds keyed per surface+engine |
+| 7 | **T3 · Studio seam adoption** | Post Copilot / Audio Composer / Video Director / Pixel Forge-assist replaced by BrainSeam (deterministic engines = Sovereign tab) | Each studio: Sovereign tab works offline; Claude tab runs a real contextual mission; Codex tab shows starters + runs one sandbox mission |
+| 8 | **R4 · Pixel gallery v2** | Gallery-first grid + facets, Forge rail w/ visual style-ref, inline ingest review, thumb re-sign | DoD; brief from rail w/ card as ref; promote from grid; smooth at 1k items |
+| 9 | **R5 + T4 · Polish + map** | Shared components extracted (BottomSheet/FeedCard/ProgressToast), full mobile QA pass all surfaces, "Brains" map popover, Media Center Sovereign Rack | Post Studio parity checklist on every studio; map popover per tab; zero regressions in Post Studio itself |
+
+Rules that hold across all 9 steps: Post Studio code untouched until step 9's
+shared extraction (and even then only additive); sovereign-only (no billing
+UI); bridge Claude tab is production — regression-check whenever its files are
+near; commit to main each step with browser proof.
 
 ## Arganta-specific tailoring notes
 
