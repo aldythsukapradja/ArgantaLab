@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Boxes, Hammer, X } from 'lucide-react'
+import { BrainsMap } from '../shared/BrainsMap'
 import { Browser } from './Browser'
 import { UsageView, PalettesView, IngestView, ForgeView } from './views'
 import { LashiraBloomArt } from './LashiraBloomArt'
@@ -56,6 +57,7 @@ export function Pixel() {
               </button>
             ))}
           </div>
+          <BrainsMap surface="pixel" />
           <button className={'pixel-forge-toggle' + (forgeOpen ? ' on' : '')} onClick={() => setForgeOpen(o => !o)} title="Toggle the Forge rail">
             <Hammer size={14} /> Forge
           </button>

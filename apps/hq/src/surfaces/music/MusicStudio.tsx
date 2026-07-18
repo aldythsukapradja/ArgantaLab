@@ -13,6 +13,7 @@ import {
   SlidersHorizontal, ListMusic, Drum as DrumIcon, Download, Library, Music3, Mic,
 } from 'lucide-react'
 import { SovereignChip } from '../shared/SovereignChip'
+import { BrainsMap } from '../shared/BrainsMap'
 import { GeneratePanel, RendersFeed, PlayerBar, type PlayTrack } from './Sovereign'
 import { useJobStore } from '../../lib/jobStore'
 import { saveAudioAsset } from '../../lib/audioLibrary'
@@ -280,6 +281,7 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
           <button className={!viz3d ? 'on' : ''} onClick={() => setViz3d(false)}>2D</button>
         </div>
         <div className="msx-spacer" />
+        <BrainsMap surface="music" />
         <SovereignChip engine="music" />
         {status && <span className="msx-status" title={status}>{status}</span>}
         {!cloudEnabled && <span className="msx-status" style={{ color: 'var(--warn, #F59E0B)' }}>offline — publish needs Supabase</span>}

@@ -8,6 +8,7 @@ import { uploadAsset } from '@arganta/video'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { VideoBuilder } from './VideoBuilder'
 import { VideoGenerate } from './VideoGenerate'
+import { BrainsMap } from '../shared/BrainsMap'
 import './video-studio.css'
 
 export function VideoStudio() {
@@ -34,6 +35,7 @@ export function VideoStudio() {
           <button className={mode === 'edit' ? 'on' : ''} onClick={() => setMode('edit')}><Scissors size={13} /> Edit</button>
         </div>
         {note && <span className="vs-note">{note}</span>}
+        <div style={{ marginLeft: 'auto' }}><BrainsMap surface="video" /></div>
       </div>
       <div className="vs-body">
         {mode === 'generate' ? <VideoGenerate onSendToEdit={sendToEdit} /> : <VideoBuilder />}
