@@ -12,6 +12,7 @@ import {
   Music2, Wand2, X, Send, Play, Pause, Plus, Disc3, History, Rocket,
   SlidersHorizontal, ListMusic, Drum as DrumIcon, Download, Library, Music3, Mic,
 } from 'lucide-react'
+import { SovereignChip } from '../shared/SovereignChip'
 import { saveAudioAsset } from '../../lib/audioLibrary'
 import { loadVoiceProfiles, auditionVoice, SEED_VOICES, type VoiceProfile } from '../../lib/voiceRegistry'
 import {
@@ -250,6 +251,7 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
           <button className={!viz3d ? 'on' : ''} onClick={() => setViz3d(false)}>2D</button>
         </div>
         <div className="msx-spacer" />
+        <SovereignChip engine="music" />
         {status && <span className="msx-status" title={status}>{status}</span>}
         {!cloudEnabled && <span className="msx-status" style={{ color: 'var(--warn, #F59E0B)' }}>offline — publish needs Supabase</span>}
         <button className="msx-ghost" title="The previous Music Builder (Overview · SFX Forge · Music Forge)" onClick={onLegacy}>
