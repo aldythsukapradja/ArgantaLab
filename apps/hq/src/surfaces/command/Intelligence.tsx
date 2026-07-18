@@ -19,7 +19,6 @@ const MODEL_MAP: { tier: string; friendly: string; color: string; models: string
 ]
 
 export function IntelligenceBand({ telemetry: t }: { telemetry: Telemetry | null }) {
-  const claudeWeek = t?.claude.weekCostUsd ?? 0
   const comfy = t?.comfy
 
   return (
@@ -30,10 +29,10 @@ export function IntelligenceBand({ telemetry: t }: { telemetry: Telemetry | null
         <h2 className="cc-zone-h">Spend <span>API-equivalent · est</span></h2>
         {t ? (
           <div className="cc-spend-row">
-            <SpendCell label="Claude · this week" value={fmtUsd(claudeWeek)} sub={`${t.claude.files} session files`} accent="#D97757" />
-            <SpendCell label="Claude · today" value={fmtUsd(t.claude.today.costUsd)} sub={`${fmtTokens(t.claude.today.tokens)} tokens`} accent="#D97757" />
+            <SpendCell label="Claude · today" value={fmtUsd(t.claude.today.costUsd)} sub={`${fmtTokens(t.claude.today.tokens)} tok`} accent="#D97757" />
+            <SpendCell label="Claude · all-time" value={fmtUsd(t.claude.allTime.costUsd)} sub={`${fmtTokens(t.claude.allTime.tokens)} · ${t.claude.files} files`} accent="#D97757" />
+            <SpendCell label="Codex · all-time" value={fmtUsd(t.codex.allTime.costUsd)} sub={`${fmtTokens(t.codex.allTime.tokens)} · ${t.codex.sessions} sess`} accent="#10A37F" />
             <SpendCell label="Sovereign media" value="$0" sub={`${comfy?.jobsWeek ?? 0} Comfy jobs`} accent="#6366f1" />
-            <SpendCell label="Codex" value="—" sub={`${t.codex.sessions} sessions`} accent="#10A37F" />
           </div>
         ) : <p className="cc-muted">Connect the bridge to see usage.</p>}
         {t && <div className="cc-bymodel">{t.claude.byModel.filter((m) => m.tokens > 0).map((m) => (

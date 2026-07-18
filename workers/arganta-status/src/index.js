@@ -37,48 +37,82 @@ async function probe(url, init) {
   }
 }
 
+/** Per-colo cache for rate-limited upstreams (Buffer's 24h limit, Vercel/
+ * Supabase management APIs). Stores the probe RESULT, not a fetch response. */
+async function cached(key, ttlSec, fn) {
+  const cache = caches.default;
+  const ck = new Request(`https://status-cache.internal/${key}`);
+  const hit = await cache.match(ck);
+  if (hit) { try { return await hit.json(); } catch { /* fall through */ } }
+  const data = await fn();
+  await cache.put(ck, new Response(JSON.stringify(data), { headers: { 'Cache-Control': `max-age=${ttlSec}` } }));
+  return data;
+}
+async function fetchJson(url, init) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+  try { const r = await fetch(url, { ...init, signal: ctl.signal }); return r.ok ? await r.json() : null; }
+  catch { return null; } finally { clearTimeout(t); }
+}
+const fmtAge = (min) => min < 60 ? `${min}m` : min < 1440 ? `${Math.round(min / 60)}h` : `${Math.round(min / 1440)}d`;
+
 async function buildStatus(env) {
   const targets = [];
 
   // Cloudflare — if we're executing, the edge is up.
   targets.push({ id: 'cloudflare', label: 'Cloudflare', up: true, ms: 0, detail: 'edge worker' });
 
-  // Vercel HQ — real deploy state if a token is present, else site reachability.
+  // Vercel — real deployment state (READY/BUILDING/ERROR) + age when a token is
+  // set (cached 60s); else plain site reachability. Web Analytics visitors if
+  // VERCEL_TEAM present too.
   if (env.VERCEL_TOKEN && env.VERCEL_PROJECT) {
-    const p = await probe(`https://api.vercel.com/v6/deployments?projectId=${env.VERCEL_PROJECT}&limit=1`, {
-      headers: { Authorization: `Bearer ${env.VERCEL_TOKEN}` },
+    const v = await cached('vercel', 60, async () => {
+      const t0 = Date.now();
+      const j = await fetchJson(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(env.VERCEL_PROJECT)}&limit=1`, { headers: { Authorization: `Bearer ${env.VERCEL_TOKEN}` } });
+      const d = j?.deployments?.[0];
+      const state = d?.readyState || d?.state || null;
+      return { up: state === 'READY' || state == null, ms: Date.now() - t0, state: state ? String(state).toLowerCase() : 'no deploys', ageMin: d?.created ? Math.round((Date.now() - d.created) / 60000) : (d?.createdAt ? Math.round((Date.now() - d.createdAt) / 60000) : null) };
     });
-    targets.push({ id: 'vercel', label: 'Vercel · HQ', up: p.up && p.status < 500, ms: p.ms, detail: p.up ? 'deploy API' : 'unreachable' });
+    targets.push({ id: 'vercel', label: 'Vercel · HQ', up: v.up, ms: v.ms, detail: v.ageMin != null ? `${v.state} · ${fmtAge(v.ageMin)} ago` : v.state });
   } else if (env.HQ_URL) {
     const p = await probe(env.HQ_URL, { method: 'GET' });
     targets.push({ id: 'vercel', label: 'Vercel · HQ', up: p.up, ms: p.ms, detail: p.up ? `HTTP ${p.status}` : 'unreachable' });
   }
 
-  // Supabase — REST root; anon key if provided, else plain reachability.
+  // Supabase — fast anon reachability always; project status/region via the
+  // Management API when a PAT is present (cached 5min, gentle on 120/min limit).
   if (env.SUPABASE_URL) {
     const headers = env.SUPABASE_ANON_KEY ? { apikey: env.SUPABASE_ANON_KEY } : {};
     const p = await probe(`${env.SUPABASE_URL}/rest/v1/`, { headers });
-    targets.push({ id: 'supabase', label: 'Supabase', up: p.up, ms: p.ms, detail: p.up ? `${p.ms}ms` : 'unreachable' });
+    let detail = p.up ? `${p.ms}ms` : 'unreachable';
+    if (env.SUPABASE_MGMT_TOKEN && env.SUPABASE_REF) {
+      const meta = await cached('supabase', 300, async () => {
+        const j = await fetchJson(`https://api.supabase.com/v1/projects/${env.SUPABASE_REF}`, { headers: { Authorization: `Bearer ${env.SUPABASE_MGMT_TOKEN}` } });
+        return { status: j?.status || null, region: j?.region || null };
+      });
+      if (meta?.status) detail = `${String(meta.status).toLowerCase().replace(/_/g, ' ')}${meta.region ? ' · ' + meta.region : ''}`;
+    }
+    targets.push({ id: 'supabase', label: 'Supabase', up: p.up, ms: p.ms, detail });
   }
 
-  // Buffer — authenticated GraphQL ping (account query) so "up" means the token
-  // actually works, not just that api.buffer.com is reachable.
+  // Buffer — authenticated GraphQL ping, CACHED 6h. Buffer has a hard 24h rate
+  // limit; polling every 30s locked the token out (the earlier 'error' bug). A
+  // RATE_LIMIT_EXCEEDED response still proves the token authenticates → "up".
   if (env.BUFFER_TOKEN) {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
-    const t0 = Date.now();
-    try {
-      const r = await fetch('https://api.buffer.com', {
-        method: 'POST', signal: ctl.signal,
-        headers: { Authorization: `Bearer ${env.BUFFER_TOKEN}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ query: 'query { account { organizations { id } } }' }),
-      });
-      const j = await r.json().catch(() => ({}));
-      const ok = r.ok && j && j.data && j.data.account && !j.errors;
-      targets.push({ id: 'buffer', label: 'Buffer · IG', up: !!ok, ms: Date.now() - t0, detail: ok ? 'token valid' : (r.status === 401 ? 'auth failed' : 'error') });
-    } catch {
-      targets.push({ id: 'buffer', label: 'Buffer · IG', up: false, ms: Date.now() - t0, detail: 'unreachable' });
-    } finally { clearTimeout(t); }
+    const b = await cached('buffer', 21600, async () => {
+      const t0 = Date.now();
+      try {
+        const r = await fetch('https://api.buffer.com', {
+          method: 'POST', headers: { Authorization: `Bearer ${env.BUFFER_TOKEN}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ query: 'query { account { organizations { id } } }' }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (j?.errors?.[0]?.extensions?.code === 'RATE_LIMIT_EXCEEDED') return { up: true, ms: Date.now() - t0, detail: 'connected' };
+        const ok = r.ok && j?.data?.account && !j.errors;
+        return { up: !!ok, ms: Date.now() - t0, detail: ok ? 'token valid' : (r.status === 401 ? 'auth failed' : 'error') };
+      } catch { return { up: false, ms: Date.now() - t0, detail: 'unreachable' }; }
+    });
+    targets.push({ id: 'buffer', label: 'Buffer · IG', up: b.up, ms: b.ms, detail: b.detail });
   }
 
   return { targets, at: new Date().toISOString() };

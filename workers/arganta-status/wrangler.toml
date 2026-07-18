@@ -24,3 +24,12 @@ SUPABASE_URL = "https://bdagdxgpnlialkppjwor.supabase.co"
 # SUPABASE_ANON_KEY is safe as a var (it's the public anon key), but left unset
 # here so it isn't committed — set it with the deploy, or the Supabase probe
 # falls back to a plain reachability check of the REST root.
+SUPABASE_REF = "bdagdxgpnlialkppjwor"
+
+# --- Optional deeper metrics (each gated on a secret; probe stays off until set) ---
+# Vercel real deploy state (READY/BUILDING/ERROR) instead of site reachability:
+#   set VERCEL_PROJECT below to the project id, then: wrangler secret put VERCEL_TOKEN
+# VERCEL_PROJECT = "prj_xxx"
+# Supabase project status/region via the Management API:
+#   wrangler secret put SUPABASE_MGMT_TOKEN   (a Supabase personal access token)
+# Buffer live tile: wrangler secret put BUFFER_TOKEN   (already set)

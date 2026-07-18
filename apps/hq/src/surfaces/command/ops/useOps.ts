@@ -94,12 +94,16 @@ export function useOps(pollMs = 10000): OpsState & { refetch: () => void; launch
 // --- Telemetry: LLM usage + ComfyUI workload from the bridge /telemetry ------
 export interface Telemetry {
   claude: {
-    provenance: 'est'; today: { tokens: number; costUsd: number }; weekCostUsd: number
+    provenance: 'est'; today: { tokens: number; costUsd: number }; allTime: { tokens: number; costUsd: number }; weekCostUsd: number
     last5hTokens: number; fivehFillPct: number
     byModel: { label: string; tokens: number; cost: number }[]
     days: { date: string; tokens: number }[]; files: number
   }
-  codex: { provenance: 'est'; sessions: number; lastActiveAt: string | null }
+  codex: {
+    provenance: 'est'; sessions: number; lastActiveAt: string | null
+    today: { tokens: number }; allTime: { tokens: number; costUsd: number }; weekCostUsd: number
+    inputTokens: number; cachedTokens: number; outputTokens: number
+  }
   comfy: {
     provenance: 'live' | 'unknown'; up: boolean; jobsToday?: number; jobsWeek?: number
     avgJobSec?: number | null; queueRunning?: number; queuePending?: number

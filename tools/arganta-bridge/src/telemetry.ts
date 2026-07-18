@@ -87,7 +87,7 @@ function claudeUsage() {
   const startOfDayUTC = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
   const byModel: Record<string, { label: string; tokens: number; cost: number }> = {};
   const byDay: Record<string, number> = {};
-  let todayTok = 0, todayCost = 0, weekCost = 0, last5hTok = 0;
+  let todayTok = 0, todayCost = 0, weekCost = 0, last5hTok = 0, allTok = 0, allCost = 0;
   const seenKeys = new Set<string>();
   for (const e of all) {
     if (e.key !== ':' && seenKeys.has(e.key)) continue; // skip replayed duplicates
@@ -95,6 +95,7 @@ function claudeUsage() {
     const tot = e.inTok + e.outTok + e.cacheR + e.cacheW;
     const m = (byModel[e.label] ||= { label: e.label, tokens: 0, cost: 0 });
     m.tokens += tot; m.cost += e.cost;
+    allTok += tot; allCost += e.cost;
     const day = new Date(e.ts).toISOString().slice(0, 10);
     byDay[day] = (byDay[day] || 0) + tot;
     if (e.ts >= startOfDayUTC) { todayTok += tot; todayCost += e.cost; }
@@ -108,6 +109,7 @@ function claudeUsage() {
   return {
     provenance: 'est' as const,
     today: { tokens: todayTok, costUsd: round(todayCost) },
+    allTime: { tokens: allTok, costUsd: round(allCost) },
     weekCostUsd: round(weekCost),
     last5hTokens: last5hTok,
     fivehFillPct: Math.min(100, Math.round((last5hTok / peakDay) * 100)),
@@ -117,24 +119,65 @@ function claudeUsage() {
   };
 }
 
-// --- Codex (best-effort, ESTIMATE) ----------------------------------------
+// --- Codex (ESTIMATE from session logs) -----------------------------------
+// Codex writes a `token_count` event whose payload.info.total_token_usage is the
+// running per-session total; the LAST one is the session's final usage. Price
+// with public GPT-5.1-codex rates (input $1.25/M, cached $0.125/M, output $10/M).
+const codexCache = new Map<string, { mtime: number; day: string; inTok: number; cachedTok: number; outTok: number }>();
 function codexUsage() {
   const dir = join(homedir(), '.codex', 'sessions');
+  const seen = new Set(codexCache.keys());
   let sessions = 0, lastAt = 0;
   try {
     const walk = (d: string) => {
       for (const e of readdirSync(d, { withFileTypes: true })) {
         const p = join(d, e.name);
-        if (e.isDirectory()) walk(p);
-        else if (e.name.endsWith('.jsonl') || e.name.endsWith('.json')) {
-          sessions++;
-          try { const m = statSync(p).mtimeMs; if (m > lastAt) lastAt = m; } catch { /* ignore */ }
-        }
+        if (e.isDirectory()) { walk(p); continue; }
+        if (!e.name.endsWith('.jsonl') && !e.name.endsWith('.json')) continue;
+        sessions++;
+        seen.delete(p);
+        let mtime = 0;
+        try { mtime = statSync(p).mtimeMs; } catch { continue; }
+        if (mtime > lastAt) lastAt = mtime;
+        const cached = codexCache.get(p);
+        if (cached && cached.mtime === mtime) continue;
+        // Parse only the last token_count event (session total).
+        let last: any = null;
+        try {
+          for (const line of readFileSync(p, 'utf8').split('\n')) {
+            if (line.indexOf('token_count') === -1) continue;
+            try { const o = JSON.parse(line); const u = o?.payload?.info?.total_token_usage; if (u) last = u; } catch { /* skip */ }
+          }
+        } catch { /* unreadable */ }
+        codexCache.set(p, {
+          mtime, day: new Date(mtime).toISOString().slice(0, 10),
+          inTok: last?.input_tokens || 0, cachedTok: last?.cached_input_tokens || 0, outTok: last?.output_tokens || 0,
+        });
       }
     };
     walk(dir);
   } catch { /* no codex */ }
-  return { provenance: 'est' as const, sessions, lastActiveAt: lastAt ? new Date(lastAt).toISOString() : null };
+  for (const gone of seen) codexCache.delete(gone);
+
+  const now = Date.now(), dayMs = 86400e3, weekMs = 7 * dayMs;
+  const startOfDayUTC = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  let inTok = 0, cachedTok = 0, outTok = 0, todayTok = 0, weekCost = 0;
+  for (const c of codexCache.values()) {
+    inTok += c.inTok; cachedTok += c.cachedTok; outTok += c.outTok;
+    const cost = (c.inTok * 1.25 + c.cachedTok * 0.125 + c.outTok * 10) / 1e6;
+    const ts = Date.parse(c.day + 'T12:00:00Z');
+    if (ts >= startOfDayUTC) todayTok += c.inTok + c.cachedTok + c.outTok;
+    if (now - ts <= weekMs) weekCost += cost;
+  }
+  const allTok = inTok + cachedTok + outTok;
+  const allCost = (inTok * 1.25 + cachedTok * 0.125 + outTok * 10) / 1e6;
+  return {
+    provenance: 'est' as const, sessions,
+    lastActiveAt: lastAt ? new Date(lastAt).toISOString() : null,
+    today: { tokens: todayTok }, allTime: { tokens: allTok, costUsd: round(allCost) },
+    weekCostUsd: round(weekCost),
+    inputTokens: inTok, cachedTokens: cachedTok, outputTokens: outTok,
+  };
 }
 
 // --- ComfyUI (MEASURED, local) --------------------------------------------

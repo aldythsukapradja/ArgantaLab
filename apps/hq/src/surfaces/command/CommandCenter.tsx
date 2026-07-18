@@ -72,7 +72,7 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
         </div>
       )}
 
-      <div className="cc-grid">
+      <div className="cc-board">
         {/* FLEET ------------------------------------------------------ */}
         <section className="cc-zone cc-fleet">
           <h2 className="cc-zone-h">Fleet <span>the brains</span></h2>
@@ -145,10 +145,11 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
           </ul>
           <button className="cc-pulse-cta" onClick={() => go('core')}>Run a mission →</button>
         </section>
-      </div>
 
-      {/* INTELLIGENCE band — LLM usage, ComfyUI workload, model routing map. */}
-      <IntelligenceBand telemetry={telemetry} />
+        {/* INTELLIGENCE — LLM usage, ComfyUI workload, model routing map.
+            (.cc-intel is display:contents so these join the bento grid.) */}
+        <IntelligenceBand telemetry={telemetry} />
+      </div>
     </div>
   )
 }
