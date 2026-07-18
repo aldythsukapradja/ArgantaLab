@@ -1,0 +1,36 @@
+/* Pixel Studio v2 — gallery-first with a persistent Forge rail (R4). */
+.pixel-wrap { display: flex; flex-direction: column; gap: 16px; max-width: 100vw; }
+.pixel-tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+
+.pixel-forge-toggle { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border-radius: 8px; border: 1px solid var(--bd2); background: var(--bg2); color: var(--tx2); font-size: 12px; font-weight: 600; cursor: pointer; }
+.pixel-forge-toggle.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+.pixel-main { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+.pixel-main.with-rail { grid-template-columns: minmax(0, 1fr) 330px; }
+.pixel-gallery { min-width: 0; }
+
+.pixel-forge-rail { position: sticky; top: 8px; border: 1px solid var(--bd); border-radius: 12px; background: var(--bg2); padding: 12px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 120px); overflow-y: auto; }
+.pixel-forge-railhead { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; }
+
+/* mobile: rail hides, Forge becomes a FAB → full-screen sheet */
+.pixel-forge-fab { display: none; }
+.pixel-forge-sheet { display: none; }
+
+@media (max-width: 900px) {
+  .pixel-main.with-rail { grid-template-columns: 1fr; }
+  .pixel-forge-rail { display: none; }
+  .pixel-forge-toggle { display: none; }
+  .pixel-forge-fab {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: fixed; right: 16px; bottom: 16px; z-index: 45;
+    width: 52px; height: 52px; border-radius: 50%; border: none;
+    background: var(--acc); color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,.3); cursor: pointer;
+  }
+  .pixel-forge-sheet {
+    display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60;
+    background: var(--bg); max-width: 100vw;
+  }
+  .pixel-forge-sheethead { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--bd); font-size: 14px; font-weight: 700; }
+  .pixel-forge-sheethead button { margin-left: auto; color: var(--tx2); cursor: pointer; background: none; border: none; }
+  .pixel-forge-sheetbody { flex: 1; overflow-y: auto; padding: 14px; }
+}

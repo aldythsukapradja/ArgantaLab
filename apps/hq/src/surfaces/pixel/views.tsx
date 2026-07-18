@@ -114,12 +114,14 @@ export function PalettesView({ palettes: pals, items }: { palettes: Palette[]; i
 // in the Ingest tab via pixel_vault_ingest. Closes brief → generate → ingest.
 const FORGE_KINDS = ['character', 'sprite', 'tile', 'tileset', 'animation', 'ui', 'portrait', 'background', 'icon']
 
-export function ForgeView() {
+export function ForgeView({ presetStyleRef }: { presetStyleRef?: string } = {}) {
   const [kind, setKind] = useState('character')
   const [prompt, setPrompt] = useState('')
   const [count, setCount] = useState(1)
   const [via, setVia] = useState<'pixellab' | 'comfyui'>('pixellab')
   const [styleRef, setStyleRef] = useState('')
+  // a grid card selected as style ref (R4) flows in here
+  useEffect(() => { if (presetStyleRef) setStyleRef(presetStyleRef) }, [presetStyleRef])
   const [note, setNote] = useState('')
   const [briefs, setBriefs] = useState<PixelBrief[] | null | 'loading'>('loading')
   const [busy, setBusy] = useState(false)

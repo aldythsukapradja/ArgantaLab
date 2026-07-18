@@ -13,7 +13,7 @@ const FILTER_KEY: Record<FacetKey, keyof QueryFilter> = {
   domain: 'domain', kind: 'kind', theme: 'theme', characterType: 'characterType', style: 'style', tier: 'tier', source: 'source',
 }
 
-export function Browser({ base, data, title, blurb }: { base: QueryFilter; data: VaultItem[]; title: string; blurb: string }) {
+export function Browser({ base, data, title, blurb, onUseAsRef }: { base: QueryFilter; data: VaultItem[]; title: string; blurb: string; onUseAsRef?: (id: string) => void }) {
   const [sel, setSel] = useState<Partial<Record<FacetKey, string>>>({})
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<VaultItem | null>(null)
@@ -88,7 +88,7 @@ export function Browser({ base, data, title, blurb }: { base: QueryFilter; data:
         </div>
       </div>
 
-      {open && <Inspector item={open} data={data} onClose={() => setOpen(null)} onPick={setOpen} />}
+      {open && <Inspector item={open} data={data} onClose={() => setOpen(null)} onPick={setOpen} onUseAsRef={onUseAsRef} />}
     </div>
   )
 }
@@ -102,7 +102,7 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   )
 }
 
-function Inspector({ item, data, onClose, onPick }: { item: VaultItem; data: VaultItem[]; onClose: () => void; onPick: (i: VaultItem) => void }) {
+function Inspector({ item, data, onClose, onPick, onUseAsRef }: { item: VaultItem; data: VaultItem[]; onClose: () => void; onPick: (i: VaultItem) => void; onUseAsRef?: (id: string) => void }) {
   const t = TIERS[item.source.tier]
   const artUrl = useArtUrl(item)
   const sim = vaultSimilar(item.id, 8, data)
@@ -119,7 +119,10 @@ function Inspector({ item, data, onClose, onPick }: { item: VaultItem; data: Vau
           <BigArt item={item} />
           <div className="spread">
             <div className="row" style={{ gap: 8 }}><TierChip tier={item.source.tier} /><span style={{ fontSize: 11, color: t.shippable ? 'var(--ok)' : 'var(--warn)' }}>{t.shippable ? 'shippable as-is' : 'reference only'}{t.attribution ? ' · credit required' : ''}</span></div>
-            {artUrl && <button onClick={() => downloadImage(artUrl, `${item.id}.png`)} style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: 'var(--acc-text)', border: '1px solid var(--bd2)', borderRadius: 6, padding: '4px 10px', background: 'var(--bg)' }}>↓ Download</button>}
+            <div className="row" style={{ gap: 6 }}>
+              {onUseAsRef && <button onClick={() => { onUseAsRef(item.id); onClose() }} style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', background: 'var(--acc)' }}>◎ Use as style ref</button>}
+              {artUrl && <button onClick={() => downloadImage(artUrl, `${item.id}.png`)} style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: 'var(--acc-text)', border: '1px solid var(--bd2)', borderRadius: 6, padding: '4px 10px', background: 'var(--bg)' }}>↓ Download</button>}
+            </div>
           </div>
           <div className={'insight ' + (t.shippable ? 'ok' : 'warn')} style={{ alignItems: 'flex-start' }}><div><div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--tx3)' }}>License policy</div><div style={{ fontSize: 11.5, marginTop: 2, lineHeight: 1.5 }}>{t.rule}</div></div></div>
 
