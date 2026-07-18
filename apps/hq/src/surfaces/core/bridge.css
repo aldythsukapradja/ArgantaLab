@@ -1,18 +1,34 @@
-/* Claude Code brain mode — only the bits Core doesn't already provide. The
-   composer, model pill, scroll area and message layout reuse core.css classes
-   so the two brains are visually identical. */
+/* Bridge brain modes (Claude Code / Codex) — only the bits Core doesn't already
+   provide. The composer, model pill, scroll area and message layout reuse
+   core.css classes so the brains are visually identical. */
 
-/* Connect bar (shown only until the socket is open) */
-.bridge-connect-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--bd); background: var(--bg2); font-size: 12px; }
+/* Anchors the connect popup's absolute scrim to the chat area. */
+.bridge-convo { position: relative; }
+
 .bridge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tx3); flex: none; }
 .bridge-dot.warn { background: var(--warn); } .bridge-dot.bad { background: var(--bad); }
-.bridge-connect-label { color: var(--tx2); margin-right: auto; }
-.bridge-url { width: 200px; padding: 5px 9px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); color: var(--tx); font-size: 12px; font-family: var(--mono); }
-.bridge-token { width: 150px; padding: 5px 9px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); color: var(--tx); font-size: 12px; }
-.bridge-connect-btn { padding: 5px 13px; border: none; background: var(--acc); color: #fff; border-radius: var(--r-md); font-size: 12px; font-weight: 600; cursor: pointer; }
+
+/* Connect POPUP — replaces the old top bar so it never collides with the
+   floating brain/Preview capsule. Scrim covers the chat area only (absolute
+   within .core-convo), not the whole document, so every mount mode works. */
+.bridge-connect-scrim { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 20px; background: color-mix(in srgb, var(--canvas) 62%, transparent); backdrop-filter: blur(2px); }
+.bridge-connect-dialog { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; padding: 18px; background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-lg, 14px); box-shadow: var(--shadow-lg, 0 16px 48px rgba(0,0,0,.35)); animation: core-msg-in var(--dur) var(--ease-out); }
+.bridge-connect-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; color: var(--tx); }
+.bridge-dialog-close { margin-left: auto; border: none; background: transparent; color: var(--tx3); font-size: 13px; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.bridge-dialog-close:hover { color: var(--tx); background: var(--bg3); }
+.bridge-connect-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tx2); line-height: 1.4; }
+.bridge-connect-status.bad { color: var(--bad); }
+.bridge-field { display: flex; flex-direction: column; gap: 4px; }
+.bridge-field > span { font-size: 11px; color: var(--tx3); font-weight: 600; }
+.bridge-url { padding: 7px 10px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); color: var(--tx); font-size: 12.5px; font-family: var(--mono); }
+.bridge-token { padding: 7px 10px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); color: var(--tx); font-size: 12.5px; }
+.bridge-connect-btn { margin-top: 2px; padding: 8px 13px; border: none; background: var(--acc); color: #fff; border-radius: var(--r-md); font-size: 13px; font-weight: 600; cursor: pointer; }
 .bridge-connect-btn:disabled { opacity: .4; cursor: default; }
 
-.bridge-brain-mark { font-size: 11px; line-height: 1; }
+/* Reconnect pill — shown above the composer when the socket drops mid-session,
+   so a dropped bridge never wipes the feed you're reading. */
+.bridge-reconnect-pill { align-self: center; display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 5px 13px; border: 1px solid var(--bd2); border-radius: 999px; background: var(--bg2); color: var(--tx2); font-size: 12px; cursor: pointer; }
+.bridge-reconnect-pill:hover { border-color: var(--bad); color: var(--tx); }
 
 /* Activity lines inside an assistant message body */
 .bf-status { font-size: 12.5px; color: var(--tx3); }
@@ -50,7 +66,4 @@
    the send button to the right. Give it the auto-margin the mic would have. */
 @media (max-width: 980px) {
   .bridge-convo .core-composer-send { margin-left: auto; }
-  .bridge-connect-bar { flex-wrap: wrap; }
-  .bridge-connect-label { flex-basis: 100%; margin-right: 0; }
-  .bridge-url, .bridge-token { flex: 1 1 auto; min-width: 0; }
 }

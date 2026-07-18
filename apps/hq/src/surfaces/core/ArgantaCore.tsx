@@ -9,6 +9,9 @@ type MountMode = 'fullscreen' | 'panel' | 'inline'
 import { ThreadsRail } from './ThreadsRail'
 import { Conversation } from './Conversation'
 import { BridgeConsole } from './BridgeConsole'
+import { ClaudeMark } from './ClaudeMark'
+import { OpenAIMark } from './OpenAIMark'
+import { ArgantaMark } from './ArgantaMark'
 import { CortexPanel } from './CortexPanel'
 import { CoreHelp } from './CoreHelp'
 import { StartersButton } from './StarterMenu'
@@ -34,20 +37,36 @@ function PreviewButton() {
   )
 }
 
-/** Arganta brand logomark — gradient "A" tile (brand gradient from icon.svg). */
-function ArgantaMark() {
+/** The three-brain toggle — Sovereign (Arganta Core) · Claude (Claude Code) ·
+ * Codex (OpenAI). One component, shared by the inline and fullscreen mounts so
+ * the markup can't drift. Each brand tab carries its own mark and, when active,
+ * its own brand colour. */
+export type Brain = 'sovereign' | 'claude' | 'codex'
+
+const BRAINS: { id: Brain; label: string; Mark?: (p: { size?: number; color?: string }) => JSX.Element; accent?: string }[] = [
+  { id: 'sovereign', label: 'Sovereign', Mark: (p) => <ArgantaMark size={p.size ?? 13} /> },
+  { id: 'claude', label: 'Claude', Mark: ClaudeMark, accent: '#D97757' },
+  { id: 'codex', label: 'Codex', Mark: OpenAIMark, accent: '#10A37F' },
+]
+
+function BrainToggle({ brain, onChange }: { brain: Brain; onChange: (b: Brain) => void }) {
   return (
-    <span className="core-brand-mark" aria-hidden>
-      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-        <rect width="26" height="26" rx="7" fill="url(#argMarkG)" />
-        <path d="M7.6 18.4 L13 7 L18.4 18.4 M9.7 14.2 H16.3" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-        <defs>
-          <linearGradient id="argMarkG" x1="0" y1="0" x2="1" y2="1">
-            <stop stopColor="#6366F1" /><stop offset="1" stopColor="#FF3D72" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </span>
+    <div className="core-brain-toggle" role="tablist" aria-label="Brain">
+      {BRAINS.map((b) => {
+        const active = brain === b.id
+        return (
+          <button
+            key={b.id} role="tab" aria-selected={active}
+            className={'core-brain-tab' + (active ? ' active' : '')}
+            style={active && b.accent ? { background: b.accent } : undefined}
+            onClick={() => onChange(b.id)}
+          >
+            {b.Mark && <b.Mark size={12} color={active ? '#fff' : b.accent} />}
+            {b.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -93,8 +112,9 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   const [railOpen, setRailOpen] = useState(true)
   const [threadsRefresh, setThreadsRefresh] = useState(0)
   const [hasThreads, setHasThreads] = useState(false)
-  // Brain mode: LLM Conversation (default) vs local Claude Code via the Bridge.
-  const [brain, setBrain] = useState<'core' | 'claude-code'>('core')
+  // Brain mode: Sovereign (LLM Conversation, default) vs local Claude Code or
+  // Codex via the Bridge.
+  const [brain, setBrain] = useState<Brain>('sovereign')
   // C5-B7 — starter pills live in the topbar (all mount modes) but the draft
   // lives in Conversation, so the pick travels down as a nonce-carrying seed.
   const [seed, setSeed] = useState<{ text: string; n: number } | undefined>(undefined)
@@ -165,16 +185,15 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
       />
       <div className="core-center">
         <div className="core-center-actions">
-          <div className="core-brain-toggle" role="tablist" aria-label="Brain">
-            <button role="tab" aria-selected={brain === 'core'} className={brain === 'core' ? 'active' : ''} onClick={() => setBrain('core')}>Core</button>
-            <button role="tab" aria-selected={brain === 'claude-code'} className={brain === 'claude-code' ? 'active' : ''} onClick={() => setBrain('claude-code')}>Claude Code</button>
-          </div>
+          <BrainToggle brain={brain} onChange={setBrain} />
           <PreviewButton />
           <StartersButton onPick={pickStarter} />
           <HelpButton onClick={() => setHelpOpen(true)} />
         </div>
-        {brain === 'claude-code'
-          ? <BridgeConsole />
+        {brain === 'claude'
+          ? <BridgeConsole key="claude" engine="claude" />
+          : brain === 'codex'
+          ? <BridgeConsole key="codex" engine="codex" />
           : <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} hasThreads={hasThreads} seed={seed} />}
       </div>
       {previewTarget
@@ -205,8 +224,9 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
-  // Brain mode: LLM Conversation (default) vs local Claude Code via the Bridge.
-  const [brain, setBrain] = useState<'core' | 'claude-code'>('core')
+  // Brain mode: Sovereign (LLM Conversation, default) vs local Claude Code or
+  // Codex via the Bridge.
+  const [brain, setBrain] = useState<Brain>('sovereign')
   return (
     <div className="core core-fullscreen" data-embed={embed || undefined} style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN }}>
       <div className="core-fs-topbar">
@@ -214,10 +234,7 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
           <ArgantaMark />
           <svg className="core-fs-title-caret" width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden><path d="M3 4.5 L5.5 7 L8 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
-        <div className="core-brain-toggle" role="tablist" aria-label="Brain">
-          <button role="tab" aria-selected={brain === 'core'} className={brain === 'core' ? 'active' : ''} onClick={() => setBrain('core')}>Core</button>
-          <button role="tab" aria-selected={brain === 'claude-code'} className={brain === 'claude-code' ? 'active' : ''} onClick={() => setBrain('claude-code')}>Claude Code</button>
-        </div>
+        <BrainToggle brain={brain} onChange={setBrain} />
         <div className="core-fs-actions">
           <PreviewButton />
           <StartersButton onPick={onPickStarter} />
@@ -231,8 +248,10 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
         </div>
       </div>
       {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
-      {brain === 'claude-code'
-        ? <BridgeConsole />
+      {brain === 'claude'
+        ? <BridgeConsole key="claude" engine="claude" />
+        : brain === 'codex'
+        ? <BridgeConsole key="codex" engine="codex" />
         : <Conversation threadId={threadId} onThreadCreated={(id) => { onSelectThread(id); bumpThreadsRefresh() }} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} seed={seed} />}
       {previewTarget && (
         <div className="core-preview-cover">

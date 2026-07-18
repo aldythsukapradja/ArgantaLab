@@ -12,24 +12,32 @@ const headers = { Authorization: `Bearer ${KEY}`, apikey: KEY, 'Content-Type': '
 
 type ActivityEvent = { type: string; label?: string; text?: string; at: string };
 
-async function req(method: string, path: string, body?: unknown) {
+async function req(method: string, path: string, body?: unknown): Promise<{ ok: boolean; status: number }> {
   try {
     const r = await fetch(`${URL}/rest/v1/${path}`, {
       method, headers: { ...headers, Prefer: 'return=minimal' },
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!r.ok) console.warn(`bridge persist ${method} ${path}: HTTP ${r.status}`);
+    return { ok: r.ok, status: r.status };
   } catch (e) {
     console.warn('bridge persist error:', (e as Error).message);
+    return { ok: false, status: 0 };
   }
 }
 
 export const persistEnabled = ENABLED;
 
-/** Create the mission row at start. */
-export async function missionStart(id: string, goal: string, cwd: string) {
+/** Create the mission row at start. `engine` is written only if the column
+ * exists — on a 400/404 (column not migrated yet) we retry without it, so
+ * persistence keeps working across the migration_missions_engine.sql boundary. */
+export async function missionStart(id: string, goal: string, cwd: string, engine = 'claude') {
   if (!ENABLED) return;
-  await req('POST', 'mission', { id, goal, cwd, status: 'running' });
+  const base = { id, goal, cwd, status: 'running' };
+  const res = await req('POST', 'mission', { ...base, engine });
+  if (!res.ok && (res.status === 400 || res.status === 404)) {
+    await req('POST', 'mission', base);
+  }
 }
 
 /** Finalize the mission: write the full buffered activity trail in one PATCH. */

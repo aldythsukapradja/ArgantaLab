@@ -11,6 +11,7 @@ import { friendlyModel } from './useCoreStatus'
 import { getPreferredModelId } from '../../lib/modelPreference'
 import { intelligenceRegistry } from '../../lib/ai'
 import { ProviderLogo, providerOf } from './ProviderLogo'
+import { Markdown } from './Markdown'
 
 export function UserMessage({ text }: { text: string }) {
   return (
@@ -144,13 +145,16 @@ function BlockedCard({ message }: { message: string }) {
 
 // Fast word-cadence typewriter, capped at 1.2s total regardless of length
 // (never make the founder wait twice). Click anywhere to skip to full text.
+// Renders plain text WHILE typing (partial `**`/`- ` markers would flicker as
+// literals mid-reveal), then swaps to full Markdown the instant it completes.
 function TextReveal({ text, skipAnimation }: { text: string; skipAnimation?: boolean }) {
   const [shown, setShown] = useState(skipAnimation ? text : '')
+  const [done, setDone] = useState(skipAnimation ?? false)
   const doneRef = useRef(skipAnimation ?? false)
 
   useEffect(() => {
-    if (skipAnimation) { setShown(text); doneRef.current = true; return }
-    doneRef.current = false
+    if (skipAnimation) { setShown(text); setDone(true); doneRef.current = true; return }
+    doneRef.current = false; setDone(false)
     const words = text.split(' ')
     const totalMs = 1200
     const stepMs = Math.max(8, totalMs / Math.max(1, words.length))
@@ -158,12 +162,13 @@ function TextReveal({ text, skipAnimation }: { text: string; skipAnimation?: boo
     const id = setInterval(() => {
       i++
       setShown(words.slice(0, i).join(' '))
-      if (i >= words.length) { doneRef.current = true; clearInterval(id) }
+      if (i >= words.length) { doneRef.current = true; setDone(true); clearInterval(id) }
     }, stepMs)
     return () => clearInterval(id)
   }, [text, skipAnimation])
 
-  const skip = () => { if (!doneRef.current) { setShown(text); doneRef.current = true } }
+  const skip = () => { if (!doneRef.current) { setShown(text); doneRef.current = true; setDone(true) } }
 
+  if (done) return <Markdown className="core-text-md" text={text} />
   return <p className="core-text" onClick={skip}>{shown}</p>
 }

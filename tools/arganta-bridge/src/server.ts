@@ -14,9 +14,10 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { query, type SDKMessage, type SDKUserMessage, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
-import { classify, toolLabel } from './permissions.ts';
-import { missionStart, missionDone, persistEnabled, type ActivityEvent } from './persist.ts';
+import { missionStart, missionDone, type ActivityEvent } from './persist.ts';
+import { createClaudeEngine } from './engines/claude.ts';
+import { createCodexEngine } from './engines/codex.ts';
+import type { MissionEngine, OutEvent } from './engines/types.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../../..');
@@ -53,14 +54,13 @@ function loadMcpServers(): Record<string, any> {
 }
 const MCP_SERVERS = loadMcpServers();
 
-type OutEvent =
-  | { type: 'status'; label: string; missionId: string }
-  | { type: 'tool'; label: string; tool: string; missionId: string }
-  | { type: 'message'; text: string; missionId: string }
-  | { type: 'awaiting_approval'; approvalId: string; tool: string; label: string; input: unknown; missionId: string }
-  | { type: 'artifact'; label: string; uri?: string; missionId: string }
-  | { type: 'done'; ok: boolean; result?: string; costUsd?: number; missionId: string }
-  | { type: 'error'; message: string; missionId: string };
+// One engine per brain. Claude gets the repo's MCP servers + default model;
+// Codex drives the local `codex` CLI. Mission `engine` field selects between
+// them, defaulting to 'claude' for older clients.
+const ENGINES: Record<string, MissionEngine> = {
+  claude: createClaudeEngine(MCP_SERVERS, MODEL),
+  codex: createCodexEngine(process.env.CODEX_MODEL || undefined),
+};
 
 // Reject bad tokens at the HTTP upgrade (401) so unauthorized clients never
 // open a socket — cleaner and verifiable, vs. closing after connect.
@@ -100,13 +100,12 @@ wss.on('connection', (ws) => {
 });
 
 class BridgeSession {
-  private pendingApprovals = new Map<string, (r: PermissionResult) => void>();
+  // approvalId -> resolver. The engine's gate() awaits these; HQ's approval
+  // message resolves them.
+  private pendingApprovals = new Map<string, (r: { approved: boolean; input?: unknown }) => void>();
   private running = false;
   // Per-mission persistence buffer (flushed once on completion).
   private activity: ActivityEvent[] = [];
-  private finalResult?: string;
-  private finalCost = 0;
-  private missionOk = true;
 
   constructor(private ws: WebSocket) {}
 
@@ -133,9 +132,7 @@ class BridgeSession {
       const resolveFn = this.pendingApprovals.get(msg.approvalId);
       if (resolveFn) {
         this.pendingApprovals.delete(msg.approvalId);
-        resolveFn(msg.approved
-          ? { behavior: 'allow', updatedInput: msg.input }
-          : { behavior: 'deny', message: 'Denied by operator in HQ.' });
+        resolveFn({ approved: !!msg.approved, input: msg.input });
       }
       return;
     }
@@ -143,97 +140,51 @@ class BridgeSession {
     // Start a mission.
     if (msg.type === 'mission' && typeof msg.prompt === 'string') {
       if (this.running) { this.send({ type: 'error', message: 'A mission is already running on this socket.', missionId: msg.missionId }); return; }
-      this.runMission(msg.prompt, msg.missionId || `m_${Date.now().toString(36)}`, msg.cwd, msg.model);
+      this.runMission(msg.prompt, msg.missionId || `m_${Date.now().toString(36)}`, msg.cwd, msg.model, msg.engine);
     }
   }
 
-  private async runMission(prompt: string, missionId: string, cwd?: string, model?: string) {
+  private async runMission(prompt: string, missionId: string, cwd?: string, model?: string, engineId?: string) {
+    const engine = ENGINES[engineId || 'claude'] || ENGINES.claude;
     this.running = true;
     this.activity = [];
-    this.finalResult = undefined;
-    this.finalCost = 0;
+    let ok = true;
+    let result: string | undefined;
+    let costUsd: number | undefined = 0;
     let failed = false;
     const workdir = cwd || REPO_ROOT;
-    void missionStart(missionId, prompt, workdir);
-    this.send({ type: 'status', label: 'Planning mission', missionId });
+    void missionStart(missionId, prompt, workdir, engineId || 'claude');
 
-    // Streaming input mode (async iterable) so canUseTool is honored.
-    async function* input(): AsyncIterable<SDKUserMessage> {
-      yield {
-        type: 'user',
-        session_id: missionId,
-        parent_tool_use_id: null,
-        message: { role: 'user', content: prompt },
-      } as SDKUserMessage;
-    }
-
-    const canUseTool = async (tool: string, toolInput: Record<string, unknown>): Promise<PermissionResult> => {
-      if (classify(tool, toolInput) === 'auto') {
-        this.send({ type: 'tool', tool, label: toolLabel(tool, toolInput), missionId });
-        return { behavior: 'allow', updatedInput: toolInput };
-      }
+    // The approval gate the engine calls for a gated tool. Sandbox-only engines
+    // (Codex v1) never call it.
+    const gate = (tool: string, input: Record<string, unknown>, label: string) => {
       const approvalId = `a_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-      this.send({ type: 'awaiting_approval', approvalId, tool, label: toolLabel(tool, toolInput), input: toolInput, missionId });
-      return new Promise<PermissionResult>((res) => this.pendingApprovals.set(approvalId, res));
+      this.send({ type: 'awaiting_approval', approvalId, tool, label, input, missionId });
+      return new Promise<{ approved: boolean; input?: unknown }>((res) => this.pendingApprovals.set(approvalId, res));
     };
 
     try {
-      const q = query({
-        prompt: input(),
-        options: {
-          cwd: cwd || REPO_ROOT,
-          model: model || MODEL,
-          mcpServers: MCP_SERVERS,
-          canUseTool,
-          permissionMode: 'default',
-        },
+      const r = await engine.run({
+        prompt, missionId, cwd: workdir, model,
+        send: (ev) => this.send(ev),
+        gate,
       });
-
-      for await (const m of q as AsyncIterable<SDKMessage>) {
-        this.normalize(m, missionId);
-      }
+      ok = r.ok; result = r.result; costUsd = r.costUsd;
+      this.send({ type: 'done', ok, result, costUsd, missionId });
     } catch (e: any) {
       failed = true;
       this.send({ type: 'error', message: e?.message || String(e), missionId });
     } finally {
       this.running = false;
-      for (const [, res] of this.pendingApprovals) res({ behavior: 'deny', message: 'Mission ended.' });
+      for (const [, res] of this.pendingApprovals) res({ approved: false });
       this.pendingApprovals.clear();
-      const status = failed || !this.missionOk ? 'failed' : 'done';
-      void missionDone(missionId, status, this.activity, this.finalResult, this.finalCost);
-    }
-  }
-
-  /** SDKMessage -> operational activity feed (no internal reasoning). */
-  private normalize(m: SDKMessage, missionId: string) {
-    switch (m.type) {
-      case 'system':
-        if ((m as any).subtype === 'init') this.send({ type: 'status', label: 'Reading repository', missionId });
-        return;
-      case 'assistant': {
-        for (const block of (m as any).message?.content || []) {
-          if (block.type === 'text' && block.text?.trim()) {
-            this.send({ type: 'message', text: block.text, missionId });
-          }
-          // tool_use blocks are surfaced via canUseTool, not here (avoids dupes).
-        }
-        return;
-      }
-      case 'result': {
-        const ok = (m as any).subtype === 'success';
-        this.finalResult = (m as any).result;
-        this.finalCost = (m as any).total_cost_usd || 0;
-        this.missionOk = ok;
-        this.send({ type: 'done', ok, result: this.finalResult, costUsd: this.finalCost, missionId });
-        return;
-      }
-      default:
-        return; // partial/status/hook frames: ignored for the feed
+      const status = failed || !ok ? 'failed' : 'done';
+      void missionDone(missionId, status, this.activity, result, costUsd || 0);
     }
   }
 
   dispose() {
-    for (const [, res] of this.pendingApprovals) res({ behavior: 'deny', message: 'Socket closed.' });
+    for (const [, res] of this.pendingApprovals) res({ approved: false });
     this.pendingApprovals.clear();
   }
 }

@@ -1,13 +1,72 @@
-// Brain mode "Claude Code" — drives the local Arganta Bridge. Deliberately
-// reuses Arganta Core's design system (same composer field, brain-pill model
-// picker, message layout) so switching brains never changes the UI language.
-// The only visible difference is the model list (Claude models) and the
-// operational activity feed (Reading repository / Editing files / Approve-Deny).
+// Bridge brain modes — "Claude Code" and "Codex" both drive the local Arganta
+// Bridge (tools/arganta-bridge) over one token-gated WebSocket; the mission's
+// `engine` field picks which agent runs it. Deliberately reuses Arganta Core's
+// design system (same composer field, brain-pill model picker, message layout)
+// so switching brains never changes the UI language — only the model list, the
+// brand mark, and the accent colour change per engine.
 import { useEffect, useRef, useState } from 'react'
 import { BridgeClient, type BridgeEvent, type BridgeStatus } from '../../lib/bridge/client'
 import { Markdown } from './Markdown'
 import { ClaudeMark } from './ClaudeMark'
+import { OpenAIMark } from './OpenAIMark'
 import './bridge.css'
+
+export type BridgeEngine = 'claude' | 'codex'
+
+type MarkComp = (p: { size?: number; color?: string }) => JSX.Element
+
+interface EngineConfig {
+  name: string            // "Claude Code" / "Codex"
+  Mark: MarkComp
+  accent: string          // brand colour for marks + capsule
+  models: { id: string; label: string; sub: string }[]
+  lsPrefix: string        // localStorage key namespace
+  capsulePrefix: string   // prepended to the model label in the pill/capsule
+  emptyCopy: string
+  composerPlaceholder: string
+}
+
+const ENGINES: Record<BridgeEngine, EngineConfig> = {
+  claude: {
+    name: 'Claude Code',
+    Mark: ClaudeMark,
+    accent: '#D97757',
+    // Aliases the Claude Code CLI understands.
+    models: [
+      { id: '', label: 'Default', sub: "Claude Code's default model" },
+      { id: 'opus', label: 'Opus 4.8', sub: 'Most capable' },
+      { id: 'sonnet', label: 'Sonnet', sub: 'Balanced' },
+      { id: 'haiku', label: 'Haiku', sub: 'Fastest' },
+    ],
+    lsPrefix: 'hq_bridge',           // keeps the existing saved keys working
+    capsulePrefix: 'Claude',
+    emptyCopy: 'What should Claude Code do? It runs on your machine with your tools — try "run the media-core tests" or "generate an ARGANTA post and save it".',
+    composerPlaceholder: 'Give Claude Code a mission…',
+  },
+  codex: {
+    name: 'Codex',
+    Mark: OpenAIMark,
+    accent: '#10A37F',
+    // Codex CLI model ids. The bridge falls back to Codex's own default when id
+    // is ''. Verify against the installed `codex` version if these drift.
+    models: [
+      { id: '', label: 'Default', sub: "Codex's default model" },
+      { id: 'gpt-5.1-codex-max', label: 'Codex Max', sub: 'Most capable' },
+      { id: 'gpt-5.1-codex', label: 'Codex', sub: 'Balanced' },
+      { id: 'gpt-5.1-codex-mini', label: 'Codex Mini', sub: 'Fastest' },
+    ],
+    lsPrefix: 'hq_bridge_codex',
+    capsulePrefix: '',               // labels already read "Codex …"
+    emptyCopy: 'What should Codex do? It runs on your machine in a sandbox — try "refactor the pixel adapter" or "write tests for the audio engine".',
+    composerPlaceholder: 'Give Codex a mission…',
+  },
+}
+
+/** Read a per-engine setting, falling back to the Claude bridge's saved value
+ * (both engines share one bridge, so a token/url set for one works for both). */
+function readSetting(prefix: string, key: string): string {
+  return localStorage.getItem(`${prefix}_${key}`) || (prefix !== 'hq_bridge' ? localStorage.getItem(`hq_bridge_${key}`) || '' : '')
+}
 
 type FeedItem =
   | { kind: 'status' | 'tool'; label: string; id: number }
@@ -17,26 +76,16 @@ type FeedItem =
   | { kind: 'error'; message: string; id: number }
   | { kind: 'user'; text: string; id: number }
 
-const TOKEN_KEY = 'hq_bridge_token'
-const MODEL_KEY = 'hq_bridge_model'
-const URL_KEY = 'hq_bridge_url'
-
-// Claude models the Bridge can run (aliases the Claude Code CLI understands).
-const MODELS: { id: string; label: string; sub: string }[] = [
-  { id: '', label: 'Default', sub: "Claude Code's default model" },
-  { id: 'opus', label: 'Opus 4.8', sub: 'Most capable' },
-  { id: 'sonnet', label: 'Sonnet', sub: 'Balanced' },
-  { id: 'haiku', label: 'Haiku', sub: 'Fastest' },
-]
-
-export function BridgeConsole() {
+export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) {
+  const cfg = ENGINES[engine]
   const [status, setStatus] = useState<BridgeStatus>('idle')
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [draft, setDraft] = useState('')
   const [running, setRunning] = useState(false)
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
-  const [model, setModel] = useState(() => localStorage.getItem(MODEL_KEY) || '')
-  const [bridgeUrl, setBridgeUrl] = useState(() => localStorage.getItem(URL_KEY) || '')
+  const [token, setToken] = useState(() => readSetting(cfg.lsPrefix, 'token'))
+  const [model, setModel] = useState(() => readSetting(cfg.lsPrefix, 'model'))
+  const [bridgeUrl, setBridgeUrl] = useState(() => readSetting(cfg.lsPrefix, 'url'))
+  const [dialogOpen, setDialogOpen] = useState(false)
   const clientRef = useRef<BridgeClient | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -61,10 +110,10 @@ export function BridgeConsole() {
 
   async function connect() {
     if (!token) return
-    localStorage.setItem(TOKEN_KEY, token)
-    if (bridgeUrl) localStorage.setItem(URL_KEY, bridgeUrl)
+    localStorage.setItem(`${cfg.lsPrefix}_token`, token)
+    if (bridgeUrl) localStorage.setItem(`${cfg.lsPrefix}_url`, bridgeUrl)
     const c = new BridgeClient({ token, url: bridgeUrl || undefined })
-    c.onStatus = setStatus
+    c.onStatus = (s) => { setStatus(s); if (s === 'open') setDialogOpen(false) }
     c.onEvent = (e: BridgeEvent) => {
       switch (e.type) {
         case 'status': case 'tool': push({ kind: e.type, label: e.label }); break
@@ -93,9 +142,10 @@ export function BridgeConsole() {
   function run() {
     const c = clientRef.current
     if (!c || status !== 'open' || !draft.trim() || running) return
-    runModelRef.current = 'Claude ' + (MODELS.find((m) => m.id === model) || MODELS[0]).label
+    const label = (cfg.models.find((m) => m.id === model) || cfg.models[0]).label
+    runModelRef.current = (cfg.capsulePrefix ? cfg.capsulePrefix + ' ' : '') + label
     push({ kind: 'user', text: draft.trim() })
-    c.startMission(draft.trim(), { model: model || undefined })
+    c.startMission(draft.trim(), { model: model || undefined, engine })
     setDraft('')
     setRunning(true)
   }
@@ -106,41 +156,46 @@ export function BridgeConsole() {
   }
 
   const connected = status === 'open'
+  // The connect popup is the empty-state when there's nothing behind it, and an
+  // on-demand overlay (via the reconnect pill) once a conversation exists — so a
+  // dropped socket never wipes a feed the founder is reading.
+  const showDialog = !connected && (feed.length === 0 || dialogOpen)
+  const showReconnect = !connected && feed.length > 0 && !dialogOpen
+  const canDismiss = feed.length > 0
 
   return (
     <div className="core-convo bridge-convo">
-      {!connected && (
-        <div className="bridge-connect-bar">
-          <span className={`bridge-dot ${status === 'unauthorized' ? 'bad' : status === 'connecting' ? 'warn' : ''}`} />
-          <span className="bridge-connect-label">
-            {status === 'unauthorized' ? "Can't reach the bridge — start it (npm start in tools/arganta-bridge) and check the URL/token" : 'Connect to your Claude Code bridge'}
-          </span>
-          <input type="text" className="bridge-url" placeholder="ws://127.0.0.1:7717 (or your Tailscale IP)" value={bridgeUrl}
-            onChange={(e) => setBridgeUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') connect() }} />
-          <input type="password" className="bridge-token" placeholder="Bridge token" value={token}
-            onChange={(e) => setToken(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') connect() }} />
-          <button className="bridge-connect-btn" onClick={connect} disabled={!token}>Connect</button>
-        </div>
-      )}
-
       <div className="core-convo-scroll" ref={scrollRef}>
         <div className="core-convo-col">
           {feed.length === 0 && connected && (
             <div className="core-convo-empty">
-              <p className="core-empty-copy">What should Claude Code do? It runs on your machine with your tools — try "run the media-core tests" or "generate an ARGANTA post and save it".</p>
+              <p className="core-empty-copy">{cfg.emptyCopy}</p>
             </div>
           )}
-          {feed.map((it) => <FeedRow key={it.id} item={it} onResolve={resolve} />)}
+          {feed.map((it) => <FeedRow key={it.id} item={it} Mark={cfg.Mark} accent={cfg.accent} onResolve={resolve} />)}
         </div>
       </div>
 
+      {showDialog && (
+        <BridgeConnectDialog
+          cfg={cfg} status={status} token={token} bridgeUrl={bridgeUrl}
+          onToken={setToken} onUrl={setBridgeUrl} onConnect={connect}
+          onClose={canDismiss ? () => setDialogOpen(false) : undefined}
+        />
+      )}
+
       <div className="core-composer">
+        {showReconnect && (
+          <button className="bridge-reconnect-pill" onClick={() => setDialogOpen(true)}>
+            <span className="bridge-dot bad" /> Bridge disconnected — reconnect
+          </button>
+        )}
         <div className="core-composer-field">
-          <BridgeModelPicker model={model} onPick={(m) => { setModel(m); localStorage.setItem(MODEL_KEY, m) }} />
+          <BridgeModelPicker cfg={cfg} model={model} onPick={(m) => { setModel(m); localStorage.setItem(`${cfg.lsPrefix}_model`, m) }} />
           <textarea
             ref={taRef}
             className="core-composer-input core-composer-textarea"
-            placeholder={connected ? 'Give Claude Code a mission…' : 'Connect to the bridge first'}
+            placeholder={connected ? cfg.composerPlaceholder : 'Connect to the bridge first'}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run() } }}
@@ -161,7 +216,56 @@ export function BridgeConsole() {
   )
 }
 
-function BridgeModelPicker({ model, onPick }: { model: string; onPick: (m: string) => void }) {
+/** Connect popup — replaces the old top bar so it can never collide with the
+ * floating Core/brain capsule. Rendered inside .core-convo (not a portal) so
+ * every mount mode keeps working. Dismissable only when a feed exists behind it. */
+function BridgeConnectDialog({ cfg, status, token, bridgeUrl, onToken, onUrl, onConnect, onClose }: {
+  cfg: EngineConfig
+  status: BridgeStatus
+  token: string
+  bridgeUrl: string
+  onToken: (v: string) => void
+  onUrl: (v: string) => void
+  onConnect: () => void
+  onClose?: () => void
+}) {
+  useEffect(() => {
+    if (!onClose) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="bridge-connect-scrim" onClick={onClose}>
+      <div className="bridge-connect-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="bridge-connect-brand">
+          <cfg.Mark size={20} />
+          <span>{cfg.name} bridge</span>
+          {onClose && <button className="bridge-dialog-close" onClick={onClose} aria-label="Close">✕</button>}
+        </div>
+        <div className={`bridge-connect-status ${status === 'unauthorized' ? 'bad' : status === 'connecting' ? 'warn' : ''}`}>
+          <span className={`bridge-dot ${status === 'unauthorized' ? 'bad' : status === 'connecting' ? 'warn' : ''}`} />
+          {status === 'unauthorized'
+            ? "Can't reach the bridge — start it (npm start in tools/arganta-bridge) and check the URL/token"
+            : status === 'connecting' ? 'Connecting…' : `Connect to your ${cfg.name} bridge`}
+        </div>
+        <label className="bridge-field">
+          <span>Bridge URL</span>
+          <input type="text" className="bridge-url" placeholder="ws://127.0.0.1:7717 (or your Tailscale IP)" value={bridgeUrl}
+            onChange={(e) => onUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') onConnect() }} />
+        </label>
+        <label className="bridge-field">
+          <span>Token</span>
+          <input type="password" className="bridge-token" placeholder="Bridge token" value={token}
+            onChange={(e) => onToken(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') onConnect() }} />
+        </label>
+        <button className="bridge-connect-btn" onClick={onConnect} disabled={!token}>Connect</button>
+      </div>
+    </div>
+  )
+}
+
+function BridgeModelPicker({ cfg, model, onPick }: { cfg: EngineConfig; model: string; onPick: (m: string) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -170,21 +274,22 @@ function BridgeModelPicker({ model, onPick }: { model: string; onPick: (m: strin
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
-  const current = MODELS.find((m) => m.id === model) || MODELS[0]
+  const current = cfg.models.find((m) => m.id === model) || cfg.models[0]
+  const label = (s: string) => (cfg.capsulePrefix ? cfg.capsulePrefix + ' ' : '') + s
   return (
     <div className="core-brain-picker" ref={ref}>
-      <button type="button" className="core-brain-pill mono" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} title="Choose the Claude model">
-        <ClaudeMark size={13} />
-        <span className="core-brain-pill-txt">Claude {current.label}</span>
+      <button type="button" className="core-brain-pill mono" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} title={`Choose the ${cfg.name} model`}>
+        <cfg.Mark size={13} />
+        <span className="core-brain-pill-txt">{label(current.label)}</span>
         <svg className="core-brain-caret" width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden><path d="M2 3.5 L5 6.5 L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
       {open && (
         <>
           <div className="core-brain-scrim" onClick={() => setOpen(false)} aria-hidden />
           <div className="core-brain-menu" role="menu">
-            {MODELS.map((m) => (
+            {cfg.models.map((m) => (
               <button key={m.id || 'default'} className={'core-brain-opt' + (m.id === model ? ' active' : '')} role="menuitem" onClick={() => { onPick(m.id); setOpen(false) }}>
-                <b>Claude {m.label}</b>
+                <b>{label(m.label)}</b>
                 <i>{m.sub}</i>
               </button>
             ))}
@@ -196,7 +301,7 @@ function BridgeModelPicker({ model, onPick }: { model: string; onPick: (m: strin
   )
 }
 
-function FeedRow({ item, onResolve }: { item: FeedItem; onResolve: (i: Extract<FeedItem, { kind: 'approval' }>, a: boolean) => void }) {
+function FeedRow({ item, Mark, accent, onResolve }: { item: FeedItem; Mark: MarkComp; accent: string; onResolve: (i: Extract<FeedItem, { kind: 'approval' }>, a: boolean) => void }) {
   switch (item.kind) {
     case 'user':
       return <div className="core-msg core-msg-user"><div className="core-msg-bubble">{item.text}</div></div>
@@ -211,7 +316,7 @@ function FeedRow({ item, onResolve }: { item: FeedItem; onResolve: (i: Extract<F
             <div className="bf-done-head">
               <strong>{item.ok ? 'Mission complete' : 'Mission failed'}</strong>
               {item.modelLabel && (
-                <span className="bf-model-capsule mono"><ClaudeMark size={12} />{item.modelLabel}</span>
+                <span className="bf-model-capsule mono" style={{ borderColor: accent + '66' }}><Mark size={12} />{item.modelLabel}</span>
               )}
               {item.costUsd != null && <span className="bf-cost">${item.costUsd.toFixed(4)}</span>}
             </div>

@@ -61,10 +61,12 @@ export class BridgeClient {
     })
   }
 
-  /** Start a mission. Returns the missionId used. */
-  startMission(prompt: string, opts?: { cwd?: string; missionId?: string; model?: string }): string {
+  /** Start a mission. Returns the missionId used. `engine` selects which local
+   * agent runs it (Claude Agent SDK vs Codex); the server defaults to 'claude'
+   * when omitted, so older clients keep working. */
+  startMission(prompt: string, opts?: { cwd?: string; missionId?: string; model?: string; engine?: 'claude' | 'codex' }): string {
     const missionId = opts?.missionId || `m_${Date.now().toString(36)}`
-    this.send({ type: 'mission', missionId, prompt, cwd: opts?.cwd, model: opts?.model })
+    this.send({ type: 'mission', missionId, prompt, cwd: opts?.cwd, model: opts?.model, engine: opts?.engine })
     return missionId
   }
 
