@@ -7,6 +7,7 @@
 .bridge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tx3); flex: none; }
 .bridge-dot.warn { background: var(--warn); } .bridge-dot.bad { background: var(--bad); }
 .bridge-connect-label { color: var(--tx2); margin-right: auto; }
+.bridge-url { width: 200px; padding: 5px 9px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); color: var(--tx); font-size: 12px; font-family: var(--mono); }
 .bridge-token { width: 150px; padding: 5px 9px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); color: var(--tx); font-size: 12px; }
 .bridge-connect-btn { padding: 5px 13px; border: none; background: var(--acc); color: #fff; border-radius: var(--r-md); font-size: 12px; font-weight: 600; cursor: pointer; }
 .bridge-connect-btn:disabled { opacity: .4; cursor: default; }
@@ -17,7 +18,9 @@
 .bf-status { font-size: 12.5px; color: var(--tx3); }
 .bf-tool { font-size: 12.5px; color: var(--tx2); display: flex; align-items: center; gap: 7px; }
 .bf-tick { width: 5px; height: 5px; border-radius: 50%; background: var(--acc); flex: none; }
-.bf-msg { font-size: 15px; color: var(--tx); line-height: 1.6; white-space: pre-wrap; }
+/* .bf-msg / .bf-result are now Markdown containers (see .md* in core.css); keep
+   only the colour + spacing hooks so replies inherit the shared markdown look. */
+.bf-msg { color: var(--tx); }
 .bf-error { font-size: 13px; color: var(--bad); }
 
 /* User mission bubble — matches the Core user message treatment */
@@ -25,8 +28,13 @@
 
 .bf-done { border: 1px solid var(--bd); border-left: 3px solid var(--ok); border-radius: var(--r-md); padding: 10px 12px; font-size: 13px; color: var(--tx); background: var(--bg2); }
 .bf-done.bad { border-left-color: var(--bad); }
-.bf-result { margin-top: 4px; color: var(--tx2); white-space: pre-wrap; }
-.bf-cost { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--tx3); font-family: var(--mono); }
+.bf-done-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.bf-done-head strong { font-size: 13px; }
+.bf-result { margin-top: 8px; color: var(--tx2); }
+.bf-result .md-p, .bf-result .md-ul li, .bf-result .md-ol li { font-size: 13.5px; color: var(--tx2); }
+.bf-cost { font-size: 11px; color: var(--tx3); font-family: var(--mono); }
+/* Model capsule — names the Claude brain that ran the finished mission. */
+.bf-model-capsule { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 6px; border: 1px solid var(--bd2); border-radius: 999px; font-size: 11px; color: var(--tx2); background: var(--bg); }
 
 .bf-approval { border: 1px solid var(--warn); border-radius: var(--r-md); padding: 12px; background: var(--bg2); }
 .bf-approval.approved { border-color: var(--ok); opacity: .8; } .bf-approval.denied { border-color: var(--bad); opacity: .7; }
@@ -42,4 +50,7 @@
    the send button to the right. Give it the auto-margin the mic would have. */
 @media (max-width: 980px) {
   .bridge-convo .core-composer-send { margin-left: auto; }
+  .bridge-connect-bar { flex-wrap: wrap; }
+  .bridge-connect-label { flex-basis: 100%; margin-right: 0; }
+  .bridge-url, .bridge-token { flex: 1 1 auto; min-width: 0; }
 }

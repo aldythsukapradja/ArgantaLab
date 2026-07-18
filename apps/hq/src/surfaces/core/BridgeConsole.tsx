@@ -5,18 +5,21 @@
 // operational activity feed (Reading repository / Editing files / Approve-Deny).
 import { useEffect, useRef, useState } from 'react'
 import { BridgeClient, type BridgeEvent, type BridgeStatus } from '../../lib/bridge/client'
+import { Markdown } from './Markdown'
+import { ClaudeMark } from './ClaudeMark'
 import './bridge.css'
 
 type FeedItem =
   | { kind: 'status' | 'tool'; label: string; id: number }
   | { kind: 'message'; text: string; id: number }
   | { kind: 'approval'; approvalId: string; tool: string; label: string; input: unknown; id: number; resolved?: 'approved' | 'denied' }
-  | { kind: 'done'; ok: boolean; result?: string; costUsd?: number; id: number }
+  | { kind: 'done'; ok: boolean; result?: string; costUsd?: number; modelLabel?: string; id: number }
   | { kind: 'error'; message: string; id: number }
   | { kind: 'user'; text: string; id: number }
 
 const TOKEN_KEY = 'hq_bridge_token'
 const MODEL_KEY = 'hq_bridge_model'
+const URL_KEY = 'hq_bridge_url'
 
 // Claude models the Bridge can run (aliases the Claude Code CLI understands).
 const MODELS: { id: string; label: string; sub: string }[] = [
@@ -33,10 +36,14 @@ export function BridgeConsole() {
   const [running, setRunning] = useState(false)
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
   const [model, setModel] = useState(() => localStorage.getItem(MODEL_KEY) || '')
+  const [bridgeUrl, setBridgeUrl] = useState(() => localStorage.getItem(URL_KEY) || '')
   const clientRef = useRef<BridgeClient | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const idRef = useRef(0)
+  // Label of the model the in-flight mission is running on — captured at launch
+  // so the completion capsule names the brain even if the picker changes after.
+  const runModelRef = useRef<string>('')
 
   const push = (item: Omit<FeedItem, 'id'> | { kind: FeedItem['kind'] } & Record<string, unknown>) =>
     setFeed((f) => [...f, { ...(item as object), id: idRef.current++ } as FeedItem])
@@ -55,14 +62,27 @@ export function BridgeConsole() {
   async function connect() {
     if (!token) return
     localStorage.setItem(TOKEN_KEY, token)
-    const c = new BridgeClient({ token })
+    if (bridgeUrl) localStorage.setItem(URL_KEY, bridgeUrl)
+    const c = new BridgeClient({ token, url: bridgeUrl || undefined })
     c.onStatus = setStatus
     c.onEvent = (e: BridgeEvent) => {
       switch (e.type) {
         case 'status': case 'tool': push({ kind: e.type, label: e.label }); break
         case 'message': push({ kind: 'message', text: e.text }); break
         case 'awaiting_approval': push({ kind: 'approval', approvalId: e.approvalId, tool: e.tool, label: e.label, input: e.input }); break
-        case 'done': push({ kind: 'done', ok: e.ok, result: e.result, costUsd: e.costUsd }); setRunning(false); break
+        case 'done': {
+          // The final result almost always repeats the text already streamed as
+          // a `message` — showing both is the "two identical cards" bug. Drop the
+          // result body when it just echoes the last streamed message, leaving a
+          // slim completion capsule (model + cost) instead of a duplicate wall.
+          const result = e.result?.trim() || ''
+          setFeed((f) => {
+            const lastMsg = [...f].reverse().find((x) => x.kind === 'message') as Extract<FeedItem, { kind: 'message' }> | undefined
+            const echo = lastMsg && result && lastMsg.text.trim() === result
+            return [...f, { kind: 'done', ok: e.ok, result: echo ? undefined : (result || undefined), costUsd: e.costUsd, modelLabel: runModelRef.current || undefined, id: idRef.current++ } as FeedItem]
+          })
+          setRunning(false); break
+        }
         case 'error': push({ kind: 'error', message: e.message }); setRunning(false); break
       }
     }
@@ -73,6 +93,7 @@ export function BridgeConsole() {
   function run() {
     const c = clientRef.current
     if (!c || status !== 'open' || !draft.trim() || running) return
+    runModelRef.current = 'Claude ' + (MODELS.find((m) => m.id === model) || MODELS[0]).label
     push({ kind: 'user', text: draft.trim() })
     c.startMission(draft.trim(), { model: model || undefined })
     setDraft('')
@@ -92,8 +113,10 @@ export function BridgeConsole() {
         <div className="bridge-connect-bar">
           <span className={`bridge-dot ${status === 'unauthorized' ? 'bad' : status === 'connecting' ? 'warn' : ''}`} />
           <span className="bridge-connect-label">
-            {status === 'unauthorized' ? "Can't reach the bridge — start it (npm start in tools/arganta-bridge) and check the token" : 'Connect to your local Claude Code bridge'}
+            {status === 'unauthorized' ? "Can't reach the bridge — start it (npm start in tools/arganta-bridge) and check the URL/token" : 'Connect to your Claude Code bridge'}
           </span>
+          <input type="text" className="bridge-url" placeholder="ws://127.0.0.1:7717 (or your Tailscale IP)" value={bridgeUrl}
+            onChange={(e) => setBridgeUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') connect() }} />
           <input type="password" className="bridge-token" placeholder="Bridge token" value={token}
             onChange={(e) => setToken(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') connect() }} />
           <button className="bridge-connect-btn" onClick={connect} disabled={!token}>Connect</button>
@@ -151,7 +174,7 @@ function BridgeModelPicker({ model, onPick }: { model: string; onPick: (m: strin
   return (
     <div className="core-brain-picker" ref={ref}>
       <button type="button" className="core-brain-pill mono" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} title="Choose the Claude model">
-        <span className="bridge-brain-mark">✦</span>
+        <ClaudeMark size={13} />
         <span className="core-brain-pill-txt">Claude {current.label}</span>
         <svg className="core-brain-caret" width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden><path d="M2 3.5 L5 6.5 L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
@@ -179,15 +202,20 @@ function FeedRow({ item, onResolve }: { item: FeedItem; onResolve: (i: Extract<F
       return <div className="core-msg core-msg-user"><div className="core-msg-bubble">{item.text}</div></div>
     case 'status': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-status">{item.label}</div></div></div>
     case 'tool': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-tool"><span className="bf-tick" />{item.label}</div></div></div>
-    case 'message': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-msg">{item.text}</div></div></div>
+    case 'message': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><Markdown className="bf-msg" text={item.text} /></div></div>
     case 'error': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-error">⚠ {item.message}</div></div></div>
     case 'done':
       return (
         <div className="core-msg core-msg-assistant"><div className="core-msg-body">
           <div className={`bf-done ${item.ok ? 'ok' : 'bad'}`}>
-            <strong>{item.ok ? 'Mission complete' : 'Mission failed'}</strong>
-            {item.result && <div className="bf-result">{item.result}</div>}
-            {item.costUsd != null && <span className="bf-cost">${item.costUsd.toFixed(4)}</span>}
+            <div className="bf-done-head">
+              <strong>{item.ok ? 'Mission complete' : 'Mission failed'}</strong>
+              {item.modelLabel && (
+                <span className="bf-model-capsule mono"><ClaudeMark size={12} />{item.modelLabel}</span>
+              )}
+              {item.costUsd != null && <span className="bf-cost">${item.costUsd.toFixed(4)}</span>}
+            </div>
+            {item.result && <Markdown className="bf-result" text={item.result} />}
           </div>
         </div></div>
       )

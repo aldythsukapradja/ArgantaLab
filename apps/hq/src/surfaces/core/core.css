@@ -147,6 +147,11 @@
   flex: 1; min-height: 0; overflow-y: auto;
   padding: 24px 20px 12px;
 }
+/* Inline mode floats the Core/Claude-Code + Preview capsule over the top-right
+   of the scroll area (position:absolute). Push the first message down so it
+   never scrolls up UNDER the capsule. Only inline needs this — panel and
+   fullscreen have a real, layout-occupying topbar. */
+.core-center .core-convo-scroll { padding-top: 56px; }
 .core-convo-col { max-width: 760px; margin: 0 auto; }
 .core-convo-empty {
   max-width: 760px; margin: 8vh auto 0; display: flex; flex-direction: column;
@@ -332,6 +337,26 @@
 .core-provenance { font-size: 11px; color: var(--tx3); display: flex; align-items: center; flex-wrap: wrap; }
 .core-provenance > svg { margin-right: 5px; flex: none; }
 .core-prov-fallback { color: var(--warn); cursor: help; }
+
+/* ---------- markdown (chat replies render **bold**, lists, code, etc.) ---------- */
+.md { display: flex; flex-direction: column; gap: 8px; word-break: break-word; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md-p { font-size: 15px; line-height: 1.62; color: var(--tx); margin: 0; white-space: pre-wrap; }
+.md-h { color: var(--tx); font-weight: 700; line-height: 1.3; margin: 4px 0 0; }
+.md-h1 { font-size: 18px; } .md-h2 { font-size: 16.5px; } .md-h3 { font-size: 15px; }
+.md-h4, .md-h5, .md-h6 { font-size: 14px; color: var(--tx2); }
+.md strong { font-weight: 700; color: var(--tx); }
+.md em { font-style: italic; }
+.md-ul, .md-ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.md-ul li, .md-ol li { font-size: 15px; line-height: 1.55; color: var(--tx); }
+.md-ul { list-style: disc; } .md-ol { list-style: decimal; }
+.md-code { font-family: var(--mono); font-size: 12.5px; background: var(--bg3); padding: 1.5px 5px; border-radius: 4px; border: 1px solid var(--bd); }
+.md-pre { margin: 2px 0; padding: 11px 13px; background: var(--bg3); border: 1px solid var(--bd); border-radius: var(--r-md); overflow-x: auto; }
+.md-pre code { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; color: var(--tx); white-space: pre; }
+.md-link { color: var(--acc-text, var(--acc)); text-decoration: underline; text-underline-offset: 2px; }
+.md-link:hover { opacity: .82; }
+.md-quote { margin: 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--bd2); color: var(--tx2); font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; }
 /* provider logo sits inline before the model name in the picker rows */
 .core-brain-opt b > svg { flex: none; }
 
@@ -679,6 +704,9 @@
 .core-brain-toggle button { padding: 3px 11px; border: none; background: transparent; color: var(--tx3); font-size: 11.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; border-radius: 999px; cursor: pointer; transition: color .12s, background .12s; }
 .core-brain-toggle button:hover { color: var(--tx); }
 .core-brain-toggle button.active { background: var(--acc); color: #fff; }
+/* The Claude Code tab carries the Claude sunburst; keep icon + label aligned. */
+.core-brain-tab-cc { display: inline-flex; align-items: center; gap: 5px; }
+.core-brain-toggle button.core-brain-tab-cc.active { background: #D97757; }
 
 /* Arganta logomark in the Core title (replaces the "Arganta Core" text) */
 .core-fs-title-logo { gap: 7px; padding-left: 10px; }

@@ -1,16 +1,18 @@
 // Arganta Bridge — the concrete "Brain Interface". Drives the Claude Agent SDK
-// locally and exposes it to HQ over a token-gated 127.0.0.1 WebSocket. HQ sends
-// a mission; the Bridge streams back a normalized activity feed and pauses on
-// gated tools for an explicit Approve/Deny.
+// locally and exposes it to HQ over a token-gated WebSocket. HQ sends a mission;
+// the Bridge streams back a normalized activity feed and pauses on gated tools
+// for an explicit Approve/Deny.
 //
-// SECURITY: binds to loopback only and requires BRIDGE_TOKEN on every socket.
-// A process that can run Claude Code has full machine access — never expose this
-// port without the tunnel + auth added in B5.
+// SECURITY: binds to loopback (127.0.0.1) always, plus BRIDGE_TAILSCALE_IP if
+// set — never 0.0.0.0/LAN. Requires BRIDGE_TOKEN on every socket. A process
+// that can run Claude Code has full machine access — the Tailscale IP is the
+// only sanctioned way to reach it off-box (private mesh, not the public LAN).
 
 import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { query, type SDKMessage, type SDKUserMessage, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { classify, toolLabel } from './permissions.ts';
@@ -21,6 +23,10 @@ const REPO_ROOT = resolve(__dirname, '../../..');
 const PORT = Number(process.env.BRIDGE_PORT || 7717);
 const TOKEN = process.env.BRIDGE_TOKEN || '';
 const MODEL = process.env.BRIDGE_MODEL || undefined; // undefined = Claude Code default
+// Optional: this machine's Tailscale IP (100.x.x.x), so devices on your private
+// tailnet (e.g. a phone) can reach the bridge. Never bind 0.0.0.0 — that would
+// expose full-machine-control to the whole LAN, not just your tailnet.
+const TAILSCALE_IP = process.env.BRIDGE_TAILSCALE_IP || '';
 
 if (!TOKEN) {
   console.error('FATAL: set BRIDGE_TOKEN in tools/arganta-bridge/.env (HQ must send the same token).');
@@ -58,15 +64,34 @@ type OutEvent =
 
 // Reject bad tokens at the HTTP upgrade (401) so unauthorized clients never
 // open a socket — cleaner and verifiable, vs. closing after connect.
-const wss = new WebSocketServer({
-  host: '127.0.0.1',
-  port: PORT,
-  verifyClient: (info, cb) => {
-    const url = new URL(info.req.url || '/', 'http://127.0.0.1');
-    url.searchParams.get('token') === TOKEN ? cb(true) : cb(false, 401, 'unauthorized');
-  },
-});
-console.log(`Arganta Bridge on ws://127.0.0.1:${PORT} (repo: ${REPO_ROOT})`);
+// noServer mode: the WebSocketServer itself binds nothing. We attach it to one
+// or two plain http.Servers below, each listening on a specific interface —
+// always loopback, plus the Tailscale IP if configured. This is how a phone on
+// your private tailnet can reach the bridge without exposing it to the LAN.
+const wss = new WebSocketServer({ noServer: true });
+
+function checkToken(req: import('node:http').IncomingMessage): boolean {
+  const url = new URL(req.url || '/', 'http://localhost');
+  return url.searchParams.get('token') === TOKEN;
+}
+
+function listenOn(host: string) {
+  const server = createServer();
+  server.on('upgrade', (req, socket, head) => {
+    if (!checkToken(req)) {
+      socket.write('HTTP/1.1 401 unauthorized\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  });
+  server.on('error', (e) => console.error(`Bridge listener on ${host}:${PORT} failed:`, (e as Error).message));
+  server.listen(PORT, host, () => console.log(`Arganta Bridge on ws://${host}:${PORT} (repo: ${REPO_ROOT})`));
+  return server;
+}
+
+listenOn('127.0.0.1');
+if (TAILSCALE_IP) listenOn(TAILSCALE_IP);
 
 wss.on('connection', (ws) => {
   const session = new BridgeSession(ws);
