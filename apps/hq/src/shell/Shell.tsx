@@ -18,7 +18,7 @@ const Broadcast = lazy(() => import('../surfaces/Broadcast').then(module => ({ d
 // itself is still reachable from the Forge's own Legacy tab.
 const GameBuilder = lazy(() => import('../surfaces/forge/ForgeShell').then(module => ({ default: module.GameForge })))
 const AppBuilder = lazy(() => import('../surfaces/forge/ForgeShell').then(module => ({ default: module.AppForge })))
-const Command = lazy(() => import('../surfaces/command/Command').then(module => ({ default: module.Command })))
+const Command = lazy(() => import('../surfaces/command/CommandCenter').then(module => ({ default: module.CommandCenter })))
 const Pixel = lazy(() => import('../surfaces/pixel/Pixel').then(module => ({ default: module.Pixel })))
 const Vault = lazy(() => import('../surfaces/Vault').then(module => ({ default: module.Vault })))
 const Architecture = lazy(() => import('../surfaces/Architecture').then(module => ({ default: module.Architecture })))

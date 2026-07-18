@@ -1,0 +1,82 @@
+/* Command Center — reuses HQ theme tokens; the "wow" is truth density, not chrome. */
+.cc { display: flex; flex-direction: column; height: 100%; overflow-y: auto; padding: 20px 24px 32px; gap: 16px; }
+
+.cc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cc-head-l { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.cc-title { font-size: 22px; font-weight: 750; color: var(--tx); margin: 0; letter-spacing: -0.01em; }
+.cc-reach { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--tx2); }
+.cc-reach .cc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tx3); }
+.cc-reach-ok .cc-dot, .cc-reach-ok { color: var(--ok); }
+.cc-reach-ok .cc-dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.cc-reach-unauthorized .cc-dot { background: var(--warn); }
+.cc-reach-unreachable .cc-dot, .cc-reach-no-token .cc-dot { background: var(--bad); }
+.cc-head-r { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--tx3); flex-wrap: wrap; }
+.cc-refresh, .cc-legacy-btn { border: 1px solid var(--bd2); background: var(--bg2); color: var(--tx2); border-radius: var(--r-md); cursor: pointer; }
+.cc-refresh { width: 26px; height: 26px; font-size: 14px; }
+.cc-legacy-btn { padding: 4px 12px; font-size: 12px; }
+.cc-legacy-btn:hover, .cc-refresh:hover { color: var(--tx); border-color: var(--acc); }
+
+.cc-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 11px 14px; border: 1px solid var(--warn); border-radius: var(--r-md); background: color-mix(in srgb, var(--warn) 8%, var(--bg2)); font-size: 13px; color: var(--tx); }
+.cc-banner-cta, .cc-pulse-cta, .cc-start, .cc-legacy-back { border: none; background: var(--acc); color: #fff; border-radius: var(--r-md); cursor: pointer; font-weight: 600; }
+.cc-banner-cta { padding: 5px 13px; font-size: 12px; margin-left: auto; }
+
+/* Grid — 2 cols on desktop, single column on narrow */
+.cc-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .cc-grid { grid-template-columns: 1fr; } }
+
+.cc-zone { border: 1px solid var(--bd); border-radius: var(--r-lg, 14px); background: var(--bg2); padding: 16px; }
+.cc-zone-h { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tx2); margin: 0 0 12px; }
+.cc-zone-h span { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--tx3); margin-left: 6px; }
+.cc-fleet { grid-column: 1 / 2; } .cc-infra { grid-column: 2 / 3; grid-row: 1 / 3; }
+@media (max-width: 900px) { .cc-fleet, .cc-infra, .cc-launch, .cc-pulse { grid-column: auto; grid-row: auto; } }
+
+/* FLEET */
+.cc-brains { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 560px) { .cc-brains { grid-template-columns: 1fr; } }
+.cc-brain { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 13px; border: 1px solid var(--bd2); border-top: 2px solid var(--brain-accent, var(--acc)); border-radius: var(--r-md); background: var(--bg); cursor: pointer; transition: transform .12s, border-color .12s; }
+.cc-brain:hover { transform: translateY(-2px); border-color: var(--brain-accent, var(--acc)); }
+.cc-brain-top { display: flex; align-items: center; justify-content: space-between; }
+.cc-pill { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.cc-pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.cc-pill.off { color: var(--tx3); background: var(--bg3); }
+.cc-brain-name { font-size: 14px; font-weight: 650; color: var(--tx); }
+.cc-brain-sub { font-size: 11px; color: var(--tx3); line-height: 1.35; }
+.cc-brain-open { font-size: 11px; color: var(--brain-accent, var(--acc)); font-weight: 600; margin-top: 2px; }
+
+/* INFRASTRUCTURE */
+.cc-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cc-tile { display: flex; flex-direction: column; gap: 5px; padding: 11px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); text-decoration: none; }
+a.cc-tile:hover { border-color: var(--acc); }
+.cc-tile-top { display: flex; align-items: center; gap: 7px; }
+.cc-tile-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.cc-tile-up { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
+.cc-tile-down { background: var(--bad); }
+.cc-tile-unknown { background: var(--tx3); }
+.cc-tile-link { background: var(--acc); }
+.cc-tile-label { font-size: 12.5px; font-weight: 600; color: var(--tx); margin-right: auto; }
+.cc-src { font-size: 9px; text-transform: uppercase; letter-spacing: .04em; padding: 1px 5px; border-radius: 4px; font-weight: 700; }
+.cc-src-live { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.cc-src-pending { color: var(--tx3); background: var(--bg3); }
+.cc-src-unknown { color: var(--tx3); background: var(--bg3); }
+.cc-tile-detail { font-size: 11px; color: var(--tx3); font-family: var(--mono); }
+.cc-provenance-note { font-size: 10.5px; color: var(--tx3); margin: 10px 0 0; line-height: 1.4; }
+
+/* LAUNCH */
+.cc-launch-list { display: flex; flex-direction: column; gap: 8px; }
+.cc-launch-row { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid var(--bd2); border-radius: var(--r-md); background: var(--bg); }
+.cc-launch-name { font-size: 13px; font-weight: 600; color: var(--tx); }
+.cc-launch-msg { font-size: 11px; color: var(--tx3); margin-left: auto; font-family: var(--mono); max-width: 55%; text-align: right; }
+.cc-start { padding: 5px 14px; font-size: 12px; }
+.cc-start:disabled { opacity: .5; cursor: default; background: var(--bg3); color: var(--tx3); }
+.cc-launch-off { font-size: 12.5px; color: var(--tx2); line-height: 1.5; }
+
+/* PULSE */
+.cc-facts { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cc-facts li { display: flex; justify-content: space-between; font-size: 12px; }
+.cc-facts li span { color: var(--tx3); } .cc-facts li b { color: var(--tx); font-weight: 600; }
+.cc-pulse-cta { padding: 7px 14px; font-size: 12px; width: 100%; }
+.cc-muted { font-size: 12px; color: var(--tx3); }
+
+/* Legacy wrapper */
+.cc-legacy-wrap { position: relative; height: 100%; }
+.cc-legacy-back { position: absolute; top: 10px; right: 14px; z-index: 30; padding: 5px 12px; font-size: 12px; }

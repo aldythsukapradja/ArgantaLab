@@ -18,6 +18,7 @@ import { missionStart, missionDone, type ActivityEvent } from './persist.ts';
 import { createClaudeEngine } from './engines/claude.ts';
 import { createCodexEngine } from './engines/codex.ts';
 import type { MissionEngine, OutEvent } from './engines/types.ts';
+import { health, launch, opsCors } from './ops.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../../..');
@@ -77,6 +78,33 @@ function checkToken(req: import('node:http').IncomingMessage): boolean {
 
 function listenOn(host: string) {
   const server = createServer();
+  // Ops endpoints (Command Center): token-gated GET /health + POST /launch.
+  // Same http.Server that carries the WS upgrade, so `tailscale serve` fronts
+  // all of it under one https origin for the phone.
+  server.on('request', (req, res) => {
+    opsCors(res);
+    const url = new URL(req.url || '/', 'http://localhost');
+    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+    if (!checkToken(req)) { res.writeHead(401, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
+
+    if (req.method === 'GET' && url.pathname === '/health') {
+      health().then((h) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(h)); })
+        .catch((e) => { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: String(e?.message || e) })); });
+      return;
+    }
+    if (req.method === 'POST' && url.pathname === '/launch') {
+      let body = '';
+      req.on('data', (c) => { body += c; if (body.length > 4096) req.destroy(); });
+      req.on('end', () => {
+        let service = '';
+        try { service = JSON.parse(body || '{}').service || ''; } catch { /* bad json */ }
+        launch(service).then((r) => { res.writeHead(r.ok ? 200 : 400, { 'content-type': 'application/json' }); res.end(JSON.stringify(r)); })
+          .catch((e) => { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: false, message: String(e?.message || e) })); });
+      });
+      return;
+    }
+    res.writeHead(404, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'not found' }));
+  });
   server.on('upgrade', (req, socket, head) => {
     if (!checkToken(req)) {
       socket.write('HTTP/1.1 401 unauthorized\r\n\r\n');
