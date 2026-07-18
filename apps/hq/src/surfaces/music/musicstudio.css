@@ -180,3 +180,78 @@
   .msx-insp{max-height:42vh;border-top:1px solid var(--bd)}
   .msx-title span{display:none}
 }
+
+/* ── R2: Generate scope + Renders feed + PlayerBar ─────────────────────────── */
+.sov-gen-seg { width: 100%; margin-bottom: 8px; }
+.sov-gen-prompt, .sov-gen-lyrics {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 52px;
+  background: var(--bg); border: 1px solid var(--bd2); border-radius: 8px;
+  padding: 8px 10px; font-size: 12.5px; color: var(--tx); font-family: inherit; margin-bottom: 6px;
+}
+.sov-gen-lyrics { min-height: 44px; }
+.sov-gen-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.sov-gen-row label { flex: 1; font-size: 10.5px; color: var(--tx3); display: flex; flex-direction: column; gap: 3px; }
+.sov-gen-row input { background: var(--bg); border: 1px solid var(--bd2); border-radius: 6px; padding: 5px 8px; font-size: 12px; color: var(--tx); }
+.sov-gen-durs { display: flex; gap: 5px; margin-bottom: 8px; }
+.sov-gen-btn {
+  width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; border: none; border-radius: 8px; background: var(--acc); color: #fff;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.sov-gen-btn:disabled { opacity: .5; cursor: default; }
+
+.sov-feed { margin: 10px 0; }
+.sov-feed-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.sov-feed-title { font-size: 12px; font-weight: 700; }
+.sov-feed-filters { display: flex; gap: 4px; }
+.sov-feed-chip { font-size: 10px; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--bd2); background: var(--bg); color: var(--tx3); cursor: pointer; text-transform: capitalize; }
+.sov-feed-chip.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+.sov-feed-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.sov-feed-empty { font-size: 11px; color: var(--tx3); line-height: 1.5; padding: 10px 4px; }
+
+.sov-card { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px; background: var(--bg2); border: 1px solid var(--bd); }
+.sov-card.playing { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 8%, var(--bg2)); }
+.sov-card.failed { border-color: var(--bad, #ef4444); }
+.sov-card-play { width: 30px; height: 30px; flex: none; border-radius: 50%; border: none; background: var(--acc); color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.sov-card-play:disabled { background: var(--bg3); color: var(--tx3); cursor: default; }
+.sov-card-body { flex: 1; min-width: 0; }
+.sov-card-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sov-card-sub { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--tx3); margin-top: 2px; }
+.sov-card-kind { text-transform: capitalize; }
+.sov-fail { color: var(--bad, #ef4444); }
+.sov-card-x { flex: none; border: none; background: transparent; color: var(--tx3); cursor: pointer; padding: 2px; }
+.sov-prog { height: 3px; border-radius: 2px; background: var(--bg3); margin-top: 5px; overflow: hidden; }
+.sov-prog > div { height: 100%; background: var(--acc); transition: width .3s; }
+.sov-spin { animation: sov-spin 1s linear infinite; }
+@keyframes sov-spin { to { transform: rotate(360deg); } }
+
+.sov-badge { font-size: 9px; font-weight: 700; font-family: var(--mono); padding: 1px 5px; border-radius: 4px; letter-spacing: .03em; }
+.sov-sov { background: color-mix(in srgb, var(--ok, #10b981) 20%, transparent); color: var(--ok, #10b981); }
+.sov-gen { background: var(--bg3); color: var(--tx2); border: 1px solid var(--bd2); }
+.sov-lib { background: var(--bg3); color: var(--tx3); }
+
+.sov-player {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 6;
+  display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px;
+  background: color-mix(in srgb, var(--bg2) 92%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--bd2); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.2);
+}
+.sov-player-play { width: 32px; height: 32px; flex: none; border-radius: 50%; border: none; background: var(--acc); color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.sov-player-meta { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 32%; }
+.sov-player-title { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sov-player-scrub { flex: 1; height: 5px; border-radius: 3px; background: var(--bg3); cursor: pointer; overflow: hidden; }
+.sov-player-scrub > div { height: 100%; background: var(--acc); }
+.sov-player-time { font-size: 10.5px; color: var(--tx3); font-family: var(--mono); flex: none; }
+.sov-player-dl { color: var(--tx3); flex: none; display: inline-flex; }
+
+@media (max-width: 960px) {
+  /* the studio host can exceed the viewport on mobile — clamp the root so the
+     stacked inspector + generate controls stay on-screen (R2 mobile parity). */
+  .msx { width: 100vw; max-width: 100vw; }
+  .msx-main { max-width: 100vw; }
+  .msx-insp { max-width: 100vw; box-sizing: border-box; }
+}
+@media (max-width: 900px) {
+  .sov-player { position: fixed; left: 8px; right: 8px; bottom: 8px; }
+  .sov-feed-list { max-height: 200px; }
+}

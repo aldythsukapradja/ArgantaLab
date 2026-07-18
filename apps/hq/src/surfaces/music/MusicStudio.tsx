@@ -13,6 +13,8 @@ import {
   SlidersHorizontal, ListMusic, Drum as DrumIcon, Download, Library, Music3, Mic,
 } from 'lucide-react'
 import { SovereignChip } from '../shared/SovereignChip'
+import { GeneratePanel, RendersFeed, PlayerBar, type PlayTrack } from './Sovereign'
+import { useJobStore } from '../../lib/jobStore'
 import { saveAudioAsset } from '../../lib/audioLibrary'
 import { loadVoiceProfiles, auditionVoice, SEED_VOICES, type VoiceProfile } from '../../lib/voiceRegistry'
 import {
@@ -68,6 +70,11 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
   const [classicalMood, setClassicalMood] = useState<string>('all')
   const [anthemPlayingId, setAnthemPlayingId] = useState<string | null>(null)
   const anthemTimerRef = useRef<number | undefined>(undefined)
+  // R2 — sovereign render jobs (feed) + the singleton player track
+  const spawnJob = useJobStore(s => s.spawn)
+  const jobs = useJobStore(s => s.jobs)
+  const [track, setTrack] = useState<PlayTrack | null>(null)
+  const savedRef = useRef<Set<string>>(new Set())
   // S1 — the central voice registry (jarvis/lady), audition via browser TTS
   const [voices, setVoices] = useState<VoiceProfile[]>(SEED_VOICES)
   const [voiceLine, setVoiceLine] = useState('Arganta Head Quarters is coming online.')
@@ -220,6 +227,28 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
     window.setTimeout(() => rec.stop(), ms)
   }
 
+  // ---- R2: sovereign render + feed player ----
+  function spawnMusic(spec: { tags: string; lyrics?: string; seconds: number; bpm?: number; keyscale?: string }) {
+    ensureAudio() // unlock the audio context on the user gesture so playback works later
+    spawnJob({ kind: 'music', label: spec.tags.slice(0, 48), spec, surface: 'music' })
+    setStatus('Rendering a sovereign song — it lands in the feed, playing.')
+  }
+  // auto-save finished renders into the Audio Library (best-effort, once each)
+  useEffect(() => {
+    for (const j of jobs) {
+      if (j.kind !== 'music' || j.status !== 'done' || !j.blobUrl || savedRef.current.has(j.id)) continue
+      if (!cloudEnabled) { savedRef.current.add(j.id); continue }
+      savedRef.current.add(j.id)
+      fetch(j.blobUrl).then(r => r.blob()).then(blob =>
+        saveAudioAsset(blob, { name: j.label, kind: 'music', prompt: (j.spec as any)?.tags, durationSec: (j.meta as any)?.seconds, provider: 'comfyui-acestep', tags: [] }),
+      ).catch(() => { /* library save is best-effort; the blob still plays locally */ })
+    }
+  }, [jobs])
+  function playTrack(t: PlayTrack) {
+    if (playing) stop()             // stop the generative bed — the player owns the stage now
+    setTrack(t)
+  }
+
   // ---- composer ----
   async function runComposer(prompt: string) {
     if (!prompt.trim() || botBusy) return
@@ -286,6 +315,9 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
             {playing ? <Pause /> : <Play style={{ marginLeft: 3 }} />}
           </button>
 
+          <PlayerBar track={track} ensureAudio={() => ensureAudio()} onBeforePlay={() => { if (playing) stop() }} onEnded={() => { /* keep track for replay */ }} />
+
+
           {botOpen && (
             <div className="msx-bot">
               <div className="msx-bot-head">
@@ -318,6 +350,9 @@ export function MusicStudio({ onLegacy }: { onLegacy: () => void }) {
 
         {/* ── inspector ── */}
         <div className="msx-insp">
+          <GeneratePanel onSpawn={spawnMusic} onOfflineCompose={runComposer} defaults={{ bpm: T.bpm, keyscale: `${T.root} ${T.scale}` }} />
+          <RendersFeed onPlay={playTrack} currentId={track?.id} />
+
           <div className="msx-panel">
             <div className="msx-ph"><SlidersHorizontal size={13} /> Feel<span className="badge">{T.root} {T.scale}</span></div>
             <div className="msx-row">
