@@ -6,6 +6,7 @@
 // brand mark, and the accent colour change per engine.
 import { useEffect, useRef, useState } from 'react'
 import { BridgeClient, type BridgeEvent, type BridgeStatus } from '../../lib/bridge/client'
+import { loadMission } from '../../lib/missions'
 import { Markdown } from './Markdown'
 import { ClaudeMark } from './ClaudeMark'
 import { OpenAIMark } from './OpenAIMark'
@@ -44,22 +45,23 @@ const ENGINES: Record<BridgeEngine, EngineConfig> = {
     composerPlaceholder: 'Give Claude Code a mission…',
   },
   codex: {
-    name: 'Codex',
+    name: 'OpenAI',
     Mark: OpenAIMark,
     accent: '#10A37F',
-    // On a ChatGPT-account login the MODEL can't be overridden (only the API-key
-    // path allows real model ids), but reasoning EFFORT can — so the picker
-    // offers effort tiers, which the bridge passes as `-c model_reasoning_effort`.
+    // Driven by the local Codex CLI. On a ChatGPT-account login the MODEL can't
+    // be overridden (only the API-key path allows real model ids), but reasoning
+    // EFFORT can — so the picker offers effort tiers, which the bridge passes as
+    // `-c model_reasoning_effort`.
     models: [
       { id: '', label: 'Auto', sub: 'Your ChatGPT plan default' },
       { id: 'high', label: 'High', sub: 'Most thorough (slower)' },
       { id: 'medium', label: 'Medium', sub: 'Balanced' },
       { id: 'low', label: 'Low', sub: 'Fastest' },
     ],
-    lsPrefix: 'hq_bridge_codex',
-    capsulePrefix: 'Codex',
-    emptyCopy: 'What should Codex do? It runs on your machine in a sandbox — try "refactor the pixel adapter" or "write tests for the audio engine".',
-    composerPlaceholder: 'Give Codex a mission…',
+    lsPrefix: 'hq_bridge_codex',     // internal key kept — don't break saved settings
+    capsulePrefix: 'OpenAI',
+    emptyCopy: 'What should OpenAI do? It runs on your machine in a sandbox (Codex CLI) — try "refactor the pixel adapter" or "write tests for the audio engine".',
+    composerPlaceholder: 'Give OpenAI a mission…',
   },
 }
 
@@ -82,7 +84,41 @@ type FeedItem =
   | { kind: 'error'; message: string; id: number }
   | { kind: 'user'; text: string; id: number }
 
-export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) {
+/** Reconstruct a read-only feed from a persisted mission (goal → activity trail
+ * → completion capsule). Same dedupe as the live done handler so the result body
+ * isn't shown twice. */
+async function reconstructMission(missionId: string, cfg: EngineConfig): Promise<FeedItem[] | null> {
+  const m = await loadMission(missionId)
+  if (!m) return null
+  let id = 0
+  const items: FeedItem[] = [{ kind: 'user', text: m.goal || '(no prompt)', id: id++ }]
+  for (const ev of m.activity) {
+    if (ev.type === 'status') items.push({ kind: 'status', label: ev.label || '', id: id++ })
+    else if (ev.type === 'tool') items.push({ kind: 'tool', label: ev.label || '', id: id++ })
+    else if (ev.type === 'message') items.push({ kind: 'message', text: ev.text || '', id: id++ })
+    else if (ev.type === 'awaiting_approval') items.push({ kind: 'status', label: 'Approval: ' + (ev.label || ''), id: id++ })
+  }
+  const result = (m.result || '').trim()
+  const lastMsg = [...items].reverse().find((x) => x.kind === 'message') as Extract<FeedItem, { kind: 'message' }> | undefined
+  const echo = lastMsg && result && lastMsg.text.trim() === result
+  items.push({
+    kind: 'done', ok: m.status !== 'failed',
+    result: echo ? undefined : (result || undefined),
+    costUsd: m.costUsd || undefined,
+    modelLabel: cfg.capsulePrefix || cfg.name, id: id++,
+  })
+  return items
+}
+
+export function BridgeConsole({ engine = 'claude', replayMissionId, onMissionSaved, onNewMission }: {
+  engine?: BridgeEngine
+  /** A past mission id to show read-only (from MissionsRail). null = live console. */
+  replayMissionId?: string | null
+  /** Called after a live mission completes so the rail can refresh its history. */
+  onMissionSaved?: () => void
+  /** Leave the read-only history view and return to a fresh live console. */
+  onNewMission?: () => void
+}) {
   const cfg = ENGINES[engine]
   const [status, setStatus] = useState<BridgeStatus>('idle')
   const [feed, setFeed] = useState<FeedItem[]>([])
@@ -98,6 +134,9 @@ export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) 
   })
   const [bridgeUrl, setBridgeUrl] = useState(() => readSetting(cfg.lsPrefix, 'url', true))
   const [dialogOpen, setDialogOpen] = useState(false)
+  // A past mission's reconstructed transcript (read-only), loaded when the rail
+  // selects one. Kept separate from the live `feed` so history and live never mix.
+  const [replay, setReplay] = useState<FeedItem[] | null>(null)
   const clientRef = useRef<BridgeClient | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -119,6 +158,15 @@ export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) 
 
   // Auto-connect on mount if a token is already saved.
   useEffect(() => { if (token && status === 'idle') void connect() }, []) // eslint-disable-line
+
+  // Load (or clear) the read-only transcript when the rail selects a mission.
+  useEffect(() => {
+    if (!replayMissionId) { setReplay(null); return }
+    let live = true
+    reconstructMission(replayMissionId, cfg).then((items) => { if (live) setReplay(items || []) })
+    return () => { live = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayMissionId])
 
   async function connect() {
     if (!token) return
@@ -142,7 +190,10 @@ export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) 
             const echo = lastMsg && result && lastMsg.text.trim() === result
             return [...f, { kind: 'done', ok: e.ok, result: echo ? undefined : (result || undefined), costUsd: e.costUsd, modelLabel: runModelRef.current || undefined, id: idRef.current++ } as FeedItem]
           })
-          setRunning(false); break
+          setRunning(false)
+          // The mission is now persisted — let the rail pull it into history.
+          onMissionSaved?.()
+          break
         }
         case 'error': push({ kind: 'error', message: e.message }); setRunning(false); break
       }
@@ -170,23 +221,29 @@ export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) 
   }
 
   const connected = status === 'open'
+  const viewingHistory = !!replayMissionId
+  const showing = viewingHistory ? (replay ?? []) : feed
   // The connect popup is the empty-state when there's nothing behind it, and an
   // on-demand overlay (via the reconnect pill) once a conversation exists — so a
-  // dropped socket never wipes a feed the founder is reading.
-  const showDialog = !connected && (feed.length === 0 || dialogOpen)
-  const showReconnect = !connected && feed.length > 0 && !dialogOpen
+  // dropped socket never wipes a feed the founder is reading. Never over the
+  // read-only history view.
+  const showDialog = !viewingHistory && !connected && (feed.length === 0 || dialogOpen)
+  const showReconnect = !viewingHistory && !connected && feed.length > 0 && !dialogOpen
   const canDismiss = feed.length > 0
 
   return (
     <div className="core-convo bridge-convo">
       <div className="core-convo-scroll" ref={scrollRef}>
         <div className="core-convo-col">
-          {feed.length === 0 && connected && (
+          {!viewingHistory && feed.length === 0 && connected && (
             <div className="core-convo-empty">
               <p className="core-empty-copy">{cfg.emptyCopy}</p>
             </div>
           )}
-          {feed.map((it) => <FeedRow key={it.id} item={it} Mark={cfg.Mark} accent={cfg.accent} onResolve={resolve} />)}
+          {viewingHistory && replay === null && (
+            <div className="core-convo-empty"><p className="core-empty-copy">Loading mission…</p></div>
+          )}
+          {showing.map((it) => <FeedRow key={it.id} item={it} Mark={cfg.Mark} accent={cfg.accent} onResolve={resolve} />)}
         </div>
       </div>
 
@@ -199,32 +256,41 @@ export function BridgeConsole({ engine = 'claude' }: { engine?: BridgeEngine }) 
       )}
 
       <div className="core-composer">
-        {showReconnect && (
-          <button className="bridge-reconnect-pill" onClick={() => setDialogOpen(true)}>
-            <span className="bridge-dot bad" /> Bridge disconnected — reconnect
-          </button>
+        {viewingHistory ? (
+          <div className="bridge-history-bar">
+            <span>Viewing a past mission — read only.</span>
+            <button className="bridge-newmission-btn" onClick={() => onNewMission?.()}>New mission</button>
+          </div>
+        ) : (
+          <>
+            {showReconnect && (
+              <button className="bridge-reconnect-pill" onClick={() => setDialogOpen(true)}>
+                <span className="bridge-dot bad" /> Bridge disconnected — reconnect
+              </button>
+            )}
+            <div className="core-composer-field">
+              <BridgeModelPicker cfg={cfg} model={model} onPick={(m) => { setModel(m); localStorage.setItem(`${cfg.lsPrefix}_model`, m) }} />
+              <textarea
+                ref={taRef}
+                className="core-composer-input core-composer-textarea"
+                placeholder={connected ? cfg.composerPlaceholder : 'Connect to the bridge first'}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run() } }}
+                disabled={!connected}
+                rows={1}
+              />
+              <button className="core-composer-send" onClick={run} disabled={!connected || !draft.trim() || running} aria-label="Run mission">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5 L13 7.5 M8 2.5 L13 7.5 L8 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            </div>
+            <div className="core-status-row mono">
+              <span className="core-session-ticker">
+                {connected ? (running ? 'running mission…' : 'local bridge · ready') : 'local bridge · disconnected'}
+              </span>
+            </div>
+          </>
         )}
-        <div className="core-composer-field">
-          <BridgeModelPicker cfg={cfg} model={model} onPick={(m) => { setModel(m); localStorage.setItem(`${cfg.lsPrefix}_model`, m) }} />
-          <textarea
-            ref={taRef}
-            className="core-composer-input core-composer-textarea"
-            placeholder={connected ? cfg.composerPlaceholder : 'Connect to the bridge first'}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run() } }}
-            disabled={!connected}
-            rows={1}
-          />
-          <button className="core-composer-send" onClick={run} disabled={!connected || !draft.trim() || running} aria-label="Run mission">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5 L13 7.5 M8 2.5 L13 7.5 L8 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-        </div>
-        <div className="core-status-row mono">
-          <span className="core-session-ticker">
-            {connected ? (running ? 'running mission…' : 'local bridge · ready') : 'local bridge · disconnected'}
-          </span>
-        </div>
       </div>
     </div>
   )

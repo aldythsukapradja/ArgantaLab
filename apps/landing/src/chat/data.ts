@@ -3,9 +3,28 @@
 // here returns `null` when there's nothing wired or nothing found, so the brain
 // can fall back to an honest empty/sample answer rather than inventing data.
 import { supabase, cloudEnabled } from '../lib/supabase'
-import type { WeekDay } from './brain'
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+// ── Kinetik's energy system, verbatim (apps/kinetik/src/data/energy.ts) — the
+// chat's calendar chips must be colored exactly as KinetikCircle colors them. ──
+export type EnergyKey = 'care' | 'mind' | 'growth' | 'memory' | 'play' | 'calm'
+export const ENERGY: Record<EnergyKey, string> = {
+  care: '#F2738C', mind: '#48A7EA', growth: '#27B79A',
+  memory: '#8E7BEA', play: '#ECA13A', calm: '#7C89C4',
+}
+export function energyOf(title: string): EnergyKey {
+  const t = title.toLowerCase()
+  if (/padel|tennis|tenis|basket|gym|pilates|gymnastic|swim|sport|football|run|ball/.test(t)) return 'play'
+  if (/flight|depart|return|liburan|trip|holiday|jakarta|jkt|doha|travel|airport|summer|✈/.test(t)) return 'memory'
+  if (/english|math|ngaji|guitar|read|study|ingatan|coding|code|class|school|sekolah|homework|lesson|award/.test(t)) return 'growth'
+  if (/anter|jemput|pickup|drop|lunch|dinner|bday|birthday|house|acara|wedding|marriot|marriage|visit|party/.test(t)) return 'care'
+  if (/focus|work|meeting|call|deep/.test(t)) return 'mind'
+  return 'calm'
+}
+
+export interface WeekEvent { title: string; time: string; energy: EnergyKey; routine: boolean }
+export interface WeekDay { dow: string; date: number; today?: boolean; weekend?: boolean; events: WeekEvent[] }
 
 /** Monday 00:00 of the week containing `base` (local time). */
 function weekStart(base = new Date()): Date {
@@ -37,21 +56,24 @@ export async function fetchWeek(scope: string[]): Promise<WeekResult | null> {
 
   const days: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(mon); d.setDate(mon.getDate() + i)
-    return { dow: DOW[d.getDay()], date: d.getDate(), today: d.getTime() === today.getTime(), events: [] as string[] }
+    const dow = d.getDay()
+    return { dow: DOW[dow], date: d.getDate(), today: d.getTime() === today.getTime(), weekend: dow === 0 || dow === 6, events: [] as WeekEvent[] }
   })
   const idxOf = (dateStr: string) => { const d = new Date(dateStr + 'T00:00:00'); return Math.round((d.getTime() - mon.getTime()) / 864e5) }
 
   for (const e of (evRes.data ?? []) as any[]) {
     const i = idxOf(e.event_date); if (i < 0 || i > 6) continue
-    days[i].events.push(hhmm(e.start_time) ? `${e.title} · ${hhmm(e.start_time)}` : e.title)
+    days[i].events.push({ title: e.title, time: hhmm(e.start_time), energy: energyOf(e.title || ''), routine: false })
   }
   // routines repeat weekly on a weekday (`day` may be a name or 0–6 index)
   for (const r of (roRes.data ?? []) as any[]) {
     const i = typeof r.day === 'number' ? r.day : DOW.findIndex(d => d.toLowerCase() === String(r.day).slice(0, 3).toLowerCase())
     const slot = i >= 0 && i <= 6 ? (i === 0 ? 6 : i - 1) : -1 // convert Sun=0 dow → Mon-first column
     if (slot < 0) continue
-    days[slot].events.push(hhmm(r.start_time) ? `${r.title} · ${hhmm(r.start_time)}` : r.title)
+    days[slot].events.push({ title: r.title, time: hhmm(r.start_time), energy: energyOf(r.title || ''), routine: true })
   }
+  // events first, then routines, each by time — mirrors the board's reading order
+  for (const d of days) d.events.sort((a, b) => Number(a.routine) - Number(b.routine) || a.time.localeCompare(b.time))
 
   const count = days.reduce((s, d) => s + d.events.length, 0)
   return { days, count }
@@ -87,26 +109,50 @@ function weekActiveDays(daily: DailyRow[]): number {
   return daily.filter(d => d.items > 0 && new Date(d.day).getTime() >= cutoff).length
 }
 
-/** Kid ids that belong to the given circle(s) and have a learner profile. */
-async function circleKidIds(scope: string[]): Promise<{ id: string; name: string }[]> {
-  const { data: cm } = await supabase.from('circle_members').select('member_id').in('circle_id', scope)
-  const ids = Array.from(new Set((cm ?? []).map((m: any) => m.member_id).filter(Boolean)))
-  if (!ids.length) return []
-  const { data: kids } = await supabase.from('child_profiles').select('id, display_name').in('id', ids)
-  return (kids ?? []).map((k: any) => ({ id: k.id, name: k.display_name || 'Kid' }))
+// A distinct empty sentinel so the brain can tell "no kids linked" (calm, normal)
+// apart from "couldn't reach the data" (transient error). Returning null == error.
+export const NO_KIDS: KidReport[] = []
+
+/** The guardian's kids — via the `my_children` RPC (the same reliable path
+ * ArgantaLab's own parent dashboard uses; independent of circle_members RLS,
+ * which was the fragile bit). Returns null only on an actual RPC error. */
+export async function myKids(): Promise<{ id: string; name: string; photo: string | null }[] | null> {
+  const { data, error } = await supabase.rpc('my_children')
+  if (error) return null
+  return (data as any[] ?? []).map(k => ({ id: k.id, name: k.display_name || k.name || 'Kid', photo: k.photo_url ?? null }))
 }
 
-/** Real learning reports for every kid in the circle(s). null = nothing wired /
- * no kids found, so the brain falls back to an honest answer. */
-export async function fetchKidReports(scope: string[]): Promise<KidReport[] | null> {
-  if (!cloudEnabled || scope.length === 0) return null
-  const kids = await circleKidIds(scope)
-  if (!kids.length) return null
+export interface KidDashboard {
+  kid: { id: string; name: string; photo: string | null; diamonds: number; xp: number; level: number }
+  mastery: { world: string; skill: string; mastery: number; box: number; lastSeen: string | null }[]
+  daily: DailyRow[]
+  bloom: Record<string, number>
+  recentRewards: { amount: number; reason: string | null; kind: string; at: string }[]
+}
+
+/** The raw per-kid dashboard bundle for the Pulse deep-dive — same RPC/shape as
+ * apps/web's parentDash.ts kid_dashboard consumer. null = fetch error. */
+export async function fetchKidDashboard(kidId: string): Promise<KidDashboard | null> {
+  if (!cloudEnabled) return null
+  const { data, error } = await supabase.rpc('kid_dashboard', { p_kid: kidId })
+  if (error || !data) return null
+  return data as KidDashboard
+}
+
+/** Real learning reports for the guardian's kids. null = fetch error (brain says
+ * "couldn't reach"); [] = no kids linked yet (brain says so calmly). Each kid's
+ * dashboard is fetched independently so one failing RPC can't sink the rest. */
+export async function fetchKidReports(_scope: string[]): Promise<KidReport[] | null> {
+  if (!cloudEnabled) return null
+  const kids = await myKids()
+  if (kids === null) return null
+  if (!kids.length) return NO_KIDS
 
   const reports = await Promise.all(kids.map(async k => {
-    const { data } = await supabase.rpc('kid_dashboard', { p_kid: k.id })
-    const daily: DailyRow[] = (data as any)?.daily ?? []
-    const diamonds: number = (data as any)?.kid?.diamonds ?? 0
+    let data: any = null
+    try { const r = await supabase.rpc('kid_dashboard', { p_kid: k.id }); data = r.data } catch { /* keep name, no progress */ }
+    const daily: DailyRow[] = data?.daily ?? []
+    const diamonds: number = data?.kid?.diamonds ?? 0
     const streak = streakOf(daily)
     const { pct, items } = recentAccuracy(daily)
     const active = weekActiveDays(daily)

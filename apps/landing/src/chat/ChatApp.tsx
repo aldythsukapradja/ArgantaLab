@@ -28,7 +28,7 @@ export function ChatApp({ name, onAbout, onSignOut }: { name: string; onAbout: (
     if (turns.length === 0) setChats(c => [{ id, title: q.slice(0, 40), when: 'Today' }, ...c])
     setThinking(true)
     await new Promise(r => setTimeout(r, 620))
-    const a = await answer(q, { scope: ctx.scope, label: ctx.label, spanning: ctx.id === ALL_CIRCLES })
+    const a = await answer(q, { scope: ctx.scope, label: ctx.label, spanning: ctx.id === ALL_CIRCLES, name })
     setThinking(false)
     setTurns(t => t.map(x => x.id === id ? { ...x, a } : x))
   }, [thinking, turns.length, ctx.scope, ctx.label, ctx.id])
@@ -39,23 +39,27 @@ export function ChatApp({ name, onAbout, onSignOut }: { name: string; onAbout: (
 
   return (
     <div className="ac-root">
-      <div className="ac-col">
-        <div className="ac-top">
-          <div className="ac-top-left">
-            <Mark size={26} breathe="off" />
-            <span className="ac-wordmark">Arganta</span>
-            <CircleSelect circles={circles} ctx={ctx} showAll={showAll} name={name} onSelect={select} />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {inConvo && <button className="ac-ghost" onClick={reset}>New</button>}
-            <button className="ac-ghost" onClick={() => setDrawer(true)}>Chats</button>
+      {/* Always reachable — the circle selector lives here, so switching family
+       * circles mid-conversation never requires scrolling back up. */}
+      <div className="ac-navbar">
+        <div className="ac-col">
+          <div className="ac-top">
+            <div className="ac-top-left">
+              <Mark size={26} breathe="off" />
+              <span className="ac-wordmark">Arganta</span>
+              <CircleSelect circles={circles} ctx={ctx} showAll={showAll} name={name} onSelect={select} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {inConvo && <button className="ac-ghost" onClick={reset}>New</button>}
+              <button className="ac-ghost" onClick={() => setDrawer(true)}>Chats</button>
+            </div>
           </div>
         </div>
       </div>
 
       {inConvo
         ? <Conversation turns={turns} thinking={thinking} onChip={ask} />
-        : <Hearth name={name} circleLabel={ctx.label} spanning={ctx.id === ALL_CIRCLES} onAsk={ask} />}
+        : <Hearth name={name} scope={ctx.scope} circleLabel={ctx.label} spanning={ctx.id === ALL_CIRCLES} onAsk={ask} />}
 
       <Composer value={draft} onChange={setDraft} onSend={send} sending={thinking} />
 

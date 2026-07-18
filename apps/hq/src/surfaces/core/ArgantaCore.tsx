@@ -7,6 +7,7 @@ import { MOUNT_MODES, resolveMountMode, Z_LAYERS } from '@arganta/agent'
 
 type MountMode = 'fullscreen' | 'panel' | 'inline'
 import { ThreadsRail } from './ThreadsRail'
+import { MissionsRail } from './MissionsRail'
 import { Conversation } from './Conversation'
 import { BridgeConsole } from './BridgeConsole'
 import { CoreInspector } from './CoreInspector'
@@ -47,7 +48,7 @@ export type Brain = 'sovereign' | 'claude' | 'codex'
 const BRAINS: { id: Brain; label: string; Mark?: (p: { size?: number; color?: string }) => JSX.Element; accent?: string }[] = [
   { id: 'sovereign', label: 'Sovereign', Mark: (p) => <ArgantaMark size={p.size ?? 13} /> },
   { id: 'claude', label: 'Claude', Mark: ClaudeMark, accent: '#D97757' },
-  { id: 'codex', label: 'Codex', Mark: OpenAIMark, accent: '#10A37F' },
+  { id: 'codex', label: 'OpenAI', Mark: OpenAIMark, accent: '#10A37F' },
 ]
 
 function BrainToggle({ brain, onChange }: { brain: Brain; onChange: (b: Brain) => void }) {
@@ -130,6 +131,12 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   // Brain mode: Sovereign (LLM Conversation, default) vs local Claude Code or
   // Codex via the Bridge.
   const [brain, setBrain] = useState<Brain>('sovereign')
+  // Bridge-brain history: selected past mission (read-only replay) + a refresh
+  // nonce so the rail pulls in a just-finished mission.
+  const [missionId, setMissionId] = useState<string | null>(null)
+  const [missionsRefresh, setMissionsRefresh] = useState(0)
+  const selectBrain = (b: Brain) => { setBrain(b); setMissionId(null) }
+  const bumpMissions = () => setMissionsRefresh(n => n + 1)
   // C5-B7 — starter pills live in the topbar (all mount modes) but the draft
   // lives in Conversation, so the pick travels down as a nonce-carrying seed.
   const [seed, setSeed] = useState<{ text: string; n: number } | undefined>(undefined)
@@ -193,23 +200,29 @@ export function ArgantaCore({ threadId: initialThreadId, mountMode, embed = fals
   // at an artifact the conversation is what you want beside it, not telemetry.
   return (
     <div className="core core-inline" data-preview={previewTarget ? 'on' : undefined}>
-      <ThreadsRail
-        activeThreadId={threadId} onSelectThread={selectThread}
-        open={railOpen} onToggle={() => setRailOpen(o => !o)}
-        refreshKey={threadsRefresh} onThreadsLoaded={(n) => setHasThreads(n > 0)}
-      />
+      {brain === 'sovereign'
+        ? <ThreadsRail
+            activeThreadId={threadId} onSelectThread={selectThread}
+            open={railOpen} onToggle={() => setRailOpen(o => !o)}
+            refreshKey={threadsRefresh} onThreadsLoaded={(n) => setHasThreads(n > 0)}
+          />
+        : <MissionsRail
+            engine={brain} engineLabel={brain === 'claude' ? 'Claude Code' : 'OpenAI'}
+            activeMissionId={missionId} onSelectMission={setMissionId} onNewMission={() => setMissionId(null)}
+            open={railOpen} onToggle={() => setRailOpen(o => !o)} refreshKey={missionsRefresh}
+          />}
       <div className="core-center">
         <div className="core-center-actions">
-          <BrainToggle brain={brain} onChange={setBrain} />
+          <BrainToggle brain={brain} onChange={selectBrain} />
           <PreviewButton />
           <StartersButton onPick={pickStarter} />
           <InspectorButton onClick={() => setInspOpen(true)} />
           <HelpButton onClick={() => setHelpOpen(true)} />
         </div>
         {brain === 'claude'
-          ? <BridgeConsole key="claude" engine="claude" />
+          ? <BridgeConsole key="claude" engine="claude" replayMissionId={missionId} onMissionSaved={bumpMissions} onNewMission={() => setMissionId(null)} />
           : brain === 'codex'
-          ? <BridgeConsole key="codex" engine="codex" />
+          ? <BridgeConsole key="codex" engine="codex" replayMissionId={missionId} onMissionSaved={bumpMissions} onNewMission={() => setMissionId(null)} />
           : <Conversation threadId={threadId} onThreadCreated={selectThread} maxCostClass={maxCostClass} onArtifact={onArtifact} hasThreads={hasThreads} seed={seed} />}
       </div>
       {previewTarget
@@ -245,6 +258,9 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
   // Brain mode: Sovereign (LLM Conversation, default) vs local Claude Code or
   // Codex via the Bridge.
   const [brain, setBrain] = useState<Brain>('sovereign')
+  const [missionId, setMissionId] = useState<string | null>(null)
+  const [missionsRefresh, setMissionsRefresh] = useState(0)
+  const selectBrain = (b: Brain) => { setBrain(b); setMissionId(null) }
   return (
     <div className="core core-fullscreen" data-embed={embed || undefined} style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN }}>
       <div className="core-fs-topbar">
@@ -252,7 +268,7 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
           <ArgantaMark />
           <svg className="core-fs-title-caret" width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden><path d="M3 4.5 L5.5 7 L8 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
-        <BrainToggle brain={brain} onChange={setBrain} />
+        <BrainToggle brain={brain} onChange={selectBrain} />
         <div className="core-fs-actions">
           <PreviewButton />
           <StartersButton onPick={onPickStarter} />
@@ -269,9 +285,9 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
       {helpOpen && <CoreHelp onClose={() => setHelpOpen(false)} />}
       {inspOpen && <CoreInspector brain={brain} onClose={() => setInspOpen(false)} />}
       {brain === 'claude'
-        ? <BridgeConsole key="claude" engine="claude" />
+        ? <BridgeConsole key="claude" engine="claude" replayMissionId={missionId} onMissionSaved={() => setMissionsRefresh(n => n + 1)} onNewMission={() => setMissionId(null)} />
         : brain === 'codex'
-        ? <BridgeConsole key="codex" engine="codex" />
+        ? <BridgeConsole key="codex" engine="codex" replayMissionId={missionId} onMissionSaved={() => setMissionsRefresh(n => n + 1)} onNewMission={() => setMissionId(null)} />
         : <Conversation threadId={threadId} onThreadCreated={(id) => { onSelectThread(id); bumpThreadsRefresh() }} maxCostClass={maxCostClass} onArtifact={onArtifact} compact hasThreads={hasThreads} seed={seed} />}
       {previewTarget && (
         <div className="core-preview-cover">
@@ -281,12 +297,19 @@ function FullscreenCore({ threadId, onSelectThread, onNewThread, embed, maxCostC
       {sheetOpen && (
         <div className="core-fs-sheet-overlay" style={{ zIndex: Z_LAYERS.CORE_FULLSCREEN + 1 }} onClick={() => setSheetOpen(false)}>
           <div className="core-fs-sheet" onClick={e => e.stopPropagation()}>
-            <ThreadsRail
-              activeThreadId={threadId}
-              onSelectThread={(id) => { onSelectThread(id); setSheetOpen(false) }}
-              open onToggle={() => setSheetOpen(false)} sheet
-              refreshKey={threadsRefresh} onThreadsLoaded={onThreadsLoaded}
-            />
+            {brain === 'sovereign'
+              ? <ThreadsRail
+                  activeThreadId={threadId}
+                  onSelectThread={(id) => { onSelectThread(id); setSheetOpen(false) }}
+                  open onToggle={() => setSheetOpen(false)} sheet
+                  refreshKey={threadsRefresh} onThreadsLoaded={onThreadsLoaded}
+                />
+              : <MissionsRail
+                  engine={brain} engineLabel={brain === 'claude' ? 'Claude Code' : 'OpenAI'}
+                  activeMissionId={missionId} onSelectMission={(id) => { setMissionId(id); setSheetOpen(false) }}
+                  onNewMission={() => { setMissionId(null); setSheetOpen(false) }}
+                  open onToggle={() => setSheetOpen(false)} sheet refreshKey={missionsRefresh}
+                />}
           </div>
         </div>
       )}

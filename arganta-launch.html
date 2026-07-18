@@ -1,0 +1,1169 @@
+<title>Arganta — the family operating system</title>
+
+<style>
+  /* ============================================================
+     TOKENS
+     ============================================================ */
+  :root {
+    --ground:    #ECEEEA;
+    --surface:   #F6F7F4;
+    --surface-2: #E2E5DF;
+    --ink:       #171A15;
+    --muted:     #5C6357;
+    --line:      #D3D7CE;
+    --accent:    #2E7D6A;
+    --accent-ink:#FFFFFF;
+    --accent-wash:#DDE8E3;
+
+    --s-care:   #B85B3C;
+    --s-mind:   #3B6796;
+    --s-growth: #2E7D6A;
+    --s-memory: #7A5F94;
+    --s-play:   #B98A26;
+    --s-calm:   #4F7F84;
+
+    --font-display: "Bahnschrift", "DIN Alternate", "Oswald", "Franklin Gothic Medium", "Arial Narrow", system-ui, sans-serif;
+    --font-body: "Constantia", "Charter", "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    --font-mono: "Cascadia Mono", "Consolas", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --t-xs:   0.75rem;
+    --t-sm:   0.8125rem;
+    --t-base: 1.0625rem;
+    --t-lg:   1.25rem;
+    --t-xl:   1.6875rem;
+    --t-2xl:  2.25rem;
+    --t-3xl:  clamp(2.6rem, 6.2vw, 4.75rem);
+
+    --rail: 132px;
+    --pad: clamp(1.25rem, 4vw, 3.25rem);
+    --measure: 34rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:    #0D100E;
+      --surface:   #141814;
+      --surface-2: #1D221D;
+      --ink:       #E8ECE5;
+      --muted:     #8C948A;
+      --line:      #272D27;
+      --accent:    #4FBFA3;
+      --accent-ink:#07120F;
+      --accent-wash:#16261F;
+
+      --s-care:   #D4795A;
+      --s-mind:   #5B92C4;
+      --s-growth: #4FBFA3;
+      --s-memory: #A387BE;
+      --s-play:   #DDB14C;
+      --s-calm:   #74AAAE;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --ground:#ECEEEA; --surface:#F6F7F4; --surface-2:#E2E5DF;
+    --ink:#171A15; --muted:#5C6357; --line:#D3D7CE;
+    --accent:#2E7D6A; --accent-ink:#FFFFFF; --accent-wash:#DDE8E3;
+    --s-care:#B85B3C; --s-mind:#3B6796; --s-growth:#2E7D6A;
+    --s-memory:#7A5F94; --s-play:#B98A26; --s-calm:#4F7F84;
+  }
+
+  :root[data-theme="dark"] {
+    --ground:#0D100E; --surface:#141814; --surface-2:#1D221D;
+    --ink:#E8ECE5; --muted:#8C948A; --line:#272D27;
+    --accent:#4FBFA3; --accent-ink:#07120F; --accent-wash:#16261F;
+    --s-care:#D4795A; --s-mind:#5B92C4; --s-growth:#4FBFA3;
+    --s-memory:#A387BE; --s-play:#DDB14C; --s-calm:#74AAAE;
+  }
+
+  /* ============================================================
+     BASE
+     ============================================================ */
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--t-base);
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-stretch: 87.5%;
+    letter-spacing: 0.005em;
+    text-wrap: balance;
+    margin: 0;
+    line-height: 1.04;
+  }
+
+  p { margin: 0; max-width: var(--measure); }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+
+  /* ============================================================
+     DEPTH RAIL
+     ============================================================ */
+  .rail {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--rail);
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 0 1.5rem 1.125rem;
+    gap: 1.75rem;
+    z-index: 20;
+  }
+
+  .rail-mark {
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .rail-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+
+  .rail-link {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.32rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+
+  .rail-link span.bar {
+    height: 9px;
+    width: 100%;
+    background: var(--line);
+    transition: background 200ms ease, transform 200ms ease;
+    transform-origin: left center;
+  }
+
+  .rail-link:hover { color: var(--ink); }
+  .rail-link[data-on="1"] { color: var(--ink); }
+  .rail-link[data-on="1"] span.bar { background: var(--bar); transform: scaleX(1.28); }
+
+  .rail-foot {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ============================================================
+     PAGE SHELL
+     ============================================================ */
+  .page {
+    margin-left: var(--rail);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .band {
+    padding: clamp(4rem, 9vw, 7.5rem) var(--pad);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .band-inner {
+    max-width: 76rem;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2rem, 4vw, 3.25rem);
+  }
+
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    max-width: 44rem;
+  }
+
+  .head h2 { font-size: var(--t-2xl); }
+
+  .head p { color: var(--muted); }
+
+  /* ============================================================
+     HERO
+     ============================================================ */
+  .hero {
+    padding-top: clamp(3rem, 7vw, 5.5rem);
+    padding-bottom: clamp(3rem, 7vw, 5rem);
+  }
+
+  .hero-grid {
+    max-width: 76rem;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: clamp(2rem, 5vw, 4.5rem);
+    align-items: center;
+  }
+
+  .hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+  }
+
+  .hero h1 {
+    font-size: var(--t-3xl);
+    font-stretch: 82.5%;
+    line-height: 0.98;
+    letter-spacing: -0.005em;
+  }
+
+  .hero h1 em {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-weight: 400;
+    font-stretch: normal;
+    letter-spacing: -0.01em;
+    color: var(--accent);
+  }
+
+  .lede { font-size: var(--t-lg); line-height: 1.5; color: var(--muted); }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 0.4rem;
+  }
+
+  .btn {
+    font-family: var(--font-display);
+    font-stretch: 87.5%;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.78rem 1.4rem;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 140ms ease, opacity 140ms ease;
+  }
+
+  .btn:hover { transform: translateY(-1px); opacity: 0.92; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+
+  .btn-ghost:hover { border-color: var(--ink); }
+
+  .hero-stats {
+    display: flex;
+    gap: 2.25rem;
+    flex-wrap: wrap;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--line);
+    margin-top: 0.6rem;
+  }
+
+  .stat { display: flex; flex-direction: column; gap: 0.15rem; }
+  .stat b {
+    font-family: var(--font-display);
+    font-stretch: 87.5%;
+    font-size: var(--t-xl);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .stat span {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .core-wrap { display: flex; justify-content: center; }
+  #core { width: 100%; max-width: 430px; height: auto; display: block; }
+
+  /* ============================================================
+     STRATA LEGEND
+     ============================================================ */
+  .legend { display: flex; flex-direction: column; }
+
+  .legend-row {
+    display: grid;
+    grid-template-columns: 10px 8.5rem minmax(0, 1fr) 5.5rem;
+    gap: clamp(0.9rem, 2vw, 2rem);
+    align-items: baseline;
+    padding: 1.05rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .legend-row:last-child { border-bottom: 1px solid var(--line); }
+
+  .legend-row i {
+    display: block;
+    width: 10px;
+    height: 34px;
+    background: var(--c);
+    align-self: center;
+  }
+
+  .legend-row b {
+    font-family: var(--font-display);
+    font-stretch: 87.5%;
+    font-size: var(--t-lg);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .legend-row p { color: var(--muted); font-size: var(--t-sm); max-width: none; line-height: 1.55; }
+
+  .legend-row .depth {
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* ============================================================
+     APPS
+     ============================================================ */
+  .apps { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+
+  .app {
+    background: var(--surface);
+    padding: clamp(1.5rem, 2.6vw, 2.25rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: relative;
+  }
+
+  .app::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--c);
+  }
+
+  .app-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+
+  .app h3 { font-size: var(--t-xl); }
+
+  .app > p { color: var(--muted); font-size: var(--t-sm); line-height: 1.6; }
+
+  .app ul {
+    list-style: none;
+    margin: auto 0 0;
+    padding: 0.9rem 0 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .app li::before { content: "— "; color: var(--c); }
+
+  /* ============================================================
+     SEQUENCE
+     ============================================================ */
+  .steps { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: clamp(1.25rem, 3vw, 2.5rem); }
+
+  .step { display: flex; flex-direction: column; gap: 0.6rem; padding-top: 1rem; border-top: 2px solid var(--accent); }
+
+  .step .k { font-family: var(--font-mono); font-size: var(--t-xs); color: var(--accent); letter-spacing: 0.1em; font-variant-numeric: tabular-nums; }
+  .step h3 { font-size: var(--t-lg); }
+  .step p { color: var(--muted); font-size: var(--t-sm); line-height: 1.58; }
+
+  /* ============================================================
+     CURRENCY
+     ============================================================ */
+  .split { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(1.25rem, 3vw, 2rem); }
+
+  .rule {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: clamp(1.5rem, 2.6vw, 2.25rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .rule .sym { font-size: 1.5rem; line-height: 1; }
+  .rule h3 { font-size: var(--t-lg); }
+  .rule p { color: var(--muted); font-size: var(--t-sm); line-height: 1.6; }
+
+  .creed {
+    border-left: 3px solid var(--accent);
+    padding: 0.35rem 0 0.35rem 1.25rem;
+    font-size: var(--t-lg);
+    line-height: 1.45;
+    max-width: 40rem;
+  }
+
+  /* ============================================================
+     PRICING
+     ============================================================ */
+  .plans { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(1.25rem, 3vw, 2rem); align-items: start; }
+
+  .plan {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: clamp(1.6rem, 3vw, 2.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .plan-lead { background: var(--accent-wash); border-color: var(--accent); }
+
+  .plan .tier {
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .plan .price {
+    font-family: var(--font-display);
+    font-stretch: 82.5%;
+    font-weight: 600;
+    font-size: clamp(2.4rem, 5vw, 3.4rem);
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .plan .price small {
+    font-family: var(--font-mono);
+    font-size: var(--t-sm);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .plan > p { color: var(--muted); font-size: var(--t-sm); }
+
+  .plan ul {
+    list-style: none;
+    margin: 0;
+    padding: 1rem 0 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    font-size: var(--t-sm);
+  }
+
+  .plan li { display: grid; grid-template-columns: 1rem 1fr; gap: 0.6rem; align-items: start; }
+  .plan li::before { content: "·"; color: var(--accent); font-weight: 700; text-align: center; }
+
+  .founding {
+    border: 1px dashed var(--accent);
+    padding: 0.85rem 1rem;
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  /* ============================================================
+     FOUNDER + CLOSE
+     ============================================================ */
+  .founder { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+
+  blockquote {
+    margin: 0;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    line-height: 1.28;
+    font-style: italic;
+    text-wrap: balance;
+  }
+
+  blockquote b { font-style: normal; font-weight: 400; color: var(--accent); }
+
+  .sig {
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 1.25rem;
+  }
+
+  .close { background: var(--surface); }
+
+  form {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    max-width: 30rem;
+  }
+
+  input[type="email"] {
+    flex: 1 1 15rem;
+    min-width: 0;
+    padding: 0.78rem 0.95rem;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+  }
+
+  input[type="email"]::placeholder { color: var(--muted); }
+
+  .form-note { font-family: var(--font-mono); font-size: var(--t-xs); color: var(--muted); letter-spacing: 0.03em; }
+
+  footer {
+    padding: 2rem var(--pad);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ============================================================
+     LOAD SEQUENCE
+     ============================================================ */
+  .rise { opacity: 0; transform: translateY(14px); }
+  .rise.in { opacity: 1; transform: none; transition: opacity 700ms cubic-bezier(.2,.7,.3,1), transform 700ms cubic-bezier(.2,.7,.3,1); }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 1080px) {
+    .apps { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .founder { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 900px) {
+    :root { --rail: 0px; }
+    .rail { display: none; }
+    .page { margin-left: 0; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .core-wrap { order: -1; }
+    #core { max-width: 320px; }
+    .split, .plans { grid-template-columns: 1fr; }
+    .legend-row { grid-template-columns: 10px 1fr; grid-template-areas: "sw name" ". desc"; }
+    .legend-row i { grid-area: sw; }
+    .legend-row b { grid-area: name; }
+    .legend-row p { grid-area: desc; }
+    .legend-row .depth { display: none; }
+  }
+
+  @media (max-width: 560px) {
+    .steps { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise { opacity: 1; transform: none; transition: none; }
+    .btn:hover { transform: none; }
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<nav class="rail" aria-label="Section navigation">
+  <a class="rail-mark" href="#top">Arganta</a>
+
+  <div class="rail-nav">
+    <a class="rail-link" href="#layers" style="--bar: var(--s-care)"><span class="bar"></span>Layers</a>
+    <a class="rail-link" href="#apps" style="--bar: var(--s-mind)"><span class="bar"></span>Apps</a>
+    <a class="rail-link" href="#how" style="--bar: var(--s-growth)"><span class="bar"></span>How</a>
+    <a class="rail-link" href="#currency" style="--bar: var(--s-memory)"><span class="bar"></span>Currency</a>
+    <a class="rail-link" href="#pricing" style="--bar: var(--s-play)"><span class="bar"></span>Pricing</a>
+    <a class="rail-link" href="#join" style="--bar: var(--s-calm)"><span class="bar"></span>Join</a>
+  </div>
+
+  <div class="rail-foot">Est.<br>2026</div>
+</nav>
+
+<div class="page" id="top">
+
+  <!-- HERO ---------------------------------------------------->
+  <section class="band hero">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow rise">Arganta — the family operating system</p>
+        <h1 class="rise">Every family already runs on layers. <em>Arganta makes them visible.</em></h1>
+        <p class="lede rise">Three apps for one circle: the week you actually keep, the learning your kids chase on their own, and a world worth coming back to. All free, forever. One subscription if you want more.</p>
+
+        <div class="cta-row rise">
+          <a class="btn" href="#join">Join the waitlist</a>
+          <a class="btn btn-ghost" href="#apps">See the three apps</a>
+        </div>
+
+        <div class="hero-stats rise">
+          <div class="stat"><b>3</b><span>Apps, one circle</span></div>
+          <div class="stat"><b>6</b><span>Energy layers</span></div>
+          <div class="stat"><b>5</b><span>Kids per family</span></div>
+        </div>
+      </div>
+
+      <div class="core-wrap rise">
+        <canvas id="core" width="860" height="1120" role="img"
+          aria-label="A drilled core sample showing six stratigraphic layers — care, mind, growth, memory, play and calm — logged against a depth scale."></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAYERS -------------------------------------------------->
+  <section class="band" id="layers">
+    <div class="band-inner">
+      <div class="head rise">
+        <p class="eyebrow">01 — The core log</p>
+        <h2>A week is not a list. It's a section through six kinds of energy.</h2>
+        <p>Arganta reads every routine, event and moment in your circle and sorts it into six layers. Nobody tags anything. You just start seeing where the week actually went — and where it didn't.</p>
+      </div>
+
+      <div class="legend rise">
+        <div class="legend-row" style="--c: var(--s-care)">
+          <i></i><b>Care</b>
+          <p>Meals, health, appointments, the school run. The load that keeps everyone standing, and the one that quietly falls on one person.</p>
+          <span class="depth">0–14 m</span>
+        </div>
+        <div class="legend-row" style="--c: var(--s-mind)">
+          <i></i><b>Mind</b>
+          <p>Homework, reading, focus work. Where attention gets spent before anyone's had a chance to choose.</p>
+          <span class="depth">14–29 m</span>
+        </div>
+        <div class="legend-row" style="--c: var(--s-growth)">
+          <i></i><b>Growth</b>
+          <p>Practice, training, the skills that compound. Small and repeated beats big and occasional — the layer thickens slowly.</p>
+          <span class="depth">29–46 m</span>
+        </div>
+        <div class="legend-row" style="--c: var(--s-memory)">
+          <i></i><b>Memory</b>
+          <p>Photos, moments, the record of what actually happened. The only layer you can't reconstruct later if you skip it.</p>
+          <span class="depth">46–58 m</span>
+        </div>
+        <div class="legend-row" style="--c: var(--s-play)">
+          <i></i><b>Play</b>
+          <p>Padel, games, Saturday. The reason anyone shows up to the rest of it.</p>
+          <span class="depth">58–74 m</span>
+        </div>
+        <div class="legend-row" style="--c: var(--s-calm)">
+          <i></i><b>Calm</b>
+          <p>Rest, downtime, the space between everything else. Thin in most families. Arganta will tell you when it's thin in yours.</p>
+          <span class="depth">74–88 m</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPS ---------------------------------------------------->
+  <section class="band" id="apps">
+    <div class="band-inner">
+      <div class="head rise">
+        <p class="eyebrow">02 — What you get</p>
+        <h2>Three apps. Not one bloated super-app.</h2>
+        <p>Each does one job properly and shares a single circle — your people, your rhythm, your progress. Sign in once.</p>
+      </div>
+
+      <div class="apps rise">
+        <article class="app" style="--c: var(--s-care)">
+          <p class="app-kicker">Kinetik Circle</p>
+          <h3>The week, as it actually runs</h3>
+          <p>Routines and one-off events merge into one calendar, so the recurring load is finally visible next to the exceptions. Today view for the morning. Moments for everything worth keeping.</p>
+          <ul>
+            <li>Today, Calendar, Moments, Me</li>
+            <li>Routines + events in one merge</li>
+            <li>Roles: owner, co-leader, member</li>
+            <li>Shared grocery, meals, travel prep</li>
+          </ul>
+        </article>
+
+        <article class="app" style="--c: var(--s-mind)">
+          <p class="app-kicker">Arganta Lab</p>
+          <h3>Learning your kids chase</h3>
+          <p>KinQuest turns drills into a full RPG — eight regions, a Keeper at the end of each, a mount you earned. Kids come back because they want the next region, not because you asked twice.</p>
+          <ul>
+            <li>KinQuest — 8 regions, 8 Keepers</li>
+            <li>Diamonds earned by learning only</li>
+            <li>ArgantaCup — you host, real prizes</li>
+            <li>Season ranks that reward the long run</li>
+          </ul>
+        </article>
+
+        <article class="app" style="--c: var(--s-play)">
+          <p class="app-kicker">Lashira Bloom</p>
+          <h3>A farm that rewards showing up</h3>
+          <p>The one the adults quietly play too. Plant, tend, build a place across seasons — and the daily habit it builds is the same one the learning apps need.</p>
+          <ul>
+            <li>Seasonal farming and building</li>
+            <li>Bloom — earned in-game, never bought</li>
+            <li>Choose a hero: path, look, mount</li>
+            <li>Plays into the same family circle</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW ----------------------------------------------------->
+  <section class="band" id="how">
+    <div class="band-inner">
+      <div class="head rise">
+        <p class="eyebrow">03 — Setup, in order</p>
+        <h2>Four steps, about ten minutes.</h2>
+      </div>
+
+      <div class="steps rise">
+        <div class="step">
+          <span class="k">STEP 01</span>
+          <h3>Create the circle</h3>
+          <p>Name it, add your people, pick who leads. A circle can be a family, a group of friends, or a class.</p>
+        </div>
+        <div class="step">
+          <span class="k">STEP 02</span>
+          <h3>Set the rhythm</h3>
+          <p>Add the routines that already happen every week. This is the part everyone skips — do it once and the rest of the year works.</p>
+        </div>
+        <div class="step">
+          <span class="k">STEP 03</span>
+          <h3>Kids earn</h3>
+          <p>They learn, they quest, they close rings. Diamonds land in their own ledger. You don't have to referee it.</p>
+        </div>
+        <div class="step">
+          <span class="k">STEP 04</span>
+          <h3>You see the section</h3>
+          <p>The six layers fill in over weeks. Thin calm, heavy care, no memory — the shape of your family, in plain view.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CURRENCY ------------------------------------------------>
+  <section class="band" id="currency">
+    <div class="band-inner">
+      <div class="head rise">
+        <p class="eyebrow">04 — The line we won't cross</p>
+        <h2>Money can buy a cape. It can never buy an answer.</h2>
+      </div>
+
+      <div class="split rise">
+        <div class="rule">
+          <span class="sym">🌸</span>
+          <h3>Bloom is earned</h3>
+          <p>Lashira's gameplay fuel. It cannot be purchased, gifted, or transferred — not by you, not by anyone. If a kid has Bloom, they played for it.</p>
+        </div>
+        <div class="rule">
+          <span class="sym">💎</span>
+          <h3>Diamonds are prestige</h3>
+          <p>Earned across learning, and giftable by a guardian. They buy identity — skins, mounts, cosmetics. They never buy learning power, hints, or progress.</p>
+        </div>
+      </div>
+
+      <p class="creed rise">Gifts arrive through a guardian Gift Vault, capped per kid each month, so a present stays a present — and never becomes a shortcut past the work.</p>
+    </div>
+  </section>
+
+  <!-- PRICING ------------------------------------------------->
+  <section class="band" id="pricing">
+    <div class="band-inner">
+      <div class="head rise">
+        <p class="eyebrow">05 — Pricing</p>
+        <h2>All three apps are free forever. The subscription is for depth.</h2>
+        <p>One family plan covers every app and up to five kids. Regional pricing from day one. Billed on the web, so more of it goes into the product.</p>
+      </div>
+
+      <div class="plans rise">
+        <div class="plan">
+          <span class="tier">Free</span>
+          <div class="price">$0<small>/ forever</small></div>
+          <p>Everything the three apps do, for as long as you want it. Not a trial.</p>
+          <ul>
+            <li>Kinetik Circle, Arganta Lab and Lashira Bloom, complete</li>
+            <li>Unlimited routines, events and moments</li>
+            <li>Full KinQuest campaign and diamond economy</li>
+            <li>Up to five kids in your circle</li>
+          </ul>
+        </div>
+
+        <div class="plan plan-lead">
+          <span class="tier">Arganta Family</span>
+          <div class="price">$4.99<small>/ month · $39.99 a year</small></div>
+          <p>One subscription across all three apps, for families who want the record and the reporting.</p>
+          <ul>
+            <li>20,000 💎 a month into your guardian Gift Vault</li>
+            <li>Parent insight dashboard — the six layers over time</li>
+            <li>Kinetik: video moments, HD storage, themes, yearbook</li>
+            <li>Host ArgantaCup competitions for your circle</li>
+            <li>Lashira: extra plot, seasonal content, subscriber cosmetics</li>
+          </ul>
+          <div class="founding"><b>Founding Family</b> — $2.99 a month for the first 500 households, locked for as long as you stay.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOUNDER ------------------------------------------------->
+  <section class="band">
+    <div class="band-inner founder rise">
+      <div>
+        <blockquote>I spent 15 years modelling worlds underground. <b>Now I build intelligent systems above it.</b></blockquote>
+        <p class="sig">Aldyth Sukapradja · Founder, Arganta</p>
+      </div>
+      <p>Arganta started as one family's calendar and one kid's maths drills. It reads the way it does — layers, depths, a section through time — because that's how I was trained to look at anything: you don't understand a system from the surface. You take a core.</p>
+    </div>
+  </section>
+
+  <!-- JOIN ---------------------------------------------------->
+  <section class="band close" id="join">
+    <div class="band-inner">
+      <div class="head rise">
+        <p class="eyebrow">06 — Launch</p>
+        <h2>Be one of the first 500 families.</h2>
+        <p>We're opening Arganta to a small first group. Leave your email and we'll send you a Founding Family invite when your region opens.</p>
+      </div>
+
+      <form class="rise" id="waitlist">
+        <label for="email" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email address</label>
+        <input type="email" id="email" name="email" placeholder="you@family.com" required>
+        <button class="btn" type="submit">Request an invite</button>
+      </form>
+      <p class="form-note" id="note">No launch spam. One email when it opens, one when it ships.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Arganta — a family operating system</span>
+    <span>Built for circles: family · friends · class</span>
+    <span>© 2026 ArgantaLab</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- seeded noise so redraws stay identical ---------- */
+  function makeRandom(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s ^= s << 13; s >>>= 0;
+      s ^= s >>> 17;
+      s ^= s << 5;  s >>>= 0;
+      return s / 4294967296;
+    };
+  }
+
+  /* ---------- the core sample ---------- */
+  var canvas = document.getElementById("core");
+  var ctx = canvas.getContext("2d");
+
+  var LAYERS = [
+    { name: "CARE",   token: "--s-care",   weight: 16, depth: 14 },
+    { name: "MIND",   token: "--s-mind",   weight: 15, depth: 29 },
+    { name: "GROWTH", token: "--s-growth", weight: 17, depth: 46 },
+    { name: "MEMORY", token: "--s-memory", weight: 12, depth: 58 },
+    { name: "PLAY",   token: "--s-play",   weight: 16, depth: 74 },
+    { name: "CALM",   token: "--s-calm",   weight: 14, depth: 88 }
+  ];
+
+  var W = 860, H = 1120;
+  var COL_X = 62, COL_W = 190;
+  var TOP = 70, BOT = H - 60;
+  var progress = reduce ? 1 : 0;
+
+  function token(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function boundary(ctx2, y, amp, rand) {
+    ctx2.beginPath();
+    for (var x = 0; x <= COL_W; x += 4) {
+      var t = x / COL_W;
+      var yy = y + Math.sin(t * 7.5 + amp) * 5 + (rand() - 0.5) * 3;
+      if (x === 0) ctx2.moveTo(COL_X + x, yy); else ctx2.lineTo(COL_X + x, yy);
+    }
+  }
+
+  function draw() {
+    var ink = token("--ink");
+    var muted = token("--muted");
+    var line = token("--line");
+
+    ctx.clearRect(0, 0, W, H);
+
+    var total = LAYERS.reduce(function (a, l) { return a + l.weight; }, 0);
+    var span = BOT - TOP;
+    var revealY = TOP + span * progress;
+
+    var rand = makeRandom(20260718);
+    var y = TOP;
+
+    /* --- strata --- */
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(COL_X - 4, TOP - 4, COL_W + 8, revealY - TOP + 4);
+    ctx.clip();
+
+    LAYERS.forEach(function (layer, i) {
+      var h = span * (layer.weight / total);
+      var color = token(layer.token);
+
+      ctx.fillStyle = color;
+      ctx.fillRect(COL_X, y, COL_W, h + 1);
+
+      /* grain: fine clastic speckle */
+      var grains = Math.round(h * 2.2);
+      for (var g = 0; g < grains; g++) {
+        var gx = COL_X + rand() * COL_W;
+        var gy = y + rand() * h;
+        var dark = rand() > 0.5;
+        ctx.fillStyle = dark ? "rgba(0,0,0,0.16)" : "rgba(255,255,255,0.13)";
+        ctx.fillRect(gx, gy, 1 + rand() * 2.4, 1 + rand() * 1.6);
+      }
+
+      /* a few larger clasts for texture */
+      for (var c = 0; c < 5; c++) {
+        ctx.beginPath();
+        ctx.ellipse(
+          COL_X + 16 + rand() * (COL_W - 32),
+          y + 12 + rand() * Math.max(1, h - 24),
+          4 + rand() * 9, 2 + rand() * 4,
+          rand() * Math.PI, 0, Math.PI * 2
+        );
+        ctx.fillStyle = "rgba(0,0,0,0.10)";
+        ctx.fill();
+      }
+
+      /* bedding lines */
+      ctx.strokeStyle = "rgba(0,0,0,0.13)";
+      ctx.lineWidth = 1;
+      for (var b = 0; b < 3; b++) {
+        var by = y + h * (0.25 + b * 0.25);
+        boundary(ctx, by, i + b, rand);
+        ctx.stroke();
+      }
+
+      y += h;
+    });
+    ctx.restore();
+
+    /* --- casing --- */
+    ctx.strokeStyle = line;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(COL_X, TOP, COL_W, span);
+
+    /* --- drill head at the reveal front --- */
+    if (progress < 1) {
+      ctx.strokeStyle = token("--accent");
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(COL_X - 12, revealY);
+      ctx.lineTo(COL_X + COL_W + 12, revealY);
+      ctx.stroke();
+    }
+
+    /* --- depth scale + labels --- */
+    var labelX = COL_X + COL_W + 34;
+    var yy = TOP;
+
+    ctx.textBaseline = "middle";
+
+    LAYERS.forEach(function (layer) {
+      var h = span * (layer.weight / total);
+      var mid = yy + h / 2;
+      var shown = mid <= revealY + 6;
+
+      ctx.globalAlpha = shown ? 1 : 0.12;
+
+      /* leader line */
+      ctx.strokeStyle = line;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(COL_X + COL_W + 6, mid);
+      ctx.lineTo(labelX - 10, mid);
+      ctx.stroke();
+
+      /* swatch */
+      ctx.fillStyle = token(layer.token);
+      ctx.fillRect(labelX - 8, mid - 7, 4, 14);
+
+      ctx.fillStyle = ink;
+      ctx.font = "600 27px 'Bahnschrift', 'DIN Alternate', system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(layer.name, labelX + 4, mid - 11);
+
+      ctx.fillStyle = muted;
+      ctx.font = "20px 'Cascadia Mono', Consolas, monospace";
+      ctx.fillText(layer.depth.toFixed(0) + " m", labelX + 4, mid + 14);
+
+      /* tick */
+      ctx.strokeStyle = line;
+      ctx.beginPath();
+      ctx.moveTo(COL_X - 22, yy + h);
+      ctx.lineTo(COL_X - 6, yy + h);
+      ctx.stroke();
+
+      yy += h;
+    });
+
+    ctx.globalAlpha = 1;
+
+    /* --- header + footer marks --- */
+    ctx.fillStyle = muted;
+    ctx.font = "20px 'Cascadia Mono', Consolas, monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("CORE 01 · ONE WEEK", COL_X, TOP - 28);
+    ctx.fillText("TOTAL 88 m", COL_X, BOT + 34);
+  }
+
+  /* device-pixel sizing */
+  function resize() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.aspectRatio = W + " / " + H;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  resize();
+
+  /* drilling animation */
+  if (!reduce) {
+    var start = null;
+    var DUR = 1500;
+    var tick = function (ts) {
+      if (start === null) start = ts;
+      var t = Math.min(1, (ts - start) / DUR);
+      progress = 1 - Math.pow(1 - t, 3);
+      draw();
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    setTimeout(function () { requestAnimationFrame(tick); }, 350);
+  }
+
+  /* redraw on theme change */
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  new MutationObserver(draw).observe(document.documentElement, {
+    attributes: true, attributeFilter: ["data-theme"]
+  });
+
+  /* ---------- staged entrance ---------- */
+  var rises = Array.prototype.slice.call(document.querySelectorAll(".rise"));
+
+  if (reduce) {
+    rises.forEach(function (el) { el.classList.add("in"); });
+  } else {
+    var heroRises = Array.prototype.slice.call(document.querySelectorAll(".hero .rise"));
+    heroRises.forEach(function (el, i) {
+      setTimeout(function () { el.classList.add("in"); }, 90 + i * 110);
+    });
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -12% 0px" });
+
+    rises.forEach(function (el) {
+      if (heroRises.indexOf(el) === -1) io.observe(el);
+    });
+  }
+
+  /* ---------- rail active state ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll(".rail-link"));
+  var targets = links.map(function (l) { return document.querySelector(l.getAttribute("href")); });
+
+  function syncRail() {
+    var mid = window.scrollY + window.innerHeight * 0.35;
+    var active = -1;
+    targets.forEach(function (t, i) {
+      if (t && t.offsetTop <= mid) active = i;
+    });
+    links.forEach(function (l, i) { l.setAttribute("data-on", i === active ? "1" : "0"); });
+  }
+
+  var queued = false;
+  window.addEventListener("scroll", function () {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () { syncRail(); queued = false; });
+  }, { passive: true });
+  syncRail();
+
+  /* ---------- waitlist ---------- */
+  document.getElementById("waitlist").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var note = document.getElementById("note");
+    note.textContent = "You're on the list. We'll email you when your region opens.";
+    note.style.color = "var(--accent)";
+    e.target.reset();
+  });
+})();
+</script>

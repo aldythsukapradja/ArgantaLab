@@ -3,22 +3,63 @@
 // dependency: the local `codex` binary (npm i -g @openai/codex + `codex login`)
 // is the auth + runtime, same spirit as Claude Code being a local CLI.
 //
-// APPROVALS (v1): Codex runs in its own `workspace-write` sandbox with approvals
-// non-interactive — it blocks disallowed actions itself rather than round-
-// tripping an Approve/Deny to HQ. So ctx.gate is intentionally never called
-// here; gated-tool parity with the Claude engine is a documented v2. This is an
-// honest scope cut, not a silent one.
+// AUTONOMY: Codex runs FULL-AUTO (approvals + OS sandbox bypassed), matching the
+// access the Claude engine already has on this machine. This is required for the
+// media MCP tools (generate_image, …) to run — `codex exec` cancels every MCP
+// tool call in its sandboxed/approval mode with no interactive approver. The
+// bridge is loopback/tailnet + token gated and runs the founder's own missions,
+// so Codex gets the same trust as Claude. ctx.gate is intentionally never called
+// (no interactive gate in v1); that parity is a documented follow-up.
 //
 // COST: Codex reports token usage, not USD. We deliberately return costUsd
 // undefined so the UI shows the model only — never a fabricated dollar figure.
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import type { MissionEngine, EngineContext, MissionResult } from './types.ts';
 
 const CODEX_BIN = process.env.CODEX_BIN || 'codex';
+const WIN = process.platform === 'win32';
 
 function stripAnsi(s: string): string {
   // eslint-disable-next-line no-control-regex
   return s.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+// Windows needs a shell to resolve the `codex.cmd`/`.ps1` shim. Passing an args
+// ARRAY with shell:true trips DEP0190 (args concatenated, not escaped); the
+// sanctioned form is a single command STRING. All our tokens are fixed flags
+// with no user content (the prompt goes via stdin), so string-joining is
+// injection-safe — we only quote a token if it contains whitespace.
+function shq(a: string): string { return WIN && /\s/.test(a) ? `"${a}"` : a; }
+function codexCmdline(args: string[]): string { return [CODEX_BIN, ...args].map(shq).join(' '); }
+
+/** Ensure the repo's media-gen MCP is registered with Codex so the OpenAI brain
+ * can generate images. Idempotent + self-healing: registers it if missing, and
+ * re-points it if the repo moved (the stored args no longer match this path).
+ * Never throws — if Codex isn't installed the OpenAI brain just can't do media,
+ * which the mission would surface anyway. Runs once at bridge startup. */
+export function ensureCodexMediaMcp(repoRoot: string): void {
+  // Forward slashes: Codex accepts them on Windows and they avoid TOML/shell
+  // backslash-escaping headaches.
+  const serverPath = resolve(repoRoot, 'tools/media-gen-mcp/src/server.ts').replace(/\\/g, '/');
+  const run = (args: string[]) => WIN
+    ? spawnSync(codexCmdline(args), { shell: true, encoding: 'utf8', timeout: 20000 })
+    : spawnSync(CODEX_BIN, args, { encoding: 'utf8', timeout: 20000 });
+  try {
+    const got = run(['mcp', 'get', 'media-gen']);
+    if (got.error) { // ENOENT — codex not on PATH
+      console.warn('Codex CLI not found — OpenAI brain media tools stay off until `npm i -g @openai/codex`.');
+      return;
+    }
+    // Registered AND pointing at this repo's server → nothing to do.
+    if (got.status === 0 && (got.stdout || '').includes(serverPath)) return;
+    run(['mcp', 'remove', 'media-gen']); // ignore result (may not exist)
+    const add = run(['mcp', 'add', 'media-gen', '--', 'npx', 'tsx', serverPath]);
+    if (add.status === 0) console.log(`Codex: registered media-gen MCP → ${serverPath}`);
+    else console.warn('Codex: could not register media-gen MCP:', ((add.stderr || add.stdout || '') as string).trim().slice(0, 200));
+  } catch (e) {
+    console.warn('Codex media MCP ensure skipped:', (e as Error).message);
+  }
 }
 
 export function createCodexEngine(defaultModel?: string): MissionEngine {
@@ -39,16 +80,17 @@ export function createCodexEngine(defaultModel?: string): MissionEngine {
           if (['minimal', 'low', 'medium', 'high'].includes(sel)) args.push('-c', `model_reasoning_effort=${sel}`);
           else args.push('--model', sel);
         }
-        args.push('--sandbox', 'workspace-write');
+        // Full-auto: skip approvals + sandbox so MCP tool calls (media-gen, etc.)
+        // actually run headlessly. Same trust level as the Claude engine.
+        args.push('--dangerously-bypass-approvals-and-sandbox');
         // Prompt goes via STDIN, never argv — codex reads it, and keeping user
-        // content out of the command line means we can safely use a shell on
-        // Windows (needed to resolve the `codex.cmd`/`.ps1` shim) without any
-        // command-injection risk. Only the fixed flags above hit the shell.
-        const useShell = process.platform === 'win32';
-
+        // content out of the command line means the fixed flags above are all
+        // that hit the (Windows) shell, so there's no command-injection risk.
         let child: ReturnType<typeof spawn>;
         try {
-          child = spawn(CODEX_BIN, args, { cwd: ctx.cwd, env: process.env, shell: useShell, stdio: ['pipe', 'pipe', 'pipe'] });
+          child = WIN
+            ? spawn(codexCmdline(args), { cwd: ctx.cwd, env: process.env, shell: true, stdio: ['pipe', 'pipe', 'pipe'] })
+            : spawn(CODEX_BIN, args, { cwd: ctx.cwd, env: process.env, stdio: ['pipe', 'pipe', 'pipe'] });
         } catch (e) {
           return rejectRun(e);
         }

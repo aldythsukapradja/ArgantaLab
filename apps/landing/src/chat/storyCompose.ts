@@ -10,38 +10,40 @@ export interface StoryDraft {
   stat: string         // small line under the headline
   caption: string      // Instagram caption (editable)
   hashtags: string
-  provenance: 'measured' | 'sample'
+  provenance: 'measured'
 }
 
-// ── pick the most shareable true thing this week ──
-export async function composeWeeklyWin(ctx?: AskCtx): Promise<StoryDraft> {
+// ── pick the most shareable TRUE thing this week — or nothing at all. ──
+// Grounding law (G1): a post is only offered when a real row backs it (a kid's
+// actual streak, the week's actual event count). No real data → return null and
+// the brain says so honestly. There is no invented fallback.
+export async function composeWeeklyWin(ctx?: AskCtx): Promise<StoryDraft | null> {
   const scope = ctx?.scope ?? []
-  let headline = 'A good week', stat = 'Small wins, every day', provenance: StoryDraft['provenance'] = 'sample'
-  let captionCore = 'Another week of showing up together.'
-
+  if (!scope.length) return null
   try {
-    if (scope.length) {
-      const kids = await fetchKidReports(scope)
-      const streaker = (kids ?? []).filter(k => k.hasData).sort((a, b) => b.streak - a.streak)[0]
-      if (streaker && streaker.streak >= 2) {
-        headline = `${streaker.streak}-day streak!`
-        stat = `${streaker.name} kept learning every day`
-        captionCore = `${streaker.name} kept a ${streaker.streak}-day learning streak going this week. Proud of the effort. 🌱`
-        provenance = 'measured'
-      } else {
-        const wk = await fetchWeek(scope)
-        if (wk && wk.count > 0) {
-          headline = 'Our week, together'
-          stat = `${wk.count} moments on the calendar`
-          captionCore = `A full week — ${wk.count} little moments, all shared. 💛`
-          provenance = 'measured'
-        }
+    const kids = await fetchKidReports(scope)
+    const streaker = (kids ?? []).filter(k => k.hasData).sort((a, b) => b.streak - a.streak)[0]
+    if (streaker && streaker.streak >= 2) {
+      return {
+        headline: `${streaker.streak}-day streak!`,
+        stat: `${streaker.name} kept learning every day`,
+        caption: `${streaker.name} kept a ${streaker.streak}-day learning streak going this week. Proud of the effort. 🌱\n\nLittle by little, a family grows. ✨`,
+        hashtags: '#family #littlewins #growingtogether #arganta',
+        provenance: 'measured',
       }
     }
-  } catch { /* keep the warm default */ }
-
-  const caption = `${captionCore}\n\nLittle by little, a family grows. ✨`
-  return { headline, stat, caption, hashtags: '#family #littlewins #growingtogether #arganta', provenance }
+    const wk = await fetchWeek(scope)
+    if (wk && wk.count > 0) {
+      return {
+        headline: 'Our week, together',
+        stat: `${wk.count} moments on the calendar`,
+        caption: `A full week — ${wk.count} little moments, all shared. 💛\n\nLittle by little, a family grows. ✨`,
+        hashtags: '#family #littlewins #growingtogether #arganta',
+        provenance: 'measured',
+      }
+    }
+  } catch { /* fall through to null — never invent */ }
+  return null
 }
 
 // ── render the branded card to a PNG blob (1080×1080, IG square) ──

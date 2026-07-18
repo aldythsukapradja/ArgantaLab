@@ -30,6 +30,18 @@
 .bridge-reconnect-pill { align-self: center; display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 5px 13px; border: 1px solid var(--bd2); border-radius: 999px; background: var(--bg2); color: var(--tx2); font-size: 12px; cursor: pointer; }
 .bridge-reconnect-pill:hover { border-color: var(--bad); color: var(--tx); }
 
+/* Read-only history footer — replaces the composer when viewing a past mission. */
+.bridge-history-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); font-size: 12.5px; color: var(--tx2); }
+.bridge-newmission-btn { flex: none; padding: 6px 14px; border: none; background: var(--acc); color: #fff; border-radius: var(--r-md); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.bridge-newmission-btn:hover { filter: brightness(1.05); }
+
+/* Mission status dot in the MissionsRail list. */
+.mission-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; display: inline-block; margin-right: 2px; }
+.mission-done { background: var(--ok); }
+.mission-failed { background: var(--bad); }
+.mission-running { background: var(--warn); animation: mission-pulse 1.3s ease-in-out infinite; }
+@keyframes mission-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
 /* Activity lines inside an assistant message body */
 .bf-status { font-size: 12.5px; color: var(--tx3); }
 .bf-tool { font-size: 12.5px; color: var(--tx2); display: flex; align-items: center; gap: 7px; }

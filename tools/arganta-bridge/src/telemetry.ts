@@ -1,17 +1,22 @@
 // Local LLM + workload telemetry for the Command Center v2. The bridge runs on
 // the machine where the logs live, so it is the right place to aggregate:
 //   - Claude Code usage from ~/.claude/projects/**/*.jsonl (ccusage pattern)
-//   - Codex activity from ~/.codex/sessions (best-effort)
+//   - Codex activity from ~/.codex/sessions (real token_count events)
 //   - ComfyUI work from its /history + /queue + /system_stats API
+//   - Local machine health from node:os
 //
 // PROVENANCE: subscription quotas (Claude/Codex) have NO official API — token
 // totals are ESTIMATES parsed from local logs, and $ is estimated from public
-// pricing. ComfyUI numbers are MEASURED locally. Every block says which it is.
+// pricing. ComfyUI + machine numbers are MEASURED locally. Every block says
+// which it is.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, totalmem, freemem, cpus } from 'node:os';
 
 const COMFY_PORT = Number(process.env.COMFY_PORT || 8188);
+
+function monthKey(ts: number): string { return new Date(ts).toISOString().slice(0, 7); }
+function round(n: number, dp = 4) { const f = 10 ** dp; return Math.round(n * f) / f; }
 
 // --- Claude Code (ccusage-style, ESTIMATE) --------------------------------
 // USD per million tokens, from packages/ai/src/registry.js (public Anthropic
@@ -25,6 +30,9 @@ function priceFor(model: string) {
   if (model.includes('opus')) return { ...PRICING.opus };
   if (model.includes('sonnet')) return { ...PRICING.sonnet };
   if (model.includes('haiku')) return { ...PRICING.haiku };
+  // No published rate for these yet — friendly label, honestly $0 (never a
+  // fabricated price) rather than showing the raw model slug.
+  if (model.includes('fable')) return { in: 0, out: 0, label: 'Fable' };
   return { in: 0, out: 0, label: model };
 }
 
@@ -45,6 +53,9 @@ function parseFile(path: string): UsageEntry[] {
       const u = o?.message?.usage;
       if (!u || o.type !== 'assistant') continue;
       const model = String(o.message.model || '');
+      // Skip internal sentinels (e.g. context-compaction summaries) — not a
+      // real model call, always 0 tokens, just noise in the model breakdown.
+      if (!model || model.startsWith('<')) continue;
       const p = priceFor(model);
       const inTok = u.input_tokens || 0, outTok = u.output_tokens || 0;
       const cacheR = u.cache_read_input_tokens || 0, cacheW = u.cache_creation_input_tokens || 0;
@@ -87,6 +98,7 @@ function claudeUsage() {
   const startOfDayUTC = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
   const byModel: Record<string, { label: string; tokens: number; cost: number }> = {};
   const byDay: Record<string, number> = {};
+  const monthly: Record<string, Record<string, { tokens: number; cost: number }>> = {};
   let todayTok = 0, todayCost = 0, weekCost = 0, last5hTok = 0, allTok = 0, allCost = 0;
   const seenKeys = new Set<string>();
   for (const e of all) {
@@ -98,6 +110,10 @@ function claudeUsage() {
     allTok += tot; allCost += e.cost;
     const day = new Date(e.ts).toISOString().slice(0, 10);
     byDay[day] = (byDay[day] || 0) + tot;
+    const mo = monthKey(e.ts);
+    const mm = (monthly[mo] ||= {});
+    const mc = (mm[e.label] ||= { tokens: 0, cost: 0 });
+    mc.tokens += tot; mc.cost += e.cost;
     if (e.ts >= startOfDayUTC) { todayTok += tot; todayCost += e.cost; }
     if (now - e.ts <= weekMs) weekCost += e.cost;
     if (now - e.ts <= fiveH) last5hTok += tot;
@@ -116,6 +132,7 @@ function claudeUsage() {
     byModel: Object.values(byModel).map((m) => ({ ...m, cost: round(m.cost) })).sort((a, b) => b.tokens - a.tokens),
     days,
     files: fileCache.size,
+    monthly,
   };
 }
 
@@ -161,12 +178,17 @@ function codexUsage() {
 
   const now = Date.now(), dayMs = 86400e3, weekMs = 7 * dayMs;
   const startOfDayUTC = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  const monthly: Record<string, { tokens: number; cost: number }> = {};
   let inTok = 0, cachedTok = 0, outTok = 0, todayTok = 0, weekCost = 0;
   for (const c of codexCache.values()) {
     inTok += c.inTok; cachedTok += c.cachedTok; outTok += c.outTok;
+    const tot = c.inTok + c.cachedTok + c.outTok;
     const cost = (c.inTok * 1.25 + c.cachedTok * 0.125 + c.outTok * 10) / 1e6;
     const ts = Date.parse(c.day + 'T12:00:00Z');
-    if (ts >= startOfDayUTC) todayTok += c.inTok + c.cachedTok + c.outTok;
+    const mo = c.day.slice(0, 7);
+    const mm = (monthly[mo] ||= { tokens: 0, cost: 0 });
+    mm.tokens += tot; mm.cost += cost;
+    if (ts >= startOfDayUTC) todayTok += tot;
     if (now - ts <= weekMs) weekCost += cost;
   }
   const allTok = inTok + cachedTok + outTok;
@@ -177,10 +199,37 @@ function codexUsage() {
     today: { tokens: todayTok }, allTime: { tokens: allTok, costUsd: round(allCost) },
     weekCostUsd: round(weekCost),
     inputTokens: inTok, cachedTokens: cachedTok, outputTokens: outTok,
+    monthly,
   };
 }
 
-// --- ComfyUI (MEASURED, local) --------------------------------------------
+/** Combine Claude's per-model monthly map + Codex's single-series monthly map
+ * into one chart-ready series, normalized to start at the FIRST month either
+ * brain was used (never padded back to some arbitrary calendar start) and
+ * filled through the most recent month with data (gaps = zero, not skipped). */
+function combineMonthly(
+  claudeMonthly: Record<string, Record<string, { tokens: number; cost: number }>>,
+  codexMonthly: Record<string, { tokens: number; cost: number }>,
+) {
+  const months = new Set([...Object.keys(claudeMonthly), ...Object.keys(codexMonthly)]);
+  if (months.size === 0) return [] as { month: string; byModel: Record<string, { tokens: number; cost: number }> }[];
+  const sorted = [...months].sort();
+  const start = sorted[0], end = sorted[sorted.length - 1];
+  const range: string[] = [];
+  let cursor = new Date(start + '-01T00:00:00Z');
+  const endDate = new Date(end + '-01T00:00:00Z');
+  while (cursor <= endDate) {
+    range.push(cursor.toISOString().slice(0, 7));
+    cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
+  }
+  return range.map((mo) => {
+    const byModel: Record<string, { tokens: number; cost: number }> = { ...(claudeMonthly[mo] || {}) };
+    if (codexMonthly[mo]) byModel.Codex = codexMonthly[mo];
+    return { month: mo, byModel };
+  });
+}
+
+// --- ComfyUI (MEASURED, local) — including "how massive" compute signals ---
 async function comfyStats() {
   const base = `http://127.0.0.1:${COMFY_PORT}`;
   const get = async (path: string) => {
@@ -194,7 +243,8 @@ async function comfyStats() {
   if (history === null && queue === null && stats === null) return { provenance: 'unknown' as const, up: false };
 
   const now = Date.now(), dayMs = 86400e3, weekMs = 7 * dayMs;
-  let jobsToday = 0, jobsWeek = 0, totalMs = 0, timed = 0;
+  let jobsToday = 0, jobsWeek = 0, totalMs = 0, timed = 0, totalNodeExecutions = 0;
+  let images = 0, videos = 0, audios = 0;
   const models: Record<string, number> = {};
   for (const id of Object.keys(history || {})) {
     const e: any = (history as any)[id];
@@ -206,11 +256,19 @@ async function comfyStats() {
       if (now - start <= weekMs) jobsWeek++;
     }
     if (start && end && end > start) { totalMs += end - start; timed++; }
-    // model per job = the checkpoint/unet loaded
+    // model per job = the checkpoint/unet loaded; also tally node executions and
+    // output types across the whole node graph (real signal of "how much work").
     const nodes = e?.prompt?.[2] || {};
-    for (const n of Object.values<any>(nodes)) {
+    const nodeList = Object.values<any>(nodes);
+    totalNodeExecutions += nodeList.length;
+    let modelTagged = false;
+    for (const n of nodeList) {
       const ck = n?.inputs?.ckpt_name || n?.inputs?.unet_name;
-      if (ck) { models[ck] = (models[ck] || 0) + 1; break; }
+      if (ck && !modelTagged) { models[ck] = (models[ck] || 0) + 1; modelTagged = true; }
+      const ct = String(n?.class_type || '');
+      if (/SaveImage|PreviewImage/.test(ct)) images++;
+      else if (/VideoCombine|SaveVideo|SaveWEBM/.test(ct)) videos++;
+      else if (/SaveAudio/.test(ct)) audios++;
     }
   }
   const vramTotal = stats?.devices?.[0]?.vram_total, vramFree = stats?.devices?.[0]?.vram_free;
@@ -219,6 +277,9 @@ async function comfyStats() {
     up: true,
     jobsToday, jobsWeek,
     avgJobSec: timed ? Math.round(totalMs / timed / 1000) : null,
+    computeSec: Math.round(totalMs / 1000),
+    totalNodeExecutions,
+    outputs: { images, videos, audios },
     queueRunning: (queue as any)?.queue_running?.length || 0,
     queuePending: (queue as any)?.queue_pending?.length || 0,
     topModels: Object.entries(models).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([name, runs]) => ({ name, runs })),
@@ -227,9 +288,24 @@ async function comfyStats() {
   };
 }
 
-function round(n: number, dp = 4) { const f = 10 ** dp; return Math.round(n * f) / f; }
+// --- Local machine health (MEASURED) --------------------------------------
+function systemInfo() {
+  const total = totalmem(), free = freemem();
+  return {
+    provenance: 'live' as const,
+    ramUsedGb: round((total - free) / 1e9, 1),
+    ramTotalGb: round(total / 1e9, 1),
+    cpuCount: cpus().length,
+    bridgeUptimeSec: Math.round(process.uptime()),
+  };
+}
 
 export async function telemetry() {
-  const [comfy] = await Promise.all([comfyStats()]);
-  return { claude: claudeUsage(), codex: codexUsage(), comfy, at: new Date().toISOString() };
+  const claude = claudeUsage();
+  const codex = codexUsage();
+  const comfy = await comfyStats();
+  const monthly = combineMonthly(claude.monthly, codex.monthly);
+  const { monthly: _cm, ...claudeOut } = claude;
+  const { monthly: _xm, ...codexOut } = codex;
+  return { claude: claudeOut, codex: codexOut, comfy, system: systemInfo(), monthly, at: new Date().toISOString() };
 }

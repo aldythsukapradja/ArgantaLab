@@ -10,7 +10,16 @@ const FN = 'arganta-publish'
 
 async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(FN, { body })
-  if (error) throw new Error(error.message)
+  if (error) {
+    // supabase-js buries the function's own error body ("CORE_URL not
+    // configured", "Worker 401"…) behind a generic "non-2xx" message; dig the
+    // real reason out of the response so the UI can show the true cause.
+    const res: Response | undefined = (error as any).context
+    if (res && typeof res.json === 'function') {
+      try { const j = await res.json(); if (j?.error) throw new Error(j.error) } catch (e) { if (e instanceof Error && e.message && !/json/i.test(e.message)) throw e }
+    }
+    throw new Error(error.message)
+  }
   if (data && (data as any).ok === false) throw new Error((data as any).error || 'Publish failed')
   return data as T
 }

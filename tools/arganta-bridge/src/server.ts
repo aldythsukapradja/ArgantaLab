@@ -16,7 +16,7 @@ import { createServer } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { missionStart, missionDone, heartbeatUpsert, type ActivityEvent } from './persist.ts';
 import { createClaudeEngine } from './engines/claude.ts';
-import { createCodexEngine } from './engines/codex.ts';
+import { createCodexEngine, ensureCodexMediaMcp } from './engines/codex.ts';
 import type { MissionEngine, OutEvent } from './engines/types.ts';
 import { health, launch, opsCors } from './ops.ts';
 import { telemetry } from './telemetry.ts';
@@ -126,6 +126,10 @@ function listenOn(host: string) {
 
 listenOn('127.0.0.1');
 if (TAILSCALE_IP) listenOn(TAILSCALE_IP);
+
+// Self-heal the OpenAI brain's media tools: make sure Codex has this repo's
+// media-gen MCP registered (idempotent; no-op if Codex isn't installed).
+ensureCodexMediaMcp(REPO_ROOT);
 
 // Heartbeat: upsert a health snapshot every 60s so the Command Center can show
 // "last seen" when this node is unreachable. Fire once on boot, then interval.

@@ -9,6 +9,18 @@ import { cloudEnabled } from '../lib/supabase'
 
 type Phase = 'review' | 'confirm' | 'sending' | 'posted' | 'error'
 
+// Buffer/Instagram rate-limits the shared token, and every retry within the
+// window makes it worse. This cooldown is deliberately shared across every
+// StoryPublish instance (localStorage, not component state) so re-asking
+// "share this week" in a fresh chat turn can't be used to sneak past it.
+const COOLDOWN_KEY = 'arganta_publish_cooldown_until'
+const COOLDOWN_MS = 3 * 60 * 1000
+function getCooldownRemaining(): number {
+  const until = Number(localStorage.getItem(COOLDOWN_KEY) || 0)
+  return Math.max(0, until - Date.now())
+}
+function startCooldown() { try { localStorage.setItem(COOLDOWN_KEY, String(Date.now() + COOLDOWN_MS)) } catch { /* private mode */ } }
+
 export function StoryPublish({ draft }: { draft: StoryDraft }) {
   const [caption, setCaption] = useState(draft.caption + '\n\n' + draft.hashtags)
   const [preview, setPreview] = useState<string | null>(null)
@@ -17,6 +29,14 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
   const [phase, setPhase] = useState<Phase>('review')
   const [msg, setMsg] = useState('')
   const blobRef = useRef<Blob | null>(null)
+  const [cooldown, setCooldown] = useState(getCooldownRemaining)
+
+  // tick the cooldown countdown once a second while it's active
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const id = setInterval(() => setCooldown(getCooldownRemaining()), 1000)
+    return () => clearInterval(id)
+  }, [cooldown > 0])
 
   // render the branded image once
   useEffect(() => {
@@ -25,20 +45,24 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
     return () => { if (url) URL.revokeObjectURL(url) }
   }, [draft])
 
-  // load the parent's Instagram channels
+  // load the parent's Instagram channels — an error here must be SHOWN, not
+  // swallowed: "couldn't reach the worker" and "no channel connected" are very
+  // different problems and the parent (and we, debugging) need to know which.
+  const [channelErr, setChannelErr] = useState<string | null>(null)
   useEffect(() => {
     if (!cloudEnabled) return
     getChannels().then(cs => {
       setChannels(cs)
       const ig = cs.find(c => c.service?.toLowerCase().includes('instagram')) ?? cs[0]
       if (ig) setChannelId(ig.id)
-    }).catch(() => { /* no channels wired — send stays disabled with a note */ })
+      setChannelErr(cs.length ? null : 'Buffer reports no connected channels.')
+    }).catch(e => setChannelErr((e as Error).message || 'Couldn’t reach the publish service.'))
   }, [])
 
   const igLabel = useMemo(() => channels.find(c => c.id === channelId)?.name || 'your Instagram', [channels, channelId])
 
   const publish = async () => {
-    if (!blobRef.current || !channelId) return
+    if (!blobRef.current || !channelId || cooldown > 0) return
     setPhase('sending'); setMsg('')
     try {
       const url = await uploadPostImage(blobRef.current)
@@ -46,10 +70,17 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
       setMsg(postId ? `Posted to ${igLabel}.` : 'Posted.')
       setPhase('posted')
     } catch (e) {
-      setMsg((e as Error).message || 'Something went wrong.')
+      const raw = (e as Error).message || 'Something went wrong.'
+      // Buffer/worker rate-limit: repeated tries make it worse, so start a real
+      // cooldown (shared across attempts) instead of just apologizing.
+      const rateLimited = /too many requests|rate limit|429/i.test(raw)
+      if (rateLimited) { startCooldown(); setCooldown(getCooldownRemaining()) }
+      setMsg(rateLimited ? 'Instagram is rate-limiting posts right now. I’ve paused the button for a few minutes so it doesn’t make things worse — it’ll unlock automatically.' : raw)
       setPhase('error')
     }
   }
+
+  const cooldownLabel = cooldown > 0 ? `Try again in ${Math.ceil(cooldown / 1000 / 60)} min` : null
 
   return (
     <div className="ac-assistant">
@@ -58,7 +89,6 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
         {preview
           ? <img className="ac-publish-img" src={preview} alt="Your story preview" />
           : <div className="ac-publish-img ac-publish-img--load">rendering…</div>}
-        {draft.provenance === 'sample' && <div className="ac-publish-note">Sample — connect your family data for a real weekly win.</div>}
 
         <label className="ac-publish-label">Caption</label>
         <textarea className="ac-publish-caption" value={caption} onChange={e => setCaption(e.target.value)} rows={5} disabled={phase === 'sending' || phase === 'posted'} />
@@ -75,17 +105,17 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
           <>
             <div className="ac-publish-confirm">This posts to <b>{igLabel}</b> right now, for real. Ready?</div>
             <div className="ac-publish-row">
-              <button className="ac-publish-send" onClick={publish} disabled={phase !== 'confirm'}>Yes, post it now</button>
+              <button className="ac-publish-send" onClick={publish} disabled={phase !== 'confirm' || cooldown > 0}>{cooldownLabel || 'Yes, post it now'}</button>
               <button className="ac-publish-cancel" onClick={() => setPhase('review')}>Back</button>
             </div>
           </>
         ) : (
           <>
-            <button className="ac-publish-send" onClick={() => setPhase('confirm')} disabled={phase === 'sending' || !channelId || !cloudEnabled}>
-              {phase === 'sending' ? 'Posting…' : 'Publish to Instagram now'}
+            <button className="ac-publish-send" onClick={() => setPhase('confirm')} disabled={phase === 'sending' || !channelId || !cloudEnabled || cooldown > 0}>
+              {phase === 'sending' ? 'Posting…' : cooldownLabel || 'Publish to Instagram now'}
             </button>
             {!cloudEnabled && <div className="ac-publish-note">Publishing isn't connected in this preview.</div>}
-            {!channelId && cloudEnabled && <div className="ac-publish-note">No Instagram channel connected yet.</div>}
+            {!channelId && cloudEnabled && <div className="ac-publish-err">{channelErr || 'No Instagram channel connected yet.'}</div>}
             {phase === 'error' && <div className="ac-publish-err">{msg}</div>}
             <div className="ac-publish-fineprint">Publishes straight to your connected Instagram. You confirm once before it goes.</div>
           </>

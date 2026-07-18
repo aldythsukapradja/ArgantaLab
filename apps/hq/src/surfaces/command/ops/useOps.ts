@@ -106,9 +106,13 @@ export interface Telemetry {
   }
   comfy: {
     provenance: 'live' | 'unknown'; up: boolean; jobsToday?: number; jobsWeek?: number
-    avgJobSec?: number | null; queueRunning?: number; queuePending?: number
+    avgJobSec?: number | null; computeSec?: number; totalNodeExecutions?: number
+    outputs?: { images: number; videos: number; audios: number }
+    queueRunning?: number; queuePending?: number
     topModels?: { name: string; runs: number }[]; vram?: { usedGb: number; totalGb: number } | null; comfyVersion?: string | null
   }
+  system: { provenance: 'live'; ramUsedGb: number; ramTotalGb: number; cpuCount: number; bridgeUptimeSec: number }
+  monthly: { month: string; byModel: Record<string, { tokens: number; cost: number }> }[]
   at: string
 }
 
