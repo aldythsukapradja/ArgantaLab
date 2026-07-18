@@ -19,7 +19,7 @@ export interface Agent {
   name: string
   role: string
   tier: Tier
-  /** Sonnet 4.6 = reasoning/debate · Haiku 4.5 = classification/sense · det = pure SQL+arithmetic */
+  /** Sonnet = reasoning/debate · Haiku = classification/sense · det = pure SQL+arithmetic */
   model: Model
   mission: string
   /** what it reads */
@@ -41,14 +41,14 @@ export const TIER_META: Record<Tier, { label: string; accent: string }> = {
 }
 
 export const MODEL_META: Record<Model, { label: string; bg: string; fg: string }> = {
-  sonnet: { label: 'Sonnet 4.6', bg: 'var(--acc-soft)', fg: 'var(--acc-text)' },
-  haiku: { label: 'Haiku 4.5', bg: 'var(--ok-bg)', fg: 'var(--ok)' },
+  sonnet: { label: 'Sonnet', bg: 'var(--acc-soft)', fg: 'var(--acc-text)' },
+  haiku: { label: 'Haiku', bg: 'var(--ok-bg)', fg: 'var(--ok)' },
   det: { label: 'Deterministic', bg: 'var(--bg3)', fg: 'var(--tx2)' },
 }
 
-// The roster. Main agents (all executives + VPs + Data Architect) run on Sonnet
-// 4.6 because they reason, collaborate and debate. Specialist child agents run on
-// Haiku 4.5 (sense/classification) — cheaper, narrower.
+// The roster. Main agents (all executives + VPs + Data Architect) carry a
+// Sonnet-class floor because they reason, collaborate and debate. Specialist
+// child agents carry a Haiku floor (sense/classification) — cheaper, narrower.
 export const AGENTS: Agent[] = [
   // ── Orchestrator ──
   { id: 'ceo', name: 'CEO Agent', role: 'Chief Executive · Orchestrator', tier: 'executive', model: 'sonnet', reportsTo: null, orchestrator: true,
@@ -284,7 +284,7 @@ export function agentMatch(c: Computed): Signal[] {
 }
 
 // ── Generate (the only LLM-reserved step) ────────────────────────────────────
-// In production this prompt + the computed facts go to Sonnet 4.6. Here we keep
+// In production this prompt + the computed facts go to a Sonnet-class model. Here we keep
 // it deterministic-template so the demo never fabricates: same facts, scripted
 // phrasing, routed by intent. Markdown-lite (**bold**) rendered by the UI.
 
@@ -304,7 +304,7 @@ export function routeIntent(prompt: string): Intent {
 const n = (v: number | null, suffix = '') => v == null ? '—' : `${v}${suffix}`
 
 export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s: Sensed): string {
-  const liveTag = s.source === 'supabase-live' ? '_(COO Agent · Sonnet 4.6 · live SQL)_' : '_(COO Agent · Sonnet 4.6 · offline)_'
+  const liveTag = s.source === 'supabase-live' ? '_(COO Agent · deterministic · live SQL)_' : '_(COO Agent · deterministic · offline)_'
   const sigLines = signals.map(x => `${x.tone === 'warn' ? '⚠️' : x.tone === 'ok' ? '✅' : '→'} ${x.text}`).join('\n')
 
   if (intent === 'brief') {
@@ -324,13 +324,13 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
         'Protect the share loop and parent progress card.'}`
   }
   if (intent === 'focus') {
-    return `**CPO · Product Focus** _(Sonnet 4.6 reasoning)_\n\n` +
+    return `**CPO · Product Focus** _(deterministic template)_\n\n` +
       `The wedge: **kid builds → learns → earns diamonds → shares → parent returns.**\n\n` +
       `This week's one priority: **${
         c.contentLivePct != null && c.contentLivePct < 60 ? 'Close the content gap — push authored items live before adding worlds.' :
         c.stickiness != null && c.stickiness < 20 ? 'Daily-quest loop to lift stickiness above 20%.' :
         'Ship the WhatsApp share card and measure signup conversion.'}**\n\n` +
-      `CFO note: full 25-agent OS runs ~$2.20/mo — cost is not the constraint, focus is.`
+      `CFO note: the agent OS runs on free/local tiers by default — see Agent Studio → Tokenomics for measured spend, not an estimate.`
   }
   if (intent === 'blockers') {
     const warns = signals.filter(x => x.tone === 'warn')
@@ -339,12 +339,12 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
       `\n\n**Pending migrations** (unlock more live signals):\n• migration_growth.sql — Growth RPCs\n• migration_nexus.sql — Phase D family loops`
   }
   if (intent === 'economy') {
-    return `**CFO · Economy Health** _(Sonnet 4.6)_\n\n` +
+    return `**CFO · Economy Health** _(deterministic template)_\n\n` +
       `**💎 Diamond value loop** ${liveTag}\n` +
       `• Recurring earn: ${n(c.recurringMint)}  ·  Burn (spent): ${n(c.burn)}  ·  Sink coverage: ${n(c.coverage, '%')}\n` +
       `• Float held: ${n(c.float)}  ·  Spend per active kid: ${n(c.spentPerKid)} 💎 (the live pay-intent proxy)\n` +
       `• The one-time starter grant is held out so coverage reflects the real loop, not the onboarding floor.\n\n` +
-      `**💰 Operating cost**\n• Full 25-agent LLM OS: ~$2.20 / month · Supabase + Vercel: free tier\n\n` +
+      `**💰 Operating cost**\n• Measured per-run in Agent Studio → Tokenomics (free/local tiers by default) · Supabase + Vercel: free tier\n\n` +
       `${c.coverage != null && c.coverage < 50 ? '⚠️ Sink coverage low — diamonds mint faster than they are spent. Add a shop sink.' : '✅ Loop balanced — diamonds recirculate at a healthy rate.'}\n\n` +
       `Ask **"monetization"** for the subscription + diamond-IAP revenue forecast.`
   }
@@ -354,7 +354,7 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
     const mid = computeScenario(PRESETS.mid, fam, DEFAULT_GLOBALS)
     const hi = computeScenario(PRESETS.high, fam, DEFAULT_GLOBALS)
     const m = (v: number) => v >= 1e6 ? '$' + (v / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M' : '$' + Math.round(v / 1000) + 'k'
-    return `**CFO · Monetization Readiness** _(Sonnet 4.6)_\n\n` +
+    return `**CFO · Monetization Readiness** _(deterministic template)_\n\n` +
       `Two streams when revenue switches on: **subscription** (parents pay monthly) + **diamond IAP** (parents buy packs for kids). Modelled at 10,000 active families:\n` +
       `• Low ${m(lo.arr)} ARR  ·  Mid ${m(mid.arr)}  ·  High ${m(hi.arr)} _(annual recurring)_\n` +
       `• Mid case: LTV:CAC ${mid.ltvCac == null ? '—' : mid.ltvCac.toFixed(1) + '×'} · payback ${mid.paybackMo == null ? '—' : Math.round(mid.paybackMo) + 'mo'} — clears the fundable bar (>3×, <12mo).\n` +
@@ -363,7 +363,7 @@ export function agentGenerate(intent: Intent, c: Computed, signals: Signal[], s:
   }
   if (intent === 'agents') {
     const byTier = AGENTS.reduce<Record<string, number>>((m, a) => { m[a.tier] = (m[a.tier] || 0) + 1; return m }, {})
-    return `**COO · Agent OS** _(Sonnet 4.6)_\n\n` +
+    return `**COO · Agent OS** _(deterministic template)_\n\n` +
       `${AGENTS.length} agents across 6 tiers:\n` +
       Object.entries(byTier).map(([t, k]) => `• ${TIER_META[t as Tier].label}: ${k}`).join('\n') +
       `\n\nPipeline is deterministic-first — Sense → Compute → Match run on SQL + arithmetic; only **Generate** uses an LLM. See the Agent Builder surface for the full roster.`

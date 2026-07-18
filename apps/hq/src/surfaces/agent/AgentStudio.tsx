@@ -21,6 +21,7 @@ import { ClaudeMark } from '../core/ClaudeMark'
 import { OpenAIMark } from '../core/OpenAIMark'
 import { Markdown } from '../core/Markdown'
 import { getSessionRuns } from '../../lib/ai'
+import { GROUNDED_OFFICE_IDS as GROUNDED } from '../../data/officeSense'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { compact } from '../../lib/format'
 import { useHQ } from '../../shell/store'
@@ -559,7 +560,6 @@ function Spark({ data }: { data: number[] }) {
 }
 
 // ── AUTHOR ──────────────────────────────────────────────────────────────────
-const GROUNDED = new Set(['operations', 'treasury'])
 function AuthorTab({ overrides, setOverride }: { overrides: Record<string, AgentOverride>; setOverride: (id: string, o: AgentOverride | null) => void }) {
   const [id, setId] = useState<string>(AGENTS[0].id)
   const base = AGENTS.find(x => x.id === id)!

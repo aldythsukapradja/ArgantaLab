@@ -16,7 +16,8 @@ import { OFFICE_META, routeConcern, delegationResponse, isOffice } from '@argant
 import { BUILDER_TOOL_SPECS, builderToolByName, validateHtml, classifyGameGenre } from '@arganta/builder'
 import { generateWebsite, generateApplication, generateGame, reviseArtifact } from '../../builder-core/generate'
 import { createArtifact, saveVersion, saveCurrentAsVersion, restoreVersion, getArtifact, listVersions, publishArtifact, publicArtifactUrl } from '../../builder-core/persist'
-import { agentSense, agentCompute, agentMatch, agentFacts, agentGenerate, routeIntent, INTENT_ROLE, AGENTS, TIER_META } from '../../data/agents'
+import { agentSense, agentCompute, agentMatch, agentFacts, agentGenerate, routeIntent, INTENT_ROLE, AGENTS } from '../../data/agents'
+import { techSense, capoSense } from '../../data/officeSense'
 import { agentMessages } from '@arganta/ai'
 
 export interface ToolResult {
@@ -244,21 +245,34 @@ async function runConsultOffice(args: { office?: string; question: string }): Pr
     ? { ...r, extraBlocks: [{ kind: 'chart', block: chartBlock }] }
     : r)
 
-  // roster — the meta-office (ADR-0007 Decision 5): grounded in the real,
-  // static org roster, not a live RPC and not a persona guess.
-  if (office === 'roster') {
-    const byTier = AGENTS.reduce<Record<string, number>>((m, a) => { m[a.tier] = (m[a.tier] || 0) + 1; return m }, {})
-    const summary = '_(Org roster · static, not a live RPC)_\n\n' +
-      `${AGENTS.length} agents across 6 tiers: ` +
-      Object.entries(byTier).map(([t, k]) => `${TIER_META[t as keyof typeof TIER_META].label} (${k})`).join(', ') +
-      '. Pipeline is deterministic-first — only the Generate step uses a model.'
-    const resp = delegationResponse({ office, text: summary, ok: true })
-    return { data: { ...resp.toolResult, provider: 'roster-metadata', model: null, grounded: true }, block: resp.block, costUsd: 0 }
+  // technology (CTO) + roster (CAPO) — grounded in INFRASTRUCTURE facts (live
+  // probes + the run ledger), not the product-metric pipeline. officeSense.ts
+  // owns the deterministic Sense; only Generate uses a model, dataClass
+  // 'internal' (probe/ledger facts are operational, never confidential). Offline
+  // degrades to the signals with no LLM call — same honesty as operations.
+  if (office === 'technology' || office === 'roster') {
+    const os = office === 'technology' ? await techSense() : await capoSense()
+    const sigText = os.signals.map(s => `${s.tone === 'warn' ? '⚠️' : s.tone === 'ok' ? '✅' : '→'} ${s.text}`).join('\n')
+    if (os.source === 'offline') {
+      const text = `_(${os.role} · operational facts · offline)_\n\n${sigText}`
+      const resp = delegationResponse({ office, text, ok: true })
+      return withChart({ data: { ...resp.toolResult, provider: 'deterministic', model: null, grounded: false }, block: resp.block, costUsd: 0 })
+    }
+    const out = await governedOfficeChat(
+      { task: 'brief', messages: agentMessages(os.role + ' Agent', os.facts + '\n\nsignals:\n' + sigText, args.question) },
+      'internal', runId,
+    )
+    const text = out.provider === 'mock'
+      ? `_(${os.role} · operational facts · model unavailable)_\n\n${sigText}`
+      : `_(${os.role} · grounded · ${out.provider})_\n\n${out.text.trim()}`
+    const resp = delegationResponse({ office, text, ok: true })
+    return withChart({ data: { ...resp.toolResult, provider: out.provider, model: out.model, grounded: out.provider !== 'mock' }, block: resp.block, costUsd: out.costUsd ?? 0 })
   }
 
   if (!GROUNDED_OFFICES.has(office)) {
-    // bridge/technology/legal — no grounded live-RPC pipeline exists yet
-    // (ADR-0007 Decisions 1/5): honest persona, same shape C3 shipped, now
+    // bridge/legal — no grounded pipeline yet (technology + roster now run the
+    // officeSense infra path above; CTO/CAPO grounding shipped in batch G).
+    // Honest persona, same shape C3 shipped, now
     // actually dataClass-governed at 'internal' (the old code called ai.chat
     // with zero dataClass awareness — a real, lower-stakes version of the
     // same latent gap the grounded path closes).
