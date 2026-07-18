@@ -403,6 +403,7 @@
 .ac-publish-row { display: flex; gap: 8px; }
 .ac-publish-row .ac-publish-send { flex: 1; }
 .ac-publish-cancel { padding: 13px 18px; border: 1px solid var(--line); border-radius: 14px; background: none; color: var(--ink-soft); font: 500 15px var(--font-text); cursor: pointer; }
+.ac-publish-src { font-size: 12px; color: var(--ember-deep); text-align: center; font-weight: 600; }
 .ac-publish-note, .ac-publish-fineprint { font-size: 12px; color: var(--ink-soft); }
 .ac-publish-fineprint { text-align: center; margin-top: 2px; }
 .ac-publish-err { font-size: 14px; color: var(--ember-deep); }
@@ -479,3 +480,12 @@
 
 /* ── loading ── */
 .ac-loading { flex: 1; display: grid; place-items: center; }
+
+/* ── KinetikCircle embed ── */
+.ac-pill-kin { color: var(--ember-deep); border-color: color-mix(in srgb, var(--ember) 40%, var(--line)); font-weight: 600; }
+.ac-kin { flex: 1; position: relative; min-height: 0; display: flex; }
+.ac-kin-frame { flex: 1; width: 100%; border: 0; background: var(--ground); }
+.ac-kin-load { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ink-soft); font-size: 15px; background: var(--ground); z-index: 1; }
+.ac-kin-load .ac-shimmer { width: 160px; }
+.ac-kin-back { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 2; font: 600 14px var(--font-text); color: var(--ink); background: var(--ground); border: 1px solid var(--line); border-radius: 999px; padding: 10px 20px; box-shadow: 0 6px 20px rgba(21,22,27,.16); cursor: pointer; }
+.ac-kin-back:hover { border-color: var(--ember); }

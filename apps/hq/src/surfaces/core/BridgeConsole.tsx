@@ -10,7 +10,43 @@ import { loadMission } from '../../lib/missions'
 import { Markdown } from './Markdown'
 import { ClaudeMark } from './ClaudeMark'
 import { OpenAIMark } from './OpenAIMark'
+import { openPreview } from './previewBus'
 import './bridge.css'
+
+// Pull previewable results out of a mission's text so the founder can SEE them
+// in the chat: image URLs render inline, and pages (.html / localhost / deployed
+// apps) get a one-click "Open preview" into the side pane. Only http(s) URLs are
+// handled — a local `C:\…\out.png` can't be loaded by the browser (media-gen
+// returns a Supabase public URL alongside the path, which is what we catch).
+const IMG_RE = /https?:\/\/[^\s)"'<>\]]+\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s)"'<>\]]*)?/gi
+const URL_RE = /https?:\/\/[^\s)"'<>\]]+/gi
+function extractPreviewables(text: string): { images: string[]; pages: string[] } {
+  const images = Array.from(new Set(text.match(IMG_RE) || []))
+  const imgSet = new Set(images)
+  const pages = Array.from(new Set(text.match(URL_RE) || []))
+    .filter((u) => !imgSet.has(u) && /(\.html?(\?|#|$)|localhost|127\.0\.0\.1|\.ts\.net|vercel\.app|\.pages\.dev)/i.test(u))
+  return { images, pages }
+}
+
+function BridgePreviews({ text }: { text: string }) {
+  const { images, pages } = extractPreviewables(text)
+  if (!images.length && !pages.length) return null
+  return (
+    <div className="bf-previews">
+      {images.map((src) => (
+        <a key={src} className="bf-preview-img" href={src} target="_blank" rel="noreferrer" title="Open full size">
+          <img src={src} alt="Generated result" loading="lazy" />
+        </a>
+      ))}
+      {pages.map((url) => (
+        <button key={url} className="bf-preview-open" onClick={() => openPreview({ kind: 'url', title: 'Preview', url })}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" /><path d="M1.5 5.6 H14.5" stroke="currentColor" strokeWidth="1.4" /></svg>
+          Open preview
+        </button>
+      ))}
+    </div>
+  )
+}
 
 export type BridgeEngine = 'claude' | 'codex'
 
@@ -331,8 +367,14 @@ function BridgeConnectDialog({ cfg, status, token, bridgeUrl, onToken, onUrl, on
         </div>
         <label className="bridge-field">
           <span>Bridge URL</span>
-          <input type="text" className="bridge-url" placeholder="ws://127.0.0.1:7717 (or your Tailscale IP)" value={bridgeUrl}
+          <input type="text" className="bridge-url" placeholder="ws://127.0.0.1:7717 (or wss://…ts.net on mobile)" value={bridgeUrl}
             onChange={(e) => onUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') onConnect() }} />
+          {/* Mixed-content guard: an HTTPS page (e.g. the deployed app on a phone)
+              can't open an insecure ws:// socket — it must use wss://. This is the
+              #1 "works on desktop, silently fails on mobile" trap. */}
+          {typeof window !== 'undefined' && window.location.protocol === 'https:' && /^ws:\/\//i.test(bridgeUrl.trim()) && (
+            <span className="bridge-field-warn">This page is HTTPS — a <code>ws://</code> address is blocked. Use your <code>wss://</code> Tailscale-serve URL (e.g. <code>wss://your-machine.tailXXXX.ts.net</code>).</span>
+          )}
         </label>
         <label className="bridge-field">
           <span>Token</span>
@@ -387,7 +429,7 @@ function FeedRow({ item, Mark, accent, onResolve }: { item: FeedItem; Mark: Mark
       return <div className="core-msg core-msg-user"><div className="core-msg-bubble">{item.text}</div></div>
     case 'status': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-status">{item.label}</div></div></div>
     case 'tool': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-tool"><span className="bf-tick" />{item.label}</div></div></div>
-    case 'message': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><Markdown className="bf-msg" text={item.text} /></div></div>
+    case 'message': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><Markdown className="bf-msg" text={item.text} /><BridgePreviews text={item.text} /></div></div>
     case 'error': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-error">⚠ {item.message}</div></div></div>
     case 'done':
       return (
@@ -401,6 +443,7 @@ function FeedRow({ item, Mark, accent, onResolve }: { item: FeedItem; Mark: Mark
               {item.costUsd != null && <span className="bf-cost">${item.costUsd.toFixed(4)}</span>}
             </div>
             {item.result && <Markdown className="bf-result" text={item.result} />}
+            {item.result && <BridgePreviews text={item.result} />}
           </div>
         </div></div>
       )

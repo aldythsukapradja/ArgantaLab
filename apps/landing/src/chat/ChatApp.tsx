@@ -8,6 +8,7 @@ import { Conversation, type Turn } from './Conversation'
 import { Composer } from './Composer'
 import { Drawer, type ChatSummary } from './Drawer'
 import { CircleSelect } from './CircleSelect'
+import { KinetikView } from './KinetikView'
 import { useCircles, ALL_CIRCLES } from './circles'
 import { answer } from './brain'
 
@@ -18,6 +19,9 @@ export function ChatApp({ name, onAbout, onSignOut }: { name: string; onAbout: (
   const [thinking, setThinking] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [chats, setChats] = useState<ChatSummary[]>([])
+  const [mode, setMode] = useState<'chat' | 'kinetik'>('chat')
+  // the real circle to hand Kinetik: a specific circle, or the first when spanning
+  const kinetikCircleId = ctx.id === ALL_CIRCLES ? (ctx.scope[0] ?? '') : ctx.id
 
   const ask = useCallback(async (qRaw: string) => {
     const q = qRaw.trim()
@@ -50,24 +54,31 @@ export function ChatApp({ name, onAbout, onSignOut }: { name: string; onAbout: (
               <CircleSelect circles={circles} ctx={ctx} showAll={showAll} name={name} onSelect={select} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              {inConvo && <button className="ac-ghost" onClick={reset}>New</button>}
-              <button className="ac-ghost" onClick={() => setDrawer(true)}>Chats</button>
+              {mode === 'kinetik'
+                ? <button className="ac-ghost" onClick={() => setMode('chat')}>← Chat</button>
+                : <>
+                    <button className="ac-ghost ac-pill-kin" onClick={() => setMode('kinetik')}>KinetikCircle</button>
+                    {inConvo && <button className="ac-ghost" onClick={reset}>New</button>}
+                    <button className="ac-ghost" onClick={() => setDrawer(true)}>Chats</button>
+                  </>}
             </div>
           </div>
         </div>
       </div>
 
-      {inConvo
-        ? <Conversation turns={turns} thinking={thinking} onChip={ask} />
-        : <Hearth name={name} scope={ctx.scope} circleLabel={ctx.label} spanning={ctx.id === ALL_CIRCLES} onAsk={ask} />}
+      {mode === 'kinetik'
+        ? <KinetikView circleId={kinetikCircleId} onBack={() => setMode('chat')} />
+        : inConvo
+          ? <Conversation turns={turns} thinking={thinking} onChip={ask} />
+          : <Hearth name={name} scope={ctx.scope} circleLabel={ctx.label} spanning={ctx.id === ALL_CIRCLES} onAsk={ask} />}
 
-      <Composer value={draft} onChange={setDraft} onSend={send} sending={thinking} />
+      {mode === 'chat' && <Composer value={draft} onChange={setDraft} onSend={send} sending={thinking} />}
 
       {drawer && (
         <Drawer chats={chats} onOpen={() => setDrawer(false)} onNew={reset} onClose={() => setDrawer(false)} />
       )}
 
-      {!inConvo && (
+      {mode === 'chat' && !inConvo && (
         <div className="ac-col" style={{ textAlign: 'center', padding: '8px 0 20px' }}>
           <button className="ac-ghost" onClick={onAbout} style={{ marginRight: 8 }}>About Arganta</button>
           <button className="ac-ghost" onClick={onSignOut}>Sign out</button>

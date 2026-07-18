@@ -760,3 +760,13 @@ html[data-theme='dark'] .sb-menu { box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55); 
   .nav { display: none; }
   .topbar { display: none; }
 }
+
+/* ── Arganta Chat embed (only when framed with ?embed=<nonce>) ──────────────
+   The host provides its own sticky navbar (mark · circle selector · menus), so
+   we hide OUR top chrome + desktop sidebar and let the bottom tab nav be the
+   in-app navigation. Standalone Kinetik never gets `.is-embedded`, so this is
+   a pure no-op there. */
+html.is-embedded .topbar { display: none !important; }
+html.is-embedded .sidebar { display: none !important; }
+html.is-embedded .nav { display: flex !important; }   /* keep bottom tabs even at desktop widths */
+html.is-embedded .main { padding-top: 8px; }

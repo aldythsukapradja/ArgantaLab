@@ -1,6 +1,12 @@
 # K1 · KinetikCircle inside Arganta Chat — concept, battle test, to-do
 
-**Date:** 2026-07-18 · **Status:** PLAN (battle-tested, not built)
+**Date:** 2026-07-18 · **Status:** W1 (Opus) BUILT + a working KinetikView consumer; W2–W5 (Sonnet) remain
+**W1 done:** bridge v2 (`arganta:circle`/`arganta:signout` + `createEmbedController`), Kinetik child hardened
+(embed-mode `autoRefreshToken:false`/`persistSession:false`, handles circle+signout), `KinetikView.tsx` mounts it,
+Kinetik `.is-embedded` CSS hides its top chrome/sidebar & keeps bottom tabs, `KinetikCircle`/`← Chat` navbar toggle.
+Both apps typecheck + build clean; message contract verified symmetric (parent init/session/circle/signout ↔ child
+handlers; child ready ↔ parent). **Unverified without a live run:** the >65-min single-use-refresh-token soak (B1)
+and real cross-origin session apply — needs landing + `kinetik` dev servers up with a signed-in parent.
 **Ask:** open KinetikCircle inside the app (shared login + shared circle), Arganta's navbar
 replaces Kinetik's top chrome, "Back to chat" pill; Hearth top-right becomes a ⚙ settings
 menu (Profile / About Arganta / Sign out); Chats becomes a ☰ burger with ChatGPT-style

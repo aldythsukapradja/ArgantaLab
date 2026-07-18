@@ -10,7 +10,16 @@ export interface StoryDraft {
   stat: string         // small line under the headline
   caption: string      // Instagram caption (editable)
   hashtags: string
+  imagePrompt: string  // S1: prompt for Sovereign/ComfyUI image generation
   provenance: 'measured'
+}
+
+// A warm, brand-safe illustration prompt derived from the real win — no faces,
+// no real names in the image itself (privacy), just the mood of the moment.
+function imagePromptFor(headline: string): string {
+  return `A warm, cozy editorial illustration celebrating a family milestone: "${headline}". ` +
+    `Soft golden-hour light, ember and cream tones, gentle hand-drawn storybook style, ` +
+    `no text, no faces, tasteful and calm. Square composition.`
 }
 
 // ── pick the most shareable TRUE thing this week — or nothing at all. ──
@@ -24,11 +33,13 @@ export async function composeWeeklyWin(ctx?: AskCtx): Promise<StoryDraft | null>
     const kids = await fetchKidReports(scope)
     const streaker = (kids ?? []).filter(k => k.hasData).sort((a, b) => b.streak - a.streak)[0]
     if (streaker && streaker.streak >= 2) {
+      const headline = `${streaker.streak}-day streak!`
       return {
-        headline: `${streaker.streak}-day streak!`,
+        headline,
         stat: `${streaker.name} kept learning every day`,
         caption: `${streaker.name} kept a ${streaker.streak}-day learning streak going this week. Proud of the effort. 🌱\n\nLittle by little, a family grows. ✨`,
         hashtags: '#family #littlewins #growingtogether #arganta',
+        imagePrompt: imagePromptFor('a learning streak, a proud small achievement'),
         provenance: 'measured',
       }
     }
@@ -39,6 +50,7 @@ export async function composeWeeklyWin(ctx?: AskCtx): Promise<StoryDraft | null>
         stat: `${wk.count} moments on the calendar`,
         caption: `A full week — ${wk.count} little moments, all shared. 💛\n\nLittle by little, a family grows. ✨`,
         hashtags: '#family #littlewins #growingtogether #arganta',
+        imagePrompt: imagePromptFor('a full, warm family week together'),
         provenance: 'measured',
       }
     }

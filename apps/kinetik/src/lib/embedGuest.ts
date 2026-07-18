@@ -17,7 +17,7 @@ const PARENT_ORIGINS = (
 // dev convenience: also trust localhost parents
 const isDevParent = (o: string) => /^https?:\/\/localhost(:\d+)?$/.test(o)
 
-export function initEmbedGuest(onScene?: (scene: string) => void) {
+export function initEmbedGuest(hooks?: { onScene?: (scene: string) => void; onCircle?: (circleId: string) => void }) {
   if (typeof window === 'undefined' || window.top === window.self) return
   const params = new URLSearchParams(window.location.search)
   const nonce = params.get('embed')
@@ -26,14 +26,23 @@ export function initEmbedGuest(onScene?: (scene: string) => void) {
   document.documentElement.classList.add('is-embedded')
 
   window.addEventListener('message', async (e: MessageEvent) => {
-    const m = e.data as { t?: string; nonce?: string; scene?: string; access_token?: string; refresh_token?: string } | undefined
+    const m = e.data as { t?: string; nonce?: string; scene?: string; circleId?: string; access_token?: string; refresh_token?: string } | undefined
     if (!m || typeof m !== 'object' || m.nonce !== nonce) return
     const trusted = PARENT_ORIGINS.includes(e.origin) || isDevParent(e.origin)
     if (m.t === 'arganta:init') {
-      if (m.scene && onScene) onScene(m.scene)
+      if (m.scene && hooks?.onScene) hooks.onScene(m.scene)
     } else if (m.t === 'arganta:session') {
       if (!trusted || !m.access_token || !m.refresh_token) return
+      // Parent owns refresh (autoRefreshToken is off here) — just apply whatever
+      // fresh tokens it sends, on first mount and after every parent-side refresh.
       try { await supabase.auth.setSession({ access_token: m.access_token, refresh_token: m.refresh_token }) } catch { /* ignore */ }
+    } else if (m.t === 'arganta:circle') {
+      // One-way circle sync: the chat's selector drives which family we show.
+      if (trusted && m.circleId && hooks?.onCircle) hooks.onCircle(m.circleId)
+    } else if (m.t === 'arganta:signout') {
+      // Parent signed out — tear our session down too (never leave a live iframe
+      // holding a valid session behind a signed-out host).
+      if (trusted) { try { await supabase.auth.signOut() } catch { /* ignore */ } }
     }
   })
 

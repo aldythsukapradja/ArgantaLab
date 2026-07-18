@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { StoryDraft } from './storyCompose'
 import { renderStoryCard } from './storyCompose'
 import { getChannels, uploadPostImage, publishPost, type BufferChannel } from './publish'
+import { generateImage } from './brainClient'
 import { cloudEnabled } from '../lib/supabase'
 
 type Phase = 'review' | 'confirm' | 'sending' | 'posted' | 'error'
@@ -24,6 +25,7 @@ function startCooldown() { try { localStorage.setItem(COOLDOWN_KEY, String(Date.
 export function StoryPublish({ draft }: { draft: StoryDraft }) {
   const [caption, setCaption] = useState(draft.caption + '\n\n' + draft.hashtags)
   const [preview, setPreview] = useState<string | null>(null)
+  const [imgSource, setImgSource] = useState<'generating' | 'sovereign' | 'cloudflare' | 'card'>('generating')
   const [channels, setChannels] = useState<BufferChannel[]>([])
   const [channelId, setChannelId] = useState<string>('')
   const [phase, setPhase] = useState<Phase>('review')
@@ -38,11 +40,24 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
     return () => clearInterval(id)
   }, [cooldown > 0])
 
-  // render the branded image once
+  // S1 · Sovereign-first image: try ComfyUI (→ Cloudflare) generation; if no
+  // backend answers, fall back to the deterministic branded canvas card. Never a
+  // silent fake — the source is labeled under the image.
   useEffect(() => {
     let url: string | null = null
-    renderStoryCard(draft).then(b => { blobRef.current = b; url = URL.createObjectURL(b); setPreview(url) })
-    return () => { if (url) URL.revokeObjectURL(url) }
+    let alive = true
+    const setImg = (b: Blob, source: typeof imgSource) => {
+      if (!alive) return
+      blobRef.current = b; url = URL.createObjectURL(b); setPreview(url); setImgSource(source)
+    }
+    ;(async () => {
+      const gen = await generateImage(draft.imagePrompt)
+      if (!alive) return
+      if (gen) { setImg(gen.blob, gen.provider === 'comfyui' ? 'sovereign' : 'cloudflare'); return }
+      const card = await renderStoryCard(draft)
+      setImg(card, 'card')
+    })()
+    return () => { alive = false; if (url) URL.revokeObjectURL(url) }
   }, [draft])
 
   // load the parent's Instagram channels — an error here must be SHOWN, not
@@ -88,7 +103,12 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
       <div className="ac-acard ac-publish">
         {preview
           ? <img className="ac-publish-img" src={preview} alt="Your story preview" />
-          : <div className="ac-publish-img ac-publish-img--load">rendering…</div>}
+          : <div className="ac-publish-img ac-publish-img--load">{imgSource === 'generating' ? 'creating your image…' : 'rendering…'}</div>}
+        <div className="ac-publish-src">
+          {imgSource === 'sovereign' && '✦ Made on your Sovereign engine (ComfyUI)'}
+          {imgSource === 'cloudflare' && '✦ Generated image (sponsored engine)'}
+          {imgSource === 'card' && 'Designed card — connect your Sovereign engine for AI images'}
+        </div>
 
         <label className="ac-publish-label">Caption</label>
         <textarea className="ac-publish-caption" value={caption} onChange={e => setCaption(e.target.value)} rows={5} disabled={phase === 'sending' || phase === 'posted'} />
@@ -111,8 +131,8 @@ export function StoryPublish({ draft }: { draft: StoryDraft }) {
           </>
         ) : (
           <>
-            <button className="ac-publish-send" onClick={() => setPhase('confirm')} disabled={phase === 'sending' || !channelId || !cloudEnabled || cooldown > 0}>
-              {phase === 'sending' ? 'Posting…' : cooldownLabel || 'Publish to Instagram now'}
+            <button className="ac-publish-send" onClick={() => setPhase('confirm')} disabled={phase === 'sending' || !channelId || !cloudEnabled || cooldown > 0 || !preview}>
+              {phase === 'sending' ? 'Posting…' : !preview ? 'Preparing image…' : cooldownLabel || 'Publish to Instagram now'}
             </button>
             {!cloudEnabled && <div className="ac-publish-note">Publishing isn't connected in this preview.</div>}
             {!channelId && cloudEnabled && <div className="ac-publish-err">{channelErr || 'No Instagram channel connected yet.'}</div>}

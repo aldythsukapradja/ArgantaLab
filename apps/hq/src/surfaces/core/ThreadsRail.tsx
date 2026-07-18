@@ -346,7 +346,7 @@ function ProjectsSection({ supported, projects, threads, onSelectThread, onChang
   )
 }
 
-function ArtifactsSection() {
+export function ArtifactsSection() {
   const [rows, setRows] = useState<StoredArtifact[] | null>(null)
   useEffect(() => { listRecentArtifacts(50).then(setRows) }, [])
   if (rows === null) return <div className="core-rail-empty">Loading…</div>
@@ -366,7 +366,7 @@ function ArtifactsSection() {
   )
 }
 
-function LibrarySection() {
+export function LibrarySection() {
   const [rows, setRows] = useState<any[] | null>(null)
   useEffect(() => {
     if (!cloudEnabled) { setRows([]); return }
