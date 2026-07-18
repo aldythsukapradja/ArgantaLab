@@ -41,7 +41,7 @@ export function Pixel() {
     <div className="pixel-wrap">
       <div className="spread pixel-head" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div className="h1"><span className="row" style={{ gap: 8 }}><Boxes size={20} /> Pixel Studio</span></div>
+          <div className="h1"><span className="row" style={{ gap: 8 }}><Boxes size={20} /> Pixel Forge</span></div>
           <div className="sub row" style={{ gap: 8 }}>
             Generate, curate, and ship pixel art — one gallery, license-tiered, agent-queryable
             <span className="pill" style={{ fontSize: 9.5, background: 'var(--bg3)', color: vault.source === 'cloud' ? 'var(--ok)' : 'var(--tx3)' }}>

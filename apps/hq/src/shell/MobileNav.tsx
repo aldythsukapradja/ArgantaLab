@@ -20,8 +20,8 @@ type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: Surfa
 export const MGROUPS: Grp[] = [
   { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'home', 'command', 'copilot', 'cinema'] },
   { id: 'insights', label: 'Insights', Icon: LineChart, surfaces: ['growth', 'data', 'vault', 'knowledge', 'architecture', 'rack'] },
-  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['biography', 'brand', 'influencer', 'broadcast', 'video', 'music', 'media', 'pixel'] },
-  { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'agents', 'reactor'] },
+  { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['biography', 'brand', 'influencer', 'broadcast', 'video', 'music', 'media', 'agents'] },
+  { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'pixel', 'reactor'] },
 ]
 
 // Launcher card copy: icon + one line of "what it does". Mobile-launcher-only
@@ -29,7 +29,7 @@ export const MGROUPS: Grp[] = [
 const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>> = {
   portfolio: { Icon: LayoutGrid, desc: 'Five products, one operating view' },
   home: { Icon: Sparkles, desc: 'The founder cockpit' },
-  command: { Icon: Radar, desc: 'C-suite offices & verdicts' },
+  command: { Icon: Radar, desc: 'Live ops cockpit — fleet, infra, launch' },
   copilot: { Icon: Mic2, desc: 'Voice & gesture control' },
   cinema: { Icon: Film, desc: 'Founder keynote cinematic' },
   growth: { Icon: TrendingUp, desc: 'North star & engagement trends' },
@@ -45,14 +45,14 @@ const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>
   video: { Icon: Film, desc: 'Videos with voice & export' },
   music: { Icon: Music2, desc: 'Tracks & soundscapes' },
   media: { Icon: Wand2, desc: 'AI image, voice & media runs' },
-  pixel: { Icon: Grid2x2, desc: 'Pixel-art sprite library' },
+  pixel: { Icon: Grid2x2, desc: 'Pixel-art sprite forge' },
   game: { Icon: Gamepad2, desc: '15-genre game engine' },
   world: { Icon: Map, desc: 'Openworld maps & towns' },
   battle: { Icon: Swords, desc: 'Monsters & encounters' },
   character: { Icon: UserRound, desc: 'Heroes, skills & NPCs' },
   app: { Icon: Boxes, desc: 'Circle app templates' },
   content: { Icon: GraduationCap, desc: 'Learning drills & lessons' },
-  agents: { Icon: Network, desc: 'Agent workflows' },
+  agents: { Icon: Network, desc: 'Agent map, roster & tokenomics' },
   reactor: { Icon: Atom, desc: 'Arc-reactor scene builder' },
 }
 

@@ -41,7 +41,7 @@ const GROUPS: Group[] = [
     { id: 'video', label: 'Video Studio', Icon: Film },
     { id: 'music', label: 'Music Studio', Icon: Music2 },
     { id: 'media', label: 'Media Studio', Icon: Wand2 },
-    { id: 'pixel', label: 'Pixel Studio', Icon: Grid2x2 },
+    { id: 'agents', label: 'Agent Studio', Icon: Network },
   ] },
   { name: 'Forge', items: [
     { id: 'game', label: 'Game Builder', Icon: Gamepad2 },
@@ -50,7 +50,7 @@ const GROUPS: Group[] = [
     { id: 'character', label: 'Character Forge', Icon: UserRound },
     { id: 'app', label: 'App Builder', Icon: Boxes },
     { id: 'content', label: 'Learn Builder', Icon: GraduationCap },
-    { id: 'agents', label: 'Agent Builder', Icon: Network },
+    { id: 'pixel', label: 'Pixel Forge', Icon: Grid2x2 },
     { id: 'reactor', label: 'Reactor Builder', Icon: Atom },
   ] },
 ]

@@ -35,7 +35,7 @@ const MAP: Record<string, Row> = {
     codex: 'pipeline & tooling missions',
   },
 }
-const LABELS: Record<string, string> = { music: 'Audio Studio', video: 'Video Studio', pixel: 'Pixel Studio', broadcast: 'Post Studio', media: 'Media Center' }
+const LABELS: Record<string, string> = { music: 'Audio Studio', video: 'Video Studio', pixel: 'Pixel Forge', broadcast: 'Post Studio', media: 'Media Center' }
 
 export function BrainsMap({ surface }: { surface: string }) {
   const [open, setOpen] = useState(false)

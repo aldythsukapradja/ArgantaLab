@@ -16,6 +16,13 @@ import type { SchemaInsights, SchemaModel, GrowthOverview, EngagementData } from
 import type { KinetikStats } from '../data/live'
 import { fmtDur } from '../components/d3/chartkit'
 import { compact } from '../lib/format'
+import { ArgantaMark } from './core/ArgantaMark'
+import { ClaudeMark } from './core/ClaudeMark'
+import { OpenAIMark } from './core/OpenAIMark'
+import {
+  AGENT_LAYERS, AGENT_COLORS, AGENT_NODES, AGENT_EDGES, BRAIN_META,
+  probeBridge, probeComfy, type Brain, type AgentStatus,
+} from '../data/agentFabric'
 
 // Architecture — the Arganta OS backbone as one React Flow graph, reconciled to
 // the reactor's seven-layer model (Command Core → Think → Know → Orchestrate →
@@ -26,7 +33,7 @@ import { compact } from '../lib/format'
 // Every node carries truthful provenance (live / partial / story / planned) —
 // never a placeholder painted as measured.
 
-type View = 'core' | 'system' | 'scale'
+type View = 'core' | 'system' | 'scale' | 'agents'
 type Prov = 'live' | 'partial' | 'simulated' | 'placeholder'
 type Logo = { path: string; hex: string; title: string }
 
@@ -43,7 +50,7 @@ const SC: Record<StackId, string> = {
   ml: '#8b5cf6', data: '#0891b2', platform: '#64748b', observ: '#10b981',
 }
 // Resolve a layer id (either lens) to its accent.
-const colorOf = (id: string): string => (LC as Record<string, string>)[id] ?? (SC as Record<string, string>)[id] ?? '#6366f1'
+const colorOf = (id: string): string => (LC as Record<string, string>)[id] ?? (SC as Record<string, string>)[id] ?? AGENT_COLORS[id] ?? '#6366f1'
 const L = { pg: siPostgresql, sb: siSupabase, vc: siVercel, react: siReact, ts: siTypescript, oai: siOpenai, claude: siClaude, cf: siCloudflare } as Record<string, Logo>
 
 // dark marks (e.g. Cloudflare/Vercel) get the theme text colour so they read on dark.
@@ -123,7 +130,7 @@ const STACK_OF: Record<string, StackId> = {
 
 // ── The nodes — real systems, honest provenance ──
 interface NodeDef {
-  id: string; layer: LayerId; label: string; sub: string; prov: Prov
+  id: string; layer: string; label: string; sub: string; prov: Prov
   next?: boolean; logos?: Logo[]
   tech?: string; repo?: string; swap?: string; headroom?: string; detail?: string
   seriesKey?: string
@@ -133,6 +140,12 @@ interface NodeDef {
   children?: string[]
   /** Quantitative headroom — only set where a real measured denominator exists. */
   util?: { used: number; cap: number; label: string }
+  /** Agents view — brand logomark rendered on the card. */
+  mark?: 'arganta' | 'claude' | 'openai'
+  /** Agents view — which local endpoint this node's live status comes from. */
+  probe?: 'bridge' | 'comfy' | 'always'
+  /** Agents view — per-brain control map (who drives this tab, and to do what). */
+  brains?: { brain: Brain; what: string }[]
 }
 const NODES: NodeDef[] = [
   // Command Core — govern
@@ -297,8 +310,12 @@ function buildLayout(nodes: NodeDef[], layers: LayerDef[], layerOf: (n: NodeDef)
   return { bands, place }
 }
 
+// The mark renderer (JSX — stays here where it's rendered; data lives in agentFabric).
+const BrainMark = ({ mark, size = 13 }: { mark: NonNullable<NodeDef['mark']>; size?: number }) =>
+  mark === 'arganta' ? <ArgantaMark size={size} /> : mark === 'claude' ? <ClaudeMark size={size} /> : <OpenAIMark size={size} />
+
 // ── Node & edge renderers ──
-interface CardData extends Record<string, unknown> { def: NodeDef; c: string; stats?: Stat[]; scale?: boolean; selected?: boolean }
+interface CardData extends Record<string, unknown> { def: NodeDef; c: string; stats?: Stat[]; scale?: boolean; selected?: boolean; status?: AgentStatus }
 interface Stat { l: string; raw: number; fmt: (n: number) => string }
 
 function Count({ raw, fmt, run }: { raw: number; fmt: (n: number) => string; run: boolean }) {
@@ -326,8 +343,12 @@ function CardNode({ data, selected }: NodeProps) {
     <div className={'af-card' + (def.next ? ' next' : '') + (selected ? ' sel' : '')} style={{ ['--af-c' as string]: d.c }}>
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <div className="af-head">
-        <span className="t">{def.label}</span>
-        <span className={'af-prov ' + p.cls} title={'provenance: ' + p.label}>{p.label}</span>
+        <span className="t" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {def.mark && <BrainMark mark={def.mark} />}{def.label}
+        </span>
+        {d.status
+          ? <span className={'af-live st-' + d.status} title={def.probe === 'always' ? 'always available — runs locally / deterministically' : 'live probe: ' + d.status}><i />{d.status === 'checking' ? '…' : d.status}</span>
+          : <span className={'af-prov ' + p.cls} title={'provenance: ' + p.label}>{p.label}</span>}
       </div>
       <div className="s">{def.sub}</div>
       {stats.length > 0 && (
@@ -435,6 +456,20 @@ export function Architecture() {
   const [gro, setGro] = useState<GrowthOverview | null>(null)
   const [eng, setEng] = useState<EngagementData | null>(null)
   const [model, setModel] = useState<SchemaModel | null>(null)
+
+  // Agents view — live endpoint probes (real handshakes, re-run on entry).
+  const [bridgeSt, setBridgeSt] = useState<AgentStatus>('checking')
+  const [comfySt, setComfySt] = useState<AgentStatus>('checking')
+  const [comfyInfo, setComfyInfo] = useState<string | null>(null)
+  useEffect(() => {
+    if (view !== 'agents') return
+    setBridgeSt('checking'); setComfySt('checking'); setComfyInfo(null)
+    probeBridge().then(setBridgeSt)
+    probeComfy().then(({ status, info }) => { setComfySt(status); setComfyInfo(info) })
+  }, [view])
+  const statusOf = (n: NodeDef): AgentStatus | undefined =>
+    n.probe === 'always' ? 'connected' : n.probe === 'bridge' ? bridgeSt : n.probe === 'comfy' ? comfySt : undefined
+
   useEffect(() => {
     live.schemaInsights().then(setIns)
     live.kinetikStats().then(setKin)
@@ -493,6 +528,22 @@ export function Architecture() {
       }))
       return { nodes, edges }
     }
+    if (view === 'agents') {
+      // Command hierarchy — its own layer set, live status dots, all NEXT shown.
+      const { bands, place } = buildLayout(AGENT_NODES as NodeDef[], AGENT_LAYERS, n => n.layer, true)
+      const cards: Node[] = (AGENT_NODES as NodeDef[]).map(n => ({
+        id: n.id, type: 'card', position: place[n.id], zIndex: 1, connectable: false,
+        data: { def: n, c: colorOf(n.layer), status: statusOf(n) } as CardData,
+      }))
+      const bandNodes: Node[] = bands.map(b => ({
+        id: 'b-' + b.id, type: 'band', position: { x: b.x, y: b.y }, data: { label: b.label, micro: b.micro, c: b.c } as BandData,
+        style: { width: b.w, height: b.h }, draggable: false, selectable: false, connectable: false, zIndex: 0,
+      }))
+      const edges: Edge[] = AGENT_EDGES.map((e, i) => ({
+        id: 'ae' + i, source: e.s, target: e.t, type: 'pulse', data: { flow: e.flow, next: e.next }, selectable: false, zIndex: 0,
+      }))
+      return { nodes: [...bandNodes, ...cards], edges }
+    }
     // C4 altitude fix: collapse the 6 client apps into one container card so a
     // technology (PostgreSQL) never sits as a visual peer of a product tier.
     const visibleNodes: NodeDef[] = [...NODES.filter(n => !CLIENT_TIER_IDS.includes(n.id)), CLIENT_CONTAINER]
@@ -520,10 +571,10 @@ export function Architecture() {
     }
     return { nodes: [...bandNodes, ...cards], edges }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, lens, showNext, stats])
+  }, [view, lens, showNext, stats, bridgeSt, comfySt])
 
   const liveCount = Object.keys(stats).length
-  const selDef = sel ? ALL_NODES.find(n => n.id === sel) ?? null : null
+  const selDef = sel ? [...ALL_NODES, ...(AGENT_NODES as NodeDef[])].find(n => n.id === sel) ?? null : null
   const selSeries = selDef?.seriesKey ? series[selDef.seriesKey] : undefined
 
   return (
@@ -532,22 +583,26 @@ export function Architecture() {
         <div>
           <div className="h1">Architecture</div>
           <div className="sub">
-            {lens === 'organs'
-              ? <>Arganta OS · seven layers, one backbone · <b>Command Core → Sense</b></>
-              : <>Classical stack · <b>UI/UX → Infrastructure</b> · agnostic — replicate on any tech stack</>}
-            {view !== 'core' && <span className="af-altitude"> · container-level view</span>}
-            <span className="af-edgekey"> · edges = data &amp; control flow</span>
-            {liveCount > 0 && <span style={{ color: 'var(--ok)' }}> · {liveCount} nodes reporting live</span>}
+            {view === 'agents'
+              ? <>Agentic command hierarchy · <b>Founder → Tri-Brain → Fabric → Surfaces</b> · status dots are real probes</>
+              : lens === 'organs'
+                ? <>Arganta OS · seven layers, one backbone · <b>Command Core → Sense</b></>
+                : <>Classical stack · <b>UI/UX → Infrastructure</b> · agnostic — replicate on any tech stack</>}
+            {view !== 'core' && view !== 'agents' && <span className="af-altitude"> · container-level view</span>}
+            <span className="af-edgekey"> · edges = {view === 'agents' ? 'control' : 'data & control'} flow</span>
+            {view !== 'agents' && liveCount > 0 && <span style={{ color: 'var(--ok)' }}> · {liveCount} nodes reporting live</span>}
           </div>
         </div>
         <div className="af-controls">
-          <div className="af-lens" title="Same graph, two lenses — our organs vs the classical stack a partner would replicate">
-            {(['organs', 'stack'] as Lens[]).map(l => (
-              <button key={l} className={lens === l ? 'on' : ''} onClick={() => { setLens(l); setSel(null) }}>{l}</button>
-            ))}
-          </div>
+          {view !== 'agents' && (
+            <div className="af-lens" title="Same graph, two lenses — our organs vs the classical stack a partner would replicate">
+              {(['organs', 'stack'] as Lens[]).map(l => (
+                <button key={l} className={lens === l ? 'on' : ''} onClick={() => { setLens(l); setSel(null) }}>{l}</button>
+              ))}
+            </div>
+          )}
           <div className="af-seg">
-            {(['core', 'system', 'scale'] as View[]).map(v => (
+            {(['core', 'system', 'scale', 'agents'] as View[]).map(v => (
               <button key={v} className={view === v ? 'on' : ''} onClick={() => { setView(v); setSel(null) }}>{v}</button>
             ))}
           </div>
@@ -567,7 +622,7 @@ export function Architecture() {
         </ReactFlow>
 
         <div className="af-legend">
-          {activeLayers.filter(l => l.id !== 'spine').map(l => (
+          {(view === 'agents' ? AGENT_LAYERS : activeLayers.filter(l => l.id !== 'spine')).map(l => (
             <span key={l.id} className="i"><i style={{ background: colorOf(l.id) }} />{l.label}</span>
           ))}
         </div>
@@ -589,8 +644,10 @@ export function Architecture() {
 
         {/* Inspector drawer */}
         {selDef && (() => {
-          const selLayer = activeLayers.find(l => l.id === layerOf(selDef))
-          const selColor = colorOf(layerOf(selDef))
+          const isAgent = selDef.layer.startsWith('ag-')
+          const selLayer = (isAgent ? AGENT_LAYERS : activeLayers).find(l => l.id === (isAgent ? selDef.layer : layerOf(selDef)))
+          const selColor = colorOf(isAgent ? selDef.layer : layerOf(selDef))
+          const selStatus = isAgent ? statusOf(selDef) : undefined
           return (
           <div className="af-drawer" style={{ ['--af-c' as string]: selColor }}>
             {CLIENT_TIER_IDS.includes(selDef.id) && (
@@ -603,8 +660,26 @@ export function Architecture() {
               </div>
               <button className="dx" onClick={() => setSel(null)} aria-label="close"><X size={15} /></button>
             </div>
-            <span className={'af-prov ' + PROV[selDef.prov].cls}>{PROV[selDef.prov].label}</span>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span className={'af-prov ' + PROV[selDef.prov].cls}>{PROV[selDef.prov].label}</span>
+              {selStatus && <span className={'af-live st-' + selStatus}><i />{selStatus === 'checking' ? 'checking…' : selStatus}</span>}
+            </div>
             {selDef.detail && <p className="dp">{selDef.detail}</p>}
+            {selDef.id === 'ag-comfy' && comfyInfo && <div className="af-comfy-info">{comfyInfo} <i className="uv-measured">measured</i></div>}
+            {selDef.brains && (
+              <div className="af-brainmap">
+                <div className="bmh">Tri-brain control map</div>
+                {selDef.brains.map(b => {
+                  const m = BRAIN_META[b.brain]
+                  return (
+                    <div key={b.brain} className="bmr" style={{ ['--bm-c' as string]: m.c }}>
+                      <span className="bmn"><BrainMark mark={m.mark} size={12} />{m.label}</span>
+                      <span className="bmw">{b.what}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             {selDef.children && (
               <div className="af-members">
                 <div className="mh">Products in this tier</div>
@@ -664,3 +739,4 @@ function Sparkline({ data, c }: { data: number[]; c: string }) {
     </svg>
   )
 }
+

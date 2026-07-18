@@ -243,16 +243,16 @@ export function CharacterForge() {
   const [tab, setTab] = useState<TabId>('lab')
 
   return (
-    <div className="forge">
-      <div className="forge-top">
-        <div className="forge-mark">◆</div>
-        <div className="forge-title"><b>Character Forge</b><span>Circle HQ · Game Command</span></div>
-        <div className="forge-inv"><b>2,895</b> parts · <b>17</b> cats · <b>68</b> motions · <b>53</b> mounts · <b>648</b> fx</div>
+    <div className="charforge">
+      <div className="cf-top">
+        <div className="cf-mark">◆</div>
+        <div className="cf-title"><b>Character Forge</b><span>Circle HQ · Game Command</span></div>
+        <div className="cf-inv"><b>2,895</b> parts · <b>17</b> cats · <b>68</b> motions · <b>53</b> mounts · <b>648</b> fx</div>
       </div>
 
-      <div className="forge-tabs">
+      <div className="cf-tabs">
         {TABS.map(t => (
-          <button key={t.id} className={'forge-tab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>
+          <button key={t.id} className={'cf-tab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>
             <span className="tn">{t.icon}</span>
             <span><span className="lbl">{t.label}</span><span className="sub">{t.sub}</span></span>
             <span className="tnum">{t.tnum}</span>
@@ -260,7 +260,7 @@ export function CharacterForge() {
         ))}
       </div>
 
-      <div className="forge-body" style={{ overflow: tab === 'lab' || tab === 'npc' || tab === 'skills' ? 'hidden' : 'auto' }}>
+      <div className="cf-body" style={{ overflow: tab === 'lab' || tab === 'npc' || tab === 'skills' ? 'hidden' : 'auto' }}>
         {tab === 'lab' && <CharacterLab />}
         {tab === 'select' && <CharacterSelect />}
         {tab === 'npc' && <NpcStudio />}

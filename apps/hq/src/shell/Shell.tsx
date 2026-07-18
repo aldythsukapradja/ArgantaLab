@@ -12,7 +12,7 @@ const Data = lazy(() => import('../surfaces/Data').then(module => ({ default: mo
 const Growth = lazy(() => import('../surfaces/Growth').then(module => ({ default: module.Growth })))
 const Portfolio = lazy(() => import('../surfaces/Portfolio').then(module => ({ default: module.Portfolio })))
 const Content = lazy(() => import('../surfaces/Content').then(module => ({ default: module.Content })))
-const Agents = lazy(() => import('../surfaces/Agents').then(module => ({ default: module.Agents })))
+const Agents = lazy(() => import('../surfaces/agent/AgentStudio').then(module => ({ default: module.AgentStudio })))
 const Broadcast = lazy(() => import('../surfaces/Broadcast').then(module => ({ default: module.Broadcast })))
 // GB-3 · the Forge replaces the v1 wizard as the builder surface; the wizard
 // itself is still reachable from the Forge's own Legacy tab.
@@ -84,7 +84,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
   // Edge-to-edge workspaces. GB-3 moved 'game'/'app' here: the Forge is a fixed,
   // non-scrollable page that owns its own viewport, so it must not sit inside
   // .content's scroll container or the panes scroll the page instead of themselves.
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app' || surface === 'brand' || surface === 'influencer' || surface === 'biography'
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app' || surface === 'brand' || surface === 'influencer' || surface === 'biography' || surface === 'agents'
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button

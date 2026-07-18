@@ -135,7 +135,7 @@ export const SEED_ROWS: CommandRow[] = [
   { id: 'open-data', category: 'navigate', label: 'Open Data', phrases: ['open data'], reply: 'Opening Data.', actionKind: 'go', actionArg: 'data' },
   { id: 'open-content', category: 'navigate', label: 'Open Learn Builder', phrases: ['open learn builder', 'open learn'], reply: 'Opening Learn Builder.', actionKind: 'go', actionArg: 'content' },
   { id: 'open-app', category: 'navigate', label: 'Open App Builder', phrases: ['open app builder'], reply: 'Opening App Builder.', actionKind: 'go', actionArg: 'app' },
-  { id: 'open-agents', category: 'navigate', label: 'Open Agent Builder', phrases: ['open agent builder', 'open agents'], reply: 'Opening Agent Builder.', actionKind: 'go', actionArg: 'agents' },
+  { id: 'open-agents', category: 'navigate', label: 'Open Agent Studio', phrases: ['open agent studio', 'open agent builder', 'open agents'], reply: 'Opening Agent Studio.', actionKind: 'go', actionArg: 'agents' },
   { id: 'open-broadcast', category: 'navigate', label: 'Open Content Builder', phrases: ['open content builder'], reply: 'Opening Content Builder.', actionKind: 'go', actionArg: 'broadcast' },
   { id: 'open-pixel', category: 'navigate', label: 'Open Pixel Vault', phrases: ['open pixel vault', 'open pixel'], reply: 'Opening Pixel Vault.', actionKind: 'go', actionArg: 'pixel' },
   { id: 'open-architecture', category: 'navigate', label: 'Open Architecture', phrases: ['open architecture'], reply: 'Opening Architecture.', actionKind: 'go', actionArg: 'architecture' },

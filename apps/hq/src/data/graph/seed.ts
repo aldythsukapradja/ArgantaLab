@@ -117,7 +117,7 @@ const HQ: GraphNode[] = [
   nd({ id: 'hq.portfolio', label: 'Portfolio', kind: 'tab', parent: 'app.hq', owner: 'bridge', status: 'live', metricLabel: 'Portfolio rollup' }),
   nd({ id: 'hq.growth', label: 'Growth', kind: 'tab', parent: 'app.hq', owner: 'operations', status: 'live', metricLabel: 'North-star WAL' }),
   nd({ id: 'hq.data', label: 'Data', kind: 'tab', parent: 'app.hq', owner: 'technology', status: 'live', metricLabel: 'Tables mapped' }),
-  nd({ id: 'hq.agents', label: 'Agent Builder', kind: 'tab', parent: 'app.hq', owner: 'roster', status: 'partial', metricLabel: 'Agents' }),
+  nd({ id: 'hq.agents', label: 'Agent Studio', kind: 'tab', parent: 'app.hq', owner: 'roster', status: 'partial', metricLabel: 'Agents' }),
   nd({ id: 'hq.builders', label: 'Builders', kind: 'tab', parent: 'app.hq', owner: 'technology', status: 'partial', metricLabel: 'Artifacts built' }),
   // Technology-owned infra
   nd({ id: 'arch.supabase', label: 'Supabase', kind: 'architecture', parent: 'app.hq', owner: 'technology', status: 'live', metricLabel: 'RPC health' }),
