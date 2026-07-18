@@ -91,6 +91,44 @@ export function useOps(pollMs = 10000): OpsState & { refetch: () => void; launch
   return { ...state, refetch, launch }
 }
 
+// --- Telemetry: LLM usage + ComfyUI workload from the bridge /telemetry ------
+export interface Telemetry {
+  claude: {
+    provenance: 'est'; today: { tokens: number; costUsd: number }; weekCostUsd: number
+    last5hTokens: number; fivehFillPct: number
+    byModel: { label: string; tokens: number; cost: number }[]
+    days: { date: string; tokens: number }[]; files: number
+  }
+  codex: { provenance: 'est'; sessions: number; lastActiveAt: string | null }
+  comfy: {
+    provenance: 'live' | 'unknown'; up: boolean; jobsToday?: number; jobsWeek?: number
+    avgJobSec?: number | null; queueRunning?: number; queuePending?: number
+    topModels?: { name: string; runs: number }[]; vram?: { usedGb: number; totalGb: number } | null; comfyVersion?: string | null
+  }
+  at: string
+}
+
+export function useTelemetry(pollMs = 20000): { telemetry: Telemetry | null; loading: boolean } {
+  const [telemetry, setTelemetry] = useState<Telemetry | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let alive = true
+    const read = async () => {
+      const { base, token } = bridgeConfig()
+      if (!token) { setLoading(false); return }
+      try {
+        const r = await fetch(`${base}/telemetry?token=${encodeURIComponent(token)}`)
+        if (!alive || !r.ok) { setLoading(false); return }
+        setTelemetry(await r.json()); setLoading(false)
+      } catch { if (alive) setLoading(false) }
+    }
+    void read()
+    const t = setInterval(read, pollMs)
+    return () => { alive = false; clearInterval(t) }
+  }, [pollMs])
+  return { telemetry, loading }
+}
+
 // --- Heartbeat: "last seen" from Supabase when the bridge is unreachable ---
 export interface Heartbeat { node: string; at: string; bridge_version?: string }
 

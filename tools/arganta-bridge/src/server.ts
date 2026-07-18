@@ -19,6 +19,7 @@ import { createClaudeEngine } from './engines/claude.ts';
 import { createCodexEngine } from './engines/codex.ts';
 import type { MissionEngine, OutEvent } from './engines/types.ts';
 import { health, launch, opsCors } from './ops.ts';
+import { telemetry } from './telemetry.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../../..');
@@ -89,6 +90,11 @@ function listenOn(host: string) {
 
     if (req.method === 'GET' && url.pathname === '/health') {
       health().then((h) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(h)); })
+        .catch((e) => { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: String(e?.message || e) })); });
+      return;
+    }
+    if (req.method === 'GET' && url.pathname === '/telemetry') {
+      telemetry().then((t) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(t)); })
         .catch((e) => { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: String(e?.message || e) })); });
       return;
     }

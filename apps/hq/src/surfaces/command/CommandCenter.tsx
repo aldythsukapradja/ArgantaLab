@@ -9,7 +9,8 @@ import { useHQ } from '../../shell/store'
 import { ClaudeMark } from '../core/ClaudeMark'
 import { OpenAIMark } from '../core/OpenAIMark'
 import { ArgantaMark } from '../core/ArgantaMark'
-import { useOps, useSupabasePing, useHeartbeat, useCloudStatus, bridgeConfig, type BridgeReach } from './ops/useOps'
+import { useOps, useSupabasePing, useHeartbeat, useCloudStatus, useTelemetry, bridgeConfig, type BridgeReach } from './ops/useOps'
+import { IntelligenceBand, fmtUsd } from './Intelligence'
 import { Command } from './Command'
 import './command-center.css'
 
@@ -38,6 +39,7 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
   const { health, reach, lastChecked, loading, refetch, launch } = useOps()
   const supa = useSupabasePing()
   const cloud = useCloudStatus()
+  const { telemetry } = useTelemetry()
   const hb = useHeartbeat(reach !== 'ok')
   const { token } = bridgeConfig()
   const cloudTile = (id: string) => cloud?.find((t) => t.id === id)
@@ -76,13 +78,16 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
           <h2 className="cc-zone-h">Fleet <span>the brains</span></h2>
           <div className="cc-brains">
             <BrainCard mark={<ArgantaMark size={22} />} name="Sovereign" accent="#6366f1"
-              ready sub="Local models · always on" onOpen={() => go('core')} />
+              ready sub="Local models · always on" onOpen={() => go('core')}
+              foot={telemetry ? <span className="cc-brain-usage mono">{telemetry.comfy.jobsToday ?? 0} media jobs today</span> : undefined} />
             <BrainCard mark={<ClaudeMark size={22} />} name="Claude Code" accent="#D97757"
               ready={online && !!engine('claude')?.ready} sub={online ? 'Runs on your machine' : 'Bridge offline'}
-              onOpen={() => go('core')} />
+              onOpen={() => go('core')}
+              foot={telemetry ? <QuotaStrip label={`${fmtUsd(telemetry.claude.today.costUsd)} today · est`} pct={telemetry.claude.fivehFillPct} /> : undefined} />
             <BrainCard mark={<OpenAIMark size={22} />} name="Codex" accent="#10A37F"
               ready={online && !!engine('codex')?.ready} sub={engine('codex')?.detail || (online ? 'Sandbox CLI' : 'Bridge offline')}
-              onOpen={() => go('core')} />
+              onOpen={() => go('core')}
+              foot={telemetry ? <span className="cc-brain-usage mono">{telemetry.codex.sessions} sessions</span> : undefined} />
           </div>
         </section>
 
@@ -141,20 +146,35 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
           <button className="cc-pulse-cta" onClick={() => go('core')}>Run a mission →</button>
         </section>
       </div>
+
+      {/* INTELLIGENCE band — LLM usage, ComfyUI workload, model routing map. */}
+      <IntelligenceBand telemetry={telemetry} />
     </div>
   )
 }
 
-function BrainCard({ mark, name, accent, ready, sub, onOpen }: {
-  mark: React.ReactNode; name: string; accent: string; ready: boolean; sub: string; onOpen: () => void
+function BrainCard({ mark, name, accent, ready, sub, onOpen, foot }: {
+  mark: React.ReactNode; name: string; accent: string; ready: boolean; sub: string; onOpen: () => void; foot?: React.ReactNode
 }) {
   return (
     <button className="cc-brain" onClick={onOpen} style={{ ['--brain-accent' as string]: accent }}>
       <div className="cc-brain-top">{mark}<span className={`cc-pill ${ready ? 'ok' : 'off'}`}>{ready ? 'ready' : 'offline'}</span></div>
       <div className="cc-brain-name">{name}</div>
       <div className="cc-brain-sub">{sub}</div>
+      {foot && <div className="cc-brain-foot">{foot}</div>}
       <div className="cc-brain-open">Open →</div>
     </button>
+  )
+}
+
+/** Compact usage strip on a brain card: a label + a self-calibrating fill bar
+ * (no official quota API exists, so the bar is relative to the busiest day). */
+function QuotaStrip({ label, pct }: { label: string; pct: number }) {
+  return (
+    <div className="cc-quota">
+      <span className="cc-quota-label mono">{label}</span>
+      <div className="cc-bar cc-bar-sm"><div className="cc-bar-fill" style={{ width: `${Math.min(100, pct)}%` }} /></div>
+    </div>
   )
 }
 
