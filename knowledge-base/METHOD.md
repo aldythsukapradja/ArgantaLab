@@ -101,5 +101,35 @@ Re-run the counts in [[00-MASTER-KB#14 · Regenerate This Note|§14]], refresh �
 > [!quote]
 > A KB note is done when a stranger to the context could act on it — and when every claim in it would survive being checked against the code. Tidy is not done. **Verified is done.**
 
+## 2026-07-19 amendments — after the process battle test
+
+The 07-18 audit cycle exposed eight failures in this method (P1–P8, recorded in the amendment rationale below). These rules are additions; everything above still holds.
+
+### A1 · Hierarchy of truth (fixes P4)
+Truth now lives in layers. When sources conflict, this order rules:
+1. **The code** (always — the one principle).
+2. **`FOCUS.md` at repo root** — the current wedge, freeze list, and pointers. If it doesn't exist, creating it is the first action of the next working session, before any other work.
+3. **The strategy of record** — currently `docs/ARGANTA-CONSOLIDATED-FOUNDER-INVESTOR-REVIEW-2026-07-18.md` (+ its battle-test patches).
+4. **This KB** — the living distillation of 1–3.
+5. Audit folders, handoffs, Claude memory — reference layers; never cite them against 1–4.
+
+### A2 · Decision register (fixes P1)
+Fact-verification can't catch *decision* contradictions (three wedge decisions coexisted, unflagged). Rule: `founder/founder-decisions.md` is the **register** — one entry per open question, exactly one `status: current` answer each; a new decision on the same question must mark the old one `superseded` **in the same commit**. A question with two current answers is a KB bug, same class as an unmarked contradiction.
+
+### A3 · Evidence before inventory (fixes P2)
+The scoreboard a process displays is the outcome it optimizes. The Master KB's snapshot block leads with **external active families · retention · payers** (even while they are 0 — *especially* while they are 0), before LOC/tables/RPCs. Build metrics are capability; family metrics are the company.
+
+### A4 · The heartbeat (fixes P3, P8)
+"Silence = unchanged" is kept for threads — but the KB itself must never be silent. Minimum viable ritual, 15 min/week, one file: append one dated line to [[00-MASTER-KB]] §12 answering **"How many external families used it this week, and what did I do to change that number?"** A missing week is itself a signal and gets back-filled honestly ("skipped — nothing user-facing happened"). Full delta folders remain the *rich* ritual; the heartbeat is the floor.
+
+### A5 · One provenance vocabulary (fixes P7)
+`#known` = the review's **fact** · `#assumed` splits into **inference** (falsifiable reasoning) and **hypothesis** (needs a named test) · verdicts are **recommendation**. Use the four words in prose; keep `#known`/`#assumed` as tags mapping onto them. Never render the lower class as the higher.
+
+### A6 · Two-surface sync is part of "done" (fixes P6)
+Any edit under `founder/` isn't committed until `npm run build:vault-seed` (in `apps/hq`) has regenerated `kb.generated.ts` and both files are in the same commit. Add it to the Audit step of the loop.
+
+### A7 · Handoff discipline (fixes P5)
+Handoffs to agents follow delta rules: each has `status: open|in-progress|done|superseded` front-matter, an explicit **ordered checklist** so an interrupted session can resume without re-deriving context, and a named sequence when several are open. Standing cap: **no new handoff while two are open** — finish or supersede first. Current sequence: ① `OPUS-KB-REFRESH-HANDOFF` ② `docs/audit/2026-07-18/00-Opus-Handoff-Master`.
+
 ## Links
 [[README|How this KB works]] · [[00-MASTER-KB]] · [[00-arc|The Journey]] · [[00-doc-atlas|The Atlas]] · [[00-stack|The Layer Tracker]]

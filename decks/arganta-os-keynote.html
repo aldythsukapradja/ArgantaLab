@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>Arganta OS — Keynote</title>
+<style>
+
+  /* ============================================================
+     TOKENS
+     Ink ground with a warm bias (not pure black), warm paper text
+     (not pure white). One accent per chapter, drawn from a single
+     arc — gold to coral to violet to teal — so switching tabs reads
+     as moving through a spectrum, not jumping between brands.
+     ============================================================ */
+  @property --accent {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #e8b34c;
+  }
+
+  :root {
+    --ink: #0b0a10;
+    --ink-2: #131019;
+    --ink-3: #1c1826;
+    --hairline: rgba(246, 242, 234, 0.11);
+    --hairline-strong: rgba(246, 242, 234, 0.2);
+    --paper: #f6f2ea;
+    --paper-dim: rgba(246, 242, 234, 0.62);
+    --paper-faint: rgba(246, 242, 234, 0.36);
+
+    --gold: #e8b34c;
+    --coral: #e8654f;
+    --violet: #8b7cf6;
+    --teal: #4fd1ae;
+
+    --accent: #e8b34c;
+
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.15, 0.28, 1);
+
+    --nav-h: 84px;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+    touch-action: none;
+  }
+
+  ::selection { background: var(--accent); color: var(--ink); }
+
+  button { font-family: inherit; }
+
+  h1, h2, p { margin: 0; }
+
+  /* ============================================================
+     APP SHELL
+     ============================================================ */
+  .app {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--ink);
+  }
+
+  .viewport {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ---------- tab panels (cross-fade + slight scale) ---------- */
+  .tab-panel {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(1.02);
+    transition: opacity .5s var(--ease-out-expo), transform .6s var(--ease-out-expo);
+  }
+  .tab-panel.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+  }
+
+  /* ambient aurora wash, unique per chapter, always drifting */
+  .aurora {
+    position: absolute;
+    inset: -10%;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 42% at 82% 12%, color-mix(in srgb, var(--tab-accent) 34%, transparent), transparent 70%),
+      radial-gradient(46% 50% at 8% 88%, color-mix(in srgb, var(--tab-accent) 20%, transparent), transparent 72%),
+      radial-gradient(60% 60% at 50% 50%, var(--ink-2), var(--ink) 68%);
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(-2%, 2%, 0) scale(1.06); }
+  }
+
+  /* ---------- slide track (horizontal paging within a chapter) ---------- */
+  .track {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform .68s var(--ease-out-expo);
+    will-change: transform;
+  }
+
+  .slide {
+    flex: 0 0 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: clamp(28px, 6vw, 88px);
+    padding-bottom: clamp(24px, 4vh, 56px);
+  }
+
+  .slide-inner {
+    max-width: 920px;
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity .6s var(--ease-out-expo) .08s, transform .6s var(--ease-out-expo) .08s;
+  }
+  .slide.is-current .slide-inner { opacity: 1; transform: translateY(0); }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: .55em;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: clamp(14px, 2.4vw, 22px);
+  }
+  .kicker::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent);
+  }
+
+  h1.headline {
+    font-size: clamp(2.1rem, 6.6vw, 5rem);
+    font-weight: 680;
+    line-height: .98;
+    letter-spacing: -.035em;
+    text-wrap: balance;
+    color: var(--paper);
+  }
+  h1.headline em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  p.dek {
+    margin-top: clamp(14px, 2.2vw, 22px);
+    max-width: 46ch;
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    line-height: 1.5;
+    font-weight: 400;
+    color: var(--paper-dim);
+  }
+
+  /* ---------- reusable content bits ---------- */
+  .row-list {
+    margin-top: clamp(22px, 3.4vw, 34px);
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--hairline);
+  }
+  .row-item {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: clamp(12px, 3vw, 28px);
+    padding: clamp(12px, 2vw, 18px) 0;
+    border-bottom: 1px solid var(--hairline);
+    align-items: baseline;
+  }
+  .row-item .row-tag {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .06em;
+    color: var(--accent);
+  }
+  .row-item .row-name {
+    font-size: clamp(1rem, 1.7vw, 1.25rem);
+    font-weight: 620;
+    letter-spacing: -.01em;
+    color: var(--paper);
+  }
+  .row-item .row-desc {
+    margin-top: 3px;
+    font-size: clamp(.86rem, 1.2vw, .98rem);
+    color: var(--paper-faint);
+    font-weight: 400;
+    max-width: 52ch;
+  }
+
+  .chip-row {
+    margin-top: clamp(20px, 3vw, 30px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: .04em;
+    padding: 8px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--hairline-strong);
+    color: var(--paper-dim);
+    background: rgba(246, 242, 234, 0.03);
+  }
+  .chip strong { color: var(--accent); font-weight: 600; }
+
+  .stat-row {
+    margin-top: clamp(22px, 3.4vw, 34px);
+    display: flex;
+    gap: clamp(24px, 5vw, 56px);
+    flex-wrap: wrap;
+  }
+  .stat { display: flex; flex-direction: column; }
+  .stat .num {
+    font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+    font-weight: 680;
+    letter-spacing: -.03em;
+    color: var(--paper);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .lbl {
+    margin-top: 2px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--paper-faint);
+  }
+
+  .price-line {
+    display: flex;
+    align-items: baseline;
+    gap: clamp(14px, 2.6vw, 24px);
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .price-line .price {
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -.03em;
+    color: var(--accent);
+  }
+  .price-line .price small {
+    font-size: .38em;
+    font-weight: 500;
+    color: var(--paper-faint);
+    letter-spacing: 0;
+  }
+
+  .cover-mark {
+    position: absolute;
+    top: clamp(22px, 4vh, 40px);
+    left: clamp(28px, 6vw, 88px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 2;
+  }
+  .cover-mark .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .cover-mark span {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--paper-faint);
+  }
+
+  /* ============================================================
+     SLIDE CHROME — counter + dots + chevrons
+     ============================================================ */
+  .slide-chrome {
+    position: absolute;
+    z-index: 3;
+    right: clamp(20px, 5vw, 64px);
+    top: clamp(22px, 4vh, 40px);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .slide-counter {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .06em;
+    color: var(--paper-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .slide-counter strong { color: var(--paper); font-weight: 600; }
+
+  .dots {
+    display: flex;
+    gap: 6px;
+  }
+  .dot-btn {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--hairline-strong);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background .35s var(--ease-out-expo), width .35s var(--ease-out-expo);
+  }
+  .dot-btn.is-on {
+    background: var(--accent);
+    width: 26px;
+  }
+
+  .chev {
+    position: absolute;
+    z-index: 3;
+    bottom: clamp(20px, 4vh, 40px);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--hairline-strong);
+    background: rgba(246, 242, 234, 0.04);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--paper-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity .3s, border-color .3s, transform .2s var(--ease-out-expo);
+  }
+  .chev:hover { border-color: var(--accent); color: var(--paper); }
+  .chev:active { transform: scale(.92); }
+  .chev[disabled] { opacity: 0; pointer-events: none; }
+  .chev.prev { right: clamp(72px, 8vw, 118px); }
+  .chev.next { right: clamp(20px, 5vw, 64px); }
+
+  /* ============================================================
+     BOTTOM NAV — frosted glass, sliding pill, safe-area aware
+     ============================================================ */
+  .tabbar {
+    position: relative;
+    flex: 0 0 auto;
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(19, 16, 25, 0.66);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .tabbar-inner {
+    position: relative;
+    display: flex;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .pill {
+    position: absolute;
+    top: 8px;
+    height: calc(var(--nav-h) - 16px);
+    width: var(--pill-w, 25%);
+    left: var(--pill-x, 0px);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+    transition: left .5s var(--ease-spring), width .5s var(--ease-spring), background .4s, border-color .4s;
+    pointer-events: none;
+  }
+
+  .tab-btn {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    color: var(--paper-faint);
+    cursor: pointer;
+    padding: 6px 4px;
+    transition: color .35s var(--ease-out-expo);
+  }
+  .tab-btn svg { display: block; transition: transform .35s var(--ease-spring); }
+  .tab-btn.is-active { color: var(--paper); }
+  .tab-btn.is-active svg { transform: translateY(-1px) scale(1.06); }
+  .tab-btn.is-active svg * { stroke: var(--accent); }
+  .tab-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 12px;
+  }
+
+  .tab-label {
+    font-size: 10.5px;
+    font-weight: 590;
+    letter-spacing: .015em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aurora { animation: none; }
+    .track, .tab-panel, .slide-inner, .pill, .tab-btn svg, .dot-btn { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+
+  @media (min-width: 900px) {
+    .row-item { grid-template-columns: 110px 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <div class="viewport" id="viewport">
+
+    <!-- ===================== TAB 0 — OVERVIEW ===================== -->
+    <section class="tab-panel is-active" data-tab-panel="0" style="--tab-accent: var(--gold)">
+      <div class="aurora"></div>
+      <div class="cover-mark"><span class="dot"></span><span>Arganta OS</span></div>
+      <div class="slide-chrome"></div>
+
+      <div class="track" data-track="0">
+
+        <article class="slide is-current">
+          <div class="slide-inner">
+            <p class="kicker">Keynote — 2026</p>
+            <h1 class="headline">One family.<br>Five worlds.<br><em>One mind.</em></h1>
+            <p class="dek">Arganta OS is the layer under every app the family touches — five products built on one spine, one account, one intelligence.</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">The family of apps</p>
+            <h1 class="headline">Five apps.<br>One spine.</h1>
+            <div class="row-list">
+              <div class="row-item">
+                <span class="row-tag">Kinetik</span>
+                <div><div class="row-name">KinetikCircle</div><div class="row-desc">The family's daily circle — quests, calendar, rank ladder, real prizes.</div></div>
+              </div>
+              <div class="row-item">
+                <span class="row-tag">Lashira</span>
+                <div><div class="row-name">LashiraBloom</div><div class="row-desc">A Stardew‑inspired farming RPG where adults play and kids learn.</div></div>
+              </div>
+              <div class="row-item">
+                <span class="row-tag">HQ</span>
+                <div><div class="row-name">Circle HQ</div><div class="row-desc">The founder's command center — growth, portfolio, the living vault.</div></div>
+              </div>
+              <div class="row-item">
+                <span class="row-tag">Studio</span>
+                <div><div class="row-name">Content Studio</div><div class="row-desc">Video, music and post production, built for the family brand.</div></div>
+              </div>
+              <div class="row-item">
+                <span class="row-tag">Core</span>
+                <div><div class="row-name">Arganta Core</div><div class="row-desc">The digital twin every app talks to underneath.</div></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">How it fits together</p>
+            <h1 class="headline">Every world reads<br>the <em>same</em> rings.</h1>
+            <p class="dek">Daily quests, the North Star, and the kid's own profile card all pull from one cloud ring of progress — never a device‑local counter. Play on any app, on any device, and it's the same day.</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">The thesis</p>
+            <h1 class="headline">Software a family<br><em>actually</em> lives in.</h1>
+            <div class="stat-row">
+              <div class="stat"><span class="num">5</span><span class="lbl">Apps, one account</span></div>
+              <div class="stat"><span class="num">8</span><span class="lbl">Regions to explore</span></div>
+              <div class="stat"><span class="num">1</span><span class="lbl">Digital twin</span></div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===================== TAB 1 — DESIGN ===================== -->
+    <section class="tab-panel" data-tab-panel="1" style="--tab-accent: var(--coral)">
+      <div class="aurora"></div>
+      <div class="cover-mark"><span class="dot"></span><span>Design</span></div>
+      <div class="slide-chrome"></div>
+
+      <div class="track" data-track="1">
+
+        <article class="slide is-current">
+          <div class="slide-inner">
+            <p class="kicker">Design language</p>
+            <h1 class="headline">Glass, light,<br>and motion<br><em>with intent.</em></h1>
+            <p class="dek">Every surface earns its blur. Every animation carries meaning — a ring closing, a rank rising, a memory surfacing. Nothing moves just to move.</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">The vault, rendered</p>
+            <h1 class="headline">A brain you<br>can <em>walk</em> through.</h1>
+            <p class="dek">The founder's knowledge vault renders as a living force graph — Obsidian‑grade, zoom‑aware labels, radial clusters by product and layer — sitting over a seven‑layer cognitive cortex.</p>
+            <div class="chip-row">
+              <span class="chip"><strong>PixiJS v8</strong> renderer</span>
+              <span class="chip"><strong>d3‑force</strong> worker</span>
+              <span class="chip">Continuous auto‑frame</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">One voice</p>
+            <h1 class="headline">Arganta is not<br>a <em>mascot.</em></h1>
+            <p class="dek">One real digital twin, one voice, no fictional cast standing in front of it. The persona is the founder — considered, not performed.</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">Craft</p>
+            <h1 class="headline">Considered,<br>not <em>decorated.</em></h1>
+            <div class="chip-row">
+              <span class="chip">Zoom‑LOD labels</span>
+              <span class="chip">Unified capsule UI</span>
+              <span class="chip">Slow, elegant settle</span>
+              <span class="chip">Color‑by‑layer filters</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===================== TAB 2 — INTELLIGENCE ===================== -->
+    <section class="tab-panel" data-tab-panel="2" style="--tab-accent: var(--violet)">
+      <div class="aurora"></div>
+      <div class="cover-mark"><span class="dot"></span><span>Intelligence</span></div>
+      <div class="slide-chrome"></div>
+
+      <div class="track" data-track="2">
+
+        <article class="slide is-current">
+          <div class="slide-inner">
+            <p class="kicker">The core</p>
+            <h1 class="headline">The Core thinks.<br>The apps <em>act.</em></h1>
+            <p class="dek">Arganta Core is the digital‑twin chat layer six organs deep — memory, reasoning, and voice shared by every app in the family, not rebuilt five times over.</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">Routing</p>
+            <h1 class="headline">Four tiers.<br>One <em>router.</em></h1>
+            <p class="dek">Every request is costed and routed before it ever reaches a model — cheapest capable tier first, frontier reasoning only when the moment calls for it.</p>
+            <div class="chip-row">
+              <span class="chip">0 · Sovereign</span>
+              <span class="chip">1 · Sponsored</span>
+              <span class="chip">2 · Economy</span>
+              <span class="chip">3 · Frontier</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">Agent OS</p>
+            <h1 class="headline">Eleven builders.<br>Four <em>analysts.</em></h1>
+            <p class="dek">A guild of build agents ships product; a smaller bench of analytics agents watches what actually happened. Six C‑level offices sit above both.</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">Where it's headed</p>
+            <h1 class="headline">From chat<br>to <em>autonomy.</em></h1>
+            <p class="dek">Today the Core answers. Next, it drafts, proposes, and — with a founder's sign‑off — acts on its own.</p>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===================== TAB 3 — AVAILABILITY ===================== -->
+    <section class="tab-panel" data-tab-panel="3" style="--tab-accent: var(--teal)">
+      <div class="aurora"></div>
+      <div class="cover-mark"><span class="dot"></span><span>Availability</span></div>
+      <div class="slide-chrome"></div>
+
+      <div class="track" data-track="3">
+
+        <article class="slide is-current">
+          <div class="slide-inner">
+            <p class="kicker">Arganta Family</p>
+            <h1 class="headline">One plan.<br>The whole<br><em>family.</em></h1>
+            <div class="price-line">
+              <span class="price">$4.99<small>/ month</small></span>
+              <span class="price" style="font-size:clamp(1.3rem,3vw,2rem); color:var(--paper-dim);">or $39.99<small>/ year</small></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">The gift vault</p>
+            <h1 class="headline">20,000 diamonds.<br>One family <em>pool.</em></h1>
+            <p class="dek">Guardians fund a shared vault and gift it down — capped at 5,000 diamonds per kid, so generosity never breaks the game's balance.</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">Where to find it</p>
+            <h1 class="headline">Five apps.<br>One <em>account.</em></h1>
+            <div class="row-list">
+              <div class="row-item"><span class="row-tag">01</span><div><div class="row-name">Kinetik</div></div></div>
+              <div class="row-item"><span class="row-tag">02</span><div><div class="row-name">Lashira</div></div></div>
+              <div class="row-item"><span class="row-tag">03</span><div><div class="row-name">HQ</div></div></div>
+              <div class="row-item"><span class="row-tag">04</span><div><div class="row-name">Studio</div></div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="slide-inner">
+            <p class="kicker">Status</p>
+            <h1 class="headline">Available<br><em>today.</em></h1>
+            <p class="dek">Guardian‑run. Real prizes. One family, playing together.</p>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ===================== BOTTOM NAV ===================== -->
+  <nav class="tabbar">
+    <div class="tabbar-inner" id="tabbarInner">
+      <div class="pill" id="pill"></div>
+
+      <button class="tab-btn is-active" data-tab="0" aria-label="Overview">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/>
+          <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tab-label">Overview</span>
+      </button>
+
+      <button class="tab-btn" data-tab="1" aria-label="Design">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="4" width="11" height="11" rx="2.4" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="9" y="9" width="11" height="11" rx="2.4" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+        </svg>
+        <span class="tab-label">Design</span>
+      </button>
+
+      <button class="tab-btn" data-tab="2" aria-label="Intelligence">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="6.5" r="2" stroke="currentColor" stroke-width="1.6"/>
+          <circle cx="6" cy="17" r="2" stroke="currentColor" stroke-width="1.6"/>
+          <circle cx="18" cy="17" r="2" stroke="currentColor" stroke-width="1.6"/>
+          <line x1="10.6" y1="7.8" x2="7" y2="15.3" stroke="currentColor" stroke-width="1.4"/>
+          <line x1="13.4" y1="7.8" x2="17" y2="15.3" stroke="currentColor" stroke-width="1.4"/>
+        </svg>
+        <span class="tab-label">Intelligence</span>
+      </button>
+
+      <button class="tab-btn" data-tab="3" aria-label="Availability">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M11 4h5.5a1.5 1.5 0 0 1 1.5 1.5V11a1.5 1.5 0 0 1-.44 1.06l-6.5 6.5a1.5 1.5 0 0 1-2.12 0l-4.5-4.5a1.5 1.5 0 0 1 0-2.12l6.5-6.5A1.5 1.5 0 0 1 11 4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <circle cx="15" cy="8" r="1.15" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tab-label">Availability</span>
+      </button>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var TAB_COUNT = 4;
+  var SLIDE_COUNTS = [4, 4, 4, 4];
+  var ACCENTS = ["var(--gold)", "var(--coral)", "var(--violet)", "var(--teal)"];
+
+  var state = {
+    tab: 0,
+    slide: [0, 0, 0, 0]
+  };
+
+  var panels = Array.prototype.slice.call(document.querySelectorAll(".tab-panel"));
+  var tracks = Array.prototype.slice.call(document.querySelectorAll(".track"));
+  var tabBtns = Array.prototype.slice.call(document.querySelectorAll(".tab-btn"));
+  var pill = document.getElementById("pill");
+  var tabbarInner = document.getElementById("tabbarInner");
+  var root = document.documentElement;
+
+  // ---- build chrome (counter + dots + chevrons) per panel, from real slide counts ----
+  panels.forEach(function (panel, tabIndex) {
+    var chrome = panel.querySelector(".slide-chrome");
+    var count = SLIDE_COUNTS[tabIndex];
+
+    var counter = document.createElement("div");
+    counter.className = "slide-counter";
+    counter.innerHTML = '<strong data-counter-current>01</strong> / ' + pad(count);
+    chrome.appendChild(counter);
+
+    var dots = document.createElement("div");
+    dots.className = "dots";
+    for (var i = 0; i < count; i++) {
+      var d = document.createElement("button");
+      d.className = "dot-btn" + (i === 0 ? " is-on" : "");
+      d.setAttribute("aria-label", "Go to slide " + (i + 1));
+      d.addEventListener("click", (function (ti, si) {
+        return function () { goToSlide(ti, si); };
+      })(tabIndex, i));
+      dots.appendChild(d);
+    }
+    chrome.appendChild(dots);
+
+    var prev = document.createElement("button");
+    prev.className = "chev prev";
+    prev.setAttribute("aria-label", "Previous slide");
+    prev.innerHTML = chevronSVG(true);
+    prev.addEventListener("click", function () { step(-1); });
+
+    var next = document.createElement("button");
+    next.className = "chev next";
+    next.setAttribute("aria-label", "Next slide");
+    next.innerHTML = chevronSVG(false);
+    next.addEventListener("click", function () { step(1); });
+
+    panel.appendChild(prev);
+    panel.appendChild(next);
+  });
+
+  function chevronSVG(isPrev) {
+    var d = isPrev ? "M13 5l-6 7 6 7" : "M9 5l6 7-6 7";
+    return '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="' + d + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  // ---- render ----
+  function render(opts) {
+    opts = opts || {};
+
+    panels.forEach(function (panel, i) {
+      panel.classList.toggle("is-active", i === state.tab);
+    });
+
+    tabBtns.forEach(function (btn) {
+      var i = parseInt(btn.getAttribute("data-tab"), 10);
+      btn.classList.toggle("is-active", i === state.tab);
+    });
+
+    root.style.setProperty("--accent", ACCENTS[state.tab]);
+    movePill(!opts.skipPillAnim);
+
+    var tabIndex = state.tab;
+    var slideIndex = state.slide[tabIndex];
+    var track = tracks[tabIndex];
+    var count = SLIDE_COUNTS[tabIndex];
+
+    track.style.transform = "translate3d(-" + (100 / count) * slideIndex + "%,0,0)";
+
+    var slides = track.querySelectorAll(".slide");
+    slides.forEach(function (s, i) { s.classList.toggle("is-current", i === slideIndex); });
+
+    var panel = panels[tabIndex];
+    var counterEl = panel.querySelector("[data-counter-current]");
+    if (counterEl) counterEl.textContent = pad(slideIndex + 1);
+
+    var dotEls = panel.querySelectorAll(".dot-btn");
+    dotEls.forEach(function (d, i) { d.classList.toggle("is-on", i === slideIndex); });
+
+    var prevBtn = panel.querySelector(".chev.prev");
+    var nextBtn = panel.querySelector(".chev.next");
+    if (prevBtn) prevBtn.disabled = slideIndex === 0;
+    if (nextBtn) nextBtn.disabled = slideIndex === count - 1;
+  }
+
+  function movePill(animate) {
+    var btn = tabBtns[state.tab];
+    var barRect = tabbarInner.getBoundingClientRect();
+    var btnRect = btn.getBoundingClientRect();
+    if (!animate) pill.style.transition = "none";
+    pill.style.setProperty("--pill-x", (btnRect.left - barRect.left) + "px");
+    pill.style.setProperty("--pill-w", btnRect.width + "px");
+    if (!animate) {
+      // force reflow then restore transition
+      void pill.offsetWidth;
+      pill.style.transition = "";
+    }
+  }
+
+  function switchTab(i) {
+    if (i === state.tab) return;
+    state.tab = i;
+    render();
+  }
+
+  function goToSlide(tabIndex, slideIndex) {
+    var count = SLIDE_COUNTS[tabIndex];
+    slideIndex = Math.max(0, Math.min(count - 1, slideIndex));
+    state.slide[tabIndex] = slideIndex;
+    if (tabIndex === state.tab) render();
+  }
+
+  function step(delta) {
+    var tabIndex = state.tab;
+    var count = SLIDE_COUNTS[tabIndex];
+    var next = state.slide[tabIndex] + delta;
+    if (next < 0 || next > count - 1) return;
+    state.slide[tabIndex] = next;
+    render();
+  }
+
+  // ---- nav clicks ----
+  tabBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      switchTab(parseInt(btn.getAttribute("data-tab"), 10));
+    });
+  });
+
+  // ---- keyboard ----
+  window.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight") step(1);
+    else if (e.key === "ArrowLeft") step(-1);
+    else if (e.key >= "1" && e.key <= "4") switchTab(parseInt(e.key, 10) - 1);
+  });
+
+  // ---- swipe (pointer events) ----
+  var dragging = false, startX = 0, startY = 0, dx = 0, activeTrack = null, locked = null;
+
+  document.getElementById("viewport").addEventListener("pointerdown", function (e) {
+    dragging = true; dx = 0; locked = null;
+    startX = e.clientX; startY = e.clientY;
+    activeTrack = tracks[state.tab];
+    activeTrack.style.transition = "none";
+  });
+
+  window.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var deltaX = e.clientX - startX;
+    var deltaY = e.clientY - startY;
+    if (locked === null) {
+      if (Math.abs(deltaX) < 6 && Math.abs(deltaY) < 6) return;
+      locked = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+    }
+    if (locked !== "x") return;
+    dx = deltaX;
+    var count = SLIDE_COUNTS[state.tab];
+    var base = -(100 / count) * state.slide[state.tab];
+    var pct = (dx / window.innerWidth) * 100;
+    activeTrack.style.transform = "translate3d(calc(" + base + "% + " + pct + "%),0,0)";
+  });
+
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    if (activeTrack) activeTrack.style.transition = "";
+    if (locked === "x" && Math.abs(dx) > 64) {
+      step(dx < 0 ? 1 : -1);
+    } else {
+      render({ skipPillAnim: true });
+    }
+    dx = 0; locked = null;
+  }
+
+  window.addEventListener("pointerup", endDrag);
+  window.addEventListener("pointercancel", endDrag);
+
+  window.addEventListener("resize", function () { movePill(false); });
+
+  // initial pill placement (after layout is ready)
+  requestAnimationFrame(function () { movePill(false); });
+</script>
+</body>
+</html>
