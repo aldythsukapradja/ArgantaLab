@@ -1,10 +1,10 @@
 import { useStore } from '../store';
 import { DOMAINS } from '../nav';
 import foundation from '../data/foundation.json';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Search, Sun, Moon } from 'lucide-react';
 
 export function ContextBar() {
-  const { domain, well, setWell, togglePalette } = useStore();
+  const { domain, well, setWell, togglePalette, theme, toggleTheme } = useStore();
   const def = DOMAINS.find((d) => d.id === domain)!;
   const wellOptions = ['ALL WELLS', ...foundation.wells.map((w) => w.well_name)];
 
@@ -56,6 +56,19 @@ export function ContextBar() {
       </button>
 
       <div style={{ flex: 1 }} />
+
+      {/* theme toggle */}
+      <button
+        onClick={toggleTheme}
+        aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        title={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+        style={{
+          display: 'grid', placeItems: 'center', width: 28, height: 28,
+          background: 'var(--panel-2)', border: '1px solid var(--line)', borderRadius: 3, color: 'var(--muted)',
+        }}
+      >
+        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+      </button>
 
       {/* route badge */}
       <span className="chip mono" style={{ color: `var(--${def.accent})`, borderColor: `var(--${def.accent})` }}>

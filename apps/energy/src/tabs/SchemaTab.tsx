@@ -59,7 +59,7 @@ export function SchemaTab() {
           <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ display: 'block', minWidth: W }} role="img" aria-label="Star schema relational canvas">
             <defs>
               <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
-                <circle cx="1" cy="1" r="1" fill="#12242b" />
+                <circle cx="1" cy="1" r="1" fill="var(--dot)" />
               </pattern>
             </defs>
             <rect width={W} height={H} fill="url(#grid)" />

@@ -26,7 +26,7 @@ export function SchemaCanvas({ schema }: { schema: Schema }) {
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ display: 'block', minWidth: W }}>
         <defs>
           <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="1" fill="#12242b" />
+            <circle cx="1" cy="1" r="1" fill="var(--dot)" />
           </pattern>
         </defs>
         <rect width={W} height={H} fill="url(#dots)" />

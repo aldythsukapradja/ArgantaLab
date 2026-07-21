@@ -1,5 +1,7 @@
-/* ArgantaEnergy — design tokens (handoff §8). Engineering control room, not SaaS. */
-:root {
+/* ArgantaEnergy — design tokens (handoff §8). Engineering control room, not SaaS.
+   Theme by attribute on <html data-theme>. Dark is the default identity; light is
+   AA-tuned. Semantic accent NAMES stay constant across themes — only values shift. */
+:root, :root[data-theme="dark"] {
   --bg: #071014;
   --panel: #0b171c;
   --panel-2: #0f1d23;
@@ -12,7 +14,31 @@
   --violet: #b37df0; /* logs */
   --rose: #df7084;   /* claims / exceptions */
   --orange: #e58d4b; /* provenance */
+  --scrollbar: #1f3742;
+  --dot: #12242b;    /* schema-canvas grid dot */
+  --sel: rgba(80, 208, 177, 0.28);
+}
 
+/* Light — same token names, values darkened for WCAG-AA on a light surface. */
+:root[data-theme="light"] {
+  --bg: #eef2f4;
+  --panel: #ffffff;
+  --panel-2: #f3f7f8;
+  --line: #d2dde1;
+  --text: #0d1a20;   /* ~15:1 on --panel */
+  --muted: #566b73;  /* ~4.7:1 on --panel (AA) */
+  --teal: #0c8f72;   /* AA on white */
+  --amber: #9a6f13;
+  --blue: #1f6fc9;
+  --violet: #7b3fc4;
+  --rose: #bf3f57;
+  --orange: #b25e1c;
+  --scrollbar: #c3ced2;
+  --dot: #dbe4e7;
+  --sel: rgba(12, 143, 114, 0.20);
+}
+
+:root {
   --rail-w: 58px;
   --topbar-h: 54px;
   --tabbar-h: 38px;
@@ -38,7 +64,7 @@ body {
 
 :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
 button { font-family: inherit; color: inherit; cursor: pointer; background: none; border: none; }
-::selection { background: rgba(80, 208, 177, 0.28); }
+::selection { background: var(--sel); }
 
 /* subtle technical grid backdrop */
 .grid-bg {
@@ -61,7 +87,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; background: none
 
 /* scrollbars */
 *::-webkit-scrollbar { width: 9px; height: 9px; }
-*::-webkit-scrollbar-thumb { background: #1f3742; border-radius: 6px; }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 6px; }
 *::-webkit-scrollbar-track { background: transparent; }
 
 /* chips */
