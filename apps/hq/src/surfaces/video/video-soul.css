@@ -1,0 +1,31 @@
+/* Video Studio · Soul mode — character rail + keyframe grid. */
+.vsoul { display: grid; grid-template-columns: 300px minmax(0,1fr); height: 100%; min-height: 0; background: var(--canvas); }
+.vsoul-rail { border-right: 1px solid var(--bd); padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.vsoul-rail-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+.vsoul-rail-head .sov-chip-wrap { margin-left: auto; }
+.vsoul-rail select { width: 100%; box-sizing: border-box; background: var(--bg); border: 1px solid var(--bd2); border-radius: 7px; padding: 6px 8px; font-size: 12px; color: var(--tx); }
+
+.vsoul-card { border: 1px solid var(--bd2); border-radius: 9px; padding: 10px 11px; display: flex; flex-direction: column; gap: 4px; background: var(--bg); }
+.vsoul-card-name { font-size: 13px; font-weight: 700; }
+.vsoul-card-meta { font-size: 10.5px; color: var(--tx3); }
+.vsoul-card-meta code { font-family: var(--mono); }
+.vsoul-card-status { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; align-self: flex-start; padding: 2px 7px; border-radius: 5px; margin-top: 2px; }
+.vsoul-card-status.draft { background: color-mix(in srgb, orange 15%, var(--bg)); color: #c9820a; }
+.vsoul-card-status.approved { background: color-mix(in srgb, var(--acc) 15%, var(--bg)); color: var(--acc); }
+
+.vsoul-matrix { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; border: 1px solid var(--bd2); border-radius: 9px; background: var(--bg); color: var(--tx2); font-size: 11.5px; cursor: pointer; }
+
+.vsoul-grid { padding: 14px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; align-content: start; }
+.vsoul-tile { border: 1px solid var(--bd2); border-radius: 9px; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; }
+.vsoul-tile img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; }
+.vsoul-tile-loading, .vsoul-tile-err { aspect-ratio: 2/3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--tx3); padding: 8px; text-align: center; }
+.vsoul-tile-err span { font-size: 10px; }
+.vsoul-tile-cap { font-size: 10px; color: var(--tx3); padding: 5px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vsoul-tile-acts { display: flex; gap: 4px; padding: 0 6px 6px; }
+.vsoul-tile-acts button { flex: 1; font-size: 10px; padding: 4px 6px; border: 1px solid var(--bd2); border-radius: 6px; background: var(--bg); color: var(--tx2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.vsoul-tile-acts button:disabled { opacity: .6; cursor: default; color: var(--acc); border-color: var(--acc); }
+
+@media (max-width: 900px) {
+  .vsoul { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
+  .vsoul-rail { border-right: none; border-bottom: 1px solid var(--bd); max-height: 50vh; }
+}

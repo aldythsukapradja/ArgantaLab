@@ -6,7 +6,7 @@
 // interleave. On completion the job holds the resulting blob (object URL) which
 // the studio persists to its library.
 import { create } from 'zustand'
-import { comfyImage, comfyMusic, comfyVideo, type EngineKind, type RunResult } from './comfyClient'
+import { comfyImage, comfyMusic, comfyVideo, comfySoulImage, type EngineKind, type RunResult } from './comfyClient'
 
 export type JobStatus = 'queued' | 'rendering' | 'done' | 'failed'
 export interface Job {
@@ -37,7 +37,7 @@ interface JobState {
 }
 
 const RUNNERS: Record<EngineKind, (spec: any, opts: any) => Promise<RunResult>> = {
-  image: comfyImage, music: comfyMusic, video: comfyVideo,
+  image: comfyImage, music: comfyMusic, video: comfyVideo, soul: comfySoulImage,
 }
 // image is light enough to interleave; music+video are heavy → single-flight.
 const HEAVY: EngineKind[] = ['music', 'video']

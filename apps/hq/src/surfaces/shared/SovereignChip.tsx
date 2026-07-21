@@ -12,6 +12,7 @@ const ENGINES: Engine[] = [
   { kind: 'image', label: 'Image' },
   { kind: 'music', label: 'Music' },
   { kind: 'video', label: 'Video' },
+  { kind: 'soul', label: 'Soul' },
 ]
 
 /** `engine` narrows the chip to one modality's readiness (a studio only cares
@@ -51,6 +52,7 @@ export function SovereignChip({ engine, compact = false }: { engine?: EngineKind
     setTesting(kind)
     const spec = kind === 'image' ? { prompt: 'arganta test tile, luminous', width: 512, height: 512 }
       : kind === 'music' ? { tags: 'test, warm, short', seconds: 8 }
+      : kind === 'soul' ? { prompt: 'front-facing close-up portrait, neutral expression' }
       : { prompt: 'a soft light drift, test', width: 320, height: 320, frames: 17 }
     spawn({ kind, label: `Test ${kind}`, spec, surface: 'rack' })
     setTimeout(() => setTesting(null), 1500)

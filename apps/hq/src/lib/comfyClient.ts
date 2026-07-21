@@ -21,13 +21,14 @@ export function setComfyUrl(url: string) {
   try { localStorage.setItem(LS_URL, url.replace(/\/+$/, '')) } catch { /* ignore */ }
 }
 
-export type EngineKind = 'image' | 'music' | 'video'
+export type EngineKind = 'image' | 'music' | 'video' | 'soul'
 export interface EngineHealth { present: boolean; model?: string }
 export interface ComfyHealth {
   up: boolean
   image: EngineHealth
   music: EngineHealth
   video: EngineHealth
+  soul: EngineHealth
   vramFreeGB?: number
   queueDepth?: number
   url: string
@@ -40,7 +41,7 @@ async function listModels(url: string, folder: string): Promise<string[]> {
 /** One round-trip health probe. Cheap enough to poll on an interval; never throws. */
 export async function comfyHealth(): Promise<ComfyHealth> {
   const url = comfyUrl()
-  const base: ComfyHealth = { up: false, image: { present: false }, music: { present: false }, video: { present: false }, url }
+  const base: ComfyHealth = { up: false, image: { present: false }, music: { present: false }, video: { present: false }, soul: { present: false }, url }
   try {
     const statsRes = await fetch(`${url}/system_stats`, { signal: AbortSignal.timeout(4000) })
     if (!statsRes.ok) return base
@@ -48,9 +49,9 @@ export async function comfyHealth(): Promise<ComfyHealth> {
     const dev = stats?.devices?.[0]
     const vramFreeGB = dev?.vram_free ? dev.vram_free / 1073741824 : undefined
 
-    const [ckpts, diffusion, encoders, vaes] = await Promise.all([
+    const [ckpts, diffusion, encoders, vaes, loras] = await Promise.all([
       listModels(url, 'checkpoints'), listModels(url, 'diffusion_models'),
-      listModels(url, 'text_encoders'), listModels(url, 'vae'),
+      listModels(url, 'text_encoders'), listModels(url, 'vae'), listModels(url, 'loras'),
     ])
     let queueDepth: number | undefined
     try { const q: any = await (await fetch(`${url}/queue`)).json(); queueDepth = (q?.queue_running?.length || 0) + (q?.queue_pending?.length || 0) } catch { /* ignore */ }
@@ -60,12 +61,15 @@ export async function comfyHealth(): Promise<ComfyHealth> {
     const wan = diffusion.find((m) => /wan.*ti2v.*5b/i.test(m)) || diffusion.find((m) => /wan.*5b/i.test(m))
     const umt5 = encoders.find((m) => /umt5/i.test(m))
     const wanVae = vaes.find((m) => /wan.*vae/i.test(m))
+    const sd15 = ckpts.find((m) => /v1-5-pruned-emaonly/i.test(m)) || ckpts.find((m) => /v1-5/i.test(m))
+    const argantaLora = loras.find((m) => /arganta/i.test(m))
 
     return {
       up: true, url, vramFreeGB, queueDepth,
       image: { present: !!zimg, model: zimg },
       music: { present: !!ace, model: ace },
       video: { present: !!(wan && umt5 && wanVae), model: wan },
+      soul: { present: !!(sd15 && argantaLora), model: argantaLora },
     }
   } catch { return base }
 }
@@ -163,6 +167,40 @@ export async function comfyImage(spec: { prompt: string; width?: number; height?
   const out = await runGraph(graph, 'images', opts)
   const blob = await fetchView(out)
   return { blob, mime: 'image/png', meta: { width, height, model: zImage, engine: 'comfyui', seed } }
+}
+
+// ── SOUL (SD1.5 + character LoRA — V2, ports arganta-character-studio's
+// soul_graphs.py wf01_lora). LoRA-only mode: the trained identity prior with
+// no IP-Adapter reference yet (that needs an /upload/image flow — V2 follow-up).
+// Auto-detects a loras/*arganta* file; trigger token is prepended to the prompt. ──
+const SOUL_TRIGGER = 'argxsoul'
+const SOUL_NEG_DEFAULT = 'different person, inconsistent identity, duplicate person, asymmetrical eyes, deformed face, malformed anatomy, extra fingers, fused fingers, waxy skin, plastic skin, CGI, 3D render, illustration, cartoon, oversmoothed face, heavy beauty filter, watermark, text, logo, low resolution, motion blur'
+
+export async function comfySoulImage(spec: { prompt: string; negative?: string; width?: number; height?: number; seed?: number; loraStrength?: number }, opts: RunOpts = {}): Promise<RunResult> {
+  const url = comfyUrl()
+  const width = Math.max(256, Math.min(1024, spec.width || 512))
+  const height = Math.max(256, Math.min(1024, spec.height || 768))
+  const seed = spec.seed ?? Math.floor(Math.random() * 1e15)
+  const loraStrength = spec.loraStrength ?? 0.8
+  const [checkpoints, loras] = await Promise.all([listModels(url, 'checkpoints'), listModels(url, 'loras')])
+  const ckpt = checkpoints.find((m) => /v1-5-pruned-emaonly/i.test(m)) || checkpoints.find((m) => /v1-5/i.test(m))
+  const lora = loras.find((m) => /arganta/i.test(m))
+  if (!ckpt) throw new Error('ComfyUI has no SD1.5 base checkpoint (v1-5-pruned-emaonly.safetensors)')
+  if (!lora) throw new Error('No ARGANTA character LoRA found in ComfyUI loras/ — drop the trained checkpoint (arganta-character-studio/characters/arganta/training/checkpoints/v003-high) in as a .safetensors first')
+  const prompt = `${SOUL_TRIGGER}, ${spec.prompt}`
+  const graph = {
+    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: ckpt } },
+    '10': { class_type: 'LoraLoader', inputs: { lora_name: lora, strength_model: loraStrength, strength_clip: loraStrength, model: ['1', 0], clip: ['1', 1] } },
+    '2': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['10', 1] } },
+    '3': { class_type: 'CLIPTextEncode', inputs: { text: spec.negative || SOUL_NEG_DEFAULT, clip: ['10', 1] } },
+    '4': { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } },
+    '5': { class_type: 'KSampler', inputs: { seed, steps: 28, cfg: 7.0, sampler_name: 'dpmpp_2m', scheduler: 'karras', denoise: 1.0, model: ['10', 0], positive: ['2', 0], negative: ['3', 0], latent_image: ['4', 0] } },
+    '6': { class_type: 'VAEDecode', inputs: { samples: ['5', 0], vae: ['1', 2] } },
+    '7': { class_type: 'SaveImage', inputs: { filename_prefix: 'soul-arganta', images: ['6', 0] } },
+  }
+  const out = await runGraph(graph, 'images', opts)
+  const blob = await fetchView(out)
+  return { blob, mime: 'image/png', meta: { width, height, model: ckpt, lora, engine: 'comfyui-soul-lora', seed } }
 }
 
 // ── MUSIC (ACE-Step 1.5 AIO, verified — 1.5 nodes required) ──────────────────
