@@ -7,6 +7,7 @@ import { StatusBar } from './components/StatusBar';
 import { CommandPalette } from './components/CommandPalette';
 import { Foundation } from './tabs/Foundation';
 import { DataTab } from './tabs/DataTab';
+import { SchemaTab } from './tabs/SchemaTab';
 import { Knowledge } from './tabs/Knowledge';
 import { Stub } from './tabs/Stub';
 
@@ -23,6 +24,7 @@ export function App() {
         <main style={{ flex: 1, minHeight: 0, overflow: 'hidden', background: 'var(--bg)' }}>
           {domain === 'foundation' && <Foundation />}
           {domain === 'data' && <DataTab />}
+          {domain === 'schema' && <SchemaTab />}
           {domain === 'knowledge' && <Knowledge />}
           {def.status === 'stub' && <Stub def={def} />}
         </main>

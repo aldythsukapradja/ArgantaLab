@@ -1,12 +1,12 @@
 // Config-driven nav — nav is DATA, not markup (the reusable Cosmo pattern).
 import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutGrid, Database, BookOpen, Wrench, Circle, Layers,
+  LayoutGrid, Database, Network, BookOpen, Wrench, Circle, Layers,
   Bot, GraduationCap, ShieldCheck, Gauge, Boxes, Radar,
 } from 'lucide-react';
 
 export type DomainId =
-  | 'foundation' | 'data' | 'knowledge' | 'workbench' | 'wells'
+  | 'foundation' | 'data' | 'schema' | 'knowledge' | 'workbench' | 'wells'
   | 'surfaces' | 'agents' | 'training' | 'audit';
 
 export interface DomainDef {
@@ -23,6 +23,7 @@ export interface DomainDef {
 export const DOMAINS: DomainDef[] = [
   { id: 'foundation', label: 'Foundation', icon: LayoutGrid, accent: 'teal', status: 'live', phase: 'P2', blurb: 'Field overview, live data metrics, relational schema.' },
   { id: 'data', label: 'Data', icon: Database, accent: 'amber', status: 'live', phase: 'P2', blurb: 'Inventory & provenance ledger — mirrored / selected / excluded.' },
+  { id: 'schema', label: 'Schema', icon: Network, accent: 'blue', status: 'live', phase: 'M1', blurb: 'Semantic model — star schema, FK ledger, orphan counts (contract v1.0.0).' },
   { id: 'knowledge', label: 'Knowledge', icon: BookOpen, accent: 'violet', status: 'live', phase: 'P2', blurb: 'Three-pane vault — notes, evidence packs, QC, archaeology.' },
   { id: 'workbench', label: 'Workbench', icon: Wrench, accent: 'blue', status: 'stub', phase: 'P3+', blurb: 'Mini-Petrel: map, logs, cross-section, trajectory, production.' },
   { id: 'wells', label: 'Wells', icon: Circle, accent: 'blue', status: 'stub', phase: 'P3+', blurb: 'Cross-domain coverage matrix + identity notes.' },
