@@ -107,6 +107,31 @@ button { font-family: inherit; color: inherit; cursor: pointer; background: none
 @keyframes pulse-soft { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
 .pulse { animation: pulse-soft 2.6s ease-in-out infinite; }
 
+/* ── Wikilinks (Explorer) ── */
+.wikilink {
+  color: var(--violet); cursor: pointer; text-decoration: none;
+  border-bottom: 1px dotted var(--violet);
+}
+.wikilink:hover { background: var(--sel); }
+.wikilink.dead {
+  color: var(--rose); border-bottom: 1px dashed var(--rose); cursor: help;
+}
+
+/* ── Cosmonaut orb (layered CSS) ── */
+@keyframes orb-halo { 0%,100% { transform: scale(1); opacity: .5; } 50% { transform: scale(1.18); opacity: .85; } }
+@keyframes orb-spin { to { transform: rotate(360deg); } }
+@keyframes orb-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes orb-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.orb-halo { animation: orb-halo 4.5s ease-in-out infinite; }
+.orb-conic { animation: orb-spin 9s linear infinite; }
+.orb-conic-2 { animation: orb-spin-rev 14s linear infinite; }
+.orb-core { animation: orb-breathe 3.4s ease-in-out infinite; }
+
+/* typewriter caret */
+@keyframes caret-blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+.caret { animation: caret-blink 1s step-end infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+  .orb-halo, .orb-conic, .orb-conic-2, .orb-core { animation: none !important; }
 }

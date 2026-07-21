@@ -14,13 +14,16 @@
     "data:kb": "node scripts/build-knowledge.mjs"
   },
   "dependencies": {
-    "lucide-react": "^0.462.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zustand": "^4.5.5",
     "d3-array": "^3.2.4",
     "d3-scale": "^4.0.2",
-    "d3-shape": "^3.2.0"
+    "d3-shape": "^3.2.0",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.462.0",
+    "pdfjs-dist": "^6.1.200",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@types/d3-array": "^3.2.1",

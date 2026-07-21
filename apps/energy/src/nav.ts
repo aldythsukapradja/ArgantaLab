@@ -40,6 +40,26 @@ export const DOMAINS: DomainDef[] = [
   { id: 'training', label: 'Training', icon: GraduationCap, accent: 'rose', status: 'stub', phase: 'V2+', zone: 'vertical', blurb: 'Curriculum generator from brain + workbench.' },
 ];
 
+// ── Sub-tabs per domain (config-driven, like DOMAINS). Top bar renders these. ──
+export interface SubTab { id: string; label: string }
+export const SUBTABS: Record<DomainId, SubTab[]> = {
+  foundation: [{ id: 'overview', label: 'Overview' }, { id: 'schema', label: 'Schema' }],
+  data: [{ id: 'inventory', label: 'Inventory' }, { id: 'pipeline', label: 'Pipeline' }],
+  schema: [{ id: 'overview', label: 'Model' }],
+  knowledge: [
+    { id: 'explorer', label: 'Explorer' },
+    { id: 'graph', label: 'Graph' },
+    { id: 'extraction', label: 'Extraction' },
+  ],
+  workbench: [{ id: 'overview', label: 'Overview' }],
+  wells: [{ id: 'overview', label: 'Overview' }],
+  surfaces: [{ id: 'overview', label: 'Overview' }],
+  agents: [{ id: 'overview', label: 'Overview' }],
+  training: [{ id: 'overview', label: 'Overview' }],
+  audit: [{ id: 'overview', label: 'Overview' }],
+};
+export const defaultSubtab = (d: DomainId): string => SUBTABS[d][0].id;
+
 // Locked "sibling apps" switcher slot (future Arganta products).
 export const SIBLING_APPS = [
   { id: 'energy', label: 'ArgantaEnergy', icon: Gauge, locked: false },
