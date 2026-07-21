@@ -4,13 +4,14 @@
   "version": "0.3.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/build-data.mjs",
-    "prebuild": "node scripts/build-data.mjs",
+    "predev": "node scripts/build-data.mjs && node scripts/build-knowledge.mjs",
+    "prebuild": "node scripts/build-data.mjs && node scripts/build-knowledge.mjs",
     "data": "node scripts/build-data.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "data:kb": "node scripts/build-knowledge.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.462.0",
