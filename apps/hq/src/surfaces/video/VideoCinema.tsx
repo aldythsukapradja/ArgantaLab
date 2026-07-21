@@ -3,7 +3,7 @@
 // and renders through the same jobStore video pipeline as Generate — same
 // single-flight GPU queue, same player/gallery primitives.
 import { useState } from 'react'
-import { Clapperboard, Shuffle } from 'lucide-react'
+import { Clapperboard, Shuffle, UserRound, X } from 'lucide-react'
 import { useJobStore, type Job } from '../../lib/jobStore'
 import { SovereignChip } from '../shared/SovereignChip'
 import { PlayerView, EmptyStage, Gallery } from './shared'
@@ -16,7 +16,9 @@ const PRESETS = [
   { id: 'wide', label: 'Wide', w: 640, h: 360, frames: 49, note: '~4min' },
 ] as const
 
-export function VideoCinema({ initialPrompt, onSendToEdit }: { initialPrompt?: string; onSendToEdit?: (clip: { url: string; meta: any }) => void }) {
+export function VideoCinema({ initialPrompt, seedImage, onClearSeed, onSendToEdit }: {
+  initialPrompt?: string; seedImage?: string; onClearSeed?: () => void; onSendToEdit?: (clip: { url: string; meta: any }) => void
+}) {
   const spawn = useJobStore((s) => s.spawn)
   const clear = useJobStore((s) => s.clear)
   const jobs = useJobStore((s) => s.jobs.filter((j) => j.kind === 'video' && j.surface === 'video-cinema'))
@@ -42,6 +44,7 @@ export function VideoCinema({ initialPrompt, onSendToEdit }: { initialPrompt?: s
         prompt: shot.prompt, negative: shot.negative,
         width: spec?.width ?? preset.w, height: spec?.height ?? preset.h, frames: spec?.frames ?? preset.frames, fps: 24,
         seed: spec?.seed ?? (seed === '' ? undefined : seed),
+        imageDataUrl: seedImage,
       },
     })
     setCurrent(id)
@@ -53,7 +56,7 @@ export function VideoCinema({ initialPrompt, onSendToEdit }: { initialPrompt?: s
     const s = job.spec as any
     const id = spawn({
       kind: 'video', label: job.label, surface: 'video-cinema',
-      spec: { prompt: s.prompt, negative: s.negative, width: overrides?.width ?? s.width, height: overrides?.height ?? s.height, frames: overrides?.frames ?? s.frames, fps: 24, seed: Math.floor(Math.random() * 1e9) },
+      spec: { prompt: s.prompt, negative: s.negative, width: overrides?.width ?? s.width, height: overrides?.height ?? s.height, frames: overrides?.frames ?? s.frames, fps: 24, seed: Math.floor(Math.random() * 1e9), imageDataUrl: s.imageDataUrl },
     })
     setCurrent(id)
   }
@@ -63,6 +66,18 @@ export function VideoCinema({ initialPrompt, onSendToEdit }: { initialPrompt?: s
       {/* left rail */}
       <div className="vc-rail">
         <div className="vc-rail-head"><Clapperboard size={14} /> Cinema<SovereignChip engine="video" compact /></div>
+
+        {seedImage && (
+          <div className="vc-source">
+            <img src={seedImage} alt="Soul keyframe seed" />
+            <div className="vc-source-info">
+              <span><UserRound size={11} /> Soul keyframe seed</span>
+              <span className="vc-source-hint">identity carries into the first frame</span>
+            </div>
+            {onClearSeed && <button className="vc-source-clear" onClick={onClearSeed} title="Use text-to-video instead"><X size={12} /></button>}
+          </div>
+        )}
+
         <textarea className="vc-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)}
           placeholder="describe the subject — “a lone figure standing on a cliff at sunset”" />
 

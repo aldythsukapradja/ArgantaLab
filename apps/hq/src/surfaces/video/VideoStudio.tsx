@@ -21,6 +21,12 @@ type Mode = 'soul' | 'generate' | 'cinema' | 'edit' | 'library'
 export function VideoStudio() {
   const [mode, setMode] = useState<Mode>('generate')
   const [note, setNote] = useState('')
+  const [cinemaSeed, setCinemaSeed] = useState<string | undefined>(undefined)
+
+  function animate(imageUrl: string) {
+    setCinemaSeed(imageUrl)
+    setMode('cinema')
+  }
 
   async function sendToEdit(clip: { url: string; meta: any }) {
     setMode('edit')
@@ -48,9 +54,9 @@ export function VideoStudio() {
         <div style={{ marginLeft: 'auto' }}><BrainsMap surface="video" /></div>
       </div>
       <div className="vs-body">
-        {mode === 'soul' && <VideoSoul />}
+        {mode === 'soul' && <VideoSoul onAnimate={animate} />}
         {mode === 'generate' && <VideoGenerate onSendToEdit={sendToEdit} />}
-        {mode === 'cinema' && <VideoCinema onSendToEdit={sendToEdit} />}
+        {mode === 'cinema' && <VideoCinema seedImage={cinemaSeed} onClearSeed={() => setCinemaSeed(undefined)} onSendToEdit={sendToEdit} />}
         {mode === 'edit' && <VideoBuilder />}
         {mode === 'library' && <VideoLibrary />}
       </div>

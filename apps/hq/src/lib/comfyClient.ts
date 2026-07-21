@@ -133,6 +133,19 @@ async function runGraph(graph: Record<string, unknown>, outputKey: 'images' | 'a
   } finally { ws?.close() }
 }
 
+/** Upload a browser blob into ComfyUI's input/ dir so a LoadImage node can
+ * reference it by filename. Used by the Soul→Cinema i2v seed (V3). */
+async function uploadImage(blob: Blob, filename: string): Promise<string> {
+  const url = comfyUrl()
+  const form = new FormData()
+  form.append('image', blob, filename)
+  form.append('overwrite', 'true')
+  const r = await fetch(`${url}/upload/image`, { method: 'POST', body: form })
+  if (!r.ok) throw new Error(`ComfyUI image upload failed: HTTP ${r.status}`)
+  const j: any = await r.json().catch(() => null)
+  return j?.name || filename
+}
+
 async function fetchView(v: { filename: string; subfolder: string; type: string }): Promise<Blob> {
   const url = comfyUrl()
   const q = new URLSearchParams({ filename: v.filename, subfolder: v.subfolder || '', type: v.type || 'output' })
@@ -228,8 +241,12 @@ export async function comfyMusic(spec: { tags: string; lyrics?: string; seconds?
   return { blob, mime: 'audio/mpeg', meta: { seconds, tags: spec.tags, bpm, keyscale, model: ckpt, engine: 'comfyui-acestep', seed } }
 }
 
-// ── VIDEO (Wan 2.2 TI2V-5B, verified — output under images key) ───────────────
-export async function comfyVideo(spec: { prompt: string; negative?: string; width?: number; height?: number; frames?: number; fps?: number; seed?: number }, opts: RunOpts = {}): Promise<RunResult> {
+// ── VIDEO (Wan 2.2 TI2V-5B, verified t2v — output under images key). V3 adds
+// an optional identity seed image (a Soul keyframe): uploaded to ComfyUI and
+// wired as Wan22ImageToVideoLatent's `start_image` input, which the node
+// supports for i2v alongside pure t2v when omitted — NOT yet live-verified
+// against a running server; falls back to t2v behavior if upload fails. ───────
+export async function comfyVideo(spec: { prompt: string; negative?: string; width?: number; height?: number; frames?: number; fps?: number; seed?: number; imageDataUrl?: string }, opts: RunOpts = {}): Promise<RunResult> {
   const url = comfyUrl()
   const grid = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(n / 16) * 16))
   const width = grid(spec.width || 384, 256, 1280)
@@ -243,7 +260,14 @@ export async function comfyVideo(spec: { prompt: string; negative?: string; widt
   const clipName = encoders.find((m) => /umt5/i.test(m))
   const vae = vaes.find((m) => /wan.*vae/i.test(m))
   if (!unet || !clipName || !vae) throw new Error('ComfyUI missing Wan 2.2 5B files (run tools/comfyui/download-media-models.ps1)')
-  const graph = {
+
+  let seedImageName: string | undefined
+  if (spec.imageDataUrl) {
+    const imgBlob = await (await fetch(spec.imageDataUrl)).blob()
+    seedImageName = await uploadImage(imgBlob, `soul-seed-${Date.now()}.png`)
+  }
+
+  const graph: Record<string, { class_type: string; inputs: Record<string, unknown> }> = {
     '37': { class_type: 'UNETLoader', inputs: { unet_name: unet, weight_dtype: 'default' } },
     '38': { class_type: 'CLIPLoader', inputs: { clip_name: clipName, type: 'wan', device: 'default' } },
     '39': { class_type: 'VAELoader', inputs: { vae_name: vae } },
@@ -256,7 +280,11 @@ export async function comfyVideo(spec: { prompt: string; negative?: string; widt
     '57': { class_type: 'CreateVideo', inputs: { images: ['8', 0], fps } },
     '58': { class_type: 'SaveVideo', inputs: { video: ['57', 0], filename_prefix: 'arganta_video', format: 'auto', codec: 'auto' } },
   }
+  if (seedImageName) {
+    graph['59'] = { class_type: 'LoadImage', inputs: { image: seedImageName } }
+    graph['55'].inputs.start_image = ['59', 0]
+  }
   const out = await runGraph(graph, 'images', opts) // ← Wan SaveVideo outputs under `images`
   const blob = await fetchView(out)
-  return { blob, mime: 'video/mp4', meta: { width, height, frames: length, fps, model: unet, engine: 'comfyui-wan22', seed } }
+  return { blob, mime: 'video/mp4', meta: { width, height, frames: length, fps, model: unet, engine: 'comfyui-wan22', seed, identitySeeded: !!seedImageName } }
 }

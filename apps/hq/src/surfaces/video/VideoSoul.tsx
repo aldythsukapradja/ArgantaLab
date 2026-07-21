@@ -4,7 +4,7 @@
 // i2v seed for Cinema in V3. Identity test matrix renders the 8-prompt
 // consistency sheet from souls.ts for founder sign-off.
 import { useState } from 'react'
-import { UserRound, Sparkles, Loader2, AlertCircle, Check, Grid3x3 } from 'lucide-react'
+import { UserRound, Sparkles, Loader2, AlertCircle, Check, Grid3x3, Clapperboard } from 'lucide-react'
 import { uploadAsset } from '@arganta/video'
 import { supabase, cloudEnabled } from '../../lib/supabase'
 import { useJobStore, type Job } from '../../lib/jobStore'
@@ -12,7 +12,7 @@ import { SovereignChip } from '../shared/SovereignChip'
 import { SOULS, STYLE_PRESETS, POSE_PRESETS, identityTestPrompts } from './souls'
 import './video-soul.css'
 
-export function VideoSoul() {
+export function VideoSoul({ onAnimate }: { onAnimate?: (imageUrl: string) => void }) {
   const soul = SOULS[0]
   const spawn = useJobStore((s) => s.spawn)
   const clear = useJobStore((s) => s.clear)
@@ -94,6 +94,7 @@ export function VideoSoul() {
                 <button onClick={() => approve(j)} disabled={approvedIds.has(j.id)}>
                   {approvedIds.has(j.id) ? <><Check size={11} /> Approved</> : 'Approve as keyframe'}
                 </button>
+                {onAnimate && j.blobUrl && <button onClick={() => onAnimate(j.blobUrl!)} title="Animate in Cinema"><Clapperboard size={11} /></button>}
                 <button onClick={() => clear(j.id)}>×</button>
               </div>
             )}

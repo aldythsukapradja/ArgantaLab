@@ -14,6 +14,13 @@
 .vc-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 .vc-row3 select { width: 100%; box-sizing: border-box; background: var(--bg); border: 1px solid var(--bd2); border-radius: 7px; padding: 6px 7px; font-size: 11.5px; color: var(--tx); }
 
+.vc-source { position: relative; display: flex; gap: 8px; align-items: center; border: 1px solid var(--acc); border-radius: 9px; padding: 6px; background: color-mix(in srgb, var(--acc) 8%, var(--bg)); }
+.vc-source img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; flex: none; }
+.vc-source-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vc-source-info span:first-child { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--tx); }
+.vc-source-hint { font-size: 9.5px; color: var(--tx3); }
+.vc-source-clear { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--bd2); background: var(--bg2); color: var(--tx3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+
 @media (max-width: 900px) {
   .vc { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr) auto; max-width: 100vw; }
   .vc-rail { grid-row: 1; border-right: none; border-bottom: 1px solid var(--bd); max-height: 50vh; }
