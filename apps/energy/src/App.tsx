@@ -4,7 +4,6 @@ import { DOMAINS } from './nav';
 import { Drawer } from './components/Drawer';
 import { ContextBar } from './components/ContextBar';
 import { MobileBar } from './components/MobileBar';
-import { StatusBar } from './components/StatusBar';
 import { CommandPalette } from './components/CommandPalette';
 import { CosmoOrbFloating, CosmoOverlay } from './components/Cosmonaut';
 import { Foundation } from './tabs/Foundation';
@@ -48,7 +47,6 @@ export function App() {
         <main style={{ flex: 1, minHeight: 0, overflow: 'hidden', background: 'var(--bg)' }}>
           <Surface />
         </main>
-        {!isMobile && <StatusBar />}
         {isMobile && <MobileBar />}
       </div>
       <CommandPalette />

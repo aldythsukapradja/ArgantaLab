@@ -2,8 +2,8 @@ import { useStore } from '../store';
 import { DOMAINS, SUBTABS } from '../nav';
 import { Search, Sun, Moon } from 'lucide-react';
 
-// Top bar = the SUB-TAB bar: brand (compact) · domain sub-tabs · ⌘K · theme toggle ·
-// route badge. Sub-tabs render from the SUBTABS config (config-driven).
+// Top bar = the SUB-TAB bar: brand (compact) · domain sub-tabs · ⌘K · theme toggle.
+// Sub-tabs render from the SUBTABS config (config-driven).
 export function ContextBar({ mobile = false }: { mobile?: boolean }) {
   const { domain, subtab, setSubtab, togglePalette, theme, toggleTheme } = useStore();
   const def = DOMAINS.find((d) => d.id === domain)!;
@@ -55,12 +55,6 @@ export function ContextBar({ mobile = false }: { mobile?: boolean }) {
           border: '1px solid var(--line)', borderRadius: 3, color: 'var(--muted)', flexShrink: 0 }}>
         {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
       </button>
-
-      {!mobile && (
-        <span className="chip mono" style={{ color: `var(--${def.accent})`, borderColor: `var(--${def.accent})` }}>
-          <span className="dot" style={{ background: `var(--${def.accent})` }} />/{def.id}
-        </span>
-      )}
     </header>
   );
 }
