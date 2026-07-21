@@ -1,0 +1,10 @@
+.env
+.env.*
+node_modules/
+dist/
+
+# generated at build time by scripts/build-data.mjs (predev/prebuild)
+src/data/
+
+__pycache__/
+*.pyc

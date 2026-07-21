@@ -1,20 +1,213 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "arganta", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","5599"], "port": 5599 },
-    { "name": "kingdom", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","8321","-d","apps/kingdom"], "port": 8321 },
-    { "name": "kingdom-web", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/kingdom/web"], "port": 8322 },
-    { "name": "kingdom-web-2", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/kingdom/web","--","--port","8323"], "port": 8323 },
-    { "name": "kingdom-dist", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","8749","-d","apps/kingdom/dist_site"], "port": 8749, "autoPort": false },
-    { "name": "kinetik", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/kinetik"], "port": 5180 },
-    { "name": "hq", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/hq","--","--port","5178"], "port": 5178, "autoPort": true },
-    { "name": "hq-offline", "runtimeExecutable": "cmd", "runtimeArgs": ["/c","set VITE_SUPABASE_URL=placeholder&& set VITE_SUPABASE_ANON_KEY=placeholder&& npm run dev --prefix apps/hq -- --port 5179"], "port": 5179, "autoPort": true },
-    { "name": "hq-v3", "runtimeExecutable": "cmd", "runtimeArgs": ["/c","set VITE_SUPABASE_URL=placeholder&& set VITE_SUPABASE_ANON_KEY=placeholder&& npm run dev --prefix apps/hq -- --port 5294 --strictPort"], "port": 5294, "autoPort": false },
-    { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/web"], "port": 5173, "autoPort": true },
-    { "name": "web-arena", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/web","--","--port","5174"], "port": 5174, "autoPort": true },
-    { "name": "landing", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/landing"], "port": 5191 },
-    { "name": "lashira", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/lashira/web","--","--port","5185"], "port": 5185, "autoPort": true },
-    { "name": "bloom-command", "runtimeExecutable": "npm", "runtimeArgs": ["run","dev","--prefix","apps/lashira/command","--","--port","5186"], "port": 5186, "autoPort": true },
-    { "name": "video-concept", "runtimeExecutable": "python", "runtimeArgs": ["-m","http.server","5311","-d","C:/Users/aldhy/AppData/Local/Temp/claude/C--Users-aldhy-OneDrive-Documents-GitHub-ArgantaLab/64aab420-0a54-4ecf-9740-94217e2f36a8/scratchpad/preview"], "port": 5311, "autoPort": true }
+    {
+      "name": "arganta",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5599"
+      ],
+      "port": 5599
+    },
+    {
+      "name": "kingdom",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8321",
+        "-d",
+        "apps/kingdom"
+      ],
+      "port": 8321
+    },
+    {
+      "name": "kingdom-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/kingdom/web"
+      ],
+      "port": 8322
+    },
+    {
+      "name": "kingdom-web-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/kingdom/web",
+        "--",
+        "--port",
+        "8323"
+      ],
+      "port": 8323
+    },
+    {
+      "name": "kingdom-dist",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8749",
+        "-d",
+        "apps/kingdom/dist_site"
+      ],
+      "port": 8749,
+      "autoPort": false
+    },
+    {
+      "name": "kinetik",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/kinetik"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "hq",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/hq",
+        "--",
+        "--port",
+        "5178"
+      ],
+      "port": 5178,
+      "autoPort": true
+    },
+    {
+      "name": "hq-offline",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set VITE_SUPABASE_URL=placeholder&& set VITE_SUPABASE_ANON_KEY=placeholder&& npm run dev --prefix apps/hq -- --port 5179"
+      ],
+      "port": 5179,
+      "autoPort": true
+    },
+    {
+      "name": "hq-v3",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set VITE_SUPABASE_URL=placeholder&& set VITE_SUPABASE_ANON_KEY=placeholder&& npm run dev --prefix apps/hq -- --port 5294 --strictPort"
+      ],
+      "port": 5294,
+      "autoPort": false
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/web"
+      ],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "web-arena",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/web",
+        "--",
+        "--port",
+        "5174"
+      ],
+      "port": 5174,
+      "autoPort": true
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/landing"
+      ],
+      "port": 5191
+    },
+    {
+      "name": "lashira",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/lashira/web",
+        "--",
+        "--port",
+        "5185"
+      ],
+      "port": 5185,
+      "autoPort": true
+    },
+    {
+      "name": "bloom-command",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/lashira/command",
+        "--",
+        "--port",
+        "5186"
+      ],
+      "port": 5186,
+      "autoPort": true
+    },
+    {
+      "name": "video-concept",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5311",
+        "-d",
+        "C:/Users/aldhy/AppData/Local/Temp/claude/C--Users-aldhy-OneDrive-Documents-GitHub-ArgantaLab/64aab420-0a54-4ecf-9740-94217e2f36a8/scratchpad/preview"
+      ],
+      "port": 5311,
+      "autoPort": true
+    },
+    {
+      "name": "arganta-studio",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/studio"
+      ],
+      "port": 3200
+    },
+    {
+      "name": "energy",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "apps/energy",
+      "port": 5279
+    }
   ]
 }

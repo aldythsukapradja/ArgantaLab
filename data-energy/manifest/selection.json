@@ -1,0 +1,5018 @@
+{
+  "decidedAt": "2026-07-21",
+  "decision": "Gate1: full exploration logs + depth horizons + all trajectories + masters",
+  "fileCount": 1002,
+  "totalBytes": 2056176075,
+  "files": [
+    {
+      "path": "Geophysical_Interpretations/Horizons/Horizons_DEPTH/Official_Horizons/BCU+ST10010ZC11_NoF10_160913_adjVolve_EasyDC+STAT+DEPTH.dat",
+      "size": 16379351,
+      "last_modified": 1760532106000
+    },
+    {
+      "path": "Geophysical_Interpretations/Horizons/Horizons_DEPTH/Official_Horizons/Hugin_Fm_Base+ST10010ZC11_Near_190314_adj_2999_EasyDC+STAT+DEPTH.dat",
+      "size": 13246452,
+      "last_modified": 1760532107000
+    },
+    {
+      "path": "Geophysical_Interpretations/Horizons/Horizons_DEPTH/Official_Horizons/Hugin_Fm_Top+ST10010ZC11_Near_190314_adj2_2760_EasyDC+STAT+DEPTH.dat",
+      "size": 13057031,
+      "last_modified": 1760532107000
+    },
+    {
+      "path": "Geophysical_Interpretations/Horizons/Horizons_DEPTH/Official_Horizons/SHETLAND_GP_Top+ST10010ZC11_160913_unadj_EasyDC+STAT+DEPTH.dat",
+      "size": 16548573,
+      "last_modified": 1760532107000
+    },
+    {
+      "path": "Geophysical_Interpretations/Horizons/Horizons_DEPTH/Official_Horizons/Ty_Fm_Top+ST10010ZC11_270613_updateF11wells_EasyDC+STAT+DEPTH.dat",
+      "size": 17129775,
+      "last_modified": 1760532107000
+    },
+    {
+      "path": "Geophysical_Interpretations/Horizons/Horizons_DEPTH/Other_Horizons/Seabed+VelBuild_04_08+PUB+DEPTH.dat",
+      "size": 36090972,
+      "last_modified": 1760532107000
+    },
+    {
+      "path": "Geophysical_Interpretations/Wells/README.txt",
+      "size": 451,
+      "last_modified": 1760532106000
+    },
+    {
+      "path": "Geophysical_Interpretations/Wells/Well_perforations_Volve.dat",
+      "size": 18228,
+      "last_modified": 1760532106000
+    },
+    {
+      "path": "Geophysical_Interpretations/Wells/Well_picks_Volve_v1.dat",
+      "size": 74548,
+      "last_modified": 1760532106000
+    },
+    {
+      "path": "HRS and Terms and conditions for license to data - Volve.pdf",
+      "size": 212938,
+      "last_modified": 1760428855000
+    },
+    {
+      "path": "Production_data/Volve production data.xlsx",
+      "size": 2342595,
+      "last_modified": 1760429276000
+    },
+    {
+      "path": "Reports/Discovery_report.pdf",
+      "size": 182392824,
+      "last_modified": 1760429217000
+    },
+    {
+      "path": "Reports/Volve PUD .pdf",
+      "size": 4844993,
+      "last_modified": 1760431091000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/01.MUD_LOG/L898MUD.LTI",
+      "size": 355352,
+      "last_modified": 1760430801000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/04.COMPOSITE/12.tif",
+      "size": 3441363,
+      "last_modified": 1760433344000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/04.COMPOSITE/L898AUD.ASC",
+      "size": 59812,
+      "last_modified": 1760429225000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/04.COMPOSITE/L898CMP.LTI",
+      "size": 6488411,
+      "last_modified": 1760431068000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/04.COMPOSITE/read me.txt",
+      "size": 85,
+      "last_modified": 1760433457000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/04.COMPOSITE/Thumbs.db",
+      "size": 5120,
+      "last_modified": 1760428958000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/05.PETROPHYSICAL INTERPRETATION/15_9-19 A Facies.xlsx",
+      "size": 162743,
+      "last_modified": 1760430884000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/05.PETROPHYSICAL INTERPRETATION/2005_Sleipner _Øst_Hugin_Petrophysical_evaluation.pdf",
+      "size": 2491182,
+      "last_modified": 1760430814000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/05.PETROPHYSICAL INTERPRETATION/CPI/15_9-19_A_CPI.las",
+      "size": 1100423,
+      "last_modified": 1760435697000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/05.PETROPHYSICAL INTERPRETATION/first interpretation/L898CPI.LTI",
+      "size": 875818,
+      "last_modified": 1760441102000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/05.PETROPHYSICAL INTERPRETATION/first interpretation/L898NOM.ASC",
+      "size": 2203,
+      "last_modified": 1760434230000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/06.LFP/159-19A_LFP.las",
+      "size": 8810367,
+      "last_modified": 1760430868000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/06.LFP/lfp_petrophysics_no_15-9-19A.pdf",
+      "size": 6068,
+      "last_modified": 1760429223000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/06.LFP/no_15_9-19_a_lfp_report.doc",
+      "size": 269824,
+      "last_modified": 1760429285000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/15_9_19A_o_w_relp.xls",
+      "size": 748032,
+      "last_modified": 1760429296000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/15_9-19 A_core shift.xlsx",
+      "size": 9429,
+      "last_modified": 1760429163000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/15-9-19_A_0035.pdf",
+      "size": 95075695,
+      "last_modified": 1760428933000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/15-9-19-A_Thin_section_micro_photograph_15_9-19A.pdf",
+      "size": 111172497,
+      "last_modified": 1760431026000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/15-9-19a-core.pdf",
+      "size": 7806485,
+      "last_modified": 1760430874000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/15919A.SPW",
+      "size": 205874,
+      "last_modified": 1760428917000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/15919A.XLS",
+      "size": 202752,
+      "last_modified": 1760431088000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/Core Photos on NPD pages.url",
+      "size": 268,
+      "last_modified": 1760431106000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/Rock Mechanical Testing Triaxial tests on sandstone Well 15-9-19 A.pdf",
+      "size": 12308555,
+      "last_modified": 1760428988000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/T17701.LOG",
+      "size": 7136,
+      "last_modified": 1760428943000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/T17702.LOG",
+      "size": 12156,
+      "last_modified": 1760431316000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/T17703.LOG",
+      "size": 11896,
+      "last_modified": 1760431091000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/T17704.LOG",
+      "size": 11372,
+      "last_modified": 1760430871000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/T17705.LOG",
+      "size": 12130,
+      "last_modified": 1760433395000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/T17706.LOG",
+      "size": 12031,
+      "last_modified": 1760431056000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/09.CORE/T17707.LOG",
+      "size": 11794,
+      "last_modified": 1760430871000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/12.BIOSTRAT/001.tif",
+      "size": 577546,
+      "last_modified": 1760432972000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/12.BIOSTRAT/002.tif",
+      "size": 648722,
+      "last_modified": 1760428929000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/12.BIOSTRAT/003.tif",
+      "size": 1930022,
+      "last_modified": 1760429227000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/12.BIOSTRAT/15_9-19a-bio.pdf",
+      "size": 520697,
+      "last_modified": 1760428915000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/12.BIOSTRAT/15-9-19_a_046_Biostratigraphy.pdf",
+      "size": 1787102,
+      "last_modified": 1760428959000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/12.BIOSTRAT/Thumbs.db",
+      "size": 37888,
+      "last_modified": 1760433484000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 A/13.GEOCHEM/GCH_REPORT.PDF",
+      "size": 200439,
+      "last_modified": 1760431020000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/01.MUD_LOG/L916MUD.LTI",
+      "size": 367204,
+      "last_modified": 1760431309000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/03.PRESSURE/BT2/04.TIF",
+      "size": 7041362,
+      "last_modified": 1760434201000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/03.PRESSURE/BT2/L916RFT.LTI",
+      "size": 133078,
+      "last_modified": 1760434170000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/03.PRESSURE/BT2/TAPELIST-L916RFT.TXT",
+      "size": 9496,
+      "last_modified": 1760436501000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/04.COMPOSITE/L916AUD.ASC",
+      "size": 20495,
+      "last_modified": 1760429275000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/04.COMPOSITE/L916CMP.LTI",
+      "size": 5202962,
+      "last_modified": 1760428908000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/04.COMPOSITE/L916CON.ASC",
+      "size": 13512,
+      "last_modified": 1760433482000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/04.COMPOSITE/L916HEAD.ASC",
+      "size": 14265,
+      "last_modified": 1760432971000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/04.COMPOSITE/L916INFO.ASC",
+      "size": 814,
+      "last_modified": 1760433381000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/04.COMPOSITE/read me.txt",
+      "size": 85,
+      "last_modified": 1760428838000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/05.PETROPHYSICAL INTERPRETATION/15_9-19 BT2 Facies.xlsx",
+      "size": 171461,
+      "last_modified": 1760433366000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/05.PETROPHYSICAL INTERPRETATION/2005_Sleipner _Øst_Hugin_Petrophysical_evaluation.pdf",
+      "size": 2491182,
+      "last_modified": 1760430868000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/05.PETROPHYSICAL INTERPRETATION/CPI/15_9-19_BT2_CPI.las",
+      "size": 666161,
+      "last_modified": 1760441544000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/05.PETROPHYSICAL INTERPRETATION/first interpretation/L916CPI.LTI",
+      "size": 851084,
+      "last_modified": 1760439008000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/05.PETROPHYSICAL INTERPRETATION/first interpretation/L916NOM.ASC",
+      "size": 2770,
+      "last_modified": 1760438899000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-19_BT2_KLOGH_NEW.las",
+      "size": 29521,
+      "last_modified": 1760433878000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/06.LFP/159-19BT2_LFP.las",
+      "size": 15769458,
+      "last_modified": 1760429223000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/06.LFP/lfp_petrophysics_no_15-9-19Bt2.pdf",
+      "size": 6063,
+      "last_modified": 1760428844000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/06.LFP/no_15_9-19_bt2_lfp_report_v2.doc",
+      "size": 268800,
+      "last_modified": 1760429213000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/15_9-19 BT2_core shift.xlsx",
+      "size": 9182,
+      "last_modified": 1760430810000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/15_9-19bt2.pdf",
+      "size": 4493767,
+      "last_modified": 1760431123000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/15-9-19_bt2_Thin_section_micro_photograph_15_9-19-BT2.pdf",
+      "size": 44847578,
+      "last_modified": 1760431108000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/15919BT2.SPW",
+      "size": 37157,
+      "last_modified": 1760432971000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/15919bt2.xls",
+      "size": 52224,
+      "last_modified": 1760433347000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/Core Photos on NPD pages.url",
+      "size": 265,
+      "last_modified": 1760428978000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/R20101.LOG",
+      "size": 6180,
+      "last_modified": 1760433473000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/R20102.log",
+      "size": 7988,
+      "last_modified": 1760432970000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/R20103.LOG",
+      "size": 8284,
+      "last_modified": 1760431111000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/09.CORE/R20104.LOG",
+      "size": 8563,
+      "last_modified": 1760430801000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/15_9-19 BT2_core shift.xlsx",
+      "size": 9182,
+      "last_modified": 1760433465000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/15_9-19bt2.pdf",
+      "size": 4493767,
+      "last_modified": 1760428984000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/15-9-19_bt2_Thin_section_micro_photograph_15_9-19-BT2.pdf",
+      "size": 44847578,
+      "last_modified": 1760433381000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/15919BT2.SPW",
+      "size": 37157,
+      "last_modified": 1760431349000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/15919bt2.xls",
+      "size": 52224,
+      "last_modified": 1760433484000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/Core Photos on NPD pages.url",
+      "size": 265,
+      "last_modified": 1760431079000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/R20101.LOG",
+      "size": 6180,
+      "last_modified": 1760428965000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/R20102.log",
+      "size": 7988,
+      "last_modified": 1760431093000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/R20103.LOG",
+      "size": 8284,
+      "last_modified": 1760428986000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/12.BIOSTRAT/R20104.LOG",
+      "size": 8563,
+      "last_modified": 1760428942000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/A Stratigraphic Reconstruction of Bulk Volatile Chemistry from Fluid Inclusions_FI080096a-1.pdf",
+      "size": 2933889,
+      "last_modified": 1760431078000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/Data Report TOC and Rock-Eval of 36 DC samples.pdf",
+      "size": 989292,
+      "last_modified": 1760431307000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/FI080096a_enclosures/FI080096a-1.txt",
+      "size": 77564,
+      "last_modified": 1760438851000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/FI080096a_enclosures/FI080096a-180.xls",
+      "size": 479744,
+      "last_modified": 1760436518000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/FI080096a_enclosures/FI080096a-180a.xls",
+      "size": 372224,
+      "last_modified": 1760438950000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/FI080096a_enclosures/FI080096a-180stat.xls",
+      "size": 515584,
+      "last_modified": 1760433548000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/FI080096a_enclosures/FI080096a-2.las",
+      "size": 533499,
+      "last_modified": 1760433495000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/FI080096a_enclosures/FI080096a-25.xls",
+      "size": 113664,
+      "last_modified": 1760434143000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/FI080096a_enclosures/FI080096a-2a.las",
+      "size": 533499,
+      "last_modified": 1760434256000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/GCH_REPORT_1_ENCL_1.ASC",
+      "size": 77877,
+      "last_modified": 1760431088000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/GCH_REPORT_1_ENCL_2.LAS",
+      "size": 533499,
+      "last_modified": 1760428846000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/GCH_REPORT_1_ENCL_3.LAS",
+      "size": 533499,
+      "last_modified": 1760431091000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 B&BT2/13.GEOCHEM/GCH_REPORT_1.PDF",
+      "size": 2933889,
+      "last_modified": 1760431311000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/01.MUD_LOG/L749MUD1.LTI",
+      "size": 1393421,
+      "last_modified": 1760430798000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/01.MUD_LOG/L749MUD2.LTI",
+      "size": 2132974,
+      "last_modified": 1760433417000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/04.COMPOSITE/L749AUD.ASC",
+      "size": 22530,
+      "last_modified": 1760431068000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/04.COMPOSITE/L749CMP.LTI",
+      "size": 4594881,
+      "last_modified": 1760431139000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/04.COMPOSITE/L749CON.ASC",
+      "size": 13371,
+      "last_modified": 1760429219000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/04.COMPOSITE/L749HEAD.ASC",
+      "size": 12789,
+      "last_modified": 1760430819000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/04.COMPOSITE/L749INFO.ASC",
+      "size": 832,
+      "last_modified": 1760429285000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/04.COMPOSITE/read me.txt",
+      "size": 137,
+      "last_modified": 1760431106000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/04.COMPOSITE/STAT1990__30-1__15-9-19_SR__COMPOSITE__1.LAS",
+      "size": 2621599,
+      "last_modified": 1760433436000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/05.PETROPHYSICAL INTERPRETATION/15_9-19 SR Facies.xlsx",
+      "size": 9013,
+      "last_modified": 1760431126000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/05.PETROPHYSICAL INTERPRETATION/2005_Sleipner _Øst_Hugin_Petrophysical_evaluation.pdf",
+      "size": 2491182,
+      "last_modified": 1760429296000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/05.PETROPHYSICAL INTERPRETATION/CPI/15_9-19_SR_CPI.las",
+      "size": 948421,
+      "last_modified": 1760441669000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/05.PETROPHYSICAL INTERPRETATION/first intepretation/L749CPI.LTI",
+      "size": 957594,
+      "last_modified": 1760433605000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/05.PETROPHYSICAL INTERPRETATION/first intepretation/L749NOM.ASC",
+      "size": 2082,
+      "last_modified": 1760438769000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/06.LFP/159-19SR_LFP.las",
+      "size": 88423751,
+      "last_modified": 1760431121000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/06.LFP/lfp_petrophysics_no_15-9-19SR.pdf",
+      "size": 6169,
+      "last_modified": 1760433467000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/09.CORE/15_9-19 SR_core shift.xlsx",
+      "size": 9093,
+      "last_modified": 1760430803000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/09.CORE/15-9-19S_0013.pdf",
+      "size": 2200808,
+      "last_modified": 1760431291000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/09.CORE/15919S.SPW",
+      "size": 60072,
+      "last_modified": 1760431046000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/09.CORE/Core Photos on NPD pages.url",
+      "size": 265,
+      "last_modified": 1760430817000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/09.CORE/core_report_nr-15.pdf",
+      "size": 3343092,
+      "last_modified": 1760433459000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/09.CORE/relperm15919S.xls",
+      "size": 131584,
+      "last_modified": 1760430851000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/12.BIOSTRAT/15_9-19sr-bio.pdf",
+      "size": 42332,
+      "last_modified": 1760433448000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/12.BIOSTRAT/N159-19S.TXT",
+      "size": 26817,
+      "last_modified": 1760430781000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/12.BIOSTRAT/N167-2.TXT",
+      "size": 59688,
+      "last_modified": 1760429256000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/12.BIOSTRAT/N167-3.TXT",
+      "size": 49891,
+      "last_modified": 1760430884000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/12.BIOSTRAT/N167-4.TXT",
+      "size": 15025,
+      "last_modified": 1760429220000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-19 S&SR/12.BIOSTRAT/N167-5.TXT",
+      "size": 22010,
+      "last_modified": 1760433467000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/01.MUD_LOG/MUD_LOG_2_INF_1.ASC",
+      "size": 1034,
+      "last_modified": 1760433434000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/01.MUD_LOG/MUD_LOG_2.DLIS",
+      "size": 242724,
+      "last_modified": 1760428866000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/01.MUD_LOG/MUD_LOG_MD_PLOT_4.PDF",
+      "size": 2176766,
+      "last_modified": 1760429277000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/01.MUD_LOG/MUD_LOG_MD_PLOT_5.PDF",
+      "size": 744789,
+      "last_modified": 1760431114000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/01.MUD_LOG/MUD_LOG_MD_PLOT_6.PDF",
+      "size": 1242645,
+      "last_modified": 1760429219000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/01.MUD_LOG/MUD_LOG_REPORT_2.PDF",
+      "size": 7041417,
+      "last_modified": 1760430851000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/01.MUD_LOG/MUD_LOG_TVD_PLOT_2.PDF",
+      "size": 427264,
+      "last_modified": 1760430822000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1_INF_1.ASC",
+      "size": 880,
+      "last_modified": 1760431078000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1.LAS",
+      "size": 1735,
+      "last_modified": 1760433461000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1-7_INF_1.ASC",
+      "size": 1664,
+      "last_modified": 1760429179000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1.LAS",
+      "size": 1639156,
+      "last_modified": 1760428919000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_2.LAS",
+      "size": 1649004,
+      "last_modified": 1760428900000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_3.LAS",
+      "size": 1644986,
+      "last_modified": 1760430872000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_4.LAS",
+      "size": 1653219,
+      "last_modified": 1760433347000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_5.LAS",
+      "size": 541184,
+      "last_modified": 1760429286000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_6.LAS",
+      "size": 486080,
+      "last_modified": 1760430826000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_7.LAS",
+      "size": 821583,
+      "last_modified": 1760430779000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_REPORT_1.PDF",
+      "size": 809776,
+      "last_modified": 1760431124000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 191947,
+      "last_modified": 1760428995000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2203870,
+      "last_modified": 1760429287000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 187337,
+      "last_modified": 1760428993000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 2252070,
+      "last_modified": 1760430801000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 3478101,
+      "last_modified": 1760428842000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3080,
+      "last_modified": 1760430820000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 11354958,
+      "last_modified": 1760429256000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 472730,
+      "last_modified": 1760431114000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/12.BIOSTRAT/BIOSTRAT_COMPUTED_1_INF_1.ASC",
+      "size": 307,
+      "last_modified": 1760428930000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/12.BIOSTRAT/BIOSTRAT_COMPUTED_1.DEX",
+      "size": 26546,
+      "last_modified": 1760429213000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/12.BIOSTRAT/BIOSTRAT_RAW_1_INF_1.ASC",
+      "size": 292,
+      "last_modified": 1760430799000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 367125,
+      "last_modified": 1760431122000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 A/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 957792,
+      "last_modified": 1760428920000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_1_INF_1.ASC",
+      "size": 1037,
+      "last_modified": 1760429274000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_2_INF_1.ASC",
+      "size": 1037,
+      "last_modified": 1760433394000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_2.DLIS",
+      "size": 198114,
+      "last_modified": 1760430882000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_MD_PLOT_4.PDF",
+      "size": 1213730,
+      "last_modified": 1760430807000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_MD_PLOT_5.PDF",
+      "size": 505969,
+      "last_modified": 1760428994000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_MD_PLOT_6.PDF",
+      "size": 733689,
+      "last_modified": 1760429256000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_REPORT_2.PDF",
+      "size": 7041417,
+      "last_modified": 1760429217000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/01.MUD_LOG/MUD_LOG_TVD_PLOT_2.PDF",
+      "size": 266563,
+      "last_modified": 1760430880000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1_INF_1.ASC",
+      "size": 877,
+      "last_modified": 1760431102000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1.LAS",
+      "size": 2185,
+      "last_modified": 1760431088000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_1-10_INF_1.ASC",
+      "size": 2026,
+      "last_modified": 1760433464000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_1.LAS",
+      "size": 1664986,
+      "last_modified": 1760429235000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_10.LAS",
+      "size": 529040,
+      "last_modified": 1760431328000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_2.LAS",
+      "size": 656468,
+      "last_modified": 1760429213000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_3.LAS",
+      "size": 537076,
+      "last_modified": 1760433391000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_4.LAS",
+      "size": 463891,
+      "last_modified": 1760431055000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_5.LAS",
+      "size": 548843,
+      "last_modified": 1760430812000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_6.LAS",
+      "size": 553722,
+      "last_modified": 1760428919000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_7.LAS",
+      "size": 481398,
+      "last_modified": 1760433392000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_8.LAS",
+      "size": 614279,
+      "last_modified": 1760431129000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_9.LAS",
+      "size": 521291,
+      "last_modified": 1760431087000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_REPORT_1.PDF",
+      "size": 1355417,
+      "last_modified": 1760430874000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 179679,
+      "last_modified": 1760429214000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2064148,
+      "last_modified": 1760429276000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 174262,
+      "last_modified": 1760430806000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 1780290,
+      "last_modified": 1760430821000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 3478101,
+      "last_modified": 1760429248000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3237,
+      "last_modified": 1760429225000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 12251855,
+      "last_modified": 1760429213000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 423193,
+      "last_modified": 1760428994000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/12.BIOSTRAT/BIOSTRAT_COMPUTED_1_INF_1.ASC",
+      "size": 307,
+      "last_modified": 1760431108000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/12.BIOSTRAT/BIOSTRAT_COMPUTED_1.DEX",
+      "size": 20902,
+      "last_modified": 1760431124000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/12.BIOSTRAT/BIOSTRAT_RAW_1_INF_1.ASC",
+      "size": 292,
+      "last_modified": 1760428848000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 255581,
+      "last_modified": 1760432969000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 B/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 998073,
+      "last_modified": 1760431106000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_1_INF_1_X.ASC",
+      "size": 7652,
+      "last_modified": 1760433346000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_1_INF_1.ASC",
+      "size": 1060,
+      "last_modified": 1760431101000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_1.DLIS",
+      "size": 627410,
+      "last_modified": 1760433468000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 1385243,
+      "last_modified": 1760431114000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 666881,
+      "last_modified": 1760430786000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 1268976,
+      "last_modified": 1760433335000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 14715590,
+      "last_modified": 1760428879000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 592600,
+      "last_modified": 1760429003000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1_INF_1.ASC",
+      "size": 923,
+      "last_modified": 1760429276000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1.LAS",
+      "size": 2655,
+      "last_modified": 1760430763000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_1-13_INF_1.ASC",
+      "size": 2506,
+      "last_modified": 1760433345000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_1.LAS",
+      "size": 487999,
+      "last_modified": 1760430883000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_10.LAS",
+      "size": 490959,
+      "last_modified": 1760430869000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_11.LAS",
+      "size": 472017,
+      "last_modified": 1760431725000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_12.LAS",
+      "size": 460537,
+      "last_modified": 1760429219000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_13.LAS",
+      "size": 473452,
+      "last_modified": 1760428920000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_2.LAS",
+      "size": 584718,
+      "last_modified": 1760431121000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_3.LAS",
+      "size": 589023,
+      "last_modified": 1760431111000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_4.LAS",
+      "size": 608916,
+      "last_modified": 1760431080000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_5.LAS",
+      "size": 491820,
+      "last_modified": 1760431124000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_6.LAS",
+      "size": 504448,
+      "last_modified": 1760428960000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_7.LAS",
+      "size": 479479,
+      "last_modified": 1760429209000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_8.LAS",
+      "size": 496699,
+      "last_modified": 1760430893000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_9.LAS",
+      "size": 523390,
+      "last_modified": 1760432970000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_REPORT_1.PDF",
+      "size": 1711513,
+      "last_modified": 1760433347000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 173932,
+      "last_modified": 1760430806000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2153640,
+      "last_modified": 1760433401000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 206377,
+      "last_modified": 1760430885000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 6405628,
+      "last_modified": 1760429281000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 1748044,
+      "last_modified": 1760433384000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3122,
+      "last_modified": 1760429276000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 13309433,
+      "last_modified": 1760433406000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1 C/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 1434236,
+      "last_modified": 1760429208000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/01.MUD_LOG/MUD_LOG_2_INF_1.ASC",
+      "size": 1033,
+      "last_modified": 1760431289000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/01.MUD_LOG/MUD_LOG_2.DLIS",
+      "size": 768706,
+      "last_modified": 1760429205000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/01.MUD_LOG/MUD_LOG_MD_PLOT_4.PDF",
+      "size": 3625006,
+      "last_modified": 1760428907000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/01.MUD_LOG/MUD_LOG_MD_PLOT_5.PDF",
+      "size": 1307165,
+      "last_modified": 1760429193000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/01.MUD_LOG/MUD_LOG_MD_PLOT_6.PDF",
+      "size": 2243658,
+      "last_modified": 1760429184000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/01.MUD_LOG/MUD_LOG_REPORT_2.PDF",
+      "size": 7041417,
+      "last_modified": 1760432974000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/01.MUD_LOG/MUD_LOG_TVD_PLOT_2.PDF",
+      "size": 796923,
+      "last_modified": 1760428846000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1_INF_1.ASC",
+      "size": 878,
+      "last_modified": 1760430878000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1.LAS",
+      "size": 1735,
+      "last_modified": 1760431317000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_1-6_INF_1.ASC",
+      "size": 1526,
+      "last_modified": 1760429182000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_1.LAS",
+      "size": 1536697,
+      "last_modified": 1760430807000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_2.LAS",
+      "size": 1062860,
+      "last_modified": 1760429284000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_3.LAS",
+      "size": 1642887,
+      "last_modified": 1760429039000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_4.LAS",
+      "size": 1648914,
+      "last_modified": 1760433350000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_5.LAS",
+      "size": 594189,
+      "last_modified": 1760431090000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_6.LAS",
+      "size": 1640878,
+      "last_modified": 1760433367000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/03.PRESSURE/FM_PRESS_RAW_RUN4_MWD_REPORT_1.PDF",
+      "size": 775674,
+      "last_modified": 1760431140000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 172805,
+      "last_modified": 1760429213000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2033170,
+      "last_modified": 1760428848000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 201011,
+      "last_modified": 1760430801000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 11994082,
+      "last_modified": 1760431113000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 3478101,
+      "last_modified": 1760428847000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3111,
+      "last_modified": 1760429206000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 11752331,
+      "last_modified": 1760429275000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 526414,
+      "last_modified": 1760430842000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/12.BIOSTRAT/BIOSTRAT_COMPUTED_1_INF_1.ASC",
+      "size": 304,
+      "last_modified": 1760429280000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/12.BIOSTRAT/BIOSTRAT_COMPUTED_1.DEX",
+      "size": 28849,
+      "last_modified": 1760429231000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/12.BIOSTRAT/BIOSTRAT_RAW_1_INF_1.ASC",
+      "size": 289,
+      "last_modified": 1760430821000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 229966,
+      "last_modified": 1760433468000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-1/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 974081,
+      "last_modified": 1760431328000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 813924,
+      "last_modified": 1760430893000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 849530,
+      "last_modified": 1760431104000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 1196512,
+      "last_modified": 1760428845000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 1274287,
+      "last_modified": 1760430894000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 7371393,
+      "last_modified": 1760429002000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 779735,
+      "last_modified": 1760429279000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/03.PRESSURE/FM_PRESS_MWD_REPORT_1.PDF",
+      "size": 3343500,
+      "last_modified": 1760428899000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/03.PRESSURE/FM_PRESS_RAW_RUN10_MWD_1-3_INF_1.ASC",
+      "size": 1174,
+      "last_modified": 1760429167000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/03.PRESSURE/FM_PRESS_RAW_RUN10_MWD_1.LAS",
+      "size": 4584380,
+      "last_modified": 1760433418000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/03.PRESSURE/FM_PRESS_RAW_RUN10_MWD_2.LAS",
+      "size": 4563512,
+      "last_modified": 1760429167000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/03.PRESSURE/FM_PRESS_RAW_RUN10_MWD_3.LAS",
+      "size": 4574522,
+      "last_modified": 1760429177000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 157229,
+      "last_modified": 1760429266000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2137096,
+      "last_modified": 1760431419000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 166055,
+      "last_modified": 1760431348000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 7557044,
+      "last_modified": 1760431307000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 52086,
+      "last_modified": 1760433458000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 2098,
+      "last_modified": 1760430883000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 144246,
+      "last_modified": 1760433473000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 1814840,
+      "last_modified": 1760433370000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/12.BIOSTRAT/BIOSTRAT_RAW_1_INF_1.ASC",
+      "size": 295,
+      "last_modified": 1760433350000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 43483,
+      "last_modified": 1760428855000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-10/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 1131578,
+      "last_modified": 1760430882000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/01.MUD_LOG/MUD_LOG_1_INF_1.ASC",
+      "size": 953,
+      "last_modified": 1760431111000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/01.MUD_LOG/MUD_LOG_1.DLIS",
+      "size": 268274,
+      "last_modified": 1760430872000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 910378,
+      "last_modified": 1760429177000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 399440,
+      "last_modified": 1760433395000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 761420,
+      "last_modified": 1760430873000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 6456200,
+      "last_modified": 1760428999000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1_INF_1.ASC",
+      "size": 928,
+      "last_modified": 1760433414000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1.LAS",
+      "size": 4259602,
+      "last_modified": 1760429224000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_1-24_INF_1.ASC",
+      "size": 3781,
+      "last_modified": 1760433462000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_1.LAS",
+      "size": 484268,
+      "last_modified": 1760433438000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_10.LAS",
+      "size": 471156,
+      "last_modified": 1760433434000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_11.LAS",
+      "size": 1641542,
+      "last_modified": 1760429227000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_12.LAS",
+      "size": 1637237,
+      "last_modified": 1760429278000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_13.LAS",
+      "size": 1642887,
+      "last_modified": 1760431140000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_14.LAS",
+      "size": 1643174,
+      "last_modified": 1760429246000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_15.LAS",
+      "size": 468196,
+      "last_modified": 1760430815000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_16.LAS",
+      "size": 1043147,
+      "last_modified": 1760429226000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_17.LAS",
+      "size": 1640107,
+      "last_modified": 1760429220000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_18.LAS",
+      "size": 1647282,
+      "last_modified": 1760429219000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_19.LAS",
+      "size": 1638959,
+      "last_modified": 1760428978000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_2.LAS",
+      "size": 471730,
+      "last_modified": 1760429218000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_20.LAS",
+      "size": 461882,
+      "last_modified": 1760429203000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_21.LAS",
+      "size": 500717,
+      "last_modified": 1760430783000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_22.LAS",
+      "size": 469721,
+      "last_modified": 1760430806000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_23.LAS",
+      "size": 613508,
+      "last_modified": 1760428919000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_24.LAS",
+      "size": 921172,
+      "last_modified": 1760430818000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_3.LAS",
+      "size": 494116,
+      "last_modified": 1760433457000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_4.LAS",
+      "size": 523677,
+      "last_modified": 1760430885000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_5.LAS",
+      "size": 587965,
+      "last_modified": 1760433461000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_6.LAS",
+      "size": 731465,
+      "last_modified": 1760433392000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_7.LAS",
+      "size": 543767,
+      "last_modified": 1760430766000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_8.LAS",
+      "size": 501578,
+      "last_modified": 1760433467000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_9.LAS",
+      "size": 639338,
+      "last_modified": 1760429196000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/03.PRESSURE/FM_PRESS_RAW_RUN8_MWD_REPORT_1.PDF",
+      "size": 2756498,
+      "last_modified": 1760430785000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 178247,
+      "last_modified": 1760433417000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2262758,
+      "last_modified": 1760433458000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 201636,
+      "last_modified": 1760430850000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 2645100,
+      "last_modified": 1760429218000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_2.PDF",
+      "size": 4408097,
+      "last_modified": 1760428971000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3146,
+      "last_modified": 1760429278000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 8687815,
+      "last_modified": 1760433468000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 189896,
+      "last_modified": 1760430852000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_COMPUTED_1-2_INF_1.ASC",
+      "size": 476,
+      "last_modified": 1760428867000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_COMPUTED_1.DEX",
+      "size": 143088,
+      "last_modified": 1760430767000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_COMPUTED_2.DEX",
+      "size": 27308,
+      "last_modified": 1760429217000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_RAW_1-2_INF_1.ASC",
+      "size": 453,
+      "last_modified": 1760430765000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 285654,
+      "last_modified": 1760429003000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_RAW_2.DEX",
+      "size": 398902,
+      "last_modified": 1760432971000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 4741646,
+      "last_modified": 1760430784000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 A/12.BIOSTRAT/BIOSTRAT_REPORT_2.PDF",
+      "size": 1057116,
+      "last_modified": 1760428845000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/01.MUD_LOG/MUD_LOG_1_INF_1.ASC",
+      "size": 1042,
+      "last_modified": 1760428921000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/01.MUD_LOG/MUD_LOG_1.DLIS",
+      "size": 494402,
+      "last_modified": 1760428842000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 1597415,
+      "last_modified": 1760430811000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 670627,
+      "last_modified": 1760433384000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 1188191,
+      "last_modified": 1760429193000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 6456200,
+      "last_modified": 1760428970000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 395462,
+      "last_modified": 1760428924000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 179424,
+      "last_modified": 1760428846000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2539956,
+      "last_modified": 1760433368000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 206687,
+      "last_modified": 1760433400000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 4985824,
+      "last_modified": 1760433483000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_2.PDF",
+      "size": 4408097,
+      "last_modified": 1760433467000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3021,
+      "last_modified": 1760429226000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 10129811,
+      "last_modified": 1760433401000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 1410696,
+      "last_modified": 1760433417000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/12.BIOSTRAT/BIOSTRAT_COMPUTED_1_INF_1.ASC",
+      "size": 308,
+      "last_modified": 1760430894000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/12.BIOSTRAT/BIOSTRAT_COMPUTED_1.DEX",
+      "size": 8117,
+      "last_modified": 1760430867000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/12.BIOSTRAT/BIOSTRAT_RAW_1_INF_1.ASC",
+      "size": 293,
+      "last_modified": 1760428855000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 125821,
+      "last_modified": 1760433350000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 B/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 719461,
+      "last_modified": 1760428908000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/01.MUD_LOG/MUD_LOG_1_INF_1.ASC",
+      "size": 1035,
+      "last_modified": 1760431090000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/01.MUD_LOG/MUD_LOG_1.DLIS",
+      "size": 969522,
+      "last_modified": 1760431110000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 2381582,
+      "last_modified": 1760433350000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 1094297,
+      "last_modified": 1760429235000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 1854421,
+      "last_modified": 1760431124000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 6456200,
+      "last_modified": 1760433370000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 913863,
+      "last_modified": 1760433400000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1_INF_1.ASC",
+      "size": 884,
+      "last_modified": 1760428986000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1.LAS",
+      "size": 2373443,
+      "last_modified": 1760430882000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_1-6_INF_1.ASC",
+      "size": 1541,
+      "last_modified": 1760429166000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_1.LAS",
+      "size": 684594,
+      "last_modified": 1760433351000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_2.LAS",
+      "size": 523964,
+      "last_modified": 1760431093000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_3.LAS",
+      "size": 466851,
+      "last_modified": 1760429286000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_4.LAS",
+      "size": 678083,
+      "last_modified": 1760429178000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_5.LAS",
+      "size": 602028,
+      "last_modified": 1760431102000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_6.LAS",
+      "size": 1219939,
+      "last_modified": 1760428987000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/03.PRESSURE/FM_PRESS_RAW_RUN7_MWD_REPORT_1.PDF",
+      "size": 893885,
+      "last_modified": 1760431316000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 169788,
+      "last_modified": 1760433415000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 2774944,
+      "last_modified": 1760428843000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2_INF_1.PDF",
+      "size": 214000,
+      "last_modified": 1760433394000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2.DLIS",
+      "size": 13075092,
+      "last_modified": 1760431350000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_2.PDF",
+      "size": 4408097,
+      "last_modified": 1760428906000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3147,
+      "last_modified": 1760429275000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 10631197,
+      "last_modified": 1760433370000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 229964,
+      "last_modified": 1760430822000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_COMPUTED_1-2_INF_1.ASC",
+      "size": 484,
+      "last_modified": 1760433470000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_COMPUTED_1.DEX",
+      "size": 153952,
+      "last_modified": 1760428953000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_COMPUTED_2.DEX",
+      "size": 41003,
+      "last_modified": 1760431129000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_RAW_1-2_INF_1.ASC",
+      "size": 456,
+      "last_modified": 1760433436000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 375240,
+      "last_modified": 1760431349000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_RAW_2.DEX",
+      "size": 667057,
+      "last_modified": 1760429164000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 4741646,
+      "last_modified": 1760433353000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11 T2/12.BIOSTRAT/BIOSTRAT_REPORT_2.PDF",
+      "size": 1188612,
+      "last_modified": 1760429220000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/01.MUD_LOG/MUD_LOG_1_INF_1.ASC",
+      "size": 686,
+      "last_modified": 1760430884000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/01.MUD_LOG/MUD_LOG_1.DLIS",
+      "size": 42904,
+      "last_modified": 1760433469000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 6456200,
+      "last_modified": 1760428863000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 155106,
+      "last_modified": 1760428835000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 57394,
+      "last_modified": 1760433368000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 188094,
+      "last_modified": 1760430766000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 97356,
+      "last_modified": 1760433367000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_2.PDF",
+      "size": 4408097,
+      "last_modified": 1760429267000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 1456,
+      "last_modified": 1760428855000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-11/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 196328,
+      "last_modified": 1760433416000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 292121,
+      "last_modified": 1760440822000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 591352,
+      "last_modified": 1760438645000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 1071168,
+      "last_modified": 1760441908000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 1075289,
+      "last_modified": 1760434139000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 495569,
+      "last_modified": 1760438640000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 3544240,
+      "last_modified": 1760438177000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 753531,
+      "last_modified": 1760434202000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1_INF_1.PDF",
+      "size": 23737,
+      "last_modified": 1760434251000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/03.PRESSURE/FM_PRESS_COMPUTED_MWD_1.ASC",
+      "size": 3903,
+      "last_modified": 1760435777000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/03.PRESSURE/Test point table.xls",
+      "size": 47104,
+      "last_modified": 1760434287000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/03.PRESSURE/Volve 15_9-F-12 FPWD Report.pdf",
+      "size": 8195718,
+      "last_modified": 1760437329000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 65314,
+      "last_modified": 1760440973000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/04.COMPOSITE/WLC_COMPOSITE_1.LIS",
+      "size": 965389,
+      "last_modified": 1760441985000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 60091,
+      "last_modified": 1760435772000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.LIS",
+      "size": 4683452,
+      "last_modified": 1760435565000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/05.PETROPHYSICAL INTERPRETATION/15_9-F-12 Facies.xlsx",
+      "size": 9455,
+      "last_modified": 1760440399000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-F-12_KLOGH_NEW.las",
+      "size": 31711,
+      "last_modified": 1760434197000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 302151,
+      "last_modified": 1760438628000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 2176,
+      "last_modified": 1760433785000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 3447460,
+      "last_modified": 1760437119000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_MD_PLOT_1.PDF",
+      "size": 618641,
+      "last_modified": 1760439291000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 179900,
+      "last_modified": 1760439154000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_1.PDS",
+      "size": 4857856,
+      "last_modified": 1760439609000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_10.DLIS",
+      "size": 3443480,
+      "last_modified": 1760441911000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_2.PDS",
+      "size": 4782080,
+      "last_modified": 1760440444000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_3.PDS",
+      "size": 3802112,
+      "last_modified": 1760440581000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_4.PDS",
+      "size": 3820032,
+      "last_modified": 1760437288000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_5.PDS",
+      "size": 3831808,
+      "last_modified": 1760435978000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_6.PDS",
+      "size": 1524224,
+      "last_modified": 1760439059000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_7.ASC",
+      "size": 26671,
+      "last_modified": 1760435235000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_8.ASC",
+      "size": 3032,
+      "last_modified": 1760437045000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_ENCL_9.ASC",
+      "size": 1363,
+      "last_modified": 1760438854000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2_INF_1.ASC",
+      "size": 1519,
+      "last_modified": 1760434388000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/07.IMAGE/PETROPHYSICAL_REPORT_2.PDF",
+      "size": 1030325,
+      "last_modified": 1760438497000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/12.BIOSTRAT/15-9-F-12_001_biostratreport.pdf",
+      "size": 616816,
+      "last_modified": 1760433655000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/12.BIOSTRAT/15-9-F-12_001_ecl1.dex",
+      "size": 341074,
+      "last_modified": 1760438346000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-12/13.GEOCHEM/Geochemistry Data Report - Well 15 9-F-4 and 15 9-F12.pdf",
+      "size": 1593498,
+      "last_modified": 1760441963000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 287050,
+      "last_modified": 1760433447000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 650166,
+      "last_modified": 1760430783000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 1102716,
+      "last_modified": 1760433350000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 1242948,
+      "last_modified": 1760429218000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 345207,
+      "last_modified": 1760430879000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 3658161,
+      "last_modified": 1760431114000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 1011927,
+      "last_modified": 1760431091000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_MWD_REPORT_1.PDF",
+      "size": 8074083,
+      "last_modified": 1760429012000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1-14_INF_1.ASC",
+      "size": 2541,
+      "last_modified": 1760430825000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1.LAS",
+      "size": 3343090,
+      "last_modified": 1760431316000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_10.LAS",
+      "size": 3234346,
+      "last_modified": 1760433485000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_11.LAS",
+      "size": 3544210,
+      "last_modified": 1760430765000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_12.LAS",
+      "size": 3535073,
+      "last_modified": 1760430879000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_13.LAS",
+      "size": 3282804,
+      "last_modified": 1760433406000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_14.LAS",
+      "size": 3253702,
+      "last_modified": 1760430789000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_2.LAS",
+      "size": 3244208,
+      "last_modified": 1760428916000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_3.LAS",
+      "size": 3244316,
+      "last_modified": 1760433394000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_4.LAS",
+      "size": 3244290,
+      "last_modified": 1760430797000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_5.LAS",
+      "size": 3243766,
+      "last_modified": 1760433345000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_6.LAS",
+      "size": 3234208,
+      "last_modified": 1760430857000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_7.LAS",
+      "size": 3263234,
+      "last_modified": 1760429286000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_8.LAS",
+      "size": 3253569,
+      "last_modified": 1760433446000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_9.LAS",
+      "size": 3264099,
+      "last_modified": 1760430852000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 62420,
+      "last_modified": 1760433395000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/04.COMPOSITE/WLC_COMPOSITE_1.LIS",
+      "size": 956740,
+      "last_modified": 1760428848000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 57766,
+      "last_modified": 1760428998000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.LIS",
+      "size": 3677190,
+      "last_modified": 1760433484000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/05.PETROPHYSICAL INTERPRETATION/geomod09/15_9-F-14 Facies.xlsx",
+      "size": 9490,
+      "last_modified": 1760435053000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-F-14_KLOGH_NEW.las",
+      "size": 42241,
+      "last_modified": 1760436659000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 324140,
+      "last_modified": 1760433416000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 2213,
+      "last_modified": 1760433482000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 1285000,
+      "last_modified": 1760433344000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 908852,
+      "last_modified": 1760428865000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Dips/Statoil_Volve_15_9-F-14_BedBoundary.txt",
+      "size": 56325,
+      "last_modified": 1760452639000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Dips/Statoil_Volve_15_9-F-14_Dips.xls",
+      "size": 164864,
+      "last_modified": 1760443823000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Dips/Statoil_Volve_15_9-F-14_PossibleFault.txt",
+      "size": 3646,
+      "last_modified": 1760448557000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Dips/Statoil_Volve_15_9-F-14_UnconformableSurface.txt",
+      "size": 2642,
+      "last_modified": 1760449932000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Logs/Statoil_Volve_15_9F14_EcoScope_Image_Composite.pds",
+      "size": 9659392,
+      "last_modified": 1760443815000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Logs/Statoil_Volve_15_9F14_EcoScope_Image_LQC.pds",
+      "size": 10462208,
+      "last_modified": 1760449014000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Logs/Statoil_Volve_15_9F14_EcoScope_Image_Scale120.pds",
+      "size": 7943680,
+      "last_modified": 1760447762000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Logs/Statoil_Volve_15_9F14_EcoScope_Image_Scale240.pds",
+      "size": 8202240,
+      "last_modified": 1760449371000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Logs/Statoil_Volve_15_9F14_EcoScope_Image_Scale40.pds",
+      "size": 7691264,
+      "last_modified": 1760449127000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Logs/Statoil_Volve_15_9F14_EcoScope_Image_Scale500.pds",
+      "size": 7834112,
+      "last_modified": 1760452628000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Poster/StatoilHydro_Volve_F14_CrossSection_Poster.gif",
+      "size": 1968176,
+      "last_modified": 1760444694000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Presentation/Statoil_Volve_15_9F14_DipVectorPlot_detailed.pdf",
+      "size": 179330,
+      "last_modified": 1760448508000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Presentation/Statoil_Volve_15_9F14_Preliminaryjob_Presentation.pdf",
+      "size": 1364770,
+      "last_modified": 1760448094000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/07.IMAGE/EcoScope_ImageInterpret/Report/StatoilHydro_Volve_15_9_F_14_Report.pdf",
+      "size": 4641752,
+      "last_modified": 1760447408000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/12.BIOSTRAT/15-9-f-14_004_Biostratigraphy.pdf",
+      "size": 575380,
+      "last_modified": 1760430833000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-14/12.BIOSTRAT/n1509F14.dex",
+      "size": 521790,
+      "last_modified": 1760429232000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 745672,
+      "last_modified": 1760429277000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 648384,
+      "last_modified": 1760430869000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 825265,
+      "last_modified": 1760433367000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 1098761,
+      "last_modified": 1760433485000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 532874,
+      "last_modified": 1760433474000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 11914862,
+      "last_modified": 1760430885000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 718871,
+      "last_modified": 1760428922000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_MWD_REPORT_1.PDF",
+      "size": 6661975,
+      "last_modified": 1760430872000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_1-9_INF_1.ASC",
+      "size": 1914,
+      "last_modified": 1760430824000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_1.LAS",
+      "size": 3778487,
+      "last_modified": 1760430818000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_2.LAS",
+      "size": 3778192,
+      "last_modified": 1760433465000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_3.LAS",
+      "size": 3788267,
+      "last_modified": 1760428843000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_4.LAS",
+      "size": 3788127,
+      "last_modified": 1760430884000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_5.LAS",
+      "size": 3534842,
+      "last_modified": 1760430868000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_6.LAS",
+      "size": 3788314,
+      "last_modified": 1760431092000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_7.LAS",
+      "size": 3788044,
+      "last_modified": 1760430797000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_8.LAS",
+      "size": 3788085,
+      "last_modified": 1760428921000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/03.PRESSURE/FM_PRESS_RAW_RUN6_MWD_9.LAS",
+      "size": 3564143,
+      "last_modified": 1760429276000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/04.COMPOSITE/WLC_COMPOSITE_2_INF_1.PDF",
+      "size": 167584,
+      "last_modified": 1760429213000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/04.COMPOSITE/WLC_COMPOSITE_2.DLIS",
+      "size": 1498324,
+      "last_modified": 1760429183000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2_INF_1.PDF",
+      "size": 177964,
+      "last_modified": 1760429287000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2.DLIS",
+      "size": 3506640,
+      "last_modified": 1760430766000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/05.PETROPHYSICAL INTERPRETATION/geomod09/15_9-F-15 A Facies.xlsx",
+      "size": 9377,
+      "last_modified": 1760436666000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-F-15_A_KLOGH_NEW.las",
+      "size": 20491,
+      "last_modified": 1760437200000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 109815,
+      "last_modified": 1760429274000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 1734,
+      "last_modified": 1760429286000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 1697846,
+      "last_modified": 1760430769000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 451090,
+      "last_modified": 1760429280000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/12.BIOSTRAT/n1509F15A.dex",
+      "size": 261889,
+      "last_modified": 1760433434000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 A/12.BIOSTRAT/n1509F15ABC.pdf",
+      "size": 925798,
+      "last_modified": 1760430770000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 745911,
+      "last_modified": 1760430886000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 550904,
+      "last_modified": 1760431087000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 334855,
+      "last_modified": 1760431103000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 1260483,
+      "last_modified": 1760433344000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 282946,
+      "last_modified": 1760431141000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 11914862,
+      "last_modified": 1760431055000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 202621,
+      "last_modified": 1760430826000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/03.PRESSURE/FM_PRESS_MWD_REPORT_1.PDF",
+      "size": 3130417,
+      "last_modified": 1760430786000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/03.PRESSURE/FM_PRESS_RAW_RUN11_MWD_1-4_INF_1.ASC",
+      "size": 1288,
+      "last_modified": 1760430802000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/03.PRESSURE/FM_PRESS_RAW_RUN11_MWD_1.LAS",
+      "size": 3126700,
+      "last_modified": 1760429265000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/03.PRESSURE/FM_PRESS_RAW_RUN11_MWD_2.LAS",
+      "size": 3236338,
+      "last_modified": 1760429164000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/03.PRESSURE/FM_PRESS_RAW_RUN11_MWD_3.LAS",
+      "size": 3264492,
+      "last_modified": 1760430884000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/03.PRESSURE/FM_PRESS_RAW_RUN11_MWD_4.LAS",
+      "size": 3138090,
+      "last_modified": 1760428846000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/04.COMPOSITE/WLC_COMPOSITE_2_INF_1.PDF",
+      "size": 176068,
+      "last_modified": 1760431079000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/04.COMPOSITE/WLC_COMPOSITE_2.DLIS",
+      "size": 1498576,
+      "last_modified": 1760430833000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_2.PDF",
+      "size": 178175,
+      "last_modified": 1760429279000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 1243316,
+      "last_modified": 1760433346000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/05.PETROPHYSICAL INTERPRETATION/geomod09/15_9-F-15 B Facies.xlsx",
+      "size": 8858,
+      "last_modified": 1760436340000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-F-15_B_KLOGH_NEW.las",
+      "size": 2941,
+      "last_modified": 1760442044000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 69936,
+      "last_modified": 1760433395000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 1657,
+      "last_modified": 1760433375000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 113806,
+      "last_modified": 1760431127000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 71594,
+      "last_modified": 1760430856000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/12.BIOSTRAT/n1509F15ABC.pdf",
+      "size": 925798,
+      "last_modified": 1760430826000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 B/12.BIOSTRAT/n1509F15B.dex",
+      "size": 147820,
+      "last_modified": 1760431124000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 745831,
+      "last_modified": 1760430787000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 507712,
+      "last_modified": 1760428898000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 486642,
+      "last_modified": 1760429195000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 655442,
+      "last_modified": 1760429265000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 365730,
+      "last_modified": 1760433382000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 11914862,
+      "last_modified": 1760431141000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 468664,
+      "last_modified": 1760431349000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_MWD_REPORT_1.PDF",
+      "size": 5970168,
+      "last_modified": 1760430878000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_1-8_INF_1.ASC",
+      "size": 1714,
+      "last_modified": 1760433460000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_1.LAS",
+      "size": 4435432,
+      "last_modified": 1760430802000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_2.LAS",
+      "size": 4444758,
+      "last_modified": 1760430803000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_3.LAS",
+      "size": 4424234,
+      "last_modified": 1760428980000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_4.LAS",
+      "size": 4435191,
+      "last_modified": 1760431111000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_5.LAS",
+      "size": 4444135,
+      "last_modified": 1760430884000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_6.LAS",
+      "size": 4445413,
+      "last_modified": 1760429010000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_7.LAS",
+      "size": 4444795,
+      "last_modified": 1760431104000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/03.PRESSURE/FM_PRESS_RAW_RUN14_MWD_8.LAS",
+      "size": 4455591,
+      "last_modified": 1760429219000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/04.COMPOSITE/WLC_COMPOSITE_2_INF_1.PDF",
+      "size": 167631,
+      "last_modified": 1760430767000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/04.COMPOSITE/WLC_COMPOSITE_2.DLIS",
+      "size": 1158416,
+      "last_modified": 1760430803000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_2.PDF",
+      "size": 179999,
+      "last_modified": 1760430807000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 1109726,
+      "last_modified": 1760433350000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/05.PETROPHYSICAL INTERPRETATION/geomod09/15_9-F-15 C Facies.xlsx",
+      "size": 9342,
+      "last_modified": 1760438634000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-F-15_C_KLOGH_NEW.las",
+      "size": 8431,
+      "last_modified": 1760439505000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 356925,
+      "last_modified": 1760431104000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 1699,
+      "last_modified": 1760431078000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 254308,
+      "last_modified": 1760431124000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 135754,
+      "last_modified": 1760429203000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/12.BIOSTRAT/n1509F15ABC.pdf",
+      "size": 925798,
+      "last_modified": 1760433465000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 C/12.BIOSTRAT/NO_15_9-F-15_C.las",
+      "size": 176253,
+      "last_modified": 1760433469000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_1_INF_1.ASC",
+      "size": 1039,
+      "last_modified": 1760428903000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_1.DLIS",
+      "size": 758604,
+      "last_modified": 1760429183000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_MD_PLOT_1.pdf",
+      "size": 5776068,
+      "last_modified": 1760431349000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_MD_PLOT_2.pdf",
+      "size": 832775,
+      "last_modified": 1760429232000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_MD_PLOT_3.pdf",
+      "size": 1590631,
+      "last_modified": 1760429179000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 18581373,
+      "last_modified": 1760429040000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 638484,
+      "last_modified": 1760433347000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/01.MUD_LOG/MUD_LOG_TVD_PLOT_4.pdf",
+      "size": 638484,
+      "last_modified": 1760428844000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/04.COMPOSITE/WLC_COMPOSITE_2_INF_1.PDF",
+      "size": 176927,
+      "last_modified": 1760431308000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/04.COMPOSITE/WLC_COMPOSITE_2.DLIS",
+      "size": 1613200,
+      "last_modified": 1760433347000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2_INF_1.PDF",
+      "size": 205772,
+      "last_modified": 1760428838000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2.DLIS",
+      "size": 10961480,
+      "last_modified": 1760430810000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 2154135,
+      "last_modified": 1760428980000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 3141,
+      "last_modified": 1760431105000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.LAS",
+      "size": 15301179,
+      "last_modified": 1760429206000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15 D/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.LAS",
+      "size": 1771868,
+      "last_modified": 1760429213000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 728325,
+      "last_modified": 1760428995000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 713396,
+      "last_modified": 1760428919000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 901179,
+      "last_modified": 1760431103000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 1033006,
+      "last_modified": 1760431079000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 529471,
+      "last_modified": 1760430786000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 11914862,
+      "last_modified": 1760430819000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 1037786,
+      "last_modified": 1760428995000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/03.PRESSURE/FM_PRESS_MWD_REPORT_1.PDF",
+      "size": 2554848,
+      "last_modified": 1760428843000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1-2_INF_1.ASC",
+      "size": 1032,
+      "last_modified": 1760432972000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1.LAS",
+      "size": 3429346,
+      "last_modified": 1760430825000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_2.LAS",
+      "size": 3418887,
+      "last_modified": 1760433400000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/04.COMPOSITE/WLC_COMPOSITE_2_INF_1.PDF",
+      "size": 163266,
+      "last_modified": 1760433472000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/04.COMPOSITE/WLC_COMPOSITE_2.DLIS",
+      "size": 1496300,
+      "last_modified": 1760430819000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2_INF_1.PDF",
+      "size": 178953,
+      "last_modified": 1760433416000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_2.DLIS",
+      "size": 6487888,
+      "last_modified": 1760428848000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/05.PETROPHYSICAL INTERPRETATION/15_9-F-15 Facies.xlsx",
+      "size": 9414,
+      "last_modified": 1760428979000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 91403,
+      "last_modified": 1760429214000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 2292,
+      "last_modified": 1760429009000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 1903424,
+      "last_modified": 1760430880000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 455460,
+      "last_modified": 1760433435000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/12.BIOSTRAT/15-9-f-15_003_Biostratigraphy.pdf",
+      "size": 704508,
+      "last_modified": 1760428931000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/12.BIOSTRAT/n1509F15.dex",
+      "size": 404872,
+      "last_modified": 1760430769000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/A Stratigraphic Reconstruction of Bulk Volatile Chemistry from Fluid Inclusions_FI090048b-1.pdf",
+      "size": 1467698,
+      "last_modified": 1760429008000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048a_enclosures/FI090048a-1.txt",
+      "size": 19506,
+      "last_modified": 1760437721000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048a_enclosures/FI090048a-180.xls",
+      "size": 140800,
+      "last_modified": 1760434275000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048a_enclosures/FI090048a-180a.xls",
+      "size": 94720,
+      "last_modified": 1760433495000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048a_enclosures/FI090048a-180stat.xls",
+      "size": 149504,
+      "last_modified": 1760434215000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048a_enclosures/FI090048a-25.xls",
+      "size": 40448,
+      "last_modified": 1760434166000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048b_enclosures/FI090048b-1.txt",
+      "size": 16646,
+      "last_modified": 1760434283000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048b_enclosures/FI090048b-180.xls",
+      "size": 107520,
+      "last_modified": 1760441345000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048b_enclosures/FI090048b-180a.xls",
+      "size": 95744,
+      "last_modified": 1760439057000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048b_enclosures/FI090048b-180stat.xls",
+      "size": 115200,
+      "last_modified": 1760437292000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048b_enclosures/FI090048b-2.las",
+      "size": 109416,
+      "last_modified": 1760438490000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048b_enclosures/FI090048b-25.xls",
+      "size": 35840,
+      "last_modified": 1760435161000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/FI090048b_enclosures/FI090048b-2a.las",
+      "size": 109416,
+      "last_modified": 1760438946000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/GCH_REPORT_1_ENCL_1.ASC",
+      "size": 19616,
+      "last_modified": 1760429181000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/GCH_REPORT_1_ENCL_2.LAS",
+      "size": 129326,
+      "last_modified": 1760431092000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/GCH_REPORT_1_ENCL_3.LAS",
+      "size": 129326,
+      "last_modified": 1760433485000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/GCH_REPORT_1_INF_1.ASC",
+      "size": 611,
+      "last_modified": 1760433345000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-15/13.GEOCHEM/GCH_REPORT_1.PDF",
+      "size": 1586246,
+      "last_modified": 1760430868000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 746823,
+      "last_modified": 1760428866000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 553016,
+      "last_modified": 1760429225000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 1188108,
+      "last_modified": 1760428855000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 4363663,
+      "last_modified": 1760433485000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 4392456,
+      "last_modified": 1760431316000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 20536598,
+      "last_modified": 1760433437000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1A_EWL_1-2_INF_1.ASC",
+      "size": 1078,
+      "last_modified": 1760431141000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1A_EWL_1.DLIS",
+      "size": 648192,
+      "last_modified": 1760431142000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1A_EWL_2.DLIS",
+      "size": 1358276,
+      "last_modified": 1760429164000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1A_EWL_PLOT_1.PDS",
+      "size": 506560,
+      "last_modified": 1760428845000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_1-16_INF_1.ASC",
+      "size": 2842,
+      "last_modified": 1760430869000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_1.DLIS",
+      "size": 1436672,
+      "last_modified": 1760433418000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_10.DLIS",
+      "size": 1241308,
+      "last_modified": 1760428908000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_11.DLIS",
+      "size": 1284604,
+      "last_modified": 1760429203000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_12.DLIS",
+      "size": 1135572,
+      "last_modified": 1760433486000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_13.DLIS",
+      "size": 1179552,
+      "last_modified": 1760433462000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_14.DLIS",
+      "size": 1457044,
+      "last_modified": 1760429218000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_15.DLIS",
+      "size": 1628540,
+      "last_modified": 1760428915000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_16.DLIS",
+      "size": 1565244,
+      "last_modified": 1760428954000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_2.DLIS",
+      "size": 646948,
+      "last_modified": 1760430842000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_3.DLIS",
+      "size": 1226692,
+      "last_modified": 1760429004000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_4.DLIS",
+      "size": 1177732,
+      "last_modified": 1760428991000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_5.DLIS",
+      "size": 1205376,
+      "last_modified": 1760433457000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_6.DLIS",
+      "size": 1183880,
+      "last_modified": 1760428912000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_7.DLIS",
+      "size": 1213432,
+      "last_modified": 1760429266000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_8.DLIS",
+      "size": 1244304,
+      "last_modified": 1760428907000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_9.DLIS",
+      "size": 1208464,
+      "last_modified": 1760430871000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_RAW_RUN1B_EWL_PLOT_1.PDS",
+      "size": 9325731,
+      "last_modified": 1760429012000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_SAMP_RAW_RUN1A_EWL_1_INF_1.ASC",
+      "size": 918,
+      "last_modified": 1760428855000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_SAMP_RAW_RUN1A_EWL_1.DLIS",
+      "size": 32089236,
+      "last_modified": 1760433351000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_SAMP_RAW_RUN1A_EWL_PLOT_1.PDS",
+      "size": 36571632,
+      "last_modified": 1760431140000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_SAMP_RAW_RUN1B_EWL_1-2_INF_1.ASC",
+      "size": 1094,
+      "last_modified": 1760431307000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_SAMP_RAW_RUN1B_EWL_1.DLIS",
+      "size": 52340740,
+      "last_modified": 1760429000000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_SAMP_RAW_RUN1B_EWL_2.DLIS",
+      "size": 19405336,
+      "last_modified": 1760428946000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/03.PRESSURE/FM_PRESS_SAMP_RAW_RUN1B_EWL_PLOT_1.PDS",
+      "size": 87770995,
+      "last_modified": 1760429278000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 38140,
+      "last_modified": 1760429232000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/04.COMPOSITE/WLC_COMPOSITE_1.LIS",
+      "size": 1105958,
+      "last_modified": 1760431142000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 40391,
+      "last_modified": 1760430808000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.LIS",
+      "size": 4798859,
+      "last_modified": 1760433416000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/CONTENT-WLC_PETRO_COMPUTED_INPUT_1.DLIS.TXT",
+      "size": 12124,
+      "last_modified": 1760430783000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/CONTENT-WLC_PETRO_COMPUTED_OUTPUT_1.DLIS.TXT",
+      "size": 12653,
+      "last_modified": 1760430819000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/geomod09/15_9-F-4 Facies.xlsx",
+      "size": 9355,
+      "last_modified": 1760433495000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-F-4_KLOGH_NEW.las",
+      "size": 35731,
+      "last_modified": 1760436841000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 172539,
+      "last_modified": 1760429255000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 2238,
+      "last_modified": 1760428992000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 1017010,
+      "last_modified": 1760431088000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_MD_PLOT_1.PDF",
+      "size": 956051,
+      "last_modified": 1760431091000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 1017326,
+      "last_modified": 1760428867000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/12.BIOSTRAT/BIOSTRAT_RAW_1_INF_1.ASC",
+      "size": 289,
+      "last_modified": 1760431056000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/12.BIOSTRAT/BIOSTRAT_RAW_1.DEX",
+      "size": 374506,
+      "last_modified": 1760428845000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/12.BIOSTRAT/BIOSTRAT_REPORT_1.PDF",
+      "size": 718096,
+      "last_modified": 1760428866000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-4/13.GEOCHEM/Geochemistry Data Report - Well 15 9-F-4 and 15 9-F12.pdf",
+      "size": 1593498,
+      "last_modified": 1760429267000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 288211,
+      "last_modified": 1760430852000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 659950,
+      "last_modified": 1760431308000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 830792,
+      "last_modified": 1760428845000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 903155,
+      "last_modified": 1760429164000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 428095,
+      "last_modified": 1760433465000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 2279236,
+      "last_modified": 1760430783000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 333177,
+      "last_modified": 1760431090000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_MWD_REPORT_1.PDF",
+      "size": 4855806,
+      "last_modified": 1760433486000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1-8_INF_1.ASC",
+      "size": 1766,
+      "last_modified": 1760431020000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_1.LAS",
+      "size": 3549167,
+      "last_modified": 1760430852000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_2.LAS",
+      "size": 3266849,
+      "last_modified": 1760432970000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_3.LAS",
+      "size": 3266695,
+      "last_modified": 1760432972000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_4.LAS",
+      "size": 3547696,
+      "last_modified": 1760430824000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_5.LAS",
+      "size": 4425876,
+      "last_modified": 1760430885000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_6.LAS",
+      "size": 3247783,
+      "last_modified": 1760431110000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_7.LAS",
+      "size": 3256732,
+      "last_modified": 1760433395000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/03.PRESSURE/FM_PRESS_RAW_RUN5_MWD_8.LAS",
+      "size": 3276328,
+      "last_modified": 1760429193000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 67217,
+      "last_modified": 1760429013000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 1390648,
+      "last_modified": 1760428842000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 63105,
+      "last_modified": 1760429012000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 4803134,
+      "last_modified": 1760431025000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/05.PETROPHYSICAL INTERPRETATION/geomod09/15_9-F-5 Facies.xlsx",
+      "size": 9448,
+      "last_modified": 1760436218000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/05.PETROPHYSICAL INTERPRETATION/geomod09/NO_15_9-F-5_KLOGH_NEW.las",
+      "size": 48631,
+      "last_modified": 1760434674000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/05.PETROPHYSICAL INTERPRETATION/PETROPHYSICAL_REPORT_1.PDF",
+      "size": 189018,
+      "last_modified": 1760430801000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_1_INF_1.ASC",
+      "size": 2333,
+      "last_modified": 1760433349000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_INPUT_1.DLIS",
+      "size": 1120684,
+      "last_modified": 1760430818000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/05.PETROPHYSICAL INTERPRETATION/WLC_PETRO_COMPUTED_OUTPUT_1.DLIS",
+      "size": 1120800,
+      "last_modified": 1760433335000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/12.BIOSTRAT/n1509F05.dex",
+      "size": 329045,
+      "last_modified": 1760430894000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-5/12.BIOSTRAT/n1509F05rep.pdf",
+      "size": 685736,
+      "last_modified": 1760429221000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 285832,
+      "last_modified": 1760431307000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 173234,
+      "last_modified": 1760431309000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 363066,
+      "last_modified": 1760428945000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 272409,
+      "last_modified": 1760428861000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 194969,
+      "last_modified": 1760430894000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 1158587,
+      "last_modified": 1760431140000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 456796,
+      "last_modified": 1760430784000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 53306,
+      "last_modified": 1760430841000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/04.COMPOSITE/WLC_COMPOSITE_1.LIS",
+      "size": 113510,
+      "last_modified": 1760428843000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 48560,
+      "last_modified": 1760428902000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.LIS",
+      "size": 524753,
+      "last_modified": 1760431307000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-7/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE.las",
+      "size": 1581327,
+      "last_modified": 1760428901000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 795425,
+      "last_modified": 1760433475000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 128630,
+      "last_modified": 1760430886000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 308747,
+      "last_modified": 1760428922000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 358298,
+      "last_modified": 1760430809000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 249383,
+      "last_modified": 1760428855000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 6349634,
+      "last_modified": 1760430801000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 193468,
+      "last_modified": 1760430895000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 75187,
+      "last_modified": 1760433370000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 178518,
+      "last_modified": 1760431046000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 75755,
+      "last_modified": 1760433482000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9 A/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 429384,
+      "last_modified": 1760431081000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/01.MUD_LOG/MUD_LOG_1_INF_1.PDF",
+      "size": 820742,
+      "last_modified": 1760430841000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/01.MUD_LOG/MUD_LOG_1.LIS",
+      "size": 153588,
+      "last_modified": 1760433447000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/01.MUD_LOG/MUD_LOG_MD_PLOT_1.PDF",
+      "size": 246040,
+      "last_modified": 1760430780000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/01.MUD_LOG/MUD_LOG_MD_PLOT_2.PDF",
+      "size": 304093,
+      "last_modified": 1760430796000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/01.MUD_LOG/MUD_LOG_MD_PLOT_3.PDF",
+      "size": 188702,
+      "last_modified": 1760430781000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/01.MUD_LOG/MUD_LOG_REPORT_1.PDF",
+      "size": 2227333,
+      "last_modified": 1760429219000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/01.MUD_LOG/MUD_LOG_TVD_PLOT_1.PDF",
+      "size": 242752,
+      "last_modified": 1760429184000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/04.COMPOSITE/WLC_COMPOSITE_1_INF_1.PDF",
+      "size": 50143,
+      "last_modified": 1760431126000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/04.COMPOSITE/WLC_COMPOSITE_1.DLIS",
+      "size": 43824,
+      "last_modified": 1760430768000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1_INF_1.PDF",
+      "size": 45872,
+      "last_modified": 1760433474000
+    },
+    {
+      "path": "Well_logs_pr_WELL/15_9-F-9/04.COMPOSITE/WLC_PETROPHYSICAL_COMPOSITE_1.DLIS",
+      "size": 97678,
+      "last_modified": 1760429167000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-19/15_9-19 A/15_9-19 A_Standard_Survey_NPD.txt",
+      "size": 37994,
+      "last_modified": 1760434399000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-19/15_9-19 A/15_9-19_A_Standard Survey - Geographic.pdf",
+      "size": 90728,
+      "last_modified": 1760441348000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-19/15_9-19 BT2/15_9-19 BT2_Standard_Survey_NPD.txt",
+      "size": 34743,
+      "last_modified": 1760434660000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-19/15_9-19 BT2/15_9-19_BT2_Standard Survey - Geographic.pdf",
+      "size": 89578,
+      "last_modified": 1760441079000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-19/15_9-19 SR/15_9-19 SR_Standard_Survey_NPD.txt",
+      "size": 45474,
+      "last_modified": 1760434233000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-19/15_9-19 SR/15_9-19_SR_Standard Survey - Geographic.pdf",
+      "size": 95413,
+      "last_modified": 1760434335000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 A/Standard Survey Report_Volve F_F-1_F-1 A_159-F-1 A rev0_PLAN.pdf",
+      "size": 64943,
+      "last_modified": 1760440983000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 A/Standard Survey Report_Volve F_F-1_F-1 A_F-1 A_ACTUAL.pdf",
+      "size": 71502,
+      "last_modified": 1760438829000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 A/Volve F_F-1_F-1 A_159-F-1 A rev0_PLAN",
+      "size": 15943,
+      "last_modified": 1760436159000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 A/Volve F_F-1_F-1 A_F-1 A_ACTUAL",
+      "size": 13862,
+      "last_modified": 1760437616000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 B/Standard Survey Report_Volve F_F-1_F-1 B_159-F-1 B Northwest Injector DG2 revp2_PLAN.pdf",
+      "size": 64531,
+      "last_modified": 1760434136000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 B/Standard Survey Report_Volve F_F-1_F-1 B_F-1 B_ACTUAL.pdf",
+      "size": 71207,
+      "last_modified": 1760436129000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 B/Volve F_F-1_F-1 B_159-F-1 B Northwest Injector DG2 revp2_PLAN",
+      "size": 17033,
+      "last_modified": 1760434695000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 B/Volve F_F-1_F-1 B_F-1 B_ACTUAL",
+      "size": 13242,
+      "last_modified": 1760437973000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 C/Standard Survey Report_Volve F_F-1_F-1 C_F-1 C InjectorProducer opt3 revp2_PLAN.pdf",
+      "size": 65572,
+      "last_modified": 1760434143000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 C/Standard Survey Report_Volve F_F-1_F-1 C_F-1 C_ACTUAL.pdf",
+      "size": 71623,
+      "last_modified": 1760434584000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 C/Volve F_F-1_F-1 C_F-1 C InjectorProducer opt3 revp2_PLAN",
+      "size": 18633,
+      "last_modified": 1760433785000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1 C/Volve F_F-1_F-1 C_F-1 C_ACTUAL",
+      "size": 14984,
+      "last_modified": 1760434259000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1/Standard Survey Report_Volve F_F-1_F-1_159-F-1 North Upside Pilot DG2 revp1_PLAN.pdf",
+      "size": 74026,
+      "last_modified": 1760440681000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1/Standard Survey Report_Volve F_F-1_F-1_F-1_ACTUAL.pdf",
+      "size": 77102,
+      "last_modified": 1760433494000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1/Volve F_F-1_F-1_159-F-1 North Upside Pilot DG2 revp1_PLAN",
+      "size": 18136,
+      "last_modified": 1760434450000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/15_9-F-1/Volve F_F-1_F-1_F-1_ACTUAL",
+      "size": 13516,
+      "last_modified": 1760434750000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-1/WellSummary F-1.pdf",
+      "size": 61225,
+      "last_modified": 1760430855000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Standard Survey Report_Volve F_F-10_F-10 A_F-10 A rev#7 LHULT 171115_PLAN.pdf",
+      "size": 65916,
+      "last_modified": 1760433876000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_Combined target EW_PROTOTYPE",
+      "size": 7710,
+      "last_modified": 1760437250000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A NW target_PROTOTYPE",
+      "size": 18033,
+      "last_modified": 1760437256000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A rev#1 STGAL 230915_PROTOTYPE",
+      "size": 26878,
+      "last_modified": 1760435849000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A rev#2 STGAL 051115_PROTOTYPE",
+      "size": 26909,
+      "last_modified": 1760434733000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A rev#3 STGAL 091115_PROTOTYPE",
+      "size": 26909,
+      "last_modified": 1760435279000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A rev#4 STGAL 091115_PROTOTYPE",
+      "size": 26677,
+      "last_modified": 1760439392000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A rev#5 STGAL091115_PROTOTYPE",
+      "size": 27254,
+      "last_modified": 1760434222000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A rev#6 STGAL 111015_PROTOTYPE",
+      "size": 27025,
+      "last_modified": 1760434816000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10 A/Volve F_F-10_F-10 A_F-10 A rev#7 LHULT 171115_PLAN",
+      "size": 27257,
+      "last_modified": 1760441303000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10/F10 Rev 51 280409_PLAN.txt",
+      "size": 18799,
+      "last_modified": 1760434272000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10/Standard Survey Report_F10 Rev 51 280409_PLAN.pdf",
+      "size": 68894,
+      "last_modified": 1760440670000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10/Standard Survey Report_Volve F_F-10_F-10_F-10_ACTUAL.pdf",
+      "size": 103364,
+      "last_modified": 1760433496000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/15_9-F-10/Volve F_F-10_F-10_F-10_ACTUAL",
+      "size": 57188,
+      "last_modified": 1760437933000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-10/Well Summary F-10.pdf",
+      "size": 59305,
+      "last_modified": 1760428854000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 A/Standard Survey Report_Volve F_F-11_159-F-11 A_159-F-11 A NWest PIL DG3 rev0_PLAN.pdf",
+      "size": 63405,
+      "last_modified": 1760440146000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 A/Standard Survey Report_Volve F_F-11_159-F-11 A_159-F-11 A_ACTUAL.pdf",
+      "size": 88260,
+      "last_modified": 1760441821000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 A/Volve F_F-11_159-F-11 A_159-F-11 A NWest PIL DG3 rev0_PLAN",
+      "size": 6788,
+      "last_modified": 1760434340000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 A/Volve F_F-11_159-F-11 A_159-F-11 A_ACTUAL",
+      "size": 38677,
+      "last_modified": 1760435696000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 B/Standard Survey Report_Volve F_F-11_159-F-11 B_159-F-11 B IOR DG3 rev0_PLAN.pdf",
+      "size": 67226,
+      "last_modified": 1760434293000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 B/Standard Survey Report_Volve F_F-11_159-F-11 B_159-F-11 B_ACTUAL.pdf",
+      "size": 88521,
+      "last_modified": 1760439890000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 B/Volve F_F-11_159-F-11 B_159-F-11 B IOR DG3 rev0_PLAN",
+      "size": 41153,
+      "last_modified": 1760438889000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 B/Volve F_F-11_159-F-11 B_159-F-11 B_ACTUAL",
+      "size": 36413,
+      "last_modified": 1760435970000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 T2/Standard Survey Report_Volve F_F-11_159-F-11 T2_159-F-11 T2 rev0_PLAN.pdf",
+      "size": 64753,
+      "last_modified": 1760434520000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 T2/Standard Survey Report_Volve F_F-11_159-F-11 T2_159-F-11 T2_ACTUAL.pdf",
+      "size": 96966,
+      "last_modified": 1760440667000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 T2/Volve F_F-11_159-F-11 T2_159-F-11 T2 rev0_PLAN",
+      "size": 21243,
+      "last_modified": 1760434144000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 T2/Volve F_F-11_159-F-11 T2_159-F-11 T2_ACTUAL",
+      "size": 52939,
+      "last_modified": 1760438238000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11 T2/Volve F_F-11_159-F-11 T2_WCD-F11 T2 Rev 0 Check tubing compression for cutting_PROTOTYPE",
+      "size": 21279,
+      "last_modified": 1760441449000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11/Standard Survey Report_Volve F_F-11_159-F-11_159-F-11 rev0_PLAN.pdf",
+      "size": 66454,
+      "last_modified": 1760434145000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11/Standard Survey Report_Volve F_F-11_159-F-11_159-F-11_ACTUAL.pdf",
+      "size": 64385,
+      "last_modified": 1760438687000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11/Volve F_F-11_159-F-11_159-F-11 rev0_PLAN",
+      "size": 20302,
+      "last_modified": 1760441323000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/15_9-F-11/Volve F_F-11_159-F-11_159-F-11_ACTUAL",
+      "size": 4231,
+      "last_modified": 1760434315000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 1049m West/Volve F_F-11_Relief well 508m West_Relief Well -F-11 B IOR 508m West 9 58 csg shoe_PROTOTYPE",
+      "size": 13804,
+      "last_modified": 1760439659000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 1049m West/Volve F_F-11_Relief well 508m West_Relief Well F-11 N pilot 508m West 14 csg shoe_PROTOTYPE",
+      "size": 11945,
+      "last_modified": 1760436109000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 1352m South/Volve F_F-11_Relief well 966m North_Relief wel F-11 B IOR 966m North 9 58 csg shoe_PROTOTYPE",
+      "size": 14500,
+      "last_modified": 1760438543000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 1352m South/Volve F_F-11_Relief well 966m North_Relief well F-11 N Pilot 966m North 14 csg shoe_PROTOTYPE",
+      "size": 12529,
+      "last_modified": 1760440354000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 508m West/Volve F_F-11_Relief well 1049m West_relief well F-11 B IOR 1049 West 9 58 csg shoe_PROTOTYPE",
+      "size": 14028,
+      "last_modified": 1760437187000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 508m West/Volve F_F-11_Relief well 1049m West_Relief Well F-11 N Pilot 1049m West 14 csg shoe_PROTOTYPE",
+      "size": 12173,
+      "last_modified": 1760437508000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 966m North/Volve F_F-11_Relief well 1352m South_Relief well F-11 B IOR 1352m South 9 58 csg shoe_PROTOTYPE",
+      "size": 15547,
+      "last_modified": 1760441357000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Relief well 966m North/Volve F_F-11_Relief well 1352m South_Relief well F-11 N Pilot 1352m South 14 csg shoe_PROTOTYPE",
+      "size": 13690,
+      "last_modified": 1760439288000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-11/Well Summary F-11.pdf",
+      "size": 63532,
+      "last_modified": 1760433374000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-12/15_9-F-12/Standard Survey Report_Volve F_F-12_F-12_F-12_ACTUAL.pdf",
+      "size": 81175,
+      "last_modified": 1760437078000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-12/15_9-F-12/Standard Survey Report_Volve F_F-12_F-12_F12 Rev011 CC 240707_PLAN.pdf",
+      "size": 63240,
+      "last_modified": 1760439105000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-12/15_9-F-12/Volve F_F-12_F-12_F-12_ACTUAL",
+      "size": 26241,
+      "last_modified": 1760439468000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-12/15_9-F-12/Volve F_F-12_F-12_F12 Rev011 CC 240707_PLAN",
+      "size": 15382,
+      "last_modified": 1760434611000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-12/Well Summary F-12.pdf",
+      "size": 58117,
+      "last_modified": 1760430782000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Standard Survey Report_Volve F_F-13_F-13_F-13 Main field rev#5 STGAL 051115_PLAN.pdf",
+      "size": 66712,
+      "last_modified": 1760439418000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_AB DG2_F-13_Target btw F12_F14 Rev2,3 141210-Final_PROTOTYPE",
+      "size": 16871,
+      "last_modified": 1760434318000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_AB DG2_F-13_Target F14N Rev1,2 141210-Final_PROTOTYPE",
+      "size": 16603,
+      "last_modified": 1760439288000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_F-13 _IOR_SE_entry(Top Hugin)  rev1 YH-(170221)_PROTOTYPE",
+      "size": 14508,
+      "last_modified": 1760438852000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_F-13 Main field rev#1 STGAL 230915_PROTOTYPE",
+      "size": 23346,
+      "last_modified": 1760436130000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_F-13 Main field rev#2 STGAL 250915_PROTOTYPE",
+      "size": 23349,
+      "last_modified": 1760434263000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_F-13 Main field rev#3 STGAL 280915_PROTOTYPE",
+      "size": 23349,
+      "last_modified": 1760434778000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_F-13 Main field rev#4 STGAL 300915_PROTOTYPE",
+      "size": 23813,
+      "last_modified": 1760438922000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_F-13 Main field rev#5 STGAL 051115_PLAN",
+      "size": 23571,
+      "last_modified": 1760435051000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/15_9-F-13/Volve F_F-13_F-13_WCDcompletion_PROTOTYPE",
+      "size": 22967,
+      "last_modified": 1760437017000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-13/Well Summary F-13.pdf",
+      "size": 59239,
+      "last_modified": 1760431090000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/15_9-F-14 A/Volve F_F-14_F-14 A_Combined targets_PROTOTYPE",
+      "size": 22145,
+      "last_modified": 1760434138000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/15_9-F-14 A/Volve F_F-14_F-14 A_F-14 A NW target - SIGULU - rev0_PROTOTYPE",
+      "size": 13310,
+      "last_modified": 1760438681000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/15_9-F-14 A/Volve F_F-14_F-14 A_F-14 A NW target deep sidetrack_PROTOTYPE",
+      "size": 12844,
+      "last_modified": 1760433843000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/15_9-F-14/Standard Survey Report_Volve F_F-14_F-14_F-14_ACTUAL.pdf",
+      "size": 76382,
+      "last_modified": 1760437339000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/15_9-F-14/Standard Survey Report_Volve F_F-14_F-14_F14 Rev6 from 958CP 270508 CC_PLAN.pdf",
+      "size": 72708,
+      "last_modified": 1760438604000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/15_9-F-14/Volve F_F-14_F-14_F-14_ACTUAL",
+      "size": 12487,
+      "last_modified": 1760436183000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/15_9-F-14/Volve F_F-14_F-14_F14 Rev6 from 958CP 270508 CC_PLAN",
+      "size": 14972,
+      "last_modified": 1760434204000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-14/Well Summary F-14.pdf",
+      "size": 59650,
+      "last_modified": 1760433384000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 A/Standard Survey Report_Volve F_F-15_F-15A_F-15A_ACTUAL.pdf",
+      "size": 70627,
+      "last_modified": 1760437197000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 A/Volve F_F-15_F-15A_F-15A_ACTUAL",
+      "size": 13424,
+      "last_modified": 1760434206000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 B/Standard Survey Report_Volve F_F-15_F-15B_F-15B Rev 1 Openhole 060109_PLAN.pdf",
+      "size": 63435,
+      "last_modified": 1760438902000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 B/Standard Survey Report_Volve F_F-15_F-15B_F-15B_ACTUAL.pdf",
+      "size": 70253,
+      "last_modified": 1760434352000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 B/Volve F_F-15_F-15B_F-15B Rev 1 Openhole 060109_PLAN",
+      "size": 3610,
+      "last_modified": 1760440381000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 B/Volve F_F-15_F-15B_F-15B_ACTUAL",
+      "size": 11736,
+      "last_modified": 1760437424000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 C/Standard Survey Report_Volve F_F-15_F-15C_F-15C_ACTUAL.pdf",
+      "size": 68483,
+      "last_modified": 1760435584000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 C/Volve F_F-15_F-15C_F-15C_ACTUAL",
+      "size": 10982,
+      "last_modified": 1760441996000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 D/Standard Survey Report_Volve F_F-15_F-15D_159-F-15 D revp8_PLAN.pdf",
+      "size": 65444,
+      "last_modified": 1760441708000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 D/Standard Survey Report_Volve F_F-15_F-15D_F-15D_ACTUAL.pdf",
+      "size": 72565,
+      "last_modified": 1760435823000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 D/Volve F_F-15_F-15D_159-F-15 D revp8_PLAN",
+      "size": 19775,
+      "last_modified": 1760437266000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15 D/Volve F_F-15_F-15D_F-15D_ACTUAL",
+      "size": 15028,
+      "last_modified": 1760441850000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15/Standard Survey Report_Volve F_F-15_F-15_F-15_ACTUAL.pdf",
+      "size": 70611,
+      "last_modified": 1760434224000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/15_9-F-15/Volve F_F-15_F-15_F-15_ACTUAL",
+      "size": 13192,
+      "last_modified": 1760439399000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-15/Well Summary F-15.pdf",
+      "size": 61481,
+      "last_modified": 1760433467000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Standard Survey Report_Volve F_F-2_F-2_F-2 rev#2 STGAL 151015_PLAN.pdf",
+      "size": 66338,
+      "last_modified": 1760434279000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F-2 Injector Max,MZ DRAFT FOR COST,211108_PROTOTYPE",
+      "size": 16231,
+      "last_modified": 1760439150000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F-2 Injector Most DRAFT FOR COST ,MZ,211108_PROTOTYPE",
+      "size": 15655,
+      "last_modified": 1760440932000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F-2 Producer Max DRAFT FOR COST,MZ,211108_PROTOTYPE",
+      "size": 16231,
+      "last_modified": 1760435849000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F-2 Producer Most DRAFT FOR COST,MZ,211108_PROTOTYPE",
+      "size": 13911,
+      "last_modified": 1760437426000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F-2 Rev #00 LS150806_PROTOTYPE",
+      "size": 3597,
+      "last_modified": 1760437050000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F-2 rev#1 STGAL 141015_PROTOTYPE",
+      "size": 17567,
+      "last_modified": 1760439415000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F-2 rev#2 STGAL 151015_PLAN",
+      "size": 17799,
+      "last_modified": 1760434370000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/15_9-F-2/Volve F_F-2_F-2_F2 Injector 170907_PROTOTYPE",
+      "size": 15609,
+      "last_modified": 1760440947000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-2/Well Summary F-2.pdf",
+      "size": 58521,
+      "last_modified": 1760430789000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-3/15_9-F-3/Standard Survey Report_Volve F_F-3_F-3_F-3 rev#1 STGAL 151015_PLAN.pdf",
+      "size": 66103,
+      "last_modified": 1760437980000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-3/15_9-F-3/Volve F_F-3_F-3_F-3 _IOR_SE_entry(Top Hugin)  rev2 YH-(240221)_PROTOTYPE",
+      "size": 14279,
+      "last_modified": 1760434144000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-3/15_9-F-3/Volve F_F-3_F-3_F-3 Rev#00 LS150806_PROTOTYPE",
+      "size": 3594,
+      "last_modified": 1760435745000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-3/15_9-F-3/Volve F_F-3_F-3_F-3 rev#1 STGAL 151015_PLAN",
+      "size": 17567,
+      "last_modified": 1760439813000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-3/15_9-F-3/Volve F_F-3_F-3_F3 E TS DRAFT NewRigCoords 220607_PROTOTYPE",
+      "size": 17452,
+      "last_modified": 1760434163000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-3/15_9-F-3/Volve F_F-3_F-3_F3 S injector 170907_PROTOTYPE",
+      "size": 15613,
+      "last_modified": 1760439108000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-3/Well Summary F-3.pdf",
+      "size": 58456,
+      "last_modified": 1760430782000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-4/15_9-F-4/Standard Survey Report_Volve F_F-4_F-4_F-4_ACTUAL.pdf",
+      "size": 72487,
+      "last_modified": 1760441923000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-4/15_9-F-4/Standard Survey Report_Volve F_F-4_F-4_F4 Rev 016 FinalCoords CC 310707_PLAN.pdf",
+      "size": 64772,
+      "last_modified": 1760436996000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-4/15_9-F-4/Volve F_F-4_F-4_F-4_ACTUAL",
+      "size": 11686,
+      "last_modified": 1760433497000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-4/15_9-F-4/Volve F_F-4_F-4_F4 Rev 016 FinalCoords CC 310707_PLAN",
+      "size": 16189,
+      "last_modified": 1760434148000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-4/15_9-F-4/Volve F_F-4_F-4_WCD-DO NOT USE - TO BE ERASED_PROTOTYPE",
+      "size": 2344,
+      "last_modified": 1760440393000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-4/Well Summary F-4.pdf",
+      "size": 57922,
+      "last_modified": 1760433481000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-5/15_9-F-5/Standard Survey Report_Volve F_F-5_F-5_F-5_ACTUAL.pdf",
+      "size": 77177,
+      "last_modified": 1760439551000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-5/15_9-F-5/Standard Survey Report_Volve F_F-5_F-5_F5 Rev 143 131207_PLAN.pdf",
+      "size": 69601,
+      "last_modified": 1760439375000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-5/15_9-F-5/Volve F_F-5_F-5_F-5_ACTUAL",
+      "size": 12934,
+      "last_modified": 1760437734000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-5/15_9-F-5/Volve F_F-5_F-5_F5 Rev 143 131207_PLAN",
+      "size": 17525,
+      "last_modified": 1760437105000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-5/Well Summary F-5.pdf",
+      "size": 58943,
+      "last_modified": 1760428844000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-6/Well Summary F-6.pdf",
+      "size": 56265,
+      "last_modified": 1760430807000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-7/15_9-F-7/Standard Survey Report_Volve F_F-7_F-7_F-7_ACTUAL.pdf",
+      "size": 67168,
+      "last_modified": 1760438838000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-7/15_9-F-7/Standard Survey Report_Volve F_F-7_F-7_F7 Rev013 FinalCoords CC 040707_PLAN.pdf",
+      "size": 64392,
+      "last_modified": 1760439046000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-7/15_9-F-7/Volve F_F-7_F-7_F-7_ACTUAL",
+      "size": 6425,
+      "last_modified": 1760434167000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-7/15_9-F-7/Volve F_F-7_F-7_F7 Rev013 FinalCoords CC 040707_PLAN",
+      "size": 6195,
+      "last_modified": 1760440755000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-7/Well Summary F-7.pdf",
+      "size": 57968,
+      "last_modified": 1760431139000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-8/15_9-F-8 A/Volve F_F-8_F-8 A_F-8 A IOR Fallback AMAP 200110 ks_PROTOTYPE",
+      "size": 15548,
+      "last_modified": 1760434253000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-8/15_9-F-8/Standard Survey Report_Volve F_F-8_F-8_F8 Volve Sør Prod DRAFT NewRigCoords 220607_PLAN.pdf",
+      "size": 65977,
+      "last_modified": 1760435758000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-8/15_9-F-8/Volve F_F-8_F-8_F8 North Producer AMAP 200110 ks_PROTOTYPE",
+      "size": 15715,
+      "last_modified": 1760439450000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-8/15_9-F-8/Volve F_F-8_F-8_F8 Volve Sør Prod DRAFT 120107_PROTOTYPE",
+      "size": 16870,
+      "last_modified": 1760435579000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-8/15_9-F-8/Volve F_F-8_F-8_F8 Volve Sør Prod DRAFT NewRigCoords 220607_PLAN",
+      "size": 16909,
+      "last_modified": 1760434184000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-8/Well Summary F-8.pdf",
+      "size": 58815,
+      "last_modified": 1760428991000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9 A/Standard Survey Report_Volve F_F-9_F-9 A_F-9 A_ACTUAL.pdf",
+      "size": 66298,
+      "last_modified": 1760438060000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9 A/Standard Survey Report_Volve F_F-9_F-9 A_F-9A Utsira Water injector Rev10 RM KO426m 120609_PLAN.pdf",
+      "size": 65408,
+      "last_modified": 1760434836000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9 A/Volve F_F-9_F-9 A_F-9 A_ACTUAL",
+      "size": 4482,
+      "last_modified": 1760434244000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9 A/Volve F_F-9_F-9 A_F-9A Utsira Water injector Rev10 RM KO426m 120609_PLAN",
+      "size": 6020,
+      "last_modified": 1760437925000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9/Standard Survey Report_Volve F_F-9_F-9_F-9_ACTUAL.pdf",
+      "size": 66804,
+      "last_modified": 1760438552000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9/Standard Survey Report_Volve F_F-9_F-9_F9 Rev 013 061207 tangent from 750m_PLAN.pdf",
+      "size": 65081,
+      "last_modified": 1760438110000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9/Volve F_F-9_F-9_F-9_ACTUAL",
+      "size": 4268,
+      "last_modified": 1760433785000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/15_9-F-9/Volve F_F-9_F-9_F9 Rev 013 061207 tangent from 750m_PLAN",
+      "size": 6376,
+      "last_modified": 1760440792000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/15_9-F-9/Well Summary F-9.pdf",
+      "size": 58542,
+      "last_modified": 1760428837000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 1/F-1 A Northwest Injector 9 58 csg. shoe/Volve F_Relief well location 1_F-1 A Northwest Injector 9 58 csg shoe_F-1 A Northwest Injector 9 58 csg shoe revp1_PLAN",
+      "size": 15341,
+      "last_modified": 1760437502000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 1/F-1 B 9 58 csg.shoe/Volve F_Relief well location 1_F-1 B 9 58 csgshoe_F-1 B 9 58 csgshoe revp1_PLAN",
+      "size": 14727,
+      "last_modified": 1760437240000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 1/F-1 North Upside Pilot 13 38 csg. shoe/Volve F_Relief well location 1_F-1 North Upside Pilot 13 38 csg shoe_F-1 North Upside Pilot 13 38 csg revp1_PLAN",
+      "size": 13124,
+      "last_modified": 1760438192000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 1/Well Summary Relief well location 1.pdf",
+      "size": 58020,
+      "last_modified": 1760428915000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 2/F-1 A Nortwest Injector 9 58 csg. shoe/Volve F_Relief well location 2_F-1 A Nortwest Injector 9 58 csg shoe_F-1 A Northwest Injector 9 58 csg shoe revp1_PLAN",
+      "size": 14761,
+      "last_modified": 1760439097000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 2/F-1 North Upside Pilot 13 38 csg. shoe/Volve F_Relief well location 2_F-1 North Upside Pilot 13 38 csg shoe_F-1 North Upside Pilot 13 38 csg shoe revp1_PLAN",
+      "size": 12555,
+      "last_modified": 1760436325000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 2/Well Summary Relief well location 2.pdf",
+      "size": 57518,
+      "last_modified": 1760433343000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 3/F-1 C/Volve F_Relief well location 3_F-1 C_F-1 C Relief Well 9 58 csg shoe revp1_PLAN",
+      "size": 13551,
+      "last_modified": 1760442002000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 3/F-12/Volve F_Relief well location 3_F-12_F-12 Relief Well 9 58 csg shoe revp1_PLAN",
+      "size": 13665,
+      "last_modified": 1760437072000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 3/F-15 C Top Resevoir Intersection/Volve F_Relief well location 3_F-15 C Top Resevoir Intersection_F-15 C Top Reservoir Intersection revp1_PLAN",
+      "size": 13925,
+      "last_modified": 1760435032000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 3/F-15 D/Volve F_Relief well location 3_F-15 D_F-15 D 9 58 csgshoe revp1_PROTOTYPE",
+      "size": 14340,
+      "last_modified": 1760439107000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 3/F-15 D/Volve F_Relief well location 3_F-15 D_F-15 D 9 58 csgshoe revp2_PLAN",
+      "size": 14224,
+      "last_modified": 1760438064000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 3/Well Summary Relief well location 3.pdf",
+      "size": 57278,
+      "last_modified": 1760430869000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 4/F-1 C/Volve F_Relief well location 4_F-1 C_F-1 C Relief Well 9 58 csg shoe revp1_PLAN",
+      "size": 15756,
+      "last_modified": 1760439062000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 4/F-15 C Top Reservoir Intersection/Volve F_Relief well location 4_F-15 C Top Reservoir Intersection_F-15 C Top Reservoir Intersection revp1_PLAN",
+      "size": 14042,
+      "last_modified": 1760440696000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 4/F-15 D/Volve F_Relief well location 4_F-15 D_F-15 D 9 58 csgshoe revp1_PROTOTYPE",
+      "size": 16543,
+      "last_modified": 1760434186000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 4/F-15 D/Volve F_Relief well location 4_F-15 D_F-15 D 9 58 csgshoe revp2_PLAN",
+      "size": 17007,
+      "last_modified": 1760434910000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 4/Well Summary Relief well location 4.pdf",
+      "size": 57207,
+      "last_modified": 1760428994000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 5/F-1 A  Northwest Injector 9 58 csg.shoe/Volve F_Relief well location 5_F-1 A  Northwest Injector 9 58 csgshoe_F-1 A Northwest Injector 9 58 csgshoe revp1_PLAN",
+      "size": 14643,
+      "last_modified": 1760435868000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 5/F-1 B 9 58 csg.shoe/Volve F_Relief well location 5_F-1 B 9 58 csgshoe_F-1 B 9 58 csgshoe revp1_PLAN",
+      "size": 14031,
+      "last_modified": 1760439133000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 5/F-1 North Upside Pilot 13 38 csg.shoe/Volve F_Relief well location 5_F-1 North Upside Pilot 13 38 csgshoe_F-1 North Upside Pilot 13 38 csg shoe revp1_PLAN",
+      "size": 12321,
+      "last_modified": 1760435857000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 5/F-12/Volve F_Relief well location 5_F-12_F-12 Relief Well 9 58 csgshoe revp1_PLAN",
+      "size": 13805,
+      "last_modified": 1760434300000
+    },
+    {
+      "path": "Well_technical_data/WellWellbore/Relief well location 5/Well Summary Relief well location 5.pdf",
+      "size": 58125,
+      "last_modified": 1760428844000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-NA-15_$47$_9-F-1/1/trajectory/1.xml",
+      "size": 20999,
+      "last_modified": 1760434459000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-NA-15_$47$_9-F-1/1/trajectory/MetaDataFileInfo.txt",
+      "size": 84,
+      "last_modified": 1760435799000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-NA-15_$47$_9-F-9 A/1/trajectory/1.xml",
+      "size": 50309,
+      "last_modified": 1760434299000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-NA-15_$47$_9-F-9 A/1/trajectory/2.xml",
+      "size": 42572,
+      "last_modified": 1760437042000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-NA-15_$47$_9-F-9 A/1/trajectory/MetaDataFileInfo.txt",
+      "size": 94,
+      "last_modified": 1760435596000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/1.xml",
+      "size": 96715,
+      "last_modified": 1760437128000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/2.xml",
+      "size": 490670,
+      "last_modified": 1760434306000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/3.xml",
+      "size": 87906,
+      "last_modified": 1760436165000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/4.xml",
+      "size": 25940,
+      "last_modified": 1760434137000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/5.xml",
+      "size": 164133,
+      "last_modified": 1760438815000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/6.xml",
+      "size": 5375,
+      "last_modified": 1760440941000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/7.xml",
+      "size": 491688,
+      "last_modified": 1760434262000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/8.xml",
+      "size": 203534,
+      "last_modified": 1760434216000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-12/1/trajectory/MetaDataFileInfo.txt",
+      "size": 618,
+      "last_modified": 1760437634000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-7/1/trajectory/1.xml",
+      "size": 15438,
+      "last_modified": 1760438884000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-7/1/trajectory/2.xml",
+      "size": 93803,
+      "last_modified": 1760434189000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-7/1/trajectory/3.xml",
+      "size": 90027,
+      "last_modified": 1760441270000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-15_$47$_9-F-7/1/trajectory/MetaDataFileInfo.txt",
+      "size": 246,
+      "last_modified": 1760434176000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/1/trajectory/1.xml",
+      "size": 147098,
+      "last_modified": 1760438799000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/1/trajectory/MetaDataFileInfo.txt",
+      "size": 34,
+      "last_modified": 1760437488000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/2/trajectory/1.xml",
+      "size": 226413,
+      "last_modified": 1760441002000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/2/trajectory/2.xml",
+      "size": 135458,
+      "last_modified": 1760439045000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/2/trajectory/MetaDataFileInfo.txt",
+      "size": 69,
+      "last_modified": 1760436066000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/3/trajectory/1.xml",
+      "size": 163381,
+      "last_modified": 1760435737000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/3/trajectory/MetaDataFileInfo.txt",
+      "size": 34,
+      "last_modified": 1760434147000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/4/trajectory/1.xml",
+      "size": 218326,
+      "last_modified": 1760435572000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/4/trajectory/2.xml",
+      "size": 127260,
+      "last_modified": 1760437265000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-1 C/4/trajectory/MetaDataFileInfo.txt",
+      "size": 64,
+      "last_modified": 1760434338000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/1/trajectory/1.xml",
+      "size": 299197,
+      "last_modified": 1760438647000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/1/trajectory/MetaDataFileInfo.txt",
+      "size": 36,
+      "last_modified": 1760436407000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/2/trajectory/1.xml",
+      "size": 359176,
+      "last_modified": 1760439455000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/2/trajectory/2.xml",
+      "size": 427830,
+      "last_modified": 1760434219000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/2/trajectory/3.xml",
+      "size": 330550,
+      "last_modified": 1760437182000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/2/trajectory/MetaDataFileInfo.txt",
+      "size": 110,
+      "last_modified": 1760437431000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/3/trajectory/1.xml",
+      "size": 24084,
+      "last_modified": 1760437075000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/3/trajectory/MetaDataFileInfo.txt",
+      "size": 33,
+      "last_modified": 1760434653000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/4/trajectory/1.xml",
+      "size": 393201,
+      "last_modified": 1760434889000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-11/4/trajectory/MetaDataFileInfo.txt",
+      "size": 35,
+      "last_modified": 1760434324000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-12/1/trajectory/1.xml",
+      "size": 254112,
+      "last_modified": 1760437637000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-12/1/trajectory/MetaDataFileInfo.txt",
+      "size": 33,
+      "last_modified": 1760434400000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-14/1/trajectory/1.xml",
+      "size": 113138,
+      "last_modified": 1760434337000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-14/1/trajectory/MetaDataFileInfo.txt",
+      "size": 33,
+      "last_modified": 1760441355000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-15/1/trajectory/1.xml",
+      "size": 99210,
+      "last_modified": 1760437797000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-15/1/trajectory/MetaDataFileInfo.txt",
+      "size": 36,
+      "last_modified": 1760434322000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-15/2/trajectory/1.xml",
+      "size": 149909,
+      "last_modified": 1760435196000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-15/2/trajectory/MetaDataFileInfo.txt",
+      "size": 35,
+      "last_modified": 1760440483000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-4/1/trajectory/1.xml",
+      "size": 105291,
+      "last_modified": 1760443500000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-4/1/trajectory/MetaDataFileInfo.txt",
+      "size": 32,
+      "last_modified": 1760443222000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-5/1/trajectory/1.xml",
+      "size": 118363,
+      "last_modified": 1760443364000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-5/1/trajectory/MetaDataFileInfo.txt",
+      "size": 32,
+      "last_modified": 1760442988000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-7/1/trajectory/1.xml",
+      "size": 51057,
+      "last_modified": 1760443070000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-7/1/trajectory/MetaDataFileInfo.txt",
+      "size": 32,
+      "last_modified": 1760443600000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-9/1/trajectory/1.xml",
+      "size": 30441,
+      "last_modified": 1760443591000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-Statoil-NO 15_$47$_9-F-9/1/trajectory/MetaDataFileInfo.txt",
+      "size": 34,
+      "last_modified": 1760443384000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-10/1/trajectory/1.xml",
+      "size": 1175176,
+      "last_modified": 1760442898000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-10/1/trajectory/2.xml",
+      "size": 118634,
+      "last_modified": 1760443310000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-10/1/trajectory/3.xml",
+      "size": 222950,
+      "last_modified": 1760442631000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-10/1/trajectory/4.xml",
+      "size": 18379,
+      "last_modified": 1760442573000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-10/1/trajectory/5.xml",
+      "size": 179855,
+      "last_modified": 1760442819000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-10/1/trajectory/MetaDataFileInfo.txt",
+      "size": 233,
+      "last_modified": 1760442912000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-14/1/trajectory/1.xml",
+      "size": 13204,
+      "last_modified": 1760442907000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-14/1/trajectory/2.xml",
+      "size": 116579,
+      "last_modified": 1760443384000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-14/1/trajectory/3.xml",
+      "size": 43036,
+      "last_modified": 1760443297000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-14/1/trajectory/4.xml",
+      "size": 227511,
+      "last_modified": 1760442920000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-14/1/trajectory/5.xml",
+      "size": 147215,
+      "last_modified": 1760443144000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-14/1/trajectory/MetaDataFileInfo.txt",
+      "size": 302,
+      "last_modified": 1760443329000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15/1/trajectory/1.xml",
+      "size": 152919,
+      "last_modified": 1760442709000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15/1/trajectory/2.xml",
+      "size": 246738,
+      "last_modified": 1760443594000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15/1/trajectory/MetaDataFileInfo.txt",
+      "size": 84,
+      "last_modified": 1760443291000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15A/1/trajectory/1.xml",
+      "size": 198448,
+      "last_modified": 1760443508000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15A/1/trajectory/2.xml",
+      "size": 170132,
+      "last_modified": 1760443429000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15A/1/trajectory/MetaDataFileInfo.txt",
+      "size": 93,
+      "last_modified": 1760443441000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15B/1/trajectory/1.xml",
+      "size": 214782,
+      "last_modified": 1760442602000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15B/1/trajectory/MetaDataFileInfo.txt",
+      "size": 45,
+      "last_modified": 1760443614000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15S/1/trajectory/1.xml",
+      "size": 249632,
+      "last_modified": 1760442666000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15S/1/trajectory/2.xml",
+      "size": 146053,
+      "last_modified": 1760443292000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-15S/1/trajectory/MetaDataFileInfo.txt",
+      "size": 93,
+      "last_modified": 1760442702000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-4/2/trajectory/1.xml",
+      "size": 165153,
+      "last_modified": 1760443321000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-4/2/trajectory/2.xml",
+      "size": 151457,
+      "last_modified": 1760442676000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-4/2/trajectory/3.xml",
+      "size": 26092,
+      "last_modified": 1760442902000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-4/2/trajectory/4.xml",
+      "size": 213066,
+      "last_modified": 1760442748000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-4/2/trajectory/5.xml",
+      "size": 96185,
+      "last_modified": 1760442765000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-4/2/trajectory/MetaDataFileInfo.txt",
+      "size": 366,
+      "last_modified": 1760443111000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-5/1/trajectory/1.xml",
+      "size": 94850,
+      "last_modified": 1760442605000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-5/1/trajectory/2.xml",
+      "size": 185688,
+      "last_modified": 1760442960000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-5/1/trajectory/3.xml",
+      "size": 237904,
+      "last_modified": 1760443614000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-5/1/trajectory/4.xml",
+      "size": 23542,
+      "last_modified": 1760443364000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-5/1/trajectory/MetaDataFileInfo.txt",
+      "size": 320,
+      "last_modified": 1760443175000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-9/1/trajectory/1.xml",
+      "size": 21051,
+      "last_modified": 1760443258000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-9/1/trajectory/2.xml",
+      "size": 59382,
+      "last_modified": 1760443080000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-9/1/trajectory/3.xml",
+      "size": 23540,
+      "last_modified": 1760442745000
+    },
+    {
+      "path": "WITSML Realtime drilling data/Norway-StatoilHydro-15_$47$_9-F-9/1/trajectory/MetaDataFileInfo.txt",
+      "size": 205,
+      "last_modified": 1760443480000
+    }
+  ]
+}

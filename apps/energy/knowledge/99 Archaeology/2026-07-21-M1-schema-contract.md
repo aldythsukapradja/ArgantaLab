@@ -1,0 +1,7 @@
+# 2026-07-21 — M1: Star-schema contract (Fable) — append-only
+
+- Built the 3-artifact contract from the REAL decoded data: contracts/schema.md (hierarchy, rule-ordered joins R1-R7, FK ledger, alias layer), contracts/ontology.md (per-column dictionary, 10 tables), src/data/schema-meta.ts (runtime SSOT: TABLES/FKS/GROUPS/CENTERS/COL_META + normalizers + fuzzy findCol; edge ids AUTO from from|to).
+- Model: hub Well(11, well_name) → child Wellbore(24, wellbore_name, sidetrack via drilled_from) → facts production(15,634)/log_sample(223)/pressure(48) + details trajectory(29)/marker(409) + gis horizon(6); bridge Surface(16); evidence EvidenceRecord(1,002). CRS ED50/UTM31N, field Q0015 SLEIPNER.
+- KEY VERIFICATION FIND: 5 physical naming systems for one wellbore. The master itself mixes short (F-12, F-15A) and full (15/9-F-11 A, 15/9-19 A) forms → canonical = SHORT form, strip common "15/9-" prefix + branch-letter spacing. First-draft normalizer (no prefix strip) FAILED most joins; corrected.
+- CORRECTED orphan counts (were wrong in first draft): FK03 production 0, FK04 logs 2 (19 B/19 S combined-branch splits), FK06 trajectory 1 (F-15 S sidetrack), FK07 markers 92 of 409 (12 regional/pilot wells outside field; the decoder's raw 300-null was exact-match failure — alias layer resolves 208, true semantic orphan is 92). Orphans carried verbatim, never merged.
+- scripts/schema-check.mjs makes the ledger self-consistency a permanent, re-runnable check (a changed count = a real data event, surfaced not hidden). tsc clean. All 4 FK orphan assertions PASS.
