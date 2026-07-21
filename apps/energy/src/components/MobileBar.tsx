@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { DOMAINS, type DomainId } from '../nav';
 import { Orb } from './Cosmonaut';
-import { LayoutGrid, Database, BookOpen, Wrench, MoreHorizontal, X } from 'lucide-react';
+import { LayoutGrid, Layers, Database, GraduationCap, MoreHorizontal, X } from 'lucide-react';
 
-// Mobile (≤820px) bottom tab bar: Core · Data · Knowledge · Cosmonaut orb (center-raised)
-// · Field Dev, plus a "⋯ More" sheet listing every domain.
+// Mobile (≤820px) bottom tab bar mirrors the 4 shell zones + center Agent orb:
+// Command Center · Verticals · (orb) · Intelligence · Foundation. Each zone tab
+// navigates to a sensible entry domain within that zone; "More" lists every domain.
 const KEYS: { id: DomainId; label: string; icon: typeof LayoutGrid }[] = [
-  { id: 'foundation', label: 'Core', icon: LayoutGrid },
-  { id: 'data', label: 'Data', icon: Database },
-  { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
-  { id: 'workbench', label: 'Field Dev', icon: Wrench },
+  { id: 'core', label: 'Command', icon: LayoutGrid },
+  { id: 'exploration', label: 'Verticals', icon: Layers },      // lifecycle entry
+  { id: 'data', label: 'Intelligence', icon: Database },        // most content-rich entry
+  { id: 'foundation', label: 'Foundation', icon: GraduationCap },
 ];
 
 export function MobileBar() {
@@ -19,7 +20,12 @@ export function MobileBar() {
   const left = KEYS.slice(0, 2), right = KEYS.slice(2);
 
   const Item = ({ d }: { d: typeof KEYS[number] }) => {
-    const Icon = d.icon; const active = domain === d.id;
+    const Icon = d.icon;
+    // Highlight the zone tab whenever the active domain is anywhere in that zone,
+    // not just its literal entry domain (e.g. "Verticals" stays lit inside Field Development).
+    const itemZone = DOMAINS.find((x) => x.id === d.id)!.zone;
+    const activeDomainDef = DOMAINS.find((x) => x.id === domain)!;
+    const active = activeDomainDef.zone === itemZone;
     return (
       <button onClick={() => setDomain(d.id)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 0', color: active ? 'var(--teal)' : 'var(--muted)' }}>
         <Icon size={18} /><span style={{ fontSize: 9.5 }}>{d.label}</span>

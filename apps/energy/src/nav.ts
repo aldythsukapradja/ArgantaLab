@@ -1,17 +1,25 @@
 // Config-driven nav — nav is DATA, not markup (the reusable Cosmo pattern).
+// Shell concept v2 (Command-Center OS): 4 bottom-nav zones + a center Agent orb.
+// See docs/arganta-energy/SHELL-CONCEPT-V2.md for the founder-directed restructure.
 import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutGrid, Database, Network, BookOpen, Wrench, Circle, Layers,
-  Bot, GraduationCap, ShieldCheck, Gauge, Boxes, Radar,
+  LayoutGrid, Database, BookOpen, Wrench, Compass, Truck, Waves,
+  Sparkles, Bot, GraduationCap, ShieldCheck, Gauge, Boxes, Radar,
 } from 'lucide-react';
 
 export type DomainId =
-  | 'foundation' | 'data' | 'schema' | 'knowledge' | 'workbench' | 'wells'
-  | 'surfaces' | 'agents' | 'training' | 'audit';
+  | 'core'                                                     // Command Center
+  | 'exploration' | 'fielddev' | 'welldelivery' | 'resmgmt'    // Verticals (O&G lifecycle)
+  | 'insight' | 'reasoning' | 'knowledge' | 'data'              // Intelligence (Data is last/bottom)
+  | 'foundation';                                               // Foundation (learning bank)
 
-// zone: the MOTHERSHIP is the platform OS (data+knowledge+agents+governance);
-// VERTICALS are domain apps that launch from it (Workbench = Field Development, …).
-export type Zone = 'platform' | 'vertical';
+// zone: the 4 bottom-nav groups. The Agent (Cosmonaut orb) is a 5th "zone" in the
+// bottom bar but is not a drawer group — it's a floating action that opens an overlay.
+export type Zone = 'command' | 'vertical' | 'intelligence' | 'foundation';
+
+export const ZONE_LABEL: Record<Zone, string> = {
+  command: 'COMMAND CENTER', vertical: 'VERTICALS', intelligence: 'INTELLIGENCE', foundation: 'FOUNDATION',
+};
 
 export interface DomainDef {
   id: DomainId;
@@ -19,44 +27,58 @@ export interface DomainDef {
   icon: LucideIcon;
   accent: string;          // css var name
   status: 'live' | 'stub';
-  phase: string;           // e.g. 'P2' or 'P3+'
+  phase: string;           // e.g. 'P2' or 'V1'
   zone: Zone;
   blurb: string;
 }
 
-// Domain tab bar + activity rail both render from this single array.
+// Domain tab bar + drawer both render from this single array, in this order.
 export const DOMAINS: DomainDef[] = [
-  // ── MOTHERSHIP — ArgantaEnergy Core (CDF / Lumi / ADME equivalent) ──
-  { id: 'foundation', label: 'Core', icon: LayoutGrid, accent: 'teal', status: 'live', phase: 'P2', zone: 'platform', blurb: 'Field overview, live data metrics, relational schema.' },
-  { id: 'data', label: 'Data', icon: Database, accent: 'amber', status: 'live', phase: 'P2', zone: 'platform', blurb: 'Ingestion refinery — mirror ledger, decode stages, provenance.' },
-  { id: 'schema', label: 'Schema', icon: Network, accent: 'blue', status: 'live', phase: 'M1', zone: 'platform', blurb: 'Semantic model — star schema, FK ledger, orphan counts (contract v1.0.0).' },
-  { id: 'knowledge', label: 'Knowledge', icon: BookOpen, accent: 'violet', status: 'live', phase: 'P2', zone: 'platform', blurb: 'Vault + knowledge graph — notes, evidence, QC, archaeology.' },
-  { id: 'agents', label: 'Agents', icon: Bot, accent: 'teal', status: 'stub', phase: 'P4', zone: 'platform', blurb: 'Deterministic-first tier ladder, truthful run envelope, approval gate.' },
-  { id: 'audit', label: 'Governance', icon: ShieldCheck, accent: 'orange', status: 'stub', phase: 'P6', zone: 'platform', blurb: 'Evidence lineage, checks, contradiction flags, portability.' },
-  // ── VERTICALS — domain apps inside the mothership ──
-  { id: 'workbench', label: 'Field Development', icon: Wrench, accent: 'blue', status: 'stub', phase: 'V1', zone: 'vertical', blurb: 'Mini-Petrel: map → logs → structural → property → volumetrics → forecast → economics.' },
-  { id: 'wells', label: 'Wells', icon: Circle, accent: 'blue', status: 'stub', phase: 'V1', zone: 'vertical', blurb: 'Cross-domain coverage matrix + identity notes.' },
-  { id: 'surfaces', label: 'Surfaces', icon: Layers, accent: 'orange', status: 'stub', phase: 'V1', zone: 'vertical', blurb: 'Marker → datum/CRS → interpolation → derived surface.' },
-  { id: 'training', label: 'Training', icon: GraduationCap, accent: 'rose', status: 'stub', phase: 'V2+', zone: 'vertical', blurb: 'Curriculum generator from brain + workbench.' },
+  // ── COMMAND CENTER — the ops cockpit. Core concept pending (founder TBD); placeholder for now. ──
+  { id: 'core', label: 'Core', icon: LayoutGrid, accent: 'teal', status: 'stub', phase: '—', zone: 'command', blurb: 'High-level operator cockpit. Concept pending.' },
+
+  // ── VERTICALS — domain apps, in O&G lifecycle order ──
+  { id: 'exploration', label: 'Exploration', icon: Compass, accent: 'violet', status: 'stub', phase: 'V1', zone: 'vertical', blurb: 'Prospect screening, play assessment, exploration risk.' },
+  { id: 'fielddev', label: 'Field Development', icon: Wrench, accent: 'blue', status: 'stub', phase: 'V1', zone: 'vertical', blurb: 'Mini-Petrel: map → logs → structural → property → volumetrics → forecast → economics.' },
+  { id: 'welldelivery', label: 'Well Delivery', icon: Truck, accent: 'amber', status: 'stub', phase: 'V2+', zone: 'vertical', blurb: 'Well planning, drilling & completion delivery.' },
+  { id: 'resmgmt', label: 'Reservoir Management', icon: Waves, accent: 'teal', status: 'stub', phase: 'V2+', zone: 'vertical', blurb: 'Surveillance, pattern balancing, injection/production optimization.' },
+
+  // ── INTELLIGENCE — data-to-insight ladder (Data is the foundation, listed last) ──
+  { id: 'insight', label: 'Insight', icon: Sparkles, accent: 'rose', status: 'stub', phase: '—', zone: 'intelligence', blurb: 'Dashboards, KPIs, briefings, decisions.' },
+  { id: 'reasoning', label: 'Reasoning', icon: Bot, accent: 'teal', status: 'stub', phase: 'P4', zone: 'intelligence', blurb: 'Deterministic-first tier ladder, truthful run envelope, approval gate.' },
+  { id: 'knowledge', label: 'Knowledge', icon: BookOpen, accent: 'violet', status: 'live', phase: 'P2', zone: 'intelligence', blurb: 'Vault + knowledge graph — notes, evidence, extraction.' },
+  { id: 'data', label: 'Data', icon: Database, accent: 'amber', status: 'live', phase: 'P2', zone: 'intelligence', blurb: 'Ingestion refinery — field overview, inventory, pipeline, semantic model.' },
+
+  // ── FOUNDATION — the knowledge bank / learning library ──
+  { id: 'foundation', label: 'Foundation', icon: GraduationCap, accent: 'rose', status: 'stub', phase: 'V2+', zone: 'foundation', blurb: 'Training materials, notes & reading, reference.' },
 ];
 
 // ── Sub-tabs per domain (config-driven, like DOMAINS). Top bar renders these. ──
 export interface SubTab { id: string; label: string }
 export const SUBTABS: Record<DomainId, SubTab[]> = {
-  foundation: [{ id: 'overview', label: 'Overview' }, { id: 'schema', label: 'Schema' }],
-  data: [{ id: 'inventory', label: 'Inventory' }, { id: 'pipeline', label: 'Pipeline' }],
-  schema: [{ id: 'overview', label: 'Model' }],
+  core: [{ id: 'overview', label: 'Overview' }, { id: 'governance', label: 'Governance' }],
+  exploration: [{ id: 'overview', label: 'Overview' }],
+  fielddev: [{ id: 'overview', label: 'Overview' }],
+  welldelivery: [{ id: 'overview', label: 'Overview' }],
+  resmgmt: [{ id: 'overview', label: 'Overview' }],
+  insight: [{ id: 'overview', label: 'Overview' }],
+  reasoning: [{ id: 'overview', label: 'Overview' }],
   knowledge: [
     { id: 'explorer', label: 'Explorer' },
     { id: 'graph', label: 'Graph' },
     { id: 'extraction', label: 'Extraction' },
   ],
-  workbench: [{ id: 'overview', label: 'Overview' }],
-  wells: [{ id: 'overview', label: 'Overview' }],
-  surfaces: [{ id: 'overview', label: 'Overview' }],
-  agents: [{ id: 'overview', label: 'Overview' }],
-  training: [{ id: 'overview', label: 'Overview' }],
-  audit: [{ id: 'overview', label: 'Overview' }],
+  data: [
+    { id: 'overview', label: 'Overview' },
+    { id: 'inventory', label: 'Inventory' },
+    { id: 'pipeline', label: 'Pipeline' },
+    { id: 'model', label: 'Model' },
+  ],
+  foundation: [
+    { id: 'training', label: 'Training' },
+    { id: 'notes', label: 'Notes & Reading' },
+    { id: 'reference', label: 'Reference' },
+  ],
 };
 export const defaultSubtab = (d: DomainId): string => SUBTABS[d][0].id;
 
@@ -66,3 +88,6 @@ export const SIBLING_APPS = [
   { id: 'hq', label: 'Circle HQ', icon: Boxes, locked: true },
   { id: 'radar', label: 'Market Radar', icon: Radar, locked: true },
 ];
+
+// Kept for any legacy import; governance content now lives at core/governance.
+export const GOVERNANCE_ICON = ShieldCheck;

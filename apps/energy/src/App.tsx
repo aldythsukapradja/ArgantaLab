@@ -27,11 +27,14 @@ function useIsMobile() {
 function Surface() {
   const { domain, subtab } = useStore();
   const def = DOMAINS.find((d) => d.id === domain)!;
-  if (domain === 'foundation') return subtab === 'schema' ? <SchemaTab /> : <Foundation />;
-  if (domain === 'data') return subtab === 'pipeline' ? <DataPipeline /> : <DataTab />;
-  if (domain === 'schema') return <SchemaTab />;
+  if (domain === 'data') {
+    if (subtab === 'inventory') return <DataTab />;
+    if (subtab === 'pipeline') return <DataPipeline />;
+    if (subtab === 'model') return <SchemaTab />;
+    return <Foundation />; // 'overview' — the field picture (was the standalone Core/Foundation tab)
+  }
   if (domain === 'knowledge') return <Knowledge />;
-  return <Stub def={def} />;
+  return <Stub def={def} />; // Core, verticals, insight/reasoning, foundation — placeholders for now
 }
 
 export function App() {

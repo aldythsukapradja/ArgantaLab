@@ -1,15 +1,13 @@
 import { useStore } from '../store';
 import { DOMAINS, SUBTABS } from '../nav';
-import foundation from '../data/foundation.json';
-import { ChevronDown, Search, Sun, Moon } from 'lucide-react';
+import { Search, Sun, Moon } from 'lucide-react';
 
-// Top bar = the SUB-TAB bar: brand (compact) · domain sub-tabs · well selector · ⌘K ·
-// theme toggle · route badge. Sub-tabs render from the SUBTABS config (config-driven).
+// Top bar = the SUB-TAB bar: brand (compact) · domain sub-tabs · ⌘K · theme toggle ·
+// route badge. Sub-tabs render from the SUBTABS config (config-driven).
 export function ContextBar({ mobile = false }: { mobile?: boolean }) {
-  const { domain, subtab, setSubtab, well, setWell, togglePalette, theme, toggleTheme } = useStore();
+  const { domain, subtab, setSubtab, togglePalette, theme, toggleTheme } = useStore();
   const def = DOMAINS.find((d) => d.id === domain)!;
   const subs = SUBTABS[domain];
-  const wellOptions = ['ALL WELLS', ...foundation.wells.map((w) => w.well_name)];
 
   return (
     <header style={{
@@ -42,17 +40,6 @@ export function ContextBar({ mobile = false }: { mobile?: boolean }) {
       </div>
 
       <div style={{ flex: 1 }} />
-
-      {!mobile && (
-        <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-          <select value={well} onChange={(e) => setWell(e.target.value)} aria-label="Well / field context" className="mono"
-            style={{ appearance: 'none', background: 'var(--panel-2)', color: 'var(--text)', border: '1px solid var(--line)',
-              borderRadius: 3, padding: '5px 26px 5px 10px', fontSize: 11.5, letterSpacing: '0.03em', minWidth: 150 }}>
-            {wellOptions.map((w) => <option key={w} value={w}>{w}</option>)}
-          </select>
-          <ChevronDown size={13} style={{ position: 'absolute', right: 8, pointerEvents: 'none', color: 'var(--muted)' }} />
-        </label>
-      )}
 
       <button onClick={() => togglePalette(true)} aria-label="Command palette"
         style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--panel-2)', border: '1px solid var(--line)',

@@ -3,7 +3,7 @@ import foundation from '../data/foundation.json';
 import { useStore } from '../store';
 
 export function StatusBar() {
-  const { domain, well } = useStore();
+  const { domain, subtab } = useStore();
   return (
     <footer
       className="mono"
@@ -16,8 +16,7 @@ export function StatusBar() {
       <span style={{ color: 'var(--teal)' }}>● AUDIT OK</span>
       <span>mirror {data.mirror.files} files · {data.mirror.gb} GB · sha256 ✓ {data.mirror.verified}/{data.mirror.files}</span>
       <span>failures {data.mirror.failures}</span>
-      <span>route /{domain}</span>
-      <span>ctx {well}</span>
+      <span>route /{domain}/{subtab}</span>
       <div style={{ flex: 1 }} />
       <span>src data-energy/processed · manifest</span>
       <span>© Equinor · Volve · Open Data Licence</span>

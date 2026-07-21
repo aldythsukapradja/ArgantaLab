@@ -49,9 +49,9 @@ export function SchemaTab() {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: sel ? '1fr 300px' : '1fr', height: '100%', gap: 10 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: sel ? '1fr 300px' : '1fr', height: '100%', gap: 10, padding: 14 }}>
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div className="panel-header" style={{ marginBottom: 8 }}>
+        <div className="panel-header panel" style={{ marginBottom: 8 }}>
           <span>Semantic model — star schema · {TABLES.length} tables · {FKS.length} relationships · contract v1.0.0 LOCKED</span>
           <span className="chip teal">hub: well ▸ wellbore</span>
         </div>

@@ -1,27 +1,27 @@
-import { DOMAINS, SIBLING_APPS } from '../nav';
+import { DOMAINS, SIBLING_APPS, ZONE_LABEL, type Zone } from '../nav';
 import { useStore } from '../store';
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
 // The MAIN nav: expanded 232px by default, collapsible to a 60px icon rail (persisted).
-// Sections come from nav zones — MOTHERSHIP (platform) then VERTICALS (vertical) — with
-// locked sibling apps at the bottom. Each item: icon + label + phase chip (chip → tooltip
-// when collapsed).
+// Sections come from nav zones, in this order: COMMAND CENTER → VERTICALS → INTELLIGENCE
+// → FOUNDATION, with locked sibling apps at the bottom.
+//
+// The collapse toggle lives in its OWN always-full-width row (never inline with the
+// brand mark) so it can never get clipped at the 60px collapsed width — the brand row
+// simply hides its label when collapsed instead of fighting the toggle for space.
+const ZONE_ORDER: Zone[] = ['command', 'vertical', 'intelligence', 'foundation'];
+
 export function Drawer() {
   const { domain, setDomain, drawerCollapsed, toggleDrawer } = useStore();
   const w = drawerCollapsed ? 60 : 232;
-
-  const groups: { zone: 'platform' | 'vertical'; label: string }[] = [
-    { zone: 'platform', label: 'MOTHERSHIP' },
-    { zone: 'vertical', label: 'VERTICALS' },
-  ];
 
   return (
     <nav aria-label="Main navigation" style={{
       width: w, flex: `0 0 ${w}px`, background: 'var(--panel)', borderRight: '1px solid var(--line)',
       display: 'flex', flexDirection: 'column', transition: 'width .18s ease', overflow: 'hidden',
     }}>
-      {/* brand + collapse toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--line)', minHeight: 54 }}>
+      {/* brand row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--line)', minHeight: 54, justifyContent: drawerCollapsed ? 'center' : 'flex-start' }}>
         <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 6, display: 'grid', placeItems: 'center',
           background: 'linear-gradient(160deg, rgba(80,208,177,.22), rgba(98,174,247,.12))', border: '1px solid var(--line)' }}>
           <div style={{ width: 12, height: 12, border: '2px solid var(--teal)', borderRadius: 3, transform: 'rotate(45deg)' }} />
@@ -31,19 +31,24 @@ export function Drawer() {
             ARGANTA<span style={{ color: 'var(--teal)' }}>ENERGY</span>
           </span>
         )}
-        <button onClick={() => toggleDrawer()} title={drawerCollapsed ? 'Expand' : 'Collapse'} aria-label="Toggle navigation"
-          style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', color: 'var(--muted)', borderRadius: 4, border: '1px solid var(--line)', flexShrink: 0 }}>
-          {drawerCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
       </div>
 
+      {/* collapse toggle — its own full-width row, sized to the drawer, never clipped */}
+      <button onClick={() => toggleDrawer()} title={drawerCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-label="Toggle navigation"
+        style={{
+          width: '100%', height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          color: 'var(--muted)', borderBottom: '1px solid var(--line)', background: 'var(--panel-2)',
+        }}>
+        {drawerCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span style={{ fontSize: 10.5 }}>Collapse</span></>}
+      </button>
+
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 8px 4px' }}>
-        {groups.map((g) => (
-          <div key={g.zone} style={{ marginBottom: 10 }}>
+        {ZONE_ORDER.map((zone) => (
+          <div key={zone} style={{ marginBottom: 10 }}>
             {!drawerCollapsed
-              ? <div className="eyebrow" style={{ padding: '4px 8px 6px', fontSize: 9 }}>{g.label}</div>
+              ? <div className="eyebrow" style={{ padding: '4px 8px 6px', fontSize: 9 }}>{ZONE_LABEL[zone]}</div>
               : <div style={{ height: 1, background: 'var(--line)', margin: '6px 8px' }} />}
-            {DOMAINS.filter((d) => d.zone === g.zone).map((d) => {
+            {DOMAINS.filter((d) => d.zone === zone).map((d) => {
               const Icon = d.icon;
               const active = domain === d.id;
               return (

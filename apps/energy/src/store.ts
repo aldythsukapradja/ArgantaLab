@@ -28,7 +28,6 @@ interface AppState {
   domain: DomainId;
   subtab: string;
   paletteOpen: boolean;
-  well: string;              // selected well/field context
   theme: Theme;
   drawerCollapsed: boolean;
   cosmoOpen: boolean;
@@ -37,7 +36,6 @@ interface AppState {
   setDomain: (d: DomainId) => void;
   setSubtab: (id: string) => void;
   goto: (d: DomainId, sub?: string) => void;
-  setWell: (w: string) => void;
   togglePalette: (v?: boolean) => void;
   toggleTheme: () => void;
   toggleDrawer: (v?: boolean) => void;
@@ -46,11 +44,11 @@ interface AppState {
   addUserNote: (n: VaultNote) => void;  // extraction accept → vault
 }
 
+// Land on Data·Overview (real content) rather than Core (placeholder for now).
 export const useStore = create<AppState>((set, get) => ({
-  domain: 'foundation',
-  subtab: defaultSubtab('foundation'),
+  domain: 'data',
+  subtab: defaultSubtab('data'),
   paletteOpen: false,
-  well: 'ALL WELLS',
   theme: initialTheme(),
   drawerCollapsed: initialDrawer(),
   cosmoOpen: false,
@@ -59,7 +57,6 @@ export const useStore = create<AppState>((set, get) => ({
   setDomain: (domain) => set({ domain, subtab: defaultSubtab(domain), paletteOpen: false }),
   setSubtab: (subtab) => set({ subtab }),
   goto: (domain, sub) => set({ domain, subtab: sub ?? defaultSubtab(domain), paletteOpen: false }),
-  setWell: (well) => set({ well }),
   togglePalette: (v) => set((s) => ({ paletteOpen: v ?? !s.paletteOpen })),
   toggleTheme: () => set((s) => { const theme: Theme = s.theme === 'dark' ? 'light' : 'dark'; applyTheme(theme); return { theme }; }),
   toggleDrawer: (v) => set((s) => {
