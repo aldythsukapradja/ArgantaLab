@@ -19,14 +19,16 @@ export function ActivityRail() {
         <div style={{ width: 14, height: 14, border: '2px solid var(--teal)', borderRadius: 3, transform: 'rotate(45deg)' }} />
       </div>
 
-      {DOMAINS.map((d) => {
+      {DOMAINS.map((d, i) => {
         const Icon = d.icon;
         const active = domain === d.id;
+        const zoneStart = i > 0 && DOMAINS[i - 1].zone !== d.zone;
         return (
+          <div key={d.id} style={{ width: 42, display: 'contents' }}>
+          {zoneStart && <div title="Verticals — apps inside the mothership" style={{ width: 22, height: 1, background: 'var(--line)', margin: '5px 0' }} />}
           <button
-            key={d.id}
             onClick={() => setDomain(d.id)}
-            title={`${d.label} · ${d.status === 'live' ? d.phase + ' live' : d.phase}`}
+            title={`${d.label} · ${d.zone === 'vertical' ? 'vertical' : 'platform'} · ${d.status === 'live' ? d.phase + ' live' : d.phase}`}
             aria-current={active ? 'page' : undefined}
             style={{
               width: 42, height: 40, borderRadius: 5, display: 'grid', placeItems: 'center', position: 'relative',
@@ -40,6 +42,7 @@ export function ActivityRail() {
             {active && <span style={{ position: 'absolute', left: -9, top: 8, bottom: 8, width: 2, borderRadius: 2, background: `var(--${d.accent})` }} />}
             {d.status === 'stub' && <span style={{ position: 'absolute', right: 4, bottom: 4, width: 4, height: 4, borderRadius: 4, background: 'var(--line)' }} />}
           </button>
+          </div>
         );
       })}
 

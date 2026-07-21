@@ -13,11 +13,17 @@ export function TabBar() {
         padding: '0 8px', gap: 2, overflowX: 'auto',
       }}
     >
-      {DOMAINS.map((d) => {
+      {DOMAINS.map((d, i) => {
         const active = domain === d.id;
+        const zoneStart = i > 0 && DOMAINS[i - 1].zone !== d.zone;
         return (
+          <div key={d.id} style={{ display: 'contents' }}>
+          {zoneStart && (
+            <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 10px', borderLeft: '1px solid var(--line)', marginLeft: 4 }}>
+              <span className="eyebrow" style={{ fontSize: 8.5 }}>VERTICALS</span>
+            </span>
+          )}
           <button
-            key={d.id}
             role="tab"
             aria-selected={active}
             onClick={() => setDomain(d.id)}
@@ -35,6 +41,7 @@ export function TabBar() {
               <span className="chip mono" style={{ padding: '0px 4px', fontSize: 9, borderColor: 'var(--line)' }}>{d.phase}</span>
             )}
           </button>
+          </div>
         );
       })}
     </div>
