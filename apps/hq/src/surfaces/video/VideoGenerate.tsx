@@ -3,10 +3,12 @@
 // sovereign Wan 2.2 render through the R1 jobStore, so it survives mode/surface
 // switches and single-flights the GPU. 8GB-honest presets; OOM → one-tap retry
 // at Draft. "Send to Edit" hands a clip to the timeline.
+// V0: player/card/gallery extracted to shared.tsx (byte-identical behavior).
 import { useState } from 'react'
-import { Sparkles, Loader2, AlertCircle, Download, Scissors, Shuffle, X } from 'lucide-react'
+import { Sparkles, Shuffle } from 'lucide-react'
 import { useJobStore, type Job } from '../../lib/jobStore'
 import { SovereignChip } from '../shared/SovereignChip'
+import { PlayerView, EmptyStage, Gallery } from './shared'
 import './video-generate.css'
 
 // presets named by INTENT, with estimates measured on the 3070 Ti (8GB).
@@ -15,8 +17,6 @@ const PRESETS = [
   { id: 'social', label: 'Social', w: 480, h: 832, frames: 49, note: '~4min' },
   { id: 'wide', label: 'Wide', w: 640, h: 360, frames: 49, note: '~4min' },
 ] as const
-
-const isOOM = (err?: string) => !!err && /oom|out of memory|alloc|cuda|reduce/i.test(err)
 
 export function VideoGenerate({ onSendToEdit }: { onSendToEdit?: (clip: { url: string; meta: any }) => void }) {
   const spawn = useJobStore((s) => s.spawn)
@@ -66,76 +66,21 @@ export function VideoGenerate({ onSendToEdit }: { onSendToEdit?: (clip: { url: s
       {/* center player */}
       <div className="vg-stage">
         {view ? <PlayerView job={view} onRetryDraft={() => render({ prompt: view.label, width: 384, height: 384, frames: 25 })} /> : (
-          <div className="vg-empty">
-            <Sparkles size={26} />
-            <p>Describe a shot and render it. Clips land in the gallery below — you keep working while the GPU renders.</p>
-            <div className="vg-starters">
-              {['golden light through drifting clouds', 'neon rain on an empty street, slow pan', 'a candle flame flickering in the dark'].map((s) => (
-                <button key={s} onClick={() => { setPrompt(s); render({ prompt: s }) }}>{s}</button>
-              ))}
-            </div>
-          </div>
+          <EmptyStage
+            hint="Describe a shot and render it. Clips land in the gallery below — you keep working while the GPU renders."
+            starters={['golden light through drifting clouds', 'neon rain on an empty street, slow pan', 'a candle flame flickering in the dark']}
+            onStart={(s) => { setPrompt(s); render({ prompt: s }) }}
+          />
         )}
       </div>
 
       {/* generations gallery */}
-      <div className="vg-gallery">
-        {jobs.length === 0 && <div className="vg-gallery-empty">no clips yet</div>}
-        {jobs.map((j) => (
-          <VideoCard key={j.id} job={j} active={view?.id === j.id} onOpen={() => setCurrent(j.id)}
-            onSendToEdit={j.blobUrl ? () => onSendToEdit?.({ url: j.blobUrl!, meta: j.meta }) : undefined}
-            onVariation={() => render({ prompt: j.label, width: (j.spec as any).width, height: (j.spec as any).height, frames: (j.spec as any).frames })}
-            onClear={() => clear(j.id)} onRetryDraft={() => render({ prompt: j.label, width: 384, height: 384, frames: 25 })} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function PlayerView({ job, onRetryDraft }: { job: Job; onRetryDraft: () => void }) {
-  if (job.status === 'done' && job.blobUrl) {
-    return <video className="vg-video" src={job.blobUrl} controls loop autoPlay muted />
-  }
-  if (job.status === 'failed') {
-    return (
-      <div className="vg-failed">
-        <AlertCircle size={22} />
-        <p>{job.error?.slice(0, 120) || 'render failed'}</p>
-        {isOOM(job.error) && <button onClick={onRetryDraft}>Retry at Draft (smaller)</button>}
-      </div>
-    )
-  }
-  return (
-    <div className="vg-rendering">
-      <Loader2 size={22} className="vg-spin" />
-      <p>{job.status === 'queued' ? `queued${job.queuePos ? ` · #${job.queuePos}` : ''}` : `rendering${job.pct != null ? ` · ${job.pct}%` : '…'}`}</p>
-      <span>{job.label}</span>
-    </div>
-  )
-}
-
-function VideoCard({ job, active, onOpen, onSendToEdit, onVariation, onClear, onRetryDraft }: {
-  job: Job; active: boolean; onOpen: () => void; onSendToEdit?: () => void; onVariation: () => void; onClear: () => void; onRetryDraft: () => void
-}) {
-  const done = job.status === 'done'
-  return (
-    <div className={'vg-card' + (active ? ' active' : '') + (job.status === 'failed' ? ' failed' : '')} onClick={onOpen}>
-      <div className="vg-card-thumb">
-        {done && job.blobUrl ? <video src={job.blobUrl} muted loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
-          : job.status === 'failed' ? <AlertCircle size={18} />
-          : <Loader2 size={18} className="vg-spin" />}
-        {job.status === 'rendering' && job.pct != null && <span className="vg-card-pct">{job.pct}%</span>}
-      </div>
-      <div className="vg-card-cap">{job.label}</div>
-      {done && (
-        <div className="vg-card-acts" onClick={(e) => e.stopPropagation()}>
-          {onSendToEdit && <button onClick={onSendToEdit} title="Send to Edit"><Scissors size={12} /></button>}
-          <button onClick={onVariation} title="Variation (new seed)"><Shuffle size={12} /></button>
-          <a href={job.blobUrl} download={`${job.label}.mp4`} title="Download"><Download size={12} /></a>
-        </div>
-      )}
-      {job.status === 'failed' && isOOM(job.error) && <button className="vg-card-retry" onClick={(e) => { e.stopPropagation(); onRetryDraft() }}>Retry Draft</button>}
-      {(done || job.status === 'failed') && <button className="vg-card-x" onClick={(e) => { e.stopPropagation(); onClear() }}><X size={12} /></button>}
+      <Gallery jobs={jobs} activeId={view?.id} onOpen={setCurrent}
+        onSendToEdit={onSendToEdit ? (j: Job) => onSendToEdit({ url: j.blobUrl!, meta: j.meta }) : undefined}
+        onVariation={(j: Job) => render({ prompt: j.label, width: (j.spec as any).width, height: (j.spec as any).height, frames: (j.spec as any).frames })}
+        onClear={clear}
+        onRetryDraft={(j: Job) => render({ prompt: j.label, width: 384, height: 384, frames: 25 })}
+      />
     </div>
   )
 }
