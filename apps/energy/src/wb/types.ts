@@ -82,5 +82,20 @@ export interface Pick {
 
 export interface PicksJson { dataNature: string; picks: Pick[] }
 
-export interface ProdMonth { ym: string; oil: number; gas: number; water: number; wi: number }
+export interface ProdMonth {
+  ym: string;
+  oil: number; gas: number; water: number; wi: number;   // Sm³, summed
+  bhp?: number | null;      // flowing downhole pressure, monthly mean (bara) — measured; null if no valid gauge that month
+  thp?: number | null;      // flowing wellhead pressure, monthly mean (bara) — measured
+  hrs?: number;             // Σ on-stream hours in the month
+  uptime?: number | null;   // Σhrs / (calendar-days·24), 0..1
+}
 export interface ProdJson { well: string; dataNature: string; units: string; source_id: string; monthly: ProdMonth[] }
+
+// Reservoir-Management pattern definitions (wb/patterns.json) — deterministic default,
+// each injector associated with nearest producers by surface distance; user-adjustable.
+export interface PatternDef { injector: string; producers: Array<{ well: string; distM: number }> }
+export interface PatternsJson {
+  dataNature: string; method: string;
+  injectors: string[]; producers: string[]; patterns: PatternDef[];
+}

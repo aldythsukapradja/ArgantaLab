@@ -168,18 +168,18 @@ function LogsInner({ index }: { index: WbIndex }) {
         }
       }
       // header text
-      ctx.fillStyle = muted; ctx.font = '9px var(--mono)'; ctx.textAlign = 'center';
+      ctx.fillStyle = muted; ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'center';
       const isInterp = ['PHIE', 'SWE', 'VSH'].some((k) => t.curves.some((c) => c.curve === k));
       const hx = horiz ? 4 : x0 + tW / 2, hy = horiz ? x0 + 10 : 11;
       if (horiz) { ctx.textAlign = 'left'; }
       ctx.fillStyle = text; ctx.fillText(t.label + (isInterp ? ' ⬗' : ''), hx, hy);
-      ctx.fillStyle = muted; ctx.font = '8px var(--mono)';
+      ctx.fillStyle = muted; ctx.font = `8px ${cssVar('--mono')}`;
       ctx.fillText(t.curves.map((c) => `${c.min}–${c.max}${c.log ? ' log' : ''}`).join('  '), hx, hy + 9);
       ctx.restore();
     });
 
     // depth axis ticks
-    ctx.fillStyle = muted; ctx.strokeStyle = line; ctx.font = '8.5px var(--mono)'; ctx.lineWidth = 0.5;
+    ctx.fillStyle = muted; ctx.strokeStyle = line; ctx.font = `8.5px ${cssVar('--mono')}`; ctx.lineWidth = 0.5;
     const step = niceStep(view.hi - view.lo);
     ctx.textAlign = 'left';
     for (let d = Math.ceil(view.lo / step) * step; d <= view.hi; d += step) {
@@ -196,7 +196,7 @@ function LogsInner({ index }: { index: WbIndex }) {
       ctx.beginPath();
       if (horiz) { ctx.moveTo(dp, headH); ctx.lineTo(dp, h); } else { ctx.moveTo(headH, dp); ctx.lineTo(w, dp); }
       ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = cssVar('--orange'); ctx.font = '8px var(--mono)'; ctx.textAlign = 'left';
+      ctx.fillStyle = cssVar('--orange'); ctx.font = `8px ${cssVar('--mono')}`; ctx.textAlign = 'left';
       ctx.fillText(p.surface.replace(/ (Top|Base).*/, ''), horiz ? dp + 2 : headH + 3, horiz ? h - 3 : dp - 2);
     }
 
@@ -210,7 +210,7 @@ function LogsInner({ index }: { index: WbIndex }) {
       const i = idxAt(hoverDepth);
       const parts = visTracks.flatMap((t) => t.curves.map((c) => { const v = log.curves[c.curve]?.values[i]; return v == null ? null : `${c.curve} ${v.toFixed(2)}`; })).filter(Boolean);
       const label = `MD ${hoverDepth.toFixed(1)}  ` + parts.join('  ');
-      ctx.font = '9px var(--mono)'; const tw = ctx.measureText(label).width + 10;
+      ctx.font = `9px ${cssVar('--mono')}`; const tw = ctx.measureText(label).width + 10;
       ctx.fillStyle = 'color-mix(in srgb, var(--panel) 85%, transparent)';
       const bx = horiz ? Math.min(dp + 4, w - tw) : headH + 4, by = horiz ? 4 : Math.min(dp + 4, h - 16);
       ctx.fillStyle = cssVar('--panel'); ctx.fillRect(bx, by, tw, 14);

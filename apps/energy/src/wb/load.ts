@@ -1,7 +1,7 @@
 // wb/load.ts — lazy, cached fetch of the wb data assets from /wb/.
 // NEVER imported into the bundle; every asset is fetched at runtime and memoised.
 
-import type { WbIndex, LogsJson, TrajJson, PicksJson, ProdJson } from './types';
+import type { WbIndex, LogsJson, TrajJson, PicksJson, ProdJson, PatternsJson } from './types';
 import type { SurfaceJson } from '../engine/grid';
 
 const BASE = `${import.meta.env.BASE_URL || '/'}wb`;
@@ -32,3 +32,4 @@ export const loadTraj = (well: string) => get<TrajJson>(`traj-${wellSlug(well)}.
 export const loadPicks = () => get<PicksJson>('picks.json');
 export const loadProd = (well: string) => get<ProdJson>(`prod-${wellSlug(well)}.json`);
 export const loadProdField = () => get<ProdJson>('prod-field.json');
+export const loadPatterns = () => get<PatternsJson>('patterns.json');

@@ -82,7 +82,7 @@ function Inner({ prods, field }: { prods: Array<{ name: string; prod: ProdJson }
     ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
     // rate display: metric = Sm³/mo (native); field = bopd (Sm³/mo → Sm³/d → bbl/d)
     const rateDisp = (q: number) => system === 'field' ? q / DAYS_PER_MONTH * 6.2898 : q;
-    ctx.fillStyle = cssVar('--muted'); ctx.font = '9px var(--mono)'; ctx.textAlign = 'right';
+    ctx.fillStyle = cssVar('--muted'); ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'right';
     for (let i = 0; i <= 4; i++) { const q = qMax * i / 4; const yy = y(q); ctx.fillText((rateDisp(q) / 1e3).toFixed(0) + 'k', padL - 4, yy + 3); ctx.strokeStyle = cssVar('--line'); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL + plotW, yy); ctx.stroke(); ctx.setLineDash([]); }
     ctx.textAlign = 'center'; ctx.fillText('producing months', padL + plotW / 2, h - 6);
     ctx.save(); ctx.translate(12, padT + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(system === 'field' ? 'oil rate bopd' : 'oil rate Sm³/mo', 0, 0); ctx.restore();
@@ -114,7 +114,7 @@ function Inner({ prods, field }: { prods: Array<{ name: string; prod: ProdJson }
       ctx.stroke(); ctx.setLineDash([]);
     }
 
-    if (hover) { const px = x(hover.t), py = y(hover.q); ctx.fillStyle = cssVar('--text'); ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill(); ctx.font = '9px var(--mono)'; ctx.textAlign = 'left'; ctx.fillText(`t${hover.t} · ${(rateDisp(hover.q)/1e3).toFixed(1)}k ${system === 'field' ? 'bopd' : 'Sm³'}`, px + 6, py - 4); }
+    if (hover) { const px = x(hover.t), py = y(hover.q); ctx.fillStyle = cssVar('--text'); ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill(); ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'left'; ctx.fillText(`t${hover.t} · ${(rateDisp(hover.q)/1e3).toFixed(1)}k ${system === 'field' ? 'bopd' : 'Sm³'}`, px + 6, py - 4); }
   }, [plotSeries, envelope, fit, qEcon, view, selSeries, hover, system]);
 
   const { canvasRef, wrapRef } = useCanvas(draw, [draw]);

@@ -514,7 +514,7 @@ function drawContours(ctx: CanvasRenderingContext2D, v: View, lines: ReturnType<
     const ring = iso.rings.reduce((a, b) => (b.length > a.length ? b : a), iso.rings[0]);
     if (ring && ring.length > 12) {
       const mid = ring[Math.floor(ring.length / 2)];
-      ctx.fillStyle = text; ctx.font = '9px var(--mono)'; ctx.textAlign = 'center';
+      ctx.fillStyle = text; ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'center';
       ctx.fillText(String(Math.round(iso.z)), v.toX(mid[0]), v.toY(mid[1]));
     }
   }
@@ -530,7 +530,7 @@ function drawClosure(ctx: CanvasRenderingContext2D, v: View, ring: Pt[], col: st
 function drawGraticule(ctx: CanvasRenderingContext2D, v: View, b: Bounds, line: string, muted: string) {
   const stepFor = (span: number) => { const raw = span / 6; const p = Math.pow(10, Math.floor(Math.log10(raw))); const n = raw / p; return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p; };
   const sx = stepFor(b.maxX - b.minX);
-  ctx.strokeStyle = line; ctx.lineWidth = 0.5; ctx.fillStyle = muted; ctx.font = '9px var(--mono)';
+  ctx.strokeStyle = line; ctx.lineWidth = 0.5; ctx.fillStyle = muted; ctx.font = `9px ${cssVar('--mono')}`;
   for (let x = Math.ceil(b.minX / sx) * sx; x <= b.maxX; x += sx) {
     const px = v.toX(x); ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, v.h); ctx.stroke();
     ctx.textAlign = 'left'; ctx.fillText(String(Math.round(x)), px + 2, 11);
@@ -551,7 +551,7 @@ function drawWellPath(ctx: CanvasRenderingContext2D, v: View, w: WellRow, path: 
 function drawWellPost(ctx: CanvasRenderingContext2D, v: View, w: WellRow, col: string) {
   const sx = v.toX(w.x), sy = v.toY(w.y);
   drawPost(ctx, sx, sy, col, w.role === 'injector' ? '▽' : '◯');
-  ctx.fillStyle = cssVar('--text'); ctx.font = '9px var(--mono)'; ctx.textAlign = 'left';
+  ctx.fillStyle = cssVar('--text'); ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'left';
   ctx.fillText(w.name, sx + 6, sy - 4);
 }
 function drawPost(ctx: CanvasRenderingContext2D, sx: number, sy: number, col: string, glyph: string) {
@@ -576,7 +576,7 @@ function drawSection(ctx: CanvasRenderingContext2D, v: View, pts: Pt[], col: str
   ['A', "A'"].forEach((lab, i) => {
     const sx = v.toX(pts[i][0]), sy = v.toY(pts[i][1]);
     ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx, sy, sel ? 5 : 4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = cssVar('--text'); ctx.font = 'bold 10px var(--mono)'; ctx.textAlign = 'center'; ctx.fillText(lab, sx, sy - 8);
+    ctx.fillStyle = cssVar('--text'); ctx.font = `bold 10px ${cssVar('--mono')}`; ctx.textAlign = 'center'; ctx.fillText(lab, sx, sy - 8);
   });
 }
 function drawMeasure(ctx: CanvasRenderingContext2D, v: View, pts: Pt[], col: string) {
@@ -584,7 +584,7 @@ function drawMeasure(ctx: CanvasRenderingContext2D, v: View, pts: Pt[], col: str
   drawSection(ctx, v, pts, col, false);
   const d = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
   const mx = v.toX((pts[0][0] + pts[1][0]) / 2), my = v.toY((pts[0][1] + pts[1][1]) / 2);
-  ctx.fillStyle = col; ctx.font = '10px var(--mono)'; ctx.textAlign = 'center'; ctx.fillText(`${d.toFixed(0)} m`, mx, my - 6);
+  ctx.fillStyle = col; ctx.font = `10px ${cssVar('--mono')}`; ctx.textAlign = 'center'; ctx.fillText(`${d.toFixed(0)} m`, mx, my - 6);
 }
 function drawPlannedWell(ctx: CanvasRenderingContext2D, v: View, s: UserShape, col: string) {
   const pts = s.pts;
@@ -594,7 +594,7 @@ function drawPlannedWell(ctx: CanvasRenderingContext2D, v: View, s: UserShape, c
   const [hx, hy] = pts[0];
   const sx = v.toX(hx), sy = v.toY(hy);
   ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(sx, sy - 6); ctx.lineTo(sx + 5, sy + 4); ctx.lineTo(sx - 5, sy + 4); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = col; ctx.font = 'bold 9px var(--mono)'; ctx.textAlign = 'left';
+  ctx.fillStyle = col; ctx.font = `bold 9px ${cssVar('--mono')}`; ctx.textAlign = 'left';
   ctx.fillText(`${s.design?.name ?? 'PLAN'} ⚑`, sx + 7, sy - 4);
 }
 

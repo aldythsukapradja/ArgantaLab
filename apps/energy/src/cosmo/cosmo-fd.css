@@ -7,26 +7,52 @@ html[data-ui="cosmo"] .fd-explorer .exh{padding:11px 13px;font-family:var(--mono
 html[data-ui="cosmo"] .fd-canvas{position:relative;min-width:0;min-height:0;background:var(--panel2);display:flex;flex-direction:column;overflow:hidden}
 html[data-ui="cosmo"] .fd-view{flex:1;min-height:0;position:relative}
 
-/* Petrel tree (GeaVision structure, COSMO skin) */
-html[data-ui="cosmo"] .fdt{overflow:auto;flex:1;min-height:0;padding:6px 6px 24px}
-html[data-ui="cosmo"] .fdt .folder{user-select:none;margin-bottom:1px}
-html[data-ui="cosmo"] .fdt .fhead{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:7px;cursor:pointer;font-weight:600;font-size:12px;color:var(--ink)}
+/* Petrel tree (GeaVision structure, COSMO skin) — clean, roomy, calm.
+   Flat rows (no chunky cards), carets only where something expands, empty
+   folders get a static dot (no twitchy rotating chevron), add on hover. */
+html[data-ui="cosmo"] .fdt{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding:8px 8px 28px;display:flex;flex-direction:column;gap:1px}
+/* reset the generated .folder file-card styling (border/shadow/lift/padding) — our
+   tree reuses the class name; here it must be a flat row, not a card */
+html[data-ui="cosmo"] .fdt .folder{user-select:none;border:0;border-radius:0;background:transparent;box-shadow:none;padding:0;overflow:visible;cursor:default;transition:none;display:block;gap:0}
+html[data-ui="cosmo"] .fdt .folder:hover{transform:none;box-shadow:none;border-color:transparent}
+
+html[data-ui="cosmo"] .fdt .fhead{display:flex;align-items:center;gap:9px;height:34px;padding:0 9px;border-radius:9px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--ink);transition:background .12s}
 html[data-ui="cosmo"] .fdt .fhead:hover{background:var(--panel2)}
-html[data-ui="cosmo"] .fdt .caret{width:14px;height:14px;color:var(--ink3);transition:transform .12s;display:inline-flex;align-items:center;justify-content:center;flex:none}
-html[data-ui="cosmo"] .fdt .caret.open{transform:rotate(90deg)}
-html[data-ui="cosmo"] .fdt .ficon{width:16px;height:16px;color:var(--ink3);display:inline-flex;align-items:center;justify-content:center;flex:none}
-html[data-ui="cosmo"] .fdt .fcount{margin-left:auto;font-size:10px;color:var(--ink3);background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:0 7px;min-width:20px;text-align:center}
-html[data-ui="cosmo"] .fdt .fadd{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink3)}
+html[data-ui="cosmo"] .fdt .empty-folder .fhead{cursor:default;color:var(--ink2)}
+html[data-ui="cosmo"] .fdt .empty-folder .fhead:hover{background:transparent}
+html[data-ui="cosmo"] .fdt .empty-folder .ficon,html[data-ui="cosmo"] .fdt .empty-folder .ftitle{opacity:.62}
+
+/* caret / static dot — the dot never animates, so no blink */
+html[data-ui="cosmo"] .fdt .caret{width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--ink3)}
+html[data-ui="cosmo"] .fdt .chev{transition:transform .16s cubic-bezier(.4,0,.2,1)}
+html[data-ui="cosmo"] .fdt .chev.open{transform:rotate(90deg)}
+html[data-ui="cosmo"] .fdt .cdot{width:4px;height:4px;border-radius:50%;background:var(--line2)}
+
+html[data-ui="cosmo"] .fdt .ficon{width:17px;height:17px;color:var(--ink3);display:inline-flex;align-items:center;justify-content:center;flex:none}
+html[data-ui="cosmo"] .fdt .ftitle{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* count pill — muted when 0, teal-tinted when populated */
+html[data-ui="cosmo"] .fdt .fcount{flex:none;font-family:var(--mono);font-size:10px;font-weight:500;color:var(--ink3);background:var(--panel2);border-radius:20px;padding:2px 8px;min-width:22px;text-align:center;line-height:1}
+html[data-ui="cosmo"] .fdt .fcount.has{color:var(--teal-ink);background:var(--teal-soft)}
+
+/* add — hidden until row hover, so it never clutters the resting state */
+html[data-ui="cosmo"] .fdt .fadd{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink3);opacity:0;transition:opacity .12s,background .12s;flex:none}
+html[data-ui="cosmo"] .fdt .fhead:hover .fadd{opacity:1}
 html[data-ui="cosmo"] .fdt .fadd:hover{background:var(--line2);color:var(--teal-ink)}
-html[data-ui="cosmo"] .fdt .fchildren{margin-left:15px;border-left:1px solid var(--line);padding-left:2px}
-html[data-ui="cosmo"] .fdt .node{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:7px;font-size:12px;color:var(--ink);position:relative;cursor:pointer}
-html[data-ui="cosmo"] .fdt .node:hover{background:var(--panel2)}
+
+/* children — indented under the folder icon with a soft guide line */
+html[data-ui="cosmo"] .fdt .fchildren{margin:2px 0 4px 20px;padding-left:8px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
+
+html[data-ui="cosmo"] .fdt .node{display:flex;align-items:center;gap:8px;min-height:30px;padding:0 9px;border-radius:8px;font-size:12px;color:var(--ink2);position:relative;cursor:pointer;transition:background .12s,color .12s}
+html[data-ui="cosmo"] .fdt .node:hover{background:var(--panel2);color:var(--ink)}
 html[data-ui="cosmo"] .fdt .node.sel{background:var(--teal-soft);color:var(--teal-ink);font-weight:600}
-html[data-ui="cosmo"] .fdt .node.sel::before{content:'';position:absolute;left:-3px;top:4px;bottom:4px;width:3px;border-radius:3px;background:var(--teal)}
+html[data-ui="cosmo"] .fdt .node.sel::before{content:'';position:absolute;left:-9px;top:6px;bottom:6px;width:3px;border-radius:0 3px 3px 0;background:var(--teal)}
 html[data-ui="cosmo"] .fdt .nicon{width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center;flex:none}
-html[data-ui="cosmo"] .fdt .nlbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .fdt .nlbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
 html[data-ui="cosmo"] .fdt .nsub{font-size:10px;color:var(--ink3);font-weight:400}
-html[data-ui="cosmo"] .fdt .eye{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink3);border-radius:4px;opacity:.5}
-html[data-ui="cosmo"] .fdt .node:hover .eye{opacity:1}
+html[data-ui="cosmo"] .fdt .node.sel .nsub{color:var(--teal-ink);opacity:.7}
+html[data-ui="cosmo"] .fdt .eye{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink3);border-radius:5px;opacity:0;transition:opacity .12s;flex:none}
+html[data-ui="cosmo"] .fdt .node:hover .eye{opacity:.7}
+html[data-ui="cosmo"] .fdt .eye:hover{opacity:1}
 html[data-ui="cosmo"] .fdt .eye.on{opacity:1;color:var(--teal-ink)}
-html[data-ui="cosmo"] .fdt .empty{padding:3px 10px;font-size:10.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .fdt .empty{padding:4px 10px;font-size:10.5px;color:var(--ink3)}

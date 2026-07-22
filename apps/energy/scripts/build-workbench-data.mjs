@@ -157,28 +157,50 @@ const markersRaw = j(join(P, 'formation-markers.json'));
 const markers = Array.isArray(markersRaw) ? markersRaw : markersRaw.markers || markersRaw.picks;
 w('picks.json', { dataNature: 'interpreted', picks: markers.map((m) => ({ well: m.well_id ? normWb(m.source_well) : null, source_well: m.source_well, surface: m.surface, md: m.md, tvdss: m.tvdss, source_id: m.source_id })) });
 
-// production monthly per wellbore + field
+// production monthly per wellbore + field. Volume fields (oil/gas/water/wi) SUM;
+// pressure fields (BHP/THP) are FLOWING averages (only rows with on_stream_hrs>0 and
+// a valid gauge reading count — a shut-in day's reading is not representative); uptime
+// is Σhrs / (calendar-days·24). BHP/THP/uptime are the Reservoir-Management surveillance
+// signals (measured; 6,667 daily BHP + 8,768 THP readings in source).
 const MON = {};
 for (const r of prod.daily_rows) {
   const wl = normWb(r.source_well_bore_name);
   const ym = r.date.slice(0, 7);
   const k = wl + '|' + ym;
-  const a = MON[k] ?? (MON[k] = { well: wl, ym, oil: 0, gas: 0, water: 0, wi: 0 });
+  const a = MON[k] ?? (MON[k] = { well: wl, ym, oil: 0, gas: 0, water: 0, wi: 0, bhpSum: 0, bhpN: 0, thpSum: 0, thpN: 0, hrs: 0, days: 0 });
   a.oil += r.bore_oil_vol || 0; a.gas += r.bore_gas_vol || 0; a.water += r.bore_wat_vol || 0; a.wi += r.bore_wi_vol || 0;
+  const hrs = +r.on_stream_hrs || 0; a.hrs += hrs; a.days += 1;
+  const bhp = +r.avg_downhole_pressure; if (Number.isFinite(bhp) && bhp > 1 && hrs > 0) { a.bhpSum += bhp; a.bhpN++; }
+  const thp = +r.avg_whp_p; if (Number.isFinite(thp) && thp > 1 && hrs > 0) { a.thpSum += thp; a.thpN++; }
 }
 const monRows = Object.values(MON);
+const shapeMon = (r) => ({
+  ym: r.ym, oil: Math.round(r.oil), gas: Math.round(r.gas), water: Math.round(r.water), wi: Math.round(r.wi),
+  bhp: r.bhpN ? Math.round((r.bhpSum / r.bhpN) * 10) / 10 : null,
+  thp: r.thpN ? Math.round((r.thpSum / r.thpN) * 10) / 10 : null,
+  hrs: Math.round(r.hrs),
+  uptime: r.days ? Math.round((r.hrs / (r.days * 24)) * 1000) / 1000 : null,
+});
 const prodWells = [...new Set(monRows.map((r) => r.well))];
+let bhpMonths = 0, thpMonths = 0;
 for (const wl of prodWells) {
-  const rows = monRows.filter((r) => r.well === wl).sort((a, b) => a.ym.localeCompare(b.ym))
-    .map((r) => ({ ym: r.ym, oil: Math.round(r.oil), gas: Math.round(r.gas), water: Math.round(r.water), wi: Math.round(r.wi) }));
+  const rows = monRows.filter((r) => r.well === wl).sort((a, b) => a.ym.localeCompare(b.ym)).map(shapeMon);
+  bhpMonths += rows.filter((r) => r.bhp != null).length; thpMonths += rows.filter((r) => r.thp != null).length;
   w(`prod-${slug(wl)}.json`, { well: wl, dataNature: 'reported', units: 'Sm3 as sourced', source_id: prod.source_id, monthly: rows });
 }
+// field aggregate: volumes + uptime SUM; per-well pressures do not average across wells (left null).
 const fieldMonthly = {};
 for (const r of monRows) {
-  const a = fieldMonthly[r.ym] ?? (fieldMonthly[r.ym] = { ym: r.ym, oil: 0, gas: 0, water: 0, wi: 0 });
-  a.oil += r.oil; a.gas += r.gas; a.water += r.water; a.wi += r.wi;
+  const a = fieldMonthly[r.ym] ?? (fieldMonthly[r.ym] = { ym: r.ym, oil: 0, gas: 0, water: 0, wi: 0, hrs: 0, days: 0 });
+  a.oil += r.oil; a.gas += r.gas; a.water += r.water; a.wi += r.wi; a.hrs += r.hrs;
 }
-w('prod-field.json', { well: 'FIELD', dataNature: 'reported', units: 'Sm3', source_id: prod.source_id, monthly: Object.values(fieldMonthly).sort((a, b) => a.ym.localeCompare(b.ym)).map((r) => ({ ym: r.ym, oil: Math.round(r.oil), gas: Math.round(r.gas), water: Math.round(r.water), wi: Math.round(r.wi) })) });
+w('prod-field.json', {
+  well: 'FIELD', dataNature: 'reported', units: 'Sm3', source_id: prod.source_id,
+  monthly: Object.values(fieldMonthly).sort((a, b) => a.ym.localeCompare(b.ym)).map((r) => ({
+    ym: r.ym, oil: Math.round(r.oil), gas: Math.round(r.gas), water: Math.round(r.water), wi: Math.round(r.wi),
+    bhp: null, thp: null, hrs: Math.round(r.hrs), uptime: null,
+  })),
+});
 
 // trajectories per well
 let trajN = 0;
@@ -198,6 +220,24 @@ const wells = wellbores.map((wb) => {
     has: { logs: wellLogInfo.has(c), traj: trajBy.has(c), production: !!pr, picks: markers.some((m) => normWb(m.source_well) === c) },
     is_exploration: /^19/.test(normWb(wb.well_name)),
   };
+});
+
+// ── 2b · Pattern definitions (Reservoir Management default) ──────────────────
+// Deterministic, user-adjustable default: each injector is associated with its
+// nearest producers by SURFACE distance. Physics-based injector→producer allocation
+// comes later from the streamline engine (R4); this is the surveillance grouping seed.
+const injWells = wells.filter((x) => x.has.production && (x.role === 'injector' || x.role === 'both') && x.x != null && x.y != null);
+const prodOnly = wells.filter((x) => x.has.production && (x.role === 'producer' || x.role === 'both') && x.x != null && x.y != null);
+const patterns = injWells.map((iw) => ({
+  injector: iw.name,
+  producers: prodOnly.filter((p) => p.name !== iw.name)
+    .map((p) => ({ well: p.name, distM: Math.round(Math.hypot(p.x - iw.x, p.y - iw.y)) }))
+    .sort((a, b) => a.distM - b.distM).slice(0, 4),
+}));
+w('patterns.json', {
+  dataNature: 'derived',
+  method: 'nearest-producer by surface distance (default; user-adjustable in Reservoir Management)',
+  injectors: injWells.map((x) => x.name), producers: prodOnly.map((x) => x.name), patterns,
 });
 
 // ── 3 · Index + VALIDATION GATES (Fable) ─────────────────────────────────────
@@ -295,6 +335,7 @@ w('index.json', {
 });
 
 console.log(`[wb] wells ${wells.length} · surfaces ${surfaces.length} · log wells ${logWells} · traj ${trajN} · prod wells ${prodWells.length}`);
+console.log(`[wb] surveillance: ${bhpMonths} well-months with BHP · ${thpMonths} with THP · ${patterns.length} injector patterns (${injWells.map((x) => x.name).join(', ') || 'none'})`);
 console.log(`[wb] VALIDATE STOIIP screening: ${sto.stoiipMMSm3} MMSm3 (${sto.method}; gate 40-220) -> ${sto.ok ? 'PASS' : 'FAIL'}`);
 console.log(`[wb] VALIDATE cum oil: ${cumMMSm3.toFixed(2)} MMSm3 (~${(cumMMSm3 * 6.2898).toFixed(1)} MMbbl vs published ~63) -> ${cumOk ? 'PASS' : 'FAIL'}`);
 if (!sto.ok || !cumOk) process.exit(1);

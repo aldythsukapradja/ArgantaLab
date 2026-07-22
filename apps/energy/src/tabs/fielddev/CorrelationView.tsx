@@ -293,14 +293,14 @@ function drawCorrelation(
   const line = cssVar('--line'), muted = cssVar('--muted'), text = cssVar('--text');
 
   // depth axis
-  ctx.fillStyle = muted; ctx.font = '8.5px var(--mono)'; ctx.lineWidth = 0.5;
+  ctx.fillStyle = muted; ctx.font = `8.5px ${cssVar('--mono')}`; ctx.lineWidth = 0.5;
   const step = niceStep(view.hi - view.lo);
   ctx.textAlign = 'left';
   for (let d = Math.ceil(view.lo / step) * step; d <= view.hi; d += step) {
     const y = d2y(d); ctx.strokeStyle = 'rgba(127,146,153,0.12)'; ctx.beginPath(); ctx.moveTo(AXIS_W - 4, y); ctx.lineTo(w, y); ctx.stroke();
     ctx.fillStyle = muted; ctx.fillText(String(Math.round(d)), 2, y + 3);
   }
-  ctx.fillStyle = text; ctx.font = 'bold 9px var(--mono)'; ctx.fillText(datum === 'MSL' ? 'MD' : `Δ${datum.slice(0, 8)}`, 2, 12);
+  ctx.fillStyle = text; ctx.font = `bold 9px ${cssVar('--mono')}`; ctx.fillText(datum === 'MSL' ? 'MD' : `Δ${datum.slice(0, 8)}`, 2, 12);
 
   const surfIndex: Record<string, number> = {};
   let si = 0;
@@ -313,7 +313,7 @@ function drawCorrelation(
     // header band
     ctx.fillStyle = withAlpha(cssVar('--teal'), 0.06); ctx.fillRect(x0, PAD_T, COL_W, HEAD_H);
     ctx.strokeStyle = line; ctx.lineWidth = 0.5; ctx.strokeRect(x0, PAD_T, COL_W, plotH);
-    ctx.fillStyle = text; ctx.font = 'bold 10px var(--mono)'; ctx.textAlign = 'center';
+    ctx.fillStyle = text; ctx.font = `bold 10px ${cssVar('--mono')}`; ctx.textAlign = 'center';
     ctx.fillText(name + '  ⇕⇔', x0 + COL_W / 2, PAD_T + 14);
 
     if (log) {

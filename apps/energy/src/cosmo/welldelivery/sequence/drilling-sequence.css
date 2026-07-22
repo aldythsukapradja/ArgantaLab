@@ -1,0 +1,163 @@
+/* Drilling Sequence — the rig-by-time schedule surface. Rebuild of the standalone
+   NOC Drilling Schedule in the COSMO design system (Volve data). Reuses COSMO
+   tokens (--teal/--ink*/--panel*/--line*/--mono/--shadow); stage identity = #e11d74.
+   Scoped under html[data-ui="cosmo"] so it never touches the classic UI. */
+
+html[data-ui="cosmo"] .dseq{--dseq:#e11d74;--dseq-soft:rgba(225,29,116,.10);height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+
+/* ── Tabs (COSMO .tabs convention) ── */
+html[data-ui="cosmo"] .dseq-tabs{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0}
+html[data-ui="cosmo"] .dseq-tab{padding:9px 14px;font-size:11.5px;font-weight:600;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;transition:color .12s}
+html[data-ui="cosmo"] .dseq-tab:hover{color:var(--ink2)}
+html[data-ui="cosmo"] .dseq-tab.on{color:var(--teal-ink);border-bottom-color:var(--teal)}
+html[data-ui="cosmo"] .dseq-tab .st{font-family:var(--mono);font-size:8px;letter-spacing:.06em;padding:1px 5px;border-radius:10px;background:var(--dseq-soft);color:var(--dseq)}
+
+html[data-ui="cosmo"] .dseq-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Toolbar row (view presets, PM, MAP) ── */
+html[data-ui="cosmo"] .dseq-tools{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0}
+html[data-ui="cosmo"] .dseq-tools .sp{flex:1}
+html[data-ui="cosmo"] .dbtn{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.03em;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink2);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .12s}
+html[data-ui="cosmo"] .dbtn:hover{border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .dbtn.on{background:var(--teal);border-color:var(--teal-ink);color:#fff}
+html[data-ui="cosmo"] .dbtn.pm.on{background:var(--dseq);border-color:#b01259;color:#fff}
+html[data-ui="cosmo"] .dseg{display:inline-flex;background:var(--panel3);border-radius:8px;padding:2px;gap:2px}
+html[data-ui="cosmo"] .dseg b{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:6px;color:var(--ink3);cursor:pointer;transition:all .12s}
+html[data-ui="cosmo"] .dseg b.on{background:var(--teal);color:#fff}
+
+/* ── Time slider ── */
+html[data-ui="cosmo"] .dts{padding:6px 14px 4px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0}
+html[data-ui="cosmo"] .dts-top{display:flex;align-items:center;gap:8px}
+html[data-ui="cosmo"] .dts-con{flex:1;position:relative;height:22px;display:flex;align-items:center}
+html[data-ui="cosmo"] .dts-trk{position:absolute;left:0;right:0;height:4px;background:var(--line);border-radius:2px;top:9px}
+html[data-ui="cosmo"] .dts-hlt{position:absolute;height:4px;background:var(--teal);border-radius:2px;top:9px}
+html[data-ui="cosmo"] .dts-con input[type=range]{position:absolute;width:100%;top:1px;height:20px;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;z-index:2;margin:0}
+html[data-ui="cosmo"] .dts-con input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--teal);border:2px solid var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.25);cursor:pointer;pointer-events:all}
+html[data-ui="cosmo"] .dts-con input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--teal);border:2px solid var(--panel);cursor:pointer;pointer-events:all}
+html[data-ui="cosmo"] .dts-lab{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink2);min-width:190px;text-align:center}
+html[data-ui="cosmo"] .dts-hist{width:100%;height:26px;margin-top:2px}
+html[data-ui="cosmo"] .dts-hist rect{fill:var(--teal)}
+html[data-ui="cosmo"] .dts-hist rect.out{fill:var(--line)}
+html[data-ui="cosmo"] .dts-sum{display:flex;gap:12px;justify-content:center;font-size:10px;color:var(--ink3);padding:1px 0;flex-wrap:wrap}
+html[data-ui="cosmo"] .dts-sum b{color:var(--ink);font-weight:700}
+
+/* ── Split area: gantt / drag / dashboard ── */
+html[data-ui="cosmo"] .dseq-split{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+html[data-ui="cosmo"] .dgantt-pane{position:relative;display:flex;flex-direction:column;min-height:180px;overflow:hidden;background:var(--panel2)}
+html[data-ui="cosmo"] .dgantt-scroll{flex:1;overflow:auto;position:relative}
+html[data-ui="cosmo"] .dgantt-rail{position:absolute;left:0;top:0;width:118px;z-index:6;background:var(--panel);border-right:1px solid var(--line)}
+html[data-ui="cosmo"] .dgantt-rb{display:flex;flex-direction:column;justify-content:center;padding:0 8px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .dgantt-rn{font-size:13px;font-weight:800}
+html[data-ui="cosmo"] .dgantt-rs{font-size:9.5px;color:var(--ink3);font-family:var(--mono)}
+html[data-ui="cosmo"] .dgantt-svgwrap{margin-left:118px}
+html[data-ui="cosmo"] .dgantt-svg text{font-family:var(--sans)}
+html[data-ui="cosmo"] .dgantt-svg.dimmed g[data-act]{opacity:.09;transition:opacity .18s}
+html[data-ui="cosmo"] .dgantt-svg.dimmed g[data-act].match{opacity:1}
+html[data-ui="cosmo"] .dgantt-svg g[data-act]{cursor:pointer}
+html[data-ui="cosmo"] .dgantt-svg .pm-marker{display:none}
+html[data-ui="cosmo"] .dgantt-svg.pm-on .pm-marker{display:initial}
+
+html[data-ui="cosmo"] .ddrag{height:7px;flex-shrink:0;cursor:row-resize;display:flex;align-items:center;justify-content:center;background:var(--panel3);border-top:1px solid var(--line);border-bottom:1px solid var(--line);z-index:8}
+html[data-ui="cosmo"] .ddrag:hover{background:var(--line)}
+html[data-ui="cosmo"] .ddrag i{width:3px;height:3px;border-radius:50%;background:var(--ink3);margin:0 1.5px}
+
+html[data-ui="cosmo"] .ddash-pane{flex:1;min-height:80px;overflow:auto;background:var(--panel)}
+
+/* ── Tooltip ── */
+html[data-ui="cosmo"] .dtip{position:fixed;display:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:11px;line-height:1.5;box-shadow:var(--shadow-lg);z-index:1200;pointer-events:none;max-width:280px;color:var(--ink)}
+html[data-ui="cosmo"] .dtip .w{font-size:12.5px;font-weight:700;margin-bottom:3px}
+html[data-ui="cosmo"] .dtip .row{display:flex;gap:6px}
+html[data-ui="cosmo"] .dtip .k{color:var(--ink3);min-width:56px}
+html[data-ui="cosmo"] .dtip .v{font-weight:600}
+html[data-ui="cosmo"] .dtip .badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8.5px;font-weight:700;color:#fff;margin-left:4px;font-family:var(--mono)}
+
+/* ── Dashboard panels ── */
+html[data-ui="cosmo"] .ddash{display:grid;grid-template-columns:20fr 50fr 30fr;gap:8px;padding:8px 12px}
+html[data-ui="cosmo"] .dcol{display:flex;flex-direction:column;gap:8px;min-width:0}
+html[data-ui="cosmo"] .dsec{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 9px}
+html[data-ui="cosmo"] .dsec-t{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);text-align:center;border-bottom:1px solid var(--line2);padding-bottom:3px;margin-bottom:5px}
+html[data-ui="cosmo"] .dpill{display:flex;align-items:center;gap:6px;padding:2px 5px;border-radius:6px;cursor:pointer;margin:1px 0;transition:background .12s}
+html[data-ui="cosmo"] .dpill:hover{background:var(--panel3)}
+html[data-ui="cosmo"] .dpill.on{outline:1.5px solid var(--dseq);outline-offset:-1px;background:var(--dseq-soft)}
+html[data-ui="cosmo"] .dpill i{width:11px;height:8px;border-radius:2px;flex-shrink:0}
+html[data-ui="cosmo"] .dpill span{font-size:10px;font-weight:600;color:var(--ink2)}
+html[data-ui="cosmo"] .dtbl{width:100%;border-collapse:collapse}
+html[data-ui="cosmo"] .dtbl th{font-family:var(--mono);font-size:8.5px;font-weight:700;color:var(--ink3);text-align:center;padding:2px 3px;border-bottom:1px solid var(--line)}
+html[data-ui="cosmo"] .dtbl td{font-size:9.5px;text-align:center;padding:2px 3px;border-bottom:1px solid var(--line2);cursor:pointer}
+html[data-ui="cosmo"] .dtbl td:first-child,html[data-ui="cosmo"] .dtbl th:first-child{text-align:left;font-weight:600}
+html[data-ui="cosmo"] .dtbl tr:hover td{background:var(--panel3)}
+html[data-ui="cosmo"] .dtbl tr.on td{background:var(--dseq-soft);font-weight:700}
+html[data-ui="cosmo"] .dtbl .tot td{font-weight:800;background:var(--panel3);border-top:1.5px solid var(--line)}
+html[data-ui="cosmo"] .dtbl td.z{color:var(--ink3);opacity:.5;cursor:default}
+
+/* ── Filter badge ── */
+html[data-ui="cosmo"] .dfbadge{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:var(--dseq);color:#fff;padding:4px 14px;border-radius:14px;font-size:11px;font-weight:600;z-index:20;box-shadow:var(--shadow);cursor:pointer;font-family:var(--mono);letter-spacing:.02em}
+html[data-ui="cosmo"] .dfbadge::after{content:' ✕';font-size:9px;opacity:.75}
+
+/* ── Inspector ── */
+html[data-ui="cosmo"] .dseq-ws{flex:1;min-height:0;display:grid;grid-template-columns:1fr 288px;overflow:hidden}
+html[data-ui="cosmo"] .dseq-ws.no-insp{grid-template-columns:1fr}
+html[data-ui="cosmo"] .dinsp{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;display:flex;flex-direction:column}
+html[data-ui="cosmo"] .dinsp-hd{display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line2);font-size:11px;font-weight:700;color:var(--ink)}
+html[data-ui="cosmo"] .dinsp-b{padding:10px 12px;font-size:11px;color:var(--ink2)}
+html[data-ui="cosmo"] .dinsp-h{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:10px 0 5px}
+html[data-ui="cosmo"] .dkv{display:flex;justify-content:space-between;gap:8px;padding:2px 0;font-size:10.5px;border-bottom:1px dotted var(--line2)}
+html[data-ui="cosmo"] .dkv b{color:var(--ink3);font-weight:500}
+html[data-ui="cosmo"] .dnat{font-family:var(--mono);font-size:7.5px;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:10px}
+html[data-ui="cosmo"] .dnat.measured,html[data-ui="cosmo"] .dnat.reported{color:var(--teal-ink);background:var(--teal-soft)}
+html[data-ui="cosmo"] .dnat.interpreted{color:#5a49c9;background:rgba(124,58,237,.12)}
+html[data-ui="cosmo"] .dnat.scenario{color:#c2790a;background:rgba(245,158,11,.14)}
+html[data-ui="cosmo"] .dnote{margin-top:12px;padding:8px 10px;background:var(--dseq-soft);border-radius:8px;font-size:10px;line-height:1.5;color:var(--ink2)}
+
+/* ── KPI cockpit (Overview) ── */
+html[data-ui="cosmo"] .dseq-over{padding:16px 20px;overflow-y:auto;height:100%}
+html[data-ui="cosmo"] .dmetrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+html[data-ui="cosmo"] .dmetric{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
+html[data-ui="cosmo"] .dmetric .edge{position:absolute;left:0;top:0;bottom:0;width:3px}
+html[data-ui="cosmo"] .dmetric .v{font-size:24px;font-weight:800;color:var(--ink);line-height:1}
+html[data-ui="cosmo"] .dmetric .l{font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-top:5px}
+
+/* ── Rig / utilization ── */
+html[data-ui="cosmo"] .dutil{display:flex;flex-direction:column;gap:10px;padding:16px 20px;overflow-y:auto;height:100%}
+html[data-ui="cosmo"] .dutil-row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+html[data-ui="cosmo"] .dutil-bar{height:8px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:8px}
+html[data-ui="cosmo"] .dutil-bar i{display:block;height:100%;border-radius:5px}
+
+/* ── Revisions ── */
+html[data-ui="cosmo"] .drev{padding:16px 20px;overflow-y:auto;height:100%}
+html[data-ui="cosmo"] .drev-diff{display:flex;flex-direction:column;gap:6px}
+html[data-ui="cosmo"] .drev-item{display:grid;grid-template-columns:80px 1fr;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:11px}
+html[data-ui="cosmo"] .drev-tag{font-family:var(--mono);font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:10px;text-align:center;align-self:start}
+html[data-ui="cosmo"] .drev-tag.add{color:#0a8a7f;background:var(--teal-soft)}
+html[data-ui="cosmo"] .drev-tag.rem{color:#c0264a;background:rgba(225,29,116,.12)}
+html[data-ui="cosmo"] .drev-tag.mov{color:#c2790a;background:rgba(245,158,11,.14)}
+
+html[data-ui="cosmo"] .dseq-empty{padding:44px;text-align:center;color:var(--ink3);font-size:12.5px}
+
+/* ── Field map drawer ── */
+html[data-ui="cosmo"] .dmap{position:absolute;top:0;left:0;bottom:0;width:0;background:var(--panel);border-right:1px solid var(--line);z-index:30;transition:width .28s cubic-bezier(.4,0,.2,1);overflow:hidden;display:flex;flex-direction:column}
+html[data-ui="cosmo"] .dmap.open{width:46%;min-width:420px;max-width:680px;box-shadow:var(--shadow-lg)}
+html[data-ui="cosmo"] .dmap-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line2);font-family:var(--mono);font-size:10px;font-weight:700;flex-shrink:0}
+html[data-ui="cosmo"] .dmap-bar .t{color:var(--dseq);letter-spacing:.06em}
+html[data-ui="cosmo"] .dmap-bar .sp{flex:1}
+html[data-ui="cosmo"] .dmap-cv{flex:1;position:relative;cursor:grab;overflow:hidden;background:var(--panel3)}
+html[data-ui="cosmo"] .dmap-cv.grab{cursor:grabbing}
+html[data-ui="cosmo"] .dmap-cv canvas{display:block;position:absolute;left:0;top:0}
+html[data-ui="cosmo"] .dmap-tip{position:absolute;display:none;background:var(--panel);border:1px solid var(--dseq);border-radius:6px;padding:6px 10px;font-size:10px;line-height:1.5;pointer-events:none;z-index:10;white-space:nowrap;box-shadow:var(--shadow);color:var(--ink)}
+html[data-ui="cosmo"] .dmap-tip b{color:var(--dseq)}
+html[data-ui="cosmo"] .dmap-stat{padding:5px 12px;font-family:var(--mono);font-size:9.5px;color:var(--ink2);background:var(--panel2);border-top:1px solid var(--line2);flex-shrink:0}
+html[data-ui="cosmo"] .dmap-layers{display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .dmap-layers label{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:600;color:var(--ink2);padding:2px 7px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;cursor:pointer}
+html[data-ui="cosmo"] .dmap-layers input{width:11px;height:11px;margin:0;cursor:pointer}
+
+/* ── Legend strip ── */
+html[data-ui="cosmo"] .dlegend{display:flex;align-items:center;gap:0;flex-wrap:wrap;background:var(--panel2);border-top:1px solid var(--line);flex-shrink:0;min-height:26px}
+html[data-ui="cosmo"] .dleg{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:600;color:var(--ink3);cursor:pointer;padding:4px 9px;border-right:1px solid var(--line2);transition:all .12s}
+html[data-ui="cosmo"] .dleg:hover{color:var(--ink);background:var(--panel3)}
+html[data-ui="cosmo"] .dleg.on{color:var(--dseq);box-shadow:inset 0 -2px 0 var(--dseq)}
+html[data-ui="cosmo"] .dleg i{width:12px;height:9px;border-radius:2px;border:1px solid rgba(0,0,0,.12)}
+html[data-ui="cosmo"] .dleg .date{margin-left:auto;padding-right:12px;color:var(--ink3);font-family:var(--mono)}
+
+@media print{
+  html[data-ui="cosmo"] .dseq-tools,html[data-ui="cosmo"] .ddrag,html[data-ui="cosmo"] .dmap{display:none!important}
+}

@@ -1,0 +1,6 @@
+/* Shell overrides & additions I control (the generated cosmo-system.css is verbatim/
+   do-not-edit). Scoped under html[data-ui="cosmo"] so the classic UI is untouched. */
+
+/* Brand block must be EXACTLY the topbar height (54px) so the sidebar divider meets
+   the topbar divider — fixes the AL SHAHEEN / RMO COSMO baseline + line mismatch. */
+html[data-ui="cosmo"] .sidebar .brand{height:54px;padding:0 16px;box-sizing:border-box}

@@ -148,14 +148,14 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
         }
       }
       // header
-      ctx.fillStyle = text; ctx.font = '9px var(--mono)'; ctx.textAlign = 'center';
+      ctx.fillStyle = text; ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'center';
       ctx.fillText(t.label, x0 + tW / 2, 12);
-      ctx.fillStyle = muted; ctx.font = '8px var(--mono)';
+      ctx.fillStyle = muted; ctx.font = `8px ${cssVar('--mono')}`;
       ctx.fillText(`${t.min}–${t.max}`, x0 + tW / 2, 22);
     });
 
     // depth ticks
-    ctx.fillStyle = muted; ctx.strokeStyle = line; ctx.font = '8.5px var(--mono)'; ctx.textAlign = 'left'; ctx.lineWidth = 0.5;
+    ctx.fillStyle = muted; ctx.strokeStyle = line; ctx.font = `8.5px ${cssVar('--mono')}`; ctx.textAlign = 'left'; ctx.lineWidth = 0.5;
     const span = view.hi - view.lo, step = Math.pow(10, Math.floor(Math.log10(span / 8))) * (span/8/Math.pow(10,Math.floor(Math.log10(span/8))) < 1.5 ? 1 : 5);
     for (let d = Math.ceil(view.lo / step) * step; d <= view.hi; d += step) {
       const py = d2p(d); ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(headH, py); ctx.stroke();
@@ -169,7 +169,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
       let lo = 0, hi = md.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (md[m] < hoverDepth) lo = m + 1; else hi = m; }
       const gr = c.GR?.values[lo], pe = c.PHIE?.values[lo], pd = derived?.phie[lo];
       const label = `MD ${hoverDepth.toFixed(1)}  GR ${gr?.toFixed(0) ?? '–'}  φe ${pe?.toFixed(3) ?? '–'}${pd != null ? `  φ' ${pd.toFixed(3)}` : ''}`;
-      ctx.font = '9px var(--mono)'; const tw = ctx.measureText(label).width + 10;
+      ctx.font = `9px ${cssVar('--mono')}`; const tw = ctx.measureText(label).width + 10;
       ctx.fillStyle = cssVar('--panel'); ctx.fillRect(headH + 4, Math.min(py + 4, h - 16), tw, 14);
       ctx.strokeStyle = line; ctx.strokeRect(headH + 4, Math.min(py + 4, h - 16), tw, 14);
       ctx.fillStyle = text; ctx.textAlign = 'left'; ctx.fillText(label, headH + 9, Math.min(py + 4, h - 16) + 10);

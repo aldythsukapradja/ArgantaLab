@@ -1,0 +1,84 @@
+/* Knowledge tab (Intelligence → Knowledge) — Obsidian-style vault (Explorer) + force-
+   directed knowledge graph (Graph & Timeline). Styled with our COSMO tokens, scoped
+   under html[data-ui="cosmo"]. Adapted from the UC116/WellAion vault reference. */
+html[data-ui="cosmo"] .kb{display:flex;flex-direction:column;height:100%;min-height:0;background:var(--panel2)}
+html[data-ui="cosmo"] .kb-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+html[data-ui="cosmo"] .kb-title{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13px;color:var(--ink)}
+html[data-ui="cosmo"] .kb-title .ki{width:26px;height:26px;border-radius:8px;background:var(--teal-soft);color:var(--teal-ink);display:grid;place-items:center}
+html[data-ui="cosmo"] .kb-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink3);font-weight:400}
+html[data-ui="cosmo"] .kb-prov{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--teal-ink);background:var(--teal-soft);border:1px solid var(--teal);border-radius:20px;padding:4px 11px}
+html[data-ui="cosmo"] .kb-dl{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer;transition:border-color .12s,color .12s}
+html[data-ui="cosmo"] .kb-dl:hover{border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .kb-export{background:var(--teal);color:#fff;border-color:var(--teal)}
+html[data-ui="cosmo"] .kb-export:hover{color:#fff;filter:brightness(1.05)}
+html[data-ui="cosmo"] .kb-note-head{justify-content:space-between}
+
+html[data-ui="cosmo"] .kb-subtabs{display:flex;gap:2px;padding:8px 16px 0;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+html[data-ui="cosmo"] .kb-subtab{padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:7px}
+html[data-ui="cosmo"] .kb-subtab:hover{color:var(--ink)}
+html[data-ui="cosmo"] .kb-subtab.on{color:var(--teal-ink);border-bottom-color:var(--teal)}
+
+/* Explorer 3-pane */
+html[data-ui="cosmo"] .kb-explorer{flex:1;display:grid;grid-template-columns:250px 1fr 260px;min-height:0;min-width:0}
+html[data-ui="cosmo"] .kb-tree{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+html[data-ui="cosmo"] .kb-search{margin:11px 12px 6px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:12px;color:var(--ink);outline:none}
+html[data-ui="cosmo"] .kb-search:focus{border-color:var(--teal)}
+html[data-ui="cosmo"] .kb-treelist{overflow-y:auto;flex:1;min-height:0;padding:4px 8px 16px}
+html[data-ui="cosmo"] .kb-folder{margin-bottom:1px}
+html[data-ui="cosmo"] .kb-fhd{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:7px;cursor:pointer;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase}
+html[data-ui="cosmo"] .kb-fhd:hover{background:var(--panel2)}
+html[data-ui="cosmo"] .kb-fhd .fcount{margin-left:auto;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:0 6px;font-size:9px}
+html[data-ui="cosmo"] .kb-note{display:flex;align-items:center;gap:8px;padding:5px 8px 5px 22px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--ink2);overflow:hidden}
+html[data-ui="cosmo"] .kb-note:hover{background:var(--panel2);color:var(--ink)}
+html[data-ui="cosmo"] .kb-note.on{background:var(--teal-soft);color:var(--teal-ink);font-weight:600}
+html[data-ui="cosmo"] .kb-note .ndot{width:7px;height:7px;border-radius:50%;flex:none}
+html[data-ui="cosmo"] .kb-note .ntx{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* note center */
+html[data-ui="cosmo"] .kb-center{overflow-y:auto;min-height:0;padding:22px 30px;background:var(--panel2)}
+html[data-ui="cosmo"] .kb-note-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+html[data-ui="cosmo"] .kb-chip{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:20px;color:#fff}
+html[data-ui="cosmo"] .kb-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-bottom:14px}
+html[data-ui="cosmo"] .kb-body{max-width:720px;color:var(--ink);font-size:13.5px;line-height:1.62}
+html[data-ui="cosmo"] .kb-body h1{font-size:22px;font-weight:800;margin:2px 0 10px}
+html[data-ui="cosmo"] .kb-body h2{font-size:15px;font-weight:700;margin:18px 0 6px;color:var(--ink)}
+html[data-ui="cosmo"] .kb-body p{margin:6px 0}
+html[data-ui="cosmo"] .kb-body ul{margin:6px 0;padding-left:20px}
+html[data-ui="cosmo"] .kb-body li{margin:2px 0}
+html[data-ui="cosmo"] .kb-body code{font-family:var(--mono);font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+html[data-ui="cosmo"] .kb-body .wl{color:var(--teal-ink);border-bottom:1px dashed var(--teal);cursor:pointer;font-weight:500}
+html[data-ui="cosmo"] .kb-body .wl:hover{background:var(--teal-soft)}
+html[data-ui="cosmo"] .kb-body blockquote,html[data-ui="cosmo"] .kb-body .cal{border-left:3px solid var(--teal);background:var(--teal-soft);padding:8px 12px;border-radius:0 8px 8px 0;margin:10px 0;font-size:12.5px;color:var(--teal-ink)}
+
+/* context (backlinks + local graph) */
+html[data-ui="cosmo"] .kb-ctx{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;min-height:0;padding:16px 14px}
+html[data-ui="cosmo"] .kb-ctx .ch{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ink3);text-transform:uppercase;margin:14px 0 8px}
+html[data-ui="cosmo"] .kb-ctx .ch:first-child{margin-top:0}
+html[data-ui="cosmo"] .kb-link{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .kb-link:hover{background:var(--panel2);color:var(--teal-ink)}
+html[data-ui="cosmo"] .kb-link .ldot{width:7px;height:7px;border-radius:50%;flex:none}
+html[data-ui="cosmo"] .kb-link .lkind{margin-left:auto;font-family:var(--mono);font-size:8.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .kb-empty{color:var(--ink3);font-size:11.5px;padding:4px 8px}
+html[data-ui="cosmo"] .kb-link.kb-unresolved{color:var(--ink3);font-style:italic;cursor:default;opacity:.7}
+html[data-ui="cosmo"] .kb-link.kb-unresolved:hover{background:transparent;color:var(--ink3)}
+
+/* Graph & Timeline */
+html[data-ui="cosmo"] .kb-graph{flex:1;position:relative;min-height:0;overflow:hidden;background:
+  radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/24px 24px, var(--panel2)}
+html[data-ui="cosmo"] .kg-toolbar{position:absolute;top:12px;left:12px;z-index:6;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+html[data-ui="cosmo"] .kg-seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;box-shadow:var(--shadow)}
+html[data-ui="cosmo"] .kg-seg b{padding:6px 11px;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;display:flex;align-items:center;gap:5px}
+html[data-ui="cosmo"] .kg-seg b.on{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .kg-btn{padding:6px 11px;font-size:11px;font-weight:600;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:9px;cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;gap:6px}
+html[data-ui="cosmo"] .kg-btn.on{border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .kg-legend{position:absolute;top:12px;right:12px;z-index:6;display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;box-shadow:var(--shadow)}
+html[data-ui="cosmo"] .kg-legend .lg{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--ink2);cursor:pointer;opacity:1}
+html[data-ui="cosmo"] .kg-legend .lg.off{opacity:.35}
+html[data-ui="cosmo"] .kg-legend .lg i{width:9px;height:9px;border-radius:50%;flex:none}
+html[data-ui="cosmo"] .kg-svg{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+html[data-ui="cosmo"] .kg-svg.grabbing{cursor:grabbing}
+html[data-ui="cosmo"] .kg-node circle{cursor:pointer;transition:stroke-width .1s}
+html[data-ui="cosmo"] .kg-node text{font-family:var(--mono);font-size:8.5px;fill:var(--ink2);pointer-events:none}
+html[data-ui="cosmo"] .kg-tip{position:absolute;z-index:8;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow-lg);padding:8px 11px;font-size:11.5px;color:var(--ink);pointer-events:none;max-width:240px}
+html[data-ui="cosmo"] .kg-tip .tt{font-weight:700;display:flex;align-items:center;gap:7px}
+html[data-ui="cosmo"] .kg-tip .tm{font-family:var(--mono);font-size:9.5px;color:var(--ink3);margin-top:2px}

@@ -1,0 +1,1189 @@
+{
+  "verticals": [
+    {
+      "id": "exploration",
+      "name": "Exploration",
+      "tag": "Find & assess",
+      "icon": "compass",
+      "color": "#22d3ee",
+      "status": "BETA",
+      "sub": "Basins, plays, prospects and prospect-level volumes",
+      "tabs": [
+        "Overview",
+        "Basemap",
+        "Seismic",
+        "Wells",
+        "Interpretation",
+        "Plays & Prospects",
+        "Volumetrics",
+        "Risk & Uncertainty"
+      ],
+      "agents": [
+        "geavision",
+        "geaguard"
+      ]
+    },
+    {
+      "id": "field-development",
+      "name": "Field Development",
+      "tag": "Model & plan",
+      "icon": "layers",
+      "color": "#0FB5A6",
+      "status": "LIVE",
+      "sub": "Static model, volumetrics, well placement and economics",
+      "tabs": [
+        "Overview",
+        "Map",
+        "Logs",
+        "Petrophysics",
+        "Correlation",
+        "Structure",
+        "Facies",
+        "Properties",
+        "Volumetrics",
+        "Uncertainty",
+        "Development",
+        "Economics"
+      ],
+      "agents": [
+        "wellaion",
+        "geavision"
+      ]
+    },
+    {
+      "id": "well-delivery",
+      "name": "Well Delivery",
+      "tag": "Drill & complete",
+      "icon": "drill",
+      "color": "#f59e0b",
+      "status": "BETA",
+      "sub": "Well design, trajectory, drilling, completion and post-mortem",
+      "tabs": [
+        "Overview",
+        "Well Plan",
+        "Trajectory",
+        "Offset Analysis",
+        "Drilling",
+        "Completion",
+        "Post-Mortem",
+        "Lessons"
+      ],
+      "agents": [
+        "wellnova"
+      ]
+    },
+    {
+      "id": "reservoir-management",
+      "name": "Reservoir Management",
+      "tag": "Operate & optimize",
+      "icon": "gauge",
+      "color": "#7c3aed",
+      "status": "LIVE",
+      "sub": "Surveillance, forecasting, patterns and opportunity screening",
+      "tabs": [
+        "Overview",
+        "Surveillance",
+        "Production",
+        "Injection & VRR",
+        "Pressure",
+        "Well Tests",
+        "Patterns",
+        "Forecast",
+        "Opportunities"
+      ],
+      "agents": [
+        "prismo",
+        "wellwatch",
+        "wellnexus"
+      ]
+    },
+    {
+      "id": "drilling-sequence",
+      "name": "Drilling Sequence",
+      "tag": "Schedule & sequence",
+      "icon": "calendar-clock",
+      "color": "#e11d74",
+      "status": "BETA",
+      "sub": "Rig-by-time drilling schedule, revisions and sequence changes",
+      "tabs": [
+        "Overview",
+        "Sequence",
+        "Rigs",
+        "Milestones",
+        "Revisions"
+      ],
+      "agents": [
+        "wellnova",
+        "wellaion"
+      ]
+    }
+  ],
+  "tech": {
+    "exploration": {
+      "benchmark": "SLB Petrel static modeling + GeoX prospect evaluation",
+      "imitate": "Petrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.",
+      "libraries": "MapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.",
+      "geavision": "Reuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection."
+    },
+    "field-development": {
+      "benchmark": "SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow",
+      "imitate": "Scenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.",
+      "libraries": "Three.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.",
+      "geavision": "Carry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects."
+    },
+    "well-delivery": {
+      "benchmark": "SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace",
+      "imitate": "One well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.",
+      "libraries": "welleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.",
+      "geavision": "Reuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata."
+    },
+    "reservoir-management": {
+      "benchmark": "SLB OFM + tNavigator/INTERSECT surveillance and history-match review",
+      "imitate": "Exception-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.",
+      "libraries": "uPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.",
+      "geavision": "Adopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes."
+    },
+    "drilling-sequence": {
+      "benchmark": "Primavera P6 planning discipline + rig-sequence views used in enterprise drilling portfolios",
+      "imitate": "Baseline and scenario schedules, rig swimlanes, dependencies, critical path, move/contract windows, readiness gates, schedule confidence, revision diff and downstream production impact.",
+      "libraries": "vis-timeline or DHTMLX Gantt for schedule interaction; d3-dag for dependency layout; Luxon for time zones/calendars; Immer for immutable scenario revisions; ECharts for utilization and confidence; Yjs only if later collaborative editing is required.",
+      "geavision": "Apply the same lightweight principle: keep normalized metadata separate from heavy arrays, render only the visible window, reuse objects, avoid DOM-per-activity at portfolio scale and preserve every approved baseline rather than overwrite."
+    }
+  },
+  "specs": {
+    "exploration": {
+      "Overview": {
+        "title": "Exploration Decision Workspace",
+        "purpose": "Move from regional evidence to ranked, auditable opportunities.",
+        "contains": [
+          "Basin and play context",
+          "Lead and prospect inventory",
+          "Evidence maturity and data gaps",
+          "Volumes, risk and decision status"
+        ],
+        "sources": [
+          "Regional seismic and interpretation",
+          "Well, log, marker and test evidence",
+          "Play and prospect polygons",
+          "Analogue and PVT assumptions"
+        ],
+        "flow": [
+          "Open a prospect",
+          "Review evidence quality",
+          "Compare scenarios",
+          "Route a drill or study decision"
+        ],
+        "visual": "Living portfolio view with evidence maturity, decision gates and ranked data gaps."
+      },
+      "Basemap": {
+        "title": "Exploration Basemap",
+        "purpose": "Spatial entry point for acreage, wells, surveys, leads and prospects.",
+        "contains": [
+          "Map layers and CRS",
+          "Acreage and study boundaries",
+          "Wells and survey footprints",
+          "Lead/prospect outlines"
+        ],
+        "sources": [
+          "GIS layers",
+          "Well master and trajectories",
+          "Seismic survey metadata",
+          "Cultural and operational constraints"
+        ],
+        "flow": [
+          "Filter by play/prospect",
+          "Select an object",
+          "Inspect evidence",
+          "Save a map state"
+        ],
+        "visual": "MapLibre-style map with Google-Maps familiarity, scale, legend, layer drawer and provenance."
+      },
+      "Seismic": {
+        "title": "Seismic Interpretation",
+        "purpose": "Tie seismic evidence to horizons, faults, attributes and depth conversion.",
+        "contains": [
+          "2D/3D survey inventory",
+          "Horizon and fault interpretations",
+          "Attributes and confidence",
+          "Velocity/depth-conversion basis"
+        ],
+        "sources": [
+          "Seismic volumes and lines",
+          "Well ties and checkshots",
+          "Velocity models",
+          "Interpretation versions"
+        ],
+        "flow": [
+          "Select line/volume",
+          "Interpret or review",
+          "QC against wells",
+          "Publish interpretation version"
+        ],
+        "visual": "Petrel-like interpretation canvas; section/map synchronization; uncertainty and QC always visible."
+      },
+      "Wells": {
+        "title": "Exploration Wells",
+        "purpose": "Compare penetrations, logs, markers, tests and outcomes.",
+        "contains": [
+          "Well inventory",
+          "Composite logs and markers",
+          "Pressure/fluid evidence",
+          "Prognosis versus actual"
+        ],
+        "sources": [
+          "Well master",
+          "LAS/log curves",
+          "Markers and formations",
+          "DST/MDT/PVT results"
+        ],
+        "flow": [
+          "Select wells",
+          "Normalize depth reference",
+          "Correlate",
+          "Capture learning"
+        ],
+        "visual": "Multi-well log panel plus map; measured/reported/interpreted truth classes."
+      },
+      "Interpretation": {
+        "title": "Geological Interpretation",
+        "purpose": "Create traceable structural and stratigraphic interpretations.",
+        "contains": [
+          "Points, polylines and polygons",
+          "Surfaces and sections",
+          "Facies/depositional concepts",
+          "Interpretation confidence"
+        ],
+        "sources": [
+          "Picked points",
+          "Wells and seismic",
+          "Analogue concepts",
+          "Versioned interpretation objects"
+        ],
+        "flow": [
+          "Create object",
+          "Edit in scenario",
+          "Validate topology",
+          "Publish"
+        ],
+        "visual": "Map-first 2D interpretation, TIN/IDW/RBF surfaces and linked sections; no silent overwrite."
+      },
+      "Plays & Prospects": {
+        "title": "Plays and Prospects",
+        "purpose": "Mature opportunities from play fairway to drill-ready prospect.",
+        "contains": [
+          "Petroleum-system elements",
+          "Common risk segments",
+          "Trap/closure definition",
+          "Maturation status"
+        ],
+        "sources": [
+          "Play fairway evidence",
+          "Prospect polygons and closures",
+          "Charge/reservoir/seal evidence",
+          "Data-gap register"
+        ],
+        "flow": [
+          "Score play elements",
+          "Define prospect",
+          "Review evidence",
+          "Advance gate"
+        ],
+        "visual": "Geox-like prospect inventory and risk matrix linked to map objects and evidence cards."
+      },
+      "Volumetrics": {
+        "title": "Exploration Volumetrics",
+        "purpose": "Calculate deterministic and probabilistic in-place volumes.",
+        "contains": [
+          "GRV and area-depth relation",
+          "NTG, porosity, saturation and FVF",
+          "Hydrocarbon contacts",
+          "P90/P50/P10"
+        ],
+        "sources": [
+          "Top/base surfaces",
+          "Boundary polygons",
+          "OWC/GOC/GWC",
+          "Property distributions"
+        ],
+        "flow": [
+          "Select closure",
+          "Set assumptions",
+          "Run deterministic",
+          "Run Monte Carlo",
+          "Compare cases"
+        ],
+        "visual": "Lightweight Petrel-style volumetrics with tornado chart and complete calculation lineage."
+      },
+      "Risk & Uncertainty": {
+        "title": "Risk and Uncertainty",
+        "purpose": "Separate chance of success from range of outcomes.",
+        "contains": [
+          "GCoS factors",
+          "Volumetric uncertainty",
+          "Dependencies/correlations",
+          "Decision sensitivity"
+        ],
+        "sources": [
+          "Evidence confidence",
+          "Parameter distributions",
+          "Scenario catalogue",
+          "Analogue ranges"
+        ],
+        "flow": [
+          "Review evidence",
+          "Set distributions",
+          "Run uncertainty",
+          "Identify top drivers"
+        ],
+        "visual": "Risk matrix, probability distributions, tornado and scenario comparison; avoid false precision."
+      }
+    },
+    "field-development": {
+      "Overview": {
+        "title": "Field Development Workspace",
+        "purpose": "Integrate static model, dynamic evidence, wells, facilities, economics and decisions.",
+        "contains": [
+          "Development concept",
+          "Model maturity",
+          "Well inventory",
+          "Volumes and value"
+        ],
+        "sources": [
+          "FDP/FID assumptions",
+          "Static and dynamic models",
+          "Well profiles",
+          "Cost and facility constraints"
+        ],
+        "flow": [
+          "Choose concept",
+          "Inspect assumptions",
+          "Compare scenarios",
+          "Route approval"
+        ],
+        "visual": "Decision cockpit aligned to Assess–Select–Define with linked FDP evidence."
+      },
+      "Map": {
+        "title": "Development Map",
+        "purpose": "View existing/future wells, polygons, phases, constraints and remaining potential.",
+        "contains": [
+          "Existing and future trajectories",
+          "Development polygons",
+          "HCFT/pressure/property maps",
+          "FID and non-FID status"
+        ],
+        "sources": [
+          "Well master/trajectory",
+          "Petrel surfaces",
+          "Futures profiles",
+          "Facility constraints"
+        ],
+        "flow": [
+          "Filter phase",
+          "Inspect well",
+          "Compare vintages",
+          "Create scenario"
+        ],
+        "visual": "Integrated FDP map; current, FID and non-FID objects are visually distinct."
+      },
+      "Logs": {
+        "title": "Development Logs",
+        "purpose": "Condition and compare multi-well logs at scale.",
+        "contains": [
+          "Curve inventory and QC",
+          "Depth matching",
+          "Composite logs",
+          "Marker consistency"
+        ],
+        "sources": [
+          "MASTER_WELL_LOGS",
+          "Markers",
+          "Core and image logs",
+          "Well headers"
+        ],
+        "flow": [
+          "Select wells",
+          "Condition curves",
+          "Align markers",
+          "Approve dataset"
+        ],
+        "visual": "Techlog-style tracks with shared depth cursor, templates and QC flags."
+      },
+      "Petrophysics": {
+        "title": "Petrophysical Evaluation",
+        "purpose": "Derive PHIT, PHIE, Vsh, Sw, SWE, Sh and NTG with calibration.",
+        "contains": [
+          "Environmental corrections",
+          "Mineral/porosity model",
+          "Saturation model",
+          "Cutoffs and net pay"
+        ],
+        "sources": [
+          "Wireline/LWD logs",
+          "CCAL/SCAL",
+          "WFT/PVT",
+          "Interpretation parameters"
+        ],
+        "flow": [
+          "Load curves",
+          "Apply method",
+          "Calibrate",
+          "Compare sensitivity",
+          "Publish"
+        ],
+        "visual": "Batch-2 lightweight petrophysics; every curve is linked to method, parameters and evidence."
+      },
+      "Correlation": {
+        "title": "Well Correlation",
+        "purpose": "Correlate markers, zones and depositional packages across wells.",
+        "contains": [
+          "Marker picks",
+          "Flattening datum",
+          "Thickness trends",
+          "Correlation confidence"
+        ],
+        "sources": [
+          "Markers",
+          "Logs",
+          "Seismic ties",
+          "Stratigraphic framework"
+        ],
+        "flow": [
+          "Choose datum",
+          "Correlate",
+          "Flag uncertainty",
+          "Update framework"
+        ],
+        "visual": "StarSteer/Techlog-like panel with draggable wells, flattening and map linkage."
+      },
+      "Structure": {
+        "title": "Structural Framework",
+        "purpose": "Build top/base surfaces, boundaries and linked sections.",
+        "contains": [
+          "Markers and seismic picks",
+          "Fault-free Batch-1 framework",
+          "Surface interpolation",
+          "Contact relationships"
+        ],
+        "sources": [
+          "Pick points",
+          "Boundary polygons",
+          "Top/base inputs",
+          "CRS and depth datum"
+        ],
+        "flow": [
+          "QC inputs",
+          "Generate surface",
+          "Inspect residuals",
+          "Version result"
+        ],
+        "visual": "TIN/IDW/RBF surface builder; Batch 1 explicitly excludes faults and corner-point grids."
+      },
+      "Facies": {
+        "title": "Facies Framework",
+        "purpose": "Represent depositional concepts and facies proportions transparently.",
+        "contains": [
+          "Facies scheme",
+          "Well interpretation",
+          "Trend maps",
+          "Scenario uncertainty"
+        ],
+        "sources": [
+          "Core/cuttings",
+          "Logs",
+          "Analogue concepts",
+          "Depositional maps"
+        ],
+        "flow": [
+          "Define scheme",
+          "Interpret wells",
+          "Create trends",
+          "Compare realizations"
+        ],
+        "visual": "Concept-led facies canvas; interpretations remain editable scenario objects."
+      },
+      "Properties": {
+        "title": "Property Modeling",
+        "purpose": "Map porosity, permeability, saturation and NTG assumptions.",
+        "contains": [
+          "Upscaling basis",
+          "Property transforms",
+          "Trend conditioning",
+          "Uncertainty ranges"
+        ],
+        "sources": [
+          "Petrophysics",
+          "Core data",
+          "Facies",
+          "Analogue relationships"
+        ],
+        "flow": [
+          "Select property",
+          "Fit transform",
+          "Generate map",
+          "QC crossplots"
+        ],
+        "visual": "Crossplots plus map/section views; preserve measured-versus-derived provenance."
+      },
+      "Volumetrics": {
+        "title": "Development Volumetrics",
+        "purpose": "Reconcile deterministic STOIIP/GIIP and scenario volumes.",
+        "contains": [
+          "Geometry and contacts",
+          "Property averages",
+          "Polygon/reservoir breakdown",
+          "Reconciliation"
+        ],
+        "sources": [
+          "Static surfaces",
+          "Contacts",
+          "Property maps",
+          "Approved boundaries"
+        ],
+        "flow": [
+          "Run case",
+          "Compare vintage",
+          "Explain delta",
+          "Publish reserves input"
+        ],
+        "visual": "Same deterministic engine as exploration, with polygon/reservoir reconciliation."
+      },
+      "Uncertainty": {
+        "title": "Development Uncertainty",
+        "purpose": "Explore ranges, correlations and model alternatives.",
+        "contains": [
+          "Structural uncertainty",
+          "Contact uncertainty",
+          "Property uncertainty",
+          "Recovery-factor sensitivity"
+        ],
+        "sources": [
+          "Parameter distributions",
+          "Alternative surfaces",
+          "Dynamic calibration",
+          "Scenario metadata"
+        ],
+        "flow": [
+          "Define ensemble",
+          "Sample",
+          "Rank drivers",
+          "Select decision cases"
+        ],
+        "visual": "Ensemble dashboard with tornado, fan charts and realization browser."
+      },
+      "Development": {
+        "title": "Development Concepts",
+        "purpose": "Compare drainage strategy, well placement and phasing.",
+        "contains": [
+          "Concept options",
+          "Well count/type",
+          "Profiles and constraints",
+          "Schedule and dependencies"
+        ],
+        "sources": [
+          "Opportunity inventory",
+          "Simulation response",
+          "Facility limits",
+          "Drilling sequence"
+        ],
+        "flow": [
+          "Build concept",
+          "Place wells",
+          "Test constraints",
+          "Compare value"
+        ],
+        "visual": "FDPlan-like option board linked to maps, profiles and assumptions."
+      },
+      "Economics": {
+        "title": "Development Economics",
+        "purpose": "Connect subsurface scenarios to cash flow and decision metrics.",
+        "contains": [
+          "CAPEX/OPEX",
+          "Production profiles",
+          "Price/tax assumptions",
+          "NPV/IRR and sensitivities"
+        ],
+        "sources": [
+          "Scenario profiles",
+          "Cost estimates",
+          "Schedule",
+          "Economic assumptions"
+        ],
+        "flow": [
+          "Select case",
+          "Run economics",
+          "Stress test",
+          "Recommend"
+        ],
+        "visual": "Decision-focused economics; assumptions and source vintages shown beside every result."
+      }
+    },
+    "well-delivery": {
+      "Overview": {
+        "title": "Well Delivery Workspace",
+        "purpose": "Carry an approved well from SOR through execution and post-mortem.",
+        "contains": [
+          "Maturation gate",
+          "Design readiness",
+          "Execution status",
+          "Learning loop"
+        ],
+        "sources": [
+          "SOR/BOD",
+          "Well plan and drilling program",
+          "Daily operations",
+          "EOWR and completion report"
+        ],
+        "flow": [
+          "Select well",
+          "Review gate",
+          "Compare plan/actual",
+          "Capture lessons"
+        ],
+        "visual": "Well-centric timeline with required evidence and approval state."
+      },
+      "Well Plan": {
+        "title": "Well Plan",
+        "purpose": "Define objectives, targets, trajectory, casing, mud, completion intent and AFE.",
+        "contains": [
+          "Objective and success criteria",
+          "Targets and uncertainty",
+          "Design envelope",
+          "Data-acquisition plan"
+        ],
+        "sources": [
+          "SOR/BOD",
+          "Offset wells",
+          "Pore pressure/geomechanics",
+          "FID targets"
+        ],
+        "flow": [
+          "Review objective",
+          "Design",
+          "Risk assess",
+          "Approve"
+        ],
+        "visual": "DrillPlan-like structured plan with map, schematic and evidence checklist."
+      },
+      "Trajectory": {
+        "title": "Trajectory Design",
+        "purpose": "Design and QC the well path in map, section and 3D.",
+        "contains": [
+          "Surface and target points",
+          "MD/TVD/TVDSS",
+          "Dogleg and anti-collision",
+          "Drilling envelope"
+        ],
+        "sources": [
+          "Wellhead",
+          "Targets",
+          "Offset trajectories",
+          "Survey standards"
+        ],
+        "flow": [
+          "Place targets",
+          "Generate path",
+          "Check collision",
+          "Approve revision"
+        ],
+        "visual": "3D and section viewer with survey table; depth-reference conversion is explicit."
+      },
+      "Offset Analysis": {
+        "title": "Offset Analysis",
+        "purpose": "Use analogous wells to quantify drilling, geology and completion risk.",
+        "contains": [
+          "Offset selection logic",
+          "Events and NPT",
+          "Formation behavior",
+          "Performance lessons"
+        ],
+        "sources": [
+          "Daily drilling reports",
+          "EOWR",
+          "Mud losses/kicks",
+          "Completion outcomes"
+        ],
+        "flow": [
+          "Select analogues",
+          "Compare metrics",
+          "Extract hazards",
+          "Update plan"
+        ],
+        "visual": "Evidence matrix with map-distance and geological-similarity filters."
+      },
+      "Drilling": {
+        "title": "Drilling Execution",
+        "purpose": "Track actual operations against plan and update the geological picture.",
+        "contains": [
+          "Depth-versus-time",
+          "ROP and BHA",
+          "Mud and events",
+          "Formation tops"
+        ],
+        "sources": [
+          "Rig daily feed",
+          "MWD/LWD",
+          "Wellsite geology",
+          "Operational events"
+        ],
+        "flow": [
+          "Monitor",
+          "Detect deviation",
+          "Record decision",
+          "Update prognosis"
+        ],
+        "visual": "Operations timeline and depth plot; actual/reported data never mixed with interpretation."
+      },
+      "Completion": {
+        "title": "Completion Execution",
+        "purpose": "Capture as-run completion, intervals, stimulation and integrity evidence.",
+        "contains": [
+          "Completion string",
+          "Perforations/open-hole interval",
+          "Sand control/stimulation",
+          "Pressure tests"
+        ],
+        "sources": [
+          "Completion program",
+          "As-run tally",
+          "Treatment reports",
+          "Well integrity tests"
+        ],
+        "flow": [
+          "Compare plan/actual",
+          "Validate intervals",
+          "Record outcome",
+          "Hand over"
+        ],
+        "visual": "Well schematic plus interval table and linked evidence."
+      },
+      "Post-Mortem": {
+        "title": "New Well Post-Mortem",
+        "purpose": "Compare prognosis, execution and early performance across disciplines.",
+        "contains": [
+          "Static and seismic",
+          "Petrophysics",
+          "Drilling/completion",
+          "Production and value"
+        ],
+        "sources": [
+          "Well plan",
+          "EOWR",
+          "Logs and tests",
+          "Early production"
+        ],
+        "flow": [
+          "Assemble evidence",
+          "Quantify deltas",
+          "Diagnose causes",
+          "Assign actions"
+        ],
+        "visual": "WellNova six-discipline synthesis with predicted-versus-actual and traceable recommendations."
+      },
+      "Lessons": {
+        "title": "Well Delivery Lessons",
+        "purpose": "Convert events and outcomes into reusable standards and analogues.",
+        "contains": [
+          "Lesson statement",
+          "Evidence and context",
+          "Applicability",
+          "Owner/action"
+        ],
+        "sources": [
+          "Post-mortems",
+          "EOWR",
+          "Operational events",
+          "Engineer validation"
+        ],
+        "flow": [
+          "Capture",
+          "Classify",
+          "Validate",
+          "Link to future wells"
+        ],
+        "visual": "Searchable lesson catalogue linked to hazards, formations, rigs, designs and wells."
+      }
+    },
+    "reservoir-management": {
+      "Overview": {
+        "title": "Reservoir Management Workspace",
+        "purpose": "Monitor, diagnose, forecast, act, track and learn.",
+        "contains": [
+          "Field/reservoir health",
+          "Exceptions",
+          "Actions and gains",
+          "Forecast confidence"
+        ],
+        "sources": [
+          "Production/injection",
+          "Pressure and tests",
+          "4D seismic",
+          "RMP and action tracker"
+        ],
+        "flow": [
+          "Select scope",
+          "Review exception",
+          "Diagnose",
+          "Approve action",
+          "Track value"
+        ],
+        "visual": "Operational cockpit with human-in-the-loop gates and evidence-backed actions."
+      },
+      "Surveillance": {
+        "title": "Integrated Surveillance",
+        "purpose": "Combine dynamic, static and 4D evidence into a surveillance plan and exception view.",
+        "contains": [
+          "Acquisition status",
+          "Pressure/PLT/4D coverage",
+          "Exceptions",
+          "Data gaps"
+        ],
+        "sources": [
+          "Surveillance plan",
+          "PS events",
+          "4D vintages",
+          "Well tests"
+        ],
+        "flow": [
+          "Review plan",
+          "Detect gap",
+          "Interpret signal",
+          "Create action"
+        ],
+        "visual": "Calendar/map/matrix views linked to the depletion strategy."
+      },
+      "Production": {
+        "title": "Production Performance",
+        "purpose": "Analyze oil, water, gas, uptime, deferment and constraints.",
+        "contains": [
+          "Rates and potentials",
+          "WCT/GOR trends",
+          "Uptime/deferment",
+          "Baseline variance"
+        ],
+        "sources": [
+          "Production data",
+          "Events",
+          "FPOT/RPOT/MPOT",
+          "Forecast"
+        ],
+        "flow": [
+          "Select well/pattern",
+          "Compare baseline",
+          "Diagnose deviation",
+          "Recommend"
+        ],
+        "visual": "Trading-app-like time series with synchronized events, thresholds and comparison wells."
+      },
+      "Injection & VRR": {
+        "title": "Injection and VRR",
+        "purpose": "Balance support and offtake by reservoir, polygon and pattern.",
+        "contains": [
+          "Injection rates",
+          "VRR",
+          "Allocation",
+          "Constraints and optimization"
+        ],
+        "sources": [
+          "Injection data",
+          "Production withdrawal",
+          "Pressure",
+          "Pattern definitions"
+        ],
+        "flow": [
+          "Select pattern",
+          "Review balance",
+          "Test redistribution",
+          "Track response"
+        ],
+        "visual": "Pattern map plus VRR trend and allocation waterfall."
+      },
+      "Pressure": {
+        "title": "Pressure Evolution",
+        "purpose": "Understand depletion, support, connectivity and safe operating envelopes.",
+        "contains": [
+          "BHP/THP and zonal pressure",
+          "Pressure maps",
+          "Interference evidence",
+          "Dynamic limits"
+        ],
+        "sources": [
+          "Pressure surveys",
+          "Build-up data",
+          "Sypher/model outputs",
+          "Geomechanics"
+        ],
+        "flow": [
+          "QC survey",
+          "Map trend",
+          "Diagnose anomaly",
+          "Update limit"
+        ],
+        "visual": "Pressure map and multi-well trends with datum correction and uncertainty."
+      },
+      "Well Tests": {
+        "title": "Well Test Monitoring",
+        "purpose": "Prioritize and validate tests, anomalies and recommended actions.",
+        "contains": [
+          "Latest test vs history",
+          "KPI deviations",
+          "Risk-based priority",
+          "Validation status"
+        ],
+        "sources": [
+          "Well tests",
+          "Lab/PVT",
+          "Pressure and events",
+          "Potential hierarchy"
+        ],
+        "flow": [
+          "Select reservoir/well",
+          "Inspect trend",
+          "Review alarm",
+          "Validate action"
+        ],
+        "visual": "WellWatch pattern: well navigation → KPI snapshot → charts → alarm console → validation."
+      },
+      "Patterns": {
+        "title": "Well and Pattern Review",
+        "purpose": "Synthesize offtake, injection, pressure, 4D and well behavior.",
+        "contains": [
+          "Pattern health",
+          "Producer/injector roles",
+          "Connectivity",
+          "Actions and opportunities"
+        ],
+        "sources": [
+          "Pattern definitions",
+          "Rates and pressure",
+          "4D signals",
+          "Historical actions"
+        ],
+        "flow": [
+          "Review pattern",
+          "Benchmark peers",
+          "Diagnose root cause",
+          "Agree actions"
+        ],
+        "visual": "WellNexus review canvas with map, benchmark plots and action register."
+      },
+      "Forecast": {
+        "title": "Forecast and Potential",
+        "purpose": "Maintain DCA/RoFo and potential hierarchy with explicit assumptions.",
+        "contains": [
+          "DCA fits",
+          "RoFo scenarios",
+          "MPOT/RPOT/FPOT",
+          "Uncertainty"
+        ],
+        "sources": [
+          "Production history",
+          "Interventions",
+          "Constraints",
+          "Simulation"
+        ],
+        "flow": [
+          "Fit decline",
+          "Review assumptions",
+          "Generate scenario",
+          "Approve forecast"
+        ],
+        "visual": "Forecast fan chart, decline diagnostics and assumptions ledger."
+      },
+      "Opportunities": {
+        "title": "Opportunity Screening",
+        "purpose": "Screen, mature and rank rig-based and rigless opportunities.",
+        "contains": [
+          "Opportunity type",
+          "Technical case",
+          "Incremental volume/value",
+          "Risk and readiness"
+        ],
+        "sources": [
+          "Surveillance exceptions",
+          "Well/pattern reviews",
+          "Static/dynamic models",
+          "Cost and schedule"
+        ],
+        "flow": [
+          "Create candidate",
+          "Screen",
+          "Mature",
+          "Rank",
+          "Track realization"
+        ],
+        "visual": "WellAion funnel with transparent criteria; final ranking remains an engineer decision."
+      }
+    },
+    "drilling-sequence": {
+      "Overview": {
+        "title": "Drilling Sequence Workspace",
+        "purpose": "Connect sanctioned wells, maturation, rig capacity and production milestones.",
+        "contains": [
+          "Sequence baseline",
+          "Rig utilization",
+          "Moved/added/removed wells",
+          "RFD/RFSU exposure"
+        ],
+        "sources": [
+          "FID future wells",
+          "SOR/BOD maturity",
+          "Rig programs",
+          "Schedule revisions"
+        ],
+        "flow": [
+          "Choose revision",
+          "Review constraints",
+          "Compare changes",
+          "Publish baseline"
+        ],
+        "visual": "Rig-by-time decision cockpit with revision provenance."
+      },
+      "Sequence": {
+        "title": "Rig-by-Time Sequence",
+        "purpose": "See which rig drills which well and why each slot exists.",
+        "contains": [
+          "Rig swimlanes",
+          "Well bars and types",
+          "Phase bands",
+          "Dependencies"
+        ],
+        "sources": [
+          "Schedule table",
+          "Well duration",
+          "Rig capability",
+          "Project phase"
+        ],
+        "flow": [
+          "Pan/zoom",
+          "Filter",
+          "Inspect activity",
+          "Create scenario"
+        ],
+        "visual": "Gantt/swimlane canvas with 24-month and five-year presets."
+      },
+      "Rigs": {
+        "title": "Rig Programs",
+        "purpose": "Manage rig capability, contract windows, moves, certification and utilization.",
+        "contains": [
+          "Rig capability",
+          "Availability windows",
+          "Moves and suspensions",
+          "Utilization"
+        ],
+        "sources": [
+          "Rig contract/program",
+          "Historical performance",
+          "Well requirements",
+          "Marine constraints"
+        ],
+        "flow": [
+          "Select rig",
+          "Review window",
+          "Match well",
+          "Resolve conflict"
+        ],
+        "visual": "Resource timeline and compatibility matrix."
+      },
+      "Milestones": {
+        "title": "Project Milestones",
+        "purpose": "Track RFD, RFSU, first oil and project dependencies.",
+        "contains": [
+          "Milestone register",
+          "Critical dependencies",
+          "Schedule confidence",
+          "Production impact"
+        ],
+        "sources": [
+          "Project plans",
+          "Well sequence",
+          "Facility readiness",
+          "Production profiles"
+        ],
+        "flow": [
+          "Inspect milestone",
+          "Trace dependencies",
+          "Run impact",
+          "Escalate"
+        ],
+        "visual": "Milestone overlay on sequence with risk and downstream impact."
+      },
+      "Revisions": {
+        "title": "Schedule Revision Control",
+        "purpose": "Explain every schedule change between baselines.",
+        "contains": [
+          "Added/removed/moved wells",
+          "Date and duration deltas",
+          "Driver and approver",
+          "Production/value impact"
+        ],
+        "sources": [
+          "Revision snapshots",
+          "Change requests",
+          "Constraint updates",
+          "Decision records"
+        ],
+        "flow": [
+          "Select A/B",
+          "Run diff",
+          "Validate driver",
+          "Approve new baseline"
+        ],
+        "visual": "Git-like diff for schedules: no silent overwrite, every change traceable."
+      }
+    }
+  },
+  "md": {
+    "exploration": {
+      "Overview": "# Exploration Decision Workspace\n\n> [!note] Purpose\n> Move from regional evidence to ranked, auditable opportunities.\n\n## What the canvas must contain\n- Basin and play context\n- Lead and prospect inventory\n- Evidence maturity and data gaps\n- Volumes, risk and decision status\n\n## Grounding inputs\n- Regional seismic and interpretation\n- Well, log, marker and test evidence\n- Play and prospect polygons\n- Analogue and PVT assumptions\n\n## Primary user flow\n1. Open a prospect\n2. Review evidence quality\n3. Compare scenarios\n4. Route a drill or study decision\n\n## Visualization and interaction\nLiving portfolio view with evidence maturity, decision gates and ranked data gaps.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Basemap": "# Exploration Basemap\n\n> [!note] Purpose\n> Spatial entry point for acreage, wells, surveys, leads and prospects.\n\n## What the canvas must contain\n- Map layers and CRS\n- Acreage and study boundaries\n- Wells and survey footprints\n- Lead/prospect outlines\n\n## Grounding inputs\n- GIS layers\n- Well master and trajectories\n- Seismic survey metadata\n- Cultural and operational constraints\n\n## Primary user flow\n1. Filter by play/prospect\n2. Select an object\n3. Inspect evidence\n4. Save a map state\n\n## Visualization and interaction\nMapLibre-style map with Google-Maps familiarity, scale, legend, layer drawer and provenance.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Seismic": "# Seismic Interpretation\n\n> [!note] Purpose\n> Tie seismic evidence to horizons, faults, attributes and depth conversion.\n\n## What the canvas must contain\n- 2D/3D survey inventory\n- Horizon and fault interpretations\n- Attributes and confidence\n- Velocity/depth-conversion basis\n\n## Grounding inputs\n- Seismic volumes and lines\n- Well ties and checkshots\n- Velocity models\n- Interpretation versions\n\n## Primary user flow\n1. Select line/volume\n2. Interpret or review\n3. QC against wells\n4. Publish interpretation version\n\n## Visualization and interaction\nPetrel-like interpretation canvas; section/map synchronization; uncertainty and QC always visible.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Wells": "# Exploration Wells\n\n> [!note] Purpose\n> Compare penetrations, logs, markers, tests and outcomes.\n\n## What the canvas must contain\n- Well inventory\n- Composite logs and markers\n- Pressure/fluid evidence\n- Prognosis versus actual\n\n## Grounding inputs\n- Well master\n- LAS/log curves\n- Markers and formations\n- DST/MDT/PVT results\n\n## Primary user flow\n1. Select wells\n2. Normalize depth reference\n3. Correlate\n4. Capture learning\n\n## Visualization and interaction\nMulti-well log panel plus map; measured/reported/interpreted truth classes.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Interpretation": "# Geological Interpretation\n\n> [!note] Purpose\n> Create traceable structural and stratigraphic interpretations.\n\n## What the canvas must contain\n- Points, polylines and polygons\n- Surfaces and sections\n- Facies/depositional concepts\n- Interpretation confidence\n\n## Grounding inputs\n- Picked points\n- Wells and seismic\n- Analogue concepts\n- Versioned interpretation objects\n\n## Primary user flow\n1. Create object\n2. Edit in scenario\n3. Validate topology\n4. Publish\n\n## Visualization and interaction\nMap-first 2D interpretation, TIN/IDW/RBF surfaces and linked sections; no silent overwrite.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Plays & Prospects": "# Plays and Prospects\n\n> [!note] Purpose\n> Mature opportunities from play fairway to drill-ready prospect.\n\n## What the canvas must contain\n- Petroleum-system elements\n- Common risk segments\n- Trap/closure definition\n- Maturation status\n\n## Grounding inputs\n- Play fairway evidence\n- Prospect polygons and closures\n- Charge/reservoir/seal evidence\n- Data-gap register\n\n## Primary user flow\n1. Score play elements\n2. Define prospect\n3. Review evidence\n4. Advance gate\n\n## Visualization and interaction\nGeox-like prospect inventory and risk matrix linked to map objects and evidence cards.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Volumetrics": "# Exploration Volumetrics\n\n> [!note] Purpose\n> Calculate deterministic and probabilistic in-place volumes.\n\n## What the canvas must contain\n- GRV and area-depth relation\n- NTG, porosity, saturation and FVF\n- Hydrocarbon contacts\n- P90/P50/P10\n\n## Grounding inputs\n- Top/base surfaces\n- Boundary polygons\n- OWC/GOC/GWC\n- Property distributions\n\n## Primary user flow\n1. Select closure\n2. Set assumptions\n3. Run deterministic\n4. Run Monte Carlo\n5. Compare cases\n\n## Visualization and interaction\nLightweight Petrel-style volumetrics with tornado chart and complete calculation lineage.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Risk & Uncertainty": "# Risk and Uncertainty\n\n> [!note] Purpose\n> Separate chance of success from range of outcomes.\n\n## What the canvas must contain\n- GCoS factors\n- Volumetric uncertainty\n- Dependencies/correlations\n- Decision sensitivity\n\n## Grounding inputs\n- Evidence confidence\n- Parameter distributions\n- Scenario catalogue\n- Analogue ranges\n\n## Primary user flow\n1. Review evidence\n2. Set distributions\n3. Run uncertainty\n4. Identify top drivers\n\n## Visualization and interaction\nRisk matrix, probability distributions, tornado and scenario comparison; avoid false precision.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel static modeling + GeoX prospect evaluation**\n\nPetrel-style object tree, map-first interpretation, linked sections, surfaces/contacts, deterministic + probabilistic volumetrics; GeoX-style play/prospect chance, risking and portfolio comparison.\n\n## Recommended JavaScript library stack\nMapLibre GL JS + deck.gl for large map layers; Three.js for lightweight WebGL 3D; vtk.js when volume/slice rendering is required; D3-delaunay for TIN; Turf.js/JSTS for geometry; ECharts for risking, tornado and uncertainty charts; Apache Arrow/Parquet-WASM for columnar interchange.\n\n## GeaVision renderer lessons harvested\nReuse GVSURF: Int16 quantization with offset/scale, NULL=-32768, gzip + Base64, shared affine grid, row-major arrays, adaptive mesh stride, BufferGeometry, instanced well/marker meshes, batched line segments, capped devicePixelRatio, explicit TVD/TVDSS/MD and contact-as-top-surface intersection.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both."
+    },
+    "field-development": {
+      "Overview": "# Field Development Workspace\n\n> [!note] Purpose\n> Integrate static model, dynamic evidence, wells, facilities, economics and decisions.\n\n## What the canvas must contain\n- Development concept\n- Model maturity\n- Well inventory\n- Volumes and value\n\n## Grounding inputs\n- FDP/FID assumptions\n- Static and dynamic models\n- Well profiles\n- Cost and facility constraints\n\n## Primary user flow\n1. Choose concept\n2. Inspect assumptions\n3. Compare scenarios\n4. Route approval\n\n## Visualization and interaction\nDecision cockpit aligned to Assess–Select–Define with linked FDP evidence.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Map": "# Development Map\n\n> [!note] Purpose\n> View existing/future wells, polygons, phases, constraints and remaining potential.\n\n## What the canvas must contain\n- Existing and future trajectories\n- Development polygons\n- HCFT/pressure/property maps\n- FID and non-FID status\n\n## Grounding inputs\n- Well master/trajectory\n- Petrel surfaces\n- Futures profiles\n- Facility constraints\n\n## Primary user flow\n1. Filter phase\n2. Inspect well\n3. Compare vintages\n4. Create scenario\n\n## Visualization and interaction\nIntegrated FDP map; current, FID and non-FID objects are visually distinct.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Logs": "# Development Logs\n\n> [!note] Purpose\n> Condition and compare multi-well logs at scale.\n\n## What the canvas must contain\n- Curve inventory and QC\n- Depth matching\n- Composite logs\n- Marker consistency\n\n## Grounding inputs\n- MASTER_WELL_LOGS\n- Markers\n- Core and image logs\n- Well headers\n\n## Primary user flow\n1. Select wells\n2. Condition curves\n3. Align markers\n4. Approve dataset\n\n## Visualization and interaction\nTechlog-style tracks with shared depth cursor, templates and QC flags.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Petrophysics": "# Petrophysical Evaluation\n\n> [!note] Purpose\n> Derive PHIT, PHIE, Vsh, Sw, SWE, Sh and NTG with calibration.\n\n## What the canvas must contain\n- Environmental corrections\n- Mineral/porosity model\n- Saturation model\n- Cutoffs and net pay\n\n## Grounding inputs\n- Wireline/LWD logs\n- CCAL/SCAL\n- WFT/PVT\n- Interpretation parameters\n\n## Primary user flow\n1. Load curves\n2. Apply method\n3. Calibrate\n4. Compare sensitivity\n5. Publish\n\n## Visualization and interaction\nBatch-2 lightweight petrophysics; every curve is linked to method, parameters and evidence.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Correlation": "# Well Correlation\n\n> [!note] Purpose\n> Correlate markers, zones and depositional packages across wells.\n\n## What the canvas must contain\n- Marker picks\n- Flattening datum\n- Thickness trends\n- Correlation confidence\n\n## Grounding inputs\n- Markers\n- Logs\n- Seismic ties\n- Stratigraphic framework\n\n## Primary user flow\n1. Choose datum\n2. Correlate\n3. Flag uncertainty\n4. Update framework\n\n## Visualization and interaction\nStarSteer/Techlog-like panel with draggable wells, flattening and map linkage.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Structure": "# Structural Framework\n\n> [!note] Purpose\n> Build top/base surfaces, boundaries and linked sections.\n\n## What the canvas must contain\n- Markers and seismic picks\n- Fault-free Batch-1 framework\n- Surface interpolation\n- Contact relationships\n\n## Grounding inputs\n- Pick points\n- Boundary polygons\n- Top/base inputs\n- CRS and depth datum\n\n## Primary user flow\n1. QC inputs\n2. Generate surface\n3. Inspect residuals\n4. Version result\n\n## Visualization and interaction\nTIN/IDW/RBF surface builder; Batch 1 explicitly excludes faults and corner-point grids.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Facies": "# Facies Framework\n\n> [!note] Purpose\n> Represent depositional concepts and facies proportions transparently.\n\n## What the canvas must contain\n- Facies scheme\n- Well interpretation\n- Trend maps\n- Scenario uncertainty\n\n## Grounding inputs\n- Core/cuttings\n- Logs\n- Analogue concepts\n- Depositional maps\n\n## Primary user flow\n1. Define scheme\n2. Interpret wells\n3. Create trends\n4. Compare realizations\n\n## Visualization and interaction\nConcept-led facies canvas; interpretations remain editable scenario objects.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Properties": "# Property Modeling\n\n> [!note] Purpose\n> Map porosity, permeability, saturation and NTG assumptions.\n\n## What the canvas must contain\n- Upscaling basis\n- Property transforms\n- Trend conditioning\n- Uncertainty ranges\n\n## Grounding inputs\n- Petrophysics\n- Core data\n- Facies\n- Analogue relationships\n\n## Primary user flow\n1. Select property\n2. Fit transform\n3. Generate map\n4. QC crossplots\n\n## Visualization and interaction\nCrossplots plus map/section views; preserve measured-versus-derived provenance.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Volumetrics": "# Development Volumetrics\n\n> [!note] Purpose\n> Reconcile deterministic STOIIP/GIIP and scenario volumes.\n\n## What the canvas must contain\n- Geometry and contacts\n- Property averages\n- Polygon/reservoir breakdown\n- Reconciliation\n\n## Grounding inputs\n- Static surfaces\n- Contacts\n- Property maps\n- Approved boundaries\n\n## Primary user flow\n1. Run case\n2. Compare vintage\n3. Explain delta\n4. Publish reserves input\n\n## Visualization and interaction\nSame deterministic engine as exploration, with polygon/reservoir reconciliation.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Uncertainty": "# Development Uncertainty\n\n> [!note] Purpose\n> Explore ranges, correlations and model alternatives.\n\n## What the canvas must contain\n- Structural uncertainty\n- Contact uncertainty\n- Property uncertainty\n- Recovery-factor sensitivity\n\n## Grounding inputs\n- Parameter distributions\n- Alternative surfaces\n- Dynamic calibration\n- Scenario metadata\n\n## Primary user flow\n1. Define ensemble\n2. Sample\n3. Rank drivers\n4. Select decision cases\n\n## Visualization and interaction\nEnsemble dashboard with tornado, fan charts and realization browser.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Development": "# Development Concepts\n\n> [!note] Purpose\n> Compare drainage strategy, well placement and phasing.\n\n## What the canvas must contain\n- Concept options\n- Well count/type\n- Profiles and constraints\n- Schedule and dependencies\n\n## Grounding inputs\n- Opportunity inventory\n- Simulation response\n- Facility limits\n- Drilling sequence\n\n## Primary user flow\n1. Build concept\n2. Place wells\n3. Test constraints\n4. Compare value\n\n## Visualization and interaction\nFDPlan-like option board linked to maps, profiles and assumptions.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Economics": "# Development Economics\n\n> [!note] Purpose\n> Connect subsurface scenarios to cash flow and decision metrics.\n\n## What the canvas must contain\n- CAPEX/OPEX\n- Production profiles\n- Price/tax assumptions\n- NPV/IRR and sensitivities\n\n## Grounding inputs\n- Scenario profiles\n- Cost estimates\n- Schedule\n- Economic assumptions\n\n## Primary user flow\n1. Select case\n2. Run economics\n3. Stress test\n4. Recommend\n\n## Visualization and interaction\nDecision-focused economics; assumptions and source vintages shown beside every result.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB Petrel development planning + INTERSECT / tNavigator integrated model workflow**\n\nScenario tree, static-to-dynamic handoff, development concepts, well count/location alternatives, constraints, uncertainty envelopes and auditable economics—not a full simulator inside the browser.\n\n## Recommended JavaScript library stack\nThree.js/vtk.js for grid, wells and sections; deck.gl/MapLibre for opportunity maps; ECharts/Plotly for profiles and uncertainty; Arquero + Apache Arrow for fast tabular transforms; glMatrix for geometry math; Web Workers for scenario calculations.\n\n## GeaVision renderer lessons harvested\nCarry the GeaVision separation between geometry Z and color scalar; shared grid/node order for attributes; local-origin recentering to preserve floating-point precision; progressive level-of-detail and explicit scenario/version objects.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both."
+    },
+    "well-delivery": {
+      "Overview": "# Well Delivery Workspace\n\n> [!note] Purpose\n> Carry an approved well from SOR through execution and post-mortem.\n\n## What the canvas must contain\n- Maturation gate\n- Design readiness\n- Execution status\n- Learning loop\n\n## Grounding inputs\n- SOR/BOD\n- Well plan and drilling program\n- Daily operations\n- EOWR and completion report\n\n## Primary user flow\n1. Select well\n2. Review gate\n3. Compare plan/actual\n4. Capture lessons\n\n## Visualization and interaction\nWell-centric timeline with required evidence and approval state.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Well Plan": "# Well Plan\n\n> [!note] Purpose\n> Define objectives, targets, trajectory, casing, mud, completion intent and AFE.\n\n## What the canvas must contain\n- Objective and success criteria\n- Targets and uncertainty\n- Design envelope\n- Data-acquisition plan\n\n## Grounding inputs\n- SOR/BOD\n- Offset wells\n- Pore pressure/geomechanics\n- FID targets\n\n## Primary user flow\n1. Review objective\n2. Design\n3. Risk assess\n4. Approve\n\n## Visualization and interaction\nDrillPlan-like structured plan with map, schematic and evidence checklist.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Trajectory": "# Trajectory Design\n\n> [!note] Purpose\n> Design and QC the well path in map, section and 3D.\n\n## What the canvas must contain\n- Surface and target points\n- MD/TVD/TVDSS\n- Dogleg and anti-collision\n- Drilling envelope\n\n## Grounding inputs\n- Wellhead\n- Targets\n- Offset trajectories\n- Survey standards\n\n## Primary user flow\n1. Place targets\n2. Generate path\n3. Check collision\n4. Approve revision\n\n## Visualization and interaction\n3D and section viewer with survey table; depth-reference conversion is explicit.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Offset Analysis": "# Offset Analysis\n\n> [!note] Purpose\n> Use analogous wells to quantify drilling, geology and completion risk.\n\n## What the canvas must contain\n- Offset selection logic\n- Events and NPT\n- Formation behavior\n- Performance lessons\n\n## Grounding inputs\n- Daily drilling reports\n- EOWR\n- Mud losses/kicks\n- Completion outcomes\n\n## Primary user flow\n1. Select analogues\n2. Compare metrics\n3. Extract hazards\n4. Update plan\n\n## Visualization and interaction\nEvidence matrix with map-distance and geological-similarity filters.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Drilling": "# Drilling Execution\n\n> [!note] Purpose\n> Track actual operations against plan and update the geological picture.\n\n## What the canvas must contain\n- Depth-versus-time\n- ROP and BHA\n- Mud and events\n- Formation tops\n\n## Grounding inputs\n- Rig daily feed\n- MWD/LWD\n- Wellsite geology\n- Operational events\n\n## Primary user flow\n1. Monitor\n2. Detect deviation\n3. Record decision\n4. Update prognosis\n\n## Visualization and interaction\nOperations timeline and depth plot; actual/reported data never mixed with interpretation.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Completion": "# Completion Execution\n\n> [!note] Purpose\n> Capture as-run completion, intervals, stimulation and integrity evidence.\n\n## What the canvas must contain\n- Completion string\n- Perforations/open-hole interval\n- Sand control/stimulation\n- Pressure tests\n\n## Grounding inputs\n- Completion program\n- As-run tally\n- Treatment reports\n- Well integrity tests\n\n## Primary user flow\n1. Compare plan/actual\n2. Validate intervals\n3. Record outcome\n4. Hand over\n\n## Visualization and interaction\nWell schematic plus interval table and linked evidence.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Post-Mortem": "# New Well Post-Mortem\n\n> [!note] Purpose\n> Compare prognosis, execution and early performance across disciplines.\n\n## What the canvas must contain\n- Static and seismic\n- Petrophysics\n- Drilling/completion\n- Production and value\n\n## Grounding inputs\n- Well plan\n- EOWR\n- Logs and tests\n- Early production\n\n## Primary user flow\n1. Assemble evidence\n2. Quantify deltas\n3. Diagnose causes\n4. Assign actions\n\n## Visualization and interaction\nWellNova six-discipline synthesis with predicted-versus-actual and traceable recommendations.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Lessons": "# Well Delivery Lessons\n\n> [!note] Purpose\n> Convert events and outcomes into reusable standards and analogues.\n\n## What the canvas must contain\n- Lesson statement\n- Evidence and context\n- Applicability\n- Owner/action\n\n## Grounding inputs\n- Post-mortems\n- EOWR\n- Operational events\n- Engineer validation\n\n## Primary user flow\n1. Capture\n2. Classify\n3. Validate\n4. Link to future wells\n\n## Visualization and interaction\nSearchable lesson catalogue linked to hazards, formations, rigs, designs and wells.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB DrillPlan + Halliburton Landmark WellPlan/OpenWells-style well delivery workspace**\n\nOne well spine from prognosis and basis of design through trajectory, casing/completion, risk register, daily execution evidence, end-of-well report and post-well learning.\n\n## Recommended JavaScript library stack\nwelleng concepts for trajectory/dogleg calculations, Three.js for wellpath and anticollision views, uPlot/ECharts for depth/time curves, AG Grid or TanStack Table for operational registers, PDF.js for evidence review, Mermaid for barrier/workflow diagrams.\n\n## GeaVision renderer lessons harvested\nReuse batched LineSegments for trajectories, InstancedMesh for repeated markers, one wellhead→wellbore→trajectory identity chain, marker sets by source, loaders that accept local files or governed corporate globals, and deterministic unit/depth-reference metadata.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both."
+    },
+    "reservoir-management": {
+      "Overview": "# Reservoir Management Workspace\n\n> [!note] Purpose\n> Monitor, diagnose, forecast, act, track and learn.\n\n## What the canvas must contain\n- Field/reservoir health\n- Exceptions\n- Actions and gains\n- Forecast confidence\n\n## Grounding inputs\n- Production/injection\n- Pressure and tests\n- 4D seismic\n- RMP and action tracker\n\n## Primary user flow\n1. Select scope\n2. Review exception\n3. Diagnose\n4. Approve action\n5. Track value\n\n## Visualization and interaction\nOperational cockpit with human-in-the-loop gates and evidence-backed actions.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Surveillance": "# Integrated Surveillance\n\n> [!note] Purpose\n> Combine dynamic, static and 4D evidence into a surveillance plan and exception view.\n\n## What the canvas must contain\n- Acquisition status\n- Pressure/PLT/4D coverage\n- Exceptions\n- Data gaps\n\n## Grounding inputs\n- Surveillance plan\n- PS events\n- 4D vintages\n- Well tests\n\n## Primary user flow\n1. Review plan\n2. Detect gap\n3. Interpret signal\n4. Create action\n\n## Visualization and interaction\nCalendar/map/matrix views linked to the depletion strategy.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Production": "# Production Performance\n\n> [!note] Purpose\n> Analyze oil, water, gas, uptime, deferment and constraints.\n\n## What the canvas must contain\n- Rates and potentials\n- WCT/GOR trends\n- Uptime/deferment\n- Baseline variance\n\n## Grounding inputs\n- Production data\n- Events\n- FPOT/RPOT/MPOT\n- Forecast\n\n## Primary user flow\n1. Select well/pattern\n2. Compare baseline\n3. Diagnose deviation\n4. Recommend\n\n## Visualization and interaction\nTrading-app-like time series with synchronized events, thresholds and comparison wells.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Injection & VRR": "# Injection and VRR\n\n> [!note] Purpose\n> Balance support and offtake by reservoir, polygon and pattern.\n\n## What the canvas must contain\n- Injection rates\n- VRR\n- Allocation\n- Constraints and optimization\n\n## Grounding inputs\n- Injection data\n- Production withdrawal\n- Pressure\n- Pattern definitions\n\n## Primary user flow\n1. Select pattern\n2. Review balance\n3. Test redistribution\n4. Track response\n\n## Visualization and interaction\nPattern map plus VRR trend and allocation waterfall.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Pressure": "# Pressure Evolution\n\n> [!note] Purpose\n> Understand depletion, support, connectivity and safe operating envelopes.\n\n## What the canvas must contain\n- BHP/THP and zonal pressure\n- Pressure maps\n- Interference evidence\n- Dynamic limits\n\n## Grounding inputs\n- Pressure surveys\n- Build-up data\n- Sypher/model outputs\n- Geomechanics\n\n## Primary user flow\n1. QC survey\n2. Map trend\n3. Diagnose anomaly\n4. Update limit\n\n## Visualization and interaction\nPressure map and multi-well trends with datum correction and uncertainty.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Well Tests": "# Well Test Monitoring\n\n> [!note] Purpose\n> Prioritize and validate tests, anomalies and recommended actions.\n\n## What the canvas must contain\n- Latest test vs history\n- KPI deviations\n- Risk-based priority\n- Validation status\n\n## Grounding inputs\n- Well tests\n- Lab/PVT\n- Pressure and events\n- Potential hierarchy\n\n## Primary user flow\n1. Select reservoir/well\n2. Inspect trend\n3. Review alarm\n4. Validate action\n\n## Visualization and interaction\nWellWatch pattern: well navigation → KPI snapshot → charts → alarm console → validation.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Patterns": "# Well and Pattern Review\n\n> [!note] Purpose\n> Synthesize offtake, injection, pressure, 4D and well behavior.\n\n## What the canvas must contain\n- Pattern health\n- Producer/injector roles\n- Connectivity\n- Actions and opportunities\n\n## Grounding inputs\n- Pattern definitions\n- Rates and pressure\n- 4D signals\n- Historical actions\n\n## Primary user flow\n1. Review pattern\n2. Benchmark peers\n3. Diagnose root cause\n4. Agree actions\n\n## Visualization and interaction\nWellNexus review canvas with map, benchmark plots and action register.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Forecast": "# Forecast and Potential\n\n> [!note] Purpose\n> Maintain DCA/RoFo and potential hierarchy with explicit assumptions.\n\n## What the canvas must contain\n- DCA fits\n- RoFo scenarios\n- MPOT/RPOT/FPOT\n- Uncertainty\n\n## Grounding inputs\n- Production history\n- Interventions\n- Constraints\n- Simulation\n\n## Primary user flow\n1. Fit decline\n2. Review assumptions\n3. Generate scenario\n4. Approve forecast\n\n## Visualization and interaction\nForecast fan chart, decline diagnostics and assumptions ledger.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Opportunities": "# Opportunity Screening\n\n> [!note] Purpose\n> Screen, mature and rank rig-based and rigless opportunities.\n\n## What the canvas must contain\n- Opportunity type\n- Technical case\n- Incremental volume/value\n- Risk and readiness\n\n## Grounding inputs\n- Surveillance exceptions\n- Well/pattern reviews\n- Static/dynamic models\n- Cost and schedule\n\n## Primary user flow\n1. Create candidate\n2. Screen\n3. Mature\n4. Rank\n5. Track realization\n\n## Visualization and interaction\nWellAion funnel with transparent criteria; final ranking remains an engineer decision.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**SLB OFM + tNavigator/INTERSECT surveillance and history-match review**\n\nException-first field→reservoir→pattern→well navigation, production/injection allocation, VRR, pressure and well-test trends, diagnostics, model-vs-actual comparison, opportunity/action tracking and closed-loop review.\n\n## Recommended JavaScript library stack\nuPlot for dense time series; ECharts for linked diagnostics; MapLibre/deck.gl for spatial surveillance; Crossfilter/Arquero for fast slicing; Arrow/Parquet-WASM for compact arrays; Cytoscape.js or Sigma.js for pattern/well relationships.\n\n## GeaVision renderer lessons harvested\nAdopt incremental loading, compact typed arrays, shared geometry, color-by attributes without rebuilding Z, Web Worker decoding, GPU-friendly buffers and explicit measured/reported/derived/scenario truth classes.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both."
+    },
+    "drilling-sequence": {
+      "Overview": "# Drilling Sequence Workspace\n\n> [!note] Purpose\n> Connect sanctioned wells, maturation, rig capacity and production milestones.\n\n## What the canvas must contain\n- Sequence baseline\n- Rig utilization\n- Moved/added/removed wells\n- RFD/RFSU exposure\n\n## Grounding inputs\n- FID future wells\n- SOR/BOD maturity\n- Rig programs\n- Schedule revisions\n\n## Primary user flow\n1. Choose revision\n2. Review constraints\n3. Compare changes\n4. Publish baseline\n\n## Visualization and interaction\nRig-by-time decision cockpit with revision provenance.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**Primavera P6 planning discipline + rig-sequence views used in enterprise drilling portfolios**\n\nBaseline and scenario schedules, rig swimlanes, dependencies, critical path, move/contract windows, readiness gates, schedule confidence, revision diff and downstream production impact.\n\n## Recommended JavaScript library stack\nvis-timeline or DHTMLX Gantt for schedule interaction; d3-dag for dependency layout; Luxon for time zones/calendars; Immer for immutable scenario revisions; ECharts for utilization and confidence; Yjs only if later collaborative editing is required.\n\n## GeaVision renderer lessons harvested\nApply the same lightweight principle: keep normalized metadata separate from heavy arrays, render only the visible window, reuse objects, avoid DOM-per-activity at portfolio scale and preserve every approved baseline rather than overwrite.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Sequence": "# Rig-by-Time Sequence\n\n> [!note] Purpose\n> See which rig drills which well and why each slot exists.\n\n## What the canvas must contain\n- Rig swimlanes\n- Well bars and types\n- Phase bands\n- Dependencies\n\n## Grounding inputs\n- Schedule table\n- Well duration\n- Rig capability\n- Project phase\n\n## Primary user flow\n1. Pan/zoom\n2. Filter\n3. Inspect activity\n4. Create scenario\n\n## Visualization and interaction\nGantt/swimlane canvas with 24-month and five-year presets.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**Primavera P6 planning discipline + rig-sequence views used in enterprise drilling portfolios**\n\nBaseline and scenario schedules, rig swimlanes, dependencies, critical path, move/contract windows, readiness gates, schedule confidence, revision diff and downstream production impact.\n\n## Recommended JavaScript library stack\nvis-timeline or DHTMLX Gantt for schedule interaction; d3-dag for dependency layout; Luxon for time zones/calendars; Immer for immutable scenario revisions; ECharts for utilization and confidence; Yjs only if later collaborative editing is required.\n\n## GeaVision renderer lessons harvested\nApply the same lightweight principle: keep normalized metadata separate from heavy arrays, render only the visible window, reuse objects, avoid DOM-per-activity at portfolio scale and preserve every approved baseline rather than overwrite.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Rigs": "# Rig Programs\n\n> [!note] Purpose\n> Manage rig capability, contract windows, moves, certification and utilization.\n\n## What the canvas must contain\n- Rig capability\n- Availability windows\n- Moves and suspensions\n- Utilization\n\n## Grounding inputs\n- Rig contract/program\n- Historical performance\n- Well requirements\n- Marine constraints\n\n## Primary user flow\n1. Select rig\n2. Review window\n3. Match well\n4. Resolve conflict\n\n## Visualization and interaction\nResource timeline and compatibility matrix.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**Primavera P6 planning discipline + rig-sequence views used in enterprise drilling portfolios**\n\nBaseline and scenario schedules, rig swimlanes, dependencies, critical path, move/contract windows, readiness gates, schedule confidence, revision diff and downstream production impact.\n\n## Recommended JavaScript library stack\nvis-timeline or DHTMLX Gantt for schedule interaction; d3-dag for dependency layout; Luxon for time zones/calendars; Immer for immutable scenario revisions; ECharts for utilization and confidence; Yjs only if later collaborative editing is required.\n\n## GeaVision renderer lessons harvested\nApply the same lightweight principle: keep normalized metadata separate from heavy arrays, render only the visible window, reuse objects, avoid DOM-per-activity at portfolio scale and preserve every approved baseline rather than overwrite.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Milestones": "# Project Milestones\n\n> [!note] Purpose\n> Track RFD, RFSU, first oil and project dependencies.\n\n## What the canvas must contain\n- Milestone register\n- Critical dependencies\n- Schedule confidence\n- Production impact\n\n## Grounding inputs\n- Project plans\n- Well sequence\n- Facility readiness\n- Production profiles\n\n## Primary user flow\n1. Inspect milestone\n2. Trace dependencies\n3. Run impact\n4. Escalate\n\n## Visualization and interaction\nMilestone overlay on sequence with risk and downstream impact.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**Primavera P6 planning discipline + rig-sequence views used in enterprise drilling portfolios**\n\nBaseline and scenario schedules, rig swimlanes, dependencies, critical path, move/contract windows, readiness gates, schedule confidence, revision diff and downstream production impact.\n\n## Recommended JavaScript library stack\nvis-timeline or DHTMLX Gantt for schedule interaction; d3-dag for dependency layout; Luxon for time zones/calendars; Immer for immutable scenario revisions; ECharts for utilization and confidence; Yjs only if later collaborative editing is required.\n\n## GeaVision renderer lessons harvested\nApply the same lightweight principle: keep normalized metadata separate from heavy arrays, render only the visible window, reuse objects, avoid DOM-per-activity at portfolio scale and preserve every approved baseline rather than overwrite.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both.",
+      "Revisions": "# Schedule Revision Control\n\n> [!note] Purpose\n> Explain every schedule change between baselines.\n\n## What the canvas must contain\n- Added/removed/moved wells\n- Date and duration deltas\n- Driver and approver\n- Production/value impact\n\n## Grounding inputs\n- Revision snapshots\n- Change requests\n- Constraint updates\n- Decision records\n\n## Primary user flow\n1. Select A/B\n2. Run diff\n3. Validate driver\n4. Approve new baseline\n\n## Visualization and interaction\nGit-like diff for schedules: no silent overwrite, every change traceable.\n\n## Shared scientific rules\n- Preserve truth class: **measured · reported · interpreted · derived · forecast · scenario**\n- Use **TVD / TVDSS / MD** explicitly; never mix depth references silently\n- Changes create a version or scenario; approved evidence is never overwritten\n- Every result links upstream evidence to downstream calculation, decision and approval\n\n## Exit criteria\n- Data lineage visible\n- Empty, loading, error and partial-data states defined\n- Desktop, tablet and mobile behavior specified\n- Export target mapped to [[Report]] · [[Document]] · [[Presentation]]\n\n## Industry benchmark to imitate\n**Primavera P6 planning discipline + rig-sequence views used in enterprise drilling portfolios**\n\nBaseline and scenario schedules, rig swimlanes, dependencies, critical path, move/contract windows, readiness gates, schedule confidence, revision diff and downstream production impact.\n\n## Recommended JavaScript library stack\nvis-timeline or DHTMLX Gantt for schedule interaction; d3-dag for dependency layout; Luxon for time zones/calendars; Immer for immutable scenario revisions; ECharts for utilization and confidence; Yjs only if later collaborative editing is required.\n\n## GeaVision renderer lessons harvested\nApply the same lightweight principle: keep normalized metadata separate from heavy arrays, render only the visible window, reuse objects, avoid DOM-per-activity at portfolio scale and preserve every approved baseline rather than overwrite.\n\n## Digital Twin Brain standard\n- **Knowledge extraction:** Graphify/GraphRAG-style entity, relation, claim and provenance extraction into ASKB Markdown.\n- **Knowledge experience:** Obsidian-style local graph, backlinks, wikilinks, timeline and version-aware notes; Sigma.js/Cytoscape.js for WebGL/Canvas scale rather than SVG-only rendering.\n- **Data contextualization:** Cognite Data Fusion-like pattern: governed source data + ontology/context graph + assets/events/files/time series + lineage, without copying the vendor UI.\n- **Retrieval:** hybrid keyword + vector + graph neighborhood retrieval; every answer returns evidence, truth class, valid time and source revision.\n- **Contract:** Knowledge + Data are one Digital Twin Brain. Data remains system-of-record truth; Markdown is the human-readable semantic memory; the graph links both."
+    }
+  }
+}

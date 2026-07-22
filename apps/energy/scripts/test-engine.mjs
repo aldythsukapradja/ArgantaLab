@@ -243,6 +243,38 @@ function pearson(xs, ys) { const n = xs.length, mx = xs.reduce((a, b) => a + b, 
   }
   // econ defaults parity
   check('PARITY · ECON_DEFAULTS Fable-set', E_econ.ECON_DEFAULTS.oilPrice === 70 && E_econ.ECON_DEFAULTS.opexVar === 14 && E_econ.ECON_DEFAULTS.capex === 1200e6 && E_econ.ECON_DEFAULTS.disc === 0.10 && E_econ.ECON_DEFAULTS.aband === 150e6 && E_econ.ECON_DEFAULTS.taxRate === 0.78);
+
+  // ── Exploration engine (explore.ts) — GCoS / risked resource / EMV ──────────────
+  {
+    const E_exp = await import('../src/engine/explore.ts');
+    // GCoS = product of chance factors, clamped [0,1]
+    const p = E_exp.gcos([{ p: 0.9 }, { p: 0.8 }, { p: 0.7 }, { p: 0.6 }, { p: 0.5 }]);
+    check('PARITY · GCoS = Π(factors)', approx(p, 0.9 * 0.8 * 0.7 * 0.6 * 0.5, 1e-9), `POS=${p.toFixed(4)}`);
+    check('PARITY · GCoS clamps out-of-range', E_exp.gcos([{ p: 1.5 }, { p: -0.2 }]) === 0);
+    check('PARITY · GCoS has 5 elements', E_exp.GCOS_ELEMENTS.length === 5);
+    // EMV two-outcome tree: EMV = POS·NPV − (1−POS)·dry
+    const e = E_exp.emv({ pos: 0.3, npvSuccess: 500e6, dryHoleCost: 80e6 });
+    check('PARITY · EMV formula', approx(e, 0.3 * 500e6 - 0.7 * 80e6, 1), `EMV=$${(e/1e6).toFixed(1)}MM`);
+    check('PARITY · EMV drill/no-drill sign', E_exp.isDrillWorthy({ pos: 0.5, npvSuccess: 300e6, dryHoleCost: 50e6 }) && !E_exp.isDrillWorthy({ pos: 0.05, npvSuccess: 300e6, dryHoleCost: 50e6 }));
+    // risked resource: seeded ⇒ reproducible; P90 ≤ P50 ≤ P10; risked = pos·mean
+    const mc = {
+      grv: { key: 'grv', label: 'GRV', dist: 'pert', min: 2.0e8, mode: 3.0e8, max: 4.5e8 },
+      ntg: { key: 'ntg', label: 'NTG', dist: 'pert', min: 0.7, mode: 0.9, max: 0.95 },
+      phi: { key: 'phi', label: 'PHI', dist: 'pert', min: 0.18, mode: 0.225, max: 0.26 },
+      sw:  { key: 'sw',  label: 'SW',  dist: 'pert', min: 0.15, mode: 0.2, max: 0.3 },
+      rf:  { key: 'rf',  label: 'RF',  dist: 'pert', min: 0.35, mode: 0.5, max: 0.6 },
+      bo: 1.47,
+    };
+    const r1 = E_exp.riskedResource(mc, 0.4, 5000, 123);
+    const r2 = E_exp.riskedResource(mc, 0.4, 5000, 123);
+    check('PARITY · riskedResource reproducible', r1.recoverable.p50 === r2.recoverable.p50);
+    check('PARITY · P90 ≤ P50 ≤ P10 (oil conv.)', r1.recoverable.p90 <= r1.recoverable.p50 && r1.recoverable.p50 <= r1.recoverable.p10);
+    check('PARITY · recoverable < in-place', r1.recoverable.mean < r1.inPlace.mean);
+    check('PARITY · riskedMean = pos·meanSuccess', approx(r1.riskedMean, 0.4 * r1.recoverable.mean, 1e-6));
+    // portfolio ranking by EMV desc
+    const ranked = E_exp.rankProspects([{ id: 'a', name: 'A', pos: 0.2, riskedMean: 1, emv: -10 }, { id: 'b', name: 'B', pos: 0.5, riskedMean: 2, emv: 40 }]);
+    check('PARITY · rankProspects EMV desc', ranked[0].id === 'b');
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -1,0 +1,2112 @@
+{
+  "DEPARTMENTS": [
+    {
+      "id": "all",
+      "name": "All Documents",
+      "icon": "database",
+      "c": "#0FB5A6"
+    },
+    {
+      "id": "corporate",
+      "name": "Corporate · North Star",
+      "icon": "star",
+      "c": "#0a8a7f"
+    },
+    {
+      "id": "exploration",
+      "name": "Exploration",
+      "icon": "compass",
+      "c": "#22d3ee"
+    },
+    {
+      "id": "field-development",
+      "name": "Field Development",
+      "icon": "layers",
+      "c": "#0FB5A6"
+    },
+    {
+      "id": "well-delivery",
+      "name": "Well Delivery",
+      "icon": "drill",
+      "c": "#f59e0b"
+    },
+    {
+      "id": "reservoir-management",
+      "name": "Reservoir Management",
+      "icon": "gauge",
+      "c": "#7c3aed"
+    },
+    {
+      "id": "drilling-sequence",
+      "name": "Drilling Sequence",
+      "icon": "calendar-clock",
+      "c": "#e11d74"
+    }
+  ],
+  "FOLDERS": {
+    "all": [
+      "Corporate Scorecard",
+      "Exploration",
+      "Field Development",
+      "Well Delivery",
+      "Reservoir Management",
+      "Drilling Sequence"
+    ],
+    "corporate": [
+      "Corporate Scorecard",
+      "Reserves & Resources",
+      "Subsurface KPI",
+      "Governance"
+    ],
+    "exploration": [
+      "Prospect Evaluations",
+      "Play & Basin",
+      "Post-Well",
+      "Reviews"
+    ],
+    "field-development": [
+      "FDP",
+      "Concept Select",
+      "Reserves & Volumetrics",
+      "Economics"
+    ],
+    "well-delivery": [
+      "Well Plans",
+      "Daily Drilling",
+      "Final Well Reports",
+      "Post-Mortems"
+    ],
+    "reservoir-management": [
+      "Daily Production",
+      "Surveillance",
+      "W&P Reviews",
+      "Forecasts"
+    ],
+    "drilling-sequence": [
+      "Schedule Revisions",
+      "Rig Programs",
+      "Sequence Changes",
+      "Milestones"
+    ]
+  },
+  "PR_META": {
+    "P1": [
+      "#e11d74",
+      "extract first"
+    ],
+    "P2": [
+      "#f59e0b",
+      "extract next"
+    ],
+    "P3": [
+      "#64748b",
+      "later"
+    ]
+  },
+  "CLS_META": {
+    "standard": [
+      "book-marked",
+      "#0FB5A6",
+      "Knowledge Base"
+    ],
+    "generated": [
+      "sparkles",
+      "#7c3aed",
+      "Cosmo Generated"
+    ]
+  },
+  "FILES": [
+    {
+      "name": "Reservoir Management Guideline.md",
+      "cls": "standard",
+      "theme": "Governance",
+      "dept": "corporate",
+      "by": "RMO Cosmo",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1w ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: North Star\ntheme: Governance\nowner: RMO Cosmo\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Reservoir Management Guideline\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> The governing RM process, gates and minimum-requirement standards across the field lifecycle.\n\n## What it contains\n- RM process map & RACI\n- Decision gates & deliverables per stage\n- Data & sovereignty (C1) policy\n- Minimum documentation standard\n\n## Source data\n- NOC RM guideline\n- Corporate governance\n\n## Extract for detail later\n- [ ] Gate criteria per stage\n- [ ] Mandatory deliverable list\n- [ ] Approval authorities\n\n## Linked\n[[Reserves & Resources Statement]] · [[Reservoir Management Plan]]",
+      "title": "Reservoir Management Guideline",
+      "stageLabel": "North Star"
+    },
+    {
+      "name": "Reserves & Resources Statement.md",
+      "cls": "standard",
+      "theme": "Reserves",
+      "dept": "corporate",
+      "by": "RMO Cosmo",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: North Star\ntheme: Reserves\nowner: RMO Cosmo\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Reserves & Resources Statement\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Annual PRMS 1P/2P/3P reserves, contingent & prospective resources with reconciliation.\n\n## What it contains\n- 1P/2P/3P by reservoir\n- Contingent & prospective resources\n- Year-on-year reconciliation\n- Reserves replacement ratio\n\n## Source data\n- Volumetrics\n- Dynamic simulation\n- `BRIDGE_Reservoir`\n\n## Extract for detail later\n- [ ] Reserves by reservoir & category\n- [ ] Reconciliation drivers\n- [ ] SPE-PRMS classification basis\n\n## Linked\n[[Reserves & Volumetrics (PRMS)]] · [[Reservoir Management Guideline]]",
+      "title": "Reserves & Resources Statement",
+      "stageLabel": "North Star"
+    },
+    {
+      "name": "Corporate Scorecard.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "corporate",
+      "by": "RMO Cosmo",
+      "fmt": "Dashboard",
+      "pr": "P2",
+      "upd": "1h ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: North Star\ntheme: Executive KPI\nowner: RMO Cosmo\nformat: Dashboard\nextract_priority: P2\nstatus: indexed\n---\n\n# Corporate Scorecard\n\n> [!note] Cosmo-generated Dashboard · output artifact\n> Auto-generated balanced scorecard — production, delivery, HSE, reserves and value vs plan.\n\n## What it contains\n- Field production vs plan\n- Delivery & NPT metrics\n- HSE record\n- Reserves & value KPIs\n\n## Source data\n- `PRISMO_PRODUCTION_DATA`\n- `BI_NOC_VRR`\n- Delivery tracker\n\n## Built from\n- [ ] Monthly KPI targets & actuals\n- [ ] KPI formula per metric\n- [ ] Traffic-light thresholds\n\n## Linked\n[[Subsurface KPI]] · [[Reserves & Resources Statement]]",
+      "title": "Corporate Scorecard",
+      "stageLabel": "North Star"
+    },
+    {
+      "name": "Subsurface KPI.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "corporate",
+      "by": "Cosmonaut",
+      "fmt": "Dashboard",
+      "pr": "P2",
+      "upd": "12h ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: North Star\ntheme: Executive KPI\nowner: Cosmonaut\nformat: Dashboard\nextract_priority: P2\nstatus: indexed\n---\n\n# Subsurface KPI\n\n> [!note] Cosmo-generated Dashboard · output artifact\n> Roll-up of all five lifecycle workstreams into one subsurface-team health view.\n\n## What it contains\n- Per-workstream health\n- Open actions & decisions\n- Cycle-time metrics\n\n## Source data\n- All five workstreams\n- Agent telemetry\n\n## Built from\n- [ ] KPI per workstream\n- [ ] Roll-up weighting\n- [ ] Action register\n\n## Linked\n[[2G&R Synthesis]] · [[Corporate Scorecard]]",
+      "title": "Subsurface KPI",
+      "stageLabel": "North Star"
+    },
+    {
+      "name": "2G&R Synthesis.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "corporate",
+      "by": "Cosmonaut",
+      "fmt": "Presentation",
+      "pr": "P3",
+      "upd": "12h ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: North Star\ntheme: Executive KPI\nowner: Cosmonaut\nformat: Presentation\nextract_priority: P3\nstatus: indexed\n---\n\n# 2G&R Synthesis\n\n> [!note] Cosmo-generated Presentation · output artifact\n> Cross-discipline geology–geophysics–reservoir synthesis across the lifecycle.\n\n## What it contains\n- Integrated subsurface narrative\n- Key uncertainties & decisions\n- Portfolio look-ahead\n\n## Source data\n- Every lifecycle stage\n- Knowledge graph\n\n## Built from\n- [ ] Discipline hand-offs\n- [ ] Open decisions\n- [ ] Cadence & owners\n\n## Linked\n[[Subsurface KPI]]",
+      "title": "2G&R Synthesis",
+      "stageLabel": "North Star"
+    },
+    {
+      "name": "Exploration Well Report.md",
+      "cls": "standard",
+      "theme": "E&A Well Reports",
+      "dept": "exploration",
+      "by": "GeaVision",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Exploration\ntheme: E&A Well Reports\nowner: GeaVision\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Exploration Well Report\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Post-well subsurface report for an exploration well — objectives, results and calibration.\n\n## What it contains\n- Pre-drill prognosis vs actual\n- Formations, net pay, fluids\n- Log & test results\n- Discovery/dry-hole outcome\n\n## Source data\n- Well logs\n- DST / MDT\n- `MASTER_WELL_LOGS`\n\n## Extract for detail later\n- [ ] Prognosis-vs-actual deltas\n- [ ] Net pay & fluid contacts\n- [ ] Calibration factors\n\n## Linked\n[[Appraisal Well Report]] · [[Prospect Evaluation]]",
+      "title": "Exploration Well Report",
+      "stageLabel": "Exploration"
+    },
+    {
+      "name": "Appraisal Well Report.md",
+      "cls": "standard",
+      "theme": "E&A Well Reports",
+      "dept": "exploration",
+      "by": "GeaVision",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "4d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Exploration\ntheme: E&A Well Reports\nowner: GeaVision\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Appraisal Well Report\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Appraisal well results that reduce volumetric & connectivity uncertainty.\n\n## What it contains\n- Reservoir extent & quality\n- Fluid contacts confirmed\n- Connectivity / compartmentalisation\n- Updated volumetrics\n\n## Source data\n- Well logs\n- Cores\n- Pressure data\n\n## Extract for detail later\n- [ ] Contact depths\n- [ ] Property ranges\n- [ ] Connectivity evidence\n\n## Linked\n[[Exploration Well Report]] · [[Reserves & Volumetrics (PRMS)]]",
+      "title": "Appraisal Well Report",
+      "stageLabel": "Exploration"
+    },
+    {
+      "name": "Prospect Evaluation.md",
+      "cls": "standard",
+      "theme": "Prospect Maturation",
+      "dept": "exploration",
+      "by": "GeaVision",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Exploration\ntheme: Prospect Maturation\nowner: GeaVision\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Prospect Evaluation\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Per-prospect volumetrics and geological chance of success — the drill case.\n\n## What it contains\n- GRV, N/G, φ, Sw, FVF\n- Deterministic & Monte-Carlo volumes\n- 5-factor GCoS\n- Trap & seal evidence\n\n## Source data\n- Depth maps\n- Analogues\n- PVT analogues\n\n## Extract for detail later\n- [ ] Volumetric distributions\n- [ ] GCoS factor scores\n- [ ] Risk segments\n\n## Linked\n[[Play & Basin Assessment]] · [[Appraisal Well Report]]",
+      "title": "Prospect Evaluation",
+      "stageLabel": "Exploration"
+    },
+    {
+      "name": "Play & Basin Assessment.md",
+      "cls": "standard",
+      "theme": "Prospect Maturation",
+      "dept": "exploration",
+      "by": "GeaGuard",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "5d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Exploration\ntheme: Prospect Maturation\nowner: GeaGuard\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Play & Basin Assessment\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Basin-scale play fairway — source, reservoir, seal, trap and migration.\n\n## What it contains\n- Play fairway maps\n- Petroleum-system elements\n- Common risk segments\n- Lead inventory\n\n## Source data\n- Regional seismic\n- Well penetrations\n- Geochemistry\n\n## Extract for detail later\n- [ ] Fairway polygons\n- [ ] SRS summary\n- [ ] Basin risk map\n\n## Linked\n[[Seismic Interpretation]] · [[Prospect Evaluation]]",
+      "title": "Play & Basin Assessment",
+      "stageLabel": "Exploration"
+    },
+    {
+      "name": "Seismic Interpretation.md",
+      "cls": "standard",
+      "theme": "Geophysics",
+      "dept": "exploration",
+      "by": "GeaGuard",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "6d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Exploration\ntheme: Geophysics\nowner: GeaGuard\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Seismic Interpretation\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Structural & stratigraphic interpretation, horizons, faults, depth conversion and attributes.\n\n## What it contains\n- Interpreted horizons & faults\n- Velocity model / depth conversion\n- QI attributes\n- 4D where available\n\n## Source data\n- 3D/4D seismic\n- Well ties\n- `WELLNOVA_4DSEISMIC`\n\n## Extract for detail later\n- [ ] Horizon & fault polygons\n- [ ] Velocity basis\n- [ ] Attribute calibration\n\n## Linked\n[[Play & Basin Assessment]] · [[Static Geological Model]]",
+      "title": "Seismic Interpretation",
+      "stageLabel": "Exploration"
+    },
+    {
+      "name": "Exploration Portfolio Review.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "exploration",
+      "by": "GeaVision",
+      "fmt": "Presentation",
+      "pr": "P3",
+      "upd": "1w ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Exploration\ntheme: Executive KPI\nowner: GeaVision\nformat: Presentation\nextract_priority: P3\nstatus: indexed\n---\n\n# Exploration Portfolio Review\n\n> [!note] Cosmo-generated Presentation · output artifact\n> Auto-generated ranking of leads/prospects — volumes, GCoS and drill-ready inventory.\n\n## What it contains\n- Prospect ranking\n- Risk-reward matrix\n- Drill-ready count\n\n## Source data\n- Prospect Evaluation set\n\n## Built from\n- [ ] Ranking weights\n- [ ] Portfolio metrics\n\n## Linked\n[[Prospect Evaluation]]",
+      "title": "Exploration Portfolio Review",
+      "stageLabel": "Exploration"
+    },
+    {
+      "name": "Field Development Plan (FDP).md",
+      "cls": "standard",
+      "theme": "Development Planning",
+      "dept": "field-development",
+      "by": "WellAion",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "2h ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Field Development\ntheme: Development Planning\nowner: WellAion\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Field Development Plan (FDP)\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Master development plan — subsurface, wells, facilities, economics and schedule.\n\n## What it contains\n- Development concept & wells\n- Production profiles\n- Facilities & export\n- CAPEX/OPEX & economics\n- Risk register\n\n## Source data\n- Static & dynamic models\n- Well & reservoir data\n- Economics\n\n## Extract for detail later\n- [ ] Well count, type & phasing\n- [ ] Plateau & profiles\n- [ ] Concept & facility basis\n\n## Linked\n[[FID Future Wells Register]] · [[Reserves & Volumetrics (PRMS)]]",
+      "title": "Field Development Plan (FDP)",
+      "stageLabel": "Field Development"
+    },
+    {
+      "name": "FID Future Wells Register.md",
+      "cls": "standard",
+      "theme": "Development Planning",
+      "dept": "field-development",
+      "by": "WellAion",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Field Development\ntheme: Development Planning\nowner: WellAion\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# FID Future Wells Register\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> The sanctioned (FID) future-well inventory — targets, type and expected outcomes.\n\n## What it contains\n- FID well list & targets\n- Well type (OP/WI/GI)\n- Expected rates & reserves\n- Phase / batch assignment\n\n## Source data\n- FDP\n- `BI_NOC_Well_Predrill_Master`\n- Dynamic model\n\n## Extract for detail later\n- [ ] Well targets & drains\n- [ ] Expected deliverability\n- [ ] FID status per well\n\n## Linked\n[[Field Development Plan (FDP)]] · [[Well Proposal & SOR]]",
+      "title": "FID Future Wells Register",
+      "stageLabel": "Field Development"
+    },
+    {
+      "name": "Static Geological Model.md",
+      "cls": "standard",
+      "theme": "Subsurface Modelling",
+      "dept": "field-development",
+      "by": "GeaVision",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Field Development\ntheme: Subsurface Modelling\nowner: GeaVision\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Static Geological Model\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> 3D structural, facies and property model — the STOIIP framework.\n\n## What it contains\n- Structural framework & faults\n- Facies & depositional model\n- φ / k / Sw cubes\n- Contacts (OWC/GOC)\n\n## Source data\n- `BI_NOC_WB_Markercharts`\n- Seismic surfaces\n- Core & logs\n\n## Extract for detail later\n- [ ] Zonation & markers\n- [ ] Property method\n- [ ] Contacts & GRV basis\n\n## Linked\n[[Petrophysical Evaluation]] · [[Reserves & Volumetrics (PRMS)]]",
+      "title": "Static Geological Model",
+      "stageLabel": "Field Development"
+    },
+    {
+      "name": "Petrophysical Evaluation.md",
+      "cls": "standard",
+      "theme": "Subsurface Modelling",
+      "dept": "field-development",
+      "by": "GeaVision",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Field Development\ntheme: Subsurface Modelling\nowner: GeaVision\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Petrophysical Evaluation\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Log-based rock & fluid properties — PHIT/PHIE, Vsh, Sw, NTG, saturation-height.\n\n## What it contains\n- Deterministic log interpretation\n- φ / Sw / NTG / Vsh\n- Saturation-height function\n- Core-log calibration (CCAL/SCAL)\n\n## Source data\n- `MASTER_WELL_LOGS`\n- `BI_NOC_WB_CCAL`\n- `BI_NOC_WB_WFT`\n\n## Extract for detail later\n- [ ] Cutoffs & parameters\n- [ ] Sw-height function\n- [ ] Calibration points\n\n## Linked\n[[Static Geological Model]]",
+      "title": "Petrophysical Evaluation",
+      "stageLabel": "Field Development"
+    },
+    {
+      "name": "Dynamic Simulation & History Match.md",
+      "cls": "standard",
+      "theme": "Subsurface Modelling",
+      "dept": "field-development",
+      "by": "WellAion",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Field Development\ntheme: Subsurface Modelling\nowner: WellAion\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Dynamic Simulation & History Match\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Flow model — history match and development-scenario forecasts.\n\n## What it contains\n- Grid & upscaling\n- Rel-perm & PVT regions\n- History-match quality\n- Scenario forecasts\n\n## Source data\n- Static model\n- Production/injection history\n- PVT & SCAL\n\n## Extract for detail later\n- [ ] HM quality\n- [ ] Rel-perm/PVT basis\n- [ ] Scenario definitions\n\n## Linked\n[[Reserves & Volumetrics (PRMS)]] · [[Rolling Forecast & Potential]]",
+      "title": "Dynamic Simulation & History Match",
+      "stageLabel": "Field Development"
+    },
+    {
+      "name": "Reserves & Volumetrics (PRMS).md",
+      "cls": "standard",
+      "theme": "Reserves",
+      "dept": "field-development",
+      "by": "WellAion",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Field Development\ntheme: Reserves\nowner: WellAion\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Reserves & Volumetrics (PRMS)\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> STOIIP/GIIP, recovery and P90/P50/P10 reserves per reservoir.\n\n## What it contains\n- STOIIP/GIIP by reservoir\n- Recovery factors\n- 1P/2P/3P\n- Uncertainty & tornado\n\n## Source data\n- Static model\n- Dynamic sim\n- Analogue RFs\n\n## Extract for detail later\n- [ ] Volumetric inputs\n- [ ] RF basis\n- [ ] Uncertainty ranges\n\n## Linked\n[[Static Geological Model]] · [[Reserves & Resources Statement]]",
+      "title": "Reserves & Volumetrics (PRMS)",
+      "stageLabel": "Field Development"
+    },
+    {
+      "name": "Concept Select & Economics.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "field-development",
+      "by": "GeaVision",
+      "fmt": "Presentation",
+      "pr": "P3",
+      "upd": "1d ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Field Development\ntheme: Executive KPI\nowner: GeaVision\nformat: Presentation\nextract_priority: P3\nstatus: indexed\n---\n\n# Concept Select & Economics\n\n> [!note] Cosmo-generated Presentation · output artifact\n> Auto-generated concept screening, selection and project economics for FID.\n\n## What it contains\n- Options & trade-offs\n- Selected concept\n- NPV/IRR/CAPEX\n- Sensitivities\n\n## Source data\n- FDP\n- Cost estimates\n\n## Built from\n- [ ] Option matrix\n- [ ] Economic inputs\n\n## Linked\n[[Field Development Plan (FDP)]]",
+      "title": "Concept Select & Economics",
+      "stageLabel": "Field Development"
+    },
+    {
+      "name": "Statement of Requirements (SOR).md",
+      "cls": "standard",
+      "theme": "Well Maturation",
+      "dept": "well-delivery",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Well Delivery\ntheme: Well Maturation\nowner: WellNova\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Statement of Requirements (SOR)\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Subsurface SOR / well-maturation — objectives, targets and success criteria for a well.\n\n## What it contains\n- Well objectives & rationale\n- Geological targets & drains\n- Data-acquisition requirements\n- Maturation stage (SOR0→2 / BOD)\n\n## Source data\n- FDP\n- FID Future Wells\n- Offset wells\n\n## Extract for detail later\n- [ ] Targets & TD\n- [ ] Data-acquisition matrix\n- [ ] Maturation gate status\n\n## Linked\n[[Well Proposal & SOR]] · [[Drilling Program]]",
+      "title": "Statement of Requirements (SOR)",
+      "stageLabel": "Well Delivery"
+    },
+    {
+      "name": "Well Proposal & SOR.md",
+      "cls": "standard",
+      "theme": "Well Maturation",
+      "dept": "well-delivery",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "8h ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Well Delivery\ntheme: Well Maturation\nowner: WellNova\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Drilling Proposal (Well Proposal)\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> The drilling proposal — trajectory, casing, mud, targets and AFE for a proposed well.\n\n## What it contains\n- Objectives & targets\n- Trajectory & anti-collision\n- Casing & mud program\n- Completion intent\n- AFE & days\n\n## Source data\n- `BI_NOC_WB_Trajectories_Map`\n- Offset wells\n- Pore-pressure\n\n## Extract for detail later\n- [ ] Target & TD\n- [ ] Casing/mud scheme\n- [ ] AFE & days estimate\n\n## Linked\n[[Statement of Requirements (SOR)]] · [[Drilling Program]]",
+      "title": "Drilling Proposal (Well Proposal)",
+      "stageLabel": "Well Delivery"
+    },
+    {
+      "name": "Basis of Design (BOD).md",
+      "cls": "standard",
+      "theme": "Well Engineering",
+      "dept": "well-delivery",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Well Delivery\ntheme: Well Engineering\nowner: WellNova\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Basis of Design (BOD)\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Engineering basis of design — the technical envelope for well construction.\n\n## What it contains\n- Design premises & envelopes\n- Pressure / temperature basis\n- Casing & cement design\n- Barriers & integrity\n\n## Source data\n- SOR\n- Offset analysis\n- Pore-pressure\n\n## Extract for detail later\n- [ ] Design envelopes\n- [ ] Barrier philosophy\n- [ ] Casing scheme\n\n## Linked\n[[Well Proposal & SOR]] · [[Drilling Program]]",
+      "title": "Basis of Design (BOD)",
+      "stageLabel": "Well Delivery"
+    },
+    {
+      "name": "Drilling Program.md",
+      "cls": "standard",
+      "theme": "Well Engineering",
+      "dept": "well-delivery",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "1d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Well Delivery\ntheme: Well Engineering\nowner: WellNova\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Drilling Program\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Detailed program to execute the well — sections, BHA, mud, cement and procedures.\n\n## What it contains\n- Section-by-section plan\n- BHA & bit program\n- Mud & cement program\n- Risk & contingency\n\n## Source data\n- BOD\n- Well proposal\n\n## Extract for detail later\n- [ ] Section objectives\n- [ ] BHA/mud scheme\n- [ ] Risk register\n\n## Linked\n[[Basis of Design (BOD)]] · [[End of Well Report (EOWR)]]",
+      "title": "Drilling Program",
+      "stageLabel": "Well Delivery"
+    },
+    {
+      "name": "Completion Program.md",
+      "cls": "standard",
+      "theme": "Well Engineering",
+      "dept": "well-delivery",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Well Delivery\ntheme: Well Engineering\nowner: WellNova\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Completion Program\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Completion & stimulation design — string, perforations, sand control and stimulation.\n\n## What it contains\n- Completion string design\n- Perforation strategy\n- Sand control\n- Stimulation (acid/frac)\n\n## Source data\n- Reservoir targets\n- Petrophysics\n\n## Extract for detail later\n- [ ] Completion type\n- [ ] Perf intervals\n- [ ] Stim design\n\n## Linked\n[[End of Well Report (EOWR)]]",
+      "title": "Completion Program",
+      "stageLabel": "Well Delivery"
+    },
+    {
+      "name": "End of Well Report (EOWR).md",
+      "cls": "standard",
+      "theme": "Well Engineering",
+      "dept": "well-delivery",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "3d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Well Delivery\ntheme: Well Engineering\nowner: WellNova\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# End of Well Report (EOWR)\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> End-of-Well summary — planned vs actual, formations, issues, cost and as-built.\n\n## What it contains\n- Well summary & timeline\n- Formations & tops\n- Issues & NPT\n- Final cost & as-built\n\n## Source data\n- Daily drilling\n- Completion report\n- `BI_NOC_WB_Master`\n\n## Extract for detail later\n- [ ] Planned-vs-actual\n- [ ] Formation tops\n- [ ] Final cost & days\n\n## Linked\n[[Drilling Program]] · [[Well Post-Mortem]]",
+      "title": "End of Well Report (EOWR)",
+      "stageLabel": "Well Delivery"
+    },
+    {
+      "name": "Daily Drilling Report.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "well-delivery",
+      "by": "WellNova",
+      "fmt": "Report",
+      "pr": "P3",
+      "upd": "4h ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Well Delivery\ntheme: Executive KPI\nowner: WellNova\nformat: Report\nextract_priority: P3\nstatus: indexed\n---\n\n# Daily Drilling Report\n\n> [!note] Cosmo-generated Report · output artifact\n> Auto-generated 24-hr operations — depth, ROP, mud, NPT and cost vs AFE.\n\n## What it contains\n- Depth & ROP\n- Mud & bit\n- NPT & cost\n\n## Source data\n- Rig daily feeds\n\n## Built from\n- [ ] Days-vs-depth\n- [ ] NPT breakdown\n- [ ] Cost vs AFE\n\n## Linked\n[[End of Well Report (EOWR)]]",
+      "title": "Daily Drilling Report",
+      "stageLabel": "Well Delivery"
+    },
+    {
+      "name": "Well Post-Mortem.md",
+      "cls": "standard",
+      "theme": "Post-Drill Review",
+      "dept": "reservoir-management",
+      "by": "Prismo",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "3d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Reservoir Management\ntheme: Post-Drill Review\nowner: Prismo\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Well Post-Mortem\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Post-drill well-data review — predicted vs actual deliverability, feeding reservoir understanding.\n\n## What it contains\n- Six-discipline comparison\n- Deliverability vs prognosis\n- Reservoir property update\n- Lessons & model feedback\n\n## Source data\n- EOWR\n- Petrophysics\n- Production test\n- `WELLNOVA_WELLHEAD_SCORE_OP`\n\n## Extract for detail later\n- [ ] Discipline deltas\n- [ ] Deliverability actual\n- [ ] Model-update actions\n\n## Linked\n[[End of Well Report (EOWR)]] · [[Reservoir Management Plan]]",
+      "title": "Well Post-Mortem",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Reservoir Management Plan (RMP).md",
+      "cls": "standard",
+      "theme": "RM Strategy",
+      "dept": "reservoir-management",
+      "by": "GeaGuard",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1w ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Reservoir Management\ntheme: RM Strategy\nowner: GeaGuard\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Reservoir Management Plan (RMP)\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> The depletion strategy and management plan for the reservoir(s).\n\n## What it contains\n- Depletion strategy\n- Offtake & injection targets\n- Surveillance requirements\n- Well & pattern strategy\n\n## Source data\n- Dynamic model\n- Surveillance history\n\n## Extract for detail later\n- [ ] Depletion targets\n- [ ] VRR/offtake basis\n- [ ] Surveillance plan\n\n## Linked\n[[Reservoir Surveillance Plan]] · [[Well Post-Mortem]]",
+      "title": "Reservoir Management Plan (RMP)",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Reservoir Surveillance Plan.md",
+      "cls": "standard",
+      "theme": "RM Strategy",
+      "dept": "reservoir-management",
+      "by": "GeaGuard",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "3d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Reservoir Management\ntheme: RM Strategy\nowner: GeaGuard\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Reservoir Surveillance Plan\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Documented surveillance program tied to the depletion strategy.\n\n## What it contains\n- Data-acquisition matrix\n- Pressure/PLT/4D program\n- VRR & offtake targets\n- Review cadence\n\n## Source data\n- `BI_NOC_PS_Events`\n- Depletion plan\n\n## Extract for detail later\n- [ ] Acquisition schedule\n- [ ] Surveillance metrics\n- [ ] Governance\n\n## Linked\n[[Reservoir Management Plan (RMP)]] · [[Pressure & VRR Review]]",
+      "title": "Reservoir Surveillance Plan",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Well Test & PVT.md",
+      "cls": "standard",
+      "theme": "Surveillance",
+      "dept": "reservoir-management",
+      "by": "WellWatch",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "6h ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Reservoir Management\ntheme: Surveillance\nowner: WellWatch\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Well Test & PVT\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Well tests vs potential, GOR/watercut trends and fluid PVT.\n\n## What it contains\n- Test rates vs FPOT\n- GOR & watercut trends\n- PVT / lab analysis\n- Anomaly flags\n\n## Source data\n- `PRISMO_WELLTEST`\n- `PRISMO_LastTest`\n- `PRISMO_LABDATA`\n\n## Extract for detail later\n- [ ] Deviation vs potential\n- [ ] PVT properties\n- [ ] Anomaly criteria\n\n## Linked\n[[Pressure & VRR Review]] · [[Rolling Forecast & Potential]]",
+      "title": "Well Test & PVT",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Pressure & VRR Review.md",
+      "cls": "standard",
+      "theme": "Surveillance",
+      "dept": "reservoir-management",
+      "by": "GeaGuard",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Reservoir Management\ntheme: Surveillance\nowner: GeaGuard\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Pressure & VRR Review\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Reservoir/zonal pressure, connectivity and voidage-replacement balance.\n\n## What it contains\n- BHP/THP trends\n- Zonal pressure\n- VRR by pattern\n- Connectivity signals\n\n## Source data\n- `PRISMO_PRESSURE`\n- `PRISMO_ZONALPRESSURE`\n- `BI_NOC_VRR`\n\n## Extract for detail later\n- [ ] Pressure trend\n- [ ] VRR by pattern\n- [ ] Connectivity interpretation\n\n## Linked\n[[Reservoir Surveillance Plan]]",
+      "title": "Pressure & VRR Review",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Rolling Forecast & Potential.md",
+      "cls": "standard",
+      "theme": "Forecasting",
+      "dept": "reservoir-management",
+      "by": "Prismo",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "1d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Reservoir Management\ntheme: Forecasting\nowner: Prismo\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Rolling Forecast & Potential\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Decline-based rolling forecast and reservoir potential (xPOT: MPOT/RPOT/FPOT).\n\n## What it contains\n- Arps/DCA fits\n- RoFo profiles\n- xPOT hierarchy\n- FPOT targets\n\n## Source data\n- `PRISMO_FORECAST_FPOT`\n- `PRISMO_FORECAST_RoFo`\n\n## Extract for detail later\n- [ ] Decline parameters\n- [ ] RoFo basis\n- [ ] xPOT definitions\n\n## Linked\n[[Dynamic Simulation & History Match]] · [[Well Test & PVT]]",
+      "title": "Rolling Forecast & Potential",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Daily Reservoir Performance.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "reservoir-management",
+      "by": "Prismo",
+      "fmt": "Report",
+      "pr": "P3",
+      "upd": "1h ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Reservoir Management\ntheme: Executive KPI\nowner: Prismo\nformat: Report\nextract_priority: P3\nstatus: indexed\n---\n\n# Daily Reservoir Performance\n\n> [!note] Cosmo-generated Report · output artifact\n> Auto-generated daily rates, uptime, deferment and exceptions vs target.\n\n## What it contains\n- Oil/water/gas rates\n- Uptime & deferment\n- Exceptions\n\n## Source data\n- `PRISMO_PRODUCTION_DATA`\n- `PRISMO_INJECTION Data`\n\n## Built from\n- [ ] Rate & deferment history\n- [ ] Deviation thresholds\n\n## Linked\n[[Rolling Forecast & Potential]]",
+      "title": "Daily Reservoir Performance",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Well & Pattern Review.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "reservoir-management",
+      "by": "WellNexus",
+      "fmt": "Presentation",
+      "pr": "P3",
+      "upd": "6h ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Reservoir Management\ntheme: Executive KPI\nowner: WellNexus\nformat: Presentation\nextract_priority: P3\nstatus: indexed\n---\n\n# Well & Pattern Review\n\n> [!note] Cosmo-generated Presentation · output artifact\n> Auto-generated cross-team pattern performance, offtake balance and actions.\n\n## What it contains\n- Pattern performance\n- Offtake/injection balance\n- Actions & opportunities\n\n## Source data\n- Production/injection\n- Pressure & VRR\n\n## Built from\n- [ ] Pattern KPIs\n- [ ] Action register\n\n## Linked\n[[Pressure & VRR Review]]",
+      "title": "Well & Pattern Review",
+      "stageLabel": "Reservoir Management"
+    },
+    {
+      "name": "Drilling Schedule Basis.md",
+      "cls": "standard",
+      "theme": "Scheduling",
+      "dept": "drilling-sequence",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P1",
+      "upd": "3h ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Drilling Sequence\ntheme: Scheduling\nowner: WellNova\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Drilling Schedule Basis\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> The basis of the rig-by-time schedule — well maturation, rig availability and phasing.\n\n## What it contains\n- Well maturation (SOR/BOD) inputs\n- Rig availability windows\n- Phase / batch phasing\n- Milestone (RFD/RFSU) basis\n\n## Source data\n- SOR / maturation\n- FID Future Wells\n- Rig contracts\n\n## Extract for detail later\n- [ ] Maturation-to-slot logic\n- [ ] Milestone basis\n- [ ] Phasing rules\n\n## Linked\n[[Rig Program]] · [[Drilling Schedule (IB27 DS Rev1)]]",
+      "title": "Drilling Schedule Basis",
+      "stageLabel": "Drilling Sequence"
+    },
+    {
+      "name": "Rig Program.md",
+      "cls": "standard",
+      "theme": "Scheduling",
+      "dept": "drilling-sequence",
+      "by": "WellNova",
+      "fmt": "MD",
+      "pr": "P2",
+      "upd": "2d ago",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Drilling Sequence\ntheme: Scheduling\nowner: WellNova\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Rig Program\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Multi-year rig contracting and utilisation plan.\n\n## What it contains\n- Rig contracts & windows\n- Utilisation & moves\n- Cert & suspension events\n\n## Source data\n- Contracts\n- Schedule\n\n## Extract for detail later\n- [ ] Rig windows\n- [ ] Utilisation %\n- [ ] Move/cert events\n\n## Linked\n[[Drilling Schedule Basis]]",
+      "title": "Rig Program",
+      "stageLabel": "Drilling Sequence"
+    },
+    {
+      "name": "Drilling Schedule (IB27 DS Rev1).md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "drilling-sequence",
+      "by": "WellNova",
+      "fmt": "Dataset",
+      "pr": "P2",
+      "upd": "3h ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Drilling Sequence\ntheme: Executive KPI\nowner: WellNova\nformat: Dataset\nextract_priority: P2\nstatus: indexed\n---\n\n# Drilling Schedule (IB27 DS Rev1)\n\n> [!note] Cosmo-generated Dataset · output artifact\n> Generated rig × time Gantt schedule — which rig drills which well, when.\n\n## What it contains\n- Per-rig timeline\n- Well type & reservoir\n- RFD/RFSU milestones\n- Well-count by year\n\n## Source data\n- Drilling Schedule Basis\n- Rig Program\n\n## Built from\n- [ ] Rig×well×dates\n- [ ] Milestones\n- [ ] Roll-ups\n\n## Linked\n[[Sequence Change Log]]",
+      "title": "Drilling Schedule (IB27 DS Rev1)",
+      "stageLabel": "Drilling Sequence"
+    },
+    {
+      "name": "Sequence Change Log.md",
+      "cls": "generated",
+      "theme": "Executive KPI",
+      "dept": "drilling-sequence",
+      "by": "WellAion",
+      "fmt": "Presentation",
+      "pr": "P3",
+      "upd": "1d ago",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Drilling Sequence\ntheme: Executive KPI\nowner: WellAion\nformat: Presentation\nextract_priority: P3\nstatus: indexed\n---\n\n# Sequence Change Log\n\n> [!note] Cosmo-generated Presentation · output artifact\n> Generated diff of what changed between schedule revisions and why.\n\n## What it contains\n- Added/removed/moved wells\n- Re-sequencing drivers\n- Well-count deltas\n\n## Source data\n- Schedule revisions\n\n## Built from\n- [ ] Change list\n- [ ] Driver per change\n- [ ] Delta summary\n\n## Linked\n[[Drilling Schedule (IB27 DS Rev1)]]",
+      "title": "Sequence Change Log",
+      "stageLabel": "Drilling Sequence"
+    }
+  ],
+  "REPORT_TREE": [
+    {
+      "group": "NORTH STAR",
+      "c": "#0FB5A6",
+      "icon": "star",
+      "reports": [
+        {
+          "id": "scorecard",
+          "name": "Corporate Scorecard",
+          "icon": "target",
+          "c": "#0FB5A6",
+          "owner": "RMO Cosmo",
+          "freq": "Monthly",
+          "kind": "scorecard",
+          "desc": "How the company is performing — a balanced scorecard of production, delivery, HSE, reserves and value versus plan.",
+          "kpis": [
+            [
+              "VS PLAN",
+              "101.3",
+              "% · on track"
+            ],
+            [
+              "PRODUCTION",
+              "182.4",
+              "kbopd"
+            ],
+            [
+              "HSE",
+              "0",
+              "incidents"
+            ],
+            [
+              "VALUE",
+              "$2.9M",
+              "realized"
+            ]
+          ]
+        },
+        {
+          "id": "reserves-yearly",
+          "name": "Reserves & Resources — Annual",
+          "icon": "layers",
+          "c": "#2563eb",
+          "owner": "RMO Cosmo",
+          "freq": "Annual",
+          "kind": "exec",
+          "desc": "How much we have left and the upside — yearly 1P/2P/3P reserves, contingent & prospective resources and reconciliation.",
+          "kpis": [
+            [
+              "1P",
+              "780",
+              "MMbbl"
+            ],
+            [
+              "2P",
+              "1,050",
+              "MMbbl"
+            ],
+            [
+              "3P",
+              "1,340",
+              "MMbbl"
+            ],
+            [
+              "RRR",
+              "118",
+              "%"
+            ]
+          ]
+        },
+        {
+          "id": "subsurface-kpi",
+          "name": "Subsurface KPI",
+          "icon": "activity",
+          "c": "#0a8a7f",
+          "owner": "Cosmonaut",
+          "freq": "Monthly",
+          "kind": "exec",
+          "desc": "How the subsurface team is performing — a roll-up of all five lifecycle workstreams into one health view.",
+          "kpis": [
+            [
+              "WORKSTREAMS",
+              "5",
+              "rolled up"
+            ],
+            [
+              "ON TARGET",
+              "4",
+              "of 5"
+            ],
+            [
+              "ACTIONS",
+              "12",
+              "open"
+            ],
+            [
+              "CONFIDENCE",
+              "High",
+              ""
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "group": "EXPLORATION",
+      "c": "#22d3ee",
+      "icon": "gem",
+      "kpi": {
+        "id": "exp-kpi",
+        "name": "Exploration KPI Report",
+        "icon": "gem",
+        "c": "#22d3ee",
+        "owner": "GeaVision",
+        "freq": "Quarterly",
+        "kind": "kpi",
+        "desc": "Exploration scorecard — prospects matured, GCoS, drill-ready inventory.",
+        "kpis": [
+          [
+            "PROSPECTS",
+            "14",
+            "in hopper"
+          ],
+          [
+            "DRILL-READY",
+            "5",
+            ""
+          ],
+          [
+            "AVG GCoS",
+            "32",
+            "%"
+          ],
+          [
+            "RESOURCES",
+            "420",
+            "MMboe"
+          ]
+        ]
+      },
+      "reports": [
+        {
+          "id": "prospect",
+          "name": "Prospect Evaluation Report",
+          "icon": "diamond",
+          "c": "#22d3ee",
+          "owner": "GeaVision",
+          "freq": "Per prospect",
+          "kind": "doc",
+          "desc": "Petroleum-system, volumetrics and geological chance-of-success for a prospect.",
+          "kpis": [
+            [
+              "GRV",
+              "1.8",
+              "bn m³"
+            ],
+            [
+              "P50 STOIIP",
+              "310",
+              "MMbbl"
+            ],
+            [
+              "GCoS",
+              "28",
+              "%"
+            ],
+            [
+              "RISK",
+              "Moderate",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "play",
+          "name": "Play / Basin Assessment",
+          "icon": "waves",
+          "c": "#22d3ee",
+          "owner": "GeaGuard",
+          "freq": "Annual",
+          "kind": "doc",
+          "desc": "Basin-scale play fairway, source-reservoir-seal and lead inventory.",
+          "kpis": [
+            [
+              "LEADS",
+              "22",
+              ""
+            ],
+            [
+              "PLAYS",
+              "4",
+              "fairways"
+            ],
+            [
+              "MATURITY",
+              "Oil win",
+              "dow"
+            ],
+            [
+              "ACREAGE",
+              "1,240",
+              "km²"
+            ]
+          ]
+        },
+        {
+          "id": "exp-postwell",
+          "name": "Post-Well Evaluation",
+          "icon": "clipboard-check",
+          "c": "#22d3ee",
+          "owner": "GeaVision",
+          "freq": "Per well",
+          "kind": "doc",
+          "desc": "Predicted vs actual — calibrates the model after an exploration well.",
+          "kpis": [
+            [
+              "OUTCOME",
+              "Discovery",
+              ""
+            ],
+            [
+              "NET PAY",
+              "42",
+              "m"
+            ],
+            [
+              "vs PRE-DRILL",
+              "+12",
+              "%"
+            ],
+            [
+              "LEARNINGS",
+              "7",
+              "logged"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "group": "FIELD DEVELOPMENT",
+      "c": "#0FB5A6",
+      "icon": "layers",
+      "kpi": {
+        "id": "fd-kpi",
+        "name": "Field Development KPI Report",
+        "icon": "layers",
+        "c": "#0FB5A6",
+        "owner": "WellAion",
+        "freq": "Monthly",
+        "kind": "kpi",
+        "desc": "Development scorecard — reserves matured, wells sanctioned, concept progress.",
+        "kpis": [
+          [
+            "RESERVES",
+            "1.1",
+            "Bbbl"
+          ],
+          [
+            "WELLS FID",
+            "36",
+            ""
+          ],
+          [
+            "RECOVERY",
+            "38",
+            "%"
+          ],
+          [
+            "MATURITY",
+            "Select",
+            ""
+          ]
+        ]
+      },
+      "reports": [
+        {
+          "id": "fdp",
+          "name": "Field Development Plan (FDP)",
+          "icon": "file-text",
+          "c": "#0FB5A6",
+          "owner": "WellAion",
+          "freq": "Per field",
+          "kind": "doc",
+          "desc": "Full FDP — subsurface, wells, facilities, economics and schedule.",
+          "kpis": [
+            [
+              "WELLS",
+              "48",
+              "planned"
+            ],
+            [
+              "PLATEAU",
+              "210",
+              "kbopd"
+            ],
+            [
+              "CAPEX",
+              "$640M",
+              ""
+            ],
+            [
+              "FIRST OIL",
+              "2028",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "concept",
+          "name": "Concept Select Report",
+          "icon": "panels-top-left",
+          "c": "#0FB5A6",
+          "owner": "GeaVision",
+          "freq": "Per project",
+          "kind": "doc",
+          "desc": "Concept screening & selection — options, trade-offs and recommendation.",
+          "kpis": [
+            [
+              "OPTIONS",
+              "4",
+              "screened"
+            ],
+            [
+              "SELECTED",
+              "Tie-back",
+              ""
+            ],
+            [
+              "NPV Δ",
+              "+$180M",
+              ""
+            ],
+            [
+              "RISK",
+              "Low",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "reserves",
+          "name": "Reserves & Volumetrics",
+          "icon": "gem",
+          "c": "#0FB5A6",
+          "owner": "WellAion",
+          "freq": "Annual",
+          "kind": "doc",
+          "desc": "PRMS reserves & volumetrics — P90/P50/P10 and reconciliation.",
+          "kpis": [
+            [
+              "1P",
+              "780",
+              "MMbbl"
+            ],
+            [
+              "2P",
+              "1,050",
+              "MMbbl"
+            ],
+            [
+              "3P",
+              "1,340",
+              "MMbbl"
+            ],
+            [
+              "RF",
+              "38",
+              "%"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "group": "WELL DELIVERY",
+      "c": "#f59e0b",
+      "icon": "drill",
+      "kpi": {
+        "id": "wd-kpi",
+        "name": "Well Delivery KPI Report",
+        "icon": "drill",
+        "c": "#f59e0b",
+        "owner": "WellNova",
+        "freq": "Weekly",
+        "kind": "kpi",
+        "desc": "Delivery scorecard — wells delivered, days/1000ft, NPT and cost vs AFE.",
+        "kpis": [
+          [
+            "WELLS YTD",
+            "18",
+            "of 24"
+          ],
+          [
+            "DAYS/1000ft",
+            "4.2",
+            ""
+          ],
+          [
+            "NPT",
+            "2.1",
+            "%"
+          ],
+          [
+            "vs AFE",
+            "−3",
+            "%"
+          ]
+        ]
+      },
+      "reports": [
+        {
+          "id": "wellplan",
+          "name": "Well Proposal / Well Plan",
+          "icon": "file-pen",
+          "c": "#f59e0b",
+          "owner": "WellNova",
+          "freq": "Per well",
+          "kind": "doc",
+          "desc": "Well objectives, trajectory, casing, mud and completion design.",
+          "kpis": [
+            [
+              "TD",
+              "3,900",
+              "m MD"
+            ],
+            [
+              "TARGET",
+              "Kharaib B",
+              ""
+            ],
+            [
+              "CASING",
+              "4",
+              "strings"
+            ],
+            [
+              "AFE",
+              "$18M",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "ddr",
+          "name": "Daily Drilling Report",
+          "icon": "crosshair",
+          "c": "#f59e0b",
+          "owner": "WellNova",
+          "freq": "Daily",
+          "kind": "daily",
+          "desc": "Depth, ROP, mud, bit, NPT and 24-hr operations summary.",
+          "kpis": [
+            [
+              "DEPTH",
+              "3,842",
+              "m MD"
+            ],
+            [
+              "ROP",
+              "18.6",
+              "m/hr"
+            ],
+            [
+              "NPT",
+              "2.1",
+              "%"
+            ],
+            [
+              "MUD WT",
+              "1.24",
+              "sg"
+            ]
+          ]
+        },
+        {
+          "id": "eowr",
+          "name": "Final Well Report (EOWR)",
+          "icon": "check-check",
+          "c": "#f59e0b",
+          "owner": "WellNova",
+          "freq": "Per well",
+          "kind": "doc",
+          "desc": "End-of-Well summary — planned vs actual, formations, issues and cost.",
+          "kpis": [
+            [
+              "TD REACHED",
+              "3,905",
+              "m"
+            ],
+            [
+              "DAYS",
+              "41",
+              "vs 44"
+            ],
+            [
+              "COST",
+              "$16.8M",
+              ""
+            ],
+            [
+              "STATUS",
+              "Cased",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "completion",
+          "name": "Completion Report",
+          "icon": "square-check",
+          "c": "#f59e0b",
+          "owner": "WellNova",
+          "freq": "Per well",
+          "kind": "doc",
+          "desc": "Completion design as-run — perforations, sand control, stimulation.",
+          "kpis": [
+            [
+              "ZONES",
+              "3",
+              ""
+            ],
+            [
+              "PERFS",
+              "480",
+              "ft"
+            ],
+            [
+              "STIM",
+              "Acid",
+              ""
+            ],
+            [
+              "SKIN",
+              "−2.1",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "wd-postmortem",
+          "name": "Post-Mortem Report",
+          "icon": "clipboard-check",
+          "c": "#f59e0b",
+          "owner": "WellNova",
+          "freq": "Per well",
+          "kind": "doc",
+          "desc": "New-well post-mortem — predicted vs actual across six disciplines.",
+          "kpis": [
+            [
+              "DISCIPLINES",
+              "6",
+              "merged"
+            ],
+            [
+              "vs PLAN",
+              "+8",
+              "%"
+            ],
+            [
+              "LESSONS",
+              "9",
+              ""
+            ],
+            [
+              "CYCLE",
+              "1.2",
+              "wk"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "group": "RESERVOIR MANAGEMENT",
+      "c": "#7c3aed",
+      "icon": "gauge",
+      "kpi": {
+        "id": "rm-kpi",
+        "name": "Reservoir Management KPI Report",
+        "icon": "gauge",
+        "c": "#7c3aed",
+        "owner": "Prismo",
+        "freq": "Daily",
+        "kind": "kpi",
+        "desc": "RM scorecard — production vs potential, VRR, uptime and forecast.",
+        "kpis": [
+          [
+            "OIL",
+            "182.4",
+            "kbopd"
+          ],
+          [
+            "vs FPOT",
+            "98",
+            "%"
+          ],
+          [
+            "VRR",
+            "1.02",
+            ""
+          ],
+          [
+            "UPTIME",
+            "97.8",
+            "%"
+          ]
+        ]
+      },
+      "reports": [
+        {
+          "id": "prod",
+          "name": "Daily Production Report",
+          "icon": "trending-up",
+          "c": "#7c3aed",
+          "owner": "Prismo",
+          "freq": "Daily",
+          "kind": "daily",
+          "desc": "Field & well oil / water / gas rates, uptime and deferment vs target.",
+          "kpis": [
+            [
+              "FIELD OIL",
+              "182.4",
+              "kbopd · +2%"
+            ],
+            [
+              "WATER CUT",
+              "41.2",
+              "%"
+            ],
+            [
+              "GAS",
+              "96",
+              "MMscfd"
+            ],
+            [
+              "UPTIME",
+              "97.8",
+              "%"
+            ]
+          ]
+        },
+        {
+          "id": "surveillance",
+          "name": "Reservoir Surveillance Report",
+          "icon": "radar",
+          "c": "#7c3aed",
+          "owner": "GeaGuard",
+          "freq": "Monthly",
+          "kind": "doc",
+          "desc": "Pressure, VRR, 4D and surveillance-acquisition status by pattern.",
+          "kpis": [
+            [
+              "PATTERNS",
+              "12",
+              ""
+            ],
+            [
+              "AVG VRR",
+              "1.02",
+              ""
+            ],
+            [
+              "4D VINTAGE",
+              "2025",
+              ""
+            ],
+            [
+              "ALERTS",
+              "2",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "wpreview",
+          "name": "Well & Pattern Review",
+          "icon": "hexagon",
+          "c": "#7c3aed",
+          "owner": "WellNexus",
+          "freq": "Quarterly",
+          "kind": "doc",
+          "desc": "Cross-team well & pattern performance, offtake balance and actions.",
+          "kpis": [
+            [
+              "PATTERNS",
+              "12",
+              "reviewed"
+            ],
+            [
+              "OFFTAKE",
+              "Balanced",
+              ""
+            ],
+            [
+              "ACTIONS",
+              "15",
+              ""
+            ],
+            [
+              "CYCLE",
+              "Q3",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "rofo",
+          "name": "Rolling Forecast Report",
+          "icon": "line-chart",
+          "c": "#7c3aed",
+          "owner": "Prismo",
+          "freq": "Monthly",
+          "kind": "doc",
+          "desc": "DCA-based rolling forecast — RoFo profiles and reservoir potential.",
+          "kpis": [
+            [
+              "HORIZON",
+              "24",
+              "mo"
+            ],
+            [
+              "BASE",
+              "172",
+              "kbopd"
+            ],
+            [
+              "UPSIDE",
+              "+14",
+              "%"
+            ],
+            [
+              "DECLINE",
+              "8",
+              "%/yr"
+            ]
+          ]
+        },
+        {
+          "id": "welltest",
+          "name": "Well Test Report",
+          "icon": "circle-dot",
+          "c": "#7c3aed",
+          "owner": "WellWatch",
+          "freq": "Daily",
+          "kind": "daily",
+          "desc": "Latest well tests, deviation vs potential and anomaly flags.",
+          "kpis": [
+            [
+              "TESTS",
+              "42",
+              "scanned"
+            ],
+            [
+              "FLAGGED",
+              "3",
+              "anomalies"
+            ],
+            [
+              "ON FPOT",
+              "88",
+              "%"
+            ],
+            [
+              "AVG WC",
+              "39.5",
+              "%"
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "ALL_REPORTS": [
+    {
+      "id": "scorecard",
+      "name": "Corporate Scorecard",
+      "icon": "target",
+      "c": "#0FB5A6",
+      "owner": "RMO Cosmo",
+      "freq": "Monthly",
+      "kind": "scorecard",
+      "desc": "How the company is performing — a balanced scorecard of production, delivery, HSE, reserves and value versus plan.",
+      "kpis": [
+        [
+          "VS PLAN",
+          "101.3",
+          "% · on track"
+        ],
+        [
+          "PRODUCTION",
+          "182.4",
+          "kbopd"
+        ],
+        [
+          "HSE",
+          "0",
+          "incidents"
+        ],
+        [
+          "VALUE",
+          "$2.9M",
+          "realized"
+        ]
+      ]
+    },
+    {
+      "id": "reserves-yearly",
+      "name": "Reserves & Resources — Annual",
+      "icon": "layers",
+      "c": "#2563eb",
+      "owner": "RMO Cosmo",
+      "freq": "Annual",
+      "kind": "exec",
+      "desc": "How much we have left and the upside — yearly 1P/2P/3P reserves, contingent & prospective resources and reconciliation.",
+      "kpis": [
+        [
+          "1P",
+          "780",
+          "MMbbl"
+        ],
+        [
+          "2P",
+          "1,050",
+          "MMbbl"
+        ],
+        [
+          "3P",
+          "1,340",
+          "MMbbl"
+        ],
+        [
+          "RRR",
+          "118",
+          "%"
+        ]
+      ]
+    },
+    {
+      "id": "subsurface-kpi",
+      "name": "Subsurface KPI",
+      "icon": "activity",
+      "c": "#0a8a7f",
+      "owner": "Cosmonaut",
+      "freq": "Monthly",
+      "kind": "exec",
+      "desc": "How the subsurface team is performing — a roll-up of all five lifecycle workstreams into one health view.",
+      "kpis": [
+        [
+          "WORKSTREAMS",
+          "5",
+          "rolled up"
+        ],
+        [
+          "ON TARGET",
+          "4",
+          "of 5"
+        ],
+        [
+          "ACTIONS",
+          "12",
+          "open"
+        ],
+        [
+          "CONFIDENCE",
+          "High",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "exp-kpi",
+      "name": "Exploration KPI Report",
+      "icon": "gem",
+      "c": "#22d3ee",
+      "owner": "GeaVision",
+      "freq": "Quarterly",
+      "kind": "kpi",
+      "desc": "Exploration scorecard — prospects matured, GCoS, drill-ready inventory.",
+      "kpis": [
+        [
+          "PROSPECTS",
+          "14",
+          "in hopper"
+        ],
+        [
+          "DRILL-READY",
+          "5",
+          ""
+        ],
+        [
+          "AVG GCoS",
+          "32",
+          "%"
+        ],
+        [
+          "RESOURCES",
+          "420",
+          "MMboe"
+        ]
+      ]
+    },
+    {
+      "id": "prospect",
+      "name": "Prospect Evaluation Report",
+      "icon": "diamond",
+      "c": "#22d3ee",
+      "owner": "GeaVision",
+      "freq": "Per prospect",
+      "kind": "doc",
+      "desc": "Petroleum-system, volumetrics and geological chance-of-success for a prospect.",
+      "kpis": [
+        [
+          "GRV",
+          "1.8",
+          "bn m³"
+        ],
+        [
+          "P50 STOIIP",
+          "310",
+          "MMbbl"
+        ],
+        [
+          "GCoS",
+          "28",
+          "%"
+        ],
+        [
+          "RISK",
+          "Moderate",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "play",
+      "name": "Play / Basin Assessment",
+      "icon": "waves",
+      "c": "#22d3ee",
+      "owner": "GeaGuard",
+      "freq": "Annual",
+      "kind": "doc",
+      "desc": "Basin-scale play fairway, source-reservoir-seal and lead inventory.",
+      "kpis": [
+        [
+          "LEADS",
+          "22",
+          ""
+        ],
+        [
+          "PLAYS",
+          "4",
+          "fairways"
+        ],
+        [
+          "MATURITY",
+          "Oil win",
+          "dow"
+        ],
+        [
+          "ACREAGE",
+          "1,240",
+          "km²"
+        ]
+      ]
+    },
+    {
+      "id": "exp-postwell",
+      "name": "Post-Well Evaluation",
+      "icon": "clipboard-check",
+      "c": "#22d3ee",
+      "owner": "GeaVision",
+      "freq": "Per well",
+      "kind": "doc",
+      "desc": "Predicted vs actual — calibrates the model after an exploration well.",
+      "kpis": [
+        [
+          "OUTCOME",
+          "Discovery",
+          ""
+        ],
+        [
+          "NET PAY",
+          "42",
+          "m"
+        ],
+        [
+          "vs PRE-DRILL",
+          "+12",
+          "%"
+        ],
+        [
+          "LEARNINGS",
+          "7",
+          "logged"
+        ]
+      ]
+    },
+    {
+      "id": "fd-kpi",
+      "name": "Field Development KPI Report",
+      "icon": "layers",
+      "c": "#0FB5A6",
+      "owner": "WellAion",
+      "freq": "Monthly",
+      "kind": "kpi",
+      "desc": "Development scorecard — reserves matured, wells sanctioned, concept progress.",
+      "kpis": [
+        [
+          "RESERVES",
+          "1.1",
+          "Bbbl"
+        ],
+        [
+          "WELLS FID",
+          "36",
+          ""
+        ],
+        [
+          "RECOVERY",
+          "38",
+          "%"
+        ],
+        [
+          "MATURITY",
+          "Select",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "fdp",
+      "name": "Field Development Plan (FDP)",
+      "icon": "file-text",
+      "c": "#0FB5A6",
+      "owner": "WellAion",
+      "freq": "Per field",
+      "kind": "doc",
+      "desc": "Full FDP — subsurface, wells, facilities, economics and schedule.",
+      "kpis": [
+        [
+          "WELLS",
+          "48",
+          "planned"
+        ],
+        [
+          "PLATEAU",
+          "210",
+          "kbopd"
+        ],
+        [
+          "CAPEX",
+          "$640M",
+          ""
+        ],
+        [
+          "FIRST OIL",
+          "2028",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "concept",
+      "name": "Concept Select Report",
+      "icon": "panels-top-left",
+      "c": "#0FB5A6",
+      "owner": "GeaVision",
+      "freq": "Per project",
+      "kind": "doc",
+      "desc": "Concept screening & selection — options, trade-offs and recommendation.",
+      "kpis": [
+        [
+          "OPTIONS",
+          "4",
+          "screened"
+        ],
+        [
+          "SELECTED",
+          "Tie-back",
+          ""
+        ],
+        [
+          "NPV Δ",
+          "+$180M",
+          ""
+        ],
+        [
+          "RISK",
+          "Low",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "reserves",
+      "name": "Reserves & Volumetrics",
+      "icon": "gem",
+      "c": "#0FB5A6",
+      "owner": "WellAion",
+      "freq": "Annual",
+      "kind": "doc",
+      "desc": "PRMS reserves & volumetrics — P90/P50/P10 and reconciliation.",
+      "kpis": [
+        [
+          "1P",
+          "780",
+          "MMbbl"
+        ],
+        [
+          "2P",
+          "1,050",
+          "MMbbl"
+        ],
+        [
+          "3P",
+          "1,340",
+          "MMbbl"
+        ],
+        [
+          "RF",
+          "38",
+          "%"
+        ]
+      ]
+    },
+    {
+      "id": "wd-kpi",
+      "name": "Well Delivery KPI Report",
+      "icon": "drill",
+      "c": "#f59e0b",
+      "owner": "WellNova",
+      "freq": "Weekly",
+      "kind": "kpi",
+      "desc": "Delivery scorecard — wells delivered, days/1000ft, NPT and cost vs AFE.",
+      "kpis": [
+        [
+          "WELLS YTD",
+          "18",
+          "of 24"
+        ],
+        [
+          "DAYS/1000ft",
+          "4.2",
+          ""
+        ],
+        [
+          "NPT",
+          "2.1",
+          "%"
+        ],
+        [
+          "vs AFE",
+          "−3",
+          "%"
+        ]
+      ]
+    },
+    {
+      "id": "wellplan",
+      "name": "Well Proposal / Well Plan",
+      "icon": "file-pen",
+      "c": "#f59e0b",
+      "owner": "WellNova",
+      "freq": "Per well",
+      "kind": "doc",
+      "desc": "Well objectives, trajectory, casing, mud and completion design.",
+      "kpis": [
+        [
+          "TD",
+          "3,900",
+          "m MD"
+        ],
+        [
+          "TARGET",
+          "Kharaib B",
+          ""
+        ],
+        [
+          "CASING",
+          "4",
+          "strings"
+        ],
+        [
+          "AFE",
+          "$18M",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "ddr",
+      "name": "Daily Drilling Report",
+      "icon": "crosshair",
+      "c": "#f59e0b",
+      "owner": "WellNova",
+      "freq": "Daily",
+      "kind": "daily",
+      "desc": "Depth, ROP, mud, bit, NPT and 24-hr operations summary.",
+      "kpis": [
+        [
+          "DEPTH",
+          "3,842",
+          "m MD"
+        ],
+        [
+          "ROP",
+          "18.6",
+          "m/hr"
+        ],
+        [
+          "NPT",
+          "2.1",
+          "%"
+        ],
+        [
+          "MUD WT",
+          "1.24",
+          "sg"
+        ]
+      ]
+    },
+    {
+      "id": "eowr",
+      "name": "Final Well Report (EOWR)",
+      "icon": "check-check",
+      "c": "#f59e0b",
+      "owner": "WellNova",
+      "freq": "Per well",
+      "kind": "doc",
+      "desc": "End-of-Well summary — planned vs actual, formations, issues and cost.",
+      "kpis": [
+        [
+          "TD REACHED",
+          "3,905",
+          "m"
+        ],
+        [
+          "DAYS",
+          "41",
+          "vs 44"
+        ],
+        [
+          "COST",
+          "$16.8M",
+          ""
+        ],
+        [
+          "STATUS",
+          "Cased",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "completion",
+      "name": "Completion Report",
+      "icon": "square-check",
+      "c": "#f59e0b",
+      "owner": "WellNova",
+      "freq": "Per well",
+      "kind": "doc",
+      "desc": "Completion design as-run — perforations, sand control, stimulation.",
+      "kpis": [
+        [
+          "ZONES",
+          "3",
+          ""
+        ],
+        [
+          "PERFS",
+          "480",
+          "ft"
+        ],
+        [
+          "STIM",
+          "Acid",
+          ""
+        ],
+        [
+          "SKIN",
+          "−2.1",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "wd-postmortem",
+      "name": "Post-Mortem Report",
+      "icon": "clipboard-check",
+      "c": "#f59e0b",
+      "owner": "WellNova",
+      "freq": "Per well",
+      "kind": "doc",
+      "desc": "New-well post-mortem — predicted vs actual across six disciplines.",
+      "kpis": [
+        [
+          "DISCIPLINES",
+          "6",
+          "merged"
+        ],
+        [
+          "vs PLAN",
+          "+8",
+          "%"
+        ],
+        [
+          "LESSONS",
+          "9",
+          ""
+        ],
+        [
+          "CYCLE",
+          "1.2",
+          "wk"
+        ]
+      ]
+    },
+    {
+      "id": "rm-kpi",
+      "name": "Reservoir Management KPI Report",
+      "icon": "gauge",
+      "c": "#7c3aed",
+      "owner": "Prismo",
+      "freq": "Daily",
+      "kind": "kpi",
+      "desc": "RM scorecard — production vs potential, VRR, uptime and forecast.",
+      "kpis": [
+        [
+          "OIL",
+          "182.4",
+          "kbopd"
+        ],
+        [
+          "vs FPOT",
+          "98",
+          "%"
+        ],
+        [
+          "VRR",
+          "1.02",
+          ""
+        ],
+        [
+          "UPTIME",
+          "97.8",
+          "%"
+        ]
+      ]
+    },
+    {
+      "id": "prod",
+      "name": "Daily Production Report",
+      "icon": "trending-up",
+      "c": "#7c3aed",
+      "owner": "Prismo",
+      "freq": "Daily",
+      "kind": "daily",
+      "desc": "Field & well oil / water / gas rates, uptime and deferment vs target.",
+      "kpis": [
+        [
+          "FIELD OIL",
+          "182.4",
+          "kbopd · +2%"
+        ],
+        [
+          "WATER CUT",
+          "41.2",
+          "%"
+        ],
+        [
+          "GAS",
+          "96",
+          "MMscfd"
+        ],
+        [
+          "UPTIME",
+          "97.8",
+          "%"
+        ]
+      ]
+    },
+    {
+      "id": "surveillance",
+      "name": "Reservoir Surveillance Report",
+      "icon": "radar",
+      "c": "#7c3aed",
+      "owner": "GeaGuard",
+      "freq": "Monthly",
+      "kind": "doc",
+      "desc": "Pressure, VRR, 4D and surveillance-acquisition status by pattern.",
+      "kpis": [
+        [
+          "PATTERNS",
+          "12",
+          ""
+        ],
+        [
+          "AVG VRR",
+          "1.02",
+          ""
+        ],
+        [
+          "4D VINTAGE",
+          "2025",
+          ""
+        ],
+        [
+          "ALERTS",
+          "2",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "wpreview",
+      "name": "Well & Pattern Review",
+      "icon": "hexagon",
+      "c": "#7c3aed",
+      "owner": "WellNexus",
+      "freq": "Quarterly",
+      "kind": "doc",
+      "desc": "Cross-team well & pattern performance, offtake balance and actions.",
+      "kpis": [
+        [
+          "PATTERNS",
+          "12",
+          "reviewed"
+        ],
+        [
+          "OFFTAKE",
+          "Balanced",
+          ""
+        ],
+        [
+          "ACTIONS",
+          "15",
+          ""
+        ],
+        [
+          "CYCLE",
+          "Q3",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "rofo",
+      "name": "Rolling Forecast Report",
+      "icon": "line-chart",
+      "c": "#7c3aed",
+      "owner": "Prismo",
+      "freq": "Monthly",
+      "kind": "doc",
+      "desc": "DCA-based rolling forecast — RoFo profiles and reservoir potential.",
+      "kpis": [
+        [
+          "HORIZON",
+          "24",
+          "mo"
+        ],
+        [
+          "BASE",
+          "172",
+          "kbopd"
+        ],
+        [
+          "UPSIDE",
+          "+14",
+          "%"
+        ],
+        [
+          "DECLINE",
+          "8",
+          "%/yr"
+        ]
+      ]
+    },
+    {
+      "id": "welltest",
+      "name": "Well Test Report",
+      "icon": "circle-dot",
+      "c": "#7c3aed",
+      "owner": "WellWatch",
+      "freq": "Daily",
+      "kind": "daily",
+      "desc": "Latest well tests, deviation vs potential and anomaly flags.",
+      "kpis": [
+        [
+          "TESTS",
+          "42",
+          "scanned"
+        ],
+        [
+          "FLAGGED",
+          "3",
+          "anomalies"
+        ],
+        [
+          "ON FPOT",
+          "88",
+          "%"
+        ],
+        [
+          "AVG WC",
+          "39.5",
+          "%"
+        ]
+      ]
+    }
+  ]
+}

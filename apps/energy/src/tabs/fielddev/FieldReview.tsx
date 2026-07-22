@@ -77,7 +77,7 @@ function Inner({ field }: { field: ProdJson }) {
     const x = (t: number) => padL + (t / nFull) * pw;
     const y = (q: number) => padT + ph - (q / qMax) * ph;
     cx.strokeStyle = cssVar('--line'); cx.lineWidth = 0.5; cx.beginPath(); cx.moveTo(padL, padT); cx.lineTo(padL, padT + ph); cx.lineTo(padL + pw, padT + ph); cx.stroke();
-    cx.fillStyle = cssVar('--muted'); cx.font = '9px var(--mono)'; cx.textAlign = 'right';
+    cx.fillStyle = cssVar('--muted'); cx.font = `9px ${cssVar('--mono')}`; cx.textAlign = 'right';
     for (let i = 0; i <= 3; i++) { const q = qMax * i / 3; cx.fillText((q / 1e3).toFixed(0) + 'k', padL - 3, y(q) + 3); }
     // real history (teal)
     cx.strokeStyle = cssVar('--teal'); cx.lineWidth = 1.5; cx.beginPath();
@@ -91,7 +91,7 @@ function Inner({ field }: { field: ProdJson }) {
     cx.strokeStyle = cssVar('--rose'); cx.lineWidth = 1.5; cx.beginPath();
     bt.predicted.forEach((q, k) => { const px = x(bt.trainN + k), py = y(q); k ? cx.lineTo(px, py) : cx.moveTo(px, py); }); cx.stroke();
     // legend
-    cx.textAlign = 'left'; cx.font = '9px var(--mono)';
+    cx.textAlign = 'left'; cx.font = `9px ${cssVar('--mono')}`;
     cx.fillStyle = cssVar('--teal'); cx.fillText('real', padL + 4, padT + 9);
     cx.fillStyle = cssVar('--amber'); cx.fillText('decline match', padL + 34, padT + 9);
     cx.fillStyle = cssVar('--rose'); cx.fillText('blind prediction', padL + 116, padT + 9);

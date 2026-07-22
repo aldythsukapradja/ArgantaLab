@@ -1,0 +1,247 @@
+// DataView (Intelligence → Data) — the ArgantaEnergy data-model explorer for the Volve
+// field. Two sub-tabs: "Model" (interactive ER diagram — draggable table cards, SVG FK
+// curves, zoom/pan, star-schema layout, searchable table rail, legend) and "Quality &
+// Coverage" (per-well completeness matrix computed from the REAL wb index). Adapted from
+// the UC116/WellAion reference, restyled to our COSMO tokens, fully rebranded, and
+// grounded 1:1 in public/wb (no fabricated data).
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Database, Star, Maximize, RotateCcw, Boxes, TableProperties, ShieldCheck } from 'lucide-react';
+import './data-cosmo.css';
+import {
+  TABLES, RELATIONSHIPS, GROUP_COLOR, GROUP_LABEL, CARD_W, cardHeight, starLayout,
+  type ModelTable,
+} from './volve-model';
+import { loadIndex } from '../wb/load';
+import type { WbIndex } from '../wb/types';
+
+type Pos = Record<string, { x: number; y: number }>;
+const tableById = (id: string) => TABLES.find((t) => t.id === id)!;
+const colIndex = (t: ModelTable, col: string) => t.columns.findIndex((c) => c.name === col);
+const nFmt = (n: number) => n.toLocaleString('en-US');
+
+// ── ER diagram ───────────────────────────────────────────────────────────────
+function ModelCanvas() {
+  const [pos, setPos] = useState<Pos>(() => starLayout());
+  const [view, setView] = useState({ x: 40, y: 20, k: 0.85 });
+  const [sel, setSel] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [mode, setMode] = useState<'all' | 'dir'>('all');
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ id: string | null; sx: number; sy: number; ox: number; oy: number; pan: boolean } | null>(null);
+
+  // related tables (for highlight/dim when a table is selected)
+  const related = useMemo(() => {
+    if (!sel) return null;
+    const s = new Set<string>([sel]);
+    RELATIONSHIPS.forEach((r) => {
+      const ft = r.from.split('.')[0], tt = r.to.split('.')[0];
+      if (mode === 'all') { if (ft === sel) s.add(tt); if (tt === sel) s.add(ft); }
+      else { if (ft === sel) s.add(tt); } // direction: only outgoing
+    });
+    return s;
+  }, [sel, mode]);
+
+  const clampK = (k: number) => Math.max(0.35, Math.min(1.8, +k.toFixed(3)));
+  const zoomBy = (f: number) => {
+    const el = wrapRef.current; if (!el) return;
+    const w = el.clientWidth, h = el.clientHeight;
+    setView((v) => { const nk = clampK(v.k * f); const r = nk / v.k; return { k: nk, x: w / 2 - (w / 2 - v.x) * r, y: h / 2 - (h / 2 - v.y) * r }; });
+  };
+  const fit = () => {
+    const el = wrapRef.current; if (!el) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    TABLES.forEach((t) => { const p = pos[t.id]; minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x + CARD_W); maxY = Math.max(maxY, p.y + cardHeight(t)); });
+    const gw = maxX - minX + 120, gh = maxY - minY + 120;
+    const k = clampK(Math.min(el.clientWidth / gw, el.clientHeight / gh));
+    setView({ k, x: (el.clientWidth - gw * k) / 2 - (minX - 60) * k, y: (el.clientHeight - gh * k) / 2 - (minY - 60) * k });
+  };
+  useEffect(() => { const t = setTimeout(fit, 40); return () => clearTimeout(t); }, []);
+
+  useEffect(() => {
+    const el = wrapRef.current; if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault(); const r = el.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
+      setView((v) => { const nk = clampK(v.k * (e.deltaY < 0 ? 1.08 : 0.926)); const kr = nk / v.k; return { k: nk, x: mx - (mx - v.x) * kr, y: my - (my - v.y) * kr }; });
+    };
+    const onMove = (e: PointerEvent) => {
+      const d = drag.current; if (!d) return;
+      if (d.pan) { setView((v) => ({ ...v, x: d.ox + (e.clientX - d.sx), y: d.oy + (e.clientY - d.sy) })); return; }
+      if (d.id) setPos((p) => ({ ...p, [d.id!]: { x: d.ox + (e.clientX - d.sx) / view.k, y: d.oy + (e.clientY - d.sy) / view.k } }));
+    };
+    const onUp = () => { if (drag.current) el.classList.remove('grabbing'); drag.current = null; };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => { el.removeEventListener('wheel', onWheel); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+  }, [view.k]);
+
+  const startPan = (e: React.PointerEvent) => {
+    if (e.button !== 0) return; drag.current = { id: null, sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y, pan: true };
+    wrapRef.current?.classList.add('grabbing');
+  };
+  const startCardDrag = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation(); drag.current = { id, sx: e.clientX, sy: e.clientY, ox: pos[id].x, oy: pos[id].y, pan: false };
+  };
+
+  // FK curve anchors — from the fk column of `from` to the pk column of `to`
+  const paths = RELATIONSHIPS.map((r) => {
+    const [fId, fCol] = r.from.split('.'); const [tId, tCol] = r.to.split('.');
+    const ft = tableById(fId), tt = tableById(tId); const fp = pos[fId], tp = pos[tId];
+    const fy = fp.y + 34 + colIndex(ft, fCol) * 20 + 10;
+    const ty = tp.y + 34 + colIndex(tt, tCol) * 20 + 10;
+    const fRight = fp.x + CARD_W / 2 < tp.x + CARD_W / 2;
+    const fx = fRight ? fp.x + CARD_W : fp.x; const tx = fRight ? tp.x : tp.x + CARD_W;
+    const dx = Math.max(40, Math.abs(tx - fx) * 0.5);
+    const c1 = fRight ? fx + dx : fx - dx; const c2 = fRight ? tx - dx : tx + dx;
+    const active = !related || (related.has(fId) && related.has(tId));
+    return { id: r.id, d: `M ${fx} ${fy} C ${c1} ${fy}, ${c2} ${ty}, ${tx} ${ty}`, color: GROUP_COLOR[ft.group], active };
+  });
+
+  const list = TABLES.filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) || t.id.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div className="dm-wrap">
+      <div className="dm-side">
+        <input className="dm-search" placeholder="Find a table…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="dm-sh">TABLES · {TABLES.length}</div>
+        <div className="dm-list">
+          {list.map((t) => (
+            <div key={t.id} className={'dm-trow' + (sel === t.id ? ' on' : '')} onClick={() => setSel((s) => (s === t.id ? null : t.id))}>
+              <span className="tdot" style={{ background: GROUP_COLOR[t.group] }} />
+              <span className="tnm">{t.name}</span>
+              <span className="trows">{nFmt(t.rows)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="dm-actions">
+          <div className="dm-abtn" onClick={() => setPos(starLayout())}><Star size={14} /> Star schema</div>
+          <div className="dm-abtn" onClick={fit}><Maximize size={14} /> Fit to screen</div>
+          <div className="dm-abtn" onClick={() => { setPos(starLayout()); setSel(null); setTimeout(fit, 20); }}><RotateCcw size={14} /> Reset layout</div>
+        </div>
+      </div>
+
+      <div className="dm-canvas-wrap" ref={wrapRef} onPointerDown={startPan}>
+        <div className="dm-toolbar">
+          <div className="dm-seg">
+            <div className={'sg' + (mode === 'all' ? ' on' : '')} onClick={() => setMode('all')}>All relations</div>
+            <div className={'sg' + (mode === 'dir' ? ' on' : '')} onClick={() => setMode('dir')}>Filter direction</div>
+          </div>
+        </div>
+
+        <div className="dm-surface" style={{ transform: `translate(${view.x}px,${view.y}px) scale(${view.k})` }}>
+          <svg className="dm-svg" width={2000} height={1400}>
+            {paths.map((p) => (
+              <path key={p.id} d={p.d} fill="none" stroke={p.color} strokeWidth={1.6}
+                strokeOpacity={p.active ? 0.7 : 0.12} strokeDasharray={p.active ? undefined : '3 4'} />
+            ))}
+          </svg>
+          {TABLES.map((t) => {
+            const p = pos[t.id]; const on = sel === t.id; const dim = !!related && !related.has(t.id);
+            return (
+              <div key={t.id} className={'er-card' + (on ? ' hot' : '') + (dim ? ' dim' : '')} style={{ left: p.x, top: p.y }}>
+                <div className="er-hd" style={{ background: GROUP_COLOR[t.group] }}
+                  onPointerDown={(e) => startCardDrag(e, t.id)} onClick={(e) => { e.stopPropagation(); setSel((s) => (s === t.id ? null : t.id)); }}>
+                  <span className="en">{t.name}</span><span className="er-rows">{nFmt(t.rows)}</span>
+                </div>
+                {t.columns.map((c) => (
+                  <div className="er-col" key={c.name}>
+                    <span className="cn">{c.name}</span>
+                    {c.pk && <span className="ck pk">PK</span>}
+                    {c.fk_to && <span className="ck fk">FK</span>}
+                    <span className="cd">{c.dtype}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="dm-zoom">
+          <div className="dm-zbtn" onClick={() => zoomBy(1.15)}>+</div>
+          <div className="dm-zval">{Math.round(view.k * 100)}%</div>
+          <div className="dm-zbtn" onClick={() => zoomBy(0.87)}>−</div>
+        </div>
+        <div className="dm-legend">
+          {(Object.keys(GROUP_LABEL) as Array<keyof typeof GROUP_LABEL>).map((g) => (
+            <div className="lg" key={g}><span className="sw" style={{ background: GROUP_COLOR[g] }} />{GROUP_LABEL[g]}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Quality & Coverage ───────────────────────────────────────────────────────
+function QualityCoverage() {
+  const [idx, setIdx] = useState<WbIndex | null>(null);
+  useEffect(() => { loadIndex().then(setIdx).catch(() => setIdx(null)); }, []);
+  const wells = idx?.wells ?? [];
+  const cell = (on: boolean) => <span className="qcell"><span className={'qdot ' + (on ? 'qy' : 'qn')} />{on ? 'Yes' : '—'}</span>;
+  const withLogs = wells.filter((w) => w.has.logs).length;
+  const withProd = wells.filter((w) => w.has.production).length;
+  const withPicks = wells.filter((w) => w.has.picks).length;
+
+  return (
+    <div className="dq">
+      <div className="dq-cards">
+        {[
+          { v: wells.length, l: 'wellbores · Volve (WB master)', b: 'MEASURED', bg: '#16a34a1e', c: '#15803d' },
+          { v: withLogs, l: 'with wireline logs', b: 'MEASURED', bg: '#16a34a1e', c: '#15803d' },
+          { v: withProd, l: 'with production history', b: 'MEASURED', bg: '#16a34a1e', c: '#15803d' },
+          { v: withPicks, l: 'with formation-top picks', b: 'INTERPRETED', bg: '#7c3aed1e', c: '#6d28d9' },
+        ].map((k) => (
+          <div className="dq-card" key={k.l}>
+            <div className="kv">{k.v}</div><div className="kl">{k.l}</div>
+            <span className="kb" style={{ background: k.bg, color: k.c }}>{k.b}</span>
+          </div>
+        ))}
+      </div>
+      <div className="dq-panel">
+        <div className="dq-phd"><ShieldCheck size={16} /> Per-well completeness matrix <span className="nat derived">DERIVED · wb index</span></div>
+        <div style={{ maxHeight: 'calc(100% - 50px)', overflow: 'auto' }}>
+          <table className="qmatrix">
+            <thead><tr><th>Well</th><th>Logs</th><th>Trajectory</th><th>Production</th><th>Tops</th><th>Overall</th></tr></thead>
+            <tbody>
+              {wells.map((w) => {
+                const score = [w.has.logs, w.has.traj, w.has.production, w.has.picks].filter(Boolean).length;
+                const ov = score >= 4 ? 'qy' : score >= 2 ? 'qp' : 'qn';
+                const ol = score >= 4 ? 'Complete' : score >= 2 ? 'Partial' : 'Minimal';
+                return (
+                  <tr key={w.name}>
+                    <td className="qw">{w.name}</td>
+                    <td>{cell(w.has.logs)}</td><td>{cell(w.has.traj)}</td><td>{cell(w.has.production)}</td><td>{cell(w.has.picks)}</td>
+                    <td><span className={'qpill ' + ov}>{ol}</span></td>
+                  </tr>
+                );
+              })}
+              {!wells.length && <tr><td colSpan={6} style={{ color: 'var(--ink3)' }}>Loading Volve well index…</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DataView() {
+  const [sub, setSub] = useState<'model' | 'quality'>('model');
+  const totalFk = RELATIONSHIPS.length;
+  const totalRows = useMemo(() => TABLES.reduce((s, t) => s + t.rows, 0), []);
+  return (
+    <div className="dm">
+      <div className="dm-bar">
+        <div className="dm-title">
+          <span className="di"><Database size={15} /></span>
+          <b>Data Model</b>
+          <span className="dm-sub">Volve · {TABLES.length} tables · {totalFk} FK · {nFmt(totalRows)} rows</span>
+        </div>
+        <div className="dm-prov"><span className="dot" /> GROUNDED · ED50 / UTM 31N · evidence-native</div>
+      </div>
+      <div className="dm-subtabs">
+        <div className={'dm-subtab' + (sub === 'model' ? ' on' : '')} onClick={() => setSub('model')}><Boxes size={14} /> Model</div>
+        <div className={'dm-subtab' + (sub === 'quality' ? ' on' : '')} onClick={() => setSub('quality')}><TableProperties size={14} /> Quality &amp; Coverage</div>
+      </div>
+      {sub === 'model' ? <ModelCanvas /> : <QualityCoverage />}
+    </div>
+  );
+}

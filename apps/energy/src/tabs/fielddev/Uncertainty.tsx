@@ -94,7 +94,7 @@ function Inner({ index, top, base }: { index: WbIndex; top: SurfaceJson; base: S
     ctx.stroke();
     // P90/P50/P10 flags
     const flags: Array<[string, number, string]> = [['P90', mc.p90, cssVar('--blue')], ['P50', mc.p50, cssVar('--text')], ['P10', mc.p10, cssVar('--rose')]];
-    ctx.font = '9px var(--mono)';
+    ctx.font = `9px ${cssVar('--mono')}`;
     for (const [lab, val, col] of flags) { const px = x(val); ctx.strokeStyle = col; ctx.setLineDash([4, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, padT); ctx.lineTo(px, padT + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.fillText(`${lab} ${(val * df).toFixed(1)}`, px, padT - 3); }
     // axes
     ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
@@ -109,7 +109,7 @@ function Inner({ index, top, base }: { index: WbIndex; top: SurfaceJson; base: S
     const plotW = w - padL - padR; const x = (v: number) => padL + (v - lo) / Math.max(1e-6, hi - lo) * plotW;
     const cx = x(base50);
     ctx.strokeStyle = cssVar('--muted'); ctx.setLineDash([3, 3]); ctx.lineWidth = 0.75; ctx.beginPath(); ctx.moveTo(cx, padT); ctx.lineTo(cx, padT + bars.length * rowH); ctx.stroke(); ctx.setLineDash([]);
-    ctx.font = '10px var(--mono)';
+    ctx.font = `10px ${cssVar('--mono')}`;
     bars.forEach((b, i) => {
       const y = padT + i * rowH + rowH / 2; const x1 = x(Math.min(b.lowOut, b.highOut)), x2 = x(Math.max(b.lowOut, b.highOut));
       ctx.fillStyle = b.r >= 0 ? withAlpha(cssVar('--teal'), 0.7) : withAlpha(cssVar('--rose'), 0.7);

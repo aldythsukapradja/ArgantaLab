@@ -19,8 +19,9 @@
     "test:review": "node scripts/test-review.mjs",
     "test:analog": "node scripts/test-analog.mjs",
     "test:gvsurf": "node scripts/test-gvsurf.mjs",
+    "test:surveillance": "node scripts/test-surveillance.mjs",
     "data:gvsurf": "node scripts/build-gvsurf.mjs",
-    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs && node scripts/test-analog.mjs && node scripts/test-gvsurf.mjs"
+    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs && node scripts/test-analog.mjs && node scripts/test-gvsurf.mjs && node scripts/test-surveillance.mjs"
   },
   "dependencies": {
     "@equinor/videx-wellog": "^1.5.2",
@@ -29,8 +30,11 @@
     "@types/three": "^0.185.1",
     "d3-array": "^3.2.4",
     "d3-contour": "^4.0.2",
+    "d3-force": "^3.0.0",
+    "d3-hierarchy": "^3.1.2",
     "d3-scale": "^4.0.2",
     "d3-shape": "^3.2.0",
+    "fflate": "^0.8.3",
     "jszip": "^3.10.1",
     "lucide-react": "^0.462.0",
     "pdfjs-dist": "^6.1.200",
@@ -43,6 +47,8 @@
   "devDependencies": {
     "@types/d3-array": "^3.2.1",
     "@types/d3-contour": "^3.0.6",
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-hierarchy": "^3.1.7",
     "@types/d3-scale": "^4.0.8",
     "@types/d3-shape": "^3.1.6",
     "@types/react": "^18.3.12",

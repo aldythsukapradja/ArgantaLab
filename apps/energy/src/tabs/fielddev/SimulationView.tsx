@@ -135,7 +135,7 @@ function Inner({ index }: { index: WbIndex }) {
       const x = pad + (iw.i + 0.5) * cw, y = pad + (ny - 1 - iw.j + 0.5) * ch;
       ctx.fillStyle = col; ctx.strokeStyle = cssVar('--bg'); ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = cssVar('--text'); ctx.font = '600 10px var(--mono)'; ctx.fillText(label, x + 7, y - 5);
+      ctx.fillStyle = cssVar('--text'); ctx.font = `600 10px ${cssVar('--mono')}`; ctx.fillText(label, x + 7, y - 5);
     };
     pin(sim.iw, cssVar('--blue'), `▼ ${inj?.name ?? 'INJ'}`);
     pin(sim.pw, cssVar('--amber'), `▲ ${prod?.name ?? 'PROD'}`);
@@ -151,7 +151,7 @@ function Inner({ index }: { index: WbIndex }) {
     const x = (pvi: number) => padL + (pvi / maxPvi) * pw;
     const y = (v: number) => padT + ph - v * ph;
     ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + ph); ctx.lineTo(padL + pw, padT + ph); ctx.stroke();
-    ctx.fillStyle = cssVar('--muted'); ctx.font = '9px var(--mono)'; ctx.textAlign = 'right';
+    ctx.fillStyle = cssVar('--muted'); ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'right';
     ctx.fillText('1', padL - 3, padT + 4); ctx.fillText('0', padL - 3, padT + ph + 3);
     // oil rate (amber)
     ctx.strokeStyle = cssVar('--amber'); ctx.lineWidth = 1.5; ctx.beginPath();

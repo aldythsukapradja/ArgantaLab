@@ -1,0 +1,97 @@
+/* Data tab (Intelligence → Data) — the Volve data-model / ER explorer + quality matrix.
+   Adapted from the UC116 "Data Model" reference but styled with OUR COSMO tokens
+   (--panel/--line/--teal/--ink/--mono) and scoped under html[data-ui="cosmo"] so the
+   classic UI is untouched. */
+html[data-ui="cosmo"] .dm{display:flex;flex-direction:column;height:100%;min-height:0;background:var(--panel2)}
+
+/* header bar */
+html[data-ui="cosmo"] .dm-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+html[data-ui="cosmo"] .dm-title{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13px;color:var(--ink)}
+html[data-ui="cosmo"] .dm-title .di{width:26px;height:26px;border-radius:8px;background:var(--teal-soft);color:var(--teal-ink);display:grid;place-items:center}
+html[data-ui="cosmo"] .dm-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink3);font-weight:400;letter-spacing:.02em}
+html[data-ui="cosmo"] .dm-prov{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--teal-ink);background:var(--teal-soft);border:1px solid var(--teal);border-radius:20px;padding:4px 11px}
+html[data-ui="cosmo"] .dm-prov .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 25%,transparent)}
+
+/* sub-tabs */
+html[data-ui="cosmo"] .dm-subtabs{display:flex;gap:2px;padding:8px 16px 0;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+html[data-ui="cosmo"] .dm-subtab{padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:7px;transition:color .12s}
+html[data-ui="cosmo"] .dm-subtab:hover{color:var(--ink)}
+html[data-ui="cosmo"] .dm-subtab.on{color:var(--teal-ink);border-bottom-color:var(--teal)}
+
+/* body: table rail | canvas */
+html[data-ui="cosmo"] .dm-wrap{flex:1;display:grid;grid-template-columns:250px 1fr;min-height:0;min-width:0}
+html[data-ui="cosmo"] .dm-side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+html[data-ui="cosmo"] .dm-search{margin:11px 12px 8px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:12px;color:var(--ink);outline:none}
+html[data-ui="cosmo"] .dm-search:focus{border-color:var(--teal)}
+html[data-ui="cosmo"] .dm-sh{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink3);padding:4px 14px;margin-top:4px}
+html[data-ui="cosmo"] .dm-list{overflow-y:auto;flex:1;min-height:0;padding:2px 8px 14px}
+html[data-ui="cosmo"] .dm-trow{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--ink);transition:background .12s}
+html[data-ui="cosmo"] .dm-trow:hover{background:var(--panel2)}
+html[data-ui="cosmo"] .dm-trow.on{background:var(--teal-soft)}
+html[data-ui="cosmo"] .dm-trow .tdot{width:8px;height:8px;border-radius:2px;flex:none}
+html[data-ui="cosmo"] .dm-trow .tnm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+html[data-ui="cosmo"] .dm-trow .trows{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+html[data-ui="cosmo"] .dm-actions{border-top:1px solid var(--line);padding:8px}
+html[data-ui="cosmo"] .dm-abtn{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:11.5px;color:var(--ink2);font-weight:500}
+html[data-ui="cosmo"] .dm-abtn:hover{background:var(--panel2);color:var(--teal-ink)}
+
+/* canvas */
+html[data-ui="cosmo"] .dm-canvas-wrap{position:relative;min-width:0;min-height:0;overflow:hidden;background:
+  radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/22px 22px, var(--panel2)}
+html[data-ui="cosmo"] .dm-toolbar{position:absolute;top:12px;left:12px;z-index:6;display:flex;align-items:center;gap:8px}
+html[data-ui="cosmo"] .dm-seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;box-shadow:var(--shadow)}
+html[data-ui="cosmo"] .dm-seg .sg{padding:6px 12px;font-size:11.5px;font-weight:600;color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .dm-seg .sg.on{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .dm-zoom{position:absolute;bottom:12px;left:12px;z-index:6;display:flex;align-items:center;gap:6px}
+html[data-ui="cosmo"] .dm-zbtn{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--panel);display:grid;place-items:center;color:var(--ink2);cursor:pointer;box-shadow:var(--shadow)}
+html[data-ui="cosmo"] .dm-zbtn:hover{border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .dm-zval{font-family:var(--mono);font-size:10.5px;color:var(--ink3);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:0 9px;height:30px;display:grid;place-items:center}
+html[data-ui="cosmo"] .dm-legend{position:absolute;bottom:12px;right:12px;z-index:6;display:flex;flex-wrap:wrap;gap:5px 12px;max-width:340px;justify-content:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;box-shadow:var(--shadow)}
+html[data-ui="cosmo"] .dm-legend .lg{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .dm-legend .lg .sw{width:9px;height:9px;border-radius:3px}
+
+html[data-ui="cosmo"] .dm-surface{position:absolute;inset:0;transform-origin:0 0;cursor:grab}
+html[data-ui="cosmo"] .dm-surface.grabbing{cursor:grabbing}
+html[data-ui="cosmo"] .dm-svg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
+
+/* ER table card */
+html[data-ui="cosmo"] .er-card{position:absolute;width:190px;background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);overflow:hidden;user-select:none;transition:box-shadow .15s,border-color .15s}
+html[data-ui="cosmo"] .er-card.hot{border-color:var(--teal);box-shadow:var(--shadow-lg)}
+html[data-ui="cosmo"] .er-card.dim{opacity:.32}
+html[data-ui="cosmo"] .er-hd{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:grab;color:#fff}
+html[data-ui="cosmo"] .er-hd .en{font-weight:700;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .er-hd .er-rows{font-family:var(--mono);font-size:9.5px;opacity:.85;background:rgba(255,255,255,.18);border-radius:10px;padding:1px 7px}
+html[data-ui="cosmo"] .er-col{display:flex;align-items:center;gap:7px;padding:3px 10px;font-size:11px;color:var(--ink2);height:20px;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .er-col .cn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono)}
+html[data-ui="cosmo"] .er-col .ck{font-family:var(--mono);font-size:8.5px;font-weight:700;padding:0 4px;border-radius:4px}
+html[data-ui="cosmo"] .er-col .ck.pk{background:#f59e0b22;color:#b45309}
+html[data-ui="cosmo"] .er-col .ck.fk{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .er-col .cd{font-family:var(--mono);font-size:8.5px;color:var(--ink3)}
+
+/* Quality & Coverage */
+html[data-ui="cosmo"] .dq{flex:1;overflow:auto;min-height:0;padding:16px}
+html[data-ui="cosmo"] .dq-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+html[data-ui="cosmo"] .dq-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+html[data-ui="cosmo"] .dq-card .kv{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--ink);line-height:1}
+html[data-ui="cosmo"] .dq-card .kl{font-size:11px;color:var(--ink3);margin-top:6px}
+html[data-ui="cosmo"] .dq-card .kb{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:5px}
+html[data-ui="cosmo"] .dq-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+html[data-ui="cosmo"] .dq-phd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:13px;color:var(--ink)}
+html[data-ui="cosmo"] .qmatrix{width:100%;border-collapse:collapse;font-size:12px}
+html[data-ui="cosmo"] .qmatrix th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:9px 14px;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--ink3);border-bottom:1px solid var(--line);text-transform:uppercase}
+html[data-ui="cosmo"] .qmatrix td{padding:8px 14px;border-bottom:1px solid var(--line2);color:var(--ink2)}
+html[data-ui="cosmo"] .qmatrix tr:hover td{background:var(--panel2)}
+html[data-ui="cosmo"] .qmatrix .qw{font-family:var(--mono);color:var(--teal-ink);font-weight:600}
+html[data-ui="cosmo"] .qcell{display:inline-flex;align-items:center;gap:6px}
+html[data-ui="cosmo"] .qdot{width:8px;height:8px;border-radius:50%}
+html[data-ui="cosmo"] .qdot.qy{background:#16a34a}
+html[data-ui="cosmo"] .qdot.qn{background:var(--line)}
+html[data-ui="cosmo"] .qpill{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px}
+html[data-ui="cosmo"] .qpill.qy{background:#16a34a1e;color:#15803d}
+html[data-ui="cosmo"] .qpill.qp{background:#f59e0b1e;color:#b45309}
+html[data-ui="cosmo"] .qpill.qn{background:var(--line2);color:var(--ink3)}
+html[data-ui="cosmo"] .nat{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:5px;margin-left:auto}
+html[data-ui="cosmo"] .nat.measured{background:#16a34a1e;color:#15803d}
+html[data-ui="cosmo"] .nat.derived{background:#2563eb1e;color:#1d4ed8}
+html[data-ui="cosmo"] .nat.interpreted{background:#7c3aed1e;color:#6d28d9}
+html[data-ui="cosmo"] .nat.reference{background:var(--line2);color:var(--ink3)}

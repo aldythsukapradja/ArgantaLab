@@ -165,7 +165,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
     // z-extent along the row
     let zMin = Infinity, zMax = -Infinity;
     for (let i = 0; i < nx; i++) { const col = jRow * nx + i; const t = grid.topZ[col], b = grid.baseZ[col]; if (isFinite(t)) zMin = Math.min(zMin, t); if (isFinite(b)) zMax = Math.max(zMax, b); }
-    if (!isFinite(zMin)) { ctx.fillStyle = cssVar('--muted'); ctx.font = '11px var(--mono)'; ctx.fillText('no active cells on this section', 12, 20); return; }
+    if (!isFinite(zMin)) { ctx.fillStyle = cssVar('--muted'); ctx.font = `11px ${cssVar('--mono')}`; ctx.fillText('no active cells on this section', 12, 20); return; }
     const padL = 44, padB = 18, padT = 10, padR = 10;
     const pw = w - padL - padR, ph = h - padB - padT;
     const zpad = (zMax - zMin) * 0.08 || 1;
@@ -183,7 +183,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
       }
     }
     // depth axis
-    ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 0.5; ctx.fillStyle = cssVar('--muted'); ctx.font = '9px var(--mono)'; ctx.textAlign = 'right';
+    ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 0.5; ctx.fillStyle = cssVar('--muted'); ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'right';
     for (let t = 0; t <= 3; t++) { const z = (zMin - zpad) + ((zMax + zpad) - (zMin - zpad)) * t / 3; const yy = zy(z); ctx.fillText(z.toFixed(0), padL - 4, yy + 3); ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.globalAlpha = 0.35; ctx.stroke(); ctx.globalAlpha = 1; }
     // OWC line
     if (owc >= zMin - zpad && owc <= zMax + zpad) { ctx.strokeStyle = cssVar('--blue'); ctx.setLineDash([4, 3]); ctx.lineWidth = 1; const yy = zy(owc); ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke(); ctx.setLineDash([]); ctx.textAlign = 'left'; ctx.fillStyle = cssVar('--blue'); ctx.fillText(`OWC ${owc}`, padL + 2, yy - 2); }

@@ -1,0 +1,48 @@
+/* exploration.css — token bridge for the Exploration surface.
+ *
+ * The viewers (and the reused fielddev/chrome components) were written against the
+ * classic token names --text / --muted / --panel-2. Under the COSMO shell those are
+ * NOT theme-aware: --text stays near-white (#e5eef0) and --panel-2 stays dark
+ * (#0f1d23), so on COSMO's LIGHT theme body text renders white-on-white (invisible)
+ * and subtle fills render dark-on-white. COSMO's real, theme-aware text/surface
+ * tokens are --ink / --ink2 / --ink3 / --bg (they flip between light & dark at :root).
+ *
+ * Remapping them here — scoped to .expl-surface only — fixes every viewer AND every
+ * reused chrome component (Inspector, Slider, Segmented, ReadoutBar, NatureBadge) in
+ * one place, in BOTH themes, without touching the shared fielddev chrome or the
+ * Field Development surface. Canvas text (read from :root via cssVar) is fixed
+ * separately by using --ink directly in the draw helpers. */
+.expl-surface {
+  --text: var(--ink);       /* primary body text  → dark on light, light on dark */
+  --muted: var(--ink2);     /* secondary text     → readable slate in both themes */
+  --panel-2: var(--bg);     /* subtle fills/inputs → light on light, dark on dark  */
+}
+
+/* COSMO's accent tokens are tuned for DARK panels; used as text/chips on the LIGHT
+ * theme's white panels they only reach ~2.2–2.8:1 (below WCAG AA). Darken them for
+ * light so every coloured label, chip and figure reads (~4.5:1), then restore the
+ * bright originals under html.dark where they sit on dark panels. Chips/cells read
+ * these via var(--green) etc., so remapping fixes them in place. (Canvas fills read
+ * :root and keep the bright accents — correct on their own coloured surfaces.) */
+.expl-surface {
+  --green: #0a875d;
+  --teal: #0a8478;
+  --amber: #a56400;
+  --rose: #c23a56;
+  --cyan: #0b8ba3;
+  --orange: #9a5418;   /* INTERPRETED chips */
+  --violet: #6d28d9;   /* DERIVED chips + inspector accents */
+  --purple: #6d28d9;
+  --ink3: #5b6b82;     /* tertiary body text (evidence bullets) — was too light */
+}
+html.dark .expl-surface {
+  --green: #10b981;
+  --teal: #0FB5A6;
+  --amber: #f59e0b;
+  --rose: #df7084;
+  --cyan: #22d3ee;
+  --orange: #e58d4b;
+  --violet: #b37df0;
+  --purple: #7c3aed;
+  --ink3: #64748b;
+}

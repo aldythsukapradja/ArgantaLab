@@ -27,16 +27,17 @@ function Node({ icon: Ic, color, label, sub, on, vis, onVis, onClick }: {
 function Folder({ icon: Ic, title, count, open, onToggle, onAdd, children }: {
   icon: typeof MapPin; title: string; count: number; open: boolean; onToggle: () => void; onAdd?: () => void; children?: React.ReactNode;
 }) {
+  const has = count > 0;
   return (
-    <div className="folder">
-      <div className="fhead" onClick={onToggle}>
-        <span className={'caret' + (open ? ' open' : '')}><ChevronRight size={12} /></span>
+    <div className={'folder' + (has ? '' : ' empty-folder')}>
+      <div className="fhead" onClick={has ? onToggle : undefined}>
+        <span className="caret">{has ? <ChevronRight size={13} className={'chev' + (open ? ' open' : '')} /> : <span className="cdot" />}</span>
         <span className="ficon"><Ic size={15} /></span>
-        <span>{title}</span>
+        <span className="ftitle">{title}</span>
         {onAdd && <span className="fadd" title="Add" onClick={(e) => { e.stopPropagation(); onAdd(); }}><Plus size={13} /></span>}
-        <span className="fcount">{count}</span>
+        <span className={'fcount' + (has ? ' has' : '')}>{count}</span>
       </div>
-      {open && <div className="fchildren">{children || <div className="empty">Empty.</div>}</div>}
+      {has && open && <div className="fchildren">{children}</div>}
     </div>
   );
 }

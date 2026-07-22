@@ -125,7 +125,7 @@ export function XSection({ line, activeSurface, contactZ, wellPaths, picks, onCl
       }
       ctx.strokeStyle = cssVar('--rose'); ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]);
       ctx.beginPath(); ctx.moveTo(PAD.l, dy(contactZ)); ctx.lineTo(w - PAD.r, dy(contactZ)); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = cssVar('--rose'); ctx.textAlign = 'left'; ctx.font = '9px var(--mono)'; ctx.fillText(`OWC ${contactZ}`, PAD.l + 3, dy(contactZ) - 3);
+      ctx.fillStyle = cssVar('--rose'); ctx.textAlign = 'left'; ctx.font = `9px ${cssVar('--mono')}`; ctx.fillText(`OWC ${contactZ}`, PAD.l + 3, dy(contactZ) - 3);
     }
 
     // horizons
@@ -142,7 +142,7 @@ export function XSection({ line, activeSurface, contactZ, wellPaths, picks, onCl
       }
       ctx.stroke(); ctx.setLineDash([]);
       const last = [...tr.pts].reverse().find((p) => isFinite(p[1]));
-      if (last) { ctx.fillStyle = ctx.strokeStyle as string; ctx.textAlign = 'right'; ctx.font = '8.5px var(--mono)'; ctx.fillText(tr.name, dx(last[0]) - 2, dy(zApply(last[1], last[0])) - 2); }
+      if (last) { ctx.fillStyle = ctx.strokeStyle as string; ctx.textAlign = 'right'; ctx.font = `8.5px ${cssVar('--mono')}`; ctx.fillText(tr.name, dx(last[0]) - 2, dy(zApply(last[1], last[0])) - 2); }
     });
 
     // hung wells + pick ties
@@ -156,7 +156,7 @@ export function XSection({ line, activeSurface, contactZ, wellPaths, picks, onCl
       ctx.strokeStyle = well.role === 'injector' ? cssVar('--blue') : cssVar('--amber');
       ctx.lineWidth = 1.4; ctx.setLineDash(perp > 60 ? [3, 3] : []);
       ctx.beginPath(); ctx.moveTo(px, PAD.t); ctx.lineTo(px, dy(zApply(Math.min(well.td_tvd, zMax + 1e4), t * lineLen))); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = text; ctx.font = 'bold 9px var(--mono)'; ctx.textAlign = 'center'; ctx.fillText(well.name, px, PAD.t + 9);
+      ctx.fillStyle = text; ctx.font = `bold 9px ${cssVar('--mono')}`; ctx.textAlign = 'center'; ctx.fillText(well.name, px, PAD.t + 9);
       for (const pk of picks) {
         if (pk.well !== well.name || pk.tvdss == null) continue;
         const py = dy(zApply(pk.tvdss, t * lineLen)); if (py < PAD.t || py > h - PAD.b) continue;
@@ -173,12 +173,12 @@ export function XSection({ line, activeSurface, contactZ, wellPaths, picks, onCl
     ctx.restore();
 
     // depth axis labels (outside clip)
-    ctx.fillStyle = muted; ctx.font = '9px var(--mono)'; ctx.textAlign = 'right';
+    ctx.fillStyle = muted; ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'right';
     for (let z = Math.ceil(zMin / zstep) * zstep; z <= zMax; z += zstep) { const py = dy(z); if (py < PAD.t - 2 || py > h - PAD.b + 2) continue; ctx.fillText(String(Math.round(flatTrace ? zc + (z - zc) : z)), PAD.l - 4, py + 3); }
     ctx.strokeStyle = line0; ctx.lineWidth = 0.6; ctx.strokeRect(PAD.l, PAD.t, plotW, plotH);
-    ctx.fillStyle = text; ctx.textAlign = 'center'; ctx.font = 'bold 10px var(--mono)';
+    ctx.fillStyle = text; ctx.textAlign = 'center'; ctx.font = `bold 10px ${cssVar('--mono')}`;
     ctx.fillText('A', PAD.l, h - 8); ctx.fillText("A'", w - PAD.r, h - 8);
-    ctx.fillStyle = muted; ctx.font = '9px var(--mono)';
+    ctx.fillStyle = muted; ctx.font = `9px ${cssVar('--mono')}`;
     ctx.fillText(`${(lineLen / 1000).toFixed(2)} km${vExag > 1 ? ` · V×${vExag}` : ''}${flatTrace ? ` · flattened on ${flatTrace.name}` : ''}`, PAD.l + plotW / 2, h - 8);
 
     // draggable endpoint handles

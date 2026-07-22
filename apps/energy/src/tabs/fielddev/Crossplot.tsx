@@ -105,7 +105,7 @@ function Plot2D({ log, xC, yC, colorC, hexbin, onSelectInterval, selInterval }: 
     const line = cssVar('--line'), muted = cssVar('--muted'), text = cssVar('--text');
     // frame + grid
     ctx.strokeStyle = line; ctx.lineWidth = 0.5; ctx.strokeRect(padL, padT, plotW, plotH);
-    ctx.fillStyle = muted; ctx.font = '8.5px var(--mono)';
+    ctx.fillStyle = muted; ctx.font = `8.5px ${cssVar('--mono')}`;
     for (let i = 0; i <= 4; i++) {
       const fx = padL + (i / 4) * plotW, fy = padT + (i / 4) * plotH;
       ctx.textAlign = 'center'; ctx.fillText((xDomain[0] + (xDomain[1] - xDomain[0]) * (i / 4)).toFixed(2), fx, h - 14);

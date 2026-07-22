@@ -1,0 +1,54 @@
+/* Well Delivery — proposal list + one-pager. Reuses COSMO tokens (--teal/--ink/
+   --panel/--line/--mono) and the .panel/.wbtn/.pill/.ban primitives already
+   defined in cosmo-system.css; scoped so it never touches the classic UI. */
+html[data-ui="cosmo"] .wd-home{height:100%;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:16px}
+html[data-ui="cosmo"] .wd-toolbar{display:flex;align-items:center;gap:10px}
+html[data-ui="cosmo"] .wd-toolbar select{padding:6px 10px;font-size:12px;font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text)}
+html[data-ui="cosmo"] .wd-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+html[data-ui="cosmo"] .wd-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .12s}
+html[data-ui="cosmo"] .wd-card:hover{border-color:var(--teal)}
+html[data-ui="cosmo"] .wd-card .wdc-well{font-weight:700;font-size:14px;color:var(--ink)}
+html[data-ui="cosmo"] .wd-card .wdc-gate{font-family:var(--mono);font-size:9.5px;color:var(--teal-ink);background:var(--teal-soft);padding:2px 8px;border-radius:20px;display:inline-block;margin-top:6px}
+html[data-ui="cosmo"] .wd-card .wdc-meta{font-size:10.5px;color:var(--ink3);margin-top:8px}
+html[data-ui="cosmo"] .wd-empty{padding:40px;text-align:center;color:var(--ink3);font-size:12.5px}
+
+/* one-pager */
+html[data-ui="cosmo"] .wd-onepager-wrap{height:100%;overflow-y:auto;display:flex;flex-direction:column}
+html[data-ui="cosmo"] .wd-op-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .wd-op-bar .sp{flex:1}
+html[data-ui="cosmo"] .wd-op-page{max-width:8.27in;margin:20px auto 60px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);padding:0.6in;font-size:11px;color:var(--ink)}
+html[data-ui="cosmo"] .wd-op-sec{margin-bottom:12px}
+html[data-ui="cosmo"] .wd-op-sec h3{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-ink);border-bottom:1px solid var(--line);padding-bottom:4px;margin:0 0 6px}
+html[data-ui="cosmo"] .wd-op-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px}
+html[data-ui="cosmo"] .wd-op-kv{display:flex;justify-content:space-between;font-size:10.5px;padding:2px 0;border-bottom:1px dotted var(--line)}
+html[data-ui="cosmo"] .wd-op-kv b{color:var(--ink3);font-weight:500}
+html[data-ui="cosmo"] .wd-op-table{width:100%;border-collapse:collapse;font-size:10px}
+html[data-ui="cosmo"] .wd-op-table th{text-align:left;font-family:var(--mono);font-size:8.5px;color:var(--ink3);text-transform:uppercase;border-bottom:1px solid var(--line);padding:3px 6px}
+html[data-ui="cosmo"] .wd-op-table td{padding:3px 6px;border-bottom:1px solid var(--line)}
+html[data-ui="cosmo"] .wd-op-table input{width:100%;border:0;background:transparent;font-size:10px;color:var(--ink);font-family:inherit}
+html[data-ui="cosmo"] .wd-op-input{width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:10.5px;background:var(--panel2);color:var(--ink);font-family:inherit}
+html[data-ui="cosmo"] .wd-op-textarea{width:100%;min-height:44px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:10.5px;background:var(--panel2);color:var(--ink);font-family:inherit;resize:vertical}
+html[data-ui="cosmo"] .wd-nature{font-family:var(--mono);font-size:7.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px}
+html[data-ui="cosmo"] .wd-nature.measured,html[data-ui="cosmo"] .wd-nature.interpreted{color:var(--teal-ink);background:var(--teal-soft)}
+html[data-ui="cosmo"] .wd-nature.scenario{color:#c2790a;background:rgba(245,158,11,.14)}
+html[data-ui="cosmo"] .wd-risk-row{display:flex;gap:8px;align-items:center;font-size:10.5px;padding:3px 0}
+html[data-ui="cosmo"] .wd-sev{font-family:var(--mono);font-size:8px;text-transform:uppercase;padding:1px 6px;border-radius:20px;flex:none}
+html[data-ui="cosmo"] .wd-sev.low{color:#0a8a7f;background:rgba(10,138,127,.12)}
+html[data-ui="cosmo"] .wd-sev.med{color:#c2790a;background:rgba(245,158,11,.14)}
+html[data-ui="cosmo"] .wd-sev.high{color:#c0264a;background:rgba(225,29,116,.12)}
+html[data-ui="cosmo"] .wd-links{display:flex;flex-wrap:wrap;gap:6px}
+html[data-ui="cosmo"] .wd-link-chip{font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink2);background:var(--panel2)}
+html[data-ui="cosmo"] .wd-link-chip.ok{border-color:var(--teal);color:var(--teal-ink);background:var(--teal-soft)}
+html[data-ui="cosmo"] .wd-gate-track{display:flex;gap:4px;margin-top:4px}
+html[data-ui="cosmo"] .wd-gate-dot{width:22px;height:5px;border-radius:3px;background:var(--line)}
+html[data-ui="cosmo"] .wd-gate-dot.on{background:var(--teal)}
+
+/* sequence preview (Drilling Sequence nav placeholder upgrade) */
+html[data-ui="cosmo"] .wd-seq{padding:20px;height:100%;overflow-y:auto}
+html[data-ui="cosmo"] .wd-seq-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;font-size:11px}
+
+@media print{
+  html[data-ui="cosmo"] .wd-op-bar{display:none!important}
+  html[data-ui="cosmo"] .wd-onepager-wrap{overflow:visible!important}
+  html[data-ui="cosmo"] .wd-op-page{box-shadow:none;border:none;margin:0;max-width:none}
+}

@@ -80,7 +80,7 @@ function Inner({ field }: { field: ProdJson }) {
     rows.forEach((r, i) => { const cx = padL + (i + 0.5) / nY * plotW; const cy = cumY(r.cumulative); i ? ctx.lineTo(cx, cy) : ctx.moveTo(cx, cy); });
     ctx.stroke();
     // labels
-    ctx.fillStyle = cssVar('--muted'); ctx.font = '9px var(--mono)'; ctx.textAlign = 'center';
+    ctx.fillStyle = cssVar('--muted'); ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'center';
     rows.forEach((_, i) => { if (i % 2 === 0) ctx.fillText(String(years[i]), padL + (i + 0.5) / nY * plotW, h - 6); });
     ctx.textAlign = 'right'; ctx.fillStyle = cssVar('--teal'); ctx.fillText('net $MM', padL - 4, padT + 8);
     ctx.fillStyle = cssVar('--amber'); ctx.textAlign = 'left'; ctx.fillText('cum $MM', padL + plotW + 4, cumY(cumMax) + 4);
