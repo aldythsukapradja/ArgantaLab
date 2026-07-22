@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CosmoApp } from './cosmo/CosmoApp';
 import { useStore } from './store';
 import { DOMAINS } from './nav';
 import { Drawer } from './components/Drawer';
@@ -40,6 +41,12 @@ function Surface() {
 
 export function App() {
   const isMobile = useIsMobile();
+
+  // dual-UI: ?ui=cosmo renders the migrated COSMO shell (ArgantaEnergy-Cosmo.bat);
+  // anything else keeps the classic UI. Both coexist until the migration completes.
+  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ui') === 'cosmo') {
+    return <CosmoApp />;
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
