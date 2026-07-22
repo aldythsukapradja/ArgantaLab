@@ -9,7 +9,7 @@ import { Inspector, InspectorSection, Slider, Loading, ErrorBanner } from './chr
 import { NatureBadge } from '../../components/Provenance';
 import { loadProdField } from '../../wb/load';
 import type { ProdJson } from '../../wb/types';
-import { fitExpDecline, arps, blindTest, expCumToLimit, evaluateFdp, fdpVerdict, type EconCtx, type FdpOption } from '../../engine/review';
+import { fitExpDecline, arps, blindTest, expCumToLimit, evaluateFdp, fdpVerdict, findOpportunity, type EconCtx, type FdpOption } from '../../engine/review';
 
 const SM3_TO_BBL = 6.2898;
 const mmbbl = (sm3: number) => (sm3 * SM3_TO_BBL / 1e6);
@@ -49,6 +49,7 @@ function Inner({ field }: { field: ProdJson }) {
   ], []);
   const results = useMemo(() => options.map((o) => evaluateFdp(o, ctx)), [options, ctx]);
   const verdict = useMemo(() => fdpVerdict(results.filter((r) => r.capexMM > 0), mmbbl(remainingSm3)), [results, remainingSm3]);
+  const opp = useMemo(() => findOpportunity(options, ctx), [options, ctx]);
 
   // ── history-match + blind-test chart ──
   const draw = useCallback((cx: CanvasRenderingContext2D, w: number, h: number) => {
@@ -98,6 +99,31 @@ function Inner({ field }: { field: ProdJson }) {
             {verdict.reasons.map((r, i) => <li key={i}>{r}</li>)}
           </ul>
         </div>
+
+        {/* OPPORTUNITY — can it be saved? the tangible what-would-it-take answer */}
+        {opp && (
+          <div style={{ margin: '0 10px 10px', padding: 11, border: '1px solid var(--amber)', borderRadius: 6, background: 'color-mix(in srgb, var(--amber) 6%, transparent)' }}>
+            <div className="eyebrow" style={{ fontSize: 9.5, color: 'var(--amber)', marginBottom: 5 }}>Opportunity · can it be saved at abandonment?</div>
+            <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.5, marginBottom: 8 }}>{opp.summary}</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                ['Best plan', opp.bestPlan.name, 'var(--text)'],
+                ['Recoverable', `${opp.recoverableMMbbl.toFixed(1)} MMbbl`, 'var(--amber)'],
+                ['Field life', `~${opp.years} yr`, 'var(--text)'],
+                ['Break-even oil', opp.breakEvenPriceUsd ? `$${opp.breakEvenPriceUsd.toFixed(0)}/bbl` : 'never', opp.economicNow ? 'var(--teal)' : 'var(--rose)'],
+                ['Re-entry ceiling', opp.breakEvenReentryMM !== null ? `≤ $${opp.breakEvenReentryMM.toFixed(0)}MM` : 'n/a', 'var(--muted)'],
+              ].map(([k, v, c]) => (
+                <div key={k} style={{ flex: '1 1 92px', border: '1px solid var(--line)', borderRadius: 5, padding: '5px 8px', background: 'var(--panel)' }}>
+                  <div className="eyebrow" style={{ fontSize: 8.5 }}>{k}</div>
+                  <div className="mono" style={{ fontSize: 12.5, color: c }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 7 }}>
+              Today: oil <b style={{ color: 'var(--text)' }}>${price}/bbl</b> · re-entry <b style={{ color: 'var(--text)' }}>${reentry}MM</b>. {opp.economicNow ? 'These clear the bar — the plan pays.' : 'Neither threshold is met at current assumptions → the plan does not pay. Drag the sliders to test what would change that.'}
+            </div>
+          </div>
+        )}
 
         {/* history match + blind test */}
         <div style={{ padding: '0 10px' }} className="eyebrow">History match · blind test (train {(trainFrac * 100).toFixed(0)}% → predict tail)</div>
@@ -156,7 +182,7 @@ function Inner({ field }: { field: ProdJson }) {
           <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4 }}>Fit on the first {(trainFrac * 100).toFixed(0)}%, predict the rest. MAPE <b style={{ color: bt.mapePct < 15 ? 'var(--teal)' : 'var(--amber)' }}>{bt.mapePct.toFixed(1)}%</b> · RMSE {bt.rmsePct.toFixed(1)}%.</div>
         </InspectorSection>
         <InspectorSection title="Economics (stress)">
-          <Slider label="Oil price" min={40} max={120} step={5} value={price} onChange={setPrice} fmt={(v) => `$${v}/bbl`} />
+          <Slider label="Oil price" min={40} max={200} step={5} value={price} onChange={setPrice} fmt={(v) => `$${v}/bbl`} />
           <Slider label="Facility re-entry" min={0} max={1200} step={50} value={reentry} onChange={setReentry} fmt={(v) => `$${v}MM`} />
           <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>opex $14/bbl + $45MM/yr · capex $80MM/well · discount 10% · abandon $150MM.</div>
         </InspectorSection>

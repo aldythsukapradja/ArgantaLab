@@ -59,6 +59,31 @@ if (existsSync(join(__dirname, '..', 'src', 'engine', 'review.ts'))) {
     const v = R.fdpVerdict(opts, 12);
     check('FDP verdict is honest (sub-economic → redevelop=false)', v.redevelop === false && /Sub-economic/i.test(v.headline), v.headline.slice(0, 48));
   }
+  // 5b · opportunity / break-even solver
+  {
+    const volveLike = { oilPrice: 70, opexVar: 14, opexFixMM: 45, perWellCapexMM: 80, facilityReentryMM: 700, discount: 0.10, abandonMM: 150, years: 7 };
+    const opts = [
+      { name: '1 infill', producers: 1, injectors: 0, incrRecoveryMMSm3: 0.6 },
+      { name: '2 infill + 1 inj', producers: 2, injectors: 1, incrRecoveryMMSm3: 1.5 },
+      { name: 'full waterflood', producers: 3, injectors: 2, incrRecoveryMMSm3: 2.6 },
+    ];
+    const op = R.findOpportunity(opts, volveLike);
+    check('opportunity: sub-economic now', op && op.economicNow === false, `NPV=$${op?.bestPlan.npvMM.toFixed(0)}MM`);
+    check('opportunity: break-even oil price is above base', op && op.breakEvenPriceUsd > volveLike.oilPrice, `BE price=$${op?.breakEvenPriceUsd?.toFixed(0)}/bbl`);
+    // at the break-even price, the best option's NPV ≈ 0
+    {
+      const best = opts.reduce((a, b) => (R.evaluateFdp(b, volveLike).npvMM > R.evaluateFdp(a, volveLike).npvMM ? b : a));
+      const npvAtBE = R.evaluateFdp(best, { ...volveLike, oilPrice: op.breakEvenPriceUsd }).npvMM;
+      check('break-even price gives NPV ≈ 0', approx(npvAtBE, 0, 1), `NPV@BE=$${npvAtBE.toFixed(2)}MM`);
+    }
+    check('opportunity: reports barrels + years', op && op.recoverableMMbbl > 0 && op.years > 0, `${op?.recoverableMMbbl.toFixed(1)} MMbbl / ${op?.years} yr`);
+    check('opportunity: NPV monotone ↑ in oil price', R.evaluateFdp(opts[2], { ...volveLike, oilPrice: 150 }).npvMM > R.evaluateFdp(opts[2], volveLike).npvMM);
+    // a rich context flips economicNow true
+    const rich = { ...volveLike, oilPrice: 150, facilityReentryMM: 50 };
+    const opR = R.findOpportunity(opts, rich);
+    check('opportunity: rich context → economic, reports years/bbl', opR && opR.economicNow === true && opR.recoverableMMbbl > 0, opR?.summary?.slice(0, 46));
+  }
+
   // 6 · higher capex strictly lowers NPV (monotonic sanity)
   {
     const base = { oilPrice: 70, opexVar: 14, opexFixMM: 45, perWellCapexMM: 80, facilityReentryMM: 700, discount: 0.10, abandonMM: 150, years: 7 };

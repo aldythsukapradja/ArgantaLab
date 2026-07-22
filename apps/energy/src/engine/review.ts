@@ -73,6 +73,14 @@ export interface FdpResult {
   paybackYr: number | null; economic: boolean; note: string;
 }
 
+/** Incremental annual oil (bbl) for an option: front-loaded exponential decline. */
+export function incrementalAnnualBbl(opt: FdpOption, ctx: EconCtx, decl = 0.28): number[] {
+  const incrOilBbl = opt.incrRecoveryMMSm3 * 1e6 * SM3_TO_BBL;
+  let sum = 0; const shape: number[] = [];
+  for (let y = 0; y < ctx.years; y++) { const s = Math.exp(-decl * y); shape.push(s); sum += s; }
+  return shape.map((s) => incrOilBbl * s / sum);
+}
+
 /** Mid-year discounted NPV of an incremental oil profile (exponential decline). */
 function npvOf(annualOilBbl: number[], ctx: EconCtx, capexMM: number): number {
   let npv = -capexMM;
@@ -86,10 +94,7 @@ function npvOf(annualOilBbl: number[], ctx: EconCtx, capexMM: number): number {
 
 export function evaluateFdp(opt: FdpOption, ctx: EconCtx): FdpResult {
   const incrOilBbl = opt.incrRecoveryMMSm3 * 1e6 * SM3_TO_BBL;
-  // front-loaded exponential incremental profile over ctx.years
-  const decl = 0.28; let sum = 0; const shape: number[] = [];
-  for (let y = 0; y < ctx.years; y++) { const s = Math.exp(-decl * y); shape.push(s); sum += s; }
-  const annual = shape.map((s) => incrOilBbl * s / sum);
+  const annual = incrementalAnnualBbl(opt, ctx);
   const capexMM = opt.producers * ctx.perWellCapexMM + opt.injectors * ctx.perWellCapexMM + (opt.producers + opt.injectors > 0 ? ctx.facilityReentryMM : 0);
   const npvMM = npvOf(annual, ctx, capexMM);
   // simple payback (undiscounted cumulative cashflow crossing zero)
@@ -101,6 +106,55 @@ export function evaluateFdp(opt: FdpOption, ctx: EconCtx): FdpResult {
     economic: npvMM > 0,
     note: npvMM > 0 ? 'positive NPV — screens in' : `NPV $${npvMM.toFixed(0)}MM — capex not recovered`,
   };
+}
+
+// ── opportunity / break-even solver ────────────────────────────────────────────
+// "At abandonment, is there anything we can do to make it economic — and if so, how
+// many barrels over how many years?" Sweep the levers, find where NPV crosses zero.
+
+/** Years to recover `frac` of the incremental oil (field-life proxy) + total bbl. */
+export function recoveryTiming(opt: FdpOption, ctx: EconCtx, frac = 0.9): { years: number; recoverableMMbbl: number } {
+  const annual = incrementalAnnualBbl(opt, ctx);
+  const total = annual.reduce((a, b) => a + b, 0);
+  let cum = 0, years = ctx.years;
+  for (let y = 0; y < annual.length; y++) { cum += annual[y]; if (cum >= frac * total) { years = y + 1; break; } }
+  return { years, recoverableMMbbl: total / 1e6 };
+}
+
+/** Bisection: the value of `lever` at which the option's NPV crosses zero, or null
+ * if there is no crossing in [lo,hi]. NPV is monotone in oilPrice (↑) / re-entry (↓). */
+export function breakEven(opt: FdpOption, ctx: EconCtx, lever: 'oilPrice' | 'facilityReentryMM', lo: number, hi: number): number | null {
+  const npvAt = (v: number) => evaluateFdp(opt, { ...ctx, [lever]: v }).npvMM;
+  let a = lo, b = hi, fa = npvAt(a), fb = npvAt(b);
+  if (fa === 0) return a; if (fb === 0) return b;
+  if ((fa < 0) === (fb < 0)) return null;                 // no sign change → no crossing
+  for (let i = 0; i < 60; i++) { const m = (a + b) / 2, fm = npvAt(m); if (Math.abs(fm) < 1e-6) return m; if ((fm < 0) === (fa < 0)) { a = m; fa = fm; } else { b = m; fb = fm; } }
+  return (a + b) / 2;
+}
+
+export interface Opportunity {
+  bestPlan: FdpResult;
+  economicNow: boolean;
+  breakEvenPriceUsd: number | null;      // oil price ($/bbl) that turns the best plan economic
+  breakEvenReentryMM: number | null;     // facility re-entry ($MM) ceiling for economic
+  recoverableMMbbl: number;              // barrels the best plan would recover
+  years: number;                         // to recover 90% of them
+  summary: string;                       // one tangible sentence
+}
+
+/** Find the most-valuable intervention and what it would take to make it pay. */
+export function findOpportunity(options: FdpOption[], ctx: EconCtx): Opportunity | null {
+  const scored = options.filter((o) => o.producers + o.injectors > 0).map((o) => ({ o, r: evaluateFdp(o, ctx) }));
+  if (!scored.length) return null;
+  const best = scored.reduce((a, b) => (b.r.npvMM > a.r.npvMM ? b : a), scored[0]);
+  const timing = recoveryTiming(best.o, ctx);
+  const bep = breakEven(best.o, ctx, 'oilPrice', ctx.oilPrice, 400);
+  const ber = breakEven(best.o, ctx, 'facilityReentryMM', 0, Math.max(ctx.facilityReentryMM, 1));
+  const economicNow = best.r.npvMM > 0;
+  const summary = economicNow
+    ? `Best plan "${best.o.name}" is economic: recover ~${timing.recoverableMMbbl.toFixed(1)} MMbbl over ~${timing.years} yr, NPV +$${best.r.npvMM.toFixed(0)}MM.`
+    : `Best screened plan "${best.o.name}" could recover ~${timing.recoverableMMbbl.toFixed(1)} MMbbl over ~${timing.years} yr, but at NPV $${best.r.npvMM.toFixed(0)}MM it destroys value. It only pays at oil ≥ $${bep ? bep.toFixed(0) : '—'}/bbl${ber !== null ? `, or if facility re-entry ≤ $${ber.toFixed(0)}MM` : ''}.`;
+  return { bestPlan: best.r, economicNow, breakEvenPriceUsd: bep, breakEvenReentryMM: ber, recoverableMMbbl: timing.recoverableMMbbl, years: timing.years, summary };
 }
 
 export interface Verdict { redevelop: boolean; headline: string; reasons: string[] }
