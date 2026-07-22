@@ -112,6 +112,73 @@ export function reconcile(
   return { p10: P10, p50: P50, p90: P90, physicsWeight: wPhys, analogWeight: wAna, derisk, basis, effN: prior.effN };
 }
 
+// ── WHY the blend weight? Inverse-variance (Bates-Granger optimal combination) ──
+// The optimal weight on an unbiased estimator is proportional to its precision
+// (1/variance). So physicsWeight = varAnalog / (varPhysics + varAnalog). A "40/60"
+// isn't a magic number — it means the analog benchmark is ~1.5× more precise here.
+// σ from a P10–P90 band (normal): σ ≈ (p90 − p10) / 2.563.
+export function optimalPhysicsWeight(physicsVal: number, physicsCV: number, prior: Prior): number {
+  const varP = (physicsVal * physicsCV) ** 2;
+  const sigmaA = (prior.p90 - prior.p10) / 2.563;
+  const varA = sigmaA * sigmaA;
+  if (varP + varA <= 0) return 0.5;
+  return varA / (varP + varA);
+}
+
+// ── BLIND TEST — leave-one-out cross-validation of the analog method ────────────
+// For each field: predict its recovery factor from the OTHER analogs only, compare
+// to the actual. Reports the honest accuracy (MAE) AND calibration (does the actual
+// fall inside the predicted P10–P90 the right fraction of the time?). This is how you
+// earn a confidence level in the method itself — and it improves as the KB grows.
+export interface CrossVal {
+  rows: Array<{ name: string; actual: number; p50: number; p10: number; p90: number; absErr: number; inRange: boolean }>;
+  mae: number;          // mean absolute error of P50
+  medAbsErr: number;
+  coverageP80: number;  // fraction of actuals inside P10–P90 (target ≈ 0.80 = well-calibrated)
+  n: number;
+}
+export function crossValidate(db: AnalogField[], k = 6): CrossVal {
+  const rows: CrossVal['rows'] = [];
+  for (let i = 0; i < db.length; i++) {
+    const held = db[i], rest = db.filter((_, j) => j !== i);
+    if (!rest.length) continue;
+    const target: AnalogTarget = { lithology: held.lithology, drive: held.drive, depthM: held.depthM, porosity: held.porosity, permMd: held.permMd, oilAPI: held.oilAPI };
+    const prior = analogPrior(matchAnalogs(target, rest, k));
+    if (!isFinite(prior.p50)) continue;
+    const actual = held.recoveryFactor;
+    rows.push({ name: held.name, actual, p50: prior.p50, p10: prior.p10, p90: prior.p90, absErr: Math.abs(prior.p50 - actual), inRange: actual >= prior.p10 && actual <= prior.p90 });
+  }
+  const n = rows.length;
+  const errs = rows.map((r) => r.absErr).sort((a, b) => a - b);
+  return {
+    rows, n,
+    mae: n ? errs.reduce((s, e) => s + e, 0) / n : NaN,
+    medAbsErr: n ? errs[Math.floor(n / 2)] : NaN,
+    coverageP80: n ? rows.filter((r) => r.inRange).length / n : NaN,
+  };
+}
+
+// ── tornado sensitivity — which input swings the answer most ────────────────────
+export interface TornadoBar { param: string; low: number; high: number; swing: number }
+/** Vary each reconcile input across its range; return the P50-answer swing, sorted. */
+export function reconcileTornado(
+  physics: number, prior: Prior, dataConfidence: number, derisk: number,
+  ranges: { physics: [number, number]; dataConfidence: [number, number]; derisk: [number, number] },
+): TornadoBar[] {
+  const base = { physics, dataConfidence, derisk };
+  const p50 = (o: typeof base) => reconcile(o.physics, prior, o.dataConfidence, { derisk: o.derisk }).p50;
+  const bars: TornadoBar[] = [
+    { param: 'physics RF', ...swingOf(p50, base, 'physics', ranges.physics) },
+    { param: 'data confidence', ...swingOf(p50, base, 'dataConfidence', ranges.dataConfidence) },
+    { param: 'derisk', ...swingOf(p50, base, 'derisk', ranges.derisk) },
+  ];
+  return bars.sort((a, b) => b.swing - a.swing);
+}
+function swingOf(fn: (o: { physics: number; dataConfidence: number; derisk: number }) => number, base: { physics: number; dataConfidence: number; derisk: number }, key: 'physics' | 'dataConfidence' | 'derisk', range: [number, number]): { low: number; high: number; swing: number } {
+  const lo = fn({ ...base, [key]: range[0] }), hi = fn({ ...base, [key]: range[1] });
+  return { low: Math.min(lo, hi), high: Math.max(lo, hi), swing: Math.abs(hi - lo) };
+}
+
 // ── seed knowledge base — textbook recovery-factor priors by drive × lithology ──
 // Literature/class-level ranges (Tarek Ahmed; SPE); replace/extend with your own
 // specific-field analogs (confidence:'field') — those outrank these class priors.

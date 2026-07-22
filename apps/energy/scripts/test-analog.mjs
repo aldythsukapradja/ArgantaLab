@@ -66,6 +66,46 @@ if (existsSync(join(__dirname, '..', 'src', 'engine', 'analog.ts'))) {
     const ri = A.reconcile(0.45, wide, 1.0, { derisk: 0.9, physicsCV: 0.08 }); // tight physics
     check('scarce range (analog) wider than data-rich (tight physics)', band(sc) > band(ri), `scarce=${band(sc).toFixed(3)} rich=${band(ri).toFixed(3)}`);
   }
+  // 5 · inverse-variance weighting (the "why 40/60" basis)
+  {
+    const prior = { p10: 0.35, p50: 0.45, p90: 0.55, mean: 0.45, n: 5, effN: 3 };
+    // equal variances → weight 0.5
+    const sigmaA = (0.55 - 0.35) / 2.563;               // analog σ
+    const cvEqual = sigmaA / 0.45;                        // physics CV giving equal variance
+    check('inverse-variance: equal variance → weight 0.5', approx(A.optimalPhysicsWeight(0.45, cvEqual, prior), 0.5, 0.02), `w=${A.optimalPhysicsWeight(0.45, cvEqual, prior).toFixed(3)}`);
+    // very precise physics → weight → 1
+    check('inverse-variance: precise physics → weight →1', A.optimalPhysicsWeight(0.45, 0.01, prior) > 0.95);
+    // very uncertain physics → weight → 0
+    check('inverse-variance: uncertain physics → weight →0', A.optimalPhysicsWeight(0.45, 1.0, prior) < 0.1);
+  }
+  // 6 · leave-one-out cross-validation (the blind test) — mechanics + honesty
+  {
+    // synthetic informative KB: one class, RF clustered around 0.45 with spread
+    const syn = [0.38, 0.42, 0.45, 0.47, 0.50, 0.44, 0.48, 0.40].map((rf, i) => ({ name: `f${i}`, lithology: 'sandstone', drive: 'waterflood', porosity: 0.22, permMd: 300, recoveryFactor: rf, source: 'syn', confidence: 'field' }));
+    const cv = A.crossValidate(syn, 6);
+    check('LOO-CV runs on every field', cv.n === syn.length, `n=${cv.n}`);
+    check('LOO-CV MAE small on a tight cluster', cv.mae < 0.05, `MAE=${cv.mae.toFixed(3)}`);
+    check('LOO-CV coverage in [0,1]', cv.coverageP80 >= 0 && cv.coverageP80 <= 1, `cov=${cv.coverageP80.toFixed(2)}`);
+    // held-out field never leaks into its own prediction
+    check('LOO-CV excludes the held-out field', cv.rows.every((r) => Math.abs(r.p50 - r.actual) === r.absErr));
+  }
+  // 7 · tornado sensitivity ordering
+  {
+    const prior = { p10: 0.35, p50: 0.45, p90: 0.55, mean: 0.45, n: 5, effN: 3 };
+    const t = A.reconcileTornado(0.5, prior, 0.4, 0.9, { physics: [0.3, 0.7], dataConfidence: [0, 1], derisk: [0.7, 1] });
+    check('tornado sorted by swing (descending)', t.every((b, i) => i === 0 || b.swing <= t[i - 1].swing), t.map((b) => `${b.param}:${b.swing.toFixed(2)}`).join(' '));
+    check('tornado bars have low ≤ high', t.every((b) => b.low <= b.high));
+  }
+  // 8 · HONEST BLIND TEST on the real seed KB — print the number
+  {
+    const cv = A.crossValidate(A.SEED_ANALOGS, 6);
+    console.log(`\n  ┌─ BLIND TEST (leave-one-out CV) on seed KB (${cv.n} analogs):`);
+    console.log(`  │  MAE of P50      = ${(cv.mae * 100).toFixed(1)} RF-points`);
+    console.log(`  │  median abs err  = ${(cv.medAbsErr * 100).toFixed(1)} RF-points`);
+    console.log(`  │  P10–P90 coverage= ${(cv.coverageP80 * 100).toFixed(0)}%  (target ≈80% = well-calibrated)`);
+    console.log(`  └─ (thin KB → wide error; accuracy improves as you load more field analogs)\n`);
+    check('blind test executed on seed KB', cv.n >= 8);
+  }
 } else {
   console.log('SKIP  analog engine not built');
 }

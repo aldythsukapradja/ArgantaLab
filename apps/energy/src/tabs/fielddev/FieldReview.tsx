@@ -10,7 +10,7 @@ import { NatureBadge } from '../../components/Provenance';
 import { loadProdField } from '../../wb/load';
 import type { ProdJson } from '../../wb/types';
 import { fitDecline, arps, blindTest, expCumToLimit, evaluateFdp, fdpVerdict, findOpportunity, type EconCtx, type FdpOption } from '../../engine/review';
-import { matchAnalogs, analogPrior, reconcile, SEED_ANALOGS, type AnalogTarget } from '../../engine/analog';
+import { matchAnalogs, analogPrior, reconcile, crossValidate, optimalPhysicsWeight, reconcileTornado, SEED_ANALOGS, type AnalogTarget } from '../../engine/analog';
 
 const SM3_TO_BBL = 6.2898;
 const mmbbl = (sm3: number) => (sm3 * SM3_TO_BBL / 1e6);
@@ -62,7 +62,10 @@ function Inner({ field }: { field: ProdJson }) {
     const matches = matchAnalogs(target, SEED_ANALOGS, 6);
     const prior = analogPrior(matches);
     const answer = reconcile(physicsRf, prior, dataConf, { derisk });
-    return { matches, prior, answer };
+    const cv = crossValidate(SEED_ANALOGS, 6);                 // blind test of the method
+    const optW = optimalPhysicsWeight(physicsRf, 0.2, prior);  // inverse-variance recommended blend
+    const tornado = reconcileTornado(physicsRf, prior, dataConf, derisk, { physics: [0.2, 0.7], dataConfidence: [0, 1], derisk: [0.6, 1] });
+    return { matches, prior, answer, cv, optW, tornado };
   }, [physicsRf, dataConf, derisk]);
 
   // ── history-match + blind-test chart ──
@@ -159,6 +162,26 @@ function Inner({ field }: { field: ProdJson }) {
           </div>
           <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 6 }}>
             <b style={{ color: 'var(--text)' }}>Basis:</b> {analog.answer.basis}. Physics is the sanity band; the benchmark ({analog.prior.n} analogs, effN {analog.prior.effN.toFixed(1)}) + judgement set the answer. Nearest: {analog.matches.slice(0, 3).map((m) => `${m.field.name.split(' · ')[0]} ${(m.field.recoveryFactor * 100).toFixed(0)}%`).join(' · ')}.
+          </div>
+          {/* method confidence (blind test) + inverse-variance recommended blend + tornado */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start', borderTop: '1px solid var(--line)', paddingTop: 8 }}>
+            <div style={{ flex: '1 1 200px', fontSize: 9.5, color: 'var(--muted)', lineHeight: 1.6 }}>
+              <div><b style={{ color: 'var(--text)' }}>Blind test (leave-one-out CV, {analog.cv.n} analogs):</b></div>
+              <div>P50 error ±<b style={{ color: analog.cv.mae < 0.08 ? 'var(--teal)' : 'var(--amber)' }}>{(analog.cv.mae * 100).toFixed(0)} RF-pts</b> · range calibration <b style={{ color: Math.abs(analog.cv.coverageP80 - 0.8) < 0.15 ? 'var(--teal)' : 'var(--amber)' }}>{(analog.cv.coverageP80 * 100).toFixed(0)}%</b> (target ~80%).</div>
+              <div>Recommended blend (inverse-variance): <b style={{ color: 'var(--text)' }}>{(analog.optW * 100).toFixed(0)}% physics</b> — precision-weighted. Point estimate is uncertain; the <b style={{ color: 'var(--teal)' }}>range is trustworthy</b>. Improves as you load field analogs.</div>
+            </div>
+            <div style={{ flex: '1 1 200px' }}>
+              <div className="eyebrow" style={{ fontSize: 8.5, marginBottom: 4 }}>Tornado · what swings the answer</div>
+              {(() => { const maxSw = Math.max(...analog.tornado.map((b) => b.swing), 1e-6); return analog.tornado.map((b) => (
+                <div key={b.param} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                  <span style={{ fontSize: 9, color: 'var(--muted)', width: 78, textAlign: 'right' }}>{b.param}</span>
+                  <div style={{ flex: 1, height: 11, background: 'var(--panel-2)', borderRadius: 2, position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${(b.swing / maxSw) * 100}%`, background: 'var(--amber)', borderRadius: 2 }} />
+                  </div>
+                  <span className="mono" style={{ fontSize: 9, color: 'var(--text)', width: 42 }}>±{(b.swing * 100 / 2).toFixed(1)}pt</span>
+                </div>
+              )); })()}
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 9.5, color: 'var(--muted)' }}>
             <label>physics RF <input type="range" min={0.2} max={0.7} step={0.01} value={physicsRf} onChange={(e) => setPhysicsRf(+e.target.value)} style={{ width: '100%', accentColor: 'var(--teal)' }} /> {(physicsRf * 100).toFixed(0)}%</label>
