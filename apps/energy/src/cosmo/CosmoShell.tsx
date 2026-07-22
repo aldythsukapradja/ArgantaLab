@@ -11,7 +11,9 @@ import {
   Grid3x3, Boxes, Waves, Box, LineChart, DollarSign, ClipboardCheck,
 } from 'lucide-react';
 import './cosmo-system.css';
+import './cosmo-fd.css';
 import { FieldDev } from '../tabs/fielddev/FieldDev';
+import { CosmoExplorer, type Sel } from './CosmoExplorer';
 
 const LIFECYCLES = [
   { id: 'exploration', name: 'Exploration', icon: Compass, color: '#22d3ee', status: 'BETA' },
@@ -49,6 +51,7 @@ export function CosmoShell() {
   const [lc, setLc] = useState('field-development');
   const [tab, setTab] = useState('map');
   const [tier, setTier] = useState('DET');
+  const [sel, setSel] = useState<Sel>(null);
   const active = LIFECYCLES.find((l) => l.id === lc);
   const isFD = lc === 'field-development';
 
@@ -115,8 +118,11 @@ export function CosmoShell() {
                 </div>
               ))}
             </div>
-            <div className="content noscroll" style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-              <div style={{ flex: 1, minHeight: 0, position: 'relative' }}><FieldDev subtab={tab} /></div>
+            <div className="fd-body">
+              <CosmoExplorer sel={sel} setSel={setSel} />
+              <div className="fd-canvas">
+                <div className="fd-view"><FieldDev subtab={tab} /></div>
+              </div>
             </div>
           </>
         ) : (
