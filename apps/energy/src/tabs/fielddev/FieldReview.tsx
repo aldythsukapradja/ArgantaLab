@@ -10,6 +10,7 @@ import { NatureBadge } from '../../components/Provenance';
 import { loadProdField } from '../../wb/load';
 import type { ProdJson } from '../../wb/types';
 import { fitDecline, arps, blindTest, expCumToLimit, evaluateFdp, fdpVerdict, findOpportunity, type EconCtx, type FdpOption } from '../../engine/review';
+import { matchAnalogs, analogPrior, reconcile, SEED_ANALOGS, type AnalogTarget } from '../../engine/analog';
 
 const SM3_TO_BBL = 6.2898;
 const mmbbl = (sm3: number) => (sm3 * SM3_TO_BBL / 1e6);
@@ -25,6 +26,9 @@ function Inner({ field }: { field: ProdJson }) {
   const [price, setPrice] = useState(70);
   const [reentry, setReentry] = useState(700);   // $MM to re-establish an offshore facility
   const [trainFrac, setTrainFrac] = useState(0.6);
+  const [physicsRf, setPhysicsRf] = useState(0.50);  // your sim/physics RF estimate
+  const [dataConf, setDataConf] = useState(0.4);     // trust in the physics (data-rich→1)
+  const [derisk, setDerisk] = useState(0.9);         // engineering upside haircut
   const [inspOpen, setInspOpen] = useState(true);
 
   const oil = useMemo(() => field.monthly.map((m) => m.oil), [field]);          // Sm³/mo
@@ -50,6 +54,16 @@ function Inner({ field }: { field: ProdJson }) {
   const results = useMemo(() => options.map((o) => evaluateFdp(o, ctx)), [options, ctx]);
   const verdict = useMemo(() => fdpVerdict(results.filter((r) => r.capexMM > 0), mmbbl(remainingSm3)), [results, remainingSm3]);
   const opp = useMemo(() => findOpportunity(options, ctx), [options, ctx]);
+
+  // Analog benchmark + engineering judgement: analog anchors the recovery factor,
+  // physics bands it, data-confidence weights the blend, derisk haircuts the upside.
+  const analog = useMemo(() => {
+    const target: AnalogTarget = { lithology: 'sandstone', drive: 'waterflood', depthM: 3000, porosity: 0.21, permMd: 400, oilAPI: 29 };
+    const matches = matchAnalogs(target, SEED_ANALOGS, 6);
+    const prior = analogPrior(matches);
+    const answer = reconcile(physicsRf, prior, dataConf, { derisk });
+    return { matches, prior, answer };
+  }, [physicsRf, dataConf, derisk]);
 
   // ── history-match + blind-test chart ──
   const draw = useCallback((cx: CanvasRenderingContext2D, w: number, h: number) => {
@@ -124,6 +138,34 @@ function Inner({ field }: { field: ProdJson }) {
             </div>
           </div>
         )}
+
+        {/* ANALOG BENCHMARK + ENGINEERING JUDGEMENT — physics sanity-checks, the
+            benchmark + judgement take control. The answer with an honest range. */}
+        <div style={{ margin: '0 10px 10px', padding: 11, border: '1px solid var(--teal)', borderRadius: 6, background: 'color-mix(in srgb, var(--teal) 5%, transparent)' }}>
+          <div className="eyebrow" style={{ fontSize: 9.5, color: 'var(--teal)', marginBottom: 6 }}>Recovery factor · analog benchmark + engineering judgement</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+            {[
+              ['Physics (sim)', `${(physicsRf * 100).toFixed(0)}%`, 'var(--muted)'],
+              ['Analog P50', `${(analog.prior.p50 * 100).toFixed(0)}%`, 'var(--amber)'],
+              ['Analog range', `${(analog.prior.p10 * 100).toFixed(0)}–${(analog.prior.p90 * 100).toFixed(0)}%`, 'var(--muted)'],
+              ['ANSWER P50', `${(analog.answer.p50 * 100).toFixed(0)}%`, 'var(--teal)'],
+              ['Answer range', `${(analog.answer.p10 * 100).toFixed(0)}–${(analog.answer.p90 * 100).toFixed(0)}%`, 'var(--text)'],
+            ].map(([k, v, c]) => (
+              <div key={k} style={{ flex: '1 1 92px', border: '1px solid var(--line)', borderRadius: 5, padding: '5px 8px', background: 'var(--panel)' }}>
+                <div className="eyebrow" style={{ fontSize: 8.5 }}>{k}</div>
+                <div className="mono" style={{ fontSize: 13, color: c }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 6 }}>
+            <b style={{ color: 'var(--text)' }}>Basis:</b> {analog.answer.basis}. Physics is the sanity band; the benchmark ({analog.prior.n} analogs, effN {analog.prior.effN.toFixed(1)}) + judgement set the answer. Nearest: {analog.matches.slice(0, 3).map((m) => `${m.field.name.split(' · ')[0]} ${(m.field.recoveryFactor * 100).toFixed(0)}%`).join(' · ')}.
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 9.5, color: 'var(--muted)' }}>
+            <label>physics RF <input type="range" min={0.2} max={0.7} step={0.01} value={physicsRf} onChange={(e) => setPhysicsRf(+e.target.value)} style={{ width: '100%', accentColor: 'var(--teal)' }} /> {(physicsRf * 100).toFixed(0)}%</label>
+            <label>data confidence <input type="range" min={0} max={1} step={0.05} value={dataConf} onChange={(e) => setDataConf(+e.target.value)} style={{ width: '100%', accentColor: 'var(--teal)' }} /> {(dataConf * 100).toFixed(0)}%</label>
+            <label>derisk <input type="range" min={0.6} max={1} step={0.05} value={derisk} onChange={(e) => setDerisk(+e.target.value)} style={{ width: '100%', accentColor: 'var(--teal)' }} /> {(derisk * 100).toFixed(0)}%</label>
+          </div>
+        </div>
 
         {/* history match + blind test */}
         <div style={{ padding: '0 10px' }} className="eyebrow">History match · blind test (train {(trainFrac * 100).toFixed(0)}% → predict tail)</div>

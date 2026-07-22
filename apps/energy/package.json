@@ -17,7 +17,8 @@
     "test:geostat": "node scripts/test-geostat.mjs",
     "test:sim": "node scripts/test-sim.mjs",
     "test:review": "node scripts/test-review.mjs",
-    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs"
+    "test:analog": "node scripts/test-analog.mjs",
+    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs && node scripts/test-analog.mjs"
   },
   "dependencies": {
     "@equinor/videx-wellog": "^1.5.2",
