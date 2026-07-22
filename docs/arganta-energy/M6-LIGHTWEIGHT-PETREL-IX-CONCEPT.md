@@ -105,6 +105,17 @@ Benchmarked the current 2D oil-water IMPES engine on this machine (Node/V8 ≈ l
 
 **This is the finding that reshapes the plan:** a credible 3D model (e.g. 40×40×10 = 16k cells) is *far* beyond today's engine. The **solver + time-stepping overhaul is therefore a prerequisite, not a nicety** — it's the difference between 1k and 100k cells. Two fixes unlock it: a **preconditioned/multigrid pressure solve** (CPR/AMG-lite → near-linear scaling) and **implicit/sequential-implicit saturation** (removes the CFL sub-step explosion). Target after the overhaul: **~50k cells in <5 s/run**, and with the **Web-Worker pool**, ensembles of such runs off the main thread.
 
+**H1 DONE (partial), MEASURED (commit 6b58d005):** Jacobi-PCG + sequential-implicit transport (implicit upstream saturation via nonlinear Gauss-Seidel + bisection local solve). Truth-lock preserved (45/45; breakthrough 0.500 vs Welge 0.503). New scaling ≈ **O(N^1.5)** (was O(N²)):
+
+| cells | IMPES (before) | Implicit (now) |
+|---|---|---|
+| 900 | 1.1 s | **0.67 s** |
+| 4,900 | 36 s | **8 s** |
+| 10,000 | DNF | **22 s** |
+| 20,000 | — | **55 s** |
+
+Engine practical range lifted from ~1.6k → ~10k cells. **Remaining gap to the 50k/<5s target:** the GS sweep count (front propagation) still grows with grid size. Two levers left: (a) **flow-ordered GS** (topological sort of the flux DAG → ~1 sweep, → near-linear), (b) the **Web-Worker pool** (moves any run off the main thread + enables ensembles). Those finish H1.
+
 **Accuracy — two different questions, answered honestly:**
 - **Physics correctness (vs analytic):** *excellent.* Buckley-Leverett breakthrough **0.500 PVI vs analytic 0.503** (0.6% error), water mass balance exact to ~1e-8, five-spot conserved, 135 truth-lock assertions. The numerics are right.
 - **Predictive accuracy vs REAL Volve:** *not yet measured for the simulator* — because it has **not been history-matched** to Volve. The **61% blind-test MAPE is the decline-curve model's error, not the simulator's.** We can honestly quote physics correctness today, but **not a sim-vs-Volve match number until AHM (H3/H4) exists** — building AHM is literally *how we will earn that number.*
