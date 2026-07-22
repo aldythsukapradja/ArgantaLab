@@ -9,7 +9,7 @@ import { Inspector, InspectorSection, Slider, Loading, ErrorBanner } from './chr
 import { NatureBadge } from '../../components/Provenance';
 import { loadProdField } from '../../wb/load';
 import type { ProdJson } from '../../wb/types';
-import { fitExpDecline, arps, blindTest, expCumToLimit, evaluateFdp, fdpVerdict, findOpportunity, type EconCtx, type FdpOption } from '../../engine/review';
+import { fitDecline, arps, blindTest, expCumToLimit, evaluateFdp, fdpVerdict, findOpportunity, type EconCtx, type FdpOption } from '../../engine/review';
 
 const SM3_TO_BBL = 6.2898;
 const mmbbl = (sm3: number) => (sm3 * SM3_TO_BBL / 1e6);
@@ -31,7 +31,7 @@ function Inner({ field }: { field: ProdJson }) {
   const series = useMemo(() => { const s = oil.findIndex((v) => v > 0); return s < 0 ? [] : oil.slice(s); }, [oil]);
   const cumHist = useMemo(() => series.reduce((a, v) => a + v, 0), [series]);
 
-  const fit = useMemo(() => fitExpDecline(series), [series]);
+  const fit = useMemo(() => fitDecline(series), [series]);
   const bt = useMemo(() => blindTest(series, trainFrac), [series, trainFrac]);
 
   // remaining reserves at current wells: decline the last rate to the economic limit
@@ -67,7 +67,7 @@ function Inner({ field }: { field: ProdJson }) {
     series.forEach((q, t) => { const px = x(t), py = y(q); t ? cx.lineTo(px, py) : cx.moveTo(px, py); }); cx.stroke();
     // decline history-match (amber dashed) over full + forecast
     cx.strokeStyle = cssVar('--amber'); cx.lineWidth = 1.25; cx.setLineDash([5, 3]); cx.beginPath();
-    for (let t = fit.peakIdx; t < nFull; t++) { const q = arps(fit.qi, fit.Di, 0, t - fit.peakIdx); if (q < qEcon) break; const px = x(t), py = y(q); t === fit.peakIdx ? cx.moveTo(px, py) : cx.lineTo(px, py); } cx.stroke(); cx.setLineDash([]);
+    for (let t = fit.peakIdx; t < nFull; t++) { const q = arps(fit.qi, fit.Di, fit.b, t - fit.peakIdx); if (q < qEcon) break; const px = x(t), py = y(q); t === fit.peakIdx ? cx.moveTo(px, py) : cx.lineTo(px, py); } cx.stroke(); cx.setLineDash([]);
     // blind-test split line + predicted-on-holdout (rose)
     cx.strokeStyle = cssVar('--muted'); cx.setLineDash([2, 3]); cx.lineWidth = 0.75; cx.beginPath(); cx.moveTo(x(bt.trainN), padT); cx.lineTo(x(bt.trainN), padT + ph); cx.stroke(); cx.setLineDash([]);
     cx.fillStyle = cssVar('--muted'); cx.textAlign = 'center'; cx.fillText('train | blind test', x(bt.trainN), padT + 8);
@@ -174,7 +174,7 @@ function Inner({ field }: { field: ProdJson }) {
       <Inspector title="Field review inspector" open={inspOpen} onToggle={() => setInspOpen(false)}>
         <InspectorSection title="Decline (history match)">
           <table className="mono" style={{ width: '100%', fontSize: 10.5 }}><tbody>
-            {[['qi', `${(fit.qi / 1e3).toFixed(1)}k Sm³/mo`], ['Di', `${(fit.Di * 100).toFixed(2)}%/mo`], ['months', `${series.length}`], ['qEcon', `${(qEcon / 1e3).toFixed(1)}k Sm³/mo`]].map(([k, v]) => <tr key={k}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{v}</td></tr>)}
+            {[['qi', `${(fit.qi / 1e3).toFixed(1)}k Sm³/mo`], ['Di', `${(fit.Di * 100).toFixed(2)}%/mo`], ['b (Arps)', fit.b.toFixed(1)], ['months', `${series.length}`], ['qEcon', `${(qEcon / 1e3).toFixed(1)}k Sm³/mo`]].map(([k, v]) => <tr key={k}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{v}</td></tr>)}
           </tbody></table>
         </InspectorSection>
         <InspectorSection title="Blind test">

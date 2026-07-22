@@ -2,9 +2,11 @@
 // dynamic simulator. Log-linear screening transform; replace (a,b) with a core
 // cloud-fit when core is available. Ported 1:1 from scripts/test-geostat.mjs.
 
-/** log10(k_mD) = a·φ + b — strictly monotone increasing in φ, k>0. Defaults give
- * ~3 mD at φ=0.05 and ~1 D at φ=0.20 (North-Sea sand screening range). */
-export function phiToK(phi: number, a = 30, b = -1): number { return Math.pow(10, a * phi + b); }
+/** log10(k_mD) = a·φ + b — strictly monotone increasing in φ, k>0. Defaults
+ * (a=19, b=-1.5) give ~1 mD at φ=0.08, ~200 mD at φ=0.20, ~600 mD at φ=0.225 —
+ * a realistic North-Sea sand screening range (the old a=30 gave an unphysical
+ * ~560 D at φ=0.225). */
+export function phiToK(phi: number, a = 19, b = -1.5): number { return Math.pow(10, a * phi + b); }
 
 /** Vertical permeability from horizontal via a kv/kh ratio (default 0.1). */
 export function permKv(kh: number, kvkh = 0.1): number { return kh * kvkh; }

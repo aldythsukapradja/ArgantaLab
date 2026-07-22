@@ -30,24 +30,60 @@ export function fitExpDecline(series: number[]): { qi: number; Di: number; peakI
   return { qi: Math.exp(my - slope * mx), Di: Math.max(1e-4, -slope), peakIdx };
 }
 
+/** Fit an Arps decline with a searched hyperbolic exponent b — grid-search (b, Di)
+ * over the post-peak decline segment (qi fixed at the peak), minimising SSE. Much
+ * better than pure exponential for injection-supported / compartmentalised fields.
+ * Returns qi, Di, b, peakIdx. */
+export function fitDecline(series: number[], maxB = 1.0): { qi: number; Di: number; b: number; peakIdx: number } {
+  const n = series.length;
+  let peakIdx = 0, qi = -Infinity;
+  for (let i = 0; i < n; i++) if (series[i] > qi) { qi = series[i]; peakIdx = i; }
+  const ts: number[] = [], qs: number[] = [];
+  for (let i = peakIdx; i < n; i++) if (series[i] > 0) { ts.push(i - peakIdx); qs.push(series[i]); }
+  if (ts.length < 3) return { qi: qi === -Infinity ? 0 : qi, Di: 0.01, b: 0, peakIdx };
+  const sse = (Di: number, b: number) => { let s = 0; for (let k = 0; k < ts.length; k++) { const q = arps(qi, Di, b, ts[k]); s += (q - qs[k]) ** 2; } return s; };
+  // best (Di, SSE) per candidate b, with a refinement pass around each b's optimum
+  const perB: Array<{ b: number; Di: number; s: number }> = [];
+  for (let bi = 0; bi <= Math.round(maxB * 10); bi++) {
+    const b = bi / 10; let bDi = 0.01, bS = Infinity;
+    if (b === 0) {
+      // exact: Di = −slope of ln(q) vs t (log-linear regression); optimal for exponential
+      const lx = ts, ly = qs.map((q) => Math.log(q)); const m = lx.length;
+      const mx = lx.reduce((a, c) => a + c, 0) / m, my = ly.reduce((a, c) => a + c, 0) / m;
+      let sxy = 0, sxx = 0; for (let k = 0; k < m; k++) { sxy += (lx[k] - mx) * (ly[k] - my); sxx += (lx[k] - mx) ** 2; }
+      bDi = Math.max(1e-4, sxx > 1e-12 ? -sxy / sxx : 0.01); bS = sse(bDi, 0);
+    } else {
+      for (let di = 0; di <= 80; di++) { const Di = 1e-4 * Math.pow(0.5 / 1e-4, di / 80); const s = sse(Di, b); if (s < bS) { bS = s; bDi = Di; } }
+      for (let r = -8; r <= 8; r++) { const Di = Math.max(1e-4, bDi * (1 + r * 0.02)); const s = sse(Di, b); if (s < bS) { bS = s; bDi = Di; } }
+    }
+    perB.push({ b, Di: bDi, s: bS });
+  }
+  // PARSIMONY: pick the SMALLEST b whose SSE is within 5% of the global minimum —
+  // a slightly-wrong hyperbolic b extrapolates badly over long horizons, so prefer
+  // the simplest decline that fits nearly as well (biases toward exponential).
+  const globalMin = Math.min(...perB.map((p) => p.s));
+  const chosen = perB.find((p) => p.s <= globalMin * 1.05) ?? perB[0];
+  return { qi, Di: chosen.Di, b: chosen.b, peakIdx };
+}
+
 // ── blind test: fit on the first `trainFrac`, predict the rest, measure error ───
 export interface BlindTest {
-  qi: number; Di: number; trainN: number;
+  qi: number; Di: number; b: number; trainN: number;
   predicted: number[]; actual: number[]; // over the held-out (test) window
   rmsePct: number; mapePct: number;
 }
 export function blindTest(series: number[], trainFrac = 0.6): BlindTest {
   const n = series.length, trainN = Math.max(4, Math.floor(n * trainFrac));
   const train = series.slice(0, trainN);
-  const fit = fitExpDecline(train);
+  const fit = fitDecline(train);   // hyperbolic-capable fit on the training window
   const predicted: number[] = [], actual: number[] = [];
   let se = 0, ae = 0, cnt = 0, sumSq = 0;
   for (let i = trainN; i < n; i++) {
-    const pred = arps(fit.qi, fit.Di, 0, i - fit.peakIdx);
+    const pred = arps(fit.qi, fit.Di, fit.b, i - fit.peakIdx);
     predicted.push(pred); actual.push(series[i]);
     if (series[i] > 0) { se += (pred - series[i]) ** 2; ae += Math.abs(pred - series[i]) / series[i]; sumSq += series[i] ** 2; cnt++; }
   }
-  return { qi: fit.qi, Di: fit.Di, trainN, predicted, actual, rmsePct: cnt ? Math.sqrt(se / cnt) / Math.sqrt(sumSq / cnt) * 100 : 0, mapePct: cnt ? (ae / cnt) * 100 : 0 };
+  return { qi: fit.qi, Di: fit.Di, b: fit.b, trainN, predicted, actual, rmsePct: cnt ? Math.sqrt(se / cnt) / Math.sqrt(sumSq / cnt) * 100 : 0, mapePct: cnt ? (ae / cnt) * 100 : 0 };
 }
 
 /** Exponential-decline EUR from a rate qi to an economic-limit rate qEcon (per step). */

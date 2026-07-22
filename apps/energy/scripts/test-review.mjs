@@ -31,6 +31,18 @@ if (existsSync(join(__dirname, '..', 'src', 'engine', 'review.ts'))) {
     check('blind test predicts held-out tail (MAPE < 2%)', bt.mapePct < 2, `MAPE=${bt.mapePct.toFixed(2)}%`);
     check('blind test RMSE small on clean decline', bt.rmsePct < 3, `RMSE=${bt.rmsePct.toFixed(2)}%`);
   }
+  // 2b · hyperbolic fit recovers b — clean exponential → b≈0; synthetic hyperbolic → b>0
+  {
+    const fe = R.fitDecline(series); // series is exponential
+    check('fitDecline: exponential → b≈0', fe.b <= 0.2 && approx(fe.Di, Di0, Di0 * 0.15), `b=${fe.b} Di=${fe.Di.toFixed(4)}`);
+    const bTrue = 0.6, qi = 1200, Dh = 0.05;
+    const hyp = Array.from({ length: 100 }, (_, t) => qi / Math.pow(1 + bTrue * Dh * t, 1 / bTrue));
+    const fh = R.fitDecline(hyp);
+    check('fitDecline: hyperbolic → recovers b>0', fh.b >= 0.3, `b=${fh.b}`);
+    const btH = R.blindTest(hyp, 0.6);
+    check('blind test on hyperbolic data: low MAPE with b-fit', btH.mapePct < 5, `MAPE=${btH.mapePct.toFixed(2)}%`);
+  }
+
   // 3 · noisy blind test still robust (±10% noise → MAPE modest, not blown up)
   {
     let seed = 12345; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
