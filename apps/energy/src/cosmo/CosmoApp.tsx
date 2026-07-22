@@ -1,26 +1,117 @@
-// CosmoApp — the migrated (COSMO design) shell. Reached via ?ui=cosmo (the
-// ArgantaEnergy-Cosmo.bat launcher). Built incrementally alongside the classic
-// UI so both coexist until the migration is complete (U0 tokens → U8 / G0–G5).
-// For now it's a clear "under construction" surface with a switch back to classic.
-import { useEffect } from 'react';
+// CosmoApp (U0+G1) — the migrated COSMO shell. Reached via ?ui=cosmo. Renders the
+// COSMO design (light-first, teal, sidebar/topbar/icon-tabs) with the Petrel
+// 3-zone Field Development body: [ explorer | canvas(reused viewer + its inspector) ].
+// The built Field-Dev engines are reused unchanged — they re-theme to COSMO via the
+// alias-bridge tokens in cosmo.css. Classic UI is untouched (App.tsx routes here).
+import { useEffect, useState } from 'react';
+import {
+  Wrench, Compass, Truck, Waves as WavesI, Search, Bell, Map as MapIcon, Activity, Gauge,
+  Columns3, Layers, Grid3x3, Boxes, Box, Sparkles, LineChart, DollarSign, ClipboardCheck,
+} from 'lucide-react';
+import './cosmo.css';
+import { FieldDev } from '../tabs/fielddev/FieldDev';
+import { CosmoExplorer } from './CosmoExplorer';
+
+type TabDef = { id: string; label: string; icon: typeof MapIcon };
+const TABS: TabDef[] = [
+  { id: 'map', label: 'Map', icon: MapIcon },
+  { id: 'logs', label: 'Logs', icon: Activity },
+  { id: 'petrophysics', label: 'Petrophysics', icon: Gauge },
+  { id: 'correlation', label: 'Correlation', icon: Columns3 },
+  { id: 'structural', label: 'Structural', icon: Layers },
+  { id: 'property', label: 'Property', icon: Grid3x3 },
+  { id: 'gridmodel', label: 'Static Model', icon: Boxes },
+  { id: 'simulation', label: 'Simulation', icon: WavesI },
+  { id: 'volumetrics', label: 'Volumetrics', icon: Box },
+  { id: 'uncertainty', label: 'Uncertainty', icon: Sparkles },
+  { id: 'forecast', label: 'Forecast', icon: LineChart },
+  { id: 'economics', label: 'Economics', icon: DollarSign },
+  { id: 'review', label: 'Field Review', icon: ClipboardCheck },
+];
+
+const NAV = [
+  { id: 'exploration', label: 'Exploration', icon: Compass, status: 'plan' as const },
+  { id: 'fielddev', label: 'Field Development', icon: Wrench, status: 'live' as const },
+  { id: 'welldelivery', label: 'Well Delivery', icon: Truck, status: 'plan' as const },
+  { id: 'resmgmt', label: 'Reservoir Mgmt', icon: WavesI, status: 'plan' as const },
+];
 
 export function CosmoApp() {
-  // COSMO is light-first — announce it on the root so the migrated shell renders
-  // in the new palette even before the token swap (U0) lands.
-  useEffect(() => { document.documentElement.setAttribute('data-ui', 'cosmo'); return () => document.documentElement.removeAttribute('data-ui'); }, []);
+  useEffect(() => {
+    const html = document.documentElement;
+    const prevTheme = html.getAttribute('data-theme');
+    html.setAttribute('data-ui', 'cosmo');
+    html.removeAttribute('data-theme');   // let COSMO light tokens win over :root[data-theme]
+    return () => { html.removeAttribute('data-ui'); if (prevTheme) html.setAttribute('data-theme', prevTheme); };
+  }, []);
+  const [tab, setTab] = useState('map');
+  const [nav, setNav] = useState('fielddev');
+  const [sel, setSel] = useState<{ folder: string; id: string } | null>(null);
+  const tabDef = TABS.find((t) => t.id === tab)!;
 
   return (
-    <div style={{ height: '100vh', display: 'grid', placeItems: 'center', background: '#f5f7fa', color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <div style={{ maxWidth: 560, textAlign: 'center', padding: 32 }}>
-        <div style={{ width: 46, height: 46, margin: '0 auto 18px', borderRadius: 13, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800, fontSize: 20, background: 'radial-gradient(circle at 35% 30%,#5fe3cf,#0FB5A6 45%,#2563eb)', boxShadow: '0 6px 20px rgba(15,181,166,.4)' }}>Æ</div>
-        <h1 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 800, letterSpacing: '-0.01em' }}>ArgantaEnergy · COSMO</h1>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.1em', color: '#0a8a7f', background: '#e6f7f5', display: 'inline-block', padding: '4px 10px', borderRadius: 6, marginBottom: 16 }}>MIGRATED UI · BUILDING</div>
-        <p style={{ fontSize: 14, lineHeight: 1.6, color: '#475569', margin: '0 0 20px' }}>
-          The new COSMO-design shell is being migrated in stages (U0 tokens → shell → components → Field-Dev re-skin; G0–G5 GeaVision/GVSURF). Both UIs run off the same dev server — this launcher shows the migrated version as it comes online.
-        </p>
-        <a href="?" style={{ display: 'inline-block', padding: '9px 16px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: '0 1px 3px rgba(15,23,42,.06)' }}>
-          ← Open the classic UI
-        </a>
+    <div className="cx-app">
+      {/* sidebar */}
+      <aside className="cx-side">
+        <div className="cx-brand">
+          <div className="cx-mark">Æ</div>
+          <div className="cx-bt">ArgantaEnergy</div>
+          <div className="cx-bs">COSMO</div>
+        </div>
+        <nav className="cx-nav">
+          <div className="cx-navlabel">VERTICALS</div>
+          {NAV.map((n) => (
+            <div key={n.id} className={'cx-navitem' + (nav === n.id ? ' on' : '')} onClick={() => setNav(n.id)}>
+              <span className="d"><n.icon size={13} /></span>
+              <span className="lbl">{n.label}</span>
+              <span className={'cx-st ' + n.status}>{n.status === 'live' ? 'LIVE' : 'PLAN'}</span>
+            </div>
+          ))}
+          <div className="cx-navlabel">INTELLIGENCE</div>
+          <div className="cx-navitem"><span className="d"><Sparkles size={13} /></span><span className="lbl">Data · Knowledge</span></div>
+        </nav>
+      </aside>
+
+      {/* main */}
+      <div className="cx-main">
+        <header className="cx-top">
+          <div className="cx-crumbs">
+            <span>ArgantaEnergy</span><span className="sep">/</span>
+            <span>Field Development</span><span className="sep">/</span>
+            <span className="cur">{tabDef.label}</span>
+          </div>
+          <div className="cx-tr">
+            <span className="cx-badge"><span className="dot" /> Volve · North Sea</span>
+            <button className="cx-ibtn" title="Search"><Search size={15} /></button>
+            <button className="cx-ibtn" title="Notifications"><Bell size={15} /></button>
+            <div className="cx-avatar">A</div>
+          </div>
+        </header>
+
+        {nav === 'fielddev' ? (
+          <>
+            <div className="cx-tabs">
+              {TABS.map((t) => (
+                <div key={t.id} className={'cx-tab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>
+                  <t.icon size={14} />{t.label}
+                </div>
+              ))}
+            </div>
+            <div className="cx-body">
+              <CosmoExplorer sel={sel} setSel={setSel} />
+              <div className="cx-canvas">
+                <div className="cx-viewer"><FieldDev subtab={tab} /></div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: 'var(--ink3)', fontSize: 14 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>{NAV.find((n) => n.id === nav)?.label}</div>
+              Coming in a later migration phase — Field Development is the first vertical on COSMO.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

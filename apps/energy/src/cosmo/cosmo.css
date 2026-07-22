@@ -1,0 +1,99 @@
+/* ============================================================
+   COSMO migrated UI — design tokens + shell (scoped to html[data-ui="cosmo"]).
+   Light-first SaaS design ported from COSMO_Final. The classic token NAMES
+   (--bg/--panel/--text/--muted/--teal…) are aliased to COSMO values so every
+   built viewer re-themes here with zero edits (the "alias bridge").
+   Loaded AFTER theme.css so it wins over :root[data-theme].
+   ============================================================ */
+html[data-ui="cosmo"]{
+  /* COSMO palette */
+  --bg:#f5f7fa; --panel:#ffffff; --panel2:#fbfcfe; --panel3:#f1f5f9;
+  --ink:#0f172a; --ink2:#475569; --ink3:#94a3b8;
+  --cline:#e2e8f0; --line2:#eef2f6;
+  --teal:#0FB5A6; --teal-soft:#e6f7f5; --teal-ink:#0a8a7f;
+  --cblue:#2563eb; --cyan:#22d3ee; --green:#10b981; --purple:#7c3aed;
+  --camber:#f59e0b; --red:#ef4444; --cviolet:#b37df0; --corange:#e58d4b;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);
+  --shadow-lg:0 12px 40px rgba(15,23,42,.14);
+  --sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono','SF Mono','Consolas',monospace;
+  /* ── alias bridge: classic names → COSMO values (re-themes the built viewers) ── */
+  --panel-2:var(--panel2); --line:var(--cline); --text:var(--ink); --muted:var(--ink2);
+  --blue:var(--cblue); --amber:var(--camber); --violet:var(--cviolet); --rose:var(--red);
+  --orange:var(--corange); --sel:var(--teal-soft); --scrollbar:var(--cline); --dot:var(--line2);
+}
+html[data-ui="cosmo"] body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px}
+.cx-mono{font-family:var(--mono)}
+
+/* ── shell grid: sidebar | (topbar / body) ── */
+.cx-app{display:grid;grid-template-columns:236px 1fr;height:100vh;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+.cx-side{background:var(--panel);border-right:1px solid var(--cline);display:flex;flex-direction:column;overflow-y:auto;min-height:0}
+.cx-brand{display:flex;align-items:center;gap:10px;padding:15px 16px 14px;border-bottom:1px solid var(--cline)}
+.cx-mark{width:30px;height:30px;border-radius:9px;background:radial-gradient(circle at 35% 30%,#5fe3cf,#0FB5A6 45%,#2563eb);display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:0 4px 14px rgba(15,181,166,.45);position:relative;overflow:hidden}
+.cx-mark::after{content:'';position:absolute;inset:0;background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.5),transparent 40%);animation:cxspin 5s linear infinite}
+@keyframes cxspin{to{transform:rotate(360deg)}}
+.cx-bt{font-weight:800;font-size:15px;letter-spacing:-.01em;line-height:1}
+.cx-bs{font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--teal-ink);background:var(--teal-soft);padding:2px 6px;border-radius:5px;margin-left:auto;font-weight:600}
+.cx-nav{padding:8px 10px;flex:1}
+.cx-navlabel{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--ink3);padding:14px 8px 6px;font-weight:600}
+.cx-navitem{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;color:var(--ink2);position:relative;transition:.14s;margin-bottom:2px}
+.cx-navitem:hover{background:var(--line2)}
+.cx-navitem.on{background:var(--teal-soft);color:var(--teal-ink);font-weight:600}
+.cx-navitem.on::before{content:'';position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--teal)}
+.cx-navitem .d{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex-shrink:0;background:var(--panel2);border:1px solid var(--cline)}
+.cx-navitem.on .d{background:#fff;border-color:var(--teal);color:var(--teal-ink)}
+.cx-navitem .lbl{font-size:12.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cx-st{font-family:var(--mono);font-size:7px;letter-spacing:.06em;padding:2px 5px;border-radius:20px;font-weight:600}
+.cx-st.live{background:rgba(16,185,129,.15);color:var(--green)}
+.cx-st.plan{background:var(--line2);color:var(--ink3)}
+
+/* ── main column ── */
+.cx-main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.cx-top{display:flex;align-items:center;gap:12px;padding:0 18px;height:54px;background:var(--panel);border-bottom:1px solid var(--cline);flex-shrink:0}
+.cx-crumbs{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink3)}
+.cx-crumbs .cur{color:var(--ink);font-weight:700}.cx-crumbs .sep{opacity:.5}
+.cx-tr{margin-left:auto;display:flex;align-items:center;gap:10px}
+.cx-badge{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9.5px;font-weight:600;padding:5px 11px;border-radius:20px;border:1px solid var(--cline);background:var(--panel2);cursor:pointer;color:var(--ink2)}
+.cx-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal)}
+.cx-ibtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--cline);background:var(--panel);display:grid;place-items:center;color:var(--ink2)}
+.cx-ibtn:hover{border-color:var(--teal);color:var(--teal-ink)}
+.cx-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--cblue));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+
+/* ── tab bar (icon tabs) ── */
+.cx-tabs{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid var(--cline);background:var(--panel);overflow-x:auto;flex-shrink:0}
+.cx-tabs::-webkit-scrollbar{height:0}
+.cx-tab{display:inline-flex;align-items:center;gap:7px;padding:11px 12px;font-size:12px;color:var(--ink3);white-space:nowrap;border-bottom:2px solid transparent;cursor:pointer;transition:.14s;font-weight:500}
+.cx-tab:hover{color:var(--ink2)}
+.cx-tab.on{color:var(--teal-ink);border-bottom-color:var(--teal);font-weight:600}
+
+/* ── 3-zone body: explorer | canvas | (viewer brings its own inspector) ── */
+.cx-body{flex:1;display:grid;grid-template-columns:262px 1fr;min-height:0;min-width:0}
+.cx-explorer{background:var(--panel);border-right:1px solid var(--cline);display:flex;flex-direction:column;min-height:0}
+.cx-canvas{position:relative;min-width:0;min-height:0;background:var(--panel2);display:flex;flex-direction:column;overflow:hidden}
+.cx-ph{padding:12px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--cline);display:flex;align-items:center;gap:8px}
+
+/* ── explorer tree (GeaVision Petrel structure, COSMO skin) ── */
+.cx-tree{overflow:auto;flex:1;min-height:0;padding:6px 6px 24px}
+.cx-folder{user-select:none;margin-bottom:1px}
+.cx-fhead{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:7px;cursor:pointer;font-weight:600;font-size:12px;color:var(--ink)}
+.cx-fhead:hover{background:var(--panel2)}
+.cx-caret{width:14px;height:14px;color:var(--ink3);transition:transform .12s;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.cx-caret.open{transform:rotate(90deg)}
+.cx-ficon{width:16px;height:16px;color:var(--ink3);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.cx-fcount{margin-left:auto;font-size:10px;color:var(--ink3);background:var(--panel2);border:1px solid var(--cline);border-radius:20px;padding:0 7px;min-width:20px;text-align:center}
+.cx-fadd{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink3)}
+.cx-fadd:hover{background:var(--line2);color:var(--teal-ink)}
+.cx-children{margin-left:15px;border-left:1px solid var(--cline);padding-left:2px}
+.cx-node{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:7px;font-size:12px;color:var(--ink);position:relative;cursor:pointer}
+.cx-node:hover{background:var(--panel2)}
+.cx-node.sel{background:var(--teal-soft);color:var(--teal-ink);font-weight:600}
+.cx-node.sel::before{content:'';position:absolute;left:-3px;top:4px;bottom:4px;width:3px;border-radius:3px;background:var(--teal)}
+.cx-nicon{width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.cx-nlbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cx-nsub{font-size:10px;color:var(--ink3);font-weight:400}
+.cx-eye{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink3);border-radius:4px;opacity:.5}
+.cx-node:hover .cx-eye{opacity:1}.cx-eye.on{opacity:1;color:var(--teal-ink)}
+.cx-empty{padding:3px 10px;font-size:10.5px;color:var(--ink3)}
+
+/* the reused viewer fills the canvas; its own toolbar/inspector re-theme via the bridge */
+.cx-viewer{flex:1;min-height:0;position:relative}
