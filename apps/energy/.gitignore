@@ -8,3 +8,6 @@ src/data/
 
 __pycache__/
 *.pyc
+
+# generated workbench assets (from data-energy, rebuilt by scripts/build-workbench-data.mjs)
+public/wb/
