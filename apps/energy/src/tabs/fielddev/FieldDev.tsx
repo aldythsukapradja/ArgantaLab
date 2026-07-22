@@ -6,6 +6,13 @@ import { Placeholder } from './Placeholder';
 import { MapView } from './MapView';
 import { LogsView } from './LogsView';
 import { CorrelationView } from './CorrelationView';
+import { Petrophysics } from './Petrophysics';
+import { Structural } from './Structural';
+import { Property } from './Property';
+import { Volumetrics } from './Volumetrics';
+import { Uncertainty } from './Uncertainty';
+import { Forecast } from './Forecast';
+import { Economics } from './Economics';
 
 class ViewerBoundary extends Component<{ children: ReactNode; name: string }, { err: string | null }> {
   state = { err: null as string | null };
@@ -32,6 +39,13 @@ export function FieldDev({ subtab }: { subtab: string }) {
   if (m.id === 'map') body = <MapView />;
   else if (m.id === 'logs') body = <LogsView />;
   else if (m.id === 'correlation') body = <CorrelationView />;
+  else if (m.id === 'petrophysics') body = <Petrophysics />;
+  else if (m.id === 'structural') body = <Structural />;
+  else if (m.id === 'property') body = <Property />;
+  else if (m.id === 'volumetrics') body = <Volumetrics />;
+  else if (m.id === 'uncertainty') body = <Uncertainty />;
+  else if (m.id === 'forecast') body = <Forecast />;
+  else if (m.id === 'economics') body = <Economics />;
   else body = <Placeholder m={m} />;
   return <div style={{ height: '100%', minHeight: 0 }}><ViewerBoundary name={m.name} key={m.id}>{body}</ViewerBoundary></div>;
 }

@@ -29,7 +29,7 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     planned: [],
   },
   petrophysics: {
-    id: 'petrophysics', name: 'Petrophysics', status: 'v1b', phase: 'V1b',
+    id: 'petrophysics', name: 'Petrophysics', status: 'live', phase: 'V1b',
     blurb: 'Interpreted (LFP) vs Archie-recompute dual mode over the log tracks.',
     planned: [
       'Interpreted PHIE/SWE/VSH (Equinor LFP, default) vs Archie recompute (derived)',
@@ -39,7 +39,7 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     ],
   },
   structural: {
-    id: 'structural', name: 'Structural', status: 'v1b', phase: 'V1b',
+    id: 'structural', name: 'Structural', status: 'live', phase: 'V1b',
     blurb: 'Surface QC and well-tie residuals.',
     planned: [
       'Grid statistics per horizon',
@@ -48,7 +48,7 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     ],
   },
   property: {
-    id: 'property', name: 'Property', status: 'v1b', phase: 'V1b',
+    id: 'property', name: 'Property', status: 'live', phase: 'V1b',
     blurb: 'Property maps from per-well zone averages.',
     planned: [
       'Per-well zone averages posted on the map',
@@ -57,7 +57,7 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     ],
   },
   volumetrics: {
-    id: 'volumetrics', name: 'Volumetrics', status: 'v1c', phase: 'V1c',
+    id: 'volumetrics', name: 'Volumetrics', status: 'live', phase: 'V1c',
     blurb: 'STOIIP / GIIP with validation against published ≈22 MMSm³ [PEER].',
     planned: [
       'Scope selector: closure · custom polygon · well-drainage circle',
@@ -67,7 +67,7 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     ],
   },
   uncertainty: {
-    id: 'uncertainty', name: 'Uncertainty', status: 'v1c', phase: 'V1c',
+    id: 'uncertainty', name: 'Uncertainty', status: 'live', phase: 'V1c',
     blurb: 'Seeded Monte Carlo over the volumetric inputs.',
     planned: [
       'PERT / triangular sliders per input',
@@ -77,7 +77,7 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     ],
   },
   forecast: {
-    id: 'forecast', name: 'Forecast', status: 'v1c', phase: 'V1c',
+    id: 'forecast', name: 'Forecast', status: 'live', phase: 'V1c',
     blurb: 'Arps decline over the real monthly production history.',
     planned: [
       'Real monthly history + Arps fit overlay to economic limit',
@@ -86,7 +86,7 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     ],
   },
   economics: {
-    id: 'economics', name: 'Economics', status: 'v1c', phase: 'V1c',
+    id: 'economics', name: 'Economics', status: 'live', phase: 'V1c',
     blurb: 'NPV / payback tied to the forecast output.',
     planned: [
       'Price / opex / capex / discount inputs',

@@ -191,5 +191,59 @@ function pearson(xs, ys) { const n = xs.length, mx = xs.reduce((a, b) => a + b, 
   check('econ defaults: NPV finite + plausible sign', Number.isFinite(v), `pre-tax NPV=$${(v / 1e6).toFixed(0)}MM @ $70/bbl`);
 }
 
+// ── PARITY: the built src/engine/*.ts must reproduce these exact reference numbers ──
+// Node 24 strips TS types natively, so we import the real engine modules directly.
+{
+  const E_vol = await import('../src/engine/volumetrics.ts');
+  const E_mc = await import('../src/engine/mc.ts');
+  const E_dca = await import('../src/engine/dca.ts');
+  const E_econ = await import('../src/engine/econ.ts');
+  const E_up = await import('../src/engine/upscale.ts');
+
+  // RNG + PERT parity (same seed → identical sequence & sample)
+  {
+    const ref = mulberry32(42), eng = E_mc.mulberry32(42);
+    const seqOk = Array.from({ length: 8 }, () => ref() === eng()).every(Boolean);
+    check('PARITY · mulberry32 sequence identical', seqOk);
+    const r1 = mulberry32(99), r2 = E_mc.mulberry32(99);
+    const a = samplePert(r1, 0.75, 1.0, 1.25), b = E_mc.samplePert(r2, 0.75, 1.0, 1.25);
+    check('PARITY · samplePert identical draw', a === b, `ref=${a.toFixed(6)} eng=${b.toFixed(6)}`);
+  }
+  // percentile convention parity
+  {
+    const arr = Array.from({ length: 2000 }, mulberry32(5)).sort((x, y) => x - y);
+    check('PARITY · percentile P50', approx(pct(arr, 50), E_mc.percentile(arr, 50), 1e-12));
+  }
+  // STOIIP + GRV parity on the real wb grids
+  if (existsSync(join(WB, 'index.json'))) {
+    const idx = j(join(WB, 'index.json'));
+    const top = j(join(WB, 'surface-hugin_top.json')), base = j(join(WB, 'surface-hugin_base.json'));
+    const d = idx.defaults, owc = idx.contacts.find((c) => c.kind === 'OWC').tvdss;
+    const grvRef = grvClosure(top, base, owc, top.cell);
+    const grvEng = E_vol.grvClosure(top, base, owc, top.cell);
+    check('PARITY · grvClosure GRV identical', approx(grvRef, grvEng.grv, 1), `ref=${(grvRef/1e6).toFixed(1)} eng=${(grvEng.grv/1e6).toFixed(1)} Mm³`);
+    const stRef = stoiip(grvRef, d.ntg, d.phi, d.sw, d.bo) / 1e6;
+    const stEng = E_vol.stoiip(grvEng.grv, d.ntg, d.phi, d.sw, d.bo) / 1e6;
+    check('PARITY · STOIIP 142.3 (engine == ref == wb)', approx(stEng, idx.validation.stoiip.stoiipMMSm3, 1.0) && approx(stRef, stEng, 1e-6), `eng=${stEng.toFixed(1)} wb=${idx.validation.stoiip.stoiipMMSm3}`);
+    // GIIP + solution gas
+    const g = E_vol.giip(grvEng.grv, d.ntg, d.phi, d.sw, 0.0040);
+    check('PARITY · GIIP inverse-Bg scaling', g > 0 && approx(E_vol.giip(grvEng.grv, d.ntg, d.phi, d.sw, 0.0080), g / 2, g * 0.01), `GIIP=${(g/1e9).toFixed(2)} BSm³`);
+    check('PARITY · solutionGas = STOIIP·Rs', approx(E_vol.solutionGas(stEng*1e6, 148), stEng*1e6*148, 1));
+  }
+  // Arps cum + NPV parity
+  {
+    check('PARITY · arpsCum exp', approx(arpsCum(1000, 0.05, 0, 120), E_dca.arpsCum(1000, 0.05, 0, 120), 1e-6));
+    check('PARITY · NPV mid-year', approx(npv([-1000, 600, 600], 0.10), E_econ.npv([-1000, 600, 600], 0.10), 1e-9));
+  }
+  // upscaling parity
+  {
+    check('PARITY · upscaleMean', approx(E_up.upscaleMean([0.2, 0.25, null, 0.3]), 0.25, 1e-9));
+    check('PARITY · netFraction', approx(E_up.netFraction([1, 1, 0, 1, 0]), 0.6, 1e-9));
+    check('PARITY · majority', E_up.majority(['SAND', 'SAND', 'SHALE']) === 'SAND');
+  }
+  // econ defaults parity
+  check('PARITY · ECON_DEFAULTS Fable-set', E_econ.ECON_DEFAULTS.oilPrice === 70 && E_econ.ECON_DEFAULTS.opexVar === 14 && E_econ.ECON_DEFAULTS.capex === 1200e6 && E_econ.ECON_DEFAULTS.disc === 0.10 && E_econ.ECON_DEFAULTS.aband === 150e6 && E_econ.ECON_DEFAULTS.taxRate === 0.78);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
