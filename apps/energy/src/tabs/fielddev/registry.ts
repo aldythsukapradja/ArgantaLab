@@ -95,6 +95,11 @@ export const VIEWERS: Record<string, ViewerManifest> = {
       'Material-balance tank check (F-12, STOIP ≈ 19.6 MMSm³ target)',
     ],
   },
+  review: {
+    id: 'review', name: 'Field Review', status: 'live', phase: 'S7',
+    blurb: 'Redevelopment decision — history match, blind test, forecast, automated FDP + honest economic verdict.',
+    planned: [],
+  },
   economics: {
     id: 'economics', name: 'Economics', status: 'live', phase: 'V1c',
     blurb: 'NPV / payback tied to the forecast output.',

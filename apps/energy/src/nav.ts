@@ -71,6 +71,7 @@ export const SUBTABS: Record<DomainId, SubTab[]> = {
     { id: 'uncertainty', label: 'Uncertainty' },
     { id: 'forecast', label: 'Forecast' },
     { id: 'economics', label: 'Economics' },
+    { id: 'review', label: 'Field Review' },
   ],
   welldelivery: [{ id: 'overview', label: 'Overview' }],
   resmgmt: [{ id: 'overview', label: 'Overview' }],

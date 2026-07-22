@@ -15,6 +15,7 @@ import { Volumetrics } from './Volumetrics';
 import { Uncertainty } from './Uncertainty';
 import { Forecast } from './Forecast';
 import { Economics } from './Economics';
+import { FieldReview } from './FieldReview';
 
 class ViewerBoundary extends Component<{ children: ReactNode; name: string }, { err: string | null }> {
   state = { err: null as string | null };
@@ -50,6 +51,7 @@ export function FieldDev({ subtab }: { subtab: string }) {
   else if (m.id === 'uncertainty') body = <Uncertainty />;
   else if (m.id === 'forecast') body = <Forecast />;
   else if (m.id === 'economics') body = <Economics />;
+  else if (m.id === 'review') body = <FieldReview />;
   else body = <Placeholder m={m} />;
   return <div style={{ height: '100%', minHeight: 0 }}><ViewerBoundary name={m.name} key={m.id}>{body}</ViewerBoundary></div>;
 }
