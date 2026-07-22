@@ -73,19 +73,48 @@ This is where streamlines earn their keep — it's what 3DSL/FrontSim exist for.
 - **P2 · P3** (history match, uncertainty, surveillance benchmark) → **Reservoir Management**.
 - The shared **Case + engine + worker-pool** backbone spans both apps.
 
-## 5 · Roadmap (H-series; Fable numerics/truth-lock → Opus impl)
-| Phase | Deliverable |
-|---|---|
-| **H1** | Case model + Web Worker run-pool + a results dashboard (the backbone everything hangs on) |
-| **H2** | 3D black-oil-lite sim on the GridModel + analytic aquifer + schedule (P1) + SPE1/aquifer truth-lock |
-| **H3** | Misfit engine + auto **benchmark overlay** vs real Volve history + match score (P2.1) |
-| **H4** | **ES-MDA assisted history matching** → posterior ensemble + calibrated forecast (P2.2) |
-| **H5** | Experimental design + proxy + **Sobol/Morris sensitivity** + P10/50/90 (P3) |
-| **H6** | Streamline **remaining-oil map + opportunity finder** (infill/sidetrack) + well-placement NPV optimization (P4) |
-| **H7** | UX consolidation — project tree, case manager, schedule editor, dashboards (P5) |
-| **H8** | Agent **tool API + LLM orchestrator** seam (P6) |
+## 5 · Roadmap (H-series; Fable numerics/truth-lock → Opus impl) — TUNED to the benchmark
+The measured O(N²) wall means **performance is the gate**, so the solver/time-stepping overhaul (H1) now leads — nothing downstream (3D, ensembles, AHM) is possible without it.
 
-Recommended first cut: **H1 → H3** gives the "wow" fast — a real case manager, 3D sim, and an automatic sim-vs-true-history benchmark. **H4 (ES-MDA)** is the credibility unlock (history-matched forecast with uncertainty). **H6** is the commercial wedge (auto-found infill/sidetrack opportunities with NPV).
+| Phase | Deliverable | Target / gate |
+|---|---|---|
+| **H1 · Performance core** | Preconditioned pressure solve (CPR / AMG-lite → near-linear) + **sequential-implicit** saturation (kills the CFL sub-step explosion) + **Web-Worker run-pool** + the Case atom | **~50k cells < 5 s/run**; ensembles off the main thread; truth-lock unchanged (breakthrough/mass-balance still pass) |
+| **H2 · 3D black-oil-lite** | Lift FV to 3D on the GridModel + gravity + analytic aquifer + schedule (P1) | SPE1 + aquifer-influx analytic truth-lock; 16k-cell 3D case interactive |
+| **H3 · Auto-benchmark** | Misfit engine + **sim-vs-real-Volve overlay** + NRMS score (P2.1) | **first honest sim-vs-Volve accuracy number** — the answer to "how accurate is it" |
+| **H4 · Assisted HM** | **ES-MDA** → posterior ensemble + calibrated forecast (P2.2) | field oil-rate **NRMS < ~1–2**, posterior brackets history, blind-check improves |
+| **H5 · Uncertainty & sensitivity** | Experimental design + proxy + **Sobol/Morris** + P10/50/90 (P3) | Sobol recovers analytic indices; proxy R² gate |
+| **H6 · Opportunity finder** | Streamline **remaining-oil map** + infill/sidetrack finder + well-placement NPV optimization (P4) | flags a known unswept region; NPV ranking monotone; feeds the built FDP engine |
+| **H7 · Studio UX** | Project tree, case manager, schedule editor, results dashboards (P5) | — |
+| **H8 · Agent seam** | Typed tool API + LLM orchestrator over deterministic engines (P6) | every agent action = a provenanced run + review gate |
+
+**Sequence rationale (post-benchmark):** **H1 is non-negotiable and first** — it converts the engine from a ~1k-cell toy into a ~50k-cell tool and is the prerequisite for 3D and for every ensemble method. **H3** is what finally lets us *quote* accuracy vs Volve (today we can't). **H4** is the credibility unlock. **H6** is the commercial wedge. UX (H7) can interleave once H1 lands.
+
+## 5b · Reality check — MEASURED performance & honest accuracy (2026-07-22)
+Benchmarked the current 2D oil-water IMPES engine on this machine (Node/V8 ≈ laptop browser), waterflood to 1.2 PVI, 24 report steps:
+
+| grid | cells | time | notes |
+|---|---|---|---|
+| 20×20 | 400 | **0.25 s** | interactive |
+| 30×30 | 900 | **1.1 s** | comfortable one-shot |
+| 40×40 | 1,600 | **3.7 s** | usable, noticeable freeze |
+| 55×55 | 3,025 | **21 s** | painful |
+| 70×70 | 4,900 | **36 s** | impractical |
+| 90×90 | 8,100 | **>50 s** | did not finish |
+
+**Scaling is ~O(N²)** — two compounding causes: (1) the pressure solve is **unpreconditioned CG** (iterations grow with grid size, made worse by the stiff well penalty); (2) point injection forces the **CFL sub-step count to grow ∝ N**, each sub-step O(N). So the current engine comfortably handles **~1,000 cells interactively, ~1,600 as a one-shot, and falls apart past ~3,000.** The Field Review/Volumetrics sweep runs use ~400–900-cell grids on purpose → sub-second.
+
+**This is the finding that reshapes the plan:** a credible 3D model (e.g. 40×40×10 = 16k cells) is *far* beyond today's engine. The **solver + time-stepping overhaul is therefore a prerequisite, not a nicety** — it's the difference between 1k and 100k cells. Two fixes unlock it: a **preconditioned/multigrid pressure solve** (CPR/AMG-lite → near-linear scaling) and **implicit/sequential-implicit saturation** (removes the CFL sub-step explosion). Target after the overhaul: **~50k cells in <5 s/run**, and with the **Web-Worker pool**, ensembles of such runs off the main thread.
+
+**Accuracy — two different questions, answered honestly:**
+- **Physics correctness (vs analytic):** *excellent.* Buckley-Leverett breakthrough **0.500 PVI vs analytic 0.503** (0.6% error), water mass balance exact to ~1e-8, five-spot conserved, 135 truth-lock assertions. The numerics are right.
+- **Predictive accuracy vs REAL Volve:** *not yet measured for the simulator* — because it has **not been history-matched** to Volve. The **61% blind-test MAPE is the decline-curve model's error, not the simulator's.** We can honestly quote physics correctness today, but **not a sim-vs-Volve match number until AHM (H3/H4) exists** — building AHM is literally *how we will earn that number.*
+
+**HM quality vs Eclipse/IX:** we do **not do dynamic history matching yet** (Field Review is decline-curve, not simulation). So there is nothing to compare to IX yet. When built, we use the **same metric IX/Petrel use**: normalized RMS misfit (NRMS) per observation stream (oil/water/gas rate, BHP, water-cut, GOR), water-breakthrough-timing error, and whether the **posterior ensemble brackets the history**. Acceptance target: field oil-rate **NRMS < ~1–2** ("good match" heuristic), breakthrough within a few months, P10–P90 covers observations, plus a **blind/out-of-sample** predictive check.
+
+**Is it good enough for quick-look screening? Is it reliable?** — precise answers:
+- **Reliable = consistent / reproducible / physics-validated?** **YES.** Deterministic, seeded, 135 truth-lock assertions, exact mass balance, matches analytics. It will not hand you random or wrong-physics answers.
+- **Good for RELATIVE screening** (compare development options, sweep/breakthrough behaviour, sensitivity directions, volumetrics, decline-based economics)? **YES** — that's real value today.
+- **Good for ABSOLUTE Volve forecasting** (trust the exact barrels/reserves)? **NO, not without history matching** — and the blind test says so out loud (61% MAPE). Screening = "which option is better / roughly how big / what would it take," *not* "this exact number is the truth."
 
 ## 6 · Honest limits (state them plainly, always)
 - Not INTERSECT physics: no compositional/thermal/unstructured/fracture/near-well/exascale. Screening + teaching + decision grade.
