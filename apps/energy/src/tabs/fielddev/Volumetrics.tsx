@@ -17,6 +17,9 @@ import { contactPolygon } from '../../engine/closure';
 import { grvClosure, grvWell, grvPolygon, stoiip, giip, solutionGas, BBL_PER_SM3, SCF_PER_SM3 } from '../../engine/volumetrics';
 import { loadWellPetro, upscale, type WellPetro } from './fdData';
 import { useUnits, oilVol, gasVol } from '../../units';
+import { simulateFV } from '../../engine/sim/fv';
+import { COREY_DEFAULTS } from '../../engine/sim/relperm';
+import { phiToK } from '../../engine/perm';
 
 type Scope = 'closure' | 'polygon' | 'well';
 type FillCase = 'oil' | 'gas';
@@ -41,12 +44,29 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
   const [fill, setFill] = useState<FillCase>('oil');
   const [mode, setMode] = useState<ModeK>('deterministic');
   const [rf, setRf] = useState(0.50);
+  const [rfMode, setRfMode] = useState<'manual' | 'waterflood'>('manual');
   const [polyR, setPolyR] = useState(2000); // polygon half-size (m) centred on crest
   const [wellR, setWellR] = useState(1500);  // drainage radius (m)
   const [drainWell, setDrainWell] = useState('F-12');
   const [inspOpen, setInspOpen] = useState(true);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const bg = 0.0040;
+
+  // S7 · recovery factor from a screening waterflood (quarter five-spot on the deck
+  // field-average φ/k) — RF = simulated cum-oil / OOIP at ~1.2 PVI. Couples the
+  // dynamic model to the static recoverable instead of a guessed slider.
+  const sweepRf = useMemo(() => {
+    const n = 20, N = n * n;
+    const r = simulateFV({
+      nx: n, ny: n, dx: 150, dy: 150, dz: 20,
+      phi: new Float64Array(N).fill(d.phi), k: new Float64Array(N).fill(phiToK(d.phi)),
+      muw: 0.5, muo: 3, corey: COREY_DEFAULTS,
+      wells: [{ i: 1, j: 1, mode: 'rate', rate: d.phi * 150 * 150 * 20 * N }, { i: n - 2, j: n - 2, mode: 'bhp', bhp: 150, WI: 1e5 }],
+    }, { tEnd: 1.2, nReports: 20, cfl: 0.4 });
+    const last = r.snapshots[r.snapshots.length - 1];
+    return Math.max(0.1, Math.min(0.7, last.cumOil / r.ooip));
+  }, [d.phi]);
+  const effRf = rfMode === 'waterflood' ? sweepRf : rf;
 
   const top = useAsync<SurfaceJson>(() => loadSurface('hugin_top'), []);
   const base = useAsync<SurfaceJson>(() => loadSurface('hugin_base'), []);
@@ -144,7 +164,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
             ? <Card title="STOIIP (oil)" big={oilVol(stoiipSm3, system).text} sub={`${oilVol(stoiipSm3, system === 'field' ? 'metric' : 'field').text} · Bo ${bo}`} nature="derived" />
             : <Card title="GIIP (gas · what-if)" big={gasVol(giipSm3, system).text} sub={`${gasVol(giipSm3, system === 'field' ? 'metric' : 'field').text} · Bg ${bg}`} nature="scenario" />}
           <Card title="Solution gas (assoc.)" big={gasVol(solGasSm3, system).text} sub={`STOIIP × Rs ${rs}`} nature="derived" />
-          <Card title={`Recoverable @ RF ${(rf * 100).toFixed(0)}%`} big={oilVol(stoiipSm3 * rf, system).text} sub={`${oilVol(stoiipSm3 * rf, system === 'field' ? 'metric' : 'field').text}`} nature="scenario" />
+          <Card title={`Recoverable @ RF ${(effRf * 100).toFixed(0)}%${rfMode === 'waterflood' ? ' (sim)' : ''}`} big={oilVol(stoiipSm3 * effRf, system).text} sub={`${oilVol(stoiipSm3 * effRf, system === 'field' ? 'metric' : 'field').text}`} nature="scenario" />
         </div>
       </div>
 
@@ -167,7 +187,10 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
           {scope === 'closure' && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>Crest-connected flood-fill to the deck OWC {owc} m.</div>}
         </InspectorSection>
         <InspectorSection title="Recovery factor">
-          <Slider label="RF (published 0.46–0.54)" min={0.30} max={0.70} step={0.01} value={rf} onChange={setRf} fmt={(v) => `${(v * 100).toFixed(0)}%`} />
+          <Segmented options={[{ id: 'manual' as const, label: 'Manual' }, { id: 'waterflood' as const, label: 'Waterflood (sim)' }]} value={rfMode} onChange={setRfMode} accent="--amber" />
+          {rfMode === 'manual'
+            ? <div style={{ marginTop: 8 }}><Slider label="RF (published 0.46–0.54)" min={0.30} max={0.70} step={0.01} value={rf} onChange={setRf} fmt={(v) => `${(v * 100).toFixed(0)}%`} /></div>
+            : <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--muted)', lineHeight: 1.5 }}>Simulated sweep RF <b style={{ color: 'var(--teal)' }}>{(sweepRf * 100).toFixed(0)}%</b> — quarter five-spot waterflood on deck-average φ/k at ~1.2 PVI (FV oil-water, Buckley-Leverett-validated). The dynamic model sets the recoverable, not a guess.</div>}
         </InspectorSection>
         <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>bbl ×{BBL_PER_SM3} · scf ×{SCF_PER_SM3}. Gas case badged scenario.</div>
       </Inspector>
