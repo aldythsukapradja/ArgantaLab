@@ -156,7 +156,8 @@ test('mark: variantForSize picks the ladder rung, falling back honestly', async 
 
 test('identity v2: every brand wears the monoline system', async () => {
   const { BRAND_BASES, BRAND_ORDER } = await import('../src/index.js')
-  const ACCENT = { arganta: '#DCA254', argantalab: '#7BAEE8', kinetikcircle: '#EC93B5', lashirabloom: '#6EC492', circlehq: '#AF9BE8' }
+  // WF1: top-level BRAND_ORDER is now the endorsed house (companies, not products).
+  const ACCENT = { arganta: '#DCA254', argantalife: '#FF7A59', argantaenergy: '#2E7CF6', argantastudio: '#A06CE8', circlehq: '#AF9BE8' }
   for (const id of BRAND_ORDER) {
     const i = BRAND_BASES[id].identity
     assert.ok(i.mark, `${id} has no mark — v2 delivered all five`)
@@ -367,17 +368,29 @@ test('bases: all five carry a real mark — handoff v2 delivered the set', async
   }
 })
 
-// BS-0: the portfolio the founder locked — five brands, no "Landing", and
-// Circle HQ present (it was missing from this file entirely).
-test('portfolio: BRAND_ORDER is the locked five, in presentation order', async () => {
+// WF1 (2026-07-22): the ENDORSED HOUSE — masterbrand + three companies +
+// internal OS. Products (Kinetik/Lab/Bloom/GeaVision) moved under MEMBERS and
+// are rendered by explicit id, not by iterating BRAND_ORDER. See
+// docs/arganta-design-system/Brand-Studio-Audit.md.
+test('portfolio: BRAND_ORDER is the endorsed house, in presentation order', async () => {
   const { BRAND_ORDER, BRAND_BASES, PUBLIC_BRAND_IDS, BRAND_ROLE, orderedBases } = await import('../src/index.js')
-  assert.deepEqual(BRAND_ORDER, ['arganta', 'argantalab', 'kinetikcircle', 'lashirabloom', 'circlehq'])
-  assert.equal(Object.keys(BRAND_BASES).length, 5)
+  assert.deepEqual(BRAND_ORDER, ['arganta', 'argantalife', 'argantaenergy', 'argantastudio', 'circlehq'])
+  assert.equal(Object.keys(BRAND_BASES).length, 9, 'master + 3 companies + 4 products + internal')
   assert.ok(!('landing' in BRAND_BASES), '"Landing" is retired — apps/landing IS Arganta')
   assert.ok('circlehq' in BRAND_BASES, 'Circle HQ is a brand, not a surface')
   assert.ok(!PUBLIC_BRAND_IDS.includes('circlehq'), 'Circle HQ is internal — never audited for social presence')
   assert.equal(orderedBases().length, 5)
   for (const id of BRAND_ORDER) assert.ok(BRAND_ROLE[id], `${id} has no role label`)
+})
+
+// WF1: products live under their company; every product resolves to a base.
+test('portfolio: MEMBERS group products under companies', async () => {
+  const { MEMBERS, PARENT, BRAND_BASES } = await import('../src/index.js')
+  assert.deepEqual(MEMBERS.argantalife, ['kinetikcircle', 'argantalab', 'lashirabloom'])
+  assert.deepEqual(MEMBERS.argantaenergy, ['geavision'])
+  for (const kids of Object.values(MEMBERS)) for (const id of kids) assert.ok(BRAND_BASES[id], `${id} has no base`)
+  assert.equal(PARENT.kinetikcircle, 'argantalife')
+  assert.equal(PARENT.geavision, 'argantaenergy')
 })
 
 test('portfolio: Kinetik Circle uses its public spelling', async () => {

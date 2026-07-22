@@ -1,0 +1,26 @@
+{
+  "_note": "Founder-lane SEED for ArgantaStudio (WF1). DB is authoritative once it has a row; this is the offline fallback. Voice reflects the founder's real builder credibility — never invent achievements. See knowledge-base/brand + docs/arganta-design-system/Film-ArgantaStudio.md.",
+  "voice": {
+    "persona": {
+      "title": "The Builder",
+      "adjectives": ["bold", "inventive", "hands-on"],
+      "speaksAs": "A builder-operator who ships real creative work fast, and now engineers AI to build alongside them.",
+      "forbidden": ["hype", "fabricated portfolio work", "employer names", "generic stock-studio imagery"]
+    },
+    "taglines": {
+      "en": "Concept. Create. Transform.",
+      "id": "Konsep. Cipta. Transformasi."
+    },
+    "boilerplates": {
+      "en": {
+        "w25": "ArgantaStudio brings engineered AI to creative production — concepting, creating, and transforming media, in one studio built for builders."
+      }
+    },
+    "pillars": [
+      { "id": "concept", "label": "Concept", "description": "Turning a raw idea into a clear creative brief, fast.", "accent": "#A06CE8" },
+      { "id": "create", "label": "Create", "description": "Generating the media itself — image, video, audio, and game assets.", "accent": "#FF7A59" },
+      { "id": "transform", "label": "Transform", "description": "Reworking and polishing generated media into publish-ready output.", "accent": "#2E7CF6" }
+    ],
+    "languages": ["en", "id"]
+  }
+}

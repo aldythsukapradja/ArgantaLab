@@ -12,4 +12,6 @@ export * from './registry.js';
 export { generate, createRegistry } from './core.js';
 export { generateImage, PALETTES, STYLES } from './adapters/image-deterministic.js';
 export { comfySovereignImageAdapter } from './adapters/comfy-sovereign.js';
+export { comfySovereignVideoAdapter } from './adapters/comfy-sovereign-video.js';
+export { comfySovereignMusicAdapter } from './adapters/comfy-sovereign-music.js';
 export { encodePNG } from './png.js';

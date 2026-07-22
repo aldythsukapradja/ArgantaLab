@@ -23,7 +23,15 @@ $Files = @(
   @{ url='https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors';
      dir='vae'; name='wan2.2_vae.safetensors' },
   @{ url='https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors';
-     dir='text_encoders'; name='umt5_xxl_fp8_e4m3fn_scaled.safetensors' }
+     dir='text_encoders'; name='umt5_xxl_fp8_e4m3fn_scaled.safetensors' },
+
+  # --- Wan 2.2 TI2V-5B TURBO (distilled, 4-step) GGUF — the FAST video path. ---
+  # ~3.8GB, fits 8GB with room for 720p. Needs the ComfyUI-GGUF custom node
+  # (install "ComfyUI-GGUF" by city96 via ComfyUI Manager). Goes in models/unet
+  # (city96 convention). 4 steps / cfg 1 → ~30s clips instead of ~3min.
+  # Source: https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF
+  @{ url='https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2.2-TI2V-5B-Turbo-Q5_K_M.gguf';
+     dir='unet'; name='Wan2.2-TI2V-5B-Turbo-Q5_K_M.gguf' }
 )
 
 foreach ($f in $Files) {

@@ -1,0 +1,34 @@
+{
+  "name": "arganta-studio",
+  "description": "ArgantaStudio — AI media creation + multi-platform social command center for the Arganta ecosystem",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "workspaces": [
+    "packages/studio"
+  ],
+  "scripts": {
+    "dev": "next dev -p 3200",
+    "build": "npm run build:studio && next build",
+    "start": "next start -p 3200",
+    "lint": "next lint",
+    "build:studio": "npm run build -w studio"
+  },
+  "dependencies": {
+    "@arganta/media-core": "file:../../packages/media-core",
+    "axios": "^1.7.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.4.1",
+    "studio": "*"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "autoprefixer": "^10.4.24",
+    "eslint": "^9",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.0"
+  }
+}

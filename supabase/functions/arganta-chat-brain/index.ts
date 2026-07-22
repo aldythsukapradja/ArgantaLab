@@ -106,7 +106,12 @@ async function generateViaComfy(base: string, prompt: string): Promise<{ imageBa
 }
 
 async function generateViaCloudflare(prompt: string): Promise<{ imageBase64: string; mime: string } | { error: string }> {
-  const acct = Deno.env.get('ARGANTA_CF_ACCOUNT_ID'), token = Deno.env.get('ARGANTA_CF_API_TOKEN')
+  // Prefer the family app's OWN keys (per-app revocation); fall back to the
+  // project's existing shared Cloudflare Workers AI keys so image generation
+  // works out of the box. The CF key only grants image-gen quota — it never
+  // touches HQ data (that wall is the JWT + RLS + allowlist, not this key).
+  const acct = Deno.env.get('ARGANTA_CF_ACCOUNT_ID') || Deno.env.get('CF_ACCOUNT_ID')
+  const token = Deno.env.get('ARGANTA_CF_API_TOKEN') || Deno.env.get('CF_API_TOKEN')
   if (!acct || !token) return { error: 'no Cloudflare fallback configured' }
   const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/${CF_IMAGE_MODEL}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -137,7 +142,7 @@ Deno.serve(async (req) => {
     return json({
       ok: true,
       sovereign: !!Deno.env.get('COMFYUI_URL'),
-      fallback: !!(Deno.env.get('ARGANTA_CF_ACCOUNT_ID') && Deno.env.get('ARGANTA_CF_API_TOKEN')),
+      fallback: !!((Deno.env.get('ARGANTA_CF_ACCOUNT_ID') || Deno.env.get('CF_ACCOUNT_ID')) && (Deno.env.get('ARGANTA_CF_API_TOKEN') || Deno.env.get('CF_API_TOKEN'))),
       tools: TOOL_ALLOWLIST,
     })
   }

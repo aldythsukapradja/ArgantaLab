@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #050505;
+  color: white;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --color-primary: #22d3ee;
+  --bg-app: #030303;
+  --bg-panel: #0a0a0a;
+  --bg-card: #111111;
+  --border-color: rgba(255,255,255,0.05);
+  --border-radius-xl: 0.75rem;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.scrollbar-none::-webkit-scrollbar {
+  height: 2px;
+  width: 2px;
+}
+.scrollbar-none::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-none::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+.scrollbar-none::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.scrollbar-none {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* ─── Mobile drawer slide-in ─────────────────────────────────────────────── */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0.4; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* ─── Wow: animated aurora backdrop ──────────────────────────────────────── */
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.35;
+  will-change: transform;
+}
+.aurora-1 {
+  width: 46vw; height: 46vw; min-width: 320px; min-height: 320px;
+  background: radial-gradient(circle at 30% 30%, #22d3ee, transparent 70%);
+  top: -12%; left: -8%;
+  animation: auroraFloat1 22s ease-in-out infinite alternate;
+}
+.aurora-2 {
+  width: 40vw; height: 40vw; min-width: 300px; min-height: 300px;
+  background: radial-gradient(circle at 60% 40%, #a855f7, transparent 70%);
+  top: 20%; right: -10%;
+  animation: auroraFloat2 26s ease-in-out infinite alternate;
+}
+.aurora-3 {
+  width: 38vw; height: 38vw; min-width: 280px; min-height: 280px;
+  background: radial-gradient(circle at 50% 60%, #e5ff33, transparent 72%);
+  opacity: 0.22;
+  bottom: -14%; left: 28%;
+  animation: auroraFloat3 30s ease-in-out infinite alternate;
+}
+@keyframes auroraFloat1 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(8vw, 10vh) scale(1.18); }
+}
+@keyframes auroraFloat2 {
+  from { transform: translate(0, 0) scale(1.05); }
+  to   { transform: translate(-10vw, 8vh) scale(1); }
+}
+@keyframes auroraFloat3 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(6vw, -8vh) scale(1.22); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob { animation: none; }
+}

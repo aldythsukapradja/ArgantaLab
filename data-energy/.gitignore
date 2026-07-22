@@ -1,0 +1,11 @@
+# ArgantaEnergy raw mirror — byte-identical Volve data, NEVER committed.
+# Keep the manifest (inventory/selection/reports) but never the bulk bytes.
+raw/
+interim/
+processed/
+sample/
+*.part
+
+# keep manifest dir contents
+!manifest/
+!manifest/**

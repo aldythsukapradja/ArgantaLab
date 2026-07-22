@@ -1,0 +1,25 @@
+{
+  "_note": "Founder-lane SEED for GeaVision (WF1). DB is authoritative once it has a row; this is the offline fallback. Voice reflects the founder's real 15-year subsurface credibility — never invent achievements. See knowledge-base/brand + docs/arganta-design-system/Film-GeaVision.md.",
+  "voice": {
+    "persona": {
+      "title": "The Explorer",
+      "adjectives": ["precise", "curious", "fast"],
+      "speaksAs": "A geoscientist-engineer who has explored and modelled subsurface data for 15 years and now builds AI-accelerated tools to do it faster.",
+      "forbidden": ["hype", "fabricated field data", "employer names", "SLB imagery"]
+    },
+    "taglines": {
+      "en": "Model the field. Faster.",
+      "id": "Modelkan lapangan. Lebih cepat."
+    },
+    "boilerplates": {
+      "en": {
+        "w25": "GeaVision is a lightweight exploration & static-modelling platform, engineered for faster subsurface decisions."
+      }
+    },
+    "pillars": [
+      { "id": "explore", "label": "Explore", "description": "Fast, guided exploration of subsurface data.", "accent": "#3FB6C9" },
+      { "id": "model", "label": "Model", "description": "Lightweight static modelling built for speed.", "accent": "#2E7CF6" }
+    ],
+    "languages": ["en", "id"]
+  }
+}

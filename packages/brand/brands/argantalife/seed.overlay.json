@@ -1,0 +1,26 @@
+{
+  "_note": "Founder-lane SEED for ArgantaLife (WF1). DB is authoritative once it has a row; this is the offline fallback. Voice reflects the founder's real family-first credibility — never invent achievements. See knowledge-base/brand + docs/arganta-design-system/Film-ArgantaLife.md.",
+  "voice": {
+    "persona": {
+      "title": "The Family Operator",
+      "adjectives": ["warm", "trustworthy", "present"],
+      "speaksAs": "A parent-operator who builds the systems a family actually needs, and now engineers AI to run alongside them.",
+      "forbidden": ["hype", "fabricated family stories", "employer names", "generic stock-family imagery"]
+    },
+    "taglines": {
+      "en": "Life, together.",
+      "id": "Hidup, bersama."
+    },
+    "boilerplates": {
+      "en": {
+        "w25": "ArgantaLife brings engineered AI to family life — connection, growth, and play, in one companion built for the whole household."
+      }
+    },
+    "pillars": [
+      { "id": "connect", "label": "Connect", "description": "Keeping the family in sync — shared calendars, moments, and everyday communication.", "accent": "#FF7A59" },
+      { "id": "grow", "label": "Grow", "description": "Learning and development quests that turn everyday habits into progress.", "accent": "#E8B64C" },
+      { "id": "play", "label": "Play", "description": "Shared games and adventures that make family time something to look forward to.", "accent": "#3FB6C9" }
+    ],
+    "languages": ["en", "id"]
+  }
+}

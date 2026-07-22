@@ -1,0 +1,56 @@
+{
+  "id": "argantalife",
+  "name": "ArgantaLife",
+  "status": "draft",
+
+  "identity": {
+    "_note": "IDENTITY v1 (2026-07-22) — the endorsed-house re-architecture (WF1). ArgantaLife is a COMPANY under Arganta.ai, not a product. Mark: the 7-LAYER REACTOR as a family ecosystem — concentric energy rings around a hot core, warm coral data on dark, never generic stock-family imagery. Palette is the design-system Life light (#FF7A59) on the shared ink ground. The procedural mark here is the FALLBACK; the real reactor asset (Higgsfield Track E) swaps in via WF3/WF4. See docs/arganta-design-system/Brand-Studio-Audit.md + The-Reactor.md.",
+    "mark": {
+      "viewBox": 120,
+      "tokens": { "line": "#9AA3B2" },
+      "tokensLight": { "line": "#3A3D45" },
+      "gradients": {
+        "energy": { "type": "linear", "from": [0, 0], "to": [1, 1], "stops": [[0, "#FF7A59"], [1, "#E8B64C"]] }
+      },
+      "variants": {
+        "core": [
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 46, "stroke": "@line", "strokeWidth": 2 },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 33, "stroke": "@energy", "strokeWidth": 2.5 },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 20, "stroke": "@energy", "strokeWidth": 2.5 },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 7, "fill": "#E8B64C" }
+        ]
+      }
+    },
+
+    "palette": {
+      "bg": "#15161B",
+      "bgAlt": "#101116",
+      "ink": "#F2F1EC",
+      "soft": "#C4C9D4",
+      "accent": "#FF7A59",
+      "plateBg": "#F2F1EC",
+      "plateInk": "#15161B"
+    },
+    "accents": {
+      "coral": "#FF7A59",
+      "core": "#E8B64C",
+      "teal": "#3FB6C9",
+      "ink": "#0B0D12"
+    },
+    "fonts": { "display": "Space Grotesk", "body": "Inter", "mono": null, "embedded": [] },
+    "icons": { "style": "precise 2px struts, warm family-ecosystem rings, one hot-core accent per composition", "set": {} },
+    "motion": { "intro": null, "outro": null, "markAnimation": null },
+    "audio": { "sting": null, "durationMs": 2000 }
+  },
+
+  "kb": {
+    "artDirection": "Near-black #0B0D12 ground. Warm luminous coral (#FF7A59) data on dark, hot gold (#E8B64C) reactor core. The 7-layer reactor read as a glowing family ecosystem — connection, growth, and play lit by intelligence. Precise, engineered, human; one weighty hero move per shot. Never generic stock-family imagery. Volumetric, fresnel rim, warm shimmer.",
+    "brandMd": null,
+    "refs": [],
+    "prompts": {}
+  },
+  "presence": {},
+  "content": { "templates": {}, "captionFormula": null, "adKit": { "meta": {}, "google": {}, "display": {} }, "ogTemplate": null },
+  "discovery": { "seo": {}, "schemaOrg": null, "ogImage": null, "factSheet": {}, "llmsTxt": null, "keywords": [] },
+  "routing": { "bufferChannelId": null, "momentSenderProfileId": null, "siteUrl": "https://life.arganta.app" }
+}

@@ -20,6 +20,7 @@ import { createCodexEngine, ensureCodexMediaMcp } from './engines/codex.ts';
 import type { MissionEngine, OutEvent } from './engines/types.ts';
 import { health, launch, opsCors } from './ops.ts';
 import { telemetry } from './telemetry.ts';
+import { serveFile } from './files.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../../..');
@@ -91,6 +92,11 @@ function listenOn(host: string) {
     if (req.method === 'GET' && url.pathname === '/health') {
       health().then((h) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(h)); })
         .catch((e) => { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: String(e?.message || e) })); });
+      return;
+    }
+    if (req.method === 'GET' && url.pathname === '/file') {
+      // Token-gated preview of generated media/HTML (allowlist-guarded in files.ts).
+      serveFile(res, REPO_ROOT, url.searchParams.get('path'));
       return;
     }
     if (req.method === 'GET' && url.pathname === '/telemetry') {

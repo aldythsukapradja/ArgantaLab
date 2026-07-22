@@ -20,6 +20,12 @@ import './bridge.css'
 // returns a Supabase public URL alongside the path, which is what we catch).
 const IMG_RE = /https?:\/\/[^\s)"'<>\]]+\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s)"'<>\]]*)?/gi
 const URL_RE = /https?:\/\/[^\s)"'<>\]]+/gi
+// LOCAL generated paths the bridge can serve via /file (inside generated-media or
+// codex generated_images). Allows spaces + backslashes; stops at backtick/quote.
+const LOCAL_RE = /(?:[A-Za-z]:[\\/]|[\\/])[^`\n\r"'<>|]*?(?:generated-media|generated_images)[\\/][^`\n\r"'<>|]*?\.(?:png|jpe?g|gif|webp|avif|svg|html?|mp4|webm|mp3|wav)/gi
+const baseName = (p: string) => p.split(/[\\/]/).pop() || p
+const isImageRef = (p: string) => /\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?|#|$)/i.test(p)
+
 function extractPreviewables(text: string): { images: string[]; pages: string[] } {
   const images = Array.from(new Set(text.match(IMG_RE) || []))
   const imgSet = new Set(images)
@@ -28,17 +34,31 @@ function extractPreviewables(text: string): { images: string[]; pages: string[] 
   return { images, pages }
 }
 
-function BridgePreviews({ text }: { text: string }) {
+/** `fileBase`/`token` (the connected bridge's http origin + token) let us also
+ * preview LOCAL generated files — a codex built-in image or a single-file .html
+ * that has no public URL — by pointing at the bridge's /file endpoint. */
+function BridgePreviews({ text, fileBase, token }: { text: string; fileBase?: string; token?: string }) {
   const { images, pages } = extractPreviewables(text)
-  if (!images.length && !pages.length) return null
+  const httpBasenames = new Set(images.map(baseName))
+  const fileUrl = (p: string) => `${fileBase}/file?path=${encodeURIComponent(p)}&token=${encodeURIComponent(token || '')}`
+  const locals = fileBase && token ? Array.from(new Set(text.match(LOCAL_RE) || [])) : []
+  // Skip a local image the reply also gave as an http URL (media-gen returns both).
+  const localImages = locals.filter((p) => isImageRef(p) && !httpBasenames.has(baseName(p))).map(fileUrl)
+  const localPages = locals.filter((p) => /\.html?$/i.test(p)).map(fileUrl)
+
+  const allImages = [...images, ...localImages]
+  const allPages = [...pages, ...localPages]
+  if (!allImages.length && !allPages.length) return null
   return (
     <div className="bf-previews">
-      {images.map((src) => (
+      {allImages.map((src) => (
         <a key={src} className="bf-preview-img" href={src} target="_blank" rel="noreferrer" title="Open full size">
-          <img src={src} alt="Generated result" loading="lazy" />
+          {/* Hide the tile if the bytes can't be fetched (stale/forbidden/404) so
+              a preview never shows a broken-image glyph. */}
+          <img src={src} alt="Generated result" loading="lazy" onError={(e) => { const a = e.currentTarget.closest('.bf-preview-img') as HTMLElement | null; if (a) a.style.display = 'none' }} />
         </a>
       ))}
-      {pages.map((url) => (
+      {allPages.map((url) => (
         <button key={url} className="bf-preview-open" onClick={() => openPreview({ kind: 'url', title: 'Preview', url })}>
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" /><path d="M1.5 5.6 H14.5" stroke="currentColor" strokeWidth="1.4" /></svg>
           Open preview
@@ -259,6 +279,9 @@ export function BridgeConsole({ engine = 'claude', replayMissionId, onMissionSav
   const connected = status === 'open'
   const viewingHistory = !!replayMissionId
   const showing = viewingHistory ? (replay ?? []) : feed
+  // The bridge's HTTP origin (for /file previews) is its WS url with the scheme
+  // swapped: ws://→http://, wss://→https:// (so tailscale-serve wss stays https).
+  const httpBase = (bridgeUrl || 'ws://127.0.0.1:7717').trim().replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:').replace(/\/+$/, '')
   // The connect popup is the empty-state when there's nothing behind it, and an
   // on-demand overlay (via the reconnect pill) once a conversation exists — so a
   // dropped socket never wipes a feed the founder is reading. Never over the
@@ -279,7 +302,7 @@ export function BridgeConsole({ engine = 'claude', replayMissionId, onMissionSav
           {viewingHistory && replay === null && (
             <div className="core-convo-empty"><p className="core-empty-copy">Loading mission…</p></div>
           )}
-          {showing.map((it) => <FeedRow key={it.id} item={it} Mark={cfg.Mark} accent={cfg.accent} onResolve={resolve} />)}
+          {showing.map((it) => <FeedRow key={it.id} item={it} Mark={cfg.Mark} accent={cfg.accent} fileBase={httpBase} token={token} onResolve={resolve} />)}
         </div>
       </div>
 
@@ -423,13 +446,13 @@ function BridgeModelPicker({ cfg, model, onPick }: { cfg: EngineConfig; model: s
   )
 }
 
-function FeedRow({ item, Mark, accent, onResolve }: { item: FeedItem; Mark: MarkComp; accent: string; onResolve: (i: Extract<FeedItem, { kind: 'approval' }>, a: boolean) => void }) {
+function FeedRow({ item, Mark, accent, fileBase, token, onResolve }: { item: FeedItem; Mark: MarkComp; accent: string; fileBase?: string; token?: string; onResolve: (i: Extract<FeedItem, { kind: 'approval' }>, a: boolean) => void }) {
   switch (item.kind) {
     case 'user':
       return <div className="core-msg core-msg-user"><div className="core-msg-bubble">{item.text}</div></div>
     case 'status': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-status">{item.label}</div></div></div>
     case 'tool': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-tool"><span className="bf-tick" />{item.label}</div></div></div>
-    case 'message': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><Markdown className="bf-msg" text={item.text} /><BridgePreviews text={item.text} /></div></div>
+    case 'message': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><Markdown className="bf-msg" text={item.text} /><BridgePreviews text={item.text} fileBase={fileBase} token={token} /></div></div>
     case 'error': return <div className="core-msg core-msg-assistant"><div className="core-msg-body"><div className="bf-error">⚠ {item.message}</div></div></div>
     case 'done':
       return (
@@ -443,7 +466,7 @@ function FeedRow({ item, Mark, accent, onResolve }: { item: FeedItem; Mark: Mark
               {item.costUsd != null && <span className="bf-cost">${item.costUsd.toFixed(4)}</span>}
             </div>
             {item.result && <Markdown className="bf-result" text={item.result} />}
-            {item.result && <BridgePreviews text={item.result} />}
+            {item.result && <BridgePreviews text={item.result} fileBase={fileBase} token={token} />}
           </div>
         </div></div>
       )

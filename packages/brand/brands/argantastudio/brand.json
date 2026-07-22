@@ -1,0 +1,56 @@
+{
+  "id": "argantastudio",
+  "name": "ArgantaStudio",
+  "status": "draft",
+
+  "identity": {
+    "_note": "IDENTITY v1 (2026-07-22) — the endorsed-house re-architecture (WF1). ArgantaStudio is a COMPANY under Arganta.ai, not a product. Mark: the 7-LAYER REACTOR as a creative studio core — concentric energy rings around a hot core, bold violet data on dark, never generic stock-studio imagery. Palette is the design-system Studio light (#A06CE8) on the shared ink ground. The procedural mark here is the FALLBACK; the real reactor asset (Higgsfield Track E) swaps in via WF3/WF4. See docs/arganta-design-system/Brand-Studio-Audit.md + The-Reactor.md.",
+    "mark": {
+      "viewBox": 120,
+      "tokens": { "line": "#9AA3B2" },
+      "tokensLight": { "line": "#3A3D45" },
+      "gradients": {
+        "energy": { "type": "linear", "from": [0, 0], "to": [1, 1], "stops": [[0, "#A06CE8"], [1, "#E8B64C"]] }
+      },
+      "variants": {
+        "core": [
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 46, "stroke": "@line", "strokeWidth": 2 },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 33, "stroke": "@energy", "strokeWidth": 2.5 },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 20, "stroke": "@energy", "strokeWidth": 2.5 },
+          { "kind": "circle", "cx": 60, "cy": 60, "r": 7, "fill": "#E8B64C" }
+        ]
+      }
+    },
+
+    "palette": {
+      "bg": "#15161B",
+      "bgAlt": "#101116",
+      "ink": "#F2F1EC",
+      "soft": "#C4C9D4",
+      "accent": "#A06CE8",
+      "plateBg": "#F2F1EC",
+      "plateInk": "#15161B"
+    },
+    "accents": {
+      "violet": "#A06CE8",
+      "core": "#E8B64C",
+      "coral": "#FF7A59",
+      "ink": "#0B0D12"
+    },
+    "fonts": { "display": "Space Grotesk", "body": "Inter", "mono": null, "embedded": [] },
+    "icons": { "style": "precise 2px struts, bold creative-studio rings, one hot-core accent per composition", "set": {} },
+    "motion": { "intro": null, "outro": null, "markAnimation": null },
+    "audio": { "sting": null, "durationMs": 2000 }
+  },
+
+  "kb": {
+    "artDirection": "Near-black #0B0D12 ground. Bold luminous violet (#A06CE8) data on dark, hot gold (#E8B64C) reactor core. The 7-layer reactor read as a glowing creative studio — concept, creation, and transformation lit by intelligence. Precise, engineered, expressive; one weighty hero move per shot. Never generic stock-studio imagery. Volumetric, fresnel rim, chromatic shimmer.",
+    "brandMd": null,
+    "refs": [],
+    "prompts": {}
+  },
+  "presence": {},
+  "content": { "templates": {}, "captionFormula": null, "adKit": { "meta": {}, "google": {}, "display": {} }, "ogTemplate": null },
+  "discovery": { "seo": {}, "schemaOrg": null, "ogImage": null, "factSheet": {}, "llmsTxt": null, "keywords": [] },
+  "routing": { "bufferChannelId": null, "momentSenderProfileId": null, "siteUrl": "https://studio.arganta.app" }
+}
