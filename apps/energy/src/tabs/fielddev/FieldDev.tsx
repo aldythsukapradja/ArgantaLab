@@ -9,6 +9,7 @@ import { CorrelationView } from './CorrelationView';
 import { Petrophysics } from './Petrophysics';
 import { Structural } from './Structural';
 import { Property } from './Property';
+import { GridModelView } from './GridModelView';
 import { Volumetrics } from './Volumetrics';
 import { Uncertainty } from './Uncertainty';
 import { Forecast } from './Forecast';
@@ -42,6 +43,7 @@ export function FieldDev({ subtab }: { subtab: string }) {
   else if (m.id === 'petrophysics') body = <Petrophysics />;
   else if (m.id === 'structural') body = <Structural />;
   else if (m.id === 'property') body = <Property />;
+  else if (m.id === 'gridmodel') body = <GridModelView />;
   else if (m.id === 'volumetrics') body = <Volumetrics />;
   else if (m.id === 'uncertainty') body = <Uncertainty />;
   else if (m.id === 'forecast') body = <Forecast />;

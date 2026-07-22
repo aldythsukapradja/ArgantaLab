@@ -56,6 +56,11 @@ export const VIEWERS: Record<string, ViewerManifest> = {
       'HCPV map = engine.grv cellwise × property grids',
     ],
   },
+  gridmodel: {
+    id: 'gridmodel', name: 'Grid Model', status: 'live', phase: 'S2',
+    blurb: 'Geostatistical 3D static model — SIS facies + SGS porosity on a real cell grid.',
+    planned: [],
+  },
   volumetrics: {
     id: 'volumetrics', name: 'Volumetrics', status: 'live', phase: 'V1c',
     blurb: 'STOIIP / GIIP with validation against published ≈22 MMSm³ [PEER].',
