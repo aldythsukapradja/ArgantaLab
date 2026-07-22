@@ -12,6 +12,7 @@ import { DataPipeline } from './tabs/DataPipeline';
 import { SchemaTab } from './tabs/SchemaTab';
 import { Knowledge } from './tabs/Knowledge';
 import { Stub } from './tabs/Stub';
+import { FieldDev } from './tabs/fielddev/FieldDev';
 
 function useIsMobile() {
   const [m, setM] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 820);
@@ -33,6 +34,7 @@ function Surface() {
     return <Foundation />; // 'overview' — the field picture (was the standalone Core/Foundation tab)
   }
   if (domain === 'knowledge') return <Knowledge />;
+  if (domain === 'fielddev') return <FieldDev subtab={subtab} />;
   return <Stub def={def} />; // Core, verticals, insight/reasoning, foundation — placeholders for now
 }
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type DataNature = 'measured' | 'reported' | 'interpreted' | 'derived';
+export type DataNature = 'measured' | 'reported' | 'interpreted' | 'derived' | 'scenario';
 export type Method = 'deterministic' | 'stochastic' | 'llm';
 
 const NATURE: Record<DataNature, { label: string; accent: string }> = {
@@ -8,6 +8,7 @@ const NATURE: Record<DataNature, { label: string; accent: string }> = {
   reported: { label: 'REPORTED', accent: 'var(--amber)' },
   interpreted: { label: 'INTERPRETED', accent: 'var(--orange)' },
   derived: { label: 'DERIVED', accent: 'var(--violet)' },
+  scenario: { label: 'SCENARIO', accent: 'var(--rose)' },
 };
 
 const METHOD: Record<Method, { glyph: string; label: string }> = {
