@@ -36,6 +36,44 @@ Match `test-engine.mjs` reference implementations exactly (same formulas, same c
 ## Common (both phases)
 Right Inspector per viewer (token-only customization); hover readouts; dataNature badges on every surfaced value; both themes; reduced-motion; mobile single-column. Later-phase tabs already stubbed by V1a → replace with the live viewer.
 
+## Founder specifics (2026-07-22) — locked into the build
+Founder direction for completing Field Development, folded into the phases above:
+
+### Structural modeling — **NO FAULTS**, WITH well-log upscaling
+- Simple structural model: the Hugin Top/Base grids as-is (no fault polygons, no compartmentalization in the model — it's a single connected structure). Honest label: "unfaulted screening model."
+- **Well-log upscaling** (`upscale.ts`): block the fine LFP samples within the Hugin interval (picks-bounded) per well into upscaled cell values — **arithmetic mean for continuous** (PHIE), **net-fraction for SAND**, **majority vote for discrete facies**. This is the Petrel "scale-up well logs" step feeding Property modeling. Show upscaled-vs-raw so nothing is hidden.
+
+### Property modeling — **simple**: 1 continuous + 1 discrete
+- **Porosity (continuous):** interpolate the upscaled per-well PHIE across the grid (IDW power 2; kriging-lite later) → a porosity property grid. Colormap + legend.
+- **Facies (discrete):** derive from **SAND** — upscaled net-sand fraction per well → interpolate → threshold into a **sand/shale discrete facies grid** (2 facies: SAND, SHALE). This is the facies model. Discrete, distinct colors.
+- HCPV/volumetrics then read porosity × facies(NTG) grids cellwise (property mode).
+
+### Volumetrics — **oil AND gas cases**
+- **Oil case (STOIIP):** `grv·ntg·phie·(1−sw)/Bo`, Bo=1.47 [deck]. Sm³ + bbl (×6.2898).
+- **Gas case (GIIP, scenario):** `grv·ntg·phie·(1−sw)/Bg` with **Bg≈0.0040 rm³/Sm³** (screening default at Pi/T; refine from deck PVDG if pulled) — a "what if the trap held gas" scenario, badged `scenario`. Sm³ + scf (×35.3147).
+- **Associated/solution gas** (reported alongside oil): `STOIIP × Rs`, Rs=148 Sm³/Sm³ [deck] → free-gas-equivalent context. Both fill cases selectable; scope selector (closure/polygon/well) as spec'd.
+
+### Uncertainty — tornado + Monte-Carlo + editable parameters
+- **Uncertainty parameters** (editable rows, PERT/triangular min/mode/max): GRV multiplier, NTG, PHIE, Sw, Bo, contact depth (OWC), (Bg for gas case), recovery factor. Each with a distribution picker.
+- **Monte-Carlo:** 10,000 seeded (fixed seed 20260722) → P90/P50/P10 (oil convention), histogram + CDF.
+- **Tornado:** Pearson r of each input vs output across realizations, sorted |r|, one-at-a-time low/high bars. Both oil (STOIIP) and gas (GIIP) selectable.
+
+### Forecast — with **offset-well benchmark**
+- Real monthly production per producing wellbore (wb prod-*.json). **Arps decline fit** on the decline segment → EUR.
+- **Offset-well benchmark:** build P90/P50/P10 type-wells from the OTHER producing wellbores (the 7 producers: F-1 C, F-5, F-11, F-12, F-14, F-15 D, F-4) as analogs — nearer/similar wells weighted → a benchmark envelope the selected well/forecast is compared against. "How does this well's decline compare to its offsets?"
+- Field forecast (sum) + the F-12 material-balance tank check (~19.6 MMSm³ [PEER]); injectors I-F-4/I-F-5 annotated. All `forecast`; "screening decline, not full-physics sim."
+
+### Economics — Fable-set screening defaults (founder delegated; all `scenario`, sliders)
+North Sea offshore screening basis, editable in the Inspector:
+- **Oil price:** base **$70/bbl** (low $50 / high $95, 2026 Brent screening).
+- **Gas price:** **$6/Mscf** (for the gas/associated case).
+- **Opex:** variable **$14/bbl**, fixed **$45 MM/yr** (leased-facility offshore, Volve-scale).
+- **Capex:** field **$1,200 MM** (historical Volve dev ~NOK 10 bn); per-well **$80 MM** for single-well runs — slider.
+- **Discount rate:** base **10%** (show 8/10/12); NPV mid-year discounting.
+- **Abandonment:** **$150 MM** decommissioning at end of life.
+- **Tax:** pre-tax NPV by default + an optional **78% Norway petroleum-tax** toggle (screening; note it's a simplification, not fiscal advice).
+- Outputs: NPV, payback, IRR-lite, cashflow chart (waterfall + cumulative). Tied to Forecast oil/gas-by-year. Every number badged `scenario`; a visible "screening economics — not investment advice" label (we are not a licensed advisor).
+
 ## Phase gates
 - V1b DoD: engine parity block green; Petrophysics dual-mode recompute matches interpreted within reason (document typical residual); Structural mistie table renders real residuals; Property HCPV sum ≈ deterministic STOIIP (±5%); tsc+build green; screenshots.
 - V1c DoD: Volumetrics validation banner correct; Uncertainty 10k reproducible (same seed → identical P50 across reloads); Forecast fits real history + tank check shown; Economics NPV matches test-engine hand-calc; the **20-task battle-test (BATTLE-TEST-V1.md) passes** → V1 exit.

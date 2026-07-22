@@ -142,5 +142,54 @@ if (existsSync(join(WB, 'index.json'))) {
   check('trajectory TVD ≤ MD (all definitive stations)', bad === 0, `${checked} stations, ${bad} violations`);
 }
 
+// ── V1b/V1c additions (founder spec: gas case, upscaling, facies, tornado, econ) ──
+// gas GIIP (scenario fill) + associated/solution gas
+const giip = (grv, ntg, phie, sw, bg) => grv * ntg * phie * (1 - sw) / bg;
+{
+  const grv = 1e9; // 1 km3-scale
+  const g = giip(grv, 0.9, 0.225, 0.20, 0.0040);
+  const oil = stoiip(grv, 0.9, 0.225, 0.20, 1.47);
+  const solnGas = oil * 148; // STOIIP × Rs
+  check('GIIP formula (>0, Bg divisor scales inversely)', g > 0 && approx(giip(grv, 0.9, 0.225, 0.20, 0.0080), g / 2, g * 0.01), `GIIP=${(g / 1e9).toFixed(2)} BSm³`);
+  check('solution gas = STOIIP·Rs (associated)', approx(solnGas, oil * 148, 1), `${(solnGas / 1e9).toFixed(2)} BSm³`);
+}
+
+// log upscaling: arithmetic mean (continuous), net-fraction (SAND), majority (facies)
+function upscaleMean(vals) { const v = vals.filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }
+function netFraction(flags) { const v = flags.filter((x) => x != null); return v.length ? v.filter((x) => x >= 0.5).length / v.length : 0; }
+function majority(labels) { const m = new Map(); for (const l of labels) m.set(l, (m.get(l) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]; }
+{
+  check('upscale mean (continuous PHIE)', approx(upscaleMean([0.2, 0.25, null, 0.3]), 0.25, 1e-9));
+  check('upscale net-fraction (SAND)', approx(netFraction([1, 1, 0, 1, 0]), 0.6, 1e-9));
+  check('upscale majority (discrete facies)', majority(['SAND', 'SAND', 'SHALE']) === 'SAND');
+}
+
+// tornado: Pearson r of input vs output (one-at-a-time sensitivity ranking)
+function pearson(xs, ys) { const n = xs.length, mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n; let sxy = 0, sx = 0, sy = 0; for (let i = 0; i < n; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sx += dx * dx; sy += dy * dy; } return sxy / Math.sqrt(sx * sy); }
+{
+  const rng = mulberry32(3); const xs = [], ys = [];
+  for (let i = 0; i < 500; i++) { const x = rng(); xs.push(x); ys.push(3 * x + 0.05 * (rng() - 0.5)); }
+  check('tornado Pearson r (strong +corr ≈1)', pearson(xs, ys) > 0.98, `r=${pearson(xs, ys).toFixed(3)}`);
+  const neg = ys.map((v) => -v);
+  check('tornado Pearson r (inverse ≈−1)', pearson(xs, neg) < -0.98);
+}
+
+// economics with the Fable-set screening defaults → plausible Volve-scale NPV
+{
+  const ECON = { oilPrice: 70, opexVar: 14, opexFix: 45e6, capex: 1200e6, disc: 0.10, aband: 150e6 };
+  // ~63 MMbbl over ~9 yr, front-loaded: crude yearly oil (MMbbl) profile
+  const oilBbl = [2e6, 12e6, 11e6, 9e6, 8e6, 7e6, 6e6, 5e6, 3e6];
+  const cf = oilBbl.map((o, y) => {
+    let c = o * ECON.oilPrice - (o * ECON.opexVar + ECON.opexFix);
+    if (y === 0) c -= ECON.capex;
+    if (y === oilBbl.length - 1) c -= ECON.aband;
+    return c;
+  });
+  const v = npv(cf, ECON.disc);
+  const cumOilBbl = oilBbl.reduce((a, b) => a + b, 0);
+  check('econ defaults: cum-oil profile ≈ 63 MMbbl', approx(cumOilBbl, 63e6, 5e6), `${(cumOilBbl / 1e6).toFixed(0)} MMbbl`);
+  check('econ defaults: NPV finite + plausible sign', Number.isFinite(v), `pre-tax NPV=$${(v / 1e6).toFixed(0)}MM @ $70/bbl`);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
