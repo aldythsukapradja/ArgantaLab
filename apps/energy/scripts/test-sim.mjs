@@ -105,6 +105,18 @@ function coreyKr(sw, e) { // e = {swc, sor, krwMax, kroMax, nw, no}
 }
 function fracFlowW(sw, e, muw, muo) { const { krw, kro } = coreyKr(sw, e); const mw = krw / muw, mo = kro / muo; return (mw + mo) === 0 ? 0 : mw / (mw + mo); }
 
+// ── Buckley-Leverett / Welge tangent (analytic 1D waterflood) ──────────────────
+// shock-front saturation = argmax of the secant slope fw(Sw)/(Sw−Swc) from Swc;
+// at the tangent point fw'(Swf) == that secant. Returns {swf, fwf, dfwf, swBar, btPVI}.
+function welge(e, muw, muo) {
+  const lo = e.swc, hi = 1 - e.sor; let best = lo + 1e-4, bestSlope = -1;
+  for (let s = lo + 1e-4; s < hi; s += 1e-4) { const slope = fracFlowW(s, e, muw, muo) / (s - lo); if (slope > bestSlope) { bestSlope = slope; best = s; } }
+  const swf = best, fwf = fracFlowW(swf, e, muw, muo);
+  const h = 1e-4, dfwf = (fracFlowW(swf + h, e, muw, muo) - fracFlowW(swf - h, e, muw, muo)) / (2 * h);
+  const swBar = swf + (1 - fwf) / dfwf;   // Welge average behind the front
+  return { swf, fwf, dfwf, swBar, btPVI: 1 / dfwf };
+}
+
 console.log('\n=== S4 simulator kernel truth-lock ===');
 
 // 1 · TPFA transmissibility
@@ -190,6 +202,18 @@ console.log('\n=== S4 simulator kernel truth-lock ===');
   check('fw monotone increasing (S-shaped)', fracFlowW(0.5, e, 0.5, 2) > fracFlowW(0.3, e, 0.5, 2) && fracFlowW(0.3, e, 0.5, 2) > fracFlowW(0.2, e, 0.5, 2));
 }
 
+// 9 · Buckley-Leverett / Welge analytic (1D waterflood)
+{
+  const e = { swc: 0.15, sor: 0.2, krwMax: 0.35, kroMax: 0.9, nw: 3, no: 2 };
+  const w = welge(e, 0.5, 3);
+  check('Welge shock saturation in (Swc, 1−Sor)', w.swf > e.swc && w.swf < 1 - e.sor, `Swf=${w.swf.toFixed(3)}`);
+  // tangent condition: fw'(Swf) ≈ fw(Swf)/(Swf−Swc)
+  const secant = w.fwf / (w.swf - e.swc);
+  check('Welge tangent: fw′(Swf) ≈ secant from Swc', approx(w.dfwf, secant, 0.02), `fw′=${w.dfwf.toFixed(3)} secant=${secant.toFixed(3)}`);
+  check('Welge average behind front Sw̄ > Swf', w.swBar > w.swf && w.swBar <= 1 - e.sor + 1e-6, `Sw̄=${w.swBar.toFixed(3)}`);
+  check('breakthrough PVI = 1/fw′(Swf) < 1', w.btPVI > 0 && w.btPVI < 1, `btPVI=${w.btPVI.toFixed(3)}`);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PARITY: once Opus builds src/engine/sim/{pressure,pvt,relperm}.ts, confirm the
 // engine reproduces every reference number. Skipped until the modules exist.
@@ -211,6 +235,48 @@ if (existsSync(join(__dirname, '..', 'src', 'engine', 'sim', 'pressure.ts'))) {
   const e = { swc: 0.15, sor: 0.25, krwMax: 0.4, kroMax: 0.9, nw: 3, no: 2 };
   check('PARITY · Corey kr', approx(R.coreyKr(0.4, e).krw, coreyKr(0.4, e).krw, 1e-12));
   check('PARITY · Bo undersaturated', approx(V.boUndersat(330, 213, 1.47, 1.2e-4), boUndersat(330, 213, 1.47, 1.2e-4), 1e-12));
+
+  // ── S5 FV oil-water: validate vs Buckley-Leverett/Welge + exact mass balance ──
+  if (existsSync(join(__dirname, '..', 'src', 'engine', 'sim', 'fv.ts'))) {
+    const FV = await import('../src/engine/sim/fv.ts');
+    const ec = { swc: 0.15, sor: 0.2, krwMax: 0.35, kroMax: 0.9, nw: 3, no: 2 };
+    const muw = 0.5, muo = 3;
+    const nx = 100;
+    const phi = new Float64Array(nx).fill(0.2), k = new Float64Array(nx).fill(200);
+    const Vcell = 10 * 10 * 10, pv = 0.2 * Vcell * nx;
+    const wells = [{ i: 0, j: 0, mode: 'rate', rate: pv }, { i: nx - 1, j: 0, mode: 'bhp', bhp: 100, WI: 1e6 }]; // 1 PVI / unit time
+    const res = FV.simulateFV({ nx, ny: 1, dx: 10, dy: 10, dz: 10, phi, k, muw, muo, corey: ec, wells }, { tEnd: 1.2, nReports: 60, cfl: 0.3 });
+    const last = res.snapshots[res.snapshots.length - 1];
+    // exact water mass balance: injected = ΔWIP_water + produced water
+    let wip0 = 0, wipN = 0; const first = res.snapshots[0];
+    for (let i = 0; i < nx; i++) { wip0 += phi[i] * Vcell * first.sw[i]; wipN += phi[i] * Vcell * last.sw[i]; }
+    const injected = pv * last.t;
+    check('FV water mass balance (injected = ΔWIP + produced)', approx(injected, (wipN - wip0) + last.cumWater, injected * 1e-6), `inj=${injected.toFixed(1)} ΔWIP+prod=${((wipN - wip0) + last.cumWater).toFixed(1)}`);
+    // saturation front monotone decreasing from injector (before full sweep)
+    const mid = res.snapshots[Math.floor(res.snapshots.length * 0.35)];
+    let mono = true; for (let i = 1; i < nx; i++) if (mid.sw[i] > mid.sw[i - 1] + 1e-9) mono = false;
+    check('FV Buckley-Leverett front monotone (injector→producer)', mono);
+    // breakthrough (water cut > 1%) before 1 PVI, near the Welge prediction
+    const wl = welge(ec, muw, muo);
+    const bt = res.snapshots.find((s) => s.waterCut > 0.01);
+    check('FV breakthrough before 1 PVI, ≈ Welge (numerical diffusion → early)', !!bt && bt.pvi > 0.4 * wl.btPVI && bt.pvi < wl.btPVI + 0.1, `btPVI=${bt ? bt.pvi.toFixed(3) : 'none'} Welge=${wl.btPVI.toFixed(3)}`);
+    // recovery grows monotonically and is plausible at 1.2 PVI
+    let recMono = true; for (let s = 1; s < res.snapshots.length; s++) if (res.snapshots[s].cumOil < res.snapshots[s - 1].cumOil - 1e-9) recMono = false;
+    const rf = last.cumOil / res.ooip;
+    check('FV oil recovery monotone & plausible (RF 0.4–0.8 @1.2PVI)', recMono && rf > 0.4 && rf < 0.8, `RF=${(rf * 100).toFixed(1)}%`);
+    // 2D quarter five-spot: mass balance + breakthrough
+    const n2 = 25; const N2 = n2 * n2;
+    const res2 = FV.simulateFV({ nx: n2, ny: n2, dx: 20, dy: 20, dz: 12, phi: new Float64Array(N2).fill(0.22), k: new Float64Array(N2).fill(300), muw, muo, corey: ec,
+      wells: [{ i: 0, j: 0, mode: 'rate', rate: 0.22 * 20 * 20 * 12 * N2 }, { i: n2 - 1, j: n2 - 1, mode: 'bhp', bhp: 150, WI: 1e5 }] }, { tEnd: 1.0, nReports: 30, cfl: 0.3 });
+    const l2 = res2.snapshots[res2.snapshots.length - 1];
+    let wip20 = 0, wip2N = 0; const f2 = res2.snapshots[0];
+    for (let c = 0; c < N2; c++) { wip20 += 0.22 * (20 * 20 * 12) * f2.sw[c]; wip2N += 0.22 * (20 * 20 * 12) * l2.sw[c]; }
+    const inj2 = (0.22 * 20 * 20 * 12 * N2) * l2.t;
+    check('FV five-spot water mass balance', approx(inj2, (wip2N - wip20) + l2.cumWater, inj2 * 1e-5), `Δ=${(inj2 - ((wip2N - wip20) + l2.cumWater)).toExponential(1)}`);
+    check('FV five-spot: water breaks through, oil recovered', l2.waterCut > 0 && l2.cumOil > 0 && l2.cumOil / res2.ooip > 0.2, `RF=${(100 * l2.cumOil / res2.ooip).toFixed(1)}% WC=${(l2.waterCut * 100).toFixed(0)}%`);
+  } else {
+    console.log('SKIP  FV oil-water — src/engine/sim/fv.ts not built yet');
+  }
 } else {
   console.log('SKIP  engine parity — src/engine/sim/pressure.ts not built yet (Opus S4 impl)');
 }
