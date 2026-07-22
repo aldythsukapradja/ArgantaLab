@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CosmoApp } from './cosmo/CosmoApp';
+import { CosmoShell } from './cosmo/CosmoShell';
 import { useStore } from './store';
 import { DOMAINS } from './nav';
 import { Drawer } from './components/Drawer';
@@ -44,8 +45,11 @@ export function App() {
 
   // dual-UI: ?ui=cosmo renders the migrated COSMO shell (ArgantaEnergy-Cosmo.bat);
   // anything else keeps the classic UI. Both coexist until the migration completes.
-  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ui') === 'cosmo') {
-    return <CosmoApp />;
+  if (typeof window !== 'undefined') {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('ui') === 'cosmo') {
+      return q.get('build') === '1' ? <CosmoShell /> : <CosmoApp />; // build=1 → React rebuild; else the iframe reference
+    }
   }
 
   return (
