@@ -12,7 +12,10 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "data:kb": "node scripts/build-knowledge.mjs",
-    "data:wb": "node scripts/build-workbench-data.mjs --force"
+    "data:wb": "node scripts/build-workbench-data.mjs --force",
+    "test:engine": "node scripts/test-engine.mjs",
+    "test:geostat": "node scripts/test-geostat.mjs",
+    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs"
   },
   "dependencies": {
     "@equinor/videx-wellog": "^1.5.2",
