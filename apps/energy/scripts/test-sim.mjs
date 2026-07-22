@@ -277,6 +277,38 @@ if (existsSync(join(__dirname, '..', 'src', 'engine', 'sim', 'pressure.ts'))) {
   } else {
     console.log('SKIP  FV oil-water — src/engine/sim/fv.ts not built yet');
   }
+
+  // ── S6 streamlines: Pollock tracing + time-of-flight ──────────────────────────
+  if (existsSync(join(__dirname, '..', 'src', 'engine', 'sim', 'streamline.ts'))) {
+    const SL = await import('../src/engine/sim/streamline.ts');
+    // homogeneous 1D: TOF ∝ PV/Q — ballpark to PV/Q, and exact inverse-Q scaling
+    // (the injector boundary cell ramps velocity 0→v, a real ~1-cell artifact).
+    {
+      const nx = 20, dx = 10, dy = 10, dz = 10, phi = 0.2;
+      const geom = { nx, ny: 1, dx, dy, dz, phi: new Float64Array(nx).fill(phi) };
+      const run = (Q) => SL.traceStreamlines(geom, new Float64Array((nx - 1)).fill(Q), new Float64Array(0), [{ i: 0, j: 0, name: 'I', kind: 'inj' }], { perInjector: 1 }).lines[0].totalTof;
+      const t5 = run(5), t10 = run(10); const pvOverQ = (nx * phi * dx * dy * dz) / 5;
+      check('streamline TOF ≈ PV/Q (ballpark)', approx(t5, pvOverQ, pvOverQ * 0.15), `TOF=${t5.toFixed(1)} PV/Q=${pvOverQ.toFixed(1)}`);
+      check('streamline TOF ∝ 1/Q (halving Q doubles TOF)', approx(t5, 2 * t10, t5 * 1e-6), `t(5)=${t5.toFixed(1)} 2·t(10)=${(2 * t10).toFixed(1)}`);
+    }
+    // 2D five-spot: streamlines from the injector reach the single producer (no-flow
+    // boundary ⇒ high allocation to that producer)
+    {
+      const nx = 15, ny = 15;
+      const wells = [{ i: 0, j: 0, mode: 'rate', rate: 20 }, { i: nx - 1, j: ny - 1, mode: 'bhp', bhp: 200, WI: 1e5 }];
+      const sol = P.solvePressure({ nx, ny, dx: 30, dy: 30, dz: 15, k: new Float64Array(nx * ny).fill(200), mu: 1, wells });
+      const fluxX = new Float64Array((nx - 1) * ny), fluxY = new Float64Array(nx * (ny - 1));
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) fluxX[j * (nx - 1) + i] = sol.faceFluxX(i, j);
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) fluxY[j * nx + i] = sol.faceFluxY(i, j);
+      const r = SL.traceStreamlines({ nx, ny, dx: 30, dy: 30, dz: 15, phi: new Float64Array(nx * ny).fill(0.2) }, fluxX, fluxY,
+        [{ i: 0, j: 0, name: 'INJ', kind: 'inj' }, { i: nx - 1, j: ny - 1, name: 'PROD', kind: 'prod' }], { perInjector: 32 });
+      const a = r.allocation['INJ→PROD'] ?? 0;
+      check('streamline five-spot allocation INJ→PROD dominant', a > 0.5, `allocation=${(a * 100).toFixed(0)}%`);
+      check('streamlines have finite positive TOF', r.maxTof > 0 && isFinite(r.maxTof), `maxTOF=${r.maxTof.toFixed(0)}`);
+    }
+  } else {
+    console.log('SKIP  streamlines — src/engine/sim/streamline.ts not built yet');
+  }
 } else {
   console.log('SKIP  engine parity — src/engine/sim/pressure.ts not built yet (Opus S4 impl)');
 }

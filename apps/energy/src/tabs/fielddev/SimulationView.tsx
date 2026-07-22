@@ -4,13 +4,14 @@
 // play/scrub timeline, plus live production curves (oil rate + water cut vs PVI)
 // and recovery factor. Deterministic, mass-conservative, Buckley-Leverett-validated.
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { SlidersHorizontal, Play, Pause, RotateCcw } from 'lucide-react';
+import { SlidersHorizontal, Play, Pause, RotateCcw, Waypoints } from 'lucide-react';
 import { useAsync, useCanvas, cssVar } from './hooks';
 import { Inspector, InspectorSection, Slider, Loading, ErrorBanner, ReadoutBar } from './chrome';
 import { NatureBadge } from '../../components/Provenance';
 import { loadIndex } from '../../wb/load';
 import type { WbIndex } from '../../wb/types';
 import { simulateFV } from '../../engine/sim/fv';
+import { traceStreamlines } from '../../engine/sim/streamline';
 import { COREY_DEFAULTS } from '../../engine/sim/relperm';
 
 const RESERVOIR_K = 500; // mD — screening Volve-scale (uniform; the flood pattern is
@@ -38,6 +39,7 @@ function Inner({ index }: { index: WbIndex }) {
   const [no, setNo] = useState(2);
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const [showStreams, setShowStreams] = useState(false);
   const [inspOpen, setInspOpen] = useState(true);
 
   // pick a real injector + producer from the well set
@@ -81,6 +83,19 @@ function Inner({ index }: { index: WbIndex }) {
   const f = Math.min(frame, Math.max(0, nFrames - 1));
   const snap = sim ? sim.result.snapshots[f] : null;
 
+  // streamlines from the current snapshot's flux field (unit-cell geom → pts in
+  // cell coords for direct canvas mapping). The streamline twin shares this exact
+  // flux field the FV pressure solve produced (S6).
+  const streams = useMemo(() => {
+    if (!sim || !snap || !showStreams) return null;
+    return traceStreamlines(
+      { nx: sim.nx, ny: sim.ny, dx: 1, dy: 1, dz: 1, phi: new Float64Array(sim.nx * sim.ny).fill(d.phi) },
+      snap.fluxX, snap.fluxY,
+      [{ i: sim.iw.i, j: sim.iw.j, name: inj?.name ?? 'INJ', kind: 'inj' }, { i: sim.pw.i, j: sim.pw.j, name: prod?.name ?? 'PROD', kind: 'prod' }],
+      { perInjector: 40 },
+    );
+  }, [sim, snap, showStreams, d.phi, inj, prod]);
+
   // animation loop
   useEffect(() => {
     if (!playing || nFrames === 0) return;
@@ -104,6 +119,17 @@ function Inner({ index }: { index: WbIndex }) {
       ctx.fillStyle = swColor(snap.sw[j * nx + i], sim.corey);
       ctx.fillRect(pad + i * cw, pad + (ny - 1 - j) * ch, cw + 0.5, ch + 0.5);
     }
+    // streamlines (cell-coord pts → canvas; y-flipped). Reached-producer = teal.
+    if (streams) {
+      ctx.lineWidth = 0.9;
+      for (const sl of streams.lines) {
+        if (sl.pts.length < 2) continue;
+        ctx.strokeStyle = sl.toWell ? 'rgba(80,208,177,0.55)' : 'rgba(200,200,210,0.28)';
+        ctx.beginPath();
+        sl.pts.forEach(([x, y], idx) => { const cx = pad + x * cw, cy = pad + (ny - y) * ch; idx ? ctx.lineTo(cx, cy) : ctx.moveTo(cx, cy); });
+        ctx.stroke();
+      }
+    }
     // wells
     const pin = (iw: { i: number; j: number }, col: string, label: string) => {
       const x = pad + (iw.i + 0.5) * cw, y = pad + (ny - 1 - iw.j + 0.5) * ch;
@@ -113,7 +139,7 @@ function Inner({ index }: { index: WbIndex }) {
     };
     pin(sim.iw, cssVar('--blue'), `▼ ${inj?.name ?? 'INJ'}`);
     pin(sim.pw, cssVar('--amber'), `▲ ${prod?.name ?? 'PROD'}`);
-  }, [sim, snap, swColor, inj, prod]);
+  }, [sim, snap, swColor, inj, prod, streams]);
 
   const drawProd = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
     if (!sim) return;
@@ -154,6 +180,10 @@ function Inner({ index }: { index: WbIndex }) {
           <span className="chip mono" style={{ color: 'var(--amber)', borderColor: 'var(--amber)' }}>RF {(rf * 100).toFixed(1)}%</span>
           <span className="chip mono" style={{ color: 'var(--blue)' }}>WC {snap ? (snap.waterCut * 100).toFixed(0) : '0'}%</span>
           <div style={{ flex: 1 }} />
+          <button onClick={() => setShowStreams((s) => !s)} title="Streamlines (flux diagnostics)"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 9px', borderRadius: 4, border: `1px solid ${showStreams ? 'var(--teal)' : 'var(--line)'}`, background: 'var(--panel-2)', color: showStreams ? 'var(--teal)' : 'var(--muted)', fontSize: 11 }}>
+            <Waypoints size={14} /><span className="mono">SL</span>
+          </button>
           <span className="chip" style={{ color: 'var(--muted)' }}>oil-water IMPES · Buckley-Leverett-validated</span>
           <NatureBadge nature="scenario" />
           <button onClick={() => setInspOpen((o) => !o)} title="Inspector" style={{ display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 4, border: '1px solid var(--line)', background: 'var(--panel-2)', color: 'var(--muted)' }}><SlidersHorizontal size={15} /></button>
@@ -188,6 +218,15 @@ function Inner({ index }: { index: WbIndex }) {
           </tbody></table>
           <div style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 4 }}>Water injected at ~1 PVI/unit-time; producer on BHP. Screening — not a history match.</div>
         </InspectorSection>
+        {streams && (
+          <InspectorSection title="Streamline diagnostics (S6)">
+            <table className="mono" style={{ width: '100%', fontSize: 10.5 }}><tbody>
+              {Object.entries(streams.allocation).map(([k, v]) => <tr key={k}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--teal)' }}>{(v * 100).toFixed(0)}%</td></tr>)}
+              <tr><td style={{ color: 'var(--muted)' }}>streamlines</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{streams.lines.length}</td></tr>
+            </tbody></table>
+            <div style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 4 }}>Pollock tracing on the SAME pressure solve → injector→producer allocation (the flux lens the cell field can't show).</div>
+          </InspectorSection>
+        )}
         <InspectorSection title="Fluids (Corey)">
           <Slider label="Oil/water μ ratio" min={1} max={20} step={1} value={muRatio} onChange={setMuRatio} fmt={(v) => `${v}×`} />
           <Slider label="Water exponent nw" min={2} max={6} step={1} value={nw} onChange={setNw} fmt={(v) => `${v}`} />

@@ -35,6 +35,7 @@ export interface FvCfg {
 export interface FvSnapshot {
   t: number; pvi: number;      // time, pore-volumes injected
   sw: Float64Array; p: Float64Array;
+  fluxX: Float64Array; fluxY: Float64Array;  // per-face total flux (for streamline tracing)
   cumOil: number; cumWater: number;  // cumulative produced (reservoir volumes)
   waterCut: number;                  // producer water cut
   wellRate: number[];                // total rate per well (+ = production)
@@ -110,9 +111,12 @@ export function simulateFV(cfg: FvCfg, opts: { tEnd: number; nReports?: number; 
   const record = () => {
     computeLt();
     const sol = solvePressureMob(cfg, lt, Tx, Ty);
+    const fx = new Float64Array((nx - 1) * ny), fy = new Float64Array(nx * (ny - 1));
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) fx[j * (nx - 1) + i] = sol.fluxX(i, j);
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) fy[j * nx + i] = sol.fluxY(i, j);
     let wc = 0, prodTot = 0;
     wells.forEach((w, wi) => { if (w.mode === 'bhp' && sol.wellRate[wi] > 0) { const c = id(w.i, w.j); wc += fracFlowW(sw[c], corey, muw, muo) * sol.wellRate[wi]; prodTot += sol.wellRate[wi]; } });
-    snapshots.push({ t, pvi: poreVol > 0 ? (injRate * t) / poreVol : 0, sw: sw.slice(), p: sol.p.slice(), cumOil, cumWater, waterCut: prodTot > 0 ? wc / prodTot : 0, wellRate: sol.wellRate });
+    snapshots.push({ t, pvi: poreVol > 0 ? (injRate * t) / poreVol : 0, sw: sw.slice(), p: sol.p.slice(), fluxX: fx, fluxY: fy, cumOil, cumWater, waterCut: prodTot > 0 ? wc / prodTot : 0, wellRate: sol.wellRate });
   };
   record();
 
