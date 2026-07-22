@@ -63,6 +63,25 @@ Data-nature law holds throughout: logs/tops = measured/interpreted; basin-model 
 - **"Could you have discovered Volve?"** A guided decision-under-uncertainty: given only the regional/pre-drill inputs, the user (or an agent-run) builds the play model, defines the prospect, estimates risked resource + POS, computes EMV, and makes a **drill / no-drill** call. Then the sim **reveals the actual outcome** (15/9-19 discovery, realized in-place ≈22 MMSm³ dynamic, ~63 MMbbl produced) and scores pre-drill vs realized — calibration feedback (were you over/under-confident? was the POS right?).
 - Reuses the deterministic engine end-to-end; explicitly `scenario`/training. This is where Exploration feeds **Goal 3 (training material)** — a replayable exploration case built entirely on real Volve data.
 
+## Basin-model constants (researched, cited — for basin.ts / the Basin Modeling tab)
+Tag in-app: [OFFICIAL Sodir/Equinor] · [PEER SPE/journal] · [COMMUNITY textbook]. Regional/textbook values are analogs where no Volve-well measurement exists — flagged.
+
+**Stratigraphy (age Ma · environment · PS role):** Nordland Gp ~23–0 overburden · Utsira Fm ~15–3 shallow-marine ovb · Hordaland Gp ~34–15 marine mud seal · Shetland Gp ~100–56 marl/chalk ovb-seal · Ty Fm ~61–58 submarine-fan **2° reservoir** · **BCU ~145** regional seal-top marker · **Draupne Fm ~157–145** anoxic marine shale **1° SOURCE + top seal** · Heather Fm ~168–150 offshore shale **2° source + seal** · **Hugin Fm ~168–157** shallow-marine **1° RESERVOIR** (diachronous, younging S) · Sleipner Fm ~170–165 fluvial · Skagerrak Fm ~237–201 fluvial redbeds **2° reservoir**. [PEER Kieft/Milton; OFFICIAL Sodir]
+
+**Source (Draupne, regional analog):** TOC ~1.7–9.6% (rich >5%); HI 65–531 (upper >350 Type II, lower II/III); oil window Ro ≈0.62–0.88% at ~3400–4400 m in the Viking Graben. At Volve depth (2.7–3.1 km) Draupne is early-mature/immature → **charge from the deep Viking Graben kitchen, not local** (surface this — it's the migration story). [PEER]
+
+**Thermal:** reservoir ~100–110°C at ~2.75–3.12 km → gradient ~32–37°C/km; Viking Graben present-day surface heat flow ≈70 mW/m² (North Sea median 64±7); seabed T ~5°C (model top BC). [PEER Slagstad/Pascal]
+
+**Rifting/subsidence:** main rift Late Jurassic (~157–145 Ma, syn-rift Heather/Draupne); post-rift Cretaceous–Cenozoic McKenzie thermal subsidence (β-stretching, Sclater & Christie 1980 Central-North-Sea calibration); trap = salt-collapse faulted dome on the Sleipner Terrace. [COMMUNITY/PEER]
+
+**EASY%Ro (Sweeney & Burnham 1990) — the maturity kinetics for basin.ts:** frequency factor A = 1×10¹³ s⁻¹; **%Ro = exp(−1.6 + 3.7·F)** (F = cumulative reaction fraction 0→1); 20 parallel 1st-order reactions, Ea 34→72 kcal/mol in 2 kcal/mol steps. ⚠ The per-reaction weight fractions must be taken from the original AAPG Bull. v.74 Table 2 and normalized to 1.0 — do NOT ship the approximate reproduction from the research pass; fetch/verify the canonical weights at build time. (EasyRo%DL variant: A→2×10¹⁴, re-tuned Ea.) [PEER]
+
+**Athy compaction (φ=φ₀·e^(−c·z), Sclater & Christie 1980) — for decompaction:** sandstone φ₀ 0.49 / c 0.27 km⁻¹; shale φ₀ 0.63 / c 0.51; shaly-sst 0.56/0.39; chalk 0.70/0.71. [COMMUNITY North Sea textbook defaults, not Volve-measured]
+
+**Discovery/creaming:** discovery well **15/9-19 SR, 1993**, oil in Hugin; block 15/9, ~5–8 km from Sleipner Øst, WD ~80 m; Volve = a late, small (~10 MMbbl-class oil) tail on an established Sleipner gas fairway → pull exact per-wellbore discovery years from Sodir Factpages (factpages.sodir.no) for the precise creaming curve. [OFFICIAL/PEER]
+
+**Confidence gaps to close before "real not placeholder":** (1) exact Sweeney-Burnham Table-2 weights from the print paper; (2) precise NPD lithostrat Ma per unit; (3) a Volve-well Rock-Eval TOC/HI set — the Equinor open Volve geochem logs likely hold it (could add to the mirror). Until then, the Draupne source numbers are Viking-Graben regional analogs (flag in-app).
+
 ## Engine additions (small, deterministic — reuse V1 core)
 - `basin.ts` — decompaction/burial history (Athy porosity-depth), 1D heat-flow temperature, EasyRo maturity + transformation ratio. Constants cited.
 - `explore.ts` — area-depth GRV from a map + contact (reuses `closure`/`grid`), risked-resource MC (reuses `mc`), POS = Π(chance factors), EMV.
