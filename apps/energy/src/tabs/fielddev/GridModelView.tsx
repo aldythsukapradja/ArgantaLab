@@ -5,8 +5,8 @@
 // Upgrades the V1b IDW Property tab to true geostatistics (engine/geostat.ts, S1).
 // Per-layer SGS/SIS keeps it interactive; each layer is an independent realization
 // conditioned on the same well averages (honest screening — labelled).
-import { useMemo, useState, useCallback } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { useMemo, useState, useCallback, Suspense, lazy } from 'react';
+import { SlidersHorizontal, Box, Square } from 'lucide-react';
 import { useAsync, useCanvas, cssVar } from './hooks';
 import { Inspector, InspectorSection, Segmented, Slider, Loading, ErrorBanner, ReadoutBar, roleColor } from './chrome';
 import { NatureBadge } from '../../components/Provenance';
@@ -20,6 +20,8 @@ import { sgs, sis, type Pt, type FaciesPt, type Vario } from '../../engine/geost
 import { phiToK } from '../../engine/perm';
 import { loadWellPetro, upscale, type WellPetro } from './fdData';
 import { BBL_PER_SM3 } from '../../engine/volumetrics';
+
+const GridCube3D = lazy(() => import('./GridCube3D'));
 
 type PropKind = 'facies' | 'porosity' | 'perm';
 interface WellPt { name: string; x: number; y: number; phie: number; netSand: number; role: 'producer' | 'injector' | 'both' | 'none' }
@@ -36,6 +38,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
   const d = index.defaults;
   const owc = index.contacts[0]?.tvdss ?? 3200;
   const [kind, setKind] = useState<PropKind>('facies');
+  const [view3d, setView3d] = useState(false);
   const [nz, setNz] = useState(8);
   const [res, setRes] = useState(28);          // max areal dimension (coarsening)
   const [range, setRange] = useState(1200);    // variogram range (m)
@@ -221,13 +224,28 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
             HCPV recon: grid {model ? model.stoiipGrid.toFixed(1) : '–'} vs det {detStoiip} MMSm³ ({delta >= 0 ? '+' : ''}{delta.toFixed(1)}%)
           </span>
           <NatureBadge nature="derived" />
+          <button onClick={() => setView3d((v) => !v)} title={view3d ? '2D map + section' : '3D cube (WebGL)'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 9px', borderRadius: 4, border: `1px solid ${view3d ? 'var(--teal)' : 'var(--line)'}`, background: 'var(--panel-2)', color: view3d ? 'var(--teal)' : 'var(--muted)', fontSize: 11 }}>
+            {view3d ? <Box size={14} /> : <Square size={14} />}<span className="mono">{view3d ? '3D' : '2D'}</span>
+          </button>
           <button onClick={() => setInspOpen((o) => !o)} title="Inspector" style={{ display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 4, border: '1px solid var(--line)', background: 'var(--panel-2)', color: 'var(--muted)' }}>
             <SlidersHorizontal size={15} />
           </button>
         </div>
 
-        {/* canvas wrappers stay mounted (so useCanvas can attach its observer);
-            loading/error render as overlays. */}
+        {/* 3D cube view (WebGL) — replaces the 2D map+section when toggled on */}
+        {view3d ? (
+          <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
+            {!model ? <Loading what="building grid model (SIS+SGS)" /> : (
+              <Suspense fallback={<Loading what="WebGL cube" />}>
+                <GridCube3D grid={model.grid} kind={kind} owc={owc} wells={wellPts}
+                  reducedMotion={typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches} />
+              </Suspense>
+            )}
+          </div>
+        ) : (
+        /* canvas wrappers stay mounted (so useCanvas can attach its observer);
+           loading/error render as overlays. */
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {/* layer slider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 10px', borderBottom: '1px solid var(--line)', fontSize: 10.5, color: 'var(--muted)' }}>
@@ -258,6 +276,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
             <canvas ref={secC.canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
           </div>
         </div>
+        )}
       </div>
 
       <Inspector title="Grid model inspector" open={inspOpen} onToggle={() => setInspOpen(false)}>
