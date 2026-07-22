@@ -61,6 +61,11 @@ export const VIEWERS: Record<string, ViewerManifest> = {
     blurb: 'Geostatistical 3D static model — SIS facies + SGS porosity on a real cell grid.',
     planned: [],
   },
+  simulation: {
+    id: 'simulation', name: 'Simulation', status: 'live', phase: 'S5',
+    blurb: 'Dynamic FV oil-water IMPES waterflood — animated saturation front + production curves.',
+    planned: [],
+  },
   volumetrics: {
     id: 'volumetrics', name: 'Volumetrics', status: 'live', phase: 'V1c',
     blurb: 'STOIIP / GIIP with validation against published ≈22 MMSm³ [PEER].',

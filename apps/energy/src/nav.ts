@@ -66,6 +66,7 @@ export const SUBTABS: Record<DomainId, SubTab[]> = {
     { id: 'structural', label: 'Structural' },
     { id: 'property', label: 'Property' },
     { id: 'gridmodel', label: 'Grid Model' },
+    { id: 'simulation', label: 'Simulation' },
     { id: 'volumetrics', label: 'Volumetrics' },
     { id: 'uncertainty', label: 'Uncertainty' },
     { id: 'forecast', label: 'Forecast' },

@@ -116,24 +116,25 @@ export function simulateFV(cfg: FvCfg, opts: { tEnd: number; nReports?: number; 
   };
   record();
 
+  const MAX_SUBSTEPS = 5000; // backstop against a pathological CFL
   for (let r = 0; r < nReports; r++) {
-    let remaining = dtReport;
-    while (remaining > 1e-12) {
-      computeLt();
-      const sol = solvePressureMob(cfg, lt, Tx, Ty);
-      // CFL sub-step: dt ≤ cfl·min φV / (outflow·dfwMax)
-      const outflow = new Float64Array(N);
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = sol.fluxX(i, j); if (q > 0) outflow[id(i, j)] += q; else outflow[id(i + 1, j)] += -q; }
-      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = sol.fluxY(i, j); if (q > 0) outflow[id(i, j)] += q; else outflow[id(i, j + 1)] += -q; }
-      wells.forEach((w, wi) => { if (sol.wellRate[wi] > 0) outflow[id(w.i, w.j)] += sol.wellRate[wi]; });
-      let dtMax = remaining;
-      for (let c = 0; c < N; c++) if (outflow[c] > 1e-12) dtMax = Math.min(dtMax, cfl * phi[c] * Vcell / (outflow[c] * dfwMax));
+    // IMPES: solve pressure ONCE per report (mobility lagged), then cheap saturation
+    // sub-steps on the frozen flux field. Slashes CG solves from thousands → nReports.
+    computeLt();
+    const sol = solvePressureMob(cfg, lt, Tx, Ty);
+    const fX = new Float64Array((nx - 1) * ny), fY = new Float64Array(nx * (ny - 1));
+    const outflow = new Float64Array(N);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = sol.fluxX(i, j); fX[j * (nx - 1) + i] = q; if (q > 0) outflow[id(i, j)] += q; else outflow[id(i + 1, j)] += -q; }
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = sol.fluxY(i, j); fY[j * nx + i] = q; if (q > 0) outflow[id(i, j)] += q; else outflow[id(i, j + 1)] += -q; }
+    wells.forEach((w, wi) => { if (sol.wellRate[wi] > 0) outflow[id(w.i, w.j)] += sol.wellRate[wi]; });
+    let dtMax = dtReport;
+    for (let c = 0; c < N; c++) if (outflow[c] > 1e-12) dtMax = Math.min(dtMax, cfl * phi[c] * Vcell / (outflow[c] * dfwMax));
+    let remaining = dtReport, steps = 0;
+    while (remaining > 1e-12 && steps++ < MAX_SUBSTEPS) {
       const dt = Math.min(remaining, dtMax);
-      // explicit water-saturation update (upstream fractional flow)
       const netW = new Float64Array(N);
-      const fwUp = (a: number, b: number, q: number) => fracFlowW(sw[q > 0 ? a : b], corey, muw, muo);
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = sol.fluxX(i, j); const fw = fwUp(id(i, j), id(i + 1, j), q); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i + 1, j)] += wq; }
-      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = sol.fluxY(i, j); const fw = fwUp(id(i, j), id(i, j + 1), q); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i, j + 1)] += wq; }
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = fX[j * (nx - 1) + i]; const fw = fracFlowW(sw[q > 0 ? id(i, j) : id(i + 1, j)], corey, muw, muo); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i + 1, j)] += wq; }
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = fY[j * nx + i]; const fw = fracFlowW(sw[q > 0 ? id(i, j) : id(i, j + 1)], corey, muw, muo); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i, j + 1)] += wq; }
       wells.forEach((w, wi) => {
         const c = id(w.i, w.j), q = sol.wellRate[wi];
         if (q < 0) netW[c] += -q;                                   // injector: water in (fw=1)
