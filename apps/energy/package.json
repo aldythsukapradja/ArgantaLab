@@ -16,6 +16,9 @@
   },
   "dependencies": {
     "@equinor/videx-wellog": "^1.5.2",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@types/three": "^0.185.1",
     "d3-array": "^3.2.4",
     "d3-contour": "^4.0.2",
     "d3-scale": "^4.0.2",
@@ -25,6 +28,7 @@
     "pdfjs-dist": "^6.1.200",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.160.1",
     "xlsx": "^0.18.5",
     "zustand": "^4.5.5"
   },

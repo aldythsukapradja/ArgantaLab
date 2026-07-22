@@ -3,10 +3,15 @@
 // drawing tools, well designer, and an interactive structural cross-section.
 // All geoscience canvases are hand-drawn 2D; the "3D" view is an honestly
 // labelled isometric projection (no WebGL, no fake-3D claims).
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback, lazy, Suspense } from 'react';
 import {
-  MousePointer2, Hand, Hexagon, Slice, MapPin, Ruler, Layers, Box,
+  MousePointer2, Hand, Hexagon, Slice, MapPin, Ruler, Layers,
 } from 'lucide-react';
+
+// three.js scene is code-split — only fetched when the 3D branch mounts.
+const Map3D = lazy(() => import('./Map3D'));
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 import { useAsync, useCanvas, usePersist, cssVar } from './hooks';
 import {
   Inspector, InspectorSection, LayerRow, ToolButton, Segmented, Slider, Field,
@@ -15,7 +20,7 @@ import {
 import { NatureBadge } from '../../components/Provenance';
 import { depthRamp } from './colormap';
 import { loadIndex, loadSurface, loadTraj, loadPicks } from '../../wb/load';
-import type { WbIndex, WellRow, Pick } from '../../wb/types';
+import type { WbIndex, WellRow, Pick, TrajJson } from '../../wb/types';
 import type { SurfaceJson } from '../../engine/grid';
 import { sampleGrid, gridMinMax, gridBounds } from '../../engine/grid';
 import { makeView, padBounds, type View, type Bounds } from '../../engine/view';
@@ -134,6 +139,13 @@ function MapInner({ index }: { index: WbIndex }) {
     return out;
   }, [trajRes.data]);
 
+  // 3D scene inputs (real trajectories + planned scenario wells)
+  const trajFor3D = useMemo(() => (trajRes.data ?? []).filter((r): r is { w: WellRow; t: TrajJson } => !!r), [trajRes.data]);
+  const planned3D = useMemo(() => shapes.filter((s) => s.kind === 'well').map((s) => ({
+    name: s.design?.name ?? 'PLAN', role: 'none' as WellRow['role'], pts: s.pts, landingTVD: s.landingTVD ?? null,
+  })), [shapes]);
+  const reduced = useMemo(prefersReducedMotion, []);
+
   // ---- draw ----
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
     const view = makeView(bounds, w, h, 28, zoom, center?.cx, center?.cy);
@@ -142,14 +154,11 @@ function MapInner({ index }: { index: WbIndex }) {
     const text = cssVar('--text');
     const muted = cssVar('--muted');
 
-    if (mode === '2d') {
-      if (surf.data && layers.surface) drawHeatmap(ctx, view, surf.data, minmax, ramp, hillshade);
-      if (layers.grat) drawGraticule(ctx, view, bounds, line, muted);
-      if (surf.data && layers.surface) drawContours(ctx, view, isolines, text, muted);
-      if (closure && layers.contact) drawClosure(ctx, view, closure.ring, cssVar('--rose'));
-    } else {
-      if (surf.data) drawIso(ctx, view, surf.data, minmax, ramp, vExag, w, h, line);
-    }
+    if (mode === '3d') return; // real WebGL scene mounts as an overlay
+    if (surf.data && layers.surface) drawHeatmap(ctx, view, surf.data, minmax, ramp, hillshade);
+    if (layers.grat) drawGraticule(ctx, view, bounds, line, muted);
+    if (surf.data && layers.surface) drawContours(ctx, view, isolines, text, muted);
+    if (closure && layers.contact) drawClosure(ctx, view, closure.ring, cssVar('--rose'));
 
     // wells + paths (2D only for clarity)
     if (mode === '2d' && layers.wells) {
@@ -302,7 +311,7 @@ function MapInner({ index }: { index: WbIndex }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderBottom: '1px solid var(--line)', background: 'var(--panel)', flexWrap: 'wrap' }}>
-          <Segmented options={[{ id: '2d' as Mode, label: '2D' }, { id: '3d' as Mode, label: '3D iso' }]} value={mode} onChange={setMode} />
+          <Segmented options={[{ id: '2d' as Mode, label: '2D' }, { id: '3d' as Mode, label: '3D · WebGL' }]} value={mode} onChange={setMode} />
           <div style={{ width: 1, height: 20, background: 'var(--line)' }} />
           <div style={{ display: 'flex', gap: 4 }}>
             {TOOLS.map((t) => (
@@ -324,17 +333,19 @@ function MapInner({ index }: { index: WbIndex }) {
           <div ref={wrapRef} style={{ flex: sectionShape ? '1 1 55%' : 1, position: 'relative', minHeight: 0, cursor: tool === 'pan' ? 'grab' : tool === 'well' ? 'crosshair' : 'default' }}>
             <canvas ref={canvasRef}
               onWheel={onWheel} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
-              onClick={onClick} onDoubleClick={onDbl} style={{ display: 'block', width: '100%', height: '100%' }} />
-            <ReadoutBar left={readout} scale={scaleBar} />
-            {mode === '3d' && (
-              <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="chip mono" style={{ borderColor: 'var(--violet)', color: 'var(--violet)' }}><Box size={11} /> ISOMETRIC PROJECTION</span>
-              </div>
+              onClick={onClick} onDoubleClick={onDbl} style={{ display: mode === '3d' ? 'none' : 'block', width: '100%', height: '100%' }} />
+            {mode === '2d' && <ReadoutBar left={readout} scale={scaleBar} />}
+            {mode === '3d' && surf.data && (
+              <Suspense fallback={<div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)', fontSize: 12 }}>Compiling WebGL scene…</div>}>
+                <Map3D grid={surf.data} minmax={minmax} activeSurfaceId={activeSurface} vExag={vExag}
+                  trajectories={trajFor3D} planned={planned3D} reducedMotion={reduced} />
+              </Suspense>
             )}
           </div>
           {sectionShape && (
             <div style={{ flex: '1 1 45%', minHeight: 160, borderTop: '1px solid var(--line)' }}>
-              <XSection line={sectionShape.pts} activeSurface={activeSurface} contactZ={contactZ} wellPaths={wellPaths} picks={picksRes.data?.picks ?? []} onClose={() => setSelSection(null)} />
+              <XSection line={sectionShape.pts} activeSurface={activeSurface} contactZ={contactZ} wellPaths={wellPaths} picks={picksRes.data?.picks ?? []} onClose={() => setSelSection(null)}
+                onUpdateLine={(end, world) => setShapes((prev) => prev.map((s) => s.id === sectionShape.id ? { ...s, pts: end === 0 ? [world, s.pts[1]] : [s.pts[0], world] } : s))} />
             </div>
           )}
         </div>
@@ -364,9 +375,9 @@ function MapInner({ index }: { index: WbIndex }) {
             </InspectorSection>
 
             {mode === '3d' && (
-              <InspectorSection title="Isometric projection">
+              <InspectorSection title="3D · WebGL scene">
                 <Slider label="Vertical exaggeration" min={1} max={20} step={1} value={vExag} onChange={setVExag} fmt={(v) => `${v}×`} />
-                <p style={{ fontSize: 10.5, color: 'var(--muted)', margin: 0 }}>Painter's-algorithm isometric render over the 50 m grid. Not a perspective 3D scene.</p>
+                <p style={{ fontSize: 10.5, color: 'var(--muted)', margin: 0 }}>Real react-three-fiber scene over the 50 m grid: lit BufferGeometry surface, orbit/pan/zoom, stackable horizons + 3D well tubes. Use the on-canvas cluster for reset/top/wireframe/stack.</p>
               </InspectorSection>
             )}
 
@@ -585,37 +596,6 @@ function drawPlannedWell(ctx: CanvasRenderingContext2D, v: View, s: UserShape, c
   ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(sx, sy - 6); ctx.lineTo(sx + 5, sy + 4); ctx.lineTo(sx - 5, sy + 4); ctx.closePath(); ctx.fill();
   ctx.fillStyle = col; ctx.font = 'bold 9px var(--mono)'; ctx.textAlign = 'left';
   ctx.fillText(`${s.design?.name ?? 'PLAN'} ⚑`, sx + 7, sy - 4);
-}
-
-function drawIso(ctx: CanvasRenderingContext2D, v: View, g: SurfaceJson, mm: { min: number; max: number }, ramp: (t: number) => string, exag: number, w: number, h: number, line: string) {
-  // painter's algorithm isometric: draw grid quads back-to-front.
-  const span = Math.max(1e-6, mm.max - mm.min);
-  const isoA = Math.PI / 6;
-  const cx = w / 2, cy = h * 0.28;
-  const scale = Math.min(w, h) / Math.max(g.nx, g.ny) * 0.62 * v.s / v.s; // keep independent of pan
-  const baseScale = Math.min(w / (g.nx * 1.3), h / (g.ny * 1.3));
-  const project = (ix: number, iy: number, z: number | null): [number, number] => {
-    const zz = z == null ? mm.max : z;
-    const hgt = ((mm.max - zz) / span) * exag * baseScale * 3.2;
-    const px = cx + (ix - iy) * Math.cos(isoA) * baseScale;
-    const py = cy + (ix + iy) * Math.sin(isoA) * baseScale - hgt;
-    return [px, py];
-  };
-  void scale;
-  for (let iy = 0; iy < g.ny - 1; iy++) {
-    for (let ix = 0; ix < g.nx - 1; ix++) {
-      const z = g.z[iy * g.nx + ix];
-      const z1 = g.z[iy * g.nx + ix + 1];
-      const z2 = g.z[(iy + 1) * g.nx + ix + 1];
-      const z3 = g.z[(iy + 1) * g.nx + ix];
-      if (z == null || z1 == null || z2 == null || z3 == null) continue;
-      const p0 = project(ix, iy, z), p1 = project(ix + 1, iy, z1), p2 = project(ix + 1, iy + 1, z2), p3 = project(ix, iy + 1, z3);
-      const t = ((z + z1 + z2 + z3) / 4 - mm.min) / span;
-      ctx.fillStyle = ramp(t); ctx.strokeStyle = line; ctx.lineWidth = 0.2;
-      ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.lineTo(p3[0], p3[1]); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    }
-  }
 }
 
 // ── hit tests ───────────────────────────────────────────────────────

@@ -5,7 +5,7 @@
 // engine meets the same spec (standard scales, fills, crossover, crosshair,
 // picks, orientation toggle, per-curve editing) with clean theming + zero
 // console noise. The dep remains installed for a future swap.
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { SlidersHorizontal, Rows3, Columns3, ScatterChart } from 'lucide-react';
 import { useAsync, useCanvas, usePersist, cssVar } from './hooks';
 import { Inspector, InspectorSection, Segmented, LayerRow, inputStyle, Loading, ErrorBanner } from './chrome';
@@ -52,6 +52,8 @@ function LogsInner({ index }: { index: WbIndex }) {
   const [zoom, setZoom] = useState({ lo: 0, hi: 1 }); // fraction of depth range
   const [hoverDepth, setHoverDepth] = useState<number | null>(null);
   const [selInterval, setSelInterval] = useState<[number, number] | null>(null);
+  const [dockH, setDockH] = useState(320); // Analytics bottom-dock height (px), resizable
+  const dockDragRef = useRef<{ y: number; h: number } | null>(null);
 
   const logsRes = useAsync<LogsJson>(() => loadLogs(well), [well]);
   const picksRes = useAsync(loadPicks, []);
@@ -249,6 +251,23 @@ function LogsInner({ index }: { index: WbIndex }) {
   };
   const onUp = () => { dragRef.current = null; };
 
+  // nudge the track canvas to re-measure when the dock opens/closes or resizes
+  useEffect(() => {
+    const id = requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    return () => cancelAnimationFrame(id);
+  }, [drawer, dockH]);
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (!dockDragRef.current) return;
+      const delta = dockDragRef.current.y - e.clientY; // drag up → taller
+      setDockH(Math.max(120, Math.min(640, dockDragRef.current.h + delta)));
+    };
+    const up = () => { dockDragRef.current = null; };
+    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, []);
+
   const editCurve = (tid: string, ci: number, patch: Partial<CurveCfg>) =>
     setTracks((prev) => prev.map((t) => t.id === tid ? { ...t, curves: t.curves.map((c, i) => i === ci ? { ...c, ...patch } : c) } : t));
 
@@ -272,17 +291,24 @@ function LogsInner({ index }: { index: WbIndex }) {
           </button>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          <div ref={wrapRef} style={{ flex: 1, minHeight: 0, position: 'relative', cursor: 'crosshair' }}>
+        {/* tracks (flex) + full-width resizable Analytics bottom dock — never
+            overlaps the inspector because the dock lives inside the left column. */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div ref={wrapRef} style={{ flex: 1, minHeight: 60, position: 'relative', overflow: 'hidden', cursor: 'crosshair' }}>
             {logsRes.loading ? <Loading what={`${well} logs`} /> : logsRes.error ? <ErrorBanner msg={logsRes.error} /> : (
               <canvas ref={canvasRef} onWheel={onWheel} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={() => { onUp(); setHoverDepth(null); }}
                 style={{ display: 'block', width: '100%', height: '100%' }} />
             )}
           </div>
           {drawer && log && (
-            <div style={{ width: 380, flexShrink: 0, borderLeft: '1px solid var(--line)', background: 'var(--panel)', minHeight: 0 }}>
-              <Crossplot log={log} onSelectInterval={setSelInterval} selInterval={selInterval} />
-            </div>
+            <>
+              <div
+                onMouseDown={(e) => { dockDragRef.current = { y: e.clientY, h: dockH }; }}
+                style={{ height: 6, cursor: 'ns-resize', background: 'var(--line)', flexShrink: 0 }} title="Drag to resize Analytics" />
+              <div style={{ height: dockH, flexShrink: 0, borderTop: '1px solid var(--line)', background: 'var(--panel)', minHeight: 0 }}>
+                <Crossplot log={log} onSelectInterval={setSelInterval} selInterval={selInterval} />
+              </div>
+            </>
           )}
         </div>
       </div>
