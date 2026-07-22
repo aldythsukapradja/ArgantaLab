@@ -16,6 +16,7 @@ import { makeView, padBounds } from '../../engine/view';
 import { contactPolygon } from '../../engine/closure';
 import { grvClosure, grvWell, grvPolygon, stoiip, giip, solutionGas, BBL_PER_SM3, SCF_PER_SM3 } from '../../engine/volumetrics';
 import { loadWellPetro, upscale, type WellPetro } from './fdData';
+import { useUnits, oilVol, gasVol } from '../../units';
 
 type Scope = 'closure' | 'polygon' | 'well';
 type FillCase = 'oil' | 'gas';
@@ -32,6 +33,7 @@ export function Volumetrics() {
 }
 
 function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
+  const { system } = useUnits();
   const d = index.defaults;
   const owc = index.contacts[0]?.tvdss ?? 3200;
   const bo = index.pvt.Bo, rs = index.pvt.Rs;
@@ -111,8 +113,6 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
   const { canvasRef, wrapRef } = useCanvas(draw, [draw]);
   const onMove = (e: React.MouseEvent) => { if (!top.data) return; const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); const view = makeView(bounds, rect.width, rect.height, 26); setHover(view.inv(e.clientX - rect.left, e.clientY - rect.top)); };
 
-  const recovBbl = stoiipSm3 * rf * BBL_PER_SM3;
-
   const Card = ({ title, big, sub, nature }: { title: string; big: string; sub: string; nature: 'scenario' | 'derived' }) => (
     <div className="panel" style={{ padding: '10px 14px', minWidth: 150, flex: 1 }}>
       <div className="eyebrow" style={{ marginBottom: 4 }}>{title}</div>
@@ -141,17 +141,17 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
         {/* cards */}
         <div style={{ display: 'flex', gap: 8, padding: 10, borderTop: '1px solid var(--line)', background: 'var(--panel)', flexWrap: 'wrap' }}>
           {fill === 'oil'
-            ? <Card title="STOIIP (oil)" big={`${(stoiipSm3 / 1e6).toFixed(1)} MMSm³`} sub={`${(stoiipSm3 * BBL_PER_SM3 / 1e6).toFixed(1)} MMbbl · Bo ${bo}`} nature="derived" />
-            : <Card title="GIIP (gas · what-if)" big={`${(giipSm3 / 1e9).toFixed(2)} BSm³`} sub={`${(giipSm3 * SCF_PER_SM3 / 1e9).toFixed(1)} Bscf · Bg ${bg}`} nature="scenario" />}
-          <Card title="Solution gas (assoc.)" big={`${(solGasSm3 / 1e9).toFixed(2)} BSm³`} sub={`STOIIP × Rs ${rs}`} nature="derived" />
-          <Card title={`Recoverable @ RF ${(rf * 100).toFixed(0)}%`} big={`${(stoiipSm3 * rf / 1e6).toFixed(1)} MMSm³`} sub={`${(recovBbl / 1e6).toFixed(1)} MMbbl`} nature="scenario" />
+            ? <Card title="STOIIP (oil)" big={oilVol(stoiipSm3, system).text} sub={`${oilVol(stoiipSm3, system === 'field' ? 'metric' : 'field').text} · Bo ${bo}`} nature="derived" />
+            : <Card title="GIIP (gas · what-if)" big={gasVol(giipSm3, system).text} sub={`${gasVol(giipSm3, system === 'field' ? 'metric' : 'field').text} · Bg ${bg}`} nature="scenario" />}
+          <Card title="Solution gas (assoc.)" big={gasVol(solGasSm3, system).text} sub={`STOIIP × Rs ${rs}`} nature="derived" />
+          <Card title={`Recoverable @ RF ${(rf * 100).toFixed(0)}%`} big={oilVol(stoiipSm3 * rf, system).text} sub={`${oilVol(stoiipSm3 * rf, system === 'field' ? 'metric' : 'field').text}`} nature="scenario" />
         </div>
       </div>
 
       <Inspector title="Volumetrics inspector" open={inspOpen} onToggle={() => setInspOpen(false)}>
         <InspectorSection title="Validation">
           <div style={{ fontSize: 10.5, lineHeight: 1.5, color: 'var(--muted)', border: '1px solid var(--amber)', borderRadius: 4, padding: 8 }}>
-            <div>Screening STOIIP <b style={{ color: 'var(--text)' }}>{(stoiipSm3 / 1e6).toFixed(0)} MMSm³</b> (blanket OWC over unfaulted closure — upper bound).</div>
+            <div>Screening STOIIP <b style={{ color: 'var(--text)' }}>{oilVol(stoiipSm3, system).text}</b> (blanket OWC over unfaulted closure — upper bound).</div>
             <div style={{ marginTop: 4 }}>Published volumetric analogue <b style={{ color: 'var(--text)' }}>67.6</b> [PEER Metsebo].</div>
             <div style={{ marginTop: 4 }}>Faulted dynamic model <b style={{ color: 'var(--text)' }}>≈22</b> [PEER]. The ~3–6× gap is 29-fault compartmentalization the unfaulted screening model cannot see.</div>
           </div>

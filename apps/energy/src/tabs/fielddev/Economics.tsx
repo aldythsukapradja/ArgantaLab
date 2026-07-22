@@ -10,6 +10,7 @@ import { loadProdField } from '../../wb/load';
 import type { ProdJson } from '../../wb/types';
 import { cashflow, npv, payback, irr, ECON_DEFAULTS } from '../../engine/econ';
 import { BBL_PER_SM3 } from '../../engine/volumetrics';
+import { useUnits, oilVol } from '../../units';
 
 export function Economics() {
   const field = useAsync<ProdJson>(loadProdField, []);
@@ -19,6 +20,7 @@ export function Economics() {
 }
 
 function Inner({ field }: { field: ProdJson }) {
+  const { system } = useUnits();
   const [oilPrice, setOilPrice] = useState(ECON_DEFAULTS.oilPrice);
   const [gasPrice, setGasPrice] = useState(ECON_DEFAULTS.gasPrice);
   const [opexVar, setOpexVar] = useState(ECON_DEFAULTS.opexVar);
@@ -100,7 +102,7 @@ function Inner({ field }: { field: ProdJson }) {
           <NatureBadge nature="scenario" />
         </div>
         <div style={{ display: 'flex', gap: 8, padding: 10, borderBottom: '1px solid var(--line)', background: 'var(--panel)', flexWrap: 'wrap' }}>
-          {[['NPV @ ' + disc.toFixed(0) + '%', M(npvVal), npvVal >= 0 ? 'var(--teal)' : 'var(--rose)'], ['Payback', pb != null ? `${pb.toFixed(1)} yr` : '—', 'var(--text)'], ['IRR-lite', irrVal != null ? `${(irrVal * 100).toFixed(0)}%` : '—', 'var(--text)'], ['Cum oil', `${(cumOilBbl / 1e6).toFixed(0)} MMbbl`, 'var(--text)'], ['Tax', tax ? '78%' : 'pre-tax', 'var(--muted)']].map(([k, v, c]) => (
+          {[['NPV @ ' + disc.toFixed(0) + '%', M(npvVal), npvVal >= 0 ? 'var(--teal)' : 'var(--rose)'], ['Payback', pb != null ? `${pb.toFixed(1)} yr` : '—', 'var(--text)'], ['IRR-lite', irrVal != null ? `${(irrVal * 100).toFixed(0)}%` : '—', 'var(--text)'], ['Cum oil', oilVol(cumOilBbl / BBL_PER_SM3, system).text, 'var(--text)'], ['Tax', tax ? '78%' : 'pre-tax', 'var(--muted)']].map(([k, v, c]) => (
             <div key={k} className="panel" style={{ padding: '8px 12px', minWidth: 110, flex: 1 }}>
               <div className="eyebrow" style={{ marginBottom: 3 }}>{k}</div>
               <div style={{ fontSize: 18, fontWeight: 600, color: c }}>{v}</div>

@@ -11,6 +11,9 @@ import { loadIndex, loadProd, loadProdField } from '../../wb/load';
 import type { WbIndex, ProdJson } from '../../wb/types';
 import { fitArps, arps, eur } from '../../engine/dca';
 import { percentile } from '../../engine/mc';
+import { useUnits, oilVol, oilRate } from '../../units';
+
+const DAYS_PER_MONTH = 30.4375; // avg — monthly Sm³ → Sm³/d for bopd conversion
 
 const PRODUCERS = ['F-1 C', 'F-5', 'F-11', 'F-12', 'F-14', 'F-15 D', 'F-4'];
 
@@ -32,6 +35,7 @@ function alignedOil(p: ProdJson): number[] {
 }
 
 function Inner({ prods, field }: { prods: Array<{ name: string; prod: ProdJson }>; field: ProdJson | null }) {
+  const { system } = useUnits();
   const [sel, setSel] = useState('F-12');
   const [view, setView] = useState<'well' | 'field'>('well');
   const [b, setB] = useState(0.5);
@@ -76,10 +80,12 @@ function Inner({ prods, field }: { prods: Array<{ name: string; prod: ProdJson }
     // axes
     ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 0.5;
     ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
+    // rate display: metric = Sm³/mo (native); field = bopd (Sm³/mo → Sm³/d → bbl/d)
+    const rateDisp = (q: number) => system === 'field' ? q / DAYS_PER_MONTH * 6.2898 : q;
     ctx.fillStyle = cssVar('--muted'); ctx.font = '9px var(--mono)'; ctx.textAlign = 'right';
-    for (let i = 0; i <= 4; i++) { const q = qMax * i / 4; const yy = y(q); ctx.fillText((q / 1e3).toFixed(0) + 'k', padL - 4, yy + 3); ctx.strokeStyle = cssVar('--line'); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL + plotW, yy); ctx.stroke(); ctx.setLineDash([]); }
+    for (let i = 0; i <= 4; i++) { const q = qMax * i / 4; const yy = y(q); ctx.fillText((rateDisp(q) / 1e3).toFixed(0) + 'k', padL - 4, yy + 3); ctx.strokeStyle = cssVar('--line'); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL + plotW, yy); ctx.stroke(); ctx.setLineDash([]); }
     ctx.textAlign = 'center'; ctx.fillText('producing months', padL + plotW / 2, h - 6);
-    ctx.save(); ctx.translate(12, padT + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('oil rate Sm³/mo', 0, 0); ctx.restore();
+    ctx.save(); ctx.translate(12, padT + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(system === 'field' ? 'oil rate bopd' : 'oil rate Sm³/mo', 0, 0); ctx.restore();
 
     // offset envelope (well view only)
     if (view === 'well') {
@@ -108,8 +114,8 @@ function Inner({ prods, field }: { prods: Array<{ name: string; prod: ProdJson }
       ctx.stroke(); ctx.setLineDash([]);
     }
 
-    if (hover) { const px = x(hover.t), py = y(hover.q); ctx.fillStyle = cssVar('--text'); ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill(); ctx.font = '9px var(--mono)'; ctx.textAlign = 'left'; ctx.fillText(`t${hover.t} · ${(hover.q/1e3).toFixed(1)}k Sm³`, px + 6, py - 4); }
-  }, [plotSeries, envelope, fit, qEcon, view, selSeries, hover]);
+    if (hover) { const px = x(hover.t), py = y(hover.q); ctx.fillStyle = cssVar('--text'); ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill(); ctx.font = '9px var(--mono)'; ctx.textAlign = 'left'; ctx.fillText(`t${hover.t} · ${(rateDisp(hover.q)/1e3).toFixed(1)}k ${system === 'field' ? 'bopd' : 'Sm³'}`, px + 6, py - 4); }
+  }, [plotSeries, envelope, fit, qEcon, view, selSeries, hover, system]);
 
   const { canvasRef, wrapRef } = useCanvas(draw, [draw]);
   const onMove = (e: React.MouseEvent) => {
@@ -146,15 +152,15 @@ function Inner({ prods, field }: { prods: Array<{ name: string; prod: ProdJson }
         {view === 'well' && fit && (
           <InspectorSection title={`Arps fit · ${sel}`}>
             <table className="mono" style={{ width: '100%', fontSize: 10.5 }}><tbody>
-              {[['qi', `${(fit.qi / 1e3).toFixed(1)}k Sm³/mo`], ['Di', `${(fit.Di * 100).toFixed(1)}%/mo`], ['b', fit.b.toFixed(2)], ['cum (hist)', `${(cumHist / 1e6).toFixed(2)} MMSm³`], ['EUR', `${(eurVal / 1e6).toFixed(2)} MMSm³`]].map(([k, v]) => <tr key={k}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{v}</td></tr>)}
+              {[['qi', system === 'field' ? oilRate(fit.qi / DAYS_PER_MONTH, 'field').text : `${(fit.qi / 1e3).toFixed(1)}k Sm³/mo`], ['Di', `${(fit.Di * 100).toFixed(1)}%/mo`], ['b', fit.b.toFixed(2)], ['cum (hist)', oilVol(cumHist, system).text], ['EUR', oilVol(eurVal, system).text]].map(([k, v]) => <tr key={k}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{v}</td></tr>)}
             </tbody></table>
             <div style={{ marginTop: 8 }}><label style={{ fontSize: 10.5, color: 'var(--muted)' }}>b exponent</label><input type="range" min={0} max={1} step={0.05} value={b} onChange={(e) => setB(parseFloat(e.target.value))} style={{ width: '100%', accentColor: 'var(--amber)' }} /></div>
           </InspectorSection>
         )}
         <InspectorSection title="F-12 material-balance tank check">
           <div style={{ fontSize: 10.5, lineHeight: 1.5, color: 'var(--muted)', border: '1px solid var(--teal)', borderRadius: 4, padding: 8 }}>
-            <div>F-12 cum oil (history): <b style={{ color: 'var(--text)' }}>{f12Cum.toFixed(2)} MMSm³</b></div>
-            <div style={{ marginTop: 4 }}>MBAL tank STOIP target: <b style={{ color: 'var(--text)' }}>≈19.6 MMSm³</b> [PEER Metsebo]</div>
+            <div>F-12 cum oil (history): <b style={{ color: 'var(--text)' }}>{oilVol(f12Cum * 1e6, system).text}</b></div>
+            <div style={{ marginTop: 4 }}>MBAL tank STOIP target: <b style={{ color: 'var(--text)' }}>≈{oilVol(19.6e6, system).text}</b> [PEER Metsebo]</div>
             <div style={{ marginTop: 4 }}>Reconciliation gauges the F-12 compartment against the tank estimate.</div>
           </div>
         </InspectorSection>

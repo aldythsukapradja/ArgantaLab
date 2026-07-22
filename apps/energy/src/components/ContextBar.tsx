@@ -1,4 +1,5 @@
 import { useStore } from '../store';
+import { useUnits } from '../units';
 import { DOMAINS, SUBTABS } from '../nav';
 import { Search, Sun, Moon } from 'lucide-react';
 
@@ -6,6 +7,7 @@ import { Search, Sun, Moon } from 'lucide-react';
 // Sub-tabs render from the SUBTABS config (config-driven).
 export function ContextBar({ mobile = false }: { mobile?: boolean }) {
   const { domain, subtab, setSubtab, togglePalette, theme, toggleTheme } = useStore();
+  const { system, setSystem } = useUnits();
   const def = DOMAINS.find((d) => d.id === domain)!;
   const subs = SUBTABS[domain];
 
@@ -48,6 +50,28 @@ export function ContextBar({ mobile = false }: { mobile?: boolean }) {
         {!mobile && <span style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>Search…</span>}
         <span className="mono chip" style={{ padding: '1px 5px' }}>⌘K</span>
       </button>
+
+      {/* project unit system — FIELD (bopd) default · METRIC (Sm³) */}
+      <div role="group" aria-label="Project units" title="Project unit system"
+        style={{ display: 'flex', alignItems: 'stretch', border: '1px solid var(--line)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
+        {(['field', 'metric'] as const).map((u) => {
+          const active = system === u;
+          return (
+            <button key={u} onClick={() => setSystem(u)} aria-pressed={active}
+              title={u === 'field' ? 'Field units — bopd / bbl / ft / psi' : 'Metric units — Sm³ / m / bar'}
+              className="mono"
+              style={{
+                padding: '0 8px', height: 26, fontSize: 10.5, letterSpacing: '0.04em',
+                background: active ? 'var(--panel-2)' : 'transparent',
+                color: active ? 'var(--text)' : 'var(--muted)',
+                borderRight: u === 'field' ? '1px solid var(--line)' : 'none',
+                fontWeight: active ? 600 : 400,
+              }}>
+              {u === 'field' ? 'bopd' : 'Sm³'}
+            </button>
+          );
+        })}
+      </div>
 
       <button onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         title={theme === 'dark' ? 'Light theme' : 'Dark theme'}

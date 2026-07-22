@@ -11,6 +11,7 @@ import type { WbIndex } from '../../wb/types';
 import type { SurfaceJson } from '../../engine/grid';
 import { grvClosure, stoiip, giip } from '../../engine/volumetrics';
 import { monteCarlo, tornado, type McInput, type DistKind } from '../../engine/mc';
+import { useUnits } from '../../units';
 
 const SEED = 20260722;
 const N = 10000;
@@ -40,6 +41,7 @@ export function Uncertainty() {
 }
 
 function Inner({ index, top, base }: { index: WbIndex; top: SurfaceJson; base: SurfaceJson }) {
+  const { system } = useUnits();
   const d = index.defaults, bo = index.pvt.Bo;
   const [fill, setFill] = useState<Case>('oil');
   const [inspOpen, setInspOpen] = useState(true);
@@ -71,7 +73,9 @@ function Inner({ index, top, base }: { index: WbIndex; top: SurfaceJson; base: S
   }, [activeRows, grvAt, fill, bo]);
 
   const tor = useMemo(() => tornado(mc, activeRows), [mc, activeRows]);
-  const unit = fill === 'oil' ? 'MMSm³' : 'BSm³';
+  // display factor: mc values are MMSm³ (oil) / BSm³ (gas). Field → MMbbl (×6.2898) / Bscf (×35.3147).
+  const df = system === 'metric' ? 1 : (fill === 'oil' ? 6.2898 : 35.3147);
+  const unit = system === 'metric' ? (fill === 'oil' ? 'MMSm³' : 'BSm³') : (fill === 'oil' ? 'MMbbl' : 'Bscf');
 
   // histogram + CDF
   const drawHist = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
@@ -91,12 +95,12 @@ function Inner({ index, top, base }: { index: WbIndex; top: SurfaceJson; base: S
     // P90/P50/P10 flags
     const flags: Array<[string, number, string]> = [['P90', mc.p90, cssVar('--blue')], ['P50', mc.p50, cssVar('--text')], ['P10', mc.p10, cssVar('--rose')]];
     ctx.font = '9px var(--mono)';
-    for (const [lab, val, col] of flags) { const px = x(val); ctx.strokeStyle = col; ctx.setLineDash([4, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, padT); ctx.lineTo(px, padT + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.fillText(`${lab} ${val.toFixed(1)}`, px, padT - 3); }
+    for (const [lab, val, col] of flags) { const px = x(val); ctx.strokeStyle = col; ctx.setLineDash([4, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, padT); ctx.lineTo(px, padT + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.fillText(`${lab} ${(val * df).toFixed(1)}`, px, padT - 3); }
     // axes
     ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
     ctx.fillStyle = cssVar('--muted'); ctx.textAlign = 'center'; ctx.fillText(unit, padL + plotW / 2, h - 4);
     ctx.textAlign = 'right'; ctx.fillStyle = cssVar('--amber'); ctx.fillText('CDF 100%', w - 4, padT + 8); ctx.fillText('0%', w - 4, padT + plotH);
-  }, [mc, unit]);
+  }, [mc, unit, df]);
 
   const drawTornado = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
     const bars = tor; const padL = 96, padR = 40, padT = 10;
@@ -127,7 +131,7 @@ function Inner({ index, top, base }: { index: WbIndex; top: SurfaceJson; base: S
           <Segmented options={[{ id: 'oil' as const, label: 'Oil STOIIP·RF' }, { id: 'gas' as const, label: 'Gas GIIP·RF' }]} value={fill} onChange={setFill} accent="--amber" />
           <span className="chip" style={{ color: 'var(--muted)' }}>{N.toLocaleString()} realizations · seed {SEED} · reproducible</span>
           <div style={{ flex: 1 }} />
-          <span className="mono" style={{ fontSize: 11, color: 'var(--text)' }}>P90 {mc.p90.toFixed(1)} · P50 {mc.p50.toFixed(1)} · P10 {mc.p10.toFixed(1)} {unit}</span>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--text)' }}>P90 {(mc.p90 * df).toFixed(1)} · P50 {(mc.p50 * df).toFixed(1)} · P10 {(mc.p10 * df).toFixed(1)} {unit}</span>
           <NatureBadge nature="derived" />
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -168,7 +172,7 @@ function Inner({ index, top, base }: { index: WbIndex; top: SurfaceJson; base: S
         </InspectorSection>
         <InspectorSection title="Result">
           <table className="mono" style={{ width: '100%', fontSize: 10.5 }}><tbody>
-            {[['P90 (pct10)', mc.p90], ['P50', mc.p50], ['P10 (pct90)', mc.p10], ['mean', mc.mean]].map(([k, v]) => <tr key={k as string}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{(v as number).toFixed(2)} {unit}</td></tr>)}
+            {[['P90 (pct10)', mc.p90], ['P50', mc.p50], ['P10 (pct90)', mc.p10], ['mean', mc.mean]].map(([k, v]) => <tr key={k as string}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{((v as number) * df).toFixed(2)} {unit}</td></tr>)}
           </tbody></table>
           <div style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 6 }}>Fixed seed {SEED} → identical P50 across reloads. Oil convention: P90 ≤ P50 ≤ P10.</div>
         </InspectorSection>
