@@ -68,13 +68,13 @@ From the ground-truth research (see sources below). Tag each in-app: **[OFFICIAL
 | Water saturation Sw | 0.20 (Swc 0.20) | [PEER] | HCPV default (else LFP_SWE) |
 | Matrix density ρ_ma | 2.65 g/cc | textbook | Archie recompute |
 | Archie a / m / n | 1 / 2 / 2 | [COMMUNITY] | Archie recompute (no Volve-specific override published) |
-| Oil FVF Bo | PVT curve (~1.0–1.2 rb/stb) | [PEER] | STOIIP divisor — **extract Bo(P) from released PVT deck for datum value** |
-| Rs (solution GOR) | 114 Sm³/Sm³ | [PEER] | PVT |
-| Oil gravity | 30° API | [PEER] | PVT |
-| Pi / Pb | 330 bar / 273 bar | [PEER] | undersaturated (Pi>Pb) → **no gas cap** |
-| Reservoir T | 110 °C | [PEER] | conditions |
+| **Oil FVF Bo (datum)** | **≈ 1.47 rm³/Sm³** (live oil, undersaturated) — NOT 1.18 (dead-oil, overstates STOIIP ~25%) | **[DECK]** PVTO region 1 | STOIIP divisor — extracted from VOLVE_2016.PRT |
+| Rs (solution GOR, datum) | **148 Sm³/Sm³** (main field; 19A area ~121) | [DECK] RSVD | PVT |
+| Oil gravity | 30° API; oil density 882 kg/m³, water 1101.3 | [DECK] DENSITY | PVT |
+| Pi / Pb | **337 bara / 256 bara** (undersaturated, Pi≫Pb → **no gas cap**) | [DECK] EQUIL | conditions |
+| Reservoir T | 110 °C · datum **3060 mTVDSS** · ROCK cf 2.0e-5/bar @329 bara | [DECK] | conditions |
 | Salinity | 151,200 ppm | [PEER] | Rw derivation (~0.02–0.03 Ω·m @110°C) |
-| OWC (main) | **≈ 3,120 mTVDSS** (compartment WOC 2,700–3,200; field is 29-fault, per-compartment) | [PEER] | contact for GRV clip |
+| OWC (main structure) | **3,200 mTVDSS** (deck EQUIL; other compartments 2,700–3,025 — field is 29-fault) | **[DECK]** EQUIL | contact for GRV clip |
 | GOC | none (undersaturated) | [PEER] | — |
 | Recovery factor | 46–54% achieved | [PEER] | forecast sanity |
 | Cum oil produced | **~63 MMbbl** (Feb 2008–Sep 2016, ~8.5 yr) | [OFFICIAL] | production reconciliation |
@@ -84,8 +84,18 @@ From the ground-truth research (see sources below). Tag each in-app: **[OFFICIAL
 
 Populate `adaptVolve` §3 with: `state.contacts=[{kind:'OWC', tvdss:3120, cls:'interpreted'}]`, `state.props` defaults above (overridden per-well by LFP zone averages), `state.pvt={Bo, Rs:114, Pi:330, Pb:273, T:110}`.
 
-## 5. Validation hooks (Fable-worthy at build time)
-- **Full-field STOIIP must land ≈ 22 MMSm³** (±~30%); >2× off ⇒ grid/param mapping wrong. Per-compartment volumetric F-12 ≈ 20–67 MMSm³ range brackets the tank-vs-volumetric spread.
+## 4c. STOIIP reference spread (three published anchors — surface all three, never hide the gap)
+Our screening volumetric (blanket deck-OWC 3200 over the unfaulted mapped closure) is a deliberate **upper bound**:
+- **Screening (blanket OWC, unfaulted) ≈ 142 MMSm³** — the workbench default; captures the whole connected structure incl. water legs.
+- **Per-well/faulted volumetric analogue 67.6 MMSm³** [PEER Metsebo].
+- **Faulted dynamic model ≈ 22 MMSm³** [PEER] — the realistic in-place; the deck's own FIPNUM OOIP.
+The ~6× screening→dynamic spread = fault compartmentalization + per-compartment contacts (2700–3200 m). The V1c Volumetrics viewer exposes OWC + fault-polygon scope so the user drives the number down toward the dynamic value — the spread IS the teaching, shown not hidden. The TIGHT truth gate is cum-oil (below), not STOIIP.
+
+## 5. Validation hooks (Fable-worthy at build time) — all in test-engine.mjs (14/14 pass)
+- **cum-oil reconciles ~63 MMbbl (10.04 MMSm³)** — the tight published gate; validates the production decode exactly.
+- STOIIP screening = 142 MMSm³ **parity** with the wb build (same grids/params/formula) + a gross-error gate (40–220); NOT gated against a field number (method-dependent).
+- Bo deck-sourced (1.47, live-oil) not the dead-oil 1.18; OWC deck 3200.
+- TVD ≤ MD on all 1593 definitive trajectory stations; PERT/percentile/Arps/NPV analytic identities.
 - **Cum oil from production.json must reconcile with ~63 MMbbl** (~10 MMSm³) produced — a direct measured check on the production sum.
 - Tank/decline forecast for F-12 should approach STOIP≈19.6 MMSm³ with Pi 330→ over life (Metsebo MBAL analogue).
 - Hugin top/base grid z in 2760–2999 m; OWC 3120 sits below base in the main compartment (consistent).

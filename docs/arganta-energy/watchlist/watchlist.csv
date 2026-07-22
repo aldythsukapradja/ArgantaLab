@@ -1,0 +1,12 @@
+date,vendor,signal,category,threat_1to5,source_url
+2026-06-22,AIQ/ADNOC/G42,ENERGYai agentic energy tools pitched to US oil & gas buyers — NOC stack going commercial/international,noc-partnership,4,https://www.semafor.com/article/06/22/2026/ai-energy-firm-born-out-of-adnoc-and-g42-eyes-us
+2026-06-15,SLB,SLB Digital Marketplace launched — app-store for AI agents/domain models/connectors on Tela-Lumi,agentic,4,https://www.slb.com/newsroom/press-release/2026/slb-launches-digital-marketplace-to-scale-ai-and-digital-innovation-across-energy
+2026-05-08,OSDU Forum,OSDU R3 Milestone 25 — DataQualitySummary entity + well pressure-test & seismic handling,osdu-milestone,2,https://osduforum.org/osdu-r3-milestone-25-is-now-released/
+2026-04-24,SLB,Agreement to acquire S&P Global geoscience/petroleum software — fuses datasets into Lumi/Tela,agentic,4,https://jpt.spe.org/slb-unveils-agentic-ai-for-upstream-workflows
+2026-04-07,OSDU Forum,OSDU Data Platform Standard v1.0 — first certifiable cross-vendor API (commoditizes data layer),osdu-milestone,3,https://blog.opengroup.org/2026/04/07/exploring-the-upcoming-osdu-data-platform-standard-version-1-0/
+2026-03-25,SLB/NVIDIA,Expanded pact to mass-produce agentic + domain foundation models (deployed w/ Shell),foundation-model,4,https://www.slb.com/newsroom/press-release/2026/pr-2026-0325-slb-nvidia
+2026-03-23,Cognite/NVIDIA/Aker BP,NV-Tesseract time-series foundation model operationalized for anomaly detection,foundation-model,3,https://www.businesswire.com/news/home/20260323390546/en/
+2026-03-23,Ikon Science,Curate 2026.2 — AI query + Documents tab surfacing unattached docs (evidence-adjacent),agentic,3,https://news.ikonscience.com/ikon-science-announces-curate-2026.2-bringing-information-into-view
+2026-Q1,Microsoft Azure,Azure Local disconnected-operations GA — fully on-prem control plane + ADME (jurisdiction-locked),sovereign-onprem,5,https://azure.microsoft.com/en-us/blog/microsoft-strengthens-sovereign-cloud-capabilities-with-new-services/
+2026-07,Geoteric/SINTEF,Joint agentic platform seismic→sim across vendors; public demo IMAGE 2026 (Houston Aug),agentic,3,https://www.sintef.no/en/latest-news/2026/geoteric-and-sintef-develop-joint-ai-agent-platform-for-better-subsurface-decisions/
+2025-11-03,SLB,Tela launched — agentic AI on Lumi (LLM + domain foundation models),foundation-model,4,https://www.slb.com/newsroom/press-release/2025/pr-2025-1103-slb-tela-ai
