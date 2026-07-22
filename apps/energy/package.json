@@ -18,7 +18,9 @@
     "test:sim": "node scripts/test-sim.mjs",
     "test:review": "node scripts/test-review.mjs",
     "test:analog": "node scripts/test-analog.mjs",
-    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs && node scripts/test-analog.mjs"
+    "test:gvsurf": "node scripts/test-gvsurf.mjs",
+    "data:gvsurf": "node scripts/build-gvsurf.mjs",
+    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs && node scripts/test-analog.mjs && node scripts/test-gvsurf.mjs"
   },
   "dependencies": {
     "@equinor/videx-wellog": "^1.5.2",
