@@ -15,7 +15,8 @@
     "data:wb": "node scripts/build-workbench-data.mjs --force",
     "test:engine": "node scripts/test-engine.mjs",
     "test:geostat": "node scripts/test-geostat.mjs",
-    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs"
+    "test:sim": "node scripts/test-sim.mjs",
+    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs"
   },
   "dependencies": {
     "@equinor/videx-wellog": "^1.5.2",
