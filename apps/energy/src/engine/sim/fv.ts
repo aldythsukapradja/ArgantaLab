@@ -14,10 +14,19 @@ import type { CoreyEndpoints } from './relperm';
 function halfTrans(k: number, A: number, d: number): number { return k * A / d; }
 function faceTrans(kA: number, kB: number, A: number, dA: number, dB: number): number { const ta = halfTrans(kA, A, dA), tb = halfTrans(kB, A, dB); return (ta * tb) / (ta + tb); }
 function dot(a: Float64Array, b: Float64Array): number { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; }
-function cg(apply: (x: Float64Array) => Float64Array, b: Float64Array, tol = 1e-10, maxit = 5000): Float64Array {
-  const n = b.length, x = new Float64Array(n); const r = b.slice(), p = b.slice();
-  let rs = dot(r, r); const bnorm = Math.sqrt(dot(b, b)) || 1;
-  for (let it = 0; it < maxit; it++) { const Ap = apply(p); const alpha = rs / dot(p, Ap); for (let i = 0; i < n; i++) { x[i] += alpha * p[i]; r[i] -= alpha * Ap[i]; } const rsNew = dot(r, r); if (Math.sqrt(rsNew) / bnorm < tol) break; const beta = rsNew / rs; for (let i = 0; i < n; i++) p[i] = r[i] + beta * p[i]; rs = rsNew; }
+// Jacobi-preconditioned CG (diag = matrix diagonal) — same solution, far fewer
+// iterations for the well-penalty-stiffened pressure system.
+function cg(apply: (x: Float64Array) => Float64Array, b: Float64Array, diag: Float64Array, tol = 1e-10, maxit = 5000): Float64Array {
+  const n = b.length, x = new Float64Array(n); const r = b.slice();
+  const minv = (v: Float64Array) => { const o = new Float64Array(n); for (let i = 0; i < n; i++) o[i] = v[i] / (diag[i] || 1); return o; };
+  let z = minv(r), p = z.slice(); let rz = dot(r, z); const bnorm = Math.sqrt(dot(b, b)) || 1;
+  for (let it = 0; it < maxit; it++) {
+    const Ap = apply(p); const alpha = rz / dot(p, Ap);
+    for (let i = 0; i < n; i++) { x[i] += alpha * p[i]; r[i] -= alpha * Ap[i]; }
+    if (Math.sqrt(dot(r, r)) / bnorm < tol) break;
+    z = minv(r); const rzNew = dot(r, z); const beta = rzNew / rz;
+    for (let i = 0; i < n; i++) p[i] = z[i] + beta * p[i]; rz = rzNew;
+  }
   return x;
 }
 function coreyKr(sw: number, e: CoreyEndpoints): { krw: number; kro: number } { const se = (sw - e.swc) / (1 - e.swc - e.sor); const s = Math.max(0, Math.min(1, se)); return { krw: e.krwMax * s ** e.nw, kro: e.kroMax * (1 - s) ** e.no }; }
@@ -64,6 +73,15 @@ function solvePressureMob(cfg: FvCfg, lt: Float64Array, Tx: Float64Array, Ty: Fl
   }
   const faceLtX = (i: number, j: number) => 0.5 * (lt[id(i, j)] + lt[id(i + 1, j)]);
   const faceLtY = (i: number, j: number) => 0.5 * (lt[id(i, j)] + lt[id(i, j + 1)]);
+  const diag = new Float64Array(N);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const c = id(i, j); let d = wDiag[c];
+    if (i < nx - 1) d += Tx[j * (nx - 1) + i] * faceLtX(i, j);
+    if (i > 0) d += Tx[j * (nx - 1) + i - 1] * faceLtX(i - 1, j);
+    if (j < ny - 1) d += Ty[j * nx + i] * faceLtY(i, j);
+    if (j > 0) d += Ty[(j - 1) * nx + i] * faceLtY(i, j - 1);
+    diag[c] = d;
+  }
   const apply = (x: Float64Array): Float64Array => {
     const y = new Float64Array(N);
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
@@ -76,15 +94,29 @@ function solvePressureMob(cfg: FvCfg, lt: Float64Array, Tx: Float64Array, Ty: Fl
     }
     return y;
   };
-  const p = cg(apply, wRhs);
+  const p = cg(apply, wRhs, diag);
   const fluxX = (i: number, j: number) => Tx[j * (nx - 1) + i] * faceLtX(i, j) * (p[id(i, j)] - p[id(i + 1, j)]);
   const fluxY = (i: number, j: number) => Ty[j * nx + i] * faceLtY(i, j) * (p[id(i, j)] - p[id(i, j + 1)]);
   const wellRate = wells.map((w) => { const c = id(w.i, w.j); return w.mode === 'bhp' ? (w.WI ?? 0) * lt[c] * (p[c] - (w.bhp ?? 0)) : -(w.rate ?? 0); });
   return { p, fluxX, fluxY, wellRate };
 }
 
-/** Run the IMPES oil-water flood. Records `nReports` evenly-spaced snapshots to tEnd. */
-export function simulateFV(cfg: FvCfg, opts: { tEnd: number; nReports?: number; cfl?: number }): FvResult {
+/** Local implicit saturation solve: a·S + fw(S)·out = rhs, S∈[Swc,1−Sor]. g(S) is
+ * strictly increasing (a>0, fw↑) ⇒ a unique root ⇒ BISECTION is bulletproof
+ * (Newton oscillates on the stiff injector cell where `out` is huge). */
+function localSat(a: number, out: number, rhs: number, e: CoreyEndpoints, muw: number, muo: number): number {
+  let lo = e.swc, hi = 1 - e.sor;
+  const g = (S: number) => a * S + fracFlowW(S, e, muw, muo) * out - rhs;
+  if (g(lo) >= 0) return lo;     // root at/below Swc
+  if (g(hi) <= 0) return hi;     // root at/above 1−Sor
+  for (let it = 0; it < 40; it++) { const m = (lo + hi) / 2; if (g(m) > 0) hi = m; else lo = m; if (hi - lo < 1e-9) break; }
+  return (lo + hi) / 2;
+}
+
+/** Run the oil-water flood. `timestepping`: 'implicit' (sequential-implicit, no CFL
+ * — default, near-linear scaling) or 'impes' (explicit, CFL sub-stepped — the
+ * Buckley-Leverett-validated reference). Records `nReports` snapshots to tEnd. */
+export function simulateFV(cfg: FvCfg, opts: { tEnd: number; nReports?: number; cfl?: number; timestepping?: 'implicit' | 'impes'; implicitSubs?: number }): FvResult {
   const { nx, ny, dx, dy, dz, phi, k, muw, muo, corey, wells } = cfg;
   const N = nx * ny; const id = (i: number, j: number) => j * nx + i;
   const Vcell = dx * dy * dz, A = dy * dz, Ay = dx * dz;
@@ -120,32 +152,59 @@ export function simulateFV(cfg: FvCfg, opts: { tEnd: number; nReports?: number; 
   };
   record();
 
-  const MAX_SUBSTEPS = 5000; // backstop against a pathological CFL
+  const mode = opts.timestepping ?? 'implicit';
+  const MAX_SUBSTEPS = 5000; // backstop against a pathological CFL (impes)
   for (let r = 0; r < nReports; r++) {
-    // IMPES: solve pressure ONCE per report (mobility lagged), then cheap saturation
-    // sub-steps on the frozen flux field. Slashes CG solves from thousands → nReports.
+    // solve pressure ONCE per report (mobility lagged), then advance saturation on
+    // the frozen flux field — implicit (no CFL) or explicit-CFL (impes reference).
     computeLt();
     const sol = solvePressureMob(cfg, lt, Tx, Ty);
     const fX = new Float64Array((nx - 1) * ny), fY = new Float64Array(nx * (ny - 1));
-    const outflow = new Float64Array(N);
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = sol.fluxX(i, j); fX[j * (nx - 1) + i] = q; if (q > 0) outflow[id(i, j)] += q; else outflow[id(i + 1, j)] += -q; }
-    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = sol.fluxY(i, j); fY[j * nx + i] = q; if (q > 0) outflow[id(i, j)] += q; else outflow[id(i, j + 1)] += -q; }
-    wells.forEach((w, wi) => { if (sol.wellRate[wi] > 0) outflow[id(w.i, w.j)] += sol.wellRate[wi]; });
-    let dtMax = dtReport;
-    for (let c = 0; c < N; c++) if (outflow[c] > 1e-12) dtMax = Math.min(dtMax, cfl * phi[c] * Vcell / (outflow[c] * dfwMax));
-    let remaining = dtReport, steps = 0;
-    while (remaining > 1e-12 && steps++ < MAX_SUBSTEPS) {
-      const dt = Math.min(remaining, dtMax);
-      const netW = new Float64Array(N);
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = fX[j * (nx - 1) + i]; const fw = fracFlowW(sw[q > 0 ? id(i, j) : id(i + 1, j)], corey, muw, muo); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i + 1, j)] += wq; }
-      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = fY[j * nx + i]; const fw = fracFlowW(sw[q > 0 ? id(i, j) : id(i, j + 1)], corey, muw, muo); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i, j + 1)] += wq; }
-      wells.forEach((w, wi) => {
-        const c = id(w.i, w.j), q = sol.wellRate[wi];
-        if (q < 0) netW[c] += -q;                                   // injector: water in (fw=1)
-        else { const fw = fracFlowW(sw[c], corey, muw, muo); netW[c] -= fw * q; cumWater += fw * q * dt; cumOil += (1 - fw) * q * dt; }
-      });
-      for (let c = 0; c < N; c++) { const pv = phi[c] * Vcell; if (pv > 0) sw[c] = clamp(sw[c] + dt * netW[c] / pv, corey.swc, 1 - corey.sor); }
-      t += dt; remaining -= dt;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) fX[j * (nx - 1) + i] = sol.fluxX(i, j);
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) fY[j * nx + i] = sol.fluxY(i, j);
+
+    if (mode === 'implicit') {
+      // build per-cell incoming faces + total outgoing flux (fixed for the report)
+      const outQ = new Float64Array(N); const injW = new Float64Array(N);
+      const incoming: Array<Array<[number, number]>> = Array.from({ length: N }, () => []);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = fX[j * (nx - 1) + i], a = id(i, j), b = id(i + 1, j); if (q > 0) { outQ[a] += q; incoming[b].push([a, q]); } else if (q < 0) { outQ[b] += -q; incoming[a].push([b, -q]); } }
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = fY[j * nx + i], a = id(i, j), b = id(i, j + 1); if (q > 0) { outQ[a] += q; incoming[b].push([a, q]); } else if (q < 0) { outQ[b] += -q; incoming[a].push([b, -q]); } }
+      wells.forEach((w, wi) => { const c = id(w.i, w.j), q = sol.wellRate[wi]; if (q < 0) injW[c] += -q; else outQ[c] += q; });
+      const nSub = opts.implicitSubs ?? 4, dt = dtReport / nSub;
+      for (let s = 0; s < nSub; s++) {
+        const swOld = sw.slice();
+        for (let sweep = 0; sweep < 200; sweep++) {
+          let maxD = 0; const back = sweep % 2 === 1; // alternate direction → GS propagates both ways (diagonal flow)
+          for (let cc = 0; cc < N; cc++) {
+            const c = back ? N - 1 - cc : cc;
+            const pv = phi[c] * Vcell; if (pv <= 0) continue;
+            const a = pv / dt; let inflow = injW[c];
+            const inc = incoming[c]; for (let m = 0; m < inc.length; m++) inflow += fracFlowW(sw[inc[m][0]], corey, muw, muo) * inc[m][1];
+            const S = localSat(a, outQ[c], a * swOld[c] + inflow, corey, muw, muo);
+            const d = Math.abs(S - sw[c]); if (d > maxD) maxD = d; sw[c] = S;
+          }
+          if (maxD < 1e-9) break;
+        }
+        wells.forEach((w, wi) => { const q = sol.wellRate[wi]; if (q > 0) { const c = id(w.i, w.j), fw = fracFlowW(sw[c], corey, muw, muo); cumWater += fw * q * dt; cumOil += (1 - fw) * q * dt; } });
+        t += dt;
+      }
+    } else {
+      // IMPES: explicit upstream saturation under a CFL sub-step (validated reference)
+      const outflow = new Float64Array(N);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = fX[j * (nx - 1) + i]; if (q > 0) outflow[id(i, j)] += q; else outflow[id(i + 1, j)] += -q; }
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = fY[j * nx + i]; if (q > 0) outflow[id(i, j)] += q; else outflow[id(i, j + 1)] += -q; }
+      wells.forEach((w, wi) => { if (sol.wellRate[wi] > 0) outflow[id(w.i, w.j)] += sol.wellRate[wi]; });
+      let dtMax = dtReport; for (let c = 0; c < N; c++) if (outflow[c] > 1e-12) dtMax = Math.min(dtMax, cfl * phi[c] * Vcell / (outflow[c] * dfwMax));
+      let remaining = dtReport, steps = 0;
+      while (remaining > 1e-12 && steps++ < MAX_SUBSTEPS) {
+        const dt = Math.min(remaining, dtMax);
+        const netW = new Float64Array(N);
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx - 1; i++) { const q = fX[j * (nx - 1) + i]; const fw = fracFlowW(sw[q > 0 ? id(i, j) : id(i + 1, j)], corey, muw, muo); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i + 1, j)] += wq; }
+        for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) { const q = fY[j * nx + i]; const fw = fracFlowW(sw[q > 0 ? id(i, j) : id(i, j + 1)], corey, muw, muo); const wq = fw * q; netW[id(i, j)] -= wq; netW[id(i, j + 1)] += wq; }
+        wells.forEach((w, wi) => { const c = id(w.i, w.j), q = sol.wellRate[wi]; if (q < 0) netW[c] += -q; else { const fw = fracFlowW(sw[c], corey, muw, muo); netW[c] -= fw * q; cumWater += fw * q * dt; cumOil += (1 - fw) * q * dt; } });
+        for (let c = 0; c < N; c++) { const pv = phi[c] * Vcell; if (pv > 0) sw[c] = clamp(sw[c] + dt * netW[c] / pv, corey.swc, 1 - corey.sor); }
+        t += dt; remaining -= dt;
+      }
     }
     record();
   }

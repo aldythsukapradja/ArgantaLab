@@ -24,22 +24,32 @@ export function wellIndex(k: number, h: number, r0: number, rw: number, skin = 0
   return (2 * Math.PI * k * h) / (Math.log(r0 / rw) + skin);
 }
 
-// ── conjugate gradient (SPD, matrix-free) ──────────────────────────────────────
+// ── (preconditioned) conjugate gradient (SPD, matrix-free) ─────────────────────
 function dot(a: Float64Array, b: Float64Array): number { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; }
-/** Solve A·x = b for an SPD operator given as a matrix-free apply(). */
-export function cg(apply: (x: Float64Array) => Float64Array, b: Float64Array, tol = 1e-10, maxit = 5000): Float64Array {
+export interface CgOpts { tol?: number; maxit?: number; diag?: Float64Array }
+/** Solve A·x = b for an SPD operator given as a matrix-free apply(). When `diag`
+ * (the matrix diagonal) is supplied, runs Jacobi-preconditioned CG — a large
+ * iteration-count reduction for well-driven systems where the BHP penalty makes
+ * the diagonal dominate and unpreconditioned CG stalls. Same solution, faster. */
+export function cg(apply: (x: Float64Array) => Float64Array, b: Float64Array, opts: CgOpts = {}): Float64Array {
+  const { tol = 1e-10, maxit = 5000, diag } = opts;
   const n = b.length, x = new Float64Array(n);
-  const r = b.slice(), p = b.slice();
-  let rs = dot(r, r); const bnorm = Math.sqrt(dot(b, b)) || 1;
+  const r = b.slice();
+  const applyMinv = diag
+    ? (v: Float64Array) => { const o = new Float64Array(n); for (let i = 0; i < n; i++) o[i] = v[i] / (diag[i] || 1); return o; }
+    : (v: Float64Array) => v.slice();
+  let z = applyMinv(r), p = z.slice();
+  let rz = dot(r, z); const bnorm = Math.sqrt(dot(b, b)) || 1;
   for (let it = 0; it < maxit; it++) {
     const Ap = apply(p);
-    const alpha = rs / dot(p, Ap);
+    const alpha = rz / dot(p, Ap);
     for (let i = 0; i < n; i++) { x[i] += alpha * p[i]; r[i] -= alpha * Ap[i]; }
-    const rsNew = dot(r, r);
-    if (Math.sqrt(rsNew) / bnorm < tol) break;
-    const beta = rsNew / rs;
-    for (let i = 0; i < n; i++) p[i] = r[i] + beta * p[i];
-    rs = rsNew;
+    if (Math.sqrt(dot(r, r)) / bnorm < tol) break;
+    z = applyMinv(r);
+    const rzNew = dot(r, z);
+    const beta = rzNew / rz;
+    for (let i = 0; i < n; i++) p[i] = z[i] + beta * p[i];
+    rz = rzNew;
   }
   return x;
 }
@@ -69,6 +79,16 @@ export function solvePressure(cfg: PressureCfg): PressureSolution {
   for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx; i++) Ty[j * nx + i] = faceTrans(k[id(i, j)], k[id(i, j + 1)], Ay, dy / 2, dy / 2);
   const wDiag = new Float64Array(N), wRhs = new Float64Array(N);
   for (const w of wells) { const c = id(w.i, w.j); if (w.mode === 'bhp') { const wi = (w.WI ?? 0) / mu; wDiag[c] += wi; wRhs[c] += wi * (w.bhp ?? 0); } else { wRhs[c] += w.rate ?? 0; } }
+  // matrix diagonal (for Jacobi preconditioning): well term + Σ face transmissibilities
+  const diag = new Float64Array(N);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const c = id(i, j); let d = wDiag[c];
+    if (i < nx - 1) d += Tx[j * (nx - 1) + i] / mu;
+    if (i > 0) d += Tx[j * (nx - 1) + i - 1] / mu;
+    if (j < ny - 1) d += Ty[j * nx + i] / mu;
+    if (j > 0) d += Ty[(j - 1) * nx + i] / mu;
+    diag[c] = d;
+  }
   const apply = (x: Float64Array): Float64Array => {
     const y = new Float64Array(N);
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
@@ -81,7 +101,7 @@ export function solvePressure(cfg: PressureCfg): PressureSolution {
     }
     return y;
   };
-  const p = cg(apply, wRhs);
+  const p = cg(apply, wRhs, { diag });
   const wellRate = wells.map((w) => { const c = id(w.i, w.j); return w.mode === 'bhp' ? ((w.WI ?? 0) / mu) * (p[c] - (w.bhp ?? 0)) : -(w.rate ?? 0); });
   const faceFluxX = (i: number, j: number) => Tx[j * (nx - 1) + i] / mu * (p[id(i, j)] - p[id(i + 1, j)]);
   const faceFluxY = (i: number, j: number) => Ty[j * nx + i] / mu * (p[id(i, j)] - p[id(i, j + 1)]);
