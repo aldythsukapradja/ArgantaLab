@@ -6,16 +6,20 @@
 html[data-ui="cosmo"] .dseq{--dseq:#e11d74;--dseq-soft:rgba(225,29,116,.10);height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 
 /* ── Tabs (COSMO .tabs convention) ── */
-html[data-ui="cosmo"] .dseq-tabs{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0}
-html[data-ui="cosmo"] .dseq-tab{padding:9px 14px;font-size:11.5px;font-weight:600;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;transition:color .12s}
+html[data-ui="cosmo"] .dseq-tabs{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+html[data-ui="cosmo"] .dseq-tabs::-webkit-scrollbar{display:none}
+html[data-ui="cosmo"] .dseq-tab{padding:9px 14px;font-size:11.5px;font-weight:600;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;transition:color .12s;flex-shrink:0;white-space:nowrap}
 html[data-ui="cosmo"] .dseq-tab:hover{color:var(--ink2)}
 html[data-ui="cosmo"] .dseq-tab.on{color:var(--teal-ink);border-bottom-color:var(--teal)}
 html[data-ui="cosmo"] .dseq-tab .st{font-family:var(--mono);font-size:8px;letter-spacing:.06em;padding:1px 5px;border-radius:10px;background:var(--dseq-soft);color:var(--dseq)}
 
 html[data-ui="cosmo"] .dseq-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+/* .dseq-stage — the gantt+dashboard+map column (left side of .dseq-ws). Was an
+   inline style; a real class lets the mobile breakpoint un-flex it cleanly. */
+html[data-ui="cosmo"] .dseq-stage{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
 
 /* ── Toolbar row (view presets, PM, MAP) ── */
-html[data-ui="cosmo"] .dseq-tools{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0}
+html[data-ui="cosmo"] .dseq-tools{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0;flex-wrap:wrap;row-gap:6px}
 html[data-ui="cosmo"] .dseq-tools .sp{flex:1}
 html[data-ui="cosmo"] .dbtn{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.03em;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink2);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .12s}
 html[data-ui="cosmo"] .dbtn:hover{border-color:var(--teal);color:var(--teal-ink)}
@@ -27,14 +31,14 @@ html[data-ui="cosmo"] .dseg b.on{background:var(--teal);color:#fff}
 
 /* ── Time slider ── */
 html[data-ui="cosmo"] .dts{padding:6px 14px 4px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0}
-html[data-ui="cosmo"] .dts-top{display:flex;align-items:center;gap:8px}
-html[data-ui="cosmo"] .dts-con{flex:1;position:relative;height:22px;display:flex;align-items:center}
+html[data-ui="cosmo"] .dts-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:6px}
+html[data-ui="cosmo"] .dts-con{flex:1 1 220px;min-width:0;position:relative;height:22px;display:flex;align-items:center}
 html[data-ui="cosmo"] .dts-trk{position:absolute;left:0;right:0;height:4px;background:var(--line);border-radius:2px;top:9px}
 html[data-ui="cosmo"] .dts-hlt{position:absolute;height:4px;background:var(--teal);border-radius:2px;top:9px}
 html[data-ui="cosmo"] .dts-con input[type=range]{position:absolute;width:100%;top:1px;height:20px;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;z-index:2;margin:0}
 html[data-ui="cosmo"] .dts-con input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--teal);border:2px solid var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.25);cursor:pointer;pointer-events:all}
 html[data-ui="cosmo"] .dts-con input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--teal);border:2px solid var(--panel);cursor:pointer;pointer-events:all}
-html[data-ui="cosmo"] .dts-lab{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink2);min-width:190px;text-align:center}
+html[data-ui="cosmo"] .dts-lab{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink2);min-width:0;flex:0 0 auto;text-align:center;white-space:nowrap}
 html[data-ui="cosmo"] .dts-hist{width:100%;height:26px;margin-top:2px}
 html[data-ui="cosmo"] .dts-hist rect{fill:var(--teal)}
 html[data-ui="cosmo"] .dts-hist rect.out{fill:var(--line)}
@@ -65,7 +69,7 @@ html[data-ui="cosmo"] .dgantt-svg .gbar:hover{filter:brightness(1.08)}
   @keyframes todayPulse{0%,100%{opacity:1}50%{opacity:.72}}
 }
 
-html[data-ui="cosmo"] .ddrag{height:7px;flex-shrink:0;cursor:row-resize;display:flex;align-items:center;justify-content:center;background:var(--panel3);border-top:1px solid var(--line);border-bottom:1px solid var(--line);z-index:8}
+html[data-ui="cosmo"] .ddrag{height:7px;flex-shrink:0;cursor:row-resize;display:flex;align-items:center;justify-content:center;background:var(--panel3);border-top:1px solid var(--line);border-bottom:1px solid var(--line);z-index:8;touch-action:none}
 html[data-ui="cosmo"] .ddrag:hover{background:var(--line)}
 html[data-ui="cosmo"] .ddrag i{width:3px;height:3px;border-radius:50%;background:var(--ink3);margin:0 1.5px}
 
@@ -80,9 +84,12 @@ html[data-ui="cosmo"] .dtip .v{font-weight:600}
 html[data-ui="cosmo"] .dtip .badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8.5px;font-weight:700;color:#fff;margin-left:4px;font-family:var(--mono)}
 
 /* ── Dashboard panels ── */
-html[data-ui="cosmo"] .ddash{display:grid;grid-template-columns:20fr 50fr 30fr;gap:8px;padding:8px 12px}
+/* auto-fit + align-items:start: column count/width always matches actual content
+   at any viewport, and a short column (e.g. the pill legend) never gets stretched
+   into a tall empty-looking card just because a sibling column is taller. */
+html[data-ui="cosmo"] .ddash{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;padding:8px 12px;align-items:start}
 html[data-ui="cosmo"] .dcol{display:flex;flex-direction:column;gap:8px;min-width:0}
-html[data-ui="cosmo"] .dsec{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 9px}
+html[data-ui="cosmo"] .dsec{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 9px;overflow-x:auto}
 html[data-ui="cosmo"] .dsec-t{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);text-align:center;border-bottom:1px solid var(--line2);padding-bottom:3px;margin-bottom:5px}
 html[data-ui="cosmo"] .dpill{display:flex;align-items:center;gap:6px;padding:2px 5px;border-radius:6px;cursor:pointer;margin:1px 0;transition:background .12s}
 html[data-ui="cosmo"] .dpill:hover{background:var(--panel3)}
@@ -103,7 +110,7 @@ html[data-ui="cosmo"] .dfbadge{position:absolute;top:8px;left:50%;transform:tran
 html[data-ui="cosmo"] .dfbadge::after{content:' ✕';font-size:9px;opacity:.75}
 
 /* ── KPI ribbon (Sequence tab) ── */
-html[data-ui="cosmo"] .dribbon{display:grid;grid-template-columns:repeat(4,1fr) 1.3fr;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0}
+html[data-ui="cosmo"] .dribbon{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding:8px 14px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0}
 html[data-ui="cosmo"] .dribbon .dmetric{padding:9px 12px;border-radius:11px}
 html[data-ui="cosmo"] .dribbon .dmetric .v .u{font-size:12px;color:var(--ink3);font-weight:600}
 html[data-ui="cosmo"] .dribbon .dmetric.gauge{display:flex;align-items:center;gap:11px}
@@ -141,7 +148,11 @@ html[data-ui="cosmo"] .dmile .md{font-family:var(--mono);font-size:9px;color:var
 /* ── Inspector ── */
 html[data-ui="cosmo"] .dseq-ws{flex:1;min-height:0;display:grid;grid-template-columns:1fr 288px;overflow:hidden}
 html[data-ui="cosmo"] .dseq-ws.no-insp{grid-template-columns:1fr}
-html[data-ui="cosmo"] .dinsp{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;display:flex;flex-direction:column}
+/* align-self:start: the rail sizes to its OWN content instead of being force-
+   stretched to match the (usually taller) gantt+dashboard column — a stretched
+   rail left a large blank panel below the milestone list; this ends the card
+   where its content ends, which reads as intentional rather than broken. */
+html[data-ui="cosmo"] .dinsp{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;display:flex;flex-direction:column;align-self:start;max-height:100%}
 html[data-ui="cosmo"] .dinsp-hd{display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line2);font-size:11px;font-weight:700;color:var(--ink)}
 html[data-ui="cosmo"] .dinsp-b{padding:10px 12px;font-size:11px;color:var(--ink2)}
 html[data-ui="cosmo"] .dinsp-h{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:10px 0 5px}
@@ -155,7 +166,7 @@ html[data-ui="cosmo"] .dnote{margin-top:12px;padding:8px 10px;background:var(--d
 
 /* ── KPI cockpit (Overview) ── */
 html[data-ui="cosmo"] .dseq-over{padding:16px 20px;overflow-y:auto;height:100%}
-html[data-ui="cosmo"] .dmetrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+html[data-ui="cosmo"] .dmetrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
 html[data-ui="cosmo"] .dmetric{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
 html[data-ui="cosmo"] .dmetric .edge{position:absolute;left:0;top:0;bottom:0;width:3px}
 html[data-ui="cosmo"] .dmetric .v{font-size:24px;font-weight:800;color:var(--ink);line-height:1}
@@ -184,7 +195,7 @@ html[data-ui="cosmo"] .dmap.open{width:46%;min-width:420px;max-width:680px;box-s
 html[data-ui="cosmo"] .dmap-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line2);font-family:var(--mono);font-size:10px;font-weight:700;flex-shrink:0}
 html[data-ui="cosmo"] .dmap-bar .t{color:var(--dseq);letter-spacing:.06em}
 html[data-ui="cosmo"] .dmap-bar .sp{flex:1}
-html[data-ui="cosmo"] .dmap-cv{flex:1;position:relative;cursor:grab;overflow:hidden;background:var(--panel3)}
+html[data-ui="cosmo"] .dmap-cv{flex:1;position:relative;cursor:grab;overflow:hidden;background:var(--panel3);touch-action:none}
 html[data-ui="cosmo"] .dmap-cv.grab{cursor:grabbing}
 html[data-ui="cosmo"] .dmap-cv canvas{display:block;position:absolute;left:0;top:0}
 html[data-ui="cosmo"] .dmap-tip{position:absolute;display:none;background:var(--panel);border:1px solid var(--dseq);border-radius:6px;padding:6px 10px;font-size:10px;line-height:1.5;pointer-events:none;z-index:10;white-space:nowrap;box-shadow:var(--shadow);color:var(--ink)}
@@ -201,6 +212,51 @@ html[data-ui="cosmo"] .dleg:hover{color:var(--ink);background:var(--panel3)}
 html[data-ui="cosmo"] .dleg.on{color:var(--dseq);box-shadow:inset 0 -2px 0 var(--dseq)}
 html[data-ui="cosmo"] .dleg i{width:12px;height:9px;border-radius:2px;border:1px solid rgba(0,0,0,.12)}
 html[data-ui="cosmo"] .dleg .date{margin-left:auto;padding-right:12px;color:var(--ink3);font-family:var(--mono)}
+
+/* ── Responsive: tablet/laptop — matches COSMO's own 1200px shell breakpoint ── */
+@media (max-width:1200px){
+  html[data-ui="cosmo"] .dseq-ws{grid-template-columns:1fr 240px}
+}
+
+/* ── Responsive: mobile — matches COSMO's own 820px shell breakpoint (sidebar
+   goes off-canvas, bottom nav appears). Strategy: stop fighting for internal
+   fixed-height scroll regions and let the page flow + scroll normally instead —
+   .content upstream is always overflow:auto, so un-clipping the chain here is
+   enough; nothing needs a hand-computed dvh height. ── */
+@media (max-width:820px){
+  html[data-ui="cosmo"] .dseq{height:auto;min-height:100%;overflow-x:hidden;overflow-y:visible}
+  html[data-ui="cosmo"] .dseq-body{overflow:visible}
+  html[data-ui="cosmo"] .dseq-stage{overflow:visible;min-height:0}
+  html[data-ui="cosmo"] .dseq-split{overflow:visible}
+  html[data-ui="cosmo"] .dseq-tools{padding:6px 12px}
+  html[data-ui="cosmo"] .dbtn{padding:6px 12px}
+  html[data-ui="cosmo"] .dribbon{padding:8px 12px}
+  html[data-ui="cosmo"] .dts{padding:6px 12px 4px}
+  html[data-ui="cosmo"] .dts-lab{font-size:10px}
+
+  /* Gantt: un-flex the pane (ganttH state still drives its own height), shrink
+     the rig-label rail so the timeline gets more room on a narrow screen. */
+  html[data-ui="cosmo"] .dgantt-pane{min-height:200px}
+  html[data-ui="cosmo"] .dgantt-rail{width:72px}
+  html[data-ui="cosmo"] .dgantt-svgwrap{margin-left:72px}
+  html[data-ui="cosmo"] .dgantt-rn{font-size:11px}
+  html[data-ui="cosmo"] .dgantt-rs{font-size:8px}
+
+  html[data-ui="cosmo"] .ddash-pane{flex:none;overflow:visible;min-height:0}
+
+  /* the 2-col stage|rail layout becomes 2 stacked rows: gantt+dashboard+map on
+     top, the operations rail below it (still its own card, not full height). */
+  html[data-ui="cosmo"] .dseq-ws{grid-template-columns:1fr;grid-template-rows:auto auto}
+  html[data-ui="cosmo"] .dinsp{border-left:0;border-top:1px solid var(--line);max-height:none}
+
+  /* field map: a slide-out drawer sized to 46% of a 375px screen is unusable —
+     make it a full-screen overlay instead, above the mobile bottom nav. */
+  html[data-ui="cosmo"] .dmap.open{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;min-width:0;border-radius:0;z-index:500}
+  html[data-ui="cosmo"] .dmap-layers label{padding:4px 9px}
+  html[data-ui="cosmo"] .dmap-layers input{width:14px;height:14px}
+
+  html[data-ui="cosmo"] .dseq-over,html[data-ui="cosmo"] .dutil,html[data-ui="cosmo"] .drev{padding:14px}
+}
 
 @media print{
   html[data-ui="cosmo"] .dseq-tools,html[data-ui="cosmo"] .ddrag,html[data-ui="cosmo"] .dmap{display:none!important}

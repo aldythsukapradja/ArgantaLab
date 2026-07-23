@@ -49,7 +49,7 @@ export function DrillingSequenceView() {
   const [pmVisible, setPmVisible] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [inspOpen, setInspOpen] = useState(true);
-  const [ganttH, setGanttH] = useState(320);
+  const [ganttH, setGanttH] = useState(() => (window.innerWidth <= 820 ? 240 : 320));
 
   useEffect(() => { buildSchedule().then(setSchedule); }, []);
 
@@ -62,19 +62,29 @@ export function DrillingSequenceView() {
   const toggleFilter = (f: string) => setActiveFilter((cur) => (cur === f ? null : f));
   const pickWell = (well: string) => toggleFilter(`well:${well}`);
 
-  // Splitter drag
+  // Splitter drag — mouse + touch, so the Gantt/dashboard split is resizable on mobile too.
   const splitRef = useRef<HTMLDivElement>(null);
-  const onDragStart = (e: React.MouseEvent) => {
+  const onDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    const startY = e.clientY, startH = ganttH;
+    const startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const startH = ganttH;
     const wrap = splitRef.current!;
-    const move = (ev: MouseEvent) => {
+    const move = (ev: MouseEvent | TouchEvent) => {
+      if ('touches' in ev) ev.preventDefault();
+      const y = 'touches' in ev ? ev.touches[0].clientY : ev.clientY;
       const max = wrap.clientHeight - 90;
-      setGanttH(Math.max(180, Math.min(max, startH + ev.clientY - startY)));
+      setGanttH(Math.max(180, Math.min(max, startH + y - startY)));
     };
-    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-    window.addEventListener('mousemove', move);
+    const up = () => {
+      window.removeEventListener('mousemove', move as EventListener);
+      window.removeEventListener('mouseup', up);
+      window.removeEventListener('touchmove', move as EventListener);
+      window.removeEventListener('touchend', up);
+    };
+    window.addEventListener('mousemove', move as EventListener);
     window.addEventListener('mouseup', up);
+    window.addEventListener('touchmove', move as EventListener, { passive: false });
+    window.addEventListener('touchend', up);
   };
 
   // Keyboard: ←/→ pan 3mo, t today, 1/2 presets, Esc clear, p PM.
@@ -134,7 +144,7 @@ export function DrillingSequenceView() {
             <KpiRibbon schedule={schedule} win={win} />
 
             <div className={`dseq-ws${inspOpen ? '' : ' no-insp'}`}>
-              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+              <div className="dseq-stage">
                 <TimeSlider win={win} onChange={setWin} activities={acts} />
 
                 <div className="dseq-split" ref={splitRef}>
@@ -145,7 +155,7 @@ export function DrillingSequenceView() {
                     <DrillingGantt schedule={schedule} win={win} height={ganttH}
                       activeFilter={activeFilter} pmVisible={pmVisible} onPickWell={pickWell} />
                   </div>
-                  <div className="ddrag" onMouseDown={onDragStart}><i /><i /><i /><i /><i /></div>
+                  <div className="ddrag" onMouseDown={onDragStart} onTouchStart={onDragStart}><i /><i /><i /><i /><i /></div>
                   <div className="ddash-pane">
                     <DrillingDashboard schedule={schedule} activeFilter={activeFilter} onFilter={toggleFilter} />
                   </div>

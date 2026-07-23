@@ -148,8 +148,12 @@ export function DrillingFieldMap({ schedule, open, onClose, activeFilter, onPick
     return () => { ro.disconnect(); clearTimeout(t); };
   }, [open, draw]);
 
-  // interaction
+  // interaction — Pointer Events unify mouse/touch/pen (one code path for pan +
+  // tap-to-select); a 2nd simultaneous pointer switches to pinch-to-zoom.
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; scale: number } | null>(null);
+
   const findWell = (mx: number, my: number): WellGeo | null => {
     const wrap = wrapRef.current!; const mw = wrap.clientWidth, mh = wrap.clientHeight;
     let best: WellGeo | null = null, bestD = 12;
@@ -161,8 +165,27 @@ export function DrillingFieldMap({ schedule, open, onClose, activeFilter, onPick
     return best;
   };
 
-  const onDown = (e: React.MouseEvent) => { drag.current = { x: e.clientX, y: e.clientY, moved: false }; };
-  const onMove = (e: React.MouseEvent) => {
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2) {
+      drag.current = null;
+      const [a, b] = [...pointers.current.values()];
+      pinch.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), scale: vp.sc };
+    } else if (pointers.current.size === 1) {
+      drag.current = { x: e.clientX, y: e.clientY, moved: false };
+    }
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size >= 2 && pinch.current) {
+      const [a, b] = [...pointers.current.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const ratio = dist / (pinch.current.dist || 1);
+      const baseScale = pinch.current.scale;
+      setVp((v) => ({ ...v, sc: Math.max(0.4, Math.min(12, baseScale * ratio)) }));
+      return;
+    }
     const wrap = wrapRef.current!; const r = wrap.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
     if (drag.current) {
@@ -183,13 +206,23 @@ export function DrillingFieldMap({ schedule, open, onClose, activeFilter, onPick
       tip.innerHTML = `<b>${w.name}</b><br>${w.wellType === 'WI' ? 'Injector' : w.role === 'none' ? 'Exploration' : 'Producer'} · ${w.reservoir ?? '—'}<br>TD ${w.tdMd.toFixed(0)} m MD${w.firstProd ? ` · first oil ${w.firstProd}` : ''}`;
     } else { tip.style.display = 'none'; }
   };
-  const onUp = (e: React.MouseEvent) => {
-    if (drag.current && !drag.current.moved) {
-      const wrap = wrapRef.current!; const r = wrap.getBoundingClientRect();
-      const w = findWell(e.clientX - r.left, e.clientY - r.top);
-      if (w) onPickWell(w.name);
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size === 0) {
+      if (drag.current && !drag.current.moved) {
+        const wrap = wrapRef.current!; const r = wrap.getBoundingClientRect();
+        const w = findWell(e.clientX - r.left, e.clientY - r.top);
+        if (w) onPickWell(w.name);
+      }
+      drag.current = null;
     }
+  };
+  const onPointerLeaveMap = () => {
     drag.current = null;
+    pointers.current.clear();
+    pinch.current = null;
+    if (tipRef.current) tipRef.current.style.display = 'none';
   };
   const onWheel = (e: React.WheelEvent) => {
     const f = e.deltaY < 0 ? 1.18 : 0.85;
@@ -216,7 +249,8 @@ export function DrillingFieldMap({ schedule, open, onClose, activeFilter, onPick
         ))}
       </div>
       <div ref={wrapRef} className={`dmap-cv${drag.current ? ' grab' : ''}`}
-        onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={() => { drag.current = null; if (tipRef.current) tipRef.current.style.display = 'none'; }}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp} onPointerLeave={onPointerLeaveMap}
         onWheel={onWheel} onDoubleClick={fit}>
         <canvas ref={cvRef} />
         <div ref={tipRef} className="dmap-tip" />
