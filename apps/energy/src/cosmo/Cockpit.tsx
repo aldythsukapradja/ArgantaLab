@@ -79,7 +79,12 @@ const RESULT_ICON: Record<SearchEntry['type'], React.ReactElement> = {
   country: <Map size={15} />,
 };
 
-export function Cockpit({ dark, onNavigate }: { dark: boolean; onNavigate: (id: string) => void }) {
+export function Cockpit({ dark, onNavigate, zoomVolveSignal }: {
+  dark: boolean;
+  onNavigate: (id: string) => void;
+  /** bumped by the chat's guided-tour step to fly to Volve and drop into 2D — external trigger only */
+  zoomVolveSignal?: number;
+}) {
   const [mode, setMode] = useState<Mode>('3d');
   const [theme, setTheme] = useState<ThemeId>('satellite');
   const [place, setPlace] = useState<Place>(PLACES[0]);
@@ -125,6 +130,14 @@ export function Cockpit({ dark, onNavigate }: { dark: boolean; onNavigate: (id: 
     setQuery('');
     setSearchOpen(false);
   };
+
+  // guided-tour hook: an external nonce bump flies to Volve and drops into 2D
+  useEffect(() => {
+    if (!zoomVolveSignal) return;
+    selectPlace(VOLVE);
+    setMode('2d');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoomVolveSignal]);
 
   const recognizeField = () => {
     const name = query.trim() || 'Your field';

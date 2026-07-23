@@ -118,6 +118,7 @@ export function CosmoShell() {
 
   const [nav, setNav] = useState('cockpit');
   const [tab, setTab] = useState('map');
+  const [tourVolveNonce, setTourVolveNonce] = useState(0);
   const [sel, setSel] = useState<Sel>(null);
   const [explTab, setExplTab] = useState<string>('Overview');
   const [explSel, setExplSel] = useState<ExplSel>(null);
@@ -236,7 +237,7 @@ export function CosmoShell() {
           </div>
         )}>
           {nav === 'cockpit' ? (
-            <Cockpit dark={dark} onNavigate={(id) => { setNav(id); setTab('map'); closeMobile(); }} />
+            <Cockpit dark={dark} onNavigate={(id) => { setNav(id); setTab('map'); closeMobile(); }} zoomVolveSignal={tourVolveNonce} />
           ) : isFD ? (
           <>
             <div className="tabs">
@@ -361,7 +362,14 @@ export function CosmoShell() {
         </button>
       </nav>
 
-      <CosmoChat open={chat} onClose={() => setChat(false)} fullSignal={chatFullSignal} />
+      <CosmoChat
+        open={chat}
+        onClose={() => setChat(false)}
+        fullSignal={chatFullSignal}
+        onFocusCockpit={() => setNav('cockpit')}
+        onZoomVolve={() => setTourVolveNonce((n) => n + 1)}
+        onFieldDevTab={(t) => { setNav('field-development'); setTab(t); }}
+      />
       <CosmoSettings open={settings} onClose={() => setSettings(false)} dark={dark} setDark={setDark} />
     </div>
   );

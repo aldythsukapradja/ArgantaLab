@@ -150,7 +150,7 @@ function MdCanvas({ md }: { md: string }) {
   );
 }
 
-type Msg = { role: 'user' | 'assistant'; text: string; done: boolean; wellPick?: LiveIntent };
+type Msg = { role: 'user' | 'assistant'; text: string; done: boolean; wellPick?: LiveIntent; tourWellPick?: boolean };
 const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Arganta** — the ArgantaEnergy orchestrator. The active field is **Volve**. Ask me to **map**, **model**, **simulate** or **forecast** a well, or open the artifact pane to see live content.', done: true };
 const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart. Or ask me to **map**, **build a 3D model**, **simulate** or **forecast** a well — I'll pull up the real Field Development viewer.`;
 
@@ -174,8 +174,37 @@ function ArtLoading({ label }: { label: string }) {
   return <div className="cc-art-loading"><Loader2 size={16} className="spin" /> {label}…</div>;
 }
 
+// ── guided tour: "Field Development · Volve" — a scripted walk across the real app (globe →
+// Volve 2D → every Field Development tab in order), not just artifact-pane content. Pauses once,
+// at Logs, for a real well pick; everything else auto-advances on a short timer.
+const TOUR_LABEL = 'Field Development · Volve';
+const FD_TOUR: Array<{ tab: string; label: string; askWell?: boolean }> = [
+  { tab: 'map', label: 'Map' },
+  { tab: 'logs', label: 'Logs', askWell: true },
+  { tab: 'petrophysics', label: 'Petrophysics' },
+  { tab: 'correlation', label: 'Correlation' },
+  { tab: 'structural', label: 'Structural' },
+  { tab: 'property', label: 'Property' },
+  { tab: 'gridmodel', label: 'Static Model' },
+  { tab: 'simulation', label: 'Simulation' },
+  { tab: 'volumetrics', label: 'Volumetrics' },
+  { tab: 'uncertainty', label: 'Uncertainty' },
+  { tab: 'forecast', label: 'Forecast' },
+  { tab: 'economics', label: 'Economics' },
+  { tab: 'review', label: 'Field Review' },
+];
+const TOUR_STEP_MS = 1500;
+
 // ── the Arganta canvas ───────────────────────────────────────────────────────
-export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClose: () => void; fullSignal?: number }) {
+export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVolve, onFieldDevTab }: {
+  open: boolean;
+  onClose: () => void;
+  fullSignal?: number;
+  /** guided-tour hooks — CosmoShell owns nav/tab, so the tour drives it through these */
+  onFocusCockpit?: () => void;
+  onZoomVolve?: () => void;
+  onFieldDevTab?: (tab: string) => void;
+}) {
   const [full, setFull] = useState(false);
   // mobile Cosmonaut orb tap opens the canvas straight to full-screen (source openCosmoFull)
   useEffect(() => { if (fullSignal) setFull(true); }, [fullSignal]);
@@ -192,9 +221,12 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
   const [pendingIntent, setPendingIntent] = useState<LiveIntent | null>(null);
   const [activeWell, setActiveWell] = useState<string | null>(null);
   const [wells, setWells] = useState<string[]>([]);
+  const [touring, setTouring] = useState(false);
+  const tourStepRef = useRef(0);
+  const tourTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const streamRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cm = CC_MODEL_BY_ID(model) || ({} as ReturnType<typeof CC_MODEL_BY_ID> & object) as NonNullable<ReturnType<typeof CC_MODEL_BY_ID>>;
-  const chips = ['Production summary', 'Map a well', 'Simulate a well', 'Forecast a well'];
+  const chips = [TOUR_LABEL, 'Map a well', 'Simulate a well', 'Forecast a well'];
 
   // real Volve well roster (wb/index.json) — used only to populate the "which well?" picker
   useEffect(() => { loadIndex().then((idx) => setWells(idx.wells.map((w) => w.name))).catch(() => setWells([])); }, []);
@@ -216,9 +248,9 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
     forecast: { file: INTENT_COPY.forecast.file, title: `${INTENT_COPY.forecast.title}${activeWell ? ` — ${activeWell}` : ''}` },
   };
 
-  const streamAssistant = (fullText: string, wellPick?: LiveIntent) => {
+  const streamAssistant = (fullText: string, wellPick?: LiveIntent, tourWellPick?: boolean) => {
     if (streamRef.current) clearInterval(streamRef.current);
-    setMsgs((m) => [...m, { role: 'assistant', text: '', done: false, wellPick }]);
+    setMsgs((m) => [...m, { role: 'assistant', text: '', done: false, wellPick, tourWellPick }]);
     let i = 0;
     streamRef.current = setInterval(() => {
       i += Math.max(2, Math.round(fullText.length / 90));
@@ -252,8 +284,60 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
     setShowRight(true);
     setTimeout(() => streamAssistant(`${INTENT_COPY[intent].loading} for **${well}**. Opening the artifact pane →`), 200);
   };
-  const onNew = () => { if (streamRef.current) clearInterval(streamRef.current); setMsgs([WELCOME]); setPendingIntent(null); setActiveWell(null); };
-  useEffect(() => () => { if (streamRef.current) clearInterval(streamRef.current); }, []);
+
+  // ── guided tour: drives the REAL app (Cockpit → Field Development tabs), not the artifact
+  // pane — each step just calls the already-built onFocusCockpit/onZoomVolve/onFieldDevTab hooks
+  // and opens the matching canvas, pausing once at Logs for a real well pick.
+  const tourTimeout = (fn: () => void, ms: number) => { tourTimers.current.push(setTimeout(fn, ms)); };
+  const runTourStep = () => {
+    const i = tourStepRef.current;
+    if (i >= FD_TOUR.length) {
+      setTouring(false);
+      tourTimeout(() => streamAssistant("That's the full Field Development walkthrough on **Volve** — map through Field Review."), 200);
+      return;
+    }
+    const step = FD_TOUR[i];
+    onFieldDevTab?.(step.tab);
+    if (step.askWell) {
+      tourTimeout(() => streamAssistant(`Opening **${step.label}** — which well should I pull it for?`, undefined, true), 250);
+      return; // paused here — selectTourWell() resumes the sequence
+    }
+    tourTimeout(() => {
+      streamAssistant(`Opening **${step.label}**…`);
+      tourStepRef.current = i + 1;
+      tourTimeout(() => runTourStep(), TOUR_STEP_MS);
+    }, 250);
+  };
+  const startTour = () => {
+    if (touring) return;
+    setMsgs((m) => [...m, { role: 'user', text: TOUR_LABEL, done: true }]);
+    setTouring(true);
+    tourStepRef.current = 0;
+    onFocusCockpit?.();
+    tourTimeout(() => {
+      streamAssistant('Opening the 3D globe, then zooming into **Volve** in 2D…');
+      onZoomVolve?.();
+      tourTimeout(() => runTourStep(), TOUR_STEP_MS);
+    }, 240);
+  };
+  const selectTourWell = (well: string) => {
+    setActiveWell(well);
+    setMsgs((m) => [...m, { role: 'user', text: well, done: true }]);
+    tourStepRef.current += 1;
+    tourTimeout(() => {
+      streamAssistant(`Got it — **${well}**. Continuing the walkthrough…`);
+      tourTimeout(() => runTourStep(), TOUR_STEP_MS);
+    }, 200);
+  };
+  const onNew = () => {
+    if (streamRef.current) clearInterval(streamRef.current);
+    tourTimers.current.forEach(clearTimeout); tourTimers.current = [];
+    setMsgs([WELCOME]); setPendingIntent(null); setActiveWell(null); setTouring(false);
+  };
+  useEffect(() => () => {
+    if (streamRef.current) clearInterval(streamRef.current);
+    tourTimers.current.forEach(clearTimeout);
+  }, []);
 
   const leftBody = leftTab === 'history' ? (
     <div>{CC_SESSIONS.map((s, i) => <div className={'cc-sess ' + (i === 0 ? 'on' : '')} key={s.id}><div className="st">{s.title}</div><div className="sm">{s.meta}</div></div>)}</div>
@@ -302,7 +386,14 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
                       ))}
                     </div>
                   )}
-                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && !m.wellPick && msgs.length > 1 && (
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && m.tourWellPick && touring && (
+                    <div className="cc-well-pick">
+                      {(wells.length ? wells : ['F-1', 'F-4', 'F-5', 'F-9', 'F-11', 'F-12', 'F-14', 'F-15']).slice(0, 10).map((w) => (
+                        <button key={w} onClick={() => selectTourWell(w)}>{w}</button>
+                      ))}
+                    </div>
+                  )}
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && !m.wellPick && !m.tourWellPick && !touring && msgs.length > 1 && (
                     <div className="art-chip" onClick={() => { if (!showRight) setShowRight(true); }}><PanelRight size={12} /> Open artifact pane</div>
                   )}
                 </div>
@@ -352,7 +443,7 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
               <span className="u"><BatteryMedium size={11} /> Weekly <div className="cc-bar warn"><i style={{ width: '62%' }} /></div> 62% · resets Mon</span>
               <span className="u" style={{ marginLeft: 'auto' }}><Shield size={11} /> {cm.tier} · governed</span>
             </div>
-            <div className="cc-chips">{chips.map((c) => <div className="cc-chip" key={c} onClick={() => send(c)}>{c}</div>)}</div>
+            <div className="cc-chips">{chips.map((c) => <div className="cc-chip" key={c} onClick={() => (c === TOUR_LABEL ? startTour() : send(c))}>{c}</div>)}</div>
           </div>
         </div>
 
