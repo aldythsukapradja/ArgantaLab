@@ -19,6 +19,15 @@ export function dk(hex: string, amt = 34): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
+/** Lighten a #rrggbb hex by `amt` (0–255) — for gradient top-stops / highlights. */
+export function lt(hex: string, amt = 30): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, (n >> 16) + amt);
+  const g = Math.min(255, ((n >> 8) & 255) + amt);
+  const b = Math.min(255, (n & 255) + amt);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
 /** Relative luminance → readable text color on a fill. */
 export function tc(hex: string): string {
   const n = parseInt(hex.slice(1), 16);

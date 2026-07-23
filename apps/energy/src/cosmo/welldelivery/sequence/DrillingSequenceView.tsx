@@ -16,6 +16,7 @@ import { DrillingGantt } from './DrillingGantt';
 import { DrillingDashboard } from './DrillingDashboard';
 import { DrillingFieldMap } from './DrillingFieldMap';
 import { OverviewView, RigsView, MilestonesView, RevisionsView } from './SequenceTabs';
+import { KpiRibbon, LiveRail } from './SequenceCockpit';
 import './drilling-sequence.css';
 
 type Tab = 'overview' | 'sequence' | 'rigs' | 'milestones' | 'revisions';
@@ -130,6 +131,8 @@ export function DrillingSequenceView() {
               </button>
             </div>
 
+            <KpiRibbon schedule={schedule} win={win} />
+
             <div className={`dseq-ws${inspOpen ? '' : ' no-insp'}`}>
               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
                 <TimeSlider win={win} onChange={setWin} activities={acts} />
@@ -161,51 +164,7 @@ export function DrillingSequenceView() {
                   activeFilter={activeFilter} onPickWell={pickWell} windowWells={windowWells} />
               </div>
 
-              {inspOpen && <Inspector schedule={schedule} activeFilter={activeFilter} />}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Inspector({ schedule, activeFilter }: { schedule: DrillingSchedule; activeFilter: string | null }) {
-  const sel = activeFilter?.startsWith('well:') ? activeFilter.slice(5) : null;
-  const selActs = sel ? allActivities(schedule).filter((a) => a.well === sel) : [];
-  const well = sel ? schedule.wells.find((w) => w.name === sel) : null;
-
-  return (
-    <div className="dinsp">
-      <div className="dinsp-hd"><CalendarClock size={13} color="#e11d74" /> Implementation map</div>
-      <div className="dinsp-b">
-        {well ? (
-          <>
-            <div className="dinsp-h">Selected well</div>
-            <div style={{ fontSize: 15, fontWeight: 800 }}>{well.name}</div>
-            <div className="dkv"><b>Reservoir</b><span style={{ color: well.reservoir ? RESERVOIR_COLOR[well.reservoir] : undefined }}>{well.reservoir ?? '—'}</span></div>
-            <div className="dkv"><b>Role</b><span>{well.role}</span></div>
-            <div className="dkv"><b>TD</b><span>{well.tdMd.toFixed(0)} m MD / {well.tdTvd.toFixed(0)} m TVD</span></div>
-            <div className="dkv"><b>Surface</b><span>{well.x.toFixed(0)}, {well.y.toFixed(0)}</span></div>
-            {well.firstProd && <div className="dkv"><b>First oil</b><span>{well.firstProd}</span></div>}
-            <div className="dinsp-h">Scheduled activities</div>
-            {selActs.map((a) => (
-              <div key={a.id} className="dkv"><b>{a.kind}</b><span>{a.start} · {a.days}d <span className={`dnat ${a.dataNature}`}>{a.dataNature}</span></span></div>
-            ))}
-          </>
-        ) : (
-          <>
-            <div className="dinsp-h">Grounding & governance</div>
-            <div className="dkv"><b>Well universe</b><span>{schedule.wells.length} real Volve wells</span></div>
-            <div className="dkv"><b>Geometry</b><span className="dnat measured">measured</span></div>
-            <div className="dkv"><b>First-oil dates</b><span className="dnat reported">reported</span></div>
-            <div className="dkv"><b>Timing</b><span className="dnat scenario">scenario</span></div>
-            <div className="dkv"><b>From proposals</b><span>{schedule.meta.proposals} approved</span></div>
-            <div className="dnote">
-              Click any bar or map well to inspect it and cross-filter the schedule. Drilling
-              <b> timing is scenario</b> — the Volve dataset carries no spud/TD dates, so bar placement
-              is a plannable proposal, not a measured record. Every unit is tagged with its true data
-              nature; approved Well Delivery proposals inject real P50 durations.
+              {inspOpen && <LiveRail schedule={schedule} activeFilter={activeFilter} />}
             </div>
           </>
         )}

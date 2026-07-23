@@ -1,7 +1,8 @@
-// DrillingGantt — the SVG rig-swimlane Gantt. React-idiomatic rebuild of the
-// reference tool's render(): lanes → axis → campaign bands → milestones → well
-// bars (fill/stroke/hatch/basis-dot/label) → PM markers → TODAY line. Data→bars
-// mapping (no manual DOM). Bar click lifts a well: crossfilter.
+// DrillingGantt — the SVG rig-swimlane Gantt. Premium rebuild of the reference
+// tool's render(): gradient bars with depth + inner highlight + soft shadow,
+// dependency threads between consecutive rig activities, a glowing animated TODAY
+// sweep, per-bar entrance motion. Data→bars mapping (no manual DOM). Bar click
+// lifts a well: crossfilter. Preserves filter-dimming, PM markers, tooltips.
 import { useLayoutEffect, useRef, useState, useMemo, Fragment } from 'react';
 import type { DrillingSchedule, ScheduleActivity } from './schedule-model';
 import { RESERVOIR_COLOR, KIND_LABEL, WELLTYPE_LABEL } from './schedule-model';
@@ -9,7 +10,7 @@ import {
   type Window, xOfDate, fmtDate, fmtMonthYear, today, addMonths, pd, db, ppd,
 } from './time-axis';
 import {
-  laneLayout, positionBars, axisTicks, basisColor, HEADER_H,
+  laneLayout, positionBars, axisTicks, basisColor, dk, lt, HEADER_H,
 } from './gantt-geometry';
 import { matchesFilter } from './filters';
 
@@ -23,6 +24,11 @@ interface Props {
 }
 
 interface Tip { x: number; y: number; a: ScheduleActivity }
+
+// Base colors that get a vertical gradient (depth). Injectors use a hatch; WO is
+// semi-transparent so stays flat.
+const GRAD_BASES = [...new Set([...Object.values(RESERVOIR_COLOR), '#f59e0b', '#cbd5e1'])];
+const gradId = (hex: string) => `grad-${hex.replace('#', '')}`;
 
 export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, onPickWell }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -46,14 +52,11 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
   const showToday = todayX >= 0 && todayX <= availW;
   const pxPerDay = ppd(win, availW);
 
-  // Hatch patterns for injectors, one per reservoir.
   const reservoirs = Object.keys(RESERVOIR_COLOR) as (keyof typeof RESERVOIR_COLOR)[];
-
-  const laneTint = ['rgba(15,181,166,.05)', 'rgba(37,99,235,.05)'];
+  const laneTint = ['rgba(15,181,166,.06)', 'rgba(37,99,235,.06)'];
 
   return (
     <div className="dgantt-scroll">
-      {/* rig label rail */}
       <div className="dgantt-rail" style={{ height: svgH }}>
         {rigs.map((r, i) => (
           <div key={r.id} className="dgantt-rb"
@@ -68,6 +71,7 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
         <svg className={`dgantt-svg${activeFilter ? ' dimmed' : ''}${pmVisible ? ' pm-on' : ''}`}
           width={availW} height={svgH} viewBox={`0 0 ${availW} ${svgH}`}>
           <defs>
+            {/* injector hatch, per reservoir */}
             {reservoirs.map((res) => (
               <pattern key={res} id={`hatch-${res}`} width={6} height={6}
                 patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -75,6 +79,22 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
                 <line x1={0} y1={0} x2={0} y2={6} stroke="rgba(255,255,255,.55)" strokeWidth={2} />
               </pattern>
             ))}
+            {/* vertical gradient per base color (depth) */}
+            {GRAD_BASES.map((base) => (
+              <linearGradient key={base} id={gradId(base)} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor={lt(base, 26)} />
+                <stop offset="1" stopColor={dk(base, 12)} />
+              </linearGradient>
+            ))}
+            {/* soft bar shadow */}
+            <filter id="barShadow" x="-20%" y="-30%" width="140%" height="180%">
+              <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000" floodOpacity="0.35" />
+            </filter>
+            {/* TODAY glow */}
+            <filter id="todayGlow" x="-300%" y="-30%" width="700%" height="160%">
+              <feGaussianBlur stdDeviation="2.4" result="b" />
+              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
           </defs>
 
           {rigs.map((rig, ri) => {
@@ -82,15 +102,13 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
             const bars = positionBars(rig.acts, win, availW);
             const camps = schedule.campaigns.filter((c) => c.rigId === rig.id);
             const miles = schedule.milestones.filter((m) => m.rigId === rig.id);
-            // PM markers: Dev/WO with TD ≥ 2026, stacked per 8px bucket to avoid overlap.
             const pmBucket = new Map<number, number>();
+            const midY = y0 + lay.barT + lay.barH / 2;
             return (
               <g key={rig.id}>
-                {/* lane background */}
                 <rect x={0} y={y0} width={availW} height={lay.rowH} fill={laneTint[ri % 2]} />
                 <line x1={0} y1={y0 + lay.rowH} x2={availW} y2={y0 + lay.rowH} stroke="var(--line)" />
 
-                {/* year gridlines + labels */}
                 {years.map((t, i) => (
                   <Fragment key={`y${i}`}>
                     <line x1={t.x} y1={y0} x2={t.x} y2={y0 + lay.rowH} stroke="var(--line)" strokeWidth={1} />
@@ -99,7 +117,6 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
                     )}
                   </Fragment>
                 ))}
-                {/* month ticks */}
                 {ri === 0 && months.map((t, i) => (
                   <Fragment key={`m${i}`}>
                     <line x1={t.x} y1={y0 + HEADER_H} x2={t.x} y2={y0 + lay.rowH} stroke="var(--line2)" strokeWidth={0.5} />
@@ -115,24 +132,39 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
                   if (cw < 2) return null;
                   return (
                     <g key={`c${i}`}>
-                      <rect x={cx} y={y0 + lay.campT} width={cw} height={12} rx={3}
-                        fill={c.color} opacity={0.13} stroke={c.color} strokeOpacity={0.5} />
+                      <rect x={cx} y={y0 + lay.campT} width={cw} height={12} rx={4}
+                        fill={c.color} opacity={0.12} stroke={c.color} strokeOpacity={0.45} />
                       {cw > 60 && (
                         <text x={cx + cw / 2} y={y0 + lay.campT + 9} fontSize={8} fontWeight={700}
-                          textAnchor="middle" fill={c.color}>{c.label}</text>
+                          letterSpacing={0.4} textAnchor="middle" fill={c.color} opacity={0.9}>{c.label.toUpperCase()}</text>
                       )}
                     </g>
                   );
                 })}
 
-                {/* milestone markers (RFSU triangles) */}
+                {/* dependency threads: rig can't drill two at once → thread consecutive bars */}
+                {bars.map(({ a, x }, i) => {
+                  if (i === 0) return null;
+                  const prev = bars[i - 1];
+                  if (prev.a.kind === 'Rig' || a.kind === 'Rig') return null;
+                  const x1 = prev.x + prev.w, x2 = x;
+                  if (x2 - x1 < 2 || x2 - x1 > 120) return null;
+                  const mx = (x1 + x2) / 2;
+                  return (
+                    <path key={`dep${a.id}`} d={`M${x1},${midY} C${mx},${midY} ${mx},${midY} ${x2},${midY}`}
+                      stroke="var(--teal)" strokeWidth={1.2} strokeOpacity={0.4} fill="none" strokeDasharray="1,2" />
+                  );
+                })}
+
+                {/* milestones */}
                 {miles.map((m, i) => {
                   const mx = xOfDate(win, availW, pd(m.date));
                   if (mx < 0 || mx > availW) return null;
                   return (
                     <g key={`ms${i}`}>
-                      <polygon points={`${mx},${y0 + HEADER_H + 4} ${mx - 4},${y0 + HEADER_H - 3} ${mx + 4},${y0 + HEADER_H - 3}`} fill={m.color} />
-                      <text x={mx + 6} y={y0 + HEADER_H + 2} fontSize={8} fontWeight={700} fill={m.color}>▾ {m.label}</text>
+                      <polygon points={`${mx},${y0 + HEADER_H + 5} ${mx - 5},${y0 + HEADER_H - 3} ${mx + 5},${y0 + HEADER_H - 3}`}
+                        fill={m.color} filter="url(#todayGlow)" />
+                      <text x={mx + 7} y={y0 + HEADER_H + 3} fontSize={8} fontWeight={700} fill={m.color}>{m.label}</text>
                     </g>
                   );
                 })}
@@ -143,25 +175,36 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
                   const by = y0 + lay.barT;
                   const showLabel = w >= 26;
                   const showPill = w >= 44 && a.kind !== 'Rig';
-                  const fill = style.hatch ? `url(#hatch-${style.hatch})` : style.fill;
+                  const fill = style.hatch
+                    ? `url(#hatch-${style.hatch})`
+                    : style.dash
+                      ? style.fill
+                      : GRAD_BASES.includes(style.fill) ? `url(#${gradId(style.fill)})` : style.fill;
                   return (
-                    <g key={a.id} data-act={a.kind} className={match ? 'match' : ''}
+                    <g key={a.id} data-act={a.kind} className={`gbar${match ? ' match' : ''}`}
                       onClick={() => onPickWell(a.well)}
                       onMouseEnter={(e) => setTip({ x: e.clientX, y: e.clientY, a })}
                       onMouseMove={(e) => setTip((t) => (t ? { ...t, x: e.clientX, y: e.clientY } : t))}
                       onMouseLeave={() => setTip(null)}>
-                      <rect x={x} y={by} width={w} height={lay.barH} rx={2}
+                      {/* body with soft shadow */}
+                      <rect x={x} y={by} width={w} height={lay.barH} rx={3.5}
                         fill={fill} stroke={style.stroke} strokeWidth={1}
-                        strokeDasharray={style.dash} />
+                        strokeDasharray={style.dash} filter="url(#barShadow)" />
+                      {/* top inner highlight */}
+                      {!style.dash && w > 4 && (
+                        <line x1={x + 2} y1={by + 1.5} x2={x + w - 2} y2={by + 1.5}
+                          stroke="#fff" strokeOpacity={0.35} strokeWidth={1} />
+                      )}
+                      {/* left accent stripe */}
+                      {w > 6 && a.kind !== 'Rig' && (
+                        <rect x={x} y={by} width={2.5} height={lay.barH} rx={1}
+                          fill={style.hatch ? RESERVOIR_COLOR[style.hatch] : lt(style.fill.slice(0, 7), 50)} opacity={0.9} />
+                      )}
                       {/* basis maturation dot */}
-                      {w > 8 && a.kind !== 'Rig' && (
-                        <circle cx={x + 5} cy={by + 5} r={2.5} fill={basisColor(a)} stroke="#fff" strokeWidth={0.5} />
+                      {w > 10 && a.kind !== 'Rig' && (
+                        <circle cx={x + 7} cy={by + 6} r={2.6} fill={basisColor(a)} stroke="#fff" strokeWidth={0.6} />
                       )}
-                      {/* non-FID red dot */}
-                      {a.nonFid && (
-                        <circle cx={x + 5} cy={by + lay.barH - 5} r={2.5} fill="#ef4444" />
-                      )}
-                      {/* vertical well label inside bar */}
+                      {a.nonFid && <circle cx={x + 7} cy={by + lay.barH - 5} r={2.6} fill="#ef4444" />}
                       {showLabel && (
                         <text x={x + w / 2} y={by + lay.barH / 2}
                           fontSize={9} fontWeight={600} fill={style.textColor}
@@ -170,11 +213,9 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
                           {a.well}
                         </text>
                       )}
-                      {/* below-bar pill */}
                       {showPill && !showLabel && (
-                        <text x={x + 3} y={by + lay.barH - 3} fontSize={8} fill={style.textColor}>{a.well}</text>
+                        <text x={x + 5} y={by + lay.barH - 3} fontSize={8} fill={style.textColor}>{a.well}</text>
                       )}
-                      {/* PM marker */}
                       {(a.kind === 'Dev' || a.kind === 'WO') && a.reservoir && pd(a.end).getFullYear() >= 2026 && (() => {
                         const bucket = Math.round(x / 8);
                         const off = (pmBucket.get(bucket) ?? 0);
@@ -194,18 +235,25 @@ export function DrillingGantt({ schedule, win, height, activeFilter, pmVisible, 
             );
           })}
 
-          {/* TODAY line (single canonical value) */}
+          {/* TODAY sweep — glowing, animated */}
           {showToday && (
-            <g>
-              <line x1={todayX} y1={0} x2={todayX} y2={svgH} stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6,3" />
-              <rect x={todayX - 20} y={2} width={40} height={13} rx={3} fill="#ef4444" />
-              <text x={todayX} y={11} fontSize={8} fontWeight={700} fill="#fff" textAnchor="middle">TODAY</text>
+            <g className="today-sweep">
+              <rect x={todayX - 22} y={0} width={22} height={svgH} fill="url(#todayFade)" />
+              <line x1={todayX} y1={0} x2={todayX} y2={svgH} stroke="#e11d74" strokeWidth={1.6}
+                strokeDasharray="6,3" filter="url(#todayGlow)" />
+              <rect x={todayX - 21} y={2} width={42} height={13} rx={3.5} fill="#e11d74" />
+              <text x={todayX} y={11.5} fontSize={8} fontWeight={800} fill="#fff" textAnchor="middle" letterSpacing={0.4}>TODAY</text>
             </g>
           )}
+          <defs>
+            <linearGradient id="todayFade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#e11d74" stopOpacity="0" />
+              <stop offset="1" stopColor="#e11d74" stopOpacity="0.14" />
+            </linearGradient>
+          </defs>
         </svg>
       </div>
 
-      {/* tooltip */}
       {tip && <GanttTip tip={tip} />}
     </div>
   );

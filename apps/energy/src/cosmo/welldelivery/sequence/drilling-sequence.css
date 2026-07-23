@@ -56,6 +56,14 @@ html[data-ui="cosmo"] .dgantt-svg.dimmed g[data-act].match{opacity:1}
 html[data-ui="cosmo"] .dgantt-svg g[data-act]{cursor:pointer}
 html[data-ui="cosmo"] .dgantt-svg .pm-marker{display:none}
 html[data-ui="cosmo"] .dgantt-svg.pm-on .pm-marker{display:initial}
+html[data-ui="cosmo"] .dgantt-svg .gbar rect[filter]{transition:filter .12s}
+html[data-ui="cosmo"] .dgantt-svg .gbar:hover{filter:brightness(1.08)}
+@media (prefers-reduced-motion:no-preference){
+  html[data-ui="cosmo"] .dgantt-svg .gbar{animation:gbarRise .42s cubic-bezier(.2,.7,.3,1)}
+  @keyframes gbarRise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  html[data-ui="cosmo"] .dgantt-svg .today-sweep{animation:todayPulse 3.4s ease-in-out infinite}
+  @keyframes todayPulse{0%,100%{opacity:1}50%{opacity:.72}}
+}
 
 html[data-ui="cosmo"] .ddrag{height:7px;flex-shrink:0;cursor:row-resize;display:flex;align-items:center;justify-content:center;background:var(--panel3);border-top:1px solid var(--line);border-bottom:1px solid var(--line);z-index:8}
 html[data-ui="cosmo"] .ddrag:hover{background:var(--line)}
@@ -93,6 +101,42 @@ html[data-ui="cosmo"] .dtbl td.z{color:var(--ink3);opacity:.5;cursor:default}
 /* ── Filter badge ── */
 html[data-ui="cosmo"] .dfbadge{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:var(--dseq);color:#fff;padding:4px 14px;border-radius:14px;font-size:11px;font-weight:600;z-index:20;box-shadow:var(--shadow);cursor:pointer;font-family:var(--mono);letter-spacing:.02em}
 html[data-ui="cosmo"] .dfbadge::after{content:' ✕';font-size:9px;opacity:.75}
+
+/* ── KPI ribbon (Sequence tab) ── */
+html[data-ui="cosmo"] .dribbon{display:grid;grid-template-columns:repeat(4,1fr) 1.3fr;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line2);background:var(--panel);flex-shrink:0}
+html[data-ui="cosmo"] .dribbon .dmetric{padding:9px 12px;border-radius:11px}
+html[data-ui="cosmo"] .dribbon .dmetric .v .u{font-size:12px;color:var(--ink3);font-weight:600}
+html[data-ui="cosmo"] .dribbon .dmetric.gauge{display:flex;align-items:center;gap:11px}
+html[data-ui="cosmo"] .dribbon .gwrap{position:relative;width:60px;height:60px;flex:none}
+html[data-ui="cosmo"] .dribbon .gwrap .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:800;color:var(--ink)}
+html[data-ui="cosmo"] .dribbon .gmeta .rig{font-size:12px;font-weight:700;margin-bottom:2px}
+html[data-ui="cosmo"] .dribbon .gmeta .l{font-size:9.5px;color:var(--ink3);margin-top:2px}
+html[data-ui="cosmo"] .dribbon .gmeta .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ── Live rail: drilling-now / AI / milestones ── */
+html[data-ui="cosmo"] .dnow{margin-bottom:12px}
+html[data-ui="cosmo"] .dnow .live{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#22c55e}
+html[data-ui="cosmo"] .dnow .live .d{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e}
+html[data-ui="cosmo"] .dnow .wn{font-size:19px;font-weight:800;margin:7px 0 2px}
+html[data-ui="cosmo"] .dnow .wm{font-size:10.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .dprog{height:6px;border-radius:4px;background:var(--panel3);margin:9px 0;overflow:hidden}
+html[data-ui="cosmo"] .dprog i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-ink))}
+html[data-ui="cosmo"] .dai{margin:4px 0 12px;padding:10px 11px;background:var(--dseq-soft);border-radius:9px}
+html[data-ui="cosmo"] .dai .hd{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+html[data-ui="cosmo"] .dai .orb{width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--teal) 62%,#0a6d64);box-shadow:0 0 10px rgba(15,181,166,.5);flex:none}
+html[data-ui="cosmo"] .dai .ey2{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .dai .msg{font-size:10.5px;line-height:1.55;color:var(--ink2)}
+html[data-ui="cosmo"] .dai .msg b{color:var(--ink)}
+html[data-ui="cosmo"] .dai .risk{color:#e0872f}
+html[data-ui="cosmo"] .dmile{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .dmile:last-child{border:0}
+html[data-ui="cosmo"] .dmile .tk{width:0;height:0;border:5px solid transparent;border-top-color:#e11d74;margin-top:3px;flex:none}
+html[data-ui="cosmo"] .dmile .mm{font-size:11px;font-weight:600}
+html[data-ui="cosmo"] .dmile .md{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:1px}
+@media (prefers-reduced-motion:no-preference){
+  html[data-ui="cosmo"] .dnow .live .d{animation:dLiveBlink 1.7s ease-in-out infinite}
+  @keyframes dLiveBlink{50%{opacity:.35}}
+}
 
 /* ── Inspector ── */
 html[data-ui="cosmo"] .dseq-ws{flex:1;min-height:0;display:grid;grid-template-columns:1fr 288px;overflow:hidden}
