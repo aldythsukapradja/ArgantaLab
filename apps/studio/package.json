@@ -12,7 +12,8 @@
     "build": "npm run build:studio && next build",
     "start": "next start -p 3200",
     "lint": "next lint",
-    "build:studio": "npm run build -w studio"
+    "build:studio": "npm run build -w studio",
+    "test:upload-target": "node --test src/lib/uploadProxyTarget.test.mjs"
   },
   "dependencies": {
     "@arganta/media-core": "file:../../packages/media-core",

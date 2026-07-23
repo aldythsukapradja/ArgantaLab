@@ -15,7 +15,9 @@ import {
 // Configure via COMFY_URL / COMFY_*_TIMEOUT_MS.
 
 export const runtime = 'nodejs';
-export const maxDuration = 800; // video (Wan 2.2) can be slow on 8GB
+// Vercel Hobby permits up to 300 seconds. Longer sovereign video jobs should
+// run asynchronously on the ComfyUI worker and be polled by the client.
+export const maxDuration = 300;
 
 const ADAPTERS = {
     image: comfySovereignImageAdapter,

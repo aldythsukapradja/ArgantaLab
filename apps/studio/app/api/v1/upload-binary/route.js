@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateUploadProxyTarget } from '../../../../src/lib/uploadProxyTarget';
+import { validateUploadProxyTarget } from '../../../../src/lib/uploadProxyTarget.mjs';
 
 export async function POST(request) {
     try {
