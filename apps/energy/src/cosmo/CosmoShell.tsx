@@ -31,7 +31,7 @@ import { ReportView } from './ReportView';
 import { DataView } from './DataView';
 import { KnowledgeView } from './KnowledgeView';
 import { WellDeliveryWorkspace } from '../tabs/welldelivery/WellDeliveryWorkspace';
-import { DrillingSequenceView } from '../tabs/welldelivery/DrillingSequenceView';
+import { DrillingSequenceView } from './welldelivery/sequence/DrillingSequenceView';
 
 const LIFECYCLES = [
   { id: 'exploration', name: 'Exploration', icon: Compass, color: '#22d3ee', status: 'BETA', sub: 'Basins, plays, prospects and prospect-level volumes' },
