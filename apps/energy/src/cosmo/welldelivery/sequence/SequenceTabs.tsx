@@ -37,7 +37,7 @@ export function OverviewView({ schedule }: { schedule: DrillingSchedule }) {
         ))}
       </div>
       <div className="dnote" style={{ maxWidth: 760 }}>
-        <b>Drilling Sequence Workspace</b> — the rig-by-time decision cockpit for the Volve
+        <b>Drilling Workspace</b> — the rig-by-time decision cockpit for the Volve
         development. Timing and sequencing are <span className="dnat scenario">scenario</span> (planning):
         well geometry, roles and reservoirs are real Volve data, but the repository carries no drilling
         calendar dates, so bar placement is a plannable proposal — approved Well Delivery proposals

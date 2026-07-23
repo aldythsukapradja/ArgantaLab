@@ -52,14 +52,14 @@ export const THEMES: Array<[string, string]> = [['dark', 'Midnight'], ['light', 
 export const TRANSITIONS = ['None', 'Fade', 'Push', 'Wipe', 'Morph', 'Zoom'];
 
 // the 5 lifecycle verticals — used by the ReportManager scorecard breakdown row
-export const VERTICAL_NAMES = ['Exploration', 'Field Development', 'Well Delivery', 'Reservoir Management', 'Drilling Sequence'];
+export const VERTICAL_NAMES = ['Exploration', 'Field Development', 'Well Delivery', 'Reservoir Management', 'Drilling'];
 export const ORG_STAGES = [
   { id: 'corporate', name: 'Corporate', c: '#0a8a7f', icon: 'sparkles' },
   { id: 'exploration', name: 'Exploration', c: '#22d3ee', icon: 'compass' },
   { id: 'field-development', name: 'Field Development', c: '#0FB5A6', icon: 'layers' },
   { id: 'well-delivery', name: 'Well Delivery', c: '#f59e0b', icon: 'drill' },
   { id: 'reservoir-management', name: 'Reservoir Management', c: '#7c3aed', icon: 'gauge' },
-  { id: 'drilling-sequence', name: 'Drilling Sequence', c: '#e11d74', icon: 'calendar-clock' },
+  { id: 'drilling-sequence', name: 'Drilling', c: '#e11d74', icon: 'calendar-clock' },
 ];
 
 // minimal markdown → HTML (headings · bullets · bold · code · callouts · wikilinks)

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { DOMAINS, ZONE_LABEL, type Zone } from '../nav';
 import { Orb } from './Cosmonaut';
-import { LayoutGrid, Layers, Database, GraduationCap } from 'lucide-react';
+import { LayoutGrid, Layers, Database } from 'lucide-react';
 
 // Mobile (≤820px) bottom bar: exactly 5 targets — 4 zone tabs + the center Agent orb.
 // No "More" overflow. Tapping a zone with multiple domains opens a compact popover of
@@ -13,7 +13,6 @@ const ZONES: { zone: Zone; label: string; icon: typeof LayoutGrid }[] = [
   { zone: 'command', label: 'Command', icon: LayoutGrid },
   { zone: 'vertical', label: 'Verticals', icon: Layers },
   { zone: 'intelligence', label: 'Intelligence', icon: Database },
-  { zone: 'foundation', label: 'Foundation', icon: GraduationCap },
 ];
 
 export function MobileBar() {

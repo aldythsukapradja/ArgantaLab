@@ -6,7 +6,7 @@
 // groups COMMAND CENTER / LIFECYCLE / INTELLIGENCE / REPORT (no sovereign-tier bar),
 // topbar crumbs + light/dark toggle + settings + avatar (no "+ New"), footer, and the
 // Cosmonaut orb. Field Development carries the REAL, truth-locked viewers.
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   Compass, Layers, Wrench, Gauge, CalendarClock, LayoutDashboard, Settings, Sparkles,
   Bot, BookOpen, Database, Moon, Sun, FolderTree, FileText, File, MonitorPlay,
@@ -16,29 +16,35 @@ import {
 import './cosmo-system.css';
 import './cosmo-fd.css';
 import './cosmo-shell.css';
-import { FieldDev } from '../tabs/fielddev/FieldDev';
-import { ReservoirMgmt } from '../tabs/reservoir/ReservoirMgmt';
-import { ReservoirExplorer } from '../tabs/reservoir/ReservoirExplorer';
 import { RM_TAB_ORDER, RM_VIEWERS } from '../tabs/reservoir/registry';
-import { CosmoExplorer, type Sel } from './CosmoExplorer';
-import { ExplorationExplorer, type ExplSel } from './ExplorationExplorer';
-import { Exploration } from '../tabs/exploration/Exploration';
+import type { Sel } from './CosmoExplorer';
+import type { ExplSel } from './ExplorationExplorer';
 import { EXPL_TAB_NAMES, explStatus } from '../tabs/exploration/registry';
 import { CosmoAgentOrb } from './CosmoAgentOrb';
 import { CosmoSettings } from './CosmoSettings';
 import { CosmoChat } from './CosmoChat';
-import { ReportView } from './ReportView';
-import { DataView } from './DataView';
-import { KnowledgeView } from './KnowledgeView';
-import { WellDeliveryWorkspace } from '../tabs/welldelivery/WellDeliveryWorkspace';
-import { DrillingSequenceView } from './welldelivery/sequence/DrillingSequenceView';
+import { Cockpit } from './Cockpit';
+
+// Keep the company-facing Cockpit lean. Scientific workspaces and their larger
+// renderers/data payloads are fetched only when the operator opens that lifecycle.
+const FieldDev = lazy(async () => ({ default: (await import('../tabs/fielddev/FieldDev')).FieldDev }));
+const ReservoirMgmt = lazy(async () => ({ default: (await import('../tabs/reservoir/ReservoirMgmt')).ReservoirMgmt }));
+const ReservoirExplorer = lazy(async () => ({ default: (await import('../tabs/reservoir/ReservoirExplorer')).ReservoirExplorer }));
+const CosmoExplorer = lazy(async () => ({ default: (await import('./CosmoExplorer')).CosmoExplorer }));
+const ExplorationExplorer = lazy(async () => ({ default: (await import('./ExplorationExplorer')).ExplorationExplorer }));
+const Exploration = lazy(async () => ({ default: (await import('../tabs/exploration/Exploration')).Exploration }));
+const ReportView = lazy(async () => ({ default: (await import('./ReportView')).ReportView }));
+const DataView = lazy(async () => ({ default: (await import('./DataView')).DataView }));
+const KnowledgeView = lazy(async () => ({ default: (await import('./KnowledgeView')).KnowledgeView }));
+const WellDeliveryWorkspace = lazy(async () => ({ default: (await import('../tabs/welldelivery/WellDeliveryWorkspace')).WellDeliveryWorkspace }));
+const DrillingSequenceView = lazy(async () => ({ default: (await import('./welldelivery/sequence/DrillingSequenceView')).DrillingSequenceView }));
 
 const LIFECYCLES = [
   { id: 'exploration', name: 'Exploration', icon: Compass, color: '#22d3ee', status: 'BETA', sub: 'Basins, plays, prospects and prospect-level volumes' },
   { id: 'field-development', name: 'Field Development', icon: Layers, color: '#0FB5A6', status: 'LIVE', sub: 'Static model, volumetrics, well placement and economics' },
   { id: 'well-delivery', name: 'Well Delivery', icon: Wrench, color: '#f59e0b', status: 'BETA', sub: 'Well design, trajectory, drilling, completion and post-mortem' },
   { id: 'reservoir-management', name: 'Reservoir Management', icon: Gauge, color: '#7c3aed', status: 'LIVE', sub: 'Surveillance, forecasting, patterns and opportunity screening' },
-  { id: 'drilling-sequence', name: 'Drilling Sequence', icon: CalendarClock, color: '#e11d74', status: 'BETA', sub: 'Rig-by-time drilling schedule, revisions and sequence changes' },
+  { id: 'drilling-sequence', name: 'Drilling', icon: CalendarClock, color: '#e11d74', status: 'BETA', sub: 'Rig-by-time drilling schedule, revisions and sequence changes' },
 ];
 const INTEL = [
   { id: 'insights', name: 'Insights', icon: Sparkles },
@@ -54,16 +60,13 @@ const REPORT = [
 ];
 // mobile bottom-sheet groups (ported 1:1 from source M_GROUPS) — same items as the
 // desktop nav groups, with a "hint" subline for the sheet rows.
-type SheetItem = { id: string; label: string; icon: typeof Compass; hint: string; zone: 'vertical' | 'report' | 'intel' | 'foundation' };
+type SheetItem = { id: string; label: string; icon: typeof Compass; hint: string; zone: 'vertical' | 'report' | 'intel' };
 const M_GROUPS: Record<string, { title: string; items: SheetItem[] }> = {
   verticals: { title: 'Lifecycle', items: LIFECYCLES.map((l) => ({ id: l.id, label: l.name, icon: l.icon, hint: l.sub, zone: 'vertical' })) },
   report: { title: 'Report', items: REPORT.map((t) => ({ id: t.id, label: t.name, icon: t.icon, hint: 'report · ' + t.name.toLowerCase(), zone: 'report' })) },
   intel: {
     title: 'Intelligence',
-    items: [
-      ...INTEL.map((i) => ({ id: i.id, label: i.name, icon: i.icon, hint: 'intelligence', zone: 'intel' as const })),
-      { id: 'foundation', label: 'Foundation', icon: Settings, hint: 'platform · control plane', zone: 'foundation' as const },
-    ],
+    items: INTEL.map((i) => ({ id: i.id, label: i.name, icon: i.icon, hint: 'intelligence', zone: 'intel' as const })),
   },
 };
 // Field Development tabs → our real, built subtabs
@@ -112,7 +115,7 @@ export function CosmoShell() {
     html.setAttribute('data-theme', dark ? 'dark' : 'light');
   }, [dark]);
 
-  const [nav, setNav] = useState('field-development');
+  const [nav, setNav] = useState('cockpit');
   const [tab, setTab] = useState('map');
   const [sel, setSel] = useState<Sel>(null);
   const [explTab, setExplTab] = useState<string>('Overview');
@@ -136,7 +139,6 @@ export function CosmoShell() {
     if (it.zone === 'vertical') { setNav(it.id); setTab('map'); }
     else if (it.zone === 'report') setNav(it.id);
     else if (it.zone === 'intel') setNav(it.id);
-    else if (it.zone === 'foundation') setNav('foundation');
   };
 
   const active = LIFECYCLES.find((l) => l.id === nav);
@@ -146,14 +148,14 @@ export function CosmoShell() {
   const reportItem = REPORT.find((r) => r.id === nav);
   const isReport = !!reportItem;
   const crumbLabel = active ? active.name
-    : (INTEL.find((i) => i.id === nav) || reportItem || { name: nav === 'cockpit' ? 'Cockpit' : nav === 'foundation' ? 'Foundation' : 'Cockpit' }).name;
+    : (INTEL.find((i) => i.id === nav) || reportItem || { name: 'Cockpit' }).name;
 
   // active bottom-nav tab — an open sheet wins; otherwise derive from the current nav
   const mActive = sheet ? sheet
     : nav === 'cockpit' ? 'cockpit'
     : LIFECYCLES.some((l) => l.id === nav) ? 'verticals'
     : isReport ? 'report'
-    : (INTEL.some((i) => i.id === nav) || nav === 'foundation') ? 'intel' : '';
+    : INTEL.some((i) => i.id === nav) ? 'intel' : '';
 
   const navItem = (item: NavItem, onClick: () => void) => {
     const on = nav === item.id;
@@ -177,7 +179,6 @@ export function CosmoShell() {
         <div className="nav">
           <div className="navlabel">COMMAND CENTER</div>
           {navItem({ id: 'cockpit', name: 'Cockpit', icon: LayoutDashboard }, () => { setNav('cockpit'); closeMobile(); })}
-          {navItem({ id: 'foundation', name: 'Foundation', icon: Settings }, () => { setNav('foundation'); closeMobile(); })}
 
           <div className="navlabel">LIFECYCLE</div>
           {LIFECYCLES.map((l) => navItem(l, () => { setNav(l.id); setTab('map'); closeMobile(); }))}
@@ -210,7 +211,16 @@ export function CosmoShell() {
 
       {/* main — direct grid child (row 2, col 2) */}
       <main className="main">
-        {isFD ? (
+        <Suspense fallback={(
+          <div className="surface-loader" role="status">
+            <span><Sparkles size={18} /></span>
+            <b>Opening workspace</b>
+            <small>Connecting data, evidence and viewers…</small>
+          </div>
+        )}>
+          {nav === 'cockpit' ? (
+            <Cockpit onNavigate={(id) => { setNav(id); setTab('map'); closeMobile(); }} />
+          ) : isFD ? (
           <>
             <div className="tabs">
               {FD_TABS.map((t) => (
@@ -272,7 +282,7 @@ export function CosmoShell() {
           <WellDeliveryWorkspace tab={wdSub} setTab={setWdSub} />
         ) : nav === 'drilling-sequence' ? (
           <DrillingSequenceView />
-        ) : (
+          ) : (
           <div className="content">
             <div className="ph" style={{ height: '100%' }}>
               <div className="phi">{active ? <active.icon size={24} /> : <LayoutDashboard size={24} />}</div>
@@ -280,7 +290,8 @@ export function CosmoShell() {
               <div className="phs">This surface comes online as we build ArgantaEnergy out region by region.</div>
             </div>
           </div>
-        )}
+          )}
+        </Suspense>
       </main>
 
       {/* footer — spans full width (row 3) */}
@@ -303,7 +314,7 @@ export function CosmoShell() {
         <div className="msheet-title">{sheet ? M_GROUPS[sheet].title : ''}</div>
         <div className="msheet-items">
           {sheet && M_GROUPS[sheet].items.map((it) => {
-            const on = nav === it.id || (it.zone === 'foundation' && nav === 'foundation');
+            const on = nav === it.id;
             return (
               <div className={'msheet-item ' + (on ? 'on' : '')} key={it.id} onClick={() => sheetGo(it)}>
                 <span className="mi-ic"><it.icon size={16} /></span>

@@ -4,21 +4,20 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutGrid, Database, BookOpen, Wrench, Compass, Truck, Waves,
-  Sparkles, Bot, GraduationCap, ShieldCheck, Gauge, Boxes, Radar,
+  Sparkles, Bot, ShieldCheck, Gauge, Boxes, Radar,
 } from 'lucide-react';
 
 export type DomainId =
   | 'core'                                                     // Command Center
   | 'exploration' | 'fielddev' | 'welldelivery' | 'resmgmt'    // Verticals (O&G lifecycle)
-  | 'insight' | 'reasoning' | 'knowledge' | 'data'              // Intelligence (Data is last/bottom)
-  | 'foundation';                                               // Foundation (learning bank)
+  | 'insight' | 'reasoning' | 'knowledge' | 'data';             // Intelligence (Data is last/bottom)
 
 // zone: the 4 bottom-nav groups. The Agent (Cosmonaut orb) is a 5th "zone" in the
 // bottom bar but is not a drawer group — it's a floating action that opens an overlay.
-export type Zone = 'command' | 'vertical' | 'intelligence' | 'foundation';
+export type Zone = 'command' | 'vertical' | 'intelligence';
 
 export const ZONE_LABEL: Record<Zone, string> = {
-  command: 'COMMAND CENTER', vertical: 'VERTICALS', intelligence: 'INTELLIGENCE', foundation: 'FOUNDATION',
+  command: 'COMMAND CENTER', vertical: 'VERTICALS', intelligence: 'INTELLIGENCE',
 };
 
 export interface DomainDef {
@@ -48,9 +47,6 @@ export const DOMAINS: DomainDef[] = [
   { id: 'reasoning', label: 'Reasoning', icon: Bot, accent: 'teal', status: 'stub', phase: 'P4', zone: 'intelligence', blurb: 'Deterministic-first tier ladder, truthful run envelope, approval gate.' },
   { id: 'knowledge', label: 'Knowledge', icon: BookOpen, accent: 'violet', status: 'live', phase: 'P2', zone: 'intelligence', blurb: 'Vault + knowledge graph — notes, evidence, extraction.' },
   { id: 'data', label: 'Data', icon: Database, accent: 'amber', status: 'live', phase: 'P2', zone: 'intelligence', blurb: 'Ingestion refinery — field overview, inventory, pipeline, semantic model.' },
-
-  // ── FOUNDATION — the knowledge bank / learning library ──
-  { id: 'foundation', label: 'Foundation', icon: GraduationCap, accent: 'rose', status: 'stub', phase: 'V2+', zone: 'foundation', blurb: 'Training materials, notes & reading, reference.' },
 ];
 
 // ── Sub-tabs per domain (config-driven, like DOMAINS). Top bar renders these. ──
@@ -87,11 +83,6 @@ export const SUBTABS: Record<DomainId, SubTab[]> = {
     { id: 'inventory', label: 'Inventory' },
     { id: 'pipeline', label: 'Pipeline' },
     { id: 'model', label: 'Model' },
-  ],
-  foundation: [
-    { id: 'training', label: 'Training' },
-    { id: 'notes', label: 'Notes & Reading' },
-    { id: 'reference', label: 'Reference' },
   ],
 };
 export const defaultSubtab = (d: DomainId): string => SUBTABS[d][0].id;

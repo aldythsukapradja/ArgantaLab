@@ -114,7 +114,7 @@ export const LIFECYCLES: LC[] = [
   {
     id: 'field-development', title: 'Field Development', tag: 'model & plan',
     mission: 'Turn a discovery into a sanctioned development: build the static + dynamic model, quantify volumes and reserves, choose a concept, place the wells, and prove the economics.',
-    stages: [['G1 · Appraise', 'Reduce subsurface uncertainty; static model + volumetrics'], ['G2 · Select', 'Screen concepts; recommend the value-optimal development'], ['G3 · Define / FID', 'Freeze the FDP; book reserves; sanction the investment'], ['Handover · Execute', 'Pass sanctioned well stock to Well Delivery & Drilling Sequence']],
+    stages: [['G1 · Appraise', 'Reduce subsurface uncertainty; static model + volumetrics'], ['G2 · Select', 'Screen concepts; recommend the value-optimal development'], ['G3 · Define / FID', 'Freeze the FDP; book reserves; sanction the investment'], ['Handover · Execute', 'Pass sanctioned well stock to Well Delivery & Drilling']],
     methods: ['Structural framework from surfaces + faults', 'Facies & property modelling (SIS / SGS)', 'Petrophysical evaluation (Vsh · φ · Sw-Archie · net pay)', 'Volumetrics — STOIIP = GRV·NTG·φ·(1−Sw)/Bo, P90/P50/P10', 'Dynamic simulation & history match', 'Well placement & drainage', 'Recovery factor from analogs', 'NPV / break-even economics'],
     decisions: ['Concept select', 'Final Investment Decision (FID)', 'Well count & placement', 'Plateau rate & offtake'],
     kpis: ['STOIIP / GIIP', '2P reserves', 'Recovery factor %', 'Wells sanctioned', 'Break-even', 'NPV'],
@@ -151,10 +151,10 @@ export const LIFECYCLES: LC[] = [
     concepts: ['VRR', 'Decline Curve Analysis', 'Reservoir Potential (FPOT)', 'Waterflood', 'History Match'],
     consumes: ['production', 'logs', 'contacts', 'dynamic-pvt'],
     outputs: ['Reservoir Management Plan (RMP)', 'Reservoir Surveillance Plan', 'Well Test & PVT', 'Pressure & VRR Review', 'Rolling Forecast & Potential', 'Daily Reservoir Performance', 'Well & Pattern Review', 'Well Post-Mortem'],
-    handoffIn: 'Well Delivery', handoffOut: 'Drilling Sequence',
+    handoffIn: 'Well Delivery', handoffOut: 'Drilling',
   },
   {
-    id: 'drilling-sequence', title: 'Drilling Sequence', tag: 'schedule & sequence',
+    id: 'drilling-sequence', title: 'Drilling', tag: 'schedule & sequence',
     mission: 'Convert the sanctioned well stock into a rig-by-time execution plan and manage its revisions under change control.',
     stages: [['G0 · Basis', 'Agree the scheduling basis (well stock, rigs, constraints)'], ['G1 · Schedule build', 'Phase wells by year; set RFSU/RFD milestones'], ['G2 · Rig program', 'Allocate rigs; multi-year utilisation plan'], ['Revision control', 'Version and log every sequence change']],
     methods: ['Rig scheduling & utilisation', 'Well-count phasing', 'RFSU / RFD milestone planning', 'Sequence-change control', 'Dependency management'],
@@ -336,7 +336,7 @@ export function buildGraph(fields: FieldSeed[]): KGraph {
         id: wid, type: 'well', title: w.name, field: f.id, folder: '03_Wells', tags: ['well', f.id, w.isExploration ? 'exploration' : w.role],
         aliases: w.aliases, meta: `${f.name} · ${roleWord}`, provenance: 'measured', source: `${f.name} WB master`,
         fm: { field: wl(f.name), reservoir: wl(f.reservoir), role: roleWord, ...(w.has.logs ? { petrophysics: wl(`${w.name} · Petrophysics`) } : {}), data: buildDataLinks(w), lifecycle: wls(LIFECYCLES.map((l) => l.title)) },
-        body: `# ${w.name}\n\n> Wellbore in ${wl(f.name)} · reservoir ${wl(f.reservoir)} · role **${roleWord}** · provenance **measured**.\n\n## Context\n- Field: ${wl(f.name)} · reservoir ${wl(f.reservoir)}\n- Penetrates: ${f.formations.slice(0, 4).map(wl).join(' · ')}\n\n## Data coverage\n${w.has.logs ? '- ' + wl('Logs') + ' — wireline curves (→ ' + wl(`${w.name} · Petrophysics`) + ')\n' : ''}${w.has.traj ? '- Trajectory — deviation survey\n' : ''}${w.has.production ? '- ' + wl('Production') + ' — monthly history\n' : ''}${w.has.picks ? '- ' + wl('Reservoir · Formation Tops') + ' — formation picks\n' : ''}\n## Lifecycle journey\n${wl('Exploration')} → ${wl('Field Development')} (placement) → ${wl('Drilling Sequence')} (slot) → ${wl('Well Delivery')} (drill & complete) → ${wl('Reservoir Management')} (${w.has.production ? 'produce & optimize' : 'monitor'})\n\n## Evidence\nSource: ${f.name} WB master · role ${roleWord}.`,
+        body: `# ${w.name}\n\n> Wellbore in ${wl(f.name)} · reservoir ${wl(f.reservoir)} · role **${roleWord}** · provenance **measured**.\n\n## Context\n- Field: ${wl(f.name)} · reservoir ${wl(f.reservoir)}\n- Penetrates: ${f.formations.slice(0, 4).map(wl).join(' · ')}\n\n## Data coverage\n${w.has.logs ? '- ' + wl('Logs') + ' — wireline curves (→ ' + wl(`${w.name} · Petrophysics`) + ')\n' : ''}${w.has.traj ? '- Trajectory — deviation survey\n' : ''}${w.has.production ? '- ' + wl('Production') + ' — monthly history\n' : ''}${w.has.picks ? '- ' + wl('Reservoir · Formation Tops') + ' — formation picks\n' : ''}\n## Lifecycle journey\n${wl('Exploration')} → ${wl('Field Development')} (placement) → ${wl('Drilling')} (slot) → ${wl('Well Delivery')} (drill & complete) → ${wl('Reservoir Management')} (${w.has.production ? 'produce & optimize' : 'monitor'})\n\n## Evidence\nSource: ${f.name} WB master · role ${roleWord}.`,
       });
       link(wid, fid, 'contextualizes');
       link(wid, rid, 'contextualizes');

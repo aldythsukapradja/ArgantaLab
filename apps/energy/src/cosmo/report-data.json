@@ -38,7 +38,7 @@
     },
     {
       "id": "drilling-sequence",
-      "name": "Drilling Sequence",
+      "name": "Drilling",
       "icon": "calendar-clock",
       "c": "#e11d74"
     }
@@ -50,7 +50,7 @@
       "Field Development",
       "Well Delivery",
       "Reservoir Management",
-      "Drilling Sequence"
+      "Drilling"
     ],
     "corporate": [
       "Corporate Scorecard",
@@ -554,9 +554,9 @@
       "fmt": "MD",
       "pr": "P1",
       "upd": "3h ago",
-      "md": "---\ntype: kb_standard\nclass: standard\nstage: Drilling Sequence\ntheme: Scheduling\nowner: WellNova\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Drilling Schedule Basis\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> The basis of the rig-by-time schedule — well maturation, rig availability and phasing.\n\n## What it contains\n- Well maturation (SOR/BOD) inputs\n- Rig availability windows\n- Phase / batch phasing\n- Milestone (RFD/RFSU) basis\n\n## Source data\n- SOR / maturation\n- FID Future Wells\n- Rig contracts\n\n## Extract for detail later\n- [ ] Maturation-to-slot logic\n- [ ] Milestone basis\n- [ ] Phasing rules\n\n## Linked\n[[Rig Program]] · [[Drilling Schedule (IB27 DS Rev1)]]",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Drilling\ntheme: Scheduling\nowner: WellNova\nformat: MD\nextract_priority: P1\nstatus: indexed\n---\n\n# Drilling Schedule Basis\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> The basis of the rig-by-time schedule — well maturation, rig availability and phasing.\n\n## What it contains\n- Well maturation (SOR/BOD) inputs\n- Rig availability windows\n- Phase / batch phasing\n- Milestone (RFD/RFSU) basis\n\n## Source data\n- SOR / maturation\n- FID Future Wells\n- Rig contracts\n\n## Extract for detail later\n- [ ] Maturation-to-slot logic\n- [ ] Milestone basis\n- [ ] Phasing rules\n\n## Linked\n[[Rig Program]] · [[Drilling Schedule (IB27 DS Rev1)]]",
       "title": "Drilling Schedule Basis",
-      "stageLabel": "Drilling Sequence"
+      "stageLabel": "Drilling"
     },
     {
       "name": "Rig Program.md",
@@ -567,9 +567,9 @@
       "fmt": "MD",
       "pr": "P2",
       "upd": "2d ago",
-      "md": "---\ntype: kb_standard\nclass: standard\nstage: Drilling Sequence\ntheme: Scheduling\nowner: WellNova\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Rig Program\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Multi-year rig contracting and utilisation plan.\n\n## What it contains\n- Rig contracts & windows\n- Utilisation & moves\n- Cert & suspension events\n\n## Source data\n- Contracts\n- Schedule\n\n## Extract for detail later\n- [ ] Rig windows\n- [ ] Utilisation %\n- [ ] Move/cert events\n\n## Linked\n[[Drilling Schedule Basis]]",
+      "md": "---\ntype: kb_standard\nclass: standard\nstage: Drilling\ntheme: Scheduling\nowner: WellNova\nformat: MD\nextract_priority: P2\nstatus: indexed\n---\n\n# Rig Program\n\n> [!success] Knowledge-base standard · minimum-requirement source doc\n> Multi-year rig contracting and utilisation plan.\n\n## What it contains\n- Rig contracts & windows\n- Utilisation & moves\n- Cert & suspension events\n\n## Source data\n- Contracts\n- Schedule\n\n## Extract for detail later\n- [ ] Rig windows\n- [ ] Utilisation %\n- [ ] Move/cert events\n\n## Linked\n[[Drilling Schedule Basis]]",
       "title": "Rig Program",
-      "stageLabel": "Drilling Sequence"
+      "stageLabel": "Drilling"
     },
     {
       "name": "Drilling Schedule (IB27 DS Rev1).md",
@@ -580,9 +580,9 @@
       "fmt": "Dataset",
       "pr": "P2",
       "upd": "3h ago",
-      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Drilling Sequence\ntheme: Executive KPI\nowner: WellNova\nformat: Dataset\nextract_priority: P2\nstatus: indexed\n---\n\n# Drilling Schedule (IB27 DS Rev1)\n\n> [!note] Cosmo-generated Dataset · output artifact\n> Generated rig × time Gantt schedule — which rig drills which well, when.\n\n## What it contains\n- Per-rig timeline\n- Well type & reservoir\n- RFD/RFSU milestones\n- Well-count by year\n\n## Source data\n- Drilling Schedule Basis\n- Rig Program\n\n## Built from\n- [ ] Rig×well×dates\n- [ ] Milestones\n- [ ] Roll-ups\n\n## Linked\n[[Sequence Change Log]]",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Drilling\ntheme: Executive KPI\nowner: WellNova\nformat: Dataset\nextract_priority: P2\nstatus: indexed\n---\n\n# Drilling Schedule (IB27 DS Rev1)\n\n> [!note] Cosmo-generated Dataset · output artifact\n> Generated rig × time Gantt schedule — which rig drills which well, when.\n\n## What it contains\n- Per-rig timeline\n- Well type & reservoir\n- RFD/RFSU milestones\n- Well-count by year\n\n## Source data\n- Drilling Schedule Basis\n- Rig Program\n\n## Built from\n- [ ] Rig×well×dates\n- [ ] Milestones\n- [ ] Roll-ups\n\n## Linked\n[[Sequence Change Log]]",
       "title": "Drilling Schedule (IB27 DS Rev1)",
-      "stageLabel": "Drilling Sequence"
+      "stageLabel": "Drilling"
     },
     {
       "name": "Sequence Change Log.md",
@@ -593,9 +593,9 @@
       "fmt": "Presentation",
       "pr": "P3",
       "upd": "1d ago",
-      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Drilling Sequence\ntheme: Executive KPI\nowner: WellAion\nformat: Presentation\nextract_priority: P3\nstatus: indexed\n---\n\n# Sequence Change Log\n\n> [!note] Cosmo-generated Presentation · output artifact\n> Generated diff of what changed between schedule revisions and why.\n\n## What it contains\n- Added/removed/moved wells\n- Re-sequencing drivers\n- Well-count deltas\n\n## Source data\n- Schedule revisions\n\n## Built from\n- [ ] Change list\n- [ ] Driver per change\n- [ ] Delta summary\n\n## Linked\n[[Drilling Schedule (IB27 DS Rev1)]]",
+      "md": "---\ntype: cosmo_generated\nclass: generated\nstage: Drilling\ntheme: Executive KPI\nowner: WellAion\nformat: Presentation\nextract_priority: P3\nstatus: indexed\n---\n\n# Sequence Change Log\n\n> [!note] Cosmo-generated Presentation · output artifact\n> Generated diff of what changed between schedule revisions and why.\n\n## What it contains\n- Added/removed/moved wells\n- Re-sequencing drivers\n- Well-count deltas\n\n## Source data\n- Schedule revisions\n\n## Built from\n- [ ] Change list\n- [ ] Driver per change\n- [ ] Delta summary\n\n## Linked\n[[Drilling Schedule (IB27 DS Rev1)]]",
       "title": "Sequence Change Log",
-      "stageLabel": "Drilling Sequence"
+      "stageLabel": "Drilling"
     }
   ],
   "REPORT_TREE": [

@@ -1,6 +1,6 @@
 /* Drilling Sequence — the rig-by-time schedule surface. Rebuild of the standalone
    NOC Drilling Schedule in the COSMO design system (Volve data). Reuses COSMO
-   tokens (--teal/--ink*/--panel*/--line*/--mono/--shadow); stage identity = #e11d74.
+   tokens (--teal, --ink, --panel, --line, --mono, --shadow); stage identity = #e11d74.
    Scoped under html[data-ui="cosmo"] so it never touches the classic UI. */
 
 html[data-ui="cosmo"] .dseq{--dseq:#e11d74;--dseq-soft:rgba(225,29,116,.10);height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}

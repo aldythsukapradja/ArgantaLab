@@ -45,7 +45,7 @@ const ORG_STAGES = [
   { id: 'field-development', name: 'Field Development', c: '#0FB5A6' },
   { id: 'well-delivery', name: 'Well Delivery', c: '#f59e0b' },
   { id: 'reservoir-management', name: 'Reservoir Management', c: '#7c3aed' },
-  { id: 'drilling-sequence', name: 'Drilling Sequence', c: '#e11d74' },
+  { id: 'drilling-sequence', name: 'Drilling', c: '#e11d74' },
 ];
 const artIcon = (name: string, size = 12) =>
   name === 'gem' ? <Gem size={size} /> : name === 'map' ? <MapIcon size={size} /> : <FileText size={size} />;
@@ -141,7 +141,7 @@ function MdCanvas({ md }: { md: string }) {
 
 type Msg = { role: 'user' | 'assistant'; text: string; done: boolean };
 const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Arganta** — the ArgantaEnergy orchestrator. The active field is **Volve**. Ask me anything, or open the artifact pane to see live content.', done: true };
-const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling Sequence** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart.`;
+const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart.`;
 
 // ── the Arganta canvas ───────────────────────────────────────────────────────
 export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClose: () => void; fullSignal?: number }) {

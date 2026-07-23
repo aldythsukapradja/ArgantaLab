@@ -183,7 +183,7 @@ export function WellProposalOnePager({ proposal, onBack }: Props) {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 10.5 }}>
             <span className="wd-link-chip">← Field Development · {p.sourceTarget.well}</span>
             <span className={`wd-link-chip${emitted ? ' ok' : ''}`}>
-              {emitted ? <Check size={10} /> : <ArrowUpRight size={10} />} Drilling Sequence {emitted ? '· emitted' : '· on approval'}
+              {emitted ? <Check size={10} /> : <ArrowUpRight size={10} />} Drilling {emitted ? '· emitted' : '· on approval'}
             </span>
           </div>
         </div>

@@ -4,3 +4,23 @@
 /* Brand block must be EXACTLY the topbar height (54px) so the sidebar divider meets
    the topbar divider — fixes the AL SHAHEEN / RMO COSMO baseline + line mismatch. */
 html[data-ui="cosmo"] .sidebar .brand{height:54px;padding:0 16px;box-sizing:border-box}
+
+html[data-ui="cosmo"] .surface-loader{
+  flex:1;
+  min-height:0;
+  display:grid;
+  place-content:center;
+  justify-items:center;
+  gap:7px;
+  background:var(--bg);
+  color:var(--ink2);
+}
+html[data-ui="cosmo"] .surface-loader>span{
+  width:42px;height:42px;display:grid;place-items:center;border-radius:13px;
+  color:var(--teal-ink);background:var(--teal-soft);border:1px solid color-mix(in srgb,var(--teal) 30%,var(--line));
+  animation:surface-loader-pulse 1.4s ease-in-out infinite;
+}
+html[data-ui="cosmo"] .surface-loader b{font-size:13px;color:var(--ink)}
+html[data-ui="cosmo"] .surface-loader small{font-size:10px;color:var(--ink3)}
+@keyframes surface-loader-pulse{50%{transform:scale(.94);opacity:.7}}
+@media(prefers-reduced-motion:reduce){html[data-ui="cosmo"] .surface-loader>span{animation:none}}

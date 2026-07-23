@@ -3,13 +3,13 @@ import { useStore } from '../store';
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
 // The MAIN nav: expanded 232px by default, collapsible to a 60px icon rail (persisted).
-// Sections come from nav zones, in this order: COMMAND CENTER → VERTICALS → INTELLIGENCE
-// → FOUNDATION, with locked sibling apps at the bottom.
+// Sections come from nav zones, in this order: COMMAND CENTER → VERTICALS →
+// INTELLIGENCE, with locked sibling apps at the bottom.
 //
 // The collapse toggle lives in its OWN always-full-width row (never inline with the
 // brand mark) so it can never get clipped at the 60px collapsed width — the brand row
 // simply hides its label when collapsed instead of fighting the toggle for space.
-const ZONE_ORDER: Zone[] = ['command', 'vertical', 'intelligence', 'foundation'];
+const ZONE_ORDER: Zone[] = ['command', 'vertical', 'intelligence'];
 
 export function Drawer() {
   const { domain, setDomain, drawerCollapsed, toggleDrawer } = useStore();
