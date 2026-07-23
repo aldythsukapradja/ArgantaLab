@@ -8,7 +8,7 @@ import type { WbIndex, PicksJson, WellRow } from '../../wb/types';
 import type { WdCandidate, MudPoint } from './types';
 import { gateIndex } from './types';
 
-const KEY = 'energy_wd_candidates_v1';
+const KEY = 'energy_wd_candidates_v2';
 const RM_KEY = 'energy_wd_rm_handover_v1';
 const SEQ_KEY = 'energy_drilling_sequence_v1';
 
@@ -100,13 +100,20 @@ function baseDesign(tdMd: number, tdTvd: number, role: 'producer' | 'injector', 
 }
 
 async function buildPortfolio(index: WbIndex, picks: PicksJson): Promise<WdCandidate[]> {
-  const producers = index.wells.filter((w) => w.role === 'producer');
-  const anchorA = producers[0] ?? index.wells[0];
-  const anchorB = producers[1] ?? anchorA;
-  const injAnchor = index.wells.find((w) => w.role === 'injector') ?? anchorA;
+  // real reservoir wells only — skip shallow parent-stub entries (e.g. the F-11 base
+  // wellbore has a ~350 m TD in the index and would give nonsense target depths).
+  const isReservoir = (w: WellRow) => w.td_tvd > 2500 && w.has.traj;
+  const producers = index.wells.filter((w) => w.role === 'producer' && isReservoir(w));
+  const deepAny = index.wells.filter(isReservoir);
+  const anchorA = producers[0] ?? deepAny[0] ?? index.wells[0];
+  const anchorB = producers[1] ?? deepAny[1] ?? anchorA;
+  const injAnchor = index.wells.find((w) => w.role === 'injector' && isReservoir(w))
+    ?? index.wells.find((w) => w.role === 'injector') ?? anchorA;
   const now = new Date().toISOString();
 
-  const huginA = pickDepth(picks, anchorA.name, /Hugin/i) ?? { md: anchorA.td_md - 260, tvdss: -(anchorA.td_tvd - 240) };
+  // Hugin sits near TD in the Volve producers; use the real pick if we can match it,
+  // else derive a realistic reservoir depth from the (now deep) anchor's TD.
+  const huginA = pickDepth(picks, anchorA.name, /Hugin/i) ?? { md: anchorA.td_md - 220, tvdss: -(anchorA.td_tvd - 170) };
   const midX = (anchorA.x + anchorB.x) / 2, midY = (anchorA.y + anchorB.y) / 2;
 
   // A — new infill producer, ready for sanction (full proposal)

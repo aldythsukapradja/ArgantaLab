@@ -96,7 +96,7 @@ export function ReportDocument() {
               <button onClick={() => setZoom((z) => clampZ(z + 0.1))}>＋</button>
               <button onClick={fit} title="Fit">⤢</button>
             </div>
-            <button className="rbtn"><Sparkles size={13} /> Ask Cosmonaut</button>
+            <button className="rbtn"><Sparkles size={13} /> Ask Arganta</button>
             <button className="rbtn p"><Download size={13} /> Export</button>
           </div>
         </div>
@@ -104,9 +104,9 @@ export function ReportDocument() {
           <div className="doc-plane" ref={planeRef} style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})` }}>
             {pages.map((p) => (
               <div className="doc-page" key={p} id={'docpg' + p} style={{ width: pw, minHeight: ph, padding: pad, fontSize: 13 }}>
-                {p === 1 && <div className="ban"><div className="co">RMO Cosmo · North Oil Company · C1-Controlled</div><div className="dt">DRAFT · v0 · {size} {orient}</div></div>}
+                {p === 1 && <div className="ban"><div className="co">ArgantaEnergy · Volve · Confidential</div><div className="dt">DRAFT · v0 · {size} {orient}</div></div>}
                 <h1 style={{ fontSize: 24 }}>{PAGE_TITLES[(p - 1) % PAGE_TITLES.length]}</h1>
-                <div className="sub" style={{ fontSize: 11 }}>Al Shaheen field · GeaVision · page {p} of {pages.length} · {dims}</div>
+                <div className="sub" style={{ fontSize: 11 }}>Volve field · ArgantaEnergy · page {p} of {pages.length} · {dims}</div>
                 <div className={cols > 1 ? 'cols' : ''} style={cols > 1 ? { columnCount: cols } : undefined}>
                   <h2 style={{ fontSize: 15 }}>1 · Executive Summary</h2>
                   <div className="sk s90" /><div className="sk" /><div className="sk s80" /><div className="sk s45" />

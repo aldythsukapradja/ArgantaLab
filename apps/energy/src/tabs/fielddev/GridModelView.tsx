@@ -22,6 +22,7 @@ import { loadWellPetro, upscale, type WellPetro } from './fdData';
 import { BBL_PER_SM3 } from '../../engine/volumetrics';
 
 const GridCube3D = lazy(() => import('./GridCube3D'));
+const GridVolume = lazy(() => import('./GridVolume')); // G3 GPU-scale shell/section + property texture
 
 type PropKind = 'facies' | 'porosity' | 'perm';
 interface WellPt { name: string; x: number; y: number; phie: number; netSand: number; role: 'producer' | 'injector' | 'both' | 'none' }
@@ -39,6 +40,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
   const owc = index.contacts[0]?.tvdss ?? 3200;
   const [kind, setKind] = useState<PropKind>('facies');
   const [view3d, setView3d] = useState(false);
+  const [gpu, setGpu] = useState(true); // 3D render path: GPU volume (default) vs legacy boxes
   const [nz, setNz] = useState(8);
   const [res, setRes] = useState(28);          // max areal dimension (coarsening)
   const [range, setRange] = useState(1200);    // variogram range (m)
@@ -233,13 +235,21 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
           </button>
         </div>
 
-        {/* 3D cube view (WebGL) — replaces the 2D map+section when toggled on */}
+        {/* 3D view (WebGL) — replaces the 2D map+section when toggled on. GPU volume
+            (shell/section + property Data3DTexture, GPU-scale) or the legacy box cube. */}
         {view3d ? (
           <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 5, display: 'flex', gap: 2, background: 'var(--panel-2)', border: '1px solid var(--line)', borderRadius: 5, padding: 2 }}>
+              {(['volume', 'boxes'] as const).map((m) => (
+                <button key={m} onClick={() => setGpu(m === 'volume')} style={{ padding: '3px 8px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 10, background: (gpu ? 'volume' : 'boxes') === m ? 'var(--teal)' : 'transparent', color: (gpu ? 'volume' : 'boxes') === m ? '#04120f' : 'var(--muted)' }}>{m}</button>
+              ))}
+            </div>
             {!model ? <Loading what="building grid model (SIS+SGS)" /> : (
-              <Suspense fallback={<Loading what="WebGL cube" />}>
-                <GridCube3D grid={model.grid} kind={kind} owc={owc} wells={wellPts}
-                  reducedMotion={typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches} />
+              <Suspense fallback={<Loading what={gpu ? 'GPU volume' : 'WebGL cube'} />}>
+                {gpu
+                  ? <GridVolume model={model.grid} />
+                  : <GridCube3D grid={model.grid} kind={kind} owc={owc} wells={wellPts}
+                      reducedMotion={typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches} />}
               </Suspense>
             )}
           </div>

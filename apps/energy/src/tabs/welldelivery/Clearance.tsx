@@ -1,17 +1,21 @@
-// Clearance — the safe-to-drill cockpit. Pore/collapse/fracture MUD WINDOW (canvas),
-// ISCWSA-style ANTI-COLLISION separation factor computed against REAL offset-well
-// trajectories, and the two-envelope WELL-BARRIER schematic (NORSOK D-010). The
-// anti-collision math is a documented simplification (see trajectory-math.ts).
-import { useMemo, useState, useCallback } from 'react';
-import { useCanvas, cssVar, useAsync } from '../fielddev/hooks';
+// Clearance — the safe-to-drill cockpit. The pore/collapse/fracture MUD WINDOW is now
+// an interactive D3/SVG chart (hover a depth for the exact gradients); ISCWSA-style
+// ANTI-COLLISION separation factor is computed against REAL offset-well trajectories;
+// the two-envelope WELL-BARRIER schematic follows NORSOK D-010. Anti-collision math is
+// a documented simplification (see trajectory-math.ts).
+import { useMemo, useState } from 'react';
+import { scaleLinear } from 'd3-scale';
+import { line, area } from 'd3-shape';
+import { useAsync } from '../fielddev/hooks';
 import { Inspector, InspectorSection, Slider } from '../fielddev/chrome';
 import { loadIndex, loadTraj } from '../../wb/load';
 import type { WbIndex } from '../../wb/types';
-import type { WdCandidate } from './types';
+import type { WdCandidate, MudPoint } from './types';
 import { wdTab } from './registry';
 import { WdHead } from './shared';
 import { candidateStations } from './wdData';
 import { closestApproaches, separationFactor, type OffsetCandidate } from './trajectory-math';
+import { useMeasure, ChartTip, TipRow } from './d3charts';
 
 async function loadOffsets(c: WdCandidate): Promise<{ index: WbIndex; offsets: OffsetCandidate[] }> {
   const index = await loadIndex();
@@ -24,52 +28,63 @@ async function loadOffsets(c: WdCandidate): Promise<{ index: WbIndex; offsets: O
   return { index, offsets };
 }
 
+/** Interactive D3 mud-weight window (sg vs depth). */
+function MudWindow({ mw }: { mw: MudPoint[] }) {
+  const { ref, w, h } = useMeasure<HTMLDivElement>();
+  const [hy, setHy] = useState<number | null>(null);
+  const W = Math.max(w, 260), H = Math.max(h, 180);
+  const ML = 34, MR = 10, MT = 12, MB = 22;
+  const dMax = Math.max(...mw.map((p) => p.md), 1);
+  const x = scaleLinear([0.9, 1.9], [ML, W - MR]);
+  const y = scaleLinear([0, dMax], [MT, H - MB]);
+  const mk = (key: keyof MudPoint) => line<MudPoint>().x((p) => x(p[key])).y((p) => y(p.md))(mw) || '';
+  const safe = area<MudPoint>().x0((p) => x(p.collapseSg)).x1((p) => x(p.fracSg)).y((p) => y(p.md))(mw) || '';
+  const hp = hy == null ? null : mw.reduce((a, b) => (Math.abs(y(b.md) - hy) < Math.abs(y(a.md) - hy) ? b : a));
+
+  return (
+    <div ref={ref} style={{ height: 230, position: 'relative' }}>
+      <svg width={W} height={H} style={{ display: 'block', cursor: 'crosshair' }}
+        onPointerMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHy(e.clientY - r.top); }}
+        onPointerLeave={() => setHy(null)}>
+        <rect x={ML} y={MT} width={W - ML - MR} height={H - MT - MB} fill="none" stroke="var(--line)" strokeWidth={0.5} />
+        {[1.0, 1.2, 1.4, 1.6, 1.8].map((sg) => (
+          <g key={sg}><line x1={x(sg)} x2={x(sg)} y1={MT} y2={H - MB} stroke="var(--line)" strokeWidth={0.4} opacity={0.5} />
+            <text x={x(sg)} y={H - 7} textAnchor="middle" fill="var(--muted)" style={{ font: '8px var(--mono)' }}>{sg.toFixed(1)}</text></g>
+        ))}
+        {[0, 1, 2, 3].map((k) => { const d = dMax * k / 3; return <text key={k} x={ML - 3} y={y(d) + 3} textAnchor="end" fill="var(--muted)" style={{ font: '8px var(--mono)' }}>{(d / 1000).toFixed(1)}k</text>; })}
+        <path d={safe} fill="var(--teal)" opacity={0.10} />
+        <path d={mk('poreSg')} fill="none" stroke="var(--blue)" strokeWidth={1.1} strokeDasharray="4 2" />
+        <path d={mk('collapseSg')} fill="none" stroke="var(--violet)" strokeWidth={1.1} strokeDasharray="2 2" />
+        <path d={mk('fracSg')} fill="none" stroke="var(--rose)" strokeWidth={1.1} strokeDasharray="4 2" />
+        <path d={mk('mudSg')} fill="none" stroke="var(--amber)" strokeWidth={1.7} />
+        {[['pore', '--blue'], ['collapse', '--violet'], ['frac', '--rose'], ['mud', '--amber']].map(([lab, v], i) => (
+          <text key={lab} x={ML + 4 + i * 46} y={MT + 9} fill={`var(${v})`} style={{ font: '8px var(--mono)' }}>{lab}</text>
+        ))}
+        {hp && <line x1={ML} x2={W - MR} y1={y(hp.md)} y2={y(hp.md)} stroke="var(--text)" strokeWidth={0.5} opacity={0.5} />}
+      </svg>
+      {hp && (
+        <ChartTip x={W * 0.5} y={y(hp.md)} w={W}>
+          <TipRow k="depth" v={`${hp.md.toFixed(0)} m`} />
+          <TipRow k="pore" v={`${hp.poreSg.toFixed(2)} sg`} c="var(--blue)" />
+          <TipRow k="collapse" v={`${hp.collapseSg.toFixed(2)} sg`} c="var(--violet)" />
+          <TipRow k="frac" v={`${hp.fracSg.toFixed(2)} sg`} c="var(--rose)" />
+          <TipRow k="mud" v={`${hp.mudSg.toFixed(2)} sg`} c="var(--amber)" />
+        </ChartTip>
+      )}
+    </div>
+  );
+}
+
 export function Clearance({ c }: { c: WdCandidate }) {
   const [inspOpen, setInspOpen] = useState(true);
   const [sfAlert, setSfAlert] = useState(1.5);
   const res = useAsync(() => loadOffsets(c), [c.id]);
   const mine = useMemo(() => candidateStations(c), [c]);
-
   const collisions = useMemo(() => {
     if (!res.data) return [];
     return closestApproaches(c.trajectory.surfaceX, c.trajectory.surfaceY, mine, res.data.offsets)
       .map((x) => ({ ...x, sf: separationFactor(x.minDistM, x.atMd) }));
   }, [res.data, mine, c]);
-
-  const mw = c.mudWindow;
-  const draw = useCallback((cx: CanvasRenderingContext2D, w: number, h: number) => {
-    const padL = 30, padR = 10, padT = 10, padB = 20;
-    const pw = w - padL - padR, ph = h - padT - padB;
-    const sgMin = 0.9, sgMax = 1.9;
-    const dMax = Math.max(...mw.map((p) => p.md), 1);
-    const X = (sg: number) => padL + ((sg - sgMin) / (sgMax - sgMin)) * pw;
-    const Y = (d: number) => padT + (d / dMax) * ph;
-    // axes
-    cx.strokeStyle = cssVar('--line'); cx.lineWidth = 0.5;
-    cx.strokeRect(padL, padT, pw, ph);
-    cx.fillStyle = cssVar('--muted'); cx.font = '8px var(--mono)'; cx.textAlign = 'center';
-    for (let sg = 1.0; sg <= 1.8; sg += 0.2) { cx.fillText(sg.toFixed(1), X(sg), h - 6); cx.strokeStyle = cssVar('--line'); cx.globalAlpha = 0.4; cx.beginPath(); cx.moveTo(X(sg), padT); cx.lineTo(X(sg), padT + ph); cx.stroke(); cx.globalAlpha = 1; }
-    cx.textAlign = 'right';
-    for (let k = 0; k <= 3; k++) { const d = dMax * k / 3; cx.fillText(`${(d / 1000).toFixed(1)}k`, padL - 3, Y(d) + 3); }
-    // safe window shading (collapse → fracture)
-    cx.fillStyle = 'rgba(80,208,177,0.10)'; cx.beginPath();
-    mw.forEach((p, i) => { const x = X(p.collapseSg), y = Y(p.md); i ? cx.lineTo(x, y) : cx.moveTo(x, y); });
-    for (let i = mw.length - 1; i >= 0; i--) { cx.lineTo(X(mw[i].fracSg), Y(mw[i].md)); }
-    cx.closePath(); cx.fill();
-    const line = (key: 'poreSg' | 'collapseSg' | 'fracSg' | 'mudSg', color: string, dash: number[] = []) => {
-      cx.strokeStyle = color; cx.lineWidth = key === 'mudSg' ? 1.6 : 1.1; cx.setLineDash(dash); cx.beginPath();
-      mw.forEach((p, i) => { const x = X(p[key]), y = Y(p.md); i ? cx.lineTo(x, y) : cx.moveTo(x, y); }); cx.stroke(); cx.setLineDash([]);
-    };
-    line('poreSg', cssVar('--blue'), [4, 2]);
-    line('collapseSg', cssVar('--violet'), [2, 2]);
-    line('fracSg', cssVar('--rose'), [4, 2]);
-    line('mudSg', cssVar('--amber'));
-    // legend
-    cx.textAlign = 'left'; cx.font = '8px var(--mono)';
-    const lg: [string, string][] = [['pore', '--blue'], ['collapse', '--violet'], ['frac', '--rose'], ['mud', '--amber']];
-    lg.forEach(([lab, v], i) => { cx.fillStyle = cssVar(v); cx.fillText(lab, padL + 4 + i * 44, padT + 9); });
-  }, [mw]);
-  const chart = useCanvas(draw, [draw]);
 
   const worst = collisions[0];
   const clearance = worst ? (worst.sf >= 4 ? 'clear' : worst.sf >= sfAlert ? 'watch' : 'alert') : 'clear';
@@ -81,14 +96,12 @@ export function Clearance({ c }: { c: WdCandidate }) {
         <WdHead tab={wdTab('clearance')} well={c.name} gate={c.gate} nature="scenario"
           right={<span className="chip mono" style={{ color: clColor, borderColor: clColor }}>{clearance === 'clear' ? '◆ CLEARED' : clearance === 'watch' ? '▲ WATCH' : '■ ALERT'}</span>} />
         <div className="wd-scroll" style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          {/* mud window */}
           <div>
             <div className="eyebrow" style={{ marginBottom: 6 }}>Mud-weight window (sg vs depth)</div>
-            <div ref={chart.wrapRef} style={{ height: 230, position: 'relative' }}><canvas ref={chart.canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} /></div>
-            <div className="wd-note">Lower bound = max(pore, collapse); upper = fracture. Planned mud rides mid-window. Volve is close to normally pressured. dataNature: scenario/derived.</div>
+            <MudWindow mw={c.mudWindow} />
+            <div className="wd-note">Lower bound = max(pore, collapse); upper = fracture. Planned mud rides mid-window. Hover a depth for the exact gradients. dataNature: scenario/derived.</div>
           </div>
 
-          {/* barrier schematic */}
           <div>
             <div className="eyebrow" style={{ marginBottom: 6 }}>Well-barrier schematic (NORSOK D-010)</div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -98,16 +111,13 @@ export function Clearance({ c }: { c: WdCandidate }) {
                     <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: b.name === 'Primary' ? 'var(--teal)' : 'var(--blue)' }}>{b.name.toUpperCase()}</span>
                     <span className="mono" style={{ fontSize: 8, marginLeft: 'auto', color: b.verified ? 'var(--teal)' : 'var(--muted)' }}>{b.verified ? '✓ verified' : '○ pending'}</span>
                   </div>
-                  {b.elements.map((el) => (
-                    <div key={el} style={{ fontSize: 10.5, color: 'var(--text)', padding: '3px 0', borderBottom: '1px solid var(--line)' }}>{el}</div>
-                  ))}
+                  {b.elements.map((el) => <div key={el} style={{ fontSize: 10.5, color: 'var(--text)', padding: '3px 0', borderBottom: '1px solid var(--line)' }}>{el}</div>)}
                 </div>
               ))}
             </div>
             <div className="wd-note">Two independent, tested envelopes (WBE stack). Each envelope isolates the source of flow.</div>
           </div>
 
-          {/* anti-collision */}
           <div style={{ gridColumn: '1 / 3' }}>
             <div className="eyebrow" style={{ marginBottom: 6 }}>Anti-collision · separation factor vs real offset wells</div>
             {res.loading && <div style={{ fontSize: 11, color: 'var(--muted)' }}>Loading offset trajectories…</div>}
@@ -133,7 +143,7 @@ export function Clearance({ c }: { c: WdCandidate }) {
                 </tbody>
               </table>
             )}
-            <div className="wd-note">SF = min distance ÷ combined positional uncertainty (~1.5% of MD). Industry thresholds: SF ≥ 4 clear · SF ≥ {sfAlert.toFixed(1)} watch · below = alert. Simplified vs the full ISCWSA covariance model.</div>
+            <div className="wd-note">SF = min distance ÷ combined positional uncertainty (~1.5% of MD). Thresholds: SF ≥ 4 clear · SF ≥ {sfAlert.toFixed(1)} watch · below = alert. Simplified vs the full ISCWSA covariance model.</div>
           </div>
         </div>
       </div>

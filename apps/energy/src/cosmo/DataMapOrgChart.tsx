@@ -20,7 +20,7 @@ type OrgNode = {
 };
 
 function buildOrgData(): OrgNode {
-  const root: OrgNode = { id: 'root', kind: 'root', name: 'North Star', sub: 'Al Shaheen · Subsurface Data Map', c: '#0FB5A6', icon: 'sparkles', children: [] };
+  const root: OrgNode = { id: 'root', kind: 'root', name: 'North Star', sub: 'Volve · Subsurface Data Map', c: '#0FB5A6', icon: 'sparkles', children: [] };
   ORG_STAGES.forEach((st) => {
     const docs = FILES.filter((f) => f.dept === st.id);
     const stageNode: OrgNode = { id: 'st-' + st.id, kind: 'stage', name: st.name, sub: docs.length + ' documents', c: st.c, icon: st.icon, children: [] };

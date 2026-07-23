@@ -3,11 +3,41 @@
 // and captured lessons. Available once the well is drilled (Execute gate) — the
 // planned/actual deltas are what feed the next well's Basis.
 import { useState } from 'react';
+import { scaleLinear } from 'd3-scale';
 import { Inspector, InspectorSection } from '../fielddev/chrome';
-import type { WdCandidate } from './types';
+import type { WdCandidate, NptRow } from './types';
 import { wdTab } from './registry';
 import { WdHead, GateLocked, usd } from './shared';
 import { isGateReached } from './wdData';
+import { useMeasure, ChartTip, TipRow } from './d3charts';
+
+/** Interactive D3 horizontal NPT bars (hover for cause + hours). */
+function NptBars({ npt }: { npt: NptRow[] }) {
+  const { ref, w } = useMeasure<HTMLDivElement>();
+  const [hi, setHi] = useState<number | null>(null);
+  const W = Math.max(w, 240);
+  const ML = 118, MR = 40, rowH = 26, H = npt.length * rowH + 6;
+  const max = Math.max(...npt.map((n) => n.hours), 1);
+  const x = scaleLinear([0, max], [ML, W - MR]);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <svg width={W} height={H} style={{ display: 'block' }}>
+        {npt.map((n, i) => {
+          const cy = i * rowH + 4;
+          return (
+            <g key={n.section} onPointerEnter={() => setHi(i)} onPointerLeave={() => setHi(null)} style={{ cursor: 'default' }}>
+              <rect x={0} y={cy} width={W} height={rowH} fill={hi === i ? 'var(--panel-2)' : 'transparent'} />
+              <text x={4} y={cy + rowH / 2 + 3} fill="var(--text)" style={{ font: '10.5px var(--mono)' }}>{n.section}</text>
+              <rect x={ML} y={cy + 6} width={Math.max(0, x(n.hours) - ML)} height={rowH - 12} rx={3} fill="var(--rose)" opacity={hi === i ? 1 : 0.82} />
+              <text x={x(n.hours) + 5} y={cy + rowH / 2 + 3} fill="var(--rose)" style={{ font: '10px var(--mono)' }}>{n.hours}h</text>
+            </g>
+          );
+        })}
+      </svg>
+      {hi != null && <ChartTip x={W * 0.5} y={hi * rowH + rowH / 2 + 4} w={W}><TipRow k={npt[hi].section} v={`${npt[hi].hours} h`} c="var(--rose)" /><div style={{ color: 'var(--muted)', marginTop: 2 }}>{npt[hi].cause}</div></ChartTip>}
+    </div>
+  );
+}
 
 export function Debrief({ c }: { c: WdCandidate }) {
   const [inspOpen, setInspOpen] = useState(true);
@@ -21,7 +51,6 @@ export function Debrief({ c }: { c: WdCandidate }) {
   }
   const a = c.asDrilled;
   const nptTotal = a.npt.reduce((s, x) => s + x.hours, 0);
-  const nptMax = Math.max(...a.npt.map((x) => x.hours), 1);
   const daysOver = a.daysActual - a.daysPlan;
   const costOver = a.costActualUsd - a.costPlanUsd;
   const lessons = [
@@ -76,17 +105,7 @@ export function Debrief({ c }: { c: WdCandidate }) {
             {/* NPT by section */}
             <div>
               <div className="eyebrow" style={{ marginBottom: 6 }}>Non-productive time by hole section</div>
-              {a.npt.map((n) => (
-                <div key={n.section} style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text)' }}>
-                    <span>{n.section}</span><span className="mono" style={{ color: 'var(--rose)' }}>{n.hours} h</span>
-                  </div>
-                  <div style={{ height: 7, background: 'var(--panel-2)', borderRadius: 3, marginTop: 2 }}>
-                    <div style={{ width: `${(n.hours / nptMax) * 100}%`, height: '100%', background: 'var(--rose)', borderRadius: 3 }} />
-                  </div>
-                  <div style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 1 }}>{n.cause}</div>
-                </div>
-              ))}
+              <NptBars npt={a.npt} />
             </div>
           </div>
 

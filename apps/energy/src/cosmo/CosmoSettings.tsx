@@ -68,7 +68,7 @@ export function CosmoSettings({ open, onClose, dark, setDark }: {
           <div className="designer-modal">
             <div className="designer-head">
               <Palette size={17} style={{ color: 'var(--teal)' }} />
-              <div><b>COSMO Designer Studio</b><br /><span>embedded previous designer · 80% canvas</span></div>
+              <div><b>ArgantaEnergy Designer Studio</b><br /><span>embedded previous designer · 80% canvas</span></div>
               <div className="sp" />
               <button className="wbtn" onClick={() => setDesigner(false)}><Minimize2 size={13} /> Back to settings</button>
               <button className="mx" onClick={closeAll}><X size={15} /></button>
@@ -76,7 +76,7 @@ export function CosmoSettings({ open, onClose, dark, setDark }: {
             <iframe
               className="designer-frame"
               srcDoc={atob(DESIGNER_STUDIO_URL.substring(DESIGNER_STUDIO_URL.indexOf(',') + 1))}
-              title="COSMO Designer Studio"
+              title="ArgantaEnergy Designer Studio"
               sandbox="allow-scripts allow-same-origin allow-downloads allow-modals"
             />
           </div>

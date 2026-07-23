@@ -13,10 +13,10 @@ import { SLIDE_SIZES, LAYOUTS, THEMES, TRANSITIONS } from './report-types';
 
 type Slide = { k: string; t: string; p: string; layout: string; theme: string; trans: string; notes: string };
 const INIT: Slide[] = [
-  { k: 'Guardians of Al Shaheen', t: 'Every field needs a guardian', p: 'The human expert is the guardian — RMO Cosmo gives back time.', layout: 'Title', theme: 'dark', trans: 'Fade', notes: 'Open with the guardian metaphor. Set the tone.' },
+  { k: 'Guardians of the reservoir', t: 'Every field needs a guardian', p: 'The human expert is the guardian — ArgantaEnergy gives back time.', layout: 'Title', theme: 'dark', trans: 'Fade', notes: 'Open with the guardian metaphor. Set the tone.' },
   { k: 'Lifecycle', t: 'Four stages, one shell', p: 'Exploration · Field Development · Well Delivery · Reservoir Management.', layout: 'Title + Content', theme: 'dark', trans: 'Push', notes: 'Walk the four lifecycle stages left to right.' },
-  { k: 'Agents', t: 'Seven workstream agents', p: 'Each embedded as a digital employee; Cosmonaut orchestrates across all.', layout: 'Two Content', theme: 'teal', trans: 'Morph', notes: 'Contrast the seven agents; Cosmonaut in the middle.' },
-  { k: 'Value', t: '~$3M potential per year', p: 'Evidence-first, C1-Controlled, grounded to the unified model.', layout: 'Chart', theme: 'violet', trans: 'Zoom', notes: 'Land the value case. Reference the ledger.' },
+  { k: 'Agents', t: 'Workstream agents', p: 'Each embedded as a digital employee; Arganta orchestrates across all.', layout: 'Two Content', theme: 'teal', trans: 'Morph', notes: 'Contrast the agents; Arganta in the middle.' },
+  { k: 'Value', t: '~$3M potential per year', p: 'Evidence-first, confidential, grounded to the unified model.', layout: 'Chart', theme: 'violet', trans: 'Zoom', notes: 'Land the value case. Reference the ledger.' },
 ];
 
 function slideBody(sl: Slide, H: number): ReactNode {
@@ -171,7 +171,7 @@ export function ReportPresentation() {
             <div className="sbadge">{i + 1} / {slides.length}</div>
             {s.theme !== 'light' && <div className="orbmini" />}
             <div className="deck-canvasarea">{slideBody(s, h)}</div>
-            {showFooter && <div className="footerbar"><span>RMO Cosmo · Al Shaheen · C1-Controlled</span><span>{i + 1}</span></div>}
+            {showFooter && <div className="footerbar"><span>ArgantaEnergy · Volve · Confidential</span><span>{i + 1}</span></div>}
           </div>
           <div className="deck-nav">
             <button className="nb" onClick={() => go(-1)}><ChevronLeft size={16} /></button>
@@ -198,7 +198,7 @@ export function ReportPresentation() {
         <button className="pexit" onClick={() => setPresent(false)}><X size={13} /> Exit (Esc)</button>
         <div className={'pslide theme-' + s.theme} style={{ width: pW, height: pH }}>
           <div className="pcanvasarea">{slideBody(s, pH)}</div>
-          {showFooter && <div className="footerbar"><span>RMO Cosmo · Al Shaheen · C1-Controlled</span><span>{i + 1}</span></div>}
+          {showFooter && <div className="footerbar"><span>ArgantaEnergy · Volve · Confidential</span><span>{i + 1}</span></div>}
         </div>
         <div className="pbar"><button onClick={() => go(-1)}><ChevronLeft size={16} /></button><span>{i + 1} / {slides.length} · {s.trans}</span><button onClick={() => go(1)}><ChevronRight size={16} /></button></div>
       </div>

@@ -14,21 +14,21 @@ import { CosmoAgentOrb } from './CosmoAgentOrb';
 
 // ── data (verbatim from source) ─────────────────────────────────────────────
 const CC_SESSIONS = [
-  { id: 's1', title: 'Al Shaheen — production review', meta: 'today · FRONTIER' },
+  { id: 's1', title: 'Volve — production review', meta: 'today · FRONTIER' },
   { id: 's2', title: 'FD volumetrics — P90/P50/P10', meta: '2d ago · SOVEREIGN' },
   { id: 's3', title: 'Opportunity screening shortlist', meta: '4d ago · DETERMINISTIC' },
 ];
 type CCModel = { id: string; name: string; desc: string; weight: number; ctx: string; badge?: string; locked?: boolean };
 const CC_MODELS: Array<{ group: string; tier: string; tc: string; models: CCModel[] }> = [
   { group: 'SOVEREIGN · on-prem', tier: 'SOV', tc: '#2563eb', models: [
-    { id: 'cosmo-lite', name: 'Cosmo Lite', desc: 'Fast local model for everyday lookups', weight: 1, ctx: '128K' },
-    { id: 'cosmo-core', name: 'Cosmo Core', desc: 'Balanced sovereign default · analysis & synthesis', weight: 2, ctx: '200K', badge: 'DEFAULT' },
+    { id: 'arganta-lite', name: 'Arganta Lite', desc: 'Fast local model for everyday lookups', weight: 1, ctx: '128K' },
+    { id: 'arganta-core', name: 'Arganta Core', desc: 'Balanced sovereign default · analysis & synthesis', weight: 2, ctx: '200K', badge: 'DEFAULT' },
   ] },
   { group: 'WORKER · agent runtime', tier: 'WRK', tc: '#0FB5A6', models: [
-    { id: 'cosmo-agent', name: 'Cosmo Agent', desc: 'Tool-using workstream agent runtime', weight: 2, ctx: '200K' },
+    { id: 'arganta-agent', name: 'Arganta Agent', desc: 'Tool-using workstream agent runtime', weight: 2, ctx: '200K' },
   ] },
-  { group: 'FRONTIER · cloud (C1-gated)', tier: 'FRO', tc: '#7c3aed', models: [
-    { id: 'cosmo-frontier', name: 'Cosmo Frontier', desc: 'Deep reasoning for hard, multi-step work', weight: 3, ctx: '1M', locked: true },
+  { group: 'FRONTIER · cloud (gated)', tier: 'FRO', tc: '#7c3aed', models: [
+    { id: 'arganta-frontier', name: 'Arganta Frontier', desc: 'Deep reasoning for hard, multi-step work', weight: 3, ctx: '1M', locked: true },
   ] },
 ];
 const CC_MODEL_BY_ID = (id: string) =>
@@ -51,7 +51,7 @@ const artIcon = (name: string, size = 12) =>
   name === 'gem' ? <Gem size={size} /> : name === 'map' ? <MapIcon size={size} /> : <FileText size={size} />;
 
 // FDP knowledge-base note (rendered inside the artifact "Note" tab — placeholder canvas)
-const FDP_NOTE = `# Field Development — Al Shaheen
+const FDP_NOTE = `# Field Development — Volve
 
 > [!note] Evidence-native plan
 Every figure below is traceable to a source in the data map.
@@ -140,10 +140,10 @@ function MdCanvas({ md }: { md: string }) {
 }
 
 type Msg = { role: 'user' | 'assistant'; text: string; done: boolean };
-const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Cosmonaut** — the RMO Cosmo orchestrator for the **Al Shaheen** field. Ask me anything, or open the artifact pane to see live content.', done: true };
-const CANNED = `Here is the **Al Shaheen** lifecycle at a glance:\n\n- **Exploration** · BETA · GeaVision, GeaGuard\n- **Field Development** · LIVE · WellAion\n- **Well Delivery** · BETA · WellNova\n- **Reservoir Management** · LIVE · Prismo, WellWatch, WellNexus\n- **Drilling Sequence** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart.`;
+const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Arganta** — the ArgantaEnergy orchestrator. The active field is **Volve**. Ask me anything, or open the artifact pane to see live content.', done: true };
+const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling Sequence** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart.`;
 
-// ── the Cosmonaut canvas ────────────────────────────────────────────────────
+// ── the Arganta canvas ───────────────────────────────────────────────────────
 export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClose: () => void; fullSignal?: number }) {
   const [full, setFull] = useState(false);
   // mobile Cosmonaut orb tap opens the canvas straight to full-screen (source openCosmoFull)
@@ -152,7 +152,7 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(false);
   const [device, setDevice] = useState('full');
-  const [model, setModel] = useState('cosmo-core');
+  const [model, setModel] = useState('arganta-core');
   const [mopen, setMopen] = useState(false);
   const [draft, setDraft] = useState('');
   const [artifact, setArtifact] = useState('note');
@@ -197,7 +197,7 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
     <div className={'cosmo-canvas ' + (open ? 'open' : '') + (full ? ' full' : '')} id="cosmoCanvas">
       <div className="cc-top">
         <div className="g"><CosmoAgentOrb size={26} /></div>
-        <div><div className="tt">Cosmonaut</div><div className="sub">RMO Cosmo · orchestrator</div></div>
+        <div><div className="tt">Arganta</div><div className="sub">ArgantaEnergy · orchestrator</div></div>
         <div className="sp" />
         <div className="cc-ic" title="History & artifacts" onClick={() => setShowLeft((v) => !v)}><PanelLeft size={15} /></div>
         <div className="cc-ic" title="New chat" onClick={onNew}><Plus size={15} /></div>
@@ -220,7 +220,7 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
           <div className="cc-stream" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
             {msgs.map((m, i) => (
               <div className={'msg ' + m.role} key={i}>
-                <div className="who" style={m.role === 'user' ? { textAlign: 'right' } : undefined}>{m.role === 'user' ? 'YOU' : 'COSMONAUT'}</div>
+                <div className="who" style={m.role === 'user' ? { textAlign: 'right' } : undefined}>{m.role === 'user' ? 'YOU' : 'ARGANTA'}</div>
                 <div className="bub">
                   {m.role === 'assistant'
                     ? (m.text ? <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) + (m.done ? '' : '<span class="cc-caret"></span>') }} /> : <div className="cc-typing"><i /><i /><i /></div>)
@@ -235,7 +235,7 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
 
           <div className="cc-composer">
             <div className="cc-shell">
-              <textarea className="cc-input" rows={1} placeholder="Ask Cosmonaut…" value={draft}
+              <textarea className="cc-input" rows={1} placeholder="Ask Arganta…" value={draft}
                 onInput={(e) => { const el = e.currentTarget; setDraft(el.value); el.style.height = 'auto'; el.style.height = Math.min(160, el.scrollHeight) + 'px'; }}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); e.currentTarget.style.height = 'auto'; } }} />
               <div className="cc-tray">
@@ -273,7 +273,7 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
             <div className="cc-usage">
               <span className="u"><Gauge size={11} /> Context <div className="cc-bar"><i style={{ width: '24%' }} /></div> 24% of {cm.ctx}</span>
               <span className="u"><BatteryMedium size={11} /> Weekly <div className="cc-bar warn"><i style={{ width: '62%' }} /></div> 62% · resets Mon</span>
-              <span className="u" style={{ marginLeft: 'auto' }}><Shield size={11} /> {cm.tier} · C1-Controlled</span>
+              <span className="u" style={{ marginLeft: 'auto' }}><Shield size={11} /> {cm.tier} · governed</span>
             </div>
             <div className="cc-chips">{chips.map((c) => <div className="cc-chip" key={c} onClick={() => send(c)}>{c}</div>)}</div>
           </div>

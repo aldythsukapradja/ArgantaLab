@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-07-23T03:38:20.099Z",
+  "crs": "WGS84 (EPSG:4326)",
+  "aoiPolygons": {
+    "xmin": -4,
+    "ymin": 55,
+    "xmax": 7,
+    "ymax": 62.5
+  },
+  "aoiWellbores": {
+    "xmin": 0.5,
+    "ymin": 57.8,
+    "xmax": 3.2,
+    "ymax": 59.6
+  },
+  "sources": {
+    "NO": {
+      "name": "Norwegian Offshore Directorate (Sodir)",
+      "licence": "NLOD-2.0",
+      "attribution": "Contains data under the Norwegian licence for Open Government data (NLOD) distributed by the Norwegian Offshore Directorate (Sokkeldirektoratet)."
+    },
+    "UK": {
+      "name": "North Sea Transition Authority (NSTA)",
+      "licence": "NSTA Open User Licence",
+      "attribution": "North Sea Transition Authority"
+    }
+  },
+  "counts": {
+    "quadrants": {
+      "NO": 36,
+      "UK": 55
+    },
+    "blocks": {
+      "NO": 319,
+      "UK": 520
+    },
+    "licences": {
+      "NO": 131,
+      "UK": 263
+    },
+    "fields": {
+      "NO": 107,
+      "UK": 253
+    },
+    "discoveries": {
+      "NO": 391,
+      "UK": 0
+    },
+    "wellbores": {
+      "NO": 1651,
+      "UK": 2204
+    }
+  },
+  "volveAnchor": {
+    "found": true,
+    "npdid": 3420717,
+    "operator": "Equinor Energy AS",
+    "status": "Shut down",
+    "discoveryYear": 1993,
+    "discoveryWellbore": "15/9-19 SR"
+  }
+}

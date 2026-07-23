@@ -9,7 +9,7 @@ export function CosmoApp() {
   return (
     <iframe
       src={COSMO_URL}
-      title="ArgantaEnergy · COSMO"
+      title="ArgantaEnergy"
       style={{ border: 'none', width: '100vw', height: '100vh', display: 'block' }}
       allow="clipboard-read; clipboard-write"
     />

@@ -11,6 +11,13 @@ export const SM3_TO_BBL = 6.2898;
 export const SM3GAS_TO_SCF = 35.3147;
 export const BARA_TO_PSI = 14.5038;
 
+/** Index of the last month a well was actually producing (oil rate > 0) — skips the
+ *  trailing zero months a field carries after shut-in (Volve: Oct–Dec 2016). */
+export function lastLiveIdx(w: RMWellSeries): number {
+  for (let i = w.oilRate.length - 1; i >= 0; i--) if (w.oilRate[i] > 0) return i;
+  return Math.max(0, w.oilRate.length - 1);
+}
+
 export function daysInMonth(ym: string): number {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m, 0).getDate();
@@ -24,6 +31,7 @@ function monthDays(months: ProdMonth[]): number[] {
 
 export interface RMWellSeries {
   well: string; role: WellRole;
+  raw: ProdMonth[];
   ym: string[]; t: number[];
   oilRate: number[]; waterRate: number[]; gasRate: number[]; liqRate: number[]; injRate: number[];
   cumOil: number[]; cumWinj: number[]; cumLiquid: number[];
@@ -62,7 +70,7 @@ export function buildWellSeries(p: ProdJson, role: WellRole = 'producer'): RMWel
   }
   const vols: MonthVols[] = M.map((m) => ({ oil: m.oil, water: m.water, wi: m.wi }));
   return {
-    well: p.well, role, ym: M.map((m) => m.ym), t,
+    well: p.well, role, raw: M, ym: M.map((m) => m.ym), t,
     oilRate, waterRate, gasRate, liqRate, injRate,
     cumOil, cumWinj, cumLiquid, wct, wor, gor, bhp, thp, uptime, hall,
     vrr: cumulativeVrr(vols),

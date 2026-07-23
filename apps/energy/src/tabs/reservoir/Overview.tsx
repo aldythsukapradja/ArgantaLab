@@ -7,16 +7,19 @@ import { useRM } from './ReservoirMgmt';
 import { setSelection } from './selection';
 import { RMChart } from './chart/RMChart';
 import { Panel, Stat, TabHeader, Page } from './surface';
+import { lastLiveIdx } from './data';
 import { annualPct, wellHealth } from '../../engine/surveillance';
 
 export function Overview() {
   const rm = useRM();
   const f = rm.field;
-  const lastOil = f.oilRate.length ? f.oilRate[f.oilRate.length - 1] : 0;
-  const lastWct = f.wct.length ? f.wct[f.wct.length - 1] : 0;
+  const fi = lastLiveIdx(f);
+  const lastOil = f.oilRate[fi] ?? 0;
+  const lastWct = f.wct[fi] ?? 0;
 
   const ranked = useMemo(() => rm.producers.map((w) => {
-    const wct = w.wct.length ? w.wct[w.wct.length - 1] : 0;
+    const li = lastLiveIdx(w);
+    const wct = w.wct[li] ?? 0;
     const up = w.uptime.filter((v): v is number => v != null);
     const uptime = up.length ? up[up.length - 1] : 1;
     const worTrend = annualPct(w.wor, 12, 12);
@@ -42,10 +45,10 @@ export function Overview() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12, marginTop: 12 }}>
         <Panel title="Field Oil Rate" minHeight={220}>
-          <RMChart series={[{ name: 'field oil', color: 'var(--green)', pts: oilTrend }]} xLabel="Month index" yLabel="Oil rate · bopd" />
+          <RMChart series={[{ name: 'field oil', color: 'var(--green)', pts: oilTrend, area: true }]} xLabel="Month index" yLabel="Oil rate · bopd" />
         </Panel>
         <Panel title="Cumulative VRR (target 1.0)" minHeight={220}>
-          <RMChart series={[{ name: 'VRR', color: 'var(--cblue)', pts: vrrTrend }]} xLabel="Month index" yLabel="VRR" target={{ y: 1, label: 'VRR = 1' }} />
+          <RMChart series={[{ name: 'VRR', color: 'var(--cblue)', pts: vrrTrend, area: true }]} xLabel="Month index" yLabel="VRR" target={{ y: 1, label: 'VRR = 1' }} />
         </Panel>
       </div>
 

@@ -95,3 +95,71 @@ html[data-ui="cosmo"] .nat.measured{background:#16a34a1e;color:#15803d}
 html[data-ui="cosmo"] .nat.derived{background:#2563eb1e;color:#1d4ed8}
 html[data-ui="cosmo"] .nat.interpreted{background:#7c3aed1e;color:#6d28d9}
 html[data-ui="cosmo"] .nat.reference{background:var(--line2);color:var(--ink3)}
+
+/* ═══════════ ATLAS Catalogue — master metadata spine + Volve instance ═══════════ */
+html[data-ui="cosmo"] .at-wrap{display:grid;grid-template-columns:1fr 300px;gap:14px;height:100%;min-height:0;padding:2px}
+html[data-ui="cosmo"] .at-main{overflow-y:auto;padding-right:4px;min-height:0}
+html[data-ui="cosmo"] .at-side{display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0}
+@media(max-width:900px){html[data-ui="cosmo"] .at-wrap{grid-template-columns:1fr}html[data-ui="cosmo"] .at-side{display:none}}
+
+html[data-ui="cosmo"] .at-note{display:flex;gap:9px;align-items:flex-start;padding:10px 13px;border:1px solid var(--line);
+  border-radius:11px;background:var(--panel2);font-size:11.5px;color:var(--ink2);line-height:1.5;margin-bottom:12px}
+html[data-ui="cosmo"] .at-note b{color:var(--ink)} html[data-ui="cosmo"] .at-note svg{color:var(--teal-ink);flex-shrink:0;margin-top:1px}
+html[data-ui="cosmo"] .at-note .mono{font-family:var(--mono);font-size:10.5px;color:var(--teal-ink)}
+
+html[data-ui="cosmo"] .at-axhd{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:700;margin:14px 0 7px}
+html[data-ui="cosmo"] .at-axhd .sw{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+html[data-ui="cosmo"] .at-axhd .ln{flex:1;height:1px;background:var(--line)}
+
+html[data-ui="cosmo"] .at-tier{display:grid;grid-template-columns:26px 1fr 128px 1fr;gap:11px;align-items:center;
+  padding:9px 13px;border:1px solid var(--line);border-left-width:3px;border-radius:10px;background:var(--panel);
+  margin-bottom:6px;box-shadow:var(--shadow);transition:.14s}
+html[data-ui="cosmo"] .at-tier:hover{transform:translateX(3px)}
+html[data-ui="cosmo"] .at-n{font-family:var(--mono);font-size:11px;color:var(--ink3);text-align:center;font-weight:600}
+html[data-ui="cosmo"] .at-ent b{font-size:13.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+html[data-ui="cosmo"] .at-ent small{display:block;font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:2px;letter-spacing:.02em}
+html[data-ui="cosmo"] .at-kt{font-family:var(--mono);font-size:9.5px;font-weight:600;padding:4px 9px;border-radius:20px;text-align:center;justify-self:start;white-space:nowrap}
+html[data-ui="cosmo"] .at-ex{font-family:var(--mono);font-size:10.5px;color:var(--ink);background:rgba(245,209,92,.13);
+  border:1px solid #ffd15c;border-radius:7px;padding:5px 9px;justify-self:stretch}
+html[data-ui="cosmo"].dark .at-ex{color:var(--ink)}
+html[data-ui="cosmo"] .at-ex.none{background:transparent;border:1px dashed var(--line);color:var(--ink3)}
+html[data-ui="cosmo"] .at-converge{text-align:center;font-family:var(--mono);font-size:10px;color:var(--ink3);margin:9px 0}
+html[data-ui="cosmo"] .at-converge b{color:#d99a00}
+@media(max-width:620px){
+  html[data-ui="cosmo"] .at-tier{grid-template-columns:24px 1fr;gap:5px}
+  html[data-ui="cosmo"] .at-kt,html[data-ui="cosmo"] .at-ex{grid-column:2;justify-self:start;margin-top:3px}
+}
+
+html[data-ui="cosmo"] .at-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+html[data-ui="cosmo"] .at-ch{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);font-weight:700}
+html[data-ui="cosmo"] .at-ch .at-cnt{margin-left:auto;color:var(--teal-ink)}
+html[data-ui="cosmo"] .at-lin{padding:11px 12px;font-size:11px;line-height:1.9}
+html[data-ui="cosmo"] .at-lin .lk{color:var(--teal-ink);font-family:var(--mono);font-size:10.5px}
+html[data-ui="cosmo"] .at-lin .sep{color:var(--ink3);margin:0 5px}
+html[data-ui="cosmo"] .at-facts{padding:6px 12px 10px;display:flex;flex-direction:column}
+html[data-ui="cosmo"] .at-fact{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px dashed var(--line2);flex-wrap:wrap}
+html[data-ui="cosmo"] .at-fact:last-child{border-bottom:none}
+html[data-ui="cosmo"] .at-fact .fm{font-size:11px;color:var(--ink2);flex:1;min-width:96px}
+html[data-ui="cosmo"] .at-fact .fv{font-size:12px;font-weight:700;color:var(--ink)}
+html[data-ui="cosmo"] .at-fact .fv small{font-size:8.5px;color:var(--ink3);font-weight:500}
+html[data-ui="cosmo"] .at-fact .fcls{font-family:var(--mono);font-size:7.5px;font-weight:700;padding:2px 6px;border-radius:20px}
+html[data-ui="cosmo"] .at-fact .fnat{font-family:var(--mono);font-size:7px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:20px;text-transform:uppercase}
+html[data-ui="cosmo"] .fnat.n-measured{background:#16a34a1e;color:#15803d}
+html[data-ui="cosmo"] .fnat.n-derived{background:#2563eb1e;color:#1d4ed8}
+html[data-ui="cosmo"] .fnat.n-interpreted{background:#7c3aed1e;color:#6d28d9}
+html[data-ui="cosmo"] .fnat.n-reference{background:var(--line2);color:var(--ink3)}
+html[data-ui="cosmo"] .at-prms{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+html[data-ui="cosmo"] .at-prms .pr{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink2)}
+html[data-ui="cosmo"] .at-prms .pd{width:9px;height:9px;border-radius:3px}
+html[data-ui="cosmo"] .at-prms .pr-cap{font-size:10px;color:var(--ink3);line-height:1.5;margin-top:4px}
+html[data-ui="cosmo"] .at-prms .pr-cap b{color:var(--ink2)}
+
+/* spine star-schema additions */
+html[data-ui="cosmo"] .er-tier{font-family:var(--mono);font-size:9px;font-weight:800;background:rgba(255,255,255,.28);
+  color:#fff;border-radius:5px;padding:1px 5px;margin-right:6px}
+html[data-ui="cosmo"] .dm-hint{font-family:var(--mono);font-size:9.5px;color:var(--ink3);letter-spacing:.03em}
+html[data-ui="cosmo"] .dm-srcseg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2);margin-left:auto;margin-right:12px}
+html[data-ui="cosmo"] .dm-srcseg .sg{padding:5px 11px;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--ink2);cursor:pointer}
+html[data-ui="cosmo"] .dm-srcseg .sg.on{background:var(--teal);color:#fff}

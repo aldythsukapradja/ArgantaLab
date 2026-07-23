@@ -118,14 +118,14 @@ export function ReportHub() {
               <button onClick={() => setZoom(1)} title="Fit">⤢</button>
             </div>
           </div>
-          <div className="rgrp"><button className="rbtn"><Sparkles size={13} /> Ask Cosmonaut</button><button className="rbtn"><Check size={13} /> Approve</button><button className="rbtn p"><Download size={13} /> Export</button></div>
+          <div className="rgrp"><button className="rbtn"><Sparkles size={13} /> Ask Arganta</button><button className="rbtn"><Check size={13} /> Approve</button><button className="rbtn p"><Download size={13} /> Export</button></div>
         </div>
 
         <div className="tpl-doc-scroll" ref={stageRef}>
           <div className="tpl-page fadein" key={t.id + orient} style={{ width: w, minHeight: h, fontSize: 13 * Math.min(1.2, w / 820) }}>
             <div className="tph">
-              <div><div className="co">RMO Cosmo · North Oil Company · C1-Controlled</div><div className="tt">{t.name}</div></div>
-              <div className="dt">Al Shaheen field<br />22 Jul 2026 · {t.owner}<br />{t.freq} · {orient} · A4</div>
+              <div><div className="co">ArgantaEnergy · Volve · Confidential</div><div className="tt">{t.name}</div></div>
+              <div className="dt">Volve field<br />22 Jul 2026 · {t.owner}<br />{t.freq} · {orient} · A4</div>
             </div>
             <div className="tpl-kpis">
               {t.kpis.map((k) => <div className="tpl-kpi" key={k[0]}><div className="k">{k[0]}</div><div className="v">{k[1]}</div><div className="s">{k[2]}</div></div>)}

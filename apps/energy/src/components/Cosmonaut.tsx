@@ -11,7 +11,7 @@ export function Orb({ size = 58, onClick, label = true }: { size?: number; onCli
   const [hover, setHover] = useState(false);
   return (
     <button onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      aria-label="Open Cosmonaut" title="Cosmonaut"
+      aria-label="Open Arganta" title="Arganta"
       style={{ position: 'relative', width: size, height: size, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'transparent' }}>
       <span className="orb-halo" style={{ position: 'absolute', inset: -6, borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(179,125,240,.6), rgba(98,174,247,.15) 60%, transparent 72%)', filter: 'blur(4px)' }} />
@@ -28,7 +28,7 @@ export function Orb({ size = 58, onClick, label = true }: { size?: number; onCli
       {label && hover && (
         <span className="mono" style={{ position: 'absolute', right: size + 8, top: '50%', transform: 'translateY(-50%)',
           background: 'var(--panel-2)', border: '1px solid var(--line)', borderRadius: 4, padding: '4px 9px', fontSize: 11, whiteSpace: 'nowrap' }}>
-          Cosmonaut
+          Arganta
         </span>
       )}
     </button>
@@ -106,7 +106,7 @@ export function CosmoOverlay({ isMobile }: { isMobile: boolean }) {
   const cols = isMobile ? '1fr' : `${leftOpen ? 232 : 0}px 1fr ${rightOpen ? 340 : 0}px`;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Cosmonaut"
+    <div role="dialog" aria-modal="true" aria-label="Arganta"
       style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'var(--bg)', display: 'grid',
         gridTemplateColumns: cols, transition: 'grid-template-columns .22s ease' }}>
 
@@ -141,7 +141,7 @@ export function CosmoOverlay({ isMobile }: { isMobile: boolean }) {
       <section style={{ display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--bg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'var(--panel)' }}>
           {!isMobile && <button onClick={() => setLeftOpen((v) => !v)} aria-label="Toggle history" style={{ color: 'var(--muted)' }}><PanelLeft size={16} /></button>}
-          <span className="mono" style={{ fontSize: 12.5, fontWeight: 600, flex: 1 }}>Cosmonaut <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· deterministic knowledge agent</span></span>
+          <span className="mono" style={{ fontSize: 12.5, fontWeight: 600, flex: 1 }}>Arganta <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· deterministic knowledge agent</span></span>
           <TierRack />
           <button onClick={() => setRightOpen((v) => !v)} aria-label="Toggle artifacts" style={{ color: 'var(--muted)' }} title="Artifacts"><PanelRight size={16} /></button>
           <button onClick={() => toggleCosmo(false)} aria-label="Close" style={{ color: 'var(--muted)' }}><X size={18} /></button>
@@ -237,7 +237,7 @@ function CosmoBubble({ msg, isLast, onOpenNote }: { msg: Msg; isLast: boolean; o
     <div style={{ alignSelf: 'flex-start', maxWidth: '92%', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <div style={{ width: 20, height: 20 }}><Orb size={20} label={false} onClick={() => {}} /></div>
-        <span className="eyebrow" style={{ fontSize: 9 }}>COSMONAUT</span>
+        <span className="eyebrow" style={{ fontSize: 9 }}>ARGANTA</span>
         {reply.badges.map((b) => <span key={b.label} className="chip" style={{ padding: '1px 6px', fontSize: 9, color: natureColor(b.nature), borderColor: natureColor(b.nature) }}>{b.label}</span>)}
       </div>
       <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: '2px 10px 10px 10px', padding: '10px 14px' }}>

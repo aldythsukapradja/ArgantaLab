@@ -171,7 +171,7 @@ export function route(promptRaw: string, notes: VaultNote[]): CosmoReply {
   // 6 · Fallback capability card
   return {
     text:
-      `I'm the **Cosmonaut** — a deterministic query surface over the Volve knowledge OS. I don't call an LLM; I route your words to a grounded answer with evidence. Try:\n\n` +
+      `I'm **Arganta** — a deterministic query surface over the Volve knowledge OS. I don't call an LLM; I route your words to a grounded answer with evidence. Try:\n\n` +
       SUGGESTIONS.map((s) => `- ${s}`).join('\n'),
     badges: [],
     artifact: {

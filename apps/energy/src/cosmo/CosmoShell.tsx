@@ -172,8 +172,7 @@ export function CosmoShell() {
       <aside className="sidebar">
         <div className="brand">
           <div className="mark"><Sparkles size={16} /></div>
-          <div><div className="bt">COSMO</div></div>
-          <div className="bs">AL SHAHEEN</div>
+          <div><div className="bt">Arganta<span style={{ background: 'linear-gradient(100deg,#0FB5A6,#5fe3cf)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>Energy</span></div></div>
         </div>
         <div className="nav">
           <div className="navlabel">COMMAND CENTER</div>
@@ -195,7 +194,7 @@ export function CosmoShell() {
       <header className="topbar">
         <button className="mham" onClick={() => { setSheet(null); setDrawer((d) => !d); }} aria-label="Menu"><Menu size={19} /></button>
         <div className="crumbs">
-          <span>RMO COSMO</span><span className="sep">/</span>
+          <span>ArgantaEnergy</span><span className="sep">/</span>
           {active && <><span>Lifecycle</span><span className="sep">/</span></>}
           <span className="cur">{crumbLabel}</span>
           {isFD && <><span className="sep">/</span><span className="cur">{FD_TABS.find((t) => t.id === tab)?.label}</span></>}
@@ -277,8 +276,8 @@ export function CosmoShell() {
           <div className="content">
             <div className="ph" style={{ height: '100%' }}>
               <div className="phi">{active ? <active.icon size={24} /> : <LayoutDashboard size={24} />}</div>
-              <div className="pht">{crumbLabel} — migrating to COSMO</div>
-              <div className="phs">This surface still lives in the reference shell (open <b>?ui=cosmo</b>); it comes online as we migrate region by region.</div>
+              <div className="pht">{crumbLabel} — coming online</div>
+              <div className="phs">This surface comes online as we build ArgantaEnergy out region by region.</div>
             </div>
           </div>
         )}
@@ -286,14 +285,14 @@ export function CosmoShell() {
 
       {/* footer — spans full width (row 3) */}
       <footer className="footer">
-        <span>ARGANTAENERGY · COSMO</span>
-        <span>VOLVE · NORTH SEA</span>
+        <span>ARGANTAENERGY · WORLD PETROLEUM</span>
+        <span>ACTIVE FIELD · VOLVE · NORTH SEA</span>
         <span style={{ marginLeft: 'auto' }}>EVIDENCE-NATIVE · TRUTH-LOCKED</span>
       </footer>
 
-      {/* Cosmonaut orb — opens the animated chat canvas */}
-      <div className={'orb-host' + (chat ? ' hidden' : '')} title="Ask Cosmonaut" onClick={() => setChat(true)}>
-        <div className="orb-label">Ask <b>Cosmonaut</b></div>
+      {/* Arganta agent orb — opens the animated chat canvas */}
+      <div className={'orb-host' + (chat ? ' hidden' : '')} title="Ask Arganta" onClick={() => setChat(true)}>
+        <div className="orb-label">Ask <b>Arganta</b></div>
         <CosmoAgentOrb size={64} />
       </div>
 
@@ -321,9 +320,9 @@ export function CosmoShell() {
         <button className={'mtab ' + (mActive === 'verticals' ? 'on' : '')} onClick={() => toggleSheet('verticals')}>
           <GitBranch size={23} strokeWidth={1.7} /><span>Lifecycle</span>
         </button>
-        <button className="mtab mtab-orb" onClick={() => { setChat(true); setChatFullSignal((s) => s + 1); closeMobile(); }} aria-label="Cosmonaut">
+        <button className="mtab mtab-orb" onClick={() => { setChat(true); setChatFullSignal((s) => s + 1); closeMobile(); }} aria-label="Arganta">
           <CosmoAgentOrb size={52} />
-          <span className="mtab-orb-lbl">Cosmonaut</span>
+          <span className="mtab-orb-lbl">Arganta</span>
         </button>
         <button className={'mtab ' + (mActive === 'report' ? 'on' : '')} onClick={() => toggleSheet('report')}>
           <FileText size={23} strokeWidth={1.7} /><span>Report</span>
