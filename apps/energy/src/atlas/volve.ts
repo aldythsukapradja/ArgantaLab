@@ -5,7 +5,7 @@
 // This is the proof the spine works end-to-end on a real asset. Nothing here is schema —
 // the schema is atlas/spine.ts; this is one CatalogueBundle of instances + facts.
 import { makeId } from './spine';
-import type { CatalogueBundle, EntityInstance, QuantityFact } from './types';
+import type { CatalogueBundle, DetailBundle, EntityInstance, QuantityFact } from './types';
 
 const F = makeId('field', 'sodir', '3420717');       // Volve field
 const RES = makeId('reservoir', 'atlas', 'volve-hugin');
@@ -86,3 +86,15 @@ const facts: QuantityFact[] = [
 
 export const VOLVE_BUNDLE: CatalogueBundle = { id: 'volve', label: 'Volve · Norwegian North Sea', instances, facts };
 export const VOLVE_FIELD_ID = F;
+
+/** Technical detail hangs from the field master; it is not part of the global spine. */
+export const VOLVE_DETAIL_BUNDLE: DetailBundle = {
+  id: 'detail:volve:open-data',
+  label: 'Volve open subsurface dataset',
+  fieldId: F,
+  provider: 'Equinor',
+  licence: 'Equinor Open Data',
+  domains: ['wells', 'wellbores', 'logs', 'trajectories', 'production', 'pressure', 'markers', 'surfaces', 'models', 'documents'],
+  nativeRoot: 'data-energy',
+  externalIds: [{ authority: 'sodir', id: '3420717' }],
+};

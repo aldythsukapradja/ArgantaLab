@@ -3,4 +3,6 @@
 // CATALOGUE-CONCEPT.md. Import from here.
 export * from './types';
 export * from './spine';
-export { VOLVE_BUNDLE, VOLVE_FIELD_ID } from './volve';
+export * from './goget';
+export * from '../osdu';
+export { VOLVE_BUNDLE, VOLVE_DETAIL_BUNDLE, VOLVE_FIELD_ID } from './volve';

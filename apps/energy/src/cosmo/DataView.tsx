@@ -372,7 +372,7 @@ function SpineStar() {
   );
 }
 
-// ── ATLAS Catalogue — the master metadata spine + Volve as a real producing oil field ──
+// ── ATLAS Catalogue — GOGET-compatible master spine + linked field detail bundles ──
 function AtlasCatalogue() {
   // instance-by-type lookup for the Volve bundle (the worked example values)
   const instByType = useMemo(() => {
@@ -418,8 +418,9 @@ function AtlasCatalogue() {
       <div className="at-main">
         <div className="at-note">
           <Globe2 size={14} />
-          <span><b>Two axes, one graph.</b> Drill by <i>geography</i> or by <i>geology</i> — both converge at
-            <b> Field → Well</b>. The spine is callable + updateable (<span className="mono">atlas/spine.ts</span>); Volve is one real instance threaded through it.</span>
+          <span><b>Catalogue spine + technical detail.</b> GOGET-compatible field masters provide global identity,
+            status, ownership, location, production and reserves. Rich packages such as <b>Volve</b> attach to one
+            canonical Field ID and keep their wells, logs, grids and models separate.</span>
         </div>
         {axes.map((ax) => (
           <div className="at-axis" key={ax}>
@@ -435,7 +436,7 @@ function AtlasCatalogue() {
 
       <aside className="at-side">
         <div className="at-card">
-          <div className="at-ch">Volve lineage · the real thread</div>
+          <div className="at-ch">Volve · linked detail proof</div>
           <div className="at-lin">
             {lineage(VOLVE_BUNDLE.instances, VOLVE_FIELD_ID).map((i, k, arr) => (
               <span key={i.id}>
