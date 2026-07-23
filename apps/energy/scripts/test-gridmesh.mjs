@@ -35,7 +35,20 @@ function validate(name, m) {
   check(`${name}: indices in range`, idxOk, `nV=${nV}`);
   check(`${name}: normals per vertex`, m.normal.length === m.position.length);
 }
-validate('shell', buildShell(packed));
+const shell = buildShell(packed);
+validate('shell', shell);
+// continuity: the top surface must be gap-free — every top vertex position must coincide
+// with another top vertex from a neighbouring cell (corner-shared), so no floating tiles.
+{
+  const top = [];
+  for (let v = 0; v < shell.position.length; v += 3) if (Math.abs(shell.uvw[v + 2] - (0.5 / nz)) < 1e-6) top.push([shell.position[v], shell.position[v + 1], shell.position[v + 2]]);
+  const key = (a) => `${a[0].toFixed(3)},${a[1].toFixed(3)},${a[2].toFixed(3)}`;
+  const seen = new Map(); for (const a of top) seen.set(key(a), (seen.get(key(a)) || 0) + 1);
+  // interior corners are shared by 2–4 cells → most positions appear >1×; a fully-tiled
+  // (broken) surface would have every position unique. Assert real sharing exists.
+  let shared = 0; for (const n of seen.values()) if (n > 1) shared++;
+  check('shell: top surface is corner-shared (continuous)', shared > top.length * 0.15, `${shared} shared / ${seen.size} unique corners`);
+}
 validate('section-i', buildSection(packed, 'i', Math.floor(nx / 2)));
 validate('section-k', buildSection(packed, 'k', Math.floor(ny / 2)));
 

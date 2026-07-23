@@ -14,3 +14,5 @@ public/wb/
 
 .vercel
 .env*
+# generated OSDU manifests — build-only input to build-cockpit-spatial.mjs, never shipped
+data-energy/generated/

@@ -18,6 +18,7 @@ const GROUPS: Group[] = [
   { name: 'Company', items: [
     { id: 'home', label: 'Home', Icon: Sparkles },
     { id: 'portfolio', label: 'Portfolio', Icon: LayoutGrid },
+    { id: 'story', label: 'Company Story', Icon: BookOpen },
     { id: 'command', label: 'Command', Icon: Radar },
     { id: 'core', label: 'Arganta Core', Icon: MessageCircle },
     { id: 'copilot', label: 'Copilot', Icon: Mic2 },

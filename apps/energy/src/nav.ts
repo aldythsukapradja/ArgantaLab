@@ -46,7 +46,7 @@ export const DOMAINS: DomainDef[] = [
   { id: 'insight', label: 'Insight', icon: Sparkles, accent: 'rose', status: 'stub', phase: '—', zone: 'intelligence', blurb: 'Dashboards, KPIs, briefings, decisions.' },
   { id: 'reasoning', label: 'Reasoning', icon: Bot, accent: 'teal', status: 'stub', phase: 'P4', zone: 'intelligence', blurb: 'Deterministic-first tier ladder, truthful run envelope, approval gate.' },
   { id: 'knowledge', label: 'Knowledge', icon: BookOpen, accent: 'violet', status: 'live', phase: 'P2', zone: 'intelligence', blurb: 'Vault + knowledge graph — notes, evidence, extraction.' },
-  { id: 'data', label: 'Data', icon: Database, accent: 'amber', status: 'live', phase: 'P2', zone: 'intelligence', blurb: 'Ingestion refinery — field overview, inventory, pipeline, semantic model.' },
+  { id: 'data', label: 'Data', icon: Database, accent: 'amber', status: 'live', phase: 'P2', zone: 'intelligence', blurb: 'OSDU data platform — manifests, catalogue, schema, governance, lineage and quality.' },
 ];
 
 // ── Sub-tabs per domain (config-driven, like DOMAINS). Top bar renders these. ──
@@ -79,10 +79,10 @@ export const SUBTABS: Record<DomainId, SubTab[]> = {
     { id: 'extraction', label: 'Extraction' },
   ],
   data: [
-    { id: 'overview', label: 'Overview' },
-    { id: 'inventory', label: 'Inventory' },
-    { id: 'pipeline', label: 'Pipeline' },
-    { id: 'model', label: 'Model' },
+    { id: 'overview', label: 'OSDU Overview' },
+    { id: 'inventory', label: 'Source Landing' },
+    { id: 'pipeline', label: 'Manifest Pipeline' },
+    { id: 'model', label: 'OSDU Schema' },
   ],
 };
 export const defaultSubtab = (d: DomainId): string => SUBTABS[d][0].id;

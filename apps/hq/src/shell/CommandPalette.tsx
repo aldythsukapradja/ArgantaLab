@@ -11,7 +11,7 @@ import { useVault, type CenterView } from '../vault/store'
 interface Cmd { id: string; label: string; hint: string; keywords: string; Icon: typeof Search; run: () => void }
 
 const SURFACE_ICON: Record<SurfaceId, typeof Search> = {
-  home: Sparkles, portfolio: LayoutGrid, growth: TrendingUp, data: Database, content: GraduationCap,
+  home: Sparkles, portfolio: LayoutGrid, story: BookUser, growth: TrendingUp, data: Database, content: GraduationCap,
   game: Gamepad2, app: Boxes, agents: Network, broadcast: Megaphone, command: Radar,
   pixel: Grid2x2, vault: VaultIcon, architecture: Waypoints, battle: Swords, character: UserRound, world: Map, music: Music2, video: Film, media: Wand2, knowledge: Orbit, cinema: Film, reactor: Atom, rack: Cpu, copilot: Mic2, core: MessageCircle,
   brand: Palette, influencer: UserRound, biography: BookUser,
@@ -44,11 +44,12 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const cmds = useMemo<Cmd[]>(() => {
-    const surfs: SurfaceId[] = ['core', 'home', 'portfolio', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack', 'cinema', 'reactor', 'copilot', 'brand', 'influencer', 'biography']
+    const surfs: SurfaceId[] = ['core', 'home', 'portfolio', 'story', 'growth', 'data', 'vault', 'architecture', 'command', 'game', 'app', 'content', 'agents', 'broadcast', 'battle', 'character', 'world', 'music', 'video', 'media', 'knowledge', 'rack', 'cinema', 'reactor', 'copilot', 'brand', 'influencer', 'biography']
     const KW: Partial<Record<SurfaceId, string>> = {
       vault: ' notes knowledge obsidian markdown',
       broadcast: ' content builder posts social carousel instagram',
       biography: ' cv resume profile linkedin journey timeline deck intro pdf arganta twin',
+      story: ' company perspectives investor partner early adopter presentation',
     }
     const out: Cmd[] = surfs.map(s => ({
       id: 'go-' + s, label: surfaceLabel(s), hint: 'Go to', keywords: s + (KW[s] ?? ''), Icon: SURFACE_ICON[s], run: () => go(s),

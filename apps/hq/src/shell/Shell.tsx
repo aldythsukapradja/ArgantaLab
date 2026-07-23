@@ -11,6 +11,7 @@ import { GlobalCopilot } from '../copilot/GlobalCopilot'
 const Data = lazy(() => import('../surfaces/Data').then(module => ({ default: module.Data })))
 const Growth = lazy(() => import('../surfaces/Growth').then(module => ({ default: module.Growth })))
 const Portfolio = lazy(() => import('../surfaces/Portfolio').then(module => ({ default: module.Portfolio })))
+const CompanyStory = lazy(() => import('../surfaces/CompanyStory').then(module => ({ default: module.CompanyStory })))
 const Content = lazy(() => import('../surfaces/Content').then(module => ({ default: module.Content })))
 const Agents = lazy(() => import('../surfaces/agent/AgentStudio').then(module => ({ default: module.AgentStudio })))
 const Broadcast = lazy(() => import('../surfaces/Broadcast').then(module => ({ default: module.Broadcast })))
@@ -53,6 +54,7 @@ function Surface() {
     case 'data': return <Data />
     case 'growth': return <Growth />
     case 'portfolio': return <Portfolio />
+    case 'story': return <CompanyStory />
     case 'content': return <Content />
     case 'game': return <GameBuilder />
     case 'app': return <AppBuilder />
@@ -84,7 +86,7 @@ export function Shell({ who = 'Operator', authed = false }: { who?: string; auth
   // Edge-to-edge workspaces. GB-3 moved 'game'/'app' here: the Forge is a fixed,
   // non-scrollable page that owns its own viewport, so it must not sit inside
   // .content's scroll container or the panes scroll the page instead of themselves.
-  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app' || surface === 'brand' || surface === 'influencer' || surface === 'biography' || surface === 'agents' || surface === 'command'
+  const full = surface === 'vault' || surface === 'architecture' || surface === 'character' || surface === 'battle' || surface === 'world' || surface === 'music' || surface === 'video' || surface === 'media' || surface === 'broadcast' || surface === 'portfolio' || surface === 'story' || surface === 'cinema' || surface === 'knowledge' || surface === 'reactor' || surface === 'rack' || surface === 'core' || surface === 'game' || surface === 'app' || surface === 'brand' || surface === 'influencer' || surface === 'biography' || surface === 'agents' || surface === 'command'
 
   // The CEO Orb landing is an immersive cockpit — no rail, no topbar. The floating
   // agent chat + command palette (⌘K) stay available; the landing's own Menu button

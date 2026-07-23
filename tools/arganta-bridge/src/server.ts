@@ -18,7 +18,7 @@ import { missionStart, missionDone, heartbeatUpsert, type ActivityEvent } from '
 import { createClaudeEngine } from './engines/claude.ts';
 import { createCodexEngine, ensureCodexMediaMcp } from './engines/codex.ts';
 import type { MissionEngine, OutEvent } from './engines/types.ts';
-import { health, launch, opsCors } from './ops.ts';
+import { health, launch, stop, opsCors } from './ops.ts';
 import { telemetry } from './telemetry.ts';
 import { serveFile } from './files.ts';
 
@@ -111,6 +111,17 @@ function listenOn(host: string) {
         let service = '';
         try { service = JSON.parse(body || '{}').service || ''; } catch { /* bad json */ }
         launch(service).then((r) => { res.writeHead(r.ok ? 200 : 400, { 'content-type': 'application/json' }); res.end(JSON.stringify(r)); })
+          .catch((e) => { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: false, message: String(e?.message || e) })); });
+      });
+      return;
+    }
+    if (req.method === 'POST' && url.pathname === '/stop') {
+      let body = '';
+      req.on('data', (c) => { body += c; if (body.length > 4096) req.destroy(); });
+      req.on('end', () => {
+        let service = '';
+        try { service = JSON.parse(body || '{}').service || ''; } catch { /* bad json */ }
+        stop(service).then((r) => { res.writeHead(r.ok ? 200 : 400, { 'content-type': 'application/json' }); res.end(JSON.stringify(r)); })
           .catch((e) => { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: false, message: String(e?.message || e) })); });
       });
       return;

@@ -92,6 +92,9 @@ a.cc-tile:hover { border-color: var(--acc); }
 .cc-launch-msg { font-size: 11px; color: var(--tx3); margin-left: auto; font-family: var(--mono); max-width: 55%; text-align: right; }
 .cc-start { padding: 6px 15px; font-size: 12.5px; }
 .cc-start:disabled { opacity: .5; cursor: default; background: var(--bg3); color: var(--tx3); }
+.cc-stop { padding: 6px 15px; font-size: 12.5px; border: 1px solid var(--bad); background: transparent; color: var(--bad); border-radius: var(--r-md); cursor: pointer; font-weight: 600; }
+.cc-stop:hover { background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.cc-stop:disabled { opacity: .5; cursor: default; border-color: var(--bd2); color: var(--tx3); }
 .cc-launch-off { font-size: 12.5px; color: var(--tx2); line-height: 1.55; }
 .cc-lastseen { color: var(--tx); font-weight: 500; margin-bottom: 6px; }
 .cc-lastseen b { color: var(--acc-text, var(--acc)); }

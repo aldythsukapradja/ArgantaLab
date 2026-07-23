@@ -52,7 +52,11 @@ async function fetchHealth(base: string, token: string, signal: AbortSignal): Pr
   }
 }
 
-export function useOps(pollMs = 10000): OpsState & { refetch: () => void; launch: (service: string) => Promise<{ ok: boolean; message: string }> } {
+export function useOps(pollMs = 10000): OpsState & {
+  refetch: () => void
+  launch: (service: string) => Promise<{ ok: boolean; message: string }>
+  stop: (service: string) => Promise<{ ok: boolean; message: string }>
+} {
   const [state, setState] = useState<OpsState>({ health: null, reach: 'no-token', lastChecked: null, loading: true })
   const abortRef = useRef<AbortController | null>(null)
 
@@ -82,13 +86,27 @@ export function useOps(pollMs = 10000): OpsState & { refetch: () => void; launch
     }
   }, [refetch])
 
+  const stop = useCallback(async (service: string) => {
+    const { base, token } = bridgeConfig()
+    try {
+      const r = await fetch(`${base}/stop?token=${encodeURIComponent(token)}`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ service }),
+      })
+      const j = await r.json()
+      setTimeout(refetch, 1000)
+      return { ok: !!j.ok, message: j.message || (j.ok ? 'stopped' : 'failed') }
+    } catch (e) {
+      return { ok: false, message: (e as Error).message }
+    }
+  }, [refetch])
+
   useEffect(() => {
     refetch()
     const t = setInterval(refetch, pollMs)
     return () => { clearInterval(t); abortRef.current?.abort() }
   }, [refetch, pollMs])
 
-  return { ...state, refetch, launch }
+  return { ...state, refetch, launch, stop }
 }
 
 // --- Telemetry: LLM usage + ComfyUI workload from the bridge /telemetry ------

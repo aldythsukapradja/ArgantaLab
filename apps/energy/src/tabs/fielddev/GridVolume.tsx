@@ -6,7 +6,7 @@
 // Geometry from engine/gridmesh.ts (pure, unit-tested); packing from engine/pack3d.ts.
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { GridModel } from '../../engine/grid3d';
 import { packGrid3D, type PackedGrid3D, type PackedProp } from '../../engine/pack3d';
@@ -100,12 +100,36 @@ function geomFrom(m: MeshBuffers): THREE.BufferGeometry {
   return g;
 }
 
-function Scene({ packed, prop, palette, mode, sectionAxis, sectionIndex, zExag, clip, opacity }: {
+export type GVWell = { name: string; x: number; y: number; role: string };
+const gvRoleColor = (r: string) => (r === 'injector' ? '#42a5f5' : r === 'producer' ? '#4caf50' : r === 'both' ? '#ab47bc' : '#90a4ae');
+
+// world centre used to place wells consistently with gridmesh's centred geometry
+function packedCentre(p: PackedGrid3D): [number, number, number] {
+  const cx = p.x0 + (p.nx * p.dx) / 2, cy = p.y0 + (p.ny * p.dy) / 2;
+  let zs = 0, n = 0;
+  for (let c = 0; c < p.activeCol.length; c++) if (p.activeCol[c]) { zs += (p.topZ[c] + p.baseZ[c]) / 2; n++; }
+  return [cx, cy, n ? zs / n : 0];
+}
+function GridWellMarker({ x, y, depth, role, name }: { x: number; y: number; depth: number; role: string; name: string }) {
+  const c = gvRoleColor(role), h = 70;
+  return (
+    <group position={[x, -depth, y]}>
+      <mesh position={[0, h / 2, 0]}><cylinderGeometry args={[5, 5, h, 8]} /><meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.4} /></mesh>
+      <mesh position={[0, h, 0]}><sphereGeometry args={[13, 16, 16]} /><meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.5} /></mesh>
+      <Html position={[0, h + 24, 0]} center distanceFactor={3200} style={{ pointerEvents: 'none' }}>
+        <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 11, fontWeight: 700, color: '#fff', background: c, borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>{name}</div>
+      </Html>
+    </group>
+  );
+}
+
+function Scene({ packed, prop, palette, mode, sectionAxis, sectionIndex, zExag, clip, opacity, wells }: {
   packed: PackedGrid3D; prop: PackedProp; palette: string; mode: 'shell' | 'section';
-  sectionAxis: 'i' | 'k'; sectionIndex: number; zExag: number; clip: number; opacity: number;
+  sectionAxis: 'i' | 'k'; sectionIndex: number; zExag: number; clip: number; opacity: number; wells: GVWell[];
 }) {
   const { gl } = useThree();
   useEffect(() => { gl.localClippingEnabled = true; }, [gl]);
+  const [cx, cy, cz] = useMemo(() => packedCentre(packed), [packed]);
 
   const shell = useMemo(() => geomFrom(buildShell(packed)), [packed]);
   const section = useMemo(() => geomFrom(buildSection(packed, sectionAxis, sectionIndex)), [packed, sectionAxis, sectionIndex]);
@@ -129,11 +153,19 @@ function Scene({ packed, prop, palette, mode, sectionAxis, sectionIndex, zExag, 
   return (
     <group ref={ref}>
       <mesh geometry={mode === 'shell' ? shell : section} material={mat} />
+      {/* wells draped on the reservoir top (2b) — role-coloured markers + labels */}
+      {wells.map((w) => {
+        const i = Math.round((w.x - packed.x0) / packed.dx - 0.5), k = Math.round((w.y - packed.y0) / packed.dy - 0.5);
+        if (i < 0 || k < 0 || i >= packed.nx || k >= packed.ny) return null;
+        const col = k * packed.nx + i; if (!packed.activeCol[col]) return null;
+        const top = packed.topZ[col]; if (!Number.isFinite(top)) return null;
+        return <GridWellMarker key={w.name} x={w.x - cx} y={w.y - cy} depth={top - cz} role={w.role} name={w.name} />;
+      })}
     </group>
   );
 }
 
-export default function GridVolume({ model }: { model: GridModel }) {
+export default function GridVolume({ model, wells = [] }: { model: GridModel; wells?: GVWell[] }) {
   const packed = useMemo(() => packGrid3D(model), [model]);
   const [propName, setPropName] = useState('phi');
   const [palette, setPalette] = useState('viridis');
@@ -156,7 +188,7 @@ export default function GridVolume({ model }: { model: GridModel }) {
       <Canvas camera={{ position: [extent * 0.9, extent * 0.7, extent * 0.9], far: extent * 20, near: 1 }} gl={{ antialias: true, localClippingEnabled: true }}>
         <color attach="background" args={[bg]} />
         <ambientLight intensity={dark ? 0.6 : 0.85} /><directionalLight position={[1, 2, 1]} intensity={dark ? 0.8 : 0.7} />
-        <Scene packed={packed} prop={prop} palette={palette} mode={mode} sectionAxis={axis} sectionIndex={sIdx} zExag={zExag} clip={clip} opacity={opacity} />
+        <Scene packed={packed} prop={prop} palette={palette} mode={mode} sectionAxis={axis} sectionIndex={sIdx} zExag={zExag} clip={clip} opacity={opacity} wells={wells} />
         <OrbitControls enableDamping makeDefault />
       </Canvas>
 

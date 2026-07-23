@@ -502,7 +502,7 @@ function OsduOverview({ index }: { index: OsduPipelineIndex | null }) {
     ['Project', 'catalogue · Volve · analytics'],
   ];
   return (
-    <div style={{ height: '100%', overflow: 'auto', padding: 14 }}>
+    <div className="osdu-overview" style={{ height: '100%', overflow: 'auto', padding: 14 }}>
       <div className="dq-cards" style={{ marginBottom: 12 }}>
         {[
           { v: index?.standard ?? 'OSDU R3', l: 'canonical backbone', b: OSDU_DATA_DEFINITIONS.release },
@@ -520,9 +520,9 @@ function OsduOverview({ index }: { index: OsduPipelineIndex | null }) {
 
       <div className="dq-panel" style={{ marginBottom: 12, paddingBottom: 14 }}>
         <div className="dq-phd"><Workflow size={16} /> Canonical OSDU data flow <span className="nat derived">MANIFEST-DRIVEN</span></div>
-        <div style={{ display: 'flex', gap: 8, padding: '14px 12px 4px', alignItems: 'stretch', overflowX: 'auto' }}>
+        <div className="osdu-flow" style={{ display: 'flex', gap: 8, padding: '14px 12px 4px', alignItems: 'stretch', overflowX: 'auto' }}>
           {flow.map(([title, detail], i) => (
-            <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 0 145px' }}>
+            <div className="osdu-flow-step" key={title} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 0 145px' }}>
               <div className="panel-2 hairline" style={{ padding: 10, borderRadius: 5, flex: 1, minHeight: 64 }}>
                 <div style={{ fontSize: 11, fontWeight: 700 }}>{title}</div>
                 <div className="mono" style={{ fontSize: 9, color: 'var(--muted)', marginTop: 5, lineHeight: 1.4 }}>{detail}</div>
@@ -543,7 +543,7 @@ function OsduOverview({ index }: { index: OsduPipelineIndex | null }) {
                 <span className={'kb'} style={{
                   color: lane.status === 'ready' ? '#0b887e' : '#b7791f',
                   background: lane.status === 'ready' ? '#0FB5A61e' : '#f59e0b1e',
-                }}>{lane.status === 'ready' ? 'READY' : 'AWAITING SOURCE'}</span>
+                }}>{lane.status === 'ready' ? 'READY' : lane.status === 'planned' ? 'PLANNED' : 'AWAITING SOURCE'}</span>
               </div>
               <div className="mono" style={{ fontSize: 10, color: 'var(--muted)', marginTop: 9 }}>
                 {lane.records.toLocaleString()} records · {lane.dataClass}
@@ -566,7 +566,7 @@ function OsduGovernance() {
     ['restricted', 'data.restricted.viewers@arganta', 'arganta-restricted', 'explicit entitlement'],
   ];
   return (
-    <div style={{ height: '100%', overflow: 'auto', padding: 14, display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(280px, .75fr)', gap: 12 }}>
+    <div className="osdu-governance" style={{ height: '100%', overflow: 'auto', padding: 14, display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(280px, .75fr)', gap: 12 }}>
       <div className="dq-panel">
         <div className="dq-phd"><LockKeyhole size={16} /> OSDU governance matrix <span className="nat measured">ENFORCED BEFORE INGESTION</span></div>
         <div style={{ overflow: 'auto' }}>

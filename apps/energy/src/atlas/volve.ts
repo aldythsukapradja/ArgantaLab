@@ -1,4 +1,4 @@
-// atlas/volve.ts — VOLVE ported as a real producing-oil-field INSTANCE of the ATLAS spine.
+// atlas/volve.ts — Volve read projection over its canonical OSDU Field/WPC records.
 // Every value is real: USGS DDS-69 (region/basin/TPS/AU) · Sodir (field/well/company/licence,
 // NPDIDs verified live) · Equinor Volve open dataset (reservoir/PVT/volumetrics/production).
 // Volve produced oil Feb-2008 → Sep-2016 (~63 MMbbl), block 15/9, Norwegian North Sea.

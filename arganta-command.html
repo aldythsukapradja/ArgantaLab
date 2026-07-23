@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arganta — Command Center</title>
+<style>
+/* ============================================================
+   ARGANTA COMMAND CENTER — local launcher
+   Bento wall, non-scrolling desktop (mirrors HQ's Command Center
+   layout language), driven by the real Arganta Bridge — real
+   Start/Stop, real local status. Apple-inspired, dark/light.
+   ============================================================ */
+:root {
+  --bg:#06070b; --bg-2:#0b0d14; --bg-3:#12151d;
+  --panel:rgba(255,255,255,0.045); --panel-2:rgba(255,255,255,0.06);
+  --stroke:rgba(255,255,255,0.09); --stroke-2:rgba(255,255,255,0.16);
+  --ink:#f4f6fb; --ink-2:#aeb4c2; --ink-3:#6b7280;
+  --ok:#34d399; --bad:#ef4444; --warn:#f59e0b; --off:#5b6270;
+  --acc:#818cf8;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",system-ui,sans-serif;
+  --mono:"SF Mono","Cascadia Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:14px;
+}
+html[data-theme="light"] {
+  --bg:#eef0f4; --bg-2:#f7f8fb; --bg-3:#ffffff;
+  --panel:rgba(255,255,255,0.75); --panel-2:rgba(255,255,255,0.92);
+  --stroke:rgba(15,20,35,0.09); --stroke-2:rgba(15,20,35,0.18);
+  --ink:#0e1220; --ink-2:#4a5163; --ink-3:#8b93a7;
+  --off:#a3aab8;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; }
+body { font-family:var(--font); background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; }
+.wrap { height:100vh; display:flex; flex-direction:column; padding:14px 18px 16px; gap:10px; }
+
+/* top bar */
+.topbar { display:flex; align-items:center; gap:.7rem; flex:none; }
+.brand { display:flex; align-items:center; gap:.55rem; font-weight:650; letter-spacing:-.02em; }
+.brand .logo { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; background:linear-gradient(140deg,#5eead4,#818cf8); flex:none; }
+.brand .logo svg { width:15px; height:15px; }
+.brand b { font-size:.98rem; }
+.reach { display:inline-flex; align-items:center; gap:6px; font-size:.76rem; color:var(--ink-2); }
+.reach .rdot { width:7px; height:7px; border-radius:50%; background:var(--off); }
+.reach.ok { color:var(--ok); } .reach.ok .rdot { background:var(--ok); box-shadow:0 0 7px var(--ok); }
+.reach.unauthorized { color:var(--warn); } .reach.unauthorized .rdot { background:var(--warn); }
+.reach.unreachable, .reach.no-token { color:var(--ink-3); } .reach.unreachable .rdot, .reach.no-token .rdot { background:var(--off); }
+.topbar .spacer { flex:1; }
+.clock { font-family:var(--mono); font-size:.76rem; color:var(--ink-3); }
+.clock b { color:var(--ink-2); font-weight:600; }
+.seg { display:inline-flex; padding:2px; border-radius:9px; border:1px solid var(--stroke); background:var(--bg-2); position:relative; }
+.seg button { position:relative; z-index:2; border:none; background:none; cursor:pointer; font:inherit; font-size:.74rem; font-weight:600; color:var(--ink-3); padding:.3rem .6rem; border-radius:7px; transition:color .2s; }
+.seg button.on { color:var(--ink); }
+.seg .glider { position:absolute; z-index:1; top:2px; bottom:2px; border-radius:7px; background:var(--panel-2); border:1px solid var(--stroke-2); transition:transform .22s cubic-bezier(.3,.7,.3,1),width .22s; }
+.tb-btn { display:inline-flex; align-items:center; gap:.35rem; height:28px; padding:0 .65rem; border-radius:8px; cursor:pointer; border:1px solid var(--stroke); background:var(--panel-2); color:var(--ink-2); font:inherit; font-size:.76rem; font-weight:500; }
+.tb-btn:hover { color:var(--ink); border-color:var(--stroke-2); }
+.tb-btn svg { width:13px; height:13px; }
+
+/* connect banner */
+.banner { display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; padding:8px 13px; border:1px solid var(--warn); border-radius:10px; background:color-mix(in srgb,var(--warn) 9%,var(--bg-2)); font-size:.78rem; color:var(--ink); flex:none; }
+.banner b { font-weight:650; }
+.banner .b-spacer { flex:1; }
+.banner button { border:none; background:var(--acc); color:#fff; border-radius:7px; padding:.32rem .7rem; font:inherit; font-size:.74rem; font-weight:650; cursor:pointer; }
+
+/* board */
+.board { flex:1; min-height:0; display:grid; grid-template-columns:2.1fr 1fr; grid-template-rows:1fr; gap:10px; }
+.col { display:flex; flex-direction:column; gap:10px; min-height:0; }
+.zone { border:1px solid var(--stroke); border-radius:var(--r); background:var(--panel); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); padding:11px 13px; display:flex; flex-direction:column; min-height:0; overflow-y:auto; scrollbar-width:thin; }
+.zone-h { font-size:.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2); margin-bottom:8px; flex:none; display:flex; align-items:baseline; gap:6px; }
+.zone-h span { text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink-3); }
+
+/* products zone */
+.products { flex:2.2; }
+.pgrid { display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); gap:8px; flex:1; min-height:0; }
+.pcard { position:relative; display:flex; flex-direction:column; gap:5px; padding:9px 10px 8px; border-radius:11px; border:1px solid var(--stroke); border-top:2px solid var(--ac); background:var(--bg-2); min-height:0; overflow:hidden; }
+.pcard-top { display:flex; align-items:center; gap:6px; }
+.pcard-top .pdot { width:7px; height:7px; border-radius:50%; background:var(--off); flex:none; }
+.pcard-top .pdot.up { background:var(--ok); box-shadow:0 0 6px var(--ok); }
+.pcard-top .pdot.down { background:var(--bad); }
+.pname { font-size:.86rem; font-weight:640; letter-spacing:-.01em; }
+.ptag { font-size:.68rem; color:var(--ink-3); font-weight:500; line-height:1.25; }
+.ptag i { color:var(--ac); font-style:normal; }
+.pbuild { margin-left:auto; font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-3); background:var(--panel-2); border:1px solid var(--stroke); border-radius:999px; padding:.15rem .4rem; flex:none; }
+.pfoot { margin-top:auto; display:flex; align-items:center; gap:5px; }
+.pport { font-family:var(--mono); font-size:.64rem; color:var(--ink-3); margin-right:auto; }
+.pmsg { font-size:.62rem; color:var(--ink-3); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pbtn { border:none; cursor:pointer; font:inherit; font-weight:650; border-radius:6px; padding:.24rem .5rem; font-size:.65rem; }
+.pbtn.open { background:var(--panel-2); color:var(--ink-2); border:1px solid var(--stroke); text-decoration:none; display:inline-flex; }
+.pbtn.open:hover { color:var(--ink); border-color:var(--stroke-2); }
+.pbtn.start { background:var(--ac); color:#07120f; }
+.pbtn.stop { background:transparent; color:var(--bad); border:1px solid var(--bad); }
+.pbtn.stop:hover { background:color-mix(in srgb,var(--bad) 14%,transparent); }
+.pbtn:disabled { opacity:.45; cursor:default; }
+
+/* infra zone */
+.infra { flex:1.1; }
+.igrid { display:grid; grid-template-columns:1fr 1fr; gap:7px; align-content:start; }
+.itile { display:flex; flex-direction:column; gap:3px; padding:7px 9px; border:1px solid var(--stroke); border-radius:9px; background:var(--bg-2); }
+.itop { display:flex; align-items:center; gap:6px; }
+.idot { width:7px; height:7px; border-radius:50%; background:var(--off); flex:none; }
+.idot.up { background:var(--ok); box-shadow:0 0 6px var(--ok); }
+.idot.down { background:var(--bad); }
+.ilabel { font-size:.74rem; font-weight:640; margin-right:auto; }
+.isrc { font-size:.56rem; text-transform:uppercase; letter-spacing:.03em; padding:1px 5px; border-radius:4px; font-weight:700; color:var(--ink-3); background:var(--panel-2); }
+.isrc.live { color:var(--ok); background:color-mix(in srgb,var(--ok) 15%,transparent); }
+.idetail { font-size:.63rem; color:var(--ink-3); font-family:var(--mono); }
+.ifoot { display:flex; gap:5px; margin-top:2px; }
+.ifoot .pbtn { font-size:.62rem; }
+
+/* pulse zone */
+.pulse { flex:.8; }
+.facts { list-style:none; display:flex; flex-direction:column; gap:3px; }
+.facts li { display:flex; justify-content:space-between; font-size:.72rem; }
+.facts li span { color:var(--ink-3); } .facts li b { color:var(--ink); font-weight:600; font-family:var(--mono); }
+.summary-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.chip { display:inline-flex; align-items:center; gap:4px; font-size:.66rem; font-weight:600; padding:.22rem .5rem; border-radius:999px; border:1px solid var(--stroke); background:var(--panel-2); color:var(--ink-2); }
+.chip b { color:var(--ink); }
+.chip .cdot { width:6px; height:6px; border-radius:50%; }
+
+/* settings modal */
+.modal-veil { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:50; }
+.modal-veil.show { display:flex; }
+.modal { width:380px; max-width:92vw; border-radius:16px; border:1px solid var(--stroke-2); background:var(--bg-3); padding:1.2rem 1.3rem; box-shadow:0 30px 70px -20px rgba(0,0,0,.6); }
+.modal h3 { font-size:1rem; font-weight:650; margin-bottom:.3rem; }
+.modal p { font-size:.78rem; color:var(--ink-2); margin-bottom:.9rem; line-height:1.45; }
+.field { margin-bottom:.7rem; }
+.field label { display:block; font-size:.72rem; font-weight:600; color:var(--ink-2); margin-bottom:.3rem; }
+.field input { width:100%; height:34px; padding:0 .6rem; border-radius:8px; border:1px solid var(--stroke-2); background:var(--bg-2); color:var(--ink); font:inherit; font-size:.82rem; font-family:var(--mono); }
+.field input:focus { outline:2px solid var(--acc); outline-offset:1px; }
+.field .hint { font-size:.7rem; color:var(--ink-3); margin-top:.35rem; line-height:1.4; }
+.modal-actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:1rem; }
+.modal-actions button { border:none; cursor:pointer; font:inherit; font-size:.8rem; font-weight:650; padding:.5rem .9rem; border-radius:8px; }
+.modal-actions .ghost { background:var(--panel-2); color:var(--ink-2); }
+.modal-actions .primary { background:var(--acc); color:#07120f; }
+
+@media (max-width:980px){
+  html,body { overflow:auto; }
+  .wrap { height:auto; min-height:100vh; }
+  .board { grid-template-columns:1fr; grid-template-rows:none; }
+  .pgrid { grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(4,minmax(90px,auto)); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#06070b" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22M5 5l2.4 2.4M16.6 16.6L19 19M19 5l-2.4 2.4M7.4 16.6L5 19"/></svg></span>
+      <b>Command Center</b>
+    </div>
+    <span class="reach no-token" id="reach"><span class="rdot"></span><span id="reachTxt">Not connected — set the bridge token</span></span>
+    <div class="spacer"></div>
+    <div class="clock" id="clock">—</div>
+    <div class="seg" id="seg">
+      <span class="glider" id="glider"></span>
+      <button data-mode="local" class="on">Local</button>
+      <button data-mode="cloud">Cloud</button>
+    </div>
+    <button class="tb-btn" id="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg><span id="refreshTxt">Scan</span></button>
+    <button class="tb-btn" id="connectBtn">Bridge</button>
+    <button class="tb-btn" id="theme" title="Toggle theme"><svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+  </div>
+
+  <div class="banner" id="banner" style="display:none">
+    <span>Connect the bridge first — paste your <b>bridge URL + token</b> (same one used in HQ's Agent → Claude Code) to start/stop local servers.</span>
+    <div class="b-spacer"></div>
+    <button id="bannerConnect">Connect</button>
+  </div>
+
+  <div class="board">
+    <div class="col">
+      <div class="zone products">
+        <div class="zone-h">Products <span id="pSummary">8 services</span></div>
+        <div class="pgrid" id="pgrid"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="zone infra">
+        <div class="zone-h">Infrastructure <span>local + cloud</span></div>
+        <div class="igrid" id="igrid"></div>
+      </div>
+      <div class="zone pulse">
+        <div class="zone-h">Pulse <span>node</span></div>
+        <ul class="facts" id="facts">
+          <li><span>node</span><b>—</b></li>
+          <li><span>bridge</span><b>—</b></li>
+          <li><span>runtime</span><b>—</b></li>
+          <li><span>reach</span><b>no-token</b></li>
+          <li><span>checked</span><b>—</b></li>
+        </ul>
+        <div class="summary-chips" id="summary"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- settings modal -->
+<div class="modal-veil" id="veil">
+  <div class="modal">
+    <h3>Connect the Arganta Bridge</h3>
+    <p>Same bridge HQ's Agent → Claude Code uses. Paste its WebSocket URL and token — stored only in this browser.</p>
+    <div class="field"><label>Bridge URL</label><input id="inUrl" placeholder="ws://127.0.0.1:7717" /></div>
+    <div class="field">
+      <label>Token</label>
+      <input id="inToken" placeholder="BRIDGE_TOKEN" type="password" />
+      <p class="hint" id="tokenHint" style="display:none">Auto-filled from tools/arganta-bridge/.env — change or clear it any time.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" id="modalCancel">Cancel</button>
+      <button class="primary" id="modalSave">Save & connect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const APPS = [
+  { key:'ai', label:'Arganta.ai', tag:['Operator','Reactor','Intelligence'], ac:'#5eead4', build:'Beta', svc:'hq', local:'http://localhost:5273/?surface=core', cloud:'https://core.arganta.app' },
+  { key:'life', label:'ArgantaLife', tag:['Connect','Grow','Play'], ac:'#fb7185', build:'Preview', svc:'landing', local:'http://localhost:5174/', cloud:'https://life.arganta.app' },
+  { key:'energy', label:'ArgantaEnergy', tag:['Consulting','Academy','Platform'], ac:'#fbbf24', build:'Live', svc:'energy', local:'http://localhost:5279/', cloud:'https://energy.arganta.app' },
+  { key:'studio', label:'ArgantaStudio', tag:['Concept','Create','Transform'], ac:'#a78bfa', build:'Beta', svc:'studio', local:'http://localhost:3200/studio', cloud:'https://studio.arganta.app' },
+  { key:'hq', label:'ArgantaHQ', tag:['Command','Govern','Orchestrate'], ac:'#60a5fa', build:'Live', svc:'hq', local:'http://localhost:5273/', cloud:'https://hq.arganta.app' },
+  { key:'kinetik', label:'KinetikCircle', tag:['Connect','Rhythm','Remember'], ac:'#34d399', build:'Live', svc:'kinetik', local:'http://localhost:5180/', cloud:'https://circle.arganta.app' },
+  { key:'lab', label:'ArgantaLab', tag:['Learn','Build','Ship'], ac:'#818cf8', build:'Live', svc:'lab', local:'http://localhost:5176/', cloud:'https://lab.arganta.app' },
+  { key:'lashira', label:'LashiraBloom', tag:['Farm','Battle','Together'], ac:'#a3e635', build:'Live', svc:'lashira', local:'http://localhost:5173/', cloud:'https://bloom.arganta.app' },
+];
+const INFRA = [
+  { key:'bridge', label:'Bridge', svc:'bridge', cloud:null },
+  { key:'comfy', label:'ComfyUI', svc:'comfy', cloud:null },
+  { key:'ollama', label:'Local LLM', svc:'ollama', cloud:null },
+  { key:'supabase', label:'Supabase', svc:null, cloud:'https://supabase.com/dashboard' },
+];
+
+let MODE = localStorage.getItem('arganta-cc-mode') || 'local';
+const TOKEN_KEY = 'arganta_cc_bridge_token', URL_KEY = 'arganta_cc_bridge_url';
+const DEFAULT_WS = 'ws://127.0.0.1:7717';
+function httpBase(wsUrl){ try { const u = new URL(wsUrl); return `${u.protocol==='wss:'?'https:':'http:'}//${u.host}`; } catch { return 'http://127.0.0.1:7717'; } }
+function bridgeCfg(){ return { base: httpBase(localStorage.getItem(URL_KEY) || DEFAULT_WS), token: localStorage.getItem(TOKEN_KEY) || '' }; }
+
+// One-time auto-connect: start-command.bat reads tools/arganta-bridge/.env and
+// opens this page with ?btoken=...&bport=... on the URL. A file:// page can't
+// load another local file as a subresource (browsers block it), so the query
+// string is what carries the value in instead. If this browser has no saved
+// token yet, seed it from there — still fully editable any time via the
+// Bridge button, this never overwrites a token you already set/changed. The
+// query is scrubbed from the address bar immediately so it doesn't linger.
+let URL_DEFAULT_TOKEN = null;
+(function seedFromUrl(){
+  const qp = new URLSearchParams(location.search);
+  const qToken = qp.get('btoken'), qPort = qp.get('bport');
+  if (!qToken) return;
+  URL_DEFAULT_TOKEN = qToken;
+  if (!localStorage.getItem(TOKEN_KEY)) {
+    localStorage.setItem(URL_KEY, `ws://127.0.0.1:${qPort || 7717}`);
+    localStorage.setItem(TOKEN_KEY, qToken);
+  }
+  history.replaceState(null, '', location.pathname);
+})();
+
+/* ---------------- render products ---------------- */
+const pgrid = document.getElementById('pgrid');
+APPS.forEach(a => {
+  const el = document.createElement('div');
+  el.className = 'pcard'; el.style.setProperty('--ac', a.ac); el.dataset.svc = a.svc; el.dataset.key = a.key;
+  el.innerHTML = `
+    <div class="pcard-top"><span class="pdot" data-pdot></span><span class="pname">${a.label}</span><span class="pbuild">${a.build}</span></div>
+    <div class="ptag">${a.tag.map((t,i)=>i===0?`<i>${t}</i>`:t).join(' · ')}</div>
+    <div class="pfoot">
+      <span class="pport" data-port>:—</span>
+      <span class="pmsg" data-msg></span>
+      <a class="pbtn open" data-open target="_blank" rel="noopener">Open</a>
+      <button class="pbtn start" data-start>Start</button>
+      <button class="pbtn stop" data-stop style="display:none">Stop</button>
+    </div>`;
+  pgrid.appendChild(el);
+});
+
+/* ---------------- render infra ---------------- */
+const igrid = document.getElementById('igrid');
+INFRA.forEach(f => {
+  const el = document.createElement('div');
+  el.className = 'itile'; el.dataset.svc = f.svc || ''; el.dataset.key = f.key;
+  el.innerHTML = `
+    <div class="itop"><span class="idot" data-idot></span><span class="ilabel">${f.label}</span><span class="isrc" data-isrc>—</span></div>
+    <div class="idetail" data-idetail>checking…</div>
+    <div class="ifoot">
+      ${f.svc ? `<button class="pbtn start" data-start>Start</button><button class="pbtn stop" data-stop style="display:none">Stop</button>` : `<a class="pbtn open" href="${f.cloud}" target="_blank" rel="noopener">Open</a>`}
+    </div>`;
+  igrid.appendChild(el);
+});
+
+/* ---------------- bridge health polling ---------------- */
+let lastHealth = null;
+async function fetchHealth(){
+  const { base, token } = bridgeCfg();
+  if (!token) return { reach:'no-token' };
+  const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 3000);
+  try {
+    const r = await fetch(`${base}/health?token=${encodeURIComponent(token)}`, { signal: ctl.signal });
+    clearTimeout(t);
+    if (r.status === 401) return { reach:'unauthorized' };
+    if (!r.ok) return { reach:'unreachable' };
+    return { health: await r.json(), reach:'ok' };
+  } catch { clearTimeout(t); return { reach:'unreachable' }; }
+}
+
+const REACH_COPY = {
+  ok: 'Bridge online', unauthorized: 'Bridge reachable — token rejected',
+  unreachable: 'Bridge unreachable — PC off, or bridge not running',
+  'no-token': 'Not connected — set the bridge token',
+};
+
+function svcById(id){ return lastHealth?.services.find(s=>s.id===id); }
+
+function paintProducts(reach){
+  document.querySelectorAll('.pcard').forEach(card => {
+    const svc = card.dataset.svc; const s = svcById(svc);
+    const a = APPS.find(x=>x.key===card.dataset.key);
+    const dot = card.querySelector('[data-pdot]');
+    const port = card.querySelector('[data-port]');
+    const msg = card.querySelector('[data-msg]');
+    const openA = card.querySelector('[data-open]');
+    const startBtn = card.querySelector('[data-start]');
+    const stopBtn = card.querySelector('[data-stop]');
+    openA.href = MODE === 'local' ? a.local : a.cloud;
+    if (reach === 'ok' && s) {
+      dot.className = 'pdot ' + (s.up ? 'up' : 'down');
+      port.textContent = s.detail ? s.detail.replace('port ', ':') : '';
+      if (MODE === 'local') {
+        startBtn.style.display = s.up ? 'none' : '';
+        stopBtn.style.display = s.up ? '' : 'none';
+      } else { startBtn.style.display = 'none'; stopBtn.style.display = 'none'; }
+    } else {
+      dot.className = 'pdot'; port.textContent = ''; msg.textContent = '';
+      startBtn.style.display = 'none'; stopBtn.style.display = 'none';
+    }
+  });
+}
+
+function paintInfra(reach){
+  document.querySelectorAll('.itile').forEach(tile => {
+    const svc = tile.dataset.svc; const s = svc ? svcById(svc) : null;
+    const dot = tile.querySelector('[data-idot]');
+    const src = tile.querySelector('[data-isrc]');
+    const detail = tile.querySelector('[data-idetail]');
+    const startBtn = tile.querySelector('[data-start]');
+    const stopBtn = tile.querySelector('[data-stop]');
+    if (svc) {
+      if (reach === 'ok' && s) {
+        dot.className = 'idot ' + (s.up ? 'up' : 'down');
+        src.textContent = 'live'; src.className = 'isrc live';
+        detail.textContent = s.detail || '';
+        if (startBtn) { startBtn.style.display = s.up || svc === 'bridge' ? 'none' : ''; }
+        if (stopBtn) { stopBtn.style.display = s.up && svc !== 'bridge' ? '' : 'none'; }
+      } else {
+        dot.className = 'idot'; src.textContent = '—'; src.className = 'isrc';
+        detail.textContent = REACH_COPY[reach] || 'unknown';
+        if (startBtn) startBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+      }
+    } else {
+      dot.className = 'idot'; src.textContent = 'link'; src.className = 'isrc';
+      detail.textContent = 'external';
+    }
+  });
+}
+
+function paintPulse(reach){
+  const f = document.getElementById('facts').querySelectorAll('b');
+  f[0].textContent = lastHealth?.node || '—';
+  f[1].textContent = lastHealth ? `v${lastHealth.bridgeVersion}` : '—';
+  f[2].textContent = lastHealth?.nodeVersion || '—';
+  f[3].textContent = reach; f[3].style.color = reach === 'ok' ? 'var(--ok)' : reach === 'unauthorized' ? 'var(--warn)' : 'var(--ink-3)';
+  f[4].textContent = lastHealth ? 'just now' : '—';
+
+  const up = lastHealth ? lastHealth.services.filter(s=>s.up).length : 0;
+  const total = lastHealth ? lastHealth.services.length : 0;
+  const built = APPS.filter(a=>a.build==='Live').length;
+  document.getElementById('summary').innerHTML = reach === 'ok'
+    ? `<span class="chip"><span class="cdot" style="background:var(--ok)"></span><b>${up}</b> local live</span>
+       <span class="chip"><span class="cdot" style="background:var(--off)"></span><b>${total-up}</b> offline</span>
+       <span class="chip"><b>${built}</b> shipped</span>`
+    : `<span class="chip"><span class="cdot" style="background:var(--off)"></span>${REACH_COPY[reach]}</span>`;
+}
+
+async function scan(){
+  document.getElementById('refreshTxt').textContent = 'Scanning…';
+  const { health: h, reach } = await fetchHealth();
+  lastHealth = h || null;
+  const reachEl = document.getElementById('reach');
+  reachEl.className = `reach ${reach}`;
+  document.getElementById('reachTxt').textContent = REACH_COPY[reach];
+  document.getElementById('banner').style.display = reach === 'no-token' || reach === 'unreachable' ? 'flex' : 'none';
+  paintProducts(reach); paintInfra(reach); paintPulse(reach);
+  document.getElementById('refreshTxt').textContent = 'Scan';
+}
+
+/* ---------------- start/stop actions ---------------- */
+async function callOp(op, service){
+  const { base, token } = bridgeCfg();
+  try {
+    const r = await fetch(`${base}/${op}?token=${encodeURIComponent(token)}`, {
+      method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ service }),
+    });
+    const j = await r.json();
+    return { ok: !!j.ok, message: j.message || (j.ok ? 'ok' : 'failed') };
+  } catch (e) { return { ok:false, message: e.message }; }
+}
+
+document.body.addEventListener('click', async (e) => {
+  const startBtn = e.target.closest('[data-start]');
+  const stopBtn = e.target.closest('[data-stop]');
+  if (!startBtn && !stopBtn) return;
+  const card = e.target.closest('.pcard, .itile');
+  const svc = card.dataset.svc;
+  const btn = startBtn || stopBtn;
+  const msgEl = card.querySelector('[data-msg]') || card.querySelector('[data-idetail]');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = startBtn ? 'starting…' : 'stopping…';
+  const r = await callOp(startBtn ? 'launch' : 'stop', svc);
+  if (msgEl) msgEl.textContent = r.message;
+  btn.disabled = false; btn.textContent = orig;
+  setTimeout(scan, 1200);
+});
+
+/* ---------------- mode toggle ---------------- */
+const seg = document.getElementById('seg'), glider = document.getElementById('glider');
+function positionGlider(){ const b = seg.querySelector('button.on'); glider.style.width = b.offsetWidth+'px'; glider.style.transform = `translateX(${b.offsetLeft-2}px)`; }
+seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); MODE = b.dataset.mode; localStorage.setItem('arganta-cc-mode', MODE);
+  positionGlider(); paintProducts(document.getElementById('reach').className.replace('reach ',''));
+}));
+seg.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.mode===MODE));
+
+/* ---------------- settings modal ---------------- */
+const veil = document.getElementById('veil');
+function openModal(){
+  const savedToken = localStorage.getItem(TOKEN_KEY) || '';
+  document.getElementById('inUrl').value = localStorage.getItem(URL_KEY) || DEFAULT_WS;
+  document.getElementById('inToken').value = savedToken;
+  const fromDefault = !!savedToken && savedToken === URL_DEFAULT_TOKEN;
+  document.getElementById('tokenHint').style.display = fromDefault ? '' : 'none';
+  veil.classList.add('show');
+}
+function closeModal(){ veil.classList.remove('show'); }
+document.getElementById('connectBtn').onclick = openModal;
+document.getElementById('bannerConnect').onclick = openModal;
+document.getElementById('modalCancel').onclick = closeModal;
+document.getElementById('modalSave').onclick = () => {
+  localStorage.setItem(URL_KEY, document.getElementById('inUrl').value.trim() || DEFAULT_WS);
+  localStorage.setItem(TOKEN_KEY, document.getElementById('inToken').value.trim());
+  closeModal(); scan();
+};
+veil.addEventListener('click', (e) => { if (e.target === veil) closeModal(); });
+
+/* ---------------- theme ---------------- */
+const root = document.documentElement;
+const savedT = localStorage.getItem('arganta-cc-theme');
+if (savedT) root.setAttribute('data-theme', savedT);
+else if (matchMedia('(prefers-color-scheme: light)').matches) root.setAttribute('data-theme','light');
+function syncThemeIcon(){
+  const dark = root.getAttribute('data-theme') !== 'light';
+  document.getElementById('themeIcon').innerHTML = dark
+    ? '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+    : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+}
+syncThemeIcon();
+document.getElementById('theme').onclick = () => {
+  const next = root.getAttribute('data-theme')==='light'?'dark':'light';
+  root.setAttribute('data-theme', next); localStorage.setItem('arganta-cc-theme', next); syncThemeIcon();
+};
+
+/* ---------------- clock + boot ---------------- */
+function tick(){ const d=new Date(); document.getElementById('clock').innerHTML = `${d.toLocaleDateString([], {weekday:'short',day:'numeric',month:'short'})} · <b>${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</b>`; }
+tick(); setInterval(tick,1000);
+document.getElementById('refresh').onclick = scan;
+window.addEventListener('load', positionGlider);
+positionGlider(); scan(); setInterval(scan, 10000);
+</script>
+</body>
+</html>

@@ -37,12 +37,19 @@ preflight; the target OSDU Schema and Storage services remain the final authorit
 | GOGET | Global field/asset identity spine | public | `goget.manifest.json` |
 | USGS | Regions, basins, petroleum systems, assessment units | public | `usgs.manifest.json` |
 | NOD/NSTA | Licences, organisations, fields, wells and wellbores | public | `north-sea.manifest.json` |
+| Brazil ANP | Producing fields, exploration blocks, basins and operators | public | `anp.manifest.json` |
 | Volve | Field-specific wells, logs, trajectories, production and interpretations | public or internal per source object | detail WPC/dataset manifests |
 | Arganta internal | Interpretations, models, economics, partner facts | internal/confidential/restricted | separate protected manifests |
 
 GOGET is identity/master metadata, not a container for logs, grids or production
 series. Field-specific packages link to the GOGET/regulator Field record by reviewed
 identity edges.
+
+The source registry also tracks BOEM (United States), NOPIMS (Australia), and
+Canadian regulator open data as planned lanes. A planned lane is visible but never
+counted as ingested. The official March 2026 GOGET workbook is now landed and
+`ready`; all six data sheets are joined by stable GOGET ID while the About sheet,
+release filename, source sheet and row provenance remain immutable evidence.
 
 ## The 18-entity mapping
 
@@ -81,8 +88,9 @@ Assessment Unit into `Play`, for example, would erase its assessment semantics.
 
 ## Commands
 
-`npm run data:osdu` builds manifests and `npm run test:osdu` runs the local OSDU
-preflight. GOGET is loaded from the newest workbook under
+`npm run data:osdu` builds manifests, `npm run data:anp` refreshes the official ANP
+WFS snapshot and rebuilds, and `npm run test:osdu` runs the local OSDU preflight.
+GOGET is loaded from the newest official workbook under
 `data-energy/raw/goget/`. Internal interchange records are loaded from
 `data-energy/internal/osdu-input.json`.
 
@@ -90,9 +98,10 @@ preflight. GOGET is loaded from the newest workbook under
 
 1. **Canonical contract — implemented.** Pin OSDU schema versions; use OSDU IDs,
    envelopes, ACLs, LegalTags, ancestry and manifests everywhere at rest.
-2. **Source adapters — implemented foundation.** USGS, NOD/NSTA and Volve emit
-   OSDU manifests. GOGET and internal adapters activate when their landing files
-   are supplied.
+2. **Source adapters — implemented foundation.** USGS, NOD/NSTA, Brazil ANP,
+   Volve and GOGET emit OSDU manifests. The internal adapter activates when its
+   landing file is supplied; BOEM, NOPIMS and Canadian regulator lanes are
+   explicitly planned in the registry.
 3. **Extension registration — next platform step.** Register the five `arganta`
    schemas in the target OSDU Schema service before ingesting those record kinds.
 4. **Identity resolution — next data step.** Make GOGET/regulator Field records

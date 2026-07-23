@@ -49,6 +49,6 @@ export interface OsduPipelineIndex {
     dataClass: DataClass;
     path: string;
     records: number;
-    status: 'ready' | 'awaiting-source';
+    status: 'ready' | 'awaiting-source' | 'planned';
   }>;
 }

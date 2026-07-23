@@ -675,7 +675,7 @@ function save(s: Persisted) {
   try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* quota — in-memory only */ }
 }
 
-export type BioTab = 'master' | 'cv' | 'deck' | 'journey'
+export type BioTab = 'master' | 'cv' | 'deck' | 'portfolio' | 'journey'
 
 interface BioState {
   activeId: ProfileId

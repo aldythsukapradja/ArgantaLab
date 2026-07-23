@@ -14,13 +14,14 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { FileText, BookUser, Presentation, Route, Printer, RotateCcw, Undo2, Download, Check, ChevronDown, Linkedin } from 'lucide-react'
+import { FileText, BookUser, Presentation, Route, Printer, RotateCcw, Undo2, Download, Check, ChevronDown, Linkedin, LayoutGrid } from 'lucide-react'
 import { MasterPrint } from './MasterPrint'
 import { useBio, type BioTab } from './biography'
 import { MasterProfile } from './MasterProfile'
 import { CvMaker } from './CvMaker'
 import { IntroDeck } from './IntroDeck'
 import { JourneyTimeline } from './JourneyTimeline'
+import { PortfolioSummary } from './PortfolioSummary'
 import { profileToMarkdown, profileToLinkedIn } from './exportCore'
 import './biography.css'
 
@@ -28,6 +29,7 @@ const TABS: { id: BioTab; label: string; Icon: typeof FileText }[] = [
   { id: 'master', label: 'Master Profile', Icon: BookUser },
   { id: 'cv', label: 'CV Maker', Icon: FileText },
   { id: 'deck', label: 'Intro Deck', Icon: Presentation },
+  { id: 'portfolio', label: 'Portfolio Summary', Icon: LayoutGrid },
   { id: 'journey', label: 'Journey', Icon: Route },
 ]
 
@@ -115,7 +117,7 @@ export function BiographyStudio() {
         <div className="bio-acts">
           <span className={'bio-saved' + (saved ? ' on' : '')}>Saved</span>
           <button type="button" className="bio-btn" onClick={undo} disabled={!history.length} title="Undo (Ctrl+Z)"><Undo2 size={13} /></button>
-          {tab !== 'deck' && tab !== 'journey' && (
+          {tab !== 'deck' && tab !== 'portfolio' && tab !== 'journey' && (
             <button type="button" className="bio-btn bio-btn-go" onClick={() => window.print()}><Printer size={13} /> Export PDF</button>
           )}
           <div className="bio-menu-wrap">
@@ -150,6 +152,7 @@ export function BiographyStudio() {
         {tab === 'master' && printRoot && createPortal(<div className="bio-print"><MasterPrint p={p} /></div>, printRoot)}
         {tab === 'cv' && <CvMaker />}
         {tab === 'deck' && <IntroDeck />}
+        {tab === 'portfolio' && <PortfolioSummary />}
         {tab === 'journey' && <JourneyTimeline />}
       </div>
     </div>

@@ -3,16 +3,20 @@
 // injector and producer, and ANIMATES the saturation front over time with a
 // play/scrub timeline, plus live production curves (oil rate + water cut vs PVI)
 // and recovery factor. Deterministic, mass-conservative, Buckley-Leverett-validated.
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { SlidersHorizontal, Play, Pause, RotateCcw, Waypoints } from 'lucide-react';
+import { useMemo, useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { SlidersHorizontal, Play, Pause, RotateCcw, Waypoints, Box, Square } from 'lucide-react';
 import { useAsync, useCanvas, cssVar } from './hooks';
 import { Inspector, InspectorSection, Slider, Loading, ErrorBanner, ReadoutBar } from './chrome';
 import { NatureBadge } from '../../components/Provenance';
-import { loadIndex } from '../../wb/load';
+import { loadIndex, loadSurface } from '../../wb/load';
 import type { WbIndex } from '../../wb/types';
-import { simulateFV } from '../../engine/sim/fv';
+import { sampleGrid } from '../../engine/grid';
+import type { FvCfg, FvResult } from '../../engine/sim/fv';
 import { traceStreamlines } from '../../engine/sim/streamline';
 import { COREY_DEFAULTS } from '../../engine/sim/relperm';
+import { packSimFrames } from '../../engine/pack-sim';
+import { ProductionChartView } from './ProductionChartView';
+const SimDrape = lazy(() => import('./SimDrape')); // G5 lightweight 3D HC-flow drape
 
 const RESERVOIR_K = 500; // mD — screening Volve-scale (uniform; the flood pattern is
                          // perm-independent for a homogeneous field, so magnitude is display-only)
@@ -40,6 +44,7 @@ function Inner({ index }: { index: WbIndex }) {
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [showStreams, setShowStreams] = useState(false);
+  const [view3d, setView3d] = useState(true); // 3D-first (the 2D dual-canvas is now a toggle)
   const [inspOpen, setInspOpen] = useState(true);
 
   // pick a real injector + producer from the well set
@@ -53,33 +58,47 @@ function Inner({ index }: { index: WbIndex }) {
     return { inj, prod };
   }, [index]);
 
-  // build + run the waterflood (memoised on params)
-  const sim = useMemo(() => {
+  // build the waterflood CONFIG synchronously (cheap) — the heavy solve runs in a worker
+  const simCfg = useMemo(() => {
     if (!inj || !prod) return null;
-    // square-ish domain around the injector→producer pair (equal padding both axes
-    // so the grid never blows up when the wells are nearly aligned on one axis)
+    // square-ish domain around the injector→producer pair (equal padding both axes)
     const span = Math.max(Math.abs(inj.x - prod.x), Math.abs(inj.y - prod.y)) + 1;
     const cxw = (inj.x + prod.x) / 2, cyw = (inj.y + prod.y) / 2, half = Math.max(span * 0.75, 900);
     const minX = cxw - half, maxX = cxw + half, minY = cyw - half, maxY = cyw + half;
-    const nx = res, ny = res; // square grid — bounded, ≤ 40×40 cells
+    const nx = res, ny = res;
     const dx = (maxX - minX) / nx, dy = (maxY - minY) / ny;
     const toIJ = (x: number, y: number) => ({ i: Math.max(0, Math.min(nx - 1, Math.round((x - minX) / dx - 0.5))), j: Math.max(0, Math.min(ny - 1, Math.round((y - minY) / dy - 0.5))) });
     const iw = toIJ(inj.x, inj.y), pw = toIJ(prod.x, prod.y);
     const phi = new Float64Array(nx * ny).fill(d.phi);
-    const k = new Float64Array(nx * ny).fill(RESERVOIR_K); // uniform → pattern is perm-independent
+    const k = new Float64Array(nx * ny).fill(RESERVOIR_K);
     const Vcell = dx * dy * 20, poreVol = d.phi * Vcell * nx * ny;
     const corey = { ...COREY_DEFAULTS, nw, no };
-    const result = simulateFV({
+    const fvCfg: FvCfg = {
       nx, ny, dx, dy, dz: 20, phi, k, muw: 0.5, muo: 0.5 * muRatio, corey,
-      wells: [
-        { i: iw.i, j: iw.j, mode: 'rate', rate: poreVol },              // ~1 PVI per unit time
-        { i: pw.i, j: pw.j, mode: 'bhp', bhp: 100, WI: 1e5 },
-      ],
-    }, { tEnd: 1.2, nReports: 32, cfl: 0.35 });
-    return { result, nx, ny, dx, dy, minX, minY, maxX, maxY, iw, pw, corey };
+      wells: [{ i: iw.i, j: iw.j, mode: 'rate', rate: poreVol }, { i: pw.i, j: pw.j, mode: 'bhp', bhp: 100, WI: 1e5 }],
+    };
+    return { fvCfg, fvOpts: { tEnd: 1.2, nReports: 32, cfl: 0.35 }, nx, ny, dx, dy, minX, minY, maxX, maxY, iw, pw, corey };
   }, [inj, prod, res, muRatio, nw, no, d.phi]);
 
+  // heavy solve OFF the main thread — Simulation tab now paints instantly
+  const [simResult, setSimResult] = useState<FvResult | null>(null);
+  useEffect(() => {
+    if (!simCfg) { setSimResult(null); return; }
+    setSimResult(null);
+    const w = new Worker(new URL('../../workers/sim.worker.ts', import.meta.url), { type: 'module' });
+    w.onmessage = (e: MessageEvent<{ ok: boolean; result?: FvResult }>) => { if (e.data.ok && e.data.result) setSimResult(e.data.result); w.terminate(); };
+    w.postMessage({ cfg: simCfg.fvCfg, opts: simCfg.fvOpts });
+    return () => w.terminate();
+  }, [simCfg]);
+
+  const sim = useMemo(() => (simCfg && simResult ? { result: simResult, nx: simCfg.nx, ny: simCfg.ny, dx: simCfg.dx, dy: simCfg.dy, minX: simCfg.minX, minY: simCfg.minY, maxX: simCfg.maxX, maxY: simCfg.maxY, iw: simCfg.iw, pw: simCfg.pw, corey: simCfg.corey } : null), [simCfg, simResult]);
   const nFrames = sim ? sim.result.snapshots.length : 0;
+
+  // ── 3D HC-flow (G5): pack the Sw frame sequence + drape on the real Hugin top ──
+  const huginTop = useAsync(() => loadSurface('hugin_top'), []);
+  const simPack = useMemo(() => (sim ? packSimFrames(sim.result.snapshots.map((s) => s.sw), { nx: sim.nx, ny: sim.ny }) : null), [sim]);
+  const simGrid = sim ? { nx: sim.nx, ny: sim.ny, dx: sim.dx, dy: sim.dy, x0: sim.minX, y0: sim.minY } : null;
+  const zAt = useMemo(() => { const g = huginTop.data; return g ? (x: number, y: number) => sampleGrid(g, x, y) : undefined; }, [huginTop.data]);
   const f = Math.min(frame, Math.max(0, nFrames - 1));
   const snap = sim ? sim.result.snapshots[f] : null;
 
@@ -141,32 +160,17 @@ function Inner({ index }: { index: WbIndex }) {
     pin(sim.pw, cssVar('--amber'), `▲ ${prod?.name ?? 'PROD'}`);
   }, [sim, snap, swColor, inj, prod, streams]);
 
-  const drawProd = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
-    if (!sim) return;
-    const snaps = sim.result.snapshots; const padL = 34, padB = 18, padT = 8, padR = 8;
-    const pw = w - padL - padR, ph = h - padB - padT;
-    const maxPvi = snaps[snaps.length - 1].pvi || 1;
-    // oil rate (normalized) + water cut, both 0..1
-    const q0 = Math.max(...snaps.map((s) => oilRateOf(s)), 1e-9);
-    const x = (pvi: number) => padL + (pvi / maxPvi) * pw;
-    const y = (v: number) => padT + ph - v * ph;
-    ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + ph); ctx.lineTo(padL + pw, padT + ph); ctx.stroke();
-    ctx.fillStyle = cssVar('--muted'); ctx.font = `9px ${cssVar('--mono')}`; ctx.textAlign = 'right';
-    ctx.fillText('1', padL - 3, padT + 4); ctx.fillText('0', padL - 3, padT + ph + 3);
-    // oil rate (amber)
-    ctx.strokeStyle = cssVar('--amber'); ctx.lineWidth = 1.5; ctx.beginPath();
-    snaps.forEach((s, i) => { const px = x(s.pvi), py = y(oilRateOf(s) / q0); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.stroke();
-    // water cut (blue)
-    ctx.strokeStyle = cssVar('--blue'); ctx.lineWidth = 1.5; ctx.beginPath();
-    snaps.forEach((s, i) => { const px = x(s.pvi), py = y(s.waterCut); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.stroke();
-    // playhead
-    if (snap) { const px = x(snap.pvi); ctx.strokeStyle = cssVar('--text'); ctx.setLineDash([3, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, padT); ctx.lineTo(px, padT + ph); ctx.stroke(); ctx.setLineDash([]); }
-    ctx.textAlign = 'left'; ctx.fillStyle = cssVar('--amber'); ctx.fillText('oil rate', padL + 4, padT + 9); ctx.fillStyle = cssVar('--blue'); ctx.fillText('water cut', padL + 52, padT + 9);
-    ctx.fillStyle = cssVar('--muted'); ctx.textAlign = 'center'; ctx.fillText('PVI', padL + pw / 2, h - 4);
-  }, [sim, snap]);
-
   const mapC = useCanvas(drawMap, [drawMap]);
-  const prodC = useCanvas(drawProd, [drawProd]);
+
+  // production series for the D3 chart (1e) — oil rate + water cut vs PVI
+  const prodData = useMemo(() => (sim ? sim.result.snapshots.map((s) => ({ pvi: s.pvi, oilRate: oilRateOf(s), waterCut: s.waterCut })) : []), [sim]);
+  const seekToPvi = useCallback((pvi: number) => {
+    if (!sim) return;
+    const snaps = sim.result.snapshots;
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < snaps.length; i++) { const d = Math.abs(snaps[i].pvi - pvi); if (d < bestD) { bestD = d; best = i; } }
+    setPlaying(false); setFrame(best);
+  }, [sim]);
 
   const rf = sim && snap ? snap.cumOil / sim.result.ooip : 0;
 
@@ -184,12 +188,25 @@ function Inner({ index }: { index: WbIndex }) {
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 9px', borderRadius: 4, border: `1px solid ${showStreams ? 'var(--teal)' : 'var(--line)'}`, background: 'var(--panel-2)', color: showStreams ? 'var(--teal)' : 'var(--muted)', fontSize: 11 }}>
             <Waypoints size={14} /><span className="mono">SL</span>
           </button>
+          <button onClick={() => setView3d((v) => !v)} title="2D map / 3D HC-flow"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 9px', borderRadius: 4, border: `1px solid ${view3d ? 'var(--teal)' : 'var(--line)'}`, background: 'var(--panel-2)', color: view3d ? 'var(--teal)' : 'var(--muted)', fontSize: 11 }}>
+            {view3d ? <Box size={14} /> : <Square size={14} />}<span className="mono">{view3d ? '3D' : '2D'}</span>
+          </button>
           <span className="chip" style={{ color: 'var(--muted)' }}>oil-water IMPES · Buckley-Leverett-validated</span>
           <NatureBadge nature="scenario" />
           <button onClick={() => setInspOpen((o) => !o)} title="Inspector" style={{ display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 4, border: '1px solid var(--line)', background: 'var(--panel-2)', color: 'var(--muted)' }}><SlidersHorizontal size={15} /></button>
         </div>
 
-        {!sim ? <Loading what="running waterflood (IMPES)" /> : (
+        {!sim ? <Loading what="running waterflood (IMPES)" /> : view3d && simPack && simGrid ? (
+          <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
+            <Suspense fallback={<Loading what="3D HC-flow drape" />}>
+              <SimDrape pack={simPack} grid={simGrid} zAt={zAt} owc={index.contacts[0]?.tvdss ?? 3200}
+                wells={index.wells.filter((w) => isFinite(w.x) && isFinite(w.y)).map((w) => ({ name: w.name, x: w.x, y: w.y, role: w.role }))}
+                injName={inj?.name} prodName={prod?.name} />
+            </Suspense>
+            <ReadoutBar left={`3D HC-flow · ${inj?.name ?? 'inj'} → ${prod?.name ?? 'prod'} · draped on Hugin top · one texture/frame`} />
+          </div>
+        ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div ref={mapC.wrapRef} style={{ flex: 1.6, minHeight: 100, position: 'relative', overflow: 'hidden' }}>
               <canvas ref={mapC.canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
@@ -204,8 +221,8 @@ function Inner({ index }: { index: WbIndex }) {
               <input type="range" min={0} max={Math.max(0, nFrames - 1)} step={1} value={f} onChange={(e) => { setPlaying(false); setFrame(parseInt(e.target.value)); }} style={{ flex: 1, accentColor: 'var(--teal)' }} />
               <span className="mono" style={{ color: 'var(--text)' }}>{f + 1}/{nFrames}</span>
             </div>
-            <div ref={prodC.wrapRef} style={{ flex: 1, minHeight: 90, position: 'relative', overflow: 'hidden', borderTop: '1px solid var(--line)', background: 'var(--panel)' }}>
-              <canvas ref={prodC.canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+            <div style={{ flex: 1, minHeight: 90, position: 'relative', overflow: 'hidden', borderTop: '1px solid var(--line)', background: 'var(--panel)' }}>
+              <ProductionChartView data={prodData} playheadPvi={snap?.pvi ?? null} onScrub={seekToPvi} />
             </div>
           </div>
         )}

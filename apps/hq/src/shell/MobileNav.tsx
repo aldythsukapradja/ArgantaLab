@@ -18,7 +18,7 @@ import { signOut } from '../lib/auth'
 // across all four groups.
 type Grp = { id: string; label: string; Icon: typeof LayoutGrid; surfaces: SurfaceId[] }
 export const MGROUPS: Grp[] = [
-  { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'home', 'command', 'copilot', 'cinema'] },
+  { id: 'company', label: 'Company', Icon: Building2, surfaces: ['portfolio', 'story', 'home', 'command', 'copilot', 'cinema'] },
   { id: 'insights', label: 'Insights', Icon: LineChart, surfaces: ['growth', 'data', 'vault', 'knowledge', 'architecture', 'rack'] },
   { id: 'studio', label: 'Studio', Icon: Clapperboard, surfaces: ['biography', 'brand', 'influencer', 'broadcast', 'video', 'music', 'media', 'agents'] },
   { id: 'forge', label: 'Forge', Icon: Hammer, surfaces: ['game', 'world', 'battle', 'character', 'app', 'content', 'pixel', 'reactor'] },
@@ -28,6 +28,7 @@ export const MGROUPS: Grp[] = [
 // chrome, so it lives here rather than the store.
 const CARD: Partial<Record<SurfaceId, { Icon: typeof LayoutGrid; desc: string }>> = {
   portfolio: { Icon: LayoutGrid, desc: 'Five products, one operating view' },
+  story: { Icon: BookOpen, desc: 'Five chapters, shaped for each audience' },
   home: { Icon: Sparkles, desc: 'The founder cockpit' },
   command: { Icon: Radar, desc: 'Live ops cockpit — fleet, infra, launch' },
   copilot: { Icon: Mic2, desc: 'Voice & gesture control' },

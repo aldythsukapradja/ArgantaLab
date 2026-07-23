@@ -39,7 +39,12 @@ class Buf {
   quad(a: number, b: number, c: number, d: number) { this.idx.push(a, b, c, a, c, d); }
 }
 
-/** Shell = top surface + base surface + boundary side-walls, coloured by the volume texture. */
+/** Shell = ONE continuous solid skin (Petrel-style): a smooth top surface + smooth base
+ * surface that share corner positions (no gaps, no per-cell stair-steps / floating boxes)
+ * plus layer-banded walls around the OUTER perimeter of the whole active region. Corner
+ * depths are averaged over the up-to-4 active cells touching each grid corner, so the body
+ * reads as one geologic solid. Per-cell UVW is kept (crisp property colouring) by emitting
+ * duplicate verts at matching corner positions — visually watertight, cell-accurate colour. */
 export function buildShell(p: PackedGrid3D): MeshBuffers {
   const [cx, cy, cz] = centreOf(p);
   const b = new Buf();
@@ -47,45 +52,73 @@ export function buildShell(p: PackedGrid3D): MeshBuffers {
   const Y = (depth: number) => -(depth - cz);          // depth up
   const U = (i: number) => (i + 0.5) / nx, V = (k: number) => (k + 0.5) / ny, W = (l: number) => (l + 0.5) / nz;
 
-  // top (l=0) and base (l=nz-1) surfaces — per-cell quads (robust to the active mask)
-  for (const [depthOf, wl, ny3] of [
-    [(i: number, k: number) => p.topZ[col(p, i, k)], W(0), 1] as const,
-    [(i: number, k: number) => p.baseZ[col(p, i, k)], W(nz - 1), -1] as const,
-  ]) {
+  // ── corner-averaged depths → a continuous (gap-free) top & base surface ─────────
+  const NX1 = nx + 1, NY1 = ny + 1;
+  const cornerTop = new Float64Array(NX1 * NY1), cornerBase = new Float64Array(NX1 * NY1);
+  const cornerN = new Uint16Array(NX1 * NY1);
+  const cid = (i: number, k: number) => k * NX1 + i;
+  for (let k = 0; k < ny; k++) for (let i = 0; i < nx; i++) {
+    if (!active(p, i, k)) continue;
+    const c = col(p, i, k), t = p.topZ[c], bz = p.baseZ[c];
+    if (!Number.isFinite(t) || !Number.isFinite(bz)) continue;
+    for (const [ci, ck] of [[i, k], [i + 1, k], [i + 1, k + 1], [i, k + 1]] as const) {
+      const q = cid(ci, ck); cornerTop[q] += t; cornerBase[q] += bz; cornerN[q]++;
+    }
+  }
+  for (let q = 0; q < cornerN.length; q++) if (cornerN[q]) { cornerTop[q] /= cornerN[q]; cornerBase[q] /= cornerN[q]; }
+  const depthAt = (i: number, k: number, top: boolean) => (top ? cornerTop : cornerBase)[cid(i, k)];
+
+  // smooth surface normal from the corner depth-gradient (central diff). Surface y=−depth,
+  // so n ∝ (∂depth/∂x, 1, ∂depth/∂z) up to sign; base flips vertical component.
+  const surfNormal = (i: number, k: number, top: boolean): [number, number, number] => {
+    const D = top ? cornerTop : cornerBase;
+    const gx = (D[cid(Math.min(nx, i + 1), k)] - D[cid(Math.max(0, i - 1), k)]) / (2 * dx);
+    const gz = (D[cid(i, Math.min(ny, k + 1))] - D[cid(i, Math.max(0, k - 1))]) / (2 * dy);
+    const ny0 = top ? 1 : -1;
+    const L = Math.hypot(gx, 1, gz) || 1; return [(gx * ny0) / L, ny0 / L, (gz * ny0) / L];
+  };
+
+  // ── top + base surfaces (continuous corner-shared positions, smooth normals) ────
+  for (const top of [true, false]) {
+    const wl = top ? W(0) : W(nz - 1);
     for (let k = 0; k < ny; k++) for (let i = 0; i < nx; i++) {
       if (!active(p, i, k)) continue;
-      const d = depthOf(i, k), y = Y(d);
-      const x0 = p.x0 + i * dx - cx, x1 = p.x0 + (i + 1) * dx - cx;
-      const z0 = p.y0 + k * dy - cy, z1 = p.y0 + (k + 1) * dy - cy;
       const u = U(i), v = V(k);
-      const n0 = b.vert(x0, y, z0, 0, ny3, 0, u, v, wl);
-      const n1 = b.vert(x1, y, z0, 0, ny3, 0, u, v, wl);
-      const n2 = b.vert(x1, y, z1, 0, ny3, 0, u, v, wl);
-      const n3 = b.vert(x0, y, z1, 0, ny3, 0, u, v, wl);
-      if (ny3 > 0) b.quad(n0, n1, n2, n3); else b.quad(n0, n3, n2, n1);
+      const P = (ci: number, ck: number) => {
+        const x = p.x0 + ci * dx - cx, z = p.y0 + ck * dy - cy, y = Y(depthAt(ci, ck, top));
+        const n = surfNormal(ci, ck, top);
+        return b.vert(x, y, z, n[0], n[1], n[2], u, v, wl);
+      };
+      const n0 = P(i, k), n1 = P(i + 1, k), n2 = P(i + 1, k + 1), n3 = P(i, k + 1);
+      if (top) b.quad(n0, n1, n2, n3); else b.quad(n0, n3, n2, n1); // base wound downward
     }
   }
 
-  // side-walls around the active boundary (one quad per exposed edge), subdivided by layer
+  // ── perimeter walls: exposed boundary edges only, layer-banded, aligned to the
+  // corner surfaces so the walls meet top & base seamlessly (the layered "block" side). ──
   const wall = (i: number, k: number, di: number, dk: number) => {
-    if (active(p, i + di, k + dk)) return; // neighbour present → interior edge, skip
-    const c = col(p, i, k), top = p.topZ[c], base = p.baseZ[c];
-    // edge endpoints (the shared face between cell and the absent neighbour)
-    const ex0 = p.x0 + (i + (di > 0 ? 1 : 0) + (dk !== 0 ? 0 : 0)) * dx;
-    // build the two horizontal corners of this vertical face
-    let ax, az, bx, bz;
-    if (di !== 0) { const xx = p.x0 + (i + (di > 0 ? 1 : 0)) * dx - cx; ax = xx; az = p.y0 + k * dy - cy; bx = xx; bz = p.y0 + (k + 1) * dy - cy; }
-    else { const zz = p.y0 + (k + (dk > 0 ? 1 : 0)) * dy - cy; ax = p.x0 + i * dx - cx; az = zz; bx = p.x0 + (i + 1) * dx - cx; bz = zz; }
-    void ex0;
+    if (active(p, i + di, k + dk)) return; // interior edge → skip (keeps the body solid)
+    // the two shared corners of the exposed vertical face
+    let a: readonly [number, number], c2: readonly [number, number];
+    if (di > 0) { a = [i + 1, k]; c2 = [i + 1, k + 1]; }
+    else if (di < 0) { a = [i, k + 1]; c2 = [i, k]; }
+    else if (dk > 0) { a = [i + 1, k + 1]; c2 = [i, k + 1]; }
+    else { a = [i, k]; c2 = [i + 1, k]; }
     const nrm: [number, number, number] = di !== 0 ? [di, 0, 0] : [0, 0, dk];
+    const u = U(i), v = V(k);
+    const ax = p.x0 + a[0] * dx - cx, az = p.y0 + a[1] * dy - cy;
+    const bx = p.x0 + c2[0] * dx - cx, bz = p.y0 + c2[1] * dy - cy;
+    const aT = depthAt(a[0], a[1], true), aB = depthAt(a[0], a[1], false);
+    const bT = depthAt(c2[0], c2[1], true), bB = depthAt(c2[0], c2[1], false);
     for (let l = 0; l < nz; l++) {
-      const yT = Y(top + (l / nz) * (base - top)), yB = Y(top + ((l + 1) / nz) * (base - top));
-      const w = W(l), u = U(i), v = V(k);
-      const a0 = b.vert(ax, yT, az, nrm[0], 0, nrm[2], u, v, w);
-      const a1 = b.vert(bx, yT, bz, nrm[0], 0, nrm[2], u, v, w);
-      const a2 = b.vert(bx, yB, bz, nrm[0], 0, nrm[2], u, v, w);
-      const a3 = b.vert(ax, yB, az, nrm[0], 0, nrm[2], u, v, w);
-      b.quad(a0, a1, a2, a3);
+      const w = W(l);
+      const aYt = Y(aT + (l / nz) * (aB - aT)), aYb = Y(aT + ((l + 1) / nz) * (aB - aT));
+      const bYt = Y(bT + (l / nz) * (bB - bT)), bYb = Y(bT + ((l + 1) / nz) * (bB - bT));
+      const q0 = b.vert(ax, aYt, az, nrm[0], 0, nrm[2], u, v, w);
+      const q1 = b.vert(bx, bYt, bz, nrm[0], 0, nrm[2], u, v, w);
+      const q2 = b.vert(bx, bYb, bz, nrm[0], 0, nrm[2], u, v, w);
+      const q3 = b.vert(ax, aYb, az, nrm[0], 0, nrm[2], u, v, w);
+      b.quad(q0, q1, q2, q3);
     }
   };
   for (let k = 0; k < ny; k++) for (let i = 0; i < nx; i++) {

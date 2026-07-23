@@ -1,18 +1,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx';
 import { emptyManifest, makeOsduId, OSDU_RELEASE, record, recordCount, validateManifest } from './osdu-core.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
-const outDir = path.join(publicDir, 'osdu');
+// Manifests are BUILD-ONLY inputs to build-cockpit-spatial.mjs — the client never fetches
+// them (only the small derived cockpit-*.geojson/json). Keep them out of public/ so they
+// never ship in `dist/` (a 45MB dead-weight deploy artifact otherwise; the 29MB GOGET
+// manifest alone is the full licensed dataset re-exposed publicly for no reason).
+const publicOsduDir = path.join(publicDir, 'osdu');
+const outDir = path.join(root, 'data-energy', 'generated', 'osdu');
 const rawDir = path.join(root, 'data-energy', 'raw');
 const internalDir = path.join(root, 'data-energy', 'internal');
 fs.mkdirSync(outDir, { recursive: true });
+fs.mkdirSync(publicOsduDir, { recursive: true });
 
 const read = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
 const write = (name, value) => fs.writeFileSync(path.join(outDir, name), JSON.stringify(value));
+const writePublic = (name, value) => fs.writeFileSync(path.join(publicOsduDir, name), JSON.stringify(value));
 const features = (name) => read(path.join(publicDir, name)).features;
 const addMaster = (m, spec) => m.MasterData.push(record(spec));
 const sourceFiles = [];
@@ -144,20 +151,63 @@ const find = (row, aliases) => {
 function buildGoget(file) {
   const manifest = emptyManifest();
   const workbook = XLSX.readFile(file);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
-  for (const [i, row] of rows.entries()) {
-    const nativeId = text(find(row, ['GEM Unit ID', 'GEM ID', 'GOGET ID', 'Unit ID', 'Project ID']));
-    const name = text(find(row, ['Unit Name', 'Project Name', 'Field Name', 'Name']));
-    if (!nativeId || !name) continue;
-    const country = text(find(row, ['Country/Area', 'Country']));
+  const sheetRows = (wanted) => {
+    const sheetName = workbook.SheetNames.find((name) => name.trim() === wanted);
+    if (!sheetName) throw new Error(`GOGET: missing worksheet "${wanted}"`);
+    return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: null })
+      .map((row, index) => ({ row, sourceSheet: sheetName, sourceRow: index + 2 }));
+  };
+  const sets = [
+    { level: 'field', type: 'main', rows: sheetRows('Field-level main data') },
+    { level: 'field', type: 'reserves', rows: sheetRows('Field-level reserves data') },
+    { level: 'field', type: 'production', rows: sheetRows('Field-level production data') },
+    { level: 'project', type: 'main', rows: sheetRows('Project-level main data') },
+    { level: 'project', type: 'reserves', rows: sheetRows('Project-level reserves data') },
+    { level: 'project', type: 'production', rows: sheetRows('Project-level production data') },
+  ];
+  const units = new Map();
+  for (const set of sets) {
+    for (const item of set.rows) {
+      const nativeId = text(find(item.row, ['GEM Unit ID', 'GEM ID', 'GOGET ID', 'Unit ID', 'Project ID']));
+      if (!nativeId) continue;
+      const name = text(find(item.row, ['Unit Name', 'Project Name', 'Field Name', 'Name']));
+      const unit = units.get(nativeId) ?? {
+        nativeId, name, country: text(find(item.row, ['Country/Area', 'Country'])),
+        levels: new Set(), main: [], reserves: [], production: [],
+      };
+      unit.levels.add(set.level);
+      if (!unit.name && name) unit.name = name;
+      if (!unit.country) unit.country = text(find(item.row, ['Country/Area', 'Country']));
+      if (set.type === 'main') unit.main.push(item);
+      else unit[set.type].push({ ...item.row, SourceSheet: item.sourceSheet, SourceRow: item.sourceRow });
+      units.set(nativeId, unit);
+    }
+  }
+  for (const unit of units.values()) {
+    if (!unit.name) continue;
+    const primaryMain = unit.main[0]?.row ?? {};
+    const rawLatitude = text(find(primaryMain, ['Latitude', 'Latitude (°)']));
+    const rawLongitude = text(find(primaryMain, ['Longitude', 'Longitude (°)']));
+    const latitude = rawLatitude == null ? NaN : Number(rawLatitude);
+    const longitude = rawLongitude == null ? NaN : Number(rawLongitude);
+    const spatialLocation = Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? { type: 'Point', coordinates: [longitude, latitude] } : undefined;
     addMaster(manifest, {
-      kind: 'osdu:wks:master-data--Field:1.1.0', nativeId: `goget-${nativeId}`,
-      name, source: 'Global Energy Monitor · Global Oil and Gas Extraction Tracker',
+      kind: 'osdu:wks:master-data--Field:1.1.0', nativeId: `goget-${unit.nativeId}`,
+      name: unit.name, source: 'Global Energy Monitor · Global Oil and Gas Extraction Tracker',
       licence: 'CC BY 4.0',
       data: {
-        FieldID: nativeId, FieldName: name,
-        ExtensionProperties: { ...row, SourceRow: i + 2, SourceRelease: path.basename(file), CountryArea: country },
+        FieldID: unit.nativeId, FieldName: unit.name, SpatialLocation: spatialLocation,
+        ExtensionProperties: {
+          UnitLevels: [...unit.levels],
+          CountryArea: unit.country,
+          SourceRelease: path.basename(file),
+          MainData: unit.main.map((item) => ({
+            ...item.row, SourceSheet: item.sourceSheet, SourceRow: item.sourceRow,
+          })),
+          ReservesObservations: unit.reserves,
+          ProductionObservations: unit.production,
+        },
       },
     });
   }
@@ -221,6 +271,75 @@ function buildVolve() {
   return manifest;
 }
 
+function buildAnp() {
+  const manifest = emptyManifest();
+  const sourceMeta = read(path.join(rawDir, 'anp', 'source.json'));
+  const fields = read(path.join(rawDir, 'anp', 'fields.geojson')).features;
+  const blocks = read(path.join(rawDir, 'anp', 'blocks.geojson')).features;
+  const source = sourceMeta.authority;
+  const licence = sourceMeta.licence;
+  const basins = new Map();
+  const organisations = new Map();
+  const basinFor = (name) => {
+    if (!name) return undefined;
+    const candidateId = makeOsduId('osdu:wks:master-data--Basin:1.2.0', `anp-basin-${name}`);
+    if (!basins.has(candidateId)) {
+      const basin = record({
+        kind: 'osdu:wks:master-data--Basin:1.2.0', nativeId: `anp-basin-${name}`,
+        name, source, licence, countries: ['BR'], data: { BasinID: `ANP:${name}` },
+      });
+      basins.set(candidateId, basin.id);
+      manifest.MasterData.push(basin);
+    }
+    return basins.get(candidateId);
+  };
+  const organisationFor = (name) => {
+    if (!name) return undefined;
+    const candidateId = makeOsduId('osdu:wks:master-data--Organisation:1.2.0', `anp-organisation-${name}`);
+    if (!organisations.has(candidateId)) {
+      const organisation = record({
+        kind: 'osdu:wks:master-data--Organisation:1.2.0', nativeId: `anp-organisation-${name}`,
+        name, source, licence, countries: ['BR'], data: { OrganisationID: `ANP:${name}` },
+      });
+      organisations.set(candidateId, organisation.id);
+      manifest.MasterData.push(organisation);
+    }
+    return organisations.get(candidateId);
+  };
+  for (const feature of fields) {
+    const p = feature.properties ?? {};
+    const basinId = basinFor(p.NOM_BACIA);
+    const operatorId = organisationFor(p.OPERADOR_C);
+    addMaster(manifest, {
+      kind: 'osdu:wks:master-data--Field:1.1.0', nativeId: `anp-field-${p.COD_CAMPO ?? p.ID}`,
+      name: p.NOM_CAMPO ?? p.SIG_CAMPO, source, licence, countries: ['BR'],
+      parents: basinId ? [basinId] : [],
+      data: {
+        FieldID: String(p.COD_CAMPO ?? p.ID), FieldName: p.NOM_CAMPO,
+        SpatialLocation: feature.geometry,
+        ExtensionProperties: { ...p, OperatorOrganisationID: operatorId },
+      },
+    });
+  }
+  for (const feature of blocks) {
+    const p = feature.properties ?? {};
+    const basinId = basinFor(p.NOM_BACIA);
+    const operatorId = organisationFor(p.OPERADOR_C);
+    addMaster(manifest, {
+      kind: 'osdu:wks:master-data--Agreement:1.1.0',
+      nativeId: `anp-agreement-${p.NUM_CONTRA ?? 'no-contract'}-${p.COD_BLOCO ?? p.NOM_BLOCO}`,
+      name: p.NOM_BLOCO ?? p.NOM_FANTAS, source, licence, countries: ['BR'],
+      parents: basinId ? [basinId] : [],
+      data: {
+        AgreementID: String(p.NUM_CONTRA ?? p.COD_BLOCO),
+        SpatialLocation: feature.geometry,
+        ExtensionProperties: { ...p, OperatorOrganisationID: operatorId },
+      },
+    });
+  }
+  return manifest;
+}
+
 function buildInternal(file) {
   const manifest = emptyManifest();
   const input = read(file);
@@ -246,12 +365,18 @@ function persist(source, dataClass, filename, manifest) {
   const result = validateManifest(manifest, dataClass);
   if (!result.valid) throw new Error(`${source} OSDU validation failed:\n${result.errors.slice(0, 20).join('\n')}`);
   write(filename, manifest);
-  sourceFiles.push({ source, dataClass, path: `/osdu/${filename}`, records: recordCount(manifest), status: 'ready' });
+  sourceFiles.push({ source, dataClass, path: `data-energy/generated/osdu/${filename}`, records: recordCount(manifest), status: 'ready' });
 }
 
 persist('USGS', 'public', 'usgs.manifest.json', buildUsgs());
 persist('North Sea regulators', 'public', 'north-sea.manifest.json', buildNorthSea());
 persist('Volve', 'public', 'volve.manifest.json', buildVolve());
+const anpSource = path.join(rawDir, 'anp', 'source.json');
+if (fs.existsSync(anpSource)) {
+  persist('Brazil ANP', 'public', 'anp.manifest.json', buildAnp());
+} else {
+  sourceFiles.push({ source: 'Brazil ANP', dataClass: 'public', path: 'data-energy/generated/osdu/anp.manifest.json', records: 0, status: 'awaiting-source' });
+}
 
 const gogetCandidates = fs.existsSync(path.join(rawDir, 'goget'))
   ? fs.readdirSync(path.join(rawDir, 'goget')).filter((x) => /\.xlsx?$/i.test(x)) : [];
@@ -259,17 +384,23 @@ if (gogetCandidates.length) {
   const file = path.join(rawDir, 'goget', gogetCandidates.sort().at(-1));
   persist('GOGET', 'public', 'goget.manifest.json', buildGoget(file));
 } else {
-  sourceFiles.push({ source: 'GOGET', dataClass: 'public', path: '/osdu/goget.manifest.json', records: 0, status: 'awaiting-source' });
+  sourceFiles.push({ source: 'GOGET', dataClass: 'public', path: 'data-energy/generated/osdu/goget.manifest.json', records: 0, status: 'awaiting-source' });
 }
 
 const internalFile = path.join(internalDir, 'osdu-input.json');
 if (fs.existsSync(internalFile)) {
   persist('Arganta internal', 'internal', 'internal.manifest.json', buildInternal(internalFile));
 } else {
-  sourceFiles.push({ source: 'Arganta internal', dataClass: 'internal', path: '/osdu/internal.manifest.json', records: 0, status: 'awaiting-source' });
+  sourceFiles.push({ source: 'Arganta internal', dataClass: 'internal', path: 'data-energy/generated/osdu/internal.manifest.json', records: 0, status: 'awaiting-source' });
 }
 
-write('index.json', {
+sourceFiles.push(
+  { source: 'US BOEM', dataClass: 'public', path: 'data-energy/generated/osdu/boem.manifest.json', records: 0, status: 'planned' },
+  { source: 'Australia NOPIMS', dataClass: 'public', path: 'data-energy/generated/osdu/nopims.manifest.json', records: 0, status: 'planned' },
+  { source: 'Canada regulator open data', dataClass: 'public', path: 'data-energy/generated/osdu/canada.manifest.json', records: 0, status: 'planned' },
+);
+
+writePublic('index.json', {
   standard: 'OSDU R3', dataDefinitions: OSDU_RELEASE,
   generatedAt: new Date().toISOString(), manifests: sourceFiles,
 });

@@ -24,3 +24,21 @@ html[data-ui="cosmo"] .surface-loader b{font-size:13px;color:var(--ink)}
 html[data-ui="cosmo"] .surface-loader small{font-size:10px;color:var(--ink3)}
 @keyframes surface-loader-pulse{50%{transform:scale(.94);opacity:.7}}
 @media(prefers-reduced-motion:reduce){html[data-ui="cosmo"] .surface-loader>span{animation:none}}
+
+/* Surface error boundary — shown when a lazy workspace chunk fails (e.g. stale dev dep). */
+html[data-ui="cosmo"] .surface-error{
+  flex:1;min-height:0;display:grid;place-content:center;justify-items:center;gap:9px;
+  background:var(--bg);color:var(--ink2);text-align:center;padding:24px;
+}
+html[data-ui="cosmo"] .surface-error-ic{
+  width:46px;height:46px;display:grid;place-items:center;border-radius:13px;
+  color:var(--amber,#e1ae48);background:color-mix(in srgb,var(--amber,#e1ae48) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--amber,#e1ae48) 34%,var(--line));
+}
+html[data-ui="cosmo"] .surface-error b{font-size:14px;color:var(--ink)}
+html[data-ui="cosmo"] .surface-error small{font-size:11px;color:var(--ink3);max-width:380px;line-height:1.55}
+html[data-ui="cosmo"] .surface-error-btn{
+  margin-top:4px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+  padding:8px 16px;border-radius:9px;cursor:pointer;color:#fff;background:var(--teal);border:0;
+}
+html[data-ui="cosmo"] .surface-error-btn:hover{filter:brightness(1.06)}

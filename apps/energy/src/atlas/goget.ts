@@ -1,4 +1,5 @@
-// GOGET ingestion boundary — source rows in, ATLAS field masters + observations out.
+// GOGET source adapter — source rows become an intermediate projection before OSDU
+// Field master records and observation WPCs are emitted at the canonical boundary.
 // The March-2026 workbook is delivered as XLS and its headings may drift between
 // releases, so aliases are explicit and unknown columns remain in the raw landing
 // layer rather than leaking into the canonical schema.

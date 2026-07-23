@@ -23,6 +23,7 @@ import { EXPL_TAB_NAMES, explStatus } from '../tabs/exploration/registry';
 import { CosmoAgentOrb } from './CosmoAgentOrb';
 import { CosmoSettings } from './CosmoSettings';
 import { CosmoChat } from './CosmoChat';
+import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
 import { Cockpit } from './Cockpit';
 
 // Keep the company-facing Cockpit lean. Scientific workspaces and their larger
@@ -134,6 +135,16 @@ export function CosmoShell() {
   useEffect(() => { document.body.classList.toggle('cosmo-on', chat); return () => document.body.classList.remove('cosmo-on'); }, [chat]);
   const closeMobile = () => { setDrawer(false); setSheet(null); };
   const toggleSheet = (g: string) => { setDrawer(false); setSheet((s) => (s === g ? null : g)); };
+  const openCockpit = () => {
+    setNav('cockpit');
+    setDrawer(false);
+    setSheet(window.matchMedia('(max-width: 820px)').matches ? 'verticals' : null);
+  };
+  useEffect(() => {
+    if (nav === 'cockpit' && window.matchMedia('(max-width: 820px)').matches) {
+      setSheet('verticals');
+    }
+  }, [nav]);
   const sheetGo = (it: SheetItem) => {
     setSheet(null);
     if (it.zone === 'vertical') { setNav(it.id); setTab('map'); }
@@ -178,7 +189,7 @@ export function CosmoShell() {
         </div>
         <div className="nav">
           <div className="navlabel">COMMAND CENTER</div>
-          {navItem({ id: 'cockpit', name: 'Cockpit', icon: LayoutDashboard }, () => { setNav('cockpit'); closeMobile(); })}
+          {navItem({ id: 'cockpit', name: 'Cockpit', icon: LayoutDashboard }, openCockpit)}
 
           <div className="navlabel">LIFECYCLE</div>
           {LIFECYCLES.map((l) => navItem(l, () => { setNav(l.id); setTab('map'); closeMobile(); }))}
@@ -209,8 +220,11 @@ export function CosmoShell() {
         </div>
       </header>
 
-      {/* main — direct grid child (row 2, col 2) */}
+      {/* main — direct grid child (row 2, col 2). The error boundary is keyed by nav so a
+          failed surface (e.g. a stale lazy chunk) shows a Reload prompt instead of white-
+          screening the app, and navigating elsewhere resets it. */}
       <main className="main">
+       <SurfaceErrorBoundary key={nav}>
         <Suspense fallback={(
           <div className="surface-loader" role="status">
             <span><Sparkles size={18} /></span>
@@ -292,6 +306,7 @@ export function CosmoShell() {
           </div>
           )}
         </Suspense>
+       </SurfaceErrorBoundary>
       </main>
 
       {/* footer — spans full width (row 3) */}
@@ -325,7 +340,7 @@ export function CosmoShell() {
         </div>
       </div>
       <nav className="mnav" aria-label="Primary">
-        <button className={'mtab ' + (mActive === 'cockpit' ? 'on' : '')} onClick={() => { setNav('cockpit'); closeMobile(); }}>
+        <button className={'mtab ' + (mActive === 'cockpit' ? 'on' : '')} onClick={openCockpit}>
           <LayoutDashboard size={23} strokeWidth={1.7} /><span>Cockpit</span>
         </button>
         <button className={'mtab ' + (mActive === 'verticals' ? 'on' : '')} onClick={() => toggleSheet('verticals')}>

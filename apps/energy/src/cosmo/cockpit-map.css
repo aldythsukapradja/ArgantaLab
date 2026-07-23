@@ -1,0 +1,78 @@
+html[data-ui="cosmo"] .aeck-maplibre{
+  position:absolute;inset:0;z-index:0;pointer-events:auto!important;touch-action:none!important;
+  /* Space/ocean backdrop only. NEVER a flat world image here — in globe mode the area around
+     the sphere is transparent, so a flat basemap image would show THROUGH as a second, mercator
+     world behind the globe (the "flat map behind the globe" bug). The map's own raster tiles
+     are the only basemap; this just fills the space around the globe. (Also keeps the sovereign
+     rule: no external tile/imagery URL embedded in CSS.) */
+  background-color:#07131d;
+  background-image:
+    radial-gradient(circle at 52% 46%,rgba(22,115,118,.20),transparent 46%),
+    linear-gradient(90deg,rgba(4,17,28,.72),transparent 30%,transparent 72%,rgba(4,17,28,.34));
+  background-position:center;
+  background-size:cover,cover;
+}
+html[data-ui="cosmo"] .aeck-maplibre canvas{pointer-events:auto!important;touch-action:none!important}
+html[data-ui="cosmo"] .aeck-globe{
+  position:absolute;inset:0;z-index:0;overflow:hidden;touch-action:none;cursor:grab;
+  background:
+    radial-gradient(circle at 58% 48%,rgba(22,115,118,.22),transparent 30%),
+    linear-gradient(90deg,#06131f 0%,#071b28 40%,#05111b 100%);
+}
+html[data-ui="cosmo"] .aeck-globe:active{cursor:grabbing}
+html[data-ui="cosmo"] .aeck-globe canvas{display:block;width:100%;height:100%;outline:0}
+html[data-ui="cosmo"] .aeck-leaflet,
+html[data-ui="cosmo"] .aeck-mesh-map{
+  position:absolute;inset:0;z-index:0;width:100%;height:100%;touch-action:none
+}
+html[data-ui="cosmo"] .aeck-mesh-map{cursor:grab;background:linear-gradient(90deg,#06131f,#082231 55%,#06131f)}
+html[data-ui="cosmo"] .aeck-mesh-map:active{cursor:grabbing}
+html[data-ui="cosmo"] .aeck-leaflet .leaflet-tile{filter:saturate(.88) contrast(1.03)}
+html[data-ui="cosmo"] .aeck-leaflet .leaflet-control-zoom{
+  overflow:hidden;border:1px solid rgba(148,209,218,.22);border-radius:11px;
+  box-shadow:0 14px 38px rgba(0,0,0,.2)
+}
+html[data-ui="cosmo"] .aeck-leaflet .leaflet-control-zoom a{color:#315e65;border:0}
+html[data-ui="cosmo"] .aeck-leaflet .leaflet-control-attribution{font-size:8px;background:rgba(255,255,255,.78)}
+html[data-ui="cosmo"] .aeck-stage:has(.aeck-maplibre)::after{
+  display:block;z-index:1;pointer-events:none!important;
+  background:linear-gradient(90deg,rgba(4,17,28,.62),rgba(4,17,28,.12) 22%,transparent 42%)
+}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-canvas{outline:0}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-bottom-left{left:12px;bottom:10px;z-index:4}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-bottom-right{right:12px;bottom:12px;z-index:4}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-group{
+  overflow:hidden;border:1px solid rgba(148,209,218,.22);border-radius:11px;
+  background:rgba(4,17,28,.82);box-shadow:0 14px 38px rgba(0,0,0,.22);backdrop-filter:blur(12px)
+}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-group button{width:36px;height:36px}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl button .maplibregl-ctrl-icon{filter:invert(1) opacity(.72)}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-attrib{
+  color:#6f8991;background:rgba(4,17,28,.62);font-size:8px;backdrop-filter:blur(8px)
+}
+html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-attrib a{color:#86a5ae}
+html[data-ui="cosmo"]:not(.dark) .aeck-maplibre .maplibregl-ctrl-group{
+  border-color:rgba(31,92,99,.18);background:rgba(255,255,255,.88);box-shadow:0 14px 38px rgba(31,76,81,.12)
+}
+html[data-ui="cosmo"]:not(.dark) .aeck-maplibre{
+  background-color:#dcecea;
+  background-image:
+    radial-gradient(circle at 52% 46%,rgba(25,143,139,.16),transparent 48%),
+    linear-gradient(90deg,rgba(255,255,255,.9),rgba(255,255,255,.08) 34%,transparent 70%,rgba(214,236,233,.24));
+}
+html[data-ui="cosmo"]:not(.dark) .aeck-globe{
+  background:
+    radial-gradient(circle at 58% 48%,rgba(25,143,139,.18),transparent 32%),
+    linear-gradient(90deg,#fff 0%,#e9f4f2 44%,#dceceb 100%);
+}
+html[data-ui="cosmo"]:not(.dark) .aeck-mesh-map{background:linear-gradient(90deg,#fff,#eaf5f3 55%,#dceceb)}
+html[data-ui="cosmo"]:not(.dark) .aeck-stage:has(.aeck-maplibre)::after{
+  background:linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.42) 18%,rgba(255,255,255,.08) 34%,transparent 52%)
+}
+html[data-ui="cosmo"]:not(.dark) .aeck-maplibre .maplibregl-ctrl button .maplibregl-ctrl-icon{filter:none;opacity:.68}
+html[data-ui="cosmo"]:not(.dark) .aeck-maplibre .maplibregl-ctrl-attrib{color:#547078;background:rgba(255,255,255,.72)}
+html[data-ui="cosmo"]:not(.dark) .aeck-maplibre .maplibregl-ctrl-attrib a{color:#365c64}
+@media(max-width:820px){
+  html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-bottom-right{right:8px;bottom:8px}
+  html[data-ui="cosmo"] .aeck-maplibre .maplibregl-ctrl-bottom-left{left:8px;bottom:6px}
+}

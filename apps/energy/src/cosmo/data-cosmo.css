@@ -163,3 +163,101 @@ html[data-ui="cosmo"] .dm-hint{font-family:var(--mono);font-size:9.5px;color:var
 html[data-ui="cosmo"] .dm-srcseg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2);margin-left:auto;margin-right:12px}
 html[data-ui="cosmo"] .dm-srcseg .sg{padding:5px 11px;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--ink2);cursor:pointer}
 html[data-ui="cosmo"] .dm-srcseg .sg.on{background:var(--teal);color:#fff}
+
+/* ═══════════ OSDU Data workspace — responsive contract ═══════════ */
+@media(max-width:900px){
+  html[data-ui="cosmo"] .at-wrap{grid-template-columns:1fr;height:auto;overflow:auto}
+  html[data-ui="cosmo"] .at-main{overflow:visible}
+  html[data-ui="cosmo"] .at-side{display:flex;overflow:visible}
+  html[data-ui="cosmo"] .osdu-governance{grid-template-columns:1fr!important}
+  html[data-ui="cosmo"] .dq-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:720px){
+  html[data-ui="cosmo"] .dm-bar{
+    display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 14px
+  }
+  html[data-ui="cosmo"] .dm-title{
+    display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 9px;align-items:center
+  }
+  html[data-ui="cosmo"] .dm-title .di{grid-row:1/3}
+  html[data-ui="cosmo"] .dm-title b{font-size:13.5px;line-height:1.15}
+  html[data-ui="cosmo"] .dm-sub{
+    grid-column:2;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px
+  }
+  html[data-ui="cosmo"] .dm-prov{
+    margin:0;justify-self:start;max-width:100%;font-size:8.5px;padding:4px 9px;white-space:normal;line-height:1.35
+  }
+  html[data-ui="cosmo"] .dm-srcseg{
+    grid-row:3;margin:0;justify-self:start;max-width:100%
+  }
+  html[data-ui="cosmo"] .dm-srcseg .sg{padding:6px 9px;font-size:8.5px}
+
+  html[data-ui="cosmo"] .dm-subtabs{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:4px 8px 0
+  }
+  html[data-ui="cosmo"] .dm-subtab{
+    min-width:0;justify-content:center;text-align:center;padding:8px 3px;font-size:10px;line-height:1.15;gap:4px
+  }
+  html[data-ui="cosmo"] .dm-subtab svg{width:13px;height:13px;flex:none}
+
+  html[data-ui="cosmo"] .osdu-overview,
+  html[data-ui="cosmo"] .osdu-governance,
+  html[data-ui="cosmo"] .dq{padding:10px!important}
+  html[data-ui="cosmo"] .dq-cards{gap:8px;margin-bottom:10px}
+  html[data-ui="cosmo"] .dq-card{padding:12px;border-radius:10px;min-width:0}
+  html[data-ui="cosmo"] .dq-card .kv{font-size:21px;overflow-wrap:anywhere}
+  html[data-ui="cosmo"] .dq-card .kl{font-size:10px;line-height:1.35}
+  html[data-ui="cosmo"] .dq-phd{padding:10px 12px;font-size:11.5px;gap:7px;flex-wrap:wrap}
+  html[data-ui="cosmo"] .dq-phd .nat{margin-left:0}
+
+  html[data-ui="cosmo"] .osdu-flow{
+    flex-direction:column;overflow:visible!important;padding:10px!important;gap:5px!important
+  }
+  html[data-ui="cosmo"] .osdu-flow-step{flex:0 0 auto!important;width:100%}
+  html[data-ui="cosmo"] .osdu-flow-step>.panel-2{min-height:0!important}
+  html[data-ui="cosmo"] .osdu-flow-step>svg{transform:rotate(90deg);margin:0 auto}
+
+  html[data-ui="cosmo"] .dm-wrap{
+    grid-template-columns:minmax(0,1fr);grid-template-rows:96px minmax(390px,1fr);
+    width:100%;max-width:100%;overflow:auto
+  }
+  html[data-ui="cosmo"] .dm-side{
+    min-width:0;width:100%;max-width:100%;overflow:hidden;
+    border-right:0;border-bottom:1px solid var(--line)
+  }
+  html[data-ui="cosmo"] .dm-search{display:none}
+  html[data-ui="cosmo"] .dm-sh{padding:7px 10px 3px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html[data-ui="cosmo"] .dm-list{
+    display:flex;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;
+    padding:3px 8px 8px;gap:5px;scroll-snap-type:x proximity
+  }
+  html[data-ui="cosmo"] .dm-trow{
+    min-width:138px;max-width:180px;padding:7px 8px;border:1px solid var(--line);scroll-snap-align:start;background:var(--panel)
+  }
+  html[data-ui="cosmo"] .dm-actions{display:none}
+  html[data-ui="cosmo"] .dm-toolbar{top:8px;left:8px;right:8px}
+  html[data-ui="cosmo"] .dm-canvas-wrap{width:100%;max-width:100%}
+  html[data-ui="cosmo"] .dm-hint{
+    background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:8px;padding:6px 8px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%
+  }
+  html[data-ui="cosmo"] .dm-legend{right:8px;bottom:8px;max-width:calc(100% - 106px);padding:6px 8px}
+  html[data-ui="cosmo"] .dm-zoom{left:8px;bottom:8px}
+
+  html[data-ui="cosmo"] .at-wrap{padding:0}
+  html[data-ui="cosmo"] .at-note{font-size:10.5px}
+  html[data-ui="cosmo"] .at-ent b{font-size:12.5px}
+  html[data-ui="cosmo"] .at-ent small{font-size:8px;overflow-wrap:anywhere}
+  html[data-ui="cosmo"] .at-tier{padding:8px 9px}
+
+  html[data-ui="cosmo"] .qmatrix{min-width:620px;font-size:10.5px}
+  html[data-ui="cosmo"] .qmatrix th,
+  html[data-ui="cosmo"] .qmatrix td{padding:7px 9px}
+}
+
+@media(max-width:390px){
+  html[data-ui="cosmo"] .dm-subtab{font-size:9.25px}
+  html[data-ui="cosmo"] .dq-card .kv{font-size:19px}
+  html[data-ui="cosmo"] .dq-card{padding:10px}
+}

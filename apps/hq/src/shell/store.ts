@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SurfaceId = 'home' | 'portfolio' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core' | 'brand' | 'influencer' | 'biography'
+export type SurfaceId = 'home' | 'portfolio' | 'story' | 'data' | 'growth' | 'content' | 'game' | 'app' | 'agents' | 'broadcast' | 'command' | 'pixel' | 'vault' | 'architecture' | 'battle' | 'character' | 'world' | 'music' | 'video' | 'media' | 'knowledge' | 'cinema' | 'reactor' | 'rack' | 'copilot' | 'core' | 'brand' | 'influencer' | 'biography'
 export type DataTab = 'schema' | 'tables' | 'ontology'
 export type BuilderSub = 'catalogue' | 'studio' | 'analytics'
 /** GB-3 · The Forge (v2 chat-driven builder) is the default; 'legacy' renders
@@ -13,7 +13,7 @@ export type AgentSize = 'small' | 'expanded' | 'full'
 export type CommandTab = 'lobby' | 'bridge' | 'operations' | 'technology' | 'treasury' | 'legal' | 'roster'
 
 const SURFACE_LABEL: Record<SurfaceId, string> = {
-  home: 'Home', portfolio: 'Portfolio', data: 'Data', growth: 'Growth',
+  home: 'Home', portfolio: 'Portfolio', story: 'Company Story', data: 'Data', growth: 'Growth',
   content: 'Learn Builder', game: 'Game Builder', app: 'App Builder',
   agents: 'Agent Studio', broadcast: 'Post Studio', command: 'Command',
   pixel: 'Pixel Forge', vault: 'HQ Vault', architecture: 'Architecture', battle: 'Battle Builder',

@@ -22,9 +22,9 @@ export function DataTab() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 12, height: '100%', padding: 14, minHeight: 0 }}>
-      {/* LEFT — provenance summary */}
+      {/* LEFT — OSDU source-landing provenance */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto' }}>
-        <Panel title="Mirror Ledger · Batch S1" right={<MethodCapsule method="deterministic" />}>
+        <Panel title="OSDU source landing · Batch S1" right={<MethodCapsule method="deterministic" />}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Stat label="Files mirrored" value={m.files.toLocaleString()} accent="teal" />
             <Stat label="Total size" value={m.gb + ' GB'} accent="amber" />
@@ -32,7 +32,7 @@ export function DataTab() {
             <Stat label="Failures" value={String(m.failures)} accent={m.failures ? 'rose' : 'teal'} />
           </div>
           <div className="mono" style={{ fontSize: 10, color: 'var(--muted)', marginTop: 10 }}>
-            1:1 raw mirror · deep re-hash ok · idempotent · {m.source}
+            Immutable native landing · pre-OSDU Dataset/WPC mapping · deep re-hash ok · {m.source}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
             <NatureBadge nature="measured" />
@@ -40,7 +40,7 @@ export function DataTab() {
           </div>
         </Panel>
 
-        <Panel title="By top folder · full source inventory">
+        <Panel title="Dataset landing inventory · source-native">
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
             {data.inventory.files.toLocaleString()} files / {data.inventory.dirs.toLocaleString()} dirs listed. Click to filter the ledger.
           </div>
@@ -60,7 +60,7 @@ export function DataTab() {
           </div>
         </Panel>
 
-        <Panel title="Excluded by rule · the _NOT_MIRRORED story">
+        <Panel title="Ingestion exclusions · explicit policy">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {data.excludeRules.map((r, i) => (
               <div key={i} style={{ borderLeft: `2px solid var(--${r.accent})`, paddingLeft: 9 }}>
@@ -71,7 +71,7 @@ export function DataTab() {
           </div>
         </Panel>
 
-        <Panel title={`Deferred decoders · ${data.deferred.length} runs`}>
+        <Panel title={`OSDU ingestion exceptions · ${data.deferred.length} runs`}>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
             48 LAS 3.0 pressure runs out of LAS-2.0 scope — honestly held, not silently dropped.
           </div>
@@ -86,10 +86,10 @@ export function DataTab() {
         </Panel>
       </div>
 
-      {/* RIGHT — evidence ledger browser */}
+      {/* RIGHT — evidence ledger backing OSDU Dataset records */}
       <div style={{ display: 'grid', gridTemplateColumns: sel ? '1fr 300px' : '1fr', gap: 12, minHeight: 0 }}>
         <Panel
-          title={`Evidence ledger · ${rows.length}${rows.length >= 400 ? '+' : ''} shown${topFilter ? ' · ' + topFilter : ''}`}
+          title={`OSDU Dataset evidence ledger · ${rows.length}${rows.length >= 400 ? '+' : ''} shown${topFilter ? ' · ' + topFilter : ''}`}
           right={
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Search size={13} style={{ position: 'absolute', left: 8, color: 'var(--muted)' }} />
@@ -137,8 +137,11 @@ export function DataTab() {
               <Field label="last_modified" value={new Date(sel.last_modified).toISOString()} />
               <Field label="status" value={sel.status} />
               <Field label="top folder" value={sel.top} />
+              <Field label="OSDU record class" value="Dataset / Work Product Component" />
+              <Field label="dataClass" value="public" />
+              <Field label="LegalTag" value="arganta-public" />
               <div className="mono" style={{ fontSize: 10, color: 'var(--muted)', borderTop: '1px solid var(--line)', paddingTop: 8 }}>
-                Resolves 1:1 to data-energy/raw · byte-exact vs Databricks listing.
+                Resolves 1:1 to immutable source landing; canonical identity and lineage are assigned in the OSDU manifest.
               </div>
             </div>
           </Panel>

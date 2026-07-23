@@ -36,7 +36,7 @@ export function CommandCenter() {
 
 function Cockpit({ onLegacy }: { onLegacy: () => void }) {
   const go = useHQ((s) => s.go)
-  const { health, reach, lastChecked, loading, refetch, launch } = useOps()
+  const { health, reach, lastChecked, loading, refetch, launch, stop } = useOps()
   const supa = useSupabasePing()
   const cloud = useCloudStatus()
   const { telemetry } = useTelemetry()
@@ -126,7 +126,7 @@ function Cockpit({ onLegacy }: { onLegacy: () => void }) {
           ) : (
             <div className="cc-launch-list">
               {(health?.services.filter((s) => s.launchable) || []).map((s) => (
-                <LaunchRow key={s.id} id={s.id} label={s.label} up={s.up} onLaunch={launch} />
+                <LaunchRow key={s.id} id={s.id} label={s.label} up={s.up} onLaunch={launch} onStop={stop} />
               ))}
               {(health?.services.filter((s) => s.launchable).length === 0) && <p className="cc-muted">No launchable services registered.</p>}
             </div>
@@ -205,20 +205,31 @@ function CloudTile({ fallbackLabel, fallbackDetail, href, target }: {
   return <Tile label={fallbackLabel} state="link" detail={fallbackDetail} source="pending" href={href} />
 }
 
-function LaunchRow({ id, label, up, onLaunch }: { id: string; label: string; up: boolean; onLaunch: (s: string) => Promise<{ ok: boolean; message: string }> }) {
-  const [busy, setBusy] = useState(false)
+function LaunchRow({ id, label, up, onLaunch, onStop }: {
+  id: string; label: string; up: boolean
+  onLaunch: (s: string) => Promise<{ ok: boolean; message: string }>
+  onStop: (s: string) => Promise<{ ok: boolean; message: string }>
+}) {
+  const [busy, setBusy] = useState<'start' | 'stop' | null>(null)
   const [msg, setMsg] = useState('')
   const start = async () => {
-    setBusy(true); setMsg('')
+    setBusy('start'); setMsg('')
     const r = await onLaunch(id)
-    setMsg(r.message); setBusy(false)
+    setMsg(r.message); setBusy(null)
+  }
+  const kill = async () => {
+    setBusy('stop'); setMsg('')
+    const r = await onStop(id)
+    setMsg(r.message); setBusy(null)
   }
   return (
     <div className="cc-launch-row">
       <span className={`cc-tile-dot cc-tile-${up ? 'up' : 'down'}`} />
       <span className="cc-launch-name">{label}</span>
       <span className="cc-launch-msg">{msg}</span>
-      <button className="cc-start" disabled={busy || up} onClick={start}>{up ? 'running' : busy ? 'starting…' : 'Start'}</button>
+      {up
+        ? <button className="cc-stop" disabled={!!busy} onClick={kill}>{busy === 'stop' ? 'stopping…' : 'Stop'}</button>
+        : <button className="cc-start" disabled={!!busy} onClick={start}>{busy === 'start' ? 'starting…' : 'Start'}</button>}
     </div>
   )
 }

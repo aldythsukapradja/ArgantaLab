@@ -2,15 +2,16 @@
 // mistie table (pickTVDSS − gridSample, no auto-adjust), contact editor (scenario
 // when changed), closure derivation view, and the well-log UPSCALING panel
 // (raw vs upscaled per well: mean PHIE, net-SAND fraction, majority facies).
-import { useMemo, useState, useCallback } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { useMemo, useState, useCallback, Suspense, lazy } from 'react';
+import { SlidersHorizontal, Box, Square } from 'lucide-react';
 import { useAsync, useCanvas, cssVar } from './hooks';
 import { Inspector, InspectorSection, Slider, Segmented, Loading, ErrorBanner, ReadoutBar } from './chrome';
 import { NatureBadge } from '../../components/Provenance';
 import { depthRamp } from './colormap';
-import { loadIndex, loadSurface, loadPicks } from '../../wb/load';
+import { loadIndex, loadSurface, loadPicks, loadTraj } from '../../wb/load';
+const Map3D = lazy(() => import('./Map3D')); // 2c — reuse the optimized 3D surface + well tubes
 import { roleColor } from './chrome';
-import type { WbIndex, PicksJson } from '../../wb/types';
+import type { WbIndex, PicksJson, WellRow, TrajJson } from '../../wb/types';
 import type { SurfaceJson } from '../../engine/grid';
 import { sampleGrid, gridBounds, gridMinMax, cellZ } from '../../engine/grid';
 import { makeView, padBounds } from '../../engine/view';
@@ -37,9 +38,16 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
   const defOwc = index.contacts[0]?.tvdss ?? 3200;
   const [showClosure, setShowClosure] = useState(true);
   const [inspOpen, setInspOpen] = useState(true);
+  const [view3d, setView3d] = useState(true); // 3D-first (2c) — 2D structure map is now the toggle
+  const [vExag, setVExag] = useState(8);
   const [hover, setHover] = useState<{ x: number; y: number; z: number | null } | null>(null);
 
   const surf = useAsync<SurfaceJson>(() => loadSurface(activeSurface), [activeSurface]);
+
+  // real deviated well tubes for the 3D view (2c)
+  const trajWells = useMemo(() => index.wells.filter((w) => w.has.traj), [index]);
+  const trajRes = useAsync(() => Promise.all(trajWells.map((w) => loadTraj(w.name).then((t) => ({ w, t })).catch(() => null))), [trajWells]);
+  const trajFor3D = useMemo(() => (trajRes.data ?? []).filter((r): r is { w: WellRow; t: TrajJson } => !!r), [trajRes.data]);
 
   // wells with logs + Hugin picks → upscaling + mistie
   const wellSet = useMemo(() => index.wells.filter((w) => w.has.logs && w.has.picks), [index]);
@@ -145,10 +153,25 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
           <div style={{ flex: 1 }} />
           <NatureBadge nature="interpreted" />
           {scenario && <NatureBadge nature="scenario" />}
+          <button onClick={() => setView3d((v) => !v)} title="2D structure map / 3D surface"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 9px', borderRadius: 4, border: `1px solid ${view3d ? 'var(--teal)' : 'var(--line)'}`, background: 'var(--panel-2)', color: view3d ? 'var(--teal)' : 'var(--muted)', fontSize: 11 }}>
+            {view3d ? <Box size={14} /> : <Square size={14} />}<span className="mono">{view3d ? '3D' : '2D'}</span>
+          </button>
           <button onClick={() => setInspOpen((o) => !o)} title="Inspector" style={{ display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 4, border: '1px solid var(--line)', background: 'var(--panel-2)', color: 'var(--muted)' }}>
             <SlidersHorizontal size={15} />
           </button>
         </div>
+        {view3d ? (
+          <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
+            {!surf.data ? <Loading what={`${activeSurface} grid`} /> : (
+              <Suspense fallback={<Loading what="3D surface" />}>
+                <Map3D grid={surf.data} minmax={minmax} activeSurfaceId={activeSurface} vExag={vExag} trajectories={trajFor3D} planned={[]}
+                  reducedMotion={typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches} />
+              </Suspense>
+            )}
+            <ReadoutBar left={`${surfInfo.name} · 3D · ${trajFor3D.length} wells · closure @ ${contactZ} m`} />
+          </div>
+        ) : (
         <div ref={wrapRef} style={{ flex: 1, minHeight: 60, position: 'relative', overflow: 'hidden', cursor: 'crosshair' }}>
           {surf.loading ? <Loading what={`${activeSurface} grid`} /> : surf.error ? <ErrorBanner msg={surf.error} /> : (
             <>
@@ -157,6 +180,7 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
             </>
           )}
         </div>
+        )}
       </div>
 
       <Inspector title="Structural inspector" open={inspOpen} onToggle={() => setInspOpen(false)}>
@@ -169,6 +193,11 @@ function Inner({ index, picks }: { index: WbIndex; picks: PicksJson }) {
             </tbody></table>
           )}
         </InspectorSection>
+        {view3d && (
+          <InspectorSection title="3D view">
+            <Slider label="Vertical exaggeration" min={1} max={20} step={1} value={vExag} onChange={setVExag} fmt={(v) => `×${v}`} />
+          </InspectorSection>
+        )}
         <InspectorSection title="Contact editor">
           <Slider label={`OWC (default ${defOwc})`} min={3000} max={3400} step={5} value={contactZ} onChange={setContactZ} fmt={(v) => `${v} m`} />
           {scenario && <div style={{ fontSize: 9.5, color: 'var(--rose)' }}>Changed from deck OWC → scenario.</div>}
