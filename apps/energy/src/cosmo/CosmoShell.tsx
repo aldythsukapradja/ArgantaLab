@@ -174,7 +174,6 @@ export function CosmoShell() {
       <div key={item.id} className={'navitem' + (on ? ' active' : '')} onClick={onClick}>
         <span className="d" style={!on && item.color ? { color: item.color } : undefined}><item.icon size={15} /></span>
         <span className="lbl">{item.name}</span>
-        {item.status && <span className={'st st-' + item.status}>{item.status}</span>}
       </div>
     );
   };
@@ -206,6 +205,10 @@ export function CosmoShell() {
       <header className="topbar">
         <button className="mham" onClick={() => { setSheet(null); setDrawer((d) => !d); }} aria-label="Menu"><Menu size={19} /></button>
         <div className="crumbs">
+          <span className="tb-brand">
+            <span className="tb-brand-mark"><Sparkles size={13} /></span>
+            <span className="tb-brand-word">Arganta<em>Energy</em></span>
+          </span>
           <span>ArgantaEnergy</span><span className="sep">/</span>
           {active && <><span>Lifecycle</span><span className="sep">/</span></>}
           <span className="cur">{crumbLabel}</span>

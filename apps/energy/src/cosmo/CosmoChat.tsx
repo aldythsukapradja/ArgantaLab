@@ -4,13 +4,24 @@
 // frames (Full/16:9/4:3/Tablet/Phone), live artifacts (radial data-map tree, production
 // chart, rendered markdown note), sovereign model picker, usage meters, suggestion chips
 // and an 80%-screen artifact modal. Uses the founder's exact classes (cosmo-system.css).
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown,
   Lock, ArrowUp, Gauge, BatteryMedium, Shield, Maximize, Monitor, Tv, Tablet, Smartphone,
   GitFork, FileText, BarChart3, Expand, Download, Image as ImageIcon, Gem, Map as MapIcon,
+  Box, Waves, TrendingUp, Loader2,
 } from 'lucide-react';
 import { CosmoAgentOrb } from './CosmoAgentOrb';
+import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
+import { loadIndex } from '../wb/load';
+
+// Real, already-built Field Development viewers — the chat never re-implements these, it only
+// calls them. Lazy-loaded so the always-mounted chat overlay doesn't pull their weight (canvas,
+// three.js internals, etc.) into every page's initial bundle.
+const LiveMapView = lazy(async () => ({ default: (await import('../tabs/fielddev/MapView')).MapView }));
+const LiveGridModelView = lazy(async () => ({ default: (await import('../tabs/fielddev/GridModelView')).GridModelView }));
+const LiveSimulationView = lazy(async () => ({ default: (await import('../tabs/fielddev/SimulationView')).SimulationView }));
+const LiveForecast = lazy(async () => ({ default: (await import('../tabs/fielddev/Forecast')).Forecast }));
 
 // ── data (verbatim from source) ─────────────────────────────────────────────
 const CC_SESSIONS = [
@@ -139,9 +150,29 @@ function MdCanvas({ md }: { md: string }) {
   );
 }
 
-type Msg = { role: 'user' | 'assistant'; text: string; done: boolean };
-const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Arganta** — the ArgantaEnergy orchestrator. The active field is **Volve**. Ask me anything, or open the artifact pane to see live content.', done: true };
-const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart.`;
+type Msg = { role: 'user' | 'assistant'; text: string; done: boolean; wellPick?: LiveIntent };
+const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Arganta** — the ArgantaEnergy orchestrator. The active field is **Volve**. Ask me to **map**, **model**, **simulate** or **forecast** a well, or open the artifact pane to see live content.', done: true };
+const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart. Or ask me to **map**, **build a 3D model**, **simulate** or **forecast** a well — I'll pull up the real Field Development viewer.`;
+
+// ── live-intent detection: map / 3D model / simulate / forecast a specific well ──────────────
+type LiveIntent = 'map' | 'model3d' | 'sim' | 'forecast';
+const INTENT_COPY: Record<LiveIntent, { verb: string; prompt: string; loading: string; title: string; file: string }> = {
+  map: { verb: 'map', prompt: 'Sure — which well should I center the structure map on?', loading: 'Opening the structure map', title: 'Structure map', file: 'structure-map.live' },
+  model3d: { verb: 'build a 3D model for', prompt: 'Which well should the 3D static model focus on?', loading: 'Opening the 3D static model', title: '3D static model', file: 'static-model-3d.live' },
+  sim: { verb: 'simulate', prompt: 'Which well should I run the simulation for? It renders with the full animation.', loading: 'Opening the simulation, with animation', title: 'Simulation (animated)', file: 'simulation-3d.live' },
+  forecast: { verb: 'forecast', prompt: "Which well's production forecast would you like to see?", loading: 'Opening the production forecast', title: 'Production forecast', file: 'forecast.live' },
+};
+function detectIntent(text: string): LiveIntent | null {
+  const t = text.toLowerCase();
+  if (/\bsimulat/.test(t)) return 'sim';
+  if (/\b(3d|static)\s*model|grid\s*model/.test(t)) return 'model3d';
+  if (/\bforecast/.test(t)) return 'forecast';
+  if (/\bmap\b/.test(t)) return 'map';
+  return null;
+}
+function ArtLoading({ label }: { label: string }) {
+  return <div className="cc-art-loading"><Loader2 size={16} className="spin" /> {label}…</div>;
+}
 
 // ── the Arganta canvas ───────────────────────────────────────────────────────
 export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClose: () => void; fullSignal?: number }) {
@@ -155,18 +186,39 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
   const [model, setModel] = useState('arganta-core');
   const [mopen, setMopen] = useState(false);
   const [draft, setDraft] = useState('');
-  const [artifact, setArtifact] = useState('note');
+  const [artifact, setArtifact] = useState<'tree' | 'note' | 'chart' | LiveIntent>('note');
   const [artFull, setArtFull] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([WELCOME]);
+  const [pendingIntent, setPendingIntent] = useState<LiveIntent | null>(null);
+  const [activeWell, setActiveWell] = useState<string | null>(null);
+  const [wells, setWells] = useState<string[]>([]);
   const streamRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cm = CC_MODEL_BY_ID(model) || ({} as ReturnType<typeof CC_MODEL_BY_ID> & object) as NonNullable<ReturnType<typeof CC_MODEL_BY_ID>>;
-  const chips = ['Production summary', 'Build a chart', 'Model as table', 'Screen opportunities'];
+  const chips = ['Production summary', 'Map a well', 'Simulate a well', 'Forecast a well'];
 
-  const renderArtifact = () => artifact === 'note' ? <MdCanvas md={FDP_NOTE} /> : artifact === 'tree' ? <CosmoMiniTree /> : <CosmoMiniChart />;
+  // real Volve well roster (wb/index.json) — used only to populate the "which well?" picker
+  useEffect(() => { loadIndex().then((idx) => setWells(idx.wells.map((w) => w.name))).catch(() => setWells([])); }, []);
 
-  const streamAssistant = (fullText: string) => {
+  const renderArtifact = () => {
+    if (artifact === 'map') return <Suspense fallback={<ArtLoading label="Loading structure map" />}><LiveMapView /></Suspense>;
+    if (artifact === 'model3d') return <Suspense fallback={<ArtLoading label="Loading 3D static model" />}><LiveGridModelView /></Suspense>;
+    if (artifact === 'sim') return <Suspense fallback={<ArtLoading label="Loading simulation" />}><LiveSimulationView /></Suspense>;
+    if (artifact === 'forecast') return <Suspense fallback={<ArtLoading label="Loading forecast" />}><LiveForecast /></Suspense>;
+    return artifact === 'note' ? <MdCanvas md={FDP_NOTE} /> : artifact === 'tree' ? <CosmoMiniTree /> : <CosmoMiniChart />;
+  };
+  const ARTIFACT_META: Record<string, { file: string; title: string }> = {
+    tree: { file: 'data-map.tree', title: 'Data-map tree' },
+    note: { file: 'fdp.md', title: 'Knowledge-base note' },
+    chart: { file: 'field-production.chart', title: 'Field production chart' },
+    map: { file: INTENT_COPY.map.file, title: `${INTENT_COPY.map.title}${activeWell ? ` — ${activeWell}` : ''}` },
+    model3d: { file: INTENT_COPY.model3d.file, title: `${INTENT_COPY.model3d.title}${activeWell ? ` — ${activeWell}` : ''}` },
+    sim: { file: INTENT_COPY.sim.file, title: `${INTENT_COPY.sim.title}${activeWell ? ` — ${activeWell}` : ''}` },
+    forecast: { file: INTENT_COPY.forecast.file, title: `${INTENT_COPY.forecast.title}${activeWell ? ` — ${activeWell}` : ''}` },
+  };
+
+  const streamAssistant = (fullText: string, wellPick?: LiveIntent) => {
     if (streamRef.current) clearInterval(streamRef.current);
-    setMsgs((m) => [...m, { role: 'assistant', text: '', done: false }]);
+    setMsgs((m) => [...m, { role: 'assistant', text: '', done: false, wellPick }]);
     let i = 0;
     streamRef.current = setInterval(() => {
       i += Math.max(2, Math.round(fullText.length / 90));
@@ -180,9 +232,27 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
   const send = (text?: string) => {
     const t = (text != null ? text : draft).trim(); if (!t) return;
     setMsgs((m) => [...m, { role: 'user', text: t, done: true }]); setDraft('');
+    const intent = detectIntent(t);
+    if (intent) {
+      setPendingIntent(intent);
+      setTimeout(() => streamAssistant(INTENT_COPY[intent].prompt, intent), 240);
+      return;
+    }
     setTimeout(() => streamAssistant(CANNED), 240);
   };
-  const onNew = () => { if (streamRef.current) clearInterval(streamRef.current); setMsgs([WELCOME]); };
+  // the well-picker step — a real chip list from the wb well roster; selecting one renders the
+  // real Field Development viewer for that intent in the artifact pane.
+  const selectWell = (well: string) => {
+    if (!pendingIntent) return;
+    const intent = pendingIntent;
+    setPendingIntent(null);
+    setMsgs((m) => [...m, { role: 'user', text: well, done: true }]);
+    setActiveWell(well);
+    setArtifact(intent);
+    setShowRight(true);
+    setTimeout(() => streamAssistant(`${INTENT_COPY[intent].loading} for **${well}**. Opening the artifact pane →`), 200);
+  };
+  const onNew = () => { if (streamRef.current) clearInterval(streamRef.current); setMsgs([WELCOME]); setPendingIntent(null); setActiveWell(null); };
   useEffect(() => () => { if (streamRef.current) clearInterval(streamRef.current); }, []);
 
   const leftBody = leftTab === 'history' ? (
@@ -225,7 +295,14 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
                   {m.role === 'assistant'
                     ? (m.text ? <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) + (m.done ? '' : '<span class="cc-caret"></span>') }} /> : <div className="cc-typing"><i /><i /><i /></div>)
                     : m.text}
-                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && msgs.length > 1 && (
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && m.wellPick && pendingIntent === m.wellPick && (
+                    <div className="cc-well-pick">
+                      {(wells.length ? wells : ['F-1', 'F-4', 'F-5', 'F-9', 'F-11', 'F-12', 'F-14', 'F-15']).slice(0, 10).map((w) => (
+                        <button key={w} onClick={() => selectWell(w)}>{w}</button>
+                      ))}
+                    </div>
+                  )}
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && !m.wellPick && msgs.length > 1 && (
                     <div className="art-chip" onClick={() => { if (!showRight) setShowRight(true); }}><PanelRight size={12} /> Open artifact pane</div>
                   )}
                 </div>
@@ -288,7 +365,7 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
             </div>
             <div className="art-seg">
               {[['tree', 'git-fork', 'Tree'], ['note', 'file-text', 'Note'], ['chart', 'bar-chart-3', 'Chart']].map((a) => (
-                <b key={a[0]} className={artifact === a[0] ? 'on' : ''} onClick={() => setArtifact(a[0])}>{segIcon(a[1])} {a[2]}</b>
+                <b key={a[0]} className={artifact === a[0] ? 'on' : ''} onClick={() => setArtifact(a[0] as 'tree' | 'note' | 'chart')}>{segIcon(a[1])} {a[2]}</b>
               ))}
             </div>
             <div className="cc-ic" title="Expand to full screen" onClick={() => setArtFull(true)}><Expand size={14} /></div>
@@ -297,8 +374,8 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
           </div>
           <div className="cc-art-preview">
             <div className={'cc-frame ' + device}>
-              <div className="fbar"><i /><i /><i /><span className="furl">{artifact === 'tree' ? 'data-map.tree' : artifact === 'chart' ? 'field-production.chart' : 'fdp.md'} · {DEV_LABEL[device] || device}</span></div>
-              <div className="fbody">{renderArtifact()}</div>
+              <div className="fbar"><i /><i /><i /><span className="furl">{ARTIFACT_META[artifact]?.file ?? artifact} · {DEV_LABEL[device] || device}</span></div>
+              <div className="fbody"><SurfaceErrorBoundary key={artifact}>{renderArtifact()}</SurfaceErrorBoundary></div>
             </div>
             <div className="cc-dev-tag">{DEV_LABEL[device] || device}</div>
           </div>
@@ -310,15 +387,15 @@ export function CosmoChat({ open, onClose, fullSignal }: { open: boolean; onClos
       <div className={'modal-scrim ' + (artFull ? 'on' : '')} onClick={() => setArtFull(false)}>
         <div className="art-modal" onClick={(e) => e.stopPropagation()}>
           <div className="art-modal-hd">
-            <span className="am-title">{artifact === 'tree' ? <GitFork size={15} /> : artifact === 'chart' ? <BarChart3 size={15} /> : <FileText size={15} />} {artifact === 'tree' ? 'Data-map tree' : artifact === 'chart' ? 'Field production chart' : 'Knowledge-base note'}</span>
+            <span className="am-title">{artIcon2(artifact)} {ARTIFACT_META[artifact]?.title ?? artifact}</span>
             <div className="art-seg" style={{ marginLeft: '12px' }}>
               {[['tree', 'git-fork', 'Tree'], ['note', 'file-text', 'Note'], ['chart', 'bar-chart-3', 'Chart']].map((a) => (
-                <b key={a[0]} className={artifact === a[0] ? 'on' : ''} onClick={() => setArtifact(a[0])}>{segIcon(a[1])} {a[2]}</b>
+                <b key={a[0]} className={artifact === a[0] ? 'on' : ''} onClick={() => setArtifact(a[0] as 'tree' | 'note' | 'chart')}>{segIcon(a[1])} {a[2]}</b>
               ))}
             </div>
             <button className="mx" style={{ marginLeft: 'auto' }} onClick={() => setArtFull(false)}><X size={15} /></button>
           </div>
-          <div className="art-modal-body">{renderArtifact()}</div>
+          <div className="art-modal-body"><SurfaceErrorBoundary key={artifact}>{renderArtifact()}</SurfaceErrorBoundary></div>
         </div>
       </div>
     </div>
@@ -330,4 +407,13 @@ function devIcon(n: string) {
 }
 function segIcon(n: string) {
   return n === 'git-fork' ? <GitFork size={11} /> : n === 'bar-chart-3' ? <BarChart3 size={11} /> : <FileText size={11} />;
+}
+function artIcon2(artifact: string) {
+  if (artifact === 'tree') return <GitFork size={15} />;
+  if (artifact === 'chart') return <BarChart3 size={15} />;
+  if (artifact === 'map') return <MapIcon size={15} />;
+  if (artifact === 'model3d') return <Box size={15} />;
+  if (artifact === 'sim') return <Waves size={15} />;
+  if (artifact === 'forecast') return <TrendingUp size={15} />;
+  return <FileText size={15} />;
 }
