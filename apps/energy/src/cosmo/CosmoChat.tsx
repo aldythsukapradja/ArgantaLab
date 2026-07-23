@@ -22,6 +22,15 @@ const LiveMapView = lazy(async () => ({ default: (await import('../tabs/fielddev
 const LiveGridModelView = lazy(async () => ({ default: (await import('../tabs/fielddev/GridModelView')).GridModelView }));
 const LiveSimulationView = lazy(async () => ({ default: (await import('../tabs/fielddev/SimulationView')).SimulationView }));
 const LiveForecast = lazy(async () => ({ default: (await import('../tabs/fielddev/Forecast')).Forecast }));
+const LiveLogsView = lazy(async () => ({ default: (await import('../tabs/fielddev/LogsView')).LogsView }));
+const LivePetrophysics = lazy(async () => ({ default: (await import('../tabs/fielddev/Petrophysics')).Petrophysics }));
+const LiveCorrelationView = lazy(async () => ({ default: (await import('../tabs/fielddev/CorrelationView')).CorrelationView }));
+const LiveStructural = lazy(async () => ({ default: (await import('../tabs/fielddev/Structural')).Structural }));
+const LiveProperty = lazy(async () => ({ default: (await import('../tabs/fielddev/Property')).Property }));
+const LiveVolumetrics = lazy(async () => ({ default: (await import('../tabs/fielddev/Volumetrics')).Volumetrics }));
+const LiveUncertainty = lazy(async () => ({ default: (await import('../tabs/fielddev/Uncertainty')).Uncertainty }));
+const LiveEconomics = lazy(async () => ({ default: (await import('../tabs/fielddev/Economics')).Economics }));
+const LiveFieldReview = lazy(async () => ({ default: (await import('../tabs/fielddev/FieldReview')).FieldReview }));
 
 // ── data (verbatim from source) ─────────────────────────────────────────────
 const CC_SESSIONS = [
@@ -150,7 +159,11 @@ function MdCanvas({ md }: { md: string }) {
   );
 }
 
-type Msg = { role: 'user' | 'assistant'; text: string; done: boolean; wellPick?: LiveIntent; tourWellPick?: boolean };
+type Msg = {
+  role: 'user' | 'assistant'; text: string; done: boolean;
+  wellPick?: LiveIntent; tourWellPick?: boolean; assistWellPick?: boolean; confirmPick?: boolean;
+};
+type StreamFlags = { wellPick?: LiveIntent; tourWellPick?: boolean; assistWellPick?: boolean; confirmPick?: boolean };
 const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Arganta** — the ArgantaEnergy orchestrator. The active field is **Volve**. Ask me to **map**, **model**, **simulate** or **forecast** a well, or open the artifact pane to see live content.', done: true };
 const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart. Or ask me to **map**, **build a 3D model**, **simulate** or **forecast** a well — I'll pull up the real Field Development viewer.`;
 
@@ -174,26 +187,34 @@ function ArtLoading({ label }: { label: string }) {
   return <div className="cc-art-loading"><Loader2 size={16} className="spin" /> {label}…</div>;
 }
 
-// ── guided tour: "Field Development · Volve" — a scripted walk across the real app (globe →
-// Volve 2D → every Field Development tab in order), not just artifact-pane content. Pauses once,
-// at Logs, for a real well pick; everything else auto-advances on a short timer.
-const TOUR_LABEL = 'Field Development · Volve';
-const FD_TOUR: Array<{ tab: string; label: string; askWell?: boolean }> = [
-  { tab: 'map', label: 'Map' },
-  { tab: 'logs', label: 'Logs', askWell: true },
-  { tab: 'petrophysics', label: 'Petrophysics' },
-  { tab: 'correlation', label: 'Correlation' },
-  { tab: 'structural', label: 'Structural' },
-  { tab: 'property', label: 'Property' },
-  { tab: 'gridmodel', label: 'Static Model' },
-  { tab: 'simulation', label: 'Simulation' },
-  { tab: 'volumetrics', label: 'Volumetrics' },
-  { tab: 'uncertainty', label: 'Uncertainty' },
-  { tab: 'forecast', label: 'Forecast' },
-  { tab: 'economics', label: 'Economics' },
-  { tab: 'review', label: 'Field Review' },
+// ── the shared Field Development step spine — one source of truth for both tour modes:
+// "FDP AI Assist" (renders each real viewer inside the chat, asks a well every step) and
+// "FDP Agentic" (drives the real app's tabs directly, asks a well once, slower + one HITL pause).
+const ASSIST_LABEL = 'FDP AI Assist · Volve';
+const AGENTIC_LABEL = 'FDP Agentic · Volve';
+type FdpStep = {
+  tab: string; label: string; artifact: string;
+  narrate: (well: string) => string;
+  askWell?: boolean;       // agentic mode: pause for a well pick at this step
+  confirmBefore?: boolean; // agentic mode: pause for a human "continue?" before this step
+};
+const FDP_STEPS: FdpStep[] = [
+  { tab: 'map', label: 'Map', artifact: 'map', narrate: (w) => `Locating **${w}** on the structure map and centering the view…` },
+  { tab: 'logs', label: 'Logs', artifact: 'logs', askWell: true, narrate: (w) => `Pulling **${w}**'s composite logs and rendering the curve tracks…` },
+  { tab: 'petrophysics', label: 'Petrophysics', artifact: 'petrophysics', narrate: (w) => `Recomputing porosity, Vsh and water saturation from **${w}**'s logs…` },
+  { tab: 'correlation', label: 'Correlation', artifact: 'correlation', narrate: (w) => `Correlating **${w}** against its offset wells along the marked picks…` },
+  { tab: 'structural', label: 'Structural', artifact: 'structural', narrate: (w) => `Rebuilding the fault-block framework around **${w}**…` },
+  { tab: 'property', label: 'Property', artifact: 'property', narrate: (w) => `Conditioning the porosity/permeability property model near **${w}**…` },
+  { tab: 'gridmodel', label: 'Static Model', artifact: 'gridmodel', narrate: (w) => `Assembling the 3D static grid and draping **${w}**'s trajectory…` },
+  { tab: 'simulation', label: 'Simulation', artifact: 'simulation', confirmBefore: true, narrate: (w) => `Running the flow simulation and animating saturation fronts around **${w}**…` },
+  { tab: 'volumetrics', label: 'Volumetrics', artifact: 'volumetrics', narrate: (w) => `Rolling up STOIIP and recovery ranges for **${w}**'s drainage area…` },
+  { tab: 'uncertainty', label: 'Uncertainty', artifact: 'uncertainty', narrate: (w) => `Sampling the P90/P50/P10 uncertainty band around **${w}**…` },
+  { tab: 'forecast', label: 'Forecast', artifact: 'forecast', narrate: (w) => `Projecting **${w}**'s production forecast from the history-matched decline…` },
+  { tab: 'economics', label: 'Economics', artifact: 'economics', narrate: (w) => `Running NPV and break-even economics on **${w}**'s development case…` },
+  { tab: 'review', label: 'Field Review', artifact: 'review', narrate: (w) => `Compiling the Field Review summary for **${w}**…` },
 ];
-const TOUR_STEP_MS = 1500;
+const AGENTIC_STEP_MS = 3200; // deliberate, "full agentic" pacing
+const ASSIST_STEP_MS = 1400;
 
 // ── the Arganta canvas ───────────────────────────────────────────────────────
 export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVolve, onFieldDevTab }: {
@@ -215,42 +236,49 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   const [model, setModel] = useState('arganta-core');
   const [mopen, setMopen] = useState(false);
   const [draft, setDraft] = useState('');
-  const [artifact, setArtifact] = useState<'tree' | 'note' | 'chart' | LiveIntent>('note');
+  const [artifact, setArtifact] = useState<string>('note');
   const [artFull, setArtFull] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([WELCOME]);
   const [pendingIntent, setPendingIntent] = useState<LiveIntent | null>(null);
   const [activeWell, setActiveWell] = useState<string | null>(null);
   const [wells, setWells] = useState<string[]>([]);
-  const [touring, setTouring] = useState(false);
+  const [tourKind, setTourKind] = useState<'assist' | 'agentic' | null>(null);
+  const touring = tourKind !== null;
   const tourStepRef = useRef(0);
   const tourTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const streamRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cm = CC_MODEL_BY_ID(model) || ({} as ReturnType<typeof CC_MODEL_BY_ID> & object) as NonNullable<ReturnType<typeof CC_MODEL_BY_ID>>;
-  const chips = [TOUR_LABEL, 'Map a well', 'Simulate a well', 'Forecast a well'];
+  const chips = [ASSIST_LABEL, AGENTIC_LABEL, 'Map a well', 'Simulate a well', 'Forecast a well'];
 
   // real Volve well roster (wb/index.json) — used only to populate the "which well?" picker
   useEffect(() => { loadIndex().then((idx) => setWells(idx.wells.map((w) => w.name))).catch(() => setWells([])); }, []);
 
+  const FDP_ARTIFACT_VIEW: Record<string, React.ReactNode> = {
+    map: <LiveMapView />, logs: <LiveLogsView />, petrophysics: <LivePetrophysics />,
+    correlation: <LiveCorrelationView />, structural: <LiveStructural />, property: <LiveProperty />,
+    gridmodel: <LiveGridModelView />, simulation: <LiveSimulationView />, volumetrics: <LiveVolumetrics />,
+    uncertainty: <LiveUncertainty />, forecast: <LiveForecast />, economics: <LiveEconomics />, review: <LiveFieldReview />,
+  };
   const renderArtifact = () => {
-    if (artifact === 'map') return <Suspense fallback={<ArtLoading label="Loading structure map" />}><LiveMapView /></Suspense>;
     if (artifact === 'model3d') return <Suspense fallback={<ArtLoading label="Loading 3D static model" />}><LiveGridModelView /></Suspense>;
     if (artifact === 'sim') return <Suspense fallback={<ArtLoading label="Loading simulation" />}><LiveSimulationView /></Suspense>;
-    if (artifact === 'forecast') return <Suspense fallback={<ArtLoading label="Loading forecast" />}><LiveForecast /></Suspense>;
+    if (FDP_ARTIFACT_VIEW[artifact]) return <Suspense fallback={<ArtLoading label={`Loading ${ARTIFACT_META[artifact]?.title ?? artifact}`} />}>{FDP_ARTIFACT_VIEW[artifact]}</Suspense>;
     return artifact === 'note' ? <MdCanvas md={FDP_NOTE} /> : artifact === 'tree' ? <CosmoMiniTree /> : <CosmoMiniChart />;
   };
   const ARTIFACT_META: Record<string, { file: string; title: string }> = {
     tree: { file: 'data-map.tree', title: 'Data-map tree' },
     note: { file: 'fdp.md', title: 'Knowledge-base note' },
     chart: { file: 'field-production.chart', title: 'Field production chart' },
+    ...Object.fromEntries(FDP_STEPS.map((s) => [s.artifact, { file: `${s.tab}.live`, title: `${s.label}${activeWell ? ` — ${activeWell}` : ''}` }])),
     map: { file: INTENT_COPY.map.file, title: `${INTENT_COPY.map.title}${activeWell ? ` — ${activeWell}` : ''}` },
     model3d: { file: INTENT_COPY.model3d.file, title: `${INTENT_COPY.model3d.title}${activeWell ? ` — ${activeWell}` : ''}` },
     sim: { file: INTENT_COPY.sim.file, title: `${INTENT_COPY.sim.title}${activeWell ? ` — ${activeWell}` : ''}` },
     forecast: { file: INTENT_COPY.forecast.file, title: `${INTENT_COPY.forecast.title}${activeWell ? ` — ${activeWell}` : ''}` },
   };
 
-  const streamAssistant = (fullText: string, wellPick?: LiveIntent, tourWellPick?: boolean) => {
+  const streamAssistant = (fullText: string, flags?: StreamFlags) => {
     if (streamRef.current) clearInterval(streamRef.current);
-    setMsgs((m) => [...m, { role: 'assistant', text: '', done: false, wellPick, tourWellPick }]);
+    setMsgs((m) => [...m, { role: 'assistant', text: '', done: false, ...flags }]);
     let i = 0;
     streamRef.current = setInterval(() => {
       i += Math.max(2, Math.round(fullText.length / 90));
@@ -267,7 +295,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     const intent = detectIntent(t);
     if (intent) {
       setPendingIntent(intent);
-      setTimeout(() => streamAssistant(INTENT_COPY[intent].prompt, intent), 240);
+      setTimeout(() => streamAssistant(INTENT_COPY[intent].prompt, { wellPick: intent }), 240);
       return;
     }
     setTimeout(() => streamAssistant(CANNED), 240);
@@ -284,40 +312,82 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     setShowRight(true);
     setTimeout(() => streamAssistant(`${INTENT_COPY[intent].loading} for **${well}**. Opening the artifact pane →`), 200);
   };
-
-  // ── guided tour: drives the REAL app (Cockpit → Field Development tabs), not the artifact
-  // pane — each step just calls the already-built onFocusCockpit/onZoomVolve/onFieldDevTab hooks
-  // and opens the matching canvas, pausing once at Logs for a real well pick.
   const tourTimeout = (fn: () => void, ms: number) => { tourTimers.current.push(setTimeout(fn, ms)); };
-  const runTourStep = () => {
+
+  // ── Mode 1 — "FDP AI Assist": every step renders the real viewer INSIDE the chat's artifact
+  // pane, with process-flavored narration ("locating…", "recomputing…") instead of a flat
+  // "Opening X". Pauses at every single step to ask which well, per the requested behavior.
+  const runAssistStep = () => {
     const i = tourStepRef.current;
-    if (i >= FD_TOUR.length) {
-      setTouring(false);
-      tourTimeout(() => streamAssistant("That's the full Field Development walkthrough on **Volve** — map through Field Review."), 200);
+    if (i >= FDP_STEPS.length) {
+      setTourKind(null);
+      tourTimeout(() => streamAssistant("That's the full FDP AI Assist walkthrough on **Volve** — every tab, well by well."), 200);
       return;
     }
-    const step = FD_TOUR[i];
+    const step = FDP_STEPS[i];
+    onFieldDevTab?.(step.tab); // keep the real app's tab in sync in the background too
+    tourTimeout(() => streamAssistant(`Which well should I use for **${step.label}**?`, { assistWellPick: true }), 250);
+  };
+  const startAssistTour = () => {
+    if (touring) return;
+    setMsgs((m) => [...m, { role: 'user', text: ASSIST_LABEL, done: true }]);
+    setTourKind('assist');
+    tourStepRef.current = 0;
+    onFocusCockpit?.();
+    tourTimeout(() => {
+      streamAssistant("Starting the FDP AI Assist walkthrough on **Volve** — I'll ask for a well at every step and show you the real view here.");
+      tourTimeout(() => runAssistStep(), ASSIST_STEP_MS);
+    }, 240);
+  };
+  const selectAssistWell = (well: string) => {
+    const step = FDP_STEPS[tourStepRef.current];
+    setActiveWell(well);
+    setMsgs((m) => [...m, { role: 'user', text: well, done: true }]);
+    setArtifact(step.artifact);
+    setShowRight(true);
+    tourTimeout(() => {
+      streamAssistant(step.narrate(well));
+      tourStepRef.current += 1;
+      tourTimeout(() => runAssistStep(), ASSIST_STEP_MS);
+    }, 220);
+  };
+
+  // ── Mode 2 — "FDP Agentic": drives the REAL app (Cockpit → Field Development tabs), slower
+  // and deliberate, with one human-in-the-loop confirmation partway through (after the static
+  // model, before running the simulation) in addition to the single well pick at Logs.
+  const runAgenticStep = () => {
+    const i = tourStepRef.current;
+    if (i >= FDP_STEPS.length) {
+      setTourKind(null);
+      tourTimeout(() => streamAssistant("That's the full FDP Agentic walkthrough on **Volve** — map through Field Review."), 200);
+      return;
+    }
+    const step = FDP_STEPS[i];
+    if (step.confirmBefore) {
+      tourTimeout(() => streamAssistant(`Static model is built. Continue to **${step.label}**?`, { confirmPick: true }), 300);
+      return; // paused here — resumeAgenticAfterConfirm() continues
+    }
     onFieldDevTab?.(step.tab);
     if (step.askWell) {
-      tourTimeout(() => streamAssistant(`Opening **${step.label}** — which well should I pull it for?`, undefined, true), 250);
+      tourTimeout(() => streamAssistant(`Opening **${step.label}** — which well should I pull it for?`, { tourWellPick: true }), 250);
       return; // paused here — selectTourWell() resumes the sequence
     }
     tourTimeout(() => {
       streamAssistant(`Opening **${step.label}**…`);
       tourStepRef.current = i + 1;
-      tourTimeout(() => runTourStep(), TOUR_STEP_MS);
+      tourTimeout(() => runAgenticStep(), AGENTIC_STEP_MS);
     }, 250);
   };
-  const startTour = () => {
+  const startAgenticTour = () => {
     if (touring) return;
-    setMsgs((m) => [...m, { role: 'user', text: TOUR_LABEL, done: true }]);
-    setTouring(true);
+    setMsgs((m) => [...m, { role: 'user', text: AGENTIC_LABEL, done: true }]);
+    setTourKind('agentic');
     tourStepRef.current = 0;
     onFocusCockpit?.();
     tourTimeout(() => {
       streamAssistant('Opening the 3D globe, then zooming into **Volve** in 2D…');
       onZoomVolve?.();
-      tourTimeout(() => runTourStep(), TOUR_STEP_MS);
+      tourTimeout(() => runAgenticStep(), AGENTIC_STEP_MS);
     }, 240);
   };
   const selectTourWell = (well: string) => {
@@ -326,13 +396,32 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     tourStepRef.current += 1;
     tourTimeout(() => {
       streamAssistant(`Got it — **${well}**. Continuing the walkthrough…`);
-      tourTimeout(() => runTourStep(), TOUR_STEP_MS);
+      tourTimeout(() => runAgenticStep(), AGENTIC_STEP_MS);
     }, 200);
   };
+  const confirmAgenticContinue = () => {
+    // resumes past the confirm gate directly — does NOT call runAgenticStep() (which would just
+    // hit the same confirmBefore check again and re-ask forever).
+    const i = tourStepRef.current;
+    const step = FDP_STEPS[i];
+    setMsgs((m) => [...m, { role: 'user', text: 'Continue', done: true }]);
+    onFieldDevTab?.(step.tab);
+    tourTimeout(() => {
+      streamAssistant(`Opening **${step.label}**…`);
+      tourStepRef.current = i + 1;
+      tourTimeout(() => runAgenticStep(), AGENTIC_STEP_MS);
+    }, 250);
+  };
+  const pauseAgenticTour = () => {
+    setMsgs((m) => [...m, { role: 'user', text: 'Pause', done: true }]);
+    setTourKind(null);
+    tourTimeout(() => streamAssistant('Paused the walkthrough — say the word whenever you want to pick it back up.'), 200);
+  };
+
   const onNew = () => {
     if (streamRef.current) clearInterval(streamRef.current);
     tourTimers.current.forEach(clearTimeout); tourTimers.current = [];
-    setMsgs([WELCOME]); setPendingIntent(null); setActiveWell(null); setTouring(false);
+    setMsgs([WELCOME]); setPendingIntent(null); setActiveWell(null); setTourKind(null);
   };
   useEffect(() => () => {
     if (streamRef.current) clearInterval(streamRef.current);
@@ -386,14 +475,27 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                       ))}
                     </div>
                   )}
-                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && m.tourWellPick && touring && (
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && m.tourWellPick && tourKind === 'agentic' && (
                     <div className="cc-well-pick">
                       {(wells.length ? wells : ['F-1', 'F-4', 'F-5', 'F-9', 'F-11', 'F-12', 'F-14', 'F-15']).slice(0, 10).map((w) => (
                         <button key={w} onClick={() => selectTourWell(w)}>{w}</button>
                       ))}
                     </div>
                   )}
-                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && !m.wellPick && !m.tourWellPick && !touring && msgs.length > 1 && (
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && m.assistWellPick && tourKind === 'assist' && (
+                    <div className="cc-well-pick">
+                      {(wells.length ? wells : ['F-1', 'F-4', 'F-5', 'F-9', 'F-11', 'F-12', 'F-14', 'F-15']).slice(0, 10).map((w) => (
+                        <button key={w} onClick={() => selectAssistWell(w)}>{w}</button>
+                      ))}
+                    </div>
+                  )}
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && m.confirmPick && tourKind === 'agentic' && (
+                    <div className="cc-well-pick">
+                      <button onClick={confirmAgenticContinue}>Continue ▶</button>
+                      <button onClick={pauseAgenticTour}>Pause</button>
+                    </div>
+                  )}
+                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && !m.wellPick && !m.tourWellPick && !m.assistWellPick && !m.confirmPick && !touring && msgs.length > 1 && (
                     <div className="art-chip" onClick={() => { if (!showRight) setShowRight(true); }}><PanelRight size={12} /> Open artifact pane</div>
                   )}
                 </div>
@@ -443,7 +545,11 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
               <span className="u"><BatteryMedium size={11} /> Weekly <div className="cc-bar warn"><i style={{ width: '62%' }} /></div> 62% · resets Mon</span>
               <span className="u" style={{ marginLeft: 'auto' }}><Shield size={11} /> {cm.tier} · governed</span>
             </div>
-            <div className="cc-chips">{chips.map((c) => <div className="cc-chip" key={c} onClick={() => (c === TOUR_LABEL ? startTour() : send(c))}>{c}</div>)}</div>
+            <div className="cc-chips">
+              {chips.map((c) => (
+                <div className="cc-chip" key={c} onClick={() => (c === ASSIST_LABEL ? startAssistTour() : c === AGENTIC_LABEL ? startAgenticTour() : send(c))}>{c}</div>
+              ))}
+            </div>
           </div>
         </div>
 
