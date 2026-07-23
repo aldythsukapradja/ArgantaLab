@@ -11,3 +11,6 @@ __pycache__/
 
 # generated workbench assets (from data-energy, rebuilt by scripts/build-workbench-data.mjs)
 public/wb/
+
+.vercel
+.env*

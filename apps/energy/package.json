@@ -9,6 +9,7 @@
     "data": "node scripts/build-data.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:vercel": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "data:kb": "node scripts/build-knowledge.mjs",

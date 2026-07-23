@@ -1,7 +1,7 @@
-// CosmoShell (?ui=cosmo&build=1) — the progressive React rebuild of the COSMO shell,
+// CosmoShell — the canonical ArgantaEnergy production UI,
 // rendered with the founder's EXACT styles (cosmo-system.css, extracted verbatim +
 // scoped; animations kept global → byte-identical). Same classes, same Lucide icons,
-// same Inter/JetBrains type → 1:1 with the iframe reference (?ui=cosmo). Shell is now
+// same Inter/JetBrains type → 1:1 with the original design reference. Shell is now
 // reproduced 1:1 from COSMO_Final.html: brand (sparkles · COSMO · AL SHAHEEN), nav
 // groups COMMAND CENTER / LIFECYCLE / INTELLIGENCE / REPORT (no sovereign-tier bar),
 // topbar crumbs + light/dark toggle + settings + avatar (no "+ New"), footer, and the
