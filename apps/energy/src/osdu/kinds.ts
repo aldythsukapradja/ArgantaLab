@@ -13,7 +13,7 @@ export interface OsduKindMapping {
 }
 
 /**
- * Persistence mapping for every entity in the 18-node ATLAS navigation spine.
+ * Canonical persistence mapping for every concept exposed by the 18-node navigation projection.
  * `arganta:wks:*` kinds are OSDU-compatible extension schemas used only where
  * the official data definitions do not contain an equivalent business object.
  */

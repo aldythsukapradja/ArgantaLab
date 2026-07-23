@@ -1,8 +1,6 @@
-// atlas/ — the ATLAS master-metadata catalogue. Strong callable spine + typed contract +
-// Volve as a real producing-oil-field instance. See docs/arganta-energy/WORLD-PETROLEUM-
-// CATALOGUE-CONCEPT.md. Import from here.
+// atlas/ — supplementary petroleum read projections over canonical OSDU records.
+// Volve is a field-specific projection; persisted identity and governance live in osdu/.
 export * from './types';
 export * from './spine';
 export * from './goget';
-export * from '../osdu';
 export { VOLVE_BUNDLE, VOLVE_DETAIL_BUNDLE, VOLVE_FIELD_ID } from './volve';

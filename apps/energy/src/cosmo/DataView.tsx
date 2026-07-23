@@ -1,21 +1,23 @@
-// DataView (Intelligence → Data) — the ArgantaEnergy data-model explorer for the Volve
-// field. Two sub-tabs: "Model" (interactive ER diagram — draggable table cards, SVG FK
-// curves, zoom/pan, star-schema layout, searchable table rail, legend) and "Quality &
-// Coverage" (per-well completeness matrix computed from the REAL wb index). Adapted from
-// the UC116/WellAion reference, restyled to our COSMO tokens, fully rebranded, and
-// grounded 1:1 in public/wb (no fabricated data).
+// DataView (Intelligence → Data) — OSDU-first catalogue, ingestion, schema,
+// governance and quality workspace. Volve is a physical projection, never the
+// enterprise data contract.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Database, Star, Maximize, RotateCcw, Boxes, TableProperties, ShieldCheck, Globe2, Link2 } from 'lucide-react';
+import {
+  Database, Star, Maximize, RotateCcw, Boxes, TableProperties, ShieldCheck,
+  Globe2, Link2, Workflow, LockKeyhole, ArrowRight, Layers3, FileJson,
+} from 'lucide-react';
 import './data-cosmo.css';
 import {
   TABLES, RELATIONSHIPS, GROUP_COLOR, GROUP_LABEL, CARD_W, cardHeight, starLayout,
   type ModelTable,
 } from './volve-model';
 import {
-  ATLAS_VERSION, spineOrdered, axisTypes, AXIS_LABEL, AXIS_COLOR, PRMS_CLASS,
+  spineOrdered, axisTypes, AXIS_LABEL, AXIS_COLOR, PRMS_CLASS,
   lineage, parseId, RELATIONSHIPS as ATLAS_RELS, VOLVE_BUNDLE, VOLVE_FIELD_ID,
   type EntityType, type EntityInstance, type QuantityFact,
 } from '../atlas';
+import { OSDU_DATA_DEFINITIONS, OSDU_KIND_BY_ENTITY } from '../osdu';
+import type { OsduPipelineIndex } from '../osdu';
 import { loadIndex } from '../wb/load';
 import type { WbIndex } from '../wb/types';
 
@@ -190,10 +192,10 @@ function QualityCoverage() {
     <div className="dq">
       <div className="dq-cards">
         {[
-          { v: wells.length, l: 'wellbores · Volve (WB master)', b: 'MEASURED', bg: '#16a34a1e', c: '#15803d' },
-          { v: withLogs, l: 'with wireline logs', b: 'MEASURED', bg: '#16a34a1e', c: '#15803d' },
-          { v: withProd, l: 'with production history', b: 'MEASURED', bg: '#16a34a1e', c: '#15803d' },
-          { v: withPicks, l: 'with formation-top picks', b: 'INTERPRETED', bg: '#7c3aed1e', c: '#6d28d9' },
+          { v: wells.length, l: 'OSDU Wellbore records · Volve', b: 'MASTER DATA', bg: '#0FB5A61e', c: '#0b887e' },
+          { v: withLogs, l: 'with WellLog WPC', b: 'MEASURED', bg: '#16a34a1e', c: '#15803d' },
+          { v: withProd, l: 'with ProductionValues WPC', b: 'REPORTED', bg: '#16a34a1e', c: '#15803d' },
+          { v: withPicks, l: 'with WellboreMarkerSet WPC', b: 'INTERPRETED', bg: '#7c3aed1e', c: '#6d28d9' },
         ].map((k) => (
           <div className="dq-card" key={k.l}>
             <div className="kv">{k.v}</div><div className="kl">{k.l}</div>
@@ -202,7 +204,7 @@ function QualityCoverage() {
         ))}
       </div>
       <div className="dq-panel">
-        <div className="dq-phd"><ShieldCheck size={16} /> Per-well completeness matrix <span className="nat derived">DERIVED · wb index</span></div>
+        <div className="dq-phd"><ShieldCheck size={16} /> OSDU WPC coverage by Wellbore <span className="nat derived">DERIVED READ MODEL</span></div>
         <div style={{ maxHeight: 'calc(100% - 50px)', overflow: 'auto' }}>
           <table className="qmatrix">
             <thead><tr><th>Well</th><th>Logs</th><th>Trajectory</th><th>Production</th><th>Tops</th><th>Overall</th></tr></thead>
@@ -228,11 +230,11 @@ function QualityCoverage() {
   );
 }
 
-// ── ATLAS spine STAR SCHEMA — the 18 entity types, Field at the hub (v1) ──────────
-// Explicit star layout (Field central; geologic ancestry left, well axis right,
-// commercial below). Draggable + pan/zoom + Fit, reusing the ER-card styling.
+// ── OSDU BACKBONE + ARGANTA PROJECTION ─────────────────────────────────────────
+// OSDU kinds are canonical. The 18 entities are a navigational projection; only
+// nodes marked EXTENSION add concepts not represented by the pinned OSDU release.
 const STAR_W = 172;
-const starCardH = (e: EntityType) => 30 + Math.min(e.keyAttrs.length, 6) * 18 + 8;
+const starCardH = (e: EntityType) => 30 + (Math.min(e.keyAttrs.length, 6) + 1) * 18 + 8;
 const STAR_POS: Record<string, { x: number; y: number }> = {
   world: { x: 40, y: 60 }, region: { x: 40, y: 210 }, country: { x: 40, y: 372 },
   basin: { x: 268, y: 92 }, 'petroleum-system': { x: 268, y: 250 }, 'assessment-unit': { x: 268, y: 410 },
@@ -243,8 +245,9 @@ const STAR_POS: Record<string, { x: number; y: number }> = {
   'wellbore-segment': { x: 1196, y: 430 }, 'contact-interval': { x: 1196, y: 610 },
   company: { x: 268, y: 590 }, licence: { x: 268, y: 740 },
 };
-function SpineStar() {
+function OsduBackbone() {
   const ents = useMemo(() => spineOrdered(), []);
+  const standardCount = ents.filter((e) => OSDU_KIND_BY_ENTITY[e.id]?.alignment === 'standard').length;
   const [pos, setPos] = useState<Pos>(() => ({ ...STAR_POS }));
   const [view, setView] = useState({ x: 20, y: 10, k: 0.82 });
   const [sel, setSel] = useState<string | null>(null);
@@ -309,15 +312,19 @@ function SpineStar() {
   return (
     <div className="dm-wrap">
       <div className="dm-side">
-        <div className="dm-sh">SPINE · 18 ENTITY TYPES</div>
+        <div className="dm-sh">OSDU BACKBONE · {standardCount} STANDARD · {ents.length - standardCount} EXTENSIONS</div>
         <div className="dm-list">
-          {ents.map((e) => (
-            <div key={e.id} className={'dm-trow' + (sel === e.id ? ' on' : '')} onClick={() => setSel((s) => (s === e.id ? null : e.id))}>
-              <span className="tdot" style={{ background: AXIS_COLOR[e.axis] }} />
-              <span className="tnm">{e.tier}. {e.name}</span>
-              <span className="trows">{e.ktype}</span>
-            </div>
-          ))}
+          {ents.map((e) => {
+            const mapping = OSDU_KIND_BY_ENTITY[e.id];
+            const extension = mapping?.alignment === 'extension';
+            return (
+              <div key={e.id} className={'dm-trow' + (sel === e.id ? ' on' : '')} onClick={() => setSel((s) => (s === e.id ? null : e.id))}>
+                <span className="tdot" style={{ background: extension ? '#f59e0b' : '#0FB5A6' }} />
+                <span className="tnm">{e.tier}. {e.name}</span>
+                <span className="trows">{extension ? 'EXT' : 'OSDU'}</span>
+              </div>
+            );
+          })}
         </div>
         <div className="dm-actions">
           <div className="dm-abtn" onClick={() => setPos({ ...STAR_POS })}><Star size={14} /> Star layout</div>
@@ -327,7 +334,7 @@ function SpineStar() {
       </div>
 
       <div className="dm-canvas-wrap" ref={wrapRef} onPointerDown={startPan}>
-        <div className="dm-toolbar"><div className="dm-hint">Star schema · Field &amp; Well are the hub where the two axes converge</div></div>
+        <div className="dm-toolbar"><div className="dm-hint">OSDU is canonical · Arganta nodes exist only for uncovered domain concepts · Field links the projections</div></div>
         <div className="dm-surface" style={{ transform: `translate(${view.x}px,${view.y}px) scale(${view.k})` }}>
           <svg className="dm-svg" width={1500} height={1000}>
             {relPaths.map((p) => (
@@ -338,12 +345,19 @@ function SpineStar() {
           {ents.map((e) => {
             const p = pos[e.id]; if (!p) return null;
             const on = sel === e.id; const dim = !!related && !related.has(e.id);
-            const c = AXIS_COLOR[e.axis];
+            const mapping = OSDU_KIND_BY_ENTITY[e.id];
+            const extension = mapping?.alignment === 'extension';
+            const c = extension ? '#f59e0b' : '#0FB5A6';
+            const kindName = mapping?.kind.match(/--([^:]+):/)?.[1] ?? 'Unmapped';
             return (
               <div key={e.id} className={'er-card' + (on ? ' hot' : '') + (dim ? ' dim' : '')} style={{ left: p.x, top: p.y, width: STAR_W }}>
                 <div className="er-hd" style={{ background: c }} onPointerDown={(ev) => startCardDrag(ev, e.id)}
                   onClick={(ev) => { ev.stopPropagation(); setSel((s) => (s === e.id ? null : e.id)); }}>
-                  <span className="er-tier">{e.tier}</span><span className="en">{e.name}</span><span className="er-rows">{e.ktype}</span>
+                  <span className="er-tier">{e.tier}</span><span className="en">{e.name}</span><span className="er-rows">{extension ? 'EXT' : 'OSDU'}</span>
+                </div>
+                <div className="er-col">
+                  <span className="cn">{kindName}</span>
+                  <span className="cd">{mapping?.recordCategory === 'WorkProductComponent' ? 'WPC' : 'MD'}</span>
                 </div>
                 {e.keyAttrs.slice(0, 6).map((a) => (
                   <div className="er-col" key={a.name}>
@@ -363,17 +377,16 @@ function SpineStar() {
           <div className="dm-zbtn" onClick={() => zoomBy(0.87)}>−</div>
         </div>
         <div className="dm-legend">
-          {(['geologic', 'well', 'commercial'] as const).map((ax) => (
-            <div className="lg" key={ax}><span className="sw" style={{ background: AXIS_COLOR[ax] }} />{AXIS_LABEL[ax]}</div>
-          ))}
+          <div className="lg"><span className="sw" style={{ background: '#0FB5A6' }} />Official OSDU kind</div>
+          <div className="lg"><span className="sw" style={{ background: '#f59e0b' }} />Arganta OSDU extension</div>
         </div>
       </div>
     </div>
   );
 }
 
-// ── ATLAS Catalogue — GOGET-compatible master spine + linked field detail bundles ──
-function AtlasCatalogue() {
+// ── OSDU catalogue — GOGET identity + field-specific WPC/dataset packages ──
+function OsduCatalogue() {
   // instance-by-type lookup for the Volve bundle (the worked example values)
   const instByType = useMemo(() => {
     const m = new Map<string, EntityInstance>();
@@ -398,15 +411,17 @@ function AtlasCatalogue() {
 
   const tierRow = (t: EntityType) => {
     const inst = instByType.get(t.id);
-    const c = AXIS_COLOR[t.axis];
+    const mapping = OSDU_KIND_BY_ENTITY[t.id];
+    const extension = mapping?.alignment === 'extension';
+    const c = extension ? '#f59e0b' : '#0FB5A6';
     return (
       <div className="at-tier" key={t.id} style={{ borderLeftColor: c }}>
         <span className="at-n">{t.tier}</span>
         <div className="at-ent">
           <b>{t.name}</b>
-          <small>{t.osdu ? `OSDU ${t.osdu} · ` : ''}{t.aligned.join(' · ')}</small>
+          <small>{mapping?.kind ?? 'unmapped'} · {extension ? 'ARGANTA EXTENSION' : 'OSDU STANDARD'}</small>
         </div>
-        <span className="at-kt" style={{ color: c, background: c + '22' }}>{t.ktype}</span>
+        <span className="at-kt" style={{ color: c, background: c + '22' }}>{extension ? 'EXT' : 'OSDU'}</span>
         <span className={'at-ex' + (inst ? '' : ' none')}>{exampleVal(t)}</span>
       </div>
     );
@@ -418,9 +433,9 @@ function AtlasCatalogue() {
       <div className="at-main">
         <div className="at-note">
           <Globe2 size={14} />
-          <span><b>Catalogue spine + technical detail.</b> GOGET-compatible field masters provide global identity,
-            status, ownership, location, production and reserves. Rich packages such as <b>Volve</b> attach to one
-            canonical Field ID and keep their wells, logs, grids and models separate.</span>
+          <span><b>OSDU is the catalogue backbone.</b> GOGET and regulators populate OSDU master data; field-specific
+            packages such as <b>Volve</b> attach through OSDU Work Product Components and Datasets. The numbered
+            18-node view is only a navigation projection, with five explicit extensions for concepts OSDU does not cover.</span>
         </div>
         {axes.map((ax) => (
           <div className="at-axis" key={ax}>
@@ -475,39 +490,188 @@ function AtlasCatalogue() {
   );
 }
 
+function OsduOverview({ index }: { index: OsduPipelineIndex | null }) {
+  const ready = index?.manifests.filter((x) => x.status === 'ready') ?? [];
+  const records = ready.reduce((sum, x) => sum + x.records, 0);
+  const flow = [
+    ['Source landing', 'immutable native evidence'],
+    ['Normalize', 'identity · units · geometry'],
+    ['Govern', 'ACL · LegalTag · countries'],
+    ['Manifest', 'OSDU Manifest 1.0.0'],
+    ['Ingest', 'Schema · Storage · Search'],
+    ['Project', 'catalogue · Volve · analytics'],
+  ];
+  return (
+    <div style={{ height: '100%', overflow: 'auto', padding: 14 }}>
+      <div className="dq-cards" style={{ marginBottom: 12 }}>
+        {[
+          { v: index?.standard ?? 'OSDU R3', l: 'canonical backbone', b: OSDU_DATA_DEFINITIONS.release },
+          { v: nFmt(records), l: 'manifest records', b: 'VALIDATED' },
+          { v: `${ready.length}/${index?.manifests.length ?? 5}`, l: 'source lanes ready', b: 'INGESTION' },
+          { v: '5', l: 'Arganta extensions', b: 'SCHEMA SERVICE' },
+        ].map((card) => (
+          <div className="dq-card" key={card.l}>
+            <div className="kv" style={{ fontSize: typeof card.v === 'string' && card.v.length > 10 ? 19 : undefined }}>{card.v}</div>
+            <div className="kl">{card.l}</div>
+            <span className="kb" style={{ background: '#0FB5A61e', color: '#0b887e' }}>{card.b}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="dq-panel" style={{ marginBottom: 12, paddingBottom: 14 }}>
+        <div className="dq-phd"><Workflow size={16} /> Canonical OSDU data flow <span className="nat derived">MANIFEST-DRIVEN</span></div>
+        <div style={{ display: 'flex', gap: 8, padding: '14px 12px 4px', alignItems: 'stretch', overflowX: 'auto' }}>
+          {flow.map(([title, detail], i) => (
+            <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 0 145px' }}>
+              <div className="panel-2 hairline" style={{ padding: 10, borderRadius: 5, flex: 1, minHeight: 64 }}>
+                <div style={{ fontSize: 11, fontWeight: 700 }}>{title}</div>
+                <div className="mono" style={{ fontSize: 9, color: 'var(--muted)', marginTop: 5, lineHeight: 1.4 }}>{detail}</div>
+              </div>
+              {i < flow.length - 1 && <ArrowRight size={14} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="dq-panel">
+        <div className="dq-phd"><FileJson size={16} /> Source manifests <span className="nat measured">LIVE INDEX</span></div>
+        <div style={{ padding: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 8 }}>
+          {(index?.manifests ?? []).map((lane) => (
+            <div key={lane.source} className="panel-2 hairline" style={{ padding: 11, borderRadius: 5 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <b style={{ fontSize: 11.5 }}>{lane.source}</b>
+                <span className={'kb'} style={{
+                  color: lane.status === 'ready' ? '#0b887e' : '#b7791f',
+                  background: lane.status === 'ready' ? '#0FB5A61e' : '#f59e0b1e',
+                }}>{lane.status === 'ready' ? 'READY' : 'AWAITING SOURCE'}</span>
+              </div>
+              <div className="mono" style={{ fontSize: 10, color: 'var(--muted)', marginTop: 9 }}>
+                {lane.records.toLocaleString()} records · {lane.dataClass}
+              </div>
+              <div className="mono" style={{ fontSize: 9, color: 'var(--muted)', marginTop: 4 }}>{lane.path}</div>
+            </div>
+          ))}
+          {!index && <div className="mono" style={{ color: 'var(--muted)', padding: 12 }}>Loading OSDU manifest index…</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OsduGovernance() {
+  const classes = [
+    ['public', 'data.public.viewers@arganta', 'arganta-public', 'public manifest'],
+    ['internal', 'data.internal.viewers@arganta', 'arganta-internal', 'protected manifest'],
+    ['confidential', 'data.confidential.viewers@arganta', 'arganta-confidential', 'restricted workflow'],
+    ['restricted', 'data.restricted.viewers@arganta', 'arganta-restricted', 'explicit entitlement'],
+  ];
+  return (
+    <div style={{ height: '100%', overflow: 'auto', padding: 14, display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(280px, .75fr)', gap: 12 }}>
+      <div className="dq-panel">
+        <div className="dq-phd"><LockKeyhole size={16} /> OSDU governance matrix <span className="nat measured">ENFORCED BEFORE INGESTION</span></div>
+        <div style={{ overflow: 'auto' }}>
+          <table className="qmatrix">
+            <thead><tr><th>Data class</th><th>Viewer entitlement</th><th>LegalTag</th><th>Manifest lane</th></tr></thead>
+            <tbody>
+              {classes.map(([dataClass, viewers, legalTag, lane]) => (
+                <tr key={dataClass}>
+                  <td><span className="qpill qy">{dataClass}</span></td>
+                  <td className="mono">{viewers}</td>
+                  <td className="mono">{legalTag}</td>
+                  <td>{lane}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="at-card">
+          <div className="at-ch"><Layers3 size={12} /> Required record envelope</div>
+          {[
+            ['id', 'partition:type:native-id'],
+            ['kind', 'authority:source:entity:version'],
+            ['acl', 'owners + viewers'],
+            ['legal', 'LegalTags + relevant countries'],
+            ['ancestry', 'parent record IDs'],
+            ['data', 'schema-validated payload'],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 8, padding: '6px 0', borderTop: '1px solid var(--line)' }}>
+              <b className="mono" style={{ fontSize: 10, color: 'var(--teal)' }}>{k}</b>
+              <span className="mono" style={{ fontSize: 9.5, color: 'var(--muted)' }}>{v}</span>
+            </div>
+          ))}
+        </div>
+        <div className="at-card">
+          <div className="at-ch"><ShieldCheck size={12} /> Non-negotiable controls</div>
+          {[
+            'Scientific dataNature is independent from access dataClass.',
+            'Internal enrichment links to public masters; it never mutates them.',
+            'Native identifiers, source release, licence and units remain traceable.',
+            'Schema and Storage services are the final ingestion release gate.',
+            'Arganta extensions must be registered and versioned like OSDU schemas.',
+          ].map((text) => <div key={text} className="mono" style={{ fontSize: 9.5, lineHeight: 1.5, padding: '5px 0', color: 'var(--muted)' }}>✓ {text}</div>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DataView() {
-  const [sub, setSub] = useState<'catalogue' | 'model' | 'quality'>('catalogue');
-  const [modelSrc, setModelSrc] = useState<'spine' | 'volve'>('spine');
+  const [sub, setSub] = useState<'overview' | 'catalogue' | 'model' | 'governance' | 'quality'>('overview');
+  const [modelSrc, setModelSrc] = useState<'backbone' | 'volve'>('backbone');
+  const [osduIndex, setOsduIndex] = useState<OsduPipelineIndex | null>(null);
+  useEffect(() => {
+    fetch('/osdu/index.json').then((r) => {
+      if (!r.ok) throw new Error(`OSDU index ${r.status}`);
+      return r.json();
+    }).then(setOsduIndex).catch(() => setOsduIndex(null));
+  }, []);
   const totalFk = RELATIONSHIPS.length;
   const totalRows = useMemo(() => TABLES.reduce((s, t) => s + t.rows, 0), []);
   const spineCount = spineOrdered().length;
-  const modelSpine = sub === 'model' && modelSrc === 'spine';
+  const modelBackbone = sub === 'model' && modelSrc === 'backbone';
+  const extensionCount = spineOrdered().filter((e) => OSDU_KIND_BY_ENTITY[e.id]?.alignment === 'extension').length;
+  const readyRecords = osduIndex?.manifests.reduce((sum, lane) => sum + lane.records, 0) ?? 0;
+  const subtitle = sub === 'overview'
+    ? `OSDU R3 · ${nFmt(readyRecords)} records · manifest ingestion`
+    : sub === 'catalogue'
+      ? `OSDU ${OSDU_DATA_DEFINITIONS.release} · ${spineCount - extensionCount} standard projections · ${extensionCount} extensions`
+      : modelBackbone
+        ? `OSDU backbone · ${spineCount - extensionCount} standard projections · ${extensionCount} Arganta extensions`
+        : sub === 'model'
+          ? `Volve · ${TABLES.length} tables · ${totalFk} FK · ${nFmt(totalRows)} rows`
+          : sub === 'governance'
+            ? 'ACL · LegalTag · data class · lineage'
+            : 'OSDU ingestion gates · physical-data coverage';
   return (
     <div className="dm">
       <div className="dm-bar">
         <div className="dm-title">
           <span className="di"><Database size={15} /></span>
-          <b>Data Catalogue</b>
-          <span className="dm-sub">
-            {sub === 'catalogue' ? `ATLAS v${ATLAS_VERSION} · ${spineCount} entity types · world petroleum spine`
-              : modelSpine ? `ATLAS spine · ${spineCount} entity types · ${ATLAS_RELS.length} relations · star schema`
-              : `Volve · ${TABLES.length} tables · ${totalFk} FK · ${nFmt(totalRows)} rows`}
-          </span>
+          <b>OSDU Data Platform</b>
+          <span className="dm-sub">{subtitle}</span>
         </div>
         {sub === 'model' && (
           <div className="dm-srcseg">
-            <div className={'sg' + (modelSrc === 'spine' ? ' on' : '')} onClick={() => setModelSrc('spine')}>ATLAS spine (18)</div>
+            <div className={'sg' + (modelSrc === 'backbone' ? ' on' : '')} onClick={() => setModelSrc('backbone')}>OSDU backbone</div>
             <div className={'sg' + (modelSrc === 'volve' ? ' on' : '')} onClick={() => setModelSrc('volve')}>Volve tables (9)</div>
           </div>
         )}
-        <div className="dm-prov"><span className="dot" /> {sub === 'catalogue' || modelSpine ? 'OSDU · USGS · PPDM · PRMS · evidence-native' : 'GROUNDED · ED50 / UTM 31N · evidence-native'}</div>
+        <div className="dm-prov"><span className="dot" /> {sub === 'model' && !modelBackbone ? 'OSDU PHYSICAL PROJECTION · evidence-native' : 'OSDU CANONICAL · ACL · LEGALTAG · LINEAGE'}</div>
       </div>
       <div className="dm-subtabs">
+        <div className={'dm-subtab' + (sub === 'overview' ? ' on' : '')} onClick={() => setSub('overview')}><Workflow size={14} /> Overview</div>
         <div className={'dm-subtab' + (sub === 'catalogue' ? ' on' : '')} onClick={() => setSub('catalogue')}><Globe2 size={14} /> Catalogue</div>
         <div className={'dm-subtab' + (sub === 'model' ? ' on' : '')} onClick={() => setSub('model')}><Boxes size={14} /> Data Model</div>
+        <div className={'dm-subtab' + (sub === 'governance' ? ' on' : '')} onClick={() => setSub('governance')}><LockKeyhole size={14} /> Governance</div>
         <div className={'dm-subtab' + (sub === 'quality' ? ' on' : '')} onClick={() => setSub('quality')}><TableProperties size={14} /> Quality &amp; Coverage</div>
       </div>
-      {sub === 'catalogue' ? <AtlasCatalogue /> : sub === 'model' ? (modelSpine ? <SpineStar /> : <ModelCanvas />) : <QualityCoverage />}
+      {sub === 'overview' ? <OsduOverview index={osduIndex} />
+        : sub === 'catalogue' ? <OsduCatalogue />
+          : sub === 'model' ? (modelBackbone ? <OsduBackbone /> : <ModelCanvas />)
+            : sub === 'governance' ? <OsduGovernance />
+              : <QualityCoverage />}
     </div>
   );
 }

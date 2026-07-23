@@ -1,13 +1,12 @@
-// atlas/spine.ts — THE STRONG SPINE. The canonical entity registry for world petroleum,
-// as data + a callable/updateable API. This is the single source of truth: add an entity
-// type or attribute by editing SPINE (or calling registerEntityType/extendEntityType at
-// runtime). Everything downstream (KB, DB schema, cockpit) reads the spine — never hardcodes.
-// Two axes (geologic + commercial) + the well axis converge at Field/Well. See types.ts.
+// atlas/spine.ts — Arganta's 18-concept navigation/read projection over OSDU.
+// OSDU kinds, envelopes and manifests are the canonical system-of-record contract.
+// This registry adds UX ordering and domain concepts only where OSDU has no equivalent.
+// Persistence mapping and extension authority live in osdu/kinds.ts.
 import type { EntityType, RelDef, AtlasId, EntityInstance, PrmsClass, PrmsCategory, ProductType } from './types';
 
 export const ATLAS_VERSION = '1.0.0';
 
-// ── the canonical spine (14 geologic/well tiers + commercial axis) ──
+// ── supplementary projection (14 geologic/well tiers + commercial axis) ──
 // tiers 1–10 geologic · 11–15 well · 16–18 commercial (clean 1..18). Ordering is by `tier`.
 export const SPINE: EntityType[] = [
   { id: 'world', tier: 1, axis: 'geologic', name: 'World', ktype: 'world', aligned: ['ATLAS'],
@@ -148,7 +147,8 @@ export function ancestryOf(id: string): EntityType[] {
 }
 export const relationsOf = (id: string): RelDef[] => RELATIONSHIPS.filter((r) => r.from === id || r.to === id);
 
-// ── canonical id helpers: atlas:{entity}:{authority}:{nativeId} ──
+// ── read-model id helpers; persisted canonical records use OSDU ids ──
+/** @deprecated Use the OSDU record id for persistence. This id is projection-local. */
 export const makeId = (entity: string, authority: string, nativeId: string | number): string => `atlas:${entity}:${authority}:${nativeId}`;
 export function parseId(id: string): AtlasId | null {
   const p = id.split(':');

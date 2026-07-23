@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { TABLES, FKS, GROUPS, CENTERS, fksFor, type TableMeta, type Role } from '../model/schema-meta';
+import { spineOrdered } from '../atlas';
+import { OSDU_DATA_DEFINITIONS, OSDU_KIND_BY_ENTITY } from '../osdu';
 
 // The mothership's SEMANTIC MODEL surface — renders the locked M1 contract
 // (schema-meta.ts) as a Power-BI-style relational canvas: tables = nodes,
@@ -27,7 +29,7 @@ const POS: Record<string, { x: number; y: number }> = {
 const NW = 176;
 const nh = (t: TableMeta) => 34 + Math.min(t.cols.length, 6) * 15;
 
-export function SchemaTab() {
+function PhysicalSchema() {
   const [sel, setSel] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const W = 1000, H = 560;
@@ -158,6 +160,91 @@ export function SchemaTab() {
           </div>
         </aside>
       )}
+    </div>
+  );
+}
+
+function OsduSchema() {
+  const entities = spineOrdered();
+  const standard = entities.filter((e) => OSDU_KIND_BY_ENTITY[e.id]?.alignment === 'standard');
+  const extensions = entities.filter((e) => OSDU_KIND_BY_ENTITY[e.id]?.alignment === 'extension');
+
+  return (
+    <div style={{ height: '100%', overflow: 'auto', padding: 14 }}>
+      <div className="panel" style={{ marginBottom: 10 }}>
+        <div className="panel-header">
+          <span>Canonical contract — OSDU R3 · Data Definitions {OSDU_DATA_DEFINITIONS.release}</span>
+          <span className="chip teal">OSDU is system of record</span>
+        </div>
+        <div style={{ padding: 12, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(150px, 1fr))', gap: 8 }}>
+          {[
+            ['Record envelope', 'id · kind · data · ancestry'],
+            ['Governance', 'ACL · LegalTag · countries'],
+            ['Ingestion', 'Manifest 1.0.0 · schema gate'],
+            ['Projection', `${standard.length} standard · ${extensions.length} extensions`],
+          ].map(([title, text]) => (
+            <div key={title} className="panel-2 hairline" style={{ padding: 10, borderRadius: 4 }}>
+              <div className="eyebrow" style={{ color: 'var(--teal)' }}>{title}</div>
+              <div className="mono" style={{ fontSize: 10, marginTop: 5 }}>{text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span>Domain projection — 18 navigation concepts mapped onto OSDU</span>
+          <span className="chip amber">{extensions.length} additions only where OSDU has no equivalent</span>
+        </div>
+        <div style={{ overflow: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+                <th style={{ padding: '8px 10px' }}>#</th>
+                <th style={{ padding: '8px 10px' }}>Projection concept</th>
+                <th style={{ padding: '8px 10px' }}>Canonical OSDU kind</th>
+                <th style={{ padding: '8px 10px' }}>Record class</th>
+                <th style={{ padding: '8px 10px' }}>Authority</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entities.map((entity) => {
+                const mapping = OSDU_KIND_BY_ENTITY[entity.id];
+                const extension = mapping.alignment === 'extension';
+                return (
+                  <tr key={entity.id} style={{ borderTop: '1px solid var(--line)' }}>
+                    <td className="mono" style={{ padding: '7px 10px', color: 'var(--muted)' }}>{entity.tier}</td>
+                    <td style={{ padding: '7px 10px', fontWeight: 600 }}>{entity.name}</td>
+                    <td className="mono" style={{ padding: '7px 10px', color: extension ? 'var(--amber)' : 'var(--teal)' }}>{mapping.kind}</td>
+                    <td className="mono" style={{ padding: '7px 10px' }}>{mapping.recordCategory}</td>
+                    <td style={{ padding: '7px 10px' }}>
+                      <span className={'chip ' + (extension ? 'amber' : 'teal')}>{extension ? 'ARGANTA EXTENSION' : 'OSDU STANDARD'}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SchemaTab() {
+  const [view, setView] = useState<'osdu' | 'physical'>('osdu');
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div className="panel-header panel" style={{ margin: '14px 14px 0', flexShrink: 0 }}>
+        <span>Schema authority</span>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className={'chip ' + (view === 'osdu' ? 'teal' : '')} onClick={() => setView('osdu')}>OSDU canonical</button>
+          <button className={'chip ' + (view === 'physical' ? 'teal' : '')} onClick={() => setView('physical')}>Volve physical projection</button>
+        </div>
+      </div>
+      <div style={{ flex: 1, minHeight: 0 }}>
+        {view === 'osdu' ? <OsduSchema /> : <PhysicalSchema />}
+      </div>
     </div>
   );
 }

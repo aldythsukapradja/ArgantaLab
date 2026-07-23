@@ -1,12 +1,21 @@
+import { useEffect, useState } from 'react';
 import data from '../data/data.json';
 import foundation from '../data/foundation.json';
 import { Panel } from '../components/ui';
 import { MethodCapsule } from '../components/Provenance';
-import { HardDriveDownload, Binary, ShieldCheck, ArrowRight } from 'lucide-react';
+import { HardDriveDownload, Binary, ShieldCheck, ArrowRight, Database } from 'lucide-react';
+import type { OsduPipelineIndex } from '../osdu';
 
 // Data → Pipeline sub-tab: mirror → decode → validate stage cards with REAL counts
 // (deterministic, sourced from data.json + foundation metrics). No fabrication.
 export function DataPipeline() {
+  const [osdu, setOsdu] = useState<OsduPipelineIndex | null>(null);
+  useEffect(() => {
+    fetch('/osdu/index.json').then((r) => {
+      if (!r.ok) throw new Error(`OSDU index ${r.status}`);
+      return r.json();
+    }).then(setOsdu).catch(() => setOsdu(null));
+  }, []);
   const m = data.mirror;
   const prodRows = foundation.metrics.find((x) => x.key === 'production')?.value ?? 0;
   const logValues = foundation.metrics.find((x) => x.key === 'logvalues')?.value ?? 0;
@@ -34,6 +43,14 @@ export function DataPipeline() {
         { k: 'Failures', v: String(m.failures) },
         { k: 'Verified', v: `${m.verified}/${m.files}` },
         { k: 'Status', v: m.failures === 0 ? 'OK' : 'REVIEW' },
+      ],
+    },
+    {
+      icon: Database, accent: 'teal', label: 'OSDU manifest', sub: 'govern → ingest → discover',
+      stats: [
+        { k: 'Ready lanes', v: String(osdu?.manifests.filter((x) => x.status === 'ready').length ?? '…') },
+        { k: 'Records', v: osdu ? osdu.manifests.reduce((n, x) => n + x.records, 0).toLocaleString() : '…' },
+        { k: 'Standard', v: osdu?.standard ?? 'OSDU R3' },
       ],
     },
   ];
@@ -67,7 +84,8 @@ export function DataPipeline() {
           })}
         </div>
         <div className="mono" style={{ fontSize: 10, color: 'var(--muted)', marginTop: 12 }}>
-          Deterministic · idempotent · every processed row.source_id resolves to a sha256 in the mirror ledger · {m.source}
+          Deterministic · idempotent · OSDU ACL + LegalTag enforced before manifest ingestion ·
+          {' '}{osdu?.dataDefinitions.release ?? 'M27 / v0.30.0'} · {m.source}
         </div>
       </Panel>
     </div>

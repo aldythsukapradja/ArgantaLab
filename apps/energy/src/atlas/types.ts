@@ -1,9 +1,6 @@
-// atlas/types.ts — the ATLAS master-metadata contract. One typed schema for all world
-// petroleum data: a STRONG canonical spine (entity types) + a metric–dimension fact model,
-// callable + updateable via atlas/spine.ts. Concept: docs/arganta-energy/WORLD-PETROLEUM-
-// CATALOGUE-CONCEPT.md. Names align to OSDU (open, versioned); assessment tier from USGS;
-// well tier from PPDM; resource maturity from SPE-PRMS; fact model from Wood Mackenzie.
-// NOTHING here is field-specific — Volve is one INSTANCE (atlas/volve.ts).
+// atlas/types.ts — supplementary read-model types projected from canonical OSDU records.
+// OSDU owns persisted identity, schema, ACL, LegalTag and lineage. These types provide
+// petroleum navigation, fact dimensions and explicit extensions not covered by OSDU.
 
 /** The three axes that converge at Field + Well. */
 export type Axis = 'geologic' | 'well' | 'commercial';
