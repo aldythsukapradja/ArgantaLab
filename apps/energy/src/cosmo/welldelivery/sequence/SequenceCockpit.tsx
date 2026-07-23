@@ -129,7 +129,7 @@ function OperationsRail({ schedule }: { schedule: DrillingSchedule }) {
         )}
 
         <div className="dai">
-          <div className="hd"><span className="orb" /><span className="ey2">Cosmonaut · read-only</span></div>
+          <div className="hd"><span className="orb" /><span className="ey2">Arganta · read-only</span></div>
           <div className="msg">
             Schedule holds <b>{acts.length} wells</b> across {schedule.rigs.length} rigs · <b>{approved}</b> approved from proposals.
             {nonFid > 0 && <> <span className="risk">{nonFid} non-FID {nonFid === 1 ? 'well needs' : 'wells need'} sanction</span> before their slot.</>}
