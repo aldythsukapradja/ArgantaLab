@@ -219,7 +219,7 @@ export function CosmoShell() {
           </div>
         )}>
           {nav === 'cockpit' ? (
-            <Cockpit onNavigate={(id) => { setNav(id); setTab('map'); closeMobile(); }} />
+            <Cockpit dark={dark} onNavigate={(id) => { setNav(id); setTab('map'); closeMobile(); }} />
           ) : isFD ? (
           <>
             <div className="tabs">

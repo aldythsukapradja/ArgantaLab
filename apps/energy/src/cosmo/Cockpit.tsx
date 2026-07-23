@@ -42,14 +42,14 @@ type AgentDef = {
   icon: typeof Compass;
   color: string;
   state: string;
-  volve: string;
+  proof: string;
   generic: string;
 };
 
 const VOLVE: Place = {
   id: 'volve',
   name: 'Volve',
-  kind: 'Sample field',
+  kind: 'Proof field',
   parent: 'Viking Graben · North Sea · Norway',
   lon: 1.9,
   lat: 58.44,
@@ -58,7 +58,7 @@ const VOLVE: Place = {
 };
 
 const PLACES: Place[] = [
-  { id: 'earth', name: 'Earth', kind: 'Global portfolio', parent: 'USGS world petroleum assessment', lon: 12, lat: 18, zoom: 1.05 },
+  { id: 'earth', name: 'Global Energy Intelligence', kind: 'Global portfolio', parent: 'Basins · assets · wells · decisions', lon: 12, lat: 18, zoom: 1.05 },
   { id: 'norway', name: 'Norway', kind: 'Country', parent: 'Europe', lon: 10.2, lat: 64.4, zoom: 4.8 },
   { id: 'north-sea', name: 'North Sea Graben', kind: 'Basin', parent: 'Europe · offshore', lon: 2.5, lat: 58, zoom: 8 },
   { id: 'viking-graben', name: 'Viking Graben', kind: 'Assessment unit', parent: 'North Sea Graben', lon: 2.2, lat: 59, zoom: 10 },
@@ -75,28 +75,28 @@ const THEMES: Array<{ id: ThemeId; name: string; icon: typeof Globe2 }> = [
 const AGENTS: AgentDef[] = [
   {
     id: 'exploration', name: 'Exploration', short: 'EXP', icon: Compass, color: '#2dd4bf', state: 'BETA',
-    volve: 'Viking Graben analogue support is strong; close the remaining trap-risk evidence.',
-    generic: 'Map basin, play and prospect evidence before the first screening gate.',
+    proof: 'On Volve, analogue evidence and remaining trap risk are already connected to source.',
+    generic: 'Screen basins, plays and prospects with risk, analogue and evidence context already connected.',
   },
   {
     id: 'field-development', name: 'Field Development', short: 'FD', icon: Layers3, color: '#38bdf8', state: 'LIVE',
-    volve: 'Central fault-block connectivity supports the preferred concept; placement confidence is 82%.',
-    generic: 'Connect static model, volumes, concepts and economics into one decision spine.',
+    proof: 'On Volve, fault-block connectivity supports the preferred concept with traceable confidence.',
+    generic: 'Move from static model and volumes to concepts, wells and economics without breaking lineage.',
   },
   {
     id: 'well-delivery', name: 'Well Delivery', short: 'WD', icon: Wrench, color: '#fbbf24', state: 'BETA',
-    volve: 'F-12 clears the depth-uncertainty envelope; the current casing window remains stable.',
-    generic: 'Recognize wells, trajectories, hazards, casing and completion evidence.',
+    proof: 'On Volve, the proposed well clears the depth envelope while the casing window stays stable.',
+    generic: 'Turn approved well intent into trajectory, drilling, completion and readiness decisions.',
   },
   {
     id: 'reservoir-management', name: 'Reservoir Management', short: 'RM', icon: Waves, color: '#a78bfa', state: 'LIVE',
-    volve: 'Water-cut trend leads plan by 4.8%; rebalance injection before the next review.',
-    generic: 'Join surveillance, patterns, forecasts and opportunities around the field.',
+    proof: 'On Volve, the agent detects the water-cut deviation and frames the next intervention.',
+    generic: 'Unify surveillance, forecasting and opportunities around the asset’s live performance.',
   },
   {
     id: 'drilling-sequence', name: 'Drilling', short: 'DRL', icon: Drill, color: '#fb7185', state: 'BETA',
-    volve: 'F-12 → F-14C preserves rig continuity and protects the first-oil logic.',
-    generic: 'Sequence mature well stock against rigs, constraints and value.',
+    proof: 'On Volve, the recommended sequence protects rig continuity and first-oil logic.',
+    generic: 'Sequence mature well stock against rig capacity, constraints, milestones and value.',
   },
 ];
 
@@ -158,6 +158,7 @@ function drawMap(
   theme: ThemeId,
   center: { lon: number; lat: number; zoom: number },
   place: Place,
+  dark: boolean,
 ) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -174,14 +175,14 @@ function drawMap(
   const w = rect.width;
   const h = rect.height;
   const bg = ctx.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, theme === 'subsurface' ? '#090819' : '#06131f');
-  bg.addColorStop(.52, '#071a28');
-  bg.addColorStop(1, theme === 'resource' ? '#171109' : '#06111b');
+  bg.addColorStop(0, dark ? (theme === 'subsurface' ? '#090819' : '#06131f') : (theme === 'subsurface' ? '#f0edff' : '#edf7f6'));
+  bg.addColorStop(.52, dark ? '#071a28' : '#dcebea');
+  bg.addColorStop(1, dark ? (theme === 'resource' ? '#171109' : '#06111b') : (theme === 'resource' ? '#fff5df' : '#f5faf9'));
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
   const seed = 41;
-  ctx.fillStyle = 'rgba(168,220,233,.18)';
+  ctx.fillStyle = dark ? 'rgba(168,220,233,.18)' : 'rgba(37,99,105,.10)';
   for (let i = 0; i < 110; i += 1) {
     const x = ((i * 73 + seed) % 997) / 997 * w;
     const y = ((i * 157 + seed) % 991) / 991 * h;
@@ -200,13 +201,13 @@ function drawMap(
     for (let lon = -180; lon <= 180; lon += center.zoom > 6 ? 5 : 20) {
       const a = project(lon, -86);
       const b = project(lon, 86);
-      ctx.strokeStyle = 'rgba(126,187,205,.09)';
+      ctx.strokeStyle = dark ? 'rgba(126,187,205,.09)' : 'rgba(37,92,99,.10)';
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
     for (let lat = -80; lat <= 80; lat += center.zoom > 6 ? 5 : 20) {
       const a = project(-180, lat);
       const b = project(180, lat);
-      ctx.strokeStyle = 'rgba(126,187,205,.09)';
+      ctx.strokeStyle = dark ? 'rgba(126,187,205,.09)' : 'rgba(37,92,99,.10)';
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
 
@@ -242,7 +243,7 @@ function drawMap(
           const p = project(province.centroid[0], province.centroid[1]);
           if (p.x < -120 || p.x > w + 120 || p.y < -20 || p.y > h + 20) return;
           ctx.font = '600 9px Inter, sans-serif';
-          ctx.fillStyle = 'rgba(222,241,244,.72)';
+          ctx.fillStyle = dark ? 'rgba(222,241,244,.72)' : 'rgba(24,68,75,.72)';
           ctx.textAlign = 'center';
           ctx.fillText(province.name.toUpperCase(), p.x, p.y);
         });
@@ -260,18 +261,18 @@ function drawMap(
 
     if (place.lon !== undefined && place.lat !== undefined) {
       const p = project(place.lon, place.lat);
-      drawMarker(ctx, p.x, p.y, place.name, place.sample);
+      drawMarker(ctx, p.x, p.y, place.name, place.sample, dark);
     }
   } else {
     const radius = Math.min(w * .36, h * .72) * clamp(.82 + center.zoom * .04, .88, 1.16);
     const cx = w * (w < 700 ? .5 : .52);
     const cy = h * .48;
     const ocean = ctx.createRadialGradient(cx - radius * .35, cy - radius * .38, radius * .05, cx, cy, radius);
-    ocean.addColorStop(0, '#1e6d7b');
-    ocean.addColorStop(.48, '#0b3449');
-    ocean.addColorStop(.86, '#061b2b');
-    ocean.addColorStop(1, '#02070d');
-    ctx.shadowColor = theme === 'subsurface' ? 'rgba(167,139,250,.5)' : 'rgba(40,211,190,.42)';
+    ocean.addColorStop(0, dark ? '#1e6d7b' : '#d9f2ef');
+    ocean.addColorStop(.48, dark ? '#0b3449' : '#9bcfce');
+    ocean.addColorStop(.86, dark ? '#061b2b' : '#5e9fa4');
+    ocean.addColorStop(1, dark ? '#02070d' : '#326f79');
+    ctx.shadowColor = theme === 'subsurface' ? 'rgba(167,139,250,.45)' : (dark ? 'rgba(40,211,190,.42)' : 'rgba(22,126,124,.28)');
     ctx.shadowBlur = 42;
     ctx.fillStyle = ocean;
     ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
@@ -303,7 +304,7 @@ function drawMap(
       });
     });
 
-    ctx.strokeStyle = 'rgba(159,226,231,.16)';
+    ctx.strokeStyle = dark ? 'rgba(159,226,231,.16)' : 'rgba(20,82,90,.16)';
     ctx.lineWidth = .7;
     for (let lat = -60; lat <= 60; lat += 30) {
       ctx.beginPath();
@@ -319,11 +320,11 @@ function drawMap(
 
     if (place.lon !== undefined && place.lat !== undefined) {
       const p = projectGlobe(place.lon, place.lat, center.lon, center.lat, cx, cy, radius);
-      if (p.visible) drawMarker(ctx, p.x, p.y, place.name, place.sample);
+      if (p.visible) drawMarker(ctx, p.x, p.y, place.name, place.sample, dark);
     }
     const rim = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
     rim.addColorStop(0, 'rgba(77,220,211,.08)');
-    rim.addColorStop(.52, 'rgba(255,255,255,.22)');
+    rim.addColorStop(.52, dark ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.7)');
     rim.addColorStop(1, 'rgba(15,181,166,.4)');
     ctx.strokeStyle = rim;
     ctx.lineWidth = 1.4;
@@ -337,6 +338,7 @@ function drawMarker(
   y: number,
   label: string,
   sample = false,
+  dark = true,
 ) {
   ctx.save();
   ctx.strokeStyle = 'rgba(45,212,191,.45)';
@@ -350,32 +352,32 @@ function drawMarker(
   ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
   ctx.font = '700 10px Inter, sans-serif';
-  const text = label.toUpperCase() + (sample ? ' · SAMPLE' : '');
+  const text = label.toUpperCase() + (sample ? ' · PROOF' : '');
   const width = ctx.measureText(text).width + 16;
-  ctx.fillStyle = 'rgba(4,17,27,.9)';
+  ctx.fillStyle = dark ? 'rgba(4,17,27,.9)' : 'rgba(255,255,255,.92)';
   ctx.strokeStyle = 'rgba(94,234,212,.45)';
   ctx.beginPath();
   ctx.roundRect(x + 12, y - 15, width, 24, 7);
   ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#dffcf8';
+  ctx.fillStyle = dark ? '#dffcf8' : '#153e46';
   ctx.textAlign = 'left';
   ctx.fillText(text, x + 20, y + 1);
   ctx.restore();
 }
 
-export function Cockpit({ onNavigate }: { onNavigate: (id: string) => void }) {
+export function Cockpit({ dark, onNavigate }: { dark: boolean; onNavigate: (id: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
   const [mode, setMode] = useState<Mode>('3d');
   const [theme, setTheme] = useState<ThemeId>('satellite');
-  const [place, setPlace] = useState<Place>(VOLVE);
+  const [place, setPlace] = useState<Place>(PLACES[0]);
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [provinces, setProvinces] = useState<MapProvince[]>([]);
   const [manifest, setManifest] = useState<WorldManifest | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [camera, setCamera] = useState({ lon: VOLVE.lon!, lat: VOLVE.lat!, zoom: VOLVE.zoom });
+  const [camera, setCamera] = useState({ lon: PLACES[0].lon!, lat: PLACES[0].lat!, zoom: PLACES[0].zoom });
 
   useEffect(() => {
     let active = true;
@@ -399,8 +401,8 @@ export function Cockpit({ onNavigate }: { onNavigate: (id: string) => void }) {
   }, []);
 
   const redraw = useCallback(() => {
-    if (canvasRef.current) drawMap(canvasRef.current, provinces, mode, theme, camera, place);
-  }, [camera, mode, place, provinces, theme]);
+    if (canvasRef.current) drawMap(canvasRef.current, provinces, mode, theme, camera, place, dark);
+  }, [camera, dark, mode, place, provinces, theme]);
 
   useEffect(() => {
     redraw();
@@ -456,9 +458,11 @@ export function Cockpit({ onNavigate }: { onNavigate: (id: string) => void }) {
 
   const isSample = place.sample === true;
   const currentTheme = THEMES.find((item) => item.id === theme)!;
-  const vitals = isSample
-    ? [['12', 'Wells'], ['28.4 MMbbl', 'Produced'], ['4.8%', 'Water-cut lead']]
-    : [[String(manifest?.counts.provinces ?? 179), 'Basins mapped'], [String(manifest?.counts.aus ?? 340), 'Assessment units'], ['READY', 'Private spine']];
+  const vitals = [
+    [String(manifest?.counts.provinces ?? 179), 'Petroleum provinces'],
+    [String(manifest?.counts.aus ?? 340), 'Assessment units'],
+    ['5', 'Lifecycle agents'],
+  ];
 
   return (
     <section className="aeck" aria-label="ArgantaEnergy cockpit">
@@ -491,7 +495,7 @@ export function Cockpit({ onNavigate }: { onNavigate: (id: string) => void }) {
                 <button key={result.id} onClick={() => selectPlace(result)}>
                   <span className="aeck-result-icon">{result.kind === 'Country' ? <Map size={15} /> : result.sample ? <Crosshair size={15} /> : <Globe2 size={15} />}</span>
                   <span><b>{result.name}</b><small>{result.kind} · {result.parent}</small></span>
-                  {result.sample && <em>SAMPLE</em>}
+                  {result.sample && <em>PROOF</em>}
                 </button>
               ))}
               {query.trim() && !results.some((result) => result.name.toLowerCase() === query.trim().toLowerCase()) && (
@@ -525,9 +529,11 @@ export function Cockpit({ onNavigate }: { onNavigate: (id: string) => void }) {
         />
 
         <div className="aeck-context">
-          <span className={isSample ? 'sample' : 'private'}>{isSample ? 'DEMO DATA · VOLVE' : place.kind.toUpperCase()}</span>
-          <h1>{place.name}</h1>
-          <p>{isSample ? 'A sample field proving the workflow. Search or recognize your own asset above.' : place.parent}</p>
+          <span className={isSample ? 'sample' : 'private'}>{isSample ? 'PUBLIC-DATA PROOF · VOLVE' : 'ONE SPATIAL OPERATING PICTURE'}</span>
+          <h1>{isSample ? 'Proof, not the boundary.' : 'See every asset. Ask every lifecycle.'}</h1>
+          <p>{isSample
+            ? 'Volve proves ArgantaEnergy working end to end—from source evidence to lifecycle decisions. Your portfolio belongs here next.'
+            : 'Navigate from global opportunity to field-level evidence in one governed intelligence layer.'}</p>
           <div className="aeck-context-meta">
             <span><Database size={12} />{provinces.length || '—'} provinces</span>
             <span><Activity size={12} />{loadError ? 'Context unavailable' : 'Evidence linked'}</span>
@@ -561,8 +567,8 @@ export function Cockpit({ onNavigate }: { onNavigate: (id: string) => void }) {
       <div className="aeck-agents">
         <div className="aeck-agent-intro">
           <span><Sparkles size={13} />FIVE LIFECYCLE AGENTS</span>
-          <strong>{isSample ? 'What the agents see in Volve' : `Ready for ${place.name}`}</strong>
-          <small>Each insight opens its working surface.</small>
+          <strong>One field of view. Five expert workforces.</strong>
+          <small>{isSample ? 'Volve is the public proof; every agent is built for your portfolio.' : 'Move from spatial context to an accountable decision workspace.'}</small>
         </div>
         <div className="aeck-agent-scroll">
           {AGENTS.map((agent) => (
@@ -572,7 +578,7 @@ export function Cockpit({ onNavigate }: { onNavigate: (id: string) => void }) {
                 <span><b>{agent.name}</b><small>{agent.short} AGENT</small></span>
                 <em>{agent.state}</em>
               </span>
-              <span className="aeck-agent-copy">{isSample ? agent.volve : agent.generic}</span>
+              <span className="aeck-agent-copy">{isSample ? agent.proof : agent.generic}</span>
               <span className="aeck-agent-action">OPEN WORKSPACE <span>↗</span></span>
             </button>
           ))}
