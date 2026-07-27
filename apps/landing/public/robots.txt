@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /legacy/
+Disallow: /settings/access
+
+Sitemap: https://www.arganta.app/sitemap.xml

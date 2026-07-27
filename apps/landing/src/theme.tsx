@@ -16,6 +16,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [dark, setDark] = useState(initial)
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#08080A' : '#F5F5F7')
     try { localStorage.setItem('arganta-theme-2', dark ? 'dark' : 'light') } catch { /* ignore */ }
   }, [dark])
   const api = useMemo<ThemeApi>(() => ({ dark, toggle: () => setDark(d => !d), set: setDark }), [dark])
