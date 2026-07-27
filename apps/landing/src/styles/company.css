@@ -16,6 +16,8 @@
   --shadow-soft: 0 24px 80px rgba(28, 29, 32, .10);
   --shadow-card: 0 16px 48px rgba(28, 29, 32, .07);
   --arganta: #f2b544;
+  --icon-ink: #2d3138;
+  --icon-soft: #7b828e;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
   --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
 }
@@ -37,6 +39,8 @@
   --glass-line: rgba(255, 255, 255, .12);
   --shadow-soft: 0 24px 80px rgba(0, 0, 0, .34);
   --shadow-card: 0 16px 48px rgba(0, 0, 0, .22);
+  --icon-ink: #f2f1ec;
+  --icon-soft: #aeb4c0;
 }
 
 * {
@@ -97,26 +101,27 @@ a:focus-visible {
 .arg-icon {
   display: block;
   overflow: visible;
-  color: var(--ink);
+  color: var(--icon-ink);
+  shape-rendering: geometricPrecision;
 }
 
-.arg-icon .line,
-.arg-icon .soft,
-.arg-icon .hair,
-.arg-icon .accent-line,
-.arg-icon .accent-hair {
+.line,
+.soft,
+.hair,
+.accent-line,
+.accent-hair {
   fill: none;
   vector-effect: non-scaling-stroke;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.arg-icon .line { stroke: currentColor; stroke-width: 3.2; }
-.arg-icon .soft { stroke: currentColor; stroke-width: 2.2; opacity: .3; }
-.arg-icon .hair { stroke: currentColor; stroke-width: 1.55; opacity: .62; }
-.arg-icon .accent-line { stroke: var(--icon-accent); stroke-width: 3.5; }
-.arg-icon .accent-hair { stroke: var(--icon-accent); stroke-width: 1.8; }
-.arg-icon .accent-fill { fill: var(--icon-accent); }
+.line { stroke: var(--icon-ink); stroke-width: 2.5; }
+.soft { stroke: var(--icon-soft); stroke-width: 2.5; }
+.hair { stroke: var(--icon-soft); stroke-width: 1.8; }
+.accent-line { stroke: var(--icon-accent); stroke-width: 3; }
+.accent-hair { stroke: var(--icon-accent); stroke-width: 2; }
+.accent-fill { fill: var(--icon-accent); }
 
 .glass {
   background: var(--glass);
@@ -735,8 +740,8 @@ a:focus-visible {
 
 .device-theatre {
   display: grid;
-  grid-template-columns: minmax(320px, .72fr) minmax(520px, 1.28fr);
-  gap: 40px;
+  grid-template-columns: minmax(340px, .72fr) minmax(0, 1.28fr);
+  gap: 24px;
   min-height: 750px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -812,7 +817,7 @@ a:focus-visible {
   position: relative;
   min-width: 0;
   height: 750px;
-  padding: 60px 28px 28px;
+  padding: 68px 32px 32px;
 }
 
 .frame-toggle {
@@ -860,15 +865,19 @@ a:focus-visible {
 
 .dframe-chrome {
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, .14);
+  border: 0;
   background: #0f1013;
-  box-shadow: 0 38px 90px rgba(0, 0, 0, .28);
+  box-shadow:
+    0 38px 90px rgba(0, 0, 0, .28),
+    inset 0 0 0 1px rgba(0, 0, 0, .14);
 }
 
 .dframe-phone .dframe-chrome {
-  padding: 22px 8px 8px;
-  border: 4px solid #1a1b1f;
+  padding: 8px;
   border-radius: 54px;
+  box-shadow:
+    0 38px 90px rgba(0, 0, 0, .28),
+    inset 0 0 0 4px #1a1b1f;
 }
 
 .dframe-desktop .dframe-chrome {
@@ -882,18 +891,6 @@ a:focus-visible {
 
 .dframe-phone .dframe-vp {
   border-radius: 34px;
-}
-
-.dframe-notch {
-  position: absolute;
-  z-index: 2;
-  top: 10px;
-  left: 50%;
-  width: 105px;
-  height: 26px;
-  border-radius: 16px;
-  background: #09090b;
-  transform: translateX(-50%);
 }
 
 .dframe-bar {
@@ -2506,7 +2503,7 @@ a:focus-visible {
     padding-left: 20px;
   }
   .device-stage {
-    height: 560px;
+    height: 680px;
   }
   .architecture-layer {
     padding: 20px;

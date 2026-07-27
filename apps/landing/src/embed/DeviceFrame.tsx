@@ -12,7 +12,7 @@ const DIMS: Record<Frame, { w: number; h: number }> = {
   desktop: { w: 1280, h: 800 },
 }
 const CHROME: Record<Frame, { padTop: number; padSide: number; padBottom: number }> = {
-  phone: { padTop: 22, padSide: 8, padBottom: 8 },
+  phone: { padTop: 8, padSide: 8, padBottom: 8 },
   desktop: { padTop: 34, padSide: 0, padBottom: 0 },
 }
 
@@ -49,11 +49,10 @@ export function DeviceFrame({ frame, label, children }: { frame: Frame; label?: 
 
   return (
     <div className={`dframe dframe-${frame}`} ref={boxRef}>
-      <div className="dframe-scale" style={{ width: outerW, height: outerH, transform: `scale(${scale})` }}>
+      <div className="dframe-scale" style={{ width: outerW, height: outerH, transform: `translateX(-50%) scale(${scale})` }}>
         <div className="dframe-chrome" style={{ width: outerW, height: outerH }}>
           {frame === 'phone' ? (
             <>
-              <span className="dframe-notch" />
               <div className="dframe-vp" style={{ width: w, height: h }}>{children}</div>
               <span className="dframe-bar" />
             </>
