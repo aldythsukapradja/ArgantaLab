@@ -29,6 +29,7 @@ const { parseIrapAscii, parseZmap, parseXyz, parseEarthVision, detectSurfaceForm
 const { digestText, classify } = await import('../src/dataqc/digest.ts');
 const { qcLog, qcSurface, qcConsistency, gateFor } = await import('../src/dataqc/qc.ts');
 const { assetsToManifest, countRecords } = await import('../src/dataqc/osdu.ts');
+const { buildAudit, wellKey, AUDIT_COLUMNS } = await import('../src/dataqc/audit.ts');
 const { decodeSurface } = await import('../src/engine/gvsurf.ts');
 
 console.log('\n=== Data QC ingestion truth-lock (Volve golden master) ===\n');
@@ -362,6 +363,80 @@ console.log('\n-- 5 · OSDU emit --');
   check('sha256 travels as evidence into OSDU tags', wpc.tags['arganta:sha256'] === 'abc123');
   check('fieldId scopes the record (multi-field guarantee)', wpc.tags['arganta:fieldId'] === 'volve');
   check('WPC ancestry points at its Dataset', wpc.ancestry?.parents?.[0] === m.Data.Datasets[0].id);
+}
+
+// ── 6 · data availability audit ──────────────────────────────────────────────
+console.log('\n-- 6 · data availability audit --');
+{
+  const mkAsset = (id, kind, well, meta = {}, status = 'pass') => ({
+    id, origin: 'bundle', fieldId: 'volve', vertical: 'field-development',
+    kind, format: 'unknown', fileName: `${id}.json`, sha256: '', bytes: 1,
+    meta: { well, ...meta }, qc: { status, exceptions: [] }, uploadedAt: '',
+  });
+
+  const assets = [
+    mkAsset('a-log', 'log', 'F-12', { curves: 6, samples: 1000 }),
+    mkAsset('a-traj', 'trajectory', 'F-12', { records: 212 }),
+    mkAsset('a-prod', 'production', 'F-12', { months: 40, firstMonth: '2008-02', lastMonth: '2011-05', cumInjectedSm3: 0 }),
+    mkAsset('a-log19', 'log', '19 A', { curves: 14, samples: 5000 }),
+    mkAsset('a-inj', 'injection', 'F-4', { months: 30, cumInjectedSm3: 16_240_000 }),
+    // producer that also injects — must light BOTH columns
+    mkAsset('a-both', 'production', 'F-5', { months: 50, cumInjectedSm3: 14_090_000 }),
+    // field-level: no well
+    mkAsset('a-surf', 'surface', null, { ncol: 146, nrow: 113 }),
+  ];
+  // a report carries no meta.well — it reaches its wellbores through the
+  // deterministic entity links, in raw source spelling
+  const doc = mkAsset('a-doc', 'document', null, { title: 'LFP Petrophysics 19A', pages: 12, candidates: 3 });
+  doc.linked = { entities: 2, candidates: 3, matched: ['15/9-19A', '15/9-F-12'] };
+  assets.push(doc);
+
+  const kbIds = ['atlas:wellbore:sodir:f-12', 'atlas:wellbore:sodir:19-a',
+    'atlas:wellbore:sodir:f-4', 'atlas:wellbore:sodir:f-5', 'atlas:wellbore:sodir:f-99'];
+  const picks = new Map([[wellKey('19 A'), 16], [wellKey('F-12'), 4]]);
+
+  const r = buildAudit({ assets, kbWellboreIds: kbIds, picksByWell: picks, picksAssetId: 'a-picks' });
+
+  const byName = (n) => r.wells.find((w) => w.key === wellKey(n));
+  check('audit reports every KB wellbore, not only those with data', r.wellCount === 5, `${r.wellCount} wells`);
+  check('a well with data lights its columns',
+    byName('F-12').cells.log.present && byName('F-12').cells.trajectory.present && byName('F-12').cells.production.present);
+  check('cell detail is measured from the asset', byName('F-12').cells.log.detail === '6 curves · 1,000 samples',
+    byName('F-12').cells.log.detail);
+  check('19 A has logs and picks but NO trajectory (the real Volve gap)',
+    byName('19 A').cells.log.present && byName('19 A').cells.picks.present && !byName('19 A').cells.trajectory.present);
+  check('picks are attributed per well from the delivery-wide asset',
+    byName('19 A').cells.picks.detail === '16 picks', byName('19 A').cells.picks.detail);
+  check('a pure injector fills the injection column, not production',
+    byName('F-4').cells.injection.present && !byName('F-4').cells.production.present);
+  check('a producer that also injects fills BOTH columns',
+    byName('F-5').cells.production.present && byName('F-5').cells.injection.present,
+    byName('F-5').cells.injection.detail);
+  check('a KB wellbore with no data is reported, not omitted',
+    byName('F-99').have === 0 && r.emptyWells.includes('F-99'), r.emptyWells.join(','));
+  check('field-level assets are separated from per-well rows',
+    r.fieldLevel.length === 2 && r.fieldLevel.some((f) => f.kind === 'surface') && r.fieldLevel.some((f) => f.kind === 'document'),
+    r.fieldLevel.map((f) => f.kind).join(','));
+  check('a report with no meta.well still reaches its wellbores via entity links',
+    byName('19 A').cells.document.present && byName('F-12').cells.document.present,
+    byName('19 A').cells.document.detail);
+  check('report entity links in raw spelling ("15/9-19A") resolve to the wellbore',
+    byName('19 A').cells.document.assetId === 'a-doc');
+  check('a report never invents a wellbore that has no row',
+    r.wellCount === 5, `${r.wellCount} wells`);
+  check('coverage counts wells per data type',
+    r.coverage.log === 2 && r.coverage.trajectory === 1 && r.coverage.injection === 2 && r.coverage.document === 2,
+    JSON.stringify(r.coverage));
+  check('rows sort richest-first', r.wells[0].have >= r.wells[r.wells.length - 1].have);
+  check('audit never invents a column', Object.keys(r.wells[0].cells).length === AUDIT_COLUMNS.length);
+
+  // a wellbore carrying data with no KB record is a provenance gap, and must be named
+  const orphan = buildAudit({
+    assets: [mkAsset('a-o', 'trajectory', 'F-15 S', { records: 101 })],
+    kbWellboreIds: ['atlas:wellbore:sodir:f-12'],
+  });
+  check('data with no Master KB wellbore record is flagged, not hidden',
+    orphan.notInKb.includes('F-15 S'), orphan.notInKb.join(','));
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

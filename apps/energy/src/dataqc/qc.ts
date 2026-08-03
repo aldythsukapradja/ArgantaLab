@@ -17,8 +17,11 @@ const DATUM_RX = /\b(TVDSS|TVD|MD|KB|RKB|GL|MSL|SS)\b/i;
 
 /** Depth units we understand. `mm`/`cm` are real and appear in the wild (the Volve
  *  bundle has one well in millimetres) — recognised here, with the genuine hazard,
- *  MIXING units across a delivery, caught by qcConsistency instead. */
-const DEPTH_UNIT_RX = /^(m|mm|cm|km|ft|f|meters?|metres?|feet|foot)$/i;
+ *  MIXING units across a delivery, caught by qcConsistency instead. `<n> in` is a
+ *  real Volve quirk too — DLIS depth channels on roughly half the composite wells
+ *  declare a decimal-fraction-of-an-inch unit (e.g. "0.1 in") for integer-resolution
+ *  encoding; kept in sync with depthToMetres() in ../units.ts. */
+const DEPTH_UNIT_RX = /^(m|mm|cm|km|ft|f|meters?|metres?|feet|foot|[\d.]*\s*in(ch(es)?)?)$/i;
 
 /** Normalised family for cross-asset comparison. */
 export function depthUnitFamily(unit: string): string | null {
@@ -28,6 +31,7 @@ export function depthUnitFamily(unit: string): string | null {
   if (u === 'cm') return 'cm';
   if (u === 'km') return 'km';
   if (/^(ft|f|feet|foot)$/.test(u)) return 'ft';
+  if (/^([\d.]*\s*)?in(ch(es)?)?$/.test(u)) return 'in';
   return null;
 }
 

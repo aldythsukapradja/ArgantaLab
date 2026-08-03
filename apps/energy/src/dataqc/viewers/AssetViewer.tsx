@@ -14,6 +14,7 @@ import { SurfaceViewer } from './SurfaceViewer.tsx';
 import { TrajectoryViewer, type TrajPayload } from './TrajectoryViewer.tsx';
 import { ProductionViewer, type ProdPayload } from './ProductionViewer.tsx';
 import type { DigestedLog, DigestedSurface } from '../types.ts';
+import { buildFluidProfile, type FluidProfile } from '../petro.ts';
 import './viewers.css';
 
 interface PicksPayload { picks: Array<{ well: string | null; surface: string; md: number }> }
@@ -22,6 +23,7 @@ interface DocPayload { doc: { blocks: Array<{ text?: string; locator: string }>;
 export function AssetViewer({ asset, onClose }: { asset: IngestedAsset; onClose: () => void }) {
   const [payload, setPayload] = useState<unknown>(null);
   const [picks, setPicks] = useState<PickMarker[]>([]);
+  const [fluidProfile, setFluidProfile] = useState<FluidProfile | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,6 +66,24 @@ export function AssetViewer({ asset, onClose }: { asset: IngestedAsset; onClose:
     return () => { dead = true; };
   }, [asset, wellName]);
 
+  // trajectory paths color by fluid status — pulled from this well's own log,
+  // the same heuristic LogViewer annotates its tracks with (petro.ts)
+  useEffect(() => {
+    setFluidProfile(null);
+    if (!wellName || asset.kind !== 'trajectory') return;
+    let dead = false;
+    (async () => {
+      const all = await listAssets(asset.fieldId);
+      const norm = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const logAsset = all.find((a) => a.kind === 'log' && a.meta.well && norm(String(a.meta.well)) === norm(wellName));
+      if (!logAsset) return;
+      const log = await readLog(logAsset);
+      if (dead || !log) return;
+      setFluidProfile(buildFluidProfile(log));
+    })();
+    return () => { dead = true; };
+  }, [asset, wellName]);
+
   const body = useMemo(() => {
     if (err) return <div className="dqv-empty">Could not read digest: {err}</div>;
     if (payload == null) return <div className="dqv-empty">Reading digest…</div>;
@@ -74,7 +94,7 @@ export function AssetViewer({ asset, onClose }: { asset: IngestedAsset; onClose:
       case 'surface':
         return <SurfaceViewer surface={payload as DigestedSurface} />;
       case 'trajectory':
-        return <TrajectoryViewer traj={payload as TrajPayload} picks={picks} />;
+        return <TrajectoryViewer traj={payload as TrajPayload} picks={picks} fluidProfile={fluidProfile} />;
       case 'production':
       case 'injection':
         return <ProductionViewer prod={payload as ProdPayload} />;
@@ -124,7 +144,7 @@ export function AssetViewer({ asset, onClose }: { asset: IngestedAsset; onClose:
           </div>
         );
     }
-  }, [payload, err, asset, picks]);
+  }, [payload, err, asset, picks, fluidProfile]);
 
   return (
     <div className="dqv-scrim" onClick={onClose}>

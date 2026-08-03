@@ -27,14 +27,14 @@ export const AGENTS: AgentDef[] = [
     generic: 'Move from static model and volumes to concepts, wells and economics without breaking lineage.',
   },
   {
-    id: 'well-delivery', name: 'Well Delivery', short: 'WD', icon: Wrench, color: '#fbbf24', state: 'BETA',
-    proof: 'On Volve, the proposed well clears the depth envelope while the casing window stays stable.',
-    generic: 'Turn approved well intent into trajectory, drilling, completion and readiness decisions.',
-  },
-  {
     id: 'reservoir-management', name: 'Reservoir Management', short: 'RM', icon: Waves, color: '#a78bfa', state: 'LIVE',
     proof: 'On Volve, the agent detects the water-cut deviation and frames the next intervention.',
     generic: 'Unify surveillance, forecasting and opportunities around the asset’s live performance.',
+  },
+  {
+    id: 'well-delivery', name: 'Well Delivery', short: 'WD', icon: Wrench, color: '#fbbf24', state: 'BETA',
+    proof: 'On Volve, the proposed well clears the depth envelope while the casing window stays stable.',
+    generic: 'Turn approved well intent into trajectory, drilling, completion and readiness decisions.',
   },
   {
     id: 'drilling-sequence', name: 'Drilling', short: 'DRL', icon: Drill, color: '#fb7185', state: 'BETA',

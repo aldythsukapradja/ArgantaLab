@@ -23,8 +23,13 @@ if (!force && existsSync(join(OUT, 'index.json'))) {
   console.log('[wb] index.json exists — skipping (use --force to rebuild)');
   process.exit(0);
 }
-// clean stale outputs (renamed wells / changed selection would otherwise linger)
-rmSync(OUT, { recursive: true, force: true });
+// clean stale outputs (renamed wells / changed selection would otherwise linger).
+// EXCEPT docs/ — those are curated source PDFs that this script does not generate
+// and public/wb is gitignored, so a blind rmSync would destroy them unrecoverably.
+for (const entry of existsSync(OUT) ? readdirSync(OUT) : []) {
+  if (entry === 'docs') continue;
+  rmSync(join(OUT, entry), { recursive: true, force: true });
+}
 mkdirSync(OUT, { recursive: true });
 
 // alias layer (mirror of schema-meta — keep in sync)
@@ -32,6 +37,14 @@ const normWb = (raw) => !raw ? raw : raw.trim()
   .replace(/^NO\s+/i, '').replace(/_/g, '/').replace(/\s+/g, ' ').trim()
   .replace(/^15\/9-/, '').replace(/(F-\d+)([A-Z])\b/g, '$1 $2');
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+// Volve packages some deliverables under a merged wellbore+sidetrack folder
+// ("15_9-19 B&BT2"). Same split rule as scripts/schema-check.mjs — keep in sync.
+const splitAmp = (raw) => {
+  const s = normWb(raw);
+  const m = s.match(/^(.*?\s)([A-Z0-9]+)&([A-Z0-9]+)$/);
+  return m ? [m[1] + m[2], m[1] + m[3]] : [s];
+};
 
 // ── 1 · Horizon grids: parse full .dat clouds → bin to 50 m regular grids ────
 const CELL = 50;
@@ -92,6 +105,19 @@ for (const s of SURFACE_FILES) {
 
 // ── 2 · Wells master + per-well logs / traj / production ─────────────────────
 const wellbores = j(join(P, 'wellbores.json')).wellbores;
+const wbMaster = new Set(wellbores.map((x) => normWb(x.wellbore_name)));
+
+/** Resolve a raw wellbore name to its canonical short form, collapsing a merged
+ *  "B&BT2" folder onto whichever member the wellbore master actually carries
+ *  (for Volve that is the terminal sidetrack — which is also what the LAS inside
+ *  is named, e.g. 15_9-19 B&BT2/06.LFP/159-19BT2_LFP.las). Ambiguous or unknown
+ *  merges keep the merged name so the orphan pass flags them instead of guessing. */
+const resolveWb = (raw) => {
+  const s = normWb(raw);
+  if (!s || !s.includes('&')) return s;
+  const inMaster = splitAmp(s).filter((c) => wbMaster.has(c));
+  return inMaster.length === 1 ? inMaster[0] : s;
+};
 const prod = j(join(P, 'production.json'));
 const prodBy = new Map(prod.wellbore_summary.map((x) => [normWb(x.wellbore), x]));
 
@@ -131,7 +157,7 @@ const logFiles = readdirSync(join(P, 'log-samples'));
 const runsBy = new Map();
 for (const f of logFiles) {
   const meta = j(join(P, 'log-samples', f));
-  const well = normWb(meta.well);
+  const well = resolveWb(meta.well);
   const resolved = resolveCurves(meta);
   const verified = Object.keys(resolved).length;
   if (verified < 3) continue;
@@ -210,17 +236,43 @@ for (const [well, t] of trajBy) {
 }
 
 // wells master (map locations from wellbore masters)
+const hasFor = (c) => ({
+  logs: wellLogInfo.has(c), traj: trajBy.has(c), production: prodBy.has(c),
+  picks: markers.some((m) => normWb(m.source_well) === c),
+});
+const roleFor = (pr) => (!pr ? 'none'
+  : pr.flow_kinds.includes('injection') && pr.flow_kinds.includes('production') ? 'both'
+  : pr.flow_kinds.includes('injection') ? 'injector' : 'producer');
+
 const wells = wellbores.map((wb) => {
   const c = normWb(wb.wellbore_name);
-  const pr = prodBy.get(c);
   return {
     name: c, well: normWb(wb.well_name), x: wb.surface_ew_m ?? null, y: wb.surface_ns_m ?? null,
     td_md: wb.bottom_hole_md_m ?? null, td_tvd: wb.bottom_hole_tvd_m ?? null, kb: wb.kb_msl ?? null,
-    role: !pr ? 'none' : pr.flow_kinds.includes('injection') && pr.flow_kinds.includes('production') ? 'both' : pr.flow_kinds.includes('injection') ? 'injector' : 'producer',
-    has: { logs: wellLogInfo.has(c), traj: trajBy.has(c), production: !!pr, picks: markers.some((m) => normWb(m.source_well) === c) },
+    role: roleFor(prodBy.get(c)),
+    has: hasFor(c),
     is_exploration: /^19/.test(normWb(wb.well_name)),
   };
 });
+
+// Union in wellbores that HAVE data but carry no wellbore-master record. Without
+// this a real sidetrack (Volve's F-15 S has a 101-station survey) is emitted to
+// public/wb but never referenced by index.json, so the app silently never loads
+// it. Flagged `no_master_record` so consumers can see the provenance gap rather
+// than inherit a fabricated master row.
+const known = new Set(wells.map((x) => x.name));
+const orphans = new Set();
+for (const c of trajBy.keys()) if (!known.has(c)) orphans.add(c);
+for (const c of wellLogInfo.keys()) if (!known.has(c)) orphans.add(c);
+for (const c of prodBy.keys()) if (!known.has(c)) orphans.add(c);
+for (const c of [...orphans].sort()) {
+  wells.push({
+    name: c, well: c, x: null, y: null, td_md: null, td_tvd: null, kb: null,
+    role: roleFor(prodBy.get(c)), has: hasFor(c),
+    is_exploration: /^19/.test(c), no_master_record: true,
+  });
+  console.log(`[wb] wellbore "${c}" has data but no wellbore-master record — included, flagged no_master_record`);
+}
 
 // ── 2b · Pattern definitions (Reservoir Management default) ──────────────────
 // Deterministic, user-adjustable default: each injector is associated with its

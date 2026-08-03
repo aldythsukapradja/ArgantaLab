@@ -5,9 +5,11 @@ import { create } from 'zustand';
 
 export type UnitSystem = 'field' | 'metric';
 
-// Sm³-native → target factors
-const SM3_TO_BBL = 6.2898;     // stock-tank m³ → barrels (oil/liquid)
-const SM3_TO_SCF = 35.3147;    // m³ → standard cubic feet (gas)
+// Sm³-native → target factors. Exported so display-only conversions elsewhere
+// (e.g. a chart's own tooltip formatter) reuse the same physical constants
+// instead of redeclaring them.
+export const SM3_TO_BBL = 6.2898;     // stock-tank m³ → barrels (oil/liquid)
+export const SM3_TO_SCF = 35.3147;    // m³ → standard cubic feet (gas)
 const M_TO_FT = 3.28084;
 const BAR_TO_PSI = 14.5038;
 
@@ -86,6 +88,13 @@ export function depthToMetres(value: number, sourceUnit: string): number | null 
   if (u === 'cm') return value / 100;
   if (u === 'km') return value * 1000;
   if (/^(ft|f|feet|foot)$/.test(u)) return value / M_TO_FT;
+  // DLIS depth channels are sometimes encoded in a decimal fraction of an inch
+  // (e.g. "0.1 in" — a real Volve quirk, ~half the composite DLIS wells declare
+  // this) so the channel can stay integer-resolution; the leading number is the
+  // fraction-of-an-inch per raw unit.
+  const inMatch = u.match(/^([\d.]+)\s*in(ch(es)?)?$/);
+  if (inMatch) return value * Number(inMatch[1]) * 0.0254;
+  if (/^in(ch(es)?)?$/.test(u)) return value * 0.0254;
   return null;
 }
 /** DEPTH / length: m → ft (field) or m (metric). */

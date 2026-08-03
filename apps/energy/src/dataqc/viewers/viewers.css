@@ -25,6 +25,35 @@ html[data-ui="cosmo"] .dqv-log{flex:1;min-height:0;display:flex;flex-direction:c
 html[data-ui="cosmo"] .dqv-curves{display:flex;flex-wrap:wrap;gap:5px;padding:9px 14px;border-bottom:1px solid var(--line);flex-shrink:0}
 html[data-ui="cosmo"] .dqv-curve{font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--ink3);cursor:pointer}
 html[data-ui="cosmo"] .dqv-curve.on{background:var(--panel)}
+html[data-ui="cosmo"] .dqv-flag-legend{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;color:var(--ink3);margin-left:auto}
+html[data-ui="cosmo"] .dqv-flag-legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+html[data-ui="cosmo"] .dqv-flag-legend em{font-style:normal;color:var(--ink3);opacity:.7;margin-left:4px}
+html[data-ui="cosmo"] .dqv-zoom-bar{display:flex;align-items:center;gap:5px;padding:6px 14px;border-bottom:1px solid var(--line);flex-shrink:0}
+html[data-ui="cosmo"] .dqv-zoom-bar button{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:9.5px;font-weight:600;padding:4px 7px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .dqv-zoom-bar button:hover:not(:disabled){color:var(--ink);border-color:var(--ink3)}
+html[data-ui="cosmo"] .dqv-zoom-bar button:disabled{opacity:.4;cursor:default}
+html[data-ui="cosmo"] .dqv-zoom-range{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .dqv-log .dqv-canvas-wrap canvas{cursor:grab;touch-action:none}
+html[data-ui="cosmo"] .dqv-log .dqv-canvas-wrap canvas:active{cursor:grabbing}
+html[data-ui="cosmo"] .dqv-track-headers{display:flex;border-bottom:1px solid var(--line);flex-shrink:0;background:var(--panel)}
+html[data-ui="cosmo"] .dqv-track-hdr{position:relative;padding:6px 6px 5px;border-left:1px solid var(--line2);min-width:0}
+html[data-ui="cosmo"] .dqv-track-title{display:block;width:100%;text-align:left;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .dqv-track-title:hover{color:var(--teal-ink)}
+html[data-ui="cosmo"] .dqv-track-range{display:block;font-family:var(--mono);font-size:9px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .dqv-scaleedit{position:absolute;top:calc(100% + 4px);left:0;z-index:25;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-lg);padding:8px;display:flex;flex-direction:column;gap:6px;width:150px}
+html[data-ui="cosmo"] .dqv-scaleedit label{display:flex;align-items:center;justify-content:space-between;gap:6px;font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .dqv-scaleedit input{width:64px;font-family:var(--mono);font-size:10.5px;padding:3px 5px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+html[data-ui="cosmo"] .dqv-scaleedit button{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;color:var(--teal-ink);background:var(--teal-soft);border:1px solid var(--teal);border-radius:6px;padding:4px 6px;cursor:pointer;justify-content:center}
+html[data-ui="cosmo"] .dqv-log-tip{position:absolute;z-index:15;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-lg);padding:7px 10px;pointer-events:none;display:flex;flex-direction:column;gap:2px;min-width:120px}
+html[data-ui="cosmo"] .dqv-log-tip b{font-family:var(--mono);font-size:10px;color:var(--ink);margin-bottom:2px}
+html[data-ui="cosmo"] .dqv-log-tip span{display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .dqv-log-tip span em{font-style:normal;color:var(--ink2);font-weight:600}
+html[data-ui="cosmo"] .dqv-log-tip-tags{display:flex;gap:4px;margin-top:4px}
+html[data-ui="cosmo"] .dqv-tag{font-style:normal;font-family:var(--mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:4px}
+html[data-ui="cosmo"] .dqv-tag.litho-sand{background:rgba(220,174,85,.22);color:#b98a2e}
+html[data-ui="cosmo"] .dqv-tag.litho-shale{background:rgba(92,103,116,.25);color:#5c6774}
+html[data-ui="cosmo"] .dqv-tag.fluid-gas{background:rgba(226,75,74,.18);color:#e24b4a}
+html[data-ui="cosmo"] .dqv-tag.fluid-oil{background:rgba(22,128,90,.18);color:#16805a}
 
 /* surface */
 html[data-ui="cosmo"] .dqv-surface,html[data-ui="cosmo"] .dqv-2d,html[data-ui="cosmo"] .dqv-3d,
@@ -39,6 +68,20 @@ html[data-ui="cosmo"] .dqv-legend i{width:16px;height:9px;border-radius:2px;disp
 /* production totals */
 html[data-ui="cosmo"] .dqv-totals{display:flex;gap:16px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--line);font-size:11px;color:var(--ink3);flex-shrink:0}
 html[data-ui="cosmo"] .dqv-totals b{color:var(--ink);font-family:var(--mono);font-weight:600;margin-left:4px}
+
+/* production chart — interactive D3 SVG */
+html[data-ui="cosmo"] .dqv-prod-svg{display:block;cursor:grab;touch-action:none}
+html[data-ui="cosmo"] .dqv-prod-svg:active{cursor:grabbing}
+html[data-ui="cosmo"] .dqv-axis-zero{stroke:var(--line);stroke-width:1}
+html[data-ui="cosmo"] .dqv-axis .domain{stroke:var(--line)}
+html[data-ui="cosmo"] .dqv-axis .tick line{stroke:var(--line);opacity:.6}
+html[data-ui="cosmo"] .dqv-axis .tick text{fill:var(--ink3);font-family:var(--mono);font-size:9.5px}
+html[data-ui="cosmo"] .dqv-axis-label{fill:var(--ink3);font-family:var(--mono);font-size:9.5px;letter-spacing:.03em}
+html[data-ui="cosmo"] .dqv-hover-line{stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3;pointer-events:none}
+html[data-ui="cosmo"] .dqv-prod-tip{position:absolute;z-index:10;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-lg);padding:8px 10px;pointer-events:none;display:flex;flex-direction:column;gap:3px;min-width:150px}
+html[data-ui="cosmo"] .dqv-prod-tip b{font-family:var(--mono);font-size:10px;color:var(--ink);margin-bottom:2px}
+html[data-ui="cosmo"] .dqv-prod-tip span{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--ink2)}
+html[data-ui="cosmo"] .dqv-prod-tip i{width:9px;height:9px;border-radius:2px;display:inline-block;flex-shrink:0}
 
 /* document */
 html[data-ui="cosmo"] .dqv-doc{flex:1;min-height:0;display:flex;flex-direction:column}

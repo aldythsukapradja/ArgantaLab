@@ -9,9 +9,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   UploadCloud, FileText, Waves, Layers, Trash2, ShieldCheck, ShieldAlert,
   ShieldQuestion, Database, Image as ImageIcon, Activity, GitBranch, Link2,
-  Droplets, Eye,
+  Droplets, Eye, Info,
 } from 'lucide-react';
 import { AssetViewer } from './viewers/AssetViewer.tsx';
+import { AuditView } from './AuditView.tsx';
 import './dataqc.css';
 import { ingestFile } from './ingest.ts';
 import { bundleFor, digestBundleItem, planBundle } from './bundle.ts';
@@ -43,11 +44,12 @@ export function DataQc({ fieldId, fieldName, vertical, dataMode = 'reference' }:
   const [busy, setBusy] = useState<string[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [over, setOver] = useState(false);
-  const [view, setView] = useState<'qc' | 'osdu'>('qc');
+  const [view, setView] = useState<'qc' | 'audit' | 'osdu'>('qc');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState<{ done: number; total: number; label: string } | null>(null);
   const [kind, setKind] = useState<AssetKind | 'all'>('all');
   const [viewing, setViewing] = useState<string | null>(null);
+  const [showDeliveryQc, setShowDeliveryQc] = useState(false);
   const [kb, setKb] = useState<KbContext | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { system } = useUnits();
@@ -177,80 +179,50 @@ export function DataQc({ fieldId, fieldName, vertical, dataMode = 'reference' }:
         <span className="dqc-spacer" />
         <span className="dqc-mode">
           <button className={view === 'qc' ? 'on' : ''} onClick={() => setView('qc')}>QC</button>
+          <button className={view === 'audit' ? 'on' : ''} onClick={() => setView('audit')}>AUDIT</button>
           <button className={view === 'osdu' ? 'on' : ''} onClick={() => setView('osdu')}>OSDU</button>
         </span>
       </div>
 
       <div className="dqc-body">
         <div className="dqc-main">
-          <div
-            className={'dqc-drop' + (over ? ' over' : '')}
-            onClick={() => inputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setOver(true); }}
-            onDragLeave={() => setOver(false)}
-            onDrop={(e) => { e.preventDefault(); setOver(false); void handleFiles(e.dataTransfer.files); }}
-          >
-            <div className="dqc-drop-ic"><UploadCloud size={15} /></div>
-            <b>
-              {loading ? `Digesting ${loading.label} — ${loading.done}/${loading.total}`
-                : busy.length ? `Ingesting ${busy.length} file${busy.length === 1 ? '' : 's'}…`
-                : `Drop data for ${fieldName}`}
-            </b>
-            <span>LAS · CSV · EarthVision · IRAP · ZMAP+ · XYZ · PDF · DOCX · XLSX</span>
-            {loading && (
-              <span className="dqc-prog"><i style={{ width: `${(loading.done / Math.max(1, loading.total)) * 100}%` }} /></span>
-            )}
-            <input
-              ref={inputRef} type="file" multiple hidden
-              accept=".las,.dat,.xyz,.irap,.gri,.grd,.asc,.zmap,.csv,.txt,.pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg"
-              onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
-            />
-          </div>
-
-          {err && <div className="dqc-exc fail" style={{ marginTop: 10 }}><div className="dqc-exc-msg">{err}</div></div>}
-
-          <div className="dqc-pipe">
-            {PIPELINE_STAGES.map((s, i) => {
-              const done =
-                s.id === 'raw' ? assets.length > 0
-                : s.id === 'digested' ? totals.digested > 0
-                : s.id === 'compressed' ? totals.comp > 0
-                : s.id === 'linked' ? assets.some((a) => (a.linked?.entities ?? 0) > 0)
-                : manifest != null;
-              const value =
-                s.id === 'raw' ? `${assets.length} file${assets.length === 1 ? '' : 's'} · ${KB(totals.raw)}`
-                : s.id === 'digested' ? `${totals.digested} parsed`
-                : s.id === 'compressed' ? (totals.comp ? `${KB(totals.comp)} · ${(totals.raw / Math.max(1, totals.comp)).toFixed(1)}×` : '—')
-                : s.id === 'linked' ? (() => {
-                    const docs = assets.filter((a) => a.kind === 'document');
-                    const ents = docs.reduce((n, a) => n + (a.linked?.entities ?? 0), 0);
-                    const cands = docs.reduce((n, a) => n + (a.linked?.candidates ?? 0), 0);
-                    return docs.length ? `${docs.length} docs · ${ents} entities · ${cands} candidates` : '—';
-                  })()
-                : manifest ? `${countRecords(manifest)} records` : '—';
-              return (
-                <div key={s.id} className={'dqc-stage' + (done ? ' done' : '')}>
-                  <div className="dqc-stage-n">{String(i + 1).padStart(2, '0')}</div>
-                  <div className="dqc-stage-l">{s.label}</div>
-                  <div className="dqc-stage-h">{s.hint}</div>
-                  <div className="dqc-stage-v">{value}</div>
-                </div>
-              );
-            })}
-          </div>
-
-          {view === 'osdu' ? (
-            <>
-              <div className="dqc-h">OSDU manifest · client lane</div>
-              {manifest
-                ? <div className="dqc-osdu">{JSON.stringify(manifest, null, 1).slice(0, 6000)}</div>
-                : <div className="dqc-empty">Ingest a file to emit governed OSDU records.</div>}
-            </>
-          ) : (
-            <>
-              {deliveryExceptions.length > 0 && (
-                <>
-                  <div className="dqc-h">Delivery-level QC · {deliveryExceptions.length}</div>
+          <div className="dqc-main-fixed">
+            <div className="dqc-drop-wrap">
+              <div
+                className={'dqc-drop' + (over ? ' over' : '')}
+                onClick={() => inputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+                onDragLeave={() => setOver(false)}
+                onDrop={(e) => { e.preventDefault(); setOver(false); void handleFiles(e.dataTransfer.files); }}
+              >
+                <div className="dqc-drop-ic"><UploadCloud size={15} /></div>
+                <b>
+                  {loading ? `Digesting ${loading.label} — ${loading.done}/${loading.total}`
+                    : busy.length ? `Ingesting ${busy.length} file${busy.length === 1 ? '' : 's'}…`
+                    : `Drop data for ${fieldName}`}
+                </b>
+                {deliveryExceptions.length > 0 && (
+                  <button
+                    className={'dqc-info-btn' + (showDeliveryQc ? ' on' : '')}
+                    title={`${deliveryExceptions.length} delivery-level QC exception${deliveryExceptions.length === 1 ? '' : 's'}`}
+                    onClick={(e) => { e.stopPropagation(); setShowDeliveryQc((v) => !v); }}
+                  >
+                    <Info size={12} /> {deliveryExceptions.length}
+                  </button>
+                )}
+                <span>LAS · CSV · EarthVision · IRAP · ZMAP+ · XYZ · PDF · DOCX · XLSX</span>
+                {loading && (
+                  <span className="dqc-prog"><i style={{ width: `${(loading.done / Math.max(1, loading.total)) * 100}%` }} /></span>
+                )}
+                <input
+                  ref={inputRef} type="file" multiple hidden
+                  accept=".las,.dat,.xyz,.irap,.gri,.grd,.asc,.zmap,.csv,.txt,.pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg"
+                  onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
+                />
+              </div>
+              {showDeliveryQc && deliveryExceptions.length > 0 && (
+                <div className="dqc-info-pop" onClick={(e) => e.stopPropagation()}>
+                  <div className="dqc-h" style={{ marginTop: 0 }}>Delivery-level QC · {deliveryExceptions.length}</div>
                   {deliveryExceptions.map((e, i) => (
                     <div key={i} className={`dqc-exc ${e.severity}`}>
                       <div className="dqc-exc-top">
@@ -262,25 +234,79 @@ export function DataQc({ fieldId, fieldName, vertical, dataMode = 'reference' }:
                       {e.detail && <div className="dqc-exc-msg" style={{ opacity: 0.75 }}>{e.detail}</div>}
                     </div>
                   ))}
-                </>
-              )}
-              <div className="dqc-h">
-                Delivery inventory · {assets.length}
-                {assets.some((a) => a.origin === 'bundle') && ` · ${assets.filter((a) => a.origin === 'bundle').length} from reference package`}
-              </div>
-
-              {groups.length > 1 && (
-                <div className="dqc-groups">
-                  <button className={'dqc-grp' + (kind === 'all' ? ' on' : '')} onClick={() => setKind('all')}>
-                    All <b>{assets.length}</b>
-                  </button>
-                  {groups.map(([k, g]) => (
-                    <button key={k} className={'dqc-grp' + (kind === k ? ' on' : '') + ` s-${g.worst}`} onClick={() => setKind(k)}>
-                      {k} <b>{g.n}</b>
-                    </button>
-                  ))}
                 </div>
               )}
+            </div>
+
+            {err && <div className="dqc-exc fail" style={{ marginTop: 10 }}><div className="dqc-exc-msg">{err}</div></div>}
+
+            <div className="dqc-pipe">
+              {PIPELINE_STAGES.map((s, i) => {
+                const done =
+                  s.id === 'raw' ? assets.length > 0
+                  : s.id === 'digested' ? totals.digested > 0
+                  : s.id === 'compressed' ? totals.comp > 0
+                  : s.id === 'linked' ? assets.some((a) => (a.linked?.entities ?? 0) > 0)
+                  : manifest != null;
+                const value =
+                  s.id === 'raw' ? `${assets.length} file${assets.length === 1 ? '' : 's'} · ${KB(totals.raw)}`
+                  : s.id === 'digested' ? `${totals.digested} parsed`
+                  : s.id === 'compressed' ? (totals.comp ? `${KB(totals.comp)} · ${(totals.raw / Math.max(1, totals.comp)).toFixed(1)}×` : '—')
+                  : s.id === 'linked' ? (() => {
+                      const docs = assets.filter((a) => a.kind === 'document');
+                      const ents = docs.reduce((n, a) => n + (a.linked?.entities ?? 0), 0);
+                      const cands = docs.reduce((n, a) => n + (a.linked?.candidates ?? 0), 0);
+                      return docs.length ? `${docs.length} docs · ${ents} entities · ${cands} candidates` : '—';
+                    })()
+                  : manifest ? `${countRecords(manifest)} records` : '—';
+                return (
+                  <div key={s.id} className={'dqc-stage' + (done ? ' done' : '')}>
+                    <div className="dqc-stage-n">{String(i + 1).padStart(2, '0')}</div>
+                    <div className="dqc-stage-l">{s.label}</div>
+                    <div className="dqc-stage-h">{s.hint}</div>
+                    <div className="dqc-stage-v">{value}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {view === 'osdu' ? (
+              <div className="dqc-h">OSDU manifest · client lane</div>
+            ) : view === 'audit' ? (
+              <div className="dqc-h">
+                Data availability · which wellbore carries which data
+              </div>
+            ) : (
+              <>
+                <div className="dqc-h">
+                  Delivery inventory · {assets.length}
+                  {assets.some((a) => a.origin === 'bundle') && ` · ${assets.filter((a) => a.origin === 'bundle').length} from reference package`}
+                </div>
+                {groups.length > 1 && (
+                  <div className="dqc-groups">
+                    <button className={'dqc-grp' + (kind === 'all' ? ' on' : '')} onClick={() => setKind('all')}>
+                      All <b>{assets.length}</b>
+                    </button>
+                    {groups.map(([k, g]) => (
+                      <button key={k} className={'dqc-grp' + (kind === k ? ' on' : '') + ` s-${g.worst}`} onClick={() => setKind(k)}>
+                        {k} <b>{g.n}</b>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="dqc-main-scroll">
+          {view === 'osdu' ? (
+            manifest
+              ? <div className="dqc-osdu">{JSON.stringify(manifest, null, 1).slice(0, 6000)}</div>
+              : <div className="dqc-empty">Ingest a file to emit governed OSDU records.</div>
+          ) : view === 'audit' ? (
+            <AuditView assets={assets} kb={kb} onOpen={setViewing} />
+          ) : (
+            <>
               {assets.length === 0 && !loading && (
                 <div className="dqc-empty">No client data yet. This field runs on catalogue and analog data.</div>
               )}
@@ -321,6 +347,7 @@ export function DataQc({ fieldId, fieldName, vertical, dataMode = 'reference' }:
               })}
             </>
           )}
+          </div>
         </div>
 
         <aside className="dqc-side">

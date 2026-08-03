@@ -20,10 +20,15 @@ html[data-ui="cosmo"] .dqc-mode button.on{background:var(--teal-soft);color:var(
 /* body: drop + inventory | detail */
 html[data-ui="cosmo"] .dqc-body{flex:1;display:grid;grid-template-columns:1fr 340px;min-height:0}
 @media (max-width:1100px){html[data-ui="cosmo"] .dqc-body{grid-template-columns:1fr}}
-html[data-ui="cosmo"] .dqc-main{overflow-y:auto;min-height:0;padding:14px 16px}
+/* .dqc-main splits into a fixed top (drop bar, pipeline, inventory header + group
+   pills) and a scrollable list — only the asset rows scroll. */
+html[data-ui="cosmo"] .dqc-main{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+html[data-ui="cosmo"] .dqc-main-fixed{flex-shrink:0;padding:14px 16px 0}
+html[data-ui="cosmo"] .dqc-main-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 16px 14px}
 html[data-ui="cosmo"] .dqc-side{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;min-height:0;padding:12px}
 
 /* drop zone — a slim bar, not a hero panel. It is an affordance, not the content. */
+html[data-ui="cosmo"] .dqc-drop-wrap{position:relative}
 html[data-ui="cosmo"] .dqc-drop{display:flex;align-items:center;gap:10px;position:relative;border:1px dashed var(--line);border-radius:10px;background:var(--panel2);padding:9px 12px;cursor:pointer;transition:border-color .14s,background .14s;overflow:hidden}
 html[data-ui="cosmo"] .dqc-drop:hover,html[data-ui="cosmo"] .dqc-drop.over{border-color:var(--teal);background:var(--teal-soft)}
 html[data-ui="cosmo"] .dqc-drop-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);color:var(--teal-ink);flex-shrink:0}
@@ -31,6 +36,12 @@ html[data-ui="cosmo"] .dqc-drop b{font-size:12px;color:var(--ink);font-weight:60
 html[data-ui="cosmo"] .dqc-drop span{font-family:var(--mono);font-size:9.5px;color:var(--ink3);margin-left:auto;text-align:right}
 html[data-ui="cosmo"] .dqc-prog{position:absolute;left:0;right:0;bottom:0;height:2px;background:transparent;margin:0}
 html[data-ui="cosmo"] .dqc-prog i{display:block;height:100%;background:var(--teal);transition:width .2s}
+
+/* the "i)" delivery-QC indicator — lives ON the drop bar, opens a popover instead
+   of permanently occupying vertical space with a full exception list */
+html[data-ui="cosmo"] .dqc-info-btn{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid rgba(245,158,11,.42);background:rgba(245,158,11,.15);color:var(--amber);cursor:pointer;flex-shrink:0}
+html[data-ui="cosmo"] .dqc-info-btn.on{background:var(--amber);color:var(--panel);border-color:var(--amber)}
+html[data-ui="cosmo"] .dqc-info-pop{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);padding:10px 12px;max-height:280px;overflow-y:auto}
 
 /* pipeline ribbon — dense, one row, real stage state (never a fake progress bar) */
 html[data-ui="cosmo"] .dqc-pipe{display:flex;align-items:stretch;gap:6px;margin:10px 0;flex-wrap:wrap}
@@ -89,5 +100,48 @@ html[data-ui="cosmo"] .dqc-empty{text-align:center;padding:26px 14px;color:var(-
 
 /* OSDU preview */
 html[data-ui="cosmo"] .dqc-osdu{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--ink2);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto;white-space:pre;max-height:260px;overflow-y:auto}
+
+/* data availability audit */
+html[data-ui="cosmo"] .dqa{display:flex;flex-direction:column;gap:10px}
+html[data-ui="cosmo"] .dqa-cov{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px}
+html[data-ui="cosmo"] .dqa-cov-cell{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:3px}
+html[data-ui="cosmo"] .dqa-cov-l{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .dqa-cov-v{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--ink);line-height:1}
+html[data-ui="cosmo"] .dqa-cov-v i{font-style:normal;font-size:10px;font-weight:500;color:var(--ink3)}
+html[data-ui="cosmo"] .dqa-cov-bar{display:block;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+html[data-ui="cosmo"] .dqa-cov-bar i{display:block;height:100%;background:var(--teal);border-radius:2px}
+
+html[data-ui="cosmo"] .dqa-tablewrap{border:1px solid var(--line);border-radius:10px;overflow:auto}
+html[data-ui="cosmo"] .dqa-table{width:100%;border-collapse:collapse;font-size:11px}
+html[data-ui="cosmo"] .dqa-table th{position:sticky;top:0;z-index:2;background:var(--panel);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);white-space:nowrap}
+html[data-ui="cosmo"] .dqa-table td{padding:0;border-bottom:1px solid var(--line2);vertical-align:middle}
+html[data-ui="cosmo"] .dqa-table tr:last-child td{border-bottom:none}
+html[data-ui="cosmo"] .dqa-table tr.dqa-none{background:rgba(148,163,184,.07)}
+html[data-ui="cosmo"] .dqa-wcol{position:sticky;left:0;z-index:1;background:var(--panel);padding:6px 10px!important;white-space:nowrap}
+html[data-ui="cosmo"] .dqa-table tr.dqa-none .dqa-wcol{background:var(--panel2)}
+html[data-ui="cosmo"] .dqa-wname{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink)}
+html[data-ui="cosmo"] .dqa-tag{display:inline-block;margin-left:6px;font-family:var(--mono);font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:4px;background:rgba(245,158,11,.16);color:var(--amber)}
+html[data-ui="cosmo"] .dqa-cell{text-align:center}
+html[data-ui="cosmo"] .dqa-cell.absent{color:var(--ink3);opacity:.4;padding:6px 8px!important}
+html[data-ui="cosmo"] .dqa-cell.present button{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;padding:6px 8px;border:none;background:none;cursor:pointer;font-family:var(--mono);font-size:9.5px;color:var(--teal-ink);white-space:nowrap}
+html[data-ui="cosmo"] .dqa-cell.present button:disabled{cursor:default}
+html[data-ui="cosmo"] .dqa-cell.present button:hover:not(:disabled){background:var(--teal-soft)}
+html[data-ui="cosmo"] .dqa-cell.present.s-warn button{color:var(--amber)}
+html[data-ui="cosmo"] .dqa-cell.present.s-fail button{color:var(--red,#e24b4a)}
+html[data-ui="cosmo"] .dqa-score{text-align:right;padding:6px 10px!important;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink2);white-space:nowrap}
+html[data-ui="cosmo"] .dqa-score i{font-style:normal;font-weight:500;color:var(--ink3)}
+
+html[data-ui="cosmo"] .dqa-note{display:flex;align-items:flex-start;gap:7px;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;color:var(--ink2)}
+html[data-ui="cosmo"] .dqa-note.warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35)}
+html[data-ui="cosmo"] .dqa-note svg{flex-shrink:0;margin-top:2px;color:var(--amber)}
+html[data-ui="cosmo"] .dqa-note b{color:var(--ink)}
+
+html[data-ui="cosmo"] .dqa-field{display:flex;flex-wrap:wrap;gap:5px}
+html[data-ui="cosmo"] .dqa-fitem{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;text-align:left}
+html[data-ui="cosmo"] .dqa-fitem:hover{border-color:var(--teal);background:var(--teal-soft)}
+html[data-ui="cosmo"] .dqa-fitem.s-warn{border-color:rgba(245,158,11,.4)}
+html[data-ui="cosmo"] .dqa-fkind{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--teal-ink)}
+html[data-ui="cosmo"] .dqa-fname{font-size:11px;color:var(--ink);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .dqa-fdetail{font-family:var(--mono);font-size:9px;color:var(--ink3)}
 
 @media (prefers-reduced-motion:reduce){html[data-ui="cosmo"] .dqc-drop,html[data-ui="cosmo"] .dqc-row{transition:none}}
