@@ -11,6 +11,7 @@ import {
   ShieldQuestion, Database, Image as ImageIcon, Activity, GitBranch, Link2,
   Droplets, Eye, Info,
 } from 'lucide-react';
+import { ExtractionGate } from './ExtractionGate.tsx';
 import { AssetViewer } from './viewers/AssetViewer.tsx';
 import { AuditView } from './AuditView.tsx';
 import './dataqc.css';
@@ -426,6 +427,8 @@ export function DataQc({ fieldId, fieldName, vertical, dataMode = 'reference' }:
               <div className="dqc-kv"><span>mode</span><span>{effectiveMode}</span></div>
               <div className="dqc-kv"><span>vertical</span><span>{vertical}</span></div>
               <div className="dqc-kv"><span>units</span><span>{system}</span></div>
+
+              <ExtractionGate assets={assets} />
 
               {kb?.field && (
                 <>

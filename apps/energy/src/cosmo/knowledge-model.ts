@@ -13,7 +13,10 @@ import { attributionFor, figuresForGeodynamics } from '../tabs/exploration/basin
 export type KType =
   | 'field' | 'reservoir' | 'formation' | 'well' | 'petrophysics'
   | 'domain' | 'lifecycle' | 'output' | 'standard' | 'analog' | 'concept' | 'decision'
-  | 'basin' | 'basin-cycle';
+  | 'basin' | 'basin-cycle'
+  // document-derived, accepted through the Extraction Studio review gate. Kept as
+  // its own type so reviewed prose is never mistaken for a measured/generated node.
+  | 'extracted';
 export type EdgeKind = 'contextualizes' | 'consumes' | 'produces' | 'covers' | 'evidences' | 'relates' | 'decides' | 'applies';
 export type DataNature = 'measured' | 'interpreted' | 'derived' | 'reference';
 
@@ -30,13 +33,13 @@ export const TYPE_COLOR: Record<KType, string> = {
   field: '#0FB5A6', reservoir: '#7c3aed', formation: '#8b5cf6', well: '#e11d74',
   petrophysics: '#22d3ee', domain: '#10b981', lifecycle: '#f59e0b', output: '#2563eb',
   standard: '#0a8a7f', analog: '#06b6d4', concept: '#64748b', decision: '#dc2626',
-  basin: '#b45309', 'basin-cycle': '#ca8a04',
+  basin: '#b45309', 'basin-cycle': '#ca8a04', extracted: '#0ea5e9',
 };
 export const TYPE_LABEL: Record<KType, string> = {
   field: 'Field', reservoir: 'Reservoir', formation: 'Formation', well: 'Well',
   petrophysics: 'Petrophysics', domain: 'Data domain', lifecycle: 'Lifecycle', output: 'Output',
   standard: 'Standard', analog: 'Analog', concept: 'Concept', decision: 'Decision',
-  basin: 'Basin', 'basin-cycle': 'Basin cycle',
+  basin: 'Basin', 'basin-cycle': 'Basin cycle', extracted: 'Extracted',
 };
 
 const wl = (t: string) => `[[${t}]]`;
@@ -583,5 +586,58 @@ export function buildLinkIndex(nodes: KNode[]): LinkIndex {
 export const FOLDER_ORDER = [
   '01_Fields', '02_Formations', '03_Wells', '04_Petrophysics', '05_Data',
   '06_Lifecycles', '07_Outputs', '08_Standards', '09_Concepts', '10_Analogs', '11_Decisions',
-  '12_Basins', '13_Cycles',
+  '12_Basins', '13_Cycles', '14_Extracted',
 ];
+
+// ── Extraction Studio bridge ─────────────────────────────────────────────────
+// Accepted candidates live in the vault user layer (VaultNote), while Explorer and
+// Graph render KNodes. This adapter is the last mile of the Data QC → Knowledge
+// chain: reviewed document knowledge becomes a first-class, navigable node.
+//
+// Edges are resolved by ENTITY NAME against node titles and aliases, because the
+// vault's own note ids and the graph's ids are different id spaces. An entity that
+// resolves to nothing produces no edge — the note still appears, unlinked, rather
+// than being dropped or attached to something it does not evidence.
+import type { VaultNote } from '../knowledge/types';
+
+const normEntity = (s: string) => s.trim().toLowerCase()
+  .replace(/^no\s+/, '').replace(/_/g, '/').replace(/^15\/9-/, '')
+  .replace(/[^a-z0-9]+/g, '');
+
+export function extractedGraph(notes: VaultNote[], base: KGraph): { nodes: KNode[]; edges: KEdge[] } {
+  const accepted = notes.filter((n) => n.gen === 'extract');
+  if (!accepted.length) return { nodes: [], edges: [] };
+
+  // title + alias lookup over the generated graph, for name-based edge resolution
+  const byName = new Map<string, string>();
+  for (const n of base.nodes) {
+    byName.set(normEntity(n.title), n.id);
+    for (const a of n.aliases ?? []) byName.set(normEntity(a), n.id);
+  }
+
+  const nodes: KNode[] = [];
+  const edges: KEdge[] = [];
+  for (const n of accepted) {
+    nodes.push({
+      id: n.id,
+      type: 'extracted',
+      title: n.title,
+      folder: '14_Extracted',
+      tags: n.tags,
+      body: n.body_md,
+      meta: n.evidence[0] ?? 'reviewed extraction',
+      // the vault's DataNature carries 'reported', which this graph's narrower
+      // vocabulary lacks; a document-sourced note is 'reference' here, and the
+      // exact original nature stays on the note body + evidence anchor
+      provenance: n.dataNature === 'measured' || n.dataNature === 'interpreted' || n.dataNature === 'derived'
+        ? n.dataNature : 'reference',
+      source: n.evidence[0],
+    });
+    // [[Wikilinks]] in the accepted body name the entities the reviewer saw
+    for (const m of n.body_md.matchAll(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g)) {
+      const target = byName.get(normEntity(m[1]));
+      if (target && target !== n.id) edges.push({ from: n.id, to: target, kind: 'evidences' });
+    }
+  }
+  return { nodes, edges };
+}

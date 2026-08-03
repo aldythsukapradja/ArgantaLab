@@ -101,6 +101,11 @@ html[data-ui="cosmo"] .dqc-empty{text-align:center;padding:26px 14px;color:var(-
 /* OSDU preview */
 html[data-ui="cosmo"] .dqc-osdu{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--ink2);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto;white-space:pre;max-height:260px;overflow-y:auto}
 
+/* extraction gate mirror (read-only; the Studio owns the state) */
+html[data-ui="cosmo"] .dqc-gate-link{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;margin-top:8px;padding:7px;border-radius:8px;border:1px solid var(--teal);background:var(--teal-soft);color:var(--teal-ink);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer}
+html[data-ui="cosmo"] .dqc-gate-link:hover{background:var(--teal);color:var(--panel)}
+html[data-ui="cosmo"] .dqc-gate-note{margin-top:5px;font-size:10px;line-height:1.5;color:var(--ink3)}
+
 /* data availability audit */
 html[data-ui="cosmo"] .dqa{display:flex;flex-direction:column;gap:10px}
 html[data-ui="cosmo"] .dqa-cov{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px}

@@ -439,5 +439,52 @@ console.log('\n-- 6 · data availability audit --');
     orphan.notInKb.includes('F-15 S'), orphan.notInKb.join(','));
 }
 
+// ── 7 · extraction review ledger ─────────────────────────────────────────────
+console.log('\n-- 7 · extraction review ledger --');
+{
+  // the ledger persists to localStorage in the browser; in Node we drive the pure
+  // functions directly and stub the global so save/load are no-ops rather than throws
+  globalThis.localStorage ??= {
+    _s: new Map(),
+    getItem(k) { return this._s.has(k) ? this._s.get(k) : null; },
+    setItem(k, v) { this._s.set(k, String(v)); },
+  };
+  const { applyReviews, recordReview, tally } = await import('../src/knowledge/review.ts');
+
+  const cands = [
+    { candId: 'xc-d1-0', docId: 'd1', locator: 'page 1', kind: 'note', title: 'A', matchedEntities: [], status: 'proposed' },
+    { candId: 'xc-d1-1', docId: 'd1', locator: 'page 2', kind: 'note', title: 'B', matchedEntities: [], status: 'proposed' },
+    { candId: 'xc-d2-0', docId: 'd2', locator: 'page 1', kind: 'claim', title: 'C', matchedEntities: [], status: 'proposed' },
+  ];
+
+  check('a fresh queue is all pending', tally(cands).pending === 3);
+
+  let ledger = {};
+  ledger = recordReview(ledger, 'xc-d1-0', 'accepted', '2026-08-03T00:00:00Z');
+  ledger = recordReview(ledger, 'xc-d2-0', 'rejected', '2026-08-03T00:01:00Z');
+
+  const replayed = applyReviews(cands, ledger);
+  check('an accept replays onto the same candidate',
+    replayed.find((c) => c.candId === 'xc-d1-0').status === 'accepted');
+  check('a REJECT survives too — the reason the ledger exists',
+    replayed.find((c) => c.candId === 'xc-d2-0').status === 'rejected');
+  check('an unreviewed candidate stays proposed',
+    replayed.find((c) => c.candId === 'xc-d1-1').status === 'proposed');
+  check('replay never mutates the source candidates', cands.every((c) => c.status === 'proposed'));
+
+  const t = tally(replayed);
+  check('tally splits accepted / rejected / pending',
+    t.total === 3 && t.accepted === 1 && t.rejected === 1 && t.pending === 1, JSON.stringify(t));
+
+  // candIds are deterministic (xc-<docId>-<n>), so a verdict from an earlier
+  // session still lands on the right candidate after a re-extraction
+  const reExtracted = cands.map((c) => ({ ...c, title: c.title + ' (re-run)' }));
+  check('verdicts survive a re-extraction of the same document',
+    tally(applyReviews(reExtracted, ledger)).pending === 1);
+
+  check('a verdict for an unknown candidate is ignored, not crashed',
+    tally(applyReviews(cands, { 'xc-gone-9': { verdict: 'accepted', at: 'x' } })).pending === 3);
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

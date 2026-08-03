@@ -42,6 +42,12 @@ interface AppState {
   toggleCosmo: (v?: boolean) => void;
   openNote: (id: string) => void;       // cross-surface: graph → explorer
   addUserNote: (n: VaultNote) => void;  // extraction accept → vault
+  /** One-shot cross-surface navigation request. CosmoShell owns `nav` as local
+   *  state, so a deeply-nested surface (e.g. the Data QC extraction gate mirror)
+   *  cannot route directly — it posts an intent here and the shell consumes it. */
+  navIntent: { nav: string; sub?: string } | null;
+  requestNav: (nav: string, sub?: string) => void;
+  consumeNavIntent: () => void;
 }
 
 // Land on Data·Overview (real content) rather than Core (placeholder for now).
@@ -71,6 +77,9 @@ export const useStore = create<AppState>((set, get) => ({
     saveUserNotes(next);
     set({ userNotes: next });
   },
+  navIntent: null,
+  requestNav: (nav, sub) => set({ navIntent: { nav, sub } }),
+  consumeNavIntent: () => set({ navIntent: null }),
 }));
 
 // Apply the initial theme attribute at module load (before first paint).

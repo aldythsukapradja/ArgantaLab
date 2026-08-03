@@ -19,6 +19,7 @@ import { CosmoAgentOrb } from './CosmoAgentOrb';
 import { CosmoSettings } from './CosmoSettings';
 import { CosmoChat } from './CosmoChat';
 import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
+import { useStore } from '../store';
 import { useSession as useFieldcraftSession } from '../fieldcraft/session';
 import { Cockpit } from './Cockpit';
 
@@ -98,6 +99,11 @@ export function CosmoShell() {
   }, [dark]);
 
   const [nav, setNav] = useState('cockpit');
+  // A nested surface can ask to route elsewhere (Data QC's extraction gate mirror →
+  // Knowledge → Extraction Studio). We apply the surface here and leave the intent
+  // standing so the destination can read its own sub-tab, then clear it.
+  const navIntent = useStore((s) => s.navIntent);
+  useEffect(() => { if (navIntent) setNav(navIntent.nav); }, [navIntent]);
   // Field Development now owns its own tab/scope state internally (FieldDevShell).
   // What's left here is just the guided-tour bridge into its parked Legacy (v1)
   // view — CosmoChat drives Legacy directly, bumping the nonce to force it open

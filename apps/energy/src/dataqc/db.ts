@@ -67,6 +67,17 @@ export function listAssets(fieldId: string): Promise<IngestedAsset[]> {
   }));
 }
 
+/** Every asset across every field. The Extraction Studio is a Knowledge-surface
+ *  view, not a field workspace — it reviews the whole delivery history. */
+export function listAllAssets(): Promise<IngestedAsset[]> {
+  return open().then((db) => new Promise<IngestedAsset[]>((resolve, reject) => {
+    const t = db.transaction(ASSETS, 'readonly');
+    const req = t.objectStore(ASSETS).getAll();
+    req.onsuccess = () => resolve((req.result as IngestedAsset[]) ?? []);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
 export async function removeAsset(id: string): Promise<void> {
   const a = await getAsset(id);
   if (a) {

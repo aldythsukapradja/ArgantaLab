@@ -8,16 +8,18 @@ import {
   forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, forceX, forceY, forceRadial,
   type Simulation,
 } from 'd3-force';
-import { BookOpen, Search, ChevronRight, Sparkles, Orbit, Grid2x2, CircleDot, Focus, RotateCcw, Maximize, Download, FolderDown } from 'lucide-react';
+import { BookOpen, Search, ChevronRight, Sparkles, Orbit, Grid2x2, CircleDot, Focus, RotateCcw, Maximize, Download, FolderDown, FlaskConical } from 'lucide-react';
 import './knowledge-cosmo.css';
+import { ExtractionStudio } from './ExtractionStudio';
 import { downloadNote, exportVault } from './note-export';
 import { loadIndex } from '../wb/load';
 import type { WbIndex } from '../wb/types';
 import {
-  buildGraph, buildLinkIndex, volveSeed, TYPE_COLOR, TYPE_LABEL, FOLDER_ORDER,
+  buildGraph, buildLinkIndex, volveSeed, extractedGraph, TYPE_COLOR, TYPE_LABEL, FOLDER_ORDER,
   type KNode, type KType, type KGraph, type LinkIndex,
 } from './knowledge-model';
 import { IntelligenceHeader, IntelligenceSurface, IntelligenceTabs } from './IntelligenceChrome';
+import { useStore } from '../store';
 
 // ── note markdown → HTML with clickable [[wikilinks]] ─────────────────────────
 function noteHtml(md: string) {
@@ -289,10 +291,29 @@ function Explorer({ graph, index, sel, setSel }: { graph: KGraph; index: LinkInd
 // ── shell ────────────────────────────────────────────────────────────────────
 export function KnowledgeView() {
   const [idx, setIdx] = useState<WbIndex | null>(null);
-  const [sub, setSub] = useState<'explorer' | 'graph'>('explorer');
+  const [sub, setSub] = useState<'explorer' | 'graph' | 'extraction'>('explorer');
+  // arriving from another surface (e.g. Data QC's extraction gate) — honour the
+  // requested sub-tab once, then clear so it can't hijack later navigation
+  const navIntent = useStore((s) => s.navIntent);
+  const consumeNavIntent = useStore((s) => s.consumeNavIntent);
+  useEffect(() => {
+    if (navIntent?.nav !== 'knowledge') return;
+    if (navIntent.sub === 'explorer' || navIntent.sub === 'graph' || navIntent.sub === 'extraction') setSub(navIntent.sub);
+    consumeNavIntent();
+  }, [navIntent, consumeNavIntent]);
   const [sel, setSel] = useState<string | null>('field:volve');
   useEffect(() => { loadIndex().then(setIdx).catch(() => setIdx(null)); }, []);
-  const graph = useMemo<KGraph | null>(() => (idx ? buildGraph([volveSeed(idx)]) : null), [idx]);
+  // accepted extractions join the graph as first-class nodes, so knowledge reviewed
+  // in the Studio is immediately navigable in Explorer and Graph
+  const userNotes = useStore((s) => s.userNotes);
+  const graph = useMemo<KGraph | null>(() => {
+    if (!idx) return null;
+    const base = buildGraph([volveSeed(idx)]);
+    const ext = extractedGraph(userNotes, base);
+    return ext.nodes.length
+      ? { nodes: [...base.nodes, ...ext.nodes], edges: [...base.edges, ...ext.edges] }
+      : base;
+  }, [idx, userNotes]);
   const index = useMemo<LinkIndex | null>(() => (graph ? buildLinkIndex(graph.nodes) : null), [graph]);
 
   return (
@@ -301,9 +322,16 @@ export function KnowledgeView() {
         status={<div className="kb-prov"><Search size={11} /> CONNECTED TWIN · data ↔ knowledge · scalable multi-field</div>}
         actions={graph ? <button className="kb-dl kb-export" onClick={() => exportVault(graph.nodes)} title="Download the whole vault as an Obsidian ZIP"><FolderDown size={14} /> Export Vault (.zip)</button> : undefined} />
       <IntelligenceTabs active={sub} onChange={setSub} ariaLabel="Knowledge views" items={[
-        { id: 'explorer', label: 'Explorer', icon: BookOpen }, { id: 'graph', label: 'Graph & Timeline', icon: Orbit },
+        { id: 'explorer', label: 'Explorer', icon: BookOpen },
+        { id: 'graph', label: 'Graph & Timeline', icon: Orbit },
+        { id: 'extraction', label: 'Extraction Studio', icon: FlaskConical },
       ]} />
-      {graph && index ? (sub === 'explorer' ? <Explorer graph={graph} index={index} sel={sel} setSel={setSel} /> : <KnowledgeGraph graph={graph} index={index} sel={sel} setSel={setSel} />)
+      {/* the Studio owns its own sources (Data QC digests + uploads) — it does not
+          depend on the Volve graph, so it must not wait on it */}
+      {sub === 'extraction' ? <ExtractionStudio />
+        : graph && index ? (sub === 'explorer'
+          ? <Explorer graph={graph} index={index} sel={sel} setSel={setSel} />
+          : <KnowledgeGraph graph={graph} index={index} sel={sel} setSel={setSel} />)
         : <div className="kb-empty" style={{ padding: 40 }}>Loading Volve knowledge graph…</div>}
     </IntelligenceSurface>
   );
