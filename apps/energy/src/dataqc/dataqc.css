@@ -1,0 +1,93 @@
+/* Data QC — the platform's client-data interface. Shared by every lifecycle tab.
+   COSMO tokens only, scoped under html[data-ui="cosmo"]; both themes. */
+
+html[data-ui="cosmo"] .dqc{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+
+/* gate banner */
+html[data-ui="cosmo"] .dqc-gate{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap}
+html[data-ui="cosmo"] .dqc-gate-badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:5px 11px;border-radius:20px;text-transform:uppercase;white-space:nowrap}
+html[data-ui="cosmo"] .dqc-gate-badge.passed,
+html[data-ui="cosmo"] .dqc-gate-badge.ready{background:rgba(16,185,129,.14);color:var(--green);border:1px solid rgba(16,185,129,.4)}
+html[data-ui="cosmo"] .dqc-gate-badge.blocked{background:rgba(239,68,68,.13);color:var(--red);border:1px solid rgba(239,68,68,.4)}
+html[data-ui="cosmo"] .dqc-gate-badge.incomplete{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.42)}
+html[data-ui="cosmo"] .dqc-gate-badge.not-required{background:var(--panel2);color:var(--ink3);border:1px solid var(--line)}
+html[data-ui="cosmo"] .dqc-gate-reason{font-size:11.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .dqc-spacer{flex:1}
+html[data-ui="cosmo"] .dqc-mode{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+html[data-ui="cosmo"] .dqc-mode button{padding:5px 11px;font-size:10.5px;font-family:var(--mono);font-weight:600;color:var(--ink3);background:var(--panel2);border:none;cursor:pointer}
+html[data-ui="cosmo"] .dqc-mode button.on{background:var(--teal-soft);color:var(--teal-ink)}
+
+/* body: drop + inventory | detail */
+html[data-ui="cosmo"] .dqc-body{flex:1;display:grid;grid-template-columns:1fr 340px;min-height:0}
+@media (max-width:1100px){html[data-ui="cosmo"] .dqc-body{grid-template-columns:1fr}}
+html[data-ui="cosmo"] .dqc-main{overflow-y:auto;min-height:0;padding:14px 16px}
+html[data-ui="cosmo"] .dqc-side{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;min-height:0;padding:12px}
+
+/* drop zone — a slim bar, not a hero panel. It is an affordance, not the content. */
+html[data-ui="cosmo"] .dqc-drop{display:flex;align-items:center;gap:10px;position:relative;border:1px dashed var(--line);border-radius:10px;background:var(--panel2);padding:9px 12px;cursor:pointer;transition:border-color .14s,background .14s;overflow:hidden}
+html[data-ui="cosmo"] .dqc-drop:hover,html[data-ui="cosmo"] .dqc-drop.over{border-color:var(--teal);background:var(--teal-soft)}
+html[data-ui="cosmo"] .dqc-drop-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);color:var(--teal-ink);flex-shrink:0}
+html[data-ui="cosmo"] .dqc-drop b{font-size:12px;color:var(--ink);font-weight:600;white-space:nowrap}
+html[data-ui="cosmo"] .dqc-drop span{font-family:var(--mono);font-size:9.5px;color:var(--ink3);margin-left:auto;text-align:right}
+html[data-ui="cosmo"] .dqc-prog{position:absolute;left:0;right:0;bottom:0;height:2px;background:transparent;margin:0}
+html[data-ui="cosmo"] .dqc-prog i{display:block;height:100%;background:var(--teal);transition:width .2s}
+
+/* pipeline ribbon — dense, one row, real stage state (never a fake progress bar) */
+html[data-ui="cosmo"] .dqc-pipe{display:flex;align-items:stretch;gap:6px;margin:10px 0;flex-wrap:wrap}
+html[data-ui="cosmo"] .dqc-stage{flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:var(--panel2)}
+html[data-ui="cosmo"] .dqc-stage.done{border-color:var(--teal);background:var(--teal-soft)}
+html[data-ui="cosmo"] .dqc-stage-n{font-family:var(--mono);font-size:8.5px;color:var(--ink3);letter-spacing:.08em}
+html[data-ui="cosmo"] .dqc-stage-l{font-size:11.5px;font-weight:600;color:var(--ink);margin-top:1px}
+html[data-ui="cosmo"] .dqc-stage.done .dqc-stage-l{color:var(--teal-ink)}
+html[data-ui="cosmo"] .dqc-stage-h{display:none}
+html[data-ui="cosmo"] .dqc-stage-v{font-family:var(--mono);font-size:10.5px;color:var(--ink2);margin-top:3px}
+
+/* row viewer affordance */
+html[data-ui="cosmo"] .dqc-view{color:var(--ink3);padding:4px;border-radius:6px;flex-shrink:0}
+html[data-ui="cosmo"] .dqc-view:hover{color:var(--teal-ink);background:var(--teal-soft)}
+
+/* group / filter chips — one per asset class, so QC can be done a class at a time */
+html[data-ui="cosmo"] .dqc-groups{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 10px}
+html[data-ui="cosmo"] .dqc-grp{font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;padding:5px 10px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--ink3);cursor:pointer;transition:.14s;display:inline-flex;align-items:center;gap:5px}
+html[data-ui="cosmo"] .dqc-grp:hover{border-color:var(--teal);color:var(--ink)}
+html[data-ui="cosmo"] .dqc-grp.on{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .dqc-grp b{font-weight:700;opacity:.75}
+/* a dot carries the worst QC status inside that class */
+html[data-ui="cosmo"] .dqc-grp.s-warn::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--amber)}
+html[data-ui="cosmo"] .dqc-grp.s-fail::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--red)}
+
+/* asset table */
+html[data-ui="cosmo"] .dqc-h{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin:16px 0 8px}
+html[data-ui="cosmo"] .dqc-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer;background:var(--panel);transition:border-color .12s}
+html[data-ui="cosmo"] .dqc-row:hover{border-color:var(--teal)}
+html[data-ui="cosmo"] .dqc-row.sel{border-color:var(--teal);background:var(--teal-soft)}
+html[data-ui="cosmo"] .dqc-row-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--panel2);color:var(--ink3);flex-shrink:0}
+html[data-ui="cosmo"] .dqc-row-main{flex:1;min-width:0}
+html[data-ui="cosmo"] .dqc-row-name{font-size:12.5px;color:var(--ink);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .dqc-row-meta{font-size:10.5px;color:var(--ink3);margin-top:1px}
+html[data-ui="cosmo"] .dqc-pill{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+html[data-ui="cosmo"] .dqc-pill.pass{background:rgba(16,185,129,.14);color:var(--green)}
+html[data-ui="cosmo"] .dqc-pill.warn{background:rgba(245,158,11,.16);color:var(--amber)}
+html[data-ui="cosmo"] .dqc-pill.fail{background:rgba(239,68,68,.14);color:var(--red)}
+html[data-ui="cosmo"] .dqc-del{color:var(--ink3);padding:4px;border-radius:6px;flex-shrink:0}
+html[data-ui="cosmo"] .dqc-del:hover{color:var(--red);background:var(--panel2)}
+
+/* detail side */
+html[data-ui="cosmo"] .dqc-kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line2);font-size:11.5px}
+html[data-ui="cosmo"] .dqc-kv:last-child{border-bottom:none}
+html[data-ui="cosmo"] .dqc-kv span:first-child{color:var(--ink3)}
+html[data-ui="cosmo"] .dqc-kv span:last-child{color:var(--ink);font-family:var(--mono);text-align:right;word-break:break-word}
+html[data-ui="cosmo"] .dqc-exc{border-left:3px solid var(--line);padding:7px 10px;margin-bottom:6px;border-radius:0 8px 8px 0;background:var(--panel2)}
+html[data-ui="cosmo"] .dqc-exc.fail{border-left-color:var(--red)}
+html[data-ui="cosmo"] .dqc-exc.warn{border-left-color:var(--amber)}
+html[data-ui="cosmo"] .dqc-exc.info{border-left-color:var(--ink3)}
+html[data-ui="cosmo"] .dqc-exc-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+html[data-ui="cosmo"] .dqc-exc-rule{font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .dqc-exc-msg{font-size:11.5px;color:var(--ink2);margin-top:2px;line-height:1.5}
+html[data-ui="cosmo"] .dqc-exc-loc{font-family:var(--mono);font-size:9.5px;color:var(--teal-ink);margin-top:3px}
+html[data-ui="cosmo"] .dqc-empty{text-align:center;padding:26px 14px;color:var(--ink3);font-size:11.5px;line-height:1.6}
+
+/* OSDU preview */
+html[data-ui="cosmo"] .dqc-osdu{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--ink2);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto;white-space:pre;max-height:260px;overflow-y:auto}
+
+@media (prefers-reduced-motion:reduce){html[data-ui="cosmo"] .dqc-drop,html[data-ui="cosmo"] .dqc-row{transition:none}}

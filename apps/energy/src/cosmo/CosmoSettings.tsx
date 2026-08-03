@@ -3,8 +3,9 @@
 // Light/Dark selector · density · motion), FOUNDATION (governed workspace). Theme mode
 // drives the shell's dark state; the Designer Studio embeds the verbatim data: URL app.
 import { useState } from 'react';
-import { Settings, X, Palette, Sun, Moon, Rows3, Sparkles, Shield, Minimize2 } from 'lucide-react';
+import { Settings, X, Palette, Sun, Moon, Rows3, Sparkles, Shield, Minimize2, Ruler } from 'lucide-react';
 import { DESIGNER_STUDIO_URL } from './designer-studio-url';
+import { useUnits, unitConventions, systemLabel } from '../units';
 
 export function CosmoSettings({ open, onClose, dark, setDark }: {
   open: boolean; onClose: () => void; dark: boolean; setDark: (v: boolean) => void;
@@ -12,6 +13,9 @@ export function CosmoSettings({ open, onClose, dark, setDark }: {
   const [designer, setDesigner] = useState(false);
   const [density, setDensity] = useState('comfortable');
   const [motion, setMotion] = useState(true);
+  // Units are a PROJECT setting, not a per-surface toggle — one store, whole app.
+  const { system, setSystem } = useUnits();
+  const conv = unitConventions(system);
   const closeAll = () => { setDesigner(false); onClose(); };
 
   return (
@@ -29,6 +33,28 @@ export function CosmoSettings({ open, onClose, dark, setDark }: {
               <span className="si"><Palette size={15} /></span>
               <div><div className="st">Designer Studio</div><div className="sd">Themes, components, canvas spine and knowledge studio</div></div>
               <button className="newbtn" onClick={() => setDesigner(true)}>Open Designer</button>
+            </div>
+
+            <div className="set-sec">PROJECT UNITS</div>
+            <div className="set-row">
+              <span className="si"><Ruler size={15} /></span>
+              <div>
+                <div className="st">Unit system</div>
+                <div className="sd">Applies app-wide. Data is stored metric-native; this converts for display only.</div>
+              </div>
+              <div className="sc segsm">
+                <b className={system === 'field' ? 'on' : ''} onClick={() => setSystem('field')}>Field</b>
+                <b className={system === 'metric' ? 'on' : ''} onClick={() => setSystem('metric')}>Metric</b>
+              </div>
+            </div>
+            <div className="set-row">
+              <span className="si" style={{ opacity: 0.5 }}><Ruler size={15} /></span>
+              <div>
+                <div className="st">{systemLabel(system)}</div>
+                <div className="sd">
+                  depth <b>{conv.depth}</b> · oil <b>{conv.oil}</b> · gas <b>{conv.gas}</b> · rate <b>{conv.rate}</b> · pressure <b>{conv.pressure}</b>
+                </div>
+              </div>
             </div>
 
             <div className="set-sec">APPEARANCE</div>

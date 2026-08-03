@@ -42,3 +42,101 @@ html[data-ui="cosmo"] .surface-error-btn{
   padding:8px 16px;border-radius:9px;cursor:pointer;color:#fff;background:var(--teal);border:0;
 }
 html[data-ui="cosmo"] .surface-error-btn:hover{filter:brightness(1.06)}
+
+/* Mobile surfaces are viewport-contained, but their content must remain a native
+   vertical scroll surface. The generated shell intentionally locks desktop
+   overflow, so mobile ownership lives here. */
+@media(max-width:820px){
+  html[data-ui="cosmo"] .main{
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
+  }
+  html[data-ui="cosmo"] .main>.fds-shell,
+  html[data-ui="cosmo"] .main>.exs-shell,
+  html[data-ui="cosmo"] .main>.wds-shell,
+  html[data-ui="cosmo"] .main>.rms-shell,
+  html[data-ui="cosmo"] .main>.drs-shell{
+    height:auto!important;
+    min-height:100%!important;
+    overflow:visible!important;
+    padding-bottom:calc(var(--mnav-h) + env(safe-area-inset-bottom) + 12px);
+  }
+
+  /* All lifecycle scope controls use one compact row on phones. */
+  html[data-ui="cosmo"] :is(.fds-bar,.exs-bar,.wds-bar,.rms-bar,.drs-bar){
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    gap:6px!important;
+    min-width:0;
+    padding:6px 8px!important;
+  }
+  html[data-ui="cosmo"] :is(.fds-bar-label,.exs-bar-label,.wds-bar-label,.rms-bar-label,.drs-bar-label),
+  html[data-ui="cosmo"] :is(.fds-legacy-btn,.exs-legacy-btn,.wds-legacy-btn,.rms-legacy,.drs-legacy-btn),
+  html[data-ui="cosmo"] :is(.fds-scope-spacer,.exs-spacer,.wds-spacer,.rms-spacer,.drs-spacer),
+  html[data-ui="cosmo"] .fds-persp-auto{
+    display:none!important;
+  }
+  html[data-ui="cosmo"] :is(.fds-scope-btn,.exs-scope-btn,.wds-scope-btn,.rms-scope,.drs-scope-btn){
+    display:inline-flex!important;
+    flex:0 1 44%;
+    min-width:0;
+    max-width:44%;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  html[data-ui="cosmo"] :is(.fds-crumb,.exs-crumb,.wds-crumb,.rms-scope,.drs-crumb){
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  html[data-ui="cosmo"] :is(.fds-search,.exs-search,.wds-search,.rms-search,.drs-search){
+    order:initial!important;
+    flex:1 1 0!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+  html[data-ui="cosmo"] :is(.fds-search-results,.exs-search-results,.wds-search-results,.rms-results,.drs-search-results){
+    min-width:0!important;
+    width:min(340px,calc(100vw - 16px));
+    max-width:calc(100vw - 16px);
+  }
+
+  /* Dashboards become document-flow stacks on phones so no evidence is clipped. */
+  html[data-ui="cosmo"] :is(.fds-kb-dashboard,.wds-kb-dashboard,.rms-kb,.drs-kb-dashboard){
+    flex:0 0 auto!important;
+    height:auto!important;
+    min-height:0!important;
+    overflow:visible!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:none!important;
+    grid-auto-rows:auto!important;
+  }
+  html[data-ui="cosmo"] :is(.fds-kb-dashboard,.wds-kb-dashboard,.rms-kb,.drs-kb-dashboard)>*{
+    grid-column:1!important;
+    grid-row:auto!important;
+    min-height:240px;
+  }
+  html[data-ui="cosmo"] :is(.fds-body,.exs-body,.wds-workspace,.rms-workspace,.drs-workspace){
+    flex:0 0 auto!important;
+    height:auto!important;
+    min-height:520px!important;
+  }
+
+  /* Knowledge had no compact breakpoint; make its three panes a readable stack. */
+  html[data-ui="cosmo"] .knowledge-surface .kb-explorer{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    height:auto;
+    overflow:visible;
+  }
+  html[data-ui="cosmo"] .knowledge-surface .kb-tree{flex:0 0 auto;max-height:260px;border-right:0;border-bottom:1px solid var(--line)}
+  html[data-ui="cosmo"] .knowledge-surface .kb-center{min-height:360px;overflow:visible;padding:16px}
+  html[data-ui="cosmo"] .knowledge-surface .kb-ctx{min-height:220px;overflow:visible;border-left:0;border-top:1px solid var(--line)}
+  html[data-ui="cosmo"] .knowledge-surface .kb-graph{flex:0 0 auto;min-height:620px}
+}

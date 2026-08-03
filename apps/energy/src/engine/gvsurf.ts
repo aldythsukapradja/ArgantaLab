@@ -8,8 +8,10 @@
 // Decode is O(1) per node; render-time LOD (§rebuild in the viewer) caps the mesh
 // at ~180² regardless of source resolution. Decimation changes DISPLAY density
 // only — the GVSURF stays the authoritative grid for calculations.
-// Isomorphic (Node + browser); pako for gzip, atob/btoa for base64.
-import pako from 'pako';
+// Isomorphic (Node + browser); fflate for gzip, atob/btoa for base64.
+// (fflate is a declared dependency — pako was imported transitively and undeclared,
+//  which would break on a clean install.)
+import { gzipSync, gunzipSync } from 'fflate';
 
 export const NULLV = -32768;   // Int16 sentinel for no-data (outside the ±30000 value range)
 
@@ -79,11 +81,50 @@ export function evToGVSURF(name: string, text: string, quant = 0.1, down = 1, ki
   // affine folds the ingest stride so world coords reconstruct from the DOWNSAMPLED index
   const x0 = ax[0] + ax[1] + ax[2], xc = ax[1] * down, xr = ax[2] * down;
   const y0 = ay[0] + ay[1] + ay[2], yc = ay[1] * down, yr = ay[2] * down;
-  const gz = pako.gzip(new Uint8Array(grid.buffer), { level: 9 });
+  const gz = gzipSync(new Uint8Array(grid.buffer), { level: 9 });
   return {
     format: 'GVSURF', version: 2, name, ncol, nrow, down,
     affine: { x0: +x0.toFixed(4), xc: +xc.toFixed(6), xr: +xr.toFixed(6), y0: +y0.toFixed(4), yc: +yc.toFixed(6), yr: +yr.toFixed(6) },
     z_units: P.meta.z_units, xy_units: 'meters', surface_type: kind,
+    z_offset: offset, z_scale: +scale.toFixed(5), z_null: NULLV, encoding: 'int16-gzip-base64-rowmajor', z: toB64(gz),
+  };
+}
+
+/** Any regular grid → GVSURF. Used by the Data QC ingest path so IRAP/ZMAP/XYZ
+ *  surfaces compress through the same codec as EarthVision. `values` is row-major,
+ *  NaN = no data. `affine` maps (col,row) → world (x,y). */
+export function gridToGVSURF(
+  name: string,
+  values: ArrayLike<number>,
+  ncol: number,
+  nrow: number,
+  affine: Affine,
+  opts: { quant?: number; kind?: string; zUnits?: string } = {},
+): GvSurf {
+  const quant = opts.quant ?? 0.1;
+  const kind = opts.kind ?? 'depth';
+  let zmin = Infinity, zmax = -Infinity;
+  for (let i = 0; i < values.length; i++) {
+    const raw = values[i];
+    if (!Number.isFinite(raw)) continue;
+    const v = kind === 'depth' ? -Math.abs(raw) : raw;
+    if (v < zmin) zmin = v; if (v > zmax) zmax = v;
+  }
+  if (!Number.isFinite(zmin)) { zmin = 0; zmax = 0; }
+  const offset = +(((zmin + zmax) / 2).toFixed(3));
+  const scale = Math.max(quant, (zmax - zmin) / 60000);
+  const grid = new Int16Array(ncol * nrow).fill(NULLV);
+  for (let i = 0; i < ncol * nrow; i++) {
+    const raw = values[i];
+    if (!Number.isFinite(raw)) continue;
+    const v = kind === 'depth' ? -Math.abs(raw) : raw;
+    grid[i] = Math.round((v - offset) / scale);
+  }
+  const gz = gzipSync(new Uint8Array(grid.buffer), { level: 9 });
+  return {
+    format: 'GVSURF', version: 2, name, ncol, nrow, down: 1,
+    affine,
+    z_units: opts.zUnits ?? 'meters', xy_units: 'meters', surface_type: kind,
     z_offset: offset, z_scale: +scale.toFixed(5), z_null: NULLV, encoding: 'int16-gzip-base64-rowmajor', z: toB64(gz),
   };
 }
@@ -97,7 +138,7 @@ export interface DecodedSurface {
   worldXY: (c: number, r: number) => { x: number; y: number };
 }
 export function decodeSurface(o: GvSurf): DecodedSurface {
-  const raw = pako.ungzip(fromB64(o.z));
+  const raw = gunzipSync(fromB64(o.z));
   const z = new Int16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2);
   const { ncol, nrow, affine: A } = o;
   const off = o.z_offset ?? 0;

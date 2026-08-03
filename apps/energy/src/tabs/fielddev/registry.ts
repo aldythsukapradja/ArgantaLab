@@ -1,112 +1,111 @@
-// registry.ts — fielddev viewer manifests. V1a = Map/Logs/Correlation live;
-// the remaining 7 render honest phase-labelled placeholders listing the planned
-// mechanics from V1-SPEC §4.
-export type ViewerStatus = 'live' | 'v1b' | 'v1c';
+// registry.ts — the Field Development Suite's 10-stage plan spine (D0 shell).
+// Mirrors FIELD-DEVELOPMENT-SUITE-CONCEPT.md Part 6: left-to-right = the decision
+// workflow = the FDP order. Each stage clones one industry tool and produces named
+// artifacts once its engine lands (D1+); for now this is the shell's plan tree +
+// header content only — no engine is wired.
+export type StagePhase = 'Frame' | 'Reduce' | 'Design' | 'Predict' | 'Commit' | 'Decide';
 
-export interface ViewerManifest {
+/** Where a stage's artifacts stand — the plan tree IS the progress meter. */
+export type StageStatus = 'untouched' | 'draft' | 'settled' | 'stale' | 'superseded';
+
+export interface StageManifest {
   id: string;
   name: string;
-  status: ViewerStatus;
-  phase: string;
+  phase: StagePhase;
+  clones: string;   // the industry tool this stage is a lightweight clone of
+  produces: string; // named artifacts this stage will emit
   blurb: string;
-  planned: string[];  // planned mechanics (from the spec)
+  status: StageStatus; // D0: always 'untouched' — no engine wired yet
 }
 
-export const VIEWERS: Record<string, ViewerManifest> = {
-  map: {
-    id: 'map', name: 'Map', status: 'live', phase: 'V1a',
-    blurb: 'Structural map workspace — 2D/3D, layers, contours, closures, drawing tools, well designer, cross-section.',
-    planned: [],
-  },
-  logs: {
-    id: 'logs', name: 'Logs', status: 'live', phase: 'V1a',
-    blurb: 'Petrel-grade multi-track log viewer with an analytics crossplot drawer.',
-    planned: [],
-  },
-  correlation: {
-    id: 'correlation', name: 'Correlation', status: 'live', phase: 'V1a',
-    blurb: 'Multi-well correlation panel with datum flattening and pick-line ties.',
-    planned: [],
-  },
-  petrophysics: {
-    id: 'petrophysics', name: 'Petrophysics', status: 'live', phase: 'V1b',
-    blurb: 'Interpreted (LFP) vs Archie-recompute dual mode over the log tracks.',
-    planned: [
-      'Interpreted PHIE/SWE/VSH (Equinor LFP, default) vs Archie recompute (derived)',
-      'Live param sliders: Rw (LFP_RW default), a/m/n, ρma/ρfl, φsh, cutoffs',
-      'Zone-average table per Hugin interval (picks-bounded): NTG · PHIE · Sw',
-      'Results feed the Property tab',
-    ],
-  },
-  structural: {
-    id: 'structural', name: 'Structural', status: 'live', phase: 'V1b',
-    blurb: 'Surface QC and well-tie residuals.',
-    planned: [
-      'Grid statistics per horizon',
-      'Well-tie mistie table: pick TVDSS vs grid sample at well x/y (honest residuals)',
-      'Contact editing (scenario) and closure-derivation view',
-    ],
-  },
-  property: {
-    id: 'property', name: 'Property', status: 'live', phase: 'V1b',
-    blurb: 'Property maps from per-well zone averages.',
-    planned: [
-      'Per-well zone averages posted on the map',
-      'IDW / kriging-lite interpolated PHIE · NTG · Sw property maps',
-      'HCPV map = engine.grv cellwise × property grids',
-    ],
-  },
-  gridmodel: {
-    id: 'gridmodel', name: 'Grid Model', status: 'live', phase: 'S2',
-    blurb: 'Geostatistical 3D static model — SIS facies + SGS porosity on a real cell grid.',
-    planned: [],
-  },
-  simulation: {
-    id: 'simulation', name: 'Simulation', status: 'live', phase: 'S5',
-    blurb: 'Dynamic FV oil-water IMPES waterflood — animated saturation front + production curves.',
-    planned: [],
-  },
-  volumetrics: {
-    id: 'volumetrics', name: 'Volumetrics', status: 'live', phase: 'V1c',
-    blurb: 'STOIIP / GIIP with validation against published ≈22 MMSm³ [PEER].',
-    planned: [
-      'Scope selector: closure · custom polygon · well-drainage circle',
-      'Deterministic (field-avg) vs property (grids) mode',
-      'STOIIP / GIIP cards + validation banner vs published ≈22 MMSm³',
-      'Per-well recoverable = drainage × recovery factor',
-    ],
-  },
-  uncertainty: {
-    id: 'uncertainty', name: 'Uncertainty', status: 'live', phase: 'V1c',
-    blurb: 'Seeded Monte Carlo over the volumetric inputs.',
-    planned: [
-      'PERT / triangular sliders per input',
-      '10k seeded realizations (mulberry32)',
-      'Histogram + CDF with P90 / P50 / P10 flags (oil convention)',
-      'Tornado sensitivity (Pearson r per input)',
-    ],
-  },
-  forecast: {
-    id: 'forecast', name: 'Forecast', status: 'live', phase: 'V1c',
-    blurb: 'Arps decline over the real monthly production history.',
-    planned: [
-      'Real monthly history + Arps fit overlay to economic limit',
-      'Per-well and field EUR; RF sanity note vs published',
-      'Material-balance tank check (F-12, STOIP ≈ 19.6 MMSm³ target)',
-    ],
-  },
-  review: {
-    id: 'review', name: 'Field Review', status: 'live', phase: 'S7',
-    blurb: 'Redevelopment decision — history match, blind test, forecast, automated FDP + honest economic verdict.',
-    planned: [],
-  },
-  economics: {
-    id: 'economics', name: 'Economics', status: 'live', phase: 'V1c',
-    blurb: 'NPV / payback tied to the forecast output.',
-    planned: [
-      'Price / opex / capex / discount inputs',
-      'NPV, payback, cashflow chart (mid-year discounting)',
-      'Tied to Forecast output',
-    ],
-  },
+export const STAGES: StageManifest[] = [
+  { id: 'asset', name: 'Asset', phase: 'Frame', clones: 'WoodMac · Rystad · IHS asset screen',
+    produces: 'AssetFrame · AnalogCohort',
+    blurb: 'Benchmark this field against its analog cohort before committing to a design.', status: 'untouched' },
+  { id: 'subsurface', name: 'Subsurface Case', phase: 'Frame', clones: 'Petrel/RMS handoff review',
+    produces: 'SubsurfaceCase',
+    blurb: 'Seam A receiver — resolves Exploration’s handoff or synthesizes from the analog cohort.', status: 'untouched' },
+  { id: 'appraisal', name: 'Appraisal & VOI', phase: 'Reduce', clones: 'GeoX · decision analysis',
+    produces: 'AppraisalProgram',
+    blurb: 'Which appraisal well kills the most uncertainty, and what it buys.', status: 'untouched' },
+  { id: 'concept', name: 'Concept Select', phase: 'Design', clones: 'Merak · Aspen concept screening',
+    produces: 'ConceptOption[] → Concept',
+    blurb: 'Onshore/offshore, standalone/tieback/FPSO — the irreversible choice.', status: 'untouched' },
+  { id: 'recovery', name: 'Recovery & Pattern', phase: 'Design', clones: 'Eclipse/IX + engineering judgment',
+    produces: 'RecoveryScheme',
+    blurb: 'Drive mechanism, pattern geometry, injector:producer ratio, expected sweep.', status: 'untouched' },
+  { id: 'well', name: 'Well Design', phase: 'Design', clones: 'Petrel well design · drainage analysis',
+    produces: 'WellDesign · PlannedWell[]',
+    blurb: 'Well count, spacing, type and Joshi PI — the atom every downstream vertical reads.', status: 'untouched' },
+  { id: 'facilities', name: 'Facilities & Drill Centres', phase: 'Design', clones: 'HYSYS-lite · facility sizing',
+    produces: 'FacilityCase · DrillCentre[]',
+    blurb: 'Plateau capacity, step-out reach, tieback vs new host.', status: 'untouched' },
+  { id: 'forecast', name: 'Forecast', phase: 'Predict', clones: 'IX/Eclipse · Aries',
+    produces: 'ProductionProfile',
+    blurb: 'Build-up → plateau → decline, P10/P50/P90, per well and field.', status: 'untouched' },
+  { id: 'schedule', name: 'Schedule & Phasing', phase: 'Commit', clones: 'Primavera P6-lite · Merak Peep',
+    produces: 'DevelopmentSchedule · WellSequence',
+    blurb: 'Seam B emitter — what Well Delivery and Drilling read next.', status: 'untouched' },
+  { id: 'value', name: 'Value & FDP', phase: 'Decide', clones: 'Merak Peep · PlanningSpace',
+    produces: 'EconomicCase · FDPDocument',
+    blurb: 'NPV/IRR/payback, case compare, the FID gate.', status: 'untouched' },
+];
+
+// Maturity perspective (PRMS resource class) is a real, designed concept — see
+// FIELD-DEVELOPMENT-SUITE-CONCEPT.md §1.3 — but it made the shell read as too
+// complex too early. HIDDEN from the UI for now, not deleted: PERSPECTIVES/
+// Perspective stay here, ready to re-attach a shell-wide control once the rest of
+// the spine (scope store, cases) has settled. Nothing currently imports these.
+export type Perspective = 'explore' | 'appraise' | 'develop' | 'produce' | 'rejuvenate' | 'retire';
+
+export interface PerspectiveManifest {
+  id: Perspective;
+  label: string;
+  prms: string;
+  question: string;
+}
+
+export const PERSPECTIVES: PerspectiveManifest[] = [
+  { id: 'explore', label: 'Explore', prms: 'prospective · 1U/2U/3U', question: 'Is there anything?' },
+  { id: 'appraise', label: 'Appraise', prms: 'contingent · 1C/2C/3C', question: 'Is it commercial?' },
+  { id: 'develop', label: 'Develop', prms: 'reserves · 1P/2P/3P', question: 'What do we build?' },
+  { id: 'produce', label: 'Produce', prms: 'production', question: 'Are we on plan?' },
+  { id: 'rejuvenate', label: 'Rejuvenate', prms: 'reserves + contingent', question: 'Infill, IOR, EOR?' },
+  { id: 'retire', label: 'Retire', prms: 'unrecoverable', question: 'When to cease?' },
+];
+
+/** LOD scale router (concept doc Part 4/7.4) — now rendered inline with Scope,
+ *  since "where am I" and "how zoomed in" are one navigation decision, not two. */
+export type Lod = 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
+export const LOD_OPTIONS: Array<{ id: Lod; label: string }> = [
+  { id: 'L0', label: 'World' }, { id: 'L1', label: 'Basin' }, { id: 'L2', label: 'Field' },
+  { id: 'L3', label: 'Structure' }, { id: 'L4', label: 'Well' },
+];
+
+/** Provenance ladder for the Plan Card's basis chips (Part 3.4 / 5.2). */
+export type Basis = 'M' | 'R' | 'A' | 'U' | 'D';
+export const BASIS_LABEL: Record<Basis, string> = {
+  M: 'Measured', R: 'Regulator', A: 'Analog', U: 'User', D: 'Derived',
 };
+
+/** The 10 headline numbers on the Plan Card (Part 7.2). All pending in D0 — no
+ *  engine is wired, so every metric shows its awaiting-stage state rather than a
+ *  fabricated number. */
+export interface PlanMetric {
+  id: string;
+  label: string;
+  unit: string;
+  awaits: string; // which stage id produces this
+}
+export const PLAN_METRICS: PlanMetric[] = [
+  { id: 'wellCount', label: 'Well count', unit: '', awaits: 'well' },
+  { id: 'spacing', label: 'Spacing', unit: 'm', awaits: 'well' },
+  { id: 'wellType', label: 'Well type', unit: '', awaits: 'well' },
+  { id: 'pattern', label: 'Pattern', unit: '', awaits: 'recovery' },
+  { id: 'drillCentres', label: 'Drill centres', unit: '', awaits: 'facilities' },
+  { id: 'plateau', label: 'Plateau rate', unit: 'kbd', awaits: 'forecast' },
+  { id: 'firstOil', label: 'First oil', unit: '', awaits: 'schedule' },
+  { id: 'recovery', label: 'Recovery factor', unit: '%', awaits: 'recovery' },
+  { id: 'capex', label: 'Capex', unit: '$', awaits: 'facilities' },
+  { id: 'npv10', label: 'NPV₁₀', unit: '$', awaits: 'value' },
+];

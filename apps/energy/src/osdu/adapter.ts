@@ -1,13 +1,15 @@
-import type { CatalogueBundle, EntityInstance } from '../atlas/types';
-import { governanceFor, OSDU_KIND_BY_ENTITY } from './kinds';
-import type { DataClass, OsduManifest, OsduRecord } from './types';
+import type { CatalogueBundle, EntityInstance } from '../atlas/types.ts';
+import { governanceFor, OSDU_KIND_BY_ENTITY } from './kinds.ts';
+import type { DataClass, OsduManifest, OsduRecord } from './types.ts';
 
 const safe = (value: string) => value.trim().toLowerCase()
   .replace(/^atlas:/, '').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
 
 export function osduId(kind: string, nativeId: string): string {
-  const match = kind.match(/:(?:master-data|work-product-component)--([^:]+):/);
-  const group = kind.includes('work-product-component--') ? 'work-product-component' : 'master-data';
+  const match = kind.match(/:(?:master-data|work-product-component|dataset)--([^:]+):/);
+  const group = kind.includes('work-product-component--') ? 'work-product-component'
+    : kind.includes('dataset--') ? 'dataset'
+    : 'master-data';
   return `arganta:${group}--${match?.[1] ?? 'Record'}:${safe(nativeId)}`;
 }
 

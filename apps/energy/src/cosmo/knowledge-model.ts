@@ -7,10 +7,13 @@
 // densely-wikilinked bodies — export via note-export.ts drops into Obsidian plug-and-play.
 import type { WbIndex } from '../wb/types';
 import { SEED_ANALOGS } from '../engine/analog';
+import { STRAT_COLUMN } from '../tabs/exploration/legacy/explData';
+import { attributionFor, figuresForGeodynamics } from '../tabs/exploration/basin-figures';
 
 export type KType =
   | 'field' | 'reservoir' | 'formation' | 'well' | 'petrophysics'
-  | 'domain' | 'lifecycle' | 'output' | 'standard' | 'analog' | 'concept' | 'decision';
+  | 'domain' | 'lifecycle' | 'output' | 'standard' | 'analog' | 'concept' | 'decision'
+  | 'basin' | 'basin-cycle';
 export type EdgeKind = 'contextualizes' | 'consumes' | 'produces' | 'covers' | 'evidences' | 'relates' | 'decides' | 'applies';
 export type DataNature = 'measured' | 'interpreted' | 'derived' | 'reference';
 
@@ -27,11 +30,13 @@ export const TYPE_COLOR: Record<KType, string> = {
   field: '#0FB5A6', reservoir: '#7c3aed', formation: '#8b5cf6', well: '#e11d74',
   petrophysics: '#22d3ee', domain: '#10b981', lifecycle: '#f59e0b', output: '#2563eb',
   standard: '#0a8a7f', analog: '#06b6d4', concept: '#64748b', decision: '#dc2626',
+  basin: '#b45309', 'basin-cycle': '#ca8a04',
 };
 export const TYPE_LABEL: Record<KType, string> = {
   field: 'Field', reservoir: 'Reservoir', formation: 'Formation', well: 'Well',
   petrophysics: 'Petrophysics', domain: 'Data domain', lifecycle: 'Lifecycle', output: 'Output',
   standard: 'Standard', analog: 'Analog', concept: 'Concept', decision: 'Decision',
+  basin: 'Basin', 'basin-cycle': 'Basin cycle',
 };
 
 const wl = (t: string) => `[[${t}]]`;
@@ -209,9 +214,84 @@ export const CONCEPTS: Concept[] = [
   { id: 'evidence-native', title: 'Evidence-native', desc: 'Every claim cites its source.', body: 'No value appears without a source table and a **provenance** class. Missing data is flagged, never faked. The design principle of this knowledge base.' },
 ];
 
+// ── basin & basin-cycle tier — the tectonostratigraphic comparability layer ─────
+// A field's stratigraphy is grouped into named basin cycles (pre-rift/extensional/
+// sag/compressional stages) — the unit Harry Doust's "Dissecting Sedimentary
+// Basins" argues is more comparable across basins than the basin as a whole. Doust
+// himself compiles from others (basin types after Kingston et al. 1983; facies
+// associations after Walker & James 1992) — cited here ONLY for what is genuinely
+// his: the cycle-as-comparable-unit thesis, his six grouping criteria, and his two
+// papers (see concept:basin-cycle-framework below). Licence on the source PDF is
+// UNRESOLVED — this is our own synthesis + citation, never the book's text/figures.
+export type CycleGeodynamics = 'pre-rift' | 'extensional' | 'sag' | 'compressional';
+export interface BasinCycleSeed {
+  id: string; title: string; ageMa: [number, number]; env: string;
+  geodynamics: CycleGeodynamics; stage: string; fill: 'marine' | 'non-marine' | 'mixed';
+  lithology: string; role?: 'source' | 'reservoir' | 'seal' | 'overburden' | 'mixed';
+  units: string[]; // formation/group names grouped into this cycle (from STRAT_COLUMN)
+}
+export interface BasinSeed {
+  id: string; name: string; setting: string;
+  usgsProvince?: { code: string; name: string };
+  usgsTps?: { code: string; name: string };
+  usgsAu?: { code: string; name: string };
+  cycles: BasinCycleSeed[];
+}
+
+/** Published type sections for a cycle's geodynamic class, drawn from the basin-type
+ *  figure library. Every entry carries its attribution inline — that credit is the
+ *  condition the organization's clearance for this material rests on, so it travels
+ *  with the note wherever the note is exported. */
+function typeSections(geodynamics: CycleGeodynamics): string {
+  const figures = figuresForGeodynamics(geodynamics);
+  if (!figures.length) return '';
+  return `## Published type sections\nComparable ${geodynamics} cycles described in the literature — use these to sanity-check this cycle's stacking pattern against basins elsewhere.\n\n`
+    + figures.map((x) => `- **Fig. ${x.fig}** (p${x.page}) — ${x.caption}. *${attributionFor(x)}*`).join('\n')
+    + `\n\nImages are held locally at \`public/doust-figures/\` and are cleared for internal scientific/educational use with attribution; they are not cleared for public redistribution.\n\n`;
+}
+
+/** Derive a cycle's age envelope/environment from the real STRAT_COLUMN units it
+ *  groups — never re-typed ages, so this can't drift from the Exploration tab. */
+function cycleFromUnits(
+  id: string, title: string, stage: string, geodynamics: CycleGeodynamics,
+  fill: BasinCycleSeed['fill'], lithology: string, role: BasinCycleSeed['role'], unitNames: string[],
+): BasinCycleSeed {
+  const units = STRAT_COLUMN.filter((u) => unitNames.includes(u.name));
+  const tops = units.map((u) => u.ageMa[0]);
+  const bases = units.map((u) => u.ageMa[1]);
+  const env = Array.from(new Set(units.map((u) => u.env))).join(' / ');
+  return { id, title, ageMa: [Math.max(...tops), Math.min(...bases)], env, geodynamics, stage, fill, lithology, role, units: unitNames };
+}
+
+/** Volve's stratigraphy grouped into 4 real tectonostratigraphic cycles. */
+export const VOLVE_CYCLES: BasinCycleSeed[] = [
+  cycleFromUnits('pre-rift', 'Pre-rift basin fill (Triassic)', 'pre-rift / early basin fill', 'pre-rift', 'non-marine', 'clastic (fluvial redbeds)', 'reservoir', ['Skagerrak Fm']),
+  cycleFromUnits('early-climax-synrift', 'Early–climax syn-rift (Middle Jurassic)', 'early–climax syn-rift', 'extensional', 'mixed', 'clastic (sandstone)', 'reservoir', ['Sleipner Fm', 'Hugin Fm']),
+  cycleFromUnits('late-synrift', 'Late syn-rift (Late Jurassic)', 'late syn-rift', 'extensional', 'marine', 'mudstone / shale', 'source', ['Heather Fm', 'Draupne Fm']),
+  cycleFromUnits('postrift-sag', 'Post-rift sag (Cretaceous–Recent)', 'post-rift sag', 'sag', 'marine', 'mixed (mudstone / chalk / sandstone)', 'mixed', ['Shetland Gp', 'Ty Fm', 'Hordaland Gp', 'Utsira Fm', 'Nordland Gp']),
+];
+
+/** Viking Graben, grounded in the ATLAS spine's already-shipped USGS DDS-69 chain
+ *  (src/atlas/volve.ts: province 4025 → TPS 402501 → AU 40250101). NOTE: that spine
+ *  currently types the province itself as `'basin'` and names the AU "Viking
+ *  Graben" — a naming shorthand from earlier work. This KB introduces the
+ *  geodynamic Basin→BasinCycle tier that verified USGS research (2026-08-02) shows
+ *  is genuinely missing (province = container, not a basin; TPS/AU = sparse,
+ *  on-demand analytical layers) — see the basin node's own body for the reconciliation
+ *  note. Reconciling the ATLAS spine's tier names is a separate, not-yet-done refactor.
+ */
+export const VOLVE_BASIN: BasinSeed = {
+  id: 'viking-graben', name: 'Viking Graben', setting: 'failed-rift graben, Norwegian North Sea',
+  usgsProvince: { code: '4025', name: 'North Sea Graben' },
+  usgsTps: { code: '402501', name: 'Kimmeridgian Shales' },
+  usgsAu: { code: '40250101', name: 'Viking Graben' },
+  cycles: VOLVE_CYCLES,
+};
+
 // ── field ingestion contract (scalable) ─────────────────────────────────────────
 export interface FieldSeed {
   id: string; name: string; crs: string; datum: string; basin?: string; operator?: string; aliases?: string[];
+  basinModel?: BasinSeed; // optional geodynamic basin/cycle tier (see above)
   reservoir: string; reservoirAge?: string; reservoirLith?: string; drive?: string;
   formations: string[];
   contact?: { kind: string; tvdss: number; nature: string; prov?: string };
@@ -225,6 +305,7 @@ export function volveSeed(idx: WbIndex): FieldSeed {
   const c = idx.contacts[0];
   return {
     id: 'volve', name: 'Volve', crs: idx.crs, datum: idx.datum, basin: 'Sleipner area · Norwegian North Sea · block 15/9', operator: 'Equinor (open data)', aliases: ['15/9 Volve'],
+    basinModel: VOLVE_BASIN,
     reservoir: 'Hugin Fm', reservoirAge: 'Middle Jurassic', reservoirLith: 'shallow-marine sandstone', drive: 'waterflood',
     formations: idx.surfaces.map((s) => s.name),
     contact: c ? { kind: c.kind, tvdss: c.tvdss, nature: c.dataNature, prov: c.prov } : undefined,
@@ -256,6 +337,39 @@ export function buildGraph(fields: FieldSeed[]): KGraph {
 
   // ---- shared: concepts ----
   CONCEPTS.forEach((c) => add({ id: 'concept:' + c.id, type: 'concept', title: c.title, folder: '09_Concepts', tags: ['concept'], provenance: 'reference', source: 'Industry doctrine (SPE / RGS)', meta: c.desc, body: `# ${c.title}\n\n> ${c.desc}\n\n${c.body}` }));
+
+  // ---- shared: basin-cycle framework (cite the parent, not the compiler) ----
+  add({
+    id: 'concept:basin-cycle-framework', type: 'concept', title: 'Basin-cycle framework', folder: '09_Concepts',
+    tags: ['concept', 'reference', 'citation-ladder'], provenance: 'reference',
+    source: 'Doust 2003 First Break 21(9); Beglinger, Corver, Doust, Cloetingh & Thurmond 2012 AAPG Bull 96(6); USGS DDS-060/ScienceBase (verified 2026-08-02)',
+    meta: 'The classification approach behind every basin’s cycle stack',
+    body: `# Basin-cycle framework
+
+> Reference concept · provenance **reference** · the classification approach behind ${wl('Viking Graben')}'s basin cycles.
+
+## Thesis (cite: Doust)
+Sedimentary basins are unique composites, but their tectonostratigraphic **cycles** recur across basins with comparable character — the cycle, not the whole basin, is the more useful unit for comparison and analogue-building. This comparability argument, and the six grouping criteria below, are due to **Harry Doust** (emeritus professor of Regional Geology, VU Amsterdam), *"Dissecting Sedimentary Basins"*. Licence on that specific PDF is **unresolved** — this note encodes the idea and cites the primaries, never the book's text or figures.
+
+## Grouping criteria (Doust)
+A cycle is classified by: basin-cycle geometry · marine vs non-marine fill · proximal vs distal (if marine) · climate (tropical / arid / continental / temperate) · clastic vs carbonate · whether the depositional environment changed within the cycle.
+
+## Doust's own cited work (his genuinely original contribution)
+- Doust, H. 2003. *Placing petroleum systems and plays in their basin history context.* First Break 21(9): 73–83.
+- Beglinger, S.E., Corver, M.P., Doust, H., Cloetingh, S. & Thurmond, A.K. 2012. *A new approach to relating petroleum system and play development to basin evolution.* AAPG Bulletin 96(6): 953–982.
+
+## USGS grounding (independently verified 2026-08-02, high confidence)
+The Province → Total Petroleum System → Assessment Unit hierarchy is itself a real precedent for treating the geodynamic entity (TPS: source + essential elements + generation-migration-accumulation-trap processes, "a naturally occurring, mappable hydrocarbon-fluid system") as distinct from the spatial container (Province: lithology/age/structural-style — *"[s]ome provinces include multiple genetically-related basins"*). Sources: USGS ScienceBase \`60ad2fd7d34e4043c850edb3\` / \`60ad2fa1d34e4043c850ed98\`; USGS DDS-060 \`PS.pdf\`/\`IN.pdf\` (public domain).
+
+## What is NOT verified
+The other basin-classification schemes sometimes compared to Doust's (Kingston et al. 1983 basin types, Bally & Snelson 1980, Ingersoll & Busby's plate-tectonic classification, Klemme) have **not** been independently corroborated by ArgantaEnergy's own research pass (2026-08-02, two runs, 107 agents). Do not cite specific claims about them as verified fact — including basin-type/geodynamic-context labels used on this platform's own cycle nodes, which are our own generic rift-basin vocabulary (pre-rift → syn-rift → post-rift sag), not a specific external classification.
+
+## Figure sourcing (2026-08-03)
+All 49 figures in Doust's booklet have been classified against the complete source PDF: 17 are his own uncited drawings (candidates to ask him about directly), 31 name a specific external author/publisher as the rightsholder (citation, not license — permission runs through them, not Doust), and 1 is compiled from unnamed sources. Two of the 31 ("external") figures actually cite Doust's own earlier co-authored papers (Doust & Sumner 2007; Beglinger et al. 2012), a simpler permission case. Full table: \`docs/arganta-energy/knowledge-base/doust-basin-figures/README.md\` and the master workbook's "Doust Figure Sourcing" tab. No image bytes have been extracted or stored anywhere.
+
+## Licence
+Cite the primary papers above for anything attributable to Doust's own thesis. Never reproduce Doust's figures or text — redraw any diagram from primary data in ArgantaEnergy's own visual language.`,
+  });
 
   // ---- shared: standards ----
   STANDARDS.forEach((s) => {
@@ -321,6 +435,45 @@ export function buildGraph(fields: FieldSeed[]): KGraph {
       body: `# ${f.reservoir}\n\n> Primary reservoir of ${wl(f.name)} · ${f.reservoirAge || ''} ${f.reservoirLith || ''} · provenance **interpreted**.\n\n${f.contact ? `- ${f.contact.kind} @ **${f.contact.tvdss} m TVDSS**\n` : ''}- Drive mechanism: **${f.drive || '—'}** → ${wl('Waterflood')}\n- Mapped by ${wl('Seismic · Structure Surfaces')}; picked in ${wl('Reservoir · Formation Tops')}; sampled by ${wl('Logs')}.\n- Fluid: ${wl('Dynamic Param · PVT')} · saturation via ${wl('Archie')}.\n\n## Volumetrics\nSTOIIP built per ${wl('Volumetrics (STOIIP)')}; recovery from ${wl('Recovery Factor')} + ${(f.analogRefs || []).map(wl).join(' · ')}.`,
     });
     link(rid, fid, 'contextualizes');
+
+    // ---- basin & basin-cycle tier (optional — real content only where grounded) ----
+    if (f.basinModel) {
+      const bm = f.basinModel;
+      const bid = `basin:${slug(bm.id)}`;
+      add({
+        id: bid, type: 'basin', title: bm.name, field: f.id, folder: '12_Basins', tags: ['basin', f.id],
+        meta: bm.setting, provenance: 'interpreted', source: 'USGS DDS-69 province/TPS/AU + regional stratigraphy',
+        fm: { field: wl(f.name), cycles: wls(bm.cycles.map((c) => c.title)) },
+        body: `# ${bm.name}\n\n> Basin (geodynamic entity) hosting ${wl(f.name)} · ${bm.setting} · provenance **interpreted**.\n\n` +
+          `## USGS lineage (independently verified 2026-08-02 against USGS DDS-69 / ScienceBase)\n` +
+          (bm.usgsProvince ? `- Province **${bm.usgsProvince.code}** "${bm.usgsProvince.name}" — a descriptive spatial container (lithology / age / structural style), not itself a basin or a process classification; a province may bundle several genetically-related basins.\n` : '') +
+          (bm.usgsTps ? `- Total Petroleum System **${bm.usgsTps.code}** "${bm.usgsTps.name}" — the process/fluid entity: essential elements + generation-migration-accumulation + trap formation, all petroleum from one pod (or related pods) of active source rock; defined only inside assessed provinces.\n` : '') +
+          (bm.usgsAu ? `- Assessment Unit **${bm.usgsAu.code}** "${bm.usgsAu.name}" — the populated, on-demand resource-assessment unit.\n` : '') +
+          `\n> **Naming note.** The ATLAS spine (\`src/atlas/\`) currently types the province (${bm.usgsProvince?.code}) itself as \`'basin'\`, and names the AU (${bm.usgsAu?.code}) "${bm.usgsAu?.name}" — a shorthand from earlier work. This Knowledge Base introduces the geodynamic **Basin → BasinCycle** tier that verified USGS research shows is genuinely missing (province is a container, not a basin; TPS/AU is a sparse, on-demand layer). Reconciling the ATLAS spine's tier names to match is a separate, not-yet-done refactor — flagged here, not silently changed.\n\n` +
+          `## Basin cycles (tectonostratigraphic stack, oldest → youngest)\n${bm.cycles.map((c) => `- ${wl(c.title)} — ${c.stage} (${c.ageMa[0]}–${c.ageMa[1]} Ma)`).join('\n')}\n\n` +
+          `## Method\nCycles group the real ${wl(f.name)} stratigraphic column into tectonostratigraphic stages — the comparability argument (cycle, not whole basin, as the unit) follows ${wl('Basin-cycle framework')}; the specific geodynamic-context/stage labels are ArgantaEnergy's own generic rift-basin vocabulary, not a cited external classification.`,
+      });
+      link(bid, fid, 'contextualizes');
+
+      bm.cycles.forEach((c) => {
+        const cid = `basin-cycle:${f.id}:${slug(c.id)}`;
+        add({
+          id: cid, type: 'basin-cycle', title: c.title, field: f.id, folder: '13_Cycles', tags: ['basin-cycle', f.id, c.geodynamics],
+          meta: `${c.ageMa[0]}–${c.ageMa[1]} Ma · ${c.geodynamics}`, provenance: 'interpreted',
+          source: 'Regional stratigraphy [PEER Kieft/Milton; OFFICIAL Sodir lithostrat] + ArgantaEnergy cycle grouping',
+          fm: { basin: wl(bm.name), units: c.units, geodynamics: c.geodynamics, fill: c.fill, lithology: c.lithology },
+          body: `# ${c.title}\n\n> Basin cycle · ${c.stage} · **${c.geodynamics}** · ${c.ageMa[0]}–${c.ageMa[1]} Ma · provenance **interpreted**.\n\n` +
+            `## Units in this cycle\n${c.units.map((u) => '- ' + u).join('\n')}\n\n` +
+            `## Character\n- Depositional fill: **${c.fill}**\n- Lithology: ${c.lithology}\n- Environment: ${c.env}\n${c.role ? `- Dominant petroleum-system role: **${c.role}**\n` : ''}\n` +
+            `## Comparability\nThe cycle — not the whole basin — is the unit ${wl('Basin-cycle framework')} treats as comparable across basins worldwide; a future analogue engine can match on this cycle's signature (geodynamics · stage · fill · lithology) rather than field-level similarity.\n\n` +
+            typeSections(c.geodynamics) +
+            `## Evidence\nUnit ages/roles: [PEER Kieft/Milton; OFFICIAL Sodir lithostrat]${c.units.includes(f.reservoir) ? ` (see ${wl(f.reservoir)})` : ''}. Cycle grouping: ArgantaEnergy synthesis, method per ${wl('Basin-cycle framework')}.`,
+        });
+        link(cid, bid, 'contextualizes');
+        link(cid, 'concept:basin-cycle-framework', 'applies');
+        if (c.units.includes(f.reservoir)) link(cid, rid, 'relates');
+      });
+    }
 
     f.formations.forEach((fm) => {
       const fmid = `formation:${f.id}:${slug(fm)}`;
@@ -430,4 +583,5 @@ export function buildLinkIndex(nodes: KNode[]): LinkIndex {
 export const FOLDER_ORDER = [
   '01_Fields', '02_Formations', '03_Wells', '04_Petrophysics', '05_Data',
   '06_Lifecycles', '07_Outputs', '08_Standards', '09_Concepts', '10_Analogs', '11_Decisions',
+  '12_Basins', '13_Cycles',
 ];

@@ -10,41 +10,41 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   Compass, Layers, Wrench, Gauge, CalendarClock, LayoutDashboard, Settings, Sparkles,
   Bot, BookOpen, Database, Moon, Sun, FolderTree, FileText, File, MonitorPlay,
-  Map as MapIcon, Activity, Columns3, Grid3x3, Boxes, Waves, Box, LineChart,
-  DollarSign, ClipboardCheck, Menu, GitBranch, Crosshair, PenLine,
+  Menu, GitBranch, GraduationCap,
 } from 'lucide-react';
 import './cosmo-system.css';
 import './cosmo-fd.css';
 import './cosmo-shell.css';
-import { RM_TAB_ORDER, RM_VIEWERS } from '../tabs/reservoir/registry';
-import type { Sel } from './CosmoExplorer';
-import type { ExplSel } from './ExplorationExplorer';
-import { EXPL_TAB_NAMES, explStatus } from '../tabs/exploration/registry';
 import { CosmoAgentOrb } from './CosmoAgentOrb';
 import { CosmoSettings } from './CosmoSettings';
 import { CosmoChat } from './CosmoChat';
 import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
+import { useSession as useFieldcraftSession } from '../fieldcraft/session';
 import { Cockpit } from './Cockpit';
 
 // Keep the company-facing Cockpit lean. Scientific workspaces and their larger
 // renderers/data payloads are fetched only when the operator opens that lifecycle.
-const FieldDev = lazy(async () => ({ default: (await import('../tabs/fielddev/FieldDev')).FieldDev }));
-const ReservoirMgmt = lazy(async () => ({ default: (await import('../tabs/reservoir/ReservoirMgmt')).ReservoirMgmt }));
-const ReservoirExplorer = lazy(async () => ({ default: (await import('../tabs/reservoir/ReservoirExplorer')).ReservoirExplorer }));
-const CosmoExplorer = lazy(async () => ({ default: (await import('./CosmoExplorer')).CosmoExplorer }));
-const ExplorationExplorer = lazy(async () => ({ default: (await import('./ExplorationExplorer')).ExplorationExplorer }));
-const Exploration = lazy(async () => ({ default: (await import('../tabs/exploration/Exploration')).Exploration }));
+const FieldDevShell = lazy(async () => ({ default: (await import('../tabs/fielddev/FieldDevShell')).FieldDevShell }));
+const ExplorationShell = lazy(async () => ({ default: (await import('../tabs/exploration/ExplorationShell')).ExplorationShell }));
+const ReservoirManagementShell = lazy(async () => ({ default: (await import('../tabs/reservoir/ReservoirManagementShell')).ReservoirManagementShell }));
+const IntelInsights = lazy(async () => ({ default: (await import('./IntelInsights')).IntelInsights }));
+const IntelAgents = lazy(async () => ({ default: (await import('./IntelAgents')).IntelAgents }));
 const ReportView = lazy(async () => ({ default: (await import('./ReportView')).ReportView }));
 const DataView = lazy(async () => ({ default: (await import('./DataView')).DataView }));
 const KnowledgeView = lazy(async () => ({ default: (await import('./KnowledgeView')).KnowledgeView }));
-const WellDeliveryWorkspace = lazy(async () => ({ default: (await import('../tabs/welldelivery/WellDeliveryWorkspace')).WellDeliveryWorkspace }));
-const DrillingSequenceView = lazy(async () => ({ default: (await import('./welldelivery/sequence/DrillingSequenceView')).DrillingSequenceView }));
+const WellDeliveryShell = lazy(async () => ({ default: (await import('../tabs/welldelivery/WellDeliveryShell')).WellDeliveryShell }));
+const DrillingShell = lazy(async () => ({ default: (await import('../tabs/drilling/DrillingShell')).DrillingShell }));
+const Fieldcraft = lazy(async () => ({ default: (await import('../fieldcraft/Fieldcraft')).Fieldcraft }));
+/* Loaded only once a Fieldcraft mission is actually running. */
+const MissionHud = lazy(async () => ({ default: (await import('../fieldcraft/MissionHud')).MissionHud }));
 
 const LIFECYCLES = [
   { id: 'exploration', name: 'Exploration', icon: Compass, color: '#22d3ee', status: 'BETA', sub: 'Basins, plays, prospects and prospect-level volumes' },
   { id: 'field-development', name: 'Field Development', icon: Layers, color: '#0FB5A6', status: 'LIVE', sub: 'Static model, volumetrics, well placement and economics' },
-  { id: 'well-delivery', name: 'Well Delivery', icon: Wrench, color: '#f59e0b', status: 'BETA', sub: 'Well design, trajectory, drilling, completion and post-mortem' },
+  // Order follows the asset lifecycle: you manage the reservoir before you deliver
+  // the next well against it, so Reservoir Management precedes Well Delivery.
   { id: 'reservoir-management', name: 'Reservoir Management', icon: Gauge, color: '#7c3aed', status: 'LIVE', sub: 'Surveillance, forecasting, patterns and opportunity screening' },
+  { id: 'well-delivery', name: 'Well Delivery', icon: Wrench, color: '#f59e0b', status: 'BETA', sub: 'Well design, trajectory, drilling, completion and post-mortem' },
   { id: 'drilling-sequence', name: 'Drilling', icon: CalendarClock, color: '#e11d74', status: 'BETA', sub: 'Rig-by-time drilling schedule, revisions and sequence changes' },
 ];
 const INTEL = [
@@ -64,37 +64,18 @@ const REPORT = [
 type SheetItem = { id: string; label: string; icon: typeof Compass; hint: string; zone: 'vertical' | 'report' | 'intel' };
 const M_GROUPS: Record<string, { title: string; items: SheetItem[] }> = {
   verticals: { title: 'Lifecycle', items: LIFECYCLES.map((l) => ({ id: l.id, label: l.name, icon: l.icon, hint: l.sub, zone: 'vertical' })) },
-  report: { title: 'Report', items: REPORT.map((t) => ({ id: t.id, label: t.name, icon: t.icon, hint: 'report · ' + t.name.toLowerCase(), zone: 'report' })) },
+  report: {
+    title: 'Report',
+    items: [
+      ...REPORT.map((t) => ({ id: t.id, label: t.name, icon: t.icon, hint: 'report · ' + t.name.toLowerCase(), zone: 'report' as const })),
+      { id: 'fieldcraft', label: 'Fieldcraft', icon: GraduationCap, hint: 'training · course delivery', zone: 'report' as const },
+    ],
+  },
   intel: {
     title: 'Intelligence',
     items: INTEL.map((i) => ({ id: i.id, label: i.name, icon: i.icon, hint: 'intelligence', zone: 'intel' as const })),
   },
 };
-// Field Development tabs → our real, built subtabs
-const FD_TABS = [
-  { id: 'map', label: 'Map', icon: MapIcon }, { id: 'logs', label: 'Logs', icon: Activity },
-  { id: 'petrophysics', label: 'Petrophysics', icon: Gauge }, { id: 'correlation', label: 'Correlation', icon: Columns3 },
-  { id: 'structural', label: 'Structural', icon: Layers }, { id: 'property', label: 'Property', icon: Grid3x3 },
-  { id: 'gridmodel', label: 'Static Model', icon: Boxes }, { id: 'simulation', label: 'Simulation', icon: Waves },
-  { id: 'volumetrics', label: 'Volumetrics', icon: Box }, { id: 'uncertainty', label: 'Uncertainty', icon: Sparkles },
-  { id: 'forecast', label: 'Forecast', icon: LineChart }, { id: 'economics', label: 'Economics', icon: DollarSign },
-  { id: 'review', label: 'Field Review', icon: ClipboardCheck },
-];
-// Exploration tabs → the founder's canonical TAB_SPECS.exploration set (COSMO). name
-// must match the router; Seismic renders the founder's spec until its canvas is built.
-const EXPL_ICON: Record<string, typeof Compass> = {
-  'Overview': LayoutDashboard, 'Basemap': MapIcon, 'Seismic': Waves, 'Wells': Activity,
-  'Interpretation': PenLine, 'Plays & Prospects': Crosshair, 'Volumetrics': Box, 'Risk & Uncertainty': Sparkles,
-};
-const EXPL_TABS = EXPL_TAB_NAMES.map((name) => ({ name, icon: EXPL_ICON[name] ?? Compass, spec: explStatus(name) === 'spec' }));
-// Reservoir Management tabs → the 9 COSMO sub-tabs (registry order), icons from the
-// already-imported lucide set.
-const RM_ICON: Record<string, typeof Compass> = {
-  overview: LayoutDashboard, surveillance: Activity, production: LineChart, injection: Waves,
-  pressure: Gauge, welltests: ClipboardCheck, patterns: GitBranch, forecast: Sparkles, opportunities: Box,
-};
-const RM_TABS = RM_TAB_ORDER.map((id) => ({ id, label: RM_VIEWERS[id].label, icon: RM_ICON[id] ?? Gauge }));
-
 type NavItem = { id: string; name: string; icon: typeof Compass; color?: string; status?: string };
 
 export function CosmoShell() {
@@ -117,13 +98,13 @@ export function CosmoShell() {
   }, [dark]);
 
   const [nav, setNav] = useState('cockpit');
-  const [tab, setTab] = useState('map');
+  // Field Development now owns its own tab/scope state internally (FieldDevShell).
+  // What's left here is just the guided-tour bridge into its parked Legacy (v1)
+  // view — CosmoChat drives Legacy directly, bumping the nonce to force it open
+  // even if Legacy is already showing a different sub-tab.
+  const [legacyTab, setLegacyTab] = useState('map');
+  const [legacyNonce, setLegacyNonce] = useState(0);
   const [tourVolveNonce, setTourVolveNonce] = useState(0);
-  const [sel, setSel] = useState<Sel>(null);
-  const [explTab, setExplTab] = useState<string>('Overview');
-  const [explSel, setExplSel] = useState<ExplSel>(null);
-  const [wdSub, setWdSub] = useState<string>('proposal');
-  const [rmTab, setRmTab] = useState<string>('overview');
   const [settings, setSettings] = useState(false);
   const [chat, setChat] = useState(false);
   const [chatFullSignal, setChatFullSignal] = useState(0);
@@ -148,7 +129,7 @@ export function CosmoShell() {
   }, [nav]);
   const sheetGo = (it: SheetItem) => {
     setSheet(null);
-    if (it.zone === 'vertical') { setNav(it.id); setTab('map'); }
+    if (it.zone === 'vertical') { setNav(it.id); setLegacyTab('map'); }
     else if (it.zone === 'report') setNav(it.id);
     else if (it.zone === 'intel') setNav(it.id);
   };
@@ -157,15 +138,18 @@ export function CosmoShell() {
   const isFD = nav === 'field-development';
   const isExpl = nav === 'exploration';
   const isRM = nav === 'reservoir-management';
+  const isFieldcraft = nav === 'fieldcraft';
+  const fieldcraftSession = useFieldcraftSession();
   const reportItem = REPORT.find((r) => r.id === nav);
   const isReport = !!reportItem;
   const crumbLabel = active ? active.name
-    : (INTEL.find((i) => i.id === nav) || reportItem || { name: 'Cockpit' }).name;
+    : (INTEL.find((i) => i.id === nav) || reportItem || (isFieldcraft ? { name: 'Fieldcraft' } : { name: 'Cockpit' })).name;
 
   // active bottom-nav tab — an open sheet wins; otherwise derive from the current nav
   const mActive = sheet ? sheet
     : nav === 'cockpit' ? 'cockpit'
     : LIFECYCLES.some((l) => l.id === nav) ? 'verticals'
+    : isFieldcraft ? 'fieldcraft'
     : isReport ? 'report'
     : INTEL.some((i) => i.id === nav) ? 'intel' : '';
 
@@ -192,13 +176,16 @@ export function CosmoShell() {
           {navItem({ id: 'cockpit', name: 'Cockpit', icon: LayoutDashboard }, openCockpit)}
 
           <div className="navlabel">LIFECYCLE</div>
-          {LIFECYCLES.map((l) => navItem(l, () => { setNav(l.id); setTab('map'); closeMobile(); }))}
+          {LIFECYCLES.map((l) => navItem(l, () => { setNav(l.id); setLegacyTab('map'); closeMobile(); }))}
 
           <div className="navlabel">INTELLIGENCE</div>
           {INTEL.map((n) => navItem(n, () => { setNav(n.id); closeMobile(); }))}
 
           <div className="navlabel">REPORT</div>
           {REPORT.map((n) => navItem(n, () => { setNav(n.id); closeMobile(); }))}
+          {/* Fieldcraft sits in the Report group but stays out of REPORT itself —
+              that array drives ReportView, which cannot render this surface. */}
+          {navItem({ id: 'fieldcraft', name: 'Fieldcraft', icon: GraduationCap, color: '#0FB5A6' }, () => { setNav('fieldcraft'); closeMobile(); })}
         </div>
       </aside>
 
@@ -213,9 +200,6 @@ export function CosmoShell() {
           <span>ArgantaEnergy</span><span className="sep">/</span>
           {active && <><span>Lifecycle</span><span className="sep">/</span></>}
           <span className="cur">{crumbLabel}</span>
-          {isFD && <><span className="sep">/</span><span className="cur">{FD_TABS.find((t) => t.id === tab)?.label}</span></>}
-          {isExpl && <><span className="sep">/</span><span className="cur">{explTab}</span></>}
-          {isRM && <><span className="sep">/</span><span className="cur">{RM_TABS.find((t) => t.id === rmTab)?.label}</span></>}
         </div>
         <div className="tr">
           <button className="ibtn" title="Theme" onClick={() => setDark((d) => !d)}>{dark ? <Sun size={15} /> : <Moon size={15} />}</button>
@@ -237,59 +221,17 @@ export function CosmoShell() {
           </div>
         )}>
           {nav === 'cockpit' ? (
-            <Cockpit dark={dark} onNavigate={(id) => { setNav(id); setTab('map'); closeMobile(); }} zoomVolveSignal={tourVolveNonce} />
+            <Cockpit dark={dark} onNavigate={(id) => { setNav(id); setLegacyTab('map'); closeMobile(); }} zoomVolveSignal={tourVolveNonce} />
           ) : isFD ? (
-          <>
-            <div className="tabs">
-              {FD_TABS.map((t) => (
-                <div key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <t.icon size={13} />{t.label}
-                </div>
-              ))}
-            </div>
-            <div className="fd-body">
-              <CosmoExplorer sel={sel} setSel={setSel} />
-              <div className="fd-canvas">
-                <div className="fd-view"><FieldDev subtab={tab} /></div>
-              </div>
-            </div>
-          </>
+            <FieldDevShell driveLegacyTab={legacyTab} driveLegacyNonce={legacyNonce} />
         ) : isExpl ? (
-          <>
-            <div className="tabs">
-              {EXPL_TABS.map((t) => (
-                <div key={t.name} className={'tab' + (explTab === t.name ? ' on' : '')} onClick={() => setExplTab(t.name)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <t.icon size={13} />{t.name}
-                  {t.spec && <span className="st st-BETA" style={{ marginLeft: 2 }}>SPEC</span>}
-                </div>
-              ))}
-            </div>
-            <div className="fd-body">
-              <ExplorationExplorer sel={explSel} setSel={setExplSel} />
-              <div className="fd-canvas">
-                <div className="fd-view"><Exploration tab={explTab} sel={explSel} setSel={setExplSel} /></div>
-              </div>
-            </div>
-          </>
+          <ExplorationShell />
         ) : isRM ? (
-          <>
-            <div className="tabs">
-              {RM_TABS.map((t) => (
-                <div key={t.id} className={'tab' + (rmTab === t.id ? ' on' : '')} onClick={() => setRmTab(t.id)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <t.icon size={13} />{t.label}
-                </div>
-              ))}
-            </div>
-            <div className="fd-body">
-              <ReservoirExplorer />
-              <div className="fd-canvas">
-                <div className="fd-view"><ReservoirMgmt subtab={rmTab} /></div>
-              </div>
-            </div>
-          </>
+          <ReservoirManagementShell />
+        ) : nav === 'insights' ? (
+          <IntelInsights />
+        ) : nav === 'agents' ? (
+          <IntelAgents onNavigate={(id) => { setNav(id); closeMobile(); }} />
         ) : isReport ? (
           <ReportView tab={reportItem!.name} goTab={(t) => setNav(REPORT.find((r) => r.name === t)?.id || 'manager')} />
         ) : nav === 'data' ? (
@@ -297,9 +239,11 @@ export function CosmoShell() {
         ) : nav === 'knowledge' ? (
           <KnowledgeView />
         ) : nav === 'well-delivery' ? (
-          <WellDeliveryWorkspace tab={wdSub} setTab={setWdSub} />
+          <WellDeliveryShell />
         ) : nav === 'drilling-sequence' ? (
-          <DrillingSequenceView />
+          <DrillingShell />
+        ) : isFieldcraft ? (
+          <Fieldcraft onOpenWorkspace={(id) => { setNav(id); closeMobile(); }} />
           ) : (
           <div className="content">
             <div className="ph" style={{ height: '100%' }}>
@@ -354,8 +298,8 @@ export function CosmoShell() {
           <CosmoAgentOrb size={52} />
           <span className="mtab-orb-lbl">Arganta</span>
         </button>
-        <button className={'mtab ' + (mActive === 'report' ? 'on' : '')} onClick={() => toggleSheet('report')}>
-          <FileText size={23} strokeWidth={1.7} /><span>Report</span>
+        <button className={'mtab ' + (mActive === 'fieldcraft' ? 'on' : '')} onClick={() => { setNav('fieldcraft'); closeMobile(); }}>
+          <GraduationCap size={23} strokeWidth={1.7} /><span>Learn</span>
         </button>
         <button className={'mtab ' + (mActive === 'intel' ? 'on' : '')} onClick={() => toggleSheet('intel')}>
           <Sparkles size={23} strokeWidth={1.7} /><span>Intelligence</span>
@@ -368,9 +312,17 @@ export function CosmoShell() {
         fullSignal={chatFullSignal}
         onFocusCockpit={() => setNav('cockpit')}
         onZoomVolve={() => setTourVolveNonce((n) => n + 1)}
-        onFieldDevTab={(t) => { setNav('field-development'); setTab(t); }}
+        onFieldDevTab={(t) => { setNav('field-development'); setLegacyTab(t); setLegacyNonce((n) => n + 1); }}
       />
       <CosmoSettings open={settings} onClose={() => setSettings(false)} dark={dark} setDark={setDark} />
+
+      {/* A running Fieldcraft mission follows the learner into whichever
+          lifecycle workspace it is scoped to, so the vertical acts as the lab. */}
+      {fieldcraftSession.activeMission && !isFieldcraft && (
+        <Suspense fallback={null}>
+          <MissionHud onReturn={() => { setNav('fieldcraft'); closeMobile(); }} />
+        </Suspense>
+      )}
     </div>
   );
 }

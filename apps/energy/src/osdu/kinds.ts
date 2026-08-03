@@ -1,4 +1,4 @@
-import type { DataClass, OsduGovernance } from './types';
+import type { DataClass, OsduGovernance } from './types.ts';
 
 export const OSDU_DATA_DEFINITIONS = {
   release: 'M27 / v0.30.0',

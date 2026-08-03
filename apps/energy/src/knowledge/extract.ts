@@ -23,18 +23,32 @@ export async function sha256Hex(buf: ArrayBuffer): Promise<string> {
 }
 
 // ── PDF: pdfjs getTextContent per page ──
-async function parsePdf(buf: ArrayBuffer): Promise<ExtractedBlock[]> {
+// `maxPages` bounds the work: a 300-page report would otherwise hold the event loop
+// for minutes. When the cap bites, the truncation is recorded as a block so the
+// omission is visible downstream rather than silently pretending the doc was short.
+async function parsePdf(buf: ArrayBuffer, maxPages?: number): Promise<ExtractedBlock[]> {
   const pdfjs = await import('pdfjs-dist');
   // worker registered via ?url so Vite bundles it as an asset
   const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
   const doc = await pdfjs.getDocument({ data: buf.slice(0) }).promise;
   const blocks: ExtractedBlock[] = [];
-  for (let p = 1; p <= doc.numPages; p++) {
+  const limit = maxPages && maxPages > 0 ? Math.min(maxPages, doc.numPages) : doc.numPages;
+  for (let p = 1; p <= limit; p++) {
     const page = await doc.getPage(p);
     const tc = await page.getTextContent();
     const text = tc.items.map((it) => ('str' in it ? it.str : '')).join(' ').replace(/\s+/g, ' ').trim();
     if (text) blocks.push({ kind: 'paragraph', text, locator: `page ${p}` });
+    page.cleanup();
+    // yield to the event loop so a long document never freezes the UI
+    if (p % 10 === 0) await new Promise((r) => setTimeout(r, 0));
+  }
+  if (limit < doc.numPages) {
+    blocks.push({
+      kind: 'paragraph',
+      text: `[Extraction bounded at ${limit} of ${doc.numPages} pages. Remaining pages were not read.]`,
+      locator: `pages ${limit + 1}-${doc.numPages}`,
+    });
   }
   return blocks;
 }
@@ -101,13 +115,18 @@ async function parseTxt(buf: ArrayBuffer): Promise<ExtractedBlock[]> {
     .map((t, i) => ({ kind: 'paragraph' as const, text: t, locator: `paragraph ${i + 1}` }));
 }
 
-export async function extractDoc(file: File): Promise<ExtractedDoc> {
+export interface ExtractOptions {
+  /** Bound PDF page reads. Omit for the full document (the Extraction Studio default). */
+  maxPages?: number;
+}
+
+export async function extractDoc(file: File, opts: ExtractOptions = {}): Promise<ExtractedDoc> {
   const buf = await file.arrayBuffer();
   const kind = detectKind(file.name);
   const sha = await sha256Hex(buf);
   let blocks: ExtractedBlock[] = [];
   try {
-    if (kind === 'pdf') blocks = await parsePdf(buf);
+    if (kind === 'pdf') blocks = await parsePdf(buf, opts.maxPages);
     else if (kind === 'xlsx' || kind === 'csv') blocks = await parseSheets(buf, kind);
     else if (kind === 'docx' || kind === 'pptx') blocks = await parseOoxml(buf, kind);
     else if (kind === 'txt') blocks = await parseTxt(buf);

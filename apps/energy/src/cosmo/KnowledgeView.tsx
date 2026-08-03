@@ -17,6 +17,7 @@ import {
   buildGraph, buildLinkIndex, volveSeed, TYPE_COLOR, TYPE_LABEL, FOLDER_ORDER,
   type KNode, type KType, type KGraph, type LinkIndex,
 } from './knowledge-model';
+import { IntelligenceHeader, IntelligenceSurface, IntelligenceTabs } from './IntelligenceChrome';
 
 // ── note markdown → HTML with clickable [[wikilinks]] ─────────────────────────
 function noteHtml(md: string) {
@@ -295,19 +296,15 @@ export function KnowledgeView() {
   const index = useMemo<LinkIndex | null>(() => (graph ? buildLinkIndex(graph.nodes) : null), [graph]);
 
   return (
-    <div className="kb">
-      <div className="kb-bar">
-        <div className="kb-title"><span className="ki"><BookOpen size={15} /></span><b>Knowledge Base</b>
-          <span className="kb-sub">{graph && index ? `${graph.nodes.length} notes · ${index.edges.length} links · Volve` : 'loading…'}</span></div>
-        <div className="kb-prov"><Search size={11} /> CONNECTED TWIN · data ↔ knowledge · scalable multi-field</div>
-        {graph && <button className="kb-dl kb-export" onClick={() => exportVault(graph.nodes)} title="Download the whole vault as an Obsidian ZIP"><FolderDown size={14} /> Export Vault (.zip)</button>}
-      </div>
-      <div className="kb-subtabs">
-        <div className={'kb-subtab' + (sub === 'explorer' ? ' on' : '')} onClick={() => setSub('explorer')}><BookOpen size={14} /> Explorer</div>
-        <div className={'kb-subtab' + (sub === 'graph' ? ' on' : '')} onClick={() => setSub('graph')}><Orbit size={14} /> Graph &amp; Timeline</div>
-      </div>
+    <IntelligenceSurface className="kb knowledge-surface" accent="var(--teal)">
+      <IntelligenceHeader icon={BookOpen} title="Knowledge Base" subtitle={graph && index ? `${graph.nodes.length} notes · ${index.edges.length} links · Volve` : 'loading…'}
+        status={<div className="kb-prov"><Search size={11} /> CONNECTED TWIN · data ↔ knowledge · scalable multi-field</div>}
+        actions={graph ? <button className="kb-dl kb-export" onClick={() => exportVault(graph.nodes)} title="Download the whole vault as an Obsidian ZIP"><FolderDown size={14} /> Export Vault (.zip)</button> : undefined} />
+      <IntelligenceTabs active={sub} onChange={setSub} ariaLabel="Knowledge views" items={[
+        { id: 'explorer', label: 'Explorer', icon: BookOpen }, { id: 'graph', label: 'Graph & Timeline', icon: Orbit },
+      ]} />
       {graph && index ? (sub === 'explorer' ? <Explorer graph={graph} index={index} sel={sel} setSel={setSel} /> : <KnowledgeGraph graph={graph} index={index} sel={sel} setSel={setSel} />)
         : <div className="kb-empty" style={{ padding: 40 }}>Loading Volve knowledge graph…</div>}
-    </div>
+    </IntelligenceSurface>
   );
 }

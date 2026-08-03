@@ -269,17 +269,32 @@ const geometryContains = (geometry, point) => {
   return false;
 };
 
-const fieldLocations = [
-  ...points.filter((item) => item.properties.type === 'Field').map((item) => item.geometry.coordinates),
-  ...polygons.filter((item) => item.properties.type === 'Field').map((item) => centroidOf(item.geometry)).filter(Boolean),
-];
+const spatialFieldFeatures = [...points, ...polygons].filter((item) => item.properties.type === 'Field');
+const fieldSpatialRows = spatialFieldFeatures.map((item) => ({
+  feature: item,
+  location: item.geometry.type === 'Point' ? item.geometry.coordinates : centroidOf(item.geometry),
+})).filter((item) => item.location);
+const fieldLocations = fieldSpatialRows.map((item) => item.location);
 const provinceFields = Object.fromEntries(provinces.features.map((item) => [item.properties.prvCode, 0]));
+const provinceFieldMembers = Object.fromEntries(provinces.features.map((item) => [item.properties.prvCode, []]));
+const auFieldMembers = Object.fromEntries(aus.features.map((item) => [item.properties.auCode, []]));
+const scopeFieldSummary = (feature, location) => ({
+  id: feature.properties.id,
+  name: feature.properties.name,
+  country: feature.properties.country || 'Not reported',
+  source: feature.properties.source,
+  fly: { lon: location[0], lat: location[1] },
+});
 let matchedFields = 0;
-for (const location of fieldLocations) {
+for (const { feature, location } of fieldSpatialRows) {
   const match = provinces.features.find((item) => geometryContains(item.geometry, location));
   if (!match) continue;
   provinceFields[match.properties.prvCode] += 1;
+  provinceFieldMembers[match.properties.prvCode].push(scopeFieldSummary(feature, location));
   matchedFields += 1;
+  for (const au of aus.features) {
+    if (geometryContains(au.geometry, location)) auFieldMembers[au.properties.auCode].push(scopeFieldSummary(feature, location));
+  }
 }
 const topProvinces = provinces.features
   .map(({ properties }) => ({ prvCode: properties.prvCode, prvName: properties.prvName, fieldCount: provinceFields[properties.prvCode], boeMean: properties.boeMean }))
@@ -308,6 +323,12 @@ const write = (name, obj) => {
 const pointKb = write('cockpit-points.geojson', { type: 'FeatureCollection', features: points });
 const polygonKb = write('cockpit-polygons.geojson', { type: 'FeatureCollection', features: polygons });
 const detailKb = write('cockpit-field-detail.json', fieldDetail);
+const scopeFieldsKb = write('cockpit-scope-fields.json', {
+  generatedAt: new Date().toISOString(),
+  methodology: 'OSDU Field spatial centroids intersected with USGS World Petroleum Assessment province and assessment-unit polygons in WGS84 (EPSG:4326).',
+  provinces: provinceFieldMembers,
+  assessmentUnits: auFieldMembers,
+});
 
 // §10 3D reserve towers — percentiles computed over the FULL real distribution at build time
 // so the client's log/percentile-clamped height scale (and its legend) is stable and honest,
@@ -324,6 +345,7 @@ const towerKb = write('cockpit-reserve-towers.json', {
 });
 console.log(`[cockpit-spatial] ${points.length} points (${pointKb}kb), ${polygons.length} polygons (${polygonKb}kb), field detail (${detailKb}kb), reserve towers ${towers.length} (${towerKb}kb)`);
 console.log(`[cockpit-insights] ${matchedFields}/${fieldLocations.length} spatial fields matched to ${provinces.features.length} USGS provinces`);
+console.log(`[cockpit-scope-fields] province/AU membership index ${scopeFieldsKb}kb`);
 
 // ── Stream D: OSDU-grounded search index (handoff §11) ──
 // Grouped by entity type; each entry carries name + aliases + parent context + a fly-to

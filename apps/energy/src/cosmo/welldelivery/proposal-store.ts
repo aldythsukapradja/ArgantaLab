@@ -1,6 +1,6 @@
 // proposal-store.ts — retained for the in-progress Drilling Sequence (sequence/*)
 // build (listProposals / listScheduleItems seed the schedule). The live Well
-// Delivery workspace uses src/tabs/welldelivery/wdData instead; both share the
+// The parked delivery workbench uses src/tabs/welldelivery/legacy/wdData instead; both share the
 // energy_drilling_sequence_v1 key so a sanctioned candidate can surface here.
 import type { WellProposal, DrillingScheduleItem } from './proposal-types';
 

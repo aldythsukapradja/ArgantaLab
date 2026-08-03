@@ -20,6 +20,7 @@ import { OSDU_DATA_DEFINITIONS, OSDU_KIND_BY_ENTITY } from '../osdu';
 import type { OsduPipelineIndex } from '../osdu';
 import { loadIndex } from '../wb/load';
 import type { WbIndex } from '../wb/types';
+import { IntelligenceHeader, IntelligenceSurface, IntelligenceTabs } from './IntelligenceChrome';
 
 type Pos = Record<string, { x: number; y: number }>;
 const tableById = (id: string) => TABLES.find((t) => t.id === id)!;
@@ -645,33 +646,23 @@ export function DataView() {
             ? 'ACL · LegalTag · data class · lineage'
             : 'OSDU ingestion gates · physical-data coverage';
   return (
-    <div className="dm">
-      <div className="dm-bar">
-        <div className="dm-title">
-          <span className="di"><Database size={15} /></span>
-          <b>OSDU Data Platform</b>
-          <span className="dm-sub">{subtitle}</span>
-        </div>
-        {sub === 'model' && (
-          <div className="dm-srcseg">
+    <IntelligenceSurface className="dm data-surface" accent="var(--teal)">
+      <IntelligenceHeader icon={Database} title="OSDU Data Platform" subtitle={subtitle}
+        context={sub === 'model' ? <div className="dm-srcseg">
             <div className={'sg' + (modelSrc === 'backbone' ? ' on' : '')} onClick={() => setModelSrc('backbone')}>OSDU backbone</div>
             <div className={'sg' + (modelSrc === 'volve' ? ' on' : '')} onClick={() => setModelSrc('volve')}>Volve tables (9)</div>
-          </div>
-        )}
-        <div className="dm-prov"><span className="dot" /> {sub === 'model' && !modelBackbone ? 'OSDU PHYSICAL PROJECTION · evidence-native' : 'OSDU CANONICAL · ACL · LEGALTAG · LINEAGE'}</div>
-      </div>
-      <div className="dm-subtabs">
-        <div className={'dm-subtab' + (sub === 'overview' ? ' on' : '')} onClick={() => setSub('overview')}><Workflow size={14} /> Overview</div>
-        <div className={'dm-subtab' + (sub === 'catalogue' ? ' on' : '')} onClick={() => setSub('catalogue')}><Globe2 size={14} /> Catalogue</div>
-        <div className={'dm-subtab' + (sub === 'model' ? ' on' : '')} onClick={() => setSub('model')}><Boxes size={14} /> Data Model</div>
-        <div className={'dm-subtab' + (sub === 'governance' ? ' on' : '')} onClick={() => setSub('governance')}><LockKeyhole size={14} /> Governance</div>
-        <div className={'dm-subtab' + (sub === 'quality' ? ' on' : '')} onClick={() => setSub('quality')}><TableProperties size={14} /> Quality &amp; Coverage</div>
-      </div>
+          </div> : undefined}
+        status={<div className="dm-prov"><span className="dot" /> {sub === 'model' && !modelBackbone ? 'OSDU PHYSICAL PROJECTION · evidence-native' : 'OSDU CANONICAL · ACL · LEGALTAG · LINEAGE'}</div>} />
+      <IntelligenceTabs active={sub} onChange={setSub} ariaLabel="Data platform views" items={[
+        { id: 'overview', label: 'Overview', icon: Workflow }, { id: 'catalogue', label: 'Catalogue', icon: Globe2 },
+        { id: 'model', label: 'Data Model', icon: Boxes }, { id: 'governance', label: 'Governance', icon: LockKeyhole },
+        { id: 'quality', label: 'Quality & Coverage', icon: TableProperties },
+      ]} />
       {sub === 'overview' ? <OsduOverview index={osduIndex} />
         : sub === 'catalogue' ? <OsduCatalogue />
           : sub === 'model' ? (modelBackbone ? <OsduBackbone /> : <ModelCanvas />)
             : sub === 'governance' ? <OsduGovernance />
               : <QualityCoverage />}
-    </div>
+    </IntelligenceSurface>
   );
 }

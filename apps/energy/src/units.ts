@@ -42,15 +42,51 @@ export function gasRate(sm3PerDay: number, sys: UnitSystem): Q {
   if (sys === 'field') { const v = sm3PerDay * SM3_TO_SCF / 1000; return { value: v, unit: 'Mscf/d', text: `${fmtNum(v)} Mscf/d` }; }
   return { value: sm3PerDay, unit: 'Sm³/d', text: `${fmtNum(sm3PerDay)} Sm³/d` };
 }
-/** Oil VOLUME (STOIIP, cumulative): Sm³ → MMbbl (field) or MMSm³ (metric). */
+/** Oil VOLUME (STOIIP, cumulative): Sm³ → MMbbl (field) or MMSm³ (metric).
+ *  MMbbl is the project default for liquids. Very large volumes roll to Bbbl so a
+ *  giant field doesn't render as a six-digit MMbbl number. */
 export function oilVol(sm3: number, sys: UnitSystem): Q {
-  if (sys === 'field') { const v = sm3 * SM3_TO_BBL / 1e6; return { value: v, unit: 'MMbbl', text: `${v.toFixed(1)} MMbbl` }; }
+  if (sys === 'field') {
+    const bbl = sm3 * SM3_TO_BBL;
+    if (Math.abs(bbl) >= 1e9) { const v = bbl / 1e9; return { value: v, unit: 'Bbbl', text: `${v.toFixed(2)} Bbbl` }; }
+    const v = bbl / 1e6; return { value: v, unit: 'MMbbl', text: `${v.toFixed(1)} MMbbl` };
+  }
   const v = sm3 / 1e6; return { value: v, unit: 'MMSm³', text: `${v.toFixed(1)} MMSm³` };
 }
-/** Gas VOLUME (GIIP): Sm³ → Bscf (field) or BSm³ (metric). */
+
+/** Gas VOLUME (GIIP): Sm³ → Bscf, rolling to TCF at scale (field) or BSm³ (metric).
+ *  Bscf is the working default; TCF takes over above 1000 Bscf, which is how gas
+ *  volumes are actually quoted. */
 export function gasVol(sm3: number, sys: UnitSystem): Q {
-  if (sys === 'field') { const v = sm3 * SM3_TO_SCF / 1e9; return { value: v, unit: 'Bscf', text: `${v.toFixed(1)} Bscf` }; }
+  if (sys === 'field') {
+    const scf = sm3 * SM3_TO_SCF;
+    if (Math.abs(scf) >= 1e12) { const v = scf / 1e12; return { value: v, unit: 'TCF', text: `${v.toFixed(2)} TCF` }; }
+    const v = scf / 1e9; return { value: v, unit: 'Bscf', text: `${v.toFixed(1)} Bscf` };
+  }
   const v = sm3 / 1e9; return { value: v, unit: 'BSm³', text: `${v.toFixed(1)} BSm³` };
+}
+
+/** Water/injection VOLUME — same magnitude family as oil, different label. */
+export function waterVol(sm3: number, sys: UnitSystem): Q {
+  if (sys === 'field') {
+    const bbl = sm3 * SM3_TO_BBL;
+    if (Math.abs(bbl) >= 1e9) { const v = bbl / 1e9; return { value: v, unit: 'Bbbl', text: `${v.toFixed(2)} Bbbl` }; }
+    const v = bbl / 1e6; return { value: v, unit: 'MMbbl', text: `${v.toFixed(1)} MMbbl` };
+  }
+  const v = sm3 / 1e6; return { value: v, unit: 'MMSm³', text: `${v.toFixed(1)} MMSm³` };
+}
+
+/** Convert a depth expressed in an arbitrary source unit into metres (the native
+ *  storage unit) so mixed-unit deliveries normalise before display.
+ *  Returns null when the unit isn't recognised — we never guess a depth. */
+export function depthToMetres(value: number, sourceUnit: string): number | null {
+  const u = sourceUnit.trim().toLowerCase();
+  if (/^(m|meters?|metres?)$/.test(u)) return value;
+  if (u === 'mm') return value / 1000;
+  if (u === 'cm') return value / 100;
+  if (u === 'km') return value * 1000;
+  if (/^(ft|f|feet|foot)$/.test(u)) return value / M_TO_FT;
+  return null;
 }
 /** DEPTH / length: m → ft (field) or m (metric). */
 export function depth(m: number, sys: UnitSystem): Q {
@@ -70,3 +106,9 @@ export function temp(c: number, sys: UnitSystem): Q {
 
 // convenience: system label for chips
 export const systemLabel = (s: UnitSystem) => (s === 'field' ? 'FIELD (bopd)' : 'METRIC (Sm³)');
+
+/** What the current system actually reports, for the settings screen and any
+ *  surface that wants to state its conventions rather than leave them implicit. */
+export const unitConventions = (s: UnitSystem) => (s === 'field'
+  ? { depth: 'ft', oil: 'MMbbl', gas: 'Bscf / TCF', rate: 'bopd', pressure: 'psi', temp: '°F' }
+  : { depth: 'm', oil: 'MMSm³', gas: 'BSm³', rate: 'Sm³/d', pressure: 'bar', temp: '°C' });

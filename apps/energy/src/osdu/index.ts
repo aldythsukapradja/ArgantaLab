@@ -1,3 +1,3 @@
-export * from './types';
-export * from './kinds';
-export * from './adapter';
+export * from './types.ts';
+export * from './kinds.ts';
+export * from './adapter.ts';

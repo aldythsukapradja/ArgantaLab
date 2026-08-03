@@ -35,6 +35,12 @@ type CockpitMapProps = {
   /** Exposes the live MapLibre instance so sibling overlays (e.g. CockpitReserveTowers'
    *  deck.gl MapboxOverlay) can attach via map.addControl — called with null on teardown. */
   onMapReady?: (map: MapLibreMap | null) => void;
+  /** 'full' (default) = the global Cockpit's layered view: province/AU/OSDU-polygon
+   *  fills, heatmap, clusters — unchanged for existing callers. 'minimal' = a single
+   *  clean white boundary line with everything else hidden, for a focused single-scope
+   *  view (e.g. the Basin Dossier) where three stacked translucent fills over satellite
+   *  imagery read as an ugly whitish haze rather than three distinct colors. */
+  overlay?: 'full' | 'minimal';
 };
 
 const EMPTY_FILTER: FilterSpecification = ['==', ['get', '__none'], '__selected'];

@@ -11,3 +11,13 @@ generated-media/
 # ComfyUI models/outputs must never enter git (server lives at C:\ComfyUI anyway)
 **/ComfyUI_windows_portable/
 **/models/checkpoints/*.safetensors
+# Third-party copyrighted source material — local reference only, never committed.
+# The Doust booklet and every figure extracted from it: 17 figures are Doust's own
+# and 31 belong to other named authors/publishers. NONE are cleared for
+# redistribution yet, so neither the PDF nor the extracted PNGs may enter git or a
+# deploy. Re-create locally with docs/arganta-energy/knowledge-base/extract_doust_figures.py
+docs/arganta-energy/knowledge-base/doust-basin-figures/_source/
+apps/energy/public/doust-figures/
+# Generated Markdown vault (9k+ notes) — rebuild from the workbook with
+# docs/arganta-energy/knowledge-base/export_kb_markdown.py
+docs/arganta-energy/knowledge-base/vault/

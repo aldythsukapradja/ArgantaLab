@@ -8,7 +8,9 @@ const dir = path.join(root, 'public', 'osdu');
 const index = JSON.parse(fs.readFileSync(path.join(dir, 'index.json'), 'utf8'));
 let total = 0;
 for (const item of index.manifests.filter((x) => x.status === 'ready')) {
-  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'public', item.path), 'utf8'));
+  // index.path is already app-relative ('data-energy/generated/osdu/…'), which is where
+  // build-osdu.mjs writes. Prefixing 'public' pointed at a directory that never exists.
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, item.path), 'utf8'));
   const result = validateManifest(manifest, item.dataClass);
   if (!result.valid) throw new Error(`${item.source}:\n${result.errors.join('\n')}`);
   total += result.records;

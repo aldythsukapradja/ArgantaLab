@@ -18,19 +18,19 @@ import { loadIndex } from '../wb/load';
 // Real, already-built Field Development viewers — the chat never re-implements these, it only
 // calls them. Lazy-loaded so the always-mounted chat overlay doesn't pull their weight (canvas,
 // three.js internals, etc.) into every page's initial bundle.
-const LiveMapView = lazy(async () => ({ default: (await import('../tabs/fielddev/MapView')).MapView }));
-const LiveGridModelView = lazy(async () => ({ default: (await import('../tabs/fielddev/GridModelView')).GridModelView }));
-const LiveSimulationView = lazy(async () => ({ default: (await import('../tabs/fielddev/SimulationView')).SimulationView }));
-const LiveForecast = lazy(async () => ({ default: (await import('../tabs/fielddev/Forecast')).Forecast }));
-const LiveLogsView = lazy(async () => ({ default: (await import('../tabs/fielddev/LogsView')).LogsView }));
-const LivePetrophysics = lazy(async () => ({ default: (await import('../tabs/fielddev/Petrophysics')).Petrophysics }));
-const LiveCorrelationView = lazy(async () => ({ default: (await import('../tabs/fielddev/CorrelationView')).CorrelationView }));
-const LiveStructural = lazy(async () => ({ default: (await import('../tabs/fielddev/Structural')).Structural }));
-const LiveProperty = lazy(async () => ({ default: (await import('../tabs/fielddev/Property')).Property }));
-const LiveVolumetrics = lazy(async () => ({ default: (await import('../tabs/fielddev/Volumetrics')).Volumetrics }));
-const LiveUncertainty = lazy(async () => ({ default: (await import('../tabs/fielddev/Uncertainty')).Uncertainty }));
-const LiveEconomics = lazy(async () => ({ default: (await import('../tabs/fielddev/Economics')).Economics }));
-const LiveFieldReview = lazy(async () => ({ default: (await import('../tabs/fielddev/FieldReview')).FieldReview }));
+const LiveMapView = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/MapView')).MapView }));
+const LiveGridModelView = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/GridModelView')).GridModelView }));
+const LiveSimulationView = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/SimulationView')).SimulationView }));
+const LiveForecast = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/Forecast')).Forecast }));
+const LiveLogsView = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/LogsView')).LogsView }));
+const LivePetrophysics = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/Petrophysics')).Petrophysics }));
+const LiveCorrelationView = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/CorrelationView')).CorrelationView }));
+const LiveStructural = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/Structural')).Structural }));
+const LiveProperty = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/Property')).Property }));
+const LiveVolumetrics = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/Volumetrics')).Volumetrics }));
+const LiveUncertainty = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/Uncertainty')).Uncertainty }));
+const LiveEconomics = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/Economics')).Economics }));
+const LiveFieldReview = lazy(async () => ({ default: (await import('../tabs/fielddev/legacy/FieldReview')).FieldReview }));
 
 // ── data (verbatim from source) ─────────────────────────────────────────────
 const CC_SESSIONS = [
