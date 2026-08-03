@@ -90,3 +90,10 @@ html[data-ui="cosmo"] .xs-reviewed button{margin-left:auto;font-family:var(--mon
 
 @media (max-width:1180px){html[data-ui="cosmo"] .xs-body{grid-template-columns:210px 1fr}html[data-ui="cosmo"] .xs-inspect{display:none}}
 @media (prefers-reduced-motion:reduce){html[data-ui="cosmo"] .xs-spin{animation:none}}
+
+/* re-read a page-capped workspace document in full */
+html[data-ui="cosmo"] .xs-src{cursor:pointer}
+html[data-ui="cosmo"] .xs-refetch{display:inline-flex;align-items:center;justify-content:center;padding:3px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--ink3);cursor:pointer;flex-shrink:0}
+html[data-ui="cosmo"] .xs-refetch:hover{border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .xs-refetch.urgent{border-color:var(--amber);background:rgba(245,158,11,.12);color:var(--amber)}
+html[data-ui="cosmo"] .xs-refetch.urgent:hover{background:var(--amber);color:var(--panel)}

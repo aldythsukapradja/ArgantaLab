@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   UploadCloud, FileText, Play, Check, X, Loader2, Database,
-  Link2, ChevronRight, Inbox,
+  Link2, ChevronRight, Inbox, RefreshCw,
 } from 'lucide-react';
 import { useStore } from '../store';
 import { mergeVault } from '../knowledge/vault';
@@ -28,8 +28,9 @@ import type { ExtractedDoc, ExtractionCandidate, VaultNote } from '../knowledge/
 import {
   applyReviews, loadReviews, recordReview, tally, type ReviewLedger,
 } from '../knowledge/review';
-import { listAllAssets } from '../dataqc/db';
+import { getAsset, getBlob, listAllAssets, putAsset, putBlob } from '../dataqc/db';
 import { readRecord } from '../dataqc/readDigest';
+import { digestRecord } from '../dataqc/digest';
 import { Markdown } from '../tabs/md';
 import './extraction-studio.css';
 
@@ -50,6 +51,11 @@ interface Source {
   fieldId?: string;
   /** workspace lane: extraction was page-capped during bundle load */
   truncated?: boolean;
+  /** workspace lane: where the original bytes live (IndexedDB key or public URL) */
+  blobKey?: string;
+  /** the real filename WITH its extension — detectKind() parses the extension, so
+   *  re-extraction must not be handed the human-readable display label */
+  fileName?: string;
 }
 
 interface DocPayload { doc: ExtractedDoc; candidates: ExtractionCandidate[] }
@@ -125,6 +131,8 @@ export function ExtractionStudio() {
             doc: payload.doc,
             fieldId: a.fieldId,
             truncated: payload.doc.blocks.some((b) => b.locator.startsWith('pages ')),
+            blobKey: a.blobKey,
+            fileName: a.fileName,
           });
           allCands.push(...(payload.candidates ?? []));
         }
@@ -166,6 +174,40 @@ export function ExtractionStudio() {
     }
     setBusy(false);
   }, [sources, idx]);
+
+  // Workspace documents carry whatever page budget the bundle loader used, so a
+  // long report arrives truncated. Re-reading the ORIGINAL bytes uncapped fixes
+  // that, and because docId is sha256-derived the candidate ids are unchanged —
+  // verdicts already recorded still apply. The fuller digest is written back so
+  // the cap is paid off once, not every session.
+  const reExtract = useCallback(async (src: Source) => {
+    if (!src.blobKey) return;
+    setSources((s) => s.map((x) => (x.id === src.id ? { ...x, state: 'extracting' } : x)));
+    try {
+      const stored = await getBlob(src.blobKey);
+      const blob = stored ?? await fetch(src.blobKey).then((r) => (r.ok ? r.blob() : null));
+      if (!blob) throw new Error('original bytes unavailable');
+      const doc = await extractDoc(new File([blob], src.fileName ?? src.name));   // uncapped
+      const cands = buildCandidates(doc, idx);
+
+      const asset = await getAsset(src.id);
+      if (asset?.digestKey) {
+        const r = digestRecord('document', { doc, candidates: cands }, {});
+        const bytes = new Uint8Array(r.compressed.length);
+        bytes.set(r.compressed);
+        await putBlob(asset.digestKey, new Blob([bytes.buffer], { type: 'application/gzip' }));
+        await putAsset({
+          ...asset,
+          compressedBytes: r.compressedBytes,
+          meta: { ...asset.meta, pages: doc.blocks.length, candidates: cands.length },
+        });
+      }
+      setSources((s) => s.map((x) => (x.id === src.id ? { ...x, state: 'done', doc, kind: doc.kind, truncated: false } : x)));
+      setCands((prev) => [...prev.filter((p) => p.docId !== doc.docId), ...cands]);
+    } catch (err) {
+      setSources((s) => s.map((x) => (x.id === src.id ? { ...x, state: 'error', error: (err as Error).message } : x)));
+    }
+  }, [idx]);
 
   const decide = useCallback((cand: ExtractionCandidate, accept: boolean) => {
     const at = new Date().toISOString();
@@ -245,7 +287,8 @@ export function ExtractionStudio() {
           {sources.filter((s) => s.origin === 'workspace').map((s) => (
             <SourceRow key={s.id} s={s} active={selDoc === docIdOf(s)}
               n={byDoc.get(docIdOf(s) ?? '')?.length ?? 0}
-              onClick={() => setSelDoc(selDoc === docIdOf(s) ? null : docIdOf(s))} />
+              onClick={() => setSelDoc(selDoc === docIdOf(s) ? null : docIdOf(s))}
+              onReExtract={s.blobKey ? () => void reExtract(s) : undefined} />
           ))}
 
           {sources.some((s) => s.origin === 'upload') && (
@@ -361,9 +404,12 @@ export function ExtractionStudio() {
   );
 }
 
-function SourceRow({ s, n, active, onClick }: { s: Source; n: number; active: boolean; onClick: () => void }) {
+function SourceRow({ s, n, active, onClick, onReExtract }: {
+  s: Source; n: number; active: boolean; onClick: () => void; onReExtract?: () => void;
+}) {
   return (
-    <button className={'xs-src' + (active ? ' on' : '')} onClick={onClick}>
+    <div className={'xs-src' + (active ? ' on' : '')} onClick={onClick} role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') onClick(); }}>
       <span className="xs-src-ic">
         {s.state === 'extracting' ? <Loader2 size={12} className="xs-spin" />
           : s.state === 'error' ? <X size={12} />
@@ -379,7 +425,16 @@ function SourceRow({ s, n, active, onClick }: { s: Source; n: number; active: bo
       </span>
       {s.state === 'queued' && <span className="xs-q">queued</span>}
       {s.error && <span className="xs-err" title={s.error}>error</span>}
+      {onReExtract && s.state !== 'extracting' && (
+        <button className={'xs-refetch' + (s.truncated ? ' urgent' : '')}
+          title={s.truncated
+            ? `Only the first pages were read. Re-read ${s.name} in full.`
+            : `Re-read ${s.name} from its original bytes and re-tag it.`}
+          onClick={(e) => { e.stopPropagation(); onReExtract(); }}>
+          <RefreshCw size={11} />
+        </button>
+      )}
       {n > 0 && <ChevronRight size={12} />}
-    </button>
+    </div>
   );
 }

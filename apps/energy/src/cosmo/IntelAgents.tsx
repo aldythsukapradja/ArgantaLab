@@ -2,7 +2,7 @@
 // lifecycle definitions are real and shared with Cockpit. Runtime runs, telemetry,
 // evaluations and deployment versions are not connected yet, so those surfaces
 // expose their contracts and honest awaiting states instead of invented activity.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity, ArrowLeft, ArrowUpRight, Beaker, BookOpenCheck, Bot, Boxes, Braces,
   CheckCircle2, ChevronRight, CircleOff, Clock3, Database, Eye, FileKey2, Gauge,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { AGENTS, type AgentDef } from './agents';
 import { IntelligenceHeader, IntelligenceSurface, IntelligenceTabs } from './IntelligenceChrome';
+import { EMPTY_CONTEXT, knowledgeBindings, loadAgentContext, toolBindings, verticalSummary, type AgentContext } from './agent-context';
 import './intel-agents.css';
 
 type AgentTab = 'workforce' | 'runs' | 'evaluations' | 'monitor' | 'governance';
@@ -45,18 +46,6 @@ const EVAL_SUITES = [
   { name: 'Lifecycle routing', cases: 'Awaiting test set', status: 'DRAFT', copy: 'Requests are routed to the correct lifecycle workspace or specialist.' },
 ];
 
-const toolsFor = (id: string) => ({
-  arganta: ['OSDU catalogue search','Knowledge retrieval','Lifecycle navigation','Artifact presentation'],
-  exploration: ['World petroleum map','Basin / play context','Prospect risk','Prospect volumetrics'],
-  'field-development': ['Static model','Volumetrics','Concept screening','Forecast & economics'],
-  'well-delivery': ['Trajectory design','Clearance','Well basis','Handover readiness'],
-  'reservoir-management': ['Production surveillance','Injection & VRR','Pressure / tests','Patterns & forecast'],
-  'drilling-sequence': ['Well stock','Rig schedule','Constraint review','Sequence scenarios'],
-}[id] ?? []);
-const knowledgeFor = (id: string) => id === 'arganta'
-  ? ['World field catalogue','Arganta knowledge graph','Lifecycle standards','Volve showcase']
-  : ['OSDU field context',`${DIRECTORY.find((item) => item.id === id)?.name ?? 'Lifecycle'} standards`,'Volve showcase evidence','Client field extension slot'];
-
 function EmptyState({ icon: Icon, title, copy }: { icon: typeof Bot; title: string; copy: string }) {
   return <div className="iag-empty"><span><Icon size={20} /></span><b>{title}</b><small>{copy}</small></div>;
 }
@@ -67,6 +56,15 @@ function SectionTitle({ icon: Icon, title, meta }: { icon: typeof Bot; title: st
 export function IntelAgents({ onNavigate }: { onNavigate: (id: string) => void }) {
   const [tab, setTab] = useState<AgentTab>('workforce');
   const [selected, setSelected] = useState<DirectoryAgent | null>(null);
+  // what the workspace can actually evidence — measured, not asserted
+  const [ctx, setCtx] = useState<AgentContext | null>(null);
+  useEffect(() => {
+    let dead = false;
+    loadAgentContext()
+      .then((c) => { if (!dead) setCtx(c); })
+      .catch(() => { if (!dead) setCtx(EMPTY_CONTEXT); });
+    return () => { dead = true; };
+  }, []);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const live = DIRECTORY.filter((agent) => agent.state === 'LIVE').length;
 
@@ -78,7 +76,7 @@ export function IntelAgents({ onNavigate }: { onNavigate: (id: string) => void }
       <IntelligenceTabs items={TABS} active={tab} onChange={(next) => { setTab(next); setSelected(null); }} ariaLabel="Agent control views" />
       <div className="iag-content">
         {tab === 'workforce' && !selected && <Workforce agents={DIRECTORY} onSelect={(agent) => { setSelected(agent); setDetailTab('overview'); }} onNavigate={onNavigate} />}
-        {tab === 'workforce' && selected && <AgentDetail agent={selected} tab={detailTab} onChangeTab={setDetailTab} onBack={() => setSelected(null)} onNavigate={onNavigate} />}
+        {tab === 'workforce' && selected && <AgentDetail agent={selected} tab={detailTab} ctx={ctx} onChangeTab={setDetailTab} onBack={() => setSelected(null)} onNavigate={onNavigate} />}
         {tab === 'runs' && <Runs />}
         {tab === 'evaluations' && <Evaluations />}
         {tab === 'monitor' && <Monitor />}
@@ -96,15 +94,15 @@ function Workforce({ agents, onSelect, onNavigate }: { agents: DirectoryAgent[];
   </article>)}</div></div>;
 }
 
-function AgentDetail({ agent, tab, onChangeTab, onBack, onNavigate }: { agent: DirectoryAgent; tab: DetailTab; onChangeTab: (tab: DetailTab) => void; onBack: () => void; onNavigate: (id: string) => void }) {
-  return <div className="iag-detail"><aside className="iag-detail-rail"><button className="iag-back" onClick={onBack}><ArrowLeft size={12} /> Workforce</button><div className="iag-profile" style={{ '--agent': agent.color } as React.CSSProperties}><span><agent.icon size={22} /></span><b>{agent.name}</b><small>{agent.role}</small><em>{agent.state}</em></div><nav>{DETAIL_TABS.map((item) => <button key={item.id} className={tab === item.id ? 'active' : ''} onClick={() => onChangeTab(item.id)}>{item.label}<ChevronRight size={11} /></button>)}</nav>{agent.kind === 'lifecycle' && <button className="iag-open-workspace" onClick={() => onNavigate(agent.id)}>Open lifecycle workspace <ArrowUpRight size={12} /></button>}</aside><main className="iag-detail-main"><DetailContent agent={agent} tab={tab} /></main></div>;
+function AgentDetail({ agent, tab, ctx, onChangeTab, onBack, onNavigate }: { agent: DirectoryAgent; tab: DetailTab; ctx: AgentContext | null; onChangeTab: (tab: DetailTab) => void; onBack: () => void; onNavigate: (id: string) => void }) {
+  return <div className="iag-detail"><aside className="iag-detail-rail"><button className="iag-back" onClick={onBack}><ArrowLeft size={12} /> Workforce</button><div className="iag-profile" style={{ '--agent': agent.color } as React.CSSProperties}><span><agent.icon size={22} /></span><b>{agent.name}</b><small>{agent.role}</small><em>{agent.state}</em></div><nav>{DETAIL_TABS.map((item) => <button key={item.id} className={tab === item.id ? 'active' : ''} onClick={() => onChangeTab(item.id)}>{item.label}<ChevronRight size={11} /></button>)}</nav>{agent.kind === 'lifecycle' && <button className="iag-open-workspace" onClick={() => onNavigate(agent.id)}>Open lifecycle workspace <ArrowUpRight size={12} /></button>}</aside><main className="iag-detail-main"><DetailContent agent={agent} tab={tab} ctx={ctx} /></main></div>;
 }
 
-function DetailContent({ agent, tab }: { agent: DirectoryAgent; tab: DetailTab }) {
-  if (tab === 'overview') return <div className="iag-overview"><section className="iag-detail-hero" style={{ '--agent': agent.color } as React.CSSProperties}><div><span>{agent.short} AGENT · {agent.kind}</span><h2>{agent.name}</h2><p>{agent.generic}</p></div><em>{agent.state}</em></section><div className="iag-overview-grid"><section><SectionTitle icon={TargetIcon} title="Accountability" /><Kv label="Owner" value={agent.owner} /><Kv label="Role" value={agent.role} /><Kv label="Runtime" value={agent.runtime} /><Kv label="Human gate" value="Required for material write actions" /></section><section><SectionTitle icon={Eye} title="Showcase proof" /><p>{agent.proof}</p><small>Purpose copy and workspace evidence only · not an agent-run result.</small></section><section><SectionTitle icon={Boxes} title="Connected surfaces" /><div className="iag-chip-list">{toolsFor(agent.id).map((tool) => <span key={tool}>{tool}</span>)}</div></section><section><SectionTitle icon={BookOpenCheck} title="Knowledge posture" /><div className="iag-chip-list">{knowledgeFor(agent.id).map((item) => <span key={item}>{item}</span>)}</div></section></div></div>;
+function DetailContent({ agent, tab, ctx }: { agent: DirectoryAgent; tab: DetailTab; ctx: AgentContext | null }) {
+  if (tab === 'overview') return <div className="iag-overview"><section className="iag-detail-hero" style={{ '--agent': agent.color } as React.CSSProperties}><div><span>{agent.short} AGENT · {agent.kind}</span><h2>{agent.name}</h2><p>{agent.generic}</p></div><em>{agent.state}</em></section><div className="iag-overview-grid"><section><SectionTitle icon={TargetIcon} title="Accountability" /><Kv label="Owner" value={agent.owner} /><Kv label="Role" value={agent.role} /><Kv label="Runtime" value={agent.runtime} /><Kv label="Human gate" value="Required for material write actions" /></section><section><SectionTitle icon={Eye} title="Showcase proof" /><p>{agent.proof}</p><small>Purpose copy and workspace evidence only · not an agent-run result.</small></section><section><SectionTitle icon={Boxes} title="Connected surfaces" meta={verticalSummary(agent.id, ctx) ?? undefined} /><div className="iag-chip-list">{toolBindings(agent.id, ctx).map((b) => <span key={b.label} className={b.bound ? 'bound' : undefined}>{b.label}{b.evidence && <i>{b.evidence}</i>}</span>)}</div></section><section><SectionTitle icon={BookOpenCheck} title="Knowledge posture" /><div className="iag-chip-list">{knowledgeBindings(agent.id, ctx).map((b) => <span key={b.label} className={b.bound ? 'bound' : undefined}>{b.label}{b.evidence && <i>{b.evidence}</i>}</span>)}</div></section></div></div>;
   if (tab === 'build') return <ConfigView title="Build definition" icon={Settings2} note="Only the shared purpose statement is currently registered. Remaining fields expose the required contract." rows={[['Identity',`${agent.name} · ${agent.short}`,'REGISTERED'],['Purpose',agent.generic,'REGISTERED'],['Instructions','Not governed in the agent registry','AWAITING'],['Model / runtime','Not registered','AWAITING'],['Triggers',agent.kind === 'lifecycle' ? 'Manual workspace launch only' : 'Ask Arganta interface','PARTIAL'],['Orchestration policy','Not registered','AWAITING']]} />;
-  if (tab === 'knowledge') return <ConfigView title="Knowledge connections" icon={Library} note="Connected product surfaces are listed separately from approved runtime retrieval sources." rows={knowledgeFor(agent.id).map((item) => [item,item.includes('Client') ? 'Extension slot' : 'Available product context',item.includes('Client') ? 'AWAITING' : 'AVAILABLE'])} />;
-  if (tab === 'tools') return <ConfigView title="Tools & skills" icon={Wrench} note="These are existing product capabilities. Agent-callable tool contracts and permissions are not registered yet." rows={toolsFor(agent.id).map((item) => [item,'Product surface available','NOT TOOL-BOUND'])} />;
+  if (tab === 'knowledge') return <ConfigView title="Knowledge connections" icon={Library} note="Retrieval sources are listed with the evidence currently behind them. A source with no measured artefact is shown as awaiting, not available." rows={knowledgeBindings(agent.id, ctx).map((b) => [b.label, b.evidence ?? 'No measured evidence yet', b.bound ? 'AVAILABLE' : 'AWAITING'])} />;
+  if (tab === 'tools') return <ConfigView title="Tools & skills" icon={Wrench} note="Agent-callable tool contracts are still unregistered; what is measured here is the evidence each surface can already draw on." rows={toolBindings(agent.id, ctx).map((b) => [b.label, b.evidence ?? 'No measured evidence yet', b.bound ? 'EVIDENCE READY' : 'NOT TOOL-BOUND'])} />;
   if (tab === 'test') return <div className="iag-test"><SectionTitle icon={Play} title="Interactive preview" meta="runtime required" /><div className="iag-test-box"><div><Bot size={18} /><span><b>{agent.name}</b><small>Preview plan, retrieval, tool calls and response here.</small></span></div><textarea disabled value="Agent preview is unavailable until a governed runtime is registered." readOnly /><button disabled><Play size={12} /> Run preview</button></div><EmptyState icon={TerminalSquare} title="No preview runtime connected" copy="The lifecycle workspace remains usable, but it must not be presented as an autonomous agent execution." /></div>;
   if (tab === 'evaluate') return <div className="iag-agent-eval"><SectionTitle icon={TestTube2} title="Evaluation gates" meta="draft suites" /><div>{EVAL_SUITES.map((suite) => <EvalCard key={suite.name} {...suite} />)}</div></div>;
   if (tab === 'monitor') return <EmptyState icon={Gauge} title="No telemetry for this agent" copy="Register a runtime and execution ledger before showing success rate, latency, cost, groundedness or tool reliability." />;

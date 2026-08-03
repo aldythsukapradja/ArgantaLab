@@ -486,5 +486,71 @@ console.log('\n-- 7 · extraction review ledger --');
     tally(applyReviews(cands, { 'xc-gone-9': { verdict: 'accepted', at: 'x' } })).pending === 3);
 }
 
+// ── 8 · agent context (S9) ───────────────────────────────────────────────────
+console.log('\n-- 8 · agent context --');
+{
+  const { summarize, toolBindings, knowledgeBindings, verticalSummary, EMPTY_CONTEXT } =
+    await import('../src/cosmo/agent-context.ts');
+
+  const mk = (id, kind, vertical) => ({
+    id, origin: 'bundle', fieldId: 'volve', vertical, kind, format: 'unknown',
+    fileName: `${id}.json`, sha256: '', bytes: 1, meta: {}, qc: { status: 'pass', exceptions: [] }, uploadedAt: '',
+  });
+  const assets = [
+    mk('l1', 'log', 'field-development'), mk('l2', 'log', 'field-development'),
+    mk('s1', 'surface', 'field-development'),
+    mk('t1', 'trajectory', 'well-delivery'),
+    mk('p1', 'production', 'reservoir-management'),
+    mk('i1', 'injection', 'reservoir-management'),
+    mk('d1', 'document', 'field-development'),
+  ];
+  const cands = [
+    { candId: 'xc-d1-0', docId: 'd1', locator: 'p1', kind: 'note', title: 'A', matchedEntities: [], status: 'proposed' },
+    { candId: 'xc-d1-1', docId: 'd1', locator: 'p2', kind: 'note', title: 'B', matchedEntities: [], status: 'proposed' },
+  ];
+  const ctx = summarize(assets, cands, { 'xc-d1-0': { verdict: 'accepted', at: 'x' } });
+
+  check('context counts assets by kind', ctx.byKind.log === 2 && ctx.byKind.injection === 1, JSON.stringify(ctx.byKind));
+  check('context counts where each asset was ingested',
+    ctx.byVertical['field-development'] === 4 && ctx.byVertical['reservoir-management'] === 2,
+    JSON.stringify(ctx.byVertical));
+  check('context emits real OSDU record counts', ctx.osduRecords === assets.length * 2, `${ctx.osduRecords} records`);
+  check('context folds in the extraction review state',
+    ctx.extraction.candidates === 2 && ctx.extraction.accepted === 1 && ctx.extraction.pending === 1,
+    JSON.stringify(ctx.extraction));
+
+  // the honesty rule: a surface is only BOUND when a measurable artefact backs it
+  const rm = toolBindings('reservoir-management', ctx);
+  check('a surface with real evidence binds, and states it',
+    rm.find((b) => b.label === 'Injection & VRR').bound === true &&
+    rm.find((b) => b.label === 'Injection & VRR').evidence === '1 injection series',
+    rm.find((b) => b.label === 'Injection & VRR').evidence);
+
+  const drl = toolBindings('drilling-sequence', ctx);
+  check('a surface with no measurable backing stays UNBOUND',
+    drl.find((b) => b.label === 'Rig schedule').bound === false &&
+    drl.find((b) => b.label === 'Rig schedule').evidence === null);
+  check('…but a drilling surface that IS backed still binds',
+    drl.find((b) => b.label === 'Well stock').bound === true,
+    drl.find((b) => b.label === 'Well stock').evidence);
+
+  check('an empty workspace binds nothing at all',
+    toolBindings('field-development', EMPTY_CONTEXT).every((b) => !b.bound && b.evidence === null));
+  check('a null context is treated as empty, not crashed',
+    toolBindings('field-development', null).every((b) => !b.bound));
+
+  check('orchestrator knowledge posture reports governed records',
+    knowledgeBindings('arganta', ctx).find((b) => b.label === 'Governed OSDU records').bound === true);
+  check('an unknown agent id yields no invented surfaces', toolBindings('nope', ctx).length === 0);
+
+  check('vertical summary separates this lifecycle from field-wide',
+    verticalSummary('well-delivery', ctx) === '1 asset ingested in this lifecycle · 7 field-wide',
+    verticalSummary('well-delivery', ctx));
+  check('a lifecycle with no ingest of its own says so, without claiming zero data',
+    verticalSummary('exploration', ctx).includes('none ingested through this lifecycle yet'),
+    verticalSummary('exploration', ctx));
+  check('no workspace data ⇒ no summary line at all', verticalSummary('field-development', EMPTY_CONTEXT) === null);
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
