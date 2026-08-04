@@ -143,6 +143,10 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // everything else keeps the calendar timeline and never offers the toggle.
   const [monthly, setMonthly] = useState<ProdMonth[]>([]);
   const [wellSeries, setWellSeries] = useState<WellSeries[]>([]);
+  // the field's own solution GOR, so produced gas can be split into the part
+  // already inside the oil voidage and the part that is a separate reservoir
+  // volume. Null when the bundle publishes no PVT — then no split is claimed.
+  const [pvtRs, setPvtRs] = useState<number | null>(null);
   // structure overlay — the live map, the horizons Data QC has ingested for this
   // field, and the decoded grid for whichever one is selected
   const [map, setMap] = useState<MapLibreMap | null>(null);
@@ -179,12 +183,14 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // toggle never appears rather than offering an empty chart.
   useEffect(() => {
     let alive = true;
-    setMonthly([]); setWellSeries([]); setChart('timeline');
+    setMonthly([]); setWellSeries([]); setChart('timeline'); setPvtRs(null);
     if (!record?.bundle) return;
     (async () => {
       const [idx, field] = await Promise.all([loadIndex().catch(() => null), loadProdField().catch(() => null)]);
       if (!alive || !field?.monthly?.length) return;
       setMonthly(field.monthly);
+      const rs = Number((idx as { pvt?: { Rs?: number } } | null)?.pvt?.Rs);
+      setPvtRs(Number.isFinite(rs) ? rs : null);
       const flowing = (idx?.wells ?? []).filter((w) => w.has?.production);
       const series = await Promise.all(flowing.map(async (w) => {
         const p = await loadProd(w.name).catch(() => null);
@@ -645,7 +651,7 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
         </div>
         {!dossier ? <div className="fds-ad-empty"><b>Reading the field record…</b></div>
           : chart === 'flow' && monthly.length > 0
-            ? <WellCountPanel months={monthly} wells={wellSeries} />
+            ? <WellCountPanel months={monthly} wells={wellSeries} rs={pvtRs} />
             : <DevelopmentTimeline milestones={dossier.lifecycle.milestones} series={dossier.production.series}
               nowYear={nowYear} onPick={() => setPop('lifecycle')} />}
       </section>
