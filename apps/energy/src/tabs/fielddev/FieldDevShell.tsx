@@ -33,6 +33,8 @@ import type { Sel } from '../../cosmo/CosmoExplorer';
 import { loadSearchIndex, type SearchEntry } from '../../cosmo/cockpit-search';
 import { useViewMode } from '../../cosmo/use-view-mode';
 import { useScopeEntry } from '../../cosmo/use-scope-entry';
+import { useScene } from './scene';
+import { ensureReferenceBundle } from '../../dataqc/ensureBundle';
 
 const CosmoExplorer = lazy(async () => ({ default: (await import('../../cosmo/CosmoExplorer')).CosmoExplorer }));
 const LegacyFieldDev = lazy(async () => ({ default: (await import('./legacy/FieldDev')).FieldDev }));
@@ -71,6 +73,20 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
       setField((current) => current ?? index.find((e) => e.type === 'field' && e.name === 'VOLVE') ?? null);
     });
   }, []);
+
+  // The SHELL owns the scene's field, not the map. The Input tree is mounted on every
+  // stage, so scoping the scene only when a map happened to mount left the tree empty
+  // for anyone who opened Petrophysics before Data Explorer.
+  const setSceneField = useScene((s) => s.setField);
+  const bumpData = useScene((s) => s.bumpData);
+  useEffect(() => { if (field) setSceneField(field.id); }, [field, setSceneField]);
+  // …and for the same reason the delivery has to be digested because the FIELD is
+  // open, not because a particular stage is showing. Cached in IndexedDB, so this is
+  // paid once per browser per field and resumes if interrupted.
+  useEffect(() => {
+    if (!field) return;
+    return ensureReferenceBundle(field.id, 'field-development', undefined, bumpData);
+  }, [field, bumpData]);
 
   useEffect(() => {
     if (driveLegacyNonce && driveLegacyNonce > 0 && driveLegacyTab) {

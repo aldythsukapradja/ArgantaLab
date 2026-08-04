@@ -2,16 +2,20 @@
 // field. Lifted out of AssetDossier so the Data Explorer draws the SAME wells from
 // the SAME digests rather than growing a second, drifting pipeline.
 //
-// Sources, all of them already ingested — nothing here fetches a new thing:
-//   surveys  → the `trajectory` assets Data QC digested (station MD/TVD/offsets)
+// ONE SOURCE. Every part of this comes out of the WORKSPACE (workspace.ts) — the
+// ingested asset store — including the wellhead slots and the declared CRS, which
+// used to be fetched separately from public/wb/index.json and are now an ingested
+// `wellmaster` asset like everything else. The Input tree and these overlays
+// therefore cannot disagree: they are the same query.
+//
+//   surveys  → the `trajectory` assets (station MD/TVD/offsets)
 //   picks    → the single `picks` asset (formation tops)
-//   slots    → the bundle index's own wellhead coordinates and declared CRS
-//   series   → the bundle's monthly production files, for the hover card
+//   slots    → the `wellmaster` asset's wellhead coordinates and declared CRS
+//   series   → the `production` assets, for the hover card
 //
 // A field missing any of these simply yields fewer overlays. Never a placed guess.
-import { listAssets } from '../../dataqc/db';
 import { readRecord } from '../../dataqc/readDigest';
-import { loadIndex, loadProd } from '../../wb/load';
+import { getWorkspace } from './workspace';
 import type { FormationPick } from './horizon-picks';
 import { wellKey, type PathStation, type PathWellhead } from './well-paths';
 import type { WellMonth } from './well-stats';
@@ -27,14 +31,12 @@ export interface WellGeometry {
 }
 
 export async function loadWellGeometry(fieldId: string): Promise<WellGeometry | null> {
-  const [assets, index] = await Promise.all([
-    listAssets(fieldId).catch(() => []),
-    loadIndex().catch(() => null),
-  ]);
-  if (!index?.wells?.length) return null;
+  const ws = await getWorkspace(fieldId).catch(() => null);
+  if (!ws?.bores.length) return null;
 
-  const trajAssets = assets.filter((a) => a.kind === 'trajectory');
-  const pickAsset = assets.find((a) => a.kind === 'picks');
+  const byId = new Map(ws.assets.map((a) => [a.id, a]));
+  const trajAssets = ws.assets.filter((a) => a.kind === 'trajectory');
+  const pickAsset = ws.assets.find((a) => a.kind === 'picks');
 
   const [surveysRaw, picksRec] = await Promise.all([
     Promise.all(trajAssets.map(async (a) => {
@@ -47,19 +49,24 @@ export async function loadWellGeometry(fieldId: string): Promise<WellGeometry | 
       : Promise.resolve(null),
   ]);
 
-  // Only bores the index says publish production are read.
-  const flowing = index.wells.filter((w) => w.has?.production);
-  const seriesEntries = await Promise.all(flowing.map(async (w) => {
-    const p = await loadProd(w.name).catch(() => null);
-    return p?.monthly?.length ? [String(w.name), p] as const : null;
-  }));
+  // Only bores the workspace says HOLD a production asset are read — the series comes
+  // from that asset's own digest, not from a parallel fetch of the raw file.
+  const seriesEntries = await Promise.all(ws.bores
+    .map((b) => ({ bore: b, id: b.assetIds.production ?? b.assetIds.injection }))
+    .filter((e): e is { bore: typeof e.bore; id: string } => !!e.id)
+    .map(async ({ bore, id }) => {
+      const asset = byId.get(id);
+      if (!asset) return null;
+      const p = await readRecord<{ monthly?: WellMonth[]; units?: string }>(asset).catch(() => null);
+      return p?.monthly?.length ? [bore.name, p] as const : null;
+    }));
 
   const series = new Map<string, WellMonth[]>();
   let unit = '';
   for (const e of seriesEntries) {
     if (!e) continue;
     series.set(wellKey(e[0]), e[1].monthly as WellMonth[]);
-    unit = unit || String((e[1] as { units?: string }).units ?? '');
+    unit = unit || String(e[1].units ?? '');
   }
   // The reference month is the FIELD's last month, so a well that stopped in 2014
   // is not called active just because 2014 is its own final row.
@@ -70,10 +77,15 @@ export async function loadWellGeometry(fieldId: string): Promise<WellGeometry | 
   }
 
   return {
-    // The bundle declares its CRS once, at the index level; parse the zone from it
-    // rather than assuming 31 — a field outside zone 31 would project a zone away.
-    zone: Number(String(index.crs ?? '').match(/UTM\s*(\d{1,2})/i)?.[1]) || 31,
-    wells: index.wells.map((w) => ({ name: String(w.name), x: w.x, y: w.y, role: w.role })),
+    // The delivery declares its CRS once, in the well master; the zone is parsed from
+    // it rather than assumed — a field outside zone 31 would project a zone away.
+    // 31 remains the last-resort fallback for a delivery that declares nothing.
+    zone: ws.utmZone ?? 31,
+    // Only bores the master gave a slot position: a survey with no origin cannot be
+    // placed, and putting it at 0,0 would draw the field off the coast of Africa.
+    wells: ws.bores
+      .filter((b) => b.x != null && b.y != null)
+      .map((b) => ({ name: b.name, x: b.x as number, y: b.y as number, role: b.role })),
     surveys: surveysRaw.filter((s): s is { well: string; stations: PathStation[] } => !!s),
     picks: picksRec?.picks ?? [],
     series, refMonth, unit,

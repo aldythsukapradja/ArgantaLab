@@ -23,13 +23,14 @@ import { orderHorizons, orderNote } from './horizon-order';
 import { matchPicks, buildImpacts } from './horizon-picks';
 import { ImpactMarkers, type ImpactMarker } from './ImpactMarkers';
 import { loadWellGeometry, buildPaths3D, type WellGeometry, type Path3D } from './well-geometry';
+import { loadIndex } from '../../wb/load';
 import { summariseWell } from './well-stats';
 import { wellKey } from './well-paths';
 import { ed50UtmToWgs84 } from '../../engine/proj';
 import type { Structure3DSurface } from './Structure3D';
 import { useScene } from './scene';
 import { MapTools } from './MapTools';
-import { SectionView } from './SectionView';
+import { SectionView, type SectionWell } from './SectionView';
 import { useInterp, latestSection } from './interp-store';
 import { wgs84ToEd50Utm } from '../../engine/proj';
 
@@ -75,6 +76,23 @@ export function FieldScene({ field }: { field: SearchEntry }) {
   const dataVersion = useScene((s) => s.dataVersion);
 
   useEffect(() => { setSceneField(field.id); }, [field.id, setSceneField]);
+
+  /** The published fluid contact, for the section's oil/water split. Field-level
+   *  and interpreted — the section labels it, and paints fluid ONLY inside the
+   *  interval it actually cuts (see SectionView). */
+  const [contact, setContact] = useState<{ depth: number; kind: string } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setContact(null);
+    loadIndex()
+      .then((idx) => {
+        if (!alive) return;
+        const c = (idx?.contacts ?? []).find((x) => /owc|gwc|goc|contact/i.test(String(x.kind)));
+        setContact(c && Number.isFinite(c.tvdss) ? { depth: Math.abs(c.tvdss), kind: c.kind || 'OWC' } : null);
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [field.id]);
 
   // Same source and same ordering rule as the dossier: the surfaces Data QC has
   // actually ingested for this field, oldest → youngest, with the sea floor left
@@ -210,7 +228,7 @@ export function FieldScene({ field }: { field: SearchEntry }) {
 
   const impacts3d = useMemo(() => {
     if (!wellGeo) return [];
-    const out: Array<ImpactMarker & { easting: number; northing: number }> = [];
+    const out: SectionWell[] = [];
     const seen = new Set<string>();
     for (const s of surfaces3d) {
       const { picks } = matchPicks(s.name, wellGeo.picks);
@@ -223,7 +241,7 @@ export function FieldScene({ field }: { field: SearchEntry }) {
           well: p.well, role: p.role, lon: 0, lat: 0,
           md: p.md, tvdss: p.tvdss, extrapolated: p.extrapolated,
           stats: monthly ? summariseWell(monthly, wellGeo.refMonth ?? undefined) : null,
-          easting: p.easting, northing: p.northing,
+          easting: p.easting, northing: p.northing, horizonId: s.id,
         });
       }
     }
@@ -287,6 +305,8 @@ export function FieldScene({ field }: { field: SearchEntry }) {
             toProjected={toProjected}
             surfaces={surfaces3d.length ? surfaces3d : xsecFallback}
             wells={impacts3d}
+            contactDepth={contact?.depth ?? null}
+            contactLabel={contact?.kind}
           />
         ) : view === '3d' ? (
           <Suspense fallback={<div className="fds-3d-empty">loading 3D…</div>}>

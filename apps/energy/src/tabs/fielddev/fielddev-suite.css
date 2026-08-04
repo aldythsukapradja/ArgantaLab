@@ -368,7 +368,21 @@ html[data-ui="cosmo"] .fds-xs-key{position:absolute;left:8px;bottom:6px;display:
   pointer-events:none}
 html[data-ui="cosmo"] .fds-xs-key span{display:flex;align-items:center;gap:4px;font:7.5px var(--mono);color:var(--ink2)}
 html[data-ui="cosmo"] .fds-xs-key i{width:10px;height:2.5px;border-radius:2px}
+/* fluid legs get a block swatch, not a line: they are areas, not horizons */
+html[data-ui="cosmo"] .fds-xs-key i.sw{width:9px;height:9px;border-radius:2px;opacity:.75}
 html[data-ui="cosmo"] .fds-xs-key em{font-style:normal;color:var(--ink3)}
+
+/* zoom / pan / exaggeration, top-right so it never fights the A′ label or the
+   scale bar at the bottom */
+html[data-ui="cosmo"] .fds-xs-ctl{position:absolute;right:8px;top:8px;z-index:6;display:flex;align-items:center;gap:4px;
+  padding:3px 5px;border:1px solid var(--line2);border-radius:7px;
+  background:color-mix(in srgb,var(--panel) 90%,transparent)}
+html[data-ui="cosmo"] .fds-xs-ctl button{display:grid;place-items:center;width:19px;height:19px;padding:0;
+  border:1px solid var(--line2);border-radius:5px;background:transparent;color:var(--ink2);cursor:pointer}
+html[data-ui="cosmo"] .fds-xs-ctl button:hover{background:var(--panel3);color:var(--ink)}
+html[data-ui="cosmo"] .fds-xs-ctl label{display:flex;align-items:center;gap:5px;font:7.5px var(--mono);color:var(--ink2);
+  padding-left:4px;border-left:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-xs-ctl input{width:74px;accent-color:#2f9bff}
 
 /* map key for the impact symbology + contact */
 html[data-ui="cosmo"] .fds-ad-mapkey{position:absolute;z-index:5;right:8px;top:8px;pointer-events:none;
@@ -746,6 +760,9 @@ html[data-ui="cosmo"] .fds-scene-empty span{max-width:340px;font-size:9.5px}
    instead of vanishing, so the data model stays constant as the task changes. */
 html[data-ui="cosmo"] .fdt{display:flex;height:100%;min-height:0;flex-direction:column}
 html[data-ui="cosmo"] .fdt-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:7px 10px;border-bottom:1px solid var(--line2);font:8px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+/* provenance tag in the tree header: this tree IS the workspace query, and while the
+   delivery is still digesting it says so rather than letting zeros read as facts */
+html[data-ui="cosmo"] .fdt-head-src{margin-left:auto;font-style:normal;font-size:7.5px;letter-spacing:.06em;color:var(--ink3);opacity:.75}
 html[data-ui="cosmo"] .fdt-scroll{flex:1;min-height:0;overflow:auto;padding:4px 0 10px}
 html[data-ui="cosmo"] .fdt-row{display:flex;align-items:center;gap:4px;padding:3px 6px 3px 0;cursor:pointer;color:var(--ink2)}
 html[data-ui="cosmo"] .fdt-row:hover{background:var(--panel2)}

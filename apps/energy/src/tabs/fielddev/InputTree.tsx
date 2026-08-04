@@ -1,41 +1,50 @@
 // InputTree — Petrel's Input pane for Field Development.
 //
-// One tree, mounted once by the shell and shared by all nine workflow stages. It
-// does not re-mount when you change stage; what changes is which folders are LIVE.
-// Folders a stage cannot act on grey back rather than disappearing, so the data
-// model you are working against stays constant while the task changes — which is
-// exactly what Petrel does and why its tree is navigable.
+// ONE SOURCE. Every count, every row and every child in this tree is read from the
+// WORKSPACE (workspace.ts) — the ingested asset store the Data Explorer fills. The
+// tree used to count wells out of public/wb/index.json while the map read the same
+// wells out of IndexedDB; those were two pictures of one delivery with nothing making
+// them agree. There is now a single query, and this component only renders it.
+//
+// One tree, mounted once by the shell and shared by all nine workflow stages. It does
+// not re-mount when you change stage; what changes is which folders are LIVE. Folders
+// a stage cannot act on grey back rather than disappearing, so the data model you are
+// working against stays constant while the task changes — which is what Petrel does
+// and why its tree is navigable.
 //
 // Structure follows Petrel's Input pane:
 //
 //   Global well logs     curve TYPES, shared across wells (not per-well instances)
-//   Well tops            the pick sets
+//                          └ each type: the wells that carry it
+//   Well tops            the pick SURFACES
+//                          └ each surface: the wells picked on it
 //   Wells                Producers · Injectors · Water supply · Observation ·
 //                        Exploration · Appraisal · Abandoned · Unclassified
-//                          └ each well: Trajectory · Local logs · Picks ·
-//                            Production · Drilling · Pressure — only what it HAS
+//                          └ each slot → each bore: Trajectory · Well logs ·
+//                            Well tops · Production · Drilling · Pressure —
+//                            only what it HAS, and each expands to its own contents
 //   Surfaces             the ingested depth grids
-//   Contacts             OWC/GOC/GWC
+//   Contacts             OWC/GOC/GWC, from the delivery's well master
 //   Points/Polylines/Polygons/Cross sections/Simulation cases
 //
 // Every count is real. Folders with nothing behind them show 0 and do not expand —
-// they are containers waiting for a delivery, never a fabricated node.
-import { useEffect, useMemo, useState } from 'react';
+// they are containers waiting for a delivery, never a fabricated node. While the
+// package is still digesting the tree says so rather than showing zeros, because a
+// zero drawn mid-load is a false statement about the delivery.
+import { useMemo, useState } from 'react';
 import {
-  Box, ChevronRight, Columns3, Database, Eye, EyeOff, FolderTree, Gauge, Hexagon,
-  Layers, Map as MapIcon, MapPin, Radio, Route, Spline, Waves,
+  Box, ChevronRight, Columns3, Database, Drill, Eye, EyeOff, FolderTree, Gauge,
+  Hexagon, Layers, Map as MapIcon, MapPin, Radio, Route, Spline, Waves,
 } from 'lucide-react';
-import { loadIndex } from '../../wb/load';
-import type { WbIndex, WellRow } from '../../wb/types';
-import { listAssets } from '../../dataqc/db';
-import type { IngestedAsset } from '../../dataqc/types';
 import { useScene, isVisible } from './scene';
 import { useInterp, interpNodeId } from './interp-store';
 import { featureMeasure, type FeatureKind } from './interpret';
+import { useWorkspace, type WorkspaceBore, type WorkspaceWellhead } from './workspace';
+import type { WellRole } from '../../dataqc/curate';
 
-/** The four Input folders the drawing tools write into. `point`, `obs` and
- *  `well` share the Points folder — one geometry, different intent, and each
- *  row already carries its own name. Mirrors FOLDER_OF in interp-store. */
+/** The four Input folders the drawing tools write into. `point`, `obs` and `well`
+ *  share the Points folder — one geometry, different intent, and each row already
+ *  carries its own name. Mirrors FOLDER_OF in interp-store. */
 const DRAWN_FOLDERS: Array<{ folder: string; label: string; icon: typeof MapPin; kinds: FeatureKind[] }> = [
   { folder: 'points', label: 'Points', icon: MapPin, kinds: ['point', 'obs', 'well'] },
   { folder: 'polylines', label: 'Polylines', icon: Spline, kinds: ['polyline'] },
@@ -57,31 +66,39 @@ const STAGE_FOLDERS: Record<string, string[]> = {
   'value-fdp': ['cases'],
 };
 
-/** Petrel's Wells folder is user-organised; ours is derived from the NPD role and
- *  purpose the bundle already carries. `water-supply` is deliberately its own bucket:
- *  a water-supply well is not an injector into the reservoir. */
-const WELL_BUCKETS: Array<{ id: string; label: string; match: (w: WellRow) => boolean }> = [
-  { id: 'producers', label: 'Producers', match: (w) => /oil[-_ ]?produc/i.test(String(w.role)) },
-  { id: 'injectors', label: 'Injectors', match: (w) => /^water-injector$/i.test(String(w.role)) },
-  { id: 'supply', label: 'Water supply', match: (w) => /^water-supply$/i.test(String(w.role)) },
-  { id: 'observation', label: 'Observation', match: (w) => /^observation$/i.test(String(w.role)) },
-  { id: 'exploration', label: 'Exploration', match: (w) => /^exploration$/i.test(String(w.role)) },
-  { id: 'appraisal', label: 'Appraisal', match: (w) => /^appraisal$/i.test(String(w.role)) },
-  // No per-well status exists in this delivery. The folder is real and stays empty
-  // rather than asserting P&A for 27 bores off a field-level "Shut down".
-  { id: 'abandoned', label: 'Abandoned', match: () => false },
+/** Petrel's Wells folder is user-organised; ours is derived from the role the
+ *  workspace resolved — the regulator's published purpose where one exists. Water
+ *  supply is deliberately its own bucket: a water-supply well is not an injector
+ *  into the reservoir. */
+const WELL_BUCKETS: Array<{ id: string; label: string; roles: WellRole[] }> = [
+  { id: 'producers', label: 'Producers', roles: ['oil-producer'] },
+  { id: 'injectors', label: 'Injectors', roles: ['water-injector'] },
+  { id: 'supply', label: 'Water supply', roles: ['water-supply'] },
+  { id: 'observation', label: 'Observation', roles: ['observation'] },
+  { id: 'exploration', label: 'Exploration', roles: ['exploration'] },
+  { id: 'appraisal', label: 'Appraisal', roles: ['appraisal'] },
+  // 'not-drilled' is the only status the delivery actually publishes. A bore is
+  // never called abandoned off a field-level "Shut down" — that would assert P&A
+  // for wells no source says anything about.
+  { id: 'abandoned', label: 'Never drilled', roles: ['not-drilled'] },
 ];
 
-const ROLE_COLOR = (role: string) => (/oil[-_ ]?produc/i.test(role) ? 'var(--green)'
-  : /inject/i.test(role) ? 'var(--cblue)'
-  : /supply/i.test(role) ? 'var(--cyan,#22d3ee)'
-  : /observation/i.test(role) ? 'var(--purple)' : 'var(--ink3)');
+const ROLE_COLOR: Record<WellRole, string> = {
+  'oil-producer': 'var(--green)',
+  'water-injector': 'var(--cblue)',
+  'water-supply': 'var(--cyan,#22d3ee)',
+  observation: 'var(--purple)',
+  exploration: 'var(--ink3)',
+  appraisal: 'var(--ink3)',
+  'not-drilled': 'var(--ink3)',
+  unclassified: 'var(--ink3)',
+};
 
 function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onToggle,
-  nodeId, selectable = true, dim }: {
+  nodeId, selectable = true, dim, title }: {
   depth: number; icon: typeof MapPin; color?: string; label: string; sub?: string;
   count?: number; expandable?: boolean; open?: boolean; onToggle?: () => void;
-  nodeId?: string; selectable?: boolean; dim?: boolean;
+  nodeId?: string; selectable?: boolean; dim?: boolean; title?: string;
 }) {
   const vis = useScene((s) => s.vis);
   const sel = useScene((s) => s.sel);
@@ -94,7 +111,14 @@ function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onTo
     <div
       className={'fdt-row' + (on ? ' sel' : '') + (dim ? ' dim' : '')}
       style={{ paddingLeft: 6 + depth * 12 }}
-      onClick={() => { if (dim) return; if (expandable) onToggle?.(); else if (nodeId && selectable) setSel(nodeId); }}
+      title={title}
+      onClick={() => {
+        if (dim) return;
+        // an expandable row that also names a thing does both: select it AND open it,
+        // so a well is inspectable without having to hit a 12px caret
+        if (nodeId && selectable) setSel(nodeId);
+        if (expandable) onToggle?.();
+      }}
     >
       <span className="fdt-caret">
         {expandable ? <ChevronRight size={12} className={'chev' + (open ? ' open' : '')} /> : <span className="fdt-dot" />}
@@ -112,122 +136,208 @@ function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onTo
   );
 }
 
+/** The six data types a bore can carry, each expanding to its own contents so the
+ *  tree answers "what is IN this well's logs" without opening a viewer. */
+function BoreChildren({ bore, dim, open, tg }: {
+  bore: WorkspaceBore; dim: boolean;
+  open: Record<string, boolean>; tg: (k: string) => void;
+}) {
+  const logKey = `bl:${bore.key}`;
+  const topKey = `bt:${bore.key}`;
+  return (
+    <>
+      {bore.hasTrajectory && (
+        <Row depth={3} icon={Route} label="Trajectory" nodeId={'traj:' + bore.name} dim={dim} />
+      )}
+      {bore.hasLogs && (
+        <>
+          <Row depth={3} icon={Radio} label="Well logs" count={bore.curves.length}
+            expandable={bore.curves.length > 0} open={!!open[logKey]} onToggle={() => tg(logKey)}
+            nodeId={'wlog:' + bore.name} dim={dim} />
+          {open[logKey] && bore.curves.map((c) => (
+            <Row key={logKey + c} depth={4} icon={Radio} label={c}
+              nodeId={`wcurve:${bore.name}:${c}`} dim={dim} />
+          ))}
+        </>
+      )}
+      {bore.hasPicks && (
+        <>
+          <Row depth={3} icon={Layers} label="Well tops" count={bore.tops.length}
+            expandable={bore.tops.length > 0} open={!!open[topKey]} onToggle={() => tg(topKey)}
+            nodeId={'wtop:' + bore.name} dim={dim} />
+          {open[topKey] && bore.tops.map((t) => (
+            <Row key={topKey + t} depth={4} icon={Layers} label={t}
+              nodeId={`wpick:${bore.name}:${t}`} dim={dim} />
+          ))}
+        </>
+      )}
+      {bore.hasProduction && <Row depth={3} icon={Gauge} label="Production" nodeId={'prod:' + bore.name} dim={dim} />}
+      {bore.hasInjection && <Row depth={3} icon={Gauge} label="Injection" nodeId={'inj:' + bore.name} dim={dim} />}
+      {bore.hasDrilling && <Row depth={3} icon={Drill} label="Drilling" nodeId={'drill:' + bore.name} dim={dim} />}
+      {bore.hasPressure && <Row depth={3} icon={Gauge} label="Formation pressure" nodeId={'press:' + bore.name} dim={dim} />}
+    </>
+  );
+}
+
 export function InputTree({ stageId }: { stageId: string }) {
-  const [idx, setIdx] = useState<WbIndex | null>(null);
-  const [assets, setAssets] = useState<IngestedAsset[]>([]);
   const [open, setOpen] = useState<Record<string, boolean>>({ wells: true, producers: true, surfaces: true });
-  const fieldId = useScene((s) => s.fieldId);
-  const dataVersion = useScene((s) => s.dataVersion);
+  const { ws, ready } = useWorkspace();
   // what the user has drawn on the Workspace canvas — authored, not delivered
   const drawn = useInterp((s) => s.features);
-
-  useEffect(() => { loadIndex().then(setIdx).catch(() => setIdx(null)); }, []);
-  useEffect(() => {
-    if (!fieldId) return;
-    let alive = true;
-    listAssets(fieldId).then((a) => { if (alive) setAssets(a); }).catch(() => undefined);
-    return () => { alive = false; };
-  }, [fieldId, dataVersion]);
 
   const tg = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   const live = STAGE_FOLDERS[stageId] ?? [];
   const dimmed = (folder: string) => live.length > 0 && !live.includes(folder);
 
-  const wells = useMemo(() => idx?.wells ?? [], [idx]);
-  const buckets = useMemo(() => WELL_BUCKETS.map((b) => {
-    const rows = wells.filter(b.match);
-    return { ...b, rows };
-  }), [wells]);
-  const unclassified = useMemo(
-    () => wells.filter((w) => !WELL_BUCKETS.some((b) => b.match(w))),
-    [wells],
-  );
+  const buckets = useMemo(() => {
+    const rest = new Set(ws.wellheads);
+    const out = WELL_BUCKETS.map((b) => {
+      const rows: WorkspaceWellhead[] = ws.wellheads.filter((h) => b.roles.includes(h.role));
+      for (const r of rows) rest.delete(r);
+      return { ...b, rows };
+    });
+    // anything the workspace could not classify is SHOWN, in its own bucket — a well
+    // that vanished because no bucket matched it would be the worst kind of silence
+    out.push({ id: 'unclassified', label: 'Unclassified', roles: [], rows: [...rest] });
+    return out;
+  }, [ws.wellheads]);
 
-  const surfaces = useMemo(() => assets.filter((a) => a.kind === 'surface'), [assets]);
-  const contacts = idx?.contacts ?? [];
-  /** Petrel's "global well logs" are curve TYPES. Ours are the distinct curve
-   *  families actually present across the delivery's logs. */
-  const globalLogs = useMemo(() => {
-    const set = new Set<string>();
-    for (const a of assets) {
-      if (a.kind !== 'log') continue;
-      for (const c of String(a.meta.curves ?? '').split(/[,·]/)) {
-        const t = c.trim();
-        if (t) set.add(t);
-      }
-    }
-    return [...set].sort();
-  }, [assets]);
-  const pickCount = assets.filter((a) => a.kind === 'picks').length;
-
-  const wellSub = (w: WellRow) => [
-    w.has?.traj ? 'traj' : null, w.has?.logs ? 'logs' : null,
-    w.has?.picks ? 'picks' : null, w.has?.production ? 'prod' : null,
-  ].filter(Boolean).join(' ');
+  const boreCount = ws.bores.length;
 
   return (
     <div className="fdt">
-      <div className="fdt-head"><Database size={12} /> Input</div>
+      <div className="fdt-head">
+        <Database size={12} /> Input
+        {/* provenance, permanently visible: this tree IS the workspace, not a
+            second reading of it */}
+        <i className="fdt-head-src">{ready ? 'workspace' : 'reading…'}</i>
+      </div>
       <div className="fdt-scroll">
-        <Row depth={0} icon={Radio} label="Global well logs" count={globalLogs.length}
-          expandable={globalLogs.length > 0} open={!!open.logs} onToggle={() => tg('logs')} dim={dimmed('logs')} />
-        {open.logs && globalLogs.map((c) => (
-          <Row key={'gl:' + c} depth={1} icon={Radio} label={c} nodeId={'log:' + c} dim={dimmed('logs')} />
-        ))}
+        {/* ── Global well logs: curve TYPES, each expanding to the wells with it ── */}
+        <Row depth={0} icon={Radio} label="Global well logs" count={ws.curveTypes.length}
+          expandable={ws.curveTypes.length > 0} open={!!open.logs} onToggle={() => tg('logs')}
+          dim={dimmed('logs')} title="Curve types present across the delivery, read from the log digests" />
+        {open.logs && ws.curveTypes.map((c) => {
+          const k = 'gl:' + c.key;
+          return (
+            <div key={k}>
+              <Row depth={1} icon={Radio} label={c.key}
+                sub={c.mnemonics.length > 1 ? c.mnemonics.join(' ') : (c.unit ?? undefined)}
+                count={c.wells.length} expandable={c.wells.length > 0}
+                open={!!open[k]} onToggle={() => tg(k)} nodeId={'log:' + c.key} dim={dimmed('logs')}
+                title={`${c.mnemonics.join(', ')}${c.unit ? ` · ${c.unit}` : ''} — in ${c.wells.length} wellbore${c.wells.length === 1 ? '' : 's'}`} />
+              {open[k] && c.wells.map((w) => (
+                <Row key={k + w} depth={2} icon={Waves} label={w}
+                  nodeId={`wcurve:${w}:${c.key}`} dim={dimmed('logs')} />
+              ))}
+            </div>
+          );
+        })}
 
-        <Row depth={0} icon={Layers} label="Well tops" count={pickCount}
-          expandable={false} nodeId="tops:all" dim={dimmed('tops')} />
+        {/* ── Well tops: the pick SURFACES, each expanding to the wells picked ── */}
+        <Row depth={0} icon={Layers} label="Well tops" count={ws.tops.length}
+          expandable={ws.tops.length > 0} open={!!open.tops} onToggle={() => tg('tops')}
+          nodeId="tops:all" dim={dimmed('tops')}
+          title={`${ws.picks.length} picks across ${ws.tops.length} surfaces`} />
+        {open.tops && ws.tops.map((t) => {
+          const k = 'tp:' + t.surface;
+          return (
+            <div key={k}>
+              <Row depth={1} icon={Layers} label={t.surface} count={t.wells.length}
+                expandable={t.wells.length > 0} open={!!open[k]} onToggle={() => tg(k)}
+                nodeId={'top:' + t.surface} dim={dimmed('tops')}
+                title={t.count !== t.wells.length
+                  ? `${t.count} picks, ${t.wells.length} attributable to a wellbore`
+                  : `picked in ${t.wells.length} wellbore${t.wells.length === 1 ? '' : 's'}`} />
+              {open[k] && t.wells.map((w) => (
+                <Row key={k + w} depth={2} icon={Waves} label={w}
+                  nodeId={`wpick:${w}:${t.surface}`} dim={dimmed('tops')} />
+              ))}
+            </div>
+          );
+        })}
 
-        <Row depth={0} icon={FolderTree} label="Wells" count={wells.length}
-          expandable={wells.length > 0} open={!!open.wells} onToggle={() => tg('wells')} dim={dimmed('wells')} />
-        {open.wells && (
-          <>
-            {[...buckets, { id: 'unclassified', label: 'Unclassified', rows: unclassified }].map((b) => (
-              <div key={b.id}>
-                <Row depth={1} icon={FolderTree} label={b.label} count={b.rows.length}
-                  expandable={b.rows.length > 0} open={!!open[b.id]} onToggle={() => tg(b.id)}
-                  dim={dimmed('wells')} />
-                {open[b.id] && b.rows.map((w) => (
-                  <div key={w.name}>
-                    <Row depth={2} icon={Waves} color={ROLE_COLOR(String(w.role))} label={w.name}
-                      sub={wellSub(w)} nodeId={'well:' + w.name} expandable
-                      open={!!open['w:' + w.name]} onToggle={() => tg('w:' + w.name)} dim={dimmed('wells')} />
-                    {open['w:' + w.name] && (
-                      <>
-                        {w.has?.traj && <Row depth={3} icon={Route} label="Trajectory" nodeId={'traj:' + w.name} dim={dimmed('wells')} />}
-                        {w.has?.logs && <Row depth={3} icon={Radio} label="Well logs" nodeId={'wlog:' + w.name} dim={dimmed('wells')} />}
-                        {w.has?.picks && <Row depth={3} icon={Layers} label="Well tops" nodeId={'wtop:' + w.name} dim={dimmed('wells')} />}
-                        {w.has?.production && <Row depth={3} icon={Gauge} label="Production" nodeId={'prod:' + w.name} dim={dimmed('wells')} />}
-                      </>
-                    )}
+        {/* ── Wells: slot → bore → the data that bore carries ── */}
+        <Row depth={0} icon={FolderTree} label="Wells" count={boreCount}
+          expandable={boreCount > 0} open={!!open.wells} onToggle={() => tg('wells')}
+          dim={dimmed('wells')}
+          title={`${ws.wellheads.length} slot${ws.wellheads.length === 1 ? '' : 's'} · ${boreCount} wellbore${boreCount === 1 ? '' : 's'}`} />
+        {open.wells && buckets.map((b) => (
+          <div key={b.id}>
+            <Row depth={1} icon={FolderTree} label={b.label}
+              count={b.rows.reduce((n, h) => n + h.bores.length, 0)}
+              expandable={b.rows.length > 0} open={!!open[b.id]} onToggle={() => tg(b.id)}
+              dim={dimmed('wells')} />
+            {open[b.id] && b.rows.map((h) => {
+              // A slot with exactly one bore is drawn as that bore. Interposing a
+              // wellhead node above a single wellbore is a level of tree that carries
+              // no information and costs a click.
+              const single = h.bores.length === 1 ? h.bores[0] : null;
+              if (single) {
+                const wk = 'w:' + single.key;
+                return (
+                  <div key={h.well}>
+                    <Row depth={2} icon={Waves} color={ROLE_COLOR[single.role]} label={single.name}
+                      sub={`${single.completeness}/7`} nodeId={'well:' + single.name} expandable
+                      open={!!open[wk]} onToggle={() => tg(wk)} dim={dimmed('wells')}
+                      title={single.roleFromKb
+                        ? 'Role published by the regulator'
+                        : 'Role inferred from the ingested data — no regulator record for this bore'} />
+                    {open[wk] && <BoreChildren bore={single} dim={dimmed('wells')} open={open} tg={tg} />}
                   </div>
-                ))}
-              </div>
-            ))}
-          </>
-        )}
+                );
+              }
+              const hk = 'h:' + h.well;
+              return (
+                <div key={h.well}>
+                  <Row depth={2} icon={FolderTree} color={ROLE_COLOR[h.role]} label={h.well}
+                    sub={`${h.bores.length} bores`} count={h.bores.length} expandable
+                    open={!!open[hk]} onToggle={() => tg(hk)} nodeId={'slot:' + h.well}
+                    dim={dimmed('wells')} title="Surface slot — the bores below share it" />
+                  {open[hk] && h.bores.map((bore) => {
+                    const wk = 'w:' + bore.key;
+                    return (
+                      <div key={bore.key}>
+                        <Row depth={3} icon={Waves} color={ROLE_COLOR[bore.role]} label={bore.name}
+                          sub={`${bore.completeness}/7`} nodeId={'well:' + bore.name} expandable
+                          open={!!open[wk]} onToggle={() => tg(wk)} dim={dimmed('wells')} />
+                        {open[wk] && (
+                          <div style={{ marginLeft: 12 }}>
+                            <BoreChildren bore={bore} dim={dimmed('wells')} open={open} tg={tg} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        ))}
 
-        <Row depth={0} icon={MapIcon} label="Surfaces" count={surfaces.length}
-          expandable={surfaces.length > 0} open={!!open.surfaces} onToggle={() => tg('surfaces')}
+        <Row depth={0} icon={MapIcon} label="Surfaces" count={ws.surfaces.length}
+          expandable={ws.surfaces.length > 0} open={!!open.surfaces} onToggle={() => tg('surfaces')}
           dim={dimmed('surfaces')} />
-        {open.surfaces && surfaces.map((s) => (
-          <Row key={s.id} depth={1} icon={MapIcon} color="var(--purple)"
-            label={String(s.meta.name ?? s.fileName)} nodeId={'surface:' + s.id} dim={dimmed('surfaces')} />
+        {open.surfaces && ws.surfaces.map((s) => (
+          <Row key={s.id} depth={1} icon={MapIcon} color="var(--purple)" label={s.name}
+            sub={s.zmin != null && s.zmax != null ? `${Math.round(s.zmin)}–${Math.round(s.zmax)} m` : undefined}
+            nodeId={'surface:' + s.id} dim={dimmed('surfaces')} />
         ))}
 
-        <Row depth={0} icon={Box} label="Contacts" count={contacts.length}
-          expandable={contacts.length > 0} open={!!open.contacts} onToggle={() => tg('contacts')}
+        <Row depth={0} icon={Box} label="Contacts" count={ws.contacts.length}
+          expandable={ws.contacts.length > 0} open={!!open.contacts} onToggle={() => tg('contacts')}
           dim={dimmed('contacts')} />
-        {open.contacts && contacts.map((c, i) => (
+        {open.contacts && ws.contacts.map((c, i) => (
           <Row key={'c' + i} depth={1} icon={Box} label={c.kind || 'OWC'}
-            sub={c.tvdss != null ? `${c.tvdss} m` : undefined} nodeId={'contact:' + i} dim={dimmed('contacts')} />
+            sub={c.tvdss != null ? `${c.tvdss} m` : undefined} nodeId={'contact:' + i}
+            dim={dimmed('contacts')} title={c.prov ?? undefined} />
         ))}
 
-        {/* These four fill from the DRAWING TOOLS on the Workspace canvas — they
-            are the one part of the tree the user authors rather than receives.
-            Each row's eye reaches the canvas through scene.vis, exactly like a
-            delivered layer, and the italic "drawn" tag keeps the provenance
-            visible so an interpretation is never mistaken for a delivery. */}
+        {/* These four fill from the DRAWING TOOLS on the Workspace canvas — they are
+            the one part of the tree the user authors rather than receives. Each row's
+            eye reaches the canvas through scene.vis, exactly like a delivered layer,
+            and the italic tag keeps the provenance visible so an interpretation is
+            never mistaken for a delivery. */}
         {DRAWN_FOLDERS.map(({ folder, label, icon, kinds }) => {
           const rows = drawn.filter((f) => kinds.includes(f.kind));
           return (
