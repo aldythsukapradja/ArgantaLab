@@ -18,7 +18,7 @@
 // Grounding is enforced in asset-dossier.ts, not here: this file renders nulls as "—"
 // and never substitutes a zero. The readiness ledger is treated as a RESULT — for most
 // of the 7,787-field catalogue it is the honest output, not an error state.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import {
   Activity, CalendarClock, Database, Droplets, GaugeCircle, Info, Layers3, Library,
   MapPinned, ShieldAlert, TrendingDown, X,
@@ -49,6 +49,12 @@ import { matchPicks, buildImpacts, type FormationPick } from './horizon-picks';
 import { summariseWell, type WellMonth } from './well-stats';
 import { orderHorizons, orderNote } from './horizon-order';
 import { ImpactMarkers, type ImpactMarker } from './ImpactMarkers';
+import type { Structure3DSurface } from './Structure3D';
+
+/** three.js + fiber + drei is ~600 kB. A dossier opened on the 2D map must not
+ *  pay for a renderer it may never show, so the 3D view is split out and only
+ *  fetched when the user asks for it. */
+const Structure3D = lazy(() => import('./Structure3D').then((m) => ({ default: m.Structure3D })));
 import { resolveKbContext } from '../../dataqc/masterkb';
 import { surfaceContextFor } from '../../dataqc/surface-context';
 
@@ -159,6 +165,13 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // a decode of the whole bundle per button press.
   const [wellGeo, setWellGeo] = useState<WellGeometry | null>(null);
   const [orderNoteText, setOrderNoteText] = useState('');
+  // 2D is the map; 3D is the section. The horizon selector is SINGLE-select in 2D
+  // (a map shows one surface) and MULTI-select in 3D (one surface in 3D is a map
+  // with extra steps), so the two views keep separate selections.
+  const [view, setView] = useState<'2d' | '3d'>('2d');
+  const [multiIds, setMultiIds] = useState<string[]>([]);
+  const [zScale, setZScale] = useState(6);
+  const [grids3d, setGrids3d] = useState<Map<string, DigestedSurface>>(new Map());
 
   useEffect(() => {
     let alive = true;
@@ -379,6 +392,77 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
     return { depth: Math.abs(c.tvdss), kind: c.kind, prov: c.prov, nature: c.dataNature };
   }, [record, selectedHorizon, kbReservoirUnit]);
 
+  // ── 3D: decode every SELECTED horizon, once each ───────────────────────────
+  // Cached by asset id, so toggling a surface off and back on is free and the
+  // int16+gzip decode happens exactly once per horizon per field.
+  useEffect(() => {
+    let alive = true;
+    const missing = multiIds.filter((id) => !grids3d.has(id));
+    if (!missing.length) return;
+    (async () => {
+      const decoded = await Promise.all(missing.map(async (id) => {
+        const hz = horizons.find((h) => h.id === id);
+        if (!hz) return null;
+        const g = await readSurfaceGrid(hz.asset).catch(() => null);
+        return g ? [id, g] as const : null;
+      }));
+      if (!alive) return;
+      setGrids3d((prev) => {
+        const next = new Map(prev);
+        for (const d of decoded) if (d) next.set(d[0], d[1]);
+        return next;
+      });
+    })().catch(() => undefined);
+    return () => { alive = false; };
+  }, [multiIds, horizons, grids3d]);
+
+  // entering 3D with nothing chosen starts from whatever the map was showing,
+  // so the toggle is continuous rather than dumping the user on an empty scene
+  useEffect(() => {
+    if (view === '3d' && !multiIds.length && horizonId) setMultiIds([horizonId]);
+  }, [view, multiIds.length, horizonId]);
+
+  useEffect(() => { setMultiIds([]); setGrids3d(new Map()); }, [field.id]);
+
+  const surfaces3d = useMemo<Structure3DSurface[]>(() => multiIds
+    .map((id) => {
+      const hz = horizons.find((h) => h.id === id);
+      const grid = grids3d.get(id);
+      const m = hz?.asset.meta;
+      const x0 = Number(m?.xmin), y0 = Number(m?.ymin), cell = Number(m?.dx);
+      if (!hz || !grid || !Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(cell)) return null;
+      return { id, name: hz.name, short: hz.short, grid, geo: { x0, y0, cell } };
+    })
+    .filter((s): s is Structure3DSurface => !!s)
+    // deepest first so the translucency rule puts the shallow sheets on top
+    .sort((a, b) => (Number(b.grid.values[0]) || 0) - (Number(a.grid.values[0]) || 0)),
+  [multiIds, horizons, grids3d]);
+
+  /** Impact points for every horizon on show in 3D, kept in projected metres —
+   *  the 3D scene works in the grid's own frame, not in lon/lat. */
+  const impacts3d = useMemo(() => {
+    if (!wellGeo) return [];
+    const out: Array<ImpactMarker & { easting: number; northing: number }> = [];
+    const seen = new Set<string>();
+    for (const s of surfaces3d) {
+      const { picks } = matchPicks(s.name, wellGeo.picks);
+      for (const p of buildImpacts(picks, wellGeo.wells, wellGeo.surveys)) {
+        const key = `${s.id}|${p.well}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const g = ed50UtmToWgs84(p.easting, p.northing, wellGeo.zone);
+        const monthly = wellGeo.series.get(wellKey(p.well));
+        out.push({
+          well: p.well, role: p.role, lon: g.lon, lat: g.lat,
+          md: p.md, tvdss: p.tvdss, extrapolated: p.extrapolated,
+          stats: monthly ? summariseWell(monthly, wellGeo.refMonth ?? undefined) : null,
+          easting: p.easting, northing: p.northing,
+        });
+      }
+    }
+    return out;
+  }, [wellGeo, surfaces3d]);
+
   // Decode ONLY the selected horizon, and only when one is picked — the digest
   // is int16+gzip in IndexedDB, so this is a read and a decompress, never a refetch.
   useEffect(() => {
@@ -486,20 +570,51 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
           {horizons.length > 0 && (
             /* ordered oldest → youngest, so the row reads down-section left to right */
             <span className="fds-ad-hz" title={orderNoteText}>
-              {horizons.map((h) => (
-                <button key={h.id} className={h.id === horizonId ? 'on' : ''}
-                  onClick={() => setHorizonId(h.id === horizonId ? null : h.id)}
-                  title={`${h.name}${h.ageMa != null ? ` · ${h.ageMa} Ma` : ''} — drape over the map`}>{h.short}</button>
-              ))}
+              {horizons.map((h) => {
+                const on = view === '3d' ? multiIds.includes(h.id) : h.id === horizonId;
+                return (
+                  <button key={h.id} className={on ? 'on' : ''}
+                    onClick={() => (view === '3d'
+                      ? setMultiIds((prev) => (prev.includes(h.id) ? prev.filter((x) => x !== h.id) : [...prev, h.id]))
+                      : setHorizonId(h.id === horizonId ? null : h.id))}
+                    title={`${h.name}${h.ageMa != null ? ` · ${h.ageMa} Ma` : ''} — ${
+                      view === '3d' ? 'add to the 3D scene' : 'drape over the map'}`}>{h.short}</button>
+                );
+              })}
             </span>
           )}
-          <em>{reported(d?.onshoreOffshore)}</em></div>
+          {horizons.length > 0 && (
+            <span className="fds-ad-view">
+              <button className={view === '2d' ? 'on' : ''} onClick={() => setView('2d')}>2D</button>
+              <button className={view === '3d' ? 'on' : ''} onClick={() => setView('3d')}>3D</button>
+            </span>
+          )}
+          <em>{view === '3d' ? `${multiIds.length} selected` : reported(d?.onshoreOffshore)}</em></div>
         {/* The Cockpit renderer, not a bespoke one: real satellite imagery, the
             province boundary and the GOGET field points, with overlay="minimal"
             so three stacked translucent fills do not wash the imagery white.
             The same treatment the Basin Dossier and the Surveillance Dossier use,
             so all three dossiers read as one product. `highlight` rings THIS field. */}
         <div className="fds-ad-mapwrap">
+          {view === '3d' ? (
+            <Suspense fallback={<div className="fds-3d-empty">loading 3D…</div>}>
+              {surfaces3d.length
+                ? (
+                  <>
+                    <Structure3D surfaces={surfaces3d} wells={impacts3d} zScale={zScale}
+                      contactDepth={contactOnThisHorizon?.depth ?? null}
+                      contactLabel={contactOnThisHorizon?.kind} />
+                    <label className="fds-3d-zx" title="vertical exaggeration — a 7 km field with 600 m of relief is flat at ×1">
+                      ×{zScale}
+                      <input type="range" min={1} max={20} step={1} value={zScale}
+                        onChange={(e) => setZScale(Number(e.target.value))} />
+                    </label>
+                  </>
+                )
+                : <div className="fds-3d-empty">Pick one or more horizons above to build the section.</div>}
+            </Suspense>
+          ) : (
+          <>
           <CockpitMap dark mode="2d" theme="satellite" overlay="minimal"
             focus={mapFocus} highlight={field.fly ?? null}
             onSelect={() => {}} onMapReady={setMap} />
@@ -540,6 +655,8 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
               <span>{Math.round(zRange.zmax)}</span>
               <em>m {reported(bundle?.datum ?? 'TVDSS')}</em>
             </div>
+          )}
+          </>
           )}
         </div>
         <div className="fds-ad-map-meta">

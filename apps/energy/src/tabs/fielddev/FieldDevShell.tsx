@@ -31,6 +31,7 @@ import { DataQc } from '../../dataqc/DataQc';
 import type { Sel } from '../../cosmo/CosmoExplorer';
 import { loadSearchIndex, type SearchEntry } from '../../cosmo/cockpit-search';
 import { useViewMode } from '../../cosmo/use-view-mode';
+import { useScopeEntry } from '../../cosmo/use-scope-entry';
 
 const CosmoExplorer = lazy(async () => ({ default: (await import('../../cosmo/CosmoExplorer')).CosmoExplorer }));
 const LegacyFieldDev = lazy(async () => ({ default: (await import('./legacy/FieldDev')).FieldDev }));
@@ -63,6 +64,7 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
   const [sel, setSel] = useState<Sel>(null);
 
   const [field, setField] = useState<SearchEntry | null>(null);
+  useScopeEntry(['field'], setField);
   useEffect(() => {
     loadSearchIndex().then((index) => {
       setField((current) => current ?? index.find((e) => e.type === 'field' && e.name === 'VOLVE') ?? null);

@@ -34,6 +34,11 @@ const RAMP: Array<[number, [number, number, number]]> = [
   [1.00, [43, 62, 140]],
 ];
 
+/** The depth ramp, exported so the 3D view colours its meshes from the SAME
+ *  function the 2D raster uses. Two ramps would let the same depth read as two
+ *  different colours depending on which view you were in. */
+export function rampRgb(t: number): [number, number, number] { return rampAt(t); }
+
 function rampAt(t: number): [number, number, number] {
   const u = Math.max(0, Math.min(1, t));
   for (let i = 1; i < RAMP.length; i++) {
