@@ -60,29 +60,54 @@ export function ensureReferenceBundle(
 
     let failed = 0;
     let lastError = '';
-    for (let i = 0; i < todo.length; i++) {
-      if (cancelled) return;
-      onProgress?.({ done: i, total: todo.length, label: todo[i].label, failed: failed || undefined });
-      try {
-        const out = await digestBundleItem(todo[i], index, spec, fieldId, vertical);
-        if (out) {
-          const bytes = new Uint8Array(out.compressed.length);
-          bytes.set(out.compressed);
-          await putBlob(out.asset.digestKey!, new Blob([bytes.buffer], { type: 'application/gzip' }));
-          await putAsset(out.asset);
-          if (!cancelled && i % 4 === 0) onDigested?.();
+    let done = 0;
+    let next = 0;
+
+    /**
+     * A bounded pool, not a serial loop.
+     *
+     * The Volve package is 82 files and ~90 MB of JSON. Fetching them one at a
+     * time meant one network round trip per file before the next even started,
+     * which is most of why a fresh browser sat empty for minutes. Six at a time
+     * keeps the connection busy without opening 82 sockets or holding 90 MB of
+     * parsed JSON in memory at once — the whole point of digesting is that only
+     * the compressed result is kept.
+     */
+    const CONCURRENCY = 6;
+
+    const worker = async () => {
+      for (;;) {
+        if (cancelled) return;
+        const i = next++;
+        if (i >= todo.length) return;
+        try {
+          const out = await digestBundleItem(todo[i], index, spec, fieldId, vertical);
+          if (out) {
+            const bytes = new Uint8Array(out.compressed.length);
+            bytes.set(out.compressed);
+            await putBlob(out.asset.digestKey!, new Blob([bytes.buffer], { type: 'application/gzip' }));
+            await putAsset(out.asset);
+          }
+        } catch (e) {
+          // one bad file must not abort the package — but it must be COUNTED, or a
+          // package that half-digested looks identical to one that fully did
+          failed += 1;
+          lastError = e instanceof Error ? e.message : String(e);
         }
-      } catch (e) {
-        // one bad file must not abort the package — but it must be COUNTED, or a
-        // package that half-digested looks identical to one that fully did
-        failed += 1;
-        lastError = e instanceof Error ? e.message : String(e);
+        done += 1;
+        if (!cancelled) {
+          onProgress?.({ done, total: todo.length, label: todo[i].label, failed: failed || undefined });
+          if (done % 4 === 0) onDigested?.();
+        }
+        // Yield to the event loop between items. Without this the run starves
+        // rendering: the page stops responding for minutes and looks hung rather
+        // than busy, which is its own reason to think something is broken.
+        await new Promise((r) => { setTimeout(r, 0); });
       }
-      // Yield to the event loop between items. Without this the whole package is
-      // one long synchronous-ish run that starves rendering: the page stops
-      // responding for minutes and looks hung rather than busy.
-      await new Promise((r) => { setTimeout(r, 0); });
-    }
+    };
+
+    onProgress?.({ done: 0, total: todo.length, label: spec.label });
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, todo.length) }, worker));
     if (cancelled) return;
     onProgress?.(failed
       ? { done: todo.length, total: todo.length, label: spec.label, failed, error: lastError }
