@@ -186,3 +186,371 @@ html[data-ui="cosmo"] .fds-evidence-legend-item{display:flex;align-items:center;
   html[data-ui="cosmo"] .fds-kb-dashboard{padding:5px;gap:5px}html[data-ui="cosmo"] .fds-kb-map-panel,html[data-ui="cosmo"] .fds-kb-hierarchy-panel,html[data-ui="cosmo"] .fds-kb-value-panel,html[data-ui="cosmo"] .fds-kb-sources-panel{padding:6px}
   html[data-ui="cosmo"] .fds-source-card small{display:none}html[data-ui="cosmo"] .fds-hierarchy-node{min-height:25px}
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASSET DOSSIER — the Field Development Knowledge Bank.
+   Deliberately the Basin Dossier skeleton (see .exs-bd in exploration-suite.css)
+   with development semantics: one non-scrolling viewport, header numbers that are
+   themselves buttons, the map holding column 1 across both content rows, a three-card
+   verdict strip, two analytical panels, everything deeper behind a modal.
+   The one intentional divergence: this surface time axis runs FORWARDS (calendar
+   years) where Exploration runs backwards (Ma before present).
+   ══════════════════════════════════════════════════════════════════════════════ */
+/* Same four-row grid as the Exploration Basin Dossier (.exs-bd): head / map spanning
+   every content row in column 1 / verdict strip / a FILTER row / then the wide
+   analytical panel beside the narrow column. Row 3 used to be spent on a
+   data-availability strip; that moved into the sources modal so the two bottom
+   panels reclaim the height, exactly as Exploration does. */
+html[data-ui="cosmo"] .fds-ad{flex:1;min-height:0;display:grid;
+  grid-template-columns:minmax(0,.95fr) minmax(0,1.5fr) minmax(190px,.62fr);
+  grid-template-rows:auto auto auto minmax(0,1fr);
+  background:var(--panel2);gap:10px;padding:10px;overflow:hidden}
+html[data-ui="cosmo"] .fds-ad-head{grid-column:1/-1;grid-row:1}
+html[data-ui="cosmo"] .fds-ad-map{grid-column:1;grid-row:2/5}
+html[data-ui="cosmo"] .fds-ad-verdicts{grid-column:2/-1;grid-row:2}
+html[data-ui="cosmo"] .fds-ad-inv{grid-column:2/-1;grid-row:3}
+html[data-ui="cosmo"] .fds-ad-timeline-panel{grid-column:2;grid-row:4}
+html[data-ui="cosmo"] .fds-ad-bench-panel{grid-column:3;grid-row:4}
+html[data-ui="cosmo"] .fds-ad>.fds-ad-map,html[data-ui="cosmo"] .fds-ad>.fds-ad-timeline-panel,html[data-ui="cosmo"] .fds-ad>.fds-ad-bench-panel{min-width:0;min-height:0;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+
+/* ── header ── */
+html[data-ui="cosmo"] .fds-ad-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+html[data-ui="cosmo"] .fds-ad-id{min-width:0}
+html[data-ui="cosmo"] .fds-ad-id small{font:8px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-id h2{margin:1px 0 0;font-size:19px;font-weight:600;color:var(--ink);line-height:1.15}
+html[data-ui="cosmo"] .fds-ad-id p{margin:1px 0 0;font-size:10.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-kpis{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+html[data-ui="cosmo"] .fds-kpi{display:flex;flex-direction:column;gap:1px;min-width:118px;padding:7px 11px;border:1px solid var(--line2);border-radius:9px;background:var(--panel2);text-align:left;cursor:default}
+html[data-ui="cosmo"] .fds-kpi.live{cursor:pointer}
+html[data-ui="cosmo"] .fds-kpi.live:hover{border-color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-kpi span{display:flex;align-items:center;gap:4px;font:7.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-kpi span svg{flex:none;color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-kpi b{font-size:15px;font-weight:600;color:var(--ink);line-height:1.2}
+html[data-ui="cosmo"] .fds-kpi small{font-size:8px;color:var(--ink3)}
+
+/* ── map panel ── */
+html[data-ui="cosmo"] .fds-ad-map{position:relative;display:flex;flex-direction:column}
+html[data-ui="cosmo"] .fds-ad-map-title{display:flex;align-items:center;gap:6px;padding:9px 11px 7px;font:8px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);flex:none}
+html[data-ui="cosmo"] .fds-ad-map-title svg{color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-ad-map-title em{margin-left:auto;font-style:normal;text-transform:none;letter-spacing:0;color:var(--ink2)}
+html[data-ui="cosmo"] .fds-ad-map>:not(.fds-ad-map-title):not(.fds-ad-map-meta){flex:1;min-height:0}
+html[data-ui="cosmo"] .fds-ad-map-meta{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px 11px;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-ad-map-meta span{display:block;font:7.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-map-meta b{font-size:10.5px;font-weight:600;color:var(--ink)}
+
+/* ── verdict strip ── */
+html[data-ui="cosmo"] .fds-ad-verdicts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:0}
+html[data-ui="cosmo"] .fds-verdict{min-height:0;display:flex;flex-direction:column;gap:2px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);text-align:left;cursor:pointer}
+html[data-ui="cosmo"] .fds-verdict:hover{border-color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-verdict>span{display:flex;align-items:center;gap:4px;font:7.5px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-verdict>span svg{flex:none;color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-verdict>b{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.25}
+html[data-ui="cosmo"] .fds-verdict>b.small{font-size:10px}
+html[data-ui="cosmo"] .fds-verdict>small{font-size:8.5px;color:var(--ink3);line-height:1.4}
+html[data-ui="cosmo"] .fds-verdict>em{margin-top:auto;padding-top:5px;font:7.5px var(--mono);font-style:normal;color:var(--cyan,#22d3ee)}
+/* verdict tones — shared with the KPI/stage vocabulary */
+html[data-ui="cosmo"] .tone-good,html[data-ui="cosmo"] .tone-producing{color:#10b981}
+html[data-ui="cosmo"] .tone-warn,html[data-ui="cosmo"] .tone-late-life,html[data-ui="cosmo"] .tone-sanctioned,html[data-ui="cosmo"] .tone-appraisal{color:#f59e0b}
+html[data-ui="cosmo"] .tone-bad,html[data-ui="cosmo"] .tone-ceased{color:#f43f5e}
+html[data-ui="cosmo"] .tone-unknown{color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-rvfacts{display:flex;gap:10px;margin-top:4px}
+html[data-ui="cosmo"] .fds-ad-rvfacts i{display:flex;flex-direction:column;min-width:0;font-style:normal}
+html[data-ui="cosmo"] .fds-ad-rvfacts span{font:7px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-rvfacts b{font-size:9.5px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* lifecycle progress bar */
+html[data-ui="cosmo"] .fds-ad-lifebar{margin:6px 0 3px}
+html[data-ui="cosmo"] .fds-ad-lifebar-track{height:7px;border-radius:4px;background:var(--panel2);overflow:hidden;border:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-ad-lifebar-track i{display:block;height:100%;border-radius:4px;background:var(--cyan,#22d3ee);transition:width .35s ease}
+html[data-ui="cosmo"] .fds-ad-lifebar-track i.tone-producing{background:#10b981}
+html[data-ui="cosmo"] .fds-ad-lifebar-track i.tone-late-life{background:#f59e0b}
+html[data-ui="cosmo"] .fds-ad-lifebar-track i.tone-ceased{background:#f43f5e}
+html[data-ui="cosmo"] .fds-ad-lifebar-track i.tone-unknown{background:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-lifebar-pips{display:flex;justify-content:space-between;margin-top:3px}
+html[data-ui="cosmo"] .fds-ad-lifebar-pips span{width:5px;height:5px;border-radius:50%;background:var(--line2)}
+html[data-ui="cosmo"] .fds-ad-lifebar-pips span.on{background:var(--cyan,#22d3ee)}
+
+/* fluid donut */
+html[data-ui="cosmo"] .fds-ad-donut{display:flex;align-items:center;gap:11px;margin-top:4px;min-height:0}
+html[data-ui="cosmo"] .fds-ad-donut svg{flex:none}
+html[data-ui="cosmo"] .fds-ad-donut-key{display:flex;flex-direction:column;gap:3px;min-width:0}
+html[data-ui="cosmo"] .fds-ad-donut-key span{display:flex;align-items:center;gap:5px;font:8px var(--mono);color:var(--ink3);white-space:nowrap}
+html[data-ui="cosmo"] .fds-ad-donut-key i{width:8px;height:8px;border-radius:2px;flex:none}
+html[data-ui="cosmo"] .fds-ad-donut-key b{color:var(--ink2)}
+
+/* ── section titles shared by the two analytical panels ── */
+html[data-ui="cosmo"] .fds-ad-section-title{display:flex;align-items:center;gap:6px;padding-bottom:7px;margin-bottom:2px;border-bottom:1px solid var(--line2);font:8.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);flex:none}
+html[data-ui="cosmo"] .fds-ad-section-title svg{color:var(--cyan,#22d3ee);flex:none}
+html[data-ui="cosmo"] .fds-ad-section-title em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-info{margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border:1px solid var(--line2);border-radius:6px;background:var(--panel2);color:var(--ink3);font:7.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .fds-info:hover{border-color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-info b{color:var(--ink2);font-weight:600}
+html[data-ui="cosmo"] .fds-info.has-gaps{border-color:color-mix(in srgb,#f59e0b 40%,var(--line2))}
+html[data-ui="cosmo"] .fds-info i{font-style:normal;padding:0 4px;border-radius:99px;background:#f59e0b;color:#1a1204;font-weight:700}
+
+/* ── development timeline (the signature chart) ── */
+html[data-ui="cosmo"] .fds-ad-timeline-panel,html[data-ui="cosmo"] .fds-ad-bench-panel{display:flex;flex-direction:column;padding:11px;min-height:0}
+html[data-ui="cosmo"] .fds-ad-timeline{flex:1;min-height:0;display:flex;flex-direction:column;padding-top:8px}
+html[data-ui="cosmo"] .fds-ad-tl-bars{position:relative;flex:1;min-height:44px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-ad-tl-bars i{position:absolute;bottom:0;width:5px;margin-left:-2.5px;border-radius:2px 2px 0 0;background:color-mix(in srgb,var(--cyan,#22d3ee) 62%,transparent)}
+html[data-ui="cosmo"] .fds-ad-tl-bars i:hover{background:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-ad-tl-nobars{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-tl-lane{position:relative;height:62px;flex:none;margin-top:10px}
+html[data-ui="cosmo"] .fds-ad-tl-axisline{position:absolute;left:0;right:0;top:5px;height:2px;border-radius:2px;background:var(--line2)}
+html[data-ui="cosmo"] .fds-ad-tl-pip{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;padding:0;border:0;background:transparent;cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .fds-ad-tl-pip i{width:11px;height:11px;border-radius:50%;border:2px solid var(--panel);background:var(--cyan,#22d3ee);box-shadow:0 0 0 1px var(--line2)}
+html[data-ui="cosmo"] .fds-ad-tl-pip.m-discovered i{background:#a78bfa}
+html[data-ui="cosmo"] .fds-ad-tl-pip.m-sanctioned i{background:#f59e0b}
+html[data-ui="cosmo"] .fds-ad-tl-pip.m-onstream i{background:#10b981}
+html[data-ui="cosmo"] .fds-ad-tl-pip b{font:8.5px var(--mono);font-weight:700;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-tl-pip span{font:7px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-tl-pip:hover b,html[data-ui="cosmo"] .fds-ad-tl-pip:hover span{color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-ad-tl-now{position:absolute;top:-52px;bottom:14px;width:0;border-left:1px dashed color-mix(in srgb,var(--ink3) 55%,transparent)}
+html[data-ui="cosmo"] .fds-ad-tl-now i{position:absolute;top:0;left:-3px;width:5px;height:5px;border-radius:50%;background:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-tl-axis{position:relative;height:13px;flex:none;margin-top:2px}
+html[data-ui="cosmo"] .fds-ad-tl-axis span{position:absolute;transform:translateX(-50%);font:7px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-tl-missing{flex:none;display:flex;gap:12px;flex-wrap:wrap;padding-top:8px;margin-top:6px;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-ad-tl-missing span{font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-tl-missing b{padding:1px 4px;border-radius:3px;background:color-mix(in srgb,#f43f5e 12%,var(--panel2));color:#e11d48;text-transform:uppercase}
+
+/* ── recovery benchmark ── */
+html[data-ui="cosmo"] .fds-ad-bench{display:flex;flex-direction:column;gap:7px;padding-top:9px}
+html[data-ui="cosmo"] .fds-ad-bench-head{display:flex;flex-direction:column;gap:1px}
+html[data-ui="cosmo"] .fds-ad-bench-head b{font-size:10.5px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-bench-head span{font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-bench-track{position:relative;height:34px;margin-top:3px;border-radius:6px;background:var(--panel2);border:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-ad-bench-band{position:absolute;top:5px;height:13px;border-radius:4px;background:color-mix(in srgb,var(--cyan,#22d3ee) 26%,transparent);border:1px solid color-mix(in srgb,var(--cyan,#22d3ee) 45%,transparent)}
+html[data-ui="cosmo"] .fds-ad-bench-mid{position:absolute;top:3px;height:17px;width:2px;margin-left:-1px;border-radius:1px;background:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-ad-bench-obs{position:absolute;top:1px;height:21px;width:0;margin-left:0;border-left:2px solid #f59e0b}
+html[data-ui="cosmo"] .fds-ad-bench-obs i{position:absolute;top:-4px;left:-4px;width:8px;height:8px;border-radius:50%;background:#f59e0b}
+html[data-ui="cosmo"] .fds-ad-bench-tick{position:absolute;bottom:2px;transform:translateX(-50%);font:6.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-bench-legend{display:flex;flex-direction:column;gap:3px}
+html[data-ui="cosmo"] .fds-ad-bench-legend span{display:flex;align-items:center;gap:5px;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-bench-legend span.muted{opacity:.75;font-style:italic}
+html[data-ui="cosmo"] .fds-ad-bench-legend b{color:var(--ink2)}
+html[data-ui="cosmo"] .fds-ad-bench-legend i{width:9px;height:9px;border-radius:2px;flex:none}
+html[data-ui="cosmo"] .fds-ad-bench-legend i.band{background:color-mix(in srgb,var(--cyan,#22d3ee) 40%,transparent);border:1px solid var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-ad-bench-legend i.obs{background:#f59e0b;border-radius:50%}
+html[data-ui="cosmo"] .fds-ad-bench-spark{margin-top:auto;padding-top:9px;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-ad-bench-spark>span{display:block;font:7.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-bench-spark small{display:block;margin-top:2px;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-spark{width:100%;height:26px;margin-top:3px;display:block}
+
+/* ── shared notes / empty states — an empty panel is a FINDING, so it is styled ── */
+html[data-ui="cosmo"] .fds-ad-note{margin:0;font-size:8.5px;line-height:1.55;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-note.lead{font-size:9.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .fds-ad-note b{color:var(--ink2)}
+html[data-ui="cosmo"] .fds-ad-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px;text-align:center}
+html[data-ui="cosmo"] .fds-ad-empty b{font-size:11px;color:var(--ink2)}
+html[data-ui="cosmo"] .fds-ad-empty span{max-width:340px;font-size:9px;line-height:1.55;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-empty-inline{padding:10px;font-size:9px;color:var(--ink3);text-align:center}
+
+/* ── modal chrome (mirrors .exs-lightbox) ── */
+html[data-ui="cosmo"] .fds-lightbox{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,6,23,.82);backdrop-filter:blur(3px)}
+html[data-ui="cosmo"] .fds-lightbox-inner{display:flex;flex-direction:column;max-width:min(1100px,94vw);max-height:92vh;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+html[data-ui="cosmo"] .fds-lightbox-inner.wide{max-width:min(1180px,95vw)}
+html[data-ui="cosmo"] .fds-lightbox-inner>header{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-lightbox-inner>header div{display:flex;flex-direction:column;gap:3px;min-width:0}
+html[data-ui="cosmo"] .fds-lightbox-inner>header span{font:8px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-lightbox-inner>header b{font-size:12px;line-height:1.45;color:var(--ink);font-weight:600}
+html[data-ui="cosmo"] .fds-lightbox-inner>header button{margin-left:auto;flex-shrink:0;display:inline-flex;padding:5px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink2);cursor:pointer}
+html[data-ui="cosmo"] .fds-modal-body{padding:14px;overflow:auto;min-height:0}
+html[data-ui="cosmo"] .fds-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+html[data-ui="cosmo"] .fds-modal-card{border:1px solid var(--line2);border-radius:10px;background:var(--panel2);padding:11px}
+html[data-ui="cosmo"] .fds-modal-card.span2{grid-column:1/-1}
+html[data-ui="cosmo"] .fds-modal-card h4,html[data-ui="cosmo"] .fds-modal-h4{margin:0 0 8px;font-size:10.5px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-modal-h4{margin-top:14px}
+
+/* modal content blocks */
+html[data-ui="cosmo"] .fds-ad-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px}
+html[data-ui="cosmo"] .fds-ad-facts>div{display:flex;flex-direction:column;gap:1px;padding:7px 9px;border:1px solid var(--line2);border-radius:8px;background:var(--panel)}
+html[data-ui="cosmo"] .fds-ad-facts span{font:7.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-facts b{font-size:11px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-milestones{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+html[data-ui="cosmo"] .fds-ad-milestones>div{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--panel)}
+html[data-ui="cosmo"] .fds-ad-milestones>div.empty{border-style:dashed;border-color:color-mix(in srgb,#f43f5e 32%,var(--line2))}
+html[data-ui="cosmo"] .fds-ad-milestones span{font:7.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-milestones b{font-size:14px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-milestones>div.empty b{font-size:10.5px;color:#e11d48}
+html[data-ui="cosmo"] .fds-ad-milestones small{font-size:8px;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-potential{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+html[data-ui="cosmo"] .fds-ad-potential>div{display:flex;flex-direction:column;gap:1px;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2)}
+html[data-ui="cosmo"] .fds-ad-potential span{font:7.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-potential b{font-size:19px;font-weight:600;color:var(--ink);line-height:1.2}
+html[data-ui="cosmo"] .fds-ad-potential small{font-size:8px;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-gaps{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+html[data-ui="cosmo"] .fds-ad-gaps>div{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid var(--line2);border-radius:9px;background:var(--panel2)}
+html[data-ui="cosmo"] .fds-ad-gaps svg{flex:none;margin-top:1px;color:#f59e0b}
+html[data-ui="cosmo"] .fds-ad-gaps b{display:block;font-size:10px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-gaps small{display:block;margin-top:1px;font-size:8.5px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-tablewrap{max-height:300px;overflow:auto;border:1px solid var(--line2);border-radius:9px}
+html[data-ui="cosmo"] .fds-ad-table{width:100%;border-collapse:collapse;font-size:9.5px}
+html[data-ui="cosmo"] .fds-ad-table th{position:sticky;top:0;z-index:1;text-align:left;padding:7px 9px;background:var(--panel2);border-bottom:1px solid var(--line2);font:7.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ad-table td{padding:6px 9px;border-bottom:1px solid var(--line2);color:var(--ink2)}
+html[data-ui="cosmo"] .fds-ad-table tr:last-child td{border-bottom:0}
+html[data-ui="cosmo"] .fds-ad-table tr.muted td{color:var(--ink3);font-style:italic}
+
+/* ── responsive: keep the one-viewport invariant down to tablet ── */
+@media(max-width:1240px){
+  html[data-ui="cosmo"] .fds-ad{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);grid-template-rows:auto auto minmax(0,1fr) minmax(150px,.6fr)}
+  html[data-ui="cosmo"] .fds-ad-verdicts{grid-column:2;grid-row:2}
+  html[data-ui="cosmo"] .fds-ad-timeline-panel{grid-column:2;grid-row:3}
+  html[data-ui="cosmo"] .fds-ad-bench-panel{grid-column:1/-1;grid-row:4}
+  html[data-ui="cosmo"] .fds-ad-bench-spark{display:none}
+}
+@media(max-width:860px){
+  html[data-ui="cosmo"] .fds-ad{grid-template-columns:1fr;grid-template-rows:auto minmax(160px,.8fr) auto minmax(0,1fr) minmax(150px,.6fr);overflow:auto}
+  html[data-ui="cosmo"] .fds-ad-map{grid-column:1;grid-row:2}
+  html[data-ui="cosmo"] .fds-ad-verdicts{grid-column:1;grid-row:3;grid-template-columns:1fr}
+  html[data-ui="cosmo"] .fds-ad-timeline-panel{grid-column:1;grid-row:4}
+  html[data-ui="cosmo"] .fds-ad-bench-panel{grid-column:1;grid-row:5}
+  html[data-ui="cosmo"] .fds-kpis{width:100%;margin-left:0}
+  html[data-ui="cosmo"] .fds-kpi{flex:1;min-width:0}
+  html[data-ui="cosmo"] .fds-modal-grid{grid-template-columns:1fr}
+  html[data-ui="cosmo"] .fds-ad-potential{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  html[data-ui="cosmo"] .fds-ad-lifebar-track i{transition:none}
+}
+
+/* ── LAYOUT FIX ────────────────────────────────────────────────────────────────
+   The first cut overflowed the viewport to the right and left a large empty middle:
+   the grid had no min-width:0 (so long benchmark prose forced column 3 wider than
+   its track), and the timeline row took 1fr even with nothing to draw. Fixes:
+   · min-width:0 + max-width:100% on the grid AND every panel child
+   · column 3 given a hard px ceiling so prose can never push the grid wide
+   · a 4th row for the data-availability strip
+   · tighter row sizing so an empty timeline no longer reserves half the screen
+   ────────────────────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .fds-ad{
+  grid-template-columns:minmax(0,.9fr) minmax(0,1.55fr) minmax(200px,290px);
+  grid-template-rows:auto auto minmax(210px,1fr) auto;
+  min-width:0;max-width:100%}
+html[data-ui="cosmo"] .fds-ad>*{min-width:0;max-width:100%}
+/* (the availability strip that used to own row 4 is now the sources modal — the
+   map spans every content row again, matching .exs-bd-map's 2/5) */
+
+/* header: 4 KPIs, so let them wrap gracefully instead of stretching the row */
+html[data-ui="cosmo"] .fds-kpi{min-width:104px;flex:1 1 104px;max-width:180px}
+html[data-ui="cosmo"] .fds-kpis{flex:1 1 auto;justify-content:flex-end}
+
+/* provenance chip — every headline number says where it came from */
+html[data-ui="cosmo"] .fds-src{font-style:normal;margin-left:auto;padding:0 4px;border-radius:3px;font:6.5px var(--mono);letter-spacing:.02em;text-transform:none;background:var(--line2);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-src.src-goget{background:color-mix(in srgb,#22d3ee 20%,transparent);color:#0e7490}
+html[data-ui="cosmo"] .fds-src.src-sodir,html[data-ui="cosmo"] .fds-src.src-nsta{background:color-mix(in srgb,#10b981 20%,transparent);color:#047857}
+html[data-ui="cosmo"] .fds-src.src-volve-bundle{background:color-mix(in srgb,#a78bfa 22%,transparent);color:#6d28d9}
+html[data-ui="cosmo"] .fds-ad-facts small{font:7px var(--mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.04em}
+html[data-ui="cosmo"] .fds-ad-note code{font:7.5px var(--mono);color:var(--cyan,#22d3ee);margin-right:6px}
+
+/* ── well inventory row — the Exploration filter strip's counterpart ──────────
+   Exploration filters its petroleum-system chart by geologic era; a producing
+   asset filters its well activity by ROLE. The chips carry the counts, so the
+   well stock is legible without opening anything, and the availability matrix
+   (which used to be a whole row) is one click away at the right. */
+html[data-ui="cosmo"] .fds-ad-inv{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-height:0}
+html[data-ui="cosmo"] .fds-ad-inv>svg{color:var(--ink3);flex:none}
+html[data-ui="cosmo"] .fds-ad-inv>b{font-size:11.5px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-chip{display:inline-flex;align-items:center;gap:5px;font:9px var(--mono);padding:4px 10px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--ink3);cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .fds-ad-chip:hover{border-color:var(--cyan,#22d3ee);color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-chip.on{background:color-mix(in srgb,var(--cyan,#22d3ee) 14%,transparent);border-color:var(--cyan,#22d3ee);color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-chip i{font-style:normal;width:7px;height:7px;border-radius:50%;flex:none}
+html[data-ui="cosmo"] .fds-ad-chip b{font-weight:700;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-chip[disabled]{opacity:.45;cursor:default}
+html[data-ui="cosmo"] .fds-ad-avail-btn{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font:9px var(--mono);padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink2);cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .fds-ad-avail-btn:hover{border-color:var(--cyan,#22d3ee);color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-avail-btn svg{color:var(--cyan,#22d3ee)}
+html[data-ui="cosmo"] .fds-ad-avail-none{font-size:9px;line-height:1.55;color:var(--ink3)}
+
+/* benchmark panel: prose must wrap, never widen the grid */
+html[data-ui="cosmo"] .fds-ad-bench-panel{overflow-y:auto}
+html[data-ui="cosmo"] .fds-ad-bench,html[data-ui="cosmo"] .fds-ad-bench *{min-width:0}
+html[data-ui="cosmo"] .fds-ad-bench .fds-ad-note{overflow-wrap:anywhere}
+
+/* empty timeline should read as a finding, not as dead space */
+html[data-ui="cosmo"] .fds-ad-timeline-panel .fds-ad-empty{flex:0 1 auto;margin:auto 0;padding:18px 14px}
+
+@media(max-width:1240px){
+  html[data-ui="cosmo"] .fds-ad{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);grid-template-rows:auto auto minmax(190px,1fr) auto auto}
+  html[data-ui="cosmo"] .fds-ad-bench-panel{grid-column:1/-1;grid-row:4}
+  html[data-ui="cosmo"] .fds-ad-avail{grid-column:1/-1;grid-row:5}
+}
+@media(max-width:860px){
+  html[data-ui="cosmo"] .fds-ad{grid-template-rows:auto minmax(160px,.8fr) auto minmax(190px,1fr) auto auto}
+  html[data-ui="cosmo"] .fds-ad-bench-panel{grid-column:1;grid-row:5}
+  html[data-ui="cosmo"] .fds-ad-avail{grid-column:1;grid-row:6}
+}
+
+/* ── MAP SQUASH FIX ────────────────────────────────────────────────────────────
+   `.fds-kmap-wrap` was authored for the OLD Knowledge Bank, where the map was a small
+   250 px SQUARE thumbnail: `max-width:250px; aspect-ratio:1/1; flex:0 1 auto`. Dropping
+   that into the Asset Dossier's tall map column meant the wrap fought the panel — a
+   1:1 box clamped to 250 px inside a ~490×530 panel, which is what read as "squashed".
+   In `fill` mode the wrap simply becomes the panel: no aspect-ratio, no max-width.
+   (The component side of the fix is a ResizeObserver → map.resize(); MapLibre sizes its
+   canvas once at construction, so a grid panel that settles after init keeps the wrong
+   aspect for ever. Both halves are required.)
+   ────────────────────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .fds-kmap-wrap.fill{
+  max-width:none;aspect-ratio:auto;flex:1 1 auto;
+  width:100%;height:100%;min-height:0;min-width:0;border-radius:0}
+html[data-ui="cosmo"] .fds-kmap-missing.fill{aspect-ratio:auto;height:100%;min-height:0;border-radius:0}
+/* the maplibre canvas must track the host exactly, or it letterboxes */
+html[data-ui="cosmo"] .fds-kmap-wrap.fill .fds-kmap,
+html[data-ui="cosmo"] .fds-kmap-wrap.fill .maplibregl-map,
+html[data-ui="cosmo"] .fds-kmap-wrap.fill .maplibregl-canvas-container,
+html[data-ui="cosmo"] .fds-kmap-wrap.fill canvas.maplibregl-canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+/* give the pin/credit room next to the zoom control, and match the dossier chrome */
+html[data-ui="cosmo"] .fds-kmap-wrap.fill .fds-kmap-pin{top:10px;left:10px;border:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-kmap-wrap.fill .fds-kmap-credit{left:10px;bottom:8px;border:1px solid var(--line2)}
+html[data-ui="cosmo"] .fds-kmap-wrap.fill .maplibregl-ctrl-group{border:1px solid var(--line2);box-shadow:none}
+/* the dossier's map cell owns the sizing; the wrap is the only growing child */
+html[data-ui="cosmo"] .fds-ad-map>.fds-kmap-wrap{flex:1 1 auto;min-height:0}
+
+/* ── phone document flow ─────────────────────────────────────────────────────
+   Desktop is deliberately a one-viewport cockpit. On a phone the same grid
+   coordinates create a narrow left column and a blank right half, so mobile
+   becomes a readable, full-width document instead. */
+@media(max-width:820px){
+  html[data-ui="cosmo"] .fds-ad{
+    flex:0 0 auto;height:auto;min-height:0;overflow:visible;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:none!important;grid-auto-rows:auto;
+    gap:10px;padding:10px;
+  }
+  html[data-ui="cosmo"] .fds-ad>*{
+    grid-column:1!important;grid-row:auto!important;
+    width:100%;min-width:0;max-width:100%;
+  }
+  html[data-ui="cosmo"] .fds-ad-head{align-items:flex-start;gap:12px;padding:14px}
+  html[data-ui="cosmo"] .fds-ad-id{width:100%}
+  html[data-ui="cosmo"] .fds-kpis{
+    width:100%;margin-left:0;display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+  }
+  html[data-ui="cosmo"] .fds-kpi{width:100%;max-width:none;min-width:0;padding:9px 10px}
+  html[data-ui="cosmo"] .fds-ad>.fds-ad-map{min-height:320px;overflow:hidden}
+  html[data-ui="cosmo"] .fds-ad-map>.fds-kmap-wrap.fill{
+    flex:0 0 230px;height:230px;min-height:230px;
+  }
+  html[data-ui="cosmo"] .fds-ad-verdicts{grid-template-columns:1fr;gap:8px}
+  html[data-ui="cosmo"] .fds-verdict{min-height:116px;padding:12px}
+  html[data-ui="cosmo"] .fds-ad>.fds-ad-timeline-panel{min-height:320px;overflow:hidden}
+  html[data-ui="cosmo"] .fds-ad>.fds-ad-bench-panel{min-height:210px;overflow:visible}
+  html[data-ui="cosmo"] .fds-ad-avail{min-height:0}
+  html[data-ui="cosmo"] .fds-ad-avail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* segmented control in a panel title — Timeline / Flow. Only rendered when the
+   field actually has a monthly series, so it never offers an empty view. */
+html[data-ui="cosmo"] .fds-ad-seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-left:8px}
+html[data-ui="cosmo"] .fds-ad-seg button{padding:2px 9px;font:8px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);background:var(--panel2);border:none;cursor:pointer}
+html[data-ui="cosmo"] .fds-ad-seg button.on{background:color-mix(in srgb,var(--cyan,#22d3ee) 16%,transparent);color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-seg button:hover:not(.on){color:var(--ink2)}
+
+/* flow-chart key — bars are swatches, the two overlay series are line marks so
+   they read as a different quantity on a different axis */
+html[data-ui="cosmo"] .fds-ad-flow-key{position:absolute;left:46px;bottom:2px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;font:8px var(--mono);color:var(--ink3);pointer-events:none}
+html[data-ui="cosmo"] .fds-ad-flow-key span{display:inline-flex;align-items:center;gap:4px}
+html[data-ui="cosmo"] .fds-ad-flow-key i{width:8px;height:8px;border-radius:2px;display:inline-block}
+html[data-ui="cosmo"] .fds-ad-flow-key .ln i{width:13px;height:2px;border-radius:1px}
+html[data-ui="cosmo"] .fds-ad-flow-key em{margin-left:auto;font-style:normal;color:var(--ink2)}
