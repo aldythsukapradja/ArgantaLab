@@ -7,9 +7,18 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 const base = import.meta.env.BASE_URL || '/';
 
-export function KnowledgeMap({ field, context }: { field: SearchEntry; context: KnowledgeContext | null }) {
+/** `fill` = occupy the whole parent panel (the Asset Dossier's map column) instead of the
+ *  legacy 250 px square thumbnail. */
+export function KnowledgeMap({ field, context, fill = false, onMapReady }: {
+  field: SearchEntry; context: KnowledgeContext | null; fill?: boolean;
+  /** Hands the live MapLibre instance up so callers can drape their own layers
+   *  on it (the Asset Dossier adds the interpreted depth structure). Called with
+   *  null on teardown so a consumer never holds a removed map. */
+  onMapReady?: (map: MapLibreMap | null) => void;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const resizeObsRef = useRef<ResizeObserver | null>(null);
   const provider = rasterProvider('openmap');
 
   useEffect(() => {
@@ -40,19 +49,43 @@ export function KnowledgeMap({ field, context }: { field: SearchEntry; context: 
       };
       map = new maplibre.Map({
         container: hostRef.current, style, center: [field.fly.lon, field.fly.lat], zoom: context?.au ? 4.25 : 4.1,
-        interactive: false, attributionControl: false, renderWorldCopies: false,
+        // The dossier map is a real map, like the Cockpit's — pan/zoom, not a picture.
+        interactive: fill, attributionControl: false, renderWorldCopies: false,
       });
+      if (fill) {
+        map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
+        map.scrollZoom.enable();
+      }
       mapRef.current = map;
+      // announce only once the style is live — addSource/addLayer throw before that
+      if (map.isStyleLoaded()) onMapReady?.(map);
+      else map.once('load', () => { if (!disposed) onMapReady?.(mapRef.current); });
+
+      // THE SQUASH FIX. MapLibre sizes its canvas once, at construction. This map lives in
+      // a CSS-grid panel whose final size is not known until the grid settles (and changes
+      // again on every window/pane resize), so without this the canvas keeps its first
+      // aspect ratio and the basemap renders stretched. Observe the host and resize.
+      const ro = new ResizeObserver(() => { mapRef.current?.resize(); });
+      ro.observe(hostRef.current);
+      resizeObsRef.current = ro;
+      // one more after first paint, for the initial grid settle
+      requestAnimationFrame(() => mapRef.current?.resize());
+      map.once('load', () => mapRef.current?.resize());
     };
     void boot().catch((error: unknown) => {
       if (hostRef.current) hostRef.current.textContent = error instanceof Error ? error.message : 'Map unavailable';
     });
-    return () => { disposed = true; map?.remove(); mapRef.current = null; };
-  }, [context, field]);
+    return () => {
+      disposed = true;
+      resizeObsRef.current?.disconnect(); resizeObsRef.current = null;
+      onMapReady?.(null);
+      map?.remove(); mapRef.current = null;
+    };
+  }, [context, field, fill, onMapReady]);
 
-  if (!field.fly) return <div className="fds-kmap-missing">Location not reported</div>;
+  if (!field.fly) return <div className={'fds-kmap-missing' + (fill ? ' fill' : '')}>Location not reported</div>;
   return (
-    <div className="fds-kmap-wrap">
+    <div className={'fds-kmap-wrap' + (fill ? ' fill' : '')}>
       <div ref={hostRef} className="fds-kmap" aria-label={`${field.name} location map`} />
       <div className="fds-kmap-pin"><b>{field.name}</b><span>{field.fly.lat.toFixed(3)}°, {field.fly.lon.toFixed(3)}°</span></div>
       <div className="fds-kmap-credit">OSM · GOGET / USGS spatial alignment</div>

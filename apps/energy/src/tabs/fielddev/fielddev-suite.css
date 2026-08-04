@@ -554,3 +554,12 @@ html[data-ui="cosmo"] .fds-ad-flow-key span{display:inline-flex;align-items:cent
 html[data-ui="cosmo"] .fds-ad-flow-key i{width:8px;height:8px;border-radius:2px;display:inline-block}
 html[data-ui="cosmo"] .fds-ad-flow-key .ln i{width:13px;height:2px;border-radius:1px}
 html[data-ui="cosmo"] .fds-ad-flow-key em{margin-left:auto;font-style:normal;color:var(--ink2)}
+
+/* horizon selector on the map title bar, and the depth key it drives */
+html[data-ui="cosmo"] .fds-ad-hz{display:inline-flex;gap:3px;flex-wrap:wrap;margin-left:8px}
+html[data-ui="cosmo"] .fds-ad-hz button{padding:2px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--ink3);font:7.5px var(--mono);letter-spacing:.03em;cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .fds-ad-hz button:hover{border-color:var(--cyan,#22d3ee);color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-hz button.on{background:color-mix(in srgb,var(--cyan,#22d3ee) 18%,transparent);border-color:var(--cyan,#22d3ee);color:var(--ink)}
+html[data-ui="cosmo"] .fds-ad-zkey{position:absolute;left:9px;bottom:52px;z-index:6;display:flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid var(--line2);border-radius:7px;background:color-mix(in srgb,var(--panel) 90%,transparent);font:7.5px var(--mono);color:var(--ink2);pointer-events:none}
+html[data-ui="cosmo"] .fds-ad-zkey i{display:block;width:74px;height:7px;border-radius:2px}
+html[data-ui="cosmo"] .fds-ad-zkey em{font-style:normal;color:var(--ink3)}

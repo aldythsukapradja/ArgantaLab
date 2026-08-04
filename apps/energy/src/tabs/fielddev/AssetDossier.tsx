@@ -37,6 +37,24 @@ import { WellCountPanel } from './WellCountPanel';
 import type { WellSeries } from './well-activity';
 import { loadIndex, loadProd, loadProdField } from '../../wb/load';
 import type { ProdMonth } from '../../wb/types';
+import type { Map as MapLibreMap } from 'maplibre-gl';
+import { listAssets } from '../../dataqc/db';
+import { readSurfaceGrid } from '../../dataqc/readDigest';
+import type { DigestedSurface, IngestedAsset } from '../../dataqc/types';
+import { StructureLayer, surfaceRange, RAMP_CSS } from './StructureLayer';
+
+interface HorizonOption { id: string; name: string; short: string; asset: IngestedAsset }
+
+/** "Hugin Fm Top" → "Hugin Top". The selector is a row of small buttons, so it
+ *  drops the lithostratigraphic rank (Fm / Gp) which adds width but no meaning —
+ *  and KEEPS Top/Base, which is the whole distinction between two picks of the
+ *  same unit. Dropping it collapsed Top Hugin and Base Hugin to one label. */
+function shortHorizon(name: string): string {
+  return name
+    .replace(/\b(Fm|Formation|Gp|Group)\b\.?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 type Pop = 'lifecycle' | 'reserves' | 'production' | 'readiness' | 'sources' | 'volumes' | null;
 
@@ -92,6 +110,12 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // everything else keeps the calendar timeline and never offers the toggle.
   const [monthly, setMonthly] = useState<ProdMonth[]>([]);
   const [wellSeries, setWellSeries] = useState<WellSeries[]>([]);
+  // structure overlay — the live map, the horizons Data QC has ingested for this
+  // field, and the decoded grid for whichever one is selected
+  const [map, setMap] = useState<MapLibreMap | null>(null);
+  const [horizons, setHorizons] = useState<HorizonOption[]>([]);
+  const [horizonId, setHorizonId] = useState<string | null>(null);
+  const [surface, setSurface] = useState<DigestedSurface | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -133,6 +157,52 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   }, [record]);
 
   const nowYear = new Date().getFullYear();
+
+  // ── structure overlay ──────────────────────────────────────────────────────
+  // Surfaces are listed from the assets Data QC has ALREADY ingested for this
+  // field. A field with no ingested horizon simply gets no selector — the map
+  // stays regional rather than showing an empty control.
+  useEffect(() => {
+    let alive = true;
+    setHorizons([]); setHorizonId(null); setSurface(null);
+    (async () => {
+      const assets = await listAssets(field.id).catch(() => []);
+      if (!alive) return;
+      const surfs = assets.filter((a) => a.kind === 'surface');
+      setHorizons(surfs.map((a) => {
+        const name = String(a.meta.name ?? a.fileName);
+        return { id: a.id, name, short: shortHorizon(name), asset: a };
+      }));
+    })().catch(() => undefined);
+    return () => { alive = false; };
+  }, [field.id]);
+
+  // Decode ONLY the selected horizon, and only when one is picked — the digest
+  // is int16+gzip in IndexedDB, so this is a read and a decompress, never a refetch.
+  useEffect(() => {
+    let alive = true;
+    if (!horizonId) { setSurface(null); return; }
+    const hz = horizons.find((h) => h.id === horizonId);
+    if (!hz) return;
+    readSurfaceGrid(hz.asset).then((g) => { if (alive) setSurface(g); }).catch(() => { if (alive) setSurface(null); });
+    return () => { alive = false; };
+  }, [horizonId, horizons]);
+
+  // The projected origin lives on the surface asset's own meta, written at ingest
+  // (xmin/ymin — the SW corner — with dx as the cell size). The UTM zone is parsed
+  // from the CRS the bundle declares rather than assumed: a field outside zone 31
+  // would otherwise be draped a whole zone away, and silently.
+  const surfaceGeo = useMemo(() => {
+    const hz = horizons.find((h) => h.id === horizonId);
+    const m = hz?.asset.meta;
+    if (!m) return null;
+    const x0 = Number(m.xmin), y0 = Number(m.ymin), cell = Number(m.dx);
+    if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(cell) || cell <= 0) return null;
+    const zone = Number(String(m.crs ?? '').match(/UTM\s*(\d{1,2})/i)?.[1]);
+    return { x0, y0, cell, zone: Number.isFinite(zone) ? zone : 31 };
+  }, [horizons, horizonId]);
+
+  const zRange = useMemo(() => surfaceRange(surface), [surface]);
 
   // The described reservoir, when the catalogue carries one. Today only Volve has a
   // dedicated study; every other field honestly reports that it has none.
@@ -194,11 +264,33 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
         </div>
       </header>
 
-      {/* ── map: column 1, spanning both content rows ────────────────────────── */}
+      {/* ── map: column 1, spanning every content row ─────────────────────────
+          The interpreted depth structure is draped ON the regional map, above
+          satellite / basin / field polygons — a horizon in its context, with the
+          wells on it, rather than a picture on its own card. The grid comes
+          straight from the Data QC digest; nothing is re-gridded here. */}
       <div className="fds-ad-map">
         <div className="fds-ad-map-title"><MapPinned size={13} /><span>Location</span>
+          {horizons.length > 0 && (
+            <span className="fds-ad-hz">
+              {horizons.map((h) => (
+                <button key={h.id} className={h.id === horizonId ? 'on' : ''}
+                  onClick={() => setHorizonId(h.id === horizonId ? null : h.id)}
+                  title={`Drape ${h.name} over the map`}>{h.short}</button>
+              ))}
+            </span>
+          )}
           <em>{reported(d?.onshoreOffshore)}</em></div>
-        <KnowledgeMap field={field} context={context} fill />
+        <KnowledgeMap field={field} context={context} fill onMapReady={setMap} />
+        <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId} />
+        {horizonId && zRange && (
+          <div className="fds-ad-zkey">
+            <span>{Math.round(zRange.zmin)}</span>
+            <i style={{ background: RAMP_CSS }} />
+            <span>{Math.round(zRange.zmax)}</span>
+            <em>m {reported(bundle?.datum ?? 'TVDSS')}</em>
+          </div>
+        )}
         <div className="fds-ad-map-meta">
           <div><span>Country / area</span><b>{field.parent === 'NO' ? 'Norway' : reported(field.parent)}</b></div>
           <div><span>Licence block</span><b>{reported(d?.block)}</b></div>
