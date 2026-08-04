@@ -6,10 +6,11 @@
 html[data-ui="cosmo"] .fds-shell{display:flex;flex-direction:column;height:100%;min-height:0;background:var(--bg)}
 
 /* ── header: field navigation / Knowledge Bank + Workspace context ── */
-html[data-ui="cosmo"] .fds-bar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap}
+html[data-ui="cosmo"] .fds-bar{display:flex;align-items:center;gap:10px;padding:7px 16px;border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:nowrap;min-width:0}
 html[data-ui="cosmo"] .fds-bar-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);flex-shrink:0;width:78px}
 
-html[data-ui="cosmo"] .fds-crumb{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
+html[data-ui="cosmo"] .fds-crumb{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:190px;font-size:12px;color:var(--ink2)}
+html[data-ui="cosmo"] .fds-crumb>span,html[data-ui="cosmo"] .fds-crumb>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html[data-ui="cosmo"] .fds-crumb b{color:var(--ink);font-weight:600}
 html[data-ui="cosmo"] .fds-crumb .sep{color:var(--ink3)}
 html[data-ui="cosmo"] .fds-scope-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink2);font-size:11.5px;cursor:pointer;transition:background .12s,border-color .12s}
@@ -17,7 +18,7 @@ html[data-ui="cosmo"] .fds-scope-btn:hover{background:var(--panel3);border-color
 html[data-ui="cosmo"] .fds-scope-spacer{flex:1}
 
 /* real search — the world catalogue, live-filtered as you type */
-html[data-ui="cosmo"] .fds-search{position:relative;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink3);width:230px;flex-shrink:0}
+html[data-ui="cosmo"] .fds-search{position:relative;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink3);width:210px;min-width:110px;flex-shrink:1}
 html[data-ui="cosmo"] .fds-search:focus-within{border-color:var(--teal);color:var(--ink2)}
 html[data-ui="cosmo"] .fds-search input{flex:1;min-width:0;border:none;background:transparent;font-size:11.5px;color:var(--ink);outline:none;font-family:var(--sans)}
 html[data-ui="cosmo"] .fds-search input::placeholder{color:var(--ink3)}
@@ -38,7 +39,7 @@ html[data-ui="cosmo"] .fds-legacy-btn{display:inline-flex;align-items:center;gap
 html[data-ui="cosmo"] .fds-legacy-btn:hover{border-color:var(--amber);color:var(--ink)}
 html[data-ui="cosmo"] .fds-back-btn{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--teal-ink);padding:6px 12px;border-radius:8px;border:1px solid var(--teal);background:var(--teal-soft);cursor:pointer}
 
-html[data-ui="cosmo"] .fds-context-bar{display:flex;align-items:stretch;gap:14px;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0;min-width:0}
+html[data-ui="cosmo"] .fds-scope-btn,html[data-ui="cosmo"] .fds-legacy-btn{flex-shrink:0}
 html[data-ui="cosmo"] .fds-mode-switch{display:flex;align-self:center;padding:3px;border:1px solid var(--line);background:var(--panel2);border-radius:9px;flex-shrink:0}
 html[data-ui="cosmo"] .fds-mode-switch button{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:0;border-radius:6px;background:transparent;color:var(--ink3);font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap}
 html[data-ui="cosmo"] .fds-mode-switch button:hover{color:var(--ink)}
@@ -52,7 +53,7 @@ html[data-ui="cosmo"] .fds-dossier-title b{color:var(--ink);font-size:11.5px}
 html[data-ui="cosmo"] .fds-dossier-fact.resources{flex:1}
 @media (max-width:1280px){html[data-ui="cosmo"] .fds-dossier-fact:nth-of-type(5){display:none}}
 @media (max-width:1050px){html[data-ui="cosmo"] .fds-dossier-fact:nth-of-type(4){display:none}}
-@media (max-width:900px){html[data-ui="cosmo"] .fds-context-bar{flex-direction:column}.fds-mode-switch{align-self:flex-start}html[data-ui="cosmo"] .fds-dossier-fact.resources{display:none}}
+@media (max-width:900px){html[data-ui="cosmo"] .fds-dossier-fact.resources{display:none}}
 
 /* Knowledge Bank — one-screen field intelligence, no nested scrolling. */
 html[data-ui="cosmo"] .fds-kb-dashboard{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(220px,.78fr) minmax(360px,1.35fr) minmax(250px,1fr);grid-template-rows:minmax(260px,1fr) 164px;gap:10px;padding:10px;background:var(--panel2)}
@@ -160,7 +161,7 @@ html[data-ui="cosmo"] .fds-evidence-legend-item{display:flex;align-items:center;
    surface. On compact screens the field map and secondary evidence collapse so
    the hierarchy, resource facts and primary sources remain within one viewport. */
 @media (max-width:900px){
-  html[data-ui="cosmo"] .fds-context-bar{flex-direction:row;padding:5px 8px}html[data-ui="cosmo"] .fds-mode-switch{align-self:center}html[data-ui="cosmo"] .fds-dossier{min-width:0}html[data-ui="cosmo"] .fds-dossier-fact:nth-of-type(n+3){display:none}
+  html[data-ui="cosmo"] .fds-dossier{min-width:0}html[data-ui="cosmo"] .fds-dossier-fact:nth-of-type(n+3){display:none}
   html[data-ui="cosmo"] .fds-kb-dashboard{overflow:hidden;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);padding:7px;gap:7px}
   html[data-ui="cosmo"] .fds-kb-map-panel{display:none}
   html[data-ui="cosmo"] .fds-kb-hierarchy-panel{grid-column:1/-1;grid-row:1}
@@ -173,7 +174,7 @@ html[data-ui="cosmo"] .fds-evidence-legend-item{display:flex;align-items:center;
   html[data-ui="cosmo"] .fds-kb-values{gap:5px}html[data-ui="cosmo"] .fds-kb-value{padding:6px}html[data-ui="cosmo"] .fds-kb-value b{font-size:11px}
 }
 @media (max-width:600px){
-  html[data-ui="cosmo"] .fds-context-bar{padding:5px 7px}html[data-ui="cosmo"] .fds-dossier{display:none}html[data-ui="cosmo"] .fds-mode-switch{width:100%}html[data-ui="cosmo"] .fds-mode-switch button{flex:1;justify-content:center;padding:5px 7px}
+  html[data-ui="cosmo"] .fds-dossier{display:none}html[data-ui="cosmo"] .fds-mode-switch button{justify-content:center;padding:5px 7px}
   html[data-ui="cosmo"] .fds-kb-dashboard{grid-template-columns:1fr 1fr;grid-template-rows:126px minmax(0,1fr);padding:6px;gap:6px}
   html[data-ui="cosmo"] .fds-kb-section-title{height:18px;margin-bottom:5px;padding-bottom:5px}html[data-ui="cosmo"] .fds-kb-section-title em{display:none}
   html[data-ui="cosmo"] .fds-hierarchy{grid-template-columns:1fr 1fr;gap:3px}html[data-ui="cosmo"] .fds-hierarchy-node{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:0;padding:4px}html[data-ui="cosmo"] .fds-hierarchy-node:nth-child(5){display:none}html[data-ui="cosmo"] .fds-hierarchy-node small{display:none}html[data-ui="cosmo"] .fds-hierarchy-node b{font-size:8px;width:100%}
@@ -251,6 +252,15 @@ html[data-ui="cosmo"] .fds-ad-map>:not(.fds-ad-map-title):not(.fds-ad-map-meta){
 html[data-ui="cosmo"] .fds-ad-map-meta{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px 11px;border-top:1px solid var(--line2)}
 html[data-ui="cosmo"] .fds-ad-map-meta span{display:block;font:7.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
 html[data-ui="cosmo"] .fds-ad-map-meta b{font-size:10.5px;font-weight:600;color:var(--ink)}
+/* CockpitMap renders a bare `.aeck-maplibre` div that fills its offset parent, so it
+   needs a positioned, sized wrapper — the same contract .rms-sd-mapwrap gives it in
+   the Surveillance Dossier. The legend and label overlay it. */
+html[data-ui="cosmo"] .fds-ad-mapwrap{position:relative;flex:1;min-height:180px;overflow:hidden}
+html[data-ui="cosmo"] .fds-ad-mapwrap>.aeck-maplibre{position:absolute;inset:0}
+html[data-ui="cosmo"] .fds-ad-mapwrap canvas{outline:none}
+html[data-ui="cosmo"] .fds-ad-maplabel{position:absolute;z-index:5;left:8px;top:8px;width:max-content;height:max-content;pointer-events:none;display:flex;flex-direction:column;padding:5px 8px;border:1px solid var(--line2);border-radius:7px;background:color-mix(in srgb,var(--panel) 86%,transparent)}
+html[data-ui="cosmo"] .fds-ad-maplabel b{font-size:9.5px;color:var(--ink);line-height:1.15}
+html[data-ui="cosmo"] .fds-ad-maplabel span{font:7px var(--mono);color:var(--ink3);margin-top:1px}
 
 /* ── verdict strip ── */
 html[data-ui="cosmo"] .fds-ad-verdicts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:0}

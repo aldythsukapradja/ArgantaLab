@@ -178,7 +178,10 @@ export function StructureLayer({
         map.addLayer({
           id: LYR, type: 'raster', source: SRC,
           paint: { 'raster-opacity': opacity, 'raster-fade-duration': 180, 'raster-resampling': 'linear' },
-        }, beforeId);
+          // MapLibre THROWS on an unknown beforeId. Resolve it against the live
+          // style so a caller naming a layer this basemap does not have gets the
+          // raster on top rather than no raster at all.
+        }, beforeId && map.getLayer(beforeId) ? beforeId : undefined);
         addedRef.current = true;
       }
     } catch { /* the style was mid-swap; the next render re-adds it */ }

@@ -24,7 +24,7 @@ import {
   MapPinned, ShieldAlert, TrendingDown, X,
 } from 'lucide-react';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
-import { KnowledgeMap } from './KnowledgeMap';
+import { CockpitMap } from '../../cosmo/CockpitMap';
 import { loadKnowledgeContext, sourceRecordCount, type KnowledgeContext } from './field-knowledge';
 import { loadKbSpine, type KbSpine } from '../../dataqc/masterkb';
 import {
@@ -190,9 +190,13 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
       // Open ON the structure rather than on an empty regional map. Selecting a
       // field that HAS an interpreted horizon is already the request to see it,
       // and the layer's fly-to then takes the camera down to the footprint.
-      // Top of the reservoir first when the names say which one that is.
-      const top = list.find((h) => /^top\b/i.test(h.short)) ?? list[0];
-      if (top) setHorizonId(top.id);
+      //
+      // The FIRST ingested surface, deliberately — not a guess at "the reservoir
+      // top". Surface names carry no stratigraphic order (Volve ships BCU, Hugin
+      // Base, Hugin Top, Shetland Top, Ty Top, alphabetically), so any rule that
+      // claimed to pick the reservoir would be picking a name pattern and calling
+      // it geology. The selector is right there to change it.
+      if (list[0]) setHorizonId(list[0].id);
     })().catch(() => undefined);
     return () => { alive = false; };
   }, [field.id]);
@@ -262,6 +266,16 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
     const zone = Number(String(m.crs ?? '').match(/UTM\s*(\d{1,2})/i)?.[1]);
     return { x0, y0, cell, zone: Number.isFinite(zone) ? zone : 31 };
   }, [horizons, horizonId]);
+
+  // CockpitMap boots asynchronously and its fly-to effect no-ops while the map
+  // instance is still null. Gating the focus on `map` guarantees the object
+  // identity changes only AFTER the renderer exists, so the flight actually runs.
+  // Regional zoom only: this puts the field in its basin. Draping a horizon then
+  // hands the camera to StructureLayer, which closes in on the grid footprint.
+  const mapFocus = useMemo(
+    () => (map && field.fly ? { lon: field.fly.lon, lat: field.fly.lat, zoom: 7.4 } : undefined),
+    [map, field.fly],
+  );
 
   const zRange = useMemo(() => surfaceRange(surface), [surface]);
 
@@ -342,17 +356,32 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
             </span>
           )}
           <em>{reported(d?.onshoreOffshore)}</em></div>
-        <KnowledgeMap field={field} context={context} fill onMapReady={setMap} />
-        <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId}
-          trajectories={horizonId ? paths : []} />
-        {horizonId && zRange && (
-          <div className="fds-ad-zkey">
-            <span>{Math.round(zRange.zmin)}</span>
-            <i style={{ background: RAMP_CSS }} />
-            <span>{Math.round(zRange.zmax)}</span>
-            <em>m {reported(bundle?.datum ?? 'TVDSS')}</em>
+        {/* The Cockpit renderer, not a bespoke one: real satellite imagery, the
+            province boundary and the GOGET field points, with overlay="minimal"
+            so three stacked translucent fills do not wash the imagery white.
+            The same treatment the Basin Dossier and the Surveillance Dossier use,
+            so all three dossiers read as one product. `highlight` rings THIS field. */}
+        <div className="fds-ad-mapwrap">
+          <CockpitMap dark mode="2d" theme="satellite" overlay="minimal"
+            focus={mapFocus} highlight={field.fly ?? null}
+            onSelect={() => {}} onMapReady={setMap} />
+          {/* beneath the focus ring, so the marker for THIS field is never buried
+              under the horizon it is meant to be pointing at */}
+          <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId}
+            trajectories={horizonId ? paths : []} beforeId="focus-field-glow" />
+          <div className="fds-ad-maplabel">
+            <b>{field.name}</b>
+            <span>{field.fly ? `${field.fly.lat.toFixed(3)}°, ${field.fly.lon.toFixed(3)}°` : 'location not reported'}</span>
           </div>
-        )}
+          {horizonId && zRange && (
+            <div className="fds-ad-zkey">
+              <span>{Math.round(zRange.zmin)}</span>
+              <i style={{ background: RAMP_CSS }} />
+              <span>{Math.round(zRange.zmax)}</span>
+              <em>m {reported(bundle?.datum ?? 'TVDSS')}</em>
+            </div>
+          )}
+        </div>
         <div className="fds-ad-map-meta">
           <div><span>Country / area</span><b>{field.parent === 'NO' ? 'Norway' : reported(field.parent)}</b></div>
           <div><span>Licence block</span><b>{reported(d?.block)}</b></div>
