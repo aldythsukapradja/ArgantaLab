@@ -83,6 +83,40 @@ export function contactTrace(
   return out;
 }
 
+/**
+ * Area of the horizon lying at or above a contact depth, in km².
+ *
+ * WHAT THIS IS NOT. It is not the hydrocarbon outline, and it must never be
+ * presented as one. It is the MAXIMUM POSSIBLE closure: every square metre of the
+ * mapped horizon that happens to be shallower than the contact, whether or not it
+ * is in the same fault block, whether or not it has closure at all, and whether or
+ * not it ever charged. A real accumulation is bounded by its trap — the spill
+ * point and the bounding faults — and this function knows nothing about either.
+ *
+ * On Volve the gap is not academic: contouring the published 3200 m OWC across
+ * Top Hugin encloses 24.4 km², while the regulator's mapped field outline is
+ * 3.70 km². The horizon is fault-compartmentalised and only one closure holds the
+ * accumulation, so the contour overstates the area 6.6-fold. Callers should show
+ * the published outline alongside it and let the reader see the difference.
+ *
+ * @param level the contact in the SAME convention as `values`
+ */
+export function closureAreaKm2(
+  values: ArrayLike<number>, ncol: number, nrow: number, level: number, cellSize: number,
+): number | null {
+  if (!ncol || !nrow || !(cellSize > 0) || values.length < ncol * nrow) return null;
+  let n = 0, live = 0;
+  for (let i = 0; i < ncol * nrow; i++) {
+    const v = values[i];
+    if (!Number.isFinite(v)) continue;
+    live++;
+    // `level` and `values` share a convention, so "above the contact" is simply
+    // the side of `level` the shallow end of the grid sits on
+    if (v >= level) n++;
+  }
+  return live ? (n * cellSize * cellSize) / 1e6 : null;
+}
+
 /** Grid space → projected space, using the grid's own origin and cell size.
  *  d3-contour's x is the column axis and y the row axis, and the grid's row 0 is
  *  its first row — the same indexing `values` uses — so no flip belongs here. */

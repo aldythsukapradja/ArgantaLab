@@ -41,7 +41,8 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { listAssets } from '../../dataqc/db';
 import { readSurfaceGrid } from '../../dataqc/readDigest';
 import type { DigestedSurface, IngestedAsset } from '../../dataqc/types';
-import { StructureLayer, surfaceRange, RAMP_CSS } from './StructureLayer';
+import { StructureLayer, surfaceRange, RAMP_CSS, depthConvention } from './StructureLayer';
+import { closureAreaKm2 } from './contact-contour';
 import { useScene } from './scene';
 import { readRecord } from '../../dataqc/readDigest';
 import { wellKey, type PathStation, type PathWellhead } from './well-paths';
@@ -102,6 +103,25 @@ function Src({ a }: { a: Authority }) {
 }
 
 const reported = (v: unknown) => (v == null || v === '' ? '—' : String(v));
+
+/** Spherical excess area of a lon/lat ring, km². Good to a fraction of a percent
+ *  at field scale, which is all this comparison needs. */
+function ringAreaKm2(ring: number[][]): number {
+  const R = 6371008.8, r = Math.PI / 180;
+  let s = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [x1, y1] = ring[j], [x2, y2] = ring[i];
+    s += (x2 * r - x1 * r) * (2 + Math.sin(y1 * r) + Math.sin(y2 * r));
+  }
+  return Math.abs((s * R * R) / 2) / 1e6;
+}
+function polygonAreaKm2(g: GeoJSON.Geometry): number | null {
+  if (g.type === 'Polygon') return ringAreaKm2(g.coordinates[0] as number[][]);
+  if (g.type === 'MultiPolygon') {
+    return (g.coordinates as number[][][][]).reduce((t, p) => t + ringAreaKm2(p[0]), 0);
+  }
+  return null;
+}
 const pctOf = (n: number, total: number) => (total > 0 ? `${Math.round((n / total) * 100)}%` : '—');
 
 /** The four buckets every wellbore lands in — and they must be all four. Showing
@@ -519,6 +539,42 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
 
   const zRange = useMemo(() => surfaceRange(surface), [surface]);
 
+  /**
+   * How much horizon the contact contour encloses, against how much the regulator
+   * actually maps as productive.
+   *
+   * These are NOT the same measurement and the gap is the point. The contour is
+   * every square metre of the mapped horizon shallower than the contact — the
+   * maximum possible closure, ignoring fault compartments, spill and charge. The
+   * published outline is the accumulation. On Volve that is 24.4 km² against
+   * 3.70 km², so anyone reading the blue line as a hydrocarbon outline would
+   * overstate the area sixfold. The dossier states both rather than drawing one
+   * line and letting it be mistaken for the other.
+   */
+  const closure = useMemo(() => {
+    if (!surface || contactOnThisHorizon == null) return null;
+    const conv = depthConvention(surface.values);
+    if (!conv) return null;
+    const level = conv.flip ? -contactOnThisHorizon.depth : contactOnThisHorizon.depth;
+    const km2 = closureAreaKm2(surface.values, surface.ncol, surface.nrow, level, surface.dx || 0);
+    return km2 == null ? null : { km2 };
+  }, [surface, contactOnThisHorizon]);
+
+  const [outlineKm2, setOutlineKm2] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setOutlineKm2(null);
+    fetch(`${import.meta.env.BASE_URL || '/'}osdu/cockpit-polygons.geojson`)
+      .then((r) => r.json())
+      .then((fc: { features?: Array<{ properties?: { id?: string }; geometry?: unknown }> }) => {
+        if (!alive) return;
+        const f = fc.features?.find((x) => x.properties?.id === field.id);
+        setOutlineKm2(f?.geometry ? polygonAreaKm2(f.geometry as GeoJSON.Geometry) : null);
+      })
+      .catch(() => { if (alive) setOutlineKm2(null); });
+    return () => { alive = false; };
+  }, [field.id]);
+
   // The described reservoir, when the catalogue carries one. Today only Volve has a
   // dedicated study; every other field honestly reports that it has none.
   const kbReservoir = useMemo(() => {
@@ -635,7 +691,7 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
           ) : (
           <>
           <CockpitMap dark mode="2d" theme="satellite" overlay="minimal"
-            focus={mapFocus} highlight={field.fly ?? null}
+            focus={mapFocus} highlight={field.fly ?? null} focusPolygonId={field.id}
             onSelect={() => {}} onMapReady={setMap} />
           {/* beneath the focus ring, so the marker for THIS field is never buried
               under the horizon it is meant to be pointing at */}
@@ -664,6 +720,20 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
               {contactOnThisHorizon && (
                 <div title={`${contactOnThisHorizon.nature} · ${contactOnThisHorizon.prov}`}>
                   <i className="k-owc" />{contactOnThisHorizon.kind} {Math.round(contactOnThisHorizon.depth)} m
+                  {closure && ` · ${closure.km2.toFixed(1)} km²`}
+                </div>
+              )}
+              {outlineKm2 != null && (
+                <div title="The regulator's mapped productive area — the published hydrocarbon extent.">
+                  <i className="k-outline" />mapped outline {outlineKm2.toFixed(1)} km²
+                </div>
+              )}
+              {/* The blue line is a DEPTH contour, not an accumulation outline. Where
+                  the two disagree badly the reader is told, with the number, rather
+                  than left to assume the contour is the field. */}
+              {closure && outlineKm2 != null && closure.km2 > outlineKm2 * 1.5 && (
+                <div className="warn" title={`Contouring the contact across the whole mapped horizon gives the MAXIMUM closure — it ignores fault compartments, spill point and charge. The published outline is the accumulation.`}>
+                  contour is {(closure.km2 / outlineKm2).toFixed(1)}× the outline — max closure, not the HC extent
                 </div>
               )}
             </div>

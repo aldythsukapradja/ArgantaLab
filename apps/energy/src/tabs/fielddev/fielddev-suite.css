@@ -303,18 +303,21 @@ html[data-ui="cosmo"] .fds-ad-view button{padding:2px 7px;border:1px solid var(-
   background:transparent;color:var(--ink3);font:7.5px var(--mono);letter-spacing:.06em;cursor:pointer}
 html[data-ui="cosmo"] .fds-ad-view button.on{background:var(--panel3);color:var(--ink);border-color:var(--line2)}
 
-html[data-ui="cosmo"] .fds-3d{position:absolute;inset:0;background:#050d16}
+/* the canvas clears to --panel2 (see Structure3D.sceneBg), so the frame around it
+   must follow the theme too rather than being pinned dark */
+html[data-ui="cosmo"] .fds-3d{position:absolute;inset:0;background:var(--panel2)}
 html[data-ui="cosmo"] .fds-3d canvas{display:block;outline:none;touch-action:none}
 html[data-ui="cosmo"] .fds-3d-empty{position:absolute;inset:0;display:grid;place-items:center;padding:16px;
-  text-align:center;color:var(--ink3);font-size:10px;background:#050d16}
+  text-align:center;color:var(--ink3);font-size:10px;background:var(--panel2)}
+/* overlays use theme tokens so they stay legible in both schemes */
 html[data-ui="cosmo"] .fds-3d-key{position:absolute;left:8px;bottom:8px;z-index:5;pointer-events:none;
-  display:flex;flex-direction:column;gap:2px;padding:6px 8px;border:1px solid rgba(140,160,180,.28);
-  border-radius:7px;background:rgba(6,16,26,.82)}
-html[data-ui="cosmo"] .fds-3d-key b{font-size:9px;color:#eaf2fa}
-html[data-ui="cosmo"] .fds-3d-key span{font:7px var(--mono);color:#93a3b5}
+  display:flex;flex-direction:column;gap:2px;padding:6px 8px;border:1px solid var(--line2);
+  border-radius:7px;background:color-mix(in srgb,var(--panel) 88%,transparent)}
+html[data-ui="cosmo"] .fds-3d-key b{font-size:9px;color:var(--ink)}
+html[data-ui="cosmo"] .fds-3d-key span{font:7px var(--mono);color:var(--ink3)}
 html[data-ui="cosmo"] .fds-3d-zx{position:absolute;right:8px;bottom:8px;z-index:6;display:flex;align-items:center;
-  gap:6px;padding:5px 8px;border:1px solid rgba(140,160,180,.28);border-radius:7px;background:rgba(6,16,26,.82);
-  font:8px var(--mono);color:#cfdae6}
+  gap:6px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px;
+  background:color-mix(in srgb,var(--panel) 88%,transparent);font:8px var(--mono);color:var(--ink2)}
 html[data-ui="cosmo"] .fds-3d-zx input{width:96px;accent-color:#2f9bff}
 .fds-3d-tip{padding:5px 7px;border:1px solid rgba(140,160,180,.35);border-radius:6px;background:rgba(9,18,28,.96);
   color:#e8eef5;white-space:nowrap;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.5)}
@@ -335,6 +338,8 @@ html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat::before{left:50%;top:-2px;bottom:-2
 html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat::after{top:50%;left:-2px;right:-2px;height:1.4px;transform:translateY(-50%)}
 html[data-ui="cosmo"] .fds-ad-mapkey i.k-idle{border:1.5px solid #9aa6b4}
 html[data-ui="cosmo"] .fds-ad-mapkey i.k-owc{width:12px;height:0;border-radius:0;border-top:2px solid #2f9bff}
+html[data-ui="cosmo"] .fds-ad-mapkey i.k-outline{width:12px;height:0;border-radius:0;border-top:2px solid #ffd166}
+html[data-ui="cosmo"] .fds-ad-mapkey .warn{max-width:180px;white-space:normal;line-height:1.35;color:var(--orange,#f59e0b)}
 
 /* ── verdict strip ── */
 html[data-ui="cosmo"] .fds-ad-verdicts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:0}
@@ -660,3 +665,55 @@ html[data-ui="cosmo"] .fds-ad-hz button.on{background:color-mix(in srgb,var(--cy
 html[data-ui="cosmo"] .fds-ad-zkey{position:absolute;left:9px;bottom:52px;z-index:6;display:flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid var(--line2);border-radius:7px;background:color-mix(in srgb,var(--panel) 90%,transparent);font:7.5px var(--mono);color:var(--ink2);pointer-events:none}
 html[data-ui="cosmo"] .fds-ad-zkey i{display:block;width:74px;height:7px;border-radius:2px}
 html[data-ui="cosmo"] .fds-ad-zkey em{font-style:normal;color:var(--ink3)}
+
+/* ── Data Explorer (stage 01) ───────────────────────────────────────────────
+   One pill row for two different things: 2D/3D steer the basemap, the three
+   uppercase panes are Data QC's own views hoisted up here. */
+html[data-ui="cosmo"] .fds-explorer{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
+html[data-ui="cosmo"] .fds-explorer-bar{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .fds-explorer-title{font-size:11px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .fds-explorer-sub{min-width:0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-explorer-spacer{flex:1}
+html[data-ui="cosmo"] .fds-explorer-dims,html[data-ui="cosmo"] .fds-explorer-panes{display:flex;flex:0 0 auto;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+html[data-ui="cosmo"] .fds-explorer-dims button,html[data-ui="cosmo"] .fds-explorer-panes button{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:0;border-radius:6px;background:transparent;color:var(--ink3);font:9px var(--mono);letter-spacing:.06em;cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .fds-explorer-dims button:hover,html[data-ui="cosmo"] .fds-explorer-panes button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .fds-explorer-dims button.on,html[data-ui="cosmo"] .fds-explorer-panes button.on{background:var(--teal-soft);color:var(--teal-ink);box-shadow:0 0 0 1px var(--teal)}
+html[data-ui="cosmo"] .fds-explorer>.dqc{flex:1;min-height:0}
+
+html[data-ui="cosmo"] .fds-scene{display:flex;flex:1;min-width:0;min-height:0;flex-direction:column}
+html[data-ui="cosmo"] .fds-scene-bar{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:6px 14px;border-bottom:1px solid var(--line2);background:var(--panel2)}
+html[data-ui="cosmo"] .fds-scene-label{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;font:8px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-scene-hz{display:flex;min-width:0;flex-wrap:wrap;gap:4px}
+html[data-ui="cosmo"] .fds-scene-hz button{padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink2);font-size:9.5px;cursor:pointer}
+html[data-ui="cosmo"] .fds-scene-hz button:hover{border-color:var(--teal)}
+html[data-ui="cosmo"] .fds-scene-hz button.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .fds-scene-none{font-size:9.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .fds-scene-ramp{display:inline-flex;align-items:center;gap:5px;margin-left:auto;flex:0 0 auto;font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-scene-ramp i{width:72px;height:7px;border-radius:3px}
+html[data-ui="cosmo"] .fds-scene-map{position:relative;flex:1;min-height:0}
+html[data-ui="cosmo"] .fds-scene-empty{display:flex;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--ink3);text-align:center}
+html[data-ui="cosmo"] .fds-scene-empty b{font-size:11px;color:var(--ink2)}
+html[data-ui="cosmo"] .fds-scene-empty span{max-width:340px;font-size:9.5px}
+
+/* ── Input tree (the Petrel Input pane) ─────────────────────────────────────
+   One tree for all nine stages. Rows a stage cannot act on grey back (.dim)
+   instead of vanishing, so the data model stays constant as the task changes. */
+html[data-ui="cosmo"] .fdt{display:flex;height:100%;min-height:0;flex-direction:column}
+html[data-ui="cosmo"] .fdt-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:7px 10px;border-bottom:1px solid var(--line2);font:8px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .fdt-scroll{flex:1;min-height:0;overflow:auto;padding:4px 0 10px}
+html[data-ui="cosmo"] .fdt-row{display:flex;align-items:center;gap:4px;padding:3px 6px 3px 0;cursor:pointer;color:var(--ink2)}
+html[data-ui="cosmo"] .fdt-row:hover{background:var(--panel2)}
+html[data-ui="cosmo"] .fdt-row.sel{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .fdt-row.dim{opacity:.38;cursor:default}
+html[data-ui="cosmo"] .fdt-row.dim:hover{background:transparent}
+html[data-ui="cosmo"] .fdt-caret{display:flex;width:13px;flex:0 0 auto;justify-content:center;color:var(--ink3)}
+html[data-ui="cosmo"] .fdt-caret .chev{transition:transform .12s}html[data-ui="cosmo"] .fdt-caret .chev.open{transform:rotate(90deg)}
+html[data-ui="cosmo"] .fdt-dot{width:3px;height:3px;border-radius:50%;background:var(--line)}
+html[data-ui="cosmo"] .fdt-eye{display:flex;width:14px;flex:0 0 auto;justify-content:center;color:var(--line)}
+html[data-ui="cosmo"] .fdt-eye.on{color:var(--ink3)}
+html[data-ui="cosmo"] .fdt-eye.ghost{visibility:hidden}
+html[data-ui="cosmo"] .fdt-ic{display:flex;flex:0 0 auto}
+html[data-ui="cosmo"] .fdt-lbl{min-width:0;flex:1;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .fdt-lbl i{margin-left:4px;font-style:normal;font-size:8px;color:var(--ink3)}
+html[data-ui="cosmo"] .fdt-n{flex:0 0 auto;padding:0 4px;border-radius:4px;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fdt-n.has{background:var(--line2);color:var(--ink2)}

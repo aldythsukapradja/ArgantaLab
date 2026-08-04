@@ -19,7 +19,7 @@
 // VERTICAL EXAGGERATION IS ALWAYS SHOWN. Volve is ~7 km across with ~600 m of
 // relief; at true scale it is a sheet of paper. Every geoscientist expects
 // exaggeration and every one of them wants to know the number.
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -27,6 +27,7 @@ import type { DigestedSurface } from '../../dataqc/types';
 import { buildSurfaceMesh, commonOrigin, sharedDepthRange, type MeshGrid } from './surface-mesh';
 import { depthConvention, rampRgb } from './StructureLayer';
 import { ROLE_FILL, type ImpactMarker } from './ImpactMarkers';
+import { pathRole } from './well-paths';
 
 export interface Structure3DSurface {
   id: string;
@@ -42,6 +43,10 @@ export interface Structure3DProps {
   surfaces: Structure3DSurface[];
   /** impact points for the horizons on show, in PROJECTED coordinates */
   wells: Array<ImpactMarker & { easting: number; northing: number }>;
+  /** Full wellbore paths — surface slot to TD, in PROJECTED metres with positive
+   *  TVD. An impact point says WHERE a well cuts a horizon; the path says how it
+   *  got there, which is the difference between a dot and a trajectory. */
+  paths?: Array<{ well: string; role: string; points: Array<[number, number, number]> }>;
   contactDepth?: number | null;
   contactLabel?: string;
   zScale: number;
@@ -51,6 +56,30 @@ export interface Structure3DProps {
  *  nodes, which is a stutter on an integrated GPU for no readable gain — the
  *  structure is smooth at 100–150 m. The stride actually used is reported. */
 const MAX_NODES = 60_000;
+
+/** Canvas clear colour, taken from the app's own theme rather than hardcoded dark.
+ *  Reads --panel2 so the scene sits in the same surface colour as the panel that
+ *  frames it; falls back to the previous dark only if the token is missing. */
+function sceneBg(): string {
+  if (typeof window === 'undefined') return '#050d16';
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--panel2').trim();
+  return v || '#050d16';
+}
+
+/** Light themes need a darker line/label treatment than dark ones. */
+function isLightTheme(): boolean {
+  if (typeof window === 'undefined') return false;
+  const t = document.documentElement.getAttribute('data-theme')
+    ?? document.body.getAttribute('data-theme');
+  if (t) return t === 'light';
+  // no explicit attribute: judge from the resolved panel colour
+  const bg = sceneBg();
+  const m = bg.match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const lum = (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
+  return lum > 0.5;
+}
 
 function strideFor(ncol: number, nrow: number): number {
   let s = 1;
@@ -78,10 +107,12 @@ function IdleSpin({ enabled, group }: { enabled: boolean; group: React.RefObject
   return null;
 }
 
-export function Structure3D({ surfaces, wells, contactDepth, contactLabel, zScale }: Structure3DProps) {
+export function Structure3D({ surfaces, wells, paths, contactDepth, contactLabel, zScale }: Structure3DProps) {
   const [idle, setIdle] = useState(true);
   const [hover, setHover] = useState<string | null>(null);
   const group = useRef<THREE.Group>(null);
+  // resolved once per mount; the theme toggle remounts the pane
+  const light = useMemo(() => isLightTheme(), []);
 
   const built = useMemo(() => {
     const grids: MeshGrid[] = surfaces.map((s) => ({
@@ -142,6 +173,29 @@ export function Structure3D({ surfaces, wells, contactDepth, contactLabel, zScal
       }));
   }, [wells, built, zScale]);
 
+  // Whole trajectories, surface slot → TD, in the same local frame as the meshes.
+  // Built as one BufferGeometry per bore so a 200-station path is a single draw call.
+  const pathLines = useMemo(() => {
+    if (!built || !paths?.length) return [];
+    return paths.map((p) => {
+      const geometry = new THREE.BufferGeometry().setFromPoints(
+        p.points.map(([x, y, tvd]) => new THREE.Vector3(
+          x - built.origin.x, y - built.origin.y, -Math.abs(tvd) * zScale,
+        )),
+      );
+      // A THREE.Line object rather than a <line> element: in TSX that tag resolves
+      // to SVG's line, not R3F's.
+      const material = new THREE.LineBasicMaterial({
+        color: ROLE_FILL[pathRole(p.role)], transparent: true, opacity: 0.85,
+      });
+      return { well: p.well, object: new THREE.Line(geometry, material) };
+    });
+  }, [paths, built, zScale]);
+
+  useEffect(() => () => {
+    pathLines.forEach((l) => { l.object.geometry.dispose(); (l.object.material as THREE.Material).dispose(); });
+  }, [pathLines]);
+
   if (!built) {
     return <div className="fds-3d-empty">No decoded horizon to render — select a surface.</div>;
   }
@@ -150,15 +204,17 @@ export function Structure3D({ surfaces, wells, contactDepth, contactLabel, zScal
   const cam = span * 1.15;
 
   return (
-    <div className="fds-3d" onPointerDown={() => setIdle(false)}>
+    <div className={'fds-3d' + (light ? ' is-light' : '')} onPointerDown={() => setIdle(false)}>
       <Canvas
         dpr={[1, 1.75]}
         camera={{ position: [cam * 0.75, -cam * 0.95, cam * 0.62], fov: 42, near: span / 500, far: span * 12 }}
-        onCreated={({ gl }) => { gl.setClearColor('#050d16'); }}
+        onCreated={({ gl }) => { gl.setClearColor(sceneBg()); }}
       >
-        <ambientLight intensity={0.72} />
-        <directionalLight position={[1, -1, 2]} intensity={1.15} />
-        <directionalLight position={[-1.4, 0.8, 0.6]} intensity={0.34} />
+        {/* a light theme needs more fill and less contrast, or the shaded flanks
+            read as dirt against a pale background */}
+        <ambientLight intensity={light ? 0.95 : 0.72} />
+        <directionalLight position={[1, -1, 2]} intensity={light ? 0.85 : 1.15} />
+        <directionalLight position={[-1.4, 0.8, 0.6]} intensity={light ? 0.5 : 0.34} />
 
         <group ref={group} position={[-built.spanX / 2, -built.spanY / 2, -built.midZ]}>
           {built.meshes.map((m, i) => (
@@ -175,6 +231,10 @@ export function Structure3D({ surfaces, wells, contactDepth, contactLabel, zScal
               <meshBasicMaterial color="#2f9bff" transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} />
             </mesh>
           )}
+
+          {/* trajectories first, so an impact sphere always sits on top of its own
+              path rather than being hidden inside the line */}
+          {pathLines.map((l) => <primitive key={'p:' + l.well} object={l.object} />)}
 
           {wellPts.map((w) => (
             <group key={w.well} position={w.pos}>

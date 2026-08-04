@@ -51,6 +51,11 @@ type CockpitMapProps = {
    *  carry this field". Marking the coordinate the field's own record publishes
    *  works for every field and says exactly what it means. */
   highlight?: { lon: number; lat: number } | null;
+  /** OSDU id of the field whose MAPPED OUTLINE should be drawn emphatically.
+   *  That outline is the regulator's productive area — the closest thing to a
+   *  hydrocarbon extent this catalogue publishes — so a single-field view needs
+   *  it distinguishable from the neighbours' outlines around it. */
+  focusPolygonId?: string | null;
 };
 
 const EMPTY_POINTS: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -196,6 +201,16 @@ function buildStyle(dark: boolean, theme: 'satellite' | 'openmap', mode: '2d' | 
       { id: 'province-selected', type: 'line', source: 'provinces', filter: EMPTY_FILTER, paint: { 'line-color': '#ffffff', 'line-width': 3 } },
       { id: 'au-selected', type: 'line', source: 'aus', filter: EMPTY_FILTER, paint: { 'line-color': '#ffffff', 'line-width': 3 } },
       { id: 'osdu-poly-selected', type: 'line', source: 'osdu-polygons', filter: EMPTY_FILTER, paint: { 'line-color': '#ffffff', 'line-width': 3 } },
+      // the subject field's own mapped outline, above its neighbours'
+      {
+        id: 'focus-poly-line', type: 'line', source: 'osdu-polygons', filter: EMPTY_FILTER,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#ffd166',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.4, 13, 3],
+          'line-opacity': 0.95,
+        },
+      },
       // The field this view is about. Drawn last so it is never buried, and as a
       // hollow ring rather than a filled dot: at field zoom the structure grid and
       // the wellbores sit inside this marker, and a solid disc would hide them.
@@ -222,7 +237,9 @@ function buildStyle(dark: boolean, theme: 'satellite' | 'openmap', mode: '2d' | 
   };
 }
 
-export function CockpitMap({ dark, mode, theme, focus, onSelect, onMapReady, overlay = 'full', highlight }: CockpitMapProps) {
+export function CockpitMap({
+  dark, mode, theme, focus, onSelect, onMapReady, overlay = 'full', highlight, focusPolygonId,
+}: CockpitMapProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const selectRef = useRef(onSelect);
@@ -253,7 +270,8 @@ export function CockpitMap({ dark, mode, theme, focus, onSelect, onMapReady, ove
       });
       const active = map;
       // projection is set by the style (born-correct) — no post-load setProjection needed here.
-      active.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+      // Top-right: bottom-right collides with the Arganta orb and the legend rail.
+      active.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
       active.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: DATA_ATTRIBUTION }), 'bottom-left');
       // MapLibre renders the compact attribution as a <details> element. On touch
       // browsers it can retain an `open` state across the control's first layout,
@@ -330,6 +348,21 @@ export function CockpitMap({ dark, mode, theme, focus, onSelect, onMapReady, ove
     if (map.isStyleLoaded()) apply();
     else map.once('load', apply);
   }, [highlight]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      try {
+        if (!map.getLayer('focus-poly-line')) return;
+        map.setFilter('focus-poly-line', focusPolygonId
+          ? ['==', ['get', 'id'], focusPolygonId]
+          : EMPTY_FILTER);
+      } catch { /* style mid-swap */ }
+    };
+    if (map.isStyleLoaded()) apply();
+    else map.once('load', apply);
+  }, [focusPolygonId]);
 
   // search fly-to (P1-1 partial: search → geometry flight)
   useEffect(() => {
