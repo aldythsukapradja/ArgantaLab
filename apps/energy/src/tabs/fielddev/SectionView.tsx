@@ -18,7 +18,7 @@
 //   the perpendicular distance it was moved, and wells beyond the corridor are
 //   not drawn at all. A section that silently gathers wells from 3 km away looks
 //   far better constrained than it is.
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { line as d3line, curveMonotoneX } from 'd3-shape';
 import type { DigestedSurface } from '../../dataqc/types';
@@ -55,19 +55,34 @@ const SAMPLES = 260;
 export function SectionView({
   section, toProjected, surfaces, wells, contactDepth, contactLabel, corridor = 750,
 }: SectionViewProps) {
-  const wrapRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<number | null>(null);
 
   const roRef = useRef<ResizeObserver | null>(null);
-  const attach = (el: HTMLDivElement | null) => {
-    wrapRef.current = el;
+  /**
+   * A callback ref, and it MUST be stable and MUST NOT set state unconditionally.
+   *
+   * React re-runs a callback ref whenever its identity changes — so an inline
+   * arrow re-runs on every render. Measuring there with `setSize({w, h})` hands
+   * back a fresh object every time, which is always a state change, which is
+   * another render, which re-runs the ref: "Maximum update depth exceeded". Both
+   * halves of the fix are load-bearing — useCallback([]) keeps the identity
+   * stable, and the functional update returns `prev` unchanged when the box has
+   * not actually resized, so a spurious measure cannot start a loop either.
+   */
+  const attach = useCallback((el: HTMLDivElement | null) => {
     roRef.current?.disconnect();
+    roRef.current = null;
     if (!el) return;
-    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }));
-    ro.observe(el); roRef.current = ro;
-    setSize({ w: el.clientWidth, h: el.clientHeight });
-  };
+    const measure = () => setSize((prev) => {
+      const w = el.clientWidth, h = el.clientHeight;
+      return prev.w === w && prev.h === h ? prev : { w, h };
+    });
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    roRef.current = ro;
+    measure();
+  }, []);
 
   const model = useMemo(() => {
     if (!section || section.pts.length < 2 || !surfaces.length) return null;

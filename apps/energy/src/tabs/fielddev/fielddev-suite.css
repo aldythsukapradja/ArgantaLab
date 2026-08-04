@@ -325,7 +325,10 @@ html[data-ui="cosmo"] .fds-3d-zx input{width:96px;accent-color:#2f9bff}
 .fds-3d-tip span{display:block;font:7.5px var(--mono,ui-monospace);color:#93a3b5}
 
 /* ── drawing tools ──────────────────────────────────────────────────────────── */
-html[data-ui="cosmo"] .fds-tools{position:absolute;z-index:6;left:50%;transform:translateX(-50%);bottom:10px;
+/* Top-centre: the palette is the first thing you reach for when authoring, and
+   the bottom edge of a map is where the scale bar, attribution and depth key
+   already compete for room. */
+html[data-ui="cosmo"] .fds-tools{position:absolute;z-index:6;left:50%;transform:translateX(-50%);top:8px;
   display:flex;gap:2px;padding:3px;border:1px solid var(--line2);border-radius:9px;
   background:color-mix(in srgb,var(--panel) 92%,transparent);box-shadow:0 4px 16px rgba(0,0,0,.28);max-width:calc(100% - 24px);
   overflow-x:auto}
@@ -334,7 +337,8 @@ html[data-ui="cosmo"] .fds-tool{display:flex;align-items:center;gap:4px;padding:
 html[data-ui="cosmo"] .fds-tool:hover{background:var(--panel3);color:var(--ink)}
 html[data-ui="cosmo"] .fds-tool.on{background:#6d5bd0;color:#fff}
 html[data-ui="cosmo"] .fds-tool-count{min-width:22px;justify-content:center;border:1px solid var(--line2)}
-html[data-ui="cosmo"] .fds-tools-hint{position:absolute;z-index:6;left:50%;transform:translateX(-50%);bottom:44px;
+/* hangs BELOW the palette, which now sits at the top */
+html[data-ui="cosmo"] .fds-tools-hint{position:absolute;z-index:6;left:50%;transform:translateX(-50%);top:40px;
   padding:3px 8px;border-radius:5px;font:7.5px var(--mono);color:#fff;background:rgba(109,91,208,.92);pointer-events:none;
   white-space:nowrap}
 

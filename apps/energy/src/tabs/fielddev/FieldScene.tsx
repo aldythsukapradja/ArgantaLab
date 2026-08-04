@@ -8,7 +8,7 @@
 // What it does NOT carry is the dossier's pick-impact analysis (which horizon each
 // well penetrates, and at what depth). That is interpretation the dossier does to
 // answer "has this been appraised", not part of the basemap.
-import { useEffect, useMemo, useState, Suspense, lazy } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import { Layers3 } from 'lucide-react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
@@ -60,6 +60,12 @@ export function FieldScene({ field }: { field: SearchEntry }) {
   const setView = useScene((s) => s.setView);
   // the section traced with the section tool — this canvas both makes it and renders it
   const section = useInterp((st) => latestSection(st.features));
+  /** Stable: SectionView memoises its whole sampling pass on this identity, so an
+   *  inline arrow would re-sample every horizon on every render. */
+  const toProjected = useCallback(
+    (lon: number, lat: number) => wgs84ToEd50Utm(lon, lat, wellGeo?.zone ?? 31),
+    [wellGeo?.zone],
+  );
   const multiIds = useScene((s) => s.multiIds);
   const setMultiIds = useScene((s) => s.setMulti);
   const toggleMulti = useScene((s) => s.toggleMulti);
@@ -278,7 +284,7 @@ export function FieldScene({ field }: { field: SearchEntry }) {
              drapes, same impact points. It adds no data. */
           <SectionView
             section={section}
-            toProjected={(lon, lat) => wgs84ToEd50Utm(lon, lat, wellGeo?.zone ?? 31)}
+            toProjected={toProjected}
             surfaces={surfaces3d.length ? surfaces3d : xsecFallback}
             wells={impacts3d}
           />
