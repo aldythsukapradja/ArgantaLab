@@ -8,8 +8,8 @@
 // What it does NOT carry is the dossier's pick-impact analysis (which horizon each
 // well penetrates, and at what depth). That is interpretation the dossier does to
 // answer "has this been appraised", not part of the basemap.
-import { useEffect, useMemo, useState } from 'react';
-import { Layers3, MapPinned } from 'lucide-react';
+import { useEffect, useMemo, useState, Suspense, lazy } from 'react';
+import { Layers3 } from 'lucide-react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 import { CockpitMap } from '../../cosmo/CockpitMap';
@@ -20,7 +20,21 @@ import { surfaceContextFor } from '../../dataqc/surface-context';
 import type { DigestedSurface, IngestedAsset } from '../../dataqc/types';
 import { StructureLayer, surfaceRange, RAMP_CSS } from './StructureLayer';
 import { orderHorizons, orderNote } from './horizon-order';
+import { matchPicks, buildImpacts } from './horizon-picks';
+import { ImpactMarkers, type ImpactMarker } from './ImpactMarkers';
+import { loadWellGeometry, buildPaths3D, type WellGeometry, type Path3D } from './well-geometry';
+import { summariseWell } from './well-stats';
+import { wellKey } from './well-paths';
+import { ed50UtmToWgs84 } from '../../engine/proj';
+import type { Structure3DSurface } from './Structure3D';
 import { useScene } from './scene';
+import { MapTools } from './MapTools';
+import { SectionView } from './SectionView';
+import { useInterp, latestSection } from './interp-store';
+import { wgs84ToEd50Utm } from '../../engine/proj';
+
+/** three.js + fiber + drei is ~600 kB — never pulled for the 2D basemap. */
+const Structure3D = lazy(async () => ({ default: (await import('./Structure3D')).Structure3D }));
 
 interface Horizon { id: string; name: string; short: string; asset: IngestedAsset }
 
@@ -37,10 +51,22 @@ export function FieldScene({ field }: { field: SearchEntry }) {
   const [surface, setSurface] = useState<DigestedSurface | null>(null);
   const [orderNoteText, setOrderNoteText] = useState('');
 
+  const [wellGeo, setWellGeo] = useState<WellGeometry | null>(null);
+  const [grids3d, setGrids3d] = useState<Map<string, DigestedSurface>>(new Map());
+
   const horizonId = useScene((s) => s.horizonId);
   const setHorizonId = useScene((s) => s.setHorizon);
   const view = useScene((s) => s.view);
+  const setView = useScene((s) => s.setView);
+  // the section traced with the section tool — this canvas both makes it and renders it
+  const section = useInterp((st) => latestSection(st.features));
+  const multiIds = useScene((s) => s.multiIds);
+  const setMultiIds = useScene((s) => s.setMulti);
+  const toggleMulti = useScene((s) => s.toggleMulti);
+  const zScale = useScene((s) => s.zScale);
+  const setZScale = useScene((s) => s.setZScale);
   const setSceneField = useScene((s) => s.setField);
+  const dataVersion = useScene((s) => s.dataVersion);
 
   useEffect(() => { setSceneField(field.id); }, [field.id, setSceneField]);
 
@@ -77,7 +103,7 @@ export function FieldScene({ field }: { field: SearchEntry }) {
       if (!held || !list.some((h) => h.id === held)) setHorizonId(list[0]?.id ?? null);
     })().catch(() => undefined);
     return () => { alive = false; };
-  }, [field.id, setHorizonId]);
+  }, [field.id, dataVersion, setHorizonId]);
 
   useEffect(() => {
     let alive = true;
@@ -109,15 +135,122 @@ export function FieldScene({ field }: { field: SearchEntry }) {
   );
   const zRange = useMemo(() => surfaceRange(surface), [surface]);
 
+  // ── wells ──────────────────────────────────────────────────────────────────
+  // Same digests the dossier reads, through the shared loader — one pipeline.
+  useEffect(() => {
+    let alive = true;
+    setWellGeo(null); setGrids3d(new Map());
+    loadWellGeometry(field.id).then((g) => { if (alive) setWellGeo(g); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [field.id, dataVersion]);
+
+  const selectedHorizon = useMemo(
+    () => horizons.find((h) => h.id === horizonId) ?? null, [horizons, horizonId],
+  );
+
+  /** 2D impact points — where each bore cuts the DRAPED horizon, in lon/lat. */
+  const impacts = useMemo<ImpactMarker[]>(() => {
+    if (!wellGeo || !selectedHorizon) return [];
+    const { picks } = matchPicks(selectedHorizon.name, wellGeo.picks);
+    if (!picks.length) return [];
+    return buildImpacts(picks, wellGeo.wells, wellGeo.surveys).map((p) => {
+      const g = ed50UtmToWgs84(p.easting, p.northing, wellGeo.zone);
+      const monthly = wellGeo.series.get(wellKey(p.well));
+      return {
+        well: p.well, role: p.role, lon: g.lon, lat: g.lat,
+        md: p.md, tvdss: p.tvdss, extrapolated: p.extrapolated,
+        stats: monthly ? summariseWell(monthly, wellGeo.refMonth ?? undefined) : null,
+      };
+    });
+  }, [wellGeo, selectedHorizon]);
+
+  // ── 3D ─────────────────────────────────────────────────────────────────────
+  // Entering 3D with nothing chosen starts from whatever the map was showing.
+  useEffect(() => {
+    if (view === '3d' && !multiIds.length && horizonId) setMultiIds([horizonId]);
+  }, [view, multiIds.length, horizonId, setMultiIds]);
+
+  useEffect(() => {
+    let alive = true;
+    const missing = multiIds.filter((id) => !grids3d.has(id));
+    if (!missing.length) return;
+    (async () => {
+      const decoded = await Promise.all(missing.map(async (id) => {
+        const hz = horizons.find((h) => h.id === id);
+        return hz ? [id, await readSurfaceGrid(hz.asset).catch(() => null)] as const : null;
+      }));
+      if (!alive) return;
+      setGrids3d((prev) => {
+        const next = new Map(prev);
+        for (const d of decoded) if (d && d[1]) next.set(d[0], d[1]);
+        return next;
+      });
+    })().catch(() => undefined);
+    return () => { alive = false; };
+  }, [multiIds, horizons, grids3d]);
+
+  const surfaces3d = useMemo<Structure3DSurface[]>(() => multiIds
+    .map((id) => {
+      const hz = horizons.find((h) => h.id === id);
+      const grid = grids3d.get(id);
+      const m = hz?.asset.meta;
+      const x0 = Number(m?.xmin), y0 = Number(m?.ymin), cell = Number(m?.dx);
+      if (!hz || !grid || !Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(cell)) return null;
+      return { id, name: hz.name, short: hz.short, grid, geo: { x0, y0, cell } };
+    })
+    .filter((s): s is Structure3DSurface => !!s)
+    .sort((a, b) => (Number(b.grid.values[0]) || 0) - (Number(a.grid.values[0]) || 0)),
+  [multiIds, horizons, grids3d]);
+
+  const impacts3d = useMemo(() => {
+    if (!wellGeo) return [];
+    const out: Array<ImpactMarker & { easting: number; northing: number }> = [];
+    const seen = new Set<string>();
+    for (const s of surfaces3d) {
+      const { picks } = matchPicks(s.name, wellGeo.picks);
+      for (const p of buildImpacts(picks, wellGeo.wells, wellGeo.surveys)) {
+        const key = `${s.id}|${p.well}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const monthly = wellGeo.series.get(wellKey(p.well));
+        out.push({
+          well: p.well, role: p.role, lon: 0, lat: 0,
+          md: p.md, tvdss: p.tvdss, extrapolated: p.extrapolated,
+          stats: monthly ? summariseWell(monthly, wellGeo.refMonth ?? undefined) : null,
+          easting: p.easting, northing: p.northing,
+        });
+      }
+    }
+    return out;
+  }, [wellGeo, surfaces3d]);
+
+  /** When no horizon is stacked for 3D, the section still needs something to
+   *  cut, so it falls back to whichever horizon the map is currently draping. */
+  const xsecFallback = useMemo<Structure3DSurface[]>(() => {
+    const hz = horizons.find((h) => h.id === horizonId);
+    const m = hz?.asset.meta;
+    const x0 = Number(m?.xmin), y0 = Number(m?.ymin), cell = Number(m?.dx);
+    if (!hz || !surface || !Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(cell)) return [];
+    return [{ id: hz.id, name: hz.name, short: hz.short, grid: surface, geo: { x0, y0, cell } }];
+  }, [horizons, horizonId, surface]);
+
+  /** The whole bore, surface slot → TD. Independent of which horizon is selected:
+   *  a trajectory exists whether or not it happens to cut the shown surface. */
+  const paths3d = useMemo<Path3D[]>(() => (wellGeo ? buildPaths3D(wellGeo) : []), [wellGeo]);
+
   return (
     <div className="fds-scene">
       <div className="fds-scene-bar">
         <span className="fds-scene-label"><Layers3 size={12} /> Horizon</span>
         {horizons.length > 0 ? (
           <span className="fds-scene-hz" title={orderNoteText}>
+            {/* single-select in 2D (a map shows one surface), multi in 3D — one
+                surface in 3D is a map with extra steps */}
             {horizons.map((h) => (
-              <button key={h.id} className={h.id === horizonId ? 'on' : ''}
-                onClick={() => setHorizonId(h.id === horizonId ? null : h.id)} title={h.name}>
+              <button key={h.id}
+                className={(view === '3d' ? multiIds.includes(h.id) : h.id === horizonId) ? 'on' : ''}
+                onClick={() => (view === '3d' ? toggleMulti(h.id) : setHorizonId(h.id === horizonId ? null : h.id))}
+                title={h.name}>
                 {h.short}
               </button>
             ))}
@@ -125,6 +258,12 @@ export function FieldScene({ field }: { field: SearchEntry }) {
         ) : (
           <span className="fds-scene-none">No interpreted horizon ingested for {field.name}</span>
         )}
+        <span className="fds-ad-view">
+          <button className={view === '2d' ? 'on' : ''} onClick={() => setView('2d')}>2D</button>
+          <button className={view === '3d' ? 'on' : ''} onClick={() => setView('3d')}>3D</button>
+          <button className={view === 'xsec' ? 'on' : ''} onClick={() => setView('xsec')}
+            title="Render the section traced with the section tool">X-Section</button>
+        </span>
         {zRange && (
           <span className="fds-scene-ramp" title="depth ramp — shallow to deep">
             <b>{Math.round(Math.abs(zRange.zmin))}</b>
@@ -134,14 +273,28 @@ export function FieldScene({ field }: { field: SearchEntry }) {
         )}
       </div>
       <div className="fds-scene-map">
-        {view === '3d' ? (
-          // The dossier owns the 3D section today; wiring the Explorer's 3D to the
-          // same renderer is the next step, and saying so beats a blank pane.
-          <div className="fds-scene-empty">
-            <MapPinned size={18} />
-            <b>3D section is not wired to the Explorer yet</b>
-            <span>Use the Knowledge Bank's 3D view — it reads this same horizon selection.</span>
-          </div>
+        {view === 'xsec' ? (
+          /* The section re-cuts what is already loaded — same grids the map
+             drapes, same impact points. It adds no data. */
+          <SectionView
+            section={section}
+            toProjected={(lon, lat) => wgs84ToEd50Utm(lon, lat, wellGeo?.zone ?? 31)}
+            surfaces={surfaces3d.length ? surfaces3d : xsecFallback}
+            wells={impacts3d}
+          />
+        ) : view === '3d' ? (
+          <Suspense fallback={<div className="fds-3d-empty">loading 3D…</div>}>
+            {surfaces3d.length ? (
+              <>
+                <Structure3D surfaces={surfaces3d} wells={impacts3d} paths={paths3d} zScale={zScale} />
+                <label className="fds-3d-zx" title="vertical exaggeration — a 7 km field with 600 m of relief is flat at ×1">
+                  ×{zScale}
+                  <input type="range" min={1} max={20} step={1} value={zScale}
+                    onChange={(e) => setZScale(Number(e.target.value))} />
+                </label>
+              </>
+            ) : <div className="fds-3d-empty">Pick one or more horizons above to build the section.</div>}
+          </Suspense>
         ) : (
           <>
             <CockpitMap dark mode="2d" theme="satellite" overlay="minimal"
@@ -149,6 +302,13 @@ export function FieldScene({ field }: { field: SearchEntry }) {
               onSelect={() => {}} onMapReady={setMap} />
             <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId}
               beforeId="focus-field-glow" contactDepth={null} />
+            {/* where each bore actually cuts the draped horizon — the same markers
+                the dossier map carries, from the same picks */}
+            <ImpactMarkers map={map} points={impacts} volumeUnit={wellGeo?.unit ?? ''} visible={!!horizonId} />
+            {/* Authoring lives in the Workspace, not the Knowledge Bank: the
+                dossier is a read of the record, this is where the record is
+                worked on. What is drawn lands in the Input tree on the left. */}
+            <MapTools map={map} fieldId={field.id} enabled />
           </>
         )}
       </div>

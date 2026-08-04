@@ -14,15 +14,17 @@
 //   polyline/polygon/section  click to add vertices, DOUBLE-CLICK to finish
 // Escape cancels a part-drawn shape, which is the one thing every drawing tool
 // must have and the reference did not.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl';
 import {
-  MousePointer2, Hand, MapPin, Eye, Drill, Spline, Pentagon, Columns3, Trash2, X,
+  MousePointer2, Hand, MapPin, Eye, Drill, Spline, Pentagon, Columns3,
 } from 'lucide-react';
 import {
-  type ToolKind, type FeatureKind, type InterpFeature, type LonLat,
-  MULTI_POINT, isComplete, newFeature, loadFeatures, saveFeatures, toGeoJson, featureMeasure,
+  type ToolKind, type FeatureKind, type LonLat,
+  MULTI_POINT, isComplete, toGeoJson,
 } from './interpret';
+import { useInterp, interpNodeId } from './interp-store';
+import { useScene, isVisible } from './scene';
 
 const SRC = 'fds-interp-src';
 const DRAFT_SRC = 'fds-interp-draft';
@@ -41,36 +43,39 @@ const TOOLS: Array<{ k: ToolKind; label: string; Icon: typeof MapPin; hint: stri
 export interface MapToolsProps {
   map: MapLibreMap | null;
   fieldId: string;
-  /** the drawn section the X-Section view should render; null when none exists */
-  onSectionChange?: (f: InterpFeature | null) => void;
   /** hide the whole palette when the map is not the active view */
   enabled?: boolean;
 }
 
-export function MapTools({ map, fieldId, onSectionChange, enabled = true }: MapToolsProps) {
+export function MapTools({ map, fieldId, enabled = true }: MapToolsProps) {
   const [tool, setTool] = useState<ToolKind>('select');
-  const [features, setFeatures] = useState<InterpFeature[]>([]);
   const [draft, setDraft] = useState<LonLat[]>([]);
-  const [listOpen, setListOpen] = useState(false);
   const addedRef = useRef(false);
+
+  // The features live in the shared store, not here — the Input tree lists the
+  // same objects and its eye toggles have to reach this canvas.
+  const features = useInterp((s) => s.features);
+  const addFeature = useInterp((s) => s.add);
+  const setInterpField = useInterp((s) => s.setField);
+  const vis = useScene((s) => s.vis);
+
   // handlers are re-created every render; refs keep the map listeners stable
   const toolRef = useRef(tool); toolRef.current = tool;
   const draftRef = useRef(draft); draftRef.current = draft;
-  const featRef = useRef(features); featRef.current = features;
 
-  useEffect(() => { setFeatures(loadFeatures(fieldId)); setDraft([]); }, [fieldId]);
-  useEffect(() => { saveFeatures(fieldId, features); }, [fieldId, features]);
-
-  // the LAST drawn section is the one the X-Section view reads
-  useEffect(() => {
-    const secs = features.filter((f) => f.kind === 'section');
-    onSectionChange?.(secs.length ? secs[secs.length - 1] : null);
-  }, [features, onSectionChange]);
+  useEffect(() => { setInterpField(fieldId); setDraft([]); }, [fieldId, setInterpField]);
 
   const commit = useCallback((kind: FeatureKind, pts: LonLat[]) => {
     if (!isComplete(kind, pts.length)) return;
-    setFeatures((prev) => [...prev, newFeature(kind, pts, prev)]);
-  }, []);
+    addFeature(kind, pts);
+  }, [addFeature]);
+
+  /** Hidden in the tree ⇒ gone from the canvas. The tree is the authority on what
+   *  is shown, exactly as it is for the delivered layers. */
+  const shown = useMemo(
+    () => features.filter((f) => isVisible(vis, interpNodeId(f))),
+    [features, vis],
+  );
 
   // ── map interaction ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -117,7 +122,7 @@ export function MapTools({ map, fieldId, onSectionChange, enabled = true }: MapT
   // ── layers ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!map) return;
-    const data = toGeoJson(features);
+    const data = toGeoJson(shown);
     try {
       const src = map.getSource(SRC) as { setData?: (d: unknown) => void } | undefined;
       if (src?.setData) { src.setData(data); return; }
@@ -169,7 +174,7 @@ export function MapTools({ map, fieldId, onSectionChange, enabled = true }: MapT
       } catch { /* already gone */ }
       addedRef.current = false;
     };
-  }, [map, features]);
+  }, [map, shown]);
 
   // the in-progress shape, redrawn on every click
   useEffect(() => {
@@ -201,10 +206,11 @@ export function MapTools({ map, fieldId, onSectionChange, enabled = true }: MapT
           </button>
         ))}
         {features.length > 0 && (
-          <button className={'fds-tool fds-tool-count' + (listOpen ? ' on' : '')}
-            title="Show what has been drawn" onClick={() => setListOpen((v) => !v)}>
+          /* the count is a pointer to the Input tree, which is where drawn
+             objects are listed, renamed, hidden and deleted — not a second list */
+          <span className="fds-tool fds-tool-count" title="Drawn objects appear in the Input tree on the left">
             {features.length}
-          </button>
+          </span>
         )}
       </div>
 
@@ -216,25 +222,6 @@ export function MapTools({ map, fieldId, onSectionChange, enabled = true }: MapT
         </div>
       )}
 
-      {listOpen && (
-        <div className="fds-interp-list">
-          <header>
-            <b>Drawn on this field</b>
-            <button onClick={() => setListOpen(false)} aria-label="Close"><X size={12} /></button>
-          </header>
-          {/* stated plainly: this is interpretation, and it has not been published */}
-          <p>Your interpretation. Stored in this browser only — not written to the OSDU record.</p>
-          {features.map((f) => (
-            <div key={f.id} className="fds-interp-row">
-              <span className={'k k-' + f.kind}>{f.kind}</span>
-              <b>{f.name}</b>
-              <em>{featureMeasure(f)}</em>
-              <button onClick={() => setFeatures((prev) => prev.filter((x) => x.id !== f.id))}
-                aria-label={`Delete ${f.name}`}><Trash2 size={11} /></button>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }

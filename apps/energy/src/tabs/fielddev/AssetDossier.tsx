@@ -18,7 +18,7 @@
 // Grounding is enforced in asset-dossier.ts, not here: this file renders nulls as "—"
 // and never substitutes a zero. The readiness ledger is treated as a RESULT — for most
 // of the 7,787-field catalogue it is the honest output, not an error state.
-import { useEffect, useMemo, useState, useCallback, Suspense, lazy } from 'react';
+import { useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import {
   Activity, CalendarClock, Database, Droplets, GaugeCircle, Info, Layers3, Library,
   MapPinned, ShieldAlert, TrendingDown, X,
@@ -46,10 +46,7 @@ import { closureAreaKm2 } from './contact-contour';
 import { useScene } from './scene';
 import { readRecord } from '../../dataqc/readDigest';
 import { wellKey, type PathStation, type PathWellhead } from './well-paths';
-import { ed50UtmToWgs84, wgs84ToEd50Utm } from '../../engine/proj';
-import { MapTools } from './MapTools';
-import { SectionView } from './SectionView';
-import type { InterpFeature } from './interpret';
+import { ed50UtmToWgs84 } from '../../engine/proj';
 import { matchPicks, buildImpacts, type FormationPick } from './horizon-picks';
 import { summariseWell, type WellMonth } from './well-stats';
 import { orderHorizons, orderNote } from './horizon-order';
@@ -540,26 +537,6 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
     [map, field.fly],
   );
 
-  /** the section traced with the map's section tool — the X-Section view's input */
-  const [section, setSection] = useState<InterpFeature | null>(null);
-
-  /** Section traces are stored in lon/lat so they survive a horizon change; the
-   *  grids live in projected metres. This is the one conversion between them. */
-  const toProjectedXY = useCallback(
-    (lon: number, lat: number) => wgs84ToEd50Utm(lon, lat, wellGeo?.zone ?? 31),
-    [wellGeo?.zone],
-  );
-
-  /** When 3D has nothing selected the section still needs something to cut, so it
-   *  falls back to whichever horizon the map is currently draping. */
-  const xsecFallbackSurfaces = useMemo<Structure3DSurface[]>(() => {
-    const hz = selectedHorizon;
-    const m = hz?.asset.meta;
-    const x0 = Number(m?.xmin), y0 = Number(m?.ymin), cell = Number(m?.dx);
-    if (!hz || !surface || !Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(cell)) return [];
-    return [{ id: hz.id, name: hz.name, short: hz.short, grid: surface, geo: { x0, y0, cell } }];
-  }, [selectedHorizon, surface]);
-
   const zRange = useMemo(() => surfaceRange(surface), [surface]);
 
   /**
@@ -685,31 +662,16 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
             <span className="fds-ad-view">
               <button className={view === '2d' ? 'on' : ''} onClick={() => setView('2d')}>2D</button>
               <button className={view === '3d' ? 'on' : ''} onClick={() => setView('3d')}>3D</button>
-              <button className={view === 'xsec' ? 'on' : ''} onClick={() => setView('xsec')}
-                title={section ? `Section: ${section.name}` : 'Trace a section on the 2D map first'}>X-Section</button>
             </span>
           )}
-          <em>{view === '3d' ? `${multiIds.length} selected`
-            : view === 'xsec' ? (section?.name ?? 'no section traced')
-              : reported(d?.onshoreOffshore)}</em></div>
+          <em>{view === '3d' ? `${multiIds.length} selected` : reported(d?.onshoreOffshore)}</em></div>
         {/* The Cockpit renderer, not a bespoke one: real satellite imagery, the
             province boundary and the GOGET field points, with overlay="minimal"
             so three stacked translucent fills do not wash the imagery white.
             The same treatment the Basin Dossier and the Surveillance Dossier use,
             so all three dossiers read as one product. `highlight` rings THIS field. */}
         <div className="fds-ad-mapwrap">
-          {view === 'xsec' ? (
-            /* The section re-cuts what is already loaded — same grids the map
-               drapes, same impact points, same published contact. It adds no data. */
-            <SectionView
-              section={section}
-              toProjected={toProjectedXY}
-              surfaces={surfaces3d.length ? surfaces3d : xsecFallbackSurfaces}
-              wells={impacts3d}
-              contactDepth={contactOnThisHorizon?.depth ?? null}
-              contactLabel={contactOnThisHorizon?.kind}
-            />
-          ) : view === '3d' ? (
+          {view === '3d' ? (
             <Suspense fallback={<div className="fds-3d-empty">loading 3D…</div>}>
               {surfaces3d.length
                 ? (
@@ -735,9 +697,6 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
               under the horizon it is meant to be pointing at */}
           <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId}
             beforeId="focus-field-glow" contactDepth={contactOnThisHorizon?.depth ?? null} />
-          {/* Draw on the map: points, observations, proposed wells, lines,
-              polygons and the section trace the X-Section view reads. */}
-          <MapTools map={map} fieldId={field.id} onSectionChange={setSection} enabled={view === '2d'} />
           {/* One dot per well, at the point that well cut THIS horizon — the
               correlation between the interpreted grid and the formation tops. */}
           <ImpactMarkers map={map} points={impacts} visible={!!horizonId} volumeUnit={wellGeo?.unit ?? ''} />

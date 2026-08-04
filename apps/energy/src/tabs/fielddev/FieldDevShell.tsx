@@ -27,7 +27,8 @@ import { WorkflowRibbon } from '../workspace-blueprint/WorkflowRibbon';
 import { WidgetBlueprintViewer } from '../workspace-blueprint/WidgetBlueprintViewer';
 import { ScopeBar, ModeDossierBar, type FieldDevMode } from './HeaderBars';
 import { AssetDossier } from './AssetDossier';
-import { DataQc } from '../../dataqc/DataQc';
+import { DataExplorer } from './DataExplorer';
+import { InputTree } from './InputTree';
 import type { Sel } from '../../cosmo/CosmoExplorer';
 import { loadSearchIndex, type SearchEntry } from '../../cosmo/cockpit-search';
 import { useViewMode } from '../../cosmo/use-view-mode';
@@ -140,11 +141,12 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
       </ScopeBar>
       {mode === 'knowledge' ? <AssetDossier field={field} /> : (
         <div className="wsb-layout">
-          <WorkflowRibbon groups={FIELDDEV_WORKFLOWS} active={stageId} onSelect={setStageId} label="Field Development" />
+          <WorkflowRibbon groups={FIELDDEV_WORKFLOWS} active={stageId} onSelect={setStageId} label="Field Development"
+            drawer={<InputTree stageId={stageId} />} />
           {stage.id === 'client-data-qc' ? (
             // The first stage is no longer a blueprint card — it is the real, shared
             // client-data interface. Every other stage still renders its plan.
-            <DataQc fieldId={field.id} fieldName={field.name} vertical="field-development" />
+            <DataExplorer field={field} />
           ) : (
             <WidgetBlueprintViewer group={workflow} tab={stage} scope={`${field.name} · ${lod}`} />
           )}
