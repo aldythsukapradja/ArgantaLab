@@ -767,6 +767,13 @@ html[data-ui="cosmo"] .fdt-scroll{flex:1;min-height:0;overflow:auto;padding:4px 
 html[data-ui="cosmo"] .fdt-row{display:flex;align-items:center;gap:4px;padding:3px 6px 3px 0;cursor:pointer;color:var(--ink2)}
 html[data-ui="cosmo"] .fdt-row:hover{background:var(--panel2)}
 html[data-ui="cosmo"] .fdt-row.sel{background:var(--teal-soft);color:var(--teal-ink)}
+/* `.live` = this row is what the canvas is SHOWING, which is a different fact
+   from `.sel` (what the inspector is pointed at). A surface can be draped without
+   being selected and selected without being draped, so they read differently:
+   a left bar and a brighter label, not another fill that would fight the
+   selection highlight. */
+html[data-ui="cosmo"] .fdt-row.live{box-shadow:inset 2px 0 0 var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .fdt-row.live .fdt-lbl{color:var(--ink);font-weight:600}
 html[data-ui="cosmo"] .fdt-row.dim{opacity:.38;cursor:default}
 html[data-ui="cosmo"] .fdt-row.dim:hover{background:transparent}
 html[data-ui="cosmo"] .fdt-caret{display:flex;width:13px;flex:0 0 auto;justify-content:center;color:var(--ink3)}

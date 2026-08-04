@@ -95,10 +95,15 @@ const ROLE_COLOR: Record<WellRole, string> = {
 };
 
 function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onToggle,
-  nodeId, selectable = true, dim, title }: {
+  nodeId, selectable = true, dim, title, onActivate, active }: {
   depth: number; icon: typeof MapPin; color?: string; label: string; sub?: string;
   count?: number; expandable?: boolean; open?: boolean; onToggle?: () => void;
   nodeId?: string; selectable?: boolean; dim?: boolean; title?: string;
+  /** Clicking the row ACTS on the canvas as well as selecting it — this is what
+   *  makes the tree a control rather than an inventory. Surfaces use it to drape. */
+  onActivate?: () => void;
+  /** true when this row is what the canvas is currently showing */
+  active?: boolean;
 }) {
   const vis = useScene((s) => s.vis);
   const sel = useScene((s) => s.sel);
@@ -109,7 +114,7 @@ function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onTo
 
   return (
     <div
-      className={'fdt-row' + (on ? ' sel' : '') + (dim ? ' dim' : '')}
+      className={'fdt-row' + (on ? ' sel' : '') + (active ? ' live' : '') + (dim ? ' dim' : '')}
       style={{ paddingLeft: 6 + depth * 12 }}
       title={title}
       onClick={() => {
@@ -118,6 +123,7 @@ function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onTo
         // so a well is inspectable without having to hit a 12px caret
         if (nodeId && selectable) setSel(nodeId);
         if (expandable) onToggle?.();
+        onActivate?.();
       }}
     >
       <span className="fdt-caret">
@@ -184,6 +190,12 @@ export function InputTree({ stageId }: { stageId: string }) {
   const { ws, ready } = useWorkspace();
   // what the user has drawn on the Workspace canvas — authored, not delivered
   const drawn = useInterp((s) => s.features);
+  // the tree is the Workspace's horizon control, so it needs the scene selection
+  const view = useScene((s) => s.view);
+  const horizonId = useScene((s) => s.horizonId);
+  const multiIds = useScene((s) => s.multiIds);
+  const setHorizon = useScene((s) => s.setHorizon);
+  const toggleMulti = useScene((s) => s.toggleMulti);
 
   const tg = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   const live = STAGE_FOLDERS[stageId] ?? [];
@@ -318,11 +330,26 @@ export function InputTree({ stageId }: { stageId: string }) {
         <Row depth={0} icon={MapIcon} label="Surfaces" count={ws.surfaces.length}
           expandable={ws.surfaces.length > 0} open={!!open.surfaces} onToggle={() => tg('surfaces')}
           dim={dimmed('surfaces')} />
-        {open.surfaces && ws.surfaces.map((s) => (
-          <Row key={s.id} depth={1} icon={MapIcon} color="var(--purple)" label={s.name}
-            sub={s.zmin != null && s.zmax != null ? `${Math.round(s.zmin)}–${Math.round(s.zmax)} m` : undefined}
-            nodeId={'surface:' + s.id} dim={dimmed('surfaces')} />
-        ))}
+        {/* Surfaces are SELECTED here — the Workspace canvas has no horizon row of
+            its own, so this is the control that drapes them. Single-select in 2D
+            (a map shows one surface), additive in 3D and the section (where the
+            whole point is a stack). Clicking the row does it; the eye still just
+            hides. Knowledge keeps its own horizon row above its 2D/3D switch,
+            because a dossier is read without a tree beside it. */}
+        {open.surfaces && ws.surfaces.map((s) => {
+          const draped = view === '2d' ? horizonId === s.assetId : multiIds.includes(s.assetId);
+          return (
+            <Row key={s.id} depth={1} icon={MapIcon} color="var(--purple)" label={s.name}
+              sub={s.zmin != null && s.zmax != null ? `${Math.round(s.zmin)}–${Math.round(s.zmax)} m` : undefined}
+              nodeId={'surface:' + s.id} dim={dimmed('surfaces')} active={draped}
+              title={view === '2d'
+                ? (draped ? `${s.name} — draped on the map. Click to undrape.` : `Drape ${s.name} on the map`)
+                : (draped ? `${s.name} — in the scene. Click to remove.` : `Add ${s.name} to the scene`)}
+              onActivate={() => (view === '2d'
+                ? setHorizon(horizonId === s.assetId ? null : s.assetId)
+                : toggleMulti(s.assetId))} />
+          );
+        })}
 
         <Row depth={0} icon={Box} label="Contacts" count={ws.contacts.length}
           expandable={ws.contacts.length > 0} open={!!open.contacts} onToggle={() => tg('contacts')}
