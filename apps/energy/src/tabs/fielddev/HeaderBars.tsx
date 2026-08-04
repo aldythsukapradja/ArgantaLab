@@ -14,10 +14,12 @@ import { FieldDossier } from './FieldDossier';
 const COUNTRY_LABEL: Record<string, string> = { NO: 'Norway', GB: 'United Kingdom' };
 const parentLabel = (parent: string) => COUNTRY_LABEL[parent] ?? parent;
 
-export function ScopeBar({ field, onSelectField, onOpenLegacy }: {
+export function ScopeBar({ field, onSelectField, onOpenLegacy, children }: {
   field: SearchEntry | null;
   onSelectField: (f: SearchEntry) => void;
   onOpenLegacy: () => void;
+  /** Mode switch + dossier, folded into this row so the header costs one line. */
+  children?: React.ReactNode;
 }) {
   const [index, setIndex] = useState<SearchEntry[] | null>(null);
   const [query, setQuery] = useState('');
@@ -40,7 +42,6 @@ export function ScopeBar({ field, onSelectField, onOpenLegacy }: {
 
   return (
     <div className="fds-bar">
-      <span className="fds-bar-label">Scope</span>
       {field ? (
         <button className="fds-scope-btn" onClick={() => setOpen(true)} title="Change field — search the world catalogue">
           <Globe2 size={13} />
@@ -74,7 +75,8 @@ export function ScopeBar({ field, onSelectField, onOpenLegacy }: {
           <div className="fds-search-results"><div className="fds-search-empty">No field matches “{query}”</div></div>
         )}
       </div>
-      <span className="fds-scope-spacer" />
+      {/* The dossier is flex:1, so it — not a spacer — is what pushes Legacy right. */}
+      {children ?? <span className="fds-scope-spacer" />}
       <button className="fds-legacy-btn" onClick={onOpenLegacy} title="The original workbench — every engine there is truth-locked and reused by the new suite">
         <History size={13} /> Legacy (v1)
       </button>
@@ -90,16 +92,16 @@ export function ModeDossierBar({ field, mode, onChange }: {
   onChange: (mode: FieldDevMode) => void;
 }) {
   return (
-    <div className="fds-context-bar">
+    <>
       <div className="fds-mode-switch" aria-label="Field Development view">
         <button className={mode === 'knowledge' ? 'active' : ''} onClick={() => onChange('knowledge')} aria-pressed={mode === 'knowledge'}>
-          <BookOpen size={13} /> Knowledge Bank
+          <BookOpen size={13} /> Knowledge
         </button>
         <button className={mode === 'workspace' ? 'active' : ''} onClick={() => onChange('workspace')} aria-pressed={mode === 'workspace'}>
           <PanelsTopLeft size={13} /> Workspace
         </button>
       </div>
       <FieldDossier field={field} />
-    </div>
+    </>
   );
 }

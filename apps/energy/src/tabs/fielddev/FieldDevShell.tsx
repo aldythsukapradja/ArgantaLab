@@ -23,13 +23,14 @@ import './fielddev-suite.css';
 import { type Lod } from './registry';
 import { FIELDDEV_WORKFLOWS } from './workflow';
 import { flattenWorkflow } from '../workspace-blueprint/types';
-import { WorkflowTree } from '../workspace-blueprint/WorkflowTree';
+import { WorkflowRibbon } from '../workspace-blueprint/WorkflowRibbon';
 import { WidgetBlueprintViewer } from '../workspace-blueprint/WidgetBlueprintViewer';
 import { ScopeBar, ModeDossierBar, type FieldDevMode } from './HeaderBars';
-import { KnowledgeBank } from './KnowledgeBank';
+import { AssetDossier } from './AssetDossier';
 import { DataQc } from '../../dataqc/DataQc';
 import type { Sel } from '../../cosmo/CosmoExplorer';
 import { loadSearchIndex, type SearchEntry } from '../../cosmo/cockpit-search';
+import { useViewMode } from '../../cosmo/use-view-mode';
 
 const CosmoExplorer = lazy(async () => ({ default: (await import('../../cosmo/CosmoExplorer')).CosmoExplorer }));
 const LegacyFieldDev = lazy(async () => ({ default: (await import('./legacy/FieldDev')).FieldDev }));
@@ -56,6 +57,8 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
   const [stageId, setStageId] = useState(workflowTabs[0].id);
   const [lod] = useState<Lod>('L2');
   const [mode, setMode] = useState<FieldDevMode>('knowledge');
+  // a Fieldcraft card shortcut can ask for the dossier or the workspace directly
+  useViewMode('field-development', setMode);
   const [legacyTab, setLegacyTab] = useState('map');
   const [sel, setSel] = useState<Sel>(null);
 
@@ -130,11 +133,12 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
 
   return (
     <div className="fds-shell">
-      <ScopeBar field={field} onSelectField={setField} onOpenLegacy={() => setView('legacy')} />
-      <ModeDossierBar field={field} mode={mode} onChange={setMode} />
-      {mode === 'knowledge' ? <KnowledgeBank field={field} /> : (
+      <ScopeBar field={field} onSelectField={setField} onOpenLegacy={() => setView('legacy')}>
+        <ModeDossierBar field={field} mode={mode} onChange={setMode} />
+      </ScopeBar>
+      {mode === 'knowledge' ? <AssetDossier field={field} /> : (
         <div className="wsb-layout">
-          <WorkflowTree groups={FIELDDEV_WORKFLOWS} active={stageId} onSelect={setStageId} label="Field Development" />
+          <WorkflowRibbon groups={FIELDDEV_WORKFLOWS} active={stageId} onSelect={setStageId} label="Field Development" />
           {stage.id === 'client-data-qc' ? (
             // The first stage is no longer a blueprint card — it is the real, shared
             // client-data interface. Every other stage still renders its plan.

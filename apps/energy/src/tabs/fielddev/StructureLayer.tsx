@@ -17,7 +17,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import type { DigestedSurface } from '../../dataqc/types';
-import { gridCornersWgs84 } from '../../engine/proj';
+import { gridCornersWgs84, ed50UtmToWgs84 } from '../../engine/proj';
+import { contactTrace, traceToProjected } from './contact-contour';
 
 const SRC = 'fds-structure-src';
 const LYR = 'fds-structure-lyr';
@@ -61,6 +62,9 @@ function rampAt(t: number): [number, number, number] {
  *  legitimately straddle zero and must not be flipped by an absolute value. */
 export function depthConvention(values: ArrayLike<number>): {
   toDepth: (v: number) => number; dmin: number; dmax: number;
+  /** true when the grid stores elevation, so a DEPTH must be negated to compare
+   *  against the stored values (what the contact trace needs) */
+  flip: boolean;
 } | null {
   let lo = Infinity, hi = -Infinity;
   for (let i = 0; i < values.length; i++) {
@@ -74,7 +78,7 @@ export function depthConvention(values: ArrayLike<number>): {
   const flip = hi <= 0;
   const toDepth = (v: number) => (flip ? -v : v);
   const a = toDepth(lo), b = toDepth(hi);
-  return { toDepth, dmin: Math.min(a, b), dmax: Math.max(a, b) };
+  return { toDepth, dmin: Math.min(a, b), dmax: Math.max(a, b), flip };
 }
 
 /** Grid → RGBA canvas. A null node stays fully transparent: an interpreted grid
@@ -109,14 +113,6 @@ function gridToCanvas(s: DigestedSurface): HTMLCanvasElement | null {
   return cv;
 }
 
-/** One wellbore's path, already in WGS84, ready to draw over the structure. */
-export interface TrajectoryLine {
-  well: string;
-  role: 'producer' | 'injector' | 'other';
-  /** surface → TD, lon/lat */
-  path: Array<[number, number]>;
-}
-
 export interface StructureLayerProps {
   map: MapLibreMap | null;
   surface: DigestedSurface | null;
@@ -126,28 +122,26 @@ export interface StructureLayerProps {
   visible?: boolean;
   /** id of the first wellbore/label layer, so structure is drawn BENEATH it */
   beforeId?: string;
-  /** wellbore paths drawn ON the structure — the point of draping it at all */
-  trajectories?: TrajectoryLine[];
   /** fly to the horizon's footprint when it is first draped */
   autoZoom?: boolean;
+  /** A published fluid contact to trace across THIS horizon, as a depth below
+   *  datum (positive down). Null on every horizon the contact does not apply to —
+   *  a contact belongs to a reservoir, and drawing it on the overburden would be
+   *  a line with no meaning. */
+  contactDepth?: number | null;
 }
 
-const TRAJ_SRC = 'fds-traj-src';
-const TRAJ_LINE = 'fds-traj-line';
-const TRAJ_HEAD = 'fds-traj-head';
-const TRAJ_TD = 'fds-traj-td';
-
-const ROLE_COLOR: Record<TrajectoryLine['role'], string> = {
-  producer: '#10b981', injector: '#26c6da', other: '#94a3b8',
-};
+const CONTACT_SRC = 'fds-contact-src';
+const CONTACT_LINE = 'fds-contact-line';
+const CONTACT_CASE = 'fds-contact-case';
 
 /** Imperative MapLibre layer, driven by React state. Renders nothing itself. */
 export function StructureLayer({
   map, surface, geo, opacity = 0.82, visible = true, beforeId,
-  trajectories = [], autoZoom = true,
+  autoZoom = true, contactDepth = null,
 }: StructureLayerProps) {
   const addedRef = useRef(false);
-  const trajAddedRef = useRef(false);
+  const contactAddedRef = useRef(false);
   // fly once per horizon, not on every opacity tweak or re-render
   const flownRef = useRef<string | null>(null);
 
@@ -235,52 +229,70 @@ export function StructureLayer({
   // reset the fly-once latch when the overlay is switched off entirely
   useEffect(() => { if (!visible) flownRef.current = null; }, [visible]);
 
-  // ── wellbore paths, drawn ON the structure ─────────────────────────────────
-  // Coloured by the same roles the inventory chips use, so the map and the chips
-  // are one reading. Surface location gets a hollow ring, TD a solid dot: on a
-  // deviated well those are hundreds of metres apart and the difference matters.
-  useEffect(() => {
-    if (!map) return;
-    const data = {
+  // ── the fluid contact, traced across this horizon ──────────────────────────
+  // The single line on the map that development is argued across. Traced from the
+  // grid itself, so where the horizon runs out the contact stops rather than
+  // closing around the edge of the survey.
+  const contactGeoJson = useMemo(() => {
+    if (!surface || !geo || contactDepth == null || !Number.isFinite(contactDepth)) return null;
+    const conv = depthConvention(surface.values);
+    if (!conv) return null;
+    // Outside the horizon's own depth range there is nothing to intersect. Saying so
+    // beats drawing an empty layer and letting the reader wonder where the line went.
+    if (contactDepth < conv.dmin || contactDepth > conv.dmax) return { type: 'FeatureCollection' as const, features: [] };
+    // Back into the grid's own convention — the trace runs on the stored values.
+    const level = conv.flip ? -contactDepth : contactDepth;
+    const lines = traceToProjected(
+      contactTrace(surface.values, surface.ncol, surface.nrow, level),
+      geo.x0, geo.y0, geo.cell,
+    );
+    return {
       type: 'FeatureCollection' as const,
-      features: trajectories.filter((t) => t.path.length > 1).map((t) => ({
-        type: 'Feature' as const,
-        properties: { well: t.well, color: ROLE_COLOR[t.role] },
-        geometry: { type: 'LineString' as const, coordinates: t.path },
+      features: lines.map((l) => ({
+        type: 'Feature' as const, properties: {},
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: l.map(([x, y]) => {
+            const g = ed50UtmToWgs84(x, y, geo.zone ?? 31);
+            return [g.lon, g.lat] as [number, number];
+          }),
+        },
       })),
     };
+  }, [surface, geo, contactDepth]);
+
+  useEffect(() => {
+    if (!map) return;
+    const data = contactGeoJson ?? { type: 'FeatureCollection' as const, features: [] };
     try {
-      const src = map.getSource(TRAJ_SRC) as { setData?: (d: unknown) => void } | undefined;
+      const src = map.getSource(CONTACT_SRC) as { setData?: (d: unknown) => void } | undefined;
       if (src?.setData) { src.setData(data); return; }
       if (!data.features.length) return;
-      map.addSource(TRAJ_SRC, { type: 'geojson', data });
+      map.addSource(CONTACT_SRC, { type: 'geojson', data });
+      // A dark casing under a bright blue line: the contact has to stay legible
+      // over both the warm crest and the cool flanks of the depth ramp.
       map.addLayer({
-        id: TRAJ_LINE, type: 'line', source: TRAJ_SRC,
+        id: CONTACT_CASE, type: 'line', source: CONTACT_SRC,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: {
-          'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.2, 13, 2.6],
-          'line-opacity': 0.95,
-        },
+        paint: { 'line-color': '#06263f', 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 3.2, 14, 6], 'line-opacity': 0.6 },
       });
       map.addLayer({
-        id: TRAJ_HEAD, type: 'circle', source: TRAJ_SRC,
-        paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 2, 13, 4.5],
-          'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 1.6,
-        },
+        id: CONTACT_LINE, type: 'line', source: CONTACT_SRC,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#2f9bff', 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.6, 14, 3.2] },
       });
-      trajAddedRef.current = true;
+      contactAddedRef.current = true;
     } catch { /* style mid-swap; next render re-adds */ }
 
     return () => {
-      if (!map || !trajAddedRef.current) return;
+      if (!map || !contactAddedRef.current) return;
       try {
-        for (const id of [TRAJ_TD, TRAJ_HEAD, TRAJ_LINE]) if (map.getLayer(id)) map.removeLayer(id);
-        if (map.getSource(TRAJ_SRC)) map.removeSource(TRAJ_SRC);
+        for (const id of [CONTACT_LINE, CONTACT_CASE]) if (map.getLayer(id)) map.removeLayer(id);
+        if (map.getSource(CONTACT_SRC)) map.removeSource(CONTACT_SRC);
       } catch { /* already gone */ }
-      trajAddedRef.current = false;
+      contactAddedRef.current = false;
     };
-  }, [map, trajectories]);
+  }, [map, contactGeoJson]);
 
   return null;
 }

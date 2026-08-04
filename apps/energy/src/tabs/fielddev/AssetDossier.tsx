@@ -42,12 +42,38 @@ import { listAssets } from '../../dataqc/db';
 import { readSurfaceGrid } from '../../dataqc/readDigest';
 import type { DigestedSurface, IngestedAsset } from '../../dataqc/types';
 import { StructureLayer, surfaceRange, RAMP_CSS } from './StructureLayer';
-import type { TrajectoryLine } from './StructureLayer';
 import { readRecord } from '../../dataqc/readDigest';
-import { buildWellPaths } from './well-paths';
+import { wellKey, type PathStation, type PathWellhead } from './well-paths';
 import { ed50UtmToWgs84 } from '../../engine/proj';
+import { matchPicks, buildImpacts, type FormationPick } from './horizon-picks';
+import { summariseWell, type WellMonth } from './well-stats';
+import { orderHorizons, orderNote } from './horizon-order';
+import { ImpactMarkers, type ImpactMarker } from './ImpactMarkers';
+import { resolveKbContext } from '../../dataqc/masterkb';
+import { surfaceContextFor } from '../../dataqc/surface-context';
 
-interface HorizonOption { id: string; name: string; short: string; asset: IngestedAsset }
+/** Everything the impact points are cut from, loaded once per field. */
+type WellGeometry = {
+  zone: number;
+  wells: PathWellhead[];
+  surveys: Array<{ well: string; stations: PathStation[] }>;
+  picks: FormationPick[];
+  /** per-wellbore monthly series, keyed by the normalised well name */
+  series: Map<string, WellMonth[]>;
+  /** last month anywhere in the field — what "active" is judged against */
+  refMonth: string | null;
+  /** the unit the source series was published in, carried through unlabelled-free */
+  unit: string;
+};
+
+interface HorizonOption {
+  id: string; name: string; short: string; asset: IngestedAsset;
+  /** the rock unit the stratigraphy sheet matched, when it matched one */
+  unit: string | null;
+  /** age used for stratigraphic ordering, and the depth fallback when undated */
+  ageMa: number | null;
+  meanDepth: number | null;
+}
 
 /** "Hugin Fm Top" → "Hugin Top". The selector is a row of small buttons, so it
  *  drops the lithostratigraphic rank (Fm / Gp) which adds width but no meaning —
@@ -123,7 +149,12 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   const [horizons, setHorizons] = useState<HorizonOption[]>([]);
   const [horizonId, setHorizonId] = useState<string | null>(null);
   const [surface, setSurface] = useState<DigestedSurface | null>(null);
-  const [paths, setPaths] = useState<TrajectoryLine[]>([]);
+  // everything the impact points are built from, loaded ONCE per field and then
+  // re-cut per horizon in a memo — the picks file and the surveys do not change
+  // when the selected horizon does, and re-reading them on every click would be
+  // a decode of the whole bundle per button press.
+  const [wellGeo, setWellGeo] = useState<WellGeometry | null>(null);
+  const [orderNoteText, setOrderNoteText] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -172,9 +203,12 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // stays regional rather than showing an empty control.
   useEffect(() => {
     let alive = true;
-    setHorizons([]); setHorizonId(null); setSurface(null);
+    setHorizons([]); setHorizonId(null); setSurface(null); setOrderNoteText('');
     (async () => {
-      const assets = await listAssets(field.id).catch(() => []);
+      const [assets, kb] = await Promise.all([
+        listAssets(field.id).catch(() => []),
+        resolveKbContext(field.id).catch(() => null),
+      ]);
       if (!alive) return;
       // Seabed is bathymetry, not structure. It is a real ingested surface and
       // stays available in Data QC, but it carries no development meaning — you
@@ -182,65 +216,162 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
       // range swamps the depth ramp the reservoir horizons share.
       const surfs = assets.filter((a) => a.kind === 'surface'
         && !/seabed|sea\s*floor|bathym/i.test(String(a.meta.name ?? a.fileName)));
-      const list = surfs.map((a) => {
+
+      // OLDEST → YOUNGEST, so the selector reads as a section rather than as an
+      // alphabet. Age comes from the stratigraphy sheet through the same matcher
+      // Data QC uses; grid depth is the fallback and is declared as such, because
+      // deeper-is-older only holds for a layer cake.
+      const ordered = orderHorizons(surfs.map((a) => {
         const name = String(a.meta.name ?? a.fileName);
-        return { id: a.id, name, short: shortHorizon(name), asset: a };
-      });
+        const ctx = surfaceContextFor(name, kb);
+        const zmin = Number(a.meta.zmin), zmax = Number(a.meta.zmax);
+        return {
+          id: a.id, name, short: shortHorizon(name), asset: a, unit: ctx?.unitName ?? null,
+          // a "Top" is dated by the unit's top, a "Base" by its base — using one
+          // for both would stack Hugin Top and Hugin Base at the same instant
+          ageMa: ctx ? (ctx.isBase ? ctx.ageBaseMa : ctx.ageTopMa) ?? null : null,
+          meanDepth: Number.isFinite(zmin) && Number.isFinite(zmax)
+            ? (Math.abs(zmin) + Math.abs(zmax)) / 2 : null,
+        };
+      }));
+      const list = ordered.map((o) => o.item);
       setHorizons(list);
+      setOrderNoteText(orderNote(ordered));
       // Open ON the structure rather than on an empty regional map. Selecting a
       // field that HAS an interpreted horizon is already the request to see it,
       // and the layer's fly-to then takes the camera down to the footprint.
-      //
-      // The FIRST ingested surface, deliberately — not a guess at "the reservoir
-      // top". Surface names carry no stratigraphic order (Volve ships BCU, Hugin
-      // Base, Hugin Top, Shetland Top, Ty Top, alphabetically), so any rule that
-      // claimed to pick the reservoir would be picking a name pattern and calling
-      // it geology. The selector is right there to change it.
+      // The list is now ordered, so the first entry is the OLDEST horizon — a
+      // defensible place to start reading a section from.
       if (list[0]) setHorizonId(list[0].id);
     })().catch(() => undefined);
     return () => { alive = false; };
   }, [field.id]);
 
-  // ── wellbore paths over the structure ──────────────────────────────────────
-  // Same discipline as the horizons: the SURVEYS come out of the trajectory
-  // digests Data QC ingested, and the surface SLOT coordinates off the bundle's
-  // own well master. Both are already-landed data, not a second fetch pipeline.
-  // A field with neither simply gets no lines drawn.
+  // ── everything the impact points need ──────────────────────────────────────
+  // Same discipline as the horizons: SURVEYS and PICKS come out of the digests
+  // Data QC already ingested, the surface SLOT coordinates and the CRS off the
+  // bundle's own index, and the per-well rates off the bundle's monthly files.
+  // Nothing here is a second pipeline. A field missing any of them simply gets
+  // fewer points, never a placed guess.
   useEffect(() => {
     let alive = true;
-    setPaths([]);
+    setWellGeo(null);
     (async () => {
       const [assets, index] = await Promise.all([
         listAssets(field.id).catch(() => []),
         loadIndex().catch(() => null),
       ]);
-      if (!alive) return;
+      if (!alive || !index?.wells?.length) return;
+
       const trajAssets = assets.filter((a) => a.kind === 'trajectory');
-      if (!trajAssets.length || !index?.wells?.length) return;
-      const surveys = (await Promise.all(trajAssets.map(async (a) => {
-        const rec = await readRecord<{ well?: string; stations?: Array<Record<string, number>> }>(a)
-          .catch(() => null);
-        const well = String(rec?.well ?? a.meta.well ?? '');
-        return rec?.stations?.length && well ? { well, stations: rec.stations } : null;
-      }))).filter((s): s is { well: string; stations: Array<Record<string, number>> } => !!s);
+      const pickAsset = assets.find((a) => a.kind === 'picks');
+
+      const [surveysRaw, picksRec] = await Promise.all([
+        Promise.all(trajAssets.map(async (a) => {
+          const rec = await readRecord<{ well?: string; stations?: PathStation[] }>(a).catch(() => null);
+          const well = String(rec?.well ?? a.meta.well ?? '');
+          return rec?.stations?.length && well ? { well, stations: rec.stations } : null;
+        })),
+        pickAsset
+          ? readRecord<{ picks?: FormationPick[] }>(pickAsset).catch(() => null)
+          : Promise.resolve(null),
+      ]);
       if (!alive) return;
-      // The bundle declares its CRS once, at the index level; parse the zone from
-      // it rather than assuming 31, for the same reason the surface layer does.
-      const zone = Number(String(index.crs ?? '').match(/UTM\s*(\d{1,2})/i)?.[1]) || 31;
-      const projected = buildWellPaths(
-        index.wells.map((w) => ({ name: String(w.name), x: w.x, y: w.y, role: w.role })),
-        surveys,
-      );
-      setPaths(projected.map((p) => ({
-        well: p.well, role: p.role,
-        path: p.points.map(([x, y]) => {
-          const g = ed50UtmToWgs84(x, y, zone);
-          return [g.lon, g.lat] as [number, number];
-        }),
-      })));
+
+      // Per-well monthly rates, for the hover card and for deciding which wells
+      // are actually live. Only bores the index says publish production are read.
+      const flowing = index.wells.filter((w) => w.has?.production);
+      const seriesEntries = await Promise.all(flowing.map(async (w) => {
+        const p = await loadProd(w.name).catch(() => null);
+        return p?.monthly?.length ? [String(w.name), p] as const : null;
+      }));
+      if (!alive) return;
+
+      const series = new Map<string, WellMonth[]>();
+      let unit = '';
+      for (const e of seriesEntries) {
+        if (!e) continue;
+        series.set(wellKey(e[0]), e[1].monthly as WellMonth[]);
+        unit = unit || String((e[1] as { units?: string }).units ?? '');
+      }
+      // The reference month is the FIELD's last month, so a well that stopped in
+      // 2014 is not called active just because 2014 is its own final row.
+      let refMonth: string | null = null;
+      for (const m of series.values()) {
+        const last = m[m.length - 1]?.ym;
+        if (last && (!refMonth || last > refMonth)) refMonth = last;
+      }
+
+      setWellGeo({
+        // The bundle declares its CRS once, at the index level; parse the zone from
+        // it rather than assuming 31, for the same reason the surface layer does.
+        zone: Number(String(index.crs ?? '').match(/UTM\s*(\d{1,2})/i)?.[1]) || 31,
+        wells: index.wells.map((w) => ({ name: String(w.name), x: w.x, y: w.y, role: w.role })),
+        surveys: surveysRaw.filter((s): s is { well: string; stations: PathStation[] } => !!s),
+        picks: picksRec?.picks ?? [],
+        series, refMonth, unit,
+      });
     })().catch(() => undefined);
     return () => { alive = false; };
   }, [field.id]);
+
+  // ── the impact points for the SELECTED horizon ─────────────────────────────
+  // A memo, not an effect: re-cutting picks that are already in memory is cheap,
+  // and it keeps the markers exactly in step with the horizon buttons.
+  const selectedHorizon = useMemo(
+    () => horizons.find((h) => h.id === horizonId) ?? null, [horizons, horizonId],
+  );
+
+  const impacts = useMemo<ImpactMarker[]>(() => {
+    if (!wellGeo || !selectedHorizon) return [];
+    const { picks } = matchPicks(selectedHorizon.name, wellGeo.picks);
+    if (!picks.length) return [];
+    return buildImpacts(picks, wellGeo.wells, wellGeo.surveys).map((p) => {
+      const g = ed50UtmToWgs84(p.easting, p.northing, wellGeo.zone);
+      const monthly = wellGeo.series.get(wellKey(p.well));
+      return {
+        well: p.well, role: p.role, lon: g.lon, lat: g.lat,
+        md: p.md, tvdss: p.tvdss, extrapolated: p.extrapolated,
+        stats: monthly ? summariseWell(monthly, wellGeo.refMonth ?? undefined) : null,
+      };
+    });
+  }, [wellGeo, selectedHorizon]);
+
+  /** Set when the horizon's picks were reached through a declared name equivalence
+   *  rather than the name itself — the reader is told, not quietly served a guess. */
+  const pickNote = useMemo(() => {
+    if (!wellGeo || !selectedHorizon) return null;
+    const m = matchPicks(selectedHorizon.name, wellGeo.picks);
+    if (m.interpreted) return `picks read from ${m.interpreted.pickName} — ${m.interpreted.why}`;
+    if (!m.picks.length) return 'no formation tops published for this horizon';
+    return null;
+  }, [wellGeo, selectedHorizon]);
+
+  /**
+   * The published fluid contact, applied ONLY to the horizon it belongs to.
+   *
+   * A contact is a property of a reservoir. Tracing the Volve OWC across the
+   * Shetland Group or the Ty would draw a line that intersects nothing physical.
+   * So it is offered only where the selected horizon's matched rock unit is the
+   * one the reservoir record names — and if the KB cannot identify the unit, no
+   * contour is drawn rather than one drawn on a guess.
+   */
+  /** Which rock unit the catalogue calls this field's reservoir. Same row the
+   *  reservoir card reads, resolved early because the contact contour needs it. */
+  const kbReservoirUnit = useMemo(() => {
+    if (!kbSpine || !context) return null;
+    const row = kbSpine.reservoir?.find((r) => context.isVolve || r.field_id === field.id);
+    return row?.formation_name ?? (context.isVolve ? 'Hugin Formation' : null);
+  }, [kbSpine, context, field.id]);
+
+  const contactOnThisHorizon = useMemo(() => {
+    const c = record?.bundle?.contacts?.find((x) => /owc|gwc|goc|contact/i.test(x.kind));
+    if (!c || !selectedHorizon?.unit || !kbReservoirUnit) return null;
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    if (!norm(selectedHorizon.unit).startsWith(norm(kbReservoirUnit))
+      && !norm(kbReservoirUnit).startsWith(norm(selectedHorizon.unit))) return null;
+    return { depth: Math.abs(c.tvdss), kind: c.kind, prov: c.prov, nature: c.dataNature };
+  }, [record, selectedHorizon, kbReservoirUnit]);
 
   // Decode ONLY the selected horizon, and only when one is picked — the digest
   // is int16+gzip in IndexedDB, so this is a read and a decompress, never a refetch.
@@ -347,11 +478,12 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
       <div className="fds-ad-map">
         <div className="fds-ad-map-title"><MapPinned size={13} /><span>Location</span>
           {horizons.length > 0 && (
-            <span className="fds-ad-hz">
+            /* ordered oldest → youngest, so the row reads down-section left to right */
+            <span className="fds-ad-hz" title={orderNoteText}>
               {horizons.map((h) => (
                 <button key={h.id} className={h.id === horizonId ? 'on' : ''}
                   onClick={() => setHorizonId(h.id === horizonId ? null : h.id)}
-                  title={`Drape ${h.name} over the map`}>{h.short}</button>
+                  title={`${h.name}${h.ageMa != null ? ` · ${h.ageMa} Ma` : ''} — drape over the map`}>{h.short}</button>
               ))}
             </span>
           )}
@@ -368,11 +500,33 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
           {/* beneath the focus ring, so the marker for THIS field is never buried
               under the horizon it is meant to be pointing at */}
           <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId}
-            trajectories={horizonId ? paths : []} beforeId="focus-field-glow" />
+            beforeId="focus-field-glow" contactDepth={contactOnThisHorizon?.depth ?? null} />
+          {/* One dot per well, at the point that well cut THIS horizon — the
+              correlation between the interpreted grid and the formation tops. */}
+          <ImpactMarkers map={map} points={impacts} visible={!!horizonId} volumeUnit={wellGeo?.unit ?? ''} />
           <div className="fds-ad-maplabel">
             <b>{field.name}</b>
             <span>{field.fly ? `${field.fly.lat.toFixed(3)}°, ${field.fly.lon.toFixed(3)}°` : 'location not reported'}</span>
+            {horizonId && (
+              <span className="fds-ad-mapnote">
+                {impacts.length
+                  ? `${impacts.length} well${impacts.length === 1 ? '' : 's'} penetrate this horizon`
+                  : (pickNote ?? 'no correlated tops')}
+              </span>
+            )}
           </div>
+          {horizonId && (
+            <div className="fds-ad-mapkey">
+              <div><i className="k-oil" />producing</div>
+              <div><i className="k-wat" />injecting</div>
+              <div><i className="k-idle" />not flowing</div>
+              {contactOnThisHorizon && (
+                <div title={`${contactOnThisHorizon.nature} · ${contactOnThisHorizon.prov}`}>
+                  <i className="k-owc" />{contactOnThisHorizon.kind} {Math.round(contactOnThisHorizon.depth)} m
+                </div>
+              )}
+            </div>
+          )}
           {horizonId && zRange && (
             <div className="fds-ad-zkey">
               <span>{Math.round(zRange.zmin)}</span>

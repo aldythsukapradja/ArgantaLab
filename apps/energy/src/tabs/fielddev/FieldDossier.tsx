@@ -61,10 +61,11 @@ export function FieldDossier({ field }: { field: SearchEntry }) {
         <span>Field dossier</span>
         <b>{field.name}</b>
       </div>
+      {/* Three facts only — status, operator and resources. Discovery year and
+          setting live in the Knowledge Bank dossier; the header is a strip, not a
+          record, and the space it gave back goes to the canvas. */}
       <div className="fds-dossier-fact"><span>Status</span><b>{detail === undefined ? 'Loading…' : reported(detail?.status ?? (isVolve ? 'Shut down' : null))}</b></div>
-      <div className="fds-dossier-fact"><span>Discovered</span><b>{detail === undefined ? 'Loading…' : reported(detail?.discoveryYear ?? (isVolve ? 1993 : null))}</b></div>
-      <div className="fds-dossier-fact"><span>Operator</span><b>{detail === undefined ? 'Loading…' : reported(detail?.operator ?? (isVolve ? 'Equinor Energy AS' : null))}</b></div>
-      <div className="fds-dossier-fact"><span>Setting</span><b>{detail === undefined ? 'Loading…' : (isVolve && setting === 'Not reported' ? 'Offshore · oil & gas' : setting)}</b></div>
+      <div className="fds-dossier-fact" title={`Discovered ${reported(detail?.discoveryYear ?? (isVolve ? 1993 : null))} · ${isVolve && setting === 'Not reported' ? 'Offshore · oil & gas' : setting}`}><span>Operator</span><b>{detail === undefined ? 'Loading…' : reported(detail?.operator ?? (isVolve ? 'Equinor Energy AS' : null))}</b></div>
       <div className="fds-dossier-fact resources" title={volveValidation?.stoiip?.method ?? resourceText}>
         <span>Resources / in-place</span><b>{detail === undefined ? 'Loading…' : resourceText}</b>
       </div>
