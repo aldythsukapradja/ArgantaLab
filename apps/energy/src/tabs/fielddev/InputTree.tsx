@@ -188,6 +188,38 @@ function BoreChildren({ bore, dim, open, tg }: {
 export function InputTree({ stageId }: { stageId: string }) {
   const [open, setOpen] = useState<Record<string, boolean>>({ wells: true, producers: true, surfaces: true });
   const { ws, ready } = useWorkspace();
+  const sceneFieldId = useScene((s) => s.fieldId);
+
+  /**
+   * Why the tree looks the way it does — reported, never left to be inferred from
+   * a column of zeros. Four distinct states that a zero cannot tell apart:
+   * nothing scoped, still reading, scoped but nothing ingested, and a real
+   * delivery.
+   */
+  const state = useMemo(() => {
+    if (!sceneFieldId) {
+      return {
+        label: 'no field', tone: 'warn' as const,
+        hint: 'No field is scoped, so there is nothing to read.',
+        banner: 'No field scoped — pick one in the scope bar above.',
+      };
+    }
+    if (!ready) {
+      return {
+        label: 'reading…', tone: '' as const,
+        hint: 'Reading the ingested asset store for this field.',
+        banner: 'Reading the workspace…',
+      };
+    }
+    if (!ws.assets.length) {
+      return {
+        label: 'no data', tone: 'warn' as const,
+        hint: 'This field has no ingested assets yet. Load a package on the Client data & QC stage.',
+        banner: 'Nothing ingested for this field yet — load a package on the Client data & QC stage.',
+      };
+    }
+    return { label: 'workspace', tone: '' as const, hint: `${ws.assets.length} ingested assets`, banner: null };
+  }, [sceneFieldId, ready, ws.assets.length]);
   // what the user has drawn on the Workspace canvas — authored, not delivered
   const drawn = useInterp((s) => s.features);
   // the tree is the Workspace's horizon control, so it needs the scene selection
@@ -237,9 +269,14 @@ export function InputTree({ stageId }: { stageId: string }) {
         <Database size={12} /> Input
         {/* provenance, permanently visible: this tree IS the workspace, not a
             second reading of it */}
-        <i className="fdt-head-src">{ready ? 'workspace' : 'reading…'}</i>
+        <i className={'fdt-head-src' + (state.tone ? ' ' + state.tone : '')} title={state.hint}>{state.label}</i>
       </div>
       <div className="fdt-scroll">
+        {/* A zero beside every folder is a statement that the delivery is empty.
+            While the workspace is still resolving, or when nothing has been
+            ingested for this field yet, that statement is false — so the tree
+            says which of the two it is instead of drawing a wall of zeros. */}
+        {state.banner && <div className="fdt-banner">{state.banner}</div>}
         {/* ── Global well logs: curve TYPES, each expanding to the wells with it ── */}
         <Row depth={0} icon={Radio} label="Global well logs" count={ws.curveTypes.length}
           expandable={ws.curveTypes.length > 0} open={!!open.logs} onToggle={() => tg('logs')}

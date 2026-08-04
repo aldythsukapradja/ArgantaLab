@@ -763,6 +763,11 @@ html[data-ui="cosmo"] .fdt-head{display:flex;align-items:center;gap:6px;flex:0 0
 /* provenance tag in the tree header: this tree IS the workspace query, and while the
    delivery is still digesting it says so rather than letting zeros read as facts */
 html[data-ui="cosmo"] .fdt-head-src{margin-left:auto;font-style:normal;font-size:7.5px;letter-spacing:.06em;color:var(--ink3);opacity:.75}
+/* an empty tree with a reason is a result; an empty tree without one is a bug
+   the user has to guess at */
+html[data-ui="cosmo"] .fdt-head-src.warn{color:var(--orange,#f59e0b);opacity:1}
+html[data-ui="cosmo"] .fdt-banner{margin:6px 8px 8px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;
+  background:var(--panel2);font:8px var(--mono);line-height:1.45;color:var(--ink2)}
 html[data-ui="cosmo"] .fdt-scroll{flex:1;min-height:0;overflow:auto;padding:4px 0 10px}
 html[data-ui="cosmo"] .fdt-row{display:flex;align-items:center;gap:4px;padding:3px 6px 3px 0;cursor:pointer;color:var(--ink2)}
 html[data-ui="cosmo"] .fdt-row:hover{background:var(--panel2)}

@@ -15,10 +15,35 @@ const ASSETS = 'assets';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
+/** How long to wait for the database to open before giving up.
+ *
+ *  `indexedDB.open` can produce NEITHER success nor error: a version change held
+ *  by another tab fires `blocked` and then nothing, and a browser under storage
+ *  pressure or in a restricted mode can simply never call back. Every read in
+ *  this module awaits `open()`, so a silent hang there stalls the whole workspace
+ *  — the Input tree sits on "reading…" with zeros beside every folder forever,
+ *  which is precisely the false statement about the delivery this app is not
+ *  supposed to make. A rejection is recoverable and legible; a hang is neither. */
+const OPEN_TIMEOUT_MS = 8000;
+
 function open(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+  dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+    let settled = false;
+    const done = (fn: () => void) => { if (!settled) { settled = true; fn(); } };
+    const timer = setTimeout(
+      () => done(() => reject(new Error('IndexedDB did not open within 8s — another tab may be holding it open, or storage is unavailable'))),
+      OPEN_TIMEOUT_MS,
+    );
+
+    let req: IDBOpenDBRequest;
+    try {
+      req = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch (e) {
+      clearTimeout(timer);
+      done(() => reject(e instanceof Error ? e : new Error('IndexedDB unavailable')));
+      return;
+    }
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(BLOBS)) db.createObjectStore(BLOBS);
@@ -27,9 +52,19 @@ function open(): Promise<IDBDatabase> {
         s.createIndex('byField', 'fieldId', { unique: false });
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => { clearTimeout(timer); done(() => resolve(req.result)); };
+    req.onerror = () => { clearTimeout(timer); done(() => reject(req.error)); };
+    // fired when ANOTHER tab holds an older version open — report it rather than
+    // waiting on a callback that is not coming
+    req.onblocked = () => {
+      clearTimeout(timer);
+      done(() => reject(new Error('IndexedDB is blocked by another open tab of this app — close it and reload')));
+    };
   });
+  // A failed open must NOT be cached: the cause is usually transient (another tab,
+  // a locked profile), and a memoised rejection would keep the app broken until a
+  // full reload even after the cause has gone away.
+  dbPromise.catch(() => { dbPromise = null; });
   return dbPromise;
 }
 

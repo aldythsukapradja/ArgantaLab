@@ -75,10 +75,25 @@ export function emptyWorkspace(fieldId: string): Workspace {
   };
 }
 
+/** Resolve, or give up and carry on.
+ *
+ *  The KB spine is 5 MB of stratigraphy and it only ENRICHES the workspace — it
+ *  names rock units, it does not decide what the delivery contains. Awaiting it
+ *  unconditionally meant one slow or stalled fetch could hold the entire Input
+ *  tree on "reading…" with a zero beside every folder, reporting a delivery that
+ *  is sitting right there in the asset store. The inventory must not wait on the
+ *  enrichment; a workspace without KB context is degraded, not wrong. */
+function optional<T>(p: Promise<T>, ms = 6000): Promise<T | null> {
+  return Promise.race([
+    p.catch(() => null),
+    new Promise<null>((r) => { setTimeout(() => r(null), ms); }),
+  ]);
+}
+
 export async function loadWorkspace(fieldId: string): Promise<Workspace> {
   const [assets, kb] = await Promise.all([
     listAssets(fieldId).catch(() => [] as IngestedAsset[]),
-    resolveKbContext(fieldId).catch(() => null as KbContext | null),
+    optional(resolveKbContext(fieldId)) as Promise<KbContext | null>,
   ]);
   if (!assets.length) return emptyWorkspace(fieldId);
 
