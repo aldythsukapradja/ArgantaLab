@@ -324,6 +324,17 @@ html[data-ui="cosmo"] .fds-3d-zx input{width:96px;accent-color:#2f9bff}
 .fds-3d-tip b{display:block;font-size:10px}
 .fds-3d-tip span{display:block;font:7.5px var(--mono,ui-monospace);color:#93a3b5}
 
+/* ── reference-package ingest, made visible ─────────────────────────────────── */
+/* A silent multi-minute ingest reads as missing data. This says which it is. */
+html[data-ui="cosmo"] .fds-ingest{position:relative;display:flex;align-items:baseline;gap:8px;flex:none;
+  padding:5px 12px 6px;border-bottom:1px solid var(--line2);background:var(--panel2);overflow:hidden}
+html[data-ui="cosmo"] .fds-ingest b{font-size:9.5px;color:var(--ink)}
+html[data-ui="cosmo"] .fds-ingest span{font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fds-ingest i{position:absolute;left:0;bottom:0;height:2px;background:var(--teal,#0fb5a6);
+  transition:width .3s ease}
+html[data-ui="cosmo"] .fds-ingest.bad{background:color-mix(in srgb,var(--orange,#f59e0b) 12%,var(--panel2))}
+html[data-ui="cosmo"] .fds-ingest.bad b{color:var(--orange,#f59e0b)}
+
 /* ── drawing tools ──────────────────────────────────────────────────────────── */
 /* Top-centre: the palette is the first thing you reach for when authoring, and
    the bottom edge of a map is where the scale bar, attribution and depth key

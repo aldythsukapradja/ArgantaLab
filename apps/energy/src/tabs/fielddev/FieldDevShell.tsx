@@ -28,13 +28,14 @@ import { WidgetBlueprintViewer } from '../workspace-blueprint/WidgetBlueprintVie
 import { ScopeBar, ModeDossierBar, type FieldDevMode } from './HeaderBars';
 import { AssetDossier } from './AssetDossier';
 import { DataExplorer } from './DataExplorer';
+import { Petrophysics } from './Petrophysics';
 import { InputTree } from './InputTree';
 import type { Sel } from '../../cosmo/CosmoExplorer';
 import { loadSearchIndex, type SearchEntry } from '../../cosmo/cockpit-search';
 import { useViewMode } from '../../cosmo/use-view-mode';
 import { useScopeEntry } from '../../cosmo/use-scope-entry';
 import { useScene } from './scene';
-import { ensureReferenceBundle } from '../../dataqc/ensureBundle';
+import { ensureReferenceBundle, type BundleProgress } from '../../dataqc/ensureBundle';
 
 const CosmoExplorer = lazy(async () => ({ default: (await import('../../cosmo/CosmoExplorer')).CosmoExplorer }));
 const LegacyFieldDev = lazy(async () => ({ default: (await import('./legacy/FieldDev')).FieldDev }));
@@ -83,9 +84,16 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
   // …and for the same reason the delivery has to be digested because the FIELD is
   // open, not because a particular stage is showing. Cached in IndexedDB, so this is
   // paid once per browser per field and resumes if interrupted.
+  // Visible, because an invisible ingest is indistinguishable from missing data.
+  // The package is ~90 items and takes minutes in a browser that has never seen
+  // it; until now that ran with no progress callback at all, so a fresh browser
+  // showed an empty Data Explorer and an empty Input tree with no explanation and
+  // the reasonable conclusion was "my data is gone".
+  const [bundleProgress, setBundleProgress] = useState<BundleProgress | null>(null);
   useEffect(() => {
     if (!field) return;
-    return ensureReferenceBundle(field.id, 'field-development', undefined, bumpData);
+    setBundleProgress(null);
+    return ensureReferenceBundle(field.id, 'field-development', setBundleProgress, bumpData);
   }, [field, bumpData]);
 
   useEffect(() => {
@@ -155,15 +163,41 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
       <ScopeBar field={field} onSelectField={setField} onOpenLegacy={() => setView('legacy')}>
         <ModeDossierBar field={field} mode={mode} onChange={setMode} />
       </ScopeBar>
+      {bundleProgress && (
+        <div className={'fds-ingest' + (bundleProgress.error ? ' bad' : '')}>
+          {bundleProgress.error ? (
+            <>
+              <b>Reference package incomplete</b>
+              <span>
+                {bundleProgress.failed
+                  ? `${bundleProgress.failed} of ${bundleProgress.total} items failed to digest`
+                  : 'the package could not be read'} — {bundleProgress.error}
+              </span>
+            </>
+          ) : (
+            <>
+              <b>Loading {bundleProgress.label}</b>
+              <span>{bundleProgress.done}/{bundleProgress.total} digested — the workspace fills as it lands</span>
+              <i style={{ width: `${bundleProgress.total ? (bundleProgress.done / bundleProgress.total) * 100 : 0}%` }} />
+            </>
+          )}
+        </div>
+      )}
       {mode === 'knowledge' ? <AssetDossier field={field} /> : (
         <div className="wsb-layout">
           <WorkflowRibbon groups={FIELDDEV_WORKFLOWS} active={stageId} onSelect={setStageId} label="Field Development"
             drawer={<InputTree stageId={stageId} />} />
           {stage.id === 'client-data-qc' ? (
             // The first stage is no longer a blueprint card — it is the real, shared
-            // client-data interface. Every other stage still renders its plan.
+            // client-data interface.
             <DataExplorer field={field} />
+          ) : stage.id === 'petrophysics-lite' ? (
+            // Petrophysics is under construction as its own surface: the SHELL CANVAS
+            // (layout + live data contract) is real, the interpretation engines land
+            // behind it in P1–P9. See PETROPHYSICS-SUITE-CONCEPT.md.
+            <Petrophysics field={field} />
           ) : (
+            // every remaining stage still renders its plan
             <WidgetBlueprintViewer group={workflow} tab={stage} scope={`${field.name} · ${lod}`} />
           )}
         </div>
