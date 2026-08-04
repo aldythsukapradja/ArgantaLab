@@ -638,9 +638,10 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
           </div>
           {horizonId && (
             <div className="fds-ad-mapkey">
-              <div><i className="k-oil" />producing</div>
-              <div><i className="k-wat" />injecting</div>
-              <div><i className="k-idle" />not flowing</div>
+              {/* by well TYPE — what a well IS, not whether it flowed last month */}
+              <div><i className="k-oil" />oil producer</div>
+              <div><i className="k-wat" />water injector</div>
+              <div><i className="k-idle" />appraisal / exploration</div>
               {contactOnThisHorizon && (
                 <div title={`${contactOnThisHorizon.nature} · ${contactOnThisHorizon.prov}`}>
                   <i className="k-owc" />{contactOnThisHorizon.kind} {Math.round(contactOnThisHorizon.depth)} m

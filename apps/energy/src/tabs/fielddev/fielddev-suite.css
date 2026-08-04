@@ -267,25 +267,15 @@ html[data-ui="cosmo"] .fds-ad-maplabel .fds-ad-mapnote{color:var(--ink2);max-wid
 /* Not scoped to html[data-ui="cosmo"]: MapLibre appends marker elements to the map
    container, which is inside the cosmo tree, but the popup is positioned relative
    to the marker and the selector needs to hold wherever MapLibre moves them. */
-.fds-imp{position:relative;display:flex;align-items:center;gap:4px;cursor:default;line-height:1}
-.fds-imp-sym{width:11px;height:11px;border-radius:50%;flex:none;box-sizing:border-box;
-  box-shadow:0 0 0 1.5px rgba(4,16,26,.75)}
-/* oil producer, flowing: filled green */
-.fds-imp.is-producer .fds-imp-sym{background:#10b981;border:1.5px solid #eafff6}
-/* water injector, injecting: the injector cross in a hollow ring */
-.fds-imp.is-injector .fds-imp-sym{background:transparent;border:1.8px solid #2f9bff;position:relative}
-.fds-imp.is-injector .fds-imp-sym::before,
-.fds-imp.is-injector .fds-imp-sym::after{content:'';position:absolute;background:#2f9bff}
-.fds-imp.is-injector .fds-imp-sym::before{left:50%;top:-1px;bottom:-1px;width:1.6px;transform:translateX(-50%)}
-.fds-imp.is-injector .fds-imp-sym::after{top:50%;left:-1px;right:-1px;height:1.6px;transform:translateY(-50%)}
-/* everything else: hollow grey, deliberately quiet */
-.fds-imp.is-idle .fds-imp-sym{background:transparent;border:1.5px solid #9aa6b4}
-
+/* The SYMBOL is a native map layer (see ImpactMarkers). Only the name chip is
+   HTML, so this block styles the chip and its hover card — nothing positional. */
+.fds-imp{position:relative;display:flex;align-items:center;cursor:default;line-height:1}
 .fds-imp-name{font:8.5px var(--mono,ui-monospace);letter-spacing:.02em;padding:1.5px 4px;border-radius:3px;
   white-space:nowrap;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.fds-imp-name.tone-oil{background:#10b981}
-.fds-imp-name.tone-wat{background:#2f9bff}
-.fds-imp-name.tone-idle{background:rgba(72,84,98,.9);color:#dfe6ee}
+/* chip colour follows the WELL TYPE, the same rule the symbol uses */
+.fds-imp-name.tone-producer{background:#10b981}
+.fds-imp-name.tone-injector{background:#2f9bff}
+.fds-imp-name.tone-other{background:rgba(72,84,98,.92);color:#dfe6ee}
 
 .fds-imp-pop{position:absolute;left:16px;top:14px;z-index:20;display:none;pointer-events:none}
 .fds-imp:hover{z-index:30}
@@ -329,7 +319,11 @@ html[data-ui="cosmo"] .fds-ad-mapkey{position:absolute;z-index:5;right:8px;top:8
 html[data-ui="cosmo"] .fds-ad-mapkey div{display:flex;align-items:center;gap:5px;font:7px var(--mono);color:var(--ink2)}
 html[data-ui="cosmo"] .fds-ad-mapkey i{width:9px;height:9px;border-radius:50%;flex:none;box-sizing:border-box}
 html[data-ui="cosmo"] .fds-ad-mapkey i.k-oil{background:#10b981;border:1px solid #eafff6}
-html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat{border:1.5px solid #2f9bff}
+html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat{border:1.5px solid #2f9bff;position:relative}
+html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat::before,
+html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat::after{content:'';position:absolute;background:#2f9bff}
+html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat::before{left:50%;top:-2px;bottom:-2px;width:1.4px;transform:translateX(-50%)}
+html[data-ui="cosmo"] .fds-ad-mapkey i.k-wat::after{top:50%;left:-2px;right:-2px;height:1.4px;transform:translateY(-50%)}
 html[data-ui="cosmo"] .fds-ad-mapkey i.k-idle{border:1.5px solid #9aa6b4}
 html[data-ui="cosmo"] .fds-ad-mapkey i.k-owc{width:12px;height:0;border-radius:0;border-top:2px solid #2f9bff}
 

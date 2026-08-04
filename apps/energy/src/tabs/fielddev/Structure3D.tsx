@@ -26,7 +26,7 @@ import * as THREE from 'three';
 import type { DigestedSurface } from '../../dataqc/types';
 import { buildSurfaceMesh, commonOrigin, sharedDepthRange, type MeshGrid } from './surface-mesh';
 import { depthConvention, rampRgb } from './StructureLayer';
-import type { ImpactMarker } from './ImpactMarkers';
+import { ROLE_FILL, type ImpactMarker } from './ImpactMarkers';
 
 export interface Structure3DSurface {
   id: string;
@@ -183,12 +183,8 @@ export function Structure3D({ surfaces, wells, contactDepth, contactLabel, zScal
                 onPointerOut={() => setHover(null)}
               >
                 <sphereGeometry args={[span / 140, 14, 12]} />
-                <meshStandardMaterial
-                  color={w.stats?.observed === 'oil' ? '#10b981'
-                    : w.stats?.observed === 'water-injection' ? '#2f9bff' : '#9aa6b4'}
-                  emissive={w.stats?.observed === 'none' ? '#000' : '#0b2b22'}
-                  roughness={0.35}
-                />
+                {/* same rule as the 2D symbols: colour reports what the well IS */}
+                <meshStandardMaterial color={ROLE_FILL[w.role]} roughness={0.35} />
               </mesh>
               {hover === w.well && (
                 <Html center distanceFactor={span * 0.9} zIndexRange={[30, 0]}>

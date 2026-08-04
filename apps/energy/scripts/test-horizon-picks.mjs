@@ -183,6 +183,35 @@ if (index && picks) {
   ok('one point per well, no duplicates',
     new Set(pts.map((p) => p.well)).size === pts.length);
 
+  // REGISTRATION. The markers and the draped raster are placed by two different
+  // code paths — per-point ed50UtmToWgs84 for the wells, four reprojected corners
+  // for the image. They agree only if both are right, so assert it in the frame
+  // the map actually draws in (WGS84), not just in projected metres.
+  if (grid) {
+    const { ed50UtmToWgs84, gridCornersWgs84 } = await import('../src/engine/proj.ts');
+    const c = gridCornersWgs84(grid.x0, grid.y0, grid.nx, grid.ny, grid.cell, 31);
+    const lons = [c.sw[0], c.se[0], c.ne[0], c.nw[0]];
+    const lats = [c.sw[1], c.se[1], c.ne[1], c.nw[1]];
+    const box = {
+      w: Math.min(...lons), e: Math.max(...lons), s: Math.min(...lats), n: Math.max(...lats),
+    };
+    const geo = pts.map((p) => ed50UtmToWgs84(p.easting, p.northing, 31));
+    ok('every impact falls inside the draped grid in LON',
+      geo.every((g) => g.lon >= box.w && g.lon <= box.e),
+      `${box.w.toFixed(4)}–${box.e.toFixed(4)}`);
+    ok('every impact falls inside the draped grid in LAT',
+      geo.every((g) => g.lat >= box.s && g.lat <= box.n),
+      `${box.s.toFixed(4)}–${box.n.toFixed(4)}`);
+    // Shape, not just containment: a bug that scaled or transposed one axis would
+    // still land inside the box. Volve's Hugin penetrations span ~2.0 x 1.85 km,
+    // so on a local Mercator the cluster must come out slightly WIDER than tall.
+    const merc = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+    const dx = Math.max(...geo.map((g) => g.lon)) - Math.min(...geo.map((g) => g.lon));
+    const dy = (Math.max(...geo.map((g) => merc(g.lat))) - Math.min(...geo.map((g) => merc(g.lat)))) * (180 / Math.PI);
+    ok('the cluster keeps its true aspect once projected',
+      dx / dy > 1.0 && dx / dy < 1.25, `W:H = ${(dx / dy).toFixed(3)}`);
+  }
+
   // ordering over the real surfaces, on the depth basis the grids alone provide
   const surfs = (index.surfaces ?? []).filter((s) => s.id !== 'seabed')
     .map((s) => ({ id: s.id, name: s.name, meanDepth: (s.zmin + s.zmax) / 2 }));
