@@ -109,6 +109,14 @@ function gridToCanvas(s: DigestedSurface): HTMLCanvasElement | null {
   return cv;
 }
 
+/** One wellbore's path, already in WGS84, ready to draw over the structure. */
+export interface TrajectoryLine {
+  well: string;
+  role: 'producer' | 'injector' | 'other';
+  /** surface → TD, lon/lat */
+  path: Array<[number, number]>;
+}
+
 export interface StructureLayerProps {
   map: MapLibreMap | null;
   surface: DigestedSurface | null;
@@ -118,11 +126,30 @@ export interface StructureLayerProps {
   visible?: boolean;
   /** id of the first wellbore/label layer, so structure is drawn BENEATH it */
   beforeId?: string;
+  /** wellbore paths drawn ON the structure — the point of draping it at all */
+  trajectories?: TrajectoryLine[];
+  /** fly to the horizon's footprint when it is first draped */
+  autoZoom?: boolean;
 }
 
+const TRAJ_SRC = 'fds-traj-src';
+const TRAJ_LINE = 'fds-traj-line';
+const TRAJ_HEAD = 'fds-traj-head';
+const TRAJ_TD = 'fds-traj-td';
+
+const ROLE_COLOR: Record<TrajectoryLine['role'], string> = {
+  producer: '#10b981', injector: '#26c6da', other: '#94a3b8',
+};
+
 /** Imperative MapLibre layer, driven by React state. Renders nothing itself. */
-export function StructureLayer({ map, surface, geo, opacity = 0.82, visible = true, beforeId }: StructureLayerProps) {
+export function StructureLayer({
+  map, surface, geo, opacity = 0.82, visible = true, beforeId,
+  trajectories = [], autoZoom = true,
+}: StructureLayerProps) {
   const addedRef = useRef(false);
+  const trajAddedRef = useRef(false);
+  // fly once per horizon, not on every opacity tweak or re-render
+  const flownRef = useRef<string | null>(null);
 
   const canvas = useMemo(() => (surface ? gridToCanvas(surface) : null), [surface]);
   const corners = useMemo(() => {
@@ -176,6 +203,81 @@ export function StructureLayer({ map, surface, geo, opacity = 0.82, visible = tr
       }
     } catch { /* layer not mounted yet */ }
   }, [map, opacity, visible]);
+
+  // ── fly to the horizon's footprint ─────────────────────────────────────────
+  // The dossier map opens at basin zoom, where a 7 km field is a dot. Draping a
+  // horizon is a statement of intent — "look at the structure" — so the camera
+  // follows it there. Once per horizon: re-flying on every opacity change would
+  // fight the user's own pan.
+  useEffect(() => {
+    if (!map || !corners || !visible || !autoZoom) return;
+    const key = `${corners.sw.join()}|${corners.ne.join()}`;
+    if (flownRef.current === key) return;
+    flownRef.current = key;
+    const lons = [corners.sw[0], corners.se[0], corners.ne[0], corners.nw[0]];
+    const lats = [corners.sw[1], corners.se[1], corners.ne[1], corners.nw[1]];
+    try {
+      map.fitBounds(
+        [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+        {
+          padding: 34, duration: 1400, essential: true,
+          // eases in and settles rather than snapping — the motion is what tells
+          // the user the map re-scoped, not just re-coloured
+          easing: (t) => 1 - Math.pow(1 - t, 3),
+        },
+      );
+    } catch { /* map torn down mid-flight */ }
+  }, [map, corners, visible, autoZoom]);
+
+  // reset the fly-once latch when the overlay is switched off entirely
+  useEffect(() => { if (!visible) flownRef.current = null; }, [visible]);
+
+  // ── wellbore paths, drawn ON the structure ─────────────────────────────────
+  // Coloured by the same roles the inventory chips use, so the map and the chips
+  // are one reading. Surface location gets a hollow ring, TD a solid dot: on a
+  // deviated well those are hundreds of metres apart and the difference matters.
+  useEffect(() => {
+    if (!map) return;
+    const data = {
+      type: 'FeatureCollection' as const,
+      features: trajectories.filter((t) => t.path.length > 1).map((t) => ({
+        type: 'Feature' as const,
+        properties: { well: t.well, color: ROLE_COLOR[t.role] },
+        geometry: { type: 'LineString' as const, coordinates: t.path },
+      })),
+    };
+    try {
+      const src = map.getSource(TRAJ_SRC) as { setData?: (d: unknown) => void } | undefined;
+      if (src?.setData) { src.setData(data); return; }
+      if (!data.features.length) return;
+      map.addSource(TRAJ_SRC, { type: 'geojson', data });
+      map.addLayer({
+        id: TRAJ_LINE, type: 'line', source: TRAJ_SRC,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.2, 13, 2.6],
+          'line-opacity': 0.95,
+        },
+      });
+      map.addLayer({
+        id: TRAJ_HEAD, type: 'circle', source: TRAJ_SRC,
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 2, 13, 4.5],
+          'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 1.6,
+        },
+      });
+      trajAddedRef.current = true;
+    } catch { /* style mid-swap; next render re-adds */ }
+
+    return () => {
+      if (!map || !trajAddedRef.current) return;
+      try {
+        for (const id of [TRAJ_TD, TRAJ_HEAD, TRAJ_LINE]) if (map.getLayer(id)) map.removeLayer(id);
+        if (map.getSource(TRAJ_SRC)) map.removeSource(TRAJ_SRC);
+      } catch { /* already gone */ }
+      trajAddedRef.current = false;
+    };
+  }, [map, trajectories]);
 
   return null;
 }

@@ -42,6 +42,10 @@ import { listAssets } from '../../dataqc/db';
 import { readSurfaceGrid } from '../../dataqc/readDigest';
 import type { DigestedSurface, IngestedAsset } from '../../dataqc/types';
 import { StructureLayer, surfaceRange, RAMP_CSS } from './StructureLayer';
+import type { TrajectoryLine } from './StructureLayer';
+import { readRecord } from '../../dataqc/readDigest';
+import { buildWellPaths } from './well-paths';
+import { ed50UtmToWgs84 } from '../../engine/proj';
 
 interface HorizonOption { id: string; name: string; short: string; asset: IngestedAsset }
 
@@ -104,7 +108,10 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   const [kbSpine, setKbSpine] = useState<KbSpine | null>(null);
   const [record, setRecord] = useState<ResolvedRecord | null>(null);
   const [pop, setPop] = useState<Pop>(null);
-  const [chart, setChart] = useState<'timeline' | 'flow'>('timeline');
+  // Flow leads: a producing asset is judged on how it flowed, and the calendar
+  // record is the context behind that. Falls back to the timeline when no monthly
+  // series exists, which is the only case where Flow would be empty.
+  const [chart, setChart] = useState<'timeline' | 'flow'>('flow');
   // the monthly flow picture — field-level bars plus the per-well series the
   // active-well count is derived from. Only a field with a deep bundle has these;
   // everything else keeps the calendar timeline and never offers the toggle.
@@ -116,6 +123,7 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   const [horizons, setHorizons] = useState<HorizonOption[]>([]);
   const [horizonId, setHorizonId] = useState<string | null>(null);
   const [surface, setSurface] = useState<DigestedSurface | null>(null);
+  const [paths, setPaths] = useState<TrajectoryLine[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -168,11 +176,64 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
     (async () => {
       const assets = await listAssets(field.id).catch(() => []);
       if (!alive) return;
-      const surfs = assets.filter((a) => a.kind === 'surface');
-      setHorizons(surfs.map((a) => {
+      // Seabed is bathymetry, not structure. It is a real ingested surface and
+      // stays available in Data QC, but it carries no development meaning — you
+      // do not read a crest or a spill point off the sea floor — and its 83–2605 m
+      // range swamps the depth ramp the reservoir horizons share.
+      const surfs = assets.filter((a) => a.kind === 'surface'
+        && !/seabed|sea\s*floor|bathym/i.test(String(a.meta.name ?? a.fileName)));
+      const list = surfs.map((a) => {
         const name = String(a.meta.name ?? a.fileName);
         return { id: a.id, name, short: shortHorizon(name), asset: a };
-      }));
+      });
+      setHorizons(list);
+      // Open ON the structure rather than on an empty regional map. Selecting a
+      // field that HAS an interpreted horizon is already the request to see it,
+      // and the layer's fly-to then takes the camera down to the footprint.
+      // Top of the reservoir first when the names say which one that is.
+      const top = list.find((h) => /^top\b/i.test(h.short)) ?? list[0];
+      if (top) setHorizonId(top.id);
+    })().catch(() => undefined);
+    return () => { alive = false; };
+  }, [field.id]);
+
+  // ── wellbore paths over the structure ──────────────────────────────────────
+  // Same discipline as the horizons: the SURVEYS come out of the trajectory
+  // digests Data QC ingested, and the surface SLOT coordinates off the bundle's
+  // own well master. Both are already-landed data, not a second fetch pipeline.
+  // A field with neither simply gets no lines drawn.
+  useEffect(() => {
+    let alive = true;
+    setPaths([]);
+    (async () => {
+      const [assets, index] = await Promise.all([
+        listAssets(field.id).catch(() => []),
+        loadIndex().catch(() => null),
+      ]);
+      if (!alive) return;
+      const trajAssets = assets.filter((a) => a.kind === 'trajectory');
+      if (!trajAssets.length || !index?.wells?.length) return;
+      const surveys = (await Promise.all(trajAssets.map(async (a) => {
+        const rec = await readRecord<{ well?: string; stations?: Array<Record<string, number>> }>(a)
+          .catch(() => null);
+        const well = String(rec?.well ?? a.meta.well ?? '');
+        return rec?.stations?.length && well ? { well, stations: rec.stations } : null;
+      }))).filter((s): s is { well: string; stations: Array<Record<string, number>> } => !!s);
+      if (!alive) return;
+      // The bundle declares its CRS once, at the index level; parse the zone from
+      // it rather than assuming 31, for the same reason the surface layer does.
+      const zone = Number(String(index.crs ?? '').match(/UTM\s*(\d{1,2})/i)?.[1]) || 31;
+      const projected = buildWellPaths(
+        index.wells.map((w) => ({ name: String(w.name), x: w.x, y: w.y, role: w.role })),
+        surveys,
+      );
+      setPaths(projected.map((p) => ({
+        well: p.well, role: p.role,
+        path: p.points.map(([x, y]) => {
+          const g = ed50UtmToWgs84(x, y, zone);
+          return [g.lon, g.lat] as [number, number];
+        }),
+      })));
     })().catch(() => undefined);
     return () => { alive = false; };
   }, [field.id]);
@@ -282,7 +343,8 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
           )}
           <em>{reported(d?.onshoreOffshore)}</em></div>
         <KnowledgeMap field={field} context={context} fill onMapReady={setMap} />
-        <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId} />
+        <StructureLayer map={map} surface={surface} geo={surfaceGeo} visible={!!horizonId}
+          trajectories={horizonId ? paths : []} />
         {horizonId && zRange && (
           <div className="fds-ad-zkey">
             <span>{Math.round(zRange.zmin)}</span>
@@ -298,6 +360,7 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
       </div>
 
       {/* ── verdict strip ────────────────────────────────────────────────────── */}
+      <div className="fds-ad-right">
       <div className="fds-ad-verdicts">
         <button className="fds-verdict" onClick={() => life && setPop('lifecycle')}>
           <span><GaugeCircle size={10} />Maturity</span>
@@ -338,20 +401,55 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
         </button>
       </div>
 
+      {/* ── well inventory: the Exploration filter strip's counterpart ─────────
+          Exploration filters its petroleum-system chart by geologic era; a
+          producing asset filters by well ROLE. The chips ARE the well stock —
+          a development read needs the producer / injector split at a glance,
+          not behind a click. The availability matrix, which used to occupy an
+          entire row of the grid, is now the button on the right. */}
+      <div className="fds-ad-inv">
+        <GaugeCircle size={12} />
+        <b>Well inventory</b>
+        {bundle ? (
+          <>
+            {WELL_ROLES.map((r) => {
+              const n = bundle[r.key];
+              return (
+                <button key={r.key} className="fds-ad-chip" disabled={n === 0} title={r.title}>
+                  <i style={{ background: r.color }} />{r.label} <b>{n}</b>
+                </button>
+              );
+            })}
+            <button className="fds-ad-avail-btn" onClick={() => setPop('sources')}
+              title="Logs, trajectories, picks, surfaces and provenance for every wellbore">
+              <Layers3 size={11} />
+              Data availability · {bundle.wells} bores
+            </button>
+          </>
+        ) : (
+          <span className="fds-ad-avail-none">
+            No deep data bundle — catalogue tier only (identity, dates, status). Well stock,
+            logs, trajectories and surfaces require a field data package.
+          </span>
+        )}
+      </div>
+
+      <div className="fds-ad-panels">
+
       {/* ── the signature panel: development history, two readings ─────────────
-          TIMELINE is calendar time — when the asset was found, sanctioned, built.
-          FLOW is the monthly voidage picture with the active well count over it,
-          which is the RM chart re-aimed: it separates reservoir decline from lost
-          wells. Both answer "how has this asset performed", at different
-          resolutions, so they share one slot rather than competing for the grid. */}
+          FLOW is the monthly voidage picture with the active well count over it —
+          the RM chart re-aimed, separating reservoir decline from lost wells. It
+          leads because it is the denser, more decision-bearing read: a producing
+          asset is judged on how it FLOWED. TIMELINE is the calendar record behind
+          it — found, sanctioned, built — and sits second. */}
       <section className="fds-ad-timeline-panel">
         <div className="fds-ad-section-title">
           <Activity size={14} /><span>{chart === 'timeline' ? 'Development timeline' : 'Production & injection'}</span>
           <em>{chart === 'timeline' ? 'calendar years · produced volume MMBOE' : 'monthly reservoir volumes · active wells'}</em>
           {monthly.length > 0 && (
             <span className="fds-ad-seg">
-              <button className={chart === 'timeline' ? 'on' : ''} onClick={() => setChart('timeline')}>Timeline</button>
               <button className={chart === 'flow' ? 'on' : ''} onClick={() => setChart('flow')}>Flow</button>
+              <button className={chart === 'timeline' ? 'on' : ''} onClick={() => setChart('timeline')}>Timeline</button>
             </span>
           )}
           <button className={'fds-info' + (dossier?.gaps.length ? ' has-gaps' : '')}
@@ -386,38 +484,8 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
         )}
       </section>
 
-      {/* ── well inventory: the Exploration filter strip's counterpart ─────────
-          Exploration filters its petroleum-system chart by geologic era; a
-          producing asset filters by well ROLE. The chips ARE the well stock —
-          a development read needs the producer / injector split at a glance,
-          not behind a click. The availability matrix, which used to occupy this
-          entire row, is now the button on the right. */}
-      <div className="fds-ad-inv">
-        <GaugeCircle size={12} />
-        <b>Well inventory</b>
-        {bundle ? (
-          <>
-            {WELL_ROLES.map((r) => {
-              const n = bundle[r.key];
-              return (
-                <button key={r.key} className="fds-ad-chip" disabled={n === 0} title={r.title}>
-                  <i style={{ background: r.color }} />{r.label} <b>{n}</b>
-                </button>
-              );
-            })}
-            <button className="fds-ad-avail-btn" onClick={() => setPop('sources')}
-              title="Logs, trajectories, picks, surfaces and provenance for every wellbore">
-              <Layers3 size={11} />
-              Data availability · {bundle.wells} bores
-            </button>
-          </>
-        ) : (
-          <span className="fds-ad-avail-none">
-            No deep data bundle — catalogue tier only (identity, dates, status). Well stock,
-            logs, trajectories and surfaces require a field data package.
-          </span>
-        )}
-      </div>
+      </div>{/* .fds-ad-panels */}
+      </div>{/* .fds-ad-right */}
 
       {/* ── modals ───────────────────────────────────────────────────────────── */}
       {pop === 'lifecycle' && life && (
