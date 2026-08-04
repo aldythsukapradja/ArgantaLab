@@ -31,7 +31,7 @@
 // they are containers waiting for a delivery, never a fabricated node. While the
 // package is still digesting the tree says so rather than showing zeros, because a
 // zero drawn mid-load is a false statement about the delivery.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Box, ChevronRight, Columns3, Database, Drill, Eye, EyeOff, FolderTree, Gauge,
   Hexagon, Layers, Map as MapIcon, MapPin, Radio, Route, Spline, Waves,
@@ -190,6 +190,15 @@ export function InputTree({ stageId }: { stageId: string }) {
   const { ws, ready } = useWorkspace();
   const sceneFieldId = useScene((s) => s.fieldId);
 
+  /** Watchdog: a read that has not returned in 30 s is stuck, not slow. */
+  const [stalled, setStalled] = useState(false);
+  useEffect(() => {
+    setStalled(false);
+    if (ready || !sceneFieldId) return;
+    const t = setTimeout(() => setStalled(true), 30_000);
+    return () => clearTimeout(t);
+  }, [ready, sceneFieldId]);
+
   /**
    * Why the tree looks the way it does — reported, never left to be inferred from
    * a column of zeros. Four distinct states that a zero cannot tell apart:
@@ -205,6 +214,18 @@ export function InputTree({ stageId }: { stageId: string }) {
       };
     }
     if (!ready) {
+      // A spinner that never ends is the worst of both worlds: it looks like
+      // progress and reports nothing. If the read has not returned in half a
+      // minute it is not slow, it is stuck — almost always IndexedDB failing to
+      // open, which no amount of waiting fixes.
+      if (stalled) {
+        return {
+          label: 'stalled', tone: 'warn' as const,
+          hint: 'The asset store did not respond. IndexedDB is usually the cause.',
+          banner: 'The workspace store is not responding. Close any other tab running this app and reload; '
+            + 'if it persists, the browser may be blocking storage for this site (private window, or site data disabled).',
+        };
+      }
       return {
         label: 'reading…', tone: '' as const,
         hint: 'Reading the ingested asset store for this field.',
@@ -219,7 +240,7 @@ export function InputTree({ stageId }: { stageId: string }) {
       };
     }
     return { label: 'workspace', tone: '' as const, hint: `${ws.assets.length} ingested assets`, banner: null };
-  }, [sceneFieldId, ready, ws.assets.length]);
+  }, [sceneFieldId, ready, stalled, ws.assets.length]);
   // what the user has drawn on the Workspace canvas — authored, not delivered
   const drawn = useInterp((s) => s.features);
   // the tree is the Workspace's horizon control, so it needs the scene selection

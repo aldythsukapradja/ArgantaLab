@@ -24,7 +24,12 @@ let dbPromise: Promise<IDBDatabase> | null = null;
  *  — the Input tree sits on "reading…" with zeros beside every folder forever,
  *  which is precisely the false statement about the delivery this app is not
  *  supposed to make. A rejection is recoverable and legible; a hang is neither. */
-const OPEN_TIMEOUT_MS = 8000;
+// Generous on purpose. This is a LAST RESORT for a callback that is never coming,
+// not a latency budget: a cold profile opening a store that already holds ~100 MB
+// of digest blobs can legitimately take many seconds, and a tight limit here would
+// turn "slow" into "broken" — and because a failed open clears the cache to allow a
+// retry, a too-tight limit would also thrash, re-opening in a loop.
+const OPEN_TIMEOUT_MS = 30_000;
 
 function open(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
