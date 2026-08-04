@@ -16,7 +16,10 @@
 // than draping horizon ids that belong to somebody else's field.
 import { create } from 'zustand';
 
-export type SceneView = '2d' | '3d';
+/** 'xsec' renders the section the user traced with the map's section tool. The
+ *  trace itself is NOT scene state — it is a drawn interpretation and lives with
+ *  the rest of them in interpret.ts, so it survives a view change and a reload. */
+export type SceneView = '2d' | '3d' | 'xsec';
 
 /** Input-tree node ids are `${folder}:${id}` — see InputTree's `nodeId`. */
 export type Visibility = Record<string, boolean>;
@@ -32,6 +35,10 @@ interface SceneState {
   vis: Visibility;
   /** Selected Input-tree node, for the inspector and canvas highlight. */
   sel: string | null;
+  /** Bumped whenever the ingested asset set changes (a reference package finishes
+   *  digesting, a client file lands). Anything reading IndexedDB depends on it —
+   *  otherwise a surface list built before the package arrived stays empty forever. */
+  dataVersion: number;
 
   setField: (fieldId: string) => void;
   setHorizon: (id: string | null) => void;
@@ -41,6 +48,7 @@ interface SceneState {
   setZScale: (z: number) => void;
   toggleVis: (nodeId: string) => void;
   setSel: (nodeId: string | null) => void;
+  bumpData: () => void;
 }
 
 export const useScene = create<SceneState>((set) => ({
@@ -51,6 +59,7 @@ export const useScene = create<SceneState>((set) => ({
   zScale: 6,
   vis: {},
   sel: null,
+  dataVersion: 0,
 
   setField: (fieldId) => set((s) => (s.fieldId === fieldId ? s : {
     fieldId, horizonId: null, multiIds: [], vis: {}, sel: null,
@@ -64,6 +73,7 @@ export const useScene = create<SceneState>((set) => ({
   setZScale: (zScale) => set({ zScale }),
   toggleVis: (nodeId) => set((s) => ({ vis: { ...s.vis, [nodeId]: s.vis[nodeId] === false } })),
   setSel: (nodeId) => set((s) => ({ sel: s.sel === nodeId ? null : nodeId })),
+  bumpData: () => set((s) => ({ dataVersion: s.dataVersion + 1 })),
 }));
 
 /** Absent = visible. Keeps callers from repeating the `!== false` dance. */

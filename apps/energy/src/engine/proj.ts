@@ -113,6 +113,63 @@ export function ed50UtmToWgs84(easting: number, northing: number, zone = 31): { 
   return { lon: w.lon, lat: w.lat };
 }
 
+/** WGS84 lat/lon → ED50 lat/lon: the same 3-parameter shift, applied backwards. */
+export function wgs84ToEd50(latDeg: number, lonDeg: number, h = 0): { lat: number; lon: number } {
+  const p = toXyz(latDeg, lonDeg, h, WGS84);
+  return toGeodetic(p.x - ED50_TO_WGS84.dx, p.y - ED50_TO_WGS84.dy, p.z - ED50_TO_WGS84.dz, INTL_1924);
+}
+
+/**
+ * Geodetic → UTM (Transverse Mercator), the forward of `utmToGeodetic`.
+ *
+ * Needed because a section is TRACED on the map in lon/lat but has to be SAMPLED
+ * against grids that live in projected metres. Doing that comparison in degrees
+ * would stretch the section east-west by 1/cos(latitude) — at Volve's 58.4°N that
+ * is a 91% error in one axis, which would put a sample kilometres from where the
+ * user clicked.
+ */
+export function geodeticToUtm(
+  latDeg: number, lonDeg: number, zone = 31, el: Ellipsoid = INTL_1924,
+): { easting: number; northing: number } {
+  const { a, f } = el;
+  const k0 = 0.9996;
+  const e2 = 2 * f - f * f;
+  const ep2 = e2 / (1 - e2);
+  const lat = latDeg * DEG, lon = lonDeg * DEG;
+  const lon0 = ((zone - 1) * 6 - 180 + 3) * DEG;
+
+  const N = a / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+  const T = Math.tan(lat) ** 2;
+  const C = ep2 * Math.cos(lat) ** 2;
+  const A = Math.cos(lat) * (lon - lon0);
+
+  const M = a * (
+    (1 - e2 / 4 - (3 * e2 * e2) / 64 - (5 * e2 ** 3) / 256) * lat
+    - ((3 * e2) / 8 + (3 * e2 * e2) / 32 + (45 * e2 ** 3) / 1024) * Math.sin(2 * lat)
+    + ((15 * e2 * e2) / 256 + (45 * e2 ** 3) / 1024) * Math.sin(4 * lat)
+    - ((35 * e2 ** 3) / 3072) * Math.sin(6 * lat)
+  );
+
+  const easting = k0 * N * (
+    A + ((1 - T + C) * A ** 3) / 6
+    + ((5 - 18 * T + T * T + 72 * C - 58 * ep2) * A ** 5) / 120
+  ) + 500000;
+
+  let northing = k0 * (M + N * Math.tan(lat) * (
+    (A * A) / 2 + ((5 - T + 9 * C + 4 * C * C) * A ** 4) / 24
+    + ((61 - 58 * T + T * T + 600 * C - 330 * ep2) * A ** 6) / 720
+  ));
+  if (latDeg < 0) northing += 10_000_000;   // southern hemisphere false northing
+  return { easting, northing };
+}
+
+/** The whole chain in reverse: WGS84 lon/lat → an ED50/UTM grid coordinate. */
+export function wgs84ToEd50Utm(lon: number, lat: number, zone = 31): { x: number; y: number } {
+  const e = wgs84ToEd50(lat, lon);
+  const u = geodeticToUtm(e.lat, e.lon, zone, INTL_1924);
+  return { x: u.easting, y: u.northing };
+}
+
 /** Corner bounds of a regular grid, as WGS84 lon/lat.
  *  Returned SW→NE; a MapLibre image source wants its four corners explicitly, so
  *  all four are given rather than assuming the box stays axis-aligned after

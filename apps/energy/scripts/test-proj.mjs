@@ -19,6 +19,7 @@ const {
   utmToGeodetic, ed50ToWgs84, ed50UtmToWgs84, gridCornersWgs84, INTL_1924, WGS84,
 } = await import('../src/engine/proj.ts');
 
+
 console.log('\n=== ED50 / UTM 31N → WGS84 ===\n');
 
 // metres per degree at ~58N, for expressing errors on the ground
@@ -100,6 +101,40 @@ if (!existsSync(surf)) {
   const tilt = Math.abs(k.se[1] - k.sw[1]) * M_PER_DEG_LAT;
   check('the box is very nearly, but not exactly, axis-aligned after reprojection',
     tilt >= 0 && tilt < 200, `${tilt.toFixed(0)} m north-south drift across the width`);
+}
+
+// ── forward projection (added for cross-sections) ─────────────────────────────
+// A section is traced in lon/lat and sampled against grids in projected metres,
+// so the round trip has to close tightly or every sample lands somewhere else.
+{
+  const { wgs84ToEd50Utm, ed50UtmToWgs84, wgs84ToEd50, ed50ToWgs84 } = await import('../src/engine/proj.ts');
+  let worst = 0;
+  for (const [e0, n0] of [[432108, 6475807], [439358, 6481407], [435000, 6478000], [430994, 6475408]]) {
+    const g = ed50UtmToWgs84(e0, n0, 31);
+    const back = wgs84ToEd50Utm(g.lon, g.lat, 31);
+    worst = Math.max(worst, Math.hypot(back.x - e0, back.y - n0));
+  }
+  check('UTM round trip closes to well under a metre across the Volve grid',
+    worst < 0.05, `${worst.toFixed(4)} m`);
+
+  // The Helmert translation is exactly invertible in geocentric XYZ, but the
+  // return to geodetic uses Bowring's CLOSED FORM, which is an approximation.
+  // So the tolerance is stated in millimetres on the ground rather than in
+  // degrees — the honest unit for a positioning error, and one that stays
+  // meaningful at any latitude.
+  const d = wgs84ToEd50(58.4385, 1.886);
+  const r = ed50ToWgs84(d.lat, d.lon);
+  const mmLat = Math.abs(r.lat - 58.4385) * 111_320 * 1000;
+  const mmLon = Math.abs(r.lon - 1.886) * 111_320 * Math.cos(58.4385 * Math.PI / 180) * 1000;
+  check('the datum shift inverts to sub-millimetre', Math.hypot(mmLat, mmLon) < 1,
+    `${Math.hypot(mmLat, mmLon).toFixed(4)} mm`);
+
+  // one degree of longitude is ~0.52 of a degree of latitude on the ground here —
+  // the error a section would carry if it were sampled in degrees
+  const p0 = wgs84ToEd50Utm(1.88, 58.44, 31), pE = wgs84ToEd50Utm(1.89, 58.44, 31);
+  const pN = wgs84ToEd50Utm(1.88, 58.45, 31);
+  const ratio = (pE.x - p0.x) / (pN.y - p0.y);
+  check('and the projection really does squeeze longitude', ratio > 0.4 && ratio < 0.6, ratio.toFixed(3));
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
