@@ -199,7 +199,22 @@ export function InputTree({ stageId }: { stageId: string }) {
 
   const tg = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   const live = STAGE_FOLDERS[stageId] ?? [];
-  const dimmed = (folder: string) => live.length > 0 && !live.includes(folder);
+  /**
+   * Dimming says "this stage does not ACT on that data". It must never reach a
+   * VIEW control.
+   *
+   * Every Workspace stage renders the same canvas, and since the canvas lost its
+   * own horizon row this tree is the only way to drape a surface. Dimming does
+   * not merely grey the row — `Row` returns early on `dim`, so the click is dead
+   * — which meant that on the five stages that do not list `surfaces`
+   * (petrophysics, fluids, history, forecast, value) the map could not be
+   * re-draped at all, and the folder looked empty. Contacts are drawn on every
+   * canvas for the same reason, so they are exempt too.
+   */
+  const VIEW_FOLDERS = ['surfaces', 'contacts'];
+  const dimmed = (folder: string) => live.length > 0
+    && !live.includes(folder)
+    && !VIEW_FOLDERS.includes(folder);
 
   const buckets = useMemo(() => {
     const rest = new Set(ws.wellheads);
