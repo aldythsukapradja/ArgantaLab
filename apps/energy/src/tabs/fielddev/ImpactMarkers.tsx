@@ -141,12 +141,17 @@ function hoverCard(m: ImpactMarker, unit: string): string {
 function labelElement(m: ImpactMarker, unit: string): HTMLElement {
   const el = document.createElement('div');
   el.className = `fds-imp is-${m.role}`;
-  el.innerHTML = `<span class="fds-imp-name tone-${m.role}">${esc(m.well)}</span>`;
   el.setAttribute('aria-label', `${m.well}, ${ROLE_WORD[m.role]}`);
+  const chip = document.createElement('span');
+  chip.className = `fds-imp-name tone-${m.role}`;
+  chip.textContent = m.well;
+  // the card lives INSIDE the chip: the marker root must carry no `position`
+  // (MapLibre owns that), so the chip is the popup's containing block
   const card = document.createElement('div');
   card.className = 'fds-imp-pop';
   card.innerHTML = hoverCard(m, unit);
-  el.appendChild(card);
+  chip.appendChild(card);
+  el.appendChild(chip);
   return el;
 }
 

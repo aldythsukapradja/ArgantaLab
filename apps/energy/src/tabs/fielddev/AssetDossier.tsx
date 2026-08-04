@@ -42,6 +42,7 @@ import { listAssets } from '../../dataqc/db';
 import { readSurfaceGrid } from '../../dataqc/readDigest';
 import type { DigestedSurface, IngestedAsset } from '../../dataqc/types';
 import { StructureLayer, surfaceRange, RAMP_CSS } from './StructureLayer';
+import { useScene } from './scene';
 import { readRecord } from '../../dataqc/readDigest';
 import { wellKey, type PathStation, type PathWellhead } from './well-paths';
 import { ed50UtmToWgs84 } from '../../engine/proj';
@@ -157,7 +158,12 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // field, and the decoded grid for whichever one is selected
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [horizons, setHorizons] = useState<HorizonOption[]>([]);
-  const [horizonId, setHorizonId] = useState<string | null>(null);
+  // What the user PICKED lives in the shared scene, not here — the Workspace's Data
+  // Explorer renders the same selection, so drape a horizon in either surface and it
+  // is draped in both. What is DERIVED from the pick (decoded grids, geometry) stays
+  // local; see scene.ts.
+  const horizonId = useScene((s) => s.horizonId);
+  const setHorizonId = useScene((s) => s.setHorizon);
   const [surface, setSurface] = useState<DigestedSurface | null>(null);
   // everything the impact points are built from, loaded ONCE per field and then
   // re-cut per horizon in a memo — the picks file and the surveys do not change
@@ -168,9 +174,14 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // 2D is the map; 3D is the section. The horizon selector is SINGLE-select in 2D
   // (a map shows one surface) and MULTI-select in 3D (one surface in 3D is a map
   // with extra steps), so the two views keep separate selections.
-  const [view, setView] = useState<'2d' | '3d'>('2d');
-  const [multiIds, setMultiIds] = useState<string[]>([]);
-  const [zScale, setZScale] = useState(6);
+  const view = useScene((s) => s.view);
+  const setView = useScene((s) => s.setView);
+  const multiIds = useScene((s) => s.multiIds);
+  const setMultiIds = useScene((s) => s.setMulti);
+  const zScale = useScene((s) => s.zScale);
+  const setZScale = useScene((s) => s.setZScale);
+  const toggleMulti = useScene((s) => s.toggleMulti);
+  const setSceneField = useScene((s) => s.setField);
   const [grids3d, setGrids3d] = useState<Map<string, DigestedSurface>>(new Map());
 
   useEffect(() => {
@@ -222,7 +233,7 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // stays regional rather than showing an empty control.
   useEffect(() => {
     let alive = true;
-    setHorizons([]); setHorizonId(null); setSurface(null); setOrderNoteText('');
+    setHorizons([]); setSurface(null); setOrderNoteText('');
     (async () => {
       const [assets, kb] = await Promise.all([
         listAssets(field.id).catch(() => []),
@@ -261,7 +272,12 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
       // and the layer's fly-to then takes the camera down to the footprint.
       // The list is now ordered, so the first entry is the OLDEST horizon — a
       // defensible place to start reading a section from.
-      if (list[0]) setHorizonId(list[0].id);
+      //
+      // Only when the shared scene has nothing valid selected. Coming back from the
+      // Data Explorer with a horizon draped, this must NOT snap the user back to the
+      // oldest one — that would make the mirror one-directional.
+      const held = useScene.getState().horizonId;
+      if (!held || !list.some((h) => h.id === held)) setHorizonId(list[0]?.id ?? null);
     })().catch(() => undefined);
     return () => { alive = false; };
   }, [field.id]);
@@ -420,9 +436,12 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
   // so the toggle is continuous rather than dumping the user on an empty scene
   useEffect(() => {
     if (view === '3d' && !multiIds.length && horizonId) setMultiIds([horizonId]);
-  }, [view, multiIds.length, horizonId]);
+  }, [view, multiIds.length, horizonId, setMultiIds]);
 
-  useEffect(() => { setMultiIds([]); setGrids3d(new Map()); }, [field.id]);
+  // Re-scoping the suite resets the shared scene (scene.setField no-ops on the same
+  // field, so this cannot clobber a selection made in the Data Explorer). The decoded
+  // grids are local, so they are dropped here.
+  useEffect(() => { setSceneField(field.id); setGrids3d(new Map()); }, [field.id, setSceneField]);
 
   const surfaces3d = useMemo<Structure3DSurface[]>(() => multiIds
     .map((id) => {
@@ -575,7 +594,7 @@ export function AssetDossier({ field }: { field: SearchEntry }) {
                 return (
                   <button key={h.id} className={on ? 'on' : ''}
                     onClick={() => (view === '3d'
-                      ? setMultiIds((prev) => (prev.includes(h.id) ? prev.filter((x) => x !== h.id) : [...prev, h.id]))
+                      ? toggleMulti(h.id)
                       : setHorizonId(h.id === horizonId ? null : h.id))}
                     title={`${h.name}${h.ageMa != null ? ` · ${h.ageMa} Ma` : ''} — ${
                       view === '3d' ? 'add to the 3D scene' : 'drape over the map'}`}>{h.short}</button>

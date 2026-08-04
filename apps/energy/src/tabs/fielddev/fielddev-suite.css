@@ -268,16 +268,25 @@ html[data-ui="cosmo"] .fds-ad-maplabel .fds-ad-mapnote{color:var(--ink2);max-wid
    container, which is inside the cosmo tree, but the popup is positioned relative
    to the marker and the selector needs to hold wherever MapLibre moves them. */
 /* The SYMBOL is a native map layer (see ImpactMarkers). Only the name chip is
-   HTML, so this block styles the chip and its hover card — nothing positional. */
-.fds-imp{position:relative;display:flex;align-items:center;cursor:default;line-height:1}
-.fds-imp-name{font:8.5px var(--mono,ui-monospace);letter-spacing:.02em;padding:1.5px 4px;border-radius:3px;
-  white-space:nowrap;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+   HTML, so this block styles the chip and its hover card — nothing positional.
+
+   NEVER give `.fds-imp` a `position`. MapLibre positions a marker through
+   `.maplibregl-marker{position:absolute}`, which has the SAME specificity as a
+   single class here and loses to it because this stylesheet is imported later.
+   A `position:relative` on the root drops every marker back into normal document
+   flow — so they stack down the page in DOM order and are THEN translated by
+   their map position, which reads as "horizontally right, vertically drifting".
+   The popup's containing block is the name chip instead. */
+.fds-imp{display:flex;align-items:center;cursor:default;line-height:1}
+.fds-imp-name{position:relative;font:8.5px var(--mono,ui-monospace);letter-spacing:.02em;
+  padding:1.5px 4px;border-radius:3px;white-space:nowrap;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 /* chip colour follows the WELL TYPE, the same rule the symbol uses */
 .fds-imp-name.tone-producer{background:#10b981}
 .fds-imp-name.tone-injector{background:#2f9bff}
 .fds-imp-name.tone-other{background:rgba(72,84,98,.92);color:#dfe6ee}
 
-.fds-imp-pop{position:absolute;left:16px;top:14px;z-index:20;display:none;pointer-events:none}
+/* anchored to the chip, which is now the containing block */
+.fds-imp-pop{position:absolute;left:0;top:14px;z-index:20;display:none;pointer-events:none}
 .fds-imp:hover{z-index:30}
 .fds-imp:hover .fds-imp-pop{display:block}
 .fds-imp-card{min-width:216px;padding:8px 9px;border:1px solid rgba(140,160,180,.35);border-radius:8px;

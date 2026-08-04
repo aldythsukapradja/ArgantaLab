@@ -150,8 +150,20 @@ function buildStyle(dark: boolean, theme: 'satellite' | 'openmap', mode: '2d' | 
       { id: 'province-line', type: 'line', source: 'provinces', paint: { 'line-color': minimal ? '#ffffff' : '#39e1cf', 'line-opacity': minimal ? 0.85 : 0.9, 'line-width': minimal ? 1.6 : 1.2 } },
       { id: 'au-fill', type: 'fill', source: 'aus', minzoom: 3, layout: { visibility: hidden }, paint: { 'fill-color': '#38bdf8', 'fill-opacity': 0.07 } },
       { id: 'au-line', type: 'line', source: 'aus', minzoom: 3, layout: { visibility: hidden }, paint: { 'line-color': '#7dd3fc', 'line-opacity': 0.5, 'line-width': 1 } },
+      // The FILL is what made three stacked translucent layers read as white haze,
+      // so minimal drops it. The OUTLINE is not haze — it is the neighbouring
+      // field boundaries, which is exactly the context a single-field view wants:
+      // in a graben like the Viking there are dozens of them around the subject,
+      // and a field floating on bare imagery hides who its neighbours are.
       { id: 'osdu-poly-fill', type: 'fill', source: 'osdu-polygons', minzoom: 3, layout: { visibility: hidden }, paint: { 'fill-color': '#fbbf24', 'fill-opacity': 0.16 } },
-      { id: 'osdu-poly-line', type: 'line', source: 'osdu-polygons', minzoom: 3, layout: { visibility: hidden }, paint: { 'line-color': '#fde68a', 'line-opacity': 0.75, 'line-width': 1 } },
+      {
+        id: 'osdu-poly-line', type: 'line', source: 'osdu-polygons', minzoom: minimal ? 5 : 3,
+        paint: {
+          'line-color': minimal ? '#f5c451' : '#fde68a',
+          'line-opacity': minimal ? 0.72 : 0.75,
+          'line-width': minimal ? ['interpolate', ['linear'], ['zoom'], 5, 0.6, 12, 1.6] : 1,
+        },
+      },
       // §9 scale-aware: heatmap (global) → clusters (regional) → field points (close)
       {
         id: 'osdu-heat', type: 'heatmap', source: 'osdu-points', maxzoom: 5, layout: { visibility: hidden },
