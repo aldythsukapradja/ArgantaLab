@@ -241,6 +241,44 @@ type Msg = {
    *  stored as prose, so its figures can never go stale in localStorage. */
   welcome?: boolean;
 };
+/** Fold the recent conversation into the prompt for a Frontier mission.
+ *
+ *  WHY THIS EXISTS: `startMission` sends a prompt and nothing else -- no thread
+ *  id, no history -- so the bridge server spawns a FRESH agent run every time.
+ *  The agent was not forgetting or drifting; it was never told what came before,
+ *  which is why it would answer a follow-up with "this is the start of our
+ *  conversation".
+ *
+ *  This is the honest stopgap, not the real fix. Proper continuity is a resumed
+ *  session on the server (the Claude Agent SDK supports resume by id), which
+ *  lives outside this repo. Re-sending history costs tokens on every turn and
+ *  is trimmed hard for that reason -- so it is labelled as a transcript rather
+ *  than dressed up as the agent's own memory.
+ */
+const HISTORY_TURNS = 8;
+const HISTORY_CHARS = 6000;
+
+function withHistory(msgs: Msg[], text: string): string {
+  const prior = msgs
+    .filter((m) => !m.welcome && !m.bridge && (m.text || '').trim())
+    .slice(-HISTORY_TURNS)
+    .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${(m.text || '').trim()}`);
+  if (!prior.length) return text;
+
+  // Newest turns matter most, so drop from the FRONT when trimming.
+  let body = prior.join('\n\n');
+  while (body.length > HISTORY_CHARS && prior.length > 1) {
+    prior.shift();
+    body = prior.join('\n\n');
+  }
+  return [
+    'Earlier in this conversation (transcript, for context -- do not greet the user as if this were a new conversation):',
+    body,
+    '---',
+    `Current message: ${text}`,
+  ].join('\n\n');
+}
+
 type StreamFlags = { wellPick?: LiveIntent; tourWellPick?: boolean; assistWellPick?: boolean; confirmPick?: boolean };
 // The welcome carries no prose at all — see AgentWelcome.tsx, which reads its
 // figures out of the gazetteer that is loaded right now. Persisting it as text
@@ -595,7 +633,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     const cfg = ENGINE_MODELS[engine];
     const optionLabel = (cfg.options.find((o) => o.id === model) || cfg.options[0]).label;
     runModelRef.current = `${cfg.capsulePrefix} ${optionLabel}`;
-    bridge.startMission(text, {
+    bridge.startMission(withHistory(msgs, text), {
       engine, model: model || undefined,
       missionId: `energy_${Date.now().toString(36)}_${bridgeMissionsRef.current}`,
     });
