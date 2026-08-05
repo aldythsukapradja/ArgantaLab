@@ -105,18 +105,27 @@ ok('matrix densities are the standard three',
 
 // ── saturation height / Cuddy ────────────────────────────────────────────────
 {
-  // BVW = 0.05·H^-0.5 exactly; with PHIE 0.25 that is Sw = BVW/phi
-  const H = [10, 40, 90, 160];
+  // BVW = 0.05·H^-0.5 exactly; with PHIE 0.25 that is Sw = BVW/phi.
+  // 24 samples, because the fit is now fluid-model.fitCuddy and it requires 20 —
+  // the same guard the initialization uses, so both tabs quote one constant.
+  const H = Array.from({ length: 24 }, (_, i) => 10 + i * 8);
   const depth = H.map((h) => 3000 - h);            // contact at 3000 m
   const phie = H.map(() => 0.25);
   const sw = H.map((h) => (0.05 * h ** -0.5) / 0.25);
   const r = saturationHeight([bore('A', { SWE: sw, PHIE: phie }, depth)], 3000);
-  ok('every sample above the contact is kept', r.points.length === 4);
+  ok('every sample above the contact is kept', r.points.length === H.length);
   ok('height is measured above the free water level', r.points[0].height === 10);
   ok('BVW is Sw × PHIE', near(r.points[0].bvw, 0.05 * 10 ** -0.5, 1e-9));
   ok('Cuddy exponent recovered', near(r.cuddy.b, -0.5, 1e-6), String(r.cuddy?.b));
   ok('Cuddy coefficient recovered', near(r.cuddy.a, 0.05, 1e-6), String(r.cuddy?.a));
   ok('and the fit predicts back', near(cuddyBvw(r.cuddy, 40), 0.05 * 40 ** -0.5, 1e-9));
+  // inherited from the shared fitter, and the reason to share it
+  ok('the fit reports the height range it was fitted over',
+    r.cuddy.hMin === 10 && r.cuddy.hMax === H[H.length - 1]);
+  ok('too few samples yield NO fit rather than a fitted-looking pair',
+    saturationHeight([bore('B', {
+      SWE: sw.slice(0, 6), PHIE: phie.slice(0, 6),
+    }, depth.slice(0, 6))], 3000).cuddy === null);
 }
 {
   // samples BELOW the contact are not a column and must not enter the fit

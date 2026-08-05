@@ -24,6 +24,7 @@
  *  picture, not evidence. */
 import { PHYSICAL_RANGE, PHIT_MAX } from './petro-compute.ts';
 import { PHI_K_SCREENING, fitPhiK } from '../../engine/perm.ts';
+import { fitCuddy, type CuddyShf } from './fluid-model.ts';
 
 export interface XPoint { well: string; x: number; y: number; z?: number; depth?: number }
 
@@ -303,29 +304,35 @@ export function permeability(bores: BoreCurves[], kCurve = 'PERM', phieCurve = '
 
 export interface ShfPoint extends XPoint { height: number; sw: number; bvw: number }
 
-export interface CuddyFit {
-  /** BVW = a · H^b, Cuddy's free-water-level-referenced bulk-volume-water form */
-  a: number; b: number; r2: number; n: number;
-}
-
 /**
  * Saturation–height, in both the classic Sw-vs-H view and Cuddy's.
  *
- * Cuddy's FOIL (function of irreducible logs) fits BULK VOLUME WATER against
- * height rather than Sw, because BVW collapses the porosity dependence that makes
- * an Sw-vs-H cloud fan out — which is precisely why it is used when rock typing
- * is thin. Both are returned; the caller shows whichever the reader asked for.
+ * RECONCILED, not reimplemented. The fit itself is `fluid-model.fitCuddy` — the
+ * same function the Fluids & Rock initialization uses to build the equilibration
+ * — so the Analytics card and the dynamic model can never quote different
+ * saturation-height constants for one field. This module only assembles the
+ * samples and says whether the delivery can support them.
+ *
+ * That inheritance also brings the stricter guard: fitCuddy needs 20 surviving
+ * samples, where a bare least-squares would happily "fit" three points through
+ * log noise and report r²≈1. And it returns the height RANGE it was fitted over,
+ * which is what lets a caller refuse to extrapolate above the highest sample.
+ *
+ * Cuddy's FOIL fits BULK VOLUME WATER against height rather than Sw, because BVW
+ * collapses the porosity dependence that makes an Sw-vs-H cloud fan out — which
+ * is exactly why it is reached for when rock typing is thin, as it is here.
  *
  * @param contactDepth free water level, m TVDSS positive down
  */
 export function saturationHeight(
   bores: BoreCurves[], contactDepth: number, swCurve = 'SWE', phieCurve = 'PHIE',
-): { points: ShfPoint[]; cuddy: CuddyFit | null; availability: Availability } {
+): { points: ShfPoint[]; cuddy: CuddyShf | null; availability: Availability } {
   const avail = availability(bores, [swCurve, phieCurve]);
   // Height above a contact is a TRUE VERTICAL question. A bore whose depths are
   // measured depth is refused outright rather than quietly producing nothing.
-  const mdOnly = bores.filter((b) => b.depth && b.depthKind !== 'tvdss');
-  if (!avail.blocked && mdOnly.length === bores.filter((b) => b.depth).length && mdOnly.length > 0) {
+  const withDepth = bores.filter((b) => b.depth);
+  const mdOnly = withDepth.filter((b) => b.depthKind !== 'tvdss');
+  if (!avail.blocked && withDepth.length > 0 && mdOnly.length === withDepth.length) {
     return {
       points: [],
       cuddy: null,
@@ -336,6 +343,7 @@ export function saturationHeight(
       },
     };
   }
+
   const points: ShfPoint[] = [];
   if (!avail.blocked && Number.isFinite(contactDepth)) {
     for (const b of bores) {
@@ -345,23 +353,22 @@ export function saturationHeight(
         if (!finite(d)) continue;
         const height = contactDepth - Math.abs(d);      // above the contact ⇒ positive
         if (height <= 0) continue;                      // below the FWL is not a column
-        const [sw, phi] = r.v;          // unit-resolved and screened by rows()
+        const [sw, phi] = r.v;                          // unit-resolved and screened by rows()
         if (!(sw > 0 && sw <= 1) || !(phi > 0)) continue;
         points.push({ well: b.well, x: height, y: sw, height, sw, bvw: sw * phi, depth: Math.abs(d) });
       }
     }
   }
-  // log(BVW) = log(a) + b·log(H)
-  const fit = linreg(points.filter((p) => p.bvw > 0).map((p) => [Math.log10(p.height), Math.log10(p.bvw)] as [number, number]));
+
   return {
     points,
-    cuddy: fit ? { a: 10 ** fit.b, b: fit.a, r2: fit.r2, n: points.length } : null,
+    cuddy: fitCuddy(points.map((p) => ({ h: p.height, sw: p.sw, phi: p.bvw / p.sw }))),
     availability: avail,
   };
 }
 
-/** BVW predicted by a Cuddy fit at a given height above the free water level. */
-export const cuddyBvw = (fit: CuddyFit, height: number) => fit.a * height ** fit.b;
+/** BVW predicted by the shared Cuddy fit at a height above the free water level. */
+export const cuddyBvw = (fit: { a: number; b: number }, height: number) => fit.a * height ** fit.b;
 
 // ── shared ───────────────────────────────────────────────────────────────────
 
