@@ -31,6 +31,8 @@ import { useWorkspace, commonCurveTypes, commonTops, type Workspace } from './wo
 import { PETRO_SCHEMATICS } from './petro-schematics';
 import { PetroLogBench } from './PetroLogBench';
 import { PetroZoneStrip } from './PetroZoneStrip';
+import { PetroCrossplot2D, type Template } from './PetroCrossplot2D';
+import { usePetroCloud } from './petro-cloud';
 import { PetroParamsRail } from './PetroParamsRail';
 import { usePetroWell } from './petro-well';
 import { DEFAULT_PARAMS, resolvePublishedArchie, type PetroParams } from './petro-compute';
@@ -178,15 +180,6 @@ const ANALYTICS_REGIONS: RegionSpec[] = [
     component: 'PetroCrossplot3D',
     data: (_ws, c) => `${c.samples.toLocaleString('en-US')} points · GPU-drawn`,
   },
-  {
-    area: 'foot', step: 'P3', icon: Database, schematic: 'table',
-    title: 'Sample table — the shared primitive',
-    blurb: 'One flattened array — { well, md, tvdss, zone, …curves } per depth sample — built once from the workspace and filtered by well / zone / net flag. Every plot above is a projection of it, so brushing anywhere selects rows here and every other view reflects it. One selection, many pictures.',
-    library: 'plain TypedArrays + a Zustand selection store',
-    component: 'sample-table.ts',
-    data: (ws, c) => `${c.wells.length} bores × ${ws.curveTypes.length} curve types → ~${c.samples.toLocaleString('en-US')} rows`,
-    caveat: 'Built once per (field, well-set). Rebuilding it per plot is how two charts start disagreeing.',
-  },
 ];
 
 const ZONATION_REGIONS: RegionSpec[] = [
@@ -267,6 +260,16 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
   // The parameter set is the deliverable — it lives above every pane, so switching
   // from the bench to a crossplot never silently reverts an interpretation.
   const [params, setParams] = useState<PetroParams>(DEFAULT_PARAMS);
+  const [template, setTemplate] = useState<Template>('denneu');
+  // Decoded only while Analytics is showing: a 24-bore log decode is not
+  // something to pay for on a pane that does not plot it.
+  const cloud = usePetroCloud(ws, pane === 'analytics');
+  /** the delivery's own free-water level, for the saturation-height template */
+  const contactDepth = useMemo(() => {
+    const c = ws.contacts.find((x) => /owc|gwc|goc/i.test(String(x.kind)));
+    const d = Number(c?.tvdss);
+    return Number.isFinite(d) ? Math.abs(d) : null;
+  }, [ws.contacts]);
   const [boreName, setBoreName] = useState<string | null>(null);
 
   // START FROM WHAT THE DELIVERY PUBLISHES, not from the textbook.
@@ -385,7 +388,25 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
             </section>
           </>
         ) : (
-          regions.map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)
+          pane === 'analytics' ? (
+            <>
+              {/* The 2D plot is REAL — it reads the ingested logs through
+                  petro-cloud and petro-xplot. The 3D card beside it is still the
+                  blueprint region, and is left saying so rather than dressed up
+                  to match. */}
+              <section className="pps-region live" style={{ gridArea: 'main' }}>
+                <PetroCrossplot2D
+                  bores={cloud.bores}
+                  contactDepth={contactDepth}
+                  archie={{ a: params.a, m: params.m, n: params.n, rw: params.rw }}
+                  template={template}
+                  onTemplate={setTemplate}
+                />
+              </section>
+              {regions.filter((r) => r.area === 'aside')
+                .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
+            </>
+          ) : regions.map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)
         )}
         <PetroParamsRail ws={ws} well={well} params={params} onChange={setParams} />
       </div>

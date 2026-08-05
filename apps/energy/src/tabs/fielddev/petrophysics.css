@@ -44,9 +44,12 @@ html[data-ui="cosmo"] .pps-body.pane-well{grid-template-columns:minmax(0,1fr) 30
 /* Correlation: the panel takes almost everything; the picker is a strip */
 html[data-ui="cosmo"] .pps-body.pane-correlation{grid-template-columns:minmax(0,1fr) 260px 262px}
 /* Analytics: two plots over the shared table that feeds them */
-html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr) 262px;
-  grid-template-rows:minmax(210px,1fr) minmax(190px,.72fr);
-  grid-template-areas:"main aside rail" "foot foot rail"}
+/* 2D and 3D at 50/50, one row. The sample table that used to occupy a second
+   row is gone: it was a view of the primitive every plot above is already a
+   projection of, and it was taking a third of the height to say so. */
+html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 262px;
+  grid-template-rows:minmax(230px,1fr);
+  grid-template-areas:"main aside rail"}
 /* Zonation: matrix wide, calibration beside it */
 html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) 330px 262px}
 
@@ -113,6 +116,40 @@ html[data-ui="cosmo"] .pps-foot em{font:8px var(--mono);font-style:normal;color:
   html[data-ui="cosmo"] .pps-body.pane-well,
   html[data-ui="cosmo"] .pps-body.pane-correlation,
   html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) minmax(0,.7fr);grid-template-areas:"main aside" "rail rail"}
-  html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside" "foot foot" "rail rail"}
+  html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside" "rail rail"}
   html[data-ui="cosmo"] .pps-rail{min-height:280px}
 }
+
+/* ── PetroCrossplot2D — the real analytics plot ─────────────────────────────── */
+/* Canvas cloud + SVG overlay: 170k points is past what SVG can carry, but the
+   template lines and axes are what a reader MEASURES against, so those stay
+   vector. */
+html[data-ui="cosmo"] .ppx{position:relative;display:flex;flex-direction:column;height:100%;min-height:0}
+html[data-ui="cosmo"] .ppx-tabs{display:flex;align-items:center;gap:3px;flex:0 0 auto;padding:5px 8px;
+  border-bottom:1px solid var(--line2);flex-wrap:wrap}
+html[data-ui="cosmo"] .ppx-tabs button{padding:2.5px 7px;border:1px solid var(--line2);border-radius:5px;
+  background:transparent;color:var(--ink3);font:8px var(--mono);letter-spacing:.03em;cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .ppx-tabs button:hover{background:var(--panel2);color:var(--ink)}
+html[data-ui="cosmo"] .ppx-tabs button.on{background:var(--panel3);color:var(--ink);border-color:var(--line)}
+html[data-ui="cosmo"] .ppx-tabs em{margin-left:auto;font-style:normal;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .ppx-plot{position:relative;flex:1;min-height:0}
+html[data-ui="cosmo"] .ppx-plot canvas{display:block}
+html[data-ui="cosmo"] .ppx-ylab{position:absolute;left:2px;top:50%;transform:translateY(-50%) rotate(-90deg);
+  transform-origin:center;font:7.5px var(--mono);color:var(--ink3);white-space:nowrap}
+html[data-ui="cosmo"] .ppx-xlab{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
+  font:7.5px var(--mono);color:var(--ink3)}
+/* A template the delivery cannot support states WHY, where the cloud would be.
+   An empty plot area is indistinguishable from a bug. */
+html[data-ui="cosmo"] .ppx-blocked{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;
+  gap:5px;padding:18px 22px;text-align:center}
+html[data-ui="cosmo"] .ppx-blocked b{font-size:10px;color:var(--orange,#f59e0b)}
+html[data-ui="cosmo"] .ppx-blocked span{font:8.5px var(--mono);color:var(--ink2);line-height:1.5}
+html[data-ui="cosmo"] .ppx-blocked .ppx-needs{color:var(--ink3)}
+html[data-ui="cosmo"] .ppx-key{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+  padding:5px 8px;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .ppx-key span{display:flex;align-items:center;gap:3px;font:7px var(--mono);
+  color:var(--ink3);cursor:default}
+html[data-ui="cosmo"] .ppx-key span.on{color:var(--ink)}
+html[data-ui="cosmo"] .ppx-key i{width:7px;height:7px;border-radius:2px}
+html[data-ui="cosmo"] .ppx-key em{font-style:normal;font:7px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .ppx-key .ppx-note{flex-basis:100%;color:var(--ink2);line-height:1.4}
