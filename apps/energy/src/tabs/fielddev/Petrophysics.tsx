@@ -33,6 +33,7 @@ import { PetroLogBench } from './PetroLogBench';
 import { PetroZoneStrip } from './PetroZoneStrip';
 import { PetroCrossplot2D, type Template } from './PetroCrossplot2D';
 import { usePetroCloud } from './petro-cloud';
+import { PetroZonationMatrix } from './PetroZonationMatrix';
 import { PetroParamsRail } from './PetroParamsRail';
 import { usePetroWell } from './petro-well';
 import { DEFAULT_PARAMS, resolvePublishedArchie, type PetroParams } from './petro-compute';
@@ -406,9 +407,25 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
               {regions.filter((r) => r.area === 'aside')
                 .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
             </>
+          ) : pane === 'zonation' ? (
+            <>
+              {/* The matrix is REAL — useFieldZones runs the current parameter set
+                  over every logged bore. The calibration report beside it is still
+                  the blueprint region and says so. */}
+              <PetroZonationMatrix ws={ws} params={params} />
+              {regions.filter((r) => r.area === 'aside')
+                .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
+            </>
           ) : regions.map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)
         )}
-        <PetroParamsRail ws={ws} well={well} params={params} onChange={setParams} />
+        {/* The rail edits the INTERPRETATION parameters — Archie, endpoints,
+            cutoffs. Only the panes that recompute an interpretation can act on
+            them: Single Well runs it, Correlation displays the same curves across
+            wells. Analytics reads finished curves and Zonation reads finished
+            zones, so a rail there is a control that changes nothing you are
+            looking at, which is worse than absent. */}
+        {(pane === 'well' || pane === 'correlation')
+          && <PetroParamsRail ws={ws} well={well} params={params} onChange={setParams} />}
       </div>
 
       <div className="pps-foot">

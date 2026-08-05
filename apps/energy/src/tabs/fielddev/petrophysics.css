@@ -47,11 +47,14 @@ html[data-ui="cosmo"] .pps-body.pane-correlation{grid-template-columns:minmax(0,
 /* 2D and 3D at 50/50, one row. The sample table that used to occupy a second
    row is gone: it was a view of the primitive every plot above is already a
    projection of, and it was taking a third of the height to say so. */
-html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 262px;
+/* No parameter rail on Analytics or Zonation — neither recomputes an
+   interpretation, so the column is reclaimed rather than left empty. */
+html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   grid-template-rows:minmax(230px,1fr);
-  grid-template-areas:"main aside rail"}
+  grid-template-areas:"main aside"}
 /* Zonation: matrix wide, calibration beside it */
-html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) 330px 262px}
+html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) 340px;
+  grid-template-areas:"main aside"}
 
 /* ── a region ────────────────────────────────────────────────────────────── */
 html[data-ui="cosmo"] .pps-region{display:flex;min-width:0;min-height:0;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
@@ -115,8 +118,8 @@ html[data-ui="cosmo"] .pps-foot em{font:8px var(--mono);font-style:normal;color:
   html[data-ui="cosmo"] .pps-body,
   html[data-ui="cosmo"] .pps-body.pane-well,
   html[data-ui="cosmo"] .pps-body.pane-correlation,
-  html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) minmax(0,.7fr);grid-template-areas:"main aside" "rail rail"}
-  html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside" "rail rail"}
+  html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) minmax(0,.7fr);grid-template-areas:"main aside"}
+  html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside"}
   html[data-ui="cosmo"] .pps-rail{min-height:280px}
 }
 
@@ -153,3 +156,36 @@ html[data-ui="cosmo"] .ppx-key span.on{color:var(--ink)}
 html[data-ui="cosmo"] .ppx-key i{width:7px;height:7px;border-radius:2px}
 html[data-ui="cosmo"] .ppx-key em{font-style:normal;font:7px var(--mono);color:var(--ink3)}
 html[data-ui="cosmo"] .ppx-key .ppx-note{flex-basis:100%;color:var(--ink2);line-height:1.4}
+
+/* ── PetroZonationMatrix — the deliverable table ────────────────────────────── */
+html[data-ui="cosmo"] .pzm{display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden}
+html[data-ui="cosmo"] .pzm-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:6px 9px;
+  border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .pzm-head b{font-size:9.5px;color:var(--ink)}
+html[data-ui="cosmo"] .pzm-head em{margin-left:auto;font-style:normal;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pzm-metrics{display:flex;gap:2px}
+html[data-ui="cosmo"] .pzm-metrics button{padding:2px 6px;border:1px solid var(--line2);border-radius:4px;
+  background:transparent;color:var(--ink3);font:7.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .pzm-metrics button.on{background:var(--panel3);color:var(--ink);border-color:var(--line)}
+html[data-ui="cosmo"] .pzm-bar{flex:0 0 auto;height:2px;background:var(--panel2)}
+html[data-ui="cosmo"] .pzm-bar i{display:block;height:100%;background:var(--teal,#0fb5a6);transition:width .25s}
+html[data-ui="cosmo"] .pzm-scroll{flex:1;min-height:0;overflow:auto}
+html[data-ui="cosmo"] .pzm-table{border-collapse:collapse;font:8px var(--mono);width:100%}
+html[data-ui="cosmo"] .pzm-table th,html[data-ui="cosmo"] .pzm-table td{
+  border:1px solid var(--line2);padding:3px 6px;text-align:right;white-space:nowrap}
+html[data-ui="cosmo"] .pzm-table thead th{position:sticky;top:0;z-index:2;background:var(--panel2);
+  color:var(--ink2);font-weight:600}
+html[data-ui="cosmo"] .pzm-corner,html[data-ui="cosmo"] .pzm-row{position:sticky;left:0;z-index:1;
+  background:var(--panel2);text-align:left;color:var(--ink)}
+html[data-ui="cosmo"] .pzm-corner{z-index:3}
+html[data-ui="cosmo"] .pzm-corner i,html[data-ui="cosmo"] .pzm-tot i{
+  font-style:normal;color:var(--ink3);margin-left:4px;font-size:7px}
+/* An absence must never read as a zero — see the header comment. */
+html[data-ui="cosmo"] .pzm-none{color:var(--ink3);opacity:.55;font-size:7px;text-align:center}
+html[data-ui="cosmo"] .pzm-nocurve{color:var(--orange,#f59e0b);opacity:.8;font-size:7px;text-align:center}
+html[data-ui="cosmo"] .pzm-tot{background:var(--panel2);color:var(--ink)}
+html[data-ui="cosmo"] .pzm-empty{padding:22px;text-align:center;color:var(--ink3);font-size:9px;line-height:1.6}
+html[data-ui="cosmo"] .pzm-skipped{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:5px 9px;
+  border-top:1px solid var(--line2);background:var(--panel2);font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pzm-skipped b{color:var(--orange,#f59e0b)}
+html[data-ui="cosmo"] .pzm-skipped svg{color:var(--orange,#f59e0b);flex:none}
