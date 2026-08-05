@@ -207,8 +207,21 @@ export function Structure3D({ surfaces, wells, paths, contactDepth, contactLabel
     <div className={'fds-3d' + (light ? ' is-light' : '')} onPointerDown={() => setIdle(false)}>
       <Canvas
         dpr={[1, 1.75]}
-        camera={{ position: [cam * 0.75, -cam * 0.95, cam * 0.62], fov: 42, near: span / 500, far: span * 12 }}
-        onCreated={({ gl }) => { gl.setClearColor(sceneBg()); }}
+        /* Looking NORTH from the south, from a low elevation.
+         *
+         *  The scene is built in the grid's own frame — x east, y north, z up —
+         *  but three's default camera up is +Y, which is NORTH here. That is why
+         *  the old view read as an arbitrary tumble: the orbit was pivoting about
+         *  the wrong axis entirely. `up` is +Z, the camera sits due south of the
+         *  model, and its height is a small fraction of the span so the horizons
+         *  are seen nearly edge-on — the orientation a structure is actually
+         *  read in, and the one that makes stacked surfaces legible. */
+        camera={{ position: [0, -cam * 1.05, cam * 0.34], up: [0, 0, 1], fov: 42, near: span / 500, far: span * 12 }}
+        onCreated={({ gl, camera }) => {
+          gl.setClearColor(sceneBg());
+          camera.up.set(0, 0, 1);
+          camera.lookAt(0, 0, 0);
+        }}
       >
         {/* a light theme needs more fill and less contrast, or the shaded flanks
             read as dirt against a pale background */}

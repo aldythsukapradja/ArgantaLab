@@ -226,11 +226,30 @@ export function FieldScene({ field }: { field: SearchEntry }) {
     .sort((a, b) => (Number(b.grid.values[0]) || 0) - (Number(a.grid.values[0]) || 0)),
   [multiIds, horizons, grids3d]);
 
+  /** When no horizon is stacked for 3D, the section still needs something to
+   *  cut, so it falls back to whichever horizon the map is currently draping. */
+  const xsecFallback = useMemo<Structure3DSurface[]>(() => {
+    const hz = horizons.find((h) => h.id === horizonId);
+    const m = hz?.asset.meta;
+    const x0 = Number(m?.xmin), y0 = Number(m?.ymin), cell = Number(m?.dx);
+    if (!hz || !surface || !Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(cell)) return [];
+    return [{ id: hz.id, name: hz.name, short: hz.short, grid: surface, geo: { x0, y0, cell } }];
+  }, [horizons, horizonId, surface]);
+
+  /** The surfaces actually ON SCREEN, and the ONE list everything derived from
+   *  them must use — meshes, section profiles and well picks alike. When these
+   *  disagreed the section could show horizons with no wells on them, because the
+   *  picks were cut against a different (empty) set. */
+  const shownSurfaces = useMemo(
+    () => (surfaces3d.length ? surfaces3d : xsecFallback),
+    [surfaces3d, xsecFallback],
+  );
+
   const impacts3d = useMemo(() => {
     if (!wellGeo) return [];
     const out: SectionWell[] = [];
     const seen = new Set<string>();
-    for (const s of surfaces3d) {
+    for (const s of shownSurfaces) {
       const { picks } = matchPicks(s.name, wellGeo.picks);
       for (const p of buildImpacts(picks, wellGeo.wells, wellGeo.surveys)) {
         const key = `${s.id}|${p.well}`;
@@ -246,17 +265,8 @@ export function FieldScene({ field }: { field: SearchEntry }) {
       }
     }
     return out;
-  }, [wellGeo, surfaces3d]);
+  }, [wellGeo, shownSurfaces]);
 
-  /** When no horizon is stacked for 3D, the section still needs something to
-   *  cut, so it falls back to whichever horizon the map is currently draping. */
-  const xsecFallback = useMemo<Structure3DSurface[]>(() => {
-    const hz = horizons.find((h) => h.id === horizonId);
-    const m = hz?.asset.meta;
-    const x0 = Number(m?.xmin), y0 = Number(m?.ymin), cell = Number(m?.dx);
-    if (!hz || !surface || !Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(cell)) return [];
-    return [{ id: hz.id, name: hz.name, short: hz.short, grid: surface, geo: { x0, y0, cell } }];
-  }, [horizons, horizonId, surface]);
 
   /** The whole bore, surface slot → TD. Independent of which horizon is selected:
    *  a trajectory exists whether or not it happens to cut the shown surface. */
@@ -272,8 +282,12 @@ export function FieldScene({ field }: { field: SearchEntry }) {
                 surface in 3D is a map with extra steps */}
             {horizons.map((h) => (
               <button key={h.id}
-                className={(view === '3d' ? multiIds.includes(h.id) : h.id === horizonId) ? 'on' : ''}
-                onClick={() => (view === '3d' ? toggleMulti(h.id) : setHorizonId(h.id === horizonId ? null : h.id))}
+                /* 2D drapes exactly one surface; 3D and the cross-section both
+                   STACK them — a section of one horizon is a line, not a section. */
+                className={(view === '2d' ? h.id === horizonId : multiIds.includes(h.id)) ? 'on' : ''}
+                onClick={() => (view === '2d'
+                  ? setHorizonId(h.id === horizonId ? null : h.id)
+                  : toggleMulti(h.id))}
                 title={h.name}>
                 {h.short}
               </button>
@@ -303,7 +317,7 @@ export function FieldScene({ field }: { field: SearchEntry }) {
           <SectionView
             section={section}
             toProjected={toProjected}
-            surfaces={surfaces3d.length ? surfaces3d : xsecFallback}
+            surfaces={shownSurfaces}
             wells={impacts3d}
             contactDepth={contact?.depth ?? null}
             contactLabel={contact?.kind}

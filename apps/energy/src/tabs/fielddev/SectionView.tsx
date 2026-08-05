@@ -71,11 +71,25 @@ const SAMPLES = 320;
 const LAYER_TINT = ['#8ea3b8', '#7d93aa', '#6f8a9e', '#63798f', '#586d82'];
 
 export function SectionView({
-  section, toProjected, surfaces, wells, contactDepth, contactLabel = 'OWC', corridor = 750,
+  section, toProjected, surfaces, wells, contactDepth, contactLabel = 'OWC', corridor: corridor0 = 1500,
 }: SectionViewProps) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
-  const [zx, setZx] = useState(1);            // vertical exaggeration
+  /** How far off the line a well may sit and still be posted. Adjustable because
+   *  the right answer depends on the section: a 700 m corridor through a 5 km
+   *  field can legitimately catch nothing, and "0 wells" then reads as a bug
+   *  rather than as the honest consequence of where the line was drawn. */
+  const CORRIDOR_STOPS = [250, 500, 1000, 1500, 2500, 5000];
+  const [corridor, setCorridor] = useState(corridor0);
+  /** Vertical exaggeration STOPS, not a linear 1..20 ramp.
+   *
+   *  A section of a 5 km line with 700 m of relief is already over-tall at ×1, so
+   *  the useful range runs BELOW one — which the old `min={1}` made unreachable.
+   *  Stops rather than a continuous slider because the meaningful steps are
+   *  multiplicative: ×0.2 → ×0.5 is the same perceptual change as ×2 → ×5. */
+  const ZX_STOPS = [0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 5, 8, 12, 20];
+  const [zxIdx, setZxIdx] = useState(ZX_STOPS.indexOf(1));
+  const zx = ZX_STOPS[zxIdx] ?? 1;
   const [t, setT] = useState<ZoomTransform>(zoomIdentity);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const roRef = useRef<ResizeObserver | null>(null);
@@ -424,8 +438,16 @@ export function SectionView({
         <button onClick={resetZoom} title="Reset zoom and pan"><Maximize2 size={11} /></button>
         <label title="vertical exaggeration — a 7 km section with 600 m of relief is flat at ×1">
           ×{zx}
-          <input type="range" min={1} max={20} step={1} value={zx}
-            onChange={(e) => setZx(Number(e.target.value))} />
+          <input type="range" min={0} max={ZX_STOPS.length - 1} step={1} value={zxIdx}
+            onChange={(e) => setZxIdx(Number(e.target.value))} />
+        </label>
+        <label title="How far off the line a well may sit and still be posted. A section is a claim about a plane, so this is a real interpretive choice, not a display preference.">
+          ±{corridor >= 1000 ? `${corridor / 1000} km` : `${corridor} m`}
+          <select value={corridor} onChange={(e) => setCorridor(Number(e.target.value))}>
+            {CORRIDOR_STOPS.map((c) => (
+              <option key={c} value={c}>{c >= 1000 ? `${c / 1000} km` : `${c} m`}</option>
+            ))}
+          </select>
         </label>
       </div>
 

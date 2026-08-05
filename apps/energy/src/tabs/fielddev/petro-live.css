@@ -1,0 +1,118 @@
+/* petro-live.css — the REAL Petrophysics components: the interpretation bench, the
+   zone summary strip, and the live parameter rail controls.
+   Kept apart from petrophysics.css (which styles the shell canvas) so the layout and
+   the working surfaces can be iterated independently. */
+
+html[data-ui="cosmo"] .pps-live{display:flex;min-width:0;min-height:0;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+html[data-ui="cosmo"] .pps-live-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:7px 11px;border-bottom:1px solid var(--line2);color:var(--teal)}
+html[data-ui="cosmo"] .pps-live-head b{font-size:10.5px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .pps-live-head em{margin-left:auto;font:8px var(--mono);font-style:normal;color:var(--ink3)}
+
+/* ── the interpretation bench ─────────────────────────────────────────── */
+html[data-ui="cosmo"] .plb{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
+html[data-ui="cosmo"] .plb-empty{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px;text-align:center;color:var(--ink3)}
+html[data-ui="cosmo"] .plb-empty b{font-size:11px;color:var(--ink2)}
+html[data-ui="cosmo"] .plb-empty span{max-width:280px;font-size:9px;line-height:1.5}
+
+/* well strip — the bench's own selector, mirrored by the Input tree */
+html[data-ui="cosmo"] .plb-wells{display:flex;flex:0 0 auto;gap:3px;padding:6px 8px;border-bottom:1px solid var(--line2);overflow-x:auto;scrollbar-width:thin}
+html[data-ui="cosmo"] .plb-well{display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--ink3);font:8.5px var(--mono);cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .plb-well:hover{color:var(--ink);border-color:var(--ink3)}
+html[data-ui="cosmo"] .plb-well.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .plb-well i{font-style:normal;font-size:8px;color:var(--amber,#fbbf24)}
+
+html[data-ui="cosmo"] .plb-bar{display:flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 8px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .plb-bar button{display:inline-flex;align-items:center;gap:3px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--ink3);font:8px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .plb-bar button:hover:not(:disabled){color:var(--ink)}
+html[data-ui="cosmo"] .plb-bar button:disabled{opacity:.4;cursor:default}
+html[data-ui="cosmo"] .plb-range{font:8px var(--mono);color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .plb-chip{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:2px 6px;border:1px solid var(--line);border-radius:5px;font:8px var(--mono);color:var(--ink2);white-space:nowrap}
+/* the calibration readout — how well our recompute reproduces the delivery's own */
+html[data-ui="cosmo"] .plb-fit{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:2px 7px;border:1px solid var(--purple,#a78bfa);border-radius:5px;font:8px var(--mono);color:var(--purple,#a78bfa);white-space:nowrap}
+html[data-ui="cosmo"] .plb-fit b{font-weight:600}
+html[data-ui="cosmo"] .plb-fit i{font-style:normal;opacity:.65}
+
+/* track headers, aligned to the canvas by the same left pad the depth axis uses */
+html[data-ui="cosmo"] .plb-headers{display:flex;flex:0 0 auto;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .plb-hdr{display:flex;min-width:0;flex-direction:column;gap:1px;padding:4px 5px;border-left:1px solid var(--line2);cursor:pointer;overflow:hidden}
+html[data-ui="cosmo"] .plb-hdr:hover{background:var(--panel2)}
+html[data-ui="cosmo"] .plb-hdr.on{background:var(--teal-soft)}
+html[data-ui="cosmo"] .plb-hdr.on b{color:var(--teal-ink)}
+html[data-ui="cosmo"] .plb-hdr b{font:9px var(--mono);font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .plb-hdr em{font:7.5px var(--mono);font-style:normal;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .plb-hdr.gone{opacity:.5;cursor:default}
+html[data-ui="cosmo"] .plb-gone{display:inline-flex;align-items:center;gap:3px;color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .plb-hdr.ribbon{align-items:center;cursor:default}
+
+html[data-ui="cosmo"] .plb-canvas{position:relative;flex:1;min-height:0;overflow:hidden}
+html[data-ui="cosmo"] .plb-canvas canvas{display:block;cursor:crosshair}
+html[data-ui="cosmo"] .plb-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:9px var(--mono);color:var(--ink3);background:color-mix(in srgb,var(--panel) 70%,transparent)}
+
+/* hover readout — DOM, not canvas: crisper text and free wrapping */
+html[data-ui="cosmo"] .plb-tip{position:absolute;z-index:4;min-width:132px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel);box-shadow:0 6px 18px rgba(0,0,0,.16);pointer-events:none}
+html[data-ui="cosmo"] .plb-tip>b{display:flex;align-items:center;gap:5px;margin-bottom:3px;font:9px var(--mono);color:var(--ink)}
+html[data-ui="cosmo"] .plb-tip-zone{padding:0 4px;border-radius:3px;background:var(--line2);font-size:7.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .plb-tip>span{display:flex;align-items:baseline;gap:6px;font:8px var(--mono);color:var(--ink3);line-height:1.5}
+html[data-ui="cosmo"] .plb-tip>span em{margin-left:auto;font-style:normal;color:var(--ink)}
+/* the delivery's own value, beside ours — the comparison is the point */
+html[data-ui="cosmo"] .plb-tip>span u{text-decoration:none;padding:0 3px;border-radius:3px;background:color-mix(in srgb,var(--purple,#a78bfa) 15%,transparent);color:var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .plb-tip-net{display:inline-block;margin-top:4px;padding:1px 5px;border-radius:3px;font:7.5px var(--mono);font-style:normal}
+html[data-ui="cosmo"] .plb-tip-net.yes{background:color-mix(in srgb,var(--green,#4ade80) 18%,transparent);color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .plb-tip-net.no{background:var(--line2);color:var(--ink3)}
+
+/* ── zone summary strip ───────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pzs{display:flex;flex:1;min-height:0;flex-direction:column}
+html[data-ui="cosmo"] .pzs-empty{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:20px;text-align:center;color:var(--ink3)}
+html[data-ui="cosmo"] .pzs-empty b{font-size:10.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .pzs-empty span{font-size:8.5px;line-height:1.55}
+html[data-ui="cosmo"] .pzs-head,html[data-ui="cosmo"] .pzs-row{display:grid;grid-template-columns:minmax(0,1.5fr) 38px 38px 54px 40px 40px;gap:4px;align-items:center;padding:4px 9px}
+html[data-ui="cosmo"] .pzs-head{flex:0 0 auto;border-bottom:1px solid var(--line2);font:7.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .pzs-head span:not(.pzs-h-zone){text-align:right}
+html[data-ui="cosmo"] .pzs-rows{flex:1;min-height:0;overflow:auto}
+html[data-ui="cosmo"] .pzs-row{border-bottom:1px solid var(--line2);font:8.5px var(--mono);color:var(--ink2);cursor:pointer}
+html[data-ui="cosmo"] .pzs-row:hover{background:var(--panel2)}
+html[data-ui="cosmo"] .pzs-row.sel{background:var(--teal-soft)}
+html[data-ui="cosmo"] .pzs-row.empty{opacity:.55}
+html[data-ui="cosmo"] .pzs-row>span:not(.pzs-zone):not(.pzs-ng):not(.pzs-hole){text-align:right}
+html[data-ui="cosmo"] .pzs-zone{display:flex;align-items:center;gap:4px;min-width:0}
+html[data-ui="cosmo"] .pzs-zone i{flex:0 0 auto;width:3px;height:12px;border-radius:2px}
+html[data-ui="cosmo"] .pzs-zone b{min-width:0;font-weight:600;font-size:8.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .pzs-zone em{flex:0 0 auto;font-style:normal;font-size:7.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .pzs-net{color:var(--green,#4ade80);font-weight:600}
+html[data-ui="cosmo"] .pzs-ng{position:relative;height:12px;border-radius:3px;background:var(--line2);overflow:hidden}
+html[data-ui="cosmo"] .pzs-ng i{position:absolute;inset:0 auto 0 0;background:var(--green,#4ade80);opacity:.45}
+html[data-ui="cosmo"] .pzs-ng u{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:7.5px;color:var(--ink2)}
+/* a hole in the delivery, drawn as a hole rather than a zero */
+html[data-ui="cosmo"] .pzs-hole{font-size:8px;font-style:italic;color:var(--ink3);text-align:center;background:repeating-linear-gradient(45deg,transparent,transparent 3px,var(--line2) 3px,var(--line2) 4px);border-radius:3px;padding:2px 0}
+html[data-ui="cosmo"] .pzs-foot{flex:0 0 auto;padding:6px 9px;border-top:1px solid var(--line2);background:var(--panel2);font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pzs-foot b{color:var(--ink)}
+html[data-ui="cosmo"] .pzs-warn{display:block;margin-top:3px;font-style:normal;color:var(--amber,#fbbf24)}
+
+/* ── live parameter rail controls ─────────────────────────────────────── */
+html[data-ui="cosmo"] .ppr-reset{margin-left:auto;display:inline-flex;padding:2px 4px;border:1px solid var(--teal);border-radius:4px;background:transparent;color:var(--teal-ink);cursor:pointer}
+html[data-ui="cosmo"] .pps-rail-sec select{width:100%;margin-top:6px;padding:3px 5px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--ink);font:8.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .ppr-row{display:flex;gap:4px;margin-top:5px}
+html[data-ui="cosmo"] .ppr-num{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}
+html[data-ui="cosmo"] .ppr-num span{font:7px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .ppr-num input{width:100%;min-width:0;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);color:var(--ink);font:8.5px var(--mono)}
+/* a control the current model IGNORES is disabled, not merely ineffective */
+html[data-ui="cosmo"] .ppr-num.off{opacity:.4}
+html[data-ui="cosmo"] .ppr-num.off input{cursor:not-allowed}
+html[data-ui="cosmo"] .ppr-chips{display:flex;gap:3px;margin-top:5px}
+html[data-ui="cosmo"] .ppr-chips button{flex:1;padding:2px 3px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);color:var(--ink3);font:7.5px var(--mono);cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .ppr-chips button.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .ppr-slider{display:block;margin-top:7px}
+html[data-ui="cosmo"] .ppr-slider>span{display:flex;justify-content:space-between;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .ppr-slider>span b{color:var(--ink)}
+html[data-ui="cosmo"] .ppr-slider input{width:100%;margin-top:2px;accent-color:var(--teal)}
+html[data-ui="cosmo"] .ppr-slider small{display:block;font-size:7.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .ppr-nature{display:flex!important;align-items:center;gap:4px;flex-wrap:wrap}
+html[data-ui="cosmo"] .ppr-missing{color:var(--amber,#fbbf24)!important;font-style:italic}
+html[data-ui="cosmo"] .ppr-calc{display:block!important;margin-top:6px;padding:4px 6px;border-radius:5px;background:var(--panel2);font:8px var(--mono);color:var(--ink3);line-height:1.6}
+html[data-ui="cosmo"] .ppr-calc b{color:var(--ink)}
+/* the check against the delivery's own measured Rw curve */
+html[data-ui="cosmo"] .ppr-check{display:block!important;margin-top:5px;padding:4px 6px;border-radius:5px;font:8px var(--mono);line-height:1.55}
+html[data-ui="cosmo"] .ppr-check.ok{background:color-mix(in srgb,var(--green,#4ade80) 12%,transparent);color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .ppr-check.off{background:color-mix(in srgb,var(--amber,#fbbf24) 12%,transparent);color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .ppr-link{padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+html[data-ui="cosmo"] .ppr-apply{width:100%;margin-top:5px;padding:3px;border:1px solid var(--teal);border-radius:5px;background:var(--teal-soft);color:var(--teal-ink);font:8px var(--mono);cursor:pointer}

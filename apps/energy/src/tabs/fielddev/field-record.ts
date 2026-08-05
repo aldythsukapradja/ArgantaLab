@@ -146,10 +146,9 @@ export function readBundle(index: WbIndex | null, prod: WbProd | null): BundleAv
   const stoiip = index.validation?.stoiip;
   const refs = (stoiip?.references ?? {}) as Record<string, unknown>;
   const volumes: BundleAvailability['volumes'] = [];
-  // Every in-place figure carries its METHOD. The headline 142.3 MMSm³ is explicitly a
-  // screening UPPER BOUND in the bundle's own words; showing it bare (and dividing
-  // production by it) would manufacture a ~7% "recovery factor" that is an artefact of
-  // the method, not the reservoir. So all estimates are listed side by side, labelled.
+  // Every in-place figure carries its METHOD. The gross-screening result is driven by
+  // the active interpreted contact and must never be shown as field-accounting truth.
+  // All estimates are therefore listed side by side and explicitly labelled.
   if (typeof stoiip?.stoiipMMSm3 === 'number') {
     volumes.push({ label: 'STOIIP — gross screening', mmSm3: stoiip.stoiipMMSm3, basis: stoiip.method ?? 'screening' });
   }

@@ -315,7 +315,9 @@ html[data-ui="cosmo"] .fds-3d-key{position:absolute;left:8px;bottom:8px;z-index:
   border-radius:7px;background:color-mix(in srgb,var(--panel) 88%,transparent)}
 html[data-ui="cosmo"] .fds-3d-key b{font-size:9px;color:var(--ink)}
 html[data-ui="cosmo"] .fds-3d-key span{font:7px var(--mono);color:var(--ink3)}
-html[data-ui="cosmo"] .fds-3d-zx{position:absolute;right:8px;bottom:8px;z-index:6;display:flex;align-items:center;
+/* TOP-right: the bottom-right corner belongs to the agent orb, and a slider
+   underneath it is unreachable. */
+html[data-ui="cosmo"] .fds-3d-zx{position:absolute;right:8px;top:8px;z-index:6;display:flex;align-items:center;
   gap:6px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px;
   background:color-mix(in srgb,var(--panel) 88%,transparent);font:8px var(--mono);color:var(--ink2)}
 html[data-ui="cosmo"] .fds-3d-zx input{width:96px;accent-color:#2f9bff}
@@ -394,6 +396,8 @@ html[data-ui="cosmo"] .fds-xs-ctl button:hover{background:var(--panel3);color:va
 html[data-ui="cosmo"] .fds-xs-ctl label{display:flex;align-items:center;gap:5px;font:7.5px var(--mono);color:var(--ink2);
   padding-left:4px;border-left:1px solid var(--line2)}
 html[data-ui="cosmo"] .fds-xs-ctl input{width:74px;accent-color:#2f9bff}
+html[data-ui="cosmo"] .fds-xs-ctl select{border:1px solid var(--line2);border-radius:4px;background:var(--panel);
+  color:var(--ink2);font:7.5px var(--mono);padding:1px 2px}
 
 /* map key for the impact symbology + contact */
 html[data-ui="cosmo"] .fds-ad-mapkey{position:absolute;z-index:5;right:8px;top:8px;pointer-events:none;

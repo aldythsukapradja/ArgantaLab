@@ -97,7 +97,7 @@ export function formatFieldObservation(row: ObservationRow): { label: string; va
 }
 
 export const volveVolumes = () => [
-  { label: 'STOIIP', value: `${compact(142.3 * BBL_PER_SM3)} MMSTB`, meta: 'screening upper bound · modeled' },
+  { label: 'STOIIP', value: `${compact(18.965 * BBL_PER_SM3)} MMSTB`, meta: '3065 m calibrated contact scenario · modeled' },
   { label: 'GIIP', value: `${compact(40.5 * 1e9 * SCF_PER_SM3 / 1e9)} BSCF`, meta: 'modeled · Volve bundle' },
 ];
 

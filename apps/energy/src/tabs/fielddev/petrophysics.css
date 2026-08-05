@@ -1,0 +1,118 @@
+/* petrophysics.css — the Petrophysics shell canvas.
+   Its own file, not appended to fielddev-suite.css, so the tab's layout can be
+   iterated without touching the suite's 750 lines. Same `html[data-ui="cosmo"]`
+   scoping rule as everything else in the suite. */
+
+html[data-ui="cosmo"] .pps{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pps-bar{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .pps-title{font-size:11px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .pps-sub{min-width:0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-spacer{flex:1}
+html[data-ui="cosmo"] .pps-panes{display:flex;flex:0 0 auto;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+html[data-ui="cosmo"] .pps-panes button{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:0;border-radius:6px;background:transparent;color:var(--ink3);font:9px var(--mono);letter-spacing:.06em;cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .pps-panes button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .pps-panes button.on{background:var(--teal-soft);color:var(--teal-ink);box-shadow:0 0 0 1px var(--teal)}
+
+/* ── coverage strip ──────────────────────────────────────────────────────
+   First thing on screen because it is the finding the tab is shaped around:
+   a small calibration set and a large subject set. */
+html[data-ui="cosmo"] .pps-coverage{display:flex;align-items:center;gap:0;flex:0 0 auto;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+html[data-ui="cosmo"] .pps-cov-cell{display:flex;align-items:baseline;gap:5px;padding:0 14px 0 0;margin-right:14px;border-right:1px solid var(--line2)}
+html[data-ui="cosmo"] .pps-cov-cell b{font:15px/1 var(--mono);font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .pps-cov-cell i{font-style:normal;font-size:8.5px;letter-spacing:.04em;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-cov-cell.good b{color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .pps-cov-cell.warn b{color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .pps-cov-cell.calib b{color:var(--teal)}
+html[data-ui="cosmo"] .pps-cov-cell.calib i{color:var(--teal-ink)}
+html[data-ui="cosmo"] .pps-cov-bar{display:flex;flex:1;height:9px;min-width:80px;border-radius:5px;overflow:hidden;background:var(--line2)}
+html[data-ui="cosmo"] .pps-cov-bar i{display:block}
+html[data-ui="cosmo"] .pps-cov-bar i.calib{background:var(--teal)}
+html[data-ui="cosmo"] .pps-cov-bar i.subject{background:var(--green,#4ade80);opacity:.55}
+html[data-ui="cosmo"] .pps-cov-bar i.out{background:var(--line);opacity:.9}
+
+/* ── body: the layout under review ───────────────────────────────────────
+   Real proportions. The rail is a fixed column on every pane; the panes differ
+   only in how the remaining space is divided, which IS the layout decision. */
+html[data-ui="cosmo"] .pps-body{display:grid;flex:1;min-height:0;gap:10px;padding:12px;overflow:auto;
+  grid-template-columns:minmax(0,1fr) minmax(0,.62fr) 262px;
+  grid-template-rows:minmax(230px,1fr);
+  grid-template-areas:"main aside rail"}
+/* Single Well: the bench dominates, the zone strip is a narrow companion */
+html[data-ui="cosmo"] .pps-body.pane-well{grid-template-columns:minmax(0,1fr) 300px 262px}
+/* Correlation: the panel takes almost everything; the picker is a strip */
+html[data-ui="cosmo"] .pps-body.pane-correlation{grid-template-columns:minmax(0,1fr) 260px 262px}
+/* Analytics: two plots over the shared table that feeds them */
+html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr) 262px;
+  grid-template-rows:minmax(210px,1fr) minmax(190px,.72fr);
+  grid-template-areas:"main aside rail" "foot foot rail"}
+/* Zonation: matrix wide, calibration beside it */
+html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) 330px 262px}
+
+/* ── a region ────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pps-region{display:flex;min-width:0;min-height:0;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+html[data-ui="cosmo"] .pps-region>header{display:flex;align-items:center;gap:7px;flex:0 0 auto;padding:8px 11px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .pps-region>header b{flex:1;min-width:0;font-size:10.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .pps-region-ic{display:flex;color:var(--teal)}
+html[data-ui="cosmo"] .pps-step{flex:0 0 auto;padding:1px 6px;border-radius:4px;background:var(--line2);color:var(--ink3);font:7.5px var(--mono);letter-spacing:.08em;font-style:normal}
+
+/* the schematic: a sketch of the finished thing, deliberately unlabelled with
+   real values so it can never be mistaken for a result */
+html[data-ui="cosmo"] .pps-schematic{flex:0 0 auto;height:96px;margin:9px 11px 2px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);color:var(--ink3);overflow:hidden}
+
+html[data-ui="cosmo"] .pps-region>p{flex:0 0 auto;margin:9px 11px 0;font-size:9.5px;line-height:1.55;color:var(--ink2)}
+html[data-ui="cosmo"] .pps-region>dl{flex:1;min-height:0;margin:10px 11px 0;overflow:auto}
+html[data-ui="cosmo"] .pps-region>dl>div{display:grid;grid-template-columns:82px minmax(0,1fr);gap:8px;padding:4px 0;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .pps-region>dl>div:first-child{border-top:0}
+html[data-ui="cosmo"] .pps-region dt{display:flex;align-items:center;gap:4px;font:7.5px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-region dd{margin:0;font-size:9px;line-height:1.45;color:var(--ink2)}
+html[data-ui="cosmo"] .pps-region dd code{font:8.5px var(--mono);color:var(--purple,#a78bfa)}
+/* the LIVE row — read from the workspace at render, so it earns emphasis */
+html[data-ui="cosmo"] .pps-region>dl>div.live dt{color:var(--teal-ink)}
+html[data-ui="cosmo"] .pps-region>dl>div.live dd{color:var(--ink);font-weight:500}
+html[data-ui="cosmo"] .pps-region>footer{display:flex;align-items:flex-start;gap:5px;flex:0 0 auto;margin:9px 0 0;padding:7px 11px;border-top:1px solid var(--line2);background:var(--panel2);font-size:8.5px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-region>footer svg{flex:0 0 auto;margin-top:2px;color:var(--amber,#fbbf24)}
+
+/* ── the parameters rail ─────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pps-rail{grid-area:rail;display:flex;min-height:0;flex-direction:column;border:1px solid var(--teal);border-radius:10px;background:var(--panel);overflow:hidden}
+html[data-ui="cosmo"] .pps-rail-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:8px 11px;border-bottom:1px solid var(--line2);background:var(--teal-soft);color:var(--teal-ink);font:9px var(--mono);letter-spacing:.09em;text-transform:uppercase}
+html[data-ui="cosmo"] .pps-rail-head em{margin-left:auto;font-style:normal;font-size:7.5px;opacity:.8}
+html[data-ui="cosmo"] .pps-rail-scope{flex:0 0 auto;padding:9px 11px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .pps-rail-scope>span{display:block;margin-bottom:5px;font:7.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-scope-chain{display:flex;align-items:center;gap:3px}
+html[data-ui="cosmo"] .pps-scope{flex:1;padding:3px 0;border:1px solid var(--line2);border-radius:5px;text-align:center;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pps-scope.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .pps-rail-scope small{display:block;margin-top:6px;font-size:8px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-rail-scroll{flex:1;min-height:0;overflow:auto;padding:2px 0 8px}
+html[data-ui="cosmo"] .pps-rail-sec{padding:9px 11px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .pps-rail-sec-head{display:flex;align-items:center;gap:5px;color:var(--teal)}
+html[data-ui="cosmo"] .pps-rail-sec-head b{flex:1;font-size:10px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .pps-rail-sec-head em{padding:1px 5px;border-radius:4px;background:var(--line2);color:var(--ink3);font:7px var(--mono);font-style:normal}
+html[data-ui="cosmo"] .pps-rail-sec p{margin:6px 0 0;font-size:8.5px;line-height:1.55;color:var(--ink2)}
+html[data-ui="cosmo"] .pps-rail-sec small{display:flex;align-items:flex-start;gap:4px;margin-top:6px;font-size:8px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-rail-sec small svg{flex:0 0 auto;margin-top:2px}
+
+/* provenance vocabulary — the same words the rest of the platform uses */
+html[data-ui="cosmo"] .pps-natures{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+html[data-ui="cosmo"] .pps-nature{padding:2px 6px;border:1px solid var(--line);border-radius:4px;font:7.5px var(--mono);color:var(--ink3);cursor:help}
+html[data-ui="cosmo"] .pps-nature.n-measured{border-color:var(--green,#4ade80);color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .pps-nature.n-interpreted{border-color:var(--purple,#a78bfa);color:var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .pps-nature.n-derived{border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .pps-nature.n-calibrated{border-color:var(--amber,#fbbf24);background:color-mix(in srgb,var(--amber,#fbbf24) 12%,transparent);color:var(--amber,#fbbf24)}
+
+/* ── footer ─────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pps-foot{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:6px 14px;border-top:1px solid var(--line);background:var(--panel);font-size:8.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .pps-foot b{font-size:9px;color:var(--ink2)}
+html[data-ui="cosmo"] .pps-foot span{flex:1;min-width:0}
+html[data-ui="cosmo"] .pps-foot em{font:8px var(--mono);font-style:normal;color:var(--ink3);opacity:.8}
+
+/* narrow: the rail drops under the content rather than crushing it */
+@media (max-width:1180px){
+  html[data-ui="cosmo"] .pps-body,
+  html[data-ui="cosmo"] .pps-body.pane-well,
+  html[data-ui="cosmo"] .pps-body.pane-correlation,
+  html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) minmax(0,.7fr);grid-template-areas:"main aside" "rail rail"}
+  html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside" "foot foot" "rail rail"}
+  html[data-ui="cosmo"] .pps-rail{min-height:280px}
+}

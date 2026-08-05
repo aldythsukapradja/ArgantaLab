@@ -51,7 +51,7 @@ export function FieldDossier({ field }: { field: SearchEntry }) {
   const resourceText = reserves.length
     ? reserves.map((row) => { const item = formatFieldObservation(row); return `${item.label} ${item.value} (${item.meta})`; }).join(' · ')
     : volveValidation?.stoiip?.stoiipMMSm3 != null
-      ? `${volveVolumes()[0].label} ${volveVolumes()[0].value} · screening upper bound`
+      ? `${volveVolumes()[0].label} ${volveVolumes()[0].value} · interpreted contact scenario`
       : 'Not reported at catalogue tier';
   const setting = [detail?.onshoreOffshore, detail?.fuelType].filter(Boolean).join(' · ') || 'Not reported';
 
