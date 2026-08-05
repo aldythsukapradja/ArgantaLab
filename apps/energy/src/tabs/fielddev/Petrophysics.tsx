@@ -34,6 +34,7 @@ import { PetroZoneStrip } from './PetroZoneStrip';
 import { PetroCrossplot2D, type Template } from './PetroCrossplot2D';
 import { usePetroCloud } from './petro-cloud';
 import { PetroZonationMatrix } from './PetroZonationMatrix';
+import { PetroCorrelationPanel } from './PetroCorrelationPanel';
 import { PetroParamsRail } from './PetroParamsRail';
 import { usePetroWell } from './petro-well';
 import { DEFAULT_PARAMS, resolvePublishedArchie, type PetroParams } from './petro-compute';
@@ -404,6 +405,14 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
                   onTemplate={setTemplate}
                 />
               </section>
+              {regions.filter((r) => r.area === 'aside')
+                .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
+            </>
+          ) : pane === 'correlation' ? (
+            <>
+              {/* Real: every column is our interpretation under the rail's
+                  parameters, which is why the rail stays on this pane. */}
+              <PetroCorrelationPanel ws={ws} params={params} />
               {regions.filter((r) => r.area === 'aside')
                 .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
             </>

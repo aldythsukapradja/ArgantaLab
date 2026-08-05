@@ -189,3 +189,25 @@ html[data-ui="cosmo"] .pzm-skipped{flex:0 0 auto;display:flex;align-items:center
   border-top:1px solid var(--line2);background:var(--panel2);font:7.5px var(--mono);color:var(--ink3)}
 html[data-ui="cosmo"] .pzm-skipped b{color:var(--orange,#f59e0b)}
 html[data-ui="cosmo"] .pzm-skipped svg{color:var(--orange,#f59e0b);flex:none}
+
+/* ── PetroCorrelationPanel ──────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pcp{display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden}
+html[data-ui="cosmo"] .pcp-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:6px 9px;
+  border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .pcp-head b{font-size:9.5px;color:var(--ink)}
+html[data-ui="cosmo"] .pcp-head em{margin-left:auto;font-style:normal;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pcp-hang{display:flex;align-items:center;gap:3px}
+html[data-ui="cosmo"] .pcp-hang button{padding:2px 7px;border:1px solid var(--line2);border-radius:4px;
+  background:transparent;color:var(--ink3);font:7.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .pcp-hang button.on{background:var(--panel3);color:var(--ink);border-color:var(--line)}
+html[data-ui="cosmo"] .pcp-hang select{border:1px solid var(--line2);border-radius:4px;background:var(--panel);
+  color:var(--ink2);font:7.5px var(--mono);padding:1px 2px;max-width:150px}
+html[data-ui="cosmo"] .pcp-bar{flex:0 0 auto;height:2px;background:var(--panel2)}
+html[data-ui="cosmo"] .pcp-bar i{display:block;height:100%;background:var(--teal,#0fb5a6);transition:width .25s}
+html[data-ui="cosmo"] .pcp-scroll{flex:1;min-height:0;overflow:auto;background:var(--panel)}
+html[data-ui="cosmo"] .pcp-empty{padding:26px;text-align:center;color:var(--ink3);font-size:9px}
+html[data-ui="cosmo"] .pcp-foot{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  padding:5px 9px;border-top:1px solid var(--line2);background:var(--panel2);font:7px var(--mono);color:var(--ink3)}
+/* provenance is permanent on this pane — the curves are not the delivery's */
+html[data-ui="cosmo"] .pcp-prov{color:var(--ink2)}
+html[data-ui="cosmo"] .pcp-warn{display:flex;align-items:center;gap:4px;color:var(--orange,#f59e0b)}
