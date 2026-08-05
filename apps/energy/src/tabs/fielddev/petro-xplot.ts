@@ -282,6 +282,13 @@ export interface ShfPoint extends XPoint { height: number; sw: number; bvw: numb
 export interface CuddyFit {
   /** BVW = a · H^b, Cuddy's free-water-level-referenced bulk-volume-water form */
   a: number; b: number; r2: number; n: number;
+  /** The height range the fit was actually FITTED OVER, m above the contact.
+   *
+   *  A power law is only evidence inside the interval that produced it. Without
+   *  this the reader cannot tell a fit spanning 3 m from one spanning 80 m, and
+   *  the curve gets read as valid across the whole plot -- including heights
+   *  where no sample ever existed. Reported so the caller can say so. */
+  hMin: number; hMax: number;
 }
 
 /**
@@ -328,10 +335,19 @@ export function saturationHeight(
     }
   }
   // log(BVW) = log(a) + b·log(H)
-  const fit = linreg(points.filter((p) => p.bvw > 0).map((p) => [Math.log10(p.height), Math.log10(p.bvw)] as [number, number]));
+  const fitted = points.filter((p) => p.bvw > 0);
+  const fit = linreg(fitted.map((p) => [Math.log10(p.height), Math.log10(p.bvw)] as [number, number]));
+  // The extent of the samples that actually entered the regression -- not of
+  // `points`, which includes samples the fit never saw.
+  const heights = fitted.map((p) => p.height);
   return {
     points,
-    cuddy: fit ? { a: 10 ** fit.b, b: fit.a, r2: fit.r2, n: points.length } : null,
+    cuddy: fit
+      ? {
+        a: 10 ** fit.b, b: fit.a, r2: fit.r2, n: fitted.length,
+        hMin: Math.min(...heights), hMax: Math.max(...heights),
+      }
+      : null,
     availability: avail,
   };
 }
