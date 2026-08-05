@@ -21,9 +21,12 @@
 // and what is left is stratigraphy. A bore with no pick for the flattening
 // surface CANNOT be flattened onto it — it is drawn unflattened and marked,
 // rather than shifted by a guessed offset.
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { scaleLinear } from 'd3-scale';
-import { Columns3, AlertTriangle } from 'lucide-react';
+import { select } from 'd3-selection';
+import { zoom as d3zoom, zoomIdentity, type ZoomTransform } from 'd3-zoom';
+import { useCumulativeOil, orderByProduction } from './petro-luping';
+import { Columns3, AlertTriangle, ArrowUpDown, Plus, Minus, Maximize2, X } from 'lucide-react';
 import type { Workspace } from './workspace';
 import type { PetroParams } from './petro-compute';
 import { useFieldCurves, hangShift, type BoreCurveSet, type HangMode } from './petro-curves';
@@ -36,15 +39,22 @@ const GUTTER = 16;       // between bores
 const HEAD = 34;         // column header
 const PAD = { l: 46, t: 10, b: 18 };
 
-/** The four tracks, left to right. `net` sits between PHIE and Sw deliberately. */
+/**
+ * The four tracks, left to right. `net` sits between PHIE and Sw deliberately.
+ *
+ * `fams` is how a tree click reaches a track. The tree lists what the DELIVERY
+ * shipped, keyed by curve family (GR, PHIE, SW, VSH — see las.ts's FAMILY map);
+ * this panel draws what we COMPUTED. They are not the same names, so each track
+ * declares the delivered families that select it. `net` answers to VSH because
+ * that is the delivered curve nearest to the shale/net decision — there is no
+ * delivered net flag to point at.
+ */
 const TRACKS = [
-  { id: 'gr', label: 'GR', lo: 0, hi: 150, color: '#7a8b3f' },
-  { id: 'phie', label: 'PHIE', lo: 0.4, hi: 0, color: '#2f9bff' },
-  { id: 'net', label: 'net', lo: 0, hi: 1, color: '#10b981' },
-  { id: 'sw', label: 'Sw', lo: 1, hi: 0, color: '#c2582c' },
+  { id: 'gr', label: 'GR', lo: 0, hi: 150, color: '#7a8b3f', fams: ['GR'] },
+  { id: 'phie', label: 'PHIE', lo: 0.4, hi: 0, color: '#2f9bff', fams: ['PHIE', 'PHIT'] },
+  { id: 'net', label: 'net', lo: 0, hi: 1, color: '#10b981', fams: ['VSH'] },
+  { id: 'sw', label: 'Sw', lo: 1, hi: 0, color: '#c2582c', fams: ['SW'] },
 ] as const;
-
-const COL_W = TRACKS.length * TRACK_W + GUTTER;
 
 export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: PetroParams }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -58,6 +68,31 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
    */
   const flattenOn = useScene((st) => st.datum);
   const hang: HangMode = flattenOn ? 'flatten' : 'md';
+  const panelWells = useScene((st) => st.panelWells);
+  const panelCurves = useScene((st) => st.panelCurves);
+  const panelOrder = useScene((st) => st.panelOrder);
+  const setPanelOrder = useScene((st) => st.setPanelOrder);
+
+  const [sortOpen, setSortOpen] = useState(false);
+  const [t, setT] = useState<ZoomTransform>(zoomIdentity);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  /** Tracks the panel draws. An empty filter is the ABSENCE of one, so nothing
+   *  ticked shows the default four rather than an empty column. */
+  const tracks = useMemo(() => {
+    if (!panelCurves.length) return TRACKS.slice();
+    const hit = TRACKS.filter((x) => x.fams.some((f) => panelCurves.includes(f)));
+    // A tick on a curve this panel doesn't draw (RHOB, CALI, ROP…) must not blank
+    // the panel — it just isn't a correlation track.
+    return hit.length ? hit : TRACKS.slice();
+  }, [panelCurves]);
+
+  /** Column pitch follows the track count, so filtering narrows the columns
+   *  instead of leaving four-track-wide gaps. */
+  const colW = tracks.length * TRACK_W + GUTTER;
+
+  const cumWells = useMemo(() => curves.bores.map((b) => b.well), [curves.bores]);
+  const { cum } = useCumulativeOil(cumWells);
 
   /** Surfaces ordered by how many of the SHOWN bores carry them — the widest
    *  correlatable datum first, because that is the one worth flattening on. */
@@ -68,8 +103,21 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
   }, [curves.bores]);
 
   const model = useMemo(() => {
-    const bores = curves.bores;
+    let bores = panelWells.length
+      ? curves.bores.filter((b) => panelWells.includes(b.well))
+      : curves.bores;
     if (!bores.length) return null;
+
+    // Explicit sequence wins; anything not named keeps its production order after
+    // the named ones, so a partial reorder never silently drops a bore.
+    if (panelOrder.length) {
+      const rank = new Map(panelOrder.map((w, i) => [w, i]));
+      bores = bores.slice().sort((a, b) => (rank.get(a.well) ?? 999) - (rank.get(b.well) ?? 999));
+    } else {
+      const order = orderByProduction(bores.map((b) => b.well), cum);
+      const rank = new Map(order.map((w, i) => [w, i]));
+      bores = bores.slice().sort((a, b) => (rank.get(a.well) ?? 999) - (rank.get(b.well) ?? 999));
+    }
 
     const shifts = new Map(bores.map((b) => [b.well, hangShift(b, hang, flattenOn)]));
     // Depth window across every bore that CAN be placed. A bore that cannot be
@@ -94,7 +142,7 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
     }));
 
     return { bores, shifts, lo, hi, lines };
-  }, [curves.bores, hang, flattenOn, surfaces]);
+  }, [curves.bores, hang, flattenOn, surfaces, panelWells, panelOrder, cum]);
 
   const unflattenable = useMemo(
     () => (hang === 'flatten' && flattenOn
@@ -104,7 +152,30 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
   );
 
   const height = 460;
-  const y = model ? scaleLinear().domain([model.lo, model.hi]).range([PAD.t + HEAD, height - PAD.b]) : null;
+  const y0 = model ? scaleLinear().domain([model.lo, model.hi]).range([PAD.t + HEAD, height - PAD.b]) : null;
+  // DEPTH-ONLY zoom. Scaling x as well would change the column pitch, and a
+  // correlation panel's columns are wells — their spacing carries no information
+  // and stretching it just pushes bores off screen.
+  const y = y0 ? t.rescaleY(y0) : null;
+
+  const zoomRef = useRef<ReturnType<typeof d3zoom<SVGSVGElement, unknown>> | null>(null);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || !model) return;
+    const b = d3zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 40])
+      .on('zoom', (e) => setT(e.transform));
+    select(svg).call(b);
+    zoomRef.current = b;
+    return () => { select(svg).on('.zoom', null); };
+  }, [model]);
+  const zoomBy = (k: number) => {
+    const svg = svgRef.current;
+    if (svg && zoomRef.current) select(svg).transition().duration(180).call(zoomRef.current.scaleBy, k);
+  };
+  const resetZoom = () => {
+    const svg = svgRef.current;
+    if (svg && zoomRef.current) select(svg).transition().duration(220).call(zoomRef.current.transform, zoomIdentity);
+  };
 
   return (
     <section className="pps-region live pcp" style={{ gridArea: 'main' }}>
@@ -122,12 +193,46 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
             </em>
           )}
         </span>
+        <span className="pcp-tools">
+          <button onClick={() => zoomBy(1.4)} title="Zoom in (depth)"><Plus size={11} /></button>
+          <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out (depth)"><Minus size={11} /></button>
+          <button onClick={resetZoom} title="Reset depth zoom"><Maximize2 size={11} /></button>
+          <button className={sortOpen ? 'on' : ''} onClick={() => setSortOpen((v) => !v)}
+            title="Set the left-to-right display sequence"><ArrowUpDown size={11} /></button>
+        </span>
         <em>
           {curves.running
             ? `interpreting ${curves.done}/${curves.total} bores…`
-            : `${curves.bores.length} bores · curves computed, not delivered`}
+            : `${model?.bores.length ?? 0}${panelWells.length ? `/${curves.bores.length}` : ''} bores`
+              + ` · ${tracks.length} track${tracks.length === 1 ? '' : 's'} · computed`}
         </em>
       </header>
+
+      {sortOpen && model && (
+        <div className="pcp-sort" role="dialog">
+          <header>
+            <b>Display sequence</b>
+            <button onClick={() => { setPanelOrder([]); }} title="Back to cumulative-oil order">reset</button>
+            <button onClick={() => setSortOpen(false)} aria-label="Close"><X size={11} /></button>
+          </header>
+          {/* Default order is by cumulative oil — the bores that made the field
+              first. Dragging is overkill for a list this size; the arrows are
+              unambiguous and keyboard-reachable. */}
+          <ol>
+            {model.bores.map((b, i) => (
+              <li key={b.well}>
+                <span className="n">{i + 1}</span>
+                <b>{b.well}</b>
+                <i>{(() => { const c = cum.get(b.well); return c == null ? 'no prod record' : `${(c / 1e6).toFixed(2)}M`; })()}</i>
+                <button disabled={i === 0} title="Move left"
+                  onClick={() => setPanelOrder(swap(model.bores.map((x) => x.well), i, i - 1))}>↑</button>
+                <button disabled={i === model.bores.length - 1} title="Move right"
+                  onClick={() => setPanelOrder(swap(model.bores.map((x) => x.well), i, i + 1))}>↓</button>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {curves.running && (
         <div className="pcp-bar"><i style={{ width: `${curves.total ? (curves.done / curves.total) * 100 : 0}%` }} /></div>
@@ -135,62 +240,86 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
 
       <div className="pcp-scroll" ref={wrapRef}>
         {model && y ? (
-          <svg width={PAD.l + model.bores.length * COL_W + 20} height={height}>
-            {/* depth axis */}
-            {y.ticks(10).map((d) => (
-              <g key={d}>
-                <line x1={PAD.l - 4} y1={y(d)} x2={PAD.l + model.bores.length * COL_W} y2={y(d)}
-                  stroke="var(--line)" opacity={0.18} />
-                <text x={PAD.l - 8} y={y(d) + 3} textAnchor="end" fontSize={7.5}
-                  fill="var(--ink3)" fontFamily="var(--mono)">{Math.round(d)}</text>
-              </g>
-            ))}
+          <svg ref={svgRef} width={PAD.l + model.bores.length * colW + 20} height={height}
+            style={{ cursor: 'ns-resize' }}>
+            {/* Everything depth-bearing is CLIPPED to the track window. Zooming
+                rescales the depth axis, so without this the curves ride up over
+                the column headers and out of the panel. */}
+            <defs>
+              <clipPath id="pcp-clip">
+                <rect x={0} y={PAD.t + HEAD} width={PAD.l + model.bores.length * colW + 20}
+                  height={height - PAD.b - PAD.t - HEAD} />
+              </clipPath>
+            </defs>
 
-            {/* correlation lines — drawn UNDER the tracks so curves stay readable */}
-            {model.lines.map((l, li) => {
-              const pts: Array<[number, number]> = [];
-              model.bores.forEach((_b, i) => {
-                const at = l.at[i];
-                if (at == null) return;
-                pts.push([PAD.l + i * COL_W + (TRACKS.length * TRACK_W) / 2, y(at)]);
-              });
-              if (pts.length < 2) return null;
-              const hue = (li * 47) % 360;
-              return (
-                <g key={l.surface}>
-                  <polyline points={pts.map((p) => p.join(',')).join(' ')} fill="none"
-                    stroke={`hsl(${hue},60%,55%)`} strokeWidth={1.2} strokeDasharray="5 3" opacity={0.85} />
-                  <text x={PAD.l + 2} y={pts[0][1] - 3} fontSize={7}
-                    fill={`hsl(${hue},60%,45%)`} fontFamily="var(--mono)">{l.surface}</text>
-                </g>
-              );
-            })}
-
+            {/* column headers and track frames — fixed, outside the clip */}
             {model.bores.map((b, i) => {
-              const shift = model.shifts.get(b.well);
-              const x0 = PAD.l + i * COL_W;
+              const x0 = PAD.l + i * colW;
               return (
                 <g key={b.well}>
                   <text x={x0 + 2} y={PAD.t + 9} fontSize={8.5} fontWeight={600}
                     fill={ROLE_FILL[pathRole(b.role)]} fontFamily="var(--mono)">{b.well}</text>
-                  {shift == null && (
+                  {model.shifts.get(b.well) == null && (
                     <text x={x0 + 2} y={PAD.t + 19} fontSize={6.5} fill="var(--orange,#f59e0b)"
                       fontFamily="var(--mono)">no {flattenOn} pick — not flattened</text>
                   )}
-                  {TRACKS.map((t, ti) => (
-                    <g key={t.id}>
+                  {tracks.map((tk, ti) => (
+                    <g key={tk.id}>
                       <text x={x0 + ti * TRACK_W + 2} y={PAD.t + HEAD - 4} fontSize={6.5}
-                        fill="var(--ink3)" fontFamily="var(--mono)">{t.label}</text>
+                        fill="var(--ink3)" fontFamily="var(--mono)">{tk.label}</text>
                       <rect x={x0 + ti * TRACK_W} y={PAD.t + HEAD} width={TRACK_W - 2}
                         height={height - PAD.b - PAD.t - HEAD} fill="none" stroke="var(--line2)" />
-                      {shift != null && (
-                        <TrackPath bore={b} track={t} x0={x0 + ti * TRACK_W} shift={shift} y={y} />
-                      )}
                     </g>
                   ))}
                 </g>
               );
             })}
+
+            <g clipPath="url(#pcp-clip)">
+              {/* depth axis */}
+              {y.ticks(10).map((d) => (
+                <g key={d}>
+                  <line x1={PAD.l - 4} y1={y(d)} x2={PAD.l + model.bores.length * colW} y2={y(d)}
+                    stroke="var(--line)" opacity={0.18} />
+                  <text x={PAD.l - 8} y={y(d) + 3} textAnchor="end" fontSize={7.5}
+                    fill="var(--ink3)" fontFamily="var(--mono)">{Math.round(d)}</text>
+                </g>
+              ))}
+
+              {/* correlation lines — drawn UNDER the tracks so curves stay readable */}
+              {model.lines.map((l, li) => {
+                const pts: Array<[number, number]> = [];
+                model.bores.forEach((_b, i) => {
+                  const at = l.at[i];
+                  if (at == null) return;
+                  pts.push([PAD.l + i * colW + (tracks.length * TRACK_W) / 2, y(at)]);
+                });
+                if (pts.length < 2) return null;
+                const hue = (li * 47) % 360;
+                return (
+                  <g key={l.surface}>
+                    <polyline points={pts.map((p) => p.join(',')).join(' ')} fill="none"
+                      stroke={`hsl(${hue},60%,55%)`} strokeWidth={1.2} strokeDasharray="5 3" opacity={0.85} />
+                    <text x={PAD.l + 2} y={pts[0][1] - 3} fontSize={7}
+                      fill={`hsl(${hue},60%,45%)`} fontFamily="var(--mono)">{l.surface}</text>
+                  </g>
+                );
+              })}
+
+              {model.bores.map((b, i) => {
+                const shift = model.shifts.get(b.well);
+                if (shift == null) return null;
+                const x0 = PAD.l + i * colW;
+                return (
+                  <g key={b.well}>
+                    {tracks.map((tk, ti) => (
+                      <TrackPath key={tk.id} bore={b} track={tk}
+                        x0={x0 + ti * TRACK_W} shift={shift} y={y} />
+                    ))}
+                  </g>
+                );
+              })}
+            </g>
           </svg>
         ) : (
           <div className="pcp-empty">
@@ -214,6 +343,13 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
       </footer>
     </section>
   );
+}
+
+/** Reorder helper — returns a NEW sequence rather than mutating the model's. */
+function swap(list: string[], a: number, b: number): string[] {
+  const out = list.slice();
+  [out[a], out[b]] = [out[b], out[a]];
+  return out;
 }
 
 /** One curve inside one track. Decimated to roughly one point per pixel — a

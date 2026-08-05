@@ -192,7 +192,9 @@ html[data-ui="cosmo"] .pzm-skipped b{color:var(--orange,#f59e0b)}
 html[data-ui="cosmo"] .pzm-skipped svg{color:var(--orange,#f59e0b);flex:none}
 
 /* ── PetroCorrelationPanel ──────────────────────────────────────────────────── */
-html[data-ui="cosmo"] .pcp{display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden}
+/* the popup anchors to the panel, so the panel is the containing block */
+html[data-ui="cosmo"] .pcp{display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden;
+  position:relative}
 html[data-ui="cosmo"] .pcp-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:6px 9px;
   border-bottom:1px solid var(--line2)}
 html[data-ui="cosmo"] .pcp-head b{font-size:9.5px;color:var(--ink)}
@@ -203,6 +205,34 @@ html[data-ui="cosmo"] .pcp-hang button{padding:2px 7px;border:1px solid var(--li
 html[data-ui="cosmo"] .pcp-hang button.on{background:var(--panel3);color:var(--ink);border-color:var(--line)}
 html[data-ui="cosmo"] .pcp-hang select{border:1px solid var(--line2);border-radius:4px;background:var(--panel);
   color:var(--ink2);font:7.5px var(--mono);padding:1px 2px;max-width:150px}
+html[data-ui="cosmo"] .pcp-tools{display:flex;align-items:center;gap:2px;margin-left:6px}
+html[data-ui="cosmo"] .pcp-tools button{display:flex;align-items:center;justify-content:center;
+  width:19px;height:17px;border:1px solid var(--line2);border-radius:4px;background:transparent;
+  color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .pcp-tools button:hover{color:var(--ink);border-color:var(--line)}
+html[data-ui="cosmo"] .pcp-tools button.on{background:var(--panel3);color:var(--ink);border-color:var(--line)}
+
+/* display-sequence popup — floats over the tracks rather than reflowing them */
+html[data-ui="cosmo"] .pcp-sort{position:absolute;top:30px;right:9px;z-index:40;width:236px;
+  max-height:min(60vh,340px);display:flex;flex-direction:column;border:1px solid var(--line);
+  border-radius:7px;background:var(--panel);box-shadow:0 12px 30px rgba(0,0,0,.42);overflow:hidden}
+html[data-ui="cosmo"] .pcp-sort > header{display:flex;align-items:center;gap:5px;padding:6px 8px;
+  border-bottom:1px solid var(--line2);background:var(--panel2)}
+html[data-ui="cosmo"] .pcp-sort > header b{font-size:8.5px;color:var(--ink)}
+html[data-ui="cosmo"] .pcp-sort > header button{margin-left:auto;border:0;background:transparent;
+  color:var(--ink3);font:7px var(--mono);cursor:pointer;padding:1px 3px}
+html[data-ui="cosmo"] .pcp-sort > header button:last-child{margin-left:0;display:flex;align-items:center}
+html[data-ui="cosmo"] .pcp-sort > header button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .pcp-sort ol{list-style:none;margin:0;padding:3px;overflow:auto}
+html[data-ui="cosmo"] .pcp-sort li{display:flex;align-items:center;gap:5px;padding:3px 4px;border-radius:4px}
+html[data-ui="cosmo"] .pcp-sort li:hover{background:var(--panel2)}
+html[data-ui="cosmo"] .pcp-sort li .n{width:13px;text-align:right;font:7px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pcp-sort li b{flex:1;min-width:0;font:8px var(--mono);color:var(--ink);
+  font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .pcp-sort li i{font-style:normal;font:7px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pcp-sort li button{width:15px;height:15px;border:1px solid var(--line2);
+  border-radius:3px;background:transparent;color:var(--ink2);font-size:8px;line-height:1;cursor:pointer}
+html[data-ui="cosmo"] .pcp-sort li button:disabled{opacity:.3;cursor:default}
 html[data-ui="cosmo"] .pcp-bar{flex:0 0 auto;height:2px;background:var(--panel2)}
 html[data-ui="cosmo"] .pcp-bar i{display:block;height:100%;background:var(--teal,#0fb5a6);transition:width .25s}
 html[data-ui="cosmo"] .pcp-scroll{flex:1;min-height:0;overflow:auto;background:var(--panel)}
