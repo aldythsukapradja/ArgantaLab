@@ -6,6 +6,7 @@
 // text badge — this app's icon language is lucide-react + text capsules, not
 // custom brand marks).
 
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import './bridge.css';
 
@@ -70,6 +71,111 @@ export type BridgeMsgKind =
   | { kind: 'done'; ok: boolean; result?: string; costUsd?: number; engineLabel?: string }
   | { kind: 'error'; message: string };
 
+/** AskUserQuestion's payload, as the agent SDKs send it. Read defensively --
+ *  this crosses a socket from a process we do not control, so anything
+ *  malformed simply falls back to the generic approve/deny rather than
+ *  throwing inside a render. */
+interface AskQuestion {
+  question: string;
+  header?: string;
+  multiSelect?: boolean;
+  options: { label: string; description?: string }[];
+}
+
+function parseAsk(tool: string, input: unknown): AskQuestion[] | null {
+  if (tool !== 'AskUserQuestion') return null;
+  const qs = (input as { questions?: unknown } | null)?.questions;
+  if (!Array.isArray(qs) || !qs.length) return null;
+  const out: AskQuestion[] = [];
+  for (const q of qs) {
+    const question = (q as AskQuestion)?.question;
+    const options = (q as AskQuestion)?.options;
+    if (typeof question !== 'string' || !Array.isArray(options) || !options.length) return null;
+    out.push({
+      question,
+      header: typeof (q as AskQuestion).header === 'string' ? (q as AskQuestion).header : undefined,
+      multiSelect: !!(q as AskQuestion).multiSelect,
+      options: options.filter((o) => o && typeof o.label === 'string'),
+    });
+  }
+  return out.length ? out : null;
+}
+
+/** The question a remote agent asked, with its options as real buttons.
+ *
+ *  AskUserQuestion arrives over the bridge as an ordinary tool approval, so it
+ *  used to render as "Approve / Deny" -- the prose asked you to choose between
+ *  options that were never drawn. The choices are already in the payload; this
+ *  just shows them. Answering resolves the same approval, with the chosen
+ *  labels as its input, so no protocol change is needed. */
+function AskUserQuestionCard({ questions, approvalId, resolved, onResolve }: {
+  questions: AskQuestion[];
+  approvalId: string;
+  resolved?: 'approved' | 'denied';
+  onResolve: (approvalId: string, approved: boolean, input: unknown) => void;
+}) {
+  const [picked, setPicked] = useState<Record<number, string[]>>({});
+
+  const toggle = (qi: number, label: string, multi: boolean) => {
+    setPicked((prev) => {
+      const cur = prev[qi] ?? [];
+      if (!multi) return { ...prev, [qi]: [label] };
+      return { ...prev, [qi]: cur.includes(label) ? cur.filter((l) => l !== label) : [...cur, label] };
+    });
+  };
+
+  const answered = questions.every((_, i) => (picked[i] ?? []).length > 0);
+  const submit = () => {
+    const answers: Record<string, string> = {};
+    questions.forEach((q, i) => { answers[q.question] = (picked[i] ?? []).join(', '); });
+    onResolve(approvalId, true, { answers });
+  };
+
+  if (resolved) {
+    return (
+      <div className="bf-ask is-resolved">
+        <div className={`bf-approval-done ${resolved}`}>
+          {resolved === 'approved' ? 'Answered' : 'Dismissed'}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bf-ask">
+      {questions.map((q, qi) => (
+        <div key={qi} className="bf-ask-q">
+          {q.header && <div className="bf-ask-header">{q.header}</div>}
+          <div className="bf-ask-question">{q.question}</div>
+          <div className="bf-ask-options">
+            {q.options.map((o) => {
+              const on = (picked[qi] ?? []).includes(o.label);
+              return (
+                <button
+                  key={o.label}
+                  type="button"
+                  className={'bf-ask-option' + (on ? ' is-on' : '')}
+                  onClick={() => toggle(qi, o.label, !!q.multiSelect)}
+                >
+                  <span className="bf-ask-option-label">{o.label}</span>
+                  {o.description && <span className="bf-ask-option-desc">{o.description}</span>}
+                </button>
+              );
+            })}
+          </div>
+          {q.multiSelect && <div className="bf-ask-hint">Pick as many as apply</div>}
+        </div>
+      ))}
+      <div className="bf-approval-actions">
+        <button type="button" className="bf-approve" disabled={!answered} onClick={submit}>
+          {answered ? 'Send answer' : 'Choose an option'}
+        </button>
+        <button type="button" className="bf-deny" onClick={() => onResolve(approvalId, false, null)}>Skip</button>
+      </div>
+    </div>
+  );
+}
+
 export function BridgeFeedItem({ item, fileBase, token, onResolve, renderMarkdown }: {
   item: BridgeMsgKind;
   fileBase?: string;
@@ -112,7 +218,19 @@ export function BridgeFeedItem({ item, fileBase, token, onResolve, renderMarkdow
           {item.result && <BridgePreviews text={item.result} fileBase={fileBase} token={token} />}
         </div>
       );
-    case 'approval':
+    case 'approval': {
+      // A question is not an approval, even though it travels as one.
+      const ask = parseAsk(item.tool, item.input);
+      if (ask) {
+        return (
+          <AskUserQuestionCard
+            questions={ask}
+            approvalId={item.approvalId}
+            resolved={item.resolved}
+            onResolve={onResolve}
+          />
+        );
+      }
       return (
         <div className={`bf-approval ${item.resolved || ''}`}>
           <div className="bf-approval-head">Approval required · <code>{item.tool}</code></div>
@@ -125,6 +243,7 @@ export function BridgeFeedItem({ item, fileBase, token, onResolve, renderMarkdow
           ) : <div className={`bf-approval-done ${item.resolved}`}>{item.resolved === 'approved' ? 'Approved' : 'Denied'}</div>}
         </div>
       );
+    }
     default:
       return null;
   }

@@ -192,3 +192,29 @@ html[data-ui="cosmo"] .bf-reconnect-pill {
   padding: 7px 12px; border-radius: 9px; border: 1px dashed var(--line);
   background: var(--panel2); color: var(--ink3); font-size: 11px; cursor: pointer; margin-bottom: 6px;
 }
+
+/* ── a question the agent asked, with real options ──────────────────────────
+   AskUserQuestion travels over the bridge as a tool approval, so it used to
+   render as Approve/Deny while the prose asked you to pick between choices
+   that were never drawn. The options are in the payload; these show them. */
+.bf-ask{ display:flex; flex-direction:column; gap:12px; }
+.bf-ask-q{ display:flex; flex-direction:column; gap:7px; }
+.bf-ask-header{
+  font-size:10px; letter-spacing:.06em; text-transform:uppercase; font-weight:650;
+  color:var(--ink-dim,#6b7280);
+}
+.bf-ask-question{ font-size:13px; line-height:1.5; font-weight:560; color:var(--ink,#111827); }
+.bf-ask-options{ display:flex; flex-direction:column; gap:6px; }
+.bf-ask-option{
+  display:flex; flex-direction:column; gap:2px; align-items:flex-start; text-align:left;
+  padding:9px 12px; border-radius:9px; cursor:pointer; font:inherit;
+  background:transparent; border:1px solid rgba(127,127,127,.26); color:var(--ink,#111827);
+  transition:border-color .12s ease, background .12s ease;
+}
+.bf-ask-option:hover{ border-color:rgba(127,127,127,.45); background:rgba(127,127,127,.06); }
+.bf-ask-option.is-on{ border-color:#0ea5e9; background:rgba(14,165,233,.1); box-shadow:inset 0 0 0 1px #0ea5e9; }
+.bf-ask-option-label{ font-size:12.5px; font-weight:580; }
+.bf-ask-option-desc{ font-size:11px; line-height:1.45; color:var(--ink-dim,#6b7280); }
+.bf-ask-hint{ font-size:10.5px; color:var(--ink-dim,#6b7280); }
+.bf-ask .bf-approve[disabled]{ opacity:.45; cursor:not-allowed; }
+@media (max-width:640px){ .bf-ask-option{ padding:11px 13px; } }
