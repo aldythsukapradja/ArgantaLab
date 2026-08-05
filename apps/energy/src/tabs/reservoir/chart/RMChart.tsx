@@ -8,7 +8,6 @@
 import { useEffect, useMemo, useRef, useState, useId } from 'react';
 import { scaleLinear, scaleLog, type ScaleContinuousNumeric } from 'd3-scale';
 import { line as d3line, area as d3area, curveMonotoneX } from 'd3-shape';
-import { bisector } from 'd3-array';
 import { cssVar } from '../../fielddev/hooks';
 
 export interface RMSeries {
@@ -34,7 +33,14 @@ export interface RMChartProps {
 }
 
 const PAD = { l: 50, r: 14, t: 14, b: 30 };
-const bisectX = bisector<[number, number], number>((d) => d[0]).left;
+/** d3-array's `bisector(d => d[0]).left`, inlined — index of the first point whose x is
+ *  >= target. Dropping the package import removes a late-discovered Vite optimizer entry
+ *  that 504'd and broke the surface (see engine/charts/SurveillanceCharts.ts). */
+const bisectX = (pts: Array<[number, number]>, target: number): number => {
+  let lo = 0, hi = pts.length;
+  while (lo < hi) { const mid = (lo + hi) >>> 1; if (pts[mid][0] < target) lo = mid + 1; else hi = mid; }
+  return lo;
+};
 
 function fmtNum(v: number): string {
   const a = Math.abs(v);

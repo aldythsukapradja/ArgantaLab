@@ -13,6 +13,7 @@ import { CockpitDossier } from './CockpitDossier';
 import { CockpitReserveTowers } from './CockpitReserveTowers';
 import { loadSearchIndex, rankSearch, searchTypeLabel, type SearchEntry } from './cockpit-search';
 import { AGENTS } from './agents';
+import { useStore } from '../store';
 import './cockpit.css';
 
 type Mode = '3d' | '2d';
@@ -138,6 +139,28 @@ export function Cockpit({ dark, onNavigate, zoomVolveSignal }: {
     setMode('2d');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomVolveSignal]);
+
+  // Agent command bus: any surface (the chat, ⌘K, a Data QC gate) can post a
+  // fly-to instead of having to reach into this component's private state.
+  // Keyed on `seq`, so repeating the same request still re-fires — see the
+  // ViewIntent/MapIntent contract in src/agent/types.ts.
+  const mapIntent = useStore((s) => s.mapIntent);
+  useEffect(() => {
+    if (!mapIntent) return;
+    setPlace({
+      id: mapIntent.highlight ?? 'agent-target',
+      name: mapIntent.label ?? 'Requested location',
+      kind: 'agent',
+      parent: '',
+      lon: mapIntent.lon,
+      lat: mapIntent.lat,
+      zoom: mapIntent.zoom,
+    });
+    setQuery('');
+    setSearchOpen(false);
+    if (mapIntent.mode) setMode(mapIntent.mode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapIntent?.seq]);
 
   const recognizeField = () => {
     const name = query.trim() || 'Your field';

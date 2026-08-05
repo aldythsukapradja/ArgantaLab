@@ -160,6 +160,7 @@ export const FIGURE_CLASSES: FigureClassMeta[] = [
 ];
 
 export const figuresFor = (klass: FigureClass) => BASIN_FIGURES.filter((x) => x.klass === klass);
+export const figureByNumber = (fig: number) => BASIN_FIGURES.find((x) => x.fig === fig) ?? null;
 
 /** Figures whose geodynamic class matches a basin cycle's `geodynamics` value, so a
  *  real cycle (e.g. Volve's Hugin syn-rift) can show the type-section literature. */

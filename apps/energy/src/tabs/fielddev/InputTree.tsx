@@ -58,7 +58,9 @@ const STAGE_FOLDERS: Record<string, string[]> = {
   'client-data-qc': ['logs', 'tops', 'wells', 'surfaces', 'contacts', 'points', 'polylines', 'polygons', 'sections', 'cases'],
   'petrophysics-lite': ['logs', 'tops', 'wells'],
   'static-model-lite': ['surfaces', 'contacts', 'wells', 'polygons', 'points'],
-  'fluids-rock': ['contacts', 'wells'],
+  // PVT and the equilibration read the well master's contacts; the initialization is
+  // checked against the formation-pressure records, which hang off the wells
+  'fluids-rock': ['contacts', 'wells', 'cases'],
   'simulation-cases': ['cases', 'wells', 'surfaces'],
   'history-uncertainty': ['cases', 'wells'],
   'recovery-wells': ['wells', 'surfaces', 'polygons'],

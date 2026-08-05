@@ -14,6 +14,18 @@ html[data-ui="cosmo"] .dqv-bar{display:flex;align-items:center;gap:6px;padding:9
 html[data-ui="cosmo"] .dqv-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 9px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--ink3);cursor:pointer}
 html[data-ui="cosmo"] .dqv-chip.on{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-ink)}
 html[data-ui="cosmo"] .dqv-meta{font-size:10.5px;color:var(--ink3);margin-left:auto}
+
+/* stratigraphic-context strip on a surface viewer — links the horizon back to the
+   SAME Master KB stratigraphy + petroleum-system model the Exploration tab reads */
+html[data-ui="cosmo"] .dqv-stratctx{display:flex;align-items:center;gap:9px;padding:7px 16px;border-bottom:1px solid var(--line);background:var(--panel2);flex-shrink:0;flex-wrap:wrap;font-size:10.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .dqv-stratctx>svg{color:var(--teal-ink);flex-shrink:0}
+html[data-ui="cosmo"] .dqv-stratctx b{color:var(--ink);font-weight:700}
+html[data-ui="cosmo"] .dqv-muted{color:var(--ink3);font-style:italic}
+html[data-ui="cosmo"] .dqv-ps-role{font-family:var(--mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:20px;background:var(--panel);border:1px solid var(--line)}
+html[data-ui="cosmo"] .dqv-ps-role.role-reservoir{color:var(--green);border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.12)}
+html[data-ui="cosmo"] .dqv-ps-role.role-source{color:var(--red, #ef4444);border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.1)}
+html[data-ui="cosmo"] .dqv-ps-role.role-seal{color:var(--amber);border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.1)}
+html[data-ui="cosmo"] .dqv-ps-role.role-overburden{color:var(--ink3);border-color:var(--line)}
 html[data-ui="cosmo"] .dqv-canvas-wrap{flex:1;min-height:0;position:relative;overflow:hidden}
 html[data-ui="cosmo"] .dqv-canvas-wrap canvas{display:block}
 html[data-ui="cosmo"] .dqv-empty{flex:1;display:grid;place-items:center;color:var(--ink3);font-size:12px;padding:30px;text-align:center}
@@ -100,3 +112,52 @@ html[data-ui="cosmo"] .dqv-json{flex:1;overflow:auto;padding:12px 16px}
 html[data-ui="cosmo"] .dqv-json pre{margin:0;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--ink2);white-space:pre-wrap}
 
 @media (prefers-reduced-motion:reduce){html[data-ui="cosmo"] .dqv-scrim{backdrop-filter:none}}
+
+/* ── drilling-parameter viewer (mud log) ─────────────────────────────────────
+   Multi-track depth display: the mud window (pore gradient · MW · ECD) first,
+   then mechanical response, then hydraulics. Screened samples render as GAPS. */
+html[data-ui="cosmo"] .dqv-drill{display:flex;flex-direction:column;height:100%;min-height:0}
+html[data-ui="cosmo"] .dqv-drill .dqv-canvas-wrap{flex:1;min-height:0;position:relative}
+html[data-ui="cosmo"] .dqv-drill canvas{display:block}
+html[data-ui="cosmo"] .dqv-chip.warn{border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.14);color:var(--amber)}
+html[data-ui="cosmo"] .dqv-drill-readout{display:flex;flex-wrap:wrap;gap:10px;padding:7px 14px;border-top:1px solid var(--line);background:var(--panel2);flex-shrink:0}
+html[data-ui="cosmo"] .dqv-drill-readout span{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9.5px;color:var(--ink3);white-space:nowrap}
+html[data-ui="cosmo"] .dqv-drill-readout i{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+html[data-ui="cosmo"] .dqv-drill-readout b{color:var(--ink);font-weight:700}
+html[data-ui="cosmo"] .dqv-drill-readout em{font-style:normal;opacity:.7}
+html[data-ui="cosmo"] .dqv-drill-foot{display:flex;align-items:center;gap:10px;padding:6px 14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:8.5px;color:var(--ink3);flex-shrink:0;flex-wrap:wrap}
+html[data-ui="cosmo"] .dqv-drill-foot code{color:var(--teal-ink);word-break:break-all}
+
+/* ── formation-pressure viewer ───────────────────────────────────────────── */
+html[data-ui="cosmo"] .dqv-press{display:flex;flex-direction:column;height:100%;min-height:0}
+html[data-ui="cosmo"] .dqv-press .dqv-canvas-wrap{flex:1;min-height:180px;padding:8px 12px}
+html[data-ui="cosmo"] .dqv-press-list{flex-shrink:0;max-height:190px;overflow:auto;border-top:1px solid var(--line);background:var(--panel2)}
+html[data-ui="cosmo"] .dqv-press-row{display:grid;grid-template-columns:52px 1fr 1fr 1fr 70px;gap:8px;align-items:center;width:100%;padding:6px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;cursor:pointer;text-align:left;font-family:var(--mono);font-size:10px;color:var(--ink3)}
+html[data-ui="cosmo"] .dqv-press-row:hover{background:var(--panel)}
+html[data-ui="cosmo"] .dqv-press-row.on{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .dqv-press-row b{color:var(--ink);font-weight:700}
+html[data-ui="cosmo"] .dqv-press-row em{font-style:normal;opacity:.65;text-align:right}
+
+/* ── hover card ──────────────────────────────────────────────────────────────
+   The per-depth readout used to be an in-flow row under the canvas, so it appeared
+   on hover and squeezed every track upward — the plot moved while you were reading
+   it. It is now an absolutely-positioned card over the canvas: hovering never
+   changes the layout. */
+html[data-ui="cosmo"] .dqv-hovercard{position:absolute;z-index:20;display:flex;flex-direction:column;gap:2px;min-width:150px;max-width:230px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:var(--shadow-lg);pointer-events:none}
+html[data-ui="cosmo"] .dqv-hovercard>b{font-family:var(--mono);font-size:10.5px;color:var(--ink);margin-bottom:3px}
+html[data-ui="cosmo"] .dqv-hovercard span{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;color:var(--ink3);white-space:nowrap}
+html[data-ui="cosmo"] .dqv-hovercard span i{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+html[data-ui="cosmo"] .dqv-hovercard span b{margin-left:auto;color:var(--ink);font-weight:700}
+html[data-ui="cosmo"] .dqv-hovercard span em{font-style:normal;opacity:.7;min-width:26px}
+html[data-ui="cosmo"] .dqv-hovercard-sec{color:#7c3aed!important;font-weight:600}
+html[data-ui="cosmo"] .dqv-hovercard-pick{color:#e11d74!important;font-weight:600}
+
+/* ── the three faces of one wellbore: path · schematic · drilling log ── */
+html[data-ui="cosmo"] .dqv-facebar{display:flex;align-items:center;gap:5px;padding:7px 14px;border-bottom:1px solid var(--line);flex-shrink:0}
+html[data-ui="cosmo"] .dqv-facebar button{font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .dqv-facebar button:hover{border-color:var(--teal);color:var(--ink)}
+html[data-ui="cosmo"] .dqv-facebar button.on{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-ink)}
+
+/* ── well schematic ── */
+html[data-ui="cosmo"] .dqv-schematic{display:flex;flex-direction:column;height:100%;min-height:0}
+html[data-ui="cosmo"] .dqv-schematic-stage{flex:1;min-height:0;display:grid;place-items:center;padding:10px 14px;overflow:auto}

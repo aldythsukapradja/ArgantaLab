@@ -292,15 +292,16 @@ function Explorer({ graph, index, sel, setSel }: { graph: KGraph; index: LinkInd
 export function KnowledgeView() {
   const [idx, setIdx] = useState<WbIndex | null>(null);
   const [sub, setSub] = useState<'explorer' | 'graph' | 'extraction'>('explorer');
-  // arriving from another surface (e.g. Data QC's extraction gate) — honour the
-  // requested sub-tab once, then clear so it can't hijack later navigation
-  const navIntent = useStore((s) => s.navIntent);
-  const consumeNavIntent = useStore((s) => s.consumeNavIntent);
+  // arriving from another surface (e.g. Data QC's extraction gate, an agent turn) —
+  // honour the requested sub-tab. Keyed on `seq`, so re-requesting the same view
+  // re-fires but merely re-rendering does not hijack later navigation.
+  const viewIntent = useStore((s) => s.viewIntent);
   useEffect(() => {
-    if (navIntent?.nav !== 'knowledge') return;
-    if (navIntent.sub === 'explorer' || navIntent.sub === 'graph' || navIntent.sub === 'extraction') setSub(navIntent.sub);
-    consumeNavIntent();
-  }, [navIntent, consumeNavIntent]);
+    if (viewIntent?.nav !== 'knowledge') return;
+    const sub = viewIntent.sub;
+    if (sub === 'explorer' || sub === 'graph' || sub === 'extraction') setSub(sub);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewIntent?.seq]);
   const [sel, setSel] = useState<string | null>('field:volve');
   useEffect(() => { loadIndex().then(setIdx).catch(() => setIdx(null)); }, []);
   // accepted extractions join the graph as first-class nodes, so knowledge reviewed

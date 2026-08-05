@@ -11,8 +11,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { useUnits, depth as depthQ } from '../../units';
 import { nearestFluid, type Fluid, type FluidProfile } from '../petro.ts';
+import { stationInclDeg, stationAziDeg } from '../insight.ts';
+import { fmtIn, type HoleSection } from './casing.ts';
 
-export interface TrajStation { md: number; tvd: number; incl?: number; azi?: number; dispNs: number; dispEw: number }
+export interface TrajStation { md: number; tvd: number; incl?: number; incl_deg?: number; azi?: number; azi_deg?: number; dispNs: number; dispEw: number }
 export interface TrajPayload { well: string; stations: TrajStation[] }
 export interface PickMarker { surface: string; md: number }
 
@@ -22,6 +24,9 @@ const NEUTRAL_COLOR = '#8b96a5';
 const PICK_COLOR = '#e11d74';
 const SURFACE_COLOR = '#0fb5a6';
 const WELL_LABEL_COLOR = '#0b6b62';
+const CASING_COLOR = '#7c3aed';
+
+export type { HoleSection } from './casing.ts';
 
 interface PanelView { scale: number; dx: number; dy: number }
 const IDENTITY_VIEW: PanelView = { scale: 1, dx: 0, dy: 0 };
@@ -60,7 +65,11 @@ const dispOf = (s: TrajStation) => Math.hypot(s.dispNs, s.dispEw);
 const fluidColor = (f: Fluid) => (f === 'gas' ? FLUID_RED : f === 'oil' ? FLUID_GREEN : NEUTRAL_COLOR);
 const depthGradient = (t: number) => `hsl(${190 - t * 150}, 72%, ${58 - t * 18}%)`;
 
-export function TrajectoryViewer({ traj, picks, fluidProfile }: { traj: TrajPayload; picks?: PickMarker[]; fluidProfile?: FluidProfile | null }) {
+export function TrajectoryViewer({ traj, picks, fluidProfile, sections }: {
+  traj: TrajPayload; picks?: PickMarker[]; fluidProfile?: FluidProfile | null;
+  /** hole sections / casing points from this wellbore's mud log, when it has one */
+  sections?: HoleSection[] | null;
+}) {
   const { system } = useUnits();
   const wrapRef = useRef<HTMLDivElement>(null);
   const cvRef = useRef<HTMLCanvasElement>(null);
@@ -139,7 +148,7 @@ export function TrajectoryViewer({ traj, picks, fluidProfile }: { traj: TrajPayl
     const css = (n: string, f: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || f;
     const ink = css('--ink', '#0f172a'), ink3 = css('--ink3', '#94a3b8'), line = css('--line', '#e2e8f0');
     const { mapBox, secBox } = geom;
-    const { projMap, projSec, vsYBase } = proj;
+    const { projMap, projSec } = proj;
 
     const clipTo = (box: { x0: number; y0: number; x1: number; y1: number }, draw: () => void) => {
       g.save(); g.beginPath(); g.rect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0); g.clip(); draw(); g.restore();
@@ -177,32 +186,96 @@ export function TrajectoryViewer({ traj, picks, fluidProfile }: { traj: TrajPayl
         g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke();
       }
 
-      // depth ticks
-      g.font = '9px ui-monospace, monospace'; g.fillStyle = ink3; g.textAlign = 'right';
-      for (let i = 0; i <= 5; i++) {
-        const tvd = (i / 5) * bounds.tvd1;
-        const y = vsYBase(tvd); // axis ticks track the base scale, not the pan/zoom — a stable ruler
-        if (y < secBox.y0 || y > secBox.y1) continue;
-        g.strokeStyle = line; g.globalAlpha = 0.5;
-        g.beginPath(); g.moveTo(secBox.x0, y); g.lineTo(secBox.x1, y); g.stroke();
-        g.globalAlpha = 1;
-        g.fillText(depthQ(tvd, system).text, secBox.x1 - 4, y - 3);
+      // DEPTH RULER — must track the trajectory through zoom/pan.
+      // This used to draw at vsYBase (the UNZOOMED position) while the well was drawn
+      // at projSec, so the moment you zoomed, the ruler and the path drifted apart and
+      // every depth reading was wrong. A depth axis that does not follow the data it
+      // labels is worse than no axis. Ticks are now projected exactly like the path,
+      // and the tick INTERVAL is chosen from the visible range so zooming in gives
+      // finer depths instead of the same five labels spread further apart.
+      {
+        const tvdAt = (yPix: number) => {
+          // invert projSec's y for the current view, then invert vsYBase
+          const yBase = secBox.cy + (yPix - secBox.cy - secView.dy) / secView.scale;
+          return ((yBase - geom.padT) / (geom.plotH || 1)) * (bounds.tvd1 || 1);
+        };
+        const tvdTop = tvdAt(secBox.y0), tvdBot = tvdAt(secBox.y1);
+        const span = Math.abs(tvdBot - tvdTop);
+        // "nice" 1/2/5×10ⁿ interval targeting ~6 labels across the visible span
+        const raw = span / 6;
+        const mag = 10 ** Math.floor(Math.log10(Math.max(1e-6, raw)));
+        const norm = raw / mag;
+        const step = (norm >= 5 ? 5 : norm >= 2 ? 2 : 1) * mag;
+        g.font = '9px ui-monospace, monospace'; g.fillStyle = ink3; g.textAlign = 'right';
+        const first = Math.ceil(Math.min(tvdTop, tvdBot) / step) * step;
+        for (let tvd = first; tvd <= Math.max(tvdTop, tvdBot); tvd += step) {
+          if (tvd < 0) continue;
+          const y = projSec(0, tvd).y;      // SAME projection as the well path
+          if (y < secBox.y0 + 2 || y > secBox.y1 - 2) continue;
+          g.strokeStyle = line; g.globalAlpha = 0.5;
+          g.beginPath(); g.moveTo(secBox.x0, y); g.lineTo(secBox.x1, y); g.stroke();
+          g.globalAlpha = 1;
+          g.fillStyle = ink3;
+          g.fillText(depthQ(tvd, system).text, secBox.x1 - 4, y - 3);
+        }
       }
 
-      // formation tops — full-width dashed guide + label
+      // ── HOLE SECTIONS / CASING POINTS ────────────────────────────────────
+      // Each step-down in bit diameter is a real casing point (measured). Drawn as a
+      // shoe marker on the path, at the same projection so it tracks zoom.
+      if (sections?.length) {
+        for (const s of sections) {
+          if (s.casingPointMd == null) continue;
+          const at = atMd(s.casingPointMd); if (!at) continue;
+          const p = projSec(Math.hypot(at.ns, at.ew), at.tvd);
+          if (p.y < secBox.y0 || p.y > secBox.y1) continue;
+          g.strokeStyle = CASING_COLOR; g.lineWidth = 2;
+          // shoe symbol: a short horizontal bar with a downward tick
+          g.beginPath();
+          g.moveTo(p.x - 9, p.y); g.lineTo(p.x + 9, p.y);
+          g.moveTo(p.x - 9, p.y); g.lineTo(p.x - 9, p.y + 6);
+          g.moveTo(p.x + 9, p.y); g.lineTo(p.x + 9, p.y + 6);
+          g.stroke();
+          g.fillStyle = CASING_COLOR; g.font = '600 8.5px ui-monospace, monospace'; g.textAlign = 'right';
+          g.fillText(s.casingIn ? `${fmtIn(s.casingIn)}" csg` : `${s.bitSizeIn}" hole`, p.x - 12, p.y + 3);
+        }
+      }
+
+      // FORMATION TOPS — full-width dashed guide + label.
+      // Labels are DE-COLLIDED: closely-spaced tops (Volve stacks BCU, Hugin Top and
+      // Draupne within a few tens of metres) previously overprinted into an unreadable
+      // smear. The guide line stays at the true depth; only the LABEL is nudged, and a
+      // leader line is drawn back to its line so the pairing is never ambiguous.
       if (picks?.length) {
-        g.setLineDash([4, 3]);
+        const LAB_H = 11;
+        const placed: Array<{ p: PickMarker; py: number; ly: number }> = [];
         for (const p of picks) {
           const at = atMd(p.md); if (!at) continue;
           const py = projSec(Math.hypot(at.ns, at.ew), at.tvd).y;
-          if (py < secBox.y0 || py > secBox.y1) continue;
-          g.strokeStyle = PICK_COLOR; g.lineWidth = 1.1;
-          g.beginPath(); g.moveTo(secBox.x0, py); g.lineTo(secBox.x1, py); g.stroke();
-          g.fillStyle = PICK_COLOR; g.font = '600 9px ui-monospace, monospace'; g.textAlign = 'left'; g.setLineDash([]);
-          g.fillText(p.surface, secBox.x0 + 4, py - 3);
-          g.setLineDash([4, 3]);
+          if (py < secBox.y0 - 40 || py > secBox.y1 + 40) continue;
+          placed.push({ p, py, ly: py });
         }
-        g.setLineDash([]);
+        placed.sort((a, b) => a.py - b.py);
+        // single downward pass: push each label below the previous one if they touch
+        for (let i = 1; i < placed.length; i++) {
+          if (placed[i].ly - placed[i - 1].ly < LAB_H) placed[i].ly = placed[i - 1].ly + LAB_H;
+        }
+
+        for (const { p, py, ly } of placed) {
+          if (py < secBox.y0 || py > secBox.y1) continue;
+          g.setLineDash([4, 3]);
+          g.strokeStyle = PICK_COLOR; g.lineWidth = 1.1; g.globalAlpha = 0.85;
+          g.beginPath(); g.moveTo(secBox.x0, py); g.lineTo(secBox.x1, py); g.stroke();
+          g.globalAlpha = 1; g.setLineDash([]);
+          // leader from the nudged label back to its true depth
+          if (Math.abs(ly - py) > 1.5) {
+            g.strokeStyle = PICK_COLOR; g.globalAlpha = 0.5; g.lineWidth = 0.8;
+            g.beginPath(); g.moveTo(secBox.x0 + 3, py); g.lineTo(secBox.x0 + 3, ly - 3); g.stroke();
+            g.globalAlpha = 1;
+          }
+          g.fillStyle = PICK_COLOR; g.font = '600 9px ui-monospace, monospace'; g.textAlign = 'left';
+          g.fillText(p.surface, secBox.x0 + 6, ly - 3);
+        }
       }
     });
 
@@ -236,7 +309,7 @@ export function TrajectoryViewer({ traj, picks, fluidProfile }: { traj: TrajPayl
       clipTo(mapBox, () => { const p = projMap(td.dispEw, td.dispNs); drawLabel(p.x, p.y); });
       clipTo(secBox, () => { const p = projSec(dispOf(td), td.tvd); drawLabel(p.x, p.y); });
     }
-  }, [st, bounds, size, picks, system, traj.well, proj, geom, fluidProfile, atMd, tdIdx]);
+  }, [st, bounds, size, picks, system, traj.well, proj, geom, fluidProfile, atMd, tdIdx, sections, secView]);
 
   const hoverInfo = useMemo(() => {
     if (!hover || !proj || !st.length) return null;
@@ -310,8 +383,10 @@ export function TrajectoryViewer({ traj, picks, fluidProfile }: { traj: TrajPayl
             <b>{traj.well}</b>
             <span>MD<em>{depthQ(hoverInfo.s.md, system).text}</em></span>
             <span>TVD<em>{depthQ(hoverInfo.s.tvd, system).text}</em></span>
-            {hoverInfo.s.incl != null && <span>Incl<em>{hoverInfo.s.incl.toFixed(1)}°</em></span>}
-            {hoverInfo.s.azi != null && <span>Azi<em>{hoverInfo.s.azi.toFixed(1)}°</em></span>}
+            {/* `incl` is radians in the WITSML-derived surveys and degrees in the
+                others — stationInclDeg() resolves which (see insight.ts) */}
+            {stationInclDeg(hoverInfo.s) != null && <span>Incl<em>{stationInclDeg(hoverInfo.s)!.toFixed(1)}°</em></span>}
+            {stationAziDeg(hoverInfo.s) != null && <span>Azi<em>{stationAziDeg(hoverInfo.s)!.toFixed(1)}°</em></span>}
             {hoverInfo.fluid && (
               <div className="dqv-log-tip-tags">
                 <i className={'dqv-tag fluid-' + hoverInfo.fluid}>{hoverInfo.fluid}</i>

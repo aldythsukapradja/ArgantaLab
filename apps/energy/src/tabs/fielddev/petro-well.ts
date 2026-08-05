@@ -15,7 +15,7 @@ import { readRecord } from '../../dataqc/readDigest';
 import { depthToMetres } from '../../units';
 import { zoneAverages, type ZoneAverages } from '../../engine/petro';
 import { runPetro, misfit, type Misfit, type NetCutoffs, type PetroParams, type PetroResult } from './petro-compute';
-import type { Workspace, WorkspaceBore, WorkspacePick } from './workspace-model';
+import { dedupePicks, type Workspace, type WorkspaceBore, type WorkspacePick } from './workspace-model';
 
 /** The curve families the bench and the compute layer both reach for. */
 export interface PetroFamilies {
@@ -66,9 +66,9 @@ export function buildZones(
   picks: WorkspacePick[], tdM: number, result: PetroResult | null, mdM: number[],
   cutoffs: NetCutoffs,
 ): Zone[] {
-  const sorted = picks
+  const sorted = dedupePicks(picks
     .filter((p) => p.md != null && Number.isFinite(p.md))
-    .sort((a, b) => (a.md as number) - (b.md as number));
+    .sort((a, b) => (a.md as number) - (b.md as number)));
   return sorted.map((p, i) => {
     const top = p.md as number;
     const base = i + 1 < sorted.length ? (sorted[i + 1].md as number) : tdM;

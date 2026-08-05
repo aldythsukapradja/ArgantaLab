@@ -4,6 +4,19 @@
 
 export type WellRole = 'producer' | 'injector' | 'both' | 'none';
 
+/** Production a wellbore actually delivered, as resolved by the wb build. Volve files
+ *  some volumes against a shallow mother bore that cannot be the source, so the build
+ *  re-attributes them to the deepest terminal bore and records BOTH the numbers and the
+ *  reasoning here. `filedOn` names the bore the series is stored under. */
+export interface WellMetrics {
+  cumOilSm3: number; cumGasSm3: number; cumWaterSm3: number; cumInjectedSm3: number;
+  firstFlow: string | null; lastFlow: string | null; months: number;
+  peakOilRateSm3d: number | null; peakOilMonth: string | null;
+  lastOilRateSm3d: number | null; lastOilMonth: string | null;
+  lastWaterCut: number | null; shareOfFieldCumPct: number | null;
+  filedOn?: string; attributionBasis?: string;
+}
+
 export interface WellRow {
   name: string;      // canonical display (e.g. "F-12")
   well: string;      // parent well group
@@ -13,8 +26,16 @@ export interface WellRow {
   td_tvd: number;
   kb?: string;
   role: WellRole;
+  purpose?: string;
   is_exploration?: boolean;
+  is_terminal?: boolean;
+  is_deepest?: boolean;
+  drilled_from?: string | null;
   has: { logs: boolean; traj: boolean; production: boolean; picks: boolean };
+  /** present when this bore is the true source of a filed production series */
+  metrics?: WellMetrics;
+  /** set on the bore the volumes were FILED against when they belong to another bore */
+  metricsFiledElsewhere?: string;
 }
 
 export interface SurfaceInfo {

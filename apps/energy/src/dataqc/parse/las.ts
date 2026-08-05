@@ -28,6 +28,14 @@ const FAMILY: Record<string, string> = {
   SW: 'SW', SWE: 'SW', SWT: 'SW',
   VSH: 'VSH', VCL: 'VSH',
   KLOGH: 'PERM', PERM: 'PERM', K: 'PERM',
+  // LWD/MWD composites. The build's canonical names (RMED/ROPLOG/BITSIZE) plus the
+  // raw ARC tool channels, so an LWD-only wellbore's curves are recognised rather
+  // than falling through as unmapped.
+  RMED: 'RMED', A28H: 'RMED', P28H: 'RMED', RACELM: 'RMED', RM: 'RMED',
+  A40H: 'RT', A34H: 'RT', P40H: 'RT', RACEHM: 'RT',
+  GR_ARC: 'GR', MWD_GR_BHC: 'GR', GRAFM: 'GR', GRSIM: 'GR', GRA: 'GR', GRM1: 'GR',
+  ROPLOG: 'ROP', ROP: 'ROP', ROP5: 'ROP', ROPAVG: 'ROP',
+  BITSIZE: 'BS', BS: 'BS', BDIA: 'BS',
 };
 export const curveFamily = (mnem: string): string | undefined => FAMILY[mnem.trim().toUpperCase()];
 

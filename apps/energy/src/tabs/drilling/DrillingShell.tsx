@@ -6,17 +6,22 @@ import { DrillingScopeBar, ModeDossierBar, type DrillingMode } from './HeaderBar
 import { DrillingKnowledgeBank } from './KnowledgeBank';
 import { DRILLING_WORKFLOWS } from './workflow';
 import { flattenWorkflow } from '../workspace-blueprint/types';
-import { WorkflowTree } from '../workspace-blueprint/WorkflowTree';
+import { WorkflowRibbon } from '../workspace-blueprint/WorkflowRibbon';
 import { WidgetBlueprintViewer } from '../workspace-blueprint/WidgetBlueprintViewer';
 import { buildSchedule, type DrillingSchedule } from './legacy/schedule-model';
 import './drilling-suite.css';
+import { useViewMode } from '../../cosmo/use-view-mode';
+import { useScopeEntry } from '../../cosmo/use-scope-entry';
 
 const LegacyDrilling = lazy(async () => ({ default: (await import('./legacy/DrillingSequenceView')).DrillingSequenceView }));
 
 export function DrillingShell() {
   const [view, setView] = useState<'suite' | 'legacy'>('suite');
   const [mode, setMode] = useState<DrillingMode>('knowledge');
+  // a Fieldcraft card shortcut can ask for the dossier or the workspace directly
+  useViewMode('drilling-sequence', setMode);
   const [selection, setSelection] = useState<SearchEntry | null>(null);
+  useScopeEntry(['field'], setSelection);
   const [schedule, setSchedule] = useState<DrillingSchedule | null>(null);
   const workflowTabs = flattenWorkflow(DRILLING_WORKFLOWS);
   const [stageId, setStageId] = useState(workflowTabs[0].id);
@@ -31,5 +36,5 @@ export function DrillingShell() {
   const activeSchedule = linked ? schedule : null;
   const stage = workflowTabs.find((candidate) => candidate.id === stageId) ?? workflowTabs[0];
   const workflow = DRILLING_WORKFLOWS.find((candidate) => candidate.tabs.some((tab) => tab.id === stage.id)) ?? DRILLING_WORKFLOWS[0];
-  return <div className="drs-shell"><DrillingScopeBar selection={selection} onSelect={setSelection} onOpenLegacy={() => setView('legacy')} /><ModeDossierBar selection={selection} schedule={activeSchedule} mode={mode} onChange={setMode} />{mode === 'knowledge' ? <DrillingKnowledgeBank selection={selection} schedule={activeSchedule} /> : <div className="wsb-layout"><WorkflowTree groups={DRILLING_WORKFLOWS} active={stage.id} onSelect={setStageId} label="Drilling" /><WidgetBlueprintViewer group={workflow} tab={stage} scope={selection.name} /></div>}</div>;
+  return <div className="drs-shell"><DrillingScopeBar selection={selection} onSelect={setSelection} onOpenLegacy={() => setView('legacy')}><ModeDossierBar selection={selection} schedule={activeSchedule} mode={mode} onChange={setMode} /></DrillingScopeBar>{mode === 'knowledge' ? <DrillingKnowledgeBank selection={selection} schedule={activeSchedule} /> : <div className="wsb-layout"><WorkflowRibbon groups={DRILLING_WORKFLOWS} active={stage.id} onSelect={setStageId} label="Drilling" /><WidgetBlueprintViewer group={workflow} tab={stage} scope={selection.name} /></div>}</div>;
 }

@@ -1,0 +1,194 @@
+/* bridge.css — the Frontier feed (status/tool/approval/done/error) and the
+   connect dialog. Cosmo design tokens only, so it inherits light/dark for free —
+   same discipline as agent.css. */
+
+/* Every new status/tool/error/done/approval line rises + fades in as it lands —
+   the mission reads as something happening live, not text just appearing. */
+@keyframes bf-rise { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+html[data-ui="cosmo"] .bf-status, html[data-ui="cosmo"] .bf-tool,
+html[data-ui="cosmo"] .bf-done, html[data-ui="cosmo"] .bf-approval, html[data-ui="cosmo"] .bf-error {
+  animation: bf-rise .22s ease-out;
+}
+
+html[data-ui="cosmo"] .bf-status {
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink3);
+  padding: 2px 0;
+}
+html[data-ui="cosmo"] .bf-tool {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 11px; color: var(--ink2);
+  padding: 3px 0;
+}
+@keyframes bf-tick-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 70% { box-shadow: 0 0 0 5px rgba(34,197,94,0); } }
+html[data-ui="cosmo"] .bf-tick {
+  width: 6px; height: 6px; border-radius: 50%; background: #22c55e; flex-shrink: 0;
+  animation: bf-tick-pulse 1.6s ease-out infinite;
+}
+html[data-ui="cosmo"] .bf-error {
+  color: #ef4444; font-size: 12.5px; padding: 6px 0;
+}
+
+/* ── "thinking" indicator — the quiet-stretch reassurance a CLI spinner gives */
+html[data-ui="cosmo"] .bf-thinking {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink3); padding: 4px 0;
+}
+html[data-ui="cosmo"] .bf-thinking i { font-style: normal; }
+@keyframes bf-think-bounce { 0%, 80%, 100% { transform: scale(.6); opacity: .35; } 40% { transform: scale(1); opacity: 1; } }
+html[data-ui="cosmo"] .bf-think-dot {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--ink3);
+  animation: bf-think-bounce 1.1s ease-in-out infinite;
+}
+html[data-ui="cosmo"] .bf-think-dot:nth-child(2) { animation-delay: .15s; }
+html[data-ui="cosmo"] .bf-think-dot:nth-child(3) { animation-delay: .3s; }
+
+html[data-ui="cosmo"] .bf-done {
+  border: 1px solid var(--line); border-radius: 11px; background: var(--panel2);
+  padding: 11px 13px; margin-top: 4px;
+}
+html[data-ui="cosmo"] .bf-done.bad { border-color: color-mix(in srgb, #ef4444 40%, var(--line)); }
+html[data-ui="cosmo"] .bf-done-head { display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+html[data-ui="cosmo"] .bf-model-capsule {
+  font-size: 8.5px; letter-spacing: .05em; padding: 2px 7px; border-radius: 20px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink3);
+}
+html[data-ui="cosmo"] .bf-cost { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); margin-left: auto; }
+
+html[data-ui="cosmo"] .bf-previews { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+html[data-ui="cosmo"] .bf-preview-img {
+  width: 84px; height: 84px; border-radius: 9px; overflow: hidden;
+  border: 1px solid var(--line); display: block;
+}
+html[data-ui="cosmo"] .bf-preview-img img { width: 100%; height: 100%; object-fit: cover; }
+html[data-ui="cosmo"] .bf-preview-open {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 11px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink2); font-size: 11.5px; cursor: pointer;
+}
+
+html[data-ui="cosmo"] .bf-approval {
+  border: 1px solid color-mix(in srgb, #f59e0b 45%, var(--line)); border-radius: 11px;
+  background: var(--panel2); padding: 11px 13px; margin-top: 4px;
+}
+html[data-ui="cosmo"] .bf-approval.approved { border-color: color-mix(in srgb, #22c55e 45%, var(--line)); }
+html[data-ui="cosmo"] .bf-approval.denied { border-color: color-mix(in srgb, #ef4444 45%, var(--line)); opacity: .75; }
+html[data-ui="cosmo"] .bf-approval-head { font-size: 11.5px; font-weight: 700; color: var(--ink); }
+html[data-ui="cosmo"] .bf-approval-head code {
+  font-family: var(--mono); font-size: 10.5px; background: var(--panel3);
+  padding: 1px 6px; border-radius: 5px; color: var(--ink2);
+}
+html[data-ui="cosmo"] .bf-approval-label { font-size: 12px; color: var(--ink2); margin-top: 4px; }
+html[data-ui="cosmo"] .bf-approval-actions { display: flex; gap: 8px; margin-top: 9px; }
+html[data-ui="cosmo"] .bf-approve, html[data-ui="cosmo"] .bf-deny {
+  padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent;
+}
+html[data-ui="cosmo"] .bf-approve { background: #22c55e; color: #04140a; }
+html[data-ui="cosmo"] .bf-deny { background: var(--panel); border-color: var(--line); color: var(--ink2); }
+html[data-ui="cosmo"] .bf-approval-done { font-size: 11px; font-weight: 600; margin-top: 8px; }
+html[data-ui="cosmo"] .bf-approval-done.approved { color: #22c55e; }
+html[data-ui="cosmo"] .bf-approval-done.denied { color: #ef4444; }
+
+/* ── engine toggle (Arganta Core · Frontier: Claude Code / Codex) ────────── */
+html[data-ui="cosmo"] .bf-engines {
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px 0;
+  min-width: 0; overflow-x: auto; overflow-y: hidden;
+}
+html[data-ui="cosmo"] .bf-engine-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 20px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel);
+  color: var(--ink3); font-size: 11px; font-weight: 600; white-space: nowrap;
+  flex: 0 0 auto;
+}
+/* Selected = a real dark capsule, not a faint tint — the brand mark (explicit
+   SVG colours, not currentColor) still reads its own hue sitting on it. */
+html[data-ui="cosmo"] .bf-engine-pill.on {
+  color: var(--bg); border-color: var(--ink); background: var(--ink);
+}
+html[data-ui="cosmo"] .bf-engine-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+/* Groups the Claude / OpenAI pills under one umbrella label — they are both
+   "Arganta Frontier", the direct-to-agent tier, distinct from Core. The group
+   itself lights up the instant either engine is chosen, so picking one reads
+   as "now in Frontier mode", not three unrelated flat buttons. */
+html[data-ui="cosmo"] .bf-frontier-group {
+  display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+  padding: 3px 8px 3px 8px; margin-left: 2px; border-radius: 20px;
+  border-left: 1px solid var(--line);
+  transition: background .14s, border-color .14s;
+}
+html[data-ui="cosmo"] .bf-frontier-group.on {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-left-color: transparent;
+}
+html[data-ui="cosmo"] .bf-frontier-label {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .08em;
+  color: var(--ink3); text-transform: uppercase; flex: 0 0 auto; margin-right: 2px;
+  transition: color .14s;
+}
+html[data-ui="cosmo"] .bf-frontier-group.on .bf-frontier-label { color: var(--ink); font-weight: 700; }
+
+/* ── model picker (next to the composer, per engine) ─────────────────────── */
+html[data-ui="cosmo"] .bf-model-picker { position: relative; flex: 0 0 auto; }
+html[data-ui="cosmo"] .bf-model-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 9px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--panel2); color: var(--ink2); font-size: 11px; cursor: pointer;
+}
+html[data-ui="cosmo"] .bf-model-pill:disabled { cursor: default; opacity: .85; }
+html[data-ui="cosmo"] .bf-model-pill-txt { white-space: nowrap; }
+html[data-ui="cosmo"] .bf-model-scrim { position: fixed; inset: 0; z-index: 39; }
+html[data-ui="cosmo"] .bf-model-menu {
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 40;
+  min-width: 200px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 11px; box-shadow: 0 12px 32px rgba(0,0,0,.2); overflow: hidden; padding: 4px;
+}
+html[data-ui="cosmo"] .bf-model-opt {
+  display: block; width: 100%; text-align: left; padding: 7px 9px; border-radius: 7px;
+  border: 0; background: none; cursor: pointer; color: var(--ink2);
+}
+html[data-ui="cosmo"] .bf-model-opt:hover, html[data-ui="cosmo"] .bf-model-opt.active { background: var(--panel3); color: var(--ink); }
+html[data-ui="cosmo"] .bf-model-opt b { display: block; font-size: 11.5px; font-weight: 600; }
+html[data-ui="cosmo"] .bf-model-opt i { display: block; font-style: normal; font-size: 10px; color: var(--ink3); margin-top: 1px; }
+
+/* ── connect dialog ───────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .bf-connect-scrim {
+  position: absolute; inset: 0; z-index: 30;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+html[data-ui="cosmo"] .bf-connect-dialog {
+  width: min(380px, 100%); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; padding: 16px; box-shadow: 0 20px 50px rgba(0,0,0,.3);
+}
+html[data-ui="cosmo"] .bf-connect-brand {
+  display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: var(--ink);
+}
+html[data-ui="cosmo"] .bf-connect-close { margin-left: auto; background: none; border: 0; color: var(--ink3); cursor: pointer; font-size: 14px; }
+html[data-ui="cosmo"] .bf-connect-status {
+  display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink3);
+  margin: 10px 0 4px;
+}
+html[data-ui="cosmo"] .bf-connect-status.bad { color: #ef4444; }
+html[data-ui="cosmo"] .bf-connect-status.warn { color: #f59e0b; }
+html[data-ui="cosmo"] .bf-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink3); flex-shrink: 0; }
+html[data-ui="cosmo"] .bf-dot.bad { background: #ef4444; }
+html[data-ui="cosmo"] .bf-dot.warn { background: #f59e0b; }
+html[data-ui="cosmo"] .bf-field { display: block; margin-top: 11px; }
+html[data-ui="cosmo"] .bf-field span { display: block; font-size: 10.5px; color: var(--ink3); margin-bottom: 4px; }
+html[data-ui="cosmo"] .bf-field input {
+  width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel2); color: var(--ink); font-size: 12.5px;
+}
+html[data-ui="cosmo"] .bf-field-warn { display: block; font-size: 10.5px; color: #f59e0b; margin-top: 5px; line-height: 1.4; }
+html[data-ui="cosmo"] .bf-field-warn code { font-family: var(--mono); }
+html[data-ui="cosmo"] .bf-connect-btn {
+  width: 100%; margin-top: 14px; padding: 9px; border-radius: 9px; border: 0;
+  background: var(--ink); color: var(--bg); font-weight: 700; font-size: 12.5px; cursor: pointer;
+}
+html[data-ui="cosmo"] .bf-connect-btn:disabled { opacity: .4; cursor: not-allowed; }
+html[data-ui="cosmo"] .bf-reconnect-pill {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  padding: 7px 12px; border-radius: 9px; border: 1px dashed var(--line);
+  background: var(--panel2); color: var(--ink3); font-size: 11px; cursor: pointer; margin-bottom: 6px;
+}

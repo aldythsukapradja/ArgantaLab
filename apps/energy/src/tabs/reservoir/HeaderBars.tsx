@@ -8,10 +8,12 @@ export type ReservoirMode = 'knowledge' | 'workspace';
 const countryName = (value: string) => ({ NO: 'Norway', GB: 'United Kingdom' }[value] ?? value);
 const shown = (value: unknown) => value == null || value === '' ? 'Not reported' : String(value);
 
-export function ReservoirScopeBar({ field, onSelectField, onOpenLegacy }: {
+export function ReservoirScopeBar({ field, onSelectField, onOpenLegacy, children }: {
   field: SearchEntry | null;
   onSelectField: (field: SearchEntry) => void;
   onOpenLegacy: () => void;
+  /** Mode switch + dossier, folded into this row so the header costs one line. */
+  children?: React.ReactNode;
 }) {
   const [index, setIndex] = useState<SearchEntry[]>([]);
   const [query, setQuery] = useState('');
@@ -29,7 +31,6 @@ export function ReservoirScopeBar({ field, onSelectField, onOpenLegacy }: {
 
   return (
     <div className="rms-bar">
-      <span className="rms-bar-label">Field scope</span>
       <button className="rms-scope" onClick={() => setOpen(true)} disabled={!field}>
         <Globe2 size={13} />
         {field ? <span>{countryName(field.parent)} <i>/</i> <b>{field.name}</b></span> : <span>Loading catalogue…</span>}
@@ -48,7 +49,8 @@ export function ReservoirScopeBar({ field, onSelectField, onOpenLegacy }: {
           </div>
         )}
       </div>
-      <span className="rms-spacer" />
+      {/* The dossier is flex:1, so it — not a spacer — is what pushes Legacy right. */}
+      {children ?? <span className="rms-spacer" />}
       <button className="rms-legacy" onClick={onOpenLegacy}><History size={13} /> Legacy (v1)</button>
     </div>
   );
@@ -72,19 +74,18 @@ export function ReservoirContextBar({ field, mode, onChange }: {
     : shown(value == null || value === '' ? fallback : value);
 
   return (
-    <div className="rms-context">
+    <>
       <div className="rms-mode" aria-label="Reservoir Management view">
-        <button className={mode === 'knowledge' ? 'active' : ''} onClick={() => onChange('knowledge')}><BookOpen size={13} /> Knowledge Bank</button>
+        <button className={mode === 'knowledge' ? 'active' : ''} onClick={() => onChange('knowledge')}><BookOpen size={13} /> Knowledge</button>
         <button className={mode === 'workspace' ? 'active' : ''} onClick={() => onChange('workspace')}><PanelsTopLeft size={13} /> Workspace</button>
       </div>
+      {/* Three facts only. The field name is already in the scope crumb beside the
+          search box, and production start / setting live in the Surveillance Dossier. */}
       <div className="rms-dossier">
-        <div><span>Field</span><b>{field.name}</b></div>
-        <div><span>Status</span><b>{fact(detail?.status, volve ? 'Shut down' : null)}</b></div>
-        <div><span>Production start</span><b>{fact(detail?.productionStartYear, volve ? 2008 : null)}</b></div>
-        <div><span>Operator</span><b>{fact(detail?.operator, volve ? 'Equinor Energy AS' : null)}</b></div>
-        <div><span>Setting</span><b>{fact([detail?.onshoreOffshore, detail?.productionType].filter(Boolean).join(' · '), volve ? 'Offshore · oil & gas' : null)}</b></div>
+        <div title={`Production start ${fact(detail?.productionStartYear, volve ? 2008 : null)}`}><span>Status</span><b>{fact(detail?.status, volve ? 'Shut down' : null)}</b></div>
+        <div title={fact([detail?.onshoreOffshore, detail?.productionType].filter(Boolean).join(' · '), volve ? 'Offshore · oil & gas' : null)}><span>Operator</span><b>{fact(detail?.operator, volve ? 'Equinor Energy AS' : null)}</b></div>
         <div className="wide"><span>RM coverage</span><b>{volve ? 'Deep-dive surveillance bundle' : 'GOGET field spine · client extension slot'}</b></div>
       </div>
-    </div>
+    </>
   );
 }

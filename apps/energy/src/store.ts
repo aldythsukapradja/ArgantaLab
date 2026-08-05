@@ -3,6 +3,10 @@ import type { DomainId } from './nav';
 import { defaultSubtab } from './nav';
 import type { VaultNote } from './knowledge/types';
 import { loadUserNotes, saveUserNotes } from './knowledge/vault';
+import type {
+  MapIntent, MapRequest, Scope, ScopeBrain, ScopeLevel, ScopePatch, ViewIntent, ViewRequest,
+} from './agent/types';
+import { applyPatch, clearLevel, clearScope, emptyScope } from './agent/scope';
 
 export type Theme = 'dark' | 'light';
 
@@ -42,12 +46,39 @@ interface AppState {
   toggleCosmo: (v?: boolean) => void;
   openNote: (id: string) => void;       // cross-surface: graph → explorer
   addUserNote: (n: VaultNote) => void;  // extraction accept → vault
-  /** One-shot cross-surface navigation request. CosmoShell owns `nav` as local
-   *  state, so a deeply-nested surface (e.g. the Data QC extraction gate mirror)
-   *  cannot route directly — it posts an intent here and the shell consumes it. */
-  navIntent: { nav: string; sub?: string } | null;
+
+  // ── The command bus (agent L0 · GLOBAL-SCOPE-FILTER-SPINE S0a) ──────────────
+  // One Scope object. Every surface reads it. No surface owns it. The agent,
+  // the scope bars and the command palette are all just clients of this bus.
+
+  /** The global scope filter. Ancestors auto-fill; conflicts are surfaced. */
+  scope: Scope;
+  /** `reroot` releases older selections that contradict this one — an agent turn
+   *  states a subject, it does not add a constraint to the previous one. */
+  setScope: (patch: ScopePatch, opts?: { autofill?: boolean; reroot?: boolean }) => void;
+  clearScopeLevel: (level: ScopeLevel) => void;
+  resetScope: (keepFacets?: boolean) => void;
+  /** Installed once the gazetteer has loaded (see agent/brain.ts). Until then
+   *  scope still works, it simply does not auto-fill ancestors. */
+  scopeBrain: ScopeBrain | null;
+  installScopeBrain: (brain: ScopeBrain) => void;
+
+  /** Cross-surface navigation request. CosmoShell owns `nav` as local state, so
+   *  a deeply-nested surface (the Data QC extraction gate mirror, a chat turn)
+   *  cannot route directly — it posts an intent here.
+   *
+   *  Intents are NOT consumed centrally: CosmoShell reads `nav` while the target
+   *  vertical reads `sub`/`mode`, and a central consume would race them. `seq`
+   *  increments on every request so repeating an identical intent still re-fires
+   *  subscriber effects — the `driveLegacyNonce` pattern, generalised. */
+  viewIntent: ViewIntent | null;
+  requestView: (view: ViewRequest) => void;
+  /** Back-compat shim for the two existing call sites. Prefer `requestView`. */
   requestNav: (nav: string, sub?: string) => void;
-  consumeNavIntent: () => void;
+
+  /** Fly/highlight request for the Cockpit map. */
+  mapIntent: MapIntent | null;
+  requestMap: (map: MapRequest) => void;
 }
 
 // Land on Data·Overview (real content) rather than Core (placeholder for now).
@@ -77,9 +108,29 @@ export const useStore = create<AppState>((set, get) => ({
     saveUserNotes(next);
     set({ userNotes: next });
   },
-  navIntent: null,
-  requestNav: (nav, sub) => set({ navIntent: { nav, sub } }),
-  consumeNavIntent: () => set({ navIntent: null }),
+  scope: emptyScope(),
+  scopeBrain: null,
+  setScope: (patch, opts) => set((s) => ({
+    scope: applyPatch(s.scope, patch, {
+      brain: s.scopeBrain,
+      autofill: opts?.autofill ?? true,
+      reroot: opts?.reroot ?? false,
+    }),
+  })),
+  clearScopeLevel: (level) => set((s) => ({ scope: clearLevel(s.scope, level, s.scopeBrain) })),
+  resetScope: (keepFacets) => set((s) => ({ scope: clearScope(s.scope, keepFacets) })),
+  installScopeBrain: (brain) => set((s) => ({
+    scopeBrain: brain,
+    // Re-derive whatever is already in scope now that ancestry is known.
+    scope: applyPatch(s.scope, {}, { brain, autofill: true }),
+  })),
+
+  viewIntent: null,
+  requestView: (view) => set((s) => ({ viewIntent: { ...view, seq: (s.viewIntent?.seq ?? 0) + 1 } })),
+  requestNav: (nav, sub) => get().requestView({ nav, sub }),
+
+  mapIntent: null,
+  requestMap: (map) => set((s) => ({ mapIntent: { ...map, seq: (s.mapIntent?.seq ?? 0) + 1 } })),
 }));
 
 // Apply the initial theme attribute at module load (before first paint).

@@ -6,9 +6,10 @@
 // groups COMMAND CENTER / LIFECYCLE / INTELLIGENCE / REPORT (no sovereign-tier bar),
 // topbar crumbs + light/dark toggle + settings + avatar (no "+ New"), footer, and the
 // Cosmonaut orb. Field Development carries the REAL, truth-locked viewers.
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { lazyRetry } from './lazy-retry';
 import {
-  Compass, Layers, Wrench, Gauge, CalendarClock, LayoutDashboard, Settings, Sparkles,
+  Compass, Layers, Wrench, Gauge, CalendarClock, LayoutDashboard, PanelLeft, PanelLeftClose, Settings, Sparkles,
   Bot, BookOpen, Database, Moon, Sun, FolderTree, FileText, File, MonitorPlay,
   Menu, GitBranch, GraduationCap,
 } from 'lucide-react';
@@ -18,26 +19,32 @@ import './cosmo-shell.css';
 import { CosmoAgentOrb } from './CosmoAgentOrb';
 import { CosmoSettings } from './CosmoSettings';
 import { CosmoChat } from './CosmoChat';
+import { CommandPalette } from '../agent/CommandPalette';
 import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
 import { useStore } from '../store';
-import { useSession as useFieldcraftSession } from '../fieldcraft/session';
+import { useSession as useFieldcraftSession } from '../fieldcraft-legacy/session';
 import { Cockpit } from './Cockpit';
 
 // Keep the company-facing Cockpit lean. Scientific workspaces and their larger
 // renderers/data payloads are fetched only when the operator opens that lifecycle.
-const FieldDevShell = lazy(async () => ({ default: (await import('../tabs/fielddev/FieldDevShell')).FieldDevShell }));
-const ExplorationShell = lazy(async () => ({ default: (await import('../tabs/exploration/ExplorationShell')).ExplorationShell }));
-const ReservoirManagementShell = lazy(async () => ({ default: (await import('../tabs/reservoir/ReservoirManagementShell')).ReservoirManagementShell }));
-const IntelInsights = lazy(async () => ({ default: (await import('./IntelInsights')).IntelInsights }));
-const IntelAgents = lazy(async () => ({ default: (await import('./IntelAgents')).IntelAgents }));
-const ReportView = lazy(async () => ({ default: (await import('./ReportView')).ReportView }));
-const DataView = lazy(async () => ({ default: (await import('./DataView')).DataView }));
-const KnowledgeView = lazy(async () => ({ default: (await import('./KnowledgeView')).KnowledgeView }));
-const WellDeliveryShell = lazy(async () => ({ default: (await import('../tabs/welldelivery/WellDeliveryShell')).WellDeliveryShell }));
-const DrillingShell = lazy(async () => ({ default: (await import('../tabs/drilling/DrillingShell')).DrillingShell }));
-const Fieldcraft = lazy(async () => ({ default: (await import('../fieldcraft/Fieldcraft')).Fieldcraft }));
-/* Loaded only once a Fieldcraft mission is actually running. */
-const MissionHud = lazy(async () => ({ default: (await import('../fieldcraft/MissionHud')).MissionHud }));
+const FieldDevShell = lazyRetry(async () => ({ default: (await import('../tabs/fielddev/FieldDevShell')).FieldDevShell }));
+const ExplorationShell = lazyRetry(async () => ({ default: (await import('../tabs/exploration/ExplorationShell')).ExplorationShell }));
+const ReservoirManagementShell = lazyRetry(async () => ({ default: (await import('../tabs/reservoir/ReservoirManagementShell')).ReservoirManagementShell }));
+const IntelInsights = lazyRetry(async () => ({ default: (await import('./IntelInsights')).IntelInsights }));
+const IntelAgents = lazyRetry(async () => ({ default: (await import('./IntelAgents')).IntelAgents }));
+const ReportView = lazyRetry(async () => ({ default: (await import('./ReportView')).ReportView }));
+const DataView = lazyRetry(async () => ({ default: (await import('./DataView')).DataView }));
+const KnowledgeView = lazyRetry(async () => ({ default: (await import('./KnowledgeView')).KnowledgeView }));
+const WellDeliveryShell = lazyRetry(async () => ({ default: (await import('../tabs/welldelivery/WellDeliveryShell')).WellDeliveryShell }));
+const DrillingShell = lazyRetry(async () => ({ default: (await import('../tabs/drilling/DrillingShell')).DrillingShell }));
+/* The current Fieldcraft: a one-page concept shell for the Volve course, built
+   from scratch. The previous implementation is parked whole under
+   `fieldcraft-legacy/` and still reachable from Command Center, so its decks,
+   quiz bank and mission runner stay available while this one is designed. */
+const Academy = lazyRetry(async () => ({ default: (await import('../academy/Academy')).Academy }));
+const FieldcraftLegacy = lazyRetry(async () => ({ default: (await import('../fieldcraft-legacy/Fieldcraft')).Fieldcraft }));
+/* Loaded only once a legacy Fieldcraft mission is actually running. */
+const MissionHud = lazyRetry(async () => ({ default: (await import('../fieldcraft-legacy/MissionHud')).MissionHud }));
 
 const LIFECYCLES = [
   { id: 'exploration', name: 'Exploration', icon: Compass, color: '#22d3ee', status: 'BETA', sub: 'Basins, plays, prospects and prospect-level volumes' },
@@ -62,15 +69,20 @@ const REPORT = [
 ];
 // mobile bottom-sheet groups (ported 1:1 from source M_GROUPS) — same items as the
 // desktop nav groups, with a "hint" subline for the sheet rows.
-type SheetItem = { id: string; label: string; icon: typeof Compass; hint: string; zone: 'vertical' | 'report' | 'intel' };
+type SheetItem = { id: string; label: string; icon: typeof Compass; hint: string; zone: 'command' | 'vertical' | 'report' | 'intel' };
 const M_GROUPS: Record<string, { title: string; items: SheetItem[] }> = {
+  command: {
+    title: 'Command Center',
+    items: [
+      { id: 'cockpit', label: 'Cockpit', icon: LayoutDashboard, hint: 'spatial intelligence · map, search, dossiers', zone: 'command' },
+      { id: 'fieldcraft', label: 'Fieldcraft', icon: GraduationCap, hint: 'training · course concept', zone: 'command' },
+      { id: 'learn', label: 'Learn', icon: GraduationCap, hint: 'decks, quizzes and guided missions', zone: 'command' },
+    ],
+  },
   verticals: { title: 'Lifecycle', items: LIFECYCLES.map((l) => ({ id: l.id, label: l.name, icon: l.icon, hint: l.sub, zone: 'vertical' })) },
   report: {
     title: 'Report',
-    items: [
-      ...REPORT.map((t) => ({ id: t.id, label: t.name, icon: t.icon, hint: 'report · ' + t.name.toLowerCase(), zone: 'report' as const })),
-      { id: 'fieldcraft', label: 'Fieldcraft', icon: GraduationCap, hint: 'training · course delivery', zone: 'report' as const },
-    ],
+    items: REPORT.map((t) => ({ id: t.id, label: t.name, icon: t.icon, hint: 'report · ' + t.name.toLowerCase(), zone: 'report' as const })),
   },
   intel: {
     title: 'Intelligence',
@@ -99,11 +111,14 @@ export function CosmoShell() {
   }, [dark]);
 
   const [nav, setNav] = useState('cockpit');
-  // A nested surface can ask to route elsewhere (Data QC's extraction gate mirror →
-  // Knowledge → Extraction Studio). We apply the surface here and leave the intent
-  // standing so the destination can read its own sub-tab, then clear it.
-  const navIntent = useStore((s) => s.navIntent);
-  useEffect(() => { if (navIntent) setNav(navIntent.nav); }, [navIntent]);
+  // A nested surface, or an agent turn, can ask to route elsewhere (Data QC's
+  // extraction gate mirror → Knowledge → Extraction Studio). We apply the top-level
+  // surface here and leave the intent STANDING — the destination reads its own
+  // `sub`/`mode` off the same object. Keyed on `seq` so a repeat of an identical
+  // intent still re-fires. Nobody consumes it; that is what makes multi-reader
+  // intents (shell takes `nav`, vertical takes `sub`) race-free.
+  const viewIntent = useStore((s) => s.viewIntent);
+  useEffect(() => { if (viewIntent) setNav(viewIntent.nav); }, [viewIntent?.seq, viewIntent?.nav]);
   // Field Development now owns its own tab/scope state internally (FieldDevShell).
   // What's left here is just the guided-tour bridge into its parked Legacy (v1)
   // view — CosmoChat drives Legacy directly, bumping the nonce to force it open
@@ -113,6 +128,18 @@ export function CosmoShell() {
   const [tourVolveNonce, setTourVolveNonce] = useState(0);
   const [settings, setSettings] = useState(false);
   const [chat, setChat] = useState(false);
+  const [chatFull, setChatFull] = useState(false);
+  /** Manual sidebar collapse. Separate from the automatic collapse the agent triggers,
+   *  so closing the agent restores whatever the user had chosen rather than always
+   *  re-expanding. Persisted: a rail is a working preference, not a per-visit accident. */
+  const [railPinned, setRailPinned] = useState(() => {
+    try { return localStorage.getItem('arganta:rail') === '1'; } catch { return false; }
+  });
+  const toggleRail = () => setRailPinned((v) => {
+    const next = !v;
+    try { localStorage.setItem('arganta:rail', next ? '1' : '0'); } catch { /* private mode */ }
+    return next;
+  });
   const [chatFullSignal, setChatFullSignal] = useState(0);
 
   // mobile shell state — off-canvas drawer + bottom sheet (ported 1:1 from source)
@@ -123,21 +150,10 @@ export function CosmoShell() {
   useEffect(() => { document.body.classList.toggle('cosmo-on', chat); return () => document.body.classList.remove('cosmo-on'); }, [chat]);
   const closeMobile = () => { setDrawer(false); setSheet(null); };
   const toggleSheet = (g: string) => { setDrawer(false); setSheet((s) => (s === g ? null : g)); };
-  const openCockpit = () => {
-    setNav('cockpit');
-    setDrawer(false);
-    setSheet(window.matchMedia('(max-width: 820px)').matches ? 'verticals' : null);
-  };
-  useEffect(() => {
-    if (nav === 'cockpit' && window.matchMedia('(max-width: 820px)').matches) {
-      setSheet('verticals');
-    }
-  }, [nav]);
   const sheetGo = (it: SheetItem) => {
     setSheet(null);
-    if (it.zone === 'vertical') { setNav(it.id); setLegacyTab('map'); }
-    else if (it.zone === 'report') setNav(it.id);
-    else if (it.zone === 'intel') setNav(it.id);
+    setNav(it.id);
+    if (it.zone === 'vertical') setLegacyTab('map');
   };
 
   const active = LIFECYCLES.find((l) => l.id === nav);
@@ -145,24 +161,31 @@ export function CosmoShell() {
   const isExpl = nav === 'exploration';
   const isRM = nav === 'reservoir-management';
   const isFieldcraft = nav === 'fieldcraft';
+  const isLearn = nav === 'learn';
   const fieldcraftSession = useFieldcraftSession();
   const reportItem = REPORT.find((r) => r.id === nav);
   const isReport = !!reportItem;
   const crumbLabel = active ? active.name
-    : (INTEL.find((i) => i.id === nav) || reportItem || (isFieldcraft ? { name: 'Fieldcraft' } : { name: 'Cockpit' })).name;
+    : (INTEL.find((i) => i.id === nav) || reportItem
+        || (isFieldcraft ? { name: 'Fieldcraft' }
+          : isLearn ? { name: 'Learn' }
+            : { name: 'Cockpit' })).name;
 
-  // active bottom-nav tab — an open sheet wins; otherwise derive from the current nav
+  // active bottom-nav tab — an open sheet wins; otherwise derive from the current nav.
+  // Cockpit and Fieldcraft share the Command Center tab, since that sheet holds both.
   const mActive = sheet ? sheet
-    : nav === 'cockpit' ? 'cockpit'
+    : nav === 'cockpit' ? 'command'
     : LIFECYCLES.some((l) => l.id === nav) ? 'verticals'
-    : isFieldcraft ? 'fieldcraft'
+    : isFieldcraft || isLearn ? 'command'
     : isReport ? 'report'
     : INTEL.some((i) => i.id === nav) ? 'intel' : '';
 
   const navItem = (item: NavItem, onClick: () => void) => {
     const on = nav === item.id;
     return (
-      <div key={item.id} className={'navitem' + (on ? ' active' : '')} onClick={onClick}>
+      // data-name feeds the rail tooltip in CSS, so a collapsed icon can still say
+      // what it is without duplicating the label anywhere.
+      <div key={item.id} data-name={item.name} className={'navitem' + (on ? ' active' : '')} onClick={onClick}>
         <span className="d" style={!on && item.color ? { color: item.color } : undefined}><item.icon size={15} /></span>
         <span className="lbl">{item.name}</span>
       </div>
@@ -170,16 +193,32 @@ export function CosmoShell() {
   };
 
   return (
-    <div className="app">
+    // Classes are driven from STATE, not a :has() selector on the panel. :has() looked
+    // tidier — the trigger really is the panel being on screen — but Chrome did not
+    // invalidate padding-right or the grid tracks when the selector flipped: the rule
+    // was the only active one in the cascade and the computed value stayed at 0.
+    <div className={'app'
+      + (railPinned ? ' rail-pinned' : '')
+      + (chat ? ' agent-open' : '')
+      + (chat && chatFull ? ' agent-full' : '')}>
       {/* sidebar — 1:1 COSMO */}
       <aside className="sidebar">
         <div className="brand">
           <div className="mark"><Sparkles size={16} /></div>
           <div><div className="bt">Arganta<span style={{ background: 'linear-gradient(100deg,#0FB5A6,#5fe3cf)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>Energy</span></div></div>
+          <button className="rail-btn" onClick={toggleRail} aria-pressed={railPinned}
+            title={railPinned ? 'Expand the sidebar' : 'Collapse the sidebar to icons'}
+            aria-label={railPinned ? 'Expand the sidebar' : 'Collapse the sidebar to icons'}>
+            {railPinned ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
+          </button>
         </div>
         <div className="nav">
           <div className="navlabel">COMMAND CENTER</div>
-          {navItem({ id: 'cockpit', name: 'Cockpit', icon: LayoutDashboard }, openCockpit)}
+          {navItem({ id: 'cockpit', name: 'Cockpit', icon: LayoutDashboard }, () => { setNav('cockpit'); closeMobile(); })}
+          {/* Fieldcraft sits in Command Center but stays out of the REPORT array below —
+              that array drives ReportView, which cannot render this surface. */}
+          {navItem({ id: 'fieldcraft', name: 'Fieldcraft', icon: GraduationCap, color: '#0FB5A6' }, () => { setNav('fieldcraft'); closeMobile(); })}
+          {navItem({ id: 'learn', name: 'Learn', icon: GraduationCap, color: '#94a3b8' }, () => { setNav('learn'); closeMobile(); })}
 
           <div className="navlabel">LIFECYCLE</div>
           {LIFECYCLES.map((l) => navItem(l, () => { setNav(l.id); setLegacyTab('map'); closeMobile(); }))}
@@ -189,9 +228,6 @@ export function CosmoShell() {
 
           <div className="navlabel">REPORT</div>
           {REPORT.map((n) => navItem(n, () => { setNav(n.id); closeMobile(); }))}
-          {/* Fieldcraft sits in the Report group but stays out of REPORT itself —
-              that array drives ReportView, which cannot render this surface. */}
-          {navItem({ id: 'fieldcraft', name: 'Fieldcraft', icon: GraduationCap, color: '#0FB5A6' }, () => { setNav('fieldcraft'); closeMobile(); })}
         </div>
       </aside>
 
@@ -249,7 +285,19 @@ export function CosmoShell() {
         ) : nav === 'drilling-sequence' ? (
           <DrillingShell />
         ) : isFieldcraft ? (
-          <Fieldcraft onOpenWorkspace={(id) => { setNav(id); closeMobile(); }} />
+          <Academy />
+        ) : isLearn ? (
+          <FieldcraftLegacy onOpenWorkspace={(id, module) => {
+            setNav(id);
+            // Field Development exposes a deep-link hook, so a mission step can
+            // land the learner directly on the module it is about. The other
+            // verticals surface the target module in the HUD instead.
+            if (id === 'field-development' && module) {
+              setLegacyTab(module);
+              setLegacyNonce((n) => n + 1);
+            }
+            closeMobile();
+          }} />
           ) : (
           <div className="content">
             <div className="ph" style={{ height: '100%' }}>
@@ -294,7 +342,7 @@ export function CosmoShell() {
         </div>
       </div>
       <nav className="mnav" aria-label="Primary">
-        <button className={'mtab ' + (mActive === 'cockpit' ? 'on' : '')} onClick={openCockpit}>
+        <button className={'mtab ' + (mActive === 'command' ? 'on' : '')} onClick={() => toggleSheet('command')} aria-expanded={sheet === 'command'}>
           <LayoutDashboard size={23} strokeWidth={1.7} /><span>Cockpit</span>
         </button>
         <button className={'mtab ' + (mActive === 'verticals' ? 'on' : '')} onClick={() => toggleSheet('verticals')}>
@@ -304,29 +352,32 @@ export function CosmoShell() {
           <CosmoAgentOrb size={52} />
           <span className="mtab-orb-lbl">Arganta</span>
         </button>
-        <button className={'mtab ' + (mActive === 'fieldcraft' ? 'on' : '')} onClick={() => { setNav('fieldcraft'); closeMobile(); }}>
-          <GraduationCap size={23} strokeWidth={1.7} /><span>Learn</span>
-        </button>
         <button className={'mtab ' + (mActive === 'intel' ? 'on' : '')} onClick={() => toggleSheet('intel')}>
           <Sparkles size={23} strokeWidth={1.7} /><span>Intelligence</span>
+        </button>
+        <button className={'mtab ' + (mActive === 'report' ? 'on' : '')} onClick={() => toggleSheet('report')}>
+          <FileText size={23} strokeWidth={1.7} /><span>Report</span>
         </button>
       </nav>
 
       <CosmoChat
         open={chat}
         onClose={() => setChat(false)}
+        onFullChange={setChatFull}
         fullSignal={chatFullSignal}
         onFocusCockpit={() => setNav('cockpit')}
         onZoomVolve={() => setTourVolveNonce((n) => n + 1)}
         onFieldDevTab={(t) => { setNav('field-development'); setLegacyTab(t); setLegacyNonce((n) => n + 1); }}
       />
       <CosmoSettings open={settings} onClose={() => setSettings(false)} dark={dark} setDark={setDark} />
+      {/* ⌘K — the same agent as the chat, a second front door. */}
+      <CommandPalette />
 
       {/* A running Fieldcraft mission follows the learner into whichever
           lifecycle workspace it is scoped to, so the vertical acts as the lab. */}
-      {fieldcraftSession.activeMission && !isFieldcraft && (
+      {fieldcraftSession.activeMission && !isLearn && (
         <Suspense fallback={null}>
-          <MissionHud onReturn={() => { setNav('fieldcraft'); closeMobile(); }} />
+          <MissionHud onReturn={() => { setNav('learn'); closeMobile(); }} />
         </Suspense>
       )}
     </div>

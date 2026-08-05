@@ -10,6 +10,7 @@ import {
   ShieldCheck, Sparkles, TerminalSquare, TestTube2, Users, Wrench,
 } from 'lucide-react';
 import { AGENTS, type AgentDef } from './agents';
+import { useStore } from '../store';
 import { IntelligenceHeader, IntelligenceSurface, IntelligenceTabs } from './IntelligenceChrome';
 import { EMPTY_CONTEXT, knowledgeBindings, loadAgentContext, toolBindings, verticalSummary, type AgentContext } from './agent-context';
 import './intel-agents.css';
@@ -66,6 +67,18 @@ export function IntelAgents({ onNavigate }: { onNavigate: (id: string) => void }
     return () => { dead = true; };
   }, []);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
+  // A Fieldcraft card's agent shortcut names the lifecycle it wants, so the
+  // learner lands on that agent's dossier rather than the directory index.
+  const viewIntent = useStore((s) => s.viewIntent);
+  useEffect(() => {
+    if (viewIntent?.nav !== 'agents' || !viewIntent.sub) return;
+    const match = DIRECTORY.find((a) => a.id === viewIntent.sub);
+    if (!match) return;
+    setTab('workforce');
+    setSelected(match);
+    setDetailTab('overview');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewIntent?.seq]);
   const live = DIRECTORY.filter((agent) => agent.state === 'LIVE').length;
 
   return (

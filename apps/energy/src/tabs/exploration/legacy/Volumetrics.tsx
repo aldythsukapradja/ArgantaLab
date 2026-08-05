@@ -141,7 +141,7 @@ function Inner({ index, top, base, sel, setSel }: { index: WbIndex; top: Surface
             </div>
           ); })}
         </InspectorSection>
-        <div style={{ fontSize: 9.5, color: 'var(--muted)', lineHeight: 1.5 }}>Deterministic STOIIP is the unfaulted screening upper bound (validated ≈22 MMSm³ dynamic [{CITATIONS.dynamic}]). Prospect ranges are pre-drill <b style={{ color: 'var(--amber)' }}>scenario</b>.</div>
+        <div style={{ fontSize: 9.5, color: 'var(--muted)', lineHeight: 1.5 }}>Deterministic STOIIP is an unfaulted contact scenario (validated ≈22 MMSm³ dynamic [{CITATIONS.dynamic}]). Prospect ranges are pre-drill <b style={{ color: 'var(--amber)' }}>scenario</b>.</div>
       </Inspector>
     </div>
   );

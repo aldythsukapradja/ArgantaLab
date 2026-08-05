@@ -208,6 +208,58 @@
       ],
       "cwd": "apps/energy",
       "port": 5279
+    },
+    {
+      "name": "energy-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5280",
+        "--strictPort"
+      ],
+      "cwd": "apps/energy",
+      "port": 5280,
+      "autoPort": false
+    },
+    {
+      "name": "energy-fast",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5288",
+        "--strictPort"
+      ],
+      "cwd": "apps/energy",
+      "port": 5288,
+      "autoPort": true
+    },
+    {
+      "name": "energy-3",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "apps/energy",
+      "port": 5281,
+      "autoPort": true
+    },
+    {
+      "name": "energy-clean",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5288",
+        "--strictPort"
+      ],
+      "cwd": "apps/energy",
+      "port": 5288,
+      "autoPort": true
     }
   ]
 }

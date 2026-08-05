@@ -14,6 +14,8 @@ import { sampleGrid } from '../../../engine/grid';
 import type { FvCfg, FvResult } from '../../../engine/sim/fv';
 import { traceStreamlines } from '../../../engine/sim/streamline';
 import { COREY_DEFAULTS } from '../../../engine/sim/relperm';
+import { useFluidCase } from '../fluid-case-store';
+import { toSimFluids } from '../fluid-model';
 import { packSimFrames } from '../../../engine/pack-sim';
 import { ProductionChartView } from './ProductionChartView';
 const SimDrape = lazy(() => import('./SimDrape')); // G5 lightweight 3D HC-flow drape
@@ -38,9 +40,23 @@ export function SimulationView() {
 function Inner({ index }: { index: WbIndex }) {
   const d = index.defaults;
   const [res, setRes] = useState(26);        // areal grid resolution
-  const [muRatio, setMuRatio] = useState(6); // oil/water viscosity ratio (mobility)
-  const [nw, setNw] = useState(3);
-  const [no, setNo] = useState(2);
+  const [muRatioLocal, setMuRatio] = useState(6); // oil/water viscosity ratio (mobility)
+  const [nwLocal, setNw] = useState(3);
+  const [noLocal, setNo] = useState(2);
+
+  // THE ROCK-FLUID BASIS. When the Fluids & Rock stage has published a case, this run
+  // initialises from IT — the deck-anchored PVT viscosities, the case's Corey
+  // endpoints, its porosity and its permeability. Before this wiring the simulator
+  // carried its own COREY_DEFAULTS and a viscosity-ratio slider, so the two surfaces
+  // could disagree with nothing on either screen saying so.
+  //
+  // With no case published the sliders are still the input, and the inspector says
+  // which of the two it is running on. It never silently falls back.
+  const published = useFluidCase((s) => s.published);
+  const fluids = published ? toSimFluids(published) : null;
+  const muRatio = fluids ? fluids.muRatio : muRatioLocal;
+  const nw = fluids ? fluids.nw : nwLocal;
+  const no = fluids ? fluids.no : noLocal;
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [showStreams, setShowStreams] = useState(false);
@@ -69,16 +85,21 @@ function Inner({ index }: { index: WbIndex }) {
     const dx = (maxX - minX) / nx, dy = (maxY - minY) / ny;
     const toIJ = (x: number, y: number) => ({ i: Math.max(0, Math.min(nx - 1, Math.round((x - minX) / dx - 0.5))), j: Math.max(0, Math.min(ny - 1, Math.round((y - minY) / dy - 0.5))) });
     const iw = toIJ(inj.x, inj.y), pw = toIJ(prod.x, prod.y);
-    const phi = new Float64Array(nx * ny).fill(d.phi);
-    const k = new Float64Array(nx * ny).fill(RESERVOIR_K);
-    const Vcell = dx * dy * 20, poreVol = d.phi * Vcell * nx * ny;
-    const corey = { ...COREY_DEFAULTS, nw, no };
+    const porosity = fluids?.phi ?? d.phi;
+    const perm = fluids?.kMd ?? RESERVOIR_K;
+    const muw = fluids?.muw ?? 0.5;
+    const phi = new Float64Array(nx * ny).fill(porosity);
+    const k = new Float64Array(nx * ny).fill(perm);
+    const Vcell = dx * dy * 20, poreVol = porosity * Vcell * nx * ny;
+    const corey = fluids
+      ? { swc: fluids.swc, sor: fluids.sor, krwMax: fluids.krwMax, kroMax: fluids.kroMax, nw, no }
+      : { ...COREY_DEFAULTS, nw, no };
     const fvCfg: FvCfg = {
-      nx, ny, dx, dy, dz: 20, phi, k, muw: 0.5, muo: 0.5 * muRatio, corey,
+      nx, ny, dx, dy, dz: 20, phi, k, muw, muo: muw * muRatio, corey,
       wells: [{ i: iw.i, j: iw.j, mode: 'rate', rate: poreVol }, { i: pw.i, j: pw.j, mode: 'bhp', bhp: 100, WI: 1e5 }],
     };
     return { fvCfg, fvOpts: { tEnd: 1.2, nReports: 32, cfl: 0.35 }, nx, ny, dx, dy, minX, minY, maxX, maxY, iw, pw, corey };
-  }, [inj, prod, res, muRatio, nw, no, d.phi]);
+  }, [inj, prod, res, muRatio, nw, no, d.phi, fluids]);
 
   // heavy solve OFF the main thread — Simulation tab now paints instantly
   const [simResult, setSimResult] = useState<FvResult | null>(null);
@@ -244,15 +265,44 @@ function Inner({ index }: { index: WbIndex }) {
             <div style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 4 }}>Pollock tracing on the SAME pressure solve → injector→producer allocation (the flux lens the cell field can't show).</div>
           </InspectorSection>
         )}
-        <InspectorSection title="Fluids (Corey)">
-          <Slider label="Oil/water μ ratio" min={1} max={20} step={1} value={muRatio} onChange={setMuRatio} fmt={(v) => `${v}×`} />
-          <Slider label="Water exponent nw" min={2} max={6} step={1} value={nw} onChange={setNw} fmt={(v) => `${v}`} />
-          <Slider label="Oil exponent no" min={2} max={5} step={1} value={no} onChange={setNo} fmt={(v) => `${v}`} />
-          <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>Higher μ ratio → less favourable mobility → earlier breakthrough, lower sweep.</div>
+        <InspectorSection title={fluids ? 'Fluids (published case)' : 'Fluids (Corey)'}>
+          {fluids ? (
+            <>
+              <table className="mono" style={{ width: '100%', fontSize: 10.5 }}><tbody>
+                {([
+                  ['μw / μo', `${fluids.muw.toFixed(3)} / ${fluids.muo.toFixed(3)} cP`],
+                  ['μ ratio', `${muRatio.toFixed(2)}×`],
+                  ['Swc / Sor', `${fluids.swc.toFixed(2)} / ${fluids.sor.toFixed(2)}`],
+                  ['krw / kro', `${fluids.krwMax.toFixed(2)} / ${fluids.kroMax.toFixed(2)}`],
+                  ['nw / no', `${fluids.nw} / ${fluids.no}`],
+                ] as Array<[string, string]>).map(([k, v]) => (
+                  <tr key={k}><td style={{ color: 'var(--muted)' }}>{k}</td><td style={{ textAlign: 'right', color: 'var(--text)' }}>{v}</td></tr>
+                ))}
+              </tbody></table>
+              <div style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 4 }}>
+                Read from the Fluids &amp; Rock stage’s published case, not from this tab’s defaults — the
+                viscosities come from the delivery’s own PVT anchors, the endpoints from its SCAL basis.
+                Change them there and this run follows.
+              </div>
+            </>
+          ) : (
+            <>
+              <Slider label="Oil/water μ ratio" min={1} max={20} step={1} value={muRatioLocal} onChange={setMuRatio} fmt={(v) => `${v}×`} />
+              <Slider label="Water exponent nw" min={2} max={6} step={1} value={nwLocal} onChange={setNw} fmt={(v) => `${v}`} />
+              <Slider label="Oil exponent no" min={2} max={5} step={1} value={noLocal} onChange={setNo} fmt={(v) => `${v}`} />
+              <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>
+                No fluid case has been published — open Fluids &amp; Rock in the suite to build one from the
+                delivery’s PVT. Until then these sliders are the input, and they are screening values, not this
+                field’s measured fluid.
+              </div>
+            </>
+          )}
         </InspectorSection>
         <InspectorSection title="Grid">
           <Slider label="Areal resolution" min={16} max={40} step={2} value={res} onChange={setRes} fmt={(v) => `${v}`} />
-          <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>φ {d.phi} · k {RESERVOIR_K} mD (screening, homogeneous). IMPES + CFL sub-stepping.</div>
+          <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>
+            φ {(fluids?.phi ?? d.phi)} · k {fluids?.kMd ?? RESERVOIR_K} mD ({fluids ? 'from the published case' : 'screening'}, homogeneous). IMPES + CFL sub-stepping.
+          </div>
         </InspectorSection>
         <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>Two-phase oil-water · mass-conservative · S6 will add the streamline twin on the same pressure solve.</div>
       </Inspector>

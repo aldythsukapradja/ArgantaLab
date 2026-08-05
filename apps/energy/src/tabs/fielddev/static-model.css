@@ -1,0 +1,138 @@
+/* static-model.css — the static modelling workspace, on Petrel's window model:
+   one big canvas, an ordered Processes rail, and process dialogs that FLOAT over
+   the canvas rather than replacing it. */
+
+html[data-ui="cosmo"] .sms{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+/* ── title bar ──────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .sms-bar{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .sms-title{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .sms-sub{min-width:0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
+html[data-ui="cosmo"] .sms-sp{flex:1}
+html[data-ui="cosmo"] .sms-progress{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid var(--line);border-radius:5px;font:8px var(--mono);color:var(--ink3)}
+
+html[data-ui="cosmo"] .sms-shell{display:flex;flex:1;min-height:0}
+html[data-ui="cosmo"] .sms-stage{display:flex;flex:1;min-width:0;min-height:0;flex-direction:column}
+/* the canvas is the frame every dialog is positioned inside */
+html[data-ui="cosmo"] .sms-canvas{position:relative;flex:1;min-height:0;overflow:hidden}
+
+/* ── Processes pane ─────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .prail{display:flex;width:186px;flex:0 0 auto;flex-direction:column;border-right:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .prail-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:7px 10px;border-bottom:1px solid var(--line2);font:8px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .prail-head button{margin-left:auto;display:inline-flex;padding:2px 4px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .prail-head button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .prail-scroll{flex:1;min-height:0;overflow:auto;padding:4px 0 10px}
+html[data-ui="cosmo"] .prail-gh{padding:8px 10px 3px;font:7px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);opacity:.75}
+html[data-ui="cosmo"] .prail-p{display:flex;align-items:center;gap:6px;width:100%;padding:4px 9px;border:0;background:transparent;color:var(--ink2);font:9px var(--sans);text-align:left;cursor:pointer}
+html[data-ui="cosmo"] .prail-p:hover:not(:disabled){background:var(--panel2);color:var(--ink)}
+html[data-ui="cosmo"] .prail-p.on{background:var(--teal-soft);color:var(--teal-ink)}
+/* a gated process is disabled and its tooltip names the step it waits on — the
+   Processes pane is ordered because the order is a constraint, not a suggestion */
+html[data-ui="cosmo"] .prail-p.blocked{opacity:.42;cursor:not-allowed}
+html[data-ui="cosmo"] .prail-ic{display:flex;width:13px;flex:0 0 auto;justify-content:center;color:var(--ink3)}
+html[data-ui="cosmo"] .prail-p.done .prail-ic{color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .prail-p.on .prail-ic{color:var(--teal-ink)}
+html[data-ui="cosmo"] .prail-lbl{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .prail-p em{flex:0 0 auto;font:7px var(--mono);font-style:normal;color:var(--ink3);opacity:.8}
+
+/* ── function bar: the tools of the ACTIVE process ──────────────────────── */
+html[data-ui="cosmo"] .fnbar{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding:5px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .fnbar-active{display:inline-flex;align-items:center;gap:3px;min-width:118px;font:9px var(--mono);color:var(--teal-ink)}
+html[data-ui="cosmo"] .fnbar-active .idle{color:var(--ink3);opacity:.7}
+html[data-ui="cosmo"] .fnbar-grp{display:flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
+html[data-ui="cosmo"] .fnbar-grp button{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border:0;border-radius:5px;background:transparent;color:var(--ink3);font:8px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .fnbar-grp button:hover:not(:disabled){color:var(--ink)}
+html[data-ui="cosmo"] .fnbar-grp button.on{background:var(--teal-soft);color:var(--teal-ink);box-shadow:0 0 0 1px var(--teal)}
+html[data-ui="cosmo"] .fnbar-grp button:disabled{opacity:.4;cursor:default}
+html[data-ui="cosmo"] .fnbar-exag{display:flex;align-items:center;gap:5px;font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .fnbar-exag input{width:84px;accent-color:var(--teal)}
+html[data-ui="cosmo"] .fnbar-sp{flex:1}
+
+/* the HUD — the number that says whether the last thing you did was affordable */
+html[data-ui="cosmo"] .gvs-hud{display:flex;align-items:center;gap:8px;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font:8px var(--mono)}
+html[data-ui="cosmo"] .gvs-hud .fps{color:var(--green,#4ade80);font-weight:600}
+html[data-ui="cosmo"] .gvs-hud .fps.low{color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .gvs-hud i{font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .gvs-hud i+i{padding-left:8px;border-left:1px solid var(--line2)}
+html[data-ui="cosmo"] .gvs-hud i.drop{color:var(--amber,#fbbf24);cursor:help}
+
+/* ── the canvas ─────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .gvs-canvas{position:absolute;inset:0}
+html[data-ui="cosmo"] .gvs-canvas canvas{display:block;width:100%;height:100%}
+html[data-ui="cosmo"] .gvs-void{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:30px;text-align:center;background:#0b1017}
+html[data-ui="cosmo"] .gvs-void b{font-size:12px;color:#c8d3e0}
+html[data-ui="cosmo"] .gvs-void span{max-width:340px;font-size:9.5px;line-height:1.6;color:#7d8b9c}
+html[data-ui="cosmo"] .gvs-loading{position:absolute;left:12px;top:12px;padding:4px 9px;border-radius:6px;background:rgba(11,16,23,.85);font:8.5px var(--mono);color:#9fb0c2}
+
+/* depth legend — one ramp across every selected horizon */
+html[data-ui="cosmo"] .gvs-legend{position:absolute;right:12px;bottom:12px;display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:7px;background:rgba(11,16,23,.82);font:8px var(--mono);color:#c8d3e0}
+html[data-ui="cosmo"] .gvs-legend i{width:110px;height:7px;border-radius:4px;background:linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)}
+html[data-ui="cosmo"] .gvs-legend em{font-style:normal;opacity:.6}
+html[data-ui="cosmo"] .gvs-exag{position:absolute;left:12px;bottom:12px;display:flex;gap:7px;padding:4px 9px;border-radius:6px;background:rgba(11,16,23,.82);font:8px var(--mono);color:#9fb0c2}
+/* a decimated view is ALWAYS labelled — quoting a number off a picture that was
+   never the model is exactly what this prevents */
+html[data-ui="cosmo"] .gvs-stride{padding-left:7px;border-left:1px solid rgba(255,255,255,.16);color:#fbbf24}
+
+/* ── process dialogs: float over the canvas, drag, dock, resize ─────────── */
+html[data-ui="cosmo"] .pdlg{position:absolute;display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:0 12px 40px rgba(0,0,0,.34);overflow:hidden}
+/* docked: pinned to the right edge, full height — Petrel's other window state */
+html[data-ui="cosmo"] .pdlg.docked{position:absolute;right:0;top:0;bottom:0;left:auto;width:320px;height:auto;border-radius:0;border-right:0;border-top:0;border-bottom:0;box-shadow:-8px 0 28px rgba(0,0,0,.22);z-index:9}
+html[data-ui="cosmo"] .pdlg.min{height:auto!important}
+
+html[data-ui="cosmo"] .pdlg>header{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:6px 8px;border-bottom:1px solid var(--line2);background:var(--teal-soft);cursor:grab;user-select:none}
+html[data-ui="cosmo"] .pdlg.docked>header{cursor:default}
+html[data-ui="cosmo"] .pdlg>header b{font-size:10px;font-weight:600;color:var(--teal-ink)}
+html[data-ui="cosmo"] .pdlg>header em{padding:0 5px;border-radius:4px;background:var(--panel);font:7px var(--mono);font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-sp{flex:1}
+html[data-ui="cosmo"] .pdlg>header button{display:inline-flex;padding:2px;border:0;border-radius:4px;background:transparent;color:var(--teal-ink);cursor:pointer;opacity:.75}
+html[data-ui="cosmo"] .pdlg>header button:hover{opacity:1;background:var(--panel)}
+html[data-ui="cosmo"] .pdlg-sub{flex:0 0 auto;padding:5px 9px;border-bottom:1px solid var(--line2);font-size:8.5px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-body{flex:1;min-height:0;overflow:auto;padding:8px 9px}
+html[data-ui="cosmo"] .pdlg-foot{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:6px 9px;border-top:1px solid var(--line2);background:var(--panel2)}
+html[data-ui="cosmo"] .pdlg-foot-note{flex:1;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-btn{padding:3px 11px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink2);font:8.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .pdlg-btn:hover{color:var(--ink)}
+html[data-ui="cosmo"] .pdlg-btn.primary{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .pdlg-grip{position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,var(--line) 50%,var(--line) 62%,transparent 62%,transparent 74%,var(--line) 74%,var(--line) 86%,transparent 86%)}
+
+/* dialog contents */
+html[data-ui="cosmo"] .pdf{display:block;margin-bottom:9px}
+html[data-ui="cosmo"] .pdf>span{display:block;margin-bottom:3px;font:7.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .pdf select,html[data-ui="cosmo"] .pdf input[type=range]{width:100%}
+html[data-ui="cosmo"] .pdf select{padding:3px 5px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--ink);font:8.5px var(--mono)}
+html[data-ui="cosmo"] .pdf input[type=range]{accent-color:var(--teal)}
+html[data-ui="cosmo"] .pdf small{display:block;margin-top:4px;font-size:7.5px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-row{display:flex;align-items:center;gap:5px;margin-bottom:7px}
+html[data-ui="cosmo"] .pdlg-mini{padding:2px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);color:var(--ink3);font:7.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .pdlg-mini:hover{color:var(--ink)}
+html[data-ui="cosmo"] .pdlg-note{font-size:8px;line-height:1.55;color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-note.pad{margin-top:8px;padding-top:7px;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .pdlg-list{display:flex;flex-direction:column;gap:2px}
+html[data-ui="cosmo"] .pdlg-item{display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:5px;font:8.5px var(--mono);color:var(--ink2);cursor:pointer}
+html[data-ui="cosmo"] .pdlg-item:hover{background:var(--panel2)}
+html[data-ui="cosmo"] .pdlg-item.on{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .pdlg-item b{width:13px;flex:0 0 auto;font-weight:600;color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-item>span{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .pdlg-item em{flex:0 0 auto;font-style:normal;font-size:7.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-item i{width:3px;height:13px;flex:0 0 auto;border-radius:2px}
+html[data-ui="cosmo"] .pdlg-item.zone{cursor:default}
+html[data-ui="cosmo"] .pdlg-item.zone.bad em{color:var(--red,#ef4444);font-weight:600}
+html[data-ui="cosmo"] .pdlg-warn{margin-top:8px;padding:6px 7px;border-left:2px solid var(--amber,#fbbf24);border-radius:0 4px 4px 0;background:color-mix(in srgb,var(--amber,#fbbf24) 10%,transparent);font-size:8px;line-height:1.5;color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .pdlg-warn.soft{border-left-color:var(--ink3);background:var(--panel2);color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-kv{display:grid;grid-template-columns:52px minmax(0,1fr);gap:7px;padding:4px 0;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .pdlg-kv:first-child{border-top:0}
+html[data-ui="cosmo"] .pdlg-kv dt{font:7.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .pdlg-kv dd{margin:0;font-size:8.5px;line-height:1.45;color:var(--ink2)}
+html[data-ui="cosmo"] .pdlg-kv dd code{font:8px var(--mono);color:var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .pdlg-kv.live dd{color:var(--ink);font-weight:500}
+html[data-ui="cosmo"] .pdlg-p{margin:8px 0 0;font-size:8.5px;line-height:1.55;color:var(--ink2)}
+
+/* the budget, live, inside the layering dialog — BEFORE you commit */
+html[data-ui="cosmo"] .pdlg-budget{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:9px}
+html[data-ui="cosmo"] .pdlg-budget>div{padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:var(--panel2)}
+html[data-ui="cosmo"] .pdlg-budget b{display:block;font:11px/1.2 var(--mono);font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .pdlg-budget i{font-style:normal;font-size:7.5px;color:var(--ink3)}
+
+@media (max-width:1100px){
+  html[data-ui="cosmo"] .prail{width:150px}
+}

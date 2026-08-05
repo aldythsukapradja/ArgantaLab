@@ -19,7 +19,14 @@ const KIND_BY_ASSET: Record<AssetKind, string> = {
   surface: 'arganta:wks:work-product-component--DepthSurface:1.0.0',
   production: 'arganta:wks:work-product-component--ProductionData:1.0.0',
   injection: 'arganta:wks:work-product-component--InjectionData:1.0.0',
+  // OSDU has no standard WPC for a mud log or an FPWD station set, so both take the
+  // arganta namespace — same convention as DepthSurface/ProductionData above.
+  drilling: 'arganta:wks:work-product-component--MudLog:1.0.0',
+  pressure: 'arganta:wks:work-product-component--FormationPressure:1.0.0',
   patterns: 'arganta:wks:work-product-component--InjectionPattern:1.0.0',
+  // the well master is a MASTER-DATA record in OSDU's own taxonomy, not a
+  // work-product component — it describes the wells themselves, not a study output
+  wellmaster: 'osdu:wks:master-data--Wellbore:1.1.0',
   document: 'osdu:wks:work-product-component--Document:1.0.0',
   image: 'osdu:wks:work-product-component--Document:1.0.0',
   unknown: 'osdu:wks:dataset--File.Generic:1.0.0',

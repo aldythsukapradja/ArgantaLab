@@ -192,6 +192,67 @@ export function resolveEndpoints(
   return shale > clean ? { clean, shale, nature: 'derived' } : null;
 }
 
+// ── physical plausibility ────────────────────────────────────────────────────
+
+/**
+ * PHYSICAL RANGES, per curve family. A reading outside these is not a measurement —
+ * it is an unresolved null sentinel, a tool failure, or a unit error.
+ *
+ * WHY THIS EXISTS, concretely: the Volve LWD composite logs carry `-999.25` as a
+ * literal value rather than a resolved null. Fed to the density-porosity transform
+ * that yields φt = (2.65 + 999.25)/1.65 ≈ 607, which clamps to 1.0 — and a 1,500 m
+ * shale interval then reports 98% porosity and 100% net-to-gross, ranked top of the
+ * field. A screening gate is not optional here; without it the answer is confidently
+ * wrong rather than honestly absent.
+ *
+ * Ranges are deliberately GENEROUS — the job is to catch impossible values, not to
+ * enforce an expectation about the rock. A hot shale really can read 1,000 gAPI.
+ */
+export const PHYSICAL_RANGE: Record<string, { lo: number; hi: number }> = {
+  gr: { lo: 0, hi: 1500 },        // gAPI — negative gamma does not exist
+  // g/cm³. The floor is 1.2, not 1.0: a rock at water density is not a rock, and a
+  // reading of exactly 1.00 (which Volve's F-1 C carries in the Heather) drives
+  // density porosity to precisely 1.0 — an answer that looks deliberate.
+  rhob: { lo: 1.2, hi: 3.6 },
+  nphi: { lo: -0.15, hi: 1.0 },   // v/v — the standard limestone-scale span
+  rt: { lo: 1e-3, hi: 1e6 },      // Ω·m — must be strictly positive for Archie
+  dt: { lo: 20, hi: 300 },        // µs/ft
+  grMin: { lo: 0, hi: 1500 },
+  grMax: { lo: 0, hi: 1500 },
+};
+
+/**
+ * The maximum porosity that can be rock.
+ *
+ * Screening the INPUTS is not sufficient on its own: a density inside the physical
+ * range can still be wrong for the formation (a washed-out hole, a barite-loaded mud,
+ * a mis-scaled unit), and the transform will happily turn it into 0.9 v/v. Nothing
+ * sedimentary holds more than ~0.6 porosity — unconsolidated sand and diatomite are
+ * the extremes — so a derived value above this is a measurement problem, not a
+ * discovery, and it is dropped and counted rather than clamped into plausibility.
+ */
+export const PHIT_MAX = 0.6;
+
+export interface RejectCount { curve: string; rejected: number; of: number }
+
+/** Replace non-physical samples with null, and count what was removed. Returns the
+ *  ORIGINAL array untouched when nothing was rejected, so the common case allocates
+ *  nothing. */
+export function screenCurve(
+  values: (number | null)[] | undefined, range: { lo: number; hi: number } | undefined,
+): { values: (number | null)[] | undefined; rejected: number } {
+  if (!values || !range) return { values, rejected: 0 };
+  let rejected = 0;
+  for (const v of values) {
+    if (v != null && Number.isFinite(v) && (v < range.lo || v > range.hi)) rejected++;
+  }
+  if (!rejected) return { values, rejected: 0 };
+  return {
+    values: values.map((v) => (v != null && Number.isFinite(v) && v >= range.lo && v <= range.hi ? v : null)),
+    rejected,
+  };
+}
+
 // ── the whole-log run ────────────────────────────────────────────────────────
 
 /** The curves the run needs, already resolved by family. Everything is optional —
@@ -224,6 +285,10 @@ export interface PetroResult {
   missing: Partial<Record<'vsh' | 'phie' | 'sw', string>>;
   /** how many samples produced a finite value, per track */
   counts: { vsh: number; phie: number; sw: number; net: number };
+  /** inputs discarded as physically impossible — an unresolved null sentinel, a tool
+   *  failure, a unit error. Surfaced, never silently swallowed: a log that is 60 %
+   *  sentinel is a delivery problem, and hiding the screening would hide it. */
+  screened: RejectCount[];
 }
 
 const finite = (v: number | null | undefined): v is number => v != null && Number.isFinite(v);
@@ -235,7 +300,25 @@ const finite = (v: number | null | undefined): v is number => v != null && Numbe
  * missing — nulls are preserved, never interpolated across, because a gap in a curve
  * is a gap in the evidence.
  */
-export function runPetro(inp: PetroInputs, p: PetroParams): PetroResult {
+export function runPetro(raw: PetroInputs, p: PetroParams): PetroResult {
+  // screen FIRST — everything below treats its inputs as measurements, and a
+  // sentinel that reaches the transforms produces a confident, impossible answer
+  const screened: RejectCount[] = [];
+  const gate = (key: keyof typeof PHYSICAL_RANGE, values: (number | null)[] | undefined, label: string) => {
+    const r = screenCurve(values, PHYSICAL_RANGE[key]);
+    if (r.rejected) screened.push({ curve: label, rejected: r.rejected, of: values!.length });
+    return r.values;
+  };
+  const inp: PetroInputs = {
+    ...raw,
+    gr: gate('gr', raw.gr, 'GR'),
+    rhob: gate('rhob', raw.rhob, 'RHOB'),
+    nphi: gate('nphi', raw.nphi, 'NPHI'),
+    rt: gate('rt', raw.rt, 'RT'),
+    dt: gate('dt', raw.dt, 'DT'),
+    grMin: gate('grMin', raw.grMin, 'GRMIN'),
+    grMax: gate('grMax', raw.grMax, 'GRMAX'),
+  };
   const n = inp.md.length;
   const vsh: (number | null)[] = new Array(n).fill(null);
   const phit: (number | null)[] = new Array(n).fill(null);
@@ -243,6 +326,7 @@ export function runPetro(inp: PetroInputs, p: PetroParams): PetroResult {
   const sw: (number | null)[] = new Array(n).fill(null);
   const net: (boolean | null)[] = new Array(n).fill(null);
   const missing: PetroResult['missing'] = {};
+  let phitRejected = 0;
 
   const endpoints = resolveEndpoints(inp.gr, p, { grMin: inp.grMin, grMax: inp.grMax });
   if (!inp.gr) missing.vsh = 'no GR curve';
@@ -281,9 +365,14 @@ export function runPetro(inp: PetroInputs, p: PetroParams): PetroResult {
       }
     }
     if (pt != null && Number.isFinite(pt)) {
-      pt = Math.max(0, Math.min(1, pt));
-      phit[i] = pt;
-      phie[i] = v != null ? phieOf(pt, v, p.phiSh) : pt;
+      if (pt < 0 || pt > PHIT_MAX) {
+        // clamping would turn an impossible reading into a confident 0.6; dropping it
+        // says what actually happened — this sample produced no usable porosity
+        phitRejected++;
+      } else {
+        phit[i] = pt;
+        phie[i] = v != null ? phieOf(pt, v, p.phiSh) : pt;
+      }
     }
 
     // ── saturation ──
@@ -299,9 +388,13 @@ export function runPetro(inp: PetroInputs, p: PetroParams): PetroResult {
     }
   }
 
+  if (phitRejected) {
+    screened.push({ curve: `φt > ${PHIT_MAX}`, rejected: phitRejected, of: n });
+  }
+
   const count = (xs: Array<number | boolean | null>) => xs.reduce<number>((k, x) => k + (x == null ? 0 : 1), 0);
   return {
-    vsh, phit, phie, sw, net, endpoints, missing,
+    vsh, phit, phie, sw, net, endpoints, missing, screened,
     counts: { vsh: count(vsh), phie: count(phie), sw: count(sw), net: count(net) },
   };
 }

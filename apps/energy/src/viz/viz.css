@@ -1,0 +1,285 @@
+/* Chart house style. One file so all 27 widgets hover, label and degrade the
+   same way — that sameness is what makes nine tabs read as one product.
+   Marks are thin, grid is recessive, text never wears the series colour. */
+
+html[data-ui="cosmo"] .viz-host{position:relative;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:6px;padding:9px}
+/* The plot is the flex child that eats the leftover space, so a chart measures
+   its real drawable box instead of guessing host-minus-a-constant. */
+html[data-ui="cosmo"] .viz-plot{position:relative;flex:1 1 auto;min-height:0;min-width:0}
+html[data-ui="cosmo"] .viz-plot>svg{display:block}
+html[data-ui="cosmo"] .viz-host>.viz-legend,html[data-ui="cosmo"] .viz-host>.viz-note{flex:0 0 auto}
+html[data-ui="cosmo"] .viz-host.scroll{overflow-y:auto;overflow-x:hidden}
+html[data-ui="cosmo"] .viz-tools{position:absolute;top:5px;right:6px;z-index:6;display:flex;gap:3px}
+html[data-ui="cosmo"] .viz-note{margin:0;font-size:9px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-note b{color:var(--ink2)}
+html[data-ui="cosmo"] .viz-loading{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:10px;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-loading i{width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:viz-spin .8s linear infinite}
+@keyframes viz-spin{to{transform:rotate(360deg)}}
+
+/* ── axes and grid: hairline, horizontal, muted ─────────────────────────── */
+html[data-ui="cosmo"] .viz-grid{stroke:var(--line2);stroke-width:1}
+html[data-ui="cosmo"] .viz-grid.vertical{stroke-dasharray:2 3}
+html[data-ui="cosmo"] .viz-axis text,html[data-ui="cosmo"] .viz-axis-text{font:9px var(--mono);fill:var(--ink3)}
+html[data-ui="cosmo"] .viz-row-label,html[data-ui="cosmo"] .viz-col-title{font:9px var(--mono);fill:var(--ink3)}
+html[data-ui="cosmo"] .viz-col-title{font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+html[data-ui="cosmo"] .viz-cycle-label{font-size:8.5px;fill:var(--panel);font-weight:600;pointer-events:none}
+
+/* ── tooltip: four fields, everywhere ───────────────────────────────────── */
+html[data-ui="cosmo"] .viz-tip{position:absolute;z-index:20;width:196px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);box-shadow:0 8px 26px rgb(0 0 0/.24);pointer-events:none}
+html[data-ui="cosmo"] .viz-tip b{display:block;margin-bottom:5px;font-size:10.5px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-tip span{display:flex;justify-content:space-between;gap:8px;font-size:9px;line-height:1.5;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-tip i{font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-tip-grade{display:inline-block;margin-top:6px;padding:2px 6px;border-radius:7px;font:8px var(--mono);font-style:normal}
+.viz-tip-grade.sourced{background:color-mix(in srgb,var(--blue) 14%,var(--panel));color:var(--blue)}
+.viz-tip-grade.derived{background:var(--teal-soft);color:var(--teal-ink)}
+.viz-tip-grade.recalled{background:color-mix(in srgb,var(--amber) 16%,var(--panel));color:var(--amber)}
+.viz-tip-grade.user{background:color-mix(in srgb,var(--purple) 14%,var(--panel));color:var(--purple)}
+
+/* ── legend and degrade ─────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-legend{display:flex;flex-wrap:wrap;gap:9px}
+html[data-ui="cosmo"] .viz-legend span{display:inline-flex;align-items:center;gap:5px;font-size:9px;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-legend i{width:9px;height:9px;border-radius:2px}
+html[data-ui="cosmo"] .viz-degrade{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px;text-align:center;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-degrade svg{color:var(--amber)}
+html[data-ui="cosmo"] .viz-degrade b{font-size:11.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-degrade p{margin:0;max-width:340px;font-size:9.5px;line-height:1.5}
+html[data-ui="cosmo"] .viz-alt-btn{margin-top:4px;padding:4px 10px;border:1px solid var(--teal);border-radius:8px;background:var(--teal-soft);color:var(--teal-ink);font-size:8.5px;cursor:pointer}
+
+/* ── table view: relief for the light-mode contrast warning ─────────────── */
+html[data-ui="cosmo"] .viz-table{flex:1;min-height:0;overflow:auto}
+html[data-ui="cosmo"] .viz-table table{width:100%;border-collapse:collapse;font-size:9.5px;font-variant-numeric:tabular-nums}
+html[data-ui="cosmo"] .viz-table th{position:sticky;top:0;padding:5px 7px;border-bottom:1px solid var(--line);background:var(--panel);text-align:left;font:8px var(--mono);text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-table td{padding:4px 7px;border-bottom:1px solid var(--line2);color:var(--ink2)}
+html[data-ui="cosmo"] .viz-table tr:hover td{background:var(--panel2)}
+
+/* ── maps ───────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-map{cursor:crosshair}
+html[data-ui="cosmo"] .viz-sphere{fill:var(--panel3);stroke:var(--line2)}
+html[data-ui="cosmo"] .viz-prov{stroke:var(--panel);stroke-width:.4;transition:opacity .12s}
+html[data-ui="cosmo"] .viz-prov:hover{opacity:.78}
+html[data-ui="cosmo"] .viz-prov.pinned{stroke:var(--ink);stroke-width:1.2}
+html[data-ui="cosmo"] .viz-prov.ghost{fill:var(--panel3);stroke:var(--line2);stroke-width:.4}
+html[data-ui="cosmo"] .viz-prov.focus{fill:color-mix(in srgb,var(--teal) 22%,var(--panel));stroke:var(--teal);stroke-width:1.1}
+html[data-ui="cosmo"] .viz-points circle{fill:var(--ink);fill-opacity:.42;stroke:var(--panel);stroke-width:.3}
+html[data-ui="cosmo"] .viz-points.solid circle{fill:var(--teal);fill-opacity:.85;stroke:var(--panel);stroke-width:.6}
+html[data-ui="cosmo"] .viz-arc{fill:none;stroke:var(--teal);stroke-linecap:round;cursor:pointer}
+
+/* ── scorecard: distribution is the track, basin is the marker ──────────── */
+html[data-ui="cosmo"] .viz-scorecard{display:flex;flex-direction:column;gap:5px}
+html[data-ui="cosmo"] .viz-score-row{display:grid;grid-template-columns:116px minmax(0,1fr) 86px 32px;align-items:center;gap:8px}
+html[data-ui="cosmo"] .viz-score-label{font-size:9.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-score-track{position:relative;height:9px;border-radius:4px;background:var(--line2);overflow:visible}
+html[data-ui="cosmo"] .viz-score-fill{display:block;height:100%;border-radius:4px;background:var(--teal)}
+html[data-ui="cosmo"] .viz-score-median{position:absolute;top:-2px;width:1px;height:11px;background:var(--ink3)}
+html[data-ui="cosmo"] .viz-score-val{font-size:11px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+html[data-ui="cosmo"] .viz-score-val em{margin-left:3px;font:8px var(--mono);font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-score-pct{font:9px var(--mono);color:var(--teal-ink);text-align:right}
+
+/* ── peers and analogues ────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-peers{display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+html[data-ui="cosmo"] .viz-peer{display:flex;flex-direction:column;gap:3px;padding:5px 7px;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);text-align:left;cursor:pointer}
+html[data-ui="cosmo"] .viz-peer:hover{border-color:var(--teal)}
+html[data-ui="cosmo"] .viz-peer-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+html[data-ui="cosmo"] .viz-peer-head b{font-size:10.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-peer-head em{font:9.5px var(--mono);font-style:normal;color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-peer-bar{display:flex;gap:1px;height:7px;border-radius:3px;overflow:hidden}
+html[data-ui="cosmo"] .viz-peer-bar i{display:block;min-width:1px}
+html[data-ui="cosmo"] .viz-peer-axes{font-size:8.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-axis-picker{display:flex;flex-wrap:wrap;gap:3px}
+html[data-ui="cosmo"] .viz-axis-picker button{padding:3px 9px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink3);font-size:9px;cursor:pointer}
+html[data-ui="cosmo"] .viz-axis-picker button.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-analogs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;overflow-y:auto}
+html[data-ui="cosmo"] .viz-analog{padding:6px 8px;border:1px solid var(--line2);border-radius:9px;background:var(--panel2)}
+html[data-ui="cosmo"] .viz-analog-head{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;margin-bottom:5px}
+html[data-ui="cosmo"] .viz-analog-head b{font-size:11px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-analog-head span{flex:1;min-width:0;font-size:8.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-analog-head button{padding:1px 6px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink3);font-size:7px;cursor:pointer}
+html[data-ui="cosmo"] .viz-analog-head em{font:8px var(--mono);font-style:normal;font-weight:700;color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-analog-axis{display:grid;grid-template-columns:104px minmax(0,1fr);align-items:center;gap:6px;padding:2px 0}
+html[data-ui="cosmo"] .viz-analog-axis span{font-size:8.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-analog-axis i{display:block;height:6px;border-radius:2px;background:var(--line2)}
+html[data-ui="cosmo"] .viz-analog-axis i b{display:block;height:100%;border-radius:2px;background:var(--teal)}
+html[data-ui="cosmo"] .viz-analog-axis.on i b{background:var(--blue)}
+
+/* ── bars, columns, ledgers ─────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-bars{flex:1;min-height:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+html[data-ui="cosmo"] .viz-bar-row{display:grid;grid-template-columns:132px minmax(0,1fr) 38px;align-items:center;gap:8px}
+html[data-ui="cosmo"] .viz-bar-row.focus .viz-bar-track i{background:var(--teal)}
+html[data-ui="cosmo"] .viz-bar-row.focus .viz-bar-label{color:var(--ink);font-weight:600}
+html[data-ui="cosmo"] .viz-bar-label{font-size:9.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-bar-track{height:8px;border-radius:3px;background:var(--line2)}
+html[data-ui="cosmo"] .viz-bar-track i{display:block;height:100%;border-radius:3px;background:var(--ink3)}
+html[data-ui="cosmo"] .viz-bar-row b{font:9px var(--mono);color:var(--ink2);text-align:right}
+html[data-ui="cosmo"] .viz-cycle{cursor:pointer}
+html[data-ui="cosmo"] .viz-cycle:hover{filter:brightness(1.12)}
+html[data-ui="cosmo"] .viz-cycle-ghost{fill:var(--line2);opacity:.6}
+html[data-ui="cosmo"] .viz-spark polyline{fill:none;stroke:var(--teal);stroke-width:1.6}
+html[data-ui="cosmo"] .viz-priors{display:flex;gap:5px;flex-wrap:wrap}
+html[data-ui="cosmo"] .viz-prior-stat{flex:1;min-width:52px;padding:4px 6px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2)}
+html[data-ui="cosmo"] .viz-prior-stat span{display:block;font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .viz-prior-stat b{font-size:13px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-narr{display:flex;flex-direction:column;gap:4px}
+html[data-ui="cosmo"] .viz-narr>div{padding:5px 7px;border-left:2px solid var(--blue);background:var(--panel2);border-radius:0 7px 7px 0}
+html[data-ui="cosmo"] .viz-narr b{font:8px var(--mono);text-transform:uppercase;color:var(--blue)}
+html[data-ui="cosmo"] .viz-narr p{margin:3px 0;font-size:9px;line-height:1.45;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-narr em{font:7.5px var(--mono);font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-ledger{display:flex;flex-direction:column;gap:1px}
+html[data-ui="cosmo"] .viz-ledger-row{display:grid;grid-template-columns:minmax(0,1.5fr) 72px 62px 40px 60px;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;font-size:9px;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-ledger-row:nth-child(odd){background:var(--panel2)}
+html[data-ui="cosmo"] .viz-ledger-row.focus{background:var(--teal-soft)}
+html[data-ui="cosmo"] .viz-ledger-row b{font-size:9.5px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-ledger-row em{padding:2px 5px;border-radius:6px;font:7.5px var(--mono);font-style:normal;text-align:center}
+html[data-ui="cosmo"] .viz-ledger-row em.sourced{background:color-mix(in srgb,var(--blue) 14%,var(--panel));color:var(--blue)}
+html[data-ui="cosmo"] .viz-ledger-row em.derived{background:var(--panel3);color:var(--ink3)}
+
+/* ── matrix / heatmap / CRS ─────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-matrix{display:grid;gap:2px;align-content:start}
+html[data-ui="cosmo"] .viz-matrix i{display:block;min-height:20px;border-radius:3px;background:var(--panel3)}
+html[data-ui="cosmo"] .viz-matrix-col,html[data-ui="cosmo"] .viz-matrix-row{font:8.5px var(--mono);color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-matrix-col{text-align:center}
+html[data-ui="cosmo"] .viz-crs{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(5,50px);gap:3px;align-items:center}
+html[data-ui="cosmo"] .viz-crs-col{font:8.5px var(--mono);color:var(--ink3);text-align:center}
+html[data-ui="cosmo"] .viz-crs-row{font-size:9.5px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-crs-cell{height:28px;border:0;border-radius:5px;opacity:.82;cursor:pointer;color:var(--panel)}
+html[data-ui="cosmo"] .viz-crs-cell:hover,html[data-ui="cosmo"] .viz-crs-cell.on{opacity:1;outline:1.5px solid var(--ink)}
+html[data-ui="cosmo"] .viz-crs-cell i{font-style:normal;font-size:12px}
+html[data-ui="cosmo"] .viz-crs-detail{padding:5px 7px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2)}
+html[data-ui="cosmo"] .viz-crs-detail b{font-size:10px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-crs-detail p{margin:3px 0 0;font-size:9px;line-height:1.4;color:var(--ink3)}
+
+/* ── events chart ───────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-critical line{stroke:var(--red);stroke-width:1.4;stroke-dasharray:3 2}
+html[data-ui="cosmo"] .viz-critical text{font:8.5px var(--mono);fill:var(--red)}
+html[data-ui="cosmo"] .viz-timing{margin-bottom:5px}
+html[data-ui="cosmo"] .viz-timing-head{display:flex;align-items:baseline;gap:7px}
+html[data-ui="cosmo"] .viz-timing-head b{font-size:10px;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-timing-head em{font:8.5px var(--mono);font-style:normal}
+
+/* ── user-input surfaces ────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-user-banner{display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:7px;background:color-mix(in srgb,var(--purple) 9%,var(--panel));border-left:2px solid var(--purple)}
+html[data-ui="cosmo"] .viz-user-banner.amber{background:color-mix(in srgb,var(--amber) 9%,var(--panel));border-left-color:var(--amber)}
+html[data-ui="cosmo"] .viz-user-banner b{font:8px var(--mono);letter-spacing:.08em;color:var(--purple)}
+html[data-ui="cosmo"] .viz-user-banner.amber b{color:var(--amber)}
+html[data-ui="cosmo"] .viz-user-banner span{font-size:9px;line-height:1.45;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-layer-grid{display:grid;grid-template-columns:minmax(0,1fr) 76px 88px;gap:5px 8px;align-items:center}
+html[data-ui="cosmo"] .viz-layer-grid>span{font:8px var(--mono);text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-layer-grid>b{font-size:9.5px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-layer-grid input,html[data-ui="cosmo"] .viz-deck-row input{width:100%;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--ink);font:9.5px var(--mono)}
+html[data-ui="cosmo"] .viz-slider{display:flex;align-items:center;gap:8px;font-size:9.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-slider b{color:var(--ink2);font-variant-numeric:tabular-nums}
+html[data-ui="cosmo"] .viz-slider input{flex:1;accent-color:var(--teal)}
+html[data-ui="cosmo"] .viz-oilwindow line{stroke:var(--amber);stroke-width:1.2;stroke-dasharray:4 3}
+html[data-ui="cosmo"] .viz-oilwindow text{font:8.5px var(--mono);fill:var(--amber)}
+html[data-ui="cosmo"] .viz-gcos,html[data-ui="cosmo"] .viz-emv{display:flex;align-items:baseline;gap:7px;padding:5px 8px;border-radius:7px;background:var(--panel2)}
+html[data-ui="cosmo"] .viz-gcos span,html[data-ui="cosmo"] .viz-emv span{font:8px var(--mono);text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-gcos b,html[data-ui="cosmo"] .viz-emv b{font-size:17px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-gcos em,html[data-ui="cosmo"] .viz-emv em{font-size:9px;font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-factor{padding:4px 0;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .viz-factor-head{display:flex;align-items:baseline;gap:6px}
+html[data-ui="cosmo"] .viz-factor-head b{font-size:10px;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-factor-head span{font:8.5px var(--mono)}
+html[data-ui="cosmo"] .viz-factor-head em{margin-left:auto;font:10px var(--mono);font-style:normal;color:var(--ink)}
+html[data-ui="cosmo"] .viz-factor-track{position:relative}
+html[data-ui="cosmo"] .viz-factor-track input{width:100%;accent-color:var(--teal)}
+html[data-ui="cosmo"] .viz-factor-track .ev{position:absolute;top:-2px;width:2px;height:9px;background:var(--blue);border-radius:1px}
+html[data-ui="cosmo"] .viz-factor small{font-size:8.5px;color:var(--ink3)}
+
+/* ── register / gate / memo ─────────────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-register-bar{display:flex;gap:5px;align-items:center}
+html[data-ui="cosmo"] .viz-register-bar input{flex:1;min-width:0;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink);font-size:9.5px}
+html[data-ui="cosmo"] .viz-register-bar button{padding:5px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink3);font-size:9px;cursor:pointer}
+html[data-ui="cosmo"] .viz-register-bar button.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-register-bar span{font:9px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .viz-reg-row{display:grid;grid-template-columns:minmax(0,1fr) 48px 96px auto auto;align-items:center;gap:6px;padding:4px 5px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .viz-reg-main b{display:block;font-size:10px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-reg-main span{font-size:8.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+html[data-ui="cosmo"] .viz-reg-spark{overflow:visible}
+html[data-ui="cosmo"] .viz-reg-spark polyline{fill:none;stroke:var(--teal);stroke-width:1.4}
+html[data-ui="cosmo"] .viz-reg-spark.thin{font:6px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .viz-reg-nums{display:flex;gap:8px}
+html[data-ui="cosmo"] .viz-reg-nums span{font:10px var(--mono);color:var(--ink2)}
+html[data-ui="cosmo"] .viz-reg-nums em{margin-left:3px;font-size:7.5px;font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-badge{padding:2px 6px;border-radius:7px;font:7.5px var(--mono);font-style:normal;white-space:nowrap}
+html[data-ui="cosmo"] .viz-badge.usgs{background:color-mix(in srgb,var(--blue) 13%,var(--panel));color:var(--blue)}
+html[data-ui="cosmo"] .viz-badge.status{background:var(--panel3);color:var(--ink3)}
+html[data-ui="cosmo"] .viz-badge.status.on{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-gate{margin-bottom:6px}
+html[data-ui="cosmo"] .viz-gate-head{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+html[data-ui="cosmo"] .viz-gate-head b{font:9px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-gate-head i{width:7px;height:7px;border-radius:50%}
+html[data-ui="cosmo"] .viz-gate-head em{margin-left:auto;font:9px var(--mono);font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-gate-item{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:6px;padding:3px 0;font-size:9px;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-gate-item b{font-weight:500;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .viz-gate-item.ok b{color:var(--ink2)}
+html[data-ui="cosmo"] .viz-gate-item.ok i{color:var(--teal)}
+html[data-ui="cosmo"] .viz-gate-item span{font:8.5px var(--mono)}
+html[data-ui="cosmo"] .viz-memo{padding:8px;border:1px solid var(--line2);border-radius:9px;background:var(--panel2)}
+html[data-ui="cosmo"] .viz-memo header{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:5px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .viz-memo header b{font-size:11px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-memo header em{font:9px var(--mono);font-style:normal;color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-memo dl{margin:6px 0 0;display:flex;flex-direction:column;gap:3px}
+html[data-ui="cosmo"] .viz-memo dl>div{display:grid;grid-template-columns:76px minmax(0,1fr);gap:6px}
+html[data-ui="cosmo"] .viz-memo dt{font:8px var(--mono);text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-memo dd{margin:0;font-size:9.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-memo-empty{margin:8px 0 0;font-size:9.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-memo-chain{margin:7px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+html[data-ui="cosmo"] .viz-memo-chain li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px;padding:2px 4px;border-radius:5px;background:var(--panel)}
+html[data-ui="cosmo"] .viz-memo-chain b{font-size:9.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-memo-chain em{padding:2px 6px;border-radius:6px;font:7.5px var(--mono);font-style:normal}
+html[data-ui="cosmo"] .viz-memo-chain em.sourced{background:color-mix(in srgb,var(--blue) 13%,var(--panel));color:var(--blue)}
+html[data-ui="cosmo"] .viz-memo-chain em.derived{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-memo-chain em.recalled{background:color-mix(in srgb,var(--amber) 15%,var(--panel));color:var(--amber)}
+html[data-ui="cosmo"] .viz-memo-chain em.user{background:color-mix(in srgb,var(--purple) 13%,var(--panel));color:var(--purple)}
+html[data-ui="cosmo"] .viz-memo-chain span{font:8.5px var(--mono);color:var(--ink3)}
+
+/* ── histogram / scatter / tornado ──────────────────────────────────────── */
+html[data-ui="cosmo"] .viz-hist-bar{fill:var(--blue);opacity:.85;cursor:pointer}
+html[data-ui="cosmo"] .viz-hist-bar:hover{opacity:1}
+html[data-ui="cosmo"] .viz-hist-world{fill:var(--ink3);opacity:.16}
+html[data-ui="cosmo"] .viz-cdf{fill:none;stroke:var(--teal);stroke-width:1.6;opacity:.9}
+html[data-ui="cosmo"] .viz-pmark line{stroke:var(--ink3);stroke-width:1;stroke-dasharray:2 2}
+html[data-ui="cosmo"] .viz-pmark text{font:8.5px var(--mono);fill:var(--ink3)}
+html[data-ui="cosmo"] .viz-classmix{display:flex;gap:2px;height:9px;border-radius:3px;overflow:hidden}
+html[data-ui="cosmo"] .viz-classmix i{display:block;background:var(--teal);opacity:.7;min-width:2px}
+html[data-ui="cosmo"] .viz-classmix i.inplace{background:var(--amber)}
+html[data-ui="cosmo"] .viz-dot{fill:var(--blue);fill-opacity:.6;stroke:var(--panel);stroke-width:1;cursor:pointer}
+html[data-ui="cosmo"] .viz-dot.focus{fill-opacity:1;stroke-width:1.4}
+html[data-ui="cosmo"] .viz-parity{stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3;opacity:.55}
+html[data-ui="cosmo"] .viz-median{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3}
+html[data-ui="cosmo"] .viz-quad{font:8.5px var(--mono);fill:var(--ink3)}
+html[data-ui="cosmo"] .viz-frontier{fill:none;stroke:var(--teal);stroke-width:1.8}
+html[data-ui="cosmo"] .viz-scenario{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:5px}
+html[data-ui="cosmo"] .viz-scenario div{padding:4px 6px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2)}
+html[data-ui="cosmo"] .viz-scenario span{display:block;font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .viz-scenario b{font-size:15px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-scenario em{font-size:7.5px;font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-deck-head,html[data-ui="cosmo"] .viz-deck-row{display:grid;grid-template-columns:minmax(0,1.3fr) 62px 62px 62px 72px;gap:5px;align-items:center}
+html[data-ui="cosmo"] .viz-deck-head span{font:8px var(--mono);text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-deck-row b{font-size:9.5px;color:var(--ink2)}
+html[data-ui="cosmo"] .viz-deck-row b em{margin-left:3px;font:7.5px var(--mono);font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .viz-origin{padding:2px 5px;border-radius:6px;font:7px var(--mono);font-style:normal;text-align:center}
+html[data-ui="cosmo"] .viz-origin.user{background:color-mix(in srgb,var(--purple) 13%,var(--panel));color:var(--purple)}
+html[data-ui="cosmo"] .viz-origin.analog{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .viz-origin.volve{background:color-mix(in srgb,var(--amber) 15%,var(--panel));color:var(--amber)}
+html[data-ui="cosmo"] .viz-deck-out{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:5px}
+html[data-ui="cosmo"] .viz-deck-out div{padding:4px 6px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);text-align:center}
+html[data-ui="cosmo"] .viz-deck-out span{display:block;font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .viz-deck-out b{font-size:16px;color:var(--ink)}
+html[data-ui="cosmo"] .viz-deck-out em{display:block;font-size:7.5px;font-style:normal;color:var(--ink3)}
+
+@media(max-width:760px){
+  html[data-ui="cosmo"] .viz-score-row{grid-template-columns:74px minmax(0,1fr) 58px 24px}
+  html[data-ui="cosmo"] .viz-reg-row{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
+  html[data-ui="cosmo"] .viz-reg-spark,html[data-ui="cosmo"] .viz-badge.status{display:none}
+  html[data-ui="cosmo"] .viz-crs{grid-template-columns:minmax(0,1fr) repeat(5,34px)}
+  html[data-ui="cosmo"] .viz-ledger-row{grid-template-columns:minmax(0,1fr) 46px 42px}
+  html[data-ui="cosmo"] .viz-ledger-row span:nth-child(4),html[data-ui="cosmo"] .viz-ledger-row em{display:none}
+  html[data-ui="cosmo"] .viz-analogs{grid-template-columns:1fr}
+  html[data-ui="cosmo"] .viz-deck-head,html[data-ui="cosmo"] .viz-deck-row{grid-template-columns:minmax(0,1fr) 46px 46px 46px}
+  html[data-ui="cosmo"] .viz-origin{display:none}
+  html[data-ui="cosmo"] .viz-tip{width:150px}
+}
+@media(prefers-reduced-motion:reduce){
+  html[data-ui="cosmo"] .viz-loading i{animation:none}
+  html[data-ui="cosmo"] .viz-prov{transition:none}
+}

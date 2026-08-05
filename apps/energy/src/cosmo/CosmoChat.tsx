@@ -4,7 +4,7 @@
 // frames (Full/16:9/4:3/Tablet/Phone), live artifacts (radial data-map tree, production
 // chart, rendered markdown note), sovereign model picker, usage meters, suggestion chips
 // and an 80%-screen artifact modal. Uses the founder's exact classes (cosmo-system.css).
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown,
   Lock, ArrowUp, Gauge, BatteryMedium, Shield, Maximize, Monitor, Tv, Tablet, Smartphone,
@@ -14,6 +14,17 @@ import {
 import { CosmoAgentOrb } from './CosmoAgentOrb';
 import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
 import { loadIndex } from '../wb/load';
+import { useAgent } from '../agent/useAgent';
+import { AgentCard } from '../agent/AgentCard';
+import type { AnswerCard, CardChip } from '../agent/types';
+import { useBridge, type BridgeEngine } from '../agent/bridge/useBridge';
+import type { BridgeEvent } from '../agent/bridge/client';
+import { BridgeFeedItem, BridgeMessageExtras, type BridgeMsgKind } from '../agent/bridge/BridgeFeedItem';
+import { BridgeConnectDialog } from '../agent/bridge/BridgeConnectDialog';
+import { EngineModelPicker, type EngineModelOption } from '../agent/bridge/EngineModelPicker';
+import { ClaudeMark } from '../agent/bridge/ClaudeMark';
+import { OpenAIMark } from '../agent/bridge/OpenAIMark';
+import { ArgantaMark } from '../agent/ArgantaMark';
 
 // Real, already-built Field Development viewers — the chat never re-implements these, it only
 // calls them. Lazy-loaded so the always-mounted chat overlay doesn't pull their weight (canvas,
@@ -162,10 +173,28 @@ function MdCanvas({ md }: { md: string }) {
 type Msg = {
   role: 'user' | 'assistant'; text: string; done: boolean;
   wellPick?: LiveIntent; tourWellPick?: boolean; assistWellPick?: boolean; confirmPick?: boolean;
+  /** A real answer from the agent. When present the bubble renders the card
+   *  rather than prose — the numbers come from local files, not from a model. */
+  card?: AnswerCard;
+  /** A Frontier (Claude Code / Codex) mission event, rendered by BridgeFeedItem
+   *  instead of markdown prose — status lines, tool activity, approval prompts,
+   *  the completion capsule. */
+  bridge?: BridgeMsgKind;
 };
 type StreamFlags = { wellPick?: LiveIntent; tourWellPick?: boolean; assistWellPick?: boolean; confirmPick?: boolean };
-const WELCOME: Msg = { role: 'assistant', text: 'Welcome to **Arganta** — the ArgantaEnergy orchestrator. The active field is **Volve**. Ask me to **map**, **model**, **simulate** or **forecast** a well, or open the artifact pane to see live content.', done: true };
-const CANNED = `Here is the **Volve** lifecycle at a glance:\n\n- **Exploration** · BETA\n- **Field Development** · LIVE\n- **Well Delivery** · BETA\n- **Reservoir Management** · LIVE\n- **Drilling** · BETA\n\nOpen the artifact pane on the right to inspect the live data-map tree, a rendered knowledge-base note, or a production chart. Or ask me to **map**, **build a 3D model**, **simulate** or **forecast** a well — I'll pull up the real Field Development viewer.`;
+const WELCOME: Msg = {
+  role: 'assistant',
+  text: [
+    'Ask me about any **basin**, **country**, **field** or **well** in the catalogue — 14,069 places across USGS, GOGET, Sodir, NSTA, ANP and the Volve bundle.',
+    '',
+    'Try **kutei basin**, **give me insight about Indonesia**, **which basins are in Norway**, or **volve**.',
+    '',
+    'I answer from local files and tell you plainly when something is missing.',
+  ].join('\n'),
+  done: true,
+};
+// (The old canned lifecycle reply is gone — every non-tour turn is now a real
+// agent answer rendered as a card.)
 
 // ── live-intent detection: map / 3D model / simulate / forecast a specific well ──────────────
 type LiveIntent = 'map' | 'model3d' | 'sim' | 'forecast';
@@ -217,9 +246,13 @@ const AGENTIC_STEP_MS = 3200; // deliberate, "full agentic" pacing
 const ASSIST_STEP_MS = 1400;
 
 // ── the Arganta canvas ───────────────────────────────────────────────────────
-export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVolve, onFieldDevTab }: {
+export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVolve, onFieldDevTab, onFullChange }: {
   open: boolean;
   onClose: () => void;
+  /** Full-canvas mode. The shell pushes its content aside for the docked panel but
+   *  must NOT when the panel covers the screen — pushing a hidden layout only causes
+   *  a reflow jump on exit. */
+  onFullChange?: (full: boolean) => void;
   fullSignal?: number;
   /** guided-tour hooks — CosmoShell owns nav/tab, so the tour drives it through these */
   onFocusCockpit?: () => void;
@@ -229,6 +262,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   const [full, setFull] = useState(false);
   // mobile Cosmonaut orb tap opens the canvas straight to full-screen (source openCosmoFull)
   useEffect(() => { if (fullSignal) setFull(true); }, [fullSignal]);
+  useEffect(() => { onFullChange?.(full); }, [full, onFullChange]);
   const [leftTab, setLeftTab] = useState('history');
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(false);
@@ -238,17 +272,202 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   const [draft, setDraft] = useState('');
   const [artifact, setArtifact] = useState<string>('note');
   const [artFull, setArtFull] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([WELCOME]);
+  // Chat history persists across reloads — every message (Core answers,
+  // Frontier missions, both) is written to localStorage, capped so a long-lived
+  // session can't grow without bound. Cards/bridge fields are plain JSON, so
+  // this is a straight round-trip; a corrupt or missing entry just starts fresh.
+  const CHAT_HISTORY_KEY = 'ae_chat_history';
+  const CHAT_HISTORY_CAP = 200;
+  const [msgs, setMsgs] = useState<Msg[]>(() => {
+    try {
+      const raw = localStorage.getItem(CHAT_HISTORY_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed) && parsed.length) return parsed as Msg[];
+    } catch { /* corrupt or unavailable — start fresh */ }
+    return [WELCOME];
+  });
+  useEffect(() => {
+    try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(msgs.slice(-CHAT_HISTORY_CAP))); } catch { /* storage full/unavailable — just won't persist */ }
+  }, [msgs]);
   const [pendingIntent, setPendingIntent] = useState<LiveIntent | null>(null);
   const [activeWell, setActiveWell] = useState<string | null>(null);
   const [wells, setWells] = useState<string[]>([]);
+  // The real agent. Everything below the composer routes through this: resolve
+  // → capability → plan → commands on the store's bus.
+  const agent = useAgent();
+  const [sugIndex, setSugIndex] = useState(-1);
+  const [sugOpen, setSugOpen] = useState(false);
+  const suggestions = useMemo(
+    () => (sugOpen && draft.trim().length >= 2 ? agent.suggestions(draft, 6) : []),
+    [sugOpen, draft, agent],
+  );
+  // ── Frontier: Claude Code / Codex, over the local Arganta Bridge ──────────
+  // Same protocol HQ's BridgeConsole speaks (tools/arganta-bridge), a different
+  // origin's localStorage — the token has to be pasted here too, it cannot be
+  // read from HQ's browser storage across origins.
+  const [brain, setBrain] = useState<'agent' | BridgeEngine>('agent');
+  const bridge = useBridge();
+  const [bridgeToken, setBridgeToken] = useState(() => localStorage.getItem('ae_bridge_token') || '');
+  const [bridgeUrl, setBridgeUrl] = useState(() => localStorage.getItem('ae_bridge_url') || '');
+  const [bridgeDialogOpen, setBridgeDialogOpen] = useState(false);
+  const [bridgeRunning, setBridgeRunning] = useState(false);
+  // A live "Nsec" ticker while a mission runs — the same reassurance Claude
+  // Code's own CLI spinner gives you, so a quiet stretch between tool calls
+  // doesn't read as the mission having silently died.
+  const [bridgeElapsed, setBridgeElapsed] = useState(0);
+  useEffect(() => {
+    if (!bridgeRunning) { setBridgeElapsed(0); return; }
+    const startedAt = Date.now();
+    const iv = setInterval(() => setBridgeElapsed(Math.round((Date.now() - startedAt) / 1000)), 500);
+    return () => clearInterval(iv);
+  }, [bridgeRunning]);
+  const bridgeMissionsRef = useRef(0);
+  // Label of the model the in-flight mission is running on — captured at launch
+  // so the completion capsule names the right one even if the picker changes
+  // mid-run (same as HQ's runModelRef).
+  const runModelRef = useRef('');
+  const ENGINE_NAME: Record<BridgeEngine, string> = { claude: 'Claude', codex: 'OpenAI' };
+
+  // Real model options only. Claude Code's aliases are the CLI's own — '' runs
+  // its default. Codex authenticates via a ChatGPT plan login, which can't pick
+  // a raw model id, only REASONING EFFORT (the bridge passes this as
+  // `-c model_reasoning_effort`) — so "the latest ChatGPT/Codex model" is
+  // whatever ships behind Auto; effort is the one real lever exposed.
+  const ENGINE_MODELS: Record<BridgeEngine, { Mark: typeof ClaudeMark; accent: string; capsulePrefix: string; options: EngineModelOption[] }> = {
+    claude: {
+      Mark: ClaudeMark, accent: '#D97757', capsulePrefix: 'Claude',
+      options: [
+        { id: '', label: 'Default', sub: "Claude Code's default model" },
+        { id: 'opus', label: 'Opus 4.8', sub: 'Most capable' },
+        { id: 'sonnet', label: 'Sonnet', sub: 'Balanced' },
+        { id: 'haiku', label: 'Haiku', sub: 'Fastest' },
+      ],
+    },
+    codex: {
+      Mark: OpenAIMark, accent: '#10A37F', capsulePrefix: 'Codex',
+      options: [
+        { id: '', label: 'Auto', sub: 'Latest Codex model, your plan default' },
+        { id: 'high', label: 'High effort', sub: 'Most thorough (slower)' },
+        { id: 'medium', label: 'Medium effort', sub: 'Balanced' },
+        { id: 'low', label: 'Low effort', sub: 'Fastest' },
+      ],
+    },
+  };
+  const [claudeModel, setClaudeModel] = useState(() => localStorage.getItem('ae_bridge_model') || '');
+  const [codexModel, setCodexModel] = useState(() => localStorage.getItem('ae_bridge_codex_model') || '');
+  const frontierModel = brain === 'claude' ? claudeModel : brain === 'codex' ? codexModel : '';
+  const setFrontierModel = (id: string) => {
+    if (brain === 'claude') { setClaudeModel(id); localStorage.setItem('ae_bridge_model', id); }
+    else if (brain === 'codex') { setCodexModel(id); localStorage.setItem('ae_bridge_codex_model', id); }
+  };
+
+  // Reveals mission text the same way Core/Lite's own replies stream in — the
+  // "echo" the mission's output as it lands, not a wall of text appearing at
+  // once. Deliberately its OWN interval per message rather than reusing
+  // `streamAssistant`'s single shared `streamRef`: a mission can emit several
+  // `message` events close together, and sharing one ref would cut the first
+  // one off mid-reveal (leaving it with an eternal blinking cursor) the moment
+  // the second one starts.
+  const streamBridgeMessage = (text: string) => {
+    let atIndex = -1;
+    setMsgs((m) => { atIndex = m.length; return [...m, { role: 'assistant', text: '', done: false }]; });
+    let i = 0;
+    const iv = setInterval(() => {
+      i += Math.max(3, Math.round(text.length / 70));
+      setMsgs((m) => {
+        if (atIndex < 0 || atIndex >= m.length) return m;
+        const c = [...m];
+        c[atIndex] = { ...c[atIndex], text: text.slice(0, i) };
+        return c;
+      });
+      if (i >= text.length) {
+        clearInterval(iv);
+        setMsgs((m) => {
+          if (atIndex < 0 || atIndex >= m.length) return m;
+          const c = [...m];
+          c[atIndex] = { ...c[atIndex], done: true };
+          return c;
+        });
+      }
+    }, 20);
+  };
+
+  bridge.onEvent((e: BridgeEvent) => {
+    switch (e.type) {
+      case 'status': case 'tool':
+        setMsgs((m) => [...m, { role: 'assistant', text: '', done: true, bridge: { kind: e.type, label: e.label } }]);
+        break;
+      case 'message':
+        streamBridgeMessage(e.text);
+        break;
+      case 'awaiting_approval':
+        setMsgs((m) => [...m, {
+          role: 'assistant', text: '', done: true,
+          bridge: { kind: 'approval', approvalId: e.approvalId, tool: e.tool, label: e.label, input: e.input },
+        }]);
+        break;
+      case 'done':
+        setBridgeRunning(false);
+        setMsgs((m) => {
+          // The completion capsule shouldn't repeat a result that was already
+          // streamed as its own `message` event just above it.
+          const lastMsg = [...m].reverse().find((x) => x.role === 'assistant' && !x.bridge && x.text);
+          const result = (e.result || '').trim();
+          const echo = lastMsg && result && lastMsg.text.trim() === result;
+          return [...m, {
+            role: 'assistant', text: '', done: true,
+            bridge: { kind: 'done', ok: e.ok, result: echo ? undefined : (result || undefined), costUsd: e.costUsd, engineLabel: runModelRef.current || ENGINE_NAME[brain as BridgeEngine] },
+          }];
+        });
+        break;
+      case 'error':
+        setBridgeRunning(false);
+        setMsgs((m) => [...m, { role: 'assistant', text: '', done: true, bridge: { kind: 'error', message: e.message } }]);
+        break;
+    }
+  });
+
+  useEffect(() => { if (bridge.status === 'open') setBridgeDialogOpen(false); }, [bridge.status]);
+
+  const bridgeHttpBase = (bridgeUrl || 'ws://127.0.0.1:7717').trim().replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:').replace(/\/+$/, '');
+
+  const connectBridge = () => {
+    if (!bridgeToken) return;
+    localStorage.setItem('ae_bridge_token', bridgeToken);
+    if (bridgeUrl) localStorage.setItem('ae_bridge_url', bridgeUrl);
+    bridge.connect(bridgeToken, bridgeUrl || undefined).catch(() => { /* status reflects it */ });
+  };
+
+  const switchBrain = (next: 'agent' | BridgeEngine) => {
+    setBrain(next);
+    if (next !== 'agent' && bridge.status !== 'open') {
+      if (bridgeToken) connectBridge(); else setBridgeDialogOpen(true);
+    }
+  };
+
+  const runFrontierMission = (text: string) => {
+    if (bridge.status !== 'open') { setBridgeDialogOpen(true); return; }
+    setMsgs((m) => [...m, { role: 'user', text, done: true }]);
+    bridgeMissionsRef.current += 1;
+    setBridgeRunning(true);
+    const engine = brain as BridgeEngine;
+    const model = engine === 'claude' ? claudeModel : codexModel;
+    const cfg = ENGINE_MODELS[engine];
+    const optionLabel = (cfg.options.find((o) => o.id === model) || cfg.options[0]).label;
+    runModelRef.current = `${cfg.capsulePrefix} ${optionLabel}`;
+    bridge.startMission(text, {
+      engine, model: model || undefined,
+      missionId: `energy_${Date.now().toString(36)}_${bridgeMissionsRef.current}`,
+    });
+  };
+
   const [tourKind, setTourKind] = useState<'assist' | 'agentic' | null>(null);
   const touring = tourKind !== null;
   const tourStepRef = useRef(0);
   const tourTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const streamRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cm = CC_MODEL_BY_ID(model) || ({} as ReturnType<typeof CC_MODEL_BY_ID> & object) as NonNullable<ReturnType<typeof CC_MODEL_BY_ID>>;
-  const chips = [ASSIST_LABEL, AGENTIC_LABEL, 'Map a well', 'Simulate a well', 'Forecast a well'];
+  const chips = [ASSIST_LABEL, AGENTIC_LABEL, 'Kutei Basin', 'Insight about Indonesia', 'Which basins are in Norway', 'Volve'];
 
   // real Volve well roster (wb/index.json) — used only to populate the "which well?" picker
   useEffect(() => { loadIndex().then((idx) => setWells(idx.wells.map((w) => w.name))).catch(() => setWells([])); }, []);
@@ -291,15 +510,42 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   };
   const send = (text?: string) => {
     const t = (text != null ? text : draft).trim(); if (!t) return;
-    setMsgs((m) => [...m, { role: 'user', text: t, done: true }]); setDraft('');
+    setDraft('');
+    setSugOpen(false);
+    setSugIndex(-1);
+
+    // Frontier mode is a different agent entirely — a live Claude Code / Codex
+    // mission over the local Bridge, not the petroleum tool-calling agent. It
+    // owns its own user-message push (see runFrontierMission) since a mission
+    // that can't be sent yet (bridge not connected) must not show a phantom
+    // "you said" bubble with nothing following it.
+    if (brain !== 'agent') { runFrontierMission(t); return; }
+
+    setMsgs((m) => [...m, { role: 'user', text: t, done: true }]);
+
+    // The guided well-picker tours keep their own scripted path.
     const intent = detectIntent(t);
     if (intent) {
       setPendingIntent(intent);
       setTimeout(() => streamAssistant(INTENT_COPY[intent].prompt, { wellPick: intent }), 240);
       return;
     }
-    setTimeout(() => streamAssistant(CANNED), 240);
+
+    if (!agent.ready) {
+      setTimeout(() => streamAssistant('Still loading the catalogue — try again in a moment.'), 200);
+      return;
+    }
+
+    // A real turn. The card IS the answer; any prose from the language tier has
+    // already been grounding-checked and is usually empty by design.
+    void agent.ask(t).then((answer) => {
+      if (!answer) { streamAssistant("I couldn't read that — try naming a basin, country, field or well."); return; }
+      setMsgs((m) => [...m, { role: 'assistant', text: answer.text, done: true, card: answer.card }]);
+    });
   };
+
+  /** A chip re-enters as if typed, so chips and typing share one code path. */
+  const onChip = (chip: CardChip) => send(chip.query);
   // the well-picker step — a real chip list from the wb well roster; selecting one renders the
   // real Field Development viewer for that intent in the artifact pane.
   const selectWell = (well: string) => {
@@ -422,6 +668,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     if (streamRef.current) clearInterval(streamRef.current);
     tourTimers.current.forEach(clearTimeout); tourTimers.current = [];
     setMsgs([WELCOME]); setPendingIntent(null); setActiveWell(null); setTourKind(null);
+    try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch { /* ignore */ }
   };
   useEffect(() => () => {
     if (streamRef.current) clearInterval(streamRef.current);
@@ -440,13 +687,64 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     <div className={'cosmo-canvas ' + (open ? 'open' : '') + (full ? ' full' : '')} id="cosmoCanvas">
       <div className="cc-top">
         <div className="g"><CosmoAgentOrb size={26} /></div>
-        <div><div className="tt">Arganta</div><div className="sub">ArgantaEnergy · orchestrator</div></div>
+        <div className="cc-top-title">
+          <div className="tt">Arganta</div>
+          {/* Only ever the live scope breadcrumb, never a static filler line —
+              and it truncates (see CSS) instead of stretching the header, since
+              a real breadcrumb ("Asia Pacific › Indonesia › Kutei Basin › Badak…")
+              can get long. */}
+          {agent.breadcrumb && <div className="sub">{agent.breadcrumb}</div>}
+        </div>
         <div className="sp" />
-        <div className="cc-ic" title="History & artifacts" onClick={() => setShowLeft((v) => !v)}><PanelLeft size={15} /></div>
-        <div className="cc-ic" title="New chat" onClick={onNew}><Plus size={15} /></div>
-        <div className="cc-ic" title="Artifact browser" onClick={() => setShowRight((v) => !v)}><PanelRight size={15} /></div>
-        <div className="cc-ic" id="ccFullBtn" title="Full canvas" onClick={() => setFull((v) => !v)}>{full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</div>
-        <div className="cc-ic" title="Close" onClick={onClose}><X size={15} /></div>
+        {/* Says which tier answered — "CORE"/"LITE" only. The live model name
+            (once shown here) had no upper bound on length and, combined with
+            this badge's own `white-space:nowrap`, was long enough to push the
+            icon row — Close included — off the visible edge of the panel. */}
+        <span className={'ag-tier has-mark ' + agent.tier} title={agent.workerConfigured
+          ? (agent.tier === 'core' ? `Answered by the language tier${agent.activeModel ? ` (${agent.activeModel.model})` : ''}, grounded in local data` : 'Worker unreachable — deterministic tier answering')
+          : 'No agent Worker configured — deterministic tier'}>
+          <ArgantaMark size={11} color={agent.tier === 'core' ? '#22c55e' : 'var(--ink3)'} />
+          <b>{agent.tier === 'core' ? 'CORE' : 'LITE'}</b>
+          {agent.busy ? ' · thinking' : ''}
+        </span>
+        <div className="cc-icons">
+          <div className="cc-ic" title="History & artifacts" onClick={() => setShowLeft((v) => !v)}><PanelLeft size={15} /></div>
+          <div className="cc-ic" title="New chat" onClick={onNew}><Plus size={15} /></div>
+          <div className="cc-ic" title="Artifact browser" onClick={() => setShowRight((v) => !v)}><PanelRight size={15} /></div>
+          <div className="cc-ic" id="ccFullBtn" title="Full canvas" onClick={() => setFull((v) => !v)}>{full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</div>
+          <div className="cc-ic" title="Close" onClick={onClose}><X size={15} /></div>
+        </div>
+      </div>
+
+      {/* Arganta Core (the petroleum tool-calling agent, Lite/Core tier above)
+          vs Arganta Frontier — Claude Code or Codex, direct over the local
+          Bridge. Two different agents; Frontier just has two engine choices. */}
+      <div className="bf-engines">
+        <button type="button" className={'bf-engine-pill' + (brain === 'agent' ? ' on' : '')} onClick={() => switchBrain('agent')} title="Arganta Core — the tool-calling petroleum agent">
+          <ArgantaMark size={12} />Arganta Core
+        </button>
+        <div className={'bf-frontier-group' + (brain !== 'agent' ? ' on' : '')}>
+          {/* Not a static label — it lights up the moment either engine is
+              picked, so choosing Claude or OpenAI visibly reads as "now in
+              Frontier mode", not three flat, unrelated buttons. */}
+          <span className="bf-frontier-label">Frontier</span>
+          <button type="button" className={'bf-engine-pill' + (brain === 'claude' ? ' on' : '')} onClick={() => switchBrain('claude')}>
+            <ClaudeMark size={12} />Claude
+          </button>
+          <button type="button" className={'bf-engine-pill' + (brain === 'codex' ? ' on' : '')} onClick={() => switchBrain('codex')}>
+            <OpenAIMark size={12} />OpenAI
+          </button>
+        </div>
+        {brain !== 'agent' && (() => {
+          const engineCfg = ENGINE_MODELS[brain as BridgeEngine];
+          const FrontierMark = engineCfg.Mark;
+          return (
+            <span className={'ag-tier has-mark ' + (bridge.status === 'open' ? 'core' : 'lite')} style={{ marginLeft: 'auto' }}>
+              <FrontierMark size={11} color={bridge.status === 'open' ? engineCfg.accent : 'var(--ink3)'} />
+              <b>{bridge.status === 'open' ? 'CONNECTED' : bridge.status.toUpperCase()}</b>
+            </span>
+          );
+        })()}
       </div>
 
       <div className={'cc-body' + (showLeft ? ' show-left' : '') + (showRight ? ' show-right' : '')} id="ccBody">
@@ -460,13 +758,45 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
         </div>
 
         <div className="cc-mid">
+          {/* Scoped to cc-mid, NOT the whole canvas: a full-canvas scrim sat on
+              top of cc-top and swallowed clicks on the panel's own Close button
+              — you could open Frontier's connect dialog and then have no way to
+              dismiss the chat at all. It now only ever covers the message area. */}
+          {brain !== 'agent' && bridgeDialogOpen && (
+            <BridgeConnectDialog
+              engineName={ENGINE_NAME[brain as BridgeEngine]}
+              status={bridge.status}
+              token={bridgeToken}
+              url={bridgeUrl}
+              onToken={setBridgeToken}
+              onUrl={setBridgeUrl}
+              onConnect={() => { connectBridge(); }}
+              onClose={msgs.length > 1 ? () => setBridgeDialogOpen(false) : undefined}
+            />
+          )}
           <div className="cc-stream" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
             {msgs.map((m, i) => (
               <div className={'msg ' + m.role} key={i}>
                 <div className="who" style={m.role === 'user' ? { textAlign: 'right' } : undefined}>{m.role === 'user' ? 'YOU' : 'ARGANTA'}</div>
                 <div className="bub">
                   {m.role === 'assistant'
-                    ? (m.text ? <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) + (m.done ? '' : '<span class="cc-caret"></span>') }} /> : <div className="cc-typing"><i /><i /><i /></div>)
+                    ? (m.bridge
+                      ? <BridgeFeedItem item={m.bridge} fileBase={bridgeHttpBase} token={bridgeToken} onResolve={(id, ok, input) => {
+                          bridge.respondApproval(id, ok, input);
+                          setMsgs((cur) => cur.map((x) => (x.bridge?.kind === 'approval' && x.bridge.approvalId === id
+                            ? { ...x, bridge: { ...x.bridge, resolved: ok ? 'approved' : 'denied' } } : x)));
+                        }} renderMarkdown={mdToHtml} />
+                      : m.card
+                        ? (<>
+                          {m.text && <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) }} />}
+                          <AgentCard card={m.card} onChip={onChip} />
+                        </>)
+                        : m.text
+                          ? (<>
+                            <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) + (m.done ? '' : '<span class="cc-caret"></span>') }} />
+                            {brain !== 'agent' && m.done && <BridgeMessageExtras text={m.text} fileBase={bridgeHttpBase} token={bridgeToken} />}
+                          </>)
+                          : brain !== 'agent' ? null : <div className="cc-typing"><i /><i /><i /></div>)
                     : m.text}
                   {m.role === 'assistant' && m.done && i === msgs.length - 1 && m.wellPick && pendingIntent === m.wellPick && (
                     <div className="cc-well-pick">
@@ -501,13 +831,72 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                 </div>
               </div>
             ))}
+            {brain !== 'agent' && bridgeRunning && (
+              <div className="msg assistant">
+                <div className="who">ARGANTA</div>
+                <div className="bub">
+                  <div className="bf-thinking">
+                    <span className="bf-think-dot" /><span className="bf-think-dot" /><span className="bf-think-dot" />
+                    <i>{ENGINE_NAME[brain as BridgeEngine]} is working… {bridgeElapsed}s</i>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="cc-composer">
-            <div className="cc-shell">
-              <textarea className="cc-input" rows={1} placeholder="Ask Arganta…" value={draft}
-                onInput={(e) => { const el = e.currentTarget; setDraft(el.value); el.style.height = 'auto'; el.style.height = Math.min(160, el.scrollHeight) + 'px'; }}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); e.currentTarget.style.height = 'auto'; } }} />
+            {brain !== 'agent' && bridge.status !== 'open' && msgs.length > 1 && !bridgeDialogOpen && (
+              <button type="button" className="bf-reconnect-pill" onClick={() => setBridgeDialogOpen(true)}>
+                <span className="bf-dot bad" /> Bridge disconnected — reconnect
+              </button>
+            )}
+            <div className="cc-shell" style={{ position: 'relative' }}>
+              {suggestions.length > 0 && brain === 'agent' && (
+                <div className="ag-sugg">
+                  {suggestions.map((s, i) => (
+                    <button type="button" key={s.node.id}
+                      className={'ag-sugg-row' + (i === sugIndex ? ' on' : '')}
+                      onMouseDown={(e) => { e.preventDefault(); send(s.node.name); }}>
+                      <span className="nm">{s.node.displayName}</span>
+                      {/* A fuzzy or phonetic hit says so BEFORE you commit to it. */}
+                      {(s.stage === 'fuzzy' || s.stage === 'phonetic') && <span className="fz">≈</span>}
+                      <span className="kd">{s.node.kind.replace('-', ' ')}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {brain !== 'agent' && (
+                <EngineModelPicker
+                  Mark={ENGINE_MODELS[brain as BridgeEngine].Mark}
+                  accent={ENGINE_MODELS[brain as BridgeEngine].accent}
+                  capsulePrefix={ENGINE_MODELS[brain as BridgeEngine].capsulePrefix}
+                  models={ENGINE_MODELS[brain as BridgeEngine].options}
+                  model={frontierModel}
+                  onPick={setFrontierModel}
+                  disabled={bridgeRunning}
+                />
+              )}
+              <textarea className="cc-input" rows={1}
+                placeholder={brain === 'agent'
+                  ? 'Ask about a basin, country, field or well…'
+                  : bridge.status === 'open'
+                    ? `Give ${ENGINE_NAME[brain as BridgeEngine]} a mission…`
+                    : 'Connect to the bridge first'}
+                value={draft}
+                disabled={brain !== 'agent' && bridge.status !== 'open'}
+                onInput={(e) => { const el = e.currentTarget; setDraft(el.value); if (brain === 'agent') { setSugOpen(true); setSugIndex(-1); } el.style.height = 'auto'; el.style.height = Math.min(160, el.scrollHeight) + 'px'; }}
+                onBlur={() => setSugOpen(false)}
+                onKeyDown={(e) => {
+                  if (suggestions.length && brain === 'agent') {
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setSugIndex((i) => (i + 1) % suggestions.length); return; }
+                    if (e.key === 'ArrowUp') { e.preventDefault(); setSugIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1)); return; }
+                    if (e.key === 'Escape') { setSugOpen(false); return; }
+                    if (e.key === 'Enter' && !e.shiftKey && sugIndex >= 0) {
+                      e.preventDefault(); send(suggestions[sugIndex].node.name); e.currentTarget.style.height = 'auto'; return;
+                    }
+                  }
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); e.currentTarget.style.height = 'auto'; }
+                }} />
               <div className="cc-tray">
                 <button className="cc-tool" title="Attach"><Paperclip size={15} /></button>
                 <button className="cc-tool" title="Tools"><Wrench size={15} /></button>
@@ -537,7 +926,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                     ))}
                   </div>
                 </div>
-                <button className="cc-send" disabled={!draft.trim()} onClick={() => send()}><ArrowUp size={16} /></button>
+                <button className="cc-send" disabled={!draft.trim() || (brain !== 'agent' && (bridge.status !== 'open' || bridgeRunning))} onClick={() => send()}><ArrowUp size={16} /></button>
               </div>
             </div>
             <div className="cc-usage">

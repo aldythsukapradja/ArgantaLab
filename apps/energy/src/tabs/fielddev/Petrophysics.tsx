@@ -365,7 +365,7 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
                 <Sigma size={12} /> <b>Zone summary</b>
                 <em>{bore?.name ?? '—'}</em>
               </header>
-              <PetroZoneStrip well={well} />
+              <PetroZoneStrip ws={ws} well={well} params={params} />
             </section>
           </>
         ) : (

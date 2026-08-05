@@ -9,7 +9,19 @@ import { select, type Selection } from 'd3-selection';
 import { scaleLinear, type ScaleLinear } from 'd3-scale';
 import { line, curveMonotoneX, type Line } from 'd3-shape';
 import { axisBottom, axisLeft } from 'd3-axis';
-import { max } from 'd3-array';
+
+/** d3-array's `max`, inlined — see SurveillanceCharts.ts: reaching `d3-array` only from a
+ *  lazily-loaded chart module left it un-prebundled by Vite's optimizer, so the request
+ *  504'd and took the whole surface down with it. */
+function max<T>(arr: readonly T[], acc: (d: T) => number | null | undefined): number | undefined {
+  let m: number | undefined;
+  for (const d of arr) {
+    const v = acc(d);
+    if (v == null || Number.isNaN(v)) continue;
+    if (m === undefined || v > m) m = v;
+  }
+  return m;
+}
 import 'd3-transition';
 
 export interface ProdPoint { pvi: number; oilRate: number; waterCut: number }

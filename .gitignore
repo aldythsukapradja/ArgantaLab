@@ -18,6 +18,23 @@ generated-media/
 # deploy. Re-create locally with docs/arganta-energy/knowledge-base/extract_doust_figures.py
 docs/arganta-energy/knowledge-base/doust-basin-figures/_source/
 apps/energy/public/doust-figures/
+# Basin figures harvested from publications: those extracted from USGS reports are
+# US Government works (public domain) and DO ship — apps/energy/public/basin-figures/.
+# Figures REPRODUCED inside a USGS report from a copyrighted source are not public
+# domain, and anything pulled from paywalled literature certainly is not. The
+# harvester routes those to the -restricted directory purely so this one rule can
+# keep them out of a public repo. Never move a file across that boundary by hand.
+apps/energy/public/basin-figures-restricted/
 # Generated Markdown vault (9k+ notes) — rebuild from the workbook with
 # docs/arganta-energy/knowledge-base/export_kb_markdown.py
 docs/arganta-energy/knowledge-base/vault/
+
+# USGS source archives and publication PDFs downloaded by the petroleum-system
+# harvester. ~1.8 GB, and reg1/reg2/reg6.zip each exceed GitHub's 100 MB hard
+# limit, so a push carrying them is rejected outright rather than merely slow.
+# They are re-downloadable inputs, not source. Keep the scripts, drop the spoil.
+.codex/tmp-petsys/sources/
+.codex/tmp-petsys/monographs/
+.codex/tmp-petsys/current-pubs/
+# Workbook inspection dumps: build output, 55-90 MB each.
+*.xlsx.inspect.ndjson

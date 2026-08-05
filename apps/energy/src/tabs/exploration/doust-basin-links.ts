@@ -72,3 +72,40 @@ export const DOUST_BASIN_LINKS: DoustBasinLink[] = [
 ];
 
 export const doustLinkFor = (prvCode: string) => DOUST_BASIN_LINKS.find((l) => l.prvCode === prvCode) ?? null;
+
+// ── one representative figure per basin-cycle stage ──────────────────────────────
+// So a cycle in the tectonostratigraphy column isn't just a coloured bar — it carries
+// the picture of what that KIND of cycle looks like. Matched on the cycle's own stage
+// wording first (most specific), then its geodynamic class. Every entry names a real
+// figure whose caption genuinely depicts that stage; there is no fallback that would
+// attach an unrelated picture just to avoid an empty slot.
+export interface CycleFigureRule {
+  /** Lower-cased substring tested against the cycle's `stage`, then its title. */
+  match: string;
+  geodynamics?: CycleGeodynamics;
+  fig: number;
+  why: string;
+}
+
+export const CYCLE_FIGURES: CycleFigureRule[] = [
+  { match: 'pre-rift', geodynamics: 'pre-rift', fig: 8, why: 'Fig. 8 shows the pre-rift (Permian–Early Jurassic, orange) sitting beneath the Viking Graben syn-rift.' },
+  { match: 'early', geodynamics: 'extensional', fig: 11, why: 'Fig. 11 panel 1 — rift initiation: fault-block formation with minor subsidence.' },
+  { match: 'climax', geodynamics: 'extensional', fig: 12, why: 'Fig. 12 — depositional environments at rift climax: talus fans on the boundary fault, deltas on the flexural flank.' },
+  { match: 'late syn-rift', geodynamics: 'extensional', fig: 11, why: 'Fig. 11 panel 3 — the waning stage: declining fault activity, rift-flank erosion and infill.' },
+  { match: 'syn-rift', geodynamics: 'extensional', fig: 11, why: 'Fig. 11 — the stages of a typical rift cycle.' },
+  { match: 'post-rift', geodynamics: 'sag', fig: 17, why: 'Fig. 17 — Orange Basin: an unfaulted post-rift sag prograding over a truncated syn-rift.' },
+  { match: 'sag', geodynamics: 'sag', fig: 18, why: 'Fig. 18 — how post-rift margin geometry differs between magma-poor and magma-rich extension.' },
+  { match: 'foreland', geodynamics: 'compressional', fig: 29, why: 'Fig. 29 — a typical foreland basin section, depocentre migrating ahead of the thrust front.' },
+  { match: 'compress', geodynamics: 'compressional', fig: 29, why: 'Fig. 29 — foreland basin geometry under an advancing fold-and-thrust belt.' },
+];
+
+/** Best figure for one basin cycle. Stage wording wins over geodynamics, so
+ *  "early–climax syn-rift" resolves to the climax facies figure rather than the
+ *  generic rift-stages cartoon. Returns null rather than guessing. */
+export function cycleFigureFor(cycle: { stage?: string; title?: string; geodynamics?: string }): CycleFigureRule | null {
+  const hay = `${cycle.stage ?? ''} ${cycle.title ?? ''}`.toLowerCase();
+  const byStage = CYCLE_FIGURES.filter((r) => hay.includes(r.match))
+    .sort((a, b) => b.match.length - a.match.length)[0];
+  if (byStage) return byStage;
+  return CYCLE_FIGURES.find((r) => r.geodynamics && r.geodynamics === cycle.geodynamics) ?? null;
+}

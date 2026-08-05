@@ -61,6 +61,10 @@ export function digestLog(log: DigestedLog, format: AssetFormat = 'las2'): Diges
     meta: {
       well: log.well,
       curves: log.curves.length,
+      // WHICH curves, not just how many — "does this well have a density log?" is
+      // the question an inventory row has to answer without being opened
+      curveList: log.curves.map((c) => c.mnemonic).join(' '),
+      families: [...new Set(log.curves.map((c) => c.family).filter(Boolean))].join(' '),
       samples: log.md.length,
       depthUnit: log.depthUnit,
       mdMin: finite.length ? Math.min(...finite) : null,
@@ -78,14 +82,27 @@ export function digestSurface(surface: DigestedSurface, format: AssetFormat = 'e
     y0: surface.y0, yc: 0, yr: surface.dy,
   }, { kind: 'depth', zUnits: surface.zUnits });
   const compressed = enc(gv);
-  let live = 0;
-  for (let i = 0; i < surface.values.length; i++) if (Number.isFinite(surface.values[i])) live++;
+  let live = 0, zmin = Infinity, zmax = -Infinity;
+  for (let i = 0; i < surface.values.length; i++) {
+    const v = surface.values[i];
+    if (!Number.isFinite(v)) continue;
+    live++;
+    if (v < zmin) zmin = v;
+    if (v > zmax) zmax = v;
+  }
   return {
     kind: 'surface', format, exceptions, status: worstSeverity(exceptions),
     compressed, compressedBytes: compressed.byteLength, surface, gvsurf: gv,
     meta: {
+      // the display name is the ONLY thing that lets a surface be matched back to a
+      // stratigraphic unit later (surface-context.ts) — it was computed for the GVSURF
+      // encode above but never survived onto the asset until now
+      name: surface.name || null,
       ncol: surface.ncol, nrow: surface.nrow, nodes: surface.ncol * surface.nrow, live,
       dx: surface.dx, dy: surface.dy,
+      // depth range is the fact that makes a horizon row readable at a glance
+      zmin: live ? Math.round(zmin * 100) / 100 : null,
+      zmax: live ? Math.round(zmax * 100) / 100 : null,
       xmin: surface.x0, xmax: surface.x0 + surface.dx * (surface.ncol - 1),
       ymin: surface.y0, ymax: surface.y0 + surface.dy * (surface.nrow - 1),
       zUnits: surface.zUnits,
@@ -138,14 +155,24 @@ export function digestText(fileName: string, text: string): DigestResult {
       y0: surface.y0, yc: 0, yr: surface.dy,
     }, { kind: 'depth', zUnits: surface.zUnits });
     const compressed = enc(gv);
-    let live = 0;
-    for (let i = 0; i < surface.values.length; i++) if (Number.isFinite(surface.values[i])) live++;
+    let live = 0, zmin = Infinity, zmax = -Infinity;
+    for (let i = 0; i < surface.values.length; i++) {
+      const v = surface.values[i];
+      if (!Number.isFinite(v)) continue;
+      live++;
+      if (v < zmin) zmin = v;
+      if (v > zmax) zmax = v;
+    }
     return {
       kind, format, exceptions, status: worstSeverity(exceptions),
       compressed, compressedBytes: compressed.byteLength, surface, gvsurf: gv,
       meta: {
+        name: surface.name || fileName,
         ncol: surface.ncol, nrow: surface.nrow, nodes: surface.ncol * surface.nrow, live,
         dx: surface.dx, dy: surface.dy,
+      // depth range is the fact that makes a horizon row readable at a glance
+      zmin: live ? Math.round(zmin * 100) / 100 : null,
+      zmax: live ? Math.round(zmax * 100) / 100 : null,
         xmin: surface.x0, xmax: surface.x0 + surface.dx * (surface.ncol - 1),
         ymin: surface.y0, ymax: surface.y0 + surface.dy * (surface.nrow - 1),
         zUnits: surface.zUnits,

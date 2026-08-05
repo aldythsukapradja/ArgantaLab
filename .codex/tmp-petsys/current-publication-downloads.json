@@ -1,0 +1,841 @@
+{
+  "summary": {
+    "publications": 52,
+    "with_downloads": 49,
+    "pdfs_downloaded": 51,
+    "bytes_downloaded": 200858232,
+    "no_pdf_link": 2,
+    "errors": 0
+  },
+  "results": [
+    {
+      "publication_id": "28494",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of Bonaparte Basin, Browse Basin, Northwest Shelf, and Gippsland Basin Provinces, Australia, 2011",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3025/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3025/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3025/FS12-3025.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28494-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1660959
+        }
+      ]
+    },
+    {
+      "publication_id": "28627",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Central Burma Basin, Irrawaddy-Andaman, and Indo-Burman Geologic Provinces, Myanmar",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3107/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3107/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3107/FS12-3107.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28627-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1545278
+        }
+      ]
+    },
+    {
+      "publication_id": "28574",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of the Arabian Peninsula and Zagros Fold Belt, 2012",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3115/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3115/",
+      "status": "no-usable-pdf",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3115/FS12-3115.pdf",
+          "status": "download-error",
+          "error": "PDF 404"
+        }
+      ]
+    },
+    {
+      "publication_id": "28653",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Cretaceous-Tertiary Composite Total Petroleum System Taranaki Basin Assessment Unit, New Zealand",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3139/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3139/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3139/FS12-3139.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28653-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1234992
+        }
+      ]
+    },
+    {
+      "publication_id": "28499",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of Four East Africa Geologic Provinces",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3039/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3039/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3039/contents/FS12-3039.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28499-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 2396977
+        }
+      ]
+    },
+    {
+      "publication_id": "28495",
+      "title": "Assessment of undiscovered oil and gas resources of Papua-New Guinea, Eastern Indonesia, and East Timor, 2011",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3029/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3029/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3029/FS2012-3029.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28495-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1167167
+        }
+      ]
+    },
+    {
+      "publication_id": "28597",
+      "title": "Assessment of undiscovered conventional oil and gas resources of six geologic provinces in China, 2011",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3117/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3117/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3117/FS12-3117.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28597-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 2524762
+        }
+      ]
+    },
+    {
+      "publication_id": "28616",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of the Western Canada Sedimentary Basin, Canada, 2012",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3148/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3148/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3148/FS12-3148-508.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28616-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 4770865
+        }
+      ]
+    },
+    {
+      "publication_id": "28467",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the North Sakhalin Basin Province, Russia, 2011",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3149/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3149/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3149/FS11-3149_508.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28467-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 970096
+        }
+      ]
+    },
+    {
+      "publication_id": "28368",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of Libya and Tunisia, 2010",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3105/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3105/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3105/pdf/FS11-3105.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28368-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1351876
+        }
+      ]
+    },
+    {
+      "publication_id": "28468",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Amu Darya Basin and Afghan-Tajik Basin Provinces, Afghanistan, Iran, Tajikistan, Turkmenistan, and Uzbekistan, 2011",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3154/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3154/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3154/report/FS11-3154.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28468-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 6515236
+        }
+      ]
+    },
+    {
+      "publication_id": "28466",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Southern Siberian Craton (Baykit High, Nepa-Botouba High, Angara-Lena Terrace, and Cis-Patome Foredeep Provinces), Russia, 2011",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3155/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3155/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3155/report/FS11-3155.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28466-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 14634645
+        }
+      ]
+    },
+    {
+      "publication_id": "28704",
+      "title": "Assessment of undiscovered oil and gas resources of North Africa, 2012",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3147/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3147/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3147/FS12-3147.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28704-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 8215891
+        }
+      ]
+    },
+    {
+      "publication_id": "28223",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Chad Basin Province, North-Central Africa",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3096/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3096/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3096/pdf/FS10-3096.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28223-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 511990
+        }
+      ]
+    },
+    {
+      "publication_id": "28724",
+      "title": "Assessment of undiscovered petroleum resources of the Amerasia Basin Petroleum Province",
+      "series": "Scientific Investigations Report",
+      "source_url": "https://pubs.usgs.gov/sir/2012/5146/",
+      "resolved_url": "https://pubs.usgs.gov/sir/2012/5146/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/sir/2012/5146/pdf/sir2012-5146_amerasia.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28724-Scientific-Investigations-Report-01.pdf",
+          "status": "downloaded",
+          "bytes": 10171683
+        }
+      ]
+    },
+    {
+      "publication_id": "28723",
+      "title": "Assessment of undiscovered petroleum resources of the Arctic Alaska Petroleum Province",
+      "series": "Scientific Investigations Report",
+      "source_url": "https://pubs.usgs.gov/sir/2012/5147/",
+      "resolved_url": "https://pubs.usgs.gov/sir/2012/5147/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/sir/2012/5147/pdf/sir2012-5147_arctic.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28723-Scientific-Investigations-Report-01.pdf",
+          "status": "downloaded",
+          "bytes": 8084041
+        }
+      ]
+    },
+    {
+      "publication_id": "27965",
+      "title": "Geologic Assessment of Undiscovered Oil and Gas Resources of the West Greenland-East Canada Province",
+      "series": "Open-File Report",
+      "source_url": "https://pubs.usgs.gov/of/2010/1012/",
+      "resolved_url": "https://pubs.usgs.gov/of/2010/1012/",
+      "status": "no-pdf-link",
+      "files": []
+    },
+    {
+      "publication_id": "28515",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Assam, Bombay, Cauvery, and Krishna-Godavari Provinces, South Asia, 2011",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3059/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3059/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3059/contents/FS2012-3059.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28515-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 673497
+        }
+      ]
+    },
+    {
+      "publication_id": "28278",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Red Sea Basin Province",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3119/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3119/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3119/pdf/FS10-3119.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28278-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 4666985
+        }
+      ]
+    },
+    {
+      "publication_id": "28118",
+      "title": "Assessment of Undiscovered Oil and Gas Resources in Southeast Asia, 2010",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3015/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3015/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3015/pdf/FS10-3015.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28118-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 834554
+        }
+      ]
+    },
+    {
+      "publication_id": "28103",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of Four West Africa Geologic Provinces",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3006/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3006/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3006/pdf/FS10-3006.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28103-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 7818217
+        }
+      ]
+    },
+    {
+      "publication_id": "28106",
+      "title": "Assessment of undiscovered oil and gas resources of the Levant Basin Province, Eastern Mediterranean",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3014/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3014/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3014/pdf/FS10-3014.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28106-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 7045479
+        }
+      ]
+    },
+    {
+      "publication_id": "28142",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Nile Delta Basin Province, Eastern Mediterranean",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3027/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3027/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3027/pdf/FS10-3027.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28142-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1562849
+        }
+      ]
+    },
+    {
+      "publication_id": "28227",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the North Caspian Basin, Middle Caspian Basin, North Ustyurt Basin, and South Caspian Basin Provinces, Caspian Sea Area, 2010",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3094/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3094/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3094/pdf/FS10-3094.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28227-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 846543
+        }
+      ]
+    },
+    {
+      "publication_id": "28226",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Volga-Ural Region Province, Russia and Kazakhstan, 2010",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2010/3095/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2010/3095/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2010/3095/pdf/FS10-3095.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28226-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 831632
+        }
+      ]
+    },
+    {
+      "publication_id": "28500",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the South Africa Coastal Province, Africa",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3030/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3030/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3030/contents/FS12-3030.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28500-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1290871
+        }
+      ]
+    },
+    {
+      "publication_id": "28353",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the West Siberian Basin Province, Russia, 2010",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3050/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3050/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3050/pdf/fs2011-3050.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28353-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 3683162
+        }
+      ]
+    },
+    {
+      "publication_id": "28351",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Dnieper-Donets Basin Province and Pripyat Basin Province, Russia, Ukraine and Belarus, 2010",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3051/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3051/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3051/pdf/fs2011-3051.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28351-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1758222
+        }
+      ]
+    },
+    {
+      "publication_id": "28352",
+      "title": "Assessment of Undiscovered Oil and Gas Resources of the Azov-Kuban Basin Province, Ukraine and Russia, 2010",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3052/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3052/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3052/pdf/fs2011-3052.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28352-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1229799
+        }
+      ]
+    },
+    {
+      "publication_id": "28304",
+      "title": "Assessment of undiscovered oil and gas resources of the Sud Province, north-central Africa",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3029/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3029/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3029/pdf/FS11-3029.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28304-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 2962281
+        }
+      ]
+    },
+    {
+      "publication_id": "28333",
+      "title": "Assessment of undiscovered oil and gas resources of the West African Coastal Province, West Africa",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2011/3034/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2011/3034/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2011/3034/pdf/FS11-3034.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28333-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1001366
+        }
+      ]
+    },
+    {
+      "publication_id": "28624",
+      "title": "Shahejie-Shahejie/Guantao/Wumishan and Carboniferous/Permian Coal-Paleozoic Total Petroleum Systems in the Bohaiwan Basin, China (based on geologic studies for the 2000 World Energy Assessment Project of the U.S. Geological Survey)",
+      "series": "Scientific Investigations Report",
+      "source_url": "https://pubs.usgs.gov/sir/2011/5010/",
+      "resolved_url": "https://pubs.usgs.gov/sir/2011/5010/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/sir/2011/5010/pdf/SIR2011-5010.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28624-Scientific-Investigations-Report-01.pdf",
+          "status": "downloaded",
+          "bytes": 3067295
+        },
+        {
+          "pdf_url": "https://pubs.usgs.gov/sir/2011/5010/pdf/Fig01_Oversized.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28624-Scientific-Investigations-Report-02.pdf",
+          "status": "downloaded",
+          "bytes": 13102229
+        },
+        {
+          "pdf_url": "https://pubs.usgs.gov/sir/2011/5010/pdf/Fig04_Oversized.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28624-Scientific-Investigations-Report-03.pdf",
+          "status": "downloaded",
+          "bytes": 970817
+        }
+      ]
+    },
+    {
+      "publication_id": "28541",
+      "title": "An estimate of undiscovered conventional oil and gas resources of the world, 2012",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3042",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3042/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3042/fs2012-3042.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28541-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 5866090
+        }
+      ]
+    },
+    {
+      "publication_id": "28542",
+      "title": "Assessment of undiscovered, conventional oil and gas resources of Mexico, Guatemala, and Belize, 2012",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3069/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3069/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3069/FS12-3069.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28542-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 2832916
+        }
+      ]
+    },
+    {
+      "publication_id": "28513",
+      "title": "Assessment of undiscovered conventional oil and gas resources of South America and the Caribbean, 2012",
+      "series": "Fact Sheet",
+      "source_url": "https://pubs.usgs.gov/fs/2012/3046/",
+      "resolved_url": "https://pubs.usgs.gov/fs/2012/3046/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2012/3046/fs2012-3046.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/28513-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 7039891
+        }
+      ]
+    },
+    {
+      "publication_id": "27981",
+      "title": "Geologic Assessment of Undiscovered Oil and Gas Resources of the North Cuba Basin, Cuba",
+      "series": "Open-File Report",
+      "source_url": "https://pubs.usgs.gov/of/2010/1029/",
+      "resolved_url": "https://pubs.usgs.gov/of/2010/1029/",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/of/2010/1029/pdf/OF10-1029.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/27981-Open-File-Report-01.pdf",
+          "status": "downloaded",
+          "bytes": 5574695
+        }
+      ]
+    },
+    {
+      "publication_id": "30153",
+      "title": "Assessment of undiscovered hydrocarbon resources of Sub-Saharan Region Africa",
+      "series": "Data Series",
+      "source_url": "https://dx.doi.org/10.3133/ds69GG",
+      "resolved_url": "https://pubs.usgs.gov/publication/ds69GG",
+      "status": "no-pdf-link",
+      "files": []
+    },
+    {
+      "publication_id": "31281",
+      "title": "Assessment of undiscovered conventional oil and gas resources of the Grand Erg/Ahnet Province, Algeria, 2018",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20193031",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20193031",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2019/3031/fs20193031.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31281-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 729621
+        }
+      ]
+    },
+    {
+      "publication_id": "31271",
+      "title": "Assessment of undiscovered oil and gas resources of the Sirte and Pelagian Basin Provinces of Libya, Tunisia, Malta, and Italy, 2019",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20193030",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20193030",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2019/3030/fs20193030.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31271-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 751669
+        }
+      ]
+    },
+    {
+      "publication_id": "31428",
+      "title": "Assessment of undiscovered conventional oil and gas resources of Southeast Asia, 2020 (ver. 1.1, November 2020)",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20203046",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20203046",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2020/3046/fs20203046.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31428-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 9542501
+        }
+      ]
+    },
+    {
+      "publication_id": "31503",
+      "title": "Assessment of undiscovered conventional oil and gas resources in the Eastern Mediterranean Area, 2020",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20213032",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20213032",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2021/3032/fs20213032.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31503-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 3659181
+        }
+      ]
+    },
+    {
+      "publication_id": "31478",
+      "title": "Assessment of undiscovered conventional oil and gas resources of China, 2020",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20213051",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20213051",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2021/3051/fs20213051.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31478-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1085014
+        }
+      ]
+    },
+    {
+      "publication_id": "31541",
+      "title": "Assessment of undiscovered conventional oil and gas resources of the West Siberian Basin Province, Russia, 2020",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20223047",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20223047",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2022/3047/fs20223047.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31541-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 9314664
+        }
+      ]
+    },
+    {
+      "publication_id": "31406",
+      "title": "Assessment of undiscovered conventional oil and gas resources in Paleozoic total petroleum systems of the Central European Basin system, 2019",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20223066",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20223066",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2022/3066/fs20223066.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31406-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 7417221
+        }
+      ]
+    },
+    {
+      "publication_id": "31526",
+      "title": "Assessment of undiscovered conventional oil and gas resources of New Guinea, Papua Barat, Seram, and Timor-Leste, 2020",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20223046",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20223046",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2022/3046/fs20223046.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31526-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 937660
+        }
+      ]
+    },
+    {
+      "publication_id": "31678",
+      "title": "Assessment of undiscovered conventional oil and gas resources of offshore Morocco, 2021",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20233027",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20233027",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2023/3027/fs20233027.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31678-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 738552
+        }
+      ]
+    },
+    {
+      "publication_id": "31585",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of the Barents Sea Area, 2021",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20233019",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20233019",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2023/3019/fs20233019.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31585-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1400158
+        }
+      ]
+    },
+    {
+      "publication_id": "31572",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of the Senegal Basin Province of Northwest Africa, 2021",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20223080",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20223080",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2022/3080/fs20223080.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31572-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 714151
+        }
+      ]
+    },
+    {
+      "publication_id": "31542",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of the Volga-Ural Basin and Timan-Pechora Basin Provinces of Russia, 2020",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20223070",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20223070",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2022/3070/fs20223070.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31542-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 9801033
+        }
+      ]
+    },
+    {
+      "publication_id": "31517",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of the Greater Taranaki Basin and East Coast Basin of New Zealand, 2020",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20213059",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20213059",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2021/3059/fs20213059.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31517-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 2890686
+        }
+      ]
+    },
+    {
+      "publication_id": "31465",
+      "title": "Assessment of Undiscovered Conventional Oil and Gas Resources of the Perth Basin, NW Shelf, Browse Basin, and Bonaparte Gulf Basin Provinces of Western Australia, 2020",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20213060",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20213060",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2021/3060/fs20213060.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/31465-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 1696463
+        }
+      ]
+    },
+    {
+      "publication_id": "0",
+      "title": "Assessment of undiscovered conventional oil and gas resources of South America and the Caribbean, 2025",
+      "series": "Fact Sheet",
+      "source_url": "https://doi.org/10.3133/fs20263066",
+      "resolved_url": "https://pubs.usgs.gov/publication/fs20263066",
+      "status": "downloaded",
+      "files": [
+        {
+          "pdf_url": "https://pubs.usgs.gov/fs/2026/3066/fs20263066.pdf",
+          "local_path": ".codex/tmp-petsys/current-pubs/0-Fact-Sheet-01.pdf",
+          "status": "downloaded",
+          "bytes": 9763810
+        }
+      ]
+    }
+  ]
+}

@@ -58,15 +58,15 @@ const RHOB_COLOR = '#df7084';
 const NPHI_COLOR = '#62aef7';
 const CROSSOVER_FILL = 'rgba(226,75,74,0.16)';
 const VSH_COLOR = '#8b7355';
-const PHIE_COLOR = '#2f9fd0';
-const SW_COLOR = '#4f7ce0';
+const PHIE_COLOR = '#d99a00';   // porosity: gold — contrasts against Sw's blue
+const SW_COLOR = '#3f6fd8';     // saturation: blue, deliberately unchanged
 const NET_COLOR = '#16805a';
-const PAY_COLOR = '#d9a441';
+const PAY_COLOR = '#c2410c';    // pay: burnt orange — distinct from the gold PHIE curve
 const REF_COLOR = '#a78bfa';       // Equinor's interpreted curves — always dashed
 const PICK_COLOR = '#e11d74';
 const AXIS_W = 58;
 const MINI_W = 26;
-const RIBBON_W = 22;
+const RIBBON_W = 40;
 const GAP = 1;
 const PAD_T = 20;
 const PAD_B = 18;
@@ -487,6 +487,18 @@ export function PetroLogBench({ well, params, onBore }: {
         <span className="plb-range">
           {depthQ(eff.lo, system).text} – {depthQ(eff.hi, system).text} · scroll to zoom · drag to pan
         </span>
+        {/* Samples the delivery declared as data but that cannot be measurements —
+            on Volve, unresolved -999.25 sentinels in the LWD composites. Screening
+            them is right; hiding the screening would hide a delivery defect. */}
+        {result?.screened?.length ? (
+          <span className="plb-screened"
+            title={`Physically impossible samples, excluded from the interpretation:\n${
+              result.screened.map((s) => `${s.curve}: ${s.rejected.toLocaleString('en-US')} of ${s.of.toLocaleString('en-US')}`).join('\n')
+            }\n\nThese are almost always unresolved null sentinels in the source log.`}>
+            <AlertTriangle size={10} />
+            {result.screened.reduce((n, s) => n + s.rejected, 0).toLocaleString('en-US')} screened
+          </span>
+        ) : null}
         {result?.endpoints && (
           <span className="plb-chip" title={`GR endpoints (${result.endpoints.nature})`}>
             GR {Math.round(result.endpoints.clean)}→{Math.round(result.endpoints.shale)}
@@ -522,8 +534,15 @@ export function PetroLogBench({ well, params, onBore }: {
             </Fragment>
           );
         })}
-        <div className="plb-hdr ribbon" style={{ width: RIBBON_W, flex: 'none' }} title="Net (green) and pay (amber) — the flag the cutoffs produce">
-          <b>N/P</b>
+        {/* the ribbon's header carries a legend, not just a label — two colours in a
+            22px column with the word "N/P" over them was unreadable */}
+        <div className="plb-hdr ribbon" style={{ width: RIBBON_W, flex: 'none' }}
+          title="Net (reservoir: passes all three cutoffs) and pay (net AND clearly hydrocarbon-bearing)">
+          <b>NET</b>
+          <span className="plb-legend">
+            <i style={{ background: NET_COLOR }} title="net" />
+            <i style={{ background: PAY_COLOR }} title="pay" />
+          </span>
         </div>
       </div>
 

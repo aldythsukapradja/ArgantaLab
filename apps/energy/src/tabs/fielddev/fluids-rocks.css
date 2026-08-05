@@ -1,0 +1,126 @@
+/* fluids-rocks.css — the Fluids & Rock stage (PVT · SCAL · Initialization).
+   Its own file for the same reason petrophysics.css is: the stage's layout can be
+   iterated without touching the suite's shared sheet. Same `html[data-ui="cosmo"]`
+   scoping rule as everything else in the suite. */
+
+html[data-ui="cosmo"] .frx{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-bar{display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .frx-title{font-size:11px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .frx-sub{min-width:0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-spacer{flex:1}
+html[data-ui="cosmo"] .frx-panes{display:flex;flex:0 0 auto;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+html[data-ui="cosmo"] .frx-panes button{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:0;border-radius:6px;background:transparent;color:var(--ink3);font:9px var(--mono);letter-spacing:.06em;cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .frx-panes button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .frx-panes button.on{background:var(--teal-soft);color:var(--teal-ink);box-shadow:0 0 0 1px var(--teal)}
+html[data-ui="cosmo"] .frx-act{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink2);font:9px var(--mono);letter-spacing:.05em;cursor:pointer}
+html[data-ui="cosmo"] .frx-act:hover{border-color:var(--teal);color:var(--teal-ink)}
+
+/* ── basis strip: what the case is standing on, counted live ─────────────── */
+html[data-ui="cosmo"] .frx-basis{display:flex;align-items:center;gap:0;flex:0 0 auto;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel2);overflow-x:auto}
+html[data-ui="cosmo"] .frx-cell{display:flex;align-items:baseline;gap:5px;flex:0 0 auto;padding:0 14px 0 0;margin-right:14px;border-right:1px solid var(--line2);white-space:nowrap}
+html[data-ui="cosmo"] .frx-cell b{font:15px/1 var(--mono);font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .frx-cell i{font-style:normal;font-size:8.5px;letter-spacing:.04em;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-cell.good b{color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .frx-cell.warn b{color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .frx-cell.bad b{color:var(--red,#f87171)}
+html[data-ui="cosmo"] .frx-cell.deck b{color:var(--teal)}
+
+/* ── body ────────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-body{display:grid;flex:1;min-height:0;gap:10px;padding:12px;overflow:auto;
+  grid-template-columns:minmax(0,1fr) minmax(0,.78fr) 276px;
+  grid-template-rows:minmax(260px,1fr);
+  grid-template-areas:"main aside rail"}
+html[data-ui="cosmo"] .frx-body.pane-init{grid-template-columns:minmax(0,1fr) minmax(0,.72fr) 276px}
+html[data-ui="cosmo"] .frx-body.pane-case{grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"main aside"}
+
+html[data-ui="cosmo"] .frx-panel{display:flex;min-width:0;min-height:0;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+html[data-ui="cosmo"] .frx-panel.main{grid-area:main}
+html[data-ui="cosmo"] .frx-panel.aside{grid-area:aside}
+html[data-ui="cosmo"] .frx-panel>header{display:flex;align-items:center;gap:7px;flex:0 0 auto;padding:8px 11px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .frx-panel>header b{flex:1;min-width:0;font-size:10.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .frx-ic{display:flex;color:var(--teal)}
+html[data-ui="cosmo"] .frx-scroll{flex:1;min-height:0;overflow:auto;padding:10px 11px}
+html[data-ui="cosmo"] .frx-plot{flex:1;min-height:0;display:flex;padding:6px 8px}
+html[data-ui="cosmo"] .frx-plot svg{width:100%;height:100%}
+html[data-ui="cosmo"] .frx-panel>footer{display:flex;align-items:flex-start;gap:5px;flex:0 0 auto;padding:7px 11px;border-top:1px solid var(--line2);background:var(--panel2);font-size:8.5px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-panel>footer svg{flex:0 0 auto;margin-top:2px;color:var(--amber,#fbbf24)}
+
+/* provenance chip — the same vocabulary the rest of the platform uses */
+html[data-ui="cosmo"] .frx-basis-chip{flex:0 0 auto;padding:1px 6px;border:1px solid var(--line);border-radius:4px;font:7.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);cursor:help}
+html[data-ui="cosmo"] .frx-basis-chip.b-deck{border-color:var(--teal);color:var(--teal-ink)}
+html[data-ui="cosmo"] .frx-basis-chip.b-measured{border-color:var(--green,#4ade80);color:var(--green,#4ade80)}
+html[data-ui="cosmo"] .frx-basis-chip.b-correlation{border-color:var(--purple,#a78bfa);color:var(--purple,#a78bfa)}
+html[data-ui="cosmo"] .frx-basis-chip.b-analogue{border-color:var(--amber,#fbbf24);background:color-mix(in srgb,var(--amber,#fbbf24) 12%,transparent);color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .frx-basis-chip.b-user{border-color:var(--cblue,#60a5fa);color:var(--cblue,#60a5fa)}
+html[data-ui="cosmo"] .frx-basis-chip.b-regulator{border-color:var(--ink3)}
+
+/* ── key/value readouts ──────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-kv{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:4px 8px;margin:0}
+html[data-ui="cosmo"] .frx-kv>span{font-size:9px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .frx-kv>b{font:10px var(--mono);font-weight:600;color:var(--ink);text-align:right}
+html[data-ui="cosmo"] .frx-kv-row{display:contents}
+html[data-ui="cosmo"] .frx-sec{margin:0 0 4px;padding-top:10px;font:7.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--teal)}
+html[data-ui="cosmo"] .frx-sec:first-child{padding-top:0}
+html[data-ui="cosmo"] .frx-note{margin:7px 0 0;font-size:8.5px;line-height:1.55;color:var(--ink3)}
+
+/* ── the rail ────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-rail{grid-area:rail;display:flex;min-height:0;flex-direction:column;border:1px solid var(--teal);border-radius:10px;background:var(--panel);overflow:hidden}
+html[data-ui="cosmo"] .frx-rail-head{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:8px 11px;border-bottom:1px solid var(--line2);background:var(--teal-soft);color:var(--teal-ink);font:9px var(--mono);letter-spacing:.09em;text-transform:uppercase}
+html[data-ui="cosmo"] .frx-rail-head em{margin-left:auto;font-style:normal;font-size:7.5px;opacity:.85}
+html[data-ui="cosmo"] .frx-rail-scroll{flex:1;min-height:0;overflow:auto;padding:0 0 8px}
+html[data-ui="cosmo"] .frx-rail-sec{padding:9px 11px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .frx-rail-sec>h4{display:flex;align-items:center;gap:5px;margin:0 0 7px;font-size:10px;font-weight:600;color:var(--ink)}
+html[data-ui="cosmo"] .frx-rail-sec>h4 svg{color:var(--teal)}
+html[data-ui="cosmo"] .frx-rail-sec>h4 em{margin-left:auto}
+
+/* a slider row: label · value · track */
+html[data-ui="cosmo"] .frx-sl{margin:0 0 8px}
+html[data-ui="cosmo"] .frx-sl>span{display:flex;align-items:baseline;gap:6px;margin-bottom:3px;font-size:8.5px;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-sl>span b{margin-left:auto;font:9.5px var(--mono);color:var(--ink)}
+html[data-ui="cosmo"] .frx-sl>span b.moved{color:var(--cblue,#60a5fa)}
+html[data-ui="cosmo"] .frx-sl input[type=range]{width:100%;height:14px;accent-color:var(--teal);cursor:pointer}
+html[data-ui="cosmo"] .frx-reset{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink3);font:8px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .frx-reset:hover{border-color:var(--cblue,#60a5fa);color:var(--cblue,#60a5fa)}
+
+/* ── issues ──────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-issue{display:flex;align-items:flex-start;gap:6px;padding:7px 0;border-top:1px solid var(--line2);font-size:8.5px;line-height:1.55;color:var(--ink2)}
+html[data-ui="cosmo"] .frx-issue:first-of-type{border-top:0}
+html[data-ui="cosmo"] .frx-issue svg{flex:0 0 auto;margin-top:2px}
+html[data-ui="cosmo"] .frx-issue.fail svg{color:var(--red,#f87171)}
+html[data-ui="cosmo"] .frx-issue.warn svg{color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .frx-issue.info svg{color:var(--teal)}
+html[data-ui="cosmo"] .frx-issue em{display:block;font:7.5px var(--mono);font-style:normal;letter-spacing:.06em;color:var(--ink3)}
+
+/* ── the deck export ─────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-deck{flex:1;min-height:0;margin:0;padding:10px 12px;overflow:auto;font:9.5px/1.5 var(--mono);color:var(--ink2);white-space:pre;background:var(--panel2)}
+
+/* ── tables ──────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-tbl{width:100%;border-collapse:collapse;font:9px var(--mono)}
+html[data-ui="cosmo"] .frx-tbl th{padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;font-weight:500;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-tbl th:first-child,html[data-ui="cosmo"] .frx-tbl td:first-child{text-align:left}
+html[data-ui="cosmo"] .frx-tbl td{padding:2.5px 6px;border-bottom:1px solid var(--line2);text-align:right;color:var(--ink2)}
+html[data-ui="cosmo"] .frx-tbl tr.sat td{color:var(--ink)}
+html[data-ui="cosmo"] .frx-tbl tr.mark td{background:color-mix(in srgb,var(--teal) 10%,transparent);color:var(--teal-ink)}
+
+/* ── empty / gate ────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-gate{display:flex;flex:1;align-items:center;justify-content:center;padding:24px}
+html[data-ui="cosmo"] .frx-empty{display:flex;max-width:460px;flex-direction:column;align-items:center;gap:7px;text-align:center}
+html[data-ui="cosmo"] .frx-empty .ic{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);color:var(--teal)}
+html[data-ui="cosmo"] .frx-empty b{font-size:11px;color:var(--ink)}
+html[data-ui="cosmo"] .frx-empty span{font-size:9.5px;line-height:1.6;color:var(--ink3)}
+
+/* ── legend ──────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .frx-legend{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;flex:0 0 auto;padding:5px 11px;border-top:1px solid var(--line2);font-size:8px;color:var(--ink3)}
+html[data-ui="cosmo"] .frx-legend span{display:inline-flex;align-items:center;gap:4px}
+html[data-ui="cosmo"] .frx-legend i{display:block;width:11px;height:2px;border-radius:1px}
+html[data-ui="cosmo"] .frx-legend i.dot{width:6px;height:6px;border-radius:50%}
+html[data-ui="cosmo"] .frx-legend i.dash{background:none;border-top:2px dashed currentColor;height:0}
+
+/* narrow: the rail drops under the content rather than crushing it */
+@media (max-width:1220px){
+  html[data-ui="cosmo"] .frx-body,
+  html[data-ui="cosmo"] .frx-body.pane-init{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside" "rail rail"}
+  html[data-ui="cosmo"] .frx-rail{min-height:300px}
+}

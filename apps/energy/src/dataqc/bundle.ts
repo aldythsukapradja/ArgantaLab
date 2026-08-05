@@ -19,7 +19,10 @@ import { mergeVault, loadUserNotes } from '../knowledge/vault.ts';
 import type {
   AssetKind, DigestedCurve, DigestedLog, DigestedSurface, IngestedAsset, Vertical,
 } from './types.ts';
+import { DIGEST_VERSION } from './types.ts';
+import { stationInclDeg } from './insight.ts';
 import { curveFamily } from './parse/las.ts';
+import { worstSeverity } from './qc.ts';
 
 const BASE = import.meta.env.BASE_URL || '/';
 
@@ -48,8 +51,18 @@ export function bundleFor(fieldId: string): BundleSpec | null {
 // ── wb payload shapes we adapt from (mirror of wb/types.ts) ──────────────────
 interface WbIndexLite {
   crs: string; datum: string;
-  wells: Array<{ name: string; has: { logs: boolean; traj: boolean; production: boolean; picks: boolean } }>;
+  wells: Array<{
+    name: string;
+    has: { logs: boolean; traj: boolean; production: boolean; picks: boolean; drilling?: boolean; pressure?: boolean };
+    // the WELL MASTER facts — surface slot position and what the regulator says the
+    // bore is for. Digested into a `wellmaster` asset so the workspace never has to
+    // reach back to the raw index for them.
+    x?: number; y?: number; role?: string; purpose?: string | null;
+  }>;
   surfaces: Array<{ id: string; name: string }>;
+  wellheads?: unknown[];
+  contacts?: unknown[];
+  official?: unknown;
 }
 
 /** Unstructured source documents shipped with the package. These are the REAL Volve
@@ -91,10 +104,19 @@ export async function planBundle(spec: BundleSpec): Promise<{ index: WbIndexLite
     if (w.has.traj) items.push({ key: `traj-${sw}`, kind: 'trajectory', url: `${spec.root}/traj-${sw}.json`, label: `${w.name} trajectory` });
     // production carries injection too (`wi` = water injected per month)
     if (w.has.production) items.push({ key: `prod-${sw}`, kind: 'production', url: `${spec.root}/prod-${sw}.json`, label: `${w.name} production` });
+    // the DRILLING record (mud log): MW in/out, ECD, ROP, WOB, RPM, SPP, torque, gas
+    if (w.has.drilling) items.push({ key: `drill-${sw}`, kind: 'drilling', url: `${spec.root}/drill-${sw}.json`, label: `${w.name} drilling parameters` });
+    // formation pressure while drilling — one file per wellbore, many test stations
+    if (w.has.pressure) items.push({ key: `press-${sw}`, kind: 'pressure', url: `${spec.root}/press-${sw}.json`, label: `${w.name} formation pressure` });
   }
   items.push({ key: 'prod-field', kind: 'production', url: `${spec.root}/prod-field.json`, label: 'Field production & injection' });
   items.push({ key: 'patterns', kind: 'patterns', url: `${spec.root}/patterns.json`, label: 'Injector–producer patterns' });
   items.push({ key: 'picks', kind: 'picks', url: `${spec.root}/picks.json`, label: 'Formation picks' });
+  // The WELL MASTER. index.json is the delivery's own manifest — slots, bore genealogy,
+  // regulator role, wellhead coordinates, declared CRS/datum and fluid contacts. It is
+  // digested like any other file so that the workspace has ONE source (the ingested
+  // asset store) rather than a store plus a side-channel fetch of the raw index.
+  items.push({ key: 'wellmaster', kind: 'wellmaster', url: `${spec.root}/index.json`, label: 'Well master & contacts' });
   for (const d of BUNDLE_DOCS) {
     items.push({ key: `doc-${d.file}`, kind: 'document', url: `${spec.root}/docs/${d.file}`, label: d.label });
   }
@@ -167,6 +189,7 @@ export async function digestBundleItem(
       },
       linked: { entities: matched.length, candidates: candidates.length, matched },
       uploadedAt: new Date().toISOString(),
+    digestVersion: DIGEST_VERSION,
     };
     return { asset, compressed: r.compressed };
   }
@@ -230,6 +253,113 @@ export async function digestBundleItem(
       role: injected > 0 && produced === 0 ? 'injector' : injected > 0 ? 'both' : 'producer',
       units: json.units ?? null,
     });
+  } else if (item.kind === 'drilling') {
+    // Real QC, not a hardcoded pass. The build screened physically-impossible values
+    // to null and recorded the counts; this surfaces them as exceptions so a
+    // screened channel is VISIBLE rather than silently repaired.
+    const curves: Record<string, { unit?: string; values: (number | null)[]; screened?: number; allNull?: boolean }> = json.curves ?? {};
+    const names = Object.keys(curves);
+    const exceptions: IngestedAsset['qc']['exceptions'] = [];
+    const nSamples = Array.isArray(json.md) ? json.md.length : 0;
+    if (!nSamples) {
+      exceptions.push({ rule: 'drill.empty', severity: 'fail', message: 'No depth index — the mud log carries no samples.', locator: 'md' });
+    }
+    if (!names.length) {
+      exceptions.push({ rule: 'drill.nocurves', severity: 'fail', message: 'No drilling channels resolved from this mud log.', locator: 'curves' });
+    }
+    if (!curves.MWIN) {
+      exceptions.push({ rule: 'drill.nomudweight', severity: 'warn', message: 'No mud-weight-in channel (MDIA) — the primary well-control record is absent.', locator: 'curves.MWIN' });
+    }
+    for (const [name, c] of Object.entries(curves)) {
+      if (c.allNull) {
+        exceptions.push({ rule: 'drill.curve.allnull', severity: 'warn', message: `Channel ${name} was logged but contains no usable value.`, locator: `curves.${name}` });
+      } else if (c.screened) {
+        exceptions.push({
+          rule: 'drill.screened', severity: 'info',
+          message: `${c.screened} of ${nSamples} ${name} samples were outside the physical range for the channel and were set to null.`,
+          locator: `curves.${name}`,
+          detail: 'These mud logs declare no null sentinel yet carry impossible values (e.g. -273.15 degC, 0 sg density). Operational zeros are preserved.',
+        });
+      }
+    }
+    r = digestRecord('drilling', json, {
+      well: json.well ?? null,
+      samples: nSamples,
+      channels: names.length,
+      curveList: names.join(' '),
+      mudWeightUnit: curves.MWIN?.unit ?? null,
+      depthUnit: json.depth_unit ?? null,
+      run: json.run ?? null,
+      dataNature: json.dataNature ?? null,
+    });
+    r = { ...r, exceptions, status: worstSeverity(exceptions) };
+  } else if (item.kind === 'pressure') {
+    const runs: Array<{ n_rows?: number; rows_source?: string; curves?: Record<string, { values: (number | null)[]; screened?: number }> }> = json.runs ?? [];
+    const exceptions: IngestedAsset['qc']['exceptions'] = [];
+    if (!runs.length) {
+      exceptions.push({ rule: 'press.empty', severity: 'fail', message: 'No pressure runs in this file.', locator: 'runs' });
+    }
+    let totalRows = 0, screened = 0, decimated = 0;
+    for (const [i, run] of runs.entries()) {
+      totalRows += run.n_rows ?? 0;
+      if (run.rows_source === 'preview') decimated++;
+      for (const [name, c] of Object.entries(run.curves ?? {})) {
+        if (c.screened) {
+          screened += c.screened;
+          exceptions.push({
+            rule: 'press.screened', severity: 'info',
+            message: `Run ${i + 1}: ${c.screened} ${name} samples outside the physical range were set to null.`,
+            locator: `runs[${i}].curves.${name}`,
+          });
+        }
+      }
+    }
+    if (decimated) {
+      exceptions.push({
+        rule: 'press.decimated', severity: 'warn',
+        message: `${decimated} of ${runs.length} runs were read from the decimated preview because the full decode was unavailable.`,
+        locator: 'runs',
+        detail: 'A decimated pressure test can miss the drawdown/buildup inflections the measurement exists to capture.',
+      });
+    }
+    r = digestRecord('pressure', json, {
+      well: json.well ?? null,
+      runs: runs.length,
+      rows: totalRows,
+      screened,
+      dataNature: json.dataNature ?? null,
+    });
+    r = { ...r, exceptions, status: worstSeverity(exceptions) };
+  } else if (item.kind === 'wellmaster') {
+    // Real QC on the master itself: a bore with no wellhead coordinate cannot be
+    // positioned, and a delivery with no declared CRS cannot be projected. Both are
+    // reported here rather than discovered later as a missing overlay.
+    const wells: WbIndexLite['wells'] = json.wells ?? [];
+    const noSlot = wells.filter((w) => !Number.isFinite(w.x) || !Number.isFinite(w.y));
+    const exceptions: IngestedAsset['qc']['exceptions'] = [];
+    if (!wells.length) {
+      exceptions.push({ rule: 'master.empty', severity: 'fail', message: 'The well master lists no wellbores.', locator: 'wells' });
+    }
+    if (!json.crs) {
+      exceptions.push({ rule: 'master.nocrs', severity: 'fail', message: 'No CRS is declared, so no wellhead can be projected.', locator: 'crs' });
+    }
+    if (noSlot.length) {
+      exceptions.push({
+        rule: 'master.noslot', severity: 'warn',
+        message: `${noSlot.length} of ${wells.length} wellbores carry no wellhead coordinate.`,
+        locator: 'wells[].x/y',
+        detail: `Without a slot position a survey has no origin, so these bores cannot be drawn: ${noSlot.map((w) => w.name).join(', ')}.`,
+      });
+    }
+    r = digestRecord('wellmaster', json, {
+      wells: wells.length,
+      wellheads: Array.isArray(json.wellheads) ? json.wellheads.length : 0,
+      contacts: Array.isArray(json.contacts) ? json.contacts.length : 0,
+      surfaces: Array.isArray(json.surfaces) ? json.surfaces.length : 0,
+      wellsWithSlot: wells.length - noSlot.length,
+    });
+    r = { ...r, exceptions, status: worstSeverity(exceptions) };
+    fileName = 'index.json';
   } else if (item.kind === 'patterns') {
     r = digestRecord('patterns', json, {
       injectors: json.injectors?.length ?? 0,
@@ -242,9 +372,26 @@ export async function digestBundleItem(
       : Array.isArray(json?.picks) ? json.picks.length : null;
     // `well` must survive onto the asset — the viewer resolves formation picks by it,
     // and without it a trajectory row is unidentifiable in the inventory.
+    // A trajectory's headline fact is where it ENDED — TD in MD and TVD, and how
+    // far it stepped out. Derived here from the survey itself rather than read from
+    // a master table, so a client survey with no master record still reports it.
+    const stations: Array<{ md?: number; tvd?: number; incl?: number; incl_deg?: number; dispNs?: number; dispEw?: number }> =
+      Array.isArray(json?.stations) ? json.stations : [];
+    const fin = (xs: (number | undefined)[]) => xs.filter((v): v is number => Number.isFinite(v as number));
+    const mds = fin(stations.map((st) => st.md));
+    const tvds = fin(stations.map((st) => st.tvd));
+    const incls = fin(stations.map((st) => stationInclDeg(st) ?? undefined));
+    const last = stations[stations.length - 1];
     r = digestRecord(item.kind, json, {
       well: json?.well ?? null,
       records: n,
+      ...(item.kind === 'trajectory' ? {
+        tdMdM: mds.length ? Math.max(...mds) : null,
+        tdTvdM: tvds.length ? Math.max(...tvds) : null,
+        maxInclDeg: incls.length ? Math.round(Math.max(...incls) * 10) / 10 : null,
+        stepOutM: last && Number.isFinite(last.dispNs) && Number.isFinite(last.dispEw)
+          ? Math.round(Math.hypot(last.dispNs as number, last.dispEw as number)) : null,
+      } : {}),
       dataNature: json?.dataNature ?? null,
     });
   }
@@ -263,6 +410,7 @@ export async function digestBundleItem(
     meta: { ...r.meta, crs: index.crs, datum: index.datum, package: spec.label, licence: spec.licence },
     qc: { status: r.status, exceptions: r.exceptions },
     uploadedAt: new Date().toISOString(),
+    digestVersion: DIGEST_VERSION,
   };
   return { asset, compressed: r.compressed };
 }

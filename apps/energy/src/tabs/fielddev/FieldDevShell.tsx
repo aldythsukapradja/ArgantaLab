@@ -29,6 +29,8 @@ import { ScopeBar, ModeDossierBar, type FieldDevMode } from './HeaderBars';
 import { AssetDossier } from './AssetDossier';
 import { DataExplorer } from './DataExplorer';
 import { Petrophysics } from './Petrophysics';
+import { FluidsRocks } from './FluidsRocks';
+import { StaticModel } from './StaticModel';
 import { InputTree } from './InputTree';
 import type { Sel } from '../../cosmo/CosmoExplorer';
 import { loadSearchIndex, type SearchEntry } from '../../cosmo/cockpit-search';
@@ -196,6 +198,16 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
             // (layout + live data contract) is real, the interpretation engines land
             // behind it in P1–P9. See PETROPHYSICS-SUITE-CONCEPT.md.
             <Petrophysics field={field} />
+          ) : stage.id === 'static-model-lite' ? (
+            // the static modelling workflow: its shell canvas is real and its cell
+            // budget is live arithmetic; the GeaVision Studio viewport is S2.
+            <StaticModel field={field} />
+          ) : stage.id === 'fluids-rock' ? (
+            // The dynamic model's rock-fluid basis is REAL: the delivery's own PVT
+            // block, the rock-fluid functions over it, and the equilibration —
+            // published as the one artifact every downstream run initialises from,
+            // and checked against the field's measured gauge stations.
+            <FluidsRocks field={field} />
           ) : (
             // every remaining stage still renders its plan
             <WidgetBlueprintViewer group={workflow} tab={stage} scope={`${field.name} · ${lod}`} />

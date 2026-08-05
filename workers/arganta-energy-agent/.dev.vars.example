@@ -1,0 +1,9 @@
+# Local secrets for `wrangler dev`. Copy to `.dev.vars` (gitignored) and fill in.
+#
+# Auth fails CLOSED, so dev needs a token too — pick anything here, and send the
+# same value as `VITE_ENERGY_AGENT_TOKEN` from apps/energy.
+AGENT_TOKEN=local-dev-token
+
+# Optional. Without it the Worker falls back to the Workers AI binding, whose
+# tool support is weaker — the client then falls back to its deterministic tier.
+# GROQ_API_KEY=

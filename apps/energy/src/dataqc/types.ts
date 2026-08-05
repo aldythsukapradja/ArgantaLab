@@ -18,7 +18,11 @@ export type AssetKind =
   | 'log' | 'surface' | 'picks' | 'trajectory'
   | 'production'          // monthly oil/gas/water for a producing well
   | 'injection'           // monthly water injection (same source series, `wi`)
+  | 'drilling'            // mud log: MW in/out, ECD, ROP, WOB, RPM, SPP, torque, gas
+  | 'pressure'            // formation pressure while drilling (FPWD/MDT stations)
   | 'patterns'            // injector→producer associations
+  | 'wellmaster'          // the delivery's WELL MASTER: slots, bores, genealogy, roles,
+                          // wellhead coordinates, declared CRS/datum and fluid contacts
   | 'document' | 'image' | 'unknown';
 
 /** Concrete file formats we detect. `unknown` still ingests (raw is always kept). */
@@ -99,7 +103,17 @@ export interface IngestedAsset {
   linked?: { entities: number; candidates: number; matched: string[] };
   osduId?: string;           // set once stage 5 emits
   uploadedAt: string;
+  /** Shape version of the digest META (not the payload). Bumped when a new fact is
+   *  recorded at digest time, so a reference package already sitting in IndexedDB
+   *  re-digests instead of showing an inventory row with facts permanently missing. */
+  digestVersion?: number;
 }
+
+/** Bump when digest.ts / bundle.ts start recording a new meta fact.
+ *  2 — curve list on logs, TD/inclination/step-out on trajectories, depth range on surfaces.
+ *  3 — inclination read via incl_deg where present (WITSML surveys store `incl` in
+ *      radians, so v2 reported a 55° well as 1°). */
+export const DIGEST_VERSION = 3;
 
 /** Per-vertical gate verdict. Computed, never stored.
  *  'ready' = a reference package is loaded, digested and QC-clean — the workspace

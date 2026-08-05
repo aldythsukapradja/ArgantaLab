@@ -552,5 +552,77 @@ console.log('\n-- 8 · agent context --');
   check('no workspace data ⇒ no summary line at all', verticalSummary('field-development', EMPTY_CONTEXT) === null);
 }
 
+// -- 9 . per-asset insight + display naming --------------------------------
+console.log('\n-- 9 · asset insight & naming --');
+{
+  const { assetInsight, assetDisplayName, cleanSurfaceName } =
+    await import('../src/dataqc/insight.ts');
+
+  const mk = (kind, meta, fileName = 'x.json') => ({
+    id: 'a', origin: 'bundle', fieldId: 'volve', vertical: 'field-development',
+    kind, format: 'unknown', fileName, sha256: '', bytes: 1, meta,
+    qc: { status: 'pass', exceptions: [] }, uploadedAt: '',
+  });
+  const val = (chips, label) => chips.find((c) => c.label === label)?.value ?? null;
+
+  const log = assetInsight(mk('log', {
+    well: 'F-12', curves: 6, curveList: 'GR RHOB NPHI RT DT CALI',
+    samples: 1000, depthUnit: 'm', mdMin: 100, mdMax: 3520,
+  }), 'field');
+  check('log reports WHICH curves, not just how many', val(log, 'curves') === 'GR . RHOB . NPHI . RT . DT . CALI'.split(' . ').join(' · '), val(log, 'curves'));
+  check('log reports the logged interval in project units', val(log, 'logged') === '328 ft – 11,549 ft', val(log, 'logged'));
+
+  const many = assetInsight(mk('log', { curveList: 'A B C D E F G H', curves: 8 }), 'field');
+  check('a long curve list truncates with the full set on hover',
+    val(many, 'curves').endsWith('+2') && many[0].title === 'A, B, C, D, E, F, G, H', val(many, 'curves'));
+
+  const mm = assetInsight(mk('log', { curveList: 'GR', depthUnit: 'mm', mdMin: 197000, mdMax: 3633000 }), 'field');
+  check('a millimetre-declared log still reports a sane interval', val(mm, 'logged') === '646 ft – 11,919 ft', val(mm, 'logged'));
+  const bad = assetInsight(mk('log', { curveList: 'GR', depthUnit: 'furlong', mdMin: 1, mdMax: 2 }), 'field');
+  check('an unrecognised depth unit omits the interval rather than guessing', val(bad, 'logged') === null);
+
+  const tr = assetInsight(mk('trajectory', { tdMdM: 3520, tdTvdM: 3108, maxInclDeg: 54.6, stepOutM: 1240, records: 212 }), 'metric');
+  check('trajectory reports TD, TVD, inclination and step-out',
+    val(tr, 'TD') === '3,520 m' && val(tr, 'TVD') === '3,108 m' && val(tr, 'max incl') === '54.6°' && val(tr, 'step-out') === '1,240 m',
+    [val(tr, 'TD'), val(tr, 'max incl')].join(' / '));
+
+  const pr = assetInsight(mk('production', {
+    cumOilSm3: 1000000, cumGasSm3: 200000000, months: 40, firstMonth: '2008-02', lastMonth: '2011-05',
+  }), 'field');
+  check('production reports cumulative volumes in project units', val(pr, 'oil') === '6.3 MMbbl', val(pr, 'oil'));
+  check('production reports its real period', val(pr, 'period') === 'Feb 2008 – May 2011', val(pr, 'period'));
+  check('a zero commodity is omitted, not shown as 0', val(pr, 'water') === null);
+
+  const surf = assetInsight(mk('surface', { name: 'Hugin Fm Top', zmin: 2725.68, zmax: 3392.92, ncol: 146, nrow: 113, dx: 50, live: 11691, nodes: 16498 }), 'metric');
+  check('surface reports its depth range', val(surf, 'depth') === '2,726 m – 3,393 m', val(surf, 'depth'));
+  check('surface reports grid and live coverage', val(surf, 'grid') === '146 × 113' && val(surf, 'coverage') === '71%', val(surf, 'coverage'));
+
+  check('an asset with no recorded facts yields no chips', assetInsight(mk('unknown', {}), 'field').length === 0);
+
+  // The Volve delivery mixes two survey conventions in the same folder: WITSML-derived
+  // files carry `incl` in RADIANS plus an explicit `incl_deg`, others carry degrees in
+  // `incl` and no `incl_deg`. Reading `incl` blindly reported a 55° well as 1°.
+  const { stationInclDeg, stationAziDeg } = await import('../src/dataqc/insight.ts');
+  check('incl_deg wins when the file provides it (radians trap)',
+    stationInclDeg({ incl: 0.922755, incl_deg: 52.87 }) === 52.87);
+  check('a file with only `incl` is taken as degrees',
+    stationInclDeg({ incl: 88.09 }) === 88.09);
+  check('azimuth follows the same rule', stationAziDeg({ azi: 1.8428, azi_deg: 105.59 }) === 105.59);
+  check('a station with no angle at all yields null', stationInclDeg({}) === null && stationInclDeg(undefined) === null);
+
+  check('"Hugin Fm Top" reads as "Top Hugin"', cleanSurfaceName('Hugin Fm Top') === 'Top Hugin');
+  check('"Hugin Fm Base" reads as "Base Hugin"', cleanSurfaceName('Hugin Fm Base') === 'Base Hugin');
+  check('"Shetland Gp Top" drops the group qualifier', cleanSurfaceName('Shetland Gp Top') === 'Top Shetland');
+  check('a name with no edge suffix is left alone', cleanSurfaceName('BCU') === 'BCU');
+  check('Seabed stays Seabed', cleanSurfaceName('Seabed') === 'Seabed');
+
+  check('a surface row leads with the horizon, not the .dat filename',
+    assetDisplayName(mk('surface', { name: 'Hugin Fm Top' }, 'Hugin_Fm_Top+ST10010ZC11_Near_190314_adj2_2760_EasyDC+STAT+DEPTH.dat')) === 'Top Hugin');
+  check('a wellbore row leads with the wellbore',
+    assetDisplayName(mk('log', { well: 'F-12' }, 'WLC_COMPOSITE_1.DLIS')) === 'F-12 · log');
+  check('an unnamed asset still falls back to its filename',
+    assetDisplayName(mk('unknown', {}, 'mystery.bin')) === 'mystery.bin');
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

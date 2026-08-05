@@ -91,11 +91,28 @@ export interface RMData {
 /** Load the full Reservoir-Management dataset (field + every produced/injected well). */
 export async function loadRMData(): Promise<RMData> {
   const [index, field, patterns] = await Promise.all([loadIndex(), loadProdField(), loadPatterns().catch(() => ({ dataNature: 'derived', method: '', injectors: [], producers: [], patterns: [] } as PatternsJson))]);
-  const roleOf = new Map(index.wells.map((w) => [w.name, w.role] as const));
-  const names = index.wells.filter((w) => w.has.production).map((w) => w.name);
+  // The universe RM cares about is every wellbore with a PRODUCING OR INJECTING ROLE, plus
+  // anything carrying a series — not just `has.production`. Volve files some volumes
+  // against a shallow mother bore that cannot be the source (F-11, TD 347 m); the wb build
+  // re-attributes those to the deepest terminal bore (F-11 B, TD 4,770 m) and records the
+  // reasoning. So we DROP the bore the volumes were merely filed against, and read the
+  // series from `metrics.filedOn` for the bore that actually flowed. Role-only producers
+  // with no series at all (F-15 C) are still listed — honestly, with no numbers invented.
+  const universe = index.wells.filter((w) => !w.metricsFiledElsewhere
+    && (w.has.production || w.metrics || /produc|inject/i.test(w.role)));
   const wells: RMWellSeries[] = [];
-  for (const name of names) {
-    try { const p = await loadProd(name); wells.push(buildWellSeries(p, roleOf.get(name) ?? 'producer')); } catch { /* skip */ }
+  for (const w of universe) {
+    const src = w.has.production ? w.name : w.metrics?.filedOn ?? null;
+    if (src) {
+      try {
+        const p = await loadProd(src);
+        const s = buildWellSeries(p, w.role);
+        s.well = w.name;              // the bore that actually flowed, not the filing bore
+        wells.push(s);
+        continue;
+      } catch { /* fall through to the no-series card */ }
+    }
+    wells.push(emptySeries(w.name, w.role));
   }
   const byWell: Record<string, RMWellSeries> = {};
   for (const w of wells) byWell[w.well] = w;
@@ -103,10 +120,37 @@ export async function loadRMData(): Promise<RMData> {
     index, patterns,
     field: buildWellSeries(field, 'both'),
     wells,
-    producers: wells.filter((w) => w.role === 'producer' || w.role === 'both'),
-    injectors: wells.filter((w) => w.role === 'injector'),
+    // Classify by MEANING, not by an exact literal. The wb index has carried at least two
+    // role vocabularies ('producer'/'injector'/'both' and 'oil-producer'/'water-injector'/
+    // 'observation'), and an exact match silently emptied both lists when the build
+    // changed. Falling back to the actual series (did it ever produce / inject?) means a
+    // brand-new role string can never blank the watchlist again.
+    producers: wells.filter(isProducer),
+    injectors: wells.filter(isInjector),
     byWell,
   };
+}
+
+/** A wellbore that is on the books as a producer/injector but carries no series at all.
+ *  Rendered as an explicit "no production record" card — never dropped, never zero-filled. */
+export function emptySeries(well: string, role: WellRole): RMWellSeries {
+  return {
+    well, role, raw: [], ym: [], t: [],
+    oilRate: [], waterRate: [], gasRate: [], liqRate: [], injRate: [],
+    cumOil: [], cumWinj: [], cumLiquid: [], wct: [], wor: [], gor: [],
+    bhp: [], thp: [], uptime: [], hall: [],
+    vrr: { cum: [], inst: [], final: 0 }, cumOilMM: 0, cumWinjMM: 0,
+  };
+}
+
+/** Producer if the role says so, or — whatever the role string — if it actually made oil. */
+export function isProducer(w: RMWellSeries): boolean {
+  if (/inject/i.test(w.role) && !/both/i.test(w.role)) return false;
+  return /produc|both/i.test(w.role) || w.cumOilMM > 0;
+}
+/** Injector if the role says so, or if it actually took water. */
+export function isInjector(w: RMWellSeries): boolean {
+  return /inject|both/i.test(w.role) || w.cumWinjMM > 0;
 }
 
 /** slug helper re-export for consumers that key by file token. */

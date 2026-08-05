@@ -111,8 +111,8 @@ console.log('\n=== V1 engine numerics truth-lock ===');
 }
 
 // 7 · STOIIP from REAL wb grids — PARITY with the wb build (same computation) + a
-// gross-error gate. STOIIP is a method-dependent SCREENING upper bound (blanket deck
-// OWC over unfaulted closure), NOT a field number — so we parity-check the computation
+// gross-error gate. STOIIP is a method-dependent SCREENING scenario (blanket contact
+// over unfaulted closure), NOT a field number — so we parity-check the computation
 // and gate against gross grid/param error, not against a published field STOIIP. The
 // TIGHT published-truth gate is cum-oil (exact production decode).
 if (existsSync(join(WB, 'index.json'))) {
@@ -122,9 +122,10 @@ if (existsSync(join(WB, 'index.json'))) {
   const grv = grvClosure(top, base, owc, top.cell);
   const st = stoiip(grv, d.ntg, d.phi, d.sw, d.bo) / 1e6;
   check('STOIIP parity with wb build (same grids/params/formula)', approx(st, idx.validation.stoiip.stoiipMMSm3, 1.0), `here=${st.toFixed(1)} wb=${idx.validation.stoiip.stoiipMMSm3}`);
-  check('STOIIP screening in gross-error gate 40-220', st >= 40 && st <= 220, `${st.toFixed(1)} MMSm³ (screening upper bound; dynamic model ≈22)`);
+  const gate = idx.validation.stoiip.gateMMSm3;
+  check(`STOIIP screening in scenario gate ${gate.min}-${gate.max}`, st >= gate.min && st <= gate.max, `${st.toFixed(1)} MMSm³ (${gate.basis})`);
   check('Bo is deck-sourced live-oil value (~1.47, not dead-oil 1.18)', approx(d.bo, 1.47, 0.05), `Bo=${d.bo}`);
-  check('OWC is deck main-structure value (3200m)', owc === 3200, `OWC=${owc}`);
+  check('OWC is active user-selected screening value (3065m)', owc === 3065, `OWC=${owc}`);
   check('cum-oil reconciles ~63 MMbbl (tight published-truth gate)', idx.validation.cumOilOk, `${idx.validation.cumOilMMSm3} MMSm³ ≈ ${(idx.validation.cumOilMMSm3 * 6.2898).toFixed(1)} MMbbl`);
 } else {
   console.log('SKIP  STOIIP grid checks — run `npm run data:wb` first');
@@ -224,7 +225,7 @@ function pearson(xs, ys) { const n = xs.length, mx = xs.reduce((a, b) => a + b, 
     check('PARITY · grvClosure GRV identical', approx(grvRef, grvEng.grv, 1), `ref=${(grvRef/1e6).toFixed(1)} eng=${(grvEng.grv/1e6).toFixed(1)} Mm³`);
     const stRef = stoiip(grvRef, d.ntg, d.phi, d.sw, d.bo) / 1e6;
     const stEng = E_vol.stoiip(grvEng.grv, d.ntg, d.phi, d.sw, d.bo) / 1e6;
-    check('PARITY · STOIIP 142.3 (engine == ref == wb)', approx(stEng, idx.validation.stoiip.stoiipMMSm3, 1.0) && approx(stRef, stEng, 1e-6), `eng=${stEng.toFixed(1)} wb=${idx.validation.stoiip.stoiipMMSm3}`);
+    check('PARITY · STOIIP engine == ref == wb', approx(stEng, idx.validation.stoiip.stoiipMMSm3, 1.0) && approx(stRef, stEng, 1e-6), `eng=${stEng.toFixed(1)} wb=${idx.validation.stoiip.stoiipMMSm3}`);
     // GIIP + solution gas
     const g = E_vol.giip(grvEng.grv, d.ntg, d.phi, d.sw, 0.0040);
     check('PARITY · GIIP inverse-Bg scaling', g > 0 && approx(E_vol.giip(grvEng.grv, d.ntg, d.phi, d.sw, 0.0080), g / 2, g * 0.01), `GIIP=${(g/1e9).toFixed(2)} BSm³`);

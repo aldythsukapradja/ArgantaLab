@@ -18,7 +18,7 @@ Completed the 7 remaining fielddev subtabs (Petrophysics, Structural, Property �
 Extended test-engine.mjs with a PARITY block (Node 24 native TS strip → `import` the built engine). Asserts engine == reference for RNG sequence, samplePert draw, percentile, grvClosure GRV, **STOIIP 142.3** (engine==ref==wb `validation.stoiip.stoiipMMSm3`), GIIP inverse-Bg (52.31 BSm³), solutionGas, arpsCum, NPV, upscaling, ECON_DEFAULTS. **36/36 pass** (was 23/23).
 
 ## Data reality folded in
-- OWC = **3200 m** (deck main structure), Bo 1.47, Rs 148 — from wb index; the V1BC-SPEC prose's stale 68.4/3120 numbers were superseded by test-engine + index.json.
+- Active screening OWC = **3065 m TVDSS** (user-selected STOIIP-calibrated scenario; released-deck baseline 3200 m), Bo 1.47, Rs 148 — from wb index; the V1BC-SPEC prose's stale 68.4/3120 numbers were superseded by test-engine + index.json.
 - Only the 15/9-19 exploration wells carry LFP curves (PHIE/SWE/VSH/SAND) + Hugin picks → Petrophysics zone averages + full upscaling; producers have raw logs (+SAND on F-12). Handled gracefully.
 - Pick TVDSS stored negative-down → negated for honest mistie posting.
 

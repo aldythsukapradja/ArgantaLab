@@ -8,11 +8,12 @@ import { ModeDossierBar, WellScopeBar, type WellDeliveryMode } from './HeaderBar
 import { WellKnowledgeBank } from './KnowledgeBank';
 import { WELLDELIVERY_WORKFLOWS } from './workflow';
 import { flattenWorkflow } from '../workspace-blueprint/types';
-import { WorkflowTree } from '../workspace-blueprint/WorkflowTree';
+import { WorkflowRibbon } from '../workspace-blueprint/WorkflowRibbon';
 import { WidgetBlueprintViewer } from '../workspace-blueprint/WidgetBlueprintViewer';
 import { loadCandidates } from './legacy/wdData';
 import type { WdCandidate } from './legacy/types';
 import './well-delivery-suite.css';
+import { useViewMode } from '../../cosmo/use-view-mode';
 
 const LegacyWorkspace = lazy(async () => ({ default: (await import('./legacy/WellDeliveryWorkspace')).WellDeliveryWorkspace }));
 
@@ -21,6 +22,8 @@ const localWellName = (entry: SearchEntry) => entry.name.replace(/^15\/9-/, '');
 export function WellDeliveryShell() {
   const [view, setView] = useState<'suite' | 'legacy'>('suite');
   const [mode, setMode] = useState<WellDeliveryMode>('knowledge');
+  // a Fieldcraft card shortcut can ask for the dossier or the workspace directly
+  useViewMode('well-delivery', setMode);
   const [selection, setSelection] = useState<SearchEntry | null>(null);
   const [wells, setWells] = useState<WellRow[]>([]);
   const [wellName, setWellName] = useState('F-12');
@@ -66,10 +69,11 @@ export function WellDeliveryShell() {
   const stage = workflowTabs.find((candidate) => candidate.id === stageId) ?? workflowTabs[0];
   const workflow = WELLDELIVERY_WORKFLOWS.find((candidate) => candidate.tabs.some((tab) => tab.id === stage.id)) ?? WELLDELIVERY_WORKFLOWS[0];
   return <div className="wds-shell">
-    <WellScopeBar selection={selection} onSelect={onSelectScope} onOpenLegacy={() => setView('legacy')} />
-    <ModeDossierBar selection={selection} well={activeWell} mode={mode} onChange={setMode} />
+    <WellScopeBar selection={selection} onSelect={onSelectScope} onOpenLegacy={() => setView('legacy')}>
+      <ModeDossierBar selection={selection} well={activeWell} mode={mode} onChange={setMode} />
+    </WellScopeBar>
     {mode === 'knowledge'
       ? <WellKnowledgeBank selection={selection} wells={wells} well={activeWell} onSelectWell={setWellName} candidates={candidates} />
-      : <div className="wsb-layout"><WorkflowTree groups={WELLDELIVERY_WORKFLOWS} active={stage.id} onSelect={setStageId} label="Well Delivery" /><WidgetBlueprintViewer group={workflow} tab={stage} scope={selection.name} /></div>}
+      : <div className="wsb-layout"><WorkflowRibbon groups={WELLDELIVERY_WORKFLOWS} active={stage.id} onSelect={setStageId} label="Well Delivery" /><WidgetBlueprintViewer group={workflow} tab={stage} scope={selection.name} /></div>}
   </div>;
 }

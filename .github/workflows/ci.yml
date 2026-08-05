@@ -41,6 +41,27 @@ jobs:
           packages/media-core/test/*.test.js
           supabase/functions/llm-proxy/router.test.js
           supabase/functions/media-proxy/router.test.js
+          workers/arganta-energy-agent/test/*.test.js
+
+  energy-agent:
+    name: Energy agent (deterministic tier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+ strips TypeScript natively, which is how the agent's
+          # truth-lock scripts import src/agent/*.ts with no build step.
+          node-version: '22'
+      # The gazetteer and crosswalk are derived artifacts, rebuilt here from the
+      # committed public/ inputs so CI proves the BUILD is reproducible, not just
+      # that a stale JSON happens to satisfy its own tests.
+      - name: Rebuild agent data
+        working-directory: apps/energy
+        run: npm run data:agent
+      - name: Truth-lock the agent
+        working-directory: apps/energy
+        run: npm run test:agent
 
   typecheck:
     name: HQ type-check (tsc --noEmit)

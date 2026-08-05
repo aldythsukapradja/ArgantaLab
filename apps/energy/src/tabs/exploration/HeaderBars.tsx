@@ -6,10 +6,12 @@ import {
 
 const SCOPE_TYPES = new Set(['country', 'province', 'assessment-unit']);
 
-export function ExplorationScopeBar({ scope, onSelectScope, onOpenLegacy }: {
+export function ExplorationScopeBar({ scope, onSelectScope, onOpenLegacy, children }: {
   scope: SearchEntry;
   onSelectScope: (scope: SearchEntry) => void;
   onOpenLegacy: () => void;
+  /** Mode switch + dossier, folded into this row so the header costs one line. */
+  children?: React.ReactNode;
 }) {
   const [index, setIndex] = useState<SearchEntry[] | null>(null);
   const [query, setQuery] = useState('');
@@ -31,7 +33,6 @@ export function ExplorationScopeBar({ scope, onSelectScope, onOpenLegacy }: {
 
   return (
     <div className="exs-bar">
-      <span className="exs-bar-label">Scope</span>
       <button className="exs-scope-btn" onClick={() => setOpen(true)} title="Change exploration study scope">
         <CircleDot size={13} />
         <span className="exs-crumb"><span>{scope.parent}</span><span className="sep">/</span><b>{scope.name}</b></span>
@@ -54,7 +55,8 @@ export function ExplorationScopeBar({ scope, onSelectScope, onOpenLegacy }: {
           <div className="exs-search-results"><div className="exs-search-empty">No scope matches “{query}”</div></div>
         )}
       </div>
-      <span className="exs-spacer" />
+      {/* The dossier is flex:1, so it — not a spacer — is what pushes Legacy right. */}
+      {children ?? <span className="exs-spacer" />}
       <button className="exs-legacy-btn" onClick={onOpenLegacy}><History size={13} /> Legacy (v1)</button>
     </div>
   );
@@ -68,17 +70,17 @@ export function ModeDossierBar({ scope, mode, onChange }: {
   onChange: (mode: ExplorationMode) => void;
 }) {
   return (
-    <div className="exs-context-bar">
+    <>
       <div className="exs-mode-switch" aria-label="Exploration view">
         <button className={mode === 'knowledge' ? 'active' : ''} onClick={() => onChange('knowledge')} aria-pressed={mode === 'knowledge'}>
-          <BookOpen size={13} /> Knowledge Bank
+          <BookOpen size={13} /> Knowledge
         </button>
         <button className={mode === 'workspace' ? 'active' : ''} onClick={() => onChange('workspace')} aria-pressed={mode === 'workspace'}>
           <PanelsTopLeft size={13} /> Workspace
         </button>
       </div>
       <ProvinceDossier scope={scope} />
-    </div>
+    </>
   );
 }
 
@@ -87,16 +89,17 @@ function ProvinceDossier({ scope }: { scope: SearchEntry }) {
   useEffect(() => { loadSearchIndex().then(setIndex); }, []);
   const directChildren = index?.filter((entry) => entry.parent === scope.name) ?? [];
   const childLabel = scope.type === 'province' ? 'Assessment units' : scope.type === 'country' ? 'Linked assets' : 'Child records';
+  // Three facts only. Parent duplicates the scope type at province level, and the
+  // reference point is already on the map — both are a click away in the dossier
+  // view, so the header keeps identity, size and provenance and nothing else.
   const coordinates = scope.fly ? `${scope.fly.lat.toFixed(2)}°, ${scope.fly.lon.toFixed(2)}°` : 'Not mapped';
 
   return (
-    <section className="exs-dossier" aria-label={`${scope.name} exploration dossier`}>
+    <section className="exs-dossier" aria-label={`${scope.name} exploration dossier`} title={`${scope.parent} · ${coordinates}`}>
       <div className="exs-dossier-title"><span>Exploration dossier</span><b>{scope.name}</b></div>
       <div className="exs-dossier-fact"><span>Scope</span><b>{searchTypeLabel(scope.type)}</b></div>
-      <div className="exs-dossier-fact"><span>Parent</span><b>{scope.parent}</b></div>
       <div className="exs-dossier-fact"><span>{childLabel}</span><b>{index ? directChildren.length.toLocaleString() : 'Loading…'}</b></div>
-      <div className="exs-dossier-fact"><span>Reference point</span><b>{coordinates}</b></div>
-      <div className="exs-dossier-fact source"><span>System of record</span><b>{scope.source}</b></div>
+      <div className="exs-dossier-fact source" title={scope.source}><span>Source</span><b>{scope.source}</b></div>
     </section>
   );
 }

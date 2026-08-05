@@ -1,9 +1,7 @@
 @echo off
 REM Compatibility launcher — ArgantaEnergy now uses COSMO as its canonical UI.
-cd /d "%~dp0apps\energy"
-echo Starting ArgantaEnergy on http://localhost:5279/ ...
-echo (Leave this window open. Close it to stop the server.)
-echo.
-start "" "http://localhost:5279/"
-call npm run dev
-pause
+REM
+REM This used to duplicate the launch logic, including the bug where the browser was
+REM opened before the dev server existed. Delegating instead, so there is exactly one
+REM place that knows how to start the app and only one place to fix.
+call "%~dp0ArgantaEnergy-Launch.bat" %*

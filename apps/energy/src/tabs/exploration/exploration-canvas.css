@@ -1,0 +1,195 @@
+/* Exploration canvas shell.
+   Zones, top to bottom: header (exs-bar) · ribbon · hint · control row · run bar ·
+   finding line · widget grid. No footer, and no left drawer — this vertical passes
+   no tree, so the column is not reserved.
+
+   The hard rule everywhere below: the canvas fits by RE-COMPOSING, never by
+   hiding. There is no display:none on a widget at any breakpoint. */
+
+/* ── layout ───────────────────────────────────────────────────────────────────
+   Scoped to `.exc-layout` on purpose. Drilling, Reservoir and Well Delivery share
+   `.wsb-layout` and also reserve an empty 180px drawer — the same dead column —
+   but they have a different child count, so widening this fix to the base rule
+   would re-flow three verticals I cannot verify in this pass. Their column is
+   worth reclaiming separately.
+
+   Four rows: ribbon · control · run · canvas. Only the canvas takes free space. */
+/* Deliberately NOT a grid. The shared `.wsb-layout` is a two-column grid whose
+   base rules place `.wsb-ribbon` at `grid-area:1/1/2/3` and are re-declared inside
+   two media queries. Overriding all of that from here worked only as long as the
+   cascade held; when it didn't, the ribbon got trapped in column 1 and the control
+   row and run bar were pushed out of view entirely.
+   A column flex owes nothing to those rules, so it cannot be undone by them. */
+html[data-ui="cosmo"] .wsb-layout.exc-layout{
+  display:flex!important;flex-direction:column;min-width:0;min-height:0;
+  grid-template-columns:none;grid-template-rows:none;
+}
+html[data-ui="cosmo"] .wsb-layout.exc-layout>*{grid-area:auto!important;width:100%;min-width:0;flex:0 0 auto}
+html[data-ui="cosmo"] .wsb-layout.exc-layout>.wsb-drawer{display:none!important}
+/* Only the canvas takes the leftover height. */
+html[data-ui="cosmo"] .wsb-layout.exc-layout>.exc-canvas{flex:1 1 auto;min-height:0}
+
+/* ── control row ──────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .exc-control{display:flex;align-items:center;gap:10px;min-width:0;padding:5px 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
+html[data-ui="cosmo"] .exc-scope-state{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:3px 8px;border-radius:11px;font:8px var(--mono);letter-spacing:.09em;background:var(--panel3);color:var(--ink3)}
+html[data-ui="cosmo"] .exc-scope-state.dossier{background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .exc-scope-state.compare{background:color-mix(in srgb,var(--blue) 14%,var(--panel));color:var(--blue)}
+html[data-ui="cosmo"] .exc-pins{display:flex;align-items:center;gap:5px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+html[data-ui="cosmo"] .exc-pins::-webkit-scrollbar{display:none}
+html[data-ui="cosmo"] .exc-pins-empty,html[data-ui="cosmo"] .exc-pins-hint{flex-shrink:0;font-size:8.5px;color:var(--ink3);white-space:nowrap}
+html[data-ui="cosmo"] .exc-pin{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:3px 7px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink2);font-size:9.5px;cursor:pointer}
+html[data-ui="cosmo"] .exc-pin:hover{border-color:var(--ink3)}
+html[data-ui="cosmo"] .exc-pin i{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+html[data-ui="cosmo"] .exc-pin b{font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ui="cosmo"] .exc-pin em{font:7.5px var(--mono);font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-facet-zone{position:relative;display:flex;align-items:center;gap:4px;flex-shrink:0}
+html[data-ui="cosmo"] .exc-facet-btn,html[data-ui="cosmo"] .exc-facet-clear{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink2);font-size:9px;cursor:pointer}
+html[data-ui="cosmo"] .exc-facet-btn.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+html[data-ui="cosmo"] .exc-facet-pop{position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:340px;max-height:60vh;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 14px 40px rgb(0 0 0/.22)}
+html[data-ui="cosmo"] .exc-facet-pop header{display:flex;flex-direction:column;gap:2px;padding-bottom:7px;margin-bottom:7px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .exc-facet-pop header b{font-size:9.5px;color:var(--ink)}
+html[data-ui="cosmo"] .exc-facet-pop header span{font-size:8px;line-height:1.4;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-facet-group{margin-bottom:8px}
+html[data-ui="cosmo"] .exc-facet-group small{display:block;margin-bottom:4px;font:7px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-facet-group>div{display:flex;flex-wrap:wrap;gap:4px}
+html[data-ui="cosmo"] .exc-facet-chip{padding:3px 8px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);color:var(--ink2);font-size:8.5px;cursor:pointer}
+html[data-ui="cosmo"] .exc-facet-chip.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+
+/* ── provenance chips. Colour is the grade, never the series. ─────────────── */
+html[data-ui="cosmo"] .exc-grade,html[data-ui="cosmo"] .exc-chip{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:2px 7px;border-radius:10px;font:7.5px var(--mono);letter-spacing:.07em;white-space:nowrap}
+html[data-ui="cosmo"] .exc-grade i,html[data-ui="cosmo"] .exc-chip i,html[data-ui="cosmo"] .exc-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+html[data-ui="cosmo"] .exc-grade em,html[data-ui="cosmo"] .exc-chip em{font-style:normal;opacity:.75}
+.exc-grade.sourced,.exc-chip.sourced,.exc-finding-grade.sourced{background:color-mix(in srgb,var(--blue) 12%,var(--panel));color:var(--blue)}
+.exc-grade.sourced i,.exc-chip.sourced i,.exc-dot.sourced{background:var(--blue)}
+.exc-grade.derived,.exc-chip.derived,.exc-finding-grade.derived{background:var(--teal-soft);color:var(--teal-ink)}
+.exc-grade.derived i,.exc-chip.derived i,.exc-dot.derived{background:var(--teal);border-top:2px dashed var(--panel)}
+.exc-grade.recalled,.exc-chip.recalled,.exc-finding-grade.recalled{background:color-mix(in srgb,var(--amber) 15%,var(--panel));color:var(--amber)}
+/* RECALLED wears the 45° hatch it will wear on the chart — the chip and the mark
+   must agree, or the key teaches the wrong thing. */
+.exc-grade.recalled i,.exc-chip.recalled i,.exc-dot.recalled{background:repeating-linear-gradient(45deg,var(--amber) 0 2px,transparent 2px 4px)}
+.exc-grade.user,.exc-chip.user,.exc-finding-grade.user{background:color-mix(in srgb,var(--purple) 12%,var(--panel));color:var(--purple)}
+.exc-grade.user i,.exc-chip.user i,.exc-dot.user{background:repeating-linear-gradient(135deg,var(--purple) 0 2px,transparent 2px 4px);outline:1px dashed color-mix(in srgb,var(--purple) 50%,transparent)}
+
+/* ── the simulated study run ──────────────────────────────────────────────── */
+html[data-ui="cosmo"] .exc-run{display:flex;flex-direction:column;gap:5px;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .exc-run-head{display:flex;align-items:center;gap:9px;min-width:0}
+html[data-ui="cosmo"] .exc-run-badge{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;font:8px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-run-badge em{padding:1px 5px;border-radius:8px;background:color-mix(in srgb,var(--amber) 15%,var(--panel));color:var(--amber);font-style:normal;letter-spacing:.06em}
+html[data-ui="cosmo"] .exc-run-go{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:4px 10px;border:1px solid var(--teal);border-radius:8px;background:var(--teal-soft);color:var(--teal-ink);font-size:9.5px;font-weight:600;cursor:pointer}
+html[data-ui="cosmo"] .exc-run-go:hover{background:color-mix(in srgb,var(--teal) 20%,var(--panel))}
+html[data-ui="cosmo"] .exc-run-stop{display:inline-flex;align-items:center;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .exc-run-progress{flex:1;min-width:40px;height:3px;border-radius:2px;background:var(--line2);overflow:hidden}
+html[data-ui="cosmo"] .exc-run-progress i{display:block;height:100%;background:var(--teal);transition:width .25s ease-out}
+html[data-ui="cosmo"] .exc-run-count{flex-shrink:0;font:8px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .exc-run-dag{display:flex;align-items:center;gap:1px;min-width:0;overflow-x:auto;scrollbar-width:none}
+html[data-ui="cosmo"] .exc-run-dag::-webkit-scrollbar{display:none}
+html[data-ui="cosmo"] .exc-dag-node{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:3px 6px;border:0;border-radius:7px;background:transparent;color:var(--ink3);font-size:8.5px;cursor:pointer}
+html[data-ui="cosmo"] .exc-dag-node:hover{background:var(--panel2);color:var(--ink2)}
+html[data-ui="cosmo"] .exc-dag-node.active{color:var(--ink);font-weight:600}
+html[data-ui="cosmo"] .exc-dag-node i{width:6px;height:6px;border-radius:50%;background:var(--line);flex-shrink:0}
+html[data-ui="cosmo"] .exc-dag-node.settled i{background:var(--teal)}
+html[data-ui="cosmo"] .exc-dag-node.working i{background:var(--amber);animation:exc-pulse 1s ease-in-out infinite}
+html[data-ui="cosmo"] .exc-dag-arrow{color:var(--line);margin-left:2px}
+@keyframes exc-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+html[data-ui="cosmo"] .exc-run-tail{display:flex;align-items:baseline;gap:8px;min-width:0;padding-top:4px;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .exc-run-tail b{flex-shrink:0;font-size:9px;color:var(--ink2)}
+html[data-ui="cosmo"] .exc-run-tail span{flex:1;min-width:0;font:8px var(--mono);color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-ui="cosmo"] .exc-run-tail em{flex-shrink:0;font:7.5px var(--mono);font-style:normal;color:var(--ink3)}
+
+/* ── canvas ───────────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .exc-canvas{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
+html[data-ui="cosmo"] .exc-canvas-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+html[data-ui="cosmo"] .exc-canvas-head>div:first-child{min-width:0}
+html[data-ui="cosmo"] .exc-canvas-head span{font:7.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--teal-ink)}
+html[data-ui="cosmo"] .exc-canvas-head h2{margin:2px 0 0;font-size:14px;color:var(--ink)}
+html[data-ui="cosmo"] .exc-canvas-meta{display:flex;align-items:center;gap:7px;flex-shrink:0}
+html[data-ui="cosmo"] .exc-output{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font:8px var(--mono)!important;color:var(--ink2)!important;text-transform:none!important;letter-spacing:0!important}
+html[data-ui="cosmo"] .exc-output em{padding:1px 5px;border-radius:7px;background:var(--teal-soft);color:var(--teal-ink);font-style:normal}
+html[data-ui="cosmo"] .exc-software{font-size:8.5px!important;color:var(--ink3)!important;text-transform:none!important;letter-spacing:0!important}
+
+/* ── finding line ─────────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .exc-finding{display:flex;align-items:flex-start;gap:8px;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel2);color:var(--teal-ink)}
+html[data-ui="cosmo"] .exc-finding.working{background:color-mix(in srgb,var(--amber) 7%,var(--panel2))}
+html[data-ui="cosmo"] .exc-finding p{margin:0;flex:1;min-width:0;font-size:10px;line-height:1.45;color:var(--ink2)}
+html[data-ui="cosmo"] .exc-finding-grade{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:2px 7px;border-radius:10px;font:7.5px var(--mono);letter-spacing:.07em}
+html[data-ui="cosmo"] .exc-finding-grade em{font-style:normal;opacity:.75}
+
+/* ── widget grid: hero + two supports. No widget is ever hidden. ──────────────
+   Rows are sized in real pixels, not fractions of whatever is left. Five bands
+   of chrome sit above this grid; dividing the remainder by two gave supports a
+   ~90px box, which is what made every chart look cramped. Now the grid asks for
+   the height a chart needs and the canvas scrolls when the viewport is short —
+   scrolling beats illegibility. */
+html[data-ui="cosmo"] .exc-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);grid-auto-rows:minmax(420px,1fr);gap:9px;padding:9px;overflow-y:auto;overflow-x:hidden}
+html[data-ui="cosmo"] .exc-supports{display:grid;grid-template-rows:minmax(200px,1fr) minmax(200px,1fr);gap:9px;min-width:0;min-height:0}
+html[data-ui="cosmo"] .exc-widget{position:relative;display:flex;min-width:0;min-height:0;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+html[data-ui="cosmo"] .exc-widget.gated{border-style:dashed}
+html[data-ui="cosmo"] .exc-widget>header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .exc-widget>header>div:first-child{display:flex;min-width:0;flex-direction:column;gap:4px}
+html[data-ui="cosmo"] .exc-widget>header b{font-size:12px;color:var(--ink)}
+html[data-ui="cosmo"] .exc-widget-tools{display:flex;gap:3px;flex-shrink:0}
+html[data-ui="cosmo"] .exc-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .exc-icon-btn:hover{border-color:var(--line);background:var(--panel2);color:var(--ink2)}
+html[data-ui="cosmo"] .exc-icon-btn.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink)}
+
+/* The chart slot. It was `align-items:center` on a ROW flex, which collapsed the
+   chart's height to its content — the single biggest cause of tiny charts. It is
+   now a column that stretches, and the chart fills it. */
+html[data-ui="cosmo"] .exc-slot{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;overflow:hidden}
+html[data-ui="cosmo"] .exc-slot>*{min-height:0}
+html[data-ui="cosmo"] .exc-slot-inner{margin:auto;display:flex;flex-direction:column;align-items:center;gap:5px;max-width:420px;padding:12px;text-align:center}
+html[data-ui="cosmo"] .exc-slot-kicker{font:7px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-slot-visual{margin:0;font-size:9.5px;line-height:1.45;color:var(--ink2)}
+html[data-ui="cosmo"] .exc-slot-lib{display:inline-flex;align-items:center;gap:4px;margin:0;font:7.5px var(--mono);color:var(--teal-ink)}
+html[data-ui="cosmo"] .exc-remark{display:flex;align-items:flex-start;gap:5px;margin:0;padding:6px 10px;border-top:1px solid var(--line2);background:color-mix(in srgb,var(--amber) 7%,var(--panel));font-size:9px;line-height:1.45;color:var(--ink2);flex-shrink:0}
+html[data-ui="cosmo"] .exc-remark svg{flex-shrink:0;margin-top:1px;color:var(--amber)}
+
+/* ── the (i) blueprint popover ────────────────────────────────────────────── */
+html[data-ui="cosmo"] .exc-info{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;padding:10px;background:color-mix(in srgb,var(--panel) 97%,transparent);backdrop-filter:blur(3px);overflow:auto}
+html[data-ui="cosmo"] .exc-info>header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--line2)}
+html[data-ui="cosmo"] .exc-info>header b{font-size:10.5px;color:var(--ink)}
+html[data-ui="cosmo"] .exc-info-purpose{margin:7px 0;font-size:9px;line-height:1.45;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-info dl{display:flex;flex-direction:column;gap:0;margin:0}
+html[data-ui="cosmo"] .exc-info dl>div{display:grid;grid-template-columns:88px minmax(0,1fr);gap:7px;padding:5px 0;border-top:1px solid var(--line2)}
+html[data-ui="cosmo"] .exc-info dl>div.warn dd{color:var(--amber)}
+html[data-ui="cosmo"] .exc-info dt{display:flex;align-items:flex-start;gap:4px;font:7px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-info dd{margin:0;font-size:8px;line-height:1.4;color:var(--ink2);overflow-wrap:anywhere}
+html[data-ui="cosmo"] .exc-info-planned,html[data-ui="cosmo"] .exc-info-actual{display:block}
+html[data-ui="cosmo"] .exc-info-planned{color:var(--ink3)}
+html[data-ui="cosmo"] .exc-info-actual{margin-top:3px;color:var(--ink2)}
+html[data-ui="cosmo"] .exc-info-planned small,html[data-ui="cosmo"] .exc-info-actual small{display:inline-block;margin-right:5px;padding:0 4px;border-radius:5px;background:var(--panel3);font:6.5px var(--mono);letter-spacing:.08em;color:var(--ink3)}
+html[data-ui="cosmo"] .exc-info-actual small{background:var(--teal-soft);color:var(--teal-ink)}
+
+/* ── responsive ladder: re-compose, never hide ────────────────────────────── */
+@media(max-width:1440px){
+  html[data-ui="cosmo"] .exc-grid{grid-template-columns:3fr 2fr}
+}
+@media(max-width:1100px){
+  /* Hero goes full width; the two supports sit side by side beneath it. */
+  html[data-ui="cosmo"] .exc-grid{grid-template-columns:minmax(0,1fr);grid-auto-rows:auto}
+  html[data-ui="cosmo"] .exc-widget.hero{min-height:440px}
+  html[data-ui="cosmo"] .exc-supports{grid-template-rows:none;grid-template-columns:1fr 1fr;min-height:340px}
+  html[data-ui="cosmo"] .exc-pin b{max-width:70px}
+}
+@media(max-width:900px){
+  html[data-ui="cosmo"] .exc-canvas-meta .exc-software{display:none}
+  html[data-ui="cosmo"] .exc-run-tail span{white-space:normal}
+}
+@media(max-width:760px){
+  /* Single column, page scrolls, every widget still reachable. */
+  html[data-ui="cosmo"] .exc-grid{display:flex;flex-direction:column;gap:8px;overflow-y:auto;scroll-snap-type:y proximity}
+  html[data-ui="cosmo"] .exc-supports{display:contents}
+  html[data-ui="cosmo"] .exc-widget{flex:0 0 auto;scroll-snap-align:start}
+  html[data-ui="cosmo"] .exc-widget{min-height:400px}
+  html[data-ui="cosmo"] .exc-control{flex-wrap:wrap;row-gap:5px}
+  html[data-ui="cosmo"] .exc-pins{order:3;flex-basis:100%}
+  html[data-ui="cosmo"] .exc-facet-pop{width:min(340px,calc(100vw - 24px))}
+  html[data-ui="cosmo"] .exc-finding{position:sticky;top:0;z-index:20}
+  /* Touch targets, not mouse targets. */
+  html[data-ui="cosmo"] .exc-icon-btn{width:32px;height:32px}
+  html[data-ui="cosmo"] .exc-dag-node{padding:6px 8px}
+}
+@media(prefers-reduced-motion:reduce){
+  html[data-ui="cosmo"] .exc-dag-node.working i{animation:none}
+  html[data-ui="cosmo"] .exc-run-progress i{transition:none}
+}

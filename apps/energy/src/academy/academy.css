@@ -1,0 +1,281 @@
+/* academy/academy.css — the concept shell.
+   One page, no page scroll. Everything sizes with clamp() against viewport
+   height so the layout densifies on short screens instead of clipping or
+   growing a scrollbar. Only modal bodies are allowed to scroll. */
+
+html[data-ui="cosmo"] .ac-shell{
+  --ac:#0FB5A6; --ac-ink:#087a70;
+  --ac-gap:clamp(8px,1.1vh,16px);
+  display:flex; flex-direction:column; width:100%; height:100%;
+  min-width:0; min-height:0; overflow:hidden;
+  background:
+    radial-gradient(120% 80% at 12% -10%, color-mix(in srgb,var(--ac) 9%,transparent), transparent 60%),
+    radial-gradient(100% 70% at 92% 0%, color-mix(in srgb,#d946ef 7%,transparent), transparent 55%),
+    var(--bg);
+  color:var(--ink); font-family:var(--sans);
+}
+html[data-ui="cosmo"] .ac-shell *{box-sizing:border-box; min-width:0}
+html[data-ui="cosmo"] .ac-shell button{font:inherit; cursor:pointer}
+
+/* ── header ─────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .ac-head{
+  flex:0 0 auto; height:clamp(46px,6vh,58px);
+  display:flex; align-items:center; gap:14px; padding:0 clamp(12px,1.6vw,22px);
+  border-bottom:1px solid var(--line); background:color-mix(in srgb,var(--panel) 82%,transparent);
+  backdrop-filter:blur(8px);
+}
+html[data-ui="cosmo"] .ac-mark{
+  width:30px; height:30px; flex:0 0 auto; display:grid; place-items:center; border-radius:9px;
+  color:#fff; background:linear-gradient(135deg,#0fb5a6,#08766f);
+  box-shadow:0 6px 18px rgba(15,181,166,.28);
+}
+html[data-ui="cosmo"] .ac-title b{display:block; font-size:clamp(12px,1.5vh,14px); line-height:1.1}
+html[data-ui="cosmo"] .ac-title small{
+  display:block; font:600 8px var(--mono); letter-spacing:.1em;
+  color:var(--ink3); margin-top:2px;
+}
+/* tier switch */
+html[data-ui="cosmo"] .ac-tiers{
+  margin-left:auto; display:flex; gap:3px; padding:3px;
+  background:var(--panel3); border:1px solid var(--line); border-radius:10px;
+}
+html[data-ui="cosmo"] .ac-tiers button{
+  border:0; background:transparent; border-radius:7px; color:var(--ink3);
+  font:700 9.5px var(--mono); letter-spacing:.08em; padding:6px 12px;
+  transition:background .18s,color .18s;
+}
+html[data-ui="cosmo"] .ac-tiers button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .ac-tiers button.on{
+  background:var(--panel); color:var(--ac-ink);
+  box-shadow:0 1px 3px rgba(15,23,42,.12);
+}
+html[data-ui="cosmo"].dark .ac-tiers button.on{color:#5eead4}
+html[data-ui="cosmo"] .ac-ghost-btn{
+  height:29px; padding:0 11px; display:flex; align-items:center; gap:6px;
+  border:1px solid var(--line); border-radius:8px; background:var(--panel2);
+  color:var(--ink2); font-size:9.5px; transition:border-color .16s,color .16s;
+}
+html[data-ui="cosmo"] .ac-ghost-btn:hover{border-color:var(--ac); color:var(--ac-ink)}
+
+/* ── promise band ───────────────────────────────────────────────── */
+html[data-ui="cosmo"] .ac-band{
+  flex:0 0 auto; display:flex; align-items:center; gap:clamp(10px,1.4vw,20px);
+  padding:clamp(9px,1.5vh,16px) clamp(12px,1.6vw,22px);
+}
+html[data-ui="cosmo"] .ac-band h1{
+  margin:0; font-size:clamp(15px,2.4vh,22px); font-weight:800; letter-spacing:-.01em;
+}
+html[data-ui="cosmo"] .ac-band p{
+  margin:3px 0 0; font-size:clamp(10px,1.35vh,12.5px); color:var(--ink2); max-width:62ch;
+}
+html[data-ui="cosmo"] .ac-adds{
+  font:600 9px var(--mono); letter-spacing:.06em; color:var(--ac-ink);
+  background:color-mix(in srgb,var(--ac) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--ac) 32%,transparent);
+  border-radius:999px; padding:4px 10px; white-space:nowrap;
+}
+html[data-ui="cosmo"] .ac-stats{margin-left:auto; display:flex; gap:6px}
+html[data-ui="cosmo"] .ac-stat{
+  border:1px solid var(--line); border-radius:9px; background:var(--panel);
+  padding:5px 10px; text-align:center; min-width:52px;
+}
+html[data-ui="cosmo"] .ac-stat b{display:block; font-size:clamp(12px,1.7vh,15px); line-height:1}
+html[data-ui="cosmo"] .ac-stat span{
+  display:block; font:600 7px var(--mono); letter-spacing:.09em;
+  color:var(--ink3); margin-top:3px;
+}
+
+/* ── the relay ──────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .ac-relay{
+  flex:1 1 auto; min-height:0; display:flex; align-items:stretch;
+  gap:clamp(5px,.7vw,10px); padding:0 clamp(12px,1.6vw,22px);
+}
+html[data-ui="cosmo"] .ac-stage{
+  flex:1 1 0; min-width:0; display:flex; flex-direction:column; text-align:left;
+  border:1px solid var(--line); border-radius:14px; background:var(--panel);
+  padding:clamp(9px,1.5vh,15px) clamp(8px,.8vw,14px);
+  box-shadow:var(--shadow); position:relative; overflow:hidden;
+  transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s, border-color .2s, flex-grow .3s;
+}
+/* the accent rail that makes the chain readable at a glance */
+html[data-ui="cosmo"] .ac-stage::before{
+  content:''; position:absolute; inset:0 auto 0 0; width:3px; background:var(--c);
+}
+html[data-ui="cosmo"] .ac-stage:hover{
+  transform:translateY(-3px); box-shadow:var(--shadow-lg);
+  border-color:color-mix(in srgb,var(--c) 45%,var(--line));
+}
+html[data-ui="cosmo"] .ac-stage.agent{
+  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 8%,var(--panel)),var(--panel) 62%);
+}
+html[data-ui="cosmo"] .ac-stage-n{
+  display:flex; align-items:center; gap:6px; margin-bottom:clamp(5px,.9vh,9px);
+}
+html[data-ui="cosmo"] .ac-stage-n i{
+  width:24px; height:24px; flex:0 0 auto; display:grid; place-items:center; border-radius:7px;
+  color:#fff; background:var(--c); font-style:normal;
+}
+html[data-ui="cosmo"] .ac-stage-n u{
+  text-decoration:none; font:700 7.5px var(--mono); letter-spacing:.1em; color:var(--c);
+}
+html[data-ui="cosmo"] .ac-stage-n em{
+  margin-left:auto; font-style:normal; font:600 7.5px var(--mono);
+  color:var(--ink3); white-space:nowrap;
+}
+html[data-ui="cosmo"] .ac-stage h3{
+  margin:0; font-size:clamp(11px,1.55vh,14px); font-weight:750; line-height:1.2;
+}
+html[data-ui="cosmo"] .ac-stage q{
+  display:block; quotes:none; margin-top:5px; color:var(--ink2);
+  font-size:clamp(9px,1.2vh,11px); line-height:1.4;
+  overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3;
+}
+/* material shortcuts — the card's launchpad row */
+html[data-ui="cosmo"] .ac-mats{
+  display:flex; flex-wrap:wrap; gap:5px; margin-top:clamp(8px,1.3vh,14px);
+}
+html[data-ui="cosmo"] .ac-mat{
+  display:inline-flex; align-items:center; gap:5px; cursor:pointer;
+  border:1px solid var(--line); border-radius:8px; background:var(--panel2);
+  padding:clamp(4px,.7vh,6px) 8px; color:var(--ink2);
+  font-size:clamp(8.5px,1.05vh,10px); line-height:1; white-space:nowrap;
+  transition:border-color .15s, color .15s, background .15s, transform .15s;
+}
+html[data-ui="cosmo"] .ac-mat:hover{
+  transform:translateY(-1px); border-color:var(--c); color:var(--c);
+  background:color-mix(in srgb,var(--c) 8%,var(--panel));
+}
+html[data-ui="cosmo"] .ac-mat:focus-visible{outline:2px solid var(--c); outline-offset:1px}
+html[data-ui="cosmo"] .ac-mat svg{flex:0 0 auto; opacity:.8}
+/* the agent chip is the pitch — it reads as its own thing, not a fourth link */
+html[data-ui="cosmo"] .ac-mat-agent{
+  border-color:color-mix(in srgb,#d946ef 42%,var(--line));
+  background:color-mix(in srgb,#d946ef 9%,var(--panel));
+  color:#a21caf; font-weight:650;
+}
+html[data-ui="cosmo"].dark .ac-mat-agent{color:#f0abfc}
+html[data-ui="cosmo"] .ac-mat-agent:hover{
+  border-color:#d946ef; color:#c026d3;
+  background:color-mix(in srgb,#d946ef 16%,var(--panel));
+}
+html[data-ui="cosmo"].dark .ac-mat-agent:hover{color:#f5d0fe}
+
+html[data-ui="cosmo"] .ac-decision{
+  margin-top:auto; padding-top:clamp(6px,1vh,10px);
+}
+html[data-ui="cosmo"] .ac-decision b{
+  display:block; font:700 8px var(--mono); letter-spacing:.05em; color:var(--ink);
+}
+html[data-ui="cosmo"] .ac-decision span{
+  display:block; margin-top:4px; font-size:8.5px; color:var(--ink3);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+html[data-ui="cosmo"] .ac-baton{
+  display:flex; align-items:center; gap:4px; margin-top:6px; padding-top:6px;
+  border-top:1px dashed var(--line);
+  font:600 7.5px var(--mono); color:var(--c); letter-spacing:.03em;
+}
+html[data-ui="cosmo"] .ac-baton span{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink3);
+}
+/* connector between stages */
+html[data-ui="cosmo"] .ac-link{
+  flex:0 0 auto; align-self:center; display:grid; place-items:center;
+  width:clamp(10px,1.1vw,18px); color:var(--ink3); opacity:.7;
+}
+
+/* ── footer ─────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .ac-foot{
+  flex:0 0 auto; height:clamp(28px,3.6vh,36px);
+  display:flex; align-items:center; gap:clamp(8px,1vw,16px);
+  padding:0 clamp(12px,1.6vw,22px);
+  border-top:1px solid var(--line); background:color-mix(in srgb,var(--panel) 70%,transparent);
+}
+html[data-ui="cosmo"] .ac-foot-note{
+  margin-left:auto; font:600 8px var(--mono); letter-spacing:.07em; color:var(--ink3);
+}
+
+/* ── modal ──────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .ac-scrim{
+  position:absolute; inset:0; z-index:60; display:grid; place-items:center;
+  padding:clamp(14px,3vh,40px);
+  background:color-mix(in srgb,var(--ink) 42%,transparent);
+  backdrop-filter:blur(3px); animation:ac-fade .16s ease-out;
+}
+@keyframes ac-fade{from{opacity:0}to{opacity:1}}
+@keyframes ac-rise{from{opacity:0; transform:translateY(10px) scale(.985)}to{opacity:1; transform:none}}
+html[data-ui="cosmo"] .ac-modal{
+  width:min(680px,100%); max-height:100%; display:flex; flex-direction:column;
+  border:1px solid var(--line); border-radius:16px; background:var(--panel);
+  box-shadow:var(--shadow-lg); overflow:hidden; animation:ac-rise .2s cubic-bezier(.2,.8,.2,1);
+}
+html[data-ui="cosmo"] .ac-modal-head{
+  flex:0 0 auto; display:flex; align-items:center; gap:10px;
+  padding:14px 16px; border-bottom:1px solid var(--line);
+  background:linear-gradient(120deg,color-mix(in srgb,var(--c,var(--ac)) 10%,var(--panel)),var(--panel) 70%);
+}
+html[data-ui="cosmo"] .ac-modal-head>i{
+  width:32px; height:32px; flex:0 0 auto; display:grid; place-items:center; border-radius:9px;
+  color:#fff; background:var(--c,var(--ac)); font-style:normal;
+}
+html[data-ui="cosmo"] .ac-modal-head u{
+  text-decoration:none; font:700 7.5px var(--mono); letter-spacing:.11em; color:var(--c,var(--ac));
+}
+html[data-ui="cosmo"] .ac-modal-head b{display:block; font-size:15px; margin-top:1px}
+html[data-ui="cosmo"] .ac-x{
+  margin-left:auto; width:28px; height:28px; display:grid; place-items:center;
+  border:1px solid var(--line); border-radius:8px; background:var(--panel2); color:var(--ink3);
+}
+html[data-ui="cosmo"] .ac-x:hover{border-color:var(--red); color:var(--red)}
+html[data-ui="cosmo"] .ac-modal-body{
+  flex:1 1 auto; min-height:0; overflow:auto; padding:16px; display:flex;
+  flex-direction:column; gap:15px;
+}
+html[data-ui="cosmo"] .ac-q{
+  margin:0; font-size:13.5px; font-weight:650; line-height:1.42;
+  padding-left:11px; border-left:3px solid var(--c,var(--ac));
+}
+html[data-ui="cosmo"] .ac-sec>h4{
+  margin:0 0 7px; font:700 8px var(--mono); letter-spacing:.11em; color:var(--ink3);
+}
+html[data-ui="cosmo"] .ac-list{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px}
+html[data-ui="cosmo"] .ac-list li{
+  display:flex; gap:9px; align-items:flex-start; font-size:11.5px; line-height:1.45; color:var(--ink2);
+  background:var(--panel2); border:1px solid var(--line2); border-radius:9px; padding:8px 10px;
+}
+html[data-ui="cosmo"] .ac-list li>b{
+  flex:0 0 auto; width:17px; height:17px; display:grid; place-items:center; border-radius:5px;
+  font:700 8px var(--mono); color:#fff; background:var(--c,var(--ac));
+}
+html[data-ui="cosmo"] .ac-list.trap li>b{background:var(--amber)}
+html[data-ui="cosmo"] .ac-list.agent li>b{background:#d946ef}
+html[data-ui="cosmo"] .ac-agent-sec{
+  border:1px solid color-mix(in srgb,#d946ef 30%,var(--line));
+  border-radius:12px; padding:11px 12px;
+  background:color-mix(in srgb,#d946ef 5%,transparent);
+}
+html[data-ui="cosmo"] .ac-agent-sec>h4{color:#a21caf}
+html[data-ui="cosmo"].dark .ac-agent-sec>h4{color:#f0abfc}
+html[data-ui="cosmo"] .ac-agent-does{
+  margin:0 0 9px; font-size:11.5px; line-height:1.45; color:var(--ink2);
+}
+html[data-ui="cosmo"] .ac-grid2{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+html[data-ui="cosmo"] .ac-kv{
+  border:1px solid var(--line); border-radius:10px; padding:9px 11px; background:var(--panel2);
+}
+html[data-ui="cosmo"] .ac-kv u{
+  text-decoration:none; display:block; font:700 7.5px var(--mono);
+  letter-spacing:.09em; color:var(--ink3);
+}
+html[data-ui="cosmo"] .ac-kv b{display:block; font-size:12px; margin-top:4px; font-weight:650}
+html[data-ui="cosmo"] .ac-note{
+  margin:0; font-size:10.5px; line-height:1.5; color:var(--ink3);
+  border-top:1px dashed var(--line); padding-top:11px;
+}
+
+@media (max-width:900px){
+  html[data-ui="cosmo"] .ac-relay{flex-wrap:wrap; overflow:auto}
+  html[data-ui="cosmo"] .ac-stage{flex:1 1 44%}
+  html[data-ui="cosmo"] .ac-link{display:none}
+  html[data-ui="cosmo"] .ac-grid2{grid-template-columns:1fr}
+}

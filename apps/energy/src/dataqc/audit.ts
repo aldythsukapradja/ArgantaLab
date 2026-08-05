@@ -11,12 +11,13 @@ import type { AssetKind, IngestedAsset } from './types.ts';
 /** Mirrors IngestedAsset['qc']['status'] — types.ts does not name it. */
 export type QcStatus = IngestedAsset['qc']['status'];
 
-export const AUDIT_COLUMNS = ['log', 'trajectory', 'picks', 'production', 'injection', 'document'] as const;
+export const AUDIT_COLUMNS = ['log', 'trajectory', 'picks', 'production', 'injection', 'drilling', 'pressure', 'document'] as const;
 export type AuditColumn = (typeof AUDIT_COLUMNS)[number];
 
 export const COLUMN_LABEL: Record<AuditColumn, string> = {
-  log: 'Logs', trajectory: 'Trajectory', picks: 'Picks',
-  production: 'Production', injection: 'Injection', document: 'Reports',
+  log: 'Logs', trajectory: 'Trajectory', picks: 'Tops',
+  production: 'Production', injection: 'Injection',
+  drilling: 'Drilling', pressure: 'Pressure', document: 'Reports',
 };
 
 export interface AuditCell {
@@ -114,6 +115,16 @@ function detailFor(a: IngestedAsset): string | null {
       const n = num(m.records);
       return n == null ? null : `${n} pick${n === 1 ? '' : 's'}`;
     }
+    case 'drilling': {
+      const c = num(m.channels), s = num(m.samples);
+      if (c == null) return null;
+      return `${c} channel${c === 1 ? '' : 's'}${s != null ? ` · ${s.toLocaleString('en-US')} samples` : ''}`;
+    }
+    case 'pressure': {
+      const r = num(m.runs), rows = num(m.rows);
+      if (r == null) return null;
+      return `${r} station${r === 1 ? '' : 's'}${rows != null ? ` · ${rows.toLocaleString('en-US')} rows` : ''}`;
+    }
     default: {
       const n = num(m.records);
       return n == null ? null : `${n} records`;
@@ -196,6 +207,8 @@ export function buildAudit({ assets, kbWellboreIds = [], picksByWell, picksAsset
         : a.kind === 'trajectory' ? 'trajectory'
         : a.kind === 'production' ? 'production'
         : a.kind === 'injection' ? 'injection'
+        : a.kind === 'drilling' ? 'drilling'
+        : a.kind === 'pressure' ? 'pressure'
         : a.kind === 'document' ? 'document'
         : a.kind === 'picks' ? 'picks'
         : null;

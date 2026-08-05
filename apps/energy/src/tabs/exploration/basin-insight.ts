@@ -117,7 +117,18 @@ export function loadVolumes() {
   return volumePromise;
 }
 
-export interface CreamingPoint { year: number; count: number; cumulative: number }
+/** A year on the creaming curve.
+ *
+ *  `cumulative` counts discoveries; `cumBoe` sums what was actually found. The second is
+ *  the one that answers "is this basin creamed" — a decade of small finds moves the
+ *  count sharply while barely moving the volume, and the classic creaming curve is
+ *  volume-based for exactly that reason. `boe` is per-year found volume, MMBOE. */
+export interface CreamingPoint {
+  year: number; count: number; cumulative: number;
+  boe: number; cumBoe: number;
+  /** The largest find of that year — the label worth putting on a step. */
+  biggest?: { name: string; boe: number };
+}
 
 export interface BasinInsight {
   /** Major fields in scope (GOGET tracks major accumulations only). */
@@ -175,16 +186,35 @@ function verdict(dated: number, creaming: CreamingPoint[], lastYear: number | nu
 export function buildBasinInsight(
   fields: ScopeFieldRef[],
   detail: Record<string, FieldDetail> | null,
+  /** Reported reserves per field, MMBOE — the reserve towers, keyed on the same OSDU
+   *  field id as `detail`. Optional: without it the curve falls back to counting. */
+  sizes?: Map<string, FieldSize> | null,
 ): BasinInsight {
   const rows = fields.map((f) => detail?.[f.id]).filter(Boolean) as FieldDetail[];
   const years = rows.map((r) => r.discoveryYear).filter((y): y is number => typeof y === 'number' && y > 1800 && y <= 2030);
 
-  const byYear = new Map<number, number>();
-  for (const y of years) byYear.set(y, (byYear.get(y) ?? 0) + 1);
-  let cum = 0;
+  // Volume AND count per year. A field with a discovery year but no reported reserves
+  // still counts as a discovery — it just contributes nothing to the volume curve,
+  // which is the honest treatment: absent is not zero, but we cannot invent a size.
+  const byYear = new Map<number, { count: number; boe: number; biggest?: { name: string; boe: number } }>();
+  for (const f of fields) {
+    const d = detail?.[f.id];
+    const y = d?.discoveryYear;
+    if (typeof y !== 'number' || y <= 1800 || y > 2030) continue;
+    const boe = sizes?.get(f.id)?.total ?? 0;
+    const slot = byYear.get(y) ?? { count: 0, boe: 0 };
+    slot.count += 1;
+    slot.boe += boe;
+    if (boe > 0 && (!slot.biggest || boe > slot.biggest.boe)) slot.biggest = { name: f.name, boe };
+    byYear.set(y, slot);
+  }
+  let cum = 0, cumB = 0;
   const creaming: CreamingPoint[] = [...byYear.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([year, count]) => ({ year, count, cumulative: (cum += count) }));
+    .map(([year, s]) => ({
+      year, count: s.count, cumulative: (cum += s.count),
+      boe: s.boe, cumBoe: (cumB += s.boe), biggest: s.biggest,
+    }));
 
   const statusMix = tally(rows.map((r) => r.status));
   const producing = statusMix.find((s) => s.key === 'operating')?.n ?? 0;
@@ -219,7 +249,29 @@ export function buildBasinInsight(
 
 export type EventKind = 'source' | 'reservoir' | 'seal' | 'overburden' | 'process';
 
-export interface EventBar { from: number; to: number; label: string; note?: string }
+/** A bare lithology word standing where a formation NAME belongs — the signature of an
+ *  extraction that lifted "Coal"/"Shale" out of authority prose as if it were a unit.
+ *  Flagged rather than hidden: it is real data that needs normalising at source, and
+ *  silently dropping it would hide the very gap the reader should see. */
+const LITHOLOGY_WORDS = new Set([
+  'coal', 'sandstone', 'sandstones', 'limestone', 'limestones', 'dolomite', 'shale', 'shales',
+  'carbonate', 'carbonates', 'sand', 'silt', 'siltstone', 'mudstone', 'evaporite', 'evaporites',
+  'anhydrite', 'salt', 'chalk', 'clastics', 'marl', 'chert', 'conglomerate', 'reef',
+]);
+export const isLithologyName = (unit: string) => LITHOLOGY_WORDS.has(unit.trim().toLowerCase());
+
+export interface EventBar {
+  from: number; to: number; label: string; note?: string; confidence?: string;
+  citationId?: string; status?: string;
+  /** True when `label` is a lithology, not a named unit — rendered as needs-normalising. */
+  qcLithology?: boolean;
+  /** True when this bar was obtained by rule or recall rather than from cited evidence.
+   *  Rendered flagged: the chart shows the interval, but never as if it were measured. */
+  derived?: boolean;
+  /** Basin cycle this element belongs to — the key the tectonostratigraphy column and
+   *  the events chart cross-filter each other on. */
+  cycleId?: string;
+}
 export interface EventRow {
   key: string;
   label: string;
@@ -236,9 +288,78 @@ export interface EventsChart {
   span: [number, number];
   modelledRows: number;
   gapRows: number;
+  periods: Array<{ id: string; name: string; from: number; to: number; parent?: string }>;
+  cycles: Array<{ id: string; label: string; from: number; to: number; contribution?: string }>;
+  title?: string;
+  grade?: string;
+  timescale?: string;
+  scope?: string;
 }
 
 interface StratLike { name: string; ageMa: [number, number]; role?: string; roleNote?: string }
+
+interface PsElementLike {
+  element_id: string; unit_name: string; element_role: string; start_ma: number; end_ma: number;
+  confidence?: string; effectiveness?: string; source_citation_id?: string; notes?: string;
+  basin_cycle_id?: string; provenance?: string;
+}
+interface PsEventLike {
+  event_id: string; event_type: string; label: string; start_ma?: number; end_ma?: number;
+  event_status: string; certainty?: string; evidence_required?: string; source_citation_id?: string; notes?: string;
+  provenance?: string;
+}
+interface CycleLike {
+  cycle_id: string; title?: string; age_top_ma?: number; age_base_ma?: number;
+  contribution?: string;
+}
+interface TimeLike {
+  unit_id: string; name: string; start_ma: number; end_ma: number; parent_name?: string;
+}
+
+export function buildPetroleumSystemChart(
+  elements: PsElementLike[], processEvents: PsEventLike[], cycles: CycleLike[], timescale: TimeLike[],
+  meta: { title?: string; grade?: string; timescale?: string; scope?: string } = {},
+): EventsChart {
+  const elementRoles: Array<{ key: EventKind; label: string }> = [
+    { key: 'source', label: 'Source rock' }, { key: 'reservoir', label: 'Reservoir rock' },
+    { key: 'seal', label: 'Seal rock' }, { key: 'overburden', label: 'Overburden rock' },
+  ];
+  const elementRows: EventRow[] = elementRoles.map(({ key, label }) => {
+    const bars = elements.filter((e) => e.element_role === key).map((e) => ({
+      from: Math.max(e.start_ma, e.end_ma), to: Math.min(e.start_ma, e.end_ma), label: e.unit_name,
+      note: [e.effectiveness, e.notes].filter(Boolean).join(' · '), confidence: e.confidence,
+      citationId: e.source_citation_id, status: 'modelled', cycleId: e.basin_cycle_id,
+      qcLithology: isLithologyName(e.unit_name),
+      derived: e.provenance === 'derived-rule' || e.provenance === 'literature-recalled',
+    })).sort((a, b) => b.from - a.from);
+    return { key, label, kind: key, bars, modelled: bars.length > 0, requires: bars.length ? undefined : `${label.toLowerCase()} interpretation` };
+  });
+  const processRows: EventRow[] = processEvents.map((e) => {
+    const hasTime = Number.isFinite(e.start_ma) && Number.isFinite(e.end_ma);
+    // 'derived' rows carry a numeric interval obtained by rule, not by evidence. They
+    // DRAW — leaving them blank would misreport a reasoned inference as an untouched
+    // gap — but they draw flagged, so the chart never passes inference off as evidence.
+    const derived = e.event_status === 'derived';
+    const modelled = (e.event_status === 'modelled' || derived) && hasTime;
+    return {
+      key: e.event_id, label: e.label, kind: 'process', modelled,
+      bars: modelled ? [{ from: Math.max(e.start_ma!, e.end_ma!), to: Math.min(e.start_ma!, e.end_ma!), label: e.label, note: e.notes, confidence: e.certainty, citationId: e.source_citation_id, status: e.event_status, derived }] : [],
+      requires: e.evidence_required || 'reviewed timing evidence',
+    };
+  });
+  const values = [...elements.flatMap((e) => [e.start_ma, e.end_ma]), ...processEvents.flatMap((e) => [e.start_ma, e.end_ma]).filter((v): v is number => Number.isFinite(v))];
+  const oldest = Math.ceil(Math.max(250, ...values) / 10) * 10;
+  const span: [number, number] = [oldest, 0];
+  const periodRows = timescale.filter((p) => p.end_ma < oldest && p.start_ma > 0).map((p) => ({
+    id: p.unit_id, name: p.name, from: Math.min(oldest, p.start_ma), to: Math.max(0, p.end_ma), parent: p.parent_name,
+  })).sort((a, b) => b.from - a.from);
+  const cycleRows = cycles.filter((c) => Number.isFinite(c.age_top_ma) && Number.isFinite(c.age_base_ma)).map((c) => ({
+    id: c.cycle_id, label: c.title || c.cycle_id, from: Math.max(c.age_top_ma!, c.age_base_ma!),
+    to: Math.min(c.age_top_ma!, c.age_base_ma!), contribution: c.contribution,
+  })).sort((a, b) => b.from - a.from);
+  const rows = [...elementRows, ...processRows];
+  return { ...meta, rows, span, periods: periodRows, cycles: cycleRows, modelledRows: rows.filter((r) => r.modelled).length, gapRows: rows.filter((r) => !r.modelled).length };
+}
 
 export function buildEventsChart(units: StratLike[]): EventsChart {
   const pick = (role: string) => units.filter((u) => (u.role || '').toLowerCase() === role);
@@ -260,10 +381,5 @@ export function buildEventsChart(units: StratLike[]): EventsChart {
     { key: 'critical', label: 'Critical moment', kind: 'process', bars: [], modelled: false, requires: 'burial & thermal model' },
   ].map((r) => ({ ...r, modelled: r.modelled && r.bars.length > 0 })) as EventRow[];
 
-  return {
-    rows,
-    span,
-    modelledRows: rows.filter((r) => r.modelled).length,
-    gapRows: rows.filter((r) => !r.modelled).length,
-  };
+  return { rows, span, periods: [], cycles: [], modelledRows: rows.filter((r) => r.modelled).length, gapRows: rows.filter((r) => !r.modelled).length };
 }

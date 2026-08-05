@@ -1,0 +1,56 @@
+name = "arganta-energy-agent"
+main = "src/index.js"
+compatibility_date = "2026-07-15"
+
+# ArgantaEnergy Agent — the LANGUAGE layer only.
+#
+# This Worker replaces exactly one thing: the deterministic grammar in
+# apps/energy/src/agent/grammar.ts. It maps fuzzy English onto a tool call
+# against the capability registry. It never sees petroleum data — every tool
+# executes CLIENT-SIDE against local JSON in the browser, so a client's dataset
+# never leaves their machine, and the model cannot invent a number because it is
+# never handed one to summarise.
+#
+# It exposes an OPENAI-COMPATIBLE endpoint on purpose: @arganta/ai's
+# createLLM({ openaiCompat: { baseUrl } }) then works unmodified, and its
+# readSSE() gives real token streaming — the only real-SSE path in the repo.
+#
+# Why not supabase/functions/llm-proxy: that Edge Function hard-gates on an
+# operator email in the Supabase JWT (403), and apps/energy has no Supabase auth
+# at all. It also has no Anthropic tool-call translation, so a tool-using agent
+# could only reach groq/gemini through it anyway.
+#
+# FOUNDER PREREQUISITES before this goes live:
+#   1. `wrangler secret put AGENT_TOKEN`   — shared bearer the energy client sends
+#      (generate with: openssl rand -hex 32)
+#   2. `wrangler secret put GROQ_API_KEY`  — free tier, tool-calling capable
+#   3. `wrangler deploy` from this directory
+#   4. Point the app at it — in apps/energy/.env.local:
+#        VITE_ENERGY_AGENT_URL=https://arganta-energy-agent.<subdomain>.workers.dev
+#        VITE_ENERGY_AGENT_TOKEN=<the AGENT_TOKEN>
+#   5. (optional) add a route/custom domain, e.g. energy-agent.arganta.app,
+#      mirroring build-artifact-runtime's route block.
+#
+# With no VITE_ENERGY_AGENT_URL set the app runs the deterministic tier and
+# says so in the UI. It never silently mocks.
+
+# Workers AI — the free fallback when GROQ_API_KEY is unset or groq is failing.
+[ai]
+binding = "AI"
+
+[vars]
+# Primary: groq is free-tier and one of the few providers in this repo's catalogue
+# that actually supports tool calling (see supabase/functions/llm-proxy/router.js
+# — the Anthropic shape there returns toolCalls: [] hardcoded).
+GROQ_MODEL = "llama-3.3-70b-versatile"
+# Fallback: Cloudflare Workers AI. Text-capable; tool support is weaker, so the
+# client falls back to the deterministic grammar if no tool call comes back.
+CF_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"
+# Hard ceiling on a single turn. The agent loop is capped at 4 steps client-side.
+MAX_TOKENS = "1024"
+# CORS allowlist (comma-separated) for NON-local origins. Any localhost origin is
+# allowed automatically at ANY port — Vite's autoPort moves the dev port around.
+ALLOWED_ORIGINS = "https://energy.arganta.app"
+
+# AGENT_TOKEN and GROQ_API_KEY are secrets, NOT vars.
+# When AGENT_TOKEN is unset (local `wrangler dev`) auth is skipped so dev is frictionless.

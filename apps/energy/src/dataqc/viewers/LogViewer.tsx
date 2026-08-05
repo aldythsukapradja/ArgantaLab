@@ -1,7 +1,7 @@
 // viewers/LogViewer.tsx — industry-standard composite well-log display.
 //
 // Structural layout (when the curves exist), left to right:
-//   GR          — reversed (150→0 API), so it reads toward "clean" as it approaches RT
+//   GR          — standard 0→150 API, clean/sand at the LEFT, shale at the RIGHT
 //   Litho flag  — narrow automated sand/shale screening strip (GR-based)
 //   Fluid flag  — narrow automated gas/oil screening strip (resistivity + crossover)
 //   RT          — logarithmic (0.2→2000 Ω·m, 4 decades), placed next to GR
@@ -38,7 +38,7 @@ export interface PickMarker { surface: string; md: number }
 // lo/hi is the LEFT/RIGHT edge value — lo>hi means the track reads reversed.
 interface FamilyScale { lo: number; hi: number; log?: boolean }
 const FAMILY_SCALE: Record<string, FamilyScale> = {
-  GR: { lo: 150, hi: 0 },                 // reversed: shale (left) → clean (right, toward RT)
+  GR: { lo: 0, hi: 150 },                  // standard: clean/sand LEFT → shale RIGHT (0–150 API)
   RT: { lo: 0.2, hi: 2000, log: true },    // 4-decade resistivity
   RXO: { lo: 0.2, hi: 2000, log: true },
   RHOB: { lo: 1.95, hi: 2.95 },
@@ -51,14 +51,20 @@ const FAMILY_SCALE: Record<string, FamilyScale> = {
   SW: { lo: 1, hi: 0 },                    // reversed — high water saturation at left, low (oil) at right
   VSH: { lo: 0, hi: 1 },
   PERM: { lo: 0.01, hi: 10000, log: true },
+  // LWD composites — medium resistivity shares RT's log decades so the two plot
+  // comparably (their separation IS the invasion signal); ROP/BS are drilling
+  // channels that ride along on an LWD run.
+  RMED: { lo: 0.2, hi: 2000, log: true },
+  ROP: { lo: 0, hi: 120 },
+  BS: { lo: 0, hi: 40 },
 };
 
 const FLUID_RED = '#e24b4a';   // gas — same red used app-wide (production chart, gate badges)
 const FLUID_GREEN = '#16805a'; // oil
 const SAND_COLOR = '#dcae55';  // litho: sand
 const SHALE_COLOR = '#5c6774'; // litho: shale
-const GR_COLOR = '#a3865e';
-const RT_COLOR = '#50d0b1';
+const GR_COLOR = '#1a9e4c';   // industry-standard: GR track is green
+const RT_COLOR = '#e2352c';   // industry-standard: deep resistivity is red
 const RHOB_COLOR = '#df7084';
 const NPHI_COLOR = '#62aef7';
 const CROSSOVER_FILL = 'rgba(226,75,74,0.16)';

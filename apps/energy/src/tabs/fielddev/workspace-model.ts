@@ -205,6 +205,25 @@ export function buildCurveTypes(
 }
 
 /**
+ * Collapse EXACT duplicate picks — same surface, same measured depth.
+ *
+ * Two picks a metre apart on the same surface are a deviated bore re-entering it
+ * and are kept as two intervals. Two picks at the SAME depth are one pick filed
+ * twice, and keeping both invents a zero-thickness interval that then reports zero
+ * net and drags the field average down. Sorted input is assumed.
+ */
+export function dedupePicks<T extends { surface: string; md: number | null }>(sorted: T[]): T[] {
+  const out: T[] = [];
+  for (const p of sorted) {
+    const prev = out[out.length - 1];
+    // compare at centimetre precision: two picks 0.001 m apart are the same pick
+    if (prev && prev.surface === p.surface && Math.abs((prev.md as number) - (p.md as number)) < 0.01) continue;
+    out.push(p);
+  }
+  return out;
+}
+
+/**
  * The curve types present in EVERY one of the given wells.
  *
  * This is the question a correlation panel actually asks: which track can I draw
