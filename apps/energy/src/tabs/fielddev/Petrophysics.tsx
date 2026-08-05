@@ -24,7 +24,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, BarChart3, Box, Columns3, Database,
-  Layers, Library, LineChart, Sigma, Sparkles, Table2,
+  Library, LineChart, Sigma, Sparkles, Table2,
 } from 'lucide-react';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 import { useWorkspace, commonCurveTypes, commonTops, type Workspace } from './workspace';
@@ -35,6 +35,7 @@ import { PetroCrossplot2D, type Template } from './PetroCrossplot2D';
 import { usePetroCloud } from './petro-cloud';
 import { PetroZonationMatrix } from './PetroZonationMatrix';
 import { PetroCorrelationPanel } from './PetroCorrelationPanel';
+import { PetroCorrelationMap } from './PetroCorrelationMap';
 import { PetroParamsRail } from './PetroParamsRail';
 import { usePetroWell } from './petro-well';
 import { DEFAULT_PARAMS, resolvePublishedArchie, type PetroParams } from './petro-compute';
@@ -154,14 +155,10 @@ const CORRELATION_REGIONS: RegionSpec[] = [
     },
     caveat: 'The datum list is commonTops(selection) — you cannot flatten on a horizon one well lacks, so an unworkable panel is unreachable rather than merely discouraged.',
   },
-  {
-    area: 'aside', step: 'P6', icon: Layers, schematic: 'datum',
-    title: 'Datum & track picker',
-    blurb: 'Choose the flattening horizon and the tracks. Both lists are computed from the selection, so an impossible panel is unreachable rather than merely discouraged.',
-    library: 'workspace-model.commonTops / commonCurveTypes (truth-locked)',
-    component: 'PetroPanelControls',
-    data: (ws) => `${ws.tops.length} pick surfaces · ${ws.curveTypes.length} curve types in the delivery`,
-  },
+  // The datum & track picker that used to sit here is GONE, not moved: the datum
+  // is a Well top you click in the Input tree and the tracks are curve types you
+  // tick there. What the panel still could not say is WHERE the line runs, so the
+  // aside is PetroCorrelationMap — rendered directly, not as a blueprint region.
 ];
 
 const ANALYTICS_REGIONS: RegionSpec[] = [
@@ -402,8 +399,7 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
               {/* Real: every column is our interpretation under the rail's
                   parameters, which is why the rail stays on this pane. */}
               <PetroCorrelationPanel ws={ws} params={params} />
-              {regions.filter((r) => r.area === 'aside')
-                .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
+              <PetroCorrelationMap ws={ws} />
             </>
           ) : pane === 'zonation' ? (
             <>

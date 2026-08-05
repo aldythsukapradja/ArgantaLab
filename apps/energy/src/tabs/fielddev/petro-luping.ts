@@ -77,6 +77,27 @@ export function orderByProduction(wells: string[], cum: CumOil): string[] {
   });
 }
 
+/**
+ * The panel's left-to-right sequence, from the tree's filters.
+ *
+ * Lives here, and not in the panel, because the correlation map draws the SAME
+ * sequence as a line on the field. Two implementations of "which bores, in what
+ * order" is two answers the moment one of them is edited.
+ *
+ *   panelWells  empty = every bore (an empty filter is the absence of one)
+ *   panelOrder  explicit sequence; anything unnamed keeps its production order
+ *               AFTER the named ones, so a partial reorder never drops a bore
+ */
+export function panelSequence(
+  wells: string[], panelWells: string[], panelOrder: string[], cum: CumOil,
+): string[] {
+  const shown = panelWells.length ? wells.filter((w) => panelWells.includes(w)) : wells.slice();
+  const byProd = orderByProduction(shown, cum);
+  if (!panelOrder.length) return byProd;
+  const rank = new Map(panelOrder.map((w, i) => [w, i]));
+  return byProd.slice().sort((a, b) => (rank.get(a) ?? 1e9) - (rank.get(b) ?? 1e9));
+}
+
 /** Long form: one row per bore per zone. */
 export function buildLuping(rows: FieldZoneRow[], order: string[]): LupingRow[] {
   const rank = new Map(order.map((w, i) => [w, i]));

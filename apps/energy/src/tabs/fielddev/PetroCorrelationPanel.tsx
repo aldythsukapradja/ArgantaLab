@@ -25,7 +25,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { select } from 'd3-selection';
 import { zoom as d3zoom, zoomIdentity, type ZoomTransform } from 'd3-zoom';
-import { useCumulativeOil, orderByProduction } from './petro-luping';
+import { useCumulativeOil, panelSequence } from './petro-luping';
 import { Columns3, AlertTriangle, ArrowUpDown, Plus, Minus, Maximize2, X } from 'lucide-react';
 import type { Workspace } from './workspace';
 import type { PetroParams } from './petro-compute';
@@ -103,21 +103,11 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
   }, [curves.bores]);
 
   const model = useMemo(() => {
-    let bores = panelWells.length
-      ? curves.bores.filter((b) => panelWells.includes(b.well))
-      : curves.bores;
+    // The SAME rule the correlation map draws its line from — see panelSequence.
+    const seq = panelSequence(curves.bores.map((b) => b.well), panelWells, panelOrder, cum);
+    const byName = new Map(curves.bores.map((b) => [b.well, b]));
+    const bores = seq.map((w) => byName.get(w)).filter((b): b is BoreCurveSet => !!b);
     if (!bores.length) return null;
-
-    // Explicit sequence wins; anything not named keeps its production order after
-    // the named ones, so a partial reorder never silently drops a bore.
-    if (panelOrder.length) {
-      const rank = new Map(panelOrder.map((w, i) => [w, i]));
-      bores = bores.slice().sort((a, b) => (rank.get(a.well) ?? 999) - (rank.get(b.well) ?? 999));
-    } else {
-      const order = orderByProduction(bores.map((b) => b.well), cum);
-      const rank = new Map(order.map((w, i) => [w, i]));
-      bores = bores.slice().sort((a, b) => (rank.get(a.well) ?? 999) - (rank.get(b.well) ?? 999));
-    }
 
     const shifts = new Map(bores.map((b) => [b.well, hangShift(b, hang, flattenOn)]));
     // Depth window across every bore that CAN be placed. A bore that cannot be
@@ -151,7 +141,28 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
     [curves.bores, hang, flattenOn],
   );
 
-  const height = 460;
+  /**
+   * The canvas fills its pane. A fixed height left the logs stopping short of the
+   * bottom with dead space under them — and worse, it made the visible depth range
+   * a property of a constant rather than of the window you gave it.
+   *
+   * Measured with a ResizeObserver and committed through a functional update that
+   * returns the PREVIOUS state when nothing moved. That is not defensive style: an
+   * observer that setStates unconditionally re-renders, which resizes, which fires
+   * the observer — the "Maximum update depth exceeded" loop this pane has already
+   * been bitten by once.
+   */
+  const [height, setHeight] = useState(460);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const h = Math.max(320, Math.round(el.clientHeight) - 2);
+      setHeight((prev) => (Math.abs(prev - h) < 2 ? prev : h));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const y0 = model ? scaleLinear().domain([model.lo, model.hi]).range([PAD.t + HEAD, height - PAD.b]) : null;
   // DEPTH-ONLY zoom. Scaling x as well would change the column pitch, and a
   // correlation panel's columns are wells — their spacing carries no information

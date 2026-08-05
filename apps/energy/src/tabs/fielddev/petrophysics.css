@@ -270,3 +270,15 @@ html[data-ui="cosmo"] .pcp-datum b{color:var(--purple,#a78bfa);font-weight:600}
 html[data-ui="cosmo"] .pcp-datum i{font-style:normal;color:var(--ink3)}
 html[data-ui="cosmo"] .pcp-datum.none{color:var(--ink3);border-style:dashed}
 html[data-ui="cosmo"] .pcp-datum.none b{color:var(--ink2)}
+
+/* ── PetroCorrelationMap ────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pcm{display:flex;flex-direction:column;min-height:0;gap:0}
+html[data-ui="cosmo"] .pcm-svg{width:calc(100% - 22px);height:auto;flex:0 0 auto;margin:9px 11px 2px;
+  background:var(--panel);border:1px solid var(--line2);border-radius:6px}
+html[data-ui="cosmo"] .pcm-empty{padding:22px 10px;text-align:center;color:var(--ink3);font-size:8.5px}
+html[data-ui="cosmo"] .pcm-foot{display:flex;flex-wrap:wrap;align-items:center;gap:9px;
+  padding:5px 11px;font:7.5px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pcm-foot b{color:var(--ink2);font-weight:600}
+html[data-ui="cosmo"] .pcm-crs{margin-left:auto;opacity:.75}
+html[data-ui="cosmo"] .pcm-note{margin-top:auto;padding:7px 11px;border-top:1px solid var(--line2);
+  background:var(--panel2);font:7px var(--mono);color:var(--ink3);line-height:1.45}
