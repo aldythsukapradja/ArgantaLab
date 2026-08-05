@@ -16,6 +16,9 @@ import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
 import { loadIndex } from '../wb/load';
 import { useAgent } from '../agent/useAgent';
 import { AgentCard } from '../agent/AgentCard';
+import { AgentTrace } from './AgentTrace.tsx';
+import { AgentWelcome } from './AgentWelcome.tsx';
+import type { TurnTrace } from '../agent/types.ts';
 import type { AnswerCard, CardChip } from '../agent/types';
 import { useBridge, type BridgeEngine } from '../agent/bridge/useBridge';
 import type { BridgeEvent } from '../agent/bridge/client';
@@ -180,19 +183,27 @@ type Msg = {
    *  instead of markdown prose — status lines, tool activity, approval prompts,
    *  the completion capsule. */
   bridge?: BridgeMsgKind;
+  /** The receipt for `card` — real pipeline steps, never a narrated monologue. */
+  trace?: TurnTrace;
+  /** The closing line under the card. Grounded against the card or not shown. */
+  summary?: string;
+  /** The opening screen. Rendered live from the loaded gazetteer rather than
+   *  stored as prose, so its figures can never go stale in localStorage. */
+  welcome?: boolean;
 };
 type StreamFlags = { wellPick?: LiveIntent; tourWellPick?: boolean; assistWellPick?: boolean; confirmPick?: boolean };
-const WELCOME: Msg = {
-  role: 'assistant',
-  text: [
-    'Ask me about any **basin**, **country**, **field** or **well** in the catalogue — 14,069 places across USGS, GOGET, Sodir, NSTA, ANP and the Volve bundle.',
-    '',
-    'Try **kutei basin**, **give me insight about Indonesia**, **which basins are in Norway**, or **volve**.',
-    '',
-    'I answer from local files and tell you plainly when something is missing.',
-  ].join('\n'),
-  done: true,
-};
+// The welcome carries no prose at all — see AgentWelcome.tsx, which reads its
+// figures out of the gazetteer that is loaded right now. Persisting it as text
+// is exactly how a stale count outlives the catalogue it described: "14,069
+// places" was true when it was typed and had no way of noticing when it wasn't.
+const WELCOME: Msg = { role: 'assistant', text: '', done: true, welcome: true };
+
+/** Older sessions have the previous hardcoded welcome sitting in localStorage.
+ *  Left alone it would keep quoting that count forever, so it is swapped for
+ *  the live one on the way in. */
+const LEGACY_WELCOME = /^Ask me about any \*\*basin\*\*/;
+const migrate = (list: Msg[]): Msg[] =>
+  list.map((m) => (m.welcome || (m.role === 'assistant' && LEGACY_WELCOME.test(m.text ?? '')) ? WELCOME : m));
 // (The old canned lifecycle reply is gone — every non-tour turn is now a real
 // agent answer rendered as a card.)
 
@@ -282,7 +293,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     try {
       const raw = localStorage.getItem(CHAT_HISTORY_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
-      if (Array.isArray(parsed) && parsed.length) return parsed as Msg[];
+      if (Array.isArray(parsed) && parsed.length) return migrate(parsed as Msg[]);
     } catch { /* corrupt or unavailable — start fresh */ }
     return [WELCOME];
   });
@@ -429,6 +440,42 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
 
   useEffect(() => { if (bridge.status === 'open') setBridgeDialogOpen(false); }, [bridge.status]);
 
+  // Keep the chat panel pinned to the VISIBLE area, not the layout viewport.
+  // On iOS the software keyboard does not shrink the layout viewport, so a
+  // `position:fixed; top:0` panel keeps its full height and its header (with the
+  // Close button) slides out of sight above the keyboard. visualViewport is the
+  // only thing that reports where the user can actually see, so it drives the
+  // panel's top/height directly. Desktop is untouched — the CSS that consumes
+  // these vars is inside the mobile breakpoint, and both fall back sanely.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const root = document.documentElement;
+    const apply = () => {
+      const height = Math.round(vv.height);
+      // A zero/absurd reading (seen when the surface is measured before it is
+      // laid out) would otherwise collapse the panel to nothing. Keep the last
+      // good value — or the CSS fallback — instead of writing a broken one.
+      if (!Number.isFinite(height) || height < 120) return;
+      root.style.setProperty('--cc-vv-h', `${height}px`);
+      root.style.setProperty('--cc-vv-top', `${Math.round(vv.offsetTop)}px`);
+    };
+    apply();
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
+    // visualViewport does not always fire for rotation or a window resize.
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', apply);
+    return () => {
+      vv.removeEventListener('resize', apply);
+      vv.removeEventListener('scroll', apply);
+      window.removeEventListener('resize', apply);
+      window.removeEventListener('orientationchange', apply);
+      root.style.removeProperty('--cc-vv-h');
+      root.style.removeProperty('--cc-vv-top');
+    };
+  }, []);
+
   const bridgeHttpBase = (bridgeUrl || 'ws://127.0.0.1:7717').trim().replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:').replace(/\/+$/, '');
 
   const connectBridge = () => {
@@ -540,7 +587,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     // already been grounding-checked and is usually empty by design.
     void agent.ask(t).then((answer) => {
       if (!answer) { streamAssistant("I couldn't read that — try naming a basin, country, field or well."); return; }
-      setMsgs((m) => [...m, { role: 'assistant', text: answer.text, done: true, card: answer.card }]);
+      setMsgs((m) => [...m, { role: 'assistant', text: answer.text, done: true, card: answer.card, trace: answer.trace, summary: answer.summary }]);
     });
   };
 
@@ -687,13 +734,10 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     <div className={'cosmo-canvas ' + (open ? 'open' : '') + (full ? ' full' : '')} id="cosmoCanvas">
       <div className="cc-top">
         <div className="g"><CosmoAgentOrb size={26} /></div>
+        {/* Title only. The scope breadcrumb lives in the Scope Bar on the
+            surfaces themselves — repeating it here just crowded the header. */}
         <div className="cc-top-title">
           <div className="tt">Arganta</div>
-          {/* Only ever the live scope breadcrumb, never a static filler line —
-              and it truncates (see CSS) instead of stretching the header, since
-              a real breadcrumb ("Asia Pacific › Indonesia › Kutei Basin › Badak…")
-              can get long. */}
-          {agent.breadcrumb && <div className="sub">{agent.breadcrumb}</div>}
         </div>
         <div className="sp" />
         {/* Says which tier answered — "CORE"/"LITE" only. The live model name
@@ -780,7 +824,15 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                 <div className="who" style={m.role === 'user' ? { textAlign: 'right' } : undefined}>{m.role === 'user' ? 'YOU' : 'ARGANTA'}</div>
                 <div className="bub">
                   {m.role === 'assistant'
-                    ? (m.bridge
+                    ? (m.welcome
+                      ? <AgentWelcome
+                          index={agent.index}
+                          tier={agent.tier}
+                          activeModel={agent.activeModel}
+                          workerConfigured={agent.workerConfigured}
+                          onChip={send}
+                        />
+                      : m.bridge
                       ? <BridgeFeedItem item={m.bridge} fileBase={bridgeHttpBase} token={bridgeToken} onResolve={(id, ok, input) => {
                           bridge.respondApproval(id, ok, input);
                           setMsgs((cur) => cur.map((x) => (x.bridge?.kind === 'approval' && x.bridge.approvalId === id
@@ -790,6 +842,8 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                         ? (<>
                           {m.text && <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) }} />}
                           <AgentCard card={m.card} onChip={onChip} />
+                          {m.summary && <p className="ag-summary">{m.summary}</p>}
+                          {m.trace && <AgentTrace trace={m.trace} />}
                         </>)
                         : m.text
                           ? (<>

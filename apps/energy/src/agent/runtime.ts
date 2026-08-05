@@ -59,14 +59,26 @@ export interface TurnOutcome {
   trail: Record<string, unknown>[];
 }
 
-export interface ActiveModel { provider: string; model: string }
+export interface ActiveModel {
+  provider: string;
+  model: string;
+  /** The whole ladder the Worker will try, in order. `provider`/`model` are its
+   *  head — the PREFERRED provider, which is not the same claim as the one that
+   *  answered. When groq is configured but failing, health still lists it first
+   *  and Workers AI does the work; only the turn's own trace knows which ran. */
+  ladder: { provider: string; model: string }[];
+}
 
 /**
- * What the Worker is ACTUALLY configured to run, read from its own /v1/health.
- * Never a picker, never a guess — Core/Lite has exactly one live model, fixed by
- * the Worker's GROQ_MODEL env var, and this reports that fact rather than
- * implying a choice that doesn't exist. Returns null if unconfigured, unreachable,
- * or reporting no provider (the deterministic tier, honestly, with nothing to show).
+ * What the Worker is configured to try, read from its own /v1/health.
+ *
+ * This is an AVAILABILITY report, not an attribution: health can only say which
+ * providers have credentials, in preference order. Which one actually served a
+ * given turn is knowable only after the fact, from that turn's trace. Callers
+ * must not present the head of this ladder as "the model that answered".
+ *
+ * Returns null if unconfigured, unreachable, or reporting no provider — the
+ * deterministic tier, honestly, with nothing to show.
  */
 export async function fetchActiveModel(): Promise<ActiveModel | null> {
   if (!BASE) return null;
@@ -74,8 +86,9 @@ export async function fetchActiveModel(): Promise<ActiveModel | null> {
     const res = await fetch(`${BASE}/v1/health`, { signal: AbortSignal.timeout(4000) });
     if (!res.ok) return null;
     const body = await res.json() as { providers?: { name: string; model: string }[] };
-    const first = body.providers?.[0];
-    return first ? { provider: first.name, model: first.model } : null;
+    const ladder = (body.providers ?? []).map((p) => ({ provider: p.name, model: p.model }));
+    const first = ladder[0];
+    return first ? { ...first, ladder } : null;
   } catch {
     return null;
   }

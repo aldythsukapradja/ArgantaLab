@@ -37,6 +37,15 @@ export interface Intent {
   usesFocus: boolean;
   matchedPhrase?: string;
   confidence: number;
+  /** The whole utterance, folded but with nothing cut out.
+   *
+   *  The parser has no catalogue, so it cannot know that a word it is about to
+   *  treat as a capability phrase is really part of a name. "Khuff Formation"
+   *  lost its kind word to the `formation` phrase and the bare "Khuff" then
+   *  matched a FIELD of that name — an exact catalogue entry beaten by a guess.
+   *  Keeping the original lets the resolver, which does have the catalogue,
+   *  check for an exact name before trusting the cut. */
+  fullQuery: string;
 }
 
 // ── lexicon ──────────────────────────────────────────────────────────────────
@@ -125,7 +134,7 @@ function isFocusReference(text: string): boolean {
 export function parse(query: string): Intent {
   const original = fold(query);
   if (!original) {
-    return { verb: 'help', capabilityIds: [], entityQuery: '', usesFocus: false, confidence: 0 };
+    return { verb: 'help', capabilityIds: [], entityQuery: '', usesFocus: false, confidence: 0, fullQuery: '' };
   }
 
   let rest = original;
@@ -182,10 +191,11 @@ export function parse(query: string): Intent {
       usesFocus: comparison[0] === '',
       matchedPhrase,
       confidence: 0.8,
+      fullQuery: original,
     };
   }
 
-  return { verb, capabilityIds, entityQuery, usesFocus, matchedPhrase, confidence };
+  return { verb, capabilityIds, entityQuery, usesFocus, matchedPhrase, confidence, fullQuery: original };
 }
 
 /** "compare volve and ekofisk" · "volve vs ekofisk" · "compare with kutei". */

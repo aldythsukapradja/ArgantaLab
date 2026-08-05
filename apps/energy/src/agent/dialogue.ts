@@ -42,6 +42,29 @@ export interface Turn {
   history: TurnRecord[];
 }
 
+/** Facts the turn genuinely produced, for the reasoning trace. Recorded as the
+ *  turn runs — never reconstructed or embellished afterwards. */
+export interface TurnFacts {
+  /** The grammar's reading: verb, whether it referred back to the focus. */
+  verb: string;
+  usesFocus: boolean;
+  /** What the user typed for the entity ('' when they said "it"/"there"). */
+  query: string;
+  /** How the entity was settled. Absent when no resolution was attempted
+   *  (a focus reference, or a pending answer). */
+  resolution?: {
+    status: 'exact' | 'corrected' | 'ambiguous' | 'none';
+    /** Which rung of the five-stage ladder matched. */
+    stage?: string;
+    distance?: number;
+    matched?: string;
+    nodeName?: string;
+    nodeKind?: string;
+    /** Contenders, when the name was genuinely ambiguous. */
+    candidates?: string[];
+  };
+}
+
 export interface TurnResult {
   turn: Turn;
   card: AnswerCard;
@@ -49,6 +72,7 @@ export interface TurnResult {
    *  agent must never navigate while it is still unsure what was asked. */
   commands: AgentPlan['commands'];
   plan: AgentPlan | null;
+  facts: TurnFacts;
 }
 
 export function newTurn(): Turn {
@@ -133,6 +157,7 @@ export function respond(index: GazIndex, turn: Turn, text: string, scope: Scope)
       card,
       commands: [],
       plan: null,
+      facts: { verb: intent.verb, usesFocus: false, query: text.trim() },
     };
   }
 
@@ -150,6 +175,9 @@ export function respond(index: GazIndex, turn: Turn, text: string, scope: Scope)
  */
 export function runIntent(index: GazIndex, turn: Turn, intent: Intent, text: string, scope: Scope): TurnResult {
   const ctx = { index, scope };
+  // Filled in as the turn actually proceeds — see TurnFacts. Never back-filled
+  // with anything the pipeline did not really do.
+  const facts: TurnFacts = { verb: intent.verb, usesFocus: intent.usesFocus, query: intent.entityQuery };
   const record = (next: Turn, card: AnswerCard, nodeId: string | null, capabilityId: string | null): Turn => ({
     ...next,
     history: [...turn.history, { text, cardKind: card.kind, nodeId, capabilityId }].slice(-24),
@@ -162,11 +190,11 @@ export function runIntent(index: GazIndex, turn: Turn, intent: Intent, text: str
     if (!left || !right) {
       const missing = !left ? (intent.entityQuery || 'the first item') : intent.secondEntityQuery;
       const card = unresolvedCard(missing, right && !left ? [] : []);
-      return { turn: record({ ...turn, pending: null }, card, null, null), card, commands: [], plan: null };
+      return { turn: record({ ...turn, pending: null }, card, null, null), card, commands: [], plan: null, facts };
     }
     const card = comparisonCard(left, right);
     const next: Turn = { ...turn, focus: left, ladder: ladderFor(index, left), pending: null };
-    return { turn: record(next, card, left.id, null), card, commands: [], plan: null };
+    return { turn: record(next, card, left.id, null), card, commands: [], plan: null, facts };
   }
 
   // ── 3 · which entity? ─────────────────────────────────────────────────────
@@ -180,16 +208,69 @@ export function runIntent(index: GazIndex, turn: Turn, intent: Intent, text: str
         provenance: ['ArgantaEnergy catalogue'],
         body: 'You referred to something we have not talked about yet. Name a basin, country, field or well.',
       };
-      return { turn: record({ ...turn, pending: null }, card, null, null), card, commands: [], plan: null };
+      return { turn: record({ ...turn, pending: null }, card, null, null), card, commands: [], plan: null, facts };
     }
-    return runOn(index, turn, turn.focus, intent, ctx, record);
+    return runOn(index, turn, turn.focus, intent, ctx, record, facts);
   }
 
-  const resolution = resolve(index, intent.entityQuery, { scope });
+  // An exact catalogue name beats the parser's guess about what was a phrase.
+  //
+  // The parser has no catalogue. Faced with "Khuff Formation" it read the kind
+  // word as the `formation` capability phrase, leaving "Khuff" — which exactly
+  // matched a FIELD of that name, so the user who typed a formation's full name
+  // got a gas field and a refusal. The rule is narrow on purpose: only an EXACT
+  // match on the untouched utterance overrides the cut, so it can never rescue
+  // a genuine phrase query, and the capability the phrase named is kept.
+  let resolution = resolve(index, intent.entityQuery, { scope });
+  if (intent.matchedPhrase && intent.entityQuery) {
+    // The phrase could have been cut from either end of the name, and the
+    // utterance may also carry a genuine verb — so put the phrase back on both
+    // sides and try the untouched utterance too. Only an EXACT hit wins, which
+    // is what keeps this from rescuing a real phrase query by accident.
+    // When two capability words appear in one utterance the parser cuts the
+    // first it finds, which is not always the right one: "overview Khuff
+    // Formation" lost `formation` (part of the name) and kept `overview` (the
+    // real request), leaving the nonsense "overview khuff". So also try
+    // dropping one leading or trailing token before re-attaching the phrase.
+    const words = intent.entityQuery.split(/\s+/).filter(Boolean);
+    const trimmed = words.length > 1
+      ? [words.slice(1).join(' '), words.slice(0, -1).join(' ')]
+      : [];
+    const retries = [
+      `${intent.entityQuery} ${intent.matchedPhrase}`,
+      `${intent.matchedPhrase} ${intent.entityQuery}`,
+      ...trimmed.flatMap((t) => [`${t} ${intent.matchedPhrase}`, `${intent.matchedPhrase} ${t}`]),
+      intent.fullQuery,
+    ];
+    for (const attempt of retries) {
+      if (!attempt || attempt === intent.entityQuery) continue;
+      const whole = resolve(index, attempt, { scope });
+      if (whole.status === 'exact' && whole.candidate.stage === 'exact'
+        && (resolution.status !== 'exact' || resolution.node.id !== whole.node.id)) {
+        resolution = whole;
+        break;
+      }
+    }
+  }
+  facts.resolution = {
+    status: resolution.status,
+    ...(resolution.status === 'exact' || resolution.status === 'corrected'
+      ? {
+        stage: resolution.candidate.stage,
+        distance: resolution.candidate.distance,
+        matched: resolution.candidate.matched,
+        nodeName: resolution.node.name,
+        nodeKind: resolution.node.kind,
+      }
+      : {}),
+    ...(resolution.status === 'ambiguous'
+      ? { candidates: resolution.candidates.map((c) => c.node.displayName) }
+      : {}),
+  };
 
   if (resolution.status === 'none') {
     const card = unresolvedCard(intent.entityQuery, resolution.suggestions);
-    return { turn: record({ ...turn, pending: null }, card, null, null), card, commands: [], plan: null };
+    return { turn: record({ ...turn, pending: null }, card, null, null), card, commands: [], plan: null, facts };
   }
 
   if (resolution.status === 'ambiguous') {
@@ -198,7 +279,7 @@ export function runIntent(index: GazIndex, turn: Turn, intent: Intent, text: str
       ...turn,
       pending: { kind: 'disambiguate', candidates: resolution.candidates, forIntent: intent, query: intent.entityQuery },
     };
-    return { turn: record(next, card, null, null), card, commands: [], plan: null };
+    return { turn: record(next, card, null, null), card, commands: [], plan: null, facts };
   }
 
   if (resolution.status === 'corrected' && !resolution.autoApply) {
@@ -209,13 +290,13 @@ export function runIntent(index: GazIndex, turn: Turn, intent: Intent, text: str
       ...turn,
       pending: { kind: 'confirm-correction', node: resolution.node, from: resolution.from, forIntent: intent },
     };
-    return { turn: record(next, card, null, null), card, commands: [], plan: null };
+    return { turn: record(next, card, null, null), card, commands: [], plan: null, facts };
   }
 
   const interpretation = resolution.status === 'corrected'
     ? { from: resolution.from, to: resolution.node.name, reason: `interpreted as ${resolution.node.displayName}` }
     : undefined;
-  return runOn(index, turn, resolution.node, intent, ctx, record, interpretation);
+  return runOn(index, turn, resolution.node, intent, ctx, record, facts, interpretation);
 }
 
 // ── running a capability against a settled entity ────────────────────────────
@@ -227,6 +308,7 @@ function runOn(
   intent: Intent,
   ctx: { index: GazIndex; scope: Scope },
   record: (next: Turn, card: AnswerCard, nodeId: string | null, capabilityId: string | null) => Turn,
+  facts: TurnFacts,
   interpretation?: AgentPlan['interpretation'],
 ): TurnResult {
   const plan = buildPlan(node, intent, ctx);
@@ -253,6 +335,7 @@ function runOn(
     card: plan.card,
     commands: navigates ? plan.commands : [],
     plan,
+    facts,
   };
 }
 
@@ -270,11 +353,20 @@ function answerPending(
     ...next,
     history: [...turn.history, { text, cardKind: card.kind, nodeId, capabilityId: null }].slice(-24),
   });
+  // On these paths the entity was settled by the USER choosing it, not by the
+  // matcher — the trace says exactly that rather than claiming a match stage.
+  const chosenFacts = (node: GazIndexed, forIntent: Intent, how: string): TurnFacts => ({
+    verb: forIntent.verb,
+    usesFocus: false,
+    query: text.trim(),
+    resolution: { status: 'exact', stage: how, nodeName: node.name, nodeKind: node.kind },
+  });
 
   if (pending.kind === 'confirm-correction') {
     if (YES.has(t)) {
       return runOn(index, { ...turn, pending: null }, pending.node, pending.forIntent, ctx,
         (next, card, nodeId) => record(next, card, nodeId),
+        chosenFacts(pending.node, pending.forIntent, 'confirmed correction'),
         { from: pending.from, to: pending.node.name, reason: 'confirmed' });
     }
     if (NO.has(t)) {
@@ -286,13 +378,20 @@ function answerPending(
         provenance: ['ArgantaEnergy catalogue'],
         body: `I could not find "${pending.from}". Try the full name, or a country to browse from.`,
       };
-      return { turn: record({ ...turn, pending: null }, card, null), card, commands: [], plan: null };
+      return {
+        turn: record({ ...turn, pending: null }, card, null),
+        card,
+        commands: [],
+        plan: null,
+        facts: { verb: pending.forIntent.verb, usesFocus: false, query: pending.from, resolution: { status: 'none' } },
+      };
     }
     // The user named it outright instead of answering yes/no.
     const direct = pickFromOffer(text, [pending.node]);
     if (direct) {
       return runOn(index, { ...turn, pending: null }, direct, pending.forIntent, ctx,
-        (next, card, nodeId) => record(next, card, nodeId));
+        (next, card, nodeId) => record(next, card, nodeId),
+        chosenFacts(direct, pending.forIntent, 'named directly'));
     }
     return null;
   }
@@ -301,15 +400,18 @@ function answerPending(
     const chosen = pickFromOffer(text, pending.candidates.map((c) => c.node));
     if (!chosen) return null;
     return runOn(index, { ...turn, pending: null }, chosen, pending.forIntent, ctx,
-      (next, card, nodeId) => record(next, card, nodeId));
+      (next, card, nodeId) => record(next, card, nodeId),
+      chosenFacts(chosen, pending.forIntent, 'picked from the list'));
   }
 
   // drill-down: a bare name or ordinal answers "Which field?". Anything else is
   // a new question, and the rung is simply abandoned.
   const chosen = pickFromOffer(text, pending.options);
   if (!chosen) return null;
-  return runOn(index, { ...turn, pending: null }, chosen, parse(chosen.name), ctx,
-    (next, card, nodeId) => record(next, card, nodeId));
+  const rungIntent = parse(chosen.name);
+  return runOn(index, { ...turn, pending: null }, chosen, rungIntent, ctx,
+    (next, card, nodeId) => record(next, card, nodeId),
+    chosenFacts(chosen, rungIntent, 'picked from the drill-down'));
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

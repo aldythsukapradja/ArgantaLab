@@ -308,3 +308,46 @@ export interface AgentPlan {
   /** Set when the plan came from a corrected or guessed reading of the query. */
   interpretation?: { from: string; to: string; reason: string };
 }
+
+// ── Reasoning trace ──────────────────────────────────────────────────────────
+// What ACTUALLY happened on a turn, recorded as it happens.
+//
+// This is not a chain of thought and must never be dressed up as one. The model
+// is asked to do exactly one thing — pick a tool — and everything else is
+// deterministic code. So the trace reports facts the pipeline genuinely
+// produced (which resolver stage matched, what the probe found, which commands
+// ran), never an invented monologue. Where a step took no measurable time, it
+// says so rather than pretending to deliberate.
+
+export type TraceKind =
+  | 'parse'      // the grammar's reading of the utterance
+  | 'resolve'    // which entity, via which matching stage
+  | 'capability' // what was chosen, and whether its data probe passed
+  | 'data'       // what the catalogue actually holds for it
+  | 'action'     // commands pushed onto the bus
+  | 'model'      // a real LLM call (language tier only)
+  | 'tool'       // a real tool execution inside the agent loop
+  | 'note';      // an honest caveat (fell back, refused, degraded)
+
+export interface TraceStep {
+  kind: TraceKind;
+  label: string;
+  value: string;
+  /** Secondary evidence — "phonetic · distance 1", "142 ms", "$0.0003". */
+  detail?: string;
+  /** Pass/fail where the step is a check. Undefined = not a check. */
+  ok?: boolean;
+  /** How many times this identical step actually occurred. Set only when >1 —
+   *  adjacent repeats are folded for readability, never removed, and the count
+   *  shown is the real count. */
+  repeat?: number;
+}
+
+export interface TurnTrace {
+  steps: TraceStep[];
+  /** Which tier answered. */
+  tier: 'lite' | 'core';
+  /** Real wall-clock for the turn. Sub-millisecond work is reported honestly
+   *  rather than padded to look like effort. */
+  ms: number;
+}

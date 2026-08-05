@@ -155,6 +155,9 @@ export function toolCallToIntent(toolName: string, rawArgs: unknown): Intent {
       secondEntityQuery: queryB || undefined,
       usesFocus: queryA === '',
       confidence: queryB ? 0.9 : 0.3,
+      // A tool call has no utterance to re-read: the model already told us the
+      // entity outright, so there is no phrase-vs-name ambiguity to resolve.
+      fullQuery: queryA,
     };
   }
 
@@ -170,6 +173,9 @@ export function toolCallToIntent(toolName: string, rawArgs: unknown): Intent {
     usesFocus: query === '',
     matchedPhrase: known?.phrases[0],
     confidence: known ? 0.95 : 0.3,
+    // Same as above: the entity arrived as its own argument, so it was never
+    // cut out of a longer utterance and there is nothing to reconsider.
+    fullQuery: query,
   };
 }
 

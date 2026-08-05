@@ -20,6 +20,9 @@ import { suggest, type Candidate } from './resolve.ts';
 import { agentEnabled, fetchActiveModel, runTurn, tier as currentTier, type ActiveModel, type Tier } from './runtime.ts';
 import { TOOL_NAMES, toolCallToIntent } from './tools.ts';
 import { enforceGrounding, toolSummary } from './guard.ts';
+import { buildTrace } from './trace.ts';
+import { summarise } from './summary.ts';
+import type { TurnTrace } from './types.ts';
 
 export interface AgentAnswer {
   card: AnswerCard;
@@ -28,6 +31,11 @@ export interface AgentAnswer {
   tier: Tier;
   /** Set when the tier tried the Worker and fell back. */
   fellBack: boolean;
+  /** What actually happened, step by step. Never a synthesised monologue. */
+  trace: TurnTrace;
+  /** The closing line — what the card means, in one or two sentences. Empty when
+   *  nothing could be said without inventing a figure. */
+  summary: string;
 }
 
 export interface UseAgent {
@@ -96,6 +104,7 @@ export function useAgent(): UseAgent {
 
   const ask = useCallback(async (text: string): Promise<AgentAnswer | null> => {
     if (!index || !text.trim()) return null;
+    const startedAt = performance.now();
     setBusy(true);
     try {
       const scope = useStore.getState().scope;
@@ -107,6 +116,7 @@ export function useAgent(): UseAgent {
         // ask for things a user could have typed. What goes BACK to the model is
         // a number-free summary — it never sees a figure it could restate wrong.
         let produced: AnswerCard | null = null;
+        let producedResult: ReturnType<typeof runIntent> | null = null;
         const executeTool = async (name: string, args: Record<string, unknown>) => {
           if (!TOOL_NAMES.has(name)) return { error: 'no such tool' };
           const result = runIntent(index, turnRef.current, toolCallToIntent(name, args), text, scope);
@@ -114,11 +124,13 @@ export function useAgent(): UseAgent {
           dispatch(result.commands);
           setBreadcrumb(ladderLabel(result.turn));
           produced = result.card;
+          producedResult = result;
           return { ok: true, summary: toolSummary(result.card) };
         };
 
         const outcome = await runTurn(text, executeTool);
-        if (produced) {
+        if (produced && producedResult) {
+          const settled = producedResult as ReturnType<typeof runIntent>;
           setTier('core');
           // The model's own prose is gated: any number not in the card or in the
           // user's own words means the whole utterance is discarded.
@@ -127,7 +139,24 @@ export function useAgent(): UseAgent {
             // eslint-disable-next-line no-console
             console.warn('[agent] discarded ungrounded prose', guarded.violations);
           }
-          return { card: produced, text: guarded.text, tier: 'core', fellBack: false };
+          const coreTrace = buildTrace({
+              facts: settled.facts,
+              card: settled.card,
+              capabilityId: settled.plan?.capabilityId ?? null,
+              commands: settled.commands,
+              node: turnRef.current.focus,
+            trail: outcome.trail,
+            tier: 'core',
+            elapsedMs: performance.now() - startedAt,
+          });
+          return {
+            card: produced,
+            text: guarded.text,
+            tier: 'core',
+            fellBack: false,
+            trace: coreTrace,
+            summary: summarise(settled.card, settled.facts, coreTrace).text,
+          };
         }
         // 'no-model' is the adapter honestly reporting it fell back to its mock;
         // any other barren outcome means the model declined to pick a tool. Both
@@ -141,7 +170,24 @@ export function useAgent(): UseAgent {
       setBreadcrumb(ladderLabel(result.turn));
       const fellBack = agentEnabled;
       setTier(fellBack ? 'lite' : currentTier());
-      return { card: result.card, text: '', tier: 'lite', fellBack };
+      const liteTrace = buildTrace({
+          facts: result.facts,
+          card: result.card,
+          capabilityId: result.plan?.capabilityId ?? null,
+          commands: result.commands,
+          node: turnRef.current.focus,
+        tier: 'lite',
+        elapsedMs: performance.now() - startedAt,
+        fellBack,
+      });
+      return {
+        card: result.card,
+        text: '',
+        tier: 'lite',
+        fellBack,
+        trace: liteTrace,
+        summary: summarise(result.card, result.facts, liteTrace).text,
+      };
     } finally {
       setBusy(false);
     }

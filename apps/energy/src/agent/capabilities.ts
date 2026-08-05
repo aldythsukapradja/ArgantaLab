@@ -71,6 +71,33 @@ const chip = (label: string, query: string, hint?: string, count?: number): Card
 const nodeChips = (nodes: GazIndexed[], limit = 8): CardChip[] =>
   nodes.slice(0, limit).map((n) => chip(n.name, n.name, n.displayName !== n.name ? n.displayName : undefined));
 
+/** The other things this node can actually answer, as chips.
+ *
+ *  A card with no chips is a cul-de-sac: the answer is correct and the user has
+ *  nowhere to go from it but the text box. Five capabilities shipped that way,
+ *  each individually reasonable — which is why this is computed from the
+ *  registry rather than hand-listed per card. It stays right as capabilities
+ *  are added, and it can never offer something that is not there, because the
+ *  offer is gated on the same `probe` the real answer is gated on.
+ *
+ *  `exclude` is the capability doing the asking — offering to show you what you
+ *  are already looking at is worse than offering nothing. */
+function alsoAvailable(node: GazIndexed, exclude: string, limit = 4): CardChip[] {
+  const out: CardChip[] = [];
+  for (const capability of CAPABILITIES) {
+    if (capability.id === exclude) continue;
+    if (!capability.kinds.includes(node.kind)) continue;
+    let ok = false;
+    try { ok = capability.probe(node); } catch { ok = false; }
+    if (!ok) continue;
+    const phrase = capability.phrases[0];
+    if (!phrase) continue;
+    out.push(chip(capability.label, `${phrase} ${node.name}`, `for ${node.name}`));
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /** Set scope at the level this node fills, letting the brain fill ancestors. */
 function scopeTo(node: GazIndexed): AgentCommand[] {
   const level = levelForKind(node.kind);
@@ -139,7 +166,7 @@ export const CAPABILITIES: Capability[] = [
         { label: 'Position', value: `${n.fly!.lat.toFixed(3)}°, ${n.fly!.lon.toFixed(3)}°`, source: n.sources[0] },
         ...(n.bbox ? [{ label: 'Extent', value: `${(n.bbox[2] - n.bbox[0]).toFixed(1)}° × ${(n.bbox[3] - n.bbox[1]).toFixed(1)}°`, source: n.sources[0], note: 'Screening-scale geometry (~1:5,000,000).' }] : []),
       ],
-      chips: [],
+      chips: alsoAvailable(n, 'map.fly'),
       provenance: prov(n),
     }),
   },
@@ -165,7 +192,7 @@ export const CAPABILITIES: Capability[] = [
           { label: 'Basins', value: plural(asNumber(n.has.basins), 'basin'), source: 'USGS DDS-69' },
           { label: 'Countries with known fields', value: num(countries.length), source: 'derived' },
         ],
-        chips: nodeChips(countries, 10),
+        chips: nodeChips(countries, 10).length ? nodeChips(countries, 10) : alsoAvailable(n, ''),
         provenance: prov(n),
         body: `${n.name} holds ${plural(asNumber(n.has.basins), 'assessed province')}. Pick a country to narrow.`,
       };
@@ -341,7 +368,7 @@ export const CAPABILITIES: Capability[] = [
           ? [{ label: 'Rights-restricted', value: num(asNumber(n.has.figures) - asNumber(n.has.openFigures)), note: 'Held back — third-party rightsholder.' }]
           : []),
       ],
-      chips: [],
+      chips: alsoAvailable(n, 'basin.figures'),
       provenance: prov(n),
     }),
   },
@@ -366,7 +393,7 @@ export const CAPABILITIES: Capability[] = [
           value: `${plural(asNumber(s.has.assessmentUnits), 'assessment unit')}${asBool(s.has.sourceRock) ? ' · source rock named' : ''}`,
           source: 'USGS',
         })),
-        chips: nodeChips(systems, 8),
+        chips: nodeChips(systems, 8).length ? nodeChips(systems, 8) : alsoAvailable(n, ''),
         provenance: prov(n),
       };
     },
@@ -393,7 +420,7 @@ export const CAPABILITIES: Capability[] = [
           source: 'USGS',
           note: asBool(a.has.assessed) ? undefined : 'Not assessed is not the same as zero.',
         })),
-        chips: nodeChips(direct, 10),
+        chips: nodeChips(direct, 10).length ? nodeChips(direct, 10) : alsoAvailable(n, ''),
         provenance: prov(n),
       };
     },
@@ -420,7 +447,7 @@ export const CAPABILITIES: Capability[] = [
           source: 'Arganta KB',
           note: asBool(c.has.cited) ? undefined : 'Interpreted, not yet cited.',
         })),
-        chips: [],
+        chips: alsoAvailable(n, 'basin.cycles'),
         provenance: prov(n, 'Arganta KB'),
       };
     },
@@ -440,7 +467,7 @@ export const CAPABILITIES: Capability[] = [
       headline: `Analogues — ${n.name}`,
       subhead: 'Cycle-signature matching',
       facts: [{ label: 'Cycles available to match on', value: num(asNumber(n.has.cycles)), source: 'Arganta KB' }],
-      chips: [],
+      chips: alsoAvailable(n, 'basin.analogs'),
       provenance: prov(n),
       body: 'Opened the Basin Analog Library. Matching is by geodynamic context and cycle signature, not hidden similarity.',
     }),
@@ -489,7 +516,11 @@ export const CAPABILITIES: Capability[] = [
           { label: 'Fields inside', value: num(asNumber(n.has.fields)), source: 'GOGET ∩ USGS polygon' },
           ...resourceFacts(n),
         ],
-        chips: twin ? [chip(`${twin.name} (basin)`, twin.name, 'The same geography one tier up')] : [],
+        // An AU without a basin twin still needs a way onward — a correct answer
+        // you cannot navigate from is a dead end however correct it is.
+        chips: twin
+          ? [chip(`${twin.name} (basin)`, twin.name, 'The same geography one tier up'), ...alsoAvailable(n, 'au.overview', 3)]
+          : alsoAvailable(n, 'au.overview'),
         provenance: prov(n),
         body: twin ? `${n.name} also exists as a basin in the Knowledge Bank — I answered at the assessment-unit tier.` : undefined,
       };
@@ -554,7 +585,7 @@ export const CAPABILITIES: Capability[] = [
         { label: 'Production data', value: 'available', source: asBool(n.has.bundle) ? 'Volve · Sodir' : 'GOGET' },
         ...(asBool(n.has.bundle) ? [{ label: 'Wells with production', value: 'see surveillance dossier', source: 'Volve' }] : []),
       ],
-      chips: [],
+      chips: alsoAvailable(n, 'field.production'),
       provenance: prov(n),
       body: asBool(n.has.bundle) ? undefined
         : 'GOGET carries annual field totals only — not well-level rates.',
@@ -575,7 +606,7 @@ export const CAPABILITIES: Capability[] = [
       headline: `Reserves — ${n.name}`,
       subhead: 'Reported volumes',
       facts: [{ label: 'Reserves record', value: 'available', source: 'GOGET' }],
-      chips: [],
+      chips: alsoAvailable(n, 'field.reserves'),
       provenance: prov(n),
       body: 'Reported volumes vary by vintage and classification; the dossier shows the basis for each figure.',
     }),
@@ -602,7 +633,7 @@ export const CAPABILITIES: Capability[] = [
         { label: 'Pressure', value: asBool(n.has.pressure) ? 'present' : 'absent', source: 'Volve' },
         { label: 'Drilling', value: asBool(n.has.drilling) ? 'present' : 'absent', source: 'Volve' },
       ],
-      chips: [],
+      chips: alsoAvailable(n, 'field.qc'),
       provenance: prov(n),
     }),
   },
@@ -650,7 +681,7 @@ export const CAPABILITIES: Capability[] = [
         { label: 'Wells', value: num(asNumber(n.has.wells)), source: 'Volve' },
         { label: 'Pressure data', value: asBool(n.has.pressure) ? 'present' : 'absent', source: 'Volve' },
       ],
-      chips: [],
+      chips: alsoAvailable(n, 'field.surveillance'),
       provenance: prov(n),
     }),
   },
@@ -678,7 +709,7 @@ export const CAPABILITIES: Capability[] = [
         { label: 'Logs', value: 'available', source: 'Volve' },
         ...(n.metrics?.tdMd != null ? [{ label: 'TD (MD)', value: `${num(n.metrics.tdMd)} m`, source: 'Sodir' }] : []),
       ],
-      chips: [],
+      chips: alsoAvailable(n, 'well.logs'),
       provenance: prov(n),
     }),
   },
@@ -700,7 +731,7 @@ export const CAPABILITIES: Capability[] = [
         { label: 'Survey', value: 'available', source: 'Volve' },
         ...(n.metrics?.tdTvd != null ? [{ label: 'TD (TVD)', value: `${num(n.metrics.tdTvd)} m`, source: 'Sodir' }] : []),
       ],
-      chips: [],
+      chips: alsoAvailable(n, 'well.trajectory'),
       provenance: prov(n),
     }),
   },
@@ -719,7 +750,7 @@ export const CAPABILITIES: Capability[] = [
       headline: `Pressure — ${n.name}`,
       subhead: 'Formation pressure',
       facts: [{ label: 'Pressure data', value: 'available', source: 'Volve' }],
-      chips: [],
+      chips: alsoAvailable(n, 'well.pressure'),
       provenance: prov(n),
     }),
   },
@@ -738,7 +769,7 @@ export const CAPABILITIES: Capability[] = [
       headline: `Drilling — ${n.name}`,
       subhead: 'MW · ECD · ROP · WOB',
       facts: [{ label: 'Drilling data', value: 'available', source: 'Volve WITSML' }],
-      chips: [],
+      chips: alsoAvailable(n, 'well.drilling'),
       provenance: prov(n),
     }),
   },
@@ -790,7 +821,7 @@ export const CAPABILITIES: Capability[] = [
           { label: 'Occurrences', value: num(asNumber(n.has.occurrences)), source: 'Arganta KB' },
           ...(n.aliases.length ? [{ label: 'Also written', value: n.aliases.slice(0, 4).join(' · ') }] : []),
         ],
-        chips: nodeChips(basins, 8),
+        chips: nodeChips(basins, 8).length ? nodeChips(basins, 8) : alsoAvailable(n, ''),
         provenance: prov(n),
       };
     },
@@ -809,7 +840,7 @@ export const CAPABILITIES: Capability[] = [
       headline: n.name,
       subhead: 'Organisation',
       facts: [{ label: 'Source', value: n.sources.join(' · ') }],
-      chips: [],
+      chips: alsoAvailable(n, 'company.overview'),
       provenance: prov(n),
       body: 'I hold this company as a registry entry. Operated-asset roll-ups are not built yet, so I cannot list its fields.',
     }),
