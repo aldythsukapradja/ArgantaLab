@@ -23,8 +23,6 @@
  *  taken apart again — a crossplot that cannot be traced back to wells is a
  *  picture, not evidence. */
 import { PHYSICAL_RANGE, PHIT_MAX } from './petro-compute.ts';
-import { PHI_K_SCREENING, fitPhiK } from '../../engine/perm.ts';
-import { fitCuddy, type CuddyShf } from './fluid-model.ts';
 
 export interface XPoint { well: string; x: number; y: number; z?: number; depth?: number }
 
@@ -238,20 +236,9 @@ export function pickett(
 export interface PermeabilityResult {
   points: XPoint[];
   availability: Availability;
-  /** Null for a delivery with no K. Present so the shape of an honest result is
-   *  identical to a blocked one, and a caller cannot forget to check. */
-  law: { form: string; a: number; b: number; r2: number | null; basis: 'core' | 'screening' } | null;
-  /**
-   * The law the STATIC MODEL is populating permeability with right now.
-   *
-   * Reconciliation, not decoration. Analytics answers "can this delivery support
-   * a φ–k law" and the static model answers "what k did I put in the cells", and
-   * with no core those are different answers to what a reader hears as one
-   * question: Analytics says "blocked, no K anywhere" while the grid is quietly
-   * full of 10^(19φ−1.5). Both are true and the pair is what matters, so the card
-   * shows the screening law IN FORCE alongside the refusal to fit one.
-   */
-  inForce: { form: string; a: number; b: number; basis: 'screening' };
+  /** Always null for a delivery with no K. Present so the shape of an honest
+   *  result is identical to a blocked one, and a caller cannot forget to check. */
+  law: { form: string; a: number; b: number; r2: number } | null;
 }
 
 /**
@@ -265,19 +252,12 @@ export interface PermeabilityResult {
  * the reports, pass it as a curve and the fit becomes real.
  */
 export function permeability(bores: BoreCurves[], kCurve = 'PERM', phieCurve = 'PHIE'): PermeabilityResult {
-  // What the static model is doing regardless of what can be fitted here.
-  const inForce = {
-    form: 'log10(k) = a·PHIE + b',
-    a: PHI_K_SCREENING.a, b: PHI_K_SCREENING.b,
-    basis: 'screening' as const,
-  };
-
   const avail = availability(
     bores, [phieCurve, kCurve],
     'no permeability curve and no core K in this delivery — a PHIE–K law cannot be fitted from it, '
-    + "and a literature transform would not be this field's rock",
+    + 'and a literature transform would not be this field\'s rock',
   );
-  if (avail.blocked) return { points: [], availability: avail, law: null, inForce };
+  if (avail.blocked) return { points: [], availability: avail, law: null };
 
   const points: XPoint[] = [];
   for (const b of bores) {
@@ -286,17 +266,12 @@ export function permeability(bores: BoreCurves[], kCurve = 'PERM', phieCurve = '
       if (phi > 0 && k > 0) points.push({ well: b.well, x: phi, y: k, depth: b.depth?.[r.i] ?? undefined });
     }
   }
-  // ONE fitter, shared with the static model (engine/perm.fitPhiK), so a law shown
-  // on this card and a law used to populate the grid can never be different code
-  // with different fallbacks — which is exactly what they were.
-  const fit = fitPhiK(points.map((p) => p.x), points.map((p) => p.y));
+  // log10(k) = a·phi + b — the standard porosity–permeability form
+  const fit = linreg(points.map((p) => [p.x, Math.log10(p.y)] as [number, number]));
   return {
     points,
     availability: avail,
-    law: fit.basis === 'core'
-      ? { form: 'log10(k) = a·PHIE + b', a: fit.a, b: fit.b, r2: fit.r2, basis: 'core' }
-      : null,
-    inForce,
+    law: fit ? { form: 'log10(k) = a·PHIE + b', a: fit.a, b: fit.b, r2: fit.r2 } : null,
   };
 }
 
@@ -304,35 +279,29 @@ export function permeability(bores: BoreCurves[], kCurve = 'PERM', phieCurve = '
 
 export interface ShfPoint extends XPoint { height: number; sw: number; bvw: number }
 
+export interface CuddyFit {
+  /** BVW = a · H^b, Cuddy's free-water-level-referenced bulk-volume-water form */
+  a: number; b: number; r2: number; n: number;
+}
+
 /**
  * Saturation–height, in both the classic Sw-vs-H view and Cuddy's.
  *
- * RECONCILED, not reimplemented. The fit itself is `fluid-model.fitCuddy` — the
- * same function the Fluids & Rock initialization uses to build the equilibration
- * — so the Analytics card and the dynamic model can never quote different
- * saturation-height constants for one field. This module only assembles the
- * samples and says whether the delivery can support them.
- *
- * That inheritance also brings the stricter guard: fitCuddy needs 20 surviving
- * samples, where a bare least-squares would happily "fit" three points through
- * log noise and report r²≈1. And it returns the height RANGE it was fitted over,
- * which is what lets a caller refuse to extrapolate above the highest sample.
- *
- * Cuddy's FOIL fits BULK VOLUME WATER against height rather than Sw, because BVW
- * collapses the porosity dependence that makes an Sw-vs-H cloud fan out — which
- * is exactly why it is reached for when rock typing is thin, as it is here.
+ * Cuddy's FOIL (function of irreducible logs) fits BULK VOLUME WATER against
+ * height rather than Sw, because BVW collapses the porosity dependence that makes
+ * an Sw-vs-H cloud fan out — which is precisely why it is used when rock typing
+ * is thin. Both are returned; the caller shows whichever the reader asked for.
  *
  * @param contactDepth free water level, m TVDSS positive down
  */
 export function saturationHeight(
   bores: BoreCurves[], contactDepth: number, swCurve = 'SWE', phieCurve = 'PHIE',
-): { points: ShfPoint[]; cuddy: CuddyShf | null; availability: Availability } {
+): { points: ShfPoint[]; cuddy: CuddyFit | null; availability: Availability } {
   const avail = availability(bores, [swCurve, phieCurve]);
   // Height above a contact is a TRUE VERTICAL question. A bore whose depths are
   // measured depth is refused outright rather than quietly producing nothing.
-  const withDepth = bores.filter((b) => b.depth);
-  const mdOnly = withDepth.filter((b) => b.depthKind !== 'tvdss');
-  if (!avail.blocked && withDepth.length > 0 && mdOnly.length === withDepth.length) {
+  const mdOnly = bores.filter((b) => b.depth && b.depthKind !== 'tvdss');
+  if (!avail.blocked && mdOnly.length === bores.filter((b) => b.depth).length && mdOnly.length > 0) {
     return {
       points: [],
       cuddy: null,
@@ -343,7 +312,6 @@ export function saturationHeight(
       },
     };
   }
-
   const points: ShfPoint[] = [];
   if (!avail.blocked && Number.isFinite(contactDepth)) {
     for (const b of bores) {
@@ -353,22 +321,23 @@ export function saturationHeight(
         if (!finite(d)) continue;
         const height = contactDepth - Math.abs(d);      // above the contact ⇒ positive
         if (height <= 0) continue;                      // below the FWL is not a column
-        const [sw, phi] = r.v;                          // unit-resolved and screened by rows()
+        const [sw, phi] = r.v;          // unit-resolved and screened by rows()
         if (!(sw > 0 && sw <= 1) || !(phi > 0)) continue;
         points.push({ well: b.well, x: height, y: sw, height, sw, bvw: sw * phi, depth: Math.abs(d) });
       }
     }
   }
-
+  // log(BVW) = log(a) + b·log(H)
+  const fit = linreg(points.filter((p) => p.bvw > 0).map((p) => [Math.log10(p.height), Math.log10(p.bvw)] as [number, number]));
   return {
     points,
-    cuddy: fitCuddy(points.map((p) => ({ h: p.height, sw: p.sw, phi: p.bvw / p.sw }))),
+    cuddy: fit ? { a: 10 ** fit.b, b: fit.a, r2: fit.r2, n: points.length } : null,
     availability: avail,
   };
 }
 
-/** BVW predicted by the shared Cuddy fit at a height above the free water level. */
-export const cuddyBvw = (fit: { a: number; b: number }, height: number) => fit.a * height ** fit.b;
+/** BVW predicted by a Cuddy fit at a given height above the free water level. */
+export const cuddyBvw = (fit: CuddyFit, height: number) => fit.a * height ** fit.b;
 
 // ── shared ───────────────────────────────────────────────────────────────────
 
