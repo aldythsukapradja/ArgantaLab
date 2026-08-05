@@ -353,7 +353,10 @@ export function saturationHeight(
 }
 
 /** BVW predicted by a Cuddy fit at a given height above the free water level. */
-export const cuddyBvw = (fit: CuddyFit, height: number) => fit.a * height ** fit.b;
+// Asks for only what it reads. Requiring the whole CuddyFit forced callers that
+// legitimately hold just the curve's shape -- the plot path, which needs a, b
+// and the calibrated height range -- to carry r2 and n they have no use for.
+export const cuddyBvw = (fit: Pick<CuddyFit, 'a' | 'b'>, height: number) => fit.a * height ** fit.b;
 
 // ── shared ───────────────────────────────────────────────────────────────────
 
