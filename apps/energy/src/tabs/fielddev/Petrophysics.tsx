@@ -24,7 +24,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, BarChart3, Box, Columns3, Database,
-  Layers, Library, LineChart, Sigma, Sparkles, Table2, Target,
+  Layers, Library, LineChart, Sigma, Sparkles, Table2,
 } from 'lucide-react';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 import { useWorkspace, commonCurveTypes, commonTops, type Workspace } from './workspace';
@@ -193,17 +193,6 @@ const ZONATION_REGIONS: RegionSpec[] = [
     component: 'PetroZonationMatrix',
     data: (ws) => `${ws.tops.length} pick surfaces × ${ws.bores.length} bores`,
     caveat: 'This is the PetrophysicalModel artifact the static model consumes.',
-  },
-  {
-    area: 'aside', step: 'P9', icon: Target, schematic: 'calib',
-    title: 'Calibration report',
-    blurb: 'Run the parameter set on the bores that already carry an interpretation, measure the misfit against it, then transfer the tuned set to the ones that do not. The report — wells, curves, RMS, final parameters — travels with the result as its provenance.',
-    library: 'pure TS + d3-scale scatter (1:1 line, R²)',
-    component: 'PetroCalibrationReport',
-    data: (_ws, c) => c.lfp.length
-      ? `${c.lfp.length} calibration bores (${c.lfp.join(' · ')}) → ${c.quartet.length - c.lfp.length} to transfer to`
-      : 'no interpreted curves in this delivery — calibration unavailable, and said so',
-    caveat: 'On Volve the calibration bores are 19-series EXPLORATION wells, not F-series producers. Same formations, different structural position — the transfer is an assumption and the report names it.',
   },
 ];
 
@@ -422,8 +411,6 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
                   over every logged bore. The calibration report beside it is still
                   the blueprint region and says so. */}
               <PetroZonationMatrix ws={ws} params={params} />
-              {regions.filter((r) => r.area === 'aside')
-                .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
             </>
           ) : regions.map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)
         )}

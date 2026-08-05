@@ -53,8 +53,9 @@ html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1f
   grid-template-rows:minmax(230px,1fr);
   grid-template-areas:"main aside"}
 /* Zonation: matrix wide, calibration beside it */
-html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) 340px;
-  grid-template-areas:"main aside"}
+/* Zonation is the matrix alone now — the calibration report card is gone. */
+html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"main"}
 
 /* ── a region ────────────────────────────────────────────────────────────── */
 html[data-ui="cosmo"] .pps-region{display:flex;min-width:0;min-height:0;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
@@ -118,7 +119,7 @@ html[data-ui="cosmo"] .pps-foot em{font:8px var(--mono);font-style:normal;color:
   html[data-ui="cosmo"] .pps-body,
   html[data-ui="cosmo"] .pps-body.pane-well,
   html[data-ui="cosmo"] .pps-body.pane-correlation,
-  html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr) minmax(0,.7fr);grid-template-areas:"main aside"}
+  html[data-ui="cosmo"] .pps-body.pane-zonation{grid-template-columns:minmax(0,1fr);grid-template-areas:"main"}
   html[data-ui="cosmo"] .pps-body.pane-analytics{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);grid-template-areas:"main aside"}
   html[data-ui="cosmo"] .pps-rail{min-height:280px}
 }
@@ -211,3 +212,23 @@ html[data-ui="cosmo"] .pcp-foot{flex:0 0 auto;display:flex;flex-wrap:wrap;align-
 /* provenance is permanent on this pane — the curves are not the delivery's */
 html[data-ui="cosmo"] .pcp-prov{color:var(--ink2)}
 html[data-ui="cosmo"] .pcp-warn{display:flex;align-items:center;gap:4px;color:var(--orange,#f59e0b)}
+
+/* Luping actions, cum-oil column tags and the click-through histogram */
+html[data-ui="cosmo"] .pzm-act{display:flex;align-items:center;gap:4px;padding:2.5px 7px;border:1px solid var(--line2);
+  border-radius:4px;background:transparent;color:var(--ink2);font:7.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .pzm-act:hover:not(:disabled){background:var(--panel3);color:var(--ink)}
+html[data-ui="cosmo"] .pzm-act:disabled{opacity:.4;cursor:default}
+html[data-ui="cosmo"] .pzm-cum{display:block;font-style:normal;font-size:6.5px;color:var(--ink3);font-weight:400}
+html[data-ui="cosmo"] .pzm-row.clickable{cursor:pointer}
+html[data-ui="cosmo"] .pzm-row.clickable:hover{background:var(--panel3);color:var(--ink)}
+html[data-ui="cosmo"] .pzm-hist{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+  background:rgba(4,10,18,.42)}
+html[data-ui="cosmo"] .pzm-hist-in{padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--panel);box-shadow:0 12px 34px rgba(0,0,0,.4)}
+html[data-ui="cosmo"] .pzm-hist-in header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+html[data-ui="cosmo"] .pzm-hist-in header b{font-size:9.5px;color:var(--ink);flex:1}
+html[data-ui="cosmo"] .pzm-hist-in header button{border:0;background:transparent;color:var(--ink3);cursor:pointer;padding:0}
+html[data-ui="cosmo"] .pzm-hist-in dl{display:flex;gap:12px;margin:6px 0 0}
+html[data-ui="cosmo"] .pzm-hist-in dl div{display:flex;flex-direction:column}
+html[data-ui="cosmo"] .pzm-hist-in dl span{font:6.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+html[data-ui="cosmo"] .pzm-hist-in dl b{font-size:9px;color:var(--ink)}

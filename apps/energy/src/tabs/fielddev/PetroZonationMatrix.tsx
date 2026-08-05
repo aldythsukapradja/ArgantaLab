@@ -13,12 +13,16 @@
 // never evaluated read as a bore with no pay. On Volve that distinction decides
 // whether 21 of 24 bores are "dry" or "not interpreted".
 import { useMemo, useState } from 'react';
-import { Table2, AlertTriangle } from 'lucide-react';
+import { Table2, AlertTriangle, Download, BarChart3, X } from 'lucide-react';
 import type { Workspace } from './workspace';
 import type { PetroParams } from './petro-compute';
 import { useFieldZones, forwardStats, rankByNet, type FieldZoneRow } from './petro-field';
+import {
+  useCumulativeOil, orderByProduction, buildLuping, lupingCsv, histogram,
+  type LupingRow, type Histogram,
+} from './petro-luping';
 
-type Metric = 'net' | 'gross' | 'ntg' | 'phie' | 'sw';
+type Metric = 'top' | 'base' | 'net' | 'gross' | 'ntg' | 'phie' | 'sw';
 
 /**
  * NET PAY IS NOT HERE, deliberately.
@@ -30,6 +34,8 @@ type Metric = 'net' | 'gross' | 'ntg' | 'phie' | 'sw';
  * zoneAverages, applied with the same cutoffs as net, not synthesised in a table.
  */
 const METRICS: Array<{ id: Metric; label: string; unit: string; hint: string }> = [
+  { id: 'top', label: 'Top', unit: 'm', hint: 'top of the picked interval, measured depth' },
+  { id: 'base', label: 'Base', unit: 'm', hint: 'base of the picked interval, measured depth' },
   { id: 'net', label: 'Net', unit: 'm', hint: 'thickness passing the cutoffs' },
   { id: 'gross', label: 'Gross', unit: 'm', hint: 'top to base of the picked interval' },
   { id: 'ntg', label: 'N:G', unit: '', hint: 'net over gross' },
@@ -39,27 +45,45 @@ const METRICS: Array<{ id: Metric; label: string; unit: string; hint: string }> 
 
 /** Read a metric off a row, or null when the row could not be evaluated. */
 function value(row: FieldZoneRow, m: Metric): number | null {
+  // Depths belong to the PICK, not to the interpretation. An interval Archie could
+  // not run in still has a top, a base and therefore a gross thickness, and those
+  // are the numbers a reader most wants when the rest is blank.
+  if (m === 'top') return Number.isFinite(row.top) ? row.top : null;
+  if (m === 'base') return Number.isFinite(row.base) ? row.base : null;
+  if (m === 'gross') {
+    return Number.isFinite(row.top) && Number.isFinite(row.base) ? row.base - row.top : null;
+  }
   const s = forwardStats(row);
   if (!s) return null;
   const v = m === 'net' ? s.netM
-    : m === 'gross' ? s.grossM
-      : m === 'ntg' ? s.ntg
-        : m === 'phie' ? s.phie
-          : s.sw;
+    : m === 'ntg' ? s.ntg
+      : m === 'phie' ? s.phie
+        : s.sw;
   return Number.isFinite(v) ? v : null;
 }
 
 const fmt = (v: number | null, m: Metric) => (v == null ? '—'
   : m === 'ntg' || m === 'phie' || m === 'sw' ? v.toFixed(3) : v.toFixed(1));
 
+/** A cell that has no value because the interval was never evaluated is NOT the
+ *  same as one that has no pick — and neither is a zero. Depth metrics survive an
+ *  unevaluated interval, so only the interpretation metrics can be "no curves". */
+const DEPTH_METRICS: Metric[] = ['top', 'base', 'gross'];
+
 export function PetroZonationMatrix({ ws, params }: { ws: Workspace; params: PetroParams }) {
   const [metric, setMetric] = useState<Metric>('net');
+  const [hist, setHist] = useState<{ title: string; h: Histogram } | null>(null);
   const zones = useFieldZones(ws, params, true);
+
+  /** Bore order. Cumulative oil descending — a zonation table should open on the
+   *  bores that made the field's production, not on whichever sorted first. */
+  const wellNames = useMemo(() => [...new Set(zones.rows.map((r) => r.well))], [zones.rows]);
+  const { cum } = useCumulativeOil(wellNames);
 
   /** Formations down, bores across — the orientation a zonation table is read in. */
   const model = useMemo(() => {
     const formations = [...new Set(zones.rows.map((r) => r.formation))];
-    const bores = [...new Set(zones.rows.map((r) => r.well))];
+    const bores = orderByProduction([...new Set(zones.rows.map((r) => r.well))], cum);
     const byKey = new Map(zones.rows.map((r) => [`${r.formation}|${r.well}`, r]));
 
     // rank formations by the net they actually carry, so the interval that matters
@@ -70,7 +94,34 @@ export function PetroZonationMatrix({ ws, params }: { ws: Workspace; params: Pet
     formations.sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99));
 
     return { formations, bores, byKey };
-  }, [zones.rows]);
+  }, [zones.rows, cum]);
+
+  const luping = useMemo<LupingRow[]>(
+    () => buildLuping(zones.rows, model.bores), [zones.rows, model.bores],
+  );
+
+  const download = () => {
+    const csv = lupingCsv(luping, { field: ws.fieldId ?? 'field', when: new Date().toISOString() });
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'luping.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /** Distribution of the shown metric — for a whole formation, or field-wide. */
+  const showHistogram = (formation: string | null) => {
+    const rows = formation
+      ? zones.rows.filter((r) => r.formation === formation)
+      : zones.rows;
+    const h = histogram(rows.map((r) => value(r, metric)));
+    if (h) {
+      setHist({
+        title: `${METRICS.find((m) => m.id === metric)?.label} · ${formation ?? 'all formations'}`,
+        h,
+      });
+    }
+  };
 
   /** Column totals, and the honest denominator: how many bores could be evaluated
    *  for this formation at all, not how many exist. */
@@ -93,10 +144,18 @@ export function PetroZonationMatrix({ ws, params }: { ws: Workspace; params: Pet
               onClick={() => setMetric(m.id)}>{m.label}</button>
           ))}
         </span>
+        <button className="pzm-act" onClick={() => showHistogram(null)}
+          title={`Distribution of ${METRICS.find((m) => m.id === metric)?.label} across every evaluated interval`}>
+          <BarChart3 size={11} />
+        </button>
+        <button className="pzm-act" onClick={download} disabled={!luping.length}
+          title="Download Luping — one row per bore per zone, with depths, thickness and the interpretation">
+          <Download size={11} /> Luping
+        </button>
         <em>
           {zones.running
             ? `running ${zones.done}/${zones.total} bores…`
-            : `${model.formations.length} formations × ${model.bores.length} bores`}
+            : `${model.formations.length} formations × ${model.bores.length} bores · by cum oil`}
         </em>
       </header>
 
@@ -111,7 +170,16 @@ export function PetroZonationMatrix({ ws, params }: { ws: Workspace; params: Pet
               <th className="pzm-corner">{METRICS.find((m) => m.id === metric)?.label}
                 <i>{METRICS.find((m) => m.id === metric)?.unit}</i>
               </th>
-              {model.bores.map((w) => <th key={w} title={w}>{w}</th>)}
+              {model.bores.map((w) => {
+                const c = cum.get(w);
+                return (
+                  <th key={w} title={c == null
+                    ? `${w} — no production record`
+                    : `${w} — ${Math.round(c).toLocaleString('en-US')} cum oil`}>
+                    {w}{c != null && <i className="pzm-cum">{(c / 1e6).toFixed(2)}M</i>}
+                  </th>
+                );
+              })}
               <th className="pzm-tot">mean</th>
             </tr>
           </thead>
@@ -120,7 +188,8 @@ export function PetroZonationMatrix({ ws, params }: { ws: Workspace; params: Pet
               const t = totals.get(f);
               return (
                 <tr key={f}>
-                  <th className="pzm-row" title={f}>{f}</th>
+                  <th className="pzm-row clickable" title={`${f} — click for the distribution of ${METRICS.find((m) => m.id === metric)?.label}`}
+                    onClick={() => showHistogram(f)}>{f}</th>
                   {model.bores.map((w) => {
                     const row = model.byKey.get(`${f}|${w}`);
                     // THE THREE STATES. A bore with no row for this formation has no
@@ -131,7 +200,14 @@ export function PetroZonationMatrix({ ws, params }: { ws: Workspace; params: Pet
                     }
                     const v = value(row, metric);
                     if (v == null) {
-                      return <td key={w} className="pzm-nocurve" title={`${w}: ${f} is picked but the curves Archie needs are not all present`}>no curves</td>;
+                      // a depth metric with no value means the PICK is incomplete;
+                      // an interpretation metric means Archie could not run
+                      const why = DEPTH_METRICS.includes(metric)
+                        ? `${w}: ${f} has no usable top/base`
+                        : `${w}: ${f} is picked but the curves Archie needs are not all present`;
+                      return <td key={w} className="pzm-nocurve" title={why}>
+                        {DEPTH_METRICS.includes(metric) ? 'no depth' : 'no curves'}
+                      </td>;
                     }
                     return (
                       <td key={w} title={`${w} · ${f} · ${row.top.toFixed(0)}–${row.base.toFixed(0)} m`}>
@@ -155,6 +231,40 @@ export function PetroZonationMatrix({ ws, params }: { ws: Workspace; params: Pet
           </div>
         )}
       </div>
+
+      {hist && (
+        <div className="pzm-hist" role="dialog" onClick={() => setHist(null)}>
+          <div className="pzm-hist-in" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <b>{hist.title}</b>
+              <button onClick={() => setHist(null)} aria-label="Close"><X size={12} /></button>
+            </header>
+            <svg width={280} height={110}>
+              {hist.h.bins.map((b, i) => {
+                const max = Math.max(...hist.h.bins.map((x) => x.n)) || 1;
+                const w = 264 / hist.h.bins.length;
+                const h = (b.n / max) * 84;
+                return (
+                  <rect key={i} x={8 + i * w} y={92 - h} width={Math.max(1, w - 1.5)} height={h}
+                    fill="var(--teal,#0fb5a6)" opacity={0.75}>
+                    <title>{`${b.lo.toFixed(2)}–${b.hi.toFixed(2)} · ${b.n}`}</title>
+                  </rect>
+                );
+              })}
+              <line x1={8} y1={92} x2={272} y2={92} stroke="var(--line)" />
+              <text x={8} y={106} fontSize={7} fill="var(--ink3)" fontFamily="var(--mono)">{hist.h.min.toFixed(2)}</text>
+              <text x={272} y={106} textAnchor="end" fontSize={7} fill="var(--ink3)" fontFamily="var(--mono)">{hist.h.max.toFixed(2)}</text>
+            </svg>
+            <dl>
+              <div><span>n</span><b>{hist.h.n}</b></div>
+              <div><span>mean</span><b>{hist.h.mean.toFixed(3)}</b></div>
+              <div><span>median</span><b>{hist.h.median.toFixed(3)}</b></div>
+              {/* intervals with no value are COUNTED, not binned as zero */}
+              <div><span>not evaluated</span><b>{hist.h.missing}</b></div>
+            </dl>
+          </div>
+        </div>
+      )}
 
       {zones.skipped.length > 0 && (
         <footer className="pzm-skipped">
