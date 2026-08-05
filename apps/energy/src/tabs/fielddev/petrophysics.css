@@ -282,3 +282,57 @@ html[data-ui="cosmo"] .pcm-foot b{color:var(--ink2);font-weight:600}
 html[data-ui="cosmo"] .pcm-crs{margin-left:auto;opacity:.75}
 html[data-ui="cosmo"] .pcm-note{margin-top:auto;padding:7px 11px;border-top:1px solid var(--line2);
   background:var(--panel2);font:7px var(--mono);color:var(--ink3);line-height:1.45}
+
+/* ── PetroCrossplot3D ───────────────────────────────────────────────────────── */
+html[data-ui="cosmo"] .pc3{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+html[data-ui="cosmo"] .pc3-presets{display:flex;gap:2px;margin-left:auto}
+html[data-ui="cosmo"] .pc3-presets button{padding:2px 8px;border:1px solid var(--line2);border-radius:5px;
+  background:transparent;color:var(--ink3);font:7.5px var(--mono);letter-spacing:.05em;cursor:pointer}
+html[data-ui="cosmo"] .pc3-presets button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .pc3-presets button.on{background:var(--teal-soft);color:var(--teal-ink);border-color:var(--teal)}
+html[data-ui="cosmo"] .pc3-reset{display:flex;align-items:center;justify-content:center;width:19px;height:17px;
+  border:1px solid var(--line2);border-radius:5px;background:transparent;color:var(--ink3);cursor:pointer}
+html[data-ui="cosmo"] .pc3-reset:hover{color:var(--ink);border-color:var(--line)}
+
+/* the canvas takes the slack — the legend and hint below it are fixed height */
+html[data-ui="cosmo"] .pc3-canvas{position:relative;flex:1;min-height:190px;margin:9px 11px 0;
+  border:1px solid var(--line2);border-radius:7px;overflow:hidden;background:#0c1017}
+html[data-ui="cosmo"] .pc3-canvas canvas{display:block;touch-action:none}
+html[data-ui="cosmo"] .pc3-progress{position:absolute;inset:0 0 auto 0;z-index:3;height:2px;background:rgba(255,255,255,.09)}
+html[data-ui="cosmo"] .pc3-progress i{display:block;height:100%;background:var(--teal,#0fb5a6);transition:width .25s}
+html[data-ui="cosmo"] .pc3-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;height:100%;padding:18px;text-align:center;color:var(--ink3)}
+html[data-ui="cosmo"] .pc3-empty svg{color:var(--amber,#fbbf24)}
+html[data-ui="cosmo"] .pc3-empty b{font-size:9px;font-weight:600;color:var(--ink2);line-height:1.45}
+html[data-ui="cosmo"] .pc3-empty span{font:7.5px var(--mono);opacity:.85}
+
+/* axis furniture lives in the 3D scene via drei/Html — it must not catch clicks */
+html[data-ui="cosmo"] .pc3-axlabel{display:flex;align-items:baseline;gap:3px;white-space:nowrap;
+  font:8px var(--mono);font-weight:600;letter-spacing:.06em;text-shadow:0 1px 3px rgba(0,0,0,.85)}
+html[data-ui="cosmo"] .pc3-axlabel i{font-style:normal;font-size:6.5px;opacity:.65}
+html[data-ui="cosmo"] .pc3-tick{white-space:nowrap;font:6.5px var(--mono);color:#95a0b4;
+  text-shadow:0 1px 3px rgba(0,0,0,.85)}
+
+html[data-ui="cosmo"] .pc3-legend{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:7px 11px 3px}
+html[data-ui="cosmo"] .pc3-legend button,
+html[data-ui="cosmo"] .pc3-unk{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;
+  border:1px solid var(--line2);border-radius:11px;background:transparent;color:var(--ink3);
+  font:7.5px var(--mono);cursor:pointer}
+html[data-ui="cosmo"] .pc3-unk{cursor:default}
+html[data-ui="cosmo"] .pc3-legend b{color:var(--ink2);font-weight:600}
+html[data-ui="cosmo"] .pc3-legend i{width:7px;height:7px;border-radius:50%;background:var(--line);
+  border:1px solid rgba(0,0,0,.25)}
+/* an OFF swatch is hollow — the colour still identifies the class it is hiding */
+html[data-ui="cosmo"] .pc3-legend button.pay i{background:#10b882}
+html[data-ui="cosmo"] .pc3-legend button.non i{background:#6b7385}
+html[data-ui="cosmo"] .pc3-unk i{background:#d99e33}
+html[data-ui="cosmo"] .pc3-legend button:not(.on){opacity:.45}
+html[data-ui="cosmo"] .pc3-legend button:not(.on) i{background:transparent}
+html[data-ui="cosmo"] .pc3-legend button.on{border-color:var(--line);color:var(--ink2)}
+
+html[data-ui="cosmo"] .pc3-hint{flex:0 0 auto;margin:0 11px 6px;font-size:8.5px;line-height:1.5;color:var(--ink3)}
+html[data-ui="cosmo"] .pc3-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:0 0 auto;
+  padding:6px 11px;border-top:1px solid var(--line2);background:var(--panel2);
+  font:7px var(--mono);color:var(--ink3)}
+html[data-ui="cosmo"] .pc3-foot b{color:var(--ink2);font-weight:600}
+html[data-ui="cosmo"] .pc3-prov{margin-left:auto;color:var(--purple,#a78bfa)}

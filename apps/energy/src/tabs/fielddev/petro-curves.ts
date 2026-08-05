@@ -36,6 +36,15 @@ export interface BoreCurveSet {
   net: (boolean | null)[];
   /** raw, for the GR track */
   gr: (number | null)[] | undefined;
+  /**
+   * The raw measurements the interpretation was run FROM, kept aligned with it.
+   *
+   * The 3D crossplot needs both halves at once — RHOB/NPHI/RT as axes and our
+   * net flag as the colour — and reading the digests a second time to get them
+   * would decode 24 bores twice and, worse, could disagree with the curves the
+   * colour came from. One decode, both halves.
+   */
+  raw: { rhob?: (number | null)[]; nphi?: (number | null)[]; rt?: (number | null)[]; dt?: (number | null)[] };
   /** THEIRS, where the delivery ships an interpretation. QC only. */
   ref: { phie?: (number | null)[]; sw?: (number | null)[]; vsh?: (number | null)[] };
   /** picks on this bore, md — what the correlation lines join */
@@ -103,6 +112,12 @@ export function useFieldCurves(ws: Workspace, params: PetroParams, enabled: bool
             md,
             vsh: res.vsh, phie: res.phie, sw: res.sw, net: res.net,
             gr: byFamily('GR')?.values,
+            raw: {
+              rhob: byFamily('RHOB')?.values,
+              nphi: byFamily('NPHI')?.values,
+              rt: (byFamily('RT') ?? byFamily('RXO'))?.values,
+              dt: byFamily('DT')?.values,
+            },
             ref: {
               phie: byMnem('PHIE')?.values,
               sw: (byMnem('SWE') ?? byMnem('SW'))?.values,

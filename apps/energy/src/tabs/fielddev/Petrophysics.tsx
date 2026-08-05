@@ -23,7 +23,7 @@
 //                 changing it while looking at a log are the same act.
 import { useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, BarChart3, Box, Columns3, Database,
+  AlertTriangle, BarChart3, Columns3, Database,
   Library, LineChart, Sigma, Sparkles, Table2,
 } from 'lucide-react';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
@@ -32,6 +32,7 @@ import { PETRO_SCHEMATICS } from './petro-schematics';
 import { PetroLogBench } from './PetroLogBench';
 import { PetroZoneStrip } from './PetroZoneStrip';
 import { PetroCrossplot2D, type Template } from './PetroCrossplot2D';
+import { PetroCrossplot3D } from './PetroCrossplot3D';
 import { usePetroCloud } from './petro-cloud';
 import { PetroZonationMatrix } from './PetroZonationMatrix';
 import { PetroCorrelationPanel } from './PetroCorrelationPanel';
@@ -171,14 +172,8 @@ const ANALYTICS_REGIONS: RegionSpec[] = [
     data: (ws, c) => `${c.samples.toLocaleString('en-US')} samples across ${c.wells.length} bores · ${ws.curveTypes.length} axes available`,
     caveat: 'Pickett is log–log. A linear Pickett is not a Pickett.',
   },
-  {
-    area: 'aside', step: 'P7', icon: Box, schematic: 'xplot3d',
-    title: '3D crossplot',
-    blurb: 'Three curves as axes plus colour, orbit and box-select. Not decoration: GR × RHOB × RT coloured by zone separates facies that any two of the three overlap on.',
-    library: 'deck.gl PointCloudLayer (already a dependency) · OrbitView',
-    component: 'PetroCrossplot3D',
-    data: (_ws, c) => `${c.samples.toLocaleString('en-US')} points · GPU-drawn`,
-  },
+  // The 3D crossplot is LIVE — PetroCrossplot3D, rendered directly. Its spec is
+  // gone from here rather than kept as a blueprint beside the thing it describes.
 ];
 
 const ZONATION_REGIONS: RegionSpec[] = [
@@ -378,10 +373,9 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
         ) : (
           pane === 'analytics' ? (
             <>
-              {/* The 2D plot is REAL — it reads the ingested logs through
-                  petro-cloud and petro-xplot. The 3D card beside it is still the
-                  blueprint region, and is left saying so rather than dressed up
-                  to match. */}
+              {/* Both plots are REAL now, and at 50/50 — the 2D reads the ingested
+                  logs through petro-cloud, the 3D reads OUR field interpretation
+                  through petro-curves and colours by the net flag it produces. */}
               <section className="pps-region live" style={{ gridArea: 'main' }}>
                 <PetroCrossplot2D
                   bores={cloud.bores}
@@ -391,8 +385,7 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
                   onTemplate={setTemplate}
                 />
               </section>
-              {regions.filter((r) => r.area === 'aside')
-                .map((r) => <Region key={r.title} spec={r} ws={ws} ctx={ctx} />)}
+              <PetroCrossplot3D ws={ws} params={params} enabled={pane === 'analytics'} />
             </>
           ) : pane === 'correlation' ? (
             <>
