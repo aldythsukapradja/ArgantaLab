@@ -21,7 +21,7 @@
 //
 //   Parameters    a RAIL, not a tab: changing `m` while looking at a crossplot and
 //                 changing it while looking at a log are the same act.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, BarChart3, Box, Columns3, Database,
   Layers, Library, LineChart, Sigma, Sparkles, Table2, Target,
@@ -33,7 +33,8 @@ import { PetroLogBench } from './PetroLogBench';
 import { PetroZoneStrip } from './PetroZoneStrip';
 import { PetroParamsRail } from './PetroParamsRail';
 import { usePetroWell } from './petro-well';
-import { DEFAULT_PARAMS, type PetroParams } from './petro-compute';
+import { DEFAULT_PARAMS, resolvePublishedArchie, type PetroParams } from './petro-compute';
+import { usePublishedArchie } from './fluids-live';
 import './petrophysics.css';
 import './petro-live.css';
 
@@ -267,6 +268,21 @@ export function Petrophysics({ field }: { field: SearchEntry }) {
   // from the bench to a crossplot never silently reverts an interpretation.
   const [params, setParams] = useState<PetroParams>(DEFAULT_PARAMS);
   const [boreName, setBoreName] = useState<string | null>(null);
+
+  // START FROM WHAT THE DELIVERY PUBLISHES, not from the textbook.
+  //
+  // a=1, m=2, n=2, Rw=0.03 is a generic sandstone. Volve's own evaluation fits
+  // m = 1.865·k^-0.0083 (≈1.79), n = 2.45, and measures the brine at 0.07 Ω·m at 20 °C
+  // — every one different from the default, and all three feed Archie multiplicatively.
+  // Applied ONCE, when the delivery's values arrive, and never again: an engineer who
+  // has moved a parameter must not have it pulled back underneath them.
+  const { archie, reservoirTempC, ready: archieReady } = usePublishedArchie();
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => {
+    if (seeded || !archieReady || !archie) return;
+    setParams((p) => resolvePublishedArchie(p, archie, reservoirTempC));
+    setSeeded(true);
+  }, [seeded, archieReady, archie, reservoirTempC]);
 
   const ctx: Ctx = useMemo(() => {
     const withLogs = ws.bores.filter((b) => b.hasLogs);

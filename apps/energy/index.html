@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover honours the notch/home-indicator safe areas.
+         interactive-widget=resizes-content makes the software keyboard shrink the
+         layout viewport (Chrome/Android), so fixed UI stays reachable; iOS ignores
+         it, which is why CosmoChat also tracks visualViewport directly.
+         Deliberately NO maximum-scale / user-scalable=no: that would stop the
+         focus-zoom by disabling pinch-to-zoom outright, which breaks accessibility.
+         The zoom is prevented properly, by keeping focusable fields at 16px. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#06131f" />
     <meta name="description" content="ArgantaEnergy spatial intelligence across the full oil and gas lifecycle." />

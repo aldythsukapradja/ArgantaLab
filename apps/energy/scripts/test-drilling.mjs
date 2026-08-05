@@ -329,11 +329,43 @@ check('pressure: full decode preferred over the decimated preview', fullRuns > p
   const r = index.validation?.reconcile;
   check('reconcile: our cum oil is within 5% of the official figure',
     !!r && Math.abs(r.cumOilDeltaPct) < 5, r ? `${r.cumOilDeltaPct}%` : '');
-  check('GROUNDING: the screening STOIIP is flagged as a gross overstatement',
-    !!r && r.stoiipScreeningOverstatesBy > 5, r ? `${r.stoiipScreeningOverstatesBy}x` : '');
-  check('GROUNDING: RF against the screening figure is nonsense, against official it is right',
-    !!r && r.rfUsingScreening < 10 && r.rfUsingOfficial > 50,
+  // These used to assert the 3200 m-contact scenario's numbers directly (overstates
+  // 7.6x, ~7% RF). The screening contact later moved to 3065 m and the assertions
+  // became a snapshot of a scenario the delivery no longer ships. What actually needs
+  // guarding is the RELATION between the figures, which survives a change of contact.
+  check('GROUNDING: the screening in-place is reconciled against the official one, either way',
+    !!r && Number.isFinite(r.stoiipScreeningOverstatesBy) && r.stoiipScreeningOverstatesBy > 0,
+    r ? `${r.stoiipScreeningMMSm3} vs official ${r.stoiipOfficialMMSm3} MMSm3 = ${r.stoiipScreeningOverstatesBy}x` : '');
+  check('GROUNDING: RF is quoted against the OFFICIAL in-place, and the screening RF is the lower one',
+    !!r && r.rfUsingOfficial >= r.rfUsingScreening,
     r ? `screening ${r.rfUsingScreening}% vs official ${r.rfUsingOfficial}%` : '');
+  check('GROUNDING: the current contact scenario reproduces the field accounting',
+    !!r && Math.abs(r.stoiipScreeningOverstatesBy - 1) < 0.15 && r.rfUsingOfficial > 45 && r.rfUsingOfficial < 65,
+    r ? `${r.stoiipScreeningOverstatesBy}x in place, ${r.rfUsingOfficial}% RF` : '');
+
+  // THE SECOND VOLUME. Volve is undersaturated, so all its gas is dissolved and
+  // GIIP = STOIIP x Rs. That makes the regulator's published gas an independent check
+  // of the deck's solution GOR — it can only come out right if the rock volume AND the
+  // Rs are both right.
+  check('GROUNDING: solution gas in place is reconciled against the regulator too',
+    !!r && Number.isFinite(r.giipOursBcm) && Number.isFinite(r.giipOfficialBcm),
+    r ? `${r.giipOursBcm} vs official ${r.giipOfficialBcm} Bcm` : 'absent');
+  check('GROUNDING: gas in place agrees with Sodir within 5%, confirming the deck Rs',
+    !!r && Math.abs(r.giipDeltaPct) < 5,
+    r ? `${r.giipDeltaPct}% on Rs ${r.solutionGorSm3Sm3} Sm3/Sm3` : '');
+  check('GIIP is exactly STOIIP x Rs — the undersaturated identity, not a separate estimate',
+    !!r && Math.abs(r.giipOursBcm - (r.stoiipScreeningMMSm3 * 1e6 * r.solutionGorSm3Sm3) / 1e9) < 0.002,
+    r ? `${r.giipOursBcm} Bcm` : '');
+
+  // The note is prose sitting next to numbers, which is exactly how the two drift
+  // apart: this note asserted "7.6x" and "~7% RF" for as long as it was a string
+  // literal beside fields that had become 1.0x and 52.8%. It is derived now, and this
+  // is the assertion that keeps it derived.
+  check('GROUNDING: the reconcile note agrees with the numbers it sits beside',
+    !!r && r.note.includes(String(r.stoiipOfficialMMSm3))
+      && r.note.includes(`${r.stoiipScreeningOverstatesBy}x`)
+      && r.note.includes(`${r.rfUsingOfficial}%`),
+    r ? r.note.slice(0, 120) : '');
 
   // per-well metrics, measured
   const withM = index.wells.filter((w) => w.metrics);

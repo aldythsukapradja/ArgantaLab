@@ -51,6 +51,7 @@ const PANES: Array<{ id: Pane; label: string; icon: typeof Droplets; hint: strin
 const BASIS_TITLE: Record<Basis, string> = {
   deck: 'Read from the delivery’s own Eclipse PVT block.',
   measured: 'A direct measurement from the delivery.',
+  interpreted: 'Read off the delivery’s interpreted logs — somebody’s petrophysical interpretation, not a core measurement.',
   correlation: 'A published correlation, anchored to a deck value.',
   analogue: 'No measurement exists — an analogue stands in, and the case says so.',
   user: 'Moved off the delivery’s basis by hand on this tab.',
@@ -97,8 +98,13 @@ export function FluidsRocks({ field }: { field: SearchEntry }) {
   // PUBLISH. Everything downstream that initialises a flow calculation reads the case
   // from here, so moving an endpoint on this tab moves the simulation — there is no
   // second copy of a viscosity or a Corey exponent anywhere else.
-  const publish = useFluidCase((s) => s.publish);
-  useEffect(() => { publish(init); }, [init, publish]);
+  //
+  // Reached through `getState()` rather than the hook ON PURPOSE. This surface is a
+  // WRITER, not a reader: subscribing it to the store as well means every publish
+  // notifies the very component that published, and React warns that a component is
+  // being updated while a different one renders. A writer that also subscribes is the
+  // bug; not subscribing is the fix.
+  useEffect(() => { useFluidCase.getState().publish(init); }, [init]);
 
   if (!ready) {
     return (
@@ -159,7 +165,7 @@ export function FluidsRocks({ field }: { field: SearchEntry }) {
       <BasisStrip basis={basis} init={init} />
 
       {pane === 'pvt' && <PvtPane init={init} />}
-      {pane === 'scal' && <ScalPane init={init} over={over} setOver={setOver} scalMoved={scalMoved} />}
+      {pane === 'scal' && <ScalPane init={init} basis={basis} over={over} setOver={setOver} scalMoved={scalMoved} />}
       {pane === 'init' && <InitPane init={init} basis={basis} over={over} setOver={setOver} rockMoved={rockMoved} />}
       {pane === 'case' && <CasePane init={init} fails={fails} warns={warns} />}
 
@@ -336,15 +342,17 @@ function PvtPane({ init }: { init: DynamicInitialization }) {
 
 // ── SCAL ─────────────────────────────────────────────────────────────────────
 
-function ScalPane({ init, over, setOver, scalMoved }: {
-  init: DynamicInitialization; over: FluidOverrides;
+function ScalPane({ init, basis, over, setOver, scalMoved }: {
+  init: DynamicInitialization; basis: FluidBasis; over: FluidOverrides;
   setOver: (f: (o: FluidOverrides) => FluidOverrides) => void; scalMoved: boolean;
 }) {
-  const s = init.scal, w = init.welge;
+  const s = init.scal, w = init.welge, wet = init.wettability;
   const set = (k: keyof ScalEndpoints) => (v: number) =>
     setOver((o) => ({ ...o, scal: { ...o.scal, [k]: v } }));
   const moved = (k: keyof ScalEndpoints) => over.scal?.[k] !== undefined;
   const dRho = init.pvt.rhoWaterRes - init.pvt.rhoOilRes;
+  const anchor = basis.swcAnchor;
+  const isLet = s.model === 'let';
 
   return (
     <div className="frx-body pane-scal">
@@ -411,6 +419,50 @@ function ScalPane({ init, over, setOver, scalMoved }: {
         </div>
         <div className="frx-rail-scroll">
           <div className="frx-rail-sec">
+            <h4><Droplets size={11} />Curve model<em><Chip basis={init.scalBasis} /></em></h4>
+            <div className="frx-panes" style={{ width: '100%' }}>
+              {(['corey', 'let'] as const).map((m) => (
+                <button key={m} style={{ flex: 1, justifyContent: 'center' }}
+                  className={(s.model ?? 'corey') === m ? 'on' : ''}
+                  onClick={() => setOver((o) => ({ ...o, scal: { ...o.scal, model: m } }))}>
+                  {m === 'corey' ? 'Corey' : 'LET'}
+                </button>
+              ))}
+            </div>
+            <p className="frx-note">
+              {isLet
+                ? 'LET (Lomeland–Ebeltoft–Thomas): three parameters per phase — L is the slope leaving the end point, T the approach to the far end, E the height through the middle. That middle freedom is what a history match needs and Corey does not have.'
+                : 'Corey: one exponent per phase, pinning the whole curve at once. Enough for screening; switch to LET when a match needs to move the mid-range without moving the end points.'}
+            </p>
+          </div>
+
+          {anchor && (
+            <div className="frx-rail-sec">
+              <h4><Database size={11} />Swc from this field’s logs</h4>
+              <div className="frx-kv">
+                <Row label="Buckles number Sw·φ" value={anchor.buckles.toFixed(4)} basis="interpreted" />
+                <Row label={`Swc at φ = ${anchor.phi.toFixed(3)}`} value={`${anchor.low.toFixed(2)} – ${anchor.high.toFixed(2)}`} basis="interpreted" />
+                <Row label="Wells contributing" value={anchor.wells.map((f) => f.well).join(', ') || '—'} basis="interpreted" />
+                {anchor.excluded.length > 0 && (
+                  <Row label="Excluded (never reach Swirr)" value={anchor.excluded.join(', ')} basis="interpreted" />
+                )}
+              </div>
+              <button className="frx-reset" style={{ marginTop: 8 }}
+                onClick={() => setOver((o) => ({ ...o, scal: { ...o.scal, swc: Number(anchor.high.toFixed(3)) } }))}>
+                <Database size={9} />Adopt Swc = {anchor.high.toFixed(2)}
+              </button>
+              <p className="frx-note">
+                Buckles: in rock at irreducible saturation the product Sw·φ is roughly constant, so a low
+                percentile of it over clean, porous samples bounds Swc. {anchor.wells.length} of{' '}
+                {basis.satWells} well{basis.satWells === 1 ? '' : 's'} with interpreted saturation reach
+                irreducible; the rest sit in the water leg and are excluded rather than averaged in.
+                This is an interpretation of an interpretation — Equinor’s LFP curve, not a core plug —
+                and adopting it moves the in-place volume, so it is offered rather than applied.
+              </p>
+            </div>
+          )}
+
+          <div className="frx-rail-sec">
             <h4><Droplets size={11} />Saturation end points</h4>
             <Slider label="Connate water Swc" value={s.swc} min={0.05} max={0.45} step={0.01}
               onChange={set('swc')} fmt={(v) => v.toFixed(2)} moved={moved('swc')} />
@@ -422,15 +474,66 @@ function ScalPane({ init, over, setOver, scalMoved }: {
               onChange={set('kroMax')} fmt={(v) => v.toFixed(2)} moved={moved('kroMax')} />
           </div>
           <div className="frx-rail-sec">
-            <h4><Waves size={11} />Corey exponents</h4>
-            <Slider label="Water nw" value={s.nw} min={1.5} max={6} step={0.1}
-              onChange={set('nw')} fmt={(v) => v.toFixed(1)} moved={moved('nw')}
-              note="higher = more water-wet, later water breakthrough" />
-            <Slider label="Oil no" value={s.no} min={1.5} max={5} step={0.1}
-              onChange={set('no')} fmt={(v) => v.toFixed(1)} moved={moved('no')} />
+            <h4><Waves size={11} />{isLet ? 'LET parameters' : 'Corey exponents'}</h4>
+            {isLet ? (
+              <>
+                <Slider label="Water Lw" value={s.lw ?? 3} min={0.5} max={8} step={0.1}
+                  onChange={set('lw')} fmt={(v) => v.toFixed(1)} moved={moved('lw')}
+                  note="slope leaving Swc" />
+                <Slider label="Water Ew" value={s.ew ?? 1} min={0.05} max={20} step={0.05}
+                  onChange={set('ew')} fmt={(v) => v.toFixed(2)} moved={moved('ew')}
+                  note="height through the middle — the freedom Corey lacks" />
+                <Slider label="Water Tw" value={s.tw ?? 2} min={0.3} max={6} step={0.1}
+                  onChange={set('tw')} fmt={(v) => v.toFixed(1)} moved={moved('tw')} />
+                <Slider label="Oil Lo" value={s.lo ?? 2} min={0.5} max={8} step={0.1}
+                  onChange={set('lo')} fmt={(v) => v.toFixed(1)} moved={moved('lo')} />
+                <Slider label="Oil Eo" value={s.eo ?? 1} min={0.05} max={20} step={0.05}
+                  onChange={set('eo')} fmt={(v) => v.toFixed(2)} moved={moved('eo')} />
+                <Slider label="Oil To" value={s.to ?? 2} min={0.3} max={6} step={0.1}
+                  onChange={set('to')} fmt={(v) => v.toFixed(1)} moved={moved('to')} />
+              </>
+            ) : (
+              <>
+                <Slider label="Water nw" value={s.nw} min={1.5} max={6} step={0.1}
+                  onChange={set('nw')} fmt={(v) => v.toFixed(1)} moved={moved('nw')}
+                  note="higher = more water-wet, later water breakthrough" />
+                <Slider label="Oil no" value={s.no} min={1.5} max={5} step={0.1}
+                  onChange={set('no')} fmt={(v) => v.toFixed(1)} moved={moved('no')} />
+              </>
+            )}
             <Slider label="Pore-size λ" value={s.lambda} min={0.5} max={5} step={0.1}
               onChange={set('lambda')} fmt={(v) => v.toFixed(1)} moved={moved('lambda')}
               note="Brooks–Corey — sets how tall the transition zone is" />
+          </div>
+
+          <div className="frx-rail-sec">
+            <h4>
+              <Droplets size={11} />Wettability
+              <em style={{ color: wet.agreeing === 3 ? 'var(--green,#4ade80)' : 'var(--amber,#fbbf24)' }}>
+                {wet.verdict} · {wet.agreeing}/3
+              </em>
+            </h4>
+            <div className="frx-kv">
+              {wet.criteria.map((c) => (
+                <div key={c.key} className="frx-kv-row">
+                  <span title={c.rule}>{c.label}</span>
+                  <b>{Number.isFinite(c.value) ? c.value.toFixed(3) : '—'}</b>
+                  <i className={`frx-basis-chip ${c.reads === wet.verdict ? 'b-deck' : 'b-analogue'}`} title={c.rule}>
+                    {c.reads}
+                  </i>
+                </div>
+              ))}
+            </div>
+            <p className="frx-note">
+              Craig’s (1971) three indicators, run <b>on these curves</b>. Wettability is a core measurement —
+              Amott–Harvey or USBM — and no core was delivered, so nothing here measures the rock. What it does
+              is tell you what your assumed curve shape <i>implies</i>.
+              {wet.agreeing < 3 && (
+                <> The indicators disagree, which is a statement about the analogue rather than about Volve:
+                  a curve introduced as water-wet whose end points read otherwise is worth sensitising before
+                  any sweep number off it is believed.</>
+              )}
+            </p>
           </div>
           <div className="frx-rail-sec">
             <h4><LineChart size={11} />What these endpoints imply</h4>

@@ -25,10 +25,12 @@ import { readRecord } from '../../dataqc/readDigest';
 import { wellKey } from '../../dataqc/audit';
 import { useScene } from './scene';
 import { getWorkspace, type Workspace } from './workspace';
+import type { DigestedCurve, DigestedLog } from '../../dataqc/types';
+import type { PublishedArchie } from './petro-compute';
 import {
-  readAnchors, buildCase, SCAL_ANALOGUE, ROCK_DEFAULTS,
-  type ContactSpec, type DynamicInitialization, type FluidAnchors,
-  type PressurePoint, type RockModel, type ScalEndpoints,
+  readAnchors, buildCase, swcFromLogs, applyPublishedShf, SCAL_ANALOGUE, ROCK_DEFAULTS,
+  type ContactSpec, type DynamicInitialization, type FluidAnchors, type PublishedShf,
+  type PressurePoint, type RockModel, type SatSample, type ScalEndpoints, type SwcAnchor,
 } from './fluid-model';
 import {
   kbElevation, stationsOf, tvdAtMd, tvdssOf,
@@ -43,10 +45,81 @@ interface MasterExtras {
   defaults?: { phi?: number; ntg?: number; sw?: number; bo?: number };
   official?: { stoiipMMSm3?: number; giipBcm?: number; producedOilMMSm3?: number; reservoir?: string; drive?: string };
   validation?: { stoiip?: { grvMm3?: number; stoiipMMSm3?: number; owc?: number; method?: string } };
-  pvt?: { source?: string; Bo_note?: string };
+  pvt?: { source?: string; Bo_note?: string; T?: number };
+  shf?: PublishedShf & { archie?: PublishedArchie; brine?: PublishedArchie['brine'] };
 }
 
 interface TrajPayload { well?: string; stations?: SurveyStation[] }
+
+/** Curve-name families this stage needs. The delivery's LFP wells publish SWE/PHIE/VSH;
+ *  other operators name them differently, so match a family rather than one mnemonic. */
+const SAT_CURVE = /^(SW|SWE|SWT|SUWI|SWIR)$/i;
+const POR_CURVE = /^(PHIE|PHIF|PHI|POR|PHIT)$/i;
+const SHALE_CURVE = /^(VSH|VCL|VSHALE|VCLAY)$/i;
+
+/**
+ * Pull one curve out of a DIGESTED log.
+ *
+ * Note the shape. The raw delivery file keys curves by name; the INGESTED asset — what
+ * this module actually reads — stores them as a `DigestedCurve[]`. Assuming the raw
+ * shape here silently yields no curves and therefore no anchor, with nothing on screen
+ * to say why, so the array form is what is matched.
+ */
+const pickCurve = (curves: DigestedCurve[] | undefined, re: RegExp): (number | null)[] | null => {
+  for (const c of curves ?? []) {
+    if (!Array.isArray(c?.values)) continue;
+    if (re.test(String(c.mnemonic ?? '')) || (c.family && re.test(String(c.family)))) return c.values;
+  }
+  return null;
+};
+
+/**
+ * The interpreted saturation samples the delivery carries, per well.
+ *
+ * Only wells that publish saturation, porosity AND shale volume together can enter a
+ * Buckles analysis — a saturation with no porosity beside it cannot be turned into a
+ * Buckles number, and one with no shale volume cannot be screened for clean rock.
+ * Wells missing any of the three are simply absent from the result rather than
+ * half-included.
+ */
+export async function loadSatSamples(ws: Workspace): Promise<Array<{ well: string; samples: SatSample[] }>> {
+  // ONLY open the logs that can possibly contribute.
+  //
+  // The workspace already inventoried which curve TYPES each bore carries, so the
+  // wells with an interpreted saturation are known before a single asset is read.
+  // Opening all of them instead means decompressing every curve of every well —
+  // on this delivery, 24 logs to find the 3 that matter — and that ran on the main
+  // thread and locked the tab. Read the inventory, then read three assets.
+  const wanted = new Set<string>();
+  for (const bore of ws.bores) {
+    const hasSat = bore.curves.some((k) => SAT_CURVE.test(k));
+    const hasPor = bore.curves.some((k) => POR_CURVE.test(k));
+    const hasShale = bore.curves.some((k) => SHALE_CURVE.test(k));
+    if (hasSat && hasPor && hasShale && bore.assetIds.log) wanted.add(bore.assetIds.log);
+  }
+  const logs = ws.assets.filter((a) => a.kind === 'log' && wanted.has(a.id));
+  if (!logs.length) return [];
+
+  const out = await Promise.all(logs.map(async (a) => {
+    const rec = await readRecord<DigestedLog>(a).catch(() => null);
+    const well = String(rec?.well ?? a.meta.well ?? '').trim();
+    if (!rec || !well) return null;
+    const sw = pickCurve(rec.curves, SAT_CURVE);
+    const phi = pickCurve(rec.curves, POR_CURVE);
+    const vsh = pickCurve(rec.curves, SHALE_CURVE);
+    if (!sw || !phi || !vsh) return null;
+    const n = Math.min(sw.length, phi.length, vsh.length);
+    const samples: SatSample[] = [];
+    for (let i = 0; i < n; i++) {
+      const s = sw[i], p = phi[i], v = vsh[i];
+      if (s == null || p == null || v == null) continue;
+      if (!Number.isFinite(s) || !Number.isFinite(p) || !Number.isFinite(v)) continue;
+      samples.push({ sw: s, phi: p, vsh: v });
+    }
+    return samples.length ? { well, samples } : null;
+  }));
+  return out.filter((v): v is { well: string; samples: SatSample[] } => !!v);
+}
 
 /**
  * Every measured formation pressure in the delivery, on the TVDSS axis.
@@ -120,6 +193,15 @@ export interface FluidBasis {
   pressureWells: number;
   /** wells that carry a pressure asset at all — the ceiling on `pressureWells` */
   boresWithPressure: number;
+  /**
+   * Connate water read off the delivery's own interpreted logs, when it has any.
+   * OFFERED, never applied silently: it is an interpretation of an interpretation,
+   * and swapping the analogue for it changes the in-place volume — so the engineer
+   * takes it deliberately or not at all.
+   */
+  swcAnchor: SwcAnchor | null;
+  /** wells that publish interpreted saturation at all */
+  satWells: number;
   /** why there is no case, when there is none */
   gap: string | null;
 }
@@ -129,7 +211,7 @@ export interface FluidBasis {
 export async function loadFluidBasis(fieldId: string, dataVersion = 0): Promise<FluidBasis> {
   const empty: FluidBasis = {
     anchors: null, contacts: [], extras: {}, rock: ROCK_DEFAULTS,
-    points: [], unplaceable: 0, noKb: 0, pressureWells: 0, boresWithPressure: 0,
+    points: [], unplaceable: 0, noKb: 0, pressureWells: 0, boresWithPressure: 0, swcAnchor: null, satWells: 0,
     gap: 'The delivery has not been digested yet.',
   };
   const ws = await getWorkspace(fieldId, dataVersion).catch(() => null);
@@ -157,8 +239,10 @@ export async function loadFluidBasis(fieldId: string, dataVersion = 0): Promise<
     if (w?.name && kb != null) kbByBore.set(wellKey(String(w.name)), kb);
   }
 
-  const { points, unplaceable, wells, noKb } = await loadPressurePoints(ws, kbByBore)
-    .catch(() => ({ points: [], unplaceable: 0, wells: 0, noKb: 0 }));
+  const [{ points, unplaceable, wells, noKb }, satPerWell] = await Promise.all([
+    loadPressurePoints(ws, kbByBore).catch(() => ({ points: [], unplaceable: 0, wells: 0, noKb: 0 })),
+    loadSatSamples(ws).catch(() => [] as Array<{ well: string; samples: SatSample[] }>),
+  ]);
 
   const d = master?.defaults;
   const rock: RockModel = {
@@ -183,8 +267,48 @@ export async function loadFluidBasis(fieldId: string, dataVersion = 0): Promise<
     extras: master ?? {},
     rock,
     points, unplaceable, noKb, pressureWells: wells, boresWithPressure,
+    // read at the delivery's own porosity, so the offered Swc and the volumetrics it
+    // would feed are on the same rock
+    swcAnchor: swcFromLogs(satPerWell, rock.phi),
+    satWells: satPerWell.length,
     gap: anchors ? null : 'This delivery publishes no PVT block — there is nothing to build a fluid model from.',
   };
+}
+
+/**
+ * The Archie constants and reservoir temperature this delivery publishes, for the
+ * Petrophysics tab.
+ *
+ * Deliberately a THIN read — only the well master, none of the pressure or saturation
+ * work `useFluidBasis` does — because Petrophysics needs four numbers, not a fluid
+ * case, and should not pay for one to get them. The underlying workspace query is the
+ * same cached one, so this costs a single digest read.
+ */
+export function usePublishedArchie(): { archie: PublishedArchie | null; reservoirTempC: number | null; ready: boolean } {
+  const fieldId = useScene((s) => s.fieldId);
+  const dataVersion = useScene((s) => s.dataVersion);
+  const [state, setState] = useState<{ archie: PublishedArchie | null; reservoirTempC: number | null; ready: boolean }>(
+    { archie: null, reservoirTempC: null, ready: false },
+  );
+  useEffect(() => {
+    if (!fieldId) return;
+    let alive = true;
+    (async () => {
+      const ws = await getWorkspace(fieldId, dataVersion).catch(() => null);
+      const master = ws?.assets.find((a) => a.kind === 'wellmaster');
+      if (!master) { if (alive) setState({ archie: null, reservoirTempC: null, ready: true }); return; }
+      const rec = await readRecord<MasterExtras & { pvt?: { T?: number } }>(master).catch(() => null);
+      const shf = rec?.shf;
+      if (!alive) return;
+      setState({
+        archie: shf?.archie ? { ...shf.archie, brine: shf.brine } : null,
+        reservoirTempC: Number.isFinite(rec?.pvt?.T) ? (rec!.pvt!.T as number) : null,
+        ready: true,
+      });
+    })();
+    return () => { alive = false; };
+  }, [fieldId, dataVersion]);
+  return state;
 }
 
 /** Endpoints and rock the engineer has moved off the delivery's own basis. */
@@ -201,11 +325,19 @@ export function assembleCase(fieldId: string, basis: FluidBasis, over: FluidOver
   for (const key of Object.keys(over.rock ?? {}) as Array<keyof NonNullable<FluidOverrides['rock']>>) {
     rockBasis[key] = 'user';
   }
+  // THE CAPILLARY SIDE COMES FROM THE DELIVERY WHEN THE DELIVERY PUBLISHES IT.
+  // The analogue Brooks–Corey pair (J_entry 0.25, λ 2.0) produces a transition zone
+  // 16–900× too thin against Volve's own published Swn = 2.222·J^-1.111. So a
+  // published SHF supersedes it — and only the capillary terms, never the kr end
+  // points, which are a different measurement the report does not supply.
+  const rockK = over.rock?.kMd ?? basis.rock.kMd;
+  const shf = basis.extras.shf ?? null;
+  const withShf = applyPublishedShf(SCAL_ANALOGUE, shf, rockK);
   return buildCase({
     fieldId,
     anchors: basis.anchors,
-    scal: { ...SCAL_ANALOGUE, ...over.scal },
-    scalBasis: touchedScal ? 'user' : 'analogue',
+    scal: { ...withShf, ...over.scal },
+    scalBasis: touchedScal ? 'user' : shf ? 'interpreted' : 'analogue',
     rock: { ...basis.rock, ...over.rock, basis: rockBasis },
     contacts: basis.contacts,
     pressurePoints: basis.points,
@@ -232,7 +364,7 @@ export function useFluidBasis(): { basis: FluidBasis; ready: boolean } {
   const [state, setState] = useState<{ basis: FluidBasis; ready: boolean }>(() => ({
     basis: {
       anchors: null, contacts: [], extras: {}, rock: ROCK_DEFAULTS,
-      points: [], unplaceable: 0, noKb: 0, pressureWells: 0, boresWithPressure: 0, gap: null,
+      points: [], unplaceable: 0, noKb: 0, pressureWells: 0, boresWithPressure: 0, swcAnchor: null, satWells: 0, gap: null,
     },
     ready: false,
   }));

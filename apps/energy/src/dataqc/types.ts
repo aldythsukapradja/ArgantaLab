@@ -112,8 +112,14 @@ export interface IngestedAsset {
 /** Bump when digest.ts / bundle.ts start recording a new meta fact.
  *  2 — curve list on logs, TD/inclination/step-out on trajectories, depth range on surfaces.
  *  3 — inclination read via incl_deg where present (WITSML surveys store `incl` in
- *      radians, so v2 reported a 55° well as 1°). */
-export const DIGEST_VERSION = 3;
+ *      radians, so v2 reported a 55° well as 1°).
+ *  4 — the delivery carries facts it did not before: KLOGH/KLOGV/SWIRR merged onto the
+ *      log runs that lack them, and the well master gained the published
+ *      saturation-height block. Both are NEW CONTENT rather than a new meta shape, but
+ *      the gate is the same one — a browser holding a v3 digest would show this field
+ *      as having no permeability and no published SHF, permanently, with nothing on
+ *      screen to say why. */
+export const DIGEST_VERSION = 4;
 
 /** Per-vertical gate verdict. Computed, never stored.
  *  'ready' = a reference package is loaded, digested and QC-clean — the workspace

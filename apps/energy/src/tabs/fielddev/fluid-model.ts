@@ -56,8 +56,10 @@ export const cToF = (t: number) => t * 9 / 5 + 32;
 export const cToK = (t: number) => t + 273.15;
 export const sm3ToScf = (rs: number) => rs * SCF_STB_PER_SM3_SM3;
 
-/** Where a number came from. The same vocabulary the rest of the platform uses. */
-export type Basis = 'deck' | 'measured' | 'correlation' | 'analogue' | 'user' | 'regulator';
+/** Where a number came from. The same vocabulary the rest of the platform uses.
+ *  `interpreted` is deliberately distinct from `measured`: Equinor's LFP saturation
+ *  curves are somebody's petrophysical interpretation of a log, not a core plug. */
+export type Basis = 'deck' | 'measured' | 'interpreted' | 'correlation' | 'analogue' | 'user' | 'regulator';
 
 /** One reported quantity with its provenance attached. Nothing in the case travels
  *  without it — a Bo of 1.47 read off the deck and a Bo of 1.47 produced by Standing
@@ -469,6 +471,9 @@ export function buildPvt(a: FluidAnchors, opts: PvtOptions = {}): PvtModel {
 
 // ── SCAL ─────────────────────────────────────────────────────────────────────
 
+/** Which shape family the relative-permeability curves take. */
+export type KrModel = 'corey' | 'let';
+
 export interface ScalEndpoints {
   swc: number;   // connate (irreducible) water
   sor: number;   // residual oil to water
@@ -482,20 +487,43 @@ export interface ScalEndpoints {
   jEntry: number;
   /** interfacial tension × cos θ, mN/m — the Leverett scaling group */
   sigmaCosTheta: number;
+  /** which kr shape family to evaluate. Corey unless a match needs more freedom. */
+  model?: KrModel;
+  /** LET parameters (Lomeland–Ebeltoft–Thomas 2005), water then oil. Only read when
+   *  `model` is 'let'. L governs the slope leaving the endpoint, T the approach to
+   *  the far end, E the height through the middle — which is the degree of freedom
+   *  Corey does not have and history matching almost always needs. */
+  lw?: number; ew?: number; tw?: number;
+  lo?: number; eo?: number; to?: number;
 }
 
 /**
- * Analogue endpoints: a water-wet Middle Jurassic shoreface sand.
+ * Analogue endpoints: a Middle Jurassic shoreface sand.
  *
- * These are NOT Volve measurements. The Volve delivery's core folders are empty in
- * source, so no SCAL exists to read: nw ≈ 3 and no ≈ 2 with Swc 0.15 / Sor 0.25 are
- * the water-wet North Sea sandstone convention, and every screen that shows a curve
- * built from them says `analogue` beside it. The uncertainty this carries into a
- * waterflood forecast is larger than any other input on this tab.
+ * These are NOT Volve measurements. The delivery's core folders are empty in source,
+ * so no SCAL exists to read: nw ≈ 3, no ≈ 2, Swc 0.15, Sor 0.25 are the North Sea
+ * sandstone convention, and every screen built from them says `analogue`.
+ *
+ * DELIBERATELY NOT CALLED "WATER-WET" HERE. Run `diagnoseWettability` on these numbers
+ * and Craig's indicators split 2/3 intermediate: the crossover at Sw ≈ 0.54 reads
+ * water-wet, but Swc 0.15 and krw-at-Sor 0.40 both read intermediate. The convention
+ * these come from is described as water-wet; the endpoints themselves are not
+ * unambiguously so, and the tab reports that rather than repeating the label.
+ *
+ * Swc is capped by the field's own data, not by taste: this delivery's interpreted
+ * initial Sw is 0.20, so a connate saturation above that would contradict it — and
+ * `validateCase` fails the case when it does.
+ *
+ * The uncertainty this carries into a waterflood forecast is larger than any other
+ * input on this tab, and only core closes it.
  */
 export const SCAL_ANALOGUE: ScalEndpoints = {
   swc: 0.15, sor: 0.25, krwMax: 0.4, kroMax: 0.9, nw: 3, no: 2,
   lambda: 2.0, jEntry: 0.25, sigmaCosTheta: 30,
+  model: 'corey',
+  // LET defaults chosen to sit close to the Corey pair above, so switching model is a
+  // change of FREEDOM rather than a jump to a different rock.
+  lw: 3, ew: 1, tw: 2, lo: 2, eo: 1, to: 2,
 };
 
 /** Normalised water saturation, clamped to the mobile range. */
@@ -504,8 +532,37 @@ export function normalizedSw(sw: number, e: ScalEndpoints): number {
   return Math.max(0, Math.min(1, se));
 }
 
-/** Corey relative permeabilities at a water saturation. */
+/**
+ * LET relative permeability (Lomeland–Ebeltoft–Thomas 2005).
+ *
+ *   krw = krwMax · Se^Lw / (Se^Lw + Ew·(1−Se)^Tw)
+ *   kro = kroMax · (1−Se)^Lo / ((1−Se)^Lo + Eo·Se^To)
+ *
+ * Three parameters per phase instead of Corey's one. L is the slope leaving the
+ * endpoint, T the approach to the far end, E the elevation through the middle. That
+ * middle degree of freedom is the whole point: a Corey curve is pinned by its
+ * exponent everywhere at once, so a history match that needs to move the mid-range
+ * without moving the endpoints has nowhere to go.
+ *
+ * NOT a superset of Corey — the two families overlap in behaviour but neither
+ * contains the other, so switching model changes the curve. Both honour the same end
+ * points exactly, which is what makes the switch safe.
+ */
+export function letKr(sw: number, e: ScalEndpoints): { krw: number; kro: number } {
+  const s = normalizedSw(sw, e);
+  const lw = e.lw ?? 3, ew = e.ew ?? 1, tw = e.tw ?? 2;
+  const lo = e.lo ?? 2, eo = e.eo ?? 1, to = e.to ?? 2;
+  const wNum = s ** lw, wDen = wNum + ew * (1 - s) ** tw;
+  const oNum = (1 - s) ** lo, oDen = oNum + eo * s ** to;
+  return {
+    krw: wDen > 0 ? e.krwMax * (wNum / wDen) : 0,
+    kro: oDen > 0 ? e.kroMax * (oNum / oDen) : 0,
+  };
+}
+
+/** Relative permeabilities at a water saturation, in whichever model the case uses. */
 export function coreyKr(sw: number, e: ScalEndpoints): { krw: number; kro: number } {
+  if (e.model === 'let') return letKr(sw, e);
   const s = normalizedSw(sw, e);
   return { krw: e.krwMax * s ** e.nw, kro: e.kroMax * (1 - s) ** e.no };
 }
@@ -521,6 +578,92 @@ export function fracFlow(sw: number, e: ScalEndpoints, muw: number, muo: number)
 export function totalMobility(sw: number, e: ScalEndpoints, muw: number, muo: number): number {
   const { krw, kro } = coreyKr(sw, e);
   return krw / muw + kro / muo;
+}
+
+// ── wettability ──────────────────────────────────────────────────────────────
+
+export type Wetting = 'water-wet' | 'intermediate' | 'oil-wet';
+
+export interface WettabilityCriterion {
+  key: 'swi' | 'crossover' | 'krwMax';
+  label: string;
+  value: number;
+  /** what this single criterion says on its own */
+  reads: Wetting;
+  /** the published threshold it was judged against */
+  rule: string;
+}
+
+export interface WettabilityDiagnosis {
+  /** the majority verdict across the three criteria */
+  verdict: Wetting;
+  /** how many of the three agree with the verdict */
+  agreeing: number;
+  criteria: WettabilityCriterion[];
+  /** the saturation at which krw and kro cross, or null if they never do */
+  crossoverSw: number | null;
+}
+
+/**
+ * Craig's (1971) rules of thumb, applied to the case's own kr curves.
+ *
+ * WHAT THIS IS AND IS NOT. Wettability is measured on core, by Amott–Harvey or USBM.
+ * This delivery has no core, so nothing here measures anything. What it does is
+ * diagnose the CURVE: Craig's three indicators read wettability off the shape of a
+ * relative-permeability pair, so running them backwards tells you what wettability
+ * your assumed endpoints actually imply.
+ *
+ * That check is worth having precisely because it can contradict the label. A curve
+ * introduced as "water-wet North Sea sand" whose endpoints read intermediate is a
+ * statement about the analogue, not about the reservoir — and it is invisible until
+ * someone computes the crossover.
+ *
+ *   Swi        water-wet rock holds more connate water: > 20–25% water-wet, < 15% oil-wet
+ *   crossover  the Sw where krw = kro: > 0.5 water-wet, < 0.5 oil-wet
+ *   krw at Sor water-wet rock keeps water in the small pores, so krw stays low:
+ *              < 0.3 water-wet, > 0.5 oil-wet
+ */
+export function diagnoseWettability(e: ScalEndpoints, samples = 2000): WettabilityDiagnosis {
+  // the crossover, found on the actual curves rather than assumed from the exponents
+  let crossoverSw: number | null = null;
+  let prev = coreyKr(e.swc, e);
+  let prevDiff = prev.krw - prev.kro;
+  for (let i = 1; i <= samples; i++) {
+    const sw = e.swc + (1 - e.sor - e.swc) * (i / samples);
+    const k = coreyKr(sw, e);
+    const diff = k.krw - k.kro;
+    if (prevDiff < 0 && diff >= 0) { crossoverSw = sw; break; }
+    prevDiff = diff;
+  }
+
+  const band = (v: number, wetBelow: boolean, wet: number, oil: number): Wetting => {
+    if (wetBelow) return v < wet ? 'water-wet' : v > oil ? 'oil-wet' : 'intermediate';
+    return v > wet ? 'water-wet' : v < oil ? 'oil-wet' : 'intermediate';
+  };
+
+  const criteria: WettabilityCriterion[] = [
+    {
+      key: 'swi', label: 'Connate water saturation', value: e.swc,
+      reads: band(e.swc, false, 0.25, 0.15),
+      rule: 'Craig: > 25% water-wet · < 15% oil-wet',
+    },
+    {
+      key: 'crossover', label: 'krw = kro crossover', value: crossoverSw ?? NaN,
+      reads: crossoverSw == null ? 'intermediate' : band(crossoverSw, false, 0.5, 0.5),
+      rule: 'Craig: > 0.5 water-wet · < 0.5 oil-wet',
+    },
+    {
+      key: 'krwMax', label: 'krw at residual oil', value: e.krwMax,
+      reads: band(e.krwMax, true, 0.3, 0.5),
+      rule: 'Craig: < 0.3 water-wet · > 0.5 oil-wet',
+    },
+  ];
+
+  const tally: Record<Wetting, number> = { 'water-wet': 0, intermediate: 0, 'oil-wet': 0 };
+  for (const c of criteria) tally[c.reads]++;
+  const verdict = (Object.keys(tally) as Wetting[])
+    .reduce((best, k) => (tally[k] > tally[best] ? k : best), 'intermediate');
+  return { verdict, agreeing: tally[verdict], criteria, crossoverSw };
 }
 
 /** End-point mobility ratio M = (krw@Sor/μw)/(kro@Swc/μo). M > 1 is unfavourable. */
@@ -643,6 +786,167 @@ export function welgeFront(e: ScalEndpoints, muw: number, muo: number, samples =
     swf, fwf, swAvgBt,
     pviBt: 1 / best,
     recoveryBt: (swAvgBt - e.swc) / (1 - e.swc),
+  };
+}
+
+// ── the delivery's PUBLISHED saturation-height function ──────────────────────
+
+/** The saturation-height parameters a delivery publishes for its own reservoir. */
+export interface PublishedShf {
+  formation?: string;
+  /** Swn = a·J^b against the Leverett J-function */
+  swn: { a: number; b: number };
+  /** Swirr = c1·log10(k[mD]) + c2 */
+  swirr?: { form: string; c1: number; c2: number };
+  /** reservoir oil/water interfacial tension × cos θ, mN/m */
+  sigmaResMNm?: number;
+  archie?: { mFromK?: { a: number; b: number }; n?: number };
+  brine?: { ppmNaClEquivalent?: number; rwOhmM?: number; rwTempC?: number };
+  source?: string;
+}
+
+/**
+ * Convert a published `Swn = a·J^b` into the Brooks–Corey pair this engine uses.
+ *
+ * Brooks–Corey writes Swn = (J/J_entry)^−λ = J_entry^λ · J^−λ, so matching term by
+ * term gives λ = −b and J_entry = a^(1/λ). Same curve, different parameterisation —
+ * which is the point: the published relation goes in without the engine having to
+ * carry a second capillary model beside the one the SWOF table already uses.
+ */
+export function shfToBrooksCorey(swn: { a: number; b: number }): { lambda: number; jEntry: number } | null {
+  const lambda = -swn.b;
+  if (!(lambda > 0) || !(swn.a > 0)) return null;
+  return { lambda, jEntry: swn.a ** (1 / lambda) };
+}
+
+/** Irreducible water at a permeability, from the delivery's published relation. */
+export function publishedSwirr(shf: PublishedShf | null | undefined, kMd: number): number | null {
+  const s = shf?.swirr;
+  if (!s || !(kMd > 0)) return null;
+  const v = s.c1 * Math.log10(kMd) + s.c2;
+  return Number.isFinite(v) ? Math.max(0.01, Math.min(0.9, v)) : null;
+}
+
+/**
+ * Apply a published SHF to a set of endpoints.
+ *
+ * Only the capillary side is replaced — λ, the entry J and the interfacial tension.
+ * The relative-permeability endpoints are a different measurement and are left alone,
+ * so adopting a published saturation-height function never silently changes the kr
+ * curves a forecast was built on.
+ */
+export function applyPublishedShf(e: ScalEndpoints, shf: PublishedShf | null | undefined, kMd?: number): ScalEndpoints {
+  if (!shf) return e;
+  const bc = shfToBrooksCorey(shf.swn);
+  if (!bc) return e;
+  const swirr = kMd != null ? publishedSwirr(shf, kMd) : null;
+  return {
+    ...e,
+    lambda: bc.lambda,
+    jEntry: bc.jEntry,
+    sigmaCosTheta: shf.sigmaResMNm ?? e.sigmaCosTheta,
+    ...(swirr != null ? { swc: swirr } : {}),
+  };
+}
+
+// ── anchoring Swc to the delivery's own logs ─────────────────────────────────
+
+/** One depth sample from an interpreted log, for the Buckles analysis. */
+export interface SatSample { sw: number; phi: number; vsh: number }
+
+export interface BucklesFit {
+  well: string;
+  /** samples that survived the clean-and-porous screen */
+  n: number;
+  /** the low-percentile Buckles numbers, Sw·φ */
+  p10: number;
+  p25: number;
+  /** Swc those imply at the model's porosity */
+  swcP10: number;
+  swcP25: number;
+  /** the lowest Sw the well actually reaches in reservoir-quality rock */
+  minSw: number;
+  /** false when the well never leaves the water leg — it cannot bound Swc */
+  reachesIrreducible: boolean;
+}
+
+export interface SwcAnchor {
+  /** the recommended connate water saturation at the model porosity */
+  swc: number;
+  /** the honest spread — P25 and P10 across the contributing wells */
+  low: number;
+  high: number;
+  /** the pooled Buckles number, Sw·φ */
+  buckles: number;
+  wells: BucklesFit[];
+  /** wells that carry the curves but never reach irreducible saturation */
+  excluded: string[];
+  phi: number;
+}
+
+const pctile = (sorted: number[], f: number) =>
+  sorted.length ? sorted[Math.max(0, Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * f)))] : NaN;
+
+/**
+ * Estimate connate water saturation from interpreted logs — the Buckles method.
+ *
+ * WHY THIS MATTERS MORE THAN ANY OTHER ENDPOINT. Swc sets where the kr curves start,
+ * how much of the pore space can ever hold oil, and — through (1−Sw) — the in-place
+ * volume itself. Leaving it on an analogue while the delivery ships three wells of
+ * interpreted saturation is leaving the best-constrained endpoint unconstrained.
+ *
+ * THE METHOD. In rock at irreducible saturation the water is held in small pores and
+ * on grain surfaces, so the product Sw·φ — the Buckles number — is roughly constant:
+ * tighter rock holds proportionally more water. Screen to clean, porous samples,
+ * take a low percentile of Sw·φ, and read Swc off at the porosity the model uses.
+ *
+ * WHAT IT CANNOT DO. A well sitting in the water leg never reaches irreducible
+ * saturation, and averaging it in would drag Swc upward toward 1. Such wells are
+ * EXCLUDED and named, not quietly included. And this is an interpretation of an
+ * interpretation — Equinor's LFP saturation curve, not a core plug — so the result is
+ * `interpreted`, never `measured`.
+ */
+export function swcFromLogs(
+  perWell: Array<{ well: string; samples: SatSample[] }>,
+  phi: number,
+  opts: { maxVsh?: number; minPhi?: number; minSamples?: number; wetIfMinSwAbove?: number } = {},
+): SwcAnchor | null {
+  const maxVsh = opts.maxVsh ?? 0.3;
+  const minPhi = opts.minPhi ?? 0.15;
+  const minSamples = opts.minSamples ?? 50;
+  const wetIfMinSwAbove = opts.wetIfMinSwAbove ?? 0.5;
+
+  const fits: BucklesFit[] = [];
+  const excluded: string[] = [];
+  for (const { well, samples } of perWell) {
+    const clean = (samples ?? []).filter((s) =>
+      Number.isFinite(s?.sw) && Number.isFinite(s?.phi) && Number.isFinite(s?.vsh)
+      && s.vsh <= maxVsh && s.phi >= minPhi && s.sw > 0 && s.sw <= 1);
+    if (clean.length < minSamples) { if (samples?.length) excluded.push(well); continue; }
+    const b = clean.map((s) => s.sw * s.phi).sort((x, y) => x - y);
+    const minSw = Math.min(...clean.map((s) => s.sw));
+    const reachesIrreducible = minSw < wetIfMinSwAbove;
+    const p10 = pctile(b, 0.10), p25 = pctile(b, 0.25);
+    const fit: BucklesFit = {
+      well, n: clean.length, p10, p25,
+      swcP10: p10 / phi, swcP25: p25 / phi,
+      minSw, reachesIrreducible,
+    };
+    if (!reachesIrreducible) { excluded.push(well); continue; }
+    fits.push(fit);
+  }
+  if (!fits.length) return null;
+
+  // pool across the contributing wells rather than taking the most optimistic one
+  const mean = (xs: number[]) => xs.reduce((a, v) => a + v, 0) / xs.length;
+  const buckles = mean(fits.map((f) => f.p25));
+  const low = mean(fits.map((f) => f.p10)) / phi;
+  const high = mean(fits.map((f) => f.p25)) / phi;
+  return {
+    swc: Math.max(0.01, Math.min(0.9, high)),
+    low: Math.max(0.01, Math.min(0.9, low)),
+    high: Math.max(0.01, Math.min(0.9, high)),
+    buckles, wells: fits, excluded, phi,
   };
 }
 
@@ -955,6 +1259,7 @@ export interface DynamicInitialization {
   rock: RockModel;
   swof: ScalRow[];
   welge: WelgeResult;
+  wettability: WettabilityDiagnosis;
   mobilityRatio: number;
   displacementEfficiency: number;
   equil: EquilState;
@@ -1034,6 +1339,7 @@ export function buildCase(input: CaseInput): DynamicInitialization {
     anchors: a, pvt, scal,
     scalBasis: input.scalBasis ?? 'analogue',
     rock, swof, welge,
+    wettability: diagnoseWettability(scal),
     mobilityRatio: mobilityRatio(scal, pvt.muw, pvt.muoAtPi),
     displacementEfficiency: displacementEfficiency(scal),
     equil, volumetrics, reconciliation,
@@ -1072,6 +1378,19 @@ export function validateCase(c: {
   if (pvt.rhoWaterRes <= pvt.rhoOilRes) {
     out.push({ severity: 'fail', rule: 'init.density', message: 'Reservoir water is not denser than reservoir oil — the phases would not segregate.' });
   }
+  // The analogue is INTRODUCED as water-wet. Craig's indicators, run on the actual
+  // endpoints, may not agree — and if they do not, the label is wrong rather than the
+  // rock being unusual. This is the check that catches a curve nobody re-examined.
+  const wet = diagnoseWettability(scal);
+  if (wet.agreeing < 3) {
+    const dissent = wet.criteria.filter((c) => c.reads !== wet.verdict);
+    out.push({
+      severity: wet.agreeing <= 1 ? 'warn' : 'info',
+      rule: 'scal.wettability',
+      message: `These curves read ${wet.verdict} on ${wet.agreeing} of Craig's 3 indicators. ${dissent.map((c) => `${c.label} is ${c.value.toFixed(3)}, which reads ${c.reads} (${c.rule})`).join('; ')}. Wettability is a core measurement and none was delivered — this only says what the assumed curve shape implies, so treat a split verdict as a reason to sensitise, not as a finding about the rock.`,
+    });
+  }
+
   const mr = mobilityRatio(scal, pvt.muw, pvt.muoAtPi);
   if (mr > 1) {
     out.push({ severity: 'warn', rule: 'scal.mobility', message: `End-point mobility ratio ${mr.toFixed(2)} is unfavourable — expect viscous fingering and early breakthrough; sweep will be optimistic in a coarse model.` });
@@ -1228,4 +1547,106 @@ export function toEclipseDeck(c: DynamicInitialization): string {
   L.push('--  Datum   Pdatum   OWC     Pc(OWC)  GOC  Pc(GOC)');
   L.push(`  ${f(c.equil.datumTvdss, 1)}  ${f(c.equil.datumPressure, 2)}  ${c.equil.owc == null ? '1*' : f(c.equil.owc, 1)}  0.0  1*  1*  /`);
   return L.join('\n');
+}
+
+// ── Cuddy's saturation-height function ──────────────────────────────────────
+//
+// Cuddy et al. (1993) observed that BULK VOLUME WATER — the product Sw·φ, i.e. the
+// fraction of the whole rock occupied by water — follows a simple power law in height
+// above the free-water level:
+//
+//     BVW = Sw · φ = a · H^b        ⇒        Sw = a · H^b / φ
+//
+// ── WHY IT IS EASIER THAN A LEVERETT J ──────────────────────────────────────
+//
+// The J-function route needs interfacial tension, a contact angle, a Pc curve and —
+// critically — a PERMEABILITY per cell. Every one of those is another number to source
+// and another place to be wrong. Cuddy needs two constants and fits them directly to
+// the log-derived Sw and φ that the interpretation already produced. Where the
+// permeability is an ANALOGUE guess, as it is here, the J-function is propagating that
+// guess into the saturation of every cell; Cuddy simply does not ask.
+//
+// ── WHAT IT GIVES UP, AND WHEN THAT MATTERS ─────────────────────────────────
+//
+// There is no explicit rock-quality term. Two cells at the same height get the same
+// BULK VOLUME of water, so the tighter one — lower φ — is assigned the HIGHER Sw, and
+// that much of the physics does survive. What does not survive is permeability: a
+// well-sorted 1000 mD sand and a poorly-sorted 50 mD sand of identical porosity get
+// identical saturation, where a J-function would separate them. Use Cuddy when the
+// permeability is unreliable or absent and log coverage is good; use the J-function
+// when core capillary pressure exists and rock types genuinely differ at equal φ.
+//
+// Both are exposed, and the two disagreeing is a finding worth having.
+
+export interface CuddyShf {
+  /** BVW = a·H^b */
+  a: number;
+  b: number;
+  /** samples the fit rests on */
+  n: number;
+  /** coefficient of determination of the log–log fit */
+  r2: number;
+  /** the height range actually fitted, metres — the function says nothing outside it */
+  hMin: number;
+  hMax: number;
+}
+
+export interface CuddySample {
+  /** height above the FREE-WATER LEVEL, metres. Samples at or below it carry no
+   *  information about the transition and must not be fitted. */
+  h: number;
+  sw: number;
+  phi: number;
+}
+
+/**
+ * Fit BVW = a·H^b by least squares in log–log space.
+ *
+ * Rejects any sample whose height, Sw or φ is non-positive: the regression is on
+ * logarithms, and a single zero would take the whole fit with it. Returns null rather
+ * than a fabricated pair when too few samples survive — a two-point "fit" through log
+ * noise is not a saturation-height function.
+ */
+export function fitCuddy(samples: CuddySample[], minSamples = 20): CuddyShf | null {
+  const xs: number[] = [], ys: number[] = [];
+  let hMin = Infinity, hMax = -Infinity;
+  for (const s of samples) {
+    if (!(s.h > 0) || !(s.phi > 0) || !(s.sw > 0) || s.sw > 1) continue;
+    const bvw = s.sw * s.phi;
+    if (!(bvw > 0)) continue;
+    xs.push(Math.log10(s.h));
+    ys.push(Math.log10(bvw));
+    if (s.h < hMin) hMin = s.h;
+    if (s.h > hMax) hMax = s.h;
+  }
+  const n = xs.length;
+  if (n < minSamples) return null;
+
+  const mx = xs.reduce((p, q) => p + q, 0) / n;
+  const my = ys.reduce((p, q) => p + q, 0) / n;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - mx, dy = ys[i] - my;
+    sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+  }
+  if (!(sxx > 0)) return null;
+  const b = sxy / sxx;
+  const a = 10 ** (my - b * mx);
+  const r2 = syy > 0 ? (sxy * sxy) / (sxx * syy) : 0;
+  return { a, b, n, r2, hMin, hMax };
+}
+
+/**
+ * Water saturation at a height above the free-water level, by Cuddy.
+ *
+ * Below the FWL the rock is fully water-bearing, and the power law is not evaluated
+ * there at all — H ≤ 0 has no logarithm and no meaning. The result is clamped to
+ * [swirr, 1]: the raw BVW law is unbounded as φ falls, so a tight cell high in the
+ * column can otherwise be handed a saturation above one, which is not a saturation.
+ */
+export function cuddySw(hM: number, phi: number, c: { a: number; b: number }, swirr = 0.05): number {
+  if (!(hM > 0)) return 1;
+  if (!(phi > 0)) return 1;
+  const bvw = c.a * hM ** c.b;
+  return Math.max(swirr, Math.min(1, bvw / phi));
 }

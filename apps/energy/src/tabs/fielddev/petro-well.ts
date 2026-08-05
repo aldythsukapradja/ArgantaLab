@@ -24,6 +24,9 @@ export interface PetroFamilies {
   grMin?: DigestedCurve; grMax?: DigestedCurve;
   /** the delivery's OWN interpreted answer, where it ships one */
   refPhie?: DigestedCurve; refSw?: DigestedCurve; refVsh?: DigestedCurve;
+  /** the delivery's permeability log, when it ships one — drives the per-sample
+   *  cementation exponent m = a·k^b that this field's evaluation publishes */
+  klogh?: DigestedCurve;
 }
 
 /** One interval between consecutive picks — what a zone actually is. */
@@ -108,6 +111,7 @@ export function usePetroWell(ws: Workspace, bore: WorkspaceBore | null, params: 
       nphi: byFamily('NPHI'), dt: byFamily('DT'),
       grMin: byMnem('GRMIN'), grMax: byMnem('GRMAX'),
       refPhie: byFamily('PHIE'), refSw: byFamily('SW'), refVsh: byFamily('VSH'),
+      klogh: byMnem('KLOGH') ?? byFamily('KLOGH'),
     };
   }, [log]);
 
@@ -131,6 +135,7 @@ export function usePetroWell(ws: Workspace, bore: WorkspaceBore | null, params: 
       nphi: fam.nphi?.values, dt: fam.dt?.values,
       grMin: fam.grMin?.values, grMax: fam.grMax?.values,
       refPhie: fam.refPhie?.values, refSw: fam.refSw?.values, refVsh: fam.refVsh?.values,
+      klogh: fam.klogh?.values,
     }, params);
   }, [log, mdM, fam, params]);
 

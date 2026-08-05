@@ -229,6 +229,14 @@ const CURVES = {
   RT: [/^LFP_RT$/, /^RT$/, /^RDEP$/, /^RD$/, /^ILD$/, /^LLD$/, /^A40H$/, /^RACEHM$/, /^P40H$/, /^A34H$/],
   DT: [/^LFP_DT$/, /^DT$/, /^DTC$/, /^AC$/], CALI: [/^LFP_CALI$/, /^CALI$/, /^CAL$/],
   PHIE: [/^LFP_PHIE$/, /^PHIE$/, /^PHIF$/], SWE: [/^LFP_SWE$/, /^SWE$/, /^SW$/], VSH: [/^LFP_VSH$/, /^LFP_VSHGR$/, /^VSH$/], SAND: [/^LFP_SAND$/, /^SAND_FLAG$/],
+  // PERMEABILITY. Only the CPI product carries it, and the CPI never wins the run
+  // scoring below (LFP gets a deliberate bonus as the fuller petrophysics set), so
+  // until the merge pass was added this curve — the delivery's ONLY statement of
+  // permeability — was silently dropped and every downstream k was an analogue.
+  KLOGH: [/^KLOGH$/, /^LFP_KLOGH$/, /^KLOGH_NEW$/],
+  KLOGV: [/^KLOGV$/],
+  // Equinor's own irreducible-saturation-from-permeability curve, SWIRR = 0.42·k^-0.18
+  SWIRR: [/^SWIRR$/],
   RW: [/^LFP_RW$/], GRMIN: [/^LFP_GRMIN$/], GRMAX: [/^LFP_GRMAX$/], RHOMA: [/^LFP_RHOMA$/],
   // Shallow/medium resistivity — with a deep channel this gives the invasion profile
   RMED: [/^P28H$/, /^A28H$/, /^RACELM$/, /^RM$/],
@@ -258,6 +266,8 @@ function resolveCurves(meta) {
 }
 const logFiles = readdirSync(join(P, 'log-samples'));
 const runsBy = new Map();
+/** every decoded run per well, so a curve only a losing run carries can still be merged */
+const altRuns = new Map();
 for (const f of logFiles) {
   const meta = j(join(P, 'log-samples', f));
   const well = resolveWb(meta.well);
@@ -267,14 +277,88 @@ for (const f of logFiles) {
   const score = verified + (/LFP/i.test(meta.folder || meta.run || f) ? 3 : 0);
   const cur = runsBy.get(well);
   if (!cur || score > cur.score) runsBy.set(well, { score, f, meta, resolved });
+  // keep every run, not just the winner — the merge pass below needs the losers
+  const alts = altRuns.get(well) ?? [];
+  alts.push({ f, meta, resolved });
+  altRuns.set(well, alts);
 }
+
+// ── 2a-ii · MERGE the curves only a LOSING run carries ───────────────────────
+//
+// The scoring above picks ONE run per well, and that is right: mixing two
+// petrophysicists' porosity curves depth-by-depth would produce an interpretation
+// neither of them signed. But it also meant a curve that exists in exactly one
+// product was thrown away with the rest of that product.
+//
+// Volve's permeability is exactly that case. KLOGH lives only in the CPI run; the LFP
+// run wins on every one of the three wells that have both; so the delivery shipped no
+// permeability at all, and every k downstream — transition-zone height, well index,
+// the simulation grid — fell back to a 500 mD analogue while the field's own measured
+// log sat in the source tree.
+//
+// So: the winner is still the interpretation. Only curves the winner DOES NOT HAVE are
+// merged in, only from a run for the same well, and only where the merged run's depth
+// index matches the winner's — no resampling, no interpolation between products. Each
+// merged curve records which run it came from.
+const MERGEABLE = ['KLOGH', 'KLOGV', 'SWIRR'];
+/** Depth-MATCHED resample: for each winner depth take the alt sample at the SAME
+ *  depth, within tolerance. Never interpolates between two alt samples — a merged
+ *  curve is the other product's own readings placed at their own depths, and where
+ *  there is no reading within tolerance the merged curve is null. */
+function alignOnDepth(altMd, altVals, winMd, tol = 0.08) {
+  if (!Array.isArray(altMd) || !Array.isArray(altVals) || !Array.isArray(winMd)) return null;
+  const order = altMd.map((d, i) => i).filter((i) => Number.isFinite(altMd[i])).sort((x, y) => altMd[x] - altMd[y]);
+  if (!order.length) return null;
+  const sortedMd = order.map((i) => altMd[i]);
+  const out = new Array(winMd.length).fill(null);
+  let hits = 0;
+  for (let w = 0; w < winMd.length; w++) {
+    const d = winMd[w];
+    if (!Number.isFinite(d)) continue;
+    let lo = 0, hi = sortedMd.length - 1, best = -1, bestDiff = Infinity;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const diff = Math.abs(sortedMd[mid] - d);
+      if (diff < bestDiff) { bestDiff = diff; best = mid; }
+      if (sortedMd[mid] < d) lo = mid + 1; else hi = mid - 1;
+    }
+    if (best >= 0 && bestDiff <= tol) {
+      const v = altVals[order[best]];
+      if (v != null && Number.isFinite(v)) { out[w] = v; hits++; }
+    }
+  }
+  return hits ? { values: out, hits } : null;
+}
+let mergedCount = 0;
+for (const [well, pick] of runsBy) {
+  for (const alt of altRuns.get(well) ?? []) {
+    if (alt.f === pick.f) continue;
+    for (const canon of MERGEABLE) {
+      if (pick.resolved[canon] || !alt.resolved[canon]) continue;
+      const aligned = alignOnDepth(alt.meta.md, alt.meta.values[alt.resolved[canon].valueKey], pick.meta.md);
+      if (!aligned) continue;
+      pick.resolved[canon] = {
+        ...alt.resolved[canon],
+        mergedFrom: alt.meta.folder || alt.meta.run || alt.f,
+        mergedValues: aligned.values,
+      };
+      mergedCount++;
+      console.log(`[wb] merged ${canon} into ${well} from ${alt.meta.folder || alt.f} (${aligned.hits}/${pick.meta.md.length} depths matched)`);
+    }
+  }
+}
+if (mergedCount) console.log(`[wb] ${mergedCount} curve(s) merged from non-winning runs — permeability now reaches the workspace`);
 let logWells = 0;
 const wellLogInfo = new Map();
 for (const [well, pick] of runsBy) {
   const m = pick.meta;
   const out = { well, run: m.run, folder: m.folder, format: m.format, dataNature: m.dataNature ?? 'measured', source_id: m.source_id, depth_unit: m.depth_unit, md: m.md, curves: {} };
   for (const [canon, r] of Object.entries(pick.resolved)) {
-    out.curves[canon] = { source: r.source, unit: r.unit, values: m.values[r.valueKey] };
+    // a merged curve carries its own values AND says which run they came from, so a
+    // reader can never mistake it for part of the winning interpretation
+    out.curves[canon] = r.mergedValues
+      ? { source: r.source, unit: r.unit, values: r.mergedValues, mergedFrom: r.mergedFrom }
+      : { source: r.source, unit: r.unit, values: m.values[r.valueKey] };
   }
   w(`logs-${slug(well)}.json`, out);
   wellLogInfo.set(well, { n: m.md.length, curves: Object.keys(out.curves) });
@@ -1102,6 +1186,41 @@ for (const h of (globalThis.__WELLHEADS__ ?? [])) {
   console.log(`[wb] metrics re-attributed: ${h.productionFiledOn} -> ${h.producedBy}`);
 }
 
+// ── SATURATION-HEIGHT FUNCTION, as PUBLISHED for this field ──────────────────
+//
+// Source: "Sleipner Øst and Volve Model 2006 — Hugin and Skagerrak Formation
+// Petrophysical Evaluation", Statoil doc. nr. 3781-06 rev.1, shipped with the Volve
+// open dataset at Well_logs/05.PETROPHYSICAL INTERPRETATION. Every constant below is
+// read off that report, for the VOLVE wells (15/9-19 A and 15/9-19 SR) specifically —
+// the same report gives different constants for Sleipner Øst and for Skagerrak, and
+// using those here would be a different field's rock.
+//
+// WHY THIS IS IN THE DELIVERY AND NOT IN THE ENGINE. The engine is field-agnostic;
+// this is a statement about Hugin at Volve. It travels with the data for the same
+// reason the PVT block does — so the code reads it rather than assuming it.
+const shf = {
+  formation: 'Hugin Fm, Volve',
+  // Normalised water saturation against the Leverett J-function, report Figure 5.b:
+  //   Swn = a · J^b        then   Sw = Swn·(1 − Swirr) + Swirr
+  swn: { a: 2.222, b: -1.111 },
+  // Irreducible water against permeability, report Figure 20.b (Volve wells):
+  //   Swirr = c1·log10(k[mD]) + c2
+  swirr: { form: 'log10', c1: -0.088, c2: 0.412 },
+  // The CPI curves implement the SAME relation as a power law, Swirr = a·k^b. The two
+  // agree at k≈1 mD and diverge to ~0.05 saturation units by 100 mD — carried so the
+  // difference is visible rather than a silent choice of one over the other.
+  swirrCpi: { form: 'power', a: 0.42, b: -0.18 },
+  // Lab capillary measurements were gas/water; the report states 70 mN/m and 0°.
+  sigmaLabMNm: 70, contactAngleLabDeg: 0,
+  // Reservoir oil/water interfacial tension implied by the CPI's own J constant
+  // (J = (0.034355/8.27)·H·√(k/φ) ⇒ σcosθ = 3.1415e-3 × 8.27 N/m).
+  sigmaResMNm: 25.98,
+  // Archie, same report: m is permeability-dependent, n is fitted per well pair.
+  archie: { mFromK: { a: 1.865, b: -0.0083 }, n: 2.45, nWells: '15/9-19 A and 15/9-19 SR' },
+  brine: { rwOhmM: 0.07, rwTempC: 20, ppmNaClEquivalent: 130000 },
+  source: 'Statoil doc 3781-06 rev.1 (2005 Sleipner Øst & Volve, Hugin/Skagerrak Petrophysical Evaluation) — Fig 5.b, Fig 20.b, §3.5, §6',
+};
+
 // cum-oil reconcile: sum of daily oil vs published ~63 MMbbl (~10.0 MMSm3).
 // THIS is the tight published-truth gate — validates the production decode exactly.
 let cumOil = 0;
@@ -1110,16 +1229,40 @@ const cumMMSm3 = cumOil / 1e6;
 const cumOk = cumMMSm3 > 9.0 && cumMMSm3 < 11.1; // 63 MMbbl ≈ 10.02 MMSm3 ±10%
 
 // Reconcile what we computed against what the authority publishes, and SAY so.
+//
+// The GAS row is a second, independent check and it tests a different input. Volve is
+// undersaturated (Pi 337 >> Pb 256), so there is no gas cap and every molecule of gas
+// is dissolved in the oil: GIIP is exactly STOIIP x Rs. Oil in place can only be right
+// if the rock volume is right; gas can only be right if the rock volume AND the deck's
+// solution GOR are both right.
+const giipOursBcm = (sto.stoiipMMSm3 * 1e6 * pvt.Rs) / 1e9;
+const overstatesBy = Math.round((sto.stoiipMMSm3 / OFFICIAL.stoiipMMSm3) * 10) / 10;
+const rfScreening = Math.round((cumMMSm3 / sto.stoiipMMSm3) * 1000) / 10;
+const rfOfficial = Math.round((cumMMSm3 / OFFICIAL.stoiipMMSm3) * 1000) / 10;
+const giipDeltaPct = Math.round(((giipOursBcm - OFFICIAL.giipBcm) / OFFICIAL.giipBcm) * 1000) / 10;
+
+// DERIVED, never a frozen sentence. This note was hard-coded once, describing a
+// 3200 m-contact scenario in which the screening volume overstated by 7.6x. The
+// contact later moved to 3065 m, the numbers beside it became 1.0x and 52.8%, and the
+// note went on asserting 7.6x and ~7% for as long as it was a string literal. A note
+// that cannot be recomputed from the object it sits in will eventually contradict it.
+const agrees = Math.abs(overstatesBy - 1) < 0.15;
 const reconcile = {
   cumOilOursMMSm3: Math.round(cumMMSm3 * 100) / 100,
   cumOilOfficialMMSm3: OFFICIAL.producedOilMMSm3,
   cumOilDeltaPct: Math.round(((cumMMSm3 - OFFICIAL.producedOilMMSm3) / OFFICIAL.producedOilMMSm3) * 1000) / 10,
   stoiipScreeningMMSm3: sto.stoiipMMSm3,
   stoiipOfficialMMSm3: OFFICIAL.stoiipMMSm3,
-  stoiipScreeningOverstatesBy: Math.round((sto.stoiipMMSm3 / OFFICIAL.stoiipMMSm3) * 10) / 10,
-  rfUsingScreening: Math.round((cumMMSm3 / sto.stoiipMMSm3) * 1000) / 10,
-  rfUsingOfficial: Math.round((cumMMSm3 / OFFICIAL.stoiipMMSm3) * 1000) / 10,
-  note: 'Use OFFICIAL.stoiipMMSm3 (18.70) for any recovery-factor statement. The screening figure is a labelled upper bound only — it overstates in-place by ~7.6x and would imply a ~7% RF against a field that actually recovered ~54%.',
+  stoiipScreeningOverstatesBy: overstatesBy,
+  rfUsingScreening: rfScreening,
+  rfUsingOfficial: rfOfficial,
+  giipOursBcm: Math.round(giipOursBcm * 1000) / 1000,
+  giipOfficialBcm: OFFICIAL.giipBcm,
+  giipDeltaPct,
+  solutionGorSm3Sm3: pvt.Rs,
+  note: agrees
+    ? `Screening in-place ${sto.stoiipMMSm3} MMSm3 is ${overstatesBy}x the official ${OFFICIAL.stoiipMMSm3} MMSm3 — they agree, so the ${sto.owc} m contact scenario reproduces the field accounting. Solution gas ${Math.round(giipOursBcm * 1000) / 1000} Bcm vs official ${OFFICIAL.giipBcm} Bcm (${giipDeltaPct >= 0 ? '+' : ''}${giipDeltaPct}%) independently confirms the deck Rs of ${pvt.Rs} Sm3/Sm3. Still quote recovery factor against OFFICIAL.stoiipMMSm3 (${rfOfficial}%), not the screening figure (${rfScreening}%).`
+    : `Use OFFICIAL.stoiipMMSm3 (${OFFICIAL.stoiipMMSm3}) for any recovery-factor statement. The screening figure ${sto.stoiipMMSm3} MMSm3 is a labelled upper bound only — it overstates in-place by ${overstatesBy}x and implies a ${rfScreening}% RF against a field that actually recovered ${(OFFICIAL.oilRecoveryFactor * 100).toFixed(0)}%.`,
 };
 console.log(`[wb] official Sodir: STOIIP ${OFFICIAL.stoiipMMSm3} MMSm3, recovered ${OFFICIAL.producedOilMMSm3} MMSm3, RF ${(OFFICIAL.oilRecoveryFactor * 100).toFixed(1)}%`);
 console.log(`[wb] reconcile: our cum oil ${reconcile.cumOilOursMMSm3} vs official ${reconcile.cumOilOfficialMMSm3} MMSm3 (${reconcile.cumOilDeltaPct}%); screening STOIIP overstates ${reconcile.stoiipScreeningOverstatesBy}x`);
@@ -1128,7 +1271,7 @@ console.log(`[wb] reconcile: our cum oil ${reconcile.cumOilOursMMSm3} vs officia
 w('index.json', {
   version: '1.0.0', generatedAt: new Date().toISOString(),
   crs: 'ED50 / UTM 31N', datum: 'TVDSS (m)',
-  wells, wellheads: globalThis.__WELLHEADS__ ?? [], surfaces, contacts, pvt, defaults,
+  wells, wellheads: globalThis.__WELLHEADS__ ?? [], surfaces, contacts, pvt, shf, defaults,
   official: OFFICIAL,
   validation: { stoiip: sto, cumOilMMSm3: Math.round(cumMMSm3 * 100) / 100, cumOilOk: cumOk, reconcile },
   provenance: { grids: 'binned mean-z from full horizon clouds (interpreted)', logs: 'measured/interpreted LFP-first', production: 'reported', defaults: 'published [PEER]/[COMMUNITY] — see V1-DATA-MAP.md' },

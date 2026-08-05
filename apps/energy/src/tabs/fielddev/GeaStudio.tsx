@@ -30,6 +30,7 @@ import * as THREE from 'three';
 import type { DigestedSurface } from '../../dataqc/types';
 import { readSurfaceGrid } from '../../dataqc/readDigest';
 import { buildSurfaceMesh, commonOrigin, sharedDepthRange, type MeshGrid } from './surface-mesh';
+import { buildShell } from '../../engine/gridmesh';
 import { depthConvention, rampRgb } from './StructureLayer';
 import { loadWellGeometry, buildPaths3D, type Path3D } from './well-geometry';
 import { useStatic } from './static-store';
@@ -44,6 +45,10 @@ export interface StudioStats {
   dropped: number;
   surfaces: number;
   wells: number;
+  /** cells in the built grid — 0 until "Build 3D grid" has run */
+  gridCells: number;
+  /** faces on its shell; the ratio to gridCells is the whole rendering argument */
+  gridFaces: number;
 }
 
 /** Rolling FPS from the render loop itself, so the number is the real frame cadence
@@ -81,6 +86,7 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
   const showWells = useStatic((s) => s.showWells);
   const showContact = useStatic((s) => s.showContact);
   const view = useStatic((s) => s.view);
+  const grid = useStatic((s) => s.grid);
 
   const [loaded, setLoaded] = useState<Loaded[]>([]);
   const [loading, setLoading] = useState(false);
@@ -167,6 +173,30 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
   // exaggeration slider rebuilds every mesh on every step
   useEffect(() => () => { built?.meshes.forEach((m) => m.geometry.dispose()); }, [built]);
 
+  // ── the built grid, as a SHELL ──
+  //
+  // gridmesh.buildShell already emits a centred, depth-up mesh with per-vertex UVW
+  // for a Data3DTexture, so property colouring later costs one texture upload rather
+  // than a geometry rebuild. Its own centring is undone here (the scene has its own
+  // origin) and the Z exaggeration is applied as a mesh scale, which is why changing
+  // exaggeration does NOT rebuild the shell.
+  const gridShell = useMemo(() => {
+    if (!grid?.packed) return null;
+    const m = buildShell(grid.packed);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(m.position, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(m.normal, 3));
+    geometry.setAttribute('uvw', new THREE.BufferAttribute(m.uvw, 3));
+    geometry.setIndex(new THREE.BufferAttribute(m.index, 1));
+    return {
+      geometry,
+      cx: m.center[0], cy: m.center[1],
+      faces: m.index.length / 3,
+    };
+  }, [grid]);
+
+  useEffect(() => () => { gridShell?.geometry.dispose(); }, [gridShell]);
+
   // ── trajectories, in the same local frame ──
   const pathLines = useMemo(() => {
     if (!built || !paths.length) return [];
@@ -191,12 +221,14 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
 
   const stats: StudioStats = useMemo(() => ({
     fps,
-    tris: built?.meshes.reduce((n, m) => n + m.tris, 0) ?? 0,
+    tris: (built?.meshes.reduce((n, m) => n + m.tris, 0) ?? 0) + (gridShell?.faces ?? 0),
     verts: built?.meshes.reduce((n, m) => n + m.verts, 0) ?? 0,
     dropped: built?.meshes.reduce((n, m) => n + m.dropped, 0) ?? 0,
     surfaces: built?.meshes.length ?? 0,
     wells: pathLines.length,
-  }), [fps, built, pathLines.length]);
+    gridCells: grid ? grid.cells : 0,
+    gridFaces: gridShell?.faces ?? 0,
+  }), [fps, built, pathLines.length, grid, gridShell]);
 
   useEffect(() => { onStats?.(stats); }, [stats, onStats]);
 
@@ -240,6 +272,16 @@ export function GeaStudio({ ws, onStats }: { ws: Workspace; onStats?: (s: Studio
         <FpsProbe onFps={setFps} />
 
         <group position={[-built.spanX / 2, -built.spanY / 2, -built.midZ]}>
+          {/* the built 3D grid, drawn as its SHELL — 10 million cells have only a few
+              hundred thousand visible faces, and the interior is never a face */}
+          {gridShell && (
+            <mesh geometry={gridShell.geometry}
+              position={[gridShell.cx - built.origin.x, gridShell.cy - built.origin.y, 0]}
+              scale={[1, 1, zScale]}>
+              <meshStandardMaterial color="#5b8db8" roughness={0.9} metalness={0.05}
+                side={THREE.DoubleSide} transparent opacity={0.92} />
+            </mesh>
+          )}
           {built.meshes.map((m, i) => (
             <mesh key={m.id} geometry={m.geometry}>
               {/* the shallower sheets go translucent, or with several opaque surfaces

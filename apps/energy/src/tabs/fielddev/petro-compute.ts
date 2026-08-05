@@ -51,6 +51,17 @@ export interface PetroParams {
   a: number; m: number; n: number;
   rw: number;         // formation-water resistivity at formation temperature, Ω·m
   rsh: number;        // shale resistivity, Ω·m — used by Simandoux and Indonesia only
+  /**
+   * Cementation exponent as a function of permeability, m = a·k^b.
+   *
+   * Volve's own petrophysical evaluation fits m = 1.865·k^-0.0083 rather than holding
+   * m constant. The k-dependence is weak — 1.87 at 1 mD to 1.76 at 1000 mD — but the
+   * LEVEL matters: a fixed m of 2.0 is ~11% above the fitted value everywhere, and
+   * Archie takes φ to the power m, so that is a systematic error in every saturation
+   * the tab computes. Applied per sample wherever a permeability log exists, and
+   * falling back to the scalar `m` where it does not.
+   */
+  mFromK?: { a: number; b: number } | null;
 
   // ── net / pay ──
   cutoffs: NetCutoffs;
@@ -65,8 +76,57 @@ export const DEFAULT_PARAMS: PetroParams = {
   swModel: 'archie',
   a: 1, m: 2, n: 2,
   rw: 0.03, rsh: 4,
+  mFromK: null,
   cutoffs: { vsh: 0.5, phie: 0.08, sw: 0.6 },
 };
+
+/** The Archie constants a delivery publishes for its own reservoir. */
+export interface PublishedArchie {
+  /** m = a·k^b, when the delivery fits m against permeability */
+  mFromK?: { a: number; b: number };
+  /** saturation exponent, fitted for these wells */
+  n?: number;
+  /** tortuosity factor, when stated */
+  a?: number;
+  brine?: { rwOhmM?: number; rwTempC?: number; ppmNaClEquivalent?: number };
+}
+
+/**
+ * Resolve the engine's saturation parameters from what the DELIVERY publishes.
+ *
+ * The generic defaults (a=1, m=2, n=2, Rw=0.03) are a textbook starting point, not a
+ * statement about any reservoir. Volve's own evaluation fits m = 1.865·k^-0.0083 and
+ * n = 2.45, and measures the brine at 0.07 Ω·m — every one of which differs from the
+ * default, and all three feed Archie multiplicatively. Reading them is the difference
+ * between a saturation for this field and a saturation for a generic sandstone.
+ *
+ * `reservoirTempC` matters because a published Rw is quoted at the measurement
+ * temperature (20 °C here) and Archie needs it at formation temperature; Arps does
+ * that conversion. Pass null to leave Rw alone rather than converting to a guess.
+ */
+export function resolvePublishedArchie(
+  base: PetroParams,
+  published: PublishedArchie | null | undefined,
+  reservoirTempC: number | null,
+): PetroParams {
+  if (!published) return base;
+  const out: PetroParams = { ...base };
+  if (published.a != null && Number.isFinite(published.a)) out.a = published.a;
+  if (published.n != null && Number.isFinite(published.n) && published.n > 0) out.n = published.n;
+  if (published.mFromK && Number.isFinite(published.mFromK.a) && Number.isFinite(published.mFromK.b)) {
+    out.mFromK = published.mFromK;
+    // the scalar fallback becomes the relation evaluated at a mid-range permeability,
+    // so a sample with no permeability log is still near the published level rather
+    // than back on the generic 2.0
+    out.m = archieMFromK(100, published.mFromK) ?? base.m;
+  }
+  const rw = published.brine?.rwOhmM;
+  const rwT = published.brine?.rwTempC;
+  if (rw != null && rw > 0) {
+    out.rw = rwT != null && reservoirTempC != null ? arps(rw, rwT, reservoirTempC) : rw;
+  }
+  return out;
+}
 
 // ── saturation models ────────────────────────────────────────────────────────
 
@@ -108,12 +168,30 @@ export const swModelHonoursN = (model: SwModel) => model !== 'simandoux';
 /** Only the shale-corrected models read Rsh. */
 export const swModelUsesRsh = (model: SwModel) => model !== 'archie';
 
-export function saturation(model: SwModel, phie: number, rt: number, vsh: number, p: PetroParams): number {
+/**
+ * Cementation exponent at a permeability, m = a·k^b.
+ *
+ * Returns null for a non-physical permeability rather than a number, so the caller
+ * falls back to the scalar m instead of quietly using an exponent derived from a
+ * sentinel.
+ */
+export function archieMFromK(k: number | null | undefined, rel: { a: number; b: number } | null | undefined): number | null {
+  if (!rel || k == null || !Number.isFinite(k) || !(k > 0)) return null;
+  const m = rel.a * k ** rel.b;
+  return Number.isFinite(m) && m > 0.5 && m < 4 ? m : null;
+}
+
+/** The cementation exponent this sample should use: the k-derived one where a
+ *  permeability exists, the parameter otherwise. */
+export const mAt = (p: PetroParams, k?: number | null): number => archieMFromK(k, p.mFromK) ?? p.m;
+
+export function saturation(model: SwModel, phie: number, rt: number, vsh: number, p: PetroParams, k?: number | null): number {
+  const m = mAt(p, k);
   switch (model) {
-    case 'simandoux': return simandouxSw(phie, rt, vsh, p.a, p.m, p.rw, p.rsh);
-    case 'indonesia': return indonesiaSw(phie, rt, vsh, p.a, p.m, p.n, p.rw, p.rsh);
+    case 'simandoux': return simandouxSw(phie, rt, vsh, p.a, m, p.rw, p.rsh);
+    case 'indonesia': return indonesiaSw(phie, rt, vsh, p.a, m, p.n, p.rw, p.rsh);
     case 'archie':
-    default: return archieSw(phie, rt, p.a, p.m, p.n, p.rw);
+    default: return archieSw(phie, rt, p.a, m, p.n, p.rw);
   }
 }
 
@@ -267,6 +345,9 @@ export interface PetroInputs {
   /** the delivery's own endpoint curves, when it ships them */
   grMin?: (number | null)[];
   grMax?: (number | null)[];
+  /** the delivery's permeability log, when it ships one — drives the per-sample
+   *  cementation exponent via `PetroParams.mFromK` */
+  klogh?: (number | null)[];
   /** an existing INTERPRETED answer, for the overlay and for calibration */
   refPhie?: (number | null)[];
   refSw?: (number | null)[];
@@ -279,7 +360,19 @@ export interface PetroResult {
   phie: (number | null)[];
   sw: (number | null)[];
   /** true where all three cutoffs pass; null where the flag could not be evaluated */
+  /** NET PAY — passes the Vsh, porosity AND saturation cutoffs. */
   net: (boolean | null)[];
+  /**
+   * NET RESERVOIR — passes the Vsh and porosity cutoffs only.
+   *
+   * This, not net pay, is the net-to-gross of the volumetric equation. STOIIP is
+   * GRV × NTG × φ × (1−Sw): the saturation already appears as its own term, so an NTG
+   * that has itself been filtered on Sw removes the water twice. On Volve the two
+   * differ by more than 3× and the double count drove the STOIIP to a fifth of the
+   * published figure. Net pay remains the right measure for a pay-thickness map — it
+   * is simply not the right multiplier here.
+   */
+  netRes: (boolean | null)[];
   endpoints: Endpoints | null;
   /** why a track is absent, keyed by the track it would have been */
   missing: Partial<Record<'vsh' | 'phie' | 'sw', string>>;
@@ -325,6 +418,7 @@ export function runPetro(raw: PetroInputs, p: PetroParams): PetroResult {
   const phie: (number | null)[] = new Array(n).fill(null);
   const sw: (number | null)[] = new Array(n).fill(null);
   const net: (boolean | null)[] = new Array(n).fill(null);
+  const netRes: (boolean | null)[] = new Array(n).fill(null);
   const missing: PetroResult['missing'] = {};
   let phitRejected = 0;
 
@@ -379,10 +473,15 @@ export function runPetro(raw: PetroInputs, p: PetroParams): PetroResult {
     const rtv = inp.rt?.[i];
     const pe = phie[i];
     if (finite(rtv) && pe != null && rtv > 0) {
-      sw[i] = saturation(p.swModel, pe, rtv, v ?? 0, p);
+      sw[i] = saturation(p.swModel, pe, rtv, v ?? 0, p, inp.klogh?.[i]);
     }
 
     // ── net flag: only where every cutoff has something to test ──
+    if (pe != null && v != null) {
+      // net reservoir needs no saturation, which is why it survives where the pay
+      // flag goes null: a sample with no resistivity still has a rock quality
+      netRes[i] = v <= p.cutoffs.vsh && pe >= p.cutoffs.phie;
+    }
     if (pe != null && sw[i] != null && v != null) {
       net[i] = netFlag(v, pe, sw[i] as number, p.cutoffs);
     }
@@ -394,7 +493,7 @@ export function runPetro(raw: PetroInputs, p: PetroParams): PetroResult {
 
   const count = (xs: Array<number | boolean | null>) => xs.reduce<number>((k, x) => k + (x == null ? 0 : 1), 0);
   return {
-    vsh, phit, phie, sw, net, endpoints, missing, screened,
+    vsh, phit, phie, sw, net, netRes, endpoints, missing, screened,
     counts: { vsh: count(vsh), phie: count(phie), sw: count(sw), net: count(net) },
   };
 }

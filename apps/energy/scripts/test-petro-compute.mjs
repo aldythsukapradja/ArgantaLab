@@ -244,5 +244,81 @@ near('temperature at depth follows the gradient', tempAtDepth(3000, 6, 3.5), 6 +
   check('resistivity must be strictly positive for Archie', PHYSICAL_RANGE.rt.lo > 0, '');
 }
 
-console.log(`\n${pass}/${pass + fail} passed`);
+
+// ── the delivery's PUBLISHED Archie constants ────────────────────────────────
+//
+// a=1, m=2, n=2, Rw=0.03 is a textbook sandstone, not this reservoir. Volve's own
+// evaluation (Statoil doc 3781-06) fits m = 1.865·k^-0.0083 and n = 2.45 and measures
+// the brine at 0.07 Ω·m @ 20 °C. All three feed Archie multiplicatively, so starting
+// from the defaults is a systematic error in every saturation the tab computes.
+{
+  const { archieMFromK, mAt, resolvePublishedArchie } = P;
+  const rel = { a: 1.865, b: -0.0083 };
+
+  near('m from k matches the published relation', archieMFromK(100, rel), 1.865 * Math.pow(100, -0.0083), 1e-12);
+  check('the k-dependence is weak but the LEVEL is well below 2.0',
+    archieMFromK(1, rel) < 1.9 && archieMFromK(1000, rel) > 1.7,
+    `m: ${archieMFromK(1, rel).toFixed(3)} at 1 mD → ${archieMFromK(1000, rel).toFixed(3)} at 1000 mD`);
+  check('a fixed m of 2.0 is ~11% above the published level',
+    (2 - archieMFromK(100, rel)) / archieMFromK(100, rel) > 0.10, '');
+  eq('no permeability yields no k-derived m', archieMFromK(null, rel), null);
+  eq('a zero or negative permeability yields no m rather than an infinity', archieMFromK(0, rel), null);
+  eq('no published relation yields no k-derived m', archieMFromK(100, null), null);
+  eq('an absurd relation is rejected rather than returned', archieMFromK(1e9, { a: 1.865, b: -2 }), null);
+
+  const withRel = { ...DEFAULT_PARAMS, mFromK: rel };
+  near('mAt uses the k-derived exponent where a permeability exists', mAt(withRel, 100), archieMFromK(100, rel), 1e-12);
+  eq('mAt falls back to the scalar where there is none', mAt(withRel, null), DEFAULT_PARAMS.m);
+  eq('mAt is the scalar when the delivery publishes no relation', mAt(DEFAULT_PARAMS, 100), DEFAULT_PARAMS.m);
+
+  // resolving the published block
+  const pub = { mFromK: rel, n: 2.45, brine: { rwOhmM: 0.07, rwTempC: 20 } };
+  const r = resolvePublishedArchie(DEFAULT_PARAMS, pub, 110);
+  eq('the published saturation exponent is adopted', r.n, 2.45);
+  eq('the published m relation is carried', r.mFromK, rel);
+  near('the scalar m falls back to the relation at mid-range k, not to 2.0',
+    r.m, archieMFromK(100, rel), 1e-12);
+  check('Rw is converted from the measurement temperature to formation temperature',
+    r.rw < 0.07 && r.rw > 0.01, `0.07 Ω·m @20 °C → ${r.rw.toFixed(4)} Ω·m @110 °C`);
+  near('...by Arps exactly', r.rw, P.arps(0.07, 20, 110), 1e-12);
+  eq('no published block leaves the parameters untouched', resolvePublishedArchie(DEFAULT_PARAMS, null, 110), DEFAULT_PARAMS);
+  eq('a published block with no temperature leaves Rw at its quoted value',
+    resolvePublishedArchie(DEFAULT_PARAMS, { brine: { rwOhmM: 0.07 } }, null).rw, 0.07);
+
+  // it must actually change the answer, and in the right direction
+  {
+    const phie = 0.22, rt = 20;
+    const def = P.saturation('archie', phie, rt, 0, DEFAULT_PARAMS);
+    const pubSw = P.saturation('archie', phie, rt, 0, { ...r, mFromK: rel }, 200);
+    check('the published constants change the computed saturation materially',
+      Math.abs(pubSw - def) / def > 0.05,
+      `default Sw ${def.toFixed(3)} vs published ${pubSw.toFixed(3)} — ${((pubSw / def - 1) * 100).toFixed(1)}%`);
+    // Each constant moves Sw a different way, so the NET direction is not obvious and
+    // must not be asserted as folklore. Lock each term on its own, then the net.
+    const only = (over) => P.saturation('archie', phie, rt, 0, { ...DEFAULT_PARAMS, ...over });
+    check('a lower Rw alone lowers Sw', only({ rw: 0.0221 }) < def, '');
+    check('a lower m alone lowers Sw — φ^m is larger for a smaller exponent',
+      only({ m: 1.799 }) < def, `m 1.799 → ${only({ m: 1.799 }).toFixed(4)} vs ${def.toFixed(4)}`);
+    check('a HIGHER n alone raises Sw — the ratio is below 1, so a smaller 1/n exponent lifts it',
+      only({ n: 2.45 }) > def, `n 2.45 → ${only({ n: 2.45 }).toFixed(4)} vs ${def.toFixed(4)}`);
+    check('n dominates on this rock, so the published set reads WETTER than the textbook default',
+      pubSw > def,
+      `published ${pubSw.toFixed(4)} > default ${def.toFixed(4)} — the generic parameters were optimistic`);
+  }
+
+  // and the whole-log run must honour the permeability curve
+  {
+    const md = [1, 2, 3];
+    const base = { md, gr: [40, 40, 40], rhob: [2.3, 2.3, 2.3], nphi: [0.2, 0.2, 0.2], rt: [20, 20, 20] };
+    const noK = P.runPetro(base, { ...r, mFromK: rel });
+    const withK = P.runPetro({ ...base, klogh: [1000, 1000, 1000] }, { ...r, mFromK: rel });
+    check('runPetro applies the per-sample cementation exponent from KLOGH',
+      Math.abs((withK.sw[0] ?? 0) - (noK.sw[0] ?? 0)) > 1e-6,
+      `no k: ${noK.sw[0]?.toFixed(4)} · k=1000 mD: ${withK.sw[0]?.toFixed(4)}`);
+    check('a null permeability sample falls back rather than producing a null Sw',
+      P.runPetro({ ...base, klogh: [null, null, null] }, { ...r, mFromK: rel }).sw[0] != null, '');
+  }
+}
+
+console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

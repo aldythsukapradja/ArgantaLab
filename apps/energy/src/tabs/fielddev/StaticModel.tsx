@@ -33,6 +33,12 @@ import {
 } from 'lucide-react';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 import { useWorkspace, type Workspace } from './workspace';
+import { readSurfaceGrid } from '../../dataqc/readDigest';
+import type { DigestedSurface } from '../../dataqc/types';
+import { depthConvention } from './StructureLayer';
+import { buildZoneModel, type HorizonGrid } from './zone-model';
+import { buildPackedGrid } from './grid-build';
+import { UpscaleDialog, SimDialog, VolumesDialog } from './ProcessRuns';
 import { GeaStudio, type StudioStats } from './GeaStudio';
 import { ProcessDialog } from './ProcessDialog';
 import {
@@ -269,6 +275,124 @@ function LayeringDialog({ ws }: { ws: Workspace }) {
   );
 }
 
+/**
+ * Build 3D grid — the first process that actually RUNS.
+ *
+ * Decodes the ordered horizons, resamples them onto one common areal frame
+ * (zone-model.ts), then builds and packs zone by zone so peak memory is the largest
+ * single zone rather than the whole model. Every number it reports is measured
+ * during the run, not estimated before it.
+ */
+function GridDialog({ ws }: { ws: Workspace }) {
+  const order = useStatic((s) => s.horizonOrder);
+  const nz = useStatic((s) => s.nzPerZone);
+  const scheme = useStatic((s) => s.layerScheme);
+  const grid = useStatic((s) => s.grid);
+  const zoneModel = useStatic((s) => s.zoneModel);
+  const building = useStatic((s) => s.building);
+  const setGrid = useStatic((s) => s.setGrid);
+  const setZoneModel = useStatic((s) => s.setZoneModel);
+  const setBuilding = useStatic((s) => s.setBuilding);
+  const markDone = useStatic((s) => s.markDone);
+  const [err, setErr] = useState<string | null>(null);
+
+  const run = useCallback(async () => {
+    setErr(null);
+    try {
+      // decode every ordered horizon — each on its OWN origin and spacing, which is
+      // exactly why a common frame has to exist before anything can be differenced
+      const horizons: HorizonGrid[] = [];
+      for (const id of order) {
+        const surf = ws.surfaces.find((x) => x.id === id);
+        const asset = surf ? ws.assets.find((a) => a.id === surf.assetId) : null;
+        if (!asset) continue;
+        const g = (await readSurfaceGrid(asset).catch(() => null)) as DigestedSurface | null;
+        if (!g) continue;
+        horizons.push({
+          id, name: surf!.name, ncol: g.ncol, nrow: g.nrow, values: g.values,
+          x0: g.x0, y0: g.y0, dx: g.dx, dy: g.dy,
+          flip: depthConvention(g.values)?.flip ?? false,
+        });
+      }
+      if (horizons.length < 2) { setErr('At least two horizons are needed to define a zone.'); return; }
+
+      const model = buildZoneModel(horizons, { kind: scheme, nz });
+      if (!model) { setErr('These horizons produce no zone with a positive thickness anywhere.'); return; }
+      setZoneModel(model);
+
+      setBuilding({ zone: 0, zones: model.zones.length, name: '' });
+      const built = await buildPackedGrid(model, (p) =>
+        setBuilding({ zone: p.zone, zones: p.zones, name: p.name }));
+      setBuilding(null);
+      setGrid(built);
+      markDone('grid');
+    } catch (e) {
+      setBuilding(null);
+      setErr((e as Error).message || 'the build failed');
+    }
+  }, [order, ws.surfaces, ws.assets, scheme, nz, setGrid, setZoneModel, setBuilding, markDone]);
+
+  const mb = (b: number) => `${(b / 1048576).toFixed(1)} MB`;
+
+  return (
+    <>
+      <div className="pdlg-kv"><dt>Engine</dt><dd><code>zone-model → grid3d.buildGrid → pack3d.packGrid3D</code></dd></div>
+      <div className="pdlg-kv"><dt>Order</dt><dd>{order.length} horizons, shallowest first</dd></div>
+      <div className="pdlg-kv"><dt>Layering</dt><dd>{scheme} · {nz} per zone</dd></div>
+
+      {building && (
+        <div className="pdlg-run">
+          <b>Building zone {building.zone} of {building.zones}</b>
+          <span>{building.name || 'resampling horizons onto the common frame…'}</span>
+          <i style={{ width: `${(building.zone / Math.max(1, building.zones)) * 100}%` }} />
+        </div>
+      )}
+
+      {err && <div className="pdlg-warn">{err}</div>}
+
+      {grid && !building && (
+        <>
+          <div className="pdlg-budget">
+            <div><b>{grid.packed.nx} × {grid.packed.ny} × {grid.packed.nz}</b><i>i × j × k</i></div>
+            <div><b>{fmt(grid.cells)}</b><i>cells</i></div>
+            <div><b>{fmt(grid.activeCells)}</b><i>active</i></div>
+            <div><b>{mb(grid.packedBytes)}</b><i>packed</i></div>
+          </div>
+          <div className="pdlg-note pad">
+            Built in {(grid.ms / 1000).toFixed(1)} s, zone by zone. Peak held at once
+            was <b>{mb(grid.peakBuildBytes)}</b>; the whole model as one GridModel would
+            have been {mb(grid.cells * 58)} — which is why it is built a zone at a time.
+          </div>
+          {zoneModel && zoneModel.zones.some((z) => z.crossedCols > 0) && (
+            <div className="pdlg-warn">
+              {zoneModel.zones.filter((z) => z.crossedCols > 0)
+                .map((z) => `${z.name}: ${z.crossedCols} columns where the base sits above the top`)
+                .join(' · ')}. Excluded, not clipped — a crossing is a structural error, and
+              hiding it would carry it into every volume.
+            </div>
+          )}
+          <div className="pdlg-warn soft">
+            Geometry only. Porosity is 0 and Sw is 1 until the upscaling and simulations
+            run, so every volume this grid reports is zero — visibly, rather than by accident.
+          </div>
+        </>
+      )}
+
+      {!grid && !building && (
+        <p className="pdlg-p">
+          Resamples every horizon onto one common areal frame — they arrive on different
+          origins and spacings, so nothing can be differenced until they share a grid —
+          then builds and packs each zone in turn.
+        </p>
+      )}
+
+      <button className="pdlg-run-btn" disabled={!!building} onClick={run}>
+        {building ? 'Building…' : grid ? 'Rebuild' : 'Run'}
+      </button>
+    </>
+  );
+}
+
 function PlannedDialog({ id, ws }: { id: ProcessId; ws: Workspace }) {
   const nz = useStatic((s) => s.nzPerZone);
   const order = useStatic((s) => s.horizonOrder);
@@ -345,14 +469,21 @@ function Dialogs({ ws }: { ws: Workspace }) {
               <>
                 <span className="pdlg-foot-note">{def.step}</span>
                 <button className="pdlg-btn" onClick={() => close(def.id)}>Close</button>
-                <button className="pdlg-btn primary" onClick={() => { markDone(def.id); }}>
-                  Apply
-                </button>
+                {/* the grid process RUNS its own pipeline and marks itself done from
+                    the result; the rest only record that the step was accepted, which
+                    is what unlocks the ones below them */}
+                {!['grid', 'upscale', 'facies', 'porosity', 'volumes'].includes(def.id) && (
+                  <button className="pdlg-btn primary" onClick={() => markDone(def.id)}>Apply</button>
+                )}
               </>
             }>
             {win.id === 'horizons' ? <HorizonsDialog ws={ws} />
               : win.id === 'zones' ? <ZonesDialog ws={ws} />
               : win.id === 'layering' ? <LayeringDialog ws={ws} />
+              : win.id === 'grid' ? <GridDialog ws={ws} />
+              : win.id === 'upscale' ? <UpscaleDialog ws={ws} />
+              : win.id === 'facies' || win.id === 'porosity' ? <SimDialog which={win.id} />
+              : win.id === 'volumes' ? <VolumesDialog ws={ws} />
               : <PlannedDialog id={win.id} ws={ws} />}
           </ProcessDialog>
         );
@@ -414,6 +545,13 @@ function FunctionBar({ stats }: { stats: StudioStats }) {
         <i>{stats.surfaces} surf</i>
         <i>{fmt(stats.tris)} tris</i>
         <i>{stats.wells} wells</i>
+        {/* the ratio is the entire rendering argument, so it is on the HUD */}
+        {stats.gridCells > 0 && (
+          <i className="grid" title="Grid cells, and the faces on their visible shell">
+            {fmt(stats.gridCells)} cells → {fmt(stats.gridFaces)} faces
+            {' '}({((stats.gridFaces / stats.gridCells) * 100).toFixed(1)}%)
+          </i>
+        )}
         {stats.dropped > 0 && (
           <i className="drop" title="Quads dropped for touching a null node — the mesh ends where the interpretation ends rather than dropping a cliff to datum">
             {fmt(stats.dropped)} dropped
@@ -428,7 +566,9 @@ function FunctionBar({ stats }: { stats: StudioStats }) {
 
 export function StaticModel({ field }: { field: SearchEntry }) {
   const { ws, ready } = useWorkspace();
-  const [stats, setStats] = useState<StudioStats>({ fps: 0, tris: 0, verts: 0, dropped: 0, surfaces: 0, wells: 0 });
+  const [stats, setStats] = useState<StudioStats>({
+    fps: 0, tris: 0, verts: 0, dropped: 0, surfaces: 0, wells: 0, gridCells: 0, gridFaces: 0,
+  });
   const onStats = useCallback((s: StudioStats) => setStats(s), []);
 
   const setVisible = useStatic((s) => s.setVisibleHorizons);

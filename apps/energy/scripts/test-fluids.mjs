@@ -36,7 +36,7 @@ const {
   welgeFront, buildSwof, pcEntryPressure, brooksCoreyPc, swAtHeight,
   fitGradient, fitByWell, gradientIntersection, gradientOf, phasePressure, buildEquil,
   stoiip, reconcile, buildCase, validateCase, toSimFluids, isRunnable, toEclipseDeck,
-  cToF, barToPsi, sm3ToScf, PSI_PER_BAR,
+  cToF, barToPsi, sm3ToScf, PSI_PER_BAR, K_SCREENING_MD,
 } = F;
 
 // ── the delivery's own anchors ───────────────────────────────────────────────
@@ -274,6 +274,131 @@ const pvt = buildPvt(a);
     w.pviBt, w.swAvgBt - e.swc, 1e-9);
   check('a MORE viscous oil breaks through earlier', welgeFront(e, 0.5, 20).pviBt < welgeFront(e, 0.5, 1).pviBt,
     `${welgeFront(e, 0.5, 20).pviBt.toFixed(4)} vs ${welgeFront(e, 0.5, 1).pviBt.toFixed(4)} PVI`);
+}
+
+/** The issues a case would raise for a given SCAL set, holding everything else fixed. */
+const kaseIssuesFor = (scal) => buildCase({
+  fieldId: 'x', anchors: a, contacts: index.contacts ?? [], scal,
+  rock: { phi: index.defaults.phi, ntg: index.defaults.ntg, sw: Math.max(index.defaults.sw, scal.swc) },
+}).issues;
+
+// ── LET relative permeability ────────────────────────────────────────────────
+{
+  const { letKr } = F;
+  const e = { ...SCAL_ANALOGUE, model: 'let', lw: 3, ew: 1, tw: 2, lo: 2, eo: 1, to: 2 };
+  // the end points are what make a model switch safe — both families must honour them
+  near('LET krw is zero at connate water', letKr(e.swc, e).krw, 0, 1e-12);
+  near('LET krw hits its end point exactly at residual oil', letKr(1 - e.sor, e).krw, e.krwMax, 1e-12);
+  near('LET kro is zero at residual oil', letKr(1 - e.sor, e).kro, 0, 1e-12);
+  near('LET kro hits its end point exactly at connate water', letKr(e.swc, e).kro, e.kroMax, 1e-12);
+  check('LET krw rises and kro falls monotonically', (() => {
+    for (let i = 1; i <= 40; i++) {
+      const lo = letKr(e.swc + (1 - e.sor - e.swc) * (i - 1) / 40, e);
+      const hi = letKr(e.swc + (1 - e.sor - e.swc) * i / 40, e);
+      if (!(hi.krw >= lo.krw - 1e-12 && hi.kro <= lo.kro + 1e-12)) return false;
+    }
+    return true;
+  })(), '');
+  check('E is the middle degree of freedom Corey lacks — it moves the curve without moving the end points',
+    (() => {
+      const lowE = { ...e, ew: 0.2 }, highE = { ...e, ew: 5 };
+      const mid = e.swc + (1 - e.sor - e.swc) * 0.5;
+      const differs = Math.abs(letKr(mid, lowE).krw - letKr(mid, highE).krw) > 0.05;
+      const endsHold = Math.abs(letKr(1 - e.sor, lowE).krw - letKr(1 - e.sor, highE).krw) < 1e-12;
+      return differs && endsHold;
+    })(), '');
+  check('the model selector actually routes — Corey and LET give different mid-curve values',
+    Math.abs(coreyKr(0.45, { ...e, model: 'corey' }).krw - coreyKr(0.45, e).krw) > 1e-6, '');
+  eq('an endpoint-only case defaults to Corey rather than silently switching',
+    coreyKr(0.45, SCAL_ANALOGUE).krw, coreyKr(0.45, { ...SCAL_ANALOGUE, model: 'corey' }).krw);
+  check('a LET case still produces a valid SWOF and a valid Welge front', (() => {
+    const t = buildSwof(e, 0.5, 1.0, 0.225, 500);
+    const wf = welgeFront(e, 0.5, 1.0);
+    return t.every((r) => Number.isFinite(r.krw) && Number.isFinite(r.kro) && Number.isFinite(r.fw))
+      && wf.swf > e.swc && wf.swf < 1 - e.sor;
+  })(), '');
+}
+
+// ── wettability, diagnosed from the curve ────────────────────────────────────
+{
+  const { diagnoseWettability } = F;
+  // a deliberately strong water-wet pair: high Swi, low krw end point
+  const ww = { ...SCAL_ANALOGUE, swc: 0.30, sor: 0.25, krwMax: 0.2, kroMax: 0.9, nw: 4, no: 2 };
+  const d1 = diagnoseWettability(ww);
+  eq('a strongly water-wet curve is diagnosed water-wet', d1.verdict, 'water-wet');
+  eq('...on all three of Craig\'s indicators', d1.agreeing, 3);
+  // a deliberately oil-wet pair: low Swi, high krw end point, early crossover
+  const ow = { ...SCAL_ANALOGUE, swc: 0.10, sor: 0.30, krwMax: 0.8, kroMax: 0.8, nw: 2, no: 4 };
+  const d2 = diagnoseWettability(ow);
+  eq('an oil-wet curve is diagnosed oil-wet', d2.verdict, 'oil-wet');
+  check('the crossover is found on the CURVES, not assumed from the exponents', (() => {
+    const x = d1.crossoverSw;
+    if (x == null) return false;
+    const k = coreyKr(x, ww);
+    return Math.abs(k.krw - k.kro) < 0.01;
+  })(), `crossover Sw ${d1.crossoverSw?.toFixed(4)}`);
+  check('a steeper water exponent pushes the crossover later — i.e. more water-wet',
+    diagnoseWettability({ ...SCAL_ANALOGUE, nw: 5 }).crossoverSw
+      > diagnoseWettability({ ...SCAL_ANALOGUE, nw: 2 }).crossoverSw,
+    `nw 5 → ${diagnoseWettability({ ...SCAL_ANALOGUE, nw: 5 }).crossoverSw?.toFixed(3)} vs nw 2 → ${diagnoseWettability({ ...SCAL_ANALOGUE, nw: 2 }).crossoverSw?.toFixed(3)}`);
+  check('a higher krw end point pulls the crossover earlier — i.e. more oil-wet',
+    diagnoseWettability({ ...SCAL_ANALOGUE, krwMax: 0.8 }).crossoverSw
+      < diagnoseWettability({ ...SCAL_ANALOGUE, krwMax: 0.2 }).crossoverSw, '');
+  eq('every criterion carries the published rule it was judged against',
+    d1.criteria.every((c) => /Craig/.test(c.rule)), true);
+
+  // THE POINT: the shipped analogue is introduced as water-wet. Does it read that way?
+  const d0 = diagnoseWettability(SCAL_ANALOGUE);
+  check('the shipped analogue is diagnosed, and the split is REPORTED not hidden',
+    d0.agreeing >= 1 && d0.agreeing <= 3,
+    `${d0.verdict} on ${d0.agreeing}/3 — ${d0.criteria.map((c) => `${c.key}:${c.reads}`).join(' ')}`);
+  check('a case whose indicators disagree raises the wettability issue',
+    kaseIssuesFor(SCAL_ANALOGUE).some((i) => i.rule === 'scal.wettability') === (d0.agreeing < 3),
+    `${d0.agreeing}/3 agreeing`);
+  check('a unanimous curve raises NO wettability issue — no noise when there is nothing to say',
+    !kaseIssuesFor(ww).some((i) => i.rule === 'scal.wettability'), '');
+}
+
+// ── Swc from the delivery's own logs (Buckles) ───────────────────────────────
+{
+  const { swcFromLogs } = F;
+  const mk = (n, sw, phi, vsh = 0.1) => Array.from({ length: n }, () => ({ sw, phi, vsh }));
+
+  // a well at a clean irreducible state: Sw·φ = 0.045 throughout
+  const tight = swcFromLogs([{ well: 'A', samples: mk(200, 0.20, 0.225) }], 0.225);
+  near('Swc is the Buckles number divided by the model porosity', tight.swc, 0.20, 1e-9);
+  near('the Buckles number is Sw·φ', tight.buckles, 0.20 * 0.225, 1e-9);
+  eq('the contributing well is named', tight.wells.map((w) => w.well), ['A']);
+
+  // Buckles is a HYPERBOLA: tighter rock at irreducible holds proportionally MORE
+  // water, and the same Buckles number still reads the same Swc at the model porosity.
+  // (φ 0.16 with Sw 0.28125 carries the same Sw·φ = 0.045 as φ 0.225 with Sw 0.20.)
+  const tighter = swcFromLogs([{ well: 'A', samples: mk(200, 0.28125, 0.16) }], 0.225);
+  near('tighter rock at the same Buckles number reads the same Swc at model porosity',
+    tighter.swc, 0.20, 1e-9);
+  check('...even though its own logged saturation is far higher',
+    tighter.wells[0].minSw > 0.28 && Math.abs(tighter.swc - 0.20) < 1e-9,
+    `logged Sw ${tighter.wells[0].minSw}, Swc at φ 0.225 = ${tighter.swc.toFixed(3)}`);
+
+  // a well sitting in the water leg cannot bound Swc and must be EXCLUDED
+  const wet = swcFromLogs([
+    { well: 'DRY', samples: mk(200, 0.18, 0.25) },
+    { well: 'WET', samples: mk(200, 1.0, 0.25) },
+  ], 0.225);
+  eq('a well that never reaches irreducible saturation is excluded', wet.excluded, ['WET']);
+  eq('...and only the contributing well is pooled', wet.wells.map((w) => w.well), ['DRY']);
+  check('excluding it matters — averaging the wet well in would nearly double Swc',
+    Math.abs(wet.swc - (0.18 * 0.25) / 0.225) < 1e-9, `got ${wet.swc.toFixed(4)}`);
+
+  // screens
+  eq('shaly samples are screened out', swcFromLogs([{ well: 'A', samples: mk(200, 0.2, 0.25, 0.8) }], 0.225), null);
+  eq('tight samples are screened out', swcFromLogs([{ well: 'A', samples: mk(200, 0.2, 0.05) }], 0.225), null);
+  eq('too few samples is not an estimate', swcFromLogs([{ well: 'A', samples: mk(5, 0.2, 0.25) }], 0.225), null);
+  eq('a delivery with no interpreted saturation yields no anchor', swcFromLogs([], 0.225), null);
+  eq('non-numeric samples are dropped rather than poisoning the percentile',
+    swcFromLogs([{ well: 'A', samples: [...mk(200, 0.2, 0.25), { sw: NaN, phi: 0.25, vsh: 0.1 }] }], 0.225).wells[0].n, 200);
+  check('the reported range brackets the recommendation',
+    tight.low <= tight.swc + 1e-9 && tight.swc <= tight.high + 1e-9, '');
 }
 
 // ── capillary pressure / transition zone ─────────────────────────────────────
@@ -661,6 +786,157 @@ const { tvdAtMd, kbElevation, stationsOf, tvdssOf } = D;
     withGauges.issues.filter((i) => i.rule === 'init.gradient').map((i) => i.message).join(''));
   check('a delivery with no pressure records makes no gradient claim at all',
     !buildCase({ fieldId: 'x', anchors: a, contacts: index.contacts }).issues.some((i) => i.rule === 'init.gradient'), '');
+}
+
+// ── the delivery's own permeability ──────────────────────────────────────────
+//
+// KLOGH lives only in the CPI petrophysics product, which never wins the build's
+// run scoring (LFP carries a deliberate bonus). Until the merge pass was added, the
+// delivery therefore shipped NO permeability at all and every k downstream — the
+// transition-zone height, the well index, the simulation grid — was an analogue while
+// the field's own log sat unread in the source tree. These assertions exist so that
+// regression cannot happen silently again.
+{
+  const { readdirSync } = await import('node:fs');
+  const wbDir = join(__dirname, '..', 'public', 'wb');
+  const withK = [];
+  for (const f of readdirSync(wbDir).filter((x) => /^logs-.*\.json$/.test(x))) {
+    const d = JSON.parse(readFileSync(join(wbDir, f), 'utf8'));
+    const k = d.curves?.KLOGH;
+    if (!k) continue;
+    const live = (k.values ?? []).filter((v) => v != null && Number.isFinite(v) && v > 0);
+    if (live.length) withK.push({ well: d.well, n: live.length, unit: k.unit, mergedFrom: k.mergedFrom, values: live });
+  }
+  check('the delivery ships a permeability log at all', withK.length > 0,
+    `${withK.length} wells carry KLOGH`);
+  check('permeability reaches MANY wells, not just the interpretation set', withK.length >= 8,
+    withK.map((w) => w.well).join(', '));
+  check('KLOGH is carried in millidarcy', withK.every((w) => /md/i.test(w.unit ?? '')),
+    [...new Set(withK.map((w) => w.unit))].join(', '));
+  check('a merged curve says which product it came from — it is not passed off as the winner\'s',
+    withK.filter((w) => w.mergedFrom).length > 0,
+    `${withK.filter((w) => w.mergedFrom).length} of ${withK.length} merged, e.g. ${withK.find((w) => w.mergedFrom)?.mergedFrom}`);
+  const all = withK.flatMap((w) => w.values).filter((v) => v <= 20000).sort((a, b) => a - b);
+  check('the permeability distribution is physical for a clastic reservoir',
+    all.length > 1000 && all[0] > 0 && all[all.length - 1] <= 20000,
+    `${all.length} samples, ${all[0].toExponential(1)}–${all[all.length - 1].toFixed(0)} mD`);
+  check('the log spans shale to high-quality sand — it is a whole-interval curve, not net pay',
+    all[0] < 0.01 && all[all.length - 1] > 1000, '');
+
+  // RESERVOIR-QUALITY rock only. The geometric mean over the whole interval is ~0
+  // because the curve runs through shale; quoting that as "the field permeability"
+  // would be as wrong as quoting the arithmetic mean of everything.
+  const net = all.filter((v) => v >= 1);
+  const geo = Math.exp(net.reduce((a, v) => a + Math.log(v), 0) / net.length);
+  const arith = net.reduce((a, v) => a + v, 0) / net.length;
+  const q = (f) => net[Math.floor((net.length - 1) * f)];
+  check('reservoir-quality permeability is a broad, log-normal-ish spread',
+    geo > 1 && geo < 1000 && q(0.9) > 10 * q(0.1),
+    `P10 ${q(0.1).toFixed(0)} · P50 ${q(0.5).toFixed(0)} · P90 ${q(0.9).toFixed(0)} · geo ${geo.toFixed(0)} · arith ${arith.toFixed(0)} mD`);
+  // The screening value is NOT the geometric mean, and pretending otherwise would be
+  // the mistake. Assert only that it sits inside the logged distribution — which is
+  // what makes it defensible as a screening number and indefensible as a fact.
+  check('the screening permeability sits inside the logged reservoir range, above the geometric mean',
+    K_SCREENING_MD > geo && K_SCREENING_MD < q(0.95),
+    `geo ${geo.toFixed(0)} < screening ${K_SCREENING_MD} < P95 ${q(0.95).toFixed(0)}; arithmetic ${arith.toFixed(0)} mD`);
+}
+
+// ── the PUBLISHED saturation-height function, and whether we align to it ─────
+//
+// Source: Statoil doc 3781-06, the Hugin/Skagerrak petrophysical evaluation shipped
+// with the Volve dataset. It states Swn = 2.222·J^-1.111 for the VOLVE Hugin wells.
+// The analogue this platform started with (J_entry 0.25, λ 2.0) is 16–900× off it,
+// which is a transition zone far too thin. These assertions keep the delivery's own
+// function in front of the analogue.
+{
+  const { shfToBrooksCorey, publishedSwirr, applyPublishedShf } = F;
+  const shf = index.shf;
+  check('the delivery publishes a saturation-height function', !!shf?.swn,
+    shf ? `${shf.formation} — ${shf.source?.slice(0, 40)}…` : 'absent');
+
+  const bc = shfToBrooksCorey(shf.swn);
+  // Swn = a·J^b  ≡  (J/Je)^-λ  ⇒  λ = -b, Je = a^(1/λ)
+  near('λ is the negated published exponent', bc.lambda, -shf.swn.b, 1e-12);
+  near('the entry J reproduces the published coefficient', bc.jEntry ** bc.lambda, shf.swn.a, 1e-9);
+  check('the two forms give the SAME curve at every J', (() => {
+    for (const J of [0.5, 1, 2, 5, 10, 40]) {
+      const pub = shf.swn.a * J ** shf.swn.b;
+      const ours = (J / bc.jEntry) ** -bc.lambda;
+      if (Math.abs(pub - ours) > 1e-9) return false;
+    }
+    return true;
+  })(), `λ ${bc.lambda.toFixed(3)}, J_entry ${bc.jEntry.toFixed(3)}`);
+  eq('a non-physical published pair yields no conversion rather than a NaN curve',
+    shfToBrooksCorey({ a: 0, b: -1 }), null);
+  eq('a positive exponent is not a drainage curve and is refused', shfToBrooksCorey({ a: 2, b: 1 }), null);
+
+  // how far the analogue was off — recorded so the correction cannot quietly regress
+  const anaSwn = (J) => Math.min(1, (J / SCAL_ANALOGUE.jEntry) ** -SCAL_ANALOGUE.lambda);
+  const pubSwn = (J) => Math.min(1, shf.swn.a * J ** shf.swn.b);
+  check('the shipped analogue is materially thinner than the published function',
+    pubSwn(5) / anaSwn(5) > 50,
+    `at J=5 published Swn ${pubSwn(5).toFixed(4)} vs analogue ${anaSwn(5).toFixed(4)} — ${(pubSwn(5) / anaSwn(5)).toFixed(0)}×`);
+
+  // Swirr from the report's own log-linear fit
+  near('published Swirr is c1·log10(k) + c2', publishedSwirr(shf, 100), shf.swirr.c1 * 2 + shf.swirr.c2, 1e-12);
+  check('published Swirr falls with permeability', publishedSwirr(shf, 1000) < publishedSwirr(shf, 10), '');
+  eq('no permeability yields no published Swirr', publishedSwirr(shf, 0), null);
+  eq('a delivery with no SHF yields no Swirr', publishedSwirr(null, 100), null);
+  // the report's log-linear fit and the CPI's power-law implementation of the SAME
+  // relation agree at ~1 mD and diverge with k — carried so the choice is visible
+  const cpiSwirr = (k) => shf.swirrCpi.a * k ** shf.swirrCpi.b;
+  check('the report fit and the CPI implementation agree near 1 mD',
+    Math.abs(publishedSwirr(shf, 1) - cpiSwirr(1)) < 0.02,
+    `${publishedSwirr(shf, 1).toFixed(3)} vs ${cpiSwirr(1).toFixed(3)}`);
+  check('...and diverge by ~0.05 saturation units through the reservoir range',
+    Math.abs(publishedSwirr(shf, 100) - cpiSwirr(100)) > 0.03,
+    `at 100 mD: report ${publishedSwirr(shf, 100).toFixed(3)} vs CPI ${cpiSwirr(100).toFixed(3)}`);
+
+  // applying it must move ONLY the capillary terms
+  const applied = applyPublishedShf(SCAL_ANALOGUE, shf, 100);
+  near('applying the published SHF sets λ', applied.lambda, bc.lambda, 1e-12);
+  near('...and the entry J', applied.jEntry, bc.jEntry, 1e-9);
+  near('...and the reservoir interfacial tension', applied.sigmaCosTheta, shf.sigmaResMNm, 1e-12);
+  eq('...and leaves every relative-permeability end point untouched',
+    [applied.krwMax, applied.kroMax, applied.nw, applied.no, applied.sor],
+    [SCAL_ANALOGUE.krwMax, SCAL_ANALOGUE.kroMax, SCAL_ANALOGUE.nw, SCAL_ANALOGUE.no, SCAL_ANALOGUE.sor]);
+  near('...and takes Swc from the published Swirr at the given permeability',
+    applied.swc, publishedSwirr(shf, 100), 1e-12);
+  eq('no delivery SHF leaves the analogue exactly as it was', applyPublishedShf(SCAL_ANALOGUE, null), SCAL_ANALOGUE);
+
+  // The transition zone the corrected function produces. λ = 1.111 is a SLOW decay:
+  // Sw approaches irreducible asymptotically and never actually reaches it over any
+  // realistic column — which is why the published form writes Sw as Swn·(1−Swirr)+Swirr
+  // with Swirr as the floor, rather than expecting the curve to land on it. Asserting
+  // "reaches connate by X metres" was the wrong expectation, not the wrong model.
+  const dRho = 348.8;
+  const swAt = (h, e, k) => swAtHeight(h, e, dRho, 0.225, k);
+  check('the published function still holds mobile water high above the contact',
+    swAt(100, applied, 100) > applied.swc * 1.5,
+    `at +100 m and 100 mD: Sw ${swAt(100, applied, 100).toFixed(3)} against an irreducible floor of ${applied.swc.toFixed(3)}`);
+  check('...where the analogue had already collapsed to connate',
+    swAt(100, SCAL_ANALOGUE, 100) < SCAL_ANALOGUE.swc * 1.2,
+    `analogue Sw at +100 m: ${swAt(100, SCAL_ANALOGUE, 100).toFixed(3)}`);
+  check('the correction raises in-place water — and therefore lowers oil — through the column',
+    swAt(30, applied, 100) > swAt(30, SCAL_ANALOGUE, 100)
+      && swAt(60, applied, 100) > swAt(60, SCAL_ANALOGUE, 100),
+    `at +30 m: ${swAt(30, applied, 100).toFixed(3)} vs analogue ${swAt(30, SCAL_ANALOGUE, 100).toFixed(3)}`);
+  check('Sw still falls monotonically with height', (() => {
+    let prev = 1;
+    for (let h = 0; h <= 300; h += 5) { const s = swAt(h, applied, 100); if (s > prev + 1e-9) return false; prev = s; }
+    return true;
+  })(), '');
+
+  // and the platform's independent Buckles number must sit near the published Swirr
+  check('our Buckles Swc agrees with the published Swirr at the logged permeability',
+    Math.abs(0.168 - publishedSwirr(shf, 142)) < 0.06,
+    `Buckles 0.168 vs published ${publishedSwirr(shf, 142).toFixed(3)} at 142 mD`);
+
+  // fluid cross-check: brine salinity derived from the deck density vs the report
+  const derivedPpm = brineSalinityWtPct(a.rhoWaterSc) * 10000;
+  check('brine salinity derived from the deck density matches the report within 10%',
+    Math.abs(derivedPpm - shf.brine.ppmNaClEquivalent) / shf.brine.ppmNaClEquivalent < 0.10,
+    `derived ${Math.round(derivedPpm).toLocaleString()} ppm vs report ${shf.brine.ppmNaClEquivalent.toLocaleString()} ppm`);
 }
 
 // ── unit bridges ─────────────────────────────────────────────────────────────

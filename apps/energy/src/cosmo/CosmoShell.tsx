@@ -341,22 +341,26 @@ export function CosmoShell() {
           })}
         </div>
       </div>
+      {/* Stroke weight is set HERE, not in CSS: lucide renders `stroke-width` as
+          an SVG presentation attribute that this renderer refuses to let CSS
+          override — verified, even with !important. Bolder-when-active is one of
+          WhatsApp's main selected-tab cues, so it has to come from the prop. */}
       <nav className="mnav" aria-label="Primary">
         <button className={'mtab ' + (mActive === 'command' ? 'on' : '')} onClick={() => toggleSheet('command')} aria-expanded={sheet === 'command'}>
-          <LayoutDashboard size={23} strokeWidth={1.7} /><span>Cockpit</span>
+          <LayoutDashboard size={24} strokeWidth={mActive === 'command' ? 2.5 : 2.1} /><span>Cockpit</span>
         </button>
         <button className={'mtab ' + (mActive === 'verticals' ? 'on' : '')} onClick={() => toggleSheet('verticals')}>
-          <GitBranch size={23} strokeWidth={1.7} /><span>Lifecycle</span>
+          <GitBranch size={24} strokeWidth={mActive === 'verticals' ? 2.5 : 2.1} /><span>Lifecycle</span>
         </button>
         <button className="mtab mtab-orb" onClick={() => { setChat(true); setChatFullSignal((s) => s + 1); closeMobile(); }} aria-label="Arganta">
           <CosmoAgentOrb size={52} />
           <span className="mtab-orb-lbl">Arganta</span>
         </button>
         <button className={'mtab ' + (mActive === 'intel' ? 'on' : '')} onClick={() => toggleSheet('intel')}>
-          <Sparkles size={23} strokeWidth={1.7} /><span>Intelligence</span>
+          <Sparkles size={24} strokeWidth={mActive === 'intel' ? 2.5 : 2.1} /><span>Intelligence</span>
         </button>
         <button className={'mtab ' + (mActive === 'report' ? 'on' : '')} onClick={() => toggleSheet('report')}>
-          <FileText size={23} strokeWidth={1.7} /><span>Report</span>
+          <FileText size={24} strokeWidth={mActive === 'report' ? 2.5 : 2.1} /><span>Report</span>
         </button>
       </nav>
 

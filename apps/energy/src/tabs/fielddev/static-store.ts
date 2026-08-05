@@ -10,6 +10,11 @@
 // dialogs are open, where they sit, what the viewport is showing) is window state
 // that follows from it.
 import { create } from 'zustand';
+import type { BuiltGrid } from './grid-build';
+import type { ZoneModel } from './zone-model';
+import type { UpscaleResultGrid, PermAverage } from './upscale-grid';
+import type { SimResult } from './sim-grid';
+import type { Reconciliation } from './volumes';
 
 export type ProcessId =
   | 'horizons' | 'zones' | 'contacts'
@@ -93,6 +98,30 @@ interface StaticState {
   layerScheme: 'proportional' | 'top-conform' | 'base-conform';
 
   // ── viewport ──
+  // ── the artifacts the processes actually produce ──
+  /** the resampled zone framework — S1's output, S3's input */
+  zoneModel: ZoneModel | null;
+  /** the packed 3D grid — what the viewport renders once it exists */
+  grid: BuiltGrid | null;
+  building: { zone: number; zones: number; name: string } | null;
+  /**
+   * Which zones are the RESERVOIR. Null means "not chosen yet — fall back to the name
+   * match". One selection, shared: it scopes the property model AND the volumes, and
+   * the two disagreeing is how a model reports a volume for rock it never simulated.
+   */
+  reservoirZones: string[] | null;
+  /** S4 — logs blocked into cells */
+  upscaled: UpscaleResultGrid | null;
+  /** S6 · S7 — the simulated facies / phi / k field */
+  sim: SimResult | null;
+  simming: { layer: number; nz: number } | null;
+  /** S9 */
+  volumes: Reconciliation | null;
+  /** simulation controls */
+  simNodes: number;
+  simSeed: number;
+  permAverage: PermAverage;
+
   view: ViewMode;
   zScale: number;
   /** which horizons the viewport is drawing */
@@ -110,6 +139,17 @@ interface StaticState {
   markDone: (id: ProcessId) => void;
   reset: () => void;
 
+  setZoneModel: (m: ZoneModel | null) => void;
+  setGrid: (g: BuiltGrid | null) => void;
+  setBuilding: (b: { zone: number; zones: number; name: string } | null) => void;
+  setReservoirZones: (z: string[] | null) => void;
+  setUpscaled: (u: UpscaleResultGrid | null) => void;
+  setSim: (s: SimResult | null) => void;
+  setSimming: (s: { layer: number; nz: number } | null) => void;
+  setVolumes: (v: Reconciliation | null) => void;
+  setSimNodes: (n: number) => void;
+  setSimSeed: (n: number) => void;
+  setPermAverage: (a: PermAverage) => void;
   setHorizonOrder: (ids: string[]) => void;
   setNz: (n: number) => void;
   setScheme: (s: StaticState['layerScheme']) => void;
@@ -134,6 +174,18 @@ export const useStatic = create<StaticState>((set) => ({
   horizonOrder: [],
   nzPerZone: 20,
   layerScheme: 'proportional',
+
+  zoneModel: null,
+  grid: null,
+  building: null,
+  reservoirZones: null,
+  upscaled: null,
+  sim: null,
+  simming: null,
+  volumes: null,
+  simNodes: 24,
+  simSeed: 1000,
+  permAverage: 'geometric',
 
   view: '3d',
   zScale: 8,
@@ -176,11 +228,29 @@ export const useStatic = create<StaticState>((set) => ({
     next.add(id);
     return { done: next };
   }),
-  reset: () => set({ done: new Set<ProcessId>(), windows: [], active: null }),
+  reset: () => set({ done: new Set<ProcessId>(), windows: [], active: null, zoneModel: null, grid: null, building: null,
+    reservoirZones: null, upscaled: null, sim: null, simming: null, volumes: null }),
 
+  setZoneModel: (zoneModel) => set({ zoneModel }),
+  // a new grid invalidates every property built on the old one
+  setGrid: (grid) => set({ grid, upscaled: null, sim: null, volumes: null }),
+  setBuilding: (building) => set({ building }),
+  // changing what counts as reservoir invalidates the property model built under the
+  // old scope — a sim that skipped a zone cannot be reinterpreted as having covered it
+  setReservoirZones: (reservoirZones) => set({ reservoirZones, sim: null, volumes: null }),
+  setUpscaled: (upscaled) => set({ upscaled }),
+  setSim: (sim) => set({ sim }),
+  setSimming: (simming) => set({ simming }),
+  setVolumes: (volumes) => set({ volumes }),
+  // a new simulation grid or seed invalidates the field it produced
+  setSimNodes: (simNodes) => set({ simNodes, sim: null, volumes: null }),
+  setSimSeed: (simSeed) => set({ simSeed, sim: null, volumes: null }),
+  setPermAverage: (permAverage) => set({ permAverage, upscaled: null, sim: null, volumes: null }),
   setHorizonOrder: (horizonOrder) => set({ horizonOrder }),
-  setNz: (nzPerZone) => set({ nzPerZone }),
-  setScheme: (layerScheme) => set({ layerScheme }),
+  // changing the layering invalidates a grid built under the old scheme; a stale
+  // grid is worse than none because it still renders
+  setNz: (nzPerZone) => set({ nzPerZone, grid: null }),
+  setScheme: (layerScheme) => set({ layerScheme, grid: null }),
   setView: (view) => set({ view }),
   setZScale: (zScale) => set({ zScale }),
   setVisibleHorizons: (visibleHorizons) => set({ visibleHorizons }),

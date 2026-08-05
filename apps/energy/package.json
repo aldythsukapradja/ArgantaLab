@@ -16,7 +16,7 @@
     "data:wb": "node scripts/build-workbench-data.mjs --force",
     "test:engine": "node scripts/test-engine.mjs",
     "test:geostat": "node scripts/test-geostat.mjs",
-    "test:sim": "node scripts/test-sim.mjs",
+    "test:sim": "node scripts/test-sim-grid.mjs",
     "test:review": "node scripts/test-review.mjs",
     "test:analog": "node scripts/test-analog.mjs",
     "test:gvsurf": "node scripts/test-gvsurf.mjs",
@@ -29,7 +29,7 @@
     "data:osdu": "node scripts/build-osdu.mjs",
     "data:spatial": "node scripts/build-cockpit-spatial.mjs && node scripts/build-master-kb.mjs && node scripts/build-crosswalk.mjs && node scripts/build-gazetteer.mjs",
     "test:osdu": "node scripts/validate-osdu.mjs",
-    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs && node scripts/test-analog.mjs && node scripts/test-gvsurf.mjs && node scripts/test-surveillance.mjs && node scripts/test-pack3d.mjs && node scripts/test-gridmesh.mjs && node scripts/test-simpack.mjs && node scripts/test-asset-dossier.mjs && node scripts/test-surveillance-dossier.mjs && node scripts/test-well-review.mjs && node scripts/test-curate.mjs && node scripts/test-workspace.mjs && node scripts/test-petro-compute.mjs && node scripts/test-fluids.mjs && node scripts/test-petro-xplot.mjs && node scripts/test-well-activity.mjs && node scripts/test-proj.mjs && node scripts/test-xsection.mjs && node scripts/test-well-paths.mjs && node scripts/test-horizon-picks.mjs && node scripts/test-contact-contour.mjs && node scripts/test-flow-series.mjs && node scripts/test-surface-mesh.mjs && node scripts/test-surface-context.mjs && node scripts/test-drilling.mjs && node scripts/test-dataqc.mjs && node scripts/validate-osdu.mjs && node scripts/test-agent-bus.mjs && node scripts/test-crosswalk.mjs && node scripts/test-gazetteer.mjs && node scripts/test-capabilities.mjs && node scripts/test-resolve.mjs && node scripts/test-grammar.mjs && node scripts/test-dialogue.mjs && node scripts/test-trace.mjs && node scripts/test-summary.mjs && node scripts/test-coverage.mjs && node scripts/test-agent-worker.mjs && node scripts/test-fieldcraft.mjs && node scripts/test-fieldcraft-pptx.mjs && node scripts/test-fieldcraft-syllabus.mjs",
+    "test": "node scripts/test-engine.mjs && node scripts/test-geostat.mjs && node scripts/test-sim.mjs && node scripts/test-review.mjs && node scripts/test-analog.mjs && node scripts/test-gvsurf.mjs && node scripts/test-surveillance.mjs && node scripts/test-pack3d.mjs && node scripts/test-gridmesh.mjs && node scripts/test-simpack.mjs && node scripts/test-asset-dossier.mjs && node scripts/test-surveillance-dossier.mjs && node scripts/test-well-review.mjs && node scripts/test-curate.mjs && node scripts/test-workspace.mjs && node scripts/test-zone-model.mjs && node scripts/test-upscale-grid.mjs && node scripts/test-sim-grid.mjs && node scripts/test-volumes.mjs && node scripts/test-pools.mjs && node scripts/test-cuddy.mjs && node scripts/test-well-tie.mjs && node scripts/test-model-qc.mjs && node scripts/test-zone-repair.mjs && node scripts/test-struct-qc.mjs && node scripts/test-handover-audit.mjs && node scripts/test-petro-compute.mjs && node scripts/test-fluids.mjs && node scripts/test-petro-xplot.mjs && node scripts/test-well-activity.mjs && node scripts/test-proj.mjs && node scripts/test-xsection.mjs && node scripts/test-well-paths.mjs && node scripts/test-horizon-picks.mjs && node scripts/test-contact-contour.mjs && node scripts/test-flow-series.mjs && node scripts/test-surface-mesh.mjs && node scripts/test-surface-context.mjs && node scripts/test-drilling.mjs && node scripts/test-dataqc.mjs && node scripts/validate-osdu.mjs && node scripts/test-agent-bus.mjs && node scripts/test-crosswalk.mjs && node scripts/test-gazetteer.mjs && node scripts/test-capabilities.mjs && node scripts/test-resolve.mjs && node scripts/test-grammar.mjs && node scripts/test-dialogue.mjs && node scripts/test-trace.mjs && node scripts/test-summary.mjs && node scripts/test-coverage.mjs && node scripts/test-agent-worker.mjs && node scripts/test-fieldcraft.mjs && node scripts/test-fieldcraft-pptx.mjs && node scripts/test-fieldcraft-syllabus.mjs",
     "test:fieldcraft": "node scripts/test-fieldcraft.mjs && node scripts/test-fieldcraft-pptx.mjs && node scripts/test-fieldcraft-syllabus.mjs",
     "test:pptx": "node scripts/test-fieldcraft-pptx.mjs",
     "test:colorramp": "node scripts/test-colorramp.mjs",
@@ -53,7 +53,14 @@
     "test:workspace": "node scripts/test-workspace.mjs",
     "test:xplot": "node scripts/test-petro-xplot.mjs",
     "test:petro": "node scripts/test-petro-compute.mjs",
-    "test:fluids": "node scripts/test-fluids.mjs"
+    "test:fluids": "node scripts/test-fluids.mjs",
+    "test:zone": "node scripts/test-zone-model.mjs",
+    "test:upscale": "node scripts/test-upscale-grid.mjs",
+    "test:volumes": "node scripts/test-volumes.mjs",
+    "volve:qc": "node scripts/volve-qc.mjs",
+    "volve:report": "node scripts/volve-report.mjs",
+    "volve:volumes": "node scripts/run-volve-volumes.mjs",
+    "test:pools": "node scripts/test-pools.mjs"
   },
   "dependencies": {
     "@arganta/agent": "file:../../packages/agent",
