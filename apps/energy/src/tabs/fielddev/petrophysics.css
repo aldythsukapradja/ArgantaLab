@@ -232,3 +232,11 @@ html[data-ui="cosmo"] .pzm-hist-in dl{display:flex;gap:12px;margin:6px 0 0}
 html[data-ui="cosmo"] .pzm-hist-in dl div{display:flex;flex-direction:column}
 html[data-ui="cosmo"] .pzm-hist-in dl span{font:6.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
 html[data-ui="cosmo"] .pzm-hist-in dl b{font-size:9px;color:var(--ink)}
+
+/* the datum readout — the control itself lives in the Input tree */
+html[data-ui="cosmo"] .pcp-datum{display:flex;align-items:center;gap:5px;font-style:normal;
+  font:7.5px var(--mono);color:var(--ink2);padding:2px 7px;border:1px solid var(--line2);border-radius:4px}
+html[data-ui="cosmo"] .pcp-datum b{color:var(--purple,#a78bfa);font-weight:600}
+html[data-ui="cosmo"] .pcp-datum i{font-style:normal;color:var(--ink3)}
+html[data-ui="cosmo"] .pcp-datum.none{color:var(--ink3);border-style:dashed}
+html[data-ui="cosmo"] .pcp-datum.none b{color:var(--ink2)}

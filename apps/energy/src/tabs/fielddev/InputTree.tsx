@@ -250,6 +250,8 @@ export function InputTree({ stageId }: { stageId: string }) {
   const horizonId = useScene((s) => s.horizonId);
   const multiIds = useScene((s) => s.multiIds);
   const setHorizon = useScene((s) => s.setHorizon);
+  const datum = useScene((s) => s.datum);
+  const setDatum = useScene((s) => s.setDatum);
   const toggleMulti = useScene((s) => s.toggleMulti);
 
   const tg = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
@@ -330,12 +332,19 @@ export function InputTree({ stageId }: { stageId: string }) {
           const k = 'tp:' + t.surface;
           return (
             <div key={k}>
+              {/* A well top IS the correlation datum — clicking one flattens the
+                  panel on it. The tree is the control rather than a dropdown the
+                  panel owns, because a datum is a thing in the delivery you point
+                  at. Clicking the active one clears it back to measured depth. */}
               <Row depth={1} icon={Layers} label={t.surface} count={t.wells.length}
                 expandable={t.wells.length > 0} open={!!open[k]} onToggle={() => tg(k)}
                 nodeId={'top:' + t.surface} dim={dimmed('tops')}
-                title={t.count !== t.wells.length
-                  ? `${t.count} picks, ${t.wells.length} attributable to a wellbore`
-                  : `picked in ${t.wells.length} wellbore${t.wells.length === 1 ? '' : 's'}`} />
+                active={datum === t.surface}
+                onActivate={() => setDatum(t.surface)}
+                title={`${datum === t.surface ? 'Correlation datum — click to clear. ' : 'Click to flatten the correlation on this top. '}`
+                  + (t.count !== t.wells.length
+                    ? `${t.count} picks, ${t.wells.length} attributable to a wellbore`
+                    : `picked in ${t.wells.length} wellbore${t.wells.length === 1 ? '' : 's'}`)} />
               {open[k] && t.wells.map((w) => (
                 <Row key={k + w} depth={2} icon={Waves} label={w}
                   nodeId={`wpick:${w}:${t.surface}`} dim={dimmed('tops')} />

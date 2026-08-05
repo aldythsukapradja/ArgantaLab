@@ -21,7 +21,7 @@
 // and what is left is stratigraphy. A bore with no pick for the flattening
 // surface CANNOT be flattened onto it — it is drawn unflattened and marked,
 // rather than shifted by a guessed offset.
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { Columns3, AlertTriangle } from 'lucide-react';
 import type { Workspace } from './workspace';
@@ -29,6 +29,7 @@ import type { PetroParams } from './petro-compute';
 import { useFieldCurves, hangShift, type BoreCurveSet, type HangMode } from './petro-curves';
 import { ROLE_FILL } from './ImpactMarkers';
 import { pathRole } from './well-paths';
+import { useScene } from './scene';
 
 const TRACK_W = 46;      // per track, px
 const GUTTER = 16;       // between bores
@@ -46,10 +47,17 @@ const TRACKS = [
 const COL_W = TRACKS.length * TRACK_W + GUTTER;
 
 export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: PetroParams }) {
-  const [hang, setHang] = useState<HangMode>('md');
-  const [flattenOn, setFlattenOn] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const curves = useFieldCurves(ws, params, true);
+
+  /**
+   * THE DATUM COMES FROM THE TREE. Clicking a surface under Well tops sets it;
+   * clicking it again clears it back to measured depth. The panel deliberately
+   * owns no picker — a datum is a thing in the delivery you point at, and having
+   * it in two places is how the tree and the canvas start disagreeing.
+   */
+  const flattenOn = useScene((st) => st.datum);
+  const hang: HangMode = flattenOn ? 'flatten' : 'md';
 
   /** Surfaces ordered by how many of the SHOWN bores carry them — the widest
    *  correlatable datum first, because that is the one worth flattening on. */
@@ -103,15 +111,15 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
       <header className="pcp-head">
         <Columns3 size={12} /> <b>Correlation</b>
         <span className="pcp-hang">
-          <button className={hang === 'md' ? 'on' : ''} onClick={() => setHang('md')}
-            title="Hung on measured depth — structure and stratigraphy together">MD</button>
-          <button className={hang === 'flatten' ? 'on' : ''}
-            onClick={() => { setHang('flatten'); if (!flattenOn && surfaces[0]) setFlattenOn(surfaces[0][0]); }}
-            title="Flatten on a shared pick — structure removed, stratigraphy left">Flatten</button>
-          {hang === 'flatten' && (
-            <select value={flattenOn ?? ''} onChange={(e) => setFlattenOn(e.target.value || null)}>
-              {surfaces.map(([s, n]) => <option key={s} value={s}>{s} ({n})</option>)}
-            </select>
+          {flattenOn ? (
+            <em className="pcp-datum" title="Set from the Well tops folder in the Input tree — click it again there to clear">
+              flattened on <b>{flattenOn}</b>
+              <i>{surfaces.find(([sf]) => sf === flattenOn)?.[1] ?? 0} bores</i>
+            </em>
+          ) : (
+            <em className="pcp-datum none" title="Pick a surface under Well tops in the Input tree to flatten on it">
+              hung on measured depth — pick a <b>Well top</b> on the left to flatten
+            </em>
           )}
         </span>
         <em>
