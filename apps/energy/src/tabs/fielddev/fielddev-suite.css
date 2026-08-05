@@ -398,6 +398,13 @@ html[data-ui="cosmo"] .fds-xs-ctl label{display:flex;align-items:center;gap:5px;
 html[data-ui="cosmo"] .fds-xs-ctl input{width:74px;accent-color:#2f9bff}
 html[data-ui="cosmo"] .fds-xs-ctl select{border:1px solid var(--line2);border-radius:4px;background:var(--panel);
   color:var(--ink2);font:7.5px var(--mono);padding:1px 2px}
+/* the contact readout — blue while it is the published depth, amber once moved,
+   so a what-if can never be mistaken for the record at a glance */
+html[data-ui="cosmo"] .fds-xs-ctl label b{font:7.5px var(--mono);font-weight:600;color:#2f9bff;white-space:nowrap}
+html[data-ui="cosmo"] .fds-xs-ctl label.moved b{color:var(--orange,#f59e0b)}
+html[data-ui="cosmo"] .fds-xs-ctl label.moved em{font-style:normal;margin-left:3px}
+/* keep the legend clear of the plot's own scale bar */
+html[data-ui="cosmo"] .fds-xs-key{max-width:calc(100% - 130px)}
 
 /* map key for the impact symbology + contact */
 html[data-ui="cosmo"] .fds-ad-mapkey{position:absolute;z-index:5;right:8px;top:8px;pointer-events:none;
