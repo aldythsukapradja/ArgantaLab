@@ -1089,3 +1089,107 @@ html[data-ui="cosmo"] .app.rail-pinned .rail-btn{margin-left:0}
   .ag-w-chips button em{ display:none; }
   .ag-w-stat{ flex:1 1 44%; }
 }
+
+/* ── markdown tables ────────────────────────────────────────────────────────
+   The models reach for a table whenever they compare two things, which for
+   this app is most of the time. Wrapper scrolls on its own so a wide table
+   never makes the whole chat panel scroll sideways. */
+.md-table-wrap{ overflow-x:auto; margin:10px 0; border:1px solid rgba(127,127,127,.2); border-radius:9px; }
+.md-table{ border-collapse:collapse; width:100%; font-size:12px; line-height:1.5; }
+.md-table th, .md-table td{
+  padding:7px 11px; text-align:left; vertical-align:top;
+  border-bottom:1px solid rgba(127,127,127,.14);
+}
+.md-table th{
+  font-weight:620; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--ink-dim,#6b7280); background:rgba(127,127,127,.06); white-space:nowrap;
+}
+.md-table tbody tr:last-child td{ border-bottom:0; }
+.md-table tbody tr:hover{ background:rgba(127,127,127,.04); }
+/* First column is the axis being compared — it earns emphasis. */
+.md-table td:first-child{ font-weight:560; color:var(--ink,#111827); }
+.dark .md-table th{ background:rgba(255,255,255,.05); }
+.dark .md-table tbody tr:hover{ background:rgba(255,255,255,.03); }
+
+/* ── mission progress, collapsed into one item ──────────────────────────────
+   Was one chat bubble per status event, which read as the agent speaking
+   repeatedly instead of one mission advancing. */
+.bf-steps{ display:flex; flex-direction:column; gap:2px; }
+.bf-step{ display:flex; align-items:center; gap:8px; font-size:11.5px; line-height:1.7; color:var(--ink-dim,#6b7280); }
+.bf-step-dot{
+  flex:0 0 auto; width:5px; height:5px; border-radius:50%;
+  background:currentColor; opacity:.45;
+}
+.bf-step.is-live{ color:var(--ink,#111827); }
+.bf-step.is-live .bf-step-dot{ opacity:1; animation:bf-pulse 1.15s ease-in-out infinite; }
+.bf-step.is-done .bf-step-label{ opacity:.75; }
+@keyframes bf-pulse{ 0%,100%{ transform:scale(1); opacity:1 } 50%{ transform:scale(1.55); opacity:.45 } }
+@media (prefers-reduced-motion:reduce){ .bf-step.is-live .bf-step-dot{ animation:none } }
+
+/* ── source links ───────────────────────────────────────────────────────────
+   Citations carry their domain as a trailing chip: the publisher is the single
+   most useful thing about a source, and it was previously buried inside a raw
+   URL the reader had to parse by eye. */
+.md-link{
+  color:#0ea5e9; text-decoration:none; border-bottom:1px solid rgba(14,165,233,.32);
+  overflow-wrap:anywhere;
+}
+.md-link:hover{ border-bottom-color:#0ea5e9; }
+.md-link-host{
+  display:inline-block; margin-left:6px; padding:1px 6px; border-radius:5px;
+  font-size:10px; letter-spacing:.02em; vertical-align:1px;
+  background:rgba(127,127,127,.12); color:var(--ink-dim,#6b7280); border-bottom:0;
+}
+.dark .md-link-host{ background:rgba(255,255,255,.08); }
+
+/* ── external-source sheet ──────────────────────────────────────────────────
+   Centered dialog on desktop, full-height sheet on mobile — the shape people
+   know from in-app browsers. It does NOT embed the page: publishers send
+   X-Frame-Options: DENY, so an iframe would be blank for most citations. It
+   shows what we actually know (publisher, full URL) and hands off cleanly. */
+.src-sheet-scrim{
+  position:absolute; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+  padding:20px; background:rgba(10,12,16,.44); backdrop-filter:blur(2px);
+}
+.src-sheet{
+  width:min(460px,100%); max-height:100%; overflow:auto;
+  background:var(--panel,#fff); color:var(--ink,#111827);
+  border:1px solid rgba(127,127,127,.22); border-radius:14px; padding:16px 17px 15px;
+  box-shadow:0 18px 48px rgba(0,0,0,.24);
+}
+.src-sheet-head{ display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+.src-sheet-host{ font-weight:640; font-size:13.5px; letter-spacing:-.01em; }
+.src-sheet-x{
+  margin-left:auto; display:flex; padding:5px; border:0; border-radius:7px;
+  background:transparent; color:var(--ink-dim,#6b7280); cursor:pointer;
+}
+.src-sheet-x:hover{ background:rgba(127,127,127,.12); color:var(--ink,#111827); }
+.src-sheet-url{
+  margin:0 0 10px; font-size:11px; line-height:1.5; overflow-wrap:anywhere;
+  color:var(--ink-dim,#6b7280); font-family:var(--mono,ui-monospace,monospace);
+}
+.src-sheet-note{ margin:0 0 14px; font-size:11.5px; line-height:1.55; color:var(--ink-dim,#6b7280); }
+.src-sheet-actions{ display:flex; gap:8px; align-items:center; }
+.src-sheet-go{
+  display:inline-flex; align-items:center; gap:7px; text-decoration:none;
+  padding:9px 14px; border-radius:9px; font-size:12.5px; font-weight:580;
+  background:#0ea5e9; color:#fff;
+}
+.src-sheet-go:hover{ background:#0284c7; }
+.src-sheet-copy{
+  padding:9px 13px; border-radius:9px; font:inherit; font-size:12.5px; cursor:pointer;
+  background:transparent; border:1px solid rgba(127,127,127,.28); color:var(--ink,#111827);
+}
+.src-sheet-copy:hover{ background:rgba(127,127,127,.09); }
+.dark .src-sheet{ background:#12161c; }
+
+/* Mobile: full-screen, the way an in-app browser behaves. */
+@media (max-width:640px){
+  .src-sheet-scrim{ padding:0; align-items:stretch; }
+  .src-sheet{
+    width:100%; max-height:none; border-radius:0; border:0;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+  .src-sheet-actions{ flex-direction:column; align-items:stretch; }
+  .src-sheet-go{ justify-content:center; }
+}

@@ -6,7 +6,7 @@
 // and an 80%-screen artifact modal. Uses the founder's exact classes (cosmo-system.css).
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown,
+  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink,
   Lock, ArrowUp, Gauge, BatteryMedium, Shield, Maximize, Monitor, Tv, Tablet, Smartphone,
   GitFork, FileText, BarChart3, Expand, Download, Image as ImageIcon, Gem, Map as MapIcon,
   Box, Waves, TrendingUp, Loader2,
@@ -110,15 +110,65 @@ function mdToHtml(md: string) {
   const out: string[] = [];
   let inList = false;
   const close = () => { if (inList) { out.push('</ul>'); inList = false; } };
+  // Only http(s) survives. A markdown link is attacker-influenced text as far as
+  // this renderer is concerned -- the models quote URLs they found on the web --
+  // so javascript:, data: and friends never reach an href.
+  const safeUrl = (u: string) => (/^https?:\/\//i.test(u.trim()) ? u.trim() : null);
+  const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
   const inline = (s: string) => s
     .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '<a class="wl">$2</a>')
     .replace(/\[\[([^\]]+)\]\]/g, '<a class="wl">$1</a>')
+    // [label](https://…) -- the shape every model uses for a citation. Left
+    // unparsed these rendered as literal brackets followed by a bare URL, which
+    // is how the Sources list looked.
+    .replace(/\[([^\]]+)\]\((https?:\/\/(?:[^\s()]|\([^\s()]*\))+)\)/g, (whole, label, url) => {
+      const safe = safeUrl(url);
+      if (!safe) return whole;
+      return `<a class="md-link" href="${esc(safe)}" target="_blank" rel="noopener noreferrer nofollow" data-src="${esc(safe)}">${label}<span class="md-link-host">${esc(host(safe))}</span></a>`;
+    })
+    // A bare URL on its own still deserves to be clickable.
+    .replace(/(^|[\s(])(https?:\/\/(?:[^\s()<]|\([^\s()<]*\))+)/g, (whole, pre, url) => {
+      const safe = safeUrl(url);
+      if (!safe) return whole;
+      return `${pre}<a class="md-link" href="${esc(safe)}" target="_blank" rel="noopener noreferrer nofollow" data-src="${esc(safe)}">${esc(host(safe))}</a>`;
+    })
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>');
-  for (const raw of lines) {
+  // A markdown table is the one construct that cannot be read line-by-line: the
+  // separator row (|---|---|) only means anything in the context of the row
+  // above it. Without this the models' comparison tables rendered as literal
+  // pipes -- "| Axis | What you're checking |" -- which is exactly the shape of
+  // answer they reach for most when comparing two basins.
+  const isRow = (l: string) => /^\s*\|.*\|\s*$/.test(l);
+  const isSep = (l: string) => /^\s*\|?[\s:-]*-[-\s|:]*\|?\s*$/.test(l) && l.includes('-');
+  const cells = (l: string) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     const line = raw.trimEnd();
     if (!line.trim()) { close(); continue; }
     let m: RegExpMatchArray | null;
+
+    // table: a header row, a separator row, then body rows until the block ends
+    if (isRow(line) && i + 1 < lines.length && isSep(lines[i + 1]) && isRow(lines[i + 1])) {
+      close();
+      const head = cells(line);
+      const body: string[][] = [];
+      let j = i + 2;
+      for (; j < lines.length && isRow(lines[j]) && !isSep(lines[j]); j++) body.push(cells(lines[j]));
+      out.push(
+        '<div class="md-table-wrap"><table class="md-table"><thead><tr>'
+        + head.map((h) => `<th>${inline(h)}</th>`).join('')
+        + '</tr></thead><tbody>'
+        + body.map((r) => `<tr>${head.map((_, k) => `<td>${inline(r[k] ?? '')}</td>`).join('')}</tr>`).join('')
+        + '</tbody></table></div>',
+      );
+      i = j - 1;
+      continue;
+    }
+
     if ((m = line.match(/^> \[!(\w+)\]\s*(.*)$/))) { close(); out.push(`<div class="cal cal-${m[1].toLowerCase()}"><b>${inline(m[2] || m[1])}</b></div>`); continue; }
     if ((m = line.match(/^(#{1,4})\s+(.*)$/))) { close(); const n = m[1].length; out.push(`<h${n}>${inline(m[2])}</h${n}>`); continue; }
     if ((m = line.match(/^[-*]\s+(.*)$/))) { if (!inList) { out.push('<ul>'); inList = true; } out.push(`<li>${inline(m[1])}</li>`); continue; }
@@ -337,6 +387,18 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   // so the completion capsule names the right one even if the picker changes
   // mid-run (same as HQ's runModelRef).
   const runModelRef = useRef('');
+  /** Did this mission stream a `message` event? If so the completion capsule
+   *  must not restate the result -- see the 'done' handler. */
+  const sawMessageRef = useRef(false);
+  /** The source the reader tapped, shown in a preview sheet before they leave.
+   *
+   *  Deliberately NOT an iframe. Instagram and LinkedIn use a native in-app
+   *  WebView, which a web page cannot call; the web equivalent is an iframe,
+   *  and the publishers these citations point at (news sites, journals) send
+   *  X-Frame-Options: DENY precisely to stop that. A sheet that renders blank
+   *  for most sources would be worse than the plain link it replaced, so this
+   *  shows what we genuinely know -- publisher and full URL -- and hands off. */
+  const [sourceSheet, setSourceSheet] = useState<{ url: string; host: string } | null>(null);
   const ENGINE_NAME: Record<BridgeEngine, string> = { claude: 'Claude', codex: 'OpenAI' };
 
   // Real model options only. Claude Code's aliases are the CLI's own — '' runs
@@ -379,6 +441,15 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   // `message` events close together, and sharing one ref would cut the first
   // one off mid-reveal (leaving it with an eternal blinking cursor) the moment
   // the second one starts.
+  /** Mark the trailing steps box finished so its last row stops pulsing. */
+  const settleSteps = (m: Msg[]): Msg[] => {
+    const last = m[m.length - 1];
+    if (last?.bridge?.kind !== 'steps' || !last.bridge.running) return m;
+    const c = [...m];
+    c[c.length - 1] = { ...last, bridge: { ...last.bridge, running: false } };
+    return c;
+  };
+
   const streamBridgeMessage = (text: string) => {
     let atIndex = -1;
     setMsgs((m) => { atIndex = m.length; return [...m, { role: 'assistant', text: '', done: false }]; });
@@ -406,9 +477,26 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   bridge.onEvent((e: BridgeEvent) => {
     switch (e.type) {
       case 'status': case 'tool':
-        setMsgs((m) => [...m, { role: 'assistant', text: '', done: true, bridge: { kind: e.type, label: e.label } }]);
+        // Fold into the trailing steps box rather than opening a new bubble --
+        // one mission, one progress item. A new box only starts after the
+        // agent has actually said something.
+        setMsgs((m) => {
+          const last = m[m.length - 1];
+          if (last?.bridge?.kind === 'steps') {
+            const steps = [...last.bridge.steps, { label: e.label, kind: e.type }];
+            const c = [...m];
+            c[c.length - 1] = { ...last, bridge: { kind: 'steps', steps, running: true } };
+            return c;
+          }
+          return [...m, {
+            role: 'assistant', text: '', done: true,
+            bridge: { kind: 'steps', steps: [{ label: e.label, kind: e.type }], running: true },
+          }];
+        });
         break;
       case 'message':
+        sawMessageRef.current = true;
+        setMsgs((m) => settleSteps(m));
         streamBridgeMessage(e.text);
         break;
       case 'awaiting_approval':
@@ -420,12 +508,16 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
       case 'done':
         setBridgeRunning(false);
         setMsgs((m) => {
-          // The completion capsule shouldn't repeat a result that was already
-          // streamed as its own `message` event just above it.
-          const lastMsg = [...m].reverse().find((x) => x.role === 'assistant' && !x.bridge && x.text);
+          // The completion capsule must not repeat what was already streamed.
+          //
+          // This used to compare the capsule's result against the last message
+          // for EXACT equality, which fails on any trailing-whitespace or
+          // truncation difference -- and when it failed the user read the whole
+          // answer twice. Whether a `message` event arrived is a fact we can
+          // record directly, so record it instead of guessing from the text.
           const result = (e.result || '').trim();
-          const echo = lastMsg && result && lastMsg.text.trim() === result;
-          return [...m, {
+          const echo = sawMessageRef.current;
+          return [...settleSteps(m), {
             role: 'assistant', text: '', done: true,
             bridge: { kind: 'done', ok: e.ok, result: echo ? undefined : (result || undefined), costUsd: e.costUsd, engineLabel: runModelRef.current || ENGINE_NAME[brain as BridgeEngine] },
           }];
@@ -497,6 +589,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     setMsgs((m) => [...m, { role: 'user', text, done: true }]);
     bridgeMissionsRef.current += 1;
     setBridgeRunning(true);
+    sawMessageRef.current = false;
     const engine = brain as BridgeEngine;
     const model = engine === 'claude' ? claudeModel : codexModel;
     const cfg = ENGINE_MODELS[engine];
@@ -818,7 +911,21 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
               onClose={msgs.length > 1 ? () => setBridgeDialogOpen(false) : undefined}
             />
           )}
-          <div className="cc-stream" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+          <div
+            className="cc-stream"
+            ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}
+            onClick={(ev) => {
+              // Delegated so it covers links inside dangerouslySetInnerHTML,
+              // which React cannot attach handlers to individually.
+              const a = (ev.target as HTMLElement | null)?.closest?.('a.md-link') as HTMLAnchorElement | null;
+              const url = a?.dataset?.src;
+              if (!a || !url) return;
+              ev.preventDefault();
+              let host = url;
+              try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* keep raw */ }
+              setSourceSheet({ url, host });
+            }}
+          >
             {msgs.map((m, i) => (
               <div className={'msg ' + m.role} key={i}>
                 <div className="who" style={m.role === 'user' ? { textAlign: 'right' } : undefined}>{m.role === 'user' ? 'YOU' : 'ARGANTA'}</div>
@@ -879,12 +986,47 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                       <button onClick={pauseAgenticTour}>Pause</button>
                     </div>
                   )}
-                  {m.role === 'assistant' && m.done && i === msgs.length - 1 && !m.wellPick && !m.tourWellPick && !m.assistWellPick && !m.confirmPick && !touring && msgs.length > 1 && (
-                    <div className="art-chip" onClick={() => { if (!showRight) setShowRight(true); }}><PanelRight size={12} /> Open artifact pane</div>
-                  )}
+                  {/* The "Open artifact pane" chip lived here. It appeared under
+                      every finished answer regardless of whether an artifact had
+                      been produced, so it read as an instruction rather than an
+                      affordance — and it interrupted the mission feed, which is
+                      the thing worth reading. Removed deliberately; the pane is
+                      still reachable from the shell. */}
                 </div>
               </div>
             ))}
+            {sourceSheet && (
+              <div className="src-sheet-scrim" onClick={() => setSourceSheet(null)} role="presentation">
+                <div className="src-sheet" role="dialog" aria-modal="true" aria-label="External source" onClick={(e) => e.stopPropagation()}>
+                  <div className="src-sheet-head">
+                    <span className="src-sheet-host">{sourceSheet.host}</span>
+                    <button className="src-sheet-x" onClick={() => setSourceSheet(null)} aria-label="Close">
+                      <X size={15} strokeWidth={2.2} />
+                    </button>
+                  </div>
+                  <p className="src-sheet-url">{sourceSheet.url}</p>
+                  <p className="src-sheet-note">
+                    This is an external site, outside ArgantaEnergy. It opens in a new tab — publishers
+                    block embedding, so nothing here can preview the page itself.
+                  </p>
+                  <div className="src-sheet-actions">
+                    <a
+                      className="src-sheet-go"
+                      href={sourceSheet.url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      onClick={() => setSourceSheet(null)}
+                    >
+                      <ExternalLink size={13} strokeWidth={2.2} /> Open {sourceSheet.host}
+                    </a>
+                    <button
+                      className="src-sheet-copy"
+                      onClick={() => { void navigator.clipboard?.writeText(sourceSheet.url); setSourceSheet(null); }}
+                    >Copy link</button>
+                  </div>
+                </div>
+              </div>
+            )}
             {brain !== 'agent' && bridgeRunning && (
               <div className="msg assistant">
                 <div className="who">ARGANTA</div>

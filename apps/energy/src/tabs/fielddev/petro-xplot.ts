@@ -23,6 +23,7 @@
  *  taken apart again — a crossplot that cannot be traced back to wells is a
  *  picture, not evidence. */
 import { PHYSICAL_RANGE, PHIT_MAX } from './petro-compute.ts';
+import { PHI_K_SCREENING, fitPhiK } from '../../engine/perm.ts';
 
 export interface XPoint { well: string; x: number; y: number; z?: number; depth?: number }
 
@@ -236,9 +237,20 @@ export function pickett(
 export interface PermeabilityResult {
   points: XPoint[];
   availability: Availability;
-  /** Always null for a delivery with no K. Present so the shape of an honest
-   *  result is identical to a blocked one, and a caller cannot forget to check. */
-  law: { form: string; a: number; b: number; r2: number } | null;
+  /** Null for a delivery with no K. Present so the shape of an honest result is
+   *  identical to a blocked one, and a caller cannot forget to check. */
+  law: { form: string; a: number; b: number; r2: number | null; basis: 'core' | 'screening' } | null;
+  /**
+   * The law the STATIC MODEL is populating permeability with right now.
+   *
+   * Reconciliation, not decoration. Analytics answers "can this delivery support
+   * a φ–k law" and the static model answers "what k did I put in the cells", and
+   * with no core those are different answers to what a reader hears as one
+   * question: Analytics says "blocked, no K anywhere" while the grid is quietly
+   * full of 10^(19φ−1.5). Both are true and the pair is what matters, so the card
+   * shows the screening law IN FORCE alongside the refusal to fit one.
+   */
+  inForce: { form: string; a: number; b: number; basis: 'screening' };
 }
 
 /**
@@ -252,12 +264,19 @@ export interface PermeabilityResult {
  * the reports, pass it as a curve and the fit becomes real.
  */
 export function permeability(bores: BoreCurves[], kCurve = 'PERM', phieCurve = 'PHIE'): PermeabilityResult {
+  // What the static model is doing regardless of what can be fitted here.
+  const inForce = {
+    form: 'log10(k) = a·PHIE + b',
+    a: PHI_K_SCREENING.a, b: PHI_K_SCREENING.b,
+    basis: 'screening' as const,
+  };
+
   const avail = availability(
     bores, [phieCurve, kCurve],
     'no permeability curve and no core K in this delivery — a PHIE–K law cannot be fitted from it, '
-    + 'and a literature transform would not be this field\'s rock',
+    + "and a literature transform would not be this field's rock",
   );
-  if (avail.blocked) return { points: [], availability: avail, law: null };
+  if (avail.blocked) return { points: [], availability: avail, law: null, inForce };
 
   const points: XPoint[] = [];
   for (const b of bores) {
@@ -266,12 +285,17 @@ export function permeability(bores: BoreCurves[], kCurve = 'PERM', phieCurve = '
       if (phi > 0 && k > 0) points.push({ well: b.well, x: phi, y: k, depth: b.depth?.[r.i] ?? undefined });
     }
   }
-  // log10(k) = a·phi + b — the standard porosity–permeability form
-  const fit = linreg(points.map((p) => [p.x, Math.log10(p.y)] as [number, number]));
+  // ONE fitter, shared with the static model (engine/perm.fitPhiK), so a law shown
+  // on this card and a law used to populate the grid can never be different code
+  // with different fallbacks — which is exactly what they were.
+  const fit = fitPhiK(points.map((p) => p.x), points.map((p) => p.y));
   return {
     points,
     availability: avail,
-    law: fit ? { form: 'log10(k) = a·PHIE + b', a: fit.a, b: fit.b, r2: fit.r2 } : null,
+    law: fit.basis === 'core'
+      ? { form: 'log10(k) = a·PHIE + b', a: fit.a, b: fit.b, r2: fit.r2, basis: 'core' }
+      : null,
+    inForce,
   };
 }
 

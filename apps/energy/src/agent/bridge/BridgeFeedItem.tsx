@@ -58,6 +58,14 @@ function BridgePreviews({ text, fileBase, token }: { text: string; fileBase?: st
 
 export type BridgeMsgKind =
   | { kind: 'status' | 'tool'; label: string }
+  /** Consecutive status/tool events, collapsed into ONE feed item.
+   *
+   *  Each event used to become its own ARGANTA bubble, so "Planning mission"
+   *  and "Reading repository" arrived as two separate messages from the
+   *  assistant -- which reads as the agent talking twice rather than as one
+   *  mission making progress. They are the same mission; they belong in the
+   *  same box. */
+  | { kind: 'steps'; steps: { label: string; kind: 'status' | 'tool' }[]; running?: boolean }
   | { kind: 'approval'; approvalId: string; tool: string; label: string; input: unknown; resolved?: 'approved' | 'denied' }
   | { kind: 'done'; ok: boolean; result?: string; costUsd?: number; engineLabel?: string }
   | { kind: 'error'; message: string };
@@ -72,6 +80,20 @@ export function BridgeFeedItem({ item, fileBase, token, onResolve, renderMarkdow
   renderMarkdown: (md: string) => string;
 }): ReactNode {
   switch (item.kind) {
+    case 'steps':
+      return (
+        <div className="bf-steps">
+          {item.steps.map((s, i) => {
+            const last = i === item.steps.length - 1;
+            return (
+              <div key={i} className={'bf-step' + (last && item.running ? ' is-live' : ' is-done')}>
+                <span className="bf-step-dot" />
+                <span className="bf-step-label">{s.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      );
     case 'status':
       return <div className="bf-status">{item.label}</div>;
     case 'tool':
