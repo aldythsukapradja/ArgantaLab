@@ -15,7 +15,7 @@ import { BasinLens } from './BasinLens';
 import { Wedges } from './Wedges';
 import { DemoFrame } from './DemoFrame';
 import {
-  dur, fadeOut, gsap, hold, prefersReducedMotion, riseIn, riseLines, SETTLE, type SceneApi,
+  dur, fadeOut, gsap, hold, riseIn, riseLines, SETTLE, type SceneApi,
 } from './timeline';
 
 export interface Scene {
@@ -330,22 +330,11 @@ const SCALES = [
 ];
 
 function S04() {
-  const [depth, setDepth] = useState(0);        // 0 → 1 across the three stops
-
-  useEffect(() => {
-    if (prefersReducedMotion()) { setDepth(1); return; }
-    // One continuous fall. Driven by GSAP rather than a CSS animation so it
-    // shares the deck's clock. Linear on purpose — the lens eases each leg
-    // itself, and easing twice reads as a stutter.
-    const o = { d: 0 };
-    const tw = gsap.to(o, {
-      d: 1, duration: 11, ease: 'none', delay: 1.1,
-      onUpdate: () => setDepth(o.d),
-    });
-    return () => { tw.kill(); };
-  }, []);
-
-  const at = Math.min(SCALES.length - 1, Math.round(depth * (SCALES.length - 1)));
+  // The lens owns the clock now and reports which stop it has reached. The
+  // scene used to hold a `depth` float and re-render on every tick — 660
+  // renders of a 200-node SVG across one fall, which is what made the descent
+  // drag. This re-renders four times.
+  const [at, setAt] = useState(0);
 
   return (
     <section className="kn-full kn-descent">
@@ -370,7 +359,7 @@ function S04() {
             that everything joins — and a panel of Kutei detail beside it would
             be arguing the opposite. The lens takes the frame alone. */}
         <div className={'kn-descent-pair' + (at === SCALES.length - 1 ? ' solo' : '')}>
-          <BasinLens depth={depth} />
+          <BasinLens onStop={setAt} />
           {at < SCALES.length - 1 && <Wedges stop={at} />}
         </div>
       </div>

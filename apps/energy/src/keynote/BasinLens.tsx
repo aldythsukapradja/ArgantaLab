@@ -14,8 +14,9 @@
 // Everything drawn is real: province outlines from world/provinces.geojson and
 // field points from cockpit-scope-fields.json. The geologist in the room will
 // recognise the shape at every stop, which is the entire reason not to fake it.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadProvinceGeo, loadScopeFields } from '../tabs/exploration/data';
+import { gsap, prefersReducedMotion } from './timeline';
 import { INDONESIA_CODES, KUTEI } from './data';
 
 const VB = 100;
@@ -117,9 +118,22 @@ function useIndonesia(): Lens | null {
         }
         centres.push({ x: sx / fs2.length, y: sy / fs2.length });
       }
+      // Nearest three, not all pairs. Thirteen provinces all-to-all is 78 arcs;
+      // at the size this renders they overlap into a solid mesh, so the extra
+      // fifty cost frames and communicate nothing.
       const arcs: string[] = [];
+      const arcSeen = new Set<string>();
       for (let i = 0; i < centres.length; i += 1) {
-        for (let j = i + 1; j < centres.length; j += 1) {
+        const near = centres
+          .map((c, j) => ({ j, d: (c.x - centres[i].x) ** 2 + (c.y - centres[i].y) ** 2 }))
+          .filter((c) => c.j !== i)
+          .sort((u, v) => u.d - v.d)
+          .slice(0, 3);
+        for (const n of near) {
+          const j = n.j;
+          const pairKey = i < j ? `${i}-${j}` : `${j}-${i}`;
+          if (arcSeen.has(pairKey)) continue;
+          arcSeen.add(pairKey);
           const a = centres[i], b2 = centres[j];
           const mx = (a.x + b2.x) / 2, my = (a.y + b2.y) / 2;
           const dx = b2.x - a.x, dy = b2.y - a.y;
@@ -177,45 +191,72 @@ function useIndonesia(): Lens | null {
  *  gliding through them — a fall that never pauses reads as a pan. */
 const easeLeg = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 
-export function BasinLens({ depth }: { depth: number }) {
+/** Drives ITSELF, and writes the camera straight to the DOM.
+ *
+ *  The previous version took a `depth` prop that the scene updated on every
+ *  GSAP tick — about 660 React renders across an eleven-second fall, each one
+ *  reconciling the whole SVG subtree. That, not the geometry, is what made the
+ *  zoom-out crawl.
+ *
+ *  Now the tween lives here and its onUpdate sets `transform` on one node and
+ *  `opacity` on one more. React renders only when the STOP changes (four times)
+ *  or when the quantised zoom crosses a step, so the dots can be re-sized.
+ *  `onStop` lets the scene keep its label in sync without owning the clock. */
+export function BasinLens({
+  duration = 11, delay = 1.1, onStop,
+}: { duration?: number; delay?: number; onStop?: (i: number) => void }) {
   const lens = useIndonesia();
+  const camRef = useRef<SVGGElement>(null);
+  const weaveRef = useRef<SVGGElement>(null);
+  const stopRef = useRef(-1);
+  const onStopRef = useRef(onStop);
+  onStopRef.current = onStop;
+  // Quantised zoom, the ONLY per-frame value allowed to reach React — and only
+  // when it crosses a step, which is roughly twenty times, not 660.
+  const [zq, setZq] = useState(1);
 
-  const view = useMemo(() => {
-    if (!lens) return { x: VB / 2, y: VB / 2, z: 1 };
-    // depth 0→1 across three stops = two legs.
-    const legs = lens.stops.length - 1;
-    const raw = Math.min(0.9999, Math.max(0, depth)) * legs;
-    const i = Math.floor(raw);
-    const t = easeLeg(raw - i);
-    const a = lens.stops[i], b = lens.stops[i + 1] ?? a;
-    return {
-      x: a.x + (b.x - a.x) * t,
-      y: a.y + (b.y - a.y) * t,
-      // Zoom is interpolated in LOG space. Linear interpolation between 1× and
-      // 26× spends almost the whole leg already deep, which feels like a jump.
-      z: Math.exp(Math.log(a.z) + (Math.log(b.z) - Math.log(a.z)) * t),
+  useEffect(() => {
+    if (!lens) return;
+    const stops = lens.stops;
+    const legs = stops.length - 1;
+
+    const apply = (d: number) => {
+      const raw = Math.min(0.9999, Math.max(0, d)) * legs;
+      const i = Math.floor(raw);
+      const t = easeLeg(raw - i);
+      const a = stops[i], b = stops[i + 1] ?? a;
+      const x = a.x + (b.x - a.x) * t;
+      const y = a.y + (b.y - a.y) * t;
+      // Zoom interpolates in LOG space. Linear between 1× and 26× spends
+      // almost the whole leg already deep, which reads as a jump.
+      const z = Math.exp(Math.log(a.z) + (Math.log(b.z) - Math.log(a.z)) * t);
+
+      if (camRef.current) {
+        camRef.current.style.transform =
+          `translate(${VB / 2}px, ${VB / 2}px) scale(${z}) translate(${-x}px, ${-y}px)`;
+      }
+      // The weave belongs to the final leg only.
+      const woven = Math.max(0, Math.min(1, d * legs - (legs - 1)));
+      if (weaveRef.current) {
+        weaveRef.current.style.opacity = String(woven * 0.62);
+        weaveRef.current.style.visibility = woven > 0 ? 'visible' : 'hidden';
+      }
+
+      const q = Math.max(0.5, Math.round(z * 3) / 3);
+      setZq((prev) => (prev === q ? prev : q));
+
+      if (i !== stopRef.current) {
+        stopRef.current = i;
+        onStopRef.current?.(i);
+      }
     };
-  }, [lens, depth]);
 
-  const { x, y, z } = view;
-  // Arcs belong to the final leg. Two legs of three carry no weave at all, so
-  // this fades in only across the last one.
-  const legs = 3;
-  const woven = Math.max(0, Math.min(1, depth * legs - (legs - 1)));
-
-  // PERFORMANCE. The zoom-out used to stutter because every ring, link, arc and
-  // dot carried an attribute derived from `z` — strokeWidth, r, opacity — so
-  // ~220 SVG nodes were re-rendered and re-laid-out sixty times a second.
-  //
-  // Now: strokes use vector-effect="non-scaling-stroke", which keeps a hairline
-  // a hairline under any transform WITHOUT a per-frame attribute; arc opacity
-  // moved from each path onto their shared group, one update instead of
-  // seventy-eight; and the dot radius is quantised so it changes about twenty
-  // times across the whole descent rather than on every frame.
-  //
-  // What is left changing per frame is a single transform string on one <g>,
-  // which is what the GPU is for.
-  const zq = Math.max(0.5, Math.round(z * 3) / 3);
+    if (prefersReducedMotion()) { apply(1); return; }
+    apply(0);
+    const o = { d: 0 };
+    const tw = gsap.to(o, { d: 1, duration, delay, ease: 'none', onUpdate: () => apply(o.d) });
+    return () => { tw.kill(); };
+  }, [lens, duration, delay]);
 
   const shapes = useMemo(() => (
     <>
@@ -258,13 +299,14 @@ export function BasinLens({ depth }: { depth: number }) {
         <circle cx={VB / 2} cy={VB / 2} r={VB / 2 - 0.5} fill="url(#kn-lens-glow)" />
 
         <g clipPath="url(#kn-lens-clip)">
-          <g style={{
-            transform: `translate(${VB / 2}px, ${VB / 2}px) scale(${z}) translate(${-x}px, ${-y}px)`,
-            transformOrigin: '0 0',
-          }}>
+          <g ref={camRef} style={{ transformOrigin: '0 0' }}>
             {/* The weave: every province joined to every other, on the last leg
                 only. One opacity on the group, not one per arc. */}
-            {woven > 0 && <g style={{ opacity: woven * 0.62 }}>{arcs}</g>}
+            {/* Always mounted, faded by the group. Mounting these DURING the
+                final transform was a visible hitch at the worst moment. */}
+            <g ref={weaveRef} style={{ opacity: 0, visibility: 'hidden' }}>
+              {arcs}
+            </g>
             {shapes}
             {dots}
           </g>
