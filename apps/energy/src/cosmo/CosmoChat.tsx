@@ -21,6 +21,7 @@ import { AgentWelcome } from './AgentWelcome.tsx';
 import { ChatArtifact } from './ChatArtifact.tsx';
 import { WORKFLOWS, WORKFLOW_BY_ID, planFor, planSummary } from '../agent/workflows.ts';
 import { buildReport, type ReportStep } from '../agent/report.ts';
+import { getCockpitState } from '../agent/useAgentCockpit.ts';
 import type { TurnTrace } from '../agent/types.ts';
 import type { AnswerCard, CardChip } from '../agent/types';
 import { useBridge, type BridgeEngine } from '../agent/bridge/useBridge';
@@ -276,12 +277,50 @@ type Msg = {
 const HISTORY_TURNS = 8;
 const HISTORY_CHARS = 6000;
 
+/** What the operator is looking at, handed to the agent rather than left for it
+ *  to discover.
+ *
+ *  The cockpit already writes this to .agent/live-state.json, and an agent that
+ *  reads it gets an exact answer. The problem is that nothing about "what am I
+ *  looking at?" suggests opening a dot-file, so it does not look — and because a
+ *  mission also carries the conversation transcript, it will answer confidently
+ *  from something said several turns ago instead. Observed exactly that: the
+ *  agent recited a proposal to BUILD this bridge while the live file sat beside
+ *  it, thirty seconds old.
+ *
+ *  So the state travels in the prompt. The file remains, for agents that do go
+ *  looking and for anything running outside a mission. */
+function appState(): string {
+  const st = getCockpitState();
+  if (!st) return '';
+  const scope = Object.entries(st.scope ?? {})
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(', ');
+  return [
+    'What the operator is looking at RIGHT NOW in ArgantaEnergy (live, read from',
+    'the running app — trust this over anything earlier in this transcript):',
+    `- surface: ${st.nav ?? 'unknown'}${st.mode ? ` (${st.mode})` : ''}`,
+    scope ? `- scope: ${scope}` : '- scope: nothing selected',
+    st.breadcrumb ? `- subject: ${st.breadcrumb}` : '',
+    '',
+    'The same state is on disk at apps/energy/.agent/live-state.json, and writing',
+    'an AgentCommand array to apps/energy/.agent/commands.json navigates the app',
+    '(ops: scope | view | map | clear). See .agent/README.md.',
+  ].filter(Boolean).join('\n');
+}
+
 function withHistory(msgs: Msg[], text: string): string {
   const prior = msgs
     .filter((m) => !m.welcome && !m.bridge && (m.text || '').trim())
     .slice(-HISTORY_TURNS)
     .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${(m.text || '').trim()}`);
-  if (!prior.length) return text;
+  const state = appState();
+  if (!prior.length) return state ? `${state}
+
+---
+
+${text}` : text;
 
   // Newest turns matter most, so drop from the FRONT when trimming.
   let body = prior.join('\n\n');

@@ -28,6 +28,17 @@ const PUBLISH_DEBOUNCE_MS = 250;
  *  gate, because the browser must not trust a file it did not write. */
 const ALLOWED = new Set(['scope', 'view', 'map', 'clear']);
 
+/** The last state this app published, kept in memory.
+ *
+ *  The file is for agents that go looking. This is for the ones that do not —
+ *  and in practice they do not, because nothing in "what am I looking at?"
+ *  suggests reading a dot-file. Worse, a Frontier mission carries a transcript
+ *  of the conversation, so an agent can confidently answer from something said
+ *  five turns ago instead of from the app in front of it. Handing the state
+ *  over in the prompt removes both failure modes. */
+let lastPublished: CockpitState | null = null;
+export const getCockpitState = (): CockpitState | null => lastPublished;
+
 export interface CockpitState {
   /** What the operator is looking at, in the app's own vocabulary. */
   nav: string | null;
@@ -64,6 +75,7 @@ export function useAgentCockpit(extra: { nav?: string | null; mode?: string | nu
         breadcrumb: extra.breadcrumb ?? '',
         at: new Date().toISOString(),
       };
+      lastPublished = body;
       const json = JSON.stringify(body);
       // Identical state is not news. Rewriting the file on every render would
       // make `at` churn and make a watching agent think something changed.
