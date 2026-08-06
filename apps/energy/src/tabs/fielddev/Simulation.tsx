@@ -36,7 +36,14 @@ import { layerSpan } from './grid-build';
 import { propValueAt } from './prop-view';
 import { simulateFV } from '../../engine/sim/fv';
 import { columnAverages, runCase, type SimWellInput, type RunOutput } from './sim-run';
+import { buildCase, V0_RECIPE } from './build-case';
+import { indexedDbCaseStore } from './case-store';
+import { useFluidBasis, assembleCase } from './fluids-live';
+import { useFluidCase } from './fluid-case-store';
 import { PlotsPane, WellsPane, ForecastPane, MatchPane, ReportPane, Blank } from './sim-views';
+import { GeaStudio } from './GeaStudio';
+import { ensureProp } from './grid-props';
+import { buildFrames, writeFrame, FRAME_NOTE, type FrameSet } from './sim-frames';
 
 const VIEWS: StudioView[] = [
   { id: 'plots', label: 'Plots', hint: 'Rates and pressures through time — simulated against observed' },
@@ -76,7 +83,63 @@ export function Simulation({ field }: { field: SearchEntry }) {
   // the seam that stage exists to provide. A simulation that carries its own PVT is a
   // simulation that can disagree with the case it claims to be running.
   const grid = useStatic((st) => st.grid);
+  const setGrid = useStatic((st) => st.setGrid);
   const fluids = useSimFluids(field.id);
+
+  // ── V0 IS THE DEFAULT BASIS, LOADED WITHOUT BEING ASKED ──────────────────
+  //
+  // The surface used to open with a disabled Run button and no way to enable it
+  // without visiting two other tabs first. v0 is the shipped ground-truth realisation,
+  // so it is what a case stands on until someone chooses otherwise: restored from the
+  // case store if it has been built before, rebuilt from V0_RECIPE if not.
+  //
+  // It is loaded, never invented. If the recipe cannot be rebuilt the surface says so
+  // and stays empty rather than running on something it made up.
+  const [basisNote, setBasisNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (grid?.packed || !ready || !ws.fieldId) return;
+    let alive = true;
+    (async () => {
+      setBasisNote('loading v0…');
+      try {
+        const saved = await indexedDbCaseStore.get('v0').catch(() => null);
+        if (!alive) return;
+        if (saved?.grid) {
+          setGrid(saved.grid);
+          setBasisNote('v0 (restored)');
+          return;
+        }
+        setBasisNote('building v0 from its recipe…');
+        const out = await buildCase(ws, V0_RECIPE, (p) => {
+          if (alive) setBasisNote(`building v0 — ${p.step} ${p.done}/${p.total}`);
+        });
+        if (!alive) return;
+        setGrid(out.grid);
+        setBasisNote('v0 (built)');
+        await indexedDbCaseStore.put({
+          id: 'v0', fieldId: ws.fieldId, savedAt: Date.now(), groundTruth: true,
+          grid: out.grid, upscaled: out.upscaled, simInfo: null,
+        } as never).catch(() => {});
+      } catch (e) {
+        if (alive) setBasisNote(`v0 could not be built: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    })();
+    return () => { alive = false; };
+  }, [grid, ready, ws, setGrid]);
+
+  // ── AND THE FLUID CASE, FROM THE SAME DEFAULTS THE FLUIDS TAB USES ───────
+  //
+  // Not a second set of constants: `assembleCase` on the delivery's own basis is
+  // exactly what Fluids & Rock computes and publishes. Publishing it here means a user
+  // who has not opened that tab still runs on the same rock-fluid functions rather than
+  // on something this file made up — and the moment they DO open it and change
+  // anything, their case replaces this one.
+  const { basis: fluidBasis, ready: basisReady } = useFluidBasis();
+  useEffect(() => {
+    if (fluids || !basisReady || !ws.fieldId) return;
+    const init = assembleCase(ws.fieldId, fluidBasis, {});
+    if (init) useFluidCase.getState().publish(init);
+  }, [fluids, basisReady, fluidBasis, ws.fieldId]);
 
   const wellsIn = useMemo<SimWellInput[]>(() => ws.bores
     .filter((b) => b.x != null && b.y != null)
@@ -92,6 +155,11 @@ export function Simulation({ field }: { field: SearchEntry }) {
   const [historyEnd, setHistoryEnd] = useState<number | null>(1825);
 
   const [run, setRun] = useState<RunOutput | null>(null);
+  const [frames, setFrames] = useState<FrameSet | null>(null);
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  // which dynamic field the viewport is colouring by
+  const [dynProp, setDynProp] = useState<'swSim' | 'sweep'>('swSim');
   const [runErr, setRunErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -130,6 +198,10 @@ export function Simulation({ field }: { field: SearchEntry }) {
         const out = runCase(p as never, cols, fluids, wellsIn,
           { tEnd: tEnd, nReports: 60 }, simulateFV);
         setRun(out);
+        // the frames the 3D viewport animates. Built once, from the same result the
+        // charts read, so the picture and the numbers cannot disagree.
+        setFrames(buildFrames(p as never, out.result, fluids.sor));
+        setStep(0);
         markDone('case'); markDone('init'); markDone('schedule'); markDone('run');
       } catch (e) {
         setRunErr(e instanceof Error ? e.message : String(e));
@@ -138,6 +210,47 @@ export function Simulation({ field }: { field: SearchEntry }) {
       }
     }, 16);
   }, [grid, fluids, wellsIn, markDone, tEnd]);
+
+  // ── THE FRAME ON SCREEN ──────────────────────────────────────────────────
+  //
+  // Written into the packed grid the Static Model viewport already draws, rather than
+  // building a second 3D scene. That reuse is the point: the flood is shown on the
+  // same geometry, the same camera, the same slicing and the same cross-section tool
+  // the static properties use, so a user is not learning a second viewer.
+  //
+  // The property keeps ONE range across the whole run — per-frame autoscaling makes the
+  // colours churn while the front appears to stand still.
+  const bumpProps = useStatic((st) => st.bumpProps);
+  const setPropKey = useStatic((st) => st.setProp);
+  useEffect(() => {
+    const p = grid?.packed;
+    if (!p || !frames || !frames.sw.length) return;
+    const ix = Math.max(0, Math.min(frames.sw.length - 1, step));
+    const swProp = ensureProp(p as never, 'swSim');
+    swProp.min = frames.swRange.lo; swProp.max = frames.swRange.hi;
+    writeFrame(swProp as never, frames.sw[ix]);
+    const swpProp = ensureProp(p as never, 'sweep');
+    swpProp.min = 0; swpProp.max = 1;
+    writeFrame(swpProp as never, frames.sweep[ix]);
+    bumpProps();
+  }, [grid, frames, step, bumpProps]);
+
+  // colour by the dynamic field whenever the 3D view is the one being looked at
+  useEffect(() => {
+    if (view === '3d' && frames) setPropKey(dynProp);
+  }, [view, frames, dynProp, setPropKey]);
+
+  // playback
+  useEffect(() => {
+    if (!playing || !frames) return;
+    const id = setInterval(() => {
+      setStep((v) => {
+        if (v >= frames.sw.length - 1) { setPlaying(false); return v; }
+        return v + 1;
+      });
+    }, 220);
+    return () => clearInterval(id);
+  }, [playing, frames]);
 
   const activeTab = useMemo(
     () => SIM_RIBBON_TABS.find((t) => t.id === ribbon) ?? SIM_RIBBON_TABS[0],
@@ -150,7 +263,9 @@ export function Simulation({ field }: { field: SearchEntry }) {
     ? 'reading the workspace…'
     : basis
       ? `${field.name} · on ${basis.name} · ${ws.bores.length} bores`
-      : `${field.name} · no static basis selected`;
+      : grid?.packed
+        ? `${field.name} · ${basisNote ?? 'v0'} · ${ws.bores.length} bores`
+        : `${field.name} · ${basisNote ?? 'no static basis'}`;
 
   return (
     <StudioShell
@@ -235,7 +350,32 @@ export function Simulation({ field }: { field: SearchEntry }) {
           : view === 'forecast' ? <ForecastPane run={run} historyEnd={historyEnd} />
           : view === 'match' ? <MatchPane run={run} historyEnd={historyEnd} />
           : view === 'report' ? <ReportPane run={run} historyEnd={historyEnd} />
-          : <Blank>The 3D dynamic viewer reuses the Static Model viewport and lands with the frame writer.</Blank>
+          : frames && frames.sw.length ? (
+            <div className="sim3d">
+              <div className="sim3d-bar">
+                <div className="mp-seg">
+                  <button className={dynProp === 'swSim' ? 'on' : ''} onClick={() => setDynProp('swSim')}
+                    title="Water saturation at this timestep — green is oil, blue is water">water saturation</button>
+                  <button className={dynProp === 'sweep' ? 'on' : ''} onClick={() => setDynProp('sweep')}
+                    title="How much of each column's movable oil has been displaced — this is the FRONT">sweep</button>
+                </div>
+                <button className="sim-run" onClick={() => setPlaying(!playing)}>
+                  {playing ? 'pause' : 'play'}
+                </button>
+                <input type="range" className="gea-scrub" min={0} max={frames.sw.length - 1} step={1}
+                  value={step} onChange={(e) => { setPlaying(false); setStep(Number(e.target.value)); }} />
+                <span className="sim3d-t">
+                  day {frames.times[step]?.toFixed(0)} · step {step + 1}/{frames.sw.length}
+                  {' · '}PVI {run.series.field[step]?.pvi.toFixed(3)}
+                  {' · '}WC {((run.series.field[step]?.watercut ?? 0) * 100).toFixed(0)}%
+                </span>
+              </div>
+              <div className="sim3d-canvas">
+                <GeaStudio ws={ws} onStats={() => {}} />
+              </div>
+              <p className="sim-note">{FRAME_NOTE}</p>
+            </div>
+          ) : <Blank>Run the case to animate the flood.</Blank>
       ) : (
         <ViewPane view={view} done={done} missing={missing} busy={busy} err={runErr} />
       )}

@@ -80,11 +80,25 @@ const FLUIDS = {
 
   check('a producer runs on bottom-hole pressure', b.cfg.wells[0].mode === 'bhp', b.cfg.wells[0].mode);
   check('an injector runs on rate', b.cfg.wells[1].mode === 'rate', b.cfg.wells[1].mode);
-  check('…and injects, so its rate is negative to the solver', b.cfg.wells[1].rate < 0, `${b.cfg.wells[1].rate}`);
+  // POSITIVE. The solver adds `rate` to the cell's right-hand side, so a positive rate
+  // is a SOURCE. This assertion used to demand a negative one, which is exactly how the
+  // sign error survived: every injector was a second producer, the incompressible
+  // system had no source at all, and pressure ran to 1e15.
+  check('…and injects, so its rate is POSITIVE to the solver', b.cfg.wells[1].rate > 0, `${b.cfg.wells[1].rate}`);
+  // A bhp well with no well index is 2*pi*k*h/ln(r0/rw) = 0: it contributes nothing to
+  // the matrix and produces nothing, and with the only sink gone the solve is singular.
+  check('a producer carries a Peaceman well index', (b.cfg.wells[0].WI ?? 0) > 0, `${b.cfg.wells[0].WI}`);
 
-  // an inactive column must be a NO-FLOW region, not a hole pressure escapes through
-  eq('an inactive column has zero permeability', b.cfg.k[0], 0);
-  eq('…and zero porosity', b.cfg.phi[0], 0);
+  // ── AN INACTIVE COLUMN MUST NOT BREAK THE PRESSURE SOLVE ────────────────
+  // Zero permeability gives its row a zero diagonal, the preconditioner divides by it,
+  // and NaN spreads through the whole solution. On the real Volve grid — 47% inactive —
+  // that meant every pressure was NaN and nothing was ever produced, while the
+  // saturation front still advanced, which is what made it look like it worked.
+  check('a dead column keeps a tiny but NON-ZERO permeability', b.cfg.k[0] > 0 && b.cfg.k[0] < 1e-3,
+    `${b.cfg.k[0]}`);
+  check('…and a tiny but non-zero porosity', b.cfg.phi[0] > 0 && b.cfg.phi[0] < 1e-6, `${b.cfg.phi[0]}`);
+  check('a dead column is initialised to water, not to connate', b.cfg.swInit[0] === 1, `${b.cfg.swInit[0]}`);
+
   near('the layer thickness is the mean gross of the ACTIVE area', b.meanH, 60, 1e-6);
 
   // the assumptions are never omitted, and a rejected well surfaces in them
@@ -111,6 +125,9 @@ const FLUIDS = {
   check('cumulative oil never decreases',
     f.every((s, i) => i === 0 || s.cumOil >= f[i - 1].cumOil - 1e-9), '');
   check('the field produced something', f[f.length - 1].cumOil > 0, `${f[f.length - 1].cumOil}`);
+  // the fixture HAS inactive columns, so this also proves the solve stayed non-singular
+  check('every reported pressure is finite, on a grid with dead columns',
+    f.every((s2) => Number.isFinite(s2.pAvg)), '');
 
   // SURFACE volumes, not reservoir. Bo = 1.25, so surface OOIP is 20% BELOW reservoir.
   near('OOIP is reported at SURFACE conditions (reservoir ÷ Bo)',

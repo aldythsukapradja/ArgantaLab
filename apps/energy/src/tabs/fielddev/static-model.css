@@ -896,3 +896,16 @@ html[data-ui="cosmo"] .wsb-layout:not(:has(> .wsb-drawer)) > :not(.wsb-ribbon) {
 :root[data-theme='light'] .tc-leg { color: #475569; }
 :root[data-theme='light'] .tc-read { background: rgba(15,23,42,0.05); color: #334155; }
 :root[data-theme='light'] .tc-read b { color: #0369a1; }
+
+/* ── the 3D flood animation ────────────────────────────────────────────────
+   The viewport itself is the Static Model's, unchanged — this is only the transport
+   over it. Reusing the viewer is the point: same geometry, same camera, same slicing
+   and cross-section tools, so nobody learns a second 3D view. */
+.sim3d { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.sim3d-bar { display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+  padding: 6px 12px; border-bottom: 1px solid rgba(148,163,184,0.14); }
+.sim3d-bar .gea-scrub { flex: 1; min-width: 120px; }
+.sim3d-t { font-family: ui-monospace, monospace; font-size: 9.5px; color: #7dd3fc; white-space: nowrap; }
+.sim3d-canvas { position: relative; flex: 1; min-height: 0; }
+.sim3d .sim-note { flex: 0 0 auto; padding: 5px 12px; margin: 0; }
+:root[data-theme='light'] .sim3d-t { color: #0369a1; }

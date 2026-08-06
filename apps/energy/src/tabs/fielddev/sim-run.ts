@@ -32,6 +32,18 @@
 import type { FvCfg, FvResult } from '../../engine/sim/fv';
 import type { Well } from '../../engine/sim/pressure';
 
+/**
+ * Peaceman equivalent radius and well index.
+ *
+ * INLINED rather than imported from `engine/sim/pressure`, for the same reason the
+ * solver is injected: a value import there is extensionless and will not resolve in
+ * plain node, and this module has to stay runnable by the truth-lock. The lock
+ * cross-checks both against the engine's own versions, so the copies cannot drift.
+ */
+export const peacemanR0 = (dx: number, dy: number) => 0.14 * Math.sqrt(dx * dx + dy * dy);
+export const wellIndex = (k: number, h: number, r0: number, rw: number, skin = 0) =>
+  (2 * Math.PI * k * h) / (Math.log(r0 / rw) + skin);
+
 export interface SimGridLike {
   nx: number; ny: number; nz: number;
   dx: number; dy: number; x0: number; y0: number;
@@ -142,19 +154,36 @@ export function buildFvCfg(
   cols: ColumnAverages,
   fluids: SimFluidsLike,
   wells: SimWellInput[],
-  opts: { defaultBhp?: number; defaultRate?: number } = {},
+  opts: { defaultBhp?: number; defaultRate?: number; wellRadius?: number; skin?: number } = {},
 ): BuildResult {
   const nCol = g.nx * g.ny;
   const phi = new Float64Array(nCol);
   const k = new Float64Array(nCol);
   const swInit = new Float64Array(nCol);
   let hs = 0, hn = 0;
+  // ── AN INACTIVE COLUMN IS NEARLY NO-FLOW, NOT EXACTLY NO-FLOW ────────────
+  //
+  // Zero permeability disconnects a cell from the pressure system entirely. Its row
+  // has a zero diagonal, the preconditioner divides by it, and the NaN propagates
+  // through the whole solution — so on the real Volve grid, which is 47% inactive,
+  // every pressure came back NaN and nothing was ever produced. The saturation front
+  // still advanced, which is what made it look like it was working.
+  //
+  // DEAD is therefore 1e-9 of the live mean rather than 0: small enough that nothing
+  // measurable flows or is stored there, large enough that the matrix stays solvable.
+  let kSum = 0, kN = 0;
+  for (let c = 0; c < nCol; c++) {
+    if (Number.isFinite(cols.k[c]) && cols.h[c] > 0) { kSum += cols.k[c]; kN++; }
+  }
+  const kDead = kN ? Math.max(1e-12, (kSum / kN) * 1e-9) : 1e-12;
+  const PHI_DEAD = 1e-9;
+
   for (let c = 0; c < nCol; c++) {
     const ok = Number.isFinite(cols.phi[c]) && cols.h[c] > 0;
-    // an inactive column is given zero porosity AND zero permeability, which makes it
-    // a no-flow region in the solver rather than a hole the pressure escapes through
-    phi[c] = ok ? cols.phi[c] : 0;
-    k[c] = ok ? Math.max(1e-6, cols.k[c]) : 0;
+    phi[c] = ok ? cols.phi[c] : PHI_DEAD;
+    k[c] = ok ? Math.max(1e-6, cols.k[c]) : kDead;
+    // a dead column holds water, not oil: it is outside the accumulation, and
+    // initialising it at connate would put oil in rock the model says is not there
     swInit[c] = ok && Number.isFinite(cols.sw[c]) ? cols.sw[c] : 1;
     if (ok) { hs += cols.h[c]; hn++; }
   }
@@ -172,9 +201,22 @@ export function buildFvCfg(
     }
     const i = c % g.nx, j = (c - (c % g.nx)) / g.nx;
     if (w.kind === 'injector') {
-      solverWells.push({ i, j, mode: 'rate', rate: -(w.rate ?? opts.defaultRate ?? 800) });
+      // ── SIGN ──
+      // The solver adds `rate` to the cell's right-hand side, so a POSITIVE rate is a
+      // source: fluid entering the reservoir. Negating it turned every injector into a
+      // second producer, which left the incompressible system with no source at all —
+      // pressure ran to 1e15 and the flood never started.
+      solverWells.push({ i, j, mode: 'rate', rate: w.rate ?? opts.defaultRate ?? 800 });
     } else {
-      solverWells.push({ i, j, mode: 'bhp', bhp: w.bhp ?? opts.defaultBhp ?? 0.6 * fluids.pInit });
+      // ── WELL INDEX ──
+      // A bhp well's flow is WI·λ·(p − pbhp). With no WI it is 2π·k·h/ln(r0/rw) = 0:
+      // the well contributes nothing to the matrix and produces nothing, and with the
+      // only sink gone the pressure solve is singular. Peaceman, on the cell's own
+      // permeability and the layer thickness the areal collapse produced.
+      const kCell = Math.max(1e-6, cols.k[c]);
+      const r0 = peacemanR0(g.dx, g.dy);
+      const WI = wellIndex(kCell, meanH, r0, opts.wellRadius ?? 0.1, opts.skin ?? 0);
+      solverWells.push({ i, j, mode: 'bhp', bhp: w.bhp ?? opts.defaultBhp ?? 0.6 * fluids.pInit, WI });
     }
     placed.push({ name: w.name, kind: w.kind, i, j });
   }

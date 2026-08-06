@@ -176,6 +176,19 @@ export const PROPERTY_STYLES: PropertyStyle[] = [
     rampId: 'saturation',
   },
   {
+    // The FLOOD, at the displayed timestep. Same ramp as static Sw on purpose: the two
+    // are the same quantity, and giving the dynamic one its own colours would make a
+    // reader compare them by eye and get it wrong.
+    key: 'swSim', label: 'Water saturation (dynamic)', unit: 'v/v', decimals: 3,
+    categorical: false, highIsGood: false, rampId: 'saturation',
+  },
+  {
+    // Sweep normalises out where the oil STARTED, so the picture is the front rather
+    // than the initial saturation map with a front faintly drawn on it.
+    key: 'sweep', label: 'Sweep efficiency', unit: 'frac', decimals: 3,
+    categorical: false, highIsGood: true, rampId: 'rainbow',
+  },
+  {
     key: 'ntg', label: 'Net-to-gross', unit: 'v/v', decimals: 3, categorical: false, highIsGood: true,
     rampId: 'viridis',
   },
