@@ -7,7 +7,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink,
-  Lock, ArrowUp, Maximize, Monitor, Tv, Tablet, Smartphone,
+  ArrowUp, Maximize, Monitor, Tv, Tablet, Smartphone,
   GitFork, FileText, BarChart3, Expand, Download, Image as ImageIcon, Gem, Map as MapIcon,
   Box, Waves, TrendingUp, Loader2,
 } from 'lucide-react';
@@ -53,21 +53,25 @@ const CC_SESSIONS = [
   { id: 's2', title: 'FD volumetrics — P90/P50/P10', meta: '2d ago · SOVEREIGN' },
   { id: 's3', title: 'Opportunity screening shortlist', meta: '4d ago · DETERMINISTIC' },
 ];
-type CCModel = { id: string; name: string; desc: string; weight: number; ctx: string; badge?: string; locked?: boolean };
-const CC_MODELS: Array<{ group: string; tier: string; tc: string; models: CCModel[] }> = [
-  { group: 'SOVEREIGN · on-prem', tier: 'SOV', tc: '#2563eb', models: [
-    { id: 'arganta-lite', name: 'Arganta Lite', desc: 'Fast local model for everyday lookups', weight: 1, ctx: '128K' },
-    { id: 'arganta-core', name: 'Arganta Core', desc: 'Balanced sovereign default · analysis & synthesis', weight: 2, ctx: '200K', badge: 'DEFAULT' },
-  ] },
-  { group: 'WORKER · agent runtime', tier: 'WRK', tc: '#0FB5A6', models: [
-    { id: 'arganta-agent', name: 'Arganta Agent', desc: 'Tool-using workstream agent runtime', weight: 2, ctx: '200K' },
-  ] },
-  { group: 'FRONTIER · cloud (gated)', tier: 'FRO', tc: '#7c3aed', models: [
-    { id: 'arganta-frontier', name: 'Arganta Frontier', desc: 'Deep reasoning for hard, multi-step work', weight: 3, ctx: '1M', locked: true },
-  ] },
-];
-const CC_MODEL_BY_ID = (id: string) =>
-  CC_MODELS.flatMap((g) => g.models.map((m) => ({ ...m, tier: g.tier, tc: g.tc }))).find((m) => m.id === id);
+// The model picker is built from what CAN ACTUALLY ANSWER, at render time.
+//
+// It used to be a static array: "Arganta Lite 128K", "Arganta Core 200K",
+// "Arganta Frontier 1M", each with a rate-limit weight drawn as filled bars.
+// None of it was real. There is no Arganta Lite; the context figures were
+// invented; the weights measured nothing; and the model actually answering,
+// as this app's own reasoning trace shows on every turn, is whatever the
+// Worker's ladder resolves to — @cf/meta/llama-3.1-8b-instruct-fp8 most of the
+// time. A picker that names models which do not exist is a worse lie than a
+// wrong number, because the user chooses on the strength of it.
+//
+// Now: the sovereign rows come from /v1/health's real provider ladder, and the
+// Frontier rows from the engine registry that genuinely drives the bridge.
+
+/** A row in the picker. `sub` is the provider, shown because "llama-3.3-70b"
+ *  means little without knowing who is serving it. */
+type PickerRow = { id: string; name: string; sub: string; badge?: string };
+type PickerGroup = { group: string; tc: string; rows: PickerRow[] };
+
 const DEV_LABEL: Record<string, string> = { full: 'responsive · full width', ar169: '16:9 · 900 px', ar43: '4:3 · 760 px', tablet: 'tablet · 768 px', mobile: 'phone · 390 px' };
 const CC_ARTIFACTS = [
   { id: 'a1', icon: 'file-text', name: 'Oil vs water rate — chart' },
@@ -367,7 +371,6 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(false);
   const [device, setDevice] = useState('full');
-  const [model, setModel] = useState('arganta-core');
   const [mopen, setMopen] = useState(false);
   const [draft, setDraft] = useState('');
   const [artifact, setArtifact] = useState<string>('note');
@@ -454,7 +457,7 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     claude: {
       Mark: ClaudeMark, accent: '#D97757', capsulePrefix: 'Claude',
       options: [
-        { id: '', label: 'Default', sub: "Claude Code's default model" },
+        { id: '', label: 'Default', sub: "Claude's default model" },
         { id: 'opus', label: 'Opus 4.8', sub: 'Most capable' },
         { id: 'sonnet', label: 'Sonnet', sub: 'Balanced' },
         { id: 'haiku', label: 'Haiku', sub: 'Fastest' },
@@ -657,7 +660,45 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   const tourStepRef = useRef(0);
   const tourTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const streamRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const cm = CC_MODEL_BY_ID(model) || ({} as ReturnType<typeof CC_MODEL_BY_ID> & object) as NonNullable<ReturnType<typeof CC_MODEL_BY_ID>>;
+  // Built from live state, so it can only ever offer what exists.
+  const modelGroups: PickerGroup[] = useMemo(() => {
+    const out: PickerGroup[] = [];
+    const ladder = agent.activeModel?.ladder ?? [];
+    out.push({
+      group: 'ARGANTA CORE · tool-calling',
+      tc: '#2563eb',
+      rows: ladder.length
+        ? ladder.map((p, i) => ({
+          id: `core:${p.model}`,
+          name: p.model,
+          sub: p.provider,
+          // Health reports preference order, not who answered. The head is
+          // tried first; each turn's trace names the one that actually ran.
+          badge: i === 0 ? 'TRIED FIRST' : undefined,
+        }))
+        : [{ id: 'core:none', name: 'Deterministic grammar', sub: 'no model configured' }],
+    });
+    for (const engine of ['claude', 'codex'] as BridgeEngine[]) {
+      const cfg = ENGINE_MODELS[engine];
+      out.push({
+        group: `${cfg.capsulePrefix.toUpperCase()} · frontier, over the bridge`,
+        tc: cfg.accent,
+        rows: cfg.options.map((o) => ({ id: `${engine}:${o.id}`, name: o.label, sub: o.sub })),
+      });
+    }
+    return out;
+  }, [agent.activeModel, ENGINE_MODELS]);
+
+  /** What the composer pill shows: the tier that would answer right now. */
+  const currentPick = useMemo(() => {
+    if (brain === 'agent') {
+      const head = agent.activeModel?.ladder?.[0];
+      return { name: head ? head.model : 'Deterministic grammar', sub: head?.provider ?? 'local', tc: '#2563eb' };
+    }
+    const cfg = ENGINE_MODELS[brain as BridgeEngine];
+    const opt = cfg.options.find((o) => o.id === (brain === 'claude' ? claudeModel : codexModel)) ?? cfg.options[0];
+    return { name: `${cfg.capsulePrefix} ${opt.label}`, sub: opt.sub, tc: cfg.accent };
+  }, [brain, agent.activeModel, claudeModel, codexModel, ENGINE_MODELS]);
   const chips = [ASSIST_LABEL, AGENTIC_LABEL, 'Kutei Basin', 'Insight about Indonesia', 'Which basins are in Norway', 'Volve'];
 
   // real Volve well roster (wb/index.json) — used only to populate the "which well?" picker
@@ -1187,28 +1228,54 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                 <button className="cc-tool" title="Tools"><Wrench size={15} /></button>
                 <div className="cc-mwrap">
                   <div className="cc-mdl" onClick={() => setMopen(!mopen)}>
-                    <span className="dot" style={{ background: cm.tc }} />{cm.name}
-                    <span className="cv">{cm.ctx}</span><ChevronDown size={13} />
+                    <span className="dot" style={{ background: currentPick.tc }} />{currentPick.name}
+                    <span className="cv">{currentPick.sub}</span><ChevronDown size={13} />
                   </div>
                   <div className={'cc-menu ' + (mopen ? 'on' : '')}>
-                    {CC_MODELS.map((g) => (
-                      <div key={g.group}>
-                        <div className="cc-mgrp"><i style={{ background: g.tc }} />{g.group}</div>
-                        {g.models.map((m) => (
-                          <div className={'cc-mrow ' + (model === m.id ? 'on' : '') + (m.locked ? ' locked' : '')} key={m.id}
-                            onClick={() => { if (!m.locked) setModel(m.id); setMopen(false); }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div className="mnm">{m.name}{m.badge && <span className="cc-mbadge">{m.badge}</span>}{m.locked && <span className="cc-mlock"><Lock size={9} /> C1</span>}</div>
-                              <div className="mds">{m.desc}</div>
-                            </div>
-                            <div className="mmeta">
-                              <span className="cc-weight" title="Rate-limit weight">{[1, 2, 3].map((w) => <i key={w} className={w <= m.weight ? 'f' : ''} />)}</span>
-                              <span className="mctx">{m.ctx}</span>
-                            </div>
+                    {modelGroups.map((g) => {
+                      const engine = g.rows[0]?.id.startsWith('claude:') ? 'claude'
+                        : g.rows[0]?.id.startsWith('codex:') ? 'codex' : null;
+                      const Mark = engine ? ENGINE_MODELS[engine as BridgeEngine].Mark : null;
+                      return (
+                        <div key={g.group}>
+                          <div className="cc-mgrp">
+                            {/* The engine's own mark where we genuinely have one.
+                                For the sovereign ladder there is no single vendor
+                                — it is groq or Cloudflare depending on which
+                                answers — so a coloured dot, not an invented logo. */}
+                            {Mark ? <Mark size={11} /> : <i style={{ background: g.tc }} />}
+                            {g.group}
                           </div>
-                        ))}
-                      </div>
-                    ))}
+                          {g.rows.map((r) => (
+                            <div
+                              key={r.id}
+                              className={'cc-mrow ' + (
+                                (brain === 'agent' && r.id.startsWith('core:'))
+                                || r.id === `${brain}:${brain === 'claude' ? claudeModel : codexModel}` ? 'on' : '')}
+                              onClick={() => {
+                                const [kind, rest] = [r.id.slice(0, r.id.indexOf(':')), r.id.slice(r.id.indexOf(':') + 1)];
+                                // Selecting a Frontier row picks that engine AND
+                                // its option. The sovereign rows are not a choice
+                                // — the Worker owns its own fallback order — so
+                                // they only switch the brain back to Core.
+                                if (kind === 'claude' || kind === 'codex') {
+                                  setBrain(kind as BridgeEngine);
+                                  if (kind === 'claude') setClaudeModel(rest); else setCodexModel(rest);
+                                } else {
+                                  setBrain('agent');
+                                }
+                                setMopen(false);
+                              }}
+                            >
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div className="mnm">{r.name}{r.badge && <span className="cc-mbadge">{r.badge}</span>}</div>
+                                <div className="mds">{r.sub}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <button className="cc-send" disabled={!draft.trim() || (brain !== 'agent' && (bridge.status !== 'open' || bridgeRunning))} onClick={() => send()}><ArrowUp size={16} /></button>
