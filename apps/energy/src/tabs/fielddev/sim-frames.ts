@@ -144,3 +144,40 @@ export function writeFrame(
   }
   return { written, missing };
 }
+
+/**
+ * Put a COARSE flow frame back onto the GEOLOGICAL grid for display.
+ *
+ * The solve runs on a coarsened areal grid; the viewport draws the full-resolution
+ * one. Every fine column takes the value of the coarse cell containing it — a nearest
+ * lookup, deliberately, not an interpolation. Smoothing the front here would draw a
+ * gradient the flow model never computed, at a resolution it never had, and the
+ * picture would imply more spatial detail than the run contains.
+ *
+ * A fine column outside the model stays NaN even if its coarse cell has a value: the
+ * coarse cell is an average over a block that includes live rock, and painting that
+ * average over the dead part puts saturation in rock the model says is not there.
+ */
+export function expandFrame(
+  fine: FrameGridLike,
+  coarseNx: number,
+  factor: number,
+  coarseFrame: ArrayLike<number>,
+): Float64Array {
+  const nColF = fine.nx * fine.ny;
+  const out = new Float64Array(nColF * fine.nz).fill(NaN);
+  const f = Math.max(1, Math.floor(factor));
+  const nCoarseCol = coarseFrame.length; // one layer's worth is nCoarse; take layer 0
+  for (let j = 0; j < fine.ny; j++) {
+    for (let i = 0; i < fine.nx; i++) {
+      const c = j * fine.nx + i;
+      if (!fine.activeCol[c]) continue;
+      const C = Math.floor(j / f) * coarseNx + Math.floor(i / f);
+      if (C < 0 || C >= nCoarseCol) continue;
+      const v = coarseFrame[C];
+      if (!Number.isFinite(v)) continue;
+      for (let l = 0; l < fine.nz; l++) out[l * nColF + c] = v;
+    }
+  }
+  return out;
+}

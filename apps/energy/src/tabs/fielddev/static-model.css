@@ -909,3 +909,16 @@ html[data-ui="cosmo"] .wsb-layout:not(:has(> .wsb-drawer)) > :not(.wsb-ribbon) {
 .sim3d-canvas { position: relative; flex: 1; min-height: 0; }
 .sim3d .sim-note { flex: 0 0 auto; padding: 5px 12px; margin: 0; }
 :root[data-theme='light'] .sim3d-t { color: #0369a1; }
+
+/* ── the Simulation canvas fills its stage, exactly as the Static Model's does ──
+   `.sms-canvas` is the shared frame, but the Static Model's children are absolutely
+   positioned viewports while the Simulation's are ordinary blocks. Without a flex
+   context those blocks collapse to their content and the pane reads as pushed to one
+   side with a wide empty margin. */
+.sms-stage > .sms-canvas { display: flex; flex-direction: column; min-width: 0; }
+.sms-canvas > .sim-scroll,
+.sms-canvas > .sim3d,
+.sms-canvas > .simp,
+.sms-canvas > .sim-empty { flex: 1; min-height: 0; width: 100%; }
+/* the blank/reasoned-absence state centres in the FULL pane, not in a shrunk box */
+.sms-canvas > .sim-empty { display: grid; place-content: center; justify-items: center; }

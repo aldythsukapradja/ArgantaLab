@@ -91,12 +91,24 @@ export function columnAverages(
   g: SimGridLike,
   at: (col: number, layer: number) => { phi: number; perm: number; sw: number } | null,
   spanOf?: (col: number, layer: number) => { top: number; base: number } | null,
+  /**
+   * The LAYER BAND that flows — the reservoir zone, not the whole model.
+   *
+   * Omitting this was a real modelling error, not a detail. The v0 grid spans
+   * BCU to Hugin Base: layers 0-9 are overburden and 10-19 are the reservoir.
+   * Averaging over all twenty put 140 m of seal into the flow model, which is
+   * wrong on its own terms AND inflates the pore volume so far that ten years of
+   * injection moved 1% of it. The flood was physical and invisible.
+   */
+  layers?: { k0: number; nz: number },
 ): ColumnAverages {
   const nCol = g.nx * g.ny;
   const phi = new Float64Array(nCol).fill(NaN);
   const k = new Float64Array(nCol).fill(NaN);
   const sw = new Float64Array(nCol).fill(NaN);
   const h = new Float64Array(nCol).fill(0);
+  const kLo = layers ? Math.max(0, layers.k0) : 0;
+  const kHi = layers ? Math.min(g.nz, layers.k0 + layers.nz) : g.nz;
 
   for (let c = 0; c < nCol; c++) {
     if (!g.activeCol[c]) continue;
@@ -104,7 +116,7 @@ export function columnAverages(
     if (!Number.isFinite(t) || !Number.isFinite(b) || b <= t) continue;
     const uniform = (b - t) / g.nz;
     let pw = 0, kw = 0, sww = 0, w = 0;
-    for (let l = 0; l < g.nz; l++) {
+    for (let l = kLo; l < kHi; l++) {
       const sp = spanOf?.(c, l);
       const lh = sp ? sp.base - sp.top : uniform;
       if (!(lh > 0)) continue;
@@ -123,6 +135,95 @@ export function columnAverages(
   return { phi, k, sw, h };
 }
 
+/**
+ * Coarsen the areal grid for the FLOW SOLVE.
+ *
+ * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────
+ *
+ * The Volve grid is 166 x 131. An implicit two-phase solve on 21,746 columns takes
+ * 87 seconds for ten report steps in this engine — minutes for a usable run — and it
+ * blocks the thread it runs on, so the surface showed "solving..." and froze. That is
+ * not a simulator anyone can use interactively.
+ *
+ * Coarsening is the honest trade: a screening flow model does not need the geological
+ * grid's areal resolution, because what it resolves is the FRONT, and the front is
+ * smooth on the scale of a few cells. What it must not do is hide the trade — the
+ * factor and the resulting size are reported and printed beside the results.
+ *
+ * Properties are POROSITY-WEIGHTED where that is what conserves the quantity:
+ *  - pore volume must be conserved exactly, so phi averages by bulk volume;
+ *  - saturation is a pore-volume-weighted average, because a saturation averaged by
+ *    bulk volume moves oil into rock that has no room for it;
+ *  - permeability averages harmonically across the block, which is the right average
+ *    for conductances in SERIES and is the conservative choice for a flow barrier.
+ */
+export interface Coarsened {
+  grid: SimGridLike;
+  cols: ColumnAverages;
+  factor: number;
+  /** what a reader has to be told */
+  note: string;
+}
+
+export function coarsen(g: SimGridLike, cols: ColumnAverages, factor: number): Coarsened {
+  const f = Math.max(1, Math.floor(factor));
+  if (f === 1) {
+    return { grid: g, cols, factor: 1, note: 'flow grid at full areal resolution' };
+  }
+  const nx = Math.max(1, Math.ceil(g.nx / f));
+  const ny = Math.max(1, Math.ceil(g.ny / f));
+  const nCol = nx * ny;
+  const active = new Uint8Array(nCol);
+  const topZ = new Float64Array(nCol).fill(NaN);
+  const baseZ = new Float64Array(nCol).fill(NaN);
+  const phi = new Float64Array(nCol).fill(NaN);
+  const k = new Float64Array(nCol).fill(NaN);
+  const sw = new Float64Array(nCol).fill(NaN);
+  const h = new Float64Array(nCol);
+
+  for (let J = 0; J < ny; J++) for (let I = 0; I < nx; I++) {
+    let bulk = 0, pv = 0, swPv = 0, kInv = 0, kN = 0, hSum = 0, hN = 0, tSum = 0, bSum = 0, n = 0;
+    for (let j = J * f; j < Math.min(g.ny, (J + 1) * f); j++) {
+      for (let i = I * f; i < Math.min(g.nx, (I + 1) * f); i++) {
+        const c = j * g.nx + i;
+        if (!g.activeCol[c] || !(cols.h[c] > 0) || !Number.isFinite(cols.phi[c])) continue;
+        const v = cols.h[c];                       // bulk volume proxy: thickness
+        bulk += v;
+        pv += cols.phi[c] * v;
+        swPv += (Number.isFinite(cols.sw[c]) ? cols.sw[c] : 1) * cols.phi[c] * v;
+        if (Number.isFinite(cols.k[c]) && cols.k[c] > 0) { kInv += 1 / cols.k[c]; kN++; }
+        hSum += v; hN++;
+        tSum += g.topZ[c]; bSum += g.baseZ[c]; n++;
+      }
+    }
+    const C = J * nx + I;
+    if (!n || !(bulk > 0)) continue;
+    active[C] = 1;
+    phi[C] = pv / bulk;                            // conserves pore volume
+    sw[C] = pv > 0 ? swPv / pv : 1;                // pore-volume weighted
+    k[C] = kN ? kN / kInv : NaN;                   // harmonic
+    h[C] = hSum / hN;
+    topZ[C] = tSum / n; baseZ[C] = bSum / n;
+  }
+
+  return {
+    grid: {
+      nx, ny, nz: g.nz, dx: g.dx * f, dy: g.dy * f, x0: g.x0, y0: g.y0,
+      activeCol: active, topZ, baseZ,
+    },
+    cols: { phi, k, sw, h },
+    factor: f,
+    note: `flow grid coarsened ${f}x areally to ${nx} x ${ny} (${g.nx} x ${g.ny} geological)`,
+  };
+}
+
+/** the coarsening factor that brings a grid under a cell budget */
+export function factorFor(nx: number, ny: number, budget = 3000): number {
+  let f = 1;
+  while (Math.ceil(nx / f) * Math.ceil(ny / f) > budget && f < 16) f++;
+  return f;
+}
+
 /** grid column index of a map position, or -1 when it falls outside */
 export function colAt(g: SimGridLike, x: number, y: number): number {
   const i = Math.floor((x - g.x0) / g.dx);
@@ -139,6 +240,8 @@ export interface BuildResult {
   rejected: Array<{ name: string; reason: string }>;
   /** mean gross thickness of the active area, m */
   meanH: number;
+  /** wells that ended up sharing a cell; `opposite` means an injector meets a producer */
+  collisions: Array<{ cell: string; wells: string[]; opposite: boolean }>;
 }
 
 /**
@@ -221,7 +324,35 @@ export function buildFvCfg(
     placed.push({ name: w.name, kind: w.kind, i, j });
   }
 
+  // ── TWO WELLS IN ONE CELL ────────────────────────────────────────────────
+  //
+  // Coarsening merges cells, and merged cells merge WELLS. An injector and a producer
+  // sharing a cell is not a slightly-wrong model: the water has nowhere to go but
+  // straight into the producer, so the run breaks through instantly and reports ~100%
+  // water cut from the first step. On Volve at 3x, five of the F-11/F-12 wells collapse
+  // into one column and do exactly that.
+  //
+  // This is reported, not repaired. Nudging one of them to a neighbouring cell would
+  // invent a well spacing the field does not have.
+  const byCell = new Map<string, typeof placed>();
+  for (const q of placed) {
+    const key = `${q.i},${q.j}`;
+    const list = byCell.get(key);
+    if (list) list.push(q); else byCell.set(key, [q]);
+  }
+  const collisions: BuildResult['collisions'] = [];
+  for (const [key, list] of byCell) {
+    if (list.length < 2) continue;
+    const kinds = new Set(list.map((q) => q.kind));
+    collisions.push({
+      cell: key,
+      wells: list.map((q) => q.name),
+      opposite: kinds.size > 1,
+    });
+  }
+
   return {
+    collisions,
     cfg: {
       nx: g.nx, ny: g.ny, dx: g.dx, dy: g.dy, dz: meanH,
       phi, k, muw: fluids.muw, muo: fluids.muo,
@@ -333,8 +464,21 @@ export interface RunAssumptions {
 }
 
 /** The assumptions, as text the UI prints beside the numbers. Never omitted. */
-export function assumptionsOf(meanH: number, rejected: BuildResult['rejected']): RunAssumptions {
+export function assumptionsOf(
+  meanH: number, rejected: BuildResult['rejected'], coarseNote?: string,
+  collisions?: BuildResult['collisions'],
+): RunAssumptions {
   const caveats: string[] = [];
+  if (coarseNote && !/full areal/.test(coarseNote)) caveats.push(coarseNote);
+  for (const c of collisions ?? []) {
+    if (c.opposite) {
+      // this one INVALIDATES the run, so it is stated as such rather than as a note
+      caveats.push(`an injector and a producer share one cell (${c.wells.join(', ')}) — `
+        + 'water passes straight between them and the water cut is meaningless');
+    } else {
+      caveats.push(`${c.wells.join(', ')} share one cell and act as a single well`);
+    }
+  }
   if (rejected.length) {
     caveats.push(`${rejected.length} well${rejected.length === 1 ? '' : 's'} could not be placed: ` +
       rejected.map((r) => `${r.name} (${r.reason})`).join(', '));
@@ -382,7 +526,7 @@ export function runCase(
   return {
     series: toSeries(result, build.placed, fluids),
     result, build,
-    assumptions: assumptionsOf(build.meanH, build.rejected),
+    assumptions: assumptionsOf(build.meanH, build.rejected, undefined, build.collisions),
   };
 }
 

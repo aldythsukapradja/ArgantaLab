@@ -35,7 +35,7 @@ import { useSimFluids } from './fluid-case-store';
 import { layerSpan } from './grid-build';
 import { propValueAt } from './prop-view';
 import { simulateFV } from '../../engine/sim/fv';
-import { columnAverages, runCase, type SimWellInput, type RunOutput } from './sim-run';
+import { columnAverages, coarsen, factorFor, runCase, assumptionsOf, type SimWellInput, type RunOutput } from './sim-run';
 import { buildCase, V0_RECIPE } from './build-case';
 import { indexedDbCaseStore } from './case-store';
 import { useFluidBasis, assembleCase } from './fluids-live';
@@ -43,7 +43,7 @@ import { useFluidCase } from './fluid-case-store';
 import { PlotsPane, WellsPane, ForecastPane, MatchPane, ReportPane, Blank } from './sim-views';
 import { GeaStudio } from './GeaStudio';
 import { ensureProp } from './grid-props';
-import { buildFrames, writeFrame, FRAME_NOTE, type FrameSet } from './sim-frames';
+import { buildFrames, writeFrame, expandFrame, FRAME_NOTE, type FrameSet } from './sim-frames';
 
 const VIEWS: StudioView[] = [
   { id: 'plots', label: 'Plots', hint: 'Rates and pressures through time — simulated against observed' },
@@ -156,6 +156,8 @@ export function Simulation({ field }: { field: SearchEntry }) {
 
   const [run, setRun] = useState<RunOutput | null>(null);
   const [frames, setFrames] = useState<FrameSet | null>(null);
+  // the coarsened flow grid the frames live on — NOT the geological grid
+  const [coarse, setCoarse] = useState<{ grid: { nx: number; ny: number; nz: number; activeCol: ArrayLike<number> }; factor: number; note: string } | null>(null);
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   // which dynamic field the viewport is colouring by
@@ -183,6 +185,14 @@ export function Simulation({ field }: { field: SearchEntry }) {
         const phi = p.props.find((x) => x.name === 'phi');
         const perm = p.props.find((x) => x.name === 'perm');
         const sw = p.props.find((x) => x.name === 'sw');
+        // ── ONLY THE RESERVOIR FLOWS ─────────────────────────────────────
+        //
+        // v0 spans BCU to Hugin Base: layers 0-9 are overburden. Averaging the whole
+        // stack put 140 m of seal into the flow model and inflated the pore volume so
+        // far that ten years of injection moved 1% of it — the flood was physical and
+        // invisible. The LAST zone is the reservoir.
+        const zl = grid.zoneLayers ?? [];
+        const resZone = zl.length ? zl[zl.length - 1] : null;
         const cols = columnAverages(
           p as never,
           (col, l) => {
@@ -194,13 +204,24 @@ export function Simulation({ field }: { field: SearchEntry }) {
             };
           },
           (col, l) => layerSpan(grid, col, l),
+          resZone ? { k0: resZone.k0, nz: resZone.nz } : undefined,
         );
-        const out = runCase(p as never, cols, fluids, wellsIn,
-          { tEnd: tEnd, nReports: 60 }, simulateFV);
+
+        // ── AND IT FLOWS ON A COARSER GRID ───────────────────────────────
+        //
+        // An implicit solve on Volve's 166 x 131 takes ~5 minutes on this thread; the
+        // surface showed "solving..." and froze. ~3000 cells brings it to ~12 s, which
+        // is a screening tool rather than a hang. The factor is REPORTED, never hidden.
+        const f = factorFor(p.nx, p.ny, 3000);
+        const co = coarsen(p as never, cols, f);
+        const out = runCase(co.grid, co.cols, fluids, wellsIn,
+          { tEnd: tEnd, nReports: 40 }, simulateFV);
+        out.assumptions = assumptionsOf(out.build.meanH, out.build.rejected, co.note, out.build.collisions);
+        setCoarse(co);
         setRun(out);
         // the frames the 3D viewport animates. Built once, from the same result the
         // charts read, so the picture and the numbers cannot disagree.
-        setFrames(buildFrames(p as never, out.result, fluids.sor));
+        setFrames(buildFrames(co.grid as never, out.result, fluids.sor));
         setStep(0);
         markDone('case'); markDone('init'); markDone('schedule'); markDone('run');
       } catch (e) {
@@ -225,15 +246,17 @@ export function Simulation({ field }: { field: SearchEntry }) {
   useEffect(() => {
     const p = grid?.packed;
     if (!p || !frames || !frames.sw.length) return;
+    if (!coarse) return;
     const ix = Math.max(0, Math.min(frames.sw.length - 1, step));
+    // the frames live on the COARSE flow grid; the viewport draws the geological one
     const swProp = ensureProp(p as never, 'swSim');
     swProp.min = frames.swRange.lo; swProp.max = frames.swRange.hi;
-    writeFrame(swProp as never, frames.sw[ix]);
+    writeFrame(swProp as never, expandFrame(p as never, coarse.grid.nx, coarse.factor, frames.sw[ix]));
     const swpProp = ensureProp(p as never, 'sweep');
     swpProp.min = 0; swpProp.max = 1;
-    writeFrame(swpProp as never, frames.sweep[ix]);
+    writeFrame(swpProp as never, expandFrame(p as never, coarse.grid.nx, coarse.factor, frames.sweep[ix]));
     bumpProps();
-  }, [grid, frames, step, bumpProps]);
+  }, [grid, frames, step, bumpProps, coarse]);
 
   // colour by the dynamic field whenever the 3D view is the one being looked at
   useEffect(() => {
