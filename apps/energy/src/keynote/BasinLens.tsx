@@ -206,6 +206,7 @@ export function BasinLens({
   duration = 11, delay = 1.1, onStop,
 }: { duration?: number; delay?: number; onStop?: (i: number) => void }) {
   const lens = useIndonesia();
+  const svgRef = useRef<SVGSVGElement>(null);
   const camRef = useRef<SVGGElement>(null);
   const weaveRef = useRef<SVGGElement>(null);
   const stopRef = useRef(-1);
@@ -245,9 +246,22 @@ export function BasinLens({
       const q = Math.max(0.5, Math.round(z * 3) / 3);
       setZq((prev) => (prev === q ? prev : q));
 
-      if (i !== stopRef.current) {
-        stopRef.current = i;
-        onStopRef.current?.(i);
+      // LEG index is not STOP index. `i` is which leg we are flying (0..legs-1),
+      // and it can never equal the final stop — so reporting it meant stop 3,
+      // "Unified Indonesian Petroleum Geology", never appeared: the camera
+      // arrived, the label and the hide-the-card rule did not. Round instead,
+      // so the name changes at the midpoint of each leg and the last stop is
+      // reachable.
+      const stop = Math.min(stops.length - 1, Math.round(raw));
+      if (stop !== stopRef.current) {
+        stopRef.current = stop;
+        // At the last stop every province lights, not only Kutei. Up to here
+        // the deck has been narrowing onto one basin; the payoff is that they
+        // are one system, and leaving twelve of them dim would say the
+        // opposite. Toggled as a class so it costs one attribute, not a
+        // re-render of every path.
+        svgRef.current?.classList.toggle('unified', stop === stops.length - 1);
+        onStopRef.current?.(stop);
       }
     };
 
@@ -285,7 +299,7 @@ export function BasinLens({
 
   return (
     <div className="kn-lens" aria-hidden>
-      <svg viewBox={`0 0 ${VB} ${VB}`}>
+      <svg ref={svgRef} viewBox={`0 0 ${VB} ${VB}`}>
         <defs>
           <clipPath id="kn-lens-clip">
             <circle cx={VB / 2} cy={VB / 2} r={VB / 2 - 0.5} />

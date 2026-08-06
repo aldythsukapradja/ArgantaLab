@@ -377,6 +377,14 @@
 .kn-lens-ring.on{fill:color-mix(in srgb,var(--technology) 12%,transparent);
   stroke:var(--technology);stroke-width:1.3px}
 .kn-lens-field{fill:color-mix(in srgb,var(--geology) 45%,transparent)}
+/* THE PAYOFF. On the final stop every province is lit and every field is gold:
+   the descent narrowed onto one basin, and the last beat is that they are one
+   system. Twelve dim outlines would argue the opposite. */
+.kn-lens svg.unified .kn-lens-ring{stroke:color-mix(in srgb,var(--technology) 85%,transparent);
+  fill:color-mix(in srgb,var(--technology) 9%,transparent);stroke-width:1px}
+.kn-lens svg.unified .kn-lens-field{fill:var(--geology)}
+.kn-lens svg .kn-lens-ring,.kn-lens svg .kn-lens-field{
+  transition:stroke .9s ease,fill .9s ease,stroke-width .9s ease}
 /* Kutei's fields breathe, and the edges between them carry a travelling pulse:
    a basin is one connected system, not a scatter of dots, and that is the
    premise the whole deck rests on. Staggered per element in the component so
