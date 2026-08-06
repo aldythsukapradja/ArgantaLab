@@ -47,8 +47,14 @@ export interface BoreCurveSet {
   raw: { rhob?: (number | null)[]; nphi?: (number | null)[]; rt?: (number | null)[]; dt?: (number | null)[] };
   /** THEIRS, where the delivery ships an interpretation. QC only. */
   ref: { phie?: (number | null)[]; sw?: (number | null)[]; vsh?: (number | null)[] };
-  /** picks on this bore, md — what the correlation lines join */
-  picks: Array<{ surface: string; md: number }>;
+  /**
+   * Picks on this bore. `md` is what the correlation lines join; `tvdss` is
+   * carried because it is the ONLY bridge this panel has between a contact
+   * (published in TVDSS) and an MD track. Fitting md↔tvdss from a bore's own
+   * picks needs no KB elevation and no survey — it uses the delivery's own two
+   * readings of the same surface.
+   */
+  picks: Array<{ surface: string; md: number; tvdss?: number | null }>;
 }
 
 export interface FieldCurves {
@@ -131,7 +137,7 @@ export function useFieldCurves(ws: Workspace, params: PetroParams, enabled: bool
                 .filter((p) => p.well && wellKey(p.well) === wellKey(bore.name)
                   && p.md != null && Number.isFinite(p.md))
                 .sort((a, b) => (a.md as number) - (b.md as number)),
-            ).map((p) => ({ surface: p.surface, md: p.md as number })),
+            ).map((p) => ({ surface: p.surface, md: p.md as number, tvdss: p.tvdss ?? null })),
           });
         } catch {
           skipped.push({ well: bore.name, why: 'log digest could not be decoded' });

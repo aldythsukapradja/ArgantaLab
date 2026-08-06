@@ -12,11 +12,12 @@
 //
 // three.js rather than deck.gl: the rest of this suite's 3D is r3f, and one 3D
 // stack per app is worth more than the blueprint's preference.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { Box, AlertTriangle, RotateCcw } from 'lucide-react';
+import { cssVar } from './hooks';
 import type { Workspace } from './workspace';
 import type { PetroParams } from './petro-compute';
 import { useFieldCurves } from './petro-curves';
@@ -25,7 +26,41 @@ import { PRESETS_3D, buildCloud3D, axisTicks, type Preset3, type Cloud3D } from 
 /** Axis colours match the frame lines, so a label is findable without reading it. */
 const AXIS_COLOR = ['#e0654c', '#4ec38a', '#5aa9f5'];
 
-function Cloud({ cloud, showPay, showNonPay }: { cloud: Cloud3D; showPay: boolean; showNonPay: boolean }) {
+/**
+ * The scene follows the app's theme.
+ *
+ * A WebGL canvas cannot inherit a CSS variable — the colours have to be read out
+ * and handed to three.js as numbers. That means re-reading them when the theme
+ * flips, which is what the MutationObserver is for: the cosmo shell toggles a
+ * `dark` class on <html>, and nothing else tells this component about it. Before
+ * this, the plot was a hardcoded near-black rectangle sitting inside a white
+ * card.
+ */
+function useSceneTheme() {
+  const read = () => ({
+    bg: cssVar('--panel'),
+    frame: cssVar('--ink3'),
+    // A cloud on a light card needs MORE alpha than one on a dark card: dark
+    // points on white read as dirt at the alpha that looks right on black.
+    dark: document.documentElement.classList.contains('dark'),
+  });
+  const [theme, setTheme] = useState(read);
+  useEffect(() => {
+    const mo = new MutationObserver(() => setTheme((prev) => {
+      const next = read();
+      // functional-update guard: an observer that setStates unconditionally on a
+      // class change re-renders for every unrelated class the shell touches
+      return prev.bg === next.bg && prev.dark === next.dark ? prev : next;
+    }));
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-ui'] });
+    return () => mo.disconnect();
+  }, []);
+  return theme;
+}
+
+function Cloud({ cloud, showPay, showNonPay, dark }: {
+  cloud: Cloud3D; showPay: boolean; showNonPay: boolean; dark: boolean;
+}) {
   const geo = useMemo(() => {
     // Filtering here rather than in buildCloud3D keeps the domains — and so the
     // camera framing — fixed while you toggle. A box that rescales when you hide
@@ -55,13 +90,14 @@ function Cloud({ cloud, showPay, showNonPay }: { cloud: Cloud3D; showPay: boolea
 
   return (
     <points geometry={geo}>
-      <pointsMaterial size={0.018} vertexColors sizeAttenuation transparent opacity={0.72} />
+      <pointsMaterial size={0.018} vertexColors sizeAttenuation transparent
+        opacity={dark ? 0.72 : 0.85} />
     </points>
   );
 }
 
 /** The unit-cube frame — twelve edges, so depth is readable without a grid. */
-function Frame() {
+function Frame({ color }: { color: string }) {
   const geo = useMemo(() => {
     const v: THREE.Vector3[] = [];
     const c = [-1, 1];
@@ -75,7 +111,7 @@ function Frame() {
   return (
     <lineSegments>
       <primitive object={geo} attach="geometry" />
-      <lineBasicMaterial color="#7b8496" transparent opacity={0.28} />
+      <lineBasicMaterial color={color} transparent opacity={0.45} />
     </lineSegments>
   );
 }
@@ -112,6 +148,7 @@ export function PetroCrossplot3D({ ws, params, enabled }: {
   const [showPay, setShowPay] = useState(true);
   const [showNonPay, setShowNonPay] = useState(true);
   const [spin, setSpin] = useState(0);   // remounts OrbitControls to reset the view
+  const theme = useSceneTheme();
 
   const preset = PRESETS_3D.find((p) => p.id === presetId) ?? PRESETS_3D[0];
   // The SAME field interpretation the correlation panel draws — one decode, and
@@ -146,12 +183,15 @@ export function PetroCrossplot3D({ ws, params, enabled }: {
             <span>{cloud.ofWells} bores read · this preset needs {preset.axes.map((a) => a.label).join(' + ')}</span>
           </div>
         ) : (
-          <Canvas key={spin} camera={{ position: [2.6, 1.9, 2.6], fov: 42 }} dpr={[1, 2]}>
-            <color attach="background" args={['#0c1017']} />
+          // dpr capped at 1.5 rather than 2: a retina canvas is 4× the fragments
+          // for a point cloud whose points are 2 px wide, and that is where the
+          // frame budget went.
+          <Canvas key={spin} camera={{ position: [2.6, 1.9, 2.6], fov: 42 }} dpr={[1, 1.5]}>
+            <color attach="background" args={[theme.bg]} />
             <ambientLight intensity={0.9} />
-            <Frame />
+            <Frame color={theme.frame} />
             <AxisLabels preset={preset} cloud={cloud} />
-            <Cloud cloud={cloud} showPay={showPay} showNonPay={showNonPay} />
+            <Cloud cloud={cloud} showPay={showPay} showNonPay={showNonPay} dark={theme.dark} />
             <OrbitControls enablePan makeDefault minDistance={1.6} maxDistance={9} />
           </Canvas>
         )}

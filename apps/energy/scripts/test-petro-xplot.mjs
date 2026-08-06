@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
   availability, densityNeutron, pickett, pickettLines, permeability,
-  saturationHeight, cuddyBvw, linreg, MATRIX_RHO,
+  saturationHeight, cuddyBvw, linreg, MATRIX_RHO, resample, MAX_CLOUD_POINTS,
 } from '../src/tabs/fielddev/petro-xplot.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -13,6 +13,22 @@ const ok = (n, c, e = '') => { if (c) pass++; else { fail++; console.error(`  �
 const near = (a, b, t) => Math.abs(a - b) <= t;
 
 const bore = (well, curves, depth, depthKind = 'tvdss') => ({ well, depth, depthKind, curves });
+
+// ── resampling ───────────────────────────────────────────────────────────────
+{
+  const src = Array.from({ length: 1000 }, (_v, i) => i);
+  ok('a set under the cap is returned untouched', resample(src, 5000) === src);
+
+  const thin = resample(src, 100);
+  ok('the cap is respected', thin.length <= 100, String(thin.length));
+  ok('it is deterministic', resample(src, 100).every((v, i) => v === thin[i]));
+  // a STRIDE, not a head-truncation: the tail of the log must survive, or every
+  // plot would show the top of each well and none of the reservoir
+  ok('the last decile survives thinning', thin[thin.length - 1] > 900, String(thin[thin.length - 1]));
+  ok('the first sample survives too', thin[0] === 0);
+  ok('an empty set stays empty', resample([], 10).length === 0);
+  ok('the default cap is a real number', MAX_CLOUD_POINTS >= 10_000);
+}
 
 // ── availability ─────────────────────────────────────────────────────────────
 const set = [

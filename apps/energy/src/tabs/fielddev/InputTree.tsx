@@ -34,7 +34,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Box, ChevronRight, Columns3, Database, Drill, Eye, EyeOff, FolderTree, Gauge,
-  Hexagon, Layers, Map as MapIcon, MapPin, Radio, Route, Spline, Waves,
+  Hexagon, Layers, Map as MapIcon, MapPin, Pin, Radio, RotateCcw, Route, Spline, Waves,
 } from 'lucide-react';
 import { useScene, isVisible } from './scene';
 import { useInterp, interpNodeId } from './interp-store';
@@ -97,10 +97,14 @@ const ROLE_COLOR: Record<WellRole, string> = {
 };
 
 function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onToggle,
-  nodeId, selectable = true, dim, title, onActivate, active }: {
+  nodeId, selectable = true, dim, title, onActivate, active, action }: {
   depth: number; icon: typeof MapPin; color?: string; label: string; sub?: string;
   count?: number; expandable?: boolean; open?: boolean; onToggle?: () => void;
   nodeId?: string; selectable?: boolean; dim?: boolean; title?: string;
+  /** A SECOND verb on the row. A well top is two things at once — a line you tie
+   *  and the surface you flatten on — and one click cannot mean both. The row
+   *  body ties it; this button flattens on it. */
+  action?: { icon: typeof MapPin; title: string; on?: boolean; onClick: () => void };
   /** Clicking the row ACTS on the canvas as well as selecting it — this is what
    *  makes the tree a control rather than an inventory. Surfaces use it to drape. */
   onActivate?: () => void;
@@ -139,6 +143,12 @@ function Row({ depth, icon: Ic, color, label, sub, count, expandable, open, onTo
       ) : <span className="fdt-eye ghost" />}
       <span className="fdt-ic" style={{ color: color ?? 'var(--ink3)' }}><Ic size={12} /></span>
       <span className="fdt-lbl">{label}{sub && <i>· {sub}</i>}</span>
+      {action && (
+        <span className={'fdt-act' + (action.on ? ' on' : '')} title={action.title}
+          onClick={(e) => { e.stopPropagation(); action.onClick(); }}>
+          <action.icon size={10} />
+        </span>
+      )}
       {count !== undefined && <span className={'fdt-n' + (count ? ' has' : '')}>{count}</span>}
     </div>
   );
@@ -252,6 +262,12 @@ export function InputTree({ stageId }: { stageId: string }) {
   const setHorizon = useScene((s) => s.setHorizon);
   const datum = useScene((s) => s.datum);
   const setDatum = useScene((s) => s.setDatum);
+  const panelWells = useScene((s) => s.panelWells);
+  const panelCurves = useScene((s) => s.panelCurves);
+  const panelTops = useScene((s) => s.panelTops);
+  const toggleTop = useScene((s) => s.toggleTop);
+  const toggleWell = useScene((s) => s.toggleWell);
+  const toggleCurve = useScene((s) => s.toggleCurve);
   const toggleMulti = useScene((s) => s.toggleMulti);
 
   const tg = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
@@ -310,11 +326,17 @@ export function InputTree({ stageId }: { stageId: string }) {
           const k = 'gl:' + c.key;
           return (
             <div key={k}>
+              {/* A curve type is a TRACK in the correlation panel — ticking it
+                  narrows the panel to the ticked set. Nothing ticked means the
+                  default set, not an empty panel. */}
               <Row depth={1} icon={Radio} label={c.key}
                 sub={c.mnemonics.length > 1 ? c.mnemonics.join(' ') : (c.unit ?? undefined)}
                 count={c.wells.length} expandable={c.wells.length > 0}
                 open={!!open[k]} onToggle={() => tg(k)} nodeId={'log:' + c.key} dim={dimmed('logs')}
-                title={`${c.mnemonics.join(', ')}${c.unit ? ` · ${c.unit}` : ''} — in ${c.wells.length} wellbore${c.wells.length === 1 ? '' : 's'}`} />
+                active={panelCurves.includes(c.key)}
+                onActivate={() => toggleCurve(c.key)}
+                title={`${panelCurves.includes(c.key) ? 'Shown in Correlation — click to remove. ' : 'Click to show only this curve in Correlation. '}`
+                  + `${c.mnemonics.join(', ')}${c.unit ? ` · ${c.unit}` : ''} — in ${c.wells.length} wellbore${c.wells.length === 1 ? '' : 's'}`} />
               {open[k] && c.wells.map((w) => (
                 <Row key={k + w} depth={2} icon={Waves} label={w}
                   nodeId={`wcurve:${w}:${c.key}`} dim={dimmed('logs')} />
@@ -327,6 +349,8 @@ export function InputTree({ stageId }: { stageId: string }) {
         <Row depth={0} icon={Layers} label="Well tops" count={ws.tops.length}
           expandable={ws.tops.length > 0} open={!!open.tops} onToggle={() => tg('tops')}
           nodeId="tops:all" dim={dimmed('tops')}
+          sub={datum ? `flattened on ${datum}` : undefined}
+          action={datum ? { icon: RotateCcw, title: `Unflatten — back to measured depth (currently on ${datum})`, on: true, onClick: () => setDatum(null) } : undefined}
           title={`${ws.picks.length} picks across ${ws.tops.length} surfaces`} />
         {open.tops && ws.tops.map((t) => {
           const k = 'tp:' + t.surface;
@@ -339,9 +363,17 @@ export function InputTree({ stageId }: { stageId: string }) {
               <Row depth={1} icon={Layers} label={t.surface} count={t.wells.length}
                 expandable={t.wells.length > 0} open={!!open[k]} onToggle={() => tg(k)}
                 nodeId={'top:' + t.surface} dim={dimmed('tops')}
-                active={datum === t.surface}
-                onActivate={() => setDatum(t.surface)}
-                title={`${datum === t.surface ? 'Correlation datum — click to clear. ' : 'Click to flatten the correlation on this top. '}`
+                active={panelTops.includes(t.surface) || datum === t.surface}
+                onActivate={() => toggleTop(t.surface)}
+                action={{
+                  icon: Pin,
+                  on: datum === t.surface,
+                  title: datum === t.surface
+                    ? 'The correlation datum — click to unflatten'
+                    : 'Flatten the correlation on this top',
+                  onClick: () => setDatum(t.surface),
+                }}
+                title={`${panelTops.includes(t.surface) ? 'Tied in Correlation — click to drop the line. ' : 'Click to tie this top in Correlation. '}`
                   + (t.count !== t.wells.length
                     ? `${t.count} picks, ${t.wells.length} attributable to a wellbore`
                     : `picked in ${t.wells.length} wellbore${t.wells.length === 1 ? '' : 's'}`)} />
@@ -376,9 +408,14 @@ export function InputTree({ stageId }: { stageId: string }) {
                     <Row depth={2} icon={Waves} color={ROLE_COLOR[single.role]} label={single.name}
                       sub={`${single.completeness}/7`} nodeId={'well:' + single.name} expandable
                       open={!!open[wk]} onToggle={() => tg(wk)} dim={dimmed('wells')}
-                      title={single.roleFromKb
-                        ? 'Role published by the regulator'
-                        : 'Role inferred from the ingested data — no regulator record for this bore'} />
+                      active={panelWells.includes(single.name)}
+                      onActivate={() => toggleWell(single.name)}
+                      title={(panelWells.includes(single.name)
+                        ? 'Shown in Correlation — click to remove. '
+                        : 'Click to show only this bore in Correlation. ')
+                        + (single.roleFromKb
+                          ? 'Role published by the regulator'
+                          : 'Role inferred from the ingested data — no regulator record for this bore')} />
                     {open[wk] && <BoreChildren bore={single} dim={dimmed('wells')} open={open} tg={tg} />}
                   </div>
                 );
@@ -394,9 +431,17 @@ export function InputTree({ stageId }: { stageId: string }) {
                     const wk = 'w:' + bore.key;
                     return (
                       <div key={bore.key}>
+                        {/* Same control as a single-bore slot. Without this, every
+                            bore under a multi-bore well — most of Volve's — was a
+                            dead row that looked identical to a live one. */}
                         <Row depth={3} icon={Waves} color={ROLE_COLOR[bore.role]} label={bore.name}
                           sub={`${bore.completeness}/7`} nodeId={'well:' + bore.name} expandable
-                          open={!!open[wk]} onToggle={() => tg(wk)} dim={dimmed('wells')} />
+                          open={!!open[wk]} onToggle={() => tg(wk)} dim={dimmed('wells')}
+                          active={panelWells.includes(bore.name)}
+                          onActivate={() => toggleWell(bore.name)}
+                          title={panelWells.includes(bore.name)
+                            ? 'Shown in Correlation — click to remove.'
+                            : 'Click to show only this bore in Correlation.'} />
                         {open[wk] && (
                           <div style={{ marginLeft: 12 }}>
                             <BoreChildren bore={bore} dim={dimmed('wells')} open={open} tg={tg} />

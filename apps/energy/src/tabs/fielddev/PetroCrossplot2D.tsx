@@ -20,6 +20,7 @@ import { scaleLinear, scaleLog } from 'd3-scale';
 import {
   densityNeutron, pickett, pickettLines, saturationHeight, cuddyBvw,
   type BoreCurves, type XPoint, type Availability,
+  resample,
 } from './petro-xplot';
 
 export type Template = 'denneu' | 'pickett' | 'buckles' | 'shf';
@@ -125,10 +126,21 @@ export function PetroCrossplot2D({
     };
   }, [bores, template, contactDepth, archie]);
 
+  // The well list comes from the FULL set. Deriving it from the thinned one
+  // would let a bore with few surviving samples vanish from the legend while its
+  // points are still on the plot.
   const wells = useMemo(
     () => [...new Set(model.points.map((p) => p.well))].sort(),
     [model.points],
   );
+
+  /**
+   * What is actually rasterised. The canvas pass re-runs on every hover — one
+   * fillRect per point — so 170,000 samples made hovering the legend a
+   * slideshow. Thinned deterministically; the count is stated in the footer
+   * rather than left as a silent claim of completeness.
+   */
+  const drawn = useMemo(() => resample(model.points), [model.points]);
 
   const iw = Math.max(10, size.w - PAD.l - PAD.r);
   const ih = Math.max(10, size.h - PAD.t - PAD.b);
@@ -154,14 +166,14 @@ export function PetroCrossplot2D({
     const hue = new Map(wells.map((w, i) => [w, WELL_HUES[i % WELL_HUES.length]]));
     // one pass, low alpha: overlapping samples build density rather than the last
     // one winning, which is the whole point of looking at a cloud
-    for (const p of model.points) {
+    for (const p of drawn) {
       if (!(p.x > 0) && model.xLog) continue;
       if (!(p.y > 0) && model.yLog) continue;
       const dim = hoverWell != null && p.well !== hoverWell;
       g.fillStyle = `hsla(${hue.get(p.well) ?? 210},70%,52%,${dim ? 0.05 : 0.28})`;
       g.fillRect(x(p.x) - 0.75, y(p.y) - 0.75, 1.5, 1.5);
     }
-  }, [model, size, x, y, wells, hoverWell, iw, ih]);
+  }, [model, drawn, size, x, y, wells, hoverWell, iw, ih]);
 
   const blocked = model.availability.blocked;
 

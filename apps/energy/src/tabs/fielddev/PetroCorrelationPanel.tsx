@@ -33,14 +33,18 @@ import { useFieldCurves, hangShift, type BoreCurveSet, type HangMode } from './p
 import { ROLE_FILL } from './ImpactMarkers';
 import { pathRole } from './well-paths';
 import { useScene } from './scene';
+import { fitMdTvd, contactMd, primaryContact, type ContactPlacement } from './petro-contact';
 
-const TRACK_W = 46;      // per track, px
-const GUTTER = 16;       // between bores
+const GUTTER = 26;       // between bores — wide enough for the column band to read
 const HEAD = 34;         // column header
 const PAD = { l: 46, t: 10, b: 18 };
 
 /**
- * The four tracks, left to right. `net` sits between PHIE and Sw deliberately.
+ * The tracks, left to right, each with its own WIDTH.
+ *
+ * `net` is 14 px against 44 for the rest, because it is a flag and not a
+ * measurement: it has one bit of information per sample and a 44 px column
+ * spent on one bit is 44 px not spent on the curves either side of it.
  *
  * `fams` is how a tree click reaches a track. The tree lists what the DELIVERY
  * shipped, keyed by curve family (GR, PHIE, SW, VSH — see las.ts's FAMILY map);
@@ -50,11 +54,22 @@ const PAD = { l: 46, t: 10, b: 18 };
  * delivered net flag to point at.
  */
 const TRACKS = [
-  { id: 'gr', label: 'GR', lo: 0, hi: 150, color: '#7a8b3f', fams: ['GR'] },
-  { id: 'phie', label: 'PHIE', lo: 0.4, hi: 0, color: '#2f9bff', fams: ['PHIE', 'PHIT'] },
-  { id: 'net', label: 'net', lo: 0, hi: 1, color: '#10b981', fams: ['VSH'] },
-  { id: 'sw', label: 'Sw', lo: 1, hi: 0, color: '#c2582c', fams: ['SW'] },
+  { id: 'gr', label: 'GR', lo: 0, hi: 150, color: '#7a8b3f', w: 44, fams: ['GR'] },
+  { id: 'phie', label: 'PHIE', lo: 0.4, hi: 0, color: '#2f9bff', w: 44, fams: ['PHIE', 'PHIT'] },
+  { id: 'net', label: 'net', lo: 0, hi: 1, color: '#10b981', w: 14, fams: ['VSH'] },
+  { id: 'sw', label: 'Sw', lo: 1, hi: 0, color: '#c2582c', w: 44, fams: ['SW'] },
 ] as const;
+
+/**
+ * What the panel opens on: PHIE, the net flag, Sw.
+ *
+ * GR is off by default and one tree click away. It is the curve you reach for to
+ * decide what the rock IS — and that decision is already made, by the same
+ * parameters, and expressed in the net ribbon. Three tracks per bore instead of
+ * four is a quarter more wells on screen, which is what a correlation panel is
+ * for.
+ */
+const DEFAULT_TRACKS = ['phie', 'net', 'sw'];
 
 export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: PetroParams }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -71,6 +86,7 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
   const panelWells = useScene((st) => st.panelWells);
   const panelCurves = useScene((st) => st.panelCurves);
   const panelOrder = useScene((st) => st.panelOrder);
+  const panelTops = useScene((st) => st.panelTops);
   const setPanelOrder = useScene((st) => st.setPanelOrder);
 
   const [sortOpen, setSortOpen] = useState(false);
@@ -80,19 +96,29 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
   /** Tracks the panel draws. An empty filter is the ABSENCE of one, so nothing
    *  ticked shows the default four rather than an empty column. */
   const tracks = useMemo(() => {
-    if (!panelCurves.length) return TRACKS.slice();
+    const base = TRACKS.filter((x) => DEFAULT_TRACKS.includes(x.id));
+    if (!panelCurves.length) return base;
     const hit = TRACKS.filter((x) => x.fams.some((f) => panelCurves.includes(f)));
     // A tick on a curve this panel doesn't draw (RHOB, CALI, ROP…) must not blank
     // the panel — it just isn't a correlation track.
-    return hit.length ? hit : TRACKS.slice();
+    return hit.length ? hit : base;
   }, [panelCurves]);
 
-  /** Column pitch follows the track count, so filtering narrows the columns
-   *  instead of leaving four-track-wide gaps. */
-  const colW = tracks.length * TRACK_W + GUTTER;
+  /** Track x-offsets within a column, and the column pitch. Widths differ per
+   *  track, so this cannot be an index times a constant. */
+  const lay = useMemo(() => {
+    const offs: number[] = [];
+    let x = 0;
+    for (const t of tracks) { offs.push(x); x += t.w; }
+    return { offs, inner: x, colW: x + GUTTER };
+  }, [tracks]);
+  const colW = lay.colW;
 
   const cumWells = useMemo(() => curves.bores.map((b) => b.well), [curves.bores]);
   const { cum } = useCumulativeOil(cumWells);
+
+  /** The fluid contact this panel draws, from the well master. */
+  const contact = useMemo(() => primaryContact(ws.contacts), [ws.contacts]);
 
   /** Surfaces ordered by how many of the SHOWN bores carry them — the widest
    *  correlatable datum first, because that is the one worth flattening on. */
@@ -121,8 +147,21 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
     }
     if (!Number.isFinite(lo) || hi <= lo) return null;
 
+    // WHICH surfaces are tied. Ticked ones win; with nothing ticked the panel
+    // falls back to the widest few, because a panel that draws no lines until you
+    // choose some is a worse default than one that shows the obvious ones.
+    const chosen = panelTops.length
+      ? surfaces.filter(([sf]) => panelTops.includes(sf))
+      : surfaces.slice(0, 8);
+
+    // the contact, per bore, through that bore's own md↔tvdss picks
+    const contactAt = new Map<string, ContactPlacement | null>();
+    if (contact?.tvdss != null) {
+      for (const b of bores) contactAt.set(b.well, contactMd(fitMdTvd(b.picks), contact.tvdss));
+    }
+
     // correlation lines: a surface, and the y each bore puts it at
-    const lines = surfaces.slice(0, 8).map(([surface]) => ({
+    const lines = chosen.map(([surface]) => ({
       surface,
       at: bores.map((b) => {
         const s = shifts.get(b.well);
@@ -131,8 +170,8 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
       }),
     }));
 
-    return { bores, shifts, lo, hi, lines };
-  }, [curves.bores, hang, flattenOn, surfaces, panelWells, panelOrder, cum]);
+    return { bores, shifts, lo, hi, lines, contactAt };
+  }, [curves.bores, hang, flattenOn, surfaces, panelWells, panelOrder, panelTops, cum, contact]);
 
   const unflattenable = useMemo(
     () => (hang === 'flatten' && flattenOn
@@ -263,6 +302,15 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
               </clipPath>
             </defs>
 
+            {/* COLUMN BANDS. Wells were reading as one continuous smear of tracks;
+                a translucent panel behind alternate bores makes the boundary a
+                surface rather than a gap, which is what "different well" is. */}
+            {model.bores.map((b, i) => (
+              <rect key={'band' + b.well} x={PAD.l + i * colW - GUTTER / 2 + 2} y={PAD.t}
+                width={lay.inner + GUTTER - 4} height={height - PAD.b - PAD.t} rx={5}
+                className={'pcp-band' + (i % 2 ? ' alt' : '')} />
+            ))}
+
             {/* column headers and track frames — fixed, outside the clip */}
             {model.bores.map((b, i) => {
               const x0 = PAD.l + i * colW;
@@ -276,10 +324,10 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
                   )}
                   {tracks.map((tk, ti) => (
                     <g key={tk.id}>
-                      <text x={x0 + ti * TRACK_W + 2} y={PAD.t + HEAD - 4} fontSize={6.5}
+                      <text x={x0 + lay.offs[ti] + 2} y={PAD.t + HEAD - 4} fontSize={6.5}
                         fill="var(--ink3)" fontFamily="var(--mono)">{tk.label}</text>
-                      <rect x={x0 + ti * TRACK_W} y={PAD.t + HEAD} width={TRACK_W - 2}
-                        height={height - PAD.b - PAD.t - HEAD} fill="none" stroke="var(--line2)" />
+                      <rect x={x0 + lay.offs[ti]} y={PAD.t + HEAD} width={tk.w - 2}
+                        height={height - PAD.b - PAD.t - HEAD} className="pcp-track" />
                     </g>
                   ))}
                 </g>
@@ -297,25 +345,66 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
                 </g>
               ))}
 
-              {/* correlation lines — drawn UNDER the tracks so curves stay readable */}
+              {/* correlation lines — drawn UNDER the tracks so curves stay readable.
+                  Each vertex is that bore's OWN pick for the surface: the line is
+                  tied at the impact points, not interpolated across the panel. */}
               {model.lines.map((l, li) => {
                 const pts: Array<[number, number]> = [];
                 model.bores.forEach((_b, i) => {
                   const at = l.at[i];
                   if (at == null) return;
-                  pts.push([PAD.l + i * colW + (tracks.length * TRACK_W) / 2, y(at)]);
+                  pts.push([PAD.l + i * colW + lay.inner / 2, y(at)]);
                 });
                 if (pts.length < 2) return null;
                 const hue = (li * 47) % 360;
+                const isDatum = l.surface === flattenOn;
                 return (
                   <g key={l.surface}>
+                    {/* the vertex dots ARE the picks — where the line touches a well
+                        is a measurement, the segments between them are not */}
+                    {pts.map((p, pi) => (
+                      <circle key={pi} cx={p[0]} cy={p[1]} r={1.9}
+                        fill={`hsl(${hue},62%,52%)`} stroke="var(--panel)" strokeWidth={0.7} />
+                    ))}
                     <polyline points={pts.map((p) => p.join(',')).join(' ')} fill="none"
-                      stroke={`hsl(${hue},60%,55%)`} strokeWidth={1.2} strokeDasharray="5 3" opacity={0.85} />
+                      stroke={`hsl(${hue},60%,55%)`} strokeWidth={isDatum ? 1.8 : 1.1}
+                      strokeDasharray={isDatum ? undefined : '5 3'} opacity={0.9} />
                     <text x={PAD.l + 2} y={pts[0][1] - 3} fontSize={7}
-                      fill={`hsl(${hue},60%,45%)`} fontFamily="var(--mono)">{l.surface}</text>
+                      fill={`hsl(${hue},60%,45%)`} fontFamily="var(--mono)"
+                      fontWeight={isDatum ? 600 : 400}>
+                      {l.surface}{isDatum ? ' · datum' : ''}
+                    </text>
                   </g>
                 );
               })}
+
+              {/* THE CONTACT. Published in TVDSS, drawn on an MD track only where
+                  that bore's own dual-recorded picks give the conversion — see
+                  petro-contact. A bore without one gets no line rather than a
+                  vertical-well assumption. */}
+              {contact && (
+                <g>
+                  {model.bores.map((b, i) => {
+                    const place = model.contactAt.get(b.well);
+                    const shift = model.shifts.get(b.well);
+                    if (!place || shift == null) return null;
+                    const x0 = PAD.l + i * colW;
+                    return (
+                      <g key={'c' + b.well}>
+                        <line x1={x0 - 3} y1={y(place.md + shift)} x2={x0 + lay.inner} y2={y(place.md + shift)}
+                          stroke="#2f9bff" strokeWidth={1.6}
+                          strokeDasharray={place.extrapolated ? '3 2' : undefined} opacity={0.95} />
+                        {i === 0 && (
+                          <text x={x0 + 2} y={y(place.md + shift) - 3} fontSize={6.6}
+                            fill="#2f9bff" fontFamily="var(--mono)">
+                            {contact.kind.toUpperCase()} {contact.tvdss} m TVDSS
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
+              )}
 
               {model.bores.map((b, i) => {
                 const shift = model.shifts.get(b.well);
@@ -325,7 +414,7 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
                   <g key={b.well}>
                     {tracks.map((tk, ti) => (
                       <TrackPath key={tk.id} bore={b} track={tk}
-                        x0={x0 + ti * TRACK_W} shift={shift} y={y} />
+                        x0={x0 + lay.offs[ti]} shift={shift} y={y} />
                     ))}
                   </g>
                 );
@@ -341,6 +430,22 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
 
       <footer className="pcp-foot">
         <span className="pcp-prov">curves are OURS — computed under the current parameters, not the delivery's</span>
+        {/* The contact is the one line here that required a CONVERSION, so it says
+            what the conversion rested on and where it could not be made. */}
+        {contact && model && (() => {
+          const placed = model.bores.filter((b) => model.contactAt.get(b.well));
+          const extra = placed.filter((b) => model.contactAt.get(b.well)?.extrapolated);
+          return (
+            <span className={placed.length === model.bores.length ? '' : 'pcp-warn'}>
+              {placed.length === 0 ? <AlertTriangle size={10} /> : null}
+              {contact.kind.toUpperCase()} placed on {placed.length}/{model.bores.length} bores
+              {' '}via each bore's own md↔tvdss picks
+              {extra.length > 0 && ` · ${extra.length} extrapolated below the deepest pick (dashed)`}
+              {placed.length < model.bores.length
+                && ` · ${model.bores.length - placed.length} lack two dual-recorded picks and get no line`}
+            </span>
+          );
+        })()}
         {unflattenable.length > 0 && (
           <span className="pcp-warn">
             <AlertTriangle size={10} />
@@ -363,22 +468,48 @@ function swap(list: string[], a: number, b: number): string[] {
   return out;
 }
 
-/** One curve inside one track. Decimated to roughly one point per pixel — a
- *  7,000-sample log into a 400 px track is 17 samples per pixel, and drawing all
- *  of them costs time to render a line nobody can see. */
+/**
+ * One track of one bore.
+ *
+ * Two rendering modes, because there are two kinds of thing here. A measurement
+ * (GR, PHIE, Sw) is a WIGGLE — its value at every depth carries meaning. The net
+ * flag is not: it has one bit per sample, and drawn as a line it becomes a
+ * square wave whose vertical strokes are pure artefact. So net is drawn as
+ * DISCRETE BLOCKS — the intervals where the flag is true — which is also the
+ * thing an engineer actually reads off it: how much, and where.
+ *
+ * Both are decimated to roughly one point per pixel. A 7,000-sample log in a
+ * 400 px track is 17 samples per pixel; drawing all of them costs frames to
+ * render a line nobody can see. The net blocks are built from the FULL sample
+ * array before decimation, though — thinning a flag would drop thin beds, and a
+ * missed thin bed is the one error this track exists to prevent.
+ */
 function TrackPath({ bore, track, x0, shift, y }: {
   bore: BoreCurveSet;
   track: typeof TRACKS[number];
   x0: number; shift: number;
   y: (d: number) => number;
 }) {
+  // ── the net flag: contiguous true runs, as blocks ──────────────────────────
+  const blocks = useMemo(() => {
+    if (track.id !== 'net') return null;
+    const out: Array<[number, number]> = [];
+    let start: number | null = null;
+    for (let i = 0; i < bore.md.length; i++) {
+      const on = bore.net[i] === true;
+      if (on && start == null) start = bore.md[i];
+      if (!on && start != null) { out.push([start, bore.md[i]]); start = null; }
+    }
+    if (start != null) out.push([start, bore.md[bore.md.length - 1]]);
+    return out;
+  }, [track.id, bore]);
+
   const d = useMemo(() => {
+    if (track.id === 'net') return '';
     const vals: (number | null)[] = track.id === 'gr' ? (bore.gr ?? [])
-      : track.id === 'phie' ? bore.phie
-        : track.id === 'sw' ? bore.sw
-          : bore.net.map((n) => (n === true ? 1 : n === false ? 0 : null));
+      : track.id === 'phie' ? bore.phie : bore.sw;
     if (!vals.length) return '';
-    const sx = scaleLinear().domain([track.lo, track.hi]).range([x0 + 1, x0 + TRACK_W - 3]).clamp(true);
+    const sx = scaleLinear().domain([track.lo, track.hi]).range([x0 + 1, x0 + track.w - 3]).clamp(true);
     const step = Math.max(1, Math.floor(bore.md.length / 600));
     const out: string[] = [];
     let pen = false;
@@ -394,10 +525,23 @@ function TrackPath({ bore, track, x0, shift, y }: {
     return out.join('');
   }, [bore, track, x0, shift, y]);
 
-  if (!d) return null;
-  // the net ribbon reads as a FILL, not a wiggle — it is a flag, not a measurement
-  if (track.id === 'net') {
-    return <path d={d} fill="none" stroke={track.color} strokeWidth={2.4} opacity={0.75} />;
+  if (blocks) {
+    if (!blocks.length) return null;
+    return (
+      <g>
+        {blocks.map(([top, base], i) => {
+          const yt = y(top + shift), yb = y(base + shift);
+          // a bed thinner than a pixel still has to be visible — it is a bed
+          const h = Math.max(0.8, yb - yt);
+          return (
+            <rect key={i} x={x0 + 1} y={yt} width={track.w - 4} height={h}
+              fill={track.color} opacity={0.85} />
+          );
+        })}
+      </g>
+    );
   }
+
+  if (!d) return null;
   return <path d={d} fill="none" stroke={track.color} strokeWidth={0.9} />;
 }

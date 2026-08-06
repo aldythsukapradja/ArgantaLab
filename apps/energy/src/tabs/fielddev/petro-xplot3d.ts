@@ -167,7 +167,17 @@ const EMPTY = (): Cloud3D => ({
  * head-truncation: taking the first N samples would plot the top of every well
  * and none of the reservoir.
  */
-export const MAX_POINTS = 120_000;
+/**
+ * 25k, not 120k.
+ *
+ * The cap was set by what a GPU can hold, which is the wrong question — the
+ * right one is what a HUMAN can read while orbiting at 60 fps. Past roughly
+ * 25,000 points a field cloud is already saturated: the extra samples land on
+ * pixels that are opaque anyway, so they add render cost and buffer churn while
+ * adding no shape. Every frame rebuilds a filtered buffer when a legend toggles,
+ * and that cost is linear in this number.
+ */
+export const MAX_POINTS = 25_000;
 
 export function buildCloud3D(
   bores: BoreCurveSet[], preset: Preset3, cap = MAX_POINTS,

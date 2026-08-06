@@ -114,6 +114,33 @@ export function isReal(curve: string, v: unknown): v is number {
 }
 const real = isReal;
 
+/**
+ * The most points a 2D cloud draws.
+ *
+ * Volve's twenty-four bores are ~170,000 screened samples, and the canvas pass
+ * re-runs on every hover — one `fillRect` each, 170,000 times, for a hover
+ * highlight. Past roughly 30,000 the cloud is saturated anyway: the extra
+ * samples land on pixels that are already opaque at the alpha used, so they buy
+ * render cost and no shape.
+ */
+export const MAX_CLOUD_POINTS = 30_000;
+
+/**
+ * Even-stride thinning, deterministic.
+ *
+ * A STRIDE and not a head-truncation: taking the first N would plot the top of
+ * every well and none of the reservoir. Uniform and not random so the same data
+ * always draws the same picture — a cloud that reshuffles between renders is one
+ * you cannot compare with the one you were just looking at.
+ */
+export function resample<T>(items: T[], cap = MAX_CLOUD_POINTS): T[] {
+  if (items.length <= cap || cap < 1) return items;
+  const stride = Math.ceil(items.length / cap);
+  const out: T[] = [];
+  for (let i = 0; i < items.length; i += stride) out.push(items[i]);
+  return out;
+}
+
 /** How many bores carry every one of `needs`. */
 export function availability(bores: BoreCurves[], needs: string[], why?: string): Availability {
   const wells = bores.filter((b) => needs.every((c) => {

@@ -44,6 +44,25 @@ interface SceneState {
    * happens to own. Null means hang on measured depth.
    */
   datum: string | null;
+  /**
+   * What the correlation panel DISPLAYS, driven from the Input tree.
+   *
+   * Empty means "everything", not "nothing" — a panel that started blank until
+   * you ticked something would be a worse default than showing the delivery. So
+   * these are FILTERS, and an empty filter is the absence of one.
+   *
+   *   panelWells   which bores are columns
+   *   panelCurves  which tracks each column carries
+   *   panelOrder   explicit left-to-right sequence; anything not named keeps its
+   *                natural order after the named ones
+   */
+  panelWells: string[];
+  panelCurves: string[];
+  panelOrder: string[];
+  /** Which pick surfaces are drawn as CORRELATION LINES. Separate from `datum`:
+   *  the datum is the one surface you flatten on, these are the ones you tie.
+   *  Empty = the widest few, picked by how many bores carry them. */
+  panelTops: string[];
   /** Bumped whenever the ingested asset set changes (a reference package finishes
    *  digesting, a client file lands). Anything reading IndexedDB depends on it —
    *  otherwise a surface list built before the package arrived stays empty forever. */
@@ -58,6 +77,11 @@ interface SceneState {
   toggleVis: (nodeId: string) => void;
   setSel: (nodeId: string | null) => void;
   setDatum: (surface: string | null) => void;
+  toggleWell: (well: string) => void;
+  toggleCurve: (curve: string) => void;
+  setPanelOrder: (order: string[]) => void;
+  toggleTop: (surface: string) => void;
+  clearPanel: () => void;
   bumpData: () => void;
 }
 
@@ -70,10 +94,15 @@ export const useScene = create<SceneState>((set) => ({
   vis: {},
   sel: null,
   datum: null,
+  panelWells: [],
+  panelCurves: [],
+  panelOrder: [],
+  panelTops: [],
   dataVersion: 0,
 
   setField: (fieldId) => set((s) => (s.fieldId === fieldId ? s : {
     fieldId, horizonId: null, multiIds: [], vis: {}, sel: null, datum: null,
+    panelWells: [], panelCurves: [], panelOrder: [], panelTops: [],
   })),
   setHorizon: (id) => set({ horizonId: id }),
   toggleMulti: (id) => set((s) => ({
@@ -86,6 +115,20 @@ export const useScene = create<SceneState>((set) => ({
   setSel: (nodeId) => set((s) => ({ sel: s.sel === nodeId ? null : nodeId })),
   // clicking the datum again clears it — one gesture, both directions
   setDatum: (surface) => set((s) => ({ datum: s.datum === surface ? null : surface })),
+  toggleWell: (well) => set((s) => ({
+    panelWells: s.panelWells.includes(well)
+      ? s.panelWells.filter((w) => w !== well) : [...s.panelWells, well],
+  })),
+  toggleCurve: (curve) => set((s) => ({
+    panelCurves: s.panelCurves.includes(curve)
+      ? s.panelCurves.filter((c) => c !== curve) : [...s.panelCurves, curve],
+  })),
+  setPanelOrder: (panelOrder) => set({ panelOrder }),
+  toggleTop: (surface) => set((s) => ({
+    panelTops: s.panelTops.includes(surface)
+      ? s.panelTops.filter((t) => t !== surface) : [...s.panelTops, surface],
+  })),
+  clearPanel: () => set({ panelWells: [], panelCurves: [], panelOrder: [], panelTops: [] }),
   bumpData: () => set((s) => ({ dataVersion: s.dataVersion + 1 })),
 }));
 
