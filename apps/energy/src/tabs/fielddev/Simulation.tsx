@@ -38,8 +38,7 @@ import { readRecord } from '../../dataqc/readDigest';
 import { propValueAt } from './prop-view';
 import { simulateFV } from '../../engine/sim/fv';
 import { columnAverages, coarsen, factorFor, runCase, assumptionsOf, type SimWellInput, type RunOutput } from './sim-run';
-import { buildCase, V0_RECIPE } from './build-case';
-import { indexedDbCaseStore } from './case-store';
+import { useV0Basis, V0 } from './use-v0';
 import { useFluidBasis, assembleCase } from './fluids-live';
 import { useFluidCase } from './fluid-case-store';
 import { PlotsPane, WellsPane, ForecastPane, MatchPane, ReportPane, Blank } from './sim-views';
@@ -87,54 +86,18 @@ export function Simulation({ field }: { field: SearchEntry }) {
   // the seam that stage exists to provide. A simulation that carries its own PVT is a
   // simulation that can disagree with the case it claims to be running.
   const grid = useStatic((st) => st.grid);
-  const setGrid = useStatic((st) => st.setGrid);
   const fluids = useSimFluids(field.id);
 
-  // ── V0 IS THE DEFAULT BASIS, LOADED WITHOUT BEING ASKED ──────────────────
+  // ── V0 IS THE DEFAULT BASIS ──────────────────────────────────────────────
   //
-  // The surface used to open with a disabled Run button and no way to enable it
-  // without visiting two other tabs first. v0 is the shipped ground-truth realisation,
-  // so it is what a case stands on until someone chooses otherwise: restored from the
-  // case store if it has been built before, rebuilt from V0_RECIPE if not.
-  //
-  // It is loaded, never invented. If the recipe cannot be rebuilt the surface says so
-  // and stays empty rather than running on something it made up.
-  const [basisNote, setBasisNote] = useState<string | null>(null);
-  // ONE grid for the whole vertical. Static, dynamic and streamline all read v0, so a
-  // number carried between them is a number about the same rock. Choosing a different
-  // realisation per surface is how three tabs end up quietly describing three fields.
-  const BASIS = 'v0';
+  // Loaded through the SHARED hook, so the Simulation and the Streamline surface
+  // cannot end up with different ideas of what "the grid" is. One realisation for the
+  // whole vertical: a number carried between the three surfaces is a number about the
+  // same rock.
+  const BASIS = V0;
   useEffect(() => { if (gridVersionId !== BASIS) setGridVersion(BASIS); }, [gridVersionId, setGridVersion]);
-  useEffect(() => {
-    if (grid?.packed || !ready || !ws.fieldId) return;
-    let alive = true;
-    (async () => {
-      setBasisNote('loading v0…');
-      try {
-        const saved = await indexedDbCaseStore.get('v0').catch(() => null);
-        if (!alive) return;
-        if (saved?.grid) {
-          setGrid(saved.grid);
-          setBasisNote('v0 (restored)');
-          return;
-        }
-        setBasisNote('building v0 from its recipe…');
-        const out = await buildCase(ws, V0_RECIPE, (p) => {
-          if (alive) setBasisNote(`building v0 — ${p.step} ${p.done}/${p.total}`);
-        });
-        if (!alive) return;
-        setGrid(out.grid);
-        setBasisNote('v0 (built)');
-        await indexedDbCaseStore.put({
-          id: 'v0', fieldId: ws.fieldId, savedAt: Date.now(), groundTruth: true,
-          grid: out.grid, upscaled: out.upscaled, simInfo: null,
-        } as never).catch(() => {});
-      } catch (e) {
-        if (alive) setBasisNote(`v0 could not be built: ${e instanceof Error ? e.message : String(e)}`);
-      }
-    })();
-    return () => { alive = false; };
-  }, [grid, ready, ws, setGrid]);
+  const v0 = useV0Basis(ws, ready);
+  const basisNote = v0.note;
 
   // ── AND THE FLUID CASE, FROM THE SAME DEFAULTS THE FLUIDS TAB USES ───────
   //

@@ -23,6 +23,7 @@ import { useThemeInk } from './theme-ink';
 import { GeaStudio } from './GeaStudio';
 import { StreamlineLayer } from './StreamlineLayer';
 import { useWorkspace } from './workspace';
+import { useV0Basis } from './use-v0';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 
 const VIEWS: StudioView[] = [
@@ -41,6 +42,9 @@ const hueFor = (i: number) => `hsl(${(i * 61 + 18) % 360} 72% 58%)`;
 
 export function Streamline({ field }: { field: SearchEntry }) {
   const { ws, ready } = useWorkspace();
+  // THE GRID THE 3D VIEWPORT DRAWS. Without this the Drainage view rendered an empty
+  // canvas and read as "there is no 3D here" rather than "there is no grid loaded".
+  const basis = useV0Basis(ws, ready);
   const ink = useThemeInk();
   const [view, setView] = useState('3d');
   const [run, setRun] = useState<StoredRun | null>(null);
@@ -178,7 +182,10 @@ export function Streamline({ field }: { field: SearchEntry }) {
         )
         : view === '3d' ? (
           <div className="sim3d">
-            <div className="sim3d-canvas">
+            {!basis.ready && (
+              <div className="sim-empty"><em>{basis.note ?? 'loading the v0 grid…'}</em></div>
+            )}
+            <div className="sim3d-canvas" style={{ display: basis.ready ? undefined : 'none' }}>
               {/* THE SAME VIEWPORT. Not a second 3D scene beside it: the lines have to
                   be read against the structure, the grid and the trajectories, and two
                   canvases can disagree about camera, exaggeration and origin without
