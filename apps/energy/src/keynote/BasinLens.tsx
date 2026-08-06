@@ -237,11 +237,18 @@ export function BasinLens({
           `translate(${VB / 2}px, ${VB / 2}px) scale(${z}) translate(${-x}px, ${-y}px)`;
       }
       // The weave belongs to the final leg only.
-      const woven = Math.max(0, Math.min(1, d * legs - (legs - 1)));
+      const woven = easeLeg(Math.max(0, Math.min(1, d * legs - (legs - 1))));
       if (weaveRef.current) {
         weaveRef.current.style.opacity = String(woven * 0.62);
         weaveRef.current.style.visibility = woven > 0 ? 'visible' : 'hidden';
+        // pathLength="1" on every arc means one dashoffset drives them all,
+        // whatever their real length — the weave DRAWS itself as we pull back.
+        weaveRef.current.style.setProperty('--draw', String(woven));
       }
+      // The unify ramp. Every province brightening in step with the pull-back
+      // is the morph; a class toggled at the midpoint was a cut wearing a
+      // transition. One property write, inherited by every path.
+      svgRef.current?.style.setProperty('--unify', String(woven));
 
       const q = Math.max(0.5, Math.round(z * 3) / 3);
       setZq((prev) => (prev === q ? prev : q));
@@ -255,12 +262,6 @@ export function BasinLens({
       const stop = Math.min(stops.length - 1, Math.round(raw));
       if (stop !== stopRef.current) {
         stopRef.current = stop;
-        // At the last stop every province lights, not only Kutei. Up to here
-        // the deck has been narrowing onto one basin; the payoff is that they
-        // are one system, and leaving twelve of them dim would say the
-        // opposite. Toggled as a class so it costs one attribute, not a
-        // re-render of every path.
-        svgRef.current?.classList.toggle('unified', stop === stops.length - 1);
         onStopRef.current?.(stop);
       }
     };
@@ -293,7 +294,7 @@ export function BasinLens({
   )), [lens, zq]);
 
   const arcs = useMemo(() => lens?.arcs.map((d, i) => (
-    <path key={`a${i}`} className="kn-lens-arc" d={d}
+    <path key={`a${i}`} className="kn-lens-arc" d={d} pathLength={1}
       style={{ animationDelay: `${(i % 11) * 0.21}s` }} />
   )), [lens]);
 

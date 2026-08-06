@@ -358,9 +358,15 @@ function S04() {
         {/* The last stop has no card. It is the zoom-OUT — the whole point is
             that everything joins — and a panel of Kutei detail beside it would
             be arguing the opposite. The lens takes the frame alone. */}
+        {/* The card stays MOUNTED and fades. Unmounting it at the stop
+            boundary was a hard cut at exactly the moment the camera is pulling
+            back, and re-mounting three charts is the last thing that frame
+            needs. Grid tracks are left alone on purpose — Chrome does not
+            interpolate track lists reliably, and a frozen column is worse than
+            no animation at all. */}
         <div className={'kn-descent-pair' + (at === SCALES.length - 1 ? ' solo' : '')}>
           <BasinLens onStop={setAt} />
-          {at < SCALES.length - 1 && <Wedges stop={at} />}
+          <Wedges stop={Math.min(at, SCALES.length - 2)} />
         </div>
       </div>
     </section>
