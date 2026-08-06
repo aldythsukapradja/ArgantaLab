@@ -24,6 +24,19 @@ import { buildTrace } from './trace.ts';
 import { summarise } from './summary.ts';
 import type { TurnTrace } from './types.ts';
 
+/** How long the language tier gets before the deterministic grammar takes over.
+ *
+ *  A try/catch cannot rescue a promise that never settles, and that is exactly
+ *  what a stalled Worker fetch is: no error, no response, the turn simply hangs
+ *  and the user watches nothing happen forever. Silence is the worst failure
+ *  this app can produce -- worse than either tier answering -- so the wait is
+ *  bounded and the fallback is a real answer built from the same local files.
+ *
+ *  20s is deliberately generous: observed healthy turns run 9-16s because the
+ *  loop makes several model round-trips. Cutting it finer would abandon turns
+ *  that were about to succeed. */
+const LANGUAGE_TIER_TIMEOUT_MS = 20_000;
+
 export interface AgentAnswer {
   card: AnswerCard;
   /** Prose from the language tier, already grounding-checked. Usually empty. */
@@ -110,6 +123,14 @@ export function useAgent(): UseAgent {
       const scope = useStore.getState().scope;
 
       // ── language tier · @arganta/agent's pure loop ─────────────────────────
+      //
+      // WRAPPED, and that wrap is the contract. The design promise is that ANY
+      // language-tier failure falls back to the deterministic grammar. It did
+      // not hold: a rejected fetch -- Worker down, CORS refusing an origin it
+      // does not know, laptop offline -- threw straight out of `ask`, and the
+      // caller had no .catch, so the turn died in silence. The user typed a
+      // question and got nothing at all, which is worse than either tier.
+      try {
       if (agentEnabled) {
         // The loop calls this for each tool the model picks. It runs through the
         // SAME dialogue.runIntent() the typed path uses, so the model can only
@@ -128,7 +149,15 @@ export function useAgent(): UseAgent {
           return { ok: true, summary: toolSummary(result.card) };
         };
 
-        const outcome = await runTurn(text, executeTool);
+        // Bounded. On timeout this rejects, the catch below logs it, and the
+        // turn falls through to the deterministic tier rather than hanging.
+        const outcome = await Promise.race([
+          runTurn(text, executeTool),
+          new Promise<never>((_, reject) => setTimeout(
+            () => reject(new Error(`language tier exceeded ${LANGUAGE_TIER_TIMEOUT_MS} ms`)),
+            LANGUAGE_TIER_TIMEOUT_MS,
+          )),
+        ]);
         if (produced && producedResult) {
           const settled = producedResult as ReturnType<typeof runIntent>;
           setTier('core');
@@ -161,6 +190,13 @@ export function useAgent(): UseAgent {
         // 'no-model' is the adapter honestly reporting it fell back to its mock;
         // any other barren outcome means the model declined to pick a tool. Both
         // drop to the deterministic tier rather than showing the model's words.
+      }
+      } catch (err) {
+        // Falls THROUGH, deliberately -- no rethrow, no early return. The
+        // deterministic answer below is a real answer built from the same local
+        // files, so a Worker outage costs the user prose they never see anyway.
+        // eslint-disable-next-line no-console
+        console.warn('[agent] language tier failed, falling back to the grammar', err);
       }
 
       // ── deterministic tier ─────────────────────────────────────────────────

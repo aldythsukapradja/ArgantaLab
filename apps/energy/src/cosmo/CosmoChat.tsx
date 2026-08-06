@@ -720,6 +720,13 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     void agent.ask(t).then((answer) => {
       if (!answer) { streamAssistant("I couldn't read that — try naming a basin, country, field or well."); return; }
       setMsgs((m) => [...m, { role: 'assistant', text: answer.text, done: true, card: answer.card, trace: answer.trace, summary: answer.summary }]);
+    }).catch((err) => {
+      // Backstop. useAgent already degrades to the deterministic tier on its
+      // own, so reaching here means something unforeseen broke -- and a turn
+      // that answers nothing at all is the one outcome never worth shipping.
+      // eslint-disable-next-line no-console
+      console.error('[chat] turn failed', err);
+      streamAssistant('That turn failed on my side. Nothing in the app was changed — try again, or name the entity directly.');
     });
   };
 

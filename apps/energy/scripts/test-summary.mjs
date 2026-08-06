@@ -190,5 +190,33 @@ function ask(text) {
   check('nothing to say produces nothing, not filler', bare.text === '' && bare.skipped === 'nothing-to-say', bare.text || '(empty)');
 }
 
+// ── 9 · the summary must never contradict the card above it ────────────────
+{
+  // Shipped once, and only caught by looking at the screen: the figures card's
+  // only fact IS its count, the subhead already states it, so every fact was
+  // dropped as redundant and the empty fallback fired — "carries no figures
+  // worth quoting" printed directly above five rendered figures.
+  const figures = {
+    kind: 'brief', headline: 'Figures — Kutei Basin', subhead: '5 public-domain figures',
+    facts: [{ label: 'Open figures', value: '5', source: 'USGS (public domain)' }],
+    chips: [], provenance: ['USGS'],
+  };
+  const s9 = summarise(figures, { verb: 'show', usesFocus: false, query: 'figures kutei basin' });
+  check('a card WITH facts is never called empty',
+    !/no figures worth quoting/i.test(s9.text), s9.text.slice(0, 130));
+
+  // The fallback still fires where it is true: a card carrying nothing.
+  const bare9 = summarise({ kind: 'brief', headline: 'Somewhere', facts: [], chips: [], provenance: [] },
+    { verb: 'show', usesFocus: false, query: 'somewhere' });
+  check('a genuinely empty card still says so', /no figures worth quoting/i.test(bare9.text), bare9.text.slice(0, 110));
+
+  // A card whose facts are all placeholders is empty, not "already said".
+  const dashes9 = summarise({
+    kind: 'brief', headline: 'Somewhere', subhead: 'field',
+    facts: [{ label: 'Reserves', value: '—' }], chips: [], provenance: [],
+  }, { verb: 'show', usesFocus: false, query: 'somewhere' });
+  check('placeholder-only facts count as empty', /no figures worth quoting/i.test(dashes9.text), dashes9.text.slice(0, 110));
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

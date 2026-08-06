@@ -761,7 +761,10 @@ export const CAPABILITIES: Capability[] = [
       // The survey itself, drawn in the answer. Gated on has.traj -- the same
       // measured flag the probe uses -- so a well with no published survey gets
       // the card and no empty plot.
-      ...(asBool(n.has.traj) ? {
+      // `has.trajectory`, NOT `has.traj`. The wb bundle's index uses `traj`;
+      // the gazetteer build renames it. Gating on the wrong key is silent --
+      // the artifact simply never appears, and nothing fails.
+      ...(asBool(n.has.trajectory) ? {
         artifact: { component: 'well-trajectory', props: { well: n.name, name: `Well path — ${n.name}` } },
       } : {})
     }),

@@ -130,9 +130,14 @@ export function summarise(card: AnswerCard, facts: TurnFacts, trace?: TurnTrace)
   // "Figures — Kutei Basin — 5 public-domain figures. Key figures — 5." is a
   // sentence that costs the reader time and returns none of it.
   const said = `${card.headline ?? ''} ${card.subhead ?? ''}`.toLowerCase();
-  const usable = card.facts.filter((f) => f.value
-    && !EMPTY.has(f.value.trim().toLowerCase())
-    && !said.includes(shortValue(f.value).toLowerCase()));
+  // Two different emptinesses, and conflating them produced a flat lie: on the
+  // figures card the ONLY fact is the count, the subhead already says it, so
+  // everything got filtered as redundant and the "no figures worth quoting"
+  // fallback fired underneath five visible figures. `hasAnyFact` remembers that
+  // the card was never empty -- it was already fully said.
+  const stated = card.facts.filter((f) => f.value && !EMPTY.has(f.value.trim().toLowerCase()));
+  const hasAnyFact = stated.length > 0;
+  const usable = stated.filter((f) => !said.includes(shortValue(f.value).toLowerCase()));
   const ordered = [...usable].sort((a, b) => rank(a.label) - rank(b.label));
   const figures = ordered.filter((f) => isFigure(f.value)).slice(0, 3);
   const attributes = ordered.filter((f) => !isFigure(f.value)).slice(0, 2);
@@ -144,9 +149,9 @@ export function summarise(card: AnswerCard, facts: TurnFacts, trace?: TurnTrace)
     sentences.push(`${series(attributes.map((f) => `${softLabel(f.label)} ${shortValue(f.value)}`))}.`
       .replace(/^[a-z]/, (c) => c.toUpperCase()));
   }
-  // Only worth saying when there IS a subject. With no subject and no facts
-  // there is nothing to be honest ABOUT, and the line becomes filler.
-  if (subject && !figures.length && !attributes.length) {
+  // Only when the card genuinely holds nothing -- never when its facts were
+  // dropped as already-said. A summary must not contradict the card above it.
+  if (subject && !hasAnyFact) {
     sentences.push('The record exists but carries no figures worth quoting.');
   }
 
