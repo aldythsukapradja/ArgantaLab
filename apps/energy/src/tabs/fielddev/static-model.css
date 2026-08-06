@@ -922,3 +922,18 @@ html[data-ui="cosmo"] .wsb-layout:not(:has(> .wsb-drawer)) > :not(.wsb-ribbon) {
 .sms-canvas > .sim-empty { flex: 1; min-height: 0; width: 100%; }
 /* the blank/reasoned-absence state centres in the FULL pane, not in a shrunk box */
 .sms-canvas > .sim-empty { display: grid; place-content: center; justify-items: center; }
+
+/* the process dialog DOCKS over the canvas rather than replacing it — the Static
+   Model's own behaviour, and the reason is the same: a dialog that throws away the
+   result you were reading is a dialog you cannot use while working */
+.sms-canvas > .simp {
+  position: absolute; right: 0; top: 0; bottom: 0; left: auto;
+  width: min(520px, 60%); z-index: 20; overflow: auto;
+  background: var(--panel, rgba(9,14,26,0.98));
+  border-left: 1px solid rgba(148,163,184,0.22);
+  box-shadow: -10px 0 30px rgba(0,0,0,0.28);
+}
+:root[data-theme='light'] .sms-canvas > .simp {
+  background: #ffffff; border-left-color: rgba(100,116,139,0.25);
+  box-shadow: -10px 0 30px rgba(15,23,42,0.12);
+}

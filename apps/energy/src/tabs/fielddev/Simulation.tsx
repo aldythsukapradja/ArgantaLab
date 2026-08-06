@@ -33,6 +33,8 @@ import type { SearchEntry } from '../../cosmo/cockpit-search';
 import { useStatic } from './static-store';
 import { useSimFluids } from './fluid-case-store';
 import { layerSpan } from './grid-build';
+import { reservoirEntry } from './well-paths';
+import { readRecord } from '../../dataqc/readDigest';
 import { propValueAt } from './prop-view';
 import { simulateFV } from '../../engine/sim/fv';
 import { columnAverages, coarsen, factorFor, runCase, assumptionsOf, type SimWellInput, type RunOutput } from './sim-run';
@@ -141,13 +143,59 @@ export function Simulation({ field }: { field: SearchEntry }) {
     if (init) useFluidCase.getState().publish(init);
   }, [fluids, basisReady, fluidBasis, ws.fieldId]);
 
-  const wellsIn = useMemo<SimWellInput[]>(() => ws.bores
-    .filter((b) => b.x != null && b.y != null)
-    .filter((b) => b.role === 'oil-producer' || /inject/i.test(String(b.role ?? '')))
-    .map((b) => ({
-      name: b.name, x: b.x as number, y: b.y as number,
-      kind: /inject/i.test(String(b.role ?? '')) ? 'injector' as const : 'producer' as const,
-    })), [ws.bores]);
+  // ── WELLS GO WHERE THEY MEET THE RESERVOIR, NOT WHERE THEY ARE DRILLED ───
+  //
+  // Volve is one platform: every bore's surface slot is within metres of every other,
+  // so placing wells by wellhead put all 24 in the same grid cell even at 50 m
+  // resolution. The waterflood then had one producer and one injector at the same
+  // point — which is why a nine-well flood animated as a single well. It WAS one well.
+  //
+  // Each trajectory is walked to the reservoir's mid-depth. A bore with no survey, or
+  // one that never reaches the reservoir, is DROPPED with a reason rather than placed
+  // at its slot: a well in the wrong cell is worse than a well that is missing, because
+  // the run still looks reasonable.
+  const [wellsIn, setWellsIn] = useState<SimWellInput[]>([]);
+  const [wellNote, setWellNote] = useState<string[]>([]);
+  useEffect(() => {
+    const flowing = ws.bores.filter((b) => b.role === 'oil-producer' || /inject/i.test(String(b.role ?? '')));
+    if (!flowing.length || !grid?.zoneLayers?.length) { setWellsIn([]); return; }
+    const zl = grid.zoneLayers;
+    const rz = zl[zl.length - 1];
+    let alive = true;
+    (async () => {
+      // the reservoir's mid-depth, averaged over the columns it actually occupies
+      const p = grid.packed;
+      let zs = 0, zn = 0;
+      for (let c = 0; c < p.nx * p.ny; c++) {
+        if (!p.activeCol[c]) continue;
+        const t = p.topZ[c], b = p.baseZ[c];
+        if (!Number.isFinite(t) || !Number.isFinite(b)) continue;
+        const f0 = rz.k0 / p.nz, f1 = (rz.k0 + rz.nz) / p.nz;
+        zs += t + ((f0 + f1) / 2) * (b - t); zn++;
+      }
+      const target = zn ? zs / zn : NaN;
+      const out: SimWellInput[] = [];
+      const notes: string[] = [];
+      for (const b of flowing) {
+        if (b.x == null || b.y == null) { notes.push(`${b.name}: no surface slot`); continue; }
+        const aid = b.assetIds?.trajectory;
+        const asset = aid ? ws.assets.find((a) => a.id === aid) : null;
+        if (!asset) { notes.push(`${b.name}: no survey — cannot locate it in the reservoir`); continue; }
+        const traj = await readRecord<{ stations?: Array<{ tvd?: number; dispEw?: number; dispNs?: number }> }>(asset).catch(() => null);
+        const kb = b.kbM ?? 0;
+        const st = (traj?.stations ?? []).map((x) => ({ ...x, tvd: (x.tvd ?? NaN) - kb }));
+        const e = reservoirEntry({ x: b.x, y: b.y }, st, target);
+        if (!e) { notes.push(`${b.name}: survey has no usable stations`); continue; }
+        if (e.shallow) { notes.push(`${b.name}: survey stops at ${e.tvdss.toFixed(0)} m, above the reservoir`); continue; }
+        out.push({
+          name: b.name, x: e.x, y: e.y,
+          kind: /inject/i.test(String(b.role ?? '')) ? 'injector' : 'producer',
+        });
+      }
+      if (alive) { setWellsIn(out); setWellNote(notes); }
+    })();
+    return () => { alive = false; };
+  }, [ws.bores, ws.assets, grid]);
 
   // the simulated period, and where history is taken to stop. Both are the user's to
   // set; the split is what makes the right-hand half of every chart a FORECAST.
@@ -217,6 +265,7 @@ export function Simulation({ field }: { field: SearchEntry }) {
         const out = runCase(co.grid, co.cols, fluids, wellsIn,
           { tEnd: tEnd, nReports: 40 }, simulateFV);
         out.assumptions = assumptionsOf(out.build.meanH, out.build.rejected, co.note, out.build.collisions);
+        out.assumptions.caveats.push(...wellNote);
         setCoarse(co);
         setRun(out);
         // the frames the 3D viewport animates. Built once, from the same result the
@@ -230,7 +279,7 @@ export function Simulation({ field }: { field: SearchEntry }) {
         setBusy(false);
       }
     }, 16);
-  }, [grid, fluids, wellsIn, markDone, tEnd]);
+  }, [grid, fluids, wellsIn, markDone, tEnd, wellNote]);
 
   // ── THE FRAME ON SCREEN ──────────────────────────────────────────────────
   //
@@ -364,10 +413,15 @@ export function Simulation({ field }: { field: SearchEntry }) {
       onCloseAside={() => setQcOpen(false)}
       asideTab={qcOpen ? undefined : { label: 'QC', title: 'Run QC — material balance, convergence and the match score', onOpen: () => setQcOpen(true) }}
     >
-      {open ? (
+      {/* THE DIALOG FLOATS. It used to REPLACE the canvas, so opening any ribbon
+          button threw away the run you were looking at — which is exactly the
+          complaint. The Static Model docks its process dialogs over the viewport for
+          this reason; this is the same behaviour, from the same intent. */}
+      {open && (
         <ProcessPane id={open} onClose={() => setOpen(null)}
           done={done} onRan={markDone} onInvalidate={invalidate} />
-      ) : run ? (
+      )}
+      {run ? (
         view === 'plots' ? <PlotsPane run={run} historyEnd={historyEnd} />
           : view === 'wells' ? <WellsPane run={run} historyEnd={historyEnd} />
           : view === 'forecast' ? <ForecastPane run={run} historyEnd={historyEnd} />

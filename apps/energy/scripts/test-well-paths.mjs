@@ -91,5 +91,49 @@ if (index) {
   }
 }
 
+// -- WHERE A WELL MEETS THE RESERVOIR ---------------------------------------
+//
+// Volve is one platform: every bore's surface slot is within metres of the others, so
+// placing wells by wellhead put all 24 in the SAME grid cell even at 50 m resolution.
+// A nine-well waterflood then animates as one well, because it is one well. Located at
+// reservoir depth the same bores occupy 16 distinct cells.
+{
+  const { reservoirEntry } = await import('../src/tabs/fielddev/well-paths.ts');
+  const head = { x: 1000, y: 2000 };
+  const st = [
+    { tvd: 0, dispEw: 0, dispNs: 0 },
+    { tvd: 1000, dispEw: 100, dispNs: 0 },
+    { tvd: 2000, dispEw: 400, dispNs: 200 },
+    { tvd: 3000, dispEw: 900, dispNs: 600 },
+  ];
+
+  const mid = reservoirEntry(head, st, 1500);
+  ok('the entry point is INTERPOLATED between the straddling stations',
+    mid && Math.abs(mid.x - (1000 + 250)) < 1e-9 && Math.abs(mid.y - (2000 + 100)) < 1e-9,
+    JSON.stringify(mid));
+  ok('...and reports the depth it was asked for', mid && mid.tvdss === 1500, JSON.stringify(mid));
+  ok('...and is not flagged shallow', mid && mid.shallow === false, '');
+
+  // the whole point: it is NOT the wellhead
+  ok('the entry point is far from the surface slot',
+    mid && Math.hypot(mid.x - head.x, mid.y - head.y) > 100, '');
+
+  const deep = reservoirEntry(head, st, 5000);
+  ok('a survey that never reaches the target falls back to its deepest station',
+    deep && deep.x === 1900 && deep.y === 2600, JSON.stringify(deep));
+  ok('...and SAYS it is shallow, so a caller can exclude it', deep && deep.shallow === true, '');
+
+  ok('a bore with no usable stations returns null, not the wellhead',
+    reservoirEntry(head, [], 1500) === null, '');
+  ok('a bore with no surface slot returns null',
+    reservoirEntry({ x: NaN, y: 2000 }, st, 1500) === null, '');
+
+  // unsorted surveys are common; the walk must not depend on file order
+  const shuffled = [st[3], st[0], st[2], st[1]];
+  const same = reservoirEntry(head, shuffled, 1500);
+  ok('station order in the file does not change the answer',
+    same && Math.abs(same.x - mid.x) < 1e-9 && Math.abs(same.y - mid.y) < 1e-9, JSON.stringify(same));
+}
+
 console.log(`well-paths: ${pass}/${pass + fail}`);
 if (fail) process.exit(1);
