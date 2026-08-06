@@ -1283,3 +1283,18 @@ html[data-ui="cosmo"] .app.rail-pinned .rail-btn{margin-left:0}
 }
 .ca-traj-facts b{ color:var(--ink,#111827); font-variant-numeric:tabular-nums; font-weight:620; }
 .dark .ca-traj svg{ background:rgba(255,255,255,.04); }
+
+/* ── well log tracks ────────────────────────────────────────────────────────
+   Fixed scales, not auto-fitted: an auto-scaled gamma track makes every well
+   look like it has the same shale baseline. Gaps are gaps — the path lifts the
+   pen at an absent sample rather than bridging across it. */
+.ca-logs{ padding:10px; }
+.ca-logs-tracks{ display:flex; gap:8px; }
+.ca-logs figure{ margin:0; flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.ca-logs figcaption{ display:flex; flex-direction:column; line-height:1.3; }
+.ca-logs figcaption b{ font-size:11px; font-weight:660; letter-spacing:.03em; }
+.ca-logs figcaption span{ font-size:9.5px; color:var(--ink-dim,#6b7280); font-variant-numeric:tabular-nums; }
+.ca-logs svg{ width:100%; height:230px; display:block; }
+.ca-log-bg{ fill:rgba(127,127,127,.05); }
+.dark .ca-log-bg{ fill:rgba(255,255,255,.04); }
+.ca-log-curve{ fill:none; stroke-width:1.1; vector-effect:non-scaling-stroke; }

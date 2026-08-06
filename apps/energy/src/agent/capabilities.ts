@@ -730,6 +730,12 @@ export const CAPABILITIES: Capability[] = [
       ],
       chips: alsoAvailable(n, 'well.logs'),
       provenance: prov(n),
+      // The curves themselves. Gated on has.logs -- the same measured flag the
+      // probe uses -- so a well with no published log file gets its card and no
+      // empty tracks.
+      ...(asBool(n.has.logs) ? {
+        artifact: { component: 'well-logs', props: { well: n.name, name: `Logs — ${n.name}` } },
+      } : {})
     }),
   },
   {

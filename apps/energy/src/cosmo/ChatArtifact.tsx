@@ -15,7 +15,7 @@
 // off the screen has stopped being an answer and become a takeover.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Images, ExternalLink, Route } from 'lucide-react';
+import { Search, Images, ExternalLink, Route, Activity } from 'lucide-react';
 import {
   figuresForEntity, figureSrc, figureAttribution, isShowable, figureTypeLabel,
   type RegistryFigure,
@@ -212,6 +212,107 @@ function WellTrajectory({ well }: { well: string }) {
   );
 }
 
+// ── well logs ────────────────────────────────────────────────────────────────
+
+interface LogCurve { source?: string; unit?: string; values: (number | null)[] }
+interface LogFile { well: string; depth_unit?: string; md: number[]; curves: Record<string, LogCurve> }
+
+/** The LAS absent convention. It is a perfectly finite number, so a
+ *  Number.isFinite guard lets it through -- and a -999.25 plotted on a gamma
+ *  track drags the whole scale flat. Screened here for the same reason
+ *  petro-xplot screens it. */
+const isAbsent = (v: number) => v <= -999 && v >= -9999.99;
+
+/** Tracks worth showing, with the scales a petrophysicist expects to read
+ *  them on. Fixed rather than auto-fitted: an auto-scaled gamma track makes
+ *  every well look like it has the same shale baseline. */
+const LOG_TRACKS: { curve: string; label: string; lo: number; hi: number; log?: boolean; colour: string }[] = [
+  { curve: 'GR', label: 'GR', lo: 0, hi: 150, colour: '#16a34a' },
+  { curve: 'RT', label: 'RT', lo: 0.2, hi: 2000, log: true, colour: '#e0913a' },
+  { curve: 'RHOB', label: 'RHOB', lo: 1.95, hi: 2.95, colour: '#0ea5e9' },
+];
+
+function WellLogs({ well }: { well: string }) {
+  const [file, setFile] = useState<LogFile | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const base = import.meta.env.BASE_URL ?? '/';
+    fetch(`${base}wb/logs-${slugWell(well)}.json`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('missing'))))
+      .then((j) => { if (alive) setFile(j); })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [well]);
+
+  const tracks = useMemo(() => {
+    if (!file?.md?.length) return null;
+    const n = file.md.length;
+    // 3,900 samples is more than a 220px-tall track can resolve. Decimating to
+    // ~900 keeps every visible inflection and keeps the SVG light.
+    const step = Math.max(1, Math.ceil(n / 900));
+    const top = file.md[0], bot = file.md[n - 1];
+    const present = LOG_TRACKS
+      .map((t) => ({ t, c: file.curves?.[t.curve] }))
+      .filter((x): x is { t: typeof LOG_TRACKS[number]; c: LogCurve } => !!x.c?.values?.length);
+    if (!present.length) return null;
+    return { top, bot, step, present, n };
+  }, [file]);
+
+  if (failed) return <div className="ca-empty">No log file published for {well}.</div>;
+  if (!file) return <div className="ca-loading">Loading the curves…</div>;
+  if (!tracks) return <div className="ca-empty">{well} carries no GR, RT or RHOB curve to plot.</div>;
+
+  const H = 230, PAD_T = 16, PAD_B = 14;
+  const depthY = (md: number) => PAD_T + ((md - tracks.top) / (tracks.bot - tracks.top || 1)) * (H - PAD_T - PAD_B);
+
+  return (
+    <div className="ca-logs">
+      <div className="ca-logs-tracks">
+        {tracks.present.map(({ t, c }) => {
+          const W = 100;
+          const scale = (v: number) => {
+            const x = t.log
+              ? (Math.log10(Math.max(v, t.lo)) - Math.log10(t.lo)) / (Math.log10(t.hi) - Math.log10(t.lo))
+              : (v - t.lo) / (t.hi - t.lo);
+            return 6 + Math.min(1, Math.max(0, x)) * (W - 12);
+          };
+          let d = '';
+          let penDown = false;
+          for (let i = 0; i < tracks.n; i += tracks.step) {
+            const v = c.values[i];
+            const md = file.md[i];
+            if (typeof v !== 'number' || !Number.isFinite(v) || isAbsent(v) || !Number.isFinite(md)) {
+              penDown = false;          // a gap is a gap; never bridge across absent samples
+              continue;
+            }
+            d += `${penDown ? 'L' : 'M'}${scale(v).toFixed(1)},${depthY(md).toFixed(1)}`;
+            penDown = true;
+          }
+          return (
+            <figure key={t.curve}>
+              <figcaption>
+                <b style={{ color: t.colour }}>{t.label}</b>
+                <span>{t.lo}–{t.hi}{c.unit ? ` ${c.unit}` : ''}{t.log ? ' log' : ''}</span>
+              </figcaption>
+              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`${t.label} track`}>
+                <rect x="0" y={PAD_T} width={W} height={H - PAD_T - PAD_B} className="ca-log-bg" />
+                <path d={d} style={{ stroke: t.colour }} className="ca-log-curve" />
+              </svg>
+            </figure>
+          );
+        })}
+      </div>
+      <div className="ca-traj-facts">
+        <span>MD <b>{nice(tracks.top)}</b>–<b>{nice(tracks.bot)}</b> {file.depth_unit ?? 'm'}</span>
+        <span><b>{tracks.n.toLocaleString('en-US')}</b> samples</span>
+        <span><b>{Object.keys(file.curves ?? {}).length}</b> curves on file</span>
+      </div>
+    </div>
+  );
+}
+
 // ── the host ─────────────────────────────────────────────────────────────────
 
 export interface ChatArtifactProps {
@@ -228,6 +329,11 @@ export function ChatArtifact({ component, props }: ChatArtifactProps) {
         const entityId = str(props.entityId);
         if (!entityId) return null;
         return <BasinFigures entityId={entityId} name={str(props.name)} />;
+      }
+      case 'well-logs': {
+        const well = str(props.well);
+        if (!well) return null;
+        return <WellLogs well={well} />;
       }
       case 'well-trajectory': {
         const well = str(props.well);
@@ -246,8 +352,10 @@ export function ChatArtifact({ component, props }: ChatArtifactProps) {
   return (
     <div className="chat-artifact">
       <div className="ca-head">
-        {component === 'well-trajectory' ? <Route size={12} strokeWidth={2.2} /> : <Images size={12} strokeWidth={2.2} />}
-        <span>{str(props.name) ?? (component === 'well-trajectory' ? 'Well path' : 'Figures')}</span>
+        {component === 'well-trajectory' ? <Route size={12} strokeWidth={2.2} />
+          : component === 'well-logs' ? <Activity size={12} strokeWidth={2.2} />
+            : <Images size={12} strokeWidth={2.2} />}
+        <span>{str(props.name) ?? 'Artifact'}</span>
       </div>
       {body}
     </div>
