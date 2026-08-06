@@ -21,6 +21,8 @@ import { agentEnabled, fetchActiveModel, runTurn, tier as currentTier, type Acti
 import { TOOL_NAMES, toolCallToIntent } from './tools.ts';
 import { enforceGrounding, toolSummary } from './guard.ts';
 import { buildTrace } from './trace.ts';
+import { CAPABILITY_BY_ID } from './capabilities.ts';
+import { WORKFLOW_BY_ID, type Workflow } from './workflows.ts';
 import { summarise } from './summary.ts';
 import type { TurnTrace } from './types.ts';
 
@@ -51,11 +53,24 @@ export interface AgentAnswer {
   summary: string;
 }
 
+/** One step of a workflow, after it ran. `skipped` means the capability's own
+ *  probe refused — the card explains why, and the chain carried on. */
+export interface WorkflowStepResult {
+  capabilityId: string;
+  title: string;
+  why: string;
+  answer: AgentAnswer;
+  skipped: boolean;
+}
+
 export interface UseAgent {
   ready: boolean;
   /** Null until the gazetteer lands. */
   index: GazIndex | null;
   ask: (text: string) => Promise<AgentAnswer | null>;
+  /** Run a whole chain deterministically against one subject. No model is
+   *  called at any point — same subject, same steps, same order, every time. */
+  runWorkflow: (workflowId: string, subject: string, onStep?: (r: WorkflowStepResult) => void) => Promise<WorkflowStepResult[]>;
   /** Type-ahead over the gazetteer, ranked by the same scorer as resolution. */
   suggestions: (query: string, limit?: number) => Candidate[];
   /** "Indonesia › Kutei Basin › Badak" — what the agent is looking at. */
@@ -242,6 +257,80 @@ export function useAgent(): UseAgent {
     }
   }, [index, dispatch]);
 
+  /** Deterministic workflow run.
+   *
+   *  Every step goes through runIntent — the same path a typed question takes —
+   *  with the capability named explicitly, so the grammar never has to guess and
+   *  the model is never consulted. That is the whole point of the deterministic
+   *  mode: it is auditable precisely because nothing in it is a judgement call.
+   *
+   *  `onStep` fires as each step lands so the UI can render progressively
+   *  rather than sitting silent and dumping five answers at the end. */
+  const runWorkflow = useCallback(async (
+    workflowId: string,
+    subject: string,
+    onStep?: (r: WorkflowStepResult) => void,
+  ): Promise<WorkflowStepResult[]> => {
+    const workflow: Workflow | undefined = WORKFLOW_BY_ID.get(workflowId);
+    if (!index || !workflow || !subject.trim()) return [];
+    const out: WorkflowStepResult[] = [];
+    setBusy(true);
+    try {
+      for (const step of workflow.steps) {
+        const capability = CAPABILITY_BY_ID.get(step.capabilityId);
+        if (!capability) continue;          // registry drift; resolvedSteps warns up front
+        const startedAt = performance.now();
+        const scope = useStore.getState().scope;
+        const result = runIntent(index, turnRef.current, {
+          verb: 'show',
+          capabilityIds: [step.capabilityId],
+          entityQuery: subject,
+          usesFocus: false,
+          matchedPhrase: capability.phrases[0],
+          confidence: 1,
+          fullQuery: subject,
+        }, subject, scope);
+
+        turnRef.current = result.turn;
+        dispatch(result.commands);
+        setBreadcrumb(ladderLabel(result.turn));
+
+        const trace = buildTrace({
+          facts: result.facts,
+          card: result.card,
+          capabilityId: step.capabilityId,
+          commands: result.commands,
+          node: result.turn.focus,
+          tier: 'lite',
+          elapsedMs: performance.now() - startedAt,
+        });
+        const entry: WorkflowStepResult = {
+          capabilityId: step.capabilityId,
+          title: step.title,
+          why: step.why,
+          // An absence is a real result, not a failure: the capability probed
+          // its own data and reported honestly. The chain continues.
+          skipped: result.card.kind === 'absence' || result.card.kind === 'error',
+          answer: {
+            card: result.card,
+            text: '',
+            tier: 'lite',
+            fellBack: false,
+            trace,
+            summary: summarise(result.card, result.facts, trace).text,
+          },
+        };
+        out.push(entry);
+        onStep?.(entry);
+        // Yield so React paints this step before the next one runs.
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      return out;
+    } finally {
+      setBusy(false);
+    }
+  }, [index, dispatch]);
+
   const suggestions = useCallback(
     (query: string, limit = 6) => (index && query.trim() ? suggest(index, query, { limit }) : []),
     [index],
@@ -256,6 +345,7 @@ export function useAgent(): UseAgent {
     ready: !!index,
     index,
     ask,
+    runWorkflow,
     suggestions,
     breadcrumb,
     reset,
@@ -263,7 +353,7 @@ export function useAgent(): UseAgent {
     workerConfigured: agentEnabled,
     busy,
     activeModel,
-  }), [index, ask, suggestions, breadcrumb, reset, tier, busy, activeModel]);
+  }), [index, ask, runWorkflow, suggestions, breadcrumb, reset, tier, busy, activeModel]);
 }
 
 export { buildIndex };

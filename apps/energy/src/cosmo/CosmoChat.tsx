@@ -6,7 +6,7 @@
 // and an 80%-screen artifact modal. Uses the founder's exact classes (cosmo-system.css).
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink,
+  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink, Workflow,
   ArrowUp, Maximize, Monitor, Tv, Tablet, Smartphone,
   GitFork, FileText, BarChart3, Expand, Download, Image as ImageIcon, Gem, Map as MapIcon,
   Box, Waves, TrendingUp, Loader2,
@@ -19,6 +19,7 @@ import { AgentCard } from '../agent/AgentCard';
 import { AgentTrace } from './AgentTrace.tsx';
 import { AgentWelcome } from './AgentWelcome.tsx';
 import { ChatArtifact } from './ChatArtifact.tsx';
+import { WORKFLOWS, WORKFLOW_BY_ID } from '../agent/workflows.ts';
 import type { TurnTrace } from '../agent/types.ts';
 import type { AnswerCard, CardChip } from '../agent/types';
 import { useBridge, type BridgeEngine } from '../agent/bridge/useBridge';
@@ -245,6 +246,9 @@ type Msg = {
   /** The opening screen. Rendered live from the loaded gazetteer rather than
    *  stored as prose, so its figures can never go stale in localStorage. */
   welcome?: boolean;
+  /** Set on a workflow step, so the answer arrives with its place in the chain
+   *  rather than as one more anonymous card. */
+  step?: { n: number; of: number; title: string; why: string; skipped: boolean; workflow: string };
 };
 /** Fold the recent conversation into the prompt for a Frontier mission.
  *
@@ -783,6 +787,31 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
     });
   };
 
+  /** Start a deterministic chain on whatever the chat is currently looking at.
+   *
+   *  The subject comes from the agent's own focus — the thing the last answer
+   *  was about — because a workflow with no subject is a question, not a run.
+   *  With nothing in focus it asks rather than guessing at a default. */
+  const startWorkflow = (workflowId: string) => {
+    const workflow = WORKFLOW_BY_ID.get(workflowId);
+    if (!workflow) return;
+    const subject = agent.breadcrumb.split('›').pop()?.trim();
+    if (!subject) {
+      streamAssistant(`Name a ${workflow.kinds.join(' or ')} first, then I'll run **${workflow.title}** on it.`);
+      return;
+    }
+    setMsgs((m) => [...m, { role: 'user', text: `${workflow.pill} — ${subject}`, done: true }]);
+    const total = workflow.steps.length;
+    void agent.runWorkflow(workflowId, subject, (r) => {
+      const n = workflow.steps.findIndex((s2) => s2.capabilityId === r.capabilityId) + 1;
+      setMsgs((m) => [...m, {
+        role: 'assistant', text: '', done: true,
+        card: r.answer.card, trace: r.answer.trace, summary: r.answer.summary,
+        step: { n, of: total, title: r.title, why: r.why, skipped: r.skipped, workflow: workflow.title },
+      }]);
+    });
+  };
+
   /** A chip re-enters as if typed, so chips and typing share one code path. */
   const onChip = (chip: CardChip) => send(chip.query);
   // the well-picker step — a real chip list from the wb well roster; selecting one renders the
@@ -1023,6 +1052,19 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
                         }} renderMarkdown={mdToHtml} />
                       : m.card
                         ? (<div className="ag-arrive">
+                          {m.step && (
+                            <div className={'wf-step' + (m.step.skipped ? ' is-skipped' : '')}>
+                              <span className="wf-step-n">{m.step.n}<em>/{m.step.of}</em></span>
+                              <span className="wf-step-body">
+                                <b>{m.step.title}</b>
+                                <em>{m.step.why}</em>
+                              </span>
+                              {/* Named, not hidden. A step whose probe refused is
+                                  a real result — the card below says what is
+                                  missing and what exists instead. */}
+                              {m.step.skipped && <span className="wf-step-flag">no data</span>}
+                            </div>
+                          )}
                           {m.text && <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) }} />}
                           <AgentCard card={m.card} onChip={onChip} />
                           {m.card.artifact && (
@@ -1274,6 +1316,15 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
                 gazetteer, so they can never point at something absent.
                 Removed rather than relabelled: the replacement is a real
                 agentic workflow, not a shorter list of the same shortcuts. */}
+            <div className="wf-pills">
+              {WORKFLOWS.map((w) => (
+                <button key={w.id} className="wf-pill" onClick={() => startWorkflow(w.id)} title={w.hint}>
+                  <Workflow size={12} strokeWidth={2.2} />
+                  <span>{w.pill}</span>
+                  <em>{w.steps.length} steps</em>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
