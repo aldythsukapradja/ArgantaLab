@@ -323,8 +323,6 @@ function ArtLoading({ label }: { label: string }) {
 // ── the shared Field Development step spine — one source of truth for both tour modes:
 // "FDP AI Assist" (renders each real viewer inside the chat, asks a well every step) and
 // "FDP Agentic" (drives the real app's tabs directly, asks a well once, slower + one HITL pause).
-const ASSIST_LABEL = 'FDP AI Assist · Volve';
-const AGENTIC_LABEL = 'FDP Agentic · Volve';
 type FdpStep = {
   tab: string; label: string; artifact: string;
   narrate: (well: string) => string;
@@ -350,7 +348,7 @@ const AGENTIC_STEP_MS = 3200; // deliberate, "full agentic" pacing
 const ASSIST_STEP_MS = 1400;
 
 // ── the Arganta canvas ───────────────────────────────────────────────────────
-export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVolve, onFieldDevTab, onFullChange }: {
+export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChange }: {
   open: boolean;
   onClose: () => void;
   /** Full-canvas mode. The shell pushes its content aside for the docked panel but
@@ -359,6 +357,10 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   onFullChange?: (full: boolean) => void;
   fullSignal?: number;
   /** guided-tour hooks — CosmoShell owns nav/tab, so the tour drives it through these */
+  /** Vestigial: both drove the removed FDP Agentic tour's app navigation.
+   *  Kept in the signature because CosmoShell still passes them and that file
+   *  is in flight in another session — dropping them there is a follow-up, not
+   *  a reason to break someone else's working tree. Nothing reads them. */
   onFocusCockpit?: () => void;
   onZoomVolve?: () => void;
   onFieldDevTab?: (tab: string) => void;
@@ -656,7 +658,6 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
   };
 
   const [tourKind, setTourKind] = useState<'assist' | 'agentic' | null>(null);
-  const touring = tourKind !== null;
   const tourStepRef = useRef(0);
   const tourTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const streamRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -699,7 +700,6 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     const opt = cfg.options.find((o) => o.id === (brain === 'claude' ? claudeModel : codexModel)) ?? cfg.options[0];
     return { name: `${cfg.capsulePrefix} ${opt.label}`, sub: opt.sub, tc: cfg.accent };
   }, [brain, agent.activeModel, claudeModel, codexModel, ENGINE_MODELS]);
-  const chips = [ASSIST_LABEL, AGENTIC_LABEL, 'Kutei Basin', 'Insight about Indonesia', 'Which basins are in Norway', 'Volve'];
 
   // real Volve well roster (wb/index.json) — used only to populate the "which well?" picker
   useEffect(() => { loadIndex().then((idx) => setWells(idx.wells.map((w) => w.name))).catch(() => setWells([])); }, []);
@@ -813,17 +813,6 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
     onFieldDevTab?.(step.tab); // keep the real app's tab in sync in the background too
     tourTimeout(() => streamAssistant(`Which well should I use for **${step.label}**?`, { assistWellPick: true }), 250);
   };
-  const startAssistTour = () => {
-    if (touring) return;
-    setMsgs((m) => [...m, { role: 'user', text: ASSIST_LABEL, done: true }]);
-    setTourKind('assist');
-    tourStepRef.current = 0;
-    onFocusCockpit?.();
-    tourTimeout(() => {
-      streamAssistant("Starting the FDP AI Assist walkthrough on **Volve** — I'll ask for a well at every step and show you the real view here.");
-      tourTimeout(() => runAssistStep(), ASSIST_STEP_MS);
-    }, 240);
-  };
   const selectAssistWell = (well: string) => {
     const step = FDP_STEPS[tourStepRef.current];
     setActiveWell(well);
@@ -862,18 +851,6 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
       tourStepRef.current = i + 1;
       tourTimeout(() => runAgenticStep(), AGENTIC_STEP_MS);
     }, 250);
-  };
-  const startAgenticTour = () => {
-    if (touring) return;
-    setMsgs((m) => [...m, { role: 'user', text: AGENTIC_LABEL, done: true }]);
-    setTourKind('agentic');
-    tourStepRef.current = 0;
-    onFocusCockpit?.();
-    tourTimeout(() => {
-      streamAssistant('Opening the 3D globe, then zooming into **Volve** in 2D…');
-      onZoomVolve?.();
-      tourTimeout(() => runAgenticStep(), AGENTIC_STEP_MS);
-    }, 240);
   };
   const selectTourWell = (well: string) => {
     setActiveWell(well);
@@ -1289,11 +1266,14 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                 and it sat under a chat whose entire claim is that its numbers
                 come from somewhere. Removed rather than wired up — real usage
                 metering is a feature to build deliberately, not to fake. */}
-            <div className="cc-chips">
-              {chips.map((c) => (
-                <div className="cc-chip" key={c} onClick={() => (c === ASSIST_LABEL ? startAssistTour() : c === AGENTIC_LABEL ? startAgenticTour() : send(c))}>{c}</div>
-              ))}
-            </div>
+            {/* The starter chips lived here. Two of them launched the "FDP AI
+                Assist" / "FDP Agentic" walkthroughs, which drive the LEGACY
+                tabs — a route that no longer reflects how the app is built. The
+                other four ("Kutei Basin", "Volve", …) were hardcoded queries
+                that the welcome screen now offers live, computed from the
+                gazetteer, so they can never point at something absent.
+                Removed rather than relabelled: the replacement is a real
+                agentic workflow, not a shorter list of the same shortcuts. */}
           </div>
         </div>
 
