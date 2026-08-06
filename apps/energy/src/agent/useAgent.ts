@@ -74,18 +74,12 @@ export interface UseAgent {
   focusNode: () => GazIndexed | null;
   /** Run a whole chain deterministically against one subject. No model is
    *  called at any point — same subject, same steps, same order, every time. */
-  runWorkflow: (
-    workflowId: string,
-    subject: string,
-    opts?: {
-      onStepStart?: (step: { n: number; of: number; title: string; why: string }) => void;
-      onStep?: (r: WorkflowStepResult) => void;
-      /** Pause between steps. Purely for legibility — the work itself takes
-       *  single-digit milliseconds, and five answers arriving at once is not a
-       *  walkthrough, it is a wall. Set 0 to run flat out. */
-      paceMs?: number;
-    },
-  ) => Promise<WorkflowStepResult[]>;
+  /** Run ONE step of a chain. The caller decides when the next one happens.
+   *
+   *  Deliberately not a loop: a walkthrough that advances on its own is a
+   *  video, and the reader cannot stop to look at step two while step four is
+   *  already on screen. Returns null when the index is past the end. */
+  runWorkflowStep: (workflowId: string, subject: string, stepIndex: number) => Promise<WorkflowStepResult | null>;
   /** Type-ahead over the gazetteer, ranked by the same scorer as resolution. */
   suggestions: (query: string, limit?: number) => Candidate[];
   /** "Indonesia › Kutei Basin › Badak" — what the agent is looking at. */
@@ -272,89 +266,73 @@ export function useAgent(): UseAgent {
     }
   }, [index, dispatch]);
 
-  /** Deterministic workflow run.
+  /** Deterministic single step of a workflow.
    *
    *  Every step goes through runIntent — the same path a typed question takes —
    *  with the capability named explicitly, so the grammar never has to guess and
-   *  the model is never consulted. That is the whole point of the deterministic
-   *  mode: it is auditable precisely because nothing in it is a judgement call.
+   *  the model is never consulted. That is what makes the mode auditable:
+   *  nothing in it is a judgement call.
    *
-   *  `onStep` fires as each step lands so the UI can render progressively
-   *  rather than sitting silent and dumping five answers at the end. */
-  const runWorkflow = useCallback(async (
+   *  Running ONE step per call, rather than looping, is what lets the chat wait
+   *  for the reader. The commands each step dispatches also move the app — so
+   *  advancing is what opens the next surface, and that should be the reader's
+   *  decision, not a timer's.
+   */
+  const runWorkflowStep = useCallback(async (
     workflowId: string,
     subject: string,
-    opts: {
-      onStepStart?: (step: { n: number; of: number; title: string; why: string }) => void;
-      onStep?: (r: WorkflowStepResult) => void;
-      paceMs?: number;
-    } = {},
-  ): Promise<WorkflowStepResult[]> => {
-    const { onStepStart, onStep, paceMs = 900 } = opts;
+    stepIndex: number,
+  ): Promise<WorkflowStepResult | null> => {
     const workflow: Workflow | undefined = WORKFLOW_BY_ID.get(workflowId);
-    if (!index || !workflow || !subject.trim()) return [];
-    const out: WorkflowStepResult[] = [];
+    if (!index || !workflow || !subject.trim()) return null;
+    const step = workflow.steps[stepIndex];
+    if (!step) return null;
+    const capability = CAPABILITY_BY_ID.get(step.capabilityId);
+    if (!capability) return null;
+
     setBusy(true);
     try {
-      for (const [i, step] of workflow.steps.entries()) {
-        const capability = CAPABILITY_BY_ID.get(step.capabilityId);
-        if (!capability) continue;          // registry drift; resolvedSteps warns up front
+      const startedAt = performance.now();
+      const scope = useStore.getState().scope;
+      const result = runIntent(index, turnRef.current, {
+        verb: 'show',
+        capabilityIds: [step.capabilityId],
+        entityQuery: subject,
+        usesFocus: false,
+        matchedPhrase: capability.phrases[0],
+        confidence: 1,
+        fullQuery: subject,
+      }, subject, scope);
 
-        // Announce the step, then pause before answering it. The pause buys
-        // nothing computationally and is not pretending to: it exists so the
-        // reader can see WHICH step is running before its answer replaces the
-        // question. Naming it `paceMs` rather than something suggestive of work
-        // keeps that honest at the call site.
-        onStepStart?.({ n: i + 1, of: workflow.steps.length, title: step.title, why: step.why });
-        if (paceMs > 0) await new Promise((r) => setTimeout(r, paceMs));
+      turnRef.current = result.turn;
+      dispatch(result.commands);
+      setBreadcrumb(ladderLabel(result.turn));
 
-        const startedAt = performance.now();
-        const scope = useStore.getState().scope;
-        const result = runIntent(index, turnRef.current, {
-          verb: 'show',
-          capabilityIds: [step.capabilityId],
-          entityQuery: subject,
-          usesFocus: false,
-          matchedPhrase: capability.phrases[0],
-          confidence: 1,
-          fullQuery: subject,
-        }, subject, scope);
-
-        turnRef.current = result.turn;
-        dispatch(result.commands);
-        setBreadcrumb(ladderLabel(result.turn));
-
-        const trace = buildTrace({
-          facts: result.facts,
+      const trace = buildTrace({
+        facts: result.facts,
+        card: result.card,
+        capabilityId: step.capabilityId,
+        commands: result.commands,
+        node: result.turn.focus,
+        tier: 'lite',
+        elapsedMs: performance.now() - startedAt,
+      });
+      return {
+        capabilityId: step.capabilityId,
+        title: step.title,
+        why: step.why,
+        // An absence is a real result, not a failure: the capability probed its
+        // own data and reported honestly.
+        skipped: result.card.kind === 'absence' || result.card.kind === 'error',
+        answer: {
           card: result.card,
-          capabilityId: step.capabilityId,
-          commands: result.commands,
-          node: result.turn.focus,
+          text: '',
           tier: 'lite',
-          elapsedMs: performance.now() - startedAt,
-        });
-        const entry: WorkflowStepResult = {
-          capabilityId: step.capabilityId,
-          title: step.title,
-          why: step.why,
-          // An absence is a real result, not a failure: the capability probed
-          // its own data and reported honestly. The chain continues.
-          skipped: result.card.kind === 'absence' || result.card.kind === 'error',
-          answer: {
-            card: result.card,
-            text: '',
-            tier: 'lite',
-            fellBack: false,
-            trace,
-            summary: summarise(result.card, result.facts, trace).text,
-          },
-        };
-        out.push(entry);
-        onStep?.(entry);
-        // Yield so React paints this step before the next begins.
-        await new Promise((r) => setTimeout(r, 0));
-      }
-      return out;
+          fellBack: false,
+          trace,
+          summary: summarise(result.card, result.facts, trace).text,
+        },
+      };
     } finally {
       setBusy(false);
     }
@@ -377,7 +355,7 @@ export function useAgent(): UseAgent {
     index,
     ask,
     focusNode,
-    runWorkflow,
+    runWorkflowStep,
     suggestions,
     breadcrumb,
     reset,
@@ -385,7 +363,7 @@ export function useAgent(): UseAgent {
     workerConfigured: agentEnabled,
     busy,
     activeModel,
-  }), [index, ask, focusNode, runWorkflow, suggestions, breadcrumb, reset, tier, busy, activeModel]);
+  }), [index, ask, focusNode, runWorkflowStep, suggestions, breadcrumb, reset, tier, busy, activeModel]);
 }
 
 export { buildIndex };

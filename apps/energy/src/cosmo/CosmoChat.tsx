@@ -6,7 +6,7 @@
 // and an 80%-screen artifact modal. Uses the founder's exact classes (cosmo-system.css).
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink, Workflow, Sparkles, FileDown,
+  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink, Workflow, Sparkles, FileDown, ArrowRight,
   ArrowUp, Maximize, Monitor, Tv, Tablet, Smartphone,
   GitFork, FileText, BarChart3, Expand, Download, Image as ImageIcon, Gem, Map as MapIcon,
   Box, Waves, TrendingUp, Loader2,
@@ -249,7 +249,11 @@ type Msg = {
   welcome?: boolean;
   /** Set on a workflow step, so the answer arrives with its place in the chain
    *  rather than as one more anonymous card. */
-  step?: { n: number; of: number; title: string; why: string; skipped: boolean; workflow: string };
+  step?: {
+    n: number; of: number; title: string; why: string; skipped: boolean; workflow: string;
+    /** The step this one can advance to, named. Null on the last. */
+    next?: { n: number; title: string; why: string; at: number } | null;
+  };
   /** The closing card of a workflow run: offers the whole thing as one file. */
   report?: { workflow: string; subject: string; steps: ReportStep[] };
   /** "Which basin?" — a workflow waiting to be told what to run on. */
@@ -454,6 +458,9 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
   const [pendingWorkflow, setPendingWorkflow] = useState<{ id: string; assisted: boolean } | null>(null);
   /** The step being run right now, shown while its answer is still coming. */
   const [runningStep, setRunningStep] = useState<{ n: number; of: number; title: string; why: string } | null>(null);
+  /** The chain in progress. Held so Continue knows where it is — the run does
+   *  not advance itself, so this is the only thing that remembers. */
+  const runRef = useRef<{ id: string; subject: string; assisted: boolean; collected: ReportStep[] } | null>(null);
   /** The source the reader tapped, shown in a preview sheet before they leave.
    *
    *  Deliberately NOT an iframe. Instagram and LinkedIn use a native in-app
@@ -855,27 +862,44 @@ ${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+
         : `**Assisted plan** — nothing to change; every step in the fixed chain has data for ${subject}.`);
     }
 
-    const total = workflow.steps.length;
-    const collected: ReportStep[] = [];
-    void agent.runWorkflow(workflowId, subject, {
-      onStepStart: (st) => setRunningStep(st),
-      onStep: (r) => {
-        const n = workflow.steps.findIndex((s2) => s2.capabilityId === r.capabilityId) + 1;
-        collected.push({ title: r.title, why: r.why, card: r.answer.card, summary: r.answer.summary, skipped: r.skipped });
-        setRunningStep(null);
-        setMsgs((m) => [...m, {
-          role: 'assistant', text: '', done: true,
-          card: r.answer.card, trace: r.answer.trace, summary: r.answer.summary,
-          step: { n, of: total, title: r.title, why: r.why, skipped: r.skipped, workflow: workflow.title },
-        }]);
+    runRef.current = { id: workflowId, subject, assisted, collected: [] };
+    void advanceRun(0);
+  };
+
+  /** Run one step, then offer Continue. Nothing advances on its own. */
+  const advanceRun = async (i: number) => {
+    const run = runRef.current;
+    const workflow = run ? WORKFLOW_BY_ID.get(run.id) : null;
+    if (!run || !workflow) return;
+    const step = workflow.steps[i];
+    if (!step) return;
+
+    setRunningStep({ n: i + 1, of: workflow.steps.length, title: step.title, why: step.why });
+    const r = await agent.runWorkflowStep(run.id, run.subject, i);
+    setRunningStep(null);
+    if (!r) return;
+
+    run.collected.push({ title: r.title, why: r.why, card: r.answer.card, summary: r.answer.summary, skipped: r.skipped });
+    const next = workflow.steps[i + 1];
+    setMsgs((m) => [...m, {
+      role: 'assistant', text: '', done: true,
+      card: r.answer.card, trace: r.answer.trace, summary: r.answer.summary,
+      step: {
+        n: i + 1, of: workflow.steps.length, title: r.title, why: r.why,
+        skipped: r.skipped, workflow: workflow.title,
+        // Named, so Continue is never a blind "next". The reader should know
+        // what they are about to open before they open it.
+        next: next ? { n: i + 2, title: next.title, why: next.why, at: i + 1 } : null,
       },
-    }).then(() => {
-      setRunningStep(null);
+    }]);
+
+    if (!next) {
       setMsgs((m) => [...m, {
         role: 'assistant', text: '', done: true,
-        report: { workflow: workflow.title, subject, steps: collected },
+        report: { workflow: workflow.title, subject: run.subject, steps: [...run.collected] },
       }]);
-    });
+      runRef.current = null;
+    }
   };
 
   /** Typeset the run and hand it over as a file. Nothing is generated here —
@@ -1181,6 +1205,16 @@ ${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+
                           )}
                           {m.summary && <p className="ag-summary">{m.summary}</p>}
                           {m.trace && <AgentTrace trace={m.trace} />}
+                          {m.step?.next && i === msgs.length - 1 && !runningStep && runRef.current && (
+                            <button className="wf-next" onClick={() => void advanceRun(m.step!.next!.at)}>
+                              <span className="wf-next-lead">Continue<b>{m.step.next.n}/{m.step.of}</b></span>
+                              <span className="wf-next-body">
+                                <b>{m.step.next.title}</b>
+                                <em>{m.step.next.why}</em>
+                              </span>
+                              <ArrowRight size={14} strokeWidth={2.2} />
+                            </button>
+                          )}
                         </div>)
                         : m.text
                           ? (<>
