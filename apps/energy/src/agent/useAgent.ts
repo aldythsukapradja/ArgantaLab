@@ -74,7 +74,18 @@ export interface UseAgent {
   focusNode: () => GazIndexed | null;
   /** Run a whole chain deterministically against one subject. No model is
    *  called at any point — same subject, same steps, same order, every time. */
-  runWorkflow: (workflowId: string, subject: string, onStep?: (r: WorkflowStepResult) => void) => Promise<WorkflowStepResult[]>;
+  runWorkflow: (
+    workflowId: string,
+    subject: string,
+    opts?: {
+      onStepStart?: (step: { n: number; of: number; title: string; why: string }) => void;
+      onStep?: (r: WorkflowStepResult) => void;
+      /** Pause between steps. Purely for legibility — the work itself takes
+       *  single-digit milliseconds, and five answers arriving at once is not a
+       *  walkthrough, it is a wall. Set 0 to run flat out. */
+      paceMs?: number;
+    },
+  ) => Promise<WorkflowStepResult[]>;
   /** Type-ahead over the gazetteer, ranked by the same scorer as resolution. */
   suggestions: (query: string, limit?: number) => Candidate[];
   /** "Indonesia › Kutei Basin › Badak" — what the agent is looking at. */
@@ -273,16 +284,30 @@ export function useAgent(): UseAgent {
   const runWorkflow = useCallback(async (
     workflowId: string,
     subject: string,
-    onStep?: (r: WorkflowStepResult) => void,
+    opts: {
+      onStepStart?: (step: { n: number; of: number; title: string; why: string }) => void;
+      onStep?: (r: WorkflowStepResult) => void;
+      paceMs?: number;
+    } = {},
   ): Promise<WorkflowStepResult[]> => {
+    const { onStepStart, onStep, paceMs = 900 } = opts;
     const workflow: Workflow | undefined = WORKFLOW_BY_ID.get(workflowId);
     if (!index || !workflow || !subject.trim()) return [];
     const out: WorkflowStepResult[] = [];
     setBusy(true);
     try {
-      for (const step of workflow.steps) {
+      for (const [i, step] of workflow.steps.entries()) {
         const capability = CAPABILITY_BY_ID.get(step.capabilityId);
         if (!capability) continue;          // registry drift; resolvedSteps warns up front
+
+        // Announce the step, then pause before answering it. The pause buys
+        // nothing computationally and is not pretending to: it exists so the
+        // reader can see WHICH step is running before its answer replaces the
+        // question. Naming it `paceMs` rather than something suggestive of work
+        // keeps that honest at the call site.
+        onStepStart?.({ n: i + 1, of: workflow.steps.length, title: step.title, why: step.why });
+        if (paceMs > 0) await new Promise((r) => setTimeout(r, paceMs));
+
         const startedAt = performance.now();
         const scope = useStore.getState().scope;
         const result = runIntent(index, turnRef.current, {
@@ -326,7 +351,7 @@ export function useAgent(): UseAgent {
         };
         out.push(entry);
         onStep?.(entry);
-        // Yield so React paints this step before the next one runs.
+        // Yield so React paints this step before the next begins.
         await new Promise((r) => setTimeout(r, 0));
       }
       return out;

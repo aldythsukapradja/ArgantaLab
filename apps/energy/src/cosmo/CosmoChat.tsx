@@ -252,6 +252,8 @@ type Msg = {
   step?: { n: number; of: number; title: string; why: string; skipped: boolean; workflow: string };
   /** The closing card of a workflow run: offers the whole thing as one file. */
   report?: { workflow: string; subject: string; steps: ReportStep[] };
+  /** "Which basin?" — a workflow waiting to be told what to run on. */
+  subjectAsk?: { workflow: string; kind: string; hint: string; options: string[] };
 };
 /** Fold the recent conversation into the prompt for a Frontier mission.
  *
@@ -446,6 +448,12 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
    *  because a counter that ticks is the one honest thing we can say while the
    *  answer is still being assembled. */
   const [askElapsed, setAskElapsed] = useState(0);
+  /** A workflow that has been chosen but has no subject yet. The next thing the
+   *  user says answers it. Asking beats inferring: running a five-step chain on
+   *  a silently-guessed subject is the kind of helpfulness nobody asked for. */
+  const [pendingWorkflow, setPendingWorkflow] = useState<{ id: string; assisted: boolean } | null>(null);
+  /** The step being run right now, shown while its answer is still coming. */
+  const [runningStep, setRunningStep] = useState<{ n: number; of: number; title: string; why: string } | null>(null);
   /** The source the reader tapped, shown in a preview sheet before they leave.
    *
    *  Deliberately NOT an iframe. Instagram and LinkedIn use a native in-app
@@ -775,6 +783,17 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
       return;
     }
 
+    // A workflow waiting on a subject claims the next utterance. Cancel words
+    // release it, so a chosen chain is never a trap you have to answer.
+    if (pendingWorkflow) {
+      const cancelled = /^(cancel|never ?mind|stop|no)$/i.test(t.trim());
+      const wf = pendingWorkflow;
+      setPendingWorkflow(null);
+      if (cancelled) { streamAssistant('Dropped that run.'); return; }
+      startWorkflow(wf.id, t.trim(), wf.assisted);
+      return;
+    }
+
     // A real turn. The card IS the answer; any prose from the language tier has
     // already been grounding-checked and is usually empty by design.
     void agent.ask(t).then((answer) => {
@@ -795,21 +814,39 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
    *  The subject comes from the agent's own focus — the thing the last answer
    *  was about — because a workflow with no subject is a question, not a run.
    *  With nothing in focus it asks rather than guessing at a default. */
-  const startWorkflow = (workflowId: string, assisted = false) => {
+  /** Clicking a pill asks which subject; it never assumes the current one.
+   *  Candidates are real entities of the right kind, richest first, so the
+   *  offer can only name something the chain can actually run on. */
+  const askForSubject = (workflowId: string, assisted: boolean) => {
     const workflow = WORKFLOW_BY_ID.get(workflowId);
-    if (!workflow) return;
+    if (!workflow || !agent.index) return;
+    setPendingWorkflow({ id: workflowId, assisted });
+    const kind = workflow.kinds[0];
+    const pool = (agent.index.byKind.get(kind) ?? [])
+      .map((n) => ({ n, score: Object.values(n.has ?? {}).filter((v) => (typeof v === 'number' ? v > 0 : v === true)).length }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map((x) => x.n.name);
+    const focusName = agent.focusNode()?.name;
+    const offer = [...new Set([...(focusName ? [focusName] : []), ...pool])].slice(0, 5);
+    setMsgs((m) => [...m, {
+      role: 'assistant', text: '', done: true,
+      subjectAsk: { workflow: workflow.title, kind, hint: workflow.hint, options: offer },
+    }]);
+  };
+
+  const startWorkflow = (workflowId: string, subject: string, assisted = false) => {
+    const workflow = WORKFLOW_BY_ID.get(workflowId);
+    if (!workflow || !subject.trim()) return;
+    setPendingWorkflow(null);
     const focus = agent.index ? agent.focusNode() : null;
-    const subject = focus?.name ?? agent.breadcrumb.split('›').pop()?.trim();
-    if (!subject) {
-      streamAssistant(`Name a ${workflow.kinds.join(' or ')} first, then I'll run **${workflow.title}** on it.`);
-      return;
-    }
     setMsgs((m) => [...m, { role: 'user', text: `${workflow.pill} — ${subject}${assisted ? ' (assisted)' : ''}`, done: true }]);
 
     // Assisted mode announces its plan BEFORE running, derived from probes
     // alone. A plan you only learn about afterwards is not a plan you approved.
-    if (assisted && focus) {
-      const plan = planFor(workflow, focus);
+    const planNode = agent.index ? (agent.suggestions(subject, 1)[0]?.node ?? focus) : focus;
+    if (assisted && planNode) {
+      const plan = planFor(workflow, planNode);
       const diff = planSummary(plan);
       streamAssistant(diff
         ? `**Assisted plan** — ${diff}.
@@ -820,15 +857,20 @@ ${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+
 
     const total = workflow.steps.length;
     const collected: ReportStep[] = [];
-    void agent.runWorkflow(workflowId, subject, (r) => {
-      const n = workflow.steps.findIndex((s2) => s2.capabilityId === r.capabilityId) + 1;
-      collected.push({ title: r.title, why: r.why, card: r.answer.card, summary: r.answer.summary, skipped: r.skipped });
-      setMsgs((m) => [...m, {
-        role: 'assistant', text: '', done: true,
-        card: r.answer.card, trace: r.answer.trace, summary: r.answer.summary,
-        step: { n, of: total, title: r.title, why: r.why, skipped: r.skipped, workflow: workflow.title },
-      }]);
+    void agent.runWorkflow(workflowId, subject, {
+      onStepStart: (st) => setRunningStep(st),
+      onStep: (r) => {
+        const n = workflow.steps.findIndex((s2) => s2.capabilityId === r.capabilityId) + 1;
+        collected.push({ title: r.title, why: r.why, card: r.answer.card, summary: r.answer.summary, skipped: r.skipped });
+        setRunningStep(null);
+        setMsgs((m) => [...m, {
+          role: 'assistant', text: '', done: true,
+          card: r.answer.card, trace: r.answer.trace, summary: r.answer.summary,
+          step: { n, of: total, title: r.title, why: r.why, skipped: r.skipped, workflow: workflow.title },
+        }]);
+      },
     }).then(() => {
+      setRunningStep(null);
       setMsgs((m) => [...m, {
         role: 'assistant', text: '', done: true,
         report: { workflow: workflow.title, subject, steps: collected },
@@ -1072,7 +1114,20 @@ ${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+
                 <div className="who" style={m.role === 'user' ? { textAlign: 'right' } : undefined}>{m.role === 'user' ? 'YOU' : 'ARGANTA'}</div>
                 <div className="bub">
                   {m.role === 'assistant'
-                    ? (m.report
+                    ? (m.subjectAsk
+                      ? (
+                        <div className="ag-arrive wf-ask">
+                          <b>Which {m.subjectAsk.kind}?</b>
+                          <em>{m.subjectAsk.workflow} — {m.subjectAsk.hint}</em>
+                          <div className="wf-ask-opts">
+                            {m.subjectAsk.options.map((o) => (
+                              <button key={o} onClick={() => send(o)}>{o}</button>
+                            ))}
+                          </div>
+                          <span className="wf-ask-note">…or type any other {m.subjectAsk.kind}.</span>
+                        </div>
+                      )
+                      : m.report
                       ? (
                         <div className="ag-arrive wf-done">
                           <b>{m.report.workflow} — {m.report.subject}</b>
@@ -1202,7 +1257,22 @@ ${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+
                 </div>
               </div>
             )}
-            {brain === 'agent' && agent.busy && (
+            {brain === 'agent' && runningStep && (
+              <div className="msg assistant">
+                <div className="who">ARGANTA</div>
+                <div className="bub">
+                  <div className="wf-running">
+                    <span className="wf-running-n">{runningStep.n}<em>/{runningStep.of}</em></span>
+                    <span className="wf-running-body">
+                      <b>{runningStep.title}</b>
+                      <em>{runningStep.why}</em>
+                    </span>
+                    <span className="ag-working-orb" aria-hidden />
+                  </div>
+                </div>
+              </div>
+            )}
+            {brain === 'agent' && agent.busy && !runningStep && (
               <div className="msg assistant">
                 <div className="who">ARGANTA</div>
                 <div className="bub">
@@ -1365,7 +1435,7 @@ ${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+
             <div className="wf-pills">
               {WORKFLOWS.map((w) => (
                 <span key={w.id} className="wf-pill-pair">
-                  <button className="wf-pill" onClick={() => startWorkflow(w.id)} title={`${w.hint} — fixed chain, no model`}>
+                  <button className="wf-pill" onClick={() => askForSubject(w.id, false)} title={`${w.hint} — fixed chain, no model`}>
                     <Workflow size={12} strokeWidth={2.2} />
                     <span>{w.pill}</span>
                     <em>{w.steps.length} steps</em>
@@ -1374,7 +1444,7 @@ ${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+
                       modes fail differently — one is auditable, one adapts — and
                       hiding that behind a chord would blur exactly the
                       distinction worth keeping. */}
-                  <button className="wf-pill is-assist" onClick={() => startWorkflow(w.id, true)} title="Same chain, but steps with no data are dropped and supported extras proposed first">
+                  <button className="wf-pill is-assist" onClick={() => askForSubject(w.id, true)} title="Same chain, but steps with no data are dropped and supported extras proposed first">
                     <Sparkles size={12} strokeWidth={2.2} /> assisted
                   </button>
                 </span>
