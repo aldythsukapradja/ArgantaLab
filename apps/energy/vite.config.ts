@@ -1,9 +1,12 @@
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { agentCockpit } from './vite-plugin-agent-cockpit';
 
 export default defineConfig({
-  plugins: [react()],
+  // agentCockpit is apply:'serve' — it exists in dev only and contributes
+  // nothing to a production build. See the plugin for why it is loopback-only.
+  plugins: [react(), agentCockpit()],
   // The shared Arganta runtime contracts — the SAME ones apps/hq builds its
   // agent on: @arganta/agent's pure loop + tool registry, @arganta/ai's provider
   // adapter and model router. apps/energy is not an npm workspace member (the

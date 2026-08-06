@@ -16,3 +16,7 @@ public/wb/
 .env*
 # generated OSDU manifests — build-only input to build-cockpit-spatial.mjs, never shipped
 data-energy/generated/
+
+# Local agent cockpit — live UI state and queued commands, dev only.
+# Runtime scratch between the running app and a local agent; never committed.
+.agent/

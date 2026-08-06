@@ -18,7 +18,10 @@ import './cosmo-fd.css';
 import './cosmo-shell.css';
 import { CosmoAgentOrb } from './CosmoAgentOrb';
 import { CosmoSettings } from './CosmoSettings';
+import { KeynoteSurface } from '../keynote/KeynoteSurface';
 import { CosmoChat } from './CosmoChat';
+import { useAgentCockpit } from '../agent/useAgentCockpit.ts';
+import { Boundary } from './Boundary';
 import { CommandPalette } from '../agent/CommandPalette';
 import { SurfaceErrorBoundary } from './SurfaceErrorBoundary';
 import { useStore } from '../store';
@@ -111,6 +114,10 @@ export function CosmoShell() {
   }, [dark]);
 
   const [nav, setNav] = useState('cockpit');
+  // Dev-only: publish what is on screen to .agent/live-state.json and accept
+  // commands back through the SAME bus the in-app agent uses. No-ops entirely
+  // in a production build. See agent/useAgentCockpit.ts.
+  useAgentCockpit({ nav });
   // A nested surface, or an agent turn, can ask to route elsewhere (Data QC's
   // extraction gate mirror → Knowledge → Extraction Studio). We apply the top-level
   // surface here and leave the intent STANDING — the destination reads its own
@@ -127,6 +134,11 @@ export function CosmoShell() {
   const [legacyNonce, setLegacyNonce] = useState(0);
   const [tourVolveNonce, setTourVolveNonce] = useState(0);
   const [settings, setSettings] = useState(false);
+  // `#keynote` opens the deck straight from a bookmark — the presenter should
+  // not have to walk through Settings in front of the room, and it makes the
+  // deck linkable for rehearsal.
+  const [keynote, setKeynote] = useState(
+    () => typeof window !== 'undefined' && window.location.hash === '#keynote');
   const [chat, setChat] = useState(false);
   const [chatFull, setChatFull] = useState(false);
   /** Manual sidebar collapse. Separate from the automatic collapse the agent triggers,
@@ -364,18 +376,35 @@ export function CosmoShell() {
         </button>
       </nav>
 
-      <CosmoChat
-        open={chat}
-        onClose={() => setChat(false)}
-        onFullChange={setChatFull}
-        fullSignal={chatFullSignal}
-        onFocusCockpit={() => setNav('cockpit')}
-        onZoomVolve={() => setTourVolveNonce((n) => n + 1)}
-        onFieldDevTab={(t) => { setNav('field-development'); setLegacyTab(t); setLegacyNonce((n) => n + 1); }}
-      />
-      <CosmoSettings open={settings} onClose={() => setSettings(false)} dark={dark} setDark={setDark} />
+      {/* Each of these is an independent surface, so each gets its own
+          boundary. Without them a throw in the chat unmounts the whole app —
+          including the keynote — and the screen goes white. */}
+      <Boundary label="Chat">
+        <CosmoChat
+          open={chat}
+          onClose={() => setChat(false)}
+          onFullChange={setChatFull}
+          fullSignal={chatFullSignal}
+          onFocusCockpit={() => setNav('cockpit')}
+          onZoomVolve={() => setTourVolveNonce((n) => n + 1)}
+          onFieldDevTab={(t) => { setNav('field-development'); setLegacyTab(t); setLegacyNonce((n) => n + 1); }}
+        />
+      </Boundary>
+      <Boundary label="Settings">
+        <CosmoSettings open={settings} onClose={() => setSettings(false)} dark={dark} setDark={setDark}
+          onPresent={() => setKeynote(true)} />
+      </Boundary>
+      {/* The keynote owns the whole viewport and portals to <body>, so no
+          ancestor's overflow or z-index can clip it. */}
+      {/* The deck defaults to dark whatever the app theme is — the brief is
+          explicit, and scene 6's dark-to-light turn only works from dark. */}
+      {keynote && (
+        <Boundary label="Keynote">
+          <KeynoteSurface onExit={() => setKeynote(false)} startDark />
+        </Boundary>
+      )}
       {/* ⌘K — the same agent as the chat, a second front door. */}
-      <CommandPalette />
+      <Boundary label="Command palette" silent><CommandPalette /></Boundary>
 
       {/* A running Fieldcraft mission follows the learner into whichever
           lifecycle workspace it is scoped to, so the vertical acts as the lab. */}
