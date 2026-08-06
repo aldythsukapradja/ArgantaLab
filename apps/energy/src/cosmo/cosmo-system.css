@@ -1262,3 +1262,24 @@ html[data-ui="cosmo"] .app.rail-pinned .rail-btn{margin-left:0}
   .ca-lightbox{ padding:0; }
   .ca-lightbox figure{ max-width:100%; height:100%; border-radius:0; }
 }
+
+/* ── well trajectory artifact ───────────────────────────────────────────────
+   Section view plots TVD against horizontal displacement, not against MD.
+   Plotting MD draws a deviated well as though it were vertical — the one thing
+   a trajectory plot exists to disprove. */
+.ca-traj{ padding:10px; }
+.ca-traj-views{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
+.ca-traj figure{ margin:0; display:flex; flex-direction:column; gap:4px; }
+.ca-traj svg{ width:100%; height:auto; display:block; background:rgba(127,127,127,.05); border-radius:7px; }
+.ca-traj figcaption{ font-size:10px; letter-spacing:.02em; color:var(--ink-dim,#6b7280); }
+.ca-axis{ stroke:rgba(127,127,127,.42); stroke-width:1; }
+.ca-path{ fill:none; stroke:#0ea5e9; stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round; }
+.ca-dot-start{ fill:#16a34a; }
+.ca-dot-end{ fill:#e0913a; }
+.ca-traj-facts{
+  display:flex; flex-wrap:wrap; gap:12px; margin-top:9px; padding-top:9px;
+  border-top:1px solid rgba(127,127,127,.14);
+  font-size:11px; color:var(--ink-dim,#6b7280);
+}
+.ca-traj-facts b{ color:var(--ink,#111827); font-variant-numeric:tabular-nums; font-weight:620; }
+.dark .ca-traj svg{ background:rgba(255,255,255,.04); }

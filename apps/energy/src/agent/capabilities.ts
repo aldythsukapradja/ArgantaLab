@@ -752,6 +752,12 @@ export const CAPABILITIES: Capability[] = [
       ],
       chips: alsoAvailable(n, 'well.trajectory'),
       provenance: prov(n),
+      // The survey itself, drawn in the answer. Gated on has.traj -- the same
+      // measured flag the probe uses -- so a well with no published survey gets
+      // the card and no empty plot.
+      ...(asBool(n.has.traj) ? {
+        artifact: { component: 'well-trajectory', props: { well: n.name, name: `Well path — ${n.name}` } },
+      } : {})
     }),
   },
   {

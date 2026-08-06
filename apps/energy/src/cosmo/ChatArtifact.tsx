@@ -15,7 +15,7 @@
 // off the screen has stopped being an answer and become a takeover.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Images, ExternalLink } from 'lucide-react';
+import { Search, Images, ExternalLink, Route } from 'lucide-react';
 import {
   figuresForEntity, figureSrc, figureAttribution, isShowable, figureTypeLabel,
   type RegistryFigure,
@@ -127,6 +127,91 @@ function BasinFigures({ entityId, name }: { entityId: string; name?: string }) {
   );
 }
 
+// ── well trajectory ──────────────────────────────────────────────────────────
+
+/** One directional survey station, as the wb bundle publishes it. */
+interface Station { md: number; tvd: number; dispNs: number; dispEw: number; incl?: number }
+
+/** Slug matching the wb bundle's own file naming (see dataqc/bundle.ts). */
+const slugWell = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const nice = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toLocaleString('en-US') : v.toFixed(1));
+
+function WellTrajectory({ well }: { well: string }) {
+  const [stations, setStations] = useState<Station[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const base = import.meta.env.BASE_URL ?? '/';
+    fetch(`${base}wb/traj-${slugWell(well)}.json`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('missing'))))
+      .then((j) => { if (alive) setStations(Array.isArray(j?.stations) ? j.stations : []); })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [well]);
+
+  const geom = useMemo(() => {
+    if (!stations?.length) return null;
+    // Section view is TVD against HORIZONTAL DISPLACEMENT, not against MD.
+    // Plotting MD would draw a deviated well as if it were vertical, which is
+    // the one thing a trajectory plot exists to disprove.
+    const pts = stations
+      .filter((p) => Number.isFinite(p.tvd) && Number.isFinite(p.dispNs) && Number.isFinite(p.dispEw))
+      .map((p) => ({ ...p, hd: Math.hypot(p.dispNs, p.dispEw) }));
+    if (pts.length < 2) return null;
+    const maxHd = Math.max(...pts.map((p) => p.hd), 1);
+    const maxTvd = Math.max(...pts.map((p) => p.tvd), 1);
+    const ext = Math.max(...pts.map((p) => Math.max(Math.abs(p.dispNs), Math.abs(p.dispEw))), 1);
+    return { pts, maxHd, maxTvd, ext, last: pts[pts.length - 1] };
+  }, [stations]);
+
+  if (failed) return <div className="ca-empty">No survey file published for {well}.</div>;
+  if (!stations) return <div className="ca-loading">Loading the directional survey…</div>;
+  if (!geom) return <div className="ca-empty">The survey for {well} has too few usable stations to plot.</div>;
+
+  const W = 300, H = 200, PAD = 26;
+  const sx = (hd: number) => PAD + (hd / geom.maxHd) * (W - PAD * 2);
+  const sy = (tvd: number) => PAD + (tvd / geom.maxTvd) * (H - PAD * 2);
+  const px = (ew: number) => W / 2 + (ew / geom.ext) * (W / 2 - PAD);
+  const py = (ns: number) => H / 2 - (ns / geom.ext) * (H / 2 - PAD);
+
+  return (
+    <div className="ca-traj">
+      <div className="ca-traj-views">
+        <figure>
+          <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${well} section view`}>
+            <line x1={PAD} y1={PAD} x2={PAD} y2={H - PAD} className="ca-axis" />
+            <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} className="ca-axis" />
+            <path d={geom.pts.map((p, i) => `${i ? 'L' : 'M'}${sx(p.hd).toFixed(1)},${sy(p.tvd).toFixed(1)}`).join('')} className="ca-path" />
+            <circle cx={sx(geom.pts[0].hd)} cy={sy(geom.pts[0].tvd)} r="2.6" className="ca-dot-start" />
+            <circle cx={sx(geom.last.hd)} cy={sy(geom.last.tvd)} r="2.6" className="ca-dot-end" />
+          </svg>
+          <figcaption>Section · TVD vs horizontal displacement</figcaption>
+        </figure>
+
+        <figure>
+          <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${well} plan view`}>
+            <line x1={PAD} y1={H / 2} x2={W - PAD} y2={H / 2} className="ca-axis" />
+            <line x1={W / 2} y1={PAD} x2={W / 2} y2={H - PAD} className="ca-axis" />
+            <path d={geom.pts.map((p, i) => `${i ? 'L' : 'M'}${px(p.dispEw).toFixed(1)},${py(p.dispNs).toFixed(1)}`).join('')} className="ca-path" />
+            <circle cx={px(0)} cy={py(0)} r="2.6" className="ca-dot-start" />
+            <circle cx={px(geom.last.dispEw)} cy={py(geom.last.dispNs)} r="2.6" className="ca-dot-end" />
+          </svg>
+          <figcaption>Plan · N up, from the wellhead</figcaption>
+        </figure>
+      </div>
+
+      <div className="ca-traj-facts">
+        <span><b>{geom.pts.length}</b> stations</span>
+        <span>TD <b>{nice(geom.last.md)}</b> m MD</span>
+        <span>TVD <b>{nice(geom.last.tvd)}</b> m</span>
+        <span>Step-out <b>{nice(geom.last.hd)}</b> m</span>
+      </div>
+    </div>
+  );
+}
+
 // ── the host ─────────────────────────────────────────────────────────────────
 
 export interface ChatArtifactProps {
@@ -144,6 +229,11 @@ export function ChatArtifact({ component, props }: ChatArtifactProps) {
         if (!entityId) return null;
         return <BasinFigures entityId={entityId} name={str(props.name)} />;
       }
+      case 'well-trajectory': {
+        const well = str(props.well);
+        if (!well) return null;
+        return <WellTrajectory well={well} />;
+      }
       default:
         // An unknown key is a wiring mistake, not something to paper over with a
         // placeholder that looks like content.
@@ -155,7 +245,10 @@ export function ChatArtifact({ component, props }: ChatArtifactProps) {
 
   return (
     <div className="chat-artifact">
-      <div className="ca-head"><Images size={12} strokeWidth={2.2} /><span>{str(props.name) ?? 'Figures'}</span></div>
+      <div className="ca-head">
+        {component === 'well-trajectory' ? <Route size={12} strokeWidth={2.2} /> : <Images size={12} strokeWidth={2.2} />}
+        <span>{str(props.name) ?? (component === 'well-trajectory' ? 'Well path' : 'Figures')}</span>
+      </div>
       {body}
     </div>
   );
