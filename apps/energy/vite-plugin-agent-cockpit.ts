@@ -133,6 +133,24 @@ export function agentCockpit(): Plugin {
         res.end(JSON.stringify(safe));
       });
 
+      // The exact prompt last sent to a Frontier engine. Written so a failing
+      // mission can be DIAGNOSED rather than guessed at: when an agent insists
+      // a capability does not exist, the first question is what it was actually
+      // told, and until now that could only be inferred.
+      server.middlewares.use('/__agent/last-mission', async (req, res) => {
+        if (!isLocal(req.socket.remoteAddress)) { res.statusCode = 403; res.end('local only'); return; }
+        const file = path.join(dir, 'last-mission.txt');
+        if (req.method === 'POST') {
+          try {
+            fs.writeFileSync(file, await readBody(req));
+            res.statusCode = 204; res.end();
+          } catch { res.statusCode = 400; res.end('bad'); }
+          return;
+        }
+        res.setHeader('content-type', 'text/plain');
+        res.end(fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '(no mission sent yet)');
+      });
+
       server.config.logger.info('  ➜  agent cockpit:  .agent/live-state.json  ·  .agent/commands.json');
     },
   };

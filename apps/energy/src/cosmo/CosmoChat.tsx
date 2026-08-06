@@ -728,7 +728,14 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
     const cfg = ENGINE_MODELS[engine];
     const optionLabel = (cfg.options.find((o) => o.id === model) || cfg.options[0]).label;
     runModelRef.current = `${cfg.capsulePrefix} ${optionLabel}`;
-    bridge.startMission(withHistory(msgs, text), {
+    const missionPrompt = withHistory(msgs, text);
+    // Record what actually goes over the wire. Two rounds were spent arguing
+    // about whether the state block was reaching the agent; this makes it a
+    // fact anyone can check with `cat`.
+    if (import.meta.env.DEV) {
+      void fetch('/__agent/last-mission', { method: 'POST', body: missionPrompt }).catch(() => {});
+    }
+    bridge.startMission(missionPrompt, {
       engine, model: model || undefined,
       missionId: `energy_${Date.now().toString(36)}_${bridgeMissionsRef.current}`,
     });
