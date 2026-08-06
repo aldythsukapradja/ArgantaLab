@@ -27,12 +27,12 @@ import { useV0Basis } from './use-v0';
 import type { SearchEntry } from '../../cosmo/cockpit-search';
 
 const VIEWS: StudioView[] = [
-  // The drainage map IS the 3D one: streamlines only mean something read against the
-  // structure they are flowing through, and a flat map throws that away. The 2D plan
-  // stays because a plan view is the right shape for judging PATTERN — spacing,
-  // symmetry, gaps — which perspective distorts.
-  { id: '3d', label: 'Drainage', hint: 'The drainage map, in the same 3D viewport as the grid, structure and well trajectories' },
-  { id: 'map', label: 'Plan view', hint: 'The same streamlines from directly above — the right shape for judging pattern and spacing' },
+  // ONE drainage view with a 2D/3D toggle on it, not two tabs.
+  //
+  // As two tabs it was possible to be sitting in the plan view without realising the
+  // 3D existed — which is exactly what happened. A dimension is a way of LOOKING at
+  // one thing, not a different thing, so it belongs on the view rather than beside it.
+  { id: 'drainage', label: 'Drainage', hint: 'Streamlines between the wells — in 3D over the grid, or in plan' },
   { id: 'allocation', label: 'Allocation', hint: 'Which injector supports which producer, and how much is lost' },
   { id: 'tof', label: 'Time of flight', hint: 'How long injected water takes to arrive' },
 ];
@@ -46,7 +46,11 @@ export function Streamline({ field }: { field: SearchEntry }) {
   // canvas and read as "there is no 3D here" rather than "there is no grid loaded".
   const basis = useV0Basis(ws, ready);
   const ink = useThemeInk();
-  const [view, setView] = useState('3d');
+  const [view, setView] = useState('drainage');
+  // 3D first: the lines only mean something read against the structure they flow
+  // through. Plan is the right shape for judging PATTERN — spacing, symmetry,
+  // gaps — which perspective distorts, so it is one click away, not hidden.
+  const [dim, setDim] = useState<'3d' | '2d'>('3d');
   const [run, setRun] = useState<StoredRun | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [stepIx, setStepIx] = useState<number | null>(null);
@@ -159,6 +163,12 @@ export function Streamline({ field }: { field: SearchEntry }) {
       onView={setView}
       toolbar={run && (
         <span className="sim-toolbar">
+          <span className="mp-seg">
+            <button className={dim === '3d' ? 'on' : ''} onClick={() => setDim('3d')}
+              title="Over the grid, structure and well paths">3D</button>
+            <button className={dim === '2d' ? 'on' : ''} onClick={() => setDim('2d')}
+              title="From directly above — the right shape for judging pattern and spacing">plan</button>
+          </span>
           <label>step
             <input type="range" min={0} max={Math.max(0, run.fluxX.length - 1)} step={1}
               value={ix} onChange={(e) => setStepIx(Number(e.target.value))} style={{ width: 120 }} />
@@ -180,7 +190,7 @@ export function Streamline({ field }: { field: SearchEntry }) {
             drainage and the saturation animation always describe the same flood.
           </Blank>
         )
-        : view === '3d' ? (
+        : view === 'drainage' && dim === '3d' ? (
           <div className="sim3d">
             {!basis.ready && (
               <div className="sim-empty"><em>{basis.note ?? 'loading the v0 grid…'}</em></div>
@@ -205,7 +215,7 @@ export function Streamline({ field }: { field: SearchEntry }) {
             </p>
           </div>
         )
-        : view === 'map' ? (
+        : view === 'drainage' ? (
           <MapPane run={run} traced={traced} colourOf={colourOf} ink={ink}
             maxDraw={maxDraw} onMaxDraw={setMaxDraw} />
         )
