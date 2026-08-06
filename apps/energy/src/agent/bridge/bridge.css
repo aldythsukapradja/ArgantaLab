@@ -90,7 +90,13 @@ html[data-ui="cosmo"] .bf-approval-done.denied { color: #ef4444; }
 
 /* ── engine toggle (Arganta Core · Frontier: Claude Code / Codex) ────────── */
 html[data-ui="cosmo"] .bf-engines {
-  display: flex; align-items: center; gap: 6px; padding: 8px 16px 0;
+  display: flex; align-items: center; gap: 6px;
+  /* Symmetric vertical padding. It was `8px 16px 0` — top spacing with none
+     below — so the row hugged the bottom of its band and read as pushed down.
+     The Frontier group is taller than a bare pill (it carries its own label and
+     padding), so the row's height is set by the group; equal padding is what
+     puts BOTH inside a centred band rather than resting on its floor. */
+  padding: 8px 16px;
   min-width: 0; overflow-x: auto; overflow-y: hidden;
 }
 html[data-ui="cosmo"] .bf-engine-pill {
