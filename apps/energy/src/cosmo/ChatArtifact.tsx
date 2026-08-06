@@ -15,7 +15,7 @@
 // off the screen has stopped being an answer and become a takeover.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Images, ExternalLink, Route, Activity } from 'lucide-react';
+import { Search, Images, ExternalLink, Route, Activity, Eye } from 'lucide-react';
 import {
   figuresForEntity, figureSrc, figureAttribution, isShowable, figureTypeLabel,
   type RegistryFigure,
@@ -39,9 +39,30 @@ function loadSpine(): Promise<Spine> {
   return spinePromise;
 }
 
+/** The prompt handed to a Frontier engine for one figure.
+ *
+ *  It names the FILE, because the agent is a local process that can open it —
+ *  and it says so explicitly, since an agent told only "look at this figure"
+ *  will apologise that it cannot see images. The caption and attribution ride
+ *  along as context the agent would otherwise have to guess at. */
+function examinePrompt(f: RegistryFigure, basin?: string): string {
+  return [
+    `Open and examine this figure: ${f.local_asset_path}`,
+    '',
+    `It is a ${figureTypeLabel(f.figure_type)}${basin ? ` linked to ${basin}` : ''}.`,
+    f.title ? `Title: ${f.title}` : '',
+    f.caption ? `Caption: ${f.caption}` : '',
+    `Source: ${figureAttribution(f)}`,
+    '',
+    'Read the image file directly, then tell me what it actually shows and what it',
+    'implies for the play. If the image is unreadable or you cannot open it, say so',
+    'plainly rather than describing what a figure of this type usually contains.',
+  ].filter(Boolean).join('\n');
+}
+
 // ── basin figures ────────────────────────────────────────────────────────────
 
-function BasinFigures({ entityId, name }: { entityId: string; name?: string }) {
+function BasinFigures({ entityId, name, onExamine }: { entityId: string; name?: string; onExamine?: (p: string) => void }) {
   const [spine, setSpine] = useState<Spine | null>(spineCache);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState<RegistryFigure | null>(null);
@@ -114,11 +135,26 @@ function BasinFigures({ entityId, name }: { entityId: string; name?: string }) {
               {/* Attribution is not decoration: every figure here is someone
                   else's work, shown because it is public domain. */}
               <cite>{figureAttribution(open)}</cite>
-              {open.source_url && (
-                <a href={open.source_url} target="_blank" rel="noopener noreferrer nofollow">
-                  <ExternalLink size={11} strokeWidth={2.2} /> Source
-                </a>
-              )}
+              <div className="ca-fig-actions">
+                {open.source_url && (
+                  <a href={open.source_url} target="_blank" rel="noopener noreferrer nofollow">
+                    <ExternalLink size={11} strokeWidth={2.2} /> Source
+                  </a>
+                )}
+                {onExamine && open.local_asset_path && (
+                  // The Frontier agent runs on THIS machine with the repo as its
+                  // cwd, so it can open the PNG itself. What travels is the path,
+                  // not the image -- the bridge carries text only, and inventing
+                  // an upload channel that does not exist would fail silently.
+                  <button
+                    type="button"
+                    className="ca-fig-examine"
+                    onClick={() => { onExamine(examinePrompt(open, name)); setOpen(null); }}
+                  >
+                    <Eye size={11} strokeWidth={2.2} /> Examine this figure
+                  </button>
+                )}
+              </div>
             </figcaption>
           </figure>
         </div>
@@ -318,17 +354,20 @@ function WellLogs({ well }: { well: string }) {
 export interface ChatArtifactProps {
   component: string;
   props: Record<string, unknown>;
+  /** Hand a figure to the Frontier agent, which runs on this machine and can
+   *  open the file directly. Absent when no Frontier engine is selected. */
+  onExamine?: (prompt: string) => void;
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
 
-export function ChatArtifact({ component, props }: ChatArtifactProps) {
+export function ChatArtifact({ component, props, onExamine }: ChatArtifactProps) {
   const body = (() => {
     switch (component) {
       case 'basin-figures': {
         const entityId = str(props.entityId);
         if (!entityId) return null;
-        return <BasinFigures entityId={entityId} name={str(props.name)} />;
+        return <BasinFigures entityId={entityId} name={str(props.name)} onExamine={onExamine} />;
       }
       case 'well-logs': {
         const well = str(props.well);

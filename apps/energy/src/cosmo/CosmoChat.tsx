@@ -1008,7 +1008,15 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                           {m.text && <div dangerouslySetInnerHTML={{ __html: mdToHtml(m.text) }} />}
                           <AgentCard card={m.card} onChip={onChip} />
                           {m.card.artifact && (
-                            <ChatArtifact component={m.card.artifact.component} props={m.card.artifact.props} />
+                            <ChatArtifact
+                              component={m.card.artifact.component}
+                              props={m.card.artifact.props}
+                              // Only offered when a Frontier engine is selected.
+                              // Arganta Core is a local tool-caller with no
+                              // vision; showing it an image is not something it
+                              // can do, so the affordance is simply absent.
+                              onExamine={brain === 'agent' ? undefined : runFrontierMission}
+                            />
                           )}
                           {m.summary && <p className="ag-summary">{m.summary}</p>}
                           {m.trace && <AgentTrace trace={m.trace} />}

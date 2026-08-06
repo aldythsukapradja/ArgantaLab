@@ -1347,3 +1347,15 @@ html[data-ui="cosmo"] .app.rail-pinned .rail-btn{margin-left:0}
   .ag-working-text{ animation:none; -webkit-text-fill-color:currentColor; background:none }
   .ag-arrive, .ag-arrive .ag-summary, .ag-arrive .ag-trace, .ag-arrive .chat-artifact{ animation:none }
 }
+
+/* Hand a figure to the Frontier agent. Shown only when a Frontier engine is
+   selected — Arganta Core is a local tool-caller with no vision, and offering
+   it would be offering something that cannot happen. */
+.ca-fig-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:2px; }
+.ca-fig-examine{
+  display:inline-flex; align-items:center; gap:5px; cursor:pointer; font:inherit;
+  padding:5px 10px; border-radius:7px; font-size:11px; font-weight:560;
+  background:rgba(14,165,233,.1); border:1px solid rgba(14,165,233,.38); color:#0284c7;
+}
+.ca-fig-examine:hover{ background:rgba(14,165,233,.18); }
+.dark .ca-fig-examine{ color:#7dd3fc; }
