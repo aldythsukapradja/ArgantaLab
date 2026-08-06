@@ -23,7 +23,13 @@ const VB = 100;
 interface Ring { d: string; kutei: boolean }
 interface Pt { x: number; y: number; r: number; kutei: boolean }
 interface Stop { x: number; y: number; z: number }
-interface Lens { rings: Ring[]; fields: Pt[]; stops: [Stop, Stop, Stop] }
+interface Link { a: Pt; b: Pt }
+interface Lens {
+  rings: Ring[]; fields: Pt[]; links: Link[];
+  /** Province-to-province arcs for the final stop. */
+  arcs: string[];
+  stops: [Stop, Stop, Stop, Stop];
+}
 
 function useIndonesia(): Lens | null {
   const [lens, setLens] = useState<Lens | null>(null);
@@ -93,9 +99,72 @@ function useIndonesia(): Lens | null {
         ? { x: kx / kn, y: ky / kn, z: 5.2 }
         : { x: VB / 2, y: VB / 2, z: 5.2 };
 
+      // ── the fourth stop: every province joined to every other ─────────────
+      // Quadratic Béziers, not chords. A straight line between two basins
+      // reads as a wire; an arc reads as a relationship — and thirteen
+      // straight lines through one small circle is a starburst nobody can
+      // parse. The control point is pushed PERPENDICULAR to the chord, by an
+      // amount proportional to its length, so long links bow more than short
+      // ones and no two arcs overlap along their whole run.
+      const centres: Array<{ x: number; y: number }> = [];
+      for (const code of INDONESIA_CODES) {
+        const fs2 = (scope.provinces[code] ?? []).filter((f) => f.fly);
+        if (!fs2.length) continue;
+        let sx = 0, sy = 0;
+        for (const f of fs2) {
+          const [x, y] = px(f.fly.lon, f.fly.lat);
+          sx += x; sy += y;
+        }
+        centres.push({ x: sx / fs2.length, y: sy / fs2.length });
+      }
+      const arcs: string[] = [];
+      for (let i = 0; i < centres.length; i += 1) {
+        for (let j = i + 1; j < centres.length; j += 1) {
+          const a = centres[i], b2 = centres[j];
+          const mx = (a.x + b2.x) / 2, my = (a.y + b2.y) / 2;
+          const dx = b2.x - a.x, dy = b2.y - a.y;
+          const len = Math.hypot(dx, dy) || 1;
+          // Perpendicular unit vector, consistently signed so the family of
+          // arcs bows the same way and reads as one weave.
+          const bow = len * 0.22;
+          const cxp = mx + (-dy / len) * bow;
+          const cyp = my + (dx / len) * bow;
+          arcs.push(`M${a.x.toFixed(2)},${a.y.toFixed(2)} Q${cxp.toFixed(2)},${cyp.toFixed(2)} ${b2.x.toFixed(2)},${b2.y.toFixed(2)}`);
+        }
+      }
+
+      // Kutei's fields, wired to their nearest neighbours. A basin is not a
+      // scatter of dots — it is one connected system, which is the entire
+      // premise of the deck, so the picture had better say so. Three links per
+      // field: enough to read as a network, few enough to stay legible when
+      // the lens is zoomed all the way out.
+      const kf = fields.filter((f) => f.kutei);
+      const links: Link[] = [];
+      const seen = new Set<string>();
+      for (let i = 0; i < kf.length; i += 1) {
+        const near = kf
+          .map((b, j) => ({ b, j, d: (b.x - kf[i].x) ** 2 + (b.y - kf[i].y) ** 2 }))
+          .filter((x) => x.j !== i)
+          .sort((p, q) => p.d - q.d)
+          .slice(0, 3);
+        for (const n of near) {
+          const key = i < n.j ? `${i}-${n.j}` : `${n.j}-${i}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          links.push({ a: kf[i], b: n.b });
+        }
+      }
+
       setLens({
-        rings, fields,
-        stops: [{ x: VB / 2, y: VB / 2, z: 1 }, kutei, focus ?? { ...kutei, z: 26 }],
+        rings, fields, links, arcs,
+        stops: [
+          { x: VB / 2, y: VB / 2, z: 1 },
+          kutei,
+          focus ?? { ...kutei, z: 26 },
+          // Back out to the whole archipelago, a touch wider than we started,
+          // so the last stop is visibly a RETURN rather than the beginning.
+          { x: VB / 2, y: VB / 2, z: 0.92 },
+        ],
       });
     });
     return () => { live = false; };
@@ -129,6 +198,10 @@ export function BasinLens({ depth }: { depth: number }) {
   }, [lens, depth]);
 
   const { x, y, z } = view;
+  // Arcs belong to the final leg. Two legs of three carry no weave at all, so
+  // this fades in only across the last one.
+  const legs = 3;
+  const woven = Math.max(0, Math.min(1, depth * legs - (legs - 1)));
 
   return (
     <div className="kn-lens" aria-hidden>
@@ -157,9 +230,26 @@ export function BasinLens({ depth }: { depth: number }) {
                    thickening into a slab as the lens descends. */
                 strokeWidth={(r.kutei ? 0.7 : 0.4) / z} />
             ))}
+            {/* The weave: every province joined to every other, on the last
+                leg only. Drawn first so it sits beneath the outlines. */}
+            {woven > 0 && lens?.arcs.map((d, i) => (
+              <path key={`a${i}`} className="kn-lens-arc" d={d}
+                strokeWidth={0.3 / z}
+                style={{ opacity: woven * 0.5, animationDelay: `${(i % 11) * 0.21}s` }} />
+            ))}
+            {/* Links under the dots, so a dot is never cut by its own edge. */}
+            {lens?.links.map((l, i) => (
+              <line key={`l${i}`} className="kn-lens-link"
+                x1={l.a.x} y1={l.a.y} x2={l.b.x} y2={l.b.y}
+                strokeWidth={0.28 / z}
+                /* Staggered so the network pulses along its edges rather than
+                   blinking as one block. */
+                style={{ animationDelay: `${(i % 9) * 0.34}s` }} />
+            ))}
             {lens?.fields.map((f, i) => (
               <circle key={i} className={'kn-lens-field' + (f.kutei ? ' on' : '')}
-                cx={f.x} cy={f.y} r={f.r / Math.sqrt(z)} />
+                cx={f.x} cy={f.y} r={f.r / Math.sqrt(z)}
+                style={f.kutei ? { animationDelay: `${(i % 7) * 0.29}s` } : undefined} />
             ))}
           </g>
         </g>

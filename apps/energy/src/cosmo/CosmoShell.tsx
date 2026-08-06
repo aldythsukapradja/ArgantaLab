@@ -95,7 +95,13 @@ const M_GROUPS: Record<string, { title: string; items: SheetItem[] }> = {
 type NavItem = { id: string; name: string; icon: typeof Compass; color?: string; status?: string };
 
 export function CosmoShell() {
-  const [dark, setDark] = useState(false);
+  // The keynote embeds this shell in an iframe (`?keynote-demo=1`) on the
+  // Solution slide. That deck is black end to end, so a light app inside it
+  // reads as a bright rectangle punched through the middle of the frame —
+  // boot dark when we are the demo. The user can still toggle either way.
+  const [dark, setDark] = useState(
+    () => typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).has('keynote-demo'));
   useEffect(() => {
     const html = document.documentElement;
     const prevTheme = html.getAttribute('data-theme');

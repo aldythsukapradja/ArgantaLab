@@ -244,7 +244,14 @@ function S02() {
   return (
     <section className="kn-scene">
       <div className="kn-eyebrow" data-rise>Why I am here</div>
-      <h2 className="kn-punch" data-rise="text">Nearly the entire upstream lifecycle.</h2>
+      <h2 className="kn-punch" data-rise="text">
+        Fifteen years across nearly the entire upstream lifecycle.
+      </h2>
+      <p className="kn-why" data-rise="text">
+        The motive is simpler than the record: to give something back to the
+        country that trained me — by preserving the understanding, so the next
+        generation inherits an opportunity instead of a gap.
+      </p>
 
       <div className="kn-journey">
         <div className="kn-journey-row">
@@ -318,111 +325,69 @@ const SCALES = [
   { name: 'Petroleum System', note: 'thirteen provinces, one framework' },
   { name: 'Tectonostratigraphy', note: 'Kutei · 3817' },
   { name: 'Field Analog', note: 'one field, and its neighbours' },
+  // The descent ends by reversing: everything it just looked at, joined.
+  { name: 'Unified Indonesian Petroleum Geology', note: 'one knowledge base' },
 ];
-
-/** The four things that spread — replacing the four that were owned. */
-const FOUR = ['A shared vocabulary.', 'A shared framework.', 'A shared record.', 'A shared future.'];
 
 function S04() {
   const [depth, setDepth] = useState(0);        // 0 → 1 across the three stops
-  const [act, setAct] = useState<1 | 2>(1);
 
   useEffect(() => {
-    if (prefersReducedMotion()) { setDepth(1); setAct(2); return; }
-    // One continuous fall, then the turn. Driven by GSAP rather than a CSS
-    // animation so it shares the deck's clock. Linear here on purpose — the
-    // lens eases each leg itself, and easing twice reads as a stutter.
+    if (prefersReducedMotion()) { setDepth(1); return; }
+    // One continuous fall. Driven by GSAP rather than a CSS animation so it
+    // shares the deck's clock. Linear on purpose — the lens eases each leg
+    // itself, and easing twice reads as a stutter.
     const o = { d: 0 };
     const tw = gsap.to(o, {
-      d: 1, duration: 8.5, ease: 'none', delay: 1.1,
+      d: 1, duration: 11, ease: 'none', delay: 1.1,
       onUpdate: () => setDepth(o.d),
     });
-    const t = setTimeout(() => setAct(2), 10600);
-    return () => { tw.kill(); clearTimeout(t); };
+    return () => { tw.kill(); };
   }, []);
 
   const at = Math.min(SCALES.length - 1, Math.round(depth * (SCALES.length - 1)));
 
   return (
-    <section className="kn-full kn-descent kn-descent-split">
-      {/* Act I is the lens and nothing else — one circle, centred, behind the
-          type. Act II carries NO field of its own: the gold particle cloud that
-          used to live here read as static, the same failure as the cyan one it
-          replaced. The deck's terrain is behind both acts already, and one
-          sentence on an empty frame is stronger than one on noise. */}
-      {/* Naming a body of work is a claim; showing it is evidence. Each stop
-          of the descent now brings up the wedge it names, read from the same
-          corpus as the rest of the app. */}
-      {act === 1 && <Wedges stop={at} />}
-
-      <div className="kn-scene-inner kn-descent-inner">
-        <div className="kn-center kn-turn-stack">
-          {act === 1 && <BasinLens depth={depth} />}
-          {/* ── Act I ── */}
-          <div className="kn-act" data-act-1>
-            <div className="kn-eyebrow" data-rise>The descent</div>
-            <h2 className="kn-scale" data-scale>{SCALES[at].name}</h2>
-            <p className="kn-scale-note" data-scale-note>{SCALES[at].note}</p>
-            <div className="kn-rungs" aria-hidden>
-              {SCALES.map((s, i) => (
-                <span key={s.name} className={'kn-rung' + (i <= at ? ' on' : '')} />
-              ))}
-            </div>
-            <h3 className="kn-mega kn-descent-line" data-act1-line>
-              Every scale is the same question, asked&nbsp;closer.
-            </h3>
+    <section className="kn-full kn-descent">
+      {/* Title on top, then two equal panels: the instrument and the evidence.
+          The second act — "an understanding, once shared, cannot be taken
+          back", and the four shared lines — is gone. It was a second thesis on
+          a slide that already had one, and it made the frame jump halfway
+          through a single thought. */}
+      <div className="kn-descent-grid">
+        <header className="kn-descent-head">
+          <div className="kn-eyebrow" data-rise>The descent</div>
+          <h2 className="kn-scale" data-scale>{SCALES[at].name}</h2>
+          <p className="kn-scale-note" data-scale-note>{SCALES[at].note}</p>
+          <div className="kn-rungs" aria-hidden>
+            {SCALES.map((sc, i) => (
+              <span key={sc.name} className={'kn-rung' + (i <= at ? ' on' : '')} />
+            ))}
           </div>
+        </header>
 
-          {/* ── Act II — same grid cell, so the turn happens in place ── */}
-          <div className="kn-act" data-act-2>
-            <div className="kn-eyebrow kn-eyebrow-gold" data-act2-eyebrow>And then it spreads</div>
-            <h2 className="kn-mega" data-act2-line>
-              An understanding, once shared, cannot be taken&nbsp;back.
-            </h2>
-            <div className="kn-four">
-              {FOUR.map((t) => <span key={t} className="kn-four-line" data-four>{t}</span>)}
-            </div>
-          </div>
+        <div className="kn-descent-pair">
+          <BasinLens depth={depth} />
+          <Wedges stop={at} />
         </div>
       </div>
-
-      {/* Sang Saka Merah-Putih: RED above WHITE. A band along the floor, below
-          everything — never a wash across the type. */}
-      <div className="kn-flagband" data-flag aria-hidden><i /><i /></div>
     </section>
   );
 }
 
 const s04api: SceneApi = {
   enter: (root) => {
-    const tl = gsap.timeline();
-    const q = (s: string) => root.querySelector(s);
-    const act1 = q('[data-act-1]'), act2 = q('[data-act-2]');
-    gsap.set(act2, { opacity: 0, y: 34 });
-    gsap.set(q('[data-flag]'), { scaleX: 0, transformOrigin: 'left center' });
-
-    // ── Act I: the fall ──────────────────────────────────────────────────────
-    tl.add(riseIn(root, '[data-act-1] .kn-eyebrow'));
-    hold(tl, 7.4);                       // the descent plays alone; say nothing
-    tl.add(riseLines(q('[data-act1-line]'), { duration: 1.4, stagger: 0.1 }));
-    hold(tl, 1.9);
-
-    // ── the turn ─────────────────────────────────────────────────────────────
-    // Act I lifts away rather than cutting: the descent is not undone, it is
-    // simply no longer what we are looking at.
-    tl.to(act1, { opacity: 0, y: -34, filter: 'blur(10px)', duration: dur(1.4), ease: 'power2.inOut' });
-    tl.to(act2, { opacity: 1, y: 0, duration: dur(1.5), ease: SETTLE }, '-=0.75')
-      .add(riseLines(q('[data-act2-line]'), { duration: 1.5, stagger: 0.11 }), '-=1.05');
-    tl.fromTo(root.querySelectorAll('[data-four]'),
-      { opacity: 0, y: 22 },
-      { opacity: 1, y: 0, duration: dur(1.0), stagger: dur(0.5), ease: 'power2.out' }, '-=0.6');
-    tl.to(q('[data-flag]'), { scaleX: 1, duration: dur(2.1), ease: 'power3.inOut' }, '-=1.4');
+    const tl = riseIn(root, '.kn-eyebrow');
+    // The two panels arrive together and then the fall runs on its own clock.
+    tl.fromTo(root.querySelectorAll('.kn-lens, .kn-wedges'),
+      { opacity: 0, y: 26 },
+      { opacity: 1, y: 0, duration: dur(1.2), stagger: dur(0.14), ease: SETTLE }, '-=0.6');
     return tl;
   },
   exit: (root) => fadeOut(root),
 };
 
-// ═══ 5 · The Platform ═══════════════════════════════════ Confidence ══════
+// ═══ 5 · Phase One, Built ═══════════════════════════════ Confidence ══════
 // The demo is the point of this slide, so it gets three quarters of the wall.
 // The copy is compressed into a left rail and the app is shown at a reduced
 // zoom so whole screens — not fragments — are legible from the back row.
@@ -430,12 +395,13 @@ function S05() {
   return (
     <section className="kn-split">
       <div className="kn-split-copy">
-        <div className="kn-eyebrow" data-rise>The platform</div>
+        <div className="kn-eyebrow" data-rise>Phase one · result</div>
         <h2 className="kn-punch" data-rise="text">
-          Technology is not the vision.
+          This part is not a proposal. It already runs.
         </h2>
         <p className="kn-quiet" data-rise="text" style={{ marginTop: 'var(--gap)' }}>
-          It makes the vision usable.
+          Built on open data, in the evenings, by one geologist who wanted to
+          see whether it could be done at all.
         </p>
       </div>
       <div className="kn-split-stage">
@@ -454,21 +420,24 @@ function S05() {
 // The order is the argument: you cannot ask a student to interrogate a basin
 // before you have taught them how, and an interpretation nobody reads is not a
 // contribution. Train, then explore, then publish.
+// The order is the argument: prove it on data anyone can check, then earn the
+// right to curate Indonesia's own, then hand the whole thing to the people who
+// will still be using it in thirty years.
 const STAGES = [
   {
-    i: '01', n: 'Phase one', name: 'TRAIN', accent: '#69D6FF',
-    words: ['Foundations.', 'Basin thinking.', 'AI as an instrument.'],
-    out: 'A shared curriculum',
+    i: '01', n: 'Phase one · proof of concept', name: 'FOUNDATION', accent: '#69D6FF',
+    words: ['Open data — USGS, AAPG.', 'Schema and structure.', 'Backend and front end.'],
+    out: 'A working MVP',
   },
   {
-    i: '02', n: 'Phase two', name: 'EXPLORE', accent: '#D8B15A',
-    words: ['Choose a basin.', 'Interrogate it.', 'Defend it.'],
-    out: 'An original interpretation',
+    i: '02', n: 'Phase two · scale', name: 'SHARPEN', accent: '#D8B15A',
+    words: ['Indonesian curated data.', 'Knowledge unified.', 'Peer review.'],
+    out: 'A national vertical',
   },
   {
-    i: '03', n: 'Phase three', name: 'PUBLISH', accent: '#E8ECF2',
-    words: ['Present.', 'Peer review.', 'Record.'],
-    out: 'A citable contribution',
+    i: '03', n: 'Phase three · adoption', name: 'PUBLISH', accent: '#E8ECF2',
+    words: ['Classes for students and fresh graduates.', 'Publication.', 'Feedback, upkeep, improvement.'],
+    out: 'A living knowledge base',
   },
 ];
 
@@ -479,6 +448,9 @@ function S03() {
       <h2 className="kn-punch" data-rise="text" style={{ maxWidth: '30ch' }}>
         Unify Indonesian petroleum knowledge — then hand it on.
       </h2>
+      <p className="kn-quiet" data-rise style={{ marginTop: 'var(--gap)' }}>
+        Three phases. The first one already runs.
+      </p>
       <div className="kn-stages">
         {STAGES.map((s) => (
           <article key={s.name} className="kn-stage-card" data-stage-card
@@ -494,13 +466,6 @@ function S03() {
           </article>
         ))}
       </div>
-      <p className="kn-mission-foot" data-mission-foot>
-        <b>GeoHackathon</b> — one cohort, a basin each, one publication.
-      </p>
-      {/* The thesis of the whole deck, inherited from the slide this replaced. */}
-      <h3 className="kn-mission-thesis" data-thesis>
-        We should measure it — not merely claim it.
-      </h3>
     </section>
   );
 }
@@ -521,10 +486,6 @@ const s03api: SceneApi = {
       { scaleX: 0, transformOrigin: 'left center' },
       { scaleX: 1, duration: dur(1.1), stagger: dur(0.46), ease: 'power3.inOut' },
       '<0.45');
-    tl.fromTo(root.querySelector('[data-mission-foot]'),
-      { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: dur(1.1), ease: SETTLE }, '-=0.5');
-    hold(tl, 0.8);
-    tl.add(riseLines(root.querySelector('[data-thesis]'), { duration: 1.4 }));
     return tl;
   },
   exit: (root) => fadeOut(root),
@@ -534,29 +495,24 @@ const s03api: SceneApi = {
 // Three questions he can answer from his own authority, and nothing that costs
 // him a budget. The fourth — the panel — is spoken, not printed: an ask that
 // appears on the wall reads as a demand, an ask made out loud is a courtesy.
-const QUESTIONS = [
-  'Is a first cohort worth running?',
-  'Which basin should they be given?',
-  'IAGI, IPA — where should they present it?',
-];
-
 function S07() {
   return (
     <section className="kn-full">
       <KeynoteMap dark flyTo={{ lon: 120.8, lat: -1.0, zoom: 3.6 }} veil="left" interactive={false} />
       <div className="kn-scene-inner">
         <div style={{ maxWidth: '40ch' }}>
+          {/* The ask is the last thing in the room, so it should sound like a
+              person rather than a form. Numbered questions made it a
+              questionnaire; a single flat line made it a challenge. What is
+              actually wanted is company. */}
           <div className="kn-eyebrow" data-rise>The ask</div>
-          <div className="kn-questions">
-            {QUESTIONS.map((q, i) => (
-              <div className="kn-question" key={q} data-question>
-                <span className="kn-question-num">{String(i + 1).padStart(2, '0')}</span>
-                <span className="kn-question-text">{q}</span>
-              </div>
-            ))}
-          </div>
           <p className="kn-final" data-closing>
-            They should inherit the way Indonesia understands its geology.
+            I have taken this as far as one person&nbsp;can.
+          </p>
+          <p className="kn-ask-warm" data-warm>
+            Tell me where I have it wrong. Tell me what you would do
+            differently. And if any part of it is worth building — I would
+            rather build it with&nbsp;you.
           </p>
         </div>
       </div>
@@ -566,12 +522,11 @@ function S07() {
 
 const s07api: SceneApi = {
   enter: (root) => {
-    const tl = riseIn(root);
-    tl.fromTo(root.querySelectorAll('[data-question]'),
-      { opacity: 0, y: 28 },
-      { opacity: 1, y: 0, duration: dur(1.2), stagger: dur(1.2), ease: 'power2.out' }, '<0.4');
-    hold(tl, 1.1);
+    const tl = riseIn(root, '.kn-eyebrow');
+    hold(tl, 0.7);
     tl.add(riseLines(root.querySelector('[data-closing]'), { duration: 1.9, stagger: 0.16 }));
+    hold(tl, 1.2);                       // let the admission sit before the ask
+    tl.add(riseLines(root.querySelector('[data-warm]'), { duration: 1.6, stagger: 0.14 }));
     return tl;
   },
   exit: (root) => fadeOut(root),
@@ -594,27 +549,27 @@ export const SCENES: Scene[] = [
     Component: S02, api: s02api,
   },
   {
-    id: 'mission', title: 'The Mission', emotion: 'purpose',
-    punchline: 'Unify Indonesian petroleum knowledge — then hand it on, through a GeoHackathon that trains a cohort, sets each of them a basin, and ends in a publication.',
-    notes: 'This is the whole proposal. Take the three phases slowly. The last line is the thesis of the deck — let it land alone.',
-    Component: S03, api: s03api,
-  },
-  {
     id: 'descent', title: 'The Descent, and the Idea', emotion: 'wonder → inspiration',
     punchline: 'Every scale is the same question, asked closer — and an understanding, once shared, cannot be taken back.',
     notes: 'ONE slide, two acts. Say NOTHING through the fall; it runs nine seconds on its own. The lens holds the real Kutei polygon and its real fields.',
     Component: S04, api: s04api,
   },
   {
-    id: 'platform', title: 'The Platform', emotion: 'confidence',
-    punchline: 'The training material, the knowledge base, the submissions — all of it lives here.',
-    notes: 'Live app. Toggle desktop/mobile. Switch to Loop if the room has no wifi. This is where the cohort would actually work.',
+    id: 'mission', title: 'The Mission', emotion: 'purpose',
+    punchline: 'Unify Indonesian petroleum knowledge — then hand it on, through a GeoHackathon that trains a cohort, sets each of them a basin, and ends in a publication.',
+    notes: 'This is the whole proposal. Take the three phases slowly. The last line is the thesis of the deck — let it land alone.',
+    Component: S03, api: s03api,
+  },
+  {
+    id: 'phase-one', title: 'Phase One, Built', emotion: 'confidence',
+    punchline: 'This part is not a proposal — it already runs, on open data, built in the evenings.',
+    notes: 'Live app, booted dark so it does not punch a bright hole in the deck. Toggle desktop/mobile. Switch to Loop if the room has no wifi.',
     Component: S05, api: standard,
   },
   {
     id: 'ask', title: 'The Ask', emotion: 'reflection',
-    punchline: 'Three questions only he can answer — and then, out loud: would you sit on the panel that reads what they produce?',
-    notes: 'Ask the fourth question ALOUD, never on the wall. Then stop. No logo after the fade; the sentence is the last thing in the room.',
+    punchline: 'I have taken this as far as one person can — tell me where I have it wrong, and if any of it is worth building, I would rather build it with you.',
+    notes: 'Let the first line land and STOP for a beat before the second. Do not fill the silence afterwards. No logo after the fade.',
     Component: S07, api: s07api,
   },
 ];

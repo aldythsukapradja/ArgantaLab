@@ -66,6 +66,22 @@ function setSpaceSky(map: MapLibreMap) {
         'fog-ground-blend': 1,
         'atmosphere-blend': 0,
       });
+      // The style's own background layer paints the whole canvas, including the
+      // space around the globe. CockpitMap sets it to a THEME colour, and its
+      // light value (#dcecea) is a pale mint — which is exactly what a stray
+      // light-mode render puts behind the planet.
+      for (const layer of map.getStyle()?.layers ?? []) {
+        if (layer.type === 'background') {
+          map.setPaintProperty(layer.id, 'background-color', 'rgba(0,0,0,0)');
+        }
+      }
+      // Read it back. `Style.setSky` VALIDATES and returns early on a bad
+      // value — no throw, no warning — so "I called it" is not evidence that
+      // it took. Only the read-back is.
+      const got = map.getSky?.();
+      if (got && got['atmosphere-blend'] !== 0) {
+        console.error('[keynote] sky did not take; atmosphere-blend =', got['atmosphere-blend']);
+      }
     } catch (err) {
       // Loud on purpose. A silent catch here is exactly why the white rim
       // survived several rounds of being "fixed".

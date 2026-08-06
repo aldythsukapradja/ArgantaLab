@@ -129,6 +129,14 @@
 .kn-map .maplibregl-ctrl-attrib a{color:var(--secondary)!important}
 /* Copy over imagery always needs a ground to sit on. */
 .kn-veil{position:absolute;inset:0;z-index:1;pointer-events:none}
+/* CORNER VIGNETTE — belt and braces on the halo.
+   The sky is set transparent with atmosphere-blend 0, which should leave no
+   glow at all. This is the second line of defence, because the halo has come
+   back three times and the deck cannot ship with a white rim on slide one.
+   It is a CORNER treatment on purpose: transparent through the middle 68%, so
+   it can never touch the archipelago, which is always centred. */
+.kn-veil::after{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 74% 78% at 50% 46%,transparent 0 68%,#000 100%)}
 .kn-veil.left{background:linear-gradient(100deg,var(--bg) 2%,color-mix(in srgb,var(--bg) 84%,transparent) 32%,transparent 64%)}
 .kn-veil.center{background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,var(--bg) 78%,transparent) 0%,transparent 60%)}
 .kn-veil.vignette{background:radial-gradient(ellipse at 50% 46%,transparent 40%,color-mix(in srgb,var(--bg) 90%,transparent) 96%)}
@@ -198,7 +206,11 @@
 .kn-dossier-chart h4{margin:0 0 calc(var(--gap)*.7);font-size:calc(var(--u)*.64);
   letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--secondary)}
 
-/* THEME. The Knowledge Bank's charts read the cosmo design tokens, and those
+/* THEME. Applies to BOTH surfaces that host these charts — the slide-1
+   drawer and the descent's wedge panel. Scoping it to the drawer alone is
+   what left the descent's tectonostratigraphy on white: the panel simply
+   inherited the app's light tokens.
+   The Knowledge Bank's charts read the cosmo design tokens, and those
    are switched by `html[data-ui="cosmo"].dark` — a class the SHELL owns. The
    app boots light, so mounting these charts inside a deck that is always black
    gave them light-theme ink on a black rail: unreadable.
@@ -206,7 +218,7 @@
    are dark whatever the app behind them is doing, and the deck never has to
    reach out and mutate a global class it does not own. Values are copied from
    the `.dark` block in cosmo-system.css — keep them in step. */
-.kn-dossier{
+.kn-dossier,.kn-wedges{
   --bg:#070d18; --panel:#0f172a; --panel2:#111a2e; --panel3:#0c1526;
   --ink:#e2e8f0; --ink2:#94a3b8; --ink3:#64748b;
   --line:#1e293b; --line2:#172033;
@@ -333,7 +345,7 @@
    thing to read, and it has to survive being changed five times without the
    layout shifting, hence the fixed height. */
 .kn-descent .kn-gl{opacity:.6}
-.kn-scale{margin:0;font-size:calc(var(--u)*4.6);line-height:1;font-weight:600;
+.kn-scale{margin:0;font-size:calc(var(--u)*3.1);line-height:1;font-weight:600;
   letter-spacing:-.036em;height:1em;display:flex;align-items:center;justify-content:center;
   color:var(--primary);text-shadow:0 0 60px color-mix(in srgb,var(--technology) 45%,transparent)}
 .kn-scale-note{margin:calc(var(--gap)*.7) 0 0;font-size:calc(var(--u)*.78);
@@ -343,8 +355,6 @@
   transition:background .6s cubic-bezier(.16,1,.3,1),box-shadow .6s}
 .kn-rung.on{background:var(--technology);
   box-shadow:0 0 14px color-mix(in srgb,var(--technology) 75%,transparent)}
-.kn-descent-line{margin-top:calc(var(--gap)*2.4);font-size:calc(var(--u)*2.3);
-  max-width:22ch;margin-left:auto;margin-right:auto;color:var(--secondary)}
 
 /* The lens — the ONE circle on this slide. Centred on the stage and sitting
    behind the type, which is why it is absolutely positioned rather than in the
@@ -352,8 +362,8 @@
    rings around the frame centre, and two off-centre circles read as a bug.
    Everything inside is clipped to the circle, so the zoom can run as deep as it
    likes without ever spilling onto the words. */
-.kn-lens{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(62vh,58vw);aspect-ratio:1;z-index:1;pointer-events:none;
+.kn-lens{position:relative;width:var(--kn-panel,min(62vh,58vw));aspect-ratio:1;
+  z-index:1;pointer-events:none;
   filter:drop-shadow(0 0 60px color-mix(in srgb,var(--technology) 26%,transparent))}
 .kn-lens svg{width:100%;height:100%;display:block;overflow:visible}
 .kn-lens-ring{fill:none;stroke:color-mix(in srgb,var(--technology) 42%,transparent)}
@@ -361,33 +371,45 @@
 .kn-lens-ring.on{fill:color-mix(in srgb,var(--technology) 12%,transparent);
   stroke:var(--technology)}
 .kn-lens-field{fill:color-mix(in srgb,var(--geology) 45%,transparent)}
+/* Kutei's fields breathe, and the edges between them carry a travelling pulse:
+   a basin is one connected system, not a scatter of dots, and that is the
+   premise the whole deck rests on. Staggered per element in the component so
+   the network ripples rather than blinking as a block. */
 .kn-lens-field.on{fill:var(--geology);
-  filter:drop-shadow(0 0 1.5px color-mix(in srgb,var(--geology) 90%,transparent))}
+  filter:drop-shadow(0 0 1.5px color-mix(in srgb,var(--geology) 90%,transparent));
+  animation:kn-field-pulse 3.4s ease-in-out infinite}
+@keyframes kn-field-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.kn-lens-link{stroke:var(--technology);stroke-linecap:round;opacity:.3;
+  animation:kn-link-pulse 3.4s ease-in-out infinite}
+@keyframes kn-link-pulse{0%,100%{opacity:.14}50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){
+  .kn-lens-field.on,.kn-lens-link{animation:none}
+}
+.kn-lens-arc{fill:none;stroke:var(--technology);stroke-linecap:round;
+  animation:kn-link-pulse 4.2s ease-in-out infinite;
+  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--technology) 60%,transparent))}
 .kn-lens-rim{fill:none;stroke:color-mix(in srgb,var(--technology) 45%,transparent);stroke-width:.35}
 .kn-lens-cross line{stroke:color-mix(in srgb,var(--technology) 60%,transparent);stroke-width:.35}
 /* A ground behind the type so a lit outline never runs through a word. */
-.kn-descent .kn-scale,.kn-descent .kn-scale-note{
-  text-shadow:0 0 26px #000,0 0 60px #000,0 0 12px #000}
 
-/* The descent, split. Copy and lens hold the left; the wedge it names is shown
-   live on the right. Naming a body of work is a claim, showing it is evidence —
-   and this deck's argument is the difference between the two. */
-.kn-descent-inner{max-width:none;padding:0 var(--pad)}
-.kn-descent-split .kn-turn-stack{
-  max-width:min(46ch,44vw);margin:0;text-align:left;justify-items:start}
-.kn-descent-split .kn-scale,.kn-descent-split .kn-descent-line{text-align:left}
-.kn-descent-split .kn-descent-line{margin-left:0;margin-right:0}
-.kn-descent-split .kn-rungs{justify-content:flex-start}
-.kn-descent-split .kn-four{justify-content:flex-start}
-/* The lens is no longer the centre of the stage — it sits above the copy in the
-   left column, at a size that leaves the right half to the evidence. */
-.kn-descent-split .kn-lens{position:relative;left:auto;top:auto;transform:none;
-  width:min(30vh,26vw);margin:0 0 calc(var(--gap)*1.4)}
+/* The descent: title centred on top, then TWO PANELS OF EQUAL SIZE — the
+   instrument and the evidence. Equal is the whole point: neither the picture
+   nor the data is subordinate to the other, and a square lens beside a
+   rectangular card read as an accident.
+   `--kn-panel` is the shared edge length; both panels take it, so they cannot
+   drift apart when the viewport changes. */
+.kn-descent{--kn-panel:min(46vh,34vw,520px)}
+.kn-descent-grid{position:relative;z-index:3;display:flex;flex-direction:column;
+  align-items:center;gap:calc(var(--gap)*1.8);width:100%;padding:0 var(--pad)}
+.kn-descent-head{text-align:center;display:flex;flex-direction:column;align-items:center}
+.kn-descent-head .kn-eyebrow{margin-bottom:calc(var(--gap)*1.1)}
+.kn-descent-pair{display:grid;grid-template-columns:repeat(2,var(--kn-panel));
+  gap:calc(var(--gap)*2);align-items:stretch;justify-content:center}
 
-.kn-wedges{position:absolute;right:var(--pad);top:50%;transform:translateY(-50%);
-  z-index:2;width:min(52ch,44vw);height:min(66vh,620px);
-  display:flex;flex-direction:column;gap:calc(var(--gap)*.9);
-  padding:calc(var(--gap)*1.3) calc(var(--gap)*1.4);
+.kn-wedges{position:relative;right:auto;top:auto;transform:none;
+  width:var(--kn-panel);height:var(--kn-panel);
+  display:flex;flex-direction:column;gap:calc(var(--gap)*.8);
+  padding:calc(var(--gap)*1.2) calc(var(--gap)*1.3);
   border:1px solid var(--hairline);border-radius:18px;
   background:color-mix(in srgb,#0B1520 72%,transparent);
   backdrop-filter:blur(20px);box-shadow:0 30px 90px rgb(0 0 0/.5)}
@@ -421,6 +443,28 @@
   box-shadow:0 0 12px color-mix(in srgb,var(--technology) 55%,transparent)}
 .kn-wedge-ops b{font-variant-numeric:tabular-nums;color:var(--primary);
   font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.62)}
+
+.kn-why{margin:calc(var(--gap)*1.4) 0 0;max-width:62ch;font-size:calc(var(--u)*1.02);
+  line-height:1.55;color:var(--secondary);letter-spacing:var(--track-body)}
+
+
+/* THE LAST LIGHT SURFACES. BasinCharts writes era and role tints as INLINE
+   styles (BasinCharts.tsx:390,411) from a hardcoded ICS pastel palette —
+   Cenozoic #F2FA8C, Mesozoic #67C5CA — so no token override can reach them.
+   That is why the bands stayed pale through three attempts at 'fixing' the
+   theme: I was overriding the wrong layer.
+    composites ABOVE , and !important
+   beats an inline shorthand, so this darkens each band while preserving its
+   hue relationships. The band labels are hardcoded near-black and have to move
+   with it, or they vanish. */
+.kn-dossier .exs-tecto-period,.kn-wedges .exs-tecto-period,
+.kn-dossier .exs-tecto-el,.kn-wedges .exs-tecto-el,
+.kn-dossier .exs-events-period,.kn-wedges .exs-events-period{
+  background-image:linear-gradient(rgb(4 6 10/.7),rgb(4 6 10/.7))!important}
+.kn-dossier .exs-tecto-period b,.kn-wedges .exs-tecto-period b,
+.kn-dossier .exs-tecto-el b,.kn-wedges .exs-tecto-el b,
+.kn-dossier .exs-events-period,.kn-wedges .exs-events-period{
+  color:#E2E8F0!important}
 
 /* slide 3 — the mission */
 .kn-mission-foot{margin:calc(var(--gap)*1.6) 0 0;font-size:calc(var(--u)*.92);
@@ -568,6 +612,7 @@
 .kn-question-num{font-family:'JetBrains Mono',monospace;font-size:calc(var(--u)*.9);
   font-weight:500;color:var(--geology);line-height:1.4}
 .kn-question-text{font-size:calc(var(--u)*1.42);line-height:1.32;max-width:30ch;font-weight:450;letter-spacing:var(--track-body)}
+.kn-ask-warm{margin:calc(var(--gap)*1.6) 0 0;max-width:44ch;font-size:calc(var(--u)*1.05);line-height:1.55;color:var(--secondary);letter-spacing:var(--track-body)}
 .kn-final{font-size:calc(var(--u)*2.05);line-height:1.24;font-weight:600;max-width:24ch;letter-spacing:-.024em;margin:0}
 
 /* A ground for copy that sits over imagery. */
@@ -582,16 +627,10 @@
   /* Nine columns need ~9 % of the width each; below 1100px that is under 10ch
      and every employer name ellipses to nothing. Three rows of three, and the
      axis goes with them — a dated line under wrapped rows would be a lie. */
-  /* Narrow: the wedge panel would leave the copy at ~20ch. Drop the evidence
-     rail and let the descent read as it did before — the lens back at centre,
-     copy centred under it. */
-  .kn-wedges{display:none}
-  .kn-descent-split .kn-turn-stack{max-width:min(26ch,90vw);margin:0 auto;
-    text-align:center;justify-items:center}
-  .kn-descent-split .kn-scale,.kn-descent-split .kn-descent-line{text-align:center}
-  .kn-descent-split .kn-descent-line{margin-left:auto;margin-right:auto}
-  .kn-descent-split .kn-rungs,.kn-descent-split .kn-four{justify-content:center}
-  .kn-descent-split .kn-lens{width:min(40vh,62vw);margin-left:auto;margin-right:auto}
+  /* Narrow: two panels side by side leave both too small to read. Stack them,
+     instrument first, and let the card take what height is left. */
+  .kn-descent-pair{grid-template-columns:min(70vw,var(--kn-panel));row-gap:calc(var(--gap)*1.2)}
+  .kn-descent{--kn-panel:min(34vh,70vw)}
   .kn-journey{width:100%;margin-left:0}
   .kn-journey-row{grid-template-columns:repeat(4,1fr);row-gap:calc(var(--gap)*1.4);align-items:start}
   .kn-jaxis{display:none}
