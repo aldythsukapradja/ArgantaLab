@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
-import type { AgentCommand, AnswerCard } from './types.ts';
+import type { AgentCommand, AnswerCard, GazIndexed } from './types.ts';
 import { buildIndex, loadGazetteer, type GazIndex } from './gazetteer.ts';
 import { makeScopeBrain } from './brain.ts';
 import { newTurn, respond, runIntent, ladderLabel, type Turn } from './dialogue.ts';
@@ -68,6 +68,10 @@ export interface UseAgent {
   /** Null until the gazetteer lands. */
   index: GazIndex | null;
   ask: (text: string) => Promise<AgentAnswer | null>;
+  /** The entity the last answer was about, or null. Assisted planning needs the
+   *  NODE, not its name — every deviation it proposes is derived from that
+   *  node's own probes, and a string cannot be probed. */
+  focusNode: () => GazIndexed | null;
   /** Run a whole chain deterministically against one subject. No model is
    *  called at any point — same subject, same steps, same order, every time. */
   runWorkflow: (workflowId: string, subject: string, onStep?: (r: WorkflowStepResult) => void) => Promise<WorkflowStepResult[]>;
@@ -331,6 +335,8 @@ export function useAgent(): UseAgent {
     }
   }, [index, dispatch]);
 
+  const focusNode = useCallback(() => turnRef.current.focus, []);
+
   const suggestions = useCallback(
     (query: string, limit = 6) => (index && query.trim() ? suggest(index, query, { limit }) : []),
     [index],
@@ -345,6 +351,7 @@ export function useAgent(): UseAgent {
     ready: !!index,
     index,
     ask,
+    focusNode,
     runWorkflow,
     suggestions,
     breadcrumb,
@@ -353,7 +360,7 @@ export function useAgent(): UseAgent {
     workerConfigured: agentEnabled,
     busy,
     activeModel,
-  }), [index, ask, runWorkflow, suggestions, breadcrumb, reset, tier, busy, activeModel]);
+  }), [index, ask, focusNode, runWorkflow, suggestions, breadcrumb, reset, tier, busy, activeModel]);
 }
 
 export { buildIndex };

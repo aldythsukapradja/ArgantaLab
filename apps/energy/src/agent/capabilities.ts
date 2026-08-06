@@ -115,6 +115,22 @@ const kbBasinId = (node: GazIndexed): string | undefined =>
 const kbProvinceId = (node: GazIndexed): string | undefined =>
   (node.nativeIds ?? []).find((id) => id.startsWith('atlas:province:'));
 
+/** The bare USGS province code, which is how provinces.geojson keys its
+ *  outlines — "atlas:province:usgs:3817" -> "3817". */
+const prvCode = (node: GazIndexed): string | undefined =>
+  kbProvinceId(node)?.split(':').pop();
+
+/** Member fields that carry coordinates, for map pins.
+ *  Passed as props rather than loaded in the chat: the gazetteer already knows
+ *  which fields belong to this basin, and it is the authority the rest of the
+ *  app uses. Re-deriving membership from a 10,000-point geojson would be a
+ *  second answer to a question already settled. */
+const fieldPins = (node: GazIndexed, ctx: CapCtx, limit = 400) =>
+  childrenOfKind(ctx.index, node.id, 'field')
+    .filter((f) => f.fly)
+    .slice(0, limit)
+    .map((f) => ({ name: f.name, lon: f.fly!.lon, lat: f.fly!.lat }));
+
 /** Set scope at the level this node fills, letting the brain fill ancestors. */
 function scopeTo(node: GazIndexed): AgentCommand[] {
   const level = levelForKind(node.kind);
@@ -333,6 +349,11 @@ export const CAPABILITIES: Capability[] = [
           ...(asNumber(n.has.petroleumSystems) ? [chip('Petroleum systems', `petroleum systems in ${n.name}`, undefined, asNumber(n.has.petroleumSystems))] : []),
         ],
         provenance: prov(n),
+        // The basin on a map, in the answer. Outline + member fields, both from
+        // sources the app already treats as authoritative.
+        ...(prvCode(n) ? {
+          artifact: { component: 'basin-map', props: { prvCode: prvCode(n), name: n.name, fields: fieldPins(n, ctx) } },
+        } : {}),
         body: fields.length
           ? `${plural(fields.length, 'field')} on record here. Which field?`
           : 'No field records fall inside this province polygon — it is an assessed container with nothing drilled in the public baseline.',
@@ -479,6 +500,11 @@ export const CAPABILITIES: Capability[] = [
         })),
         chips: alsoAvailable(n, 'basin.cycles'),
         provenance: prov(n, 'Arganta KB'),
+        // The column itself. Keyed on the atlas:basin: id, which is what the
+        // basinCycle rows carry — the same id the figure links use.
+        ...(kbBasinId(n) ? {
+          artifact: { component: 'basin-cycles', props: { basinId: kbBasinId(n), name: n.name } },
+        } : {})
       };
     },
   },

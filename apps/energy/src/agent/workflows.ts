@@ -85,3 +85,81 @@ export function resolvedSteps(workflow: Workflow): { step: WorkflowStep; known: 
 /** Workflows that can start from a given entity kind. */
 export const workflowsForKind = (kind: GazKind): Workflow[] =>
   WORKFLOWS.filter((w) => w.kinds.includes(kind));
+
+
+// ── AI-assisted mode ─────────────────────────────────────────────────────────
+//
+// The deterministic chain is fixed: same subject, same steps, same order, and
+// no model is consulted. That is what makes it auditable, and it is the right
+// default for anything you will defend in a meeting.
+//
+// Assisted mode makes the chain a PROPOSAL. Every deviation is derived from the
+// capability probes -- the same measured flags a single answer is gated on --
+// never from the model's opinion about what is interesting. So the plan is
+// explainable before it runs, which is the only reason it is safe to let it
+// change.
+//
+// What it may do: drop a step whose data is absent, and append a step this
+// subject supports that the fixed chain did not think to ask for. What it may
+// NOT do: invent a step, reorder the geological logic, or silently skip
+// something that WOULD have worked.
+
+import type { GazIndexed } from './types.ts';
+import { CAPABILITIES } from './capabilities.ts';
+
+export interface PlannedStep {
+  step: WorkflowStep;
+  /** 'run' | 'drop' | 'add' — and why, in the reader's terms. */
+  action: 'run' | 'drop' | 'add';
+  reason: string;
+}
+
+/** Build the assisted plan for one subject, from probes alone. */
+export function planFor(workflow: Workflow, node: GazIndexed): PlannedStep[] {
+  const probe = (id: string) => {
+    const c = CAPABILITY_BY_ID.get(id);
+    if (!c || !c.kinds.includes(node.kind)) return false;
+    try { return c.probe(node); } catch { return false; }
+  };
+
+  const planned: PlannedStep[] = workflow.steps.map((step) => (
+    probe(step.capabilityId)
+      ? { step, action: 'run' as const, reason: 'data is on file' }
+      : {
+        step,
+        action: 'drop' as const,
+        // Named precisely: the step is not "unavailable", its probe measured
+        // the absence. The user can check that claim against the card.
+        reason: `${CAPABILITY_BY_ID.get(step.capabilityId)?.label ?? step.capabilityId} has no data for ${node.name}`,
+      }
+  ));
+
+  // Additions: capabilities this subject genuinely supports that the fixed
+  // chain omits. Ordered by the registry's own weight so the suggestion is
+  // stable rather than incidental.
+  const already = new Set(workflow.steps.map((s) => s.capabilityId));
+  const extras = CAPABILITIES
+    .filter((c) => !already.has(c.id) && c.kinds.includes(node.kind))
+    .filter((c) => { try { return c.probe(node); } catch { return false; } })
+    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
+    .slice(0, 2)
+    .map((c) => ({
+      step: { capabilityId: c.id, title: c.label, why: 'Not in the fixed chain, but this subject supports it.' },
+      action: 'add' as const,
+      reason: `${node.name} carries data for ${c.label}`,
+    }));
+
+  return [...planned, ...extras];
+}
+
+/** One line describing how the plan differs from the fixed chain. Empty when
+ *  it does not — an assisted run that changed nothing should say so. */
+export function planSummary(plan: PlannedStep[]): string {
+  const dropped = plan.filter((p) => p.action === 'drop').length;
+  const added = plan.filter((p) => p.action === 'add').length;
+  if (!dropped && !added) return '';
+  const parts = [];
+  if (dropped) parts.push(`${dropped} step${dropped === 1 ? '' : 's'} dropped for missing data`);
+  if (added) parts.push(`${added} added that this subject supports`);
+  return parts.join(', ');
+}

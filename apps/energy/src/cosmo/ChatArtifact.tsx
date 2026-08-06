@@ -443,6 +443,180 @@ function PsEvents({ provinceId, name }: { provinceId: string; name?: string }) {
   );
 }
 
+// ── tectonostratigraphy ──────────────────────────────────────────────────────
+
+interface BasinCycle {
+  cycle_id: string; title?: string; basin_id?: string; stage?: string;
+  age_top_ma?: number; age_base_ma?: number;
+  geodynamics?: string; fill?: string; lithology?: string; dominant_role?: string;
+  citation_status?: string; confidence?: string;
+}
+
+/** Colour by the role the cycle plays in the system, not by age. Age is already
+ *  the axis; repeating it as hue says nothing the reader cannot already see. */
+const ROLE_TINT: Record<string, string> = {
+  source: '#16a34a',
+  reservoir: '#0ea5e9',
+  seal: '#7c3aed',
+  overburden: '#94a3b8',
+  basement: '#78716c',
+};
+const roleTint = (role?: string) => {
+  const key = Object.keys(ROLE_TINT).find((k) => (role ?? '').toLowerCase().includes(k));
+  return key ? ROLE_TINT[key] : '#8b8f98';
+};
+
+function Tectonostrat({ basinId, name }: { basinId: string; name?: string }) {
+  const [spine, setSpine] = useState<any>(spineCache);
+  useEffect(() => {
+    let alive = true;
+    loadSpine().then((sp) => { if (alive) setSpine(sp); });
+    return () => { alive = false; };
+  }, []);
+
+  const column = useMemo(() => {
+    const rows: BasinCycle[] = (spine?.basinCycle ?? []).filter((c: BasinCycle) => c.basin_id === basinId);
+    const timed = rows.filter((c) => Number.isFinite(c.age_top_ma) && Number.isFinite(c.age_base_ma));
+    if (!timed.length) return null;
+    // Oldest at the BOTTOM — a stratigraphic column read any other way is a
+    // chart, not a column, and geologists read it without thinking.
+    timed.sort((a, b) => (b.age_base_ma! - a.age_base_ma!));
+    const oldest = Math.max(...timed.map((c) => c.age_base_ma!));
+    const youngest = Math.min(...timed.map((c) => c.age_top_ma!));
+    return { rows: timed, oldest, youngest, span: Math.max(oldest - youngest, 1), untimed: rows.length - timed.length };
+  }, [spine, basinId]);
+
+  if (!spine) return <div className="ca-loading">Loading the cycle framework…</div>;
+  if (!column) return <div className="ca-empty">No timed basin cycles for {name ?? 'this basin'}.</div>;
+
+  const uncited = column.rows.filter((c) => (c.citation_status ?? '').toLowerCase() !== 'cited').length;
+
+  return (
+    <div className="ca-strat">
+      <div className="ca-strat-col">
+        {column.rows.map((c) => {
+          const thick = ((c.age_base_ma! - c.age_top_ma!) / column.span) * 100;
+          const cited = (c.citation_status ?? '').toLowerCase() === 'cited';
+          return (
+            <div
+              key={c.cycle_id}
+              className={'ca-strat-band' + (cited ? '' : ' is-uncited')}
+              style={{ height: `${Math.max(thick, 9)}%`, borderLeftColor: roleTint(c.dominant_role) }}
+              title={`${c.age_base_ma}–${c.age_top_ma} Ma · ${c.dominant_role ?? 'role unstated'} · ${c.citation_status ?? 'citation unstated'}${c.confidence ? ` · confidence ${c.confidence}` : ''}`}
+            >
+              <span className="ca-strat-age">{c.age_base_ma}–{c.age_top_ma}</span>
+              <span className="ca-strat-body">
+                <b>{c.title ?? c.cycle_id}</b>
+                {(c.stage || c.geodynamics) && <em>{[c.stage, c.geodynamics].filter(Boolean).join(' · ')}</em>}
+              </span>
+              {!cited && <span className="ca-strat-flag">interpreted</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="ca-strat-foot">
+        <span>Ma, oldest at base</span>
+        {/* Stated, because a tidy column implies a settled framework. */}
+        {uncited > 0 && <em>{uncited} of {column.rows.length} cycles are interpreted, not cited</em>}
+        {column.untimed > 0 && <em>{column.untimed} further cycle{column.untimed === 1 ? '' : 's'} carry no ages and are not drawn</em>}
+      </div>
+    </div>
+  );
+}
+
+// ── basin map ────────────────────────────────────────────────────────────────
+
+/** Province outlines. 296 KB for all 179, fetched once and shared — small
+ *  enough to load in a chat, which is the whole reason this is SVG and not a
+ *  MapLibre instance mounted per answer. */
+let provincesCache: any = null;
+let provincesPromise: Promise<any> | null = null;
+function loadProvinces(): Promise<any> {
+  if (provincesCache) return Promise.resolve(provincesCache);
+  if (!provincesPromise) {
+    const base = import.meta.env.BASE_URL ?? '/';
+    provincesPromise = fetch(`${base}world/provinces.geojson`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { provincesCache = j; return j; })
+      .catch(() => null);
+  }
+  return provincesPromise;
+}
+
+type Ring = [number, number][];
+const ringsOf = (geom: any): Ring[] => {
+  if (!geom) return [];
+  if (geom.type === 'Polygon') return geom.coordinates as Ring[];
+  if (geom.type === 'MultiPolygon') return (geom.coordinates as Ring[][]).flat();
+  return [];
+};
+
+interface FieldPin { name: string; lon: number; lat: number }
+
+function BasinMap({ prvCode, name, fields = [] }: { prvCode: string; name?: string; fields?: FieldPin[] }) {
+  const [geo, setGeo] = useState<any>(provincesCache);
+  useEffect(() => {
+    let alive = true;
+    loadProvinces().then((g) => { if (alive) setGeo(g); });
+    return () => { alive = false; };
+  }, []);
+
+  const shape = useMemo(() => {
+    const f = (geo?.features ?? []).find((x: any) => String(x.properties?.prvCode) === String(prvCode));
+    const rings = ringsOf(f?.geometry).filter((r) => r.length > 2);
+    if (!rings.length) return null;
+    const lons = rings.flat().map((c) => c[0]);
+    const lats = rings.flat().map((c) => c[1]);
+    const pad = 0.06;
+    const w = Math.max(...lons) - Math.min(...lons) || 1;
+    const h = Math.max(...lats) - Math.min(...lats) || 1;
+    const box = {
+      x0: Math.min(...lons) - w * pad, x1: Math.max(...lons) + w * pad,
+      y0: Math.min(...lats) - h * pad, y1: Math.max(...lats) + h * pad,
+    };
+    return { rings, box, props: f.properties };
+  }, [geo, prvCode]);
+
+  if (!geo) return <div className="ca-loading">Loading the province outline…</div>;
+  if (!shape) return <div className="ca-empty">No mapped outline for {name ?? 'this basin'}.</div>;
+
+  // Equirectangular, with latitude scaled by cos(mid-lat) so the shape is not
+  // stretched east-west. Not a projection anyone would publish — but honest at
+  // one basin's extent, and this is a locator, not a base map.
+  const midLat = (shape.box.y0 + shape.box.y1) / 2;
+  const kx = Math.cos((midLat * Math.PI) / 180) || 1;
+  const spanX = (shape.box.x1 - shape.box.x0) * kx;
+  const spanY = shape.box.y1 - shape.box.y0;
+  const W = 320, H = Math.max(140, Math.min(240, (spanY / (spanX || 1)) * W));
+  const px = (lon: number) => ((lon - shape.box.x0) * kx / (spanX || 1)) * W;
+  const py = (lat: number) => H - ((lat - shape.box.y0) / (spanY || 1)) * H;
+  const d = shape.rings
+    .map((r) => r.map((c, i) => `${i ? 'L' : 'M'}${px(c[0]).toFixed(1)},${py(c[1]).toFixed(1)}`).join('') + 'Z')
+    .join(' ');
+
+  const inside = fields.filter((f) => Number.isFinite(f.lon) && Number.isFinite(f.lat));
+
+  return (
+    <div className="ca-map">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${name ?? 'basin'} outline`}>
+        <path d={d} className="ca-map-outline" />
+        {inside.map((f) => (
+          <circle key={f.name} cx={px(f.lon)} cy={py(f.lat)} r="2.4" className="ca-map-pin">
+            <title>{f.name}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="ca-map-foot">
+        <span>{Math.abs(shape.box.x1 - shape.box.x0).toFixed(1)}° × {Math.abs(shape.box.y1 - shape.box.y0).toFixed(1)}°</span>
+        {inside.length > 0 && <span><i className="ca-map-key" /> {inside.length} field{inside.length === 1 ? '' : 's'} with coordinates</span>}
+        {/* The outline is a screening-scale USGS province boundary, not a
+            licence or a mapped basin edge. Saying so stops it being measured. */}
+        <em>USGS province boundary · screening scale</em>
+      </div>
+    </div>
+  );
+}
+
 // ── the host ─────────────────────────────────────────────────────────────────
 
 export interface ChatArtifactProps {
@@ -462,6 +636,16 @@ export function ChatArtifact({ component, props, onExamine }: ChatArtifactProps)
         const entityId = str(props.entityId);
         if (!entityId) return null;
         return <BasinFigures entityId={entityId} name={str(props.name)} onExamine={onExamine} />;
+      }
+      case 'basin-map': {
+        const prvCode = str(props.prvCode);
+        if (!prvCode) return null;
+        return <BasinMap prvCode={prvCode} name={str(props.name)} fields={(props.fields as FieldPin[]) ?? []} />;
+      }
+      case 'basin-cycles': {
+        const basinId = str(props.basinId);
+        if (!basinId) return null;
+        return <Tectonostrat basinId={basinId} name={str(props.name)} />;
       }
       case 'basin-events': {
         const provinceId = str(props.provinceId);

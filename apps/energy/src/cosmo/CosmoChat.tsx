@@ -6,7 +6,7 @@
 // and an 80%-screen artifact modal. Uses the founder's exact classes (cosmo-system.css).
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink, Workflow,
+  PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink, Workflow, Sparkles, FileDown,
   ArrowUp, Maximize, Monitor, Tv, Tablet, Smartphone,
   GitFork, FileText, BarChart3, Expand, Download, Image as ImageIcon, Gem, Map as MapIcon,
   Box, Waves, TrendingUp, Loader2,
@@ -19,7 +19,8 @@ import { AgentCard } from '../agent/AgentCard';
 import { AgentTrace } from './AgentTrace.tsx';
 import { AgentWelcome } from './AgentWelcome.tsx';
 import { ChatArtifact } from './ChatArtifact.tsx';
-import { WORKFLOWS, WORKFLOW_BY_ID } from '../agent/workflows.ts';
+import { WORKFLOWS, WORKFLOW_BY_ID, planFor, planSummary } from '../agent/workflows.ts';
+import { buildReport, type ReportStep } from '../agent/report.ts';
 import type { TurnTrace } from '../agent/types.ts';
 import type { AnswerCard, CardChip } from '../agent/types';
 import { useBridge, type BridgeEngine } from '../agent/bridge/useBridge';
@@ -249,6 +250,8 @@ type Msg = {
   /** Set on a workflow step, so the answer arrives with its place in the chain
    *  rather than as one more anonymous card. */
   step?: { n: number; of: number; title: string; why: string; skipped: boolean; workflow: string };
+  /** The closing card of a workflow run: offers the whole thing as one file. */
+  report?: { workflow: string; subject: string; steps: ReportStep[] };
 };
 /** Fold the recent conversation into the prompt for a Frontier mission.
  *
@@ -792,24 +795,57 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
    *  The subject comes from the agent's own focus — the thing the last answer
    *  was about — because a workflow with no subject is a question, not a run.
    *  With nothing in focus it asks rather than guessing at a default. */
-  const startWorkflow = (workflowId: string) => {
+  const startWorkflow = (workflowId: string, assisted = false) => {
     const workflow = WORKFLOW_BY_ID.get(workflowId);
     if (!workflow) return;
-    const subject = agent.breadcrumb.split('›').pop()?.trim();
+    const focus = agent.index ? agent.focusNode() : null;
+    const subject = focus?.name ?? agent.breadcrumb.split('›').pop()?.trim();
     if (!subject) {
       streamAssistant(`Name a ${workflow.kinds.join(' or ')} first, then I'll run **${workflow.title}** on it.`);
       return;
     }
-    setMsgs((m) => [...m, { role: 'user', text: `${workflow.pill} — ${subject}`, done: true }]);
+    setMsgs((m) => [...m, { role: 'user', text: `${workflow.pill} — ${subject}${assisted ? ' (assisted)' : ''}`, done: true }]);
+
+    // Assisted mode announces its plan BEFORE running, derived from probes
+    // alone. A plan you only learn about afterwards is not a plan you approved.
+    if (assisted && focus) {
+      const plan = planFor(workflow, focus);
+      const diff = planSummary(plan);
+      streamAssistant(diff
+        ? `**Assisted plan** — ${diff}.
+
+${plan.map((p) => `- ${p.action === 'run' ? '' : p.action === 'drop' ? '~~' : '+ '}${p.step.title}${p.action === 'drop' ? '~~' : ''} — ${p.reason}`).join('\n')}`
+        : `**Assisted plan** — nothing to change; every step in the fixed chain has data for ${subject}.`);
+    }
+
     const total = workflow.steps.length;
+    const collected: ReportStep[] = [];
     void agent.runWorkflow(workflowId, subject, (r) => {
       const n = workflow.steps.findIndex((s2) => s2.capabilityId === r.capabilityId) + 1;
+      collected.push({ title: r.title, why: r.why, card: r.answer.card, summary: r.answer.summary, skipped: r.skipped });
       setMsgs((m) => [...m, {
         role: 'assistant', text: '', done: true,
         card: r.answer.card, trace: r.answer.trace, summary: r.answer.summary,
         step: { n, of: total, title: r.title, why: r.why, skipped: r.skipped, workflow: workflow.title },
       }]);
+    }).then(() => {
+      setMsgs((m) => [...m, {
+        role: 'assistant', text: '', done: true,
+        report: { workflow: workflow.title, subject, steps: collected },
+      }]);
     });
+  };
+
+  /** Typeset the run and hand it over as a file. Nothing is generated here —
+   *  see report.ts; it reproduces the cards the run already showed. */
+  const downloadReport = (r: { workflow: string; subject: string; steps: ReportStep[] }) => {
+    const html = buildReport({ ...r, generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') });
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${r.subject.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${r.workflow.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.html`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   /** A chip re-enters as if typed, so chips and typing share one code path. */
@@ -1036,7 +1072,17 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
                 <div className="who" style={m.role === 'user' ? { textAlign: 'right' } : undefined}>{m.role === 'user' ? 'YOU' : 'ARGANTA'}</div>
                 <div className="bub">
                   {m.role === 'assistant'
-                    ? (m.welcome
+                    ? (m.report
+                      ? (
+                        <div className="ag-arrive wf-done">
+                          <b>{m.report.workflow} — {m.report.subject}</b>
+                          <em>{m.report.steps.filter((x) => !x.skipped).length} of {m.report.steps.length} steps returned data</em>
+                          <button className="wf-report" onClick={() => downloadReport(m.report!)}>
+                            <FileDown size={13} strokeWidth={2.2} /> Download the report
+                          </button>
+                        </div>
+                      )
+                      : m.welcome
                       ? <AgentWelcome
                           index={agent.index}
                           tier={agent.tier}
@@ -1318,11 +1364,20 @@ export function CosmoChat({ open, onClose, fullSignal, onFieldDevTab, onFullChan
                 agentic workflow, not a shorter list of the same shortcuts. */}
             <div className="wf-pills">
               {WORKFLOWS.map((w) => (
-                <button key={w.id} className="wf-pill" onClick={() => startWorkflow(w.id)} title={w.hint}>
-                  <Workflow size={12} strokeWidth={2.2} />
-                  <span>{w.pill}</span>
-                  <em>{w.steps.length} steps</em>
-                </button>
+                <span key={w.id} className="wf-pill-pair">
+                  <button className="wf-pill" onClick={() => startWorkflow(w.id)} title={`${w.hint} — fixed chain, no model`}>
+                    <Workflow size={12} strokeWidth={2.2} />
+                    <span>{w.pill}</span>
+                    <em>{w.steps.length} steps</em>
+                  </button>
+                  {/* Assisted is a separate control, not a modifier key. The two
+                      modes fail differently — one is auditable, one adapts — and
+                      hiding that behind a chord would blur exactly the
+                      distinction worth keeping. */}
+                  <button className="wf-pill is-assist" onClick={() => startWorkflow(w.id, true)} title="Same chain, but steps with no data are dropped and supported extras proposed first">
+                    <Sparkles size={12} strokeWidth={2.2} /> assisted
+                  </button>
+                </span>
               ))}
             </div>
           </div>
