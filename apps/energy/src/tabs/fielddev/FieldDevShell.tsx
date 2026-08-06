@@ -31,6 +31,7 @@ import { DataExplorer } from './DataExplorer';
 import { Petrophysics } from './Petrophysics';
 import { FluidsRocks } from './FluidsRocks';
 import { Simulation } from './Simulation';
+import { Streamline } from './Streamline';
 import { StaticModel } from './StaticModel';
 import { InputTree } from './InputTree';
 import type { Sel } from '../../cosmo/CosmoExplorer';
@@ -70,7 +71,7 @@ const LEGACY_TABS = [
  */
 // Surfaces that carry their own tree. Showing the shared Input rail beside one
 // puts two trees of the same data on screen and costs the canvas 200 px.
-const NO_INPUT_TREE = new Set(['static-model-lite', 'fluids-rock', 'simulation-cases']);
+const NO_INPUT_TREE = new Set(['static-model-lite', 'fluids-rock', 'simulation-cases', 'history-uncertainty']);
 
 export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
   /** guided-tour hooks — CosmoChat drives Legacy directly through these */
@@ -230,6 +231,11 @@ export function FieldDevShell({ driveLegacyTab, driveLegacyNonce }: {
             // forecast. It wears the same shell as the Static Model, from the same
             // `studio-shell` code, so the two cannot drift apart.
             <Simulation field={field} />
+          ) : stage.id === 'history-uncertainty' ? (
+            // The drainage read of the SAVED run. It never re-solves: tracing a fresh
+            // solve would describe a different realisation of the same recipe, and its
+            // allocations would quietly disagree with the animation one tab over.
+            <Streamline field={field} />
           ) : stage.id === 'fluids-rock' ? (
             // The dynamic model's rock-fluid basis is REAL: the delivery's own PVT
             // block, the rock-fluid functions over it, and the equilibration —

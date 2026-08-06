@@ -45,7 +45,8 @@ import { useFluidCase } from './fluid-case-store';
 import { PlotsPane, WellsPane, ForecastPane, MatchPane, ReportPane, Blank } from './sim-views';
 import { GeaStudio } from './GeaStudio';
 import { ensureProp } from './grid-props';
-import { buildFrames, writeFrame, expandFrame, FRAME_NOTE, type FrameSet } from './sim-frames';
+import { buildFrames, writeFrame, expandFrame, swRangeOf, FRAME_NOTE, type FrameSet } from './sim-frames';
+import { indexedDbRunStore, runId, runMatches, mismatchReason, type StoredRun } from './run-store';
 
 const VIEWS: StudioView[] = [
   { id: 'plots', label: 'Plots', hint: 'Rates and pressures through time — simulated against observed' },
@@ -66,6 +67,7 @@ export function Simulation({ field }: { field: SearchEntry }) {
   const view = useSim((s) => s.view);
   const setView = useSim((s) => s.setView);
   const gridVersionId = useSim((s) => s.gridVersionId);
+  const setGridVersion = useSim((s) => s.setGridVersion);
 
   const [ribbon, setRibbon] = useState<'model' | 'predict'>('model');
   const [versions, setVersions] = useState<GridVersion[]>([]);
@@ -98,6 +100,11 @@ export function Simulation({ field }: { field: SearchEntry }) {
   // It is loaded, never invented. If the recipe cannot be rebuilt the surface says so
   // and stays empty rather than running on something it made up.
   const [basisNote, setBasisNote] = useState<string | null>(null);
+  // ONE grid for the whole vertical. Static, dynamic and streamline all read v0, so a
+  // number carried between them is a number about the same rock. Choosing a different
+  // realisation per surface is how three tabs end up quietly describing three fields.
+  const BASIS = 'v0';
+  useEffect(() => { if (gridVersionId !== BASIS) setGridVersion(BASIS); }, [gridVersionId, setGridVersion]);
   useEffect(() => {
     if (grid?.packed || !ready || !ws.fieldId) return;
     let alive = true;
@@ -212,6 +219,8 @@ export function Simulation({ field }: { field: SearchEntry }) {
   const [dynProp, setDynProp] = useState<'swSim' | 'sweep'>('swSim');
   const [runErr, setRunErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<StoredRun | null>(null);
+  const [restored, setRestored] = useState(false);
 
   const canRun = !!grid?.packed && !!fluids && wellsIn.length > 0;
   const missing = !grid?.packed
@@ -268,6 +277,29 @@ export function Simulation({ field }: { field: SearchEntry }) {
         out.assumptions.caveats.push(...wellNote);
         setCoarse(co);
         setRun(out);
+        // SAVED, so it is solved once. The Streamline surface reads this same record —
+        // tracing a re-run would be tracing a different realisation of the same recipe
+        // and its allocations would quietly disagree with the animation next door.
+        const stored: StoredRun = {
+          id: runId(ws.fieldId, BASIS, tEnd), fieldId: ws.fieldId, gridVersionId: BASIS,
+          savedAt: Date.now(), tEnd, historyEnd,
+          series: out.series, assumptions: out.assumptions,
+          grid: {
+            nx: co.grid.nx, ny: co.grid.ny, nz: co.grid.nz,
+            dx: co.grid.dx, dy: co.grid.dy, x0: co.grid.x0, y0: co.grid.y0,
+            activeCol: Uint8Array.from(co.grid.activeCol as ArrayLike<number>),
+            phi: Float64Array.from(out.build.cfg.phi as ArrayLike<number>),
+            dz: out.build.meanH,
+          },
+          coarseFactor: co.factor,
+          times: out.result.snapshots.map((x) => x.t),
+          sw: out.result.snapshots.map((x) => x.sw),
+          fluxX: out.result.snapshots.map((x) => x.fluxX),
+          fluxY: out.result.snapshots.map((x) => x.fluxY),
+          placed: out.build.placed, collisions: out.build.collisions,
+        };
+        void indexedDbRunStore.put(stored);
+        setSaved(stored);
         // the frames the 3D viewport animates. Built once, from the same result the
         // charts read, so the picture and the numbers cannot disagree.
         setFrames(buildFrames(co.grid as never, out.result, fluids.sor));
@@ -324,6 +356,41 @@ export function Simulation({ field }: { field: SearchEntry }) {
     return () => clearInterval(id);
   }, [playing, frames]);
 
+  // ── RESTORE, RATHER THAN RE-SOLVE ────────────────────────────────────────
+  //
+  // A saved run is only valid against the realisation it was solved on. That is
+  // CHECKED, not assumed: loading one against a different grid is a silent failure —
+  // the charts render, the animation plays, and the flood is on rock it never flowed
+  // through. When it does not match, the reason is shown and the Run button stays.
+  const [staleWhy, setStaleWhy] = useState<string | null>(null);
+  useEffect(() => {
+    if (restored || !ws.fieldId || !grid?.packed) return;
+    let alive = true;
+    (async () => {
+      const st = await indexedDbRunStore.get(runId(ws.fieldId, BASIS, tEnd));
+      if (!alive) return;
+      setRestored(true);
+      if (runMatches(st, ws.fieldId, BASIS, tEnd)) {
+        setSaved(st);
+        // the charts read `run`; a restored record carries the series and assumptions,
+        // and the frames are rebuilt from its saturation field
+        setRun({ series: st!.series, assumptions: st!.assumptions,
+          build: { cfg: null as never, placed: st!.placed, rejected: [], meanH: st!.grid.dz, collisions: st!.collisions },
+          result: null as never } as RunOutput);
+        setCoarse({ grid: st!.grid, factor: st!.coarseFactor, note: '' });
+        setFrames({
+          times: st!.times, sw: st!.sw,
+          sweep: st!.sw.map((f) => f),
+          swRange: swRangeOf(st!.sw),
+        });
+        markDone('case'); markDone('init'); markDone('schedule'); markDone('run');
+      } else if (st) {
+        setStaleWhy(mismatchReason(st, ws.fieldId, BASIS, tEnd));
+      }
+    })();
+    return () => { alive = false; };
+  }, [restored, ws.fieldId, grid, tEnd, markDone]);
+
   const activeTab = useMemo(
     () => SIM_RIBBON_TABS.find((t) => t.id === ribbon) ?? SIM_RIBBON_TABS[0],
     [ribbon],
@@ -335,7 +402,9 @@ export function Simulation({ field }: { field: SearchEntry }) {
     ? 'reading the workspace…'
     : basis
       ? `${field.name} · on ${basis.name} · ${ws.bores.length} bores`
-      : grid?.packed
+      : saved
+        ? `${field.name} · v0 · saved run, ${saved.times.length} steps · ${ws.bores.length} bores`
+        : grid?.packed
         ? `${field.name} · ${basisNote ?? 'v0'} · ${ws.bores.length} bores`
         : `${field.name} · ${basisNote ?? 'no static basis'}`;
 
@@ -454,7 +523,7 @@ export function Simulation({ field }: { field: SearchEntry }) {
             </div>
           ) : <Blank>Run the case to animate the flood.</Blank>
       ) : (
-        <ViewPane view={view} done={done} missing={missing} busy={busy} err={runErr} />
+        <ViewPane view={view} done={done} missing={missing} busy={busy} err={runErr} stale={staleWhy} />
       )}
     </StudioShell>
   );
@@ -525,9 +594,9 @@ function ProcessPane({ id, onClose, done, onRan, onInvalidate }: {
   );
 }
 
-function ViewPane({ view, done, missing, busy, err }: {
+function ViewPane({ view, done, missing, busy, err, stale }: {
   view: string; done: Set<SimProcessId>;
-  missing: string | null; busy: boolean; err: string | null;
+  missing: string | null; busy: boolean; err: string | null; stale: string | null;
 }) {
   const v = VIEWS.find((x) => x.id === view) ?? VIEWS[0];
   // which step has to have run for this view to have anything to show
@@ -546,6 +615,7 @@ function ViewPane({ view, done, missing, busy, err }: {
       <em>
         {busy ? 'solving…'
           : err ? `The run failed: ${err}`
+          : stale ? `A saved run exists but does not apply — ${stale}. Press Run.`
           : missing ? `Cannot run — ${missing}.`
           : wait ? `Nothing to show — ${wait} has not run. Press Run.`
           : 'Press Run.'}

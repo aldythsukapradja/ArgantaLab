@@ -181,3 +181,15 @@ export function expandFrame(
   }
   return out;
 }
+
+/** the one range every frame in a set shares — see `buildFrames` for why it is shared */
+export function swRangeOf(frames: ArrayLike<number>[]): { lo: number; hi: number } {
+  let lo = Infinity, hi = -Infinity;
+  for (const f of frames) for (let i = 0; i < f.length; i++) {
+    const v = f[i];
+    if (!Number.isFinite(v)) continue;
+    if (v < lo) lo = v; if (v > hi) hi = v;
+  }
+  if (!Number.isFinite(lo)) return { lo: 0, hi: 1 };
+  return { lo, hi: hi > lo ? hi : lo + 1e-6 };
+}
