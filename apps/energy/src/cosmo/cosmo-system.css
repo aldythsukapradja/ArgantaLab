@@ -376,11 +376,6 @@ html[data-ui="cosmo"] .cc-mrow .mctx{font-family:var(--mono);font-size:8px;color
 html[data-ui="cosmo"] .cc-mbadge{font-family:var(--mono);font-size:7px;font-weight:700;padding:1px 5px;border-radius:6px;background:var(--teal);color:#fff}
 html[data-ui="cosmo"] .cc-mlock{font-family:var(--mono);font-size:7px;color:var(--amber)}
 /* usage strip */
-html[data-ui="cosmo"] .cc-usage{display:flex;align-items:center;gap:12px;padding:8px 4px 2px;font-family:var(--mono);font-size:9px;color:var(--ink3)}
-html[data-ui="cosmo"] .cc-usage .u{display:flex;align-items:center;gap:6px}
-html[data-ui="cosmo"] .cc-bar{width:70px;height:5px;border-radius:3px;background:var(--line2);overflow:hidden}
-html[data-ui="cosmo"] .cc-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--blue))}
-html[data-ui="cosmo"] .cc-bar.warn i{background:linear-gradient(90deg,var(--amber),var(--red))}
 html[data-ui="cosmo"] .cc-chips{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
 html[data-ui="cosmo"] .cc-chip{font-size:10px;padding:4px 10px;border:1px solid var(--line);border-radius:14px;color:var(--ink2);cursor:pointer;background:var(--panel2)}
 html[data-ui="cosmo"] .cc-chip:hover{border-color:var(--teal);color:var(--teal-ink)}
@@ -910,7 +905,6 @@ html[data-ui="cosmo"] .msheet-item .mi-s{font-size:11.5px;color:var(--ink3)}
   html[data-ui="cosmo"] .cc-scrim{position:absolute;inset:0;z-index:15;background:rgba(15,23,42,.42);backdrop-filter:blur(1px);opacity:0;pointer-events:none;transition:opacity .25s;display:block}
   html[data-ui="cosmo"] .cc-body.m-left .cc-scrim, html[data-ui="cosmo"] .cc-body.m-right .cc-scrim{opacity:1;pointer-events:auto}
   html[data-ui="cosmo"] .cc-composer{padding-bottom:calc(9px + env(safe-area-inset-bottom))}
-  html[data-ui="cosmo"] .cc-usage{flex-wrap:wrap;gap:7px 12px}
   html[data-ui="cosmo"] .cc-menu{width:min(320px,86vw)}
   html[data-ui="cosmo"] .cc-tray{flex-wrap:wrap}
   html[data-ui="cosmo"] #ccFullBtn{display:none}

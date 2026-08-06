@@ -7,7 +7,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanelLeft, PanelRight, Plus, Maximize2, Minimize2, X, Paperclip, Wrench, ChevronDown, ExternalLink,
-  Lock, ArrowUp, Gauge, BatteryMedium, Shield, Maximize, Monitor, Tv, Tablet, Smartphone,
+  Lock, ArrowUp, Maximize, Monitor, Tv, Tablet, Smartphone,
   GitFork, FileText, BarChart3, Expand, Download, Image as ImageIcon, Gem, Map as MapIcon,
   Box, Waves, TrendingUp, Loader2,
 } from 'lucide-react';
@@ -1214,11 +1214,14 @@ export function CosmoChat({ open, onClose, fullSignal, onFocusCockpit, onZoomVol
                 <button className="cc-send" disabled={!draft.trim() || (brain !== 'agent' && (bridge.status !== 'open' || bridgeRunning))} onClick={() => send()}><ArrowUp size={16} /></button>
               </div>
             </div>
-            <div className="cc-usage">
-              <span className="u"><Gauge size={11} /> Context <div className="cc-bar"><i style={{ width: '24%' }} /></div> 24% of {cm.ctx}</span>
-              <span className="u"><BatteryMedium size={11} /> Weekly <div className="cc-bar warn"><i style={{ width: '62%' }} /></div> 62% · resets Mon</span>
-              <span className="u" style={{ marginLeft: 'auto' }}><Shield size={11} /> {cm.tier} · governed</span>
-            </div>
+            {/* The usage strip lived here — "Context 24% of 200K", "Weekly 62%
+                · resets Mon", "SOV · governed". Every one of those numbers was
+                a hardcoded literal inherited from the COSMO mock: the bars
+                never moved, the week never reset, and nothing measured context.
+                Invented telemetry is the same failure as an invented figure,
+                and it sat under a chat whose entire claim is that its numbers
+                come from somewhere. Removed rather than wired up — real usage
+                metering is a feature to build deliberately, not to fake. */}
             <div className="cc-chips">
               {chips.map((c) => (
                 <div className="cc-chip" key={c} onClick={() => (c === ASSIST_LABEL ? startAssistTour() : c === AGENTIC_LABEL ? startAgenticTour() : send(c))}>{c}</div>
