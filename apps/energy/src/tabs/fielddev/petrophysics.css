@@ -348,3 +348,21 @@ html[data-ui="cosmo"] .fdt-act{display:flex;align-items:center;justify-content:c
   width:15px;height:14px;flex:0 0 auto;border-radius:3px;color:var(--ink3);opacity:.45}
 html[data-ui="cosmo"] .fdt-act:hover{opacity:1;color:var(--ink);background:var(--panel3,var(--panel2))}
 html[data-ui="cosmo"] .fdt-act.on{opacity:1;color:var(--purple,#a78bfa);background:var(--panel3,var(--panel2))}
+
+/* The depth-space switch. First control in the header because it changes what
+   every number on the panel MEANS. */
+html[data-ui="cosmo"] .pcp-depth{display:flex;gap:2px;padding:1px;border:1px solid var(--line2);
+  border-radius:5px;background:var(--panel2)}
+html[data-ui="cosmo"] .pcp-depth button{padding:2px 7px;border:0;border-radius:4px;background:transparent;
+  color:var(--ink3);font:7.5px var(--mono);letter-spacing:.06em;cursor:pointer}
+html[data-ui="cosmo"] .pcp-depth button:hover{color:var(--ink)}
+html[data-ui="cosmo"] .pcp-depth button.on{background:var(--teal-soft);color:var(--teal-ink);
+  box-shadow:0 0 0 1px var(--teal)}
+
+/* What the Input tree is doing to this panel. A filter you cannot see is
+   indistinguishable from a control that does not work. */
+html[data-ui="cosmo"] .pcp-filter{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  border:1px solid var(--purple,#a78bfa);border-radius:11px;background:transparent;
+  color:var(--purple,#a78bfa);font:7.5px var(--mono);cursor:pointer;white-space:nowrap}
+html[data-ui="cosmo"] .pcp-filter:hover{background:var(--panel3,var(--panel2))}
+html[data-ui="cosmo"] .pcp-filter i{font-style:normal;opacity:.65}

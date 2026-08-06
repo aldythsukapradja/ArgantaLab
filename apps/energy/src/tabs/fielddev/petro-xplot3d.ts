@@ -96,10 +96,10 @@ export const PRESETS_3D: Preset3[] = [
 export function curveOf(b: BoreCurveSet, key: Axis3Key): (number | null)[] | undefined {
   switch (key) {
     case 'GR': return b.gr;
-    case 'RHOB': return b.raw.rhob;
-    case 'NPHI': return b.raw.nphi;
-    case 'RT': return b.raw.rt;
-    case 'DT': return b.raw.dt;
+    case 'RHOB': return b.raw.RHOB;
+    case 'NPHI': return b.raw.NPHI;
+    case 'RT': return b.raw.RT ?? b.raw.RXO;
+    case 'DT': return b.raw.DT;
     case 'PHIE': return b.phie;
     case 'SW': return b.sw;
     case 'VSH': return b.vsh;

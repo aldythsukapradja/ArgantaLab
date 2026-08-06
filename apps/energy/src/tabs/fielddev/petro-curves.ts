@@ -37,14 +37,20 @@ export interface BoreCurveSet {
   /** raw, for the GR track */
   gr: (number | null)[] | undefined;
   /**
-   * The raw measurements the interpretation was run FROM, kept aligned with it.
+   * EVERY delivered curve on this bore, keyed by FAMILY, kept aligned with the
+   * interpretation.
    *
-   * The 3D crossplot needs both halves at once — RHOB/NPHI/RT as axes and our
-   * net flag as the colour — and reading the digests a second time to get them
-   * would decode 24 bores twice and, worse, could disagree with the curves the
-   * colour came from. One decode, both halves.
+   * It was four named fields and that was the bug. The Input tree lists the
+   * seventeen curve families the delivery actually carries, and a panel that can
+   * only draw four of them makes thirteen of those rows a click that does
+   * nothing — which reads, correctly, as "the tree is not connected".
+   *
+   * Keyed by family so a tick on the tree row reaches the curve directly: the
+   * tree's key IS the family (see workspace-model.buildCurveTypes). One decode
+   * serves both halves — reading the digests a second time for the raw curves
+   * could disagree with the interpretation about which sample is which.
    */
-  raw: { rhob?: (number | null)[]; nphi?: (number | null)[]; rt?: (number | null)[]; dt?: (number | null)[] };
+  raw: Record<string, (number | null)[] | undefined>;
   /** THEIRS, where the delivery ships an interpretation. QC only. */
   ref: { phie?: (number | null)[]; sw?: (number | null)[]; vsh?: (number | null)[] };
   /**
@@ -66,6 +72,19 @@ export interface FieldCurves {
 }
 
 const EMPTY: FieldCurves = { bores: [], done: 0, total: 0, running: false, skipped: [] };
+
+/** Every curve keyed by family, first writer wins — a family-resolved curve
+ *  beats a raw mnemonic, the same precedence petro-cloud uses. */
+function rawByFamily(
+  curves: Array<{ mnemonic: string; family?: string | null; values: (number | null)[] }>,
+): Record<string, (number | null)[] | undefined> {
+  const out: Record<string, (number | null)[] | undefined> = {};
+  for (const c of curves) {
+    const key = (c.family ?? c.mnemonic).toUpperCase();
+    if (!out[key]) out[key] = c.values;
+  }
+  return out;
+}
 
 export function useFieldCurves(ws: Workspace, params: PetroParams, enabled: boolean): FieldCurves {
   const [state, setState] = useState<FieldCurves>(EMPTY);
@@ -118,12 +137,7 @@ export function useFieldCurves(ws: Workspace, params: PetroParams, enabled: bool
             md,
             vsh: res.vsh, phie: res.phie, sw: res.sw, net: res.net,
             gr: byFamily('GR')?.values,
-            raw: {
-              rhob: byFamily('RHOB')?.values,
-              nphi: byFamily('NPHI')?.values,
-              rt: (byFamily('RT') ?? byFamily('RXO'))?.values,
-              dt: byFamily('DT')?.values,
-            },
+            raw: rawByFamily(log.curves),
             ref: {
               phie: byMnem('PHIE')?.values,
               sw: (byMnem('SWE') ?? byMnem('SW'))?.values,

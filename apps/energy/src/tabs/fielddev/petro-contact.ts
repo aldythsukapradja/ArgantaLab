@@ -89,6 +89,37 @@ export function contactMd(fit: MdTvdFit | null, tvdss: number): ContactPlacement
   return { md, extrapolated: tvdss < lo - pad || tvdss > hi + pad, n: fit.n };
 }
 
+/**
+ * The inverse: this bore's TVDSS at a measured depth.
+ *
+ * Same fit, read the other way. Null when there is no fit — a panel offering a
+ * TVDSS view must DROP the bores it cannot convert and say so, not draw them at
+ * their MD and let the reader assume the axis means what it says.
+ */
+export function tvdssFromMd(fit: MdTvdFit | null, md: number): number | null {
+  if (!fit || !finite(md) || Math.abs(fit.b) < 1e-9) return null;
+  const v = (md - fit.a) / fit.b;
+  return finite(v) ? v : null;
+}
+
+/**
+ * Which way is down.
+ *
+ * TVDSS is negative downwards in most deliveries and positive downwards in
+ * some. A depth axis that guesses puts the reservoir at the top of the panel in
+ * half the world's data. Returns −1 when the values run negative (so multiplying
+ * by it gives a number that INCREASES downward), +1 otherwise.
+ *
+ * Judged on the median rather than the mean: one mis-signed outlier should not
+ * flip the whole panel upside down.
+ */
+export function tvdssSign(values: Array<number | null | undefined>): -1 | 1 {
+  const v = values.filter(finite).sort((a, b) => a - b);
+  if (!v.length) return -1;   // the common convention, when nothing says otherwise
+  const mid = v[Math.floor(v.length / 2)];
+  return mid < 0 ? -1 : 1;
+}
+
 /** The contact a panel should draw, chosen from the workspace's list. */
 export function primaryContact<T extends { kind: string; tvdss: number | null }>(
   contacts: T[],

@@ -3,7 +3,9 @@
 // The failure this locks out is the plausible one: drawing a −3120 m TVDSS
 // contact at 3120 m MD. On a bore deviated 400 m that is 400 m of pay in the
 // wrong place, and nothing about the picture looks wrong.
-import { fitMdTvd, contactMd, primaryContact } from '../src/tabs/fielddev/petro-contact.ts';
+import {
+  fitMdTvd, contactMd, tvdssFromMd, tvdssSign, primaryContact,
+} from '../src/tabs/fielddev/petro-contact.ts';
 
 let pass = 0, fail = 0;
 const ok = (n, c, e = '') => { if (c) pass++; else { fail++; console.error(`  ✗ ${n}${e ? ` — ${e}` : ''}`); } };
@@ -100,6 +102,45 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
   ]);
   ok('the fit does not assume a TVDSS sign convention',
     near(contactMd(f, 2400).md, 3000, 1e-6));
+}
+
+// ── the TVDSS view ───────────────────────────────────────────────────────────
+{
+  // 1 m of TVD costs 1.25 m of hole
+  const f = fitMdTvd([
+    { surface: 'A', md: 2500, tvdss: -2000 },
+    { surface: 'B', md: 3125, tvdss: -2500 },
+  ]);
+  ok('a measured depth converts back to TVDSS', near(tvdssFromMd(f, 3000), -2400, 1e-6),
+    String(tvdssFromMd(f, 3000)));
+  ok('the round trip is the identity',
+    near(tvdssFromMd(f, contactMd(f, -2400).md), -2400, 1e-6));
+  // THE WHOLE POINT: on a deviated bore MD and TVDSS are different depths, and a
+  // panel that draws one under an axis labelled the other is wrong by the
+  // deviation — several hundred metres here — while looking entirely plausible
+  ok('MD and TVDSS differ by the deviation', Math.abs(tvdssFromMd(f, 3000) + 3000) > 500);
+  ok('no fit means no TVDSS — a bore that cannot be converted must be DROPPED',
+    tvdssFromMd(null, 3000) === null);
+  ok('a non-finite depth is refused', tvdssFromMd(f, NaN) === null);
+}
+{
+  // a perfectly horizontal section has no TVD change; inverting it would divide
+  // by ~zero and place samples at infinity
+  const f = { a: 0, b: 0, n: 2, from: -2000, to: -2000 };
+  ok('a zero-slope fit cannot be inverted', tvdssFromMd(f, 3000) === null);
+}
+
+// ── which way is down ────────────────────────────────────────────────────────
+{
+  ok('negative-down TVDSS is detected', tvdssSign([-2000, -2500, -3000]) === -1);
+  ok('positive-down TVDSS is detected', tvdssSign([2000, 2500, 3000]) === 1);
+  ok('the median decides, so one mis-signed outlier cannot flip the panel',
+    tvdssSign([-2000, -2500, -3000, 2800]) === -1);
+  ok('nulls are ignored', tvdssSign([null, -2000, undefined, -2500]) === -1);
+  ok('an empty set falls back to the common convention', tvdssSign([]) === -1);
+  // multiplying by the sign must give a number that INCREASES downward
+  const s = tvdssSign([-2000, -3000]);
+  ok('sign times depth increases downward', s * -3000 > s * -2000);
 }
 
 // ── choosing the contact ─────────────────────────────────────────────────────

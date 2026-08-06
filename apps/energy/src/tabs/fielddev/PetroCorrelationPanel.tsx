@@ -1,13 +1,18 @@
 // PetroCorrelationPanel — the wells side by side, on OUR interpretation.
 //
-// Four tracks per bore, in the order a correlation is read:
+// It opens on PHIE · net · Sw and the INPUT TREE decides the rest: tick a curve
+// family and it becomes a column, tick a bore and it becomes a well, tick a well
+// top and it becomes a tie line. The vocabulary of drawable tracks lives in
+// petro-tracks and covers every family the delivery carries — a tree row that
+// cannot change the panel is a tree that is not connected to it.
 //
-//   GR            what the rock is — the shale/sand discriminator
-//   PHIE          how much of it can hold fluid
-//   fluid flag    the net ribbon, BETWEEN porosity and saturation, because it is
-//                 the join between them: net is where PHIE passes the cutoff AND
-//                 Sw says it is hydrocarbon-bearing
-//   Sw            what is in the pore space
+// DEPTH IS TVDSS BY DEFAULT. Volve's bores are deviated by hundreds of metres;
+// on measured depth two wells' beds do not line up even when they ARE the same
+// bed, which is the one thing this panel exists to show. MD stays one click away
+// because it is the depth the log was recorded at. The conversion is each bore's
+// OWN dual-recorded picks (petro-contact) — no KB, no survey, and a bore that
+// cannot be converted is DROPPED from the TVDSS view and named, never drawn at
+// its MD under a TVDSS axis.
 //
 // CURVES ARE OURS, and that is the point. The delivery ships PHIE/SWE/VSH in
 // three of twenty-four bores, so a panel of delivered curves is three columns of
@@ -22,54 +27,25 @@
 // surface CANNOT be flattened onto it — it is drawn unflattened and marked,
 // rather than shifted by a guessed offset.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { scaleLinear } from 'd3-scale';
+import { scaleLinear, scaleLog } from 'd3-scale';
 import { select } from 'd3-selection';
 import { zoom as d3zoom, zoomIdentity, type ZoomTransform } from 'd3-zoom';
 import { useCumulativeOil, panelSequence } from './petro-luping';
-import { Columns3, AlertTriangle, ArrowUpDown, Plus, Minus, Maximize2, X } from 'lucide-react';
+import {
+  Columns3, AlertTriangle, ArrowUpDown, Plus, Minus, Maximize2, X, Eraser,
+} from 'lucide-react';
 import type { Workspace } from './workspace';
 import type { PetroParams } from './petro-compute';
-import { useFieldCurves, hangShift, type BoreCurveSet, type HangMode } from './petro-curves';
+import { useFieldCurves, type BoreCurveSet } from './petro-curves';
+import { resolveTracks, trackLayout, type TrackSpec } from './petro-tracks';
 import { ROLE_FILL } from './ImpactMarkers';
 import { pathRole } from './well-paths';
 import { useScene } from './scene';
-import { fitMdTvd, contactMd, primaryContact, type ContactPlacement } from './petro-contact';
+import { fitMdTvd, contactMd, tvdssFromMd, tvdssSign, primaryContact } from './petro-contact';
 
 const GUTTER = 26;       // between bores — wide enough for the column band to read
 const HEAD = 34;         // column header
 const PAD = { l: 46, t: 10, b: 18 };
-
-/**
- * The tracks, left to right, each with its own WIDTH.
- *
- * `net` is 14 px against 44 for the rest, because it is a flag and not a
- * measurement: it has one bit of information per sample and a 44 px column
- * spent on one bit is 44 px not spent on the curves either side of it.
- *
- * `fams` is how a tree click reaches a track. The tree lists what the DELIVERY
- * shipped, keyed by curve family (GR, PHIE, SW, VSH — see las.ts's FAMILY map);
- * this panel draws what we COMPUTED. They are not the same names, so each track
- * declares the delivered families that select it. `net` answers to VSH because
- * that is the delivered curve nearest to the shale/net decision — there is no
- * delivered net flag to point at.
- */
-const TRACKS = [
-  { id: 'gr', label: 'GR', lo: 0, hi: 150, color: '#7a8b3f', w: 44, fams: ['GR'] },
-  { id: 'phie', label: 'PHIE', lo: 0.4, hi: 0, color: '#2f9bff', w: 44, fams: ['PHIE', 'PHIT'] },
-  { id: 'net', label: 'net', lo: 0, hi: 1, color: '#10b981', w: 14, fams: ['VSH'] },
-  { id: 'sw', label: 'Sw', lo: 1, hi: 0, color: '#c2582c', w: 44, fams: ['SW'] },
-] as const;
-
-/**
- * What the panel opens on: PHIE, the net flag, Sw.
- *
- * GR is off by default and one tree click away. It is the curve you reach for to
- * decide what the rock IS — and that decision is already made, by the same
- * parameters, and expressed in the net ribbon. Three tracks per bore instead of
- * four is a quarter more wells on screen, which is what a correlation panel is
- * for.
- */
-const DEFAULT_TRACKS = ['phie', 'net', 'sw'];
 
 export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: PetroParams }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -82,7 +58,9 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
    * it in two places is how the tree and the canvas start disagreeing.
    */
   const flattenOn = useScene((st) => st.datum);
-  const hang: HangMode = flattenOn ? 'flatten' : 'md';
+  const depthMode = useScene((st) => st.depthMode);
+  const setDepthMode = useScene((st) => st.setDepthMode);
+  const clearPanel = useScene((st) => st.clearPanel);
   const panelWells = useScene((st) => st.panelWells);
   const panelCurves = useScene((st) => st.panelCurves);
   const panelOrder = useScene((st) => st.panelOrder);
@@ -93,26 +71,28 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
   const [t, setT] = useState<ZoomTransform>(zoomIdentity);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  /** Tracks the panel draws. An empty filter is the ABSENCE of one, so nothing
-   *  ticked shows the default four rather than an empty column. */
-  const tracks = useMemo(() => {
-    const base = TRACKS.filter((x) => DEFAULT_TRACKS.includes(x.id));
-    if (!panelCurves.length) return base;
-    const hit = TRACKS.filter((x) => x.fams.some((f) => panelCurves.includes(f)));
-    // A tick on a curve this panel doesn't draw (RHOB, CALI, ROP…) must not blank
-    // the panel — it just isn't a correlation track.
-    return hit.length ? hit : base;
-  }, [panelCurves]);
+  /** Tracks the panel draws — resolved from the tree's tick set. An empty filter
+   *  is the ABSENCE of one, so nothing ticked opens on the default three. */
+  const tracks = useMemo(() => resolveTracks(panelCurves), [panelCurves]);
 
   /** Track x-offsets within a column, and the column pitch. Widths differ per
    *  track, so this cannot be an index times a constant. */
   const lay = useMemo(() => {
-    const offs: number[] = [];
-    let x = 0;
-    for (const t of tracks) { offs.push(x); x += t.w; }
-    return { offs, inner: x, colW: x + GUTTER };
+    const l = trackLayout(tracks);
+    return { ...l, colW: l.inner + GUTTER };
   }, [tracks]);
   const colW = lay.colW;
+
+  /**
+   * Which way TVDSS runs in THIS delivery, read from its own picks.
+   *
+   * Negative downwards in most, positive in some. A panel that assumes puts the
+   * reservoir at the top of the screen for half the world's data.
+   */
+  const zSign = useMemo(
+    () => tvdssSign(ws.picks.map((p) => p.tvdss)),
+    [ws.picks],
+  );
 
   const cumWells = useMemo(() => curves.bores.map((b) => b.well), [curves.bores]);
   const { cum } = useCumulativeOil(cumWells);
@@ -132,18 +112,49 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
     // The SAME rule the correlation map draws its line from — see panelSequence.
     const seq = panelSequence(curves.bores.map((b) => b.well), panelWells, panelOrder, cum);
     const byName = new Map(curves.bores.map((b) => [b.well, b]));
-    const bores = seq.map((w) => byName.get(w)).filter((b): b is BoreCurveSet => !!b);
-    if (!bores.length) return null;
+    const picked = seq.map((w) => byName.get(w)).filter((b): b is BoreCurveSet => !!b);
+    if (!picked.length) return null;
 
-    const shifts = new Map(bores.map((b) => [b.well, hangShift(b, hang, flattenOn)]));
-    // Depth window across every bore that CAN be placed. A bore that cannot be
-    // flattened is excluded from the range rather than stretching it to nothing.
+    /**
+     * DISPLAY DEPTH: one number per bore per sample, always increasing downward.
+     *
+     * In MD it is the measured depth. In TVDSS it is the bore's own md↔tvdss fit
+     * applied to every sample and multiplied by the delivery's sign convention,
+     * so "deeper" is "further down the screen" whichever way the delivery signs
+     * its true vertical depths.
+     *
+     * A bore with no fit CANNOT be placed on a TVDSS axis. It is dropped and
+     * named — drawing it at its MD under an axis labelled TVDSS would be a
+     * silent lie of several hundred metres on a deviated well.
+     */
+    const noFit: string[] = [];
+    const placed = picked.map((b) => {
+      const fit = fitMdTvd(b.picks);
+      if (depthMode === 'md') {
+        return { b, fit, toDisp: (md: number) => md };
+      }
+      if (!fit) { noFit.push(b.well); return null; }
+      return { b, fit, toDisp: (md: number) => zSign * (tvdssFromMd(fit, md) as number) };
+    }).filter((e): e is { b: BoreCurveSet; fit: ReturnType<typeof fitMdTvd>; toDisp: (md: number) => number } => !!e);
+    if (!placed.length) return null;
+
+    // FLATTENING happens in display space, so it means the same thing on either
+    // axis: put every bore's datum pick on one line. A bore with no pick for the
+    // datum keeps its own depth and is marked, rather than shifted by a guess.
+    const flattening = !!flattenOn;
+    const entries = placed.map((e) => {
+      const pick = flattenOn ? e.b.picks.find((p) => p.surface === flattenOn) : null;
+      const shift = !flattening ? 0 : pick ? -e.toDisp(pick.md) : null;
+      // depths are precomputed per bore: the tracks, the tie lines and the
+      // contact all read the same array, so they cannot disagree by a rounding
+      const dep = shift == null ? [] : e.b.md.map((m) => e.toDisp(m) + shift);
+      return { ...e, well: e.b.well, shift, dep };
+    });
+
     let lo = Infinity, hi = -Infinity;
-    for (const b of bores) {
-      const s = shifts.get(b.well);
-      if (s == null || !b.md.length) continue;
-      lo = Math.min(lo, b.md[0] + s);
-      hi = Math.max(hi, b.md[b.md.length - 1] + s);
+    for (const e of entries) {
+      if (e.shift == null || !e.dep.length) continue;
+      lo = Math.min(lo, e.dep[0]); hi = Math.max(hi, e.dep[e.dep.length - 1]);
     }
     if (!Number.isFinite(lo) || hi <= lo) return null;
 
@@ -154,30 +165,41 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
       ? surfaces.filter(([sf]) => panelTops.includes(sf))
       : surfaces.slice(0, 8);
 
-    // the contact, per bore, through that bore's own md↔tvdss picks
-    const contactAt = new Map<string, ContactPlacement | null>();
-    if (contact?.tvdss != null) {
-      for (const b of bores) contactAt.set(b.well, contactMd(fitMdTvd(b.picks), contact.tvdss));
-    }
-
-    // correlation lines: a surface, and the y each bore puts it at
     const lines = chosen.map(([surface]) => ({
       surface,
-      at: bores.map((b) => {
-        const s = shifts.get(b.well);
-        const p = b.picks.find((q) => q.surface === surface);
-        return s != null && p ? p.md + s : null;
+      at: entries.map((e) => {
+        const p = e.b.picks.find((q) => q.surface === surface);
+        return e.shift != null && p ? e.toDisp(p.md) + e.shift : null;
       }),
     }));
 
-    return { bores, shifts, lo, hi, lines, contactAt };
-  }, [curves.bores, hang, flattenOn, surfaces, panelWells, panelOrder, panelTops, cum, contact]);
+    /**
+     * THE CONTACT. On a TVDSS axis it needs no conversion at all — it is already
+     * a TVDSS depth, and that is the strongest argument for TVDSS being the
+     * default. On MD it goes through each bore's own fit and is flagged where
+     * that fit is being extrapolated.
+     */
+    const contactAt = new Map<string, { at: number; extrapolated: boolean } | null>();
+    if (contact?.tvdss != null) {
+      for (const e of entries) {
+        if (e.shift == null) { contactAt.set(e.well, null); continue; }
+        if (depthMode === 'tvdss') {
+          contactAt.set(e.well, { at: zSign * contact.tvdss + e.shift, extrapolated: false });
+        } else {
+          const c = contactMd(e.fit, contact.tvdss);
+          contactAt.set(e.well, c ? { at: c.md + e.shift, extrapolated: c.extrapolated } : null);
+        }
+      }
+    }
+
+    return { entries, lo, hi, lines, contactAt, noFit };
+  }, [curves.bores, depthMode, zSign, flattenOn, surfaces, panelWells, panelOrder, panelTops, cum, contact]);
 
   const unflattenable = useMemo(
-    () => (hang === 'flatten' && flattenOn
+    () => (flattenOn
       ? curves.bores.filter((b) => !b.picks.some((p) => p.surface === flattenOn)).map((b) => b.well)
       : []),
-    [curves.bores, hang, flattenOn],
+    [curves.bores, flattenOn],
   );
 
   /**
@@ -231,6 +253,14 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
     <section className="pps-region live pcp" style={{ gridArea: 'main' }}>
       <header className="pcp-head">
         <Columns3 size={12} /> <b>Correlation</b>
+        {/* THE DEPTH AXIS, and it is the panel's most load-bearing control.
+            TVDSS first because that is the space beds correlate in. */}
+        <span className="pcp-depth">
+          <button className={depthMode === 'tvdss' ? 'on' : ''} onClick={() => setDepthMode('tvdss')}
+            title="True vertical depth subsea — beds line up across deviated bores. Converted per bore from its own dual-recorded picks.">TVDSS</button>
+          <button className={depthMode === 'md' ? 'on' : ''} onClick={() => setDepthMode('md')}
+            title="Measured depth — the depth the log was recorded at, and the depth you read back to the driller.">MD</button>
+        </span>
         <span className="pcp-hang">
           {flattenOn ? (
             <em className="pcp-datum" title="Set from the Well tops folder in the Input tree — click it again there to clear">
@@ -239,7 +269,7 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
             </em>
           ) : (
             <em className="pcp-datum none" title="Pick a surface under Well tops in the Input tree to flatten on it">
-              hung on measured depth — pick a <b>Well top</b> on the left to flatten
+              hung on {depthMode === 'tvdss' ? 'TVDSS' : 'measured depth'} — pin a <b>Well top</b> on the left to flatten
             </em>
           )}
         </span>
@@ -250,10 +280,26 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
           <button className={sortOpen ? 'on' : ''} onClick={() => setSortOpen((v) => !v)}
             title="Set the left-to-right display sequence"><ArrowUpDown size={11} /></button>
         </span>
+        {/* WHAT THE TREE IS DOING TO THIS PANEL, said out loud. A filter you
+            cannot see is indistinguishable from a control that does not work —
+            which is exactly how this pane read before. */}
+        {(panelWells.length > 0 || panelCurves.length > 0 || panelTops.length > 0 || panelOrder.length > 0) && (
+          <button className="pcp-filter" onClick={clearPanel}
+            title="Clear every Input-tree filter on this panel">
+            <Eraser size={10} />
+            {[
+              panelWells.length ? `${panelWells.length} bore${panelWells.length === 1 ? '' : 's'}` : null,
+              panelCurves.length ? `${panelCurves.length} curve${panelCurves.length === 1 ? '' : 's'}` : null,
+              panelTops.length ? `${panelTops.length} top${panelTops.length === 1 ? '' : 's'}` : null,
+              panelOrder.length ? 'custom order' : null,
+            ].filter(Boolean).join(' · ')}
+            <i>from tree — clear</i>
+          </button>
+        )}
         <em>
           {curves.running
             ? `interpreting ${curves.done}/${curves.total} bores…`
-            : `${model?.bores.length ?? 0}${panelWells.length ? `/${curves.bores.length}` : ''} bores`
+            : `${model?.entries.length ?? 0}${panelWells.length ? `/${curves.bores.length}` : ''} bores`
               + ` · ${tracks.length} track${tracks.length === 1 ? '' : 's'} · computed`}
         </em>
       </header>
@@ -269,15 +315,15 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
               first. Dragging is overkill for a list this size; the arrows are
               unambiguous and keyboard-reachable. */}
           <ol>
-            {model.bores.map((b, i) => (
-              <li key={b.well}>
+            {model.entries.map((e, i) => (
+              <li key={e.well}>
                 <span className="n">{i + 1}</span>
-                <b>{b.well}</b>
-                <i>{(() => { const c = cum.get(b.well); return c == null ? 'no prod record' : `${(c / 1e6).toFixed(2)}M`; })()}</i>
+                <b>{e.well}</b>
+                <i>{(() => { const c = cum.get(e.well); return c == null ? 'no prod record' : `${(c / 1e6).toFixed(2)}M`; })()}</i>
                 <button disabled={i === 0} title="Move left"
-                  onClick={() => setPanelOrder(swap(model.bores.map((x) => x.well), i, i - 1))}>↑</button>
-                <button disabled={i === model.bores.length - 1} title="Move right"
-                  onClick={() => setPanelOrder(swap(model.bores.map((x) => x.well), i, i + 1))}>↓</button>
+                  onClick={() => setPanelOrder(swap(model.entries.map((x) => x.well), i, i - 1))}>↑</button>
+                <button disabled={i === model.entries.length - 1} title="Move right"
+                  onClick={() => setPanelOrder(swap(model.entries.map((x) => x.well), i, i + 1))}>↓</button>
               </li>
             ))}
           </ol>
@@ -290,14 +336,14 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
 
       <div className="pcp-scroll" ref={wrapRef}>
         {model && y ? (
-          <svg ref={svgRef} width={PAD.l + model.bores.length * colW + 20} height={height}
+          <svg ref={svgRef} width={PAD.l + model.entries.length * colW + 20} height={height}
             style={{ cursor: 'ns-resize' }}>
             {/* Everything depth-bearing is CLIPPED to the track window. Zooming
                 rescales the depth axis, so without this the curves ride up over
                 the column headers and out of the panel. */}
             <defs>
               <clipPath id="pcp-clip">
-                <rect x={0} y={PAD.t + HEAD} width={PAD.l + model.bores.length * colW + 20}
+                <rect x={0} y={PAD.t + HEAD} width={PAD.l + model.entries.length * colW + 20}
                   height={height - PAD.b - PAD.t - HEAD} />
               </clipPath>
             </defs>
@@ -305,20 +351,20 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
             {/* COLUMN BANDS. Wells were reading as one continuous smear of tracks;
                 a translucent panel behind alternate bores makes the boundary a
                 surface rather than a gap, which is what "different well" is. */}
-            {model.bores.map((b, i) => (
-              <rect key={'band' + b.well} x={PAD.l + i * colW - GUTTER / 2 + 2} y={PAD.t}
+            {model.entries.map((e, i) => (
+              <rect key={'band' + e.well} x={PAD.l + i * colW - GUTTER / 2 + 2} y={PAD.t}
                 width={lay.inner + GUTTER - 4} height={height - PAD.b - PAD.t} rx={5}
                 className={'pcp-band' + (i % 2 ? ' alt' : '')} />
             ))}
 
             {/* column headers and track frames — fixed, outside the clip */}
-            {model.bores.map((b, i) => {
+            {model.entries.map((e, i) => {
               const x0 = PAD.l + i * colW;
               return (
-                <g key={b.well}>
+                <g key={e.well}>
                   <text x={x0 + 2} y={PAD.t + 9} fontSize={8.5} fontWeight={600}
-                    fill={ROLE_FILL[pathRole(b.role)]} fontFamily="var(--mono)">{b.well}</text>
-                  {model.shifts.get(b.well) == null && (
+                    fill={ROLE_FILL[pathRole(e.b.role)]} fontFamily="var(--mono)">{e.well}</text>
+                  {e.shift == null && (
                     <text x={x0 + 2} y={PAD.t + 19} fontSize={6.5} fill="var(--orange,#f59e0b)"
                       fontFamily="var(--mono)">no {flattenOn} pick — not flattened</text>
                   )}
@@ -335,13 +381,17 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
             })}
 
             <g clipPath="url(#pcp-clip)">
-              {/* depth axis */}
+              {/* depth axis — ticks are labelled in the delivery's own numbers, so
+                  a negative-down TVDSS reads negative rather than being quietly
+                  flipped into something that looks like a depth below rotary */}
               {y.ticks(10).map((d) => (
                 <g key={d}>
-                  <line x1={PAD.l - 4} y1={y(d)} x2={PAD.l + model.bores.length * colW} y2={y(d)}
+                  <line x1={PAD.l - 4} y1={y(d)} x2={PAD.l + model.entries.length * colW} y2={y(d)}
                     stroke="var(--line)" opacity={0.18} />
                   <text x={PAD.l - 8} y={y(d) + 3} textAnchor="end" fontSize={7.5}
-                    fill="var(--ink3)" fontFamily="var(--mono)">{Math.round(d)}</text>
+                    fill="var(--ink3)" fontFamily="var(--mono)">
+                    {Math.round(depthMode === 'tvdss' ? d * zSign : d)}
+                  </text>
                 </g>
               ))}
 
@@ -350,7 +400,7 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
                   tied at the impact points, not interpolated across the panel. */}
               {model.lines.map((l, li) => {
                 const pts: Array<[number, number]> = [];
-                model.bores.forEach((_b, i) => {
+                model.entries.forEach((_e, i) => {
                   const at = l.at[i];
                   if (at == null) return;
                   pts.push([PAD.l + i * colW + lay.inner / 2, y(at)]);
@@ -360,8 +410,6 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
                 const isDatum = l.surface === flattenOn;
                 return (
                   <g key={l.surface}>
-                    {/* the vertex dots ARE the picks — where the line touches a well
-                        is a measurement, the segments between them are not */}
                     {pts.map((p, pi) => (
                       <circle key={pi} cx={p[0]} cy={p[1]} r={1.9}
                         fill={`hsl(${hue},62%,52%)`} stroke="var(--panel)" strokeWidth={0.7} />
@@ -378,43 +426,36 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
                 );
               })}
 
-              {/* THE CONTACT. Published in TVDSS, drawn on an MD track only where
-                  that bore's own dual-recorded picks give the conversion — see
-                  petro-contact. A bore without one gets no line rather than a
-                  vertical-well assumption. */}
-              {contact && (
-                <g>
-                  {model.bores.map((b, i) => {
-                    const place = model.contactAt.get(b.well);
-                    const shift = model.shifts.get(b.well);
-                    if (!place || shift == null) return null;
-                    const x0 = PAD.l + i * colW;
-                    return (
-                      <g key={'c' + b.well}>
-                        <line x1={x0 - 3} y1={y(place.md + shift)} x2={x0 + lay.inner} y2={y(place.md + shift)}
-                          stroke="#2f9bff" strokeWidth={1.6}
-                          strokeDasharray={place.extrapolated ? '3 2' : undefined} opacity={0.95} />
-                        {i === 0 && (
-                          <text x={x0 + 2} y={y(place.md + shift) - 3} fontSize={6.6}
-                            fill="#2f9bff" fontFamily="var(--mono)">
-                            {contact.kind.toUpperCase()} {contact.tvdss} m TVDSS
-                          </text>
-                        )}
-                      </g>
-                    );
-                  })}
-                </g>
-              )}
-
-              {model.bores.map((b, i) => {
-                const shift = model.shifts.get(b.well);
-                if (shift == null) return null;
+              {/* THE CONTACT. On TVDSS it needs no conversion — it already IS a
+                  TVDSS depth. On MD it goes through each bore's own fit, dashed
+                  where that fit is extrapolated past the deepest pick. */}
+              {contact && model.entries.map((e, i) => {
+                const c = model.contactAt.get(e.well);
+                if (!c) return null;
                 const x0 = PAD.l + i * colW;
                 return (
-                  <g key={b.well}>
+                  <g key={'c' + e.well}>
+                    <line x1={x0 - 3} y1={y(c.at)} x2={x0 + lay.inner} y2={y(c.at)}
+                      stroke="#2f9bff" strokeWidth={1.6}
+                      strokeDasharray={c.extrapolated ? '3 2' : undefined} opacity={0.95} />
+                    {i === 0 && (
+                      <text x={x0 + 2} y={y(c.at) - 3} fontSize={6.6}
+                        fill="#2f9bff" fontFamily="var(--mono)">
+                        {contact.kind.toUpperCase()} {contact.tvdss} m TVDSS
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+
+              {model.entries.map((e, i) => {
+                if (e.shift == null) return null;
+                const x0 = PAD.l + i * colW;
+                return (
+                  <g key={e.well}>
                     {tracks.map((tk, ti) => (
-                      <TrackPath key={tk.id} bore={b} track={tk}
-                        x0={x0 + lay.offs[ti]} shift={shift} y={y} />
+                      <TrackPath key={tk.id} bore={e.b} track={tk} dep={e.dep}
+                        x0={x0 + lay.offs[ti]} y={y} />
                     ))}
                   </g>
                 );
@@ -423,7 +464,11 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
           </svg>
         ) : (
           <div className="pcp-empty">
-            {curves.running ? 'interpreting the delivery…' : 'No bore produced curves to correlate.'}
+            {curves.running ? 'interpreting the delivery…'
+              : depthMode === 'tvdss'
+                ? 'No bore can be placed on a TVDSS axis — that needs two picks recorded '
+                  + 'in both MD and TVDSS. Switch to MD above.'
+                : 'No bore produced curves to correlate.'}
           </div>
         )}
       </div>
@@ -433,19 +478,31 @@ export function PetroCorrelationPanel({ ws, params }: { ws: Workspace; params: P
         {/* The contact is the one line here that required a CONVERSION, so it says
             what the conversion rested on and where it could not be made. */}
         {contact && model && (() => {
-          const placed = model.bores.filter((b) => model.contactAt.get(b.well));
-          const extra = placed.filter((b) => model.contactAt.get(b.well)?.extrapolated);
+          const placed = model.entries.filter((e) => model.contactAt.get(e.well));
+          const extra = placed.filter((e) => model.contactAt.get(e.well)?.extrapolated);
+          const all = model.entries.length;
           return (
-            <span className={placed.length === model.bores.length ? '' : 'pcp-warn'}>
+            <span className={placed.length === all ? '' : 'pcp-warn'}>
               {placed.length === 0 ? <AlertTriangle size={10} /> : null}
-              {contact.kind.toUpperCase()} placed on {placed.length}/{model.bores.length} bores
-              {' '}via each bore's own md↔tvdss picks
+              {contact.kind.toUpperCase()} on {placed.length}/{all} bores
+              {depthMode === 'tvdss'
+                ? ' — no conversion needed on a TVDSS axis'
+                : " via each bore's own md↔tvdss picks"}
               {extra.length > 0 && ` · ${extra.length} extrapolated below the deepest pick (dashed)`}
-              {placed.length < model.bores.length
-                && ` · ${model.bores.length - placed.length} lack two dual-recorded picks and get no line`}
+              {placed.length < all && ` · ${all - placed.length} lack two dual-recorded picks`}
             </span>
           );
         })()}
+        {/* Bores the TVDSS view cannot place are NAMED. Silently showing fewer
+            wells than the tree says exist is how a panel loses trust. */}
+        {model && model.noFit.length > 0 && (
+          <span className="pcp-warn">
+            <AlertTriangle size={10} />
+            {model.noFit.length} bore{model.noFit.length === 1 ? '' : 's'} cannot be placed on TVDSS —
+            {' '}fewer than two picks recorded in both MD and TVDSS:
+            {' '}{model.noFit.slice(0, 5).join(' · ')}{model.noFit.length > 5 ? ' …' : ''}
+          </span>
+        )}
         {unflattenable.length > 0 && (
           <span className="pcp-warn">
             <AlertTriangle size={10} />
@@ -472,65 +529,98 @@ function swap(list: string[], a: number, b: number): string[] {
  * One track of one bore.
  *
  * Two rendering modes, because there are two kinds of thing here. A measurement
- * (GR, PHIE, Sw) is a WIGGLE — its value at every depth carries meaning. The net
- * flag is not: it has one bit per sample, and drawn as a line it becomes a
- * square wave whose vertical strokes are pure artefact. So net is drawn as
- * DISCRETE BLOCKS — the intervals where the flag is true — which is also the
- * thing an engineer actually reads off it: how much, and where.
+ * is a WIGGLE — its value at every depth carries meaning. The net flag is not:
+ * it has one bit per sample, and drawn as a line it becomes a square wave whose
+ * vertical strokes are pure artefact. So net is drawn as DISCRETE BLOCKS — the
+ * intervals where the flag is true — which is also what an engineer reads off
+ * it: how much, and where.
  *
- * Both are decimated to roughly one point per pixel. A 7,000-sample log in a
- * 400 px track is 17 samples per pixel; drawing all of them costs frames to
- * render a line nobody can see. The net blocks are built from the FULL sample
- * array before decimation, though — thinning a flag would drop thin beds, and a
+ * `dep` is the bore's DISPLAY depth per sample, already in MD or TVDSS and
+ * already shifted by the flattening. Passing the finished array rather than a
+ * conversion function means every element of the column — tracks, tie lines,
+ * contact — is reading the same numbers, and the depth transform is applied
+ * exactly once per bore instead of once per track.
+ *
+ * Wiggles are decimated to roughly one point per pixel. The net blocks are built
+ * from the FULL array first, though — thinning a flag drops thin beds, and a
  * missed thin bed is the one error this track exists to prevent.
  */
-function TrackPath({ bore, track, x0, shift, y }: {
+function TrackPath({ bore, track, dep, x0, y }: {
   bore: BoreCurveSet;
-  track: typeof TRACKS[number];
-  x0: number; shift: number;
+  track: TrackSpec;
+  dep: number[];
+  x0: number;
   y: (d: number) => number;
 }) {
-  // ── the net flag: contiguous true runs, as blocks ──────────────────────────
+  /** Where this track's samples come from — ours, or a delivered family. */
+  const vals = useMemo((): (number | null)[] | undefined => {
+    if (track.src.kind === 'raw') return bore.raw[track.src.family];
+    switch (track.src.key) {
+      case 'phie': return bore.phie;
+      case 'sw': return bore.sw;
+      case 'vsh': return bore.vsh;
+      case 'gr': return bore.gr;
+      case 'net': return null as unknown as undefined;   // handled as blocks
+    }
+  }, [bore, track]);
+
   const blocks = useMemo(() => {
-    if (track.id !== 'net') return null;
+    if (track.src.kind !== 'ours' || track.src.key !== 'net') return null;
     const out: Array<[number, number]> = [];
     let start: number | null = null;
-    for (let i = 0; i < bore.md.length; i++) {
+    const n = Math.min(dep.length, bore.net.length);
+    for (let i = 0; i < n; i++) {
       const on = bore.net[i] === true;
-      if (on && start == null) start = bore.md[i];
-      if (!on && start != null) { out.push([start, bore.md[i]]); start = null; }
+      if (on && start == null) start = dep[i];
+      if (!on && start != null) { out.push([start, dep[i]]); start = null; }
     }
-    if (start != null) out.push([start, bore.md[bore.md.length - 1]]);
+    if (start != null && n) out.push([start, dep[n - 1]]);
     return out;
-  }, [track.id, bore]);
+  }, [track, bore, dep]);
 
   const d = useMemo(() => {
-    if (track.id === 'net') return '';
-    const vals: (number | null)[] = track.id === 'gr' ? (bore.gr ?? [])
-      : track.id === 'phie' ? bore.phie : bore.sw;
-    if (!vals.length) return '';
-    const sx = scaleLinear().domain([track.lo, track.hi]).range([x0 + 1, x0 + track.w - 3]).clamp(true);
-    const step = Math.max(1, Math.floor(bore.md.length / 600));
+    if (blocks || !vals?.length || !dep.length) return '';
+    // A track with no declared scale takes one from its own data — used for a
+    // curve family we have no convention for. It is labelled `auto` so nobody
+    // reads it as a standard scale.
+    let { lo, hi } = track;
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+      let mn = Infinity, mx = -Infinity;
+      for (let i = 0; i < vals.length; i++) {
+        const v = vals[i];
+        if (v == null || !Number.isFinite(v) || (v <= -999 && v >= -9999.99)) continue;
+        if (v < mn) mn = v; if (v > mx) mx = v;
+      }
+      if (!(mx > mn)) return '';
+      lo = mn; hi = mx;
+    }
+    const sx = track.log
+      ? scaleLog().domain([Math.max(lo, 1e-6), Math.max(hi, 1e-6)]).range([x0 + 1, x0 + track.w - 3]).clamp(true)
+      : scaleLinear().domain([lo, hi]).range([x0 + 1, x0 + track.w - 3]).clamp(true);
+
+    const n = Math.min(dep.length, vals.length);
+    const step = Math.max(1, Math.floor(n / 600));
     const out: string[] = [];
     let pen = false;
-    for (let i = 0; i < bore.md.length; i += step) {
+    for (let i = 0; i < n; i += step) {
       const v = vals[i];
       // a gap must BREAK the line rather than bridge two readings across a
-      // hundred metres of no data
-      if (v == null || !Number.isFinite(v)) { pen = false; continue; }
-      const px = sx(v), py = y(bore.md[i] + shift);
+      // hundred metres of no data. −999.25 is finite and is a gap.
+      if (v == null || !Number.isFinite(v) || (v <= -999 && v >= -9999.99)
+        || (track.log && v <= 0)) { pen = false; continue; }
+      const px = sx(v), py = y(dep[i]);
       out.push(`${pen ? 'L' : 'M'}${px.toFixed(1)},${py.toFixed(1)}`);
       pen = true;
     }
     return out.join('');
-  }, [bore, track, x0, shift, y]);
+  }, [blocks, vals, dep, track, x0, y]);
 
   if (blocks) {
     if (!blocks.length) return null;
     return (
       <g>
         {blocks.map(([top, base], i) => {
-          const yt = y(top + shift), yb = y(base + shift);
+          const yt = y(top), yb = y(base);
           // a bed thinner than a pixel still has to be visible — it is a bed
           const h = Math.max(0.8, yb - yt);
           return (

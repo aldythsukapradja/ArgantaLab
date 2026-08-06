@@ -63,6 +63,16 @@ interface SceneState {
    *  the datum is the one surface you flatten on, these are the ones you tie.
    *  Empty = the widest few, picked by how many bores carry them. */
   panelTops: string[];
+  /**
+   * What the correlation panel's depth axis MEANS.
+   *
+   * TVDSS by default. Volve's bores are deviated by hundreds of metres, so on
+   * measured depth two wells' beds do not line up even when they are the same
+   * bed — which is the one thing a correlation panel exists to show. MD stays
+   * available because it is the depth the log was recorded at and the depth an
+   * engineer reads back to the driller.
+   */
+  depthMode: 'tvdss' | 'md';
   /** Bumped whenever the ingested asset set changes (a reference package finishes
    *  digesting, a client file lands). Anything reading IndexedDB depends on it —
    *  otherwise a surface list built before the package arrived stays empty forever. */
@@ -81,6 +91,7 @@ interface SceneState {
   toggleCurve: (curve: string) => void;
   setPanelOrder: (order: string[]) => void;
   toggleTop: (surface: string) => void;
+  setDepthMode: (mode: 'tvdss' | 'md') => void;
   clearPanel: () => void;
   bumpData: () => void;
 }
@@ -98,6 +109,7 @@ export const useScene = create<SceneState>((set) => ({
   panelCurves: [],
   panelOrder: [],
   panelTops: [],
+  depthMode: 'tvdss',
   dataVersion: 0,
 
   setField: (fieldId) => set((s) => (s.fieldId === fieldId ? s : {
@@ -128,6 +140,7 @@ export const useScene = create<SceneState>((set) => ({
     panelTops: s.panelTops.includes(surface)
       ? s.panelTops.filter((t) => t !== surface) : [...s.panelTops, surface],
   })),
+  setDepthMode: (depthMode) => set({ depthMode }),
   clearPanel: () => set({ panelWells: [], panelCurves: [], panelOrder: [], panelTops: [] }),
   bumpData: () => set((s) => ({ dataVersion: s.dataVersion + 1 })),
 }));

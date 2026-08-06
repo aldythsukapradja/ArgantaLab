@@ -18,7 +18,7 @@ const preset = (id) => PRESETS_3D.find((p) => p.id === id);
 const bore = (well, { rhob, nphi, rt, gr, phie, sw, vsh, net }) => ({
   well, boreKey: well, role: 'producer', md: [],
   vsh: vsh ?? [], phie: phie ?? [], sw: sw ?? [], net: net ?? [],
-  gr, raw: { rhob, nphi, rt }, ref: {}, picks: [],
+  gr, raw: { RHOB: rhob, NPHI: nphi, RT: rt }, ref: {}, picks: [],
 });
 
 // ── presets are triads, not arbitrary ────────────────────────────────────────
